@@ -3,9 +3,9 @@ import { CheckCircle2, Download, FileAudio, ImagePlus, Plus, Trash2, Upload } fr
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { emptyContributor, emptyMetadata, embedMetadata, metadataSchema, type Contributor, type Metadata } from "@/lib/metadata";
+import { emptyContributor, emptyMetadata, embedMetadata, metadataSchema, GENRES, PROS, RELEASE_TYPES, type Contributor, type Metadata } from "@/lib/metadata";
 
-export function MetadataUploader() {
+export function MetadataUploader({ stageName }: { stageName?: string }) {
   const [metadata, setMetadata] = useState<Metadata>(emptyMetadata);
   const [audio, setAudio] = useState<File>();
   const [artwork, setArtwork] = useState<File>();
@@ -53,7 +53,8 @@ export function MetadataUploader() {
   }
 
   return (
-    <section className="mt-8 max-w-5xl">
+    <section className="mx-auto mt-8 max-w-5xl">
+      {stageName && <h1 className="mb-8 text-center text-4xl font-extrabold tracking-tight md:text-5xl">{stageName}</h1>}
       <div className="mb-6 flex flex-wrap items-end justify-between gap-3">
         <h1 className="text-2xl font-bold">Embed Metadata</h1>
         <span className="text-sm text-muted-foreground">MP3 · ID3v2.3</span>
@@ -83,10 +84,33 @@ export function MetadataUploader() {
           <legend className="px-0 pr-3 text-lg font-semibold">Track details</legend>
           <div className="grid gap-5 sm:grid-cols-2">
             <Field label="Track title" id="title" value={metadata.title} required onChange={(value) => update("title", value)} />
+            <Field label="Track number" id="trackNumber" value={metadata.trackNumber} placeholder="1" onChange={(value) => update("trackNumber", value)} />
             <Field label="Artist name" id="artist" value={metadata.artist} required onChange={(value) => update("artist", value)} />
-            <Field label="Featured artists" id="featured" value={metadata.featured} placeholder="Names, separated by commas" onChange={(value) => update("featured", value)} />
+            <div className="space-y-2">
+              {metadata.featured.map((name, index) => (
+                <div key={index} className="flex items-end gap-2">
+                  <div className="flex-1"><Field label={index === 0 ? "Featured artist" : `Featured artist ${index + 1}`} id={`featured-${index}`} value={name} onChange={(value) => update("featured", metadata.featured.map((n, i) => i === index ? value : n))} /></div>
+                  {index === metadata.featured.length - 1
+                    ? <Button type="button" size="icon" variant="outline" aria-label="Add featured artist" onClick={() => update("featured", [...metadata.featured, ""])}><Plus /></Button>
+                    : <Button type="button" size="icon" variant="ghost" aria-label={`Remove featured artist ${index + 1}`} onClick={() => update("featured", metadata.featured.filter((_, i) => i !== index))}><Trash2 /></Button>}
+                </div>
+              ))}
+            </div>
+            <Field label="Track duration" id="duration" value={metadata.duration} placeholder="3:45" onChange={(value) => update("duration", value)} />
+            <SelectField label="Release type" id="releaseType" value={metadata.releaseType} options={RELEASE_TYPES} onChange={(value) => update("releaseType", value)} />
             <Field label="Album / release title" id="album" value={metadata.album} onChange={(value) => update("album", value)} />
             <Field label="Release date" id="releaseDate" type="date" value={metadata.releaseDate} onChange={(value) => update("releaseDate", value)} />
+            <Field label="Record label" id="label" value={metadata.label} onChange={(value) => update("label", value)} />
+            <div className="space-y-2">
+              <Label>Explicit content</Label>
+              <div className="flex gap-2" role="radiogroup" aria-label="Explicit content">
+                {[true, false].map((v) => (
+                  <Button key={String(v)} type="button" role="radio" aria-checked={metadata.explicit === v} variant={metadata.explicit === v ? "default" : "outline"} onClick={() => update("explicit", v)}>{v ? "Yes" : "No"}</Button>
+                ))}
+              </div>
+            </div>
+            <SelectField label="Primary genre" id="primaryGenre" value={metadata.primaryGenre} options={GENRES} onChange={(value) => update("primaryGenre", value)} />
+            <SelectField label="Secondary genre" id="secondaryGenre" value={metadata.secondaryGenre} options={GENRES} onChange={(value) => update("secondaryGenre", value)} />
           </div>
         </fieldset>
 
@@ -95,11 +119,12 @@ export function MetadataUploader() {
           <div className="grid gap-5 sm:grid-cols-3">
             <Field label="ISRC" id="isrc" value={metadata.isrc} placeholder="USABC2600001" onChange={(value) => update("isrc", value)} />
             <Field label="UPC / EAN" id="upc" value={metadata.upc} placeholder="12 or 13 digits" onChange={(value) => update("upc", value)} />
-            <Field label="ISWC" id="iswc" value={metadata.iswc} placeholder="T-123.456.789-0" onChange={(value) => update("iswc", value)} />
+            <Field label="ISWC (optional)" id="iswc" value={metadata.iswc} placeholder="T-123.456.789-0" onChange={(value) => update("iswc", value)} />
           </div>
         </fieldset>
-        <Contributors title="Writers" group="writers" rows={metadata.writers} disabled={busy} onChange={(rows) => update("writers", rows)} />
-        <Contributors title="Publishers" group="publishers" rows={metadata.publishers} disabled={busy} onChange={(rows) => update("publishers", rows)} />
+        <Contributors title="Writers" singular="writer" group="writers" rows={metadata.writers} disabled={busy} onChange={(rows) => update("writers", rows)} />
+        <Contributors title="Composers" singular="composer" group="composers" rows={metadata.composers} disabled={busy} onChange={(rows) => update("composers", rows)} />
+        <Contributors title="Publishers" singular="publisher" group="publishers" rows={metadata.publishers} disabled={busy} publisher onChange={(rows) => update("publishers", rows)} />
 
         <div className="space-y-4 border-t border-border pt-6 pb-8">
           {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
@@ -116,16 +141,25 @@ function Field({ label, id, value, onChange, required, type = "text", placeholde
   return <div className="min-w-0 space-y-2"><Label htmlFor={id}>{label}{required ? " *" : ""}</Label><Input id={id} value={value} type={type} required={required} placeholder={placeholder} onChange={(event) => onChange(event.target.value)} /></div>;
 }
 
-function Contributors({ title, group, rows, onChange, disabled }: { title: string; group: string; rows: Contributor[]; onChange: (rows: Contributor[]) => void; disabled: boolean }) {
+function SelectField({ label, id, value, options, onChange }: { label: string; id: string; value: string; options: readonly string[]; onChange: (value: string) => void }) {
+  return <div className="min-w-0 space-y-2"><Label htmlFor={id}>{label}</Label>
+    <select id={id} value={value} onChange={(event) => onChange(event.target.value)} className="flex h-9 w-full rounded-md border border-input bg-background px-3 text-sm shadow-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+      <option value="">Select…</option>
+      {options.map((o) => <option key={o} value={o}>{o}</option>)}
+    </select></div>;
+}
+
+function Contributors({ title, singular, group, rows, onChange, disabled, publisher }: { title: string; singular: string; group: string; rows: Contributor[]; onChange: (rows: Contributor[]) => void; disabled: boolean; publisher?: boolean }) {
   function change(index: number, key: keyof Contributor, value: string) { onChange(rows.map((row, i) => i === index ? { ...row, [key]: value } : row)); }
   return <fieldset disabled={disabled} className="space-y-5 border-t border-border pt-6">
     <legend className="pr-3 text-lg font-semibold">{title}</legend>
-    {rows.map((row, index) => <div key={index} className="grid items-end gap-4 sm:grid-cols-[1fr_1fr_120px_36px]">
-      <Field label="Name" id={`${group}-${index}-name`} value={row.name} onChange={(value) => change(index, "name", value)} />
-      <Field label="PRO affiliation" id={`${group}-${index}-pro`} value={row.pro} onChange={(value) => change(index, "pro", value)} />
-      <div className="space-y-2"><Label htmlFor={`${group}-${index}-share`}>Share (%)</Label><Input id={`${group}-${index}-share`} type="number" min="0" max="100" step="0.01" value={row.percentage} onChange={(event) => change(index, "percentage", event.target.value)} /></div>
-      <Button type="button" size="icon" variant="ghost" aria-label={`Remove ${title.toLowerCase().slice(0, -1)} ${index + 1}`} disabled={rows.length === 1} onClick={() => onChange(rows.filter((_, i) => i !== index))}><Trash2 /></Button>
+    {rows.map((row, index) => <div key={index} className={`grid items-end gap-4 ${publisher ? "sm:grid-cols-[1fr_160px_160px_36px]" : "sm:grid-cols-[1fr_110px_150px_150px_36px]"}`}>
+      <Field label={publisher ? "Publisher name" : "Legal name"} id={`${group}-${index}-name`} value={row.name} onChange={(value) => change(index, "name", value)} />
+      {!publisher && <div className="space-y-2"><Label htmlFor={`${group}-${index}-share`}>Split (%)</Label><Input id={`${group}-${index}-share`} type="number" min="0" max="100" step="0.01" value={row.percentage} onChange={(event) => change(index, "percentage", event.target.value)} /></div>}
+      <Field label={publisher ? "Publisher IPI" : "IPI name number"} id={`${group}-${index}-ipi`} value={row.ipi} placeholder="9–11 digits" onChange={(value) => change(index, "ipi", value)} />
+      <SelectField label="PRO affiliation" id={`${group}-${index}-pro`} value={row.pro} options={PROS} onChange={(value) => change(index, "pro", value)} />
+      <Button type="button" size="icon" variant="ghost" aria-label={`Remove ${singular} ${index + 1}`} disabled={rows.length === 1} onClick={() => onChange(rows.filter((_, i) => i !== index))}><Trash2 /></Button>
     </div>)}
-    <div className="flex flex-wrap items-center justify-between gap-3"><Button type="button" variant="outline" onClick={() => onChange([...rows, emptyContributor()])}><Plus />Add {title.toLowerCase().slice(0, -1)}</Button><span className="text-sm text-muted-foreground">Total: {Number(rows.reduce((sum, row) => sum + Number(row.percentage || 0), 0).toFixed(2))}%</span></div>
+    <div className="flex flex-wrap items-center justify-between gap-3"><Button type="button" variant="outline" onClick={() => onChange([...rows, emptyContributor()])}><Plus />Add {singular}</Button>{!publisher && <span className="text-sm text-muted-foreground">Total: {Number(rows.reduce((sum, row) => sum + Number(row.percentage || 0), 0).toFixed(2))}%</span>}</div>
   </fieldset>;
 }
