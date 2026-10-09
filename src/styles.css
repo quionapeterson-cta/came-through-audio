@@ -142,3 +142,24 @@
     color: var(--color-foreground);
   }
 }
+
+/* Came Through Audio brand */
+:root {
+  --primary: oklch(0.665 0.115 196);
+  --primary-foreground: oklch(1 0 0);
+  --ring: oklch(0.665 0.115 196);
+  --ink: oklch(0 0 0);
+  --ink-foreground: oklch(1 0 0);
+  --ink-muted: oklch(0.75 0 0);
+  --ink-border: oklch(0.25 0 0);
+}
+
+@theme inline {
+  --color-ink: var(--ink);
+  --color-ink-foreground: var(--ink-foreground);
+  --color-ink-muted: var(--ink-muted);
+  --color-ink-border: var(--ink-border);
+  --font-sans: "Poppins", ui-sans-serif, system-ui, sans-serif;
+}
+
+body { font-family: var(--font-sans); }
