@@ -6,7 +6,13 @@ describe("MP3 metadata", () => {
     const audio = new Uint8Array([255, 251, 144, 0, 1, 2, 3, 4]);
     const data = { ...emptyMetadata(), title: "Test Track", artist: "Test Artist", isrc: "USABC2600001" };
     const blob = await embedMetadata(audio.buffer, data);
-    const bytes = new Uint8Array(await blob.arrayBuffer());
+    const buffer = await new Promise<ArrayBuffer>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => reader.result instanceof ArrayBuffer ? resolve(reader.result) : reject(new Error("Expected binary data"));
+      reader.onerror = () => reject(reader.error);
+      reader.readAsArrayBuffer(blob);
+    });
+    const bytes = new Uint8Array(buffer);
     expect(Array.from(bytes.slice(0, 3))).toEqual([73, 68, 51]);
     expect(Array.from(bytes.slice(-audio.length))).toEqual(Array.from(audio));
     const text = Array.from(bytes).map((byte) => String.fromCharCode(byte)).join("");
