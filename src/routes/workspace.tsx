@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { MetadataUploader } from "@/components/MetadataUploader";
 
 export const Route = createFileRoute("/workspace")({
   head: () => ({
@@ -84,7 +85,8 @@ function Workspace() {
             ))}
           </TabsList>
 
-          {tabs.map(({ id, label, icon: Icon, blurb }) => (
+          <TabsContent value="catalog" forceMount className="data-[state=inactive]:hidden"><MetadataUploader /></TabsContent>
+          {tabs.filter(({ id }) => id !== "catalog").map(({ id, label, icon: Icon, blurb }) => (
             <TabsContent key={id} value={id}><Blank icon={Icon} title={label} text={blurb} /></TabsContent>
           ))}
           <TabsContent value="masterclasses">
