@@ -118,7 +118,7 @@ function Landing() {
             {values.map((v, i) => (
               <li key={i} className="flex gap-5">
                 <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary font-bold text-primary-foreground">{i + 1}</span>
-                <p className="text-ink-muted"><span className="font-semibold text-ink-foreground">{v.split(/[.:]/)[0]}.</span>{v.slice(v.split(/[.:]/)[0].length + 1)}</p>
+                <p className="text-ink-muted"><span className="font-semibold text-ink-foreground">{v.split(/[.:]/)[0] ?? ""}.</span>{v.slice((v.split(/[.:]/)[0] ?? "").length + 1)}</p>
               </li>
             ))}
           </ol>

@@ -42,10 +42,10 @@ function Workspace() {
   useEffect(() => {
     if (!user) return;
     const meta = user.user_metadata ?? {};
-    setName(meta.stage_name || meta.legal_name || user.email || "");
+    setName(meta["stage_name"] || meta["legal_name"] || user.email || "");
     supabase.from("profiles").select("stage_name, legal_name, tier").eq("id", user.id).maybeSingle().then(({ data }) => {
       if (data) {
-        setName(data.stage_name || data.legal_name || meta.stage_name || user.email || "");
+        setName(data.stage_name || data.legal_name || meta["stage_name"] || user.email || "");
         if (data.tier) setTier(data.tier);
       }
     });
