@@ -57,6 +57,5 @@ export async function embedMetadata(audio: ArrayBuffer, metadata: Metadata, artw
     writer.setFrame("TXXX", { description: "PUBLISHER_SPLITS", value: JSON.stringify(publishers) });
   }
   if (artwork) writer.setFrame("APIC", { type: 3, data: artwork, description: "Front cover" });
-  writer.addTag();
   return new Blob([writer.addTag()], { type: "audio/mpeg" });
 }
