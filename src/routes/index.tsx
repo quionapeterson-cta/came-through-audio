@@ -46,7 +46,7 @@ function Landing() {
         <div className="mx-auto grid max-w-7xl gap-12 px-6 pb-20 pt-10 lg:grid-cols-[1.15fr_1fr] lg:items-center">
           <div className="space-y-6">
             <h1 className="text-4xl font-bold leading-tight md:text-5xl lg:text-6xl">
-              Embed Your Metadata and Organize Your Music Business <span className="text-primary">Like a Pro.</span>
+              Embed Your Metadata. <span className="text-primary">Organize your music business like a pro.</span>
             </h1>
             <p className="text-lg text-ink-muted">
               Came Through Audio organizes your entire catalog, injects permanent tracking blocks into your audio, and checks the health of your royalties from one secure dashboard. Never search for a Master again.
