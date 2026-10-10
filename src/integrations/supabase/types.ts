@@ -69,6 +69,7 @@ export type Database = {
           artist_name: string
           audio_url: string | null
           created_at: string | null
+          details: Json
           duration: string | null
           featured_artists: string[] | null
           id: string
@@ -81,6 +82,7 @@ export type Database = {
           release_date: string | null
           track_title: string
           upc: string | null
+          updated_at: string
           user_id: string | null
           writer_names: string[] | null
           writer_percentages: number[] | null
@@ -92,6 +94,7 @@ export type Database = {
           artist_name: string
           audio_url?: string | null
           created_at?: string | null
+          details?: Json
           duration?: string | null
           featured_artists?: string[] | null
           id?: string
@@ -104,6 +107,7 @@ export type Database = {
           release_date?: string | null
           track_title: string
           upc?: string | null
+          updated_at?: string
           user_id?: string | null
           writer_names?: string[] | null
           writer_percentages?: number[] | null
@@ -115,6 +119,7 @@ export type Database = {
           artist_name?: string
           audio_url?: string | null
           created_at?: string | null
+          details?: Json
           duration?: string | null
           featured_artists?: string[] | null
           id?: string
@@ -127,6 +132,7 @@ export type Database = {
           release_date?: string | null
           track_title?: string
           upc?: string | null
+          updated_at?: string
           user_id?: string | null
           writer_names?: string[] | null
           writer_percentages?: number[] | null
