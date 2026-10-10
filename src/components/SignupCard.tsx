@@ -57,7 +57,7 @@ export function SignupCard() {
         <>
           <h2 className="text-2xl font-bold leading-tight">
             {mode === "signup" ? (
-              <>Musicians, sign up free — <span className="text-primary">Includes Free Royalty Health Check</span></>
+              <>Musicians - Sign Up Now</>
             ) : (
               "Welcome back"
             )}
