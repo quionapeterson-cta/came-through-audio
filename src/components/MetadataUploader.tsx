@@ -1,11 +1,13 @@
-import { useEffect, useRef, useState, type FormEvent } from "react";
-import { CheckCircle2, Download, FileAudio, ImagePlus, Plus, Trash2, Upload } from "lucide-react";
+import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
+import { CheckCircle2, Download, FileAudio, ImagePlus, Pencil, Plus, Save, Trash2, Upload } from "lucide-react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { emptyContributor, emptyMetadata, embedMetadata, metadataSchema, GENRES, PROS, RELEASE_TYPES, type Contributor, type Metadata } from "@/lib/metadata";
+import { deleteTrack, listTracks, saveTrack, type CatalogTrack } from "@/lib/catalog";
 
-export function MetadataUploader({ stageName }: { stageName?: string }) {
+export function MetadataUploader({ stageName, userId }: { stageName?: string; userId?: string }) {
   const [metadata, setMetadata] = useState<Metadata>(emptyMetadata);
   const [audio, setAudio] = useState<File>();
   const [artwork, setArtwork] = useState<File>();
@@ -13,8 +15,54 @@ export function MetadataUploader({ stageName }: { stageName?: string }) {
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   const [result, setResult] = useState<{ url: string; name: string }>();
+  const [tracks, setTracks] = useState<CatalogTrack[]>([]);
+  const [editingId, setEditingId] = useState<string>();
+  const [saving, setSaving] = useState(false);
   const audioInput = useRef<HTMLInputElement>(null);
   const artInput = useRef<HTMLInputElement>(null);
+
+  const refresh = useCallback(() => {
+    if (!userId) return;
+    listTracks().then(setTracks).catch((e) => toast.error(e.message ?? "Could not load your catalog."));
+  }, [userId]);
+  useEffect(() => { refresh(); }, [refresh]);
+
+  async function save() {
+    if (!userId) return;
+    const parsed = metadataSchema.safeParse(metadata);
+    if (!parsed.success) { setError(parsed.error.issues[0]?.message ?? "Check your metadata."); return; }
+    setSaving(true);
+    try {
+      const id = await saveTrack(parsed.data, userId, editingId);
+      setEditingId(id);
+      toast.success(editingId ? "Track updated in your catalog." : "Track saved to your catalog.");
+      refresh();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Could not save track.");
+    } finally { setSaving(false); }
+  }
+  function open(t: CatalogTrack) {
+    setMetadata(t.metadata);
+    setEditingId(t.id);
+    setResult(undefined);
+    setError("");
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+  function startNew() {
+    setMetadata(emptyMetadata());
+    setEditingId(undefined);
+    setAudio(undefined);
+    setArtwork(undefined);
+    setResult(undefined);
+  }
+  async function remove(id: string) {
+    if (!confirm("Delete this track from your catalog?")) return;
+    try {
+      await deleteTrack(id);
+      if (id === editingId) startNew();
+      refresh();
+    } catch (e) { toast.error(e instanceof Error ? e.message : "Could not delete track."); }
+  }
 
   useEffect(() => {
     if (!artwork) { setCover(""); return; }
@@ -129,10 +177,32 @@ export function MetadataUploader({ stageName }: { stageName?: string }) {
         <div className="space-y-4 border-t border-border pt-6 pb-8">
           {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
           {result && <div role="status" className="flex flex-wrap items-center gap-3 text-sm"><CheckCircle2 className="h-5 w-5 text-primary" /><span>Your tagged MP3 is ready.</span><Button asChild variant="outline"><a href={result.url} download={result.name}><Download />Download MP3</a></Button></div>}
-          <Button type="submit" size="lg" disabled={busy}><FileAudio />{busy ? "Embedding…" : "Embed Metadata"}</Button>
-          <p className="text-xs text-muted-foreground">Local download only · Not saved to your catalog or Supabase.</p>
+          <div className="flex flex-wrap gap-3">
+            <Button type="submit" size="lg" disabled={busy}><FileAudio />{busy ? "Embedding…" : "Embed Metadata"}</Button>
+            {userId && <Button type="button" size="lg" variant="outline" disabled={saving} onClick={save}><Save />{saving ? "Saving…" : editingId ? "Update in catalog" : "Save to catalog"}</Button>}
+            {editingId && <Button type="button" size="lg" variant="ghost" onClick={startNew}><Plus />New track</Button>}
+          </div>
         </div>
       </form>
+
+      {userId && (
+        <div className="mt-4 border-t border-border pt-6 pb-12">
+          <h2 className="mb-4 text-xl font-bold">Saved tracks</h2>
+          {tracks.length === 0 ? <p className="text-sm text-muted-foreground">No saved tracks yet. Fill in the details above and click "Save to catalog".</p> : (
+            <ul className="divide-y divide-border rounded-lg border border-border">
+              {tracks.map((t) => (
+                <li key={t.id} className={`flex flex-wrap items-center justify-between gap-3 p-4 ${t.id === editingId ? "bg-accent/30" : ""}`}>
+                  <div><div className="font-semibold">{t.title}</div><div className="text-sm text-muted-foreground">{t.artist}{t.metadata.isrc ? ` · ${t.metadata.isrc}` : ""}</div></div>
+                  <div className="flex gap-2">
+                    <Button type="button" variant="outline" size="sm" onClick={() => open(t)}><Pencil />Open</Button>
+                    <Button type="button" variant="ghost" size="icon" aria-label={`Delete ${t.title}`} onClick={() => remove(t.id)}><Trash2 /></Button>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      )}
     </section>
   );
 }

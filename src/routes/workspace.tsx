@@ -85,7 +85,7 @@ function Workspace() {
             ))}
           </TabsList>
 
-          <TabsContent value="catalog" forceMount className="data-[state=inactive]:hidden"><MetadataUploader stageName={name} /></TabsContent>
+          <TabsContent value="catalog" forceMount className="data-[state=inactive]:hidden"><MetadataUploader stageName={name} userId={user.id} /></TabsContent>
           {tabs.filter(({ id }) => id !== "catalog").map(({ id, label, icon: Icon, blurb }) => (
             <TabsContent key={id} value={id}><Blank icon={Icon} title={label} text={blurb} /></TabsContent>
           ))}
