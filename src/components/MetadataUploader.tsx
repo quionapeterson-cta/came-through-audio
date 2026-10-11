@@ -247,17 +247,18 @@ function SelectField({ label, id, value, options, onChange }: { label: string; i
     </select></div>;
 }
 
-function Contributors({ title, singular, group, rows, onChange, disabled, publisher }: { title: string; singular: string; group: string; rows: Contributor[]; onChange: (rows: Contributor[]) => void; disabled: boolean; publisher?: boolean }) {
+function Contributors({ title, singular, group, rows, onChange, disabled, publisher, tip, simple }: { title: string; singular: string; group: string; rows: Contributor[]; onChange: (rows: Contributor[]) => void; disabled: boolean; publisher?: boolean; tip?: string; simple?: boolean }) {
   function change(index: number, key: keyof Contributor, value: string) { onChange(rows.map((row, i) => i === index ? { ...row, [key]: value } : row)); }
   return <fieldset disabled={disabled} className="space-y-5 border-t border-border pt-6">
-    <legend className="pr-3 text-lg font-semibold">{title}</legend>
-    {rows.map((row, index) => <div key={index} className={`grid items-end gap-4 ${publisher ? "sm:grid-cols-[1fr_160px_160px_36px]" : "sm:grid-cols-[1fr_110px_150px_150px_36px]"}`}>
+    <legend className="pr-3 text-lg font-semibold">{title}{tip && <span title={tip} tabIndex={0} aria-label={tip} className="ml-2 inline-flex h-5 w-5 cursor-help items-center justify-center rounded-full border border-primary text-xs text-primary">i</span>}</legend>
+    {tip && <p className="text-sm text-muted-foreground">{tip}</p>}
+    {simple ? rows.map((row, index) => <div key={index} className="flex items-end gap-2"><div className="flex-1"><Field label={`${title.slice(0, -1)} name`} id={`${group}-${index}-name`} value={row.name} onChange={(value) => change(index, "name", value)} /></div><Button type="button" size="icon" variant="ghost" aria-label={`Remove ${singular} ${index + 1}`} disabled={rows.length === 1} onClick={() => onChange(rows.filter((_, i) => i !== index))}><Trash2 /></Button></div>) : rows.map((row, index) => <div key={index} className={`grid items-end gap-4 ${publisher ? "sm:grid-cols-[1fr_160px_160px_36px]" : "sm:grid-cols-[1fr_110px_150px_150px_36px]"}`}>
       <Field label={publisher ? "Publisher name" : "Legal name"} id={`${group}-${index}-name`} value={row.name} onChange={(value) => change(index, "name", value)} />
       {!publisher && <div className="space-y-2"><Label htmlFor={`${group}-${index}-share`}>Split (%)</Label><Input id={`${group}-${index}-share`} type="number" min="0" max="100" step="0.01" value={row.percentage} onChange={(event) => change(index, "percentage", event.target.value)} /></div>}
       <Field label={publisher ? "Publisher IPI" : "IPI name number"} id={`${group}-${index}-ipi`} value={row.ipi} placeholder="9–11 digits" onChange={(value) => change(index, "ipi", value)} />
       <SelectField label="PRO affiliation" id={`${group}-${index}-pro`} value={row.pro} options={PROS} onChange={(value) => change(index, "pro", value)} />
       <Button type="button" size="icon" variant="ghost" aria-label={`Remove ${singular} ${index + 1}`} disabled={rows.length === 1} onClick={() => onChange(rows.filter((_, i) => i !== index))}><Trash2 /></Button>
     </div>)}
-    <div className="flex flex-wrap items-center justify-between gap-3"><Button type="button" variant="outline" onClick={() => onChange([...rows, emptyContributor()])}><Plus />Add {singular}</Button>{!publisher && <span className="text-sm text-muted-foreground">Total: {Number(rows.reduce((sum, row) => sum + Number(row.percentage || 0), 0).toFixed(2))}%</span>}</div>
+    <div className="flex flex-wrap items-center justify-between gap-3"><Button type="button" variant="outline" onClick={() => onChange([...rows, emptyContributor()])}><Plus />Add {singular}</Button>{!publisher && !simple && <span className="text-sm text-muted-foreground">Total: {Number(rows.reduce((sum, row) => sum + Number(row.percentage || 0), 0).toFixed(2))}%</span>}</div>
   </fieldset>;
 }
