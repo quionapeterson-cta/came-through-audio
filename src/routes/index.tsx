@@ -38,7 +38,7 @@ function Landing() {
       <header className="bg-ink text-ink-foreground">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-5">
           <span className="text-lg font-bold tracking-tight">Came Through <span className="text-primary">Audio</span></span>
-          <Link to="/workspace" className="text-sm font-semibold text-ink-muted hover:text-primary">Log in</Link>
+          <Link to="/workspace" search={{ tab: undefined }} className="text-sm font-semibold text-ink-muted hover:text-primary">Log in</Link>
         </div>
       </header>
 

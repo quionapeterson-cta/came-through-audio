@@ -20,7 +20,7 @@ export const Route = createFileRoute("/workspace")({
       { name: "twitter:card", content: "summary" },
     ],
   }),
-  validateSearch: (s: Record<string, unknown>) => ({ tab: typeof s.tab === "string" ? s.tab : undefined }),
+  validateSearch: (s: Record<string, unknown>) => ({ tab: typeof s["tab"] === "string" ? (s["tab"] as string) : undefined } as { tab?: string | undefined }),
   component: Workspace,
 });
 
