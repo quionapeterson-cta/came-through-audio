@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { Check, Mic, Guitar, Disc3, NotebookPen, Music, Quote } from "lucide-react";
+import { Check, Mic, Guitar, Disc3, NotebookPen, Music, Quote, AlertTriangle, Upload, Download, FileSignature, ShieldCheck } from "lucide-react";
 import { SignupCard } from "@/components/SignupCard";
 
 export const Route = createFileRoute("/")({
@@ -16,7 +16,21 @@ export const Route = createFileRoute("/")({
   component: Landing,
 });
 
-const includes = ["Metadata Embedding", "Cataloging", "Royalty Audit", "Blockchain Timestamp", "Secure Vault"];
+const includes = ["Metadata Embedding", "Cataloging", "Royalty Audits", "Blockchain Timestamp", "Secure Catalog"];
+
+const steps = [
+  { icon: Upload, phase: "Upload / Embed Metadata", title: "The Session Ends", text: "You're working with a Producer, finish a track at the studio and instantly upload and embed your data right from your phone." },
+  { icon: Download, phase: "Download & Log", title: "Log Your Masters", text: "Download your embedded tracks and log them into your master catalog. Swap in new audio anytime — your metadata stays intact. You now have shareable embedded masters fresh out of the studio!" },
+  { icon: FileSignature, phase: "Before You Leave the Studio", title: "Lock the Legal Ownership", text: "Click \"Generate Split Sheet\" and the Artist and Producer sign on the spot." },
+  { icon: ShieldCheck, phase: "Before You Leave the Studio", title: "Secure the Ink", text: "Collaborator left early? They get an email invite, create a 100% free Collaborator Account, and e-sign — storing a permanent verification record." },
+];
+
+const footerCols = [
+  { title: "Product", links: ["Metadata Embedding", "Centralized Master Catalog", "Royalty Health Suite", "System Security Metrics"] },
+  { title: "Learn", links: ["Help Center", "Industry Insights", "The Studio-to-Vault Guide"] },
+  { title: "Legal", links: ["Privacy Policy", "Terms of Service", "DMCA Safety", "Liability & Authorization Releases"] },
+  { title: "Access", links: ["Support Tickets", "Contact Us", "Admin Whitelist Verification"] },
+];
 
 const roles = [
   { icon: Mic, title: "Artist", scene: "Recording in studio", text: "Centralize your master files and preserve your recording legacy safely." },
