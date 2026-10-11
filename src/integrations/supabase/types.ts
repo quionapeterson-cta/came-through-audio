@@ -14,6 +14,85 @@ export type Database = {
   }
   public: {
     Tables: {
+      admin_whitelist: {
+        Row: {
+          assigned_role: Database["public"]["Enums"]["user_role"] | null
+          created_at: string | null
+          email: string
+          id: string
+        }
+        Insert: {
+          assigned_role?: Database["public"]["Enums"]["user_role"] | null
+          created_at?: string | null
+          email: string
+          id?: string
+        }
+        Update: {
+          assigned_role?: Database["public"]["Enums"]["user_role"] | null
+          created_at?: string | null
+          email?: string
+          id?: string
+        }
+        Relationships: []
+      }
+      agency_registrations: {
+        Row: {
+          assigned_employee_id: string | null
+          authorization_text_snapshot: string | null
+          catalog_id: string | null
+          created_at: string | null
+          has_signed_authorization: boolean | null
+          id: string
+          status: Database["public"]["Enums"]["registration_status"] | null
+          target_agency: Database["public"]["Enums"]["agency_name"]
+          user_id: string | null
+        }
+        Insert: {
+          assigned_employee_id?: string | null
+          authorization_text_snapshot?: string | null
+          catalog_id?: string | null
+          created_at?: string | null
+          has_signed_authorization?: boolean | null
+          id?: string
+          status?: Database["public"]["Enums"]["registration_status"] | null
+          target_agency: Database["public"]["Enums"]["agency_name"]
+          user_id?: string | null
+        }
+        Update: {
+          assigned_employee_id?: string | null
+          authorization_text_snapshot?: string | null
+          catalog_id?: string | null
+          created_at?: string | null
+          has_signed_authorization?: boolean | null
+          id?: string
+          status?: Database["public"]["Enums"]["registration_status"] | null
+          target_agency?: Database["public"]["Enums"]["agency_name"]
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "agency_registrations_assigned_employee_id_fkey"
+            columns: ["assigned_employee_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agency_registrations_catalog_id_fkey"
+            columns: ["catalog_id"]
+            isOneToOne: false
+            referencedRelation: "catalogs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agency_registrations_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       ai_protection_certificates: {
         Row: {
           catalog_id: string | null
@@ -461,8 +540,14 @@ export type Database = {
       [_ in never]: never
     }
     Enums: {
+      agency_name: "MLC" | "SoundExchange" | "ASCAP" | "BMI"
       check_status: "Pass" | "Incomplete" | "Mismatch"
       content_format: "Single" | "EP" | "Album" | "Plus"
+      registration_status:
+        | "pending_review"
+        | "assigned"
+        | "submitted"
+        | "completed"
       room_status: "scheduled" | "live" | "completed"
       subscription_tier: "free" | "paid"
       user_role: "super_admin" | "employee" | "user"
@@ -593,8 +678,15 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      agency_name: ["MLC", "SoundExchange", "ASCAP", "BMI"],
       check_status: ["Pass", "Incomplete", "Mismatch"],
       content_format: ["Single", "EP", "Album", "Plus"],
+      registration_status: [
+        "pending_review",
+        "assigned",
+        "submitted",
+        "completed",
+      ],
       room_status: ["scheduled", "live", "completed"],
       subscription_tier: ["free", "paid"],
       user_role: ["super_admin", "employee", "user"],

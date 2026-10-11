@@ -31,19 +31,19 @@ export function toCatalogRow(m: Metadata, userId: string) {
 }
 
 export function fromCatalogRow(row: Record<string, unknown>): CatalogTrack {
-  const saved = (row.details ?? {}) as Partial<Metadata>;
+  const saved = (row["details"] ?? {}) as Partial<Metadata>;
   const base = emptyMetadata();
   const metadata: Metadata = {
     ...base,
     ...saved,
-    title: (row.track_title as string) ?? "",
-    artist: (row.artist_name as string) ?? "",
+    title: (row["track_title"] as string) ?? "",
+    artist: (row["artist_name"] as string) ?? "",
     featured: saved.featured?.length ? saved.featured : [""],
     writers: saved.writers?.length ? saved.writers : [emptyContributor()],
     composers: saved.composers?.length ? saved.composers : [emptyContributor()],
     publishers: saved.publishers?.length ? saved.publishers : [emptyContributor()],
   };
-  return { id: row.id as string, title: metadata.title, artist: metadata.artist, updatedAt: (row.updated_at ?? row.created_at) as string, metadata };
+  return { id: row["id"] as string, title: metadata.title, artist: metadata.artist, updatedAt: (row["updated_at"] ?? row["created_at"]) as string, metadata };
 }
 
 export async function listTracks(): Promise<CatalogTrack[]> {
