@@ -1,6 +1,6 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { Disc3, Activity, FileSignature, ScrollText, GraduationCap, LogOut, Check } from "lucide-react";
+import { FileAudio, CalendarClock, Lock, Disc3, Activity, FileSignature, ScrollText, GraduationCap, LogOut, Check } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
@@ -20,14 +20,17 @@ export const Route = createFileRoute("/workspace")({
       { name: "twitter:card", content: "summary" },
     ],
   }),
+  validateSearch: (s: Record<string, unknown>) => ({ tab: typeof s.tab === "string" ? s.tab : undefined }),
   component: Workspace,
 });
 
 const tabs = [
-  { id: "catalog", label: "My Catalog", icon: Disc3, blurb: "Your master catalog entries will live here." },
-  { id: "health", label: "Royalty Health Check", icon: Activity, blurb: "Run health checks across BMI, ASCAP, SoundExchange and PPL UK." },
-  { id: "splits", label: "Split Sheets", icon: FileSignature, blurb: "Create and sign split sheets with your collaborators." },
-  { id: "contracts", label: "Contracts & Blueprints", icon: ScrollText, blurb: "Contract templates and business blueprints are coming here." },
+  { id: "embed", label: "Embed Metadata", icon: FileAudio },
+  { id: "catalog", label: "My Catalog", icon: Disc3 },
+  { id: "splits", label: "Split Sheets", icon: FileSignature },
+  { id: "health", label: "Royalty Health Check", icon: Activity },
+  { id: "contracts", label: "Contracts & Blueprints", icon: ScrollText },
+  { id: "masterclasses", label: "Masterclasses", icon: GraduationCap },
 ];
 
 function Workspace() {
@@ -35,6 +38,10 @@ function Workspace() {
   const navigate = useNavigate();
   const [name, setName] = useState<string>("");
   const [tier, setTier] = useState<string>("free");
+  const search = Route.useSearch();
+  const [tab, setTab] = useState(search.tab ?? "embed");
+  const [splitTrack, setSplitTrack] = useState<string>();
+  const [catalogKey, setCatalogKey] = useState(0);
 
   useEffect(() => {
     if (!loading && !user) navigate({ to: "/" });
@@ -76,25 +83,27 @@ function Workspace() {
       </header>
 
       <main className="mx-auto max-w-7xl px-6 py-8">
-        <Tabs defaultValue="catalog">
+        <Tabs value={tab} onValueChange={setTab}>
           <TabsList className="h-auto w-full flex-wrap justify-start gap-1 bg-muted p-1">
-            {[...tabs, { id: "masterclasses", label: "Masterclasses", icon: GraduationCap }].map(({ id, label, icon: Icon }) => (
+            {tabs.map(({ id, label, icon: Icon }, i) => (
               <TabsTrigger key={id} value={id} className="gap-2 px-4 py-2.5 font-semibold data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
-                <Icon className="h-4 w-4" /> {label}
+                <span className="text-xs opacity-70">{i + 1}.</span><Icon className="h-4 w-4" /> {label}
               </TabsTrigger>
             ))}
           </TabsList>
 
-          <TabsContent value="catalog" forceMount className="data-[state=inactive]:hidden"><MetadataUploader stageName={name} userId={user.id} /></TabsContent>
-          {tabs.filter(({ id }) => id !== "catalog").map(({ id, label, icon: Icon, blurb }) => (
-            <TabsContent key={id} value={id}><Blank icon={Icon} title={label} text={blurb} /></TabsContent>
-          ))}
-          <TabsContent value="masterclasses">
-            <div className="mt-6 grid gap-6 md:grid-cols-2">
-              <Blank icon={GraduationCap} title="Upcoming Bookings" text="Your scheduled calendar sessions will appear here." />
-              <Blank icon={Activity} title="Live Sessions" text="Active in-house live sessions will appear here." />
+          <TabsContent value="embed" forceMount className="data-[state=inactive]:hidden"><MetadataUploader stageName={name} userId={user.id} mode="embed" onSubmitted={() => setCatalogKey((k) => k + 1)} /></TabsContent>
+          <TabsContent value="catalog" forceMount className="data-[state=inactive]:hidden">
+            <div className="mx-auto mt-8 max-w-5xl rounded-xl border border-primary p-5">
+              <div className="font-bold">AI Protection Certificate uploads</div>
+              <p className="mt-1 text-sm text-muted-foreground">If you added AI Protection, upload a 15-second DAW session video and an 8-second notes-app proof for each protected song.</p>
             </div>
+            <MetadataUploader key={catalogKey} userId={user.id} mode="catalog" canSplit={tier === "paid"} onSplitSheet={(t) => { setSplitTrack(t.title); setTab("splits"); }} />
           </TabsContent>
+          <TabsContent value="splits"><Blank icon={FileSignature} title="Split Sheets" text={splitTrack ? `Starting a split sheet for "${splitTrack}". Collaborators will be invited by email to sign.` : "Generate a split sheet from any song in My Catalog."} /></TabsContent>
+          <TabsContent value="health"><Blank icon={Activity} title="Royalty Health Check" text="Your free Royalty Health Check across BMI, ASCAP, SoundExchange and the MLC starts here." /></TabsContent>
+          <TabsContent value="contracts"><Blank icon={ScrollText} title="Contracts & Blueprints" text="Producer agreements, videographer releases and beat licenses — included with Catalog & Contracts." /></TabsContent>
+          <TabsContent value="masterclasses"><Masterclasses /></TabsContent>
         </Tabs>
       </main>
     </div>
@@ -111,31 +120,73 @@ function Blank({ icon: Icon, title, text }: { icon: React.ElementType; title: st
   );
 }
 
+const plans = [
+  { name: "Starter", price: "Free", monthly: "", text: "Provides entry-level users and collaborators with a 100% free account to sign split sheets and run Unlimited Royalty Health Checks across public databases." },
+  { name: "Catalog Plus", price: "$24.99/yr", monthly: "(Only $2.08 / month)", text: "Provides independent creators with unlimited core metadata embedding, centralized master asset cataloging, and Unlimited Royalty Health Checks." },
+  { name: "Catalog & Collaborate", price: "$44.99/yr", monthly: "(Only $3.75 / month)", text: "Unlocks collaborative industry-standard split sheets generation, automated e-signature requests, and our unlimited PRO Formula Converter suite." },
+  { name: "Catalog & Contracts", price: "$89.99/yr", monthly: "(Only $7.50 / month)", text: "Includes everything in lower tiers plus unlimited access to our professional contract blueprints vault (producer agreements, videographer releases, beat licenses) and custom metadata protection playbooks." },
+];
+
 function PlansDialog() {
   return (
     <Dialog>
       <DialogTrigger asChild><Button className="font-semibold">View Plans</Button></DialogTrigger>
-      <DialogContent className="max-w-2xl">
+      <DialogContent className="max-h-[90vh] max-w-5xl overflow-y-auto">
         <DialogHeader><DialogTitle className="text-2xl font-bold">Choose your plan</DialogTitle></DialogHeader>
-        <div className="grid gap-4 md:grid-cols-2">
-          <div className="rounded-xl border border-border p-6">
-            <div className="font-bold">Free</div>
-            <div className="mt-1 text-3xl font-bold">$0</div>
-            <ul className="mt-4 space-y-2 text-sm"><li className="flex gap-2"><Check className="h-4 w-4 text-primary" />1 Free Royalty Health Check</li></ul>
-            <Button variant="outline" disabled className="mt-6 w-full">Current plan</Button>
-          </div>
-          <div className="rounded-xl bg-ink p-6 text-ink-foreground">
-            <div className="font-bold text-primary">Pro</div>
-            <div className="mt-1 text-3xl font-bold">$24.99<span className="text-base text-ink-muted">/yr</span></div>
-            <ul className="mt-4 space-y-2 text-sm">
-              {["Unlimited Master Catalog", "Unlimited Metadata Embedding", "Unlimited Royalty Health Checks"].map((f) => (
-                <li key={f} className="flex gap-2"><Check className="h-4 w-4 text-primary" />{f}</li>
-              ))}
-            </ul>
-            <Button className="mt-6 w-full" disabled>Coming soon</Button>
-          </div>
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+          {plans.map((p, i) => (
+            <div key={p.name} className={`flex flex-col rounded-xl p-5 ${i === 1 ? "bg-ink text-ink-foreground" : "border border-border"}`}>
+              <div className="font-bold text-primary">{p.name}</div>
+              <div className="mt-2 text-3xl font-bold">{p.price}</div>
+              {p.monthly && <div className="text-sm opacity-80">{p.monthly}</div>}
+              <Badge variant="outline" className="mt-2 w-fit">{i === 0 ? "Always free" : "Billed annually"}</Badge>
+              <p className="mt-4 flex-1 text-sm opacity-90">{p.text}</p>
+              <Button className="mt-5 w-full" variant={i === 0 ? "outline" : "default"} disabled>{i === 0 ? "Current plan" : "Coming soon"}</Button>
+            </div>
+          ))}
         </div>
       </DialogContent>
     </Dialog>
+  );
+}
+
+function Masterclasses() {
+  const [songs, setSongs] = useState(0);
+  const [type, setType] = useState<"single" | "album">("single");
+  const [count, setCount] = useState(1);
+  const [agencies, setAgencies] = useState(1);
+  const [agree, setAgree] = useState(false);
+  useEffect(() => { supabase.from("catalogs").select("id", { count: "exact", head: true }).then(({ count: c }) => setSongs(c ?? 0)); }, []);
+  const base = type === "single" ? 14.99 : 29.99;
+  const n = type === "album" ? Math.min(count, 20) : count;
+  const total = (base + 4.99 * n * agencies).toFixed(2);
+  const unlocked = songs > 0 && agree;
+  return (
+    <div className="mt-6 grid gap-6 md:grid-cols-2">
+      <div className="rounded-2xl border border-border p-6">
+        <GraduationCap className="h-8 w-8 text-primary" />
+        <h2 className="mt-3 text-2xl font-bold">Music Business Masterclasses</h2>
+        <p className="mt-2 text-muted-foreground">Live group classes with an industry expert.</p>
+        <div className="mt-4 flex items-center justify-between rounded-lg bg-muted p-4"><span className="font-semibold">1 class slot</span><span className="text-xl font-bold text-primary">$19/slot</span></div>
+        <Button className="mt-4 w-full" disabled>Checkout coming soon</Button>
+      </div>
+      <div className="rounded-2xl border border-primary p-6">
+        <CalendarClock className="h-8 w-8 text-primary" />
+        <h2 className="mt-3 text-2xl font-bold">Expert Registration Assistance</h2>
+        <p className="mt-2 text-sm text-muted-foreground">1-on-1 live video guidance registering your songs with your PRO, SoundExchange and the MLC.</p>
+        <div className="mt-4 grid grid-cols-2 gap-2">
+          {(["single", "album"] as const).map((t) => <Button key={t} variant={type === t ? "default" : "outline"} onClick={() => setType(t)}>{t === "single" ? "Single / EP" : "Full album"}</Button>)}
+        </div>
+        <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
+          <label className="space-y-1"><span>Songs{type === "album" ? " (up to 20)" : ""}</span><input type="number" min={1} max={type === "album" ? 20 : 6} value={count} onChange={(e) => setCount(Math.max(1, Number(e.target.value)))} className="w-full rounded-md border border-input bg-background px-3 py-2" /></label>
+          <label className="space-y-1"><span>Agencies</span><input type="number" min={1} max={4} value={agencies} onChange={(e) => setAgencies(Math.min(4, Math.max(1, Number(e.target.value))))} className="w-full rounded-md border border-input bg-background px-3 py-2" /></label>
+        </div>
+        <p className="mt-3 text-sm text-muted-foreground">${base} setup + $4.99 per song per agency</p>
+        <div className="mt-1 text-3xl font-bold text-primary">${total}</div>
+        <label className="mt-4 flex items-start gap-2 text-sm"><input type="checkbox" className="mt-1 accent-[var(--primary)]" checked={agree} onChange={(e) => setAgree(e.target.checked)} />I confirm I can successfully log into my PRO, SoundExchange and MLC accounts.</label>
+        {songs === 0 && <p className="mt-3 flex items-center gap-2 text-sm text-destructive"><Lock className="h-4 w-4" />Add your track details to My Catalog first.</p>}
+        <Button className="mt-4 w-full" disabled={!unlocked}>{unlocked ? "Booking calendar coming soon" : "Locked"}</Button>
+      </div>
+    </div>
   );
 }

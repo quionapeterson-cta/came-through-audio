@@ -25,17 +25,17 @@ export function SignupCard() {
           email,
           password,
           options: {
-            emailRedirectTo: `${window.location.origin}/workspace`,
+            emailRedirectTo: `${window.location.origin}/workspace?tab=health`,
             data: { stage_name: stageName, legal_name: legalName },
           },
         });
         if (error) throw error;
-        if (data.session) navigate({ to: "/workspace" });
+        if (data.session) navigate({ to: "/workspace", search: { tab: "health" } });
         else setSent(true);
       } else {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
-        navigate({ to: "/workspace" });
+        navigate({ to: "/workspace", search: { tab: undefined } });
       }
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Something went wrong");
@@ -57,7 +57,7 @@ export function SignupCard() {
         <>
           <h2 className="text-2xl font-bold leading-tight">
             {mode === "signup" ? (
-              <>Musicians - Sign Up Now</>
+              <>Musicians, sign up free. <span className="text-primary">Includes Free Royalty Health Check.</span></>
             ) : (
               "Welcome back"
             )}
