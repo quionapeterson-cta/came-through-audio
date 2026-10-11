@@ -247,7 +247,7 @@ function SelectField({ label, id, value, options, onChange }: { label: string; i
     </select></div>;
 }
 
-function Contributors({ title, singular, group, rows, onChange, disabled, publisher, tip, simple }: { title: string; singular: string; group: string; rows: Contributor[]; onChange: (rows: Contributor[]) => void; disabled: boolean; publisher?: boolean; tip?: string; simple?: boolean }) {
+function Contributors({ title, singular, group, rows, onChange, disabled, publisher, tip, simple }: { title: string; singular: string; group: string; rows: Contributor[]; onChange: (rows: Contributor[]) => void; disabled: boolean; publisher?: boolean; tip?: string | undefined; simple?: boolean }) {
   function change(index: number, key: keyof Contributor, value: string) { onChange(rows.map((row, i) => i === index ? { ...row, [key]: value } : row)); }
   return <fieldset disabled={disabled} className="space-y-5 border-t border-border pt-6">
     <legend className="pr-3 text-lg font-semibold">{title}{tip && <span title={tip} tabIndex={0} aria-label={tip} className="ml-2 inline-flex h-5 w-5 cursor-help items-center justify-center rounded-full border border-primary text-xs text-primary">i</span>}</legend>
