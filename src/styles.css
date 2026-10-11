@@ -159,6 +159,7 @@
   --ink-foreground: oklch(1 0 0);
   --ink-muted: oklch(0.75 0 0);
   --ink-border: oklch(0.25 0 0);
+  --caution: oklch(0.86 0.17 92);
 }
 
 @theme inline {
@@ -166,6 +167,7 @@
   --color-ink-foreground: var(--ink-foreground);
   --color-ink-muted: var(--ink-muted);
   --color-ink-border: var(--ink-border);
+  --color-caution: var(--caution);
   --font-sans: "Poppins", ui-sans-serif, system-ui, sans-serif;
 }
 
