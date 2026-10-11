@@ -41,6 +41,7 @@ export function fromCatalogRow(row: Record<string, unknown>): CatalogTrack {
     featured: saved.featured?.length ? saved.featured : [""],
     writers: saved.writers?.length ? saved.writers : [emptyContributor()],
     composers: saved.composers?.length ? saved.composers : [emptyContributor()],
+    producers: saved.producers?.length ? saved.producers : [emptyContributor()],
     publishers: saved.publishers?.length ? saved.publishers : [emptyContributor()],
   };
   return { id: row["id"] as string, title: metadata.title, artist: metadata.artist, updatedAt: (row["updated_at"] ?? row["created_at"]) as string, metadata };

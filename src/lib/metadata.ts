@@ -30,6 +30,7 @@ export const metadataSchema = z.object({
   secondaryGenre: z.string().default(""),
   writers: z.array(contributorSchema),
   composers: z.array(contributorSchema).default([]),
+  producers: z.array(contributorSchema).default([]),
   publishers: z.array(contributorSchema),
 }).superRefine((data, ctx) => {
   for (const group of ["writers", "composers", "publishers"] as const) {
@@ -47,7 +48,7 @@ export const emptyContributor = (): Contributor => ({ name: "", pro: "", ipi: ""
 export const emptyMetadata = (): Metadata => ({
   title: "", trackNumber: "", artist: "", featured: [""], album: "", duration: "", releaseType: "", releaseDate: "", label: "",
   isrc: "", upc: "", iswc: "", explicit: false, primaryGenre: "", secondaryGenre: "",
-  writers: [emptyContributor()], composers: [emptyContributor()], publishers: [emptyContributor()],
+  writers: [emptyContributor()], composers: [emptyContributor()], producers: [emptyContributor()], publishers: [emptyContributor()],
 });
 
 export async function embedMetadata(audio: ArrayBuffer, metadata: Metadata, artwork?: ArrayBuffer): Promise<Blob> {
@@ -76,6 +77,8 @@ export async function embedMetadata(audio: ArrayBuffer, metadata: Metadata, artw
   if (writers.length || composers.length) writer.setFrame("TCOM", [...writers, ...composers].map((row) => row.name));
   if (writers.length) writer.setFrame("TXXX", { description: "WRITER_SPLITS", value: JSON.stringify(writers) });
   if (composers.length) writer.setFrame("TXXX", { description: "COMPOSER_SPLITS", value: JSON.stringify(composers) });
+  const producers = (data.producers ?? []).filter((row) => row.name);
+  if (producers.length) writer.setFrame("TXXX", { description: "PRODUCERS", value: producers.map((row) => row.name).join(", ") });
   if (publishers.length) {
     writer.setFrame("TPUB", publishers.map((row) => row.name).join("; "));
     writer.setFrame("TXXX", { description: "PUBLISHERS", value: JSON.stringify(publishers.map(({ name, pro, ipi }) => ({ name, pro, ipi }))) });
