@@ -73,7 +73,7 @@ const BUCKET = "catalog-files";
 /** Store a master or artwork file privately under the owner's folder; returns its storage path. */
 export async function uploadCatalogFile(userId: string, trackId: string, kind: "master" | "artwork", file: Blob, ext: string) {
   const path = `${userId}/${trackId}/${kind}.${ext}`;
-  const { error } = await supabase.storage.from(BUCKET).upload(path, file, { upsert: true, contentType: file.type || undefined });
+  const { error } = await supabase.storage.from(BUCKET).upload(path, file, { upsert: true, contentType: file.type || (kind === "master" ? "audio/mpeg" : "image/jpeg") });
   if (error) throw error;
   return path;
 }
