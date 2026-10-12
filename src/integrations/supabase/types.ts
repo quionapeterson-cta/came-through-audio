@@ -540,6 +540,24 @@ export type Database = {
           },
         ]
       }
+      site_settings: {
+        Row: {
+          content: Json
+          id: string
+          updated_at: string | null
+        }
+        Insert: {
+          content: Json
+          id: string
+          updated_at?: string | null
+        }
+        Update: {
+          content?: Json
+          id?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       split_sheets: {
         Row: {
           assigned_percentage: number
