@@ -277,8 +277,10 @@ export function MetadataUploader({ stageName, userId, mode = "embed", onSubmitte
                   </div>
                   <div className="flex flex-wrap gap-2">
                     <Button type="button" variant="outline" size="sm" onClick={() => open(t)}><Pencil />Edit</Button>
-                    {t.metadata.lyrics && <Button type="button" variant="outline" size="sm" onClick={() => { const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([t.metadata.lyrics ?? ""], { type: "text/plain" })); a.download = `${t.title}-lyrics.txt`; a.click(); }}><Download />Lyrics</Button>}
-                    {onProtect && <Button type="button" variant="outline" size="sm" onClick={() => onProtect(t)}><ShieldCheck />Protect Track</Button>}
+                    {t.metadata.audioPath && <Button type="button" variant="outline" size="sm" onClick={() => downloadCatalogFile(t.metadata.audioPath, `${safeName(t.title)} - Came Through Audio.mp3`).catch(() => toast.error("Could not download the song."))}><Download />Song</Button>}
+                    {t.metadata.artPath && <Button type="button" variant="outline" size="sm" onClick={() => downloadCatalogFile(t.metadata.artPath, `${safeName(t.title)}-artwork.${t.metadata.artPath.split(".").pop()}`).catch(() => toast.error("Could not download the artwork."))}><Download />Artwork</Button>}
+                    {t.metadata.lyrics && <Button type="button" variant="outline" size="sm" onClick={() => void downloadLyricsPdf(t)}><Download />Lyrics</Button>}
+                    {onProtect && <Button type="button" variant={t.metadata.aiProtection ? "default" : "outline"} size="sm" onClick={() => onProtect(t)}><ShieldCheck />{t.metadata.aiProtection ? "Add AI Protection Proof" : "Protect Track"}</Button>}
                     <Button type="button" size="sm" onClick={() => { if (!canSplit) { setUpsell(true); return; } onSplitSheet?.(t); }}>{!canSplit && <Lock />}Generate Split Sheet</Button>
                     <Button type="button" variant="ghost" size="icon" aria-label={`Delete ${t.title}`} onClick={() => remove(t.id)}><Trash2 /></Button>
                   </div>
