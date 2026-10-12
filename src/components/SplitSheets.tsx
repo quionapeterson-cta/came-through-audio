@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { FileSignature, Plus, Trash2, Download, Lock, PenLine, Check, ChevronLeft, Loader2, Mail } from "lucide-react";
+import { FileSignature, Plus, Trash2, Download, Lock, PenLine, Check, ChevronLeft, Loader2, Mail, Copy } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { ContributorLibrary } from "@/components/ContributorLibrary";
 import { toast } from "sonner";
@@ -14,6 +14,7 @@ import {
   listSplitSheets,
   saveSplitSheet,
   signCollaborator,
+  signLink,
   splitStatus,
   splitTotal,
   listContributors,
@@ -197,15 +198,32 @@ function SplitEditor({ userId, track, initial, onClose, onSaved }: { userId: str
 
   const markOwner = (i: number) => setCollaborators((rows) => rows.map((r, idx) => ({ ...r, isOwner: idx === i })));
 
-  const requestSignature = (i: number) => {
+  const requestSignature = async (i: number) => {
     const c = collaborators[i];
     if (!c) return;
     if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(c.email.trim())) {
       toast.error("Add a valid email for this collaborator first.");
       return;
     }
-    update(i, { invitedAt: new Date().toISOString() });
-    toast.success(`Signature request queued for ${c.email}. Save the split sheet to keep it.`);
+    if (!totalOk) {
+      toast.error("Splits must add up to exactly 100% before requesting signatures.");
+      return;
+    }
+    try {
+      const next = collaborators.map((r, idx) => (idx === i ? { ...r, invitedAt: new Date().toISOString() } : r));
+      const saved = await saveSplitSheet(track.id, next);
+      setCollaborators(saved);
+      const row = saved.find((r) => r.name === c.name && r.email === c.email);
+      if (!row?.rowId) return;
+      const link = signLink(row.rowId);
+      await navigator.clipboard.writeText(link).catch(() => {});
+      const subject = encodeURIComponent(`Please sign the split sheet for "${track.title}"`);
+      const body = encodeURIComponent(`Hi ${c.name},\n\nPlease review and sign your ${c.percentage}% ${c.role} split for "${track.title}" by ${track.artist}.\n\nCreate a free Came Through Audio account with this email (${c.email}) and sign here:\n${link}\n\nYou can also add your PRO and IPI number.\n\nThank you!`);
+      window.open(`mailto:${c.email}?subject=${subject}&body=${body}`, "_blank");
+      toast.success("Signing link copied and your email app opened.");
+    } catch {
+      toast.error("Could not create the signature request.");
+    }
   };
 
   const total = useMemo(() => splitTotal(collaborators), [collaborators]);
@@ -332,8 +350,12 @@ function SplitEditor({ userId, track, initial, onClose, onSaved }: { userId: str
                       <PenLine className="h-4 w-4" /> Sign as account owner
                     </Button>
                   )
-                ) : c.invitedAt ? (
-                  <Badge variant="outline" className="border-primary text-primary"><Mail className="mr-1 h-3.5 w-3.5" /> Requested {new Date(c.invitedAt).toLocaleDateString()} · awaiting signature</Badge>
+                ) : c.invitedAt && c.rowId ? (
+                  <>
+                    <Badge variant="outline" className="border-primary text-primary"><Mail className="mr-1 h-3.5 w-3.5" /> Requested {new Date(c.invitedAt).toLocaleDateString()} · awaiting signature</Badge>
+                    <Button size="sm" variant="ghost" onClick={() => { void navigator.clipboard.writeText(signLink(c.rowId!)); toast.success("Signing link copied."); }}><Copy className="h-4 w-4" /> Copy link</Button>
+                    <Button size="sm" variant="ghost" onClick={() => void requestSignature(i)}><Mail className="h-4 w-4" /> Resend</Button>
+                  </>
                 ) : (
                   <Button size="sm" variant="outline" disabled={!c.name.trim()} onClick={() => requestSignature(i)}>
                     <Mail className="h-4 w-4" /> Email signature request
@@ -375,27 +397,61 @@ function SplitEditor({ userId, track, initial, onClose, onSaved }: { userId: str
 }
 
 async function downloadSplitPdf(track: CatalogTrack, collaborators: SplitCollaborator[]) {
-  const { jsPDF } = await import("jspdf");
-  const pdf = new jsPDF();
-  let y = 20;
-  pdf.setFontSize(18);
-  pdf.text("Split Sheet — Came Through Audio", 14, y);
-  y += 10;
-  pdf.setFontSize(12);
-  pdf.text(`Song: ${track.title}`, 14, y); y += 7;
-  pdf.text(`Artist: ${track.artist}`, 14, y); y += 7;
-  if (track.metadata.isrc) { pdf.text(`ISRC: ${track.metadata.isrc}`, 14, y); y += 7; }
-  y += 4;
-  pdf.setFontSize(11);
-  for (const c of collaborators.filter((x) => x.name)) {
-    const line = `${c.name} (${c.role}) — ${c.percentage}%${c.pro ? ` — PRO: ${c.pro}` : ""}${c.ipi ? ` — IPI: ${c.ipi}` : ""}`;
-    pdf.text(line, 14, y); y += 6;
-    pdf.setFontSize(9);
-    pdf.text(c.signedAt ? `Signed: ${c.signatureName} · ${new Date(c.signedAt).toLocaleString()} · Hash: ${c.signatureHash.slice(0, 24)}…` : "Signature: pending", 18, y);
-    pdf.setFontSize(11);
-    y += 8;
-    if (y > 270) { pdf.addPage(); y = 20; }
-  }
-  pdf.text(`Total: ${splitTotal(collaborators)}%`, 14, y + 4);
+  const { newBrandedPdf, brandHeader, brandFooter, infoGrid, sectionTitle, ensureSpace, COBALT, INK, MUTED, RULE } = await import("@/lib/brand-pdf");
+  const pdf = await newBrandedPdf();
+  const w = pdf.internal.pageSize.getWidth();
+  const rows = collaborators.filter((c) => c.name);
+  const status = splitStatus(collaborators);
+  let y = brandHeader(pdf, "Split Sheet Agreement", `${track.title} — ${track.artist}`);
+  y = infoGrid(pdf, y, [
+    ["Song title", track.title], ["Artist", track.artist],
+    ["ISRC", track.metadata.isrc], ["ISWC", track.metadata.iswc],
+    ["Status", status === "signed" ? "Fully signed" : status === "partial" ? "Partially signed" : "Draft"], ["Agreement ID", track.id.slice(0, 8).toUpperCase()],
+  ]);
+
+  y = sectionTitle(pdf, y, "Ownership splits");
+  const cols = [18, 80, 115, 145, 175];
+  pdf.setFillColor(...COBALT).rect(18, y, w - 36, 8, "F");
+  pdf.setFont("helvetica", "bold").setFontSize(8).setTextColor(255, 255, 255);
+  ["NAME", "ROLE", "PRO", "IPI", "SHARE"].forEach((h, i) => pdf.text(h, cols[i]! + 3, y + 5.5));
+  y += 8;
+  rows.forEach((c, i) => {
+    if (i % 2) pdf.setFillColor(245, 247, 251).rect(18, y, w - 36, 9, "F");
+    pdf.setFont("helvetica", "normal").setFontSize(10).setTextColor(...INK);
+    pdf.text(c.name, cols[0]! + 3, y + 6);
+    pdf.text(c.role, cols[1]! + 3, y + 6);
+    pdf.text(c.pro || "—", cols[2]! + 3, y + 6);
+    pdf.text(c.ipi || "—", cols[3]! + 3, y + 6);
+    pdf.setFont("helvetica", "bold").text(`${c.percentage}%`, cols[4]! + 3, y + 6);
+    y += 9;
+  });
+  pdf.setDrawColor(...COBALT).setLineWidth(0.6).line(18, y, w - 18, y);
+  pdf.setFont("helvetica", "bold").setFontSize(10).setTextColor(...INK).text("TOTAL", cols[0]! + 3, y + 6);
+  pdf.setTextColor(...COBALT).text(`${splitTotal(collaborators)}%`, cols[4]! + 3, y + 6);
+  y += 18;
+
+  y = ensureSpace(pdf, y, 40);
+  y = sectionTitle(pdf, y, "Signatures");
+  pdf.setFont("helvetica", "normal").setFontSize(8.5).setTextColor(...MUTED);
+  const agreement = pdf.splitTextToSize("By signing, each party confirms the ownership percentages above are accurate and agrees to them for this composition. Each electronic signature is recorded with a timestamp and a SHA-256 verification hash.", w - 36) as string[];
+  pdf.text(agreement, 18, y); y += agreement.length * 4 + 6;
+  const boxW = (w - 36 - 6) / 2;
+  rows.forEach((c, i) => {
+    const x = 18 + (i % 2) * (boxW + 6);
+    if (i % 2 === 0) y = ensureSpace(pdf, y, 36);
+    pdf.setDrawColor(...RULE).setLineWidth(0.3).roundedRect(x, y, boxW, 32, 2, 2, "S");
+    if (c.signedAt) {
+      pdf.setFont("times", "italic").setFontSize(18).setTextColor(...INK).text(c.signatureName, x + 5, y + 12);
+    } else {
+      pdf.setFont("helvetica", "italic").setFontSize(10).setTextColor(...MUTED).text(c.invitedAt ? "Awaiting signature" : "Not yet requested", x + 5, y + 12);
+    }
+    pdf.setDrawColor(...INK).line(x + 5, y + 15, x + boxW - 5, y + 15);
+    pdf.setFont("helvetica", "bold").setFontSize(9).setTextColor(...INK).text(`${c.name}${c.isOwner ? "  (Account owner)" : ""}`, x + 5, y + 20);
+    pdf.setFont("helvetica", "normal").setFontSize(7.5).setTextColor(...MUTED);
+    pdf.text(c.signedAt ? `Signed ${new Date(c.signedAt).toLocaleString()}` : `${c.role} · ${c.percentage}%`, x + 5, y + 24.5);
+    if (c.signedAt) pdf.setTextColor(...COBALT).text(`Hash ${c.signatureHash.slice(0, 32)}…`, x + 5, y + 28.5);
+    if (i % 2 === 1 || i === rows.length - 1) y += 36;
+  });
+  brandFooter(pdf);
   pdf.save(`${track.title.replace(/[^a-z0-9]+/gi, "-") || "split-sheet"}-split-sheet.pdf`);
 }
