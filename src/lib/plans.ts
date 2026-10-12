@@ -31,6 +31,19 @@ export function isActiveSub(s: { status: string; current_period_end: string | nu
   return false;
 }
 
+/** Free tier card: no price ID — signup only. */
+export const FREE_CARD = {
+  tier: "free" as const,
+  price: "$0",
+  monthly: "Free forever",
+  lead: "Start with the essentials:",
+  features: [
+    { title: "Unlimited Royalty Health Audits", tip: "Continuous checks across PRO, SoundExchange, and mechanical eligibility" },
+    { title: "Unlimited Split Sheet Signatures", tip: "Create, negotiate, and lock in audit-ready publishing splits" },
+    { title: "Free Royalty Health Check", tip: "A guided audit of your royalty setup when you join" },
+  ] as Feature[],
+};
+
 export type Feature = { title: string; tip: string };
 export const PLAN_CARDS: { tier: Exclude<Tier, "free">; price: string; priceId: string; monthly: string; lead?: string; features: Feature[] }[] = [
   {
