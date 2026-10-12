@@ -145,7 +145,7 @@ const plans = [
 function PlansDialog() {
   return (
     <Dialog>
-      <DialogTrigger asChild><Button className="font-semibold">View Plans</Button></DialogTrigger>
+      <DialogTrigger asChild><Button id="plans-trigger" className="font-semibold">View Plans</Button></DialogTrigger>
       <DialogContent className="max-h-[90vh] max-w-5xl overflow-y-auto">
         <DialogHeader><DialogTitle className="text-2xl font-bold">Choose your plan</DialogTitle></DialogHeader>
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
