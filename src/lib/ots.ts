@@ -26,8 +26,8 @@ export function proofManifest(p: Record<string, string>): string {
   return ["CAME THROUGH AUDIO — PROOF MANIFEST", ...Object.entries(p).map(([k, v]) => `${k}: ${v}`)].join("\n") + "\n";
 }
 
-export function download(name: string, data: BlobPart, type: string) {
-  const url = URL.createObjectURL(new Blob([data], { type }));
+export function download(name: string, data: BlobPart | Uint8Array, type: string) {
+  const url = URL.createObjectURL(new Blob([data as BlobPart], { type }));
   const a = document.createElement("a");
   a.href = url; a.download = name; a.click();
   setTimeout(() => URL.revokeObjectURL(url), 1000);
