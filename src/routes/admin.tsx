@@ -113,7 +113,7 @@ function Center({ children }: { children: ReactNode }) {
   return <div className="flex min-h-screen flex-col items-center justify-center gap-3 bg-background text-muted-foreground">{children}</div>;
 }
 
-function Stat({ icon, label, value }: { icon: ReactNode; label: string; value?: number }) {
+function Stat({ icon, label, value }: { icon: ReactNode; label: string; value: number | undefined }) {
   return (
     <div className="rounded-2xl border border-border bg-card p-5">
       <div className="flex items-center gap-2 text-primary [&_svg]:h-5 [&_svg]:w-5">{icon}<span className="text-sm text-muted-foreground">{label}</span></div>
@@ -122,7 +122,7 @@ function Stat({ icon, label, value }: { icon: ReactNode; label: string; value?: 
   );
 }
 
-function Table({ head, rows }: { head: string[]; rows?: string[][] }) {
+function Table({ head, rows }: { head: string[]; rows: string[][] | undefined }) {
   if (!rows) return <p className="mt-6 text-muted-foreground">Loading…</p>;
   if (!rows.length) return <p className="mt-6 text-muted-foreground">Nothing here yet.</p>;
   return (
