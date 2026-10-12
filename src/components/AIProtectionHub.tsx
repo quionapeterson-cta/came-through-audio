@@ -71,15 +71,15 @@ export function AIProtectionHub({ userId, paid, track }: { userId: string; paid:
     } catch { toast.error("That video could not be read."); }
   }
 
-  function save() {
-    if (!f.title || !f.artist || !named.some((w) => w.role !== "producer")) { toast.error("Track title, artist and at least one writer are required."); return; }
-    if (!attest) { toast.error("Check the legal attestation to continue."); return; }
-    if (paid) { setUnlocked(true); return; }
+  const active = paid || unlocked;
+  function checkout() {
     toast.info(`Checkout for the ${pkg} package ($${PACKAGES.find((p) => p.id === pkg)!.price}) is being connected. You'll be able to pay here soon.`);
   }
 
   async function generate() {
+    if (!f.title || !f.artist || !named.some((w) => w.role !== "producer")) { toast.error("Track title, artist and at least one writer are required."); return; }
     if (!daw || !notes || !firstDraft || !lastDraft) { toast.error("Add both recordings and the first and latest draft dates."); return; }
+    if (!attest) { toast.error("Check the legal attestation to continue."); return; }
     setBusy(true);
     try {
       const strength = chainStrength(new Date(firstDraft), new Date(lastDraft));
