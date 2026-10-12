@@ -9,6 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { MetadataUploader } from "@/components/MetadataUploader";
 import { AIProtectionHub } from "@/components/AIProtectionHub";
+import { SplitSheets } from "@/components/SplitSheets";
 import type { CatalogTrack } from "@/lib/catalog";
 
 export const Route = createFileRoute("/workspace")({
@@ -29,8 +30,8 @@ export const Route = createFileRoute("/workspace")({
 const tabs = [
   { id: "embed", label: "Embed Metadata", icon: FileAudio },
   { id: "catalog", label: "My Catalog", icon: Disc3 },
-  { id: "protect", label: "AI Protection Hub", icon: ShieldCheck },
   { id: "splits", label: "Split Sheets", icon: FileSignature },
+  { id: "protect", label: "AI Protection Hub", icon: ShieldCheck },
   { id: "health", label: "Royalty Health Check", icon: Activity },
   { id: "learn", label: "Contracts & Masterclasses", icon: GraduationCap },
 ];
@@ -42,7 +43,7 @@ function Workspace() {
   const [tier, setTier] = useState<string>("free");
   const search = Route.useSearch();
   const [tab, setTab] = useState(search.tab ?? "embed");
-  const [splitTrack, setSplitTrack] = useState<string>();
+  const [splitTrackId, setSplitTrackId] = useState<string>();
   const [catalogKey, setCatalogKey] = useState(0);
   const [protectTrack, setProtectTrack] = useState<CatalogTrack>();
 
@@ -97,10 +98,10 @@ function Workspace() {
 
           <TabsContent value="embed" forceMount className="data-[state=inactive]:hidden"><MetadataUploader stageName={name} userId={user.id} mode="embed" onSubmitted={() => setCatalogKey((k) => k + 1)} /></TabsContent>
           <TabsContent value="catalog" forceMount className="data-[state=inactive]:hidden">
-            <MetadataUploader key={catalogKey} userId={user.id} mode="catalog" canSplit={tier === "paid"} onSplitSheet={(t) => { setSplitTrack(t.title); setTab("splits"); }} onProtect={(t) => { setProtectTrack(t); setTab("protect"); }} />
+            <MetadataUploader key={catalogKey} userId={user.id} mode="catalog" canSplit={tier === "paid"} onSplitSheet={(t) => { setSplitTrackId(t.id); setTab("splits"); }} onProtect={(t) => { setProtectTrack(t); setTab("protect"); }} />
           </TabsContent>
           <TabsContent value="protect"><AIProtectionHub userId={user.id} paid={tier === "paid"} track={protectTrack} /></TabsContent>
-          <TabsContent value="splits"><Blank icon={FileSignature} title="Split Sheets" text={splitTrack ? `Starting a split sheet for "${splitTrack}". Collaborators will be invited by email to sign.` : "Generate a split sheet from any song in My Catalog."} /></TabsContent>
+          <TabsContent value="splits"><SplitSheets userId={user.id} canSplit={tier === "paid"} prefillTrackId={splitTrackId} onUpgrade={() => document.getElementById("plans-trigger")?.click()} /></TabsContent>
           <TabsContent value="health"><Health /></TabsContent>
           <TabsContent value="learn"><Learn /></TabsContent>
         </Tabs>
