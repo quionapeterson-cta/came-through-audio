@@ -6,7 +6,9 @@ import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useAuth } from "@/hooks/useAuth";
 import { openCheckout } from "@/lib/paddle";
-import { PLAN_CARDS, TIER_LABEL } from "@/lib/plans";
+import { FREE_CARD, PLAN_CARDS, TIER_LABEL } from "@/lib/plans";
+
+const ALL_CARDS = [FREE_CARD, ...PLAN_CARDS];
 
 export const Route = createFileRoute("/plans")({
   head: () => ({
