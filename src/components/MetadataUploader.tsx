@@ -6,7 +6,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { readMetadata, CREDIT_ROLES, emptyContributor, emptyMetadata, embedMetadata, metadataSchema, GENRES, PROS, RELEASE_TYPES, type Contributor, type Metadata } from "@/lib/metadata";
-import { deleteTrack, listTracks, saveTrack, type CatalogTrack } from "@/lib/catalog";
+import { deleteTrack, downloadCatalogFile, listTracks, safeName, saveTrack, uploadCatalogFile, type CatalogTrack } from "@/lib/catalog";
+import { downloadLyricsPdf } from "@/lib/lyrics-pdf";
 
 export function MetadataUploader({ stageName, userId, mode = "embed", onSubmitted, onSplitSheet, onProtect, canSplit }: { stageName?: string; userId?: string; mode?: "embed" | "catalog"; onSubmitted?: () => void; onSplitSheet?: (t: CatalogTrack) => void; onProtect?: (t: CatalogTrack) => void; canSplit?: boolean }) {
   const full = mode === "catalog";
@@ -39,11 +40,21 @@ export function MetadataUploader({ stageName, userId, mode = "embed", onSubmitte
     if (!parsed.success) { setError(parsed.error.issues[0]?.message ?? "Check your metadata."); return; }
     setSaving(true);
     try {
-      const id = await saveTrack(parsed.data, userId, editingId);
+      const data = { ...parsed.data, aiProtection: parsed.data.aiProtection || aiProtect };
+      const id = await saveTrack(data, userId, editingId);
+      // Keep the tagged master and artwork in the private catalog vault so they can be downloaded later.
+      const master = result ? await (await fetch(result.url)).blob() : audio;
+      let filesChanged = false;
+      try {
+        if (master) { data.audioPath = await uploadCatalogFile(userId, id, "master", master, "mp3"); filesChanged = true; }
+        if (artwork) { data.artPath = await uploadCatalogFile(userId, id, "artwork", artwork, artwork.type === "image/png" ? "png" : "jpg"); filesChanged = true; }
+        if (filesChanged) await saveTrack(data, userId, id);
+      } catch { toast.warning("Details saved, but your audio or artwork could not be stored. Try saving again."); }
+      setMetadata(data);
       setEditingId(id);
       toast.success(editingId ? "Track updated in your catalog." : "Track submitted to your catalog.");
       refresh();
-      if (!full) { setSubmitted(true); if (aiProtect) toast.info("AI Protection Certificate requested — upload your proof videos in My Catalog."); onSubmitted?.(); }
+      if (!full) { setSubmitted(true); onSubmitted?.(); }
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Could not save track.");
     } finally { setSaving(false); }
