@@ -93,7 +93,8 @@ function Landing() {
 
       <section className="border-b border-border bg-background">
         <div className="mx-auto max-w-7xl px-6 py-14">
-          <h2 className="mb-8 text-center text-3xl font-extrabold uppercase tracking-wide text-primary md:text-4xl">What all plans include</h2>
+          <h2 className="text-center text-3xl font-extrabold uppercase tracking-wide text-primary md:text-4xl">What all plans include</h2>
+          <p className="mb-8 mt-2 text-center text-sm text-muted-foreground">Free plans include unlimited royalty audits &amp; unlimited split sheet signatures.</p>
           <div className="flex flex-wrap items-center justify-center gap-x-10 gap-y-4">
             {includes.map((i) => (
               <span key={i} className="flex items-center gap-2 text-lg font-semibold">
