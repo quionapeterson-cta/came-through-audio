@@ -11,3 +11,5 @@
 
 - Keep metadata embedding in a browser-safe utility using browser-id3-writer; the uploader creates local MP3 downloads without changing catalog persistence or database permissions.
 - Use shared semantic primary, accent and ring tokens for brand accents, so all controls follow the global theme.
+
+- Paid access comes from Paddle webhook rows (subscriptions for yearly tiers, purchases for one-time buys) keyed by human-readable price IDs in src/lib/plans.ts; the client never writes them, so payment state cannot be forged.
