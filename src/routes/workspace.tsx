@@ -1,6 +1,6 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { ShieldCheck, FileAudio, CalendarClock, Lock, Disc3, Activity, FileSignature, ScrollText, GraduationCap, LogOut, Check } from "lucide-react";
+import { ShieldCheck, FileAudio, Lock, Disc3, Activity, FileSignature, ScrollText, GraduationCap, LogOut, Check } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
@@ -12,6 +12,14 @@ import { AIProtectionHub } from "@/components/AIProtectionHub";
 import { SplitSheets } from "@/components/SplitSheets";
 import { BrandLogo } from "@/components/BrandLogo";
 import type { CatalogTrack } from "@/lib/catalog";
+import { RoyaltyUtilitySuite } from "@/components/RoyaltyUtilitySuite";
+import { ExpertAssistance } from "@/components/ExpertAssistance";
+import { PaymentTestModeBanner } from "@/components/PaymentTestModeBanner";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { toast } from "sonner";
+import { useBilling, type Purchase } from "@/hooks/useBilling";
+import { openCheckout } from "@/lib/paddle";
+import { PLAN_CARDS, TIER_LABEL, hasTier, type Tier } from "@/lib/plans";
 
 export const Route = createFileRoute("/workspace")({
   head: () => ({
@@ -41,12 +49,15 @@ function Workspace() {
   const { user, loading } = useAuth();
   const navigate = useNavigate();
   const [name, setName] = useState<string>("");
-  const [tier, setTier] = useState<string>("free");
   const search = Route.useSearch();
   const [tab, setTab] = useState(search.tab ?? "embed");
   const [splitTrackId, setSplitTrackId] = useState<string>();
   const [catalogKey, setCatalogKey] = useState(0);
   const [protectTrack, setProtectTrack] = useState<CatalogTrack>();
+  const { tier, purchases } = useBilling(user?.id);
+  const canSplit = hasTier(tier, "collaborate");
+  const hasAi = purchases.some((p) => p.kind === "ai");
+  const upgrade = () => document.getElementById("plans-trigger")?.click();
 
   useEffect(() => {
     if (!loading && !user) navigate({ to: "/" });
@@ -59,7 +70,6 @@ function Workspace() {
     supabase.from("profiles").select("stage_name, legal_name, tier").eq("id", user.id).maybeSingle().then(({ data }) => {
       if (data) {
         setName(data.stage_name || data.legal_name || meta["stage_name"] || user.email || "");
-        if (data.tier) setTier(data.tier);
       }
     });
   }, [user]);
@@ -70,6 +80,7 @@ function Workspace() {
 
   return (
     <div className="min-h-screen bg-background">
+      <PaymentTestModeBanner />
       <header className="bg-ink text-ink-foreground">
         <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-6 py-4">
           <div className="flex items-center gap-3">
@@ -80,8 +91,8 @@ function Workspace() {
             </div>
           </div>
           <div className="flex items-center gap-3">
-            <Badge variant="outline" className="border-ink-border text-ink-foreground">{tier === "paid" ? "Paid Tier" : "Free Tier"}</Badge>
-            <PlansDialog />
+            <Badge variant="outline" className="border-ink-border text-ink-foreground">{TIER_LABEL[tier]}</Badge>
+            <PlansDialog tier={tier} userId={user.id} email={user.email} />
             <Button variant="ghost" size="icon" aria-label="Log out" className="text-ink-muted hover:bg-ink-border hover:text-ink-foreground"
               onClick={async () => { await supabase.auth.signOut(); navigate({ to: "/" }); }}>
               <LogOut className="h-4 w-4" />
@@ -102,19 +113,19 @@ function Workspace() {
 
           <TabsContent value="embed" forceMount className="data-[state=inactive]:hidden"><MetadataUploader stageName={name} userId={user.id} mode="embed" onSubmitted={() => setCatalogKey((k) => k + 1)} /></TabsContent>
           <TabsContent value="catalog" forceMount className="data-[state=inactive]:hidden">
-            <MetadataUploader key={catalogKey} stageName={name} userId={user.id} mode="catalog" canSplit={tier === "paid"} onSplitSheet={(t) => { setSplitTrackId(t.id); setTab("splits"); }} onProtect={(t) => { setProtectTrack(t); setTab("protect"); }} />
+            <MetadataUploader key={catalogKey} stageName={name} userId={user.id} mode="catalog" canSplit={canSplit} onSplitSheet={(t) => { setSplitTrackId(t.id); setTab("splits"); }} onProtect={(t) => { setProtectTrack(t); setTab("protect"); }} />
           </TabsContent>
-          <TabsContent value="protect"><AIProtectionHub userId={user.id} paid={tier === "paid" || !!protectTrack?.metadata.aiProtection} track={protectTrack} /></TabsContent>
-          <TabsContent value="splits"><SplitSheets userId={user.id} canSplit={tier === "paid"} prefillTrackId={splitTrackId} onUpgrade={() => document.getElementById("plans-trigger")?.click()} /></TabsContent>
-          <TabsContent value="health"><Health /></TabsContent>
-          <TabsContent value="learn"><Learn /></TabsContent>
+          <TabsContent value="protect"><AIProtectionHub userId={user.id} paid={hasAi} email={user.email} track={protectTrack} /></TabsContent>
+          <TabsContent value="splits"><SplitSheets userId={user.id} canSplit={canSplit} prefillTrackId={splitTrackId} onUpgrade={upgrade} /></TabsContent>
+          <TabsContent value="health"><Health userId={user.id} email={user.email} purchases={purchases} canUtility={canSplit} onUpgrade={upgrade} /></TabsContent>
+          <TabsContent value="learn"><Learn unlocked={hasTier(tier, "management")} onUpgrade={upgrade} /></TabsContent>
         </Tabs>
       </main>
     </div>
   );
 }
 
-function Learn() {
+function Learn({ unlocked, onUpgrade }: { unlocked: boolean; onUpgrade: () => void }) {
   const [view, setView] = useState<"contracts" | "classes">("contracts");
   return (
     <div className="mt-6">
@@ -122,8 +133,15 @@ function Learn() {
         <Button size="sm" variant={view === "contracts" ? "default" : "ghost"} onClick={() => setView("contracts")}><ScrollText className="h-4 w-4" />Contracts & Blueprints</Button>
         <Button size="sm" variant={view === "classes" ? "default" : "ghost"} onClick={() => setView("classes")}><GraduationCap className="h-4 w-4" />Masterclasses</Button>
       </div>
-      {view === "contracts"
-        ? <Blank icon={ScrollText} title="Contracts & Blueprints" text="Producer agreements, videographer releases and beat licenses — included with Catalog & Contracts." />
+      {!unlocked ? (
+        <div className="mt-6 flex flex-col items-center gap-3 rounded-2xl border-2 border-primary p-8 text-center">
+          <Lock className="h-8 w-8 text-primary" />
+          <h2 className="text-2xl font-bold">Included with Catalog Management</h2>
+          <p className="max-w-md text-muted-foreground">Unlimited contract blueprints and industry masterclasses.</p>
+          <Button onClick={onUpgrade}>Upgrade to unlock</Button>
+        </div>
+      ) : view === "contracts"
+        ? <Blank icon={ScrollText} title="Contracts & Blueprints" text="Producer agreements, videographer releases, beat licenses, label and studio blueprints." />
         : <Masterclasses />}
     </div>
   );
@@ -139,31 +157,48 @@ function Blank({ icon: Icon, title, text }: { icon: React.ElementType; title: st
   );
 }
 
-const plans = [
-  { name: "Starter", price: "Free", monthly: "", text: "Provides entry-level users and collaborators with a 100% free account to sign split sheets and run Unlimited Royalty Health Checks across public databases." },
-  { name: "Catalog Plus", price: "$24.99/yr", monthly: "(Only $2.08 / month)", text: "Provides independent creators with unlimited core metadata embedding, centralized master asset cataloging, and Unlimited Royalty Health Checks." },
-  { name: "Catalog & Collaborate", price: "$44.99/yr", monthly: "(Only $3.75 / month)", text: "Unlocks collaborative industry-standard split sheets generation, automated e-signature requests, and our unlimited PRO Formula Converter suite." },
-  { name: "Catalog & Contracts", price: "$89.99/yr", monthly: "(Only $7.50 / month)", text: "Includes everything in lower tiers plus unlimited access to our professional contract blueprints vault (producer agreements, videographer releases, beat licenses) and custom metadata protection playbooks." },
-];
-
-function PlansDialog() {
+function PlansDialog({ tier, userId, email }: { tier: Tier; userId: string; email?: string | undefined }) {
+  const buy = async (priceId: string) => {
+    try { await openCheckout({ items: [{ priceId, quantity: 1 }], email, customData: { userId } }); }
+    catch (e) { toast.error(e instanceof Error ? e.message : "Checkout could not open."); }
+  };
   return (
     <Dialog>
       <DialogTrigger asChild><Button id="plans-trigger" className="font-semibold">View Plans</Button></DialogTrigger>
       <DialogContent className="max-h-[90vh] max-w-5xl overflow-y-auto">
         <DialogHeader><DialogTitle className="text-2xl font-bold">Choose your plan</DialogTitle></DialogHeader>
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-          {plans.map((p, i) => (
-            <div key={p.name} className={`flex flex-col rounded-xl p-5 ${i === 1 ? "bg-ink text-ink-foreground" : "border border-border"}`}>
-              <div className={`font-bold ${i === 1 ? "w-fit rounded-xl bg-card px-3 py-1 text-primary" : "text-primary"}`}>{p.name}</div>
-              <div className="mt-2 text-3xl font-bold">{p.price}</div>
-              {p.monthly && <div className="text-sm opacity-80">{p.monthly}</div>}
-              <Badge variant="outline" className={`mt-2 w-fit ${i === 1 ? "border-primary text-ink-foreground" : ""}`}>{i === 0 ? "Always free" : "Billed annually"}</Badge>
-              <p className="mt-4 flex-1 text-sm opacity-90">{p.text}</p>
-              <Button className="mt-5 w-full" variant={i === 0 ? "outline" : "default"} disabled>{i === 0 ? "Current plan" : "Coming soon"}</Button>
-            </div>
-          ))}
-        </div>
+        <TooltipProvider delayDuration={100}>
+          <div className="grid gap-4 md:grid-cols-3">
+            {PLAN_CARDS.map((p, i) => {
+              const current = tier === p.tier;
+              const owned = hasTier(tier, p.tier);
+              return (
+                <div key={p.tier} className={`flex flex-col rounded-xl p-5 ${i === 1 ? "bg-ink text-ink-foreground" : "border border-border"}`}>
+                  <div className={`font-bold ${i === 1 ? "w-fit rounded-xl bg-card px-3 py-1 text-primary" : "text-primary"}`}>{TIER_LABEL[p.tier]}</div>
+                  <div className="mt-2 text-3xl font-bold">{p.price}<span className="text-base font-semibold">/yr</span></div>
+                  <div className="text-sm opacity-80">{p.monthly}</div>
+                  {p.lead && <p className="mt-4 text-xs italic opacity-80">{p.lead}</p>}
+                  <ul className="mt-3 flex-1 space-y-2">
+                    {p.features.map((f) => (
+                      <li key={f.title}>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <span className="flex cursor-help items-start gap-2 text-sm font-semibold"><Check className="mt-0.5 h-4 w-4 shrink-0 text-primary" strokeWidth={3} />{f.title}</span>
+                          </TooltipTrigger>
+                          <TooltipContent className="max-w-60">{f.tip}</TooltipContent>
+                        </Tooltip>
+                      </li>
+                    ))}
+                  </ul>
+                  <Button className="mt-5 w-full" variant={i === 1 ? "secondary" : "default"} disabled={owned} onClick={() => buy(p.priceId)}>
+                    {current ? "Current plan" : owned ? "Included" : tier === "free" ? "Get started" : "Upgrade"}
+                  </Button>
+                </div>
+              );
+            })}
+          </div>
+        </TooltipProvider>
+        <p className="text-center text-xs text-muted-foreground">Free plans include unlimited royalty audits &amp; unlimited split sheet signatures. Billed annually.</p>
       </DialogContent>
     </Dialog>
   );
@@ -183,53 +218,12 @@ function Masterclasses() {
   );
 }
 
-function Health() {
+function Health({ userId, email, purchases, canUtility, onUpgrade }: { userId: string; email?: string | undefined; purchases: Purchase[]; canUtility: boolean; onUpgrade: () => void }) {
   return (
     <div className="mt-6 space-y-6">
       <Blank icon={Activity} title="Royalty Health Check" text="Your free Royalty Health Check across BMI, ASCAP, SoundExchange and the MLC starts here." />
-      <Assistance />
+      <ExpertAssistance userId={userId} email={email} purchases={purchases} />
+      <RoyaltyUtilitySuite unlocked={canUtility} onUpgrade={onUpgrade} />
     </div>
   );
-}
-
-function Assistance() {
-  const [songs, setSongs] = useState(0);
-  const [type, setType] = useState<"single" | "album">("single");
-  const [count, setCount] = useState("");
-  const [agencies, setAgencies] = useState("");
-  const [agree, setAgree] = useState(false);
-  useEffect(() => { supabase.from("catalogs").select("id", { count: "exact", head: true }).then(({ count: c }) => setSongs(c ?? 0)); }, []);
-  const base = type === "single" ? 14.99 : 29.99;
-  const total = assistanceTotal(type, Number(count) || 0, Number(agencies) || 0).toFixed(2);
-  const unlocked = songs > 0 && agree;
-  return (
-    <div className="grid gap-6 md:grid-cols-2">
-      <div className="rounded-2xl border border-primary p-6">
-        <CalendarClock className="h-8 w-8 text-primary" />
-        <p className="mt-3 text-sm font-bold uppercase tracking-widest text-primary">Need help?</p>
-        <h2 className="mt-1 text-2xl font-bold">Get Expert Registration Assistance</h2>
-        <p className="mt-2 text-sm text-muted-foreground">Don't leave royalties on the table. Register with your PRO, SoundExchange and the MLC live, 1-on-1, with an industry specialist so you collect every dollar you're owed.</p>
-        <ul className="mt-3 space-y-1 text-sm">{["Live 1-on-1 video session", "Step-by-step PRO, SoundExchange & MLC setup", "Get your songs registered right the first time"].map((x) => <li key={x} className="flex items-center gap-2"><span className="h-1.5 w-1.5 rounded-full bg-primary" />{x}</li>)}</ul>
-        <div className="mt-4 grid grid-cols-2 gap-2">
-          {(["single", "album"] as const).map((t) => <Button key={t} variant={type === t ? "default" : "outline"} onClick={() => setType(t)}>{t === "single" ? "Single / EP" : "Full album"}</Button>)}
-        </div>
-        <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
-          <label className="space-y-1"><span>Songs ({type === "album" ? "up to 20 per album entry" : "up to 6"})</span><input type="number" min={1} max={type === "album" ? undefined : 6} value={count} onChange={(e) => setCount(e.target.value === "" ? "" : String(Math.max(1, Math.min(type === "single" ? 6 : 999, Number(e.target.value)))))} className="w-full rounded-md border border-input bg-background px-3 py-2" /></label>
-          <label className="space-y-1"><span>Agencies</span><input type="number" min={1} max={4} value={agencies} onChange={(e) => setAgencies(e.target.value === "" ? "" : String(Math.min(4, Math.max(1, Number(e.target.value)))))} className="w-full rounded-md border border-input bg-background px-3 py-2" /></label>
-        </div>
-        <p className="mt-3 text-sm text-muted-foreground">${base} setup + $4.99 per song per agency</p>
-        <div className="mt-1 text-3xl font-bold text-primary">${total}</div>
-        <label className="mt-4 flex items-start gap-2 text-sm"><input type="checkbox" className="mt-1 accent-[var(--primary)]" checked={agree} onChange={(e) => setAgree(e.target.checked)} />I confirm I can successfully log into my PRO, SoundExchange and MLC accounts.</label>
-        {songs === 0 && <p className="mt-3 flex items-center gap-2 text-sm text-destructive"><Lock className="h-4 w-4" />Add your track details to My Catalog first.</p>}
-        <Button className="mt-4 w-full" disabled={!unlocked}>{unlocked ? "Booking calendar coming soon" : "Locked"}</Button>
-      </div>
-    </div>
-  );
-}
-
-/** Singles/EPs cap at 6 songs. Albums: every block of up to 20 songs is a new entry with its own $29.99 setup fee. */
-export function assistanceTotal(type: "single" | "album", songs: number, agencies: number) {
-  if (songs <= 0 || agencies <= 0) return 0;
-  if (type === "single") return 14.99 + 4.99 * Math.min(songs, 6) * agencies;
-  return 29.99 * Math.ceil(songs / 20) + 4.99 * songs * agencies;
 }

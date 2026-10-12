@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { chainStrength, PACKAGES } from "./proof";
-import { assistanceTotal } from "@/routes/workspace";
+import { assistanceTotal } from "@/lib/plans";
 
 describe("proof rules", () => {
   it("days apart is a strong chain", () => expect(chainStrength(new Date("2026-01-01"), new Date("2026-01-04"))).toMatch(/^Strong/));
