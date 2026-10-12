@@ -1,6 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { Check, Mic, Guitar, Disc3, NotebookPen, Music, Quote, AlertTriangle, Upload, Download, FileSignature, ShieldCheck } from "lucide-react";
+import { Check, Mic, Guitar, Disc3, NotebookPen, Music, Quote, AlertTriangle, Upload, Download, FileSignature, ShieldCheck, Mail } from "lucide-react";
 import { SignupCard } from "@/components/SignupCard";
+import { BrandLogo } from "@/components/BrandLogo";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 
 export const Route = createFileRoute("/")({
@@ -20,11 +21,12 @@ export const Route = createFileRoute("/")({
 const includes = ["Metadata Embedding", "Cataloging", "Royalty Audits", "Blockchain Timestamp", "Secure Catalog"];
 
 const steps = [
-  { icon: Upload, phase: "Upload Your Tracks", title: "The Session Ends (Instant Upload)", text: "The engineer bounces the final mix. Instead of texting a compressed file or emailing a loose, un-tagged Google Drive link, you drop your high-resolution master track straight into Came Through Audio right from your phone or studio laptop." },
-  { icon: Download, phase: "Embed Metadata", title: "Embed Permanent Metadata", text: "You immediately embed permanent tracking data (Song Data, ISRC, UPC, and creator credentials) directly into your audio file wrapper. If you need to tweak the mix or update the ISRC later, no worries—you can easily update the metadata and swap the audio file in your workspace at any time while preserving your cataloged entry perfectly." },
-  { icon: Disc3, phase: "Submit to Your Catalog", title: "Secure Your Organized Catalog (Your Vault)", text: "Click \"Submit to Catalog\" to lock your track into your permanent music repository. Your high-res master files, album art, credits, PRO information and publishing registries are organized safely in one secure home base that you can access and download from anywhere in the world." },
-  { icon: FileSignature, phase: "Generate and Sign Split Sheets", title: "Formalize Legal Ownership (The Split Sheet)", text: "Before anyone leaves the studio parking lot, you click \"Generate Split Sheet.\" The platform automatically pulls the track title and writer percentages directly from your catalog data to draft a legal agreement, instantly routing a signature link to your collaborators." },
-  { icon: ShieldCheck, phase: "Follow Up After Session", title: "Secure the Ink", text: "Virtual collaborators and featured artists receive a secure invitation link. They sign up for a 100% Free Collaborator Account right on their mobile devices and execute their digital signatures—generating a permanent verification hash that secures your chain of ownership forever." },
+  { icon: Upload, title: "Upload your master", text: "Drop your final mix straight in from your phone or studio laptop. No more loose links." },
+  { icon: Download, title: "Embed your metadata", text: "Lock song data, ISRC, UPC and credits inside the file. Update it any time." },
+  { icon: Disc3, title: "Save to your catalog", text: "Your masters, art, lyrics and credits live in one vault you can download from anywhere." },
+  { icon: FileSignature, title: "Create a split sheet", text: "Splits pull from your catalog automatically. Sign as the owner in seconds." },
+  { icon: Mail, title: "Collect signatures", text: "Collaborators get a link, sign up free and sign. Every signature is verified." },
+  { icon: ShieldCheck, title: "Add AI Protection", text: "Prove you made it first with a certificate time-stamped on the Bitcoin blockchain." },
 ];
 
 const faqs = [
@@ -61,7 +63,7 @@ function Landing() {
     <div className="min-h-screen bg-background text-foreground">
       <header className="bg-ink text-ink-foreground">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-5">
-          <span className="text-lg font-bold tracking-tight">Came Through <span className="text-primary">Audio</span></span>
+          <BrandLogo />
           <Link to="/workspace" search={{ tab: undefined }} className="text-sm font-semibold text-ink-muted hover:text-primary">Log in</Link>
         </div>
       </header>
@@ -101,20 +103,18 @@ function Landing() {
       </section>
 
       <section className="bg-ink py-24 text-ink-foreground">
-        <div className="mx-auto max-w-7xl px-6">
+        <div className="mx-auto max-w-6xl px-6">
           <h2 className="text-center text-4xl font-bold md:text-5xl lg:text-6xl">How It Works</h2>
-          <p className="mt-3 text-center"><span className="inline-block rounded-xl bg-background px-4 py-1 text-xl font-semibold text-primary md:text-2xl">The Studio-to-Catalog Lifecycle</span></p>
-          <ol className="mt-14 grid gap-6 md:grid-cols-2 lg:grid-cols-5">
-            {steps.map(({ icon: Icon, phase, title, text }, i) => (
-              <li key={title} className="overflow-hidden rounded-2xl border border-ink-border transition hover:-translate-y-1 hover:border-primary">
-                <div className="flex aspect-video items-center justify-center bg-background">
-                  <Icon className="h-14 w-14 text-primary" />
+          <p className="mx-auto mt-4 max-w-xl text-center text-lg text-ink-muted">From the studio to your vault in six simple steps.</p>
+          <ol className="mt-14 grid gap-px overflow-hidden rounded-2xl border border-ink-border bg-ink-border md:grid-cols-2 lg:grid-cols-3">
+            {steps.map(({ icon: Icon, title, text }, i) => (
+              <li key={title} className="group flex flex-col gap-4 bg-ink p-8 transition hover:bg-ink-border/40">
+                <div className="flex items-center justify-between">
+                  <span className="text-5xl font-black leading-none text-ink-foreground/20 transition group-hover:text-ink-foreground/40">{String(i + 1).padStart(2, "0")}</span>
+                  <span className="flex h-12 w-12 items-center justify-center rounded-xl bg-background"><Icon className="h-6 w-6 text-primary" /></span>
                 </div>
-                <div className="space-y-2 p-6">
-                  <span className="inline-block rounded-md border border-primary px-2 py-0.5 text-xs font-bold uppercase tracking-widest text-ink-foreground">{phase}</span>
-                  <h3 className="text-xl font-bold">Step {i + 1}: {title}</h3>
-                  <p className="text-sm text-ink-muted">{text}</p>
-                </div>
+                <h3 className="text-xl font-bold">{title}</h3>
+                <p className="text-base leading-relaxed text-ink-muted">{text}</p>
               </li>
             ))}
           </ol>

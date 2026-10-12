@@ -10,6 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { MetadataUploader } from "@/components/MetadataUploader";
 import { AIProtectionHub } from "@/components/AIProtectionHub";
 import { SplitSheets } from "@/components/SplitSheets";
+import { BrandLogo } from "@/components/BrandLogo";
 import type { CatalogTrack } from "@/lib/catalog";
 
 export const Route = createFileRoute("/workspace")({
@@ -71,9 +72,12 @@ function Workspace() {
     <div className="min-h-screen bg-background">
       <header className="bg-ink text-ink-foreground">
         <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-6 py-4">
-          <div>
-            <div className="text-xs uppercase tracking-widest text-ink-muted">Came Through Audio</div>
-            <div className="text-xl font-bold">{name}</div>
+          <div className="flex items-center gap-3">
+            <BrandLogo showName={false} />
+            <div>
+              <div className="text-xs uppercase tracking-widest text-ink-muted">Came Through Audio</div>
+              <div className="text-xl font-bold">{name}</div>
+            </div>
           </div>
           <div className="flex items-center gap-3">
             <Badge variant="outline" className="border-ink-border text-ink-foreground">{tier === "paid" ? "Paid Tier" : "Free Tier"}</Badge>
@@ -98,7 +102,7 @@ function Workspace() {
 
           <TabsContent value="embed" forceMount className="data-[state=inactive]:hidden"><MetadataUploader stageName={name} userId={user.id} mode="embed" onSubmitted={() => setCatalogKey((k) => k + 1)} /></TabsContent>
           <TabsContent value="catalog" forceMount className="data-[state=inactive]:hidden">
-            <MetadataUploader key={catalogKey} userId={user.id} mode="catalog" canSplit={tier === "paid"} onSplitSheet={(t) => { setSplitTrackId(t.id); setTab("splits"); }} onProtect={(t) => { setProtectTrack(t); setTab("protect"); }} />
+            <MetadataUploader key={catalogKey} stageName={name} userId={user.id} mode="catalog" canSplit={tier === "paid"} onSplitSheet={(t) => { setSplitTrackId(t.id); setTab("splits"); }} onProtect={(t) => { setProtectTrack(t); setTab("protect"); }} />
           </TabsContent>
           <TabsContent value="protect"><AIProtectionHub userId={user.id} paid={tier === "paid"} track={protectTrack} /></TabsContent>
           <TabsContent value="splits"><SplitSheets userId={user.id} canSplit={tier === "paid"} prefillTrackId={splitTrackId} onUpgrade={() => document.getElementById("plans-trigger")?.click()} /></TabsContent>
