@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
-import { Lock, ShieldCheck, CheckCircle2, Download, FileAudio, ImagePlus, Pencil, Plus, Save, Trash2, Upload } from "lucide-react";
+import { Disc3, Lock, ShieldCheck, CheckCircle2, Download, FileAudio, ImagePlus, Pencil, Plus, Save, Trash2, Upload } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -23,6 +23,7 @@ export function MetadataUploader({ stageName, userId, mode = "embed", onSubmitte
   const [editingId, setEditingId] = useState<string>();
   const [saving, setSaving] = useState(false);
   const [upsell, setUpsell] = useState(false);
+  const [filter, setFilter] = useState<"All" | "Single" | "EP" | "Album">("All");
   const audioInput = useRef<HTMLInputElement>(null);
   const artInput = useRef<HTMLInputElement>(null);
 
@@ -145,6 +146,7 @@ export function MetadataUploader({ stageName, userId, mode = "embed", onSubmitte
               const file = event.target.files?.[0];
               if (file && !["image/jpeg", "image/png"].includes(file.type)) { setError("Choose JPEG or PNG artwork."); return; }
               setArtwork(file); setResult(undefined); setError(""); event.target.value = "";
+              if (file) makeThumb(file).then((t) => setMetadata((m) => ({ ...m, coverThumb: t }))).catch(() => {});
             }} />
           </div>
         </fieldset>
@@ -237,10 +239,31 @@ export function MetadataUploader({ stageName, userId, mode = "embed", onSubmitte
         <div className="mt-4 border-t border-border pt-6 pb-12">
           <h2 className="mb-4 text-xl font-bold">Your songs</h2>
           {tracks.length === 0 ? <p className="text-sm text-muted-foreground">No songs yet. Embed a track in the Embed Metadata tab and submit it to your catalog.</p> : (
-            <ul className="divide-y divide-border rounded-lg border border-border">
-              {tracks.map((t) => (
-                <li key={t.id} className={`flex flex-wrap items-center justify-between gap-3 p-4 ${t.id === editingId ? "bg-accent/30" : ""}`}>
-                  <div><div className="font-semibold">{t.title}</div><div className="text-sm text-muted-foreground">{t.artist}{t.metadata.isrc ? ` · ${t.metadata.isrc}` : ""}</div></div>
+            <>
+            <div className="mb-5 flex flex-wrap gap-2" role="tablist" aria-label="Filter by release type">
+              {(["All", "Single", "EP", "Album"] as const).map((f) => {
+                const n = f === "All" ? tracks.length : tracks.filter((t) => releaseGroup(t) === f).length;
+                return <Button key={f} type="button" role="tab" aria-selected={filter === f} size="sm" variant={filter === f ? "default" : "outline"} onClick={() => setFilter(f)}>{f === "All" ? "All" : `${f}s`}<span className="ml-1 opacity-70">{n}</span></Button>;
+              })}
+            </div>
+            {(["Single", "EP", "Album"] as const).filter((g) => filter === "All" || filter === g).map((g) => {
+              const items = tracks.filter((t) => releaseGroup(t) === g);
+              if (!items.length) return null;
+              return <div key={g} className="mb-8">
+                <h3 className="mb-3 text-sm font-bold uppercase tracking-widest text-primary">{g}s</h3>
+                <ul className="grid gap-3">
+              {items.map((t) => (
+                <li key={t.id} className={`group flex flex-wrap items-center gap-4 rounded-xl border p-3 transition hover:border-primary hover:shadow-md ${t.id === editingId ? "border-primary bg-accent/30" : "border-border"}`}>
+                  {t.metadata.coverThumb
+                    ? <img src={t.metadata.coverThumb} alt={`${t.title} artwork`} className="h-16 w-16 shrink-0 rounded-lg object-cover shadow" />
+                    : <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground shadow"><Disc3 className="h-8 w-8 transition group-hover:rotate-180" /></div>}
+                  <div className="min-w-0 flex-1">
+                    <div className="truncate text-lg font-bold">{t.title}</div>
+                    <div className="truncate text-sm text-muted-foreground">{t.artist}{t.metadata.album ? ` · ${t.metadata.album}` : ""}</div>
+                    <div className="mt-1 flex flex-wrap gap-1 text-xs">
+                      {[t.metadata.primaryGenre, t.metadata.duration, t.metadata.isrc && `ISRC ${t.metadata.isrc}`].filter(Boolean).map((b) => <span key={String(b)} className="rounded-full border border-primary px-2 py-0.5 text-primary">{b}</span>)}
+                    </div>
+                  </div>
                   <div className="flex flex-wrap gap-2">
                     <Button type="button" variant="outline" size="sm" onClick={() => open(t)}><Pencil />Edit</Button>
                     {t.metadata.lyrics && <Button type="button" variant="outline" size="sm" onClick={() => { const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([t.metadata.lyrics ?? ""], { type: "text/plain" })); a.download = `${t.title}-lyrics.txt`; a.click(); }}><Download />Lyrics</Button>}
@@ -250,14 +273,17 @@ export function MetadataUploader({ stageName, userId, mode = "embed", onSubmitte
                   </div>
                 </li>
               ))}
-            </ul>
+                </ul>
+              </div>;
+            })}
+            </>
           )}
         </div>
       )}
       <Dialog open={upsell} onOpenChange={setUpsell}>
         <DialogContent className="bg-card text-card-foreground">
           <DialogHeader><DialogTitle className="flex items-center gap-2 text-xl font-bold"><Lock className="h-5 w-5 text-primary" />Split Sheets are locked</DialogTitle></DialogHeader>
-          <p className="text-base font-medium">Upgrade now and Unlock Unlimited Split Sheets and E-Signature requests. Upgrade today and we will automatically refund you the exact pricing difference if you are within 30 days of your initial sign up window!</p>
+          <p className="text-base font-medium">Upgrade and Get Unlimited Split Sheets and E-Signatures.</p>
           <Button onClick={() => setUpsell(false)}>Got it</Button>
         </DialogContent>
       </Dialog>
@@ -291,4 +317,16 @@ function Contributors({ title, singular, group, rows, onChange, disabled, publis
     </div>)}
     <div className="flex flex-wrap items-center justify-between gap-3"><Button type="button" variant="outline" onClick={() => onChange([...rows, emptyContributor()])}><Plus />Add {singular}</Button>{!publisher && !simple && <span className="text-sm text-muted-foreground">Total: {Number(rows.reduce((sum, row) => sum + Number(row.percentage || 0), 0).toFixed(2))}%</span>}</div>
   </fieldset>;
+}
+function releaseGroup(t: CatalogTrack): "Single" | "EP" | "Album" {
+  const r = t.metadata.releaseType;
+  return r === "EP" ? "EP" : r === "Album" || r === "Compilation" ? "Album" : "Single";
+}
+
+async function makeThumb(file: File): Promise<string> {
+  const img = await createImageBitmap(file);
+  const c = document.createElement("canvas");
+  c.width = c.height = 160;
+  c.getContext("2d")?.drawImage(img, 0, 0, 160, 160);
+  return c.toDataURL("image/jpeg", 0.8);
 }

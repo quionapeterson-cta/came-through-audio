@@ -33,6 +33,7 @@ export const metadataSchema = z.object({
   producers: z.array(contributorSchema).default([]),
   publishers: z.array(contributorSchema),
   lyrics: z.string().default(""),
+  coverThumb: z.string().default(""),
   credits: z.array(z.object({ role: z.string(), name: z.string().trim() })).default([]),
 }).superRefine((data, ctx) => {
   for (const group of ["writers", "composers", "publishers"] as const) {
@@ -51,7 +52,7 @@ export const emptyMetadata = (): Metadata => ({
   title: "", trackNumber: "", artist: "", featured: [""], album: "", duration: "", releaseType: "", releaseDate: "", label: "",
   isrc: "", upc: "", iswc: "", explicit: false, primaryGenre: "", secondaryGenre: "",
   writers: [emptyContributor()], composers: [emptyContributor()], producers: [emptyContributor()], publishers: [emptyContributor()],
-  lyrics: "", credits: [],
+  lyrics: "", coverThumb: "", credits: [],
 });
 
 export const CREDIT_ROLES = ["Session musician", "Mixing engineer", "Recording engineer", "Mastering engineer", "Backup vocalist", "Arranger"] as const;

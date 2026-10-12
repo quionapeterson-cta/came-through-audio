@@ -201,8 +201,10 @@ function Assistance() {
     <div className="grid gap-6 md:grid-cols-2">
       <div className="rounded-2xl border border-primary p-6">
         <CalendarClock className="h-8 w-8 text-primary" />
-        <h2 className="mt-3 text-2xl font-bold">Expert Registration Assistance</h2>
-        <p className="mt-2 text-sm text-muted-foreground">1-on-1 live video guidance registering your songs with your PRO, SoundExchange and the MLC.</p>
+        <p className="mt-3 text-sm font-bold uppercase tracking-widest text-primary">Need help?</p>
+        <h2 className="mt-1 text-2xl font-bold">Get Expert Registration Assistance</h2>
+        <p className="mt-2 text-sm text-muted-foreground">Don't leave royalties on the table. Register with your PRO, SoundExchange and the MLC live, 1-on-1, with an industry specialist so you collect every dollar you're owed.</p>
+        <ul className="mt-3 space-y-1 text-sm">{["Live 1-on-1 video session", "Step-by-step PRO, SoundExchange & MLC setup", "Get your songs registered right the first time"].map((x) => <li key={x} className="flex items-center gap-2"><span className="h-1.5 w-1.5 rounded-full bg-primary" />{x}</li>)}</ul>
         <div className="mt-4 grid grid-cols-2 gap-2">
           {(["single", "album"] as const).map((t) => <Button key={t} variant={type === t ? "default" : "outline"} onClick={() => setType(t)}>{t === "single" ? "Single / EP" : "Full album"}</Button>)}
         </div>
