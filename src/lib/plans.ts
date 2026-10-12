@@ -39,7 +39,7 @@ export const FREE_CARD = {
   lead: "Start with the essentials:",
   features: [
     { title: "Unlimited Royalty Health Audits", tip: "Continuous checks across PRO, SoundExchange, and mechanical eligibility" },
-    { title: "Unlimited Split Sheet Signatures", tip: "Create, negotiate, and lock in audit-ready publishing splits" },
+    { title: "Unlimited Split Sheet Signatures", tip: "Sign split sheets you're invited to by collaborators. Creating split sheets requires Catalog and Collaborate." },
     { title: "Free Royalty Health Check", tip: "A guided audit of your royalty setup when you join" },
   ] as Feature[],
 };

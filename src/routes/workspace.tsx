@@ -57,8 +57,8 @@ function Workspace() {
   const { tier: realTier, purchases } = useBilling(user?.id);
   const [previewTier, setPreviewTier] = useState<Tier | "real">("real");
   const tier: Tier = getPaddleEnvironment() === "sandbox" && previewTier !== "real" ? previewTier : realTier;
-  // Free plan includes split sheets and owner signatures (see FREE_CARD).
-  const canSplit = hasTier(tier, "free");
+  // Free accounts may only sign invited split sheets (/sign/$token); creation requires Collaborate.
+  const canSplit = hasTier(tier, "collaborate");
   const hasAi = purchases.some((p) => p.kind === "ai");
   const upgrade = () => document.getElementById("plans-trigger")?.click();
 
