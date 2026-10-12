@@ -19,7 +19,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { toast } from "sonner";
 import { useBilling, type Purchase } from "@/hooks/useBilling";
 import { openCheckout, getPaddleEnvironment } from "@/lib/paddle";
-import { PLAN_CARDS, TIER_LABEL, hasTier, type Tier } from "@/lib/plans";
+import { FREE_CARD, PLAN_CARDS, TIER_LABEL, hasTier, type Tier } from "@/lib/plans";
 
 export const Route = createFileRoute("/workspace")({
   head: () => ({
@@ -170,14 +170,14 @@ function PlansDialog({ tier, userId, email }: { tier: Tier; userId: string; emai
       <DialogContent className="max-h-[90vh] max-w-5xl overflow-y-auto">
         <DialogHeader><DialogTitle className="text-2xl font-bold">Choose your plan</DialogTitle></DialogHeader>
         <TooltipProvider delayDuration={100}>
-          <div className="grid gap-4 md:grid-cols-3">
-            {PLAN_CARDS.map((p, i) => {
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+            {[FREE_CARD, ...PLAN_CARDS].map((p) => {
               const current = tier === p.tier;
               const owned = hasTier(tier, p.tier);
               return (
-                <div key={p.tier} className={`flex flex-col rounded-xl p-5 ${i === 1 ? "bg-ink text-ink-foreground" : "border border-border"}`}>
-                  <div className={`font-bold ${i === 1 ? "w-fit rounded-xl bg-card px-3 py-1 text-primary" : "text-primary"}`}>{TIER_LABEL[p.tier]}</div>
-                  <div className="mt-2 text-3xl font-bold">{p.price}<span className="text-base font-semibold">/yr</span></div>
+                <div key={p.tier} className={`flex flex-col rounded-xl p-5 ${p.tier === "collaborate" ? "bg-ink text-ink-foreground" : "border border-border"}`}>
+                  <div className={`font-bold ${p.tier === "collaborate" ? "w-fit rounded-xl bg-card px-3 py-1 text-primary" : "text-primary"}`}>{TIER_LABEL[p.tier]}</div>
+                  <div className="mt-2 text-3xl font-bold">{p.price}<span className="text-base font-semibold">{p.price === "$0" ? "" : "/yr"}</span></div>
                   <div className="text-sm opacity-80">{p.monthly}</div>
                   {p.lead && <p className="mt-4 text-xs italic opacity-80">{p.lead}</p>}
                   <ul className="mt-3 flex-1 space-y-2">
@@ -192,9 +192,15 @@ function PlansDialog({ tier, userId, email }: { tier: Tier; userId: string; emai
                       </li>
                     ))}
                   </ul>
-                  <Button className="mt-5 w-full" variant={i === 1 ? "secondary" : "default"} disabled={owned} onClick={() => buy(p.priceId)}>
-                    {current ? "Current plan" : owned ? "Included" : tier === "free" ? "Get started" : "Upgrade"}
-                  </Button>
+                  {p.tier === "free" ? (
+                    <Button className="mt-5 w-full" variant="secondary" disabled={owned}>
+                      {current ? "Current plan" : "Included"}
+                    </Button>
+                  ) : (
+                    <Button className="mt-5 w-full" variant={p.tier === "collaborate" ? "secondary" : "default"} disabled={owned} onClick={() => buy(p.priceId)}>
+                      {current ? "Current plan" : owned ? "Included" : tier === "free" ? "Get started" : "Upgrade"}
+                    </Button>
+                  )}
                 </div>
               );
             })}
