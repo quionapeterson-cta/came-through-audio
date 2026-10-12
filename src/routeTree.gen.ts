@@ -14,6 +14,7 @@ import { Route as PrivacyNoticeRouteImport } from './routes/privacy-notice'
 import { Route as RefundPolicyRouteImport } from './routes/refund-policy'
 import { Route as TermsAndConditionsRouteImport } from './routes/terms-and-conditions'
 import { Route as WorkspaceRouteImport } from './routes/workspace'
+import { Route as SignRowIdRouteImport } from './routes/sign.$rowId'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -40,6 +41,11 @@ const WorkspaceRoute = WorkspaceRouteImport.update({
   path: '/workspace',
   getParentRoute: () => rootRouteImport,
 } as any)
+const SignRowIdRoute = SignRowIdRouteImport.update({
+  id: '/sign/$rowId',
+  path: '/sign/$rowId',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -47,6 +53,7 @@ export interface FileRoutesByFullPath {
   '/refund-policy': typeof RefundPolicyRoute
   '/terms-and-conditions': typeof TermsAndConditionsRoute
   '/workspace': typeof WorkspaceRoute
+  '/sign/$rowId': typeof SignRowIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -54,6 +61,7 @@ export interface FileRoutesByTo {
   '/refund-policy': typeof RefundPolicyRoute
   '/terms-and-conditions': typeof TermsAndConditionsRoute
   '/workspace': typeof WorkspaceRoute
+  '/sign/$rowId': typeof SignRowIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -62,6 +70,7 @@ export interface FileRoutesById {
   '/refund-policy': typeof RefundPolicyRoute
   '/terms-and-conditions': typeof TermsAndConditionsRoute
   '/workspace': typeof WorkspaceRoute
+  '/sign/$rowId': typeof SignRowIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -71,6 +80,7 @@ export interface FileRouteTypes {
     | '/refund-policy'
     | '/terms-and-conditions'
     | '/workspace'
+    | '/sign/$rowId'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -78,6 +88,7 @@ export interface FileRouteTypes {
     | '/refund-policy'
     | '/terms-and-conditions'
     | '/workspace'
+    | '/sign/$rowId'
   id:
     | '__root__'
     | '/'
@@ -85,6 +96,7 @@ export interface FileRouteTypes {
     | '/refund-policy'
     | '/terms-and-conditions'
     | '/workspace'
+    | '/sign/$rowId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -93,6 +105,7 @@ export interface RootRouteChildren {
   RefundPolicyRoute: typeof RefundPolicyRoute
   TermsAndConditionsRoute: typeof TermsAndConditionsRoute
   WorkspaceRoute: typeof WorkspaceRoute
+  SignRowIdRoute: typeof SignRowIdRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -132,6 +145,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof WorkspaceRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/sign/$rowId': {
+      id: '/sign/$rowId'
+      path: '/sign/$rowId'
+      fullPath: '/sign/$rowId'
+      preLoaderRoute: typeof SignRowIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -141,6 +161,7 @@ const rootRouteChildren: RootRouteChildren = {
   RefundPolicyRoute: RefundPolicyRoute,
   TermsAndConditionsRoute: TermsAndConditionsRoute,
   WorkspaceRoute: WorkspaceRoute,
+  SignRowIdRoute: SignRowIdRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

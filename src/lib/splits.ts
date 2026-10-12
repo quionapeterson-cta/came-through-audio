@@ -112,28 +112,67 @@ export async function listSplitSheets(): Promise<Map<string, SplitCollaborator[]
   return map;
 }
 
-/** Replace a track's split sheet with the given collaborators (delete + insert keeps it simple). */
-export async function saveSplitSheet(catalogId: string, collaborators: SplitCollaborator[]) {
-  const { error: delError } = await supabase.from("split_sheets").delete().eq("catalog_id", catalogId);
-  if (delError) throw delError;
-  const rows = collaborators
-    .filter((c) => c.name.trim())
-    .map((c) => ({
-      catalog_id: catalogId,
-      collaborator_email: c.email.trim() || "unknown@pending.invite",
-      legal_name: c.name.trim(),
-      assigned_percentage: Math.round(Number(c.percentage) || 0),
-      role: c.role,
-      pro_affiliation: c.pro || null,
-      ipi_number: c.ipi || null,
-      signature_name: c.signatureName || null,
-      signature_hash: c.signatureHash || null,
-      signed_at: c.signedAt,
-      is_owner: c.isOwner,
-      invited_at: c.invitedAt,
-    }));
-  if (!rows.length) return;
-  const { error } = await supabase.from("split_sheets").insert(rows as never);
+/** Save a track's split sheet. Existing rows keep their id so signature links stay valid; signed rows are never overwritten. */
+export async function saveSplitSheet(catalogId: string, collaborators: SplitCollaborator[]): Promise<SplitCollaborator[]> {
+  const named = collaborators.filter((c) => c.name.trim());
+  const toRow = (c: SplitCollaborator) => ({
+    catalog_id: catalogId,
+    collaborator_email: c.email.trim() || "unknown@pending.invite",
+    legal_name: c.name.trim(),
+    assigned_percentage: Math.round(Number(c.percentage) || 0),
+    role: c.role,
+    pro_affiliation: c.pro || null,
+    ipi_number: c.ipi || null,
+    signature_name: c.signatureName || null,
+    signature_hash: c.signatureHash || null,
+    signed_at: c.signedAt,
+    is_owner: c.isOwner,
+    invited_at: c.invitedAt,
+  });
+  const { data: current, error: curErr } = await supabase.from("split_sheets").select("id, signed_at").eq("catalog_id", catalogId);
+  if (curErr) throw curErr;
+  const keep = new Set(named.map((c) => c.rowId).filter(Boolean));
+  const remove = (current ?? []).filter((r) => !keep.has(r.id)).map((r) => r.id);
+  if (remove.length) {
+    const { error } = await supabase.from("split_sheets").delete().in("id", remove);
+    if (error) throw error;
+  }
+  const signedRemote = new Set((current ?? []).filter((r) => r.signed_at).map((r) => r.id));
+  const saved: SplitCollaborator[] = [];
+  for (const c of named) {
+    if (c.rowId && signedRemote.has(c.rowId)) { saved.push(c); continue; }
+    if (c.rowId) {
+      const { error } = await supabase.from("split_sheets").update(toRow(c) as never).eq("id", c.rowId);
+      if (error) throw error;
+      saved.push(c);
+    } else {
+      const { data, error } = await supabase.from("split_sheets").insert(toRow(c) as never).select("id").single();
+      if (error) throw error;
+      saved.push({ ...c, rowId: (data as { id: string }).id });
+    }
+  }
+  return saved;
+}
+
+export const signLink = (rowId: string) => `${window.location.origin}/sign/${rowId}`;
+
+export type SplitInvite = {
+  row_id: string; track_title: string; artist_name: string; isrc: string | null;
+  legal_name: string; role: string; percentage: number; pro: string | null; ipi: string | null; signed_at: string | null;
+  collaborators: { name: string; role: string; percentage: number; signed: boolean }[];
+};
+
+export async function getSplitInvite(rowId: string): Promise<SplitInvite | null> {
+  const { data, error } = await supabase.rpc("get_split_invite" as never, { _row_id: rowId } as never);
+  if (error) throw error;
+  return data as unknown as SplitInvite | null;
+}
+
+export async function signSplitInvite(rowId: string, typedName: string, pro: string, ipi: string, email: string, percentage: number) {
+  const signedAt = new Date().toISOString();
+  const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(`${typedName.trim()}|${email}|${percentage}|${rowId}|${signedAt}`));
+  const hash = Array.from(new Uint8Array(digest)).map((b) => b.toString(16).padStart(2, "0")).join("");
+  const { error } = await supabase.rpc("sign_split_invite" as never, { _row_id: rowId, _signature_name: typedName, _pro: pro, _ipi: ipi, _hash: hash } as never);
   if (error) throw error;
 }
 

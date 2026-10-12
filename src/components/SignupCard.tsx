@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
-export function SignupCard() {
+export function SignupCard({ returnPath, onAuthed }: { returnPath?: string; onAuthed?: () => void } = {}) {
   const navigate = useNavigate();
   const [mode, setMode] = useState<"signup" | "login">("signup");
   const [stageName, setStageName] = useState("");
@@ -25,17 +25,17 @@ export function SignupCard() {
           email,
           password,
           options: {
-            emailRedirectTo: `${window.location.origin}/workspace?tab=health`,
+            emailRedirectTo: `${window.location.origin}${returnPath ?? "/workspace?tab=health"}`,
             data: { stage_name: stageName, legal_name: legalName },
           },
         });
         if (error) throw error;
-        if (data.session) navigate({ to: "/workspace", search: { tab: "health" } });
+        if (data.session) { if (onAuthed) onAuthed(); else navigate({ to: "/workspace", search: { tab: "health" } }); }
         else setSent(true);
       } else {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
-        navigate({ to: "/workspace", search: { tab: undefined } });
+        if (onAuthed) onAuthed(); else navigate({ to: "/workspace", search: { tab: undefined } });
       }
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Something went wrong");

@@ -6,7 +6,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { readMetadata, CREDIT_ROLES, emptyContributor, emptyMetadata, embedMetadata, metadataSchema, GENRES, PROS, RELEASE_TYPES, type Contributor, type Metadata } from "@/lib/metadata";
-import { deleteTrack, listTracks, saveTrack, type CatalogTrack } from "@/lib/catalog";
+import { deleteTrack, downloadCatalogFile, listTracks, safeName, saveTrack, uploadCatalogFile, type CatalogTrack } from "@/lib/catalog";
+import { downloadLyricsPdf } from "@/lib/lyrics-pdf";
 
 export function MetadataUploader({ stageName, userId, mode = "embed", onSubmitted, onSplitSheet, onProtect, canSplit }: { stageName?: string; userId?: string; mode?: "embed" | "catalog"; onSubmitted?: () => void; onSplitSheet?: (t: CatalogTrack) => void; onProtect?: (t: CatalogTrack) => void; canSplit?: boolean }) {
   const full = mode === "catalog";
@@ -39,11 +40,21 @@ export function MetadataUploader({ stageName, userId, mode = "embed", onSubmitte
     if (!parsed.success) { setError(parsed.error.issues[0]?.message ?? "Check your metadata."); return; }
     setSaving(true);
     try {
-      const id = await saveTrack(parsed.data, userId, editingId);
+      const data = { ...parsed.data, aiProtection: parsed.data.aiProtection || aiProtect };
+      const id = await saveTrack(data, userId, editingId);
+      // Keep the tagged master and artwork in the private catalog vault so they can be downloaded later.
+      const master = result ? await (await fetch(result.url)).blob() : audio;
+      let filesChanged = false;
+      try {
+        if (master) { data.audioPath = await uploadCatalogFile(userId, id, "master", master, "mp3"); filesChanged = true; }
+        if (artwork) { data.artPath = await uploadCatalogFile(userId, id, "artwork", artwork, artwork.type === "image/png" ? "png" : "jpg"); filesChanged = true; }
+        if (filesChanged) await saveTrack(data, userId, id);
+      } catch { toast.warning("Details saved, but your audio or artwork could not be stored. Try saving again."); }
+      setMetadata(data);
       setEditingId(id);
       toast.success(editingId ? "Track updated in your catalog." : "Track submitted to your catalog.");
       refresh();
-      if (!full) { setSubmitted(true); if (aiProtect) toast.info("AI Protection Certificate requested — upload your proof videos in My Catalog."); onSubmitted?.(); }
+      if (!full) { setSubmitted(true); onSubmitted?.(); }
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Could not save track.");
     } finally { setSaving(false); }
@@ -266,8 +277,10 @@ export function MetadataUploader({ stageName, userId, mode = "embed", onSubmitte
                   </div>
                   <div className="flex flex-wrap gap-2">
                     <Button type="button" variant="outline" size="sm" onClick={() => open(t)}><Pencil />Edit</Button>
-                    {t.metadata.lyrics && <Button type="button" variant="outline" size="sm" onClick={() => { const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([t.metadata.lyrics ?? ""], { type: "text/plain" })); a.download = `${t.title}-lyrics.txt`; a.click(); }}><Download />Lyrics</Button>}
-                    {onProtect && <Button type="button" variant="outline" size="sm" onClick={() => onProtect(t)}><ShieldCheck />Protect Track</Button>}
+                    {t.metadata.audioPath && <Button type="button" variant="outline" size="sm" onClick={() => downloadCatalogFile(t.metadata.audioPath, `${safeName(t.title)} - Came Through Audio.mp3`).catch(() => toast.error("Could not download the song."))}><Download />Song</Button>}
+                    {t.metadata.artPath && <Button type="button" variant="outline" size="sm" onClick={() => downloadCatalogFile(t.metadata.artPath, `${safeName(t.title)}-artwork.${t.metadata.artPath.split(".").pop()}`).catch(() => toast.error("Could not download the artwork."))}><Download />Artwork</Button>}
+                    {t.metadata.lyrics && <Button type="button" variant="outline" size="sm" onClick={() => void downloadLyricsPdf(t)}><Download />Lyrics</Button>}
+                    {onProtect && <Button type="button" variant={t.metadata.aiProtection ? "default" : "outline"} size="sm" onClick={() => onProtect(t)}><ShieldCheck />{t.metadata.aiProtection ? "Add AI Protection Proof" : "Protect Track"}</Button>}
                     <Button type="button" size="sm" onClick={() => { if (!canSplit) { setUpsell(true); return; } onSplitSheet?.(t); }}>{!canSplit && <Lock />}Generate Split Sheet</Button>
                     <Button type="button" variant="ghost" size="icon" aria-label={`Delete ${t.title}`} onClick={() => remove(t.id)}><Trash2 /></Button>
                   </div>
