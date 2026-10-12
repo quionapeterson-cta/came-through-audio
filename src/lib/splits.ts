@@ -13,6 +13,7 @@ export type SplitCollaborator = {
   pro: string;
   ipi: string;
   signatureName: string;
+  signatureHash: string;
   signedAt: string | null;
 };
 
