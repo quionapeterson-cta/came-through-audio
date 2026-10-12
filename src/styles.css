@@ -148,7 +148,7 @@
   --primary: oklch(0.43650531 0.17091113 259.20619);
   --primary-foreground: oklch(1 0 0);
   --ring: var(--primary);
-  --accent: color-mix(in oklch, var(--primary) 10%, var(--background));
+  --accent: oklch(0.97 0 0);
   --accent-foreground: var(--foreground);
   --sidebar-primary: var(--primary);
   --sidebar-primary-foreground: var(--primary-foreground);

@@ -61,8 +61,8 @@ function Landing() {
     <div className="min-h-screen bg-background text-foreground">
       <header className="bg-ink text-ink-foreground">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-5">
-          <span className="text-lg font-bold tracking-tight">Came Through Audio</span>
-          <Link to="/workspace" search={{ tab: undefined }} className="text-sm font-semibold text-ink-foreground hover:underline">Log in</Link>
+          <span className="text-lg font-bold tracking-tight">Came Through <span className="text-primary">Audio</span></span>
+          <Link to="/workspace" search={{ tab: undefined }} className="text-sm font-semibold text-ink-muted hover:text-primary">Log in</Link>
         </div>
       </header>
 
@@ -72,22 +72,22 @@ function Landing() {
             <h1 className="uppercase leading-[0.95] tracking-tight">
               <span className="block text-3xl font-bold md:text-4xl lg:text-5xl">Embed your metadata &amp;</span>
               <span className="block text-4xl font-light text-transparent [-webkit-text-stroke:1px_var(--ink-foreground)] md:text-5xl lg:text-6xl">Organize your</span>
-              <span className="block text-4xl font-extrabold text-ink-foreground md:text-5xl lg:text-6xl">Music business</span>
+              <span className="block text-4xl font-extrabold text-primary [-webkit-text-stroke:1px_var(--ink-foreground)] md:text-5xl lg:text-6xl">Music business</span>
               <span className="block text-5xl font-black md:text-6xl lg:text-7xl">Like a pro</span>
             </h1>
             <p className="text-lg text-ink-foreground">
               Every unembedded song is lost income. Embed your metadata and ensure your music is properly tracked everywhere it's played — so you never miss a royalty you earned.
             </p>
-            <div className="flex gap-3 border-l-4 border-ink-foreground pl-5 text-base text-ink-foreground">
+            <div className="flex gap-3 border-l-4 border-primary pl-5 text-base text-ink-foreground">
               <AlertTriangle className="mt-0.5 h-6 w-6 shrink-0 fill-caution text-ink" />
-              <p><span className="font-bold underline decoration-caution decoration-2 underline-offset-4">70% of independent artists</span> lose royalties because credits aren’t embedded, catalogs are scattered, and accounts aren’t set up to collect Worldwide.</p>
+              <p><span className="font-bold text-primary">70% of independent artists</span> lose royalties because credits aren’t embedded, catalogs are scattered, and accounts aren’t set up to collect Worldwide.</p>
             </div>
           </div>
           <div id="signup"><SignupCard /></div>
         </div>
       </section>
 
-      <section className="border-b border-border bg-accent">
+      <section className="border-b border-border bg-background">
         <div className="mx-auto max-w-7xl px-6 py-14">
           <h2 className="mb-8 text-center text-3xl font-extrabold uppercase tracking-wide text-primary md:text-4xl">What all plans include</h2>
           <div className="flex flex-wrap items-center justify-center gap-x-10 gap-y-4">
@@ -100,20 +100,20 @@ function Landing() {
         </div>
       </section>
 
-      <section className="bg-background py-24 text-foreground">
+      <section className="bg-ink py-24 text-ink-foreground">
         <div className="mx-auto max-w-7xl px-6">
           <h2 className="text-center text-4xl font-bold md:text-5xl lg:text-6xl">How It Works</h2>
-          <p className="mt-3 text-center"><span className="inline-block rounded-full bg-primary px-5 py-1.5 text-lg font-semibold text-primary-foreground md:text-xl">The Studio-to-Catalog Lifecycle</span></p>
+          <p className="mt-3 text-center"><span className="inline-block rounded-xl bg-background px-4 py-1 text-xl font-semibold text-primary md:text-2xl">The Studio-to-Catalog Lifecycle</span></p>
           <ol className="mt-14 grid gap-6 md:grid-cols-2 lg:grid-cols-5">
             {steps.map(({ icon: Icon, phase, title, text }, i) => (
-              <li key={title} className="overflow-hidden rounded-2xl border border-border bg-background shadow-sm transition hover:-translate-y-1 hover:border-primary hover:shadow-lg">
-                <div className="flex aspect-video items-center justify-center bg-primary">
-                  <Icon className="h-14 w-14 text-primary-foreground" />
+              <li key={title} className="overflow-hidden rounded-2xl border border-ink-border transition hover:-translate-y-1 hover:border-primary">
+                <div className="flex aspect-video items-center justify-center bg-background">
+                  <Icon className="h-14 w-14 text-primary" />
                 </div>
                 <div className="space-y-2 p-6">
-                  <span className="inline-block rounded-md bg-accent px-2 py-0.5 text-xs font-bold uppercase tracking-widest text-primary">{phase}</span>
+                  <span className="inline-block rounded-md border border-primary px-2 py-0.5 text-xs font-bold uppercase tracking-widest text-ink-foreground">{phase}</span>
                   <h3 className="text-xl font-bold">Step {i + 1}: {title}</h3>
-                  <p className="text-sm text-muted-foreground">{text}</p>
+                  <p className="text-sm text-ink-muted">{text}</p>
                 </div>
               </li>
             ))}
@@ -126,7 +126,7 @@ function Landing() {
         <div className="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-5">
           {roles.map(({ icon: Icon, title, scene, text }) => (
             <div key={title} className="overflow-hidden rounded-xl border border-border">
-              <div className="flex aspect-square flex-col items-center justify-center gap-2 bg-ink text-ink-foreground">
+              <div className="flex aspect-square flex-col items-center justify-center gap-2 bg-ink text-primary">
                 <Icon className="h-12 w-12" />
                 <span className="text-xs text-ink-muted">{scene}</span>
               </div>
@@ -160,15 +160,15 @@ function Landing() {
         </div>
       </section>
 
-      <section className="bg-accent py-20">
+      <section className="bg-background py-20">
         <div className="mx-auto max-w-5xl px-6">
           <div className="overflow-hidden rounded-3xl border-2 border-primary bg-background shadow-xl">
             <div className="grid md:grid-cols-[1fr_1.6fr]">
               <div className="flex flex-col justify-center gap-3 bg-primary p-10 text-primary-foreground">
                 <p className="text-sm font-semibold uppercase tracking-widest">One simple plan</p>
-                <p className="text-6xl font-extrabold leading-none">$24.99</p>
-                <p className="text-lg">per year · about $2.08/month</p>
-                <a href="#signup" className="mt-4 inline-flex h-12 items-center justify-center rounded-md bg-background px-8 font-semibold text-primary hover:bg-accent">Sign up free</a>
+                <p className="text-6xl font-extrabold leading-none">$24.99<span className="text-3xl font-bold">/yr</span></p>
+                <p className="text-3xl font-bold">Gets you</p>
+                <a href="#signup" className="mt-4 inline-flex h-12 items-center justify-center rounded-md bg-background px-8 font-semibold text-primary hover:bg-muted">Sign up free</a>
               </div>
               <div className="p-10">
                 <h2 className="text-3xl font-bold">What you get</h2>
