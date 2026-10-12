@@ -439,7 +439,9 @@ export type Database = {
           ipi_number: string | null
           legal_name: string | null
           pro_affiliation: string | null
+          role: string
           signature_hash: string | null
+          signature_name: string | null
           signed_at: string | null
         }
         Insert: {
@@ -450,7 +452,9 @@ export type Database = {
           ipi_number?: string | null
           legal_name?: string | null
           pro_affiliation?: string | null
+          role?: string
           signature_hash?: string | null
+          signature_name?: string | null
           signed_at?: string | null
         }
         Update: {
@@ -461,7 +465,9 @@ export type Database = {
           ipi_number?: string | null
           legal_name?: string | null
           pro_affiliation?: string | null
+          role?: string
           signature_hash?: string | null
+          signature_name?: string | null
           signed_at?: string | null
         }
         Relationships: [
