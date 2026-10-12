@@ -9,6 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { MetadataUploader } from "@/components/MetadataUploader";
 import { AIProtectionHub } from "@/components/AIProtectionHub";
+import type { CatalogTrack } from "@/lib/catalog";
 
 export const Route = createFileRoute("/workspace")({
   head: () => ({
@@ -27,12 +28,11 @@ export const Route = createFileRoute("/workspace")({
 
 const tabs = [
   { id: "embed", label: "Embed Metadata", icon: FileAudio },
-  { id: "protect", label: "AI Protection Hub", icon: ShieldCheck },
   { id: "catalog", label: "My Catalog", icon: Disc3 },
+  { id: "protect", label: "AI Protection Hub", icon: ShieldCheck },
   { id: "splits", label: "Split Sheets", icon: FileSignature },
   { id: "health", label: "Royalty Health Check", icon: Activity },
-  { id: "contracts", label: "Contracts & Blueprints", icon: ScrollText },
-  { id: "masterclasses", label: "Masterclasses", icon: GraduationCap },
+  { id: "learn", label: "Contracts & Masterclasses", icon: GraduationCap },
 ];
 
 function Workspace() {
@@ -44,6 +44,7 @@ function Workspace() {
   const [tab, setTab] = useState(search.tab ?? "embed");
   const [splitTrack, setSplitTrack] = useState<string>();
   const [catalogKey, setCatalogKey] = useState(0);
+  const [protectTrack, setProtectTrack] = useState<CatalogTrack>();
 
   useEffect(() => {
     if (!loading && !user) navigate({ to: "/" });
@@ -86,9 +87,9 @@ function Workspace() {
 
       <main className="mx-auto max-w-7xl px-6 py-8">
         <Tabs value={tab} onValueChange={setTab}>
-          <TabsList className="h-auto w-full flex-wrap justify-start gap-1 bg-muted p-1">
+          <TabsList className="h-auto w-full flex-nowrap justify-start gap-1 overflow-x-auto bg-muted p-1">
             {tabs.map(({ id, label, icon: Icon }, i) => (
-              <TabsTrigger key={id} value={id} className="gap-2 px-4 py-2.5 font-semibold data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+              <TabsTrigger key={id} value={id} className="shrink-0 gap-2 px-3 py-2.5 font-semibold data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
                 <span className="text-xs opacity-70">{i + 1}.</span><Icon className="h-4 w-4" /> {label}
               </TabsTrigger>
             ))}
@@ -96,15 +97,29 @@ function Workspace() {
 
           <TabsContent value="embed" forceMount className="data-[state=inactive]:hidden"><MetadataUploader stageName={name} userId={user.id} mode="embed" onSubmitted={() => setCatalogKey((k) => k + 1)} /></TabsContent>
           <TabsContent value="catalog" forceMount className="data-[state=inactive]:hidden">
-            <MetadataUploader key={catalogKey} userId={user.id} mode="catalog" canSplit={tier === "paid"} onSplitSheet={(t) => { setSplitTrack(t.title); setTab("splits"); }} />
+            <MetadataUploader key={catalogKey} userId={user.id} mode="catalog" canSplit={tier === "paid"} onSplitSheet={(t) => { setSplitTrack(t.title); setTab("splits"); }} onProtect={(t) => { setProtectTrack(t); setTab("protect"); }} />
           </TabsContent>
-          <TabsContent value="protect"><AIProtectionHub userId={user.id} paid={tier === "paid"} /></TabsContent>
+          <TabsContent value="protect"><AIProtectionHub userId={user.id} paid={tier === "paid"} track={protectTrack} /></TabsContent>
           <TabsContent value="splits"><Blank icon={FileSignature} title="Split Sheets" text={splitTrack ? `Starting a split sheet for "${splitTrack}". Collaborators will be invited by email to sign.` : "Generate a split sheet from any song in My Catalog."} /></TabsContent>
           <TabsContent value="health"><Blank icon={Activity} title="Royalty Health Check" text="Your free Royalty Health Check across BMI, ASCAP, SoundExchange and the MLC starts here." /></TabsContent>
-          <TabsContent value="contracts"><Blank icon={ScrollText} title="Contracts & Blueprints" text="Producer agreements, videographer releases and beat licenses — included with Catalog & Contracts." /></TabsContent>
-          <TabsContent value="masterclasses"><Masterclasses /></TabsContent>
+          <TabsContent value="learn"><Learn /></TabsContent>
         </Tabs>
       </main>
+    </div>
+  );
+}
+
+function Learn() {
+  const [view, setView] = useState<"contracts" | "classes">("contracts");
+  return (
+    <div className="mt-6">
+      <div className="inline-flex gap-1 rounded-lg bg-muted p-1">
+        <Button size="sm" variant={view === "contracts" ? "default" : "ghost"} onClick={() => setView("contracts")}><ScrollText className="h-4 w-4" />Contracts & Blueprints</Button>
+        <Button size="sm" variant={view === "classes" ? "default" : "ghost"} onClick={() => setView("classes")}><GraduationCap className="h-4 w-4" />Masterclasses</Button>
+      </div>
+      {view === "contracts"
+        ? <Blank icon={ScrollText} title="Contracts & Blueprints" text="Producer agreements, videographer releases and beat licenses — included with Catalog & Contracts." />
+        : <Masterclasses />}
     </div>
   );
 }
