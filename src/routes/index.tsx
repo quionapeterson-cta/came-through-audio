@@ -19,17 +19,26 @@ export const Route = createFileRoute("/")({
 const includes = ["Metadata Embedding", "Cataloging", "Royalty Audits", "Blockchain Timestamp", "Secure Catalog"];
 
 const steps = [
-  { icon: Upload, phase: "Upload / Embed Metadata", title: "The Session Ends", text: "You're working with a Producer, finish a track at the studio and instantly upload and embed your data right from your phone." },
-  { icon: Download, phase: "Download & Log", title: "Log Your Masters", text: "Download your embedded tracks and log them into your master catalog. Swap in new audio anytime — your metadata stays intact. You now have shareable embedded masters fresh out of the studio!" },
-  { icon: FileSignature, phase: "Before You Leave the Studio", title: "Lock the Legal Ownership", text: "Click \"Generate Split Sheet\" and the Artist and Producer sign on the spot." },
-  { icon: ShieldCheck, phase: "Before You Leave the Studio", title: "Secure the Ink", text: "Collaborator left early? They get an email invite, create a 100% free Collaborator Account, and e-sign — storing a permanent verification record." },
+  { icon: Upload, phase: "Upload Your Tracks", title: "The Session Ends (Instant Upload)", text: "The engineer bounces the final mix. Instead of texting a compressed file or emailing a loose, un-tagged Google Drive link, you drop your high-resolution master track straight into Came Through Audio right from your phone or studio laptop." },
+  { icon: Download, phase: "Embed Metadata", title: "Embed Permanent Metadata", text: "You immediately embed permanent tracking data (Song Data, ISRC, UPC, and creator credentials) directly into your audio file wrapper. If you need to tweak the mix or update the ISRC later, no worries—you can easily update the metadata and swap the audio file in your workspace at any time while preserving your cataloged entry perfectly." },
+  { icon: Disc3, phase: "Submit to Your Catalog", title: "Secure Your Organized Catalog (Your Vault)", text: "Click \"Submit to Catalog\" to lock your track into your permanent music repository. Your high-res master files, album art, credits, PRO information and publishing registries are organized safely in one secure home base that you can access and download from anywhere in the world." },
+  { icon: FileSignature, phase: "Generate and Sign Split Sheets", title: "Formalize Legal Ownership (The Split Sheet)", text: "Before anyone leaves the studio parking lot, you click \"Generate Split Sheet.\" The platform automatically pulls the track title and writer percentages directly from your catalog data to draft a legal agreement, instantly routing a signature link to your collaborators." },
+  { icon: ShieldCheck, phase: "Follow Up After Session", title: "Secure the Ink", text: "Virtual collaborators and featured artists receive a secure invitation link. They sign up for a 100% Free Collaborator Account right on their mobile devices and execute their digital signatures—generating a permanent verification hash that secures your chain of ownership forever." },
 ];
 
-const footerCols = [
-  { title: "Product", links: ["Metadata Embedding", "Centralized Master Catalog", "Royalty Health Suite", "System Security Metrics"] },
-  { title: "Learn", links: ["Help Center", "Industry Insights", "The Studio-to-Vault Guide"] },
-  { title: "Legal", links: ["Privacy Policy", "Terms of Service", "DMCA Safety", "Liability & Authorization Releases"] },
-  { title: "Access", links: ["Support Tickets", "Contact Us", "Admin Whitelist Verification"] },
+const faqs = [
+  { q: "What is a Catalog?", a: "In the music industry, your Catalog is the complete collection of musical works, masters, and intellectual property that you own or control. Inside Came Through Audio, the \"My Catalog\" tab acts as your private, institutional-grade digital vault. It organizes your master files, high-resolution cover art, precise tracking tags, splits, and credit data in one secure dashboard so you never lose track of an asset or miss out on a royalty payout." },
+  { q: "What does it mean to \"embed\" metadata?", a: "Embedding means permanently injecting tracking blocks, legal credits, and identifiers (like your real legal name, ISRC, UPC, and lyrics) directly inside the structural code of your MP3 or audio file container. Instead of keeping credits separate in a text document, embedding locks the data directly into the audio file itself. Wherever that file travels, your data travels with it, protecting your ownership." },
+  { q: "Can I download my songs or re-embed metadata later?", a: "Yes! You have unlimited, permanent access to download your embedded master MP3 files, 3000x3000px cover art layers, and lyric blocks at any time from your dashboard. If you don't have all your identifiers (like an ISRC or UPC code) right now, don't worry. You can fill out what you have, download the file, and return later to safely re-upload, modify, and append your updated metadata without breaking the file." },
+  { q: "How does the AI Protection Hub prove I created my music?", a: "The hub uses a secure 3-layer proof engine to establish a definitive, unalterable timeline of your creative process. By linking short screen recordings of your DAW (Digital Audio Workstation) and tracking your version histories over time, our platform calculates a cryptographic hash and generates a downloadable PDF Proof Certificate with a unique validation QR code. This gives you institutional-grade legal security to shield your tracks from automated platform takedowns and corporate claims." },
+];
+
+type FooterLink = { label: string; to?: "/terms-and-conditions" | "/refund-policy" | "/privacy-notice" };
+const footerCols: { title: string; links: FooterLink[] }[] = [
+  { title: "Product", links: [{ label: "Metadata Embedding" }, { label: "Centralized Master Catalog" }, { label: "Royalty Health Suite" }, { label: "System Security Metrics" }] },
+  { title: "Learn", links: [{ label: "Help Center" }, { label: "Industry Insights" }, { label: "The Studio-to-Vault Guide" }] },
+  { title: "Legal", links: [{ label: "Terms and Conditions", to: "/terms-and-conditions" }, { label: "Refund Policy", to: "/refund-policy" }, { label: "Privacy Notice", to: "/privacy-notice" }] },
+  { title: "Access", links: [{ label: "Support Tickets" }, { label: "Contact Us" }, { label: "Admin Whitelist Verification" }] },
 ];
 
 const roles = [

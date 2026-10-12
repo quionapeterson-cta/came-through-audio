@@ -10,11 +10,29 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as PrivacyNoticeRouteImport } from './routes/privacy-notice'
+import { Route as RefundPolicyRouteImport } from './routes/refund-policy'
+import { Route as TermsAndConditionsRouteImport } from './routes/terms-and-conditions'
 import { Route as WorkspaceRouteImport } from './routes/workspace'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PrivacyNoticeRoute = PrivacyNoticeRouteImport.update({
+  id: '/privacy-notice',
+  path: '/privacy-notice',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const RefundPolicyRoute = RefundPolicyRouteImport.update({
+  id: '/refund-policy',
+  path: '/refund-policy',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TermsAndConditionsRoute = TermsAndConditionsRouteImport.update({
+  id: '/terms-and-conditions',
+  path: '/terms-and-conditions',
   getParentRoute: () => rootRouteImport,
 } as any)
 const WorkspaceRoute = WorkspaceRouteImport.update({
@@ -25,27 +43,55 @@ const WorkspaceRoute = WorkspaceRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/privacy-notice': typeof PrivacyNoticeRoute
+  '/refund-policy': typeof RefundPolicyRoute
+  '/terms-and-conditions': typeof TermsAndConditionsRoute
   '/workspace': typeof WorkspaceRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/privacy-notice': typeof PrivacyNoticeRoute
+  '/refund-policy': typeof RefundPolicyRoute
+  '/terms-and-conditions': typeof TermsAndConditionsRoute
   '/workspace': typeof WorkspaceRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/privacy-notice': typeof PrivacyNoticeRoute
+  '/refund-policy': typeof RefundPolicyRoute
+  '/terms-and-conditions': typeof TermsAndConditionsRoute
   '/workspace': typeof WorkspaceRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/workspace'
+  fullPaths:
+    | '/'
+    | '/privacy-notice'
+    | '/refund-policy'
+    | '/terms-and-conditions'
+    | '/workspace'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/workspace'
-  id: '__root__' | '/' | '/workspace'
+  to:
+    | '/'
+    | '/privacy-notice'
+    | '/refund-policy'
+    | '/terms-and-conditions'
+    | '/workspace'
+  id:
+    | '__root__'
+    | '/'
+    | '/privacy-notice'
+    | '/refund-policy'
+    | '/terms-and-conditions'
+    | '/workspace'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  PrivacyNoticeRoute: typeof PrivacyNoticeRoute
+  RefundPolicyRoute: typeof RefundPolicyRoute
+  TermsAndConditionsRoute: typeof TermsAndConditionsRoute
   WorkspaceRoute: typeof WorkspaceRoute
 }
 
@@ -56,6 +102,27 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/privacy-notice': {
+      id: '/privacy-notice'
+      path: '/privacy-notice'
+      fullPath: '/privacy-notice'
+      preLoaderRoute: typeof PrivacyNoticeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/refund-policy': {
+      id: '/refund-policy'
+      path: '/refund-policy'
+      fullPath: '/refund-policy'
+      preLoaderRoute: typeof RefundPolicyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/terms-and-conditions': {
+      id: '/terms-and-conditions'
+      path: '/terms-and-conditions'
+      fullPath: '/terms-and-conditions'
+      preLoaderRoute: typeof TermsAndConditionsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/workspace': {
@@ -70,6 +137,9 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  PrivacyNoticeRoute: PrivacyNoticeRoute,
+  RefundPolicyRoute: RefundPolicyRoute,
+  TermsAndConditionsRoute: TermsAndConditionsRoute,
   WorkspaceRoute: WorkspaceRoute,
 }
 export const routeTree = rootRouteImport
