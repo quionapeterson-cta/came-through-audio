@@ -160,8 +160,8 @@ export type SavedContributor = { id?: string; name: string; kind: string; email:
 export async function listContributors(): Promise<SavedContributor[]> {
   const { data, error } = await supabase.from("contributors" as never).select("*").order("name");
   if (error) throw error;
-  return ((data ?? []) as unknown as Record<string, string | null>[]).map((r) => ({
-    id: r.id ?? undefined, name: r.name ?? "", kind: r.kind ?? "Writer", email: r.email ?? "",
+  return ((data ?? []) as unknown as { id: string; name: string | null; kind: string | null; email: string | null; pro: string | null; ipi: string | null; publisher: string | null; label: string | null }[]).map((r) => ({
+    id: r.id, name: r.name ?? "", kind: r.kind ?? "Writer", email: r.email ?? "",
     pro: r.pro ?? "", ipi: r.ipi ?? "", publisher: r.publisher ?? "", label: r.label ?? "",
   }));
 }
