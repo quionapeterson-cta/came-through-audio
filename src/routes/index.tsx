@@ -66,7 +66,7 @@ function Landing() {
       <header className="bg-ink text-ink-foreground">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-5">
           <BrandLogo />
-          <nav className="flex items-center gap-6"><a href="#plans" className="text-sm font-semibold text-ink-muted hover:text-primary">Plans</a><Link to="/workspace" search={{ tab: undefined }} className="text-sm font-semibold text-ink-muted hover:text-primary">Log in</Link></nav>
+          <nav className="flex items-center gap-6"><Link to="/plans" className="text-sm font-semibold text-ink-muted hover:text-primary">Plans</Link><Link to="/workspace" search={{ tab: undefined }} className="text-sm font-semibold text-ink-muted hover:text-primary">Log in</Link></nav>
         </div>
       </header>
 
