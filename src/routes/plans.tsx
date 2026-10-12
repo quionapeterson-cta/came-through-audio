@@ -83,9 +83,9 @@ function PlansPage() {
 
       <footer className="bg-ink text-ink-muted">
         <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-center gap-6 px-6 py-8 text-sm">
-          <Link to="/terms-and-conditions" className="hover:text-ink-foreground">Terms and Conditions</Link>
+          <Link to="/terms-of-service" className="hover:text-ink-foreground">Terms of Service</Link>
           <Link to="/refund-policy" className="hover:text-ink-foreground">Refund Policy</Link>
-          <Link to="/privacy-notice" className="hover:text-ink-foreground">Privacy Notice</Link>
+          <Link to="/privacy-policy" className="hover:text-ink-foreground">Privacy Policy</Link>
         </div>
         <div className="border-t border-ink-border py-6 text-center text-sm">© {new Date().getFullYear()} Came Through Audio, LLC</div>
       </footer>

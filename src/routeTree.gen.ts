@@ -12,8 +12,10 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as PlansRouteImport } from './routes/plans'
 import { Route as PrivacyNoticeRouteImport } from './routes/privacy-notice'
+import { Route as PrivacyPolicyRouteImport } from './routes/privacy-policy'
 import { Route as RefundPolicyRouteImport } from './routes/refund-policy'
 import { Route as TermsAndConditionsRouteImport } from './routes/terms-and-conditions'
+import { Route as TermsOfServiceRouteImport } from './routes/terms-of-service'
 import { Route as WorkspaceRouteImport } from './routes/workspace'
 import { Route as SignRowIdRouteImport } from './routes/sign.$rowId'
 import { Route as ApiPublicPaymentsWebhookRouteImport } from './routes/api/public/payments/webhook'
@@ -33,6 +35,11 @@ const PrivacyNoticeRoute = PrivacyNoticeRouteImport.update({
   path: '/privacy-notice',
   getParentRoute: () => rootRouteImport,
 } as any)
+const PrivacyPolicyRoute = PrivacyPolicyRouteImport.update({
+  id: '/privacy-policy',
+  path: '/privacy-policy',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const RefundPolicyRoute = RefundPolicyRouteImport.update({
   id: '/refund-policy',
   path: '/refund-policy',
@@ -41,6 +48,11 @@ const RefundPolicyRoute = RefundPolicyRouteImport.update({
 const TermsAndConditionsRoute = TermsAndConditionsRouteImport.update({
   id: '/terms-and-conditions',
   path: '/terms-and-conditions',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TermsOfServiceRoute = TermsOfServiceRouteImport.update({
+  id: '/terms-of-service',
+  path: '/terms-of-service',
   getParentRoute: () => rootRouteImport,
 } as any)
 const WorkspaceRoute = WorkspaceRouteImport.update({
@@ -64,8 +76,10 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/plans': typeof PlansRoute
   '/privacy-notice': typeof PrivacyNoticeRoute
+  '/privacy-policy': typeof PrivacyPolicyRoute
   '/refund-policy': typeof RefundPolicyRoute
   '/terms-and-conditions': typeof TermsAndConditionsRoute
+  '/terms-of-service': typeof TermsOfServiceRoute
   '/workspace': typeof WorkspaceRoute
   '/sign/$rowId': typeof SignRowIdRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
@@ -74,8 +88,10 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/plans': typeof PlansRoute
   '/privacy-notice': typeof PrivacyNoticeRoute
+  '/privacy-policy': typeof PrivacyPolicyRoute
   '/refund-policy': typeof RefundPolicyRoute
   '/terms-and-conditions': typeof TermsAndConditionsRoute
+  '/terms-of-service': typeof TermsOfServiceRoute
   '/workspace': typeof WorkspaceRoute
   '/sign/$rowId': typeof SignRowIdRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
@@ -85,8 +101,10 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/plans': typeof PlansRoute
   '/privacy-notice': typeof PrivacyNoticeRoute
+  '/privacy-policy': typeof PrivacyPolicyRoute
   '/refund-policy': typeof RefundPolicyRoute
   '/terms-and-conditions': typeof TermsAndConditionsRoute
+  '/terms-of-service': typeof TermsOfServiceRoute
   '/workspace': typeof WorkspaceRoute
   '/sign/$rowId': typeof SignRowIdRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
@@ -97,8 +115,10 @@ export interface FileRouteTypes {
     | '/'
     | '/plans'
     | '/privacy-notice'
+    | '/privacy-policy'
     | '/refund-policy'
     | '/terms-and-conditions'
+    | '/terms-of-service'
     | '/workspace'
     | '/sign/$rowId'
     | '/api/public/payments/webhook'
@@ -107,8 +127,10 @@ export interface FileRouteTypes {
     | '/'
     | '/plans'
     | '/privacy-notice'
+    | '/privacy-policy'
     | '/refund-policy'
     | '/terms-and-conditions'
+    | '/terms-of-service'
     | '/workspace'
     | '/sign/$rowId'
     | '/api/public/payments/webhook'
@@ -117,8 +139,10 @@ export interface FileRouteTypes {
     | '/'
     | '/plans'
     | '/privacy-notice'
+    | '/privacy-policy'
     | '/refund-policy'
     | '/terms-and-conditions'
+    | '/terms-of-service'
     | '/workspace'
     | '/sign/$rowId'
     | '/api/public/payments/webhook'
@@ -128,8 +152,10 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   PlansRoute: typeof PlansRoute
   PrivacyNoticeRoute: typeof PrivacyNoticeRoute
+  PrivacyPolicyRoute: typeof PrivacyPolicyRoute
   RefundPolicyRoute: typeof RefundPolicyRoute
   TermsAndConditionsRoute: typeof TermsAndConditionsRoute
+  TermsOfServiceRoute: typeof TermsOfServiceRoute
   WorkspaceRoute: typeof WorkspaceRoute
   SignRowIdRoute: typeof SignRowIdRoute
   ApiPublicPaymentsWebhookRoute: typeof ApiPublicPaymentsWebhookRoute
@@ -158,6 +184,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PrivacyNoticeRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/privacy-policy': {
+      id: '/privacy-policy'
+      path: '/privacy-policy'
+      fullPath: '/privacy-policy'
+      preLoaderRoute: typeof PrivacyPolicyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/refund-policy': {
       id: '/refund-policy'
       path: '/refund-policy'
@@ -170,6 +203,13 @@ declare module '@tanstack/react-router' {
       path: '/terms-and-conditions'
       fullPath: '/terms-and-conditions'
       preLoaderRoute: typeof TermsAndConditionsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/terms-of-service': {
+      id: '/terms-of-service'
+      path: '/terms-of-service'
+      fullPath: '/terms-of-service'
+      preLoaderRoute: typeof TermsOfServiceRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/workspace': {
@@ -200,8 +240,10 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   PlansRoute: PlansRoute,
   PrivacyNoticeRoute: PrivacyNoticeRoute,
+  PrivacyPolicyRoute: PrivacyPolicyRoute,
   RefundPolicyRoute: RefundPolicyRoute,
   TermsAndConditionsRoute: TermsAndConditionsRoute,
+  TermsOfServiceRoute: TermsOfServiceRoute,
   WorkspaceRoute: WorkspaceRoute,
   SignRowIdRoute: SignRowIdRoute,
   ApiPublicPaymentsWebhookRoute: ApiPublicPaymentsWebhookRoute,

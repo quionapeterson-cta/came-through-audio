@@ -38,11 +38,11 @@ const faqs = [
   { q: "How does the AI Protection Hub prove human origin?", a: "The hub issues a Certificate of Human Origin. Short screen recordings of your DAW session and draft history are fingerprinted (SHA-256), paired with a sworn human-authorship attestation, and timestamped on the Bitcoin blockchain — proving you made it, and that you made it first." },
 ];
 
-type FooterLink = { label: string; to?: "/terms-and-conditions" | "/refund-policy" | "/privacy-notice" };
+type FooterLink = { label: string; to?: "/terms-of-service" | "/refund-policy" | "/privacy-policy" };
 const footerCols: { title: string; links: FooterLink[] }[] = [
   { title: "Product", links: [{ label: "Metadata Embedding" }, { label: "Centralized Master Catalog" }, { label: "Royalty Health Suite" }, { label: "System Security Metrics" }] },
   { title: "Learn", links: [{ label: "Help Center" }, { label: "Industry Insights" }, { label: "The Studio-to-Vault Guide" }] },
-  { title: "Legal", links: [{ label: "Terms and Conditions", to: "/terms-and-conditions" }, { label: "Refund Policy", to: "/refund-policy" }, { label: "Privacy Notice", to: "/privacy-notice" }] },
+  { title: "Legal", links: [{ label: "Terms of Service", to: "/terms-of-service" }, { label: "Refund Policy", to: "/refund-policy" }, { label: "Privacy Policy", to: "/privacy-policy" }] },
   { title: "Access", links: [{ label: "Support Tickets" }, { label: "Contact Us" }, { label: "Admin Whitelist Verification" }] },
 ];
 
