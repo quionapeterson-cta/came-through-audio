@@ -13,3 +13,6 @@
 - [x] Split sheets: collaborator signing page, copy link / email request, beautiful PDF
 - [ ] Automatic emails for signature requests (blocked: needs an email sending domain; currently opens the owner's email app with the link)
 - [ ] Paddle checkout for AI Protection / paid tier (not yet connected)
+- [x] Pre-Distribution hover note + Pro Tip under identifiers; matching FAQ
+- [x] Catalog downloads grouped in one Downloads menu; vault always stores tagged master
+- [x] AI Protection copy: Certificate of Human Origin

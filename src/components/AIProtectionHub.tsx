@@ -136,9 +136,9 @@ export function AIProtectionHub({ userId, paid, track }: { userId: string; paid:
       <div className="flex items-center gap-3"><ShieldCheck className="h-8 w-8 text-primary" /><h1 className="text-2xl font-bold">AI Protection Hub</h1></div>
 
       <div className="space-y-4 rounded-2xl border-2 border-primary bg-card p-6">
-        <span className="inline-flex items-center gap-2 rounded-full border border-primary px-3 py-1 text-xs font-bold tracking-widest text-primary"><ShieldCheck className="h-4 w-4" />SHIELD YOUR SOUND · AI DEFENSE SYSTEM</span>
-        <h2 className="text-3xl font-extrabold leading-tight">Defend Your Sound Against AI Allegations & Ownership Disputes — <span className="text-primary">Prove You Created It First.</span></h2>
-        <p className="max-w-3xl text-muted-foreground">Before your master hits DSPs or social media, lock in cryptographic proof of human authorship. Generate tamper-proof certificates with SHA-256 session hashing and permanent Bitcoin blockchain timestamps so no one can copy, scrape, or claim what you made.</p>
+        <span className="inline-flex items-center gap-2 rounded-full border border-primary px-3 py-1 text-xs font-bold tracking-widest text-primary"><ShieldCheck className="h-4 w-4" />CERTIFICATE OF HUMAN ORIGIN · BITCOIN BLOCKCHAIN ANCHORED</span>
+        <h2 className="text-3xl font-extrabold leading-tight">Prove Human Origin — <span className="text-primary">And That You Made It First.</span></h2>
+        <p className="max-w-3xl text-muted-foreground">Before your master hits DSPs or social media, lock in proof that a human made it. Get a tamper-proof Certificate of Human Origin, timestamped on the Bitcoin blockchain — shielding your sound from AI scrapers, voice cloning and false ownership claims.</p>
       </div>
 
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">

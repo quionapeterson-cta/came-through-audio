@@ -5,6 +5,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { PRE_DIST_NOTE, PRO_TIP } from "@/lib/copy";
 import { readMetadata, CREDIT_ROLES, emptyContributor, emptyMetadata, embedMetadata, metadataSchema, GENRES, PROS, RELEASE_TYPES, type Contributor, type Metadata } from "@/lib/metadata";
 import { deleteTrack, downloadCatalogFile, listTracks, safeName, saveTrack, uploadCatalogFile, type CatalogTrack } from "@/lib/catalog";
 import { downloadLyricsPdf } from "@/lib/lyrics-pdf";
@@ -42,8 +45,13 @@ export function MetadataUploader({ stageName, userId, mode = "embed", onSubmitte
     try {
       const data = { ...parsed.data, aiProtection: parsed.data.aiProtection || aiProtect };
       const id = await saveTrack(data, userId, editingId);
-      // Keep the tagged master and artwork in the private catalog vault so they can be downloaded later.
-      const master = result ? await (await fetch(result.url)).blob() : audio;
+      // Always store the fully tagged master (never the raw upload) and artwork in the private vault.
+      let master: Blob | undefined;
+      if (result) master = await (await fetch(result.url)).blob();
+      else if (audio) {
+        try { master = await embedMetadata(await audio.arrayBuffer(), data, artwork ? await artwork.arrayBuffer() : undefined); }
+        catch { master = audio; }
+      }
       let filesChanged = false;
       try {
         if (master) { data.audioPath = await uploadCatalogFile(userId, id, "master", master, "mp3"); filesChanged = true; }
@@ -203,12 +211,20 @@ export function MetadataUploader({ stageName, userId, mode = "embed", onSubmitte
         <Contributors title="Producers" singular="producer" group="producers" rows={metadata.producers ?? [emptyContributor()]} disabled={busy} onChange={(rows) => update("producers", rows)} simple={!full} />
         <fieldset disabled={busy} className="space-y-5 border-t border-border pt-6">
           <legend className="pr-3 text-lg font-semibold">Identifiers</legend>
-          <p className="rounded-lg border border-primary bg-accent/30 p-3 text-sm">Don't worry if you don't have these yet! You can download your embedded track, return later, re-upload, and edit them.</p>
           <div className="grid gap-5 sm:grid-cols-3">
             <Field label="ISRC" id="isrc" value={metadata.isrc} placeholder="USABC2600001" onChange={(value) => update("isrc", value)} />
             <Field label="UPC / EAN" id="upc" value={metadata.upc} placeholder="12 or 13 digits" onChange={(value) => update("upc", value)} />
             <Field label="ISWC (optional)" id="iswc" value={metadata.iswc} placeholder="T-123.456.789-0" onChange={(value) => update("iswc", value)} />
           </div>
+          <HoverCard openDelay={100}>
+            <HoverCardTrigger asChild>
+              <button type="button" className="inline-flex items-center rounded-full border border-primary px-3 py-1 text-sm font-semibold text-primary">💡 Pre-Distribution Note</button>
+            </HoverCardTrigger>
+            <HoverCardContent align="start" className="w-96 space-y-3 text-sm">
+              <p>{PRE_DIST_NOTE}</p>
+              <p><span className="font-semibold">⭐ Pro Tip: </span>{PRO_TIP}</p>
+            </HoverCardContent>
+          </HoverCard>
         </fieldset>
         <fieldset disabled={busy} className="space-y-3 border-t border-border pt-6">
           <legend className="pr-3 text-lg font-semibold">Lyrics</legend>
@@ -277,9 +293,16 @@ export function MetadataUploader({ stageName, userId, mode = "embed", onSubmitte
                   </div>
                   <div className="flex flex-wrap gap-2">
                     <Button type="button" variant="outline" size="sm" onClick={() => open(t)}><Pencil />Edit</Button>
-                    {t.metadata.audioPath && <Button type="button" variant="outline" size="sm" onClick={() => downloadCatalogFile(t.metadata.audioPath, `${safeName(t.title)} - Came Through Audio.mp3`).catch(() => toast.error("Could not download the song."))}><Download />Song</Button>}
-                    {t.metadata.artPath && <Button type="button" variant="outline" size="sm" onClick={() => downloadCatalogFile(t.metadata.artPath, `${safeName(t.title)}-artwork.${t.metadata.artPath.split(".").pop()}`).catch(() => toast.error("Could not download the artwork."))}><Download />Artwork</Button>}
-                    {t.metadata.lyrics && <Button type="button" variant="outline" size="sm" onClick={() => void downloadLyricsPdf(t)}><Download />Lyrics</Button>}
+                    {(t.metadata.audioPath || t.metadata.artPath || t.metadata.lyrics) && (
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild><Button type="button" variant="outline" size="sm"><Download />Downloads</Button></DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          {t.metadata.audioPath && <DropdownMenuItem onClick={() => downloadCatalogFile(t.metadata.audioPath, `${safeName(t.title)} - Came Through Audio.mp3`).catch(() => toast.error("Could not download the song."))}>Master MP3</DropdownMenuItem>}
+                          {t.metadata.artPath && <DropdownMenuItem onClick={() => downloadCatalogFile(t.metadata.artPath, `${safeName(t.title)}-artwork.${t.metadata.artPath.split(".").pop()}`).catch(() => toast.error("Could not download the artwork."))}>Artwork</DropdownMenuItem>}
+                          {t.metadata.lyrics && <DropdownMenuItem onClick={() => void downloadLyricsPdf(t)}>Lyrics PDF</DropdownMenuItem>}
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    )}
                     {onProtect && <Button type="button" variant={t.metadata.aiProtection ? "default" : "outline"} size="sm" onClick={() => onProtect(t)}><ShieldCheck />{t.metadata.aiProtection ? "Add AI Protection Proof" : "Protect Track"}</Button>}
                     <Button type="button" size="sm" onClick={() => { if (!canSplit) { setUpsell(true); return; } onSplitSheet?.(t); }}>{!canSplit && <Lock />}Generate Split Sheet</Button>
                     <Button type="button" variant="ghost" size="icon" aria-label={`Delete ${t.title}`} onClick={() => remove(t.id)}><Trash2 /></Button>
