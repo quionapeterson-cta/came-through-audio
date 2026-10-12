@@ -23,7 +23,7 @@ const statusBadge: Record<string, { label: string; className: string }> = {
   signed: { label: "Fully signed", className: "border-primary bg-primary text-primary-foreground" },
 };
 
-export function SplitSheets({ userId, canSplit, prefillTrackId, onUpgrade }: { userId: string; canSplit: boolean; prefillTrackId?: string; onUpgrade: () => void }) {
+export function SplitSheets({ userId, canSplit, prefillTrackId, onUpgrade }: { userId: string; canSplit: boolean; prefillTrackId: string | undefined; onUpgrade: () => void }) {
   const [tracks, setTracks] = useState<CatalogTrack[]>([]);
   const [sheets, setSheets] = useState<Map<string, SplitCollaborator[]>>(new Map());
   const [loading, setLoading] = useState(true);
@@ -158,7 +158,7 @@ export function SplitSheets({ userId, canSplit, prefillTrackId, onUpgrade }: { u
   );
 }
 
-function SplitEditor({ track, initial, onClose, onSaved }: { track: CatalogTrack; initial?: SplitCollaborator[]; onClose: () => void; onSaved: () => void }) {
+function SplitEditor({ track, initial, onClose, onSaved }: { track: CatalogTrack; initial: SplitCollaborator[] | undefined; onClose: () => void; onSaved: () => void }) {
   const [collaborators, setCollaborators] = useState<SplitCollaborator[]>(initial?.length ? initial : collaboratorsFromTrack(track));
   const [signingIndex, setSigningIndex] = useState<number | null>(null);
   const [typedName, setTypedName] = useState("");
@@ -190,6 +190,7 @@ function SplitEditor({ track, initial, onClose, onSaved }: { track: CatalogTrack
 
   const sign = async (i: number) => {
     const c = collaborators[i];
+    if (!c) return;
     if (typedName.trim().toLowerCase() !== c.name.trim().toLowerCase()) {
       toast.error("Type the collaborator's full legal name exactly as listed to sign.");
       return;
