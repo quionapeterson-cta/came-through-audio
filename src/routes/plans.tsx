@@ -6,7 +6,9 @@ import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useAuth } from "@/hooks/useAuth";
 import { openCheckout } from "@/lib/paddle";
-import { PLAN_CARDS, TIER_LABEL } from "@/lib/plans";
+import { FREE_CARD, PLAN_CARDS, TIER_LABEL } from "@/lib/plans";
+
+const ALL_CARDS = [FREE_CARD, ...PLAN_CARDS];
 
 export const Route = createFileRoute("/plans")({
   head: () => ({
@@ -44,11 +46,11 @@ function PlansPage() {
         <h1 className="text-center text-4xl font-bold md:text-5xl">Choose your plan</h1>
         <p className="mt-3 text-center text-muted-foreground">Simple yearly pricing. Start free and upgrade anytime.</p>
         <TooltipProvider delayDuration={100}>
-          <div className="mt-12 grid gap-6 md:grid-cols-3">
-            {PLAN_CARDS.map((p, i) => (
-              <div key={p.tier} className={`flex flex-col rounded-2xl p-6 ${i === 1 ? "bg-ink text-ink-foreground shadow-xl" : "border border-border"}`}>
-                <div className={`font-bold ${i === 1 ? "w-fit rounded-xl bg-card px-3 py-1 text-primary" : "text-primary"}`}>{TIER_LABEL[p.tier]}</div>
-                <div className="mt-3 text-4xl font-bold">{p.price}<span className="text-base font-semibold">/yr</span></div>
+          <div className="mt-12 grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+            {ALL_CARDS.map((p) => (
+              <div key={p.tier} className={`flex flex-col rounded-2xl p-6 ${p.tier === "collaborate" ? "bg-ink text-ink-foreground shadow-xl" : "border border-border"}`}>
+                <div className={`font-bold ${p.tier === "collaborate" ? "w-fit rounded-xl bg-card px-3 py-1 text-primary" : "text-primary"}`}>{TIER_LABEL[p.tier]}</div>
+                <div className="mt-3 text-4xl font-bold">{p.price}<span className="text-base font-semibold">{p.price === "$0" ? "" : "/yr"}</span></div>
                 <div className="text-sm opacity-80">{p.monthly}</div>
                 {p.lead && <p className="mt-4 text-xs italic opacity-80">{p.lead}</p>}
                 <ul className="mt-4 flex-1 space-y-3">
@@ -63,9 +65,15 @@ function PlansPage() {
                     </li>
                   ))}
                 </ul>
-                <Button className="mt-6 w-full" variant={i === 1 ? "secondary" : "default"} onClick={() => buy(p.priceId)}>
-                  {user ? "Get started" : "Sign up to start"}
-                </Button>
+                {p.tier === "free" ? (
+                  <Button className="mt-6 w-full" variant="secondary" onClick={() => (user ? navigate({ to: "/workspace" }) : navigate({ to: "/", hash: "signup" }))}>
+                    {user ? "Included with account" : "Sign up free"}
+                  </Button>
+                ) : (
+                  <Button className="mt-6 w-full" variant={p.tier === "collaborate" ? "secondary" : "default"} onClick={() => buy(p.priceId)}>
+                    {user ? "Get started" : "Sign up to start"}
+                  </Button>
+                )}
               </div>
             ))}
           </div>
