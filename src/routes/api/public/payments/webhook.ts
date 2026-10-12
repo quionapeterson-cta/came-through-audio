@@ -4,7 +4,7 @@ import { verifyWebhook, EventName, type PaddleEnv } from "@/lib/paddle.server";
 
 let _sb: ReturnType<typeof createClient> | null = null;
 function db() {
-  if (!_sb) _sb = createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
+  if (!_sb) _sb = createClient(process.env['SUPABASE_URL']!, process.env['SUPABASE_SERVICE_ROLE_KEY']!);
   return _sb;
 }
 
