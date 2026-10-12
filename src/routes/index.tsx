@@ -1,6 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { Check, Mic, Guitar, Disc3, NotebookPen, Music, Quote, AlertTriangle, Upload, Download, FileSignature, ShieldCheck } from "lucide-react";
 import { SignupCard } from "@/components/SignupCard";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -102,16 +103,16 @@ function Landing() {
       <section className="bg-ink py-24 text-ink-foreground">
         <div className="mx-auto max-w-7xl px-6">
           <h2 className="text-center text-4xl font-bold md:text-5xl lg:text-6xl">How It Works</h2>
-          <p className="mt-3 text-center text-xl text-primary md:text-2xl">The Studio-to-Catalog Lifecycle</p>
-          <ol className="mt-14 grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+          <p className="mt-3 text-center"><span className="inline-block rounded-xl bg-background px-4 py-1 text-xl font-semibold text-primary md:text-2xl">The Studio-to-Catalog Lifecycle</span></p>
+          <ol className="mt-14 grid gap-6 md:grid-cols-2 lg:grid-cols-5">
             {steps.map(({ icon: Icon, phase, title, text }, i) => (
               <li key={title} className="overflow-hidden rounded-2xl border border-ink-border">
-                <div className="flex aspect-video items-center justify-center bg-primary/20">
+                <div className="flex aspect-video items-center justify-center bg-background">
                   <Icon className="h-14 w-14 text-primary" />
                 </div>
                 <div className="space-y-2 p-6">
-                  <span className="text-xs font-bold uppercase tracking-widest text-primary">{phase}</span>
-                  <h3 className="text-xl font-bold"><span className="text-primary">{i + 1}.</span> {title}</h3>
+                  <span className="inline-block rounded-md border border-primary px-2 py-0.5 text-xs font-bold uppercase tracking-widest text-ink-foreground">{phase}</span>
+                  <h3 className="text-xl font-bold">Step {i + 1}: {title}</h3>
                   <p className="text-sm text-ink-muted">{text}</p>
                 </div>
               </li>
@@ -162,20 +163,35 @@ function Landing() {
       <section className="mx-auto max-w-6xl px-6 py-20">
         <div className="grid gap-10 rounded-3xl bg-ink p-10 text-ink-foreground md:grid-cols-[1.2fr_1fr] md:items-center md:p-14">
           <div>
-            <h2 className="text-4xl font-bold md:text-5xl"><span className="text-primary">$24.99/yr</span> Gets you</h2>
+            <h2 className="text-4xl font-bold md:text-5xl"><span className="rounded-xl bg-background px-3 text-primary">$24.99/yr</span> Gets you</h2>
             <ol className="mt-10 space-y-8">
               {values.map((v, i) => (
-                <li key={i} className="flex gap-5">
-                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary font-bold text-primary-foreground">{i + 1}</span>
-                  <p className="text-ink-muted">{v}</p>
+                <li key={i} className={`flex gap-5 ${i === 1 ? "pt-6" : ""}`}>
+                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary font-bold text-primary-foreground ring-2 ring-ink-foreground">{i + 1}</span>
+                  <div className="space-y-3 text-ink-muted">
+                    <p>{v}</p>
+                    {i === 0 && <p className="font-semibold text-ink-foreground">No more searching for important identifiers across distributors and royalty collection databases. All the information you need in one home base allowing you to easily retrieve your data.</p>}
+                  </div>
                 </li>
               ))}
             </ol>
           </div>
           <div className="flex md:justify-end">
-            <a href="#signup" className="inline-flex h-14 items-center rounded-md bg-primary px-10 text-lg font-semibold text-primary-foreground hover:bg-primary/90">Sign up free</a>
+            <a href="#signup" className="inline-flex h-14 items-center rounded-md border-2 border-ink-foreground bg-primary px-10 text-lg font-semibold text-primary-foreground hover:bg-primary/90">Sign up free</a>
           </div>
         </div>
+      </section>
+
+      <section className="mx-auto max-w-4xl px-6 pb-20">
+        <h2 className="text-center text-3xl font-bold md:text-4xl">Frequently Asked Questions</h2>
+        <Accordion type="single" collapsible className="mt-10 rounded-2xl border-2 border-foreground">
+          {faqs.map((f, i) => (
+            <AccordionItem key={f.q} value={`faq-${i}`} className="px-6 last:border-b-0">
+              <AccordionTrigger className="text-left text-lg font-bold">{f.q}</AccordionTrigger>
+              <AccordionContent className="text-base leading-relaxed text-foreground">{f.a}</AccordionContent>
+            </AccordionItem>
+          ))}
+        </Accordion>
       </section>
 
       <footer className="bg-ink text-ink-muted">
@@ -184,13 +200,17 @@ function Landing() {
             <div key={c.title}>
               <h4 className="mb-4 font-bold text-ink-foreground">{c.title}</h4>
               <ul className="space-y-2 text-sm">
-                {c.links.map((l) => <li key={l}><span className="hover:text-primary">{l}</span></li>)}
+                {c.links.map((l) => (
+                  <li key={l.label}>
+                    {l.to ? <Link to={l.to} className="underline-offset-4 hover:text-ink-foreground hover:underline">{l.label}</Link> : <span>{l.label}</span>}
+                  </li>
+                ))}
                 {c.title === "Access" && <li className="font-semibold text-ink-foreground">🟢 System Status: Fully Operational</li>}
               </ul>
             </div>
           ))}
         </div>
-        <div className="border-t border-ink-border py-6 text-center text-sm">© {new Date().getFullYear()} Came Through Audio</div>
+        <div className="border-t border-ink-border py-6 text-center text-sm">© {new Date().getFullYear()} Came Through Audio, LLC</div>
       </footer>
     </div>
   );
