@@ -165,7 +165,6 @@ function Landing() {
           <div className="overflow-hidden rounded-3xl border-2 border-primary bg-background shadow-xl">
             <div className="grid md:grid-cols-[1fr_1.6fr]">
               <div className="flex flex-col justify-center gap-3 bg-primary p-10 text-primary-foreground">
-                <p className="text-sm font-semibold uppercase tracking-widest">One simple plan</p>
                 <p className="text-6xl font-extrabold leading-none">$24.99<span className="text-3xl font-bold">/yr</span></p>
                 <p className="text-3xl font-bold">Gets you</p>
                 <a href="#signup" className="mt-4 inline-flex h-12 items-center justify-center rounded-md bg-background px-8 font-semibold text-primary hover:bg-muted">Sign up free</a>
