@@ -97,6 +97,7 @@ export type Database = {
         Row: {
           artist_name: string | null
           attested: boolean
+          blockchain_status: string
           catalog_id: string | null
           chain_strength: string | null
           format_type: Database["public"]["Enums"]["content_format"]
@@ -108,6 +109,9 @@ export type Database = {
           legal_credits: Json
           notes_hash: string | null
           notes_proof_url: string
+          ots_calendar: string | null
+          ots_receipt: string | null
+          proof_digest: string | null
           session_hash: string | null
           session_video_url: string
           track_title: string | null
@@ -117,6 +121,7 @@ export type Database = {
         Insert: {
           artist_name?: string | null
           attested?: boolean
+          blockchain_status?: string
           catalog_id?: string | null
           chain_strength?: string | null
           format_type: Database["public"]["Enums"]["content_format"]
@@ -128,6 +133,9 @@ export type Database = {
           legal_credits?: Json
           notes_hash?: string | null
           notes_proof_url?: string
+          ots_calendar?: string | null
+          ots_receipt?: string | null
+          proof_digest?: string | null
           session_hash?: string | null
           session_video_url?: string
           track_title?: string | null
@@ -137,6 +145,7 @@ export type Database = {
         Update: {
           artist_name?: string | null
           attested?: boolean
+          blockchain_status?: string
           catalog_id?: string | null
           chain_strength?: string | null
           format_type?: Database["public"]["Enums"]["content_format"]
@@ -148,6 +157,9 @@ export type Database = {
           legal_credits?: Json
           notes_hash?: string | null
           notes_proof_url?: string
+          ots_calendar?: string | null
+          ots_receipt?: string | null
+          proof_digest?: string | null
           session_hash?: string | null
           session_video_url?: string
           track_title?: string | null
