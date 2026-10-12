@@ -311,6 +311,41 @@ export type Database = {
         }
         Relationships: []
       }
+      expert_gateways: {
+        Row: {
+          agencies: string[]
+          id: string
+          purchase_id: string
+          signature_name: string
+          signed_at: string
+          user_id: string
+        }
+        Insert: {
+          agencies?: string[]
+          id?: string
+          purchase_id: string
+          signature_name: string
+          signed_at?: string
+          user_id: string
+        }
+        Update: {
+          agencies?: string[]
+          id?: string
+          purchase_id?: string
+          signature_name?: string
+          signed_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "expert_gateways_purchase_id_fkey"
+            columns: ["purchase_id"]
+            isOneToOne: true
+            referencedRelation: "purchases"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           id: string
@@ -335,6 +370,39 @@ export type Database = {
           stage_name?: string | null
           tier?: Database["public"]["Enums"]["subscription_tier"] | null
           updated_at?: string | null
+        }
+        Relationships: []
+      }
+      purchases: {
+        Row: {
+          created_at: string | null
+          details: Json
+          environment: string
+          id: string
+          kind: string
+          paddle_transaction_id: string
+          price_ids: string[]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          details?: Json
+          environment?: string
+          id?: string
+          kind: string
+          paddle_transaction_id: string
+          price_ids?: string[]
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          details?: Json
+          environment?: string
+          id?: string
+          kind?: string
+          paddle_transaction_id?: string
+          price_ids?: string[]
+          user_id?: string
         }
         Relationships: []
       }
@@ -528,6 +596,54 @@ export type Database = {
           },
         ]
       }
+      subscriptions: {
+        Row: {
+          cancel_at_period_end: boolean | null
+          created_at: string | null
+          current_period_end: string | null
+          current_period_start: string | null
+          environment: string
+          id: string
+          paddle_customer_id: string
+          paddle_subscription_id: string
+          price_id: string
+          product_id: string
+          status: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          cancel_at_period_end?: boolean | null
+          created_at?: string | null
+          current_period_end?: string | null
+          current_period_start?: string | null
+          environment?: string
+          id?: string
+          paddle_customer_id: string
+          paddle_subscription_id: string
+          price_id: string
+          product_id: string
+          status?: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          cancel_at_period_end?: boolean | null
+          created_at?: string | null
+          current_period_end?: string | null
+          current_period_start?: string | null
+          environment?: string
+          id?: string
+          paddle_customer_id?: string
+          paddle_subscription_id?: string
+          price_id?: string
+          product_id?: string
+          status?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       video_rooms: {
         Row: {
           created_at: string | null
@@ -634,6 +750,10 @@ export type Database = {
     }
     Functions: {
       get_split_invite: { Args: { _row_id: string }; Returns: Json }
+      has_active_subscription: {
+        Args: { check_env?: string; user_uuid: string }
+        Returns: boolean
+      }
       sign_split_invite: {
         Args: {
           _hash: string
