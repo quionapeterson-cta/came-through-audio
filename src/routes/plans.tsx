@@ -66,7 +66,7 @@ function PlansPage() {
                   ))}
                 </ul>
                 {p.tier === "free" ? (
-                  <Button className="mt-6 w-full" variant="secondary" onClick={() => navigate({ to: user ? "/workspace" : "/", hash: user ? undefined : "signup" })}>
+                  <Button className="mt-6 w-full" variant="secondary" onClick={() => (user ? navigate({ to: "/workspace" }) : navigate({ to: "/", hash: "signup" }))}>
                     {user ? "Included with account" : "Sign up free"}
                   </Button>
                 ) : (
