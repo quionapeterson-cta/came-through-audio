@@ -1,6 +1,6 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { FileAudio, CalendarClock, Lock, Disc3, Activity, FileSignature, ScrollText, GraduationCap, LogOut, Check } from "lucide-react";
+import { ShieldCheck, FileAudio, CalendarClock, Lock, Disc3, Activity, FileSignature, ScrollText, GraduationCap, LogOut, Check } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { MetadataUploader } from "@/components/MetadataUploader";
+import { AIProtectionHub } from "@/components/AIProtectionHub";
 
 export const Route = createFileRoute("/workspace")({
   head: () => ({
@@ -26,6 +27,7 @@ export const Route = createFileRoute("/workspace")({
 
 const tabs = [
   { id: "embed", label: "Embed Metadata", icon: FileAudio },
+  { id: "protect", label: "AI Protection Hub", icon: ShieldCheck },
   { id: "catalog", label: "My Catalog", icon: Disc3 },
   { id: "splits", label: "Split Sheets", icon: FileSignature },
   { id: "health", label: "Royalty Health Check", icon: Activity },
@@ -94,12 +96,9 @@ function Workspace() {
 
           <TabsContent value="embed" forceMount className="data-[state=inactive]:hidden"><MetadataUploader stageName={name} userId={user.id} mode="embed" onSubmitted={() => setCatalogKey((k) => k + 1)} /></TabsContent>
           <TabsContent value="catalog" forceMount className="data-[state=inactive]:hidden">
-            <div className="mx-auto mt-8 max-w-5xl rounded-xl border border-primary p-5">
-              <div className="font-bold">AI Protection Certificate uploads</div>
-              <p className="mt-1 text-sm text-muted-foreground">If you added AI Protection, upload a 15-second DAW session video and an 8-second notes-app proof for each protected song.</p>
-            </div>
             <MetadataUploader key={catalogKey} userId={user.id} mode="catalog" canSplit={tier === "paid"} onSplitSheet={(t) => { setSplitTrack(t.title); setTab("splits"); }} />
           </TabsContent>
+          <TabsContent value="protect"><AIProtectionHub userId={user.id} paid={tier === "paid"} /></TabsContent>
           <TabsContent value="splits"><Blank icon={FileSignature} title="Split Sheets" text={splitTrack ? `Starting a split sheet for "${splitTrack}". Collaborators will be invited by email to sign.` : "Generate a split sheet from any song in My Catalog."} /></TabsContent>
           <TabsContent value="health"><Blank icon={Activity} title="Royalty Health Check" text="Your free Royalty Health Check across BMI, ASCAP, SoundExchange and the MLC starts here." /></TabsContent>
           <TabsContent value="contracts"><Blank icon={ScrollText} title="Contracts & Blueprints" text="Producer agreements, videographer releases and beat licenses — included with Catalog & Contracts." /></TabsContent>
@@ -136,10 +135,10 @@ function PlansDialog() {
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
           {plans.map((p, i) => (
             <div key={p.name} className={`flex flex-col rounded-xl p-5 ${i === 1 ? "bg-ink text-ink-foreground" : "border border-border"}`}>
-              <div className="font-bold text-primary">{p.name}</div>
+              <div className={`font-bold ${i === 1 ? "w-fit rounded-xl bg-card px-3 py-1 text-primary" : "text-primary"}`}>{p.name}</div>
               <div className="mt-2 text-3xl font-bold">{p.price}</div>
               {p.monthly && <div className="text-sm opacity-80">{p.monthly}</div>}
-              <Badge variant="outline" className="mt-2 w-fit">{i === 0 ? "Always free" : "Billed annually"}</Badge>
+              <Badge variant="outline" className={`mt-2 w-fit ${i === 1 ? "border-primary text-ink-foreground" : ""}`}>{i === 0 ? "Always free" : "Billed annually"}</Badge>
               <p className="mt-4 flex-1 text-sm opacity-90">{p.text}</p>
               <Button className="mt-5 w-full" variant={i === 0 ? "outline" : "default"} disabled>{i === 0 ? "Current plan" : "Coming soon"}</Button>
             </div>
@@ -153,13 +152,12 @@ function PlansDialog() {
 function Masterclasses() {
   const [songs, setSongs] = useState(0);
   const [type, setType] = useState<"single" | "album">("single");
-  const [count, setCount] = useState(1);
-  const [agencies, setAgencies] = useState(1);
+  const [count, setCount] = useState("");
+  const [agencies, setAgencies] = useState("");
   const [agree, setAgree] = useState(false);
   useEffect(() => { supabase.from("catalogs").select("id", { count: "exact", head: true }).then(({ count: c }) => setSongs(c ?? 0)); }, []);
   const base = type === "single" ? 14.99 : 29.99;
-  const n = type === "album" ? Math.min(count, 20) : count;
-  const total = (base + 4.99 * n * agencies).toFixed(2);
+  const total = assistanceTotal(type, Number(count) || 0, Number(agencies) || 0).toFixed(2);
   const unlocked = songs > 0 && agree;
   return (
     <div className="mt-6 grid gap-6 md:grid-cols-2">
@@ -178,8 +176,8 @@ function Masterclasses() {
           {(["single", "album"] as const).map((t) => <Button key={t} variant={type === t ? "default" : "outline"} onClick={() => setType(t)}>{t === "single" ? "Single / EP" : "Full album"}</Button>)}
         </div>
         <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
-          <label className="space-y-1"><span>Songs{type === "album" ? " (up to 20)" : ""}</span><input type="number" min={1} max={type === "album" ? 20 : 6} value={count} onChange={(e) => setCount(Math.max(1, Number(e.target.value)))} className="w-full rounded-md border border-input bg-background px-3 py-2" /></label>
-          <label className="space-y-1"><span>Agencies</span><input type="number" min={1} max={4} value={agencies} onChange={(e) => setAgencies(Math.min(4, Math.max(1, Number(e.target.value))))} className="w-full rounded-md border border-input bg-background px-3 py-2" /></label>
+          <label className="space-y-1"><span>Songs ({type === "album" ? "up to 20 per album entry" : "up to 6"})</span><input type="number" min={1} max={type === "album" ? undefined : 6} value={count} onChange={(e) => setCount(e.target.value === "" ? "" : String(Math.max(1, Math.min(type === "single" ? 6 : 999, Number(e.target.value)))))} className="w-full rounded-md border border-input bg-background px-3 py-2" /></label>
+          <label className="space-y-1"><span>Agencies</span><input type="number" min={1} max={4} value={agencies} onChange={(e) => setAgencies(e.target.value === "" ? "" : String(Math.min(4, Math.max(1, Number(e.target.value)))))} className="w-full rounded-md border border-input bg-background px-3 py-2" /></label>
         </div>
         <p className="mt-3 text-sm text-muted-foreground">${base} setup + $4.99 per song per agency</p>
         <div className="mt-1 text-3xl font-bold text-primary">${total}</div>
@@ -189,4 +187,11 @@ function Masterclasses() {
       </div>
     </div>
   );
+}
+
+/** Singles/EPs cap at 6 songs. Albums: every block of up to 20 songs is a new entry with its own $29.99 setup fee. */
+export function assistanceTotal(type: "single" | "album", songs: number, agencies: number) {
+  if (songs <= 0 || agencies <= 0) return 0;
+  if (type === "single") return 14.99 + 4.99 * Math.min(songs, 6) * agencies;
+  return 29.99 * Math.ceil(songs / 20) + 4.99 * songs * agencies;
 }

@@ -95,33 +95,63 @@ export type Database = {
       }
       ai_protection_certificates: {
         Row: {
+          artist_name: string | null
+          attested: boolean
           catalog_id: string | null
+          chain_strength: string | null
           format_type: Database["public"]["Enums"]["content_format"]
           id: string
           is_verified: boolean | null
+          isrc: string | null
           issued_at: string | null
+          iswc: string | null
+          legal_credits: Json
+          notes_hash: string | null
           notes_proof_url: string
+          session_hash: string | null
           session_video_url: string
+          track_title: string | null
+          upc: string | null
           user_id: string | null
         }
         Insert: {
+          artist_name?: string | null
+          attested?: boolean
           catalog_id?: string | null
+          chain_strength?: string | null
           format_type: Database["public"]["Enums"]["content_format"]
           id?: string
           is_verified?: boolean | null
+          isrc?: string | null
           issued_at?: string | null
-          notes_proof_url: string
-          session_video_url: string
+          iswc?: string | null
+          legal_credits?: Json
+          notes_hash?: string | null
+          notes_proof_url?: string
+          session_hash?: string | null
+          session_video_url?: string
+          track_title?: string | null
+          upc?: string | null
           user_id?: string | null
         }
         Update: {
+          artist_name?: string | null
+          attested?: boolean
           catalog_id?: string | null
+          chain_strength?: string | null
           format_type?: Database["public"]["Enums"]["content_format"]
           id?: string
           is_verified?: boolean | null
+          isrc?: string | null
           issued_at?: string | null
+          iswc?: string | null
+          legal_credits?: Json
+          notes_hash?: string | null
           notes_proof_url?: string
+          session_hash?: string | null
           session_video_url?: string
+          track_title?: string | null
+          upc?: string | null
           user_id?: string | null
         }
         Relationships: [
