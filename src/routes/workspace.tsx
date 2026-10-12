@@ -104,7 +104,7 @@ function Workspace() {
           <TabsContent value="catalog" forceMount className="data-[state=inactive]:hidden">
             <MetadataUploader key={catalogKey} stageName={name} userId={user.id} mode="catalog" canSplit={tier === "paid"} onSplitSheet={(t) => { setSplitTrackId(t.id); setTab("splits"); }} onProtect={(t) => { setProtectTrack(t); setTab("protect"); }} />
           </TabsContent>
-          <TabsContent value="protect"><AIProtectionHub userId={user.id} paid={tier === "paid"} track={protectTrack} /></TabsContent>
+          <TabsContent value="protect"><AIProtectionHub userId={user.id} paid={tier === "paid" || !!protectTrack?.metadata.aiProtection} track={protectTrack} /></TabsContent>
           <TabsContent value="splits"><SplitSheets userId={user.id} canSplit={tier === "paid"} prefillTrackId={splitTrackId} onUpgrade={() => document.getElementById("plans-trigger")?.click()} /></TabsContent>
           <TabsContent value="health"><Health /></TabsContent>
           <TabsContent value="learn"><Learn /></TabsContent>
