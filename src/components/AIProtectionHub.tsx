@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Info, Lock, ShieldCheck, Video } from "lucide-react";
+import { Info, Lock, Plus, Trash2, ShieldCheck, Video } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -10,12 +10,14 @@ import { useServerFn } from "@tanstack/react-start";
 import { stampDigest } from "@/lib/ots.functions";
 import { buildOtsFile, download, proofManifest } from "@/lib/ots";
 
+type WriterRole = "author" | "composer" | "both";
+type WriterRow = { name: string; role: WriterRole };
 type Proof = { name: string; hash: string };
 
 export function AIProtectionHub({ userId, paid }: { userId: string; paid: boolean }) {
   const stamp = useServerFn(stampDigest);
   const [otsFile, setOtsFile] = useState<{ name: string; bytes: Uint8Array }>();
-  const [f, setF] = useState({ title: "", artist: "", writers: "", composers: "", producers: "", isrc: "", upc: "", iswc: "" });
+  const [f, setF] = useState({ title: "", artist: "", producers: "", isrc: "", upc: "", iswc: "" });
   const [pkg, setPkg] = useState<PackageId>("Single");
   const [attest, setAttest] = useState(false);
   const [unlocked, setUnlocked] = useState(false);
@@ -24,6 +26,11 @@ export function AIProtectionHub({ userId, paid }: { userId: string; paid: boolea
   const [firstDraft, setFirstDraft] = useState("");
   const [lastDraft, setLastDraft] = useState("");
   const [busy, setBusy] = useState(false);
+  const [writerRows, setWriterRows] = useState<WriterRow[]>([{ name: "", role: "both" }]);
+  const named = writerRows.filter((w) => w.name.trim());
+  const writers = named.filter((w) => w.role !== "composer").map((w) => w.name.trim()).join(", ");
+  const composers = named.filter((w) => w.role !== "author").map((w) => w.name.trim()).join(", ");
+  const editRow = (i: number, patch: Partial<WriterRow>) => setWriterRows(writerRows.map((w, j) => (j === i ? { ...w, ...patch } : w)));
   const set = (k: keyof typeof f) => (e: React.ChangeEvent<HTMLInputElement>) => setF({ ...f, [k]: e.target.value });
 
   async function proof(file: File | undefined, done: (p: Proof) => void) {
@@ -36,7 +43,7 @@ export function AIProtectionHub({ userId, paid }: { userId: string; paid: boolea
   }
 
   function save() {
-    if (!f.title || !f.artist || !f.writers || !f.composers || !f.producers) { toast.error("Track title, artist and legal names for writers, composers and producers are required."); return; }
+    if (!f.title || !f.artist || !named.length || !f.producers) { toast.error("Track title, artist, at least one writer and producer legal names are required."); return; }
     if (!attest) { toast.error("Check the legal attestation to continue."); return; }
     if (paid) { setUnlocked(true); return; }
     toast.info(`Checkout for the ${pkg} package ($${PACKAGES.find((p) => p.id === pkg)!.price}) is being connected. You'll be able to pay here soon.`);
@@ -48,7 +55,7 @@ export function AIProtectionHub({ userId, paid }: { userId: string; paid: boolea
     try {
       const strength = chainStrength(new Date(firstDraft), new Date(lastDraft));
       const manifest = proofManifest({
-        Track: f.title, Artist: f.artist, Writers: f.writers, Composers: f.composers, Producers: f.producers,
+        Track: f.title, Artist: f.artist, Writers: writers, Composers: composers, Producers: f.producers,
         ISRC: f.isrc || "-", UPC: f.upc || "-", ISWC: f.iswc || "-", Chain: strength,
         "DAW session SHA-256": daw.hash, "Draft history SHA-256": notes.hash,
       });
@@ -58,7 +65,7 @@ export function AIProtectionHub({ userId, paid }: { userId: string; paid: boolea
       try { ots = await stamp({ data: { digest } }); } catch { toast.warning("Blockchain timestamp unavailable right now — certificate issued without it."); }
       const { data, error } = await supabase.from("ai_protection_certificates").insert({
         user_id: userId, format_type: pkg, track_title: f.title, artist_name: f.artist,
-        legal_credits: { writers: f.writers, composers: f.composers, producers: f.producers },
+        legal_credits: { writers: writers, composers: composers, producers: f.producers },
         isrc: f.isrc || null, upc: f.upc || null, iswc: f.iswc || null,
         session_hash: daw.hash, notes_hash: notes.hash, chain_strength: strength, attested: true,
         session_video_url: daw.name, notes_proof_url: notes.name,
@@ -73,7 +80,7 @@ export function AIProtectionHub({ userId, paid }: { userId: string; paid: boolea
       pdf.setFontSize(20); pdf.text("Came Through Audio — Proof Certificate", 15, 22);
       pdf.setFontSize(11);
       const lines = [`Certificate ID: ${row.id}`, `Issued: ${new Date(row.issued_at).toUTCString()}`, `Track: ${f.title}`, `Artist: ${f.artist}`,
-        `Writers: ${f.writers}`, `Composers: ${f.composers}`, `Producers: ${f.producers}`,
+        `Writers: ${writers}`, `Composers: ${composers}`, `Producers: ${f.producers}`,
         `ISRC: ${f.isrc || "—"}   UPC: ${f.upc || "—"}   ISWC: ${f.iswc || "—"}`, `Chain: ${strength}`,
         `DAW session SHA-256: ${daw.hash}`, `Draft history SHA-256: ${notes.hash}`,
         `Proof manifest SHA-256: ${digest}`,
@@ -112,7 +119,21 @@ export function AIProtectionHub({ userId, paid }: { userId: string; paid: boolea
       <div className="grid gap-6 md:grid-cols-[1fr_260px]">
         <div className="grid gap-4 sm:grid-cols-2">
           <F label="Track title *" v={f.title} on={set("title")} /><F label="Artist name *" v={f.artist} on={set("artist")} />
-          <F label="Writers' legal names *" v={f.writers} on={set("writers")} /><F label="Composers' legal names *" v={f.composers} on={set("composers")} />
+          <div className="space-y-3 rounded-xl border border-border p-4 sm:col-span-2">
+            <div className="font-semibold">Writers *</div>
+            {writerRows.map((w, i) => (
+              <div key={i} className="grid gap-2 sm:grid-cols-[1fr_15rem_auto]">
+                <Input aria-label={`Writer ${i + 1} legal name`} placeholder="Full legal name" value={w.name} onChange={(e) => editRow(i, { name: e.target.value })} />
+                <select aria-label={`Writer ${i + 1} role`} value={w.role} onChange={(e) => editRow(i, { role: e.target.value as WriterRole })} className="rounded-md border border-input bg-background px-3 py-2 text-sm">
+                  <option value="both">Both (Author & Composer)</option>
+                  <option value="author">Author (Lyrics)</option>
+                  <option value="composer">Composer (Music / Beat)</option>
+                </select>
+                <Button type="button" variant="ghost" size="icon" aria-label="Remove writer" disabled={writerRows.length === 1} onClick={() => setWriterRows(writerRows.filter((_, j) => j !== i))}><Trash2 className="h-4 w-4" /></Button>
+              </div>
+            ))}
+            <Button type="button" variant="outline" size="sm" onClick={() => setWriterRows([...writerRows, { name: "", role: "both" }])}><Plus className="h-4 w-4" />Add another writer</Button>
+          </div>
           <F label="Producers' legal names *" v={f.producers} on={set("producers")} /><F label="ISRC (optional)" v={f.isrc} on={set("isrc")} />
           <F label="UPC (optional)" v={f.upc} on={set("upc")} /><F label="ISWC (optional)" v={f.iswc} on={set("iswc")} />
         </div>
