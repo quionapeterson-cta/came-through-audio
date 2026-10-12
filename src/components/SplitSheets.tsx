@@ -212,7 +212,7 @@ function SplitEditor({ track, initial, onClose, onSaved }: { track: CatalogTrack
             <h2 className="text-2xl font-bold">{track.title}</h2>
             <p className="text-sm text-muted-foreground">{track.artist}{track.metadata.isrc ? ` · ISRC ${track.metadata.isrc}` : ""}</p>
           </div>
-          <Badge variant="outline" className={statusBadge[status].className}>{statusBadge[status].label}</Badge>
+          <Badge variant="outline" className={statusBadge[status]!.className}>{statusBadge[status]!.label}</Badge>
         </div>
 
         <div className="mt-6 space-y-3">
