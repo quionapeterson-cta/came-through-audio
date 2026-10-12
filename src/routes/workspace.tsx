@@ -18,7 +18,7 @@ import { PaymentTestModeBanner } from "@/components/PaymentTestModeBanner";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { toast } from "sonner";
 import { useBilling, type Purchase } from "@/hooks/useBilling";
-import { openCheckout } from "@/lib/paddle";
+import { openCheckout, getPaddleEnvironment } from "@/lib/paddle";
 import { PLAN_CARDS, TIER_LABEL, hasTier, type Tier } from "@/lib/plans";
 
 export const Route = createFileRoute("/workspace")({
@@ -54,7 +54,9 @@ function Workspace() {
   const [splitTrackId, setSplitTrackId] = useState<string>();
   const [catalogKey, setCatalogKey] = useState(0);
   const [protectTrack, setProtectTrack] = useState<CatalogTrack>();
-  const { tier, purchases } = useBilling(user?.id);
+  const { tier: realTier, purchases } = useBilling(user?.id);
+  const [previewTier, setPreviewTier] = useState<Tier | "real">("real");
+  const tier: Tier = getPaddleEnvironment() === "sandbox" && previewTier !== "real" ? previewTier : realTier;
   const canSplit = hasTier(tier, "collaborate");
   const hasAi = purchases.some((p) => p.kind === "ai");
   const upgrade = () => document.getElementById("plans-trigger")?.click();
@@ -80,7 +82,7 @@ function Workspace() {
 
   return (
     <div className="min-h-screen bg-background">
-      <PaymentTestModeBanner />
+      <PaymentTestModeBanner previewTier={previewTier} onPreviewTier={setPreviewTier} />
       <header className="bg-ink text-ink-foreground">
         <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-6 py-4">
           <div className="flex items-center gap-3">
