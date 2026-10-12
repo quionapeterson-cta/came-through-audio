@@ -633,7 +633,17 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      get_split_invite: { Args: { _row_id: string }; Returns: Json }
+      sign_split_invite: {
+        Args: {
+          _hash: string
+          _ipi: string
+          _pro: string
+          _row_id: string
+          _signature_name: string
+        }
+        Returns: undefined
+      }
     }
     Enums: {
       agency_name: "MLC" | "SoundExchange" | "ASCAP" | "BMI"
