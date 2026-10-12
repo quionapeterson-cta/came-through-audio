@@ -20,6 +20,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { PACKAGES, MAX_PROOF_SECONDS, chainStrength, sha256, videoDuration, type PackageId } from "@/lib/proof";
 import { useServerFn } from "@tanstack/react-start";
+import { openCheckout } from "@/lib/paddle";
 import { stampDigest } from "@/lib/ots.functions";
 import { buildOtsFile, download, proofManifest } from "@/lib/ots";
 
@@ -27,7 +28,7 @@ type WriterRole = "author" | "composer" | "both" | "producer";
 type WriterRow = { name: string; role: WriterRole };
 type Proof = { name: string; hash: string };
 
-export function AIProtectionHub({ userId, paid, track }: { userId: string; paid: boolean; track?: CatalogTrack | undefined }) {
+export function AIProtectionHub({ userId, paid, track, email }: { userId: string; paid: boolean; track?: CatalogTrack | undefined; email?: string | undefined }) {
   const stamp = useServerFn(stampDigest);
   const [otsFile, setOtsFile] = useState<{ name: string; bytes: Uint8Array }>();
   const [f, setF] = useState({ title: "", artist: "", isrc: "", upc: "", iswc: "" });
@@ -72,8 +73,14 @@ export function AIProtectionHub({ userId, paid, track }: { userId: string; paid:
   }
 
   const active = paid || unlocked;
-  function checkout() {
-    toast.info(`Checkout for the ${pkg} package ($${PACKAGES.find((p) => p.id === pkg)!.price}) is being connected. You'll be able to pay here soon.`);
+  async function checkout() {
+    try {
+      await openCheckout({
+        items: [{ priceId: `ai_protection_${pkg.toLowerCase()}`, quantity: 1 }], email,
+        customData: { userId, kind: "ai", package: pkg, ...(track ? { trackId: track.id } : {}) },
+        successUrl: `${window.location.origin}/workspace?tab=protect&checkout=success`,
+      });
+    } catch (e) { toast.error(e instanceof Error ? e.message : "Checkout could not open."); }
   }
 
   async function generate() {
