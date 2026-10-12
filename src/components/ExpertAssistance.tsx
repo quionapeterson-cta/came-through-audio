@@ -1,0 +1,144 @@
+import { useEffect, useMemo, useState } from "react";
+import { CalendarClock, Check, Lock, FileSignature } from "lucide-react";
+import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { listTracks, type CatalogTrack } from "@/lib/catalog";
+import { assistanceItems, assistanceTotal } from "@/lib/plans";
+import { openCheckout } from "@/lib/paddle";
+import type { Purchase } from "@/hooks/useBilling";
+
+const AGENCIES = ["PRO (ASCAP / BMI / SESAC)", "SoundExchange", "The MLC"];
+
+/** A track is "ready" when title, artist and every writer's name + PRO are filled in. */
+function missing(t: CatalogTrack): string[] {
+  const out: string[] = [];
+  if (!t.title) out.push("title");
+  if (!t.artist) out.push("artist");
+  const w = t.metadata.writers.filter((x) => x.name.trim());
+  if (!w.length) out.push("writers");
+  else if (w.some((x) => !x.pro?.trim())) out.push("writer PRO");
+  return out;
+}
+
+export function ExpertAssistance({ userId, email, purchases }: { userId: string; email?: string | undefined; purchases: Purchase[] }) {
+  const [tracks, setTracks] = useState<CatalogTrack[]>([]);
+  const [type, setType] = useState<"single" | "album">("single");
+  const [count, setCount] = useState("1");
+  const [agencies, setAgencies] = useState<string[]>([AGENCIES[0]!]);
+  const [signed, setSigned] = useState<Record<string, boolean>>({});
+  const [sigName, setSigName] = useState("");
+  const [agree, setAgree] = useState(false);
+  const [busy, setBusy] = useState(false);
+
+  useEffect(() => { listTracks().then(setTracks).catch(() => {}); }, []);
+  const session = purchases.find((p) => p.kind === "expert");
+  useEffect(() => {
+    if (!session) return;
+    supabase.from("expert_gateways" as never).select("purchase_id").eq("purchase_id", session.id).then(({ data }) => {
+      if ((data ?? []).length) setSigned((s) => ({ ...s, [session.id]: true }));
+    });
+  }, [session]);
+
+  const songs = Number(count) || 0;
+  const total = assistanceTotal(type, songs, agencies.length);
+  const incomplete = useMemo(() => tracks.map((t) => ({ t, miss: missing(t) })).filter((x) => x.miss.length), [tracks]);
+  const readyCount = tracks.length - incomplete.length;
+  const paidSongs = Number(session?.details["songs"] ?? 0);
+  const catalogReady = !!session && readyCount >= paidSongs && paidSongs > 0;
+
+  async function pay() {
+    if (!songs || !agencies.length) { toast.error("Choose your songs and at least one agency."); return; }
+    setBusy(true);
+    try {
+      await openCheckout({
+        items: assistanceItems(type, songs, agencies.length), email,
+        customData: { userId, kind: "expert", type, songs: String(type === "single" ? Math.min(songs, 6) : songs), agencies: agencies.join(" | ") },
+        successUrl: `${window.location.origin}/workspace?tab=health&checkout=success`,
+      });
+    } catch (e) { toast.error(e instanceof Error ? e.message : "Checkout could not open."); }
+    finally { setBusy(false); }
+  }
+
+  async function sign() {
+    if (!session || !sigName.trim() || !agree) { toast.error("Type your legal name and confirm the agreement."); return; }
+    const { error } = await supabase.from("expert_gateways" as never).insert({ user_id: userId, purchase_id: session.id, signature_name: sigName.trim(), agencies: (session.details["agencies"] ?? "").split(" | ") } as never);
+    if (error) { toast.error(error.message); return; }
+    setSigned({ ...signed, [session.id]: true });
+    toast.success("Agreement signed.");
+  }
+
+  const step = (n: number, label: string, done: boolean, active: boolean) => (
+    <li className={`flex items-center gap-2 text-sm ${active ? "font-bold" : ""}`}>
+      <span className={`flex h-6 w-6 items-center justify-center rounded-full text-xs ${done ? "bg-primary text-primary-foreground" : "border border-border"}`}>{done ? <Check className="h-3 w-3" /> : n}</span>{label}
+    </li>
+  );
+  const isSigned = !!session && !!signed[session.id];
+
+  return (
+    <div className="rounded-2xl border-2 border-primary bg-card p-6">
+      <div className="grid gap-8 md:grid-cols-2">
+        <div>
+          <CalendarClock className="h-8 w-8 text-primary" />
+          <p className="mt-3 text-sm font-bold uppercase tracking-widest text-primary">Need help?</p>
+          <h2 className="mt-1 text-2xl font-bold">Get Expert Registration Assistance</h2>
+          <p className="mt-2 text-sm text-muted-foreground">Live 1-on-1 video guidance so your PRO, SoundExchange and MLC submissions are bulletproof — and you collect every dollar you're owed.</p>
+          <ol className="mt-5 space-y-2">
+            {step(1, "Pay upfront", !!session, !session)}
+            {step(2, "Complete your track data in My Catalog", catalogReady, !!session && !catalogReady)}
+            {step(3, "Sign the registry login agreement", isSigned, catalogReady && !isSigned)}
+            {step(4, "Schedule your live session", false, isSigned)}
+          </ol>
+        </div>
+
+        <div>
+          {!session && (
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-2">
+                {(["single", "album"] as const).map((t) => <Button key={t} variant={type === t ? "default" : "outline"} onClick={() => setType(t)}>{t === "single" ? "Single / EP" : "Full album"}</Button>)}
+              </div>
+              <label className="block space-y-1 text-sm"><span>Songs {type === "single" ? "(up to 6)" : "(each 20 tracks adds a setup fee)"}</span>
+                <Input type="number" min={1} max={type === "single" ? 6 : 200} value={count} onChange={(e) => setCount(e.target.value === "" ? "" : String(Math.max(1, Math.min(type === "single" ? 6 : 200, Number(e.target.value)))))} />
+              </label>
+              <div className="space-y-2 text-sm">
+                <span>Agencies</span>
+                {AGENCIES.map((a) => (
+                  <label key={a} className="flex items-center gap-2"><input type="checkbox" className="accent-[var(--primary)]" checked={agencies.includes(a)} onChange={(e) => setAgencies(e.target.checked ? [...agencies, a] : agencies.filter((x) => x !== a))} />{a}</label>
+                ))}
+              </div>
+              <p className="text-sm text-muted-foreground">{type === "single" ? "$14.99" : "$29.99"} setup + $4.99 per song per agency</p>
+              <div className="text-3xl font-bold text-primary">${total.toFixed(2)}</div>
+              <Button className="w-full" size="lg" disabled={busy} onClick={pay}>Pay & reserve my session</Button>
+            </div>
+          )}
+
+          {session && !catalogReady && (
+            <div className="space-y-3 text-sm">
+              <p className="flex items-center gap-2 font-semibold"><Lock className="h-4 w-4 text-primary" />Scheduling unlocks once {paidSongs} song{paidSongs === 1 ? " is" : "s are"} fully entered in My Catalog.</p>
+              <p className="text-muted-foreground">Ready: {readyCount} of {paidSongs}</p>
+              {incomplete.slice(0, 6).map(({ t, miss }) => <div key={t.id} className="rounded-md bg-muted px-3 py-2">{t.title || "Untitled"} — missing {miss.join(", ")}</div>)}
+            </div>
+          )}
+
+          {catalogReady && !isSigned && (
+            <div className="space-y-3 text-sm">
+              <div className="flex items-center gap-2 font-bold"><FileSignature className="h-5 w-5 text-primary" />Digital Gateway Agreement</div>
+              <p className="text-muted-foreground">I confirm I can successfully log into each registry account for this session ({session?.details["agencies"]}). I understand the live call is used for data audit and confirmation, not account recovery or setup.</p>
+              <label className="flex items-start gap-2"><input type="checkbox" className="mt-1 accent-[var(--primary)]" checked={agree} onChange={(e) => setAgree(e.target.checked)} />I agree and have tested my logins.</label>
+              <Input placeholder="Type your full legal name to sign" value={sigName} onChange={(e) => setSigName(e.target.value)} />
+              <Button className="w-full" onClick={sign}>Sign agreement</Button>
+            </div>
+          )}
+
+          {isSigned && (
+            <div className="space-y-3 text-sm">
+              <p className="font-bold text-primary">You're cleared. Pick a time for your live session.</p>
+              <Button className="w-full" size="lg" onClick={() => toast.info("Booking calendar is being connected — we'll email you to schedule.")}>Schedule my session</Button>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
