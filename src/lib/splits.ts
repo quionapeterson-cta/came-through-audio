@@ -33,6 +33,7 @@ export const emptySplitCollaborator = (): SplitCollaborator => ({
   pro: "",
   ipi: "",
   signatureName: "",
+  signatureHash: "",
   signedAt: null,
 });
 
@@ -71,6 +72,7 @@ type SplitRow = {
   ipi_number: string | null;
   role: string;
   signature_name: string | null;
+  signature_hash: string | null;
   signed_at: string | null;
 };
 
@@ -84,6 +86,7 @@ function fromRow(row: SplitRow): SplitCollaborator {
     pro: row.pro_affiliation ?? "",
     ipi: row.ipi_number ?? "",
     signatureName: row.signature_name ?? "",
+    signatureHash: row.signature_hash ?? "",
     signedAt: row.signed_at,
   };
 }
@@ -116,6 +119,7 @@ export async function saveSplitSheet(catalogId: string, collaborators: SplitColl
       pro_affiliation: c.pro || null,
       ipi_number: c.ipi || null,
       signature_name: c.signatureName || null,
+      signature_hash: c.signatureHash || null,
       signed_at: c.signedAt,
     }));
   if (!rows.length) return;
@@ -136,5 +140,5 @@ export async function signCollaborator(collaborator: SplitCollaborator, typedNam
     new TextEncoder().encode(`${typedName.trim()}|${collaborator.email}|${collaborator.percentage}|${signedAt}`),
   );
   const hash = Array.from(new Uint8Array(digest)).map((b) => b.toString(16).padStart(2, "0")).join("");
-  return { ...collaborator, signatureName: typedName.trim(), signedAt: `${signedAt}#${hash.slice(0, 16)}` };
+  return { ...collaborator, signatureName: typedName.trim(), signatureHash: hash, signedAt };
 }
