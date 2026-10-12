@@ -6,10 +6,15 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { PACKAGES, MAX_PROOF_SECONDS, chainStrength, sha256, videoDuration, type PackageId } from "@/lib/proof";
+import { useServerFn } from "@tanstack/react-start";
+import { stampDigest } from "@/lib/ots.functions";
+import { buildOtsFile, download, proofManifest } from "@/lib/ots";
 
 type Proof = { name: string; hash: string };
 
 export function AIProtectionHub({ userId, paid }: { userId: string; paid: boolean }) {
+  const stamp = useServerFn(stampDigest);
+  const [otsFile, setOtsFile] = useState<{ name: string; bytes: Uint8Array }>();
   const [f, setF] = useState({ title: "", artist: "", writers: "", composers: "", producers: "", isrc: "", upc: "", iswc: "" });
   const [pkg, setPkg] = useState<PackageId>("Single");
   const [attest, setAttest] = useState(false);
@@ -42,27 +47,50 @@ export function AIProtectionHub({ userId, paid }: { userId: string; paid: boolea
     setBusy(true);
     try {
       const strength = chainStrength(new Date(firstDraft), new Date(lastDraft));
+      const manifest = proofManifest({
+        Track: f.title, Artist: f.artist, Writers: f.writers, Composers: f.composers, Producers: f.producers,
+        ISRC: f.isrc || "-", UPC: f.upc || "-", ISWC: f.iswc || "-", Chain: strength,
+        "DAW session SHA-256": daw.hash, "Draft history SHA-256": notes.hash,
+      });
+      const manifestBytes = new TextEncoder().encode(manifest);
+      const digest = await sha256(manifestBytes.buffer as ArrayBuffer);
+      let ots: { calendar: string; receipt: string } | null = null;
+      try { ots = await stamp({ data: { digest } }); } catch { toast.warning("Blockchain timestamp unavailable right now — certificate issued without it."); }
       const { data, error } = await supabase.from("ai_protection_certificates").insert({
         user_id: userId, format_type: pkg, track_title: f.title, artist_name: f.artist,
         legal_credits: { writers: f.writers, composers: f.composers, producers: f.producers },
         isrc: f.isrc || null, upc: f.upc || null, iswc: f.iswc || null,
         session_hash: daw.hash, notes_hash: notes.hash, chain_strength: strength, attested: true,
         session_video_url: daw.name, notes_proof_url: notes.name,
+        proof_digest: digest, ots_receipt: ots?.receipt ?? null, ots_calendar: ots?.calendar ?? null,
+        blockchain_status: ots ? "pending_bitcoin" : "none",
       } as never).select("id, issued_at").single();
       if (error) throw error;
       const row = data as { id: string; issued_at: string };
       const [{ jsPDF }, QR] = await Promise.all([import("jspdf"), import("qrcode")]);
-      const qr = await QR.toDataURL(`CTA-CERT:${row.id}:${daw.hash}`);
+      const qr = await QR.toDataURL(`CTA-CERT:${row.id}:${digest}`);
       const pdf = new jsPDF();
       pdf.setFontSize(20); pdf.text("Came Through Audio — Proof Certificate", 15, 22);
       pdf.setFontSize(11);
-      [`Certificate ID: ${row.id}`, `Issued: ${new Date(row.issued_at).toUTCString()}`, `Track: ${f.title}`, `Artist: ${f.artist}`,
+      const lines = [`Certificate ID: ${row.id}`, `Issued: ${new Date(row.issued_at).toUTCString()}`, `Track: ${f.title}`, `Artist: ${f.artist}`,
         `Writers: ${f.writers}`, `Composers: ${f.composers}`, `Producers: ${f.producers}`,
         `ISRC: ${f.isrc || "—"}   UPC: ${f.upc || "—"}   ISWC: ${f.iswc || "—"}`, `Chain: ${strength}`,
-        `DAW session SHA-256: ${daw.hash}`, `Draft history SHA-256: ${notes.hash}`].forEach((l, i) => pdf.text(pdf.splitTextToSize(l, 180), 15, 36 + i * 9));
-      pdf.addImage(qr, "PNG", 150, 140, 45, 45);
-      pdf.save(`${f.title}-proof-certificate.pdf`);
-      toast.success("Proof certificate generated.");
+        `DAW session SHA-256: ${daw.hash}`, `Draft history SHA-256: ${notes.hash}`,
+        `Proof manifest SHA-256: ${digest}`,
+        ots ? `Bitcoin timestamp: submitted via OpenTimestamps (${ots.calendar}); anchors within a few hours.` : "Bitcoin timestamp: not available",
+        ots ? "Verify: upload the manifest .txt and .ots files at opentimestamps.org" : ""];
+      let y = 36;
+      lines.forEach((l) => { const s = pdf.splitTextToSize(l, 130); pdf.text(s, 15, y); y += 6 * s.length + 3; });
+      pdf.addImage(qr, "PNG", 150, 36, 45, 45);
+      const base = f.title.replace(/[^\w-]+/g, "_");
+      pdf.save(`${base}-proof-certificate.pdf`);
+      download(`${base}-proof-manifest.txt`, manifestBytes, "text/plain");
+      if (ots) {
+        const file = buildOtsFile(digest, ots.receipt);
+        setOtsFile({ name: `${base}-proof-manifest.txt.ots`, bytes: file });
+        download(`${base}-proof-manifest.txt.ots`, file, "application/octet-stream");
+      }
+      toast.success(ots ? "Certificate generated and submitted to the Bitcoin blockchain." : "Proof certificate generated.");
     } catch (e) { toast.error(e instanceof Error ? e.message : "Could not generate certificate."); }
     finally { setBusy(false); }
   }
@@ -109,6 +137,13 @@ export function AIProtectionHub({ userId, paid }: { userId: string; paid: boolea
       </div>
       {!unlocked && <p className="flex items-center gap-2 text-sm text-muted-foreground"><Lock className="h-4 w-4" />Proof uploads unlock after checkout.</p>}
       {unlocked && <Button size="lg" disabled={busy} onClick={generate}>{busy ? "Generating…" : "Run test & download PDF certificate"}</Button>}
+      {otsFile && (
+        <div className="space-y-2 rounded-xl border-2 border-primary bg-card p-4 text-sm">
+          <p className="font-semibold text-primary">OpenTimestamps calendar submitted · Pending Bitcoin block confirmation</p>
+          <p className="text-muted-foreground">Keep the manifest .txt and .ots files together. Anyone can verify them at opentimestamps.org.</p>
+          <Button variant="outline" size="sm" onClick={() => download(otsFile.name, otsFile.bytes, "application/octet-stream")}>Download .ots proof again</Button>
+        </div>
+      )}
 
       {!paid && <div className="rounded-xl border-2 border-primary bg-card p-5 font-semibold text-primary">Upgrade to Catalog Plus to permanently embed and submit metadata to your catalog.</div>}
     </section>
