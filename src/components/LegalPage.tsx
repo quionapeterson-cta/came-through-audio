@@ -11,9 +11,9 @@ export function LegalPage({ title, updated, intro, sections }: { title: string; 
         <div className="mx-auto flex max-w-4xl items-center justify-between px-6 py-5">
           <BrandLogo />
           <nav className="flex gap-4 text-sm text-ink-muted">
-            <Link to="/terms-and-conditions" className="hover:text-ink-foreground">Terms</Link>
+            <Link to="/terms-of-service" className="hover:text-ink-foreground">Terms</Link>
             <Link to="/refund-policy" className="hover:text-ink-foreground">Refunds</Link>
-            <Link to="/privacy-notice" className="hover:text-ink-foreground">Privacy</Link>
+            <Link to="/privacy-policy" className="hover:text-ink-foreground">Privacy</Link>
           </nav>
         </div>
       </header>
