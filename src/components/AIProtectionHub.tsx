@@ -239,11 +239,12 @@ function F({ label, v, on }: { label: string; v: string; on: (e: React.ChangeEve
   return <div className="space-y-1"><Label>{label}</Label><Input value={v} onChange={on} /></div>;
 }
 
-function ProofBox({ title, proof, on, children }: { title: string; proof?: Proof | undefined; on: (f?: File) => void; children?: React.ReactNode }) {
+function ProofBox({ title, tip, proof, on, children }: { title: string; tip: string; proof?: Proof | undefined; on: (f?: File) => void; children?: React.ReactNode }) {
   return (
     <div className="space-y-3 rounded-xl border border-border p-4">
       <div className="flex items-center gap-2 font-semibold"><Video className="h-5 w-5 text-primary" />{title}</div>
-      <p className="text-xs text-muted-foreground">Screen recording, {MAX_PROOF_SECONDS} seconds max.</p>
+      <p className="text-sm">{tip}</p>
+      <p className="text-xs text-muted-foreground">Video file, {MAX_PROOF_SECONDS} seconds max. Only a fingerprint is saved, never your music.</p>
       <Input type="file" accept="video/*" onChange={(e) => on(e.target.files?.[0])} />
       {proof && <p className="break-all text-xs">SHA-256: {proof.hash}</p>}
       {children}
