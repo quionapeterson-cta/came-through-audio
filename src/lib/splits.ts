@@ -15,6 +15,8 @@ export type SplitCollaborator = {
   signatureName: string;
   signatureHash: string;
   signedAt: string | null;
+  isOwner: boolean;
+  invitedAt: string | null;
 };
 
 export type SplitSheet = {
@@ -35,6 +37,8 @@ export const emptySplitCollaborator = (): SplitCollaborator => ({
   signatureName: "",
   signatureHash: "",
   signedAt: null,
+  isOwner: false,
+  invitedAt: null,
 });
 
 export const splitTotal = (collaborators: SplitCollaborator[]) =>
@@ -74,6 +78,8 @@ type SplitRow = {
   signature_name: string | null;
   signature_hash: string | null;
   signed_at: string | null;
+  is_owner: boolean | null;
+  invited_at: string | null;
 };
 
 function fromRow(row: SplitRow): SplitCollaborator {
@@ -88,6 +94,8 @@ function fromRow(row: SplitRow): SplitCollaborator {
     signatureName: row.signature_name ?? "",
     signatureHash: row.signature_hash ?? "",
     signedAt: row.signed_at,
+    isOwner: !!row.is_owner,
+    invitedAt: row.invited_at,
   };
 }
 
@@ -121,6 +129,8 @@ export async function saveSplitSheet(catalogId: string, collaborators: SplitColl
       signature_name: c.signatureName || null,
       signature_hash: c.signatureHash || null,
       signed_at: c.signedAt,
+      is_owner: c.isOwner,
+      invited_at: c.invitedAt,
     }));
   if (!rows.length) return;
   const { error } = await supabase.from("split_sheets").insert(rows as never);
@@ -141,4 +151,41 @@ export async function signCollaborator(collaborator: SplitCollaborator, typedNam
   );
   const hash = Array.from(new Uint8Array(digest)).map((b) => b.toString(16).padStart(2, "0")).join("");
   return { ...collaborator, signatureName: typedName.trim(), signatureHash: hash, signedAt };
+}
+
+// ---------- Saved contributor library ----------
+export const CONTRIBUTOR_KINDS = ["Writer", "Composer", "Producer", "Artist", "Publisher", "Label"] as const;
+export type SavedContributor = { id?: string; name: string; kind: string; email: string; pro: string; ipi: string; publisher: string; label: string };
+
+export async function listContributors(): Promise<SavedContributor[]> {
+  const { data, error } = await supabase.from("contributors" as never).select("*").order("name");
+  if (error) throw error;
+  return ((data ?? []) as unknown as { id: string; name: string | null; kind: string | null; email: string | null; pro: string | null; ipi: string | null; publisher: string | null; label: string | null }[]).map((r) => ({
+    id: r.id, name: r.name ?? "", kind: r.kind ?? "Writer", email: r.email ?? "",
+    pro: r.pro ?? "", ipi: r.ipi ?? "", publisher: r.publisher ?? "", label: r.label ?? "",
+  }));
+}
+
+/** Upsert contributors into the user's library (keyed by name + kind). Empty fields never overwrite saved values. */
+export async function saveContributors(userId: string, list: SavedContributor[]) {
+  const clean = list.filter((c) => c.name.trim());
+  if (!clean.length) return;
+  const existing = await listContributors().catch(() => [] as SavedContributor[]);
+  const rows = clean.map((c) => {
+    const prev = existing.find((e) => e.name.toLowerCase() === c.name.trim().toLowerCase() && e.kind === c.kind);
+    const pick = (a: string, b?: string) => (a.trim() || b || null);
+    return {
+      user_id: userId, name: c.name.trim(), kind: c.kind,
+      email: pick(c.email, prev?.email), pro: pick(c.pro, prev?.pro), ipi: pick(c.ipi, prev?.ipi),
+      publisher: pick(c.publisher, prev?.publisher), label: pick(c.label, prev?.label),
+      updated_at: new Date().toISOString(),
+    };
+  });
+  const { error } = await supabase.from("contributors" as never).upsert(rows as never, { onConflict: "user_id,name,kind" });
+  if (error) throw error;
+}
+
+export async function deleteContributor(id: string) {
+  const { error } = await supabase.from("contributors" as never).delete().eq("id", id);
+  if (error) throw error;
 }

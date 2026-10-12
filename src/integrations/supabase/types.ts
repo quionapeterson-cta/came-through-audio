@@ -269,6 +269,48 @@ export type Database = {
           },
         ]
       }
+      contributors: {
+        Row: {
+          created_at: string
+          email: string | null
+          id: string
+          ipi: string | null
+          kind: string
+          label: string | null
+          name: string
+          pro: string | null
+          publisher: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          email?: string | null
+          id?: string
+          ipi?: string | null
+          kind?: string
+          label?: string | null
+          name: string
+          pro?: string | null
+          publisher?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          email?: string | null
+          id?: string
+          ipi?: string | null
+          kind?: string
+          label?: string | null
+          name?: string
+          pro?: string | null
+          publisher?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           id: string
@@ -436,7 +478,9 @@ export type Database = {
           catalog_id: string | null
           collaborator_email: string
           id: string
+          invited_at: string | null
           ipi_number: string | null
+          is_owner: boolean
           legal_name: string | null
           pro_affiliation: string | null
           role: string
@@ -449,7 +493,9 @@ export type Database = {
           catalog_id?: string | null
           collaborator_email: string
           id?: string
+          invited_at?: string | null
           ipi_number?: string | null
+          is_owner?: boolean
           legal_name?: string | null
           pro_affiliation?: string | null
           role?: string
@@ -462,7 +508,9 @@ export type Database = {
           catalog_id?: string | null
           collaborator_email?: string
           id?: string
+          invited_at?: string | null
           ipi_number?: string | null
+          is_owner?: boolean
           legal_name?: string | null
           pro_affiliation?: string | null
           role?: string

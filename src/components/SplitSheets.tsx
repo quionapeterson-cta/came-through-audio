@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
-import { FileSignature, Plus, Trash2, Download, Lock, PenLine, Check, ChevronLeft, Loader2 } from "lucide-react";
+import { FileSignature, Plus, Trash2, Download, Lock, PenLine, Check, ChevronLeft, Loader2, Mail } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { ContributorLibrary } from "@/components/ContributorLibrary";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -14,6 +16,9 @@ import {
   signCollaborator,
   splitStatus,
   splitTotal,
+  listContributors,
+  saveContributors,
+  type SavedContributor,
   type SplitCollaborator,
 } from "@/lib/splits";
 
@@ -28,6 +33,7 @@ export function SplitSheets({ userId, canSplit, prefillTrackId, onUpgrade }: { u
   const [sheets, setSheets] = useState<Map<string, SplitCollaborator[]>>(new Map());
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState<CatalogTrack | null>(null);
+  const [libKey, setLibKey] = useState(0);
 
   const load = async () => {
     setLoading(true);
@@ -35,6 +41,10 @@ export function SplitSheets({ userId, canSplit, prefillTrackId, onUpgrade }: { u
       const [t, s] = await Promise.all([listTracks(), listSplitSheets()]);
       setTracks(t);
       setSheets(s);
+      // Keep catalog writers, composers, producers and publishers in the contributor library.
+      const fromCatalog = t.flatMap((tr) => collaboratorsFromTrack(tr).filter((c) => c.name.trim()).map((c) => ({ name: c.name, kind: c.role, email: "", pro: c.pro ?? "", ipi: c.ipi ?? "", publisher: "", label: "" })));
+      await saveContributors(userId, fromCatalog).catch(() => {});
+      setLibKey((k) => k + 1);
     } catch {
       toast.error("Could not load your split sheets.");
     } finally {
@@ -67,6 +77,7 @@ export function SplitSheets({ userId, canSplit, prefillTrackId, onUpgrade }: { u
   if (editing) {
     return (
       <SplitEditor
+        userId={userId}
         track={editing}
         initial={sheets.get(editing.id)}
         onClose={() => setEditing(null)}
@@ -83,9 +94,11 @@ export function SplitSheets({ userId, canSplit, prefillTrackId, onUpgrade }: { u
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h2 className="text-2xl font-bold">Split Sheets</h2>
-          <p className="text-sm text-muted-foreground">Create industry-standard split sheets from your catalog songs and collect typed e-signatures.</p>
+          <p className="text-sm text-muted-foreground">Create industry-standard split sheets from your catalog songs and sign as the owner. Collaborators get an email request to sign with a free account.</p>
         </div>
       </div>
+
+      <ContributorLibrary userId={userId} refreshKey={libKey} />
 
       {loading ? (
         <div className="flex items-center gap-2 text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" /> Loading…</div>
@@ -158,11 +171,42 @@ export function SplitSheets({ userId, canSplit, prefillTrackId, onUpgrade }: { u
   );
 }
 
-function SplitEditor({ track, initial, onClose, onSaved }: { track: CatalogTrack; initial: SplitCollaborator[] | undefined; onClose: () => void; onSaved: () => void }) {
+function SplitEditor({ userId, track, initial, onClose, onSaved }: { userId: string; track: CatalogTrack; initial: SplitCollaborator[] | undefined; onClose: () => void; onSaved: () => void }) {
   const [collaborators, setCollaborators] = useState<SplitCollaborator[]>(initial?.length ? initial : collaboratorsFromTrack(track));
   const [signingIndex, setSigningIndex] = useState<number | null>(null);
   const [typedName, setTypedName] = useState("");
   const [saving, setSaving] = useState(false);
+  const [ownerName, setOwnerName] = useState("");
+  const [library, setLibrary] = useState<SavedContributor[]>([]);
+
+  useEffect(() => {
+    void supabase.from("profiles").select("legal_name").eq("id", userId).maybeSingle().then(({ data }) => {
+      const legal = data?.legal_name ?? "";
+      setOwnerName(legal);
+      if (legal) setCollaborators((rows) => rows.some((r) => r.isOwner) ? rows : rows.map((r) => r.name.trim().toLowerCase() === legal.trim().toLowerCase() ? { ...r, isOwner: true } : r));
+    });
+    void listContributors().then(setLibrary).catch(() => {});
+  }, [userId]);
+
+  const fillFromLibrary = (i: number, name: string) => {
+    const match = library.find((l) => l.name.toLowerCase() === name.trim().toLowerCase());
+    const row = collaborators[i];
+    if (!match || !row) return;
+    update(i, { email: row.email || match.email, pro: row.pro || match.pro, ipi: row.ipi || match.ipi });
+  };
+
+  const markOwner = (i: number) => setCollaborators((rows) => rows.map((r, idx) => ({ ...r, isOwner: idx === i })));
+
+  const requestSignature = (i: number) => {
+    const c = collaborators[i];
+    if (!c) return;
+    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(c.email.trim())) {
+      toast.error("Add a valid email for this collaborator first.");
+      return;
+    }
+    update(i, { invitedAt: new Date().toISOString() });
+    toast.success(`Signature request queued for ${c.email}. Save the split sheet to keep it.`);
+  };
 
   const total = useMemo(() => splitTotal(collaborators), [collaborators]);
   const totalOk = total === 100;
@@ -179,6 +223,7 @@ function SplitEditor({ track, initial, onClose, onSaved }: { track: CatalogTrack
     setSaving(true);
     try {
       await saveSplitSheet(track.id, collaborators);
+      await saveContributors(userId, collaborators.map((c) => ({ name: c.name, kind: c.role, email: c.email, pro: c.pro, ipi: c.ipi, publisher: "", label: "" }))).catch(() => {});
       toast.success("Split sheet saved.");
       onSaved();
     } catch {
@@ -191,8 +236,12 @@ function SplitEditor({ track, initial, onClose, onSaved }: { track: CatalogTrack
   const sign = async (i: number) => {
     const c = collaborators[i];
     if (!c) return;
+    if (!c.isOwner) {
+      toast.error("Only the account owner signs here. Collaborators sign from their email request.");
+      return;
+    }
     if (typedName.trim().toLowerCase() !== c.name.trim().toLowerCase()) {
-      toast.error("Type the collaborator's full legal name exactly as listed to sign.");
+      toast.error("Type your full legal name exactly as listed to sign.");
       return;
     }
     const signed = await signCollaborator(c, typedName);
@@ -221,7 +270,7 @@ function SplitEditor({ track, initial, onClose, onSaved }: { track: CatalogTrack
               <div className="grid gap-3 md:grid-cols-[1.4fr_1.4fr_1fr_0.6fr_auto]">
                 <label className="space-y-1 text-sm">
                   <span className="font-medium">Legal name</span>
-                  <input value={c.name} onChange={(e) => update(i, { name: e.target.value })} disabled={!!c.signedAt}
+                  <input list="contributor-library" value={c.name} onChange={(e) => update(i, { name: e.target.value })} onBlur={(e) => fillFromLibrary(i, e.target.value)} disabled={!!c.signedAt}
                     className="w-full rounded-md border border-input bg-background px-3 py-2" placeholder="Full legal name" />
                 </label>
                 <label className="space-y-1 text-sm">
@@ -254,37 +303,54 @@ function SplitEditor({ track, initial, onClose, onSaved }: { track: CatalogTrack
                 <label className="space-y-1 text-sm">
                   <span className="font-medium">PRO affiliation</span>
                   <input value={c.pro} onChange={(e) => update(i, { pro: e.target.value })} disabled={!!c.signedAt}
-                    className="w-full rounded-md border border-input bg-background px-3 py-2" placeholder="ASCAP, BMI…" />
+                    className="w-full rounded-md border border-input bg-background px-3 py-2" placeholder="ASCAP, BMI… (they can add it too)" />
                 </label>
                 <label className="space-y-1 text-sm">
                   <span className="font-medium">IPI / CAE number</span>
                   <input value={c.ipi} onChange={(e) => update(i, { ipi: e.target.value })} disabled={!!c.signedAt}
-                    className="w-full rounded-md border border-input bg-background px-3 py-2" placeholder="Optional" />
+                    className="w-full rounded-md border border-input bg-background px-3 py-2" placeholder="Optional — they can add it too" />
                 </label>
               </div>
 
-              <div className="mt-3">
+              <div className="mt-3 flex flex-wrap items-center gap-3">
                 {c.signedAt ? (
-                  <p className="flex items-center gap-2 text-sm text-primary">
-                    <Check className="h-4 w-4" /> Signed by {c.signatureName} on {new Date(c.signedAt).toLocaleDateString()}
+                  <p className="flex items-center gap-2 text-sm">
+                    <Check className="h-4 w-4 text-primary" />
+                    <span className="font-serif text-lg italic text-foreground">{c.signatureName}</span>
+                    <span className="text-muted-foreground">signed {new Date(c.signedAt).toLocaleDateString()}</span>
                   </p>
-                ) : signingIndex === i ? (
-                  <div className="flex flex-wrap items-center gap-2 rounded-lg bg-muted p-3">
-                    <input value={typedName} onChange={(e) => setTypedName(e.target.value)} placeholder={`Type "${c.name}" to sign`}
-                      className="min-w-56 flex-1 rounded-md border border-input bg-background px-3 py-2 text-sm" />
-                    <Button size="sm" onClick={() => void sign(i)}>Sign</Button>
-                    <Button size="sm" variant="ghost" onClick={() => { setSigningIndex(null); setTypedName(""); }}>Cancel</Button>
-                  </div>
+                ) : c.isOwner ? (
+                  signingIndex === i ? (
+                    <div className="flex flex-1 flex-wrap items-center gap-2 rounded-lg bg-muted p-3">
+                      <input value={typedName} onChange={(e) => setTypedName(e.target.value)} placeholder={`Type "${c.name}" to sign`}
+                        className="min-w-56 flex-1 rounded-md border border-input bg-background px-3 py-2 font-serif text-lg italic text-foreground" />
+                      <Button size="sm" onClick={() => void sign(i)}>Sign</Button>
+                      <Button size="sm" variant="ghost" onClick={() => { setSigningIndex(null); setTypedName(""); }}>Cancel</Button>
+                    </div>
+                  ) : (
+                    <Button size="sm" disabled={!c.name.trim()} onClick={() => { setSigningIndex(i); setTypedName(""); }}>
+                      <PenLine className="h-4 w-4" /> Sign as account owner
+                    </Button>
+                  )
+                ) : c.invitedAt ? (
+                  <Badge variant="outline" className="border-primary text-primary"><Mail className="mr-1 h-3.5 w-3.5" /> Requested {new Date(c.invitedAt).toLocaleDateString()} · awaiting signature</Badge>
                 ) : (
-                  <Button size="sm" variant="outline" disabled={!c.name.trim()} onClick={() => { setSigningIndex(i); setTypedName(""); }}>
-                    <PenLine className="h-4 w-4" /> Collect signature
+                  <Button size="sm" variant="outline" disabled={!c.name.trim()} onClick={() => requestSignature(i)}>
+                    <Mail className="h-4 w-4" /> Email signature request
                   </Button>
                 )}
+                {!c.signedAt && !c.isOwner && !collaborators.some((r) => r.isOwner && r.signedAt) && (
+                  <button type="button" className="text-xs text-muted-foreground underline" onClick={() => markOwner(i)}>This is me</button>
+                )}
+                {c.isOwner && <Badge variant="outline">Account owner{ownerName ? "" : ""}</Badge>}
               </div>
             </div>
           ))}
         </div>
 
+        <datalist id="contributor-library">
+          {library.map((l) => <option key={`${l.name}-${l.kind}`} value={l.name}>{l.kind}</option>)}
+        </datalist>
         <Button variant="outline" className="mt-4" onClick={() => setCollaborators((rows) => [...rows, emptySplitCollaborator()])}>
           <Plus className="h-4 w-4" /> Add collaborator
         </Button>
