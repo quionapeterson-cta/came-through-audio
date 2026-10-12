@@ -71,15 +71,15 @@ export function AIProtectionHub({ userId, paid, track }: { userId: string; paid:
     } catch { toast.error("That video could not be read."); }
   }
 
-  function save() {
-    if (!f.title || !f.artist || !named.some((w) => w.role !== "producer")) { toast.error("Track title, artist and at least one writer are required."); return; }
-    if (!attest) { toast.error("Check the legal attestation to continue."); return; }
-    if (paid) { setUnlocked(true); return; }
+  const active = paid || unlocked;
+  function checkout() {
     toast.info(`Checkout for the ${pkg} package ($${PACKAGES.find((p) => p.id === pkg)!.price}) is being connected. You'll be able to pay here soon.`);
   }
 
   async function generate() {
+    if (!f.title || !f.artist || !named.some((w) => w.role !== "producer")) { toast.error("Track title, artist and at least one writer are required."); return; }
     if (!daw || !notes || !firstDraft || !lastDraft) { toast.error("Add both recordings and the first and latest draft dates."); return; }
+    if (!attest) { toast.error("Check the legal attestation to continue."); return; }
     setBusy(true);
     try {
       const strength = chainStrength(new Date(firstDraft), new Date(lastDraft));
@@ -135,27 +135,15 @@ export function AIProtectionHub({ userId, paid, track }: { userId: string; paid:
     <section className="mx-auto mt-8 max-w-5xl space-y-8 pb-12">
       <div className="flex items-center gap-3"><ShieldCheck className="h-8 w-8 text-primary" /><h1 className="text-2xl font-bold">AI Protection Hub</h1></div>
 
-      <div className="space-y-5 rounded-2xl border-2 border-primary bg-card p-6">
+      <div className="space-y-4 rounded-2xl border-2 border-primary bg-card p-6">
         <span className="inline-flex items-center gap-2 rounded-full border border-primary px-3 py-1 text-xs font-bold tracking-widest text-primary"><ShieldCheck className="h-4 w-4" />SHIELD YOUR SOUND · AI DEFENSE SYSTEM</span>
         <h2 className="text-3xl font-extrabold leading-tight">Defend Your Sound Against AI Allegations & Ownership Disputes — <span className="text-primary">Prove You Created It First.</span></h2>
         <p className="max-w-3xl text-muted-foreground">Before your master hits DSPs or social media, lock in cryptographic proof of human authorship. Generate tamper-proof certificates with SHA-256 session hashing and permanent Bitcoin blockchain timestamps so no one can copy, scrape, or claim what you made.</p>
-        <div className="grid gap-4 md:grid-cols-3">
-          {EXPLAINERS.map((x) => (
-            <div key={x.title} className="space-y-2 rounded-xl border border-primary/40 bg-background p-4 text-sm">
-              <x.icon className="h-6 w-6 text-primary" />
-              <div className="font-bold">{x.title}</div>
-              <div className="text-xs font-semibold text-primary">{x.tag}</div>
-              <p><span className="font-semibold">In plain English: </span>{x.plain}</p>
-              <p className="text-muted-foreground"><span className="font-semibold text-foreground">Why you need it: </span>{x.why}</p>
-            </div>
-          ))}
-        </div>
       </div>
-
 
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         {PACKAGES.map((p) => (
-          <button key={p.id} type="button" onClick={() => setPkg(p.id)} className={`rounded-xl border-2 bg-card p-4 text-left ${pkg === p.id ? "border-primary" : "border-border"}`}>
+          <button key={p.id} type="button" onClick={() => setPkg(p.id)} className={`rounded-xl border-2 bg-card p-4 text-left transition ${pkg === p.id ? "border-primary shadow-lg" : "border-border hover:border-primary/50"}`}>
             <div className="font-semibold">{p.label}</div>
             <div className="mt-1 text-2xl font-bold text-primary">${p.price}</div>
             {p.save && <div className="text-xs font-semibold text-primary">{p.save}</div>}
@@ -163,6 +151,30 @@ export function AIProtectionHub({ userId, paid, track }: { userId: string; paid:
         ))}
       </div>
 
+      {!active && (
+        <div className="space-y-2 text-center">
+          <Button size="lg" className="h-14 w-full text-lg font-bold sm:w-auto sm:px-12" onClick={checkout}>
+            <Lock className="h-5 w-5" />Lock In Protection · ${PACKAGES.find((p) => p.id === pkg)!.price}
+          </Button>
+          <p className="text-xs text-muted-foreground">Instant activation · Publicly verifiable on Bitcoin · Add your track details after checkout</p>
+        </div>
+      )}
+
+      <div className="grid gap-4 md:grid-cols-3">
+        {EXPLAINERS.map((x) => (
+          <div key={x.title} className="space-y-2 rounded-xl border border-primary/40 bg-card p-4 text-sm">
+            <x.icon className="h-6 w-6 text-primary" />
+            <div className="font-bold">{x.title}</div>
+            <div className="text-xs font-semibold text-primary">{x.tag}</div>
+            <p><span className="font-semibold">In plain English: </span>{x.plain}</p>
+            <p className="text-muted-foreground"><span className="font-semibold text-foreground">Why you need it: </span>{x.why}</p>
+          </div>
+        ))}
+      </div>
+
+      {active && (<>
+      <div className="rounded-xl border-2 border-primary bg-card p-4 font-semibold text-primary">Protection active — complete these steps to generate your certificate.</div>
+      <h3 className="text-xl font-bold">Step 1 · Track details</h3>
       <div className="grid gap-6 md:grid-cols-[1fr_260px]">
         <div className="grid gap-4 sm:grid-cols-2">
           <F label="Track title *" v={f.title} on={set("title")} /><F label="Artist name *" v={f.artist} on={set("artist")} />
@@ -188,24 +200,28 @@ export function AIProtectionHub({ userId, paid, track }: { userId: string; paid:
         <div className="h-fit rounded-xl border border-primary bg-card p-4 text-sm"><Info className="mb-2 h-5 w-5 text-primary" />Use real legal names only — not stage names or pseudonyms. Certificates are legal records.</div>
       </div>
 
+      <h3 className="text-xl font-bold">Step 2 · Record your proof</h3>
+      <div className="grid gap-4 md:grid-cols-2">
+        <ProofBox title="DAW Session Proof" proof={daw} on={(file) => proof(file, setDaw)}
+          tip="Screen-record 5–15 seconds of your open project (FL Studio, Logic, Ableton, Pro Tools, etc.). Scroll through your tracks, stems, MIDI or automation. This shows you own the raw session — not just a finished bounce." />
+        <ProofBox title="Draft History Proof" proof={notes} on={(file) => proof(file, setNotes)}
+          tip="Screen-record 5–15 seconds of earlier versions: voice memos, rough mixes, lyric notes or a folder showing file dates. Then pick the date of your first idea and your latest version below.">
+          <div className="grid grid-cols-2 gap-2">
+            <div className="space-y-1"><Label>First idea / draft</Label><Input type="datetime-local" value={firstDraft} onChange={(e) => setFirstDraft(e.target.value)} /></div>
+            <div className="space-y-1"><Label>Latest version</Label><Input type="datetime-local" value={lastDraft} onChange={(e) => setLastDraft(e.target.value)} /></div>
+          </div>
+          {firstDraft && lastDraft && <p className="text-sm font-semibold text-primary">{chainStrength(new Date(firstDraft), new Date(lastDraft))}</p>}
+          <p className="text-xs text-muted-foreground">Drafts days apart earn a Strong Chain (Human Creation) rating.</p>
+        </ProofBox>
+      </div>
+
+      <h3 className="text-xl font-bold">Step 3 · Confirm & generate</h3>
       <label className="flex items-start gap-3 rounded-xl border border-border p-4 text-sm">
         <input type="checkbox" className="mt-1 h-4 w-4 accent-[var(--primary)]" checked={attest} onChange={(e) => setAttest(e.target.checked)} />
         <span>I attest under penalty of law that the information and recordings I provide are true and that I (and the listed contributors) created this work. I understand fraudulent misrepresentation may expose me to statutory damages under 17 U.S.C. §504.</span>
       </label>
-      <Button size="lg" onClick={save}>{paid ? "Save & continue" : `Save & check out ($${PACKAGES.find((p) => p.id === pkg)!.price})`}</Button>
-
-      <div className={`grid gap-4 md:grid-cols-2 ${unlocked ? "" : "pointer-events-none opacity-50"}`} aria-disabled={!unlocked}>
-        <ProofBox title="Form 1 · DAW Session Proof" proof={daw} on={(file) => proof(file, setDaw)} />
-        <ProofBox title="Form 2 · Draft History Proof" proof={notes} on={(file) => proof(file, setNotes)}>
-          <div className="grid grid-cols-2 gap-2">
-            <div className="space-y-1"><Label>First draft</Label><Input type="datetime-local" value={firstDraft} onChange={(e) => setFirstDraft(e.target.value)} /></div>
-            <div className="space-y-1"><Label>Latest draft</Label><Input type="datetime-local" value={lastDraft} onChange={(e) => setLastDraft(e.target.value)} /></div>
-          </div>
-          {firstDraft && lastDraft && <p className="text-sm font-semibold text-primary">{chainStrength(new Date(firstDraft), new Date(lastDraft))}</p>}
-        </ProofBox>
-      </div>
-      {!unlocked && <p className="flex items-center gap-2 text-sm text-muted-foreground"><Lock className="h-4 w-4" />Proof uploads unlock after checkout.</p>}
-      {unlocked && <Button size="lg" disabled={busy} onClick={generate}>{busy ? "Generating…" : "Run test & download PDF certificate"}</Button>}
+      <Button size="lg" disabled={busy} onClick={generate}>{busy ? "Generating…" : "Generate & download PDF certificate"}</Button>
+      </>)}
       {otsFile && (
         <div className="space-y-2 rounded-xl border-2 border-primary bg-card p-4 text-sm">
           <p className="font-semibold text-primary">OpenTimestamps calendar submitted · Pending Bitcoin block confirmation</p>
@@ -223,11 +239,12 @@ function F({ label, v, on }: { label: string; v: string; on: (e: React.ChangeEve
   return <div className="space-y-1"><Label>{label}</Label><Input value={v} onChange={on} /></div>;
 }
 
-function ProofBox({ title, proof, on, children }: { title: string; proof?: Proof | undefined; on: (f?: File) => void; children?: React.ReactNode }) {
+function ProofBox({ title, tip, proof, on, children }: { title: string; tip: string; proof?: Proof | undefined; on: (f?: File) => void; children?: React.ReactNode }) {
   return (
     <div className="space-y-3 rounded-xl border border-border p-4">
       <div className="flex items-center gap-2 font-semibold"><Video className="h-5 w-5 text-primary" />{title}</div>
-      <p className="text-xs text-muted-foreground">Screen recording, {MAX_PROOF_SECONDS} seconds max.</p>
+      <p className="text-sm">{tip}</p>
+      <p className="text-xs text-muted-foreground">Video file, {MAX_PROOF_SECONDS} seconds max. Only a fingerprint is saved, never your music.</p>
       <Input type="file" accept="video/*" onChange={(e) => on(e.target.files?.[0])} />
       {proof && <p className="break-all text-xs">SHA-256: {proof.hash}</p>}
       {children}
