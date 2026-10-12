@@ -101,7 +101,7 @@ function Workspace() {
           </TabsContent>
           <TabsContent value="protect"><AIProtectionHub userId={user.id} paid={tier === "paid"} track={protectTrack} /></TabsContent>
           <TabsContent value="splits"><Blank icon={FileSignature} title="Split Sheets" text={splitTrack ? `Starting a split sheet for "${splitTrack}". Collaborators will be invited by email to sign.` : "Generate a split sheet from any song in My Catalog."} /></TabsContent>
-          <TabsContent value="health"><Blank icon={Activity} title="Royalty Health Check" text="Your free Royalty Health Check across BMI, ASCAP, SoundExchange and the MLC starts here." /></TabsContent>
+          <TabsContent value="health"><Health /></TabsContent>
           <TabsContent value="learn"><Learn /></TabsContent>
         </Tabs>
       </main>
@@ -165,6 +165,29 @@ function PlansDialog() {
 }
 
 function Masterclasses() {
+  return (
+    <div className="mt-6 grid gap-6 md:grid-cols-2">
+      <div className="rounded-2xl border border-border p-6">
+        <GraduationCap className="h-8 w-8 text-primary" />
+        <h2 className="mt-3 text-2xl font-bold">Music Business Masterclasses</h2>
+        <p className="mt-2 text-muted-foreground">Live group classes with an industry expert.</p>
+        <div className="mt-4 flex items-center justify-between rounded-lg bg-muted p-4"><span className="font-semibold">1 class slot</span><span className="text-xl font-bold text-primary">$19/slot</span></div>
+        <Button className="mt-4 w-full" disabled>Checkout coming soon</Button>
+      </div>
+    </div>
+  );
+}
+
+function Health() {
+  return (
+    <div className="mt-6 space-y-6">
+      <Blank icon={Activity} title="Royalty Health Check" text="Your free Royalty Health Check across BMI, ASCAP, SoundExchange and the MLC starts here." />
+      <Assistance />
+    </div>
+  );
+}
+
+function Assistance() {
   const [songs, setSongs] = useState(0);
   const [type, setType] = useState<"single" | "album">("single");
   const [count, setCount] = useState("");
@@ -175,14 +198,7 @@ function Masterclasses() {
   const total = assistanceTotal(type, Number(count) || 0, Number(agencies) || 0).toFixed(2);
   const unlocked = songs > 0 && agree;
   return (
-    <div className="mt-6 grid gap-6 md:grid-cols-2">
-      <div className="rounded-2xl border border-border p-6">
-        <GraduationCap className="h-8 w-8 text-primary" />
-        <h2 className="mt-3 text-2xl font-bold">Music Business Masterclasses</h2>
-        <p className="mt-2 text-muted-foreground">Live group classes with an industry expert.</p>
-        <div className="mt-4 flex items-center justify-between rounded-lg bg-muted p-4"><span className="font-semibold">1 class slot</span><span className="text-xl font-bold text-primary">$19/slot</span></div>
-        <Button className="mt-4 w-full" disabled>Checkout coming soon</Button>
-      </div>
+    <div className="grid gap-6 md:grid-cols-2">
       <div className="rounded-2xl border border-primary p-6">
         <CalendarClock className="h-8 w-8 text-primary" />
         <h2 className="mt-3 text-2xl font-bold">Expert Registration Assistance</h2>
