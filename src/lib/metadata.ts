@@ -32,6 +32,8 @@ export const metadataSchema = z.object({
   composers: z.array(contributorSchema).default([]),
   producers: z.array(contributorSchema).default([]),
   publishers: z.array(contributorSchema),
+  lyrics: z.string().default(""),
+  credits: z.array(z.object({ role: z.string(), name: z.string().trim() })).default([]),
 }).superRefine((data, ctx) => {
   for (const group of ["writers", "composers", "publishers"] as const) {
     data[group].forEach((row, index) => {
@@ -49,7 +51,10 @@ export const emptyMetadata = (): Metadata => ({
   title: "", trackNumber: "", artist: "", featured: [""], album: "", duration: "", releaseType: "", releaseDate: "", label: "",
   isrc: "", upc: "", iswc: "", explicit: false, primaryGenre: "", secondaryGenre: "",
   writers: [emptyContributor()], composers: [emptyContributor()], producers: [emptyContributor()], publishers: [emptyContributor()],
+  lyrics: "", credits: [],
 });
+
+export const CREDIT_ROLES = ["Session musician", "Mixing engineer", "Recording engineer", "Mastering engineer", "Backup vocalist", "Arranger"] as const;
 
 export async function embedMetadata(audio: ArrayBuffer, metadata: Metadata, artwork?: ArrayBuffer): Promise<Blob> {
   const data = metadataSchema.parse(metadata);
@@ -83,6 +88,51 @@ export async function embedMetadata(audio: ArrayBuffer, metadata: Metadata, artw
     writer.setFrame("TPUB", publishers.map((row) => row.name).join("; "));
     writer.setFrame("TXXX", { description: "PUBLISHERS", value: JSON.stringify(publishers.map(({ name, pro, ipi }) => ({ name, pro, ipi }))) });
   }
+  if (data.lyrics) writer.setFrame("USLT", { description: "", lyrics: data.lyrics, language: "eng" });
+  const credits = data.credits.filter((c) => c.name);
+  if (credits.length) writer.setFrame("TXXX", { description: "CREDITS", value: JSON.stringify(credits) });
   if (artwork) writer.setFrame("APIC", { type: 3, data: artwork, description: "Front cover" });
   return new Blob([writer.addTag()], { type: "audio/mpeg" });
+}
+
+/** Reads ID3v2.3/2.4 text frames written by embedMetadata so re-uploads pre-fill the form. */
+export function readMetadata(buf: ArrayBuffer): Partial<Metadata> {
+  const b = new Uint8Array(buf);
+  if (b.length < 10 || b[0] !== 0x49 || b[1] !== 0x44 || b[2] !== 0x33) return {};
+  const ver = b[3];
+  const syncsafe = (i: number) => ((b[i]! & 127) << 21) | ((b[i + 1]! & 127) << 14) | ((b[i + 2]! & 127) << 7) | (b[i + 3]! & 127);
+  const end = 10 + syncsafe(6);
+  const dec = (enc: number, bytes: Uint8Array) => new TextDecoder(enc === 1 ? "utf-16" : enc === 2 ? "utf-16be" : enc === 3 ? "utf-8" : "latin1").decode(bytes).replace(/\u0000+$/, "");
+  const frames: Record<string, string> = {}; const txxx: Record<string, string> = {}; let lyrics = "";
+  let i = 10;
+  while (i + 10 <= end && b[i] !== 0) {
+    const id = String.fromCharCode(b[i]!, b[i + 1]!, b[i + 2]!, b[i + 3]!);
+    const size = ver === 4 ? syncsafe(i + 4) : (b[i + 4]! << 24) | (b[i + 5]! << 16) | (b[i + 6]! << 8) | b[i + 7]!;
+    const body = b.subarray(i + 10, i + 10 + size); const enc = body[0] ?? 0;
+    if (id === "TXXX") {
+      const parts = dec(enc, body.subarray(1)).split("\u0000").filter((x) => x !== "");
+      if (parts[0]) txxx[parts[0]] = parts.slice(1).join("");
+    } else if (id === "USLT") {
+      lyrics = dec(enc, body.subarray(4)).split("\u0000").filter(Boolean).pop() ?? "";
+    } else if (id.startsWith("T")) frames[id] = dec(enc, body.subarray(1)).replace(/\u0000/g, "/");
+    i += 10 + size;
+  }
+  const json = <T,>(v?: string): T | undefined => { try { return v ? JSON.parse(v) as T : undefined; } catch { return undefined; } };
+  const out: Partial<Metadata> = {};
+  if (frames["TIT2"]) out.title = frames["TIT2"];
+  if (frames["TPE1"]) { const [a, ...f] = frames["TPE1"].split("/"); out.artist = a ?? ""; out.featured = f.length ? f : [""]; }
+  if (frames["TALB"]) out.album = frames["TALB"];
+  if (frames["TRCK"]) out.trackNumber = frames["TRCK"];
+  if (frames["TSRC"]) out.isrc = frames["TSRC"];
+  if (txxx["UPC"]) out.upc = txxx["UPC"];
+  if (txxx["ISWC"]) out.iswc = txxx["ISWC"];
+  if (txxx["LABEL"]) out.label = txxx["LABEL"];
+  if (txxx["RELEASE_DATE"]) out.releaseDate = txxx["RELEASE_DATE"];
+  if (txxx["EXPLICIT"]) out.explicit = txxx["EXPLICIT"] === "Yes";
+  const w = json<Contributor[]>(txxx["WRITER_SPLITS"]); if (w?.length) out.writers = w;
+  const c = json<Contributor[]>(txxx["COMPOSER_SPLITS"]); if (c?.length) out.composers = c;
+  if (txxx["PRODUCERS"]) out.producers = txxx["PRODUCERS"].split(", ").map((name) => ({ ...emptyContributor(), name }));
+  const cr = json<Metadata["credits"]>(txxx["CREDITS"]); if (cr) out.credits = cr;
+  if (lyrics) out.lyrics = lyrics;
+  return out;
 }

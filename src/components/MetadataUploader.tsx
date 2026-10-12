@@ -1,10 +1,11 @@
 import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
-import { CheckCircle2, Download, FileAudio, ImagePlus, Pencil, Plus, Save, Trash2, Upload } from "lucide-react";
+import { Lock, CheckCircle2, Download, FileAudio, ImagePlus, Pencil, Plus, Save, Trash2, Upload } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { emptyContributor, emptyMetadata, embedMetadata, metadataSchema, GENRES, PROS, RELEASE_TYPES, type Contributor, type Metadata } from "@/lib/metadata";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { readMetadata, CREDIT_ROLES, emptyContributor, emptyMetadata, embedMetadata, metadataSchema, GENRES, PROS, RELEASE_TYPES, type Contributor, type Metadata } from "@/lib/metadata";
 import { deleteTrack, listTracks, saveTrack, type CatalogTrack } from "@/lib/catalog";
 
 export function MetadataUploader({ stageName, userId, mode = "embed", onSubmitted, onSplitSheet, canSplit }: { stageName?: string; userId?: string; mode?: "embed" | "catalog"; onSubmitted?: () => void; onSplitSheet?: (t: CatalogTrack) => void; canSplit?: boolean }) {
@@ -21,6 +22,7 @@ export function MetadataUploader({ stageName, userId, mode = "embed", onSubmitte
   const [tracks, setTracks] = useState<CatalogTrack[]>([]);
   const [editingId, setEditingId] = useState<string>();
   const [saving, setSaving] = useState(false);
+  const [upsell, setUpsell] = useState(false);
   const audioInput = useRef<HTMLInputElement>(null);
   const artInput = useRef<HTMLInputElement>(null);
 
@@ -46,7 +48,7 @@ export function MetadataUploader({ stageName, userId, mode = "embed", onSubmitte
     } finally { setSaving(false); }
   }
   function open(t: CatalogTrack) {
-    setMetadata(t.metadata);
+    setMetadata({ ...emptyMetadata(), ...t.metadata });
     setEditingId(t.id);
     setResult(undefined);
     setError("");
@@ -89,6 +91,10 @@ export function MetadataUploader({ stageName, userId, mode = "embed", onSubmitte
     if (!/\.mp3$/i.test(file.name)) { setError("Choose an MP3 audio file. WAV and FLAC embedding are not available yet."); return; }
     setAudio(file);
     setError("");
+    file.arrayBuffer().then((buf) => {
+      const found = readMetadata(buf);
+      if (Object.keys(found).length) { setMetadata((m) => ({ ...m, ...found })); toast.success("Existing metadata found and pre-filled. You can still edit every field."); }
+    }).catch(() => {});
   }
   async function submit(event: FormEvent) {
     event.preventDefault();
@@ -132,7 +138,8 @@ export function MetadataUploader({ stageName, userId, mode = "embed", onSubmitte
           </div>
           <div className="flex min-h-44 flex-col items-center justify-center gap-3 rounded-lg border border-dashed border-border p-4">
             {cover ? <img src={cover} alt="Selected cover artwork" className="h-20 w-20 rounded object-cover" /> : <ImagePlus className="h-8 w-8 text-primary" />}
-            <Button type="button" variant="ghost" onClick={() => artInput.current?.click()}>{artwork ? "Replace artwork" : "Add 3000x3000 artwork"}</Button>
+            <Button type="button" variant="ghost" onClick={() => artInput.current?.click()}>{artwork ? "Replace artwork" : "Add cover art"}</Button>
+            <p className="text-center text-xs text-muted-foreground">3000x3000px recommended (streaming standard). JPEG or PNG; any standard album size works.</p>
             {artwork && <Button type="button" size="icon" variant="ghost" aria-label="Remove cover artwork" onClick={() => { setArtwork(undefined); setResult(undefined); }}><Trash2 /></Button>}
             <input ref={artInput} type="file" accept="image/jpeg,image/png" aria-label="Cover artwork" className="sr-only" onChange={(event) => {
               const file = event.target.files?.[0];
@@ -183,12 +190,26 @@ export function MetadataUploader({ stageName, userId, mode = "embed", onSubmitte
         <Contributors title="Producers" singular="producer" group="producers" rows={metadata.producers ?? [emptyContributor()]} disabled={busy} onChange={(rows) => update("producers", rows)} simple={!full} />
         <fieldset disabled={busy} className="space-y-5 border-t border-border pt-6">
           <legend className="pr-3 text-lg font-semibold">Identifiers</legend>
+          <p className="rounded-lg border border-primary bg-accent/30 p-3 text-sm">Don't worry if you don't have these yet! You can download your embedded track, return later, re-upload, and edit them.</p>
           <div className="grid gap-5 sm:grid-cols-3">
             <Field label="ISRC" id="isrc" value={metadata.isrc} placeholder="USABC2600001" onChange={(value) => update("isrc", value)} />
             <Field label="UPC / EAN" id="upc" value={metadata.upc} placeholder="12 or 13 digits" onChange={(value) => update("upc", value)} />
             <Field label="ISWC (optional)" id="iswc" value={metadata.iswc} placeholder="T-123.456.789-0" onChange={(value) => update("iswc", value)} />
           </div>
         </fieldset>
+        <fieldset disabled={busy} className="space-y-3 border-t border-border pt-6">
+          <legend className="pr-3 text-lg font-semibold">Lyrics</legend>
+          <textarea aria-label="Lyrics" rows={6} value={metadata.lyrics} onChange={(e) => update("lyrics", e.target.value)} placeholder="Paste your lyrics" className="w-full rounded-md border border-input bg-background p-3 text-sm" />
+        </fieldset>
+        {full && <fieldset disabled={busy} className="space-y-3 border-t border-border pt-6">
+          <legend className="pr-3 text-lg font-semibold">Add Credits</legend>
+          {metadata.credits.map((c, i) => <div key={i} className="grid items-end gap-3 sm:grid-cols-[220px_1fr_36px]">
+            <SelectField label="Role" id={`credit-${i}-role`} value={c.role} options={CREDIT_ROLES} onChange={(v) => update("credits", metadata.credits.map((x, j) => j === i ? { ...x, role: v } : x))} />
+            <Field label="Name" id={`credit-${i}-name`} value={c.name} onChange={(v) => update("credits", metadata.credits.map((x, j) => j === i ? { ...x, name: v } : x))} />
+            <Button type="button" size="icon" variant="ghost" aria-label={`Remove credit ${i + 1}`} onClick={() => update("credits", metadata.credits.filter((_, j) => j !== i))}><Trash2 /></Button>
+          </div>)}
+          <Button type="button" variant="outline" onClick={() => update("credits", [...metadata.credits, { role: CREDIT_ROLES[0], name: "" }])}><Plus />Add credit</Button>
+        </fieldset>}
         {full && <Contributors title="Publishers" singular="publisher" group="publishers" rows={metadata.publishers} disabled={busy} publisher onChange={(rows) => update("publishers", rows)} tip="Publishers administer the composition and collect the publisher share (usually 50%). Self-published writers can list their own publishing entity." />}
 
         <div className="space-y-4 border-t border-border pt-6 pb-8">
@@ -222,7 +243,8 @@ export function MetadataUploader({ stageName, userId, mode = "embed", onSubmitte
                   <div><div className="font-semibold">{t.title}</div><div className="text-sm text-muted-foreground">{t.artist}{t.metadata.isrc ? ` · ${t.metadata.isrc}` : ""}</div></div>
                   <div className="flex flex-wrap gap-2">
                     <Button type="button" variant="outline" size="sm" onClick={() => open(t)}><Pencil />Edit</Button>
-                    <Button type="button" size="sm" onClick={() => { if (!canSplit) { toast.error("Split sheets are part of the Catalog & Collaborate plan and up."); return; } onSplitSheet?.(t); }}>Generate Split Sheet</Button>
+                    {t.metadata.lyrics && <Button type="button" variant="outline" size="sm" onClick={() => { const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([t.metadata.lyrics ?? ""], { type: "text/plain" })); a.download = `${t.title}-lyrics.txt`; a.click(); }}><Download />Lyrics</Button>}
+                    <Button type="button" size="sm" onClick={() => { if (!canSplit) { setUpsell(true); return; } onSplitSheet?.(t); }}>{!canSplit && <Lock />}Generate Split Sheet</Button>
                     <Button type="button" variant="ghost" size="icon" aria-label={`Delete ${t.title}`} onClick={() => remove(t.id)}><Trash2 /></Button>
                   </div>
                 </li>
@@ -231,6 +253,13 @@ export function MetadataUploader({ stageName, userId, mode = "embed", onSubmitte
           )}
         </div>
       )}
+      <Dialog open={upsell} onOpenChange={setUpsell}>
+        <DialogContent className="bg-card text-card-foreground">
+          <DialogHeader><DialogTitle className="flex items-center gap-2 text-xl font-bold"><Lock className="h-5 w-5 text-primary" />Split Sheets are locked</DialogTitle></DialogHeader>
+          <p className="text-base font-medium">Upgrade now and Unlock Unlimited Split Sheets and E-Signature requests. Upgrade today and we will automatically refund you the exact pricing difference if you are within 30 days of your initial sign up window!</p>
+          <Button onClick={() => setUpsell(false)}>Got it</Button>
+        </DialogContent>
+      </Dialog>
     </section>
   );
 }
