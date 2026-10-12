@@ -50,10 +50,10 @@ const roles = [
   { icon: Music, title: "Composer", scene: "Scoring on sheet music", text: "Anchor your cinematic compositions and publishing percentages flawlessly." },
 ];
 
-const values = [
-  "Unlimited Master Catalog entries and downloads. Your music and data locked securely in one permanent home base. No more searching for scattered songs and album art in emails, text and random hard drives.",
-  "Unlimited Real Metadata Embedding: Don’t question, rather you’ll get paid properly when your song lands a sync licensing or brand deal and is played in a major venue! Sign up now and start embedding.",
-  "Unlimited Royalty Health Checks: Run Health checks on the major public repertoires to see if your song shows up and if there is missing important Metadata in those systems; all from one place. If your song is not properly registered you could be missing out on your royalty payouts! Sign up now and get a free Royalty Health Check.",
+const valueItems = [
+  { title: "Unlimited Master Catalog", text: "Every song, album art and identifier in one permanent home base. No more digging through emails, texts and old hard drives." },
+  { title: "Unlimited Metadata Embedding", text: "Your credits travel inside the file, so you get paid properly when a song lands a sync, brand deal or major venue play." },
+  { title: "Unlimited Royalty Health Checks", text: "See if your songs show up in the major public repertoires and what's missing — unregistered songs mean missed payouts." },
 ];
 
 function Landing() {
@@ -61,8 +61,8 @@ function Landing() {
     <div className="min-h-screen bg-background text-foreground">
       <header className="bg-ink text-ink-foreground">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-5">
-          <span className="text-lg font-bold tracking-tight">Came Through <span className="text-primary">Audio</span></span>
-          <Link to="/workspace" search={{ tab: undefined }} className="text-sm font-semibold text-ink-muted hover:text-primary">Log in</Link>
+          <span className="text-lg font-bold tracking-tight">Came Through Audio</span>
+          <Link to="/workspace" search={{ tab: undefined }} className="text-sm font-semibold text-ink-foreground hover:underline">Log in</Link>
         </div>
       </header>
 
@@ -72,27 +72,27 @@ function Landing() {
             <h1 className="uppercase leading-[0.95] tracking-tight">
               <span className="block text-3xl font-bold md:text-4xl lg:text-5xl">Embed your metadata &amp;</span>
               <span className="block text-4xl font-light text-transparent [-webkit-text-stroke:1px_var(--ink-foreground)] md:text-5xl lg:text-6xl">Organize your</span>
-              <span className="block text-4xl font-extrabold text-primary [-webkit-text-stroke:1px_var(--ink-foreground)] md:text-5xl lg:text-6xl">Music business</span>
+              <span className="block text-4xl font-extrabold text-ink-foreground md:text-5xl lg:text-6xl">Music business</span>
               <span className="block text-5xl font-black md:text-6xl lg:text-7xl">Like a pro</span>
             </h1>
             <p className="text-lg text-ink-foreground">
               Every unembedded song is lost income. Embed your metadata and ensure your music is properly tracked everywhere it's played — so you never miss a royalty you earned.
             </p>
-            <div className="flex gap-3 border-l-4 border-primary pl-5 text-base text-ink-foreground">
+            <div className="flex gap-3 border-l-4 border-ink-foreground pl-5 text-base text-ink-foreground">
               <AlertTriangle className="mt-0.5 h-6 w-6 shrink-0 fill-caution text-ink" />
-              <p><span className="font-bold text-primary">70% of independent artists</span> lose royalties because credits aren’t embedded, catalogs are scattered, and accounts aren’t set up to collect Worldwide.</p>
+              <p><span className="font-bold underline decoration-caution decoration-2 underline-offset-4">70% of independent artists</span> lose royalties because credits aren’t embedded, catalogs are scattered, and accounts aren’t set up to collect Worldwide.</p>
             </div>
           </div>
           <div id="signup"><SignupCard /></div>
         </div>
       </section>
 
-      <section className="border-b border-border">
-        <div className="mx-auto max-w-7xl px-6 py-10">
-          <p className="mb-5 text-center text-sm font-semibold uppercase tracking-widest text-muted-foreground">What all plans include</p>
+      <section className="border-b border-border bg-accent">
+        <div className="mx-auto max-w-7xl px-6 py-14">
+          <h2 className="mb-8 text-center text-3xl font-extrabold uppercase tracking-wide text-primary md:text-4xl">What all plans include</h2>
           <div className="flex flex-wrap items-center justify-center gap-x-10 gap-y-4">
             {includes.map((i) => (
-              <span key={i} className="flex items-center gap-2 font-semibold">
+              <span key={i} className="flex items-center gap-2 text-lg font-semibold">
                 <Check className="h-5 w-5 text-primary" strokeWidth={3} /> Unlimited {i}
               </span>
             ))}
@@ -100,20 +100,20 @@ function Landing() {
         </div>
       </section>
 
-      <section className="bg-ink py-24 text-ink-foreground">
+      <section className="bg-background py-24 text-foreground">
         <div className="mx-auto max-w-7xl px-6">
           <h2 className="text-center text-4xl font-bold md:text-5xl lg:text-6xl">How It Works</h2>
-          <p className="mt-3 text-center"><span className="inline-block rounded-xl bg-background px-4 py-1 text-xl font-semibold text-primary md:text-2xl">The Studio-to-Catalog Lifecycle</span></p>
+          <p className="mt-3 text-center"><span className="inline-block rounded-full bg-primary px-5 py-1.5 text-lg font-semibold text-primary-foreground md:text-xl">The Studio-to-Catalog Lifecycle</span></p>
           <ol className="mt-14 grid gap-6 md:grid-cols-2 lg:grid-cols-5">
             {steps.map(({ icon: Icon, phase, title, text }, i) => (
-              <li key={title} className="overflow-hidden rounded-2xl border border-ink-border">
-                <div className="flex aspect-video items-center justify-center bg-background">
-                  <Icon className="h-14 w-14 text-primary" />
+              <li key={title} className="overflow-hidden rounded-2xl border border-border bg-background shadow-sm transition hover:-translate-y-1 hover:border-primary hover:shadow-lg">
+                <div className="flex aspect-video items-center justify-center bg-primary">
+                  <Icon className="h-14 w-14 text-primary-foreground" />
                 </div>
                 <div className="space-y-2 p-6">
-                  <span className="inline-block rounded-md border border-primary px-2 py-0.5 text-xs font-bold uppercase tracking-widest text-ink-foreground">{phase}</span>
+                  <span className="inline-block rounded-md bg-accent px-2 py-0.5 text-xs font-bold uppercase tracking-widest text-primary">{phase}</span>
                   <h3 className="text-xl font-bold">Step {i + 1}: {title}</h3>
-                  <p className="text-sm text-ink-muted">{text}</p>
+                  <p className="text-sm text-muted-foreground">{text}</p>
                 </div>
               </li>
             ))}
@@ -126,7 +126,7 @@ function Landing() {
         <div className="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-5">
           {roles.map(({ icon: Icon, title, scene, text }) => (
             <div key={title} className="overflow-hidden rounded-xl border border-border">
-              <div className="flex aspect-square flex-col items-center justify-center gap-2 bg-ink text-primary">
+              <div className="flex aspect-square flex-col items-center justify-center gap-2 bg-ink text-ink-foreground">
                 <Icon className="h-12 w-12" />
                 <span className="text-xs text-ink-muted">{scene}</span>
               </div>
@@ -160,24 +160,31 @@ function Landing() {
         </div>
       </section>
 
-      <section className="mx-auto max-w-6xl px-6 py-20">
-        <div className="grid gap-10 rounded-3xl bg-ink p-10 text-ink-foreground md:grid-cols-[1.2fr_1fr] md:items-center md:p-14">
-          <div>
-            <h2 className="text-4xl font-bold md:text-5xl"><span className="rounded-xl bg-background px-3 text-primary">$24.99/yr</span> Gets you</h2>
-            <ol className="mt-10 space-y-8">
-              {values.map((v, i) => (
-                <li key={i} className={`flex gap-5 ${i === 1 ? "pt-6" : ""}`}>
-                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary font-bold text-primary-foreground ring-2 ring-ink-foreground">{i + 1}</span>
-                  <div className="space-y-3 text-ink-muted">
-                    <p>{v}</p>
-                    {i === 0 && <p className="font-semibold text-ink-foreground">No more searching for important identifiers across distributors and royalty collection databases. All the information you need in one home base allowing you to easily retrieve your data.</p>}
-                  </div>
-                </li>
-              ))}
-            </ol>
-          </div>
-          <div className="flex md:justify-end">
-            <a href="#signup" className="inline-flex h-14 items-center rounded-md border-2 border-ink-foreground bg-primary px-10 text-lg font-semibold text-primary-foreground hover:bg-primary/90">Sign up free</a>
+      <section className="bg-accent py-20">
+        <div className="mx-auto max-w-5xl px-6">
+          <div className="overflow-hidden rounded-3xl border-2 border-primary bg-background shadow-xl">
+            <div className="grid md:grid-cols-[1fr_1.6fr]">
+              <div className="flex flex-col justify-center gap-3 bg-primary p-10 text-primary-foreground">
+                <p className="text-sm font-semibold uppercase tracking-widest">One simple plan</p>
+                <p className="text-6xl font-extrabold leading-none">$24.99</p>
+                <p className="text-lg">per year · about $2.08/month</p>
+                <a href="#signup" className="mt-4 inline-flex h-12 items-center justify-center rounded-md bg-background px-8 font-semibold text-primary hover:bg-accent">Sign up free</a>
+              </div>
+              <div className="p-10">
+                <h2 className="text-3xl font-bold">What you get</h2>
+                <ul className="mt-6 space-y-6">
+                  {valueItems.map((v) => (
+                    <li key={v.title} className="flex gap-4">
+                      <Check className="mt-1 h-6 w-6 shrink-0 text-primary" strokeWidth={3} />
+                      <div>
+                        <h3 className="text-lg font-bold">{v.title}</h3>
+                        <p className="mt-1 text-muted-foreground">{v.text}</p>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </div>
           </div>
         </div>
       </section>

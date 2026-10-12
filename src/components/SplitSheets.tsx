@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { FileSignature, Plus, Trash2, Download, Lock, PenLine, Check, ChevronLeft, Loader2, Mail } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { ContributorLibrary } from "@/components/ContributorLibrary";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -32,6 +33,7 @@ export function SplitSheets({ userId, canSplit, prefillTrackId, onUpgrade }: { u
   const [sheets, setSheets] = useState<Map<string, SplitCollaborator[]>>(new Map());
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState<CatalogTrack | null>(null);
+  const [libKey, setLibKey] = useState(0);
 
   const load = async () => {
     setLoading(true);
@@ -39,6 +41,10 @@ export function SplitSheets({ userId, canSplit, prefillTrackId, onUpgrade }: { u
       const [t, s] = await Promise.all([listTracks(), listSplitSheets()]);
       setTracks(t);
       setSheets(s);
+      // Keep catalog writers, composers, producers and publishers in the contributor library.
+      const fromCatalog = t.flatMap((tr) => collaboratorsFromTrack(tr).filter((c) => c.name.trim()).map((c) => ({ name: c.name, kind: c.role, email: "", pro: c.pro ?? "", ipi: c.ipi ?? "", publisher: "", label: "" })));
+      await saveContributors(userId, fromCatalog).catch(() => {});
+      setLibKey((k) => k + 1);
     } catch {
       toast.error("Could not load your split sheets.");
     } finally {
@@ -91,6 +97,8 @@ export function SplitSheets({ userId, canSplit, prefillTrackId, onUpgrade }: { u
           <p className="text-sm text-muted-foreground">Create industry-standard split sheets from your catalog songs and sign as the owner. Collaborators get an email request to sign with a free account.</p>
         </div>
       </div>
+
+      <ContributorLibrary userId={userId} refreshKey={libKey} />
 
       {loading ? (
         <div className="flex items-center gap-2 text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" /> Loading…</div>
