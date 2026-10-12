@@ -1,6 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { Check, Mic, Guitar, Disc3, NotebookPen, Music, Quote, AlertTriangle, Upload, Download, FileSignature, ShieldCheck } from "lucide-react";
 import { SignupCard } from "@/components/SignupCard";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -19,17 +20,26 @@ export const Route = createFileRoute("/")({
 const includes = ["Metadata Embedding", "Cataloging", "Royalty Audits", "Blockchain Timestamp", "Secure Catalog"];
 
 const steps = [
-  { icon: Upload, phase: "Upload / Embed Metadata", title: "The Session Ends", text: "You're working with a Producer, finish a track at the studio and instantly upload and embed your data right from your phone." },
-  { icon: Download, phase: "Download & Log", title: "Log Your Masters", text: "Download your embedded tracks and log them into your master catalog. Swap in new audio anytime — your metadata stays intact. You now have shareable embedded masters fresh out of the studio!" },
-  { icon: FileSignature, phase: "Before You Leave the Studio", title: "Lock the Legal Ownership", text: "Click \"Generate Split Sheet\" and the Artist and Producer sign on the spot." },
-  { icon: ShieldCheck, phase: "Before You Leave the Studio", title: "Secure the Ink", text: "Collaborator left early? They get an email invite, create a 100% free Collaborator Account, and e-sign — storing a permanent verification record." },
+  { icon: Upload, phase: "Upload Your Tracks", title: "The Session Ends (Instant Upload)", text: "The engineer bounces the final mix. Instead of texting a compressed file or emailing a loose, un-tagged Google Drive link, you drop your high-resolution master track straight into Came Through Audio right from your phone or studio laptop." },
+  { icon: Download, phase: "Embed Metadata", title: "Embed Permanent Metadata", text: "You immediately embed permanent tracking data (Song Data, ISRC, UPC, and creator credentials) directly into your audio file wrapper. If you need to tweak the mix or update the ISRC later, no worries—you can easily update the metadata and swap the audio file in your workspace at any time while preserving your cataloged entry perfectly." },
+  { icon: Disc3, phase: "Submit to Your Catalog", title: "Secure Your Organized Catalog (Your Vault)", text: "Click \"Submit to Catalog\" to lock your track into your permanent music repository. Your high-res master files, album art, credits, PRO information and publishing registries are organized safely in one secure home base that you can access and download from anywhere in the world." },
+  { icon: FileSignature, phase: "Generate and Sign Split Sheets", title: "Formalize Legal Ownership (The Split Sheet)", text: "Before anyone leaves the studio parking lot, you click \"Generate Split Sheet.\" The platform automatically pulls the track title and writer percentages directly from your catalog data to draft a legal agreement, instantly routing a signature link to your collaborators." },
+  { icon: ShieldCheck, phase: "Follow Up After Session", title: "Secure the Ink", text: "Virtual collaborators and featured artists receive a secure invitation link. They sign up for a 100% Free Collaborator Account right on their mobile devices and execute their digital signatures—generating a permanent verification hash that secures your chain of ownership forever." },
 ];
 
-const footerCols = [
-  { title: "Product", links: ["Metadata Embedding", "Centralized Master Catalog", "Royalty Health Suite", "System Security Metrics"] },
-  { title: "Learn", links: ["Help Center", "Industry Insights", "The Studio-to-Vault Guide"] },
-  { title: "Legal", links: ["Privacy Policy", "Terms of Service", "DMCA Safety", "Liability & Authorization Releases"] },
-  { title: "Access", links: ["Support Tickets", "Contact Us", "Admin Whitelist Verification"] },
+const faqs = [
+  { q: "What is a Catalog?", a: "In the music industry, your Catalog is the complete collection of musical works, masters, and intellectual property that you own or control. Inside Came Through Audio, the \"My Catalog\" tab acts as your private, institutional-grade digital vault. It organizes your master files, high-resolution cover art, precise tracking tags, splits, and credit data in one secure dashboard so you never lose track of an asset or miss out on a royalty payout." },
+  { q: "What does it mean to \"embed\" metadata?", a: "Embedding means permanently injecting tracking blocks, legal credits, and identifiers (like your real legal name, ISRC, UPC, and lyrics) directly inside the structural code of your MP3 or audio file container. Instead of keeping credits separate in a text document, embedding locks the data directly into the audio file itself. Wherever that file travels, your data travels with it, protecting your ownership." },
+  { q: "Can I download my songs or re-embed metadata later?", a: "Yes! You have unlimited, permanent access to download your embedded master MP3 files, 3000x3000px cover art layers, and lyric blocks at any time from your dashboard. If you don't have all your identifiers (like an ISRC or UPC code) right now, don't worry. You can fill out what you have, download the file, and return later to safely re-upload, modify, and append your updated metadata without breaking the file." },
+  { q: "How does the AI Protection Hub prove I created my music?", a: "The hub uses a secure 3-layer proof engine to establish a definitive, unalterable timeline of your creative process. By linking short screen recordings of your DAW (Digital Audio Workstation) and tracking your version histories over time, our platform calculates a cryptographic hash and generates a downloadable PDF Proof Certificate with a unique validation QR code. This gives you institutional-grade legal security to shield your tracks from automated platform takedowns and corporate claims." },
+];
+
+type FooterLink = { label: string; to?: "/terms-and-conditions" | "/refund-policy" | "/privacy-notice" };
+const footerCols: { title: string; links: FooterLink[] }[] = [
+  { title: "Product", links: [{ label: "Metadata Embedding" }, { label: "Centralized Master Catalog" }, { label: "Royalty Health Suite" }, { label: "System Security Metrics" }] },
+  { title: "Learn", links: [{ label: "Help Center" }, { label: "Industry Insights" }, { label: "The Studio-to-Vault Guide" }] },
+  { title: "Legal", links: [{ label: "Terms and Conditions", to: "/terms-and-conditions" }, { label: "Refund Policy", to: "/refund-policy" }, { label: "Privacy Notice", to: "/privacy-notice" }] },
+  { title: "Access", links: [{ label: "Support Tickets" }, { label: "Contact Us" }, { label: "Admin Whitelist Verification" }] },
 ];
 
 const roles = [
@@ -93,16 +103,16 @@ function Landing() {
       <section className="bg-ink py-24 text-ink-foreground">
         <div className="mx-auto max-w-7xl px-6">
           <h2 className="text-center text-4xl font-bold md:text-5xl lg:text-6xl">How It Works</h2>
-          <p className="mt-3 text-center text-xl text-primary md:text-2xl">The Studio-to-Catalog Lifecycle</p>
-          <ol className="mt-14 grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+          <p className="mt-3 text-center"><span className="inline-block rounded-xl bg-background px-4 py-1 text-xl font-semibold text-primary md:text-2xl">The Studio-to-Catalog Lifecycle</span></p>
+          <ol className="mt-14 grid gap-6 md:grid-cols-2 lg:grid-cols-5">
             {steps.map(({ icon: Icon, phase, title, text }, i) => (
               <li key={title} className="overflow-hidden rounded-2xl border border-ink-border">
-                <div className="flex aspect-video items-center justify-center bg-primary/20">
+                <div className="flex aspect-video items-center justify-center bg-background">
                   <Icon className="h-14 w-14 text-primary" />
                 </div>
                 <div className="space-y-2 p-6">
-                  <span className="text-xs font-bold uppercase tracking-widest text-primary">{phase}</span>
-                  <h3 className="text-xl font-bold"><span className="text-primary">{i + 1}.</span> {title}</h3>
+                  <span className="inline-block rounded-md border border-primary px-2 py-0.5 text-xs font-bold uppercase tracking-widest text-ink-foreground">{phase}</span>
+                  <h3 className="text-xl font-bold">Step {i + 1}: {title}</h3>
                   <p className="text-sm text-ink-muted">{text}</p>
                 </div>
               </li>
@@ -153,20 +163,35 @@ function Landing() {
       <section className="mx-auto max-w-6xl px-6 py-20">
         <div className="grid gap-10 rounded-3xl bg-ink p-10 text-ink-foreground md:grid-cols-[1.2fr_1fr] md:items-center md:p-14">
           <div>
-            <h2 className="text-4xl font-bold md:text-5xl"><span className="text-primary">$24.99/yr</span> Gets you</h2>
+            <h2 className="text-4xl font-bold md:text-5xl"><span className="rounded-xl bg-background px-3 text-primary">$24.99/yr</span> Gets you</h2>
             <ol className="mt-10 space-y-8">
               {values.map((v, i) => (
-                <li key={i} className="flex gap-5">
-                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary font-bold text-primary-foreground">{i + 1}</span>
-                  <p className="text-ink-muted">{v}</p>
+                <li key={i} className={`flex gap-5 ${i === 1 ? "pt-6" : ""}`}>
+                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary font-bold text-primary-foreground ring-2 ring-ink-foreground">{i + 1}</span>
+                  <div className="space-y-3 text-ink-muted">
+                    <p>{v}</p>
+                    {i === 0 && <p className="font-semibold text-ink-foreground">No more searching for important identifiers across distributors and royalty collection databases. All the information you need in one home base allowing you to easily retrieve your data.</p>}
+                  </div>
                 </li>
               ))}
             </ol>
           </div>
           <div className="flex md:justify-end">
-            <a href="#signup" className="inline-flex h-14 items-center rounded-md bg-primary px-10 text-lg font-semibold text-primary-foreground hover:bg-primary/90">Sign up free</a>
+            <a href="#signup" className="inline-flex h-14 items-center rounded-md border-2 border-ink-foreground bg-primary px-10 text-lg font-semibold text-primary-foreground hover:bg-primary/90">Sign up free</a>
           </div>
         </div>
+      </section>
+
+      <section className="mx-auto max-w-4xl px-6 pb-20">
+        <h2 className="text-center text-3xl font-bold md:text-4xl">Frequently Asked Questions</h2>
+        <Accordion type="single" collapsible className="mt-10 rounded-2xl border-2 border-foreground">
+          {faqs.map((f, i) => (
+            <AccordionItem key={f.q} value={`faq-${i}`} className="px-6 last:border-b-0">
+              <AccordionTrigger className="text-left text-lg font-bold">{f.q}</AccordionTrigger>
+              <AccordionContent className="text-base leading-relaxed text-foreground">{f.a}</AccordionContent>
+            </AccordionItem>
+          ))}
+        </Accordion>
       </section>
 
       <footer className="bg-ink text-ink-muted">
@@ -175,13 +200,17 @@ function Landing() {
             <div key={c.title}>
               <h4 className="mb-4 font-bold text-ink-foreground">{c.title}</h4>
               <ul className="space-y-2 text-sm">
-                {c.links.map((l) => <li key={l}><span className="hover:text-primary">{l}</span></li>)}
+                {c.links.map((l) => (
+                  <li key={l.label}>
+                    {l.to ? <Link to={l.to} className="underline-offset-4 hover:text-ink-foreground hover:underline">{l.label}</Link> : <span>{l.label}</span>}
+                  </li>
+                ))}
                 {c.title === "Access" && <li className="font-semibold text-ink-foreground">🟢 System Status: Fully Operational</li>}
               </ul>
             </div>
           ))}
         </div>
-        <div className="border-t border-ink-border py-6 text-center text-sm">© {new Date().getFullYear()} Came Through Audio</div>
+        <div className="border-t border-ink-border py-6 text-center text-sm">© {new Date().getFullYear()} Came Through Audio, LLC</div>
       </footer>
     </div>
   );
