@@ -1,4 +1,5 @@
 import { Link } from "@tanstack/react-router";
+import { BrandLogo } from "@/components/BrandLogo";
 import type { ReactNode } from "react";
 
 export type LegalSection = { heading: string; body: ReactNode };
@@ -8,7 +9,7 @@ export function LegalPage({ title, updated, intro, sections }: { title: string; 
     <div className="min-h-screen bg-background text-foreground">
       <header className="bg-ink text-ink-foreground">
         <div className="mx-auto flex max-w-4xl items-center justify-between px-6 py-5">
-          <Link to="/" className="text-lg font-bold tracking-tight">Came Through Audio</Link>
+          <BrandLogo />
           <nav className="flex gap-4 text-sm text-ink-muted">
             <Link to="/terms-and-conditions" className="hover:text-ink-foreground">Terms</Link>
             <Link to="/refund-policy" className="hover:text-ink-foreground">Refunds</Link>

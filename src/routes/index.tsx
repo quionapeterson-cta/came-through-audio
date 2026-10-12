@@ -66,7 +66,7 @@ function Landing() {
       <header className="bg-ink text-ink-foreground">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-5">
           <BrandLogo />
-          <Link to="/workspace" search={{ tab: undefined }} className="text-sm font-semibold text-ink-muted hover:text-primary">Log in</Link>
+          <nav className="flex items-center gap-6"><a href="#plans" className="text-sm font-semibold text-ink-muted hover:text-primary">Plans</a><Link to="/workspace" search={{ tab: undefined }} className="text-sm font-semibold text-ink-muted hover:text-primary">Log in</Link></nav>
         </div>
       </header>
 
@@ -163,7 +163,7 @@ function Landing() {
         </div>
       </section>
 
-      <section className="bg-background py-20">
+      <section id="plans" className="scroll-mt-4 bg-background py-20">
         <div className="mx-auto max-w-5xl px-6">
           <div className="overflow-hidden rounded-3xl border-2 border-primary bg-background shadow-xl">
             <div className="grid md:grid-cols-[1fr_1.6fr]">

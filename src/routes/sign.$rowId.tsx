@@ -58,7 +58,7 @@ function SignPage() {
     <div className="min-h-screen bg-background text-foreground">
       <header className="bg-ink text-ink-foreground">
         <div className="mx-auto flex max-w-5xl items-center justify-between px-6 py-4">
-          <Link to="/"><BrandLogo /></Link>
+          <BrandLogo />
           {user && <Button variant="ghost" size="sm" className="text-ink-muted hover:bg-ink-border hover:text-ink-foreground" onClick={() => supabase.auth.signOut()}><LogOut className="h-4 w-4" /> Log out</Button>}
         </div>
       </header>
