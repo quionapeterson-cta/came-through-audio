@@ -27,7 +27,7 @@ const steps = [
   { icon: Disc3, title: "Save to your catalog", text: "Your masters, art, lyrics and credits live in one vault you can download from anywhere." },
   { icon: FileSignature, title: "Create a split sheet", text: "Splits pull from your catalog automatically. Sign as the owner in seconds." },
   { icon: Mail, title: "Collect signatures", text: "Collaborators get a link, sign up free and sign. Every signature is verified." },
-  { icon: ShieldCheck, title: "Prove human origin", text: "Show you made it, and made it first, with a Certificate of Human Origin timestamped on the Bitcoin blockchain." },
+  { icon: ShieldCheck, title: "AI Protection", text: "Show you made it, and made it first, with a Certificate of Human Origin timestamped on the Bitcoin blockchain." },
 ];
 
 const faqs = [

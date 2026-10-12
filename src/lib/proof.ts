@@ -2,7 +2,7 @@ export const PACKAGES = [
   { id: "Single", label: "Single", songs: 1, price: 2.99, save: "" },
   { id: "EP", label: "EP · up to 6 songs", songs: 6, price: 9.99, save: "Save $8" },
   { id: "Album", label: "Album · up to 12 songs", songs: 12, price: 16.99, save: "Save $19" },
-  { id: "Plus", label: "Album+ · up to 20 songs", songs: 20, price: 24.99, save: "" },
+  { id: "Plus", label: "Album+ · up to 20 songs", songs: 20, price: 24.99, save: "Save $35" },
 ] as const;
 export type PackageId = (typeof PACKAGES)[number]["id"];
 
