@@ -67,3 +67,29 @@ export async function deleteTrack(id: string) {
   const { error } = await supabase.from("catalogs").delete().eq("id", id);
   if (error) throw error;
 }
+
+const BUCKET = "catalog-files";
+
+/** Store a master or artwork file privately under the owner's folder; returns its storage path. */
+export async function uploadCatalogFile(userId: string, trackId: string, kind: "master" | "artwork", file: Blob, ext: string) {
+  const path = `${userId}/${trackId}/${kind}.${ext}`;
+  const { error } = await supabase.storage.from(BUCKET).upload(path, file, { upsert: true, contentType: file.type || undefined });
+  if (error) throw error;
+  return path;
+}
+
+export async function downloadCatalogFile(path: string, filename: string) {
+  const { data, error } = await supabase.storage.from(BUCKET).download(path);
+  if (error) throw error;
+  saveBlob(data, filename);
+}
+
+export function saveBlob(blob: Blob, filename: string) {
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = filename;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+}
+
+export const safeName = (s: string) => s.replace(/[<>:"/\\|?*]+/g, "_").trim() || "track";
