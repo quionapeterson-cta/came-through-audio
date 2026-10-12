@@ -1,6 +1,18 @@
 import { useEffect, useState } from "react";
 import type { CatalogTrack } from "@/lib/catalog";
-import { Info, Lock, Plus, Trash2, ShieldCheck, Video } from "lucide-react";
+import { Info, Lock, Plus, Trash2, ShieldCheck, Video, Fingerprint, Link2, Gavel } from "lucide-react";
+
+const EXPLAINERS = [
+  { icon: Fingerprint, title: "DAW & Draft Hashing (SHA-256)", tag: "Your song's tamper-proof digital fingerprint",
+    plain: "When you upload a short screen recording of your DAW session (Logic, FL Studio, Ableton, Pro Tools) or lyric drafts, we create a unique 64-character fingerprint of that file.",
+    why: "Change even one detail and the fingerprint changes completely — proving your session and arrangement existed in your hands first." },
+  { icon: Link2, title: "Bitcoin Blockchain Anchored", tag: "Permanent, public proof of when",
+    plain: "Your song's fingerprint is recorded on the public Bitcoin blockchain through OpenTimestamps. Your actual music is never uploaded there.",
+    why: "No company, platform or label can alter, backdate or delete it. Anyone — a lawyer, distributor or judge — can verify the date at opentimestamps.org." },
+  { icon: Gavel, title: "17 U.S.C. §504 Attestation", tag: "Your sworn human-creation record",
+    plain: "A formal statement, made under penalty of law, that you and your listed contributors created this work as humans.",
+    why: "U.S. copyright law allows statutory damages of up to $150,000 per work for willful infringement. A sworn, time-stamped record strengthens takedowns, PRO disputes and AI claims." },
+];
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -122,6 +134,24 @@ export function AIProtectionHub({ userId, paid, track }: { userId: string; paid:
   return (
     <section className="mx-auto mt-8 max-w-5xl space-y-8 pb-12">
       <div className="flex items-center gap-3"><ShieldCheck className="h-8 w-8 text-primary" /><h1 className="text-2xl font-bold">AI Protection Hub</h1></div>
+
+      <div className="space-y-5 rounded-2xl border-2 border-primary bg-card p-6">
+        <span className="inline-flex items-center gap-2 rounded-full border border-primary px-3 py-1 text-xs font-bold tracking-widest text-primary"><ShieldCheck className="h-4 w-4" />SHIELD YOUR SOUND · AI DEFENSE SYSTEM</span>
+        <h2 className="text-3xl font-extrabold leading-tight">Defend Your Sound Against AI Allegations & Ownership Disputes — <span className="text-primary">Prove You Created It First.</span></h2>
+        <p className="max-w-3xl text-muted-foreground">Before your master hits DSPs or social media, lock in cryptographic proof of human authorship. Generate tamper-proof certificates with SHA-256 session hashing and permanent Bitcoin blockchain timestamps so no one can copy, scrape, or claim what you made.</p>
+        <div className="grid gap-4 md:grid-cols-3">
+          {EXPLAINERS.map((x) => (
+            <div key={x.title} className="space-y-2 rounded-xl border border-primary/40 bg-background p-4 text-sm">
+              <x.icon className="h-6 w-6 text-primary" />
+              <div className="font-bold">{x.title}</div>
+              <div className="text-xs font-semibold text-primary">{x.tag}</div>
+              <p><span className="font-semibold">In plain English: </span>{x.plain}</p>
+              <p className="text-muted-foreground"><span className="font-semibold text-foreground">Why you need it: </span>{x.why}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+
 
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         {PACKAGES.map((p) => (
