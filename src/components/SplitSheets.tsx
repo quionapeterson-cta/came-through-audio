@@ -397,6 +397,20 @@ function SplitEditor({ userId, track, initial, onClose, onSaved }: { userId: str
 }
 
 async function downloadSplitPdf(track: CatalogTrack, collaborators: SplitCollaborator[]) {
+  const id = toast.loading("Preparing your split sheet PDF…");
+  try {
+    await buildSplitPdf(track, collaborators);
+    toast.success("Split sheet downloaded.", { id });
+  } catch (e) {
+    console.error("Split sheet PDF failed", e);
+    toast.error("Could not create the PDF. Please try again.", { id });
+  }
+}
+
+async function buildSplitPdf(track: CatalogTrack, rawCollaborators: SplitCollaborator[]) {
+  const t = (v: unknown) => (v === null || v === undefined ? "" : String(v));
+  const collaborators = rawCollaborators.map((c) => ({ ...c, name: t(c.name), role: t(c.role) as SplitCollaborator["role"], pro: t(c.pro), ipi: t(c.ipi), signatureName: t(c.signatureName) || t(c.name), signatureHash: t(c.signatureHash), percentage: Number(c.percentage) || 0 }));
+  track = { ...track, title: t(track.title) || "Untitled", artist: t(track.artist), metadata: { ...track.metadata, isrc: t(track.metadata?.isrc), iswc: t(track.metadata?.iswc) } };
   const { newBrandedPdf, brandHeader, brandFooter, infoGrid, sectionTitle, ensureSpace, COBALT, INK, MUTED, RULE } = await import("@/lib/brand-pdf");
   const pdf = await newBrandedPdf();
   const w = pdf.internal.pageSize.getWidth();
@@ -449,7 +463,7 @@ async function downloadSplitPdf(track: CatalogTrack, collaborators: SplitCollabo
     pdf.setFont("helvetica", "bold").setFontSize(9).setTextColor(...INK).text(`${c.name}${c.isOwner ? "  (Account owner)" : ""}`, x + 5, y + 20);
     pdf.setFont("helvetica", "normal").setFontSize(7.5).setTextColor(...MUTED);
     pdf.text(c.signedAt ? `Signed ${new Date(c.signedAt).toLocaleString()}` : `${c.role} · ${c.percentage}%`, x + 5, y + 24.5);
-    if (c.signedAt) pdf.setTextColor(...COBALT).text(`Hash ${c.signatureHash.slice(0, 32)}…`, x + 5, y + 28.5);
+    if (c.signedAt && c.signatureHash) pdf.setTextColor(...COBALT).text(`Hash ${c.signatureHash.slice(0, 32)}…`, x + 5, y + 28.5);
     if (i % 2 === 1 || i === rows.length - 1) y += 36;
   });
   brandFooter(pdf);
