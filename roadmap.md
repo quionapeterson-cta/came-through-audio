@@ -22,3 +22,5 @@
 - [x] Pre-Distribution hover note + Pro Tip under identifiers; matching FAQ
 - [x] Catalog downloads grouped in one Downloads menu; vault always stores tagged master
 - [x] AI Protection copy: Certificate of Human Origin
+- [x] Quick Song Inspector, mismatch tips, ASCAP/BMI exclusive, distributor copy updated
+- [ ] Brainstorm: DistroKid takedown homepage hook to sell Human Origin Certificates

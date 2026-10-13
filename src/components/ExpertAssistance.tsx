@@ -12,6 +12,14 @@ import type { Purchase } from "@/hooks/useBilling";
 // Public registries only — SESAC is invitation-only and not offered.
 const AGENCIES = ["ASCAP", "BMI", "SoundExchange", "The MLC"];
 
+const PRO_CHOICES = ["ASCAP", "BMI"];
+/** ASCAP and BMI are mutually exclusive: picking one PRO drops the other. */
+export function toggleAgency(list: string[], a: string, on: boolean): string[] {
+  if (!on) return list.filter((x) => x !== a);
+  const base = PRO_CHOICES.includes(a) ? list.filter((x) => !PRO_CHOICES.includes(x)) : list;
+  return [...base, a];
+}
+
 /** A track is "ready" when title, artist and every writer's name + PRO are filled in. */
 function missing(t: CatalogTrack): string[] {
   const out: string[] = [];
@@ -104,8 +112,9 @@ export function ExpertAssistance({ userId, email, purchases }: { userId: string;
               </label>
               <div className="space-y-2 text-sm">
                 <span>Agencies</span>
+                <p className="text-xs text-muted-foreground">Songwriters can only belong to one PRO — choose ASCAP or BMI.</p>
                 {AGENCIES.map((a) => (
-                  <label key={a} className="flex items-center gap-2"><input type="checkbox" className="accent-[var(--primary)]" checked={agencies.includes(a)} onChange={(e) => setAgencies(e.target.checked ? [...agencies, a] : agencies.filter((x) => x !== a))} />{a}</label>
+                  <label key={a} className="flex items-center gap-2"><input type="checkbox" className="accent-[var(--primary)]" checked={agencies.includes(a)} onChange={(e) => setAgencies(toggleAgency(agencies, a, e.target.checked))} />{a}</label>
                 ))}
               </div>
               {(() => { const fee = assistanceFees(type, songs); return (

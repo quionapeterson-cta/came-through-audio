@@ -2,9 +2,10 @@ import { useEffect, useState } from "react";
 import { Activity, AlertTriangle, CheckCircle2, Hourglass, ExternalLink, XCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { listTracks, type CatalogTrack } from "@/lib/catalog";
+import { QuickSongInspector, MismatchTips } from "@/components/QuickSongInspector";
 import { auditCatalog, BMI_SEARCH, PILLARS } from "@/lib/audit";
 
-export function RoyaltyHealthCheck({ onFix }: { onFix: () => void }) {
+export function RoyaltyHealthCheck({ onFix, onEmbed }: { onFix: () => void; onEmbed: () => void }) {
   const [tracks, setTracks] = useState<CatalogTrack[]>();
   useEffect(() => { listTracks().then(setTracks).catch(() => setTracks([])); }, []);
   if (!tracks) return <div className="rounded-2xl border border-border p-6 text-muted-foreground">Scanning your catalog…</div>;
@@ -41,13 +42,16 @@ export function RoyaltyHealthCheck({ onFix }: { onFix: () => void }) {
             })}
           </div>
         )}
+        {tracks.length > 0 && <div className="mt-4"><MismatchTips /></div>}
       </div>
+
+      <QuickSongInspector onEmbed={onEmbed} onExpert={book} />
 
       <div className="grid gap-4 md:grid-cols-2">
         <div className="rounded-2xl border-2 border-destructive/60 bg-card p-5">
           <AlertTriangle className="h-6 w-6 text-destructive" />
           <h3 className="mt-2 text-lg font-bold">Your distributor only collects part of your money.</h3>
-          <p className="mt-1 text-sm text-muted-foreground">DistroKid, TuneCore and CD Baby pay your master streams. They do <span className="font-semibold text-foreground">not</span> collect performance royalties (ASCAP/BMI), digital radio royalties (SoundExchange) or streaming mechanicals (The MLC). If those aren't registered, that money goes unclaimed.</p>
+          <p className="mt-1 text-sm text-muted-foreground">TuneCore, CD Baby, Symphonic and other distributors pay your master streams. They do <span className="font-semibold text-foreground">not</span> collect performance royalties (ASCAP/BMI), digital radio royalties (SoundExchange) or streaming mechanicals (The MLC). If those aren't registered, that money goes unclaimed.</p>
         </div>
         <div className="rounded-2xl border-2 border-destructive/60 bg-card p-5">
           <Hourglass className="h-6 w-6 text-destructive" />
