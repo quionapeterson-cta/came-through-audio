@@ -71,20 +71,36 @@ export const PLAN_CARDS: { tier: Exclude<Tier, "free">; price: string; priceId: 
   },
 ];
 
-/** Expert assistance: Singles/EPs (max 6) $14.99 setup; albums $29.99 setup per block of up to 20 songs; +$4.99 per song per agency. */
+/**
+ * Expert assistance setup fees. Base Fee: $14.99 for Singles/EPs (max 6) or $29.99 for albums (up to 20).
+ * Extended Repertoire Fee: beyond 20 album tracks the cycle repeats per block of 20 —
+ * each full block of 20 adds $29.99; a final partial block of 1–6 adds $14.99, 7–19 adds $29.99.
+ * Plus $4.99 per song per agency.
+ */
+export function assistanceFees(type: "single" | "album", songs: number) {
+  const n = type === "single" ? Math.min(songs, 6) : songs;
+  if (n <= 0) return { n: 0, base: 0, smallBlocks: 0, largeBlocks: 0, extended: 0 };
+  if (type === "single") return { n, base: 14.99, smallBlocks: 0, largeBlocks: 0, extended: 0 };
+  const rest = Math.max(0, n - 20);
+  const rem = rest % 20;
+  const largeBlocks = Math.floor(rest / 20) + (rem > 6 ? 1 : 0);
+  const smallBlocks = rem > 0 && rem <= 6 ? 1 : 0;
+  return { n, base: 29.99, smallBlocks, largeBlocks, extended: Math.round((largeBlocks * 29.99 + smallBlocks * 14.99) * 100) / 100 };
+}
+
 export function assistanceTotal(type: "single" | "album", songs: number, agencies: number) {
   if (songs <= 0 || agencies <= 0) return 0;
-  const n = type === "single" ? Math.min(songs, 6) : songs;
-  const setup = type === "single" ? 14.99 : 29.99 * Math.ceil(n / 20);
-  return Math.round((setup + 4.99 * n * agencies) * 100) / 100;
+  const f = assistanceFees(type, songs);
+  return Math.round((f.base + f.extended + 4.99 * f.n * agencies) * 100) / 100;
 }
 
 export function assistanceItems(type: "single" | "album", songs: number, agencies: number) {
-  const n = type === "single" ? Math.min(songs, 6) : songs;
-  return [
-    type === "single" ? { priceId: "expert_setup_single", quantity: 1 } : { priceId: "expert_setup_album", quantity: Math.ceil(n / 20) },
-    { priceId: "expert_per_song_agency", quantity: n * agencies },
-  ];
+  const f = assistanceFees(type, songs);
+  const items = [type === "single" ? { priceId: "expert_setup_single", quantity: 1 } : { priceId: "expert_setup_album", quantity: 1 + f.largeBlocks }];
+  // Extended Repertoire Fee small blocks reuse the $14.99 setup price.
+  if (f.smallBlocks) items.push({ priceId: "expert_setup_single", quantity: f.smallBlocks });
+  items.push({ priceId: "expert_per_song_agency", quantity: f.n * agencies });
+  return items;
 }
 
 /** BMI reports writer+publisher shares on a 200% scale; ASCAP, SoundExchange and the MLC use 100%. */
