@@ -5,11 +5,12 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { listTracks, type CatalogTrack } from "@/lib/catalog";
-import { assistanceItems, assistanceTotal } from "@/lib/plans";
+import { assistanceFees, assistanceItems, assistanceTotal } from "@/lib/plans";
 import { openCheckout } from "@/lib/paddle";
 import type { Purchase } from "@/hooks/useBilling";
 
-const AGENCIES = ["PRO (ASCAP / BMI / SESAC)", "SoundExchange", "The MLC"];
+// Public registries only — SESAC is invitation-only and not offered.
+const AGENCIES = ["ASCAP", "BMI", "SoundExchange", "The MLC"];
 
 /** A track is "ready" when title, artist and every writer's name + PRO are filled in. */
 function missing(t: CatalogTrack): string[] {
@@ -107,7 +108,13 @@ export function ExpertAssistance({ userId, email, purchases }: { userId: string;
                   <label key={a} className="flex items-center gap-2"><input type="checkbox" className="accent-[var(--primary)]" checked={agencies.includes(a)} onChange={(e) => setAgencies(e.target.checked ? [...agencies, a] : agencies.filter((x) => x !== a))} />{a}</label>
                 ))}
               </div>
-              <p className="text-sm text-muted-foreground">{type === "single" ? "$14.99" : "$29.99"} setup + $4.99 per song per agency</p>
+              {(() => { const fee = assistanceFees(type, songs); return (
+                <div className="space-y-1 rounded-lg bg-muted p-3 text-sm">
+                  <div className="flex justify-between"><span>Base Fee</span><span>${fee.base.toFixed(2)}</span></div>
+                  {fee.extended > 0 && <div className="flex justify-between"><span>Extended Repertoire Fee <span className="text-muted-foreground">(tracks 21+)</span></span><span>${fee.extended.toFixed(2)}</span></div>}
+                  <div className="flex justify-between"><span>{fee.n} song{fee.n === 1 ? "" : "s"} × {agencies.length} agenc{agencies.length === 1 ? "y" : "ies"} × $4.99</span><span>${(fee.n * agencies.length * 4.99).toFixed(2)}</span></div>
+                </div>); })()}
+              {type === "album" && <p className="text-xs text-muted-foreground">After 20 tracks, each extra batch of 1–6 songs adds $14.99 and 7–20 songs adds $29.99.</p>}
               <div className="text-3xl font-bold text-primary">${total.toFixed(2)}</div>
               <Button className="w-full" size="lg" disabled={busy} onClick={pay}>Pay & reserve my session</Button>
             </div>
