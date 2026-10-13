@@ -201,8 +201,8 @@ export function MetadataUploader({ stageName, userId, mode = "embed", onSubmitte
                 </div>
               ))}
             </div>
+            <SelectField label="Release type" id="releaseType" value={metadata.releaseType} options={RELEASE_TYPES} onChange={(value) => update("releaseType", value)} />
             {full && <>
-              <SelectField label="Release type" id="releaseType" value={metadata.releaseType} options={RELEASE_TYPES} onChange={(value) => update("releaseType", value)} />
               <Field label="Album / release title" id="album" value={metadata.album} onChange={(value) => update("album", value)} />
               <Field label="Release date" id="releaseDate" type="date" value={metadata.releaseDate} onChange={(value) => update("releaseDate", value)} />
               <Field label="Record label" id="label" value={metadata.label} onChange={(value) => update("label", value)} />
@@ -291,7 +291,7 @@ export function MetadataUploader({ stageName, userId, mode = "embed", onSubmitte
                     <div className="truncate text-lg font-bold">{t.title}</div>
                     <div className="truncate text-sm text-muted-foreground">{t.artist}{t.metadata.album ? ` · ${t.metadata.album}` : ""}</div>
                     <div className="mt-1 flex flex-wrap gap-1 text-xs">
-                      {[t.metadata.primaryGenre, t.metadata.duration, t.metadata.isrc && `ISRC ${t.metadata.isrc}`].filter(Boolean).map((b) => <span key={String(b)} className="rounded-full border border-primary px-2 py-0.5 text-primary">{b}</span>)}
+                      {[t.metadata.releaseType || "Single", t.metadata.primaryGenre, t.metadata.duration, t.metadata.isrc && `ISRC ${t.metadata.isrc}`].filter(Boolean).map((b) => <span key={String(b)} className="rounded-full border border-primary px-2 py-0.5 text-primary">{b}</span>)}
                     </div>
                   </div>
                   <div className="flex flex-wrap gap-2">
