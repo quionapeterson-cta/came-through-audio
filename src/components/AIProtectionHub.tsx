@@ -20,7 +20,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { PACKAGES, MAX_PROOF_SECONDS, chainStrength, sha256, videoDuration, type PackageId } from "@/lib/proof";
 import { useServerFn } from "@tanstack/react-start";
-import { openCheckout } from "@/lib/paddle";
+import { openCheckout, getPaddleEnvironment } from "@/lib/paddle";
 import { stampDigest } from "@/lib/ots.functions";
 import { buildOtsFile, download, proofManifest } from "@/lib/ots";
 
@@ -140,7 +140,14 @@ export function AIProtectionHub({ userId, paid, track, email }: { userId: string
 
   return (
     <section className="mx-auto mt-8 max-w-5xl space-y-8 pb-12">
-      <div className="flex items-center gap-3"><ShieldCheck className="h-8 w-8 text-primary" /><h1 className="text-2xl font-bold">AI Protection Hub</h1></div>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex items-center gap-3"><ShieldCheck className="h-8 w-8 text-primary" /><h1 className="text-2xl font-bold">AI Protection Hub</h1></div>
+        {getPaddleEnvironment() === "sandbox" && !paid && (
+          <Button variant="outline" size="sm" onClick={() => setUnlocked((v) => !v)}>
+            {unlocked ? "Exit test preview" : "Preview Proof Generator (Test Mode)"}
+          </Button>
+        )}
+      </div>
 
       <div className="space-y-4 rounded-2xl border-2 border-primary bg-card p-6">
         <span className="inline-flex items-center gap-2 rounded-full border border-primary px-3 py-1 text-xs font-bold tracking-widest text-primary"><ShieldCheck className="h-4 w-4" />CERTIFICATE OF HUMAN ORIGIN · BITCOIN BLOCKCHAIN ANCHORED</span>
