@@ -121,7 +121,7 @@ function Workspace() {
           </TabsContent>
           <TabsContent value="protect"><AIProtectionHub userId={user.id} paid={hasAi} email={user.email} track={protectTrack} /></TabsContent>
           <TabsContent value="splits"><SplitSheets userId={user.id} canSplit={canSplit} prefillTrackId={splitTrackId} onUpgrade={upgrade} /></TabsContent>
-          <TabsContent value="health"><Health onFix={() => setTab("catalog")} userId={user.id} email={user.email} purchases={purchases} canUtility={canSplit} onUpgrade={upgrade} /></TabsContent>
+          <TabsContent value="health"><Health onFix={() => setTab("catalog")} onEmbed={() => setTab("embed")} userId={user.id} email={user.email} purchases={purchases} canUtility={canSplit} onUpgrade={upgrade} /></TabsContent>
           <TabsContent value="learn"><Learn unlocked={hasTier(tier, "management")} onUpgrade={upgrade} /></TabsContent>
         </Tabs>
       </main>
@@ -228,10 +228,10 @@ function Masterclasses() {
   );
 }
 
-function Health({ onFix, userId, email, purchases, canUtility, onUpgrade }: { userId: string; email?: string | undefined; purchases: Purchase[]; canUtility: boolean; onUpgrade: () => void; onFix: () => void }) {
+function Health({ onFix, onEmbed, userId, email, purchases, canUtility, onUpgrade }: { userId: string; email?: string | undefined; purchases: Purchase[]; canUtility: boolean; onUpgrade: () => void; onFix: () => void; onEmbed: () => void }) {
   return (
     <div className="mt-6 space-y-6">
-      <RoyaltyHealthCheck onFix={onFix} />
+      <RoyaltyHealthCheck onFix={onFix} onEmbed={onEmbed} />
       <div id="expert-assistance"><ExpertAssistance userId={userId} email={email} purchases={purchases} /></div>
       <RoyaltyUtilitySuite unlocked={canUtility} onUpgrade={onUpgrade} />
     </div>
