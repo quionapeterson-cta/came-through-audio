@@ -47,7 +47,7 @@ export function RoyaltyHealthCheck({ onFix }: { onFix: () => void }) {
         <div className="rounded-2xl border-2 border-destructive/60 bg-card p-5">
           <AlertTriangle className="h-6 w-6 text-destructive" />
           <h3 className="mt-2 text-lg font-bold">Your distributor only collects part of your money.</h3>
-          <p className="mt-1 text-sm text-muted-foreground">DistroKid, TuneCore and CD Baby pay your master streams. They do <span className="font-semibold text-foreground">not</span> collect performance royalties (ASCAP/BMI), digital radio royalties (SoundExchange) or streaming mechanicals (The MLC). If those aren't registered, that money goes unclaimed.</p>
+          <p className="mt-1 text-sm text-muted-foreground">TuneCore, CD Baby, Symphonic and other distributors pay your master streams. They do <span className="font-semibold text-foreground">not</span> collect performance royalties (ASCAP/BMI), digital radio royalties (SoundExchange) or streaming mechanicals (The MLC). If those aren't registered, that money goes unclaimed.</p>
         </div>
         <div className="rounded-2xl border-2 border-destructive/60 bg-card p-5">
           <Hourglass className="h-6 w-6 text-destructive" />
