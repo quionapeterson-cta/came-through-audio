@@ -2,9 +2,10 @@ import { useEffect, useState } from "react";
 import { Activity, AlertTriangle, CheckCircle2, Hourglass, ExternalLink, XCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { listTracks, type CatalogTrack } from "@/lib/catalog";
+import { QuickSongInspector, MismatchTips } from "@/components/QuickSongInspector";
 import { auditCatalog, BMI_SEARCH, PILLARS } from "@/lib/audit";
 
-export function RoyaltyHealthCheck({ onFix }: { onFix: () => void }) {
+export function RoyaltyHealthCheck({ onFix, onEmbed }: { onFix: () => void; onEmbed: () => void }) {
   const [tracks, setTracks] = useState<CatalogTrack[]>();
   useEffect(() => { listTracks().then(setTracks).catch(() => setTracks([])); }, []);
   if (!tracks) return <div className="rounded-2xl border border-border p-6 text-muted-foreground">Scanning your catalog…</div>;
@@ -41,7 +42,10 @@ export function RoyaltyHealthCheck({ onFix }: { onFix: () => void }) {
             })}
           </div>
         )}
+        {tracks.length > 0 && <div className="mt-4"><MismatchTips /></div>}
       </div>
+
+      <QuickSongInspector onEmbed={onEmbed} onExpert={book} />
 
       <div className="grid gap-4 md:grid-cols-2">
         <div className="rounded-2xl border-2 border-destructive/60 bg-card p-5">
