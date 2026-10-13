@@ -16,6 +16,8 @@
 - [x] Plan cards: "Unlimited ..." lines with hover descriptions (workspace only; homepage unchanged)
 - [x] Royalty Utility Suite (BMI/ASCAP converter + earnings calculator) for Catalog and Collaborate+
 - [x] Expert Registration Assistance: pay upfront → catalog complete → gateway agreement → scheduling
+- [x] Royalty Health Check audit (ASCAP, BMI, SoundExchange, MLC) with pain-point banners
+- [x] Expert assistance: SESAC removed; Extended Repertoire Fee after 20 tracks
 - [ ] Expert session booking calendar (blocked: needs the user's booking link/tool)
 - [x] Pre-Distribution hover note + Pro Tip under identifiers; matching FAQ
 - [x] Catalog downloads grouped in one Downloads menu; vault always stores tagged master
