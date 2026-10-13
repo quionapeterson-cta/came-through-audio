@@ -9,6 +9,6 @@ describe("proof rules", () => {
 });
 describe("registration assistance", () => {
   it("singles cap at 6", () => expect(assistanceTotal("single", 10, 1)).toBeCloseTo(14.99 + 4.99 * 6));
-  it("21 album tracks bill a second entry", () => expect(assistanceTotal("album", 21, 1)).toBeCloseTo(29.99 * 2 + 4.99 * 21));
+  it("21 album tracks add a $14.99 Extended Repertoire Fee", () => expect(assistanceTotal("album", 21, 1)).toBeCloseTo(29.99 + 14.99 + 4.99 * 21));
   it("blank inputs total 0", () => expect(assistanceTotal("album", 0, 0)).toBe(0));
 });
