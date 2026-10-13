@@ -800,6 +800,14 @@ export type Database = {
         }
         Returns: boolean
       }
+      is_room_host: {
+        Args: { _room_id: string; _user_id: string }
+        Returns: boolean
+      }
+      is_room_member: {
+        Args: { _room_id: string; _user_id: string }
+        Returns: boolean
+      }
       is_staff: { Args: { _user_id: string }; Returns: boolean }
       sign_split_invite: {
         Args: {
