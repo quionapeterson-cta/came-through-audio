@@ -126,7 +126,11 @@ export function MetadataUploader({ stageName, userId, mode = "embed", onSubmitte
     setBusy(true);
     try {
       const blob = await embedMetadata(await audio.arrayBuffer(), parsed.data, artwork ? await artwork.arrayBuffer() : undefined);
-      setResult({ url: URL.createObjectURL(blob), name: `${parsed.data.title.replace(/[<>:"/\\|?*]/g, "_")}-tagged.mp3` });
+      const file = { url: URL.createObjectURL(blob), name: `${parsed.data.title.replace(/[<>:"/\\|?*]/g, "_")}-tagged.mp3` };
+      const a = document.createElement("a");
+      a.href = file.url; a.download = file.name;
+      document.body.appendChild(a); a.click(); a.remove();
+      setResult(file);
     } catch {
       setError("This file could not be tagged. Check that it is a valid MP3 and the cover is a valid JPEG or PNG.");
     } finally { setBusy(false); }
@@ -250,7 +254,6 @@ export function MetadataUploader({ stageName, userId, mode = "embed", onSubmitte
                 <input type="checkbox" className="mt-1 h-4 w-4 accent-[var(--primary)]" checked={aiProtect} onChange={(e) => setAiProtect(e.target.checked)} />
                 <span><span className="font-semibold">Add AI Protection Certificate (+$2.99)</span> — With generative AI cloning and scraping artist catalogs at an alarming rate, secure your time-stamped proof of human origin right now to protect your music from false plagiarism claims and automated platform takedowns before downloading.</span>
               </label>
-              <Button asChild variant="outline"><a href={result.url} download={result.name}><Download />Download MP3</a></Button>
             </div>
           )}
           <div className="flex flex-wrap gap-3">
