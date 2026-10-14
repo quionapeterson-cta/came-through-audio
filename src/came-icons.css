@@ -40,3 +40,13 @@
 }
 .cta-bedazzled-unlock { animation: cta-sparkle-pop 0.8s cubic-bezier(.2,1.4,.4,1) both; }
 @media (prefers-reduced-motion: reduce) { .cta-bedazzled-unlock { animation: none; } }
+
+/* Added icons */
+.cta-key { background-image: url("/icons/serious/key_holder.png"); }
+.cta-time-witness { background-image: url("/icons/serious/time_witness.png"); }
+.cta-lyrical { background-image: url("/icons/serious/lyrical_genesis.png"); }
+.cta-split { background-image: url("/icons/serious/split_royal.png"); }
+.cta-master { background-image: url("/icons/serious/master_crowned.png"); }
+.cta-midnight { background-image: url("/icons/playful/midnight_oil.png"); }
+.cta-marathon { background-image: url("/icons/playful/marathon.png"); }
+.cta-unbreakable { background-image: url("/icons/playful/unbreakable.png"); }
