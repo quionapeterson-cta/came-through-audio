@@ -249,7 +249,7 @@ export function MetadataUploader({ stageName, userId, mode = "embed", onSubmitte
           {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
           {result && (
             <div role="status" className="space-y-3 rounded-xl border border-primary p-5">
-              <p className="text-lg font-bold">🎉 Audio Tagged Successfully!</p>
+              <p className="flex items-center gap-2 text-lg font-bold"><span className="cta-icon cta-party cta-bedazzled-unlock" aria-hidden /> Audio Tagged Successfully!</p>
               <label className="flex items-start gap-3 text-sm">
                 <input type="checkbox" className="mt-1 h-4 w-4 accent-[var(--primary)]" checked={aiProtect} onChange={(e) => setAiProtect(e.target.checked)} />
                 <span><span className="font-semibold">Add AI Protection Certificate (+$2.99)</span> — With generative AI cloning and scraping artist catalogs at an alarming rate, secure your time-stamped proof of human origin right now to protect your music from false plagiarism claims and automated platform takedowns before downloading.</span>

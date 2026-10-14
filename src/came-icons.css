@@ -1,0 +1,42 @@
+/* Came Through Audio award icon system. Serious = clean; Playful = bedazzled. */
+:root { --cta-blue: #004aad; --cta-gold: #ffd700; --cta-white: #ffffff; --cta-black: #000000; }
+
+.cta-icon { display: inline-block; width: 32px; height: 32px; background: center / contain no-repeat; vertical-align: middle; flex-shrink: 0; }
+.cta-icon-64 { width: 64px; height: 64px; }
+.cta-icon-128 { width: 128px; height: 128px; }
+
+/* Serious */
+.cta-genesis { background-image: url("/icons/serious/came_genesis_gold.png"); }
+.cta-strong { background-image: url("/icons/serious/came_strong_gold.png"); }
+.cta-crown { background-image: url("/icons/serious/came_crown_gold.png"); }
+.cta-double { background-image: url("/icons/serious/came_double_gold.png"); }
+.cta-shield { background-image: url("/icons/serious/award_shield.png"); }
+.cta-vault { background-image: url("/icons/serious/award_vault.png"); }
+.cta-certificate { background-image: url("/icons/serious/award_certificate.png"); }
+.cta-handshake { background-image: url("/icons/serious/handshake_diamond_watch.png"); }
+
+/* Playful */
+.cta-catalog { background-image: url("/icons/playful/catalog_complete.png"); }
+.cta-party { background-image: url("/icons/playful/party_popper.png"); }
+.cta-mic { background-image: url("/icons/playful/bedazzled_mic.png"); }
+.cta-note { background-image: url("/icons/playful/bedazzled_note.png"); }
+.cta-vinyl { background-image: url("/icons/playful/bedazzled_vinyl.png"); }
+.cta-bedazzled { background-image: url("/icons/playful/bedazzled_cta.png"); }
+
+/* Badges — blue only on white, gold only on black, Poppins Bold */
+.cta-badge-blue, .cta-badge-gold, .cta-badge-black {
+  font-family: "Poppins", sans-serif; font-weight: 700; padding: 6px 12px; border-radius: 999px;
+  display: inline-flex; align-items: center; gap: 8px;
+}
+.cta-badge-blue { background: var(--cta-white); color: var(--cta-blue); border: 2px solid var(--cta-blue); }
+.cta-badge-gold { background: var(--cta-black); color: var(--cta-gold); border: 2px solid var(--cta-gold); }
+.cta-badge-black { background: var(--cta-black); color: var(--cta-white); border: 2px solid var(--cta-white); }
+
+/* Playful unlock sparkle-pop */
+@keyframes cta-sparkle-pop {
+  0% { transform: scale(0.4) rotate(-12deg); opacity: 0; filter: drop-shadow(0 0 0 var(--cta-gold)); }
+  60% { transform: scale(1.15) rotate(4deg); opacity: 1; filter: drop-shadow(0 0 14px var(--cta-gold)); }
+  100% { transform: scale(1) rotate(0); filter: drop-shadow(0 0 4px var(--cta-gold)); }
+}
+.cta-bedazzled-unlock { animation: cta-sparkle-pop 0.8s cubic-bezier(.2,1.4,.4,1) both; }
+@media (prefers-reduced-motion: reduce) { .cta-bedazzled-unlock { animation: none; } }
