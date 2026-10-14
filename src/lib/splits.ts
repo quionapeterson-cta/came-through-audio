@@ -1,8 +1,8 @@
 import { supabase } from "@/integrations/supabase/client";
 import type { CatalogTrack } from "@/lib/catalog";
 
-export type SplitRole = "Writer" | "Composer" | "Producer" | "Artist" | "Publisher";
-export const SPLIT_ROLES: SplitRole[] = ["Writer", "Composer", "Producer", "Artist", "Publisher"];
+export type SplitRole = "Writer" | "Composer" | "Author/Composer" | "Producer" | "Artist" | "Publisher";
+export const SPLIT_ROLES: SplitRole[] = ["Writer", "Composer", "Author/Composer", "Producer", "Artist", "Publisher"];
 
 export type SplitCollaborator = {
   rowId?: string;

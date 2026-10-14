@@ -1,12 +1,14 @@
 import { useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { toast } from "sonner";
+import { Check, X } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { PASSWORD_RULES, passwordValid, rememberReturn } from "@/lib/password";
 
-export function SignupCard({ returnPath, onAuthed }: { returnPath?: string; onAuthed?: () => void } = {}) {
+export function SignupCard({ returnPath, onAuthed, inviteMode }: { returnPath?: string; onAuthed?: () => void; inviteMode?: boolean } = {}) {
   const navigate = useNavigate();
   const [mode, setMode] = useState<"signup" | "login">("signup");
   const [stageName, setStageName] = useState("");
@@ -15,9 +17,12 @@ export function SignupCard({ returnPath, onAuthed }: { returnPath?: string; onAu
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
   const [sent, setSent] = useState(false);
+  const [showRules, setShowRules] = useState(false);
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
+    if (mode === "signup" && !passwordValid(password)) { setShowRules(true); return; }
+    if (returnPath) rememberReturn(returnPath);
     setBusy(true);
     try {
       if (mode === "signup") {
@@ -78,10 +83,19 @@ export function SignupCard({ returnPath, onAuthed }: { returnPath?: string; onAu
             <div className="space-y-1.5">
               <Label htmlFor="email">Email</Label>
               <Input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
+              {inviteMode && <p className="text-xs font-medium text-primary">Use your invite email — the same address your split sheet request was sent to.</p>}
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="password">Password</Label>
-              <Input id="password" type="password" minLength={6} value={password} onChange={(e) => setPassword(e.target.value)} required />
+              <Input id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} onBlur={() => { if (mode === "signup" && password && !passwordValid(password)) setShowRules(true); }} required />
+              {mode === "signup" && showRules && !passwordValid(password) && (
+                <ul className="space-y-0.5 pt-1 text-xs">
+                  {PASSWORD_RULES.map((r) => {
+                    const ok = r.test(password);
+                    return <li key={r.id} className={`flex items-center gap-1.5 ${ok ? "text-primary" : "text-destructive"}`}>{ok ? <Check className="h-3 w-3" /> : <X className="h-3 w-3" />}{r.label}</li>;
+                  })}
+                </ul>
+              )}
             </div>
             <Button type="submit" disabled={busy} className="h-12 w-full text-base font-semibold">
               {busy ? "Please wait…" : mode === "signup" ? "Create my free account" : "Log in"}
