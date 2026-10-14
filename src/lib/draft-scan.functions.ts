@@ -21,10 +21,10 @@ const SCHEMA = {
 /** Reads visible on-screen timestamps from sampled draft-video frames. Never guesses. */
 export const scanDraftFrames = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: { frames: string[] }) => {
+  .inputValidator((input: { frames: string[]; kind?: "drafts" | "daw" }) => {
     if (!Array.isArray(input.frames) || !input.frames.length || input.frames.length > 6) throw new Error("Invalid frames");
     if (input.frames.some((f) => typeof f !== "string" || !f.startsWith("data:image/jpeg;base64,") || f.length > 1_500_000)) throw new Error("Invalid frame");
-    return input;
+    return { frames: input.frames, kind: input.kind === "daw" ? "daw" : "drafts" } as const;
   })
   .handler(async ({ data }) => {
     const key = process.env["LOVABLE_API_KEY"];
@@ -37,8 +37,9 @@ export const scanDraftFrames = createServerFn({ method: "POST" })
         stream: true,
         store: false,
         reasoning: { effort: "low" },
-        instructions:
-          "These are frames from a screen recording of an artist's song drafts (Apple Notes, Google Keep, Samsung Notes, Voice Memos, Files). List every creation or modified date that is CLEARLY visible on screen and belongs to a draft, note, memo or file. Return each as ISO YYYY-MM-DD (assume the current year 2026 only if the screen shows no year and context makes it obvious; otherwise skip it). label = a few words of what it belongs to. Never invent or guess dates; return an empty list if none are legible.",
+        instructions: data.kind === "daw"
+          ? "These are frames from a screen recording of an artist's open DAW project (FL Studio, Logic, Ableton, Pro Tools, BandLab, etc.). List every project/session creation or save date that is CLEARLY visible on screen (file browser, project info/properties window, title bar, Finder/Explorer date column). Return each as ISO YYYY-MM-DD (skip it if no year is shown and context does not make it obvious). label = a few words of where it appears. Never invent or guess dates; return an empty list if none are legible."
+          : "These are frames from a screen recording of an artist's song drafts (Apple Notes, Google Keep, Samsung Notes, Voice Memos, Files). List every creation or modified date that is CLEARLY visible on screen and belongs to a draft, note, memo or file. Return each as ISO YYYY-MM-DD (assume the current year 2026 only if the screen shows no year and context makes it obvious; otherwise skip it). label = a few words of what it belongs to. Never invent or guess dates; return an empty list if none are legible.",
         input: [{ role: "user", content: data.frames.map((image_url) => ({ type: "input_image", image_url })) }],
         text: { format: { type: "json_schema", name: "draft_dates", strict: true, schema: SCHEMA } },
       }),
