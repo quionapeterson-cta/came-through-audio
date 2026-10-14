@@ -18,7 +18,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { PACKAGES, MIN_PROOF_SECONDS, MAX_PROOF_SECONDS, chainStrength, sha256, videoDuration, proofFileError, PROOF_VIDEO_TYPES, type PackageId } from "@/lib/proof";
+import { NoteGuide, RecordGuide } from "@/components/ProofGuides";
+import { PACKAGES, MIN_PROOF_SECONDS, MAX_PROOF_SECONDS, sha256, videoDuration, proofFileError, PROOF_VIDEO_TYPES, type PackageId } from "@/lib/proof";
 import { useServerFn } from "@tanstack/react-start";
 import { openCheckout, getPaddleEnvironment } from "@/lib/paddle";
 import { stampDigest } from "@/lib/ots.functions";
@@ -38,9 +39,7 @@ export function AIProtectionHub({ userId, paid, track, email }: { userId: string
   const [daw, setDaw] = useState<Proof>();
   const [notes, setNotes] = useState<Proof>();
   const [draftNotes, setDraftNotes] = useState("");
-  const times = [daw?.created, notes?.created].filter((t): t is number => !!t);
-  const firstDraft = times.length ? new Date(Math.min(...times)).toISOString() : "";
-  const lastDraft = times.length ? new Date(Math.max(...times)).toISOString() : "";
+  const chainStatus = "Pending — Make sure both timestamps clearly visible in 1 video";
   const [busy, setBusy] = useState(false);
   const [writerRows, setWriterRows] = useState<WriterRow[]>([{ name: "", role: "both" }]);
   const named = writerRows.filter((w) => w.name.trim());
@@ -97,11 +96,11 @@ export function AIProtectionHub({ userId, paid, track, email }: { userId: string
 
   async function generate() {
     if (!f.title || !f.artist || !named.some((w) => w.role !== "producer")) { toast.error("Track title, artist and at least one writer are required."); return; }
-    if (!daw || !notes || !firstDraft || !lastDraft) { toast.error("Add both recordings to continue."); return; }
+    if (!daw || !notes) { toast.error("Add both recordings to continue."); return; }
     if (!attest) { toast.error("Check the legal attestation to continue."); return; }
     setBusy(true);
     try {
-      const strength = chainStrength(new Date(firstDraft), new Date(lastDraft));
+      const strength = chainStatus;
       const manifest = proofManifest({
         Track: f.title, Artist: f.artist, Writers: writers, Composers: composers, Producers: producers || "-",
         ISRC: f.isrc || "-", UPC: f.upc || "-", ISWC: f.iswc || "-", Chain: strength,
@@ -233,14 +232,16 @@ export function AIProtectionHub({ userId, paid, track, email }: { userId: string
         <ProofBox title="Draft History Proof" proof={notes} on={(file) => proof(file, "drafts", setNotes)}
           tip="Screen-record 15-60 seconds of your earlier versions — voice memos, rough takes, lyric notes, or your folder showing file dates. Show how the song grew from idea to now. We auto-detect your timeline and drafts days apart earn a Strong Chain (Human Creation) rating.">
           <div className="flex flex-wrap items-center gap-2 rounded-md border border-border p-3 text-xs">
-            <span><b>Created</b> {firstDraft ? new Date(firstDraft).toLocaleDateString() : "—"}</span><span className="text-primary">→</span>
-            <span><b>Latest</b> {lastDraft ? new Date(lastDraft).toLocaleDateString() : "—"}</span><span className="text-primary">→</span>
+            <span><b>Old draft</b> {notes ? "Scanning video" : "—"}</span><span className="text-primary">→</span>
+            <span><b>New draft</b> {notes ? "Scanning video" : "—"}</span><span className="text-primary">→</span>
             <span><b>Anchored (Bitcoin)</b> {otsFile ? "Submitted" : "On generate"}</span>
           </div>
-          {firstDraft && lastDraft && <p className="text-sm font-semibold text-primary">{chainStrength(new Date(firstDraft), new Date(lastDraft))}</p>}
+          {notes && <p className="text-sm font-semibold text-primary">{chainStatus}</p>}
           <div className="space-y-1"><Label>Notes (optional)</Label><Input value={draftNotes} onChange={(e) => setDraftNotes(e.target.value)} /></div>
+          <NoteGuide />
         </ProofBox>
       </div>
+      <RecordGuide />
 
       <h3 className="text-xl font-bold">Step 3 · Confirm & generate</h3>
       <label className="flex items-start gap-3 rounded-xl border border-border p-4 text-sm">
