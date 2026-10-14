@@ -65,7 +65,7 @@ function Animation({ id }: { id: AppId }) {
   return (
     <div className={card}>
       <div style={loop("pg-scroll")} className="space-y-2">
-        {rows.map((r) => <div key={r} className="flex items-center gap-2 rounded bg-muted px-2 py-1.5 text-[11px] font-medium">{id === "files" ? "📁" : "🎙️"} {r}</div>)}
+        {rows.map((r) => <div key={r} className="flex items-center gap-2 rounded bg-muted px-2 py-1.5 text-[11px] font-medium"><span className={`cta-icon !h-4 !w-4 ${id === "files" ? "cta-catalog" : "cta-mic"}`} aria-hidden /> {r}</div>)}
       </div>
       <Finger style={{ bottom: 6, right: 20, ...loop("pg-scroll") }} />
     </div>
