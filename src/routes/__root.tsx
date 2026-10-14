@@ -13,6 +13,8 @@ import { useEffect, type ReactNode } from "react";
 import { Toaster } from "@/components/ui/sonner";
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
+import { supabase } from "@/integrations/supabase/client";
+import { takeReturn } from "@/lib/password";
 
 function NotFoundComponent() {
   return (
@@ -117,6 +119,26 @@ function RootShell({ children }: { children: ReactNode }) {
 
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
+
+  // Send people back to the page they were invited to (e.g. a split sheet) after login or email confirmation.
+  useEffect(() => {
+    const path = window.location.pathname;
+    const hash = window.location.hash;
+    const search = window.location.search;
+    const fromEmail = hash.includes("access_token") || hash.includes("type=signup") || search.includes("code=");
+    if (path === "/" && fromEmail) {
+      const ret = takeReturn();
+      window.location.replace(`/verified${ret ? `?next=${encodeURIComponent(ret)}` : ""}${hash}`);
+      return;
+    }
+    const { data: sub } = supabase.auth.onAuthStateChange((event) => {
+      if (event !== "SIGNED_IN") return;
+      const ret = takeReturn();
+      if (ret && window.location.pathname !== ret && window.location.pathname !== "/verified") window.location.assign(ret);
+    });
+    return () => sub.subscription.unsubscribe();
+  }, []);
+
 
   return (
     <QueryClientProvider client={queryClient}>

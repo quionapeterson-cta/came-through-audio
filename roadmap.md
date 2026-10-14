@@ -25,3 +25,5 @@
 - [x] Quick Song Inspector, mismatch tips, ASCAP/BMI exclusive, distributor copy updated
 - [x] AI proof video engine: private 50MB proof-videos storage + uploads
 - [ ] Brainstorm: DistroKid takedown homepage hook to sell Human Origin Certificates
+- [x] Split sheet invite: login/confirm returns to the requested signature page
+- [x] 30-day free Collaborate trial for e-signature collaborators; Author/Composer role; invite-email reminder; password rules
