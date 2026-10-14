@@ -33,7 +33,7 @@ export function emailLayout(bodyHtml: string, opts: EmailLayoutOptions): string 
 <div style="max-width:560px;margin:0 auto;padding:32px 24px">
 <div style="text-align:center;padding-bottom:20px;border-bottom:2px solid #004AAD;margin-bottom:24px">
 <img src="${SITE_URL}/email-logo-dark.png" alt="Came Through Audio logo" width="120" style="display:block;margin:0 auto 10px;height:auto;border:0" />
-<div style="font-size:20px;font-weight:700;color:#0b0b0b">Came Through Audio</div>
+<div style="font-size:20px;font-weight:700;color:#0b0b0b">Came Through <span style="color:#004AAD">Audio</span></div>
 <div style="font-size:11px;font-weight:700;letter-spacing:2px;color:#004AAD;margin-top:4px">${TAGLINE}</div>
 </div>
 ${bodyHtml}

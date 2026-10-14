@@ -38,7 +38,7 @@ export const sendSplitInvite = createServerFn({ method: "POST" })
 <p style="margin:0;font-size:14px;color:#555">Your share</p>
 <p style="margin:4px 0 0;font-size:22px;font-weight:700">${Number(row.assigned_percentage)}% · ${esc(row.role)}</p></div>
 <a href="${link}" style="display:inline-block;background:#004AAD;color:#ffffff;text-decoration:none;font-weight:700;padding:14px 28px;border-radius:8px">Review &amp; Sign</a>
-<p style="font-size:13px;line-height:1.6;color:#555;margin-top:24px">Signing is 100% free. Create a free Came Through Audio account with this email (${esc(email)}), then add your PRO and IPI number if you have them.</p>
+<p style="font-size:13px;line-height:1.6;color:#555;margin-top:24px"><b>Signing is always 100% free.</b> When you activate your account with this email (<b>${esc(email)}</b>), you’ll also receive a complimentary <b>30-day Catalog &amp; Collaborate Trial</b>—giving you full creator access to split sheets, catalog tools, and metadata embedding with no credit card required. Review the split sheet to confirm your credits, and add your PRO and IPI numbers to secure your royalties.</p>
 `, { reason: `You're receiving this because ${artist || "a Came Through Audio member"} invited you to review and sign a split sheet.` });
 
     const res = await fetch("https://api.resend.com/emails", {

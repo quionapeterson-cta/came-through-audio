@@ -173,3 +173,7 @@
 }
 
 body { font-family: var(--font-sans); }
+
+@utility text-brand-electric {
+  color: #4D8CFF;
+}
