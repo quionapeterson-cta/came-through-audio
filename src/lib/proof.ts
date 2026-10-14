@@ -7,6 +7,15 @@ export const PACKAGES = [
 export type PackageId = (typeof PACKAGES)[number]["id"];
 
 export const MAX_PROOF_SECONDS = 15;
+export const MAX_PROOF_BYTES = 52_428_800; // 50MB
+export const PROOF_VIDEO_TYPES = ["video/mp4", "video/quicktime", "video/webm"];
+
+/** Returns an error message, or null when the file is an acceptable proof video. */
+export function proofFileError(file: { type: string; size: number }): string | null {
+  if (!PROOF_VIDEO_TYPES.includes(file.type)) return "Use an MP4, MOV or WebM video.";
+  if (file.size > MAX_PROOF_BYTES) return "Videos must be 50MB or smaller.";
+  return null;
+}
 
 export async function sha256(buf: ArrayBuffer): Promise<string> {
   const d = await crypto.subtle.digest("SHA-256", buf);

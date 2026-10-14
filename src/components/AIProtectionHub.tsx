@@ -18,7 +18,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { PACKAGES, MAX_PROOF_SECONDS, chainStrength, sha256, videoDuration, type PackageId } from "@/lib/proof";
+import { PACKAGES, MAX_PROOF_SECONDS, chainStrength, sha256, videoDuration, proofFileError, PROOF_VIDEO_TYPES, type PackageId } from "@/lib/proof";
 import { useServerFn } from "@tanstack/react-start";
 import { openCheckout, getPaddleEnvironment } from "@/lib/paddle";
 import { stampDigest } from "@/lib/ots.functions";
@@ -26,7 +26,7 @@ import { buildOtsFile, download, proofManifest } from "@/lib/ots";
 
 type WriterRole = "author" | "composer" | "both" | "producer";
 type WriterRow = { name: string; role: WriterRole };
-type Proof = { name: string; hash: string };
+type Proof = { name: string; hash: string; path: string; size: number };
 
 export function AIProtectionHub({ userId, paid, track, email }: { userId: string; paid: boolean; track?: CatalogTrack | undefined; email?: string | undefined }) {
   const stamp = useServerFn(stampDigest);
@@ -63,13 +63,22 @@ export function AIProtectionHub({ userId, paid, track, email }: { userId: string
   const editRow = (i: number, patch: Partial<WriterRow>) => setWriterRows(writerRows.map((w, j) => (j === i ? { ...w, ...patch } : w)));
   const set = (k: keyof typeof f) => (e: React.ChangeEvent<HTMLInputElement>) => setF({ ...f, [k]: e.target.value });
 
-  async function proof(file: File | undefined, done: (p: Proof) => void) {
+  async function proof(file: File | undefined, kind: "daw" | "drafts", done: (p: Proof) => void) {
     if (!file) return;
-    try {
-      const d = await videoDuration(file);
-      if (d > MAX_PROOF_SECONDS) { toast.error(`Recordings must be ${MAX_PROOF_SECONDS} seconds or shorter (this one is ${Math.round(d)}s).`); return; }
-      done({ name: file.name, hash: await sha256(await file.arrayBuffer()) });
-    } catch { toast.error("That video could not be read."); }
+    const bad = proofFileError(file);
+    if (bad) { toast.error(bad); return; }
+    let d: number;
+    try { d = await videoDuration(file); } catch { toast.error("That video could not be read."); return; }
+    if (d > MAX_PROOF_SECONDS) { toast.error(`Recordings must be ${MAX_PROOF_SECONDS} seconds or shorter (this one is ${Math.round(d)}s).`); return; }
+    const hash = await sha256(await file.arrayBuffer());
+    const ext = file.name.split(".").pop()?.toLowerCase() || "mp4";
+    const path = `${userId}/${Date.now()}_${kind}.${ext}`;
+    const id = toast.loading("Securing your proof video…");
+    const { error } = await supabase.storage.from("proof-videos").upload(path, file, { contentType: file.type });
+    toast.dismiss(id);
+    if (error) { toast.error(`Upload failed: ${error.message}`); return; }
+    done({ name: file.name, hash, path, size: file.size });
+    toast.success("Proof video uploaded & fingerprinted.");
   }
 
   const active = paid || unlocked;
