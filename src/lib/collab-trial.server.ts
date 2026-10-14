@@ -46,10 +46,11 @@ export function formatEndDate(periodEnd: string): string {
 /** Sends the reminder for one trial row owned by the given email. Returns true if sent and marked. */
 export async function sendReminderForTrial(
   supabaseAdmin: any,
-  sub: { id: string; current_period_end: string },
+  sub: { id: string; current_period_end: string | null },
   email: string,
   plansUrl: string,
 ): Promise<boolean> {
+  if (!sub.current_period_end) return false;
   const key = resendKey();
   const daysLeft = daysLeftInWindow(sub.current_period_end);
   if (!key || daysLeft === null) return false;
