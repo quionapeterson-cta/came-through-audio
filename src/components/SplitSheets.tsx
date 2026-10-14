@@ -179,6 +179,8 @@ function SplitEditor({ userId, track, initial, onClose, onSaved }: { userId: str
   const [signingIndex, setSigningIndex] = useState<number | null>(null);
   const [typedName, setTypedName] = useState("");
   const [saving, setSaving] = useState(false);
+  const [sendingIndex, setSendingIndex] = useState<number | null>(null);
+  const sendInvite = useServerFn(sendSplitInvite);
   const [ownerName, setOwnerName] = useState("");
   const [library, setLibrary] = useState<SavedContributor[]>([]);
 
