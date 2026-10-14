@@ -6,6 +6,8 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { listTracks, type CatalogTrack } from "@/lib/catalog";
+import { useServerFn } from "@tanstack/react-start";
+import { sendSplitInvite } from "@/lib/splits-email.functions";
 import {
   SPLIT_ROLES,
   collaboratorsFromTrack,
@@ -215,14 +217,13 @@ function SplitEditor({ userId, track, initial, onClose, onSaved }: { userId: str
       setCollaborators(saved);
       const row = saved.find((r) => r.name === c.name && r.email === c.email);
       if (!row?.rowId) return;
-      const link = signLink(row.rowId);
-      await navigator.clipboard.writeText(link).catch(() => {});
-      const subject = encodeURIComponent(`Please sign the split sheet for "${track.title}"`);
-      const body = encodeURIComponent(`Hi ${c.name},\n\nPlease review and sign your ${c.percentage}% ${c.role} split for "${track.title}" by ${track.artist}.\n\nCreate a free Came Through Audio account with this email (${c.email}) and sign here:\n${link}\n\nYou can also add your PRO and IPI number.\n\nThank you!`);
-      window.open(`mailto:${c.email}?subject=${subject}&body=${body}`, "_blank");
-      toast.success("Signing link copied and your email app opened.");
-    } catch {
-      toast.error("Could not create the signature request.");
+      setSendingIndex(i);
+      await sendInvite({ data: { rowId: row.rowId, origin: window.location.origin } });
+      toast.success(`Signature request emailed to ${c.email}.`);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Could not send the signature request.");
+    } finally {
+      setSendingIndex(null);
     }
   };
 
@@ -354,11 +355,11 @@ function SplitEditor({ userId, track, initial, onClose, onSaved }: { userId: str
                   <>
                     <Badge variant="outline" className="border-primary text-primary"><Mail className="mr-1 h-3.5 w-3.5" /> Requested {new Date(c.invitedAt).toLocaleDateString()} · awaiting signature</Badge>
                     <Button size="sm" variant="ghost" onClick={() => { void navigator.clipboard.writeText(signLink(c.rowId!)); toast.success("Signing link copied."); }}><Copy className="h-4 w-4" /> Copy link</Button>
-                    <Button size="sm" variant="ghost" onClick={() => void requestSignature(i)}><Mail className="h-4 w-4" /> Resend</Button>
+                    <Button size="sm" variant="ghost" disabled={sendingIndex === i} onClick={() => void requestSignature(i)}>{sendingIndex === i ? <Loader2 className="h-4 w-4 animate-spin" /> : <Mail className="h-4 w-4" />} Resend invite</Button>
                   </>
                 ) : (
-                  <Button size="sm" variant="outline" disabled={!c.name.trim()} onClick={() => requestSignature(i)}>
-                    <Mail className="h-4 w-4" /> Email signature request
+                  <Button size="sm" variant="outline" disabled={!c.name.trim() || sendingIndex === i} onClick={() => void requestSignature(i)}>
+                    {sendingIndex === i ? <Loader2 className="h-4 w-4 animate-spin" /> : <Mail className="h-4 w-4" />} Send invite
                   </Button>
                 )}
                 {!c.signedAt && !c.isOwner && !collaborators.some((r) => r.isOwner && r.signedAt) && (
