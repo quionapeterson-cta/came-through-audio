@@ -25,7 +25,7 @@ export function SignupCard({ returnPath, onAuthed }: { returnPath?: string; onAu
           email,
           password,
           options: {
-            emailRedirectTo: `${window.location.origin}${returnPath ?? "/workspace?tab=health"}`,
+            emailRedirectTo: `${window.location.origin}/verified?next=${encodeURIComponent(returnPath ?? "/workspace?tab=health")}`,
             data: { stage_name: stageName, legal_name: legalName },
           },
         });
