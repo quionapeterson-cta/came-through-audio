@@ -113,7 +113,7 @@ export function AIProtectionHub({ userId, paid, track, email }: { userId: string
         legal_credits: { writers: writers, composers: composers, producers },
         isrc: f.isrc || null, upc: f.upc || null, iswc: f.iswc || null,
         session_hash: daw.hash, notes_hash: notes.hash, chain_strength: strength, attested: true,
-        session_video_url: daw.name, notes_proof_url: notes.name,
+        session_video_url: daw.path, notes_proof_url: notes.path,
         proof_digest: digest, ots_receipt: ots?.receipt ?? null, ots_calendar: ots?.calendar ?? null,
         blockchain_status: ots ? "pending_bitcoin" : "none",
       } as never).select("id, issued_at").single();
@@ -225,9 +225,9 @@ export function AIProtectionHub({ userId, paid, track, email }: { userId: string
 
       <h3 className="text-xl font-bold">Step 2 · Record your proof</h3>
       <div className="grid gap-4 md:grid-cols-2">
-        <ProofBox title="DAW Session Proof" proof={daw} on={(file) => proof(file, setDaw)}
+        <ProofBox title="DAW Session Proof" proof={daw} on={(file) => proof(file, "daw", setDaw)}
           tip="Screen-record 5–15 seconds of your open project (FL Studio, Logic, Ableton, Pro Tools, etc.). Scroll through your tracks, stems, MIDI or automation. This shows you own the raw session — not just a finished bounce." />
-        <ProofBox title="Draft History Proof" proof={notes} on={(file) => proof(file, setNotes)}
+        <ProofBox title="Draft History Proof" proof={notes} on={(file) => proof(file, "drafts", setNotes)}
           tip="Screen-record 5–15 seconds of earlier versions: voice memos, rough mixes, lyric notes or a folder showing file dates. Then pick the date of your first idea and your latest version below.">
           <div className="grid grid-cols-2 gap-2">
             <div className="space-y-1"><Label>First idea / draft</Label><Input type="datetime-local" value={firstDraft} onChange={(e) => setFirstDraft(e.target.value)} /></div>
@@ -267,9 +267,9 @@ function ProofBox({ title, tip, proof, on, children }: { title: string; tip: str
     <div className="space-y-3 rounded-xl border border-border p-4">
       <div className="flex items-center gap-2 font-semibold"><Video className="h-5 w-5 text-primary" />{title}</div>
       <p className="text-sm">{tip}</p>
-      <p className="text-xs text-muted-foreground">Video file, {MAX_PROOF_SECONDS} seconds max. Only a fingerprint is saved, never your music.</p>
-      <Input type="file" accept="video/*" onChange={(e) => on(e.target.files?.[0])} />
-      {proof && <p className="break-all text-xs">SHA-256: {proof.hash}</p>}
+      <p className="text-xs text-muted-foreground">MP4, MOV or WebM · {MAX_PROOF_SECONDS} seconds max · 50MB max. Stored privately in your account and fingerprinted.</p>
+      <Input type="file" accept={PROOF_VIDEO_TYPES.join(",")} onChange={(e) => on(e.target.files?.[0])} />
+      {proof && <div className="space-y-1 rounded-md border border-primary/40 p-2 text-xs"><p className="font-semibold text-primary">Uploaded &amp; fingerprinted · {proof.name} · {(proof.size / 1048576).toFixed(1)}MB</p><p className="break-all">SHA-256: {proof.hash}</p></div>}
       {children}
     </div>
   );
