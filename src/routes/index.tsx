@@ -84,7 +84,7 @@ function Landing() {
             </p>
             <div className="flex gap-3 border-l-4 border-primary pl-5 text-base text-ink-foreground">
               <AlertTriangle className="mt-0.5 h-6 w-6 shrink-0 fill-caution text-ink" />
-              <p><span className="font-bold text-primary">70% of independent artists</span> lose royalties because credits aren’t embedded, catalogs are scattered, and accounts aren’t set up to collect Worldwide.</p>
+              <p><span className="font-bold text-brand-electric">70% of independent artists</span> lose royalties because credits aren’t embedded, catalogs are scattered, and accounts aren’t set up to collect Worldwide.</p>
             </div>
           </div>
           <div id="signup"><SignupCard /></div>
