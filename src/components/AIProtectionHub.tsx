@@ -19,12 +19,12 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { NoteGuide, RecordGuide } from "@/components/ProofGuides";
-import { PACKAGES, MIN_PROOF_SECONDS, MAX_PROOF_SECONDS, sha256, videoDuration, proofFileError, PROOF_VIDEO_TYPES, type PackageId } from "@/lib/proof";
+import { PACKAGES, MIN_PROOF_SECONDS, MAX_PROOF_SECONDS, MAX_PROOF_BYTES, sha256, videoDuration, proofFileError, PROOF_VIDEO_TYPES, type PackageId } from "@/lib/proof";
 import { useServerFn } from "@tanstack/react-start";
 import { openCheckout, getPaddleEnvironment } from "@/lib/paddle";
 import { stampDigest } from "@/lib/ots.functions";
 import { scanDraftFrames } from "@/lib/draft-scan.functions";
-import { extractFrames, rateChain, type ChainResult } from "@/lib/draft-chain";
+import { extractFrames, rateChain, gradeProof, compressTo720p, type ChainResult } from "@/lib/draft-chain";
 import { buildOtsFile, download, proofManifest } from "@/lib/ots";
 
 type WriterRole = "author" | "composer" | "both" | "producer";
@@ -40,19 +40,28 @@ export function AIProtectionHub({ userId, paid, track, email }: { userId: string
   const [unlocked, setUnlocked] = useState(false);
   const [daw, setDaw] = useState<Proof>();
   const [notes, setNotes] = useState<Proof>();
+  const [dawFile, setDawFile] = useState<File>();
+  const [draftFile, setDraftFile] = useState<File>();
   const [draftNotes, setDraftNotes] = useState("");
   const scan = useServerFn(scanDraftFrames);
   const [chain, setChain] = useState<ChainResult>();
+  const [dawDate, setDawDate] = useState<string>();
   const [scanning, setScanning] = useState(false);
-  const chainStatus = chain?.status === "strong" ? `Strong Chain (Human Creation) · ${chain.days} days apart`
+  const scanned = !!chain;
+  const grade = gradeProof(chain, dawDate);
+  const chainStatus = chain?.status === "strong" ? `Strong Chain${grade === "A+" ? " A+ (Triple-Verified Human Origin)" : " (Human Creation)"} · ${chain.days} days apart`
     : chain?.status === "weak" ? `Weak Chain · drafts only ${chain.days} day${chain.days === 1 ? "" : "s"} apart — show an older draft for Strong Chain`
     : "Pending — Make sure both timestamps clearly visible in 1 video";
-  async function scanDrafts(file: File) {
-    setScanning(true); setChain(undefined);
+  async function scanAndRate() {
+    if (!draftFile) return;
+    setScanning(true); setChain(undefined); setDawDate(undefined);
     try {
-      const frames = await extractFrames(file);
-      const { dates } = await scan({ data: { frames } });
-      setChain(rateChain(dates.map((d) => d.date)));
+      const [drafts, dawScan] = await Promise.all([
+        extractFrames(draftFile).then((frames) => scan({ data: { frames, kind: "drafts" } })),
+        dawFile ? extractFrames(dawFile).then((frames) => scan({ data: { frames, kind: "daw" } })).catch(() => ({ dates: [] })) : Promise.resolve({ dates: [] }),
+      ]);
+      setChain(rateChain(drafts.dates.map((d) => d.date)));
+      setDawDate(dawScan.dates.map((d) => d.date).sort().pop());
     } catch (e) { toast.error(e instanceof Error ? e.message : "Date scan failed."); setChain({ status: "pending" }); }
     finally { setScanning(false); }
   }
@@ -82,6 +91,11 @@ export function AIProtectionHub({ userId, paid, track, email }: { userId: string
 
   async function proof(file: File | undefined, kind: "daw" | "drafts", done: (p: Proof) => void) {
     if (!file) return;
+    if (PROOF_VIDEO_TYPES.includes(file.type) && file.size > MAX_PROOF_BYTES && file.size <= 400 * 1048576) {
+      const id = toast.loading("Video is over 50MB — shrinking it to 720p. This takes about as long as the video plays…");
+      try { file = await compressTo720p(file); } catch { toast.dismiss(id); toast.error("Couldn't shrink this video. Try a shorter or lower-resolution recording."); return; }
+      toast.dismiss(id);
+    }
     const bad = proofFileError(file);
     if (bad) { toast.error(bad); return; }
     let d: number;
@@ -113,10 +127,11 @@ export function AIProtectionHub({ userId, paid, track, email }: { userId: string
   async function generate() {
     if (!f.title || !f.artist || !named.some((w) => w.role !== "producer")) { toast.error("Track title, artist and at least one writer are required."); return; }
     if (!daw || !notes) { toast.error("Add both recordings to continue."); return; }
+    if (!scanned) { toast.error("Run Scan & Rate first."); return; }
     if (!attest) { toast.error("Check the legal attestation to continue."); return; }
     setBusy(true);
     try {
-      const strength = chainStatus;
+      const strength = `Grade ${grade} · ${chainStatus}${dawDate ? ` · DAW session dated ${dawDate}` : ""}`;
       const manifest = proofManifest({
         Track: f.title, Artist: f.artist, Writers: writers, Composers: composers, Producers: producers || "-",
         ISRC: f.isrc || "-", UPC: f.upc || "-", ISWC: f.iswc || "-", Chain: strength,
@@ -243,28 +258,47 @@ export function AIProtectionHub({ userId, paid, track, email }: { userId: string
 
       <h3 className="text-xl font-bold">Step 2 · Record your proof</h3>
       <div className="grid gap-4 md:grid-cols-2">
-        <ProofBox title="DAW Session Proof" proof={daw} on={(file) => proof(file, "daw", setDaw)} hint="Solo 2-3 tracks individually, then play the full mix together"
-          tip="Screen-record 15-60 seconds of your open project (FL Studio, Logic, Ableton, Pro Tools, BandLab, etc.). Scroll through your tracks, then solo and play your tracks one by one — vocals, beats, instruments — then play them all together so we can hear the final song. This proves you own the real session, not just the final song." />
-        <ProofBox title="Draft History Proof" proof={notes} on={(file) => proof(file, "drafts", (p) => { setNotes(p); void scanDrafts(file!); })}
+        <ProofBox title="DAW Session Proof" proof={daw} on={(file) => proof(file, "daw", (p) => { setDaw(p); setDawFile(file); setDawDate(undefined); })} hint="Solo 2-3 tracks individually, then play the full mix together"
+          tip="Screen-record 15-60 seconds of your open project (FL Studio, Logic, Ableton, Pro Tools, BandLab, etc.). Scroll through your tracks, then solo and play your tracks one by one — vocals, beats, instruments — then play them all together so we can hear the final song. This proves you own the real session, not just the final song.">
+          <div className="group relative w-fit">
+            <span className="inline-flex cursor-help items-center gap-1 rounded-full border border-primary px-3 py-1 text-xs font-semibold text-primary"><Info className="h-3.5 w-3.5" />Pro tip: earn an A+</span>
+            <div className="pointer-events-none absolute left-0 top-full z-10 mt-2 w-72 rounded-md border border-primary bg-popover p-3 text-xs text-popover-foreground opacity-0 shadow-lg transition group-hover:opacity-100">
+              Also show your project's save or created date in the recording (your project folder, File → Project Info, or the file's date column). It's optional — but it earns a Strong Chain A+ certificate for going the extra mile.
+            </div>
+          </div>
+          {daw && scanned && <p className="text-xs"><b>DAW session date</b> {dawDate ?? "Not shown — no penalty"}</p>}
+        </ProofBox>
+        <ProofBox title="Draft History Proof" proof={notes} on={(file) => proof(file, "drafts", (p) => { setNotes(p); setDraftFile(file); setChain(undefined); })}
           tip="Screen-record 15-60 seconds of your earlier versions — voice memos, rough takes, lyric notes, or your folder showing file dates. Show how the song grew from idea to now. We auto-detect your timeline and drafts days apart earn a Strong Chain (Human Creation) rating.">
           <div className="flex flex-wrap items-center gap-2 rounded-md border border-border p-3 text-xs">
             <span><b>Old draft</b> {scanning ? "Scanning video…" : chain?.first ?? "—"}</span><span className="text-primary">→</span>
             <span><b>New draft</b> {scanning ? "Scanning video…" : chain?.latest ?? "—"}</span><span className="text-primary">→</span>
             <span><b>Anchored (Bitcoin)</b> {otsFile ? "Submitted" : "On generate"}</span>
           </div>
-          {notes && !scanning && <p className="text-sm font-semibold text-primary">{chainStatus}</p>}
           <div className="space-y-1"><Label>Notes (optional)</Label><Input value={draftNotes} onChange={(e) => setDraftNotes(e.target.value)} /></div>
           <NoteGuide />
         </ProofBox>
       </div>
       <RecordGuide />
 
+      <div className="space-y-3 rounded-xl border-2 border-primary bg-card p-4">
+        <Button size="lg" disabled={!draftFile || scanning} onClick={scanAndRate}>{scanning ? "Scanning your videos…" : "Scan & Rate"}</Button>
+        {!draftFile && <p className="text-xs text-muted-foreground">Upload your Draft History video to scan. The DAW video is scanned too when added.</p>}
+        {scanned && !scanning && (
+          <div className="space-y-1">
+            <p className="text-2xl font-extrabold text-primary">Grade {grade}</p>
+            <p className="text-sm font-semibold text-primary">{chainStatus}</p>
+          </div>
+        )}
+      </div>
+
       <h3 className="text-xl font-bold">Step 3 · Confirm & generate</h3>
       <label className="flex items-start gap-3 rounded-xl border border-border p-4 text-sm">
         <input type="checkbox" className="mt-1 h-4 w-4 accent-[var(--primary)]" checked={attest} onChange={(e) => setAttest(e.target.checked)} />
         <span>I attest under penalty of law that the information and recordings I provide are true and that I (and the listed contributors) created this work. I understand fraudulent misrepresentation may expose me to statutory damages under 17 U.S.C. §504.</span>
       </label>
-      <Button size="lg" disabled={busy} onClick={generate}>{busy ? "Generating…" : "Generate & download PDF certificate"}</Button>
+      <Button size="lg" disabled={busy || !scanned || !daw || !notes} onClick={generate}>{busy ? "Generating…" : "Generate & download PDF certificate"}</Button>
+      {(!scanned || !daw) && <p className="text-xs text-muted-foreground">Upload both videos and run Scan & Rate first.</p>}
       </>)}
       {otsFile && (
         <div className="space-y-2 rounded-xl border-2 border-primary bg-card p-4 text-sm">
