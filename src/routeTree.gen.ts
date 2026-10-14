@@ -20,6 +20,7 @@ import { Route as TermsOfServiceRouteImport } from './routes/terms-of-service'
 import { Route as VerifiedRouteImport } from './routes/verified'
 import { Route as WorkspaceRouteImport } from './routes/workspace'
 import { Route as SignRowIdRouteImport } from './routes/sign.$rowId'
+import { Route as ApiPublicCronTrialRemindersRouteImport } from './routes/api/public/cron/trial-reminders'
 import { Route as ApiPublicPaymentsWebhookRouteImport } from './routes/api/public/payments/webhook'
 
 const IndexRoute = IndexRouteImport.update({
@@ -77,6 +78,12 @@ const SignRowIdRoute = SignRowIdRouteImport.update({
   path: '/sign/$rowId',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicCronTrialRemindersRoute =
+  ApiPublicCronTrialRemindersRouteImport.update({
+    id: '/api/public/cron/trial-reminders',
+    path: '/api/public/cron/trial-reminders',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicPaymentsWebhookRoute =
   ApiPublicPaymentsWebhookRouteImport.update({
     id: '/api/public/payments/webhook',
@@ -96,6 +103,7 @@ export interface FileRoutesByFullPath {
   '/verified': typeof VerifiedRoute
   '/workspace': typeof WorkspaceRoute
   '/sign/$rowId': typeof SignRowIdRoute
+  '/api/public/cron/trial-reminders': typeof ApiPublicCronTrialRemindersRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
 }
 export interface FileRoutesByTo {
@@ -110,6 +118,7 @@ export interface FileRoutesByTo {
   '/verified': typeof VerifiedRoute
   '/workspace': typeof WorkspaceRoute
   '/sign/$rowId': typeof SignRowIdRoute
+  '/api/public/cron/trial-reminders': typeof ApiPublicCronTrialRemindersRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
 }
 export interface FileRoutesById {
@@ -125,6 +134,7 @@ export interface FileRoutesById {
   '/verified': typeof VerifiedRoute
   '/workspace': typeof WorkspaceRoute
   '/sign/$rowId': typeof SignRowIdRoute
+  '/api/public/cron/trial-reminders': typeof ApiPublicCronTrialRemindersRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
 }
 export interface FileRouteTypes {
@@ -141,6 +151,7 @@ export interface FileRouteTypes {
     | '/verified'
     | '/workspace'
     | '/sign/$rowId'
+    | '/api/public/cron/trial-reminders'
     | '/api/public/payments/webhook'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -155,6 +166,7 @@ export interface FileRouteTypes {
     | '/verified'
     | '/workspace'
     | '/sign/$rowId'
+    | '/api/public/cron/trial-reminders'
     | '/api/public/payments/webhook'
   id:
     | '__root__'
@@ -169,6 +181,7 @@ export interface FileRouteTypes {
     | '/verified'
     | '/workspace'
     | '/sign/$rowId'
+    | '/api/public/cron/trial-reminders'
     | '/api/public/payments/webhook'
   fileRoutesById: FileRoutesById
 }
@@ -184,6 +197,7 @@ export interface RootRouteChildren {
   VerifiedRoute: typeof VerifiedRoute
   WorkspaceRoute: typeof WorkspaceRoute
   SignRowIdRoute: typeof SignRowIdRoute
+  ApiPublicCronTrialRemindersRoute: typeof ApiPublicCronTrialRemindersRoute
   ApiPublicPaymentsWebhookRoute: typeof ApiPublicPaymentsWebhookRoute
 }
 
@@ -266,6 +280,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SignRowIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/cron/trial-reminders': {
+      id: '/api/public/cron/trial-reminders'
+      path: '/api/public/cron/trial-reminders'
+      fullPath: '/api/public/cron/trial-reminders'
+      preLoaderRoute: typeof ApiPublicCronTrialRemindersRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/payments/webhook': {
       id: '/api/public/payments/webhook'
       path: '/api/public/payments/webhook'
@@ -288,6 +309,7 @@ const rootRouteChildren: RootRouteChildren = {
   VerifiedRoute: VerifiedRoute,
   WorkspaceRoute: WorkspaceRoute,
   SignRowIdRoute: SignRowIdRoute,
+  ApiPublicCronTrialRemindersRoute: ApiPublicCronTrialRemindersRoute,
   ApiPublicPaymentsWebhookRoute: ApiPublicPaymentsWebhookRoute,
 }
 export const routeTree = rootRouteImport
