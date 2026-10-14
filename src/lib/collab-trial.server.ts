@@ -4,12 +4,12 @@ const REMINDED = "collab_trial_reminded";
 const REMINDER_WINDOW_DAYS = 5;
 
 function reminderHtml(daysLeft: number, when: string, plansUrl: string): string {
-  return emailLayout(`<p style="font-size:12px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:#004AAD;margin:0">Your Collaborate Trial</p>
+  return emailLayout(`<p style="font-size:12px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:#004AAD;margin:0">Your Catalog &amp; Collaborate Trial</p>
 <h1 style="font-size:24px;margin:8px 0 16px">Your free trial ends in ${daysLeft} day${daysLeft === 1 ? "" : "s"}</h1>
 <p style="font-size:15px;line-height:1.6">Your 30-day Catalog &amp; Collaborate access ends on <b>${when}</b>. After that your account moves to the Free plan automatically. You won't be charged.</p>
 <p style="font-size:15px;line-height:1.6">On Free you can still sign split sheets you're invited to, but you won't be able to create split sheets or use Collaborate features. Your saved catalog stays safe.</p>
 <a href="${plansUrl}" style="display:inline-block;background:#004AAD;color:#ffffff;text-decoration:none;font-weight:700;padding:14px 28px;border-radius:8px">Keep Collaborate Access</a>`,
-    { reason: "You're receiving this account notice because your free Collaborate trial on Came Through Audio is ending soon." });
+    { reason: "You're receiving this account notice because your free Catalog & Collaborate Trial on Came Through Audio is ending soon." });
 }
 
 async function sendReminderEmail(key: string, idempotencyKey: string, email: string, daysLeft: number, when: string, plansUrl: string): Promise<boolean> {
@@ -19,7 +19,7 @@ async function sendReminderEmail(key: string, idempotencyKey: string, email: str
     body: JSON.stringify({
       from: "Came Through Audio <collaborate@camethroughaudio.com>",
       to: [email],
-      subject: `Your Came Through Audio trial ends in ${daysLeft} day${daysLeft === 1 ? "" : "s"}`,
+      subject: `Your Catalog & Collaborate Trial ends in ${daysLeft} day${daysLeft === 1 ? "" : "s"}`,
       html: reminderHtml(daysLeft, when, plansUrl),
     }),
   });

@@ -27,3 +27,5 @@
 - [ ] Brainstorm: DistroKid takedown homepage hook to sell Human Origin Certificates
 - [x] Split sheet invite: login/confirm returns to the requested signature page
 - [x] 30-day free Collaborate trial for e-signature collaborators; Author/Composer role; invite-email reminder; password rules
+- [x] Brand header contrast + email header two-tone + Catalog & Collaborate Trial copy
+- [ ] Milestone badges (gold) — waiting on the user's full badge rules
