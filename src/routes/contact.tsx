@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { CheckCircle2 } from "lucide-react";
 import { BrandLogo } from "@/components/BrandLogo";
@@ -30,6 +30,7 @@ function ContactPage() {
   const { type } = Route.useSearch();
   const send = useServerFn(submitTicket);
   const [kind, setKind] = useState<"contact" | "support">(type ?? "contact");
+  useEffect(() => { if (type) setKind(type); }, [type]);
   const [form, setForm] = useState({ name: "", email: "", category: TICKET_CATEGORIES[0] as string, subject: "", message: "", website: "" });
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState(false);
