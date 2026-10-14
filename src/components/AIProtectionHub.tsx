@@ -23,6 +23,8 @@ import { PACKAGES, MIN_PROOF_SECONDS, MAX_PROOF_SECONDS, sha256, videoDuration, 
 import { useServerFn } from "@tanstack/react-start";
 import { openCheckout, getPaddleEnvironment } from "@/lib/paddle";
 import { stampDigest } from "@/lib/ots.functions";
+import { scanDraftFrames } from "@/lib/draft-scan.functions";
+import { extractFrames, rateChain, type ChainResult } from "@/lib/draft-chain";
 import { buildOtsFile, download, proofManifest } from "@/lib/ots";
 
 type WriterRole = "author" | "composer" | "both" | "producer";
@@ -39,7 +41,21 @@ export function AIProtectionHub({ userId, paid, track, email }: { userId: string
   const [daw, setDaw] = useState<Proof>();
   const [notes, setNotes] = useState<Proof>();
   const [draftNotes, setDraftNotes] = useState("");
-  const chainStatus = "Pending — Make sure both timestamps clearly visible in 1 video";
+  const scan = useServerFn(scanDraftFrames);
+  const [chain, setChain] = useState<ChainResult>();
+  const [scanning, setScanning] = useState(false);
+  const chainStatus = chain?.status === "strong" ? `Strong Chain (Human Creation) · ${chain.days} days apart`
+    : chain?.status === "weak" ? `Weak Chain · drafts only ${chain.days} day${chain.days === 1 ? "" : "s"} apart — show an older draft for Strong Chain`
+    : "Pending — Make sure both timestamps clearly visible in 1 video";
+  async function scanDrafts(file: File) {
+    setScanning(true); setChain(undefined);
+    try {
+      const frames = await extractFrames(file);
+      const { dates } = await scan({ data: { frames } });
+      setChain(rateChain(dates.map((d) => d.date)));
+    } catch (e) { toast.error(e instanceof Error ? e.message : "Date scan failed."); setChain({ status: "pending" }); }
+    finally { setScanning(false); }
+  }
   const [busy, setBusy] = useState(false);
   const [writerRows, setWriterRows] = useState<WriterRow[]>([{ name: "", role: "both" }]);
   const named = writerRows.filter((w) => w.name.trim());
@@ -229,14 +245,14 @@ export function AIProtectionHub({ userId, paid, track, email }: { userId: string
       <div className="grid gap-4 md:grid-cols-2">
         <ProofBox title="DAW Session Proof" proof={daw} on={(file) => proof(file, "daw", setDaw)} hint="Solo 2-3 tracks individually, then play the full mix together"
           tip="Screen-record 15-60 seconds of your open project (FL Studio, Logic, Ableton, Pro Tools, BandLab, etc.). Scroll through your tracks, then solo and play your tracks one by one — vocals, beats, instruments — then play them all together so we can hear the final song. This proves you own the real session, not just the final song." />
-        <ProofBox title="Draft History Proof" proof={notes} on={(file) => proof(file, "drafts", setNotes)}
+        <ProofBox title="Draft History Proof" proof={notes} on={(file) => proof(file, "drafts", (p) => { setNotes(p); void scanDrafts(file!); })}
           tip="Screen-record 15-60 seconds of your earlier versions — voice memos, rough takes, lyric notes, or your folder showing file dates. Show how the song grew from idea to now. We auto-detect your timeline and drafts days apart earn a Strong Chain (Human Creation) rating.">
           <div className="flex flex-wrap items-center gap-2 rounded-md border border-border p-3 text-xs">
-            <span><b>Old draft</b> {notes ? "Scanning video" : "—"}</span><span className="text-primary">→</span>
-            <span><b>New draft</b> {notes ? "Scanning video" : "—"}</span><span className="text-primary">→</span>
+            <span><b>Old draft</b> {scanning ? "Scanning video…" : chain?.first ?? "—"}</span><span className="text-primary">→</span>
+            <span><b>New draft</b> {scanning ? "Scanning video…" : chain?.latest ?? "—"}</span><span className="text-primary">→</span>
             <span><b>Anchored (Bitcoin)</b> {otsFile ? "Submitted" : "On generate"}</span>
           </div>
-          {notes && <p className="text-sm font-semibold text-primary">{chainStatus}</p>}
+          {notes && !scanning && <p className="text-sm font-semibold text-primary">{chainStatus}</p>}
           <div className="space-y-1"><Label>Notes (optional)</Label><Input value={draftNotes} onChange={(e) => setDraftNotes(e.target.value)} /></div>
           <NoteGuide />
         </ProofBox>
