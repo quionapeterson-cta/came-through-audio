@@ -17,6 +17,7 @@ import { Route as PrivacyPolicyRouteImport } from './routes/privacy-policy'
 import { Route as RefundPolicyRouteImport } from './routes/refund-policy'
 import { Route as TermsAndConditionsRouteImport } from './routes/terms-and-conditions'
 import { Route as TermsOfServiceRouteImport } from './routes/terms-of-service'
+import { Route as VerifiedRouteImport } from './routes/verified'
 import { Route as WorkspaceRouteImport } from './routes/workspace'
 import { Route as SignRowIdRouteImport } from './routes/sign.$rowId'
 import { Route as ApiPublicPaymentsWebhookRouteImport } from './routes/api/public/payments/webhook'
@@ -61,6 +62,11 @@ const TermsOfServiceRoute = TermsOfServiceRouteImport.update({
   path: '/terms-of-service',
   getParentRoute: () => rootRouteImport,
 } as any)
+const VerifiedRoute = VerifiedRouteImport.update({
+  id: '/verified',
+  path: '/verified',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const WorkspaceRoute = WorkspaceRouteImport.update({
   id: '/workspace',
   path: '/workspace',
@@ -87,6 +93,7 @@ export interface FileRoutesByFullPath {
   '/refund-policy': typeof RefundPolicyRoute
   '/terms-and-conditions': typeof TermsAndConditionsRoute
   '/terms-of-service': typeof TermsOfServiceRoute
+  '/verified': typeof VerifiedRoute
   '/workspace': typeof WorkspaceRoute
   '/sign/$rowId': typeof SignRowIdRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
@@ -100,6 +107,7 @@ export interface FileRoutesByTo {
   '/refund-policy': typeof RefundPolicyRoute
   '/terms-and-conditions': typeof TermsAndConditionsRoute
   '/terms-of-service': typeof TermsOfServiceRoute
+  '/verified': typeof VerifiedRoute
   '/workspace': typeof WorkspaceRoute
   '/sign/$rowId': typeof SignRowIdRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
@@ -114,6 +122,7 @@ export interface FileRoutesById {
   '/refund-policy': typeof RefundPolicyRoute
   '/terms-and-conditions': typeof TermsAndConditionsRoute
   '/terms-of-service': typeof TermsOfServiceRoute
+  '/verified': typeof VerifiedRoute
   '/workspace': typeof WorkspaceRoute
   '/sign/$rowId': typeof SignRowIdRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
@@ -129,6 +138,7 @@ export interface FileRouteTypes {
     | '/refund-policy'
     | '/terms-and-conditions'
     | '/terms-of-service'
+    | '/verified'
     | '/workspace'
     | '/sign/$rowId'
     | '/api/public/payments/webhook'
@@ -142,6 +152,7 @@ export interface FileRouteTypes {
     | '/refund-policy'
     | '/terms-and-conditions'
     | '/terms-of-service'
+    | '/verified'
     | '/workspace'
     | '/sign/$rowId'
     | '/api/public/payments/webhook'
@@ -155,6 +166,7 @@ export interface FileRouteTypes {
     | '/refund-policy'
     | '/terms-and-conditions'
     | '/terms-of-service'
+    | '/verified'
     | '/workspace'
     | '/sign/$rowId'
     | '/api/public/payments/webhook'
@@ -169,6 +181,7 @@ export interface RootRouteChildren {
   RefundPolicyRoute: typeof RefundPolicyRoute
   TermsAndConditionsRoute: typeof TermsAndConditionsRoute
   TermsOfServiceRoute: typeof TermsOfServiceRoute
+  VerifiedRoute: typeof VerifiedRoute
   WorkspaceRoute: typeof WorkspaceRoute
   SignRowIdRoute: typeof SignRowIdRoute
   ApiPublicPaymentsWebhookRoute: typeof ApiPublicPaymentsWebhookRoute
@@ -232,6 +245,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof TermsOfServiceRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/verified': {
+      id: '/verified'
+      path: '/verified'
+      fullPath: '/verified'
+      preLoaderRoute: typeof VerifiedRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/workspace': {
       id: '/workspace'
       path: '/workspace'
@@ -265,6 +285,7 @@ const rootRouteChildren: RootRouteChildren = {
   RefundPolicyRoute: RefundPolicyRoute,
   TermsAndConditionsRoute: TermsAndConditionsRoute,
   TermsOfServiceRoute: TermsOfServiceRoute,
+  VerifiedRoute: VerifiedRoute,
   WorkspaceRoute: WorkspaceRoute,
   SignRowIdRoute: SignRowIdRoute,
   ApiPublicPaymentsWebhookRoute: ApiPublicPaymentsWebhookRoute,
