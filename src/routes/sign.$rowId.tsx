@@ -8,6 +8,10 @@ import { BrandLogo } from "@/components/BrandLogo";
 import { SignupCard } from "@/components/SignupCard";
 import { Button } from "@/components/ui/button";
 import { getSplitInvite, signSplitInvite, type SplitInvite } from "@/lib/splits";
+import { useServerFn } from "@tanstack/react-start";
+import { grantCollaboratorTrial } from "@/lib/collab-trial.functions";
+import { getPaddleEnvironment } from "@/lib/paddle";
+import { clearReturn, rememberReturn } from "@/lib/password";
 
 export const Route = createFileRoute("/sign/$rowId")({
   head: () => ({
@@ -33,13 +37,21 @@ function SignPage() {
   const [ipi, setIpi] = useState("");
   const [busy, setBusy] = useState(false);
 
+  const grantTrial = useServerFn(grantCollaboratorTrial);
   const load = () => {
     setError("");
     getSplitInvite(rowId)
-      .then((d) => { setInvite(d); setPro(d?.pro ?? ""); setIpi(d?.ipi ?? ""); })
+      .then((d) => {
+        setInvite(d); setPro(d?.pro ?? ""); setIpi(d?.ipi ?? "");
+        clearReturn();
+        if (d) grantTrial({ data: { rowId, environment: getPaddleEnvironment() === "live" ? "live" : "sandbox" } })
+          .then((r) => { if (r.granted) toast.success("Welcome! You've unlocked a free 30-day Catalog and Collaborate account."); })
+          .catch(() => {});
+      })
       .catch((e) => setError(e instanceof Error ? e.message : "Could not open this request."));
   };
-  useEffect(() => { if (user) load(); }, [user, rowId]);
+  useEffect(() => { if (!user) rememberReturn(`/sign/${rowId}`); }, [user, rowId]);
+  useEffect(() => { if (user) load(); }, [user?.id, rowId]);
 
   async function sign() {
     if (!invite || !user) return;
@@ -71,8 +83,9 @@ function SignPage() {
               <FileSignature className="h-10 w-10 text-primary" />
               <h1 className="text-3xl font-bold">You've been asked to sign a split sheet</h1>
               <p className="text-muted-foreground">Create your free collaborator account using the same email the request was sent to, or log in. Then review your share and sign in seconds.</p>
+              <p className="rounded-lg border border-primary p-3 text-sm font-medium">Bonus: collaborators who sign get a free 30-day Catalog and Collaborate account.</p>
             </div>
-            <SignupCard returnPath={`/sign/${rowId}`} onAuthed={() => {}} />
+            <SignupCard returnPath={`/sign/${rowId}`} onAuthed={() => {}} inviteMode />
           </div>
         ) : error ? (
           <div className="rounded-2xl border border-destructive p-8 text-center">

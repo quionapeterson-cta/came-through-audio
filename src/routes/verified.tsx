@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { BrandLogo } from "@/components/BrandLogo";
+import { takeReturn } from "@/lib/password";
 
 function safeNext(n: unknown): string {
   return typeof n === "string" && n.startsWith("/") && !n.startsWith("//") ? n : "/workspace";
@@ -30,7 +31,7 @@ export const Route = createFileRoute("/verified")({
 function Verified() {
   const navigate = useNavigate();
   const { next } = Route.useSearch();
-  const dest = safeNext(next);
+  const dest = next ? safeNext(next) : (takeReturn() ?? "/workspace");
   const [signedIn, setSignedIn] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
