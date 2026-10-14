@@ -23,4 +23,5 @@
 - [x] Catalog downloads grouped in one Downloads menu; vault always stores tagged master
 - [x] AI Protection copy: Certificate of Human Origin
 - [x] Quick Song Inspector, mismatch tips, ASCAP/BMI exclusive, distributor copy updated
+- [x] AI proof video engine: private 50MB proof-videos storage + uploads
 - [ ] Brainstorm: DistroKid takedown homepage hook to sell Human Origin Certificates

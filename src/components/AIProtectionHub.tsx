@@ -18,7 +18,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { PACKAGES, MAX_PROOF_SECONDS, chainStrength, sha256, videoDuration, type PackageId } from "@/lib/proof";
+import { PACKAGES, MAX_PROOF_SECONDS, chainStrength, sha256, videoDuration, proofFileError, PROOF_VIDEO_TYPES, type PackageId } from "@/lib/proof";
 import { useServerFn } from "@tanstack/react-start";
 import { openCheckout, getPaddleEnvironment } from "@/lib/paddle";
 import { stampDigest } from "@/lib/ots.functions";
@@ -26,7 +26,7 @@ import { buildOtsFile, download, proofManifest } from "@/lib/ots";
 
 type WriterRole = "author" | "composer" | "both" | "producer";
 type WriterRow = { name: string; role: WriterRole };
-type Proof = { name: string; hash: string };
+type Proof = { name: string; hash: string; path: string; size: number };
 
 export function AIProtectionHub({ userId, paid, track, email }: { userId: string; paid: boolean; track?: CatalogTrack | undefined; email?: string | undefined }) {
   const stamp = useServerFn(stampDigest);
@@ -63,13 +63,22 @@ export function AIProtectionHub({ userId, paid, track, email }: { userId: string
   const editRow = (i: number, patch: Partial<WriterRow>) => setWriterRows(writerRows.map((w, j) => (j === i ? { ...w, ...patch } : w)));
   const set = (k: keyof typeof f) => (e: React.ChangeEvent<HTMLInputElement>) => setF({ ...f, [k]: e.target.value });
 
-  async function proof(file: File | undefined, done: (p: Proof) => void) {
+  async function proof(file: File | undefined, kind: "daw" | "drafts", done: (p: Proof) => void) {
     if (!file) return;
-    try {
-      const d = await videoDuration(file);
-      if (d > MAX_PROOF_SECONDS) { toast.error(`Recordings must be ${MAX_PROOF_SECONDS} seconds or shorter (this one is ${Math.round(d)}s).`); return; }
-      done({ name: file.name, hash: await sha256(await file.arrayBuffer()) });
-    } catch { toast.error("That video could not be read."); }
+    const bad = proofFileError(file);
+    if (bad) { toast.error(bad); return; }
+    let d: number;
+    try { d = await videoDuration(file); } catch { toast.error("That video could not be read."); return; }
+    if (d > MAX_PROOF_SECONDS) { toast.error(`Recordings must be ${MAX_PROOF_SECONDS} seconds or shorter (this one is ${Math.round(d)}s).`); return; }
+    const hash = await sha256(await file.arrayBuffer());
+    const ext = file.name.split(".").pop()?.toLowerCase() || "mp4";
+    const path = `${userId}/${Date.now()}_${kind}.${ext}`;
+    const id = toast.loading("Securing your proof video…");
+    const { error } = await supabase.storage.from("proof-videos").upload(path, file, { contentType: file.type });
+    toast.dismiss(id);
+    if (error) { toast.error(`Upload failed: ${error.message}`); return; }
+    done({ name: file.name, hash, path, size: file.size });
+    toast.success("Proof video uploaded & fingerprinted.");
   }
 
   const active = paid || unlocked;
@@ -104,7 +113,7 @@ export function AIProtectionHub({ userId, paid, track, email }: { userId: string
         legal_credits: { writers: writers, composers: composers, producers },
         isrc: f.isrc || null, upc: f.upc || null, iswc: f.iswc || null,
         session_hash: daw.hash, notes_hash: notes.hash, chain_strength: strength, attested: true,
-        session_video_url: daw.name, notes_proof_url: notes.name,
+        session_video_url: daw.path, notes_proof_url: notes.path,
         proof_digest: digest, ots_receipt: ots?.receipt ?? null, ots_calendar: ots?.calendar ?? null,
         blockchain_status: ots ? "pending_bitcoin" : "none",
       } as never).select("id, issued_at").single();
@@ -216,9 +225,9 @@ export function AIProtectionHub({ userId, paid, track, email }: { userId: string
 
       <h3 className="text-xl font-bold">Step 2 · Record your proof</h3>
       <div className="grid gap-4 md:grid-cols-2">
-        <ProofBox title="DAW Session Proof" proof={daw} on={(file) => proof(file, setDaw)}
+        <ProofBox title="DAW Session Proof" proof={daw} on={(file) => proof(file, "daw", setDaw)}
           tip="Screen-record 5–15 seconds of your open project (FL Studio, Logic, Ableton, Pro Tools, etc.). Scroll through your tracks, stems, MIDI or automation. This shows you own the raw session — not just a finished bounce." />
-        <ProofBox title="Draft History Proof" proof={notes} on={(file) => proof(file, setNotes)}
+        <ProofBox title="Draft History Proof" proof={notes} on={(file) => proof(file, "drafts", setNotes)}
           tip="Screen-record 5–15 seconds of earlier versions: voice memos, rough mixes, lyric notes or a folder showing file dates. Then pick the date of your first idea and your latest version below.">
           <div className="grid grid-cols-2 gap-2">
             <div className="space-y-1"><Label>First idea / draft</Label><Input type="datetime-local" value={firstDraft} onChange={(e) => setFirstDraft(e.target.value)} /></div>
@@ -258,9 +267,9 @@ function ProofBox({ title, tip, proof, on, children }: { title: string; tip: str
     <div className="space-y-3 rounded-xl border border-border p-4">
       <div className="flex items-center gap-2 font-semibold"><Video className="h-5 w-5 text-primary" />{title}</div>
       <p className="text-sm">{tip}</p>
-      <p className="text-xs text-muted-foreground">Video file, {MAX_PROOF_SECONDS} seconds max. Only a fingerprint is saved, never your music.</p>
-      <Input type="file" accept="video/*" onChange={(e) => on(e.target.files?.[0])} />
-      {proof && <p className="break-all text-xs">SHA-256: {proof.hash}</p>}
+      <p className="text-xs text-muted-foreground">MP4, MOV or WebM · {MAX_PROOF_SECONDS} seconds max · 50MB max. Stored privately in your account and fingerprinted.</p>
+      <Input type="file" accept={PROOF_VIDEO_TYPES.join(",")} onChange={(e) => on(e.target.files?.[0])} />
+      {proof && <div className="space-y-1 rounded-md border border-primary/40 p-2 text-xs"><p className="font-semibold text-primary">Uploaded &amp; fingerprinted · {proof.name} · {(proof.size / 1048576).toFixed(1)}MB</p><p className="break-all">SHA-256: {proof.hash}</p></div>}
       {children}
     </div>
   );
