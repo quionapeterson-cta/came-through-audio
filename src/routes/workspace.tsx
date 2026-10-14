@@ -18,6 +18,7 @@ import { RoyaltyHealthCheck } from "@/components/RoyaltyHealthCheck";
 import { PaymentTestModeBanner } from "@/components/PaymentTestModeBanner";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { toast } from "sonner";
+import { sendTrialEndingReminder } from "@/lib/collab-trial.functions";
 import { useBilling, type Purchase } from "@/hooks/useBilling";
 import { openCheckout, getPaddleEnvironment } from "@/lib/paddle";
 import { FREE_CARD, PLAN_CARDS, TIER_LABEL, hasTier, type Tier } from "@/lib/plans";
@@ -66,6 +67,13 @@ function Workspace() {
   useEffect(() => {
     if (!loading && !user) navigate({ to: "/" });
   }, [loading, user, navigate]);
+
+  useEffect(() => {
+    if (!user) return;
+    sendTrialEndingReminder({ data: { environment: getPaddleEnvironment(), origin: window.location.origin } })
+      .then((r) => { if (r.sent) toast.info(`Your free Collaborate trial ends in ${r.daysLeft} day(s). We emailed you the details.`); })
+      .catch(() => {});
+  }, [user]);
 
   useEffect(() => {
     if (!user) return;
