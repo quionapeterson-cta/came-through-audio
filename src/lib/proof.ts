@@ -6,7 +6,8 @@ export const PACKAGES = [
 ] as const;
 export type PackageId = (typeof PACKAGES)[number]["id"];
 
-export const MAX_PROOF_SECONDS = 15;
+export const MIN_PROOF_SECONDS = 15;
+export const MAX_PROOF_SECONDS = 60;
 export const MAX_PROOF_BYTES = 52_428_800; // 50MB
 export const PROOF_VIDEO_TYPES = ["video/mp4", "video/quicktime", "video/webm"];
 
