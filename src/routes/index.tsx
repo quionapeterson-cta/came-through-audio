@@ -38,12 +38,12 @@ const faqs = [
   { q: "How does the AI Protection Hub prove human origin?", a: "The hub issues a Certificate of Human Origin. Short screen recordings of your DAW session and draft history are fingerprinted (SHA-256), paired with a sworn human-authorship attestation, and timestamped on the Bitcoin blockchain — proving you made it, and that you made it first." },
 ];
 
-type FooterLink = { label: string; to?: "/terms-of-service" | "/refund-policy" | "/privacy-policy" };
+type FooterLink = { label: string; to?: "/terms-of-service" | "/refund-policy" | "/privacy-policy" | "/contact"; search?: { type: "support" | "contact" } };
 const footerCols: { title: string; links: FooterLink[] }[] = [
   { title: "Product", links: [{ label: "Metadata Embedding" }, { label: "Centralized Master Catalog" }, { label: "Royalty Health Suite" }, { label: "System Security Metrics" }] },
   { title: "Learn", links: [{ label: "Help Center" }, { label: "Industry Insights" }, { label: "The Studio-to-Vault Guide" }] },
   { title: "Legal", links: [{ label: "Terms of Service", to: "/terms-of-service" }, { label: "Refund Policy", to: "/refund-policy" }, { label: "Privacy Policy", to: "/privacy-policy" }] },
-  { title: "Access", links: [{ label: "Support Tickets" }, { label: "Contact Us" }, { label: "Admin Whitelist Verification" }] },
+  { title: "Access", links: [{ label: "Support Tickets", to: "/contact", search: { type: "support" } }, { label: "Contact Us", to: "/contact", search: { type: "contact" } }, { label: "Admin Whitelist Verification" }] },
 ];
 
 const roles = [
@@ -211,7 +211,7 @@ function Landing() {
               <ul className="space-y-2 text-sm">
                 {c.links.map((l) => (
                   <li key={l.label}>
-                    {l.to ? <Link to={l.to} className="underline-offset-4 hover:text-ink-foreground hover:underline">{l.label}</Link> : <span>{l.label}</span>}
+                    {l.to ? <Link to={l.to} search={l.search as never} className="underline-offset-4 hover:text-ink-foreground hover:underline">{l.label}</Link> : <span>{l.label}</span>}
                   </li>
                 ))}
                 {c.title === "Access" && <li className="font-semibold text-ink-foreground">🟢 System Status: Fully Operational</li>}

@@ -1,9 +1,10 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { emailLayout, escapeHtml } from "./email-layout";
 
 const FROM = "Came Through Audio <collaborate@camethroughaudio.com>";
-const esc = (s: string) => s.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]!);
+const esc = escapeHtml;
 
 /** Emails a collaborator their split-sheet signing link. The row must be readable by the caller (RLS = owner only). */
 export const sendSplitInvite = createServerFn({ method: "POST" })
@@ -30,9 +31,7 @@ export const sendSplitInvite = createServerFn({ method: "POST" })
     const link = `${new URL(data.origin).origin}/sign/${row.id}`;
     const name = row.legal_name ?? "there";
 
-    const html = `<!doctype html><html><body style="margin:0;background:#ffffff;font-family:Poppins,Arial,sans-serif;color:#0b0b0b">
-<div style="max-width:560px;margin:0 auto;padding:32px 24px">
-<p style="font-size:12px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:#004AAD;margin:0">Split Sheet Signature Request</p>
+    const html = emailLayout(`<p style="font-size:12px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:#004AAD;margin:0">Split Sheet Signature Request</p>
 <h1 style="font-size:24px;margin:8px 0 16px">Hi ${esc(name)}, please sign your split for "${esc(title)}"</h1>
 <p style="font-size:15px;line-height:1.6">${artist ? esc(artist) + " has" : "You've been"} listed you as a collaborator on this song.</p>
 <div style="border:2px solid #004AAD;border-radius:12px;padding:16px;margin:20px 0">
@@ -40,8 +39,7 @@ export const sendSplitInvite = createServerFn({ method: "POST" })
 <p style="margin:4px 0 0;font-size:22px;font-weight:700">${Number(row.assigned_percentage)}% · ${esc(row.role)}</p></div>
 <a href="${link}" style="display:inline-block;background:#004AAD;color:#ffffff;text-decoration:none;font-weight:700;padding:14px 28px;border-radius:8px">Review &amp; Sign</a>
 <p style="font-size:13px;line-height:1.6;color:#555;margin-top:24px">Signing is 100% free. Create a free Came Through Audio account with this email (${esc(email)}), then add your PRO and IPI number if you have them.</p>
-<p style="font-size:12px;color:#888;word-break:break-all">Or paste this link: ${link}</p>
-</div></body></html>`;
+`, { reason: `You're receiving this because ${artist || "a Came Through Audio member"} invited you to review and sign a split sheet.` });
 
     const res = await fetch("https://api.resend.com/emails", {
       method: "POST",

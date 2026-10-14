@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { getAdminOverview, getStaffRole } from "@/lib/admin.functions";
+import { SupportTicketsPanel } from "@/components/SupportTicketsPanel";
 
 export const Route = createFileRoute("/admin")({
   ssr: false,
@@ -81,7 +82,7 @@ function AdminPage() {
 
         <Tabs defaultValue="ai" className="mt-8">
           <TabsList className="h-auto flex-wrap justify-start gap-1 bg-muted p-1">
-            {[["ai", "AI Protection"], ["reg", "Registrations"], ["splits", "Split Sheets"], ["purchases", "Purchases"], ["staff", "Staff"]].map(([v, l]) => (
+            {[["ai", "AI Protection"], ["reg", "Registrations"], ["splits", "Split Sheets"], ["purchases", "Purchases"], ["support", "Support Tickets"], ["staff", "Staff"]].map(([v, l]) => (
               <TabsTrigger key={v} value={v!} className="font-semibold data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">{l}</TabsTrigger>
             ))}
           </TabsList>
@@ -100,6 +101,7 @@ function AdminPage() {
           <TabsContent value="purchases">
             <Table head={["Type", "Mode", "Date"]} rows={d?.purchases.map((p) => [p.kind, p.environment, fmt(p.created_at)])} />
           </TabsContent>
+          <TabsContent value="support"><SupportTicketsPanel /></TabsContent>
           <TabsContent value="staff">
             <Table head={["Email", "Role", "Added"]} rows={d?.staff.map((s) => [s.email, s.assigned_role ?? "—", fmt(s.created_at)])} />
           </TabsContent>
