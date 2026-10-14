@@ -9,7 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { submitTicket, ticketSchema, TICKET_CATEGORIES } from "@/lib/support.functions";
 import { BUSINESS_ADDRESS, SUPPORT_EMAIL } from "@/lib/email-layout";
 
-type Search = { type?: "contact" | "support" };
+type Search = { type?: "contact" | "support" | undefined };
 
 export const Route = createFileRoute("/contact")({
   validateSearch: (s: Record<string, unknown>): Search => ({ type: s["type"] === "support" ? "support" : s["type"] === "contact" ? "contact" : undefined }),
@@ -98,7 +98,7 @@ function ContactPage() {
   );
 }
 
-function Field({ label, error, children }: { label: string; error?: string; children: React.ReactNode }) {
+function Field({ label, error, children }: { label: string; error?: string | undefined; children: React.ReactNode }) {
   return (
     <label className="block space-y-1.5">
       <span className="text-sm font-semibold">{label}</span>
