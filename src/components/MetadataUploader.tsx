@@ -333,7 +333,8 @@ export function MetadataUploader({ stageName, userId, mode = "embed", onSubmitte
               const items = tracks.filter((t) => releaseGroup(t) === g);
               if (!items.length) return null;
               const row = (t: CatalogTrack) => (
-                <li key={t.id} className={`group flex flex-wrap items-center gap-4 rounded-xl border p-3 transition hover:border-primary hover:shadow-md ${t.id === editingId ? "border-primary bg-accent/30" : "border-border"}`}>
+                <li key={t.id} className={`group flex flex-wrap items-center gap-4 rounded-xl border p-3 transition hover:border-primary hover:shadow-md ${t.id === editingId || picked.has(t.id) ? "border-primary bg-accent/30" : "border-border"}`}>
+                  <input type="checkbox" aria-label={`Select ${t.title} for bulk export`} checked={picked.has(t.id)} onChange={() => togglePick(t.id)} className="h-4 w-4 accent-primary" />
                   {g !== "Single" && <span className="w-6 text-center text-sm font-bold text-primary">{t.metadata.trackNumber || "–"}</span>}
                   {t.metadata.coverThumb
                     ? <img src={t.metadata.coverThumb} alt={`${t.title} artwork`} className="h-16 w-16 shrink-0 rounded-lg object-cover shadow" />
@@ -357,12 +358,7 @@ export function MetadataUploader({ stageName, userId, mode = "embed", onSubmitte
                         </DropdownMenuContent>
                       </DropdownMenu>
                     )}
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild><Button type="button" variant="outline" size="sm">{!canSplit && <Lock />}Agency Export</Button></DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        {(["mlc", "soundexchange", "pro"] as Agency[]).map((a) => <DropdownMenuItem key={a} onClick={() => { if (!canSplit) { setUpsell("export"); return; } downloadAgencyExport(a, [t], safeName(t.title)).catch(() => toast.error("Could not build the export.")); }}>{AGENCY_LABEL[a]}</DropdownMenuItem>)}
-                      </DropdownMenuContent>
-                    </DropdownMenu>
+                    {exportMenu("Agency Export", [t], t.title)}
                     {onProtect && <Button type="button" variant={t.metadata.aiProtection ? "default" : "outline"} size="sm" onClick={() => onProtect(t)}><ShieldCheck />{t.metadata.aiProtection ? "Add AI Protection Proof" : "Protect Track"}</Button>}
                     <Button type="button" size="sm" onClick={() => { if (!canSplit) { setUpsell("split"); return; } onSplitSheet?.(t); }}>{!canSplit && <Lock />}Generate Split Sheet</Button>
                     <Button type="button" variant="ghost" size="icon" aria-label={`Delete ${t.title}`} onClick={() => remove(t.id)}><Trash2 /></Button>
@@ -387,12 +383,22 @@ export function MetadataUploader({ stageName, userId, mode = "embed", onSubmitte
                           <div className="truncate text-xl font-bold">{p.title}</div>
                           <div className="text-sm text-muted-foreground">{p.artist} · {p.tracks.length} {p.tracks.length === 1 ? "track" : "tracks"}</div>
                         </div>
+                        {exportMenu("Export Release", p.tracks, p.title)}
                       </summary>
                       <ul className="mt-4 grid gap-3">{p.tracks.map(row)}</ul>
                     </details>
                   ))}</div>}
               </div>;
             })}
+            {picked.size > 0 && (() => { const sel = tracks.filter((t) => picked.has(t.id)); return sel.length > 0 && (
+              <div role="region" aria-label="Selected tracks" className="sticky bottom-4 z-20 mx-auto flex max-w-2xl flex-wrap items-center justify-between gap-3 rounded-2xl border border-primary bg-card p-3 shadow-lg">
+                <span className="font-semibold">{sel.length} {sel.length === 1 ? "track" : "tracks"} selected</span>
+                <div className="flex flex-wrap gap-2">
+                  <Button type="button" variant="ghost" size="sm" onClick={() => setPicked(new Set())}>Clear</Button>
+                  {exportMenu("Export Selected", sel, `${sel.length} Tracks`)}
+                </div>
+              </div>
+            ); })()}
             </>
           )}
         </div>
