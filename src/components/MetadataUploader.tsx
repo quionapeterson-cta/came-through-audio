@@ -333,18 +333,16 @@ export function MetadataUploader({ stageName, userId, mode = "embed", onSubmitte
               const items = tracks.filter((t) => releaseGroup(t) === g);
               if (!items.length) return null;
               const row = (t: CatalogTrack) => (
-                <li key={t.id} className={`group flex flex-wrap items-center gap-4 rounded-xl border p-3 transition hover:border-primary hover:shadow-md ${t.id === editingId || picked.has(t.id) ? "border-primary bg-accent/30" : "border-border"}`}>
+                <li key={t.id} className={`group rounded-xl border p-3 transition hover:border-primary hover:shadow-md ${t.id === editingId || picked.has(t.id) ? "border-primary bg-accent/30" : "border-border"}`}>
+                  <div className="flex flex-wrap items-center gap-4">
                   <input type="checkbox" aria-label={`Select ${t.title} for bulk export`} checked={picked.has(t.id)} onChange={() => togglePick(t.id)} className="h-4 w-4 accent-primary" />
                   {g !== "Single" && <span className="w-6 text-center text-sm font-bold text-primary">{t.metadata.trackNumber || "–"}</span>}
                   {t.metadata.coverThumb
                     ? <img src={t.metadata.coverThumb} alt={`${t.title} artwork`} className="h-16 w-16 shrink-0 rounded-lg object-cover shadow" />
                     : <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground shadow"><Disc3 className="h-8 w-8 transition group-hover:rotate-180" /></div>}
-                  <div className="min-w-0 flex-1">
+                  <div className="min-w-[10rem] flex-1">
                     <div className="truncate text-lg font-bold">{t.title}</div>
                     <div className="truncate text-sm text-muted-foreground">{t.artist}{t.metadata.album ? ` · ${t.metadata.album}` : ""}</div>
-                    <div className="mt-1 flex flex-wrap gap-1 text-xs">
-                      {regBadges(t).map((b) => <span key={b} className="rounded-full border border-primary px-2 py-0.5 text-primary">{b}</span>)}
-                    </div>
                   </div>
                   <div className="flex flex-wrap gap-2">
                     <Button type="button" variant="outline" size="sm" onClick={() => open(t)}><Pencil />Edit</Button>
@@ -362,6 +360,21 @@ export function MetadataUploader({ stageName, userId, mode = "embed", onSubmitte
                     {onProtect && <Button type="button" variant={t.metadata.aiProtection ? "default" : "outline"} size="sm" onClick={() => onProtect(t)}><ShieldCheck />{t.metadata.aiProtection ? "Add AI Protection Proof" : "Protect Track"}</Button>}
                     <Button type="button" size="sm" onClick={() => { if (!canSplit) { setUpsell("split"); return; } onSplitSheet?.(t); }}>{!canSplit && <Lock />}Generate Split Sheet</Button>
                     <Button type="button" variant="ghost" size="icon" aria-label={`Delete ${t.title}`} onClick={() => remove(t.id)}><Trash2 /></Button>
+                  </div>
+                  </div>
+                  <div className="mt-3 space-y-3 border-t border-border pt-3">
+                    <div className="flex flex-wrap gap-1.5 text-xs">
+                      {regBadges(t).map((b) => <span key={b} className="rounded-full border border-primary px-2 py-0.5 text-primary">{b}</span>)}
+                    </div>
+                    {creditGroups(t).length > 0 && <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                      {creditGroups(t).map((cg) => <div key={cg.label} className="min-w-0">
+                        <div className="mb-1 text-xs font-bold uppercase tracking-widest text-primary">{cg.label}</div>
+                        <ul className="space-y-1 text-sm">{cg.rows.map((c, i) => <li key={i} className="min-w-0">
+                          <span className="font-semibold">{c.name}</span>
+                          {(c.percentage || c.pro || c.ipi) && <span className="block text-xs text-muted-foreground">{[c.percentage && `${c.percentage}%`, c.pro, c.ipi && `IPI ${c.ipi}`].filter(Boolean).join(" · ")}</span>}
+                        </li>)}</ul>
+                      </div>)}
+                    </div>}
                   </div>
                 </li>
               );
@@ -455,10 +468,15 @@ function groupProjects(items: CatalogTrack[]) {
 
 function regBadges(t: CatalogTrack): string[] {
   const m = t.metadata;
-  const ppl = (r: Contributor[] | undefined, label: string) => (r ?? []).filter((c) => c.name.trim()).map((c) => `${label}: ${c.name}${[c.percentage && `${c.percentage}%`, c.pro, c.ipi && `IPI ${c.ipi}`].filter(Boolean).length ? ` (${[c.percentage && `${c.percentage}%`, c.pro, c.ipi && `IPI ${c.ipi}`].filter(Boolean).join(" · ")})` : ""}`);
   return [m.releaseType || "Single", m.primaryGenre, m.duration, m.releaseDate && `Released ${m.releaseDate}`, m.label && `Label ${m.label}`,
-    m.isrc && `ISRC ${m.isrc}`, m.upc && `UPC ${m.upc}`, m.iswc && `ISWC ${m.iswc}`,
-    ...ppl(m.writers, "Writer"), ...ppl(m.composers, "Composer"), ...ppl(m.publishers, "Publisher"), ...ppl(m.producers, "Producer")].filter((b): b is string => !!b);
+    m.isrc && `ISRC ${m.isrc}`, m.upc && `UPC ${m.upc}`, m.iswc && `ISWC ${m.iswc}`].filter((b): b is string => !!b);
+}
+
+function creditGroups(t: CatalogTrack) {
+  const m = t.metadata;
+  return ([["Writers", m.writers], ["Composers", m.composers], ["Publishers", m.publishers], ["Producers", m.producers]] as const)
+    .map(([label, rows]) => ({ label, rows: (rows ?? []).filter((c) => c.name.trim()) }))
+    .filter((g) => g.rows.length > 0);
 }
 
 function releaseGroup(t: CatalogTrack): "Single" | "EP" | "Album" {

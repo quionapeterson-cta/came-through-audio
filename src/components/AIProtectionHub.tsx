@@ -308,7 +308,6 @@ export function AIProtectionHub({ userId, paid, track, email }: { userId: string
         </div>
       )}
 
-      {!paid && <div className="rounded-xl border-2 border-primary bg-card p-5 font-semibold text-primary">Upgrade to Catalog Plus to permanently embed and submit metadata to your catalog.</div>}
     </section>
   );
 }
