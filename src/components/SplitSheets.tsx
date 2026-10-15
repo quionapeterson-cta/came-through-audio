@@ -223,13 +223,23 @@ function SplitEditor({ userId, track, initial, onClose, onSaved }: { userId: str
   const [library, setLibrary] = useState<SavedContributor[]>([]);
 
   useEffect(() => {
-    void supabase.from("profiles").select("legal_name").eq("id", userId).maybeSingle().then(({ data }) => {
+    void Promise.all([
+      supabase.from("profiles").select("legal_name").eq("id", userId).maybeSingle(),
+      supabase.auth.getUser(),
+    ]).then(([{ data }, { data: auth }]) => {
       const legal = data?.legal_name ?? "";
+      const accountEmail = auth.user?.email ?? "";
       setOwnerName(legal);
-      if (legal) setCollaborators((rows) => rows.some((r) => r.isOwner) ? rows : rows.map((r) => r.name.trim().toLowerCase() === legal.trim().toLowerCase() ? { ...r, isOwner: true } : r));
+      setCollaborators((rows) => {
+        let next = rows.some((r) => r.isOwner) || !legal ? rows : rows.map((r) => r.name.trim().toLowerCase() === legal.trim().toLowerCase() ? { ...r, isOwner: true } : r);
+        if (accountEmail) next = next.map((r) => (r.isOwner && !r.email.trim() ? { ...r, email: accountEmail } : r));
+        return next;
+      });
+      setAccountEmail(accountEmail);
     });
     void listContributors().then(setLibrary).catch(() => {});
   }, [userId]);
+  const [accountEmail, setAccountEmail] = useState("");
 
   const fillFromLibrary = (i: number, name: string) => {
     const match = library.find((l) => l.name.toLowerCase() === name.trim().toLowerCase());
