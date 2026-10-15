@@ -383,7 +383,7 @@ export function MetadataUploader({ stageName, userId, mode = "embed", onSubmitte
                         <div className="mb-1 text-xs font-bold uppercase tracking-widest text-primary">{cg.label}</div>
                         <ul className="space-y-1 text-sm">{cg.rows.map((c, i) => <li key={i} className="min-w-0">
                           <span className="font-semibold">{c.name}</span>
-                          {(c.percentage || c.pro || c.ipi) && <span className="block text-xs text-muted-foreground">{[c.percentage && `${c.percentage}%`, c.pro, c.ipi && `IPI ${c.ipi}`].filter(Boolean).join(" · ")}</span>}
+                          {(cg.label === "Writers" || c.percentage || c.pro || c.ipi) && <span className="block text-xs text-muted-foreground">{[cg.label === "Writers" && writerRole(c.role), c.percentage && `${c.percentage}%`, c.pro, c.ipi && `IPI ${c.ipi}`].filter(Boolean).join(" · ")}</span>}
                         </li>)}</ul>
                       </div>)}
                     </div>}
