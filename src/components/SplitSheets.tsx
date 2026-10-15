@@ -223,13 +223,23 @@ function SplitEditor({ userId, track, initial, onClose, onSaved }: { userId: str
   const [library, setLibrary] = useState<SavedContributor[]>([]);
 
   useEffect(() => {
-    void supabase.from("profiles").select("legal_name").eq("id", userId).maybeSingle().then(({ data }) => {
+    void Promise.all([
+      supabase.from("profiles").select("legal_name").eq("id", userId).maybeSingle(),
+      supabase.auth.getUser(),
+    ]).then(([{ data }, { data: auth }]) => {
       const legal = data?.legal_name ?? "";
+      const accountEmail = auth.user?.email ?? "";
       setOwnerName(legal);
-      if (legal) setCollaborators((rows) => rows.some((r) => r.isOwner) ? rows : rows.map((r) => r.name.trim().toLowerCase() === legal.trim().toLowerCase() ? { ...r, isOwner: true } : r));
+      setCollaborators((rows) => {
+        let next = rows.some((r) => r.isOwner) || !legal ? rows : rows.map((r) => r.name.trim().toLowerCase() === legal.trim().toLowerCase() ? { ...r, isOwner: true } : r);
+        if (accountEmail) next = next.map((r) => (r.isOwner && !r.email.trim() ? { ...r, email: accountEmail } : r));
+        return next;
+      });
+      setAccountEmail(accountEmail);
     });
     void listContributors().then(setLibrary).catch(() => {});
   }, [userId]);
+  const [accountEmail, setAccountEmail] = useState("");
 
   const fillFromLibrary = (i: number, name: string) => {
     const match = library.find((l) => l.name.toLowerCase() === name.trim().toLowerCase());
@@ -238,7 +248,7 @@ function SplitEditor({ userId, track, initial, onClose, onSaved }: { userId: str
     update(i, { email: row.email || match.email, pro: row.pro || match.pro, ipi: row.ipi || match.ipi, publisherName: row.publisherName || match.publisher });
   };
 
-  const markOwner = (i: number) => setCollaborators((rows) => rows.map((r, idx) => ({ ...r, isOwner: idx === i })));
+  const markOwner = (i: number) => setCollaborators((rows) => rows.map((r, idx) => ({ ...r, isOwner: idx === i, email: idx === i && !r.email.trim() ? accountEmail : r.email })));
 
   const requestSignature = async (i: number) => {
     const c = collaborators[i];
@@ -335,7 +345,7 @@ function SplitEditor({ userId, track, initial, onClose, onSaved }: { userId: str
                 <label className="space-y-1 text-sm">
                   <span className="font-medium">Email</span>
                   <input type="email" value={c.email} onChange={(e) => update(i, { email: e.target.value })} disabled={!!c.signedAt}
-                    className="w-full rounded-md border border-input bg-background px-3 py-2" placeholder="collaborator@email.com" />
+                    className="w-full rounded-md border border-input bg-background px-3 py-2" placeholder={c.isOwner ? "Your account email" : "collaborator@email.com"} />
                 </label>
                 <label className="space-y-1 text-sm">
                   <span className="font-medium">Role</span>
@@ -365,7 +375,7 @@ function SplitEditor({ userId, track, initial, onClose, onSaved }: { userId: str
                     className="w-full rounded-md border border-input bg-background px-3 py-2" placeholder="Optional — artist or stage name" />
                 </label>
                 <label className="space-y-1 text-sm">
-                  <span className="font-medium">PRO affiliation</span>
+                  <span className="font-medium">PRO affiliation <span className="font-normal text-muted-foreground">(optional — they can add it too)</span></span>
                   <ProSelect value={c.pro} onChange={(v) => update(i, { pro: v })} disabled={!!c.signedAt} />
                 </label>
                 <label className="space-y-1 text-sm">
