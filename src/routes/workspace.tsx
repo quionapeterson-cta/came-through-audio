@@ -69,9 +69,14 @@ function Workspace() {
   const [embedKey, setEmbedKey] = useState(0);
   useEffect(() => {
     if (!user) return;
-    const o = loadOnboarding(user.id);
-    setOnboard(o);
-    if (!o?.done) setProfileOpen(true);
+    setOnboard(loadOnboarding(user.id));
+    let live = true;
+    syncFromCloud(user.id).then((o) => {
+      if (!live) return;
+      setOnboard(o); setEmbedKey((k) => k + 1);
+      if (!o?.done) setProfileOpen(true);
+    });
+    return () => { live = false; };
   }, [user]);
   const upgrade = () => document.getElementById("plans-trigger")?.click();
 
