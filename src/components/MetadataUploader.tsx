@@ -10,7 +10,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { PRE_DIST_NOTE, PRO_TIP } from "@/lib/copy";
 import { readMetadata, CREDIT_ROLES, emptyContributor, emptyMetadata, embedMetadata, metadataSchema, GENRES, PROS, RELEASE_TYPES, type Contributor, type Metadata } from "@/lib/metadata";
 import { deleteTrack, downloadCatalogFile, listTracks, safeName, saveTrack, uploadCatalogFile, type CatalogTrack } from "@/lib/catalog";
-import { AGENCY_LABEL, downloadAgencyCsv, type Agency } from "@/lib/agency-export";
+import { AGENCY_LABEL, downloadAgencyExport, type Agency } from "@/lib/agency-export";
 import { downloadLyricsPdf } from "@/lib/lyrics-pdf";
 import { loadProfile, pickProfile, saveProfile, withProfile } from "@/lib/artist-profile";
 
@@ -346,11 +346,11 @@ export function MetadataUploader({ stageName, userId, mode = "embed", onSubmitte
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild><Button type="button" variant="outline" size="sm">{!canSplit && <Lock />}Agency Export</Button></DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
-                        {(["mlc", "soundexchange", "pro"] as Agency[]).map((a) => <DropdownMenuItem key={a} onClick={() => { if (!canSplit) { setUpsell(true); return; } downloadAgencyCsv(a, [t], safeName(t.title)); }}>{AGENCY_LABEL[a]} CSV</DropdownMenuItem>)}
+                        {(["mlc", "soundexchange", "pro"] as Agency[]).map((a) => <DropdownMenuItem key={a} onClick={() => { if (!canSplit) { setUpsell("export"); return; } downloadAgencyExport(a, [t], safeName(t.title)).catch(() => toast.error("Could not build the export.")); }}>{AGENCY_LABEL[a]}</DropdownMenuItem>)}
                       </DropdownMenuContent>
                     </DropdownMenu>
                     {onProtect && <Button type="button" variant={t.metadata.aiProtection ? "default" : "outline"} size="sm" onClick={() => onProtect(t)}><ShieldCheck />{t.metadata.aiProtection ? "Add AI Protection Proof" : "Protect Track"}</Button>}
-                    <Button type="button" size="sm" onClick={() => { if (!canSplit) { setUpsell(true); return; } onSplitSheet?.(t); }}>{!canSplit && <Lock />}Generate Split Sheet</Button>
+                    <Button type="button" size="sm" onClick={() => { if (!canSplit) { setUpsell("split"); return; } onSplitSheet?.(t); }}>{!canSplit && <Lock />}Generate Split Sheet</Button>
                     <Button type="button" variant="ghost" size="icon" aria-label={`Delete ${t.title}`} onClick={() => remove(t.id)}><Trash2 /></Button>
                   </div>
                 </li>
@@ -383,10 +383,10 @@ export function MetadataUploader({ stageName, userId, mode = "embed", onSubmitte
           )}
         </div>
       ); })()}
-      <Dialog open={upsell} onOpenChange={setUpsell}>
+      <Dialog open={!!upsell} onOpenChange={(o) => !o && setUpsell(false)}>
         <DialogContent className="bg-card text-card-foreground">
-          <DialogHeader><DialogTitle className="flex items-center gap-2 text-xl font-bold"><Lock className="h-5 w-5 text-primary" />Split Sheets are locked</DialogTitle></DialogHeader>
-          <p className="text-base font-medium">Upgrade and Get Unlimited Split Sheets and E-Signatures.</p>
+          <DialogHeader><DialogTitle className="flex items-center gap-2 text-xl font-bold"><Lock className="h-5 w-5 text-primary" />{upsell === "export" ? "1-Click Official Agency Exports are locked" : "Split Sheets are locked"}</DialogTitle></DialogHeader>
+          <p className="text-base font-medium">{upsell === "export" ? "Upgrade to Catalog & Collaborate to export official The MLC and SoundExchange Direct bulk spreadsheets, plus BMI and ASCAP registration cheat sheets." : "Upgrade and Get Unlimited Split Sheets and E-Signatures."}</p>
           <Button onClick={() => setUpsell(false)}>Got it</Button>
         </DialogContent>
       </Dialog>
