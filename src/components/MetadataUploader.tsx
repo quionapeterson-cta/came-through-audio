@@ -160,6 +160,16 @@ export function MetadataUploader({ stageName, userId, mode = "embed", onSubmitte
         makeThumb(art).then((t) => setMetadata((m) => ({ ...m, coverThumb: t }))).catch(() => {});
       }
       const filled = Object.fromEntries(Object.entries(found).filter(([, v]) => Array.isArray(v) ? v.some((x) => (typeof x === "string" ? x : x?.name)) : v !== "" && v != null));
+      // Private PRO/IPI/splits never live in files — restore them from the saved profile for matching names.
+      const profile = loadProfile(userId);
+      for (const g of ["writers", "composers", "producers", "publishers"] as const) {
+        const rows = filled[g] as Contributor[] | undefined;
+        if (!rows) continue;
+        filled[g] = rows.map((r) => {
+          const saved = profile?.[g]?.find((s) => s.name.trim().toLowerCase() === r.name.trim().toLowerCase());
+          return saved ? { ...r, pro: r.pro || saved.pro, ipi: r.ipi || saved.ipi, percentage: r.percentage || saved.percentage } : r;
+        });
+      }
       if (Object.keys(filled).length || picture) { setMetadata((m) => ({ ...m, ...filled })); toast.success("Existing metadata found and pre-filled. You can still edit every field."); }
     }).catch(() => {});
   }

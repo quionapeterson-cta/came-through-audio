@@ -22,6 +22,9 @@ export const metadataSchema = z.object({
   releaseType: z.string().default(""),
   releaseDate: z.string(),
   label: z.string().trim().default(""),
+  copyright: z.string().trim().default(""),
+  phonographic: z.string().trim().default(""),
+  language: z.string().trim().default(""),
   isrc: z.string().trim().refine((value) => !value || /^[A-Z]{2}[A-Z0-9]{3}\d{7}$/i.test(value.replace(/-/g, "")), "Enter a valid 12-character ISRC."),
   upc: z.string().trim().refine((value) => !value || /^\d{12,13}$/.test(value), "Enter a 12- or 13-digit UPC/EAN."),
   iswc: z.string().trim().refine((value) => !value || /^T\d{10}$/i.test(value.replace(/[.\s-]/g, "")), "Enter a valid ISWC (T followed by 10 digits)."),
@@ -52,7 +55,7 @@ export type Metadata = z.infer<typeof metadataSchema>;
 export type Contributor = z.infer<typeof contributorSchema>;
 export const emptyContributor = (): Contributor => ({ name: "", pro: "", ipi: "", percentage: "" });
 export const emptyMetadata = (): Metadata => ({
-  title: "", trackNumber: "", artist: "", featured: [""], album: "", duration: "", releaseType: "", releaseDate: "", label: "",
+  title: "", trackNumber: "", artist: "", featured: [""], album: "", duration: "", releaseType: "", releaseDate: "", label: "", copyright: "", phonographic: "", language: "",
   isrc: "", upc: "", iswc: "", explicit: false, primaryGenre: "", secondaryGenre: "",
   writers: [emptyContributor()], composers: [emptyContributor()], producers: [emptyContributor()], publishers: [emptyContributor()],
   lyrics: "", coverThumb: "", audioPath: "", artPath: "", aiProtection: false, credits: [],
@@ -84,14 +87,19 @@ export async function embedMetadata(audio: ArrayBuffer, metadata: Metadata, artw
   const composers = data.composers.filter((row) => row.name);
   const publishers = data.publishers.filter((row) => row.name);
   if (writers.length || composers.length) writer.setFrame("TCOM", [...writers, ...composers].map((row) => row.name));
-  if (writers.length) writer.setFrame("TXXX", { description: "WRITER_SPLITS", value: JSON.stringify(writers) });
-  if (composers.length) writer.setFrame("TXXX", { description: "COMPOSER_SPLITS", value: JSON.stringify(composers) });
+  // Privacy rule: PRO affiliations, IPI numbers and split percentages are never embedded — names only.
+  const publicOnly = (rows: Contributor[]) => JSON.stringify(rows.map(({ name }) => ({ name, pro: "", ipi: "", percentage: "" })));
+  if (writers.length) writer.setFrame("TXXX", { description: "WRITER_SPLITS", value: publicOnly(writers) });
+  if (composers.length) writer.setFrame("TXXX", { description: "COMPOSER_SPLITS", value: publicOnly(composers) });
   const producers = (data.producers ?? []).filter((row) => row.name);
   if (producers.length) writer.setFrame("TXXX", { description: "PRODUCERS", value: producers.map((row) => row.name).join(", ") });
   if (publishers.length) {
     writer.setFrame("TPUB", publishers.map((row) => row.name).join("; "));
-    writer.setFrame("TXXX", { description: "PUBLISHERS", value: JSON.stringify(publishers.map(({ name, pro, ipi }) => ({ name, pro, ipi }))) });
+    writer.setFrame("TXXX", { description: "PUBLISHERS", value: publicOnly(publishers) });
   }
+  if (data.copyright) writer.setFrame("TCOP", data.copyright);
+  if (data.phonographic) writer.setFrame("TXXX", { description: "PHONOGRAPHIC_COPYRIGHT", value: data.phonographic });
+  if (data.language) writer.setFrame("TXXX", { description: "LANGUAGE", value: data.language });
   if (data.lyrics) writer.setFrame("USLT", { description: "", lyrics: data.lyrics, language: "eng" });
   const credits = data.credits.filter((c) => c.name);
   if (credits.length) writer.setFrame("TXXX", { description: "CREDITS", value: JSON.stringify(credits) });

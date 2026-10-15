@@ -12,6 +12,8 @@ import { AIProtectionHub } from "@/components/AIProtectionHub";
 import { SplitSheets } from "@/components/SplitSheets";
 import { BrandLogo } from "@/components/BrandLogo";
 import type { CatalogTrack } from "@/lib/catalog";
+import { ArtistAvatar, ArtistOnboarding } from "@/components/ArtistOnboarding";
+import { loadOnboarding, type Onboarding } from "@/lib/artist-profile";
 import { RoyaltyUtilitySuite } from "@/components/RoyaltyUtilitySuite";
 import { ExpertAssistance } from "@/components/ExpertAssistance";
 import { RoyaltyHealthCheck } from "@/components/RoyaltyHealthCheck";
@@ -62,6 +64,15 @@ function Workspace() {
   // Free accounts may only sign invited split sheets (/sign/$token); creation requires Collaborate.
   const canSplit = hasTier(tier, "collaborate");
   const hasAi = purchases.some((p) => p.kind === "ai");
+  const [onboard, setOnboard] = useState<Onboarding | null>(null);
+  const [profileOpen, setProfileOpen] = useState(false);
+  const [embedKey, setEmbedKey] = useState(0);
+  useEffect(() => {
+    if (!user) return;
+    const o = loadOnboarding(user.id);
+    setOnboard(o);
+    if (!o?.done) setProfileOpen(true);
+  }, [user]);
   const upgrade = () => document.getElementById("plans-trigger")?.click();
 
   useEffect(() => {
@@ -104,6 +115,9 @@ function Workspace() {
           </div>
           <div className="flex items-center gap-3">
             <Badge variant="outline" className="border-ink-border text-ink-foreground">{TIER_LABEL[tier]}</Badge>
+            <Button variant="ghost" className="gap-2 text-ink-foreground hover:bg-ink-border hover:text-ink-foreground" onClick={() => setProfileOpen(true)}>
+              <ArtistAvatar src={onboard?.avatar} className="h-7 w-7" />Profile
+            </Button>
             <PlansDialog tier={tier} userId={user.id} email={user.email} />
             <Button variant="ghost" size="icon" aria-label="Log out" className="text-ink-muted hover:bg-ink-border hover:text-ink-foreground"
               onClick={async () => { await supabase.auth.signOut(); navigate({ to: "/" }); }}>
@@ -113,6 +127,8 @@ function Workspace() {
         </div>
       </header>
 
+      <ArtistOnboarding userId={user.id} open={profileOpen} onOpenChange={setProfileOpen} firstRun={!onboard?.done}
+        onSaved={(o) => { setOnboard(o); if (o.stageName) setName(o.stageName); setEmbedKey((k) => k + 1); setTab("embed"); }} />
       <main className="mx-auto max-w-7xl px-6 py-8">
         <Tabs value={tab} onValueChange={setTab}>
           <TabsList className="h-auto w-full flex-nowrap justify-start gap-1 overflow-x-auto bg-muted p-1">
@@ -123,7 +139,7 @@ function Workspace() {
             ))}
           </TabsList>
 
-          <TabsContent value="embed" forceMount className="data-[state=inactive]:hidden"><MetadataUploader stageName={name} userId={user.id} mode="embed" onSubmitted={() => setCatalogKey((k) => k + 1)} /></TabsContent>
+          <TabsContent value="embed" forceMount className="data-[state=inactive]:hidden"><MetadataUploader key={`embed-${embedKey}`} stageName={name} userId={user.id} mode="embed" onSubmitted={() => setCatalogKey((k) => k + 1)} /></TabsContent>
           <TabsContent value="catalog" forceMount className="data-[state=inactive]:hidden">
             <MetadataUploader key={catalogKey} stageName={name} userId={user.id} mode="catalog" canSplit={canSplit} onSplitSheet={(t) => { setSplitTrackId(t.id); setTab("splits"); }} onProtect={(t) => { setProtectTrack(t); setTab("protect"); }} />
           </TabsContent>

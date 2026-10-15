@@ -46,3 +46,18 @@ describe("MP3 metadata", () => {
     expect(out.publishers?.[0]?.name).toBe("Came Pub");
   });
 });
+
+import { embedMetadata as embedPrivacy, emptyMetadata as emptyPrivacy } from "@/lib/metadata";
+import { describe as d2, it as i2, expect as e2 } from "vitest";
+d2("embed privacy", () => {
+  i2("never writes PRO affiliations or IPI numbers into the file", async () => {
+    const m = { ...emptyPrivacy(), title: "Song", artist: "Kay",
+      writers: [{ name: "Kay Writer", pro: "BMI", ipi: "123456789", percentage: "50" }],
+      publishers: [{ name: "Kay Pub", pro: "ASCAP", ipi: "987654321", percentage: "50" }] };
+    const blob = await embedPrivacy(new ArrayBuffer(16), m);
+    const buf = await new Promise<ArrayBuffer>((r) => { const fr = new FileReader(); fr.onload = () => r(fr.result as ArrayBuffer); fr.readAsArrayBuffer(blob); }); const text = new TextDecoder("utf-16le").decode(buf) + new TextDecoder("latin1").decode(buf);
+    e2(text).toContain("Kay Writer");
+    e2(text).not.toContain("123456789");
+    e2(text).not.toContain("987654321");
+  });
+});
