@@ -123,14 +123,32 @@ export function SplitSheets({ userId, canSplit, prefillTrackId, onUpgrade }: { u
           </div>
           <Button disabled={!pick} onClick={() => { const t = tracks.find((x) => x.id === pick); if (t) { setEditing(t); setPick(""); } }}><PenLine className="h-4 w-4" /> Generate</Button>
         </div>
-        {([["Pending Signatures", false], ["Signed Splits", true]] as const).map(([heading, signedGroup]) => {
-          const list = tracks.filter((t) => { const c = sheets.get(t.id); return c && (splitStatus(c) === "signed") === signedGroup; }).sort((a, b) => a.title.localeCompare(b.title));
+        {([["Pending Signatures", false], ["Signed Split Sheet Vault", true]] as const).map(([heading, signedGroup]) => {
+          const list = tracks.filter((t) => { const c = sheets.get(t.id); return c && (splitStatus(c) === "signed") === signedGroup; });
+          const groups = new Map<string, CatalogTrack[]>();
+          for (const t of list) { const k = t.metadata.album?.trim() || ""; groups.set(k, [...(groups.get(k) ?? []), t]); }
+          const ordered = [...groups.entries()].sort(([a], [b]) => (a === "" ? 1 : b === "" ? -1 : a.localeCompare(b)));
+          const waiting = signedGroup ? [] : list.flatMap((t) => sheets.get(t.id)!.filter((c) => c.name && !c.signedAt).map((c) => ({ name: c.name, track: t.title })));
           return (
-            <section key={heading}>
+            <section key={heading} className="rounded-2xl border border-border p-5">
               <h3 className="mb-3 text-sm font-bold uppercase tracking-widest text-primary">{heading} <span className="opacity-70">{list.length}</span></h3>
-              {list.length === 0 ? <p className="text-sm text-muted-foreground">{signedGroup ? "No fully signed split sheets yet." : "No split sheets waiting on signatures."}</p> : (
-        <div className="grid gap-4 md:grid-cols-2">
-          {list.map((track) => {
+              {!signedGroup && waiting.length > 0 && (
+                <div className="mb-4 rounded-xl border border-primary/40 bg-primary/5 p-3 text-sm">
+                  <div className="mb-1.5 font-semibold">Who hasn't signed yet</div>
+                  <div className="flex flex-wrap gap-2">
+                    {waiting.map((w, i) => <Badge key={i} variant="outline" className="border-primary/50">{w.name} <span className="ml-1 text-muted-foreground">· {w.track}</span></Badge>)}
+                  </div>
+                </div>
+              )}
+              {list.length === 0 ? <p className="text-sm text-muted-foreground">{signedGroup ? "No fully signed split sheets in your vault yet." : "No split sheets waiting on signatures."}</p> : (
+                <div className="space-y-3">
+                  {ordered.map(([album, items]) => (
+                    <details key={album || "singles"} open className="rounded-xl border border-border">
+                      <summary className="flex cursor-pointer items-center justify-between gap-2 px-4 py-3 font-semibold">
+                        <span>{album || "Singles"}</span><span className="text-xs text-muted-foreground">{items.length} {items.length === 1 ? "song" : "songs"}</span>
+                      </summary>
+        <div className="grid gap-4 p-4 pt-0 md:grid-cols-2">
+          {[...items].sort((a, b) => a.title.localeCompare(b.title)).map((track) => {
             const collaborators = sheets.get(track.id)!;
             const badge = statusBadge[splitStatus(collaborators)];
             return (
@@ -138,7 +156,7 @@ export function SplitSheets({ userId, canSplit, prefillTrackId, onUpgrade }: { u
                 <div className="flex items-start justify-between gap-3">
                   <div>
                     <div className="font-bold">{track.title}</div>
-                    <div className="text-sm text-muted-foreground">{track.artist}{track.metadata.album ? ` · ${track.metadata.album}` : ""}</div>
+                    <div className="text-sm text-muted-foreground">{track.artist}</div>
                   </div>
                   {badge && <Badge variant="outline" className={badge.className}>{badge.label}</Badge>}
                 </div>
@@ -148,6 +166,7 @@ export function SplitSheets({ userId, canSplit, prefillTrackId, onUpgrade }: { u
                         <span className="flex items-center gap-2">
                           {c.signedAt ? <Check className="h-3.5 w-3.5 text-primary" /> : <span className="h-1.5 w-1.5 rounded-full bg-muted-foreground" />}
                           {c.name} <span className="text-muted-foreground">· {c.role}</span>
+                          {!c.signedAt && <span className="text-xs text-destructive">Not signed</span>}
                         </span>
                         <span className="font-semibold">{c.percentage}%</span>
                       </div>
@@ -179,6 +198,9 @@ export function SplitSheets({ userId, canSplit, prefillTrackId, onUpgrade }: { u
             );
           })}
         </div>
+                    </details>
+                  ))}
+                </div>
               )}
             </section>
           );
