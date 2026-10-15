@@ -84,7 +84,8 @@ export function ArtistOnboarding({ userId, open, onOpenChange, onSaved, firstRun
             <DialogHeader><DialogTitle className="text-center text-2xl">Hi {ob.stageName || "there"}!</DialogTitle></DialogHeader>
             <p className="text-muted-foreground">At CTA we celebrate your wins! Handling your music business isn’t an easy feat, so enjoy unlocking badges as you complete embeds, catalog entries, protecting your creations and proper registrations!</p>
             <p className="font-semibold">Here’s your first badge! A celebration of believing in yourself &amp; artistry!</p>
-            <p className="text-sm italic text-muted-foreground">Cheers,<br /><span className="font-semibold not-italic text-foreground">We’re on your Team!</span><br />— Karma</p>
+            <p className="text-sm italic text-muted-foreground">Cheers,<br /><span className="font-semibold not-italic text-foreground">We’re on your Team!</span><br /><span className="not-italic">Karma Came,<br />Founder<br />Came Through Audio</span></p>
+            <p className="text-lg font-bold text-primary">Let’s goooo!</p>
             <Button className="w-full" onClick={() => { setOb((o) => ({ ...o, welcomed: true })); setStep(1); }}>Claim my badge &amp; set up my profile<ArrowRight /></Button>
           </div>
         )}
