@@ -106,7 +106,7 @@ export function readMetadata(buf: ArrayBuffer): Partial<Metadata> & { picture?: 
   const ver = b[3];
   const syncsafe = (i: number) => ((b[i]! & 127) << 21) | ((b[i + 1]! & 127) << 14) | ((b[i + 2]! & 127) << 7) | (b[i + 3]! & 127);
   const end = 10 + syncsafe(6);
-  const dec = (enc: number, bytes: Uint8Array) => new TextDecoder(enc === 1 ? "utf-16" : enc === 2 ? "utf-16be" : enc === 3 ? "utf-8" : "latin1").decode(bytes).replace(/\u0000+$/, "");
+  const dec = (enc: number, bytes: Uint8Array) => new TextDecoder(enc === 1 ? "utf-16" : enc === 2 ? "utf-16be" : enc === 3 ? "utf-8" : "latin1").decode(bytes).replace(/\uFEFF/g, "").replace(/\u0000+$/, "");
   const frames: Record<string, string> = {}; const txxx: Record<string, string> = {}; let lyrics = ""; let picture: Blob | undefined;
   let i = 10;
   while (i + 10 <= end && b[i] !== 0) {
