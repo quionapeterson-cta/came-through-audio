@@ -15,6 +15,8 @@ import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
 import { supabase } from "@/integrations/supabase/client";
 import { takeReturn } from "@/lib/password";
+import { redirect } from "@tanstack/react-router";
+import { getGateStatus } from "@/lib/gate.functions";
 
 function NotFoundComponent() {
   return (
@@ -77,6 +79,12 @@ function ErrorComponent({ error, reset }: ErrorComponentProps) {
 }
 
 export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()({
+  // Staging passcode gate: clear SITE_PASSWORD to open the site at launch.
+  beforeLoad: async ({ location }) => {
+    if (location.pathname === "/unlock") return;
+    const { unlocked } = await getGateStatus();
+    if (!unlocked) throw redirect({ to: "/unlock", search: { next: location.href } });
+  },
   head: () => ({
     meta: [
       { charSet: "utf-8" },
