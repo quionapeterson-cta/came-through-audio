@@ -58,6 +58,7 @@ export const PLAN_CARDS: { tier: Exclude<Tier, "free">; price: string; priceId: 
     tier: "collaborate", price: "$44.99", priceId: "catalog_collaborate_yearly", monthly: "Only $3.75 / month", lead: "Includes everything in Catalog Plus, plus:",
     features: [
       { title: "Unlimited Collaborative Split Sheets", tip: "Create, negotiate, and lock in audit-ready publishing splits" },
+      { title: "Unlimited 1-Click Agency Exports", tip: "Download registration-ready files for The MLC, SoundExchange and ASCAP/BMI from your catalog" },
       { title: "Unlimited Collaborator E-Signatures", tip: "Digital legal sign-off and instant collaborator account invitations" },
       { title: "Unlimited Royalty Utility Suite", tip: "Access the BMI/ASCAP Formula Converter & Projected Royalty Earnings Calculator" },
     ],

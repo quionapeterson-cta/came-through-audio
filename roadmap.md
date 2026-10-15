@@ -33,3 +33,5 @@
 - [ ] Catalog Downloads menu: open on hover (currently click-only)
 - [ ] Milestone badges (gold) — waiting on the user's full badge rules
 - [ ] Before public launch: remove noindex tag and restore Allow rules in robots.txt
+- [x] Catalog: collapsible Singles, only newest release open, registration info bubbles
+- [x] 1-click agency exports (MLC, SoundExchange, ASCAP/BMI CSV) for Catalog & Collaborate+

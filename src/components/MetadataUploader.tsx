@@ -10,6 +10,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { PRE_DIST_NOTE, PRO_TIP } from "@/lib/copy";
 import { readMetadata, CREDIT_ROLES, emptyContributor, emptyMetadata, embedMetadata, metadataSchema, GENRES, PROS, RELEASE_TYPES, type Contributor, type Metadata } from "@/lib/metadata";
 import { deleteTrack, downloadCatalogFile, listTracks, safeName, saveTrack, uploadCatalogFile, type CatalogTrack } from "@/lib/catalog";
+import { AGENCY_LABEL, downloadAgencyCsv, type Agency } from "@/lib/agency-export";
 import { downloadLyricsPdf } from "@/lib/lyrics-pdf";
 import { loadProfile, pickProfile, saveProfile, withProfile } from "@/lib/artist-profile";
 
@@ -303,7 +304,7 @@ export function MetadataUploader({ stageName, userId, mode = "embed", onSubmitte
       </form>
       )}
 
-      {userId && full && (
+      {userId && full && (() => { const newest = [...tracks].sort((a, b) => String(b.updatedAt).localeCompare(String(a.updatedAt)))[0]; return (
         <div className="mt-4 border-t border-border pt-6 pb-12">
           <h2 className="mb-4 text-xl font-bold">Your songs</h2>
           {tracks.length === 0 ? <p className="text-sm text-muted-foreground">No songs yet. Embed a track in the Embed Metadata tab and submit it to your catalog.</p> : (
@@ -327,7 +328,7 @@ export function MetadataUploader({ stageName, userId, mode = "embed", onSubmitte
                     <div className="truncate text-lg font-bold">{t.title}</div>
                     <div className="truncate text-sm text-muted-foreground">{t.artist}{t.metadata.album ? ` · ${t.metadata.album}` : ""}</div>
                     <div className="mt-1 flex flex-wrap gap-1 text-xs">
-                      {[t.metadata.releaseType || "Single", t.metadata.primaryGenre, t.metadata.duration, t.metadata.isrc && `ISRC ${t.metadata.isrc}`].filter(Boolean).map((b) => <span key={String(b)} className="rounded-full border border-primary px-2 py-0.5 text-primary">{b}</span>)}
+                      {regBadges(t).map((b) => <span key={b} className="rounded-full border border-primary px-2 py-0.5 text-primary">{b}</span>)}
                     </div>
                   </div>
                   <div className="flex flex-wrap gap-2">
@@ -342,6 +343,12 @@ export function MetadataUploader({ stageName, userId, mode = "embed", onSubmitte
                         </DropdownMenuContent>
                       </DropdownMenu>
                     )}
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild><Button type="button" variant="outline" size="sm">{!canSplit && <Lock />}Agency Export</Button></DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        {(["mlc", "soundexchange", "pro"] as Agency[]).map((a) => <DropdownMenuItem key={a} onClick={() => { if (!canSplit) { setUpsell(true); return; } downloadAgencyCsv(a, [t], safeName(t.title)); }}>{AGENCY_LABEL[a]} CSV</DropdownMenuItem>)}
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                     {onProtect && <Button type="button" variant={t.metadata.aiProtection ? "default" : "outline"} size="sm" onClick={() => onProtect(t)}><ShieldCheck />{t.metadata.aiProtection ? "Add AI Protection Proof" : "Protect Track"}</Button>}
                     <Button type="button" size="sm" onClick={() => { if (!canSplit) { setUpsell(true); return; } onSplitSheet?.(t); }}>{!canSplit && <Lock />}Generate Split Sheet</Button>
                     <Button type="button" variant="ghost" size="icon" aria-label={`Delete ${t.title}`} onClick={() => remove(t.id)}><Trash2 /></Button>
@@ -351,9 +358,15 @@ export function MetadataUploader({ stageName, userId, mode = "embed", onSubmitte
               return <div key={g} className="mb-8">
                 <h3 className="mb-3 text-sm font-bold uppercase tracking-widest text-primary">{g}s</h3>
                 {g === "Single"
-                  ? <ul className="grid gap-3">{[...items].sort((a, b) => a.title.localeCompare(b.title)).map(row)}</ul>
+                  ? <details open={newest ? releaseGroup(newest) === "Single" : false} className="rounded-2xl border border-border p-4 open:border-primary">
+                      <summary className="flex cursor-pointer list-none items-center gap-4">
+                        <div className="flex h-14 w-14 items-center justify-center rounded-lg bg-primary text-primary-foreground"><Disc3 className="h-7 w-7" /></div>
+                        <div className="min-w-0 flex-1"><div className="truncate text-xl font-bold">All Singles</div><div className="text-sm text-muted-foreground">{items.length} {items.length === 1 ? "single" : "singles"} · A–Z</div></div>
+                      </summary>
+                      <ul className="mt-4 grid gap-3">{[...items].sort((a, b) => a.title.localeCompare(b.title)).map(row)}</ul>
+                    </details>
                   : <div className="grid gap-4">{groupProjects(items).map((p) => (
-                    <details key={p.key} open className="rounded-2xl border border-border p-4 open:border-primary">
+                    <details key={p.key} open={!!newest && p.tracks.some((x) => x.id === newest.id)} className="rounded-2xl border border-border p-4 open:border-primary">
                       <summary className="flex cursor-pointer list-none items-center gap-4">
                         {p.cover ? <img src={p.cover} alt={`${p.title} artwork`} className="h-14 w-14 rounded-lg object-cover shadow" /> : <div className="flex h-14 w-14 items-center justify-center rounded-lg bg-primary text-primary-foreground"><Disc3 className="h-7 w-7" /></div>}
                         <div className="min-w-0 flex-1">
@@ -369,7 +382,7 @@ export function MetadataUploader({ stageName, userId, mode = "embed", onSubmitte
             </>
           )}
         </div>
-      )}
+      ); })()}
       <Dialog open={upsell} onOpenChange={setUpsell}>
         <DialogContent className="bg-card text-card-foreground">
           <DialogHeader><DialogTitle className="flex items-center gap-2 text-xl font-bold"><Lock className="h-5 w-5 text-primary" />Split Sheets are locked</DialogTitle></DialogHeader>
@@ -418,6 +431,14 @@ function groupProjects(items: CatalogTrack[]) {
     const tracks = [...list].sort((a, b) => (Number(a.metadata.trackNumber) || 999) - (Number(b.metadata.trackNumber) || 999) || a.title.localeCompare(b.title));
     return { key, tracks, title: list[0]!.metadata.album?.trim() || "Untitled", artist: list[0]!.artist, cover: tracks.find((t) => t.metadata.coverThumb)?.metadata.coverThumb };
   }).sort((a, b) => a.title.localeCompare(b.title));
+}
+
+function regBadges(t: CatalogTrack): string[] {
+  const m = t.metadata;
+  const ppl = (r: Contributor[] | undefined, label: string) => (r ?? []).filter((c) => c.name.trim()).map((c) => `${label}: ${c.name}${[c.percentage && `${c.percentage}%`, c.pro, c.ipi && `IPI ${c.ipi}`].filter(Boolean).length ? ` (${[c.percentage && `${c.percentage}%`, c.pro, c.ipi && `IPI ${c.ipi}`].filter(Boolean).join(" · ")})` : ""}`);
+  return [m.releaseType || "Single", m.primaryGenre, m.duration, m.releaseDate && `Released ${m.releaseDate}`, m.label && `Label ${m.label}`,
+    m.isrc && `ISRC ${m.isrc}`, m.upc && `UPC ${m.upc}`, m.iswc && `ISWC ${m.iswc}`,
+    ...ppl(m.writers, "Writer"), ...ppl(m.composers, "Composer"), ...ppl(m.publishers, "Publisher"), ...ppl(m.producers, "Producer")].filter((b): b is string => !!b);
 }
 
 function releaseGroup(t: CatalogTrack): "Single" | "EP" | "Album" {
