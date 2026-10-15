@@ -15,7 +15,8 @@ const AVATAR_BADGES = [
   { src: "/icons/playful/bedazzled_mic.png", label: "Recording artist" },
   { src: "/icons/playful/bedazzled_note.png", label: "Songwriter" },
   { src: "/icons/playful/bedazzled_mpc.png", label: "Producer" },
-  { src: "/icons/playful/bedazzled_cta.png", label: "Came Through" },
+  { src: "/icons/playful/bedazzled_band.png", label: "Live musician" },
+  { src: "/icons/playful/bedazzled_cta.png", label: "CTA Badge" },
 ];
 const STEPS = ["Welcome", "Profile Image", "Release Defaults", "Artist Catalog Profile"];
 const year = new Date().getFullYear();
