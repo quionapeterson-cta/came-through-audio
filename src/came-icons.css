@@ -22,6 +22,7 @@
 .cta-note { background-image: url("/icons/playful/bedazzled_note.png"); }
 .cta-vinyl { background-image: url("/icons/playful/bedazzled_vinyl.png"); }
 .cta-bedazzled { background-image: url("/icons/playful/bedazzled_cta.png"); }
+.cta-band { background-image: url("/icons/playful/bedazzled_band.png"); }
 
 /* Badges — blue only on white, gold only on black, Poppins Bold */
 .cta-badge-blue, .cta-badge-gold, .cta-badge-black {
