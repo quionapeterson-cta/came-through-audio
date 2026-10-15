@@ -462,11 +462,18 @@ function SplitEditor({ userId, track, initial, onClose, onSaved }: { userId: str
         </div>
         {!totalOk && <p className="mt-2 text-sm text-destructive">Splits must add up to exactly 100% before saving.</p>}
 
+        <label className="mt-6 block space-y-1 text-sm">
+          <span className="font-semibold">Notes <span className="font-normal text-muted-foreground">— optional</span></span>
+          <textarea value={notes} onChange={(e) => setNotes(e.target.value)} disabled={anySigned} rows={4}
+            className="w-full rounded-md border border-input bg-background px-3 py-2" />
+          <span className="block text-xs text-muted-foreground">Shown right above the signatures on the split sheet.</span>
+        </label>
+
         <div className="mt-6 flex flex-wrap gap-2">
           <Button onClick={() => void save()} disabled={saving || !totalOk}>
             {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileSignature className="h-4 w-4" />} Save split sheet
           </Button>
-          <Button variant="outline" onClick={() => void downloadSplitPdf(track, collaborators)} disabled={!collaborators.some((c) => c.name)}>
+          <Button variant="outline" onClick={() => void downloadSplitPdf(track, collaborators.map((c) => ({ ...c, notes })))} disabled={!collaborators.some((c) => c.name)}>
             <Download className="h-4 w-4" /> Download PDF
           </Button>
         </div>
@@ -543,6 +550,15 @@ async function buildSplitPdf(track: CatalogTrack, rawCollaborators: SplitCollabo
       y += 9;
     });
     y += 10;
+  }
+
+  const notes = t(rawCollaborators.find((c) => c.notes)?.notes).trim();
+  if (notes) {
+    const lines = pdf.splitTextToSize(notes, w - 36) as string[];
+    y = ensureSpace(pdf, y, 14 + lines.length * 4.5);
+    y = sectionTitle(pdf, y, "Notes");
+    pdf.setFont("helvetica", "normal").setFontSize(9.5).setTextColor(...INK).text(lines, 18, y);
+    y += lines.length * 4.5 + 8;
   }
 
   y = ensureSpace(pdf, y, 40);
