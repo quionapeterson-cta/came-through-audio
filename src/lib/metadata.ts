@@ -100,14 +100,14 @@ export async function embedMetadata(audio: ArrayBuffer, metadata: Metadata, artw
 }
 
 /** Reads ID3v2.3/2.4 text frames written by embedMetadata so re-uploads pre-fill the form. */
-export function readMetadata(buf: ArrayBuffer): Partial<Metadata> {
+export function readMetadata(buf: ArrayBuffer): Partial<Metadata> & { picture?: Blob } {
   const b = new Uint8Array(buf);
   if (b.length < 10 || b[0] !== 0x49 || b[1] !== 0x44 || b[2] !== 0x33) return {};
   const ver = b[3];
   const syncsafe = (i: number) => ((b[i]! & 127) << 21) | ((b[i + 1]! & 127) << 14) | ((b[i + 2]! & 127) << 7) | (b[i + 3]! & 127);
   const end = 10 + syncsafe(6);
   const dec = (enc: number, bytes: Uint8Array) => new TextDecoder(enc === 1 ? "utf-16" : enc === 2 ? "utf-16be" : enc === 3 ? "utf-8" : "latin1").decode(bytes).replace(/\u0000+$/, "");
-  const frames: Record<string, string> = {}; const txxx: Record<string, string> = {}; let lyrics = "";
+  const frames: Record<string, string> = {}; const txxx: Record<string, string> = {}; let lyrics = ""; let picture: Blob | undefined;
   let i = 10;
   while (i + 10 <= end && b[i] !== 0) {
     const id = String.fromCharCode(b[i]!, b[i + 1]!, b[i + 2]!, b[i + 3]!);
@@ -118,11 +118,19 @@ export function readMetadata(buf: ArrayBuffer): Partial<Metadata> {
       if (parts[0]) txxx[parts[0]] = parts.slice(1).join("");
     } else if (id === "USLT") {
       lyrics = dec(enc, body.subarray(4)).split("\u0000").filter(Boolean).pop() ?? "";
+    } else if (id === "APIC" && !picture) {
+      const mimeEnd = body.indexOf(0, 1);
+      const mime = new TextDecoder("latin1").decode(body.subarray(1, mimeEnd)) || "image/jpeg";
+      let j = mimeEnd + 2;
+      if (enc === 1 || enc === 2) { while (j + 1 < body.length && !(body[j] === 0 && body[j + 1] === 0)) j += 2; j += 2; }
+      else { while (j < body.length && body[j] !== 0) j++; j++; }
+      picture = new Blob([body.slice(j)], { type: mime.includes("png") ? "image/png" : "image/jpeg" });
     } else if (id.startsWith("T")) frames[id] = dec(enc, body.subarray(1)).replace(/\u0000/g, "/");
     i += 10 + size;
   }
   const json = <T,>(v?: string): T | undefined => { try { return v ? JSON.parse(v) as T : undefined; } catch { return undefined; } };
-  const out: Partial<Metadata> = {};
+  const out: Partial<Metadata> & { picture?: Blob } = {};
+  if (picture && picture.size > 0) out.picture = picture;
   if (frames["TIT2"]) out.title = frames["TIT2"];
   if (frames["TPE1"]) { const [a, ...f] = frames["TPE1"].split("/"); out.artist = a ?? ""; out.featured = f.length ? f : [""]; }
   if (frames["TALB"]) out.album = frames["TALB"];
@@ -137,6 +145,12 @@ export function readMetadata(buf: ArrayBuffer): Partial<Metadata> {
   const c = json<Contributor[]>(txxx["COMPOSER_SPLITS"]); if (c?.length) out.composers = c;
   if (txxx["PRODUCERS"]) out.producers = txxx["PRODUCERS"].split(", ").map((name) => ({ ...emptyContributor(), name }));
   const cr = json<Metadata["credits"]>(txxx["CREDITS"]); if (cr) out.credits = cr;
+  if (frames["TCON"]) { const [g1, g2] = frames["TCON"].split("/"); if (g1) out.primaryGenre = g1; if (g2) out.secondaryGenre = g2; }
+  if (frames["TLEN"]) { const sec = Math.round(Number(frames["TLEN"]) / 1000); if (sec > 0) out.duration = `${Math.floor(sec / 60)}:${String(sec % 60).padStart(2, "0")}`; }
+  if (txxx["RELEASE_TYPE"]) out.releaseType = txxx["RELEASE_TYPE"];
+  const pubs = json<Contributor[]>(txxx["PUBLISHERS"]);
+  if (pubs?.length) out.publishers = pubs.map((p) => ({ ...emptyContributor(), ...p }));
+  else if (frames["TPUB"]) out.publishers = frames["TPUB"].split("; ").map((name) => ({ ...emptyContributor(), name }));
   if (lyrics) out.lyrics = lyrics;
   return out;
 }
