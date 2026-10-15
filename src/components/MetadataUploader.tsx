@@ -30,6 +30,20 @@ export function MetadataUploader({ stageName, userId, mode = "embed", onSubmitte
   const [saving, setSaving] = useState(false);
   const [upsell, setUpsell] = useState<false | "split" | "export">(false);
   const [filter, setFilter] = useState<"All" | "Single" | "EP" | "Album">("All");
+  const [picked, setPicked] = useState<Set<string>>(new Set());
+  const togglePick = (id: string) => setPicked((s) => { const n = new Set(s); if (n.has(id)) n.delete(id); else n.add(id); return n; });
+  const runExport = (a: Agency, list: CatalogTrack[], name: string) => {
+    if (!canSplit) { setUpsell("export"); return; }
+    downloadAgencyExport(a, list, safeName(name)).catch(() => toast.error("Could not build the export."));
+  };
+  const exportMenu = (label: string, list: CatalogTrack[], name: string, size: "sm" | "default" = "sm") => (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild><Button type="button" variant="outline" size={size} onClick={(e) => e.stopPropagation()}>{!canSplit && <Lock />}{label}</Button></DropdownMenuTrigger>
+      <DropdownMenuContent align="end">
+        {(["mlc", "soundexchange", "pro"] as Agency[]).map((a) => <DropdownMenuItem key={a} onClick={() => runExport(a, list, name)}>{AGENCY_LABEL[a]}</DropdownMenuItem>)}
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
   const [useProfile, setUseProfile] = useState(false);
   const audioInput = useRef<HTMLInputElement>(null);
   useEffect(() => {
