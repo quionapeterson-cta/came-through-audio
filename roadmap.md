@@ -35,3 +35,9 @@
 - [ ] Before public launch: remove noindex tag and restore Allow rules in robots.txt
 - [x] Catalog: collapsible Singles, only newest release open, registration info bubbles
 - [x] 1-click agency exports (MLC, SoundExchange, ASCAP/BMI CSV) for Catalog & Collaborate+
+
+## Oct 15 updates
+- [x] Founder account promoted to super admin
+- [x] Writer title + Author/Composer/Author-Composer dropdown everywhere; MLC role codes
+- [x] Producer Name (Stage Name) on embed + setup with legal-name-as-Composer explainer
+- [x] PRO/IPI "add later" note; MPC producer profile badge

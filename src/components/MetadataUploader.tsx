@@ -8,7 +8,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { PRE_DIST_NOTE, PRO_TIP } from "@/lib/copy";
-import { readMetadata, CREDIT_ROLES, emptyContributor, emptyMetadata, embedMetadata, metadataSchema, GENRES, PROS, RELEASE_TYPES, type Contributor, type Metadata } from "@/lib/metadata";
+import { readMetadata, CREDIT_ROLES, emptyContributor, emptyMetadata, embedMetadata, metadataSchema, GENRES, PROS, RELEASE_TYPES, WRITER_ROLES, writerRole, type Contributor, type Metadata } from "@/lib/metadata";
 import { deleteTrack, downloadCatalogFile, listTracks, safeName, saveTrack, uploadCatalogFile, type CatalogTrack } from "@/lib/catalog";
 import { AGENCY_LABEL, downloadAgencyExport, type Agency } from "@/lib/agency-export";
 import { downloadLyricsPdf } from "@/lib/lyrics-pdf";
@@ -267,9 +267,10 @@ export function MetadataUploader({ stageName, userId, mode = "embed", onSubmitte
           </div>
         </fieldset>
 
-        <Contributors title="Writers" singular="writer" group="writers" rows={metadata.writers} disabled={busy} onChange={(rows) => update("writers", rows)} tip={full ? "Writers own the lyrics/melody copyright. Splits across all writers must total 100% and each writer should list their PRO and IPI." : undefined} simple={!full} />
-        <Contributors title="Composers" singular="composer" group="composers" rows={metadata.composers} disabled={busy} onChange={(rows) => update("composers", rows)} tip={full ? "Composers write the music. They share the writer's (composition) side of royalties, collected by PROs like BMI or ASCAP." : undefined} simple={!full} />
-        <Contributors title="Producers" singular="producer" group="producers" rows={metadata.producers ?? [emptyContributor()]} disabled={busy} onChange={(rows) => update("producers", rows)} simple={!full} />
+        <Contributors title="Writer" singular="writer" group="writers" writer rows={metadata.writers} disabled={busy} onChange={(rows) => update("writers", rows)} tip={full ? "Choose Author (lyrics/melody), Composer (music/beat) or Author/Composer for each writer. Writer splits must total 100%." : undefined} simple={!full} />
+        {full && metadata.composers.some((c) => c.name.trim()) && <Contributors title="Composer (earlier entries)" singular="composer" group="composers" rows={metadata.composers} disabled={busy} onChange={(rows) => update("composers", rows)} tip="Saved before Writer roles existed. Move these into Writer with the Composer role when you can." />}
+        <Contributors title="Producer Name (Stage Name)" singular="producer" group="producers" rows={metadata.producers ?? [emptyContributor()]} disabled={busy} onChange={(rows) => update("producers", rows)} simple
+          tip="Embedded with your track for credit. Place the producer's legal name under Writer as Composer in your Catalog for royalty splits." />
         <fieldset disabled={busy} className="space-y-5 border-t border-border pt-6">
           <legend className="pr-3 text-lg font-semibold">Identifiers</legend>
           <div className="grid gap-5 sm:grid-cols-3">
@@ -300,6 +301,7 @@ export function MetadataUploader({ stageName, userId, mode = "embed", onSubmitte
           </div>)}
           <Button type="button" variant="outline" onClick={() => update("credits", [...metadata.credits, { role: CREDIT_ROLES[0], name: "" }])}><Plus />Add credit</Button>
         </fieldset>}
+        {full && <p className="rounded-lg border border-primary/40 bg-accent/30 p-3 text-sm text-muted-foreground"><span className="font-semibold text-foreground">No PRO or IPI number yet?</span> Leave them blank. Add them anytime after you register with a PRO and receive your IPI name number.</p>}
         {full && <Contributors title="Publishers" singular="publisher" group="publishers" rows={metadata.publishers} disabled={busy} publisher onChange={(rows) => update("publishers", rows)} tip="Publishers administer the composition and collect the publisher share (usually 50%). Self-published writers can list their own publishing entity." />}
 
         <div className="space-y-4 border-t border-border pt-6 pb-8">
@@ -381,7 +383,7 @@ export function MetadataUploader({ stageName, userId, mode = "embed", onSubmitte
                         <div className="mb-1 text-xs font-bold uppercase tracking-widest text-primary">{cg.label}</div>
                         <ul className="space-y-1 text-sm">{cg.rows.map((c, i) => <li key={i} className="min-w-0">
                           <span className="font-semibold">{c.name}</span>
-                          {(c.percentage || c.pro || c.ipi) && <span className="block text-xs text-muted-foreground">{[c.percentage && `${c.percentage}%`, c.pro, c.ipi && `IPI ${c.ipi}`].filter(Boolean).join(" · ")}</span>}
+                          {(cg.label === "Writers" || c.percentage || c.pro || c.ipi) && <span className="block text-xs text-muted-foreground">{[cg.label === "Writers" && writerRole(c.role), c.percentage && `${c.percentage}%`, c.pro, c.ipi && `IPI ${c.ipi}`].filter(Boolean).join(" · ")}</span>}
                         </li>)}</ul>
                       </div>)}
                     </div>}
@@ -449,19 +451,22 @@ function SelectField({ label, id, value, options, onChange }: { label: string; i
     </select></div>;
 }
 
-function Contributors({ title, singular, group, rows, onChange, disabled, publisher, tip, simple }: { title: string; singular: string; group: string; rows: Contributor[]; onChange: (rows: Contributor[]) => void; disabled: boolean; publisher?: boolean; tip?: string | undefined; simple?: boolean }) {
+function Contributors({ title, singular, group, rows, onChange, disabled, publisher, tip, simple, writer }: { title: string; singular: string; group: string; rows: Contributor[]; onChange: (rows: Contributor[]) => void; disabled: boolean; publisher?: boolean; tip?: string | undefined; simple?: boolean; writer?: boolean }) {
+  const roleSelect = (row: Contributor, index: number) => writer && <SelectField label="Role" id={`${group}-${index}-role`} value={writerRole(row.role)} options={WRITER_ROLES} onChange={(value) => change(index, "role", value)} />;
+  const simpleLabel = group === "producers" ? "Producer name" : writer ? "Writer name" : `${title} name`;
   function change(index: number, key: keyof Contributor, value: string) { onChange(rows.map((row, i) => i === index ? { ...row, [key]: value } : row)); }
   return <fieldset disabled={disabled} className="space-y-5 border-t border-border pt-6">
     <legend className="pr-3 text-lg font-semibold">{title}{tip && <span title={tip} tabIndex={0} aria-label={tip} className="ml-2 inline-flex h-5 w-5 cursor-help items-center justify-center rounded-full border border-primary text-xs text-primary">i</span>}</legend>
     {tip && <p className="text-sm text-muted-foreground">{tip}</p>}
-    {simple ? rows.map((row, index) => <div key={index} className="flex items-end gap-2"><div className="flex-1"><Field label={`${title.slice(0, -1)} name`} id={`${group}-${index}-name`} value={row.name} onChange={(value) => change(index, "name", value)} /></div><Button type="button" size="icon" variant="ghost" aria-label={`Remove ${singular} ${index + 1}`} disabled={rows.length === 1} onClick={() => onChange(rows.filter((_, i) => i !== index))}><Trash2 /></Button></div>) : rows.map((row, index) => <div key={index} className={`grid items-end gap-4 ${publisher ? "sm:grid-cols-[1fr_160px_160px_36px]" : "sm:grid-cols-[1fr_110px_150px_150px_36px]"}`}>
+    {simple ? rows.map((row, index) => <div key={index} className="flex items-end gap-2"><div className="flex-1"><Field label={simpleLabel} id={`${group}-${index}-name`} value={row.name} onChange={(value) => change(index, "name", value)} /></div>{writer && <div className="w-44">{roleSelect(row, index)}</div>}<Button type="button" size="icon" variant="ghost" aria-label={`Remove ${singular} ${index + 1}`} disabled={rows.length === 1} onClick={() => onChange(rows.filter((_, i) => i !== index))}><Trash2 /></Button></div>) : rows.map((row, index) => <div key={index} className={`grid items-end gap-4 ${publisher ? "sm:grid-cols-[1fr_160px_160px_36px]" : writer ? "sm:grid-cols-[1fr_150px_110px_150px_150px_36px]" : "sm:grid-cols-[1fr_110px_150px_150px_36px]"}`}>
       <Field label={publisher ? "Publisher name" : "Legal name"} id={`${group}-${index}-name`} value={row.name} onChange={(value) => change(index, "name", value)} />
+      {roleSelect(row, index)}
       {!publisher && <div className="space-y-2"><Label htmlFor={`${group}-${index}-share`}>Split (%)</Label><Input id={`${group}-${index}-share`} type="number" min="0" max="100" step="0.01" value={row.percentage} onChange={(event) => change(index, "percentage", event.target.value)} /></div>}
       <Field label={publisher ? "Publisher IPI" : "IPI name number"} id={`${group}-${index}-ipi`} value={row.ipi} placeholder="9–11 digits" onChange={(value) => change(index, "ipi", value)} />
       <SelectField label="PRO affiliation" id={`${group}-${index}-pro`} value={row.pro} options={PROS} onChange={(value) => change(index, "pro", value)} />
       <Button type="button" size="icon" variant="ghost" aria-label={`Remove ${singular} ${index + 1}`} disabled={rows.length === 1} onClick={() => onChange(rows.filter((_, i) => i !== index))}><Trash2 /></Button>
     </div>)}
-    <div className="flex flex-wrap items-center justify-between gap-3"><Button type="button" variant="outline" onClick={() => onChange([...rows, emptyContributor()])}><Plus />Add {singular}</Button>{!publisher && !simple && <span className="text-sm text-muted-foreground">Total: {Number(rows.reduce((sum, row) => sum + Number(row.percentage || 0), 0).toFixed(2))}%</span>}</div>
+    <div className="flex flex-wrap items-center justify-between gap-3"><Button type="button" variant="outline" onClick={() => onChange([...rows, emptyContributor()])}><Plus />Add {singular}</Button>{!publisher && !simple && group !== "producers" && <span className="text-sm text-muted-foreground">Total: {Number(rows.reduce((sum, row) => sum + Number(row.percentage || 0), 0).toFixed(2))}%</span>}</div>
   </fieldset>;
 }
 function groupProjects(items: CatalogTrack[]) {
