@@ -20,10 +20,11 @@ export function agencyCsv(agency: Agency, tracks: CatalogTrack[]): string {
   const rows: unknown[][] = [head];
   for (const { metadata: m } of tracks) {
     const base = [m.title, m.iswc, m.isrc, m.artist];
+    const start = rows.length;
     for (const w of named(m.writers)) rows.push([...base, "Writer", w.name, "Writer", w.percentage, w.pro, w.ipi]);
     for (const c of named(m.composers)) rows.push([...base, "Writer", c.name, "Composer", c.percentage, c.pro, c.ipi]);
     for (const p of named(m.publishers)) rows.push([...base, "Publisher", p.name, "Publisher", p.percentage, p.pro, p.ipi]);
-    if (rows.length === 1 || rows[rows.length - 1]![0] !== m.title) rows.push([...base, "", "", "", "", "", ""]);
+    if (rows.length === start) rows.push([...base, "", "", "", "", "", ""]);
   }
   return csv(rows);
 }
