@@ -13,7 +13,7 @@ import { SplitSheets } from "@/components/SplitSheets";
 import { BrandLogo } from "@/components/BrandLogo";
 import type { CatalogTrack } from "@/lib/catalog";
 import { ArtistAvatar, ArtistOnboarding } from "@/components/ArtistOnboarding";
-import { loadOnboarding, type Onboarding } from "@/lib/artist-profile";
+import { loadOnboarding, syncFromCloud, type Onboarding } from "@/lib/artist-profile";
 import { RoyaltyUtilitySuite } from "@/components/RoyaltyUtilitySuite";
 import { ExpertAssistance } from "@/components/ExpertAssistance";
 import { RoyaltyHealthCheck } from "@/components/RoyaltyHealthCheck";
@@ -69,9 +69,14 @@ function Workspace() {
   const [embedKey, setEmbedKey] = useState(0);
   useEffect(() => {
     if (!user) return;
-    const o = loadOnboarding(user.id);
-    setOnboard(o);
-    if (!o?.done) setProfileOpen(true);
+    setOnboard(loadOnboarding(user.id));
+    let live = true;
+    syncFromCloud(user.id).then((o) => {
+      if (!live) return;
+      setOnboard(o); setEmbedKey((k) => k + 1);
+      if (!o?.done) setProfileOpen(true);
+    });
+    return () => { live = false; };
   }, [user]);
   const upgrade = () => document.getElementById("plans-trigger")?.click();
 

@@ -348,24 +348,30 @@ export type Database = {
       }
       profiles: {
         Row: {
+          artist_defaults: Json | null
           id: string
           legal_name: string | null
+          onboarding: Json | null
           role: Database["public"]["Enums"]["user_role"] | null
           stage_name: string | null
           tier: Database["public"]["Enums"]["subscription_tier"] | null
           updated_at: string | null
         }
         Insert: {
+          artist_defaults?: Json | null
           id: string
           legal_name?: string | null
+          onboarding?: Json | null
           role?: Database["public"]["Enums"]["user_role"] | null
           stage_name?: string | null
           tier?: Database["public"]["Enums"]["subscription_tier"] | null
           updated_at?: string | null
         }
         Update: {
+          artist_defaults?: Json | null
           id?: string
           legal_name?: string | null
+          onboarding?: Json | null
           role?: Database["public"]["Enums"]["user_role"] | null
           stage_name?: string | null
           tier?: Database["public"]["Enums"]["subscription_tier"] | null

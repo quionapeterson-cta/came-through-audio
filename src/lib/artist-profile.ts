@@ -1,4 +1,5 @@
 import { emptyContributor, emptyMetadata, type Contributor, type Metadata } from "@/lib/metadata";
+import { supabase } from "@/integrations/supabase/client";
 
 /** Recurring details a user can opt to prefill on every embed. Stored only in this browser. */
 export const PROFILE_KEYS = [
@@ -30,8 +31,16 @@ export function loadProfile(userId?: string): ArtistProfile | null {
   try { const v = localStorage.getItem(key(userId)); return v ? (JSON.parse(v) as ArtistProfile) : null; } catch { return null; }
 }
 
+// The account (profiles row) is the source of truth; localStorage is a fast local cache.
+const pushCloud = (userId: string, patch: Record<string, unknown>) => {
+  void supabase.from("profiles").update(patch as never).eq("id", userId).then(({ error }) => {
+    if (error) console.error("Profile sync failed", error.message);
+  });
+};
+
 export function saveProfile(userId: string, p: ArtistProfile | null) {
   if (p) localStorage.setItem(key(userId), JSON.stringify(p)); else localStorage.removeItem(key(userId));
+  pushCloud(userId, { artist_defaults: p });
 }
 
 export function loadOnboarding(userId?: string): Onboarding | null {
@@ -41,6 +50,19 @@ export function loadOnboarding(userId?: string): Onboarding | null {
 
 export function saveOnboarding(userId: string, o: Onboarding) {
   localStorage.setItem(onboardKey(userId), JSON.stringify(o));
+  pushCloud(userId, { onboarding: o });
+}
+
+/** Pull the account's saved profile into this device. Uploads local-only data from before sync existed. */
+export async function syncFromCloud(userId: string): Promise<Onboarding | null> {
+  const { data } = await supabase.from("profiles").select("*").eq("id", userId).maybeSingle();
+  const row = data as { artist_defaults?: ArtistProfile | null; onboarding?: Onboarding | null } | null;
+  const localP = loadProfile(userId), localO = loadOnboarding(userId);
+  if (row?.artist_defaults) localStorage.setItem(key(userId), JSON.stringify(row.artist_defaults));
+  else if (localP) pushCloud(userId, { artist_defaults: localP });
+  if (row?.onboarding) localStorage.setItem(onboardKey(userId), JSON.stringify(row.onboarding));
+  else if (localO) pushCloud(userId, { onboarding: localO });
+  return row?.onboarding ?? localO;
 }
 
 const hasName = (rows?: Contributor[]) => (rows ?? []).filter((r) => r.name.trim());
