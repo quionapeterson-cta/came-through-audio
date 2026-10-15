@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { embedMetadata, emptyMetadata, metadataSchema } from "@/lib/metadata";
+import { embedMetadata, emptyMetadata, metadataSchema, readMetadata } from "@/lib/metadata";
 
 describe("MP3 metadata", () => {
   it("embeds title, artist and ISRC without changing the audio bytes", async () => {
@@ -33,5 +33,15 @@ describe("MP3 metadata", () => {
     const base = { ...emptyMetadata(), title: "Track", artist: "Artist" };
     expect(metadataSchema.safeParse({ ...base, isrc: "invalid" }).success).toBe(false);
     expect(metadataSchema.safeParse({ ...base, writers: [{ name: "A", pro: "", percentage: "70" }, { name: "B", pro: "", percentage: "40" }] }).success).toBe(false);
+  });
+
+  it("reads back genres, release type, duration and publishers for pre-fill", async () => {
+    const data = { ...emptyMetadata(), title: "Therapy", artist: "Karma Came", primaryGenre: "R&B/Soul", releaseType: "EP", duration: "3:25", publishers: [{ name: "Came Pub", pro: "BMI", ipi: "123456789", percentage: "" }] };
+    const blob = await embedMetadata(new Uint8Array([255, 251, 144, 0]).buffer, data);
+    const out = readMetadata(await new Response(blob).arrayBuffer());
+    expect(out.primaryGenre).toBe("R&B/Soul");
+    expect(out.releaseType).toBe("EP");
+    expect(out.duration).toBe("3:25");
+    expect(out.publishers?.[0]?.name).toBe("Came Pub");
   });
 });
