@@ -81,6 +81,8 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
+      // Development-stage shield: remove before public launch.
+      { name: "robots", content: "noindex, nofollow" },
       { title: "Came Through Audio" },
       { name: "description", content: "Embed metadata, organize your catalog and check your royalty health." },
       { property: "og:type", content: "website" },
