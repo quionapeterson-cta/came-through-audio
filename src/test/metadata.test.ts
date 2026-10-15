@@ -38,7 +38,7 @@ describe("MP3 metadata", () => {
   it("reads back genres, release type, duration and publishers for pre-fill", async () => {
     const data = { ...emptyMetadata(), title: "Therapy", artist: "Karma Came", primaryGenre: "R&B/Soul", releaseType: "EP", duration: "3:25", publishers: [{ name: "Came Pub", pro: "BMI", ipi: "123456789", percentage: "" }] };
     const blob = await embedMetadata(new Uint8Array([255, 251, 144, 0]).buffer, data);
-    const out = readMetadata(await new Response(blob).arrayBuffer());
+    const out = readMetadata(await blob.arrayBuffer());
     expect(out.primaryGenre).toBe("R&B/Soul");
     expect(out.releaseType).toBe("EP");
     expect(out.duration).toBe("3:25");
