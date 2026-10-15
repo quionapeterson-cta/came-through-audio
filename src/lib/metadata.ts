@@ -5,11 +5,19 @@ export const PROS = ["BMI", "ASCAP", "SESAC", "GMR", "SOCAN", "PRS", "PPL", "Non
 export const RELEASE_TYPES = ["Single", "EP", "Album", "Compilation"] as const;
 export const GENRES = ["Hip-Hop/Rap", "R&B/Soul", "Pop", "Rock", "Gospel", "Jazz", "Blues", "Country", "Electronic", "Reggae", "Latin", "Afrobeats", "Classical", "Soundtrack", "Alternative", "Other"] as const;
 
+/** "Writer" is the umbrella title; each writer row picks one of these PRO roles. */
+export const WRITER_ROLES = ["Author", "Composer", "Author/Composer"] as const;
+export type WriterRole = (typeof WRITER_ROLES)[number];
+/** MLC writer role codes: A = Author, C = Composer, CA = Composer/Author. */
+export const MLC_ROLE: Record<WriterRole, string> = { Author: "A", Composer: "C", "Author/Composer": "CA" };
+export const writerRole = (r?: string): WriterRole => (WRITER_ROLES as readonly string[]).includes(r ?? "") ? (r as WriterRole) : "Author/Composer";
+
 export const contributorSchema = z.object({
   name: z.string().trim(),
   pro: z.string().trim(),
   ipi: z.string().trim().default("").refine((value) => !value || /^\d{9,11}$/.test(value), "IPI numbers are 9–11 digits."),
   percentage: z.string().trim().default("").refine((value) => value === "" || (Number.isFinite(Number(value)) && Number(value) >= 0 && Number(value) <= 100), "Enter a percentage between 0 and 100."),
+  role: z.string().optional(),
 });
 
 export const metadataSchema = z.object({
