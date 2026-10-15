@@ -28,4 +28,7 @@
 - [x] Split sheet invite: login/confirm returns to the requested signature page
 - [x] 30-day free Collaborate trial for e-signature collaborators; Author/Composer role; invite-email reminder; password rules
 - [x] Brand header contrast + email header two-tone + Catalog & Collaborate Trial copy
+- [x] Live Paddle products verified: all plan, AI and expert price codes exist in the live account
+- [ ] Paddle go-live approval: domain review rejected, business ID + identity verification not started (blocked: Paddle must approve)
+- [ ] Catalog Downloads menu: open on hover (currently click-only)
 - [ ] Milestone badges (gold) — waiting on the user's full badge rules
