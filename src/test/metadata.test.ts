@@ -55,7 +55,7 @@ d2("embed privacy", () => {
       writers: [{ name: "Kay Writer", pro: "BMI", ipi: "123456789", percentage: "50" }],
       publishers: [{ name: "Kay Pub", pro: "ASCAP", ipi: "987654321", percentage: "50" }] };
     const blob = await embedPrivacy(new ArrayBuffer(16), m);
-    const buf = await new Response(blob).arrayBuffer(); const text = new TextDecoder("utf-16le").decode(buf) + new TextDecoder("latin1").decode(buf);
+    const buf = await new Promise<ArrayBuffer>((r) => { const fr = new FileReader(); fr.onload = () => r(fr.result as ArrayBuffer); fr.readAsArrayBuffer(blob); }); const text = new TextDecoder("utf-16le").decode(buf) + new TextDecoder("latin1").decode(buf);
     e2(text).toContain("Kay Writer");
     e2(text).not.toContain("123456789");
     e2(text).not.toContain("987654321");
