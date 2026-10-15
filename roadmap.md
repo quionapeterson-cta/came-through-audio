@@ -32,3 +32,4 @@
 - [ ] Paddle go-live approval: domain review rejected, business ID + identity verification not started (blocked: Paddle must approve)
 - [ ] Catalog Downloads menu: open on hover (currently click-only)
 - [ ] Milestone badges (gold) — waiting on the user's full badge rules
+- [ ] Before public launch: remove noindex tag and restore Allow rules in robots.txt
