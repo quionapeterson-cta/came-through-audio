@@ -13,7 +13,7 @@ import { SplitSheets } from "@/components/SplitSheets";
 import { BrandLogo } from "@/components/BrandLogo";
 import type { CatalogTrack } from "@/lib/catalog";
 import { ArtistAvatar, ArtistOnboarding } from "@/components/ArtistOnboarding";
-import { loadOnboarding, type Onboarding } from "@/lib/artist-profile";
+import { loadOnboarding, syncFromCloud, type Onboarding } from "@/lib/artist-profile";
 import { RoyaltyUtilitySuite } from "@/components/RoyaltyUtilitySuite";
 import { ExpertAssistance } from "@/components/ExpertAssistance";
 import { RoyaltyHealthCheck } from "@/components/RoyaltyHealthCheck";
