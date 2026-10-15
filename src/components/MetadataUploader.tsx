@@ -27,7 +27,7 @@ export function MetadataUploader({ stageName, userId, mode = "embed", onSubmitte
   const [editingId, setEditingId] = useState<string>();
   const [saving, setSaving] = useState(false);
   const [upsell, setUpsell] = useState(false);
-  const [filter, setFilter] = useState<"All" | "Single" | "EP" | "Album">("Album");
+  const [filter, setFilter] = useState<"All" | "Single" | "EP" | "Album">("All");
   const audioInput = useRef<HTMLInputElement>(null);
   const artInput = useRef<HTMLInputElement>(null);
 
@@ -378,7 +378,7 @@ function groupProjects(items: CatalogTrack[]) {
   }
   return [...map.entries()].map(([key, list]) => {
     const tracks = [...list].sort((a, b) => (Number(a.metadata.trackNumber) || 999) - (Number(b.metadata.trackNumber) || 999) || a.title.localeCompare(b.title));
-    return { key, tracks, title: list[0].metadata.album?.trim() || "Untitled", artist: list[0].artist, cover: tracks.find((t) => t.metadata.coverThumb)?.metadata.coverThumb };
+    return { key, tracks, title: list[0]!.metadata.album?.trim() || "Untitled", artist: list[0]!.artist, cover: tracks.find((t) => t.metadata.coverThumb)?.metadata.coverThumb };
   }).sort((a, b) => a.title.localeCompare(b.title));
 }
 
