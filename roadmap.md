@@ -31,3 +31,4 @@
 - [x] Live Paddle products verified: all plan, AI and expert price codes exist in the live account
 - [ ] Paddle go-live approval: domain review rejected, business ID + identity verification not started (blocked: Paddle must approve)
 - [ ] Catalog Downloads menu: open on hover (currently click-only)
+- [ ] Milestone badges (gold) — waiting on the user's full badge rules
