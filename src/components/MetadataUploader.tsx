@@ -271,19 +271,17 @@ export function MetadataUploader({ stageName, userId, mode = "embed", onSubmitte
           {tracks.length === 0 ? <p className="text-sm text-muted-foreground">No songs yet. Embed a track in the Embed Metadata tab and submit it to your catalog.</p> : (
             <>
             <div className="mb-5 flex flex-wrap gap-2" role="tablist" aria-label="Filter by release type">
-              {(["All", "Single", "EP", "Album"] as const).map((f) => {
+              {(["Album", "EP", "Single", "All"] as const).map((f) => {
                 const n = f === "All" ? tracks.length : tracks.filter((t) => releaseGroup(t) === f).length;
                 return <Button key={f} type="button" role="tab" aria-selected={filter === f} size="sm" variant={filter === f ? "default" : "outline"} onClick={() => setFilter(f)}>{f === "All" ? "All" : `${f}s`}<span className="ml-1 opacity-70">{n}</span></Button>;
               })}
             </div>
-            {(["Single", "EP", "Album"] as const).filter((g) => filter === "All" || filter === g).map((g) => {
+            {(["Album", "EP", "Single"] as const).filter((g) => filter === "All" || filter === g).map((g) => {
               const items = tracks.filter((t) => releaseGroup(t) === g);
               if (!items.length) return null;
-              return <div key={g} className="mb-8">
-                <h3 className="mb-3 text-sm font-bold uppercase tracking-widest text-primary">{g}s</h3>
-                <ul className="grid gap-3">
-              {items.map((t) => (
+              const row = (t: CatalogTrack) => (
                 <li key={t.id} className={`group flex flex-wrap items-center gap-4 rounded-xl border p-3 transition hover:border-primary hover:shadow-md ${t.id === editingId ? "border-primary bg-accent/30" : "border-border"}`}>
+                  {g !== "Single" && <span className="w-6 text-center text-sm font-bold text-primary">{t.metadata.trackNumber || "–"}</span>}
                   {t.metadata.coverThumb
                     ? <img src={t.metadata.coverThumb} alt={`${t.title} artwork`} className="h-16 w-16 shrink-0 rounded-lg object-cover shadow" />
                     : <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground shadow"><Disc3 className="h-8 w-8 transition group-hover:rotate-180" /></div>}
@@ -311,8 +309,23 @@ export function MetadataUploader({ stageName, userId, mode = "embed", onSubmitte
                     <Button type="button" variant="ghost" size="icon" aria-label={`Delete ${t.title}`} onClick={() => remove(t.id)}><Trash2 /></Button>
                   </div>
                 </li>
-              ))}
-                </ul>
+              );
+              return <div key={g} className="mb-8">
+                <h3 className="mb-3 text-sm font-bold uppercase tracking-widest text-primary">{g}s</h3>
+                {g === "Single"
+                  ? <ul className="grid gap-3">{[...items].sort((a, b) => a.title.localeCompare(b.title)).map(row)}</ul>
+                  : <div className="grid gap-4">{groupProjects(items).map((p) => (
+                    <details key={p.key} open className="rounded-2xl border border-border p-4 open:border-primary">
+                      <summary className="flex cursor-pointer list-none items-center gap-4">
+                        {p.cover ? <img src={p.cover} alt={`${p.title} artwork`} className="h-14 w-14 rounded-lg object-cover shadow" /> : <div className="flex h-14 w-14 items-center justify-center rounded-lg bg-primary text-primary-foreground"><Disc3 className="h-7 w-7" /></div>}
+                        <div className="min-w-0 flex-1">
+                          <div className="truncate text-xl font-bold">{p.title}</div>
+                          <div className="text-sm text-muted-foreground">{p.artist} · {p.tracks.length} {p.tracks.length === 1 ? "track" : "tracks"}</div>
+                        </div>
+                      </summary>
+                      <ul className="mt-4 grid gap-3">{p.tracks.map(row)}</ul>
+                    </details>
+                  ))}</div>}
               </div>;
             })}
             </>
@@ -357,6 +370,18 @@ function Contributors({ title, singular, group, rows, onChange, disabled, publis
     <div className="flex flex-wrap items-center justify-between gap-3"><Button type="button" variant="outline" onClick={() => onChange([...rows, emptyContributor()])}><Plus />Add {singular}</Button>{!publisher && !simple && <span className="text-sm text-muted-foreground">Total: {Number(rows.reduce((sum, row) => sum + Number(row.percentage || 0), 0).toFixed(2))}%</span>}</div>
   </fieldset>;
 }
+function groupProjects(items: CatalogTrack[]) {
+  const map = new Map<string, CatalogTrack[]>();
+  for (const t of items) {
+    const key = (t.metadata.album || "Untitled").trim().toLowerCase().replace(/\s+/g, " ");
+    map.set(key, [...(map.get(key) ?? []), t]);
+  }
+  return [...map.entries()].map(([key, list]) => {
+    const tracks = [...list].sort((a, b) => (Number(a.metadata.trackNumber) || 999) - (Number(b.metadata.trackNumber) || 999) || a.title.localeCompare(b.title));
+    return { key, tracks, title: list[0].metadata.album?.trim() || "Untitled", artist: list[0].artist, cover: tracks.find((t) => t.metadata.coverThumb)?.metadata.coverThumb };
+  }).sort((a, b) => a.title.localeCompare(b.title));
+}
+
 function releaseGroup(t: CatalogTrack): "Single" | "EP" | "Album" {
   const r = t.metadata.releaseType;
   return r === "EP" ? "EP" : r === "Album" || r === "Compilation" ? "Album" : "Single";

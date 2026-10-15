@@ -37,6 +37,7 @@ export function SplitSheets({ userId, canSplit, prefillTrackId, onUpgrade }: { u
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState<CatalogTrack | null>(null);
   const [libKey, setLibKey] = useState(0);
+  const [pick, setPick] = useState("");
 
   const load = async () => {
     setLoading(true);
@@ -111,21 +112,36 @@ export function SplitSheets({ userId, canSplit, prefillTrackId, onUpgrade }: { u
           <p className="mt-4 max-w-md text-muted-foreground">Add a song to My Catalog first — every split sheet is tied to one of your tracks.</p>
         </div>
       ) : (
+        <>
+        <div className="flex flex-wrap items-end gap-3 rounded-2xl border border-primary p-5">
+          <div className="min-w-60 flex-1 space-y-2">
+            <label htmlFor="split-song" className="text-sm font-semibold">Choose a song for a split sheet</label>
+            <select id="split-song" value={pick} onChange={(e) => setPick(e.target.value)} className="flex h-10 w-full rounded-md border border-input bg-background px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+              <option value="">Select a song…</option>
+              {[...tracks].sort((a, b) => a.title.localeCompare(b.title)).map((t) => <option key={t.id} value={t.id}>{t.title}{t.metadata.album ? ` — ${t.metadata.album}` : ""}{sheets.has(t.id) ? " (has split sheet)" : ""}</option>)}
+            </select>
+          </div>
+          <Button disabled={!pick} onClick={() => { const t = tracks.find((x) => x.id === pick); if (t) { setEditing(t); setPick(""); } }}><PenLine className="h-4 w-4" /> Generate</Button>
+        </div>
+        {([["Pending Signatures", false], ["Signed Splits", true]] as const).map(([heading, signedGroup]) => {
+          const list = tracks.filter((t) => { const c = sheets.get(t.id); return c && (splitStatus(c) === "signed") === signedGroup; }).sort((a, b) => a.title.localeCompare(b.title));
+          return (
+            <section key={heading}>
+              <h3 className="mb-3 text-sm font-bold uppercase tracking-widest text-primary">{heading} <span className="opacity-70">{list.length}</span></h3>
+              {list.length === 0 ? <p className="text-sm text-muted-foreground">{signedGroup ? "No fully signed split sheets yet." : "No split sheets waiting on signatures."}</p> : (
         <div className="grid gap-4 md:grid-cols-2">
-          {tracks.map((track) => {
-            const collaborators = sheets.get(track.id);
-            const status = collaborators ? splitStatus(collaborators) : null;
-            const badge = status ? statusBadge[status] : null;
+          {list.map((track) => {
+            const collaborators = sheets.get(track.id)!;
+            const badge = statusBadge[splitStatus(collaborators)];
             return (
               <div key={track.id} className="rounded-2xl border border-border p-5">
                 <div className="flex items-start justify-between gap-3">
                   <div>
                     <div className="font-bold">{track.title}</div>
-                    <div className="text-sm text-muted-foreground">{track.artist}</div>
+                    <div className="text-sm text-muted-foreground">{track.artist}{track.metadata.album ? ` · ${track.metadata.album}` : ""}</div>
                   </div>
                   {badge && <Badge variant="outline" className={badge.className}>{badge.label}</Badge>}
                 </div>
-                {collaborators ? (
                   <div className="mt-4 space-y-1.5 text-sm">
                     {collaborators.filter((c) => c.name).map((c, i) => (
                       <div key={i} className="flex items-center justify-between gap-2">
@@ -140,18 +156,14 @@ export function SplitSheets({ userId, canSplit, prefillTrackId, onUpgrade }: { u
                       <span>Total</span><span className={splitTotal(collaborators) === 100 ? "text-primary" : "text-destructive"}>{splitTotal(collaborators)}%</span>
                     </div>
                   </div>
-                ) : (
-                  <p className="mt-4 text-sm text-muted-foreground">No split sheet yet for this song.</p>
-                )}
                 <div className="mt-4 flex gap-2">
                   <Button size="sm" className="flex-1" onClick={() => setEditing(track)}>
-                    <PenLine className="h-4 w-4" /> {collaborators ? "Edit split sheet" : "Create split sheet"}
+                    <PenLine className="h-4 w-4" /> {signedGroup ? "View split sheet" : "Edit split sheet"}
                   </Button>
-                  {collaborators && (
-                    <>
                       <Button size="sm" variant="outline" onClick={() => void downloadSplitPdf(track, collaborators)} aria-label="Download PDF"><Download className="h-4 w-4" /></Button>
                       <Button size="sm" variant="outline" aria-label="Delete split sheet"
                         onClick={async () => {
+                          if (!confirm("Delete this split sheet?")) return;
                           try {
                             await deleteSplitSheet(track.id);
                             toast.success("Split sheet deleted.");
@@ -162,13 +174,16 @@ export function SplitSheets({ userId, canSplit, prefillTrackId, onUpgrade }: { u
                         }}>
                         <Trash2 className="h-4 w-4" />
                       </Button>
-                    </>
-                  )}
                 </div>
               </div>
             );
           })}
         </div>
+              )}
+            </section>
+          );
+        })}
+        </>
       )}
     </div>
   );
