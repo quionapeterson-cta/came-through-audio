@@ -1,5 +1,5 @@
 import type { CatalogTrack } from "@/lib/catalog";
-import type { Contributor } from "@/lib/metadata";
+import { MLC_ROLE, writerRole, type Contributor } from "@/lib/metadata";
 
 export type Agency = "mlc" | "soundexchange" | "pro";
 export const AGENCY_LABEL: Record<Agency, string> = {
@@ -30,7 +30,7 @@ export function mlcRows(tracks: CatalogTrack[]): (string | number)[][] {
   const rows: (string | number)[][] = [];
   for (const { metadata: m } of tracks) {
     const people = [
-      ...named(m.writers).map((w) => ({ c: w, role: "CA" })),
+      ...named(m.writers).map((w) => ({ c: w, role: MLC_ROLE[writerRole(w.role)] })),
       ...named(m.composers).map((w) => ({ c: w, role: "C" })),
     ];
     const pubs = named(m.publishers);
@@ -72,7 +72,7 @@ export function proCheatSheet(tracks: CatalogTrack[]): string {
   const rows: unknown[][] = [["Work Title", "ISWC", "ISRC", "Performing Artist", "Party Type", "Name", "Role", "Share %", "PRO", "IPI #"]];
   for (const { metadata: m } of tracks) {
     const base = [m.title, m.iswc, m.isrc, m.artist];
-    for (const w of named(m.writers)) rows.push([...base, "Writer", w.name, "Composer/Author", w.percentage, w.pro, w.ipi]);
+    for (const w of named(m.writers)) rows.push([...base, "Writer", w.name, writerRole(w.role), w.percentage, w.pro, w.ipi]);
     for (const c of named(m.composers)) rows.push([...base, "Writer", c.name, "Composer", c.percentage, c.pro, c.ipi]);
     for (const p of named(m.publishers)) rows.push([...base, "Publisher", p.name, "Original Publisher", p.percentage, p.pro, p.ipi]);
   }
