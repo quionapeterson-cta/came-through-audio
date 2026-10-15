@@ -127,6 +127,16 @@ export function MetadataUploader({ stageName, userId, mode = "embed", onSubmitte
     if (!/\.mp3$/i.test(file.name)) { setError("Choose an MP3 audio file. WAV and FLAC embedding are not available yet."); return; }
     setAudio(file);
     setError("");
+    const probe = new Audio();
+    const probeUrl = URL.createObjectURL(file);
+    probe.preload = "metadata";
+    probe.onloadedmetadata = () => {
+      const sec = Math.round(probe.duration);
+      if (Number.isFinite(sec) && sec > 0) setMetadata((m) => ({ ...m, duration: `${Math.floor(sec / 60)}:${String(sec % 60).padStart(2, "0")}` }));
+      URL.revokeObjectURL(probeUrl);
+    };
+    probe.onerror = () => URL.revokeObjectURL(probeUrl);
+    probe.src = probeUrl;
     file.arrayBuffer().then((buf) => {
       const { picture, ...found } = readMetadata(buf);
       if (picture && !artwork) {
@@ -174,12 +184,6 @@ export function MetadataUploader({ stageName, userId, mode = "embed", onSubmitte
         </div>
       ) : showForm && (
       <form onSubmit={submit} className="space-y-8" aria-busy={busy}>
-        {userId && !full && (
-          <label className="flex items-start gap-3 rounded-xl border border-primary bg-accent/30 p-4 text-sm">
-            <input type="checkbox" className="mt-1 h-4 w-4 accent-[var(--primary)]" checked={useProfile} onChange={(e) => toggleProfile(e.target.checked)} />
-            <span><span className="font-semibold">Want to make embedding easier?</span> Pre-fill your main artist details on every embed — check here. We'll save your artist name, label, genres, writers, composers, producers and publishers from this form. You can still change any field for a one-off song.</span>
-          </label>
-        )}
         <fieldset disabled={busy} className="grid gap-5 sm:grid-cols-[1fr_220px]">
           <div onDragOver={(event) => event.preventDefault()} onDrop={(event) => { event.preventDefault(); if (!busy) selectAudio(event.dataTransfer.files[0]); }} className="flex min-h-44 flex-col items-center justify-center gap-3 rounded-lg border border-dashed border-primary bg-accent/30 p-5 text-center">
             <FileAudio className="h-8 w-8 text-primary" />
@@ -274,10 +278,16 @@ export function MetadataUploader({ stageName, userId, mode = "embed", onSubmitte
         {full && <Contributors title="Publishers" singular="publisher" group="publishers" rows={metadata.publishers} disabled={busy} publisher onChange={(rows) => update("publishers", rows)} tip="Publishers administer the composition and collect the publisher share (usually 50%). Self-published writers can list their own publishing entity." />}
 
         <div className="space-y-4 border-t border-border pt-6 pb-8">
+          {userId && !full && (
+            <label className="flex items-start gap-3 rounded-xl border border-primary bg-accent/30 p-4 text-sm">
+              <input type="checkbox" className="mt-1 h-4 w-4 accent-[var(--primary)]" checked={useProfile} onChange={(e) => toggleProfile(e.target.checked)} />
+              <span><span className="font-semibold">Want to make embedding easier?</span> Pre-fill your main artist details on every embed — check here. We'll save your artist name, label, genres, writers, composers, producers and publishers from this form. You can still change any field for a one-off song.</span>
+            </label>
+          )}
           {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
           {result && (
             <div role="status" className="space-y-3 rounded-xl border border-primary p-5">
-              <p className="flex items-center gap-2 text-lg font-bold"><span className="cta-icon cta-party cta-bedazzled-unlock" aria-hidden /> Audio Tagged Successfully!</p>
+              <p className="flex items-center gap-2 text-lg font-bold">Audio Tagged Successfully! <span className="cta-icon cta-party cta-bedazzled-unlock" aria-hidden /></p>
               <label className="flex items-start gap-3 text-sm">
                 <input type="checkbox" className="mt-1 h-4 w-4 accent-[var(--primary)]" checked={aiProtect} onChange={(e) => setAiProtect(e.target.checked)} />
                 <span><span className="font-semibold">Add AI Protection Certificate (+$2.99)</span> — With generative AI cloning and scraping artist catalogs at an alarming rate, secure your time-stamped proof of human origin right now to protect your music from false plagiarism claims and automated platform takedowns before downloading.</span>
