@@ -28,6 +28,8 @@ export type SplitCollaborator = {
   signedAt: string | null;
   isOwner: boolean;
   invitedAt: string | null;
+  /** Sheet-wide open notes, stored on every row of the sheet. */
+  notes: string;
 };
 
 export type SplitSheet = {
@@ -55,6 +57,7 @@ export const emptySplitCollaborator = (): SplitCollaborator => ({
   signedAt: null,
   isOwner: false,
   invitedAt: null,
+  notes: "",
 });
 
 export const splitTotal = (collaborators: SplitCollaborator[]) =>
@@ -101,6 +104,7 @@ type SplitRow = {
   signed_at: string | null;
   is_owner: boolean | null;
   invited_at: string | null;
+  notes?: string | null;
 };
 
 function fromRow(row: SplitRow): SplitCollaborator {
@@ -122,6 +126,7 @@ function fromRow(row: SplitRow): SplitCollaborator {
     signedAt: row.signed_at,
     isOwner: !!row.is_owner,
     invitedAt: row.invited_at,
+    notes: row.notes ?? "",
   };
 }
 
@@ -159,6 +164,7 @@ export async function saveSplitSheet(catalogId: string, collaborators: SplitColl
     signed_at: c.signedAt,
     is_owner: c.isOwner,
     invited_at: c.invitedAt,
+    notes: c.notes.trim() || null,
   });
   const { data: current, error: curErr } = await supabase.from("split_sheets").select("id, signed_at").eq("catalog_id", catalogId);
   if (curErr) throw curErr;
@@ -190,7 +196,7 @@ export const signLink = (rowId: string) => `${window.location.origin}/sign/${row
 export type SplitInvite = {
   row_id: string; track_title: string; artist_name: string; isrc: string | null;
   legal_name: string; performer_name: string | null; role: string;
-  publisher_name: string | null; publisher_pro: string | null; publisher_ipi: string | null; publisher_percentage: number | null; percentage: number; pro: string | null; ipi: string | null; signed_at: string | null;
+  publisher_name: string | null; publisher_pro: string | null; publisher_ipi: string | null; publisher_percentage: number | null; notes: string | null; percentage: number; pro: string | null; ipi: string | null; signed_at: string | null;
   collaborators: { name: string; performer: string | null; role: string; percentage: number; signed: boolean }[];
 };
 
