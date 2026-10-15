@@ -145,7 +145,13 @@ export function readMetadata(buf: ArrayBuffer): Partial<Metadata> & { picture?: 
   const c = json<Contributor[]>(txxx["COMPOSER_SPLITS"]); if (c?.length) out.composers = c;
   if (txxx["PRODUCERS"]) out.producers = txxx["PRODUCERS"].split(", ").map((name) => ({ ...emptyContributor(), name }));
   const cr = json<Metadata["credits"]>(txxx["CREDITS"]); if (cr) out.credits = cr;
-  if (frames["TCON"]) { const [g1, g2] = frames["TCON"].split("/"); if (g1) out.primaryGenre = g1; if (g2) out.secondaryGenre = g2; }
+  if (frames["TCON"]) {
+    // Genre names contain "/" (e.g. "R&B/Soul"), so match known genres instead of splitting.
+    const raw = frames["TCON"];
+    const found = GENRES.filter((g) => raw.includes(g)).sort((a, b) => raw.indexOf(a) - raw.indexOf(b));
+    if (found[0]) out.primaryGenre = found[0];
+    if (found[1]) out.secondaryGenre = found[1];
+  }
   if (frames["TLEN"]) { const sec = Math.round(Number(frames["TLEN"]) / 1000); if (sec > 0) out.duration = `${Math.floor(sec / 60)}:${String(sec % 60).padStart(2, "0")}`; }
   if (txxx["RELEASE_TYPE"]) out.releaseType = txxx["RELEASE_TYPE"];
   const pubs = json<Contributor[]>(txxx["PUBLISHERS"]);
