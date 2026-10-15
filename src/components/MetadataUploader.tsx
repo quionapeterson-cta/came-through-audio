@@ -11,6 +11,7 @@ import { PRE_DIST_NOTE, PRO_TIP } from "@/lib/copy";
 import { readMetadata, CREDIT_ROLES, emptyContributor, emptyMetadata, embedMetadata, metadataSchema, GENRES, PROS, RELEASE_TYPES, type Contributor, type Metadata } from "@/lib/metadata";
 import { deleteTrack, downloadCatalogFile, listTracks, safeName, saveTrack, uploadCatalogFile, type CatalogTrack } from "@/lib/catalog";
 import { downloadLyricsPdf } from "@/lib/lyrics-pdf";
+import { loadProfile, pickProfile, saveProfile, withProfile } from "@/lib/artist-profile";
 
 export function MetadataUploader({ stageName, userId, mode = "embed", onSubmitted, onSplitSheet, onProtect, canSplit }: { stageName?: string; userId?: string; mode?: "embed" | "catalog"; onSubmitted?: () => void; onSplitSheet?: (t: CatalogTrack) => void; onProtect?: (t: CatalogTrack) => void; canSplit?: boolean }) {
   const full = mode === "catalog";
@@ -28,7 +29,22 @@ export function MetadataUploader({ stageName, userId, mode = "embed", onSubmitte
   const [saving, setSaving] = useState(false);
   const [upsell, setUpsell] = useState(false);
   const [filter, setFilter] = useState<"All" | "Single" | "EP" | "Album">("All");
+  const [useProfile, setUseProfile] = useState(false);
   const audioInput = useRef<HTMLInputElement>(null);
+  useEffect(() => {
+    const p = loadProfile(userId);
+    setUseProfile(!!p);
+    if (p && !full) setMetadata((m) => (m.title || m.artist ? m : withProfile(p)));
+  }, [userId, full]);
+  function toggleProfile(on: boolean) {
+    if (!userId) return;
+    setUseProfile(on);
+    if (on) {
+      if (!metadata.artist.trim()) { toast.info("Fill in your artist name, label, genres, writers and publishers first — then check this box to save them."); setUseProfile(false); return; }
+      saveProfile(userId, pickProfile(metadata));
+      toast.success("Main artist details saved. They'll pre-fill every new embed — you can still change them anytime.");
+    } else { saveProfile(userId, null); toast.success("Pre-fill turned off."); }
+  }
   const artInput = useRef<HTMLInputElement>(null);
 
   const refresh = useCallback(() => {
@@ -75,7 +91,7 @@ export function MetadataUploader({ stageName, userId, mode = "embed", onSubmitte
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
   function startNew() {
-    setMetadata(emptyMetadata());
+    setMetadata(withProfile(loadProfile(userId)));
     setEditingId(undefined);
     setAudio(undefined);
     setArtwork(undefined);
@@ -112,8 +128,14 @@ export function MetadataUploader({ stageName, userId, mode = "embed", onSubmitte
     setAudio(file);
     setError("");
     file.arrayBuffer().then((buf) => {
-      const found = readMetadata(buf);
-      if (Object.keys(found).length) { setMetadata((m) => ({ ...m, ...found })); toast.success("Existing metadata found and pre-filled. You can still edit every field."); }
+      const { picture, ...found } = readMetadata(buf);
+      if (picture && !artwork) {
+        const art = new File([picture], picture.type === "image/png" ? "cover.png" : "cover.jpg", { type: picture.type });
+        setArtwork(art);
+        makeThumb(art).then((t) => setMetadata((m) => ({ ...m, coverThumb: t }))).catch(() => {});
+      }
+      const filled = Object.fromEntries(Object.entries(found).filter(([, v]) => Array.isArray(v) ? v.some((x) => (typeof x === "string" ? x : x?.name)) : v !== "" && v != null));
+      if (Object.keys(filled).length || picture) { setMetadata((m) => ({ ...m, ...filled })); toast.success("Existing metadata found and pre-filled. You can still edit every field."); }
     }).catch(() => {});
   }
   async function submit(event: FormEvent) {
@@ -152,6 +174,12 @@ export function MetadataUploader({ stageName, userId, mode = "embed", onSubmitte
         </div>
       ) : showForm && (
       <form onSubmit={submit} className="space-y-8" aria-busy={busy}>
+        {userId && !full && (
+          <label className="flex items-start gap-3 rounded-xl border border-primary bg-accent/30 p-4 text-sm">
+            <input type="checkbox" className="mt-1 h-4 w-4 accent-[var(--primary)]" checked={useProfile} onChange={(e) => toggleProfile(e.target.checked)} />
+            <span><span className="font-semibold">Want to make embedding easier?</span> Pre-fill your main artist details on every embed — check here. We'll save your artist name, label, genres, writers, composers, producers and publishers from this form. You can still change any field for a one-off song.</span>
+          </label>
+        )}
         <fieldset disabled={busy} className="grid gap-5 sm:grid-cols-[1fr_220px]">
           <div onDragOver={(event) => event.preventDefault()} onDrop={(event) => { event.preventDefault(); if (!busy) selectAudio(event.dataTransfer.files[0]); }} className="flex min-h-44 flex-col items-center justify-center gap-3 rounded-lg border border-dashed border-primary bg-accent/30 p-5 text-center">
             <FileAudio className="h-8 w-8 text-primary" />
