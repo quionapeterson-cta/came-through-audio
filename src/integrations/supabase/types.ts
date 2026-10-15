@@ -574,7 +574,12 @@ export type Database = {
           ipi_number: string | null
           is_owner: boolean
           legal_name: string | null
+          performer_name: string | null
           pro_affiliation: string | null
+          publisher_ipi: string | null
+          publisher_name: string | null
+          publisher_percentage: number | null
+          publisher_pro: string | null
           role: string
           signature_hash: string | null
           signature_name: string | null
@@ -589,7 +594,12 @@ export type Database = {
           ipi_number?: string | null
           is_owner?: boolean
           legal_name?: string | null
+          performer_name?: string | null
           pro_affiliation?: string | null
+          publisher_ipi?: string | null
+          publisher_name?: string | null
+          publisher_percentage?: number | null
+          publisher_pro?: string | null
           role?: string
           signature_hash?: string | null
           signature_name?: string | null
@@ -604,7 +614,12 @@ export type Database = {
           ipi_number?: string | null
           is_owner?: boolean
           legal_name?: string | null
+          performer_name?: string | null
           pro_affiliation?: string | null
+          publisher_ipi?: string | null
+          publisher_name?: string | null
+          publisher_percentage?: number | null
+          publisher_pro?: string | null
           role?: string
           signature_hash?: string | null
           signature_name?: string | null
