@@ -27,7 +27,7 @@ export function MetadataUploader({ stageName, userId, mode = "embed", onSubmitte
   const [editingId, setEditingId] = useState<string>();
   const [saving, setSaving] = useState(false);
   const [upsell, setUpsell] = useState(false);
-  const [filter, setFilter] = useState<"All" | "Single" | "EP" | "Album">("All");
+  const [filter, setFilter] = useState<"All" | "Single" | "EP" | "Album">("Album");
   const audioInput = useRef<HTMLInputElement>(null);
   const artInput = useRef<HTMLInputElement>(null);
 
