@@ -574,6 +574,7 @@ export type Database = {
           ipi_number: string | null
           is_owner: boolean
           legal_name: string | null
+          notes: string | null
           performer_name: string | null
           pro_affiliation: string | null
           publisher_ipi: string | null
@@ -594,6 +595,7 @@ export type Database = {
           ipi_number?: string | null
           is_owner?: boolean
           legal_name?: string | null
+          notes?: string | null
           performer_name?: string | null
           pro_affiliation?: string | null
           publisher_ipi?: string | null
@@ -614,6 +616,7 @@ export type Database = {
           ipi_number?: string | null
           is_owner?: boolean
           legal_name?: string | null
+          notes?: string | null
           performer_name?: string | null
           pro_affiliation?: string | null
           publisher_ipi?: string | null

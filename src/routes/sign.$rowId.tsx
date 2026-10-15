@@ -136,6 +136,12 @@ function SignPage() {
                     {invite.publisher_name && <p><span className="text-muted-foreground">Publisher:</span> <span className="font-semibold">{invite.publisher_name}</span>{invite.publisher_pro ? ` · ${invite.publisher_pro}` : ""}{invite.publisher_ipi ? ` · IPI ${invite.publisher_ipi}` : ""}{invite.publisher_percentage ? ` · ${invite.publisher_percentage}%` : ""}</p>}
                   </div>
                 )}
+                {invite.notes && (
+                  <div className="rounded-lg border border-border p-3 text-sm">
+                    <p className="mb-1 font-semibold">Notes</p>
+                    <p className="whitespace-pre-wrap text-muted-foreground">{invite.notes}</p>
+                  </div>
+                )}
                 <label className="block space-y-1 text-sm"><span className="font-medium">Type your legal name to sign: <span className="font-bold">{invite.legal_name}</span></span>
                   <input value={typed} onChange={(e) => setTyped(e.target.value)} placeholder={invite.legal_name} className="w-full rounded-md border border-input bg-background px-3 py-3 font-serif text-2xl italic" /></label>
                 <p className="text-xs text-muted-foreground">By signing, you agree the ownership percentages above are accurate. Your signature is time-stamped and secured with a SHA-256 hash.</p>

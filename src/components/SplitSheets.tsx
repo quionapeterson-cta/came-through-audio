@@ -240,6 +240,8 @@ function SplitEditor({ userId, track, initial, onClose, onSaved }: { userId: str
     void listContributors().then(setLibrary).catch(() => {});
   }, [userId]);
   const [accountEmail, setAccountEmail] = useState("");
+  const [notes, setNotes] = useState(initial?.find((c) => c.notes)?.notes ?? "");
+  const anySigned = collaborators.some((c) => c.signedAt);
 
   const fillFromLibrary = (i: number, name: string) => {
     const match = library.find((l) => l.name.toLowerCase() === name.trim().toLowerCase());
@@ -263,7 +265,7 @@ function SplitEditor({ userId, track, initial, onClose, onSaved }: { userId: str
     }
     try {
       const next = collaborators.map((r, idx) => (idx === i ? { ...r, invitedAt: new Date().toISOString() } : r));
-      const saved = await saveSplitSheet(track.id, next);
+      const saved = await saveSplitSheet(track.id, next.map((r) => ({ ...r, notes })));
       setCollaborators(saved);
       const row = saved.find((r) => r.name === c.name && r.email === c.email);
       if (!row?.rowId) return;
@@ -291,7 +293,7 @@ function SplitEditor({ userId, track, initial, onClose, onSaved }: { userId: str
     }
     setSaving(true);
     try {
-      await saveSplitSheet(track.id, collaborators);
+      await saveSplitSheet(track.id, collaborators.map((c) => ({ ...c, notes })));
       await saveContributors(userId, collaborators.map((c) => ({ name: c.name, kind: c.role, email: c.email, pro: c.pro, ipi: c.ipi, publisher: c.publisherName, label: "" }))).catch(() => {});
       toast.success("Split sheet saved.");
       onSaved();
@@ -368,12 +370,7 @@ function SplitEditor({ userId, track, initial, onClose, onSaved }: { userId: str
                   )}
                 </div>
               </div>
-              <div className="mt-3 grid gap-3 md:grid-cols-3">
-                <label className="space-y-1 text-sm">
-                  <span className="font-medium">Performer Name (Stage Name)</span>
-                  <input value={c.performerName} onChange={(e) => update(i, { performerName: e.target.value })} disabled={!!c.signedAt}
-                    className="w-full rounded-md border border-input bg-background px-3 py-2" placeholder="Optional — artist or stage name" />
-                </label>
+              <div className="mt-3 grid gap-3 md:grid-cols-2">
                 <label className="space-y-1 text-sm">
                   <span className="font-medium">PRO affiliation <span className="font-normal text-muted-foreground">(optional — they can add it too)</span></span>
                   <ProSelect value={c.pro} onChange={(v) => update(i, { pro: v })} disabled={!!c.signedAt} />
@@ -465,11 +462,18 @@ function SplitEditor({ userId, track, initial, onClose, onSaved }: { userId: str
         </div>
         {!totalOk && <p className="mt-2 text-sm text-destructive">Splits must add up to exactly 100% before saving.</p>}
 
+        <label className="mt-6 block space-y-1 text-sm">
+          <span className="font-semibold">Notes <span className="font-normal text-muted-foreground">— optional</span></span>
+          <textarea value={notes} onChange={(e) => setNotes(e.target.value)} disabled={anySigned} rows={4}
+            className="w-full rounded-md border border-input bg-background px-3 py-2" />
+          <span className="block text-xs text-muted-foreground">Shown right above the signatures on the split sheet.</span>
+        </label>
+
         <div className="mt-6 flex flex-wrap gap-2">
           <Button onClick={() => void save()} disabled={saving || !totalOk}>
             {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileSignature className="h-4 w-4" />} Save split sheet
           </Button>
-          <Button variant="outline" onClick={() => void downloadSplitPdf(track, collaborators)} disabled={!collaborators.some((c) => c.name)}>
+          <Button variant="outline" onClick={() => void downloadSplitPdf(track, collaborators.map((c) => ({ ...c, notes })))} disabled={!collaborators.some((c) => c.name)}>
             <Download className="h-4 w-4" /> Download PDF
           </Button>
         </div>
@@ -546,6 +550,15 @@ async function buildSplitPdf(track: CatalogTrack, rawCollaborators: SplitCollabo
       y += 9;
     });
     y += 10;
+  }
+
+  const notes = t(rawCollaborators.find((c) => c.notes)?.notes).trim();
+  if (notes) {
+    const lines = pdf.splitTextToSize(notes, w - 36) as string[];
+    y = ensureSpace(pdf, y, 14 + lines.length * 4.5);
+    y = sectionTitle(pdf, y, "Notes");
+    pdf.setFont("helvetica", "normal").setFontSize(9.5).setTextColor(...INK).text(lines, 18, y);
+    y += lines.length * 4.5 + 8;
   }
 
   y = ensureSpace(pdf, y, 40);
