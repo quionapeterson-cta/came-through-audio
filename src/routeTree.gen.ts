@@ -18,6 +18,7 @@ import { Route as PrivacyPolicyRouteImport } from './routes/privacy-policy'
 import { Route as RefundPolicyRouteImport } from './routes/refund-policy'
 import { Route as TermsAndConditionsRouteImport } from './routes/terms-and-conditions'
 import { Route as TermsOfServiceRouteImport } from './routes/terms-of-service'
+import { Route as UnlockRouteImport } from './routes/unlock'
 import { Route as VerifiedRouteImport } from './routes/verified'
 import { Route as WorkspaceRouteImport } from './routes/workspace'
 import { Route as SignRowIdRouteImport } from './routes/sign.$rowId'
@@ -69,6 +70,11 @@ const TermsOfServiceRoute = TermsOfServiceRouteImport.update({
   path: '/terms-of-service',
   getParentRoute: () => rootRouteImport,
 } as any)
+const UnlockRoute = UnlockRouteImport.update({
+  id: '/unlock',
+  path: '/unlock',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const VerifiedRoute = VerifiedRouteImport.update({
   id: '/verified',
   path: '/verified',
@@ -107,6 +113,7 @@ export interface FileRoutesByFullPath {
   '/refund-policy': typeof RefundPolicyRoute
   '/terms-and-conditions': typeof TermsAndConditionsRoute
   '/terms-of-service': typeof TermsOfServiceRoute
+  '/unlock': typeof UnlockRoute
   '/verified': typeof VerifiedRoute
   '/workspace': typeof WorkspaceRoute
   '/sign/$rowId': typeof SignRowIdRoute
@@ -123,6 +130,7 @@ export interface FileRoutesByTo {
   '/refund-policy': typeof RefundPolicyRoute
   '/terms-and-conditions': typeof TermsAndConditionsRoute
   '/terms-of-service': typeof TermsOfServiceRoute
+  '/unlock': typeof UnlockRoute
   '/verified': typeof VerifiedRoute
   '/workspace': typeof WorkspaceRoute
   '/sign/$rowId': typeof SignRowIdRoute
@@ -140,6 +148,7 @@ export interface FileRoutesById {
   '/refund-policy': typeof RefundPolicyRoute
   '/terms-and-conditions': typeof TermsAndConditionsRoute
   '/terms-of-service': typeof TermsOfServiceRoute
+  '/unlock': typeof UnlockRoute
   '/verified': typeof VerifiedRoute
   '/workspace': typeof WorkspaceRoute
   '/sign/$rowId': typeof SignRowIdRoute
@@ -158,6 +167,7 @@ export interface FileRouteTypes {
     | '/refund-policy'
     | '/terms-and-conditions'
     | '/terms-of-service'
+    | '/unlock'
     | '/verified'
     | '/workspace'
     | '/sign/$rowId'
@@ -174,6 +184,7 @@ export interface FileRouteTypes {
     | '/refund-policy'
     | '/terms-and-conditions'
     | '/terms-of-service'
+    | '/unlock'
     | '/verified'
     | '/workspace'
     | '/sign/$rowId'
@@ -190,6 +201,7 @@ export interface FileRouteTypes {
     | '/refund-policy'
     | '/terms-and-conditions'
     | '/terms-of-service'
+    | '/unlock'
     | '/verified'
     | '/workspace'
     | '/sign/$rowId'
@@ -207,6 +219,7 @@ export interface RootRouteChildren {
   RefundPolicyRoute: typeof RefundPolicyRoute
   TermsAndConditionsRoute: typeof TermsAndConditionsRoute
   TermsOfServiceRoute: typeof TermsOfServiceRoute
+  UnlockRoute: typeof UnlockRoute
   VerifiedRoute: typeof VerifiedRoute
   WorkspaceRoute: typeof WorkspaceRoute
   SignRowIdRoute: typeof SignRowIdRoute
@@ -279,6 +292,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof TermsOfServiceRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/unlock': {
+      id: '/unlock'
+      path: '/unlock'
+      fullPath: '/unlock'
+      preLoaderRoute: typeof UnlockRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/verified': {
       id: '/verified'
       path: '/verified'
@@ -327,6 +347,7 @@ const rootRouteChildren: RootRouteChildren = {
   RefundPolicyRoute: RefundPolicyRoute,
   TermsAndConditionsRoute: TermsAndConditionsRoute,
   TermsOfServiceRoute: TermsOfServiceRoute,
+  UnlockRoute: UnlockRoute,
   VerifiedRoute: VerifiedRoute,
   WorkspaceRoute: WorkspaceRoute,
   SignRowIdRoute: SignRowIdRoute,
