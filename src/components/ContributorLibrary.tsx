@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { BookUser, Plus, Trash2, Save } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { CONTRIBUTOR_KINDS, deleteContributor, listContributors, saveContributors, type SavedContributor } from "@/lib/splits";
+import { ALL_PROS, CONTRIBUTOR_KINDS, deleteContributor, listContributors, saveContributors, type SavedContributor } from "@/lib/splits";
 
 const blank = (): SavedContributor => ({ name: "", kind: "Writer", email: "", pro: "", ipi: "", publisher: "", label: "" });
 const field = "w-full rounded-md border border-input bg-background px-2 py-1.5 text-sm";
@@ -38,7 +38,11 @@ export function ContributorLibrary({ userId, refreshKey }: { userId: string; ref
                 {CONTRIBUTOR_KINDS.map((k) => <option key={k}>{k}</option>)}
               </select>
               <input className={field} value={c.email} placeholder="Email" onChange={(e) => update(i, { email: e.target.value })} />
-              <input className={field} value={c.pro} placeholder="PRO" onChange={(e) => update(i, { pro: e.target.value })} />
+              <select className={field} value={c.pro} onChange={(e) => update(i, { pro: e.target.value })}>
+                <option value="">PRO…</option>
+                {c.pro && !(ALL_PROS as readonly string[]).includes(c.pro) && <option value={c.pro}>{c.pro}</option>}
+                {ALL_PROS.map((p) => <option key={p} value={p}>{p}</option>)}
+              </select>
               <input className={field} value={c.ipi} placeholder="IPI #" onChange={(e) => update(i, { ipi: e.target.value })} />
               <input className={field} value={c.publisher} placeholder="Publisher" onChange={(e) => update(i, { publisher: e.target.value })} />
               <input className={field} value={c.label} placeholder="Label" onChange={(e) => update(i, { label: e.target.value })} />

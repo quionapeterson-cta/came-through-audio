@@ -7,7 +7,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { BrandLogo } from "@/components/BrandLogo";
 import { SignupCard } from "@/components/SignupCard";
 import { Button } from "@/components/ui/button";
-import { getSplitInvite, signSplitInvite, type SplitInvite } from "@/lib/splits";
+import { ALL_PROS, getSplitInvite, signSplitInvite, type SplitInvite } from "@/lib/splits";
 import { useServerFn } from "@tanstack/react-start";
 import { grantCollaboratorTrial } from "@/lib/collab-trial.functions";
 import { getPaddleEnvironment } from "@/lib/paddle";
@@ -106,7 +106,7 @@ function SignPage() {
             <div className="overflow-hidden rounded-2xl border border-border">
               {invite.collaborators.map((c, i) => (
                 <div key={i} className={`flex items-center justify-between gap-3 px-5 py-3 ${i % 2 ? "bg-muted/50" : ""}`}>
-                  <span className="flex items-center gap-2">{c.signed ? <Check className="h-4 w-4 text-primary" /> : <span className="h-2 w-2 rounded-full bg-muted-foreground" />}<span className="font-semibold">{c.name}</span><span className="text-sm text-muted-foreground">{c.role}</span></span>
+                  <span className="flex items-center gap-2">{c.signed ? <Check className="h-4 w-4 text-primary" /> : <span className="h-2 w-2 rounded-full bg-muted-foreground" />}<span className="font-semibold">{c.name}</span>{c.performer ? <span className="text-sm text-muted-foreground">p/k/a {c.performer}</span> : null}<span className="text-sm text-muted-foreground">{c.role}</span></span>
                   <span className="font-bold">{c.percentage}%</span>
                 </div>
               ))}
@@ -122,10 +122,20 @@ function SignPage() {
                 <h2 className="text-xl font-bold">Your share: {invite.percentage}% · {invite.role}</h2>
                 <div className="grid gap-3 sm:grid-cols-2">
                   <label className="space-y-1 text-sm"><span className="font-medium">PRO affiliation</span>
-                    <input value={pro} onChange={(e) => setPro(e.target.value)} placeholder="ASCAP, BMI, SESAC…" className="w-full rounded-md border border-input bg-background px-3 py-2" /></label>
+                    <select value={pro} onChange={(e) => setPro(e.target.value)} className="w-full rounded-md border border-input bg-background px-3 py-2">
+                      <option value="">Select PRO…</option>
+                      {pro && !(ALL_PROS as readonly string[]).includes(pro) && <option value={pro}>{pro}</option>}
+                      {ALL_PROS.map((p) => <option key={p} value={p}>{p}</option>)}
+                    </select></label>
                   <label className="space-y-1 text-sm"><span className="font-medium">IPI / CAE number</span>
                     <input value={ipi} onChange={(e) => setIpi(e.target.value)} placeholder="Optional" className="w-full rounded-md border border-input bg-background px-3 py-2" /></label>
                 </div>
+                {(invite.performer_name || invite.publisher_name) && (
+                  <div className="grid gap-2 rounded-lg bg-muted p-3 text-sm sm:grid-cols-2">
+                    {invite.performer_name && <p><span className="text-muted-foreground">Performer name:</span> <span className="font-semibold">{invite.performer_name}</span></p>}
+                    {invite.publisher_name && <p><span className="text-muted-foreground">Publisher:</span> <span className="font-semibold">{invite.publisher_name}</span>{invite.publisher_pro ? ` · ${invite.publisher_pro}` : ""}{invite.publisher_ipi ? ` · IPI ${invite.publisher_ipi}` : ""}{invite.publisher_percentage ? ` · ${invite.publisher_percentage}%` : ""}</p>}
+                  </div>
+                )}
                 <label className="block space-y-1 text-sm"><span className="font-medium">Type your legal name to sign: <span className="font-bold">{invite.legal_name}</span></span>
                   <input value={typed} onChange={(e) => setTyped(e.target.value)} placeholder={invite.legal_name} className="w-full rounded-md border border-input bg-background px-3 py-3 font-serif text-2xl italic" /></label>
                 <p className="text-xs text-muted-foreground">By signing, you agree the ownership percentages above are accurate. Your signature is time-stamped and secured with a SHA-256 hash.</p>

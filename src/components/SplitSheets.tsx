@@ -10,6 +10,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { sendSplitInvite } from "@/lib/splits-email.functions";
 import {
   SPLIT_ROLES,
+  ALL_PROS,
   collaboratorsFromTrack,
   deleteSplitSheet,
   emptySplitCollaborator,
@@ -98,7 +99,7 @@ export function SplitSheets({ userId, canSplit, prefillTrackId, onUpgrade }: { u
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h2 className="text-2xl font-bold">Split Sheets</h2>
-          <p className="text-sm text-muted-foreground">Create industry-standard split sheets from your catalog songs and sign as the owner. Collaborators get an email request to sign with a free account.</p>
+          <p className="text-sm text-muted-foreground">Create industry-standard split sheets from your catalog songs and sign as the owner. Collaborators receive an email invitation to review and sign, plus a free 30-day trial of the Catalog & Collaborate account.</p>
         </div>
       </div>
 
@@ -234,7 +235,7 @@ function SplitEditor({ userId, track, initial, onClose, onSaved }: { userId: str
     const match = library.find((l) => l.name.toLowerCase() === name.trim().toLowerCase());
     const row = collaborators[i];
     if (!match || !row) return;
-    update(i, { email: row.email || match.email, pro: row.pro || match.pro, ipi: row.ipi || match.ipi });
+    update(i, { email: row.email || match.email, pro: row.pro || match.pro, ipi: row.ipi || match.ipi, publisherName: row.publisherName || match.publisher });
   };
 
   const markOwner = (i: number) => setCollaborators((rows) => rows.map((r, idx) => ({ ...r, isOwner: idx === i })));
@@ -281,7 +282,7 @@ function SplitEditor({ userId, track, initial, onClose, onSaved }: { userId: str
     setSaving(true);
     try {
       await saveSplitSheet(track.id, collaborators);
-      await saveContributors(userId, collaborators.map((c) => ({ name: c.name, kind: c.role, email: c.email, pro: c.pro, ipi: c.ipi, publisher: "", label: "" }))).catch(() => {});
+      await saveContributors(userId, collaborators.map((c) => ({ name: c.name, kind: c.role, email: c.email, pro: c.pro, ipi: c.ipi, publisher: c.publisherName, label: "" }))).catch(() => {});
       toast.success("Split sheet saved.");
       onSaved();
     } catch {
@@ -357,11 +358,15 @@ function SplitEditor({ userId, track, initial, onClose, onSaved }: { userId: str
                   )}
                 </div>
               </div>
-              <div className="mt-3 grid gap-3 md:grid-cols-2">
+              <div className="mt-3 grid gap-3 md:grid-cols-3">
+                <label className="space-y-1 text-sm">
+                  <span className="font-medium">Performer Name (Stage Name)</span>
+                  <input value={c.performerName} onChange={(e) => update(i, { performerName: e.target.value })} disabled={!!c.signedAt}
+                    className="w-full rounded-md border border-input bg-background px-3 py-2" placeholder="Optional — artist or stage name" />
+                </label>
                 <label className="space-y-1 text-sm">
                   <span className="font-medium">PRO affiliation</span>
-                  <input value={c.pro} onChange={(e) => update(i, { pro: e.target.value })} disabled={!!c.signedAt}
-                    className="w-full rounded-md border border-input bg-background px-3 py-2" placeholder="ASCAP, BMI… (they can add it too)" />
+                  <ProSelect value={c.pro} onChange={(v) => update(i, { pro: v })} disabled={!!c.signedAt} />
                 </label>
                 <label className="space-y-1 text-sm">
                   <span className="font-medium">IPI / CAE number</span>
@@ -369,6 +374,33 @@ function SplitEditor({ userId, track, initial, onClose, onSaved }: { userId: str
                     className="w-full rounded-md border border-input bg-background px-3 py-2" placeholder="Optional — they can add it too" />
                 </label>
               </div>
+
+              <details className="mt-3 rounded-lg border border-border p-3" open={!!c.publisherName}>
+                <summary className="cursor-pointer text-sm font-semibold">Publishing <span className="font-normal text-muted-foreground">— optional</span></summary>
+                <div className="mt-3 grid gap-3 md:grid-cols-[1.4fr_1fr_1fr_0.6fr]">
+                  <label className="space-y-1 text-sm">
+                    <span className="font-medium">Publisher name</span>
+                    <input value={c.publisherName} onChange={(e) => update(i, { publisherName: e.target.value })} disabled={!!c.signedAt}
+                      className="w-full rounded-md border border-input bg-background px-3 py-2" placeholder="Publishing company or self-published" />
+                  </label>
+                  <label className="space-y-1 text-sm">
+                    <span className="font-medium">Publisher PRO</span>
+                    <ProSelect value={c.publisherPro} onChange={(v) => update(i, { publisherPro: v })} disabled={!!c.signedAt || !c.publisherName.trim()} />
+                  </label>
+                  <label className="space-y-1 text-sm">
+                    <span className="font-medium">Publisher IPI #</span>
+                    <input value={c.publisherIpi} onChange={(e) => update(i, { publisherIpi: e.target.value })} disabled={!!c.signedAt || !c.publisherName.trim()}
+                      className="w-full rounded-md border border-input bg-background px-3 py-2" placeholder="Optional" />
+                  </label>
+                  <label className="space-y-1 text-sm">
+                    <span className="font-medium">Publisher %</span>
+                    <input type="number" min={0} max={100} value={c.publisherPercentage || ""} disabled={!!c.signedAt || !c.publisherName.trim()}
+                      onChange={(e) => update(i, { publisherPercentage: Math.max(0, Math.min(100, Number(e.target.value) || 0)) })}
+                      className="w-full rounded-md border border-input bg-background px-3 py-2" placeholder="0" />
+                  </label>
+                </div>
+                <p className="mt-2 text-xs text-muted-foreground">Publisher share is the publishing side of this writer's split — it doesn't change the 100% writer total.</p>
+              </details>
 
               <div className="mt-3 flex flex-wrap items-center gap-3">
                 {c.signedAt ? (
@@ -449,7 +481,7 @@ async function downloadSplitPdf(track: CatalogTrack, collaborators: SplitCollabo
 
 async function buildSplitPdf(track: CatalogTrack, rawCollaborators: SplitCollaborator[]) {
   const t = (v: unknown) => (v === null || v === undefined ? "" : String(v));
-  const collaborators = rawCollaborators.map((c) => ({ ...c, name: t(c.name), role: t(c.role) as SplitCollaborator["role"], pro: t(c.pro), ipi: t(c.ipi), signatureName: t(c.signatureName) || t(c.name), signatureHash: t(c.signatureHash), percentage: Number(c.percentage) || 0 }));
+  const collaborators = rawCollaborators.map((c) => ({ ...c, name: t(c.name), role: t(c.role) as SplitCollaborator["role"], pro: t(c.pro), ipi: t(c.ipi), performerName: t(c.performerName), publisherName: t(c.publisherName), publisherPro: t(c.publisherPro), publisherIpi: t(c.publisherIpi), signatureName: t(c.signatureName) || t(c.name), signatureHash: t(c.signatureHash), percentage: Number(c.percentage) || 0 }));
   track = { ...track, title: t(track.title) || "Untitled", artist: t(track.artist), metadata: { ...track.metadata, isrc: t(track.metadata?.isrc), iswc: t(track.metadata?.iswc) } };
   const { newBrandedPdf, brandHeader, brandFooter, infoGrid, sectionTitle, ensureSpace, COBALT, INK, MUTED, RULE } = await import("@/lib/brand-pdf");
   const pdf = await newBrandedPdf();
@@ -473,16 +505,38 @@ async function buildSplitPdf(track: CatalogTrack, rawCollaborators: SplitCollabo
     if (i % 2) pdf.setFillColor(245, 247, 251).rect(18, y, w - 36, 9, "F");
     pdf.setFont("helvetica", "normal").setFontSize(10).setTextColor(...INK);
     pdf.text(c.name, cols[0]! + 3, y + 6);
+    if (c.performerName) pdf.setFontSize(7).setTextColor(...MUTED).text(`p/k/a ${c.performerName}`, cols[0]! + 3, y + 9.5).setFontSize(10).setTextColor(...INK);
     pdf.text(c.role, cols[1]! + 3, y + 6);
     pdf.text(c.pro || "—", cols[2]! + 3, y + 6);
     pdf.text(c.ipi || "—", cols[3]! + 3, y + 6);
     pdf.setFont("helvetica", "bold").text(`${c.percentage}%`, cols[4]! + 3, y + 6);
-    y += 9;
+    y += c.performerName ? 11 : 9;
   });
   pdf.setDrawColor(...COBALT).setLineWidth(0.6).line(18, y, w - 18, y);
   pdf.setFont("helvetica", "bold").setFontSize(10).setTextColor(...INK).text("TOTAL", cols[0]! + 3, y + 6);
   pdf.setTextColor(...COBALT).text(`${splitTotal(collaborators)}%`, cols[4]! + 3, y + 6);
   y += 18;
+
+  const pubs = rows.filter((c) => c.publisherName);
+  if (pubs.length) {
+    y = ensureSpace(pdf, y, 20 + pubs.length * 9);
+    y = sectionTitle(pdf, y, "Publishing");
+    pdf.setFillColor(...COBALT).rect(18, y, w - 36, 8, "F");
+    pdf.setFont("helvetica", "bold").setFontSize(8).setTextColor(255, 255, 255);
+    ["PUBLISHER", "FOR WRITER", "PRO", "IPI", "SHARE"].forEach((h, i) => pdf.text(h, cols[i]! + 3, y + 5.5));
+    y += 8;
+    pubs.forEach((c, i) => {
+      if (i % 2) pdf.setFillColor(245, 247, 251).rect(18, y, w - 36, 9, "F");
+      pdf.setFont("helvetica", "normal").setFontSize(9).setTextColor(...INK);
+      pdf.text(c.publisherName, cols[0]! + 3, y + 6);
+      pdf.text(c.name, cols[1]! + 3, y + 6);
+      pdf.text(c.publisherPro || "—", cols[2]! + 3, y + 6);
+      pdf.text(c.publisherIpi || "—", cols[3]! + 3, y + 6);
+      pdf.text(`${Number(c.publisherPercentage) || 0}%`, cols[4]! + 3, y + 6);
+      y += 9;
+    });
+    y += 10;
+  }
 
   y = ensureSpace(pdf, y, 40);
   y = sectionTitle(pdf, y, "Signatures");
@@ -508,4 +562,21 @@ async function buildSplitPdf(track: CatalogTrack, rawCollaborators: SplitCollabo
   });
   brandFooter(pdf);
   pdf.save(`${track.title.replace(/[^a-z0-9]+/gi, "-") || "split-sheet"}-split-sheet.pdf`);
+}
+
+function ProSelect({ value, onChange, disabled }: { value: string; onChange: (v: string) => void; disabled?: boolean }) {
+  const known = !value || (ALL_PROS as readonly string[]).includes(value);
+  const [custom, setCustom] = useState(!known);
+  return (
+    <div className="space-y-2">
+      <select value={custom ? "Other" : value} disabled={disabled}
+        onChange={(e) => { const v = e.target.value; setCustom(v === "Other"); onChange(v === "Other" ? "" : v); }}
+        className="w-full rounded-md border border-input bg-background px-3 py-2">
+        <option value="">Select PRO…</option>
+        {ALL_PROS.map((p) => <option key={p} value={p}>{p}</option>)}
+      </select>
+      {custom && <input value={value} disabled={disabled} onChange={(e) => onChange(e.target.value)} placeholder="Type society name"
+        className="w-full rounded-md border border-input bg-background px-3 py-2" />}
+    </div>
+  );
 }

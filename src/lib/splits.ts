@@ -4,9 +4,20 @@ import type { CatalogTrack } from "@/lib/catalog";
 export type SplitRole = "Writer" | "Composer" | "Author/Composer" | "Producer" | "Artist" | "Publisher";
 export const SPLIT_ROLES: SplitRole[] = ["Writer", "Composer", "Author/Composer", "Producer", "Artist", "Publisher"];
 
+/** Every performing rights organization offered in PRO dropdowns. "Other" lets users type a society not listed. */
+export const ALL_PROS = [
+  "ASCAP", "BMI", "SESAC", "GMR", "SOCAN", "PRS for Music", "APRA AMCOS", "SACEM", "GEMA", "SIAE", "SGAE", "BUMA/STEMRA",
+  "SABAM", "STIM", "TONO", "KODA", "TEOSTO", "IMRO", "JASRAC", "KOMCA", "SAMRO", "ECAD", "SADAIC", "SAYCE", "SACM", "IPRS", "COSON", "MCSK", "Other", "None",
+] as const;
+
 export type SplitCollaborator = {
   rowId?: string;
   name: string;
+  performerName: string;
+  publisherName: string;
+  publisherPro: string;
+  publisherIpi: string;
+  publisherPercentage: number;
   email: string;
   role: SplitRole;
   percentage: number;
@@ -29,6 +40,11 @@ export type SplitSheet = {
 
 export const emptySplitCollaborator = (): SplitCollaborator => ({
   name: "",
+  performerName: "",
+  publisherName: "",
+  publisherPro: "",
+  publisherIpi: "",
+  publisherPercentage: 0,
   email: "",
   role: "Writer",
   percentage: 0,
@@ -72,6 +88,11 @@ type SplitRow = {
   collaborator_email: string;
   assigned_percentage: number;
   legal_name: string | null;
+  performer_name?: string | null;
+  publisher_name?: string | null;
+  publisher_pro?: string | null;
+  publisher_ipi?: string | null;
+  publisher_percentage?: number | null;
   pro_affiliation: string | null;
   ipi_number: string | null;
   role: string;
@@ -86,6 +107,11 @@ function fromRow(row: SplitRow): SplitCollaborator {
   return {
     rowId: row.id,
     name: row.legal_name ?? "",
+    performerName: row.performer_name ?? "",
+    publisherName: row.publisher_name ?? "",
+    publisherPro: row.publisher_pro ?? "",
+    publisherIpi: row.publisher_ipi ?? "",
+    publisherPercentage: Number(row.publisher_percentage) || 0,
     email: row.collaborator_email ?? "",
     role: (SPLIT_ROLES as string[]).includes(row.role) ? (row.role as SplitRole) : "Writer",
     percentage: Number(row.assigned_percentage) || 0,
@@ -119,6 +145,11 @@ export async function saveSplitSheet(catalogId: string, collaborators: SplitColl
     catalog_id: catalogId,
     collaborator_email: c.email.trim() || "unknown@pending.invite",
     legal_name: c.name.trim(),
+    performer_name: c.performerName.trim() || null,
+    publisher_name: c.publisherName.trim() || null,
+    publisher_pro: c.publisherPro || null,
+    publisher_ipi: c.publisherIpi.trim() || null,
+    publisher_percentage: c.publisherName.trim() ? Number(c.publisherPercentage) || 0 : null,
     assigned_percentage: Math.round(Number(c.percentage) || 0),
     role: c.role,
     pro_affiliation: c.pro || null,
@@ -158,8 +189,9 @@ export const signLink = (rowId: string) => `${window.location.origin}/sign/${row
 
 export type SplitInvite = {
   row_id: string; track_title: string; artist_name: string; isrc: string | null;
-  legal_name: string; role: string; percentage: number; pro: string | null; ipi: string | null; signed_at: string | null;
-  collaborators: { name: string; role: string; percentage: number; signed: boolean }[];
+  legal_name: string; performer_name: string | null; role: string;
+  publisher_name: string | null; publisher_pro: string | null; publisher_ipi: string | null; publisher_percentage: number | null; percentage: number; pro: string | null; ipi: string | null; signed_at: string | null;
+  collaborators: { name: string; performer: string | null; role: string; percentage: number; signed: boolean }[];
 };
 
 export async function getSplitInvite(rowId: string): Promise<SplitInvite | null> {
