@@ -208,7 +208,7 @@ function Rows({ title, rows, onChange, seed, noPro, writer, note }: { title: str
       {note && <p className="text-xs text-muted-foreground">{note}</p>}
       {list.map((r, i) => (
         <div key={i} className={`grid gap-2 ${writer ? "sm:grid-cols-[1.6fr_1.3fr_0.9fr_1.2fr_0.8fr_auto]" : "sm:grid-cols-[2fr_1fr_1.3fr_0.8fr_auto]"}`}>
-          <Input aria-label={`${title} name`} placeholder={noPro ? "Stage name" : "Legal name"} value={r.name} onChange={(e) => upd(i, "name", e.target.value)} />
+          <Input aria-label={`${title} name`} placeholder={noPro ? "Stage name" : writer ? (i === 0 ? "Author/Lyricist (legal name)" : i === 1 ? "Composer/Producer (legal name)" : "Writer (legal name)") : "Legal name"} value={r.name} onChange={(e) => upd(i, "name", e.target.value)} />
           {writer && (
             <select aria-label="Writer role" value={writerRole(r.role)} onChange={(e) => upd(i, "role", e.target.value)} className="h-9 rounded-md border border-input bg-background px-2 text-sm">
               {WRITER_ROLES.map((o) => <option key={o}>{o}</option>)}
