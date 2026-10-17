@@ -857,6 +857,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      can_manage_staff: { Args: { _user_id: string }; Returns: boolean }
       get_split_invite: { Args: { _row_id: string }; Returns: Json }
       has_active_subscription: {
         Args: { check_env?: string; user_uuid: string }
@@ -867,6 +868,10 @@ export type Database = {
           _role: Database["public"]["Enums"]["user_role"]
           _user_id: string
         }
+        Returns: boolean
+      }
+      in_department: {
+        Args: { _dept: string; _user_id: string }
         Returns: boolean
       }
       is_room_host: {
