@@ -49,22 +49,24 @@ export const submitTicket = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
-/** Staff-only: list tickets. */
+/** Support department only: list tickets. */
 export const listTickets = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
-    const { data: isStaff } = await context.supabase.rpc("is_staff", { _user_id: context.userId });
-    if (!isStaff) throw new Error("Forbidden");
+    const { data: allowed } = await context.supabase.rpc("in_department", { _user_id: context.userId, _dept: "support" });
+    if (!allowed) throw new Error("Forbidden");
     const { data, error } = await context.supabase.from("support_tickets").select("*").order("created_at", { ascending: false }).limit(200);
     if (error) throw new Error("Couldn't load tickets.");
     return data ?? [];
   });
 
-/** Staff-only: change ticket status. */
+/** Support department only: change ticket status. */
 export const updateTicketStatus = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d) => z.object({ id: z.string().uuid(), status: z.enum(TICKET_STATUSES) }).parse(d))
   .handler(async ({ data, context }) => {
+    const { data: allowed } = await context.supabase.rpc("in_department", { _user_id: context.userId, _dept: "support" });
+    if (!allowed) throw new Error("Forbidden");
     const { error } = await context.supabase.from("support_tickets").update({ status: data.status }).eq("id", data.id);
     if (error) throw new Error("Couldn't update ticket.");
     return { ok: true };

@@ -1,13 +1,15 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { useEffect, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { ShieldCheck, Building2, FileSignature, Receipt, Users, ArrowLeft, Lock } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { BrandLogo } from "@/components/BrandLogo";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { getAdminOverview, getStaffRole } from "@/lib/admin.functions";
+import { DEPARTMENTS, DEPARTMENT_LABEL, ROLE_LABEL, visibleTabs, type Department } from "@/lib/departments";
 import { SupportTicketsPanel } from "@/components/SupportTicketsPanel";
 
 export const Route = createFileRoute("/admin")({
@@ -34,10 +36,12 @@ function AdminPage() {
   useEffect(() => { if (!loading && !user) navigate({ to: "/" }); }, [loading, user, navigate]);
 
   const role = useQuery({ queryKey: ["staff-role", user?.id], queryFn: () => getStaffRole(), enabled: !!user });
-  const overview = useQuery({ queryKey: ["admin-overview"], queryFn: () => getAdminOverview(), enabled: !!role.data });
+  const access = role.data;
+  const overview = useQuery({ queryKey: ["admin-overview", user?.id], queryFn: () => getAdminOverview(), enabled: !!access && access.role !== "hr_admin" });
+  const [view, setView] = useState<Department | "all">("all");
 
   if (loading || !user || role.isLoading) return <Center>Loading…</Center>;
-  if (!role.data) {
+  if (!access) {
     return (
       <Center>
         <Lock className="h-8 w-8 text-primary" />
@@ -49,6 +53,9 @@ function AdminPage() {
 
   const d = overview.data;
   const pendingSigs = d?.splits.filter((s) => !s.is_owner && !s.signed_at).length ?? 0;
+  const tabs = visibleTabs(access, view);
+  const show = (value: string) => tabs.some((t) => t.value === value);
+  const isSuper = access.role === "super_admin";
 
   return (
     <div className="min-h-screen bg-background">
@@ -62,7 +69,21 @@ function AdminPage() {
             </div>
           </div>
           <div className="flex items-center gap-3">
-            <Badge variant="outline" className="border-ink-border text-ink-foreground">{role.data === "super_admin" ? "Super Admin" : "Employee"}</Badge>
+            {isSuper && (
+              <Select value={view} onValueChange={(v) => setView(v as Department | "all")}>
+                <SelectTrigger aria-label="Department" className="w-48 border-ink-border bg-transparent text-ink-foreground"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {DEPARTMENTS.map((dep) => <SelectItem key={dep} value={dep}>{DEPARTMENT_LABEL[dep]}</SelectItem>)}
+                  <SelectItem value="all">All departments</SelectItem>
+                </SelectContent>
+              </Select>
+            )}
+            <Badge variant="outline" className="border-ink-border text-ink-foreground">{ROLE_LABEL[access.role]}</Badge>
+            {access.canManageStaff && (
+              <Button asChild variant="ghost" className="text-ink-muted hover:bg-ink-border hover:text-ink-foreground">
+                <Link to="/admin/staff"><Users className="h-4 w-4" />Staff</Link>
+              </Button>
+            )}
             <Button asChild variant="ghost" className="text-ink-muted hover:bg-ink-border hover:text-ink-foreground">
               <Link to="/workspace"><ArrowLeft className="h-4 w-4" />Workspace</Link>
             </Button>
@@ -71,19 +92,32 @@ function AdminPage() {
       </header>
 
       <main className="mx-auto max-w-7xl px-6 py-8">
+        {!isSuper && (
+          <div className="mb-6 flex flex-wrap gap-2">
+            {access.departments.map((dep) => <Badge key={dep} variant="secondary">{DEPARTMENT_LABEL[dep]}</Badge>)}
+          </div>
+        )}
+
+        {!tabs.length ? (
+          <div className="rounded-2xl border border-border bg-card p-8 text-center text-muted-foreground">
+            {access.canManageStaff && view === "all"
+              ? <>Manage employees, roles and departments from <Link to="/admin/staff" className="font-semibold text-primary">Staff</Link>.</>
+              : access.departments.length ? "No dashboard tools for this department yet." : "You haven't been assigned a department yet. Ask HR or an admin."}
+          </div>
+        ) : (<>
         <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
-          <Stat icon={<ShieldCheck />} label="AI certificates" value={d?.certificates.length} />
-          <Stat icon={<Building2 />} label="Registrations pending" value={d?.registrations.filter((r) => r.status === "pending_review").length} />
-          <Stat icon={<FileSignature />} label="Signatures pending" value={pendingSigs} />
-          <Stat icon={<Receipt />} label="Purchases" value={d?.purchases.length} />
+          {show("ai") && <Stat icon={<ShieldCheck />} label="AI certificates" value={d?.certificates.length} />}
+          {show("reg") && <Stat icon={<Building2 />} label="Registrations pending" value={d?.registrations.filter((r) => r.status === "pending_review").length} />}
+          {show("splits") && <Stat icon={<FileSignature />} label="Signatures pending" value={pendingSigs} />}
+          {show("purchases") && <Stat icon={<Receipt />} label="Purchases" value={d?.purchases.length} />}
         </div>
 
         {overview.isError && <p className="mt-6 text-destructive">Couldn't load dashboard data.</p>}
 
-        <Tabs defaultValue="ai" className="mt-8">
+        <Tabs key={view} defaultValue={tabs[0]!.value} className="mt-8">
           <TabsList className="h-auto flex-wrap justify-start gap-1 bg-muted p-1">
-            {[["ai", "AI Protection"], ["reg", "Registrations"], ["splits", "Split Sheets"], ["purchases", "Purchases"], ["support", "Support Tickets"], ["staff", "Staff"]].map(([v, l]) => (
-              <TabsTrigger key={v} value={v!} className="font-semibold data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">{l}</TabsTrigger>
+            {tabs.map((t) => (
+              <TabsTrigger key={t.value} value={t.value} className="font-semibold data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">{t.label}</TabsTrigger>
             ))}
           </TabsList>
           <TabsContent value="ai">
@@ -101,11 +135,9 @@ function AdminPage() {
           <TabsContent value="purchases">
             <Table head={["Type", "Mode", "Date"]} rows={d?.purchases.map((p) => [p.kind, p.environment, fmt(p.created_at)])} />
           </TabsContent>
-          <TabsContent value="support"><SupportTicketsPanel /></TabsContent>
-          <TabsContent value="staff">
-            <Table head={["Email", "Role", "Added"]} rows={d?.staff.map((s) => [s.email, s.assigned_role ?? "—", fmt(s.created_at)])} />
-          </TabsContent>
+          {show("support") && <TabsContent value="support"><SupportTicketsPanel /></TabsContent>}
         </Tabs>
+        </>)}
       </main>
     </div>
   );

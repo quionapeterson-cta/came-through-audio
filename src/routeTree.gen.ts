@@ -21,6 +21,7 @@ import { Route as TermsOfServiceRouteImport } from './routes/terms-of-service'
 import { Route as UnlockRouteImport } from './routes/unlock'
 import { Route as VerifiedRouteImport } from './routes/verified'
 import { Route as WorkspaceRouteImport } from './routes/workspace'
+import { Route as AdminStaffRouteImport } from './routes/admin_.staff'
 import { Route as SignRowIdRouteImport } from './routes/sign.$rowId'
 import { Route as ApiPublicCronTrialRemindersRouteImport } from './routes/api/public/cron/trial-reminders'
 import { Route as ApiPublicPaymentsWebhookRouteImport } from './routes/api/public/payments/webhook'
@@ -85,6 +86,11 @@ const WorkspaceRoute = WorkspaceRouteImport.update({
   path: '/workspace',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AdminStaffRoute = AdminStaffRouteImport.update({
+  id: '/admin_/staff',
+  path: '/admin/staff',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const SignRowIdRoute = SignRowIdRouteImport.update({
   id: '/sign/$rowId',
   path: '/sign/$rowId',
@@ -116,6 +122,7 @@ export interface FileRoutesByFullPath {
   '/unlock': typeof UnlockRoute
   '/verified': typeof VerifiedRoute
   '/workspace': typeof WorkspaceRoute
+  '/admin/staff': typeof AdminStaffRoute
   '/sign/$rowId': typeof SignRowIdRoute
   '/api/public/cron/trial-reminders': typeof ApiPublicCronTrialRemindersRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
@@ -133,6 +140,7 @@ export interface FileRoutesByTo {
   '/unlock': typeof UnlockRoute
   '/verified': typeof VerifiedRoute
   '/workspace': typeof WorkspaceRoute
+  '/admin/staff': typeof AdminStaffRoute
   '/sign/$rowId': typeof SignRowIdRoute
   '/api/public/cron/trial-reminders': typeof ApiPublicCronTrialRemindersRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
@@ -151,6 +159,7 @@ export interface FileRoutesById {
   '/unlock': typeof UnlockRoute
   '/verified': typeof VerifiedRoute
   '/workspace': typeof WorkspaceRoute
+  '/admin_/staff': typeof AdminStaffRoute
   '/sign/$rowId': typeof SignRowIdRoute
   '/api/public/cron/trial-reminders': typeof ApiPublicCronTrialRemindersRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
@@ -170,6 +179,7 @@ export interface FileRouteTypes {
     | '/unlock'
     | '/verified'
     | '/workspace'
+    | '/admin/staff'
     | '/sign/$rowId'
     | '/api/public/cron/trial-reminders'
     | '/api/public/payments/webhook'
@@ -187,6 +197,7 @@ export interface FileRouteTypes {
     | '/unlock'
     | '/verified'
     | '/workspace'
+    | '/admin/staff'
     | '/sign/$rowId'
     | '/api/public/cron/trial-reminders'
     | '/api/public/payments/webhook'
@@ -204,6 +215,7 @@ export interface FileRouteTypes {
     | '/unlock'
     | '/verified'
     | '/workspace'
+    | '/admin_/staff'
     | '/sign/$rowId'
     | '/api/public/cron/trial-reminders'
     | '/api/public/payments/webhook'
@@ -222,6 +234,7 @@ export interface RootRouteChildren {
   UnlockRoute: typeof UnlockRoute
   VerifiedRoute: typeof VerifiedRoute
   WorkspaceRoute: typeof WorkspaceRoute
+  AdminStaffRoute: typeof AdminStaffRoute
   SignRowIdRoute: typeof SignRowIdRoute
   ApiPublicCronTrialRemindersRoute: typeof ApiPublicCronTrialRemindersRoute
   ApiPublicPaymentsWebhookRoute: typeof ApiPublicPaymentsWebhookRoute
@@ -313,6 +326,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof WorkspaceRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/admin_/staff': {
+      id: '/admin_/staff'
+      path: '/admin/staff'
+      fullPath: '/admin/staff'
+      preLoaderRoute: typeof AdminStaffRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/sign/$rowId': {
       id: '/sign/$rowId'
       path: '/sign/$rowId'
@@ -350,6 +370,7 @@ const rootRouteChildren: RootRouteChildren = {
   UnlockRoute: UnlockRoute,
   VerifiedRoute: VerifiedRoute,
   WorkspaceRoute: WorkspaceRoute,
+  AdminStaffRoute: AdminStaffRoute,
   SignRowIdRoute: SignRowIdRoute,
   ApiPublicCronTrialRemindersRoute: ApiPublicCronTrialRemindersRoute,
   ApiPublicPaymentsWebhookRoute: ApiPublicPaymentsWebhookRoute,

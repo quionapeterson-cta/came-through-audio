@@ -21,7 +21,7 @@ export function SupportTicketsPanel() {
   return (
     <div className="mt-4 space-y-3">
       <div className="flex flex-wrap gap-2">
-        {["all", ...TICKET_STATUSES].map((s) => (
+        {[...TICKET_STATUSES, "all"].map((s) => (
           <button key={s} onClick={() => setFilter(s)}
             className={`rounded-full border px-3 py-1 text-sm font-semibold ${filter === s ? "border-primary bg-primary text-primary-foreground" : "border-border"}`}>
             {s === "all" ? "All" : LABEL[s]} ({(q.data ?? []).filter((t) => s === "all" || t.status === s).length})

@@ -1,5 +1,5 @@
 /* Came Through Audio award icon system. Serious = clean; Playful = bedazzled. */
-:root { --cta-blue: #004aad; --cta-gold: #ffd700; --cta-white: #ffffff; --cta-black: #000000; }
+:root { --cta-blue: #004aad; --cta-gold: #ffd700; --cta-white: #ffffff; --cta-black: #0b0b0b; } /* Primary Black; was #000000 before 2026-10-17 */
 
 .cta-icon { display: inline-block; width: 32px; height: 32px; background: center / contain no-repeat; vertical-align: middle; flex-shrink: 0; }
 .cta-icon-64 { width: 64px; height: 64px; }

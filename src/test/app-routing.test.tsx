@@ -1,8 +1,11 @@
 import { QueryClient } from "@tanstack/react-query";
-import { createRouter, rootRouteId } from "@tanstack/react-router";
-import { describe, expect, it } from "vitest";
+import { createRouter, isRedirect, rootRouteId } from "@tanstack/react-router";
+import { describe, expect, it, vi } from "vitest";
 
 import { routeTree } from "@/routeTree.gen";
+import { Route as RootRoute } from "@/routes/__root";
+
+vi.mock("@/lib/gate.functions", () => ({ getGateStatus: async () => ({ unlocked: false }), unlockSite: async () => ({ ok: false }) }));
 
 // Match routes without running loaders or rendering: loaders may need a server or
 // network the test run lacks, and jsdom never loads the stylesheets React waits on.
@@ -13,5 +16,19 @@ describe("App routing", () => {
     const matches = router.matchRoutes("/");
 
     expect(matches.at(-1)?.routeId).not.toBe(rootRouteId);
+  });
+
+  it("matches /admin/staff to the staff page, not the dashboard", () => {
+    const router = createRouter({ routeTree, context: { queryClient: new QueryClient() } });
+
+    expect(router.matchRoutes("/admin/staff").at(-1)?.routeId).toBe("/admin_/staff");
+  });
+
+  it("keeps admin pages behind the private-preview gate", async () => {
+    const beforeLoad = RootRoute.options.beforeLoad as (ctx: unknown) => Promise<void>;
+    for (const path of ["/admin", "/admin/staff"]) {
+      const err = await beforeLoad({ location: { pathname: path, href: path } }).catch((e: unknown) => e);
+      expect(isRedirect(err)).toBe(true);
+    }
   });
 });
