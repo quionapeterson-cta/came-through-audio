@@ -199,16 +199,22 @@ export function IpiNote() {
 }
 
 function Rows({ title, rows, onChange, seed, noPro, writer, note }: { title: string; rows?: Contributor[] | undefined; onChange: (r: Contributor[]) => void; seed?: string; noPro?: boolean; writer?: boolean; note?: string }) {
-  const list = rows?.length ? rows : [{ ...emptyContributor(), name: seed ?? "" }];
+  const list = rows?.length ? rows : [{ ...emptyContributor(), name: seed ?? "", ...(writer && { legalName: seed ?? "" }) }];
   const upd = (i: number, k: keyof Contributor, v: string) => onChange(list.map((r, j) => (j === i ? { ...r, [k]: v } : r)));
   const total = list.reduce((s, r) => s + Number(r.percentage || 0), 0);
   return (
     <fieldset className="space-y-2 rounded-xl border border-border p-4">
       <legend className="px-1 text-sm font-bold text-primary">{title}</legend>
       {note && <p className="text-xs text-muted-foreground">{note}</p>}
+      {writer && <p className="text-xs text-muted-foreground"><span className="font-semibold text-foreground">Credited name</span> is how you're credited (stage names are fine). <span className="font-semibold text-foreground">Legal name</span> is only needed to register songs, so you can add it later.</p>}
       {list.map((r, i) => (
-        <div key={i} className={`grid gap-2 ${writer ? "sm:grid-cols-[1.6fr_1.3fr_0.9fr_1.2fr_0.8fr_auto]" : "sm:grid-cols-[2fr_1fr_1.3fr_0.8fr_auto]"}`}>
-          <Input aria-label={`${title} name`} placeholder={noPro ? "Stage name" : writer ? (i === 0 ? "Author/Lyricist (legal name)" : i === 1 ? "Composer/Producer (legal name)" : "Writer (legal name)") : "Legal name"} value={r.name} onChange={(e) => upd(i, "name", e.target.value)} />
+        <div key={i} className={`grid gap-2 ${writer ? "sm:grid-cols-[1.3fr_1.3fr_1.2fr_0.9fr_1.1fr_0.8fr_auto]" : "sm:grid-cols-[2fr_1fr_1.3fr_0.8fr_auto]"}`}>
+          {writer
+            ? <>
+                <Input aria-label="Credited name" title="The name shown in credits. Stage names are fine." placeholder="Credited name" value={r.name} onChange={(e) => upd(i, "name", e.target.value)} />
+                <Input aria-label="Legal name" title="The writer's full legal name, as their PRO and The MLC know it. Only needed to register songs." placeholder="Legal name" value={r.legalName ?? ""} onChange={(e) => upd(i, "legalName", e.target.value)} />
+              </>
+            : <Input aria-label={`${title} name`} placeholder={noPro ? "Stage name" : "Legal name"} value={r.name} onChange={(e) => upd(i, "name", e.target.value)} />}
           {writer && (
             <select aria-label="Writer role" value={writerRole(r.role)} onChange={(e) => upd(i, "role", e.target.value)} className="h-9 rounded-md border border-input bg-background px-2 text-sm">
               {WRITER_ROLES.map((o) => <option key={o}>{o}</option>)}

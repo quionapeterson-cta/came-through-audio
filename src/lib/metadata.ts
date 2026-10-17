@@ -13,7 +13,9 @@ export const MLC_ROLE: Record<WriterRole, string> = { Author: "A", Composer: "C"
 export const writerRole = (r?: string): WriterRole => (WRITER_ROLES as readonly string[]).includes(r ?? "") ? (r as WriterRole) : "Author/Composer";
 
 export const contributorSchema = z.object({
+  /** Credited name (stage names OK). Writers also carry legalName, required only for registration. */
   name: z.string().trim(),
+  legalName: z.string().trim().optional(),
   pro: z.string().trim(),
   ipi: z.string().trim().default("").refine((value) => !value || /^\d{9,11}$/.test(value), "IPI numbers are 9–11 digits."),
   percentage: z.string().trim().default("").refine((value) => value === "" || (Number.isFinite(Number(value)) && Number(value) >= 0 && Number(value) <= 100), "Enter a percentage between 0 and 100."),
@@ -37,6 +39,8 @@ export const metadataSchema = z.object({
   upc: z.string().trim().refine((value) => !value || /^\d{12,13}$/.test(value), "Enter a 12- or 13-digit UPC/EAN."),
   iswc: z.string().trim().refine((value) => !value || /^T\d{10}$/i.test(value.replace(/[.\s-]/g, "")), "Enter a valid ISWC (T followed by 10 digits)."),
   explicit: z.boolean().default(false),
+  /** Instrumental songs need no author to be registration-ready. */
+  instrumental: z.boolean().default(false),
   primaryGenre: z.string().default(""),
   secondaryGenre: z.string().default(""),
   writers: z.array(contributorSchema),
@@ -64,10 +68,15 @@ export type Contributor = z.infer<typeof contributorSchema>;
 export const emptyContributor = (): Contributor => ({ name: "", pro: "", ipi: "", percentage: "" });
 export const emptyMetadata = (): Metadata => ({
   title: "", trackNumber: "", artist: "", featured: [""], album: "", duration: "", releaseType: "", releaseDate: "", label: "", copyright: "", phonographic: "", language: "",
-  isrc: "", upc: "", iswc: "", explicit: false, primaryGenre: "", secondaryGenre: "",
+  isrc: "", upc: "", iswc: "", explicit: false, instrumental: false, primaryGenre: "", secondaryGenre: "",
   writers: [emptyContributor()], composers: [emptyContributor()], producers: [emptyContributor()], publishers: [emptyContributor()],
   lyrics: "", coverThumb: "", audioPath: "", artPath: "", aiProtection: false, credits: [],
 });
+
+/** Writers saved before legalName existed were typed into "(legal name)" fields, so their name seeds it. Never overwrites. */
+export const withLegalName = (rows: Contributor[]): Contributor[] => rows.map((r) => (r.legalName === undefined && r.name ? { ...r, legalName: r.name } : r));
+/** On save, mark legalName as known (even if blank) so the seeding above only ever applies to legacy rows. */
+export const sealLegalName = (rows: Contributor[]): Contributor[] => rows.map((r) => (r.legalName === undefined ? { ...r, legalName: "" } : r));
 
 export const CREDIT_ROLES = ["Session musician", "Mixing engineer", "Recording engineer", "Mastering engineer", "Backup vocalist", "Arranger"] as const;
 

@@ -5,6 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { listTracks, type CatalogTrack } from "@/lib/catalog";
+import { registrationReadiness } from "@/lib/readiness";
 import { assistanceFees, assistanceItems, assistanceTotal } from "@/lib/plans";
 import { openCheckout } from "@/lib/paddle";
 import type { Purchase } from "@/hooks/useBilling";
@@ -20,18 +21,10 @@ export function toggleAgency(list: string[], a: string, on: boolean): string[] {
   return [...base, a];
 }
 
-/** A track is "ready" when title, artist and every writer's name + PRO are filled in. */
-function missing(t: CatalogTrack): string[] {
-  const out: string[] = [];
-  if (!t.title) out.push("title");
-  if (!t.artist) out.push("artist");
-  const w = t.metadata.writers.filter((x) => x.name.trim());
-  if (!w.length) out.push("writers");
-  else if (w.some((x) => !x.pro?.trim())) out.push("writer PRO");
-  return out;
-}
+/** Readiness comes from the shared check; PRO affiliation is only required when registering with ASCAP or BMI. */
+const proSession = (agencies: string[]) => agencies.some((a) => PRO_CHOICES.includes(a));
 
-export function ExpertAssistance({ userId, email, purchases }: { userId: string; email?: string | undefined; purchases: Purchase[] }) {
+export function ExpertAssistance({ userId, email, purchases, onFix }: { userId: string; email?: string | undefined; purchases: Purchase[]; onFix?: (trackId: string, field: string) => void }) {
   const [tracks, setTracks] = useState<CatalogTrack[]>([]);
   const [type, setType] = useState<"single" | "album">("single");
   const [count, setCount] = useState("1");
@@ -52,7 +45,9 @@ export function ExpertAssistance({ userId, email, purchases }: { userId: string;
 
   const songs = Number(count) || 0;
   const total = assistanceTotal(type, songs, agencies.length);
-  const incomplete = useMemo(() => tracks.map((t) => ({ t, miss: missing(t) })).filter((x) => x.miss.length), [tracks]);
+  const sessionAgencies = session ? (session.details["agencies"] ?? "").split(" | ") : agencies;
+  const target = proSession(sessionAgencies) ? "pro" : undefined;
+  const incomplete = useMemo(() => tracks.map((t) => ({ t, miss: registrationReadiness(t.metadata, target).missing })).filter((x) => x.miss.length), [tracks, target]);
   const readyCount = tracks.length - incomplete.length;
   const paidSongs = Number(session?.details["songs"] ?? 0);
   const catalogReady = !!session && readyCount >= paidSongs && paidSongs > 0;
@@ -133,7 +128,12 @@ export function ExpertAssistance({ userId, email, purchases }: { userId: string;
             <div className="space-y-3 text-sm">
               <p className="flex items-center gap-2 font-semibold"><Lock className="h-4 w-4 text-primary" />Scheduling unlocks once {paidSongs} song{paidSongs === 1 ? " is" : "s are"} fully entered in My Catalog.</p>
               <p className="text-muted-foreground">Ready: {readyCount} of {paidSongs}</p>
-              {incomplete.slice(0, 6).map(({ t, miss }) => <div key={t.id} className="rounded-md bg-muted px-3 py-2">{t.title || "Untitled"} — missing {miss.join(", ")}</div>)}
+              {incomplete.slice(0, 6).map(({ t, miss }) => <div key={t.id} className="rounded-md bg-muted px-3 py-2">
+                <div className="font-semibold">{t.title || "Untitled"}</div>
+                <ul>{miss.map((i) => <li key={i.code + i.field}>
+                  {onFix ? <button type="button" className="text-left underline-offset-2 hover:underline" onClick={() => onFix(t.id, i.field)}>⚠️ {i.message}</button> : <>⚠️ {i.message}</>}
+                </li>)}</ul>
+              </div>)}
             </div>
           )}
 

@@ -1,4 +1,4 @@
-import { emptyContributor, emptyMetadata, type Contributor, type Metadata } from "@/lib/metadata";
+import { emptyContributor, emptyMetadata, sealLegalName, withLegalName, type Contributor, type Metadata } from "@/lib/metadata";
 import { supabase } from "@/integrations/supabase/client";
 
 /** Recurring details a user can opt to prefill on every embed. Stored only in this browser. */
@@ -28,7 +28,12 @@ export function pickProfile(m: Metadata): ArtistProfile {
 
 export function loadProfile(userId?: string): ArtistProfile | null {
   if (!userId || typeof localStorage === "undefined") return null;
-  try { const v = localStorage.getItem(key(userId)); return v ? (JSON.parse(v) as ArtistProfile) : null; } catch { return null; }
+  try {
+    const v = localStorage.getItem(key(userId));
+    if (!v) return null;
+    const p = JSON.parse(v) as ArtistProfile;
+    return { ...p, ...(p.writers && { writers: withLegalName(p.writers) }), ...(p.composers && { composers: withLegalName(p.composers) }) };
+  } catch { return null; }
 }
 
 // The account (profiles row) is the source of truth; localStorage is a fast local cache.
@@ -38,7 +43,8 @@ const pushCloud = (userId: string, patch: Record<string, unknown>) => {
   });
 };
 
-export function saveProfile(userId: string, p: ArtistProfile | null) {
+export function saveProfile(userId: string, profile: ArtistProfile | null) {
+  const p = profile && { ...profile, ...(profile.writers && { writers: sealLegalName(profile.writers) }), ...(profile.composers && { composers: sealLegalName(profile.composers) }) };
   if (p) localStorage.setItem(key(userId), JSON.stringify(p)); else localStorage.removeItem(key(userId));
   pushCloud(userId, { artist_defaults: p });
 }

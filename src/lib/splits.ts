@@ -1,5 +1,6 @@
 import { supabase } from "@/integrations/supabase/client";
 import type { CatalogTrack } from "@/lib/catalog";
+import { registrationWriters } from "@/lib/readiness";
 
 export type SplitRole = "Writer" | "Composer" | "Author/Composer" | "Producer" | "Artist" | "Publisher";
 export const SPLIT_ROLES: SplitRole[] = ["Writer", "Composer", "Author/Composer", "Producer", "Artist", "Publisher"];
@@ -78,8 +79,8 @@ export function collaboratorsFromTrack(track: CatalogTrack): SplitCollaborator[]
     if (!name.trim() || out.some((c) => c.name === name.trim())) return;
     out.push({ ...emptySplitCollaborator(), name: name.trim(), role, percentage: Number(percentage) || 0, pro, ipi });
   };
-  for (const w of track.metadata.writers) push(w.name, "Writer", w.percentage, w.pro, w.ipi);
-  for (const c of track.metadata.composers) push(c.name, "Composer", c.percentage, c.pro, c.ipi);
+  // Split sheets are legal records: writers come in under their legal name when known.
+  for (const w of registrationWriters(track.metadata)) push(w.name, w.role === "Author" ? "Writer" : (w.role as SplitRole), w.percentage, w.pro, w.ipi);
   for (const p of track.metadata.producers ?? []) push(p.name, "Producer", p.percentage, p.pro, p.ipi);
   if (!out.length && track.artist.trim()) out.push({ ...emptySplitCollaborator(), name: track.artist.trim(), role: "Artist", percentage: 100 });
   return out.length ? out : [emptySplitCollaborator()];

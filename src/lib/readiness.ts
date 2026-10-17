@@ -1,0 +1,54 @@
+import { writerRole, type Contributor, type Metadata } from "@/lib/metadata";
+
+/** Registration targets. Only PRO registration (BMI/ASCAP) also needs each writer's PRO affiliation. */
+export type ReadinessTarget = "mlc" | "soundexchange" | "pro";
+export type MissingCode = "author" | "composer" | "legal_name" | "pro";
+/** `field` is the form input id to jump to, e.g. "writers-1-legalName". */
+export type MissingItem = { code: MissingCode; message: string; field: string };
+export type Readiness = { ready: boolean; missing: MissingItem[] };
+
+type Listed = { row: Contributor; group: "writers" | "composers"; index: number; author: boolean; composer: boolean };
+
+const listed = (m: Pick<Metadata, "writers" | "composers">): Listed[] => {
+  const out: Listed[] = [];
+  (m.writers ?? []).forEach((row, index) => {
+    if (!row.name.trim() && !row.legalName?.trim()) return;
+    const role = writerRole(row.role);
+    out.push({ row, group: "writers", index, author: role !== "Composer", composer: role !== "Author" });
+  });
+  // Entries saved before writer roles existed are composers.
+  (m.composers ?? []).forEach((row, index) => {
+    if (row.name.trim() || row.legalName?.trim()) out.push({ row, group: "composers", index, author: false, composer: true });
+  });
+  return out;
+};
+
+/**
+ * The single source of truth for registration readiness. Every feature (embed indicator, catalog badge,
+ * export gate, registration sessions) calls this — never re-implement it.
+ * Ready = (has an author OR is instrumental) AND has a composer AND every writer has a legal name.
+ * Author/Composer counts toward both. Embedding and saving are never gated on this.
+ */
+export function registrationReadiness(m: Pick<Metadata, "writers" | "composers" | "instrumental">, target?: ReadinessTarget): Readiness {
+  const people = listed(m);
+  const missing: MissingItem[] = [];
+  const first = people[0];
+  const roleField = first?.group === "writers" ? `writers-${first.index}-role` : "writers-0-name";
+  if (!m.instrumental && !people.some((p) => p.author)) missing.push({ code: "author", message: "Add an Author or Author/Composer, or mark the song Instrumental", field: roleField });
+  if (!people.some((p) => p.composer)) missing.push({ code: "composer", message: "Add a Composer or Author/Composer", field: roleField });
+  for (const p of people) {
+    const who = p.row.name.trim() || p.row.legalName?.trim() || "Writer";
+    if (!p.row.legalName?.trim()) missing.push({ code: "legal_name", message: `${who}: add legal name`, field: `${p.group}-${p.index}-legalName` });
+    if (target === "pro" && (!p.row.pro?.trim() || p.row.pro === "None")) missing.push({ code: "pro", message: `${who}: add PRO affiliation`, field: `${p.group}-${p.index}-pro` });
+  }
+  return { ready: missing.length === 0, missing };
+}
+
+/** Writers for registration and exports, always under their legal name. Only call on ready songs. */
+export function registrationWriters(m: Pick<Metadata, "writers" | "composers">) {
+  return listed(m).map(({ row, author, composer }) => ({
+    ...row,
+    name: row.legalName?.trim() || row.name.trim(),
+    role: author && composer ? "Author/Composer" : author ? "Author" : "Composer",
+  }));
+}

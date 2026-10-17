@@ -68,9 +68,7 @@ Apply these rules across the website, emails and PDFs.
 ## 5. Writer and producer terminology
 
 - **Writer** is the section title, not the name of an input field.
-- First writer field: **Author/Lyricist (legal name)**.
-- Second writer field: **Composer/Producer (legal name)**.
-- Additional writer fields: **Writer (legal name)**.
+- Each writer row has **Credited name** (stage names are fine) and **Legal name** (optional until registration), plus a role.
 - Keep the role dropdown: Author, Composer, or Author/Composer.
 - Authors and composers may be different people; do not assume they are the same person.
 - **Producer Name (Stage Name)** is for embedded credits.

@@ -1,5 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
-import { emptyContributor, emptyMetadata, type Metadata } from "@/lib/metadata";
+import { emptyContributor, emptyMetadata, sealLegalName, withLegalName, type Metadata } from "@/lib/metadata";
 
 export type CatalogTrack = { id: string; title: string; artist: string; updatedAt: string; metadata: Metadata };
 
@@ -25,7 +25,7 @@ export function toCatalogRow(m: Metadata, userId: string) {
     publisher_identities: publishers.map((r) => r.name),
     publisher_pro_affiliations: publishers.map((r) => r.pro),
     publisher_percentages: publishers.map((r) => Number(r.percentage || 0)),
-    details: m,
+    details: { ...m, writers: sealLegalName(m.writers), composers: sealLegalName(m.composers) },
     updated_at: new Date().toISOString(),
   };
 }
@@ -39,8 +39,8 @@ export function fromCatalogRow(row: Record<string, unknown>): CatalogTrack {
     title: (row["track_title"] as string) ?? "",
     artist: (row["artist_name"] as string) ?? "",
     featured: saved.featured?.length ? saved.featured : [""],
-    writers: saved.writers?.length ? saved.writers : [emptyContributor()],
-    composers: saved.composers?.length ? saved.composers : [emptyContributor()],
+    writers: saved.writers?.length ? withLegalName(saved.writers) : [emptyContributor()],
+    composers: saved.composers?.length ? withLegalName(saved.composers) : [emptyContributor()],
     producers: saved.producers?.length ? saved.producers : [emptyContributor()],
     publishers: saved.publishers?.length ? saved.publishers : [emptyContributor()],
   };

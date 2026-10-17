@@ -58,6 +58,7 @@ function Workspace() {
   const [splitTrackId, setSplitTrackId] = useState<string>();
   const [catalogKey, setCatalogKey] = useState(0);
   const [protectTrack, setProtectTrack] = useState<CatalogTrack>();
+  const [catalogFix, setCatalogFix] = useState<{ trackId: string; field: string }>();
   const { tier: realTier, purchases } = useBilling(user?.id);
   const [previewTier, setPreviewTier] = useState<Tier | "real">("real");
   const tier: Tier = getPaddleEnvironment() === "sandbox" && previewTier !== "real" ? previewTier : realTier;
@@ -146,11 +147,11 @@ function Workspace() {
 
           <TabsContent value="embed" forceMount className="data-[state=inactive]:hidden"><MetadataUploader key={`embed-${embedKey}`} stageName={name} userId={user.id} mode="embed" onSubmitted={() => setCatalogKey((k) => k + 1)} /></TabsContent>
           <TabsContent value="catalog" forceMount className="data-[state=inactive]:hidden">
-            <MetadataUploader key={catalogKey} stageName={name} userId={user.id} mode="catalog" canSplit={canSplit} onSplitSheet={(t) => { setSplitTrackId(t.id); setTab("splits"); }} onProtect={(t) => { setProtectTrack(t); setTab("protect"); }} />
+            <MetadataUploader key={catalogKey} stageName={name} userId={user.id} mode="catalog" canSplit={canSplit} focus={catalogFix} onFocused={() => setCatalogFix(undefined)} onSplitSheet={(t) => { setSplitTrackId(t.id); setTab("splits"); }} onProtect={(t) => { setProtectTrack(t); setTab("protect"); }} />
           </TabsContent>
           <TabsContent value="protect"><AIProtectionHub userId={user.id} paid={hasAi} email={user.email} track={protectTrack} /></TabsContent>
           <TabsContent value="splits"><SplitSheets userId={user.id} canSplit={canSplit} prefillTrackId={splitTrackId} onUpgrade={upgrade} /></TabsContent>
-          <TabsContent value="health"><Health onFix={() => setTab("catalog")} onEmbed={() => setTab("embed")} userId={user.id} email={user.email} purchases={purchases} canUtility={canSplit} onUpgrade={upgrade} /></TabsContent>
+          <TabsContent value="health"><Health onFix={() => setTab("catalog")} onFixField={(trackId, field) => { setCatalogFix({ trackId, field }); setTab("catalog"); }} onEmbed={() => setTab("embed")} userId={user.id} email={user.email} purchases={purchases} canUtility={canSplit} onUpgrade={upgrade} /></TabsContent>
           <TabsContent value="learn"><Learn unlocked={hasTier(tier, "management")} onUpgrade={upgrade} /></TabsContent>
         </Tabs>
       </main>
@@ -257,11 +258,11 @@ function Masterclasses() {
   );
 }
 
-function Health({ onFix, onEmbed, userId, email, purchases, canUtility, onUpgrade }: { userId: string; email?: string | undefined; purchases: Purchase[]; canUtility: boolean; onUpgrade: () => void; onFix: () => void; onEmbed: () => void }) {
+function Health({ onFix, onFixField, onEmbed, userId, email, purchases, canUtility, onUpgrade }: { userId: string; email?: string | undefined; purchases: Purchase[]; canUtility: boolean; onUpgrade: () => void; onFix: () => void; onFixField: (trackId: string, field: string) => void; onEmbed: () => void }) {
   return (
     <div className="mt-6 space-y-6">
       <RoyaltyHealthCheck onFix={onFix} onEmbed={onEmbed} />
-      <div id="expert-assistance"><ExpertAssistance userId={userId} email={email} purchases={purchases} /></div>
+      <div id="expert-assistance"><ExpertAssistance userId={userId} email={email} purchases={purchases} onFix={onFixField} /></div>
       <RoyaltyUtilitySuite unlocked={canUtility} onUpgrade={onUpgrade} />
     </div>
   );

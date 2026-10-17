@@ -26,6 +26,7 @@ import { stampDigest } from "@/lib/ots.functions";
 import { scanDraftFrames } from "@/lib/draft-scan.functions";
 import { extractFrames, rateChain, gradeProof, compressTo720p, type ChainResult } from "@/lib/draft-chain";
 import { buildOtsFile, download, proofManifest } from "@/lib/ots";
+import { registrationWriters } from "@/lib/readiness";
 
 type WriterRole = "author" | "composer" | "both" | "producer";
 type WriterRow = { name: string; role: WriterRole };
@@ -83,7 +84,9 @@ export function AIProtectionHub({ userId, paid, track, email }: { userId: string
       if (hit && ((hit.role === "author" && role === "composer") || (hit.role === "composer" && role === "author"))) hit.role = "both";
       else if (!hit || hit.role !== role) rows.push({ name, role });
     });
-    add(m.writers, "author"); add(m.composers, "composer"); add(m.producers, "producer");
+    // Certificates are legal records: legal names, with Author/Composer counted as both.
+    for (const w of registrationWriters(m)) add([w], w.role === "Author" ? "author" : w.role === "Composer" ? "composer" : "both");
+    add(m.producers, "producer");
     setWriterRows(rows.length ? rows : [{ name: "", role: "both" }]);
   }, [track]);
   const editRow = (i: number, patch: Partial<WriterRow>) => setWriterRows(writerRows.map((w, j) => (j === i ? { ...w, ...patch } : w)));

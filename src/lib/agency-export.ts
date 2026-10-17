@@ -1,5 +1,6 @@
 import type { CatalogTrack } from "@/lib/catalog";
 import { MLC_ROLE, writerRole, type Contributor } from "@/lib/metadata";
+import { registrationReadiness, registrationWriters, type MissingItem } from "@/lib/readiness";
 
 export type Agency = "mlc" | "soundexchange" | "pro";
 export const AGENCY_LABEL: Record<Agency, string> = {
@@ -29,12 +30,8 @@ const hms = (d: string) => {
 export function mlcRows(tracks: CatalogTrack[]): (string | number)[][] {
   const rows: (string | number)[][] = [];
   for (const { metadata: m } of tracks) {
-    const people = [
-      ...named(m.writers).map((w) => ({ c: w, role: MLC_ROLE[writerRole(w.role)] })),
-      ...named(m.composers).map((w) => ({ c: w, role: "C" })),
-    ];
+    const people = registrationWriters(m).map((w) => ({ c: w, role: MLC_ROLE[writerRole(w.role)] }));
     const pubs = named(m.publishers);
-    if (!people.length) people.push({ c: { name: "", pro: "", ipi: "", percentage: "" }, role: "" });
     people.forEach(({ c, role }, i) => {
       const { last, first } = splitName(c.name);
       const pub = pubs[i] ?? pubs[0];
@@ -57,7 +54,7 @@ export function soundExchangeRows(tracks: CatalogTrack[]): (string | number)[][]
       m.artist, m.title, m.isrc.replace(/-/g, "").toUpperCase(), "Copyright Owner", 100, usDate(m.releaseDate), "", "", "",
       hms(m.duration), m.primaryGenre ?? "", "", "United States", "", "United States", usDate(m.releaseDate), "United States",
       year && m.label ? `℗ ${year} ${m.label}` : "", m.iswc.replace(/[.\s-]/g, "").toUpperCase(),
-      [...named(m.writers), ...named(m.composers)].map((c) => c.name).join("; "), named(m.publishers).map((p) => p.name).join("; "),
+      registrationWriters(m).map((c) => c.name).join("; "), named(m.publishers).map((p) => p.name).join("; "),
       m.artist, m.album || m.title, "", m.upc, "", usDate(m.releaseDate), "United States", m.label,
     ];
   });
@@ -72,8 +69,7 @@ export function proCheatSheet(tracks: CatalogTrack[]): string {
   const rows: unknown[][] = [["Work Title", "ISWC", "ISRC", "Performing Artist", "Party Type", "Name", "Role", "Share %", "PRO", "IPI #"]];
   for (const { metadata: m } of tracks) {
     const base = [m.title, m.iswc, m.isrc, m.artist];
-    for (const w of named(m.writers)) rows.push([...base, "Writer", w.name, writerRole(w.role), w.percentage, w.pro, w.ipi]);
-    for (const c of named(m.composers)) rows.push([...base, "Writer", c.name, "Composer", c.percentage, c.pro, c.ipi]);
+    for (const w of registrationWriters(m)) rows.push([...base, "Writer", w.name, w.role, w.percentage, w.pro, w.ipi]);
     for (const p of named(m.publishers)) rows.push([...base, "Publisher", p.name, "Original Publisher", p.percentage, p.pro, p.ipi]);
   }
   return rows.map((r) => r.map(cell).join(",")).join("\r\n");
@@ -97,8 +93,24 @@ async function fillTemplate(path: string, sheet: string, firstRow: number, clear
   return new Blob([await wb.xlsx.writeBuffer()], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
 }
 
-export async function downloadAgencyExport(agency: Agency, tracks: CatalogTrack[], name: string) {
-  if (agency === "mlc") return save(await fillTemplate("/templates/MLCBulkWork_V1.2.xlsx", "Format", 2, 11, mlcRows(tracks)), `${name} - MLC Bulk Work Registration.xlsx`);
-  if (agency === "soundexchange") return save(await fillTemplate("/templates/ISRC_Ingest_Form.xlsx", "Form", 11, 11, soundExchangeRows(tracks)), `${name} - SoundExchange ISRC Ingest.xlsx`);
-  save(new Blob([proCheatSheet(tracks)], { type: "text/csv;charset=utf-8" }), `${name} - BMI-ASCAP Registration Cheat Sheet.csv`);
+export type Held = { track: CatalogTrack; missing: MissingItem[] };
+/** Splits tracks by the shared readiness check; only ready songs may enter an agency export. */
+export function exportGate(agency: Agency, tracks: CatalogTrack[]) {
+  const ready: CatalogTrack[] = [];
+  const held: Held[] = [];
+  for (const track of tracks) {
+    const r = registrationReadiness(track.metadata, agency);
+    if (r.ready) ready.push(track); else held.push({ track, missing: r.missing });
+  }
+  return { ready, held };
+}
+
+/** Exports the ready songs and returns the ones held back so the UI can say what to fix. */
+export async function downloadAgencyExport(agency: Agency, tracks: CatalogTrack[], name: string): Promise<Held[]> {
+  const { ready, held } = exportGate(agency, tracks);
+  if (!ready.length) return held;
+  if (agency === "mlc") save(await fillTemplate("/templates/MLCBulkWork_V1.2.xlsx", "Format", 2, 11, mlcRows(ready)), `${name} - MLC Bulk Work Registration.xlsx`);
+  else if (agency === "soundexchange") save(await fillTemplate("/templates/ISRC_Ingest_Form.xlsx", "Form", 11, 11, soundExchangeRows(ready)), `${name} - SoundExchange ISRC Ingest.xlsx`);
+  else save(new Blob([proCheatSheet(ready)], { type: "text/csv;charset=utf-8" }), `${name} - BMI-ASCAP Registration Cheat Sheet.csv`);
+  return held;
 }

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
 import { Disc3, Lock, ShieldCheck, CheckCircle2, Download, FileAudio, ImagePlus, Pencil, Plus, Save, Trash2, Upload } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -10,11 +10,12 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { PRE_DIST_NOTE, PRO_TIP } from "@/lib/copy";
 import { readMetadata, CREDIT_ROLES, emptyContributor, emptyMetadata, embedMetadata, metadataSchema, GENRES, PROS, RELEASE_TYPES, WRITER_ROLES, writerRole, type Contributor, type Metadata } from "@/lib/metadata";
 import { deleteTrack, downloadCatalogFile, listTracks, safeName, saveTrack, uploadCatalogFile, type CatalogTrack } from "@/lib/catalog";
-import { AGENCY_LABEL, downloadAgencyExport, type Agency } from "@/lib/agency-export";
+import { AGENCY_LABEL, downloadAgencyExport, type Agency, type Held } from "@/lib/agency-export";
+import { registrationReadiness, type MissingItem } from "@/lib/readiness";
 import { downloadLyricsPdf } from "@/lib/lyrics-pdf";
 import { loadProfile, pickProfile, saveProfile, withProfile } from "@/lib/artist-profile";
 
-export function MetadataUploader({ stageName, userId, mode = "embed", onSubmitted, onSplitSheet, onProtect, canSplit }: { stageName?: string; userId?: string; mode?: "embed" | "catalog"; onSubmitted?: () => void; onSplitSheet?: (t: CatalogTrack) => void; onProtect?: (t: CatalogTrack) => void; canSplit?: boolean }) {
+export function MetadataUploader({ stageName, userId, mode = "embed", onSubmitted, onSplitSheet, onProtect, canSplit, focus, onFocused }: { onFocused?: () => void; stageName?: string; userId?: string; mode?: "embed" | "catalog"; focus?: { trackId: string; field: string } | undefined; onSubmitted?: () => void; onSplitSheet?: (t: CatalogTrack) => void; onProtect?: (t: CatalogTrack) => void; canSplit?: boolean }) {
   const full = mode === "catalog";
   const [aiProtect, setAiProtect] = useState(false);
   const [submitted, setSubmitted] = useState(false);
@@ -29,12 +30,15 @@ export function MetadataUploader({ stageName, userId, mode = "embed", onSubmitte
   const [editingId, setEditingId] = useState<string>();
   const [saving, setSaving] = useState(false);
   const [upsell, setUpsell] = useState<false | "split" | "export">(false);
+  const [held, setHeld] = useState<{ agency: Agency; songs: Held[]; exported: number }>();
   const [filter, setFilter] = useState<"All" | "Single" | "EP" | "Album">("All");
   const [picked, setPicked] = useState<Set<string>>(new Set());
   const togglePick = (id: string) => setPicked((s) => { const n = new Set(s); if (n.has(id)) n.delete(id); else n.add(id); return n; });
   const runExport = (a: Agency, list: CatalogTrack[], name: string) => {
     if (!canSplit) { setUpsell("export"); return; }
-    downloadAgencyExport(a, list, safeName(name)).catch(() => toast.error("Could not build the export."));
+    downloadAgencyExport(a, list, safeName(name))
+      .then((songs) => { if (songs.length) setHeld({ agency: a, songs, exported: list.length - songs.length }); })
+      .catch(() => toast.error("Could not build the export."));
   };
   const exportMenu = (label: string, list: CatalogTrack[], name: string, size: "sm" | "default" = "sm") => (
     <DropdownMenu>
@@ -67,6 +71,14 @@ export function MetadataUploader({ stageName, userId, mode = "embed", onSubmitte
     listTracks().then(setTracks).catch((e) => toast.error(e.message ?? "Could not load your catalog."));
   }, [userId]);
   useEffect(() => { refresh(); }, [refresh]);
+  // A ⚠️ link elsewhere (e.g. Expert Assistance) asked to fix a field on one of these songs.
+  useEffect(() => {
+    const t = focus && tracks.find((x) => x.id === focus.trackId);
+    if (!t) return;
+    fix(t, focus.field);
+    onFocused?.();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [focus, tracks]);
 
   async function save() {
     if (!userId) return;
@@ -104,6 +116,12 @@ export function MetadataUploader({ stageName, userId, mode = "embed", onSubmitte
     setResult(undefined);
     setError("");
     window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+  /** Open a catalog song and jump to the field a ⚠️ readiness item points at. */
+  function fix(t: CatalogTrack, field: string) {
+    open(t);
+    setHeld(undefined);
+    setTimeout(() => jumpTo(field), 150);
   }
   function startNew() {
     setMetadata(withProfile(loadProfile(userId)));
@@ -167,7 +185,7 @@ export function MetadataUploader({ stageName, userId, mode = "embed", onSubmitte
         if (!rows) continue;
         filled[g] = rows.map((r) => {
           const saved = profile?.[g]?.find((s) => s.name.trim().toLowerCase() === r.name.trim().toLowerCase());
-          return saved ? { ...r, pro: r.pro || saved.pro, ipi: r.ipi || saved.ipi, percentage: r.percentage || saved.percentage } : r;
+          return saved ? { ...r, legalName: r.legalName || saved.legalName, pro: r.pro || saved.pro, ipi: r.ipi || saved.ipi, percentage: r.percentage || saved.percentage } : r;
         });
       }
       if (Object.keys(filled).length || picture) { setMetadata((m) => ({ ...m, ...filled })); toast.success("Existing metadata found and pre-filled. You can still edit every field."); }
@@ -267,8 +285,11 @@ export function MetadataUploader({ stageName, userId, mode = "embed", onSubmitte
           </div>
         </fieldset>
 
-        <Contributors title="Writer" singular="writer" group="writers" writer rows={metadata.writers} disabled={busy} onChange={(rows) => update("writers", rows)} tip={full ? "Choose Author (lyrics/melody), Composer (music/beat) or Author/Composer for each writer. Writer splits must total 100%." : undefined} simple={!full} />
+        <Contributors title="Writer" singular="writer" group="writers" writer rows={metadata.writers} disabled={busy} onChange={(rows) => update("writers", rows)} tip={full ? "Choose Author (lyrics/melody), Composer (music/beat) or Author/Composer for each writer. Writer splits must total 100%." : undefined} simple={!full}>
+          <label className="flex items-center gap-2 text-sm"><input id="instrumental" type="checkbox" className="h-4 w-4 accent-[var(--primary)]" checked={metadata.instrumental} onChange={(e) => update("instrumental", e.target.checked)} />Instrumental (no lyrics)<Tip text={TIPS.instrumental} /></label>
+        </Contributors>
         {full && metadata.composers.some((c) => c.name.trim()) && <Contributors title="Composer (earlier entries)" singular="composer" group="composers" rows={metadata.composers} disabled={busy} onChange={(rows) => update("composers", rows)} tip="Saved before Writer roles existed. Move these into Writer with the Composer role when you can." />}
+        <ReadinessPanel metadata={metadata} />
         <Contributors title="Producer Name (Stage Name)" singular="producer" group="producers" rows={metadata.producers ?? [emptyContributor()]} disabled={busy} onChange={(rows) => update("producers", rows)} simple
           tip="Embedded with your track for credit. Place the producer's legal name under Writer as Composer in your Catalog for royalty splits." />
         <fieldset disabled={busy} className="space-y-5 border-t border-border pt-6">
@@ -378,11 +399,18 @@ export function MetadataUploader({ stageName, userId, mode = "embed", onSubmitte
                     <div className="flex flex-wrap gap-1.5 text-xs">
                       {regBadges(t).map((b) => <span key={b} className="rounded-full border border-primary px-2 py-0.5 text-primary">{b}</span>)}
                     </div>
+                    {(() => { const r = registrationReadiness(t.metadata); return r.ready
+                      ? <span className="inline-flex items-center gap-1 rounded-full bg-primary px-2 py-0.5 text-xs font-semibold text-primary-foreground"><CheckCircle2 className="h-3 w-3" />Ready to register</span>
+                      : <details className="text-sm">
+                          <summary className="cursor-pointer font-semibold">⚠️ {r.missing.length} to fix before registering</summary>
+                          <div className="mt-2 pl-1"><MissingList items={r.missing} onJump={(field) => fix(t, field)} /></div>
+                        </details>; })()}
                     {creditGroups(t).length > 0 && <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
                       {creditGroups(t).map((cg) => <div key={cg.label} className="min-w-0">
                         <div className="mb-1 text-xs font-bold uppercase tracking-widest text-primary">{cg.label}</div>
                         <ul className="space-y-1 text-sm">{cg.rows.map((c, i) => <li key={i} className="min-w-0">
                           <span className="font-semibold">{c.name}</span>
+                          {c.legalName && c.legalName !== c.name && <span className="block text-xs text-muted-foreground">Legal: {c.legalName}</span>}
                           {(cg.label === "Writers" || c.percentage || c.pro || c.ipi) && <span className="block text-xs text-muted-foreground">{[cg.label === "Writers" && writerRole(c.role), c.percentage && `${c.percentage}%`, c.pro, c.ipi && `IPI ${c.ipi}`].filter(Boolean).join(" · ")}</span>}
                         </li>)}</ul>
                       </div>)}
@@ -428,6 +456,19 @@ export function MetadataUploader({ stageName, userId, mode = "embed", onSubmitte
           )}
         </div>
       ); })()}
+      <Dialog open={!!held} onOpenChange={(o) => !o && setHeld(undefined)}>
+        <DialogContent className="bg-card text-card-foreground">
+          <DialogHeader><DialogTitle className="text-xl font-bold">{held?.exported ? `Exported ${held.exported} ${held.exported === 1 ? "song" : "songs"}` : "Nothing exported yet"}</DialogTitle></DialogHeader>
+          <p className="text-sm text-muted-foreground">{held?.songs.length === 1 ? "This song needs" : "These songs need"} writer info before {held && AGENCY_LABEL[held.agency].split(" (")[0]} can accept {held?.songs.length === 1 ? "it" : "them"}. Fix them, then export again.</p>
+          <div className="max-h-80 space-y-3 overflow-y-auto">
+            {held?.songs.map(({ track, missing }) => <div key={track.id} className="rounded-lg border border-border p-3">
+              <div className="mb-1 font-semibold">{track.title || "Untitled"}</div>
+              <MissingList items={missing} onJump={(field) => fix(track, field)} />
+            </div>)}
+          </div>
+          <Button onClick={() => setHeld(undefined)}>Got it</Button>
+        </DialogContent>
+      </Dialog>
       <Dialog open={!!upsell} onOpenChange={(o) => !o && setUpsell(false)}>
         <DialogContent className="bg-card text-card-foreground">
           <DialogHeader><DialogTitle className="flex items-center gap-2 text-xl font-bold"><Lock className="h-5 w-5 text-primary" />{upsell === "export" ? "1-Click Official Agency Exports are locked" : "Split Sheets are locked"}</DialogTitle></DialogHeader>
@@ -439,8 +480,42 @@ export function MetadataUploader({ stageName, userId, mode = "embed", onSubmitte
   );
 }
 
-function Field({ label, id, value, onChange, required, type = "text", placeholder }: { label: string; id: string; value: string; onChange: (value: string) => void; required?: boolean; type?: string; placeholder?: string }) {
-  return <div className="min-w-0 space-y-2"><Label htmlFor={id}>{label}{required ? " *" : ""}</Label><Input id={id} value={value} type={type} required={required} placeholder={placeholder} onChange={(event) => onChange(event.target.value)} /></div>;
+const TIPS = {
+  credited: "The name shown in credits. Stage names are fine.",
+  legal: "The writer's full legal name, as their PRO and The MLC know it. You can leave it blank for now: it's only needed to register the song.",
+  instrumental: "Check this if the song has no lyrics. Instrumental songs don't need an Author to be registered.",
+};
+
+function Tip({ text }: { text: string }) {
+  return <span title={text} tabIndex={0} aria-label={text} className="ml-2 inline-flex h-5 w-5 cursor-help items-center justify-center rounded-full border border-primary text-xs text-primary">i</span>;
+}
+
+/** Scroll to and focus a form field by id (used by ⚠️ readiness links). */
+function jumpTo(field: string) {
+  requestAnimationFrame(() => {
+    const el = document.getElementById(field);
+    el?.scrollIntoView({ behavior: "smooth", block: "center" });
+    el?.focus({ preventScroll: true });
+  });
+}
+
+function MissingList({ items, onJump }: { items: MissingItem[]; onJump: (field: string) => void }) {
+  return <ul className="space-y-1">{items.map((i) => <li key={i.code + i.field}>
+    <button type="button" className="text-left text-sm underline-offset-2 hover:underline" onClick={() => onJump(i.field)}>⚠️ {i.message}</button>
+  </li>)}</ul>;
+}
+
+function ReadinessPanel({ metadata }: { metadata: Metadata }) {
+  const r = registrationReadiness(metadata);
+  return <div role="status" className="rounded-lg border border-primary/40 bg-accent/30 p-3 text-sm">
+    {r.ready
+      ? <p className="flex items-center gap-2 font-semibold"><CheckCircle2 className="h-4 w-4 text-primary" />Writer info is ready to register.</p>
+      : <><p className="mb-2"><span className="font-semibold">You can still embed and save.</span> To register this song, fix:</p><MissingList items={r.missing} onJump={jumpTo} /></>}
+  </div>;
+}
+
+function Field({ label, id, value, onChange, required, type = "text", placeholder, tip }: { label: string; id: string; value: string; onChange: (value: string) => void; required?: boolean; type?: string; placeholder?: string; tip?: string }) {
+  return <div className="min-w-0 space-y-2"><Label htmlFor={id}>{label}{required ? " *" : ""}{tip && <Tip text={tip} />}</Label><Input id={id} value={value} type={type} required={required} placeholder={placeholder} onChange={(event) => onChange(event.target.value)} /></div>;
 }
 
 function SelectField({ label, id, value, options, onChange }: { label: string; id: string; value: string; options: readonly string[]; onChange: (value: string) => void }) {
@@ -451,22 +526,40 @@ function SelectField({ label, id, value, options, onChange }: { label: string; i
     </select></div>;
 }
 
-function Contributors({ title, singular, group, rows, onChange, disabled, publisher, tip, simple, writer }: { title: string; singular: string; group: string; rows: Contributor[]; onChange: (rows: Contributor[]) => void; disabled: boolean; publisher?: boolean; tip?: string | undefined; simple?: boolean; writer?: boolean }) {
+function Contributors({ title, singular, group, rows, onChange, disabled, publisher, tip, simple, writer, children }: { title: string; singular: string; group: string; rows: Contributor[]; onChange: (rows: Contributor[]) => void; disabled: boolean; publisher?: boolean; tip?: string | undefined; simple?: boolean; writer?: boolean; children?: ReactNode }) {
   const roleSelect = (row: Contributor, index: number) => writer && <SelectField label="Role" id={`${group}-${index}-role`} value={writerRole(row.role)} options={WRITER_ROLES} onChange={(value) => change(index, "role", value)} />;
-  const writerLabel = (i: number) => i === 0 ? "Author/Lyricist (legal name)" : i === 1 ? "Composer/Producer (legal name)" : "Writer (legal name)";
-  const simpleLabel = group === "producers" ? "Producer name" : writer ? "Writer name" : `${title} name`;
+  // Writers (and pre-role composer entries) carry a credited name plus a legal name for registration.
+  const legal = writer || group === "composers";
+  const simpleLabel = group === "producers" ? "Producer name" : `${title} name`;
   function change(index: number, key: keyof Contributor, value: string) { onChange(rows.map((row, i) => i === index ? { ...row, [key]: value } : row)); }
+  const names = (row: Contributor, index: number) => <>
+    <Field label="Credited name" id={`${group}-${index}-name`} value={row.name} tip={TIPS.credited} onChange={(value) => change(index, "name", value)} />
+    <Field label="Legal name" id={`${group}-${index}-legalName`} value={row.legalName ?? ""} tip={TIPS.legal} onChange={(value) => change(index, "legalName", value)} />
+  </>;
+  const removeButton = (index: number) => <Button type="button" size="icon" variant="ghost" aria-label={`Remove ${singular} ${index + 1}`} disabled={rows.length === 1} onClick={() => onChange(rows.filter((_, i) => i !== index))}><Trash2 /></Button>;
+  const share = (row: Contributor, index: number) => <div className="space-y-2"><Label htmlFor={`${group}-${index}-share`}>Split (%)</Label><Input id={`${group}-${index}-share`} type="number" min="0" max="100" step="0.01" value={row.percentage} onChange={(event) => change(index, "percentage", event.target.value)} /></div>;
+  const ipi = (row: Contributor, index: number) => <Field label={publisher ? "Publisher IPI" : "IPI name number"} id={`${group}-${index}-ipi`} value={row.ipi} placeholder="9–11 digits" onChange={(value) => change(index, "ipi", value)} />;
+  const pro = (row: Contributor, index: number) => <SelectField label="PRO affiliation" id={`${group}-${index}-pro`} value={row.pro} options={PROS} onChange={(value) => change(index, "pro", value)} />;
   return <fieldset disabled={disabled} className="space-y-5 border-t border-border pt-6">
-    <legend className="pr-3 text-lg font-semibold">{title}{tip && <span title={tip} tabIndex={0} aria-label={tip} className="ml-2 inline-flex h-5 w-5 cursor-help items-center justify-center rounded-full border border-primary text-xs text-primary">i</span>}</legend>
+    <legend className="pr-3 text-lg font-semibold">{title}{tip && <Tip text={tip} />}</legend>
     {tip && <p className="text-sm text-muted-foreground">{tip}</p>}
-    {simple ? rows.map((row, index) => <div key={index} className="flex items-end gap-2"><div className="flex-1"><Field label={writer ? writerLabel(index) : simpleLabel} id={`${group}-${index}-name`} value={row.name} onChange={(value) => change(index, "name", value)} /></div>{writer && <div className="w-44">{roleSelect(row, index)}</div>}<Button type="button" size="icon" variant="ghost" aria-label={`Remove ${singular} ${index + 1}`} disabled={rows.length === 1} onClick={() => onChange(rows.filter((_, i) => i !== index))}><Trash2 /></Button></div>) : rows.map((row, index) => <div key={index} className={`grid items-end gap-4 ${publisher ? "sm:grid-cols-[1fr_160px_160px_36px]" : writer ? "sm:grid-cols-[1fr_150px_110px_150px_150px_36px]" : "sm:grid-cols-[1fr_110px_150px_150px_36px]"}`}>
-      <Field label={publisher ? "Publisher name" : writer ? writerLabel(index) : "Legal name"} id={`${group}-${index}-name`} value={row.name} onChange={(value) => change(index, "name", value)} />
-      {roleSelect(row, index)}
-      {!publisher && <div className="space-y-2"><Label htmlFor={`${group}-${index}-share`}>Split (%)</Label><Input id={`${group}-${index}-share`} type="number" min="0" max="100" step="0.01" value={row.percentage} onChange={(event) => change(index, "percentage", event.target.value)} /></div>}
-      <Field label={publisher ? "Publisher IPI" : "IPI name number"} id={`${group}-${index}-ipi`} value={row.ipi} placeholder="9–11 digits" onChange={(value) => change(index, "ipi", value)} />
-      <SelectField label="PRO affiliation" id={`${group}-${index}-pro`} value={row.pro} options={PROS} onChange={(value) => change(index, "pro", value)} />
-      <Button type="button" size="icon" variant="ghost" aria-label={`Remove ${singular} ${index + 1}`} disabled={rows.length === 1} onClick={() => onChange(rows.filter((_, i) => i !== index))}><Trash2 /></Button>
-    </div>)}
+    {rows.map((row, index) => simple
+      ? legal
+        ? <div key={index} className={`grid items-end gap-3 ${writer ? "sm:grid-cols-[1fr_1fr_176px_36px]" : "sm:grid-cols-[1fr_1fr_36px]"}`}>{names(row, index)}{roleSelect(row, index)}{removeButton(index)}</div>
+        : <div key={index} className="flex items-end gap-2"><div className="flex-1"><Field label={simpleLabel} id={`${group}-${index}-name`} value={row.name} onChange={(value) => change(index, "name", value)} /></div>{removeButton(index)}</div>
+      : legal
+        ? <div key={index} className="space-y-4 rounded-lg border border-border p-3">
+            <div className={`grid items-end gap-4 ${writer ? "sm:grid-cols-[1fr_1fr_180px_36px]" : "sm:grid-cols-[1fr_1fr_36px]"}`}>{names(row, index)}{roleSelect(row, index)}{removeButton(index)}</div>
+            <div className="grid items-end gap-4 sm:grid-cols-3">{share(row, index)}{ipi(row, index)}{pro(row, index)}</div>
+          </div>
+        : <div key={index} className={`grid items-end gap-4 ${publisher ? "sm:grid-cols-[1fr_160px_160px_36px]" : "sm:grid-cols-[1fr_110px_150px_150px_36px]"}`}>
+            <Field label={publisher ? "Publisher name" : "Legal name"} id={`${group}-${index}-name`} value={row.name} onChange={(value) => change(index, "name", value)} />
+            {!publisher && share(row, index)}
+            {ipi(row, index)}
+            {pro(row, index)}
+            {removeButton(index)}
+          </div>)}
+    {children}
     <div className="flex flex-wrap items-center justify-between gap-3"><Button type="button" variant="outline" onClick={() => onChange([...rows, emptyContributor()])}><Plus />Add {singular}</Button>{!publisher && !simple && group !== "producers" && <span className="text-sm text-muted-foreground">Total: {Number(rows.reduce((sum, row) => sum + Number(row.percentage || 0), 0).toFixed(2))}%</span>}</div>
   </fieldset>;
 }
