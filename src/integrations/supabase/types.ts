@@ -900,7 +900,12 @@ export type Database = {
         | "completed"
       room_status: "scheduled" | "live" | "completed"
       subscription_tier: "free" | "paid"
-      user_role: "super_admin" | "employee" | "user"
+      user_role:
+        | "super_admin"
+        | "employee"
+        | "user"
+        | "department_lead"
+        | "hr_admin"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -1039,7 +1044,13 @@ export const Constants = {
       ],
       room_status: ["scheduled", "live", "completed"],
       subscription_tier: ["free", "paid"],
-      user_role: ["super_admin", "employee", "user"],
+      user_role: [
+        "super_admin",
+        "employee",
+        "user",
+        "department_lead",
+        "hr_admin",
+      ],
     },
   },
 } as const
