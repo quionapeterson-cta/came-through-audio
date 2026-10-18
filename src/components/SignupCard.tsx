@@ -62,7 +62,7 @@ export function SignupCard({ returnPath, onAuthed, inviteMode }: { returnPath?: 
         <>
           <h2 className="text-2xl font-bold leading-tight">
             {mode === "signup" ? (
-              <>Musicians, sign up free.<span className="mt-1 block text-lg font-normal text-primary">Includes Free Royalty Health Check.</span></>
+              <>Musicians, sign up free.<span className="mt-1 block text-lg font-normal text-primary">Includes Free Unlimited Royalty Health Checks.</span></>
             ) : (
               "Welcome back"
             )}

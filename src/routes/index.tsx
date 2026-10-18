@@ -1,8 +1,11 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { PRE_DIST_NOTE, PRO_TIP } from "@/lib/copy";
-import { Check, Mic, Guitar, Disc3, NotebookPen, Music, Quote, AlertTriangle, Upload, Download, FileSignature, ShieldCheck, Mail } from "lucide-react";
+import { Check, Music, Quote, Upload, Download } from "lucide-react";
 import { SignupCard } from "@/components/SignupCard";
 import { BrandLogo } from "@/components/BrandLogo";
+import { FitHeadline } from "@/components/FitHeadline";
+import { EmbedBadge, ShieldBadge, SignBadge, SplitBadge, UploadBadge, VaultBadge } from "@/components/StepBadges";
+import { ArtistBadge, ComposerBadge, MusicianBadge, ProducerBadge, SongwriterBadge } from "@/components/RoleBadges";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 
 export const Route = createFileRoute("/")({
@@ -22,12 +25,12 @@ export const Route = createFileRoute("/")({
 const includes = ["Metadata Embedding", "Cataloging", "Royalty Audits", "Blockchain Timestamp", "Secure Catalog"];
 
 const steps = [
-  { icon: Upload, title: "Upload your master", text: "Drop your final mix straight in from your phone or studio laptop. No more loose links." },
-  { icon: Download, title: "Embed your metadata", text: "Lock song data, ISRC, UPC and credits inside the file. Update it any time." },
-  { icon: Disc3, title: "Save to your catalog", text: "Your masters, art, lyrics and credits live in one vault you can download from anywhere." },
-  { icon: FileSignature, title: "Create a split sheet", text: "Splits pull from your catalog automatically. Sign as the owner in seconds." },
-  { icon: Mail, title: "Collect signatures", text: "Collaborators get a link, sign up free and sign. Every signature is verified." },
-  { icon: ShieldCheck, title: "AI Protection", text: "Show you made it, and made it first, with a Certificate of Human Origin timestamped on the Bitcoin blockchain." },
+  { badge: UploadBadge, title: "Upload your master", text: "Drop your final mix straight in from your phone or studio laptop. No more loose links." },
+  { badge: EmbedBadge, title: "Embed your metadata", text: "Lock song data, ISRC, UPC and credits inside the file. Update it any time." },
+  { badge: VaultBadge, title: "Save to your catalog", text: "Your masters, art, lyrics and credits live in one vault you can download from anywhere." },
+  { badge: SplitBadge, title: "Create a split sheet", text: "Splits pull from your catalog automatically. Sign as the owner in seconds." },
+  { badge: SignBadge, title: "Collect signatures", text: "Collaborators get a link, sign up free and sign. Every signature is verified." },
+  { badge: ShieldBadge, title: "AI Protection", text: "Show you made it, and made it first, with a Certificate of Human Origin timestamped on the Bitcoin blockchain." },
 ];
 
 const faqs = [
@@ -47,11 +50,11 @@ const footerCols: { title: string; links: FooterLink[] }[] = [
 ];
 
 const roles = [
-  { icon: Mic, title: "Artist", scene: "Recording in studio", text: "Centralize your master files and preserve your recording legacy safely." },
-  { icon: Guitar, title: "Musician", scene: "Playing an instrument live", text: "Ensure your performance tracking metadata is locked into every release." },
-  { icon: Disc3, title: "Producer", scene: "Working on a beat machine", text: "Secure your production splits and protect your sample history upfront." },
-  { icon: NotebookPen, title: "Songwriter", scene: "Writing with a notebook", text: "Lock down your lyrical ownership and claim your mechanical collection stakes." },
-  { icon: Music, title: "Composer", scene: "Scoring on sheet music", text: "Anchor your cinematic compositions and publishing percentages flawlessly." },
+  { badge: ArtistBadge, title: "Artists", question: "Recording in the studio?", text: "Centralize your master files and preserve your recording legacy safely." },
+  { badge: MusicianBadge, title: "Musicians", question: "Do you play music live?", text: "Ensure your performance tracking metadata is locked into every release." },
+  { badge: ProducerBadge, title: "Producers", question: "Are you working on beats?", text: "Secure your production splits and protect your sample history upfront." },
+  { badge: SongwriterBadge, title: "Songwriters", question: "Are you writing songs?", text: "Lock down your lyrical ownership and claim your mechanical collection stakes." },
+  { badge: ComposerBadge, title: "Composers", question: "Do you score music?", text: "Anchor your cinematic compositions and publishing percentages flawlessly." },
 ];
 
 const valueItems = [
@@ -63,35 +66,45 @@ const valueItems = [
 function Landing() {
   return (
     <div className="min-h-screen bg-background text-foreground">
-      <header className="bg-ink text-ink-foreground">
+      {/* A white header sets the black hero apart as its own block instead of one long stretch of black. */}
+      <header className="border-b border-border bg-background text-foreground">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-5">
-          <BrandLogo />
-          <nav className="flex items-center gap-6"><Link to="/plans" className="text-sm font-semibold text-ink-muted hover:text-primary">Plans</Link><Link to="/workspace" search={{ tab: undefined }} className="text-sm font-semibold text-ink-muted hover:text-primary">Log in</Link></nav>
+          <BrandLogo tone="light" />
+          <nav className="flex items-center gap-4 whitespace-nowrap sm:gap-6"><Link to="/plans" className="text-sm font-semibold text-muted-foreground hover:text-primary">Plans</Link><Link to="/workspace" search={{ tab: undefined }} className="text-sm font-semibold text-muted-foreground hover:text-primary">Log in</Link></nav>
         </div>
       </header>
 
       <section className="bg-ink text-ink-foreground">
-        <div className="mx-auto grid max-w-7xl gap-12 px-6 pb-20 pt-10 md:grid-cols-[1.15fr_1fr] md:items-center">
-          <div className="space-y-6">
-            <h1 className="uppercase leading-[0.95] tracking-tight">
-              <span className="block text-3xl font-bold md:text-4xl lg:text-5xl">Embed your metadata &amp;</span>
-              <span className="block text-4xl font-light text-transparent [-webkit-text-stroke:1px_var(--ink-foreground)] md:text-5xl lg:text-6xl">Organize your</span>
-              <span className="block text-4xl font-extrabold text-primary [-webkit-text-stroke:1px_var(--ink-foreground)] md:text-5xl lg:text-6xl">Music business</span>
-              <span className="block text-5xl font-black md:text-6xl lg:text-7xl">Like a pro</span>
-            </h1>
-            <p className="text-lg text-ink-foreground">
-              Every unembedded song is lost income. Embed your metadata and ensure your music is properly tracked everywhere it's played — so you never miss a royalty you earned.
-            </p>
-            <div className="flex gap-3 border-l-4 border-primary pl-5 text-base text-ink-foreground">
-              <AlertTriangle className="mt-0.5 h-6 w-6 shrink-0 fill-caution text-ink" />
-              <p><span className="font-bold text-brand-electric">70% of independent artists</span> lose royalties because credits aren’t embedded, catalogs are scattered, and accounts aren’t set up to collect Worldwide.</p>
-            </div>
+        <div className="mx-auto grid max-w-7xl gap-12 px-6 py-16 md:grid-cols-[1.15fr_1fr] md:items-center">
+          <div className="min-w-0">
+            {/* The tagline: always uppercase with 2px letter spacing (BRANDING.md §1). The first line's negative margin
+                trims the space above the capitals, so the headline block centers optically against the sign-up box. */}
+            <FitHeadline className="uppercase leading-none tracking-[2px]" lines={[
+              { text: <><span className="text-primary [-webkit-text-stroke:1px_var(--ink-foreground)]">Your</span> first</>, className: "-mt-[0.13em] text-5xl font-extrabold md:text-6xl lg:text-7xl" },
+              // "Before" is filled with the background so overlapping inner strokes don't show; only the outline reads.
+              { text: <>Stop <span className="font-bold text-ink [-webkit-text-stroke:1.5px_var(--ink-foreground)]">before</span></>, className: "text-5xl font-extrabold md:text-6xl lg:text-7xl" },
+              { text: "Distribution", className: "text-5xl font-extrabold text-primary [-webkit-text-stroke:1px_var(--ink-foreground)] md:text-6xl lg:text-7xl" },
+            ]} sub="Embed your metadata & organize your music business like a pro." subClassName="text-xl font-semibold text-ink-foreground" />
           </div>
           <div id="signup"><SignupCard /></div>
         </div>
       </section>
 
+      {/* A white band right after the hero breaks up the black and makes the problem the first thing to read on. */}
       <section className="border-b border-border bg-background">
+        <div className="mx-auto grid max-w-7xl gap-10 px-6 py-16 md:grid-cols-2 md:items-center md:gap-16">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:gap-6">
+            <span className="shrink-0 text-7xl font-black leading-none tracking-tight text-primary md:text-8xl">70%</span>
+            <p className="border-l-4 border-primary pl-6 text-lg"><span className="font-bold">of independent artists</span> lose royalties because credits aren’t embedded, catalogs are scattered, and accounts aren’t set up to collect Worldwide.</p>
+          </div>
+          <p className="text-lg text-muted-foreground">
+            <span className="mb-2 block text-3xl font-extrabold tracking-tight text-foreground md:text-4xl">Every unembedded song is lost income.</span>
+            Embed your metadata and ensure your music is properly tracked everywhere it's played — so you never miss a royalty you earned.
+          </p>
+        </div>
+      </section>
+
+      <section className="border-y border-border bg-muted">
         <div className="mx-auto max-w-7xl px-6 py-14">
           <h2 className="text-center text-3xl font-extrabold uppercase tracking-wide text-primary md:text-4xl">What all plans include</h2>
           <p className="mb-8 mt-2 text-center text-sm text-muted-foreground">Free plans include unlimited royalty audits &amp; unlimited split sheet signatures.</p>
@@ -110,11 +123,11 @@ function Landing() {
           <h2 className="text-center text-4xl font-bold md:text-5xl lg:text-6xl">How It Works</h2>
           <p className="mx-auto mt-4 max-w-xl text-center text-lg text-ink-muted">From the studio to your vault in six simple steps.</p>
           <ol className="mt-14 grid gap-px overflow-hidden rounded-2xl border border-ink-border bg-ink-border md:grid-cols-2 lg:grid-cols-3">
-            {steps.map(({ icon: Icon, title, text }, i) => (
+            {steps.map(({ badge: Badge, title, text }, i) => (
               <li key={title} className="group flex flex-col gap-4 bg-ink p-8 transition hover:bg-ink-border/40">
                 <div className="flex items-center justify-between">
                   <span className="text-5xl font-black leading-none text-ink-foreground/20 transition group-hover:text-ink-foreground/40">{String(i + 1).padStart(2, "0")}</span>
-                  <span className="flex h-12 w-12 items-center justify-center rounded-xl bg-background"><Icon className="h-6 w-6 text-primary" /></span>
+                  <Badge />
                 </div>
                 <h3 className="text-xl font-bold">{title}</h3>
                 <p className="text-base leading-relaxed text-ink-muted">{text}</p>
@@ -125,17 +138,17 @@ function Landing() {
       </section>
 
       <section className="mx-auto max-w-7xl px-6 py-20">
-        <h2 className="text-center text-3xl font-bold md:text-4xl">Who it's for</h2>
+        <h2 className="text-center text-3xl font-bold md:text-4xl">Who It's For</h2>
         <div className="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-5">
-          {roles.map(({ icon: Icon, title, scene, text }) => (
-            <div key={title} className="overflow-hidden rounded-xl border border-border">
-              <div className="flex aspect-square flex-col items-center justify-center gap-2 bg-ink text-primary">
-                <Icon className="h-12 w-12" />
-                <span className="text-xs text-ink-muted">{scene}</span>
-              </div>
-              <div className="p-5">
-                <h3 className="text-lg font-bold">{title}</h3>
-                <p className="mt-1 text-sm text-muted-foreground">{text}</p>
+          {roles.map(({ badge: Badge, title, question, text }) => (
+            <div key={title} className="group flex flex-col">
+              <h3 className="mb-3 text-center text-lg font-extrabold uppercase tracking-[2px] text-primary">{title}</h3>
+              <div className="flex-1 overflow-hidden rounded-xl border border-border">
+                <div className="flex aspect-[16/10] items-center justify-center bg-ink sm:aspect-square"><Badge /></div>
+                <div className="p-5">
+                  <p className="text-lg font-bold">{question}</p>
+                  <p className="mt-1 text-sm text-muted-foreground">{text}</p>
+                </div>
               </div>
             </div>
           ))}
