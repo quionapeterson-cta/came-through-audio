@@ -15,6 +15,8 @@ export interface Onboarding {
   avatar: string; // badge path, uploaded photo (data URL), or "" for none
   stageName: string;
   legalName: string;
+  /** Country whose collection societies the Royalty Health Check uses (src/lib/repertoires.ts code). */
+  healthCountry?: string;
 }
 
 const key = (userId: string) => `cta-artist-profile:${userId}`;

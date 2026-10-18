@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { auditCatalog, auditTrack, isIsrc, isIswc } from "./audit";
+import { auditCatalog, auditTrack, hasPro, isIsrc, isIswc } from "./audit";
 import { emptyMetadata } from "./metadata";
 import type { CatalogTrack } from "./catalog";
 
@@ -26,5 +26,13 @@ describe("royalty audit", () => {
   it("a missing ISRC flags SoundExchange only", () => {
     const issues = auditTrack({ ...ready, metadata: { ...ready.metadata, isrc: "" } });
     expect(issues.map((i) => i.pillar)).toEqual(["digital"]);
+  });
+  it("accepts any worldwide or typed-in PRO, not only US societies", () => {
+    for (const pro of ["PRS for Music", "SOCAN", "GEMA", "SACEM", "MÜST"]) {
+      expect(auditTrack({ ...ready, metadata: { ...ready.metadata, writers: [{ ...ready.metadata.writers[0]!, pro }] } })).toEqual([]);
+    }
+  });
+  it("flags writers with no PRO", () => {
+    expect(["", " ", "None", "Other"].map(hasPro)).toEqual([false, false, false, false]);
   });
 });

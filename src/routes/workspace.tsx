@@ -261,7 +261,7 @@ function Masterclasses() {
 function Health({ onFix, onFixField, onEmbed, userId, email, purchases, canUtility, onUpgrade }: { userId: string; email?: string | undefined; purchases: Purchase[]; canUtility: boolean; onUpgrade: () => void; onFix: () => void; onFixField: (trackId: string, field: string) => void; onEmbed: () => void }) {
   return (
     <div className="mt-6 space-y-6">
-      <RoyaltyHealthCheck onFix={onFix} onEmbed={onEmbed} />
+      <RoyaltyHealthCheck userId={userId} onFix={onFix} onFixField={onFixField} onEmbed={onEmbed} />
       <div id="expert-assistance"><ExpertAssistance userId={userId} email={email} purchases={purchases} onFix={onFixField} /></div>
       <RoyaltyUtilitySuite unlocked={canUtility} onUpgrade={onUpgrade} />
     </div>

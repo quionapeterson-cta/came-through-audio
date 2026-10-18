@@ -2,7 +2,8 @@ import type { CatalogTrack } from "@/lib/catalog";
 import { creditName } from "@/lib/metadata";
 
 export type Pillar = "performance" | "digital" | "mechanical";
-export type Issue = { pillar: Pillar; text: string };
+/** `field` is the catalog form field id to jump to, so each warning can link straight to the fix. */
+export type Issue = { pillar: Pillar; text: string; field?: string };
 
 export const PILLARS: { id: Pillar; label: string; registry: string; search: string; searchLabel: string }[] = [
   { id: "performance", label: "Performance Royalties", registry: "ASCAP · BMI", search: "https://www.ascap.com/repertory", searchLabel: "ASCAP Repertory" },
@@ -14,30 +15,31 @@ export const BMI_SEARCH = "https://repertoire.bmi.com/";
 export const isIsrc = (v: string) => /^[A-Z]{2}[A-Z0-9]{3}\d{7}$/.test(v.replace(/-/g, "").toUpperCase());
 export const isIswc = (v: string) => /^T\d{10}$/.test(v.replace(/[-.\s]/g, "").toUpperCase());
 export const isIpi = (v: string) => /^\d{9,11}$/.test(v.trim());
-const PROS = ["ascap", "bmi", "sesac", "gmr"];
+/** Any society counts, from the worldwide PRO list or typed in under "Other"; only a blank or "None" means unaffiliated. */
+export const hasPro = (pro?: string) => !["", "none", "other"].includes((pro ?? "").trim().toLowerCase());
 
 /** Checks one catalog track against what each repertoire system needs to match and pay it. */
 export function auditTrack(t: CatalogTrack): Issue[] {
   const m = t.metadata;
   const out: Issue[] = [];
-  const writers = [...m.writers, ...m.composers].filter(creditName).map((w) => ({ ...w, name: creditName(w) }));
-  if (!writers.length) out.push({ pillar: "performance", text: "No songwriters listed" });
+  const writers = (["writers", "composers"] as const).flatMap((group) => m[group].map((w, index) => ({ ...w, name: creditName(w), at: `${group}-${index}` }))).filter((w) => w.name);
+  if (!writers.length) out.push({ pillar: "performance", text: "No songwriters listed", field: "writers-0-legalName" });
   writers.forEach((w) => {
-    if (!PROS.some((p) => w.pro?.toLowerCase().includes(p))) out.push({ pillar: "performance", text: `${w.name}: no PRO affiliation` });
-    if (!isIpi(w.ipi ?? "")) out.push({ pillar: "performance", text: `${w.name}: missing or invalid IPI` });
+    if (!hasPro(w.pro)) out.push({ pillar: "performance", text: `${w.name}: no PRO affiliation`, field: `${w.at}-pro` });
+    if (!isIpi(w.ipi ?? "")) out.push({ pillar: "performance", text: `${w.name}: missing or invalid IPI`, field: `${w.at}-ipi` });
   });
   if (writers.length) {
     const split = m.writers.filter(creditName).reduce((s, w) => s + Number(w.percentage || 0), 0);
-    if (split && Math.round(split) !== 100) out.push({ pillar: "performance", text: `Writer splits total ${split}% (must be 100%)` });
+    if (split && Math.round(split) !== 100) out.push({ pillar: "performance", text: `Writer splits total ${split}% (must be 100%)`, field: "writers-0-share" });
   }
-  if (!m.isrc) out.push({ pillar: "digital", text: "Missing ISRC" });
-  else if (!isIsrc(m.isrc)) out.push({ pillar: "digital", text: "ISRC is not 12 characters (CC-XXX-YY-NNNNN)" });
-  if (!t.artist.trim()) out.push({ pillar: "digital", text: "No featured artist name" });
+  if (!m.isrc) out.push({ pillar: "digital", text: "Missing ISRC", field: "isrc" });
+  else if (!isIsrc(m.isrc)) out.push({ pillar: "digital", text: "ISRC is not 12 characters (CC-XXX-YY-NNNNN)", field: "isrc" });
+  if (!t.artist.trim()) out.push({ pillar: "digital", text: "No featured artist name", field: "artist" });
   const pubs = m.publishers.filter((p) => p.name.trim());
-  if (!pubs.length) out.push({ pillar: "mechanical", text: "No publisher listed (self-published writers can list their own entity)" });
-  pubs.forEach((p) => { if (!isIpi(p.ipi ?? "")) out.push({ pillar: "mechanical", text: `${p.name}: missing publisher IPI` }); });
-  if (!m.iswc) out.push({ pillar: "mechanical", text: "Missing ISWC — sound recording can't be linked to its composition" });
-  else if (!isIswc(m.iswc)) out.push({ pillar: "mechanical", text: "ISWC format should be T-123.456.789-0" });
+  if (!pubs.length) out.push({ pillar: "mechanical", text: "No publisher listed (self-published writers can list their own entity)", field: "publishers-0-name" });
+  m.publishers.forEach((p, index) => { if (p.name.trim() && !isIpi(p.ipi ?? "")) out.push({ pillar: "mechanical", text: `${p.name}: missing publisher IPI`, field: `publishers-${index}-ipi` }); });
+  if (!m.iswc) out.push({ pillar: "mechanical", text: "Missing ISWC — sound recording can't be linked to its composition", field: "iswc" });
+  else if (!isIswc(m.iswc)) out.push({ pillar: "mechanical", text: "ISWC format should be T-123.456.789-0", field: "iswc" });
   return out;
 }
 

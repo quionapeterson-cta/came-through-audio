@@ -2,6 +2,7 @@ import { useState } from "react";
 import { CheckCircle2, XCircle, ExternalLink, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { ProSelect } from "@/components/ProSelect";
 import type { CatalogTrack } from "@/lib/catalog";
 import { auditTrack, BMI_SEARCH, PILLARS, type Issue } from "@/lib/audit";
 
@@ -37,7 +38,7 @@ export function QuickSongInspector({ onEmbed, onExpert }: { onEmbed: () => void;
       <div className="mt-4 grid gap-3 md:grid-cols-3">
         {field("title", "Song title")}{field("artist", "Artist")}{field("duration", "Duration", "3:25")}
         {field("isrc", "ISRC", "US-XXX-26-00001")}{field("iswc", "ISWC (optional)", "T-123.456.789-0")}{field("writer", "Writer name")}
-        {field("pro", "Writer PRO", "ASCAP or BMI")}{field("ipi", "Writer IPI #")}{field("split", "Writer split %")}
+        <div className="space-y-1 text-sm"><label htmlFor="inspector-pro">Writer PRO</label><ProSelect id="inspector-pro" value={f.pro} onChange={(pro) => setF({ ...f, pro })} /></div>{field("ipi", "Writer IPI #")}{field("split", "Writer split %")}
         {field("publisher", "Publisher")}{field("pubIpi", "Publisher IPI #")}
       </div>
       <div className="mt-4 flex gap-2">
