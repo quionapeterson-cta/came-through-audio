@@ -17,7 +17,8 @@
 
 /* Playful */
 .cta-catalog { background-image: url("/icons/playful/catalog_complete.png"); }
-.cta-party { background-image: url("/icons/playful/party_popper.png"); }
+/* No party popper badge yet; the "tagged" moment shows the vault until one exists. */
+.cta-party { background-image: url("/icons/playful/vault.png"); }
 .cta-mic { background-image: url("/icons/playful/bedazzled_mic.png"); }
 .cta-note { background-image: url("/icons/playful/bedazzled_note.png"); }
 .cta-vinyl { background-image: url("/icons/playful/bedazzled_vinyl.png"); }

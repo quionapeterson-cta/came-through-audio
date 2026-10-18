@@ -16,8 +16,15 @@ export function cardText({ ctx, artist, title, count }: Omit<CardInput, "avatar"
 
 const loadImage = (src: string) => new Promise<HTMLImageElement>((ok, fail) => { const i = new Image(); i.onload = () => ok(i); i.onerror = fail; i.src = src; });
 
-/** Crops a badge's transparent padding so the artwork itself sits next to the text. */
-function trimmed(img: HTMLImageElement): CanvasImageSource & { width: number; height: number } {
+type Trimmed = CanvasImageSource & { width: number; height: number; shiftX?: number };
+
+/**
+ * Crops a badge's transparent padding so the artwork itself sits next to the text, and works out its optical
+ * center: lopsided art like the music note looks centered on its wide solid parts (the note head), not on its
+ * outer edges, so each row counts by its width squared. Halfway between that and the edge center keeps thin
+ * parts like the flag from swinging it too far; symmetrical badges don't move. `shiftX` is in trimmed pixels.
+ */
+function trimmed(img: HTMLImageElement): Trimmed {
   const c = document.createElement("canvas"); c.width = img.naturalWidth; c.height = img.naturalHeight;
   const g = c.getContext("2d", { willReadFrequently: true })!; g.drawImage(img, 0, 0);
   try {
@@ -25,8 +32,17 @@ function trimmed(img: HTMLImageElement): CanvasImageSource & { width: number; he
     let x0 = width, y0 = height, x1 = -1, y1 = -1;
     for (let y = 0; y < height; y += 2) for (let x = 0; x < width; x += 2) if (data[(y * width + x) * 4 + 3]! > 16) { if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; }
     if (x1 < 0) return img;
-    const out = document.createElement("canvas"); out.width = x1 - x0 + 2; out.height = y1 - y0 + 2;
+    let weight = 0, sum = 0;
+    for (let y = y0; y <= y1; y += 2) {
+      let left = -1, right = -1;
+      for (let x = x0; x <= x1; x += 2) if (data[(y * width + x) * 4 + 3]! > 16) { if (left < 0) left = x; right = x; }
+      if (left < 0) continue;
+      const w = (right - left) ** 2; weight += w; sum += w * (left + right) / 2;
+    }
+    const edges = (x0 + x1) / 2, optical = weight ? (edges + sum / weight) / 2 : edges;
+    const out: HTMLCanvasElement & { shiftX?: number } = document.createElement("canvas"); out.width = x1 - x0 + 2; out.height = y1 - y0 + 2;
     out.getContext("2d")!.drawImage(c, x0, y0, out.width, out.height, 0, 0, out.width, out.height);
+    out.shiftX = Math.max(-0.12, Math.min(0.12, (optical - edges) / out.width)) * out.width;
     return out;
   } catch { return img; }
 }
@@ -56,7 +72,7 @@ export async function drawPromoCard(input: CardInput): Promise<Blob> {
       g.drawImage(img, (img.width - m) / 2, (img.height - m) / 2, m, m, x, y, box, box); g.restore();
     } else {
       const w = img.width * k;
-      g.drawImage(img, (S - w) / 2, y, w, bh);
+      g.drawImage(img, (S - w) / 2 - ((img as Trimmed).shiftX ?? 0) * k, y, w, bh);
     }
   }
 
