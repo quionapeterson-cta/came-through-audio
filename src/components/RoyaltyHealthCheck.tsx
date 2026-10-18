@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { AlertTriangle, Hourglass } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -18,11 +18,23 @@ export function RoyaltyHealthCheck({ userId, onFix, onFixField, onEmbed }: { use
   const [checks, setChecks] = useState<RepertoireCheck[]>([]);
   const [code, setCode] = useState(() => loadOnboarding(userId)?.healthCountry);
   const [running, setRunning] = useState<{ done: number; total: number; trackId?: string }>();
+  const [loaded, setLoaded] = useState(false);
+  const autoRan = useRef(false);
 
   useEffect(() => {
-    listTracks().then(setTracks).catch(() => setTracks([]));
-    listChecks().then(setChecks).catch(() => toast.error("Couldn't load your saved registration checks."));
+    Promise.all([
+      listTracks().then(setTracks).catch(() => setTracks([])),
+      listChecks().then(setChecks).catch(() => toast.error("Couldn't load your saved registration checks.")),
+    ]).then(() => setLoaded(true));
   }, []);
+
+  // Songs that have never been looked up get looked up on their own, so results are there without a click.
+  useEffect(() => {
+    if (!loaded || autoRan.current || !tracks?.length) return;
+    autoRan.current = true;
+    const fresh = tracks.filter((t) => !checks.some((c) => c.trackId === t.id && AUTO.includes(c.society)));
+    if (fresh.length) void runAll(fresh, false);
+  }, [loaded]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // First visit: guess the country from the writers' PROs, falling back to the US.
   const country = countryByCode(code ?? guessCountry((tracks ?? []).flatMap((t) => [...t.metadata.writers, ...t.metadata.composers].map((w) => w.pro)))) ?? countryByCode("US")!;
@@ -49,8 +61,7 @@ export function RoyaltyHealthCheck({ userId, onFix, onFixField, onEmbed }: { use
   }
 
   /** One song at a time: MusicBrainz allows about one request per second, so a catalog takes a little while. */
-  async function runAll() {
-    const list = tracks ?? [];
+  async function runAll(list: CatalogTrack[] = tracks ?? [], announce = true) {
     let failed = 0;
     for (const [i, t] of list.entries()) {
       setRunning({ done: i, total: list.length, trackId: t.id });
@@ -58,7 +69,7 @@ export function RoyaltyHealthCheck({ userId, onFix, onFixField, onEmbed }: { use
     }
     setRunning(undefined);
     if (failed) toast.error(`${failed} lookup${failed === 1 ? "" : "s"} didn't finish. Try those songs again.`);
-    else toast.success("Live lookups finished.");
+    else if (announce) toast.success("Live lookups finished.");
   }
 
   async function mark(trackId: string, society: string, status: RepertoireCheck["status"], workId?: string) {
@@ -69,13 +80,13 @@ export function RoyaltyHealthCheck({ userId, onFix, onFixField, onEmbed }: { use
     try { await clearCheck(trackId, society); setChecks((all) => all.filter((x) => !(x.trackId === trackId && x.society === society))); } catch { toast.error("Couldn't undo that. Try again."); }
   }
 
-  if (!tracks) return <div className="rounded-3xl bg-ink p-8 text-ink-muted">Scanning your catalog…</div>;
   const book = () => document.getElementById("expert-assistance")?.scrollIntoView({ behavior: "smooth" });
+  if (!tracks) return <div className="rounded-3xl bg-ink p-8 text-ink-muted">Scanning your catalog…</div>;
 
   return (
     <div className="space-y-6">
       <HealthReport report={report} country={country} running={running}
-        onCountry={chooseCountry} onRunAll={() => void runAll()} onRunOne={(id) => void runOne(id)} onMark={(...a) => void mark(...a)} onClear={(...a) => void clear(...a)} onFixField={onFixField} />
+        onCountry={chooseCountry} onRunAll={() => void runAll()} onExpert={book} onRunOne={(id) => void runOne(id)} onMark={(...a) => void mark(...a)} onClear={(...a) => void clear(...a)} onFixField={onFixField} />
 
       {tracks.length > 0 && <MismatchTips />}
 

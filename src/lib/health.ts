@@ -8,10 +8,16 @@ import { INTERNATIONAL, societyForPro, type Country, type Society } from "@/lib/
 export type RepertoireCheck = { trackId: string; society: string; status: "found" | "not_listed"; source: "self" | "auto"; workId?: string | null; details?: unknown; checkedAt: string };
 
 export const PILLAR_ORDER: Pillar[] = ["performance", "digital", "mechanical"];
+/** Plain-language name for each kind of royalty; pillarTerm is the official term shown underneath. */
 export function pillarLabel(p: Pillar, country: Country) {
+  if (p === "performance") return "Songwriter airplay pay";
+  if (p === "mechanical") return "Songwriter streaming pay";
+  return country.code === "US" ? "Artist radio pay" : "Recording airplay pay";
+}
+export function pillarTerm(p: Pillar, country: Country) {
   if (p === "performance") return "Performance royalties";
   if (p === "mechanical") return "Mechanical royalties";
-  return country.code === "US" ? "Digital performance" : "Recording royalties";
+  return country.code === "US" ? "Digital performance royalties" : "Neighbouring rights";
 }
 export const PILLAR_HINT: Record<Pillar, string> = {
   performance: "Paid to songwriters when the song is played on radio, TV, streaming and live.",
@@ -56,10 +62,14 @@ export function trackReport(t: CatalogTrack, country: Country, checks: Repertoir
   const auto = (id: string) => { const c = mine.find((x) => x.society === id && x.source === "auto"); return c && { hit: c.status === "found" ? (c.details as never) : null, checkedAt: c.checkedAt }; };
   const streaming = auto(INTERNATIONAL.deezer.id) as TrackReport["streaming"];
   const work = auto(INTERNATIONAL.musicbrainz.id) as TrackReport["work"];
-  const findings = streaming || work ? compareLookup({ streaming: streaming?.hit ?? null, work: work?.hit ?? null }, {
+  const found = streaming || work ? compareLookup({ streaming: streaming?.hit ?? null, work: work?.hit ?? null }, {
     title: t.title, artist: t.artist, isrc: t.metadata.isrc, iswc: t.metadata.iswc, writers: writerNames(t),
   }) : [];
-  return { track: t, issues, pillars, streaming, work, findings };
+  const findings = found;
+  // When a lookup already says how to fix a field (e.g. "add ISWC T-…"), drop the vaguer data issue for that field.
+  const covered = new Set(findings.filter((f) => f.level === "warn").map((f) => f.field));
+  const shownIssues = issues.filter((i) => !(i.field && covered.has(i.field as never)));
+  return { track: t, issues: shownIssues, pillars: pillars.map((p) => ({ ...p, dataIssues: p.dataIssues.filter((i) => shownIssues.includes(i)) })), streaming, work, findings };
 }
 
 /**
@@ -89,4 +99,26 @@ export function healthReport(tracks: CatalogTrack[], country: Country, checks: R
       return { pillar, total: list.length, confirmed: list.filter((c) => c.state === "confirmed").length, dataOk: list.filter((c) => !c.dataIssues.length).length };
     }).filter((p) => p.total),
   };
+}
+
+/** One thing the user can do to get paid, in the order it should be done: fix song info, register, then confirm. */
+export type TodoItem =
+  | { kind: "fix"; track: CatalogTrack; text: string; field?: string | undefined }
+  | { kind: "register" | "confirm"; track: CatalogTrack; pillar: Pillar; society: Society };
+
+export function todoList(report: { rows: TrackReport[] }): TodoItem[] {
+  const fix: TodoItem[] = [], register: TodoItem[] = [], confirm: TodoItem[] = [];
+  for (const r of report.rows) {
+    for (const i of r.issues) fix.push({ kind: "fix", track: r.track, text: i.text, field: i.field });
+    for (const f of r.findings) if (f.level === "warn") fix.push({ kind: "fix", track: r.track, text: f.text, field: f.field === "writers" ? "writers-0-legalName" : f.field });
+    for (const p of r.pillars) {
+      if (p.state === "confirmed") continue;
+      for (const { society, check } of p.societies) {
+        // Performance lists every possible PRO when writers have none; the writer only joins one, so ask once.
+        if (check?.status === "not_listed") register.push({ kind: "register", track: r.track, pillar: p.pillar, society });
+        else if (!check && (p.pillar !== "performance" || p.societies.length === 1 || society === p.societies[0]!.society)) confirm.push({ kind: "confirm", track: r.track, pillar: p.pillar, society });
+      }
+    }
+  }
+  return [...fix, ...register, ...confirm];
 }

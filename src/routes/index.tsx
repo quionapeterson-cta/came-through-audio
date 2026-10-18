@@ -22,7 +22,7 @@ export const Route = createFileRoute("/")({
   component: Landing,
 });
 
-const includes = ["Metadata Embedding", "Cataloging", "Royalty Audits", "Blockchain Timestamp", "Secure Catalog"];
+const includes = ["Metadata Embedding", "Cataloging", "Royalty Audits", "Split Sheet Signatures", "Secure Catalog"];
 
 const steps = [
   { badge: UploadBadge, title: "Upload your master", text: "Drop your final mix straight in from your phone or studio laptop. No more loose links." },
@@ -106,7 +106,7 @@ function Landing() {
 
       <section className="border-y border-border bg-muted">
         <div className="mx-auto max-w-7xl px-6 py-14">
-          <h2 className="text-center text-3xl font-extrabold uppercase tracking-wide text-primary md:text-4xl">What all plans include</h2>
+          <h2 className="text-center text-3xl font-extrabold uppercase tracking-wide text-primary md:text-4xl">What all $25/yr plans include</h2>
           <p className="mb-8 mt-2 text-center text-sm text-muted-foreground">Free plans include unlimited royalty audits &amp; unlimited split sheet signatures.</p>
           <div className="flex flex-wrap items-center justify-center gap-x-10 gap-y-4">
             {includes.map((i) => (
