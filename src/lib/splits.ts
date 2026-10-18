@@ -1,15 +1,13 @@
 import { supabase } from "@/integrations/supabase/client";
 import type { CatalogTrack } from "@/lib/catalog";
+import { PROS } from "@/lib/metadata";
 import { registrationWriters } from "@/lib/readiness";
 
 export type SplitRole = "Writer" | "Composer" | "Author/Composer" | "Producer" | "Artist" | "Publisher";
 export const SPLIT_ROLES: SplitRole[] = ["Writer", "Composer", "Author/Composer", "Producer", "Artist", "Publisher"];
 
-/** Every performing rights organization offered in PRO dropdowns. "Other" lets users type a society not listed. */
-export const ALL_PROS = [
-  "ASCAP", "BMI", "SESAC", "GMR", "SOCAN", "PRS for Music", "APRA AMCOS", "SACEM", "GEMA", "SIAE", "SGAE", "BUMA/STEMRA",
-  "SABAM", "STIM", "TONO", "KODA", "TEOSTO", "IMRO", "JASRAC", "KOMCA", "SAMRO", "ECAD", "SADAIC", "SAYCE", "SACM", "IPRS", "COSON", "MCSK", "Other", "None",
-] as const;
+/** Worldwide PRO choices, shared with the catalog and profile forms. */
+export const ALL_PROS = PROS;
 
 export type SplitCollaborator = {
   rowId?: string;

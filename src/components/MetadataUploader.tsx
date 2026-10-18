@@ -8,14 +8,19 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { PRE_DIST_NOTE, PRO_TIP } from "@/lib/copy";
-import { readMetadata, CREDIT_ROLES, emptyContributor, emptyMetadata, embedMetadata, metadataSchema, GENRES, PROS, RELEASE_TYPES, WRITER_ROLES, writerRole, type Contributor, type Metadata } from "@/lib/metadata";
+import { readMetadata, CREDIT_ROLES, emptyContributor, emptyMetadata, embedMetadata, creditName, metadataSchema, GENRES, RELEASE_TYPES, WRITER_ROLES, writerRole, type Contributor, type Metadata } from "@/lib/metadata";
 import { deleteTrack, downloadCatalogFile, listTracks, safeName, saveTrack, uploadCatalogFile, type CatalogTrack } from "@/lib/catalog";
 import { AGENCY_LABEL, downloadAgencyExport, type Agency, type Held } from "@/lib/agency-export";
 import { registrationReadiness, type MissingItem } from "@/lib/readiness";
 import { downloadLyricsPdf } from "@/lib/lyrics-pdf";
-import { loadProfile, pickProfile, saveProfile, withProfile } from "@/lib/artist-profile";
+import { ProSelect } from "@/components/ProSelect";
+import { ArtistAvatar } from "@/components/ArtistOnboarding";
+import { BadgeViewer } from "@/components/BadgeViewer";
+import { isBadgeImage } from "@/lib/badges";
+import { loadProfile, withProfile } from "@/lib/artist-profile";
+import { Link } from "@tanstack/react-router";
 
-export function MetadataUploader({ stageName, userId, mode = "embed", onSubmitted, onSplitSheet, onProtect, canSplit, focus, onFocused }: { onFocused?: () => void; stageName?: string; userId?: string; mode?: "embed" | "catalog"; focus?: { trackId: string; field: string } | undefined; onSubmitted?: () => void; onSplitSheet?: (t: CatalogTrack) => void; onProtect?: (t: CatalogTrack) => void; canSplit?: boolean }) {
+export function MetadataUploader({ stageName, avatar, userId, mode = "embed", onSubmitted, onSplitSheet, onProtect, canSplit, focus, onFocused }: { onFocused?: () => void; stageName?: string; avatar?: string | undefined; userId?: string; mode?: "embed" | "catalog"; focus?: { trackId: string; field: string } | undefined; onSubmitted?: () => void; onSplitSheet?: (t: CatalogTrack) => void; onProtect?: (t: CatalogTrack) => void; canSplit?: boolean }) {
   const full = mode === "catalog";
   const [aiProtect, setAiProtect] = useState(false);
   const [submitted, setSubmitted] = useState(false);
@@ -30,6 +35,7 @@ export function MetadataUploader({ stageName, userId, mode = "embed", onSubmitte
   const [editingId, setEditingId] = useState<string>();
   const [saving, setSaving] = useState(false);
   const [upsell, setUpsell] = useState<false | "split" | "export">(false);
+  const [viewAvatar, setViewAvatar] = useState(false);
   const [held, setHeld] = useState<{ agency: Agency; songs: Held[]; exported: number }>();
   const [filter, setFilter] = useState<"All" | "Single" | "EP" | "Album">("All");
   const [picked, setPicked] = useState<Set<string>>(new Set());
@@ -48,22 +54,12 @@ export function MetadataUploader({ stageName, userId, mode = "embed", onSubmitte
       </DropdownMenuContent>
     </DropdownMenu>
   );
-  const [useProfile, setUseProfile] = useState(false);
   const audioInput = useRef<HTMLInputElement>(null);
+  // Embed defaults come from the profile (edited in Profile → Edit profile → Embed Defaults).
   useEffect(() => {
     const p = loadProfile(userId);
-    setUseProfile(!!p);
     if (p && !full) setMetadata((m) => (m.title || m.artist ? m : withProfile(p)));
   }, [userId, full]);
-  function toggleProfile(on: boolean) {
-    if (!userId) return;
-    setUseProfile(on);
-    if (on) {
-      if (!metadata.artist.trim()) { toast.info("Fill in your artist name, label, genres, writers and publishers first — then check this box to save them."); setUseProfile(false); return; }
-      saveProfile(userId, pickProfile(metadata));
-      toast.success("Main artist details saved. They'll pre-fill every new embed — you can still change them anytime.");
-    } else { saveProfile(userId, null); toast.success("Pre-fill turned off."); }
-  }
   const artInput = useRef<HTMLInputElement>(null);
 
   const refresh = useCallback(() => {
@@ -184,7 +180,7 @@ export function MetadataUploader({ stageName, userId, mode = "embed", onSubmitte
         const rows = filled[g] as Contributor[] | undefined;
         if (!rows) continue;
         filled[g] = rows.map((r) => {
-          const saved = profile?.[g]?.find((s) => s.name.trim().toLowerCase() === r.name.trim().toLowerCase());
+          const saved = profile?.[g]?.find((s) => creditName(s).toLowerCase() === creditName(r).toLowerCase());
           return saved ? { ...r, legalName: r.legalName || saved.legalName, pro: r.pro || saved.pro, ipi: r.ipi || saved.ipi, percentage: r.percentage || saved.percentage } : r;
         });
       }
@@ -201,7 +197,7 @@ export function MetadataUploader({ stageName, userId, mode = "embed", onSubmitte
     setBusy(true);
     try {
       const blob = await embedMetadata(await audio.arrayBuffer(), parsed.data, artwork ? await artwork.arrayBuffer() : undefined);
-      const file = { url: URL.createObjectURL(blob), name: `${parsed.data.title.replace(/[<>:"/\\|?*]/g, "_")}-tagged.mp3` };
+      const file = { url: URL.createObjectURL(blob), name: `${safeName(parsed.data.title)}.mp3` };
       const a = document.createElement("a");
       a.href = file.url; a.download = file.name;
       document.body.appendChild(a); a.click(); a.remove();
@@ -214,7 +210,15 @@ export function MetadataUploader({ stageName, userId, mode = "embed", onSubmitte
   const showForm = !full || !!editingId;
   return (
     <section className="mx-auto mt-8 max-w-5xl">
-      {stageName && <h1 className="mb-8 text-center text-4xl font-extrabold tracking-tight md:text-5xl">{stageName}</h1>}
+      {stageName && <h1 className="mb-8 flex items-center justify-center gap-[0.3em] text-center text-4xl font-extrabold leading-none tracking-tight md:text-5xl">
+        <span className="min-w-0 break-words">{stageName}</span>
+        {/* Avatar matches the name's height so badges can be enjoyed up close; click for full size. */}
+        {avatar && <button type="button" aria-label="View your profile badge" onClick={() => setViewAvatar(true)} className="shrink-0 rounded-full transition hover:ring-2 hover:ring-primary/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+          <ArtistAvatar src={avatar} className="h-[1.15em] w-[1.15em]" />
+        </button>}
+      </h1>}
+      <BadgeViewer src={viewAvatar ? avatar : undefined} round={!isBadgeImage(avatar)} onClose={() => setViewAvatar(false)}
+        share={full ? { ctx: "catalog", artist: stageName ?? "", count: tracks.length, genre: loadProfile(userId)?.primaryGenre } : { ctx: "embed", artist: metadata.artist.trim() || (stageName ?? ""), title: metadata.title, genre: metadata.primaryGenre }} />
       <div className="mb-6 flex flex-wrap items-end justify-between gap-3">
         <h1 className="text-2xl font-bold">{full ? (editingId ? "Edit track" : "My Catalog") : "Embed Metadata"}</h1>
         <span className="text-sm text-muted-foreground">{full ? "Saved songs, identifiers and splits" : "MP3 · ID3v2.3"}</span>
@@ -253,7 +257,15 @@ export function MetadataUploader({ stageName, userId, mode = "embed", onSubmitte
           <legend className="px-0 pr-3 text-lg font-semibold">Track details</legend>
           <div className="grid gap-5 sm:grid-cols-2">
             <Field label="Track title" id="title" value={metadata.title} required onChange={(value) => update("title", value)} />
-            <Field label="Track number" id="trackNumber" value={metadata.trackNumber} placeholder="1" onChange={(value) => update("trackNumber", value)} />
+            <div className="min-w-0 space-y-2">
+              <Label htmlFor="trackNumber">Track number</Label>
+              <div className="flex items-center gap-3">
+                <Input id="trackNumber" inputMode="numeric" className="w-20" value={metadata.trackNumber} placeholder="1" onChange={(e) => update("trackNumber", e.target.value.replace(/\D/g, "").slice(0, 3))} />
+                <span className="text-sm text-muted-foreground">of</span>
+                <Input id="trackTotal" aria-label="Total tracks on the release" inputMode="numeric" className="w-20" value={metadata.trackTotal} placeholder="12" onChange={(e) => update("trackTotal", e.target.value.replace(/\D/g, "").slice(0, 3))} />
+              </div>
+              <p className="text-xs text-muted-foreground">Example: track 1 of 12 on the album</p>
+            </div>
             <Field label="Track duration" id="duration" value={metadata.duration} placeholder="3:45" onChange={(value) => update("duration", value)} />
             <div className="space-y-2">
               <Label>Explicit content</Label>
@@ -288,10 +300,10 @@ export function MetadataUploader({ stageName, userId, mode = "embed", onSubmitte
         <Contributors title="Writer" singular="writer" group="writers" writer rows={metadata.writers} disabled={busy} onChange={(rows) => update("writers", rows)} tip={full ? "Choose Author (lyrics/melody), Composer (music/beat) or Author/Composer for each writer. Writer splits must total 100%." : undefined} simple={!full}>
           <label className="flex items-center gap-2 text-sm"><input id="instrumental" type="checkbox" className="h-4 w-4 accent-[var(--primary)]" checked={metadata.instrumental} onChange={(e) => update("instrumental", e.target.checked)} />Instrumental (no lyrics)<Tip text={TIPS.instrumental} /></label>
         </Contributors>
-        {full && metadata.composers.some((c) => c.name.trim()) && <Contributors title="Composer (earlier entries)" singular="composer" group="composers" rows={metadata.composers} disabled={busy} onChange={(rows) => update("composers", rows)} tip="Saved before Writer roles existed. Move these into Writer with the Composer role when you can." />}
+        {full && metadata.composers.some(creditName) && <Contributors title="Composer (earlier entries)" singular="composer" group="composers" rows={metadata.composers} disabled={busy} onChange={(rows) => update("composers", rows)} tip="Saved before Writer roles existed. Move these into Writer with the Composer role when you can." />}
         <ReadinessPanel metadata={metadata} />
-        <Contributors title="Producer Name (Stage Name)" singular="producer" group="producers" rows={metadata.producers ?? [emptyContributor()]} disabled={busy} onChange={(rows) => update("producers", rows)} simple
-          tip="Embedded with your track for credit. Place the producer's legal name under Writer as Composer in your Catalog for royalty splits." />
+        <Contributors title="Producer Name" singular="producer" group="producers" rows={metadata.producers ?? [emptyContributor()]} disabled={busy} onChange={(rows) => update("producers", rows)} simple
+          tip="This name is embedded in your track for credit. If the producer also earns royalties, add them under Writer with their legal name and the Composer role." />
         <fieldset disabled={busy} className="space-y-5 border-t border-border pt-6">
           <legend className="pr-3 text-lg font-semibold">Identifiers</legend>
           <div className="grid gap-5 sm:grid-cols-3">
@@ -327,10 +339,9 @@ export function MetadataUploader({ stageName, userId, mode = "embed", onSubmitte
 
         <div className="space-y-4 border-t border-border pt-6 pb-8">
           {userId && !full && (
-            <label className="flex items-start gap-3 rounded-xl border border-primary bg-accent/30 p-4 text-sm">
-              <input type="checkbox" className="mt-1 h-4 w-4 accent-[var(--primary)]" checked={useProfile} onChange={(e) => toggleProfile(e.target.checked)} />
-              <span><span className="font-semibold">Want to make embedding easier?</span> Pre-fill your main artist details on every embed — check here. We'll save your artist name, label, genres, writers, composers, producers and publishers from this form. You can still change any field for a one-off song.</span>
-            </label>
+            <p className="rounded-xl border border-primary bg-accent/30 p-4 text-sm">
+              <span className="font-semibold">Need to change prepopulated metadata?</span> <Link to="/profile" className="font-semibold text-primary hover:underline">Go to Profile</Link> and click Edit profile, then edit Embed Defaults.
+            </p>
           )}
           {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
           {result && (
@@ -383,7 +394,7 @@ export function MetadataUploader({ stageName, userId, mode = "embed", onSubmitte
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild><Button type="button" variant="outline" size="sm"><Download />Downloads</Button></DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
-                          {t.metadata.audioPath && <DropdownMenuItem onClick={() => downloadCatalogFile(t.metadata.audioPath, `${safeName(t.title)} - Came Through Audio.mp3`).catch(() => toast.error("Could not download the song."))}>Master MP3</DropdownMenuItem>}
+                          {t.metadata.audioPath && <DropdownMenuItem onClick={() => downloadCatalogFile(t.metadata.audioPath, `${safeName(t.title)}.mp3`).catch(() => toast.error("Could not download the song."))}>Master MP3</DropdownMenuItem>}
                           {t.metadata.artPath && <DropdownMenuItem onClick={() => downloadCatalogFile(t.metadata.artPath, `${safeName(t.title)}-artwork.${t.metadata.artPath.split(".").pop()}`).catch(() => toast.error("Could not download the artwork."))}>Artwork</DropdownMenuItem>}
                           {t.metadata.lyrics && <DropdownMenuItem onClick={() => void downloadLyricsPdf(t)}>Lyrics PDF</DropdownMenuItem>}
                         </DropdownMenuContent>
@@ -410,7 +421,6 @@ export function MetadataUploader({ stageName, userId, mode = "embed", onSubmitte
                         <div className="mb-1 text-xs font-bold uppercase tracking-widest text-primary">{cg.label}</div>
                         <ul className="space-y-1 text-sm">{cg.rows.map((c, i) => <li key={i} className="min-w-0">
                           <span className="font-semibold">{c.name}</span>
-                          {c.legalName && c.legalName !== c.name && <span className="block text-xs text-muted-foreground">Legal: {c.legalName}</span>}
                           {(cg.label === "Writers" || c.percentage || c.pro || c.ipi) && <span className="block text-xs text-muted-foreground">{[cg.label === "Writers" && writerRole(c.role), c.percentage && `${c.percentage}%`, c.pro, c.ipi && `IPI ${c.ipi}`].filter(Boolean).join(" · ")}</span>}
                         </li>)}</ul>
                       </div>)}
@@ -481,7 +491,6 @@ export function MetadataUploader({ stageName, userId, mode = "embed", onSubmitte
 }
 
 const TIPS = {
-  credited: "The name shown in credits. Stage names are fine.",
   legal: "The writer's full legal name, as their PRO and The MLC know it. You can leave it blank for now: it's only needed to register the song.",
   instrumental: "Check this if the song has no lyrics. Instrumental songs don't need an Author to be registered.",
 };
@@ -501,7 +510,7 @@ function jumpTo(field: string) {
 
 function MissingList({ items, onJump }: { items: MissingItem[]; onJump: (field: string) => void }) {
   return <ul className="space-y-1">{items.map((i) => <li key={i.code + i.field}>
-    <button type="button" className="text-left text-sm underline-offset-2 hover:underline" onClick={() => onJump(i.field)}>⚠️ {i.message}</button>
+    <button type="button" className="text-left text-sm hover:text-primary" onClick={() => onJump(i.field)}>⚠️ {i.message}</button>
   </li>)}</ul>;
 }
 
@@ -514,8 +523,8 @@ function ReadinessPanel({ metadata }: { metadata: Metadata }) {
   </div>;
 }
 
-function Field({ label, id, value, onChange, required, type = "text", placeholder, tip }: { label: string; id: string; value: string; onChange: (value: string) => void; required?: boolean; type?: string; placeholder?: string; tip?: string }) {
-  return <div className="min-w-0 space-y-2"><Label htmlFor={id}>{label}{required ? " *" : ""}{tip && <Tip text={tip} />}</Label><Input id={id} value={value} type={type} required={required} placeholder={placeholder} onChange={(event) => onChange(event.target.value)} /></div>;
+function Field({ label, id, value, onChange, required, type = "text", placeholder, tip }: { label: string; id: string; value: string; onChange: (value: string) => void; required?: boolean; type?: string; placeholder?: string | undefined; tip?: string }) {
+  return <div className={`min-w-0 ${tip ? "space-y-3" : "space-y-2"}`}><Label htmlFor={id} className="leading-5">{label}{required ? " *" : ""}{tip && <Tip text={tip} />}</Label><Input id={id} value={value} type={type} required={required} placeholder={placeholder} onChange={(event) => onChange(event.target.value)} /></div>;
 }
 
 function SelectField({ label, id, value, options, onChange }: { label: string; id: string; value: string; options: readonly string[]; onChange: (value: string) => void }) {
@@ -528,35 +537,31 @@ function SelectField({ label, id, value, options, onChange }: { label: string; i
 
 function Contributors({ title, singular, group, rows, onChange, disabled, publisher, tip, simple, writer, children }: { title: string; singular: string; group: string; rows: Contributor[]; onChange: (rows: Contributor[]) => void; disabled: boolean; publisher?: boolean; tip?: string | undefined; simple?: boolean; writer?: boolean; children?: ReactNode }) {
   const roleSelect = (row: Contributor, index: number) => writer && <SelectField label="Role" id={`${group}-${index}-role`} value={writerRole(row.role)} options={WRITER_ROLES} onChange={(value) => change(index, "role", value)} />;
-  // Writers (and pre-role composer entries) carry a credited name plus a legal name for registration.
+  // Writers (and pre-role composer entries) have one name: their legal name, used for credits and registration.
   const legal = writer || group === "composers";
-  const simpleLabel = group === "producers" ? "Producer name" : `${title} name`;
+  const simpleLabel = group === "producers" ? "Produced by" : `${title} name`;
   function change(index: number, key: keyof Contributor, value: string) { onChange(rows.map((row, i) => i === index ? { ...row, [key]: value } : row)); }
-  const names = (row: Contributor, index: number) => <>
-    <Field label="Credited name" id={`${group}-${index}-name`} value={row.name} tip={TIPS.credited} onChange={(value) => change(index, "name", value)} />
-    <Field label="Legal name" id={`${group}-${index}-legalName`} value={row.legalName ?? ""} tip={TIPS.legal} onChange={(value) => change(index, "legalName", value)} />
-  </>;
+  const names = (row: Contributor, index: number) => <Field label="Legal name" id={`${group}-${index}-legalName`} value={row.legalName ?? ""} tip={TIPS.legal} onChange={(value) => change(index, "legalName", value)} />;
   const removeButton = (index: number) => <Button type="button" size="icon" variant="ghost" aria-label={`Remove ${singular} ${index + 1}`} disabled={rows.length === 1} onClick={() => onChange(rows.filter((_, i) => i !== index))}><Trash2 /></Button>;
-  const share = (row: Contributor, index: number) => <div className="space-y-2"><Label htmlFor={`${group}-${index}-share`}>Split (%)</Label><Input id={`${group}-${index}-share`} type="number" min="0" max="100" step="0.01" value={row.percentage} onChange={(event) => change(index, "percentage", event.target.value)} /></div>;
-  const ipi = (row: Contributor, index: number) => <Field label={publisher ? "Publisher IPI" : "IPI name number"} id={`${group}-${index}-ipi`} value={row.ipi} placeholder="9–11 digits" onChange={(value) => change(index, "ipi", value)} />;
-  const pro = (row: Contributor, index: number) => <SelectField label="PRO affiliation" id={`${group}-${index}-pro`} value={row.pro} options={PROS} onChange={(value) => change(index, "pro", value)} />;
+  const share = (row: Contributor, index: number) => <div className="space-y-2"><Label htmlFor={`${group}-${index}-share`}>{publisher ? "Share (%)" : "Split (%)"}</Label><Input id={`${group}-${index}-share`} type="number" min="0" max="100" step="0.01" value={row.percentage} onChange={(event) => change(index, "percentage", event.target.value)} /></div>;
+  const ipi = (row: Contributor, index: number) => <Field label="IPI name number" id={`${group}-${index}-ipi`} value={row.ipi} placeholder="9–11 digits" onChange={(value) => change(index, "ipi", value)} />;
+  const pro = (row: Contributor, index: number) => <div className="min-w-0 space-y-2"><Label htmlFor={`${group}-${index}-pro`}>PRO affiliation</Label>
+    <ProSelect id={`${group}-${index}-pro`} value={row.pro} onChange={(value) => change(index, "pro", value)} className="flex h-9 w-full rounded-md border border-input bg-background px-3 text-sm shadow-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" /></div>;
   return <fieldset disabled={disabled} className="space-y-5 border-t border-border pt-6">
     <legend className="pr-3 text-lg font-semibold">{title}{tip && <Tip text={tip} />}</legend>
     {tip && <p className="text-sm text-muted-foreground">{tip}</p>}
     {rows.map((row, index) => simple
       ? legal
-        ? <div key={index} className={`grid items-end gap-3 ${writer ? "sm:grid-cols-[1fr_1fr_176px_36px]" : "sm:grid-cols-[1fr_1fr_36px]"}`}>{names(row, index)}{roleSelect(row, index)}{removeButton(index)}</div>
-        : <div key={index} className="flex items-end gap-2"><div className="flex-1"><Field label={simpleLabel} id={`${group}-${index}-name`} value={row.name} onChange={(value) => change(index, "name", value)} /></div>{removeButton(index)}</div>
+        ? <div key={index} className={`grid items-end gap-x-6 gap-y-3 ${writer ? "sm:grid-cols-[1fr_176px_36px]" : "sm:grid-cols-[1fr_36px]"}`}>{names(row, index)}{roleSelect(row, index)}{removeButton(index)}</div>
+        : <div key={index} className="flex items-end gap-2"><div className="flex-1"><Field label={simpleLabel} id={`${group}-${index}-name`} value={row.name} placeholder={group === "producers" ? "Name" : undefined} onChange={(value) => change(index, "name", value)} /></div>{removeButton(index)}</div>
       : legal
         ? <div key={index} className="space-y-4 rounded-lg border border-border p-3">
-            <div className={`grid items-end gap-4 ${writer ? "sm:grid-cols-[1fr_1fr_180px_36px]" : "sm:grid-cols-[1fr_1fr_36px]"}`}>{names(row, index)}{roleSelect(row, index)}{removeButton(index)}</div>
-            <div className="grid items-end gap-4 sm:grid-cols-3">{share(row, index)}{ipi(row, index)}{pro(row, index)}</div>
+            <div className={`grid items-end gap-x-6 gap-y-4 ${writer ? "sm:grid-cols-[1fr_180px_36px]" : "sm:grid-cols-[1fr_36px]"}`}>{names(row, index)}{roleSelect(row, index)}{removeButton(index)}</div>
+            <div className="grid items-end gap-x-6 gap-y-4 sm:grid-cols-3">{share(row, index)}{ipi(row, index)}{pro(row, index)}</div>
           </div>
-        : <div key={index} className={`grid items-end gap-4 ${publisher ? "sm:grid-cols-[1fr_160px_160px_36px]" : "sm:grid-cols-[1fr_110px_150px_150px_36px]"}`}>
-            <Field label={publisher ? "Publisher name" : "Legal name"} id={`${group}-${index}-name`} value={row.name} onChange={(value) => change(index, "name", value)} />
-            {!publisher && share(row, index)}
-            {ipi(row, index)}
-            {pro(row, index)}
+        : <div key={index} className={`grid items-end gap-4 ${publisher ? "sm:grid-cols-[1fr_170px_150px_110px_36px]" : "sm:grid-cols-[1fr_110px_150px_150px_36px]"}`}>
+            <Field label="Legal name" id={`${group}-${index}-name`} value={row.name} onChange={(value) => change(index, "name", value)} />
+            {publisher ? <>{pro(row, index)}{ipi(row, index)}{share(row, index)}</> : <>{share(row, index)}{ipi(row, index)}{pro(row, index)}</>}
             {removeButton(index)}
           </div>)}
     {children}
@@ -584,7 +589,7 @@ function regBadges(t: CatalogTrack): string[] {
 function creditGroups(t: CatalogTrack) {
   const m = t.metadata;
   return ([["Writers", m.writers], ["Composers", m.composers], ["Publishers", m.publishers], ["Producers", m.producers]] as const)
-    .map(([label, rows]) => ({ label, rows: (rows ?? []).filter((c) => c.name.trim()) }))
+    .map(([label, rows]) => ({ label, rows: (rows ?? []).filter(creditName).map((c) => ({ ...c, name: creditName(c) })) }))
     .filter((g) => g.rows.length > 0);
 }
 

@@ -1,12 +1,14 @@
 import { useEffect, useState } from "react";
-import { ArrowLeft, ArrowRight, Camera, Lock, Plus, Trash2, UserRound } from "lucide-react";
+import { ArrowLeft, ArrowRight, Camera, Lock, Plus, Save, Trash2, UserRound } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { emptyContributor, GENRES, PROS, RELEASE_TYPES, WRITER_ROLES, writerRole, type Contributor } from "@/lib/metadata";
+import { ProSelect } from "@/components/ProSelect";
+import { emptyContributor, GENRES, RELEASE_TYPES, WRITER_ROLES, writerRole, type Contributor } from "@/lib/metadata";
+import { isBadgeImage } from "@/lib/badges";
 import { loadOnboarding, loadProfile, saveOnboarding, saveProfile, type ArtistProfile, type Onboarding } from "@/lib/artist-profile";
 
 // Placeholder founder badge until the custom opening-message badge is supplied.
@@ -18,7 +20,7 @@ const AVATAR_BADGES = [
   { src: "/icons/playful/bedazzled_band.png", label: "Live musician" },
   { src: "/icons/playful/bedazzled_cta.png", label: "CTA Badge" },
 ];
-const STEPS = ["Welcome", "Profile Image", "Release Defaults", "Artist Catalog Profile"];
+const STEPS = ["Welcome", "Profile Image", "Embed Defaults", "Artist Catalog Profile"];
 const year = new Date().getFullYear();
 
 function resizeImage(file: File): Promise<string> {
@@ -35,6 +37,8 @@ function resizeImage(file: File): Promise<string> {
 }
 
 export function ArtistAvatar({ src, className = "h-10 w-10" }: { src?: string | undefined; className?: string }) {
+  // Badges are shown whole so wide artwork is never cropped; photos stay round.
+  if (isBadgeImage(src)) return <img src={src} alt="Profile badge" className={`${className} object-contain`} />;
   return src
     ? <img src={src} alt="Profile" className={`${className} rounded-full border-2 border-primary bg-card object-cover`} />
     : <span className={`${className} flex items-center justify-center rounded-full border-2 border-primary bg-card text-primary`}><UserRound className="h-1/2 w-1/2" /></span>;
@@ -68,16 +72,21 @@ export function ArtistOnboarding({ userId, open, onOpenChange, onSaved, firstRun
     await supabase.from("profiles").update({ stage_name: stage || null, legal_name: ob.legalName.trim() || null }).eq("id", userId);
     onSaved(final);
     onOpenChange(false);
-    toast.success("You're all set! Your saved details will prefill every new embed and catalog entry.");
+    toast.success(firstRun ? "You're all set! Your saved details will prefill every new embed and catalog entry." : "Profile saved.");
   }
 
   return (
     <Dialog open={open} onOpenChange={(o) => { if (!firstRun) onOpenChange(o); }}>
-      <DialogContent className="max-h-[90vh] max-w-2xl overflow-y-auto" onInteractOutside={(e) => firstRun && e.preventDefault()} onEscapeKeyDown={(e) => firstRun && e.preventDefault()}>
+      <DialogContent className="max-h-[90vh] max-w-5xl overflow-y-auto" onInteractOutside={(e) => firstRun && e.preventDefault()} onEscapeKeyDown={(e) => firstRun && e.preventDefault()}>
         <ol className="flex flex-wrap gap-2 text-xs" aria-label="Setup steps">
-          {STEPS.map((s, i) => (i === 0 && !firstRun) ? null : (
-            <li key={s} className={`rounded-full px-3 py-1 font-semibold ${i === step ? "bg-primary text-primary-foreground" : i < step ? "bg-accent text-accent-foreground" : "bg-muted text-muted-foreground"}`}>{i + 1}. {s}</li>
-          ))}
+          {STEPS.map((s, i) => {
+            if (i === 0 && !firstRun) return null;
+            const look = `inline-block rounded-full px-3 py-1 font-semibold ${i === step ? "bg-primary text-primary-foreground" : i < step ? "bg-accent text-accent-foreground" : "bg-muted text-muted-foreground"}`;
+            // When editing an existing profile, every section opens on its own.
+            return <li key={s}>{firstRun
+              ? <span className={look}>{i + 1}. {s}</span>
+              : <button type="button" aria-current={i === step ? "step" : undefined} onClick={() => setStep(i)} className={`${look} transition hover:ring-2 hover:ring-primary/40`}>{i + 1}. {s}</button>}</li>;
+          })}
         </ol>
 
         {step === 0 && (
@@ -118,17 +127,19 @@ export function ArtistOnboarding({ userId, open, onOpenChange, onSaved, firstRun
                 </button>
               ))}
             </div>
-            <Nav onBack={firstRun ? () => setStep(0) : undefined} onNext={() => setStep(2)} nextLabel={ob.avatar ? "Continue" : "Skip for now"} />
+            <Nav onBack={firstRun ? () => setStep(0) : undefined} onNext={() => setStep(2)} nextLabel={!firstRun ? "Change and Continue" : ob.avatar ? "Continue" : "Skip for now"} onSave={firstRun ? undefined : finish} />
           </div>
         )}
 
         {step === 2 && (
           <div className="space-y-5">
-            <DialogHeader><DialogTitle className="text-2xl">Set Your Release Defaults</DialogTitle>
+            <DialogHeader><DialogTitle className="text-2xl">Set Your Embed Defaults</DialogTitle>
               <DialogDescription>Enter it once, prefill every embed. Add the public release details you use most and each new song starts closer to distribution-ready. You can always change details for an individual track.</DialogDescription></DialogHeader>
             <Group title="Artist & Label">
               <Field label="Primary Artist / Stage Name"><Input value={ob.stageName} onChange={(e) => { setOb((o) => ({ ...o, stageName: e.target.value })); set("artist", e.target.value); }} /></Field>
-              <Field label="Default Label Name (optional)"><Input value={p.label ?? ""} onChange={(e) => set("label", e.target.value)} placeholder="Your label or own imprint" /></Field>
+              <Field label="Default Label Name (optional)"><Input value={p.label ?? ""} onChange={(e) => set("label", e.target.value)} placeholder="Your label name" /></Field>
+              <Field label="Produced by (optional)"><Input value={p.producers?.[0]?.name ?? ""} placeholder="Name" title="This name is embedded in your track for credit. If the producer also earns royalties, add them under Writer with their legal name and the Composer role."
+                onChange={(e) => { const rest = p.producers?.slice(1) ?? []; set("producers", [{ ...(p.producers?.[0] ?? emptyContributor()), name: e.target.value }, ...rest]); }} /></Field>
             </Group>
             <Group title="Release Metadata">
               <Field label="Primary Genre"><Pick value={p.primaryGenre ?? ""} options={GENRES} onChange={(v) => set("primaryGenre", v)} /></Field>
@@ -142,7 +153,7 @@ export function ArtistOnboarding({ userId, open, onOpenChange, onSaved, firstRun
               <Field label="Sound Recording Copyright (℗)"><Input value={p.phonographic ?? ""} onChange={(e) => set("phonographic", e.target.value)} placeholder={`℗ ${year} Label or rights holder`} /></Field>
             </Group>
             <PrivacyNote />
-            <Nav onBack={() => setStep(1)} onNext={() => setStep(3)} />
+            <Nav onBack={() => setStep(1)} onNext={() => setStep(3)} nextLabel={firstRun ? "Continue" : "Change and Continue"} onSave={firstRun ? undefined : finish} />
           </div>
         )}
 
@@ -152,12 +163,10 @@ export function ArtistOnboarding({ userId, open, onOpenChange, onSaved, firstRun
               <DialogDescription>Save your private credit and registration details once. We’ll prefill every catalog entry, split sheet and registration file — so you never have to enter them again.</DialogDescription></DialogHeader>
             <Field label="Legal Name"><Input value={ob.legalName} onChange={(e) => setOb((o) => ({ ...o, legalName: e.target.value }))} placeholder="As registered with your PRO" /></Field>
             <Rows title="Writer" rows={p.writers} onChange={(r) => set("writers", r)} seed={ob.legalName} writer />
-            <Rows title="Producer Name (Stage Name)" rows={p.producers} onChange={(r) => set("producers", r)} seed={ob.stageName} noPro
-              note="Embedded with your track for credit. Add the producer's legal name as a Writer (Composer) for royalty splits." />
             <Rows title="Publisher" rows={p.publishers} onChange={(r) => set("publishers", r)} />
             <p className="flex items-start gap-2 rounded-lg bg-muted p-3 text-xs text-muted-foreground"><Lock className="mt-0.5 h-4 w-4 shrink-0 text-primary" />Private: PRO affiliations, IPI name numbers and shares stay in your catalog and are never embedded in your music files.</p>
             <IpiNote />
-            <Nav onBack={() => setStep(2)} onNext={finish} nextLabel="Save & start embedding" />
+            <Nav onBack={() => setStep(2)} onNext={finish} nextLabel={firstRun ? "Save & start embedding" : "Save & exit"} />
           </div>
         )}
       </DialogContent>
@@ -165,11 +174,14 @@ export function ArtistOnboarding({ userId, open, onOpenChange, onSaved, firstRun
   );
 }
 
-function Nav({ onBack, onNext, nextLabel = "Continue" }: { onBack?: (() => void) | undefined; onNext: () => void; nextLabel?: string }) {
+function Nav({ onBack, onNext, onSave, nextLabel = "Continue" }: { onBack?: (() => void) | undefined; onNext: () => void; onSave?: (() => void) | undefined; nextLabel?: string }) {
   return (
-    <div className="flex justify-between gap-3 border-t border-border pt-4">
+    <div className="flex flex-wrap justify-between gap-3 border-t border-border pt-4">
       {onBack ? <Button variant="ghost" onClick={onBack}><ArrowLeft />Back</Button> : <span />}
-      <Button onClick={onNext}>{nextLabel}<ArrowRight /></Button>
+      <div className="flex flex-wrap gap-3">
+        {onSave && <Button variant="outline" onClick={onSave}><Save />Save &amp; exit</Button>}
+        <Button onClick={onNext}>{nextLabel}{nextLabel !== "Save & exit" && <ArrowRight />}</Button>
+      </div>
     </div>
   );
 }
@@ -191,39 +203,32 @@ function Pick({ value, options, onChange, empty = "Select…" }: { value: string
 }
 
 function PrivacyNote() {
-  return <p className="flex items-start gap-2 rounded-lg bg-muted p-3 text-xs text-muted-foreground"><Lock className="mt-0.5 h-4 w-4 shrink-0 text-primary" />Your private PRO affiliations, IPI name numbers, splits and registration details are never embedded in your music files. You’ll save them separately in the next step.</p>;
+  return <p className="flex items-start gap-2 rounded-lg bg-muted p-3 text-xs text-muted-foreground"><Lock className="mt-0.5 h-4 w-4 shrink-0 text-primary" />Your private PRO affiliations, IPI name numbers, splits and registration details are never embedded in your music files. They stay private in your catalog.</p>;
 }
 
 export function IpiNote() {
   return <p className="rounded-lg border border-primary/40 bg-accent/30 p-3 text-xs text-muted-foreground"><span className="font-semibold text-foreground">No PRO or IPI number yet?</span> Leave them blank. Add them anytime after you register with a PRO and receive your IPI name number.</p>;
 }
 
-function Rows({ title, rows, onChange, seed, noPro, writer, note }: { title: string; rows?: Contributor[] | undefined; onChange: (r: Contributor[]) => void; seed?: string; noPro?: boolean; writer?: boolean; note?: string }) {
-  const list = rows?.length ? rows : [{ ...emptyContributor(), name: seed ?? "", ...(writer && { legalName: seed ?? "" }) }];
+function Rows({ title, rows, onChange, seed, writer }: { title: string; rows?: Contributor[] | undefined; onChange: (r: Contributor[]) => void; seed?: string; writer?: boolean }) {
+  const list = rows?.length ? rows : [writer ? { ...emptyContributor(), legalName: seed ?? "" } : emptyContributor()];
   const upd = (i: number, k: keyof Contributor, v: string) => onChange(list.map((r, j) => (j === i ? { ...r, [k]: v } : r)));
   const total = list.reduce((s, r) => s + Number(r.percentage || 0), 0);
   return (
     <fieldset className="space-y-2 rounded-xl border border-border p-4">
       <legend className="px-1 text-sm font-bold text-primary">{title}</legend>
-      {note && <p className="text-xs text-muted-foreground">{note}</p>}
-      {writer && <p className="text-xs text-muted-foreground"><span className="font-semibold text-foreground">Credited name</span> is how you're credited (stage names are fine). <span className="font-semibold text-foreground">Legal name</span> is only needed to register songs, so you can add it later.</p>}
+      {writer && <p className="text-xs text-muted-foreground"><span className="font-semibold text-foreground">Legal name</span> is only needed to register songs, so you can add it later.</p>}
       {list.map((r, i) => (
-        <div key={i} className={`grid gap-2 ${writer ? "sm:grid-cols-[1.3fr_1.3fr_1.2fr_0.9fr_1.1fr_0.8fr_auto]" : "sm:grid-cols-[2fr_1fr_1.3fr_0.8fr_auto]"}`}>
+        <div key={i} className={`grid items-start gap-x-4 gap-y-2 ${writer ? "sm:grid-cols-[1.6fr_1.1fr_1.1fr_1fr_0.7fr_auto]" : "sm:grid-cols-[1.6fr_1.1fr_1fr_0.7fr_auto]"}`}>
           {writer
-            ? <>
-                <Input aria-label="Credited name" title="The name shown in credits. Stage names are fine." placeholder="Credited name" value={r.name} onChange={(e) => upd(i, "name", e.target.value)} />
-                <Input aria-label="Legal name" title="The writer's full legal name, as their PRO and The MLC know it. Only needed to register songs." placeholder="Legal name" value={r.legalName ?? ""} onChange={(e) => upd(i, "legalName", e.target.value)} />
-              </>
-            : <Input aria-label={`${title} name`} placeholder={noPro ? "Stage name" : "Legal name"} value={r.name} onChange={(e) => upd(i, "name", e.target.value)} />}
+            ? <Input aria-label="Legal name" title="The writer's full legal name, as their PRO and The MLC know it. Only needed to register songs." placeholder="Legal name" value={r.legalName ?? ""} onChange={(e) => upd(i, "legalName", e.target.value)} />
+            : <Input aria-label={`${title} legal name`} title="The publisher's legal business name, as registered with its PRO." placeholder="Legal name" value={r.name} onChange={(e) => upd(i, "name", e.target.value)} />}
           {writer && (
             <select aria-label="Writer role" value={writerRole(r.role)} onChange={(e) => upd(i, "role", e.target.value)} className="h-9 rounded-md border border-input bg-background px-2 text-sm">
               {WRITER_ROLES.map((o) => <option key={o}>{o}</option>)}
             </select>)}
-          {noPro ? <span className="hidden sm:block" /> : (
-            <select aria-label="PRO" value={r.pro} onChange={(e) => upd(i, "pro", e.target.value)} className="h-9 rounded-md border border-input bg-background px-2 text-sm">
-              <option value="">PRO</option>{PROS.map((o) => <option key={o}>{o}</option>)}
-            </select>)}
-          {noPro ? <span className="hidden sm:block" /> : <Input aria-label="IPI name number" placeholder="IPI name #" inputMode="numeric" value={r.ipi} onChange={(e) => upd(i, "ipi", e.target.value.replace(/\D/g, "").slice(0, 11))} />}
+          <ProSelect value={r.pro} onChange={(v) => upd(i, "pro", v)} className="h-9 w-full rounded-md border border-input bg-background px-2 text-sm" />
+          <Input aria-label="IPI name number" title="The 9–11 digit number your PRO assigns. Leave it blank if you don't have one yet." placeholder="IPI name number" inputMode="numeric" value={r.ipi} onChange={(e) => upd(i, "ipi", e.target.value.replace(/\D/g, "").slice(0, 11))} />
           <Input aria-label="Default share %" placeholder="Share %" inputMode="decimal" value={r.percentage} onChange={(e) => {
             const others = total - Number(r.percentage || 0); const v = Math.min(Number(e.target.value || 0), 100 - others);
             upd(i, "percentage", e.target.value === "" ? "" : String(Math.max(0, v)));
@@ -232,7 +237,7 @@ function Rows({ title, rows, onChange, seed, noPro, writer, note }: { title: str
         </div>
       ))}
       <div className="flex items-center justify-between">
-        <Button type="button" variant="outline" size="sm" onClick={() => onChange([...list, emptyContributor()])}><Plus />Add {noPro ? "Producer" : title.split(" ")[0]}</Button>
+        <Button type="button" variant="outline" size="sm" onClick={() => onChange([...list, emptyContributor()])}><Plus />Add {title}</Button>
         <span className="text-xs text-muted-foreground">Default share total: {total}% of 100%</span>
       </div>
     </fieldset>

@@ -131,7 +131,7 @@ export function ExpertAssistance({ userId, email, purchases, onFix }: { userId: 
               {incomplete.slice(0, 6).map(({ t, miss }) => <div key={t.id} className="rounded-md bg-muted px-3 py-2">
                 <div className="font-semibold">{t.title || "Untitled"}</div>
                 <ul>{miss.map((i) => <li key={i.code + i.field}>
-                  {onFix ? <button type="button" className="text-left underline-offset-2 hover:underline" onClick={() => onFix(t.id, i.field)}>⚠️ {i.message}</button> : <>⚠️ {i.message}</>}
+                  {onFix ? <button type="button" className="text-left" onClick={() => onFix(t.id, i.field)}>⚠️ {i.message}</button> : <>⚠️ {i.message}</>}
                 </li>)}</ul>
               </div>)}
             </div>

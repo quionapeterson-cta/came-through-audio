@@ -22,7 +22,7 @@
 Embedding is forgiving; registration is strict. Never block a user from saving or embedding a song because of incomplete writer info. Only block songs from entering registration sessions or agency exports.
 
 ### Writer data
-- Every writer has: credited_name (required, stage names OK), legal_name (optional until registration), role.
+- Every writer has: legal_name (their only name, used for credits and registration; optional until registration), role, plus PRO affiliation (worldwide list), IPI name number and share. There is no credited or stage name for writers.
 - Roles are exactly: "Author", "Composer", "Author/Composer". Do not add, rename, or remove roles without asking.
 - "Author/Composer" counts toward BOTH author and composer coverage everywhere: validation, catalog, exports, reports.
 - Songs can have unlimited writers.
@@ -35,7 +35,7 @@ Embedding is forgiving; registration is strict. Never block a user from saving o
 
 ### Data flow
 - Embed → Catalog → Agency export templates. Changes to writer fields must be carried through all three.
-- Exports and registrations always use legal_name, never credited_name.
+- Exports and registrations always use legal_name.
 - When adding a new agency/PRO export template, it must use the shared readiness check and the existing writer fields. Do not create template-specific writer fields.
 
 ### UX conventions

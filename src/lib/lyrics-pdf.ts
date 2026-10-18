@@ -1,8 +1,9 @@
 import type { CatalogTrack } from "@/lib/catalog";
 import { safeName } from "@/lib/catalog";
 import { brandFooter, brandHeader, ensureSpace, infoGrid, INK, newBrandedPdf, sectionTitle } from "@/lib/brand-pdf";
+import { creditName, type Contributor } from "@/lib/metadata";
 
-const names = (rows: { name: string }[] | undefined) => (rows ?? []).map((r) => r.name).filter(Boolean).join(", ");
+const names = (rows: Contributor[] | undefined) => (rows ?? []).map(creditName).filter(Boolean).join(", ");
 
 export async function downloadLyricsPdf(track: CatalogTrack) {
   const m = track.metadata;

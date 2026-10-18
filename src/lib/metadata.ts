@@ -1,7 +1,11 @@
 import { z } from "zod";
 import { ID3Writer } from "browser-id3-writer";
 
-export const PROS = ["BMI", "ASCAP", "SESAC", "GMR", "SOCAN", "PRS", "PPL", "None"] as const;
+/** Every performing rights organization offered in PRO dropdowns, worldwide. "Other" lets users type a society not listed. */
+export const PROS = [
+  "ASCAP", "BMI", "SESAC", "GMR", "SOCAN", "PRS for Music", "APRA AMCOS", "SACEM", "GEMA", "SIAE", "SGAE", "BUMA/STEMRA",
+  "SABAM", "STIM", "TONO", "KODA", "TEOSTO", "IMRO", "JASRAC", "KOMCA", "SAMRO", "ECAD", "SADAIC", "SAYCE", "SACM", "IPRS", "COSON", "MCSK", "Other", "None",
+] as const;
 export const RELEASE_TYPES = ["Single", "EP", "Album", "Compilation"] as const;
 export const GENRES = ["Hip-Hop/Rap", "R&B/Soul", "Pop", "Rock", "Gospel", "Jazz", "Blues", "Country", "Electronic", "Reggae", "Latin", "Afrobeats", "Classical", "Soundtrack", "Alternative", "Other"] as const;
 
@@ -13,7 +17,7 @@ export const MLC_ROLE: Record<WriterRole, string> = { Author: "A", Composer: "C"
 export const writerRole = (r?: string): WriterRole => (WRITER_ROLES as readonly string[]).includes(r ?? "") ? (r as WriterRole) : "Author/Composer";
 
 export const contributorSchema = z.object({
-  /** Credited name (stage names OK). Writers also carry legalName, required only for registration. */
+  /** Producer/publisher name. Writers use legalName; their `name` only holds entries saved before that (see withLegalName). */
   name: z.string().trim(),
   legalName: z.string().trim().optional(),
   pro: z.string().trim(),
@@ -25,6 +29,8 @@ export const contributorSchema = z.object({
 export const metadataSchema = z.object({
   title: z.string().trim().min(1, "Track title is required."),
   trackNumber: z.string().trim().default("").refine((v) => !v || /^\d{1,3}$/.test(v), "Track number must be a whole number."),
+  /** Total tracks on the release: track 1 of 12 is trackNumber "1", trackTotal "12" (ID3 TRCK "1/12"). */
+  trackTotal: z.string().trim().default("").refine((v) => !v || /^\d{1,3}$/.test(v), "Total tracks must be a whole number."),
   artist: z.string().trim().min(1, "Artist name is required."),
   featured: z.array(z.string().trim()).default([]),
   album: z.string().trim(),
@@ -56,7 +62,7 @@ export const metadataSchema = z.object({
 }).superRefine((data, ctx) => {
   for (const group of ["writers", "composers", "publishers"] as const) {
     data[group].forEach((row, index) => {
-      if ((row.pro || row.percentage || row.ipi) && !row.name) ctx.addIssue({ code: "custom", path: [group, index, "name"], message: "Enter a name for this contributor." });
+      if ((row.pro || row.percentage || row.ipi) && !creditName(row)) ctx.addIssue({ code: "custom", path: [group, index, "name"], message: "Enter a name for this contributor." });
     });
     const total = data[group].reduce((sum, row) => sum + Number(row.percentage || 0), 0);
     if (total > 100) ctx.addIssue({ code: "custom", path: [group], message: "Total percentages cannot exceed 100%." });
@@ -67,16 +73,23 @@ export type Metadata = z.infer<typeof metadataSchema>;
 export type Contributor = z.infer<typeof contributorSchema>;
 export const emptyContributor = (): Contributor => ({ name: "", pro: "", ipi: "", percentage: "" });
 export const emptyMetadata = (): Metadata => ({
-  title: "", trackNumber: "", artist: "", featured: [""], album: "", duration: "", releaseType: "", releaseDate: "", label: "", copyright: "", phonographic: "", language: "",
+  title: "", trackNumber: "", trackTotal: "", artist: "", featured: [""], album: "", duration: "", releaseType: "", releaseDate: "", label: "", copyright: "", phonographic: "", language: "",
   isrc: "", upc: "", iswc: "", explicit: false, instrumental: false, primaryGenre: "", secondaryGenre: "",
   writers: [emptyContributor()], composers: [emptyContributor()], producers: [emptyContributor()], publishers: [emptyContributor()],
   lyrics: "", coverThumb: "", audioPath: "", artPath: "", aiProtection: false, credits: [],
 });
 
-/** Writers saved before legalName existed were typed into "(legal name)" fields, so their name seeds it. Never overwrites. */
-export const withLegalName = (rows: Contributor[]): Contributor[] => rows.map((r) => (r.legalName === undefined && r.name ? { ...r, legalName: r.name } : r));
-/** On save, mark legalName as known (even if blank) so the seeding above only ever applies to legacy rows. */
-export const sealLegalName = (rows: Contributor[]): Contributor[] => rows.map((r) => (r.legalName === undefined ? { ...r, legalName: "" } : r));
+/** The name shown for a contributor: a writer's legal name, otherwise the plain name (producers, publishers, older entries). */
+export const creditName = (r: Contributor) => r.legalName?.trim() || r.name.trim();
+
+/** Writers keep one name, the legal name. A blank legal name is filled from an older saved name; `name` itself is kept, never deleted. */
+export const withLegalName = (rows: Contributor[]): Contributor[] => rows.map((r) => (!r.legalName?.trim() && r.name.trim() ? { ...r, legalName: r.name.trim() } : r));
+
+/** "1/12" (ID3 TRCK) → track 1 of 12. Plain numbers have no total. */
+export function splitTrack(v: string): { trackNumber: string; trackTotal: string } {
+  const [n = "", t = ""] = v.split("/").map((x) => x.trim());
+  return { trackNumber: n, trackTotal: t };
+}
 
 export const CREDIT_ROLES = ["Session musician", "Mixing engineer", "Recording engineer", "Mastering engineer", "Backup vocalist", "Arranger"] as const;
 
@@ -84,7 +97,7 @@ export async function embedMetadata(audio: ArrayBuffer, metadata: Metadata, artw
   const data = metadataSchema.parse(metadata);
   const writer = new ID3Writer(audio);
   writer.setFrame("TIT2", data.title).setFrame("TPE1", [data.artist, ...data.featured.filter(Boolean)]);
-  if (data.trackNumber) writer.setFrame("TRCK", data.trackNumber);
+  if (data.trackNumber) writer.setFrame("TRCK", data.trackTotal ? `${data.trackNumber}/${data.trackTotal}` : data.trackNumber);
   if (data.album) writer.setFrame("TALB", data.album);
   if (data.isrc) writer.setFrame("TSRC", data.isrc.replace(/-/g, "").toUpperCase());
   if (data.duration) {
@@ -100,8 +113,8 @@ export async function embedMetadata(audio: ArrayBuffer, metadata: Metadata, artw
   for (const [description, value] of [["UPC", data.upc], ["ISWC", data.iswc], ["RELEASE_TYPE", data.releaseType], ["LABEL", data.label], ["EXPLICIT", data.explicit ? "Yes" : "No"]] as const) {
     if (value) writer.setFrame("TXXX", { description, value });
   }
-  const writers = data.writers.filter((row) => row.name);
-  const composers = data.composers.filter((row) => row.name);
+  const writers = data.writers.filter(creditName).map((row) => ({ ...row, name: creditName(row) }));
+  const composers = data.composers.filter(creditName).map((row) => ({ ...row, name: creditName(row) }));
   const publishers = data.publishers.filter((row) => row.name);
   if (writers.length || composers.length) writer.setFrame("TCOM", [...writers, ...composers].map((row) => row.name));
   // Privacy rule: PRO affiliations, IPI numbers and split percentages are never embedded — names only.
@@ -159,15 +172,15 @@ export function readMetadata(buf: ArrayBuffer): Partial<Metadata> & { picture?: 
   if (frames["TIT2"]) out.title = frames["TIT2"];
   if (frames["TPE1"]) { const [a, ...f] = frames["TPE1"].split("/"); out.artist = a ?? ""; out.featured = f.length ? f : [""]; }
   if (frames["TALB"]) out.album = frames["TALB"];
-  if (frames["TRCK"]) out.trackNumber = frames["TRCK"];
+  if (frames["TRCK"]) Object.assign(out, splitTrack(frames["TRCK"]));
   if (frames["TSRC"]) out.isrc = frames["TSRC"];
   if (txxx["UPC"]) out.upc = txxx["UPC"];
   if (txxx["ISWC"]) out.iswc = txxx["ISWC"];
   if (txxx["LABEL"]) out.label = txxx["LABEL"];
   if (txxx["RELEASE_DATE"]) out.releaseDate = txxx["RELEASE_DATE"];
   if (txxx["EXPLICIT"]) out.explicit = txxx["EXPLICIT"] === "Yes";
-  const w = json<Contributor[]>(txxx["WRITER_SPLITS"]); if (w?.length) out.writers = w;
-  const c = json<Contributor[]>(txxx["COMPOSER_SPLITS"]); if (c?.length) out.composers = c;
+  const w = json<Contributor[]>(txxx["WRITER_SPLITS"]); if (w?.length) out.writers = withLegalName(w);
+  const c = json<Contributor[]>(txxx["COMPOSER_SPLITS"]); if (c?.length) out.composers = withLegalName(c);
   if (txxx["PRODUCERS"]) out.producers = txxx["PRODUCERS"].split(", ").map((name) => ({ ...emptyContributor(), name }));
   const cr = json<Metadata["credits"]>(txxx["CREDITS"]); if (cr) out.credits = cr;
   if (frames["TCON"]) {

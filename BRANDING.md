@@ -68,12 +68,14 @@ Apply these rules across the website, emails and PDFs.
 ## 5. Writer and producer terminology
 
 - **Writer** is the section title, not the name of an input field.
-- Each writer row has **Credited name** (stage names are fine) and **Legal name** (optional until registration), plus a role.
+- Each writer row has one name, **Legal name** (optional until registration), plus a role. There is no credited or stage name for writers; embedded credits use the legal name.
 - Keep the role dropdown: Author, Composer, or Author/Composer.
 - Authors and composers may be different people; do not assume they are the same person.
-- **Producer Name (Stage Name)** is for embedded credits.
+- **Produced by** is for embedded credits, and can be saved in Embed Defaults.
 - A producer's royalty-split identity belongs under Writer as Composer, using their legal name.
 - PRO/IPI information can be left blank and added after registration; explain this concisely.
+- PRO affiliation fields always offer the worldwide PRO list, with Other for unlisted societies.
+- Publisher rows read: Legal name, PRO affiliation, IPI name number, Share.
 - For MLC exports: Author = A, Composer = C, Author/Composer = CA.
 
 ## 6. Catalog and split sheets
@@ -81,6 +83,8 @@ Apply these rules across the website, emails and PDFs.
 - Remember each user's catalog profile across sessions and devices, not only when they type their name.
 - Require first-time catalog-profile setup before embedding.
 - Use catalog Artist and Featured Artist information; avoid duplicate performer fields in collaborator rows.
+- Track number is entered as two boxes, "1 of 12", and embedded as ID3 `1/12`.
+- Downloaded masters are named exactly as the track title was entered (`Song Title.mp3`).
 - Prefill the owner's account email with their signup email when the field is blank.
 - Preserve the "they can add it too" guidance for collaborator PRO/IPI information.
 - Offer worldwide PRO choices, not only BMI and ASCAP.

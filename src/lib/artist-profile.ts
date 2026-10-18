@@ -1,4 +1,4 @@
-import { emptyContributor, emptyMetadata, sealLegalName, withLegalName, type Contributor, type Metadata } from "@/lib/metadata";
+import { creditName, emptyContributor, emptyMetadata, withLegalName, type Contributor, type Metadata } from "@/lib/metadata";
 import { supabase } from "@/integrations/supabase/client";
 
 /** Recurring details a user can opt to prefill on every embed. Stored only in this browser. */
@@ -44,9 +44,8 @@ const pushCloud = (userId: string, patch: Record<string, unknown>) => {
 };
 
 export function saveProfile(userId: string, profile: ArtistProfile | null) {
-  const p = profile && { ...profile, ...(profile.writers && { writers: sealLegalName(profile.writers) }), ...(profile.composers && { composers: sealLegalName(profile.composers) }) };
-  if (p) localStorage.setItem(key(userId), JSON.stringify(p)); else localStorage.removeItem(key(userId));
-  pushCloud(userId, { artist_defaults: p });
+  if (profile) localStorage.setItem(key(userId), JSON.stringify(profile)); else localStorage.removeItem(key(userId));
+  pushCloud(userId, { artist_defaults: profile });
 }
 
 export function loadOnboarding(userId?: string): Onboarding | null {
@@ -71,7 +70,7 @@ export async function syncFromCloud(userId: string): Promise<Onboarding | null> 
   return row?.onboarding ?? localO;
 }
 
-const hasName = (rows?: Contributor[]) => (rows ?? []).filter((r) => r.name.trim());
+const hasName = (rows?: Contributor[]) => (rows ?? []).filter(creditName);
 
 /** Fresh embed form with the saved profile applied (values stay editable). */
 export function withProfile(p: ArtistProfile | null): Metadata {

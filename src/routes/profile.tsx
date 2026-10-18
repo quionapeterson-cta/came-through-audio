@@ -1,0 +1,236 @@
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { useEffect, useState, type FormEvent, type ReactNode } from "react";
+import { ArrowLeft, Check, LayoutGrid, Lock, LogOut, Pencil, Rows3 } from "lucide-react";
+import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
+import { useBilling } from "@/hooks/useBilling";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { BrandLogo } from "@/components/BrandLogo";
+import { ArtistAvatar, ArtistOnboarding } from "@/components/ArtistOnboarding";
+import { BadgeViewer } from "@/components/BadgeViewer";
+import type { ShareInfo } from "@/components/BadgeCelebration";
+import { loadOnboarding, loadProfile, syncFromCloud, type ArtistProfile, type Onboarding } from "@/lib/artist-profile";
+import { earnedAwards, isBadgeImage, upNextAwards, type Award } from "@/lib/badges";
+import { creditName, writerRole, type Contributor } from "@/lib/metadata";
+import { TIER_LABEL } from "@/lib/plans";
+import { PASSWORD_RULES, passwordValid } from "@/lib/password";
+
+export const Route = createFileRoute("/profile")({
+  head: () => ({ meta: [{ title: "Profile — Came Through Audio" }, { name: "description", content: "Your artist profile, account and awards." }] }),
+  component: ProfilePage,
+});
+
+type Size = "large" | "small";
+const SIZE_KEY = "cta-awards-size";
+
+function ProfilePage() {
+  const { user, loading } = useAuth();
+  const navigate = useNavigate();
+  const { tier } = useBilling(user?.id);
+  const [ob, setOb] = useState<Onboarding | null>(null);
+  const [profile, setProfile] = useState<ArtistProfile | null>(null);
+  const [accountName, setAccountName] = useState("");
+  const [editing, setEditing] = useState(false);
+  const [passwordOpen, setPasswordOpen] = useState(false);
+  const [viewing, setViewing] = useState<{ src: string; name?: string; round?: boolean; share?: ShareInfo }>();
+  const [size, setSize] = useState<Size>(() => { try { return localStorage.getItem(SIZE_KEY) === "small" ? "small" : "large"; } catch { return "large"; } });
+
+  useEffect(() => { if (!loading && !user) navigate({ to: "/" }); }, [loading, user, navigate]);
+  useEffect(() => {
+    if (!user) return;
+    setOb(loadOnboarding(user.id));
+    setProfile(loadProfile(user.id));
+    syncFromCloud(user.id).then((o) => { setOb(o); setProfile(loadProfile(user.id)); });
+    const meta = user.user_metadata ?? {};
+    setAccountName(meta["stage_name"] || meta["legal_name"] || "");
+    supabase.from("profiles").select("stage_name, legal_name").eq("id", user.id).maybeSingle().then(({ data }) => {
+      if (data) setAccountName(data.stage_name || data.legal_name || meta["stage_name"] || "");
+    });
+  }, [user]);
+
+  function chooseSize(s: Size) {
+    setSize(s);
+    try { localStorage.setItem(SIZE_KEY, s); } catch { /* per-device preference only */ }
+  }
+
+  if (loading || !user) return <div className="flex min-h-screen items-center justify-center bg-ink text-ink-muted">Loading…</div>;
+
+  const name = ob?.stageName || accountName || user.email || "";
+  const legalName = ob?.legalName || (user.user_metadata?.["legal_name"] as string | undefined) || "";
+  const memberSince = new Date(user.created_at).toLocaleDateString(undefined, { month: "long", year: "numeric" });
+  const earned = earnedAwards(ob);
+  const upNext = upNextAwards(ob);
+  const genres = [profile?.primaryGenre, profile?.secondaryGenre].filter(Boolean).join(" · ");
+
+  return (
+    <div className="min-h-screen bg-background">
+      <header className="bg-ink text-ink-foreground">
+        <div className="mx-auto flex max-w-5xl items-center justify-between gap-4 px-6 py-4">
+          <BrandLogo />
+          <Button asChild variant="ghost" className="text-ink-foreground hover:bg-ink-border hover:text-ink-foreground">
+            <Link to="/workspace"><ArrowLeft />Back to workspace</Link>
+          </Button>
+        </div>
+      </header>
+
+      <main className="mx-auto max-w-5xl space-y-8 px-6 py-10">
+        {/* Hero */}
+        <section className="flex flex-col items-center gap-6 rounded-2xl border border-border bg-card p-8 text-center sm:flex-row sm:text-left">
+          <button type="button" aria-label="View your profile picture" disabled={!ob?.avatar} onClick={() => ob?.avatar && setViewing({ src: ob.avatar, name, round: !isBadgeImage(ob.avatar), share: { ctx: "profile", artist: ob?.stageName || accountName || "", genre: profile?.primaryGenre } })}
+            className="shrink-0 rounded-full transition enabled:hover:ring-2 enabled:hover:ring-primary/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+            <ArtistAvatar src={ob?.avatar} className="h-32 w-32 sm:h-36 sm:w-36" />
+          </button>
+          <div className="min-w-0 flex-1 space-y-2">
+            <h1 className="break-words text-4xl font-extrabold leading-tight tracking-tight">{name}</h1>
+            <p className="text-muted-foreground">{[legalName, `Member since ${memberSince}`].filter(Boolean).join(" · ")}</p>
+            <span className="inline-block rounded-full bg-primary px-3 py-1 text-xs font-semibold text-primary-foreground">{TIER_LABEL[tier]}</span>
+          </div>
+          <Button variant="outline" onClick={() => setEditing(true)}><Pencil />Edit profile</Button>
+        </section>
+
+        <div className="grid gap-8 md:grid-cols-2">
+          <Card title="Artist Profile">
+            <Rows rows={[
+              ["Artist name", name],
+              ["Legal name", legalName],
+              ["Label", profile?.label],
+              ["Genres", genres],
+              ["Release type", profile?.releaseType],
+              ["Composition ©", profile?.copyright],
+              ["Recording ℗", profile?.phonographic],
+            ]} />
+            <People title="Writers" rows={profile?.writers} writer />
+            <People title="Producers" rows={profile?.producers} />
+            <People title="Publishers" rows={profile?.publishers} />
+          </Card>
+
+          <Card title="Account">
+            <Rows rows={[["Email", user.email], ["Plan", TIER_LABEL[tier]], ["Member since", memberSince]]} />
+            <div className="flex flex-wrap gap-3 border-t border-border pt-5">
+              <Button asChild variant="outline"><Link to="/plans">Manage plan</Link></Button>
+              <Button variant="outline" onClick={() => setPasswordOpen(true)}>Change password</Button>
+              <Button variant="ghost" onClick={async () => { await supabase.auth.signOut(); navigate({ to: "/" }); }}><LogOut />Log out</Button>
+            </div>
+          </Card>
+        </div>
+
+        <Card title="Awards & Badges" aside={<>
+          <span className="text-sm text-muted-foreground">{earned.length} earned</span>
+          <div role="radiogroup" aria-label="Badge size" className="flex rounded-lg border border-border p-0.5">
+            {([["large", LayoutGrid, "Large"], ["small", Rows3, "Small"]] as const).map(([s, Icon, label]) => (
+              <button key={s} type="button" role="radio" aria-checked={size === s} onClick={() => chooseSize(s)}
+                className={`flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-semibold transition ${size === s ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}>
+                <Icon className="h-4 w-4" />{label}
+              </button>
+            ))}
+          </div>
+        </>}>
+          <Shelf awards={earned} size={size} onOpen={(a) => setViewing({ src: a.src, name: a.name })} empty="Finish setting up your profile to claim your first badge." />
+          {upNext.length > 0 && <div className="space-y-4 border-t border-border pt-6">
+            <h3 className="text-xs font-bold uppercase tracking-widest text-primary">Up next</h3>
+            <Shelf awards={upNext} size={size} locked />
+          </div>}
+        </Card>
+      </main>
+
+      <BadgeViewer src={viewing?.src} name={viewing?.name} round={viewing?.round} share={viewing?.share} onClose={() => setViewing(undefined)} />
+      <ArtistOnboarding userId={user.id} open={editing} onOpenChange={setEditing} firstRun={false}
+        onSaved={(o) => { setOb(o); setProfile(loadProfile(user.id)); setEditing(false); }} />
+      <PasswordDialog open={passwordOpen} onOpenChange={setPasswordOpen} />
+    </div>
+  );
+}
+
+function Card({ title, aside, children }: { title: string; aside?: ReactNode; children: ReactNode }) {
+  return (
+    <section className="space-y-6 rounded-2xl border border-border bg-card p-6 sm:p-8">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <h2 className="text-xs font-bold uppercase tracking-widest text-primary">{title}</h2>
+        {aside && <div className="flex items-center gap-4">{aside}</div>}
+      </div>
+      {children}
+    </section>
+  );
+}
+
+function Rows({ rows }: { rows: [string, string | undefined][] }) {
+  return (
+    <dl className="grid grid-cols-[8.5rem_1fr] gap-x-4 gap-y-3 text-sm">
+      {rows.map(([k, v]) => <div key={k} className="contents">
+        <dt className="text-muted-foreground">{k}</dt>
+        <dd className={`min-w-0 break-words font-medium ${v ? "" : "text-muted-foreground"}`}>{v || "—"}</dd>
+      </div>)}
+    </dl>
+  );
+}
+
+function People({ title, rows, writer }: { title: string; rows?: Contributor[] | undefined; writer?: boolean }) {
+  const list = (rows ?? []).filter(creditName);
+  if (!list.length) return null;
+  return (
+    <div className="space-y-2 border-t border-border pt-5">
+      <h3 className="text-sm font-semibold">{title}</h3>
+      <ul className="space-y-2 text-sm">
+        {list.map((r, i) => <li key={i} className="flex flex-wrap items-baseline justify-between gap-x-3">
+          <span className="font-medium">{creditName(r)}</span>
+          {writer && <span className="text-xs text-muted-foreground">{writerRole(r.role)}</span>}
+        </li>)}
+      </ul>
+    </div>
+  );
+}
+
+function Shelf({ awards, size, locked, onOpen, empty }: { awards: Award[]; size: Size; locked?: boolean; onOpen?: (a: Award) => void; empty?: string }) {
+  if (!awards.length) return empty ? <p className="text-sm text-muted-foreground">{empty}</p> : null;
+  const grid = size === "large" ? "grid-cols-2 sm:grid-cols-3" : "grid-cols-3 sm:grid-cols-6";
+  return (
+    <ul className={`grid gap-6 ${grid}`}>
+      {awards.map((a) => <li key={a.id}>
+        <button type="button" disabled={locked} onClick={() => onOpen?.(a)} aria-label={locked ? `${a.name} (locked)` : `View ${a.name}`}
+          className="group flex w-full flex-col items-center gap-3 rounded-xl p-3 text-center transition enabled:hover:bg-accent/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-default">
+          <span className="relative flex aspect-square w-full items-center justify-center">
+            <img src={a.src} alt="" loading="lazy" className={`h-full w-full object-contain transition ${locked ? "opacity-30 grayscale" : "drop-shadow-lg group-hover:drop-shadow-2xl"}`} />
+            {locked && <Lock className="absolute h-6 w-6 text-muted-foreground" />}
+          </span>
+          <span className={`font-semibold ${size === "large" ? "text-sm" : "text-xs"} ${locked ? "text-muted-foreground" : ""}`}>{a.name}</span>
+        </button>
+      </li>)}
+    </ul>
+  );
+}
+
+function PasswordDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (o: boolean) => void }) {
+  const [password, setPassword] = useState("");
+  const [confirm, setConfirm] = useState("");
+  const [busy, setBusy] = useState(false);
+  async function submit(e: FormEvent) {
+    e.preventDefault();
+    if (!passwordValid(password)) { toast.error("Choose a password that meets every rule."); return; }
+    if (password !== confirm) { toast.error("The passwords don't match."); return; }
+    setBusy(true);
+    const { error } = await supabase.auth.updateUser({ password });
+    setBusy(false);
+    if (error) { toast.error(error.message); return; }
+    toast.success("Password updated.");
+    setPassword(""); setConfirm(""); onOpenChange(false);
+  }
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="bg-card text-card-foreground">
+        <DialogHeader><DialogTitle className="text-xl font-bold">Change password</DialogTitle></DialogHeader>
+        <form onSubmit={submit} className="space-y-4">
+          <div className="space-y-2"><Label htmlFor="new-password">New password</Label><Input id="new-password" type="password" autoComplete="new-password" value={password} onChange={(e) => setPassword(e.target.value)} /></div>
+          <ul className="grid gap-1 text-xs sm:grid-cols-2">
+            {PASSWORD_RULES.map((r) => <li key={r.id} className={`flex items-center gap-1.5 ${r.test(password) ? "text-primary" : "text-muted-foreground"}`}><Check className="h-3.5 w-3.5" />{r.label}</li>)}
+          </ul>
+          <div className="space-y-2"><Label htmlFor="confirm-password">Confirm new password</Label><Input id="confirm-password" type="password" autoComplete="new-password" value={confirm} onChange={(e) => setConfirm(e.target.value)} /></div>
+          <Button type="submit" className="w-full" disabled={busy}>{busy ? "Saving…" : "Update password"}</Button>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+}

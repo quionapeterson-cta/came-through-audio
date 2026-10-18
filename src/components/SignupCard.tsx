@@ -71,7 +71,7 @@ export function SignupCard({ returnPath, onAuthed, inviteMode }: { returnPath?: 
             {mode === "signup" && (
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1.5">
-                  <Label htmlFor="stage">Stage name</Label>
+                  <Label htmlFor="stage">Artist name</Label>
                   <Input id="stage" value={stageName} onChange={(e) => setStageName(e.target.value)} required />
                 </div>
                 <div className="space-y-1.5">

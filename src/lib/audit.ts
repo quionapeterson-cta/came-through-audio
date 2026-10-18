@@ -1,4 +1,5 @@
 import type { CatalogTrack } from "@/lib/catalog";
+import { creditName } from "@/lib/metadata";
 
 export type Pillar = "performance" | "digital" | "mechanical";
 export type Issue = { pillar: Pillar; text: string };
@@ -19,14 +20,14 @@ const PROS = ["ascap", "bmi", "sesac", "gmr"];
 export function auditTrack(t: CatalogTrack): Issue[] {
   const m = t.metadata;
   const out: Issue[] = [];
-  const writers = [...m.writers, ...m.composers].filter((w) => w.name.trim());
+  const writers = [...m.writers, ...m.composers].filter(creditName).map((w) => ({ ...w, name: creditName(w) }));
   if (!writers.length) out.push({ pillar: "performance", text: "No songwriters listed" });
   writers.forEach((w) => {
     if (!PROS.some((p) => w.pro?.toLowerCase().includes(p))) out.push({ pillar: "performance", text: `${w.name}: no PRO affiliation` });
     if (!isIpi(w.ipi ?? "")) out.push({ pillar: "performance", text: `${w.name}: missing or invalid IPI` });
   });
   if (writers.length) {
-    const split = m.writers.filter((w) => w.name.trim()).reduce((s, w) => s + Number(w.percentage || 0), 0);
+    const split = m.writers.filter(creditName).reduce((s, w) => s + Number(w.percentage || 0), 0);
     if (split && Math.round(split) !== 100) out.push({ pillar: "performance", text: `Writer splits total ${split}% (must be 100%)` });
   }
   if (!m.isrc) out.push({ pillar: "digital", text: "Missing ISRC" });

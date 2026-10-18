@@ -15,6 +15,7 @@ import { Route as ContactRouteImport } from './routes/contact'
 import { Route as PlansRouteImport } from './routes/plans'
 import { Route as PrivacyNoticeRouteImport } from './routes/privacy-notice'
 import { Route as PrivacyPolicyRouteImport } from './routes/privacy-policy'
+import { Route as ProfileRouteImport } from './routes/profile'
 import { Route as RefundPolicyRouteImport } from './routes/refund-policy'
 import { Route as TermsAndConditionsRouteImport } from './routes/terms-and-conditions'
 import { Route as TermsOfServiceRouteImport } from './routes/terms-of-service'
@@ -54,6 +55,11 @@ const PrivacyNoticeRoute = PrivacyNoticeRouteImport.update({
 const PrivacyPolicyRoute = PrivacyPolicyRouteImport.update({
   id: '/privacy-policy',
   path: '/privacy-policy',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ProfileRoute = ProfileRouteImport.update({
+  id: '/profile',
+  path: '/profile',
   getParentRoute: () => rootRouteImport,
 } as any)
 const RefundPolicyRoute = RefundPolicyRouteImport.update({
@@ -116,6 +122,7 @@ export interface FileRoutesByFullPath {
   '/plans': typeof PlansRoute
   '/privacy-notice': typeof PrivacyNoticeRoute
   '/privacy-policy': typeof PrivacyPolicyRoute
+  '/profile': typeof ProfileRoute
   '/refund-policy': typeof RefundPolicyRoute
   '/terms-and-conditions': typeof TermsAndConditionsRoute
   '/terms-of-service': typeof TermsOfServiceRoute
@@ -134,6 +141,7 @@ export interface FileRoutesByTo {
   '/plans': typeof PlansRoute
   '/privacy-notice': typeof PrivacyNoticeRoute
   '/privacy-policy': typeof PrivacyPolicyRoute
+  '/profile': typeof ProfileRoute
   '/refund-policy': typeof RefundPolicyRoute
   '/terms-and-conditions': typeof TermsAndConditionsRoute
   '/terms-of-service': typeof TermsOfServiceRoute
@@ -153,6 +161,7 @@ export interface FileRoutesById {
   '/plans': typeof PlansRoute
   '/privacy-notice': typeof PrivacyNoticeRoute
   '/privacy-policy': typeof PrivacyPolicyRoute
+  '/profile': typeof ProfileRoute
   '/refund-policy': typeof RefundPolicyRoute
   '/terms-and-conditions': typeof TermsAndConditionsRoute
   '/terms-of-service': typeof TermsOfServiceRoute
@@ -173,6 +182,7 @@ export interface FileRouteTypes {
     | '/plans'
     | '/privacy-notice'
     | '/privacy-policy'
+    | '/profile'
     | '/refund-policy'
     | '/terms-and-conditions'
     | '/terms-of-service'
@@ -191,6 +201,7 @@ export interface FileRouteTypes {
     | '/plans'
     | '/privacy-notice'
     | '/privacy-policy'
+    | '/profile'
     | '/refund-policy'
     | '/terms-and-conditions'
     | '/terms-of-service'
@@ -209,6 +220,7 @@ export interface FileRouteTypes {
     | '/plans'
     | '/privacy-notice'
     | '/privacy-policy'
+    | '/profile'
     | '/refund-policy'
     | '/terms-and-conditions'
     | '/terms-of-service'
@@ -228,6 +240,7 @@ export interface RootRouteChildren {
   PlansRoute: typeof PlansRoute
   PrivacyNoticeRoute: typeof PrivacyNoticeRoute
   PrivacyPolicyRoute: typeof PrivacyPolicyRoute
+  ProfileRoute: typeof ProfileRoute
   RefundPolicyRoute: typeof RefundPolicyRoute
   TermsAndConditionsRoute: typeof TermsAndConditionsRoute
   TermsOfServiceRoute: typeof TermsOfServiceRoute
@@ -282,6 +295,13 @@ declare module '@tanstack/react-router' {
       path: '/privacy-policy'
       fullPath: '/privacy-policy'
       preLoaderRoute: typeof PrivacyPolicyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/profile': {
+      id: '/profile'
+      path: '/profile'
+      fullPath: '/profile'
+      preLoaderRoute: typeof ProfileRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/refund-policy': {
@@ -364,6 +384,7 @@ const rootRouteChildren: RootRouteChildren = {
   PlansRoute: PlansRoute,
   PrivacyNoticeRoute: PrivacyNoticeRoute,
   PrivacyPolicyRoute: PrivacyPolicyRoute,
+  ProfileRoute: ProfileRoute,
   RefundPolicyRoute: RefundPolicyRoute,
   TermsAndConditionsRoute: TermsAndConditionsRoute,
   TermsOfServiceRoute: TermsOfServiceRoute,

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { emptyMetadata, sealLegalName, withLegalName, type Contributor, type Metadata } from "@/lib/metadata";
+import { emptyMetadata, splitTrack, withLegalName, type Contributor, type Metadata } from "@/lib/metadata";
 import { registrationReadiness, registrationWriters } from "@/lib/readiness";
 import { exportGate, mlcRows, proCheatSheet } from "@/lib/agency-export";
 import type { CatalogTrack } from "@/lib/catalog";
@@ -26,8 +26,8 @@ describe("registration readiness", () => {
   it("lists each writer missing a legal name with a link to that field", () => {
     const r = registrationReadiness(song({ writers: [w("", "Author"), w("Q", "Author/Composer", ""), w("Beatz", "Composer")] }));
     expect(r.missing).toEqual([
-      { code: "legal_name", message: "Q: add legal name", field: "writers-1-legalName" },
-      { code: "legal_name", message: "Beatz: add legal name", field: "writers-2-legalName" },
+      { code: "legal_name", message: "Add a legal name for Q", field: "writers-1-legalName" },
+      { code: "legal_name", message: "Add a legal name for Beatz", field: "writers-2-legalName" },
     ]);
   });
   it("counts entries saved before roles existed as composers", () => {
@@ -41,11 +41,21 @@ describe("registration readiness", () => {
 });
 
 describe("legal name seeding", () => {
-  it("seeds legacy rows from the name typed into the old legal-name field, never overwriting", () => {
-    expect(withLegalName([w("Quiona P", "Author"), w("Q", "Author", "")]).map((r) => r.legalName)).toEqual(["Quiona P", ""]);
+  it("fills a blank legal name from the older saved name, never overwriting or deleting", () => {
+    const rows = withLegalName([w("Quiona P", "Author"), w("Q", "Author", ""), w("Lil Q", "Author", "Quiona Peterson")]);
+    expect(rows.map((r) => r.legalName)).toEqual(["Quiona P", "Q", "Quiona Peterson"]);
+    expect(rows.map((r) => r.name)).toEqual(["Quiona P", "Q", "Lil Q"]);
   });
-  it("seals new rows on save so a stage name is never seeded as a legal name", () => {
-    expect(withLegalName(sealLegalName([w("Lil Q", "Author")]))[0]!.legalName).toBe("");
+  it("flags a writer row with a share but no name", () => {
+    const r = registrationReadiness(song({ writers: [w("", "Author/Composer", "Quiona P"), { ...w("", "Composer", ""), percentage: "50" }] }));
+    expect(r.missing).toEqual([{ code: "legal_name", message: "Add a legal name for writer 2", field: "writers-1-legalName" }]);
+  });
+});
+
+describe("track number", () => {
+  it("splits 1/12 into track 1 of 12", () => {
+    expect(splitTrack("1/12")).toEqual({ trackNumber: "1", trackTotal: "12" });
+    expect(splitTrack("3")).toEqual({ trackNumber: "3", trackTotal: "" });
   });
 });
 
@@ -73,5 +83,17 @@ describe("agency exports", () => {
   });
   it("maps writers to their registration role", () => {
     expect(registrationWriters(song({ writers: [w("A", "Author", "a")], composers: [w("C", "", "c")] })).map((x) => x.role)).toEqual(["Author", "Composer"]);
+  });
+});
+
+describe("embedded files", () => {
+  it("round-trips track 1 of 12 and writer legal names", async () => {
+    const { embedMetadata, readMetadata } = await import("@/lib/metadata");
+    const blob = await embedMetadata(new Uint8Array([0xff, 0xfb, 0x90, 0x00, ...new Array(400).fill(0)]).buffer, song({ trackNumber: "1", trackTotal: "12", writers: [w("Lil Q", "Author/Composer", "Quiona Peterson")] }));
+    // jsdom's Blob has no arrayBuffer(), so read it the old way.
+    const buf = await new Promise<ArrayBuffer>((ok) => { const r = new FileReader(); r.onload = () => ok(r.result as ArrayBuffer); r.readAsArrayBuffer(blob); });
+    const back = readMetadata(buf);
+    expect([back.trackNumber, back.trackTotal]).toEqual(["1", "12"]);
+    expect(back.writers?.[0]?.legalName).toBe("Quiona Peterson");
   });
 });

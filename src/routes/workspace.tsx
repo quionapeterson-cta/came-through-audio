@@ -121,7 +121,7 @@ function Workspace() {
           </div>
           <div className="flex items-center gap-3">
             <Badge variant="outline" className="border-ink-border text-ink-foreground">{TIER_LABEL[tier]}</Badge>
-            <Button variant="ghost" className="gap-2 text-ink-foreground hover:bg-ink-border hover:text-ink-foreground" onClick={() => setProfileOpen(true)}>
+            <Button variant="ghost" className="gap-2 text-ink-foreground hover:bg-ink-border hover:text-ink-foreground" onClick={() => navigate({ to: "/profile" })}>
               <ArtistAvatar src={onboard?.avatar} className="h-7 w-7" />Profile
             </Button>
             <PlansDialog tier={tier} userId={user.id} email={user.email} />
@@ -145,9 +145,9 @@ function Workspace() {
             ))}
           </TabsList>
 
-          <TabsContent value="embed" forceMount className="data-[state=inactive]:hidden"><MetadataUploader key={`embed-${embedKey}`} stageName={name} userId={user.id} mode="embed" onSubmitted={() => setCatalogKey((k) => k + 1)} /></TabsContent>
+          <TabsContent value="embed" forceMount className="data-[state=inactive]:hidden"><MetadataUploader key={`embed-${embedKey}`} stageName={name} avatar={onboard?.avatar} userId={user.id} mode="embed" onSubmitted={() => setCatalogKey((k) => k + 1)} /></TabsContent>
           <TabsContent value="catalog" forceMount className="data-[state=inactive]:hidden">
-            <MetadataUploader key={catalogKey} stageName={name} userId={user.id} mode="catalog" canSplit={canSplit} focus={catalogFix} onFocused={() => setCatalogFix(undefined)} onSplitSheet={(t) => { setSplitTrackId(t.id); setTab("splits"); }} onProtect={(t) => { setProtectTrack(t); setTab("protect"); }} />
+            <MetadataUploader key={catalogKey} stageName={name} avatar={onboard?.avatar} userId={user.id} mode="catalog" canSplit={canSplit} focus={catalogFix} onFocused={() => setCatalogFix(undefined)} onSplitSheet={(t) => { setSplitTrackId(t.id); setTab("splits"); }} onProtect={(t) => { setProtectTrack(t); setTab("protect"); }} />
           </TabsContent>
           <TabsContent value="protect"><AIProtectionHub userId={user.id} paid={hasAi} email={user.email} track={protectTrack} /></TabsContent>
           <TabsContent value="splits"><SplitSheets userId={user.id} canSplit={canSplit} prefillTrackId={splitTrackId} onUpgrade={upgrade} /></TabsContent>

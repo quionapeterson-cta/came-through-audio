@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { FileSignature, Plus, Trash2, Download, Lock, PenLine, Check, ChevronLeft, Loader2, Mail, Copy } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { ContributorLibrary } from "@/components/ContributorLibrary";
+import { ProSelect } from "@/components/ProSelect";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -10,7 +11,6 @@ import { useServerFn } from "@tanstack/react-start";
 import { sendSplitInvite } from "@/lib/splits-email.functions";
 import {
   SPLIT_ROLES,
-  ALL_PROS,
   collaboratorsFromTrack,
   deleteSplitSheet,
   emptySplitCollaborator,
@@ -587,19 +587,3 @@ async function buildSplitPdf(track: CatalogTrack, rawCollaborators: SplitCollabo
   pdf.save(`${track.title.replace(/[^a-z0-9]+/gi, "-") || "split-sheet"}-split-sheet.pdf`);
 }
 
-function ProSelect({ value, onChange, disabled }: { value: string; onChange: (v: string) => void; disabled?: boolean }) {
-  const known = !value || (ALL_PROS as readonly string[]).includes(value);
-  const [custom, setCustom] = useState(!known);
-  return (
-    <div className="space-y-2">
-      <select value={custom ? "Other" : value} disabled={disabled}
-        onChange={(e) => { const v = e.target.value; setCustom(v === "Other"); onChange(v === "Other" ? "" : v); }}
-        className="w-full rounded-md border border-input bg-background px-3 py-2">
-        <option value="">Select PRO…</option>
-        {ALL_PROS.map((p) => <option key={p} value={p}>{p}</option>)}
-      </select>
-      {custom && <input value={value} disabled={disabled} onChange={(e) => onChange(e.target.value)} placeholder="Type society name"
-        className="w-full rounded-md border border-input bg-background px-3 py-2" />}
-    </div>
-  );
-}
