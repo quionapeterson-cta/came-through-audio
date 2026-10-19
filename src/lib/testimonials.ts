@@ -40,6 +40,7 @@ export const TESTIMONIALS: Testimonial[] = [
   },
   {
     name: "Lil Flippa",
+    location: "Atlanta, GA",
     service: "Branding Power Sessions",
     quote: "They came up with a perfect blueprint that fits my artistry all around… Most definitely one of the best services ever offered to me as an independent musician.",
     photo: "/__l5e/assets-v1/15f77a5a-bb9b-4320-8e54-fe5b49395247/lil-flippa.jpg",

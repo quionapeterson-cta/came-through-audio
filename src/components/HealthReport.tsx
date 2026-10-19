@@ -19,7 +19,7 @@ export type HealthActions = {
   onExpert: () => void;
 };
 type Running = { done: number; total: number; trackId?: string | undefined };
-type Props = HealthActions & { report: Report; country: Country; running?: Running | undefined };
+type Props = HealthActions & { report: Report; country: Country; running?: Running | undefined; canCatalog: boolean; onEmbed: () => void };
 
 function ScoreRing({ value }: { value: number }) {
   const r = 52, c = 2 * Math.PI * r;
@@ -240,7 +240,7 @@ function TodoRow({ item, country, actions }: { item: TodoItem; country: Country;
   );
 }
 
-export function HealthReport({ report, country, running, ...actions }: Props) {
+export function HealthReport({ report, country, running, canCatalog, onEmbed, ...actions }: Props) {
   const rowOf = (id: string) => report.rows.find((r) => r.track.id === id)!;
   const todos = todoList(report).filter((t) => !(t.kind === "confirm" && t.pillar === "performance" && needsPro(rowOf(t.track.id))));
   const [showAll, setShowAll] = useState(false);
@@ -259,7 +259,9 @@ export function HealthReport({ report, country, running, ...actions }: Props) {
         <div className="flex flex-col gap-6 md:flex-row md:items-start md:justify-between">
           <div>
             <h2 className="text-3xl font-extrabold tracking-tight md:text-4xl">Royalty Health Check</h2>
-            <p className="mt-2 max-w-xl text-ink-muted">Make sure every song is registered and matched, so every royalty it earns can reach you.</p>
+            <p className="mt-2 max-w-xl text-ink-muted">{canCatalog || report.rows.length
+              ? "Make sure every song is registered and matched, so every royalty it earns can reach you."
+              : "Enter a song's details below to see if it's registered and matched, so every royalty it earns can reach you."}</p>
           </div>
           <CountryPicker country={country} onCountry={actions.onCountry} />
         </div>
@@ -286,7 +288,14 @@ export function HealthReport({ report, country, running, ...actions }: Props) {
       </section>
 
       {report.rows.length === 0 ? (
-        <div className="rounded-2xl border border-border p-8 text-center"><p className="font-semibold">Add songs to My Catalog to run your free health check.</p></div>
+        // Paid plans: shown only until the first song is saved. Free plans use the Quick Song Inspector below instead.
+        canCatalog ? (
+          <div className="rounded-2xl border border-border p-8 text-center">
+            <p className="text-lg font-semibold">Your songs are checked automatically.</p>
+            <p className="mx-auto mt-1 max-w-xl text-muted-foreground">Every song you embed and save to My Catalog runs through the Royalty Health Check on its own. Embed your first song to see its report here.</p>
+            <Button className="mt-4" onClick={onEmbed}>Embed a song</Button>
+          </div>
+        ) : null
       ) : <>
         <section className="rounded-3xl border border-border bg-card p-6">
           <div className="flex items-baseline justify-between gap-3">

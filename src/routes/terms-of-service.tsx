@@ -36,7 +36,7 @@ function Terms() {
         { heading: "7. Service Availability", body: <p>We work to keep the Service reliable, but we do not guarantee it will be uninterrupted or error-free. To the fullest extent permitted by law, the Service is provided "as is" without implied warranties, and our total liability is limited to the fees you paid in the 12 months before the claim. Nothing limits liability for fraud, death, or personal injury where the law does not allow it.</p> },
         { heading: "8. Suspension and Termination", body: <p>We may suspend or terminate your access for material breach of these terms, non-payment, security or fraud risk, or repeated or serious policy violations. You may close your account at any time and download your data before doing so.</p> },
         { heading: "9. Governing Law", body: <p>These terms are governed by the laws of the State of Georgia, United States, without regard to conflict-of-law principles. Legal actions arising under these terms shall be brought exclusively in courts located in Georgia.</p> },
-        { heading: "10. Contact", body: <p>Questions? Email <a className="text-primary underline" href="mailto:legal@camethroughaudio.com">legal@camethroughaudio.com</a>.</p> },
+        { heading: "10. Contact", body: <p>Questions? Email <a className="text-primary underline" href="mailto:support@camethroughaudio.com">support@camethroughaudio.com</a>.</p> },
       ]}
     />
   );

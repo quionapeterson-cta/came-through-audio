@@ -13,7 +13,7 @@ import { loadOnboarding, saveOnboarding } from "@/lib/artist-profile";
 
 const AUTO = [INTERNATIONAL.deezer.id, INTERNATIONAL.musicbrainz.id];
 
-export function RoyaltyHealthCheck({ userId, onFix, onFixField, onEmbed }: { userId: string; onFix: () => void; onFixField: (trackId: string, field: string) => void; onEmbed: () => void }) {
+export function RoyaltyHealthCheck({ userId, canCatalog, onFix, onFixField, onEmbed }: { userId: string; canCatalog: boolean; onFix: () => void; onFixField: (trackId: string, field: string) => void; onEmbed: () => void }) {
   const [tracks, setTracks] = useState<CatalogTrack[]>();
   const [checks, setChecks] = useState<RepertoireCheck[]>([]);
   const [code, setCode] = useState(() => loadOnboarding(userId)?.healthCountry);
@@ -85,12 +85,12 @@ export function RoyaltyHealthCheck({ userId, onFix, onFixField, onEmbed }: { use
 
   return (
     <div className="space-y-6">
-      <HealthReport report={report} country={country} running={running}
+      <HealthReport report={report} country={country} running={running} canCatalog={canCatalog} onEmbed={onEmbed}
         onCountry={chooseCountry} onRunAll={() => void runAll()} onExpert={book} onRunOne={(id) => void runOne(id)} onMark={(...a) => void mark(...a)} onClear={(...a) => void clear(...a)} onFixField={onFixField} />
 
       {tracks.length > 0 && <MismatchTips />}
 
-      <QuickSongInspector onEmbed={onEmbed} onExpert={book} />
+      <div id="quick-check" className="scroll-mt-4"><QuickSongInspector onEmbed={onEmbed} onExpert={book} /></div>
 
       <div className="grid gap-4 md:grid-cols-2">
         <div className="rounded-2xl border-2 border-destructive/60 bg-card p-5">
