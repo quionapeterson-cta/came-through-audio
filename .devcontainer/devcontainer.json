@@ -1,0 +1,13 @@
+{
+  "name": "Came Through Audio",
+  "image": "mcr.microsoft.com/devcontainers/universal:6",
+  "features": {
+    "ghcr.io/anthropics/devcontainer-features/claude-code:1": {}
+  },
+  "postStartCommand": "bash .devcontainer/link-claude-home.sh",
+  "customizations": {
+    "vscode": {
+      "extensions": ["anthropic.claude-code"]
+    }
+  }
+}
