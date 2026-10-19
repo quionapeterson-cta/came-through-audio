@@ -412,6 +412,50 @@ export type Database = {
         }
         Relationships: []
       }
+      repertoire_checks: {
+        Row: {
+          checked_at: string
+          details: Json
+          id: string
+          society: string
+          source: string
+          status: string
+          track_id: string
+          user_id: string
+          work_id: string | null
+        }
+        Insert: {
+          checked_at?: string
+          details?: Json
+          id?: string
+          society: string
+          source?: string
+          status: string
+          track_id: string
+          user_id?: string
+          work_id?: string | null
+        }
+        Update: {
+          checked_at?: string
+          details?: Json
+          id?: string
+          society?: string
+          source?: string
+          status?: string
+          track_id?: string
+          user_id?: string
+          work_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "repertoire_checks_track_id_fkey"
+            columns: ["track_id"]
+            isOneToOne: false
+            referencedRelation: "catalogs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       room_participants: {
         Row: {
           id: string
