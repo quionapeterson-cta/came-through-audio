@@ -183,6 +183,33 @@ export type Database = {
           },
         ]
       }
+      artist_name_changes: {
+        Row: {
+          changed_at: string
+          counted: boolean
+          id: string
+          new_name: string
+          old_name: string | null
+          user_id: string
+        }
+        Insert: {
+          changed_at?: string
+          counted?: boolean
+          id?: string
+          new_name: string
+          old_name?: string | null
+          user_id: string
+        }
+        Update: {
+          changed_at?: string
+          counted?: boolean
+          id?: string
+          new_name?: string
+          old_name?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       catalogs: {
         Row: {
           album_title: string | null
@@ -345,6 +372,66 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      health_song_status: {
+        Row: {
+          list: string
+          note: string
+          remind_on: string | null
+          song_ref: string
+          steps: Json
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          list?: string
+          note?: string
+          remind_on?: string | null
+          song_ref: string
+          steps?: Json
+          updated_at?: string
+          user_id?: string
+        }
+        Update: {
+          list?: string
+          note?: string
+          remind_on?: string | null
+          song_ref?: string
+          steps?: Json
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      health_songs: {
+        Row: {
+          artist: string
+          created_at: string
+          id: string
+          metadata: Json
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          artist?: string
+          created_at?: string
+          id?: string
+          metadata?: Json
+          title: string
+          updated_at?: string
+          user_id?: string
+        }
+        Update: {
+          artist?: string
+          created_at?: string
+          id?: string
+          metadata?: Json
+          title?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
       }
       profiles: {
         Row: {
@@ -901,6 +988,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      artist_name_status: { Args: { uid?: string }; Returns: Json }
       can_manage_staff: { Args: { _user_id: string }; Returns: boolean }
       get_split_invite: { Args: { _row_id: string }; Returns: Json }
       has_active_subscription: {
@@ -927,6 +1015,7 @@ export type Database = {
         Returns: boolean
       }
       is_staff: { Args: { _user_id: string }; Returns: boolean }
+      norm_artist_name: { Args: { v: string }; Returns: string }
       sign_split_invite: {
         Args: {
           _hash: string
