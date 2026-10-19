@@ -3,7 +3,9 @@ import { AlertTriangle, Hourglass } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { listTracks, type CatalogTrack } from "@/lib/catalog";
-import { QuickSongInspector, MismatchTips } from "@/components/QuickSongInspector";
+import { RoyaltyInspector, MismatchTips } from "@/components/RoyaltyInspector";
+import { HealthChecklist } from "@/components/HealthChecklist";
+import { deleteInspectorSong, emptyStatus, inspectorChecks, isInspectorSong, listInspectorSongs, listStatuses, saveInspectorSong, saveStatus, type InspectorFields, type SongStatus } from "@/lib/health-songs";
 import { HealthReport } from "@/components/HealthReport";
 import { healthReport, type RepertoireCheck } from "@/lib/health";
 import { clearCheck, listChecks, markCheck } from "@/lib/repertoire-checks";
@@ -13,18 +15,24 @@ import { loadOnboarding, saveOnboarding } from "@/lib/artist-profile";
 
 const AUTO = [INTERNATIONAL.deezer.id, INTERNATIONAL.musicbrainz.id];
 
-export function RoyaltyHealthCheck({ userId, canCatalog, onFix, onFixField, onEmbed }: { userId: string; canCatalog: boolean; onFix: () => void; onFixField: (trackId: string, field: string) => void; onEmbed: () => void }) {
+export function RoyaltyHealthCheck({ userId, canCatalog, onUpgrade, onFix, onFixField, onEmbed }: { userId: string; canCatalog: boolean; onUpgrade: () => void; onFix: () => void; onFixField: (trackId: string, field: string) => void; onEmbed: () => void }) {
   const [tracks, setTracks] = useState<CatalogTrack[]>();
   const [checks, setChecks] = useState<RepertoireCheck[]>([]);
   const [code, setCode] = useState(() => loadOnboarding(userId)?.healthCountry);
   const [running, setRunning] = useState<{ done: number; total: number; trackId?: string }>();
   const [loaded, setLoaded] = useState(false);
+  const [inspectorSongs, setInspectorSongs] = useState<CatalogTrack[]>([]);
+  const [statuses, setStatuses] = useState<SongStatus[]>([]);
+  const [editing, setEditing] = useState<CatalogTrack>();
   const autoRan = useRef(false);
 
   useEffect(() => {
     Promise.all([
       listTracks().then(setTracks).catch(() => setTracks([])),
       listChecks().then(setChecks).catch(() => toast.error("Couldn't load your saved registration checks.")),
+      // Checklist tables arrive with the 20261020120000 migration; until then the checklist simply starts empty.
+      listInspectorSongs().then(setInspectorSongs).catch(() => {}),
+      listStatuses().then(setStatuses).catch(() => {}),
     ]).then(() => setLoaded(true));
   }, []);
 
@@ -38,7 +46,32 @@ export function RoyaltyHealthCheck({ userId, canCatalog, onFix, onFixField, onEm
 
   // First visit: guess the country from the writers' PROs, falling back to the US.
   const country = countryByCode(code ?? guessCountry((tracks ?? []).flatMap((t) => [...t.metadata.writers, ...t.metadata.composers].map((w) => w.pro)))) ?? countryByCode("US")!;
-  const report = useMemo(() => healthReport(tracks ?? [], country, checks), [tracks, country, checks]);
+  // Catalog songs and Royalty Inspector songs share one report; inspector marks live in their checklist status.
+  const allTracks = useMemo(() => [...(tracks ?? []), ...inspectorSongs], [tracks, inspectorSongs]);
+  const allChecks = useMemo(() => [...checks, ...inspectorChecks(statuses)], [checks, statuses]);
+  const report = useMemo(() => healthReport(allTracks, country, allChecks), [allTracks, country, allChecks]);
+  const statusOf = (id: string) => statuses.find((x) => x.songRef === id) ?? emptyStatus(id);
+
+  async function updateStatus(next: SongStatus) {
+    const prev = statuses;
+    setStatuses((all) => [...all.filter((x) => x.songRef !== next.songRef), next]);
+    try { await saveStatus(next); } catch { setStatuses(prev); toast.error("Couldn't save that step. Try again."); }
+  }
+  async function saveInspector(fields: InspectorFields, id?: string) {
+    try {
+      const t = await saveInspectorSong(fields, id);
+      setInspectorSongs((all) => [t, ...all.filter((x) => x.id !== t.id)]);
+      toast.success(id ? "Song updated." : "Saved to your Song Health Checklist.");
+    } catch (e) { toast.error(e instanceof Error ? e.message : "Couldn't save the song."); throw e; }
+  }
+  async function removeInspector(id: string) {
+    try { await deleteInspectorSong(id); setInspectorSongs((all) => all.filter((x) => x.id !== id)); } catch { toast.error("Couldn't remove the song. Try again."); }
+  }
+  function fixField(trackId: string, field: string) {
+    if (!isInspectorSong(trackId)) { onFixField(trackId, field); return; }
+    setEditing(inspectorSongs.find((x) => x.id === trackId));
+    document.getElementById("quick-check")?.scrollIntoView({ behavior: "smooth" });
+  }
 
   const upsert = (c: RepertoireCheck) => setChecks((all) => [...all.filter((x) => !(x.trackId === c.trackId && x.society === c.society)), c]);
 
@@ -73,24 +106,43 @@ export function RoyaltyHealthCheck({ userId, canCatalog, onFix, onFixField, onEm
   }
 
   async function mark(trackId: string, society: string, status: RepertoireCheck["status"], workId?: string) {
+    if (isInspectorSong(trackId)) {
+      const cur = statusOf(trackId), steps = { ...cur.steps };
+      delete steps[`found:${society}`]; delete steps[`not_listed:${society}`];
+      steps[`${status}:${society}`] = new Date().toISOString();
+      return updateStatus({ ...cur, steps });
+    }
     try { upsert(await markCheck(userId, trackId, society, status, workId)); } catch { toast.error("Couldn't save that. Try again."); }
   }
   async function clear(trackId: string, society: string) {
+    if (isInspectorSong(trackId)) {
+      const cur = statusOf(trackId), steps = { ...cur.steps };
+      delete steps[`found:${society}`]; delete steps[`not_listed:${society}`];
+      return updateStatus({ ...cur, steps });
+    }
     if (AUTO.includes(society)) return;
     try { await clearCheck(trackId, society); setChecks((all) => all.filter((x) => !(x.trackId === trackId && x.society === society))); } catch { toast.error("Couldn't undo that. Try again."); }
   }
 
   const book = () => document.getElementById("expert-assistance")?.scrollIntoView({ behavior: "smooth" });
+  const actions = {
+    onCountry: chooseCountry, onRunAll: () => void runAll(), onExpert: book, onRunOne: (id: string) => void runOne(id),
+    onMark: (...a: Parameters<typeof mark>) => void mark(...a), onClear: (...a: Parameters<typeof clear>) => void clear(...a), onFixField: fixField,
+  };
   if (!tracks) return <div className="rounded-3xl bg-ink p-8 text-ink-muted">Scanning your catalog…</div>;
 
   return (
     <div className="space-y-6">
-      <HealthReport report={report} country={country} running={running} canCatalog={canCatalog} onEmbed={onEmbed}
-        onCountry={chooseCountry} onRunAll={() => void runAll()} onExpert={book} onRunOne={(id) => void runOne(id)} onMark={(...a) => void mark(...a)} onClear={(...a) => void clear(...a)} onFixField={onFixField} />
+      <HealthReport {...actions} report={report} country={country} running={running} canCatalog={canCatalog} onEmbed={onEmbed} />
+
+      <HealthChecklist rows={report.rows} country={country} statuses={statuses} onStatus={(x) => void updateStatus(x)} actions={actions}
+        runningId={running?.trackId} canCatalog={canCatalog} onUpgrade={onUpgrade} onEditInspector={(id) => fixField(id, "")} onDeleteInspector={(id) => void removeInspector(id)} />
 
       {tracks.length > 0 && <MismatchTips />}
 
-      <div id="quick-check" className="scroll-mt-4"><QuickSongInspector onEmbed={onEmbed} onExpert={book} /></div>
+      <div id="quick-check" className="scroll-mt-4">
+        <RoyaltyInspector onEmbed={onEmbed} onExpert={book} onSave={saveInspector} editing={editing} onDoneEditing={() => setEditing(undefined)} />
+      </div>
 
       <div className="grid gap-4 md:grid-cols-2">
         <div className="rounded-2xl border-2 border-destructive/60 bg-card p-5">

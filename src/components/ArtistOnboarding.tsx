@@ -44,12 +44,30 @@ export function ArtistAvatar({ src, className = "h-10 w-10" }: { src?: string | 
     : <span className={`${className} flex items-center justify-center rounded-full border-2 border-primary bg-card text-primary`}><UserRound className="h-1/2 w-1/2" /></span>;
 }
 
+type NameStatus = { in_grace: boolean; grace_until: string | null; changes_left: number; next_change_at: string | null };
+const normName = (v?: string | null) => (v ?? "").trim().replace(/\s+/g, " ").toLowerCase();
+async function loadNameStatus(): Promise<NameStatus> {
+  const { data, error } = await supabase.rpc("artist_name_status" as never);
+  if (error) throw error;
+  return data as NameStatus;
+}
+const day = (iso: string) => new Date(iso).toLocaleDateString(undefined, { month: "long", day: "numeric", year: "numeric" });
+/** Plain-language artist-name rule: free fixes for 72 hours after signup, then once a week and 3 times a year. */
+function nameRuleText(s?: NameStatus) {
+  if (!s) return "Your artist name is tied to your catalog. You can change it once a week, up to 3 times a year.";
+  if (s.in_grace && s.grace_until) return `Fix any typos freely until ${day(s.grace_until)}. After that, you can change it once a week, up to 3 times a year.`;
+  if (s.next_change_at) return `You can change your artist name again on ${day(s.next_change_at)}.`;
+  return `You can change your artist name once a week, up to 3 times a year (${s.changes_left} left). Releasing as another artist? Add an artist to your account.`;
+}
+
 export function ArtistOnboarding({ userId, open, onOpenChange, onSaved, firstRun }: {
   userId: string; open: boolean; onOpenChange: (o: boolean) => void; onSaved: (o: Onboarding) => void; firstRun: boolean;
 }) {
   const [step, setStep] = useState(firstRun ? 0 : 1);
   const [ob, setOb] = useState<Onboarding>({ done: false, welcomed: false, avatar: "", stageName: "", legalName: "" });
   const [p, setP] = useState<ArtistProfile>({});
+  const [nameRule, setNameRule] = useState<NameStatus>();
+  const [savedName, setSavedName] = useState("");
 
   useEffect(() => {
     if (!open) return;
@@ -58,8 +76,11 @@ export function ArtistOnboarding({ userId, open, onOpenChange, onSaved, firstRun
     const prof = loadProfile(userId) ?? {};
     setP({ copyright: `© ${year} `, phonographic: `℗ ${year} `, language: "English", ...prof });
     if (saved) setOb(saved);
-    else supabase.from("profiles").select("stage_name, legal_name").eq("id", userId).maybeSingle().then(({ data }) =>
-      setOb((o) => ({ ...o, stageName: data?.stage_name ?? "", legalName: data?.legal_name ?? "" })));
+    supabase.from("profiles").select("stage_name, legal_name").eq("id", userId).maybeSingle().then(({ data }) => {
+      setSavedName(data?.stage_name ?? "");
+      if (!saved) setOb((o) => ({ ...o, stageName: data?.stage_name ?? "", legalName: data?.legal_name ?? "" }));
+    });
+    loadNameStatus().then(setNameRule).catch(() => setNameRule(undefined));
   }, [open, userId, firstRun]);
 
   const set = <K extends keyof ArtistProfile>(k: K, v: ArtistProfile[K]) => setP((x) => ({ ...x, [k]: v }));
@@ -67,6 +88,12 @@ export function ArtistOnboarding({ userId, open, onOpenChange, onSaved, firstRun
   async function finish() {
     const stage = ob.stageName.trim() || p.artist?.trim() || "";
     const final: Onboarding = { ...ob, stageName: stage, done: true, welcomed: true };
+    // Artist name changes are limited (see artist_name_status); the database has the final say.
+    if (normName(savedName) && normName(savedName) !== normName(stage)) {
+      const { error } = await supabase.from("profiles").update({ stage_name: stage }).eq("id", userId);
+      if (error) { toast.error(error.message.replace("ARTIST_NAME_LOCKED: ", "")); return; }
+      setSavedName(stage);
+    }
     saveProfile(userId, { ...p, artist: p.artist?.trim() || stage });
     saveOnboarding(userId, final);
     await supabase.from("profiles").update({ stage_name: stage || null, legal_name: ob.legalName.trim() || null }).eq("id", userId);
@@ -136,7 +163,8 @@ export function ArtistOnboarding({ userId, open, onOpenChange, onSaved, firstRun
             <DialogHeader><DialogTitle className="text-2xl">Set Your Embed Defaults</DialogTitle>
               <DialogDescription>Enter it once, prefill every embed. Add the public release details you use most and each new song starts closer to distribution-ready. You can always change details for an individual track.</DialogDescription></DialogHeader>
             <Group title="Artist & Label">
-              <Field label="Primary Artist / Stage Name"><Input value={ob.stageName} onChange={(e) => { setOb((o) => ({ ...o, stageName: e.target.value })); set("artist", e.target.value); }} /></Field>
+              <Field label="Primary Artist / Stage Name"><Input value={ob.stageName} onChange={(e) => { setOb((o) => ({ ...o, stageName: e.target.value })); set("artist", e.target.value); }} />
+                {savedName && <p className="mt-1 text-xs text-muted-foreground">{nameRuleText(nameRule)}</p>}</Field>
               <Field label="Default Label Name (optional)"><Input value={p.label ?? ""} onChange={(e) => set("label", e.target.value)} placeholder="Your label name" /></Field>
               <Field label="Produced by (optional)"><Input value={p.producers?.[0]?.name ?? ""} placeholder="Name" title="This name is embedded in your track for credit. If the producer also earns royalties, add them under Writer with their legal name and the Composer role."
                 onChange={(e) => { const rest = p.producers?.slice(1) ?? []; set("producers", [{ ...(p.producers?.[0] ?? emptyContributor()), name: e.target.value }, ...rest]); }} /></Field>

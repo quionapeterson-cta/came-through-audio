@@ -18,11 +18,15 @@ import { ProSelect } from "@/components/ProSelect";
 import { ArtistAvatar } from "@/components/ArtistOnboarding";
 import { BadgeViewer } from "@/components/BadgeViewer";
 import { isBadgeImage } from "@/lib/badges";
-import { loadProfile, withProfile } from "@/lib/artist-profile";
+import { loadOnboarding, loadProfile, withProfile } from "@/lib/artist-profile";
+
+const normArtist = (v: string) => v.trim().replace(/\s+/g, " ").toLowerCase();
 import { Link } from "@tanstack/react-router";
 
 export function MetadataUploader({ stageName, avatar, userId, mode = "embed", onSubmitted, onSplitSheet, onProtect, canSplit, canExport, focus, onFocused }: { onFocused?: () => void; stageName?: string; avatar?: string | undefined; userId?: string; mode?: "embed" | "catalog"; focus?: { trackId: string; field: string } | undefined; onSubmitted?: () => void; onSplitSheet?: (t: CatalogTrack) => void; onProtect?: (t: CatalogTrack) => void; canSplit?: boolean; canExport?: boolean }) {
   const full = mode === "catalog";
+  // One artist per account: the artist name from setup. A different name gets a gentle add-an-artist note.
+  const registeredArtist = loadOnboarding(userId)?.stageName?.trim() ?? "";
   const [aiProtect, setAiProtect] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [metadata, setMetadata] = useState<Metadata>(emptyMetadata);
@@ -34,6 +38,8 @@ export function MetadataUploader({ stageName, avatar, userId, mode = "embed", on
   const [result, setResult] = useState<{ url: string; name: string }>();
   const [tracks, setTracks] = useState<CatalogTrack[]>([]);
   const [editingId, setEditingId] = useState<string>();
+  // My Catalog: adding a song directly (an already-embedded MP3, or details only) instead of going through Embed.
+  const [adding, setAdding] = useState(false);
   const [saving, setSaving] = useState(false);
   const [upsell, setUpsell] = useState<false | "split" | "export">(false);
   const [viewAvatar, setViewAvatar] = useState(false);
@@ -105,6 +111,7 @@ export function MetadataUploader({ stageName, avatar, userId, mode = "embed", on
       } catch { toast.warning("Details saved, but your audio or artwork could not be stored. Try saving again."); }
       setMetadata(data);
       setEditingId(id);
+      setAdding(false);
       toast.success(editingId ? "Track updated in your catalog." : "Track submitted to your catalog.");
       refresh();
       if (!full) { setSubmitted(true); onSubmitted?.(); }
@@ -248,7 +255,13 @@ export function MetadataUploader({ stageName, avatar, userId, mode = "embed", on
     } finally { setBusy(false); }
   }
 
-  const showForm = !full || !!editingId;
+  const showForm = !full || !!editingId || adding;
+  function addSong(withAudio: boolean) {
+    startNew();
+    setAdding(true);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+    if (withAudio) setTimeout(() => audioInput.current?.click(), 50);
+  }
   return (
     <section className={`mx-auto mt-8 ${full ? "max-w-5xl" : "max-w-7xl"}`}>
       {stageName && <h1 className="mb-8 flex items-center justify-center gap-[0.3em] text-center text-4xl font-extrabold leading-none tracking-tight md:text-5xl">
@@ -261,8 +274,22 @@ export function MetadataUploader({ stageName, avatar, userId, mode = "embed", on
       <BadgeViewer src={viewAvatar ? avatar : undefined} round={!isBadgeImage(avatar)} onClose={() => setViewAvatar(false)}
         share={full ? { ctx: "catalog", artist: stageName ?? "", count: tracks.length, genre: loadProfile(userId)?.primaryGenre } : { ctx: "embed", artist: metadata.artist.trim() || (stageName ?? ""), title: metadata.title, genre: metadata.primaryGenre }} />
       <div className="mb-6 flex flex-wrap items-end justify-between gap-3">
-        <h1 className="text-2xl font-bold">{full ? (editingId ? "Edit track" : "My Catalog") : "Embed Metadata"}</h1>
-        <span className="text-sm text-muted-foreground">{full ? "Saved songs, identifiers and splits" : "MP3 · ID3v2.3"}</span>
+        <h1 className="text-2xl font-bold">{full ? (editingId ? "Edit track" : adding ? "Add a song" : "My Catalog") : "Embed Metadata"}</h1>
+        {full && userId && !editingId && !adding ? (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild><Button type="button"><Plus />Add song</Button></DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="max-w-xs">
+              <DropdownMenuItem onClick={() => addSong(true)} className="flex-col items-start gap-0.5">
+                <span className="font-semibold">Upload an MP3 you already embedded</span>
+                <span className="text-xs text-muted-foreground">We read its tags and fill in the details for you.</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => addSong(false)} className="flex-col items-start gap-0.5">
+                <span className="font-semibold">Add without audio</span>
+                <span className="text-xs text-muted-foreground">Type in the details. Add the MP3 anytime later.</span>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        ) : <span className="text-sm text-muted-foreground">{full ? "Saved songs, identifiers and splits" : "MP3 · ID3v2.3"}</span>}
       </div>
       <div className={full ? "" : "lg:grid lg:grid-cols-[13rem_minmax(0,1fr)_17rem] lg:items-start lg:gap-6"}>
       {!full && <SessionRail audio={audio} queue={queue} done={sessionDone} onAdd={() => audioInput.current?.click()} onRemove={(i) => setQueue((q) => q.filter((_, j) => j !== i))} />}
@@ -279,7 +306,7 @@ export function MetadataUploader({ stageName, avatar, userId, mode = "embed", on
         <fieldset disabled={busy} className="grid gap-5 sm:grid-cols-[1fr_220px]">
           <div onDragOver={(event) => event.preventDefault()} onDrop={(event) => { event.preventDefault(); if (!busy) addFiles(event.dataTransfer.files); }} className="flex min-h-44 flex-col items-center justify-center gap-3 rounded-lg border border-dashed border-primary bg-accent/30 p-5 text-center">
             <FileAudio className="h-8 w-8 text-primary" />
-            <div className="max-w-full break-all text-sm font-semibold">{audio ? audio.name : full ? "Replace audio (optional)" : "Audio file"}</div>
+            <div className="max-w-full break-all text-sm font-semibold">{audio ? audio.name : full ? (editingId ? "Replace audio (optional)" : "MP3 (optional)") : "Audio file"}</div>
             {audio && <span className="text-xs text-muted-foreground">{(audio.size / 1024 / 1024).toFixed(1)} MB</span>}
             <Button type="button" variant="outline" onClick={() => audioInput.current?.click()}><Upload />{audio ? (full ? "Replace MP3" : "Add more songs") : full ? "Choose MP3" : "Choose MP3s"}</Button>
             {!full && !audio && <span className="text-xs text-muted-foreground">Drop a whole EP or album. Songs wait in your session queue.</span>}
@@ -323,7 +350,14 @@ export function MetadataUploader({ stageName, avatar, userId, mode = "embed", on
             </div>
             <SelectField label="Primary genre" id="primaryGenre" value={metadata.primaryGenre} options={GENRES} onChange={(value) => update("primaryGenre", value)} />
             <SelectField label="Secondary genre" id="secondaryGenre" value={metadata.secondaryGenre} options={GENRES} onChange={(value) => update("secondaryGenre", value)} />
-            <Field label="Artist name" id="artist" value={metadata.artist} required onChange={(value) => update("artist", value)} />
+            <div>
+              <Field label="Artist name" id="artist" value={metadata.artist} required onChange={(value) => update("artist", value)} />
+              {registeredArtist && metadata.artist.trim() && normArtist(metadata.artist) !== normArtist(registeredArtist) && (
+                <p role="note" className="mt-2 rounded-md border border-primary/50 bg-accent/30 p-2 text-xs">
+                  This account is registered to <span className="font-semibold">{registeredArtist}</span>. Releasing as a different artist? Each artist gets their own catalog with an add-on artist account (from $19.99/yr), coming soon. Featuring someone? Add them under Featured artist instead.
+                </p>
+              )}
+            </div>
             <div className="space-y-2">
               {metadata.featured.map((name, index) => (
                 <div key={index} className="flex items-end gap-2">
@@ -403,7 +437,7 @@ export function MetadataUploader({ stageName, avatar, userId, mode = "embed", on
           <div className="flex flex-wrap items-center gap-3">
             <Button type="submit" size="lg" disabled={busy}><FileAudio />{busy ? "Embedding…" : "Embed & Download"}</Button>
             {userId && <Button type="button" size="lg" variant="outline" disabled={saving} onClick={save}><Save />{saving ? "Saving…" : editingId ? "Update in catalog" : "Submit to catalog"}</Button>}
-            {full && editingId && <Button type="button" size="lg" variant="ghost" onClick={startNew}>Close</Button>}
+            {full && (editingId || adding) && <Button type="button" size="lg" variant="ghost" onClick={() => { startNew(); setAdding(false); }}>Close</Button>}
             {!full && <span className="hidden text-xs text-muted-foreground sm:inline"><kbd className="rounded border border-border px-1.5 py-0.5">Ctrl</kbd> + <kbd className="rounded border border-border px-1.5 py-0.5">Enter</kbd> to embed</span>}
           </div>
         </div>
@@ -419,7 +453,7 @@ export function MetadataUploader({ stageName, avatar, userId, mode = "embed", on
             <h2 className="text-xl font-bold">Your songs</h2>
             {tracks.length > 0 && <Button type="button" variant="outline" size="sm" onClick={() => { const list = filter === "All" ? tracks : tracks.filter((t) => releaseGroup(t) === filter); downloadCatalogPdf(list, filter === "All" ? "Catalog" : `Catalog - ${filter}s`).catch(() => toast.error("Could not create the catalog PDF.")); }}><FileText />{filter === "All" ? "Catalog PDF" : `${filter}s PDF`}</Button>}
           </div>
-          {tracks.length === 0 ? <p className="text-sm text-muted-foreground">No songs yet. Embed a track in the Embed Metadata tab and submit it to your catalog.</p> : (
+          {tracks.length === 0 ? <p className="text-sm text-muted-foreground">No songs yet. Use Add song to save a song you already embedded, or embed a new one in Embed Metadata. Every song you save runs through the Royalty Health Check automatically.</p> : (
             <>
             <div className="mb-5 flex flex-wrap gap-2" role="tablist" aria-label="Filter by release type">
               {(["Album", "EP", "Single", "All"] as const).map((f) => {

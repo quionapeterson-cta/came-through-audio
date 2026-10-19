@@ -63,7 +63,11 @@ export const DOCS: Doc[] = [
     intro: "Unregistered songs mean missed payouts. The Royalty Health Suite shows where each song stands and what to do next.",
     sections: [
       { heading: "Royalty Health Check (free)", bullets: [
-        "Checks your catalog songs for streaming availability and composition data using open music databases.",
+        "The Royalty Inspector checks any song you type in, free and unlimited. Save it to your Song Health Checklist to track it.",
+        "Every song gets a simple step-by-step checklist: fix the song details, register it, then confirm it shows up. Tick steps at your own pace until it's 100% healthy.",
+        "Not showing up yet? Each step lists the common, harmless reasons (still processing, not matched or reconciled yet, spelled differently) and what to do.",
+        "Organize songs into Needs attention, Saved for later (with a note and reminder date) and 100% Healthy.",
+        "On paid plans, every song you embed or save to My Catalog is checked automatically, including streaming availability and composition data from open music databases.",
         "Lists the collection societies for your country, with direct links to search their public repertoires or log in to your member account.",
         "Lets you mark each society \"Found it\" or \"Not listed\" so your report stays up to date.",
         "Flags missing writer details that would block registration, with links to fix them.",
@@ -112,6 +116,7 @@ export const DOCS: Doc[] = [
       { heading: "Embedding and catalog", bullets: [
         "Embed Metadata is in your workspace. Drop in an MP3, fill in the details, and download your tagged master.",
         "Use Submit to catalog to save the song, master, art and lyrics to My Catalog.",
+        "Already embedded a song elsewhere? In My Catalog, use Add song to upload the MP3 (we read its tags) or add a song without audio.",
         "Writers need a legal name and role (Author, Composer or Author/Composer) before registration. You can embed without them.",
         "Mark a song Instrumental if it has no lyrics. It then doesn't need an author.",
       ] },

@@ -70,7 +70,7 @@ function Workspace() {
   const tier: Tier = canPreview && previewTier !== "real" ? previewTier : realTier;
   // Free accounts may only sign invited split sheets (/sign/$token). Generating one starts at Plus; collecting
   // collaborator e-signatures, agency exports and the utility suite need Collaborate. The database enforces both.
-  // Free accounts use the Quick Check with their own song details; embedding and the catalog start at Plus.
+  // Free accounts use the Royalty Inspector with their own song details; embedding and the catalog start at Plus.
   const canCatalog = hasTier(tier, "plus");
   const canSplit = hasTier(tier, "plus");
   const canCollect = hasTier(tier, "collaborate");
@@ -97,7 +97,7 @@ function Workspace() {
   const upgrade = () => document.getElementById("plans-trigger")?.click();
   const openQuickCheck = () => { setTab("health"); setTimeout(() => document.getElementById("quick-check")?.scrollIntoView({ behavior: "smooth" }), 50); };
   const studio = useStudioMode();
-  // Free accounts open on the Royalty Health Check (Quick Check) instead of the locked Embed tab.
+  // Free accounts open on the Royalty Health Check (Royalty Inspector) instead of the locked Embed tab.
   useEffect(() => { if (billingLoaded && !search.tab && !hasTier(realTier, "plus")) setTab((t) => (t === "embed" ? "health" : t)); }, [billingLoaded]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // A plan picked before signup ("Sign up to start") goes straight to that plan's checkout once billing has loaded.
@@ -283,7 +283,7 @@ function Masterclasses() {
 function Health({ canCatalog, onFix, onFixField, onEmbed, userId, email, purchases, canUtility, onUpgrade }: { canCatalog: boolean; userId: string; email?: string | undefined; purchases: Purchase[]; canUtility: boolean; onUpgrade: () => void; onFix: () => void; onFixField: (trackId: string, field: string) => void; onEmbed: () => void }) {
   return (
     <div className="mt-6 space-y-6">
-      <RoyaltyHealthCheck userId={userId} canCatalog={canCatalog} onFix={onFix} onFixField={onFixField} onEmbed={onEmbed} />
+      <RoyaltyHealthCheck userId={userId} canCatalog={canCatalog} onUpgrade={onUpgrade} onFix={onFix} onFixField={onFixField} onEmbed={onEmbed} />
       <div id="expert-assistance"><ExpertAssistance userId={userId} email={email} purchases={purchases} onFix={onFixField} /></div>
       <RoyaltyUtilitySuite unlocked={canUtility} onUpgrade={onUpgrade} />
     </div>
