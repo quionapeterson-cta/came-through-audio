@@ -323,6 +323,66 @@ Artist will credit Videographer as "{{credit}}" in the video description where c
 ${general(7)}`,
   },
   {
+    id: "photo-video-release",
+    name: "Photo, Video & Testimonial Release",
+    category: "Visual",
+    summary: "Someone gives you permission to use their photo, video, voice, name and written testimonial, forever, in exchange for a gift or fee.",
+    whenToUse: "Use it before you post a customer testimonial, a fan video, behind-the-scenes footage or any photo of a person in your marketing.",
+    keyTerms: [
+      "Perpetual and worldwide: you can keep using the material with no end date, anywhere.",
+      "What's covered: photos, video, audio, their name, likeness and the exact written testimonial.",
+      "Consideration: what they receive in return (a gift, product or fee). Something of value makes the release stronger.",
+      "Editing: you may crop, edit and shorten, but not change the meaning of what they said.",
+      "No obligation: you're allowed to use it, never required to.",
+      "Minors: anyone under 18 needs a parent or guardian to sign too.",
+    ],
+    roles: ["Company", "Participant"],
+    fields: [
+      DATE,
+      { key: "materials", label: "Materials covered", placeholder: "Photos, video recordings, voice, name, likeness and written testimonial", tip: "Everything the person is giving you permission to use.", multiline: true },
+      { key: "testimonial", label: "Written testimonial (optional)", placeholder: "Paste their testimonial exactly as approved", tip: "The exact words they approved. Leave blank if it isn't written yet.", multiline: true },
+      { key: "consideration", label: "What they receive", placeholder: "One year of Catalog Plus at no cost", tip: "The gift or payment they get in return for the release." },
+      { key: "uses", label: "Where it may appear", placeholder: "Website, social media, ads, email, presentations and press", tip: "The places you plan to use the material. \"Any media\" is broadest." },
+      { key: "credit", label: "How they are credited", placeholder: "First name and city, e.g. \"Jordan, Atlanta\"", tip: "How the person's name appears next to their testimonial, if at all." },
+      STATE,
+    ],
+    body: `PHOTO, VIDEO & TESTIMONIAL RELEASE
+
+This release is made on {{effectiveDate}} between {{party:Company}} ("Company") and {{party:Participant}} ("Participant").
+
+1. PERMISSION
+Participant grants Company and its successors the irrevocable, perpetual, worldwide, royalty-free right to use, reproduce, publish, display and distribute the following, in whole or in part: {{materials}} (the "Materials").
+
+2. TESTIMONIAL
+Participant approves this written testimonial for use with the Materials: "{{testimonial}}". Company will not change its meaning.
+
+3. USES
+Company may use the Materials in any media now known or later developed, including {{uses}}, to advertise and promote Company and its services.
+
+4. EDITING
+Company may crop, edit, shorten, caption and combine the Materials with other content, as long as the meaning of Participant's statements is not changed.
+
+5. CREDIT
+Where a name appears, Participant will be credited as {{credit}}. Company may also use the Materials without a name.
+
+6. CONSIDERATION
+In exchange for this release, Participant receives: {{consideration}}. Participant agrees this is the full compensation, and no royalties or further payments are owed.
+
+7. OWNERSHIP AND APPROVAL
+Company owns any photos and recordings it creates of Participant. Participant waives any right to inspect or approve final versions, except that the written testimonial will not be changed in meaning.
+
+8. NO OBLIGATION
+Company is allowed, but never required, to use the Materials.
+
+9. RELEASE OF CLAIMS
+Participant releases Company from claims for invasion of privacy, right of publicity or defamation arising from uses permitted here.
+
+10. AGE
+Participant confirms they are 18 or older. If not, a parent or legal guardian must also sign this release on their behalf.
+
+${general(11)}`,
+  },
+  {
     id: "indie-label-license",
     name: "Independent Label License Agreement",
     category: "Label",

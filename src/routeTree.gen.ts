@@ -17,6 +17,7 @@ import { Route as PrivacyNoticeRouteImport } from './routes/privacy-notice'
 import { Route as PrivacyPolicyRouteImport } from './routes/privacy-policy'
 import { Route as ProfileRouteImport } from './routes/profile'
 import { Route as RefundPolicyRouteImport } from './routes/refund-policy'
+import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as TermsAndConditionsRouteImport } from './routes/terms-and-conditions'
 import { Route as TermsOfServiceRouteImport } from './routes/terms-of-service'
 import { Route as UnlockRouteImport } from './routes/unlock'
@@ -68,6 +69,11 @@ const ProfileRoute = ProfileRouteImport.update({
 const RefundPolicyRoute = RefundPolicyRouteImport.update({
   id: '/refund-policy',
   path: '/refund-policy',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ResetPasswordRoute = ResetPasswordRouteImport.update({
+  id: '/reset-password',
+  path: '/reset-password',
   getParentRoute: () => rootRouteImport,
 } as any)
 const TermsAndConditionsRoute = TermsAndConditionsRouteImport.update({
@@ -142,6 +148,7 @@ export interface FileRoutesByFullPath {
   '/privacy-policy': typeof PrivacyPolicyRoute
   '/profile': typeof ProfileRoute
   '/refund-policy': typeof RefundPolicyRoute
+  '/reset-password': typeof ResetPasswordRoute
   '/terms-and-conditions': typeof TermsAndConditionsRoute
   '/terms-of-service': typeof TermsOfServiceRoute
   '/unlock': typeof UnlockRoute
@@ -164,6 +171,7 @@ export interface FileRoutesByTo {
   '/privacy-policy': typeof PrivacyPolicyRoute
   '/profile': typeof ProfileRoute
   '/refund-policy': typeof RefundPolicyRoute
+  '/reset-password': typeof ResetPasswordRoute
   '/terms-and-conditions': typeof TermsAndConditionsRoute
   '/terms-of-service': typeof TermsOfServiceRoute
   '/unlock': typeof UnlockRoute
@@ -187,6 +195,7 @@ export interface FileRoutesById {
   '/privacy-policy': typeof PrivacyPolicyRoute
   '/profile': typeof ProfileRoute
   '/refund-policy': typeof RefundPolicyRoute
+  '/reset-password': typeof ResetPasswordRoute
   '/terms-and-conditions': typeof TermsAndConditionsRoute
   '/terms-of-service': typeof TermsOfServiceRoute
   '/unlock': typeof UnlockRoute
@@ -211,6 +220,7 @@ export interface FileRouteTypes {
     | '/privacy-policy'
     | '/profile'
     | '/refund-policy'
+    | '/reset-password'
     | '/terms-and-conditions'
     | '/terms-of-service'
     | '/unlock'
@@ -233,6 +243,7 @@ export interface FileRouteTypes {
     | '/privacy-policy'
     | '/profile'
     | '/refund-policy'
+    | '/reset-password'
     | '/terms-and-conditions'
     | '/terms-of-service'
     | '/unlock'
@@ -255,6 +266,7 @@ export interface FileRouteTypes {
     | '/privacy-policy'
     | '/profile'
     | '/refund-policy'
+    | '/reset-password'
     | '/terms-and-conditions'
     | '/terms-of-service'
     | '/unlock'
@@ -278,6 +290,7 @@ export interface RootRouteChildren {
   PrivacyPolicyRoute: typeof PrivacyPolicyRoute
   ProfileRoute: typeof ProfileRoute
   RefundPolicyRoute: typeof RefundPolicyRoute
+  ResetPasswordRoute: typeof ResetPasswordRoute
   TermsAndConditionsRoute: typeof TermsAndConditionsRoute
   TermsOfServiceRoute: typeof TermsOfServiceRoute
   UnlockRoute: typeof UnlockRoute
@@ -348,6 +361,13 @@ declare module '@tanstack/react-router' {
       path: '/refund-policy'
       fullPath: '/refund-policy'
       preLoaderRoute: typeof RefundPolicyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/reset-password': {
+      id: '/reset-password'
+      path: '/reset-password'
+      fullPath: '/reset-password'
+      preLoaderRoute: typeof ResetPasswordRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/terms-and-conditions': {
@@ -446,6 +466,7 @@ const rootRouteChildren: RootRouteChildren = {
   PrivacyPolicyRoute: PrivacyPolicyRoute,
   ProfileRoute: ProfileRoute,
   RefundPolicyRoute: RefundPolicyRoute,
+  ResetPasswordRoute: ResetPasswordRoute,
   TermsAndConditionsRoute: TermsAndConditionsRoute,
   TermsOfServiceRoute: TermsOfServiceRoute,
   UnlockRoute: UnlockRoute,

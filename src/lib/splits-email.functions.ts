@@ -6,6 +6,9 @@ import { emailLayout, escapeHtml } from "./email-layout";
 const FROM = "Came Through Audio <collaborate@camethroughaudio.com>";
 const esc = escapeHtml;
 
+/** Invite emails one account may send per 24 hours, so nobody can blast invites to farm free trial accounts. */
+const DAILY_INVITE_LIMIT = 50;
+
 /** Emails a collaborator their split-sheet signing link. The row must be readable by the caller (RLS = owner only). */
 export const sendSplitInvite = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
@@ -16,6 +19,9 @@ export const sendSplitInvite = createServerFn({ method: "POST" })
     const { data: canCollect } = await context.supabase.rpc("has_tier" as never, { _uid: context.userId, _needed: "collaborate" } as never);
     if (!canCollect) throw new Error("Collaborator e-signature requests are included with Catalog and Collaborate.");
 
+    const since = new Date(Date.now() - 86400000).toISOString();
+    const { count: sentToday } = await context.supabase.from("split_sheets" as never).select("id", { count: "exact", head: true }).gte("invited_at", since);
+    if ((sentToday ?? 0) >= DAILY_INVITE_LIMIT) throw new Error("You've reached today's limit of " + DAILY_INVITE_LIMIT + " invites. Try again tomorrow, or contact support if you need more.");
     const { data: row, error } = await context.supabase
       .from("split_sheets")
       .select("id, catalog_id, collaborator_email, legal_name, role, assigned_percentage, signed_at")

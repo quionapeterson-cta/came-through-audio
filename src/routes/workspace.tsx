@@ -70,6 +70,8 @@ function Workspace() {
   const tier: Tier = canPreview && previewTier !== "real" ? previewTier : realTier;
   // Free accounts may only sign invited split sheets (/sign/$token). Generating one starts at Plus; collecting
   // collaborator e-signatures, agency exports and the utility suite need Collaborate. The database enforces both.
+  // Free accounts use the Quick Check with their own song details; embedding and the catalog start at Plus.
+  const canCatalog = hasTier(tier, "plus");
   const canSplit = hasTier(tier, "plus");
   const canCollect = hasTier(tier, "collaborate");
   const hasAi = purchases.some((p) => p.kind === "ai");
@@ -89,6 +91,8 @@ function Workspace() {
   }, [user]);
   const upgrade = () => document.getElementById("plans-trigger")?.click();
   const studio = useStudioMode();
+  // Free accounts open on the Royalty Health Check (Quick Check) instead of the locked Embed tab.
+  useEffect(() => { if (billingLoaded && !search.tab && !hasTier(realTier, "plus")) setTab((t) => (t === "embed" ? "health" : t)); }, [billingLoaded]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // A plan picked before signup ("Sign up to start") goes straight to that plan's checkout once billing has loaded.
   useEffect(() => {
@@ -168,9 +172,13 @@ function Workspace() {
             ))}
           </TabsList>
 
-          <TabsContent value="embed" forceMount className="data-[state=inactive]:hidden"><MetadataUploader key={`embed-${embedKey}`} stageName={name} avatar={onboard?.avatar} userId={user.id} mode="embed" onSubmitted={() => setCatalogKey((k) => k + 1)} /></TabsContent>
+          <TabsContent value="embed" forceMount className="data-[state=inactive]:hidden">
+            {canCatalog ? <MetadataUploader key={`embed-${embedKey}`} stageName={name} avatar={onboard?.avatar} userId={user.id} mode="embed" onSubmitted={() => setCatalogKey((k) => k + 1)} />
+              : <PlusLock title="Embed Metadata starts with Catalog Plus" onQuickCheck={() => setTab("health")} onUpgrade={upgrade} />}
+          </TabsContent>
           <TabsContent value="catalog" forceMount className="data-[state=inactive]:hidden">
-            <MetadataUploader key={catalogKey} stageName={name} avatar={onboard?.avatar} userId={user.id} mode="catalog" canSplit={canSplit} canExport={canCollect} focus={catalogFix} onFocused={() => setCatalogFix(undefined)} onSplitSheet={(t) => { setSplitTrackId(t.id); setTab("splits"); }} onProtect={(t) => { setProtectTrack(t); setTab("protect"); }} />
+            {!canCatalog ? <PlusLock title="My Catalog starts with Catalog Plus" onQuickCheck={() => setTab("health")} onUpgrade={upgrade} /> : <>
+            <MetadataUploader key={catalogKey} stageName={name} avatar={onboard?.avatar} userId={user.id} mode="catalog" canSplit={canSplit} canExport={canCollect} focus={catalogFix} onFocused={() => setCatalogFix(undefined)} onSplitSheet={(t) => { setSplitTrackId(t.id); setTab("splits"); }} onProtect={(t) => { setProtectTrack(t); setTab("protect"); }} /></>}
           </TabsContent>
           <TabsContent value="protect"><AIProtectionHub userId={user.id} paid={hasAi} email={user.email} track={protectTrack} /></TabsContent>
           <TabsContent value="splits"><SplitSheets userId={user.id} canSplit={canSplit} canCollect={canCollect} prefillTrackId={splitTrackId} onUpgrade={upgrade} /></TabsContent>
@@ -178,6 +186,20 @@ function Workspace() {
           <TabsContent value="learn"><Learn userId={user.id} unlocked={hasTier(tier, "management")} onUpgrade={upgrade} /></TabsContent>
         </Tabs>
       </main>
+    </div>
+  );
+}
+
+function PlusLock({ title, onQuickCheck, onUpgrade }: { title: string; onQuickCheck: () => void; onUpgrade: () => void }) {
+  return (
+    <div className="mt-6 flex flex-col items-center gap-3 rounded-2xl border-2 border-primary p-10 text-center">
+      <Lock className="h-8 w-8 text-primary" />
+      <h2 className="text-2xl font-bold">{title}</h2>
+      <p className="max-w-lg text-muted-foreground">Embed your credits into every master, keep your catalog, masters, art and lyrics in one place, and generate split sheets for $24.99/yr. That's about $2.08 a month, billed annually.</p>
+      <div className="mt-2 flex flex-wrap justify-center gap-3">
+        <Button onClick={onUpgrade}>See plans</Button>
+        <Button variant="outline" onClick={onQuickCheck}>Run a free Quick Check</Button>
+      </div>
     </div>
   );
 }

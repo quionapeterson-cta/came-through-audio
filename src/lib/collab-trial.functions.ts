@@ -5,21 +5,39 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 export const COLLAB_TRIAL_DAYS = 30;
 
 /**
- * Grants a one-time 30-day Catalog and Collaborate trial to a collaborator who was
- * invited to sign a split sheet. The invite is verified as the caller (email must match).
+ * Grants a one-time 30-day Catalog and Collaborate trial to someone invited to sign a split sheet or contract.
+ * The invite is verified as the caller (email must match), then the fraud guard runs (see trialBlockReason).
+ * Reasons are logged server-side only, so the response never teaches anyone how to get around the checks.
  */
 export const grantCollaboratorTrial = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d) => z.object({ rowId: z.string().uuid(), environment: z.enum(["sandbox", "live"]) }).parse(d))
+  .inputValidator((d) => z.object({
+    rowId: z.string().uuid().optional(),
+    partyId: z.string().uuid().optional(),
+    environment: z.enum(["sandbox", "live"]),
+  }).refine((v) => !!v.rowId !== !!v.partyId, "Send a rowId or a partyId").parse(d))
   .handler(async ({ data, context }) => {
-    // Throws unless the invite was sent to the caller's email.
-    const { data: invite, error } = await context.supabase.rpc("get_split_invite", { _row_id: data.rowId });
-    if (error || !invite) return { granted: false };
-
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { trialBlockReason, inviterOf, hashIp } = await import("./collab-trial.server");
+
+    // Throws unless the invite was sent to the caller's email.
+    const source = data.rowId ? "split_sheet" as const : "contract" as const;
+    const { data: invite, error } = data.rowId
+      ? await context.supabase.rpc("get_split_invite", { _row_id: data.rowId })
+      : await context.supabase.rpc("get_contract_invite" as never, { _party_id: data.partyId } as never);
+    if (error || !invite) return { granted: false };
+    if (source === "contract" && !(invite as { can_sign?: boolean }).can_sign) return { granted: false };
+
     const subId = `collab_trial_${context.userId}`;
     const { data: existing } = await supabaseAdmin.from("subscriptions").select("id").eq("paddle_subscription_id", subId).maybeSingle();
     if (existing) return { granted: false };
+
+    const inviterId = await inviterOf(supabaseAdmin, source, (data.rowId ?? data.partyId)!);
+    const { getRequestHeader, getRequestIP } = await import("@tanstack/react-start/server");
+    const ip = getRequestHeader("cf-connecting-ip") ?? getRequestIP({ xForwardedFor: true }) ?? "";
+    const ipHash = ip ? hashIp(ip) : null;
+    const reason = await trialBlockReason(supabaseAdmin, { userId: context.userId, inviterId, source, ipHash, environment: data.environment });
+    if (reason) { console.warn(`Collaborator trial withheld for ${context.userId}: ${reason}`); return { granted: false }; }
 
     const now = new Date();
     const end = new Date(now.getTime() + COLLAB_TRIAL_DAYS * 86400000);
@@ -35,6 +53,8 @@ export const grantCollaboratorTrial = createServerFn({ method: "POST" })
       environment: data.environment,
     });
     if (insErr) { console.error("Trial insert failed", insErr); return { granted: false }; }
+    const email = String((context.claims as { email?: string }).email ?? "");
+    await supabaseAdmin.from("trial_grants" as never).insert({ user_id: context.userId, inviter_id: inviterId, source, ip_hash: ipHash, email_domain: email.split("@")[1]?.toLowerCase() ?? null } as never);
     return { granted: true, endsAt: end.toISOString() };
   });
 

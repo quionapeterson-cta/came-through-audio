@@ -11,6 +11,9 @@ import { CONTRACT_DISCLAIMER } from "@/lib/contract-blueprints";
 import { downloadContractPdf } from "@/lib/contract-pdf";
 import { getContractInvite, signContract, type ContractInvite } from "@/lib/contracts";
 import { clearReturn, rememberReturn } from "@/lib/password";
+import { useServerFn } from "@tanstack/react-start";
+import { grantCollaboratorTrial } from "@/lib/collab-trial.functions";
+import { getPaddleEnvironment } from "@/lib/paddle";
 
 export const Route = createFileRoute("/contract/$partyId")({
   head: () => ({
@@ -35,10 +38,17 @@ function ContractSignPage() {
   const [agreed, setAgreed] = useState(false);
   const [busy, setBusy] = useState(false);
 
+  const grantTrial = useServerFn(grantCollaboratorTrial);
   const load = () => {
     setError("");
     getContractInvite(partyId)
-      .then((d) => { setInvite(d); clearReturn(); })
+      .then((d) => {
+        setInvite(d); clearReturn();
+        // Signers who open their invite get a one-time 30-day Catalog and Collaborate trial (fraud-guarded on the server).
+        if (d?.can_sign) grantTrial({ data: { partyId, environment: getPaddleEnvironment() === "live" ? "live" : "sandbox" } })
+          .then((r) => { if (r.granted) toast.success("Welcome! You've unlocked a free 30-day Catalog and Collaborate account."); })
+          .catch(() => {});
+      })
       .catch((e) => setError(e instanceof Error ? e.message : "Could not open this contract."));
   };
   useEffect(() => { if (!user) rememberReturn(`/contract/${partyId}`); }, [user, partyId]);
@@ -77,6 +87,7 @@ function ContractSignPage() {
               <FileSignature className="h-10 w-10 text-primary" />
               <h1 className="text-3xl font-bold">You've been asked to sign a contract</h1>
               <p className="text-muted-foreground">Log in, or create a free account using the same email the request was sent to. Then read the full contract and sign in seconds. Signing is always free.</p>
+              <p className="rounded-lg border border-primary p-3 text-sm font-medium">Bonus: new signers get a free 30-day Catalog and Collaborate account.</p>
             </div>
             <SignupCard returnPath={`/contract/${partyId}`} onAuthed={() => {}} inviteMode />
           </div>

@@ -17,7 +17,8 @@ import { loadOnboarding, loadProfile, syncFromCloud, type ArtistProfile, type On
 import { earnedAwards, isBadgeImage, upNextAwards, type Award } from "@/lib/badges";
 import { creditName, writerRole, type Contributor } from "@/lib/metadata";
 import { TIER_LABEL } from "@/lib/plans";
-import { PASSWORD_RULES, passwordValid } from "@/lib/password";
+import { passwordValid } from "@/lib/password";
+import { PasswordField } from "@/components/PasswordField";
 
 export const Route = createFileRoute("/profile")({
   head: () => ({ meta: [{ title: "Profile — Came Through Audio" }, { name: "description", content: "Your artist profile, account and awards." }] }),
@@ -223,10 +224,7 @@ function PasswordDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (
       <DialogContent className="bg-card text-card-foreground">
         <DialogHeader><DialogTitle className="text-xl font-bold">Change password</DialogTitle></DialogHeader>
         <form onSubmit={submit} className="space-y-4">
-          <div className="space-y-2"><Label htmlFor="new-password">New password</Label><Input id="new-password" type="password" autoComplete="new-password" value={password} onChange={(e) => setPassword(e.target.value)} /></div>
-          <ul className="grid gap-1 text-xs sm:grid-cols-2">
-            {PASSWORD_RULES.map((r) => <li key={r.id} className={`flex items-center gap-1.5 ${r.test(password) ? "text-primary" : "text-muted-foreground"}`}><Check className="h-3.5 w-3.5" />{r.label}</li>)}
-          </ul>
+          <PasswordField id="new-password" label="New password" value={password} onChange={setPassword} />
           <div className="space-y-2"><Label htmlFor="confirm-password">Confirm new password</Label><Input id="confirm-password" type="password" autoComplete="new-password" value={confirm} onChange={(e) => setConfirm(e.target.value)} /></div>
           <Button type="submit" className="w-full" disabled={busy}>{busy ? "Saving…" : "Update password"}</Button>
         </form>

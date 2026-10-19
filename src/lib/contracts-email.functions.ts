@@ -6,6 +6,9 @@ import { emailLayout, escapeHtml } from "./email-layout";
 const FROM = "Came Through Audio <collaborate@camethroughaudio.com>";
 const esc = escapeHtml;
 
+/** Invite emails one account may send per 24 hours, so nobody can blast invites to farm free trial accounts. */
+const DAILY_INVITE_LIMIT = 50;
+
 /** Emails a contract party their signing link. Both rows must be readable by the caller (RLS = contract owner only). */
 export const sendContractInvite = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
@@ -16,6 +19,9 @@ export const sendContractInvite = createServerFn({ method: "POST" })
     const { data: canSend } = await context.supabase.rpc("has_tier" as never, { _uid: context.userId, _needed: "management" } as never);
     if (!canSend) throw new Error("Contract signature requests are included with Catalog Management.");
 
+    const since = new Date(Date.now() - 86400000).toISOString();
+    const { count: sentToday } = await context.supabase.from("contract_parties" as never).select("id", { count: "exact", head: true }).gte("invited_at", since);
+    if ((sentToday ?? 0) >= DAILY_INVITE_LIMIT) throw new Error("You've reached today's limit of " + DAILY_INVITE_LIMIT + " invites. Try again tomorrow, or contact support if you need more.");
     const { data: party, error } = await context.supabase
       .from("contract_parties" as never)
       .select("id, contract_id, legal_name, email, role, signed_at")
