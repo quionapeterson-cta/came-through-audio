@@ -1,6 +1,8 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { ShieldCheck, FileAudio, Lock, Disc3, Activity, FileSignature, ScrollText, GraduationCap, LogOut } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { getStaffRole } from "@/lib/admin.functions";
+import { ShieldCheck, FileAudio, Lock, Disc3, Activity, FileSignature, ScrollText, GraduationCap, LogOut, Moon, Sun } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
@@ -62,9 +64,14 @@ function Workspace() {
   const [catalogFix, setCatalogFix] = useState<{ trackId: string; field: string }>();
   const { tier: realTier, purchases, loaded: billingLoaded } = useBilling(user?.id);
   const [previewTier, setPreviewTier] = useState<Tier | "real">("real");
-  const tier: Tier = getPaddleEnvironment() === "sandbox" && previewTier !== "real" ? previewTier : realTier;
-  // Free accounts may only sign invited split sheets (/sign/$token); creation requires Collaborate.
-  const canSplit = hasTier(tier, "collaborate");
+  // The test-mode tier preview is for super admins only, so testers can't hand themselves a paid plan in the UI.
+  const staff = useQuery({ queryKey: ["staff-role", user?.id], queryFn: () => getStaffRole(), enabled: !!user && getPaddleEnvironment() === "sandbox" });
+  const canPreview = staff.data?.role === "super_admin";
+  const tier: Tier = canPreview && previewTier !== "real" ? previewTier : realTier;
+  // Free accounts may only sign invited split sheets (/sign/$token). Generating one starts at Plus; collecting
+  // collaborator e-signatures, agency exports and the utility suite need Collaborate. The database enforces both.
+  const canSplit = hasTier(tier, "plus");
+  const canCollect = hasTier(tier, "collaborate");
   const hasAi = purchases.some((p) => p.kind === "ai");
   const [onboard, setOnboard] = useState<Onboarding | null>(null);
   const [profileOpen, setProfileOpen] = useState(false);
@@ -81,6 +88,7 @@ function Workspace() {
     return () => { live = false; };
   }, [user]);
   const upgrade = () => document.getElementById("plans-trigger")?.click();
+  const studio = useStudioMode();
 
   // A plan picked before signup ("Sign up to start") goes straight to that plan's checkout once billing has loaded.
   useEffect(() => {
@@ -120,8 +128,8 @@ function Workspace() {
 
   return (
     <div className="min-h-screen bg-background">
-      <PaymentTestModeBanner previewTier={previewTier} onPreviewTier={setPreviewTier} />
-      <header className="bg-ink text-ink-foreground">
+      <PaymentTestModeBanner previewTier={previewTier} onPreviewTier={canPreview ? setPreviewTier : undefined} />
+      <header className="border-b border-ink-border bg-ink text-ink-foreground">
         <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-6 py-4">
           <div className="flex items-center gap-3">
             <BrandLogo showName={false} />
@@ -134,6 +142,10 @@ function Workspace() {
             <Badge variant="outline" className="border-ink-border text-ink-foreground">{TIER_LABEL[tier]}</Badge>
             <Button variant="ghost" className="gap-2 text-ink-foreground hover:bg-ink-border hover:text-ink-foreground" onClick={() => navigate({ to: "/profile" })}>
               <ArtistAvatar src={onboard?.avatar} className="h-7 w-7" />Profile
+            </Button>
+            <Button variant="ghost" size="icon" aria-label={studio.on ? "Switch to light mode" : "Switch to Studio Mode (dark)"} title={studio.on ? "Light mode" : "Studio Mode"}
+              className="text-ink-muted hover:bg-ink-border hover:text-ink-foreground" onClick={studio.toggle}>
+              {studio.on ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
             </Button>
             <PlansDialog tier={tier} userId={user.id} email={user.email} />
             <Button variant="ghost" size="icon" aria-label="Log out" className="text-ink-muted hover:bg-ink-border hover:text-ink-foreground"
@@ -158,16 +170,34 @@ function Workspace() {
 
           <TabsContent value="embed" forceMount className="data-[state=inactive]:hidden"><MetadataUploader key={`embed-${embedKey}`} stageName={name} avatar={onboard?.avatar} userId={user.id} mode="embed" onSubmitted={() => setCatalogKey((k) => k + 1)} /></TabsContent>
           <TabsContent value="catalog" forceMount className="data-[state=inactive]:hidden">
-            <MetadataUploader key={catalogKey} stageName={name} avatar={onboard?.avatar} userId={user.id} mode="catalog" canSplit={canSplit} focus={catalogFix} onFocused={() => setCatalogFix(undefined)} onSplitSheet={(t) => { setSplitTrackId(t.id); setTab("splits"); }} onProtect={(t) => { setProtectTrack(t); setTab("protect"); }} />
+            <MetadataUploader key={catalogKey} stageName={name} avatar={onboard?.avatar} userId={user.id} mode="catalog" canSplit={canSplit} canExport={canCollect} focus={catalogFix} onFocused={() => setCatalogFix(undefined)} onSplitSheet={(t) => { setSplitTrackId(t.id); setTab("splits"); }} onProtect={(t) => { setProtectTrack(t); setTab("protect"); }} />
           </TabsContent>
           <TabsContent value="protect"><AIProtectionHub userId={user.id} paid={hasAi} email={user.email} track={protectTrack} /></TabsContent>
-          <TabsContent value="splits"><SplitSheets userId={user.id} canSplit={canSplit} prefillTrackId={splitTrackId} onUpgrade={upgrade} /></TabsContent>
-          <TabsContent value="health"><Health onFix={() => setTab("catalog")} onFixField={(trackId, field) => { setCatalogFix({ trackId, field }); setTab("catalog"); }} onEmbed={() => setTab("embed")} userId={user.id} email={user.email} purchases={purchases} canUtility={canSplit} onUpgrade={upgrade} /></TabsContent>
+          <TabsContent value="splits"><SplitSheets userId={user.id} canSplit={canSplit} canCollect={canCollect} prefillTrackId={splitTrackId} onUpgrade={upgrade} /></TabsContent>
+          <TabsContent value="health"><Health onFix={() => setTab("catalog")} onFixField={(trackId, field) => { setCatalogFix({ trackId, field }); setTab("catalog"); }} onEmbed={() => setTab("embed")} userId={user.id} email={user.email} purchases={purchases} canUtility={canCollect} onUpgrade={upgrade} /></TabsContent>
           <TabsContent value="learn"><Learn userId={user.id} unlocked={hasTier(tier, "management")} onUpgrade={upgrade} /></TabsContent>
         </Tabs>
       </main>
     </div>
   );
+}
+
+/**
+ * Studio Mode: the workspace's dark theme for long sessions, on by default and remembered per browser. The class
+ * goes on <html> so dialogs and menus (rendered outside the page) match; leaving the workspace removes it.
+ */
+function useStudioMode() {
+  // Starts on (matches the server render), then applies the saved choice once in the browser.
+  const [on, setOn] = useState(true);
+  useEffect(() => {
+    try { if (localStorage.getItem("cta.studioMode") === "off") setOn(false); } catch { /* storage blocked */ }
+  }, []);
+  useEffect(() => {
+    document.documentElement.classList.toggle("dark", on);
+    try { localStorage.setItem("cta.studioMode", on ? "on" : "off"); } catch { /* storage blocked */ }
+    return () => document.documentElement.classList.remove("dark");
+  }, [on]);
+  return { on, toggle: () => setOn((v) => !v) };
 }
 
 function Learn({ userId, unlocked, onUpgrade }: { userId: string; unlocked: boolean; onUpgrade: () => void }) {

@@ -163,6 +163,31 @@
   --caution: oklch(0.86 0.17 92);
 }
 
+/*
+ * Studio Mode: the workspace's dark theme for long sessions (BRANDING.md: dark base is Primary Black #0b0b0b
+ * or charcoal with white text). Cobalt #004AAD stays the button fill; small accent text, accent borders and focus
+ * rings switch to Electric Cobalt #4D8CFF, since Cobalt is too dim to read on black.
+ */
+.dark {
+  --background: var(--ink);
+  --foreground: oklch(1 0 0);
+  --card: oklch(0.19 0 0);
+  --card-foreground: oklch(1 0 0);
+  --popover: oklch(0.19 0 0);
+  --popover-foreground: oklch(1 0 0);
+  --secondary: oklch(0.25 0 0);
+  --secondary-foreground: oklch(1 0 0);
+  --muted: oklch(0.22 0 0);
+  --muted-foreground: oklch(0.74 0 0);
+  --accent: oklch(0.26 0 0);
+  --accent-foreground: oklch(1 0 0);
+  --border: oklch(1 0 0 / 12%);
+  --input: oklch(1 0 0 / 18%);
+  --ring: #4D8CFF;
+}
+.dark .text-primary { color: #4D8CFF; }
+.dark .border-primary { border-color: #4D8CFF; }
+
 @theme inline {
   --color-ink: var(--ink);
   --color-ink-foreground: var(--ink-foreground);

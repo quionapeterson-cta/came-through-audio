@@ -1,7 +1,7 @@
 import { getPaddleEnvironment } from "@/lib/paddle";
 import { TIER_LABEL, type Tier } from "@/lib/plans";
 
-type Props = { previewTier?: Tier | "real"; onPreviewTier?: (t: Tier | "real") => void };
+type Props = { previewTier?: Tier | "real"; onPreviewTier?: ((t: Tier | "real") => void) | undefined };
 
 /** Test-mode notice. In sandbox only, also offers a preview-only tier switcher (never touches billing data). */
 export function PaymentTestModeBanner({ previewTier, onPreviewTier }: Props) {

@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { captionForX, promoCaption, promoOrder, type PromoContext } from "@/lib/promo-copy";
 import { drawPromoCard } from "@/lib/promo-card";
+import { publishShareCard } from "@/lib/share-cards";
 
 export type ShareInfo = { ctx: PromoContext; artist: string; title?: string | undefined; count?: number | undefined; genre?: string | undefined };
 
@@ -105,6 +106,8 @@ export function SharePanel({ avatar, round, share }: { avatar: string; round?: b
   const input = { title: showDetail ? title?.trim() || undefined : undefined, count: showDetail ? count || undefined : undefined, genre };
   const [caption, setCaption] = useState("");
   const [card, setCard] = useState<{ blob: Blob; url: string }>();
+  // Public /share link for the current card (uploaded on first share), so link previews show the card image.
+  const [shareLink, setShareLink] = useState<{ for: string; url: string }>();
 
   useEffect(() => { setCaption(promoCaption(ctx, order[step % order.length]!, input)); }, [step, showDetail]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => {
@@ -118,15 +121,31 @@ export function SharePanel({ avatar, round, share }: { avatar: string; round?: b
   const detail = ctx === "embed" && title?.trim() ? "Show song title" : ctx === "catalog" && count ? "Show song count" : "";
   const imageName = `${fileName([artist, input.title].filter(Boolean).join(" - "))} teaser.png`;
   const copy = async (msg = "Caption copied.") => { try { await navigator.clipboard.writeText(caption); toast.success(msg); } catch { toast.error("Couldn't copy. Select the caption and copy it instead."); } };
-  const open = (url: string) => window.open(url, "_blank", "noopener,noreferrer");
-  const enc = encodeURIComponent(caption);
   const file = card && typeof File !== "undefined" ? new File([card.blob], imageName, { type: "image/png" }) : undefined;
   const canShare = typeof navigator !== "undefined" && !!navigator.share;
+
+  async function link() {
+    if (!card) return SITE_URL;
+    if (shareLink?.for === card.url) return shareLink.url;
+    const url = await publishShareCard(card.blob);
+    setShareLink({ for: card.url, url });
+    return url;
+  }
+  /** Opens the tab right away (popup blockers allow that only during the click), then points it at the share URL. */
+  function openWithLink(build: (url: string) => string) {
+    const w = window.open("", "_blank");
+    link()
+      .then((url) => { if (w) { w.opener = null; w.location.href = build(url); } })
+      .catch(() => {
+        toast.error("Couldn't attach your card image, so the post will link to the site instead.");
+        if (w) { w.opener = null; w.location.href = build(SITE_URL); }
+      });
+  }
 
   async function nativeShare() {
     try {
       if (file && navigator.canShare?.({ files: [file] })) await navigator.share({ files: [file], text: caption });
-      else await navigator.share({ text: caption, url: SITE_URL });
+      else await navigator.share({ text: caption, url: await link().catch(() => SITE_URL) });
     } catch (e) { if ((e as Error).name !== "AbortError") toast.error("Sharing didn't work. Try Save image and Copy caption."); }
   }
   function save() {
@@ -150,14 +169,15 @@ export function SharePanel({ avatar, round, share }: { avatar: string; round?: b
       </div>
       <div className="flex flex-wrap gap-2">
         {canShare && <Button type="button" onClick={() => void nativeShare()}><Share2 />Share…</Button>}
-        <Button type="button" variant="outline" onClick={() => open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(captionForX(caption, genre))}`)}>X</Button>
-        <Button type="button" variant="outline" onClick={() => { void copy("Caption copied. Paste it into your Facebook post."); open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(SITE_URL)}`); }}>Facebook</Button>
-        <Button type="button" variant="outline" onClick={() => open(`https://www.threads.net/intent/post?text=${enc}`)}>Threads</Button>
-        <Button type="button" variant="outline" onClick={() => open(`https://wa.me/?text=${enc}`)}>WhatsApp</Button>
+        {/* Each of these builds its preview from the /share link's og:image, so the card shows up in the post. */}
+        <Button type="button" variant="outline" disabled={!card} onClick={() => openWithLink((u) => `https://twitter.com/intent/tweet?text=${encodeURIComponent(captionForX(caption, genre))}&url=${encodeURIComponent(u)}`)}>X</Button>
+        <Button type="button" variant="outline" disabled={!card} onClick={() => { void copy("Caption copied. Paste it into your Facebook post."); openWithLink((u) => `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(u)}`); }}>Facebook</Button>
+        <Button type="button" variant="outline" disabled={!card} onClick={() => openWithLink((u) => `https://www.threads.net/intent/post?text=${encodeURIComponent(`${caption}\n\n${u}`)}`)}>Threads</Button>
+        <Button type="button" variant="outline" disabled={!card} onClick={() => openWithLink((u) => `https://wa.me/?text=${encodeURIComponent(`${caption}\n\n${u}`)}`)}>WhatsApp</Button>
         <Button type="button" variant="outline" onClick={() => void copy()}><Copy />Copy caption</Button>
         <Button type="button" variant="outline" disabled={!card} onClick={save}><Download />Save image</Button>
       </div>
-      <p className="text-xs text-muted-foreground">For Instagram or TikTok, use Share… on your phone, or Save image and Copy caption, then post from the app.</p>
+      <p className="text-xs text-muted-foreground">X, Facebook, Threads and WhatsApp show your card in the post preview. Instagram and TikTok don't allow link posts, so use Share… on your phone, or Save image and Copy caption, then post from the app.</p>
     </section>
   );
 }

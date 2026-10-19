@@ -4,11 +4,15 @@ Disallow: /
 User-agent: Bingbot
 Disallow: /
 
+# Social link-preview crawlers may read public share cards only (/share/...), so posted cards show their image.
 User-agent: Twitterbot
+Allow: /share/
 Disallow: /
 
 User-agent: facebookexternalhit
+Allow: /share/
 Disallow: /
 
 User-agent: *
+Allow: /share/
 Disallow: /

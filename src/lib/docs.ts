@@ -116,7 +116,8 @@ export const DOCS: Doc[] = [
         "Mark a song Instrumental if it has no lyrics. It then doesn't need an author.",
       ] },
       { heading: "Split sheets", bullets: [
-        "Create a split sheet from any catalog song (Catalog and Collaborate and up).",
+        "Generate a split sheet from any catalog song, sign as the owner and download the PDF (Catalog Plus and up).",
+        "Request collaborators' e-signatures by email (Catalog and Collaborate and up).",
         "Collaborators get an email link, create a free account with that email, and sign.",
         "Collaborators can add their own PRO and IPI when they sign.",
         "Signed split sheets live in your Signed Split Sheet Vault.",

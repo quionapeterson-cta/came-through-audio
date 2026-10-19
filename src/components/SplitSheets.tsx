@@ -32,7 +32,7 @@ const statusBadge: Record<string, { label: string; className: string }> = {
   signed: { label: "Fully signed", className: "border-primary bg-primary text-primary-foreground" },
 };
 
-export function SplitSheets({ userId, canSplit, prefillTrackId, onUpgrade }: { userId: string; canSplit: boolean; prefillTrackId: string | undefined; onUpgrade: () => void }) {
+export function SplitSheets({ userId, canSplit, canCollect, prefillTrackId, onUpgrade }: { userId: string; canSplit: boolean; canCollect: boolean; prefillTrackId: string | undefined; onUpgrade: () => void }) {
   const [tracks, setTracks] = useState<CatalogTrack[]>([]);
   const [sheets, setSheets] = useState<Map<string, SplitCollaborator[]>>(new Map());
   const [loading, setLoading] = useState(true);
@@ -72,8 +72,8 @@ export function SplitSheets({ userId, canSplit, prefillTrackId, onUpgrade }: { u
     return (
       <div className="mt-6 flex min-h-72 flex-col items-center justify-center rounded-2xl border-2 border-dashed border-border p-10 text-center">
         <Lock className="h-10 w-10 text-primary" />
-        <h2 className="mt-4 text-2xl font-bold">Split Sheets are a Catalog &amp; Collaborate feature</h2>
-        <p className="mt-2 max-w-md text-muted-foreground">Upgrade and Get Unlimited Split Sheets and E-Signatures.</p>
+        <h2 className="mt-4 text-2xl font-bold">Split sheets start with Catalog Plus</h2>
+        <p className="mt-2 max-w-md text-muted-foreground">Generate unlimited split sheets from your catalog for $24.99/yr. Add collaborator e-signature requests with Catalog and Collaborate.</p>
         <Button className="mt-6" onClick={onUpgrade}>View Plans</Button>
       </div>
     );
@@ -85,6 +85,8 @@ export function SplitSheets({ userId, canSplit, prefillTrackId, onUpgrade }: { u
         userId={userId}
         track={editing}
         initial={sheets.get(editing.id)}
+        canCollect={canCollect}
+        onUpgrade={onUpgrade}
         onClose={() => setEditing(null)}
         onSaved={async () => {
           setEditing(null);
@@ -93,6 +95,11 @@ export function SplitSheets({ userId, canSplit, prefillTrackId, onUpgrade }: { u
       />
     );
   }
+
+  const isSigned = (t: CatalogTrack) => splitStatus(sheets.get(t.id)!) === "signed";
+  const pendingTracks = tracks.filter((t) => sheets.has(t.id) && !isSigned(t));
+  const signedTracks = tracks.filter((t) => sheets.has(t.id) && isSigned(t));
+  const waitingAll = pendingTracks.flatMap((t) => sheets.get(t.id)!.filter((c) => c.name && !c.signedAt).map((c) => ({ name: c.name, track: t.title })));
 
   return (
     <div className="mt-6 space-y-6">
@@ -103,7 +110,35 @@ export function SplitSheets({ userId, canSplit, prefillTrackId, onUpgrade }: { u
         </div>
       </div>
 
-      <ContributorLibrary userId={userId} refreshKey={libKey} />
+      {/* One glance row: the library you draw from on the left, what needs attention and what's done on the right.
+          Opening the library's editor moves it below the row, full width, so the status cards never jump away. */}
+      <div className="grid gap-4 lg:grid-cols-[1.6fr_1fr_1fr]">
+        <ContributorLibrary userId={userId} refreshKey={libKey} />
+        <a href="#split-pending" className="group flex flex-col rounded-2xl border border-border p-5 transition hover:border-primary">
+          <div className="flex items-center justify-between">
+            <h3 className="font-bold">Pending Signatures</h3>
+            <span className="text-3xl font-extrabold leading-none text-primary">{pendingTracks.length}</span>
+          </div>
+          {waitingAll.length === 0
+            ? <p className="mt-2 text-sm text-muted-foreground">{pendingTracks.length ? "Everyone listed has signed." : "Nothing waiting on signatures."}</p>
+            : <ul className="mt-3 max-h-28 space-y-1 overflow-y-auto pr-1 text-sm">
+                {waitingAll.map((w, i) => <li key={i} className="truncate"><span className="font-semibold">{w.name}</span> <span className="text-muted-foreground">· {w.track}</span></li>)}
+              </ul>}
+          <span className="mt-auto pt-3 text-xs font-semibold text-primary opacity-0 transition group-hover:opacity-100">See all ↓</span>
+        </a>
+        <a href="#split-signed" className="group flex flex-col rounded-2xl border border-border p-5 transition hover:border-primary">
+          <div className="flex items-center justify-between">
+            <h3 className="font-bold">Signed Vault</h3>
+            <span className="text-3xl font-extrabold leading-none text-primary">{signedTracks.length}</span>
+          </div>
+          {signedTracks.length === 0
+            ? <p className="mt-2 text-sm text-muted-foreground">Fully signed split sheets are stored here.</p>
+            : <ul className="mt-3 max-h-28 space-y-1 overflow-y-auto pr-1 text-sm">
+                {signedTracks.map((t) => <li key={t.id} className="flex items-center gap-1.5 truncate"><Check className="h-3.5 w-3.5 shrink-0 text-primary" />{t.title}</li>)}
+              </ul>}
+          <span className="mt-auto pt-3 text-xs font-semibold text-primary opacity-0 transition group-hover:opacity-100">See all ↓</span>
+        </a>
+      </div>
 
       {loading ? (
         <div className="flex items-center gap-2 text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" /> Loading…</div>
@@ -129,18 +164,9 @@ export function SplitSheets({ userId, canSplit, prefillTrackId, onUpgrade }: { u
           const groups = new Map<string, CatalogTrack[]>();
           for (const t of list) { const k = t.metadata.album?.trim() || ""; groups.set(k, [...(groups.get(k) ?? []), t]); }
           const ordered = [...groups.entries()].sort(([a], [b]) => (a === "" ? 1 : b === "" ? -1 : a.localeCompare(b)));
-          const waiting = signedGroup ? [] : list.flatMap((t) => sheets.get(t.id)!.filter((c) => c.name && !c.signedAt).map((c) => ({ name: c.name, track: t.title })));
           return (
-            <section key={heading} className="rounded-2xl border border-border p-5">
+            <section key={heading} id={signedGroup ? "split-signed" : "split-pending"} className="scroll-mt-4 rounded-2xl border border-border p-5">
               <h3 className="mb-3 text-sm font-bold uppercase tracking-widest text-primary">{heading} <span className="opacity-70">{list.length}</span></h3>
-              {!signedGroup && waiting.length > 0 && (
-                <div className="mb-4 rounded-xl border border-primary/40 bg-primary/5 p-3 text-sm">
-                  <div className="mb-1.5 font-semibold">Who hasn't signed yet</div>
-                  <div className="flex flex-wrap gap-2">
-                    {waiting.map((w, i) => <Badge key={i} variant="outline" className="border-primary/50">{w.name} <span className="ml-1 text-muted-foreground">· {w.track}</span></Badge>)}
-                  </div>
-                </div>
-              )}
               {list.length === 0 ? <p className="text-sm text-muted-foreground">{signedGroup ? "No fully signed split sheets in your vault yet." : "No split sheets waiting on signatures."}</p> : (
                 <div className="space-y-3">
                   {ordered.map(([album, items]) => (
@@ -212,7 +238,7 @@ export function SplitSheets({ userId, canSplit, prefillTrackId, onUpgrade }: { u
   );
 }
 
-function SplitEditor({ userId, track, initial, onClose, onSaved }: { userId: string; track: CatalogTrack; initial: SplitCollaborator[] | undefined; onClose: () => void; onSaved: () => void }) {
+function SplitEditor({ userId, track, initial, canCollect, onUpgrade, onClose, onSaved }: { userId: string; track: CatalogTrack; initial: SplitCollaborator[] | undefined; canCollect: boolean; onUpgrade: () => void; onClose: () => void; onSaved: () => void }) {
   const [collaborators, setCollaborators] = useState<SplitCollaborator[]>(initial?.length ? initial : collaboratorsFromTrack(track));
   const [signingIndex, setSigningIndex] = useState<number | null>(null);
   const [typedName, setTypedName] = useState("");
@@ -429,6 +455,10 @@ function SplitEditor({ userId, track, initial, onClose, onSaved }: { userId: str
                       <PenLine className="h-4 w-4" /> Sign as account owner
                     </Button>
                   )
+                ) : !canCollect ? (
+                  <Button size="sm" variant="outline" onClick={onUpgrade} title="Collaborator e-signature requests are included with Catalog and Collaborate">
+                    <Lock className="h-4 w-4" /> Request e-signature
+                  </Button>
                 ) : c.invitedAt && c.rowId ? (
                   <>
                     <Badge variant="outline" className="border-primary text-primary"><Mail className="mr-1 h-3.5 w-3.5" /> Requested {new Date(c.invitedAt).toLocaleDateString()} · awaiting signature</Badge>

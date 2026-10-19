@@ -81,7 +81,8 @@ function ErrorComponent({ error, reset }: ErrorComponentProps) {
 export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()({
   // Staging passcode gate: clear SITE_PASSWORD to open the site at launch.
   beforeLoad: async ({ location }) => {
-    if (location.pathname === "/unlock") return;
+    // Public share cards stay reachable so social sites can read their preview image; they show only the card.
+    if (location.pathname === "/unlock" || location.pathname.startsWith("/share/")) return;
     const { unlocked } = await getGateStatus();
     if (!unlocked) throw redirect({ to: "/unlock", search: { next: location.href } });
   },

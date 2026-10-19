@@ -90,7 +90,7 @@ Apply these rules across the website, emails and PDFs.
 - Offer worldwide PRO choices, not only BMI and ASCAP.
 - Include publisher information and associated fields.
 - Place freeform Notes directly above signatures in the signing view and the exported split sheet.
-- Free accounts may sign invited split sheets; creating one requires Catalog & Collaborate or higher.
+- Free accounts may sign invited split sheets. Generating one (and signing as the owner) starts at Catalog Plus; collecting collaborator e-signatures requires Catalog & Collaborate or higher.
 - Invitation copy should describe the free 30-day Catalog & Collaborate trial.
 
 ## 7. Email branding and compliance

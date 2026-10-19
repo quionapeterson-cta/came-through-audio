@@ -13,6 +13,8 @@ export const sendContractInvite = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const key = process.env["RESEND_API_KEY"] || process.env["CameThroughAudio"];
     if (!key) throw new Error("Email sending is not configured yet.");
+    const { data: canSend } = await context.supabase.rpc("has_tier" as never, { _uid: context.userId, _needed: "management" } as never);
+    if (!canSend) throw new Error("Contract signature requests are included with Catalog Management.");
 
     const { data: party, error } = await context.supabase
       .from("contract_parties" as never)

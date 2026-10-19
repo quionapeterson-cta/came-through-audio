@@ -21,7 +21,7 @@ import { isBadgeImage } from "@/lib/badges";
 import { loadProfile, withProfile } from "@/lib/artist-profile";
 import { Link } from "@tanstack/react-router";
 
-export function MetadataUploader({ stageName, avatar, userId, mode = "embed", onSubmitted, onSplitSheet, onProtect, canSplit, focus, onFocused }: { onFocused?: () => void; stageName?: string; avatar?: string | undefined; userId?: string; mode?: "embed" | "catalog"; focus?: { trackId: string; field: string } | undefined; onSubmitted?: () => void; onSplitSheet?: (t: CatalogTrack) => void; onProtect?: (t: CatalogTrack) => void; canSplit?: boolean }) {
+export function MetadataUploader({ stageName, avatar, userId, mode = "embed", onSubmitted, onSplitSheet, onProtect, canSplit, canExport, focus, onFocused }: { onFocused?: () => void; stageName?: string; avatar?: string | undefined; userId?: string; mode?: "embed" | "catalog"; focus?: { trackId: string; field: string } | undefined; onSubmitted?: () => void; onSplitSheet?: (t: CatalogTrack) => void; onProtect?: (t: CatalogTrack) => void; canSplit?: boolean; canExport?: boolean }) {
   const full = mode === "catalog";
   const [aiProtect, setAiProtect] = useState(false);
   const [submitted, setSubmitted] = useState(false);
@@ -38,18 +38,23 @@ export function MetadataUploader({ stageName, avatar, userId, mode = "embed", on
   const [upsell, setUpsell] = useState<false | "split" | "export">(false);
   const [viewAvatar, setViewAvatar] = useState(false);
   const [held, setHeld] = useState<{ agency: Agency; songs: Held[]; exported: number }>();
+  // Embed session: songs waiting their turn, songs finished this sitting, and what carries over to the next song.
+  const [queue, setQueue] = useState<File[]>([]);
+  const [sessionDone, setSessionDone] = useState<string[]>([]);
+  const [carry, setCarry] = useState<Record<CarryKey, boolean>>({ artist: true, release: true, people: true, genre: true });
+  const formRef = useRef<HTMLFormElement>(null);
   const [filter, setFilter] = useState<"All" | "Single" | "EP" | "Album">("All");
   const [picked, setPicked] = useState<Set<string>>(new Set());
   const togglePick = (id: string) => setPicked((s) => { const n = new Set(s); if (n.has(id)) n.delete(id); else n.add(id); return n; });
   const runExport = (a: Agency, list: CatalogTrack[], name: string) => {
-    if (!canSplit) { setUpsell("export"); return; }
+    if (!canExport) { setUpsell("export"); return; }
     downloadAgencyExport(a, list, safeName(name))
       .then((songs) => { if (songs.length) setHeld({ agency: a, songs, exported: list.length - songs.length }); })
       .catch(() => toast.error("Could not build the export."));
   };
   const exportMenu = (label: string, list: CatalogTrack[], name: string, size: "sm" | "default" = "sm") => (
     <DropdownMenu>
-      <DropdownMenuTrigger asChild><Button type="button" variant="outline" size={size} onClick={(e) => e.stopPropagation()}>{!canSplit && <Lock />}{label}</Button></DropdownMenuTrigger>
+      <DropdownMenuTrigger asChild><Button type="button" variant="outline" size={size} onClick={(e) => e.stopPropagation()}>{!canExport && <Lock />}{label}</Button></DropdownMenuTrigger>
       <DropdownMenuContent align="end">
         {(["mlc", "soundexchange", "pro"] as Agency[]).map((a) => <DropdownMenuItem key={a} onClick={() => runExport(a, list, name)}>{AGENCY_LABEL[a]}</DropdownMenuItem>)}
       </DropdownMenuContent>
@@ -129,6 +134,40 @@ export function MetadataUploader({ stageName, avatar, userId, mode = "embed", on
     setSubmitted(false);
     setAiProtect(false);
   }
+  /** Next song in the session: keeps the chosen details from this one, then loads the next queued MP3 if any. */
+  function startNext() {
+    const next = withProfile(loadProfile(userId));
+    const m = metadata;
+    if (carry.artist) Object.assign(next, { artist: m.artist, featured: m.featured });
+    if (carry.release) {
+      const n = Number(m.trackNumber);
+      Object.assign(next, { album: m.album, releaseType: m.releaseType, releaseDate: m.releaseDate, label: m.label, upc: m.upc,
+        trackTotal: m.trackTotal, trackNumber: n ? String(n + 1) : "", coverThumb: m.coverThumb, copyright: m.copyright, phonographic: m.phonographic });
+    }
+    if (carry.people) Object.assign(next, { writers: m.writers, composers: m.composers, producers: m.producers, publishers: m.publishers, credits: m.credits });
+    if (carry.genre) Object.assign(next, { primaryGenre: m.primaryGenre, secondaryGenre: m.secondaryGenre });
+    setMetadata(next);
+    setEditingId(undefined);
+    setAudio(undefined);
+    if (!carry.release) setArtwork(undefined);
+    setResult(undefined);
+    setSubmitted(false);
+    setAiProtect(false);
+    setError("");
+    const [file, ...rest] = queue;
+    setQueue(rest);
+    if (file) selectAudio(file);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+  /** Drop or pick several MP3s: the first fills the form if it's free, the rest wait in the session queue. */
+  function addFiles(list: FileList | File[]) {
+    const files = [...list].filter((f) => /\.mp3$/i.test(f.name));
+    if (!files.length) { setError("Choose MP3 audio files. WAV and FLAC embedding are not available yet."); return; }
+    const [first, ...rest] = files;
+    if (!audio && !full) { selectAudio(first); setQueue((q) => [...q, ...rest]); }
+    else if (full) selectAudio(first);
+    else setQueue((q) => [...q, ...files]);
+  }
   async function remove(id: string) {
     if (!confirm("Delete this track from your catalog?")) return;
     try {
@@ -203,6 +242,7 @@ export function MetadataUploader({ stageName, avatar, userId, mode = "embed", on
       a.href = file.url; a.download = file.name;
       document.body.appendChild(a); a.click(); a.remove();
       setResult(file);
+      setSessionDone((d) => [...d, parsed.data.title.trim() || file.name]);
     } catch {
       setError("This file could not be tagged. Check that it is a valid MP3 and the cover is a valid JPEG or PNG.");
     } finally { setBusy(false); }
@@ -210,7 +250,7 @@ export function MetadataUploader({ stageName, avatar, userId, mode = "embed", on
 
   const showForm = !full || !!editingId;
   return (
-    <section className="mx-auto mt-8 max-w-5xl">
+    <section className={`mx-auto mt-8 ${full ? "max-w-5xl" : "max-w-7xl"}`}>
       {stageName && <h1 className="mb-8 flex items-center justify-center gap-[0.3em] text-center text-4xl font-extrabold leading-none tracking-tight md:text-5xl">
         <span className="min-w-0 break-words">{stageName}</span>
         {/* Avatar matches the name's height so badges can be enjoyed up close; click for full size. */}
@@ -224,21 +264,26 @@ export function MetadataUploader({ stageName, avatar, userId, mode = "embed", on
         <h1 className="text-2xl font-bold">{full ? (editingId ? "Edit track" : "My Catalog") : "Embed Metadata"}</h1>
         <span className="text-sm text-muted-foreground">{full ? "Saved songs, identifiers and splits" : "MP3 · ID3v2.3"}</span>
       </div>
+      <div className={full ? "" : "lg:grid lg:grid-cols-[13rem_minmax(0,1fr)_17rem] lg:items-start lg:gap-6"}>
+      {!full && <SessionRail audio={audio} queue={queue} done={sessionDone} onAdd={() => audioInput.current?.click()} onRemove={(i) => setQueue((q) => q.filter((_, j) => j !== i))} />}
+      <div className="min-w-0">
       {showForm && submitted && !full ? (
-        <div className="rounded-xl border border-primary p-8 text-center">
+        <div className="rounded-2xl border border-primary p-8 text-center">
           <CheckCircle2 className="mx-auto h-10 w-10 text-primary" />
           <p className="mt-3 text-lg font-semibold">Submitted to your catalog.</p>
-          <Button className="mt-5" onClick={startNew}><Plus />Embed Another Song</Button>
+          <NextSong queue={queue} carry={carry} onCarry={setCarry} onNext={startNext} />
         </div>
       ) : showForm && (
-      <form onSubmit={submit} className="space-y-8" aria-busy={busy}>
+      <form ref={formRef} onSubmit={submit} className="space-y-8" aria-busy={busy}
+        onKeyDown={(e) => { if ((e.metaKey || e.ctrlKey) && e.key === "Enter") { e.preventDefault(); formRef.current?.requestSubmit(); } }}>
         <fieldset disabled={busy} className="grid gap-5 sm:grid-cols-[1fr_220px]">
-          <div onDragOver={(event) => event.preventDefault()} onDrop={(event) => { event.preventDefault(); if (!busy) selectAudio(event.dataTransfer.files[0]); }} className="flex min-h-44 flex-col items-center justify-center gap-3 rounded-lg border border-dashed border-primary bg-accent/30 p-5 text-center">
+          <div onDragOver={(event) => event.preventDefault()} onDrop={(event) => { event.preventDefault(); if (!busy) addFiles(event.dataTransfer.files); }} className="flex min-h-44 flex-col items-center justify-center gap-3 rounded-lg border border-dashed border-primary bg-accent/30 p-5 text-center">
             <FileAudio className="h-8 w-8 text-primary" />
             <div className="max-w-full break-all text-sm font-semibold">{audio ? audio.name : full ? "Replace audio (optional)" : "Audio file"}</div>
             {audio && <span className="text-xs text-muted-foreground">{(audio.size / 1024 / 1024).toFixed(1)} MB</span>}
-            <Button type="button" variant="outline" onClick={() => audioInput.current?.click()}><Upload />{audio ? "Replace MP3" : "Choose MP3"}</Button>
-            <input ref={audioInput} type="file" accept=".mp3,audio/mpeg" aria-label="MP3 audio file" className="sr-only" onChange={(event) => { selectAudio(event.target.files?.[0]); event.target.value = ""; }} />
+            <Button type="button" variant="outline" onClick={() => audioInput.current?.click()}><Upload />{audio ? (full ? "Replace MP3" : "Add more songs") : full ? "Choose MP3" : "Choose MP3s"}</Button>
+            {!full && !audio && <span className="text-xs text-muted-foreground">Drop a whole EP or album. Songs wait in your session queue.</span>}
+            <input ref={audioInput} type="file" accept=".mp3,audio/mpeg" multiple={!full} aria-label="MP3 audio files" className="sr-only" onChange={(event) => { if (event.target.files) addFiles(event.target.files); event.target.value = ""; }} />
           </div>
           <div className="flex min-h-44 flex-col items-center justify-center gap-3 rounded-lg border border-dashed border-border p-4">
             {cover ? <img src={cover} alt="Selected cover artwork" className="h-20 w-20 rounded object-cover" /> : <ImagePlus className="h-8 w-8 text-primary" />}
@@ -354,14 +399,19 @@ export function MetadataUploader({ stageName, avatar, userId, mode = "embed", on
               </label>
             </div>
           )}
-          <div className="flex flex-wrap gap-3">
+          {result && !full && <NextSong queue={queue} carry={carry} onCarry={setCarry} onNext={startNext} compact />}
+          <div className="flex flex-wrap items-center gap-3">
             <Button type="submit" size="lg" disabled={busy}><FileAudio />{busy ? "Embedding…" : "Embed & Download"}</Button>
             {userId && <Button type="button" size="lg" variant="outline" disabled={saving} onClick={save}><Save />{saving ? "Saving…" : editingId ? "Update in catalog" : "Submit to catalog"}</Button>}
             {full && editingId && <Button type="button" size="lg" variant="ghost" onClick={startNew}>Close</Button>}
+            {!full && <span className="hidden text-xs text-muted-foreground sm:inline"><kbd className="rounded border border-border px-1.5 py-0.5">Ctrl</kbd> + <kbd className="rounded border border-border px-1.5 py-0.5">Enter</kbd> to embed</span>}
           </div>
         </div>
       </form>
       )}
+      </div>
+      {!full && <NowEmbedding metadata={metadata} cover={cover} />}
+      </div>
 
       {userId && full && (() => { const newest = [...tracks].sort((a, b) => String(b.updatedAt).localeCompare(String(a.updatedAt)))[0]; return (
         <div className="mt-4 border-t border-border pt-6 pb-12">
@@ -487,7 +537,7 @@ export function MetadataUploader({ stageName, avatar, userId, mode = "embed", on
       <Dialog open={!!upsell} onOpenChange={(o) => !o && setUpsell(false)}>
         <DialogContent className="bg-card text-card-foreground">
           <DialogHeader><DialogTitle className="flex items-center gap-2 text-xl font-bold"><Lock className="h-5 w-5 text-primary" />{upsell === "export" ? "1-Click Official Agency Exports are locked" : "Split Sheets are locked"}</DialogTitle></DialogHeader>
-          <p className="text-base font-medium">{upsell === "export" ? "Upgrade to Catalog & Collaborate to export official The MLC and SoundExchange Direct bulk spreadsheets, plus BMI and ASCAP registration cheat sheets." : "Upgrade and Get Unlimited Split Sheets and E-Signatures."}</p>
+          <p className="text-base font-medium">{upsell === "export" ? "Upgrade to Catalog & Collaborate to export official The MLC and SoundExchange Direct bulk spreadsheets, plus BMI and ASCAP registration cheat sheets." : "Generate unlimited split sheets from your catalog starting with Catalog Plus ($24.99/yr). Add collaborator e-signatures with Catalog and Collaborate."}</p>
           <Button onClick={() => setUpsell(false)}>Got it</Button>
         </DialogContent>
       </Dialog>
@@ -511,6 +561,90 @@ function jumpTo(field: string) {
     el?.scrollIntoView({ behavior: "smooth", block: "center" });
     el?.focus({ preventScroll: true });
   });
+}
+
+type CarryKey = "artist" | "release" | "people" | "genre";
+const CARRY_LABEL: Record<CarryKey, string> = { artist: "Artist", release: "Album, art & release", people: "Writers & producers", genre: "Genre" };
+
+/** "Next song" with carry-over chips, so a whole release can be embedded without retyping what's shared. */
+function NextSong({ queue, carry, onCarry, onNext, compact }: { queue: File[]; carry: Record<CarryKey, boolean>; onCarry: (c: Record<CarryKey, boolean>) => void; onNext: () => void; compact?: boolean }) {
+  return (
+    <div className={compact ? "rounded-xl border border-border p-4" : "mt-5"}>
+      <p className={`text-sm font-semibold ${compact ? "" : "text-center"}`}>Carry over to the next song</p>
+      <div className={`mt-2 flex flex-wrap gap-2 ${compact ? "" : "justify-center"}`}>
+        {(Object.keys(CARRY_LABEL) as CarryKey[]).map((k) => (
+          <button key={k} type="button" aria-pressed={carry[k]} onClick={() => onCarry({ ...carry, [k]: !carry[k] })}
+            className={`rounded-full border px-3 py-1 text-xs font-semibold transition ${carry[k] ? "border-primary bg-primary text-primary-foreground" : "border-border text-muted-foreground hover:border-primary"}`}>
+            {carry[k] && <CheckCircle2 className="mr-1 inline h-3 w-3" />}{CARRY_LABEL[k]}
+          </button>
+        ))}
+      </div>
+      <Button type="button" size="lg" className={`mt-4 ${compact ? "" : "mx-auto"}`} onClick={onNext} autoFocus={!compact}>
+        <Plus />{queue[0] ? `Next song: ${queue[0].name.replace(/\.mp3$/i, "")}` : "Next song"}
+      </Button>
+    </div>
+  );
+}
+
+/** Left rail: what's done this sitting, what's on now, and what's waiting. */
+function SessionRail({ audio, queue, done, onAdd, onRemove }: { audio: File | undefined; queue: File[]; done: string[]; onAdd: () => void; onRemove: (i: number) => void }) {
+  if (!audio && !queue.length && !done.length) return (
+    <aside aria-label="Embed session" className="hidden rounded-2xl border border-dashed border-border p-4 lg:sticky lg:top-6 lg:block">
+      <h2 className="text-xs font-bold uppercase tracking-[2px] text-primary">Session</h2>
+      <p className="mt-2 text-sm text-muted-foreground">Add a few songs at once and work through them one after another. Shared details carry over.</p>
+      <Button type="button" variant="outline" size="sm" className="mt-3 w-full" onClick={onAdd}><Plus />Add songs</Button>
+    </aside>
+  );
+  return (
+    <aside aria-label="Embed session" className="mb-6 rounded-2xl border border-border bg-card p-4 lg:sticky lg:top-6 lg:mb-0">
+      <div className="flex items-baseline justify-between">
+        <h2 className="text-xs font-bold uppercase tracking-[2px] text-primary">Session</h2>
+        <span className="text-xs text-muted-foreground">{done.length} embedded</span>
+      </div>
+      <ol className="mt-3 max-h-[60vh] space-y-1.5 overflow-y-auto text-sm">
+        {done.map((t, i) => <li key={`d${i}`} className="flex items-center gap-2 text-muted-foreground"><CheckCircle2 className="h-4 w-4 shrink-0 text-primary" /><span className="truncate">{t}</span></li>)}
+        {audio && <li className="flex items-center gap-2 rounded-lg bg-primary/10 px-2 py-1.5 font-semibold"><FileAudio className="h-4 w-4 shrink-0 text-primary" /><span className="truncate">{audio.name.replace(/\.mp3$/i, "")}</span></li>}
+        {queue.map((f, i) => (
+          <li key={`q${i}`} className="group flex items-center gap-2 px-2">
+            <span className="w-4 shrink-0 text-center text-xs text-muted-foreground">{i + 1}</span>
+            <span className="min-w-0 flex-1 truncate">{f.name.replace(/\.mp3$/i, "")}</span>
+            <button type="button" aria-label={`Remove ${f.name} from the queue`} onClick={() => onRemove(i)} className="text-muted-foreground opacity-0 transition hover:text-destructive group-hover:opacity-100 focus:opacity-100"><Trash2 className="h-3.5 w-3.5" /></button>
+          </li>
+        ))}
+      </ol>
+      <Button type="button" variant="outline" size="sm" className="mt-3 w-full" onClick={onAdd}><Plus />Add songs</Button>
+    </aside>
+  );
+}
+
+/** Right rail: a live look at exactly what goes into the file, plus registration readiness from the shared check. */
+function NowEmbedding({ metadata: m, cover }: { metadata: Metadata; cover: string }) {
+  const art = cover || m.coverThumb;
+  const feat = m.featured.filter(Boolean);
+  const people = (["writers", "composers", "producers"] as const).reduce((n, g) => n + (m[g] ?? []).filter(creditName).length, 0);
+  const r = registrationReadiness(m);
+  const rows: [string, string][] = [
+    ["Album", m.album], ["Track", m.trackNumber ? `${m.trackNumber}${m.trackTotal ? ` of ${m.trackTotal}` : ""}` : ""],
+    ["Genre", m.primaryGenre], ["ISRC", m.isrc], ["UPC", m.upc], ["Credits", people ? `${people} ${people === 1 ? "person" : "people"}` : ""],
+    ["Lyrics", m.lyrics.trim() ? "Included" : ""],
+  ];
+  return (
+    <aside aria-label="Now embedding" className="hidden rounded-2xl border border-border bg-card p-4 lg:sticky lg:top-6 lg:block">
+      <h2 className="text-xs font-bold uppercase tracking-[2px] text-primary">Now embedding</h2>
+      <div className="mt-3 aspect-square overflow-hidden rounded-xl bg-muted">
+        {art ? <img src={art} alt="" className="h-full w-full object-cover" /> : <div className="flex h-full items-center justify-center"><Disc3 className="h-16 w-16 text-muted-foreground/40" /></div>}
+      </div>
+      <p className="mt-3 truncate text-lg font-bold">{m.title || "Untitled"}</p>
+      <p className="truncate text-sm text-muted-foreground">{m.artist || "Artist"}{feat.length ? ` feat. ${feat.join(", ")}` : ""}</p>
+      <dl className="mt-3 space-y-1 text-xs">
+        {rows.map(([k, v]) => <div key={k} className="flex justify-between gap-3"><dt className="text-muted-foreground">{k}</dt><dd className={`truncate font-semibold ${v ? "" : "text-muted-foreground/50"}`}>{v || "—"}</dd></div>)}
+      </dl>
+      <p className={`mt-3 rounded-lg px-2 py-1.5 text-xs font-semibold ${r.ready ? "bg-primary/10 text-primary" : "bg-muted"}`}>
+        {r.ready ? "Ready to register" : `⚠️ ${r.missing.length} to fix before registering`}
+      </p>
+      <p className="mt-2 text-[11px] leading-snug text-muted-foreground">PRO, IPI and split percentages stay private and are never written into the file.</p>
+    </aside>
+  );
 }
 
 function MissingList({ items, onJump }: { items: MissingItem[]; onJump: (field: string) => void }) {

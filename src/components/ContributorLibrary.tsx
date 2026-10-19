@@ -18,13 +18,14 @@ export function ContributorLibrary({ userId, refreshKey }: { userId: string; ref
   const update = (i: number, patch: Partial<SavedContributor>) => setRows((r) => r.map((x, idx) => (idx === i ? { ...x, ...patch } : x)));
 
   return (
-    <div className="rounded-2xl border border-border p-5">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex items-center gap-3">
-          <BookUser className="h-6 w-6 text-primary" />
+    // In the Split Sheets top row this is a summary card; the editor needs the full width, so it moves below the row.
+    <div className={`rounded-2xl border border-border p-5 ${open ? "lg:order-last lg:col-span-full" : ""}`}>
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex items-start gap-3">
+          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10"><BookUser className="h-5 w-5 text-primary" /></span>
           <div>
             <h3 className="font-bold">Contributor Library</h3>
-            <p className="text-sm text-muted-foreground">{rows.length} saved writers, producers, publishers &amp; labels — reused automatically.</p>
+            <p className="mt-0.5 max-w-sm text-sm leading-relaxed text-muted-foreground"><span className="font-semibold text-foreground">{rows.length}</span> saved writers, producers, publishers &amp; labels, reused automatically on every split sheet.</p>
           </div>
         </div>
         <Button size="sm" variant="outline" onClick={() => setOpen((o) => !o)}>{open ? "Hide" : "Manage"}</Button>

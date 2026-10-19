@@ -26,6 +26,7 @@ import { Route as AdminStaffRouteImport } from './routes/admin_.staff'
 import { Route as ContractPartyIdRouteImport } from './routes/contract.$partyId'
 import { Route as DocsSlugRouteImport } from './routes/docs.$slug'
 import { Route as SignRowIdRouteImport } from './routes/sign.$rowId'
+import { Route as ShareOwnerCardRouteImport } from './routes/share.$owner.$card'
 import { Route as ApiPublicCronTrialRemindersRouteImport } from './routes/api/public/cron/trial-reminders'
 import { Route as ApiPublicPaymentsWebhookRouteImport } from './routes/api/public/payments/webhook'
 
@@ -114,6 +115,11 @@ const SignRowIdRoute = SignRowIdRouteImport.update({
   path: '/sign/$rowId',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ShareOwnerCardRoute = ShareOwnerCardRouteImport.update({
+  id: '/share/$owner/$card',
+  path: '/share/$owner/$card',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPublicCronTrialRemindersRoute =
   ApiPublicCronTrialRemindersRouteImport.update({
     id: '/api/public/cron/trial-reminders',
@@ -145,6 +151,7 @@ export interface FileRoutesByFullPath {
   '/contract/$partyId': typeof ContractPartyIdRoute
   '/docs/$slug': typeof DocsSlugRoute
   '/sign/$rowId': typeof SignRowIdRoute
+  '/share/$owner/$card': typeof ShareOwnerCardRoute
   '/api/public/cron/trial-reminders': typeof ApiPublicCronTrialRemindersRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
 }
@@ -166,6 +173,7 @@ export interface FileRoutesByTo {
   '/contract/$partyId': typeof ContractPartyIdRoute
   '/docs/$slug': typeof DocsSlugRoute
   '/sign/$rowId': typeof SignRowIdRoute
+  '/share/$owner/$card': typeof ShareOwnerCardRoute
   '/api/public/cron/trial-reminders': typeof ApiPublicCronTrialRemindersRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
 }
@@ -188,6 +196,7 @@ export interface FileRoutesById {
   '/contract/$partyId': typeof ContractPartyIdRoute
   '/docs/$slug': typeof DocsSlugRoute
   '/sign/$rowId': typeof SignRowIdRoute
+  '/share/$owner/$card': typeof ShareOwnerCardRoute
   '/api/public/cron/trial-reminders': typeof ApiPublicCronTrialRemindersRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
 }
@@ -211,6 +220,7 @@ export interface FileRouteTypes {
     | '/contract/$partyId'
     | '/docs/$slug'
     | '/sign/$rowId'
+    | '/share/$owner/$card'
     | '/api/public/cron/trial-reminders'
     | '/api/public/payments/webhook'
   fileRoutesByTo: FileRoutesByTo
@@ -232,6 +242,7 @@ export interface FileRouteTypes {
     | '/contract/$partyId'
     | '/docs/$slug'
     | '/sign/$rowId'
+    | '/share/$owner/$card'
     | '/api/public/cron/trial-reminders'
     | '/api/public/payments/webhook'
   id:
@@ -253,6 +264,7 @@ export interface FileRouteTypes {
     | '/contract/$partyId'
     | '/docs/$slug'
     | '/sign/$rowId'
+    | '/share/$owner/$card'
     | '/api/public/cron/trial-reminders'
     | '/api/public/payments/webhook'
   fileRoutesById: FileRoutesById
@@ -275,6 +287,7 @@ export interface RootRouteChildren {
   ContractPartyIdRoute: typeof ContractPartyIdRoute
   DocsSlugRoute: typeof DocsSlugRoute
   SignRowIdRoute: typeof SignRowIdRoute
+  ShareOwnerCardRoute: typeof ShareOwnerCardRoute
   ApiPublicCronTrialRemindersRoute: typeof ApiPublicCronTrialRemindersRoute
   ApiPublicPaymentsWebhookRoute: typeof ApiPublicPaymentsWebhookRoute
 }
@@ -400,6 +413,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SignRowIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/share/$owner/$card': {
+      id: '/share/$owner/$card'
+      path: '/share/$owner/$card'
+      fullPath: '/share/$owner/$card'
+      preLoaderRoute: typeof ShareOwnerCardRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/cron/trial-reminders': {
       id: '/api/public/cron/trial-reminders'
       path: '/api/public/cron/trial-reminders'
@@ -435,6 +455,7 @@ const rootRouteChildren: RootRouteChildren = {
   ContractPartyIdRoute: ContractPartyIdRoute,
   DocsSlugRoute: DocsSlugRoute,
   SignRowIdRoute: SignRowIdRoute,
+  ShareOwnerCardRoute: ShareOwnerCardRoute,
   ApiPublicCronTrialRemindersRoute: ApiPublicCronTrialRemindersRoute,
   ApiPublicPaymentsWebhookRoute: ApiPublicPaymentsWebhookRoute,
 }
