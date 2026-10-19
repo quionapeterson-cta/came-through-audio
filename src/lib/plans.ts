@@ -23,6 +23,22 @@ export function hasTier(current: Tier, needed: Tier) {
   return TIER_RANK[current] >= TIER_RANK[needed];
 }
 
+/**
+ * The plan a signed-out visitor picked, kept in this browser until they have an account (checkout needs their
+ * user ID so the payment webhook can credit the right person). Survives the email-confirmation round trip.
+ */
+const PLAN_INTENT_KEY = "cta.planIntent";
+export function rememberPlanIntent(priceId: string | undefined) {
+  try { if (priceId) localStorage.setItem(PLAN_INTENT_KEY, priceId); else localStorage.removeItem(PLAN_INTENT_KEY); } catch { /* storage blocked */ }
+}
+export function takePlanIntent(): string | null {
+  try {
+    const v = localStorage.getItem(PLAN_INTENT_KEY);
+    localStorage.removeItem(PLAN_INTENT_KEY);
+    return v && PRICE_TIER[v] ? v : null;
+  } catch { return null; }
+}
+
 /** A subscription row grants access while active/trialing/past_due, or canceled until period end. */
 export function isActiveSub(s: { status: string; current_period_end: string | null }, now = new Date()) {
   const future = !s.current_period_end || new Date(s.current_period_end) > now;
@@ -31,45 +47,40 @@ export function isActiveSub(s: { status: string; current_period_end: string | nu
   return false;
 }
 
-/** Free tier card: no price ID — signup only. */
-export const FREE_CARD = {
-  tier: "free" as const,
-  price: "$0",
-  monthly: "Free forever",
-  lead: "Start with the essentials:",
-  features: [
-    { title: "Unlimited Royalty Health Audits", tip: "Continuous checks across PRO, SoundExchange, and mechanical eligibility" },
-    { title: "Unlimited Split Sheet Signatures", tip: "Sign split sheets you're invited to by collaborators. Creating split sheets requires Catalog and Collaborate." },
-    { title: "Free Royalty Health Check", tip: "A guided audit of your royalty setup when you join" },
-  ] as Feature[],
-};
+export type PlanTier = { tier: Tier; price: string; monthly: string; priceId?: string };
 
-export type Feature = { title: string; tip: string };
-export const PLAN_CARDS: { tier: Exclude<Tier, "free">; price: string; priceId: string; monthly: string; lead?: string; features: Feature[] }[] = [
-  {
-    tier: "plus", price: "$24.99", priceId: "catalog_plus_yearly", monthly: "Only $2.08 / month",
-    features: [
-      { title: "Unlimited Core Metadata Embedding", tip: "Embed complete track details and identifiers directly into your audio files" },
-      { title: "Unlimited Asset Cataloging & Storage", tip: "Permanent cloud vault for your final masters, high-res artwork, and lyrics" },
-      { title: "Unlimited Royalty Health Audits", tip: "Continuous checks across PRO, SoundExchange, and mechanical eligibility" },
-    ],
-  },
-  {
-    tier: "collaborate", price: "$44.99", priceId: "catalog_collaborate_yearly", monthly: "Only $3.75 / month", lead: "Includes everything in Catalog Plus, plus:",
-    features: [
-      { title: "Unlimited Collaborative Split Sheets", tip: "Create, negotiate, and lock in audit-ready publishing splits" },
-      { title: "Unlimited 1-Click Agency Exports", tip: "Download registration-ready files for The MLC, SoundExchange and ASCAP/BMI from your catalog" },
-      { title: "Unlimited Collaborator E-Signatures", tip: "Digital legal sign-off and instant collaborator account invitations" },
-      { title: "Unlimited Royalty Utility Suite", tip: "Access the BMI/ASCAP Formula Converter & Projected Royalty Earnings Calculator" },
-    ],
-  },
-  {
-    tier: "management", price: "$89.99", priceId: "catalog_management_yearly", monthly: "Only $7.50 / month", lead: "Includes everything in Catalog and Collaborate, plus:",
-    features: [
-      { title: "Unlimited Contract Blueprints", tip: "Production agreements, beat licenses, videographer releases, and label blueprints" },
-      { title: "Unlimited Industry Masterclasses", tip: "In-depth executive video masterclasses covering sync, publishing, and royalties" },
-    ],
-  },
+/** Pricing columns, cheapest first. Free has no price ID (signup only). */
+export const PLAN_TIERS: PlanTier[] = [
+  { tier: "free", price: "$0", monthly: "Free forever" },
+  { tier: "plus", price: "$24.99", priceId: "catalog_plus_yearly", monthly: "Only $2.08 / month" },
+  { tier: "collaborate", price: "$44.99", priceId: "catalog_collaborate_yearly", monthly: "Only $3.75 / month" },
+  { tier: "management", price: "$89.99", priceId: "catalog_management_yearly", monthly: "Only $7.50 / month" },
+];
+
+export type Feature = { title: string; tip: string; group: string; from: Tier; soon?: boolean };
+
+/**
+ * Every benefit in one list. A plan includes a feature when hasTier(plan, feature.from), the same rule that gates
+ * access in the app. Everything is unlimited, so titles leave the word out; the chart says it once in a banner.
+ */
+export const PLAN_FEATURES: Feature[] = [
+  { group: "Royalty health", from: "free", title: "Royalty Health Checks", tip: "See if your songs show up in the major public repertoires (PRO, SoundExchange, mechanicals) and what's missing" },
+  { group: "Royalty health", from: "free", title: "Sign Split Sheets You're Invited To", tip: "Sign split sheets collaborators send you, free. Creating your own starts with Catalog and Collaborate." },
+  { group: "Catalog & metadata", from: "plus", title: "Metadata Embedding", tip: "Embed complete track details, credits, lyrics, artwork and identifiers directly into your audio files" },
+  { group: "Catalog & metadata", from: "plus", title: "Asset Cataloging", tip: "One organized home for every song's credits, identifiers, artwork and lyrics" },
+  { group: "Catalog & metadata", from: "plus", title: "Master MP3 Retrieval", tip: "Download your embedded master MP3 from My Catalog anytime, no re-embedding needed" },
+  { group: "Catalog & metadata", from: "plus", title: "Album Art Uploads & Retrieval", tip: "Upload cover art with each song and download it again whenever you need it" },
+  { group: "Catalog & metadata", from: "plus", title: "PDF Catalog Downloads", tip: "Download your whole catalog as a branded PDF: titles, artists, identifiers and credits" },
+  { group: "Catalog & metadata", from: "plus", title: "PDF Lyric Downloads", tip: "Download any song's lyrics with its credits as a branded PDF" },
+  { group: "Collaboration & registration", from: "collaborate", title: "Collaborative Split Sheets", tip: "Create, negotiate and lock in audit-ready publishing splits" },
+  { group: "Collaboration & registration", from: "collaborate", title: "Split Sheet Signature Requests", tip: "Email collaborators a secure link to e-sign, with instant free account invitations" },
+  { group: "Collaboration & registration", from: "collaborate", title: "1-Click Agency Exports", tip: "Download registration-ready files for The MLC, SoundExchange and ASCAP/BMI from your catalog" },
+  { group: "Collaboration & registration", from: "collaborate", title: "Royalty Utility Suite", tip: "BMI/ASCAP Formula Converter & Projected Royalty Earnings Calculator" },
+  { group: "Business & education", from: "management", title: "Custom Music Industry Contracts", tip: "Fill in a contract from a blueprint, adjust the terms, and keep it with your catalog" },
+  { group: "Business & education", from: "management", title: "Music Industry Blueprints", tip: "Producer agreements, beat licenses, feature, session, videographer and label blueprints, with plain-language guides" },
+  { group: "Business & education", from: "management", title: "Contract Signature Requests & Signing", tip: "Send contracts to every party to e-sign; each signature is time-stamped and hashed" },
+  { group: "Business & education", from: "management", title: "Signed Contract Vault", tip: "Fully signed contracts are locked and stored, ready to download as a signed PDF" },
+  { group: "Business & education", from: "management", title: "Industry Masterclasses", tip: "In-depth masterclasses covering sync, publishing and royalties", soon: true },
 ];
 
 /**

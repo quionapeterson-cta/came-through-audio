@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
-import { Disc3, Lock, ShieldCheck, CheckCircle2, Download, FileAudio, ImagePlus, Pencil, Plus, Save, Trash2, Upload } from "lucide-react";
+import { Disc3, Lock, ShieldCheck, CheckCircle2, Download, FileAudio, FileText, ImagePlus, Pencil, Plus, Save, Trash2, Upload } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,6 +13,7 @@ import { deleteTrack, downloadCatalogFile, listTracks, safeName, saveTrack, uplo
 import { AGENCY_LABEL, downloadAgencyExport, type Agency, type Held } from "@/lib/agency-export";
 import { registrationReadiness, type MissingItem } from "@/lib/readiness";
 import { downloadLyricsPdf } from "@/lib/lyrics-pdf";
+import { downloadCatalogPdf } from "@/lib/catalog-pdf";
 import { ProSelect } from "@/components/ProSelect";
 import { ArtistAvatar } from "@/components/ArtistOnboarding";
 import { BadgeViewer } from "@/components/BadgeViewer";
@@ -364,7 +365,10 @@ export function MetadataUploader({ stageName, avatar, userId, mode = "embed", on
 
       {userId && full && (() => { const newest = [...tracks].sort((a, b) => String(b.updatedAt).localeCompare(String(a.updatedAt)))[0]; return (
         <div className="mt-4 border-t border-border pt-6 pb-12">
-          <h2 className="mb-4 text-xl font-bold">Your songs</h2>
+          <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+            <h2 className="text-xl font-bold">Your songs</h2>
+            {tracks.length > 0 && <Button type="button" variant="outline" size="sm" onClick={() => { const list = filter === "All" ? tracks : tracks.filter((t) => releaseGroup(t) === filter); downloadCatalogPdf(list, filter === "All" ? "Catalog" : `Catalog - ${filter}s`).catch(() => toast.error("Could not create the catalog PDF.")); }}><FileText />{filter === "All" ? "Catalog PDF" : `${filter}s PDF`}</Button>}
+          </div>
           {tracks.length === 0 ? <p className="text-sm text-muted-foreground">No songs yet. Embed a track in the Embed Metadata tab and submit it to your catalog.</p> : (
             <>
             <div className="mb-5 flex flex-wrap gap-2" role="tablist" aria-label="Filter by release type">
@@ -458,6 +462,7 @@ export function MetadataUploader({ stageName, avatar, userId, mode = "embed", on
                 <span className="font-semibold">{sel.length} {sel.length === 1 ? "track" : "tracks"} selected</span>
                 <div className="flex flex-wrap gap-2">
                   <Button type="button" variant="ghost" size="sm" onClick={() => setPicked(new Set())}>Clear</Button>
+                  <Button type="button" variant="outline" size="sm" onClick={() => downloadCatalogPdf(sel, `Catalog - ${sel.length} Songs`).catch(() => toast.error("Could not create the catalog PDF."))}><FileText />PDF</Button>
                   {exportMenu("Export Selected", sel, `${sel.length} Tracks`)}
                 </div>
               </div>

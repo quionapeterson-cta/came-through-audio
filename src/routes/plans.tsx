@@ -1,14 +1,10 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { Check } from "lucide-react";
 import { toast } from "sonner";
 import { BrandLogo } from "@/components/BrandLogo";
-import { Button } from "@/components/ui/button";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { PlanComparison, planAction } from "@/components/PlanComparison";
 import { useAuth } from "@/hooks/useAuth";
+import { useBilling } from "@/hooks/useBilling";
 import { openCheckout } from "@/lib/paddle";
-import { FREE_CARD, PLAN_CARDS, TIER_LABEL } from "@/lib/plans";
-
-const ALL_CARDS = [FREE_CARD, ...PLAN_CARDS];
 
 export const Route = createFileRoute("/plans")({
   head: () => ({
@@ -27,6 +23,7 @@ export const Route = createFileRoute("/plans")({
 function PlansPage() {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const { tier } = useBilling(user?.id);
   const buy = async (priceId: string) => {
     if (!user) { navigate({ to: "/", hash: "signup" }); return; }
     try { await openCheckout({ items: [{ priceId, quantity: 1 }], email: user.email, customData: { userId: user.id } }); }
@@ -42,43 +39,12 @@ function PlansPage() {
         </div>
       </header>
 
-      <main className="mx-auto max-w-6xl px-6 py-16">
+      <main className="mx-auto max-w-6xl px-4 py-16 sm:px-6">
         <h1 className="text-center text-4xl font-bold md:text-5xl">Choose your plan</h1>
         <p className="mt-3 text-center text-muted-foreground">Simple yearly pricing. Start free and upgrade anytime.</p>
-        <TooltipProvider delayDuration={100}>
-          <div className="mt-12 grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-            {ALL_CARDS.map((p) => (
-              <div key={p.tier} className={`flex flex-col rounded-2xl p-6 ${p.tier === "collaborate" ? "bg-ink text-ink-foreground shadow-xl" : "border border-border"}`}>
-                <div className={`font-bold ${p.tier === "collaborate" ? "w-fit rounded-xl bg-card px-3 py-1 text-primary" : "text-primary"}`}>{TIER_LABEL[p.tier]}</div>
-                <div className="mt-3 text-4xl font-bold">{p.price}<span className="text-base font-semibold">{p.price === "$0" ? "" : "/yr"}</span></div>
-                <div className="text-sm opacity-80">{p.monthly}</div>
-                {p.lead && <p className="mt-4 text-xs italic opacity-80">{p.lead}</p>}
-                <ul className="mt-4 flex-1 space-y-3">
-                  {p.features.map((f) => (
-                    <li key={f.title}>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <span className="flex cursor-help items-start gap-2 text-sm font-semibold"><Check className="mt-0.5 h-4 w-4 shrink-0 text-primary" strokeWidth={3} />{f.title}</span>
-                        </TooltipTrigger>
-                        <TooltipContent className="max-w-60">{f.tip}</TooltipContent>
-                      </Tooltip>
-                    </li>
-                  ))}
-                </ul>
-                {p.tier === "free" ? (
-                  <Button className="mt-6 w-full" variant="secondary" onClick={() => (user ? navigate({ to: "/workspace" }) : navigate({ to: "/", hash: "signup" }))}>
-                    {user ? "Included with account" : "Sign up free"}
-                  </Button>
-                ) : (
-                  <Button className="mt-6 w-full" variant={p.tier === "collaborate" ? "secondary" : "default"} onClick={() => buy(p.priceId)}>
-                    {user ? "Get started" : "Sign up to start"}
-                  </Button>
-                )}
-              </div>
-            ))}
-          </div>
-        </TooltipProvider>
-        <p className="mt-8 text-center text-sm text-muted-foreground">Free plans include unlimited royalty audits &amp; unlimited split sheet signatures. Billed annually.</p>
+        <div className="mt-12">
+          <PlanComparison currentTier={user ? tier : undefined} action={(p) => planAction(p, { tier: user ? tier : undefined, onBuy: (id) => void buy(id), onSignup: () => navigate({ to: "/", hash: "signup" }) })} />
+        </div>
       </main>
 
       <footer className="bg-ink text-ink-muted">

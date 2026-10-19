@@ -7,6 +7,8 @@ import { FitHeadline } from "@/components/FitHeadline";
 import { EmbedBadge, ShieldBadge, SignBadge, SplitBadge, UploadBadge, VaultBadge } from "@/components/StepBadges";
 import { ArtistBadge, ComposerBadge, MusicianBadge, ProducerBadge, SongwriterBadge } from "@/components/RoleBadges";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import { PlanComparison, planAction } from "@/components/PlanComparison";
+import { PLAN_FEATURES } from "@/lib/plans";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -22,7 +24,8 @@ export const Route = createFileRoute("/")({
   component: Landing,
 });
 
-const includes = ["Metadata Embedding", "Cataloging", "Royalty Audits", "Split Sheet Signatures", "Secure Catalog"];
+/** What the $24.99 plan adds over Free, straight from the pricing chart so the two never disagree. */
+const includes = PLAN_FEATURES.filter((f) => f.from === "plus").map((f) => f.title);
 
 const steps = [
   { badge: UploadBadge, title: "Upload your master", text: "Drop your final mix straight in from your phone or studio laptop. No more loose links." },
@@ -41,12 +44,12 @@ const faqs = [
   { q: "How does the AI Protection Hub prove human origin?", a: "The hub issues a Certificate of Human Origin. Short screen recordings of your DAW session and draft history are fingerprinted (SHA-256), paired with a sworn human-authorship attestation, and timestamped on the Bitcoin blockchain — proving you made it, and that you made it first." },
 ];
 
-type FooterLink = { label: string; to?: "/terms-of-service" | "/refund-policy" | "/privacy-policy" | "/contact"; search?: { type: "support" | "contact" } };
+type FooterLink = { label: string; to?: "/terms-of-service" | "/refund-policy" | "/privacy-policy" | "/contact"; search?: { type: "support" | "contact" }; doc?: string };
 const footerCols: { title: string; links: FooterLink[] }[] = [
-  { title: "Product", links: [{ label: "Metadata Embedding" }, { label: "Centralized Master Catalog" }, { label: "Royalty Health Suite" }, { label: "System Security Metrics" }] },
-  { title: "Learn", links: [{ label: "Help Center" }, { label: "Industry Insights" }, { label: "The Studio-to-Vault Guide" }] },
+  { title: "Product", links: [{ label: "Metadata Embedding", doc: "metadata-embedding" }, { label: "Centralized Master Catalog", doc: "master-catalog" }, { label: "Royalty Health Suite", doc: "royalty-health-suite" }, { label: "System Security Metrics", doc: "security" }] },
+  { title: "Learn", links: [{ label: "Help Center", doc: "help-center" }, { label: "Industry Insights", doc: "industry-insights" }, { label: "The Studio-to-Catalog Guide", doc: "studio-to-catalog-guide" }] },
   { title: "Legal", links: [{ label: "Terms of Service", to: "/terms-of-service" }, { label: "Refund Policy", to: "/refund-policy" }, { label: "Privacy Policy", to: "/privacy-policy" }] },
-  { title: "Access", links: [{ label: "Support Tickets", to: "/contact", search: { type: "support" } }, { label: "Contact Us", to: "/contact", search: { type: "contact" } }, { label: "Admin Whitelist Verification" }] },
+  { title: "Access", links: [{ label: "Support Tickets", to: "/contact", search: { type: "support" } }, { label: "Contact Us", to: "/contact", search: { type: "contact" } }] },
 ];
 
 const roles = [
@@ -55,12 +58,6 @@ const roles = [
   { badge: ProducerBadge, title: "Producers", question: "Are you working on beats?", text: "Secure your production splits and protect your sample history upfront." },
   { badge: SongwriterBadge, title: "Songwriters", question: "Are you writing songs?", text: "Lock down your lyrical ownership and claim your mechanical collection stakes." },
   { badge: ComposerBadge, title: "Composers", question: "Do you score music?", text: "Anchor your cinematic compositions and publishing percentages flawlessly." },
-];
-
-const valueItems = [
-  { title: "Unlimited Master Catalog", text: "Every song, album art and identifier in one permanent home base. No more digging through emails, texts and old hard drives." },
-  { title: "Unlimited Metadata Embedding", text: "Your credits travel inside the file, so you get paid properly when a song lands a sync, brand deal or major venue play." },
-  { title: "Unlimited Royalty Health Checks", text: "See if your songs show up in the major public repertoires and what's missing — unregistered songs mean missed payouts." },
 ];
 
 function Landing() {
@@ -106,8 +103,8 @@ function Landing() {
 
       <section className="border-y border-border bg-muted">
         <div className="mx-auto max-w-7xl px-6 py-14">
-          <h2 className="text-center text-3xl font-extrabold uppercase tracking-wide text-primary md:text-4xl">What all $25/yr plans include</h2>
-          <p className="mb-8 mt-2 text-center text-sm text-muted-foreground">Free plans include unlimited royalty audits &amp; unlimited split sheet signatures.</p>
+          <h2 className="text-center text-3xl font-extrabold uppercase tracking-wide text-primary md:text-4xl">Everything in the $24.99/yr plan</h2>
+          <p className="mb-8 mt-2 text-center text-sm text-muted-foreground">Plus free Royalty Health Checks and split sheet signing. Only $2.08 a month, billed annually.</p>
           <div className="flex flex-wrap items-center justify-center gap-x-10 gap-y-4">
             {includes.map((i) => (
               <span key={i} className="flex items-center gap-2 text-lg font-semibold">
@@ -177,29 +174,11 @@ function Landing() {
       </section>
 
       <section id="plans" className="scroll-mt-4 bg-background py-20">
-        <div className="mx-auto max-w-5xl px-6">
-          <div className="overflow-hidden rounded-3xl border-2 border-primary bg-background shadow-xl">
-            <div className="grid md:grid-cols-[1fr_1.6fr]">
-              <div className="flex flex-col justify-center gap-3 bg-primary p-10 text-primary-foreground">
-                <p className="text-6xl font-extrabold leading-none">$24.99<span className="text-3xl font-bold">/yr</span></p>
-                <p className="text-3xl font-bold">Gets you</p>
-                <a href="#signup" className="mt-4 inline-flex h-12 items-center justify-center rounded-md bg-background px-8 font-semibold text-primary hover:bg-muted">Sign up free</a>
-              </div>
-              <div className="p-10">
-                <h2 className="text-3xl font-bold">What you get</h2>
-                <ul className="mt-6 space-y-6">
-                  {valueItems.map((v) => (
-                    <li key={v.title} className="flex gap-4">
-                      <Check className="mt-1 h-6 w-6 shrink-0 text-primary" strokeWidth={3} />
-                      <div>
-                        <h3 className="text-lg font-bold">{v.title}</h3>
-                        <p className="mt-1 text-muted-foreground">{v.text}</p>
-                      </div>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            </div>
+        <div className="mx-auto max-w-6xl px-4 sm:px-6">
+          <h2 className="text-center text-3xl font-bold md:text-5xl">More value at every step</h2>
+          <p className="mx-auto mt-3 max-w-2xl text-center text-lg text-muted-foreground">Start free with Royalty Health Checks. Unlock embedding, your catalog and every download for $24.99 a year, then grow into split sheets, agency exports and contracts.</p>
+          <div className="mt-10">
+            <PlanComparison action={(p) => planAction(p, { onBuy: () => {}, onSignup: () => document.getElementById("signup")?.scrollIntoView({ behavior: "smooth" }) })} />
           </div>
         </div>
       </section>
@@ -224,7 +203,8 @@ function Landing() {
               <ul className="space-y-2 text-sm">
                 {c.links.map((l) => (
                   <li key={l.label}>
-                    {l.to ? <Link to={l.to} search={l.search as never} className="underline-offset-4 hover:text-ink-foreground hover:underline">{l.label}</Link> : <span>{l.label}</span>}
+                    {l.doc ? <Link to="/docs/$slug" params={{ slug: l.doc }} className="underline-offset-4 hover:text-ink-foreground hover:underline">{l.label}</Link>
+                      : l.to ? <Link to={l.to} search={l.search as never} className="underline-offset-4 hover:text-ink-foreground hover:underline">{l.label}</Link> : <span>{l.label}</span>}
                   </li>
                 ))}
                 {c.title === "Access" && <li className="font-semibold text-ink-foreground">🟢 System Status: Fully Operational</li>}

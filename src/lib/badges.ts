@@ -31,3 +31,9 @@ export function upNextAwards(ob: Onboarding | null): Award[] {
 
 /** Avatars are either a badge image (shown whole) or an uploaded photo (shown round). */
 export const isBadgeImage = (src?: string) => !!src && src.startsWith("/icons/");
+
+/** Retired badge art, mapped to its replacement so saved avatars keep working without rewriting profile data. */
+const RETIRED_BADGES: Record<string, string> = {
+  "/icons/playful/bedazzled_mpc.png": "/icons/playful/producer/platinum_laptop.png",
+};
+export const currentBadge = (src?: string) => (src && RETIRED_BADGES[src]) || src;

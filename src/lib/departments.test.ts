@@ -29,19 +29,25 @@ describe("resolveAccess", () => {
 describe("visibleTabs", () => {
   it("shows employees only their department tabs", () => {
     const branding = resolveAccess([{ role: "employee", departments: ["registration", "royalty_accounts", "branding"] }])!;
-    expect(visibleTabs(branding).map((t) => t.value)).toEqual(["ai", "reg", "splits"]);
+    expect(visibleTabs(branding).map((t) => t.value)).toEqual(["ai", "reg", "splits", "tasks"]);
     const billing = resolveAccess([{ role: "employee", departments: ["finance", "support", "marketing_sales"] }])!;
-    expect(visibleTabs(billing).map((t) => t.value)).toEqual(["purchases", "support"]);
+    expect(visibleTabs(billing).map((t) => t.value)).toEqual(["purchases", "support", "tasks"]);
   });
 
   it("never shows finance to HR admins", () => {
-    expect(visibleTabs(resolveAccess([{ role: "hr_admin" }])!)).toEqual([]);
+    expect(visibleTabs(resolveAccess([{ role: "hr_admin" }])!).map((t) => t.value)).toEqual(["tasks"]);
+  });
+
+  it("gives marketing its Task Bank even without other tools", () => {
+    const marketing = resolveAccess([{ role: "employee", departments: ["marketing_sales"] }])!;
+    expect(visibleTabs(marketing).map((t) => t.value)).toEqual(["tasks"]);
+    expect(visibleTabs(resolveAccess([{ role: "employee", departments: [] }])!)).toEqual([]);
   });
 
   it("narrows the super admin view with the switcher", () => {
     const sa = resolveAccess([{ role: "super_admin" }])!;
-    expect(visibleTabs(sa)).toHaveLength(5);
-    expect(visibleTabs(sa, "finance").map((t) => t.value)).toEqual(["purchases"]);
+    expect(visibleTabs(sa)).toHaveLength(6);
+    expect(visibleTabs(sa, "finance").map((t) => t.value)).toEqual(["purchases", "tasks"]);
   });
 });
 

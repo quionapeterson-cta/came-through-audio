@@ -9,6 +9,7 @@ export type Purchase = { id: string; kind: string; price_ids: string[]; details:
 export function useBilling(userId: string | undefined) {
   const [tier, setTier] = useState<Tier>("free");
   const [purchases, setPurchases] = useState<Purchase[]>([]);
+  const [loaded, setLoaded] = useState(false);
   const env = getPaddleEnvironment();
 
   const load = useCallback(async () => {
@@ -22,6 +23,7 @@ export function useBilling(userId: string | undefined) {
     const order: Tier[] = ["management", "collaborate", "plus"];
     setTier(order.find((t) => active.includes(t)) ?? "free");
     setPurchases((buys.data ?? []) as Purchase[]);
+    if (!subs.error) setLoaded(true);
   }, [userId, env]);
 
   useEffect(() => {
@@ -36,5 +38,5 @@ export function useBilling(userId: string | undefined) {
     return () => { supabase.removeChannel(ch); clearInterval(t); };
   }, [load, userId]);
 
-  return { tier, purchases, reload: load };
+  return { tier, purchases, loaded, reload: load };
 }

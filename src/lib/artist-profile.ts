@@ -1,5 +1,6 @@
 import { creditName, emptyContributor, emptyMetadata, withLegalName, type Contributor, type Metadata } from "@/lib/metadata";
 import { supabase } from "@/integrations/supabase/client";
+import { currentBadge } from "@/lib/badges";
 
 /** Recurring details a user can opt to prefill on every embed. Stored only in this browser. */
 export const PROFILE_KEYS = [
@@ -52,8 +53,10 @@ export function saveProfile(userId: string, profile: ArtistProfile | null) {
 
 export function loadOnboarding(userId?: string): Onboarding | null {
   if (!userId || typeof localStorage === "undefined") return null;
-  try { const v = localStorage.getItem(onboardKey(userId)); return v ? (JSON.parse(v) as Onboarding) : null; } catch { return null; }
+  try { const v = localStorage.getItem(onboardKey(userId)); return v ? withCurrentBadge(JSON.parse(v) as Onboarding) : null; } catch { return null; }
 }
+
+const withCurrentBadge = (o: Onboarding): Onboarding => ({ ...o, avatar: currentBadge(o.avatar) ?? "" });
 
 export function saveOnboarding(userId: string, o: Onboarding) {
   localStorage.setItem(onboardKey(userId), JSON.stringify(o));
@@ -69,7 +72,7 @@ export async function syncFromCloud(userId: string): Promise<Onboarding | null> 
   else if (localP) pushCloud(userId, { artist_defaults: localP });
   if (row?.onboarding) localStorage.setItem(onboardKey(userId), JSON.stringify(row.onboarding));
   else if (localO) pushCloud(userId, { onboarding: localO });
-  return row?.onboarding ?? localO;
+  return row?.onboarding ? withCurrentBadge(row.onboarding) : localO;
 }
 
 const hasName = (rows?: Contributor[]) => (rows ?? []).filter(creditName);

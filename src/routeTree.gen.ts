@@ -23,6 +23,8 @@ import { Route as UnlockRouteImport } from './routes/unlock'
 import { Route as VerifiedRouteImport } from './routes/verified'
 import { Route as WorkspaceRouteImport } from './routes/workspace'
 import { Route as AdminStaffRouteImport } from './routes/admin_.staff'
+import { Route as ContractPartyIdRouteImport } from './routes/contract.$partyId'
+import { Route as DocsSlugRouteImport } from './routes/docs.$slug'
 import { Route as SignRowIdRouteImport } from './routes/sign.$rowId'
 import { Route as ApiPublicCronTrialRemindersRouteImport } from './routes/api/public/cron/trial-reminders'
 import { Route as ApiPublicPaymentsWebhookRouteImport } from './routes/api/public/payments/webhook'
@@ -97,6 +99,16 @@ const AdminStaffRoute = AdminStaffRouteImport.update({
   path: '/admin/staff',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ContractPartyIdRoute = ContractPartyIdRouteImport.update({
+  id: '/contract/$partyId',
+  path: '/contract/$partyId',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DocsSlugRoute = DocsSlugRouteImport.update({
+  id: '/docs/$slug',
+  path: '/docs/$slug',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const SignRowIdRoute = SignRowIdRouteImport.update({
   id: '/sign/$rowId',
   path: '/sign/$rowId',
@@ -130,6 +142,8 @@ export interface FileRoutesByFullPath {
   '/verified': typeof VerifiedRoute
   '/workspace': typeof WorkspaceRoute
   '/admin/staff': typeof AdminStaffRoute
+  '/contract/$partyId': typeof ContractPartyIdRoute
+  '/docs/$slug': typeof DocsSlugRoute
   '/sign/$rowId': typeof SignRowIdRoute
   '/api/public/cron/trial-reminders': typeof ApiPublicCronTrialRemindersRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
@@ -149,6 +163,8 @@ export interface FileRoutesByTo {
   '/verified': typeof VerifiedRoute
   '/workspace': typeof WorkspaceRoute
   '/admin/staff': typeof AdminStaffRoute
+  '/contract/$partyId': typeof ContractPartyIdRoute
+  '/docs/$slug': typeof DocsSlugRoute
   '/sign/$rowId': typeof SignRowIdRoute
   '/api/public/cron/trial-reminders': typeof ApiPublicCronTrialRemindersRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
@@ -169,6 +185,8 @@ export interface FileRoutesById {
   '/verified': typeof VerifiedRoute
   '/workspace': typeof WorkspaceRoute
   '/admin_/staff': typeof AdminStaffRoute
+  '/contract/$partyId': typeof ContractPartyIdRoute
+  '/docs/$slug': typeof DocsSlugRoute
   '/sign/$rowId': typeof SignRowIdRoute
   '/api/public/cron/trial-reminders': typeof ApiPublicCronTrialRemindersRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
@@ -190,6 +208,8 @@ export interface FileRouteTypes {
     | '/verified'
     | '/workspace'
     | '/admin/staff'
+    | '/contract/$partyId'
+    | '/docs/$slug'
     | '/sign/$rowId'
     | '/api/public/cron/trial-reminders'
     | '/api/public/payments/webhook'
@@ -209,6 +229,8 @@ export interface FileRouteTypes {
     | '/verified'
     | '/workspace'
     | '/admin/staff'
+    | '/contract/$partyId'
+    | '/docs/$slug'
     | '/sign/$rowId'
     | '/api/public/cron/trial-reminders'
     | '/api/public/payments/webhook'
@@ -228,6 +250,8 @@ export interface FileRouteTypes {
     | '/verified'
     | '/workspace'
     | '/admin_/staff'
+    | '/contract/$partyId'
+    | '/docs/$slug'
     | '/sign/$rowId'
     | '/api/public/cron/trial-reminders'
     | '/api/public/payments/webhook'
@@ -248,6 +272,8 @@ export interface RootRouteChildren {
   VerifiedRoute: typeof VerifiedRoute
   WorkspaceRoute: typeof WorkspaceRoute
   AdminStaffRoute: typeof AdminStaffRoute
+  ContractPartyIdRoute: typeof ContractPartyIdRoute
+  DocsSlugRoute: typeof DocsSlugRoute
   SignRowIdRoute: typeof SignRowIdRoute
   ApiPublicCronTrialRemindersRoute: typeof ApiPublicCronTrialRemindersRoute
   ApiPublicPaymentsWebhookRoute: typeof ApiPublicPaymentsWebhookRoute
@@ -353,6 +379,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminStaffRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/contract/$partyId': {
+      id: '/contract/$partyId'
+      path: '/contract/$partyId'
+      fullPath: '/contract/$partyId'
+      preLoaderRoute: typeof ContractPartyIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/docs/$slug': {
+      id: '/docs/$slug'
+      path: '/docs/$slug'
+      fullPath: '/docs/$slug'
+      preLoaderRoute: typeof DocsSlugRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/sign/$rowId': {
       id: '/sign/$rowId'
       path: '/sign/$rowId'
@@ -392,6 +432,8 @@ const rootRouteChildren: RootRouteChildren = {
   VerifiedRoute: VerifiedRoute,
   WorkspaceRoute: WorkspaceRoute,
   AdminStaffRoute: AdminStaffRoute,
+  ContractPartyIdRoute: ContractPartyIdRoute,
+  DocsSlugRoute: DocsSlugRoute,
   SignRowIdRoute: SignRowIdRoute,
   ApiPublicCronTrialRemindersRoute: ApiPublicCronTrialRemindersRoute,
   ApiPublicPaymentsWebhookRoute: ApiPublicPaymentsWebhookRoute,

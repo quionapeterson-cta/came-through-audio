@@ -16,7 +16,7 @@ const FIRST_BADGE = "/icons/serious/came_genesis_gold.png";
 const AVATAR_BADGES = [
   { src: "/icons/playful/bedazzled_mic.png", label: "Recording artist" },
   { src: "/icons/playful/bedazzled_note.png", label: "Songwriter" },
-  { src: "/icons/playful/bedazzled_mpc.png", label: "Producer" },
+  { src: "/icons/playful/producer/platinum_laptop.png", label: "Producer" },
   { src: "/icons/playful/bedazzled_band.png", label: "Live musician" },
   { src: "/icons/playful/bedazzled_cta.png", label: "CTA Badge" },
 ];

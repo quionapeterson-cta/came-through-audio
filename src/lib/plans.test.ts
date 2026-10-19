@@ -36,3 +36,24 @@ describe("plans", () => {
     expect(hasTier("management", "collaborate")).toBe(true);
   });
 });
+
+describe("plan comparison", () => {
+  it("each plan includes everything below it, so the list only grows", async () => {
+    const { PLAN_FEATURES, PLAN_TIERS } = await import("./plans");
+    const counts = PLAN_TIERS.map((p) => PLAN_FEATURES.filter((f) => hasTier(p.tier, f.from)).length);
+    expect(counts).toEqual([...counts].sort((a, b) => a - b));
+    expect(counts.at(-1)).toBe(PLAN_FEATURES.length);
+  });
+
+  it("buttons follow the viewer's plan", async () => {
+    const { planAction } = await import("@/components/PlanComparison");
+    const { PLAN_TIERS } = await import("./plans");
+    const [free, plus, collab] = PLAN_TIERS;
+    const o = { onBuy: () => {}, onSignup: () => {} };
+    expect(planAction(collab!, { ...o, tier: undefined }).label).toBe("Sign up to start");
+    expect(planAction(plus!, { ...o, tier: "plus" })).toMatchObject({ label: "Current plan", disabled: true });
+    expect(planAction(free!, { ...o, tier: "plus" })).toMatchObject({ label: "Included", disabled: true });
+    expect(planAction(collab!, { ...o, tier: "plus" }).label).toBe("Upgrade");
+    expect(planAction(collab!, { ...o, tier: "free" }).label).toBe("Get started");
+  });
+});

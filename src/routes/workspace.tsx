@@ -1,6 +1,6 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { ShieldCheck, FileAudio, Lock, Disc3, Activity, FileSignature, ScrollText, GraduationCap, LogOut, Check } from "lucide-react";
+import { ShieldCheck, FileAudio, Lock, Disc3, Activity, FileSignature, ScrollText, GraduationCap, LogOut } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
@@ -10,6 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { MetadataUploader } from "@/components/MetadataUploader";
 import { AIProtectionHub } from "@/components/AIProtectionHub";
 import { SplitSheets } from "@/components/SplitSheets";
+import { Contracts } from "@/components/Contracts";
 import { BrandLogo } from "@/components/BrandLogo";
 import type { CatalogTrack } from "@/lib/catalog";
 import { ArtistAvatar, ArtistOnboarding } from "@/components/ArtistOnboarding";
@@ -18,12 +19,12 @@ import { RoyaltyUtilitySuite } from "@/components/RoyaltyUtilitySuite";
 import { ExpertAssistance } from "@/components/ExpertAssistance";
 import { RoyaltyHealthCheck } from "@/components/RoyaltyHealthCheck";
 import { PaymentTestModeBanner } from "@/components/PaymentTestModeBanner";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { toast } from "sonner";
 import { sendTrialEndingReminder } from "@/lib/collab-trial.functions";
 import { useBilling, type Purchase } from "@/hooks/useBilling";
 import { openCheckout, getPaddleEnvironment } from "@/lib/paddle";
-import { FREE_CARD, PLAN_CARDS, TIER_LABEL, hasTier, type Tier } from "@/lib/plans";
+import { PRICE_TIER, TIER_LABEL, hasTier, takePlanIntent, type Tier } from "@/lib/plans";
+import { PlanComparison, planAction } from "@/components/PlanComparison";
 
 export const Route = createFileRoute("/workspace")({
   head: () => ({
@@ -59,7 +60,7 @@ function Workspace() {
   const [catalogKey, setCatalogKey] = useState(0);
   const [protectTrack, setProtectTrack] = useState<CatalogTrack>();
   const [catalogFix, setCatalogFix] = useState<{ trackId: string; field: string }>();
-  const { tier: realTier, purchases } = useBilling(user?.id);
+  const { tier: realTier, purchases, loaded: billingLoaded } = useBilling(user?.id);
   const [previewTier, setPreviewTier] = useState<Tier | "real">("real");
   const tier: Tier = getPaddleEnvironment() === "sandbox" && previewTier !== "real" ? previewTier : realTier;
   // Free accounts may only sign invited split sheets (/sign/$token); creation requires Collaborate.
@@ -80,6 +81,16 @@ function Workspace() {
     return () => { live = false; };
   }, [user]);
   const upgrade = () => document.getElementById("plans-trigger")?.click();
+
+  // A plan picked before signup ("Sign up to start") goes straight to that plan's checkout once billing has loaded.
+  useEffect(() => {
+    if (!user || !billingLoaded) return;
+    const priceId = takePlanIntent();
+    if (!priceId || hasTier(realTier, PRICE_TIER[priceId]!)) return;
+    toast.info(`Opening checkout for ${TIER_LABEL[PRICE_TIER[priceId]!]}…`);
+    openCheckout({ items: [{ priceId, quantity: 1 }], email: user.email, customData: { userId: user.id } })
+      .catch((e) => toast.error(e instanceof Error ? e.message : "Checkout could not open. Use View Plans to try again."));
+  }, [user, billingLoaded, realTier]);
 
   useEffect(() => {
     if (!loading && !user) navigate({ to: "/" });
@@ -152,14 +163,14 @@ function Workspace() {
           <TabsContent value="protect"><AIProtectionHub userId={user.id} paid={hasAi} email={user.email} track={protectTrack} /></TabsContent>
           <TabsContent value="splits"><SplitSheets userId={user.id} canSplit={canSplit} prefillTrackId={splitTrackId} onUpgrade={upgrade} /></TabsContent>
           <TabsContent value="health"><Health onFix={() => setTab("catalog")} onFixField={(trackId, field) => { setCatalogFix({ trackId, field }); setTab("catalog"); }} onEmbed={() => setTab("embed")} userId={user.id} email={user.email} purchases={purchases} canUtility={canSplit} onUpgrade={upgrade} /></TabsContent>
-          <TabsContent value="learn"><Learn unlocked={hasTier(tier, "management")} onUpgrade={upgrade} /></TabsContent>
+          <TabsContent value="learn"><Learn userId={user.id} unlocked={hasTier(tier, "management")} onUpgrade={upgrade} /></TabsContent>
         </Tabs>
       </main>
     </div>
   );
 }
 
-function Learn({ unlocked, onUpgrade }: { unlocked: boolean; onUpgrade: () => void }) {
+function Learn({ userId, unlocked, onUpgrade }: { userId: string; unlocked: boolean; onUpgrade: () => void }) {
   const [view, setView] = useState<"contracts" | "classes">("contracts");
   return (
     <div className="mt-6">
@@ -167,26 +178,16 @@ function Learn({ unlocked, onUpgrade }: { unlocked: boolean; onUpgrade: () => vo
         <Button size="sm" variant={view === "contracts" ? "default" : "ghost"} onClick={() => setView("contracts")}><ScrollText className="h-4 w-4" />Contracts & Blueprints</Button>
         <Button size="sm" variant={view === "classes" ? "default" : "ghost"} onClick={() => setView("classes")}><GraduationCap className="h-4 w-4" />Masterclasses</Button>
       </div>
-      {!unlocked ? (
-        <div className="mt-6 flex flex-col items-center gap-3 rounded-2xl border-2 border-primary p-8 text-center">
-          <Lock className="h-8 w-8 text-primary" />
-          <h2 className="text-2xl font-bold">Included with Catalog Management</h2>
-          <p className="max-w-md text-muted-foreground">Unlimited contract blueprints and industry masterclasses.</p>
-          <Button onClick={onUpgrade}>Upgrade to unlock</Button>
-        </div>
-      ) : view === "contracts"
-        ? <Blank icon={ScrollText} title="Contracts & Blueprints" text="Producer agreements, videographer releases, beat licenses, label and studio blueprints." />
-        : <Masterclasses />}
-    </div>
-  );
-}
-
-function Blank({ icon: Icon, title, text }: { icon: React.ElementType; title: string; text: string }) {
-  return (
-    <div className="mt-6 flex min-h-72 flex-col items-center justify-center rounded-2xl border-2 border-dashed border-border p-10 text-center">
-      <Icon className="h-10 w-10 text-primary" />
-      <h2 className="mt-4 text-2xl font-bold">{title}</h2>
-      <p className="mt-2 max-w-md text-muted-foreground">{text}</p>
+      {/* Contracts handles its own gating: blueprint guides are a preview for everyone, and contracts sent to you are always visible. */}
+      {view === "contracts" ? <Contracts userId={userId} unlocked={unlocked} onUpgrade={onUpgrade} />
+        : !unlocked ? (
+          <div className="mt-6 flex flex-col items-center gap-3 rounded-2xl border-2 border-primary p-8 text-center">
+            <Lock className="h-8 w-8 text-primary" />
+            <h2 className="text-2xl font-bold">Included with Catalog Management</h2>
+            <p className="max-w-md text-muted-foreground">Industry masterclasses covering sync, publishing and royalties.</p>
+            <Button onClick={onUpgrade}>Upgrade to unlock</Button>
+          </div>
+        ) : <Masterclasses />}
     </div>
   );
 }
@@ -199,46 +200,9 @@ function PlansDialog({ tier, userId, email }: { tier: Tier; userId: string; emai
   return (
     <Dialog>
       <DialogTrigger asChild><Button id="plans-trigger" className="font-semibold">View Plans</Button></DialogTrigger>
-      <DialogContent className="max-h-[90vh] max-w-5xl overflow-y-auto">
+      <DialogContent className="max-h-[90vh] max-w-6xl overflow-y-auto">
         <DialogHeader><DialogTitle className="text-2xl font-bold">Choose your plan</DialogTitle></DialogHeader>
-        <TooltipProvider delayDuration={100}>
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-            {[FREE_CARD, ...PLAN_CARDS].map((p) => {
-              const current = tier === p.tier;
-              const owned = hasTier(tier, p.tier);
-              return (
-                <div key={p.tier} className={`flex flex-col rounded-xl p-5 ${p.tier === "collaborate" ? "bg-ink text-ink-foreground" : "border border-border"}`}>
-                  <div className={`font-bold ${p.tier === "collaborate" ? "w-fit rounded-xl bg-card px-3 py-1 text-primary" : "text-primary"}`}>{TIER_LABEL[p.tier]}</div>
-                  <div className="mt-2 text-3xl font-bold">{p.price}<span className="text-base font-semibold">{p.price === "$0" ? "" : "/yr"}</span></div>
-                  <div className="text-sm opacity-80">{p.monthly}</div>
-                  {p.lead && <p className="mt-4 text-xs italic opacity-80">{p.lead}</p>}
-                  <ul className="mt-3 flex-1 space-y-2">
-                    {p.features.map((f) => (
-                      <li key={f.title}>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <span className="flex cursor-help items-start gap-2 text-sm font-semibold"><Check className="mt-0.5 h-4 w-4 shrink-0 text-primary" strokeWidth={3} />{f.title}</span>
-                          </TooltipTrigger>
-                          <TooltipContent className="max-w-60">{f.tip}</TooltipContent>
-                        </Tooltip>
-                      </li>
-                    ))}
-                  </ul>
-                  {p.tier === "free" ? (
-                    <Button className="mt-5 w-full" variant="secondary" disabled={owned}>
-                      {current ? "Current plan" : "Included"}
-                    </Button>
-                  ) : (
-                    <Button className="mt-5 w-full" variant={p.tier === "collaborate" ? "secondary" : "default"} disabled={owned} onClick={() => buy(p.priceId)}>
-                      {current ? "Current plan" : owned ? "Included" : tier === "free" ? "Get started" : "Upgrade"}
-                    </Button>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        </TooltipProvider>
-        <p className="text-center text-xs text-muted-foreground">Free plans include unlimited royalty audits &amp; unlimited split sheet signatures. Billed annually.</p>
+        <PlanComparison currentTier={tier} action={(p) => planAction(p, { tier, onBuy: (id) => void buy(id), onSignup: () => {} })} />
       </DialogContent>
     </Dialog>
   );

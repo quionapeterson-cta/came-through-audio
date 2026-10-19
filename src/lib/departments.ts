@@ -71,7 +71,13 @@ export const ADMIN_TABS = [
   { value: "support", label: "Support Tickets", department: "support" },
 ] as const satisfies readonly { value: string; label: string; department: Department }[];
 
-/** Tabs for the caller, optionally narrowed to one department (the super admin switcher). */
-export function visibleTabs(access: StaffAccess, view: Department | "all" = "all") {
-  return ADMIN_TABS.filter((t) => access.departments.includes(t.department) && (view === "all" || t.department === view));
+/** Departments in view: all of the caller's, or the one the super admin switcher picked. */
+export function viewDepartments(access: StaffAccess, view: Department | "all" = "all") {
+  return access.departments.filter((d) => view === "all" || d === view);
+}
+
+/** Tabs for the caller, optionally narrowed to one department. Every department gets the Task Bank, last. */
+export function visibleTabs(access: StaffAccess, view: Department | "all" = "all"): { value: string; label: string }[] {
+  const tabs = ADMIN_TABS.filter((t) => access.departments.includes(t.department) && (view === "all" || t.department === view));
+  return viewDepartments(access, view).length ? [...tabs, { value: "tasks", label: "Task Bank" }] : tabs;
 }
