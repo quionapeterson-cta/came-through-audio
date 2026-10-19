@@ -10,6 +10,8 @@ import { publishShareCard } from "@/lib/share-cards";
 export type ShareInfo = { ctx: PromoContext; artist: string; title?: string | undefined; count?: number | undefined; genre?: string | undefined };
 
 const rand = (a: number, b: number) => a + Math.random() * (b - a);
+// Smaller on phones so the share panel starts on the first screen.
+const ROUND_SIZE = "w-[min(70vw,38svh)] md:w-[min(80vw,32rem)]";
 const reducedMotion = () => typeof window !== "undefined" && !!window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
 
 /**
@@ -30,13 +32,13 @@ export function CelebrationStage({ src, name, round }: { src: string; name?: str
   }, [run, still]);
   const shape = round ? "rounded-full object-cover" : "object-contain";
   return (
-    <figure className="flex flex-col items-center gap-6">
+    <figure className="flex flex-col items-center gap-4 md:gap-6">
       {!still && <Rain key={`rain-${run}`} src={src} shape={shape} />}
       {!still && <Burst key={`burst-${run}`} src={src} shape={shape} from={badge} />}
       <div key={`badge-${run}`} className="relative w-full" style={still ? undefined : { animation: "badge-pop 0.6s ease-out" }}>
-        <img ref={badge} src={src} alt={name ?? "Badge"} className={round ? "mx-auto aspect-square w-[min(80vw,32rem)] rounded-full border-4 border-primary object-cover" : "max-h-[60vh] w-full object-contain drop-shadow-2xl"} />
+        <img ref={badge} src={src} alt={name ?? "Badge"} className={round ? `mx-auto aspect-square ${ROUND_SIZE} rounded-full border-4 border-primary object-cover` : "max-h-[38svh] w-full object-contain drop-shadow-2xl md:max-h-[60vh]"} />
         {/* The shine is masked by the badge itself so only the artwork catches the light. */}
-        <div aria-hidden className={`pointer-events-none absolute inset-0 ${round ? "mx-auto aspect-square w-[min(80vw,32rem)] rounded-full" : ""}`}
+        <div aria-hidden className={`pointer-events-none absolute inset-0 ${round ? `mx-auto aspect-square ${ROUND_SIZE} rounded-full` : ""}`}
           style={{ ...(round ? {} : { maskImage: `url("${src}")`, WebkitMaskImage: `url("${src}")`, maskSize: "contain", WebkitMaskSize: "contain", maskRepeat: "no-repeat", WebkitMaskRepeat: "no-repeat", maskPosition: "center", WebkitMaskPosition: "center" }),
             backgroundImage: "linear-gradient(105deg, transparent 40%, rgb(255 255 255 / 0.7) 50%, transparent 60%)", backgroundSize: "250% 100%", backgroundRepeat: "no-repeat",
             animation: "badge-shine 1.1s ease-in-out 0.35s both" }} />
