@@ -1,7 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-import { ALL_BADGES, badgeById } from "@/lib/badges";
+import { ALL_BADGES, BADGES, badgeById } from "@/lib/badges";
 import { badgeMetrics, evaluateBadges, type BadgeData } from "@/lib/badge-rules";
 import { fromCatalogRow } from "@/lib/catalog";
 
@@ -153,4 +153,46 @@ export const logBadgeDrop = createServerFn({ method: "POST" })
     const { error } = await context.supabase.from("badge_drops" as never).insert({ note: data.note, created_by: context.userId } as never);
     if (error) throw new Error("Couldn't save the badge drop.");
     return { ok: true };
+  });
+
+/**
+ * Support unlocks a badge for the user behind a ticket, when the app should have awarded it but didn't. Support
+ * department (or super admin) only, never for yourself, and every unlock is logged in badge_grants with its reason.
+ * Repeating badges get one more earning; a badge the user already holds once can't be unlocked again.
+ */
+export const grantBadgeForTicket = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d) => z.object({
+    ticketId: z.string().uuid(),
+    badgeId: z.string().refine((id) => BADGES.some((b) => b.id === id), "Pick a badge."),
+    reason: z.string().trim().min(3, "Add the reason.").max(500),
+  }).parse(d))
+  .handler(async ({ data, context }) => {
+    const { data: allowed } = await context.supabase.rpc("in_department" as never, { _user_id: context.userId, _dept: "support" } as never);
+    if (!allowed) throw new Error("Forbidden");
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: ticket } = await supabaseAdmin.from("support_tickets").select("email").eq("id", data.ticketId).maybeSingle();
+    if (!ticket) throw new Error("Couldn't find that ticket.");
+    const { data: userId } = await supabaseAdmin.rpc("user_id_by_email" as never, { _email: ticket.email } as never);
+    if (!userId) throw new Error(`No account uses ${ticket.email}. Ask the user which email they signed up with.`);
+    if (userId === context.userId) throw new Error("You can't unlock badges for your own account.");
+
+    const badge = badgeById(data.badgeId)!;
+    const { data: row } = await supabaseAdmin.from("user_badges" as never).select("times, earned_at, log")
+      .eq("user_id", userId).eq("badge_id", badge.id).maybeSingle();
+    const had = row as { times: number; earned_at: string; log: BadgeEarning[] | null } | null;
+    if (had && !badge.every) throw new Error(`They already have ${badge.title}.`);
+    const now = new Date().toISOString();
+    const entry: BadgeEarning = badge.choices ? { at: now, pick: null } : { at: now };
+    // Logged first, so no unlock ever happens without its record.
+    const logged = await supabaseAdmin.from("badge_grants" as never).insert({
+      user_id: userId, badge_id: badge.id, ticket_id: data.ticketId, reason: data.reason, granted_by: context.userId,
+    } as never);
+    if (logged.error) throw new Error("Couldn't record the unlock, so the badge wasn't unlocked.");
+    const { error } = await supabaseAdmin.from("user_badges" as never).upsert({
+      user_id: userId, badge_id: badge.id, times: (had?.times ?? 0) + 1, earned_at: had?.earned_at ?? now, seen_at: null,
+      log: [...(had?.log ?? []), entry],
+    } as never, { onConflict: "user_id,badge_id" });
+    if (error) throw new Error("Couldn't unlock the badge.");
+    return { ok: true, title: badge.title };
   });
