@@ -210,6 +210,48 @@ export type Database = {
         }
         Relationships: []
       }
+      badge_events: {
+        Row: {
+          created_at: string
+          id: string
+          kind: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          kind: string
+          user_id?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          kind?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      badge_settings: {
+        Row: {
+          badge_id: string
+          enabled: boolean
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          badge_id: string
+          enabled?: boolean
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          badge_id?: string
+          enabled?: boolean
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: []
+      }
       catalogs: {
         Row: {
           album_title: string | null
@@ -916,6 +958,30 @@ export type Database = {
         }
         Relationships: []
       }
+      user_badges: {
+        Row: {
+          badge_id: string
+          earned_at: string
+          seen_at: string | null
+          times: number
+          user_id: string
+        }
+        Insert: {
+          badge_id: string
+          earned_at?: string
+          seen_at?: string | null
+          times?: number
+          user_id: string
+        }
+        Update: {
+          badge_id?: string
+          earned_at?: string
+          seen_at?: string | null
+          times?: number
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           created_at: string
@@ -1046,7 +1112,15 @@ export type Database = {
     }
     Functions: {
       artist_name_status: { Args: { uid?: string }; Returns: Json }
+      badge_earned_counts: {
+        Args: never
+        Returns: {
+          badge_id: string
+          users: number
+        }[]
+      }
       can_issue_ai_certificate: { Args: { _user_id: string }; Returns: boolean }
+      can_manage_badges: { Args: { _user_id: string }; Returns: boolean }
       can_manage_staff: { Args: { _user_id: string }; Returns: boolean }
       get_split_invite: { Args: { _row_id: string }; Returns: Json }
       has_active_subscription: {
