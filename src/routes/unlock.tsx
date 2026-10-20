@@ -1,3 +1,4 @@
+import { safeRedirectPath } from "@/lib/safe-redirect";
 import { createFileRoute } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useState } from "react";
@@ -31,7 +32,7 @@ function Unlock() {
     const { ok } = await unlock({ data: { password } });
     setBusy(false);
     if (ok) {
-      const dest = next && next.startsWith("/") && !next.startsWith("//") ? next : "/";
+      const dest = safeRedirectPath(next, "/");
       window.location.assign(dest);
     } else setError(true);
   }

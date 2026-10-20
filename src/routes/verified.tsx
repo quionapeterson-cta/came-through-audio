@@ -1,3 +1,4 @@
+import { safeRedirectPath } from "@/lib/safe-redirect";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { CheckCircle2 } from "lucide-react";
@@ -10,7 +11,7 @@ import { BrandLogo } from "@/components/BrandLogo";
 import { takeReturn } from "@/lib/password";
 
 function safeNext(n: unknown): string {
-  return typeof n === "string" && n.startsWith("/") && !n.startsWith("//") ? n : "/workspace";
+  return safeRedirectPath(n, "/workspace");
 }
 
 export const Route = createFileRoute("/verified")({
@@ -31,7 +32,7 @@ export const Route = createFileRoute("/verified")({
 function Verified() {
   const navigate = useNavigate();
   const { next } = Route.useSearch();
-  const dest = next ? safeNext(next) : (takeReturn() ?? "/workspace");
+  const dest = next ? safeNext(next) : safeNext(takeReturn() ?? "/workspace");
   const [signedIn, setSignedIn] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
