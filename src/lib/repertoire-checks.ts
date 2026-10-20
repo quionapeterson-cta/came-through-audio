@@ -1,4 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
+import { requestBadgeCheck } from "@/lib/badge-events";
 import type { RepertoireCheck } from "@/lib/health";
 
 const fromRow = (r: { track_id: string; society: string; status: string; source: string; work_id: string | null; details: unknown; checked_at: string }): RepertoireCheck => ({
@@ -18,6 +19,7 @@ export async function markCheck(userId: string, trackId: string, society: string
     .upsert({ user_id: userId, track_id: trackId, society, status, source: "self", work_id: workId?.trim() || null, checked_at: new Date().toISOString() }, { onConflict: "track_id,society" })
     .select("track_id, society, status, source, work_id, details, checked_at").single();
   if (error) throw error;
+  requestBadgeCheck();
   return fromRow(data);
 }
 

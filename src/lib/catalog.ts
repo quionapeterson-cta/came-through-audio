@@ -1,4 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
+import { requestBadgeCheck } from "@/lib/badge-events";
 import { creditName, emptyContributor, emptyMetadata, splitTrack, withLegalName, type Metadata } from "@/lib/metadata";
 
 export type CatalogTrack = { id: string; title: string; artist: string; updatedAt: string; metadata: Metadata };
@@ -61,6 +62,7 @@ export async function saveTrack(m: Metadata, userId: string, id?: string): Promi
     : supabase.from("catalogs").insert(row).select("id").single();
   const { data, error } = await query;
   if (error) throw error;
+  requestBadgeCheck();
   return (data as { id: string }).id;
 }
 

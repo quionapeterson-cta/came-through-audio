@@ -1,4 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
+import { requestBadgeCheck } from "@/lib/badge-events";
 
 export type ContractStatus = "draft" | "sent" | "signed";
 
@@ -82,6 +83,7 @@ export async function saveContract(c: Contract): Promise<Contract> {
   }
   const { data, error } = await supabase.from("contracts" as never).select("*, contract_parties(*)").eq("id", id).single();
   if (error) throw error;
+  requestBadgeCheck();
   return fromRow(data as unknown as ContractRow);
 }
 
@@ -89,6 +91,7 @@ export async function saveContract(c: Contract): Promise<Contract> {
 export async function sendContract(id: string) {
   const { error } = await supabase.rpc("send_contract" as never, { _contract_id: id } as never);
   if (error) throw error;
+  requestBadgeCheck();
 }
 
 export async function reopenContract(id: string) {
@@ -122,6 +125,7 @@ export async function getContractInvite(partyId: string): Promise<ContractInvite
 export async function signContract(partyId: string, typedName: string) {
   const { error } = await supabase.rpc("sign_contract" as never, { _party_id: partyId, _signature_name: typedName } as never);
   if (error) throw error;
+  requestBadgeCheck();
 }
 
 export type ReceivedContract = { party_id: string; title: string; role: string; status: ContractStatus; signed_at: string | null; sent_at: string | null; completed_at: string | null };

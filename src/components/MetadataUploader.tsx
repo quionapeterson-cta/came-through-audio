@@ -21,6 +21,8 @@ import { ProSelect } from "@/components/ProSelect";
 import { ArtistAvatar } from "@/components/ArtistOnboarding";
 import { BadgeViewer } from "@/components/BadgeViewer";
 import { isBadgeImage } from "@/lib/badges";
+import { logBadgeEvent } from "@/lib/badge-events";
+import { NextBadgeHint } from "@/components/Badges";
 import { loadOnboarding, loadProfile, withProfile } from "@/lib/artist-profile";
 
 const normArtist = (v: string) => v.trim().replace(/\s+/g, " ").toLowerCase();
@@ -59,6 +61,7 @@ export function MetadataUploader({ stageName, avatar, userId, mode = "embed", on
     if (!canExport) { setUpsell("export"); return; }
     downloadAgencyExport(a, list, safeName(name))
       .then((songs) => {
+        if (songs.length < list.length) logBadgeEvent("agency_export");
         if (songs.length) setHeld({ agency: a, songs, exported: list.length - songs.length });
         // Splits that don't add up to 100% are exported anyway, with a heads-up: agencies reject them.
         const off = list.filter((t) => !songs.some((h) => h.track.id === t.id) && registrationReadiness(t.metadata, a).warnings.length);
@@ -70,6 +73,7 @@ export function MetadataUploader({ stageName, avatar, userId, mode = "embed", on
   const runPack = (list: CatalogTrack[], name: string) => {
     if (!canExport) { setUpsell("export"); return; }
     const skipped = downloadNeighbouringPack(list, safeName(name));
+    if (skipped.length < list.length) logBadgeEvent("agency_export");
     if (skipped.length) toast.warning(skipped.length === list.length
       ? "Add an ISRC first: societies match recordings by ISRC, so none of these songs could go in the pack."
       : `${skipped.length} song${skipped.length === 1 ? "" : "s"} left out of the pack because ${skipped.length === 1 ? "it has" : "they have"} no ISRC yet.`, { duration: 10000 });
@@ -265,6 +269,7 @@ export function MetadataUploader({ stageName, avatar, userId, mode = "embed", on
       const a = document.createElement("a");
       a.href = file.url; a.download = file.name;
       document.body.appendChild(a); a.click(); a.remove();
+      logBadgeEvent("master_download");
       setResult(file);
       setSessionDone((d) => [...d, parsed.data.title.trim() || file.name]);
     } catch {
@@ -291,7 +296,10 @@ export function MetadataUploader({ stageName, avatar, userId, mode = "embed", on
       <BadgeViewer src={viewAvatar ? avatar : undefined} round={!isBadgeImage(avatar)} onClose={() => setViewAvatar(false)}
         share={full ? { ctx: "catalog", artist: stageName ?? "", count: tracks.length, genre: loadProfile(userId)?.primaryGenre } : { ctx: "embed", artist: metadata.artist.trim() || (stageName ?? ""), title: metadata.title, genre: metadata.primaryGenre }} />
       <div className="mb-6 flex flex-wrap items-end justify-between gap-3">
-        <h1 className="text-2xl font-bold">{full ? (editingId ? "Edit track" : adding ? "Add a song" : "My Catalog") : "Embed Metadata"}</h1>
+        <div className="flex flex-wrap items-center gap-3">
+          <h1 className="text-2xl font-bold">{full ? (editingId ? "Edit track" : adding ? "Add a song" : "My Catalog") : "Embed Metadata"}</h1>
+          {userId && !editingId && !adding && <NextBadgeHint userId={userId} collections={full ? ["core", "lyrics", "hiphop", "spiritual", "night"] : ["core", "lyrics", "producer", "live"]} />}
+        </div>
         {full && userId && !editingId && !adding ? (
           <DropdownMenu>
             <DropdownMenuTrigger asChild><Button type="button"><Plus />Add song</Button></DropdownMenuTrigger>

@@ -11,6 +11,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { sendSplitInvite } from "@/lib/splits-email.functions";
 import { InfoTip } from "@/components/InfoTip";
 import { capShare } from "@/lib/splits-total";
+import { NextBadgeHint } from "@/components/Badges";
 import {
   SPLIT_ROLES,
   collaboratorsFromTrack,
@@ -107,7 +108,10 @@ export function SplitSheets({ userId, canSplit, canCollect, prefillTrackId, onUp
     <div className="mt-6 space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h2 className="text-2xl font-bold">Split Sheets</h2>
+          <div className="flex flex-wrap items-center gap-3">
+            <h2 className="text-2xl font-bold">Split Sheets</h2>
+            <NextBadgeHint userId={userId} collections={["splits"]} />
+          </div>
           <p className="text-sm text-muted-foreground">Create industry-standard split sheets from your catalog songs and sign as the owner. Collaborators receive an email invitation to review and sign, plus a free 30-day trial of the Catalog & Collaborate account.</p>
         </div>
       </div>

@@ -72,6 +72,10 @@ export function trackReport(t: CatalogTrack, country: Country, checks: Repertoir
   return { track: t, issues: shownIssues, pillars: pillars.map((p) => ({ ...p, dataIssues: p.dataIssues.filter((i) => shownIssues.includes(i)) })), streaming, work, findings };
 }
 
+/** 100% healthy: no data issues, no lookup warnings, and confirmed in a society for every pillar. */
+export const songHealthy = (r: TrackReport) =>
+  !r.issues.length && !r.findings.some((f) => f.level === "warn") && r.pillars.length > 0 && r.pillars.every((p) => p.state === "confirmed");
+
 /**
  * The whole catalog's health. Data = share of song × pillar cells with complete data; Registered = share confirmed
  * in a society. The headline score weighs both equally, so a perfectly filled-in but unregistered catalog is 50%.

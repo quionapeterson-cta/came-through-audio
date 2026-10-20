@@ -12,6 +12,8 @@ import { listTracks, type CatalogTrack } from "@/lib/catalog";
 import { BLUEPRINTS, CONTRACT_DISCLAIMER, blueprintById, renderContract, type Blueprint } from "@/lib/contract-blueprints";
 import { downloadContractPdf } from "@/lib/contract-pdf";
 import { sendContractInvite } from "@/lib/contracts-email.functions";
+import { NextBadgeHint } from "@/components/Badges";
+import { logBadgeEvent } from "@/lib/badge-events";
 import {
   contractLink, deleteContract, emptyParty, isValidEmail, listContracts, listReceivedContracts, reopenContract, saveContract, sendContract, signContract,
   type Contract, type ContractParty, type ReceivedContract,
@@ -69,6 +71,7 @@ export function Contracts({ userId, unlocked, onUpgrade }: { userId: string; unl
     <TooltipProvider delayDuration={100}>
       <div className="mt-6 space-y-6">
         <div className="flex flex-wrap items-center justify-between gap-3">
+          <NextBadgeHint userId={userId} collections={["contracts"]} className="order-last" />
           <div className="inline-flex flex-wrap gap-1 rounded-lg bg-muted p-1" role="tablist" aria-label="Contracts">
             {([["blueprints", "Blueprints", ScrollText], ["contracts", "My Contracts", FileSignature], ["vault", "Signed Vault", Vault]] as const).map(([id, label, Icon]) => (
               <Button key={id} role="tab" aria-selected={view === id} size="sm" variant={view === id ? "default" : "ghost"} onClick={() => setView(id)}>
@@ -155,7 +158,7 @@ function Blueprints({ unlocked, onUse }: { unlocked: boolean; onUse: (bp: Bluepr
                 </div>
               )}
               <div className="mt-auto flex flex-wrap gap-2 pt-4">
-                <Button size="sm" variant="ghost" onClick={() => setOpenId(expanded ? undefined : bp.id)}>{expanded ? "Hide guide" : "Read the guide"}</Button>
+                <Button size="sm" variant="ghost" onClick={() => { if (!expanded) logBadgeEvent("blueprint_read"); setOpenId(expanded ? undefined : bp.id); }}>{expanded ? "Hide guide" : "Read the guide"}</Button>
                 <Button size="sm" variant="outline" onClick={() => unlocked ? void downloadContractPdf({ title: bp.name, body: renderContract(bp, {}, []), parties: bp.roles.map((role) => ({ name: "", role, signedAt: null })), status: "draft" }) : onUse(bp)}>
                   {unlocked ? <Download className="h-4 w-4" /> : <Lock className="h-4 w-4" />}Blank PDF
                 </Button>

@@ -27,6 +27,7 @@ import { useBilling, type Purchase } from "@/hooks/useBilling";
 import { openCheckout, getPaddleEnvironment } from "@/lib/paddle";
 import { PRICE_TIER, TIER_LABEL, hasTier, takePlanIntent, type Tier } from "@/lib/plans";
 import { PlanComparison, planAction } from "@/components/PlanComparison";
+import { BadgeWatcher } from "@/components/Badges";
 
 export const Route = createFileRoute("/workspace")({
   head: () => ({
@@ -168,6 +169,7 @@ function Workspace() {
 
       <ArtistOnboarding userId={user.id} open={profileOpen} onOpenChange={setProfileOpen} firstRun={!onboard?.done}
         onSaved={(o) => { setOnboard(o); if (o.stageName) setName(o.stageName); setEmbedKey((k) => k + 1); setTab(canCatalog ? "embed" : "health"); }} />
+      <BadgeWatcher userId={user.id} artist={name} />
       <main className="mx-auto max-w-7xl px-6 py-8">
         <Tabs value={tab} onValueChange={setTab}>
           <TabsList className="h-auto w-full flex-nowrap justify-start gap-1 overflow-x-auto bg-muted p-1">

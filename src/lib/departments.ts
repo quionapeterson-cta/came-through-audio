@@ -69,6 +69,7 @@ export const ADMIN_TABS = [
   { value: "splits", label: "Split Sheets", department: "royalty_accounts" },
   { value: "purchases", label: "Purchases", department: "finance" },
   { value: "support", label: "Support Tickets", department: "support" },
+  { value: "badges", label: "Badges", department: "branding" },
 ] as const satisfies readonly { value: string; label: string; department: Department }[];
 
 /** Departments in view: all of the caller's, or the one the super admin switcher picked. */

@@ -28,6 +28,7 @@ import { scanDraftFrames } from "@/lib/draft-scan.functions";
 import { extractFrames, rateChain, gradeProof, compressTo720p, type ChainResult } from "@/lib/draft-chain";
 import { buildOtsFile, download, proofManifest } from "@/lib/ots";
 import { registrationWriters } from "@/lib/readiness";
+import { requestBadgeCheck } from "@/lib/badge-events";
 
 type WriterRole = "author" | "composer" | "both" | "producer";
 type WriterRow = { name: string; role: WriterRole };
@@ -156,6 +157,7 @@ export function AIProtectionHub({ userId, paid, track, email }: { userId: string
       } as never).select("id, issued_at").single();
       if (error) throw error;
       const row = data as { id: string; issued_at: string };
+      requestBadgeCheck();
       const [{ jsPDF }, QR] = await Promise.all([import("jspdf"), import("qrcode")]);
       const qr = await QR.toDataURL(`CTA-CERT:${row.id}:${digest}`);
       const pdf = new jsPDF();

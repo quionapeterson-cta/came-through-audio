@@ -11,6 +11,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { getAdminOverview, getStaffRole } from "@/lib/admin.functions";
 import { DEPARTMENTS, DEPARTMENT_LABEL, ROLE_LABEL, viewDepartments, visibleTabs, type Department } from "@/lib/departments";
 import { SupportTicketsPanel } from "@/components/SupportTicketsPanel";
+import { BadgeSwitchboard } from "@/components/BadgeSwitchboard";
 import { TaskBankPanel } from "@/components/TaskBankPanel";
 
 export const Route = createFileRoute("/admin")({
@@ -137,6 +138,7 @@ function AdminPage() {
             <Table head={["Type", "Mode", "Date"]} rows={d?.purchases.map((p) => [p.kind, p.environment, fmt(p.created_at)])} />
           </TabsContent>
           {show("support") && <TabsContent value="support"><SupportTicketsPanel /></TabsContent>}
+          {show("badges") && <TabsContent value="badges"><BadgeSwitchboard /></TabsContent>}
           {show("tasks") && <TabsContent value="tasks"><TaskBankPanel departments={viewDepartments(access, view)} /></TabsContent>}
         </Tabs>
         </>)}

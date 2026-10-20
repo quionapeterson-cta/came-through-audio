@@ -1,6 +1,6 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState, type FormEvent, type ReactNode } from "react";
-import { ArrowLeft, Check, LayoutGrid, Lock, LogOut, Pencil, Rows3 } from "lucide-react";
+import { ArrowLeft, Check, LayoutGrid, LogOut, Pencil, Rows3 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -13,8 +13,9 @@ import { BrandLogo } from "@/components/BrandLogo";
 import { ArtistAvatar, ArtistOnboarding } from "@/components/ArtistOnboarding";
 import { BadgeViewer } from "@/components/BadgeViewer";
 import type { ShareInfo } from "@/components/BadgeCelebration";
-import { loadOnboarding, loadProfile, syncFromCloud, type ArtistProfile, type Onboarding } from "@/lib/artist-profile";
-import { earnedAwards, isBadgeImage, upNextAwards, type Award } from "@/lib/badges";
+import { badgePrefs, loadOnboarding, loadProfile, syncFromCloud, type ArtistProfile, type Onboarding } from "@/lib/artist-profile";
+import { isBadgeImage } from "@/lib/badges";
+import { BadgeDetail, BadgeSettings, BadgeSettingsButton, BadgeShelf, BadgeWatcher, useBadgeStates, type BadgeState } from "@/components/Badges";
 import { creditName, writerRole, type Contributor } from "@/lib/metadata";
 import { TIER_LABEL } from "@/lib/plans";
 import { passwordValid } from "@/lib/password";
@@ -38,6 +39,9 @@ function ProfilePage() {
   const [editing, setEditing] = useState(false);
   const [passwordOpen, setPasswordOpen] = useState(false);
   const [viewing, setViewing] = useState<{ src: string; name?: string; round?: boolean; share?: ShareInfo }>();
+  const [badge, setBadge] = useState<BadgeState>();
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const { states } = useBadgeStates(user?.id);
   const [size, setSize] = useState<Size>(() => { try { return localStorage.getItem(SIZE_KEY) === "small" ? "small" : "large"; } catch { return "large"; } });
 
   useEffect(() => { if (!loading && !user) navigate({ to: "/" }); }, [loading, user, navigate]);
@@ -63,8 +67,7 @@ function ProfilePage() {
   const name = ob?.stageName || accountName || user.email || "";
   const legalName = ob?.legalName || (user.user_metadata?.["legal_name"] as string | undefined) || "";
   const memberSince = new Date(user.created_at).toLocaleDateString(undefined, { month: "long", year: "numeric" });
-  const earned = earnedAwards(ob);
-  const upNext = upNextAwards(ob);
+  const earnedCount = states.filter((s) => s.earned).length;
   const genres = [profile?.primaryGenre, profile?.secondaryGenre].filter(Boolean).join(" · ");
 
   return (
@@ -119,8 +122,9 @@ function ProfilePage() {
           </Card>
         </div>
 
-        <Card title="Awards & Badges" aside={<>
-          <span className="text-sm text-muted-foreground">{earned.length} earned</span>
+        <Card id="badges" title="Awards & Badges" aside={<>
+          <span className="text-sm text-muted-foreground">{earnedCount} earned</span>
+          <BadgeSettingsButton onClick={() => setSettingsOpen(true)} />
           <div role="radiogroup" aria-label="Badge size" className="flex rounded-lg border border-border p-0.5">
             {([["large", LayoutGrid, "Large"], ["small", Rows3, "Small"]] as const).map(([s, Icon, label]) => (
               <button key={s} type="button" role="radio" aria-checked={size === s} onClick={() => chooseSize(s)}
@@ -130,14 +134,14 @@ function ProfilePage() {
             ))}
           </div>
         </>}>
-          <Shelf awards={earned} size={size} onOpen={(a) => setViewing({ src: a.src, name: a.name })} empty="Finish setting up your profile to claim your first badge." />
-          {upNext.length > 0 && <div className="space-y-4 border-t border-border pt-6">
-            <h3 className="text-xs font-bold uppercase tracking-widest text-primary">Up next</h3>
-            <Shelf awards={upNext} size={size} locked />
-          </div>}
+          <BadgeShelf userId={user.id} size={size} onOpen={setBadge} />
         </Card>
       </main>
 
+      <BadgeDetail state={badge} artist={name} onClose={() => setBadge(undefined)}
+        onShare={badgePrefs(ob).share ? (s) => { setBadge(undefined); setViewing({ src: s.badge.src, name: s.badge.title, share: { ctx: "profile", artist: name, genre: profile?.primaryGenre } }); } : undefined} />
+      <BadgeSettings userId={user.id} open={settingsOpen} onOpenChange={setSettingsOpen} onSaved={setOb} />
+      <BadgeWatcher userId={user.id} artist={name} />
       <BadgeViewer src={viewing?.src} name={viewing?.name} round={viewing?.round} share={viewing?.share} onClose={() => setViewing(undefined)} />
       <ArtistOnboarding userId={user.id} open={editing} onOpenChange={setEditing} firstRun={false}
         onSaved={(o) => { setOb(o); setProfile(loadProfile(user.id)); setEditing(false); }} />
@@ -146,12 +150,12 @@ function ProfilePage() {
   );
 }
 
-function Card({ title, aside, children }: { title: string; aside?: ReactNode; children: ReactNode }) {
+function Card({ id, title, aside, children }: { id?: string; title: string; aside?: ReactNode; children: ReactNode }) {
   return (
-    <section className="space-y-6 rounded-2xl border border-border bg-card p-6 sm:p-8">
+    <section id={id} className="scroll-mt-6 space-y-6 rounded-2xl border border-border bg-card p-6 sm:p-8">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h2 className="text-xs font-bold uppercase tracking-widest text-primary">{title}</h2>
-        {aside && <div className="flex items-center gap-4">{aside}</div>}
+        {aside && <div className="flex flex-wrap items-center gap-4">{aside}</div>}
       </div>
       {children}
     </section>
@@ -182,25 +186,6 @@ function People({ title, rows, writer }: { title: string; rows?: Contributor[] |
         </li>)}
       </ul>
     </div>
-  );
-}
-
-function Shelf({ awards, size, locked, onOpen, empty }: { awards: Award[]; size: Size; locked?: boolean; onOpen?: (a: Award) => void; empty?: string }) {
-  if (!awards.length) return empty ? <p className="text-sm text-muted-foreground">{empty}</p> : null;
-  const grid = size === "large" ? "grid-cols-2 sm:grid-cols-3" : "grid-cols-3 sm:grid-cols-6";
-  return (
-    <ul className={`grid gap-6 ${grid}`}>
-      {awards.map((a) => <li key={a.id}>
-        <button type="button" disabled={locked} onClick={() => onOpen?.(a)} aria-label={locked ? `${a.name} (locked)` : `View ${a.name}`}
-          className="group flex w-full flex-col items-center gap-3 rounded-xl p-3 text-center transition enabled:hover:bg-accent/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-default">
-          <span className="relative flex aspect-square w-full items-center justify-center">
-            <img src={a.src} alt="" loading="lazy" className={`h-full w-full object-contain transition ${locked ? "opacity-30 grayscale" : "drop-shadow-lg group-hover:drop-shadow-2xl"}`} />
-            {locked && <Lock className="absolute h-6 w-6 text-muted-foreground" />}
-          </span>
-          <span className={`font-semibold ${size === "large" ? "text-sm" : "text-xs"} ${locked ? "text-muted-foreground" : ""}`}>{a.name}</span>
-        </button>
-      </li>)}
-    </ul>
   );
 }
 

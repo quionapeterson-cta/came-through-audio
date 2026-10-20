@@ -12,6 +12,7 @@ import { clearCheck, listChecks, markCheck } from "@/lib/repertoire-checks";
 import { runSongLookups } from "@/lib/lookups.functions";
 import { INTERNATIONAL, countryByCode, guessCountry } from "@/lib/repertoires";
 import { loadOnboarding, saveOnboarding } from "@/lib/artist-profile";
+import { NextBadgeHint } from "@/components/Badges";
 
 const AUTO = [INTERNATIONAL.deezer.id, INTERNATIONAL.musicbrainz.id];
 
@@ -133,6 +134,7 @@ export function RoyaltyHealthCheck({ userId, canCatalog, onUpgrade, onFix, onFix
 
   return (
     <div className="space-y-6">
+      <NextBadgeHint userId={userId} collections={["health"]} />
       <HealthReport {...actions} report={report} country={country} running={running} canCatalog={canCatalog} onEmbed={onEmbed} />
 
       <HealthChecklist rows={report.rows} country={country} statuses={statuses} onStatus={(x) => void updateStatus(x)} actions={actions}

@@ -1,4 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
+import { requestBadgeCheck } from "@/lib/badge-events";
 import type { CatalogTrack } from "@/lib/catalog";
 import { PROS } from "@/lib/metadata";
 import { registrationWriters } from "@/lib/readiness";
@@ -187,6 +188,7 @@ export async function saveSplitSheet(catalogId: string, collaborators: SplitColl
       saved.push({ ...c, rowId: (data as { id: string }).id });
     }
   }
+  requestBadgeCheck();
   return saved;
 }
 

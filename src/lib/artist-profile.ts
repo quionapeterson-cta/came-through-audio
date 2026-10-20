@@ -1,6 +1,7 @@
 import { creditName, emptyContributor, emptyMetadata, withLegalName, type Contributor, type Metadata } from "@/lib/metadata";
 import { supabase } from "@/integrations/supabase/client";
-import { currentBadge } from "@/lib/badges";
+import { requestBadgeCheck } from "@/lib/badge-events";
+import { currentBadge, DEFAULT_BADGE_PREFS, type BadgePrefs } from "@/lib/badges";
 
 /** Recurring details a user can opt to prefill on every embed. Stored only in this browser. */
 export const PROFILE_KEYS = [
@@ -18,7 +19,11 @@ export interface Onboarding {
   legalName: string;
   /** Country whose collection societies the Royalty Health Check uses (src/lib/repertoires.ts code). */
   healthCountry?: string;
+  /** What badges show (celebrations, hints, hidden collections, sharing). Badges are always earned regardless. */
+  badgePrefs?: BadgePrefs;
 }
+
+export const badgePrefs = (o?: Onboarding | null): BadgePrefs => ({ ...DEFAULT_BADGE_PREFS, ...o?.badgePrefs });
 
 const key = (userId: string) => `cta-artist-profile:${userId}`;
 const onboardKey = (userId: string) => `cta-onboarding:${userId}`;
@@ -61,6 +66,7 @@ const withCurrentBadge = (o: Onboarding): Onboarding => ({ ...o, avatar: current
 export function saveOnboarding(userId: string, o: Onboarding) {
   localStorage.setItem(onboardKey(userId), JSON.stringify(o));
   pushCloud(userId, { onboarding: o });
+  if (o.welcomed) requestBadgeCheck();
 }
 
 /** Pull the account's saved profile into this device. Uploads local-only data from before sync existed. */

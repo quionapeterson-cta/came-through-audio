@@ -29,7 +29,7 @@ describe("resolveAccess", () => {
 describe("visibleTabs", () => {
   it("shows employees only their department tabs", () => {
     const branding = resolveAccess([{ role: "employee", departments: ["registration", "royalty_accounts", "branding"] }])!;
-    expect(visibleTabs(branding).map((t) => t.value)).toEqual(["ai", "reg", "splits", "tasks"]);
+    expect(visibleTabs(branding).map((t) => t.value)).toEqual(["ai", "reg", "splits", "badges", "tasks"]);
     const billing = resolveAccess([{ role: "employee", departments: ["finance", "support", "marketing_sales"] }])!;
     expect(visibleTabs(billing).map((t) => t.value)).toEqual(["purchases", "support", "tasks"]);
   });
@@ -46,7 +46,7 @@ describe("visibleTabs", () => {
 
   it("narrows the super admin view with the switcher", () => {
     const sa = resolveAccess([{ role: "super_admin" }])!;
-    expect(visibleTabs(sa)).toHaveLength(6);
+    expect(visibleTabs(sa)).toHaveLength(7);
     expect(visibleTabs(sa, "finance").map((t) => t.value)).toEqual(["purchases", "tasks"]);
   });
 });
