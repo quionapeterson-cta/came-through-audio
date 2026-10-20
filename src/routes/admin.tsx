@@ -12,6 +12,7 @@ import { getAdminOverview, getStaffRole } from "@/lib/admin.functions";
 import { DEPARTMENTS, DEPARTMENT_LABEL, ROLE_LABEL, viewDepartments, visibleTabs, type Department } from "@/lib/departments";
 import { SupportTicketsPanel } from "@/components/SupportTicketsPanel";
 import { BadgeSwitchboard } from "@/components/BadgeSwitchboard";
+import { PlansPanel } from "@/components/PlansPanel";
 import { TaskBankPanel } from "@/components/TaskBankPanel";
 
 export const Route = createFileRoute("/admin")({
@@ -140,6 +141,7 @@ function AdminPage() {
           {show("support") && <TabsContent value="support"><SupportTicketsPanel /></TabsContent>}
           {show("badges") && <TabsContent value="badges"><BadgeSwitchboard /></TabsContent>}
           {show("tasks") && <TabsContent value="tasks"><TaskBankPanel departments={viewDepartments(access, view)} /></TabsContent>}
+          {show("plans") && <TabsContent value="plans"><PlansPanel /></TabsContent>}
         </Tabs>
         </>)}
       </main>

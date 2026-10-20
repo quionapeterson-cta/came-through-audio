@@ -52,7 +52,7 @@ describe("visibleTabs", () => {
 
   it("narrows the super admin view with the switcher", () => {
     const sa = resolveAccess([{ role: "super_admin" }])!;
-    expect(visibleTabs(sa)).toHaveLength(7);
+    expect(visibleTabs(sa).map((t) => t.value).slice(-2)).toEqual(["tasks", "plans"]);
     expect(visibleTabs(sa, "finance").map((t) => t.value)).toEqual(["purchases", "tasks"]);
     expect(visibleTabs(sa, "support").map((t) => t.value)).toEqual(["support", "badges", "tasks"]);
   });

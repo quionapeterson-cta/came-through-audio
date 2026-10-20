@@ -85,8 +85,10 @@ export function viewDepartments(access: StaffAccess, view: Department | "all" = 
   return access.departments.filter((d) => view === "all" || d === view);
 }
 
-/** Tabs for the caller, optionally narrowed to one department. Every department gets the Task Bank, last. */
+/** Tabs for the caller, optionally narrowed to one department. Every department gets the Task Bank; super admins also get Plans. */
 export function visibleTabs(access: StaffAccess, view: Department | "all" = "all"): { value: string; label: string }[] {
   const tabs = ADMIN_TABS.filter((t) => t.departments.some((d: Department) => access.departments.includes(d) && (view === "all" || d === view)));
-  return viewDepartments(access, view).length ? [...tabs, { value: "tasks", label: "Task Bank" }] : tabs;
+  const withTasks = viewDepartments(access, view).length ? [...tabs, { value: "tasks", label: "Task Bank" }] : tabs;
+  // Company plans are for super admins only, in the all-departments view.
+  return access.role === "super_admin" && view === "all" ? [...withTasks, { value: "plans", label: "Plans" }] : withTasks;
 }
