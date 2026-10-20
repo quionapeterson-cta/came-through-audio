@@ -42,3 +42,7 @@
 - [x] Producer Name (Stage Name) on embed + setup with legal-name-as-Composer explainer
 - [x] PRO/IPI "add later" note; MPC producer profile badge
 - [x] Badge artwork filed into Playful collections: producer, contracts, live_musicians, split_sheets, hip_hop (10) with hip_hop/spiritual_rap (9), crowns (3) (award logic still deferred)
+
+## Oct 20 updates
+- [x] Lyrics badge collection filed (1 First Lyric Entry, 5 Word Weaver, 25 Hook Keeper, 40 Mega Accomplishment, 50 Verse Vault, 100 Lyrical Legacy, In The Quiet, creative-flow variants); Session Hero + Live Legend in live_musicians; flagship folder; new CTA app icon + favicon
+- [ ] Super Legend flagship badge (award logic deferred). Popup copy (exact): "SUPER LEGEND. You didn't just come through — you CAME THROUGH. Crown on. Cape on. Pen charged. You hold albums, live players, early mornings, late nights. This is Came Through Audio at full power. You are the super."
