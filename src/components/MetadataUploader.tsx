@@ -56,7 +56,12 @@ export function MetadataUploader({ stageName, avatar, userId, mode = "embed", on
   const runExport = (a: Agency, list: CatalogTrack[], name: string) => {
     if (!canExport) { setUpsell("export"); return; }
     downloadAgencyExport(a, list, safeName(name))
-      .then((songs) => { if (songs.length) setHeld({ agency: a, songs, exported: list.length - songs.length }); })
+      .then((songs) => {
+        if (songs.length) setHeld({ agency: a, songs, exported: list.length - songs.length });
+        // Splits that don't add up to 100% are exported anyway, with a heads-up: agencies reject them.
+        const off = list.filter((t) => !songs.some((h) => h.track.id === t.id) && registrationReadiness(t.metadata, a).warnings.length);
+        if (off.length) toast.warning(`${off.length === 1 ? `"${off[0]!.title}" has splits` : `${off.length} songs have splits`} that don't add up to exactly 100%. Fix them before you submit, or the agency may reject ${off.length === 1 ? "it" : "them"}.`, { duration: 10000 });
+      })
       .catch(() => toast.error("Could not build the export."));
   };
   const exportMenu = (label: string, list: CatalogTrack[], name: string, size: "sm" | "default" = "sm") => (
@@ -500,7 +505,8 @@ export function MetadataUploader({ stageName, avatar, userId, mode = "embed", on
                       {regBadges(t).map((b) => <span key={b} className="rounded-full border border-primary px-2 py-0.5 text-primary">{b}</span>)}
                     </div>
                     {(() => { const r = registrationReadiness(t.metadata); return r.ready
-                      ? <span className="inline-flex items-center gap-1 rounded-full bg-primary px-2 py-0.5 text-xs font-semibold text-primary-foreground"><CheckCircle2 className="h-3 w-3" />Ready to register</span>
+                      ? <><span className="inline-flex items-center gap-1 rounded-full bg-primary px-2 py-0.5 text-xs font-semibold text-primary-foreground"><CheckCircle2 className="h-3 w-3" />Ready to register</span>
+                          {r.warnings.length > 0 && <div className="mt-2 pl-1"><MissingList items={r.warnings} onJump={(field) => fix(t, field)} /></div>}</>
                       : <details className="text-sm">
                           <summary className="cursor-pointer font-semibold">⚠️ {r.missing.length} to fix before registering</summary>
                           <div className="mt-2 pl-1"><MissingList items={r.missing} onJump={(field) => fix(t, field)} /></div>
@@ -675,7 +681,7 @@ function NowEmbedding({ metadata: m, cover }: { metadata: Metadata; cover: strin
         {rows.map(([k, v]) => <div key={k} className="flex justify-between gap-3"><dt className="text-muted-foreground">{k}</dt><dd className={`truncate font-semibold ${v ? "" : "text-muted-foreground/50"}`}>{v || "—"}</dd></div>)}
       </dl>
       <p className={`mt-3 rounded-lg px-2 py-1.5 text-xs font-semibold ${r.ready ? "bg-primary/10 text-primary" : "bg-muted"}`}>
-        {r.ready ? "Ready to register" : `⚠️ ${r.missing.length} to fix before registering`}
+        {r.ready ? `Ready to register${r.warnings.length ? " · ⚠️ check splits" : ""}` : `⚠️ ${r.missing.length} to fix before registering`}
       </p>
       <p className="mt-2 text-[11px] leading-snug text-muted-foreground">PRO, IPI and split percentages stay private and are never written into the file.</p>
     </aside>
@@ -694,6 +700,7 @@ function ReadinessPanel({ metadata }: { metadata: Metadata }) {
     {r.ready
       ? <p className="flex items-center gap-2 font-semibold"><CheckCircle2 className="h-4 w-4 text-primary" />Writer info is ready to register.</p>
       : <><p className="mb-2"><span className="font-semibold">You can still embed and save.</span> To register this song, fix:</p><MissingList items={r.missing} onJump={jumpTo} /></>}
+    {r.warnings.length > 0 && <div className="mt-2"><p className="mb-1 text-muted-foreground">Agencies only accept splits that add up to exactly 100%:</p><MissingList items={r.warnings} onJump={jumpTo} /></div>}
   </div>;
 }
 

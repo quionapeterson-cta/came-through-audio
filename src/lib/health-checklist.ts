@@ -64,8 +64,10 @@ export function songChecklist(r: TrackReport, country: Country, status?: SongSta
   const needsPro = r.issues.some((i) => i.field?.endsWith("-pro"));
   const steps: ChecklistStep[] = [];
 
-  steps.push({ id: "writers", stage: "details", auto: true, done: readiness.ready, title: "Add every writer's legal name, role and split",
-    field: readiness.missing[0]?.field ?? "writers-0-legalName", items: readiness.missing.map((x) => ({ text: x.message, field: x.field })) });
+  // Split warnings don't block exports, but the song isn't fully healthy until they're fixed.
+  const writerItems = [...readiness.missing, ...readiness.warnings];
+  steps.push({ id: "writers", stage: "details", auto: true, done: !writerItems.length, title: "Add every writer's legal name, role and split",
+    field: writerItems[0]?.field ?? "writers-0-legalName", items: writerItems.map((x) => ({ text: x.message, field: x.field })) });
   // Other flagged details (PRO, IPI, publisher…), minus what the writer and ISRC/ISWC steps already cover (writer and publisher splits included).
   const other = [
     ...r.issues.filter((i) => i.field !== "isrc" && i.field !== "iswc" && i.field !== "writers-0-share" && i.field !== "publishers-0-share" && i.text !== "No songwriters listed").map((i) => ({ text: i.text, field: i.field })),

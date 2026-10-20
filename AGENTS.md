@@ -29,7 +29,8 @@ Embedding is forgiving; registration is strict. Never block a user from saving o
 - Songs can be marked Instrumental, which removes the author requirement.
 
 ### Registration readiness (single source of truth)
-- A song is "Ready" only when: (has an author OR is instrumental) AND has a composer AND every writer has a legal_name AND writer splits total exactly 100% (not under, not over; agencies reject anything else) AND, if any publisher is listed, publisher shares total exactly 100% (shares are entered as 100% of the publisher half, not of the whole song). SoundExchange exports skip the split check because they register the recording, not the song.
+- A song is "Ready" only when: (has an author OR is instrumental) AND has a composer AND every writer has a legal_name.
+- Splits are checked by the same module as warnings only (they never hold back an export or registration): writer splits must total exactly 100%, and if any publisher is listed, publisher shares must total exactly 100% (shares are entered as 100% of the publisher half, not of the whole song). Exports still go out, with a warning naming the songs to fix. SoundExchange skips the split check because it registers the recording, not the song.
 - This logic lives in ONE shared function/module. Every feature (embed indicator, catalog badge, export gate, any future agency template) must call it. Never re-implement readiness checks anywhere else.
 - Readiness returns a list of specific missing items, not just true/false, so the UI can tell users exactly what to fix.
 
