@@ -24,11 +24,18 @@ describe("App routing", () => {
     expect(router.matchRoutes("/admin/staff").at(-1)?.routeId).toBe("/admin_/staff");
   });
 
-  it("keeps admin pages behind the private-preview gate", async () => {
-    const beforeLoad = RootRoute.options.beforeLoad as (ctx: unknown) => Promise<void>;
-    for (const path of ["/admin", "/admin/staff"]) {
+  it("keeps the workspace and admin pages behind the private-preview gate", async () => {
+    const beforeLoad = RootRoute.options.beforeLoad as unknown as (ctx: unknown) => Promise<unknown>;
+    for (const path of ["/admin", "/admin/staff", "/workspace", "/profile"]) {
       const err = await beforeLoad({ location: { pathname: path, href: path } }).catch((e: unknown) => e);
       expect(isRedirect(err)).toBe(true);
+    }
+  });
+
+  it("opens only the pages a payment provider reviews, with signup still locked", async () => {
+    const beforeLoad = RootRoute.options.beforeLoad as unknown as (ctx: unknown) => Promise<unknown>;
+    for (const path of ["/", "/plans", "/contact", "/terms-of-service", "/privacy-policy", "/refund-policy"]) {
+      await expect(beforeLoad({ location: { pathname: path, href: path } })).resolves.toEqual({ siteLocked: true });
     }
   });
 });

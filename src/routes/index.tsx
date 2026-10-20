@@ -69,6 +69,7 @@ const roles = [
 
 function Landing() {
   const filter = Route.useLoaderData();
+  const { siteLocked } = Route.useRouteContext();
   return (
     <div className="min-h-screen bg-background text-foreground">
       {/* A white header sets the black hero apart as its own block instead of one long stretch of black. */}
@@ -91,7 +92,7 @@ function Landing() {
               { text: "Distribution", className: "text-5xl font-extrabold text-primary [-webkit-text-stroke:1px_var(--ink-foreground)] md:text-6xl lg:text-7xl" },
             ]} sub="Embed your metadata & organize your music business like a pro." subClassName="text-xl font-semibold text-ink-foreground" />
           </div>
-          <div id="signup"><SignupCard /></div>
+          <div id="signup">{siteLocked ? <LaunchingSoon /> : <SignupCard />}</div>
         </div>
       </section>
 
@@ -210,6 +211,21 @@ function Landing() {
         </div>
         <div className="border-t border-ink-border py-6 text-center text-sm">© {new Date().getFullYear()} Came Through Audio, LLC</div>
       </footer>
+    </div>
+  );
+}
+
+/** Shown instead of signup until launch: the site is open for review, but accounts open at launch. */
+function LaunchingSoon() {
+  return (
+    <div className="rounded-2xl border border-ink-border bg-card p-8 text-center text-card-foreground shadow-xl">
+      <p className="text-xs font-bold uppercase tracking-[2px] text-primary">Launching soon</p>
+      <h2 className="mt-2 text-2xl font-bold">Accounts open at launch</h2>
+      <p className="mt-2 text-sm text-muted-foreground">Came Through Audio is in private testing. Plans and pricing are below; questions are welcome any time.</p>
+      <div className="mt-5 flex flex-wrap justify-center gap-3">
+        <Link to="/contact" className="inline-flex h-10 items-center rounded-md bg-primary px-4 text-sm font-semibold text-primary-foreground hover:bg-primary/90">Contact us</Link>
+        <Link to="/unlock" search={{ next: "/" }} className="inline-flex h-10 items-center rounded-md border border-border px-4 text-sm font-semibold hover:bg-accent">I have early access</Link>
+      </div>
     </div>
   );
 }

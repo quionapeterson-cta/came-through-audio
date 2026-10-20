@@ -79,15 +79,21 @@ function ErrorComponent({ error, reset }: ErrorComponentProps) {
   );
 }
 
+/** Open during pre-launch so Paddle's website review can see the business (founder, 2026-10-20). Search engines stay blocked. */
+const REVIEW_PAGES = new Set(["/", "/plans", "/contact", "/terms-of-service", "/terms-and-conditions", "/privacy-policy", "/privacy-notice", "/refund-policy"]);
+
 export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()({
   // Staging passcode gate: clear SITE_PASSWORD to open the site at launch.
   beforeLoad: async ({ location }) => {
     // Public share cards stay reachable so social sites can read their preview image; they show only the card.
     // Password reset links stay reachable so the one-time token in the link isn't lost on a detour through /unlock.
     // Invite opt-out links stay reachable so anyone who got an invite can stop them without a passcode.
-    if (location.pathname === "/unlock" || location.pathname === "/reset-password" || location.pathname === "/invites/stop" || location.pathname.startsWith("/share/")) return;
+    if (location.pathname === "/unlock" || location.pathname === "/reset-password" || location.pathname === "/invites/stop" || location.pathname.startsWith("/share/")) return { siteLocked: false };
     const { unlocked } = await getGateStatus();
-    if (!unlocked) throw redirect({ to: "/unlock", search: { next: location.href } });
+    // The pages a payment provider reviews (product, pricing, legal, contact) are open to everyone; signup on them
+    // waits until launch (siteLocked). The workspace, admin and everything else stay behind the passcode.
+    if (!unlocked && !REVIEW_PAGES.has(location.pathname) && !location.pathname.startsWith("/docs/")) throw redirect({ to: "/unlock", search: { next: location.href } });
+    return { siteLocked: !unlocked };
   },
   head: () => ({
     meta: [
