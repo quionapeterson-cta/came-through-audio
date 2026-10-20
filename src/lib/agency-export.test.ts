@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { emptyMetadata } from "@/lib/metadata";
-import { mlcRows, proCheatSheet, soundExchangeRows } from "@/lib/agency-export";
+import { mlcRows, neighbouringRows, proCheatSheet, soundExchangeRows } from "@/lib/agency-export";
 
 const track = (extra = {}) => ({ id: "1", title: "Song", artist: "Q", updatedAt: "", metadata: { ...emptyMetadata(), title: "Song", artist: "Q", releaseDate: "2026-03-14", isrc: "US-CTA-26-00001", upc: "012345678905",
   writers: [{ name: "", legalName: "Ann Lee", role: "Author/Composer", pro: "BMI", ipi: "00123456789", percentage: "100" }],
@@ -21,4 +21,19 @@ describe("agency exports", () => {
     expect(row[28]).toBe("Q"); // no label: self-released uses the artist
   });
   it("PRO cheat sheet keeps IPI as text", () => expect(proCheatSheet([track()])).toContain('"=""00123456789"""'));
+  it("Neighbouring Rights Pack lists every performer, featured first, and leaves out songs without an ISRC", () => {
+    const t = track({ featured: ["OG PI"], phonographic: "℗ 2026 Came Through Audio", recordedIn: "United States", recordedYear: "",
+      credits: [{ role: "Session musician", name: "Jane Doe", instrument: "Guitar" }, { role: "Mixing engineer", name: "Sam", instrument: "" }] });
+    const { csv, skipped } = neighbouringRows([t, { ...t, id: "2", metadata: { ...t.metadata, isrc: "" } }]);
+    const lines = csv.split("\r\n");
+    expect(lines).toHaveLength(4);
+    expect(lines[1]).toContain("USCTA2600001,Song,Q feat. OG PI,Q,Featured");
+    expect(lines[3]).toContain("Jane Doe,Non-featured,Session musician,Guitar,United States,2026,Came Through Audio");
+    expect(csv).not.toContain("Sam");
+    expect(skipped).toHaveLength(1);
+  });
+  it("reads the master owner from the P-line without eating a leading P", () => {
+    expect(soundExchangeRows([track({ phonographic: "Prince Records" })])[0]![17]).toBe("Prince Records");
+    expect(soundExchangeRows([track({ phonographic: "P 2026 Came Through Audio" })])[0]![17]).toBe("2026 Came Through Audio");
+  });
 });

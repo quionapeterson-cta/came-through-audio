@@ -13,7 +13,7 @@ import { PRE_DIST_NOTE, PRO_TIP } from "@/lib/copy";
 import { readMetadata, CREDIT_ROLES, isPerformer, performers, emptyContributor, emptyMetadata, embedMetadata, creditName, metadataSchema, GENRES, RELEASE_TYPES, WRITER_ROLES, writerRole, type Contributor, type Metadata } from "@/lib/metadata";
 import { COUNTRIES } from "@/lib/repertoires";
 import { deleteTrack, downloadCatalogFile, listTracks, safeName, saveTrack, uploadCatalogFile, type CatalogTrack } from "@/lib/catalog";
-import { AGENCY_LABEL, downloadAgencyExport, type Agency, type Held } from "@/lib/agency-export";
+import { AGENCY_LABEL, downloadAgencyExport, downloadNeighbouringPack, type Agency, type Held } from "@/lib/agency-export";
 import { registrationReadiness, type MissingItem } from "@/lib/readiness";
 import { downloadLyricsPdf } from "@/lib/lyrics-pdf";
 import { downloadCatalogPdf } from "@/lib/catalog-pdf";
@@ -66,11 +66,20 @@ export function MetadataUploader({ stageName, avatar, userId, mode = "embed", on
       })
       .catch(() => toast.error("Could not build the export."));
   };
+  /** Performers on each recording for PPL / SoundExchange International. Songs need an ISRC to be matched. */
+  const runPack = (list: CatalogTrack[], name: string) => {
+    if (!canExport) { setUpsell("export"); return; }
+    const skipped = downloadNeighbouringPack(list, safeName(name));
+    if (skipped.length) toast.warning(skipped.length === list.length
+      ? "Add an ISRC first: societies match recordings by ISRC, so none of these songs could go in the pack."
+      : `${skipped.length} song${skipped.length === 1 ? "" : "s"} left out of the pack because ${skipped.length === 1 ? "it has" : "they have"} no ISRC yet.`, { duration: 10000 });
+  };
   const exportMenu = (label: string, list: CatalogTrack[], name: string, size: "sm" | "default" = "sm") => (
     <DropdownMenu>
       <DropdownMenuTrigger asChild><Button type="button" variant="outline" size={size} onClick={(e) => e.stopPropagation()}>{!canExport && <Lock />}{label}</Button></DropdownMenuTrigger>
       <DropdownMenuContent align="end">
         {(["mlc", "soundexchange", "pro"] as Agency[]).map((a) => <DropdownMenuItem key={a} onClick={() => runExport(a, list, name)}>{AGENCY_LABEL[a]}</DropdownMenuItem>)}
+        <DropdownMenuItem onClick={() => runPack(list, name)}>Neighbouring Rights Pack (.csv)</DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
   );

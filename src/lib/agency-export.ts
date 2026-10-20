@@ -1,5 +1,5 @@
 import type { CatalogTrack } from "@/lib/catalog";
-import { MLC_ROLE, writerRole, type Contributor } from "@/lib/metadata";
+import { MLC_ROLE, performers, writerRole, type Contributor } from "@/lib/metadata";
 import { registrationReadiness, registrationWriters, type MissingItem } from "@/lib/readiness";
 
 export type Agency = "mlc" | "soundexchange" | "pro";
@@ -23,7 +23,8 @@ const sheetDate = (iso: string): Date | "" => {
   return m ? new Date(Date.UTC(Number(m[1]), Number(m[2]) - 1, Number(m[3]))) : "";
 };
 /** The (P) line without its symbol, as SoundExchange writes it ("2007 XYZ Records"). */
-const pLine = (v: string) => (v ?? "").replace(/^\s*(℗|\(P\)|P)\s*/i, "").trim();
+// A bare "P" counts as the symbol only before a space or the year, so "Prince Records" keeps its P.
+const pLine = (v: string) => (v ?? "").replace(/^\s*(℗|\(P\)|P(?=[\s\d]))\s*/i, "").trim();
 /** Artist credit with featured artists, as SoundExchange asks ("James Jamz feat. Plain Jane"). */
 const artistCredit = (artist: string, featured: string[] = []) => {
   const f = featured.map((x) => x.trim()).filter(Boolean);
@@ -92,6 +93,34 @@ export function proCheatSheet(tracks: CatalogTrack[]): string {
     for (const p of named(m.publishers)) rows.push([...base, "Publisher", p.name, "Original Publisher", p.percentage, p.pro, idText(p.ipi)]);
   }
   return rows.map((r) => r.map(cell).join(",")).join("\r\n");
+}
+
+/** Master owner from the ℗ line ("℗ 2026 Came Through Audio" → "Came Through Audio"), else the label, else the artist. */
+const masterOwner = (m: CatalogTrack["metadata"]) => pLine(m.phonographic).replace(/^\d{4}\s+/, "").trim() || m.label || m.artist;
+
+/**
+ * Neighbouring Rights Pack: one row per performer per recording, with the fields PPL and SoundExchange International
+ * ask for. Songs without an ISRC are left out (societies match recordings by ISRC) and returned so the UI can say so.
+ */
+export function neighbouringRows(tracks: CatalogTrack[]) {
+  const rows: unknown[][] = [["ISRC", "Title", "Main Artist", "Performer", "Featured / Non-featured", "Role", "Instrument", "Recorded In", "Year Recorded", "Master Owner", "Label", "Release Date", "UPC", "Duration"]];
+  const skipped: CatalogTrack[] = [];
+  for (const t of tracks) {
+    const m = t.metadata;
+    if (!m.isrc.trim()) { skipped.push(t); continue; }
+    const year = m.recordedYear || (m.releaseDate ?? "").slice(0, 4);
+    for (const p of performers(m)) {
+      rows.push([m.isrc.replace(/-/g, "").toUpperCase(), m.title, artistCredit(m.artist, m.featured), p.name, p.featured ? "Featured" : "Non-featured", p.role, p.instrument,
+        m.recordedIn, year, masterOwner(m), m.label, m.releaseDate, idText(m.upc), m.duration]);
+    }
+  }
+  return { csv: rows.map((r) => r.map(cell).join(",")).join("\r\n"), skipped };
+}
+
+export function downloadNeighbouringPack(tracks: CatalogTrack[], name: string) {
+  const { csv, skipped } = neighbouringRows(tracks);
+  if (skipped.length < tracks.length) save(new Blob([csv], { type: "text/csv;charset=utf-8" }), `${name} - Neighbouring Rights Pack.csv`);
+  return skipped;
 }
 
 function save(blob: Blob, filename: string) {

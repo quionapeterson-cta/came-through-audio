@@ -74,7 +74,7 @@ export const PLAN_FEATURES: Feature[] = [
   { group: "Catalog & metadata", from: "plus", title: "PDF Lyric Downloads", tip: "Download any song's lyrics with its credits as a branded PDF" },
   { group: "Catalog & metadata", from: "plus", title: "Split Sheet Generator", tip: "Generate split sheets from your catalog songs, sign as the owner and download the PDF. Collecting collaborators' e-signatures starts with Catalog and Collaborate." },
   { group: "Collaboration & registration", from: "collaborate", title: "Collaborator E-Signature Requests", tip: "Email collaborators a secure link to e-sign your split sheets, with instant free account invitations" },
-  { group: "Collaboration & registration", from: "collaborate", title: "1-Click Agency Exports", tip: "Download registration-ready files for The MLC, SoundExchange and ASCAP/BMI from your catalog" },
+  { group: "Collaboration & registration", from: "collaborate", title: "1-Click Agency Exports", tip: "Download registration-ready files for The MLC, SoundExchange and ASCAP/BMI from your catalog, plus a Neighbouring Rights Pack listing every performer for international airplay" },
   { group: "Collaboration & registration", from: "collaborate", title: "Royalty Utility Suite", tip: "BMI/ASCAP Formula Converter & Projected Royalty Earnings Calculator" },
   { group: "Business & education", from: "management", title: "Custom Music Industry Contracts", tip: "Fill in a contract from a blueprint, adjust the terms, and keep it with your catalog" },
   { group: "Business & education", from: "management", title: "Music Industry Blueprints", tip: "Producer agreements, beat licenses, feature, session, videographer and label blueprints, with plain-language guides" },
