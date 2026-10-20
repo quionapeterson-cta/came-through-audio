@@ -78,7 +78,8 @@ export function drawLogo(pdf: JsPDF, x: number, y: number, w: number) {
 export function brandHeader(pdf: JsPDF, title: string, subtitle?: string, meta?: string) {
   const w = pdf.internal.pageSize.getWidth();
   const logoW = 23;
-  drawLogo(pdf, MARGIN, 11.5, logoW);
+  // Logo centered on the two text lines (wordmark cap top ≈ 15.6, tagline baseline 23.2).
+  drawLogo(pdf, MARGIN, 19.4 - (logoW * LOGO_RATIO) / 2, logoW);
   const x = MARGIN + logoW + 5;
   font(pdf, "semibold", 12).setTextColor(...INK).text("CAME THROUGH", x, 18.6, { charSpace: 0.2 });
   const cameW = pdf.getTextWidth("CAME THROUGH ") + 0.2 * 12;
