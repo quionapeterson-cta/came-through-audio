@@ -117,7 +117,7 @@ export const DOCS: Doc[] = [
         "Embed Metadata is in your workspace. Drop in an MP3, fill in the details, and download your tagged master.",
         "Use Submit to catalog to save the song, master, art and lyrics to My Catalog.",
         "Already embedded a song elsewhere? In My Catalog, use Add song to upload the MP3 (we read its tags) or add a song without audio.",
-        "Writers need a legal name and role (Author, Composer or Author/Composer), and their splits must add up to exactly 100% before registration. You can embed without them.",
+        "Writers need a legal name and role (Author, Composer or Author/Composer), and their splits must add up to exactly 100% before registration (publisher shares too, if you list a publisher). You can embed without them.",
         "Mark a song Instrumental if it has no lyrics. It then doesn't need an author.",
       ] },
       { heading: "Split sheets", bullets: [

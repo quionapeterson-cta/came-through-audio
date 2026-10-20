@@ -51,6 +51,17 @@ describe("registration readiness", () => {
     expect(missing(song({ writers: [w("Q", "Author", "Quiona P", "", "60"), w("B", "Composer", "John Doe", "", "50")] }))[0]?.message).toContain("Lower them by 10%");
     expect(missing(song({ writers: [w("Q", "Author", "Quiona P", "", "33.33"), w("B", "Composer", "John Doe", "", "33.33"), w("C", "Composer", "Cee", "", "33.34")] }))).toEqual([]);
   });
+  it("needs publisher shares to equal exactly 100% when any publisher is listed", () => {
+    const writers = [w("Q", "Author/Composer", "Quiona P", "", "100")];
+    const pub = (percentage: string) => ({ name: "Lee Songs", pro: "", ipi: "", percentage });
+    expect(codes(song({ writers }))).toEqual([]);
+    expect(codes(song({ writers, publishers: [pub("100")] }))).toEqual([]);
+    expect(codes(song({ writers, publishers: [pub("50"), { ...pub("50"), name: "Co Pub" }] }))).toEqual([]);
+    expect(registrationReadiness(song({ writers, publishers: [pub("50")] })).missing).toEqual([
+      { code: "split", message: "Publisher shares total 50%. Add the missing 50% so they equal exactly 100%.", field: "publishers-0-share" },
+    ]);
+    expect(codes(song({ writers, publishers: [pub("")] }))).toEqual(["split"]);
+  });
   it("doesn't check splits for SoundExchange, which registers the recording", () => {
     expect(registrationReadiness(song({ writers: [w("Q", "Author/Composer", "Quiona P")] }, false), "soundexchange").ready).toBe(true);
   });

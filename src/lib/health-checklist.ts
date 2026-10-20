@@ -66,9 +66,9 @@ export function songChecklist(r: TrackReport, country: Country, status?: SongSta
 
   steps.push({ id: "writers", stage: "details", auto: true, done: readiness.ready, title: "Add every writer's legal name, role and split",
     field: readiness.missing[0]?.field ?? "writers-0-legalName", items: readiness.missing.map((x) => ({ text: x.message, field: x.field })) });
-  // Other flagged details (PRO, IPI, publisher…), minus what the writer and ISRC/ISWC steps already cover (writer splits included).
+  // Other flagged details (PRO, IPI, publisher…), minus what the writer and ISRC/ISWC steps already cover (writer and publisher splits included).
   const other = [
-    ...r.issues.filter((i) => i.field !== "isrc" && i.field !== "iswc" && i.field !== "writers-0-share" && i.text !== "No songwriters listed").map((i) => ({ text: i.text, field: i.field })),
+    ...r.issues.filter((i) => i.field !== "isrc" && i.field !== "iswc" && i.field !== "writers-0-share" && i.field !== "publishers-0-share" && i.text !== "No songwriters listed").map((i) => ({ text: i.text, field: i.field })),
     ...r.findings.filter((f) => f.level === "warn").map((f) => ({ text: f.text, field: f.field === "writers" ? "writers-0-legalName" : f.field })),
   ];
   if (other.length) steps.push({ id: "details", stage: "details", auto: true, done: false, title: "Fix the flagged song details", items: other, field: other[0]?.field });

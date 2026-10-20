@@ -31,11 +31,12 @@ const listed = (m: Pick<Metadata, "writers" | "composers">): Listed[] => {
  * The single source of truth for registration readiness. Every feature (embed indicator, catalog badge,
  * export gate, registration sessions) calls this — never re-implement it.
  * Ready = (has an author OR is instrumental) AND has a composer AND every writer has a legal name
- * AND the writer splits add up to exactly 100% (agencies won't register anything else).
+ * AND the writer splits add up to exactly 100% (agencies won't register anything else)
+ * AND, when any publisher is listed, publisher shares add up to exactly 100% (100% of the publisher half).
  * SoundExchange registers the recording, not the song, so its export doesn't check splits.
  * Author/Composer counts toward both. Embedding and saving are never gated on this.
  */
-export function registrationReadiness(m: Pick<Metadata, "writers" | "composers" | "instrumental">, target?: ReadinessTarget): Readiness {
+export function registrationReadiness(m: Pick<Metadata, "writers" | "composers" | "instrumental"> & { publishers?: Contributor[] }, target?: ReadinessTarget): Readiness {
   const people = listed(m);
   const missing: MissingItem[] = [];
   const first = people[0];
@@ -53,6 +54,14 @@ export function registrationReadiness(m: Pick<Metadata, "writers" | "composers" 
     if (split.state === "empty") missing.push({ code: "split", message: "Add each writer's split. Splits must add up to exactly 100% to register.", field: at });
     else if (split.state === "under") missing.push({ code: "split", message: `Writer splits total ${split.total}%. Add the missing ${split.left}% so they equal exactly 100%.`, field: at });
     else if (split.state === "over") missing.push({ code: "split", message: `Writer splits total ${split.total}%. Lower them by ${split.over}% so they equal exactly 100%.`, field: at });
+  }
+  const pubs = (m.publishers ?? []).map((row, index) => ({ row, index })).filter(({ row }) => row.name.trim() || row.percentage?.trim() || row.ipi?.trim());
+  if (pubs.length && target !== "soundexchange") {
+    const share = splitStatus(pubs.map((p) => p.row));
+    const at = `publishers-${pubs[0]!.index}-share`;
+    if (share.state === "empty") missing.push({ code: "split", message: "Add each publisher's share. Publisher shares must add up to exactly 100%.", field: at });
+    else if (share.state === "under") missing.push({ code: "split", message: `Publisher shares total ${share.total}%. Add the missing ${share.left}% so they equal exactly 100%.`, field: at });
+    else if (share.state === "over") missing.push({ code: "split", message: `Publisher shares total ${share.total}%. Lower them by ${share.over}% so they equal exactly 100%.`, field: at });
   }
   return { ready: missing.length === 0, missing };
 }
