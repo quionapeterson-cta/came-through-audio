@@ -41,4 +41,4 @@
 - [x] Writer title + Author/Composer/Author-Composer dropdown everywhere; MLC role codes
 - [x] Producer Name (Stage Name) on embed + setup with legal-name-as-Composer explainer
 - [x] PRO/IPI "add later" note; MPC producer profile badge
-- [x] Badge artwork filed into Playful collections: producer, contracts, live_musicians, split_sheets, anointed_rapper (award logic still deferred)
+- [x] Badge artwork filed into Playful collections: producer, contracts, live_musicians, split_sheets, hip_hop (10) with hip_hop/spiritual_rap (9), crowns (3) (award logic still deferred)
