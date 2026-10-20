@@ -47,7 +47,8 @@ export function ExpertAssistance({ userId, email, purchases, onFix }: { userId: 
   const total = assistanceTotal(type, songs, agencies.length);
   const sessionAgencies = session ? (session.details["agencies"] ?? "").split(" | ") : agencies;
   const target = proSession(sessionAgencies) ? "pro" : undefined;
-  const incomplete = useMemo(() => tracks.map((t) => ({ t, miss: registrationReadiness(t.metadata, target).missing })).filter((x) => x.miss.length), [tracks, target]);
+  // Splits must be settled before registering, so here split warnings hold a song back too (exports only warn).
+  const incomplete = useMemo(() => tracks.map((t) => { const r = registrationReadiness(t.metadata, target); return { t, miss: [...r.missing, ...r.warnings] }; }).filter((x) => x.miss.length), [tracks, target]);
   const readyCount = tracks.length - incomplete.length;
   const paidSongs = Number(session?.details["songs"] ?? 0);
   const catalogReady = !!session && readyCount >= paidSongs && paidSongs > 0;

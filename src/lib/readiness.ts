@@ -8,6 +8,7 @@ export type MissingCode = "author" | "composer" | "legal_name" | "pro" | "split"
 export type MissingItem = { code: MissingCode; message: string; field: string };
 /** `missing` blocks registration and exports; `warnings` (splits not at 100%) are shown but never hold a song back. */
 export type Readiness = { ready: boolean; missing: MissingItem[]; warnings: MissingItem[] };
+// Registration assistance treats warnings as blocking: splits must be settled before registering (ExpertAssistance).
 
 type Listed = { row: Contributor; group: "writers" | "composers"; index: number; author: boolean; composer: boolean };
 
@@ -34,7 +35,7 @@ const listed = (m: Pick<Metadata, "writers" | "composers">): Listed[] => {
  * Ready = (has an author OR is instrumental) AND has a composer AND every writer has a legal name
  * Splits are checked too, as warnings only: writer splits, and publisher shares when any publisher is listed
  * (100% of the publisher half), should each add up to exactly 100%. Agencies won't register anything else, but the
- * user decides, so warnings never hold back an export. SoundExchange registers the recording, so it skips splits.
+ * user decides, so warnings never hold back an export. Registration assistance does block on them. SoundExchange registers the recording, so it skips splits.
  * Author/Composer counts toward both. Embedding and saving are never gated on this.
  */
 export function registrationReadiness(m: Pick<Metadata, "writers" | "composers" | "instrumental"> & { publishers?: Contributor[] }, target?: ReadinessTarget): Readiness {
