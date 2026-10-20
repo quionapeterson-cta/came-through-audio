@@ -65,6 +65,15 @@ Apply these rules across the website, emails and PDFs.
 - Preserve the founder welcome message exactly as supplied; do not rewrite or polish it without permission.
 - Provide previews before making changes, so they can be reviewed and approved first.
 
+### Brand voice
+
+- **Primary branding:** the tagline YOUR FIRST STOP BEFORE DISTRIBUTION, and "Came Through", as in Came Through Audio,
+  or "Came Through Audio Came Through for {song or artist}". Lead with these in copy, badges, emails and share cards.
+- **Crowns are secondary:** crown imagery and "Don't let em knock you out cho'crown" are founder Karma Came's personal
+  branding. Reference them subtly and only every now and then (a crown badge, an occasional line), never as the main message.
+- User-facing copy uses neutral, non-gendered words and no fixed personal names. To personalize, use the user's own
+  artist name.
+
 ## 5. Writer and producer terminology
 
 - **Writer** is the section title, not the name of an input field.

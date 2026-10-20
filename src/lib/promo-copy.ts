@@ -7,6 +7,7 @@ export const BRAND_TAGS = ["#CameThrough", "#CameThroughAudio"];
 /** Three discovery hashtags per genre (keys match GENRES in metadata.ts). */
 export const GENRE_TAGS: Record<string, [string, string, string]> = {
   "Hip-Hop/Rap": ["#HipHop", "#RapMusic", "#NewHipHop"],
+  "Spiritual Hip-Hop": ["#ChristianHipHop", "#ChristianRap", "#FaithMusic"],
   "R&B/Soul": ["#RnB", "#SoulMusic", "#NewRnB"],
   Pop: ["#PopMusic", "#NewPop", "#PopArtist"],
   Rock: ["#RockMusic", "#NewRock", "#RockBand"],

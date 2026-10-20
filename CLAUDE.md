@@ -7,6 +7,7 @@ Full branding and global rules: @BRANDING.md
 
 - **Font:** Poppins
 - **Tagline:** YOUR FIRST STOP BEFORE DISTRIBUTION — always uppercase, 2px letter spacing; never "1ST".
+- **Voice:** lead with the tagline and "Came Through" (Came Through Audio Came Through for …). Crowns and "Don't let em knock you out cho'crown" (the founder's personal branding) are used subtly, only now and then. See BRANDING.md §4.
 
 Hierarchy: **Black and White are the primary brand colors.** Cobalt Blue is the signature accent and ranks below them.
 

@@ -8,8 +8,9 @@
 /* Serious */
 .cta-genesis { background-image: url("/icons/serious/came_genesis_gold.png"); }
 .cta-strong { background-image: url("/icons/serious/came_strong_gold.png"); }
-.cta-crown { background-image: url("/icons/serious/came_crown_gold.png"); }
-.cta-double { background-image: url("/icons/serious/came_double_gold.png"); }
+.cta-crown { background-image: url("/icons/serious/came_genesis_gold.png"); }
+.cta-double { background-image: url("/icons/serious/came_double_trophy_gold.png"); }
+.cta-chain { background-image: url("/icons/serious/came_chain_gold.png"); }
 .cta-shield { background-image: url("/icons/serious/award_shield.png"); }
 .cta-vault { background-image: url("/icons/playful/vault.png"); }
 .cta-folder { background-image: url("/icons/serious/award_folder.png"); }
@@ -21,7 +22,7 @@
 .cta-party { background-image: url("/icons/playful/party_popper.png"); }
 .cta-mic { background-image: url("/icons/playful/bedazzled_mic.png"); }
 .cta-note { background-image: url("/icons/playful/bedazzled_note.png"); }
-.cta-vinyl { background-image: url("/icons/playful/bedazzled_vinyl.png"); }
+.cta-vinyl { background-image: url("/icons/playful/bedazzled_vinyl.webp"); }
 .cta-bedazzled { background-image: url("/icons/playful/bedazzled_cta.png"); }
 .cta-band { background-image: url("/icons/playful/bedazzled_band.png"); }
 

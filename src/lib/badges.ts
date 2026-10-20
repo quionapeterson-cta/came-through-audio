@@ -5,7 +5,6 @@ export type Award = { id: string; name: string; src: string };
 /**
  * Awards in the order they unlock. Only Genesis is earnable today (claimed during onboarding);
  * the award rules are deferred (BRANDING.md §8), so later entries are placeholders until then.
- * bedazzled_vinyl.png (corrupt header) is left out until it is replaced.
  */
 export const AWARDS: Award[] = [
   { id: "genesis", name: "Genesis Crown", src: "/icons/serious/came_genesis_gold.png" },

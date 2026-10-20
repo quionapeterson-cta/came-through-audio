@@ -7,7 +7,7 @@ export const PROS = [
   "SABAM", "STIM", "TONO", "KODA", "TEOSTO", "IMRO", "JASRAC", "KOMCA", "SAMRO", "ECAD", "SADAIC", "SAYCE", "SACM", "IPRS", "COSON", "MCSK", "Other", "None",
 ] as const;
 export const RELEASE_TYPES = ["Single", "EP", "Album", "Compilation"] as const;
-export const GENRES = ["Hip-Hop/Rap", "R&B/Soul", "Pop", "Rock", "Gospel", "Jazz", "Blues", "Country", "Electronic", "Reggae", "Latin", "Afrobeats", "Classical", "Soundtrack", "Alternative", "Other"] as const;
+export const GENRES = ["Hip-Hop/Rap", "Spiritual Hip-Hop", "R&B/Soul", "Pop", "Rock", "Gospel", "Jazz", "Blues", "Country", "Electronic", "Reggae", "Latin", "Afrobeats", "Classical", "Soundtrack", "Alternative", "Other"] as const;
 
 /** "Writer" is the umbrella title; each writer row picks one of these PRO roles. */
 export const WRITER_ROLES = ["Author", "Composer", "Author/Composer"] as const;
