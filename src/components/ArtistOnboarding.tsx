@@ -10,6 +10,7 @@ import { ProSelect } from "@/components/ProSelect";
 import { emptyContributor, GENRES, RELEASE_TYPES, WRITER_ROLES, writerRole, type Contributor } from "@/lib/metadata";
 import { isBadgeImage } from "@/lib/badges";
 import { loadOnboarding, loadProfile, saveOnboarding, saveProfile, type ArtistProfile, type Onboarding } from "@/lib/artist-profile";
+import { capShare, splitTotal } from "@/lib/splits-total";
 
 // Placeholder founder badge until the custom opening-message badge is supplied.
 const FIRST_BADGE = "/icons/serious/came_genesis_gold.png";
@@ -44,7 +45,7 @@ export function ArtistAvatar({ src, className = "h-10 w-10" }: { src?: string | 
     : <span className={`${className} flex items-center justify-center rounded-full border-2 border-primary bg-card text-primary`}><UserRound className="h-1/2 w-1/2" /></span>;
 }
 
-type NameStatus = { in_grace: boolean; grace_until: string | null; changes_left: number; next_change_at: string | null };
+type NameStatus = { in_grace: boolean; grace_until: string | null; changes_left: number; next_change_at: string | null; frees_up_at?: string | null };
 const normName = (v?: string | null) => (v ?? "").trim().replace(/\s+/g, " ").toLowerCase();
 async function loadNameStatus(): Promise<NameStatus> {
   const { data, error } = await supabase.rpc("artist_name_status" as never);
@@ -52,11 +53,16 @@ async function loadNameStatus(): Promise<NameStatus> {
   return data as NameStatus;
 }
 const day = (iso: string) => new Date(iso).toLocaleDateString(undefined, { month: "long", day: "numeric", year: "numeric" });
+const shortDay = (iso: string) => new Date(iso).toLocaleDateString(undefined, { month: "short", day: "numeric" });
+const daysUntil = (iso: string) => Math.max(1, Math.ceil((Date.parse(iso) - Date.now()) / 86_400_000));
+const plural = (n: number, w: string) => `${n} ${w}${n === 1 ? "" : "s"}`;
+/** "in 5 days (Oct 24)" */
+const whenNext = (iso: string) => `in ${plural(daysUntil(iso), "day")} (${shortDay(iso)})`;
 /** Plain-language artist-name rule: free fixes for 72 hours after signup, then once a week and 3 times a year. */
 function nameRuleText(s?: NameStatus) {
   if (!s) return "Your artist name is tied to your catalog. You can change it once a week, up to 3 times a year.";
   if (s.in_grace && s.grace_until) return `Fix any typos freely until ${day(s.grace_until)}. After that, you can change it once a week, up to 3 times a year.`;
-  if (s.next_change_at) return `You can change your artist name again on ${day(s.next_change_at)}.`;
+  if (s.next_change_at) return `You can change your artist name again ${whenNext(s.next_change_at)}. ${plural(s.changes_left, "change")} left this year.`;
   return `You can change your artist name once a week, up to 3 times a year (${s.changes_left} left). Releasing as another artist? Add an artist to your account.`;
 }
 
@@ -68,6 +74,10 @@ export function ArtistOnboarding({ userId, open, onOpenChange, onSaved, firstRun
   const [p, setP] = useState<ArtistProfile>({});
   const [nameRule, setNameRule] = useState<NameStatus>();
   const [savedName, setSavedName] = useState("");
+  // The "Change your artist name?" pop-up, and the "Add another artist" coming-soon panel inside it.
+  const [confirmName, setConfirmName] = useState(false);
+  const [seats, setSeats] = useState(false);
+  const [notified, setNotified] = useState(false);
 
   useEffect(() => {
     if (!open) return;
@@ -85,11 +95,28 @@ export function ArtistOnboarding({ userId, open, onOpenChange, onSaved, firstRun
 
   const set = <K extends keyof ArtistProfile>(k: K, v: ArtistProfile[K]) => setP((x) => ({ ...x, [k]: v }));
 
+  const newName = () => ob.stageName.trim() || p.artist?.trim() || "";
+  const nameChanges = () => !!normName(savedName) && normName(savedName) !== normName(newName());
+
+  /** Changing a saved artist name counts toward the limit, so it asks first (free typo fixes in the first 72 hours don't). */
   async function finish() {
-    const stage = ob.stageName.trim() || p.artist?.trim() || "";
+    if (nameChanges() && !nameRule?.in_grace) { setSeats(false); setConfirmName(true); return; }
+    await save();
+  }
+
+  async function notifySeats() {
+    const { error } = await supabase.from("feature_interest" as never).upsert({ user_id: userId, feature: "artist_seats" } as never, { onConflict: "user_id,feature", ignoreDuplicates: true });
+    if (error) { toast.error("Couldn't save that. Try again."); return; }
+    setNotified(true);
+    toast.success("We'll let you know when you can add more artists.");
+  }
+
+  async function save() {
+    setConfirmName(false);
+    const stage = newName();
     const final: Onboarding = { ...ob, stageName: stage, done: true, welcomed: true };
     // Artist name changes are limited (see artist_name_status); the database has the final say.
-    if (normName(savedName) && normName(savedName) !== normName(stage)) {
+    if (nameChanges()) {
       const { error } = await supabase.from("profiles").update({ stage_name: stage }).eq("id", userId);
       if (error) { toast.error(error.message.replace("ARTIST_NAME_LOCKED: ", "")); return; }
       setSavedName(stage);
@@ -166,7 +193,7 @@ export function ArtistOnboarding({ userId, open, onOpenChange, onSaved, firstRun
               <Field label="Primary Artist / Stage Name"><Input value={ob.stageName} onChange={(e) => { setOb((o) => ({ ...o, stageName: e.target.value })); set("artist", e.target.value); }} />
                 {savedName && <p className="mt-1 text-xs text-muted-foreground">{nameRuleText(nameRule)}</p>}</Field>
               <Field label="Default Label Name (optional)"><Input value={p.label ?? ""} onChange={(e) => set("label", e.target.value)} placeholder="Your label name" /></Field>
-              <Field label="Produced by (optional)"><Input value={p.producers?.[0]?.name ?? ""} placeholder="Name" title="This name is embedded in your track for credit. If the producer also earns royalties, add them under Writer with their legal name and the Composer role."
+              <Field label="Produced by (optional)"><Input value={p.producers?.[0]?.name ?? ""} placeholder="Name" title="Produced by is a credit: it shows who produced the recording, and it's embedded in your MP3 when you embed one. It doesn't pay royalties by itself. If the producer co-wrote the music (made the beat) and gets a share of the song, also add them under Writer with their legal name and the Composer role. Producer points from the master (a cut of record sales) are agreed in a producer contract, not here."
                 onChange={(e) => { const rest = p.producers?.slice(1) ?? []; set("producers", [{ ...(p.producers?.[0] ?? emptyContributor()), name: e.target.value }, ...rest]); }} /></Field>
             </Group>
             <Group title="Release Metadata">
@@ -197,6 +224,56 @@ export function ArtistOnboarding({ userId, open, onOpenChange, onSaved, firstRun
             <Nav onBack={() => setStep(2)} onNext={finish} nextLabel={firstRun ? "Save & start embedding" : "Save & exit"} />
           </div>
         )}
+      </DialogContent>
+      <NameChangeDialog open={confirmName} onOpenChange={setConfirmName} from={savedName} to={newName()} status={nameRule}
+        seats={seats} onSeats={() => setSeats(true)} notified={notified} onNotify={() => void notifySeats()} onConfirm={() => void save()} />
+    </Dialog>
+  );
+}
+
+/** Seat prices (yearly, per added artist) from PLAN-pricing-badges.md §E; artist seats aren't built yet. */
+const SEAT_PRICES = [["Catalog Plus", "$19.99"], ["Catalog & Collaborate", "$36.99"], ["Catalog Management", "$69.99"]] as const;
+
+function NameChangeDialog({ open, onOpenChange, from, to, status, seats, onSeats, notified, onNotify, onConfirm }: {
+  open: boolean; onOpenChange: (o: boolean) => void; from: string; to: string; status?: NameStatus | undefined;
+  seats: boolean; onSeats: () => void; notified: boolean; onNotify: () => void; onConfirm: () => void;
+}) {
+  const left = status?.changes_left ?? 3;
+  const blocked = !!status?.next_change_at || left <= 0;
+  const weekOut = new Date(Date.now() + 7 * 86_400_000).toISOString();
+  // With no earlier changes, the one being made now is the first to free up, a year from today.
+  const freesUp = status?.frees_up_at ?? new Date(Date.now() + 365 * 86_400_000).toISOString();
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-md">
+        {seats ? <>
+          <DialogHeader><DialogTitle>Coming soon: add more artists</DialogTitle>
+            <DialogDescription>Manage another artist's catalog from your account, each with their own login. Yearly, per added artist:</DialogDescription></DialogHeader>
+          <ul className="space-y-1 text-sm">{SEAT_PRICES.map(([tier, price]) => <li key={tier} className="flex justify-between rounded-lg bg-muted px-3 py-2"><span>{tier}</span><span className="font-semibold">{price}/yr</span></li>)}</ul>
+          <div className="flex flex-wrap justify-end gap-2">
+            <Button variant="outline" onClick={() => onOpenChange(false)}>Close</Button>
+            <Button onClick={onNotify} disabled={notified}>{notified ? "We'll let you know" : "Notify me"}</Button>
+          </div>
+        </> : <>
+          <DialogHeader><DialogTitle>Change your artist name?</DialogTitle>
+            <DialogDescription className="font-semibold text-foreground">"{from}" → "{to}"</DialogDescription></DialogHeader>
+          {blocked ? (
+            <p className="text-sm">You can change your artist name again <b>{status?.next_change_at ? whenNext(status.next_change_at) : `when a change frees up on ${shortDay(freesUp)}`}</b>. <b>{plural(left, "change")}</b> left this year.</p>
+          ) : (
+            <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-sm">
+              <dt className="text-muted-foreground">Changes left this year</dt><dd className="font-semibold">{left} of 3</dd>
+              <dt className="text-muted-foreground">Next change after this</dt><dd className="font-semibold">{whenNext(weekOut)}</dd>
+              <dt className="text-muted-foreground">Resets</dt><dd className="font-semibold">1 change frees up on {day(freesUp)}</dd>
+            </dl>
+          )}
+          <p className="text-sm text-muted-foreground">Songs you already saved keep the name they were released under.</p>
+          <p className="text-sm"><span className="font-semibold">Releasing music as a different artist?</span> <span className="text-muted-foreground">Add them as another artist instead, so both names stay on your account.</span></p>
+          <div className="flex flex-wrap justify-end gap-2">
+            <Button variant="ghost" onClick={onSeats}><Plus />Add another artist</Button>
+            <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
+            {!blocked && <Button onClick={onConfirm}>Change name</Button>}
+          </div>
+        </>}
       </DialogContent>
     </Dialog>
   );
@@ -241,7 +318,7 @@ export function IpiNote() {
 function Rows({ title, rows, onChange, seed, writer }: { title: string; rows?: Contributor[] | undefined; onChange: (r: Contributor[]) => void; seed?: string; writer?: boolean }) {
   const list = rows?.length ? rows : [writer ? { ...emptyContributor(), legalName: seed ?? "" } : emptyContributor()];
   const upd = (i: number, k: keyof Contributor, v: string) => onChange(list.map((r, j) => (j === i ? { ...r, [k]: v } : r)));
-  const total = list.reduce((s, r) => s + Number(r.percentage || 0), 0);
+  const total = splitTotal(list);
   return (
     <fieldset className="space-y-2 rounded-xl border border-border p-4">
       <legend className="px-1 text-sm font-bold text-primary">{title}</legend>
@@ -257,10 +334,7 @@ function Rows({ title, rows, onChange, seed, writer }: { title: string; rows?: C
             </select>)}
           <ProSelect value={r.pro} onChange={(v) => upd(i, "pro", v)} className="h-9 w-full rounded-md border border-input bg-background px-2 text-sm" />
           <Input aria-label="IPI name number" title="The 9–11 digit number your PRO assigns. Leave it blank if you don't have one yet." placeholder="IPI name number" inputMode="numeric" value={r.ipi} onChange={(e) => upd(i, "ipi", e.target.value.replace(/\D/g, "").slice(0, 11))} />
-          <Input aria-label="Default share %" placeholder="Share %" inputMode="decimal" value={r.percentage} onChange={(e) => {
-            const others = total - Number(r.percentage || 0); const v = Math.min(Number(e.target.value || 0), 100 - others);
-            upd(i, "percentage", e.target.value === "" ? "" : String(Math.max(0, v)));
-          }} />
+          <Input aria-label="Default share %" placeholder="Share %" inputMode="decimal" value={r.percentage} onChange={(e) => upd(i, "percentage", capShare(list, i, e.target.value).value)} />
           <Button type="button" variant="ghost" size="icon" aria-label="Remove" onClick={() => onChange(list.filter((_, j) => j !== i))}><Trash2 /></Button>
         </div>
       ))}

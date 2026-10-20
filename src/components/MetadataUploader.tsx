@@ -384,7 +384,7 @@ export function MetadataUploader({ stageName, avatar, userId, mode = "embed", on
         {full && metadata.composers.some(creditName) && <Contributors title="Composer (earlier entries)" singular="composer" group="composers" rows={metadata.composers} disabled={busy} onChange={(rows) => update("composers", rows)} tip="Saved before Writer roles existed. Move these into Writer with the Composer role when you can." />}
         <ReadinessPanel metadata={metadata} />
         <Contributors title="Producer Name" singular="producer" group="producers" rows={metadata.producers ?? [emptyContributor()]} disabled={busy} onChange={(rows) => update("producers", rows)} simple
-          tip="This name is embedded in your track for credit. If the producer also earns royalties, add them under Writer with their legal name and the Composer role." />
+          tip={PRODUCER_TIP} tipOnly />
         <fieldset disabled={busy} className="space-y-5 border-t border-border pt-6">
           <legend className="pr-3 text-lg font-semibold">Identifiers</legend>
           <div className="grid gap-5 sm:grid-cols-3">
@@ -709,7 +709,10 @@ function SelectField({ label, id, value, options, onChange }: { label: string; i
     </select></div>;
 }
 
-function Contributors({ title, singular, group, rows, onChange, disabled, publisher, tip, simple, writer, children }: { title: string; singular: string; group: string; rows: Contributor[]; onChange: (rows: Contributor[]) => void; disabled: boolean; publisher?: boolean; tip?: string | undefined; simple?: boolean; writer?: boolean; children?: ReactNode }) {
+/** Shown as an ⓘ tip: "Add song" can save a song that was never embedded, so this is worded for both cases. */
+const PRODUCER_TIP = "Produced by is a credit: it shows who produced the recording, and it's embedded in your MP3 when you embed one. It doesn't pay royalties by itself. If the producer co-wrote the music (made the beat) and gets a share of the song, also add them under Writer with their legal name and the Composer role. Producer points from the master (a cut of record sales) are agreed in a producer contract, not here.";
+
+function Contributors({ title, singular, group, rows, onChange, disabled, publisher, tip, tipOnly, simple, writer, children }: { title: string; singular: string; group: string; rows: Contributor[]; onChange: (rows: Contributor[]) => void; disabled: boolean; publisher?: boolean; tip?: string | undefined; tipOnly?: boolean; simple?: boolean; writer?: boolean; children?: ReactNode }) {
   const roleSelect = (row: Contributor, index: number) => writer && <SelectField label="Role" id={`${group}-${index}-role`} value={writerRole(row.role)} options={WRITER_ROLES} onChange={(value) => change(index, "role", value)} />;
   // Writers (and pre-role composer entries) have one name: their legal name, used for credits and registration.
   const legal = writer || group === "composers";
@@ -731,7 +734,7 @@ function Contributors({ title, singular, group, rows, onChange, disabled, publis
     <ProSelect id={`${group}-${index}-pro`} value={row.pro} onChange={(value) => change(index, "pro", value)} className="flex h-9 w-full rounded-md border border-input bg-background px-3 text-sm shadow-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" /></div>;
   return <fieldset disabled={disabled} className="space-y-5 border-t border-border pt-6">
     <legend className="pr-3 text-lg font-semibold">{title}{tip && <Tip text={tip} />}</legend>
-    {tip && <p className="text-sm text-muted-foreground">{tip}</p>}
+    {tip && !tipOnly && <p className="text-sm text-muted-foreground">{tip}</p>}
     {rows.map((row, index) => simple
       ? legal
         ? <div key={index} className={`grid items-end gap-x-6 gap-y-3 ${writer ? "sm:grid-cols-[1fr_176px_36px]" : "sm:grid-cols-[1fr_36px]"}`}>{names(row, index)}{roleSelect(row, index)}{removeButton(index)}</div>
