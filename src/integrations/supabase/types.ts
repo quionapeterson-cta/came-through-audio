@@ -210,6 +210,27 @@ export type Database = {
         }
         Relationships: []
       }
+      badge_drops: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          id: string
+          note: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          note: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          note?: string
+        }
+        Relationships: []
+      }
       badge_events: {
         Row: {
           created_at: string
@@ -962,6 +983,7 @@ export type Database = {
         Row: {
           badge_id: string
           earned_at: string
+          log: Json
           seen_at: string | null
           times: number
           user_id: string
@@ -969,6 +991,7 @@ export type Database = {
         Insert: {
           badge_id: string
           earned_at?: string
+          log?: Json
           seen_at?: string | null
           times?: number
           user_id: string
@@ -976,6 +999,7 @@ export type Database = {
         Update: {
           badge_id?: string
           earned_at?: string
+          log?: Json
           seen_at?: string | null
           times?: number
           user_id?: string
