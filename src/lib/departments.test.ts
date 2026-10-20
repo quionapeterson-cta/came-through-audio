@@ -34,13 +34,19 @@ describe("visibleTabs", () => {
     expect(visibleTabs(billing).map((t) => t.value)).toEqual(["purchases", "support", "badges", "tasks"]);
   });
 
+  it("gives the AI department the AI Protection tab; Software and Security start with their Task Bank", () => {
+    expect(visibleTabs(resolveAccess([{ role: "employee", departments: ["ai"] }])!).map((t) => t.value)).toEqual(["ai", "tasks"]);
+    expect(visibleTabs(resolveAccess([{ role: "employee", departments: ["software", "security"] }])!).map((t) => t.value)).toEqual(["tasks"]);
+  });
+
   it("never shows finance to HR admins", () => {
     expect(visibleTabs(resolveAccess([{ role: "hr_admin" }])!).map((t) => t.value)).toEqual(["tasks"]);
   });
 
-  it("gives marketing the Badges tab and its Task Bank", () => {
-    const marketing = resolveAccess([{ role: "employee", departments: ["marketing_sales"] }])!;
+  it("gives marketing the Badges tab and its Task Bank; sales gets its Task Bank", () => {
+    const marketing = resolveAccess([{ role: "employee", departments: ["marketing"] }])!;
     expect(visibleTabs(marketing).map((t) => t.value)).toEqual(["badges", "tasks"]);
+    expect(visibleTabs(resolveAccess([{ role: "employee", departments: ["marketing_sales"] }])!).map((t) => t.value)).toEqual(["tasks"]);
     expect(visibleTabs(resolveAccess([{ role: "employee", departments: [] }])!)).toEqual([]);
   });
 

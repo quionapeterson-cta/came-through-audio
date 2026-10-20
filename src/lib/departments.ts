@@ -2,7 +2,7 @@
  * Staff roles and departments. Mirrors public.in_department / public.can_manage_staff so the
  * dashboard shows exactly the tabs the database will let each person read.
  */
-export const DEPARTMENTS = ["registration", "royalty_accounts", "finance", "branding", "marketing_sales", "support", "hr"] as const;
+export const DEPARTMENTS = ["registration", "royalty_accounts", "finance", "branding", "marketing", "marketing_sales", "support", "ai", "software", "security", "hr"] as const;
 export type Department = (typeof DEPARTMENTS)[number];
 
 export const DEPARTMENT_LABEL: Record<Department, string> = {
@@ -10,8 +10,13 @@ export const DEPARTMENT_LABEL: Record<Department, string> = {
   royalty_accounts: "Royalty Accounts",
   finance: "Finance",
   branding: "Branding",
-  marketing_sales: "Marketing & Sales",
+  marketing: "Marketing & Social Media",
+  // The id predates the separate Marketing department (2026-10-20); it is the Sales team now.
+  marketing_sales: "Sales",
   support: "Support",
+  ai: "AI",
+  software: "Software",
+  security: "Security",
   hr: "HR",
 };
 
@@ -64,10 +69,10 @@ export function staffChangeError(o: { actorId: string; actorIsSuper: boolean; ta
 }
 
 /** Departments that see and control badges in Admin → Badges (super admins hold every department). Mirrors public.can_manage_badges. */
-export const BADGE_DEPARTMENTS = ["branding", "marketing_sales", "support"] as const satisfies readonly Department[];
+export const BADGE_DEPARTMENTS = ["branding", "marketing", "support"] as const satisfies readonly Department[];
 
 export const ADMIN_TABS = [
-  { value: "ai", label: "AI Protection", departments: ["registration"] },
+  { value: "ai", label: "AI Protection", departments: ["registration", "ai"] },
   { value: "reg", label: "Registrations", departments: ["registration"] },
   { value: "splits", label: "Split Sheets", departments: ["royalty_accounts"] },
   { value: "purchases", label: "Purchases", departments: ["finance"] },

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { FileDown } from "lucide-react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
@@ -8,6 +9,26 @@ import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { ALL_BADGES, COLLECTIONS, TIER_LABEL } from "@/lib/badges";
 import { listBadgeSettings, logBadgeDrop, setBadgesEnabled } from "@/lib/badges.functions";
+
+/** The badge reference PDF for Branding, Marketing & Social Media and Support, built from the live badge list. */
+function ReferenceDownload() {
+  const [busy, setBusy] = useState(false);
+  async function download() {
+    setBusy(true);
+    try { await (await import("@/lib/badge-reference-pdf")).downloadBadgeReferencePdf(); }
+    catch { toast.error("Couldn't build the badge reference. Try again."); }
+    finally { setBusy(false); }
+  }
+  return (
+    <section className="flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-border bg-card p-5">
+      <div className="min-w-0">
+        <h3 className="text-lg font-bold">Badge Reference</h3>
+        <p className="mt-1 max-w-2xl text-sm text-muted-foreground">Every badge with its art, milestone and pop-up message, in the order users earn them. Built from the live badge list, so it always matches the app.</p>
+      </div>
+      <Button onClick={() => void download()} disabled={busy}><FileDown />{busy ? "Building…" : "Download PDF"}</Button>
+    </section>
+  );
+}
 
 const DROP_MONTHS = 6;
 const fmt = (d: Date) => d.toLocaleDateString(undefined, { month: "long", day: "numeric", year: "numeric" });
@@ -78,6 +99,7 @@ export function BadgeSwitchboard() {
 
   return (
     <div className="mt-6 space-y-6">
+      <ReferenceDownload />
       <DropReminder last={q.data?.lastDrop ?? null} />
       <p className="max-w-3xl text-sm text-muted-foreground">Turning a badge off stops new unlocks only. Anyone who already earned it keeps it on their shelf.</p>
       {COLLECTIONS.map((c) => {
