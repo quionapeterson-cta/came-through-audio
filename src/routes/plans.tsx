@@ -35,7 +35,7 @@ function PlansPage() {
       <header className="bg-ink text-ink-foreground">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-5">
           <BrandLogo />
-          <Link to="/workspace" search={{ tab: undefined }} className="text-sm font-semibold text-ink-muted hover:text-primary">Log in</Link>
+          <Link to="/workspace" search={{ tab: undefined }} className="text-sm font-semibold text-ink-muted hover:text-primary">{user ? "Back to workspace" : "Log in"}</Link>
         </div>
       </header>
 

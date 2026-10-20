@@ -31,6 +31,11 @@ export function useBadgeStates(userId: string | undefined) {
 /** The art for one earning: the user's pick for badges with choices, otherwise the badge's own art. */
 const artFor = (badge: BadgeDef, pick?: string | null) => (pick && badge.choices?.includes(pick) ? pick : badge.src);
 /** The art the shelf shows: the latest pick, or the badge's own art. */
+/** Earned (or earned again) in the last 7 days. */
+const isNew = (s: BadgeState) => {
+  const last = s.earned?.log?.[s.earned.log.length - 1]?.at ?? s.earned?.earnedAt;
+  return !!last && Date.now() - Date.parse(last) < 7 * 86_400_000;
+};
 const shelfArt = (s: BadgeState) => artFor(s.badge, [...(s.earned?.log ?? [])].reverse().find((e) => e.pick)?.pick);
 
 function TierChip({ badge }: { badge: BadgeDef }) {
@@ -40,11 +45,14 @@ function TierChip({ badge }: { badge: BadgeDef }) {
 }
 
 /**
- * Celebrates newly earned badges, following the user's settings: all, big moments only (others get a quiet toast),
- * or off (they wait, unseen, until celebrations are back on). Four or more at once show as one summary.
+ * Celebrates badges as they're earned during a visit, following the user's settings: all, big moments only (others
+ * get a quiet toast), or off (they wait, unseen, until celebrations are back on). Four or more at once show as one
+ * summary. Badges already waiting when the page opens (earned while away) go straight to the shelf, marked New,
+ * so logging in never starts with a string of pop-ups (founder, 2026-10-20).
  */
 export function BadgeWatcher({ userId, artist }: { userId: string; artist?: string | undefined }) {
-  const { unseen: waiting } = useBadgeStates(userId);
+  const { unseen: waiting, isFetched } = useBadgeStates(userId);
+  const arrived = useRef(false);
   const [queue, setQueue] = useState<BadgeState[]>([]);
   const [summary, setSummary] = useState<BadgeState[]>([]);
   // Badges already shown this visit, so a pop-up never repeats while the server copy catches up.
@@ -52,18 +60,28 @@ export function BadgeWatcher({ userId, artist }: { userId: string; artist?: stri
   const unseen = waiting.filter((s) => !shown.current.has(`${s.badge.id}:${s.earned?.times}`));
 
   useEffect(() => {
-    if (!unseen.length || queue.length || summary.length) return;
+    if (!isFetched || arrived.current) return;
+    arrived.current = true;
+    if (!unseen.length || badgePrefs(loadOnboarding(userId)).celebrations === "off") return;
+    for (const s of unseen) shown.current.add(`${s.badge.id}:${s.earned?.times}`);
+    void markBadgesSeen(userId, unseen.map((s) => s.badge.id));
+  }, [isFetched]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    // Re-checked here: the arrival effect above may have just set aside badges that were waiting at page open.
+    const fresh = unseen.filter((s) => !shown.current.has(`${s.badge.id}:${s.earned?.times}`));
+    if (!arrived.current || !fresh.length || queue.length || summary.length) return;
     const prefs = badgePrefs(loadOnboarding(userId));
     if (prefs.celebrations === "off") return;
-    for (const s of unseen) shown.current.add(`${s.badge.id}:${s.earned?.times}`);
-    const quiet = unseen.filter((s) => prefs.hidden.includes(s.badge.collection) || (prefs.celebrations === "big" && !isBigTier(s.badge.tier)));
-    const loud = unseen.filter((s) => !quiet.includes(s));
+    for (const s of fresh) shown.current.add(`${s.badge.id}:${s.earned?.times}`);
+    const quiet = fresh.filter((s) => prefs.hidden.includes(s.badge.collection) || (prefs.celebrations === "big" && !isBigTier(s.badge.tier)));
+    const loud = fresh.filter((s) => !quiet.includes(s));
     if (quiet.length) {
       void markBadgesSeen(userId, quiet.map((s) => s.badge.id));
       for (const s of quiet.filter((q) => !prefs.hidden.includes(q.badge.collection)).slice(0, 3)) toast.success(`New badge: ${s.badge.title}`);
     }
     if (loud.length >= 4) setSummary(loud); else setQueue(loud);
-  }, [unseen.length, userId]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [unseen.length, userId, isFetched]); // eslint-disable-line react-hooks/exhaustive-deps
 
   function next() {
     const [done, ...rest] = queue;
@@ -226,6 +244,7 @@ export function BadgeShelf({ userId, size, onOpen }: { userId: string; size: Siz
                   <img src={shelfArt(s)} alt="" loading="lazy" className={`h-full w-full object-contain transition ${s.earned ? "drop-shadow-lg group-hover:drop-shadow-2xl" : "opacity-30 grayscale"}`} />
                   {!s.earned && <Lock className="absolute h-6 w-6 text-muted-foreground" />}
                   {(s.earned?.times ?? 0) > 1 && <span className="cta-badge-count absolute right-0 top-0" aria-label={`Earned ${s.earned!.times} times`}>×{s.earned!.times}</span>}
+                  {isNew(s) && <span className="absolute left-0 top-0 rounded-full bg-primary px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-primary-foreground">New</span>}
                 </span>
                 <span className={`font-semibold ${size === "large" ? "text-sm" : "text-xs"} ${s.earned ? "" : "text-muted-foreground"}`}>{s.badge.title}</span>
                 {!s.earned && s.badge.goal > 1 && <span className="text-xs text-muted-foreground">{Math.min(s.count, s.badge.goal)}/{s.badge.goal}</span>}

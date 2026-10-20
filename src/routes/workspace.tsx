@@ -2,7 +2,8 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { getStaffRole } from "@/lib/admin.functions";
-import { ShieldCheck, FileAudio, Lock, Disc3, Activity, FileSignature, ScrollText, GraduationCap, LogOut, Moon, Sun } from "lucide-react";
+import { ShieldCheck, FileAudio, Lock, Disc3, Activity, FileSignature, ScrollText, GraduationCap, LogOut, Moon, Sun, UserRound, Gem } from "lucide-react";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
@@ -142,14 +143,31 @@ function Workspace() {
       <PaymentTestModeBanner previewTier={previewTier} onPreviewTier={canPreview ? setPreviewTier : undefined} />
       <header className="border-b border-ink-border bg-ink text-ink-foreground">
         <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-6 py-4">
-          <div className="flex items-center gap-3">
+          <div className="flex min-w-0 items-center gap-3">
             <BrandLogo showName={false} />
-            <div>
+            <div className="min-w-0">
               <div className="text-xs uppercase tracking-widest text-ink-muted">Came Through Audio</div>
-              <div className="text-xl font-bold">{name}</div>
+              <div className="truncate text-xl font-bold">{name}</div>
             </div>
           </div>
-          <div className="flex items-center gap-3">
+          {/* Phones: everything sits in one menu on the profile picture, so the header never runs off the screen. */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" className="h-auto shrink-0 rounded-full p-1 hover:bg-ink-border sm:hidden" aria-label="Account menu">
+                <ArtistAvatar src={onboard?.avatar} className="h-9 w-9" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-56">
+              <DropdownMenuLabel className="font-normal text-muted-foreground">{TIER_LABEL[tier]}</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onSelect={() => navigate({ to: "/profile" })}><UserRound />Profile</DropdownMenuItem>
+              <DropdownMenuItem onSelect={upgrade}><Gem />View Plans</DropdownMenuItem>
+              <DropdownMenuItem onSelect={studio.toggle}>{studio.on ? <Sun /> : <Moon />}{studio.on ? "Light mode" : "Studio Mode"}</DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onSelect={async () => { await supabase.auth.signOut(); navigate({ to: "/" }); }}><LogOut />Log out</DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+          <div className="hidden items-center gap-3 sm:flex">
             <Badge variant="outline" className="border-ink-border text-ink-foreground">{TIER_LABEL[tier]}</Badge>
             <Button variant="ghost" className="gap-2 text-ink-foreground hover:bg-ink-border hover:text-ink-foreground" onClick={() => navigate({ to: "/profile" })}>
               <ArtistAvatar src={onboard?.avatar} className="h-7 w-7" />Profile
@@ -247,7 +265,7 @@ function Learn({ userId, unlocked, onUpgrade }: { userId: string; unlocked: bool
             <p className="max-w-md text-muted-foreground">Industry masterclasses covering sync, publishing and royalties.</p>
             <Button onClick={onUpgrade}>Upgrade to unlock</Button>
           </div>
-        ) : <Masterclasses />}
+        ) : <Masterclasses userId={userId} />}
     </div>
   );
 }
@@ -268,7 +286,17 @@ function PlansDialog({ tier, userId, email }: { tier: Tier; userId: string; emai
   );
 }
 
-function Masterclasses() {
+function Masterclasses({ userId }: { userId: string }) {
+  const [asked, setAsked] = useState(false);
+  const [busy, setBusy] = useState(false);
+  async function notifyMe() {
+    setBusy(true);
+    const { error } = await supabase.from("feature_interest" as never).upsert({ user_id: userId, feature: "masterclasses" } as never, { onConflict: "user_id,feature", ignoreDuplicates: true });
+    setBusy(false);
+    if (error) { toast.error("Couldn't save that. Try again."); return; }
+    setAsked(true);
+    toast.success("You're on the list. We'll email you when the first class opens.");
+  }
   return (
     <div className="mt-6 grid gap-6 md:grid-cols-2">
       <div className="rounded-2xl border border-border p-6">
@@ -276,7 +304,8 @@ function Masterclasses() {
         <h2 className="mt-3 text-2xl font-bold">Music Business Masterclasses</h2>
         <p className="mt-2 text-muted-foreground">Live group classes with an industry expert.</p>
         <div className="mt-4 flex items-center justify-between rounded-lg bg-muted p-4"><span className="font-semibold">1 class slot</span><span className="text-xl font-bold text-primary">$19/slot</span></div>
-        <Button className="mt-4 w-full" disabled>Checkout coming soon</Button>
+        <p className="mt-4 text-sm text-muted-foreground">The first classes are being scheduled now. Join the list and we'll email you the dates as soon as booking opens.</p>
+        <Button className="mt-3 w-full" disabled={busy || asked} onClick={() => void notifyMe()}>{asked ? "You're on the list" : "Notify me when classes open"}</Button>
       </div>
     </div>
   );

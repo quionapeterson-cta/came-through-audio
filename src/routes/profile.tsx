@@ -18,6 +18,8 @@ import { isBadgeImage } from "@/lib/badges";
 import { BadgeDetail, BadgeSettings, BadgeSettingsButton, BadgeShelf, BadgeWatcher, useBadgeStates, type BadgeState } from "@/components/Badges";
 import { creditName, writerRole, type Contributor } from "@/lib/metadata";
 import { TIER_LABEL } from "@/lib/plans";
+import { getPaddleEnvironment } from "@/lib/paddle";
+import { openBillingPortal } from "@/lib/payments.functions";
 import { passwordValid } from "@/lib/password";
 import { PasswordField } from "@/components/PasswordField";
 
@@ -32,7 +34,7 @@ const SIZE_KEY = "cta-awards-size";
 function ProfilePage() {
   const { user, loading } = useAuth();
   const navigate = useNavigate();
-  const { tier } = useBilling(user?.id);
+  const { tier, plan } = useBilling(user?.id);
   const [ob, setOb] = useState<Onboarding | null>(null);
   const [profile, setProfile] = useState<ArtistProfile | null>(null);
   const [accountName, setAccountName] = useState("");
@@ -113,9 +115,12 @@ function ProfilePage() {
           </Card>
 
           <Card title="Account">
-            <Rows rows={[["Email", user.email], ["Plan", TIER_LABEL[tier]], ["Member since", memberSince]]} />
+            <Rows rows={[["Email", user.email], ["Plan", TIER_LABEL[tier]],
+              ...(plan?.periodEnd ? [[plan.cancelling ? "Ends" : "Renews", longDate(plan.periodEnd)] as [string, string]] : []),
+              ["Member since", memberSince]]} />
             <div className="flex flex-wrap gap-3 border-t border-border pt-5">
-              <Button asChild variant="outline"><Link to="/plans">Manage plan</Link></Button>
+              {plan ? <ManageBilling /> : <Button asChild variant="outline"><Link to="/plans">See plans</Link></Button>}
+              {plan && <Button asChild variant="ghost"><Link to="/plans">Compare plans</Link></Button>}
               <Button variant="outline" onClick={() => setPasswordOpen(true)}>Change password</Button>
               <Button variant="ghost" onClick={async () => { await supabase.auth.signOut(); navigate({ to: "/" }); }}><LogOut />Log out</Button>
             </div>
@@ -216,4 +221,24 @@ function PasswordDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (
       </DialogContent>
     </Dialog>
   );
+}
+
+const longDate = (iso: string) => new Date(iso).toLocaleDateString(undefined, { month: "long", day: "numeric", year: "numeric" });
+
+/** Opens Paddle's billing page for this account: cancel, change the card, download invoices. */
+function ManageBilling() {
+  const [busy, setBusy] = useState(false);
+  async function open() {
+    // Opened during the click so the browser allows the new tab, then pointed at the portal.
+    const tab = window.open("", "_blank");
+    setBusy(true);
+    try {
+      const { url } = await openBillingPortal({ data: { environment: getPaddleEnvironment() } });
+      if (tab) { tab.opener = null; tab.location.href = url; } else window.location.href = url;
+    } catch (e) {
+      tab?.close();
+      toast.error(e instanceof Error ? e.message : "Billing couldn't open. Contact support and we'll help right away.");
+    } finally { setBusy(false); }
+  }
+  return <Button variant="outline" disabled={busy} onClick={() => void open()}>{busy ? "Opening…" : "Manage billing"}</Button>;
 }
