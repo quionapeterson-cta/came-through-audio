@@ -4,8 +4,19 @@ import { registrationReadiness, registrationWriters } from "@/lib/readiness";
 import { exportGate, mlcRows, proCheatSheet } from "@/lib/agency-export";
 import type { CatalogTrack } from "@/lib/catalog";
 
-const w = (name: string, role: string, legalName?: string, pro = ""): Contributor => ({ name, role, pro, ipi: "", percentage: "", ...(legalName !== undefined && { legalName }) });
-const song = (patch: Partial<Metadata>): Metadata => ({ ...emptyMetadata(), writers: [], composers: [], title: "Song", artist: "Artist", ...patch });
+const w = (name: string, role: string, legalName?: string, pro = "", percentage = ""): Contributor => ({ name, role, pro, ipi: "", percentage, ...(legalName !== undefined && { legalName }) });
+/** Shares the 100% evenly (last row takes the rounding) unless a test sets its own splits. */
+const even = (rows: Contributor[]) => {
+  const named = rows.filter((r) => r.name || r.legalName);
+  const each = Math.floor(100 / Math.max(1, named.length));
+  return rows.map((r) => !named.includes(r) ? r : { ...r, percentage: String(r === named.at(-1) ? 100 - each * (named.length - 1) : each) });
+};
+const song = (patch: Partial<Metadata>, splits = true): Metadata => {
+  const m = { ...emptyMetadata(), writers: [], composers: [], title: "Song", artist: "Artist", ...patch };
+  if (!splits || [...m.writers, ...m.composers].some((r) => r.percentage)) return m;
+  const all = even([...m.writers, ...m.composers]);
+  return { ...m, writers: all.slice(0, m.writers.length), composers: all.slice(m.writers.length) };
+};
 const codes = (m: Metadata, target?: "pro") => registrationReadiness(m, target).missing.map((i) => i.code);
 
 describe("registration readiness", () => {
@@ -33,6 +44,16 @@ describe("registration readiness", () => {
   it("counts entries saved before roles existed as composers", () => {
     expect(codes(song({ writers: [w("Q", "Author", "Quiona P")], composers: [w("Beatz", "", "John Doe")] }))).toEqual([]);
   });
+  it("needs writer splits to equal exactly 100%, with a link to the first split box", () => {
+    const missing = (m: Metadata) => registrationReadiness(m).missing.filter((x) => x.code === "split");
+    expect(missing(song({ writers: [w("Q", "Author/Composer", "Quiona P")] }, false))[0]).toMatchObject({ field: "writers-0-share", message: expect.stringContaining("exactly 100%") });
+    expect(missing(song({ writers: [w("Q", "Author", "Quiona P", "", "50"), w("B", "Composer", "John Doe", "", "35")] }))[0]?.message).toContain("Add the missing 15%");
+    expect(missing(song({ writers: [w("Q", "Author", "Quiona P", "", "60"), w("B", "Composer", "John Doe", "", "50")] }))[0]?.message).toContain("Lower them by 10%");
+    expect(missing(song({ writers: [w("Q", "Author", "Quiona P", "", "33.33"), w("B", "Composer", "John Doe", "", "33.33"), w("C", "Composer", "Cee", "", "33.34")] }))).toEqual([]);
+  });
+  it("doesn't check splits for SoundExchange, which registers the recording", () => {
+    expect(registrationReadiness(song({ writers: [w("Q", "Author/Composer", "Quiona P")] }, false), "soundexchange").ready).toBe(true);
+  });
   it("requires PRO affiliation only for PRO registration", () => {
     const m = song({ writers: [w("Q", "Author/Composer", "Quiona P", "None")] });
     expect(codes(m)).toEqual([]);
@@ -47,7 +68,7 @@ describe("legal name seeding", () => {
     expect(rows.map((r) => r.name)).toEqual(["Quiona P", "Q", "Lil Q"]);
   });
   it("flags a writer row with a share but no name", () => {
-    const r = registrationReadiness(song({ writers: [w("", "Author/Composer", "Quiona P"), { ...w("", "Composer", ""), percentage: "50" }] }));
+    const r = registrationReadiness(song({ writers: [w("", "Author/Composer", "Quiona P", "", "50"), { ...w("", "Composer", ""), percentage: "50" }] }));
     expect(r.missing).toEqual([{ code: "legal_name", message: "Add a legal name for writer 2", field: "writers-1-legalName" }]);
   });
 });
