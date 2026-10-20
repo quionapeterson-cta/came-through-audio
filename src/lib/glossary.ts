@@ -26,6 +26,9 @@ export const GLOSSARY = {
   releaseType: { term: "Release type", text: "Single, EP or Album. It tells stores how to group and display the release." },
   explicit: { term: "Explicit", text: "Check this if the lyrics have strong language or adult content. Stores label the song so listeners and parents know." },
   label: { term: "Label", text: "The name the release goes out under. Independent? Use your own label name or your artist name." },
+  neighbouringRights: { term: "Neighbouring rights", text: "Royalties for your recording when it's played on radio, TV or in venues outside the US. They pay the performers and the master owner. Collect them through SoundExchange's international mandate or by joining PPL." },
+  performers: { term: "Featured / non-featured performer", text: "Featured performers are the artists named on the release. Non-featured performers are session players and backup singers. Both can be paid for airplay outside the US." },
+  ppl: { term: "PPL", text: "The UK society that collects neighbouring rights for performers and master owners, from about 100 countries. Artists from outside the UK can join." },
   metadata: { term: "Metadata", text: "The details saved inside your music file: title, artist, credits, artwork and IDs. Correct metadata helps you get found, credited and paid." },
 } as const;
 

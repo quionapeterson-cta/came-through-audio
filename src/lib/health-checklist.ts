@@ -29,6 +29,11 @@ export type ChecklistStep = {
 };
 export type SongChecklist = { steps: ChecklistStep[]; done: number; total: number; pct: number; group: "attention" | "later" | "healthy" };
 
+/** Account-wide checklist state lives in its own health_song_status row, under this song_ref (it's not a song). */
+export const ACCOUNT_REF = "account";
+/** Set once per account: international airplay collection through SoundExchange or PPL. */
+export const INTL_KEY = "intl:setup";
+
 export const STAGE_LABEL: Record<Stage, string> = { details: "Fix the song details", register: "Register it", confirm: "Confirm it shows up" };
 
 /** What each society's search finds a song by most exactly, and the value to copy. Missing values point at their field. */
@@ -57,7 +62,7 @@ export const printKey = (societyId: string) => `print:${societyId}`;
 /** The society a pillar's steps point at: the one already marked, otherwise the first (writers join one PRO). */
 const societyOf = (p: TrackReport["pillars"][number]) => (p.societies.find((s) => s.check) ?? p.societies[0])?.society;
 
-export function songChecklist(r: TrackReport, country: Country, status?: SongStatus): SongChecklist {
+export function songChecklist(r: TrackReport, country: Country, status?: SongStatus, account?: SongStatus): SongChecklist {
   const m = r.track.metadata;
   const ticked = status?.steps ?? {};
   const readiness = registrationReadiness(m);
@@ -88,6 +93,9 @@ export function songChecklist(r: TrackReport, country: Country, status?: SongSta
     steps.push({ id: `confirm:${p.pillar}`, stage: "confirm", auto: false, pillar: p.pillar, society,
       done: found, title: `Confirm it shows up in ${society.name}` });
   }
+  // US radio doesn't pay recordings, so US artists collect airplay abroad through SoundExchange or PPL. One setting per account.
+  if (country.code === "US")
+    steps.push({ id: "intl", stage: "register", auto: false, done: !!account?.steps[INTL_KEY], title: "Collect international airplay (neighbouring rights)" });
   if (r.pillars.some((p) => p.pillar === "performance" || p.pillar === "mechanical"))
     steps.push({ id: "iswc", stage: "confirm", auto: true, done: !!m.iswc.trim(), title: "Add the ISWC once it's assigned", field: "iswc" });
 

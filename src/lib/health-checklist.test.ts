@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { emptyMetadata } from "@/lib/metadata";
 import { trackReport } from "@/lib/health";
-import { printKey, registrationPrint, releaseGroups, searchKey, songChecklist } from "@/lib/health-checklist";
+import { ACCOUNT_REF, INTL_KEY, printKey, registrationPrint, releaseGroups, searchKey, songChecklist } from "@/lib/health-checklist";
 import { inspectorChecks, emptyStatus } from "@/lib/health-songs";
 import { countryByCode } from "@/lib/repertoires";
 
@@ -28,9 +28,9 @@ describe("song health checklist", () => {
     expect(c.steps.find((s) => s.id === "register:performance")?.done).toBe(true);
     expect(c.group).toBe("later");
   });
-  it("reaches 100% when every society is confirmed and the ISWC is in", () => {
+  it("reaches 100% when every society is confirmed, the ISWC is in and international airplay is set up", () => {
     const r = trackReport(track({ iswc: "T1234567890" }), us, ["bmi", "mlc", "soundexchange"].map((society) => ({ trackId: "t1", society, status: "found" as const, source: "self" as const, checkedAt: "x" })));
-    const c = songChecklist(r, us);
+    const c = songChecklist(r, us, undefined, { ...emptyStatus(ACCOUNT_REF), steps: { [INTL_KEY]: "x" } });
     expect(c.steps.filter((s) => !s.done).map((s) => s.title)).toEqual([]);
     expect(c.group).toBe("healthy");
   });
@@ -69,5 +69,14 @@ describe("song health checklist", () => {
     expect(groups[0]!.pct).toBe(60);
     expect(releaseGroups(songs, "az").map((g) => g.name).slice(0, 2)).toEqual(["Came Through", "Karma Season"]);
     expect(releaseGroups(songs, "least", "karma").flatMap((g) => g.songs).length).toBe(2);
+  });
+
+  it("asks US users once per account to collect international airplay", () => {
+    const r = trackReport(track(), us, []);
+    expect(songChecklist(r, us).steps.find((s) => s.id === "intl")).toMatchObject({ stage: "register", done: false });
+    const account = { ...emptyStatus(ACCOUNT_REF), steps: { [INTL_KEY]: "2026-10-20T00:00:00Z" } };
+    expect(songChecklist(r, us, undefined, account).steps.find((s) => s.id === "intl")?.done).toBe(true);
+    const gb = countryByCode("GB")!;
+    expect(songChecklist(trackReport(track(), gb, []), gb).steps.some((s) => s.id === "intl")).toBe(false);
   });
 });

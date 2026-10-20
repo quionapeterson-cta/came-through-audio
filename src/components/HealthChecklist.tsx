@@ -4,7 +4,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Guide, LiveRecords, openSearch, type HealthActions } from "@/components/HealthReport";
-import { encouragement, printKey, registrationPrint, releaseGroups, searchKey, songChecklist, STAGE_LABEL, type ChecklistStep, type SongChecklist, type SongSort, type Stage } from "@/lib/health-checklist";
+import { ACCOUNT_REF, encouragement, INTL_KEY, printKey, registrationPrint, releaseGroups, searchKey, songChecklist, STAGE_LABEL, type ChecklistStep, type SongChecklist, type SongSort, type Stage } from "@/lib/health-checklist";
 import { updateGuide } from "@/lib/register-guides";
 import { InfoTip } from "@/components/InfoTip";
 import type { GlossaryKey } from "@/lib/glossary";
@@ -41,7 +41,10 @@ type Props = {
 /** Every song's step-by-step path to 100% health, in three lists: needs attention, saved for later and healthy. */
 export function HealthChecklist({ rows, country, statuses, onStatus, actions, runningId, canCatalog, onUpgrade, onEditInspector, onDeleteInspector }: Props) {
   const statusOf = (id: string) => statuses.find((s) => s.songRef === id) ?? emptyStatus(id);
-  const lists = useMemo(() => rows.map((r) => ({ r, c: songChecklist(r, country, statusOf(r.track.id)) })), [rows, country, statuses]); // eslint-disable-line react-hooks/exhaustive-deps
+  // Account-wide steps (international airplay) are ticked once and count on every song.
+  const account = statusOf(ACCOUNT_REF);
+  const setIntl = (on: boolean) => { const steps = { ...account.steps }; if (on) steps[INTL_KEY] = new Date().toISOString(); else delete steps[INTL_KEY]; onStatus({ ...account, steps }); };
+  const lists = useMemo(() => rows.map((r) => ({ r, c: songChecklist(r, country, statusOf(r.track.id), account) })), [rows, country, statuses]); // eslint-disable-line react-hooks/exhaustive-deps
   const [group, setGroup] = useState<Group>("attention");
   const inGroup = lists.filter((x) => x.c.group === group);
   const [query, setQuery] = useState("");
@@ -141,7 +144,7 @@ export function HealthChecklist({ rows, country, statuses, onStatus, actions, ru
             })}
           </div>
           {focused && <SongDetail key={focused.r.track.id} r={focused.r} c={focused.c} country={country} status={statusOf(focused.r.track.id)} onStatus={onStatus}
-            actions={actions} running={runningId === focused.r.track.id} onEditInspector={onEditInspector} onDeleteInspector={onDeleteInspector} />}
+            actions={actions} running={runningId === focused.r.track.id} onEditInspector={onEditInspector} onDeleteInspector={onDeleteInspector} onIntl={setIntl} />}
         </div>
       )}
 
@@ -169,9 +172,9 @@ function Ring({ pct }: { pct: number }) {
   );
 }
 
-function SongDetail({ r, c, country, status, onStatus, actions, running, onEditInspector, onDeleteInspector }: {
+function SongDetail({ r, c, country, status, onStatus, actions, running, onEditInspector, onDeleteInspector, onIntl }: {
   r: TrackReport; c: SongChecklist; country: Country; status: SongStatus; onStatus: (s: SongStatus) => void; actions: HealthActions; running: boolean;
-  onEditInspector: (id: string) => void; onDeleteInspector: (id: string) => void;
+  onEditInspector: (id: string) => void; onDeleteInspector: (id: string) => void; onIntl: (on: boolean) => void;
 }) {
   const id = r.track.id;
   const inspector = isInspectorSong(id);
@@ -227,7 +230,7 @@ function SongDetail({ r, c, country, status, onStatus, actions, running, onEditI
             <div key={stage}>
               <h5 className="mb-2 flex items-center gap-2 text-sm font-extrabold uppercase tracking-[2px]"><span className="flex h-5 w-5 items-center justify-center rounded-full bg-primary text-[11px] text-primary-foreground">{si + 1}</span>{STAGE_LABEL[stage]}</h5>
               <ol className="space-y-2">
-                {list.map((s) => <StepRow key={s.id} s={s} r={r} country={country} open={s.id === nextOpen} onFix={fix} apply={apply} actions={actions} />)}
+                {list.map((s) => <StepRow key={s.id} s={s} r={r} country={country} open={s.id === nextOpen} onFix={fix} apply={apply} actions={actions} onIntl={onIntl} />)}
               </ol>
             </div>
           );
@@ -259,10 +262,11 @@ function SongDetail({ r, c, country, status, onStatus, actions, running, onEditI
 
 type Apply = (changes: Record<string, string | null>, mark?: { society: string; status: "found" | "not_listed" | null }) => void;
 
-function StepRow({ s, r, country, open, onFix, apply, actions }: {
+function StepRow({ s, r, country, open, onFix, apply, actions, onIntl }: {
   s: ChecklistStep; r: TrackReport; country: Country; open: boolean;
-  onFix: (field?: string) => void; apply: Apply; actions: HealthActions;
+  onFix: (field?: string) => void; apply: Apply; actions: HealthActions; onIntl: (on: boolean) => void;
 }) {
+  const intl = s.id === "intl";
   const [expanded, setExpanded] = useState(open);
   const [confirming, setConfirming] = useState(false);
   const m = r.track.metadata;
@@ -275,12 +279,14 @@ function StepRow({ s, r, country, open, onFix, apply, actions }: {
   const markFound = () => s.society && apply(print, { society: s.society.id, status: "found" });
   const untick = () => {
     setConfirming(false);
+    if (intl) { onIntl(false); return; }
     if (!s.society) return;
     // Not registered means it can't be found there either, so unticking Register clears that mark too.
     if (s.stage === "register") apply({ [`registered:${s.society.id}`]: null, [printKey(s.society.id)]: null }, check ? { society: s.society.id, status: null } : undefined);
     else apply({}, { society: s.society.id, status: null });
   };
   const toggle = () => {
+    if (intl) { if (s.done) setConfirming(true); else onIntl(true); return; }
     if (s.auto || !s.society) { onFix(s.field); return; }
     if (s.done) { setConfirming(true); return; }
     if (s.stage === "register") registered(); else markFound();
@@ -304,6 +310,7 @@ function StepRow({ s, r, country, open, onFix, apply, actions }: {
               <ChevronDown className={`mt-1 h-4 w-4 shrink-0 transition-transform ${expanded ? "rotate-180" : ""}`} />
             </button>
             {s.stage === "register" && s.pillar && <InfoTip term={PILLAR_TERM[s.pillar]} className="mt-0.5" />}
+            {intl && <InfoTip term="neighbouringRights" className="mt-0.5" />}
           </div>
           {confirming && (
             <div className="mt-2 flex flex-wrap items-center gap-2 rounded-lg bg-muted p-3 text-sm">
@@ -337,6 +344,7 @@ function StepRow({ s, r, country, open, onFix, apply, actions }: {
               ) : (
                 <Guide society={s.society} pillar={s.pillar} country={country} title={r.track.title} onExpert={actions.onExpert} onDone={s.done ? undefined : registered} />
               ))}
+              {intl && <IntlGuide done={s.done} onDone={() => onIntl(true)} />}
               {s.stage === "confirm" && s.society && key && <>
                 <p className="text-muted-foreground">{key.hint}{s.society.access === "member" ? ` Log in to your ${s.society.name} account first.` : ""} Then check that the writers, shares and IPI numbers match what you registered.</p>
                 {key.value ? (
@@ -368,6 +376,27 @@ function StepRow({ s, r, country, open, onFix, apply, actions }: {
         </div>
       </div>
     </li>
+  );
+}
+
+/** International airplay: one setup per account, through SoundExchange International Services or a PPL mandate. */
+function IntlGuide({ done, onDone }: { done: boolean; onDone: () => void }) {
+  return (
+    <div className="rounded-xl bg-muted p-4">
+      <p>When your recording plays on radio, TV or in venues outside the US, its performers and master owner are owed royalties. US radio doesn't pay these, so most artists miss them. You set this up once for your whole account.</p>
+      <p className="mt-3 font-semibold">Pick one for each country (not both, each one is exclusive):</p>
+      <ol className="mt-2 space-y-2">
+        <li className="flex gap-2"><span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary text-[11px] font-bold text-primary-foreground">1</span>
+          <span><span className="font-semibold">SoundExchange International Services</span> (easiest). Once you're registered with SoundExchange, enroll in International Services in your SX Direct account, for every country or only the ones you choose.</span></li>
+        <li className="flex gap-2"><span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary text-[11px] font-bold text-primary-foreground">2</span>
+          <span><span className="font-semibold">Join PPL</span><InfoTip term="ppl" /> (free, open to US artists). To have PPL collect outside the UK, sign their International Performer Mandate. It's signed as a deed, so print it and sign with a witness.</span></li>
+      </ol>
+      <div className="mt-4 flex flex-wrap gap-2">
+        <Button size="sm" onClick={() => window.open("https://www.soundexchange.com/international-partners/", "_blank", "noopener,noreferrer")}><ExternalLink />Open SoundExchange</Button>
+        <Button size="sm" variant="outline" onClick={() => window.open("https://www.ppluk.com/royalties/what-do-i-need-to-join-ppl/", "_blank", "noopener,noreferrer")}><ExternalLink />Open PPL</Button>
+        {!done && <Button size="sm" variant="outline" onClick={onDone}><Check />I've set this up</Button>}
+      </div>
+    </div>
   );
 }
 
