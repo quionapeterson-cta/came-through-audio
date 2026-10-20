@@ -252,6 +252,44 @@ export type Database = {
         }
         Relationships: []
       }
+      badge_grants: {
+        Row: {
+          badge_id: string
+          created_at: string
+          granted_by: string | null
+          id: string
+          reason: string
+          ticket_id: string | null
+          user_id: string
+        }
+        Insert: {
+          badge_id: string
+          created_at?: string
+          granted_by?: string | null
+          id?: string
+          reason: string
+          ticket_id?: string | null
+          user_id: string
+        }
+        Update: {
+          badge_id?: string
+          created_at?: string
+          granted_by?: string | null
+          id?: string
+          reason?: string
+          ticket_id?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "badge_grants_ticket_id_fkey"
+            columns: ["ticket_id"]
+            isOneToOne: false
+            referencedRelation: "support_tickets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       badge_settings: {
         Row: {
           badge_id: string
@@ -359,6 +397,30 @@ export type Database = {
           },
         ]
       }
+      company_plans: {
+        Row: {
+          body: string
+          slug: string
+          status: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          body?: string
+          slug: string
+          status?: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          body?: string
+          slug?: string
+          status?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       contributors: {
         Row: {
           created_at: string
@@ -398,6 +460,39 @@ export type Database = {
           publisher?: string | null
           updated_at?: string
           user_id?: string
+        }
+        Relationships: []
+      }
+      department_tasks: {
+        Row: {
+          body: string
+          created_at: string
+          created_by: string | null
+          department: string
+          id: string
+          status: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          body?: string
+          created_at?: string
+          created_by?: string | null
+          department: string
+          id?: string
+          status?: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          body?: string
+          created_at?: string
+          created_by?: string | null
+          department?: string
+          id?: string
+          status?: string
+          title?: string
+          updated_at?: string
         }
         Relationships: []
       }
@@ -1182,6 +1277,7 @@ export type Database = {
         }
         Returns: undefined
       }
+      user_id_by_email: { Args: { _email: string }; Returns: string }
     }
     Enums: {
       agency_name: "MLC" | "SoundExchange" | "ASCAP" | "BMI"
