@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { PRE_DIST_NOTE, PRO_TIP } from "@/lib/copy";
-import { Check, Music, Quote, Upload, Download } from "lucide-react";
+import { Check, Music, Upload, Download } from "lucide-react";
 import { SignupCard } from "@/components/SignupCard";
 import { BrandLogo } from "@/components/BrandLogo";
 import { FitHeadline } from "@/components/FitHeadline";
@@ -9,7 +9,9 @@ import { ArtistBadge, ComposerBadge, MusicianBadge, ProducerBadge, SongwriterBad
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { PlanComparison, planAction } from "@/components/PlanComparison";
 import { PLAN_FEATURES } from "@/lib/plans";
-import { TESTIMONIALS, type Testimonial } from "@/lib/testimonials";
+import { DEFAULT_TESTIMONIAL_FILTER, TESTIMONIALS } from "@/lib/testimonials";
+import { getTestimonialFilter } from "@/lib/testimonials.functions";
+import { TestimonialCard } from "@/components/TestimonialCard";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -22,6 +24,8 @@ export const Route = createFileRoute("/")({
       { name: "twitter:card", content: "summary_large_image" },
     ],
   }),
+  // The shared testimonial photo filter, loaded with the page so photos never flash with the wrong look.
+  loader: () => getTestimonialFilter().catch(() => DEFAULT_TESTIMONIAL_FILTER),
   component: Landing,
 });
 
@@ -62,6 +66,7 @@ const roles = [
 ];
 
 function Landing() {
+  const filter = Route.useLoaderData();
   return (
     <div className="min-h-screen bg-background text-foreground">
       {/* A white header sets the black hero apart as its own block instead of one long stretch of black. */}
@@ -157,7 +162,7 @@ function Landing() {
         <div className="mx-auto max-w-7xl px-6">
           <h2 className="text-center text-3xl font-bold md:text-4xl">What musicians are saying</h2>
           <div className="mt-12 grid gap-6 md:grid-cols-3">
-            {TESTIMONIALS.map((t) => <TestimonialCard key={t.name} t={t} />)}
+            {TESTIMONIALS.map((t) => <TestimonialCard key={t.name} t={t} filter={filter} />)}
           </div>
         </div>
       </section>
@@ -204,32 +209,5 @@ function Landing() {
         <div className="border-t border-ink-border py-6 text-center text-sm">© {new Date().getFullYear()} Came Through Audio, LLC</div>
       </footer>
     </div>
-  );
-}
-
-/**
- * One testimonial: a wide photo under the shared brand filter (black-and-white, cobalt tint, dark fade),
- * so every photo matches no matter how it was shot, with name and location on the photo and the quote below.
- */
-function TestimonialCard({ t }: { t: Testimonial }) {
-  return (
-    <figure className="flex flex-col overflow-hidden rounded-xl border border-ink-border bg-ink text-ink-foreground">
-      <div className="relative aspect-[4/3] overflow-hidden">
-        <img src={t.photo} alt={`${t.name}, Came Through Audio client`} loading="lazy" style={{ objectPosition: t.focus ?? "50% 30%", transform: t.zoom ? `scale(${t.zoom})` : undefined, transformOrigin: t.focus }}
-          className="h-full w-full object-cover grayscale contrast-125 brightness-90" />
-        <div className="absolute inset-0 bg-primary opacity-50 mix-blend-color" aria-hidden />
-        <div className="absolute inset-0 bg-gradient-to-t from-ink via-ink/30 to-transparent" aria-hidden />
-        <figcaption className="absolute inset-x-0 bottom-0 p-5">
-          <div className="text-xl font-extrabold uppercase tracking-wide">{t.name}</div>
-          {t.title && <div className="text-xs text-ink-muted">{t.title}</div>}
-          {t.location && <div className="mt-0.5 text-sm font-semibold text-brand-electric">{t.location}</div>}
-        </figcaption>
-      </div>
-      <div className="flex flex-1 flex-col p-5 pt-4">
-        <Quote className="h-5 w-5 text-brand-electric" aria-hidden />
-        <blockquote className="mt-2 flex-1 leading-relaxed">{t.quote}</blockquote>
-        <div className="mt-4 text-xs font-bold uppercase tracking-[2px] text-ink-muted">{t.service}</div>
-      </div>
-    </figure>
   );
 }
