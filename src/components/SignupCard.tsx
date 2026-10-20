@@ -14,13 +14,15 @@ export function SignupCard({ returnPath, onAuthed, inviteMode }: { returnPath?: 
   const [stageName, setStageName] = useState("");
   const [legalName, setLegalName] = useState("");
   const [email, setEmail] = useState("");
+  // Password rules stay hidden behind the strength bar until a signup attempt fails them.
+  const [showRules, setShowRules] = useState(false);
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
   const [sent, setSent] = useState(false);
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
-    if (mode === "signup" && !passwordValid(password)) { toast.error("Your password needs to pass every check below."); return; }
+    if (mode === "signup" && !passwordValid(password)) { setShowRules(true); toast.error("Your password needs to pass every check below."); return; }
     if (returnPath) rememberReturn(returnPath);
     setBusy(true);
     try {
@@ -96,7 +98,7 @@ export function SignupCard({ returnPath, onAuthed, inviteMode }: { returnPath?: 
               <Input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
               {inviteMode && <p className="text-xs font-medium text-primary">Use your invite email: the same address your signature request was sent to.</p>}
             </div>
-            {mode === "signup" ? <PasswordField id="password" value={password} onChange={setPassword} />
+            {mode === "signup" ? <PasswordField id="password" value={password} onChange={setPassword} rules={showRules} />
               : mode === "login" && (
               <div className="space-y-1.5">
                 <div className="flex items-baseline justify-between">
