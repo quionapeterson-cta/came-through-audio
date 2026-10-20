@@ -224,7 +224,7 @@ const SPLITS: BadgeDef[] = [
   { id: "written_in_the_stars", title: "Written in the Stars", collection: "splits", tier: "ultimate", milestone: "100 split sheets signed by everyone, then every 100 more", metric: "splitsSigned", goal: 100, every: 100, src: `${SP}/constellation_collab.jpg`,
     description: "One hundred songs, every share signed and sealed. Your collaborations are written in the stars and on paper.",
     popup: "ULTIMATE! 100 split sheets. Written in the stars." },
-  { id: "high_five", title: "High Five", collection: "splits", tier: "standard", milestone: "Every signature you receive on a split sheet or contract", metric: "signaturesReceived", goal: 1, every: 1, src: `${SP}/fist_pump_sealed_black.webp`,
+  { id: "high_five", title: "High Five", collection: "splits", tier: "standard", milestone: "Every signature you receive on a split sheet or contract", metric: "signaturesReceived", goal: 1, every: 1, src: `${SP}/high_five.png`,
     description: "Someone put their name next to yours. Getting a music business agreement signed is an accomplishment, every single time.",
     popup: "High five! Another signature came through." },
 ];
