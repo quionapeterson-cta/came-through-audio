@@ -5,7 +5,10 @@ import { ALL_BADGES, badgeById } from "@/lib/badges";
 import { badgeMetrics, evaluateBadges, type BadgeData } from "@/lib/badge-rules";
 import { fromCatalogRow } from "@/lib/catalog";
 
-export type EarnedBadge = { id: string; times: number; earnedAt: string; seenAt: string | null };
+/** One earning of a badge; `pick` is the art the user chose, for badges with choices. */
+export type BadgeEarning = { at: string; pick?: string | null };
+export type EarnedBadge = { id: string; times: number; earnedAt: string; seenAt: string | null; log: BadgeEarning[] };
+type HeldRow = { badge_id: string; times: number; earned_at: string; seen_at: string | null; log: BadgeEarning[] | null };
 export type BadgeCheck = { earned: EarnedBadge[]; metrics: Record<string, number>; disabled: string[] };
 
 const validZone = (tz: string) => { try { new Intl.DateTimeFormat("en-US", { timeZone: tz }); return true; } catch { return false; } };
@@ -32,7 +35,9 @@ export const checkBadges = createServerFn({ method: "POST" })
       db.from("badge_events" as never).select("kind").eq("user_id", uid),
       db.from("profiles").select("onboarding, stage_name, legal_name").eq("id", uid).maybeSingle(),
       db.from("badge_settings" as never).select("badge_id").eq("enabled", false),
-      supabaseAdmin.from("user_badges" as never).select("badge_id, times, earned_at, seen_at").eq("user_id", uid),
+      // Until the badge-log migration runs there's no log column; badges still work, just without per-earning dates.
+      supabaseAdmin.from("user_badges" as never).select("badge_id, times, earned_at, seen_at, log").eq("user_id", uid)
+        .then((r) => (r.error ? supabaseAdmin.from("user_badges" as never).select("badge_id, times, earned_at, seen_at").eq("user_id", uid) : r)),
       supabaseAdmin.auth.admin.getUserById(uid),
     ]);
     if (catalogs.error) fail("catalog");
@@ -58,21 +63,48 @@ export const checkBadges = createServerFn({ method: "POST" })
 
     const disabled = ((settings.data ?? []) as { badge_id: string }[]).map((s) => s.badge_id);
     const metrics = badgeMetrics(input);
-    const mine = new Map(((held.data ?? []) as { badge_id: string; times: number; earned_at: string; seen_at: string | null }[]).map((r) => [r.badge_id, r]));
+    const mine = new Map(((held.data ?? []) as HeldRow[]).map((r) => [r.badge_id, r]));
     const now = new Date().toISOString();
     const changes = evaluateBadges(metrics, new Set(disabled))
       .filter((s) => s.earned && s.times > (mine.get(s.badge.id)?.times ?? 0))
-      // A badge earned again (repeatable) comes back unseen so it celebrates again.
-      .map((s) => ({ user_id: uid, badge_id: s.badge.id, times: s.times, earned_at: mine.get(s.badge.id)?.earned_at ?? now, seen_at: s.badge.preSeen ? now : null }));
+      .map((s): HeldRow & { user_id: string } => {
+        const had = mine.get(s.badge.id);
+        // One log entry per new earning; badges with art choices wait for the user's pick.
+        const fresh = Array.from({ length: s.times - (had?.times ?? 0) }, (): BadgeEarning => (s.badge.choices ? { at: now, pick: null } : { at: now }));
+        // A badge earned again comes back unseen so it celebrates again.
+        return { user_id: uid, badge_id: s.badge.id, times: s.times, earned_at: had?.earned_at ?? now, seen_at: s.badge.preSeen ? now : null, log: [...(had?.log ?? []), ...fresh] };
+      });
     if (changes.length) {
-      const { error } = await supabaseAdmin.from("user_badges" as never).upsert(changes as never, { onConflict: "user_id,badge_id" });
+      let { error } = await supabaseAdmin.from("user_badges" as never).upsert(changes as never, { onConflict: "user_id,badge_id" });
+      if (error) ({ error } = await supabaseAdmin.from("user_badges" as never).upsert(changes.map(({ log: _, ...c }) => c) as never, { onConflict: "user_id,badge_id" }));
       if (error) fail("saving");
-      for (const c of changes) mine.set(c.badge_id, { badge_id: c.badge_id, times: c.times, earned_at: c.earned_at, seen_at: c.seen_at });
+      for (const c of changes) mine.set(c.badge_id, c);
     }
 
     const earned = [...mine.values()].filter((r) => badgeById(r.badge_id))
-      .map((r) => ({ id: r.badge_id, times: r.times, earnedAt: r.earned_at, seenAt: r.seen_at }));
+      .map((r) => ({ id: r.badge_id, times: r.times, earnedAt: r.earned_at, seenAt: r.seen_at, log: r.log ?? [] }));
     return { earned, metrics, disabled };
+  });
+
+/** Saves the art the user picked for one earning of a badge with choices (Self-Produced). A pick can't be changed later. */
+export const pickBadgeArt = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d) => z.object({ badgeId: z.string().max(80), index: z.number().int().min(0), pick: z.string().max(200) }).parse(d))
+  .handler(async ({ data, context }) => {
+    const badge = badgeById(data.badgeId);
+    if (!badge?.choices?.includes(data.pick)) throw new Error("That art isn't one of this badge's choices.");
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: row, error } = await supabaseAdmin.from("user_badges" as never).select("log")
+      .eq("user_id", context.userId).eq("badge_id", data.badgeId).maybeSingle();
+    const log = ((row as { log: BadgeEarning[] } | null)?.log ?? []).slice();
+    const entry = log[data.index];
+    if (error || !entry) throw new Error("Couldn't find that badge.");
+    if (entry.pick) return { ok: true };
+    log[data.index] = { ...entry, pick: data.pick };
+    const { error: saveError } = await supabaseAdmin.from("user_badges" as never).update({ log } as never)
+      .eq("user_id", context.userId).eq("badge_id", data.badgeId);
+    if (saveError) throw new Error("Couldn't save your pick.");
+    return { ok: true };
   });
 
 /** Super admins and the Branding, Marketing & Sales and Support departments (public.can_manage_badges). */
@@ -86,12 +118,15 @@ export const listBadgeSettings = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
     await assertBadgeStaff(context as never);
-    const [settings, counts] = await Promise.all([
+    const [settings, counts, drops] = await Promise.all([
       context.supabase.from("badge_settings" as never).select("badge_id, enabled, updated_at"),
       context.supabase.rpc("badge_earned_counts" as never),
+      context.supabase.from("badge_drops" as never).select("note, created_at").order("created_at", { ascending: false }).limit(1),
     ]);
     if (settings.error || counts.error) throw new Error("Couldn't load badge settings.");
     return {
+      // Missing until the badge-drops migration runs; the reminder then counts from today.
+      lastDrop: ((drops.data ?? []) as { note: string; created_at: string }[])[0] ?? null,
       settings: (settings.data ?? []) as unknown as { badge_id: string; enabled: boolean; updated_at: string }[],
       earned: Object.fromEntries(((counts.data ?? []) as { badge_id: string; users: number }[]).map((r) => [r.badge_id, Number(r.users)])) as Record<string, number>,
     };
@@ -106,5 +141,16 @@ export const setBadgesEnabled = createServerFn({ method: "POST" })
     const rows = data.ids.map((badge_id) => ({ badge_id, enabled: data.enabled, updated_by: context.userId, updated_at: new Date().toISOString() }));
     const { error } = await context.supabase.from("badge_settings" as never).upsert(rows as never, { onConflict: "badge_id" });
     if (error) throw new Error("Couldn't save the badge setting.");
+    return { ok: true };
+  });
+
+/** Branding logs a new badge release (holiday, promotion, new badge); Admin → Badges reminds them six months later. */
+export const logBadgeDrop = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d) => z.object({ note: z.string().trim().min(1).max(500) }).parse(d))
+  .handler(async ({ data, context }) => {
+    await assertBadgeStaff(context as never);
+    const { error } = await context.supabase.from("badge_drops" as never).insert({ note: data.note, created_by: context.userId } as never);
+    if (error) throw new Error("Couldn't save the badge drop.");
     return { ok: true };
   });

@@ -3,9 +3,53 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { ALL_BADGES, COLLECTIONS, TIER_LABEL } from "@/lib/badges";
-import { listBadgeSettings, setBadgesEnabled } from "@/lib/badges.functions";
+import { listBadgeSettings, logBadgeDrop, setBadgesEnabled } from "@/lib/badges.functions";
+
+const DROP_MONTHS = 6;
+const fmt = (d: Date) => d.toLocaleDateString(undefined, { month: "long", day: "numeric", year: "numeric" });
+
+/**
+ * Branding's reminder: every six months, release a new badge for each collection (a holiday badge, a promotion…).
+ * Logging the drop restarts the clock.
+ */
+function DropReminder({ last }: { last: { note: string; created_at: string } | null }) {
+  const log = useServerFn(logBadgeDrop);
+  const qc = useQueryClient();
+  const [note, setNote] = useState("");
+  const [busy, setBusy] = useState(false);
+  const due = last ? new Date(new Date(last.created_at).setMonth(new Date(last.created_at).getMonth() + DROP_MONTHS)) : new Date();
+  const overdue = due.getTime() <= Date.now();
+
+  async function save() {
+    setBusy(true);
+    try {
+      await log({ data: { note } });
+      setNote("");
+      toast.success("Badge drop logged. Next reminder in six months.");
+      await qc.invalidateQueries({ queryKey: ["badge-settings"] });
+    } catch { toast.error("Couldn't save the badge drop."); }
+    finally { setBusy(false); }
+  }
+
+  return (
+    <section className={`rounded-2xl border p-5 ${overdue ? "border-primary bg-primary/5" : "border-border bg-card"}`}>
+      <h3 className="text-lg font-bold">{overdue ? "Time for a new badge drop" : `Next badge drop due ${fmt(due)}`}</h3>
+      <p className="mt-1 max-w-3xl text-sm text-muted-foreground">
+        Every {DROP_MONTHS} months, create a new badge for each collection: a holiday badge, a promotion or a new milestone.
+        {last ? ` Last drop ${fmt(new Date(last.created_at))}: ${last.note}` : " No drop logged yet."}
+      </p>
+      <form className="mt-4 flex flex-wrap gap-2" onSubmit={(e) => { e.preventDefault(); if (note.trim()) void save(); }}>
+        <label htmlFor="badge-drop-note" className="sr-only">What was released</label>
+        <Input id="badge-drop-note" value={note} onChange={(e) => setNote(e.target.value)} maxLength={500} placeholder="What was released, e.g. Holiday 2026 badges" className="min-w-0 flex-1" />
+        <Button type="submit" disabled={busy || !note.trim()}>Log badge drop</Button>
+      </form>
+    </section>
+  );
+}
 
 /**
  * Super admins, Branding, Marketing & Sales and Support see every badge, how many users hold it, and turn badges on or off for new unlocks, one at a time or a whole collection. Switching one off never
@@ -34,6 +78,7 @@ export function BadgeSwitchboard() {
 
   return (
     <div className="mt-6 space-y-6">
+      <DropReminder last={q.data?.lastDrop ?? null} />
       <p className="max-w-3xl text-sm text-muted-foreground">Turning a badge off stops new unlocks only. Anyone who already earned it keeps it on their shelf.</p>
       {COLLECTIONS.map((c) => {
         const list = ALL_BADGES.filter((b) => b.collection === c.id);

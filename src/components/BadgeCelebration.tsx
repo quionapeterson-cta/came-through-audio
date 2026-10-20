@@ -19,7 +19,7 @@ const reducedMotion = () => typeof window !== "undefined" && !!window.matchMedia
  * then about 45 badges rain down for ~5 seconds with depth, sway and gold sparkles, and a replay button appears.
  * Reduced motion: no rain or burst, just one gentle shine.
  */
-export function CelebrationStage({ src, name, round }: { src: string; name?: string | undefined; round?: boolean | undefined }) {
+export function CelebrationStage({ src, name, round, float }: { src: string; name?: string | undefined; round?: boolean | undefined; float?: boolean | undefined }) {
   const [run, setRun] = useState(0);
   const [done, setDone] = useState(false);
   const [still] = useState(reducedMotion);
@@ -36,7 +36,7 @@ export function CelebrationStage({ src, name, round }: { src: string; name?: str
       {!still && <Rain key={`rain-${run}`} src={src} shape={shape} />}
       {!still && <Burst key={`burst-${run}`} src={src} shape={shape} from={badge} />}
       <div key={`badge-${run}`} className="relative w-full" style={still ? undefined : { animation: "badge-pop 0.6s ease-out" }}>
-        <img ref={badge} src={src} alt={name ?? "Badge"} className={round ? `mx-auto aspect-square ${ROUND_SIZE} rounded-full border-4 border-primary object-cover` : "max-h-[38svh] w-full object-contain drop-shadow-2xl md:max-h-[60vh]"} />
+        <img ref={badge} src={src} alt={name ?? "Badge"} className={`${round ? `mx-auto aspect-square ${ROUND_SIZE} rounded-full border-4 border-primary object-cover` : "max-h-[38svh] w-full object-contain drop-shadow-2xl md:max-h-[60vh]"}${float ? " badge-float" : ""}`} />
         {/* The shine is masked by the badge itself so only the artwork catches the light. */}
         <div aria-hidden className={`pointer-events-none absolute inset-0 ${round ? `mx-auto aspect-square ${ROUND_SIZE} rounded-full` : ""}`}
           style={{ ...(round ? {} : { maskImage: `url("${src}")`, WebkitMaskImage: `url("${src}")`, maskSize: "contain", WebkitMaskSize: "contain", maskRepeat: "no-repeat", WebkitMaskRepeat: "no-repeat", maskPosition: "center", WebkitMaskPosition: "center" }),

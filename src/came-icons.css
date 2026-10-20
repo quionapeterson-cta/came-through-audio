@@ -53,3 +53,19 @@
 .cta-midnight { background-image: url("/icons/playful/midnight_oil.png"); }
 .cta-marathon { background-image: url("/icons/playful/marathon.png"); }
 .cta-unbreakable { background-image: url("/icons/playful/unbreakable.png"); }
+
+/* Times-earned count on a badge (×3): a small jeweled chip, Primary Black with an Electric Cobalt rim and glints. */
+.cta-badge-count {
+  font-family: "Poppins", sans-serif; font-weight: 700; font-size: 0.75rem; line-height: 1;
+  min-width: 1.9rem; height: 1.9rem; padding: 0 0.45rem; border-radius: 999px;
+  display: inline-flex; align-items: center; justify-content: center;
+  color: var(--cta-white); background-color: var(--cta-black);
+  background-image: radial-gradient(circle at 28% 30%, rgb(255 255 255 / 0.55) 0 1.5px, transparent 2.5px),
+    radial-gradient(circle at 74% 66%, rgb(255 255 255 / 0.4) 0 1px, transparent 2px),
+    radial-gradient(circle at 62% 22%, rgb(77 140 255 / 0.7) 0 1px, transparent 2px);
+  border: 2px solid #4d8cff; box-shadow: 0 0 0 2px var(--cta-black), 0 0 10px rgb(77 140 255 / 0.75);
+}
+
+/* After the unlock pop, the badge floats gently. */
+@keyframes badge-float { 50% { transform: translateY(-8px); } }
+@media (prefers-reduced-motion: no-preference) { .badge-float { animation: badge-float 3.2s ease-in-out 1.6s infinite; } }

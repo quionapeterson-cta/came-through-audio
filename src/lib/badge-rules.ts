@@ -1,4 +1,4 @@
-import { BADGES, INSTRUMENTS, type BadgeDef } from "@/lib/badges";
+import { BADGES, INSTRUMENTS, timesEarned, type BadgeDef } from "@/lib/badges";
 import type { CatalogTrack } from "@/lib/catalog";
 import { songHealthy, trackReport, type RepertoireCheck } from "@/lib/health";
 import { creditName, isPerformer } from "@/lib/metadata";
@@ -43,12 +43,21 @@ export function localTime(iso: string, timeZone: string) {
   return { date: `${get("year")}-${get("month")}-${get("day")}`, hour: Number(get("hour")) };
 }
 
-/** Albums/EPs (by album title) with at least three tracks. */
-function releases(tracks: CatalogTrack[]) {
+/** Tracks grouped by album title. */
+function albums(tracks: CatalogTrack[]) {
   const by = new Map<string, CatalogTrack[]>();
   for (const t of tracks) { const a = norm(t.metadata.album ?? ""); if (a) by.set(a, [...(by.get(a) ?? []), t]); }
-  return [...by.values()].filter((list) => list.length >= RELEASE_MIN_TRACKS);
+  return [...by.values()];
 }
+
+/** Albums/EPs (by album title) with at least three tracks. */
+const releases = (tracks: CatalogTrack[]) => albums(tracks).filter((list) => list.length >= RELEASE_MIN_TRACKS);
+
+/** Projects with every track in the catalog: as many tracks as the "1 of 12" totals say (when entered). */
+function fullProjects(tracks: CatalogTrack[]) {
+  return albums(tracks).filter((list) => list.length >= Math.max(0, ...list.map((t) => Number(t.metadata.trackTotal) || 0)));
+}
+const EP_TRACKS = [4, 6], ALBUM_TRACKS = 8;
 
 /** Every count the badges unlock on. Uses the shared readiness and health modules, never its own versions of them. */
 export function badgeMetrics(d: BadgeData): Record<string, number> {
@@ -80,13 +89,24 @@ export function badgeMetrics(d: BadgeData): Record<string, number> {
   for (const c of credits) { const id = instrumentOf(c); if (id) instruments[`instrument:${id}`] = (instruments[`instrument:${id}`] ?? 0) + 1; }
 
   const evenings = new Map<string, number>();
-  let midnight = 0, quiet = 0;
+  const midnights = new Set<string>(), mornings = new Set<string>();
   for (const t of d.tracks) {
     const { date, hour } = localTime(t.createdAt, d.timeZone);
     if (hour >= 21) evenings.set(date, (evenings.get(date) ?? 0) + 1);
-    if (hour < 4) midnight++;
-    else if (hour < 6) quiet++;
+    if (hour < 4) midnights.add(date);
+    else if (hour < 6) mornings.add(date);
   }
+  const checkMonths = new Set(d.checks.map((c) => localTime(c.checkedAt, d.timeZone).date.slice(0, 7)));
+
+  // Signatures from anyone else on the user's own split sheets and contracts.
+  const signatures = [...sheets.values()].flat().filter((r) => !r.isOwner && r.signedAt).length
+    + d.contracts.flatMap((c) => c.parties).filter((p) => !p.isOwner && p.signedAt).length;
+
+  const full = fullProjects(d.tracks);
+  const isWav = (t: CatalogTrack) => /\.wav$/i.test(t.metadata.audioPath);
+  const wavAlbums = full.filter((list) => list.length >= ALBUM_TRACKS && list.every(isWav)).length;
+  const selfProduced = d.tracks.filter((t) => ready.has(t.id) && t.metadata.artist.trim()
+    && t.metadata.producers.some((p) => norm(creditName(p) || p.name || "") === norm(t.metadata.artist))).length;
 
   const hiphop = d.tracks.filter((t) => hasGenre(t, "Hip-Hop/Rap"));
   const years = Math.floor((d.now.getTime() - new Date(d.accountCreatedAt).getTime()) / (365.25 * 24 * 3600 * 1000));
@@ -105,8 +125,12 @@ export function badgeMetrics(d: BadgeData): Record<string, number> {
     protected: protectedSongs,
     agencyExports: d.events.agency_export,
     masterDownloads: d.events.master_download,
+    masterCrowns: (d.events.master_download > 0 ? 1 : 0) + wavAlbums,
+    fullEps: full.filter((list) => list.length >= EP_TRACKS[0]! && list.length <= EP_TRACKS[1]!).length,
+    fullAlbums: full.filter((list) => list.length >= ALBUM_TRACKS).length,
     blueprintReads: d.events.blueprint_read,
     healthChecks: d.checks.length,
+    healthCheckMonths: checkMonths.size,
     chainOfTitle: d.tracks.filter((t) => {
       const r = registrationReadiness(t.metadata);
       return r.ready && !r.warnings.length && signedSheetIds.has(t.id) && certified.has(t.id);
@@ -116,8 +140,8 @@ export function badgeMetrics(d: BadgeData): Record<string, number> {
     memberYears: Math.max(0, years),
     healthy,
     marathonNights: [...evenings.values()].filter((n) => n >= 5).length,
-    midnightEntries: midnight,
-    quietEntries: quiet,
+    midnightNights: midnights.size,
+    quietMornings: mornings.size,
     splitsCreated: sheets.size,
     splitsSigned: signedSheets.length,
     signedSplits3: signedSheets.filter(([, rows]) => collaborators(rows) >= 3).length,
@@ -126,7 +150,9 @@ export function badgeMetrics(d: BadgeData): Record<string, number> {
     contractsSent: d.contracts.filter((c) => c.status === "sent" || c.status === "signed").length,
     contractsSigned: signedContracts,
     deals: signedSheets.length + signedContracts,
+    signaturesReceived: signatures,
     produced,
+    selfProduced,
     performerCredits: credits.length,
     ...instruments,
     hiphop: hiphop.length,
@@ -138,11 +164,11 @@ export function badgeMetrics(d: BadgeData): Record<string, number> {
 
 export type BadgeStatus = { badge: BadgeDef; count: number; earned: boolean; times: number };
 
-/** Each live badge's progress. Repeatable badges count how many times the goal has been passed. */
+/** Each live badge's progress. Repeating badges count every step passed (see timesEarned). */
 export function evaluateBadges(metrics: Record<string, number>, disabled: ReadonlySet<string> = new Set()): BadgeStatus[] {
   return BADGES.filter((b) => !disabled.has(b.id)).map((badge) => {
     const count = metrics[badge.metric] ?? 0;
-    const earned = count >= badge.goal;
-    return { badge, count, earned, times: earned ? (badge.repeatable ? Math.floor(count / badge.goal) : 1) : 0 };
+    const times = timesEarned(badge, count);
+    return { badge, count, earned: times > 0, times };
   });
 }
