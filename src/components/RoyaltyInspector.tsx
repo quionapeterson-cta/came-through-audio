@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
-import { CheckCircle2, XCircle, ExternalLink, HelpCircle, ListChecks, Loader2, Search } from "lucide-react";
+import { CheckCircle2, XCircle, ExternalLink, ListChecks, Loader2, Search } from "lucide-react";
+import { InfoTip } from "@/components/InfoTip";
+import type { GlossaryKey } from "@/lib/glossary";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ProSelect } from "@/components/ProSelect";
@@ -54,8 +56,8 @@ export function RoyaltyInspector({ onEmbed, onExpert, onSave, editing, onDoneEdi
   }
   const reset = () => { setF(blank); setIssues(undefined); setSaved(false); if (editing) onDoneEditing(); };
 
-  const field = (k: keyof Form, label: string, ph = "", help?: string) => (
-    <label className="space-y-1 text-sm"><span className="inline-flex items-center gap-1">{label}{help && <span title={help} aria-label={help} role="img"><HelpCircle className="h-3.5 w-3.5 text-muted-foreground" /></span>}</span>
+  const field = (k: keyof Form, label: string, ph = "", term?: GlossaryKey) => (
+    <label className="space-y-1 text-sm"><span className="inline-flex items-center">{label}{term && <InfoTip term={term} />}</span>
       <Input value={f[k]} placeholder={ph} onChange={set(k)} /></label>
   );
   const score = issues ? Math.round((PILLARS.filter((p) => !issues.some((i) => i.pillar === p.id)).length / 3) * 100) : 0;
@@ -66,14 +68,14 @@ export function RoyaltyInspector({ onEmbed, onExpert, onSave, editing, onDoneEdi
       <p className="mt-1 text-sm text-muted-foreground">Check any song in seconds, free and unlimited. Save it to your checklist to track every step to 100% health.</p>
       <div className="mt-4 grid gap-3 md:grid-cols-3">
         {field("title", "Song title")}{field("artist", "Artist")}{field("duration", "Duration", "3:25")}
-        {field("isrc", "ISRC", "US-XXX-26-00001", "Your recording's ID. Your distributor usually assigns it for free.")}
-        {field("iswc", "ISWC (optional)", "T-123.456.789-0", "Your song's ID. Your PRO assigns it after you register the song, so it's fine to leave blank.")}
-        {field("writer", "Writer legal name", "", "The writer's real legal name, used for registration. Not a stage name.")}
-        <label className="space-y-1 text-sm"><span className="inline-flex items-center gap-1">Writer role<span title="Author wrote the lyrics, Composer wrote the music, Author/Composer did both." aria-label="Author wrote the lyrics, Composer wrote the music, Author/Composer did both." role="img"><HelpCircle className="h-3.5 w-3.5 text-muted-foreground" /></span></span>
+        {field("isrc", "ISRC", "US-XXX-26-00001", "isrc")}
+        {field("iswc", "ISWC (optional)", "T-123.456.789-0", "iswc")}
+        {field("writer", "Writer legal name", "", "legalName")}
+        <label className="space-y-1 text-sm"><span className="inline-flex items-center">Writer role<InfoTip term="roles" /></span>
           <select value={f.role} onChange={set("role")} className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm">{WRITER_ROLES.map((r) => <option key={r} value={r}>{r}</option>)}</select></label>
-        <div className="space-y-1 text-sm"><label htmlFor="inspector-pro">Writer PRO</label><ProSelect id="inspector-pro" value={f.pro} onChange={(pro) => { setF({ ...f, pro }); setSaved(false); }} /></div>
-        {field("ipi", "Writer IPI #", "", "A 9–11 digit number from your PRO. Leave it blank if you don't have it yet.")}{field("split", "Writer split %")}
-        {field("publisher", "Publisher", "", "Self-published? Enter your own publishing name, or leave it blank.")}{field("pubIpi", "Publisher IPI #")}
+        <div className="space-y-1 text-sm"><label htmlFor="inspector-pro" className="inline-flex items-center">Writer PRO<InfoTip term="pro" /></label><ProSelect id="inspector-pro" value={f.pro} onChange={(pro) => { setF({ ...f, pro }); setSaved(false); }} /></div>
+        {field("ipi", "Writer IPI #", "", "ipi")}{field("split", "Writer split %", "", "split")}
+        {field("publisher", "Publisher", "", "publisher")}{field("pubIpi", "Publisher IPI #", "", "ipi")}
       </div>
       <div className="mt-4 flex flex-wrap gap-2">
         <Button onClick={run}>Inspect Song</Button>

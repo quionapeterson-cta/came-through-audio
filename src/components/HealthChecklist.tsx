@@ -6,6 +6,9 @@ import { Input } from "@/components/ui/input";
 import { Guide, LiveRecords, openSearch, type HealthActions } from "@/components/HealthReport";
 import { encouragement, printKey, registrationPrint, releaseGroups, searchKey, songChecklist, STAGE_LABEL, type ChecklistStep, type SongChecklist, type SongSort, type Stage } from "@/lib/health-checklist";
 import { updateGuide } from "@/lib/register-guides";
+import { InfoTip } from "@/components/InfoTip";
+import type { GlossaryKey } from "@/lib/glossary";
+import type { Pillar } from "@/lib/audit";
 import { notShowingReasons } from "@/lib/health-reasons";
 import { emptyStatus, isInspectorSong, type SongStatus } from "@/lib/health-songs";
 import type { TrackReport } from "@/lib/health";
@@ -19,6 +22,7 @@ const GROUPS: { id: Group; label: string }[] = [
   { id: "healthy", label: "100% Healthy" },
 ];
 const STAGES: Stage[] = ["details", "register", "confirm"];
+const PILLAR_TERM: Record<Pillar, GlossaryKey> = { performance: "performance", mechanical: "mechanical", digital: "digitalPerformance" };
 const today = () => new Date().toISOString().slice(0, 10);
 
 type Props = {
@@ -294,10 +298,13 @@ function StepRow({ s, r, country, open, onFix, apply, actions }: {
           {s.done && <Check className="h-4 w-4" />}
         </button>
         <div className="min-w-0 flex-1">
-          <button type="button" onClick={() => setExpanded(!expanded)} aria-expanded={expanded} className="flex w-full items-start justify-between gap-2 text-left">
-            <span className={`font-semibold ${s.done ? "text-muted-foreground line-through" : ""}`}>{s.title}</span>
-            <ChevronDown className={`mt-1 h-4 w-4 shrink-0 transition-transform ${expanded ? "rotate-180" : ""}`} />
-          </button>
+          <div className="flex items-start gap-1">
+            <button type="button" onClick={() => setExpanded(!expanded)} aria-expanded={expanded} className="flex min-w-0 flex-1 items-start justify-between gap-2 text-left">
+              <span className={`font-semibold ${s.done ? "text-muted-foreground line-through" : ""}`}>{s.title}</span>
+              <ChevronDown className={`mt-1 h-4 w-4 shrink-0 transition-transform ${expanded ? "rotate-180" : ""}`} />
+            </button>
+            {s.stage === "register" && s.pillar && <InfoTip term={PILLAR_TERM[s.pillar]} className="mt-0.5" />}
+          </div>
           {confirming && (
             <div className="mt-2 flex flex-wrap items-center gap-2 rounded-lg bg-muted p-3 text-sm">
               <span className="font-medium">Untick "{s.title}"?</span>

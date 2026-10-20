@@ -1,7 +1,7 @@
 import { Fragment } from "react";
 import { Check, Infinity as InfinityIcon, Minus } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { InfoTip } from "@/components/InfoTip";
 import { PLAN_FEATURES, PLAN_TIERS, TIER_LABEL, hasTier, rememberPlanIntent, type Feature, type PlanTier, type Tier } from "@/lib/plans";
 
 export type PlanAction = { label: string; disabled?: boolean; onClick?: () => void };
@@ -18,7 +18,7 @@ export function PlanComparison({ currentTier, action }: { currentTier?: Tier | u
   const tag = currentTier ? "Your plan" : "Most popular";
 
   return (
-    <TooltipProvider delayDuration={100}>
+    <>
       <p className="flex items-center justify-center gap-2 text-center text-lg font-extrabold uppercase tracking-[2px] text-primary">
         <InfinityIcon className="h-6 w-6 shrink-0" strokeWidth={3} />Every feature. Unlimited. No per-song fees.
       </p>
@@ -77,7 +77,7 @@ export function PlanComparison({ currentTier, action }: { currentTier?: Tier | u
           );
         })}
       </div>
-    </TooltipProvider>
+    </>
   );
 }
 
@@ -110,15 +110,12 @@ function Tag({ text }: { text: string }) {
 
 function FeatureName({ feature }: { feature: Feature }) {
   return (
-    <Tooltip>
-      <TooltipTrigger asChild>
+    <InfoTip title={feature.title} text={feature.tip} className="text-left">
         <span className="cursor-help text-sm font-semibold underline decoration-border decoration-dotted underline-offset-4">
           {feature.title}
           {feature.soon && <span className="ml-2 whitespace-nowrap rounded bg-muted px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-muted-foreground no-underline">Coming soon</span>}
         </span>
-      </TooltipTrigger>
-      <TooltipContent className="max-w-64">{feature.tip}</TooltipContent>
-    </Tooltip>
+    </InfoTip>
   );
 }
 

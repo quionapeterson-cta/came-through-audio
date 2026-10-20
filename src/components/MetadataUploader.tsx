@@ -6,7 +6,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card";
+import { InfoTip } from "@/components/InfoTip";
+import { GLOSSARY, type GlossaryKey } from "@/lib/glossary";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { PRE_DIST_NOTE, PRO_TIP } from "@/lib/copy";
 import { readMetadata, CREDIT_ROLES, emptyContributor, emptyMetadata, embedMetadata, creditName, metadataSchema, GENRES, RELEASE_TYPES, WRITER_ROLES, writerRole, type Contributor, type Metadata } from "@/lib/metadata";
@@ -347,7 +348,7 @@ export function MetadataUploader({ stageName, avatar, userId, mode = "embed", on
             </div>
             <Field label="Track duration" id="duration" value={metadata.duration} placeholder="3:45" onChange={(value) => update("duration", value)} />
             <div className="space-y-2">
-              <Label>Explicit content</Label>
+              <Label>Explicit content<InfoTip term="explicit" /></Label>
               <div className="flex gap-2" role="radiogroup" aria-label="Explicit content">
                 {[true, false].map((v) => (
                   <Button key={String(v)} type="button" role="radio" aria-checked={metadata.explicit === v} variant={metadata.explicit === v ? "default" : "outline"} onClick={() => update("explicit", v)}>{v ? "Yes" : "No"}</Button>
@@ -367,18 +368,18 @@ export function MetadataUploader({ stageName, avatar, userId, mode = "embed", on
             <div className="space-y-2">
               {metadata.featured.map((name, index) => (
                 <div key={index} className="flex items-end gap-2">
-                  <div className="flex-1"><Field label={index === 0 ? "Featured artist" : `Featured artist ${index + 1}`} id={`featured-${index}`} value={name} onChange={(value) => update("featured", metadata.featured.map((n, i) => i === index ? value : n))} /></div>
+                  <div className="flex-1"><Field label={index === 0 ? "Featured artist" : `Featured artist ${index + 1}`} term={index === 0 ? "featured" : undefined} id={`featured-${index}`} value={name} onChange={(value) => update("featured", metadata.featured.map((n, i) => i === index ? value : n))} /></div>
                   {index === metadata.featured.length - 1
                     ? <Button type="button" size="icon" variant="outline" aria-label="Add featured artist" onClick={() => update("featured", [...metadata.featured, ""])}><Plus /></Button>
                     : <Button type="button" size="icon" variant="ghost" aria-label={`Remove featured artist ${index + 1}`} onClick={() => update("featured", metadata.featured.filter((_, i) => i !== index))}><Trash2 /></Button>}
                 </div>
               ))}
             </div>
-            <SelectField label="Release type" id="releaseType" value={metadata.releaseType} options={RELEASE_TYPES} onChange={(value) => update("releaseType", value)} />
+            <SelectField label="Release type" term="releaseType" id="releaseType" value={metadata.releaseType} options={RELEASE_TYPES} onChange={(value) => update("releaseType", value)} />
             {full && <>
               <Field label="Album / release title" id="album" value={metadata.album} onChange={(value) => update("album", value)} />
               <Field label="Release date" id="releaseDate" type="date" value={metadata.releaseDate} onChange={(value) => update("releaseDate", value)} />
-              <Field label="Record label" id="label" value={metadata.label} onChange={(value) => update("label", value)} />
+              <Field label="Record label" term="label" id="label" value={metadata.label} onChange={(value) => update("label", value)} />
             </>}
           </div>
         </fieldset>
@@ -389,23 +390,15 @@ export function MetadataUploader({ stageName, avatar, userId, mode = "embed", on
         {full && metadata.composers.some(creditName) && <Contributors title="Composer (earlier entries)" singular="composer" group="composers" rows={metadata.composers} disabled={busy} onChange={(rows) => update("composers", rows)} tip="Saved before Writer roles existed. Move these into Writer with the Composer role when you can." />}
         <ReadinessPanel metadata={metadata} />
         <Contributors title="Producer Name" singular="producer" group="producers" rows={metadata.producers ?? [emptyContributor()]} disabled={busy} onChange={(rows) => update("producers", rows)} simple
-          tip={PRODUCER_TIP} tipOnly />
+          tip={GLOSSARY.producedBy.text} tipOnly />
         <fieldset disabled={busy} className="space-y-5 border-t border-border pt-6">
           <legend className="pr-3 text-lg font-semibold">Identifiers</legend>
           <div className="grid gap-5 sm:grid-cols-3">
-            <Field label="ISRC" id="isrc" value={metadata.isrc} placeholder="USABC2600001" onChange={(value) => update("isrc", value)} />
-            <Field label="UPC / EAN" id="upc" value={metadata.upc} placeholder="12 or 13 digits" onChange={(value) => update("upc", value)} />
-            <Field label="ISWC (optional)" id="iswc" value={metadata.iswc} placeholder="T-123.456.789-0" onChange={(value) => update("iswc", value)} />
+            <Field label="ISRC" term="isrc" id="isrc" value={metadata.isrc} placeholder="USABC2600001" onChange={(value) => update("isrc", value)} />
+            <Field label="UPC / EAN" term="upc" id="upc" value={metadata.upc} placeholder="12 or 13 digits" onChange={(value) => update("upc", value)} />
+            <Field label="ISWC (optional)" term="iswc" id="iswc" value={metadata.iswc} placeholder="T-123.456.789-0" onChange={(value) => update("iswc", value)} />
           </div>
-          <HoverCard openDelay={100}>
-            <HoverCardTrigger asChild>
-              <button type="button" className="inline-flex items-center rounded-full border border-primary px-3 py-1 text-sm font-semibold text-primary">💡 Pre-Distribution Note</button>
-            </HoverCardTrigger>
-            <HoverCardContent align="start" className="w-96 space-y-3 text-sm">
-              <p>{PRE_DIST_NOTE}</p>
-              <p><span className="font-semibold">⭐ Pro Tip: </span>{PRO_TIP}</p>
-            </HoverCardContent>
-          </HoverCard>
+          <InfoTip title="Pre-Distribution Note" text={`${PRE_DIST_NOTE} ⭐ Pro Tip: ${PRO_TIP}`} className="inline-flex items-center rounded-full border border-primary px-3 py-1 text-sm font-semibold text-primary">💡 Pre-Distribution Note</InfoTip>
         </fieldset>
         <fieldset disabled={busy} className="space-y-3 border-t border-border pt-6">
           <legend className="pr-3 text-lg font-semibold">Lyrics</legend>
@@ -421,7 +414,7 @@ export function MetadataUploader({ stageName, avatar, userId, mode = "embed", on
           <Button type="button" variant="outline" onClick={() => update("credits", [...metadata.credits, { role: CREDIT_ROLES[0], name: "" }])}><Plus />Add credit</Button>
         </fieldset>}
         {full && <p className="rounded-lg border border-primary/40 bg-accent/30 p-3 text-sm text-muted-foreground"><span className="font-semibold text-foreground">No PRO or IPI number yet?</span> Leave them blank. Add them anytime after you register with a PRO and receive your IPI name number.</p>}
-        {full && <Contributors title="Publishers" singular="publisher" group="publishers" rows={metadata.publishers} disabled={busy} publisher onChange={(rows) => update("publishers", rows)} tip="Publishers administer the composition and collect the publisher share, which is half of the song's royalties. Enter each publisher's part of that half, so the shares here add up to 100%. Self-published writers can list their own publishing entity." />}
+        {full && <Contributors title="Publishers" singular="publisher" group="publishers" rows={metadata.publishers} disabled={busy} publisher onChange={(rows) => update("publishers", rows)} tip={GLOSSARY.publisher.text} />}
 
         <div className="space-y-4 border-t border-border pt-6 pb-8">
           {userId && !full && (
@@ -591,12 +584,11 @@ export function MetadataUploader({ stageName, avatar, userId, mode = "embed", on
 }
 
 const TIPS = {
-  legal: "The writer's full legal name, as their PRO and The MLC know it. You can leave it blank for now: it's only needed to register the song.",
   instrumental: "Check this if the song has no lyrics. Instrumental songs don't need an Author to be registered.",
 };
 
-function Tip({ text }: { text: string }) {
-  return <span title={text} tabIndex={0} aria-label={text} className="ml-2 inline-flex h-5 w-5 cursor-help items-center justify-center rounded-full border border-primary text-xs text-primary">i</span>;
+function Tip({ text, title }: { text: string; title?: string }) {
+  return <InfoTip text={text} {...(title && { title })} />;
 }
 
 /** Scroll to and focus a form field by id (used by ⚠️ readiness links). */
@@ -709,23 +701,20 @@ function ReadinessPanel({ metadata }: { metadata: Metadata }) {
   </div>;
 }
 
-function Field({ label, id, value, onChange, required, type = "text", placeholder, tip }: { label: string; id: string; value: string; onChange: (value: string) => void; required?: boolean; type?: string; placeholder?: string | undefined; tip?: string }) {
-  return <div className={`min-w-0 ${tip ? "space-y-3" : "space-y-2"}`}><Label htmlFor={id} className="leading-5">{label}{required ? " *" : ""}{tip && <Tip text={tip} />}</Label><Input id={id} value={value} type={type} required={required} placeholder={placeholder} onChange={(event) => onChange(event.target.value)} /></div>;
+function Field({ label, id, value, onChange, required, type = "text", placeholder, tip, term }: { label: string; id: string; value: string; onChange: (value: string) => void; required?: boolean; type?: string; placeholder?: string | undefined; tip?: string; term?: GlossaryKey | undefined }) {
+  return <div className={`min-w-0 ${tip ? "space-y-3" : "space-y-2"}`}><Label htmlFor={id} className="leading-5">{label}{required ? " *" : ""}{term ? <InfoTip term={term} /> : tip && <Tip text={tip} title={label} />}</Label><Input id={id} value={value} type={type} required={required} placeholder={placeholder} onChange={(event) => onChange(event.target.value)} /></div>;
 }
 
-function SelectField({ label, id, value, options, onChange }: { label: string; id: string; value: string; options: readonly string[]; onChange: (value: string) => void }) {
-  return <div className="min-w-0 space-y-2"><Label htmlFor={id}>{label}</Label>
+function SelectField({ label, id, value, options, onChange, term }: { label: string; id: string; value: string; options: readonly string[]; onChange: (value: string) => void; term?: GlossaryKey }) {
+  return <div className="min-w-0 space-y-2"><Label htmlFor={id}>{label}{term && <InfoTip term={term} />}</Label>
     <select id={id} value={value} onChange={(event) => onChange(event.target.value)} className="flex h-9 w-full rounded-md border border-input bg-background px-3 text-sm shadow-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
       <option value="">Select…</option>
       {options.map((o) => <option key={o} value={o}>{o}</option>)}
     </select></div>;
 }
 
-/** Shown as an ⓘ tip: "Add song" can save a song that was never embedded, so this is worded for both cases. */
-const PRODUCER_TIP = "Produced by is a credit: it shows who produced the recording, and it's embedded in your MP3 when you embed one. It doesn't pay royalties by itself. If the producer co-wrote the music (made the beat) and gets a share of the song, also add them under Writer with their legal name and the Composer role. Producer points from the master (a cut of record sales) are agreed in a producer contract, not here.";
-
 function Contributors({ title, singular, group, rows, onChange, disabled, publisher, tip, tipOnly, simple, writer, children }: { title: string; singular: string; group: string; rows: Contributor[]; onChange: (rows: Contributor[]) => void; disabled: boolean; publisher?: boolean; tip?: string | undefined; tipOnly?: boolean; simple?: boolean; writer?: boolean; children?: ReactNode }) {
-  const roleSelect = (row: Contributor, index: number) => writer && <SelectField label="Role" id={`${group}-${index}-role`} value={writerRole(row.role)} options={WRITER_ROLES} onChange={(value) => change(index, "role", value)} />;
+  const roleSelect = (row: Contributor, index: number) => writer && <SelectField label="Role" term="roles" id={`${group}-${index}-role`} value={writerRole(row.role)} options={WRITER_ROLES} onChange={(value) => change(index, "role", value)} />;
   // Writers (and pre-role composer entries) have one name: their legal name, used for credits and registration.
   const legal = writer || group === "composers";
   const simpleLabel = group === "producers" ? "Produced by" : `${title} name`;
@@ -738,14 +727,14 @@ function Contributors({ title, singular, group, rows, onChange, disabled, publis
     change(index, "percentage", next.value);
   };
   const totals = !simple && (publisher || legal) ? splitStatus(rows) : undefined;
-  const names = (row: Contributor, index: number) => <Field label="Legal name" id={`${group}-${index}-legalName`} value={row.legalName ?? ""} tip={TIPS.legal} onChange={(value) => change(index, "legalName", value)} />;
+  const names = (row: Contributor, index: number) => <Field label="Legal name" id={`${group}-${index}-legalName`} value={row.legalName ?? ""} term="legalName" onChange={(value) => change(index, "legalName", value)} />;
   const removeButton = (index: number) => <Button type="button" size="icon" variant="ghost" aria-label={`Remove ${singular} ${index + 1}`} disabled={rows.length === 1} onClick={() => onChange(rows.filter((_, i) => i !== index))}><Trash2 /></Button>;
-  const share = (row: Contributor, index: number) => <div className="space-y-2"><Label htmlFor={`${group}-${index}-share`}>{publisher ? "Share (%)" : "Split (%)"}</Label><Input id={`${group}-${index}-share`} type="number" min="0" max="100" step="0.01" value={row.percentage} onChange={(event) => changeShare(index, event.target.value)} />{capped?.index === index && <p className="text-xs text-muted-foreground">Capped at {capped.at}%, the share that's left.</p>}</div>;
-  const ipi = (row: Contributor, index: number) => <Field label="IPI name number" id={`${group}-${index}-ipi`} value={row.ipi} placeholder="9–11 digits" onChange={(value) => change(index, "ipi", value)} />;
-  const pro = (row: Contributor, index: number) => <div className="min-w-0 space-y-2"><Label htmlFor={`${group}-${index}-pro`}>PRO affiliation</Label>
+  const share = (row: Contributor, index: number) => <div className="space-y-2"><Label htmlFor={`${group}-${index}-share`}>{publisher ? "Share (%)" : "Split (%)"}<InfoTip term={publisher ? "publisher" : "split"} /></Label><Input id={`${group}-${index}-share`} type="number" min="0" max="100" step="0.01" value={row.percentage} onChange={(event) => changeShare(index, event.target.value)} />{capped?.index === index && <p className="text-xs text-muted-foreground">Capped at {capped.at}%, the share that's left.</p>}</div>;
+  const ipi = (row: Contributor, index: number) => <Field label="IPI name number" term="ipi" id={`${group}-${index}-ipi`} value={row.ipi} placeholder="9–11 digits" onChange={(value) => change(index, "ipi", value)} />;
+  const pro = (row: Contributor, index: number) => <div className="min-w-0 space-y-2"><Label htmlFor={`${group}-${index}-pro`}>PRO affiliation<InfoTip term="pro" /></Label>
     <ProSelect id={`${group}-${index}-pro`} value={row.pro} onChange={(value) => change(index, "pro", value)} className="flex h-9 w-full rounded-md border border-input bg-background px-3 text-sm shadow-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" /></div>;
   return <fieldset disabled={disabled} className="space-y-5 border-t border-border pt-6">
-    <legend className="pr-3 text-lg font-semibold">{title}{tip && <Tip text={tip} />}</legend>
+    <legend className="pr-3 text-lg font-semibold">{title}{tip && <Tip text={tip} title={title} />}</legend>
     {tip && !tipOnly && <p className="text-sm text-muted-foreground">{tip}</p>}
     {rows.map((row, index) => simple
       ? legal

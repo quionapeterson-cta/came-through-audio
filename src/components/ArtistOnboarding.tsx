@@ -11,6 +11,8 @@ import { emptyContributor, GENRES, RELEASE_TYPES, WRITER_ROLES, writerRole, type
 import { isBadgeImage } from "@/lib/badges";
 import { loadOnboarding, loadProfile, saveOnboarding, saveProfile, type ArtistProfile, type Onboarding } from "@/lib/artist-profile";
 import { capShare, splitTotal } from "@/lib/splits-total";
+import { InfoTip } from "@/components/InfoTip";
+import type { GlossaryKey } from "@/lib/glossary";
 
 // Placeholder founder badge until the custom opening-message badge is supplied.
 const FIRST_BADGE = "/icons/serious/came_genesis_gold.png";
@@ -192,20 +194,20 @@ export function ArtistOnboarding({ userId, open, onOpenChange, onSaved, firstRun
             <Group title="Artist & Label">
               <Field label="Primary Artist / Stage Name"><Input value={ob.stageName} onChange={(e) => { setOb((o) => ({ ...o, stageName: e.target.value })); set("artist", e.target.value); }} />
                 {savedName && <p className="mt-1 text-xs text-muted-foreground">{nameRuleText(nameRule)}</p>}</Field>
-              <Field label="Default Label Name (optional)"><Input value={p.label ?? ""} onChange={(e) => set("label", e.target.value)} placeholder="Your label name" /></Field>
-              <Field label="Produced by (optional)"><Input value={p.producers?.[0]?.name ?? ""} placeholder="Name" title="Produced by is a credit: it shows who produced the recording, and it's embedded in your MP3 when you embed one. It doesn't pay royalties by itself. If the producer co-wrote the music (made the beat) and gets a share of the song, also add them under Writer with their legal name and the Composer role. Producer points from the master (a cut of record sales) are agreed in a producer contract, not here."
+              <Field label="Default Label Name (optional)" term="label"><Input value={p.label ?? ""} onChange={(e) => set("label", e.target.value)} placeholder="Your label name" /></Field>
+              <Field label="Produced by (optional)" term="producedBy"><Input value={p.producers?.[0]?.name ?? ""} placeholder="Name"
                 onChange={(e) => { const rest = p.producers?.slice(1) ?? []; set("producers", [{ ...(p.producers?.[0] ?? emptyContributor()), name: e.target.value }, ...rest]); }} /></Field>
             </Group>
             <Group title="Release Metadata">
               <Field label="Primary Genre"><Pick value={p.primaryGenre ?? ""} options={GENRES} onChange={(v) => set("primaryGenre", v)} /></Field>
               <Field label="Secondary Genre (optional)"><Pick value={p.secondaryGenre ?? ""} options={GENRES} onChange={(v) => set("secondaryGenre", v)} /></Field>
               <Field label="Default Language"><Input value={p.language ?? ""} onChange={(e) => set("language", e.target.value)} /></Field>
-              <Field label="Default Release Type"><Pick value={p.releaseType ?? ""} options={RELEASE_TYPES} empty="Ask each time" onChange={(v) => set("releaseType", v)} /></Field>
-              <label className="flex items-center gap-2 text-sm sm:col-span-2"><input type="checkbox" className="h-4 w-4 accent-[var(--primary)]" checked={!!p.explicit} onChange={(e) => set("explicit", e.target.checked)} />My songs are usually Explicit (you can change this per song)</label>
+              <Field label="Default Release Type" term="releaseType"><Pick value={p.releaseType ?? ""} options={RELEASE_TYPES} empty="Ask each time" onChange={(v) => set("releaseType", v)} /></Field>
+              <label className="flex items-center gap-2 text-sm sm:col-span-2"><input type="checkbox" className="h-4 w-4 accent-[var(--primary)]" checked={!!p.explicit} onChange={(e) => set("explicit", e.target.checked)} />My songs are usually Explicit (you can change this per song)<InfoTip term="explicit" /></label>
             </Group>
             <Group title="Copyright Lines">
-              <Field label="Composition Copyright (©)"><Input value={p.copyright ?? ""} onChange={(e) => set("copyright", e.target.value)} placeholder={`© ${year} Publisher or rights holder`} /></Field>
-              <Field label="Sound Recording Copyright (℗)"><Input value={p.phonographic ?? ""} onChange={(e) => set("phonographic", e.target.value)} placeholder={`℗ ${year} Label or rights holder`} /></Field>
+              <Field label="Composition Copyright (©)" term="cLine"><Input value={p.copyright ?? ""} onChange={(e) => set("copyright", e.target.value)} placeholder={`© ${year} Publisher or rights holder`} /></Field>
+              <Field label="Sound Recording Copyright (℗)" term="pLine"><Input value={p.phonographic ?? ""} onChange={(e) => set("phonographic", e.target.value)} placeholder={`℗ ${year} Label or rights holder`} /></Field>
             </Group>
             <PrivacyNote />
             <Nav onBack={() => setStep(1)} onNext={() => setStep(3)} nextLabel={firstRun ? "Continue" : "Change and Continue"} onSave={firstRun ? undefined : finish} />
@@ -295,8 +297,8 @@ function Group({ title, children }: { title: string; children: React.ReactNode }
   return <fieldset className="space-y-3 rounded-xl border border-border p-4"><legend className="px-1 text-sm font-bold text-primary">{title}</legend><div className="grid gap-3 sm:grid-cols-2">{children}</div></fieldset>;
 }
 
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
-  return <div className="space-y-1.5"><Label className="text-xs">{label}</Label>{children}</div>;
+function Field({ label, term, children }: { label: string; term?: GlossaryKey; children: React.ReactNode }) {
+  return <div className="space-y-1.5"><Label className="text-xs">{label}{term && <InfoTip term={term} />}</Label>{children}</div>;
 }
 
 function Pick({ value, options, onChange, empty = "Select…" }: { value: string; options: readonly string[]; onChange: (v: string) => void; empty?: string }) {
@@ -321,19 +323,26 @@ function Rows({ title, rows, onChange, seed, writer }: { title: string; rows?: C
   const total = splitTotal(list);
   return (
     <fieldset className="space-y-2 rounded-xl border border-border p-4">
-      <legend className="px-1 text-sm font-bold text-primary">{title}</legend>
+      <legend className="px-1 text-sm font-bold text-primary">{title}<InfoTip term={writer ? "roles" : "publisher"} /></legend>
       {writer && <p className="text-xs text-muted-foreground"><span className="font-semibold text-foreground">Legal name</span> is only needed to register songs, so you can add it later.</p>}
+      {/* The row inputs have no room for labels, so their tips sit in one line above them. */}
+      <p className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
+        <span className="inline-flex items-center">Legal name<InfoTip term="legalName" /></span>
+        <span className="inline-flex items-center">PRO<InfoTip term="pro" /></span>
+        <span className="inline-flex items-center">IPI<InfoTip term="ipi" /></span>
+        <span className="inline-flex items-center">Share<InfoTip term={writer ? "split" : "publisher"} /></span>
+      </p>
       {list.map((r, i) => (
         <div key={i} className={`grid items-start gap-x-4 gap-y-2 ${writer ? "sm:grid-cols-[1.6fr_1.1fr_1.1fr_1fr_0.7fr_auto]" : "sm:grid-cols-[1.6fr_1.1fr_1fr_0.7fr_auto]"}`}>
           {writer
-            ? <Input aria-label="Legal name" title="The writer's full legal name, as their PRO and The MLC know it. Only needed to register songs." placeholder="Legal name" value={r.legalName ?? ""} onChange={(e) => upd(i, "legalName", e.target.value)} />
-            : <Input aria-label={`${title} legal name`} title="The publisher's legal business name, as registered with its PRO." placeholder="Legal name" value={r.name} onChange={(e) => upd(i, "name", e.target.value)} />}
+            ? <Input aria-label="Legal name" placeholder="Legal name" value={r.legalName ?? ""} onChange={(e) => upd(i, "legalName", e.target.value)} />
+            : <Input aria-label={`${title} legal name`} placeholder="Legal name" value={r.name} onChange={(e) => upd(i, "name", e.target.value)} />}
           {writer && (
             <select aria-label="Writer role" value={writerRole(r.role)} onChange={(e) => upd(i, "role", e.target.value)} className="h-9 rounded-md border border-input bg-background px-2 text-sm">
               {WRITER_ROLES.map((o) => <option key={o}>{o}</option>)}
             </select>)}
           <ProSelect value={r.pro} onChange={(v) => upd(i, "pro", v)} className="h-9 w-full rounded-md border border-input bg-background px-2 text-sm" />
-          <Input aria-label="IPI name number" title="The 9–11 digit number your PRO assigns. Leave it blank if you don't have one yet." placeholder="IPI name number" inputMode="numeric" value={r.ipi} onChange={(e) => upd(i, "ipi", e.target.value.replace(/\D/g, "").slice(0, 11))} />
+          <Input aria-label="IPI name number" placeholder="IPI name number" inputMode="numeric" value={r.ipi} onChange={(e) => upd(i, "ipi", e.target.value.replace(/\D/g, "").slice(0, 11))} />
           <Input aria-label="Default share %" placeholder="Share %" inputMode="decimal" value={r.percentage} onChange={(e) => upd(i, "percentage", capShare(list, i, e.target.value).value)} />
           <Button type="button" variant="ghost" size="icon" aria-label="Remove" onClick={() => onChange(list.filter((_, j) => j !== i))}><Trash2 /></Button>
         </div>

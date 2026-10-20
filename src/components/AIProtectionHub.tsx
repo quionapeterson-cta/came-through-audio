@@ -16,6 +16,7 @@ const EXPLAINERS = [
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
+import { InfoTip } from "@/components/InfoTip";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { NoteGuide, RecordGuide } from "@/components/ProofGuides";
@@ -263,12 +264,8 @@ export function AIProtectionHub({ userId, paid, track, email }: { userId: string
       <div className="grid gap-4 md:grid-cols-2">
         <ProofBox title="DAW Session Proof" proof={daw} on={(file) => proof(file, "daw", (p) => { setDaw(p); setDawFile(file); setDawDate(undefined); })} hint="Solo 2-3 tracks individually, then play the full mix together"
           tip="Screen-record 15-60 seconds of your open project (FL Studio, Logic, Ableton, Pro Tools, BandLab, etc.). Scroll through your tracks, then solo and play your tracks one by one — vocals, beats, instruments — then play them all together so we can hear the final song. This proves you own the real session, not just the final song.">
-          <div className="group relative w-fit">
-            <span className="inline-flex cursor-help items-center gap-1 rounded-full border border-primary px-3 py-1 text-xs font-semibold text-primary"><Info className="h-3.5 w-3.5" />Pro tip: earn an A+</span>
-            <div className="pointer-events-none absolute left-0 top-full z-10 mt-2 w-72 rounded-md border border-primary bg-popover p-3 text-xs text-popover-foreground opacity-0 shadow-lg transition group-hover:opacity-100">
-              Also show your project's save or created date in the recording (your project folder, File → Project Info, or the file's date column). It's optional — but it earns a Strong Chain A+ certificate for going the extra mile.
-            </div>
-          </div>
+          <InfoTip title="Pro tip: earn an A+" text="Also show your project's save or created date in the recording (your project folder, File → Project Info, or the file's date column). It's optional — but it earns a Strong Chain A+ certificate for going the extra mile."
+            className="inline-flex w-fit cursor-help items-center gap-1 rounded-full border border-primary px-3 py-1 text-xs font-semibold text-primary"><Info className="h-3.5 w-3.5" />Pro tip: earn an A+</InfoTip>
           {daw && scanned && <p className="text-xs"><b>DAW session date</b> {dawDate ?? "Not shown — no penalty"}</p>}
         </ProofBox>
         <ProofBox title="Draft History Proof" proof={notes} on={(file) => proof(file, "drafts", (p) => { setNotes(p); setDraftFile(file); setChain(undefined); })}

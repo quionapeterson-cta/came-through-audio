@@ -9,6 +9,8 @@ import { Badge } from "@/components/ui/badge";
 import { listTracks, type CatalogTrack } from "@/lib/catalog";
 import { useServerFn } from "@tanstack/react-start";
 import { sendSplitInvite } from "@/lib/splits-email.functions";
+import { InfoTip } from "@/components/InfoTip";
+import { capShare } from "@/lib/splits-total";
 import {
   SPLIT_ROLES,
   collaboratorsFromTrack,
@@ -366,7 +368,7 @@ function SplitEditor({ userId, track, initial, canCollect, onUpgrade, onClose, o
             <div key={i} className="rounded-xl border border-border p-4">
               <div className="grid gap-3 md:grid-cols-[1.4fr_1.4fr_1fr_0.6fr_auto]">
                 <label className="space-y-1 text-sm">
-                  <span className="font-medium">Legal name</span>
+                  <span className="inline-flex items-center font-medium">Legal name<InfoTip term="legalName" /></span>
                   <input list="contributor-library" value={c.name} onChange={(e) => update(i, { name: e.target.value })} onBlur={(e) => fillFromLibrary(i, e.target.value)} disabled={!!c.signedAt}
                     className="w-full rounded-md border border-input bg-background px-3 py-2" placeholder="Full legal name" />
                 </label>
@@ -383,9 +385,9 @@ function SplitEditor({ userId, track, initial, canCollect, onUpgrade, onClose, o
                   </select>
                 </label>
                 <label className="space-y-1 text-sm">
-                  <span className="font-medium">Split %</span>
+                  <span className="inline-flex items-center font-medium">Split %<InfoTip term="split" /></span>
                   <input type="number" min={0} max={100} value={c.percentage || ""} disabled={!!c.signedAt}
-                    onChange={(e) => update(i, { percentage: Math.max(0, Math.min(100, Number(e.target.value) || 0)) })}
+                    onChange={(e) => update(i, { percentage: Number(capShare(collaborators.map((r) => ({ percentage: String(r.percentage || "") })), i, e.target.value).value) || 0 })}
                     className="w-full rounded-md border border-input bg-background px-3 py-2" placeholder="0" />
                 </label>
                 <div className="flex items-end gap-1">
@@ -398,11 +400,11 @@ function SplitEditor({ userId, track, initial, canCollect, onUpgrade, onClose, o
               </div>
               <div className="mt-3 grid gap-3 md:grid-cols-2">
                 <label className="space-y-1 text-sm">
-                  <span className="font-medium">PRO affiliation <span className="font-normal text-muted-foreground">(optional — they can add it too)</span></span>
+                  <span className="inline-flex flex-wrap items-center font-medium">PRO affiliation<InfoTip term="pro" /> <span className="ml-1 font-normal text-muted-foreground">(optional — they can add it too)</span></span>
                   <ProSelect value={c.pro} onChange={(v) => update(i, { pro: v })} disabled={!!c.signedAt} />
                 </label>
                 <label className="space-y-1 text-sm">
-                  <span className="font-medium">IPI / CAE number</span>
+                  <span className="inline-flex items-center font-medium">IPI / CAE number<InfoTip term="ipi" /></span>
                   <input value={c.ipi} onChange={(e) => update(i, { ipi: e.target.value })} disabled={!!c.signedAt}
                     className="w-full rounded-md border border-input bg-background px-3 py-2" placeholder="Optional — they can add it too" />
                 </label>
@@ -412,7 +414,7 @@ function SplitEditor({ userId, track, initial, canCollect, onUpgrade, onClose, o
                 <summary className="cursor-pointer text-sm font-semibold">Publishing <span className="font-normal text-muted-foreground">— optional</span></summary>
                 <div className="mt-3 grid gap-3 md:grid-cols-[1.4fr_1fr_1fr_0.6fr]">
                   <label className="space-y-1 text-sm">
-                    <span className="font-medium">Publisher name</span>
+                    <span className="inline-flex items-center font-medium">Publisher name<InfoTip term="publisher" /></span>
                     <input value={c.publisherName} onChange={(e) => update(i, { publisherName: e.target.value })} disabled={!!c.signedAt}
                       className="w-full rounded-md border border-input bg-background px-3 py-2" placeholder="Publishing company or self-published" />
                   </label>

@@ -1,12 +1,13 @@
 import { useEffect, useMemo, useState } from "react";
-import { AlertTriangle, Check, ChevronLeft, Copy, Download, FileSignature, HelpCircle, Loader2, Lock, Mail, PenLine, Plus, RotateCcw, ScrollText, ShieldCheck, Trash2, Unlock, Vault } from "lucide-react";
+import { AlertTriangle, Check, ChevronLeft, Copy, Download, FileSignature, Loader2, Lock, Mail, PenLine, Plus, RotateCcw, ScrollText, ShieldCheck, Trash2, Unlock, Vault } from "lucide-react";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { TooltipProvider } from "@/components/ui/tooltip";
+import { InfoTip } from "@/components/InfoTip";
 import { listTracks, type CatalogTrack } from "@/lib/catalog";
 import { BLUEPRINTS, CONTRACT_DISCLAIMER, blueprintById, renderContract, type Blueprint } from "@/lib/contract-blueprints";
 import { downloadContractPdf } from "@/lib/contract-pdf";
@@ -423,12 +424,9 @@ function Step({ n, title, hint, children }: { n?: number | undefined; title: str
 function Field({ label, tip, wide, children }: { label: string; tip: string; wide?: boolean | undefined; children: React.ReactNode }) {
   return (
     <div className={`space-y-1.5 ${wide ? "sm:col-span-2" : ""}`}>
-      <span className="flex items-center gap-1 text-sm font-medium">
+      <span className="flex items-center text-sm font-medium">
         {label}
-        <Tooltip>
-          <TooltipTrigger asChild><button type="button" aria-label={`About ${label}`} className="text-muted-foreground hover:text-primary"><HelpCircle className="h-3.5 w-3.5" /></button></TooltipTrigger>
-          <TooltipContent className="max-w-64">{tip}</TooltipContent>
-        </Tooltip>
+        <InfoTip title={label} text={tip} />
       </span>
       {children}
     </div>
