@@ -7,6 +7,7 @@ import type { CatalogTrack } from "@/lib/catalog";
 import { auditTrack, BMI_SEARCH, PILLARS, type Issue } from "@/lib/audit";
 import { creditName, WRITER_ROLES, writerRole } from "@/lib/metadata";
 import type { InspectorFields } from "@/lib/health-songs";
+import { capShare } from "@/lib/splits-total";
 
 const blank = { title: "", artist: "", duration: "", isrc: "", iswc: "", writer: "", role: "Author/Composer", pro: "", ipi: "", split: "100", publisher: "", pubIpi: "" };
 type Form = typeof blank;
@@ -35,7 +36,11 @@ export function RoyaltyInspector({ onEmbed, onExpert, onSave, editing, onDoneEdi
   const [issues, setIssues] = useState<Issue[]>();
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
-  const set = (k: keyof Form) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => { setF({ ...f, [k]: e.target.value }); setSaved(false); };
+  // One writer here, so the split box simply can't go past 100% (same shared cap as Embed Metadata).
+  const set = (k: keyof Form) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    const value = k === "split" ? capShare([{ percentage: f.split }], 0, e.target.value).value : e.target.value;
+    setF({ ...f, [k]: value }); setSaved(false);
+  };
   useEffect(() => { if (editing) { setF(fromTrack(editing)); setIssues(undefined); setSaved(false); } }, [editing?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   function run() {

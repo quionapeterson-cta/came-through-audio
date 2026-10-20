@@ -1,5 +1,6 @@
 import type { CatalogTrack } from "@/lib/catalog";
 import { creditName } from "@/lib/metadata";
+import { splitStatus } from "@/lib/splits-total";
 
 export type Pillar = "performance" | "digital" | "mechanical";
 /** `field` is the catalog form field id to jump to, so each warning can link straight to the fix. */
@@ -29,14 +30,17 @@ export function auditTrack(t: CatalogTrack): Issue[] {
     if (!isIpi(w.ipi ?? "")) out.push({ pillar: "performance", text: `${w.name}: missing or invalid IPI`, field: `${w.at}-ipi` });
   });
   if (writers.length) {
-    const split = m.writers.filter(creditName).reduce((s, w) => s + Number(w.percentage || 0), 0);
-    if (split && Math.round(split) !== 100) out.push({ pillar: "performance", text: `Writer splits total ${split}% (must be 100%)`, field: "writers-0-share" });
+    const split = splitStatus(m.writers.filter(creditName));
+    if (split.state === "over") out.push({ pillar: "performance", text: `Writer splits total ${split.total}%, ${split.over}% over 100%. Lower one to fix it.`, field: "writers-0-share" });
+    else if (split.state === "under" && Math.round(split.total) !== 100) out.push({ pillar: "performance", text: `Writer splits total ${split.total}%, ${split.left}% short of 100%`, field: "writers-0-share" });
   }
   if (!m.isrc) out.push({ pillar: "digital", text: "Missing ISRC", field: "isrc" });
   else if (!isIsrc(m.isrc)) out.push({ pillar: "digital", text: "ISRC is not 12 characters (CC-XXX-YY-NNNNN)", field: "isrc" });
   if (!t.artist.trim()) out.push({ pillar: "digital", text: "No featured artist name", field: "artist" });
   const pubs = m.publishers.filter((p) => p.name.trim());
   if (!pubs.length) out.push({ pillar: "mechanical", text: "No publisher listed (self-published writers can list their own entity)", field: "publishers-0-name" });
+  const pubSplit = splitStatus(pubs);
+  if (pubSplit.state === "over") out.push({ pillar: "mechanical", text: `Publisher shares total ${pubSplit.total}%, ${pubSplit.over}% over 100%. Lower one to fix it.`, field: "publishers-0-share" });
   m.publishers.forEach((p, index) => { if (p.name.trim() && !isIpi(p.ipi ?? "")) out.push({ pillar: "mechanical", text: `${p.name}: missing publisher IPI`, field: `publishers-${index}-ipi` }); });
   if (!m.iswc) out.push({ pillar: "mechanical", text: "Missing ISWC — sound recording can't be linked to its composition", field: "iswc" });
   else if (!isIswc(m.iswc)) out.push({ pillar: "mechanical", text: "ISWC format should be T-123.456.789-0", field: "iswc" });

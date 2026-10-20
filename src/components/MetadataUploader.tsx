@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
 import { Disc3, Lock, ShieldCheck, CheckCircle2, Download, FileAudio, FileText, ImagePlus, Pencil, Plus, Save, Trash2, Upload } from "lucide-react";
+import { capShare, splitStatus, splitSummary } from "@/lib/splits-total";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -714,9 +715,17 @@ function Contributors({ title, singular, group, rows, onChange, disabled, publis
   const legal = writer || group === "composers";
   const simpleLabel = group === "producers" ? "Produced by" : `${title} name`;
   function change(index: number, key: keyof Contributor, value: string) { onChange(rows.map((row, i) => i === index ? { ...row, [key]: value } : row)); }
+  // Shares in a group can't add up past 100%: a box snaps to what's left, with a short note saying so.
+  const [capped, setCapped] = useState<{ index: number; at: number }>();
+  const changeShare = (index: number, value: string) => {
+    const next = capShare(rows, index, value);
+    setCapped(next.cappedAt !== undefined ? { index, at: next.cappedAt } : undefined);
+    change(index, "percentage", next.value);
+  };
+  const totals = !simple && (publisher || legal) ? splitStatus(rows) : undefined;
   const names = (row: Contributor, index: number) => <Field label="Legal name" id={`${group}-${index}-legalName`} value={row.legalName ?? ""} tip={TIPS.legal} onChange={(value) => change(index, "legalName", value)} />;
   const removeButton = (index: number) => <Button type="button" size="icon" variant="ghost" aria-label={`Remove ${singular} ${index + 1}`} disabled={rows.length === 1} onClick={() => onChange(rows.filter((_, i) => i !== index))}><Trash2 /></Button>;
-  const share = (row: Contributor, index: number) => <div className="space-y-2"><Label htmlFor={`${group}-${index}-share`}>{publisher ? "Share (%)" : "Split (%)"}</Label><Input id={`${group}-${index}-share`} type="number" min="0" max="100" step="0.01" value={row.percentage} onChange={(event) => change(index, "percentage", event.target.value)} /></div>;
+  const share = (row: Contributor, index: number) => <div className="space-y-2"><Label htmlFor={`${group}-${index}-share`}>{publisher ? "Share (%)" : "Split (%)"}</Label><Input id={`${group}-${index}-share`} type="number" min="0" max="100" step="0.01" value={row.percentage} onChange={(event) => changeShare(index, event.target.value)} />{capped?.index === index && <p className="text-xs text-muted-foreground">Capped at {capped.at}%, the share that's left.</p>}</div>;
   const ipi = (row: Contributor, index: number) => <Field label="IPI name number" id={`${group}-${index}-ipi`} value={row.ipi} placeholder="9–11 digits" onChange={(value) => change(index, "ipi", value)} />;
   const pro = (row: Contributor, index: number) => <div className="min-w-0 space-y-2"><Label htmlFor={`${group}-${index}-pro`}>PRO affiliation</Label>
     <ProSelect id={`${group}-${index}-pro`} value={row.pro} onChange={(value) => change(index, "pro", value)} className="flex h-9 w-full rounded-md border border-input bg-background px-3 text-sm shadow-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" /></div>;
@@ -738,7 +747,7 @@ function Contributors({ title, singular, group, rows, onChange, disabled, publis
             {removeButton(index)}
           </div>)}
     {children}
-    <div className="flex flex-wrap items-center justify-between gap-3"><Button type="button" variant="outline" onClick={() => onChange([...rows, emptyContributor()])}><Plus />Add {singular}</Button>{!publisher && !simple && group !== "producers" && <span className="text-sm text-muted-foreground">Total: {Number(rows.reduce((sum, row) => sum + Number(row.percentage || 0), 0).toFixed(2))}%</span>}</div>
+    <div className="flex flex-wrap items-center justify-between gap-3"><Button type="button" variant="outline" onClick={() => onChange([...rows, emptyContributor()])}><Plus />Add {singular}</Button>{totals && <span className={`text-sm ${totals.state === "over" || totals.state === "under" ? "font-medium text-foreground" : "text-muted-foreground"}`}>{totals.state === "over" || totals.state === "under" ? "⚠️ " : ""}{splitSummary(rows)}</span>}</div>
   </fieldset>;
 }
 function groupProjects(items: CatalogTrack[]) {
