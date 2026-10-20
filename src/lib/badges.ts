@@ -225,9 +225,15 @@ const CONTRACTS: BadgeDef[] = [
   { id: "dottin_your_is", title: "Dottin' Your I's", collection: "contracts", tier: "mega", milestone: "25 contracts signed by every party", metric: "contractsSigned", goal: 25, src: `${CT}/dottin_your_i_ultra.webp`,
     description: "Twenty-five agreements, every dot and cross in place. That's executive energy.",
     popup: "MEGA! 25 contracts. Every I dotted." },
-  { id: "executive_suite", title: "Executive Suite", collection: "contracts", tier: "ultimate", milestone: "50 contracts signed by every party", metric: "contractsSigned", goal: 50, src: `${CT}/bedazzled_v2.webp`,
+  { id: "executive_blueprint", title: "Executive Blueprint", collection: "contracts", tier: "standard", milestone: "35 contracts signed by every party", metric: "contractsSigned", goal: 35, src: `${CT}/bedazzled_v1.webp`,
+    description: "Thirty-five agreements drawn up and signed. You don't wing deals, you design them, and your catalog is built on solid plans.",
+    popup: "Executive blueprint! 35 contracts signed." },
+  { id: "executive_suite", title: "Executive Suite", collection: "contracts", tier: "standard", milestone: "50 contracts signed by every party", metric: "contractsSigned", goal: 50, src: `${CT}/bedazzled_v2.webp`,
     description: "Fifty signed agreements. You run your music like a company because it is one.",
-    popup: "ULTIMATE! 50 contracts. Welcome to the executive suite." },
+    popup: "50 contracts. Welcome to the executive suite." },
+  { id: "executive_legacy", title: "Executive Legacy", collection: "contracts", tier: "ultimate", milestone: "75 contracts signed by every party", metric: "contractsSigned", goal: 75, src: `${CT}/bedazzled_v3.webp`,
+    description: "Seventy-five signed agreements. Every collaborator, every deal, every term on file. This is how a music business outlasts trends.",
+    popup: "ULTIMATE! 75 contracts. Came Through Audio came through for your legacy." },
 ];
 
 const PR = `${P}/producer`;

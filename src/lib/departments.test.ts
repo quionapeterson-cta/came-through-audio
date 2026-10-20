@@ -31,16 +31,16 @@ describe("visibleTabs", () => {
     const branding = resolveAccess([{ role: "employee", departments: ["registration", "royalty_accounts", "branding"] }])!;
     expect(visibleTabs(branding).map((t) => t.value)).toEqual(["ai", "reg", "splits", "badges", "tasks"]);
     const billing = resolveAccess([{ role: "employee", departments: ["finance", "support", "marketing_sales"] }])!;
-    expect(visibleTabs(billing).map((t) => t.value)).toEqual(["purchases", "support", "tasks"]);
+    expect(visibleTabs(billing).map((t) => t.value)).toEqual(["purchases", "support", "badges", "tasks"]);
   });
 
   it("never shows finance to HR admins", () => {
     expect(visibleTabs(resolveAccess([{ role: "hr_admin" }])!).map((t) => t.value)).toEqual(["tasks"]);
   });
 
-  it("gives marketing its Task Bank even without other tools", () => {
+  it("gives marketing the Badges tab and its Task Bank", () => {
     const marketing = resolveAccess([{ role: "employee", departments: ["marketing_sales"] }])!;
-    expect(visibleTabs(marketing).map((t) => t.value)).toEqual(["tasks"]);
+    expect(visibleTabs(marketing).map((t) => t.value)).toEqual(["badges", "tasks"]);
     expect(visibleTabs(resolveAccess([{ role: "employee", departments: [] }])!)).toEqual([]);
   });
 
@@ -48,6 +48,7 @@ describe("visibleTabs", () => {
     const sa = resolveAccess([{ role: "super_admin" }])!;
     expect(visibleTabs(sa)).toHaveLength(7);
     expect(visibleTabs(sa, "finance").map((t) => t.value)).toEqual(["purchases", "tasks"]);
+    expect(visibleTabs(sa, "support").map((t) => t.value)).toEqual(["support", "badges", "tasks"]);
   });
 });
 

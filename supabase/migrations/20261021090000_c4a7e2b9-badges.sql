@@ -5,7 +5,17 @@
 --    data, so nobody can hand themselves a badge (sponsored badges will unlock perks). Earned badges are never removed.
 -- 2. badge_events: actions that leave no other record (agency export, master download, blueprint guide read).
 --    Users log their own; these badges never carry sponsor perks.
--- 3. badge_settings: staff switch a badge off for new unlocks. Missing row = on. Branding department manages it.
+-- 3. badge_settings: staff switch a badge off for new unlocks. Missing row = on.
+-- 4. can_manage_badges(): super admins and the Branding, Marketing & Sales and Support departments see and control
+--    badges (Admin → Badges). badge_earned_counts() gives them how many users hold each badge, never who.
+-- Safe to run more than once.
+
+CREATE OR REPLACE FUNCTION public.can_manage_badges(_user_id uuid)
+RETURNS boolean LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public AS $$
+  SELECT public.in_department(_user_id, 'branding') OR public.in_department(_user_id, 'marketing_sales') OR public.in_department(_user_id, 'support')
+$$;
+REVOKE ALL ON FUNCTION public.can_manage_badges(uuid) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.can_manage_badges(uuid) TO authenticated, service_role;
 
 CREATE TABLE IF NOT EXISTS public.user_badges (
   user_id uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
@@ -51,9 +61,18 @@ GRANT ALL ON public.badge_settings TO service_role;
 ALTER TABLE public.badge_settings ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "Anyone signed in reads badge settings" ON public.badge_settings;
 CREATE POLICY "Anyone signed in reads badge settings" ON public.badge_settings FOR SELECT TO authenticated USING (true);
-DROP POLICY IF EXISTS "Branding staff add badge settings" ON public.badge_settings;
-CREATE POLICY "Branding staff add badge settings" ON public.badge_settings FOR INSERT TO authenticated
-  WITH CHECK (public.in_department(auth.uid(), 'branding'));
-DROP POLICY IF EXISTS "Branding staff change badge settings" ON public.badge_settings;
-CREATE POLICY "Branding staff change badge settings" ON public.badge_settings FOR UPDATE TO authenticated
-  USING (public.in_department(auth.uid(), 'branding')) WITH CHECK (public.in_department(auth.uid(), 'branding'));
+DROP POLICY IF EXISTS "Badge staff add badge settings" ON public.badge_settings;
+CREATE POLICY "Badge staff add badge settings" ON public.badge_settings FOR INSERT TO authenticated
+  WITH CHECK (public.can_manage_badges(auth.uid()));
+DROP POLICY IF EXISTS "Badge staff change badge settings" ON public.badge_settings;
+CREATE POLICY "Badge staff change badge settings" ON public.badge_settings FOR UPDATE TO authenticated
+  USING (public.can_manage_badges(auth.uid())) WITH CHECK (public.can_manage_badges(auth.uid()));
+
+CREATE OR REPLACE FUNCTION public.badge_earned_counts()
+RETURNS TABLE (badge_id text, users bigint) LANGUAGE plpgsql STABLE SECURITY DEFINER SET search_path = public AS $$
+BEGIN
+  IF NOT public.can_manage_badges(auth.uid()) THEN RAISE EXCEPTION 'Not allowed'; END IF;
+  RETURN QUERY SELECT b.badge_id, count(*) FROM public.user_badges b GROUP BY b.badge_id;
+END $$;
+REVOKE ALL ON FUNCTION public.badge_earned_counts() FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.badge_earned_counts() TO authenticated, service_role;

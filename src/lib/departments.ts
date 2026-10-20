@@ -63,14 +63,17 @@ export function staffChangeError(o: { actorId: string; actorIsSuper: boolean; ta
   return null;
 }
 
+/** Departments that see and control badges in Admin → Badges (super admins hold every department). Mirrors public.can_manage_badges. */
+export const BADGE_DEPARTMENTS = ["branding", "marketing_sales", "support"] as const satisfies readonly Department[];
+
 export const ADMIN_TABS = [
-  { value: "ai", label: "AI Protection", department: "registration" },
-  { value: "reg", label: "Registrations", department: "registration" },
-  { value: "splits", label: "Split Sheets", department: "royalty_accounts" },
-  { value: "purchases", label: "Purchases", department: "finance" },
-  { value: "support", label: "Support Tickets", department: "support" },
-  { value: "badges", label: "Badges", department: "branding" },
-] as const satisfies readonly { value: string; label: string; department: Department }[];
+  { value: "ai", label: "AI Protection", departments: ["registration"] },
+  { value: "reg", label: "Registrations", departments: ["registration"] },
+  { value: "splits", label: "Split Sheets", departments: ["royalty_accounts"] },
+  { value: "purchases", label: "Purchases", departments: ["finance"] },
+  { value: "support", label: "Support Tickets", departments: ["support"] },
+  { value: "badges", label: "Badges", departments: BADGE_DEPARTMENTS },
+] as const satisfies readonly { value: string; label: string; departments: readonly Department[] }[];
 
 /** Departments in view: all of the caller's, or the one the super admin switcher picked. */
 export function viewDepartments(access: StaffAccess, view: Department | "all" = "all") {
@@ -79,6 +82,6 @@ export function viewDepartments(access: StaffAccess, view: Department | "all" = 
 
 /** Tabs for the caller, optionally narrowed to one department. Every department gets the Task Bank, last. */
 export function visibleTabs(access: StaffAccess, view: Department | "all" = "all"): { value: string; label: string }[] {
-  const tabs = ADMIN_TABS.filter((t) => access.departments.includes(t.department) && (view === "all" || t.department === view));
+  const tabs = ADMIN_TABS.filter((t) => t.departments.some((d: Department) => access.departments.includes(d) && (view === "all" || d === view)));
   return viewDepartments(access, view).length ? [...tabs, { value: "tasks", label: "Task Bank" }] : tabs;
 }

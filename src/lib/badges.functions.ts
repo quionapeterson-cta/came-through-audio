@@ -75,15 +75,26 @@ export const checkBadges = createServerFn({ method: "POST" })
     return { earned, metrics, disabled };
   });
 
-/** Admin → Badges: every staff switch-off. Branding staff only (RLS lets anyone signed in read; the tab is staff-only). */
+/** Super admins and the Branding, Marketing & Sales and Support departments (public.can_manage_badges). */
+async function assertBadgeStaff(context: { supabase: { rpc: (fn: never, args: never) => PromiseLike<{ data: unknown }> }; userId: string }) {
+  const { data } = await context.supabase.rpc("can_manage_badges" as never, { _user_id: context.userId } as never);
+  if (!data) throw new Error("Forbidden");
+}
+
+/** Admin → Badges: staff switch-offs, and how many users hold each badge (counts only, never who). */
 export const listBadgeSettings = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
-    const { data: allowed } = await context.supabase.rpc("in_department", { _user_id: context.userId, _dept: "branding" });
-    if (!allowed) throw new Error("Forbidden");
-    const { data, error } = await context.supabase.from("badge_settings" as never).select("badge_id, enabled, updated_at");
-    if (error) throw new Error("Couldn't load badge settings.");
-    return (data ?? []) as unknown as { badge_id: string; enabled: boolean; updated_at: string }[];
+    await assertBadgeStaff(context as never);
+    const [settings, counts] = await Promise.all([
+      context.supabase.from("badge_settings" as never).select("badge_id, enabled, updated_at"),
+      context.supabase.rpc("badge_earned_counts" as never),
+    ]);
+    if (settings.error || counts.error) throw new Error("Couldn't load badge settings.");
+    return {
+      settings: (settings.data ?? []) as unknown as { badge_id: string; enabled: boolean; updated_at: string }[],
+      earned: Object.fromEntries(((counts.data ?? []) as { badge_id: string; users: number }[]).map((r) => [r.badge_id, Number(r.users)])) as Record<string, number>,
+    };
   });
 
 /** Turns badges on or off for new unlocks site-wide. Anyone who already earned one keeps it. */
@@ -91,8 +102,7 @@ export const setBadgesEnabled = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d) => z.object({ ids: z.array(z.string().refine((id) => ALL_BADGES.some((b) => b.id === id))).min(1).max(ALL_BADGES.length), enabled: z.boolean() }).parse(d))
   .handler(async ({ data, context }) => {
-    const { data: allowed } = await context.supabase.rpc("in_department", { _user_id: context.userId, _dept: "branding" });
-    if (!allowed) throw new Error("Forbidden");
+    await assertBadgeStaff(context as never);
     const rows = data.ids.map((badge_id) => ({ badge_id, enabled: data.enabled, updated_by: context.userId, updated_at: new Date().toISOString() }));
     const { error } = await context.supabase.from("badge_settings" as never).upsert(rows as never, { onConflict: "badge_id" });
     if (error) throw new Error("Couldn't save the badge setting.");

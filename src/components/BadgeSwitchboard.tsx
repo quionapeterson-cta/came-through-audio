@@ -8,7 +8,7 @@ import { ALL_BADGES, COLLECTIONS, TIER_LABEL } from "@/lib/badges";
 import { listBadgeSettings, setBadgesEnabled } from "@/lib/badges.functions";
 
 /**
- * Branding staff turn badges on or off for new unlocks, one at a time or a whole collection. Switching one off never
+ * Super admins, Branding, Marketing & Sales and Support see every badge, how many users hold it, and turn badges on or off for new unlocks, one at a time or a whole collection. Switching one off never
  * takes it from anyone who already earned it. Badges still waiting on art are listed but can't be switched yet.
  */
 export function BadgeSwitchboard() {
@@ -20,7 +20,8 @@ export function BadgeSwitchboard() {
 
   if (q.isLoading) return <p className="mt-6 text-muted-foreground">Loading…</p>;
   if (q.isError) return <p className="mt-6 text-destructive">Couldn't load badge settings.</p>;
-  const off = new Set((q.data ?? []).filter((s) => !s.enabled).map((s) => s.badge_id));
+  const off = new Set((q.data?.settings ?? []).filter((s) => !s.enabled).map((s) => s.badge_id));
+  const earned = q.data?.earned ?? {};
 
   async function toggle(ids: string[], enabled: boolean) {
     setBusy(true);
@@ -51,6 +52,7 @@ export function BadgeSwitchboard() {
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-2 font-semibold">{b.title}{TIER_LABEL[b.tier] && <Badge variant="secondary">{TIER_LABEL[b.tier]}</Badge>}</div>
                   <div className="truncate text-xs text-muted-foreground">{b.milestone}</div>
+                  {!b.artPending && <div className="text-xs text-muted-foreground">Earned by {earned[b.id] ?? 0} {(earned[b.id] ?? 0) === 1 ? "user" : "users"}</div>}
                 </div>
                 {b.artPending ? <Badge variant="outline">Art coming</Badge>
                   : <Switch aria-label={`${b.title} on`} checked={!off.has(b.id)} disabled={busy} onCheckedChange={(v) => void toggle([b.id], v)} />}
