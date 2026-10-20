@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { confirmAction } from "@/components/ConfirmHost";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { Pencil, Plus, Trash2 } from "lucide-react";
@@ -111,7 +112,7 @@ export function TaskBankPanel({ departments }: { departments: Department[] }) {
               <p className="whitespace-pre-wrap text-sm leading-relaxed">{t.body || "No details yet."}</p>
               <div className="mt-3 flex gap-2">
                 <Button size="sm" variant="outline" onClick={() => setDraft({ id: t.id, department: t.department as Department, title: t.title, body: t.body, status: t.status })}><Pencil className="h-4 w-4" />Edit</Button>
-                <Button size="sm" variant="ghost" onClick={() => { if (confirm("Delete this task?")) void remove({ data: { id: t.id } }).then(() => qc.invalidateQueries({ queryKey: ["department-tasks"] })); }}><Trash2 className="h-4 w-4" />Delete</Button>
+                <Button size="sm" variant="ghost" onClick={async () => { if (await confirmAction({ title: "Delete this task?" })) void remove({ data: { id: t.id } }).then(() => qc.invalidateQueries({ queryKey: ["department-tasks"] })); }}><Trash2 className="h-4 w-4" />Delete</Button>
               </div>
             </div>
           )}

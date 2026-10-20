@@ -1,3 +1,4 @@
+import { planPrice } from "@/components/UpgradeLock";
 import { createFileRoute, Link, notFound } from "@tanstack/react-router";
 import { Check } from "lucide-react";
 import { BrandLogo } from "@/components/BrandLogo";
@@ -60,7 +61,7 @@ function DocPage() {
             <div className="mt-14 flex flex-col items-start gap-4 rounded-2xl bg-ink p-8 text-ink-foreground sm:flex-row sm:items-center sm:justify-between">
               <div>
                 <p className="text-xl font-bold">Ready to organize your music business?</p>
-                <p className="text-sm text-ink-muted">Start free. Unlock embedding and your catalog for $24.99/yr, billed annually.</p>
+                <p className="text-sm text-ink-muted">Start free. Unlock embedding and your catalog for {planPrice("plus")}, billed annually.</p>
               </div>
               <div className="flex shrink-0 gap-3">
                 <Link to="/plans" className="inline-flex h-11 items-center rounded-md border border-ink-border px-5 font-semibold hover:bg-ink-border">Compare plans</Link>

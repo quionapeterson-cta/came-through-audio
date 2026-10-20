@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { Calculator, Lock, Repeat } from "lucide-react";
+import { Calculator, Repeat } from "lucide-react";
+import { UpgradeLock } from "@/components/UpgradeLock";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -9,14 +10,8 @@ const money = (n: number) => n.toLocaleString("en-US", { style: "currency", curr
 
 export function RoyaltyUtilitySuite({ unlocked, onUpgrade }: { unlocked: boolean; onUpgrade: () => void }) {
   if (!unlocked) {
-    return (
-      <div className="flex flex-col items-center gap-3 rounded-2xl border-2 border-primary bg-card p-8 text-center">
-        <Lock className="h-8 w-8 text-primary" />
-        <h2 className="text-2xl font-bold">Royalty Utility Suite</h2>
-        <p className="max-w-md text-muted-foreground">Convert BMI and ASCAP splits and forecast your future payouts. Included with Catalog and Collaborate.</p>
-        <Button onClick={onUpgrade}>Upgrade to unlock</Button>
-      </div>
-    );
+    return <UpgradeLock className="" title="Royalty Utility Suite" tier="collaborate" onUpgrade={onUpgrade}
+      text="Convert BMI and ASCAP splits and forecast your future payouts." />;
   }
   return (
     <div className="grid gap-6 md:grid-cols-2">

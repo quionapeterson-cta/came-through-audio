@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
+import { confirmAction } from "@/components/ConfirmHost";
 import { Disc3, Lock, ShieldCheck, CheckCircle2, Download, FileAudio, FileText, ImagePlus, Pencil, Plus, Save, Trash2, Upload } from "lucide-react";
 import { capShare, splitStatus, splitSummary } from "@/lib/splits-total";
 import { toast } from "sonner";
@@ -23,6 +24,8 @@ import { BadgeViewer } from "@/components/BadgeViewer";
 import { isBadgeImage } from "@/lib/badges";
 import { logBadgeEvent } from "@/lib/badge-events";
 import { NextBadgeHint } from "@/components/Badges";
+import { ARTIST_SEAT_PRICES } from "@/lib/plans";
+import { PACKAGES } from "@/lib/proof";
 import { loadOnboarding, loadProfile, withProfile } from "@/lib/artist-profile";
 
 const normArtist = (v: string) => v.trim().replace(/\s+/g, " ").toLowerCase();
@@ -197,7 +200,7 @@ export function MetadataUploader({ stageName, avatar, userId, mode = "embed", on
     else setQueue((q) => [...q, ...files]);
   }
   async function remove(id: string) {
-    if (!confirm("Delete this track from your catalog?")) return;
+    if (!(await confirmAction({ title: "Delete this song from your catalog?", text: "Its master, artwork and lyrics are removed too. Badges you earned stay on your profile." }))) return;
     try {
       await deleteTrack(id);
       if (id === editingId) startNew();
@@ -379,7 +382,7 @@ export function MetadataUploader({ stageName, avatar, userId, mode = "embed", on
               <Field label="Artist name" id="artist" value={metadata.artist} required onChange={(value) => update("artist", value)} />
               {registeredArtist && metadata.artist.trim() && normArtist(metadata.artist) !== normArtist(registeredArtist) && (
                 <p role="note" className="mt-2 rounded-md border border-primary/50 bg-accent/30 p-2 text-xs">
-                  This account is registered to <span className="font-semibold">{registeredArtist}</span>. Releasing as a different artist? Each artist gets their own catalog with an add-on artist account (from $19.99/yr), coming soon. Featuring someone? Add them under Featured artist instead.
+                  This account is registered to <span className="font-semibold">{registeredArtist}</span>. Releasing as a different artist? Each artist gets their own catalog with an add-on artist account (from {ARTIST_SEAT_PRICES[0]!.price}/yr), coming soon. Featuring someone? Add them under Featured artist instead.
                 </p>
               )}
             </div>
@@ -438,7 +441,7 @@ export function MetadataUploader({ stageName, avatar, userId, mode = "embed", on
               <p className="flex items-center gap-2 text-lg font-bold">Audio Tagged Successfully! <span className="cta-icon cta-party cta-bedazzled-unlock" aria-hidden /></p>
               <label className="flex items-start gap-3 text-sm">
                 <input type="checkbox" className="mt-1 h-4 w-4 accent-[var(--primary)]" checked={aiProtect} onChange={(e) => setAiProtect(e.target.checked)} />
-                <span><span className="font-semibold">Add AI Protection Certificate (+$2.99)</span> — With generative AI cloning and scraping artist catalogs at an alarming rate, secure your time-stamped proof of human origin right now to protect your music from false plagiarism claims and automated platform takedowns before downloading.</span>
+                <span><span className="font-semibold">Add AI Protection Certificate (+${PACKAGES[0]!.price})</span> — With generative AI cloning and scraping artist catalogs at an alarming rate, secure your time-stamped proof of human origin right now to protect your music from false plagiarism claims and automated platform takedowns before downloading.</span>
               </label>
             </div>
           )}
@@ -585,7 +588,7 @@ export function MetadataUploader({ stageName, avatar, userId, mode = "embed", on
       <Dialog open={!!upsell} onOpenChange={(o) => !o && setUpsell(false)}>
         <DialogContent className="bg-card text-card-foreground">
           <DialogHeader><DialogTitle className="flex items-center gap-2 text-xl font-bold"><Lock className="h-5 w-5 text-primary" />{upsell === "export" ? "1-Click Official Agency Exports are locked" : "Split Sheets are locked"}</DialogTitle></DialogHeader>
-          <p className="text-base font-medium">{upsell === "export" ? "Upgrade to Catalog & Collaborate to export official The MLC and SoundExchange Direct bulk spreadsheets, plus BMI and ASCAP registration cheat sheets." : "Generate unlimited split sheets from your catalog starting with Catalog Plus ($24.99/yr). Add collaborator e-signatures with Catalog and Collaborate."}</p>
+          <p className="text-base font-medium">{upsell === "export" ? "Upgrade to Catalog & Collaborate to export official The MLC and SoundExchange Direct bulk spreadsheets, plus BMI and ASCAP registration cheat sheets." : "Generate unlimited split sheets from your catalog starting with Catalog Plus ($24.99/yr). Add collaborator e-signatures with Catalog & Collaborate."}</p>
           <Button onClick={() => setUpsell(false)}>Got it</Button>
         </DialogContent>
       </Dialog>

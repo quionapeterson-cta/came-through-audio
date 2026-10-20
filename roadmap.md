@@ -11,7 +11,7 @@
 - [x] Catalog downloads: song, artwork, lyrics (files stored privately)
 - [x] "Add AI Protection Proof" button on protected catalog songs
 - [x] Split sheets: collaborator signing page, copy link / email request, beautiful PDF
-- [ ] Automatic emails for signature requests (blocked: needs an email sending domain; currently opens the owner's email app with the link)
+- [x] Automatic emails for signature requests (split sheets and contracts send through the branded email layout)
 - [x] Paddle checkout: Catalog Plus $24.99, Catalog and Collaborate $44.99, Catalog Management $89.99 (yearly), AI Protection packages, Expert Assistance
 - [x] Plan cards: "Unlimited ..." lines with hover descriptions (workspace only; homepage unchanged)
 - [x] Royalty Utility Suite (BMI/ASCAP converter + earnings calculator) for Catalog and Collaborate+

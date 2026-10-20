@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useBilling } from "@/hooks/useBilling";
+import { useArtistName } from "@/hooks/useArtistName";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -36,8 +37,8 @@ function ProfilePage() {
   const navigate = useNavigate();
   const { tier, plan } = useBilling(user?.id);
   const [ob, setOb] = useState<Onboarding | null>(null);
+  const names = useArtistName(user, ob?.stageName);
   const [profile, setProfile] = useState<ArtistProfile | null>(null);
-  const [accountName, setAccountName] = useState("");
   const [editing, setEditing] = useState(false);
   const [passwordOpen, setPasswordOpen] = useState(false);
   const [viewing, setViewing] = useState<{ src: string; name?: string; round?: boolean; share?: ShareInfo }>();
@@ -52,11 +53,6 @@ function ProfilePage() {
     setOb(loadOnboarding(user.id));
     setProfile(loadProfile(user.id));
     syncFromCloud(user.id).then((o) => { setOb(o); setProfile(loadProfile(user.id)); });
-    const meta = user.user_metadata ?? {};
-    setAccountName(meta["stage_name"] || meta["legal_name"] || "");
-    supabase.from("profiles").select("stage_name, legal_name").eq("id", user.id).maybeSingle().then(({ data }) => {
-      if (data) setAccountName(data.stage_name || data.legal_name || meta["stage_name"] || "");
-    });
   }, [user]);
 
   function chooseSize(s: Size) {
@@ -66,7 +62,7 @@ function ProfilePage() {
 
   if (loading || !user) return <div className="flex min-h-screen items-center justify-center bg-ink text-ink-muted">Loading…</div>;
 
-  const name = ob?.stageName || accountName || user.email || "";
+  const name = names.display;
   const legalName = ob?.legalName || (user.user_metadata?.["legal_name"] as string | undefined) || "";
   const memberSince = new Date(user.created_at).toLocaleDateString(undefined, { month: "long", year: "numeric" });
   const earnedCount = states.filter((s) => s.earned).length;
@@ -86,7 +82,7 @@ function ProfilePage() {
       <main className="mx-auto max-w-5xl space-y-8 px-6 py-10">
         {/* Hero */}
         <section className="flex flex-col items-center gap-6 rounded-2xl border border-border bg-card p-8 text-center sm:flex-row sm:text-left">
-          <button type="button" aria-label="View your profile picture" disabled={!ob?.avatar} onClick={() => ob?.avatar && setViewing({ src: ob.avatar, name, round: !isBadgeImage(ob.avatar), share: { ctx: "profile", artist: ob?.stageName || accountName || "", genre: profile?.primaryGenre } })}
+          <button type="button" aria-label="View your profile picture" disabled={!ob?.avatar} onClick={() => ob?.avatar && setViewing({ src: ob.avatar, name, round: !isBadgeImage(ob.avatar), share: { ctx: "profile", artist: names.artist, genre: profile?.primaryGenre } })}
             className="shrink-0 rounded-full transition enabled:hover:ring-2 enabled:hover:ring-primary/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
             <ArtistAvatar src={ob?.avatar} className="h-32 w-32 sm:h-36 sm:w-36" />
           </button>
@@ -143,10 +139,10 @@ function ProfilePage() {
         </Card>
       </main>
 
-      <BadgeDetail state={badge} artist={name} onClose={() => setBadge(undefined)}
-        onShare={badgePrefs(ob).share ? (s) => { setBadge(undefined); setViewing({ src: s.badge.src, name: s.badge.title, share: { ctx: "profile", artist: name, genre: profile?.primaryGenre } }); } : undefined} />
+      <BadgeDetail state={badge} artist={names.artist} onClose={() => setBadge(undefined)}
+        onShare={badgePrefs(ob).share ? (s) => { setBadge(undefined); setViewing({ src: s.badge.src, name: s.badge.title, share: { ctx: "profile", artist: names.artist, genre: profile?.primaryGenre } }); } : undefined} />
       <BadgeSettings userId={user.id} open={settingsOpen} onOpenChange={setSettingsOpen} onSaved={setOb} />
-      <BadgeWatcher userId={user.id} artist={name} />
+      <BadgeWatcher userId={user.id} artist={names.artist} />
       <BadgeViewer src={viewing?.src} name={viewing?.name} round={viewing?.round} share={viewing?.share} onClose={() => setViewing(undefined)} />
       <ArtistOnboarding userId={user.id} open={editing} onOpenChange={setEditing} firstRun={false}
         onSaved={(o) => { setOb(o); setProfile(loadProfile(user.id)); setEditing(false); }} />

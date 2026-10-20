@@ -1,10 +1,12 @@
 import { useEffect, useMemo, useState } from "react";
+import { confirmAction } from "@/components/ConfirmHost";
 import { FileSignature, Plus, Trash2, Download, Lock, PenLine, Check, ChevronLeft, Loader2, Mail, Copy } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { ContributorLibrary } from "@/components/ContributorLibrary";
 import { ProSelect } from "@/components/ProSelect";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { UpgradeLock } from "@/components/UpgradeLock";
 import { Badge } from "@/components/ui/badge";
 import { listTracks, type CatalogTrack } from "@/lib/catalog";
 import { useServerFn } from "@tanstack/react-start";
@@ -73,12 +75,8 @@ export function SplitSheets({ userId, canSplit, canCollect, prefillTrackId, onUp
 
   if (!canSplit) {
     return (
-      <div className="mt-6 flex min-h-72 flex-col items-center justify-center rounded-2xl border-2 border-dashed border-border p-10 text-center">
-        <Lock className="h-10 w-10 text-primary" />
-        <h2 className="mt-4 text-2xl font-bold">Split sheets start with Catalog Plus</h2>
-        <p className="mt-2 max-w-md text-muted-foreground">Generate unlimited split sheets from your catalog for $24.99/yr. Add collaborator e-signature requests with Catalog and Collaborate.</p>
-        <Button className="mt-6" onClick={onUpgrade}>View Plans</Button>
-      </div>
+      <UpgradeLock title="Split sheets start with Catalog Plus" tier="plus" onUpgrade={onUpgrade}
+        text="Generate unlimited split sheets from your catalog. Collaborator e-signature requests come with Catalog & Collaborate. Split sheets someone sends you are always free to sign." />
     );
   }
 
@@ -215,7 +213,7 @@ export function SplitSheets({ userId, canSplit, canCollect, prefillTrackId, onUp
                       <Button size="sm" variant="outline" onClick={() => void downloadSplitPdf(track, collaborators)} aria-label="Download PDF"><Download className="h-4 w-4" /></Button>
                       <Button size="sm" variant="outline" aria-label="Delete split sheet"
                         onClick={async () => {
-                          if (!confirm("Delete this split sheet?")) return;
+                          if (!(await confirmAction({ title: "Delete this split sheet?", text: "Signatures already collected on it are deleted too." }))) return;
                           try {
                             await deleteSplitSheet(track.id);
                             toast.success("Split sheet deleted.");
@@ -462,7 +460,7 @@ function SplitEditor({ userId, track, initial, canCollect, onUpgrade, onClose, o
                     </Button>
                   )
                 ) : !canCollect ? (
-                  <Button size="sm" variant="outline" onClick={onUpgrade} title="Collaborator e-signature requests are included with Catalog and Collaborate">
+                  <Button size="sm" variant="outline" onClick={onUpgrade} title="Collaborator e-signature requests are included with Catalog & Collaborate">
                     <Lock className="h-4 w-4" /> Request e-signature
                   </Button>
                 ) : c.invitedAt && c.rowId ? (

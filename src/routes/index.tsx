@@ -8,7 +8,7 @@ import { EmbedBadge, ShieldBadge, SignBadge, SplitBadge, UploadBadge, VaultBadge
 import { ArtistBadge, ComposerBadge, MusicianBadge, ProducerBadge, SongwriterBadge } from "@/components/RoleBadges";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { PlanComparison, planAction } from "@/components/PlanComparison";
-import { PLAN_FEATURES } from "@/lib/plans";
+import { PLAN_FEATURES, PLAN_TIERS } from "@/lib/plans";
 import { DEFAULT_TESTIMONIAL_FILTER, TESTIMONIALS } from "@/lib/testimonials";
 import { getTestimonialFilter } from "@/lib/testimonials.functions";
 import { TestimonialCard } from "@/components/TestimonialCard";
@@ -29,7 +29,9 @@ export const Route = createFileRoute("/")({
   component: Landing,
 });
 
-/** What the $24.99 plan adds over Free, straight from the pricing chart so the two never disagree. */
+/** Catalog Plus, the first paid plan, from the pricing list so homepage copy never disagrees with the chart. */
+const PLUS = PLAN_TIERS.find((t) => t.tier === "plus")!;
+/** What Catalog Plus adds over Free, straight from the pricing chart so the two never disagree. */
 const includes = PLAN_FEATURES.filter((f) => f.from === "plus").map((f) => f.title);
 
 const steps = [
@@ -109,8 +111,8 @@ function Landing() {
 
       <section className="border-y border-border bg-muted">
         <div className="mx-auto max-w-7xl px-6 py-14">
-          <h2 className="text-center text-3xl font-extrabold uppercase tracking-wide text-primary md:text-4xl">Everything in the $24.99/yr plan</h2>
-          <p className="mb-8 mt-2 text-center text-sm text-muted-foreground">Plus free Royalty Health Checks and split sheet signing. Only $2.08 a month, billed annually.</p>
+          <h2 className="text-center text-3xl font-extrabold uppercase tracking-wide text-primary md:text-4xl">Everything in the {PLUS.price}/yr plan</h2>
+          <p className="mb-8 mt-2 text-center text-sm text-muted-foreground">Plus free Royalty Health Checks and split sheet signing. {PLUS.monthly.replace(" / month", " a month")}, billed annually.</p>
           <div className="flex flex-wrap items-center justify-center gap-x-10 gap-y-4">
             {includes.map((i) => (
               <span key={i} className="flex items-center gap-2 text-lg font-semibold">
@@ -170,7 +172,7 @@ function Landing() {
       <section id="plans" className="scroll-mt-4 bg-background py-20">
         <div className="mx-auto max-w-6xl px-4 sm:px-6">
           <h2 className="text-center text-3xl font-bold md:text-5xl">More value at every step</h2>
-          <p className="mx-auto mt-3 max-w-2xl text-center text-lg text-muted-foreground">Start free with Royalty Health Checks. Unlock embedding, your catalog and every download for $24.99 a year, then grow into split sheets, agency exports and contracts.</p>
+          <p className="mx-auto mt-3 max-w-2xl text-center text-lg text-muted-foreground">Start free with Royalty Health Checks. Unlock embedding, your catalog and every download for {PLUS.price} a year, then grow into split sheets, agency exports and contracts.</p>
           <div className="mt-10">
             <PlanComparison action={(p) => planAction(p, { onBuy: () => {}, onSignup: () => document.getElementById("signup")?.scrollIntoView({ behavior: "smooth" }) })} />
           </div>

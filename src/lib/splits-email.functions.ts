@@ -18,7 +18,7 @@ export const sendSplitInvite = createServerFn({ method: "POST" })
     const key = process.env["RESEND_API_KEY"] || process.env["CameThroughAudio"];
     if (!key) throw new Error("Email sending is not configured yet.");
     const { data: canCollect } = await context.supabase.rpc("has_tier" as never, { _uid: context.userId, _needed: "collaborate" } as never);
-    if (!canCollect) throw new Error("Collaborator e-signature requests are included with Catalog and Collaborate.");
+    if (!canCollect) throw new Error("Collaborator e-signature requests are included with Catalog & Collaborate.");
 
     const { data: row, error } = await context.supabase
       .from("split_sheets")

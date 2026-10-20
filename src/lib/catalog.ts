@@ -66,9 +66,19 @@ export async function saveTrack(m: Metadata, userId: string, id?: string): Promi
   return (data as { id: string }).id;
 }
 
+/** Deletes a song and its stored master and artwork (everything in its private folder). */
 export async function deleteTrack(id: string) {
   const { error } = await supabase.from("catalogs").delete().eq("id", id);
   if (error) throw error;
+  // Files go after the row, so a failed delete never leaves a song without its master.
+  const { data: auth } = await supabase.auth.getUser();
+  const folder = auth.user ? `${auth.user.id}/${id}` : "";
+  if (!folder) return;
+  const { data: files } = await supabase.storage.from(BUCKET).list(folder);
+  if (files?.length) {
+    const { error: fileError } = await supabase.storage.from(BUCKET).remove(files.map((f) => `${folder}/${f.name}`));
+    if (fileError) console.error("Song deleted, but its files weren't removed", fileError.message);
+  }
 }
 
 const BUCKET = "catalog-files";

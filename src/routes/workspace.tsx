@@ -2,10 +2,11 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { getStaffRole } from "@/lib/admin.functions";
-import { ShieldCheck, FileAudio, Lock, Disc3, Activity, FileSignature, ScrollText, GraduationCap, LogOut, Moon, Sun, UserRound, Gem } from "lucide-react";
+import { ShieldCheck, FileAudio, Disc3, Activity, FileSignature, ScrollText, GraduationCap, LogOut, Moon, Sun, UserRound, Gem, Users, Calculator } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { useArtistName } from "@/hooks/useArtistName";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -29,6 +30,7 @@ import { openCheckout, getPaddleEnvironment } from "@/lib/paddle";
 import { PRICE_TIER, TIER_LABEL, hasTier, takePlanIntent, type Tier } from "@/lib/plans";
 import { PlanComparison, planAction } from "@/components/PlanComparison";
 import { BadgeWatcher } from "@/components/Badges";
+import { UpgradeLock } from "@/components/UpgradeLock";
 
 export const Route = createFileRoute("/workspace")({
   head: () => ({
@@ -57,7 +59,6 @@ const tabs = [
 function Workspace() {
   const { user, loading } = useAuth();
   const navigate = useNavigate();
-  const [name, setName] = useState<string>("");
   const search = Route.useSearch();
   const [tab, setTab] = useState(search.tab ?? "embed");
   const [splitTrackId, setSplitTrackId] = useState<string>();
@@ -78,6 +79,8 @@ function Workspace() {
   const canCollect = hasTier(tier, "collaborate");
   const hasAi = purchases.some((p) => p.kind === "ai");
   const [onboard, setOnboard] = useState<Onboarding | null>(null);
+  const names = useArtistName(user, onboard?.stageName);
+  const name = names.display;
   const [onboardSynced, setOnboardSynced] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
   const [embedKey, setEmbedKey] = useState(0);
@@ -123,16 +126,6 @@ function Workspace() {
       .catch(() => {});
   }, [user]);
 
-  useEffect(() => {
-    if (!user) return;
-    const meta = user.user_metadata ?? {};
-    setName(meta["stage_name"] || meta["legal_name"] || user.email || "");
-    supabase.from("profiles").select("stage_name, legal_name, tier").eq("id", user.id).maybeSingle().then(({ data }) => {
-      if (data) {
-        setName(data.stage_name || data.legal_name || meta["stage_name"] || user.email || "");
-      }
-    });
-  }, [user]);
 
   if (loading || !user) {
     return <div className="flex min-h-screen items-center justify-center bg-ink text-ink-muted">Loading…</div>;
@@ -186,8 +179,8 @@ function Workspace() {
       </header>
 
       <ArtistOnboarding userId={user.id} open={profileOpen} onOpenChange={setProfileOpen} firstRun={!onboard?.done}
-        onSaved={(o) => { setOnboard(o); if (o.stageName) setName(o.stageName); setEmbedKey((k) => k + 1); setTab(canCatalog ? "embed" : "health"); }} />
-      <BadgeWatcher userId={user.id} artist={name} />
+        onSaved={(o) => { setOnboard(o); setEmbedKey((k) => k + 1); setTab(canCatalog ? "embed" : "health"); }} />
+      <BadgeWatcher userId={user.id} artist={names.artist} />
       <main className="mx-auto max-w-7xl px-6 py-8">
         <Tabs value={tab} onValueChange={setTab}>
           <TabsList className="h-auto w-full flex-nowrap justify-start gap-1 overflow-x-auto bg-muted p-1">
@@ -217,17 +210,8 @@ function Workspace() {
 }
 
 function PlusLock({ title, onQuickCheck, onUpgrade }: { title: string; onQuickCheck: () => void; onUpgrade: () => void }) {
-  return (
-    <div className="mt-6 flex flex-col items-center gap-3 rounded-2xl border-2 border-primary p-10 text-center">
-      <Lock className="h-8 w-8 text-primary" />
-      <h2 className="text-2xl font-bold">{title}</h2>
-      <p className="max-w-lg text-muted-foreground">Embed your credits into every master, keep your catalog, masters, art and lyrics in one place, and generate split sheets for $24.99/yr. That's about $2.08 a month, billed annually.</p>
-      <div className="mt-2 flex flex-wrap justify-center gap-3">
-        <Button onClick={onUpgrade}>See plans</Button>
-        <Button variant="outline" onClick={onQuickCheck}>Run a Royalty Health Check</Button>
-      </div>
-    </div>
-  );
+  return <UpgradeLock title={title} tier="plus" onUpgrade={onUpgrade} free={{ label: "Run a free Royalty Health Check", onClick: onQuickCheck }}
+    text="Embed your credits into every master, keep your catalog, masters, art and lyrics in one place, and generate split sheets." />;
 }
 
 /**
@@ -258,14 +242,9 @@ function Learn({ userId, unlocked, onUpgrade }: { userId: string; unlocked: bool
       </div>
       {/* Contracts handles its own gating: blueprint guides are a preview for everyone, and contracts sent to you are always visible. */}
       {view === "contracts" ? <Contracts userId={userId} unlocked={unlocked} onUpgrade={onUpgrade} />
-        : !unlocked ? (
-          <div className="mt-6 flex flex-col items-center gap-3 rounded-2xl border-2 border-primary p-8 text-center">
-            <Lock className="h-8 w-8 text-primary" />
-            <h2 className="text-2xl font-bold">Included with Catalog Management</h2>
-            <p className="max-w-md text-muted-foreground">Industry masterclasses covering sync, publishing and royalties.</p>
-            <Button onClick={onUpgrade}>Upgrade to unlock</Button>
-          </div>
-        ) : <Masterclasses userId={userId} />}
+        : !unlocked ? <UpgradeLock title="Music Business Masterclasses" tier="management" onUpgrade={onUpgrade}
+            text="Live group classes with an industry expert, covering sync, publishing and royalties." />
+        : <Masterclasses userId={userId} />}
     </div>
   );
 }
@@ -312,11 +291,18 @@ function Masterclasses({ userId }: { userId: string }) {
 }
 
 function Health({ canCatalog, onFix, onFixField, onEmbed, userId, email, purchases, canUtility, onUpgrade }: { canCatalog: boolean; userId: string; email?: string | undefined; purchases: Purchase[]; canUtility: boolean; onUpgrade: () => void; onFix: () => void; onFixField: (trackId: string, field: string) => void; onEmbed: () => void }) {
+  // Three tools, one at a time, switched like Contracts & Masterclasses.
+  const [view, setView] = useState<"check" | "expert" | "utility">("check");
+  const views = [["check", "Health Check", Activity], ["expert", "Expert Help", Users], ["utility", "Utility Suite", Calculator]] as const;
   return (
     <div className="mt-6 space-y-6">
-      <RoyaltyHealthCheck userId={userId} canCatalog={canCatalog} onUpgrade={onUpgrade} onFix={onFix} onFixField={onFixField} onEmbed={onEmbed} />
-      <div id="expert-assistance"><ExpertAssistance userId={userId} email={email} purchases={purchases} onFix={onFixField} /></div>
-      <RoyaltyUtilitySuite unlocked={canUtility} onUpgrade={onUpgrade} />
+      <div className="inline-flex flex-wrap gap-1 rounded-lg bg-muted p-1">
+        {views.map(([id, label, Icon]) => <Button key={id} size="sm" variant={view === id ? "default" : "ghost"} onClick={() => setView(id)}><Icon className="h-4 w-4" />{label}</Button>)}
+      </div>
+      {view === "check" && <RoyaltyHealthCheck userId={userId} canCatalog={canCatalog} onUpgrade={onUpgrade} onFix={onFix} onFixField={onFixField} onEmbed={onEmbed}
+        onExpert={() => { setView("expert"); window.scrollTo({ top: 0, behavior: "smooth" }); }} />}
+      {view === "expert" && <div id="expert-assistance"><ExpertAssistance userId={userId} email={email} purchases={purchases} onFix={onFixField} /></div>}
+      {view === "utility" && <RoyaltyUtilitySuite unlocked={canUtility} onUpgrade={onUpgrade} />}
     </div>
   );
 }

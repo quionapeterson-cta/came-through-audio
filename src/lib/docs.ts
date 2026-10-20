@@ -73,7 +73,7 @@ export const DOCS: Doc[] = [
         "Flags missing writer details that would block registration, with links to fix them.",
       ] },
       { heading: "Expert Assistance", paragraphs: ["Prefer help? Our team can handle registrations for you. Pricing is shown up front: a setup fee for a single, EP or album, plus a per-song, per-agency fee."] },
-      { heading: "Royalty Utility Suite", paragraphs: ["Included with Catalog and Collaborate and up: the BMI/ASCAP Formula Converter (BMI reports shares on a 200% scale; ASCAP, SoundExchange and The MLC use 100%) and a Projected Royalty Earnings Calculator with editable rate estimates."] },
+      { heading: "Royalty Utility Suite", paragraphs: ["Included with Catalog & Collaborate and up: the BMI/ASCAP Formula Converter (BMI reports shares on a 200% scale; ASCAP, SoundExchange and The MLC use 100%) and a Projected Royalty Earnings Calculator with editable rate estimates."] },
     ],
   },
   {
@@ -122,7 +122,7 @@ export const DOCS: Doc[] = [
       ] },
       { heading: "Split sheets", bullets: [
         "Generate a split sheet from any catalog song, sign as the owner and download the PDF (Catalog Plus and up).",
-        "Request collaborators' e-signatures by email (Catalog and Collaborate and up).",
+        "Request collaborators' e-signatures by email (Catalog & Collaborate and up).",
         "Collaborators get an email link, create a free account with that email, and sign.",
         "Collaborators can add their own PRO and IPI when they sign.",
         "Signed split sheets live in your Signed Split Sheet Vault.",

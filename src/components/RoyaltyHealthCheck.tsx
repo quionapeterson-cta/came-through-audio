@@ -16,7 +16,7 @@ import { NextBadgeHint } from "@/components/Badges";
 
 const AUTO = [INTERNATIONAL.deezer.id, INTERNATIONAL.musicbrainz.id];
 
-export function RoyaltyHealthCheck({ userId, canCatalog, onUpgrade, onFix, onFixField, onEmbed }: { userId: string; canCatalog: boolean; onUpgrade: () => void; onFix: () => void; onFixField: (trackId: string, field: string) => void; onEmbed: () => void }) {
+export function RoyaltyHealthCheck({ userId, canCatalog, onUpgrade, onFix, onFixField, onEmbed, onExpert }: { userId: string; canCatalog: boolean; onUpgrade: () => void; onFix: () => void; onFixField: (trackId: string, field: string) => void; onEmbed: () => void; onExpert?: () => void }) {
   const [tracks, setTracks] = useState<CatalogTrack[]>();
   const [checks, setChecks] = useState<RepertoireCheck[]>([]);
   const [code, setCode] = useState(() => loadOnboarding(userId)?.healthCountry);
@@ -125,7 +125,7 @@ export function RoyaltyHealthCheck({ userId, canCatalog, onUpgrade, onFix, onFix
     try { await clearCheck(trackId, society); setChecks((all) => all.filter((x) => !(x.trackId === trackId && x.society === society))); } catch { toast.error("Couldn't undo that. Try again."); }
   }
 
-  const book = () => document.getElementById("expert-assistance")?.scrollIntoView({ behavior: "smooth" });
+  const book = () => onExpert ? onExpert() : document.getElementById("expert-assistance")?.scrollIntoView({ behavior: "smooth" });
   const actions = {
     onCountry: chooseCountry, onRunAll: () => void runAll(), onExpert: book, onRunOne: (id: string) => void runOne(id),
     onMark: (...a: Parameters<typeof mark>) => void mark(...a), onClear: (...a: Parameters<typeof clear>) => void clear(...a), onFixField: fixField,

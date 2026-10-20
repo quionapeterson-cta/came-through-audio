@@ -11,6 +11,7 @@ import { emptyContributor, GENRES, RELEASE_TYPES, WRITER_ROLES, writerRole, type
 import { isBadgeImage } from "@/lib/badges";
 import { loadOnboarding, loadProfile, saveOnboarding, saveProfile, type ArtistProfile, type Onboarding } from "@/lib/artist-profile";
 import { capShare, splitTotal } from "@/lib/splits-total";
+import { ARTIST_SEAT_PRICES, TIER_LABEL } from "@/lib/plans";
 import { InfoTip } from "@/components/InfoTip";
 import type { GlossaryKey } from "@/lib/glossary";
 
@@ -234,8 +235,8 @@ export function ArtistOnboarding({ userId, open, onOpenChange, onSaved, firstRun
   );
 }
 
-/** Seat prices (yearly, per added artist) from PLAN-pricing-badges.md §E; artist seats aren't built yet. */
-const SEAT_PRICES = [["Catalog Plus", "$19.99"], ["Catalog & Collaborate", "$36.99"], ["Catalog Management", "$69.99"]] as const;
+/** Seat prices (yearly, per added artist); artist seats aren't built yet. */
+const SEAT_PRICES = ARTIST_SEAT_PRICES.map((s) => [TIER_LABEL[s.tier], s.price] as const);
 
 function NameChangeDialog({ open, onOpenChange, from, to, status, seats, onSeats, notified, onNotify, onConfirm }: {
   open: boolean; onOpenChange: (o: boolean) => void; from: string; to: string; status?: NameStatus | undefined;

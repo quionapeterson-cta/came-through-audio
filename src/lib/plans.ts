@@ -11,7 +11,7 @@ export const PRICE_TIER: Record<string, Tier> = {
 export const TIER_LABEL: Record<Tier, string> = {
   free: "Free",
   plus: "Catalog Plus",
-  collaborate: "Catalog and Collaborate",
+  collaborate: "Catalog & Collaborate",
   management: "Catalog Management",
 };
 
@@ -49,6 +49,11 @@ export function isActiveSub(s: { status: string; current_period_end: string | nu
 
 export type PlanTier = { tier: Tier; price: string; monthly: string; priceId?: string };
 
+/** Add-on artist seats, per added artist per year (PLAN-pricing-badges.md §E). Not on sale yet. */
+export const ARTIST_SEAT_PRICES: { tier: Exclude<Tier, "free">; price: string }[] = [
+  { tier: "plus", price: "$19.99" }, { tier: "collaborate", price: "$36.99" }, { tier: "management", price: "$69.99" },
+];
+
 /** Pricing columns, cheapest first. Free has no price ID (signup only). */
 export const PLAN_TIERS: PlanTier[] = [
   { tier: "free", price: "$0", monthly: "Free forever" },
@@ -65,14 +70,14 @@ export type Feature = { title: string; tip: string; group: string; from: Tier; s
  */
 export const PLAN_FEATURES: Feature[] = [
   { group: "Royalty health", from: "free", title: "Royalty Health Checks", tip: "See if your songs show up in the major public repertoires (PRO, SoundExchange, mechanicals) and what's missing" },
-  { group: "Royalty health", from: "free", title: "Sign Split Sheets You're Invited To", tip: "Sign split sheets collaborators send you, free. Creating your own starts with Catalog and Collaborate." },
+  { group: "Royalty health", from: "free", title: "Sign Split Sheets You're Invited To", tip: "Sign split sheets collaborators send you, free. Creating your own starts with Catalog Plus." },
   { group: "Catalog & metadata", from: "plus", title: "Metadata Embedding", tip: "Embed complete track details, credits, lyrics, artwork and identifiers directly into your audio files" },
   { group: "Catalog & metadata", from: "plus", title: "Asset Cataloging", tip: "One organized home for every song's credits, identifiers, artwork and lyrics" },
   { group: "Catalog & metadata", from: "plus", title: "Master MP3 Retrieval", tip: "Download your embedded master MP3 from My Catalog anytime, no re-embedding needed" },
   { group: "Catalog & metadata", from: "plus", title: "Album Art Uploads & Retrieval", tip: "Upload cover art with each song and download it again whenever you need it" },
   { group: "Catalog & metadata", from: "plus", title: "PDF Catalog Downloads", tip: "Download your whole catalog as a branded PDF: titles, artists, identifiers and credits" },
   { group: "Catalog & metadata", from: "plus", title: "PDF Lyric Downloads", tip: "Download any song's lyrics with its credits as a branded PDF" },
-  { group: "Catalog & metadata", from: "plus", title: "Split Sheet Generator", tip: "Generate split sheets from your catalog songs, sign as the owner and download the PDF. Collecting collaborators' e-signatures starts with Catalog and Collaborate." },
+  { group: "Catalog & metadata", from: "plus", title: "Split Sheet Generator", tip: "Generate split sheets from your catalog songs, sign as the owner and download the PDF. Collecting collaborators' e-signatures starts with Catalog & Collaborate." },
   { group: "Collaboration & registration", from: "collaborate", title: "Collaborator E-Signature Requests", tip: "Email collaborators a secure link to e-sign your split sheets, with instant free account invitations" },
   { group: "Collaboration & registration", from: "collaborate", title: "1-Click Agency Exports", tip: "Download registration-ready files for The MLC, SoundExchange and ASCAP/BMI from your catalog, plus a Neighbouring Rights Pack listing every performer for international airplay" },
   { group: "Collaboration & registration", from: "collaborate", title: "Royalty Utility Suite", tip: "BMI/ASCAP Formula Converter & Projected Royalty Earnings Calculator" },

@@ -5,7 +5,7 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 export const COLLAB_TRIAL_DAYS = 30;
 
 /**
- * Grants a one-time 30-day Catalog and Collaborate trial to someone invited to sign a split sheet or contract.
+ * Grants a one-time 30-day Catalog & Collaborate trial to someone invited to sign a split sheet or contract.
  * The invite is verified as the caller (email must match), then the fraud guard runs (see trialBlockReason).
  * Reasons are logged server-side only, so the response never teaches anyone how to get around the checks.
  */

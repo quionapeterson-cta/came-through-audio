@@ -45,7 +45,7 @@ function SignPage() {
         setInvite(d); setPro(d?.pro ?? ""); setIpi(d?.ipi ?? "");
         clearReturn();
         if (d) grantTrial({ data: { rowId, environment: getPaddleEnvironment() === "live" ? "live" : "sandbox" } })
-          .then((r) => { if (r.granted) toast.success("Welcome! You've unlocked a free 30-day Catalog and Collaborate account."); })
+          .then((r) => { if (r.granted) toast.success("Welcome! You've unlocked a free 30-day Catalog & Collaborate account."); })
           .catch(() => {});
       })
       .catch((e) => setError(e instanceof Error ? e.message : "Could not open this request."));
@@ -83,7 +83,7 @@ function SignPage() {
               <FileSignature className="h-10 w-10 text-primary" />
               <h1 className="text-3xl font-bold">You've been asked to sign a split sheet</h1>
               <p className="text-muted-foreground">Create your free collaborator account using the same email the request was sent to, or log in. Then review your share and sign in seconds.</p>
-              <p className="rounded-lg border border-primary p-3 text-sm font-medium">Bonus: collaborators who sign get a free 30-day Catalog and Collaborate account.</p>
+              <p className="rounded-lg border border-primary p-3 text-sm font-medium">Bonus: collaborators who sign get a free 30-day Catalog & Collaborate account.</p>
             </div>
             <SignupCard returnPath={`/sign/${rowId}`} onAuthed={() => {}} inviteMode />
           </div>

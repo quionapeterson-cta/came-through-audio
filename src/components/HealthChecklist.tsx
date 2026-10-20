@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { confirmAction } from "@/components/ConfirmHost";
 import { Archive, Bell, Check, CheckCircle2, ChevronDown, Copy, ExternalLink, Info, Pencil, PartyPopper, RotateCcw, Search, Trash2, Undo2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -244,7 +245,7 @@ function SongDetail({ r, c, country, status, onStatus, actions, running, onEditI
         {status.list !== "later" && c.pct < 100 && <Button size="sm" variant="outline" onClick={() => setLater(!later)}><Archive />Save for later</Button>}
         {inspector && <>
           <Button size="sm" variant="outline" onClick={() => onEditInspector(id)}><Pencil />Edit song details</Button>
-          <Button size="sm" variant="ghost" onClick={() => { if (window.confirm(`Remove "${r.track.title}" from your checklist?`)) onDeleteInspector(id); }}><Trash2 />Remove</Button>
+          <Button size="sm" variant="ghost" onClick={async () => { if (await confirmAction({ title: `Remove "${r.track.title}" from your checklist?`, action: "Remove" })) onDeleteInspector(id); }}><Trash2 />Remove</Button>
         </>}
       </div>
       {later && (

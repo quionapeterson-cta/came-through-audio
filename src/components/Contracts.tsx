@@ -1,9 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
+import { confirmAction } from "@/components/ConfirmHost";
 import { AlertTriangle, Check, ChevronLeft, Copy, Download, FileSignature, Loader2, Lock, Mail, PenLine, Plus, RotateCcw, ScrollText, ShieldCheck, Trash2, Unlock, Vault } from "lucide-react";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
+import { UpgradeLock } from "@/components/UpgradeLock";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -370,7 +372,7 @@ function ContractEditor({ userId, initial, tracks, onClose }: { userId: string; 
             <div className="flex flex-wrap gap-3">
               <Button variant="outline" disabled={busy} onClick={() => void save()}>{busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}Save draft</Button>
               <Button disabled={busy || !ready} onClick={() => void lockAndSend()}><Lock className="h-4 w-4" />Lock &amp; request signatures</Button>
-              {c.id && <Button variant="ghost" className="ml-auto" disabled={busy} onClick={() => { if (confirm("Delete this draft?")) void deleteContract(c.id!).then(onClose); }}><Trash2 className="h-4 w-4" />Delete</Button>}
+              {c.id && <Button variant="ghost" className="ml-auto" disabled={busy} onClick={async () => { if (await confirmAction({ title: "Delete this draft?" })) void deleteContract(c.id!).then(onClose); }}><Trash2 className="h-4 w-4" />Delete</Button>}
             </div>
             <p className="mt-2 text-xs text-muted-foreground">Locking freezes the text and records its fingerprint, so nobody can change it after people start signing.</p>
           </Step>
@@ -437,14 +439,7 @@ function Field({ label, tip, wide, children }: { label: string; tip: string; wid
 }
 
 function Locked({ text, onUpgrade }: { text: string; onUpgrade: () => void }) {
-  return (
-    <div className="flex flex-col items-center gap-3 rounded-2xl border-2 border-primary p-8 text-center">
-      <Lock className="h-8 w-8 text-primary" />
-      <h2 className="text-2xl font-bold">Included with Catalog Management</h2>
-      <p className="max-w-md text-muted-foreground">{text}</p>
-      <Button onClick={onUpgrade}>Upgrade to unlock</Button>
-    </div>
-  );
+  return <UpgradeLock className="" title="Custom contracts" tier="management" onUpgrade={onUpgrade} text={text} />;
 }
 
 function Empty({ icon: Icon, text }: { icon: React.ElementType; text: string }) {

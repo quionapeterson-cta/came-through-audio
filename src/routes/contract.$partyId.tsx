@@ -44,9 +44,9 @@ function ContractSignPage() {
     getContractInvite(partyId)
       .then((d) => {
         setInvite(d); clearReturn();
-        // Signers who open their invite get a one-time 30-day Catalog and Collaborate trial (fraud-guarded on the server).
+        // Signers who open their invite get a one-time 30-day Catalog & Collaborate trial (fraud-guarded on the server).
         if (d?.can_sign) grantTrial({ data: { partyId, environment: getPaddleEnvironment() === "live" ? "live" : "sandbox" } })
-          .then((r) => { if (r.granted) toast.success("Welcome! You've unlocked a free 30-day Catalog and Collaborate account."); })
+          .then((r) => { if (r.granted) toast.success("Welcome! You've unlocked a free 30-day Catalog & Collaborate account."); })
           .catch(() => {});
       })
       .catch((e) => setError(e instanceof Error ? e.message : "Could not open this contract."));
@@ -87,7 +87,7 @@ function ContractSignPage() {
               <FileSignature className="h-10 w-10 text-primary" />
               <h1 className="text-3xl font-bold">You've been asked to sign a contract</h1>
               <p className="text-muted-foreground">Log in, or create a free account using the same email the request was sent to. Then read the full contract and sign in seconds. Signing is always free.</p>
-              <p className="rounded-lg border border-primary p-3 text-sm font-medium">Bonus: new signers get a free 30-day Catalog and Collaborate account.</p>
+              <p className="rounded-lg border border-primary p-3 text-sm font-medium">Bonus: new signers get a free 30-day Catalog & Collaborate account.</p>
             </div>
             <SignupCard returnPath={`/contract/${partyId}`} onAuthed={() => {}} inviteMode />
           </div>
