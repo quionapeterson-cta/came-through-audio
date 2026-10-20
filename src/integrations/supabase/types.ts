@@ -1046,6 +1046,7 @@ export type Database = {
     }
     Functions: {
       artist_name_status: { Args: { uid?: string }; Returns: Json }
+      can_issue_ai_certificate: { Args: { _user_id: string }; Returns: boolean }
       can_manage_staff: { Args: { _user_id: string }; Returns: boolean }
       get_split_invite: { Args: { _row_id: string }; Returns: Json }
       has_active_subscription: {
