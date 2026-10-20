@@ -10,7 +10,8 @@ import { InfoTip } from "@/components/InfoTip";
 import { GLOSSARY, type GlossaryKey } from "@/lib/glossary";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { PRE_DIST_NOTE, PRO_TIP } from "@/lib/copy";
-import { readMetadata, CREDIT_ROLES, emptyContributor, emptyMetadata, embedMetadata, creditName, metadataSchema, GENRES, RELEASE_TYPES, WRITER_ROLES, writerRole, type Contributor, type Metadata } from "@/lib/metadata";
+import { readMetadata, CREDIT_ROLES, isPerformer, performers, emptyContributor, emptyMetadata, embedMetadata, creditName, metadataSchema, GENRES, RELEASE_TYPES, WRITER_ROLES, writerRole, type Contributor, type Metadata } from "@/lib/metadata";
+import { COUNTRIES } from "@/lib/repertoires";
 import { deleteTrack, downloadCatalogFile, listTracks, safeName, saveTrack, uploadCatalogFile, type CatalogTrack } from "@/lib/catalog";
 import { AGENCY_LABEL, downloadAgencyExport, type Agency, type Held } from "@/lib/agency-export";
 import { registrationReadiness, type MissingItem } from "@/lib/readiness";
@@ -391,6 +392,7 @@ export function MetadataUploader({ stageName, avatar, userId, mode = "embed", on
         <ReadinessPanel metadata={metadata} />
         <Contributors title="Producer Name" singular="producer" group="producers" rows={metadata.producers ?? [emptyContributor()]} disabled={busy} onChange={(rows) => update("producers", rows)} simple
           tip={GLOSSARY.producedBy.text} tipOnly />
+        <Performers metadata={metadata} disabled={busy} update={update} />
         <fieldset disabled={busy} className="space-y-5 border-t border-border pt-6">
           <legend className="pr-3 text-lg font-semibold">Identifiers</legend>
           <div className="grid gap-5 sm:grid-cols-3">
@@ -404,15 +406,6 @@ export function MetadataUploader({ stageName, avatar, userId, mode = "embed", on
           <legend className="pr-3 text-lg font-semibold">Lyrics</legend>
           <textarea aria-label="Lyrics" rows={6} value={metadata.lyrics} onChange={(e) => update("lyrics", e.target.value)} placeholder="Paste your lyrics" className="w-full rounded-md border border-input bg-background p-3 text-sm" />
         </fieldset>
-        {full && <fieldset disabled={busy} className="space-y-3 border-t border-border pt-6">
-          <legend className="pr-3 text-lg font-semibold">Add Credits</legend>
-          {metadata.credits.map((c, i) => <div key={i} className="grid items-end gap-3 sm:grid-cols-[220px_1fr_36px]">
-            <SelectField label="Role" id={`credit-${i}-role`} value={c.role} options={CREDIT_ROLES} onChange={(v) => update("credits", metadata.credits.map((x, j) => j === i ? { ...x, role: v } : x))} />
-            <Field label="Name" id={`credit-${i}-name`} value={c.name} onChange={(v) => update("credits", metadata.credits.map((x, j) => j === i ? { ...x, name: v } : x))} />
-            <Button type="button" size="icon" variant="ghost" aria-label={`Remove credit ${i + 1}`} onClick={() => update("credits", metadata.credits.filter((_, j) => j !== i))}><Trash2 /></Button>
-          </div>)}
-          <Button type="button" variant="outline" onClick={() => update("credits", [...metadata.credits, { role: CREDIT_ROLES[0], name: "" }])}><Plus />Add credit</Button>
-        </fieldset>}
         {full && <p className="rounded-lg border border-primary/40 bg-accent/30 p-3 text-sm text-muted-foreground"><span className="font-semibold text-foreground">No PRO or IPI number yet?</span> Leave them blank. Add them anytime after you register with a PRO and receive your IPI name number.</p>}
         {full && <Contributors title="Publishers" singular="publisher" group="publishers" rows={metadata.publishers} disabled={busy} publisher onChange={(rows) => update("publishers", rows)} tip={GLOSSARY.publisher.text} />}
 
@@ -589,6 +582,48 @@ const TIPS = {
 
 function Tip({ text, title }: { text: string; title?: string }) {
   return <InfoTip text={text} {...(title && { title })} />;
+}
+
+/**
+ * Who performs on the recording, plus other credits (engineers, arranger). Asked during embed for neighbouring rights:
+ * the main and featured artists come from their own fields (no retyping); session players and backup vocalists add
+ * an instrument. Optional, like PRO and IPI. Recorded in / year stay in the catalog and are never embedded.
+ */
+function Performers({ metadata: m, disabled, update }: { metadata: Metadata; disabled: boolean; update: <K extends keyof Metadata>(key: K, value: Metadata[K]) => void }) {
+  const credits = m.credits;
+  const set = (i: number, patch: Partial<Metadata["credits"][number]>) => update("credits", credits.map((x, j) => (j === i ? { ...x, ...patch } : x)));
+  const named = performers({ ...m, credits: [] });
+  const releaseYear = /^\d{4}/.exec(m.releaseDate)?.[0] ?? "";
+  return (
+    <fieldset id="performers" disabled={disabled} className="space-y-4 border-t border-border pt-6">
+      <legend className="pr-3 text-lg font-semibold">Performers & credits<InfoTip term="performers" /></legend>
+      <p className="text-sm text-muted-foreground">Add everyone who played or sang on this recording, so every performer can be paid for airplay outside the US. Optional; add it anytime.</p>
+      {named.length > 0 && (
+        <ul className="space-y-1 text-sm">
+          {named.map((p) => <li key={p.name}><span className="font-semibold">{p.name}</span> <span className="text-muted-foreground">· Featured artist (from {p.name === m.artist.trim() ? "Artist name" : "Featured artist"})</span></li>)}
+        </ul>
+      )}
+      {credits.map((c, i) => (
+        <div key={i} className="grid items-end gap-3 sm:grid-cols-[200px_1fr_1fr_36px]">
+          <SelectField label="Role" id={`credit-${i}-role`} value={c.role} options={CREDIT_ROLES} onChange={(v) => set(i, { role: v })} />
+          <Field label="Name" id={`credit-${i}-name`} value={c.name} onChange={(v) => set(i, { name: v })} />
+          {isPerformer(c.role)
+            ? <Field label="Instrument" id={`credit-${i}-instrument`} value={c.instrument ?? ""} placeholder={c.role === "Backup vocalist" ? "Vocals" : "e.g. Guitar"} onChange={(v) => set(i, { instrument: v })} />
+            : <p className="pb-2 text-xs text-muted-foreground">Credited only: engineers and arrangers aren't paid for airplay.</p>}
+          <Button type="button" size="icon" variant="ghost" aria-label={`Remove credit ${i + 1}`} onClick={() => update("credits", credits.filter((_, j) => j !== i))}><Trash2 /></Button>
+        </div>
+      ))}
+      <Button type="button" variant="outline" onClick={() => update("credits", [...credits, { role: CREDIT_ROLES[0], name: "", instrument: "" }])}><Plus />Add performer or credit</Button>
+      <div className="grid gap-5 sm:grid-cols-2">
+        <div className="min-w-0 space-y-2">
+          <Label htmlFor="recordedIn">Recorded in</Label>
+          <Input id="recordedIn" list="recorded-in-countries" value={m.recordedIn} placeholder="United States" onChange={(e) => update("recordedIn", e.target.value)} />
+          <datalist id="recorded-in-countries">{COUNTRIES.filter((c) => c.code !== "XX").map((c) => <option key={c.code} value={c.name} />)}</datalist>
+        </div>
+        <Field label="Year recorded" id="recordedYear" value={m.recordedYear} placeholder={releaseYear || "2026"} onChange={(v) => update("recordedYear", v.replace(/\D/g, "").slice(0, 4))} />
+      </div>
+    </fieldset>
+  );
 }
 
 /** Scroll to and focus a form field by id (used by ⚠️ readiness links). */

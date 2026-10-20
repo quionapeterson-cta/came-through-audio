@@ -5,7 +5,7 @@ import { currentBadge } from "@/lib/badges";
 /** Recurring details a user can opt to prefill on every embed. Stored only in this browser. */
 export const PROFILE_KEYS = [
   "artist", "label", "primaryGenre", "secondaryGenre", "releaseType", "explicit", "copyright", "phonographic", "language",
-  "writers", "composers", "producers", "publishers",
+  "writers", "composers", "producers", "publishers", "recordedIn",
 ] as const;
 export type ArtistProfile = Partial<Pick<Metadata, (typeof PROFILE_KEYS)[number]>>;
 

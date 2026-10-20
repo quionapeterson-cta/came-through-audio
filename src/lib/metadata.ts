@@ -58,7 +58,11 @@ export const metadataSchema = z.object({
   audioPath: z.string().default(""),
   artPath: z.string().default(""),
   aiProtection: z.boolean().default(false),
-  credits: z.array(z.object({ role: z.string(), name: z.string().trim() })).default([]),
+  /** Credits and performers. `instrument` matters for performers (session players, backup vocalists): it's what neighbouring-rights societies pay on. */
+  credits: z.array(z.object({ role: z.string(), name: z.string().trim(), instrument: z.string().trim().default("") })).default([]),
+  /** Where and when the recording was made, for neighbouring rights (international airplay). Kept in the catalog, never embedded. */
+  recordedIn: z.string().trim().default(""),
+  recordedYear: z.string().trim().default("").refine((v) => !v || /^\d{4}$/.test(v), "Enter a 4-digit year."),
 }).superRefine((data, ctx) => {
   for (const group of ["writers", "composers", "publishers"] as const) {
     data[group].forEach((row, index) => {
@@ -76,7 +80,7 @@ export const emptyMetadata = (): Metadata => ({
   title: "", trackNumber: "", trackTotal: "", artist: "", featured: [""], album: "", duration: "", releaseType: "", releaseDate: "", label: "", copyright: "", phonographic: "", language: "",
   isrc: "", upc: "", iswc: "", explicit: false, instrumental: false, primaryGenre: "", secondaryGenre: "",
   writers: [emptyContributor()], composers: [emptyContributor()], producers: [emptyContributor()], publishers: [emptyContributor()],
-  lyrics: "", coverThumb: "", audioPath: "", artPath: "", aiProtection: false, credits: [],
+  lyrics: "", coverThumb: "", audioPath: "", artPath: "", aiProtection: false, credits: [], recordedIn: "", recordedYear: "",
 });
 
 /** The name shown for a contributor: a writer's legal name, otherwise the plain name (producers, publishers, older entries). */
@@ -91,7 +95,18 @@ export function splitTrack(v: string): { trackNumber: string; trackTotal: string
   return { trackNumber: n, trackTotal: t };
 }
 
-export const CREDIT_ROLES = ["Session musician", "Mixing engineer", "Recording engineer", "Mastering engineer", "Backup vocalist", "Arranger"] as const;
+export const CREDIT_ROLES = ["Session musician", "Backup vocalist", "Arranger", "Mixing engineer", "Recording engineer", "Mastering engineer"] as const;
+/** Credit roles that perform on the recording, so neighbouring-rights societies pay them. Engineers are credited, not paid. */
+export const PERFORMER_ROLES: readonly string[] = ["Session musician", "Backup vocalist"];
+export const isPerformer = (role: string) => PERFORMER_ROLES.includes(role);
+
+/** Everyone who performs on the recording: the main and featured artists (featured), then credited session players (non-featured). */
+export function performers(m: Pick<Metadata, "artist" | "featured" | "credits">) {
+  return [
+    ...[m.artist, ...m.featured].map((n) => n.trim()).filter(Boolean).map((name) => ({ name, featured: true, role: "Featured artist", instrument: "" })),
+    ...m.credits.filter((c) => c.name.trim() && isPerformer(c.role)).map((c) => ({ name: c.name.trim(), featured: false, role: c.role, instrument: c.instrument ?? "" })),
+  ];
+}
 
 export async function embedMetadata(audio: ArrayBuffer, metadata: Metadata, artwork?: ArrayBuffer): Promise<Blob> {
   const data = metadataSchema.parse(metadata);

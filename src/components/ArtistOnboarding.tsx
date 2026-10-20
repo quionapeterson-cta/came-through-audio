@@ -202,6 +202,7 @@ export function ArtistOnboarding({ userId, open, onOpenChange, onSaved, firstRun
               <Field label="Primary Genre"><Pick value={p.primaryGenre ?? ""} options={GENRES} onChange={(v) => set("primaryGenre", v)} /></Field>
               <Field label="Secondary Genre (optional)"><Pick value={p.secondaryGenre ?? ""} options={GENRES} onChange={(v) => set("secondaryGenre", v)} /></Field>
               <Field label="Default Language"><Input value={p.language ?? ""} onChange={(e) => set("language", e.target.value)} /></Field>
+              <Field label="Usually recorded in" term="neighbouringRights"><Input value={p.recordedIn ?? ""} placeholder="United States" onChange={(e) => set("recordedIn", e.target.value)} /></Field>
               <Field label="Default Release Type" term="releaseType"><Pick value={p.releaseType ?? ""} options={RELEASE_TYPES} empty="Ask each time" onChange={(v) => set("releaseType", v)} /></Field>
               <label className="flex items-center gap-2 text-sm sm:col-span-2"><input type="checkbox" className="h-4 w-4 accent-[var(--primary)]" checked={!!p.explicit} onChange={(e) => set("explicit", e.target.checked)} />My songs are usually Explicit (you can change this per song)<InfoTip term="explicit" /></label>
             </Group>

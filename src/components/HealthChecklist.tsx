@@ -11,6 +11,7 @@ import type { GlossaryKey } from "@/lib/glossary";
 import type { Pillar } from "@/lib/audit";
 import { notShowingReasons } from "@/lib/health-reasons";
 import { emptyStatus, isInspectorSong, type SongStatus } from "@/lib/health-songs";
+import { performers } from "@/lib/metadata";
 import type { TrackReport } from "@/lib/health";
 import type { Country } from "@/lib/repertoires";
 
@@ -345,6 +346,9 @@ function StepRow({ s, r, country, open, onFix, apply, actions, onIntl }: {
                 <Guide society={s.society} pillar={s.pillar} country={country} title={r.track.title} onExpert={actions.onExpert} onDone={s.done ? undefined : registered} />
               ))}
               {intl && <IntlGuide done={s.done} onDone={() => onIntl(true)} />}
+              {intl && !isInspectorSong(r.track.id) && !performers(r.track.metadata).some((p) => !p.featured) && (
+                <p className="text-muted-foreground">This song lists no session players or backup singers. Played and sang it all yourself? You're covered. Otherwise <button type="button" onClick={() => onFix("performers")} className="font-semibold text-primary underline">add who played on it</button> so every performer gets paid.</p>
+              )}
               {s.stage === "confirm" && s.society && key && <>
                 <p className="text-muted-foreground">{key.hint}{s.society.access === "member" ? ` Log in to your ${s.society.name} account first.` : ""} Then check that the writers, shares and IPI numbers match what you registered.</p>
                 {key.value ? (

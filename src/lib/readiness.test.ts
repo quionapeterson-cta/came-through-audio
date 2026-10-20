@@ -133,4 +133,23 @@ describe("embedded files", () => {
     expect([back.trackNumber, back.trackTotal]).toEqual(["1", "12"]);
     expect(back.writers?.[0]?.legalName).toBe("Quiona Peterson");
   });
+  it("keeps performer instruments in the file, but not where or when it was recorded", async () => {
+    const { embedMetadata, readMetadata } = await import("@/lib/metadata");
+    const credits = [{ role: "Session musician", name: "Jane Doe", instrument: "Guitar" }];
+    const blob = await embedMetadata(new Uint8Array([0xff, 0xfb, 0x90, 0x00, ...new Array(400).fill(0)]).buffer, song({ credits, recordedIn: "United States", recordedYear: "2026" }));
+    const buf = await new Promise<ArrayBuffer>((ok) => { const r = new FileReader(); r.onload = () => ok(r.result as ArrayBuffer); r.readAsArrayBuffer(blob); });
+    const back = readMetadata(buf);
+    expect(back.credits).toEqual(credits);
+    expect(back.recordedIn).toBeUndefined();
+  });
+});
+
+describe("performers", () => {
+  it("lists main and featured artists as featured, session players and backup vocalists as non-featured, and skips engineers", async () => {
+    const { performers } = await import("@/lib/metadata");
+    const list = performers({ artist: "Karma Came", featured: ["OG PI", ""], credits: [
+      { role: "Session musician", name: "Jane Doe", instrument: "Guitar" }, { role: "Mixing engineer", name: "Sam", instrument: "" }, { role: "Backup vocalist", name: "Bee", instrument: "Vocals" },
+    ] });
+    expect(list.map((p) => [p.name, p.featured, p.instrument])).toEqual([["Karma Came", true, ""], ["OG PI", true, ""], ["Jane Doe", false, "Guitar"], ["Bee", false, "Vocals"]]);
+  });
 });
