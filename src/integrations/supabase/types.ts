@@ -373,6 +373,24 @@ export type Database = {
           },
         ]
       }
+      feature_interest: {
+        Row: {
+          created_at: string
+          feature: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          feature: string
+          user_id?: string
+        }
+        Update: {
+          created_at?: string
+          feature?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       health_song_status: {
         Row: {
           list: string
@@ -430,6 +448,45 @@ export type Database = {
           title?: string
           updated_at?: string
           user_id?: string
+        }
+        Relationships: []
+      }
+      invite_blocklist: {
+        Row: {
+          created_at: string
+          email: string
+        }
+        Insert: {
+          created_at?: string
+          email: string
+        }
+        Update: {
+          created_at?: string
+          email?: string
+        }
+        Relationships: []
+      }
+      invite_sends: {
+        Row: {
+          id: string
+          recipient_email: string
+          sender_id: string
+          sent_at: string
+          split_row_id: string | null
+        }
+        Insert: {
+          id?: string
+          recipient_email: string
+          sender_id: string
+          sent_at?: string
+          split_row_id?: string | null
+        }
+        Update: {
+          id?: string
+          recipient_email?: string
+          sender_id?: string
+          sent_at?: string
+          split_row_id?: string | null
         }
         Relationships: []
       }
