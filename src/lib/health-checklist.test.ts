@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { emptyMetadata } from "@/lib/metadata";
 import { trackReport } from "@/lib/health";
-import { printKey, registrationPrint, searchKey, songChecklist } from "@/lib/health-checklist";
+import { printKey, registrationPrint, releaseGroups, searchKey, songChecklist } from "@/lib/health-checklist";
 import { inspectorChecks, emptyStatus } from "@/lib/health-songs";
 import { countryByCode } from "@/lib/repertoires";
 
@@ -52,7 +52,22 @@ describe("song health checklist", () => {
     const socs = us.societies;
     expect(searchKey(socs.digital![0]!, m)).toMatchObject({ by: "ISRC", value: "USCTA2600001" });
     expect(searchKey(socs.mechanical![0]!, m)).toMatchObject({ by: "writer name", value: "Ann Lee" });
-    expect(searchKey(socs.performance![0]!, m)).toMatchObject({ by: "title", value: "Song" });
+    expect(searchKey(socs.performance![0]!, m)).toMatchObject({ by: "writer name", value: "Ann Lee" });
+    expect(searchKey(countryByCode("GB")!.societies.performance![0]!, m)).toMatchObject({ by: "title", value: "Song" });
     expect(searchKey(socs.digital![0]!, { ...m, isrc: "" })).toMatchObject({ value: "", field: "isrc" });
+  });
+
+  it("groups songs by release in track order, with Singles and Inspector songs last", () => {
+    const song = (id: string, album: string, trackNumber: string, pct: number) => {
+      const t = { ...track({ album, trackNumber }), id, title: id };
+      return { r: trackReport(t, us, []), c: { ...songChecklist(trackReport(t, us, []), us), pct } };
+    };
+    const songs = [song("b2", "Karma Season", "2", 40), song("b1", "Karma Season", "1", 80), song("s1", "", "", 10), song("e1", "Came Through", "1", 90), song("h:x", "", "", 0)];
+    const groups = releaseGroups(songs, "least");
+    expect(groups.map((g) => g.name)).toEqual(["Karma Season", "Came Through", "Singles", "Royalty Inspector songs"]);
+    expect(groups[0]!.songs.map((x) => x.r.track.id)).toEqual(["b1", "b2"]);
+    expect(groups[0]!.pct).toBe(60);
+    expect(releaseGroups(songs, "az").map((g) => g.name).slice(0, 2)).toEqual(["Came Through", "Karma Season"]);
+    expect(releaseGroups(songs, "least", "karma").flatMap((g) => g.songs).length).toBe(2);
   });
 });

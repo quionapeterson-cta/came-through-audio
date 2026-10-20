@@ -4,7 +4,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Guide, LiveRecords, openSearch, type HealthActions } from "@/components/HealthReport";
-import { encouragement, printKey, registrationPrint, searchKey, songChecklist, STAGE_LABEL, type ChecklistStep, type SongChecklist, type Stage } from "@/lib/health-checklist";
+import { encouragement, printKey, registrationPrint, releaseGroups, searchKey, songChecklist, STAGE_LABEL, type ChecklistStep, type SongChecklist, type SongSort, type Stage } from "@/lib/health-checklist";
 import { updateGuide } from "@/lib/register-guides";
 import { notShowingReasons } from "@/lib/health-reasons";
 import { emptyStatus, isInspectorSong, type SongStatus } from "@/lib/health-songs";
@@ -39,9 +39,18 @@ export function HealthChecklist({ rows, country, statuses, onStatus, actions, ru
   const statusOf = (id: string) => statuses.find((s) => s.songRef === id) ?? emptyStatus(id);
   const lists = useMemo(() => rows.map((r) => ({ r, c: songChecklist(r, country, statusOf(r.track.id)) })), [rows, country, statuses]); // eslint-disable-line react-hooks/exhaustive-deps
   const [group, setGroup] = useState<Group>("attention");
-  const inGroup = lists.filter((x) => x.c.group === group).sort((a, b) => b.c.pct - a.c.pct);
+  const inGroup = lists.filter((x) => x.c.group === group);
+  const [query, setQuery] = useState("");
+  const [sort, setSort] = useState<SongSort>("least");
+  const releases = useMemo(() => releaseGroups(inGroup, sort, query), [lists, group, sort, query]); // eslint-disable-line react-hooks/exhaustive-deps
   const [focus, setFocus] = useState<string>();
-  const focused = inGroup.find((x) => x.r.track.id === focus) ?? inGroup[0];
+  // Until a song is picked, the first song of the first release; typing a search doesn't change it.
+  const firstSong = useMemo(() => releaseGroups(inGroup, sort)[0]?.songs[0], [lists, group, sort]); // eslint-disable-line react-hooks/exhaustive-deps
+  const focused = inGroup.find((x) => x.r.track.id === focus) ?? firstSong;
+  // Releases start collapsed; the one holding the selected song opens, and a search opens every match.
+  const [opened, setOpened] = useState<Record<string, boolean>>({});
+  const focusedKey = releases.find((g) => g.songs.some((x) => x.r.track.id === focused?.r.track.id))?.key;
+  const isOpen = (key: string) => opened[key] ?? (!!query.trim() || key === focusedKey);
   // Open on the first list that has songs, so nobody lands on an empty tab.
   useEffect(() => {
     if (!lists.some((x) => x.c.group === group)) { const first = GROUPS.find((g) => lists.some((x) => x.c.group === g.id)); if (first) setGroup(first.id); }
@@ -72,29 +81,61 @@ export function HealthChecklist({ rows, country, statuses, onStatus, actions, ru
         </div>
       ) : (
         <div className="grid gap-4 lg:grid-cols-[18rem_minmax(0,1fr)]">
-          <ul className="space-y-2">
-            {inGroup.map(({ r, c }) => {
-              const s = statusOf(r.track.id);
-              const due = s.list === "later" && s.remindOn && s.remindOn <= today();
+          <div className="space-y-3 lg:sticky lg:top-4 lg:max-h-[calc(100vh-2rem)] lg:overflow-y-auto lg:pr-1">
+            <div className="flex gap-2">
+              <div className="relative min-w-0 flex-1">
+                <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <Input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search songs…" aria-label="Search songs" className="pl-9" />
+              </div>
+              <select value={sort} onChange={(e) => setSort(e.target.value as SongSort)} aria-label="Sort releases"
+                className="rounded-md border border-input bg-background px-2 text-sm">
+                <option value="least">Least healthy</option>
+                <option value="az">A–Z</option>
+                <option value="recent">Recently updated</option>
+              </select>
+            </div>
+            {!releases.length && <p className="p-4 text-center text-sm text-muted-foreground">No songs match "{query}".</p>}
+            {releases.map((g) => {
+              const open = isOpen(g.key);
+              const left = g.songs.reduce((n, x) => n + x.c.total - x.c.done, 0);
               return (
-                <li key={r.track.id}>
-                  <button type="button" onClick={() => { setFocus(r.track.id); if (window.innerWidth < 1024) setTimeout(() => document.getElementById("song-health-detail")?.scrollIntoView({ behavior: "smooth" }), 50); }}
-                    className={`w-full rounded-xl border bg-card p-4 text-left ${focused?.r.track.id === r.track.id ? "border-2 border-primary" : "border-border hover:border-primary/50"}`}>
-                    <div className="flex items-center justify-between gap-2">
-                      <span className="truncate font-bold">{r.track.title || "Untitled"}</span>
-                      {isInspectorSong(r.track.id) && <span className="shrink-0 rounded-full bg-muted px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Inspector</span>}
+                <div key={g.key} className="rounded-xl border border-border bg-card">
+                  <button type="button" onClick={() => setOpened({ ...opened, [g.key]: !open })} aria-expanded={open} className="w-full p-3 text-left">
+                    <div className="flex items-center gap-2">
+                      <ChevronDown className={`h-4 w-4 shrink-0 transition-transform ${open ? "" : "-rotate-90"}`} />
+                      <span className="min-w-0 flex-1 truncate font-bold">{g.name}{g.type && <span className="font-normal text-muted-foreground"> ({g.type})</span>}</span>
+                      <span className="shrink-0 text-xs font-semibold">{g.pct}%</span>
                     </div>
-                    <div className="truncate text-xs text-muted-foreground">{r.track.artist}</div>
-                    <div className="mt-2 h-2 rounded-full bg-muted"><div className="h-2 rounded-full bg-primary transition-[width]" style={{ width: `${c.pct}%` }} /></div>
-                    <div className="mt-1 text-xs text-muted-foreground">
-                      {group === "later" ? (s.note ? `Waiting on: ${s.note}` : "Saved for later") : `${c.pct}% healthy${c.pct < 100 ? ` · ${c.total - c.done} step${c.total - c.done === 1 ? "" : "s"} left` : ""}`}
-                      {due && <span className="ml-1 font-semibold text-primary">· Reminder due</span>}
-                    </div>
+                    <div className="ml-6 mt-1.5 h-1.5 rounded-full bg-muted"><div className="h-1.5 rounded-full bg-primary" style={{ width: `${g.pct}%` }} /></div>
+                    <div className="ml-6 mt-1 text-xs text-muted-foreground">{g.songs.length} song{g.songs.length === 1 ? "" : "s"}{left ? ` · ${left} step${left === 1 ? "" : "s"} left` : ""}</div>
                   </button>
-                </li>
+                  {open && (
+                    <ul className="border-t border-border p-1.5">
+                      {g.songs.map(({ r, c }) => {
+                        const s = statusOf(r.track.id);
+                        const due = s.list === "later" && s.remindOn && s.remindOn <= today();
+                        const selected = focused?.r.track.id === r.track.id;
+                        return (
+                          <li key={r.track.id}>
+                            <button type="button" aria-current={selected || undefined}
+                              onClick={() => { setFocus(r.track.id); if (window.innerWidth < 1024) setTimeout(() => document.getElementById("song-health-detail")?.scrollIntoView({ behavior: "smooth" }), 50); }}
+                              className={`flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-sm ${selected ? "bg-primary/10 font-semibold ring-1 ring-primary" : "hover:bg-muted"}`}>
+                              {r.track.metadata.trackNumber && <span className="w-5 shrink-0 text-xs text-muted-foreground">{r.track.metadata.trackNumber}</span>}
+                              <span className="min-w-0 flex-1 truncate">{r.track.title || "Untitled"}</span>
+                              <span className="h-1.5 w-12 shrink-0 rounded-full bg-muted"><span className="block h-1.5 rounded-full bg-primary" style={{ width: `${c.pct}%` }} /></span>
+                              <span className="w-16 shrink-0 text-right text-xs text-muted-foreground">
+                                {due ? <span className="font-semibold text-primary">Reminder</span> : group === "later" ? "Later" : c.pct < 100 ? `${c.total - c.done} left` : "Done"}
+                              </span>
+                            </button>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  )}
+                </div>
               );
             })}
-          </ul>
+          </div>
           {focused && <SongDetail key={focused.r.track.id} r={focused.r} c={focused.c} country={country} status={statusOf(focused.r.track.id)} onStatus={onStatus}
             actions={actions} running={runningId === focused.r.track.id} onEditInspector={onEditInspector} onDeleteInspector={onDeleteInspector} />}
         </div>

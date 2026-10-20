@@ -1,6 +1,6 @@
 import type { Pillar } from "@/lib/audit";
 import { pillarLabel, type TrackReport } from "@/lib/health";
-import type { SongStatus } from "@/lib/health-songs";
+import { isInspectorSong, type SongStatus } from "@/lib/health-songs";
 import { creditName, type Metadata } from "@/lib/metadata";
 import { registrationReadiness } from "@/lib/readiness";
 import type { Country, Society } from "@/lib/repertoires";
@@ -39,8 +39,7 @@ export function searchKey(society: Society, m: Metadata): SearchKey {
     const writer = [...m.writers, ...m.composers].map(creditName).find(Boolean) ?? "";
     return { by: "writer name", value: writer, field: "writers-0-legalName", hint: `Search ${society.name} by writer name, then find the song in that writer's list.` };
   }
-  const hint = society.searchBy === "title-writer" ? `Search ${society.name} by title, then check the writer names match.` : `Search ${society.name} by the exact title.`;
-  return { by: "title", value: m.title.trim(), field: "title", hint };
+  return { by: "title", value: m.title.trim(), field: "title", hint: `Search ${society.name} by the exact title.` };
 }
 
 /** A short fingerprint of the details a society registration holds, so a later edit to them can be noticed. */
@@ -104,4 +103,37 @@ export function encouragement(c: SongChecklist): string {
   if (left === 1) return "One step left. You're almost there.";
   if (c.pct >= 50) return `You're ${c.done} of ${c.total} steps in. More than halfway, keep going.`;
   return `You're ${c.done} of ${c.total} steps in. Every step you finish makes it easier to get paid.`;
+}
+
+/** The song list's release groups: catalog albums, then Singles (no album), then Royalty Inspector songs. */
+export type SongSort = "least" | "az" | "recent";
+export type ReleaseGroup<T> = { key: string; name: string; type: string; songs: T[]; pct: number; updatedAt: string };
+type Listed = { r: TrackReport; c: SongChecklist };
+
+export function releaseGroups<T extends Listed>(songs: T[], sort: SongSort, query = ""): ReleaseGroup<T>[] {
+  const q = query.trim().toLowerCase();
+  const hit = ({ r }: T) => !q || [r.track.title, r.track.artist, r.track.metadata.album].some((v) => v?.toLowerCase().includes(q));
+  const groups = new Map<string, ReleaseGroup<T>>();
+  for (const x of songs.filter(hit)) {
+    const m = x.r.track.metadata;
+    const inspector = isInspectorSong(x.r.track.id);
+    const album = m.album.trim();
+    const key = inspector ? "~inspector" : album ? `album:${album.toLowerCase()}` : "~singles";
+    const g = groups.get(key) ?? { key, name: inspector ? "Royalty Inspector songs" : album || "Singles", type: inspector || !album ? "" : m.releaseType, songs: [], pct: 0, updatedAt: "" };
+    g.songs.push(x);
+    if (x.r.track.updatedAt > g.updatedAt) g.updatedAt = x.r.track.updatedAt;
+    groups.set(key, g);
+  }
+  const trackNo = (x: Listed) => Number(x.r.track.metadata.trackNumber) || 999;
+  const list = [...groups.values()].map((g) => ({
+    ...g,
+    songs: g.songs.sort((a, b) => trackNo(a) - trackNo(b) || a.r.track.title.localeCompare(b.r.track.title)),
+    pct: Math.round(g.songs.reduce((n, x) => n + x.c.pct, 0) / g.songs.length),
+  }));
+  // Albums are sorted; Singles and Royalty Inspector songs always come after them.
+  const rank = (g: ReleaseGroup<T>) => (g.key === "~inspector" ? 2 : g.key === "~singles" ? 1 : 0);
+  const by = sort === "az" ? (a: ReleaseGroup<T>, b: ReleaseGroup<T>) => a.name.localeCompare(b.name)
+    : sort === "recent" ? (a: ReleaseGroup<T>, b: ReleaseGroup<T>) => b.updatedAt.localeCompare(a.updatedAt)
+    : (a: ReleaseGroup<T>, b: ReleaseGroup<T>) => a.pct - b.pct;
+  return list.sort((a, b) => rank(a) - rank(b) || by(a, b));
 }

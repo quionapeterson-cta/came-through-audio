@@ -13,8 +13,8 @@ export type Society = {
   access: "public" | "member";
   /** Names this society goes by in writers' PRO affiliations (src/lib/metadata.ts PROS). */
   aliases?: string[];
-  /** What its search finds a song by most exactly. Default: the title. "title-writer": title, then check the writers. */
-  searchBy?: "isrc" | "writer" | "title-writer";
+  /** What its search finds a song by most exactly. Default: the title. Writer names are more unique than titles. */
+  searchBy?: "isrc" | "writer";
 };
 export type Country = {
   code: string;
@@ -29,9 +29,9 @@ export type Region = (typeof REGIONS)[number];
 const s = (id: string, name: string, url: string, access: Society["access"] = "public", aliases?: string[], searchBy?: Society["searchBy"]): Society =>
   ({ id, name, url, access, ...(aliases && { aliases }), ...(searchBy && { searchBy }) });
 
-const ASCAP = s("ascap", "ASCAP", "https://www.ascap.com/repertory", "public", undefined, "title-writer");
-const BMI = s("bmi", "BMI", "https://repertoire.bmi.com/", "public", undefined, "title-writer");
-const SESAC = s("sesac", "SESAC", "https://www.sesac.com/repertory/", "public", undefined, "title-writer");
+const ASCAP = s("ascap", "ASCAP", "https://www.ascap.com/repertory", "public", undefined, "writer");
+const BMI = s("bmi", "BMI", "https://repertoire.bmi.com/", "public", undefined, "writer");
+const SESAC = s("sesac", "SESAC", "https://www.sesac.com/repertory/", "public", undefined, "writer");
 const GMR = s("gmr", "GMR", "https://globalmusicrights.com/", "member");
 const SOUNDEXCHANGE = s("soundexchange", "SoundExchange", "https://isrc.soundexchange.com/", "public", undefined, "isrc");
 const MLC = s("mlc", "The MLC", "https://portal.themlc.com/search", "public", undefined, "writer");
