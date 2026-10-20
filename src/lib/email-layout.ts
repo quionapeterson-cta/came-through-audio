@@ -19,6 +19,8 @@ export interface EmailLayoutOptions {
   /** Marketing emails must include an opt-out link. */
   kind?: EmailKind;
   unsubscribeUrl?: string;
+  /** Transactional invites: a link that stops further invites to this address. */
+  optOutUrl?: string;
 }
 
 export function emailLayout(bodyHtml: string, opts: EmailLayoutOptions): string {
@@ -29,6 +31,7 @@ export function emailLayout(bodyHtml: string, opts: EmailLayoutOptions): string 
     kind === "marketing"
       ? `<p style="margin:8px 0 0"><a href="${opts.unsubscribeUrl}" style="color:#004AAD">Unsubscribe</a> from these emails at any time.</p>`
       : `<p style="margin:8px 0 0">If you weren't expecting this, you can safely ignore it or contact <a href="mailto:${SUPPORT_EMAIL}" style="color:#004AAD">${SUPPORT_EMAIL}</a>.</p>`;
+  const invites = opts.optOutUrl ? `<p style="margin:8px 0 0">Don't want these? <a href="${opts.optOutUrl}" style="color:#004AAD">Don't send me invites</a>.</p>` : "";
   return `<!doctype html><html><body style="margin:0;background:#ffffff;font-family:Poppins,Arial,sans-serif;color:#0b0b0b">
 <div style="max-width:560px;margin:0 auto;padding:32px 24px">
 <div style="text-align:center;padding-bottom:20px;border-bottom:2px solid #004AAD;margin-bottom:24px">
@@ -41,6 +44,7 @@ ${bodyHtml}
 <p style="margin:0"><b>${BUSINESS_NAME}</b> · ${BUSINESS_ADDRESS}</p>
 <p style="margin:8px 0 0">${escapeHtml(opts.reason)}</p>
 ${optOut}
+${invites}
 <p style="margin:8px 0 0"><a href="${SITE_URL}/privacy-policy" style="color:#004AAD">Privacy Policy</a> · <a href="${SITE_URL}/terms-of-service" style="color:#004AAD">Terms of Service</a> · <a href="${SITE_URL}/contact" style="color:#004AAD">Contact Us</a></p>
 <p style="margin:8px 0 0">© ${year} ${BUSINESS_NAME}. All rights reserved.</p>
 </div>

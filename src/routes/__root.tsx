@@ -83,7 +83,8 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
   beforeLoad: async ({ location }) => {
     // Public share cards stay reachable so social sites can read their preview image; they show only the card.
     // Password reset links stay reachable so the one-time token in the link isn't lost on a detour through /unlock.
-    if (location.pathname === "/unlock" || location.pathname === "/reset-password" || location.pathname.startsWith("/share/")) return;
+    // Invite opt-out links stay reachable so anyone who got an invite can stop them without a passcode.
+    if (location.pathname === "/unlock" || location.pathname === "/reset-password" || location.pathname === "/invites/stop" || location.pathname.startsWith("/share/")) return;
     const { unlocked } = await getGateStatus();
     if (!unlocked) throw redirect({ to: "/unlock", search: { next: location.href } });
   },

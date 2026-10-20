@@ -26,6 +26,7 @@ import { Route as WorkspaceRouteImport } from './routes/workspace'
 import { Route as AdminStaffRouteImport } from './routes/admin_.staff'
 import { Route as ContractPartyIdRouteImport } from './routes/contract.$partyId'
 import { Route as DocsSlugRouteImport } from './routes/docs.$slug'
+import { Route as InvitesStopRouteImport } from './routes/invites.stop'
 import { Route as SignRowIdRouteImport } from './routes/sign.$rowId'
 import { Route as ShareOwnerCardRouteImport } from './routes/share.$owner.$card'
 import { Route as ApiPublicCronTrialRemindersRouteImport } from './routes/api/public/cron/trial-reminders'
@@ -116,6 +117,11 @@ const DocsSlugRoute = DocsSlugRouteImport.update({
   path: '/docs/$slug',
   getParentRoute: () => rootRouteImport,
 } as any)
+const InvitesStopRoute = InvitesStopRouteImport.update({
+  id: '/invites/stop',
+  path: '/invites/stop',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const SignRowIdRoute = SignRowIdRouteImport.update({
   id: '/sign/$rowId',
   path: '/sign/$rowId',
@@ -157,6 +163,7 @@ export interface FileRoutesByFullPath {
   '/admin/staff': typeof AdminStaffRoute
   '/contract/$partyId': typeof ContractPartyIdRoute
   '/docs/$slug': typeof DocsSlugRoute
+  '/invites/stop': typeof InvitesStopRoute
   '/sign/$rowId': typeof SignRowIdRoute
   '/share/$owner/$card': typeof ShareOwnerCardRoute
   '/api/public/cron/trial-reminders': typeof ApiPublicCronTrialRemindersRoute
@@ -180,6 +187,7 @@ export interface FileRoutesByTo {
   '/admin/staff': typeof AdminStaffRoute
   '/contract/$partyId': typeof ContractPartyIdRoute
   '/docs/$slug': typeof DocsSlugRoute
+  '/invites/stop': typeof InvitesStopRoute
   '/sign/$rowId': typeof SignRowIdRoute
   '/share/$owner/$card': typeof ShareOwnerCardRoute
   '/api/public/cron/trial-reminders': typeof ApiPublicCronTrialRemindersRoute
@@ -204,6 +212,7 @@ export interface FileRoutesById {
   '/admin_/staff': typeof AdminStaffRoute
   '/contract/$partyId': typeof ContractPartyIdRoute
   '/docs/$slug': typeof DocsSlugRoute
+  '/invites/stop': typeof InvitesStopRoute
   '/sign/$rowId': typeof SignRowIdRoute
   '/share/$owner/$card': typeof ShareOwnerCardRoute
   '/api/public/cron/trial-reminders': typeof ApiPublicCronTrialRemindersRoute
@@ -229,6 +238,7 @@ export interface FileRouteTypes {
     | '/admin/staff'
     | '/contract/$partyId'
     | '/docs/$slug'
+    | '/invites/stop'
     | '/sign/$rowId'
     | '/share/$owner/$card'
     | '/api/public/cron/trial-reminders'
@@ -252,6 +262,7 @@ export interface FileRouteTypes {
     | '/admin/staff'
     | '/contract/$partyId'
     | '/docs/$slug'
+    | '/invites/stop'
     | '/sign/$rowId'
     | '/share/$owner/$card'
     | '/api/public/cron/trial-reminders'
@@ -275,6 +286,7 @@ export interface FileRouteTypes {
     | '/admin_/staff'
     | '/contract/$partyId'
     | '/docs/$slug'
+    | '/invites/stop'
     | '/sign/$rowId'
     | '/share/$owner/$card'
     | '/api/public/cron/trial-reminders'
@@ -299,6 +311,7 @@ export interface RootRouteChildren {
   AdminStaffRoute: typeof AdminStaffRoute
   ContractPartyIdRoute: typeof ContractPartyIdRoute
   DocsSlugRoute: typeof DocsSlugRoute
+  InvitesStopRoute: typeof InvitesStopRoute
   SignRowIdRoute: typeof SignRowIdRoute
   ShareOwnerCardRoute: typeof ShareOwnerCardRoute
   ApiPublicCronTrialRemindersRoute: typeof ApiPublicCronTrialRemindersRoute
@@ -426,6 +439,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DocsSlugRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/invites/stop': {
+      id: '/invites/stop'
+      path: '/invites/stop'
+      fullPath: '/invites/stop'
+      preLoaderRoute: typeof InvitesStopRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/sign/$rowId': {
       id: '/sign/$rowId'
       path: '/sign/$rowId'
@@ -475,6 +495,7 @@ const rootRouteChildren: RootRouteChildren = {
   AdminStaffRoute: AdminStaffRoute,
   ContractPartyIdRoute: ContractPartyIdRoute,
   DocsSlugRoute: DocsSlugRoute,
+  InvitesStopRoute: InvitesStopRoute,
   SignRowIdRoute: SignRowIdRoute,
   ShareOwnerCardRoute: ShareOwnerCardRoute,
   ApiPublicCronTrialRemindersRoute: ApiPublicCronTrialRemindersRoute,
