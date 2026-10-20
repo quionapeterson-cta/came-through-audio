@@ -1,6 +1,7 @@
 import type { Pillar } from "@/lib/audit";
 import { pillarLabel, type TrackReport } from "@/lib/health";
 import type { SongStatus } from "@/lib/health-songs";
+import { creditName, type Metadata } from "@/lib/metadata";
 import { registrationReadiness } from "@/lib/readiness";
 import type { Country, Society } from "@/lib/repertoires";
 
@@ -23,10 +24,36 @@ export type ChecklistStep = {
   field?: string | undefined;
   /** Flagged details to fix, listed under the step. */
   items?: { text: string; field?: string | undefined }[];
+  /** Registered (or found) before the song's details changed: the registration needs updating to match. */
+  update?: boolean;
 };
 export type SongChecklist = { steps: ChecklistStep[]; done: number; total: number; pct: number; group: "attention" | "later" | "healthy" };
 
 export const STAGE_LABEL: Record<Stage, string> = { details: "Fix the song details", register: "Register it", confirm: "Confirm it shows up" };
+
+/** What each society's search finds a song by most exactly, and the value to copy. Missing values point at their field. */
+export type SearchKey = { by: string; value: string; field?: string; hint: string };
+export function searchKey(society: Society, m: Metadata): SearchKey {
+  if (society.searchBy === "isrc") return { by: "ISRC", value: m.isrc.trim(), field: "isrc", hint: `Search ${society.name} by ISRC. It's the most exact match.` };
+  if (society.searchBy === "writer") {
+    const writer = [...m.writers, ...m.composers].map(creditName).find(Boolean) ?? "";
+    return { by: "writer name", value: writer, field: "writers-0-legalName", hint: `Search ${society.name} by writer name, then find the song in that writer's list.` };
+  }
+  const hint = society.searchBy === "title-writer" ? `Search ${society.name} by title, then check the writer names match.` : `Search ${society.name} by the exact title.`;
+  return { by: "title", value: m.title.trim(), field: "title", hint };
+}
+
+/** A short fingerprint of the details a society registration holds, so a later edit to them can be noticed. */
+export function registrationPrint(m: Metadata, pillar: Pillar): string {
+  const people = (rows: Metadata["writers"]) => rows.map((r) => [creditName(r), r.role ?? "", r.percentage, r.pro, r.ipi].join("~")).filter((x) => x.replace(/~/g, ""));
+  const parts = pillar === "digital"
+    ? [m.title, m.artist, m.isrc, ...m.featured]
+    : [m.title, ...people(m.writers), ...people(m.composers), ...people(m.publishers)];
+  let h = 5381;
+  for (const ch of parts.map((x) => x.trim().toLowerCase()).join("|")) h = ((h * 33) ^ ch.charCodeAt(0)) >>> 0;
+  return h.toString(36);
+}
+export const printKey = (societyId: string) => `print:${societyId}`;
 
 /** The society a pillar's steps point at: the one already marked, otherwise the first (writers join one PRO). */
 const societyOf = (p: TrackReport["pillars"][number]) => (p.societies.find((s) => s.check) ?? p.societies[0])?.society;
@@ -52,8 +79,11 @@ export function songChecklist(r: TrackReport, country: Country, status?: SongSta
     const society = societyOf(p);
     if (!society || (p.pillar === "performance" && needsPro)) continue;
     const found = p.state === "confirmed";
-    steps.push({ id: `register:${p.pillar}`, stage: "register", auto: false, pillar: p.pillar, society,
-      done: found || !!ticked[`registered:${society.id}`], title: `Register with ${society.name} for ${pillarLabel(p.pillar, country).toLowerCase()}` });
+    const registered = found || !!ticked[`registered:${society.id}`];
+    const saved = ticked[printKey(society.id)];
+    const update = registered && !!saved && saved !== registrationPrint(m, p.pillar);
+    steps.push({ id: `register:${p.pillar}`, stage: "register", auto: false, pillar: p.pillar, society, update,
+      done: registered && !update, title: update ? `Update your registration at ${society.name}` : `Register with ${society.name} for ${pillarLabel(p.pillar, country).toLowerCase()}` });
     steps.push({ id: `confirm:${p.pillar}`, stage: "confirm", auto: false, pillar: p.pillar, society,
       done: found, title: `Confirm it shows up in ${society.name}` });
   }

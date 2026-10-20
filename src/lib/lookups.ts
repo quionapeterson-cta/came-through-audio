@@ -65,9 +65,14 @@ async function lookupStreaming(input: LookupInput, fetcher: Fetcher): Promise<St
   const isrc = cleanIsrc(input.isrc);
   if (isrc) { const hit = toHit((await get(`https://api.deezer.com/track/isrc:${isrc}`)) ?? {}); if (hit) return hit; }
   if (!input.title.trim()) return null;
-  // A plain "artist title" search is the form Deezer answers; only accept a result whose title and artist match.
-  const results = (await get(`https://api.deezer.com/search?q=${encodeURIComponent(`${input.artist} ${input.title}`)}&limit=5`))?.data ?? [];
-  const first = results.find((t) => t.title && t.artist && norm(t.title) === norm(input.title) && sameArtist(t.artist.name, input.artist));
+  // "artist title" first; Deezer doesn't recognize every artist name, so then the title alone.
+  // Either way, only accept a result whose title and artist both match.
+  const match = (t: DzTrack) => !!t.title && !!t.artist && norm(t.title) === norm(input.title) && sameArtist(t.artist.name, input.artist);
+  let first: DzTrack | undefined;
+  for (const q of [`${input.artist} ${input.title}`, input.title]) {
+    first = ((await get(`https://api.deezer.com/search?q=${encodeURIComponent(q)}&limit=25`))?.data ?? []).find(match);
+    if (first) break;
+  }
   // Search results may leave out the ISRC, so fetch the track itself to report which ISRC is live.
   return first?.id ? toHit((await get(`https://api.deezer.com/track/${first.id}`)) ?? first) : null;
 }

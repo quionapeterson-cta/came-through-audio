@@ -73,6 +73,15 @@ describe("lookups", () => {
     expect(r.streaming?.title).toBe("Cut To The Feeling");
     expect(r.work).toMatchObject({ iswcs: ["T-919.481.654-1"], writers: ["Carly Rae Jepsen", "Sir Nolan"] });
   });
+  it("falls back to a title-only streaming search when the artist search finds nothing", async () => {
+    const extra: Record<string, unknown> = {
+      "https://api.deezer.com/search?q=Big%20Booty%20Bouncing&limit=25": { data: [{ id: 9, title: "Big Booty Bouncing", artist: { name: "Someone Else" } }, { id: 7, title: "Big Booty Bouncing", artist: { name: "Karma Came" } }] },
+      "https://api.deezer.com/track/7": { id: 7, title: "Big Booty Bouncing", isrc: "GX8KD2640648", artist: { name: "Karma Came" } },
+    };
+    const f = async (url: string) => url in extra ? new Response(JSON.stringify(extra[url])) : fake(url);
+    const r = await lookupSong({ title: "Big Booty Bouncing", artist: "Karma Came" }, f, 0);
+    expect(r.streaming).toMatchObject({ title: "Big Booty Bouncing", artist: "Karma Came", isrc: "GX8KD2640648" });
+  });
   it("returns nothing found rather than failing", async () => {
     const r = await lookupSong({ isrc: "XX0000000000", title: "", artist: "" }, fake, 0);
     expect(r).toEqual({ streaming: null, work: null });

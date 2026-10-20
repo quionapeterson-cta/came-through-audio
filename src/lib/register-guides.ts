@@ -39,3 +39,13 @@ export function registerGuide(society: Society, pillar: Pillar, country: Country
     ],
   };
 }
+
+/** Steps for bringing a registration in line after the song's details changed in the catalog. */
+export function updateGuide(society: Society, pillar: Pillar): string[] {
+  const what = pillar === "digital" ? "the recording's title, artist and ISRC" : "the title, every writer, their shares and IPI numbers, and the publisher";
+  return [
+    `Log in to ${society.name} and open the ${pillar === "digital" ? "recording" : "song"} you registered.`,
+    `Update ${what} so they match your catalog exactly.`,
+    "Save your changes, then tick this step. Updates can take a few weeks to show up in search.",
+  ];
+}

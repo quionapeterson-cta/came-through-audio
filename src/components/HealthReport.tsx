@@ -53,12 +53,13 @@ function CountryPicker({ country, onCountry }: { country: Country; onCountry: (c
 }
 
 /** Copy the title, then open the society's search, so the user can paste it straight in. */
-export async function openSearch(society: Society, title: string) {
-  try { await navigator.clipboard.writeText(title); toast.success(`"${title}" copied. Paste it into the ${society.name} search.`); } catch { /* opening still helps */ }
+/** Copies what to search for (the title, ISRC or writer name), then opens the society's site. */
+export async function openSearch(society: Society, value: string) {
+  try { await navigator.clipboard.writeText(value); toast.success(`"${value}" copied. Paste it into the ${society.name} search.`); } catch { /* opening still helps */ }
   window.open(society.url, "_blank", "noopener,noreferrer");
 }
 
-export function Guide({ society, pillar, country, title, onExpert, onDone }: { society: Society; pillar: Pillar; country: Country; title: string; onExpert: () => void; onDone: () => void }) {
+export function Guide({ society, pillar, country, title, onExpert, onDone }: { society: Society; pillar: Pillar; country: Country; title: string; onExpert: () => void; onDone?: (() => void) | undefined }) {
   const g = registerGuide(society, pillar, country);
   return (
     <div className="mt-3 rounded-xl bg-muted p-4 text-sm">
@@ -69,7 +70,7 @@ export function Guide({ society, pillar, country, title, onExpert, onDone }: { s
       </ol>
       <div className="mt-4 flex flex-wrap gap-2">
         <Button type="button" size="sm" onClick={() => void openSearch(society, title)}><ExternalLink />Open {society.name}</Button>
-        <Button type="button" size="sm" variant="outline" onClick={onDone}><Check />It's registered now</Button>
+        {onDone && <Button type="button" size="sm" variant="outline" onClick={onDone}><Check />It's registered now</Button>}
         <Button type="button" size="sm" variant="ghost" onClick={onExpert}>Have an expert do it</Button>
       </div>
     </div>
@@ -85,7 +86,7 @@ export function LiveRecords({ r, onRun, running }: { r: TrackReport; onRun: () =
         <h4 className="text-sm font-extrabold uppercase tracking-[2px]">What the world sees</h4>
         <Button type="button" size="sm" variant="outline" disabled={running} onClick={onRun}><Radar className={running ? "animate-spin" : ""} />{checked ? "Re-check" : "Look up"}</Button>
       </div>
-      {!checked && <p className="text-sm text-muted-foreground">{running ? "Looking this song up…" : "We'll look this song up on streaming and in MusicBrainz, the open music database."}</p>}
+      {!checked && <p className="text-sm text-muted-foreground">{running ? "Looking this song up…" : "We'll look this song up on streaming and in MusicBrainz, the open, volunteer music database."}</p>}
       {checked && <>
         <div className="flex gap-3">
           {s?.cover ? <img src={s.cover} alt="" className="h-14 w-14 shrink-0 rounded-lg object-cover" /> : <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-lg bg-ink"><Disc3 className="h-6 w-6 text-primary" /></div>}
@@ -97,11 +98,11 @@ export function LiveRecords({ r, onRun, running }: { r: TrackReport; onRun: () =
           </div>
         </div>
         <div className="text-sm">
-          <div className="font-bold">In the public song database</div>
+          <div className="font-bold">In MusicBrainz <span className="font-normal text-muted-foreground">(the open, volunteer music database)</span></div>
           {w ? <div className="space-y-0.5">
             <a href={w.link} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-primary underline">{w.workTitle ?? w.recordingTitle} on {INTERNATIONAL.musicbrainz.name}<ExternalLink className="h-3 w-3" /></a>
             <div className="text-xs text-muted-foreground">{w.iswcs.length ? `ISWC ${w.iswcs.join(" / ")}` : "No ISWC on record"}{w.writers.length ? ` · Writers: ${w.writers.join(", ")}` : ""}</div>
-          </div> : <span className="text-muted-foreground">No public record yet. That's common for newer releases.</span>}
+          </div> : <span className="text-muted-foreground">Not listed there. That's normal for independent releases and doesn't affect your royalties. Agencies like SoundExchange and The MLC don't let apps look songs up, so confirm those with the checklist steps.</span>}
         </div>
       </>}
     </div>

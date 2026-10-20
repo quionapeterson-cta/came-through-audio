@@ -1,9 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
-import { Archive, Bell, Check, CheckCircle2, ChevronDown, ExternalLink, Pencil, PartyPopper, RotateCcw, Search, Trash2, Undo2 } from "lucide-react";
+import { Archive, Bell, Check, CheckCircle2, ChevronDown, Copy, ExternalLink, Info, Pencil, PartyPopper, RotateCcw, Search, Trash2, Undo2 } from "lucide-react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Guide, LiveRecords, openSearch, type HealthActions } from "@/components/HealthReport";
-import { encouragement, songChecklist, STAGE_LABEL, type ChecklistStep, type SongChecklist, type Stage } from "@/lib/health-checklist";
+import { encouragement, printKey, registrationPrint, searchKey, songChecklist, STAGE_LABEL, type ChecklistStep, type SongChecklist, type Stage } from "@/lib/health-checklist";
+import { updateGuide } from "@/lib/register-guides";
 import { notShowingReasons } from "@/lib/health-reasons";
 import { emptyStatus, isInspectorSong, type SongStatus } from "@/lib/health-songs";
 import type { TrackReport } from "@/lib/health";
@@ -51,6 +53,8 @@ export function HealthChecklist({ rows, country, statuses, onStatus, actions, ru
       <div>
         <h3 className="text-2xl font-extrabold">Song Health Checklist</h3>
         <p className="text-muted-foreground">Simple steps for each song. Tick them off at your own pace until every song is 100% healthy.</p>
+        <p className="mt-2 flex gap-2 text-sm text-muted-foreground"><Info className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+          <span><span className="font-semibold text-foreground">Fix it</span> corrects your Came Through Audio catalog, so your exports and 1-click agency files are right from now on. It doesn't change what SoundExchange, The MLC or your PRO already have. If the song is already registered there, log in and update it too; we'll add that step for you.</span></p>
       </div>
       <div className="flex flex-wrap gap-2" role="tablist" aria-label="Song lists">
         {GROUPS.map((g) => {
@@ -130,10 +134,19 @@ function SongDetail({ r, c, country, status, onStatus, actions, running, onEditI
   const [note, setNote] = useState(status.note);
   const [remind, setRemind] = useState(status.remindOn ?? "");
   const fix = (field?: string) => { if (inspector) onEditInspector(id); else if (field) actions.onFixField(id, field); };
-  const tick = (key: string, on: boolean) => {
+  /**
+   * Saves step changes (null removes one) and an optional found / not-listed mark in one go. Catalog songs keep marks
+   * in their own table; Inspector songs keep them in these steps, so they're written together and can't overwrite each other.
+   */
+  const apply: Apply = (changes, mark) => {
     const steps = { ...status.steps };
-    if (on) steps[key] = new Date().toISOString(); else delete steps[key];
-    onStatus({ ...status, steps });
+    if (mark && inspector) {
+      delete steps[`found:${mark.society}`]; delete steps[`not_listed:${mark.society}`];
+      if (mark.status) steps[`${mark.status}:${mark.society}`] = new Date().toISOString();
+    }
+    for (const [k, v] of Object.entries(changes)) { if (v === null) delete steps[k]; else steps[k] = v; }
+    if (Object.keys(changes).length || (mark && inspector)) onStatus({ ...status, steps });
+    if (mark && !inspector) { if (mark.status) actions.onMark(id, mark.society, mark.status); else actions.onClear(id, mark.society); }
   };
   const nextOpen = c.steps.find((s) => !s.done)?.id;
 
@@ -169,7 +182,7 @@ function SongDetail({ r, c, country, status, onStatus, actions, running, onEditI
             <div key={stage}>
               <h5 className="mb-2 flex items-center gap-2 text-sm font-extrabold uppercase tracking-[2px]"><span className="flex h-5 w-5 items-center justify-center rounded-full bg-primary text-[11px] text-primary-foreground">{si + 1}</span>{STAGE_LABEL[stage]}</h5>
               <ol className="space-y-2">
-                {list.map((s) => <StepRow key={s.id} s={s} r={r} country={country} status={status} open={s.id === nextOpen} onFix={fix} onTick={tick} actions={actions} />)}
+                {list.map((s) => <StepRow key={s.id} s={s} r={r} country={country} open={s.id === nextOpen} onFix={fix} apply={apply} actions={actions} />)}
               </ol>
             </div>
           );
@@ -199,21 +212,37 @@ function SongDetail({ r, c, country, status, onStatus, actions, running, onEditI
   );
 }
 
-function StepRow({ s, r, country, status, open, onFix, onTick, actions }: {
-  s: ChecklistStep; r: TrackReport; country: Country; status: SongStatus; open: boolean;
-  onFix: (field?: string) => void; onTick: (key: string, on: boolean) => void; actions: HealthActions;
+type Apply = (changes: Record<string, string | null>, mark?: { society: string; status: "found" | "not_listed" | null }) => void;
+
+function StepRow({ s, r, country, open, onFix, apply, actions }: {
+  s: ChecklistStep; r: TrackReport; country: Country; open: boolean;
+  onFix: (field?: string) => void; apply: Apply; actions: HealthActions;
 }) {
   const [expanded, setExpanded] = useState(open);
-  const id = r.track.id;
+  const [confirming, setConfirming] = useState(false);
+  const m = r.track.metadata;
   const check = s.society ? r.pillars.find((p) => p.pillar === s.pillar)?.societies.find((x) => x.society.id === s.society!.id)?.check : undefined;
   const notListed = s.stage === "confirm" && check?.status === "not_listed";
+  const now = () => new Date().toISOString();
+  // Ticking "registered" or "found" remembers the details as they are, so a later edit reopens the step as an update.
+  const print = s.society && s.pillar ? { [printKey(s.society.id)]: registrationPrint(m, s.pillar) } : {};
+  const registered = () => s.society && apply({ [`registered:${s.society.id}`]: now(), ...print });
+  const markFound = () => s.society && apply(print, { society: s.society.id, status: "found" });
+  const untick = () => {
+    setConfirming(false);
+    if (!s.society) return;
+    // Not registered means it can't be found there either, so unticking Register clears that mark too.
+    if (s.stage === "register") apply({ [`registered:${s.society.id}`]: null, [printKey(s.society.id)]: null }, check ? { society: s.society.id, status: null } : undefined);
+    else apply({}, { society: s.society.id, status: null });
+  };
   const toggle = () => {
     if (s.auto || !s.society) { onFix(s.field); return; }
-    if (s.stage === "register") onTick(`registered:${s.society.id}`, !s.done);
-    else if (s.done) actions.onClear(id, s.society.id);
-    else actions.onMark(id, s.society.id, "found");
+    if (s.done) { setConfirming(true); return; }
+    if (s.stage === "register") registered(); else markFound();
   };
   const reasons = s.society && s.pillar ? notShowingReasons(s.society, s.pillar) : undefined;
+  const key = s.society && s.stage === "confirm" ? searchKey(s.society, m) : undefined;
+  const copy = async (v: string) => { try { await navigator.clipboard.writeText(v); toast.success(`"${v}" copied.`); } catch { /* nothing to copy into */ } };
 
   return (
     <li className={`rounded-xl border p-4 ${!s.done && open ? "border-2 border-primary" : "border-border"}`}>
@@ -224,38 +253,62 @@ function StepRow({ s, r, country, status, open, onFix, onTick, actions }: {
           {s.done && <Check className="h-4 w-4" />}
         </button>
         <div className="min-w-0 flex-1">
-          <button type="button" onClick={() => setExpanded(!expanded)} className="flex w-full items-start justify-between gap-2 text-left">
+          <button type="button" onClick={() => setExpanded(!expanded)} aria-expanded={expanded} className="flex w-full items-start justify-between gap-2 text-left">
             <span className={`font-semibold ${s.done ? "text-muted-foreground line-through" : ""}`}>{s.title}</span>
-            {!s.done && <ChevronDown className={`mt-1 h-4 w-4 shrink-0 transition-transform ${expanded ? "rotate-180" : ""}`} />}
+            <ChevronDown className={`mt-1 h-4 w-4 shrink-0 transition-transform ${expanded ? "rotate-180" : ""}`} />
           </button>
-          {expanded && !s.done && (
+          {confirming && (
+            <div className="mt-2 flex flex-wrap items-center gap-2 rounded-lg bg-muted p-3 text-sm">
+              <span className="font-medium">Untick "{s.title}"?</span>
+              <Button size="sm" onClick={untick}>Untick</Button>
+              <Button size="sm" variant="outline" onClick={() => setConfirming(false)}>Keep it</Button>
+            </div>
+          )}
+          {expanded && (
             <div className="mt-2 space-y-3 text-sm">
               {s.stage === "details" && <>
                 {s.items?.length ? <ul className="space-y-1">{s.items.map((it, k) => <li key={k}>⚠️ {it.text}</li>)}</ul> : null}
                 {s.id === "isrc" && <p className="text-muted-foreground">The ISRC is your recording's ID. Most distributors assign one free when you release. Add it here once you have it.</p>}
-                <Button size="sm" onClick={() => onFix(s.field ?? s.items?.[0]?.field)}><Pencil />Fix it</Button>
+                {!s.done && <FixIt onClick={() => onFix(s.field ?? s.items?.[0]?.field)} />}
               </>}
               {s.id === "iswc" && <>
                 <p className="text-muted-foreground">The ISWC is your song's ID. Your PRO or publisher assigns it after the song is registered, so this one comes last. Add it when you see it in your PRO account.</p>
-                <Button size="sm" onClick={() => onFix("iswc")}><Pencil />Add the ISWC</Button>
+                {!s.done && <FixIt label="Add the ISWC" onClick={() => onFix("iswc")} />}
               </>}
-              {s.stage === "register" && s.society && s.pillar && <>
-                <Guide society={s.society} pillar={s.pillar} country={country} title={r.track.title} onExpert={actions.onExpert} onDone={() => onTick(`registered:${s.society!.id}`, true)} />
-              </>}
-              {s.stage === "confirm" && s.society && <>
-                <ol className="list-decimal space-y-1 pl-5 text-muted-foreground">
-                  <li>Open {s.society.name}{s.society.access === "member" ? " and log in to your account" : ""}, then search the exact title.</li>
-                  <li>Check that the writers, shares and IPI numbers match what you registered.</li>
-                  <li>Found it? Tick this step.</li>
-                </ol>
-                <div className="flex flex-wrap gap-2">
-                  <Button size="sm" onClick={() => void openSearch(s.society!, r.track.title)}><Search />Open {s.society.name}<ExternalLink /></Button>
-                  <Button size="sm" variant="outline" onClick={() => actions.onMark(id, s.society!.id, "found")}><CheckCircle2 />Yes, it's there</Button>
-                  {!notListed && <Button size="sm" variant="outline" onClick={() => actions.onMark(id, s.society!.id, "not_listed")}>Not showing up</Button>}
-                  {notListed && <Button size="sm" variant="ghost" onClick={() => actions.onClear(id, s.society!.id)}><RotateCcw />Undo</Button>}
+              {s.stage === "register" && s.society && s.pillar && (s.update ? (
+                <div className="rounded-xl bg-muted p-4">
+                  <p>You changed this song's details after registering it with {s.society.name}. Update the registration so it matches, or royalties can go to the wrong place.</p>
+                  <ol className="mt-3 space-y-1.5">
+                    {updateGuide(s.society, s.pillar).map((step, i) => <li key={i} className="flex gap-2"><span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary text-[11px] font-bold text-primary-foreground">{i + 1}</span>{step}</li>)}
+                  </ol>
+                  <div className="mt-4 flex flex-wrap gap-2">
+                    <Button size="sm" onClick={() => void openSearch(s.society!, r.track.title)}><ExternalLink />Open {s.society.name}</Button>
+                    <Button size="sm" variant="outline" onClick={registered}><Check />I've updated it</Button>
+                  </div>
                 </div>
+              ) : (
+                <Guide society={s.society} pillar={s.pillar} country={country} title={r.track.title} onExpert={actions.onExpert} onDone={s.done ? undefined : registered} />
+              ))}
+              {s.stage === "confirm" && s.society && key && <>
+                <p className="text-muted-foreground">{key.hint}{s.society.access === "member" ? ` Log in to your ${s.society.name} account first.` : ""} Then check that the writers, shares and IPI numbers match what you registered.</p>
+                {key.value ? (
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span>Your {key.by}: <span className="font-semibold">{key.value}</span></span>
+                    <Button size="sm" variant="ghost" onClick={() => void copy(key.value)}><Copy />Copy</Button>
+                  </div>
+                ) : (
+                  <p>⚠️ Add the {key.by} first, so you can search for it. <button type="button" onClick={() => onFix(key.field)} className="font-semibold text-primary underline">Add it</button></p>
+                )}
+                {!s.done && (
+                  <div className="flex flex-wrap gap-2">
+                    <Button size="sm" onClick={() => void openSearch(s.society!, key.value || r.track.title)}><Search />Open {s.society.name}<ExternalLink /></Button>
+                    <Button size="sm" variant="outline" onClick={markFound}><CheckCircle2 />Yes, it's there</Button>
+                    {!notListed && <Button size="sm" variant="outline" onClick={() => apply({}, { society: s.society!.id, status: "not_listed" })}>Not showing up</Button>}
+                    {notListed && <Button size="sm" variant="ghost" onClick={() => apply({}, { society: s.society!.id, status: null })}><RotateCcw />Undo</Button>}
+                  </div>
+                )}
               </>}
-              {s.stage === "confirm" && reasons && (
+              {s.stage === "confirm" && reasons && !s.done && (
                 <details open={notListed} className="rounded-lg bg-muted p-4">
                   <summary className="cursor-pointer font-semibold text-primary">Not showing up yet? Relax, this is common.</summary>
                   <ul className="mt-2 space-y-1.5">{reasons.reasons.map((x) => <li key={x.title}><span className="font-semibold">{x.title}</span> <span className="text-muted-foreground">{x.text}</span></li>)}</ul>
@@ -270,3 +323,12 @@ function StepRow({ s, r, country, status, open, onFix, onTick, actions }: {
   );
 }
 
+/** "Fix it" always says what it changes: the user's own catalog, not the agencies. */
+function FixIt({ onClick, label = "Fix it" }: { onClick: () => void; label?: string }) {
+  return (
+    <div className="flex flex-wrap items-center gap-2">
+      <Button size="sm" onClick={onClick}><Pencil />{label}</Button>
+      <span className="text-xs text-muted-foreground">Updates your catalog</span>
+    </div>
+  );
+}

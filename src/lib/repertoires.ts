@@ -2,8 +2,8 @@ import type { Pillar } from "@/lib/audit";
 
 /**
  * Collection societies by country, for the Royalty Health Check. None of these offer an open lookup API, so each
- * links to its own site: the public search where one exists, otherwise the member login. "Search" copies the song
- * title first so it can be pasted straight in. Society ids are stored in repertoire_checks, so never rename one.
+ * links to its own site: the public search where one exists, otherwise the member login. "Search" copies the key that
+ * society searches best by (searchBy) first, so it can be pasted straight in. Society ids are stored in repertoire_checks, so never rename one.
  */
 export type Society = {
   id: string;
@@ -13,6 +13,8 @@ export type Society = {
   access: "public" | "member";
   /** Names this society goes by in writers' PRO affiliations (src/lib/metadata.ts PROS). */
   aliases?: string[];
+  /** What its search finds a song by most exactly. Default: the title. "title-writer": title, then check the writers. */
+  searchBy?: "isrc" | "writer" | "title-writer";
 };
 export type Country = {
   code: string;
@@ -24,14 +26,15 @@ export type Country = {
 export const REGIONS = ["North America", "Latin America & Caribbean", "Europe", "Asia-Pacific", "Africa"] as const;
 export type Region = (typeof REGIONS)[number];
 
-const s = (id: string, name: string, url: string, access: Society["access"] = "public", aliases?: string[]): Society => ({ id, name, url, access, ...(aliases && { aliases }) });
+const s = (id: string, name: string, url: string, access: Society["access"] = "public", aliases?: string[], searchBy?: Society["searchBy"]): Society =>
+  ({ id, name, url, access, ...(aliases && { aliases }), ...(searchBy && { searchBy }) });
 
-const ASCAP = s("ascap", "ASCAP", "https://www.ascap.com/repertory");
-const BMI = s("bmi", "BMI", "https://repertoire.bmi.com/");
-const SESAC = s("sesac", "SESAC", "https://www.sesac.com/repertory/");
+const ASCAP = s("ascap", "ASCAP", "https://www.ascap.com/repertory", "public", undefined, "title-writer");
+const BMI = s("bmi", "BMI", "https://repertoire.bmi.com/", "public", undefined, "title-writer");
+const SESAC = s("sesac", "SESAC", "https://www.sesac.com/repertory/", "public", undefined, "title-writer");
 const GMR = s("gmr", "GMR", "https://globalmusicrights.com/", "member");
-const SOUNDEXCHANGE = s("soundexchange", "SoundExchange", "https://isrc.soundexchange.com/");
-const MLC = s("mlc", "The MLC", "https://portal.themlc.com/search");
+const SOUNDEXCHANGE = s("soundexchange", "SoundExchange", "https://isrc.soundexchange.com/", "public", undefined, "isrc");
+const MLC = s("mlc", "The MLC", "https://portal.themlc.com/search", "public", undefined, "writer");
 const PRS = s("prs", "PRS for Music", "https://www.prsformusic.com/", "member", ["PRS for Music", "PRS", "MCPS"]);
 const GEMA = s("gema", "GEMA", "https://online.gema.de/werke/search.faces?lang=en");
 const SACEM = s("sacem", "SACEM", "https://repertoire.sacem.fr/", "public", ["SACEM", "SDRM"]);

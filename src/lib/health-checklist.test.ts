@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { emptyMetadata } from "@/lib/metadata";
 import { trackReport } from "@/lib/health";
-import { songChecklist } from "@/lib/health-checklist";
+import { printKey, registrationPrint, searchKey, songChecklist } from "@/lib/health-checklist";
 import { inspectorChecks, emptyStatus } from "@/lib/health-songs";
 import { countryByCode } from "@/lib/repertoires";
 
@@ -36,5 +36,23 @@ describe("song health checklist", () => {
   });
   it("reads inspector marks back as checks", () => {
     expect(inspectorChecks([{ ...emptyStatus("h:1"), steps: { "found:bmi": "x", "registered:mlc": "y" } }])).toEqual([{ trackId: "h:1", society: "bmi", status: "found", source: "self", checkedAt: "x" }]);
+  });
+
+  it("asks for a registration update when registered details change afterwards", () => {
+    const t = track();
+    const steps = { "registered:bmi": "2026-10-01T00:00:00Z", [printKey("bmi")]: registrationPrint(t.metadata, "performance") };
+    const same = songChecklist(trackReport(t, us, []), us, { ...emptyStatus("t1"), steps });
+    expect(same.steps.find((s) => s.id === "register:performance")).toMatchObject({ done: true, update: false });
+    const changed = track({ writers: [{ name: "", legalName: "Ann Lee", role: "Author/Composer", pro: "BMI", ipi: "00123456789", percentage: "50" }] });
+    const step = songChecklist(trackReport(changed, us, []), us, { ...emptyStatus("t1"), steps }).steps.find((s) => s.id === "register:performance");
+    expect(step).toMatchObject({ done: false, update: true, title: "Update your registration at BMI" });
+  });
+  it("searches each agency by its most exact key", () => {
+    const m = track().metadata;
+    const socs = us.societies;
+    expect(searchKey(socs.digital![0]!, m)).toMatchObject({ by: "ISRC", value: "USCTA2600001" });
+    expect(searchKey(socs.mechanical![0]!, m)).toMatchObject({ by: "writer name", value: "Ann Lee" });
+    expect(searchKey(socs.performance![0]!, m)).toMatchObject({ by: "title", value: "Song" });
+    expect(searchKey(socs.digital![0]!, { ...m, isrc: "" })).toMatchObject({ value: "", field: "isrc" });
   });
 });
