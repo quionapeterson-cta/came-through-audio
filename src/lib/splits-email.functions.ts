@@ -17,7 +17,12 @@ export const sendSplitInvite = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const key = process.env["RESEND_API_KEY"] || process.env["CameThroughAudio"];
     if (!key) throw new Error("Email sending is not configured yet.");
-    const { data: canCollect } = await context.supabase.rpc("has_tier" as never, { _uid: context.userId, _needed: "collaborate" } as never);
+    const { data: canCollect, error: tierErr } = await context.supabase.rpc("has_tier" as never, { _uid: context.userId, _needed: "collaborate" } as never);
+    // A failed plan check is reported as such, not as "upgrade", so a database problem can't pass for a plan block.
+    if (tierErr) {
+      console.error("has_tier failed:", tierErr);
+      throw new Error(`Couldn't check your plan (${tierErr.message}). Contact support and we'll help right away.`);
+    }
     if (!canCollect) throw new Error("Collaborator e-signature requests are included with Catalog & Collaborate.");
 
     const { data: row, error } = await context.supabase

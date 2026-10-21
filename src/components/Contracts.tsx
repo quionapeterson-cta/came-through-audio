@@ -11,7 +11,7 @@ import { Input } from "@/components/ui/input";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { InfoTip } from "@/components/InfoTip";
 import { listTracks, type CatalogTrack } from "@/lib/catalog";
-import { BLUEPRINTS, COMPANY_BLUEPRINTS, COMPANY_LEGAL_NAME, CONTRACT_DISCLAIMER, blueprintById, renderContract, type Blueprint } from "@/lib/contract-blueprints";
+import { BLUEPRINTS, COMPANY_BLUEPRINTS, CONTRACT_DISCLAIMER, blueprintById, renderContract, type Blueprint } from "@/lib/contract-blueprints";
 import { downloadContractPdf } from "@/lib/contract-pdf";
 import { sendContractInvite } from "@/lib/contracts-email.functions";
 import { NextBadgeHint } from "@/components/Badges";
@@ -262,8 +262,7 @@ function ContractEditor({ userId, initial, tracks, blueprint, onClose }: { userI
 
   useEffect(() => {
     void Promise.all([supabase.from("profiles").select("legal_name").eq("id", userId).maybeSingle(), supabase.auth.getUser()]).then(([{ data }, { data: auth }]) => {
-      // Company agreements are signed by the LLC, so its name is the owner party's legal name.
-      const a = { email: auth.user?.email ?? "", legalName: initial.isCompany ? COMPANY_LEGAL_NAME : data?.legal_name ?? "" };
+      const a = { email: auth.user?.email ?? "", legalName: data?.legal_name ?? "" };
       setAccount(a);
       if (initial.status === "draft") setC((x) => ({ ...x, parties: x.parties.map((p) => p.isOwner ? { ...p, email: a.email, legalName: p.legalName || a.legalName } : p) }));
     });

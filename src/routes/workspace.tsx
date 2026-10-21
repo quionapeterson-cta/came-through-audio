@@ -22,6 +22,7 @@ import { loadOnboarding, syncFromCloud, type Onboarding } from "@/lib/artist-pro
 import { RoyaltyUtilitySuite } from "@/components/RoyaltyUtilitySuite";
 import { ExpertAssistance } from "@/components/ExpertAssistance";
 import { RoyaltyHealthCheck } from "@/components/RoyaltyHealthCheck";
+import { NextBadgeHint } from "@/components/Badges";
 import { PaymentTestModeBanner } from "@/components/PaymentTestModeBanner";
 import { toast } from "sonner";
 import { sendTrialEndingReminder } from "@/lib/collab-trial.functions";
@@ -295,8 +296,11 @@ function Health({ canCatalog, onFix, onFixField, onEmbed, userId, purchases, can
   const views = [["check", "Health Check", Activity], ["expert", "Expert Help", Users], ["utility", "Utility Suite", Calculator]] as const;
   return (
     <div className="mt-6 space-y-6">
-      <div className="inline-flex flex-wrap gap-1 rounded-lg bg-muted p-1">
-        {views.map(([id, label, Icon]) => <Button key={id} size="sm" variant={view === id ? "default" : "ghost"} onClick={() => setView(id)}><Icon className="h-4 w-4" />{label}</Button>)}
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="inline-flex flex-wrap gap-1 rounded-lg bg-muted p-1">
+          {views.map(([id, label, Icon]) => <Button key={id} size="sm" variant={view === id ? "default" : "ghost"} onClick={() => setView(id)}><Icon className="h-4 w-4" />{label}</Button>)}
+        </div>
+        <NextBadgeHint userId={userId} collections={["health"]} />
       </div>
       {view === "check" && <RoyaltyHealthCheck userId={userId} canCatalog={canCatalog} onUpgrade={onUpgrade} onFix={onFix} onFixField={onFixField} onEmbed={onEmbed}
         onExpert={() => { setView("expert"); window.scrollTo({ top: 0, behavior: "smooth" }); }} />}

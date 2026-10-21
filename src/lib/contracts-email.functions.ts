@@ -17,7 +17,12 @@ export const sendContractInvite = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const key = process.env["RESEND_API_KEY"] || process.env["CameThroughAudio"];
     if (!key) throw new Error("Email sending is not configured yet.");
-    const { data: canSend } = await context.supabase.rpc("has_tier" as never, { _uid: context.userId, _needed: "management" } as never);
+    const { data: canSend, error: tierErr } = await context.supabase.rpc("has_tier" as never, { _uid: context.userId, _needed: "management" } as never);
+    // A failed plan check is reported as such, not as "upgrade", so a database problem can't pass for a plan block.
+    if (tierErr) {
+      console.error("has_tier failed:", tierErr);
+      throw new Error(`Couldn't check your plan (${tierErr.message}). Contact support and we'll help right away.`);
+    }
     if (!canSend) throw new Error("Contract signature requests are included with Catalog Management.");
 
     const since = new Date(Date.now() - 86400000).toISOString();

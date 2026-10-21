@@ -437,6 +437,10 @@ ${general(7)}`,
 /** The company's own legal name, the Company party on every company contract. */
 export const COMPANY_LEGAL_NAME = "Came Through Audio, LLC";
 
+/** Company agreements name the LLC as the party; the founder signs as its authorized representative. */
+const SIGNER: BlueprintField = { key: "signerTitle", label: "Your title", placeholder: "Founder & CEO", tip: "Your title at Came Through Audio, LLC. You sign with your own legal name on the company's behalf." };
+const asCompany = (body: string) => body.replace(`{{party:Company}} ("Company")`, `${COMPANY_LEGAL_NAME} ("Company"), signed by its authorized representative {{party:Company}}, {{signerTitle}},`);
+
 const PRELAUNCH = (n: number) => `${n}. PRE-LAUNCH CONFIDENTIALITY
 Until Company publicly announces the launch of its service (or gives written permission first), Participant will not post, share, screenshot, record or describe the Came Through Audio app or its features. Company will hold the Materials and will not publish them before launch.
 
@@ -453,7 +457,8 @@ export const COMPANY_BLUEPRINTS: Blueprint[] = [
     category: "Company",
     summary: "A homepage or marketing testimonial giver lets Came Through Audio use their photo, video, name and words, and keeps the app private until launch.",
     whenToUse: "Send it to everyone whose testimonial, photo or video appears on the site or in marketing, including people already on the homepage.",
-    body: `${RELEASE_TERMS}${PRELAUNCH(11)}${general(12)}`,
+    fields: [SIGNER, ...BLUEPRINTS.find((b) => b.id === "photo-video-release")!.fields],
+    body: asCompany(`${RELEASE_TERMS}${PRELAUNCH(11)}${general(12)}`),
   },
   {
     id: "company-blank",
@@ -463,15 +468,15 @@ export const COMPANY_BLUEPRINTS: Blueprint[] = [
     whenToUse: "Any company agreement that doesn't have a template yet.",
     keyTerms: ["Write the terms in your own words, then lock and send."],
     roles: ["Company", "Participant"],
-    fields: [DATE, { key: "terms", label: "Terms", placeholder: "What each side agrees to", tip: "The agreement in plain language.", multiline: true }, STATE],
-    body: `AGREEMENT
+    fields: [SIGNER, DATE, { key: "terms", label: "Terms", placeholder: "What each side agrees to", tip: "The agreement in plain language.", multiline: true }, STATE],
+    body: asCompany(`AGREEMENT
 
 This agreement is made on {{effectiveDate}} between {{party:Company}} ("Company") and {{party:Participant}} ("Participant").
 
 1. TERMS
 {{terms}}
 
-${general(2)}`,
+${general(2)}`),
   },
 ];
 
