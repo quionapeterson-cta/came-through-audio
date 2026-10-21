@@ -1,7 +1,7 @@
-# PLAN — Expert Registration Assistance: working checkout and a proper intake flow · v2
+# PLAN — Expert Registration Assistance: working checkout and a proper intake flow · v3
 
 Status: **awaiting approval. PRIORITY 1.**
-Source: founder testing notes, 2026-10-21. v2 (2026-10-21): founder answered Q1 (draft the agreement) and Q2 (users may pay for songs that aren't ready, but must complete and submit them before work starts); agency checklists researched (§5).
+Source: founder testing notes, 2026-10-21. v2 (2026-10-21): founder answered Q1 (draft the agreement) and Q2 (users may pay for songs that aren't ready, but must complete and submit them before work starts); agency checklists researched (§5). v3 (2026-10-21): the system checks every paid song right after payment and alerts the user immediately with what to provide; agents register the songs themselves, no live assistance (§3).
 
 ---
 
@@ -28,22 +28,29 @@ Source: founder testing notes, 2026-10-21. v2 (2026-10-21): founder answered Q1 
 
 ## 3. After payment: step-by-step intake
 
+**Done-for-you service (founder, v3): our agents register the songs themselves. There is no live call or live assistance.** The current flow's live-session pieces go: "Pay & reserve my session", the "I can log into each registry account… the live call is used for data audit" confirmation (`expert_gateways`), and "Schedule your live session". The button becomes **Pay & start registration**. (Live time stays a separate, later product in PLAN-live-registration.md.)
+
 A numbered checklist that unlocks in order (later steps stay locked until earlier ones are done):
 
 1. **Payment confirmed** ✓
-2. **Complete and submit your songs.** One card per paid song, with that song's checklist for every agency in the order (§5). Each ⚠️ item links straight to the field in My Catalog. When a song's checklist is complete, **Submit song** locks its registration copy (a snapshot saved with the session, so later catalog edits don't change what the agent registers; the user can ask the agent to unlock it). The step is done when every paid song is submitted. **Registration work can't start until then**, and the refund window stays open (refund policy: refundable until our team starts work).
-3. **Sign the Registration Authorization agreement** (§6). Signed in-app, saved like other contracts.
-4. **Add Came Through Audio as your representative/user.** One card per agency picked, with plain-language steps:
+2. **Automatic readiness check, the moment payment confirms.** The system runs the shared readiness check (§5) on every paid song, for every agency in the order. Nothing waits for an agent.
+   - **All ready:** the user sees "All N songs are ready ✓" and moves straight to step 3.
+   - **Any not ready:** the user is **alerted immediately**, on the payment-confirmed screen (not a toast that disappears) and by email (`emailLayout()`), e.g. "2 of 5 songs need a few details before our agents can register them", listing each song, each agency and exactly what to provide. In the app every ⚠️ item links straight to the field in My Catalog; the email links to this checklist (no raw-link fallback).
+   - The check re-runs on every save in My Catalog. A song flips to ✓ as soon as it's complete; the user doesn't have to re-submit anything.
+   - **Reminder** if songs are still incomplete after 3 days, then weekly, same email (stops once everything is ready). The 30-day refund window keeps running; the email says so.
+3. **Confirm and submit your songs.** One review card per song (title, writers and splits, publishers, ISRC, the agencies). **Submit for registration** is only available once every paid song passes; it saves a registration copy of each song with the order, so later catalog edits don't change what the agent registers (the agent can unlock a song if the user needs a fix). This is when work starts, so the refund window ends here (refund policy: refundable until our team starts work); the button says so.
+4. **Sign the Registration Authorization agreement** (§6). Signed in-app, saved like other contracts.
+5. **Add Came Through Audio as your representative/user.** One card per agency picked, with plain-language steps:
    - **ASCAP / BMI:** add us as an authorized user or representative in the member portal.
    - **The MLC:** invite us as a user on the MLC Portal (Account → Users).
    - **SoundExchange:** add us as an authorized representative (SoundExchange Direct; a Letter of Direction may be needed).
    - Each card has a "Done" button and a "Need help?" link. Exact steps will be checked against each agency's current portal before this ships.
-5. **Book your session** (existing booking step).
-6. **Status tracker:** Submitted → In progress → Registered, per song and per agency, updated by the agent.
+6. **Status tracker:** Waiting on you → Queued → In progress → Registered, per song and per agency, updated by the agent. The user gets an email when each agency's registrations are done.
 
 ## 4. Agent side: one-click agency exports
 
-- Admin → Registration queue: one row per paid session showing the user, songs (submitted x of y), agencies, agreement signed?, representative access confirmed?, booking. Sessions stay in "Waiting on customer" until every song is submitted.
+- Admin → Registration queue: one row per paid order showing the user, songs (ready x of y, submitted?), agencies, agreement signed?, representative access confirmed?. Orders stay in "Waiting on customer" until every song is submitted, the agreement is signed and access is confirmed; then they move to "Ready to register".
+- Before exporting, the server re-runs the same readiness check on the submitted copies (never trusts the browser), so an agent never receives an incomplete song.
 - **One-click export** per agency for the session's submitted songs, using the existing export templates and shared readiness check (no template-specific writer fields).
 - The agent marks each song/agency registered; the user's tracker updates.
 - Staff-only through staff-verified server functions.
@@ -124,7 +131,7 @@ A customer agreement signed at intake step 3, built like the company templates (
 > **SCHEDULE A:** filled in automatically: each song (title, ISRC), each organization, the purchase date and the amount paid.
 
 ## Files
-`src/components/ExpertAssistance.tsx`, `src/lib/stripe-mapping.ts`, `src/lib/checkout.ts`, **`src/lib/readiness.ts` (new `ascap` / `bmi` targets and agency items, per §5; rule change, needs approval)** + `readiness.test.ts`, `src/lib/metadata.ts` (5 new catalog-only fields), the My Catalog / Embed Metadata form (new fields + tooltips), `src/lib/agency-export.ts` (SoundExchange reads master ownership), `src/lib/contract-blueprints.ts` (Registration Authorization), admin route + new `registration_sessions` migration (status per song/agency, submitted snapshots, server-written). AGENTS.md "Registration readiness" section gets the per-agency items added once approved.
+`src/components/ExpertAssistance.tsx`, `src/lib/stripe-mapping.ts`, `src/lib/checkout.ts`, **`src/lib/readiness.ts` (new `ascap` / `bmi` targets and agency items, per §5; rule change, needs approval)** + `readiness.test.ts`, `src/lib/metadata.ts` (5 new catalog-only fields), the My Catalog / Embed Metadata form (new fields + tooltips), `src/lib/agency-export.ts` (SoundExchange reads master ownership), `src/lib/contract-blueprints.ts` (Registration Authorization), admin route + new `registration_sessions` migration (status per song/agency, submitted snapshots, server-written), the payment webhook (runs the readiness check when an expert purchase confirms) + a new "songs need details" email through `emailLayout()`, a reminder job (run beside `src/routes/api/public/cron/trial-reminders.ts`). Live-session removal: the gateway confirmation and scheduling step in `ExpertAssistance.tsx`; the `expert_gateways` table and its existing rows are kept, just no longer written. AGENTS.md "Registration readiness" section gets the per-agency items added once approved.
 Touches writer/readiness/export code paths, so per AGENTS.md: confirm this file list before editing.
 
 ## Questions
@@ -134,3 +141,5 @@ Touches writer/readiness/export code paths, so per AGENTS.md: confirm this file 
 4. Approve the 5 new catalog fields in §5.
 5. Before submitting, may a user swap a paid song for a different catalog song (same price)? Recommended: yes, until it's submitted.
 6. Agreement §6: any changes to the wording? And should the pre-launch confidentiality clause be included while we're pre-launch?
+7. Not-ready reminders: after 3 days, then weekly, until the songs are complete (§3 step 2). OK, or a different schedule?
+8. Turnaround: what should the status tracker promise after submission (for example "registrations are filed within 5 business days")?
