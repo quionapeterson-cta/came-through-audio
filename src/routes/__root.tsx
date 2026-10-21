@@ -152,8 +152,13 @@ function RootComponent() {
       window.location.replace(`/verified${ret ? `?next=${encodeURIComponent(ret)}` : ""}${hash}`);
       return;
     }
-    const { data: sub } = supabase.auth.onAuthStateChange((event) => {
-      if (event !== "SIGNED_IN") return;
+    // Supabase also fires SIGNED_IN when an existing session is restored (tab refocus, preview login sharing),
+    // so only follow the saved path on a real logged-out → logged-in change.
+    let hadSession: boolean | null = null;
+    const { data: sub } = supabase.auth.onAuthStateChange((event, session) => {
+      const wasSignedIn = hadSession;
+      hadSession = !!session;
+      if (event !== "SIGNED_IN" || wasSignedIn !== false) return;
       const ret = takeReturn();
       if (ret && window.location.pathname !== ret && window.location.pathname !== "/verified") window.location.assign(ret);
     });

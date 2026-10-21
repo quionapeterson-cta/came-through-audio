@@ -51,7 +51,9 @@ function ContractSignPage() {
       })
       .catch((e) => setError(e instanceof Error ? e.message : "Could not open this contract."));
   };
-  useEffect(() => { if (!user) rememberReturn(`/contract/${partyId}`); }, [user, partyId]);
+  // Only remember this page once we know the visitor is logged out; while auth is still loading `user` is null even for
+  // signed-in people, and saving then would send them back here on every later sign-in.
+  useEffect(() => { if (loading) return; if (user) clearReturn(); else rememberReturn(`/contract/${partyId}`); }, [user, loading, partyId]);
   useEffect(() => { if (user) load(); }, [user?.id, partyId]);
 
   async function sign() {

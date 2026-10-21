@@ -50,7 +50,9 @@ function SignPage() {
       })
       .catch((e) => setError(e instanceof Error ? e.message : "Could not open this request."));
   };
-  useEffect(() => { if (!user) rememberReturn(`/sign/${rowId}`); }, [user, rowId]);
+  // Only remember this page once we know the visitor is logged out; while auth is still loading `user` is null even for
+  // signed-in people, and saving then would send them back here on every later sign-in.
+  useEffect(() => { if (loading) return; if (user) clearReturn(); else rememberReturn(`/sign/${rowId}`); }, [user, loading, rowId]);
   useEffect(() => { if (user) load(); }, [user?.id, rowId]);
 
   async function sign() {
