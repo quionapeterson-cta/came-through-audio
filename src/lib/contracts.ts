@@ -28,6 +28,8 @@ export type Contract = {
   completedAt: string | null;
   updatedAt: string;
   parties: ContractParty[];
+  /** Came Through Audio, LLC's own agreement (Admin → Company Contracts), kept out of the founder's personal vault. */
+  isCompany?: boolean;
 };
 
 export const emptyParty = (role: string, isOwner = false): ContractParty => ({
@@ -35,12 +37,12 @@ export const emptyParty = (role: string, isOwner = false): ContractParty => ({
 });
 
 type PartyRow = { id: string; role: string; legal_name: string; email: string; is_owner: boolean; position: number; invited_at: string | null; signature_name: string | null; signature_hash: string | null; signed_at: string | null };
-type ContractRow = { id: string; blueprint: string; title: string; catalog_id: string | null; fields: Record<string, string> | null; body: string; status: ContractStatus; body_hash: string | null; sent_at: string | null; completed_at: string | null; updated_at: string; contract_parties: PartyRow[] | null };
+type ContractRow = { id: string; blueprint: string; title: string; catalog_id: string | null; fields: Record<string, string> | null; body: string; status: ContractStatus; body_hash: string | null; sent_at: string | null; completed_at: string | null; updated_at: string; is_company?: boolean; contract_parties: PartyRow[] | null };
 
 function fromRow(r: ContractRow): Contract {
   return {
     id: r.id, blueprint: r.blueprint, title: r.title, catalogId: r.catalog_id, fields: r.fields ?? {}, body: r.body, status: r.status,
-    bodyHash: r.body_hash ?? "", sentAt: r.sent_at, completedAt: r.completed_at, updatedAt: r.updated_at,
+    bodyHash: r.body_hash ?? "", sentAt: r.sent_at, completedAt: r.completed_at, updatedAt: r.updated_at, isCompany: !!r.is_company,
     parties: [...(r.contract_parties ?? [])].sort((a, b) => a.position - b.position).map((p) => ({
       id: p.id, role: p.role, legalName: p.legal_name, email: p.email, isOwner: p.is_owner, invitedAt: p.invited_at,
       signatureName: p.signature_name ?? "", signatureHash: p.signature_hash ?? "", signedAt: p.signed_at,
@@ -48,10 +50,11 @@ function fromRow(r: ContractRow): Contract {
   };
 }
 
-export async function listContracts(): Promise<Contract[]> {
+/** Your own contracts, or with company: true, the company's (Admin). Filtered here so it works before the is_company column exists. */
+export async function listContracts({ company = false } = {}): Promise<Contract[]> {
   const { data, error } = await supabase.from("contracts" as never).select("*, contract_parties(*)").order("updated_at", { ascending: false });
   if (error) throw error;
-  return ((data ?? []) as unknown as ContractRow[]).map(fromRow);
+  return ((data ?? []) as unknown as ContractRow[]).map(fromRow).filter((c) => !!c.isCompany === company);
 }
 
 /** Saves a draft and its parties. Sent and signed contracts are frozen by the database, so only drafts come here. */
@@ -62,8 +65,8 @@ export async function saveContract(c: Contract): Promise<Contract> {
     const { error } = await supabase.from("contracts" as never).update({ ...row, updated_at: new Date().toISOString() } as never).eq("id", id);
     if (error) throw error;
   } else {
-    const { data, error } = await supabase.from("contracts" as never).insert(row as never).select("id").single();
-    if (error) throw error;
+    const { data, error } = await supabase.from("contracts" as never).insert((c.isCompany ? { ...row, is_company: true } : row) as never).select("id").single();
+    if (error) throw new Error(c.isCompany && /is_company/.test(error.message) ? "Company contracts need the latest database update. Run migration 20261022170000 in the Supabase SQL editor." : error.message);
     id = (data as { id: string }).id;
   }
   const keep = new Set(c.parties.map((p) => p.id).filter(Boolean));
@@ -140,3 +143,24 @@ export async function listReceivedContracts(): Promise<ReceivedContract[]> {
 export const contractLink = (partyId: string) => `${window.location.origin}/contract/${partyId}`;
 
 export const isValidEmail = (e: string) => /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(e.trim());
+
+const templateKey = (blueprintId: string) => `company_template_${blueprintId}`;
+
+/** Super admins' own wording for company templates, by blueprint id (site_settings; staff-readable, super-admin-writable). */
+export async function loadCompanyTemplates(): Promise<Record<string, string>> {
+  const { data } = await supabase.from("site_settings").select("id, content").like("id", "company_template_%");
+  const out: Record<string, string> = {};
+  for (const r of data ?? []) {
+    const body = (r.content as { body?: unknown } | null)?.body;
+    if (typeof body === "string" && body.trim()) out[r.id.replace("company_template_", "")] = body;
+  }
+  return out;
+}
+
+/** Saves a company template's wording for every future contract from it. An empty body goes back to the original. */
+export async function saveCompanyTemplate(blueprintId: string, body: string) {
+  const { error } = body.trim()
+    ? await supabase.from("site_settings").upsert({ id: templateKey(blueprintId), content: { body } as never, updated_at: new Date().toISOString() })
+    : await supabase.from("site_settings").delete().eq("id", templateKey(blueprintId));
+  if (error) throw new Error("Couldn't save the template.");
+}

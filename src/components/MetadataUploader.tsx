@@ -301,8 +301,8 @@ export function MetadataUploader({ stageName, avatar, userId, mode = "embed", on
       <div className="mb-6 flex flex-wrap items-end justify-between gap-3">
         <div className="flex flex-wrap items-center gap-3">
           <h1 className="text-2xl font-bold">{full ? (editingId ? "Edit track" : adding ? "Add a song" : "My Catalog") : "Embed Metadata"}</h1>
-          {userId && !editingId && !adding && <NextBadgeHint userId={userId} collections={full ? ["core", "lyrics", "hiphop", "spiritual", "night"] : ["core", "lyrics", "producer", "live"]} />}
         </div>
+        {userId && !editingId && !adding && <NextBadgeHint userId={userId} collections={full ? ["core", "lyrics", "hiphop", "spiritual", "night"] : ["core", "lyrics", "producer", "live"]} />}
         {full && userId && !editingId && !adding ? (
           <DropdownMenu>
             <DropdownMenuTrigger asChild><Button type="button"><Plus />Add song</Button></DropdownMenuTrigger>

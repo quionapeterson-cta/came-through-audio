@@ -11,13 +11,13 @@ import { Input } from "@/components/ui/input";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { InfoTip } from "@/components/InfoTip";
 import { listTracks, type CatalogTrack } from "@/lib/catalog";
-import { BLUEPRINTS, CONTRACT_DISCLAIMER, blueprintById, renderContract, type Blueprint } from "@/lib/contract-blueprints";
+import { BLUEPRINTS, COMPANY_BLUEPRINTS, COMPANY_LEGAL_NAME, CONTRACT_DISCLAIMER, blueprintById, renderContract, type Blueprint } from "@/lib/contract-blueprints";
 import { downloadContractPdf } from "@/lib/contract-pdf";
 import { sendContractInvite } from "@/lib/contracts-email.functions";
 import { NextBadgeHint } from "@/components/Badges";
 import { logBadgeEvent } from "@/lib/badge-events";
 import {
-  contractLink, deleteContract, emptyParty, isValidEmail, listContracts, listReceivedContracts, reopenContract, saveContract, sendContract, signContract,
+  contractLink, deleteContract, emptyParty, isValidEmail, listContracts, listReceivedContracts, loadCompanyTemplates, reopenContract, saveCompanyTemplate, saveContract, sendContract, signContract,
   type Contract, type ContractParty, type ReceivedContract,
 } from "@/lib/contracts";
 
@@ -34,17 +34,22 @@ const STATUS: Record<Contract["status"], { label: string; className: string }> =
  * request signatures, and keep fully signed contracts in the vault. Creating requires Catalog Management;
  * contracts other people send you are always visible, since signing is free.
  */
-export function Contracts({ userId, unlocked, onUpgrade }: { userId: string; unlocked: boolean; onUpgrade: () => void }) {
+export function Contracts({ userId, unlocked, onUpgrade, company = false }: { userId: string; unlocked: boolean; onUpgrade: () => void; /** Admin → Company Contracts: the LLC's own agreements and templates. */ company?: boolean }) {
   const [view, setView] = useState<View>("blueprints");
   const [contracts, setContracts] = useState<Contract[]>([]);
   const [received, setReceived] = useState<ReceivedContract[]>([]);
   const [tracks, setTracks] = useState<CatalogTrack[]>([]);
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState<Contract | null>(null);
+  const [templates, setTemplates] = useState<Record<string, string>>({});
+  /** Company templates with any wording a super admin saved in place of the original. */
+  const companyBlueprints = useMemo(() => COMPANY_BLUEPRINTS.map((bp) => templates[bp.id] ? { ...bp, body: templates[bp.id]! } : bp), [templates]);
+  const blueprintFor = (id: string) => (company ? companyBlueprints.find((b) => b.id === id) : undefined) ?? blueprintById(id);
 
   const load = async () => {
     setLoading(true);
-    const [c, r, t] = await Promise.allSettled([unlocked ? listContracts() : Promise.resolve([]), listReceivedContracts(), listTracks()]);
+    if (company) void loadCompanyTemplates().then(setTemplates).catch(() => {});
+    const [c, r, t] = await Promise.allSettled([unlocked ? listContracts({ company }) : Promise.resolve([]), company ? Promise.resolve([]) : listReceivedContracts(), company ? Promise.resolve([]) : listTracks()]);
     if (c.status === "fulfilled") setContracts(c.value);
     if (r.status === "fulfilled") setReceived(r.value);
     if (t.status === "fulfilled") setTracks(t.value);
@@ -59,11 +64,12 @@ export function Contracts({ userId, unlocked, onUpgrade }: { userId: string; unl
       blueprint: bp.id, title: bp.name, catalogId: null, fields: {}, body: "", status: "draft", bodyHash: "",
       sentAt: null, completedAt: null, updatedAt: new Date().toISOString(),
       parties: bp.roles.map((role, i) => emptyParty(role, i === 0)),
+      ...(company && { isCompany: true }),
     });
   };
 
   if (editing) {
-    return <ContractEditor userId={userId} initial={editing} tracks={tracks} onClose={() => { setEditing(null); void load(); }} />;
+    return <ContractEditor userId={userId} initial={editing} tracks={tracks} blueprint={blueprintFor(editing.blueprint)} onClose={() => { setEditing(null); void load(); }} />;
   }
 
   const open = contracts.filter((c) => c.status !== "signed");
@@ -73,9 +79,11 @@ export function Contracts({ userId, unlocked, onUpgrade }: { userId: string; unl
     <TooltipProvider delayDuration={100}>
       <div className="mt-6 space-y-6">
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <NextBadgeHint userId={userId} collections={["contracts"]} className="order-last" />
+          {!company && <NextBadgeHint userId={userId} collections={["contracts"]} className="order-last" />}
           <div className="inline-flex flex-wrap gap-1 rounded-lg bg-muted p-1" role="tablist" aria-label="Contracts">
-            {([["blueprints", "Blueprints", ScrollText], ["contracts", "My Contracts", FileSignature], ["vault", "Signed Vault", Vault]] as const).map(([id, label, Icon]) => (
+            {(company
+              ? [["blueprints", "Templates", ScrollText], ["contracts", "Drafts & out for signature", FileSignature], ["vault", "Signed", Vault]] as const
+              : [["blueprints", "Blueprints", ScrollText], ["contracts", "My Contracts", FileSignature], ["vault", "Signed Vault", Vault]] as const).map(([id, label, Icon]) => (
               <Button key={id} role="tab" aria-selected={view === id} size="sm" variant={view === id ? "default" : "ghost"} onClick={() => setView(id)}>
                 <Icon className="h-4 w-4" />{label}
                 {id === "contracts" && open.length > 0 && <span className="ml-1 opacity-70">{open.length}</span>}
@@ -86,18 +94,20 @@ export function Contracts({ userId, unlocked, onUpgrade }: { userId: string; unl
           {!unlocked && <Button size="sm" onClick={onUpgrade}><Lock className="h-4 w-4" />Unlock with Catalog Management</Button>}
         </div>
 
-        {view === "blueprints" && <Blueprints unlocked={unlocked} onUse={start} />}
+        {view === "blueprints" && (company
+          ? <CompanyTemplates blueprints={companyBlueprints} edited={templates} onUse={start} onSaved={() => void loadCompanyTemplates().then(setTemplates)} />
+          : <Blueprints unlocked={unlocked} onUse={start} />)}
 
         {view === "contracts" && (!unlocked ? (
           <Locked onUpgrade={onUpgrade} text="Build custom contracts from any blueprint, send them for e-signature and keep every signed copy in your vault." />
         ) : loading ? <Spinner /> : (
           <section className="space-y-4">
             <div className="flex flex-wrap items-center justify-between gap-3">
-              <p className="text-sm text-muted-foreground">Drafts and contracts waiting on signatures. Start a new one from any blueprint.</p>
+              <p className="text-sm text-muted-foreground">{company ? "Company agreements in progress and who still needs to sign. Start a new one from a template." : "Drafts and contracts waiting on signatures. Start a new one from any blueprint."}</p>
               <Button onClick={() => setView("blueprints")}><Plus className="h-4 w-4" />New contract</Button>
             </div>
             {open.length === 0
-              ? <Empty icon={FileSignature} text="No contracts yet. Pick a blueprint to create your first one." />
+              ? <Empty icon={FileSignature} text={company ? "No company agreements yet. Pick a template to send the first one." : "No contracts yet. Pick a blueprint to create your first one."} />
               : <ul className="grid gap-3">{open.map((c) => <ContractRow key={c.id} contract={c} onOpen={() => setEditing(c)} />)}</ul>}
           </section>
         ))}
@@ -105,12 +115,12 @@ export function Contracts({ userId, unlocked, onUpgrade }: { userId: string; unl
         {view === "vault" && (loading ? <Spinner /> : (
           <div className="space-y-6">
             <section className="rounded-2xl border border-border p-5">
-              <h3 className="mb-3 text-sm font-bold uppercase tracking-widest text-primary">Your signed contracts <span className="opacity-70">{signed.length}</span></h3>
+              <h3 className="mb-3 text-sm font-bold uppercase tracking-widest text-primary">{company ? "Signed company agreements" : "Your signed contracts"} <span className="opacity-70">{signed.length}</span></h3>
               {!unlocked ? <p className="text-sm text-muted-foreground">Contracts you create with Catalog Management are stored here once everyone signs.</p>
                 : signed.length === 0 ? <p className="text-sm text-muted-foreground">Fully signed contracts are locked and stored here, ready to download.</p>
                 : <ul className="grid gap-3">{signed.map((c) => <ContractRow key={c.id} contract={c} onOpen={() => setEditing(c)} />)}</ul>}
             </section>
-            <section className="rounded-2xl border border-border p-5">
+            {!company && <section className="rounded-2xl border border-border p-5">
               <h3 className="mb-3 text-sm font-bold uppercase tracking-widest text-primary">Sent to you <span className="opacity-70">{received.length}</span></h3>
               {received.length === 0 ? <p className="text-sm text-muted-foreground">Contracts other people ask you to sign show up here.</p> : (
                 <ul className="grid gap-2">
@@ -128,7 +138,7 @@ export function Contracts({ userId, unlocked, onUpgrade }: { userId: string; unl
                   ))}
                 </ul>
               )}
-            </section>
+            </section>}
           </div>
         ))}
       </div>
@@ -174,6 +184,54 @@ function Blueprints({ unlocked, onUse }: { unlocked: boolean; onUse: (bp: Bluepr
   );
 }
 
+/** Admin: company templates. Each can be used as is, or its wording changed for every agreement sent from it later. */
+function CompanyTemplates({ blueprints, edited, onUse, onSaved }: { blueprints: Blueprint[]; edited: Record<string, string>; onUse: (bp: Blueprint) => void; onSaved: () => void }) {
+  const [editingId, setEditingId] = useState<string>();
+  const [text, setText] = useState("");
+  const [busy, setBusy] = useState(false);
+  const original = (id: string) => COMPANY_BLUEPRINTS.find((b) => b.id === id)!.body;
+  const save = async (id: string, body: string) => {
+    setBusy(true);
+    try {
+      await saveCompanyTemplate(id, body === original(id) ? "" : body);
+      toast.success(body === original(id) ? "Template reset to the original wording." : "Template saved. New agreements from it use this wording.");
+      setEditingId(undefined);
+      onSaved();
+    } catch (e) { toast.error(e instanceof Error ? e.message : "Couldn't save the template."); }
+    finally { setBusy(false); }
+  };
+  return (
+    <section className="space-y-4">
+      <p className="flex items-start gap-2 rounded-xl border border-border bg-muted/50 p-3 text-sm text-muted-foreground"><AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-primary" />{CONTRACT_DISCLAIMER}</p>
+      <div className="grid gap-4 md:grid-cols-2">
+        {blueprints.map((bp) => (
+          <article key={bp.id} className={`flex flex-col rounded-2xl border p-5 ${editingId === bp.id ? "border-primary md:col-span-2" : "border-border"}`}>
+            <p className="text-xs font-bold uppercase tracking-widest text-primary">Company{edited[bp.id] ? " · your wording" : ""}</p>
+            <h3 className="mt-1 text-lg font-bold">{bp.name}</h3>
+            <p className="mt-1 text-sm text-muted-foreground">{bp.summary}</p>
+            {editingId === bp.id ? (
+              <div className="mt-4 space-y-3">
+                <p className="text-sm text-muted-foreground">Change the terms for every agreement you send from this template from now on. Agreements already sent keep the wording they were signed with. Keep the <code>{"{{…}}"}</code> blanks: they fill in from the details and parties.</p>
+                <textarea aria-label={`${bp.name} wording`} rows={22} value={text} onChange={(e) => setText(e.target.value)} className="w-full rounded-xl border border-input bg-background p-4 font-mono text-sm leading-relaxed" />
+                <div className="flex flex-wrap gap-2">
+                  <Button disabled={busy || !text.trim()} onClick={() => void save(bp.id, text)}>{busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}Save template</Button>
+                  <Button variant="ghost" disabled={busy} onClick={() => setEditingId(undefined)}>Cancel</Button>
+                  {edited[bp.id] && <Button variant="ghost" className="ml-auto" disabled={busy} onClick={async () => { if (await confirmAction({ title: "Go back to the original wording?", text: "Your changes to this template are removed. Agreements already sent don't change.", action: "Reset" })) void save(bp.id, original(bp.id)); }}><RotateCcw className="h-4 w-4" />Reset to original</Button>}
+                </div>
+              </div>
+            ) : (
+              <div className="mt-auto flex flex-wrap gap-2 pt-4">
+                <Button size="sm" variant="outline" onClick={() => { setText(bp.body); setEditingId(bp.id); }}><PenLine className="h-4 w-4" />Edit terms</Button>
+                <Button size="sm" onClick={() => onUse(bp)}><FileSignature className="h-4 w-4" />Use this template</Button>
+              </div>
+            )}
+          </article>
+        ))}
+      </div>
+    </section>
+  );
+}
+
 function ContractRow({ contract: c, onOpen }: { contract: Contract; onOpen: () => void }) {
   const done = c.parties.filter((p) => p.signedAt).length;
   return (
@@ -191,8 +249,8 @@ function ContractRow({ contract: c, onOpen }: { contract: Contract; onOpen: () =
   );
 }
 
-function ContractEditor({ userId, initial, tracks, onClose }: { userId: string; initial: Contract; tracks: CatalogTrack[]; onClose: () => void }) {
-  const bp = blueprintById(initial.blueprint) ?? BLUEPRINTS[0]!;
+function ContractEditor({ userId, initial, tracks, blueprint, onClose }: { userId: string; initial: Contract; tracks: CatalogTrack[]; blueprint?: Blueprint | undefined; onClose: () => void }) {
+  const bp = blueprint ?? blueprintById(initial.blueprint) ?? BLUEPRINTS[0]!;
   const [c, setC] = useState<Contract>(initial);
   const [customized, setCustomized] = useState(!!initial.body && initial.body !== renderContract(bp, initial.fields, initial.parties));
   const [busy, setBusy] = useState(false);
@@ -204,7 +262,8 @@ function ContractEditor({ userId, initial, tracks, onClose }: { userId: string; 
 
   useEffect(() => {
     void Promise.all([supabase.from("profiles").select("legal_name").eq("id", userId).maybeSingle(), supabase.auth.getUser()]).then(([{ data }, { data: auth }]) => {
-      const a = { email: auth.user?.email ?? "", legalName: data?.legal_name ?? "" };
+      // Company agreements are signed by the LLC, so its name is the owner party's legal name.
+      const a = { email: auth.user?.email ?? "", legalName: initial.isCompany ? COMPANY_LEGAL_NAME : data?.legal_name ?? "" };
       setAccount(a);
       if (initial.status === "draft") setC((x) => ({ ...x, parties: x.parties.map((p) => p.isOwner ? { ...p, email: a.email, legalName: p.legalName || a.legalName } : p) }));
     });

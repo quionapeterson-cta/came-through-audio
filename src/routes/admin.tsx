@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useEffect, useState, type ReactNode } from "react";
 import { ShieldCheck, Building2, FileSignature, Receipt, Users, ArrowLeft, Lock } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
+import { Contracts } from "@/components/Contracts";
 import { BrandLogo } from "@/components/BrandLogo";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -137,12 +138,13 @@ function AdminPage() {
               rows={d?.splits.map((s) => [s.collaborator_email, s.role, `${s.assigned_percentage}%`, s.is_owner ? "Owner" : "Collaborator", s.signed_at ? `Signed ${fmt(s.signed_at)}` : "Pending"])} />
           </TabsContent>
           <TabsContent value="purchases">
-            <Table head={["Type", "Mode", "Date"]} rows={d?.purchases.map((p) => [p.kind, p.environment, fmt(p.created_at)])} />
+            <Table head={["Type", "Mode", "Status", "Date"]} rows={d?.purchases.map((p) => [p.type, p.environment, p.status, fmt(p.created_at)])} />
           </TabsContent>
           {show("support") && <TabsContent value="support"><SupportTicketsPanel /></TabsContent>}
           {show("badges") && <TabsContent value="badges"><BadgeSwitchboard /></TabsContent>}
           {show("homepage") && <TabsContent value="homepage"><TestimonialFilterPanel /></TabsContent>}
           {show("tasks") && <TabsContent value="tasks"><TaskBankPanel departments={viewDepartments(access, view)} /></TabsContent>}
+          {show("company") && <TabsContent value="company"><Contracts userId={user.id} unlocked company onUpgrade={() => {}} /></TabsContent>}
           {show("plans") && <TabsContent value="plans"><PlansPanel /></TabsContent>}
         </Tabs>
         </>)}

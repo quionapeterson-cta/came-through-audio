@@ -106,13 +106,11 @@ export function SplitSheets({ userId, canSplit, canCollect, prefillTrackId, onUp
   return (
     <div className="mt-6 space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <div className="flex flex-wrap items-center gap-3">
-            <h2 className="text-2xl font-bold">Split Sheets</h2>
-            <NextBadgeHint userId={userId} collections={["splits"]} />
-          </div>
+        <div className="min-w-0 flex-1 basis-80">
+          <h2 className="text-2xl font-bold">Split Sheets</h2>
           <p className="text-sm text-muted-foreground">Create industry-standard split sheets from your catalog songs and sign as the owner. Collaborators receive an email invitation to review and sign, plus a free 30-day trial of the Catalog & Collaborate account.</p>
         </div>
+        <NextBadgeHint userId={userId} collections={["splits"]} />
       </div>
 
       {/* One glance row: the library you draw from on the left, what needs attention and what's done on the right.
@@ -333,7 +331,7 @@ function SplitEditor({ userId, track, initial, canCollect, onUpgrade, onClose, o
       toast.success("Split sheet saved.");
       // Splits change over time: offer to carry the new percentages back to the catalog, never automatically.
       const updated = catalogWithSplits(track, collaborators);
-      if (updated && (await confirmAction({ title: "Update My Catalog too?", text: `These splits differ from "${track.title}" in My Catalog. Update the catalog's split percentages to match? Names, roles and everything else stay as they are.`, action: "Update catalog" }))) {
+      if (updated && (await confirmAction({ title: "Update My Catalog too?", text: `These splits differ from "${track.title}" in My Catalog. Update the catalog's split percentages to match? Names, roles and everything else stay as they are.`, action: "Update catalog", tone: "primary" }))) {
         await saveTrack(updated, userId, track.id).then(() => toast.success("My Catalog updated.")).catch(() => toast.error("Split sheet saved, but My Catalog could not be updated."));
       }
       onSaved();
@@ -471,7 +469,8 @@ function SplitEditor({ userId, track, initial, canCollect, onUpgrade, onClose, o
                     </Button>
                   )
                 ) : !canCollect ? (
-                  <Button size="sm" variant="outline" onClick={onUpgrade} title="Collaborator e-signature requests are included with Catalog & Collaborate">
+                  <Button size="sm" variant="outline" className="opacity-60" title="Collaborator e-signature requests are included with Catalog & Collaborate"
+                    onClick={() => void confirmAction({ title: "Collect e-signatures with Catalog & Collaborate", text: "Email collaborators a secure link to sign your split sheet. Upgrade to Catalog & Collaborate to send signature requests.", action: "See upgrade", cancel: "Not now", tone: "primary" }).then((go) => go && onUpgrade())}>
                     <Lock className="h-4 w-4" /> Request e-signature
                   </Button>
                 ) : c.invitedAt && c.rowId ? (

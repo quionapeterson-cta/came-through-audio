@@ -7,7 +7,7 @@ export type BlueprintField = { key: string; label: string; placeholder?: string;
 export type Blueprint = {
   id: string;
   name: string;
-  category: "Production" | "Performance" | "Visual" | "Label";
+  category: "Production" | "Performance" | "Visual" | "Label" | "Company";
   summary: string;
   whenToUse: string;
   keyTerms: string[];
@@ -31,6 +31,42 @@ const GENERAL = `GENERAL TERMS
 {{n}}.5 Electronic signatures. The parties agree that electronic signatures, including typed signatures recorded by Came Through Audio with a time stamp and verification hash, are binding and have the same effect as handwritten signatures.`;
 
 const general = (n: number) => GENERAL.replaceAll("{{n}}", String(n));
+
+const RELEASE_TERMS = `PHOTO, VIDEO & TESTIMONIAL RELEASE
+
+This release is made on {{effectiveDate}} between {{party:Company}} ("Company") and {{party:Participant}} ("Participant").
+
+1. PERMISSION
+Participant grants Company and its successors the irrevocable, perpetual, worldwide, royalty-free right to use, reproduce, publish, display and distribute the following, in whole or in part: {{materials}} (the "Materials").
+
+2. TESTIMONIAL
+Participant approves this written testimonial for use with the Materials: "{{testimonial}}". Company will not change its meaning.
+
+3. USES
+Company may use the Materials in any media now known or later developed, including {{uses}}, to advertise and promote Company and its services.
+
+4. EDITING
+Company may crop, edit, shorten, caption and combine the Materials with other content, as long as the meaning of Participant's statements is not changed.
+
+5. CREDIT
+Where a name appears, Participant will be credited as {{credit}}. Company may also use the Materials without a name.
+
+6. CONSIDERATION
+In exchange for this release, Participant receives: {{consideration}}. Participant agrees this is the full compensation, and no royalties or further payments are owed.
+
+7. OWNERSHIP AND APPROVAL
+Company owns any photos and recordings it creates of Participant. Participant waives any right to inspect or approve final versions, except that the written testimonial will not be changed in meaning.
+
+8. NO OBLIGATION
+Company is allowed, but never required, to use the Materials.
+
+9. RELEASE OF CLAIMS
+Participant releases Company from claims for invasion of privacy, right of publicity or defamation arising from uses permitted here.
+
+10. AGE
+Participant confirms they are 18 or older. If not, a parent or legal guardian must also sign this release on their behalf.
+
+`;
 
 export const BLUEPRINTS: Blueprint[] = [
   {
@@ -346,41 +382,7 @@ ${general(7)}`,
       { key: "credit", label: "How they are credited", placeholder: "First name and city, e.g. \"Jordan, Atlanta\"", tip: "How the person's name appears next to their testimonial, if at all." },
       STATE,
     ],
-    body: `PHOTO, VIDEO & TESTIMONIAL RELEASE
-
-This release is made on {{effectiveDate}} between {{party:Company}} ("Company") and {{party:Participant}} ("Participant").
-
-1. PERMISSION
-Participant grants Company and its successors the irrevocable, perpetual, worldwide, royalty-free right to use, reproduce, publish, display and distribute the following, in whole or in part: {{materials}} (the "Materials").
-
-2. TESTIMONIAL
-Participant approves this written testimonial for use with the Materials: "{{testimonial}}". Company will not change its meaning.
-
-3. USES
-Company may use the Materials in any media now known or later developed, including {{uses}}, to advertise and promote Company and its services.
-
-4. EDITING
-Company may crop, edit, shorten, caption and combine the Materials with other content, as long as the meaning of Participant's statements is not changed.
-
-5. CREDIT
-Where a name appears, Participant will be credited as {{credit}}. Company may also use the Materials without a name.
-
-6. CONSIDERATION
-In exchange for this release, Participant receives: {{consideration}}. Participant agrees this is the full compensation, and no royalties or further payments are owed.
-
-7. OWNERSHIP AND APPROVAL
-Company owns any photos and recordings it creates of Participant. Participant waives any right to inspect or approve final versions, except that the written testimonial will not be changed in meaning.
-
-8. NO OBLIGATION
-Company is allowed, but never required, to use the Materials.
-
-9. RELEASE OF CLAIMS
-Participant releases Company from claims for invasion of privacy, right of publicity or defamation arising from uses permitted here.
-
-10. AGE
-Participant confirms they are 18 or older. If not, a parent or legal guardian must also sign this release on their behalf.
-
-${general(11)}`,
+    body: `${RELEASE_TERMS}${general(11)}`,
   },
   {
     id: "indie-label-license",
@@ -432,7 +434,48 @@ ${general(7)}`,
   },
 ];
 
-export const blueprintById = (id: string) => BLUEPRINTS.find((b) => b.id === id);
+/** The company's own legal name, the Company party on every company contract. */
+export const COMPANY_LEGAL_NAME = "Came Through Audio, LLC";
+
+const PRELAUNCH = (n: number) => `${n}. PRE-LAUNCH CONFIDENTIALITY
+Until Company publicly announces the launch of its service (or gives written permission first), Participant will not post, share, screenshot, record or describe the Came Through Audio app or its features. Company will hold the Materials and will not publish them before launch.
+
+`;
+
+/**
+ * Came Through Audio, LLC's own agreements, sent from Admin → Company Contracts (super admins only). Never shown in
+ * the customer blueprint list. Super admins can change a template's wording there (stored in site_settings).
+ */
+export const COMPANY_BLUEPRINTS: Blueprint[] = [
+  {
+    ...BLUEPRINTS.find((b) => b.id === "photo-video-release")!,
+    id: "company-testimonial-release",
+    category: "Company",
+    summary: "A homepage or marketing testimonial giver lets Came Through Audio use their photo, video, name and words, and keeps the app private until launch.",
+    whenToUse: "Send it to everyone whose testimonial, photo or video appears on the site or in marketing, including people already on the homepage.",
+    body: `${RELEASE_TERMS}${PRELAUNCH(11)}${general(12)}`,
+  },
+  {
+    id: "company-blank",
+    name: "Blank company agreement",
+    category: "Company",
+    summary: "Your own wording, signed through the same secure flow.",
+    whenToUse: "Any company agreement that doesn't have a template yet.",
+    keyTerms: ["Write the terms in your own words, then lock and send."],
+    roles: ["Company", "Participant"],
+    fields: [DATE, { key: "terms", label: "Terms", placeholder: "What each side agrees to", tip: "The agreement in plain language.", multiline: true }, STATE],
+    body: `AGREEMENT
+
+This agreement is made on {{effectiveDate}} between {{party:Company}} ("Company") and {{party:Participant}} ("Participant").
+
+1. TERMS
+{{terms}}
+
+${general(2)}`,
+  },
+];
+
+export const blueprintById = (id: string) => BLUEPRINTS.find((b) => b.id === id) ?? COMPANY_BLUEPRINTS.find((b) => b.id === id);
 
 /** Fills {{field}} and {{party:Role}} tokens. Anything left blank stays visible as a [Label] blank to fill in. */
 export function renderContract(bp: Blueprint, fields: Record<string, string>, parties: { role: string; legalName: string }[]) {

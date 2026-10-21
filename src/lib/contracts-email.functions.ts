@@ -2,6 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { emailLayout, escapeHtml } from "./email-layout";
+import { COMPANY_LEGAL_NAME } from "./contract-blueprints";
 
 const FROM = "Came Through Audio <collaborate@camethroughaudio.com>";
 const esc = escapeHtml;
@@ -33,12 +34,13 @@ export const sendContractInvite = createServerFn({ method: "POST" })
     const email = p.email.trim();
     if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) throw new Error("Add a valid email for this party first.");
 
-    const { data: contract } = await context.supabase.from("contracts" as never).select("title, status").eq("id", p.contract_id).maybeSingle();
-    const k = contract as { title: string; status: string } | null;
+    // "*" so this still works before the is_company column exists.
+    const { data: contract } = await context.supabase.from("contracts" as never).select("*").eq("id", p.contract_id).maybeSingle();
+    const k = contract as { title: string; status: string; is_company?: boolean } | null;
     if (!k || k.status !== "sent") throw new Error("Send the contract for signature first.");
 
     const { data: owner } = await context.supabase.from("profiles").select("stage_name, legal_name").eq("id", context.userId).maybeSingle();
-    const from = owner?.stage_name || owner?.legal_name || "A Came Through Audio member";
+    const from = k.is_company ? COMPANY_LEGAL_NAME : owner?.stage_name || owner?.legal_name || "A Came Through Audio member";
     const link = `${new URL(data.origin).origin}/contract/${p.id}`;
 
     const html = emailLayout(`<p style="font-size:12px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:#004AAD;margin:0">Contract Signature Request</p>
@@ -46,7 +48,7 @@ export const sendContractInvite = createServerFn({ method: "POST" })
 <p style="font-size:15px;line-height:1.6">${esc(from)} sent you a contract to sign as <b>${esc(p.role)}</b>.</p>
 <a href="${link}" style="display:inline-block;background:#004AAD;color:#ffffff;text-decoration:none;font-weight:700;padding:14px 28px;border-radius:8px">Review &amp; Sign</a>
 <p style="font-size:13px;line-height:1.6;color:#555;margin-top:24px"><b>Signing is always free.</b> Log in or create a free account with this email (<b>${esc(email)}</b>) to read the full contract and sign. Your signature is time-stamped and secured with a verification hash, and you can download the signed copy when everyone has signed. Take your time, and talk to an attorney if you have questions before signing.</p>
-`, { reason: `You're receiving this because ${from} listed you as a party on a contract in Came Through Audio.` });
+`, { reason: k.is_company ? `You're receiving this because ${from} asked you to review and sign an agreement with us.` : `You're receiving this because ${from} listed you as a party on a contract in Came Through Audio.` });
 
     const res = await fetch("https://api.resend.com/emails", {
       method: "POST",

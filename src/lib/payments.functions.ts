@@ -3,7 +3,7 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { createStripeClient, getStripeErrorMessage } from "@/lib/stripe.server";
 import { getPaymentsEnvironment } from "@/lib/payments-env";
 import { checkoutInput, planCheckout } from "@/lib/stripe-mapping";
-import { isActiveSub } from "@/lib/plans";
+import { isActiveSub, PRICE_TIER } from "@/lib/plans";
 
 /**
  * Sales tax on sales Came Through Audio, LLC makes directly (Expert Assistance). Stays off until Stripe Tax is
@@ -43,6 +43,67 @@ async function resolveOrCreateCustomer(
   return created.id;
 }
 
+type Stripe = ReturnType<typeof createStripeClient>;
+
+/**
+ * A billing-portal page where the customer confirms switching to the plan they picked: Stripe shows the prorated
+ * amount and takes the payment. Needs no plan switching set up in the portal settings: if Stripe asks for it, an
+ * app-owned portal configuration that allows it is used instead. Picking the plan they already have opens the portal.
+ */
+async function planSwitchUrl(stripe: Stripe, customer: string, subscriptionId: string, lookupKey: string, returnUrl: string) {
+  const [sub, prices] = await Promise.all([
+    stripe.subscriptions.retrieve(subscriptionId),
+    stripe.prices.list({ lookup_keys: [lookupKey], active: true, limit: 1 }),
+  ]);
+  const item = sub.items.data[0];
+  const price = prices.data[0];
+  if (!price) throw new Error("This item isn't available to buy yet. Contact support and we'll help right away.");
+  if (!item || item.price.id === price.id) return (await stripe.billingPortal.sessions.create({ customer, return_url: returnUrl })).url;
+  const flow = {
+    customer,
+    return_url: returnUrl,
+    flow_data: {
+      type: "subscription_update_confirm" as const,
+      subscription_update_confirm: { subscription: subscriptionId, items: [{ id: item.id, price: price.id, quantity: 1 }] },
+      after_completion: { type: "redirect" as const, redirect: { return_url: `${returnUrl}?checkout=success` } },
+    },
+  };
+  try {
+    return (await stripe.billingPortal.sessions.create(flow)).url;
+  } catch (e) {
+    console.warn("Plan switch with the default portal settings failed, retrying with the app's own:", getStripeErrorMessage(e));
+    return (await stripe.billingPortal.sessions.create({ ...flow, configuration: await planSwitchConfiguration(stripe) })).url;
+  }
+}
+
+/** The app's own portal configuration with plan switching on (made once, found again by its metadata). */
+async function planSwitchConfiguration(stripe: Stripe) {
+  const existing = await stripe.billingPortal.configurations.list({ active: true, limit: 100 });
+  const found = existing.data.find((c) => c.metadata?.["app"] === "cta_plan_switch");
+  if (found) return found.id;
+  const prices = await stripe.prices.list({ lookup_keys: Object.keys(PRICE_TIER), active: true, limit: 20 });
+  const byProduct = new Map<string, string[]>();
+  for (const p of prices.data) {
+    const product = typeof p.product === "string" ? p.product : p.product.id;
+    byProduct.set(product, [...(byProduct.get(product) ?? []), p.id]);
+  }
+  const created = await stripe.billingPortal.configurations.create({
+    metadata: { app: "cta_plan_switch" },
+    features: {
+      subscription_update: {
+        enabled: true,
+        default_allowed_updates: ["price"],
+        proration_behavior: "always_invoice",
+        products: [...byProduct].map(([product, ids]) => ({ product, prices: ids })),
+      },
+      subscription_cancel: { enabled: true, mode: "at_period_end" },
+      payment_method_update: { enabled: true },
+      invoice_history: { enabled: true },
+    },
+  });
+  return created.id;
+}
+
 /**
  * Starts a checkout for the signed-in user. The buyer, prices and quantities are set here from what they chose,
  * never taken from the browser. Returns an embedded-checkout client secret, or, for someone who already has a
@@ -65,12 +126,7 @@ export const createCheckoutSession = createServerFn({ method: "POST" })
           .order("created_at", { ascending: false });
         const current = subs?.find((s) => s.status !== "canceled" && isActiveSub(s));
         if (current?.stripe_customer_id && current.stripe_subscription_id) {
-          const params = { customer: current.stripe_customer_id, return_url: `${origin}/workspace` };
-          const portal = await stripe.billingPortal.sessions.create({
-            ...params,
-            flow_data: { type: "subscription_update", subscription_update: { subscription: current.stripe_subscription_id } },
-          }).catch(() => stripe.billingPortal.sessions.create(params)); // plan switching not turned on in the portal yet
-          return { portalUrl: portal.url };
+          return { portalUrl: await planSwitchUrl(stripe, current.stripe_customer_id, current.stripe_subscription_id, plan.items[0]!.lookupKey, `${origin}/workspace`) };
         }
       }
 

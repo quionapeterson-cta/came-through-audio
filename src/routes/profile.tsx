@@ -1,6 +1,6 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState, type FormEvent, type ReactNode } from "react";
-import { ArrowLeft, Check, LayoutGrid, LogOut, Pencil, Rows3 } from "lucide-react";
+import { ArrowLeft, ArrowUpCircle, Check, LayoutGrid, LogOut, Pencil, Rows3 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -114,8 +114,8 @@ function ProfilePage() {
               ...(plan?.periodEnd ? [[plan.cancelling ? "Ends" : "Renews", longDate(plan.periodEnd)] as [string, string]] : []),
               ["Member since", memberSince]]} />
             <div className="flex flex-wrap gap-3 border-t border-border pt-5">
-              {plan ? <ManageBilling /> : <Button asChild variant="outline"><Link to="/plans">See plans</Link></Button>}
-              {plan && <Button asChild variant="ghost"><Link to="/plans">Compare plans</Link></Button>}
+              {tier !== "management" && <Button asChild size="lg" className="w-full text-base font-bold"><Link to="/plans"><ArrowUpCircle />Upgrade plan</Link></Button>}
+              {plan && <ManageBilling />}
               <Button variant="outline" onClick={() => setPasswordOpen(true)}>Change password</Button>
               <Button variant="ghost" onClick={async () => { await supabase.auth.signOut(); navigate({ to: "/" }); }}><LogOut />Log out</Button>
             </div>

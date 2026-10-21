@@ -134,7 +134,7 @@ export function RoyaltyHealthCheck({ userId, canCatalog, onUpgrade, onFix, onFix
 
   return (
     <div className="space-y-6">
-      <NextBadgeHint userId={userId} collections={["health"]} />
+      <div className="flex justify-end"><NextBadgeHint userId={userId} collections={["health"]} /></div>
       <HealthReport {...actions} report={report} country={country} running={running} canCatalog={canCatalog} onEmbed={onEmbed} />
 
       <HealthChecklist rows={report.rows} country={country} statuses={statuses} onStatus={(x) => void updateStatus(x)} actions={actions}

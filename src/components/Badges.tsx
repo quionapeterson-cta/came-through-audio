@@ -10,7 +10,7 @@ import { useBadges } from "@/hooks/useBadges";
 import { badgePrefs, loadOnboarding, saveOnboarding, type Onboarding } from "@/lib/artist-profile";
 import { useServerFn } from "@tanstack/react-start";
 import { useQueryClient } from "@tanstack/react-query";
-import { BADGES, COLLECTIONS, METRIC_UNIT, TIER_LABEL, isBigTier, nextGoal, withArtist, type BadgeDef, type BadgePrefs, type CollectionId } from "@/lib/badges";
+import { BADGES, COLLECTIONS, TIER_LABEL, isBigTier, nextGoal, withArtist, type BadgeDef, type BadgePrefs, type CollectionId } from "@/lib/badges";
 import { markBadgesSeen } from "@/lib/badge-events";
 import { pickBadgeArt, type EarnedBadge } from "@/lib/badges.functions";
 
@@ -187,12 +187,12 @@ function UnlockPopup({ state, artist, more, onNext, share }: { state: BadgeState
 }
 
 const remaining = (s: BadgeState) => Math.max(0, s.badge.goal - s.count);
-const unitFor = (s: BadgeState, n: number) => {
-  const unit = METRIC_UNIT[s.badge.metric];
-  return unit ? `${n} more ${n === 1 ? unit[0] : unit[1]}` : null;
-};
 
-/** "3 more lyrics to Lyric Lover": the closest badge in these collections, linking to the profile shelf. */
+/**
+ * The closest badge in these collections, as a card: what it is called, how to earn it, and a bar filling up toward
+ * it (no counts, which read like song credits). Says "Badge" so nobody mistakes it for a real record certification.
+ * Links to the profile shelf.
+ */
 export function NextBadgeHint({ userId, collections, className = "" }: { userId: string; collections: CollectionId[]; className?: string }) {
   const { states } = useBadgeStates(userId);
   const prefs = badgePrefs(loadOnboarding(userId));
@@ -201,12 +201,19 @@ export function NextBadgeHint({ userId, collections, className = "" }: { userId:
     .filter((s) => collections.includes(s.badge.collection) && !prefs.hidden.includes(s.badge.collection) && !s.earned && !s.off)
     .sort((a, b) => remaining(a) / a.badge.goal - remaining(b) / b.badge.goal)[0];
   if (!next) return null;
-  const left = unitFor(next, remaining(next));
+  const pct = Math.round((Math.min(next.count, next.badge.goal) / next.badge.goal) * 100);
   return (
-    <Link to="/profile" hash="badges" className={`inline-flex items-center gap-3 rounded-full border border-border bg-card py-1 pl-1 pr-4 text-sm transition hover:border-primary ${className}`}>
-      <img src={next.badge.src} alt="" className="h-8 w-8 object-contain opacity-60 grayscale" />
-      <span><span className="font-semibold">{left ? `${left} to ${next.badge.title}` : `Next badge: ${next.badge.title}`}</span>
-        <span className="text-muted-foreground"> · {next.count}/{next.badge.goal}</span></span>
+    <Link to="/profile" hash="badges" aria-label={`Next badge: ${next.badge.title}. ${next.badge.milestone}. ${pct}% there.`}
+      className={`ml-auto flex w-full max-w-xs items-center gap-3 rounded-xl border border-border bg-card p-3 text-left transition hover:border-primary sm:w-72 ${className}`}>
+      <img src={next.badge.src} alt="" className="h-11 w-11 shrink-0 object-contain opacity-60 grayscale" />
+      <span className="min-w-0 flex-1 space-y-1">
+        <span className="block text-[10px] font-bold uppercase tracking-widest text-primary">Badge</span>
+        <span className="block truncate text-sm font-semibold leading-tight">{next.badge.title}</span>
+        <span className="block text-xs leading-snug text-muted-foreground">{next.badge.milestone}</span>
+        <span role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={pct} className="mt-1.5 block h-1.5 overflow-hidden rounded-full bg-muted">
+          <span className="block h-full rounded-full bg-primary transition-[width] duration-700" style={{ width: `${Math.max(pct, 4)}%` }} />
+        </span>
+      </span>
     </Link>
   );
 }
