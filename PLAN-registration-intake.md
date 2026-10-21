@@ -1,7 +1,7 @@
 # PLAN — Expert Registration Assistance: working checkout and a proper intake flow · v3
 
-Status: **awaiting approval. PRIORITY 1.**
-Source: founder testing notes, 2026-10-21. v2 (2026-10-21): founder answered Q1 (draft the agreement) and Q2 (users may pay for songs that aren't ready, but must complete and submit them before work starts); agency checklists researched (§5). v3 (2026-10-21): the system checks every paid song right after payment and alerts the user immediately with what to provide; agents register the songs themselves, no live assistance (§3).
+Status: **approved 2026-10-21 (Q3–8 answered). PRIORITY 1.** Build order: catalog fields + organized form first (with PLAN-catalog-organization §1), then readiness targets, then checkout fix + intake.
+Source: founder testing notes, 2026-10-21. v2 (2026-10-21): founder answered Q1 (draft the agreement) and Q2 (users may pay for songs that aren't ready, but must complete and submit them before work starts); agency checklists researched (§5). v3 (2026-10-21): the system checks every paid song right after payment and alerts the user immediately with what to provide; agents register the songs themselves, no live assistance (§3). v4 (2026-10-21): founder approved the agency checklists, the 5 catalog fields, song swaps, the agreement wording with the pre-launch clause, and the reminder schedule; uncataloged songs can be bought (§1); no turnaround promise (§3 step 6).
 
 ---
 
@@ -13,12 +13,12 @@ Source: founder testing notes, 2026-10-21. v2 (2026-10-21): founder answered Q1 
 - **Fix:** reproduce it in the preview, read the server log, and fix that path so it uses the same signed-in server call as plan checkout. Add a test for the expert checkout input.
 - **Founder check after the fix:** sandbox purchase with card 4242 4242 4242 4242.
 
-## 1. Songs must be in the catalog first (friendly redirect)
+## 1. Songs not in the catalog yet (v4)
 
-- Registration assistance only works from catalog songs, because agents export straight from the catalog.
-- If the catalog is empty: a friendly card instead of the order form:
-  > **Let's get your songs in first.** Registration starts from your catalog, so our agents have every detail in one place. Add your songs in My Catalog, then come back here.
-  > [Go to My Catalog]
+- Founder (v4): **songs that aren't cataloged yet can still be bought**, but they must be cataloged before we register them.
+- The order form lists catalog songs (§2) plus **"+ A song that isn't in my catalog yet"**: the user types its title (and artist, prefilled). Each one counts and is priced like any other song.
+- After payment these songs show ⚠️ **Add this song to My Catalog** (instant alert, §3 step 2), linking to Add song with the title filled in. Saving it links the new catalog song to the order, then it gets the normal readiness check.
+- If the catalog is empty, the order form still works; it shows a short note: "Registration runs from your catalog. You can pay now and add the songs to My Catalog right after."
 
 ## 2. Pick songs from the catalog (replaces the number box)
 
@@ -45,7 +45,7 @@ A numbered checklist that unlocks in order (later steps stay locked until earlie
    - **The MLC:** invite us as a user on the MLC Portal (Account → Users).
    - **SoundExchange:** add us as an authorized representative (SoundExchange Direct; a Letter of Direction may be needed).
    - Each card has a "Done" button and a "Need help?" link. Exact steps will be checked against each agency's current portal before this ships.
-6. **Status tracker:** Waiting on you → Queued → In progress → Registered, per song and per agency, updated by the agent. The user gets an email when each agency's registrations are done.
+6. **Status tracker:** Waiting on you → Pending → In progress → Registered, per song and per agency, updated by the agent. **No turnaround promise** (founder, v4): submitted songs show **Pending**, with "We register songs in the order they're submitted and email you as each one is filed." The user gets an email when each agency's registrations are done. Admin queue flags any order Pending for more than 30 days (internal target only, never shown to users).
 
 ## 4. Agent side: one-click agency exports
 
@@ -134,12 +134,12 @@ A customer agreement signed at intake step 3, built like the company templates (
 `src/components/ExpertAssistance.tsx`, `src/lib/stripe-mapping.ts`, `src/lib/checkout.ts`, **`src/lib/readiness.ts` (new `ascap` / `bmi` targets and agency items, per §5; rule change, needs approval)** + `readiness.test.ts`, `src/lib/metadata.ts` (5 new catalog-only fields), the My Catalog / Embed Metadata form (new fields + tooltips), `src/lib/agency-export.ts` (SoundExchange reads master ownership), `src/lib/contract-blueprints.ts` (Registration Authorization), admin route + new `registration_sessions` migration (status per song/agency, submitted snapshots, server-written), the payment webhook (runs the readiness check when an expert purchase confirms) + a new "songs need details" email through `emailLayout()`, a reminder job (run beside `src/routes/api/public/cron/trial-reminders.ts`). Live-session removal: the gateway confirmation and scheduling step in `ExpertAssistance.tsx`; the `expert_gateways` table and its existing rows are kept, just no longer written. AGENTS.md "Registration readiness" section gets the per-agency items added once approved.
 Touches writer/readiness/export code paths, so per AGENTS.md: confirm this file list before editing.
 
-## Questions
-1. ~~Agreement wording: draft or lawyer?~~ **Answered: draft it** (§6, needs your review).
-2. ~~Pay for songs that aren't ready?~~ **Answered: yes, but every song must be completed and submitted before work starts** (§3 step 2).
-3. Approve the per-agency checklists in §5, especially the **Required** items (for example: BMI requires duration and genre; The MLC requires an ISRC).
-4. Approve the 5 new catalog fields in §5.
-5. Before submitting, may a user swap a paid song for a different catalog song (same price)? Recommended: yes, until it's submitted.
-6. Agreement §6: any changes to the wording? And should the pre-launch confidentiality clause be included while we're pre-launch?
-7. Not-ready reminders: after 3 days, then weekly, until the songs are complete (§3 step 2). OK, or a different schedule?
-8. Turnaround: what should the status tracker promise after submission (for example "registrations are filed within 5 business days")?
+## Questions (all answered 2026-10-21)
+1. Agreement wording: **draft it** (§6).
+2. Pay for songs that aren't ready: **yes; each must be completed and submitted before work starts.**
+3. Agency checklists (§5): **approved.**
+4. 5 new catalog fields (§5): **approved**, placed in the organized catalog form (PLAN-catalog-organization §1).
+5. Swap a paid song before submitting: **yes.** Uncataloged songs can be bought too; they must be cataloged before we register (§1).
+6. Agreement wording: **approved, include the pre-launch confidentiality clause** while pre-launch.
+7. Reminders after 3 days, then weekly: **approved.**
+8. Turnaround: **no promise; submitted songs show Pending** (§3 step 6).
