@@ -8,14 +8,15 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { UpgradeLock } from "@/components/UpgradeLock";
 import { Badge } from "@/components/ui/badge";
-import { listTracks, type CatalogTrack } from "@/lib/catalog";
+import { listTracks, saveTrack, type CatalogTrack } from "@/lib/catalog";
 import { useServerFn } from "@tanstack/react-start";
 import { sendSplitInvite } from "@/lib/splits-email.functions";
 import { InfoTip } from "@/components/InfoTip";
-import { capShare } from "@/lib/splits-total";
+import { splitSummary } from "@/lib/splits-total";
 import { NextBadgeHint } from "@/components/Badges";
 import {
   SPLIT_ROLES,
+  catalogWithSplits,
   collaboratorsFromTrack,
   deleteSplitSheet,
   emptySplitCollaborator,
@@ -294,13 +295,17 @@ function SplitEditor({ userId, track, initial, canCollect, onUpgrade, onClose, o
       return;
     }
     try {
-      const next = collaborators.map((r, idx) => (idx === i ? { ...r, invitedAt: new Date().toISOString() } : r));
-      const saved = await saveSplitSheet(track.id, next.map((r) => ({ ...r, notes })));
+      // "Requested" only shows once the email really went out (the server records invited_at after sending).
+      const saved = await saveSplitSheet(track.id, collaborators.map((r) => ({ ...r, notes })));
       setCollaborators(saved);
-      const row = saved.find((r) => r.name === c.name && r.email === c.email);
-      if (!row?.rowId) return;
+      // saveSplitSheet returns the named rows in order, so this row is found by position, not by name/email
+      // (a trailing space in either used to make the lookup miss and the invite silently never sent).
+      const row = saved[collaborators.slice(0, i).filter((r) => r.name.trim()).length];
+      if (!row?.rowId) throw new Error("Save the split sheet first, then send the invite.");
       setSendingIndex(i);
       await sendInvite({ data: { rowId: row.rowId, origin: window.location.origin } });
+      const sentAt = new Date().toISOString();
+      setCollaborators((rows) => rows.map((r) => (r.rowId === row.rowId ? { ...r, invitedAt: sentAt } : r)));
       toast.success(`Signature request emailed to ${c.email}.`);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Could not send the signature request.");
@@ -326,6 +331,11 @@ function SplitEditor({ userId, track, initial, canCollect, onUpgrade, onClose, o
       await saveSplitSheet(track.id, collaborators.map((c) => ({ ...c, notes })));
       await saveContributors(userId, collaborators.map((c) => ({ name: c.name, kind: c.role, email: c.email, pro: c.pro, ipi: c.ipi, publisher: c.publisherName, label: "" }))).catch(() => {});
       toast.success("Split sheet saved.");
+      // Splits change over time: offer to carry the new percentages back to the catalog, never automatically.
+      const updated = catalogWithSplits(track, collaborators);
+      if (updated && (await confirmAction({ title: "Update My Catalog too?", text: `These splits differ from "${track.title}" in My Catalog. Update the catalog's split percentages to match? Names, roles and everything else stay as they are.`, action: "Update catalog" }))) {
+        await saveTrack(updated, userId, track.id).then(() => toast.success("My Catalog updated.")).catch(() => toast.error("Split sheet saved, but My Catalog could not be updated."));
+      }
       onSaved();
     } catch {
       toast.error("Could not save the split sheet.");
@@ -364,6 +374,7 @@ function SplitEditor({ userId, track, initial, canCollect, onUpgrade, onClose, o
           </div>
           <Badge variant="outline" className={statusBadge[status]!.className}>{statusBadge[status]!.label}</Badge>
         </div>
+        {!anySigned && <p className="mt-3 text-sm text-muted-foreground">Splits filled in from My Catalog. Things change: edit any split here.</p>}
 
         <div className="mt-6 space-y-3">
           {collaborators.map((c, i) => (
@@ -389,7 +400,7 @@ function SplitEditor({ userId, track, initial, canCollect, onUpgrade, onClose, o
                 <label className="space-y-1 text-sm">
                   <span className="inline-flex items-center font-medium">Split %<InfoTip term="split" /></span>
                   <input type="number" min={0} max={100} value={c.percentage || ""} disabled={!!c.signedAt}
-                    onChange={(e) => update(i, { percentage: Number(capShare(collaborators.map((r) => ({ percentage: String(r.percentage || "") })), i, e.target.value).value) || 0 })}
+                    onChange={(e) => update(i, { percentage: Math.min(100, Math.max(0, Number(e.target.value) || 0)) })}
                     className="w-full rounded-md border border-input bg-background px-3 py-2" placeholder="0" />
                 </label>
                 <div className="flex items-end gap-1">
@@ -494,7 +505,7 @@ function SplitEditor({ userId, track, initial, canCollect, onUpgrade, onClose, o
           <span className="font-semibold">Total ownership</span>
           <span className={`text-2xl font-bold ${totalOk ? "text-primary" : "text-destructive"}`}>{total}%</span>
         </div>
-        {!totalOk && <p className="mt-2 text-sm text-destructive">Splits must add up to exactly 100% before saving.</p>}
+        {!totalOk && <p className="mt-2 text-sm text-destructive">{splitSummary(collaborators.map((c) => ({ percentage: String(c.percentage || "") })))}<span className="block">Splits must add up to exactly 100% before saving.</span></p>}
 
         <label className="mt-6 block space-y-1 text-sm">
           <span className="font-semibold">Notes <span className="font-normal text-muted-foreground">— optional</span></span>

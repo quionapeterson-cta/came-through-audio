@@ -1,7 +1,7 @@
 import { supabase } from "@/integrations/supabase/client";
 import { requestBadgeCheck } from "@/lib/badge-events";
 import type { CatalogTrack } from "@/lib/catalog";
-import { PROS } from "@/lib/metadata";
+import { PROS, creditName, type Metadata } from "@/lib/metadata";
 import { registrationWriters } from "@/lib/readiness";
 
 export type SplitRole = "Writer" | "Composer" | "Author/Composer" | "Producer" | "Artist" | "Publisher";
@@ -83,6 +83,26 @@ export function collaboratorsFromTrack(track: CatalogTrack): SplitCollaborator[]
   for (const p of track.metadata.producers ?? []) push(p.name, "Producer", p.percentage, p.pro, p.ipi);
   if (!out.length && track.artist.trim()) out.push({ ...emptySplitCollaborator(), name: track.artist.trim(), role: "Artist", percentage: 100 });
   return out.length ? out : [emptySplitCollaborator()];
+}
+
+/**
+ * The track's catalog metadata with the split sheet's percentages copied onto the matching writer, composer and
+ * producer rows (matched by name, first match only, the same rows collaboratorsFromTrack read them from). Only
+ * percentages change: no row is added or removed. Returns null when nothing differs.
+ */
+export function catalogWithSplits(track: CatalogTrack, collaborators: SplitCollaborator[]): Metadata | null {
+  const m = track.metadata;
+  const groups = { writers: m.writers.map((r) => ({ ...r })), composers: m.composers.map((r) => ({ ...r })), producers: (m.producers ?? []).map((r) => ({ ...r })) };
+  const key = (name: string) => name.trim().toLowerCase();
+  let changed = false;
+  for (const c of collaborators) {
+    if (!c.name.trim()) continue;
+    const row = [...groups.writers, ...groups.composers, ...groups.producers].find((r) => key(creditName(r)) === key(c.name));
+    if (!row || Number(row.percentage || 0) === c.percentage) continue;
+    row.percentage = String(c.percentage);
+    changed = true;
+  }
+  return changed ? { ...m, ...groups } : null;
 }
 
 type SplitRow = {

@@ -40,7 +40,10 @@ describe("planCheckout", () => {
     const p = planCheckout(checkoutInput.parse({ kind: "ai", package: "Plus", trackIds: ids }), "me");
     expect(Object.values(p.metadata).every((v) => v.length <= 500)).toBe(true);
     expect(paidTrackIds([{ kind: "ai", details: p.metadata }])).toEqual(ids);
-    expect(() => checkoutInput.parse({ kind: "ai", package: "Single", trackIds: ids.slice(0, 2) })).toThrow();
+    expect(() => checkoutInput.parse({ kind: "ai", package: "Single", trackIds: ids.slice(0, 4) })).toThrow();
+    const singles = planCheckout(checkoutInput.parse({ kind: "ai", package: "Single", trackIds: ids.slice(0, 3) }), "me");
+    expect(singles.items).toEqual([{ lookupKey: "ai_protection_single", quantity: 3 }]);
+    expect(singles.metadata["songs"]).toBe("3");
   });
 
   it("prices Expert Assistance on the server and merges repeated prices into one line", () => {

@@ -1,13 +1,23 @@
 import { describe, expect, it } from "vitest";
-import { chainStrength, PACKAGES, proofFileError } from "./proof";
+import { certificateCredits, chainStrength, PACKAGES, packageFor, packagePrice, proofFileError } from "./proof";
 import { assistanceTotal } from "@/lib/plans";
 
 describe("proof rules", () => {
   it("days apart is a strong chain", () => expect(chainStrength(new Date("2026-01-01"), new Date("2026-01-04"))).toMatch(/^Strong/));
   it("same day is weak", () => expect(chainStrength(new Date("2026-01-01T10:00"), new Date("2026-01-01T10:00"))).toMatch(/^Weak/));
-  it("proof videos over 50MB are rejected", () => expect(proofFileError({ type: "video/mp4", size: 52_428_801 })).not.toBeNull());
-  it("50MB MP4 is accepted", () => expect(proofFileError({ type: "video/mp4", size: 52_428_800 })).toBeNull());
-  it("non-video rejected", () => expect(proofFileError({ type: "audio/mpeg", size: 10 })).not.toBeNull());
+  it("big phone videos are accepted", () => expect(proofFileError({ type: "video/quicktime", name: "IMG_1.MOV", size: 76 * 1048576 })).toBeNull());
+  it("videos over 1GB are rejected", () => expect(proofFileError({ type: "video/mp4", name: "a.mp4", size: 1_073_741_825 })).not.toBeNull());
+  it("blank file type is read from the extension", () => expect(proofFileError({ type: "", name: "clip.m4v", size: 10 })).toBeNull());
+  it("non-video rejected", () => expect(proofFileError({ type: "audio/mpeg", name: "a.mp3", size: 10 })).not.toBeNull());
+  it("singles stack up to 3 songs before the EP", () => {
+    expect([1, 2, 3, 4, 6, 7].map(packageFor)).toEqual(["Single", "Single", "Single", "EP", "EP", "Album"]);
+    expect([1, 2, 3].map((n) => packagePrice("Single", n))).toEqual([2.99, 5.98, 8.97]);
+    expect(packagePrice("EP", 4)).toBe(9.99);
+  });
+  it("credits: Singles count songs bought, packages their size, refunds nothing", () => expect(certificateCredits([
+    { kind: "ai", details: { package: "Single", songs: "3" } }, { kind: "ai", details: { package: "Single" } },
+    { kind: "ai", details: { package: "EP", songs: "4" } }, { kind: "ai", details: { package: "EP", refunded_at: "x" } },
+  ])).toBe(10));
   it("package prices", () => expect(PACKAGES.map((p) => p.price)).toEqual([2.99, 9.99, 16.99, 24.99]));
 });
 describe("registration assistance", () => {

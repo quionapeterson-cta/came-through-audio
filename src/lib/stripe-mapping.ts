@@ -40,10 +40,12 @@ export function planCheckout(input: CheckoutInput, userId: string): CheckoutPlan
     return { mode: "subscription", items: [{ lookupKey: input.priceId, quantity: 1 }], metadata: { userId }, managed: true };
   }
   if (input.kind === "ai") {
+    // Singles are bought per song (1–3); the other packages are one price for up to their song count.
+    const songs = input.package === "Single" ? Math.max(1, input.trackIds?.length ?? 0) : packageSongs(input.package);
     return {
       mode: "payment",
-      items: [{ lookupKey: `ai_protection_${input.package.toLowerCase()}`, quantity: 1 }],
-      metadata: { userId, kind: "ai", package: input.package, ...trackKeys(input.trackIds ?? []) },
+      items: [{ lookupKey: `ai_protection_${input.package.toLowerCase()}`, quantity: input.package === "Single" ? songs : 1 }],
+      metadata: { userId, kind: "ai", package: input.package, songs: String(songs), ...trackKeys(input.trackIds ?? []) },
       returnTab: "protect",
       managed: true,
     };

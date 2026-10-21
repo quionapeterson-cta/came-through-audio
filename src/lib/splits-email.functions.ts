@@ -77,7 +77,9 @@ export const sendSplitInvite = createServerFn({ method: "POST" })
     if (!res.ok) {
       const body = await res.text();
       console.error(`Resend failed [${res.status}]: ${body}`);
-      throw new Error(`Email could not be sent (${res.status}).`);
+      // Resend refuses mail from a domain it hasn't verified yet; say so instead of a bare status code.
+      if (res.status === 403 && /domain/i.test(body)) throw new Error("Email could not be sent: the camethroughaudio.com sending domain isn't verified in Resend yet. Copy the signing link and send it yourself for now.");
+      throw new Error(`Email could not be sent (${res.status}). Copy the signing link and send it yourself for now.`);
     }
     await sends().insert({ sender_id: context.userId, split_row_id: row.id, recipient_email: recipient } as never);
     await context.supabase.from("split_sheets").update({ invited_at: new Date().toISOString() }).eq("id", row.id);

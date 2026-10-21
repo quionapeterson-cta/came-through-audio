@@ -19,6 +19,7 @@ export async function saveCertificatePdf(c: Certificate) {
     `ISRC: ${c.isrc || "—"}   UPC: ${c.upc || "—"}   ISWC: ${c.iswc || "—"}`, `Chain: ${c.chain_strength ?? "—"}`,
     `DAW session SHA-256: ${c.session_hash ?? "—"}`, `Draft history SHA-256: ${c.notes_hash ?? "—"}`,
     `Proof manifest SHA-256: ${c.proof_digest ?? "—"}`,
+    "Keep your original proof videos: the fingerprints above match those exact files.",
     c.ots_receipt ? `Bitcoin timestamp: submitted via OpenTimestamps (${c.ots_calendar}); anchors within a few hours.` : "Bitcoin timestamp: not available",
     c.ots_receipt ? "Verify: upload the manifest .txt and .ots files at opentimestamps.org" : ""];
   let y = 36;

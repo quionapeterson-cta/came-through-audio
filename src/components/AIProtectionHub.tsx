@@ -21,7 +21,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
 import { NoteGuide, RecordGuide } from "@/components/ProofGuides";
-import { PACKAGES, MIN_PROOF_SECONDS, MAX_PROOF_SECONDS, MAX_PROOF_BYTES, sha256, videoDuration, proofFileError, PROOF_VIDEO_TYPES, packageFor, certificateCredits, paidTrackIds, type PackageId } from "@/lib/proof";
+import { PACKAGES, MIN_PROOF_SECONDS, MAX_PROOF_SECONDS, MAX_PROOF_BYTES, sha256, videoDuration, proofFileError, proofVideoType, PROOF_VIDEO_TYPES, packageFor, packagePrice, certificateCredits, paidTrackIds, DEVICE_ONLY, type PackageId } from "@/lib/proof";
 import { useServerFn } from "@tanstack/react-start";
 import { openCheckout, getPaymentsEnvironment } from "@/lib/checkout";
 import { stampDigest } from "@/lib/ots.functions";
@@ -35,7 +35,8 @@ import type { Purchase } from "@/hooks/useBilling";
 
 type WriterRole = "author" | "composer" | "both" | "producer";
 type WriterRow = { name: string; role: WriterRole };
-type Proof = { name: string; hash: string; path: string; size: number; created: number };
+/** A fingerprinted proof video. The backup copy uploads in the background; the fingerprint never waits for it. */
+type Proof = { name: string; hash: string; path?: string; size: number; created: number; backup: "saving" | "saved" | "device"; progress?: number | undefined };
 type Kind = "daw" | "drafts";
 /** What a proof box is doing right now, shown inline under its file picker. */
 type Status = { busy?: string; progress?: number; error?: string };
@@ -64,18 +65,28 @@ export function AIProtectionHub({ userId, purchases, justPaid, track }: { userId
   // Paid-for catalog songs that don't have a certificate yet (songs deleted from the catalog drop out).
   const waiting = useMemo(() => paidTrackIds(purchases).filter((id) => !protectedIds.has(id) && tracks.some((t) => t.id === id)), [purchases, certs, tracks]); // eslint-disable-line react-hooks/exhaustive-deps
   const trackById = (id: string) => tracks.find((t) => t.id === id);
+  // Songs picked at checkout vs. extra room left in an EP/Album package (any song can use it).
+  const paidSongs = paidTrackIds(purchases).length;
+  const openSlots = Math.max(0, left - waiting.length);
+  const creditLine = [
+    paidSongs > 0 && `${paidSongs} song${paidSongs === 1 ? "" : "s"} paid`,
+    waiting.length > 0 && `${waiting.length} waiting for proof`,
+    openSlots > 0 && `${openSlots} open slot${openSlots === 1 ? "" : "s"} for any song`,
+  ].filter(Boolean).join(" · ") || "All paid certificates used";
 
   // ---- Buying -------------------------------------------------------------------------------------------------
   const [picked, setPicked] = useState<string[]>(track ? [track.id] : []);
   const [pkg, setPkg] = useState<PackageId>("Single");
-  const [buyOpen, setBuyOpen] = useState(false);
+  // Open/closed is the user's choice once they toggle it; until then it starts open only before the first purchase.
+  const [buyOpen, setBuyOpen] = useState<boolean>();
+  const [certsOpen, setCertsOpen] = useState(true);
   useEffect(() => { if (track) { setPicked((p) => (p.includes(track.id) ? p : [...p, track.id])); setTarget(track.id); } }, [track]);
   const togglePick = (id: string) => {
     const next = picked.includes(id) ? picked.filter((x) => x !== id) : [...picked, id];
     if (next.length > PACKAGES[PACKAGES.length - 1]!.songs) return;
     setPicked(next); setPkg(packageFor(Math.max(1, next.length)));
   };
-  const price = PACKAGES.find((p) => p.id === pkg)!.price;
+  const price = packagePrice(pkg, picked.length);
   const needsSong = tracks.length > 0 && picked.length === 0;
   async function checkout() {
     try { await openCheckout({ kind: "ai", package: pkg, trackIds: picked }); }
@@ -142,7 +153,7 @@ export function AIProtectionHub({ userId, purchases, justPaid, track }: { userId
   const [issued, setIssued] = useState<Certificate>();
   function resetProof() {
     setDaw(undefined); setNotes(undefined); setDawFile(undefined); setDraftFile(undefined); setDraftNotes("");
-    setStatus({ daw: {}, drafts: {} }); setAttest(false); setChain(undefined); setDawDate(undefined);
+    setStatus({ daw: {}, drafts: {} }); setAttest(false); setChain(undefined); setDawDate(undefined); backups.current = {};
   }
   const scanned = !!chain;
   const grade = gradeProof(chain, dawDate);
@@ -151,28 +162,47 @@ export function AIProtectionHub({ userId, purchases, justPaid, track }: { userId
     : "Pending — Make sure both timestamps clearly visible in 1 video";
 
   const setKind = (kind: Kind, s: Status) => setStatus((all) => ({ ...all, [kind]: s }));
+  // The fingerprint and the date scan both use the original video on the device, so file size never blocks a
+  // certificate. Only the private backup copy has a storage limit; it uploads in the background.
   async function proof(file: File | undefined, kind: Kind, done: (p: Proof, file: File) => void) {
     if (!file) return;
     const fail = (error: string) => setKind(kind, { error });
-    if (PROOF_VIDEO_TYPES.includes(file.type) && file.size > MAX_PROOF_BYTES && file.size <= 400 * 1048576) {
-      setKind(kind, { busy: `Your video is ${Math.round(file.size / 1048576)}MB, so we're shrinking it to 720p. Keep this tab open and on screen.`, progress: 0 });
-      try { file = await compressTo720p(file, (p) => setKind(kind, { busy: "Shrinking to 720p. Keep this tab open and on screen.", progress: Math.round(p * 100) })); }
-      catch { return fail("Couldn't shrink this video. Try a shorter or lower-resolution recording."); }
-    }
     const bad = proofFileError(file);
     if (bad) return fail(bad);
     let d: number;
-    try { d = await videoDuration(file); } catch { return fail("That video could not be read. Try an MP4 or MOV file."); }
+    try { d = await videoDuration(file); } catch { return fail("That video could not be read on this device. Try an MP4 or MOV file."); }
     if (d < MIN_PROOF_SECONDS || d > MAX_PROOF_SECONDS) return fail(`This video is ${Math.round(d)} seconds. Proof videos can be ${MIN_PROOF_SECONDS}–${MAX_PROOF_SECONDS} seconds long.`);
-    setKind(kind, { busy: `Uploading and fingerprinting (${(file.size / 1048576).toFixed(1)}MB)…` });
+    setKind(kind, { busy: `Fingerprinting your video (${(file.size / 1048576).toFixed(1)}MB)…` });
     const hash = await sha256(await file.arrayBuffer());
-    const ext = file.name.split(".").pop()?.toLowerCase() || "mp4";
-    const path = `${userId}/${Date.now()}_${kind}.${ext}`;
-    const { error } = await supabase.storage.from("proof-videos").upload(path, file, { contentType: file.type });
-    if (error) return fail(`Upload failed: ${error.message}. Please try again.`);
     setKind(kind, {});
     setChain(undefined);
-    done({ name: file.name, hash, path, size: file.size, created: file.lastModified || Date.now() }, file);
+    done({ name: file.name, hash, size: file.size, created: file.lastModified || Date.now(), backup: "saving" }, file);
+    backups.current[kind] = saveBackup(file, kind, hash, d);
+  }
+
+  const backups = useRef<Partial<Record<Kind, Promise<string>>>>({});
+  const patchProof = (kind: Kind, hash: string, patch: Partial<Proof>) =>
+    (kind === "daw" ? setDaw : setNotes)((p) => (p?.hash === hash ? { ...p, ...patch } : p));
+  /** Stores a private backup copy (shrunk to 720p when over 50MB). Resolves to its path, or DEVICE_ONLY if it can't. */
+  async function saveBackup(file: File, kind: Kind, hash: string, seconds: number): Promise<string> {
+    try {
+      let copy = file;
+      if (file.size > MAX_PROOF_BYTES) {
+        // The shrink plays the video once in real time; give up (keeping the original on the device) if it stalls.
+        const limit = new Promise<never>((_, bad) => setTimeout(() => bad(new Error("timeout")), (seconds * 3 + 30) * 1000));
+        copy = await Promise.race([compressTo720p(file, (p) => patchProof(kind, hash, { progress: Math.round(p * 100) })), limit]);
+        if (copy.size > MAX_PROOF_BYTES) throw new Error("too big");
+      }
+      const ext = copy.name.split(".").pop()?.toLowerCase() || "mp4";
+      const path = `${userId}/${Date.now()}_${kind}.${ext}`;
+      const { error } = await supabase.storage.from("proof-videos").upload(path, copy, { contentType: proofVideoType(copy) ?? copy.type });
+      if (error) throw error;
+      patchProof(kind, hash, { backup: "saved", path, progress: undefined });
+      return path;
+    } catch {
+      patchProof(kind, hash, { backup: "device", progress: undefined });
+      return DEVICE_ONLY;
+    }
   }
 
   const scanMissing = [
@@ -198,6 +228,8 @@ export function AIProtectionHub({ userId, purchases, justPaid, track }: { userId
     if (detailsMissing.length || !daw || !notes || !scanned || !attest) return;
     setBusy(true);
     try {
+      // Usually finished long before this; waits only if a backup copy is still uploading.
+      const [dawPath, notesPath] = await Promise.all([backups.current.daw ?? daw.path ?? DEVICE_ONLY, backups.current.drafts ?? notes.path ?? DEVICE_ONLY]);
       const strength = `Grade ${grade} · ${chainStatus}${dawDate ? ` · DAW session dated ${dawDate}` : ""}`;
       const manifest = proofManifest({
         Track: f.title, Artist: f.artist, Writers: writers, Composers: composers, Producers: producers || "-",
@@ -213,7 +245,7 @@ export function AIProtectionHub({ userId, purchases, justPaid, track }: { userId
         legal_credits: { writers, composers, producers },
         isrc: f.isrc || null, upc: f.upc || null, iswc: f.iswc || null,
         session_hash: daw.hash, notes_hash: notes.hash, chain_strength: strength, attested: true,
-        session_video_url: daw.path, notes_proof_url: notes.path, manifest,
+        session_video_url: dawPath, notes_proof_url: notesPath, manifest,
         proof_digest: digest, ots_receipt: ots?.receipt ?? null, ots_calendar: ots?.calendar ?? null,
         blockchain_status: ots ? "pending_bitcoin" : "none",
       }).select("*").single();
@@ -228,6 +260,7 @@ export function AIProtectionHub({ userId, purchases, justPaid, track }: { userId
       const next = waiting.find((id) => id !== target);
       setTarget(next ?? MANUAL);
       if (target === MANUAL) { resetProof(); setF({ title: "", artist: "", isrc: "", upc: "", iswc: "" }); setWriterRows(blankWriters()); }
+      setCertsOpen(true);
       document.getElementById("my-certificates")?.scrollIntoView({ behavior: "smooth", block: "start" });
     } catch (e) { toast.error(e instanceof Error ? e.message : "Could not generate certificate."); }
     finally { setBusy(false); }
@@ -235,7 +268,7 @@ export function AIProtectionHub({ userId, purchases, justPaid, track }: { userId
 
   // Songs offered in step 1: paid-for songs first, then the rest of the catalog.
   const stepSongs = [...waiting.map(trackById).filter((t): t is CatalogTrack => !!t), ...tracks.filter((t) => !waiting.includes(t.id) && !protectedIds.has(t.id))];
-  const showBuy = !active || buyOpen;
+  const buyShown = buyOpen ?? !active;
 
   return (
     <section className="mx-auto mt-8 max-w-4xl space-y-6 pb-12">
@@ -250,7 +283,7 @@ export function AIProtectionHub({ userId, purchases, justPaid, track }: { userId
       </header>
 
       {/* 1 · My certificates */}
-      <Card id="my-certificates" title="My certificates" aside={credits > 0 && <span className="rounded-full border border-primary px-3 py-1 text-xs font-semibold text-primary">{left} of {credits} left to use</span>}>
+      <Card id="my-certificates" title="My certificates" open={certsOpen} onToggle={() => setCertsOpen(!certsOpen)} aside={credits > 0 && <span className="rounded-full border border-primary px-3 py-1 text-xs font-semibold text-primary">{creditLine}</span>}>
         {!certs ? <p className="text-sm text-muted-foreground">Loading…</p>
           : certs.length === 0 && waiting.length === 0 ? (
             <p className="text-sm text-muted-foreground">Your certificates will live here. Pick a song below, record your proof, and download your certificate any time.</p>
@@ -285,12 +318,16 @@ export function AIProtectionHub({ userId, purchases, justPaid, track }: { userId
       )}
 
       {/* 2 · Buy */}
-      {active && !buyOpen ? (
-        <button type="button" onClick={() => setBuyOpen(true)} className="flex w-full items-center justify-between rounded-2xl border border-border bg-card px-5 py-4 text-left text-sm font-semibold hover:border-primary">
-          <span className="flex items-center gap-2"><Plus className="h-4 w-4 text-primary" />Protect more songs</span><ChevronDown className="h-4 w-4" />
-        </button>
-      ) : showBuy && !confirming && (
-        <Card title="Protect a song" subtitle={tracks.length ? "Choose the songs from My Catalog. Their details fill in for you after checkout." : "No songs in My Catalog yet: choose a package and type each song's details after checkout."}>
+      {!confirming && (
+        <div className="rounded-2xl border border-border bg-card">
+          <button type="button" aria-expanded={buyShown} onClick={() => setBuyOpen(!buyShown)} className="flex w-full items-start justify-between gap-3 rounded-2xl p-5 text-left hover:bg-primary/5 sm:px-6">
+            <span className="space-y-1">
+              <span className="flex items-center gap-2 text-lg font-bold">{active && <Plus className="h-4 w-4 text-primary" />}{active ? "Protect more songs" : "Protect a song"}</span>
+              {buyShown && <span className="block text-sm text-muted-foreground">{tracks.length ? "Choose the songs from My Catalog. Their details fill in for you after checkout." : "No songs in My Catalog yet: choose a package and type each song's details after checkout."}</span>}
+            </span>
+            <ChevronDown className={`mt-1 h-5 w-5 shrink-0 transition ${buyShown ? "rotate-180" : ""}`} />
+          </button>
+          {buyShown && <div className="space-y-5 border-t border-border p-5 sm:p-6">
           {tracks.length > 0 && (
             <div className="grid max-h-72 gap-2 overflow-y-auto pr-1 sm:grid-cols-2">
               {tracks.map((t) => {
@@ -313,14 +350,14 @@ export function AIProtectionHub({ userId, purchases, justPaid, track }: { userId
                 <button key={p.id} type="button" disabled={tooSmall} onClick={() => setPkg(p.id)}
                   className={`rounded-xl border-2 p-3 text-left transition disabled:opacity-40 ${pkg === p.id ? "border-primary" : "border-border hover:border-primary/50"}`}>
                   <div className="text-sm font-semibold">{p.label.split(" · ")[0]}</div>
-                  <div className="text-xs text-muted-foreground">{p.songs === 1 ? "1 song" : `up to ${p.songs} songs`}</div>
-                  <div className="mt-1 text-lg font-bold text-primary">${p.price}</div>
+                  <div className="text-xs text-muted-foreground">{p.id === "Single" ? `$${p.price} per song, 1–${p.songs} songs` : `up to ${p.songs} songs`}</div>
+                  <div className="mt-1 text-lg font-bold text-primary">${p.id === "Single" ? packagePrice("Single", picked.length) : p.price}</div>
                 </button>
               );
             })}
           </div>
           <div className="flex flex-col gap-3 border-t border-border pt-4 sm:flex-row sm:items-center sm:justify-between">
-            <p className="text-sm text-muted-foreground">{picked.length ? `${picked.length} song${picked.length === 1 ? "" : "s"} selected` : needsSong ? "Select at least one song" : "Add song details after checkout"} · {PACKAGES.find((p) => p.id === pkg)!.label.split(" · ")[0]}</p>
+            <p className="text-sm text-muted-foreground">{picked.length ? `${picked.length} song${picked.length === 1 ? "" : "s"} selected` : needsSong ? "Select at least one song" : "Add song details after checkout"} · {pkg === "Single" ? `${Math.max(1, picked.length)} × Single` : PACKAGES.find((p) => p.id === pkg)!.label.split(" · ")[0]}{pkg === "Single" && picked.length === 3 ? " · a 4th song switches to the EP ($9.99 for up to 6)" : ""}</p>
             <Button size="lg" className="font-bold" disabled={needsSong} onClick={checkout}><Lock className="h-4 w-4" />Lock In Protection · ${price}</Button>
           </div>
           <details className="group rounded-xl border border-border">
@@ -337,7 +374,8 @@ export function AIProtectionHub({ userId, purchases, justPaid, track }: { userId
               ))}
             </div>
           </details>
-        </Card>
+          </div>}
+        </div>
       )}
 
       {/* 3 · Create the certificate */}
@@ -417,7 +455,7 @@ export function AIProtectionHub({ userId, purchases, justPaid, track }: { userId
 
               <Step n={5} title="Generate your certificate" done={false} last>
                 {(detailsMissing.length > 0 || !scanned) && <Checklist items={[...detailsMissing.map((m) => `${m} (step 1)`), ...(!scanned ? ["Run Scan & Rate (step 4)"] : [])]} />}
-                <Button size="lg" disabled={busy || detailsMissing.length > 0 || !scanned || scanMissing.length > 0} onClick={generate}>{busy ? <><Loader2 className="h-4 w-4 animate-spin" />Generating…</> : "Generate & download certificate"}</Button>
+                <Button size="lg" disabled={busy || detailsMissing.length > 0 || !scanned || scanMissing.length > 0} onClick={generate}>{busy ? <><Loader2 className="h-4 w-4 animate-spin" />{daw?.backup === "saving" || notes?.backup === "saving" ? "Finishing your backup copies…" : "Generating…"}</> : "Generate & download certificate"}</Button>
                 <p className="text-xs text-muted-foreground">You'll get the PDF certificate plus a manifest .txt and .ots file. Keep those two together: anyone can verify them at opentimestamps.org. All three stay downloadable under My certificates.</p>
               </Step>
             </ol>
@@ -428,14 +466,20 @@ export function AIProtectionHub({ userId, purchases, justPaid, track }: { userId
   );
 }
 
-function Card({ id, title, subtitle, aside, children }: { id?: string; title: string; subtitle?: string; aside?: React.ReactNode; children: React.ReactNode }) {
+/** A section card. With onToggle, the title row opens and closes it. */
+function Card({ id, title, subtitle, aside, open = true, onToggle, children }: { id?: string; title: string; subtitle?: string; aside?: React.ReactNode; open?: boolean; onToggle?: () => void; children: React.ReactNode }) {
+  const heading = <div className="space-y-1"><h2 className="text-lg font-bold">{title}</h2>{subtitle && <p className="text-sm text-muted-foreground">{subtitle}</p>}</div>;
   return (
     <div id={id} className="scroll-mt-24 space-y-5 rounded-2xl border border-border bg-card p-5 sm:p-6">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div className="space-y-1"><h2 className="text-lg font-bold">{title}</h2>{subtitle && <p className="text-sm text-muted-foreground">{subtitle}</p>}</div>
-        {aside}
-      </div>
-      {children}
+      {onToggle ? (
+        <button type="button" aria-expanded={open} onClick={onToggle} className="flex w-full flex-wrap items-center justify-between gap-3 text-left">
+          {heading}
+          <span className="flex items-center gap-3">{aside}<ChevronDown className={`h-5 w-5 shrink-0 transition ${open ? "rotate-180" : ""}`} /></span>
+        </button>
+      ) : (
+        <div className="flex flex-wrap items-start justify-between gap-3">{heading}{aside}</div>
+      )}
+      {open && children}
     </div>
   );
 }
@@ -472,13 +516,15 @@ function ProofBox({ title, tip, proof, status, on, children }: { title: string; 
     <div className="flex flex-col gap-3 rounded-xl border border-border p-4">
       <div className="flex items-center gap-2 font-semibold"><Video className="h-5 w-5 text-primary" />{title}</div>
       <p className="text-sm">{tip}</p>
-      <p className="text-xs text-muted-foreground">{MIN_PROOF_SECONDS}–{MAX_PROOF_SECONDS} second video (MP4, MOV or WebM). Stored privately; only its fingerprint is anchored to Bitcoin.</p>
-      <Input type="file" accept={PROOF_VIDEO_TYPES.join(",")} disabled={!!status.busy} onChange={(e) => { on(e.target.files?.[0]); e.target.value = ""; }} />
+      <p className="text-xs text-muted-foreground">{MIN_PROOF_SECONDS}–{MAX_PROOF_SECONDS} second video (MP4, MOV or WebM), any size. Stored privately; only its fingerprint is anchored to Bitcoin.</p>
+      <Input type="file" accept={[...PROOF_VIDEO_TYPES, ".mov", ".mp4", ".m4v", ".webm"].join(",")} disabled={!!status.busy} onChange={(e) => { on(e.target.files?.[0]); e.target.value = ""; }} />
       {status.busy && (
         <div className="space-y-2 text-xs"><p className="flex items-center gap-2 font-semibold"><Loader2 className="h-3.5 w-3.5 animate-spin text-primary" />{status.busy}</p>{status.progress !== undefined && <Progress value={status.progress} />}</div>
       )}
       {status.error && <p className="flex gap-2 text-xs font-semibold"><AlertTriangle className="h-4 w-4 shrink-0 text-primary" />{status.error}</p>}
-      {proof && !status.busy && <div className="space-y-1 rounded-md border border-primary/40 p-2 text-xs"><p className="font-semibold text-primary">Uploaded &amp; fingerprinted · {proof.name} · {(proof.size / 1048576).toFixed(1)}MB</p><p className="break-all text-muted-foreground">SHA-256: {proof.hash}</p></div>}
+      {proof && !status.busy && <div className="space-y-1 rounded-md border border-primary/40 p-2 text-xs"><p className="font-semibold text-primary">Fingerprinted · {proof.name} · {(proof.size / 1048576).toFixed(1)}MB</p><p className="break-all text-muted-foreground">SHA-256: {proof.hash}</p>
+        <p className="text-muted-foreground">{proof.backup === "saving" ? `Saving a private backup copy${proof.progress !== undefined ? ` · ${proof.progress}%` : ""}. You can keep going.`
+          : proof.backup === "saved" ? "Private backup copy saved." : "Keep this original video: its fingerprint is on your certificate. (We couldn't store a backup copy.)"}</p></div>}
       {children}
     </div>
   );
