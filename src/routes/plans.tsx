@@ -4,7 +4,7 @@ import { BrandLogo } from "@/components/BrandLogo";
 import { PlanComparison, planAction } from "@/components/PlanComparison";
 import { useAuth } from "@/hooks/useAuth";
 import { useBilling } from "@/hooks/useBilling";
-import { openCheckout } from "@/lib/paddle";
+import { openCheckout } from "@/lib/checkout";
 
 export const Route = createFileRoute("/plans")({
   head: () => ({
@@ -26,7 +26,7 @@ function PlansPage() {
   const { tier } = useBilling(user?.id);
   const buy = async (priceId: string) => {
     if (!user) { navigate({ to: "/", hash: "signup" }); return; }
-    try { await openCheckout({ items: [{ priceId, quantity: 1 }], email: user.email, customData: { userId: user.id } }); }
+    try { await openCheckout({ kind: "plan", priceId }); }
     catch (e) { toast.error(e instanceof Error ? e.message : "Checkout could not open."); }
   };
 

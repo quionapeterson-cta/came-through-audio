@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { getPaddleEnvironment } from "@/lib/paddle";
+import { getPaymentsEnvironment } from "@/lib/checkout";
 import { isActiveSub, tierFromPrice, type Tier } from "@/lib/plans";
 
 /** The plan in force: when it renews, or when it ends if it was cancelled. */
@@ -13,7 +13,7 @@ export function useBilling(userId: string | undefined) {
   const [purchases, setPurchases] = useState<Purchase[]>([]);
   const [loaded, setLoaded] = useState(false);
   const [plan, setPlan] = useState<PlanStatus>(null);
-  const env = getPaddleEnvironment();
+  const env = getPaymentsEnvironment();
 
   const load = useCallback(async () => {
     if (!userId) return;
@@ -29,7 +29,8 @@ export function useBilling(userId: string | undefined) {
     setTier(best);
     const row = live.find((r) => tierFromPrice(r.price_id) === best);
     setPlan(row ? { periodEnd: row.current_period_end, cancelling: !!row.cancel_at_period_end || row.status === "canceled" } : null);
-    setPurchases((buys.data ?? []) as Purchase[]);
+    // A fully refunded purchase no longer unlocks anything (the webhook marks it).
+    setPurchases(((buys.data ?? []) as Purchase[]).filter((p) => !p.details["refunded_at"]));
     if (!subs.error) setLoaded(true);
   }, [userId, env]);
 

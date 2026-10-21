@@ -1,11 +1,11 @@
-import { getPaddleEnvironment } from "@/lib/paddle";
+import { getPaymentsEnvironment } from "@/lib/checkout";
 import { TIER_LABEL, type Tier } from "@/lib/plans";
 
 type Props = { previewTier?: Tier | "real"; onPreviewTier?: ((t: Tier | "real") => void) | undefined };
 
 /** Test-mode notice. In sandbox only, also offers a preview-only tier switcher (never touches billing data). */
 export function PaymentTestModeBanner({ previewTier, onPreviewTier }: Props) {
-  if (getPaddleEnvironment() !== "sandbox") return null;
+  if (getPaymentsEnvironment() !== "sandbox") return null;
   return (
     <div className="flex w-full flex-wrap items-center justify-center gap-3 border-b border-caution bg-caution/20 px-4 py-2 text-center text-sm text-foreground">
       <span>

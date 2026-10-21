@@ -1,10 +1,14 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-import { type StripeEnv, createStripeClient, getStripeErrorMessage } from "@/lib/stripe.server";
+import { createStripeClient, getStripeErrorMessage } from "@/lib/stripe.server";
+import { getPaymentsEnvironment } from "@/lib/payments-env";
+import { checkoutInput, planCheckout } from "@/lib/stripe-mapping";
+import { isActiveSub } from "@/lib/plans";
 
-type CheckoutSessionResult = { clientSecret: string } | { error: string };
-
-const PRICE_ID = /^[a-zA-Z0-9_-]+$/;
+async function appOrigin() {
+  const { getRequest } = await import("@tanstack/react-start/server");
+  return new URL(getRequest().url).origin;
+}
 
 // Look up an existing Customer by userId metadata (then by email), or
 // create one. Putting userId on the Customer object is what makes later
@@ -12,168 +16,119 @@ const PRICE_ID = /^[a-zA-Z0-9_-]+$/;
 // depending on Session metadata, which is NOT searchable.
 async function resolveOrCreateCustomer(
   stripe: ReturnType<typeof createStripeClient>,
-  options: { email?: string; userId?: string },
+  options: { email?: string | undefined; userId: string },
 ): Promise<string> {
-  if (options.userId && !/^[a-zA-Z0-9_-]+$/.test(options.userId)) {
-    throw new Error("Invalid userId");
-  }
-  if (options.userId) {
-    const found = await stripe.customers.search({
-      query: `metadata['userId']:'${options.userId}'`,
-      limit: 1,
-    });
-    if (found.data.length) return found.data[0].id;
-  }
+  const found = await stripe.customers.search({ query: `metadata['userId']:'${options.userId}'`, limit: 1 });
+  if (found.data[0]) return found.data[0].id;
   if (options.email) {
     const existing = await stripe.customers.list({ email: options.email, limit: 1 });
-    if (existing.data.length) {
-      const customer = existing.data[0];
-      if (options.userId && customer.metadata?.userId !== options.userId) {
-        await stripe.customers.update(customer.id, {
-          metadata: { ...customer.metadata, userId: options.userId },
-        });
+    const customer = existing.data[0];
+    if (customer) {
+      if (customer.metadata?.["userId"] !== options.userId) {
+        await stripe.customers.update(customer.id, { metadata: { ...customer.metadata, userId: options.userId } });
       }
       return customer.id;
     }
   }
   const created = await stripe.customers.create({
     ...(options.email && { email: options.email }),
-    ...(options.userId && { metadata: { userId: options.userId } }),
+    metadata: { userId: options.userId },
   });
   return created.id;
 }
 
 /**
- * Creates an embedded-checkout session. Items use our human-readable price IDs (Stripe lookup keys).
- * customData (userId, kind, package, trackId…) is mirrored onto the Session as metadata so the
- * webhook can credit the right person and record one-time purchases.
+ * Starts a checkout for the signed-in user. The buyer, prices and quantities are set here from what they chose,
+ * never taken from the browser. Returns an embedded-checkout client secret, or, for someone who already has a
+ * plan, a billing-portal link to switch plans (prorated) so nobody pays for two plans.
  */
 export const createCheckoutSession = createServerFn({ method: "POST" })
-  .inputValidator((data: {
-    items: { priceId: string; quantity: number }[];
-    customerEmail?: string;
-    userId?: string;
-    customData?: Record<string, string>;
-    returnUrl: string;
-    environment: StripeEnv;
-  }) => {
-    if (!Array.isArray(data.items) || data.items.length === 0 || data.items.length > 10) throw new Error("No items to check out.");
-    for (const i of data.items) {
-      if (!PRICE_ID.test(i.priceId)) throw new Error("Invalid priceId");
-      if (!Number.isInteger(i.quantity) || i.quantity < 1 || i.quantity > 100) throw new Error("Invalid quantity");
-    }
-    if (data.userId && !PRICE_ID.test(data.userId)) throw new Error("Invalid userId");
-    const meta: Record<string, string> = {};
-    for (const [k, v] of Object.entries(data.customData ?? {})) {
-      if (!PRICE_ID.test(k) || typeof v !== "string" || v.length > 450) throw new Error("Invalid checkout data");
-      meta[k] = v;
-    }
-    return { ...data, customData: meta };
-  })
-  .handler(async ({ data }): Promise<CheckoutSessionResult> => {
-    try {
-      const stripe = createStripeClient(data.environment);
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d) => checkoutInput.parse(d))
+  .handler(async ({ data, context }): Promise<{ clientSecret: string } | { portalUrl: string }> => {
+    const env = getPaymentsEnvironment();
+    const stripe = createStripeClient(env);
+    const origin = await appOrigin();
+    const plan = planCheckout(data, context.userId);
 
-      // Resolve human-readable price IDs via lookup_keys.
-      const lineItems: { price: string; quantity: number }[] = [];
-      let isRecurring = false;
-      const productNames: string[] = [];
-      for (const item of data.items) {
-        const prices = await stripe.prices.list({ lookup_keys: [item.priceId] });
-        if (!prices.data.length) throw new Error(`Price not found: ${item.priceId}`);
-        const stripePrice = prices.data[0];
-        if (stripePrice.type === "recurring") isRecurring = true;
-        lineItems.push({ price: stripePrice.id, quantity: item.quantity });
-        const productId = typeof stripePrice.product === "string" ? stripePrice.product : stripePrice.product.id;
-        productNames.push((await stripe.products.retrieve(productId)).name);
+    try {
+      if (plan.mode === "subscription") {
+        const { data: subs } = await context.supabase.from("subscriptions")
+          .select("stripe_subscription_id, stripe_customer_id, status, current_period_end")
+          .eq("user_id", context.userId).eq("environment", env).not("stripe_subscription_id", "is", null)
+          .order("created_at", { ascending: false });
+        const current = subs?.find((s) => s.status !== "canceled" && isActiveSub(s));
+        if (current?.stripe_customer_id && current.stripe_subscription_id) {
+          const params = { customer: current.stripe_customer_id, return_url: `${origin}/workspace` };
+          const portal = await stripe.billingPortal.sessions.create({
+            ...params,
+            flow_data: { type: "subscription_update", subscription_update: { subscription: current.stripe_subscription_id } },
+          }).catch(() => stripe.billingPortal.sessions.create(params)); // plan switching not turned on in the portal yet
+          return { portalUrl: portal.url };
+        }
       }
 
-      const customerId = (data.customerEmail || data.userId)
-        ? await resolveOrCreateCustomer(stripe, { email: data.customerEmail, userId: data.userId })
-        : undefined;
+      // Resolve human-readable price IDs via lookup_keys.
+      const prices = await stripe.prices.list({ lookup_keys: plan.items.map((i) => i.lookupKey), active: true, expand: ["data.product"], limit: 20 });
+      const byKey = new Map(prices.data.map((p) => [p.lookup_key, p]));
+      const missing = plan.items.find((i) => !byKey.has(i.lookupKey));
+      if (missing) {
+        console.error(`Stripe price with lookup key ${missing.lookupKey} not found (${env})`);
+        throw new Error("This item isn't available to buy yet. Contact support and we'll help right away.");
+      }
+      const productNames = plan.items.map((i) => {
+        const product = byKey.get(i.lookupKey)!.product;
+        return typeof product === "object" && "name" in product ? product.name : i.lookupKey;
+      });
 
-      const metadata = { ...data.customData, ...(data.userId && { userId: data.userId }) };
+      const email = (context.claims as { email?: string }).email;
+      const customer = await resolveOrCreateCustomer(stripe, { email, userId: context.userId });
+      const back = `${origin}/workspace${plan.returnTab ? `?tab=${plan.returnTab}&` : "?"}checkout=success`;
+      const metadata = { ...plan.metadata, priceIds: plan.items.map((i) => i.lookupKey).join(",") };
 
       const session = await stripe.checkout.sessions.create({
-        line_items: lineItems,
-        mode: isRecurring ? "subscription" : "payment",
+        line_items: plan.items.map((i) => ({ price: byKey.get(i.lookupKey)!.id, quantity: i.quantity })),
+        mode: plan.mode,
         ui_mode: "embedded_page",
-        return_url: data.returnUrl,
-        ...(customerId && { customer: customerId }),
+        return_url: back,
+        customer,
+        client_reference_id: context.userId,
         // One-off charges: the product name lands on the Charge so the payments dashboard
         // shows it instead of "Unknown product". Subscriptions resolve names server-side.
-        ...(!isRecurring && { payment_intent_data: { description: productNames.join(" + ") } }),
+        ...(plan.mode === "payment" && { payment_intent_data: { description: productNames.join(" + ") } }),
         metadata: { ...metadata, managed_payments: "true" },
-        ...(data.userId && isRecurring && { subscription_data: { metadata: { userId: data.userId } } }),
+        ...(plan.mode === "subscription" && { subscription_data: { metadata: { userId: context.userId } } }),
         // Stripe handles tax, fraud protection, disputes and transaction support end-to-end.
         managed_payments: { enabled: true },
       } as Parameters<typeof stripe.checkout.sessions.create>[0]);
-
-      return { clientSecret: session.client_secret ?? "" };
-    } catch (error) {
-      return { error: getStripeErrorMessage(error) };
+      if (!session.client_secret) throw new Error("Stripe did not return a client secret");
+      return { clientSecret: session.client_secret };
+    } catch (e) {
+      console.error("Stripe checkout failed:", getStripeErrorMessage(e));
+      if (e instanceof Error && e.message.startsWith("This item")) throw e;
+      throw new Error("Checkout could not open. Try again, or contact support and we'll help right away.");
     }
   });
 
 /**
- * Switches the signed-in user's active plan to a new price, pro-rated and effective immediately
- * (upgrades charge the difference now; downgrades credit it). The webhook updates local access.
- */
-export const changePlan = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
-  .inputValidator((data: { priceId: string; environment: StripeEnv }) => {
-    if (!PRICE_ID.test(data.priceId)) throw new Error("Invalid priceId");
-    return data;
-  })
-  .handler(async ({ data, context }): Promise<{ ok: true } | { error: string }> => {
-    const { data: subs } = await context.supabase.from("subscriptions")
-      .select("stripe_subscription_id, price_id, status, current_period_end")
-      .eq("user_id", context.userId).eq("environment", data.environment)
-      .order("created_at", { ascending: false });
-    const row = (subs ?? []).find((s) => s.stripe_subscription_id
-      && (["active", "trialing", "past_due"].includes(s.status)
-        || (s.status === "canceled" && s.current_period_end && new Date(s.current_period_end) > new Date())));
-    if (!row?.stripe_subscription_id) return { error: "No active plan to change. Pick a plan to subscribe first." };
-    if (row.price_id === data.priceId) return { error: "That's already your plan." };
-    try {
-      const stripe = createStripeClient(data.environment);
-      const prices = await stripe.prices.list({ lookup_keys: [data.priceId] });
-      if (!prices.data.length) throw new Error("Price not found");
-      const sub = await stripe.subscriptions.retrieve(row.stripe_subscription_id);
-      const item = sub.items?.data?.[0];
-      if (!item) throw new Error("Subscription has no items");
-      await stripe.subscriptions.update(row.stripe_subscription_id, {
-        items: [{ id: item.id, price: prices.data[0].id }],
-        proration_behavior: "create_prorations",
-      });
-      return { ok: true };
-    } catch (error) {
-      return { error: getStripeErrorMessage(error) };
-    }
-  });
-
-/**
- * Opens the signed-in user's Stripe customer portal: cancel, update the card, see invoices. The subscription is
- * looked up through the caller's own session, so nobody can open someone else's billing.
+ * Opens the signed-in user's Stripe customer portal: cancel, update the card, see invoices, switch plans. The
+ * customer is looked up through the caller's own session, so nobody can open someone else's billing.
  */
 export const openBillingPortal = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((data: { environment: StripeEnv; returnUrl?: string }) => ({ environment: data.environment === "live" ? "live" as const : "sandbox" as const, returnUrl: data.returnUrl }))
-  .handler(async ({ data, context }): Promise<{ url: string } | { error: string }> => {
+  .handler(async ({ context }): Promise<{ url: string }> => {
+    const env = getPaymentsEnvironment();
     const { data: subs } = await context.supabase.from("subscriptions").select("stripe_customer_id")
-      .eq("user_id", context.userId).eq("environment", data.environment)
+      .eq("user_id", context.userId).eq("environment", env)
       .not("stripe_customer_id", "is", null)
       .order("created_at", { ascending: false }).limit(1);
-    const sub = subs?.[0];
-    if (!sub?.stripe_customer_id) return { error: "No plan to manage yet. Pick a plan first." };
+    const customer = subs?.[0]?.stripe_customer_id;
+    if (!customer) throw new Error("No plan to manage yet. Pick a plan first.");
     try {
-      const stripe = createStripeClient(data.environment);
-      const portal = await stripe.billingPortal.sessions.create({
-        customer: sub.stripe_customer_id,
-        ...(data.returnUrl && { return_url: data.returnUrl }),
-      });
+      const portal = await createStripeClient(env).billingPortal.sessions.create({ customer, return_url: `${await appOrigin()}/workspace` });
       return { url: portal.url };
-    } catch (error) {
-      return { error: getStripeErrorMessage(error) };
+    } catch (e) {
+      console.error("Stripe portal failed:", getStripeErrorMessage(e));
+      throw new Error("Billing couldn't open. Contact support and we'll help right away.");
     }
   });

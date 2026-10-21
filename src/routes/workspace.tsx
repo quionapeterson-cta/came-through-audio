@@ -26,7 +26,7 @@ import { PaymentTestModeBanner } from "@/components/PaymentTestModeBanner";
 import { toast } from "sonner";
 import { sendTrialEndingReminder } from "@/lib/collab-trial.functions";
 import { useBilling, type Purchase } from "@/hooks/useBilling";
-import { openCheckout, getPaddleEnvironment } from "@/lib/paddle";
+import { openCheckout, getPaymentsEnvironment } from "@/lib/checkout";
 import { PRICE_TIER, TIER_LABEL, hasTier, takePlanIntent, type Tier } from "@/lib/plans";
 import { PlanComparison, planAction } from "@/components/PlanComparison";
 import { BadgeWatcher } from "@/components/Badges";
@@ -68,7 +68,7 @@ function Workspace() {
   const { tier: realTier, purchases, loaded: billingLoaded } = useBilling(user?.id);
   const [previewTier, setPreviewTier] = useState<Tier | "real">("real");
   // The test-mode tier preview is for super admins only, so testers can't hand themselves a paid plan in the UI.
-  const staff = useQuery({ queryKey: ["staff-role", user?.id], queryFn: () => getStaffRole(), enabled: !!user && getPaddleEnvironment() === "sandbox" });
+  const staff = useQuery({ queryKey: ["staff-role", user?.id], queryFn: () => getStaffRole(), enabled: !!user && getPaymentsEnvironment() === "sandbox" });
   const canPreview = staff.data?.role === "super_admin";
   const tier: Tier = canPreview && previewTier !== "real" ? previewTier : realTier;
   // Free accounts may only sign invited split sheets (/sign/$token). Generating one starts at Plus; collecting
@@ -111,7 +111,7 @@ function Workspace() {
     const priceId = takePlanIntent();
     if (!priceId || hasTier(realTier, PRICE_TIER[priceId]!)) return;
     toast.info(`Opening checkout for ${TIER_LABEL[PRICE_TIER[priceId]!]}…`);
-    openCheckout({ items: [{ priceId, quantity: 1 }], email: user.email, customData: { userId: user.id } })
+    openCheckout({ kind: "plan", priceId })
       .catch((e) => toast.error(e instanceof Error ? e.message : "Checkout could not open. Use View Plans to try again."));
   }, [user, billingLoaded, realTier]);
 
@@ -121,7 +121,7 @@ function Workspace() {
 
   useEffect(() => {
     if (!user) return;
-    sendTrialEndingReminder({ data: { environment: getPaddleEnvironment(), origin: window.location.origin } })
+    sendTrialEndingReminder({ data: { environment: getPaymentsEnvironment(), origin: window.location.origin } })
       .then((r) => { if (r.sent) toast.info(`Your free Collaborate trial ends in ${r.daysLeft} day(s). We emailed you the details.`); })
       .catch(() => {});
   }, [user]);
@@ -169,7 +169,7 @@ function Workspace() {
               className="text-ink-muted hover:bg-ink-border hover:text-ink-foreground" onClick={studio.toggle}>
               {studio.on ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
             </Button>
-            <PlansDialog tier={tier} userId={user.id} email={user.email} />
+            <PlansDialog tier={tier} />
             <Button variant="ghost" size="icon" aria-label="Log out" className="text-ink-muted hover:bg-ink-border hover:text-ink-foreground"
               onClick={async () => { await supabase.auth.signOut(); navigate({ to: "/" }); }}>
               <LogOut className="h-4 w-4" />
@@ -199,9 +199,9 @@ function Workspace() {
             {!canCatalog ? <PlusLock title="My Catalog starts with Catalog Plus" onQuickCheck={openQuickCheck} onUpgrade={upgrade} /> : <>
             <MetadataUploader key={catalogKey} stageName={name} avatar={onboard?.avatar} userId={user.id} mode="catalog" canSplit={canSplit} canExport={canCollect} focus={catalogFix} onFocused={() => setCatalogFix(undefined)} onSplitSheet={(t) => { setSplitTrackId(t.id); setTab("splits"); }} onProtect={(t) => { setProtectTrack(t); setTab("protect"); }} /></>}
           </TabsContent>
-          <TabsContent value="protect"><AIProtectionHub userId={user.id} paid={hasAi} email={user.email} track={protectTrack} /></TabsContent>
+          <TabsContent value="protect"><AIProtectionHub userId={user.id} paid={hasAi} track={protectTrack} /></TabsContent>
           <TabsContent value="splits"><SplitSheets userId={user.id} canSplit={canSplit} canCollect={canCollect} prefillTrackId={splitTrackId} onUpgrade={upgrade} /></TabsContent>
-          <TabsContent value="health"><Health canCatalog={canCatalog} onFix={() => setTab("catalog")} onFixField={(trackId, field) => { setCatalogFix({ trackId, field }); setTab("catalog"); }} onEmbed={() => setTab("embed")} userId={user.id} email={user.email} purchases={purchases} canUtility={canCollect} onUpgrade={upgrade} /></TabsContent>
+          <TabsContent value="health"><Health canCatalog={canCatalog} onFix={() => setTab("catalog")} onFixField={(trackId, field) => { setCatalogFix({ trackId, field }); setTab("catalog"); }} onEmbed={() => setTab("embed")} userId={user.id} purchases={purchases} canUtility={canCollect} onUpgrade={upgrade} /></TabsContent>
           <TabsContent value="learn"><Learn userId={user.id} unlocked={hasTier(tier, "management")} onUpgrade={upgrade} /></TabsContent>
         </Tabs>
       </main>
@@ -249,9 +249,9 @@ function Learn({ userId, unlocked, onUpgrade }: { userId: string; unlocked: bool
   );
 }
 
-function PlansDialog({ tier, userId, email }: { tier: Tier; userId: string; email?: string | undefined }) {
+function PlansDialog({ tier }: { tier: Tier }) {
   const buy = async (priceId: string) => {
-    try { await openCheckout({ items: [{ priceId, quantity: 1 }], email, customData: { userId } }); }
+    try { await openCheckout({ kind: "plan", priceId }); }
     catch (e) { toast.error(e instanceof Error ? e.message : "Checkout could not open."); }
   };
   return (
@@ -290,7 +290,7 @@ function Masterclasses({ userId }: { userId: string }) {
   );
 }
 
-function Health({ canCatalog, onFix, onFixField, onEmbed, userId, email, purchases, canUtility, onUpgrade }: { canCatalog: boolean; userId: string; email?: string | undefined; purchases: Purchase[]; canUtility: boolean; onUpgrade: () => void; onFix: () => void; onFixField: (trackId: string, field: string) => void; onEmbed: () => void }) {
+function Health({ canCatalog, onFix, onFixField, onEmbed, userId, purchases, canUtility, onUpgrade }: { canCatalog: boolean; userId: string; purchases: Purchase[]; canUtility: boolean; onUpgrade: () => void; onFix: () => void; onFixField: (trackId: string, field: string) => void; onEmbed: () => void }) {
   // Three tools, one at a time, switched like Contracts & Masterclasses.
   const [view, setView] = useState<"check" | "expert" | "utility">("check");
   const views = [["check", "Health Check", Activity], ["expert", "Expert Help", Users], ["utility", "Utility Suite", Calculator]] as const;
@@ -301,7 +301,7 @@ function Health({ canCatalog, onFix, onFixField, onEmbed, userId, email, purchas
       </div>
       {view === "check" && <RoyaltyHealthCheck userId={userId} canCatalog={canCatalog} onUpgrade={onUpgrade} onFix={onFix} onFixField={onFixField} onEmbed={onEmbed}
         onExpert={() => { setView("expert"); window.scrollTo({ top: 0, behavior: "smooth" }); }} />}
-      {view === "expert" && <div id="expert-assistance"><ExpertAssistance userId={userId} email={email} purchases={purchases} onFix={onFixField} /></div>}
+      {view === "expert" && <div id="expert-assistance"><ExpertAssistance userId={userId} purchases={purchases} onFix={onFixField} /></div>}
       {view === "utility" && <RoyaltyUtilitySuite unlocked={canUtility} onUpgrade={onUpgrade} />}
     </div>
   );

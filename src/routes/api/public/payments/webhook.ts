@@ -1,6 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { createClient } from "@supabase/supabase-js";
-import { verifyWebhook, EventName, type PaddleEnv } from "@/lib/paddle.server";
+import type Stripe from "stripe";
+import { createStripeClient, verifyWebhook, type StripeEnv } from "@/lib/stripe.server";
+import { purchaseRow, subscriptionRow, type StripeSubscriptionLike } from "@/lib/stripe-mapping";
 
 let _sb: ReturnType<typeof createClient> | null = null;
 function db() {
@@ -8,67 +10,101 @@ function db() {
   return _sb;
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-async function subCreated(data: any, env: PaddleEnv) {
-  const userId = data.customData?.userId;
-  if (!userId) return console.error("No userId in customData");
-  const item = data.items[0];
-  const priceId = item.price.importMeta?.externalId;
-  const productId = item.product.importMeta?.externalId;
-  if (!priceId || !productId) return console.warn("Skipping subscription: missing importMeta.externalId");
-  await db().from("subscriptions").upsert({
-    user_id: userId, paddle_subscription_id: data.id, paddle_customer_id: data.customerId,
-    product_id: productId, price_id: priceId, status: data.status,
-    current_period_start: data.currentBillingPeriod?.startsAt, current_period_end: data.currentBillingPeriod?.endsAt,
-    environment: env, updated_at: new Date().toISOString(),
-  } as never, { onConflict: "paddle_subscription_id" });
+/** Writes the subscription's current state. Fetched fresh from Stripe so out-of-order events can't roll it back. */
+async function syncSubscription(env: StripeEnv, subscriptionId: string) {
+  const sub = await createStripeClient(env).subscriptions.retrieve(subscriptionId);
+  await saveSubscription(sub as unknown as StripeSubscriptionLike, env);
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-async function subUpdated(data: any, env: PaddleEnv) {
-  const item = data.items?.[0];
-  const priceId = item?.price?.importMeta?.externalId;
-  await db().from("subscriptions").update({
-    status: data.status,
-    ...(priceId ? { price_id: priceId, product_id: item.product?.importMeta?.externalId ?? undefined } : {}),
-    current_period_start: data.currentBillingPeriod?.startsAt, current_period_end: data.currentBillingPeriod?.endsAt,
-    cancel_at_period_end: data.scheduledChange?.action === "cancel", updated_at: new Date().toISOString(),
-  } as never).eq("paddle_subscription_id", data.id).eq("environment", env);
+async function saveSubscription(sub: StripeSubscriptionLike, env: StripeEnv, deleted = false) {
+  const row = subscriptionRow(sub, env, deleted);
+  if (!row) return console.warn(`Skipping subscription ${sub.id}: price has no plan lookup key`);
+  const userId = sub.metadata?.["userId"];
+  if (userId) {
+    const { error } = await db().from("subscriptions").upsert({ ...row, user_id: userId } as never, { onConflict: "stripe_subscription_id" });
+    if (error) throw error;
+  } else {
+    // Created outside our checkout (e.g. in the Stripe dashboard): only update a row we already know.
+    const { error } = await db().from("subscriptions").update(row as never).eq("stripe_subscription_id", sub.id);
+    if (error) throw error;
+  }
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-async function txCompleted(data: any, env: PaddleEnv) {
-  if (data.subscriptionId) return; // subscription payments handled above
-  const cd = data.customData ?? {};
-  if (!cd.userId || !cd.kind) return console.warn("One-time transaction without userId/kind");
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const priceIds = (data.items ?? []).map((i: any) => i.price?.importMeta?.externalId).filter(Boolean);
-  await db().from("purchases").upsert({
-    user_id: cd.userId, paddle_transaction_id: data.id, kind: cd.kind, price_ids: priceIds, details: cd, environment: env,
-  } as never, { onConflict: "paddle_transaction_id" });
+async function checkoutCompleted(session: Stripe.Checkout.Session, env: StripeEnv) {
+  if (session.mode === "subscription" && session.subscription) {
+    return syncSubscription(env, typeof session.subscription === "string" ? session.subscription : session.subscription.id);
+  }
+  const row = purchaseRow(session as Parameters<typeof purchaseRow>[0], env);
+  if (!row) return console.warn(`Checkout ${session.id} has no paid one-time purchase to record`);
+  const { error } = await db().from("purchases").upsert(row as never, { onConflict: "stripe_session_id" });
+  if (error) throw error;
+}
+
+/** Marks the one-time purchase paid by this charge as refunded (kept for history, no longer unlocks anything). */
+async function markRefunded(env: StripeEnv, charge: Stripe.Charge) {
+  const pi = typeof charge.payment_intent === "string" ? charge.payment_intent : charge.payment_intent?.id;
+  if (!pi) return;
+  const sessions = await createStripeClient(env).checkout.sessions.list({ payment_intent: pi, limit: 1 });
+  const sessionId = sessions.data[0]?.id;
+  if (!sessionId) return;
+  const { data: row } = await db().from("purchases").select("id, details").eq("stripe_session_id", sessionId).maybeSingle();
+  const purchase = row as { id: string; details: Record<string, string> } | null;
+  if (!purchase) return;
+  const { error } = await db().from("purchases")
+    .update({ details: { ...purchase.details, refunded_at: new Date().toISOString() } } as never).eq("id", purchase.id);
+  if (error) throw error;
+}
+
+/** Renewals: the invoice points at its subscription (location differs by Stripe API version). */
+function invoiceSubscriptionId(invoice: Stripe.Invoice): string | null {
+  const i = invoice as unknown as { subscription?: string | { id: string } | null; parent?: { subscription_details?: { subscription?: string | { id: string } } | null } | null };
+  const s = i.parent?.subscription_details?.subscription ?? i.subscription;
+  return typeof s === "string" ? s : s?.id ?? null;
 }
 
 export const Route = createFileRoute("/api/public/payments/webhook")({
   server: {
     handlers: {
       POST: async ({ request }) => {
-        const env = (new URL(request.url).searchParams.get("env") || "sandbox") as PaddleEnv;
+        const env: StripeEnv = new URL(request.url).searchParams.get("env") === "live" ? "live" : "sandbox";
+        let event: { type: string; data: { object: any } }; // eslint-disable-line @typescript-eslint/no-explicit-any
         try {
-          const event = await verifyWebhook(request, env);
-          switch (event.eventType) {
-            case EventName.SubscriptionCreated: await subCreated(event.data, env); break;
-            case EventName.SubscriptionUpdated: await subUpdated(event.data, env); break;
-            case EventName.SubscriptionCanceled:
-              await db().from("subscriptions").update({ status: "canceled", updated_at: new Date().toISOString() } as never)
-                .eq("paddle_subscription_id", (event.data as { id: string }).id).eq("environment", env);
+          event = await verifyWebhook(request, env);
+        } catch (e) {
+          console.error("Webhook signature check failed:", e);
+          return new Response("Invalid webhook signature", { status: 400 });
+        }
+        try {
+          switch (event.type) {
+            case "checkout.session.completed":
+              await checkoutCompleted(event.data.object, env);
               break;
-            case EventName.TransactionCompleted: await txCompleted(event.data, env); break;
-            default: console.log("Unhandled event:", event.eventType);
+            case "customer.subscription.created":
+            case "customer.subscription.updated":
+              await syncSubscription(env, event.data.object.id);
+              break;
+            case "customer.subscription.deleted":
+              await saveSubscription(event.data.object as unknown as StripeSubscriptionLike, env, true);
+              break;
+            case "invoice.paid": {
+              const id = invoiceSubscriptionId(event.data.object);
+              if (id) await syncSubscription(env, id);
+              break;
+            }
+            case "charge.refunded": {
+              const charge = event.data.object as Stripe.Charge;
+              // Only a full refund ends the purchase; partial refunds keep access.
+              if (charge.refunded) await markRefunded(env, charge);
+              break;
+            }
+            default:
+              console.log("Unhandled event:", event.type);
           }
           return Response.json({ received: true });
         } catch (e) {
-          console.error("Webhook error:", e);
-          return new Response("Webhook error", { status: 400 });
+          // 500 so Stripe retries later.
+          console.error(`Webhook ${event.type} failed:`, e);
+          return new Response("Webhook error", { status: 500 });
         }
       },
     },

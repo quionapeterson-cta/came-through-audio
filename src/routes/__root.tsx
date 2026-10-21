@@ -1,5 +1,6 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ConfirmHost } from "@/components/ConfirmHost";
+import { CheckoutHost } from "@/components/CheckoutHost";
 import {
   Outlet,
   Link,
@@ -166,6 +167,7 @@ function RootComponent() {
       <Outlet />
       <Toaster />
       <ConfirmHost />
+      <CheckoutHost />
     </QueryClientProvider>
   );
 }

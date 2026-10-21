@@ -22,7 +22,7 @@ import { Label } from "@/components/ui/label";
 import { NoteGuide, RecordGuide } from "@/components/ProofGuides";
 import { PACKAGES, MIN_PROOF_SECONDS, MAX_PROOF_SECONDS, MAX_PROOF_BYTES, sha256, videoDuration, proofFileError, PROOF_VIDEO_TYPES, type PackageId } from "@/lib/proof";
 import { useServerFn } from "@tanstack/react-start";
-import { openCheckout, getPaddleEnvironment } from "@/lib/paddle";
+import { openCheckout, getPaymentsEnvironment } from "@/lib/checkout";
 import { stampDigest } from "@/lib/ots.functions";
 import { scanDraftFrames } from "@/lib/draft-scan.functions";
 import { extractFrames, rateChain, gradeProof, compressTo720p, type ChainResult } from "@/lib/draft-chain";
@@ -34,7 +34,7 @@ type WriterRole = "author" | "composer" | "both" | "producer";
 type WriterRow = { name: string; role: WriterRole };
 type Proof = { name: string; hash: string; path: string; size: number; created: number };
 
-export function AIProtectionHub({ userId, paid, track, email }: { userId: string; paid: boolean; track?: CatalogTrack | undefined; email?: string | undefined }) {
+export function AIProtectionHub({ userId, paid, track }: { userId: string; paid: boolean; track?: CatalogTrack | undefined }) {
   const stamp = useServerFn(stampDigest);
   const [otsFile, setOtsFile] = useState<{ name: string; bytes: Uint8Array }>();
   const [f, setF] = useState({ title: "", artist: "", isrc: "", upc: "", iswc: "" });
@@ -121,11 +121,7 @@ export function AIProtectionHub({ userId, paid, track, email }: { userId: string
   const active = paid || unlocked;
   async function checkout() {
     try {
-      await openCheckout({
-        items: [{ priceId: `ai_protection_${pkg.toLowerCase()}`, quantity: 1 }], email,
-        customData: { userId, kind: "ai", package: pkg, ...(track ? { trackId: track.id } : {}) },
-        successUrl: `${window.location.origin}/workspace?tab=protect&checkout=success`,
-      });
+      await openCheckout({ kind: "ai", package: pkg, ...(track ? { trackId: track.id } : {}) });
     } catch (e) { toast.error(e instanceof Error ? e.message : "Checkout could not open."); }
   }
 
@@ -190,7 +186,7 @@ export function AIProtectionHub({ userId, paid, track, email }: { userId: string
     <section className="mx-auto mt-8 max-w-5xl space-y-8 pb-12">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-3"><ShieldCheck className="h-8 w-8 text-primary" /><h1 className="text-2xl font-bold">AI Protection Hub</h1></div>
-        {getPaddleEnvironment() === "sandbox" && !paid && (
+        {getPaymentsEnvironment() === "sandbox" && !paid && (
           <Button variant="outline" size="sm" onClick={() => setUnlocked((v) => !v)}>
             {unlocked ? "Exit test preview" : "Preview Proof Generator (Test Mode)"}
           </Button>

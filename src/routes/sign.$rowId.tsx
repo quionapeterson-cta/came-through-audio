@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button";
 import { ALL_PROS, getSplitInvite, signSplitInvite, type SplitInvite } from "@/lib/splits";
 import { useServerFn } from "@tanstack/react-start";
 import { grantCollaboratorTrial } from "@/lib/collab-trial.functions";
-import { getPaddleEnvironment } from "@/lib/paddle";
+import { getPaymentsEnvironment } from "@/lib/checkout";
 import { clearReturn, rememberReturn } from "@/lib/password";
 
 export const Route = createFileRoute("/sign/$rowId")({
@@ -44,7 +44,7 @@ function SignPage() {
       .then((d) => {
         setInvite(d); setPro(d?.pro ?? ""); setIpi(d?.ipi ?? "");
         clearReturn();
-        if (d) grantTrial({ data: { rowId, environment: getPaddleEnvironment() === "live" ? "live" : "sandbox" } })
+        if (d) grantTrial({ data: { rowId, environment: getPaymentsEnvironment() } })
           .then((r) => { if (r.granted) toast.success("Welcome! You've unlocked a free 30-day Catalog & Collaborate account."); })
           .catch(() => {});
       })

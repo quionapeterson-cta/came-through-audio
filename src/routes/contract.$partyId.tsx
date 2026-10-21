@@ -13,7 +13,7 @@ import { getContractInvite, signContract, type ContractInvite } from "@/lib/cont
 import { clearReturn, rememberReturn } from "@/lib/password";
 import { useServerFn } from "@tanstack/react-start";
 import { grantCollaboratorTrial } from "@/lib/collab-trial.functions";
-import { getPaddleEnvironment } from "@/lib/paddle";
+import { getPaymentsEnvironment } from "@/lib/checkout";
 
 export const Route = createFileRoute("/contract/$partyId")({
   head: () => ({
@@ -45,7 +45,7 @@ function ContractSignPage() {
       .then((d) => {
         setInvite(d); clearReturn();
         // Signers who open their invite get a one-time 30-day Catalog & Collaborate trial (fraud-guarded on the server).
-        if (d?.can_sign) grantTrial({ data: { partyId, environment: getPaddleEnvironment() === "live" ? "live" : "sandbox" } })
+        if (d?.can_sign) grantTrial({ data: { partyId, environment: getPaymentsEnvironment() } })
           .then((r) => { if (r.granted) toast.success("Welcome! You've unlocked a free 30-day Catalog & Collaborate account."); })
           .catch(() => {});
       })

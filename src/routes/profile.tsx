@@ -19,8 +19,7 @@ import { isBadgeImage } from "@/lib/badges";
 import { BadgeDetail, BadgeSettings, BadgeSettingsButton, BadgeShelf, BadgeWatcher, useBadgeStates, type BadgeState } from "@/components/Badges";
 import { creditName, writerRole, type Contributor } from "@/lib/metadata";
 import { TIER_LABEL } from "@/lib/plans";
-import { getPaddleEnvironment } from "@/lib/paddle";
-import { openBillingPortal } from "@/lib/payments.functions";
+import { openBilling } from "@/lib/checkout";
 import { passwordValid } from "@/lib/password";
 import { PasswordField } from "@/components/PasswordField";
 
@@ -221,18 +220,14 @@ function PasswordDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (
 
 const longDate = (iso: string) => new Date(iso).toLocaleDateString(undefined, { month: "long", day: "numeric", year: "numeric" });
 
-/** Opens Paddle's billing page for this account: cancel, change the card, download invoices. */
+/** Opens Stripe's billing page for this account: cancel, change the card, download invoices, switch plans. */
 function ManageBilling() {
   const [busy, setBusy] = useState(false);
   async function open() {
-    // Opened during the click so the browser allows the new tab, then pointed at the portal.
-    const tab = window.open("", "_blank");
     setBusy(true);
     try {
-      const { url } = await openBillingPortal({ data: { environment: getPaddleEnvironment() } });
-      if (tab) { tab.opener = null; tab.location.href = url; } else window.location.href = url;
+      await openBilling();
     } catch (e) {
-      tab?.close();
       toast.error(e instanceof Error ? e.message : "Billing couldn't open. Contact support and we'll help right away.");
     } finally { setBusy(false); }
   }

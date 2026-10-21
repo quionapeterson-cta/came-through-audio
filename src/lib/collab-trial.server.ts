@@ -133,7 +133,7 @@ export async function trialBlockReason(admin: Admin, o: { userId: string; invite
 
   const { data: subs } = await admin.from("subscriptions").select("price_id, status, current_period_end, paddle_subscription_id, environment").eq("user_id", o.inviterId).eq("environment", o.environment);
   const needed = o.source === "contract" ? "management" : "collaborate";
-  const paying = (subs ?? []).some((s) => !s.paddle_subscription_id.startsWith("collab_trial_") && isActiveSub(s) && hasTier(tierFromPrice(s.price_id), needed));
+  const paying = (subs ?? []).some((s) => !s.paddle_subscription_id?.startsWith("collab_trial_") && isActiveSub(s) && hasTier(tierFromPrice(s.price_id), needed));
   const { data: roles } = await admin.from("user_roles").select("role").eq("user_id", o.inviterId);
   if (!paying && !(roles ?? []).some((r) => r.role === "super_admin")) return "inviter is not a paying member";
 

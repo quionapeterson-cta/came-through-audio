@@ -6,8 +6,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { listTracks, type CatalogTrack } from "@/lib/catalog";
 import { registrationReadiness } from "@/lib/readiness";
-import { assistanceFees, assistanceItems, assistanceTotal } from "@/lib/plans";
-import { openCheckout } from "@/lib/paddle";
+import { assistanceFees, assistanceTotal } from "@/lib/plans";
+import { openCheckout } from "@/lib/checkout";
 import type { Purchase } from "@/hooks/useBilling";
 
 // Public registries only — SESAC is invitation-only and not offered.
@@ -24,7 +24,7 @@ export function toggleAgency(list: string[], a: string, on: boolean): string[] {
 /** Readiness comes from the shared check; PRO affiliation is only required when registering with ASCAP or BMI. */
 const proSession = (agencies: string[]) => agencies.some((a) => PRO_CHOICES.includes(a));
 
-export function ExpertAssistance({ userId, email, purchases, onFix }: { userId: string; email?: string | undefined; purchases: Purchase[]; onFix?: (trackId: string, field: string) => void }) {
+export function ExpertAssistance({ userId, purchases, onFix }: { userId: string; purchases: Purchase[]; onFix?: (trackId: string, field: string) => void }) {
   const [tracks, setTracks] = useState<CatalogTrack[]>([]);
   const [type, setType] = useState<"single" | "album">("single");
   const [count, setCount] = useState("1");
@@ -57,11 +57,7 @@ export function ExpertAssistance({ userId, email, purchases, onFix }: { userId: 
     if (!songs || !agencies.length) { toast.error("Choose your songs and at least one agency."); return; }
     setBusy(true);
     try {
-      await openCheckout({
-        items: assistanceItems(type, songs, agencies.length), email,
-        customData: { userId, kind: "expert", type, songs: String(type === "single" ? Math.min(songs, 6) : songs), agencies: agencies.join(" | ") },
-        successUrl: `${window.location.origin}/workspace?tab=health&checkout=success`,
-      });
+      await openCheckout({ kind: "expert", type, songs, agencies });
     } catch (e) { toast.error(e instanceof Error ? e.message : "Checkout could not open."); }
     finally { setBusy(false); }
   }
