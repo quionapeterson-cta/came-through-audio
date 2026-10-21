@@ -107,9 +107,9 @@ up front, non-refundable once started, catalog read-only), and the 30-day emptyi
 4. Approve the AGENTS.md exception wording (§8)?
 
 v2:
-5. Vault fee $1.99 per month, paid up front, non-refundable once the pause starts?
-6. Window for Need more time and Pause: from 30 days before renewal until a failed renewal is fixed?
-7. OK to turn off cancelling inside the Stripe portal so every cancel goes through the offers screen?
+5. Vault fee $1.99 per month, paid up front, non-refundable once the pause starts? **Yes (2026-10-21).**
+6. Window for Need more time and Pause: from 30 days before renewal until a failed renewal is fixed? **Answered 2026-10-21: from 30 days before renewal, through a failed renewal, and through the 30-day countdown to emptying (until the catalog is emptied).**
+7. OK to turn off cancelling inside the Stripe portal so every cancel goes through the offers screen? **Yes (2026-10-21).**
 
 ## Files
 New: migration (`catalog_lapses`), `src/lib/catalog-lapse.server.ts`, `src/routes/api/public/cron/catalog-lapses.ts`,
