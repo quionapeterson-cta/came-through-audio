@@ -60,16 +60,17 @@ export function mlcRows(tracks: CatalogTrack[]): (string | number)[][] {
 
 /**
  * Rows for the official SoundExchange Direct ISRC Ingest "Form" sheet (29 columns), one row per recording.
- * Following its instructions: 100% is written as 1 (the column is a percent), begin/end dates stay blank for
- * rights from inception in perpetuity, a self-released song uses the artist as label, and anything we don't
- * know (countries, recording date) stays blank rather than guessed.
+ * Following its instructions: the claim comes from the song's Master ownership (100% is written as 1, the column is a
+ * percent), begin/end dates stay blank for rights from inception in perpetuity, a self-released song uses the artist as
+ * label, and anything we don't know (countries, recording date) stays blank rather than guessed.
  */
 export function soundExchangeRows(tracks: CatalogTrack[]): (string | number | Date)[][] {
   return tracks.map(({ metadata: m }) => {
     const year = (m.releaseDate ?? "").slice(0, 4);
     const label = m.label || m.artist;
     return [
-      artistCredit(m.artist, m.featured), m.title, m.isrc.replace(/-/g, "").toUpperCase(), "Copyright Owner", 1, "", "", "", "",
+      artistCredit(m.artist, m.featured), m.title, m.isrc.replace(/-/g, "").toUpperCase(), m.masterBasis || "Copyright Owner",
+      Number(m.masterShare || 100) / 100, sheetDate(m.rightsStart ?? ""), sheetDate(m.rightsEnd ?? ""), "", "",
       hms(m.duration), m.primaryGenre ?? "", "", "", "", "", sheetDate(m.releaseDate), "",
       pLine(m.phonographic) || (year && label ? `${year} ${label}` : ""), m.iswc.replace(/[.\s-]/g, "").toUpperCase(),
       registrationWriters(m).map((c) => c.name).join("; "), named(m.publishers).map((p) => p.name).join("; "),

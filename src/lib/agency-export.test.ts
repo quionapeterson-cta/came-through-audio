@@ -20,6 +20,13 @@ describe("agency exports", () => {
     expect(row[15]).toEqual(new Date(Date.UTC(2026, 2, 14)));
     expect(row[28]).toBe("Q"); // no label: self-released uses the artist
   });
+  it("SoundExchange claims the song's master ownership", () => {
+    const row = soundExchangeRows([track({ masterShare: "50", masterBasis: "Collections Designee", rightsStart: "2026-01-02" })])[0]!;
+    expect(row[3]).toBe("Collections Designee");
+    expect(row[4]).toBe(0.5);
+    expect(row[5]).toEqual(new Date(Date.UTC(2026, 0, 2)));
+    expect(row[6]).toBe("");
+  });
   it("PRO cheat sheet keeps IPI as text", () => expect(proCheatSheet([track()])).toContain('"=""00123456789"""'));
   it("Neighbouring Rights Pack lists every performer, featured first, and leaves out songs without an ISRC", () => {
     const t = track({ featured: ["OG PI"], phonographic: "℗ 2026 Came Through Audio", recordedIn: "United States", recordedYear: "",

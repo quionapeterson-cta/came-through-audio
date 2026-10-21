@@ -10,6 +10,9 @@ export const RELEASE_TYPES = ["Single", "EP", "Album", "Compilation"] as const;
 export const GENRES = ["Hip-Hop/Rap", "Spiritual Hip-Hop", "R&B/Soul", "Pop", "Rock", "Gospel", "Jazz", "Blues", "Country", "Electronic", "Reggae", "Latin", "Afrobeats", "Classical", "Soundtrack", "Alternative", "Other"] as const;
 
 /** "Writer" is the umbrella title; each writer row picks one of these PRO roles. */
+export const PRODUCTION_TYPES = ["Film", "TV", "Stage show", "Ad"] as const;
+/** SoundExchange's two claim bases, worded as its ingest form expects. */
+export const MASTER_BASES = ["Copyright Owner", "Collections Designee"] as const;
 export const WRITER_ROLES = ["Author", "Composer", "Author/Composer"] as const;
 export type WriterRole = (typeof WRITER_ROLES)[number];
 /** MLC writer role codes: A = Author, C = Composer, CA = Composer/Author. */
@@ -63,6 +66,21 @@ export const metadataSchema = z.object({
   /** Where and when the recording was made, for neighbouring rights (international airplay). Kept in the catalog, never embedded. */
   recordedIn: z.string().trim().default(""),
   recordedYear: z.string().trim().default("").refine((v) => !v || /^\d{4}$/.test(v), "Enter a 4-digit year."),
+  /** Registration details (PRO, MLC, SoundExchange forms). Kept in the catalog, never embedded. */
+  alternateTitles: z.array(z.string().trim()).default([""]),
+  selfPublished: z.boolean().default(false),
+  /** "" = not answered yet. Samples or songs this one is based on (public-domain sources included). */
+  samples: z.enum(["", "No", "Yes"]).default(""),
+  sampleTitle: z.string().trim().default(""),
+  sampleWriters: z.string().trim().default(""),
+  sampleSource: z.string().trim().default(""),
+  writtenFor: z.enum(["", "No", ...PRODUCTION_TYPES]).default(""),
+  productionTitle: z.string().trim().default(""),
+  /** Master ownership for SoundExchange. Blank start/end mean from release, forever. */
+  masterShare: z.string().trim().default("100").refine((v) => v === "" || (Number.isFinite(Number(v)) && Number(v) > 0 && Number(v) <= 100), "Enter a master share between 0.01 and 100."),
+  masterBasis: z.enum(MASTER_BASES).default("Copyright Owner"),
+  rightsStart: z.string().default(""),
+  rightsEnd: z.string().default(""),
 }).superRefine((data, ctx) => {
   for (const group of ["writers", "composers", "publishers"] as const) {
     data[group].forEach((row, index) => {
@@ -81,6 +99,8 @@ export const emptyMetadata = (): Metadata => ({
   isrc: "", upc: "", iswc: "", explicit: false, instrumental: false, primaryGenre: "", secondaryGenre: "",
   writers: [emptyContributor()], composers: [emptyContributor()], producers: [emptyContributor()], publishers: [emptyContributor()],
   lyrics: "", coverThumb: "", audioPath: "", artPath: "", aiProtection: false, credits: [], recordedIn: "", recordedYear: "",
+  alternateTitles: [""], selfPublished: false, samples: "", sampleTitle: "", sampleWriters: "", sampleSource: "", writtenFor: "", productionTitle: "",
+  masterShare: "100", masterBasis: "Copyright Owner", rightsStart: "", rightsEnd: "",
 });
 
 /** The name shown for a contributor: a writer's legal name, otherwise the plain name (producers, publishers, older entries). */

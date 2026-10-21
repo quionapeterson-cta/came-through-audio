@@ -1,6 +1,6 @@
 # PLAN — Catalog organization, Royalty Health bar, split sheet and contract fixes · v1
 
-Status: **§1 approved by founder 2026-10-21 ("organize the new catalog as planned"); layout preview below awaits a final OK. §0, §2–4 still awaiting approval.**
+Status: **§0 approved and added to BRANDING.md §3 ("organized by titles"); §1 approved and BUILT 2026-10-21 (song form sections + 5 registration fields). Innovative ideas and §2–4 still awaiting approval.**
 Source: founder testing notes, 2026-10-21.
 
 ---

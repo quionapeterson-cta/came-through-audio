@@ -1,6 +1,6 @@
 # PLAN — Expert Registration Assistance: working checkout and a proper intake flow · v3
 
-Status: **approved 2026-10-21 (Q3–8 answered). PRIORITY 1.** Build order: catalog fields + organized form first (with PLAN-catalog-organization §1), then readiness targets, then checkout fix + intake.
+Status: **approved 2026-10-21 (Q3–8 answered). PRIORITY 1.** Build order: catalog fields + organized form first (DONE 2026-10-21) (with PLAN-catalog-organization §1), then readiness targets, then checkout fix + intake.
 Source: founder testing notes, 2026-10-21. v2 (2026-10-21): founder answered Q1 (draft the agreement) and Q2 (users may pay for songs that aren't ready, but must complete and submit them before work starts); agency checklists researched (§5). v3 (2026-10-21): the system checks every paid song right after payment and alerts the user immediately with what to provide; agents register the songs themselves, no live assistance (§3). v4 (2026-10-21): founder approved the agency checklists, the 5 catalog fields, song swaps, the agreement wording with the pre-launch clause, and the reminder schedule; uncataloged songs can be bought (§1); no turnaround promise (§3 step 6).
 
 ---

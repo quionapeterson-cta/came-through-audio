@@ -53,6 +53,7 @@ Apply these rules across the website, emails and PDFs.
 - Consolidate related information; avoid clutter and unnecessary duplicate fields.
 - Spread catalog information left to right rather than bunching it together.
 - Use grouped releases, collapsible sections and clear summaries where appropriate.
+- **Consolidate every page into collapsible sections, organized by titles.** Each section has a clear title and opens as its own dropdown, with a one-line summary when closed (e.g. "Writers · 3 · ✓ Ready to register"), so pages stay short and users open only what they need. Sections with something missing show ⚠️ and open on their own.
 - Keep controls in natural workflow order: complete inputs first, then confirmations, saving and final actions.
 - Keep later actions unavailable until their prerequisites are complete.
 - List specific filter categories first; "All" always comes last, to keep the interface organized and decluttered.

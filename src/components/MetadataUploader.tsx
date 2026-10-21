@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
 import { confirmAction } from "@/components/ConfirmHost";
-import { Disc3, Lock, ShieldCheck, CheckCircle2, Download, FileAudio, FileText, ImagePlus, Pencil, Plus, Save, Trash2, Upload } from "lucide-react";
+import { ChevronDown, Disc3, Lock, ShieldCheck, CheckCircle2, Download, FileAudio, FileText, ImagePlus, Pencil, Plus, Save, Trash2, Upload } from "lucide-react";
 import { capShare, splitStatus, splitSummary } from "@/lib/splits-total";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -11,7 +11,7 @@ import { InfoTip } from "@/components/InfoTip";
 import { GLOSSARY, type GlossaryKey } from "@/lib/glossary";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { PRE_DIST_NOTE, PRO_TIP } from "@/lib/copy";
-import { readMetadata, CREDIT_ROLES, isPerformer, performers, emptyContributor, emptyMetadata, embedMetadata, creditName, metadataSchema, GENRES, RELEASE_TYPES, WRITER_ROLES, writerRole, type Contributor, type Metadata } from "@/lib/metadata";
+import { readMetadata, CREDIT_ROLES, isPerformer, performers, emptyContributor, emptyMetadata, embedMetadata, creditName, metadataSchema, GENRES, MASTER_BASES, PRODUCTION_TYPES, RELEASE_TYPES, WRITER_ROLES, writerRole, type Contributor, type Metadata } from "@/lib/metadata";
 import { COUNTRIES } from "@/lib/repertoires";
 import { deleteTrack, downloadCatalogFile, listTracks, safeName, saveTrack, uploadCatalogFile, type CatalogTrack } from "@/lib/catalog";
 import { AGENCY_LABEL, downloadAgencyExport, downloadNeighbouringPack, type Agency, type Held } from "@/lib/agency-export";
@@ -329,7 +329,7 @@ export function MetadataUploader({ stageName, avatar, userId, mode = "embed", on
           <NextSong queue={queue} carry={carry} onCarry={setCarry} onNext={startNext} />
         </div>
       ) : showForm && (
-      <form ref={formRef} onSubmit={submit} className="space-y-8" aria-busy={busy}
+      <form key={editingId ?? (adding ? "add" : "new")} ref={formRef} onSubmit={submit} className="space-y-8" aria-busy={busy}
         onKeyDown={(e) => { if ((e.metaKey || e.ctrlKey) && e.key === "Enter") { e.preventDefault(); formRef.current?.requestSubmit(); } }}>
         <fieldset disabled={busy} className="grid gap-5 sm:grid-cols-[1fr_220px]">
           <div onDragOver={(event) => event.preventDefault()} onDrop={(event) => { event.preventDefault(); if (!busy) addFiles(event.dataTransfer.files); }} className="flex min-h-44 flex-col items-center justify-center gap-3 rounded-lg border border-dashed border-primary bg-accent/30 p-5 text-center">
@@ -354,80 +354,135 @@ export function MetadataUploader({ stageName, avatar, userId, mode = "embed", on
           </div>
         </fieldset>
 
-        <fieldset disabled={busy} className="space-y-5 border-t border-border pt-6">
-          <legend className="px-0 pr-3 text-lg font-semibold">Track details</legend>
-          <div className="grid gap-5 sm:grid-cols-2">
-            <Field label="Track title" id="title" value={metadata.title} required onChange={(value) => update("title", value)} />
-            <div className="min-w-0 space-y-2">
-              <Label htmlFor="trackNumber">Track number</Label>
-              <div className="flex items-center gap-3">
-                <Input id="trackNumber" inputMode="numeric" className="w-20" value={metadata.trackNumber} placeholder="1" onChange={(e) => update("trackNumber", e.target.value.replace(/\D/g, "").slice(0, 3))} />
-                <span className="text-sm text-muted-foreground">of</span>
-                <Input id="trackTotal" aria-label="Total tracks on the release" inputMode="numeric" className="w-20" value={metadata.trackTotal} placeholder="12" onChange={(e) => update("trackTotal", e.target.value.replace(/\D/g, "").slice(0, 3))} />
-              </div>
-              <p className="text-xs text-muted-foreground">Example: track 1 of 12 on the album</p>
-            </div>
-            <Field label="Track duration" id="duration" value={metadata.duration} placeholder="3:45" onChange={(value) => update("duration", value)} />
-            <div className="space-y-2">
-              <Label>Explicit content<InfoTip term="explicit" /></Label>
-              <div className="flex gap-2" role="radiogroup" aria-label="Explicit content">
-                {[true, false].map((v) => (
-                  <Button key={String(v)} type="button" role="radio" aria-checked={metadata.explicit === v} variant={metadata.explicit === v ? "default" : "outline"} onClick={() => update("explicit", v)}>{v ? "Yes" : "No"}</Button>
-                ))}
-              </div>
-            </div>
-            <SelectField label="Primary genre" id="primaryGenre" value={metadata.primaryGenre} options={GENRES} onChange={(value) => update("primaryGenre", value)} />
-            <SelectField label="Secondary genre" id="secondaryGenre" value={metadata.secondaryGenre} options={GENRES} onChange={(value) => update("secondaryGenre", value)} />
-            <div>
-              <Field label="Artist name" id="artist" value={metadata.artist} required onChange={(value) => update("artist", value)} />
-              {registeredArtist && metadata.artist.trim() && normArtist(metadata.artist) !== normArtist(registeredArtist) && (
-                <p role="note" className="mt-2 rounded-md border border-primary/50 bg-accent/30 p-2 text-xs">
-                  This account is registered to <span className="font-semibold">{registeredArtist}</span>. Releasing as a different artist? Each artist gets their own catalog with an add-on artist account (from {ARTIST_SEAT_PRICES[0]!.price}/yr), coming soon. Featuring someone? Add them under Featured artist instead.
-                </p>
-              )}
-            </div>
-            <div className="space-y-2">
-              {metadata.featured.map((name, index) => (
-                <div key={index} className="flex items-end gap-2">
-                  <div className="flex-1"><Field label={index === 0 ? "Featured artist" : `Featured artist ${index + 1}`} term={index === 0 ? "featured" : undefined} id={`featured-${index}`} value={name} onChange={(value) => update("featured", metadata.featured.map((n, i) => i === index ? value : n))} /></div>
-                  {index === metadata.featured.length - 1
-                    ? <Button type="button" size="icon" variant="outline" aria-label="Add featured artist" onClick={() => update("featured", [...metadata.featured, ""])}><Plus /></Button>
-                    : <Button type="button" size="icon" variant="ghost" aria-label={`Remove featured artist ${index + 1}`} onClick={() => update("featured", metadata.featured.filter((_, i) => i !== index))}><Trash2 /></Button>}
+        {(() => {
+          const r = registrationReadiness(metadata);
+          const warnIn = (...prefixes: string[]) => [...r.missing, ...r.warnings].some((i) => prefixes.some((p) => i.field.startsWith(p)));
+          const count = (rows: Contributor[] | undefined) => (rows ?? []).filter(creditName).length;
+          const filled = (pairs: [string, string][]) => pairs.filter(([, v]) => v.trim()).map(([k]) => k).join(" · ");
+          const writersWarn = warnIn("writers-", "composers-");
+          const publishersWarn = warnIn("publishers-");
+          return <div className="space-y-3">
+            <FormSection title="Song info" open={!full || !metadata.title} disabled={busy} summary={filled([[metadata.title, metadata.title], [metadata.artist, metadata.artist]]) || "Title and artist"}>
+              <div className="grid gap-5 sm:grid-cols-2">
+                <Field label="Track title" id="title" value={metadata.title} required onChange={(value) => update("title", value)} />
+                <div>
+                  <Field label="Artist name" id="artist" value={metadata.artist} required onChange={(value) => update("artist", value)} />
+                  {registeredArtist && metadata.artist.trim() && normArtist(metadata.artist) !== normArtist(registeredArtist) && (
+                    <p role="note" className="mt-2 rounded-md border border-primary/50 bg-accent/30 p-2 text-xs">
+                      This account is registered to <span className="font-semibold">{registeredArtist}</span>. Releasing as a different artist? Each artist gets their own catalog with an add-on artist account (from {ARTIST_SEAT_PRICES[0]!.price}/yr), coming soon. Featuring someone? Add them under Featured artist instead.
+                    </p>
+                  )}
                 </div>
-              ))}
-            </div>
-            <SelectField label="Release type" term="releaseType" id="releaseType" value={metadata.releaseType} options={RELEASE_TYPES} onChange={(value) => update("releaseType", value)} />
-            {full && <>
-              <Field label="Album / release title" id="album" value={metadata.album} onChange={(value) => update("album", value)} />
-              <Field label="Release date" id="releaseDate" type="date" value={metadata.releaseDate} onChange={(value) => update("releaseDate", value)} />
-              <Field label="Record label" term="label" id="label" value={metadata.label} onChange={(value) => update("label", value)} />
-            </>}
-          </div>
-        </fieldset>
+                {full && <ListField label="Alternate title" id="alternateTitles" tip={TIPS.alternateTitles} values={metadata.alternateTitles?.length ? metadata.alternateTitles : [""]} onChange={(v) => update("alternateTitles", v)} />}
+                <div className="space-y-2">
+                  {metadata.featured.map((name, index) => (
+                    <div key={index} className="flex items-end gap-2">
+                      <div className="flex-1"><Field label={index === 0 ? "Featured artist" : `Featured artist ${index + 1}`} term={index === 0 ? "featured" : undefined} id={`featured-${index}`} value={name} onChange={(value) => update("featured", metadata.featured.map((n, i) => i === index ? value : n))} /></div>
+                      {index === metadata.featured.length - 1
+                        ? <Button type="button" size="icon" variant="outline" aria-label="Add featured artist" onClick={() => update("featured", [...metadata.featured, ""])}><Plus /></Button>
+                        : <Button type="button" size="icon" variant="ghost" aria-label={`Remove featured artist ${index + 1}`} onClick={() => update("featured", metadata.featured.filter((_, i) => i !== index))}><Trash2 /></Button>}
+                    </div>
+                  ))}
+                </div>
+                <Field label="Track duration" id="duration" value={metadata.duration} placeholder="3:45" onChange={(value) => update("duration", value)} />
+                <div className="space-y-2">
+                  <Label>Explicit content<InfoTip term="explicit" /></Label>
+                  <Choice label="Explicit content" value={metadata.explicit ? "Yes" : "No"} options={["Yes", "No"]} onChange={(v) => update("explicit", v === "Yes")} />
+                </div>
+                <SelectField label="Primary genre" id="primaryGenre" value={metadata.primaryGenre} options={GENRES} onChange={(value) => update("primaryGenre", value)} />
+                <SelectField label="Secondary genre" id="secondaryGenre" value={metadata.secondaryGenre} options={GENRES} onChange={(value) => update("secondaryGenre", value)} />
+              </div>
+            </FormSection>
 
-        <Contributors title="Writer" singular="writer" group="writers" writer rows={metadata.writers} disabled={busy} onChange={(rows) => update("writers", rows)} tip={full ? "Choose Author (lyrics/melody), Composer (music/beat) or Author/Composer for each writer. Writer splits must total 100%." : undefined} simple={!full}>
-          <label className="flex items-center gap-2 text-sm"><input id="instrumental" type="checkbox" className="h-4 w-4 accent-[var(--primary)]" checked={metadata.instrumental} onChange={(e) => update("instrumental", e.target.checked)} />Instrumental (no lyrics)<Tip text={TIPS.instrumental} /></label>
-        </Contributors>
-        {full && metadata.composers.some(creditName) && <Contributors title="Composer (earlier entries)" singular="composer" group="composers" rows={metadata.composers} disabled={busy} onChange={(rows) => update("composers", rows)} tip="Saved before Writer roles existed. Move these into Writer with the Composer role when you can." />}
-        <ReadinessPanel metadata={metadata} />
-        <Contributors title="Producer Name" singular="producer" group="producers" rows={metadata.producers ?? [emptyContributor()]} disabled={busy} onChange={(rows) => update("producers", rows)} simple
-          tip={GLOSSARY.producedBy.text} tipOnly />
-        <Performers metadata={metadata} disabled={busy} update={update} />
-        <fieldset disabled={busy} className="space-y-5 border-t border-border pt-6">
-          <legend className="pr-3 text-lg font-semibold">Identifiers</legend>
-          <div className="grid gap-5 sm:grid-cols-3">
-            <Field label="ISRC" term="isrc" id="isrc" value={metadata.isrc} placeholder="USABC2600001" onChange={(value) => update("isrc", value)} />
-            <Field label="UPC / EAN" term="upc" id="upc" value={metadata.upc} placeholder="12 or 13 digits" onChange={(value) => update("upc", value)} />
-            <Field label="ISWC (optional)" term="iswc" id="iswc" value={metadata.iswc} placeholder="T-123.456.789-0" onChange={(value) => update("iswc", value)} />
-          </div>
-          <InfoTip title="Pre-Distribution Note" text={`${PRE_DIST_NOTE} ⭐ Pro Tip: ${PRO_TIP}`} className="inline-flex items-center rounded-full border border-primary px-3 py-1 text-sm font-semibold text-primary">💡 Pre-Distribution Note</InfoTip>
-        </fieldset>
-        <fieldset disabled={busy} className="space-y-3 border-t border-border pt-6">
-          <legend className="pr-3 text-lg font-semibold">Lyrics</legend>
-          <textarea aria-label="Lyrics" rows={6} value={metadata.lyrics} onChange={(e) => update("lyrics", e.target.value)} placeholder="Paste your lyrics" className="w-full rounded-md border border-input bg-background p-3 text-sm" />
-        </fieldset>
-        {full && <p className="rounded-lg border border-primary/40 bg-accent/30 p-3 text-sm text-muted-foreground"><span className="font-semibold text-foreground">No PRO or IPI number yet?</span> Leave them blank. Add them anytime after you register with a PRO and receive your IPI name number.</p>}
-        {full && <Contributors title="Publishers" singular="publisher" group="publishers" rows={metadata.publishers} disabled={busy} publisher onChange={(rows) => update("publishers", rows)} tip={GLOSSARY.publisher.text} />}
+            <FormSection title="Release" open={!full} disabled={busy} summary={filled([[metadata.releaseType, metadata.releaseType], [metadata.album, metadata.album], [metadata.releaseDate, metadata.releaseDate]]) || "Release type, album, date"}>
+              <div className="grid gap-5 sm:grid-cols-2">
+                <SelectField label="Release type" term="releaseType" id="releaseType" value={metadata.releaseType} options={RELEASE_TYPES} onChange={(value) => update("releaseType", value)} />
+                <div className="min-w-0 space-y-2">
+                  <Label htmlFor="trackNumber">Track number</Label>
+                  <div className="flex items-center gap-3">
+                    <Input id="trackNumber" inputMode="numeric" className="w-20" value={metadata.trackNumber} placeholder="1" onChange={(e) => update("trackNumber", e.target.value.replace(/\D/g, "").slice(0, 3))} />
+                    <span className="text-sm text-muted-foreground">of</span>
+                    <Input id="trackTotal" aria-label="Total tracks on the release" inputMode="numeric" className="w-20" value={metadata.trackTotal} placeholder="12" onChange={(e) => update("trackTotal", e.target.value.replace(/\D/g, "").slice(0, 3))} />
+                  </div>
+                  <p className="text-xs text-muted-foreground">Example: track 1 of 12 on the album</p>
+                </div>
+                {full && <>
+                  <Field label="Album / release title" id="album" value={metadata.album} onChange={(value) => update("album", value)} />
+                  <Field label="Release date" id="releaseDate" type="date" value={metadata.releaseDate} onChange={(value) => update("releaseDate", value)} />
+                  <Field label="Record label" term="label" id="label" value={metadata.label} onChange={(value) => update("label", value)} />
+                </>}
+              </div>
+            </FormSection>
+
+            <FormSection title={`Writers · ${count(metadata.writers)}`} open={!full || writersWarn} warn={writersWarn} ok={!writersWarn && count(metadata.writers) > 0} summary={writersWarn ? "Needs info to register" : count(metadata.writers) ? "Ready to register" : "Who wrote the song"}>
+              <Contributors bare title="Writers" singular="writer" group="writers" writer rows={metadata.writers} disabled={busy} onChange={(rows) => update("writers", rows)} tip={full ? "Choose Author (lyrics/melody), Composer (music/beat) or Author/Composer for each writer. Writer splits must total 100%." : undefined} simple={!full}>
+                <label className="flex items-center gap-2 text-sm"><input id="instrumental" type="checkbox" className="h-4 w-4 accent-[var(--primary)]" checked={metadata.instrumental} onChange={(e) => update("instrumental", e.target.checked)} />Instrumental (no lyrics)<Tip text={TIPS.instrumental} /></label>
+              </Contributors>
+              <ReadinessPanel metadata={metadata} />
+              {full && <p className="rounded-lg border border-primary/40 bg-accent/30 p-3 text-sm text-muted-foreground"><span className="font-semibold text-foreground">No PRO or IPI number yet?</span> Leave them blank. Add them anytime after you register with a PRO and receive your IPI name number.</p>}
+            </FormSection>
+            {full && metadata.composers.some(creditName) && <FormSection title={`Composers (earlier entries) · ${count(metadata.composers)}`} open={writersWarn} warn={warnIn("composers-")} summary="Move these into Writers">
+              <Contributors bare title="Composers (earlier entries)" singular="composer" group="composers" rows={metadata.composers} disabled={busy} onChange={(rows) => update("composers", rows)} tip="Saved before Writer roles existed. Move these into Writer with the Composer role when you can." />
+            </FormSection>}
+
+            <FormSection title={`Producers · ${count(metadata.producers)}`} open={!full} summary={(metadata.producers ?? []).filter(creditName).map(creditName).join(", ") || "Produced by"}>
+              <Contributors bare title="Producers" singular="producer" group="producers" rows={metadata.producers ?? [emptyContributor()]} disabled={busy} onChange={(rows) => update("producers", rows)} simple
+                tip={GLOSSARY.producedBy.text} tipOnly />
+            </FormSection>
+
+            <FormSection title="Performers & recording" open={!full} summary={filled([[`${metadata.credits.length} credit${metadata.credits.length === 1 ? "" : "s"}`, metadata.credits.length ? "x" : ""], [metadata.recordedIn, metadata.recordedIn], [metadata.recordedYear, metadata.recordedYear]]) || "Optional"}>
+              <Performers bare metadata={metadata} disabled={busy} update={update} />
+            </FormSection>
+
+            {full && <FormSection title="Song origins" disabled={busy} summary={metadata.samples && metadata.writtenFor ? `Sample: ${metadata.samples} · Written for: ${metadata.writtenFor}` : "Not answered yet"} ok={!!(metadata.samples && metadata.writtenFor)}>
+              <div className="space-y-2">
+                <Label>Uses a sample or based on another song?<Tip text={TIPS.samples} title="Samples" /></Label>
+                <Choice id="samples" label="Uses a sample or based on another song" value={metadata.samples} options={["No", "Yes"]} onChange={(v) => update("samples", v as Metadata["samples"])} />
+              </div>
+              {metadata.samples === "Yes" && <div className="grid gap-5 sm:grid-cols-3">
+                <Field label="Original song title" id="sampleTitle" value={metadata.sampleTitle} onChange={(v) => update("sampleTitle", v)} />
+                <Field label="Original writers" id="sampleWriters" value={metadata.sampleWriters} placeholder="Names, comma separated" onChange={(v) => update("sampleWriters", v)} />
+                <Field label="Source" id="sampleSource" value={metadata.sampleSource} placeholder="Recording, or Public domain" onChange={(v) => update("sampleSource", v)} />
+              </div>}
+              <div className="space-y-2">
+                <Label>Written for film, TV, stage or an ad?<Tip text={TIPS.writtenFor} title="Written for" /></Label>
+                <Choice id="writtenFor" label="Written for film, TV, stage or an ad" value={metadata.writtenFor} options={["No", ...PRODUCTION_TYPES]} onChange={(v) => update("writtenFor", v as Metadata["writtenFor"])} />
+              </div>
+              {metadata.writtenFor && metadata.writtenFor !== "No" && <Field label="Production title" id="productionTitle" value={metadata.productionTitle} placeholder="Name of the film, show or ad" onChange={(v) => update("productionTitle", v)} />}
+            </FormSection>}
+
+            {full && <FormSection title={metadata.selfPublished && !count(metadata.publishers) ? "Publishers · self-published" : `Publishers · ${count(metadata.publishers)}`} open={publishersWarn} warn={publishersWarn} summary={metadata.selfPublished ? "No publisher" : (metadata.publishers ?? []).filter(creditName).map(creditName).join(", ") || "Who publishes the song"}>
+              <label className="flex items-center gap-2 text-sm"><input id="selfPublished" type="checkbox" className="h-4 w-4 accent-[var(--primary)]" disabled={busy} checked={metadata.selfPublished} onChange={(e) => update("selfPublished", e.target.checked)} />Self-published (no publisher)<Tip text={TIPS.selfPublished} title="Self-published" /></label>
+              {(!metadata.selfPublished || count(metadata.publishers) > 0) && <Contributors bare title="Publishers" singular="publisher" group="publishers" rows={metadata.publishers} disabled={busy} publisher onChange={(rows) => update("publishers", rows)} tip={GLOSSARY.publisher.text} />}
+              {metadata.selfPublished && count(metadata.publishers) > 0 && <p className="text-sm">⚠️ You checked Self-published but also listed a publisher. Uncheck Self-published, or remove the publisher.</p>}
+            </FormSection>}
+
+            {full && <FormSection title="Master ownership" disabled={busy} summary={`${metadata.masterShare || "100"}% · ${metadata.masterBasis === "Collections Designee" ? "Authorized designee" : "Owner"}`}>
+              <div className="grid gap-5 sm:grid-cols-2">
+                <Field label="Share of the master you own (%)" id="masterShare" value={metadata.masterShare} placeholder="100" tip={TIPS.masterShare} onChange={(v) => update("masterShare", v.replace(/[^\d.]/g, "").slice(0, 6))} />
+                <div className="space-y-2">
+                  <Label>Your claim<Tip text={TIPS.masterBasis} title="Your claim" /></Label>
+                  <Choice id="masterBasis" label="Your claim" value={metadata.masterBasis} options={MASTER_BASES} labels={{ "Copyright Owner": "I own it", "Collections Designee": "Authorized designee" }} onChange={(v) => update("masterBasis", v as Metadata["masterBasis"])} />
+                </div>
+                <Field label="Rights start (blank = from release)" id="rightsStart" type="date" value={metadata.rightsStart} tip={TIPS.rights} onChange={(v) => update("rightsStart", v)} />
+                <Field label="Rights end (blank = forever)" id="rightsEnd" type="date" value={metadata.rightsEnd} onChange={(v) => update("rightsEnd", v)} />
+              </div>
+            </FormSection>}
+
+            <FormSection title="Identifiers" open={!full} disabled={busy} summary={filled([["ISRC", metadata.isrc], ["UPC", metadata.upc], ["ISWC", metadata.iswc]]) || "ISRC, UPC, ISWC"}>
+              <div className="grid gap-5 sm:grid-cols-3">
+                <Field label="ISRC" term="isrc" id="isrc" value={metadata.isrc} placeholder="USABC2600001" onChange={(value) => update("isrc", value)} />
+                <Field label="UPC / EAN" term="upc" id="upc" value={metadata.upc} placeholder="12 or 13 digits" onChange={(value) => update("upc", value)} />
+                <Field label="ISWC (optional)" term="iswc" id="iswc" value={metadata.iswc} placeholder="T-123.456.789-0" onChange={(value) => update("iswc", value)} />
+              </div>
+              <InfoTip title="Pre-Distribution Note" text={`${PRE_DIST_NOTE} ⭐ Pro Tip: ${PRO_TIP}`} className="inline-flex items-center rounded-full border border-primary px-3 py-1 text-sm font-semibold text-primary">💡 Pre-Distribution Note</InfoTip>
+            </FormSection>
+
+            <FormSection title="Lyrics" open={!full} disabled={busy} summary={metadata.lyrics.trim() ? "Added" : "None yet"}>
+              <textarea aria-label="Lyrics" rows={6} value={metadata.lyrics} onChange={(e) => update("lyrics", e.target.value)} placeholder="Paste your lyrics" className="w-full rounded-md border border-input bg-background p-3 text-sm" />
+            </FormSection>
+          </div>;
+        })()}
 
         <div className="space-y-4 border-t border-border pt-6 pb-8">
           {userId && !full && (
@@ -598,7 +653,49 @@ export function MetadataUploader({ stageName, avatar, userId, mode = "embed", on
 
 const TIPS = {
   instrumental: "Check this if the song has no lyrics. Instrumental songs don't need an Author to be registered.",
+  alternateTitles: "Other names the song goes by, like a short title or a translation. Agencies use them to match plays to your song.",
+  samples: "Answer Yes if the song uses a sample, borrows from another song, or is based on an older song (public-domain songs too). PROs ask for the original song's details when you register.",
+  writtenFor: "Was the song made for a movie, TV show, stage show or commercial? BMI asks this when you register.",
+  selfPublished: "Check this if no publisher has rights to the song. Your PRO then pays the publisher half to the writers. Have your own publishing company? List it as a publisher instead.",
+  masterShare: "How much of the recording (the master) you own. Most independent artists own 100%. SoundExchange pays the master owner by this share.",
+  masterBasis: "I own it: you own the recording. Authorized designee: you collect for the owner, for example as their label or administrator.",
+  rights: "Leave the dates blank if you've owned the recording since its release and always will.",
 };
+
+/** A titled dropdown section of the song form. The closed summary shows ⚠️ or ✓; it starts open when asked to. */
+function FormSection({ title, summary, open, warn, ok, disabled, children }: { title: string; summary: string; open?: boolean; warn?: boolean; ok?: boolean; disabled?: boolean; children: ReactNode }) {
+  // Fixed at mount (the form is keyed per song), so React never closes a section the user opened.
+  const [initial] = useState(!!open);
+  return <details open={initial} className="group rounded-xl border border-border open:border-primary/60">
+    <summary className="flex cursor-pointer list-none items-center justify-between gap-3 p-4 [&::-webkit-details-marker]:hidden">
+      <span className="text-lg font-semibold">{title}</span>
+      <span className="flex min-w-0 items-center gap-2 text-sm text-muted-foreground">
+        <span className="truncate">{warn ? "⚠️ " : ok ? "✓ " : ""}{summary}</span>
+        <ChevronDown className="h-4 w-4 shrink-0 transition group-open:rotate-180" aria-hidden />
+      </span>
+    </summary>
+    <fieldset disabled={disabled} className="min-w-0 space-y-5 border-t border-border p-4">{children}</fieldset>
+  </details>;
+}
+
+/** Button-style single choice (Yes / No and similar), matching the Explicit content control. */
+function Choice({ id, label, value, options, labels, onChange }: { id?: string; label: string; value: string; options: readonly string[]; labels?: Record<string, string>; onChange: (value: string) => void }) {
+  return <div id={id} tabIndex={-1} className="flex flex-wrap gap-2" role="radiogroup" aria-label={label}>
+    {options.map((o) => <Button key={o} type="button" role="radio" aria-checked={value === o} variant={value === o ? "default" : "outline"} onClick={() => onChange(o)}>{labels?.[o] ?? o}</Button>)}
+  </div>;
+}
+
+/** A list of short text values with add and remove, like Featured artist. */
+function ListField({ label, id, tip, values, onChange }: { label: string; id: string; tip: string; values: string[]; onChange: (values: string[]) => void }) {
+  return <div className="space-y-2">
+    {values.map((v, i) => <div key={i} className="flex items-end gap-2">
+      <div className="flex-1"><Field label={i === 0 ? label : `${label} ${i + 1}`} id={`${id}-${i}`} value={v} {...(i === 0 && { tip })} onChange={(next) => onChange(values.map((x, j) => (j === i ? next : x)))} /></div>
+      {i === values.length - 1
+        ? <Button type="button" size="icon" variant="outline" aria-label={`Add ${label.toLowerCase()}`} onClick={() => onChange([...values, ""])}><Plus /></Button>
+        : <Button type="button" size="icon" variant="ghost" aria-label={`Remove ${label.toLowerCase()} ${i + 1}`} onClick={() => onChange(values.filter((_, j) => j !== i))}><Trash2 /></Button>}
+    </div>)}
+  </div>;
+}
 
 function Tip({ text, title }: { text: string; title?: string }) {
   return <InfoTip text={text} {...(title && { title })} />;
@@ -609,14 +706,15 @@ function Tip({ text, title }: { text: string; title?: string }) {
  * the main and featured artists come from their own fields (no retyping); session players and backup vocalists add
  * an instrument. Optional, like PRO and IPI. Recorded in / year stay in the catalog and are never embedded.
  */
-function Performers({ metadata: m, disabled, update }: { metadata: Metadata; disabled: boolean; update: <K extends keyof Metadata>(key: K, value: Metadata[K]) => void }) {
+function Performers({ metadata: m, disabled, update, bare }: { bare?: boolean; metadata: Metadata; disabled: boolean; update: <K extends keyof Metadata>(key: K, value: Metadata[K]) => void }) {
   const credits = m.credits;
   const set = (i: number, patch: Partial<Metadata["credits"][number]>) => update("credits", credits.map((x, j) => (j === i ? { ...x, ...patch } : x)));
   const named = performers({ ...m, credits: [] });
   const releaseYear = /^\d{4}/.exec(m.releaseDate)?.[0] ?? "";
   return (
-    <fieldset id="performers" disabled={disabled} className="space-y-4 border-t border-border pt-6">
-      <legend className="pr-3 text-lg font-semibold">Performers & credits<InfoTip term="performers" /></legend>
+    <fieldset id="performers" disabled={disabled} className={bare ? "min-w-0 space-y-4" : "space-y-4 border-t border-border pt-6"}>
+      <legend className={bare ? "sr-only" : "pr-3 text-lg font-semibold"}>Performers & credits{!bare && <InfoTip term="performers" />}</legend>
+      {bare && <p className="flex items-center text-sm font-semibold">Performers & credits<InfoTip term="performers" /></p>}
       <p className="text-sm text-muted-foreground">Add everyone who played or sang on this recording, so every performer can be paid for airplay outside the US. Optional; add it anytime.</p>
       {named.length > 0 && (
         <ul className="space-y-1 text-sm">
@@ -650,6 +748,8 @@ function Performers({ metadata: m, disabled, update }: { metadata: Metadata; dis
 function jumpTo(field: string) {
   requestAnimationFrame(() => {
     const el = document.getElementById(field);
+    const section = el?.closest("details");
+    if (section) section.open = true;
     el?.scrollIntoView({ behavior: "smooth", block: "center" });
     el?.focus({ preventScroll: true });
   });
@@ -768,7 +868,7 @@ function SelectField({ label, id, value, options, onChange, term }: { label: str
     </select></div>;
 }
 
-function Contributors({ title, singular, group, rows, onChange, disabled, publisher, tip, tipOnly, simple, writer, children }: { title: string; singular: string; group: string; rows: Contributor[]; onChange: (rows: Contributor[]) => void; disabled: boolean; publisher?: boolean; tip?: string | undefined; tipOnly?: boolean; simple?: boolean; writer?: boolean; children?: ReactNode }) {
+function Contributors({ title, singular, group, rows, onChange, disabled, publisher, tip, tipOnly, simple, writer, bare, children }: { bare?: boolean; title: string; singular: string; group: string; rows: Contributor[]; onChange: (rows: Contributor[]) => void; disabled: boolean; publisher?: boolean; tip?: string | undefined; tipOnly?: boolean; simple?: boolean; writer?: boolean; children?: ReactNode }) {
   const roleSelect = (row: Contributor, index: number) => writer && <SelectField label="Role" term="roles" id={`${group}-${index}-role`} value={writerRole(row.role)} options={WRITER_ROLES} onChange={(value) => change(index, "role", value)} />;
   // Writers (and pre-role composer entries) have one name: their legal name, used for credits and registration.
   const legal = writer || group === "composers";
@@ -788,8 +888,9 @@ function Contributors({ title, singular, group, rows, onChange, disabled, publis
   const ipi = (row: Contributor, index: number) => <Field label="IPI name number" term="ipi" id={`${group}-${index}-ipi`} value={row.ipi} placeholder="9–11 digits" onChange={(value) => change(index, "ipi", value)} />;
   const pro = (row: Contributor, index: number) => <div className="min-w-0 space-y-2"><Label htmlFor={`${group}-${index}-pro`}>PRO affiliation<InfoTip term="pro" /></Label>
     <ProSelect id={`${group}-${index}-pro`} value={row.pro} onChange={(value) => change(index, "pro", value)} className="flex h-9 w-full rounded-md border border-input bg-background px-3 text-sm shadow-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" /></div>;
-  return <fieldset disabled={disabled} className="space-y-5 border-t border-border pt-6">
-    <legend className="pr-3 text-lg font-semibold">{title}{tip && <Tip text={tip} title={title} />}</legend>
+  return <fieldset disabled={disabled} className={bare ? "min-w-0 space-y-5" : "space-y-5 border-t border-border pt-6"}>
+    <legend className={bare ? "sr-only" : "pr-3 text-lg font-semibold"}>{title}{!bare && tip && <Tip text={tip} title={title} />}</legend>
+    {bare && tip && tipOnly && <p className="flex items-center text-sm text-muted-foreground">About this<Tip text={tip} title={title} /></p>}
     {tip && !tipOnly && <p className="text-sm text-muted-foreground">{tip}</p>}
     {rows.map((row, index) => simple
       ? legal
