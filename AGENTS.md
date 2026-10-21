@@ -34,6 +34,12 @@ Embedding is forgiving; registration is strict. Never block a user from saving o
 - Splits are checked by the same module as `warnings`: they never hold back an agency export (it goes out with a warning), but they DO block registration assistance, because splits must be settled before registering: writer splits must total exactly 100%, and if any publisher is listed, publisher shares must total exactly 100% (shares are entered as 100% of the publisher half, not of the whole song). Exports still go out, with a warning naming the songs to fix. SoundExchange skips the split check because it registers the recording, not the song.
 - This logic lives in ONE shared function/module. Every feature (embed indicator, catalog badge, export gate, any future agency template) must call it. Never re-implement readiness checks anywhere else.
 - Readiness returns a list of specific missing items, not just true/false, so the UI can tell users exactly what to fix.
+- Registration assistance (our agents registering for the user) uses the stricter per-agency check `registrationCheck` in the same module, never the export gate. It builds on the core rules, always blocks on splits, and adds each agency's requirements (PLAN-registration-intake §5):
+  - **ASCAP:** writer PRO + IPI, publisher (PRO + share) or Self-published, samples answered.
+  - **BMI:** the ASCAP items plus publisher IPI, duration, genre, "written for film/TV/stage/ad" answered, and a label once released.
+  - **The MLC:** IPI for writers in a PRO, publisher or Self-published, ISRC.
+  - **SoundExchange:** recording only, with no writer checks: ISRC, master share, UPC.
+  - Saving, embedding and the user's own exports are never held to these.
 
 ### Data flow
 - Embed → Catalog → Agency export templates. Changes to writer fields must be carried through all three.

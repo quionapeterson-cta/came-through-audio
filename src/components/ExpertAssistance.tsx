@@ -5,7 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { listTracks, type CatalogTrack } from "@/lib/catalog";
-import { registrationReadiness } from "@/lib/readiness";
+import { REGISTRATION_AGENCY_LABEL, registrationAgency, registrationChecks, type MissingItem, type RegistrationAgency } from "@/lib/readiness";
 import { assistanceFees, assistanceTotal } from "@/lib/plans";
 import { openCheckout } from "@/lib/checkout";
 import type { Purchase } from "@/hooks/useBilling";
@@ -21,8 +21,17 @@ export function toggleAgency(list: string[], a: string, on: boolean): string[] {
   return [...base, a];
 }
 
-/** Readiness comes from the shared check; PRO affiliation is only required when registering with ASCAP or BMI. */
-const proSession = (agencies: string[]) => agencies.some((a) => PRO_CHOICES.includes(a));
+/** Every agency's missing items for one song, merged so an item two agencies share shows once, naming both. */
+function missingFor(m: CatalogTrack["metadata"], agencies: RegistrationAgency[]): (MissingItem & { agencies: string[] })[] {
+  const out = new Map<string, MissingItem & { agencies: string[] }>();
+  for (const c of registrationChecks(m, agencies)) for (const i of c.missing) {
+    const key = `${i.field}|${i.message}`;
+    const seen = out.get(key);
+    if (seen) seen.agencies.push(REGISTRATION_AGENCY_LABEL[c.agency]);
+    else out.set(key, { ...i, agencies: [REGISTRATION_AGENCY_LABEL[c.agency]] });
+  }
+  return [...out.values()];
+}
 
 export function ExpertAssistance({ userId, purchases, onFix }: { userId: string; purchases: Purchase[]; onFix?: (trackId: string, field: string) => void }) {
   const [tracks, setTracks] = useState<CatalogTrack[]>([]);
@@ -46,9 +55,9 @@ export function ExpertAssistance({ userId, purchases, onFix }: { userId: string;
   const songs = Number(count) || 0;
   const total = assistanceTotal(type, songs, agencies.length);
   const sessionAgencies = session ? (session.details["agencies"] ?? "").split(" | ") : agencies;
-  const target = proSession(sessionAgencies) ? "pro" : undefined;
-  // Splits must be settled before registering, so here split warnings hold a song back too (exports only warn).
-  const incomplete = useMemo(() => tracks.map((t) => { const r = registrationReadiness(t.metadata, target); return { t, miss: [...r.missing, ...r.warnings] }; }).filter((x) => x.miss.length), [tracks, target]);
+  const targets = useMemo(() => sessionAgencies.map(registrationAgency).filter((a): a is RegistrationAgency => !!a), [sessionAgencies.join("|")]); // eslint-disable-line react-hooks/exhaustive-deps
+  // Each agency's own checklist (shared readiness module); splits must be settled before registering.
+  const incomplete = useMemo(() => tracks.map((t) => ({ t, miss: missingFor(t.metadata, targets) })).filter((x) => x.miss.length), [tracks, targets]);
   const readyCount = tracks.length - incomplete.length;
   const paidSongs = Number(session?.details["songs"] ?? 0);
   const catalogReady = !!session && readyCount >= paidSongs && paidSongs > 0;
@@ -127,8 +136,9 @@ export function ExpertAssistance({ userId, purchases, onFix }: { userId: string;
               <p className="text-muted-foreground">Ready: {readyCount} of {paidSongs}</p>
               {incomplete.slice(0, 6).map(({ t, miss }) => <div key={t.id} className="rounded-md bg-muted px-3 py-2">
                 <div className="font-semibold">{t.title || "Untitled"}</div>
-                <ul>{miss.map((i) => <li key={i.code + i.field}>
+                <ul>{miss.map((i) => <li key={i.field + i.message}>
                   {onFix ? <button type="button" className="text-left" onClick={() => onFix(t.id, i.field)}>⚠️ {i.message}</button> : <>⚠️ {i.message}</>}
+                  {targets.length > 1 && <span className="text-xs text-muted-foreground"> ({i.agencies.join(", ")})</span>}
                 </li>)}</ul>
               </div>)}
             </div>

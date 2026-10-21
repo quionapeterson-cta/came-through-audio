@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { emptyMetadata, splitTrack, withLegalName, type Contributor, type Metadata } from "@/lib/metadata";
-import { registrationReadiness, registrationWriters } from "@/lib/readiness";
+import { registrationAgency, registrationCheck, registrationReadiness, registrationWriters, type RegistrationAgency } from "@/lib/readiness";
 import { exportGate, mlcRows, proCheatSheet } from "@/lib/agency-export";
 import type { CatalogTrack } from "@/lib/catalog";
 
@@ -151,5 +151,50 @@ describe("performers", () => {
       { role: "Session musician", name: "Jane Doe", instrument: "Guitar" }, { role: "Mixing engineer", name: "Sam", instrument: "" }, { role: "Backup vocalist", name: "Bee", instrument: "Vocals" },
     ] });
     expect(list.map((p) => [p.name, p.featured, p.instrument])).toEqual([["Karma Came", true, ""], ["OG PI", true, ""], ["Jane Doe", false, "Guitar"], ["Bee", false, "Vocals"]]);
+  });
+});
+
+describe("per-agency registration checks", () => {
+  const writer = (patch: Partial<Contributor> = {}): Contributor => ({ ...w("Q", "Author/Composer", "Quiona P", "ASCAP", "100"), ipi: "00123456789", ...patch });
+  const full = (patch: Partial<Metadata> = {}) => song({
+    writers: [writer()], selfPublished: true, samples: "No", writtenFor: "No", duration: "3:20", primaryGenre: "Pop",
+    isrc: "USCTA2600001", upc: "123456789012", releaseDate: "2026-01-02", label: "Came Through Audio", ...patch,
+  });
+  const need = (m: Metadata, a: RegistrationAgency) => registrationCheck(m, a, "2026-10-21").missing.map((i) => i.field);
+
+  it("passes a complete song for every agency", () => {
+    for (const a of ["ascap", "bmi", "mlc", "soundexchange"] as const) expect(registrationCheck(full(), a, "2026-10-21")).toMatchObject({ ready: true, missing: [] });
+  });
+  it("needs an IPI for every writer who belongs to a PRO, linked to that writer", () => {
+    const m = full({ writers: [writer({ ipi: "" })] });
+    for (const a of ["ascap", "bmi", "mlc"] as const) expect(need(m, a)).toEqual(["writers-0-ipi"]);
+    expect(need(m, "soundexchange")).toEqual([]);
+  });
+  it("needs a publisher or Self-published, never both", () => {
+    expect(need(full({ selfPublished: false }), "ascap")).toEqual(["selfPublished"]);
+    const pub = { name: "Lee Songs", pro: "BMI", ipi: "", percentage: "100" };
+    expect(need(full({ selfPublished: true, publishers: [pub] }), "mlc")).toEqual(["selfPublished"]);
+    expect(need(full({ selfPublished: false, publishers: [pub] }), "ascap")).toEqual([]);
+    expect(need(full({ selfPublished: false, publishers: [pub] }), "bmi")).toEqual(["publishers-0-ipi"]);
+  });
+  it("asks PROs about samples, and BMI about duration, genre, productions and the label once released", () => {
+    expect(need(full({ samples: "" }), "ascap")).toEqual(["samples"]);
+    expect(need(full({ samples: "Yes" }), "bmi")).toEqual(["sampleTitle", "sampleWriters"]);
+    expect(need(full({ duration: "", primaryGenre: "", writtenFor: "" }), "bmi")).toEqual(["duration", "primaryGenre", "writtenFor"]);
+    expect(need(full({ writtenFor: "Film" }), "bmi")).toEqual(["productionTitle"]);
+    expect(need(full({ label: "" }), "bmi")).toEqual(["label"]);
+    expect(need(full({ label: "", releaseDate: "2027-01-01" }), "bmi")).toEqual([]);
+    expect(need(full({ samples: "", duration: "" }), "mlc")).toEqual([]);
+  });
+  it("needs an ISRC for The MLC and SoundExchange, and only recording details for SoundExchange", () => {
+    expect(need(full({ isrc: "" }), "mlc")).toEqual(["isrc"]);
+    expect(need(full({ isrc: "", upc: "", masterShare: "0", writers: [] }), "soundexchange")).toEqual(["isrc", "masterShare", "upc"]);
+    expect(registrationCheck(full({ isrc: "" }), "ascap", "2026-10-21")).toMatchObject({ ready: true, tips: [expect.objectContaining({ field: "isrc" })] });
+  });
+  it("blocks on splits that don't total 100%", () => {
+    expect(need(full({ writers: [writer({ percentage: "90" })] }), "ascap")).toEqual(["writers-0-share"]);
+  });
+  it("maps purchase labels to agencies", () => {
+    expect(["ASCAP", "BMI", "The MLC", "SoundExchange", "SESAC"].map(registrationAgency)).toEqual(["ascap", "bmi", "mlc", "soundexchange", undefined]);
   });
 });

@@ -3,7 +3,8 @@ import { splitStatus } from "@/lib/splits-total";
 
 /** Registration targets. Only PRO registration (BMI/ASCAP) also needs each writer's PRO affiliation. */
 export type ReadinessTarget = "mlc" | "soundexchange" | "pro";
-export type MissingCode = "author" | "composer" | "legal_name" | "pro" | "split";
+export type MissingCode = "author" | "composer" | "legal_name" | "pro" | "split"
+  | "ipi" | "publisher" | "samples" | "written_for" | "duration" | "genre" | "release" | "isrc" | "upc" | "master" | "iswc";
 /** `field` is the form input id to jump to, e.g. "writers-1-legalName". */
 export type MissingItem = { code: MissingCode; message: string; field: string };
 /** `missing` blocks registration and exports; `warnings` (splits not at 100%) are shown but never hold a song back. */
@@ -77,3 +78,85 @@ export function registrationWriters(m: Pick<Metadata, "writers" | "composers">) 
     role: author && composer ? "Author/Composer" : author ? "Author" : "Composer",
   }));
 }
+
+/** Agencies our team registers with (Expert Registration Assistance). */
+export type RegistrationAgency = "ascap" | "bmi" | "mlc" | "soundexchange";
+export const REGISTRATION_AGENCY_LABEL: Record<RegistrationAgency, string> = { ascap: "ASCAP", bmi: "BMI", mlc: "The MLC", soundexchange: "SoundExchange" };
+/** "ASCAP" / "The MLC" (as stored on a purchase) → agency key. */
+export const registrationAgency = (label: string): RegistrationAgency | undefined =>
+  (Object.entries(REGISTRATION_AGENCY_LABEL) as [RegistrationAgency, string][]).find(([, l]) => l === label.trim())?.[0];
+/** `missing` blocks submitting the song for registration with that agency; `tips` are recommended, never blocking. */
+export type RegistrationCheck = { agency: RegistrationAgency; ready: boolean; missing: MissingItem[]; tips: MissingItem[] };
+
+const hasPro = (r: Contributor) => !!r.pro?.trim() && r.pro !== "None";
+const isReleased = (date: string, today: string) => !!date && date <= today;
+
+/**
+ * What one agency needs before our team registers the song (PLAN-registration-intake §5). Built on registrationReadiness,
+ * so the core rules stay in one place. Stricter than the export gate on purpose: it is only used for registration
+ * assistance, never for saving, embedding or the user's own exports. Splits always block here.
+ */
+export function registrationCheck(m: Metadata, agency: RegistrationAgency, today = new Date().toISOString().slice(0, 10)): RegistrationCheck {
+  const missing: MissingItem[] = [];
+  const tips: MissingItem[] = [];
+  const need = (code: MissingCode, message: string, field: string) => missing.push({ code, message, field });
+  const tip = (code: MissingCode, message: string, field: string) => tips.push({ code, message, field });
+  const pubs = (m.publishers ?? []).map((row, index) => ({ row, index })).filter(({ row }) => creditName(row) || row.percentage?.trim() || row.ipi?.trim());
+
+  if (agency === "soundexchange") {
+    if (!m.isrc.trim()) need("isrc", "Add the recording's ISRC. SoundExchange matches every play to it.", "isrc");
+    const share = Number(m.masterShare || 0);
+    if (!(share > 0 && share <= 100)) need("master", "Add the share of the master you own (most independent artists own 100%).", "masterShare");
+    if (!m.upc.trim()) need("upc", "Add the release's UPC (or EAN). SoundExchange needs at least one release for each recording.", "upc");
+    if (!m.releaseDate) tip("release", "Add the release date.", "releaseDate");
+    if (!m.recordedIn.trim()) tip("release", "Add the country it was recorded in (helps collect royalties outside the US).", "recordedIn");
+    return { agency, ready: !missing.length, missing, tips };
+  }
+
+  const base = registrationReadiness(m, agency === "mlc" ? "mlc" : "pro");
+  missing.push(...base.missing, ...base.warnings);
+  // Every writer who belongs to a PRO has an IPI number; all three agencies identify writers by it.
+  for (const { row, group, index } of listed(m)) {
+    if (hasPro(row) && !row.ipi?.trim()) need("ipi", `Add the IPI name number for ${creditName(row) || `writer ${index + 1}`}. Find it in their ${row.pro} account.`, `${group}-${index}-ipi`);
+  }
+
+  // Who collects the publisher share: a listed publisher, or nobody (self-published / self-administered).
+  if (m.selfPublished && pubs.length) need("publisher", "You checked Self-published but also listed a publisher. Keep one.", "selfPublished");
+  else if (!m.selfPublished && !pubs.length) need("publisher", "Add the song's publisher, or check Self-published (no publisher).", "selfPublished");
+  for (const { row, index } of pubs) {
+    const who = creditName(row) || `publisher ${index + 1}`;
+    if (!creditName(row)) need("publisher", `Add a name for ${who}.`, `publishers-${index}-name`);
+    if (agency !== "mlc" && !hasPro(row)) need("pro", `Add a PRO affiliation for ${who}.`, `publishers-${index}-pro`);
+    if (agency === "bmi" && !row.ipi?.trim()) need("ipi", `Add the IPI name number for ${who}.`, `publishers-${index}-ipi`);
+  }
+
+  if (agency === "mlc") {
+    if (!m.isrc.trim()) need("isrc", "Add the recording's ISRC. The MLC pays by matching streams to the song through its recordings.", "isrc");
+    if (!m.iswc.trim()) tip("iswc", "Add the ISWC if your PRO has assigned one.", "iswc");
+    return { agency, ready: !missing.length, missing, tips };
+  }
+
+  if (!m.samples) need("samples", "Answer whether the song uses a sample or is based on another song.", "samples");
+  else if (m.samples === "Yes") {
+    if (!m.sampleTitle.trim()) need("samples", "Add the title of the song it samples or is based on.", "sampleTitle");
+    if (!m.sampleWriters.trim()) need("samples", "Add the writers of the song it samples or is based on.", "sampleWriters");
+  }
+  if (agency === "bmi") {
+    if (!m.duration.trim()) need("duration", "Add the song's duration (mm:ss).", "duration");
+    if (!m.primaryGenre) need("genre", "Choose the song's primary genre.", "primaryGenre");
+    if (!m.writtenFor) need("written_for", "Answer whether the song was written for a film, TV show, stage show or ad.", "writtenFor");
+    else if (m.writtenFor !== "No" && !m.productionTitle.trim()) need("written_for", "Add the title of the production it was written for.", "productionTitle");
+    if (isReleased(m.releaseDate, today) && !m.label.trim()) need("release", "Released songs need a record label. Self-released? Use your artist or label name.", "label");
+    if (!m.iswc.trim()) tip("iswc", "Add the ISWC if one has been assigned.", "iswc");
+  } else {
+    if (!m.isrc.trim()) tip("isrc", "Add the ISRC so ASCAP can match streams to the song.", "isrc");
+    if (!m.duration.trim()) tip("duration", "Add the song's duration.", "duration");
+  }
+  return { agency, ready: !missing.length, missing, tips };
+}
+
+/** One song checked against every agency in an order. */
+export function registrationChecks(m: Metadata, agencies: RegistrationAgency[], today?: string): RegistrationCheck[] {
+  return agencies.map((a) => registrationCheck(m, a, today));
+}
+
