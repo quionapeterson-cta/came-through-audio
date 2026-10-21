@@ -20,7 +20,7 @@ describe("checkout input", () => {
 
   it("ignores a user ID or price sent from the browser", () => {
     const parsed = checkoutInput.parse({ kind: "plan", priceId: "catalog_plus_yearly", userId: "someone-else", items: [{ priceId: "x" }] });
-    expect(planCheckout(parsed, "me")).toEqual({ mode: "subscription", items: [{ lookupKey: "catalog_plus_yearly", quantity: 1 }], metadata: { userId: "me" } });
+    expect(planCheckout(parsed, "me")).toEqual({ mode: "subscription", items: [{ lookupKey: "catalog_plus_yearly", quantity: 1 }], metadata: { userId: "me" }, managed: true });
   });
 });
 
@@ -31,6 +31,7 @@ describe("planCheckout", () => {
     expect(p.items).toEqual([{ lookupKey: "ai_protection_ep", quantity: 1 }]);
     expect(p.metadata).toMatchObject({ userId: "me", kind: "ai", package: "EP" });
     expect(p.returnTab).toBe("protect");
+    expect(p.managed).toBe(true);
   });
 
   it("prices Expert Assistance on the server and merges repeated prices into one line", () => {
@@ -42,6 +43,8 @@ describe("planCheckout", () => {
       { lookupKey: "expert_per_song_agency", quantity: 48 },
     ]);
     expect(p.metadata).toEqual({ userId: "me", kind: "expert", type: "album", songs: "24", agencies: "The MLC | BMI" });
+    // A service our team delivers can't go through Managed Payments.
+    expect(p.managed).toBe(false);
   });
 
   it("caps a single/EP session at 6 songs", () => {

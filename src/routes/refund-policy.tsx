@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { LegalPage } from "@/components/LegalPage";
 
-const d = "Came Through Audio offers a 30-day refund window on subscriptions and packages, processed by Paddle.";
+const d = "Came Through Audio offers a 30-day refund window on plans, packages and Expert Registration Assistance, processed by Stripe.";
 
 export const Route = createFileRoute("/refund-policy")({
   head: () => ({
@@ -21,12 +21,13 @@ function Refund() {
   return (
     <LegalPage
       title="Refund Policy"
-      updated="October 12, 2026"
+      updated="October 21, 2026"
       intro={<p>We want you to have complete peace of mind when organizing your music. We offer a 30-day refund window, structured as follows.</p>}
       sections={[
-        { heading: "Catalog Plus Subscriptions", body: <p>If you are unsatisfied with your annual Catalog Plus subscription, you may request a full refund within 30 days of your order date. If you upgrade from a starter plan, we will refund the exact pricing difference when the upgrade is made within 30 days of your original payment.</p> },
+        { heading: "Plans (Catalog Plus, Catalog & Collaborate, Catalog Management)", body: <p>If you are unsatisfied with your annual plan, you may request a full refund within 30 days of your order date. When you switch to a higher plan, you pay only the prorated difference at the time of the switch. A refund ends the plan right away, and once a plan ends its catalog is emptied, so download your masters, cover art, lyrics and catalog PDF before you request a refund or let your plan end.</p> },
         { heading: "AI Protection Hub Packages", body: <p>Individual packages — Single ($2.99), EP up to 6 songs ($9.99), Album up to 12 songs ($16.99), and Album+ up to 20 songs ($24.99) — are eligible for a refund within 30 days of purchase, provided the proof certificate has not yet been generated. Once the PDF Proof Certificate, validation QR code, or timestamp has been produced, the digital service is considered delivered.</p> },
-        { heading: "How to Request a Refund", body: <p>Refunds are processed by our payment provider and Merchant of Record, Paddle, and credited to your original payment method. To request a refund, visit <a className="text-primary underline" href="https://paddle.net" target="_blank" rel="noreferrer">paddle.net</a> or email <a className="text-primary underline" href="mailto:support@camethroughaudio.com">support@camethroughaudio.com</a> with your order details. See also <a className="text-primary underline" href="https://www.paddle.com/legal/refund-policy" target="_blank" rel="noreferrer">Paddle's Refund Policy</a>.</p> },
+        { heading: "Expert Registration Assistance", body: <p>You may request a full refund within 30 days of purchase, as long as our team hasn't started work on your registrations. Once work has started, the service is considered delivered.</p> },
+        { heading: "How to Request a Refund", body: <p>Email <a className="text-primary underline" href="mailto:support@camethroughaudio.com">support@camethroughaudio.com</a> with the email on your account and what you bought. Approved refunds go back to your original payment method, usually within 5–10 business days. For purchases sold through Link, you can also ask Link support at <a className="text-primary underline" href="https://support.link.com" target="_blank" rel="noreferrer">support.link.com</a>.</p> },
       ]}
     />
   );

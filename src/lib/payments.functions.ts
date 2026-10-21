@@ -5,6 +5,12 @@ import { getPaymentsEnvironment } from "@/lib/payments-env";
 import { checkoutInput, planCheckout } from "@/lib/stripe-mapping";
 import { isActiveSub } from "@/lib/plans";
 
+/**
+ * Sales tax on sales Came Through Audio, LLC makes directly (Expert Assistance). Stays off until Stripe Tax is
+ * turned on in the Stripe dashboard, because checkout fails otherwise.
+ */
+const STRIPE_TAX = false;
+
 async function appOrigin() {
   const { getRequest } = await import("@tanstack/react-start/server");
   return new URL(getRequest().url).origin;
@@ -96,10 +102,10 @@ export const createCheckoutSession = createServerFn({ method: "POST" })
         // One-off charges: the product name lands on the Charge so the payments dashboard
         // shows it instead of "Unknown product". Subscriptions resolve names server-side.
         ...(plan.mode === "payment" && { payment_intent_data: { description: productNames.join(" + ") } }),
-        metadata: { ...metadata, managed_payments: "true" },
+        metadata: plan.managed ? { ...metadata, managed_payments: "true" } : metadata,
         ...(plan.mode === "subscription" && { subscription_data: { metadata: { userId: context.userId } } }),
-        // Stripe handles tax, fraud protection, disputes and transaction support end-to-end.
-        managed_payments: { enabled: true },
+        // Managed: Stripe handles tax, fraud protection, disputes and transaction support end-to-end.
+        ...(plan.managed ? { managed_payments: { enabled: true } } : STRIPE_TAX ? { automatic_tax: { enabled: true } } : {}),
       } as Parameters<typeof stripe.checkout.sessions.create>[0]);
       if (!session.client_secret) throw new Error("Stripe did not return a client secret");
       return { clientSecret: session.client_secret };

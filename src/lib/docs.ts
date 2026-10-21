@@ -95,7 +95,7 @@ export const DOCS: Doc[] = [
       ] },
       { heading: "Proof of creation", paragraphs: ["The AI Protection Hub fingerprints your session recordings with SHA-256 and timestamps them on the Bitcoin blockchain through OpenTimestamps. That proves a file existed at a point in time. It doesn't prove ownership by itself, which is why it's paired with your sworn human-authorship attestation."] },
       { heading: "Payments and staff access", bullets: [
-        "Checkout is handled by Paddle, so your card details never touch our servers.",
+        "Checkout is handled by Stripe, so your card details never touch our servers.",
         "Paid access comes only from verified payment records. It can't be granted from inside the app.",
         "Staff access is role-based and limited to each person's department. Nobody can promote themselves.",
       ] },

@@ -28,11 +28,16 @@ export type CheckoutPlan = {
   /** Copied onto the Stripe session (and subscription) and back into purchases.details by the webhook. */
   metadata: Record<string, string>;
   returnTab?: "protect" | "health";
+  /**
+   * Sold through Stripe Managed Payments (Link is merchant of record). Only fully automated digital products
+   * qualify, so services our team delivers (Expert Assistance) are sold by Came Through Audio, LLC directly.
+   */
+  managed: boolean;
 };
 
 export function planCheckout(input: CheckoutInput, userId: string): CheckoutPlan {
   if (input.kind === "plan") {
-    return { mode: "subscription", items: [{ lookupKey: input.priceId, quantity: 1 }], metadata: { userId } };
+    return { mode: "subscription", items: [{ lookupKey: input.priceId, quantity: 1 }], metadata: { userId }, managed: true };
   }
   if (input.kind === "ai") {
     return {
@@ -40,6 +45,7 @@ export function planCheckout(input: CheckoutInput, userId: string): CheckoutPlan
       items: [{ lookupKey: `ai_protection_${input.package.toLowerCase()}`, quantity: 1 }],
       metadata: { userId, kind: "ai", package: input.package, ...(input.trackId ? { trackId: input.trackId } : {}) },
       returnTab: "protect",
+      managed: true,
     };
   }
   const songs = input.type === "single" ? Math.min(input.songs, 6) : input.songs;
@@ -51,6 +57,7 @@ export function planCheckout(input: CheckoutInput, userId: string): CheckoutPlan
     items: [...merged].map(([lookupKey, quantity]) => ({ lookupKey, quantity })),
     metadata: { userId, kind: "expert", type: input.type, songs: String(songs), agencies: input.agencies.join(" | ") },
     returnTab: "health",
+    managed: false,
   };
 }
 
