@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { assistanceItems, PRICE_TIER } from "@/lib/plans";
-import { PACKAGES } from "@/lib/proof";
+import { PACKAGES, TRACKS_PER_KEY, packageSongs } from "@/lib/proof";
 
 /**
  * What the browser may ask to buy. Prices, quantities and the buyer are never taken from the browser: the server
@@ -11,7 +11,7 @@ export const checkoutInput = z.discriminatedUnion("kind", [
   z.object({
     kind: z.literal("ai"),
     package: z.enum(PACKAGES.map((p) => p.id) as [string, ...string[]]),
-    trackId: z.string().uuid().optional(),
+    trackIds: z.array(z.string().uuid()).max(20).optional(),
   }),
   z.object({
     kind: z.literal("expert"),
@@ -19,7 +19,7 @@ export const checkoutInput = z.discriminatedUnion("kind", [
     songs: z.number().int().min(1).max(500),
     agencies: z.array(z.string().trim().min(1).max(60)).min(1).max(12),
   }),
-]);
+]).refine((a) => a.kind !== "ai" || (a.trackIds?.length ?? 0) <= packageSongs(a.package), { message: "Pick a bigger package for that many songs." });
 export type CheckoutInput = z.infer<typeof checkoutInput>;
 
 export type CheckoutPlan = {
@@ -43,7 +43,7 @@ export function planCheckout(input: CheckoutInput, userId: string): CheckoutPlan
     return {
       mode: "payment",
       items: [{ lookupKey: `ai_protection_${input.package.toLowerCase()}`, quantity: 1 }],
-      metadata: { userId, kind: "ai", package: input.package, ...(input.trackId ? { trackId: input.trackId } : {}) },
+      metadata: { userId, kind: "ai", package: input.package, ...trackKeys(input.trackIds ?? []) },
       returnTab: "protect",
       managed: true,
     };
@@ -59,6 +59,13 @@ export function planCheckout(input: CheckoutInput, userId: string): CheckoutPlan
     returnTab: "health",
     managed: false,
   };
+}
+
+/** tracks_1, tracks_2…: comma-separated catalog song IDs, read back by paidTrackIds. */
+function trackKeys(ids: string[]): Record<string, string> {
+  const out: Record<string, string> = {};
+  for (let i = 0; i < ids.length; i += TRACKS_PER_KEY) out[`tracks_${i / TRACKS_PER_KEY + 1}`] = ids.slice(i, i + TRACKS_PER_KEY).join(",");
+  return out;
 }
 
 const iso = (unix: number | null | undefined) => (unix ? new Date(unix * 1000).toISOString() : null);

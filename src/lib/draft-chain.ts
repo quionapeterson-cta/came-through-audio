@@ -43,8 +43,8 @@ export async function extractFrames(file: File): Promise<string[]> {
   } finally { URL.revokeObjectURL(url); }
 }
 
-/** Re-records a video at up to 720p (~2.5 Mbps) in the browser. Takes about as long as the video plays. */
-export async function compressTo720p(file: File): Promise<File> {
+/** Re-records a video at up to 720p (~2.5 Mbps) in real time. Browsers pause hidden tabs, so the page must stay open and on screen. */
+export async function compressTo720p(file: File, onProgress?: (fraction: number) => void): Promise<File> {
   const url = URL.createObjectURL(file);
   const v = document.createElement("video");
   v.playsInline = true; v.src = url;
@@ -66,6 +66,7 @@ export async function compressTo720p(file: File): Promise<File> {
     const stopped = new Promise<void>((ok) => { rec.onstop = () => ok(); });
     let raf = 0;
     const draw = () => { ctx.drawImage(v, 0, 0, c.width, c.height); raf = requestAnimationFrame(draw); };
+    v.ontimeupdate = () => onProgress?.(v.duration ? v.currentTime / v.duration : 0);
     rec.start(1000);
     await v.play();
     draw();

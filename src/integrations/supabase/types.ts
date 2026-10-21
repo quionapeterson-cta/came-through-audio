@@ -107,6 +107,7 @@ export type Database = {
           issued_at: string | null
           iswc: string | null
           legal_credits: Json
+          manifest: string | null
           notes_hash: string | null
           notes_proof_url: string
           ots_calendar: string | null
@@ -131,6 +132,7 @@ export type Database = {
           issued_at?: string | null
           iswc?: string | null
           legal_credits?: Json
+          manifest?: string | null
           notes_hash?: string | null
           notes_proof_url?: string
           ots_calendar?: string | null
@@ -155,6 +157,7 @@ export type Database = {
           issued_at?: string | null
           iswc?: string | null
           legal_credits?: Json
+          manifest?: string | null
           notes_hash?: string | null
           notes_proof_url?: string
           ots_calendar?: string | null

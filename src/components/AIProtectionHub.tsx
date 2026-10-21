@@ -1,6 +1,6 @@
-import { useEffect, useState } from "react";
-import type { CatalogTrack } from "@/lib/catalog";
-import { Info, Lock, Plus, Trash2, ShieldCheck, Video, Fingerprint, Link2, Gavel } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { listTracks, type CatalogTrack } from "@/lib/catalog";
+import { Check, ChevronDown, Download, Info, Loader2, Lock, Music2, Plus, Trash2, ShieldCheck, Video, Fingerprint, Link2, Gavel, AlertTriangle } from "lucide-react";
 
 const EXPLAINERS = [
   { icon: Fingerprint, title: "DAW & Draft Hashing (SHA-256)", tag: "Your song's tamper-proof digital fingerprint",
@@ -19,66 +19,93 @@ import { Button } from "@/components/ui/button";
 import { InfoTip } from "@/components/InfoTip";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Progress } from "@/components/ui/progress";
 import { NoteGuide, RecordGuide } from "@/components/ProofGuides";
-import { PACKAGES, MIN_PROOF_SECONDS, MAX_PROOF_SECONDS, MAX_PROOF_BYTES, sha256, videoDuration, proofFileError, PROOF_VIDEO_TYPES, type PackageId } from "@/lib/proof";
+import { PACKAGES, MIN_PROOF_SECONDS, MAX_PROOF_SECONDS, MAX_PROOF_BYTES, sha256, videoDuration, proofFileError, PROOF_VIDEO_TYPES, packageFor, certificateCredits, paidTrackIds, type PackageId } from "@/lib/proof";
 import { useServerFn } from "@tanstack/react-start";
 import { openCheckout, getPaymentsEnvironment } from "@/lib/checkout";
 import { stampDigest } from "@/lib/ots.functions";
 import { scanDraftFrames } from "@/lib/draft-scan.functions";
 import { extractFrames, rateChain, gradeProof, compressTo720p, type ChainResult } from "@/lib/draft-chain";
-import { buildOtsFile, download, proofManifest } from "@/lib/ots";
+import { proofManifest } from "@/lib/ots";
+import { saveBitcoinProof, saveCertificatePdf, type Certificate } from "@/lib/certificate";
 import { registrationWriters } from "@/lib/readiness";
 import { requestBadgeCheck } from "@/lib/badge-events";
+import type { Purchase } from "@/hooks/useBilling";
 
 type WriterRole = "author" | "composer" | "both" | "producer";
 type WriterRow = { name: string; role: WriterRole };
 type Proof = { name: string; hash: string; path: string; size: number; created: number };
+type Kind = "daw" | "drafts";
+/** What a proof box is doing right now, shown inline under its file picker. */
+type Status = { busy?: string; progress?: number; error?: string };
 
-export function AIProtectionHub({ userId, paid, track }: { userId: string; paid: boolean; track?: CatalogTrack | undefined }) {
+const MANUAL = "manual";
+const blankWriters = (): WriterRow[] => [{ name: "", role: "both" }];
+
+export function AIProtectionHub({ userId, purchases, justPaid, track }: { userId: string; purchases: Purchase[]; justPaid: boolean; track?: CatalogTrack | undefined }) {
   const stamp = useServerFn(stampDigest);
-  const [otsFile, setOtsFile] = useState<{ name: string; bytes: Uint8Array }>();
-  const [f, setF] = useState({ title: "", artist: "", isrc: "", upc: "", iswc: "" });
-  const [pkg, setPkg] = useState<PackageId>("Single");
-  const [attest, setAttest] = useState(false);
-  const [unlocked, setUnlocked] = useState(false);
-  const [daw, setDaw] = useState<Proof>();
-  const [notes, setNotes] = useState<Proof>();
-  const [dawFile, setDawFile] = useState<File>();
-  const [draftFile, setDraftFile] = useState<File>();
-  const [draftNotes, setDraftNotes] = useState("");
   const scan = useServerFn(scanDraftFrames);
-  const [chain, setChain] = useState<ChainResult>();
-  const [dawDate, setDawDate] = useState<string>();
-  const [scanning, setScanning] = useState(false);
-  const scanned = !!chain;
-  const grade = gradeProof(chain, dawDate);
-  const chainStatus = chain?.status === "strong" ? `Strong Chain${grade === "A+" ? " A+ (Triple-Verified Human Origin)" : " (Human Creation)"} · ${chain.days} days apart`
-    : chain?.status === "weak" ? `Weak Chain · drafts only ${chain.days} day${chain.days === 1 ? "" : "s"} apart — show an older draft for Strong Chain`
-    : "Pending — Make sure both timestamps clearly visible in 1 video";
-  async function scanAndRate() {
-    if (!draftFile) return;
-    setScanning(true); setChain(undefined); setDawDate(undefined);
-    try {
-      const [drafts, dawScan] = await Promise.all([
-        extractFrames(draftFile).then((frames) => scan({ data: { frames, kind: "drafts" } })),
-        dawFile ? extractFrames(dawFile).then((frames) => scan({ data: { frames, kind: "daw" } })).catch(() => ({ dates: [] })) : Promise.resolve({ dates: [] }),
-      ]);
-      setChain(rateChain(drafts.dates.map((d) => d.date)));
-      setDawDate(dawScan.dates.map((d) => d.date).sort().pop());
-    } catch (e) { toast.error(e instanceof Error ? e.message : "Date scan failed."); setChain({ status: "pending" }); }
-    finally { setScanning(false); }
+  const [tracks, setTracks] = useState<CatalogTrack[]>([]);
+  const [certs, setCerts] = useState<Certificate[]>();
+  const [unlocked, setUnlocked] = useState(false);
+
+  async function loadCerts() {
+    const { data } = await supabase.from("ai_protection_certificates").select("*").eq("user_id", userId).order("issued_at", { ascending: false });
+    setCerts((data ?? []) as Certificate[]);
   }
-  const [busy, setBusy] = useState(false);
-  const [writerRows, setWriterRows] = useState<WriterRow[]>([{ name: "", role: "both" }]);
-  const named = writerRows.filter((w) => w.name.trim());
-  const pick = (roles: WriterRole[]) => named.filter((w) => roles.includes(w.role)).map((w) => w.name.trim()).join(", ");
-  const writers = pick(["author", "both"]);
-  const composers = pick(["composer", "both"]);
-  const producers = pick(["producer"]);
+  useEffect(() => { listTracks().then(setTracks).catch(() => setTracks([])); void loadCerts(); }, [userId]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Credits: one certificate per song in each package; the database enforces the same count.
+  const credits = certificateCredits(purchases);
+  const left = certs ? Math.max(0, credits - certs.length) : 0;
+  const active = left > 0 || unlocked;
+  const protectedIds = new Set((certs ?? []).map((c) => c.catalog_id).filter(Boolean));
+  // Paid-for catalog songs that don't have a certificate yet (songs deleted from the catalog drop out).
+  const waiting = useMemo(() => paidTrackIds(purchases).filter((id) => !protectedIds.has(id) && tracks.some((t) => t.id === id)), [purchases, certs, tracks]); // eslint-disable-line react-hooks/exhaustive-deps
+  const trackById = (id: string) => tracks.find((t) => t.id === id);
+
+  // ---- Buying -------------------------------------------------------------------------------------------------
+  const [picked, setPicked] = useState<string[]>(track ? [track.id] : []);
+  const [pkg, setPkg] = useState<PackageId>("Single");
+  const [buyOpen, setBuyOpen] = useState(false);
+  useEffect(() => { if (track) { setPicked((p) => (p.includes(track.id) ? p : [...p, track.id])); setTarget(track.id); } }, [track]);
+  const togglePick = (id: string) => {
+    const next = picked.includes(id) ? picked.filter((x) => x !== id) : [...picked, id];
+    if (next.length > PACKAGES[PACKAGES.length - 1]!.songs) return;
+    setPicked(next); setPkg(packageFor(Math.max(1, next.length)));
+  };
+  const price = PACKAGES.find((p) => p.id === pkg)!.price;
+  const needsSong = tracks.length > 0 && picked.length === 0;
+  async function checkout() {
+    try { await openCheckout({ kind: "ai", package: pkg, trackIds: picked }); }
+    catch (e) { toast.error(e instanceof Error ? e.message : "Checkout could not open."); }
+  }
+
+  // ---- After paying: confirm, then lead straight into the steps ---------------------------------------------------
+  const [timedOut, setTimedOut] = useState(false);
+  const [welcomed, setWelcomed] = useState(false);
+  const steps = useRef<HTMLDivElement>(null);
+  const confirming = justPaid && !!certs && left === 0 && !timedOut;
+  useEffect(() => { if (!justPaid) return; const t = setTimeout(() => setTimedOut(true), 90_000); return () => clearTimeout(t); }, [justPaid]);
   useEffect(() => {
-    if (!track) return;
-    const m = track.metadata;
-    setF({ title: track.title, artist: track.artist, isrc: m.isrc ?? "", upc: m.upc ?? "", iswc: m.iswc ?? "" });
+    if (!justPaid || welcomed || left === 0) return;
+    setWelcomed(true);
+    setTimeout(() => steps.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 150);
+  }, [justPaid, left, welcomed]);
+
+  // ---- The song being protected -----------------------------------------------------------------------------------
+  const [target, setTarget] = useState<string>(track?.id ?? MANUAL);
+  // Once songs and purchases load, start on the first paid song that has no certificate yet.
+  useEffect(() => { if (target === MANUAL && waiting[0]) setTarget(waiting[0]); }, [waiting]); // eslint-disable-line react-hooks/exhaustive-deps
+  const targetTrack = target === MANUAL ? undefined : trackById(target);
+  const [f, setF] = useState({ title: "", artist: "", isrc: "", upc: "", iswc: "" });
+  const [writerRows, setWriterRows] = useState<WriterRow[]>(blankWriters());
+  useEffect(() => {
+    resetProof();
+    if (!targetTrack) { setF({ title: "", artist: "", isrc: "", upc: "", iswc: "" }); setWriterRows(blankWriters()); return; }
+    const m = targetTrack.metadata;
+    setF({ title: targetTrack.title, artist: targetTrack.artist, isrc: m.isrc ?? "", upc: m.upc ?? "", iswc: m.iswc ?? "" });
     const rows: WriterRow[] = [];
     const add = (list: { name: string }[] | undefined, role: WriterRole) => (list ?? []).forEach((c) => {
       const name = c.name.trim(); if (!name) return;
@@ -89,47 +116,86 @@ export function AIProtectionHub({ userId, paid, track }: { userId: string; paid:
     // Certificates are legal records: legal names, with Author/Composer counted as both.
     for (const w of registrationWriters(m)) add([w], w.role === "Author" ? "author" : w.role === "Composer" ? "composer" : "both");
     add(m.producers, "producer");
-    setWriterRows(rows.length ? rows : [{ name: "", role: "both" }]);
-  }, [track]);
+    setWriterRows(rows.length ? rows : blankWriters());
+  }, [targetTrack?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+  const named = writerRows.filter((w) => w.name.trim());
+  const pick = (roles: WriterRole[]) => named.filter((w) => roles.includes(w.role)).map((w) => w.name.trim()).join(", ");
+  const writers = pick(["author", "both"]);
+  const composers = pick(["composer", "both"]);
+  const producers = pick(["producer"]);
   const editRow = (i: number, patch: Partial<WriterRow>) => setWriterRows(writerRows.map((w, j) => (j === i ? { ...w, ...patch } : w)));
   const set = (k: keyof typeof f) => (e: React.ChangeEvent<HTMLInputElement>) => setF({ ...f, [k]: e.target.value });
+  const detailsMissing = [!f.title.trim() && "Track title", !f.artist.trim() && "Artist name", !named.some((w) => w.role !== "producer") && "At least one writer's legal name"].filter(Boolean) as string[];
 
-  async function proof(file: File | undefined, kind: "daw" | "drafts", done: (p: Proof) => void) {
+  // ---- Proof videos -----------------------------------------------------------------------------------------------
+  const [daw, setDaw] = useState<Proof>();
+  const [notes, setNotes] = useState<Proof>();
+  const [dawFile, setDawFile] = useState<File>();
+  const [draftFile, setDraftFile] = useState<File>();
+  const [draftNotes, setDraftNotes] = useState("");
+  const [status, setStatus] = useState<Record<Kind, Status>>({ daw: {}, drafts: {} });
+  const [attest, setAttest] = useState(false);
+  const [chain, setChain] = useState<ChainResult>();
+  const [dawDate, setDawDate] = useState<string>();
+  const [scanning, setScanning] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [issued, setIssued] = useState<Certificate>();
+  function resetProof() {
+    setDaw(undefined); setNotes(undefined); setDawFile(undefined); setDraftFile(undefined); setDraftNotes("");
+    setStatus({ daw: {}, drafts: {} }); setAttest(false); setChain(undefined); setDawDate(undefined);
+  }
+  const scanned = !!chain;
+  const grade = gradeProof(chain, dawDate);
+  const chainStatus = chain?.status === "strong" ? `Strong Chain${grade === "A+" ? " A+ (Triple-Verified Human Origin)" : " (Human Creation)"} · ${chain.days} days apart`
+    : chain?.status === "weak" ? `Weak Chain · drafts only ${chain.days} day${chain.days === 1 ? "" : "s"} apart — show an older draft for Strong Chain`
+    : "Pending — Make sure both timestamps clearly visible in 1 video";
+
+  const setKind = (kind: Kind, s: Status) => setStatus((all) => ({ ...all, [kind]: s }));
+  async function proof(file: File | undefined, kind: Kind, done: (p: Proof, file: File) => void) {
     if (!file) return;
+    const fail = (error: string) => setKind(kind, { error });
     if (PROOF_VIDEO_TYPES.includes(file.type) && file.size > MAX_PROOF_BYTES && file.size <= 400 * 1048576) {
-      const id = toast.loading("Video is over 50MB — shrinking it to 720p. This takes about as long as the video plays…");
-      try { file = await compressTo720p(file); } catch { toast.dismiss(id); toast.error("Couldn't shrink this video. Try a shorter or lower-resolution recording."); return; }
-      toast.dismiss(id);
+      setKind(kind, { busy: `Your video is ${Math.round(file.size / 1048576)}MB, so we're shrinking it to 720p. Keep this tab open and on screen.`, progress: 0 });
+      try { file = await compressTo720p(file, (p) => setKind(kind, { busy: "Shrinking to 720p. Keep this tab open and on screen.", progress: Math.round(p * 100) })); }
+      catch { return fail("Couldn't shrink this video. Try a shorter or lower-resolution recording."); }
     }
     const bad = proofFileError(file);
-    if (bad) { toast.error(bad); return; }
+    if (bad) return fail(bad);
     let d: number;
-    try { d = await videoDuration(file); } catch { toast.error("That video could not be read."); return; }
-    if (d < MIN_PROOF_SECONDS) { toast.error(`Recordings must be at least ${MIN_PROOF_SECONDS} seconds (this one is ${Math.round(d)}s).`); return; }
-    if (d > MAX_PROOF_SECONDS) { toast.error(`Recordings must be ${MAX_PROOF_SECONDS} seconds or shorter (this one is ${Math.round(d)}s).`); return; }
+    try { d = await videoDuration(file); } catch { return fail("That video could not be read. Try an MP4 or MOV file."); }
+    if (d < MIN_PROOF_SECONDS || d > MAX_PROOF_SECONDS) return fail(`This video is ${Math.round(d)} seconds. Proof videos can be ${MIN_PROOF_SECONDS}–${MAX_PROOF_SECONDS} seconds long.`);
+    setKind(kind, { busy: `Uploading and fingerprinting (${(file.size / 1048576).toFixed(1)}MB)…` });
     const hash = await sha256(await file.arrayBuffer());
     const ext = file.name.split(".").pop()?.toLowerCase() || "mp4";
     const path = `${userId}/${Date.now()}_${kind}.${ext}`;
-    const id = toast.loading("Securing your proof video…");
     const { error } = await supabase.storage.from("proof-videos").upload(path, file, { contentType: file.type });
-    toast.dismiss(id);
-    if (error) { toast.error(`Upload failed: ${error.message}`); return; }
-    done({ name: file.name, hash, path, size: file.size, created: file.lastModified || Date.now() });
-    toast.success("Proof video uploaded & fingerprinted.");
+    if (error) return fail(`Upload failed: ${error.message}. Please try again.`);
+    setKind(kind, {});
+    setChain(undefined);
+    done({ name: file.name, hash, path, size: file.size, created: file.lastModified || Date.now() }, file);
   }
 
-  const active = paid || unlocked;
-  async function checkout() {
+  const scanMissing = [
+    !daw && (status.daw.error ? `DAW Session video: ${status.daw.error}` : "Add your DAW Session video (step 2)"),
+    !notes && (status.drafts.error ? `Draft History video: ${status.drafts.error}` : "Add your Draft History video (step 2)"),
+    !attest && "Check the attestation (step 3)",
+  ].filter(Boolean) as string[];
+  async function scanAndRate() {
+    if (!draftFile || !dawFile) return;
+    setScanning(true); setChain(undefined); setDawDate(undefined);
     try {
-      await openCheckout({ kind: "ai", package: pkg, ...(track ? { trackId: track.id } : {}) });
-    } catch (e) { toast.error(e instanceof Error ? e.message : "Checkout could not open."); }
+      const [drafts, dawScan] = await Promise.all([
+        extractFrames(draftFile).then((frames) => scan({ data: { frames, kind: "drafts" } })),
+        extractFrames(dawFile).then((frames) => scan({ data: { frames, kind: "daw" } })).catch(() => ({ dates: [] })),
+      ]);
+      setChain(rateChain(drafts.dates.map((d) => d.date)));
+      setDawDate(dawScan.dates.map((d) => d.date).sort().pop());
+    } catch (e) { toast.error(e instanceof Error ? e.message : "Date scan failed."); setChain({ status: "pending" }); }
+    finally { setScanning(false); }
   }
 
   async function generate() {
-    if (!f.title || !f.artist || !named.some((w) => w.role !== "producer")) { toast.error("Track title, artist and at least one writer are required."); return; }
-    if (!daw || !notes) { toast.error("Add both recordings to continue."); return; }
-    if (!scanned) { toast.error("Run Scan & Rate first."); return; }
-    if (!attest) { toast.error("Check the legal attestation to continue."); return; }
+    if (detailsMissing.length || !daw || !notes || !scanned || !attest) return;
     setBusy(true);
     try {
       const strength = `Grade ${grade} · ${chainStatus}${dawDate ? ` · DAW session dated ${dawDate}` : ""}`;
@@ -143,185 +209,276 @@ export function AIProtectionHub({ userId, paid, track }: { userId: string; paid:
       let ots: { calendar: string; receipt: string } | null = null;
       try { ots = await stamp({ data: { digest } }); } catch { toast.warning("Blockchain timestamp unavailable right now — certificate issued without it."); }
       const { data, error } = await supabase.from("ai_protection_certificates").insert({
-        user_id: userId, format_type: pkg, track_title: f.title, artist_name: f.artist,
-        legal_credits: { writers: writers, composers: composers, producers },
+        user_id: userId, catalog_id: targetTrack?.id ?? null, format_type: (purchases.find((p) => p.kind === "ai")?.details["package"] ?? "Single") as PackageId, track_title: f.title, artist_name: f.artist,
+        legal_credits: { writers, composers, producers },
         isrc: f.isrc || null, upc: f.upc || null, iswc: f.iswc || null,
         session_hash: daw.hash, notes_hash: notes.hash, chain_strength: strength, attested: true,
-        session_video_url: daw.path, notes_proof_url: notes.path,
+        session_video_url: daw.path, notes_proof_url: notes.path, manifest,
         proof_digest: digest, ots_receipt: ots?.receipt ?? null, ots_calendar: ots?.calendar ?? null,
         blockchain_status: ots ? "pending_bitcoin" : "none",
-      } as never).select("id, issued_at").single();
+      }).select("*").single();
       if (error) throw error;
-      const row = data as { id: string; issued_at: string };
+      const cert = data as Certificate;
       requestBadgeCheck();
-      const [{ jsPDF }, QR] = await Promise.all([import("jspdf"), import("qrcode")]);
-      const qr = await QR.toDataURL(`CTA-CERT:${row.id}:${digest}`);
-      const pdf = new jsPDF();
-      pdf.setFontSize(20); pdf.text("Came Through Audio — Proof Certificate", 15, 22);
-      pdf.setFontSize(11);
-      const lines = [`Certificate ID: ${row.id}`, `Issued: ${new Date(row.issued_at).toUTCString()}`, `Track: ${f.title}`, `Artist: ${f.artist}`,
-        `Writers: ${writers}`, `Composers: ${composers}`, `Producers: ${producers || "—"}`,
-        `ISRC: ${f.isrc || "—"}   UPC: ${f.upc || "—"}   ISWC: ${f.iswc || "—"}`, `Chain: ${strength}`,
-        `DAW session SHA-256: ${daw.hash}`, `Draft history SHA-256: ${notes.hash}`,
-        `Proof manifest SHA-256: ${digest}`,
-        ots ? `Bitcoin timestamp: submitted via OpenTimestamps (${ots.calendar}); anchors within a few hours.` : "Bitcoin timestamp: not available",
-        ots ? "Verify: upload the manifest .txt and .ots files at opentimestamps.org" : ""];
-      let y = 36;
-      lines.forEach((l) => { const s = pdf.splitTextToSize(l, 130); pdf.text(s, 15, y); y += 6 * s.length + 3; });
-      pdf.addImage(qr, "PNG", 150, 36, 45, 45);
-      const base = f.title.replace(/[^\w-]+/g, "_");
-      pdf.save(`${base}-proof-certificate.pdf`);
-      download(`${base}-proof-manifest.txt`, manifestBytes, "text/plain");
-      if (ots) {
-        const file = buildOtsFile(digest, ots.receipt);
-        setOtsFile({ name: `${base}-proof-manifest.txt.ots`, bytes: file });
-        download(`${base}-proof-manifest.txt.ots`, file, "application/octet-stream");
-      }
-      toast.success(ots ? "Certificate generated and submitted to the Bitcoin blockchain." : "Proof certificate generated.");
+      await saveCertificatePdf(cert);
+      saveBitcoinProof(cert);
+      setIssued(cert);
+      toast.success(ots ? "Certificate issued and submitted to the Bitcoin blockchain." : "Certificate issued.");
+      await loadCerts();
+      const next = waiting.find((id) => id !== target);
+      setTarget(next ?? MANUAL);
+      if (target === MANUAL) { resetProof(); setF({ title: "", artist: "", isrc: "", upc: "", iswc: "" }); setWriterRows(blankWriters()); }
+      document.getElementById("my-certificates")?.scrollIntoView({ behavior: "smooth", block: "start" });
     } catch (e) { toast.error(e instanceof Error ? e.message : "Could not generate certificate."); }
     finally { setBusy(false); }
   }
 
+  // Songs offered in step 1: paid-for songs first, then the rest of the catalog.
+  const stepSongs = [...waiting.map(trackById).filter((t): t is CatalogTrack => !!t), ...tracks.filter((t) => !waiting.includes(t.id) && !protectedIds.has(t.id))];
+  const showBuy = !active || buyOpen;
+
   return (
-    <section className="mx-auto mt-8 max-w-5xl space-y-8 pb-12">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex items-center gap-3"><ShieldCheck className="h-8 w-8 text-primary" /><h1 className="text-2xl font-bold">AI Protection Hub</h1></div>
-        {getPaymentsEnvironment() === "sandbox" && !paid && (
-          <Button variant="outline" size="sm" onClick={() => setUnlocked((v) => !v)}>
-            {unlocked ? "Exit test preview" : "Preview Proof Generator (Test Mode)"}
-          </Button>
-        )}
-      </div>
-
-      <div className="space-y-4 rounded-2xl border-2 border-primary bg-card p-6">
-        <span className="inline-flex items-center gap-2 rounded-full border border-primary px-3 py-1 text-xs font-bold tracking-widest text-primary"><ShieldCheck className="h-4 w-4" />CERTIFICATE OF HUMAN ORIGIN · BITCOIN BLOCKCHAIN ANCHORED</span>
-        <h2 className="text-3xl font-extrabold leading-tight">Prove Human Origin — <span className="text-primary">And That You Made It First.</span></h2>
-        <p className="max-w-3xl text-muted-foreground">Before your master hits DSPs or social media, lock in proof that a human made it. Get a tamper-proof Certificate of Human Origin, timestamped on the Bitcoin blockchain — shielding your sound from AI scrapers, voice cloning and false ownership claims.</p>
-      </div>
-
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        {PACKAGES.map((p) => (
-          <button key={p.id} type="button" onClick={() => setPkg(p.id)} className={`rounded-xl border-2 bg-card p-4 text-left transition ${pkg === p.id ? "border-primary shadow-lg" : "border-border hover:border-primary/50"}`}>
-            <div className="font-semibold">{p.label}</div>
-            <div className="mt-1 text-2xl font-bold text-primary">${p.price}</div>
-            {p.save && <div className="text-xs font-semibold text-primary">{p.save}</div>}
-          </button>
-        ))}
-      </div>
-
-      {!active && (
-        <div className="space-y-2 text-center">
-          <Button size="lg" className="h-14 w-full text-lg font-bold sm:w-auto sm:px-12" onClick={checkout}>
-            <Lock className="h-5 w-5" />Lock In Protection · ${PACKAGES.find((p) => p.id === pkg)!.price}
-          </Button>
-          <p className="text-xs text-muted-foreground">Instant activation · Publicly verifiable on Bitcoin · Add your track details after checkout</p>
+    <section className="mx-auto mt-8 max-w-4xl space-y-6 pb-12">
+      <header className="flex flex-wrap items-start justify-between gap-4">
+        <div className="space-y-1">
+          <div className="flex items-center gap-3"><ShieldCheck className="h-8 w-8 text-primary" /><h1 className="text-2xl font-bold">AI Protection Hub</h1></div>
+          <p className="max-w-2xl text-sm text-muted-foreground">Prove a human made your song, and that you made it first. Each Certificate of Human Origin is fingerprinted, sworn and anchored on the Bitcoin blockchain before your master reaches DSPs or social media.</p>
         </div>
+        {getPaymentsEnvironment() === "sandbox" && left === 0 && (
+          <Button variant="outline" size="sm" onClick={() => setUnlocked((v) => !v)}>{unlocked ? "Exit test preview" : "Preview steps (Test Mode)"}</Button>
+        )}
+      </header>
+
+      {/* 1 · My certificates */}
+      <Card id="my-certificates" title="My certificates" aside={credits > 0 && <span className="rounded-full border border-primary px-3 py-1 text-xs font-semibold text-primary">{left} of {credits} left to use</span>}>
+        {!certs ? <p className="text-sm text-muted-foreground">Loading…</p>
+          : certs.length === 0 && waiting.length === 0 ? (
+            <p className="text-sm text-muted-foreground">Your certificates will live here. Pick a song below, record your proof, and download your certificate any time.</p>
+          ) : (
+            <ul className="divide-y divide-border">
+              {certs.map((c) => (
+                <li key={c.id} className={`grid items-center gap-3 py-3 sm:grid-cols-[1fr_auto_auto] ${issued?.id === c.id ? "rounded-lg bg-primary/5 px-3" : ""}`}>
+                  <SongCell title={c.track_title} artist={c.artist_name} />
+                  <span className="text-xs font-semibold text-primary">{c.chain_strength?.split(" · ")[0] ?? "Issued"} · {c.ots_receipt ? "Anchored on Bitcoin" : "No Bitcoin stamp"} · {c.issued_at ? new Date(c.issued_at).toLocaleDateString() : ""}</span>
+                  <div className="flex gap-2">
+                    <Button size="sm" variant="outline" onClick={() => void saveCertificatePdf(c)}><Download className="h-4 w-4" />PDF</Button>
+                    {c.ots_receipt && <Button size="sm" variant="outline" title={c.manifest ? "Manifest .txt + .ots receipt" : "Use with the manifest .txt you downloaded when the certificate was issued"} onClick={() => saveBitcoinProof(c)}><Download className="h-4 w-4" />Bitcoin proof</Button>}
+                  </div>
+                </li>
+              ))}
+              {waiting.map((id) => (
+                <li key={id} className="grid items-center gap-3 py-3 sm:grid-cols-[1fr_auto_auto]">
+                  <SongCell title={trackById(id)!.title} artist={trackById(id)!.artist} />
+                  <span className="text-xs font-semibold text-muted-foreground">Paid · proof not recorded yet</span>
+                  <Button size="sm" onClick={() => { setTarget(id); steps.current?.scrollIntoView({ behavior: "smooth", block: "start" }); }}>Start proof</Button>
+                </li>
+              ))}
+            </ul>
+          )}
+      </Card>
+
+      {confirming && (
+        <div className="flex items-center gap-3 rounded-2xl border-2 border-primary bg-card p-5 text-sm font-semibold"><Loader2 className="h-5 w-5 animate-spin text-primary" />Payment received. Confirming it with Stripe, which usually takes a few seconds…</div>
+      )}
+      {justPaid && timedOut && left === 0 && (
+        <div className="flex items-center gap-3 rounded-2xl border border-border bg-card p-5 text-sm"><AlertTriangle className="h-5 w-5 text-primary" />We haven't received your payment confirmation yet. Refresh in a minute; if it still doesn't show, contact support@camethroughaudio.com.</div>
       )}
 
-      <div className="grid gap-4 md:grid-cols-3">
-        {EXPLAINERS.map((x) => (
-          <div key={x.title} className="space-y-2 rounded-xl border border-primary/40 bg-card p-4 text-sm">
-            <x.icon className="h-6 w-6 text-primary" />
-            <div className="font-bold">{x.title}</div>
-            <div className="text-xs font-semibold text-primary">{x.tag}</div>
-            <p><span className="font-semibold">In plain English: </span>{x.plain}</p>
-            <p className="text-muted-foreground"><span className="font-semibold text-foreground">Why you need it: </span>{x.why}</p>
+      {/* 2 · Buy */}
+      {active && !buyOpen ? (
+        <button type="button" onClick={() => setBuyOpen(true)} className="flex w-full items-center justify-between rounded-2xl border border-border bg-card px-5 py-4 text-left text-sm font-semibold hover:border-primary">
+          <span className="flex items-center gap-2"><Plus className="h-4 w-4 text-primary" />Protect more songs</span><ChevronDown className="h-4 w-4" />
+        </button>
+      ) : showBuy && !confirming && (
+        <Card title="Protect a song" subtitle={tracks.length ? "Choose the songs from My Catalog. Their details fill in for you after checkout." : "No songs in My Catalog yet: choose a package and type each song's details after checkout."}>
+          {tracks.length > 0 && (
+            <div className="grid max-h-72 gap-2 overflow-y-auto pr-1 sm:grid-cols-2">
+              {tracks.map((t) => {
+                const done = protectedIds.has(t.id), paid = waiting.includes(t.id), on = picked.includes(t.id);
+                return (
+                  <button key={t.id} type="button" disabled={done || paid} onClick={() => togglePick(t.id)}
+                    className={`flex items-center gap-3 rounded-xl border p-3 text-left transition disabled:cursor-default disabled:opacity-60 ${on ? "border-primary bg-primary/5" : "border-border hover:border-primary/60"}`}>
+                    <span className={`flex h-5 w-5 shrink-0 items-center justify-center rounded border ${on ? "border-primary bg-primary text-primary-foreground" : "border-input"}`}>{on && <Check className="h-3.5 w-3.5" />}</span>
+                    <SongCell title={t.title} artist={t.artist} />
+                    {(done || paid) && <span className="ml-auto text-xs font-semibold text-primary">{done ? "Protected" : "Paid"}</span>}
+                  </button>
+                );
+              })}
+            </div>
+          )}
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+            {PACKAGES.map((p) => {
+              const tooSmall = p.songs < picked.length;
+              return (
+                <button key={p.id} type="button" disabled={tooSmall} onClick={() => setPkg(p.id)}
+                  className={`rounded-xl border-2 p-3 text-left transition disabled:opacity-40 ${pkg === p.id ? "border-primary" : "border-border hover:border-primary/50"}`}>
+                  <div className="text-sm font-semibold">{p.label.split(" · ")[0]}</div>
+                  <div className="text-xs text-muted-foreground">{p.songs === 1 ? "1 song" : `up to ${p.songs} songs`}</div>
+                  <div className="mt-1 text-lg font-bold text-primary">${p.price}</div>
+                </button>
+              );
+            })}
           </div>
-        ))}
-      </div>
-
-      {active && (<>
-      <div className="rounded-xl border-2 border-primary bg-card p-4 font-semibold text-primary">Protection active — complete these steps to generate your certificate.</div>
-      <h3 className="text-xl font-bold">Step 1 · Track details</h3>
-      <div className="grid gap-6 md:grid-cols-[1fr_260px]">
-        <div className="grid gap-4 sm:grid-cols-2">
-          <F label="Track title *" v={f.title} on={set("title")} /><F label="Artist name *" v={f.artist} on={set("artist")} />
-          <div className="space-y-3 rounded-xl border border-border p-4 sm:col-span-2">
-            <div className="font-semibold">Contributors & Writers *</div>
-            {writerRows.map((w, i) => (
-              <div key={i} className="grid gap-2 sm:grid-cols-[1fr_15rem_auto]">
-                <Input aria-label={`Writer ${i + 1} legal name`} placeholder="Full legal name" value={w.name} onChange={(e) => editRow(i, { name: e.target.value })} />
-                <select aria-label={`Writer ${i + 1} role`} value={w.role} onChange={(e) => editRow(i, { role: e.target.value as WriterRole })} className="rounded-md border border-input bg-background px-3 py-2 text-sm">
-                  <option value="both">Both (Author & Composer)</option>
-                  <option value="author">Author (Lyrics)</option>
-                  <option value="composer">Composer (Music / Beat)</option>
-                  <option value="producer">Producer</option>
-                </select>
-                <Button type="button" variant="ghost" size="icon" aria-label="Remove contributor" disabled={writerRows.length === 1} onClick={() => setWriterRows(writerRows.filter((_, j) => j !== i))}><Trash2 className="h-4 w-4" /></Button>
-              </div>
-            ))}
-            <Button type="button" variant="outline" size="sm" onClick={() => setWriterRows([...writerRows, { name: "", role: "both" }])}><Plus className="h-4 w-4" />Add another contributor</Button>
+          <div className="flex flex-col gap-3 border-t border-border pt-4 sm:flex-row sm:items-center sm:justify-between">
+            <p className="text-sm text-muted-foreground">{picked.length ? `${picked.length} song${picked.length === 1 ? "" : "s"} selected` : needsSong ? "Select at least one song" : "Add song details after checkout"} · {PACKAGES.find((p) => p.id === pkg)!.label.split(" · ")[0]}</p>
+            <Button size="lg" className="font-bold" disabled={needsSong} onClick={checkout}><Lock className="h-4 w-4" />Lock In Protection · ${price}</Button>
           </div>
-          <F label="ISRC (optional)" v={f.isrc} on={set("isrc")} />
-          <F label="UPC (optional)" v={f.upc} on={set("upc")} /><F label="ISWC (optional)" v={f.iswc} on={set("iswc")} />
-        </div>
-        <div className="h-fit rounded-xl border border-primary bg-card p-4 text-sm"><Info className="mb-2 h-5 w-5 text-primary" />Use real legal names only — not stage names or pseudonyms. Certificates are legal records.</div>
-      </div>
-
-      <h3 className="text-xl font-bold">Step 2 · Record your proof</h3>
-      <div className="grid gap-4 md:grid-cols-2">
-        <ProofBox title="DAW Session Proof" proof={daw} on={(file) => proof(file, "daw", (p) => { setDaw(p); setDawFile(file); setDawDate(undefined); })} hint="Solo 2-3 tracks individually, then play the full mix together"
-          tip="Screen-record 15-60 seconds of your open project (FL Studio, Logic, Ableton, Pro Tools, BandLab, etc.). Scroll through your tracks, then solo and play your tracks one by one — vocals, beats, instruments — then play them all together so we can hear the final song. This proves you own the real session, not just the final song.">
-          <InfoTip title="Pro tip: earn an A+" text="Also show your project's save or created date in the recording (your project folder, File → Project Info, or the file's date column). It's optional — but it earns a Strong Chain A+ certificate for going the extra mile."
-            className="inline-flex w-fit cursor-help items-center gap-1 rounded-full border border-primary px-3 py-1 text-xs font-semibold text-primary"><Info className="h-3.5 w-3.5" />Pro tip: earn an A+</InfoTip>
-          {daw && scanned && <p className="text-xs"><b>DAW session date</b> {dawDate ?? "Not shown — no penalty"}</p>}
-        </ProofBox>
-        <ProofBox title="Draft History Proof" proof={notes} on={(file) => proof(file, "drafts", (p) => { setNotes(p); setDraftFile(file); setChain(undefined); })}
-          tip="Screen-record 15-60 seconds of your earlier versions — voice memos, rough takes, lyric notes, or your folder showing file dates. Show how the song grew from idea to now. We auto-detect your timeline and drafts days apart earn a Strong Chain (Human Creation) rating.">
-          <div className="flex flex-wrap items-center gap-2 rounded-md border border-border p-3 text-xs">
-            <span><b>Old draft</b> {scanning ? "Scanning video…" : chain?.first ?? "—"}</span><span className="text-primary">→</span>
-            <span><b>New draft</b> {scanning ? "Scanning video…" : chain?.latest ?? "—"}</span><span className="text-primary">→</span>
-            <span><b>Anchored (Bitcoin)</b> {otsFile ? "Submitted" : "On generate"}</span>
-          </div>
-          <div className="space-y-1"><Label>Notes (optional)</Label><Input value={draftNotes} onChange={(e) => setDraftNotes(e.target.value)} /></div>
-          <NoteGuide />
-        </ProofBox>
-      </div>
-      <RecordGuide />
-
-      <div className="space-y-3 rounded-xl border-2 border-primary bg-card p-4">
-        <Button size="lg" disabled={!draftFile || scanning} onClick={scanAndRate}>{scanning ? "Scanning your videos…" : "Scan & Rate"}</Button>
-        {!draftFile && <p className="text-xs text-muted-foreground">Upload your Draft History video to scan. The DAW video is scanned too when added.</p>}
-        {scanned && !scanning && (
-          <div className="space-y-1">
-            <p className="text-2xl font-extrabold text-primary">Grade {grade}</p>
-            <p className="text-sm font-semibold text-primary">{chainStatus}</p>
-          </div>
-        )}
-      </div>
-
-      <h3 className="text-xl font-bold">Step 3 · Confirm & generate</h3>
-      <label className="flex items-start gap-3 rounded-xl border border-border p-4 text-sm">
-        <input type="checkbox" className="mt-1 h-4 w-4 accent-[var(--primary)]" checked={attest} onChange={(e) => setAttest(e.target.checked)} />
-        <span>I attest under penalty of law that the information and recordings I provide are true and that I (and the listed contributors) created this work. I understand fraudulent misrepresentation may expose me to statutory damages under 17 U.S.C. §504.</span>
-      </label>
-      <Button size="lg" disabled={busy || !scanned || !daw || !notes} onClick={generate}>{busy ? "Generating…" : "Generate & download PDF certificate"}</Button>
-      {(!scanned || !daw) && <p className="text-xs text-muted-foreground">Upload both videos and run Scan & Rate first.</p>}
-      </>)}
-      {otsFile && (
-        <div className="space-y-2 rounded-xl border-2 border-primary bg-card p-4 text-sm">
-          <p className="font-semibold text-primary">OpenTimestamps calendar submitted · Pending Bitcoin block confirmation</p>
-          <p className="text-muted-foreground">Keep the manifest .txt and .ots files together. Anyone can verify them at opentimestamps.org.</p>
-          <Button variant="outline" size="sm" onClick={() => download(otsFile.name, otsFile.bytes, "application/octet-stream")}>Download .ots proof again</Button>
-        </div>
+          <details className="group rounded-xl border border-border">
+            <summary className="flex cursor-pointer list-none items-center justify-between p-4 text-sm font-semibold">How it works<ChevronDown className="h-4 w-4 transition group-open:rotate-180" /></summary>
+            <div className="grid gap-4 border-t border-border p-4 md:grid-cols-3">
+              {EXPLAINERS.map((x) => (
+                <div key={x.title} className="space-y-2 text-sm">
+                  <x.icon className="h-6 w-6 text-primary" />
+                  <div className="font-bold">{x.title}</div>
+                  <div className="text-xs font-semibold text-primary">{x.tag}</div>
+                  <p><span className="font-semibold">In plain English: </span>{x.plain}</p>
+                  <p className="text-muted-foreground"><span className="font-semibold text-foreground">Why you need it: </span>{x.why}</p>
+                </div>
+              ))}
+            </div>
+          </details>
+        </Card>
       )}
 
+      {/* 3 · Create the certificate */}
+      {active && (
+        <div ref={steps} className="scroll-mt-24">
+          <Card title="Create your certificate" subtitle={justPaid && welcomed ? "Payment received. Follow the five steps below; each song takes a few minutes." : "Five steps, a few minutes per song."}>
+            <ol className="space-y-8">
+              <Step n={1} title="Song details" done={!detailsMissing.length}>
+                <div className="space-y-1">
+                  <Label>Which song are you protecting?</Label>
+                  <select value={target} onChange={(e) => setTarget(e.target.value)} className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm">
+                    {stepSongs.map((t) => <option key={t.id} value={t.id}>{t.title}{waiting.includes(t.id) ? " (paid)" : ""}</option>)}
+                    <option value={MANUAL}>A song that isn't in My Catalog</option>
+                  </select>
+                </div>
+                <div className="grid gap-4 sm:grid-cols-2"><F label="Track title" v={f.title} on={set("title")} /><F label="Artist name" v={f.artist} on={set("artist")} /></div>
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between"><Label>Writers</Label><span className="text-xs text-muted-foreground">Legal names only. Certificates are legal records.</span></div>
+                  {writerRows.map((w, i) => (
+                    <div key={i} className="grid gap-2 sm:grid-cols-[1fr_11rem_auto]">
+                      <Input aria-label={`Writer ${i + 1} legal name`} placeholder="Legal name" value={w.name} onChange={(e) => editRow(i, { name: e.target.value })} />
+                      <select aria-label={`Writer ${i + 1} role`} value={w.role} onChange={(e) => editRow(i, { role: e.target.value as WriterRole })} className="rounded-md border border-input bg-background px-3 py-2 text-sm">
+                        <option value="author">Author</option>
+                        <option value="composer">Composer</option>
+                        <option value="both">Author/Composer</option>
+                        <option value="producer">Producer</option>
+                      </select>
+                      <Button type="button" variant="ghost" size="icon" aria-label="Remove writer" disabled={writerRows.length === 1} onClick={() => setWriterRows(writerRows.filter((_, j) => j !== i))}><Trash2 className="h-4 w-4" /></Button>
+                    </div>
+                  ))}
+                  <Button type="button" variant="outline" size="sm" onClick={() => setWriterRows([...writerRows, { name: "", role: "both" }])}><Plus className="h-4 w-4" />Add writer</Button>
+                </div>
+                <div className="grid gap-4 sm:grid-cols-3"><F label="ISRC (optional)" v={f.isrc} on={set("isrc")} /><F label="UPC (optional)" v={f.upc} on={set("upc")} /><F label="ISWC (optional)" v={f.iswc} on={set("iswc")} /></div>
+              </Step>
+
+              <Step n={2} title="Record your proof" done={!!daw && !!notes}>
+                <div className="flex gap-3 rounded-xl border-l-4 border-primary bg-primary/5 p-4 text-sm">
+                  <Music2 className="mt-0.5 h-5 w-5 shrink-0 text-primary" />
+                  <p><b>Start with your melody.</b> Copyright protects melody and lyrics, not drum patterns or chord progressions, so your melody is the most important thing to prove. Solo your lead vocal or melody line first, then solo as many other tracks as you can, then play the full mix.</p>
+                </div>
+                <div className="grid gap-4 md:grid-cols-2">
+                  <ProofBox title="DAW Session" proof={daw} status={status.daw} on={(file) => proof(file, "daw", (p, file) => { setDaw(p); setDawFile(file); setDawDate(undefined); })}
+                    tip="Screen-record your open project (FL Studio, Logic, Ableton, Pro Tools, BandLab…). Melody first, then each track solo, then the full mix. This proves you own the real session, not just the final song.">
+                    <InfoTip title="Pro tip: earn an A+" text="Also show your project's save or created date in the recording (your project folder, File → Project Info, or the file's date column). It's optional — but it earns a Strong Chain A+ certificate for going the extra mile."
+                      className="inline-flex w-fit cursor-help items-center gap-1 rounded-full border border-primary px-3 py-1 text-xs font-semibold text-primary"><Info className="h-3.5 w-3.5" />Pro tip: earn an A+</InfoTip>
+                  </ProofBox>
+                  <ProofBox title="Draft History" proof={notes} status={status.drafts} on={(file) => proof(file, "drafts", (p, file) => { setNotes(p); setDraftFile(file); })}
+                    tip="Screen-record your earlier versions: voice memos, rough takes, lyric notes, or a folder showing file dates. Early melody ideas (hummed voice memos, rough toplines) are your strongest drafts. Drafts days apart earn a Strong Chain.">
+                    <div className="space-y-1"><Label>Notes (optional)</Label><Input value={draftNotes} onChange={(e) => setDraftNotes(e.target.value)} /></div>
+                  </ProofBox>
+                </div>
+                <details className="group rounded-xl border border-border">
+                  <summary className="flex cursor-pointer list-none items-center justify-between p-4 text-sm font-semibold">How to record on your phone, and how to show draft dates<ChevronDown className="h-4 w-4 transition group-open:rotate-180" /></summary>
+                  <div className="grid gap-4 border-t border-border p-4 md:grid-cols-2"><RecordGuide /><NoteGuide /></div>
+                </details>
+              </Step>
+
+              <Step n={3} title="Attest" done={attest}>
+                <label className="flex items-start gap-3 rounded-xl border border-border p-4 text-sm">
+                  <input type="checkbox" className="mt-1 h-4 w-4 accent-[var(--primary)]" checked={attest} onChange={(e) => setAttest(e.target.checked)} />
+                  <span>I attest under penalty of law that the information and recordings I provide are true and that I (and the listed contributors) created this work. I understand fraudulent misrepresentation may expose me to statutory damages under 17 U.S.C. §504.</span>
+                </label>
+              </Step>
+
+              <Step n={4} title="Scan & Rate" done={scanned}>
+                <p className="text-sm text-muted-foreground">We read the dates in both videos to rate how strong your proof chain is.</p>
+                {scanMissing.length > 0 && <Checklist items={scanMissing} />}
+                <Button size="lg" disabled={scanMissing.length > 0 || scanning} onClick={scanAndRate}>{scanning ? <><Loader2 className="h-4 w-4 animate-spin" />Scanning your videos…</> : scanned ? "Scan again" : "Scan & Rate"}</Button>
+                {scanned && !scanning && (
+                  <div className="space-y-1 rounded-xl border border-primary/40 p-4">
+                    <p className="text-2xl font-extrabold text-primary">Grade {grade}</p>
+                    <p className="text-sm font-semibold text-primary">{chainStatus}</p>
+                    <p className="text-xs text-muted-foreground">Old draft {chain?.first ?? "—"} → New draft {chain?.latest ?? "—"} · DAW session date {dawDate ?? "not shown (no penalty)"}</p>
+                  </div>
+                )}
+              </Step>
+
+              <Step n={5} title="Generate your certificate" done={false} last>
+                {(detailsMissing.length > 0 || !scanned) && <Checklist items={[...detailsMissing.map((m) => `${m} (step 1)`), ...(!scanned ? ["Run Scan & Rate (step 4)"] : [])]} />}
+                <Button size="lg" disabled={busy || detailsMissing.length > 0 || !scanned || scanMissing.length > 0} onClick={generate}>{busy ? <><Loader2 className="h-4 w-4 animate-spin" />Generating…</> : "Generate & download certificate"}</Button>
+                <p className="text-xs text-muted-foreground">You'll get the PDF certificate plus a manifest .txt and .ots file. Keep those two together: anyone can verify them at opentimestamps.org. All three stay downloadable under My certificates.</p>
+              </Step>
+            </ol>
+          </Card>
+        </div>
+      )}
     </section>
   );
+}
+
+function Card({ id, title, subtitle, aside, children }: { id?: string; title: string; subtitle?: string; aside?: React.ReactNode; children: React.ReactNode }) {
+  return (
+    <div id={id} className="scroll-mt-24 space-y-5 rounded-2xl border border-border bg-card p-5 sm:p-6">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="space-y-1"><h2 className="text-lg font-bold">{title}</h2>{subtitle && <p className="text-sm text-muted-foreground">{subtitle}</p>}</div>
+        {aside}
+      </div>
+      {children}
+    </div>
+  );
+}
+
+function Step({ n, title, done, last, children }: { n: number; title: string; done: boolean; last?: boolean; children: React.ReactNode }) {
+  return (
+    <li className="relative grid grid-cols-[2rem_1fr] gap-4">
+      {!last && <span className="absolute bottom-[-2rem] left-4 top-9 w-px -translate-x-1/2 bg-border" aria-hidden />}
+      <span className={`flex h-8 w-8 items-center justify-center rounded-full border-2 text-sm font-bold ${done ? "border-primary bg-primary text-primary-foreground" : "border-primary text-primary"}`}>{done ? <Check className="h-4 w-4" /> : n}</span>
+      <div className="min-w-0 space-y-4"><h3 className="pt-1 font-bold">{title}</h3>{children}</div>
+    </li>
+  );
+}
+
+function Checklist({ items }: { items: string[] }) {
+  return (
+    <ul className="space-y-1.5 rounded-xl border border-border p-4 text-sm">
+      <li className="font-semibold">To unlock this step:</li>
+      {items.map((m) => <li key={m} className="flex gap-2"><AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-primary" />{m}</li>)}
+    </ul>
+  );
+}
+
+function SongCell({ title, artist }: { title: string | null; artist: string | null }) {
+  return <div className="min-w-0"><p className="truncate text-sm font-semibold">{title || "Untitled"}</p>{artist && <p className="truncate text-xs text-muted-foreground">{artist}</p>}</div>;
 }
 
 function F({ label, v, on }: { label: string; v: string; on: (e: React.ChangeEvent<HTMLInputElement>) => void }) {
   return <div className="space-y-1"><Label>{label}</Label><Input value={v} onChange={on} /></div>;
 }
 
-function ProofBox({ title, tip, hint, proof, on, children }: { title: string; tip: string; hint?: string; proof?: Proof | undefined; on: (f?: File) => void; children?: React.ReactNode }) {
+function ProofBox({ title, tip, proof, status, on, children }: { title: string; tip: string; proof?: Proof | undefined; status: Status; on: (f?: File) => void; children?: React.ReactNode }) {
   return (
-    <div className="space-y-3 rounded-xl border border-border p-4">
+    <div className="flex flex-col gap-3 rounded-xl border border-border p-4">
       <div className="flex items-center gap-2 font-semibold"><Video className="h-5 w-5 text-primary" />{title}</div>
       <p className="text-sm">{tip}</p>
-      <p className="text-xs text-muted-foreground">Video file, 15-60 seconds max. Stored privately in your catalog vault. Only the SHA-256 fingerprint is anchored to Bitcoin — your actual music never leaves your vault.</p>
-      <Input title={hint} type="file" accept={PROOF_VIDEO_TYPES.join(",")} onChange={(e) => on(e.target.files?.[0])} />
-      {proof && <div className="space-y-1 rounded-md border border-primary/40 p-2 text-xs"><p className="font-semibold text-primary">Uploaded &amp; fingerprinted · {proof.name} · {(proof.size / 1048576).toFixed(1)}MB</p><p className="break-all">SHA-256: {proof.hash}</p></div>}
+      <p className="text-xs text-muted-foreground">{MIN_PROOF_SECONDS}–{MAX_PROOF_SECONDS} second video (MP4, MOV or WebM). Stored privately; only its fingerprint is anchored to Bitcoin.</p>
+      <Input type="file" accept={PROOF_VIDEO_TYPES.join(",")} disabled={!!status.busy} onChange={(e) => { on(e.target.files?.[0]); e.target.value = ""; }} />
+      {status.busy && (
+        <div className="space-y-2 text-xs"><p className="flex items-center gap-2 font-semibold"><Loader2 className="h-3.5 w-3.5 animate-spin text-primary" />{status.busy}</p>{status.progress !== undefined && <Progress value={status.progress} />}</div>
+      )}
+      {status.error && <p className="flex gap-2 text-xs font-semibold"><AlertTriangle className="h-4 w-4 shrink-0 text-primary" />{status.error}</p>}
+      {proof && !status.busy && <div className="space-y-1 rounded-md border border-primary/40 p-2 text-xs"><p className="font-semibold text-primary">Uploaded &amp; fingerprinted · {proof.name} · {(proof.size / 1048576).toFixed(1)}MB</p><p className="break-all text-muted-foreground">SHA-256: {proof.hash}</p></div>}
       {children}
     </div>
   );

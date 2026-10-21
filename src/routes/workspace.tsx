@@ -43,7 +43,7 @@ export const Route = createFileRoute("/workspace")({
       { name: "twitter:card", content: "summary" },
     ],
   }),
-  validateSearch: (s: Record<string, unknown>) => ({ tab: typeof s["tab"] === "string" ? (s["tab"] as string) : undefined } as { tab?: string | undefined }),
+  validateSearch: (s: Record<string, unknown>) => ({ tab: typeof s["tab"] === "string" ? (s["tab"] as string) : undefined, checkout: s["checkout"] === "success" ? "success" : undefined } as { tab?: string | undefined; checkout?: "success" | undefined }),
   component: Workspace,
 });
 
@@ -77,7 +77,6 @@ function Workspace() {
   const canCatalog = hasTier(tier, "plus");
   const canSplit = hasTier(tier, "plus");
   const canCollect = hasTier(tier, "collaborate");
-  const hasAi = purchases.some((p) => p.kind === "ai");
   const [onboard, setOnboard] = useState<Onboarding | null>(null);
   const names = useArtistName(user, onboard?.stageName);
   const name = names.display;
@@ -199,7 +198,7 @@ function Workspace() {
             {!canCatalog ? <PlusLock title="My Catalog starts with Catalog Plus" onQuickCheck={openQuickCheck} onUpgrade={upgrade} /> : <>
             <MetadataUploader key={catalogKey} stageName={name} avatar={onboard?.avatar} userId={user.id} mode="catalog" canSplit={canSplit} canExport={canCollect} focus={catalogFix} onFocused={() => setCatalogFix(undefined)} onSplitSheet={(t) => { setSplitTrackId(t.id); setTab("splits"); }} onProtect={(t) => { setProtectTrack(t); setTab("protect"); }} /></>}
           </TabsContent>
-          <TabsContent value="protect"><AIProtectionHub userId={user.id} paid={hasAi} track={protectTrack} /></TabsContent>
+          <TabsContent value="protect"><AIProtectionHub userId={user.id} purchases={purchases} justPaid={search.checkout === "success" && search.tab === "protect"} track={protectTrack} /></TabsContent>
           <TabsContent value="splits"><SplitSheets userId={user.id} canSplit={canSplit} canCollect={canCollect} prefillTrackId={splitTrackId} onUpgrade={upgrade} /></TabsContent>
           <TabsContent value="health"><Health canCatalog={canCatalog} onFix={() => setTab("catalog")} onFixField={(trackId, field) => { setCatalogFix({ trackId, field }); setTab("catalog"); }} onEmbed={() => setTab("embed")} userId={user.id} purchases={purchases} canUtility={canCollect} onUpgrade={upgrade} /></TabsContent>
           <TabsContent value="learn"><Learn userId={user.id} unlocked={hasTier(tier, "management")} onUpgrade={upgrade} /></TabsContent>

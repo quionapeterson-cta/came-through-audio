@@ -6,7 +6,33 @@ export const PACKAGES = [
 ] as const;
 export type PackageId = (typeof PACKAGES)[number]["id"];
 
-export const MIN_PROOF_SECONDS = 15;
+/** The smallest package that covers this many songs (Album+ is the largest). */
+export function packageFor(songs: number): PackageId {
+  return (PACKAGES.find((p) => p.songs >= songs) ?? PACKAGES[PACKAGES.length - 1]!).id;
+}
+
+export const packageSongs = (id: string | undefined) => PACKAGES.find((p) => p.id === id)?.songs ?? 1;
+
+type AiPurchase = { kind: string; details: Record<string, string> };
+
+/** Certificates paid for: one per song in each package. Mirrors public.can_issue_ai_certificate. */
+export function certificateCredits(purchases: AiPurchase[]): number {
+  return purchases.filter((p) => p.kind === "ai" && !p.details["refunded_at"]).reduce((n, p) => n + packageSongs(p.details["package"]), 0);
+}
+
+/** Stripe metadata values hold 500 characters, so song IDs travel in chunks of 10. */
+export const TRACKS_PER_KEY = 10;
+
+/** Catalog song IDs picked at checkout, in order (older purchases carry a single trackId). */
+export function paidTrackIds(purchases: AiPurchase[]): string[] {
+  const ids = purchases.filter((p) => p.kind === "ai" && !p.details["refunded_at"]).flatMap((p) => {
+    const keys = Object.keys(p.details).filter((k) => /^tracks_\d+$/.test(k)).sort((a, b) => Number(a.slice(7)) - Number(b.slice(7)));
+    return [...(p.details["trackId"] ? [p.details["trackId"]] : []), ...keys.flatMap((k) => p.details[k]!.split(",").filter(Boolean))];
+  });
+  return [...new Set(ids)];
+}
+
+export const MIN_PROOF_SECONDS = 5;
 export const MAX_PROOF_SECONDS = 60;
 export const MAX_PROOF_BYTES = 52_428_800; // 50MB
 export const PROOF_VIDEO_TYPES = ["video/mp4", "video/quicktime", "video/webm"];

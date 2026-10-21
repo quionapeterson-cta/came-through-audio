@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { checkoutInput, planCheckout, purchaseRow, subscriptionRow, type StripeSubscriptionLike } from "./stripe-mapping";
+import { paidTrackIds } from "./proof";
 
 const sub = (over: Partial<StripeSubscriptionLike> = {}): StripeSubscriptionLike => ({
   id: "sub_1",
@@ -26,12 +27,20 @@ describe("checkout input", () => {
 
 describe("planCheckout", () => {
   it("maps an AI Protection package to its one-time price", () => {
-    const p = planCheckout({ kind: "ai", package: "EP", trackId: "3f1c2b8e-1d2a-4c3b-9e8f-0a1b2c3d4e5f" }, "me");
+    const p = planCheckout({ kind: "ai", package: "EP", trackIds: ["3f1c2b8e-1d2a-4c3b-9e8f-0a1b2c3d4e5f"] }, "me");
     expect(p.mode).toBe("payment");
     expect(p.items).toEqual([{ lookupKey: "ai_protection_ep", quantity: 1 }]);
-    expect(p.metadata).toMatchObject({ userId: "me", kind: "ai", package: "EP" });
+    expect(p.metadata).toMatchObject({ userId: "me", kind: "ai", package: "EP", tracks_1: "3f1c2b8e-1d2a-4c3b-9e8f-0a1b2c3d4e5f" });
     expect(p.returnTab).toBe("protect");
     expect(p.managed).toBe(true);
+  });
+
+  it("carries up to 20 picked songs in metadata chunks a Stripe value can hold", () => {
+    const ids = Array.from({ length: 20 }, (_, i) => `3f1c2b8e-1d2a-4c3b-9e8f-${String(i).padStart(12, "0")}`);
+    const p = planCheckout(checkoutInput.parse({ kind: "ai", package: "Plus", trackIds: ids }), "me");
+    expect(Object.values(p.metadata).every((v) => v.length <= 500)).toBe(true);
+    expect(paidTrackIds([{ kind: "ai", details: p.metadata }])).toEqual(ids);
+    expect(() => checkoutInput.parse({ kind: "ai", package: "Single", trackIds: ids.slice(0, 2) })).toThrow();
   });
 
   it("prices Expert Assistance on the server and merges repeated prices into one line", () => {
