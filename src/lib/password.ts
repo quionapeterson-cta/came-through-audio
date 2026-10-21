@@ -22,9 +22,11 @@ export function passwordStrength(p: string) {
 /** Remembers where an invited user should land after logging in or confirming email. */
 export const RETURN_KEY = "cta_return_path";
 export function rememberReturn(path: string) { try { localStorage.setItem(RETURN_KEY, path); } catch { /* ignore */ } }
+/** Reads and clears the saved path in one step, so a stale invite link can never trap anyone in a redirect loop. */
 export function takeReturn(): string | null {
   try {
     const p = localStorage.getItem(RETURN_KEY);
+    localStorage.removeItem(RETURN_KEY);
     return p && p.startsWith("/") && !p.startsWith("//") ? p : null;
   } catch { return null; }
 }

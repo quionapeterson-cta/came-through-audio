@@ -32,7 +32,8 @@ export const Route = createFileRoute("/verified")({
 function Verified() {
   const navigate = useNavigate();
   const { next } = Route.useSearch();
-  const dest = next ? safeNext(next) : safeNext(takeReturn() ?? "/workspace");
+  // takeReturn() clears the saved path, so read it once rather than on every render.
+  const [dest] = useState(() => next ? safeNext(next) : safeNext(takeReturn() ?? "/workspace"));
   const [signedIn, setSignedIn] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
