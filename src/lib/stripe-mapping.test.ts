@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
 import { checkoutInput, planCheckout, purchaseRow, subscriptionRow, type StripeSubscriptionLike } from "./stripe-mapping";
 import { paidTrackIds } from "./proof";
+import { orderSongsOf } from "./registration";
+
+const uuid = (i: number) => `3f1c2b8e-1d2a-4c3b-9e8f-${String(i).padStart(12, "0")}`;
 
 const sub = (over: Partial<StripeSubscriptionLike> = {}): StripeSubscriptionLike => ({
   id: "sub_1",
@@ -16,7 +19,9 @@ describe("checkout input", () => {
   it("rejects prices the browser makes up and unknown plans", () => {
     expect(() => checkoutInput.parse({ kind: "plan", priceId: "free_forever" })).toThrow();
     expect(() => checkoutInput.parse({ kind: "ai", package: "Huge" })).toThrow();
-    expect(() => checkoutInput.parse({ kind: "expert", type: "album", songs: 0, agencies: ["MLC"] })).toThrow();
+    expect(() => checkoutInput.parse({ kind: "expert", trackIds: [uuid(1)], agencies: ["MLC"] })).toThrow();
+    expect(() => checkoutInput.parse({ kind: "expert", trackIds: [], agencies: ["The MLC"] })).toThrow();
+    expect(() => checkoutInput.parse({ kind: "expert", trackIds: [uuid(1)], agencies: ["ASCAP", "BMI"] })).toThrow();
   });
 
   it("ignores a user ID or price sent from the browser", () => {
@@ -48,21 +53,33 @@ describe("planCheckout", () => {
 
   it("prices Expert Assistance on the server and merges repeated prices into one line", () => {
     // 24 album songs: base album fee + one small extended block ($14.99) + per-song-per-agency.
-    const p = planCheckout({ kind: "expert", type: "album", songs: 24, agencies: ["The MLC", "BMI"] }, "me");
+    const ids = Array.from({ length: 22 }, (_, i) => uuid(i));
+    const p = planCheckout(checkoutInput.parse({ kind: "expert", trackIds: ids, newSongs: [{ title: "New One", artist: "Me" }, { title: "New Two", artist: "" }], agencies: ["The MLC", "BMI"] }), "me");
     expect(p.items).toEqual([
       { lookupKey: "expert_setup_album", quantity: 1 },
       { lookupKey: "expert_setup_single", quantity: 1 },
       { lookupKey: "expert_per_song_agency", quantity: 48 },
     ]);
-    expect(p.metadata).toEqual({ userId: "me", kind: "expert", type: "album", songs: "24", agencies: "The MLC | BMI" });
+    expect(p.metadata).toMatchObject({ userId: "me", kind: "expert", type: "album", songs: "24", agencies: "The MLC | BMI" });
+    expect(Object.keys(p.metadata).length).toBeLessThanOrEqual(50);
+    expect(Object.values(p.metadata).every((v) => v.length <= 500)).toBe(true);
+    // The webhook reads back exactly the songs that were paid for.
+    expect(orderSongsOf(p.metadata)).toEqual({ trackIds: ids, newSongs: [{ title: "New One", artist: "Me" }, { title: "New Two", artist: "" }] });
     // A service our team delivers can't go through Managed Payments.
     expect(p.managed).toBe(false);
   });
 
-  it("caps a single/EP session at 6 songs", () => {
-    const p = planCheckout({ kind: "expert", type: "single", songs: 9, agencies: ["ASCAP"] }, "me");
-    expect(p.items).toContainEqual({ lookupKey: "expert_per_song_agency", quantity: 6 });
-    expect(p.metadata["songs"]).toBe("6");
+  it("sets Single/EP or album from the songs picked, counting each song once", () => {
+    const p = planCheckout(checkoutInput.parse({ kind: "expert", trackIds: [uuid(1), uuid(1), uuid(2)], agencies: ["ASCAP"] }), "me");
+    expect(p.items).toEqual([{ lookupKey: "expert_setup_single", quantity: 1 }, { lookupKey: "expert_per_song_agency", quantity: 2 }]);
+    expect(p.metadata["type"]).toBe("single");
+    expect(p.metadata["songs"]).toBe("2");
+  });
+
+  it("handles the largest order Stripe metadata can carry", () => {
+    const p = planCheckout(checkoutInput.parse({ kind: "expert", trackIds: Array.from({ length: 200 }, (_, i) => uuid(i)), newSongs: Array.from({ length: 20 }, (_, i) => ({ title: "x".repeat(120), artist: "y".repeat(78) + i })), agencies: ["ASCAP", "The MLC", "SoundExchange"] }), "me");
+    expect(Object.keys(p.metadata).length).toBeLessThanOrEqual(50 - 1); // priceIds is added at checkout
+    expect(Object.values(p.metadata).every((v) => v.length <= 500)).toBe(true);
   });
 });
 

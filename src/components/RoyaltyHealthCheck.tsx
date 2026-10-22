@@ -161,7 +161,7 @@ export function RoyaltyHealthCheck({ userId, canCatalog, onUpgrade, onFix, onFix
         <div className="flex flex-col items-start gap-3 rounded-2xl bg-primary p-6 text-primary-foreground md:flex-row md:items-center md:justify-between">
           <div>
             <h3 className="text-xl font-bold">One typo can freeze your payouts — with no error message.</h3>
-            <p className="text-sm opacity-90">{report.needsAction} of your songs need attention. Get an expert extra set of eyes live on video.</p>
+            <p className="text-sm opacity-90">{report.needsAction} of your songs need attention. Our agents can check and register them for you, done-for-you.</p>
           </div>
           <div className="flex gap-2"><Button variant="secondary" size="lg" onClick={book}>Get Expert Help</Button><Button variant="outline" size="lg" className="border-primary-foreground/40 bg-transparent text-primary-foreground hover:bg-primary-foreground/10" onClick={onFix}>Open My Catalog</Button></div>
         </div>

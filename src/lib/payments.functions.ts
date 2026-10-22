@@ -166,9 +166,11 @@ export const createCheckoutSession = createServerFn({ method: "POST" })
       if (!session.client_secret) throw new Error("Stripe did not return a client secret");
       return { clientSecret: session.client_secret };
     } catch (e) {
-      console.error("Stripe checkout failed:", getStripeErrorMessage(e));
+      const reason = getStripeErrorMessage(e);
+      console.error(`Stripe checkout failed (${data.kind}):`, reason, e);
       if (e instanceof Error && e.message.startsWith("This item")) throw e;
-      throw new Error("Checkout could not open. Try again, or contact support and we'll help right away.");
+      // Name the reason so a failing checkout can be fixed instead of guessed at (PLAN-registration-intake §0).
+      throw new Error(`Checkout could not open (${reason.slice(0, 200)}). Try again, or contact support and we'll help right away.`);
     }
   });
 

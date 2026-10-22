@@ -36,8 +36,17 @@ async function checkoutCompleted(session: Stripe.Checkout.Session, env: StripeEn
   }
   const row = purchaseRow(session as Parameters<typeof purchaseRow>[0], env);
   if (!row) return console.warn(`Checkout ${session.id} has no paid one-time purchase to record`);
-  const { error } = await db().from("purchases").upsert(row as never, { onConflict: "stripe_session_id" });
+  const { data: saved, error } = await db().from("purchases").upsert(row as never, { onConflict: "stripe_session_id" }).select("id, user_id, details").single();
   if (error) throw error;
+  // Expert Assistance: set up the intake, check every paid song and alert the user right away.
+  const purchase = saved as unknown as { id: string; user_id: string; details: Record<string, string> } | null;
+  if (row.kind === "expert" && purchase) {
+    // Never fails the payment: if this can't run now, the checklist sets it up when the user opens it.
+    try {
+      const { admin, startRegistration } = await import("@/lib/registration.server");
+      await startRegistration(await admin(), purchase);
+    } catch (e) { console.error(`Registration intake for ${purchase.id} failed:`, e); }
+  }
 }
 
 /** Marks the one-time purchase paid by this charge as refunded (kept for history, no longer unlocks anything). */

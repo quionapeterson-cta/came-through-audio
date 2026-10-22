@@ -44,7 +44,7 @@ export const Route = createFileRoute("/workspace")({
       { name: "twitter:card", content: "summary" },
     ],
   }),
-  validateSearch: (s: Record<string, unknown>) => ({ tab: typeof s["tab"] === "string" ? (s["tab"] as string) : undefined, checkout: s["checkout"] === "success" ? "success" : undefined } as { tab?: string | undefined; checkout?: "success" | undefined }),
+  validateSearch: (s: Record<string, unknown>) => ({ tab: typeof s["tab"] === "string" ? (s["tab"] as string) : undefined, checkout: s["checkout"] === "success" ? "success" : undefined, view: s["view"] === "expert" ? "expert" : undefined } as { tab?: string | undefined; checkout?: "success" | undefined; view?: "expert" | undefined }),
   component: Workspace,
 });
 
@@ -201,7 +201,7 @@ function Workspace() {
           </TabsContent>
           <TabsContent value="protect"><AIProtectionHub userId={user.id} purchases={purchases} justPaid={search.checkout === "success" && search.tab === "protect"} track={protectTrack} /></TabsContent>
           <TabsContent value="splits"><SplitSheets userId={user.id} canSplit={canSplit} canCollect={canCollect} prefillTrackId={splitTrackId} onUpgrade={upgrade} /></TabsContent>
-          <TabsContent value="health"><Health canCatalog={canCatalog} onFix={() => setTab("catalog")} onFixField={(trackId, field) => { setCatalogFix({ trackId, field }); setTab("catalog"); }} onEmbed={() => setTab("embed")} userId={user.id} purchases={purchases} canUtility={canCollect} onUpgrade={upgrade} /></TabsContent>
+          <TabsContent value="health"><Health startView={search.view === "expert" || (search.tab === "health" && search.checkout === "success") ? "expert" : "check"} justPaid={search.tab === "health" && search.checkout === "success"} canCatalog={canCatalog} onFix={() => setTab("catalog")} onFixField={(trackId, field) => { setCatalogFix({ trackId, field }); setTab("catalog"); }} onEmbed={() => setTab("embed")} userId={user.id} purchases={purchases} canUtility={canCollect} onUpgrade={upgrade} /></TabsContent>
           <TabsContent value="learn"><Learn userId={user.id} unlocked={hasTier(tier, "management")} onUpgrade={upgrade} /></TabsContent>
         </Tabs>
       </main>
@@ -290,9 +290,9 @@ function Masterclasses({ userId }: { userId: string }) {
   );
 }
 
-function Health({ canCatalog, onFix, onFixField, onEmbed, userId, purchases, canUtility, onUpgrade }: { canCatalog: boolean; userId: string; purchases: Purchase[]; canUtility: boolean; onUpgrade: () => void; onFix: () => void; onFixField: (trackId: string, field: string) => void; onEmbed: () => void }) {
+function Health({ startView, justPaid, canCatalog, onFix, onFixField, onEmbed, userId, purchases, canUtility, onUpgrade }: { startView: "check" | "expert"; justPaid: boolean; canCatalog: boolean; userId: string; purchases: Purchase[]; canUtility: boolean; onUpgrade: () => void; onFix: () => void; onFixField: (trackId: string, field: string) => void; onEmbed: () => void }) {
   // Three tools, one at a time, switched like Contracts & Masterclasses.
-  const [view, setView] = useState<"check" | "expert" | "utility">("check");
+  const [view, setView] = useState<"check" | "expert" | "utility">(startView);
   const views = [["check", "Health Check", Activity], ["expert", "Expert Help", Users], ["utility", "Utility Suite", Calculator]] as const;
   return (
     <div className="mt-6 space-y-6">
@@ -304,7 +304,7 @@ function Health({ canCatalog, onFix, onFixField, onEmbed, userId, purchases, can
       </div>
       {view === "check" && <RoyaltyHealthCheck userId={userId} canCatalog={canCatalog} onUpgrade={onUpgrade} onFix={onFix} onFixField={onFixField} onEmbed={onEmbed}
         onExpert={() => { setView("expert"); window.scrollTo({ top: 0, behavior: "smooth" }); }} />}
-      {view === "expert" && <div id="expert-assistance"><ExpertAssistance userId={userId} purchases={purchases} onFix={onFixField} /></div>}
+      {view === "expert" && <div id="expert-assistance"><ExpertAssistance userId={userId} purchases={purchases} justPaid={justPaid} onFix={onFixField} onCatalog={onFix} /></div>}
       {view === "utility" && <RoyaltyUtilitySuite unlocked={canUtility} onUpgrade={onUpgrade} />}
     </div>
   );

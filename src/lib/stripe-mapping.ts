@@ -1,6 +1,7 @@
 import { z } from "zod";
-import { assistanceItems, PRICE_TIER } from "@/lib/plans";
+import { assistanceItems, assistanceType, PRICE_TIER } from "@/lib/plans";
 import { PACKAGES, TRACKS_PER_KEY, packageSongs } from "@/lib/proof";
+import { ASSISTANCE_AGENCIES, MAX_NEW_SONGS, newSongKeys } from "@/lib/registration";
 
 /**
  * What the browser may ask to buy. Prices, quantities and the buyer are never taken from the browser: the server
@@ -15,11 +16,15 @@ export const checkoutInput = z.discriminatedUnion("kind", [
   }),
   z.object({
     kind: z.literal("expert"),
-    type: z.enum(["single", "album"]),
-    songs: z.number().int().min(1).max(500),
-    agencies: z.array(z.string().trim().min(1).max(60)).min(1).max(12),
+    // Catalog songs picked, plus songs that aren't in the catalog yet (PLAN-registration-intake §1–2).
+    trackIds: z.array(z.string().uuid()).max(200).default([]),
+    newSongs: z.array(z.object({ title: z.string().trim().min(1).max(120), artist: z.string().trim().max(80) })).max(MAX_NEW_SONGS).default([]),
+    agencies: z.array(z.enum(ASSISTANCE_AGENCIES)).min(1).max(ASSISTANCE_AGENCIES.length),
   }),
-]).refine((a) => a.kind !== "ai" || (a.trackIds?.length ?? 0) <= packageSongs(a.package), { message: "Pick a bigger package for that many songs." });
+])
+  .refine((a) => a.kind !== "ai" || (a.trackIds?.length ?? 0) <= packageSongs(a.package), { message: "Pick a bigger package for that many songs." })
+  .refine((a) => a.kind !== "expert" || new Set(a.trackIds).size + a.newSongs.length > 0, { message: "Choose at least one song." })
+  .refine((a) => a.kind !== "expert" || !(a.agencies.includes("ASCAP") && a.agencies.includes("BMI")), { message: "Songwriters can only belong to one PRO. Choose ASCAP or BMI." });
 export type CheckoutInput = z.infer<typeof checkoutInput>;
 
 export type CheckoutPlan = {
@@ -50,14 +55,16 @@ export function planCheckout(input: CheckoutInput, userId: string): CheckoutPlan
       managed: true,
     };
   }
-  const songs = input.type === "single" ? Math.min(input.songs, 6) : input.songs;
+  const trackIds = [...new Set(input.trackIds)];
+  const songs = trackIds.length + input.newSongs.length;
+  const type = assistanceType(songs);
   // Stripe needs one line per price; the $14.99 setup price can appear twice (base + small extended block).
   const merged = new Map<string, number>();
-  for (const i of assistanceItems(input.type, songs, input.agencies.length)) merged.set(i.priceId, (merged.get(i.priceId) ?? 0) + i.quantity);
+  for (const i of assistanceItems(type, songs, input.agencies.length)) merged.set(i.priceId, (merged.get(i.priceId) ?? 0) + i.quantity);
   return {
     mode: "payment",
     items: [...merged].map(([lookupKey, quantity]) => ({ lookupKey, quantity })),
-    metadata: { userId, kind: "expert", type: input.type, songs: String(songs), agencies: input.agencies.join(" | ") },
+    metadata: { userId, kind: "expert", type, songs: String(songs), agencies: input.agencies.join(" | "), ...trackKeys(trackIds), ...newSongKeys(input.newSongs) },
     returnTab: "health",
     managed: false,
   };

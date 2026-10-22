@@ -105,6 +105,9 @@ export function assistanceFees(type: "single" | "album", songs: number) {
   return { n, base: 29.99, smallBlocks, largeBlocks, extended: Math.round((largeBlocks * 29.99 + smallBlocks * 14.99) * 100) / 100 };
 }
 
+/** Singles/EPs are up to 6 songs; more is priced as an album. Set from the songs picked, never chosen by the user. */
+export const assistanceType = (songs: number): "single" | "album" => (songs > 6 ? "album" : "single");
+
 export function assistanceTotal(type: "single" | "album", songs: number, agencies: number) {
   if (songs <= 0 || agencies <= 0) return 0;
   const f = assistanceFees(type, songs);

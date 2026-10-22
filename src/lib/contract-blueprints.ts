@@ -480,7 +480,56 @@ ${general(2)}`),
   },
 ];
 
-export const blueprintById = (id: string) => BLUEPRINTS.find((b) => b.id === id) ?? COMPANY_BLUEPRINTS.find((b) => b.id === id);
+export type AuthorizationSchedule = { songs: { title: string; isrc: string }[]; agencies: string[]; purchasedOn: string; amount: string };
+
+/**
+ * The Registration Authorization a customer signs at intake step 4 (PLAN-registration-intake §6). Came Through Audio,
+ * LLC is the party; Schedule A is filled from the order. Built on the server when signing, so the text and its hash
+ * can't be changed by the browser. Have a lawyer review before launch.
+ */
+export function registrationAuthorization(o: { effectiveDate: string; client: string; prelaunch: boolean } & AuthorizationSchedule): string {
+  const agencies = o.agencies.join(", ");
+  const n = o.prelaunch ? 10 : 9;
+  return `REGISTRATION AUTHORIZATION
+
+This agreement is made on ${o.effectiveDate} between ${COMPANY_LEGAL_NAME} ("Came Through Audio") and ${o.client} ("Client").
+
+1. WHAT CLIENT AUTHORIZES
+Client authorizes Came Through Audio to register the songs and recordings listed in Schedule A with the organizations listed there (${agencies}), acting as Client's authorized user or representative in Client's own accounts. This includes entering, checking and submitting registration details, and reading Client's registration status.
+
+2. WHAT CAME THROUGH AUDIO WILL NOT DO
+Came Through Audio will not: (a) take or claim any ownership, copyright, writer share or publisher share in Client's music; (b) collect, receive or hold royalties for Client; (c) change Client's payment, bank or tax details, contact email, password or membership; (d) sign up for new memberships or agreements on Client's behalf; or (e) register anything not listed in Schedule A.
+
+3. CLIENT'S INFORMATION
+Client confirms that the details submitted for each song (titles, writers, roles, shares, publishers, IPI numbers, recordings and ownership) are true and complete, that every co-writer and co-owner has agreed to the shares submitted, and that Client has the right to register them. Came Through Audio registers exactly what Client submitted and is not responsible for errors in it. If an organization reports a conflict or asks for proof, Came Through Audio will tell Client, and Client will provide what's needed.
+
+4. ACCOUNT ACCESS
+Client will add Came Through Audio as an authorized user or representative in each account, as the organization allows, and will not share passwords. Client may remove that access at any time. Came Through Audio will stop using an account once its work for that account is done, and asks Client to remove its access then.
+
+5. NO GUARANTEE OF RESULTS
+Each organization decides on its own whether and when to accept a registration and pay royalties. Came Through Audio does not guarantee acceptance, timing or any amount of royalties.
+
+6. FEES AND REFUNDS
+Fees are listed in Schedule A. Refunds follow Came Through Audio's Refund Policy: a full refund within 30 days of purchase, as long as work on Client's registrations hasn't started. Work starts once Client has submitted every song in Schedule A and signed this agreement.
+
+7. PRIVACY
+Came Through Audio uses Client's information only to complete these registrations, as described in its Privacy Policy, and keeps PRO, IPI and share details private.
+
+8. ENDING THIS AUTHORIZATION
+This authorization ends when every registration in Schedule A is complete, or earlier if either side ends it in writing. Registrations already submitted stay in place.
+
+${o.prelaunch ? `9. PRE-LAUNCH CONFIDENTIALITY
+Until Came Through Audio publicly announces the launch of its service (or gives written permission first), Client will not post, share, screenshot, record or describe the Came Through Audio app or its features.
+
+` : ""}${general(n).replace("{{governingLaw}}", "the State of Georgia")}
+
+SCHEDULE A
+Organizations: ${agencies}
+Purchased: ${o.purchasedOn} · Amount paid: ${o.amount}
+${o.songs.map((s, i) => `${i + 1}. ${s.title}${s.isrc ? ` (ISRC ${s.isrc})` : ""}`).join("\n")}`;
+}
+
+export const blueprintById =(id: string) => BLUEPRINTS.find((b) => b.id === id) ?? COMPANY_BLUEPRINTS.find((b) => b.id === id);
 
 /** Fills {{field}} and {{party:Role}} tokens. Anything left blank stays visible as a [Label] blank to fill in. */
 export function renderContract(bp: Blueprint, fields: Record<string, string>, parties: { role: string; legalName: string }[]) {

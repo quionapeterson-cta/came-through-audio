@@ -16,6 +16,7 @@ import { BadgeSwitchboard } from "@/components/BadgeSwitchboard";
 import { PlansPanel } from "@/components/PlansPanel";
 import { TestimonialFilterPanel } from "@/components/TestimonialFilterPanel";
 import { TaskBankPanel } from "@/components/TaskBankPanel";
+import { RegistrationQueuePanel } from "@/components/RegistrationQueuePanel";
 
 export const Route = createFileRoute("/admin")({
   ssr: false,
@@ -130,8 +131,12 @@ function AdminPage() {
               rows={d?.certificates.map((c) => [c.track_title ?? "—", c.artist_name ?? "—", c.format_type, c.blockchain_status, c.is_verified ? "Yes" : "No", fmt(c.issued_at)])} />
           </TabsContent>
           <TabsContent value="reg">
-            <Table head={["Agency", "Status", "Authorization signed", "Created"]}
-              rows={d?.registrations.map((r) => [r.target_agency, r.status ?? "—", r.has_signed_authorization ? "Yes" : "No", fmt(r.created_at)])} />
+            {show("reg") && <RegistrationQueuePanel />}
+            {!!d?.registrations.length && <>
+              <h3 className="mt-8 font-semibold">Earlier requests</h3>
+              <Table head={["Agency", "Status", "Authorization signed", "Created"]}
+                rows={d.registrations.map((r) => [r.target_agency, r.status ?? "—", r.has_signed_authorization ? "Yes" : "No", fmt(r.created_at)])} />
+            </>}
           </TabsContent>
           <TabsContent value="splits">
             <Table head={["Email", "Role", "Share", "Type", "Status"]}
