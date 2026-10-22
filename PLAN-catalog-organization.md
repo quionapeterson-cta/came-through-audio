@@ -72,3 +72,28 @@ Founder asked to organize the catalog with the 5 new fields approved in PLAN-reg
 
 Files: catalog form components, `src/lib/readiness.ts` (read only; health % reuses it), split sheet list + PDF (`src/lib/*split*pdf*`), contracts and masterclasses components, BRANDING.md (rule above, after approval).
 Touches writer field layout (order and titles only, no field or data changes); per AGENTS.md this file list is the plan to confirm before editing.
+
+## 5. My Catalog on one page + liquid health meter (v1, 2026-10-22, awaiting approval)
+
+Founder request: put the whole catalog on one page, edit right there, and add a liquid master health meter at the top (gold in light mode, platinum in Studio Mode). Replaces the bar in §2 and uses idea 1 (progress) and idea 2 (Fix next).
+Preview: https://claude.ai/artifact/Hocb9vXMVMs1R6B8dnVM8w
+
+```
+My Catalog                                         [+ Add song]
+CATALOG HEALTH  72%  [≈≈≈≈≈≈≈≈≈≈≈≈≈≈≈≈≈≈≈≈≈~    ]  (click = Fix next)
+                     0    25    50    75    100
+                     1 of 4 songs fully healthy · 3 need work · Fix next: Night Shift →
+Albums · EPs · Singles · All
+▸ Crown Season          ▬▬▬▬▬ 100%   [Edit]
+▾ Night Shift Freestyle ▬▬▁▁▁  45%   [Close]
+    Song info ✓ · Writers ⚠️ (open) · … · Lyrics
+    [Update in catalog] [Embed & Download]
+▸ Gold Rush             ▬▬▬▬▁  80%   [Edit]
+```
+
+- **One page:** Edit opens the song form inside its own row in the list (one song open at a time), instead of replacing the page with an "Edit track" screen. Add song opens a new blank card at the top of the list. Close, Update in catalog and Embed & Download stay in the card. ⚠️ fix links (from the Health Check or readiness) open that song's card and jump to the field.
+- **Meter:** catalog % = average of each song's Royalty Health % from `songChecklist()` (the same code and saved checks as the Royalty Health Check, so both always agree; no second copy of the rules). Each song row gets a small meter in the same liquid. Clicking the big meter opens the lowest song that isn't 100% (Fix next).
+- **Look:** a horizontal glass tube with 25/50/75 ticks, liquid fill with a slow wave and a few bubbles; fills on load and rises after a save; still fill for people who turn off motion. Light mode: gold `#FFD700` liquid in a light glass tube. Studio Mode: platinum `#E5E4E2` liquid in a dark glass tube. The percentage text is black/white, never on the metal. Buttons stay Cobalt.
+- **Brand note:** BRANDING §1 reserves Gold and Platinum for badges and awards. Founder asked for this, so add one line there: "Exception: the Catalog health meter uses liquid Gold (light mode) and Platinum (dark mode)."
+
+Files: `src/components/MetadataUploader.tsx` (form placement only; no writer fields, roles or readiness logic change), new `src/components/HealthMeter.tsx`, `src/styles.css` (meter tokens for light and `.dark`), `BRANDING.md` (exception line). `src/lib/health.ts`, `health-checklist.ts`, `readiness.ts` are read only. No database changes.
