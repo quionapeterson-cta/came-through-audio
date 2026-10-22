@@ -9,7 +9,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { ProSelect } from "@/components/ProSelect";
 import { emptyContributor, GENRES, RELEASE_TYPES, WRITER_ROLES, writerRole, type Contributor } from "@/lib/metadata";
 import { isBadgeImage } from "@/lib/badges";
-import { loadOnboarding, loadProfile, saveOnboarding, saveProfile, type ArtistProfile, type Onboarding } from "@/lib/artist-profile";
+import { loadOnboarding, loadProfile, saveOnboarding, saveProfile, withOwnWriter, type ArtistProfile, type Onboarding } from "@/lib/artist-profile";
 import { capShare, splitTotal } from "@/lib/splits-total";
 import { ARTIST_SEAT_PRICES, TIER_LABEL } from "@/lib/plans";
 import { InfoTip } from "@/components/InfoTip";
@@ -98,6 +98,7 @@ export function ArtistOnboarding({ userId, open, onOpenChange, onSaved, firstRun
 
   const set = <K extends keyof ArtistProfile>(k: K, v: ArtistProfile[K]) => setP((x) => ({ ...x, [k]: v }));
 
+  const hasPublisher = (p.publishers ?? []).some((r) => r.name.trim());
   const newName = () => ob.stageName.trim() || p.artist?.trim() || "";
   const nameChanges = () => !!normName(savedName) && normName(savedName) !== normName(newName());
 
@@ -124,7 +125,8 @@ export function ArtistOnboarding({ userId, open, onOpenChange, onSaved, firstRun
       if (error) { toast.error(error.message.replace("ARTIST_NAME_LOCKED: ", "")); return; }
       setSavedName(stage);
     }
-    saveProfile(userId, { ...p, artist: p.artist?.trim() || stage });
+    const writers = withOwnWriter(p.writers, ob.legalName);
+    saveProfile(userId, { ...p, artist: p.artist?.trim() || stage, ...(writers && { writers }) });
     saveOnboarding(userId, final);
     await supabase.from("profiles").update({ stage_name: stage || null, legal_name: ob.legalName.trim() || null }).eq("id", userId);
     onSaved(final);
@@ -222,7 +224,9 @@ export function ArtistOnboarding({ userId, open, onOpenChange, onSaved, firstRun
               <DialogDescription>Save your private credit and registration details once. We’ll prefill every catalog entry, split sheet and registration file — so you never have to enter them again.</DialogDescription></DialogHeader>
             <Field label="Legal Name"><Input value={ob.legalName} onChange={(e) => setOb((o) => ({ ...o, legalName: e.target.value }))} placeholder="As registered with your PRO" /></Field>
             <Rows title="Writer" rows={p.writers} onChange={(r) => set("writers", r)} seed={ob.legalName} writer />
-            <Rows title="Publisher" rows={p.publishers} onChange={(r) => set("publishers", r)} />
+            <label className="flex items-center gap-2 text-sm"><input type="checkbox" className="h-4 w-4 accent-[var(--primary)]" checked={!!p.selfPublished} onChange={(e) => set("selfPublished", e.target.checked)} />I'm self-published (no publisher)<InfoTip term="selfPublished" /></label>
+            {(!p.selfPublished || hasPublisher) && <Rows title="Publisher" rows={p.publishers} onChange={(r) => set("publishers", r)} />}
+            {p.selfPublished && hasPublisher && <p className="text-sm">⚠️ You checked Self-published but also listed a publisher. Uncheck Self-published, or remove the publisher.</p>}
             <p className="flex items-start gap-2 rounded-lg bg-muted p-3 text-xs text-muted-foreground"><Lock className="mt-0.5 h-4 w-4 shrink-0 text-primary" />Private: PRO affiliations, IPI name numbers and shares stay in your catalog and are never embedded in your music files.</p>
             <IpiNote />
             <Nav onBack={() => setStep(2)} onNext={finish} nextLabel={firstRun ? "Save & start embedding" : "Save & exit"} />

@@ -127,6 +127,7 @@ Apply these rules across the website, emails and PDFs.
 ## 9. Platform safeguards
 
 - Keep private PRO affiliations, IPI numbers and split percentages out of embedded MP3 metadata.
+- Never embed publisher information in MP3s. Publishers, the ℗ line and language stay in the catalog for registration; the embed carries public release credits only (© and record label included).
 - Paid access comes from verified payment records; users cannot grant themselves paid access.
 - Staff access is controlled securely; users cannot promote themselves through profile edits.
 - Metadata embedding creates local MP3 downloads without changing catalog permissions.

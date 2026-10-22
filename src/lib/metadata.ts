@@ -150,21 +150,15 @@ export async function embedMetadata(audio: ArrayBuffer, metadata: Metadata, artw
   }
   const writers = data.writers.filter(creditName).map((row) => ({ ...row, name: creditName(row) }));
   const composers = data.composers.filter(creditName).map((row) => ({ ...row, name: creditName(row) }));
-  const publishers = data.publishers.filter((row) => row.name);
   if (writers.length || composers.length) writer.setFrame("TCOM", [...writers, ...composers].map((row) => row.name));
   // Privacy rule: PRO affiliations, IPI numbers and split percentages are never embedded — names only.
+  // Publishers, ℗ and language are never embedded at all; they live in the catalog for registration.
   const publicOnly = (rows: Contributor[]) => JSON.stringify(rows.map(({ name }) => ({ name, pro: "", ipi: "", percentage: "" })));
   if (writers.length) writer.setFrame("TXXX", { description: "WRITER_SPLITS", value: publicOnly(writers) });
   if (composers.length) writer.setFrame("TXXX", { description: "COMPOSER_SPLITS", value: publicOnly(composers) });
   const producers = (data.producers ?? []).filter((row) => row.name);
   if (producers.length) writer.setFrame("TXXX", { description: "PRODUCERS", value: producers.map((row) => row.name).join(", ") });
-  if (publishers.length) {
-    writer.setFrame("TPUB", publishers.map((row) => row.name).join("; "));
-    writer.setFrame("TXXX", { description: "PUBLISHERS", value: publicOnly(publishers) });
-  }
   if (data.copyright) writer.setFrame("TCOP", data.copyright);
-  if (data.phonographic) writer.setFrame("TXXX", { description: "PHONOGRAPHIC_COPYRIGHT", value: data.phonographic });
-  if (data.language) writer.setFrame("TXXX", { description: "LANGUAGE", value: data.language });
   if (data.lyrics) writer.setFrame("USLT", { description: "", lyrics: data.lyrics, language: "eng" });
   const credits = data.credits.filter((c) => c.name);
   if (credits.length) writer.setFrame("TXXX", { description: "CREDITS", value: JSON.stringify(credits) });
@@ -212,6 +206,7 @@ export function readMetadata(buf: ArrayBuffer): Partial<Metadata> & { picture?: 
   if (txxx["UPC"]) out.upc = txxx["UPC"];
   if (txxx["ISWC"]) out.iswc = txxx["ISWC"];
   if (txxx["LABEL"]) out.label = txxx["LABEL"];
+  if (frames["TCOP"]) out.copyright = frames["TCOP"];
   if (txxx["RELEASE_DATE"]) out.releaseDate = txxx["RELEASE_DATE"];
   if (txxx["EXPLICIT"]) out.explicit = txxx["EXPLICIT"] === "Yes";
   const w = json<Contributor[]>(txxx["WRITER_SPLITS"]); if (w?.length) out.writers = withLegalName(w);

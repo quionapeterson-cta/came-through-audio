@@ -27,7 +27,7 @@ import { ProSelect } from "@/components/ProSelect";
 import { logBadgeEvent } from "@/lib/badge-events";
 import { ARTIST_SEAT_PRICES } from "@/lib/plans";
 import { PACKAGES } from "@/lib/proof";
-import { loadOnboarding, loadProfile, withProfile } from "@/lib/artist-profile";
+import { loadOnboarding, loadProfile, restoreRows, withProfile, withProfileFilled } from "@/lib/artist-profile";
 import type { ShareInfo } from "@/components/BadgeCelebration";
 
 const normArtist = (v: string) => v.trim().replace(/\s+/g, " ").toLowerCase();
@@ -164,7 +164,8 @@ export function MetadataUploader({ onShareInfo, userId, mode = "embed", onSubmit
     } finally { setSaving(false); }
   }
   function open(t: CatalogTrack) {
-    setMetadata({ ...emptyMetadata(), ...t.metadata });
+    // Blanks fill from the profile (Embed Defaults + Catalog Profile), so only this song's own details are left.
+    setMetadata(withProfileFilled({ ...emptyMetadata(), ...t.metadata }, loadProfile(userId)));
     setEditingId(t.id);
     setResult(undefined);
     setError("");
@@ -270,16 +271,8 @@ export function MetadataUploader({ onShareInfo, userId, mode = "embed", onSubmit
       }
       const filled = Object.fromEntries(Object.entries(found).filter(([, v]) => Array.isArray(v) ? v.some((x) => (typeof x === "string" ? x : x?.name)) : v !== "" && v != null));
       // Private PRO/IPI/splits never live in files — restore them from the saved profile for matching names.
-      const profile = loadProfile(userId);
-      for (const g of ["writers", "composers", "producers", "publishers"] as const) {
-        const rows = filled[g] as Contributor[] | undefined;
-        if (!rows) continue;
-        filled[g] = rows.map((r) => {
-          const saved = profile?.[g]?.find((s) => creditName(s).toLowerCase() === creditName(r).toLowerCase());
-          return saved ? { ...r, legalName: r.legalName || saved.legalName, pro: r.pro || saved.pro, ipi: r.ipi || saved.ipi, percentage: r.percentage || saved.percentage } : r;
-        });
-      }
-      if (Object.keys(filled).length || picture) { setMetadata((m) => ({ ...m, ...filled })); toast.success("Existing metadata found and pre-filled. You can still edit every field."); }
+      const restored = restoreRows(filled as Partial<Metadata>, loadProfile(userId));
+      if (Object.keys(filled).length || picture) { setMetadata((m) => ({ ...m, ...restored })); toast.success("Existing metadata found and pre-filled. You can still edit every field."); }
     }).catch(() => {});
   }
   async function submit(event: FormEvent) {
@@ -379,7 +372,7 @@ export function MetadataUploader({ onShareInfo, userId, mode = "embed", onSubmit
               </div>
             </FormSection>
 
-            <FormSection title="Release" open={!full} disabled={busy} summary={filled([[metadata.releaseType, metadata.releaseType], [metadata.album, metadata.album], [metadata.releaseDate, metadata.releaseDate]]) || "Release type, album, date"}>
+            <FormSection title="Release" open={!full} disabled={busy} summary={filled([[metadata.releaseType, metadata.releaseType], [metadata.album, metadata.album], [metadata.releaseDate, metadata.releaseDate], [metadata.label, metadata.label]]) || (full ? "Release type, album, date, label" : "Release type, label, ©")}>
               <div className="grid gap-5 sm:grid-cols-2">
                 <SelectField label="Release type" term="releaseType" id="releaseType" value={metadata.releaseType} options={RELEASE_TYPES} onChange={(value) => update("releaseType", value)} />
                 <div className="min-w-0 space-y-2">
@@ -394,7 +387,13 @@ export function MetadataUploader({ onShareInfo, userId, mode = "embed", onSubmit
                 {full && <>
                   <Field label="Album / release title" id="album" value={metadata.album} onChange={(value) => update("album", value)} />
                   <Field label="Release date" id="releaseDate" type="date" value={metadata.releaseDate} onChange={(value) => update("releaseDate", value)} />
-                  <Field label="Record label" term="label" id="label" value={metadata.label} onChange={(value) => update("label", value)} />
+                </>}
+                <Field label="Record label" term="label" id="label" value={metadata.label} onChange={(value) => update("label", value)} />
+                <Field label="Composition copyright (©)" term="cLine" id="copyright" value={metadata.copyright} onChange={(value) => update("copyright", value)} />
+                {/* ℗ and language are catalog details; they aren't embedded in the MP3. */}
+                {full && <>
+                  <Field label="Sound recording copyright (℗)" term="pLine" id="phonographic" value={metadata.phonographic} onChange={(value) => update("phonographic", value)} />
+                  <Field label="Language" id="language" value={metadata.language} onChange={(value) => update("language", value)} />
                 </>}
               </div>
             </FormSection>

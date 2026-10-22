@@ -6,7 +6,7 @@ import { currentBadge, DEFAULT_BADGE_PREFS, type BadgePrefs } from "@/lib/badges
 /** Recurring details a user can opt to prefill on every embed. Stored only in this browser. */
 export const PROFILE_KEYS = [
   "artist", "label", "primaryGenre", "secondaryGenre", "releaseType", "explicit", "copyright", "phonographic", "language",
-  "writers", "composers", "producers", "publishers", "recordedIn",
+  "writers", "composers", "producers", "publishers", "selfPublished", "recordedIn",
 ] as const;
 export type ArtistProfile = Partial<Pick<Metadata, (typeof PROFILE_KEYS)[number]>>;
 
@@ -40,8 +40,21 @@ export function loadProfile(userId?: string): ArtistProfile | null {
     const v = localStorage.getItem(key(userId));
     if (!v) return null;
     const p = JSON.parse(v) as ArtistProfile;
-    return { ...p, ...(p.writers && { writers: withLegalName(p.writers) }), ...(p.composers && { composers: withLegalName(p.composers) }) };
+    const writers = withOwnWriter(p.writers && withLegalName(p.writers), loadOnboarding(userId)?.legalName);
+    return { ...p, ...(writers && { writers }), ...(p.composers && { composers: withLegalName(p.composers) }) };
   } catch { return null; }
+}
+
+/**
+ * The user's own writer row. Setup shows it prefilled with their legal name, but only stored the name once the row was
+ * typed in, so a lone unnamed row (often holding their IPI/PRO) or no row at all takes the account's legal name.
+ * Only fills a blank: an existing name is never replaced.
+ */
+export function withOwnWriter(rows: Contributor[] | undefined, legalName?: string): Contributor[] | undefined {
+  const name = legalName?.trim();
+  if (!name) return rows;
+  if (!rows?.length) return [{ ...emptyContributor(), legalName: name, role: "Author/Composer" }];
+  return rows.length === 1 && !creditName(rows[0]!) ? [{ ...rows[0]!, legalName: name }] : rows;
 }
 
 // The account (profiles row) is the source of truth; localStorage is a fast local cache.
@@ -103,5 +116,34 @@ export function fillMissing(detected: Partial<Metadata>, p: ArtistProfile | null
     const empty = cur === undefined || cur === "" || (Array.isArray(cur) && hasName(cur as Contributor[]).length === 0);
     if (empty && p[k] !== undefined) (out as Record<string, unknown>)[k] = p[k];
   }
+  return out;
+}
+
+const ROW_GROUPS = ["writers", "composers", "producers", "publishers"] as const;
+
+/** Private PRO/IPI/shares never live in files: rows matching a saved profile name get them back, blanks only. */
+export function restoreRows(m: Partial<Metadata>, p: ArtistProfile | null): Partial<Metadata> {
+  if (!p) return m;
+  const out: Partial<Metadata> = { ...m };
+  for (const g of ROW_GROUPS) {
+    const rows = out[g];
+    if (!rows) continue;
+    out[g] = rows.map((r) => {
+      const saved = creditName(r) && p[g]?.find((s) => creditName(s).toLowerCase() === creditName(r).toLowerCase());
+      return saved ? { ...r, legalName: r.legalName || saved.legalName, pro: r.pro || saved.pro, ipi: r.ipi || saved.ipi, percentage: r.percentage || saved.percentage } : r;
+    });
+  }
+  return out;
+}
+
+/**
+ * A catalog song with the profile filled in: empty fields take the Embed Defaults and Catalog Profile, matching writers
+ * and publishers get their saved PRO/IPI/share, and no publisher + a self-published profile reads as self-published.
+ * Only blanks are filled; nothing the song already has is replaced. Applied to the form, saved when the user saves.
+ */
+export function withProfileFilled(m: Metadata, p: ArtistProfile | null): Metadata {
+  if (!p) return m;
+  const out = { ...m, ...restoreRows(fillMissing(m, p), p) } as Metadata;
+  if (p.selfPublished && !out.selfPublished && !hasName(out.publishers).length) out.selfPublished = true;
   return out;
 }
