@@ -30,3 +30,6 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# The project uses Bun (bun.lock); npm lockfiles from local installs stay out
+package-lock.json
