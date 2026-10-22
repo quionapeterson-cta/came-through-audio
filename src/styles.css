@@ -186,6 +186,46 @@
   --ring: #4D8CFF;
 }
 .dark .text-primary { color: #4D8CFF; }
+
+/*
+ * Catalog health meter (BRANDING.md §1 exception): liquid Medallion Gold #B98339 in light mode, liquid Platinum
+ * #E5E4E2 in Studio Mode. The fill eases up when the % changes and a slow sheen runs through it like poured metal.
+ */
+:root { --meter-top: #E7AF4E; --meter-liquid: #B98339; --meter-deep: #824600; --meter-glass: oklch(0.95 0.004 85); }
+.dark { --meter-top: #FFFFFF; --meter-liquid: #E5E4E2; --meter-deep: #9C9EA3; --meter-glass: oklch(0.22 0 0); }
+.health-liquid {
+  position: relative; overflow: hidden; height: 100%; border-radius: inherit;
+  background: linear-gradient(180deg, var(--meter-top), var(--meter-liquid) 50%, var(--meter-deep));
+  transition: width 1.2s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.health-liquid::after {
+  content: ""; position: absolute; inset: 0; width: 40%;
+  background: linear-gradient(90deg, transparent, rgb(255 255 255 / 0.6), transparent);
+  animation: health-sheen 3.2s ease-in-out infinite;
+}
+@keyframes health-sheen { from { transform: translateX(-120%); } to { transform: translateX(320%); } }
+/* The master meter is tall enough to show the liquid itself: a rippling surface, a sloshing front edge and rising bubbles. */
+.health-wave {
+  position: absolute; left: 0; top: 0; width: calc(100% + 20px); height: 7px; opacity: 0.6;
+  background: radial-gradient(10px 4px at 10px 0, rgb(255 255 255 / 0.75) 98%, transparent) 0 0 / 20px 7px repeat-x;
+  animation: health-drift 4s linear infinite;
+}
+.health-front {
+  position: absolute; top: -20%; right: -9px; width: 20px; height: 140%; border-radius: 45%;
+  background: var(--meter-liquid); animation: health-slosh 2.6s ease-in-out infinite;
+}
+.health-bubble {
+  position: absolute; bottom: -6px; width: 4px; height: 4px; border-radius: 9999px;
+  background: rgb(255 255 255 / 0.8); animation: health-rise 3.4s ease-in infinite;
+}
+@keyframes health-drift { to { transform: translateX(-20px); } }
+@keyframes health-slosh { 0%, 100% { transform: translateY(0) scaleX(1); } 50% { transform: translateY(6%) scaleX(0.8); } }
+@keyframes health-rise { 0% { transform: translateY(0); opacity: 0; } 20% { opacity: 0.9; } 100% { transform: translateY(-32px); opacity: 0; } }
+@media (prefers-reduced-motion: reduce) {
+  .health-liquid { transition: none; }
+  .health-liquid::after, .health-wave, .health-bubble { display: none; }
+  .health-front { animation: none; }
+}
 .dark .border-primary { border-color: #4D8CFF; }
 
 @theme inline {

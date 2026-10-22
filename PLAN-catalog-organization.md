@@ -73,7 +73,9 @@ Founder asked to organize the catalog with the 5 new fields approved in PLAN-reg
 Files: catalog form components, `src/lib/readiness.ts` (read only; health % reuses it), split sheet list + PDF (`src/lib/*split*pdf*`), contracts and masterclasses components, BRANDING.md (rule above, after approval).
 Touches writer field layout (order and titles only, no field or data changes); per AGENTS.md this file list is the plan to confirm before editing.
 
-## 5. My Catalog on one page + liquid health meter (v1, 2026-10-22, awaiting approval)
+## 5. My Catalog on one page + liquid health meter (v2, 2026-10-22, APPROVED and BUILT)
+
+Founder changes (v2): gold darkened to Medallion Gold `#B98339` (the CTA seal on the Piggy Bank Split badge), added to BRANDING §1 with Platinum `#E5E4E2` for dark mode; song meters thin; master meter tall enough to show the liquid (wave, sloshing front, bubbles, sheen).
 
 Founder request: put the whole catalog on one page, edit right there, and add a liquid master health meter at the top (gold in light mode, platinum in Studio Mode). Replaces the bar in §2 and uses idea 1 (progress) and idea 2 (Fix next).
 Preview: https://claude.ai/artifact/Hocb9vXMVMs1R6B8dnVM8w

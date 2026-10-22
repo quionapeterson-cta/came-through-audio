@@ -1,5 +1,6 @@
 import type { Pillar } from "@/lib/audit";
-import { pillarLabel, type TrackReport } from "@/lib/health";
+import { pillarLabel, trackReport, type RepertoireCheck, type TrackReport } from "@/lib/health";
+import type { CatalogTrack } from "@/lib/catalog";
 import { isInspectorSong, type SongStatus } from "@/lib/health-songs";
 import { creditName, type Metadata } from "@/lib/metadata";
 import { registrationReadiness } from "@/lib/readiness";
@@ -103,6 +104,22 @@ export function songChecklist(r: TrackReport, country: Country, status?: SongSta
   const pct = steps.length ? Math.round((done / steps.length) * 100) : 0;
   const group = pct === 100 ? "healthy" : status?.list === "later" ? "later" : "attention";
   return { steps, done, total: steps.length, pct, group };
+}
+
+/**
+ * The My Catalog health meter: each song's checklist % (the same steps the Royalty Health Check shows) and their
+ * average, plus the first unfinished step's field so "Fix next" can jump straight to it.
+ */
+export function catalogHealth(tracks: CatalogTrack[], country: Country, checks: RepertoireCheck[], statuses: SongStatus[]) {
+  const statusOf = (id: string) => statuses.find((s) => s.songRef === id);
+  const account = statusOf(ACCOUNT_REF);
+  const songs = tracks.map((track) => {
+    const c = songChecklist(trackReport(track, country, checks), country, statusOf(track.id), account);
+    return { track, pct: c.pct, field: c.steps.find((s) => !s.done && s.field)?.field };
+  });
+  const pct = songs.length ? Math.round(songs.reduce((sum, s) => sum + s.pct, 0) / songs.length) : 0;
+  const next = songs.filter((s) => s.pct < 100).sort((a, b) => a.pct - b.pct)[0];
+  return { songs, pct, healthy: songs.filter((s) => s.pct === 100).length, next };
 }
 
 /** A warm, honest line for where the song is. */

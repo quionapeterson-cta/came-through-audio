@@ -25,6 +25,6 @@ Contrast rules:
   - Small and medium text: "Audio" in Electric Cobalt `#4D8CFF`.
   - Large display text: "Audio" in Cobalt with a thin white outline.
 
-Gold `#FFD700` and Platinum `#E5E4E2` are only for badges and awards, never general site design. See BRANDING.md.
+Gold `#FFD700`, Medallion Gold `#B98339` and Platinum `#E5E4E2` are only for badges and awards, never general site design. Exception: the My Catalog health meter is liquid Medallion Gold in light mode and liquid Platinum in dark mode. See BRANDING.md.
 
 In code, use the semantic theme tokens (`foreground`, `background`, `primary`, `ink`, …) rather than raw hex values, so every control follows the global theme.

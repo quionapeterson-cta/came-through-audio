@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent, type ReactNode } from "react";
 import { confirmAction } from "@/components/ConfirmHost";
 import { ChevronDown, Disc3, Lock, ShieldCheck, CheckCircle2, Download, FileAudio, FileText, ImagePlus, Pencil, Plus, Save, Trash2, Upload } from "lucide-react";
 import { capShare, splitStatus, splitSummary } from "@/lib/splits-total";
@@ -12,7 +12,12 @@ import { GLOSSARY, type GlossaryKey } from "@/lib/glossary";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { PRE_DIST_NOTE, PRO_TIP } from "@/lib/copy";
 import { readMetadata, CREDIT_ROLES, isPerformer, performers, emptyContributor, emptyMetadata, embedMetadata, creditName, metadataSchema, GENRES, MASTER_BASES, PRODUCTION_TYPES, RELEASE_TYPES, WRITER_ROLES, writerRole, type Contributor, type Metadata } from "@/lib/metadata";
-import { COUNTRIES } from "@/lib/repertoires";
+import { COUNTRIES, countryByCode, guessCountry } from "@/lib/repertoires";
+import { catalogHealth } from "@/lib/health-checklist";
+import { listChecks } from "@/lib/repertoire-checks";
+import { listStatuses, type SongStatus } from "@/lib/health-songs";
+import type { RepertoireCheck } from "@/lib/health";
+import { HealthLiquid, HealthMeter } from "@/components/HealthMeter";
 import { deleteTrack, downloadCatalogFile, listTracks, safeName, saveTrack, uploadCatalogFile, type CatalogTrack } from "@/lib/catalog";
 import { AGENCY_LABEL, downloadAgencyExport, downloadNeighbouringPack, type Agency, type Held } from "@/lib/agency-export";
 import { registrationReadiness, type MissingItem } from "@/lib/readiness";
@@ -103,6 +108,20 @@ export function MetadataUploader({ stageName, avatar, userId, mode = "embed", on
     listTracks().then(setTracks).catch((e) => toast.error(e.message ?? "Could not load your catalog."));
   }, [userId]);
   useEffect(() => { refresh(); }, [refresh]);
+  // The health meter reads the same saved checks and checklist ticks as the Royalty Health Check.
+  const [checks, setChecks] = useState<RepertoireCheck[]>([]);
+  const [statuses, setStatuses] = useState<SongStatus[]>([]);
+  useEffect(() => {
+    if (!full || !userId) return;
+    listChecks().then(setChecks).catch(() => {});
+    listStatuses().then(setStatuses).catch(() => {});
+  }, [full, userId]);
+  const health = useMemo(() => {
+    if (!full) return undefined;
+    const code = loadOnboarding(userId)?.healthCountry ?? guessCountry(tracks.flatMap((t) => [...t.metadata.writers, ...t.metadata.composers].map((w) => w.pro)));
+    return catalogHealth(tracks, countryByCode(code) ?? countryByCode("US")!, checks, statuses);
+  }, [full, userId, tracks, checks, statuses]);
+  const pctOf = (id: string) => health?.songs.find((x) => x.track.id === id)?.pct ?? 0;
   // A ⚠️ link elsewhere (e.g. Expert Assistance) asked to fix a field on one of these songs.
   useEffect(() => {
     const t = focus && tracks.find((x) => x.id === focus.trackId);
@@ -148,8 +167,12 @@ export function MetadataUploader({ stageName, avatar, userId, mode = "embed", on
     setEditingId(t.id);
     setResult(undefined);
     setError("");
-    window.scrollTo({ top: 0, behavior: "smooth" });
+    setAdding(false);
+    // The song opens right where it sits in the list.
+    setTimeout(() => document.getElementById(`song-${t.id}`)?.scrollIntoView({ behavior: "smooth", block: "start" }), 50);
   }
+  /** Close the open song (or the new one) and go back to the list. */
+  function closeSong() { startNew(); setAdding(false); }
   /** Open a catalog song and jump to the field a ⚠️ readiness item points at. */
   function fix(t: CatalogTrack, field: string) {
     open(t);
@@ -281,47 +304,8 @@ export function MetadataUploader({ stageName, avatar, userId, mode = "embed", on
   }
 
   const showForm = !full || !!editingId || adding;
-  function addSong(withAudio: boolean) {
-    startNew();
-    setAdding(true);
-    window.scrollTo({ top: 0, behavior: "smooth" });
-    if (withAudio) setTimeout(() => audioInput.current?.click(), 50);
-  }
-  return (
-    <section className={`mx-auto mt-8 ${full ? "max-w-5xl" : "max-w-7xl"}`}>
-      {stageName && <h1 className="mb-8 flex items-center justify-center gap-[0.3em] text-center text-4xl font-extrabold leading-none tracking-tight md:text-5xl">
-        <span className="min-w-0 break-words">{stageName}</span>
-        {/* Avatar matches the name's height so badges can be enjoyed up close; click for full size. */}
-        {avatar && <button type="button" aria-label="View your profile badge" onClick={() => setViewAvatar(true)} className="shrink-0 rounded-full transition hover:ring-2 hover:ring-primary/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
-          <ArtistAvatar src={avatar} className="h-[1.15em] w-[1.15em]" />
-        </button>}
-      </h1>}
-      <BadgeViewer src={viewAvatar ? avatar : undefined} round={!isBadgeImage(avatar)} onClose={() => setViewAvatar(false)}
-        share={full ? { ctx: "catalog", artist: stageName ?? "", count: tracks.length, genre: loadProfile(userId)?.primaryGenre } : { ctx: "embed", artist: metadata.artist.trim() || (stageName ?? ""), title: metadata.title, genre: metadata.primaryGenre }} />
-      <div className="mb-6 flex flex-wrap items-end justify-between gap-3">
-        <div className="flex flex-wrap items-center gap-3">
-          <h1 className="text-2xl font-bold">{full ? (editingId ? "Edit track" : adding ? "Add a song" : "My Catalog") : "Embed Metadata"}</h1>
-        </div>
-        {userId && !editingId && !adding && <NextBadgeHint userId={userId} collections={full ? ["core", "lyrics", "hiphop", "spiritual", "night"] : ["core", "lyrics", "producer", "live"]} />}
-        {full && userId && !editingId && !adding ? (
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild><Button type="button"><Plus />Add song</Button></DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="max-w-xs">
-              <DropdownMenuItem onClick={() => addSong(true)} className="flex-col items-start gap-0.5">
-                <span className="font-semibold">Upload an MP3 you already embedded</span>
-                <span className="text-xs text-muted-foreground">We read its tags and fill in the details for you.</span>
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => addSong(false)} className="flex-col items-start gap-0.5">
-                <span className="font-semibold">Add without audio</span>
-                <span className="text-xs text-muted-foreground">Type in the details. Add the MP3 anytime later.</span>
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        ) : <span className="text-sm text-muted-foreground">{full ? "Saved songs, identifiers and splits" : "MP3 · ID3v2.3"}</span>}
-      </div>
-      <div className={full ? "" : "lg:grid lg:grid-cols-[13rem_minmax(0,1fr)_17rem] lg:items-start lg:gap-6"}>
-      {!full && <SessionRail audio={audio} queue={queue} done={sessionDone} onAdd={() => audioInput.current?.click()} onRemove={(i) => setQueue((q) => q.filter((_, j) => j !== i))} />}
-      <div className="min-w-0">
+  // My Catalog shows this form inside the open song's card (or the new-song card); Embed Metadata shows it in the page.
+  const formBlock = (<>
       {showForm && submitted && !full ? (
         <div className="rounded-2xl border border-primary p-8 text-center">
           <CheckCircle2 className="mx-auto h-10 w-10 text-primary" />
@@ -504,18 +488,69 @@ export function MetadataUploader({ stageName, avatar, userId, mode = "embed", on
           <div className="flex flex-wrap items-center gap-3">
             <Button type="submit" size="lg" disabled={busy}><FileAudio />{busy ? "Embedding…" : "Embed & Download"}</Button>
             {userId && <Button type="button" size="lg" variant="outline" disabled={saving} onClick={save}><Save />{saving ? "Saving…" : editingId ? "Update in catalog" : "Submit to catalog"}</Button>}
-            {full && (editingId || adding) && <Button type="button" size="lg" variant="ghost" onClick={() => { startNew(); setAdding(false); }}>Close</Button>}
+            {full && (editingId || adding) && <Button type="button" size="lg" variant="ghost" onClick={closeSong}>Close</Button>}
             {!full && <span className="hidden text-xs text-muted-foreground sm:inline"><kbd className="rounded border border-border px-1.5 py-0.5">Ctrl</kbd> + <kbd className="rounded border border-border px-1.5 py-0.5">Enter</kbd> to embed</span>}
           </div>
         </div>
       </form>
       )}
+  </>);
+  function addSong(withAudio: boolean) {
+    startNew();
+    setAdding(true);
+    setTimeout(() => document.getElementById("song-new")?.scrollIntoView({ behavior: "smooth", block: "start" }), 50);
+    if (withAudio) setTimeout(() => audioInput.current?.click(), 50);
+  }
+  return (
+    <section className={`mx-auto mt-8 ${full ? "max-w-5xl" : "max-w-7xl"}`}>
+      {stageName && <h1 className="mb-8 flex items-center justify-center gap-[0.3em] text-center text-4xl font-extrabold leading-none tracking-tight md:text-5xl">
+        <span className="min-w-0 break-words">{stageName}</span>
+        {/* Avatar matches the name's height so badges can be enjoyed up close; click for full size. */}
+        {avatar && <button type="button" aria-label="View your profile badge" onClick={() => setViewAvatar(true)} className="shrink-0 rounded-full transition hover:ring-2 hover:ring-primary/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+          <ArtistAvatar src={avatar} className="h-[1.15em] w-[1.15em]" />
+        </button>}
+      </h1>}
+      <BadgeViewer src={viewAvatar ? avatar : undefined} round={!isBadgeImage(avatar)} onClose={() => setViewAvatar(false)}
+        share={full ? { ctx: "catalog", artist: stageName ?? "", count: tracks.length, genre: loadProfile(userId)?.primaryGenre } : { ctx: "embed", artist: metadata.artist.trim() || (stageName ?? ""), title: metadata.title, genre: metadata.primaryGenre }} />
+      <div className="mb-6 flex flex-wrap items-end justify-between gap-3">
+        <div className="flex flex-wrap items-center gap-3">
+          <h1 className="text-2xl font-bold">{full ? "My Catalog" : "Embed Metadata"}</h1>
+        </div>
+        {userId && (full || (!editingId && !adding)) && <NextBadgeHint userId={userId} collections={full ? ["core", "lyrics", "hiphop", "spiritual", "night"] : ["core", "lyrics", "producer", "live"]} />}
+        {full && userId ? (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild><Button type="button"><Plus />Add song</Button></DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="max-w-xs">
+              <DropdownMenuItem onClick={() => addSong(true)} className="flex-col items-start gap-0.5">
+                <span className="font-semibold">Upload an MP3 you already embedded</span>
+                <span className="text-xs text-muted-foreground">We read its tags and fill in the details for you.</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => addSong(false)} className="flex-col items-start gap-0.5">
+                <span className="font-semibold">Add without audio</span>
+                <span className="text-xs text-muted-foreground">Type in the details. Add the MP3 anytime later.</span>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        ) : <span className="text-sm text-muted-foreground">{full ? "Saved songs, identifiers and splits" : "MP3 · ID3v2.3"}</span>}
       </div>
-      {!full && <NowEmbedding metadata={metadata} cover={cover} />}
+      {!full && <div className="lg:grid lg:grid-cols-[13rem_minmax(0,1fr)_17rem] lg:items-start lg:gap-6">
+      <SessionRail audio={audio} queue={queue} done={sessionDone} onAdd={() => audioInput.current?.click()} onRemove={(i) => setQueue((q) => q.filter((_, j) => j !== i))} />
+      <div className="min-w-0">
+      {formBlock}
       </div>
+      <NowEmbedding metadata={metadata} cover={cover} />
+      </div>}
 
       {userId && full && (() => { const newest = [...tracks].sort((a, b) => String(b.updatedAt).localeCompare(String(a.updatedAt)))[0]; return (
-        <div className="mt-4 border-t border-border pt-6 pb-12">
+        <div className="pb-12">
+          {health && tracks.length > 0 && <div className="mb-8 rounded-2xl border border-border bg-card p-5">
+            <HealthMeter pct={health.pct} healthy={health.healthy} total={tracks.length} next={health.next?.track.title}
+              onNext={() => { const n = health.next; if (n) { if (n.field) fix(n.track, n.field); else open(n.track); } }} />
+          </div>}
+          {adding && <div id="song-new" className="mb-8 scroll-mt-4 rounded-2xl border border-primary p-4">
+            <h2 className="mb-4 text-xl font-bold">Add a song</h2>
+            {formBlock}
+          </div>}
           <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
             <h2 className="text-xl font-bold">Your songs</h2>
             {tracks.length > 0 && <Button type="button" variant="outline" size="sm" onClick={() => { const list = filter === "All" ? tracks : tracks.filter((t) => releaseGroup(t) === filter); downloadCatalogPdf(list, filter === "All" ? "Catalog" : `Catalog - ${filter}s`).catch(() => toast.error("Could not create the catalog PDF.")); }}><FileText />{filter === "All" ? "Catalog PDF" : `${filter}s PDF`}</Button>}
@@ -532,7 +567,7 @@ export function MetadataUploader({ stageName, avatar, userId, mode = "embed", on
               const items = tracks.filter((t) => releaseGroup(t) === g);
               if (!items.length) return null;
               const row = (t: CatalogTrack) => (
-                <li key={t.id} className={`group rounded-xl border p-3 transition hover:border-primary hover:shadow-md ${t.id === editingId || picked.has(t.id) ? "border-primary bg-accent/30" : "border-border"}`}>
+                <li key={t.id} id={`song-${t.id}`} className={`group scroll-mt-4 rounded-xl border p-3 transition hover:border-primary hover:shadow-md ${t.id === editingId || picked.has(t.id) ? "border-primary bg-accent/30" : "border-border"}`}>
                   <div className="flex flex-wrap items-center gap-4">
                   <input type="checkbox" aria-label={`Select ${t.title} for bulk export`} checked={picked.has(t.id)} onChange={() => togglePick(t.id)} className="h-4 w-4 accent-primary" />
                   {g !== "Single" && <span className="w-6 text-center text-sm font-bold text-primary">{t.metadata.trackNumber || "–"}</span>}
@@ -543,8 +578,14 @@ export function MetadataUploader({ stageName, avatar, userId, mode = "embed", on
                     <div className="truncate text-lg font-bold">{t.title}</div>
                     <div className="truncate text-sm text-muted-foreground">{t.artist}{t.metadata.album ? ` · ${t.metadata.album}` : ""}</div>
                   </div>
+                  {health && <div className="w-20 shrink-0" title="Royalty health">
+                    <HealthLiquid pct={pctOf(t.id)} className="h-1.5" />
+                    <div className="mt-1 text-right text-xs tabular-nums text-muted-foreground">{pctOf(t.id)}%</div>
+                  </div>}
                   <div className="flex flex-wrap gap-2">
-                    <Button type="button" variant="outline" size="sm" onClick={() => open(t)}><Pencil />Edit</Button>
+                    {t.id === editingId
+                      ? <Button type="button" size="sm" onClick={closeSong}>Close</Button>
+                      : <Button type="button" variant="outline" size="sm" onClick={() => open(t)}><Pencil />Edit</Button>}
                     {(t.metadata.audioPath || t.metadata.artPath || t.metadata.lyrics) && (
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild><Button type="button" variant="outline" size="sm"><Download />Downloads</Button></DropdownMenuTrigger>
@@ -561,7 +602,7 @@ export function MetadataUploader({ stageName, avatar, userId, mode = "embed", on
                     <Button type="button" variant="ghost" size="icon" aria-label={`Delete ${t.title}`} onClick={() => remove(t.id)}><Trash2 /></Button>
                   </div>
                   </div>
-                  <div className="mt-3 space-y-3 border-t border-border pt-3">
+                  {t.id === editingId ? <div className="mt-3 border-t border-border pt-4">{formBlock}</div> : <div className="mt-3 space-y-3 border-t border-border pt-3">
                     <div className="flex flex-wrap gap-1.5 text-xs">
                       {regBadges(t).map((b) => <span key={b} className="rounded-full border border-primary px-2 py-0.5 text-primary">{b}</span>)}
                     </div>
@@ -585,13 +626,13 @@ export function MetadataUploader({ stageName, avatar, userId, mode = "embed", on
                         </li>)}</ul>
                       </div>)}
                     </div>}
-                  </div>
+                  </div>}
                 </li>
               );
               return <div key={g} className="mb-8">
                 <h3 className="mb-3 text-sm font-bold uppercase tracking-widest text-primary">{g}s</h3>
                 {g === "Single"
-                  ? <details open={newest ? releaseGroup(newest) === "Single" : false} className="rounded-2xl border border-border p-4 open:border-primary">
+                  ? <details open={items.some((x) => x.id === editingId) || (newest ? releaseGroup(newest) === "Single" : false)} className="rounded-2xl border border-border p-4 open:border-primary">
                       <summary className="flex cursor-pointer list-none items-center gap-4">
                         <div className="flex h-14 w-14 items-center justify-center rounded-lg bg-primary text-primary-foreground"><Disc3 className="h-7 w-7" /></div>
                         <div className="min-w-0 flex-1"><div className="truncate text-xl font-bold">All Singles</div><div className="text-sm text-muted-foreground">{items.length} {items.length === 1 ? "single" : "singles"} · A–Z</div></div>
@@ -599,7 +640,7 @@ export function MetadataUploader({ stageName, avatar, userId, mode = "embed", on
                       <ul className="mt-4 grid gap-3">{[...items].sort((a, b) => a.title.localeCompare(b.title)).map(row)}</ul>
                     </details>
                   : <div className="grid gap-4">{groupProjects(items).map((p) => (
-                    <details key={p.key} open={!!newest && p.tracks.some((x) => x.id === newest.id)} className="rounded-2xl border border-border p-4 open:border-primary">
+                    <details key={p.key} open={p.tracks.some((x) => x.id === editingId) || (!!newest && p.tracks.some((x) => x.id === newest.id))} className="rounded-2xl border border-border p-4 open:border-primary">
                       <summary className="flex cursor-pointer list-none items-center gap-4">
                         {p.cover ? <img src={p.cover} alt={`${p.title} artwork`} className="h-14 w-14 rounded-lg object-cover shadow" /> : <div className="flex h-14 w-14 items-center justify-center rounded-lg bg-primary text-primary-foreground"><Disc3 className="h-7 w-7" /></div>}
                         <div className="min-w-0 flex-1">
