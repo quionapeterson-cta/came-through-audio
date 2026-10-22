@@ -46,13 +46,18 @@ export const sendContractInvite = createServerFn({ method: "POST" })
 
     const { data: owner } = await context.supabase.from("profiles").select("stage_name, legal_name").eq("id", context.userId).maybeSingle();
     const from = k.is_company ? COMPANY_LEGAL_NAME : owner?.stage_name || owner?.legal_name || "A Came Through Audio member";
-    const link = `${new URL(data.origin).origin}/contract/${p.id}`;
+    // Company agreements sign without an account, through a private link (contract-sign.functions.ts).
+    const origin = new URL(data.origin).origin;
+    const link = k.is_company ? (await import("./contract-sign.server")).signLink(origin, p.id) : `${origin}/contract/${p.id}`;
+    const howToSign = k.is_company
+      ? `<b>No account needed.</b> Open the agreement, read it, and sign with a 6-digit code we email to this address (<b>${esc(email)}</b>). Your signature is time-stamped and secured with a verification hash, and you'll get the signed copy when everyone has signed. Take your time, and talk to an attorney if you have questions before signing.`
+      : `<b>Signing is always free.</b> Log in or create a free account with this email (<b>${esc(email)}</b>) to read the full contract and sign. Your signature is time-stamped and secured with a verification hash, and you can download the signed copy when everyone has signed. Take your time, and talk to an attorney if you have questions before signing.`;
 
     const html = emailLayout(`<p style="font-size:12px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:#004AAD;margin:0">Contract Signature Request</p>
 <h1 style="font-size:24px;margin:8px 0 16px">Hi ${esc(p.legal_name || "there")}, please review and sign "${esc(k.title)}"</h1>
 <p style="font-size:15px;line-height:1.6">${esc(from)} sent you a contract to sign as <b>${esc(p.role)}</b>.</p>
 <a href="${link}" style="display:inline-block;background:#004AAD;color:#ffffff;text-decoration:none;font-weight:700;padding:14px 28px;border-radius:8px">Review &amp; Sign</a>
-<p style="font-size:13px;line-height:1.6;color:#555;margin-top:24px"><b>Signing is always free.</b> Log in or create a free account with this email (<b>${esc(email)}</b>) to read the full contract and sign. Your signature is time-stamped and secured with a verification hash, and you can download the signed copy when everyone has signed. Take your time, and talk to an attorney if you have questions before signing.</p>
+<p style="font-size:13px;line-height:1.6;color:#555;margin-top:24px">${howToSign}</p>
 `, { reason: k.is_company ? `You're receiving this because ${from} asked you to review and sign an agreement with us.` : `You're receiving this because ${from} listed you as a party on a contract in Came Through Audio.` });
 
     const res = await fetch("https://api.resend.com/emails", {

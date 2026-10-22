@@ -27,6 +27,11 @@ export const grantCollaboratorTrial = createServerFn({ method: "POST" })
       : await context.supabase.rpc("get_contract_invite" as never, { _party_id: data.partyId } as never);
     if (error || !invite) return { granted: false };
     if (source === "contract" && !(invite as { can_sign?: boolean }).can_sign) return { granted: false };
+    // Company agreements (testimonial releases and the like) never start a trial; gifts come from Admin at launch.
+    if (source === "contract") {
+      const { data: k } = await supabaseAdmin.from("contracts" as never).select("is_company").eq("id", (invite as { contract_id: string }).contract_id).maybeSingle();
+      if ((k as { is_company?: boolean } | null)?.is_company) return { granted: false };
+    }
 
     const subId = `collab_trial_${context.userId}`;
     const { data: existing } = await supabaseAdmin.from("subscriptions").select("id").eq("paddle_subscription_id", subId).maybeSingle();

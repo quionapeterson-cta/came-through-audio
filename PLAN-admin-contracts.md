@@ -1,6 +1,7 @@
 # PLAN — Company Contracts in Super Admin, e-signature strength · v1
 
 Status: **§1 v1 built 2026-10-21 (6d1d62e): Company Contracts tab, testimonial release + blank, editable templates. Rest of the plan still pending.**
+**2026-10-22: company agreements sign WITHOUT an account (approved):** private link (HMAC of the party id, never stored) + 6-digit code emailed to the invited address (10 min, 5 tries), consent checkbox, hashed IP + device recorded, everyone emailed a link to the signed copy when the last party signs. No trial for company signers. Testimonial release gains §11 Launch gift: free 3-month Catalog Plus starting on launch day. Still to build before launch: super-admin "Grant launch gift" (logged grant linked to the signed release). Customer contracts and split sheets still sign by logging in.
 Source: founder request, 2026-10-19.
 
 ---

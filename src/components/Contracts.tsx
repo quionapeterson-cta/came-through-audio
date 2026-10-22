@@ -17,6 +17,7 @@ import { listTracks, type CatalogTrack } from "@/lib/catalog";
 import { BLUEPRINTS, COMPANY_BLUEPRINTS, CONTRACT_DISCLAIMER, blueprintById, renderContract, type Blueprint, type BlueprintField } from "@/lib/contract-blueprints";
 import { downloadContractPdf } from "@/lib/contract-pdf";
 import { sendContractInvite } from "@/lib/contracts-email.functions";
+import { companySignLink } from "@/lib/contract-sign.functions";
 import { logBadgeEvent } from "@/lib/badge-events";
 import {
   contractLink, deleteContract, emptyParty, getContract, isValidEmail, listContracts, listReceivedContracts, loadCompanyTemplates, reopenContract, saveCompanyTemplate, saveContract, sendContract, signContract,
@@ -260,6 +261,15 @@ function ContractEditor({ userId, initial, tracks, blueprint, onClose }: { userI
   const [typed, setTyped] = useState("");
   const [sending, setSending] = useState<string>();
   const sendInvite = useServerFn(sendContractInvite);
+  const privateLink = useServerFn(companySignLink);
+  /** Company agreements are signed without an account, through a private link only the server can make. */
+  const copyLink = async (p: ContractParty) => {
+    try {
+      const link = c.isCompany ? (await privateLink({ data: { partyId: p.id!, origin: window.location.origin } })).link : contractLink(p.id!);
+      await navigator.clipboard.writeText(link);
+      toast.success("Signing link copied.");
+    } catch (e) { toast.error(e instanceof Error ? e.message : "Couldn't copy the link."); }
+  };
   const draft = c.status === "draft";
 
   useEffect(() => {
@@ -449,7 +459,7 @@ function ContractEditor({ userId, initial, tracks, blueprint, onClose }: { userI
                     </div>
                     {p.signedAt ? <span className="flex items-center gap-1 text-sm font-semibold text-primary"><ShieldCheck className="h-4 w-4" />Signed</span> : !p.isOwner && (
                       <div className="flex gap-2">
-                        <Button size="sm" variant="outline" onClick={() => { void navigator.clipboard.writeText(contractLink(p.id!)); toast.success("Signing link copied."); }}><Copy className="h-4 w-4" />Copy link</Button>
+                        <Button size="sm" variant="outline" onClick={() => void copyLink(p)}><Copy className="h-4 w-4" />Copy link</Button>
                         <Button size="sm" disabled={sending === p.id} onClick={() => void email(p)}>{sending === p.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Mail className="h-4 w-4" />}{p.invitedAt ? "Resend" : "Email request"}</Button>
                       </div>
                     )}

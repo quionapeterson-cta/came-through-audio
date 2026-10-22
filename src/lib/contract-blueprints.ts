@@ -442,6 +442,11 @@ export const COMPANY_LEGAL_NAME = "Came Through Audio, LLC";
 const SIGNER: BlueprintField = { key: "signerTitle", label: "Your title", placeholder: "Founder & CEO", tip: "Your title at Came Through Audio, LLC. You sign with your own legal name on the company's behalf." };
 const asCompany = (body: string) => body.replace(`{{party:Company}} ("Company")`, `${COMPANY_LEGAL_NAME} ("Company"), signed by its authorized representative {{party:Company}}, {{signerTitle}},`);
 
+const LAUNCH_GIFT = (n: number) => `${n}. LAUNCH GIFT
+At launch, Company will give Participant a free 3-month Catalog Plus account, starting on the day Company announces launch.
+
+`;
+
 const PRELAUNCH = (n: number) => `${n}. PRE-LAUNCH CONFIDENTIALITY
 Until Company publicly announces the launch of its service (or gives written permission first), Participant will not post, share, screenshot, record or describe the Came Through Audio app or its features. Company will hold the Materials and will not publish them before launch.
 
@@ -459,7 +464,7 @@ export const COMPANY_BLUEPRINTS: Blueprint[] = [
     summary: "A homepage or marketing testimonial giver lets Came Through Audio use their photo, video, name and words, and keeps the app private until launch.",
     whenToUse: "Send it to everyone whose testimonial, photo or video appears on the site or in marketing, including people already on the homepage.",
     fields: [SIGNER, ...BLUEPRINTS.find((b) => b.id === "photo-video-release")!.fields],
-    body: asCompany(`${RELEASE_TERMS}${PRELAUNCH(11)}${general(12)}`),
+    body: asCompany(`${RELEASE_TERMS}${LAUNCH_GIFT(11)}${PRELAUNCH(12)}${general(13)}`),
   },
   {
     id: "company-blank",
