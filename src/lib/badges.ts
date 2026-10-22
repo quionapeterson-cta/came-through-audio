@@ -324,10 +324,10 @@ const LIVE_STEPS = [
   { goal: 1, every: 5 as number | undefined, tier: "instant" as Tier, title: (l: string) => `${l} Credit`, action: (l: string) => `Credit a ${l.toLowerCase()} part`,
     description: (l: string) => `Every ${l.toLowerCase()} part deserves a name. Each ${l.toLowerCase()} credit is how session musicians get paid and get hired again, and every 5 credits earn this badge again.`,
     popup: (l: string) => `${l} credited! The player got their name on the record.` },
-  { goal: 10, every: undefined, tier: "standard" as Tier, title: (l: string) => `${l} Medallion`, action: (l: string) => `Catalog 10 ${l.toLowerCase()}s`,
+  { goal: 10, every: undefined, tier: "standard" as Tier, title: (l: string) => `${l} Medallion`, action: (l: string) => `Credit ${l.toLowerCase()} 10 times`,
     description: (l: string) => `Ten ${l.toLowerCase()} credits. You treat players like partners, and the record shows it.`,
     popup: (l: string) => `Medallion! 10 ${l.toLowerCase()} credits.` },
-  { goal: 25, every: undefined, tier: "standard" as Tier, title: (l: string) => `Star-Studded ${l}`, action: (l: string) => `Catalog 25 ${l.toLowerCase()}s`,
+  { goal: 25, every: undefined, tier: "standard" as Tier, title: (l: string) => `Star-Studded ${l}`, action: (l: string) => `Credit ${l.toLowerCase()} 25 times`,
     description: (l: string) => `Twenty-five ${l.toLowerCase()} credits. Your sessions are star-studded and every star is named.`,
     popup: (l: string) => `Star-studded! 25 ${l.toLowerCase()} credits.` },
 ];
