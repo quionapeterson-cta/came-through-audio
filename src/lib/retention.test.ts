@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { dueRenewalReminder, dueReminder, extendedRenewal, isPaused, offers, pauseSpan, shiftedEmptyAfter, type Pause, type PlanSub } from "@/lib/retention";
+import { canRenewEarly, dueRenewalReminder, dueReminder, earlyRenewalTarget, extendedRenewal, isPaused, offers, pauseSpan, shiftedEmptyAfter, type Pause, type PlanSub } from "@/lib/retention";
 import { planCheckout, checkoutInput } from "@/lib/stripe-mapping";
 import { crc32, uniqueName, zipBytes } from "@/lib/zip";
 
@@ -62,6 +62,23 @@ describe("renewal reminders", () => {
   });
   it("start over when the renewal date moves", () => {
     expect(dueRenewalReminder(renews, ["90"], "2026-11-30T12:00:00Z", now)).toBe(90);
+  });
+});
+
+describe("renew now", () => {
+  it("is only for a plan running normally, one year ahead at a time", () => {
+    expect(canRenewEarly(sub(), [], now)).toBe(true);
+    expect(canRenewEarly(sub({ cancel_at_period_end: true }), [], now)).toBe(false);
+    expect(canRenewEarly(sub({ status: "past_due" }), [], now)).toBe(false);
+    expect(canRenewEarly(sub(), [used("pause", "2026-10-01T00:00:00Z", { starts_at: "2026-11-10T00:00:00Z", ends_at: "2026-12-10T00:00:00Z" })], now)).toBe(false);
+    // Already renewed early: the next charge is more than a year away.
+    expect(canRenewEarly(sub({ status: "trialing", current_period_end: "2027-11-10T00:00:00Z" }), [], now)).toBe(false);
+  });
+  it("keeps every day left: the plan runs a year past the renewal it paid for", () => {
+    expect(earlyRenewalTarget("2026-11-10T00:00:00Z").toISOString().slice(0, 10)).toBe("2027-11-10");
+  });
+  it("is priced from the subscription, never through planCheckout", () => {
+    expect(() => planCheckout(checkoutInput.parse({ kind: "renew" }), "u1")).toThrow();
   });
 });
 

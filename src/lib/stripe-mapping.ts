@@ -17,6 +17,8 @@ export const checkoutInput = z.discriminatedUnion("kind", [
   }),
   // Pause: the Vault fee, one per month paused, paid up front (PLAN-catalog-emptying §10).
   z.object({ kind: z.literal("vault"), months: z.number().int().min(1).max(3) }),
+  // Renew now: next year's plan paid early. The server reads the plan and price from the user's own subscription.
+  z.object({ kind: z.literal("renew") }),
   z.object({
     kind: z.literal("expert"),
     // Catalog songs picked, plus songs that aren't in the catalog yet (PLAN-registration-intake §1–2).
@@ -43,7 +45,9 @@ export type CheckoutPlan = {
   managed: boolean;
 };
 
+/** Every checkout except Renew now, which is priced from the user's own subscription (payments.functions). */
 export function planCheckout(input: CheckoutInput, userId: string): CheckoutPlan {
+  if (input.kind === "renew") throw new Error("Renew now is priced from the subscription itself.");
   if (input.kind === "plan") {
     return { mode: "subscription", items: [{ lookupKey: input.priceId, quantity: 1 }], metadata: { userId }, managed: true };
   }

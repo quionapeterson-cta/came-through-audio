@@ -1,13 +1,13 @@
-import { useState, type ReactNode } from "react";
-import { CalendarClock, CreditCard, PauseCircle, PlayCircle, TriangleAlert, XCircle } from "lucide-react";
+import { useEffect, useState, type ReactNode } from "react";
+import { CalendarClock, CreditCard, PauseCircle, PlayCircle, RefreshCw, TriangleAlert, XCircle } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { confirmAction } from "@/components/ConfirmHost";
 import { openBilling, openCheckout } from "@/lib/checkout";
 import { needMoreTime, resumeNow, setPlanCancelling } from "@/lib/retention.functions";
-import { hasTier, TIER_LABEL, type Tier } from "@/lib/plans";
-import { currentPause, extendedRenewal, inGrace, offers, PAUSE_MONTHS, pauseSpan, VAULT_PRICE, type Lapse, type Pause, type PlanSub } from "@/lib/retention";
+import { hasTier, PLAN_TIERS, TIER_LABEL, type Tier } from "@/lib/plans";
+import { canRenewEarly, currentPause, earlyRenewalTarget, extendedRenewal, inGrace, offers, renewalDate, PAUSE_MONTHS, pauseSpan, VAULT_PRICE, type Lapse, type Pause, type PlanSub } from "@/lib/retention";
 
 const longDate = (d: string | Date) => new Date(d).toLocaleDateString(undefined, { month: "long", day: "numeric", year: "numeric" });
 const money = (n: number) => `$${n.toFixed(2)}`;
@@ -106,6 +106,25 @@ export function RetentionControls({ tier, ...account }: Account & { tier: Tier }
   const { sub, lapse } = account;
   const pause = r.pause;
   const ended = !sub?.stripe_subscription_id && inGrace(lapse);
+  const renewable = canRenewEarly(sub, account.pauses);
+
+  /** Renew now: pay next year early; the plan then runs a full year past the current renewal date. */
+  async function renewNow() {
+    const renews = sub && renewalDate(sub);
+    const price = PLAN_TIERS.find((p) => p.tier === tier)?.price;
+    if (!renews || !price) return;
+    if (!(await confirmAction({ tone: "primary", action: `Pay ${price} and renew`, cancel: "Not now",
+      title: `Renew ${TIER_LABEL[tier]} now?`,
+      text: `You'll pay ${price} today (plus tax where it applies) for your next year. You keep the time you have left, so your plan runs until ${longDate(earlyRenewalTarget(renews))}, with nothing charged on ${longDate(renews)}. Refundable within 30 days of today.` }))) return;
+    try { await openCheckout({ kind: "renew" }); }
+    catch (e) { toast.error(e instanceof Error ? e.message : "Checkout could not open. Contact support and we'll help right away."); }
+  }
+  // The renewal reminder emails link here with ?renew=1.
+  useEffect(() => {
+    if (!renewable || new URLSearchParams(window.location.search).get("renew") !== "1") return;
+    window.history.replaceState(null, "", window.location.pathname);
+    void renewNow();
+  }, [renewable]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <>
@@ -119,6 +138,7 @@ export function RetentionControls({ tier, ...account }: Account & { tier: Tier }
         <p className="w-full text-sm text-muted-foreground">Your plan ended. Your catalog will be emptied on {longDate(lapse!.empty_after)} unless you renew.</p>
         <OfferButtons r={r} />
       </>}
+      {renewable && <Button variant="outline" disabled={r.busy} onClick={() => void renewNow()}><RefreshCw />Renew now</Button>}
       {pause && <Button disabled={r.busy} onClick={() => void r.resume()}><PlayCircle />Resume now</Button>}
       {sub?.stripe_subscription_id && !sub.cancel_at_period_end && !pause && <Button variant="ghost" disabled={r.busy} onClick={() => setCancelOpen(true)}><XCircle />Cancel plan</Button>}
       {sub?.cancel_at_period_end && <Button variant="outline" disabled={r.busy} onClick={() => void r.act(() => setPlanCancelling({ data: { cancel: false } }), "Your plan will renew as usual.")}>Keep my plan</Button>}

@@ -2,7 +2,7 @@ import { createStripeClient, type StripeEnv } from "@/lib/stripe.server";
 import { isActiveSub, PLAN_TIERS, TIER_LABEL, TIER_RANK, tierFromPrice } from "@/lib/plans";
 import { getPaymentsEnvironment } from "@/lib/payments-env";
 import {
-  addDays, dueReminder, dueRenewalReminder, extendedRenewal, RENEWAL_REMINDER_DAYS, GRACE_DAYS, offers, pauseSpan, shiftedEmptyAfter,
+  addDays, dueReminder, dueRenewalReminder, earlyRenewalTarget, extendedRenewal, RENEWAL_REMINDER_DAYS, GRACE_DAYS, offers, pauseSpan, shiftedEmptyAfter,
   type Lapse, type Pause, type PlanSub,
 } from "@/lib/retention";
 import { sendRetentionEmail } from "@/lib/retention-email.server";
@@ -253,4 +253,39 @@ export async function sendPaymentFailedEmail(userId: string, priceId: string, in
   const tier = tierFromPrice(priceId);
   if (!email || tier === "free") return;
   await sendRetentionEmail(email, { kind: "payment-failed", plan: TIER_LABEL[tier], reminder: attempt > 1 }, `payment-failed-${invoiceId}-${attempt}`);
+}
+
+type PaidRenewal = { id: string; user_id: string; details: Record<string, string> };
+
+/** The date a Stripe subscription next charges: the end of a trial (Need more time, Pause, Renew now) or of the period. */
+async function stripeRenewal(env: StripeEnv, subscriptionId: string) {
+  const sub = await createStripeClient(env).subscriptions.retrieve(subscriptionId);
+  const end = sub.status === "trialing" && sub.trial_end ? sub.trial_end : sub.items.data[0]?.current_period_end;
+  return end ? new Date(end * 1000) : null;
+}
+
+/**
+ * Renew now, paid (called by the payment webhook): the next charge moves a full year past the renewal that was paid
+ * for, so no days are lost. Safe to run twice: a renewal already at or past that date is left alone.
+ */
+export async function applyEarlyRenewal(db: Admin, purchase: PaidRenewal, env: StripeEnv) {
+  const { subscription, renews } = purchase.details;
+  if (!subscription || !renews || purchase.details["applied_at"]) return;
+  const target = earlyRenewalTarget(renews);
+  const current = await stripeRenewal(env, subscription);
+  if (!current || current < target) {
+    await createStripeClient(env).subscriptions.update(subscription, { trial_end: unix(target), proration_behavior: "none" });
+  }
+  await db.from("purchases").update({ details: { ...purchase.details, applied_at: new Date().toISOString() } } as never).eq("id", purchase.id);
+  const email = await emailOf(db, purchase.user_id);
+  if (email) await sendRetentionEmail(email, { kind: "renewed", renewsOn: target.toISOString() }, `renewed-${purchase.id}`);
+}
+
+/** A fully refunded Renew now puts the renewal back on the date it had before, if that's still ahead. */
+export async function undoEarlyRenewal(purchase: PaidRenewal, env: StripeEnv) {
+  const { subscription, renews } = purchase.details;
+  if (!subscription || !renews || !purchase.details["applied_at"]) return;
+  const back = new Date(renews);
+  if (back > new Date()) await createStripeClient(env).subscriptions.update(subscription, { trial_end: unix(back), proration_behavior: "none" });
+  else console.error(`Refunded Renew now ${purchase.id}: its old renewal date has passed; set the renewal by hand in Stripe.`);
 }

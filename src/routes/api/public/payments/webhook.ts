@@ -39,6 +39,12 @@ async function checkoutCompleted(session: Stripe.Checkout.Session, env: StripeEn
   const { data: saved, error } = await db().from("purchases").upsert(row as never, { onConflict: "stripe_session_id" }).select("id, user_id, details").single();
   if (error) throw error;
   const purchase = saved as unknown as { id: string; user_id: string; details: Record<string, string> } | null;
+  // Renew now paid: move the next charge a year past the renewal it paid for. 500 on failure so Stripe retries.
+  if (row.kind === "renew" && purchase) {
+    const { admin, applyEarlyRenewal } = await import("@/lib/retention.server");
+    await applyEarlyRenewal(await admin(), purchase, env);
+    return;
+  }
   // Vault fee paid: start the pause it bought. A failure returns 500 so Stripe retries (it's paid for).
   if (row.kind === "vault" && purchase) {
     const { admin, startPause } = await import("@/lib/retention.server");
@@ -62,12 +68,16 @@ async function markRefunded(env: StripeEnv, charge: Stripe.Charge) {
   const sessions = await createStripeClient(env).checkout.sessions.list({ payment_intent: pi, limit: 1 });
   const sessionId = sessions.data[0]?.id;
   if (!sessionId) return;
-  const { data: row } = await db().from("purchases").select("id, details").eq("stripe_session_id", sessionId).maybeSingle();
-  const purchase = row as { id: string; details: Record<string, string> } | null;
+  const { data: row } = await db().from("purchases").select("id, user_id, kind, details").eq("stripe_session_id", sessionId).maybeSingle();
+  const purchase = row as { id: string; user_id: string; kind: string; details: Record<string, string> } | null;
   if (!purchase) return;
   const { error } = await db().from("purchases")
     .update({ details: { ...purchase.details, refunded_at: new Date().toISOString() } } as never).eq("id", purchase.id);
   if (error) throw error;
+  if (purchase.kind === "renew") {
+    const { undoEarlyRenewal } = await import("@/lib/retention.server");
+    await undoEarlyRenewal(purchase, env);
+  }
 }
 
 /** A subscription just set to cancel (it wasn't before this event) gets the "your plan ends on DATE" email once. */

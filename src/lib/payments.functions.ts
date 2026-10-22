@@ -106,6 +106,40 @@ async function planSwitchConfiguration(stripe: Stripe) {
 }
 
 /**
+ * Renew now: a one-time payment for next year's plan at the plan's own price (read from the user's subscription,
+ * never the browser). The webhook then moves the renewal a full year past the one paid for.
+ */
+async function renewCheckout(stripe: Stripe, env: "sandbox" | "live", userId: string, email: string | undefined, origin: string) {
+  const [{ admin, loadState }, { canRenewEarly, renewalDate }] = await Promise.all([import("@/lib/retention.server"), import("@/lib/retention")]);
+  const s = await loadState(await admin(), userId, env);
+  if (!s.sub?.stripe_subscription_id || !canRenewEarly(s.sub, s.pauses)) throw new Error("Renew now isn't available on this plan right now.");
+  try {
+    const sub = await stripe.subscriptions.retrieve(s.sub.stripe_subscription_id, { expand: ["items.data.price.product"] });
+    const price = sub.items.data[0]?.price;
+    const product = price && (typeof price.product === "string" ? price.product : price.product.id);
+    if (!price?.unit_amount || !product) throw new Error("This plan's price couldn't be read.");
+    const name = typeof price.product === "object" && "name" in price.product ? price.product.name : "Plan";
+    const session = await stripe.checkout.sessions.create({
+      line_items: [{ price_data: { currency: price.currency, product, unit_amount: price.unit_amount }, quantity: 1 }],
+      mode: "payment",
+      ui_mode: "embedded_page",
+      return_url: `${origin}/profile?checkout=success`,
+      customer: await resolveOrCreateCustomer(stripe, { email, userId }),
+      client_reference_id: userId,
+      payment_intent_data: { description: `${name}: next year, renewed early` },
+      metadata: { userId, kind: "renew", subscription: sub.id, renews: renewalDate(s.sub)!.toISOString(), priceIds: price.lookup_key ?? "", managed_payments: "true" },
+      managed_payments: { enabled: true },
+    } as Parameters<typeof stripe.checkout.sessions.create>[0]);
+    if (!session.client_secret) throw new Error("Stripe did not return a client secret");
+    return { clientSecret: session.client_secret };
+  } catch (e) {
+    const reason = getStripeErrorMessage(e);
+    console.error("Renew now checkout failed:", reason, e);
+    throw new Error(`Checkout could not open (${reason.slice(0, 200)}). Try again, or contact support and we'll help right away.`);
+  }
+}
+
+/**
  * Starts a checkout for the signed-in user. The buyer, prices and quantities are set here from what they chose,
  * never taken from the browser. Returns an embedded-checkout client secret, or, for someone who already has a
  * plan, a billing-portal link to switch plans (prorated) so nobody pays for two plans.
@@ -117,6 +151,7 @@ export const createCheckoutSession = createServerFn({ method: "POST" })
     const env = getPaymentsEnvironment();
     const stripe = createStripeClient(env);
     const origin = await appOrigin();
+    if (data.kind === "renew") return renewCheckout(stripe, env, context.userId, (context.claims as { email?: string }).email, origin);
     const plan = planCheckout(data, context.userId);
     if (data.kind === "vault") {
       // Pause is only sold when it can start: around renewal, after a failed renewal or during the grace period.

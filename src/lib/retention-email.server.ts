@@ -26,7 +26,8 @@ export type RetentionEmail =
   | { kind: "extended"; renewsOn: string; plan: boolean }
   | { kind: "paused"; startsOn: string; endsOn: string; plan: boolean }
   | { kind: "renewal"; plan: string; price: string; renewsOn: string; daysLeft: number }
-  | { kind: "payment-failed"; plan: string; reminder: boolean };
+  | { kind: "payment-failed"; plan: string; reminder: boolean }
+  | { kind: "renewed"; renewsOn: string };
 
 function render(e: RetentionEmail): { subject: string; html: string } {
   switch (e.kind) {
@@ -67,8 +68,8 @@ function render(e: RetentionEmail): { subject: string; html: string } {
       const when = e.daysLeft === 1 ? "tomorrow" : `on ${d}`;
       return { subject: `Your ${plan} plan renews ${when}`, html: page("Renewal reminder", `Your ${plan} plan renews ${when}`, [
         `It renews automatically for ${escapeHtml(e.price)} a year (plus tax where it applies), with nothing for you to do. Your catalog, masters and badges carry on as they are.`,
-        "Want to change plans or update your card? You can do both from Profile.",
-      ], [profile, "Open Profile"]) };
+        "Prefer to get it done now? Renew early and keep every day you have left. Want to change plans or update your card? You can do both from Profile.",
+      ], [`${profile}?renew=1`, "Renew now"]) };
     }
     case "payment-failed": {
       const plan = escapeHtml(e.plan);
@@ -77,6 +78,13 @@ function render(e: RetentionEmail): { subject: string; html: string } {
         "Need a little longer? You can move your renewal back 30 days free, or pause for 1 to 3 months, from Profile.",
         "If it's never paid, your plan ends and your catalog stays read-only for 30 days before it's emptied.",
       ], [profile, "Update my card"]) };
+    }
+    case "renewed": {
+      const d = escapeHtml(longDate(e.renewsOn));
+      return { subject: `You're renewed through ${d}`, html: page("Renewed early", `You're renewed through ${d}`, [
+        "Thanks for renewing early. Your next year is paid, and you kept every day you had left, so nothing is charged until then.",
+        "Your 30-day refund window starts today, the day you paid.",
+      ], [profile, "Open Profile"]) };
     }
     case "paused": {
       const s = escapeHtml(longDate(e.startsOn)), end = escapeHtml(longDate(e.endsOn));

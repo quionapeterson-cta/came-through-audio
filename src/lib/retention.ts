@@ -122,3 +122,16 @@ export function dueRenewalReminder(renews: Date, sent: string[], sentFor: string
   const already = sentFor && new Date(sentFor).getTime() === renews.getTime() ? sent : [];
   return already.includes(String(due)) ? null : due;
 }
+
+/**
+ * Renew now: pay for the next year early. Only on a plan that's running normally (not cancelling, failing or paused)
+ * and only one year ahead, so a renewal more than a year away can't be paid again.
+ */
+export function canRenewEarly(sub: PlanSub | null, pauses: Pause[], now = new Date()) {
+  if (!sub?.stripe_subscription_id || sub.cancel_at_period_end || !["active", "trialing"].includes(sub.status) || currentPause(pauses, now)) return false;
+  const renews = renewalDate(sub);
+  return !!renews && renews > now && renews.getTime() - now.getTime() <= 365 * DAY;
+}
+
+/** After renewing early, the plan runs a full year past the renewal date that was paid for, so no days are lost. */
+export const earlyRenewalTarget = (renews: string | Date) => addMonths(renews, 12);

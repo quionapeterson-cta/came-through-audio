@@ -71,6 +71,12 @@ states."* It changes only with your approval.
   payment fails (email on the first failed attempt and Stripe's third, plus a banner with Update card), and during
   the 30-day countdown after a plan ends. No standalone buttons otherwise. Built.
 
+## 8b. Renew now (founder, 2026-10-22)
+- Profile → **Renew now** (and the button in every renewal reminder email) pays next year early at the plan's own price.
+  The next charge moves a full year past the current renewal date, so no days are lost. One year ahead at a time; not
+  while cancelling, failing or paused. Refundable within 30 days of paying; a full refund puts the renewal date back. Built.
+- Refund Policy line: awaiting wording approval.
+
 ## 9. Need more time (renewal extension)
 - **Who:** anyone on a paid yearly plan, from 30 days before renewal until a failed renewal is fixed.
 - **What:** the renewal date moves back **30 days**, free. Full access continues. **Once every 12 months.**
