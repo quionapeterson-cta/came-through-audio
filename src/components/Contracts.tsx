@@ -14,7 +14,6 @@ import { listTracks, type CatalogTrack } from "@/lib/catalog";
 import { BLUEPRINTS, COMPANY_BLUEPRINTS, CONTRACT_DISCLAIMER, blueprintById, renderContract, type Blueprint } from "@/lib/contract-blueprints";
 import { downloadContractPdf } from "@/lib/contract-pdf";
 import { sendContractInvite } from "@/lib/contracts-email.functions";
-import { NextBadgeHint } from "@/components/Badges";
 import { logBadgeEvent } from "@/lib/badge-events";
 import {
   contractLink, deleteContract, emptyParty, isValidEmail, listContracts, listReceivedContracts, loadCompanyTemplates, reopenContract, saveCompanyTemplate, saveContract, sendContract, signContract,
@@ -79,7 +78,6 @@ export function Contracts({ userId, unlocked, onUpgrade, company = false }: { us
     <TooltipProvider delayDuration={100}>
       <div className="mt-6 space-y-6">
         <div className="flex flex-wrap items-center justify-between gap-3">
-          {!company && <NextBadgeHint userId={userId} collections={["contracts"]} className="order-last" />}
           <div className="inline-flex flex-wrap gap-1 rounded-lg bg-muted p-1" role="tablist" aria-label="Contracts">
             {(company
               ? [["blueprints", "Templates", ScrollText], ["contracts", "Drafts & out for signature", FileSignature], ["vault", "Signed", Vault]] as const

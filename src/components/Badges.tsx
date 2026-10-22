@@ -204,13 +204,13 @@ export function NextBadgeHint({ userId, collections, className = "" }: { userId:
   const pct = Math.round((Math.min(next.count, next.badge.goal) / next.badge.goal) * 100);
   return (
     <Link to="/profile" hash="badges" aria-label={`Next badge: ${next.badge.title}. ${next.badge.milestone}. ${pct}% there.`}
-      className={`ml-auto flex w-full max-w-xs items-center gap-3 rounded-xl border border-border bg-card p-3 text-left transition hover:border-primary sm:w-72 ${className}`}>
-      <img src={next.badge.src} alt="" className="h-11 w-11 shrink-0 object-contain opacity-60 grayscale" />
-      <span className="min-w-0 flex-1 space-y-1">
-        <span className="block text-[10px] font-bold uppercase tracking-widest text-primary">Badge</span>
-        <span className="block truncate text-sm font-semibold leading-tight">{next.badge.title}</span>
-        <span className="block text-xs leading-snug text-muted-foreground">{next.badge.milestone}</span>
-        <span role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={pct} className="mt-1.5 block h-1.5 overflow-hidden rounded-full bg-muted">
+      className={`flex w-full items-center gap-2.5 rounded-lg border border-border bg-card px-2.5 py-2 text-left transition hover:border-primary sm:w-56 ${className}`}>
+      <img src={next.badge.src} alt="" className="h-8 w-8 shrink-0 object-contain opacity-60 grayscale" />
+      <span className="min-w-0 flex-1 space-y-0.5">
+        <span className="block text-[9px] font-bold uppercase tracking-widest text-primary">Badge</span>
+        <span className="block truncate text-xs font-semibold leading-tight">{next.badge.title}</span>
+        <span className="line-clamp-2 block text-[11px] leading-snug text-muted-foreground">{next.badge.milestone}</span>
+        <span role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={pct} className="mt-1 block h-1 overflow-hidden rounded-full bg-muted">
           <span className="block h-full rounded-full bg-primary transition-[width] duration-700" style={{ width: `${Math.max(pct, 4)}%` }} />
         </span>
       </span>

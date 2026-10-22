@@ -31,6 +31,8 @@ import { openCheckout, getPaymentsEnvironment } from "@/lib/checkout";
 import { PRICE_TIER, TIER_LABEL, hasTier, takePlanIntent, type Tier } from "@/lib/plans";
 import { PlanComparison, planAction } from "@/components/PlanComparison";
 import { BadgeWatcher } from "@/components/Badges";
+import { BadgeViewer } from "@/components/BadgeViewer";
+import { isBadgeImage, type CollectionId } from "@/lib/badges";
 import { UpgradeLock } from "@/components/UpgradeLock";
 
 export const Route = createFileRoute("/workspace")({
@@ -56,6 +58,16 @@ const tabs = [
   { id: "health", label: "Royalty Health Check", icon: Activity },
   { id: "learn", label: "Contracts & Masterclasses", icon: GraduationCap },
 ];
+
+/** Which badge collections each tab's next-badge card suggests from. */
+const TAB_BADGES: Record<string, CollectionId[]> = {
+  embed: ["core", "lyrics", "producer", "live"],
+  catalog: ["core", "lyrics", "hiphop", "spiritual", "night"],
+  splits: ["splits"],
+  protect: ["core"],
+  health: ["health"],
+  learn: ["contracts"],
+};
 
 function Workspace() {
   const { user, loading } = useAuth();
@@ -84,6 +96,7 @@ function Workspace() {
   const [onboardSynced, setOnboardSynced] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
   const [embedKey, setEmbedKey] = useState(0);
+  const [viewAvatar, setViewAvatar] = useState(false);
   useEffect(() => {
     if (!user) return;
     setOnboard(loadOnboarding(user.id));
@@ -191,13 +204,29 @@ function Workspace() {
             ))}
           </TabsList>
 
+          {/* Same row on every tab: the artist name centered, the next-badge card pinned top right. Fixed side columns
+              and height keep the card in the exact same spot from tab to tab. */}
+          <div className="mt-8 grid items-center gap-4 sm:min-h-24 sm:grid-cols-[14rem_minmax(0,1fr)_14rem]">
+            <div className="hidden sm:block" />
+            <h1 className="flex items-center justify-center gap-[0.3em] text-center text-4xl font-extrabold leading-none tracking-tight md:text-5xl">
+              <span className="min-w-0 break-words">{name}</span>
+              {/* Avatar matches the name's height so badges can be enjoyed up close; click for full size. */}
+              {onboard?.avatar && <button type="button" aria-label="View your profile badge" onClick={() => setViewAvatar(true)} className="shrink-0 rounded-full transition hover:ring-2 hover:ring-primary/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+                <ArtistAvatar src={onboard.avatar} className="h-[1.15em] w-[1.15em]" />
+              </button>}
+            </h1>
+            <NextBadgeHint userId={user.id} collections={TAB_BADGES[tab] ?? ["core"]} />
+          </div>
+          <BadgeViewer src={viewAvatar ? onboard?.avatar : undefined} round={!isBadgeImage(onboard?.avatar)} onClose={() => setViewAvatar(false)}
+            share={{ ctx: "profile", artist: names.artist ?? name }} />
+
           <TabsContent value="embed" forceMount className="data-[state=inactive]:hidden">
-            {canCatalog ? <MetadataUploader key={`embed-${embedKey}`} stageName={name} avatar={onboard?.avatar} userId={user.id} mode="embed" onSubmitted={() => setCatalogKey((k) => k + 1)} />
+            {canCatalog ? <MetadataUploader key={`embed-${embedKey}`} userId={user.id} mode="embed" onSubmitted={() => setCatalogKey((k) => k + 1)} />
               : <PlusLock title="Embed Metadata starts with Catalog Plus" onQuickCheck={openQuickCheck} onUpgrade={upgrade} />}
           </TabsContent>
           <TabsContent value="catalog" forceMount className="data-[state=inactive]:hidden">
             {!canCatalog ? <PlusLock title="My Catalog starts with Catalog Plus" onQuickCheck={openQuickCheck} onUpgrade={upgrade} /> : <>
-            <MetadataUploader key={catalogKey} stageName={name} avatar={onboard?.avatar} userId={user.id} mode="catalog" canSplit={canSplit} canExport={canCollect} focus={catalogFix} onFocused={() => setCatalogFix(undefined)} onSplitSheet={(t) => { setSplitTrackId(t.id); setTab("splits"); }} onProtect={(t) => { setProtectTrack(t); setTab("protect"); }} /></>}
+            <MetadataUploader key={catalogKey} userId={user.id} mode="catalog" canSplit={canSplit} canExport={canCollect} focus={catalogFix} onFocused={() => setCatalogFix(undefined)} onSplitSheet={(t) => { setSplitTrackId(t.id); setTab("splits"); }} onProtect={(t) => { setProtectTrack(t); setTab("protect"); }} /></>}
           </TabsContent>
           <TabsContent value="protect"><AIProtectionHub userId={user.id} purchases={purchases} justPaid={search.checkout === "success" && search.tab === "protect"} track={protectTrack} /></TabsContent>
           <TabsContent value="splits"><SplitSheets userId={user.id} canSplit={canSplit} canCollect={canCollect} prefillTrackId={splitTrackId} onUpgrade={upgrade} /></TabsContent>
@@ -300,7 +329,6 @@ function Health({ startView, justPaid, canCatalog, onFix, onFixField, onEmbed, u
         <div className="inline-flex flex-wrap gap-1 rounded-lg bg-muted p-1">
           {views.map(([id, label, Icon]) => <Button key={id} size="sm" variant={view === id ? "default" : "ghost"} onClick={() => setView(id)}><Icon className="h-4 w-4" />{label}</Button>)}
         </div>
-        <NextBadgeHint userId={userId} collections={["health"]} />
       </div>
       {view === "check" && <RoyaltyHealthCheck userId={userId} canCatalog={canCatalog} onUpgrade={onUpgrade} onFix={onFix} onFixField={onFixField} onEmbed={onEmbed}
         onExpert={() => { setView("expert"); window.scrollTo({ top: 0, behavior: "smooth" }); }} />}

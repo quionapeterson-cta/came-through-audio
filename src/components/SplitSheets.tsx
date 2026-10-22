@@ -13,7 +13,6 @@ import { useServerFn } from "@tanstack/react-start";
 import { sendSplitInvite } from "@/lib/splits-email.functions";
 import { InfoTip } from "@/components/InfoTip";
 import { splitSummary } from "@/lib/splits-total";
-import { NextBadgeHint } from "@/components/Badges";
 import {
   SPLIT_ROLES,
   catalogWithSplits,
@@ -110,7 +109,6 @@ export function SplitSheets({ userId, canSplit, canCollect, prefillTrackId, onUp
           <h2 className="text-2xl font-bold">Split Sheets</h2>
           <p className="text-sm text-muted-foreground">Create industry-standard split sheets from your catalog songs and sign as the owner. Collaborators receive an email invitation to review and sign, plus a free 30-day trial of the Catalog & Collaborate account.</p>
         </div>
-        <NextBadgeHint userId={userId} collections={["splits"]} />
       </div>
 
       {/* One glance row: the library you draw from on the left, what needs attention and what's done on the right.

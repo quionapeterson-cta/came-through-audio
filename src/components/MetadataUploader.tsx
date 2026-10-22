@@ -24,11 +24,7 @@ import { registrationReadiness, type MissingItem } from "@/lib/readiness";
 import { downloadLyricsPdf } from "@/lib/lyrics-pdf";
 import { downloadCatalogPdf } from "@/lib/catalog-pdf";
 import { ProSelect } from "@/components/ProSelect";
-import { ArtistAvatar } from "@/components/ArtistOnboarding";
-import { BadgeViewer } from "@/components/BadgeViewer";
-import { isBadgeImage } from "@/lib/badges";
 import { logBadgeEvent } from "@/lib/badge-events";
-import { NextBadgeHint } from "@/components/Badges";
 import { ARTIST_SEAT_PRICES } from "@/lib/plans";
 import { PACKAGES } from "@/lib/proof";
 import { loadOnboarding, loadProfile, withProfile } from "@/lib/artist-profile";
@@ -36,7 +32,7 @@ import { loadOnboarding, loadProfile, withProfile } from "@/lib/artist-profile";
 const normArtist = (v: string) => v.trim().replace(/\s+/g, " ").toLowerCase();
 import { Link } from "@tanstack/react-router";
 
-export function MetadataUploader({ stageName, avatar, userId, mode = "embed", onSubmitted, onSplitSheet, onProtect, canSplit, canExport, focus, onFocused }: { onFocused?: () => void; stageName?: string; avatar?: string | undefined; userId?: string; mode?: "embed" | "catalog"; focus?: { trackId: string; field: string } | undefined; onSubmitted?: () => void; onSplitSheet?: (t: CatalogTrack) => void; onProtect?: (t: CatalogTrack) => void; canSplit?: boolean; canExport?: boolean }) {
+export function MetadataUploader({ userId, mode = "embed", onSubmitted, onSplitSheet, onProtect, canSplit, canExport, focus, onFocused }: { onFocused?: () => void; userId?: string; mode?: "embed" | "catalog"; focus?: { trackId: string; field: string } | undefined; onSubmitted?: () => void; onSplitSheet?: (t: CatalogTrack) => void; onProtect?: (t: CatalogTrack) => void; canSplit?: boolean; canExport?: boolean }) {
   const full = mode === "catalog";
   // One artist per account: the artist name from setup. A different name gets a gentle add-an-artist note.
   const registeredArtist = loadOnboarding(userId)?.stageName?.trim() ?? "";
@@ -55,7 +51,6 @@ export function MetadataUploader({ stageName, avatar, userId, mode = "embed", on
   const [adding, setAdding] = useState(false);
   const [saving, setSaving] = useState(false);
   const [upsell, setUpsell] = useState<false | "split" | "export">(false);
-  const [viewAvatar, setViewAvatar] = useState(false);
   const [held, setHeld] = useState<{ agency: Agency; songs: Held[]; exported: number }>();
   // Embed session: songs waiting their turn, songs finished this sitting, and what carries over to the next song.
   const [queue, setQueue] = useState<File[]>([]);
@@ -503,20 +498,10 @@ export function MetadataUploader({ stageName, avatar, userId, mode = "embed", on
   }
   return (
     <section className={`mx-auto mt-8 ${full ? "max-w-5xl" : "max-w-7xl"}`}>
-      {stageName && <h1 className="mb-8 flex items-center justify-center gap-[0.3em] text-center text-4xl font-extrabold leading-none tracking-tight md:text-5xl">
-        <span className="min-w-0 break-words">{stageName}</span>
-        {/* Avatar matches the name's height so badges can be enjoyed up close; click for full size. */}
-        {avatar && <button type="button" aria-label="View your profile badge" onClick={() => setViewAvatar(true)} className="shrink-0 rounded-full transition hover:ring-2 hover:ring-primary/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
-          <ArtistAvatar src={avatar} className="h-[1.15em] w-[1.15em]" />
-        </button>}
-      </h1>}
-      <BadgeViewer src={viewAvatar ? avatar : undefined} round={!isBadgeImage(avatar)} onClose={() => setViewAvatar(false)}
-        share={full ? { ctx: "catalog", artist: stageName ?? "", count: tracks.length, genre: loadProfile(userId)?.primaryGenre } : { ctx: "embed", artist: metadata.artist.trim() || (stageName ?? ""), title: metadata.title, genre: metadata.primaryGenre }} />
       <div className="mb-6 flex flex-wrap items-end justify-between gap-3">
         <div className="flex flex-wrap items-center gap-3">
           <h1 className="text-2xl font-bold">{full ? "My Catalog" : "Embed Metadata"}</h1>
         </div>
-        {userId && (full || (!editingId && !adding)) && <NextBadgeHint userId={userId} collections={full ? ["core", "lyrics", "hiphop", "spiritual", "night"] : ["core", "lyrics", "producer", "live"]} />}
         {full && userId ? (
           <DropdownMenu>
             <DropdownMenuTrigger asChild><Button type="button"><Plus />Add song</Button></DropdownMenuTrigger>
