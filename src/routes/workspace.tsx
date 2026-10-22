@@ -32,6 +32,7 @@ import { PRICE_TIER, TIER_LABEL, hasTier, takePlanIntent, type Tier } from "@/li
 import { PlanComparison, planAction } from "@/components/PlanComparison";
 import { BadgeWatcher } from "@/components/Badges";
 import { BadgeViewer } from "@/components/BadgeViewer";
+import type { ShareInfo } from "@/components/BadgeCelebration";
 import { isBadgeImage, type CollectionId } from "@/lib/badges";
 import { UpgradeLock } from "@/components/UpgradeLock";
 
@@ -97,6 +98,9 @@ function Workspace() {
   const [profileOpen, setProfileOpen] = useState(false);
   const [embedKey, setEmbedKey] = useState(0);
   const [viewAvatar, setViewAvatar] = useState(false);
+  // Song share cards reported by Embed and My Catalog; every other tab shares the profile card.
+  const [tabShare, setTabShare] = useState<Record<string, Partial<ShareInfo> & Pick<ShareInfo, "ctx">>>({});
+  const share = tabShare[tab] ?? { ctx: "profile" as const };
   useEffect(() => {
     if (!user) return;
     setOnboard(loadOnboarding(user.id));
@@ -218,15 +222,15 @@ function Workspace() {
             <NextBadgeHint userId={user.id} collections={TAB_BADGES[tab] ?? ["core"]} />
           </div>
           <BadgeViewer src={viewAvatar ? onboard?.avatar : undefined} round={!isBadgeImage(onboard?.avatar)} onClose={() => setViewAvatar(false)}
-            share={{ ctx: "profile", artist: names.artist ?? name }} />
+            share={{ ...share, artist: share.artist || names.artist || name }} />
 
           <TabsContent value="embed" forceMount className="data-[state=inactive]:hidden">
-            {canCatalog ? <MetadataUploader key={`embed-${embedKey}`} userId={user.id} mode="embed" onSubmitted={() => setCatalogKey((k) => k + 1)} />
+            {canCatalog ? <MetadataUploader key={`embed-${embedKey}`} userId={user.id} mode="embed" onShareInfo={(i) => setTabShare((m) => ({ ...m, embed: i }))} onSubmitted={() => setCatalogKey((k) => k + 1)} />
               : <PlusLock title="Embed Metadata starts with Catalog Plus" onQuickCheck={openQuickCheck} onUpgrade={upgrade} />}
           </TabsContent>
           <TabsContent value="catalog" forceMount className="data-[state=inactive]:hidden">
             {!canCatalog ? <PlusLock title="My Catalog starts with Catalog Plus" onQuickCheck={openQuickCheck} onUpgrade={upgrade} /> : <>
-            <MetadataUploader key={catalogKey} userId={user.id} mode="catalog" canSplit={canSplit} canExport={canCollect} focus={catalogFix} onFocused={() => setCatalogFix(undefined)} onSplitSheet={(t) => { setSplitTrackId(t.id); setTab("splits"); }} onProtect={(t) => { setProtectTrack(t); setTab("protect"); }} /></>}
+            <MetadataUploader key={catalogKey} userId={user.id} mode="catalog" onShareInfo={(i) => setTabShare((m) => ({ ...m, catalog: i }))} canSplit={canSplit} canExport={canCollect} focus={catalogFix} onFocused={() => setCatalogFix(undefined)} onSplitSheet={(t) => { setSplitTrackId(t.id); setTab("splits"); }} onProtect={(t) => { setProtectTrack(t); setTab("protect"); }} /></>}
           </TabsContent>
           <TabsContent value="protect"><AIProtectionHub userId={user.id} purchases={purchases} justPaid={search.checkout === "success" && search.tab === "protect"} track={protectTrack} /></TabsContent>
           <TabsContent value="splits"><SplitSheets userId={user.id} canSplit={canSplit} canCollect={canCollect} prefillTrackId={splitTrackId} onUpgrade={upgrade} /></TabsContent>

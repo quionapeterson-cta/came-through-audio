@@ -28,11 +28,12 @@ import { logBadgeEvent } from "@/lib/badge-events";
 import { ARTIST_SEAT_PRICES } from "@/lib/plans";
 import { PACKAGES } from "@/lib/proof";
 import { loadOnboarding, loadProfile, withProfile } from "@/lib/artist-profile";
+import type { ShareInfo } from "@/components/BadgeCelebration";
 
 const normArtist = (v: string) => v.trim().replace(/\s+/g, " ").toLowerCase();
 import { Link } from "@tanstack/react-router";
 
-export function MetadataUploader({ userId, mode = "embed", onSubmitted, onSplitSheet, onProtect, canSplit, canExport, focus, onFocused }: { onFocused?: () => void; userId?: string; mode?: "embed" | "catalog"; focus?: { trackId: string; field: string } | undefined; onSubmitted?: () => void; onSplitSheet?: (t: CatalogTrack) => void; onProtect?: (t: CatalogTrack) => void; canSplit?: boolean; canExport?: boolean }) {
+export function MetadataUploader({ onShareInfo, userId, mode = "embed", onSubmitted, onSplitSheet, onProtect, canSplit, canExport, focus, onFocused }: { onShareInfo?: (s: Partial<ShareInfo> & Pick<ShareInfo, "ctx">) => void; onFocused?: () => void; userId?: string; mode?: "embed" | "catalog"; focus?: { trackId: string; field: string } | undefined; onSubmitted?: () => void; onSplitSheet?: (t: CatalogTrack) => void; onProtect?: (t: CatalogTrack) => void; canSplit?: boolean; canExport?: boolean }) {
   const full = mode === "catalog";
   // One artist per account: the artist name from setup. A different name gets a gentle add-an-artist note.
   const registeredArtist = loadOnboarding(userId)?.stageName?.trim() ?? "";
@@ -103,6 +104,11 @@ export function MetadataUploader({ userId, mode = "embed", onSubmitted, onSplitS
     listTracks().then(setTracks).catch((e) => toast.error(e.message ?? "Could not load your catalog."));
   }, [userId]);
   useEffect(() => { refresh(); }, [refresh]);
+  // The page's share card (artist avatar next to the name): song count on My Catalog, the song being embedded on Embed.
+  const shareGenre = full ? loadProfile(userId)?.primaryGenre : metadata.primaryGenre;
+  useEffect(() => {
+    onShareInfo?.(full ? { ctx: "catalog", count: tracks.length, genre: shareGenre } : { ctx: "embed", artist: metadata.artist.trim(), title: metadata.title, genre: shareGenre });
+  }, [full, tracks.length, metadata.artist, metadata.title, shareGenre]); // eslint-disable-line react-hooks/exhaustive-deps
   // The health meter reads the same saved checks and checklist ticks as the Royalty Health Check.
   const [checks, setChecks] = useState<RepertoireCheck[]>([]);
   const [statuses, setStatuses] = useState<SongStatus[]>([]);
