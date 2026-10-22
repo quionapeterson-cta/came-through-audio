@@ -3,7 +3,8 @@
  * Bodies use {{field}} for blueprint fields and {{party:Role}} for a party's legal name; renderContract fills them.
  * These are general templates, not legal advice, and every surface that shows one says so (CONTRACT_DISCLAIMER).
  */
-export type BlueprintField = { key: string; label: string; placeholder?: string; tip: string; multiline?: boolean };
+/** `date` adds a calendar: "one" fills the field with the picked date, "many" adds each pick to a list. */
+export type BlueprintField = { key: string; label: string; placeholder?: string; tip: string; multiline?: boolean; date?: "one" | "many" };
 export type Blueprint = {
   id: string;
   name: string;
@@ -19,7 +20,7 @@ export type Blueprint = {
 export const CONTRACT_DISCLAIMER =
   "Blueprints are general templates to help you organize a deal. They are not legal advice. Have a qualified music attorney review any contract before you sign it.";
 
-const DATE: BlueprintField = { key: "effectiveDate", label: "Effective date", placeholder: "January 1, 2027", tip: "The date the agreement starts." };
+const DATE: BlueprintField = { key: "effectiveDate", label: "Effective date", placeholder: "January 1, 2027", tip: "The date the agreement starts.", date: "one" };
 const STATE: BlueprintField = { key: "governingLaw", label: "Governing law (state or country)", placeholder: "Georgia", tip: "Whose laws apply if there's ever a dispute. Usually where you live or do business." };
 const SONG: BlueprintField = { key: "songTitle", label: "Song title", placeholder: "Song Title", tip: "The song this agreement covers. Pick a catalog song to fill it in." };
 
@@ -89,7 +90,7 @@ export const BLUEPRINTS: Blueprint[] = [
       { key: "feeSchedule", label: "When the fee is paid", placeholder: "50% on signing, 50% on delivery", tip: "Payment timing, for example half now and half on delivery." },
       { key: "points", label: "Producer royalty (points)", placeholder: "3%", tip: "The producer's percentage of master royalties." },
       { key: "publishingShare", label: "Producer publishing share", placeholder: "50%", tip: "The producer's share of the song's writing (composition). Match your split sheet." },
-      { key: "deliveryDate", label: "Delivery date", placeholder: "March 1, 2027", tip: "When the finished production is due." },
+      { key: "deliveryDate", label: "Delivery date", placeholder: "March 1, 2027", tip: "When the finished production is due.", date: "one" },
       { key: "credit", label: "Credit line", placeholder: "Produced by Jane Doe", tip: "How the producer will be credited on releases and metadata." },
       STATE,
     ],
@@ -285,7 +286,7 @@ ${general(7)}`,
     fields: [
       DATE, SONG,
       { key: "instrument", label: "Instrument or role", placeholder: "Bass guitar", tip: "What the musician will play or sing." },
-      { key: "sessionDate", label: "Session date(s)", placeholder: "February 10, 2027", tip: "When the recording session happens." },
+      { key: "sessionDate", label: "Session date(s)", placeholder: "February 10, 2027", tip: "When the recording session happens.", date: "many" },
       { key: "fee", label: "Session fee", placeholder: "$300", tip: "The one-time amount paid for the session." },
       { key: "credit", label: "Credit line", placeholder: "Bass: John Smith", tip: "How the musician will be credited." },
       STATE,
@@ -326,10 +327,10 @@ ${general(6)}`,
     roles: ["Artist", "Videographer"],
     fields: [
       DATE, SONG,
-      { key: "shootDate", label: "Shoot date(s)", placeholder: "April 5, 2027", tip: "When filming happens." },
+      { key: "shootDate", label: "Shoot date(s)", placeholder: "April 5, 2027", tip: "When filming happens.", date: "many" },
       { key: "deliverables", label: "Deliverables", placeholder: "Final 16:9 cut, 3 vertical clips, raw footage", tip: "Everything the videographer will hand over.", multiline: true },
       { key: "revisions", label: "Revision rounds", placeholder: "2", tip: "How many rounds of edits are included." },
-      { key: "deliveryDate", label: "Delivery date", placeholder: "May 1, 2027", tip: "When the final files are due." },
+      { key: "deliveryDate", label: "Delivery date", placeholder: "May 1, 2027", tip: "When the final files are due.", date: "one" },
       { key: "fee", label: "Fee", placeholder: "$2,000", tip: "The total paid to the videographer." },
       { key: "credit", label: "Credit line", placeholder: "Directed by Jane Doe", tip: "How the videographer is credited." },
       STATE,
@@ -405,7 +406,7 @@ ${general(7)}`,
       { key: "term", label: "Term", placeholder: "5 years", tip: "How long the label controls the release before rights return." },
       { key: "advance", label: "Advance", placeholder: "$0", tip: "Money paid to the artist up front, recouped from royalties." },
       { key: "royaltySplit", label: "Artist royalty", placeholder: "50% of net receipts", tip: "The artist's share of the label's income from the release." },
-      { key: "releaseDeadline", label: "Release deadline", placeholder: "Within 6 months of delivery", tip: "If the label misses this, rights go back to the artist." },
+      { key: "releaseDeadline", label: "Release deadline", placeholder: "Within 6 months of delivery", tip: "If the label misses this, rights go back to the artist.", date: "one" },
       STATE,
     ],
     body: `INDEPENDENT LABEL LICENSE AGREEMENT

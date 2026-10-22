@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { confirmAction } from "@/components/ConfirmHost";
-import { AlertTriangle, Check, ChevronLeft, Copy, Download, FileSignature, Loader2, Lock, Mail, PenLine, Plus, RotateCcw, ScrollText, ShieldCheck, Trash2, Unlock, Vault } from "lucide-react";
+import { AlertTriangle, CalendarDays, Check, ChevronLeft, Copy, Download, FileSignature, Loader2, Lock, Mail, PenLine, Plus, RotateCcw, ScrollText, ShieldCheck, Trash2, Unlock, Vault } from "lucide-react";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -8,15 +8,18 @@ import { Button } from "@/components/ui/button";
 import { UpgradeLock } from "@/components/UpgradeLock";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { format, isValid, parse } from "date-fns";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { InfoTip } from "@/components/InfoTip";
 import { listTracks, type CatalogTrack } from "@/lib/catalog";
-import { BLUEPRINTS, COMPANY_BLUEPRINTS, CONTRACT_DISCLAIMER, blueprintById, renderContract, type Blueprint } from "@/lib/contract-blueprints";
+import { BLUEPRINTS, COMPANY_BLUEPRINTS, CONTRACT_DISCLAIMER, blueprintById, renderContract, type Blueprint, type BlueprintField } from "@/lib/contract-blueprints";
 import { downloadContractPdf } from "@/lib/contract-pdf";
 import { sendContractInvite } from "@/lib/contracts-email.functions";
 import { logBadgeEvent } from "@/lib/badge-events";
 import {
-  contractLink, deleteContract, emptyParty, isValidEmail, listContracts, listReceivedContracts, loadCompanyTemplates, reopenContract, saveCompanyTemplate, saveContract, sendContract, signContract,
+  contractLink, deleteContract, emptyParty, getContract, isValidEmail, listContracts, listReceivedContracts, loadCompanyTemplates, reopenContract, saveCompanyTemplate, saveContract, sendContract, signContract,
   type Contract, type ContractParty, type ReceivedContract,
 } from "@/lib/contracts";
 
@@ -219,7 +222,8 @@ function CompanyTemplates({ blueprints, edited, onUse, onSaved }: { blueprints: 
               </div>
             ) : (
               <div className="mt-auto flex flex-wrap gap-2 pt-4">
-                <Button size="sm" variant="outline" onClick={() => { setText(bp.body); setEditingId(bp.id); }}><PenLine className="h-4 w-4" />Edit terms</Button>
+                <Button size="sm" variant="ghost" onClick={() => { setText(bp.body); setEditingId(bp.id); }}><PenLine className="h-4 w-4" />Edit terms</Button>
+                <Button size="sm" variant="outline" onClick={() => void downloadContractPdf({ title: bp.name, body: renderContract(bp, {}, []), parties: bp.roles.map((role) => ({ name: "", role, signedAt: null })), status: "draft" })}><Download className="h-4 w-4" />Blank PDF</Button>
                 <Button size="sm" onClick={() => onUse(bp)}><FileSignature className="h-4 w-4" />Use this template</Button>
               </div>
             )}
@@ -304,14 +308,14 @@ function ContractEditor({ userId, initial, tracks, blueprint, onClose }: { userI
     setBusy(true);
     try {
       await sendContract(saved.id);
-      const fresh = (await listContracts()).find((x) => x.id === saved.id);
+      const fresh = await getContract(saved.id);
       if (fresh) setC(fresh);
       toast.success("Locked. Now send each party their signature request.");
     } catch (e) { toast.error(e instanceof Error ? e.message : "Could not lock the contract."); }
     finally { setBusy(false); }
   };
 
-  const refresh = async () => { const fresh = (await listContracts()).find((x) => x.id === c.id); if (fresh) setC(fresh); };
+  const refresh = async () => { const fresh = c.id ? await getContract(c.id) : null; if (fresh) setC(fresh); };
 
   const email = async (p: ContractParty) => {
     if (!p.id) return;
@@ -370,6 +374,7 @@ function ContractEditor({ userId, initial, tracks, blueprint, onClose }: { userI
                   <Field key={f.key} label={f.label} tip={f.tip} wide={f.multiline}>
                     {f.multiline
                       ? <textarea rows={3} value={c.fields[f.key] ?? ""} placeholder={f.placeholder} onChange={(e) => setField(f.key, e.target.value)} className="w-full rounded-md border border-input bg-background p-3 text-sm" />
+                      : f.date ? <DateInput field={f} value={c.fields[f.key] ?? ""} onChange={(v) => setField(f.key, v)} />
                       : <Input value={c.fields[f.key] ?? ""} placeholder={f.placeholder} onChange={(e) => setField(f.key, e.target.value)} />}
                   </Field>
                 ))}
@@ -479,6 +484,36 @@ function Step({ n, title, hint, children }: { n?: number | undefined; title: str
       {hint && <p className="mt-1 text-sm text-muted-foreground">{hint}</p>}
       <div className="mt-4">{children}</div>
     </section>
+  );
+}
+
+const DATE_FORMAT = "MMMM d, yyyy";
+
+/** A date field with a calendar beside it. Typing still works, for wording like "Within 6 months of delivery". */
+function DateInput({ field, value, onChange }: { field: BlueprintField; value: string; onChange: (v: string) => void }) {
+  const [open, setOpen] = useState(false);
+  const many = field.date === "many";
+  const last = value.split(";").pop()?.trim() ?? "";
+  const shown = parse(last, DATE_FORMAT, new Date());
+  const pick = (d: Date | undefined) => {
+    if (!d) return;
+    const text = format(d, DATE_FORMAT);
+    onChange(many && value.trim() && !value.includes(text) ? `${value.trim()}; ${text}` : text);
+    if (!many) setOpen(false);
+  };
+  return (
+    <div className="flex gap-2">
+      <Input value={value} placeholder={field.placeholder} onChange={(e) => onChange(e.target.value)} />
+      <Popover open={open} onOpenChange={setOpen}>
+        <PopoverTrigger asChild>
+          <Button type="button" variant="outline" size="icon" className="shrink-0" aria-label={`Pick ${field.label.toLowerCase()} on a calendar`}><CalendarDays className="h-4 w-4" /></Button>
+        </PopoverTrigger>
+        <PopoverContent className="w-auto p-0" align="end">
+          <Calendar mode="single" captionLayout="dropdown" {...(isValid(shown) && { selected: shown, defaultMonth: shown })} onSelect={pick} />
+          {many && <p className="max-w-64 px-3 pb-3 text-xs text-muted-foreground">Pick each date; they're added to the list.</p>}
+        </PopoverContent>
+      </Popover>
+    </div>
   );
 }
 

@@ -57,6 +57,13 @@ export async function listContracts({ company = false } = {}): Promise<Contract[
   return ((data ?? []) as unknown as ContractRow[]).map(fromRow).filter((c) => !!c.isCompany === company);
 }
 
+/** One contract by id, personal or company, for refreshing the open editor. */
+export async function getContract(id: string): Promise<Contract | null> {
+  const { data, error } = await supabase.from("contracts" as never).select("*, contract_parties(*)").eq("id", id).maybeSingle();
+  if (error) throw error;
+  return data ? fromRow(data as unknown as ContractRow) : null;
+}
+
 /** Saves a draft and its parties. Sent and signed contracts are frozen by the database, so only drafts come here. */
 export async function saveContract(c: Contract): Promise<Contract> {
   const row = { blueprint: c.blueprint, title: c.title.trim() || "Untitled contract", catalog_id: c.catalogId, fields: c.fields, body: c.body };
