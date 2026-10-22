@@ -81,7 +81,7 @@ function Workspace() {
   const [catalogKey, setCatalogKey] = useState(0);
   const [protectTrack, setProtectTrack] = useState<CatalogTrack>();
   const [catalogFix, setCatalogFix] = useState<{ trackId: string; field: string }>();
-  const { tier: realTier, purchases, loaded: billingLoaded, lapse, pauses } = useBilling(user?.id);
+  const { tier: realTier, purchases, loaded: billingLoaded, lapse, pauses, sub, reload: reloadBilling } = useBilling(user?.id);
   const [previewTier, setPreviewTier] = useState<Tier | "real">("real");
   // The test-mode tier preview is for super admins only, so testers can't hand themselves a paid plan in the UI.
   const staff = useQuery({ queryKey: ["staff-role", user?.id], queryFn: () => getStaffRole(), enabled: !!user && getPaymentsEnvironment() === "sandbox" });
@@ -203,7 +203,7 @@ function Workspace() {
         onSaved={(o) => { setOnboard(o); setEmbedKey((k) => k + 1); setTab(canCatalog ? "embed" : "health"); }} />
       <BadgeWatcher userId={user.id} artist={names.artist} />
       <main className="mx-auto max-w-7xl px-6 py-8">
-        <CatalogLapseBanner lapse={lapse} pauses={pauses} onRenew={upgrade} />
+        <CatalogLapseBanner sub={sub} lapse={lapse} pauses={pauses} onRenew={upgrade} onChanged={() => void reloadBilling()} />
         <Tabs value={tab} onValueChange={setTab}>
           <TabsList className="h-auto w-full flex-nowrap justify-start gap-1 overflow-x-auto bg-muted p-1">
             {tabs.map(({ id, label, icon: Icon }, i) => (

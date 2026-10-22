@@ -123,7 +123,7 @@ export const createCheckoutSession = createServerFn({ method: "POST" })
       const [{ admin, loadState }, { offers }] = await Promise.all([import("@/lib/retention.server"), import("@/lib/retention")]);
       const s = await loadState(await admin(), context.userId, env);
       const o = offers(s.sub, s.lapse, s.pauses);
-      if (!o.canPause) throw new Error(o.pauseAgain ? "Pause can be used once every 12 months." : "Pause opens 30 days before your renewal.");
+      if (!o.canPause) throw new Error(o.pauseAgain ? "Pause can be used once every 12 months." : "Pause isn't available on this account right now.");
     }
 
     try {

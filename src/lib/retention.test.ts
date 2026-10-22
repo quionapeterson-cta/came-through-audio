@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { dueReminder, extendedRenewal, isPaused, offers, pauseSpan, shiftedEmptyAfter, type Pause, type PlanSub } from "@/lib/retention";
+import { dueRenewalReminder, dueReminder, extendedRenewal, isPaused, offers, pauseSpan, shiftedEmptyAfter, type Pause, type PlanSub } from "@/lib/retention";
 import { planCheckout, checkoutInput } from "@/lib/stripe-mapping";
 import { crc32, uniqueName, zipBytes } from "@/lib/zip";
 
@@ -8,15 +8,15 @@ const sub = (extra: Partial<PlanSub> = {}): PlanSub => ({ stripe_subscription_id
 const used = (kind: Pause["kind"], created: string, extra: Partial<Pause> = {}): Pause => ({ id: kind, kind, months: kind === "pause" ? 1 : null, starts_at: created, ends_at: created, ended_at: null, created_at: created, ...extra });
 
 describe("need more time and pause", () => {
-  it("open 30 days before renewal, not earlier", () => {
-    expect(offers(sub(), null, [], now)).toMatchObject({ inWindow: true, canExtend: true, canPause: true });
-    expect(offers(sub({ current_period_end: "2027-01-10T00:00:00Z" }), null, [], now).inWindow).toBe(false);
+  it("are offered on a running plan (the cancel screen), not on one already cancelling", () => {
+    expect(offers(sub({ current_period_end: "2027-06-10T00:00:00Z" }), null, [], now)).toMatchObject({ failing: false, canExtend: true, canPause: true });
+    expect(offers(sub({ cancel_at_period_end: true }), null, [], now).canExtend).toBe(false);
   });
   it("open after a failed renewal, and during the grace period once the plan has ended", () => {
-    expect(offers(sub({ status: "past_due", current_period_end: "2027-10-01T00:00:00Z" }), null, [], now).canExtend).toBe(true);
+    expect(offers(sub({ status: "past_due", current_period_end: "2027-10-01T00:00:00Z" }), null, [], now)).toMatchObject({ failing: true, canExtend: true });
     const lapse = { plan_ended_at: "2026-10-10T00:00:00Z", empty_after: "2026-11-09T00:00:00Z", emptied_at: null };
     expect(offers(null, lapse, [], now).canPause).toBe(true);
-    expect(offers(null, { ...lapse, emptied_at: "2026-11-09T00:00:00Z" }, [], now).inWindow).toBe(false);
+    expect(offers(null, { ...lapse, emptied_at: "2026-11-09T00:00:00Z" }, [], now).canPause).toBe(false);
   });
   it("are each once every 12 months", () => {
     const o = offers(sub(), null, [used("extend", "2026-03-01T00:00:00Z")], now);
@@ -48,6 +48,20 @@ describe("emptying reminders", () => {
     expect(dueReminder(lapse("2026-10-28T12:00:00Z", ["start"]), now)?.send).toBe("7");
     // A late start skips straight to the most urgent one and counts the earlier ones as sent.
     expect(dueReminder(lapse("2026-10-23T12:00:00Z"), now)).toEqual({ send: "1", covers: ["start", "7", "1"] });
+  });
+});
+
+describe("renewal reminders", () => {
+  const renews = new Date("2027-01-20T12:00:00Z"); // 90 days after `now`
+  it("go out 90, 60, 30, 7 and 1 day ahead, once each per renewal date", () => {
+    expect(dueRenewalReminder(renews, [], null, now)).toBe(90);
+    expect(dueRenewalReminder(renews, ["90"], renews.toISOString(), now)).toBeNull();
+    expect(dueRenewalReminder(new Date("2026-11-30T12:00:00Z"), ["90"], "2026-11-30T12:00:00.000Z", now)).toBe(60);
+    expect(dueRenewalReminder(new Date("2026-10-27T12:00:00Z"), [], null, now)).toBe(7);
+    expect(dueRenewalReminder(new Date("2027-06-01T12:00:00Z"), [], null, now)).toBeNull();
+  });
+  it("start over when the renewal date moves", () => {
+    expect(dueRenewalReminder(renews, ["90"], "2026-11-30T12:00:00Z", now)).toBe(90);
   });
 });
 

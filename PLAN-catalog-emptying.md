@@ -65,6 +65,12 @@ AGENTS.md says **"Never delete or overwrite existing writer data."** Emptying a 
 this needs a written exception: *"except when a catalog is emptied 30 days after its plan ends, as the Refund Policy
 states."* It changes only with your approval.
 
+## 8a. Plan A, then plan B (founder, 2026-10-22)
+- **Plan A, renewal reminders:** emails 90, 60, 30, 7 and 1 day before a yearly plan renews (not for plans already cancelling). Built.
+- **Plan B, Need more time and Pause:** offered only when someone tries to cancel (Cancel plan screen), when a renewal
+  payment fails (email on the first failed attempt and Stripe's third, plus a banner with Update card), and during
+  the 30-day countdown after a plan ends. No standalone buttons otherwise. Built.
+
 ## 9. Need more time (renewal extension)
 - **Who:** anyone on a paid yearly plan, from 30 days before renewal until a failed renewal is fixed.
 - **What:** the renewal date moves back **30 days**, free. Full access continues. **Once every 12 months.**

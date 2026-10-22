@@ -4,7 +4,8 @@ import { Download, PauseCircle, TriangleAlert } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { downloadWholeCatalog } from "@/lib/catalog";
-import { currentPause, inGrace, isPaused, type Lapse, type Pause } from "@/lib/retention";
+import { currentPause, inGrace, isPaused, type Lapse, type Pause, type PlanSub } from "@/lib/retention";
+import { FailedRenewalBanner, GraceOffers } from "@/components/RetentionControls";
 
 const longDate = (iso: string) => new Date(iso).toLocaleDateString(undefined, { month: "long", day: "numeric", year: "numeric" });
 
@@ -25,11 +26,12 @@ export function DownloadCatalogButton({ variant = "default" }: { variant?: "defa
 }
 
 /**
- * The workspace banner while a plan has ended (30-day grace before the catalog is emptied) or is paused.
- * Pause and Need more time live in Profile, linked from here.
+ * The workspace banner while a renewal payment is failing, a plan has ended (30-day grace before the catalog is
+ * emptied) or is paused. Need more time and Pause are offered right here when they're available.
  */
-export function CatalogLapseBanner({ lapse, pauses, onRenew }: { lapse: Lapse | null; pauses: Pause[]; onRenew: () => void }) {
+export function CatalogLapseBanner({ sub, lapse, pauses, onRenew, onChanged }: { sub: PlanSub | null; lapse: Lapse | null; pauses: Pause[]; onRenew: () => void; onChanged: () => void }) {
   const pause = currentPause(pauses);
+  if (sub?.status === "past_due") return <FailedRenewalBanner sub={sub} lapse={lapse} pauses={pauses} onChanged={onChanged} />;
   if (pause && isPaused(pauses)) {
     return (
       <div className="mb-6 flex flex-wrap items-center gap-4 rounded-2xl border border-primary bg-card p-4">
@@ -46,9 +48,10 @@ export function CatalogLapseBanner({ lapse, pauses, onRenew }: { lapse: Lapse | 
     <div className="mb-6 flex flex-wrap items-center gap-4 rounded-2xl border-2 border-primary bg-card p-4">
       <TriangleAlert className="h-6 w-6 shrink-0 text-primary" />
       <p className="min-w-0 flex-1 text-sm"><span className="font-semibold">Your plan ended. Your catalog will be emptied on {longDate(lapse!.empty_after)}.</span>{" "}
-        <span className="text-muted-foreground">Download everything now, or renew to keep it. Need longer? <Link to="/profile" className="font-semibold text-primary underline">Need more time or Pause</Link>.</span></p>
+        <span className="text-muted-foreground">Download everything now, or renew to keep it.</span></p>
       <DownloadCatalogButton />
       <Button variant="outline" onClick={onRenew}>Renew</Button>
+      <GraceOffers sub={sub} lapse={lapse} pauses={pauses} onChanged={onChanged} />
     </div>
   );
 }

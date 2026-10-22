@@ -24,7 +24,9 @@ export type RetentionEmail =
   | { kind: "lapse-start" | "lapse-7" | "lapse-1"; emptyOn: string }
   | { kind: "emptied"; songs: number }
   | { kind: "extended"; renewsOn: string; plan: boolean }
-  | { kind: "paused"; startsOn: string; endsOn: string; plan: boolean };
+  | { kind: "paused"; startsOn: string; endsOn: string; plan: boolean }
+  | { kind: "renewal"; plan: string; price: string; renewsOn: string; daysLeft: number }
+  | { kind: "payment-failed"; plan: string; reminder: boolean };
 
 function render(e: RetentionEmail): { subject: string; html: string } {
   switch (e.kind) {
@@ -59,6 +61,22 @@ function render(e: RetentionEmail): { subject: string; html: string } {
         e.plan ? "You have 30 more days, free, with full access. Nothing is charged until then." : "Your catalog stays read-only for 30 more days, so you can download it or renew.",
         "Need more time can be used once every 12 months.",
       ], [profile, "Open Profile"]) };
+    }
+    case "renewal": {
+      const d = escapeHtml(longDate(e.renewsOn)), plan = escapeHtml(e.plan);
+      const when = e.daysLeft === 1 ? "tomorrow" : `on ${d}`;
+      return { subject: `Your ${plan} plan renews ${when}`, html: page("Renewal reminder", `Your ${plan} plan renews ${when}`, [
+        `It renews automatically for ${escapeHtml(e.price)} a year (plus tax where it applies), with nothing for you to do. Your catalog, masters and badges carry on as they are.`,
+        "Want to change plans or update your card? You can do both from Profile.",
+      ], [profile, "Open Profile"]) };
+    }
+    case "payment-failed": {
+      const plan = escapeHtml(e.plan);
+      return { subject: e.reminder ? "Reminder: your renewal still didn't go through" : "Your renewal didn't go through", html: page("Renewal payment", e.reminder ? "Your renewal still didn't go through" : "Your renewal didn't go through", [
+        `We couldn't charge your card for ${plan}. Update your card to keep your plan; Stripe will try again over the next few weeks, and you keep full access meanwhile.`,
+        "Need a little longer? You can move your renewal back 30 days free, or pause for 1 to 3 months, from Profile.",
+        "If it's never paid, your plan ends and your catalog stays read-only for 30 days before it's emptied.",
+      ], [profile, "Update my card"]) };
     }
     case "paused": {
       const s = escapeHtml(longDate(e.startsOn)), end = escapeHtml(longDate(e.endsOn));

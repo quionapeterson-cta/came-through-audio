@@ -1,7 +1,8 @@
 import { createStripeClient, type StripeEnv } from "@/lib/stripe.server";
-import { isActiveSub, TIER_RANK, tierFromPrice } from "@/lib/plans";
+import { isActiveSub, PLAN_TIERS, TIER_LABEL, TIER_RANK, tierFromPrice } from "@/lib/plans";
+import { getPaymentsEnvironment } from "@/lib/payments-env";
 import {
-  addDays, dueReminder, extendedRenewal, GRACE_DAYS, offers, pauseSpan, shiftedEmptyAfter,
+  addDays, dueReminder, dueRenewalReminder, extendedRenewal, RENEWAL_REMINDER_DAYS, GRACE_DAYS, offers, pauseSpan, shiftedEmptyAfter,
   type Lapse, type Pause, type PlanSub,
 } from "@/lib/retention";
 import { sendRetentionEmail } from "@/lib/retention-email.server";
@@ -55,7 +56,7 @@ async function voidOpenInvoices(env: StripeEnv, subscriptionId: string) {
 export async function extend(db: Admin, userId: string, env: StripeEnv) {
   const s = await loadState(db, userId, env);
   const o = offers(s.sub, s.lapse, s.pauses);
-  if (!o.canExtend) throw new Error(o.extendAgain ? "Need more time can be used once every 12 months." : "Need more time opens 30 days before your renewal.");
+  if (!o.canExtend) throw new Error(o.extendAgain ? "Need more time can be used once every 12 months." : "Need more time isn't available on this account right now.");
   const until = s.sub?.stripe_subscription_id ? extendedRenewal(s.sub) : addDays(s.lapse!.empty_after, 30);
   // Recorded first (so it can't be used twice), and taken back if the change itself doesn't go through.
   const record = await recordPause(db, { user_id: userId, kind: "extend", starts_at: new Date().toISOString(), ends_at: until.toISOString(),
@@ -205,4 +206,51 @@ export async function runCatalogLapses(now = new Date()) {
 export async function sendCancelledEmail(db: Admin, userId: string, subscriptionId: string, endsOn: string) {
   const email = await emailOf(db, userId);
   if (email) await sendRetentionEmail(email, { kind: "cancelled", endsOn }, `cancelled-${subscriptionId}-${endsOn.slice(0, 10)}`);
+}
+
+/**
+ * Plan A: reminds people 90, 60, 30, 7 and 1 day before their yearly plan renews (cancelling plans and free trials are
+ * skipped). Each reminder goes out once per renewal date, so a moved renewal starts a fresh set.
+ */
+export async function sendRenewalReminders(now = new Date()) {
+  const db = await admin();
+  const env = getPaymentsEnvironment();
+  const horizon = addDays(now, RENEWAL_REMINDER_DAYS[0] + 1).toISOString();
+  const { data, error } = await db.from("subscriptions")
+    .select("id, user_id, price_id, status, current_period_end, cancel_at_period_end, renewal_reminders, renewal_reminders_for")
+    .eq("environment", env).not("stripe_subscription_id", "is", null).in("status", ["active", "trialing"])
+    .gt("current_period_end", now.toISOString()).lte("current_period_end", horizon);
+  if (error) throw error;
+  let sent = 0;
+  for (const row of (data ?? []) as unknown as { id: string; user_id: string; price_id: string; current_period_end: string; cancel_at_period_end: boolean | null; renewal_reminders: string[] | null; renewal_reminders_for: string | null }[]) {
+    if (row.cancel_at_period_end) continue;
+    const tier = tierFromPrice(row.price_id);
+    const price = PLAN_TIERS.find((p) => p.tier === tier)?.price;
+    if (tier === "free" || !price) continue;
+    const renews = new Date(row.current_period_end);
+    const due = dueRenewalReminder(renews, row.renewal_reminders ?? [], row.renewal_reminders_for, now);
+    if (due === null) continue;
+    const email = await emailOf(db, row.user_id);
+    if (!email) continue;
+    const ok = await sendRetentionEmail(email, { kind: "renewal", plan: TIER_LABEL[tier], price, renewsOn: row.current_period_end, daysLeft: due },
+      `renewal-${due}-${row.id}-${row.current_period_end.slice(0, 10)}`);
+    if (!ok) continue;
+    const same = row.renewal_reminders_for && new Date(row.renewal_reminders_for).getTime() === renews.getTime();
+    await db.from("subscriptions").update({ renewal_reminders: [...(same ? row.renewal_reminders ?? [] : []), String(due)], renewal_reminders_for: row.current_period_end } as never).eq("id", row.id);
+    sent += 1;
+  }
+  return { renewalReminders: sent };
+}
+
+/**
+ * Plan B for a failed renewal: an email on the first failed attempt and a reminder on Stripe's third, both offering
+ * Update card, Need more time and Pause. Only yearly renewals, not first payments.
+ */
+export async function sendPaymentFailedEmail(userId: string, priceId: string, invoiceId: string, attempt: number) {
+  if (attempt !== 1 && attempt !== 3) return;
+  const db = await admin();
+  const email = await emailOf(db, userId);
+  const tier = tierFromPrice(priceId);
+  if (!email || tier === "free") return;
+  await sendRetentionEmail(email, { kind: "payment-failed", plan: TIER_LABEL[tier], reminder: attempt > 1 }, `payment-failed-${invoiceId}-${attempt}`);
 }

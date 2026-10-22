@@ -1,6 +1,8 @@
 /**
  * Need more time, Pause and the catalog-emptying grace period (PLAN-catalog-emptying.md). Pure rules shared by Profile,
  * the workspace banner and the server, which re-checks everything before touching Stripe.
+ * Plan A is reminding people before renewal (90, 60, 30, 7 and 1 day ahead). Need more time and Pause are plan B: offered
+ * only when someone tries to cancel, when a renewal payment fails, and during the countdown after a plan ends.
  */
 
 export const DAY = 86_400_000;
@@ -8,8 +10,8 @@ export const DAY = 86_400_000;
 export const GRACE_DAYS = 30;
 /** Need more time moves the renewal back this many days. */
 export const EXTEND_DAYS = 30;
-/** Need more time and Pause open this many days before renewal. */
-export const WINDOW_DAYS = 30;
+/** Renewal reminders go out this many days before a yearly plan renews. */
+export const RENEWAL_REMINDER_DAYS = [90, 60, 30, 7, 1] as const;
 export const PAUSE_MONTHS = [1, 2, 3] as const;
 export const VAULT_PRICE = 1.99;
 export const VAULT_LOOKUP_KEY = "vault_month";
@@ -53,8 +55,8 @@ export function renewalDate(sub: PlanSub): Date | null {
 export const inGrace = (lapse: Lapse | null, now = new Date()) => !!lapse && !lapse.emptied_at && new Date(lapse.empty_after) > now;
 
 export type Offers = {
-  /** Around renewal (30 days before it), during a failed renewal, or during the grace period. */
-  inWindow: boolean;
+  /** A renewal payment failed and Stripe is retrying it. */
+  failing: boolean;
   canExtend: boolean;
   canPause: boolean;
   /** Each is once every 12 months; the date it opens again. */
@@ -62,16 +64,19 @@ export type Offers = {
   pauseAgain?: Date | undefined;
 };
 
-/** What the account may use right now. `sub` is the Stripe plan, if there is one (free trials don't count). */
+/**
+ * What the account may use right now. `sub` is the Stripe plan, if there is one (free trials don't count). A running
+ * plan qualifies (the cancel screen offers them), as does a failing renewal or a plan in its 30-day countdown.
+ */
 export function offers(sub: PlanSub | null, lapse: Lapse | null, pauses: Pause[], now = new Date()): Offers {
-  const renews = sub?.stripe_subscription_id ? renewalDate(sub) : null;
-  const nearRenewal = !!sub?.stripe_subscription_id && !sub.cancel_at_period_end && (sub.status === "past_due" || (!!renews && renews.getTime() - now.getTime() <= WINDOW_DAYS * DAY));
-  const inWindow = nearRenewal || (!sub?.stripe_subscription_id && inGrace(lapse, now));
+  const plan = !!sub?.stripe_subscription_id && !sub.cancel_at_period_end;
+  const failing = !!sub?.stripe_subscription_id && sub.status === "past_due";
+  const eligible = plan || failing || (!sub?.stripe_subscription_id && inGrace(lapse, now));
   const lastOf = (kind: Pause["kind"]) => pauses.filter((p) => p.kind === kind).map((p) => new Date(p.created_at)).sort((a, b) => b.getTime() - a.getTime())[0];
   const again = (kind: Pause["kind"]) => { const last = lastOf(kind); const at = last && addMonths(last, 12); return at && at > now ? at : undefined; };
   const extendAgain = again("extend"), pauseAgain = again("pause");
   const busy = !!currentPause(pauses, now);
-  return { inWindow, canExtend: inWindow && !busy && !extendAgain, canPause: inWindow && !busy && !pauseAgain, extendAgain, pauseAgain };
+  return { failing, canExtend: eligible && !busy && !extendAgain, canPause: eligible && !busy && !pauseAgain, extendAgain, pauseAgain };
 }
 
 /**
@@ -106,4 +111,14 @@ export function dueReminder(lapse: Lapse & { reminders: string[] }, now = new Da
   if (lapse.reminders.includes(send)) return null;
   const covers: Reminder[] = send === "1" ? ["start", "7", "1"] : send === "7" ? ["start", "7"] : ["start"];
   return { send, covers };
+}
+
+/** The renewal reminder due now (90, 60, 30, 7 or 1 day ahead), unless it already went out for this renewal date. */
+export function dueRenewalReminder(renews: Date, sent: string[], sentFor: string | null, now = new Date()): number | null {
+  const left = daysUntil(renews, now);
+  if (left < 1) return null;
+  const due = RENEWAL_REMINDER_DAYS.filter((d) => left <= d).at(-1);
+  if (due === undefined) return null;
+  const already = sentFor && new Date(sentFor).getTime() === renews.getTime() ? sent : [];
+  return already.includes(String(due)) ? null : due;
 }

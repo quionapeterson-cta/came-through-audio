@@ -128,6 +128,23 @@ export const Route = createFileRoute("/api/public/payments/webhook")({
               if (id) await syncSubscription(env, id);
               break;
             }
+            case "invoice.payment_failed": {
+              // A yearly renewal that didn't go through: tell them, with Update card, Need more time and Pause.
+              const invoice = event.data.object as Stripe.Invoice;
+              const id = invoiceSubscriptionId(invoice);
+              if (id && invoice.billing_reason === "subscription_cycle") {
+                await syncSubscription(env, id);
+                const { data } = await db().from("subscriptions").select("user_id, price_id").eq("stripe_subscription_id", id).maybeSingle();
+                const sub = data as { user_id: string; price_id: string } | null;
+                if (sub) {
+                  try {
+                    const { sendPaymentFailedEmail } = await import("@/lib/retention.server");
+                    await sendPaymentFailedEmail(sub.user_id, sub.price_id, invoice.id ?? id, invoice.attempt_count ?? 1);
+                  } catch (e) { console.error("Payment failed email failed:", e); }
+                }
+              }
+              break;
+            }
             case "charge.refunded": {
               const charge = event.data.object as Stripe.Charge;
               // Only a full refund ends the purchase; partial refunds keep access.
