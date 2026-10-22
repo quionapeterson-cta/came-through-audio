@@ -3,7 +3,7 @@
 The output holds the plan text, so it stays out of git (.git/info/exclude)."""
 import glob, re
 out=["-- Loads every PLAN-*.md into Admin → Plans (super admins only). Generated locally; never commit this file.",
-     "-- Run after migration 20261022120000. Safe to run again: it replaces each plan with the latest text."]
+     "-- Run after migration 20261022120000. Copy the WHOLE file (Ctrl+A, Ctrl+C). Safe to run again: it replaces each plan with the latest text."]
 for f in sorted(glob.glob("PLAN*.md")):
     body=open(f).read()
     slug=f[:-3].lower()
@@ -14,7 +14,8 @@ for f in sorted(glob.glob("PLAN*.md")):
     tag="$plan$"
     assert tag not in body
     q=lambda x: "'"+x.replace("'","''")+"'"
-    out.append(f"INSERT INTO public.company_plans (slug, title, status, body, updated_at) VALUES ({q(slug)}, {q(title)}, {q(status)}, {tag}{body}{tag}, now())\n"
-               "ON CONFLICT (slug) DO UPDATE SET title = EXCLUDED.title, status = EXCLUDED.status, body = EXCLUDED.body, updated_at = now();")
-open("plans-load.sql","w").write("\n\n".join(out)+"\n")
+    # Delete then insert, rather than ON CONFLICT, so a re-run (or an editor that runs part of the file) never hits a duplicate key.
+    out.append(f"DELETE FROM public.company_plans WHERE slug = {q(slug)};\n"
+               f"INSERT INTO public.company_plans (slug, title, status, body, updated_at) VALUES ({q(slug)}, {q(title)}, {q(status)}, {tag}{body}{tag}, now());")
+open("plans-load.sql","w").write(out[0]+"\n"+out[1]+"\nBEGIN;\n\n"+"\n\n".join(out[2:])+"\n\nCOMMIT;\n")
 print(len(out)-2,"plans")
