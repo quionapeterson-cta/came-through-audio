@@ -1,6 +1,6 @@
 # PLAN — Expert Registration Assistance: working checkout and a proper intake flow · v3
 
-Status: **approved 2026-10-21 (Q3–8 answered). PRIORITY 1.** Build order: catalog fields + organized form first (DONE 2026-10-21) (with PLAN-catalog-organization §1), then readiness targets, then checkout fix + intake.
+Status: **approved 2026-10-21 (Q3–8 answered). PRIORITY 1. Build preview for §0–4, §6 in §7 awaits a final OK (2026-10-22).** Build order: catalog fields + organized form first (DONE 2026-10-21) (with PLAN-catalog-organization §1), then readiness targets, then checkout fix + intake.
 Source: founder testing notes, 2026-10-21. v2 (2026-10-21): founder answered Q1 (draft the agreement) and Q2 (users may pay for songs that aren't ready, but must complete and submit them before work starts); agency checklists researched (§5). v3 (2026-10-21): the system checks every paid song right after payment and alerts the user immediately with what to provide; agents register the songs themselves, no live assistance (§3). v4 (2026-10-21): founder approved the agency checklists, the 5 catalog fields, song swaps, the agreement wording with the pre-launch clause, and the reminder schedule; uncataloged songs can be bought (§1); no turnaround promise (§3 step 6).
 
 ---
@@ -129,6 +129,70 @@ A customer agreement signed at intake step 3, built like the company templates (
 > **9. GENERAL** (the existing `general()` clause: entire agreement, independent parties, governing law, severability, e-signatures. Governing law fixed to the State of Georgia, where the LLC is based)
 >
 > **SCHEDULE A:** filled in automatically: each song (title, ISRC), each organization, the purchase date and the amount paid.
+
+## 7. Build preview: §0–4 and §6 (2026-10-22, for approval before building)
+
+Catalog fields, organized form and per-agency checks (`registrationCheck`) are already built. This is what the rest looks like.
+
+### §0 checkout bug: what I found
+- Expert checkout runs through the **same signed-in server call** as plan checkout (`createCheckoutSession`), which works. The only differences are its 3 Stripe prices (`expert_setup_single`, `expert_setup_album`, `expert_per_song_agency`) and that it's sold outside Managed Payments.
+- The server replaces every Stripe error with a generic message, so the real cause stays hidden. **Fix:** (1) log the full Stripe error and show a specific reason ("price not set up yet", "sign in again"), (2) check on the server that the 3 expert lookup keys exist and name the missing one in the log, (3) add a test for the expert checkout input with picked songs.
+- **Founder, if you can:** press the button once more and paste the exact error text here. That tells me whether it's the sign-in or a missing Stripe price.
+
+### Order form (replaces the number box)
+```
+Expert Registration Assistance            Done-for-you: our agents register your songs.
+
+▸ Singles · 4      ☑ Midnight Run   ✓ Ready to submit
+                   ☑ Gold Rush      ⚠️ 3 items to complete
+▸ EPs · 1          (collapsed)
+▸ Albums · 0
++ A song that isn't in my catalog yet   [Title______] [Artist: {your artist name}]
+
+Agencies   ◉ ASCAP  ○ BMI  (one PRO only)   ☑ The MLC   ☐ SoundExchange
+           Base Fee                    $14.99
+           2 songs × 2 agencies × $4.99 $19.96
+           Total                       $34.95
+[ Pay & start registration ]   Refundable for 30 days, until our team starts work.
+```
+- Single/EP vs album is set from the songs picked (1–6 = Single/EP, more = album), so the user never picks it.
+- The song IDs go to Stripe and back into `purchases.details` the same way the AI Protection Hub does it (`tracks_1`, …). Uncataloged titles go in as `new_1`, ….
+
+### After payment: the intake checklist
+```
+① Payment confirmed ✓
+② Readiness check         ⚠️ 2 of 5 songs need a few details
+     Gold Rush   ASCAP: ⚠️ Add Maya's IPI number →   The MLC: ⚠️ Add the ISRC →
+     New Song    ⚠️ Add this song to My Catalog →
+③ Confirm and submit      🔒 unlocks when every song is ready
+     one card per song: title · writers & splits · publishers · ISRC · agencies
+     [ Submit for registration ]  Work starts here, so the 30-day refund ends.
+④ Sign the Registration Authorization   🔒
+⑤ Add Came Through Audio as your representative   🔒   one card per agency · [Done] · Need help?
+⑥ Status   Gold Rush · ASCAP Pending · The MLC Pending
+     We register songs in the order they're submitted and email you as each one is filed.
+```
+- Every ⚠️ opens the song in My Catalog at the right dropdown and field. Saving in My Catalog re-runs the check; nothing to re-submit.
+- Swap a song: a "Swap" link on each song until it's submitted (same price).
+- Emails (all through `emailLayout()`): "N of M songs need a few details" right after payment, reminders after 3 days and then weekly until ready (says the refund window is still running), and "Your songs are filed with {agency}".
+
+### Admin → Registration queue (staff only)
+```
+User        Songs        Agencies         Agreement  Access  Status               Oldest
+Artist A    5/5 ✓ sub.   ASCAP, The MLC   ✓          ✓ ✓     Ready to register    2 d
+Artist B    3/5          BMI              –          –       Waiting on customer  6 d
+```
+- Open an order → per song: the submitted copy, **Export for ASCAP / BMI / The MLC / SoundExchange** (existing templates, re-checked on the server), mark Pending → In progress → Registered, Unlock for a fix. Orders Pending over 30 days are flagged (staff only).
+
+### Database (one new migration, nothing existing changed)
+- `registration_songs`: one row per paid song: purchase, user, catalog song (or the typed title until it's cataloged), agencies, submitted copy + submitted time, status per agency. Written only by server functions (submit, swap, staff updates); users read their own, staff read all.
+- `registration_orders`: per purchase: agreement contract, representative access confirmed per agency, last reminder sent.
+- The agreement is saved in the existing `contracts` table, like company contracts. `expert_gateways` and its rows stay, just no longer written.
+
+### Files
+Changed: `ExpertAssistance.tsx` (rebuilt as order form + checklist), `stripe-mapping.ts` (expert input takes songs), `payments.functions.ts` (real error reasons), `plans.ts` (type from song count), `routes/api/public/payments/webhook.ts` (creates the order, runs the check, sends the alert), `contract-blueprints.ts` (Registration Authorization), `routes/workspace.tsx` (opens a song at a field from the checklist), admin route + nav. New: `registration.functions.ts` (submit / swap / access / staff actions, server re-check), `registration-email.ts`, `routes/api/public/cron/registration-reminders.ts` (needs a daily cron, like trial reminders), the migration, tests. Readiness rules in `readiness.ts` are **not** changed; everything calls `registrationCheck`.
+
+**Founder:** reply "approved" (or tell me what to change) and I'll build it. You'll need to run one migration in the Supabase SQL editor afterwards.
 
 ## Files
 `src/components/ExpertAssistance.tsx`, `src/lib/stripe-mapping.ts`, `src/lib/checkout.ts`, **`src/lib/readiness.ts` (new `ascap` / `bmi` targets and agency items, per §5; rule change, needs approval)** + `readiness.test.ts`, `src/lib/metadata.ts` (5 new catalog-only fields), the My Catalog / Embed Metadata form (new fields + tooltips), `src/lib/agency-export.ts` (SoundExchange reads master ownership), `src/lib/contract-blueprints.ts` (Registration Authorization), admin route + new `registration_sessions` migration (status per song/agency, submitted snapshots, server-written), the payment webhook (runs the readiness check when an expert purchase confirms) + a new "songs need details" email through `emailLayout()`, a reminder job (run beside `src/routes/api/public/cron/trial-reminders.ts`). Live-session removal: the gateway confirmation and scheduling step in `ExpertAssistance.tsx`; the `expert_gateways` table and its existing rows are kept, just no longer written. AGENTS.md "Registration readiness" section gets the per-agency items added once approved.
