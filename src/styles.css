@@ -142,6 +142,12 @@
     background-color: var(--color-background);
     color: var(--color-foreground);
   }
+
+  /* Example text sits well below typed text, so a placeholder never reads as a filled-in value. */
+  input::placeholder,
+  textarea::placeholder {
+    color: color-mix(in oklab, var(--color-muted-foreground) 50%, transparent);
+  }
 }
 
 /* Came Through Audio brand */

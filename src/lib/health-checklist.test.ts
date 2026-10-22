@@ -1,26 +1,42 @@
 import { describe, it, expect } from "vitest";
 import { emptyMetadata } from "@/lib/metadata";
 import { trackReport } from "@/lib/health";
-import { ACCOUNT_REF, INTL_KEY, printKey, registrationPrint, releaseGroups, searchKey, songChecklist } from "@/lib/health-checklist";
+import { ACCOUNT_REF, catalogHealth, INTL_KEY, printKey, registrationPrint, releaseGroups, searchKey, songChecklist } from "@/lib/health-checklist";
 import { inspectorChecks, emptyStatus } from "@/lib/health-songs";
 import { countryByCode } from "@/lib/repertoires";
 
 const us = countryByCode("US")!;
 const track = (extra = {}) => ({ id: "t1", title: "Song", artist: "Q", updatedAt: "", metadata: { ...emptyMetadata(), title: "Song", artist: "Q", isrc: "USCTA2600001",
+  upc: "123456789012", duration: "3:10", primaryGenre: "Hip-Hop/Rap", samples: "No" as const, writtenFor: "No" as const,
   writers: [{ name: "", legalName: "Ann Lee", role: "Author/Composer", pro: "BMI", ipi: "00123456789", percentage: "100" }],
   publishers: [{ name: "Lee Songs", pro: "BMI", ipi: "00987654321", percentage: "100" }], ...extra } });
 
 describe("song health checklist", () => {
-  it("starts with details done and registration to do", () => {
+  it("is 100% ready from the catalog alone, with registration still to do", () => {
     const c = songChecklist(trackReport(track(), us, []), us);
-    expect(c.steps.find((s) => s.id === "writers")?.done).toBe(true);
+    expect(c.steps.filter((s) => s.stage === "details").map((s) => [s.id, s.done])).toEqual([["ready:performance", true], ["ready:digital", true], ["ready:mechanical", true]]);
     expect(c.steps.find((s) => s.id === "register:performance")?.society?.id).toBe("bmi");
-    expect(c.pct).toBeLessThan(100);
+    expect(c.pct).toBe(100);
+    expect(c.registered).toEqual({ done: 0, total: 4 });
     expect(c.group).toBe("attention");
   });
-  it("uses the shared readiness check for writers", () => {
-    const c = songChecklist(trackReport(track({ writers: [{ name: "", legalName: "", role: "Composer", pro: "", ipi: "", percentage: "" }] }), us, []), us);
-    expect(c.steps.find((s) => s.id === "writers")?.done).toBe(false);
+  it("scores readiness by agency with the shared registration check", () => {
+    const c = songChecklist(trackReport(track({ upc: "", writers: [{ name: "", legalName: "", role: "Composer", pro: "", ipi: "", percentage: "" }] }), us, []), us);
+    expect(c.steps.find((s) => s.id === "ready:performance")?.done).toBe(false);
+    expect(c.steps.find((s) => s.id === "ready:digital")?.items?.map((i) => i.field)).toEqual(["upc"]);
+    expect(c.pct).toBe(0);
+  });
+  it("counts a BMI song with no publisher as ready once Self-published is checked", () => {
+    const m = { publishers: [{ name: "", pro: "", ipi: "", percentage: "" }] };
+    expect(songChecklist(trackReport(track(m), us, []), us).steps.find((s) => s.id === "ready:performance")?.done).toBe(false);
+    expect(songChecklist(trackReport(track({ ...m, selfPublished: true }), us, []), us).pct).toBe(100);
+  });
+  it("averages readiness across the catalog and counts ticked registrations", () => {
+    const h = catalogHealth([track(), { ...track({ upc: "" }), id: "t2" }], us, [], [{ ...emptyStatus("t1"), steps: { "registered:bmi": "x" } }]);
+    expect(h.pct).toBe(84);
+    expect(h.ready).toBe(1);
+    expect(h.registered).toEqual({ done: 1, total: 8 });
+    expect(h.next).toMatchObject({ field: "upc" });
   });
   it("ticked registrations and found marks count, and saved-for-later moves the song", () => {
     const status = { ...emptyStatus("t1"), list: "later" as const, steps: { "registered:bmi": "x" } };

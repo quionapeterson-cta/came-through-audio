@@ -1,5 +1,6 @@
 import type { CatalogTrack } from "@/lib/catalog";
-import { creditName } from "@/lib/metadata";
+import { creditName, type Contributor } from "@/lib/metadata";
+import { societyForPro } from "@/lib/repertoires";
 import { splitStatus } from "@/lib/splits-total";
 
 export type Pillar = "performance" | "digital" | "mechanical";
@@ -18,6 +19,15 @@ export const isIswc = (v: string) => /^T\d{10}$/.test(v.replace(/[-.\s]/g, "").t
 export const isIpi = (v: string) => /^\d{9,11}$/.test(v.trim());
 /** Any society counts, from the worldwide PRO list or typed in under "Other"; only a blank or "None" means unaffiliated. */
 export const hasPro = (pro?: string) => !["", "none", "other"].includes((pro ?? "").trim().toLowerCase());
+
+/** A BMI writer: with no publisher, BMI pays the publisher share to the writers, in proportion to their splits. */
+export const isBmi = (w: Contributor) => societyForPro(w.pro)?.id === "bmi";
+/** No publisher is needed: Self-published is checked, or every named writer is with BMI. */
+export function publisherCovered(m: { writers: Contributor[]; composers: Contributor[]; selfPublished?: boolean }) {
+  if (m.selfPublished) return true;
+  const named = [...m.writers, ...m.composers].filter(creditName);
+  return named.length > 0 && named.every(isBmi);
+}
 
 /** Checks one catalog track against what each repertoire system needs to match and pay it. */
 export function auditTrack(t: CatalogTrack): Issue[] {
@@ -38,7 +48,7 @@ export function auditTrack(t: CatalogTrack): Issue[] {
   else if (!isIsrc(m.isrc)) out.push({ pillar: "digital", text: "ISRC is not 12 characters (CC-XXX-YY-NNNNN)", field: "isrc" });
   if (!t.artist.trim()) out.push({ pillar: "digital", text: "No featured artist name", field: "artist" });
   const pubs = m.publishers.filter((p) => p.name.trim());
-  if (!pubs.length) out.push({ pillar: "mechanical", text: "No publisher listed (self-published writers can list their own entity)", field: "publishers-0-name" });
+  if (!pubs.length && !publisherCovered(m)) out.push({ pillar: "mechanical", text: "No publisher listed. Add one, or check Self-published if there isn't one.", field: "selfPublished" });
   const pubSplit = splitStatus(pubs);
   if (pubSplit.state === "over") out.push({ pillar: "mechanical", text: `Publisher shares total ${pubSplit.total}%, ${pubSplit.over}% over 100%. Lower one to fix it.`, field: "publishers-0-share" });
   m.publishers.forEach((p, index) => { if (p.name.trim() && !isIpi(p.ipi ?? "")) out.push({ pillar: "mechanical", text: `${p.name}: missing publisher IPI`, field: `publishers-${index}-ipi` }); });

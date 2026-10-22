@@ -3,13 +3,13 @@ import { pillarLabel, trackReport, type RepertoireCheck, type TrackReport } from
 import type { CatalogTrack } from "@/lib/catalog";
 import { isInspectorSong, type SongStatus } from "@/lib/health-songs";
 import { creditName, type Metadata } from "@/lib/metadata";
-import { registrationReadiness } from "@/lib/readiness";
+import { registrationCheck, registrationReadiness, type RegistrationAgency } from "@/lib/readiness";
 import type { Country, Society } from "@/lib/repertoires";
 
 /**
- * Every song's Health Checklist: fix the song details, register it, then confirm it shows up.
- * Detail steps tick themselves from the song's data (writer readiness comes from the shared readiness module);
- * register and confirm steps are ticked by the user. 100% means every step is done.
+ * Every song's Health Checklist: get it ready to register, register it, then confirm it shows up.
+ * Readiness steps tick themselves from the catalog (the shared registrationCheck, one per agency) and make up the %;
+ * register and confirm steps are ticked by the user.
  */
 export type Stage = "details" | "register" | "confirm";
 export type ChecklistStep = {
@@ -28,14 +28,18 @@ export type ChecklistStep = {
   /** Registered (or found) before the song's details changed: the registration needs updating to match. */
   update?: boolean;
 };
-export type SongChecklist = { steps: ChecklistStep[]; done: number; total: number; pct: number; group: "attention" | "later" | "healthy" };
+/**
+ * `pct` is registration readiness: the share of agencies the catalog has everything for. Registering and confirming
+ * are still steps the user ticks (`registered`, `done`), but they don't move the %; "healthy" means every step is done.
+ */
+export type SongChecklist = { steps: ChecklistStep[]; done: number; total: number; pct: number; registered: { done: number; total: number }; group: "attention" | "later" | "healthy" };
 
 /** Account-wide checklist state lives in its own health_song_status row, under this song_ref (it's not a song). */
 export const ACCOUNT_REF = "account";
 /** Set once per account: international airplay collection through SoundExchange or PPL. */
 export const INTL_KEY = "intl:setup";
 
-export const STAGE_LABEL: Record<Stage, string> = { details: "Fix the song details", register: "Register it", confirm: "Confirm it shows up" };
+export const STAGE_LABEL: Record<Stage, string> = { details: "Ready to register", register: "Register it", confirm: "Confirm it shows up" };
 
 /** What each society's search finds a song by most exactly, and the value to copy. Missing values point at their field. */
 export type SearchKey = { by: string; value: string; field?: string; hint: string };
@@ -63,24 +67,36 @@ export const printKey = (societyId: string) => `print:${societyId}`;
 /** The society a pillar's steps point at: the one already marked, otherwise the first (writers join one PRO). */
 const societyOf = (p: TrackReport["pillars"][number]) => (p.societies.find((s) => s.check) ?? p.societies[0])?.society;
 
+/** The agencies our registration check knows; other societies fall back to the core readiness rules. */
+const AGENCIES: RegistrationAgency[] = ["bmi", "ascap", "mlc", "soundexchange"];
+
+/**
+ * Is the song ready to register with this society? Uses the shared registrationCheck (never re-implemented here),
+ * so the items listed are exactly what our team would ask for before registering.
+ */
+function readyFor(m: Metadata, society: Society, pillar: Pillar): { text: string; field?: string }[] {
+  const agency = AGENCIES.find((a) => a === society.id);
+  if (agency) return registrationCheck(m, agency).missing.map((x) => ({ text: x.message, field: x.field }));
+  if (pillar === "digital") return m.isrc.trim() ? [] : [{ text: "Add the recording's ISRC.", field: "isrc" }];
+  const core = registrationReadiness(m, pillar === "mechanical" ? "mlc" : "pro");
+  return [...core.missing, ...core.warnings].map((x) => ({ text: x.message, field: x.field }));
+}
+
 export function songChecklist(r: TrackReport, country: Country, status?: SongStatus, account?: SongStatus): SongChecklist {
   const m = r.track.metadata;
   const ticked = status?.steps ?? {};
-  const readiness = registrationReadiness(m);
   const needsPro = r.issues.some((i) => i.field?.endsWith("-pro"));
   const steps: ChecklistStep[] = [];
 
-  // Split warnings don't block exports, but the song isn't fully healthy until they're fixed.
-  const writerItems = [...readiness.missing, ...readiness.warnings];
-  steps.push({ id: "writers", stage: "details", auto: true, done: !writerItems.length, title: "Add every writer's legal name, role and split",
-    field: writerItems[0]?.field ?? "writers-0-legalName", items: writerItems.map((x) => ({ text: x.message, field: x.field })) });
-  // Other flagged details (PRO, IPI, publisher…), minus what the writer and ISRC/ISWC steps already cover (writer and publisher splits included).
-  const other = [
-    ...r.issues.filter((i) => i.field !== "isrc" && i.field !== "iswc" && i.field !== "writers-0-share" && i.field !== "publishers-0-share" && i.text !== "No songwriters listed").map((i) => ({ text: i.text, field: i.field })),
-    ...r.findings.filter((f) => f.level === "warn").map((f) => ({ text: f.text, field: f.field === "writers" ? "writers-0-legalName" : f.field })),
-  ];
-  if (other.length) steps.push({ id: "details", stage: "details", auto: true, done: false, title: "Fix the flagged song details", items: other, field: other[0]?.field });
-  steps.push({ id: "isrc", stage: "details", auto: true, done: !!m.isrc.trim(), title: "Add the recording's ISRC", field: "isrc" });
+  // Ready to register: one step per agency, ticked by the catalog itself. These alone make up the song's %.
+  for (const p of r.pillars) {
+    const society = societyOf(p);
+    if (!society) continue;
+    const items = readyFor(m, society, p.pillar);
+    const name = p.pillar === "performance" && needsPro ? "your PRO" : society.name;
+    steps.push({ id: `ready:${p.pillar}`, stage: "details", auto: true, pillar: p.pillar, society, done: !items.length,
+      title: `Ready to register with ${name}`, items, field: items[0]?.field });
+  }
 
   for (const p of r.pillars) {
     const society = societyOf(p);
@@ -97,39 +113,47 @@ export function songChecklist(r: TrackReport, country: Country, status?: SongSta
   // US radio doesn't pay recordings, so US artists collect airplay abroad through SoundExchange or PPL. One setting per account.
   if (country.code === "US")
     steps.push({ id: "intl", stage: "register", auto: false, done: !!account?.steps[INTL_KEY], title: "Collect international airplay (neighbouring rights)" });
+  // Live records that disagree with the catalog (e.g. a different ISRC on streaming) are checked after registering.
+  const findings = r.findings.filter((f) => f.level === "warn").map((f) => ({ text: f.text, field: f.field === "writers" ? "writers-0-legalName" : f.field }));
+  if (findings.length) steps.push({ id: "details", stage: "confirm", auto: true, done: false, title: "Match what the live records show", items: findings, field: findings[0]?.field });
   if (r.pillars.some((p) => p.pillar === "performance" || p.pillar === "mechanical"))
     steps.push({ id: "iswc", stage: "confirm", auto: true, done: !!m.iswc.trim(), title: "Add the ISWC once it's assigned", field: "iswc" });
 
+  const ready = steps.filter((s) => s.stage === "details");
+  const reg = steps.filter((s) => s.stage === "register");
   const done = steps.filter((s) => s.done).length;
-  const pct = steps.length ? Math.round((done / steps.length) * 100) : 0;
-  const group = pct === 100 ? "healthy" : status?.list === "later" ? "later" : "attention";
-  return { steps, done, total: steps.length, pct, group };
+  const pct = ready.length ? Math.round((ready.filter((s) => s.done).length / ready.length) * 100) : 0;
+  const group = done === steps.length ? "healthy" : status?.list === "later" ? "later" : "attention";
+  return { steps, done, total: steps.length, pct, registered: { done: reg.filter((s) => s.done).length, total: reg.length }, group };
 }
 
 /**
- * The My Catalog health meter: each song's checklist % (the same steps the Royalty Health Check shows) and their
- * average, plus the first unfinished step's field so "Fix next" can jump straight to it.
+ * The My Catalog health meter: how ready each song is to register (the same readiness steps the Royalty Health Check
+ * ticks) and their average, how many registrations are ticked off, and the first missing field so "Fix next" can jump to it.
  */
 export function catalogHealth(tracks: CatalogTrack[], country: Country, checks: RepertoireCheck[], statuses: SongStatus[]) {
   const statusOf = (id: string) => statuses.find((s) => s.songRef === id);
   const account = statusOf(ACCOUNT_REF);
   const songs = tracks.map((track) => {
     const c = songChecklist(trackReport(track, country, checks), country, statusOf(track.id), account);
-    return { track, pct: c.pct, field: c.steps.find((s) => !s.done && s.field)?.field };
+    return { track, pct: c.pct, registered: c.registered, field: c.steps.find((s) => s.stage === "details" && !s.done)?.field };
   });
   const pct = songs.length ? Math.round(songs.reduce((sum, s) => sum + s.pct, 0) / songs.length) : 0;
   const next = songs.filter((s) => s.pct < 100).sort((a, b) => a.pct - b.pct)[0];
-  return { songs, pct, healthy: songs.filter((s) => s.pct === 100).length, next };
+  const registered = songs.reduce((n, s) => ({ done: n.done + s.registered.done, total: n.total + s.registered.total }), { done: 0, total: 0 });
+  return { songs, pct, ready: songs.filter((s) => s.pct === 100).length, registered, next };
 }
 
 /** A warm, honest line for where the song is. */
 export function encouragement(c: SongChecklist): string {
-  if (c.pct === 100) return "100% healthy. This song is set up to get paid. Nice work.";
-  const left = c.total - c.done;
-  if (c.done === 0) return `${c.total} simple steps to go. Take them one at a time; nothing here is urgent.`;
-  if (left === 1) return "One step left. You're almost there.";
-  if (c.pct >= 50) return `You're ${c.done} of ${c.total} steps in. More than halfway, keep going.`;
-  return `You're ${c.done} of ${c.total} steps in. Every step you finish makes it easier to get paid.`;
+  if (c.group === "healthy") return "Ready, registered and confirmed. This song is set up to get paid. Nice work.";
+  if (c.pct === 100) {
+    const left = c.registered.total - c.registered.done;
+    return left ? `Ready to register everywhere. ${left} registration${left === 1 ? "" : "s"} left to do.` : "Ready and registered. Confirm it shows up to finish.";
+  }
+  if (c.pct === 0) return "A few details to add before it's ready to register. Take them one at a time; nothing here is urgent.";
+  if (c.pct >= 50) return `${c.pct}% ready to register. More than halfway, keep going.`;
+  return `${c.pct}% ready to register. Every detail you add makes it easier to get paid.`;
 }
 
 /** The song list's release groups: catalog albums, then Singles (no album), then Royalty Inspector songs. */

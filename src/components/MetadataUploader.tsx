@@ -21,6 +21,7 @@ import { HealthLiquid, HealthMeter } from "@/components/HealthMeter";
 import { deleteTrack, downloadCatalogFile, listTracks, safeName, saveTrack, uploadCatalogFile, type CatalogTrack } from "@/lib/catalog";
 import { AGENCY_LABEL, downloadAgencyExport, downloadNeighbouringPack, type Agency, type Held } from "@/lib/agency-export";
 import { registrationReadiness, type MissingItem } from "@/lib/readiness";
+import { isBmi } from "@/lib/audit";
 import { downloadLyricsPdf } from "@/lib/lyrics-pdf";
 import { downloadCatalogPdf } from "@/lib/catalog-pdf";
 import { ProSelect } from "@/components/ProSelect";
@@ -339,6 +340,8 @@ export function MetadataUploader({ onShareInfo, userId, mode = "embed", onSubmit
           const filled = (pairs: [string, string][]) => pairs.filter(([, v]) => v.trim()).map(([k]) => k).join(" · ");
           const writersWarn = warnIn("writers-", "composers-");
           const publishersWarn = warnIn("publishers-");
+          // With no publisher, BMI pays the publisher share to its writers, so say so where it matters.
+          const bmiNoPublisher = full && !count(metadata.publishers) && [...metadata.writers, ...metadata.composers].some((w) => creditName(w) && isBmi(w));
           return <div className="space-y-3">
             <FormSection title="Song info" open={!full || !metadata.title} disabled={busy} summary={filled([[metadata.title, metadata.title], [metadata.artist, metadata.artist]]) || "Title and artist"}>
               <div className="grid gap-5 sm:grid-cols-2">
@@ -399,7 +402,8 @@ export function MetadataUploader({ onShareInfo, userId, mode = "embed", onSubmit
             </FormSection>
 
             <FormSection title={`Writers · ${count(metadata.writers)}`} open={!full || writersWarn} warn={writersWarn} ok={!writersWarn && count(metadata.writers) > 0} summary={writersWarn ? "Needs info to register" : count(metadata.writers) ? "Ready to register" : "Who wrote the song"}>
-              <Contributors bare title="Writers" singular="writer" group="writers" writer rows={metadata.writers} disabled={busy} onChange={(rows) => update("writers", rows)} tip={full ? "Choose Author (lyrics/melody), Composer (music/beat) or Author/Composer for each writer. Writer splits must total 100%." : undefined} simple={!full}>
+              <Contributors bare title="Writers" singular="writer" group="writers" writer rows={metadata.writers} disabled={busy} onChange={(rows) => update("writers", rows)} tip={full ? "Choose Author (lyrics/melody), Composer (music/beat) or Author/Composer for each writer. Writer splits must total 100%." : undefined} simple={!full}
+                rowNote={(row) => bmiNoPublisher && isBmi(row) && <p className="text-sm text-muted-foreground">💡 With no publisher, BMI pays this writer's part of the publisher share too, in proportion to their split.</p>}>
                 <label className="flex items-center gap-2 text-sm"><input id="instrumental" type="checkbox" className="h-4 w-4 accent-[var(--primary)]" checked={metadata.instrumental} onChange={(e) => update("instrumental", e.target.checked)} />Instrumental (no lyrics)<Tip text={TIPS.instrumental} /></label>
               </Contributors>
               <ReadinessPanel metadata={metadata} />
@@ -437,6 +441,7 @@ export function MetadataUploader({ onShareInfo, userId, mode = "embed", onSubmit
 
             {full && <FormSection title={metadata.selfPublished && !count(metadata.publishers) ? "Publishers · self-published" : `Publishers · ${count(metadata.publishers)}`} open={publishersWarn} warn={publishersWarn} summary={metadata.selfPublished ? "No publisher" : (metadata.publishers ?? []).filter(creditName).map(creditName).join(", ") || "Who publishes the song"}>
               <label className="flex items-center gap-2 text-sm"><input id="selfPublished" type="checkbox" className="h-4 w-4 accent-[var(--primary)]" disabled={busy} checked={metadata.selfPublished} onChange={(e) => update("selfPublished", e.target.checked)} />Self-published (no publisher)<Tip text={TIPS.selfPublished} title="Self-published" /></label>
+              {bmiNoPublisher && <p className="rounded-lg border border-primary/40 bg-accent/30 p-3 text-sm text-muted-foreground"><span className="font-semibold text-foreground">💡 No publisher? BMI has you covered.</span> When a song has no publisher, BMI pays the publisher share to the writers automatically. It's split between all the writers in proportion to their writer splits, so a 60/40 split gets 60% and 40% of the publisher share too. Nothing else to set up.{!metadata.selfPublished && " Check Self-published so your registration says so."}</p>}
               {(!metadata.selfPublished || count(metadata.publishers) > 0) && <Contributors bare title="Publishers" singular="publisher" group="publishers" rows={metadata.publishers} disabled={busy} publisher onChange={(rows) => update("publishers", rows)} tip={GLOSSARY.publisher.text} />}
               {metadata.selfPublished && count(metadata.publishers) > 0 && <p className="text-sm">⚠️ You checked Self-published but also listed a publisher. Uncheck Self-published, or remove the publisher.</p>}
             </FormSection>}
@@ -448,8 +453,8 @@ export function MetadataUploader({ onShareInfo, userId, mode = "embed", onSubmit
                   <Label>Your claim<Tip text={TIPS.masterBasis} title="Your claim" /></Label>
                   <Choice id="masterBasis" label="Your claim" value={metadata.masterBasis} options={MASTER_BASES} labels={{ "Copyright Owner": "I own it", "Collections Designee": "Authorized designee" }} onChange={(v) => update("masterBasis", v as Metadata["masterBasis"])} />
                 </div>
-                <Field label="Rights start (blank = from release)" id="rightsStart" type="date" value={metadata.rightsStart} tip={TIPS.rights} onChange={(v) => update("rightsStart", v)} />
-                <Field label="Rights end (blank = forever)" id="rightsEnd" type="date" value={metadata.rightsEnd} onChange={(v) => update("rightsEnd", v)} />
+                <RightsDate label="Rights start" id="rightsStart" check="Inception" tip={TIPS.inception} value={metadata.rightsStart} disabled={busy} onChange={(v) => update("rightsStart", v)} />
+                <RightsDate label="Rights end" id="rightsEnd" check="Perpetuity" tip={TIPS.perpetuity} value={metadata.rightsEnd} disabled={busy} onChange={(v) => update("rightsEnd", v)} />
               </div>
             </FormSection>}
 
@@ -534,7 +539,7 @@ export function MetadataUploader({ onShareInfo, userId, mode = "embed", onSubmit
       {userId && full && (() => { const newest = [...tracks].sort((a, b) => String(b.updatedAt).localeCompare(String(a.updatedAt)))[0]; return (
         <div className="pb-12">
           {health && tracks.length > 0 && <div className="mb-8 rounded-2xl border border-border bg-card p-5">
-            <HealthMeter pct={health.pct} healthy={health.healthy} total={tracks.length} next={health.next?.track.title}
+            <HealthMeter pct={health.pct} ready={health.ready} registered={health.registered} total={tracks.length} next={health.next?.track.title}
               onNext={() => { const n = health.next; if (n) { if (n.field) fix(n.track, n.field); else open(n.track); } }} />
           </div>}
           {adding && <div id="song-new" className="mb-8 scroll-mt-4 rounded-2xl border border-primary p-4">
@@ -690,7 +695,8 @@ const TIPS = {
   selfPublished: "Check this if no publisher has rights to the song. Your PRO then pays the publisher half to the writers. Have your own publishing company? List it as a publisher instead.",
   masterShare: "How much of the recording (the master) you own. Most independent artists own 100%. SoundExchange pays the master owner by this share.",
   masterBasis: "I own it: you own the recording. Authorized designee: you collect for the owner, for example as their label or administrator.",
-  rights: "Leave the dates blank if you've owned the recording since its release and always will.",
+  inception: "You've owned the recording since it was first made or released. Uncheck if your rights started on a later date, for example when you bought or took over the master.",
+  perpetuity: "You'll own the recording forever. Uncheck if your rights end on a set date, for example when a license or deal expires.",
 };
 
 /** A titled dropdown section of the song form. The closed summary shows ⚠️ or ✓; it starts open when asked to. */
@@ -888,7 +894,22 @@ function ReadinessPanel({ metadata }: { metadata: Metadata }) {
 }
 
 function Field({ label, id, value, onChange, required, type = "text", placeholder, tip, term }: { label: string; id: string; value: string; onChange: (value: string) => void; required?: boolean; type?: string; placeholder?: string | undefined; tip?: string; term?: GlossaryKey | undefined }) {
-  return <div className={`min-w-0 ${tip ? "space-y-3" : "space-y-2"}`}><Label htmlFor={id} className="leading-5">{label}{required ? " *" : ""}{term ? <InfoTip term={term} /> : tip && <Tip text={tip} title={label} />}</Label><Input id={id} value={value} type={type} required={required} placeholder={placeholder} onChange={(event) => onChange(event.target.value)} /></div>;
+  return <div className={`min-w-0 ${tip ? "space-y-3" : "space-y-2"}`}><Label htmlFor={id} className="leading-5">{label}{required ? " *" : ""}{term ? <InfoTip term={term} /> : tip && <Tip text={tip} title={label} />}</Label><Input id={id} value={value} type={type} required={required} placeholder={placeholder} className={type === "date" && !value ? "text-muted-foreground/50" : undefined} onChange={(event) => onChange(event.target.value)} /></div>;
+}
+
+/**
+ * A SoundExchange-style rights date: checked means from inception / in perpetuity (saved blank, as SoundExchange
+ * expects); unchecking it shows a date picker. A song that already has a date opens unchecked.
+ */
+function RightsDate({ label, id, check, tip, value, disabled, onChange }: { label: string; id: string; check: string; tip: string; value: string; disabled?: boolean; onChange: (value: string) => void }) {
+  const [dated, setDated] = useState(!!value);
+  return <div className="min-w-0 space-y-2">
+    <Label>{label}</Label>
+    <label className="flex items-center gap-2 text-sm"><input id={`${id}-open`} type="checkbox" className="h-4 w-4 accent-[var(--primary)]" disabled={disabled} checked={!dated}
+      onChange={(e) => { setDated(!e.target.checked); if (e.target.checked) onChange(""); }} />{check}<Tip text={tip} title={check} /></label>
+    {dated ? <Input id={id} type="date" aria-label={`${label} date`} value={value} disabled={disabled} className={value ? undefined : "text-muted-foreground/50"} onChange={(e) => onChange(e.target.value)} />
+      : <p className="text-xs text-muted-foreground">Uncheck to choose a date.</p>}
+  </div>;
 }
 
 function SelectField({ label, id, value, options, onChange, term }: { label: string; id: string; value: string; options: readonly string[]; onChange: (value: string) => void; term?: GlossaryKey }) {
@@ -899,7 +920,7 @@ function SelectField({ label, id, value, options, onChange, term }: { label: str
     </select></div>;
 }
 
-function Contributors({ title, singular, group, rows, onChange, disabled, publisher, tip, tipOnly, simple, writer, bare, children }: { bare?: boolean; title: string; singular: string; group: string; rows: Contributor[]; onChange: (rows: Contributor[]) => void; disabled: boolean; publisher?: boolean; tip?: string | undefined; tipOnly?: boolean; simple?: boolean; writer?: boolean; children?: ReactNode }) {
+function Contributors({ title, singular, group, rows, onChange, disabled, publisher, tip, tipOnly, simple, writer, bare, rowNote, children }: { rowNote?: (row: Contributor, index: number) => ReactNode; bare?: boolean; title: string; singular: string; group: string; rows: Contributor[]; onChange: (rows: Contributor[]) => void; disabled: boolean; publisher?: boolean; tip?: string | undefined; tipOnly?: boolean; simple?: boolean; writer?: boolean; children?: ReactNode }) {
   const roleSelect = (row: Contributor, index: number) => writer && <SelectField label="Role" term="roles" id={`${group}-${index}-role`} value={writerRole(row.role)} options={WRITER_ROLES} onChange={(value) => change(index, "role", value)} />;
   // Writers (and pre-role composer entries) have one name: their legal name, used for credits and registration.
   const legal = writer || group === "composers";
@@ -931,6 +952,7 @@ function Contributors({ title, singular, group, rows, onChange, disabled, publis
         ? <div key={index} className="space-y-4 rounded-lg border border-border p-3">
             <div className={`grid items-end gap-x-6 gap-y-4 ${writer ? "sm:grid-cols-[1fr_180px_36px]" : "sm:grid-cols-[1fr_36px]"}`}>{names(row, index)}{roleSelect(row, index)}{removeButton(index)}</div>
             <div className="grid items-end gap-x-6 gap-y-4 sm:grid-cols-3">{share(row, index)}{ipi(row, index)}{pro(row, index)}</div>
+            {rowNote?.(row, index)}
           </div>
         : <div key={index} className={`grid items-end gap-4 ${publisher ? "sm:grid-cols-[1fr_170px_150px_110px_36px]" : "sm:grid-cols-[1fr_110px_150px_150px_36px]"}`}>
             <Field label="Legal name" id={`${group}-${index}-name`} value={row.name} onChange={(value) => change(index, "name", value)} />

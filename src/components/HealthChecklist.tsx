@@ -70,7 +70,7 @@ export function HealthChecklist({ rows, country, statuses, onStatus, actions, ru
     <section className="space-y-4">
       <div>
         <h3 className="text-2xl font-extrabold">Song Health Checklist</h3>
-        <p className="text-muted-foreground">Simple steps for each song. Tick them off at your own pace until every song is 100% healthy.</p>
+        <p className="text-muted-foreground">Your catalog ticks off what each agency needs, so you can see how ready every song is to register. Then register it and confirm it shows up, at your own pace.</p>
         <p className="mt-2 flex gap-2 text-sm text-muted-foreground"><Info className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
           <span><span className="font-semibold text-foreground">Fix it</span> corrects your Came Through Audio catalog, so your exports and 1-click agency files are right from now on. It doesn't change what SoundExchange, The MLC or your PRO already have. If the song is already registered there, log in and update it too; we'll add that step for you.</span></p>
       </div>
@@ -133,7 +133,7 @@ export function HealthChecklist({ rows, country, statuses, onStatus, actions, ru
                               <span className="min-w-0 flex-1 truncate">{r.track.title || "Untitled"}</span>
                               <span className="h-1.5 w-12 shrink-0 rounded-full bg-muted"><span className="block h-1.5 rounded-full bg-primary" style={{ width: `${c.pct}%` }} /></span>
                               <span className="w-16 shrink-0 text-right text-xs text-muted-foreground">
-                                {due ? <span className="font-semibold text-primary">Reminder</span> : group === "later" ? "Later" : c.pct < 100 ? `${c.total - c.done} left` : "Done"}
+                                {due ? <span className="font-semibold text-primary">Reminder</span> : group === "later" ? "Later" : c.done < c.total ? `${c.total - c.done} left` : "Done"}
                               </span>
                             </button>
                           </li>
@@ -164,12 +164,12 @@ export function HealthChecklist({ rows, country, statuses, onStatus, actions, ru
 function Ring({ pct }: { pct: number }) {
   const r = 52, c = 2 * Math.PI * r;
   return (
-    <div className="relative h-24 w-24 shrink-0" aria-label={`${pct}% healthy`}>
+    <div className="relative h-24 w-24 shrink-0" aria-label={`${pct}% ready to register`}>
       <svg viewBox="0 0 120 120" className="h-full w-full -rotate-90" aria-hidden>
         <circle cx="60" cy="60" r={r} fill="none" stroke="var(--muted)" strokeWidth="12" />
         <circle cx="60" cy="60" r={r} fill="none" stroke="var(--primary)" strokeWidth="12" strokeLinecap="round" strokeDasharray={c} strokeDashoffset={c * (1 - pct / 100)} className="transition-[stroke-dashoffset] duration-700" />
       </svg>
-      <div className="absolute inset-0 flex items-center justify-center text-2xl font-extrabold">{pct}%</div>
+      <div className="absolute inset-0 flex flex-col items-center justify-center"><span className="text-2xl font-extrabold leading-none">{pct}%</span><span className="mt-1 text-[0.6rem] font-bold uppercase tracking-[1px] text-muted-foreground">ready</span></div>
     </div>
   );
 }
@@ -211,13 +211,13 @@ function SongDetail({ r, c, country, status, onStatus, actions, running, onEditI
         <Ring pct={c.pct} />
       </div>
 
-      {c.pct === 100 && (
+      {c.group === "healthy" && (
         <div className="mt-4 flex items-center gap-3 rounded-xl bg-primary p-4 text-primary-foreground">
           <PartyPopper className="h-6 w-6 shrink-0" /><span className="font-semibold">Every step is done. Re-check after big changes, like a new co-writer or a re-release.</span>
         </div>
       )}
 
-      {status.list === "later" && c.pct < 100 && (
+      {status.list === "later" && c.group !== "healthy" && (
         <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border p-4 text-sm">
           <div><span className="font-semibold">Saved for later.</span> {status.note && <span className="text-muted-foreground">Waiting on: {status.note}.</span>} {status.remindOn && <span className="text-muted-foreground"><Bell className="inline h-3.5 w-3.5" /> Reminder {new Date(`${status.remindOn}T12:00:00`).toLocaleDateString()}</span>}</div>
           <Button size="sm" variant="outline" onClick={() => onStatus({ ...status, list: "active" })}><Undo2 />Move back to Needs attention</Button>
@@ -230,7 +230,8 @@ function SongDetail({ r, c, country, status, onStatus, actions, running, onEditI
           if (!list.length) return null;
           return (
             <div key={stage}>
-              <h5 className="mb-2 flex items-center gap-2 text-sm font-extrabold uppercase tracking-[2px]"><span className="flex h-5 w-5 items-center justify-center rounded-full bg-primary text-[11px] text-primary-foreground">{si + 1}</span>{STAGE_LABEL[stage]}</h5>
+              <h5 className="mb-2 flex items-center gap-2 text-sm font-extrabold uppercase tracking-[2px]"><span className="flex h-5 w-5 items-center justify-center rounded-full bg-primary text-[11px] text-primary-foreground">{si + 1}</span>{STAGE_LABEL[stage]}
+                {stage === "register" && c.registered.total > 0 && <span className="ml-auto text-xs font-semibold normal-case tracking-normal text-muted-foreground">Registered {c.registered.done} of {c.registered.total}</span>}</h5>
               <ol className="space-y-2">
                 {list.map((s) => <StepRow key={s.id} s={s} r={r} country={country} open={s.id === nextOpen} onFix={fix} apply={apply} actions={actions} onIntl={onIntl} />)}
               </ol>
@@ -242,7 +243,7 @@ function SongDetail({ r, c, country, status, onStatus, actions, running, onEditI
       {!inspector && <div className="mt-6"><LiveRecords r={r} running={running} onRun={() => actions.onRunOne(id)} /></div>}
 
       <div className="mt-6 flex flex-wrap gap-2 border-t border-border pt-4">
-        {status.list !== "later" && c.pct < 100 && <Button size="sm" variant="outline" onClick={() => setLater(!later)}><Archive />Save for later</Button>}
+        {status.list !== "later" && c.group !== "healthy" && <Button size="sm" variant="outline" onClick={() => setLater(!later)}><Archive />Save for later</Button>}
         {inspector && <>
           <Button size="sm" variant="outline" onClick={() => onEditInspector(id)}><Pencil />Edit song details</Button>
           <Button size="sm" variant="ghost" onClick={async () => { if (await confirmAction({ title: `Remove "${r.track.title}" from your checklist?`, action: "Remove" })) onDeleteInspector(id); }}><Trash2 />Remove</Button>
@@ -301,7 +302,7 @@ function StepRow({ s, r, country, open, onFix, apply, actions, onIntl }: {
     <li className={`rounded-xl border p-4 ${!s.done && open ? "border-2 border-primary" : "border-border"}`}>
       <div className="flex gap-3">
         <button type="button" onClick={toggle} aria-pressed={s.done} aria-label={s.auto ? `${s.title}: ${s.done ? "done" : "fix it"}` : `${s.done ? "Untick" : "Tick"}: ${s.title}`}
-          title={s.auto ? "Ticks itself when the song details are complete" : undefined}
+          title={s.auto ? "Ticks itself when your catalog has everything this needs" : undefined}
           className={`mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded ${s.done ? "bg-primary text-primary-foreground" : "border-2 border-muted-foreground/60"}`}>
           {s.done && <Check className="h-4 w-4" />}
         </button>
@@ -323,10 +324,10 @@ function StepRow({ s, r, country, open, onFix, apply, actions, onIntl }: {
           )}
           {expanded && (
             <div className="mt-2 space-y-3 text-sm">
-              {s.stage === "details" && <>
-                {s.items?.length ? <ul className="space-y-1">{s.items.map((it, k) => <li key={k}>⚠️ {it.text}</li>)}</ul> : null}
-                {s.id === "isrc" && <p className="text-muted-foreground">The ISRC is your recording's ID. Most distributors assign one free when you release. Add it here once you have it.</p>}
-                {!s.done && <FixIt onClick={() => onFix(s.field ?? s.items?.[0]?.field)} />}
+              {s.stage === "details" && s.done && s.society && <p className="text-muted-foreground">Your catalog has everything {s.society.name} asks for. Ticked automatically.</p>}
+              {s.auto && s.id !== "iswc" && !s.done && <>
+                {s.items?.length ? <ul className="space-y-1">{s.items.map((it, k) => <li key={k}>⚠️ {it.field ? <button type="button" onClick={() => onFix(it.field)} className="text-left underline decoration-primary underline-offset-2 hover:text-primary">{it.text}</button> : it.text}</li>)}</ul> : null}
+                <FixIt onClick={() => onFix(s.field ?? s.items?.[0]?.field)} />
               </>}
               {s.id === "iswc" && <>
                 <p className="text-muted-foreground">The ISWC is your song's ID. Your PRO or publisher assigns it after the song is registered, so this one comes last. Add it when you see it in your PRO account.</p>

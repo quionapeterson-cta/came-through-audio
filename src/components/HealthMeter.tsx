@@ -21,23 +21,27 @@ export function HealthLiquid({ pct, className = "h-1.5", ticks, live }: { pct: n
   );
 }
 
-/** My Catalog's master health meter. Clicking it opens the song that needs the most work. */
-export function HealthMeter({ pct, healthy, total, next, onNext }: { pct: number; healthy: number; total: number; next?: string | undefined; onNext?: () => void }) {
+/**
+ * My Catalog's master health meter: how ready the catalog is to register, ticked off by the catalog itself.
+ * Registrations the user has ticked show underneath but don't move it. Clicking it opens the song furthest from ready.
+ */
+export function HealthMeter({ pct, ready, registered, total, next, onNext }: { pct: number; ready: number; registered: { done: number; total: number }; total: number; next?: string | undefined; onNext?: () => void }) {
   return (
     <button type="button" onClick={onNext} disabled={!next}
-      aria-label={`Catalog health ${pct}%.${next ? ` Open ${next}, the song that needs the most work.` : ""}`}
+      aria-label={`Catalog health ${pct}% ready to register.${next ? ` Open ${next}, the song furthest from ready.` : ""}`}
       className="group grid w-full grid-cols-[auto_minmax(0,1fr)] items-center gap-5 rounded-xl text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-4 focus-visible:ring-offset-background enabled:cursor-pointer">
       <span className="grid">
         <span className="text-[0.65rem] font-bold uppercase tracking-[2px] text-muted-foreground">Catalog health</span>
         <span className="text-5xl font-extrabold leading-none tabular-nums tracking-tight">{pct}<span className="text-lg">%</span></span>
+        <span className="mt-1 text-[0.65rem] font-semibold text-muted-foreground">ready to register</span>
       </span>
       <span className="grid min-w-0 gap-1.5">
         <HealthLiquid pct={pct} ticks live className="h-7" />
         <span className="flex justify-between px-0.5 text-[0.6rem] tabular-nums text-muted-foreground" aria-hidden>{[0, 25, 50, 75, 100].map((t) => <span key={t}>{t}</span>)}</span>
         <span className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
-          <span><b className="text-foreground">{healthy} of {total}</b> {total === 1 ? "song" : "songs"} fully healthy</span>
-          {total > healthy && <span><b className="text-foreground">{total - healthy}</b> {total - healthy === 1 ? "needs" : "need"} work</span>}
-          {next ? <span className="font-semibold text-primary group-hover:underline">Fix next: {next} →</span> : total > 0 && <span className="font-semibold text-primary">Every song is set up to get paid.</span>}
+          <span><b className="text-foreground">{ready} of {total}</b> {total === 1 ? "song" : "songs"} ready to register</span>
+          {registered.total > 0 && <span>Registered <b className="text-foreground">{registered.done} of {registered.total}</b></span>}
+          {next ? <span className="font-semibold text-primary group-hover:underline">Fix next: {next} →</span> : total > 0 && <span className="font-semibold text-primary">{registered.done < registered.total ? "Every song is ready. Register them in the Royalty Health Check." : "Every song is ready and registered."}</span>}
         </span>
       </span>
     </button>

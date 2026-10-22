@@ -17,7 +17,7 @@ export const GLOSSARY = {
   masterVsComposition: { term: "Master vs. composition", text: "Every track has two copyrights. The master is the recording and the composition is the song itself (lyrics and music), and each earns its own royalties." },
   split: { term: "Split", text: "Each writer's percentage of the song. Splits must add up to exactly 100%, or agencies won't register the song." },
   publisher: { term: "Publisher", text: "Manages the song and collects the publisher share, which is half of the song's royalties. Self-published? Enter your own publishing name. Publisher shares here add up to 100% of that half." },
-  selfPublished: { term: "Self-published", text: "No publisher has rights to your songs. Your PRO then pays the publisher half to the writers too, so you collect both halves (BMI does this automatically). Have your own publishing company? List it as a publisher instead." },
+  selfPublished: { term: "Self-published", text: "No publisher has rights to your songs. Your PRO then pays the publisher half to the writers too, so you collect both halves. BMI pays the publisher share to the writers automatically, in proportion to their writer splits. Have your own publishing company? List it as a publisher instead." },
   pLine: { term: "℗ (P-line)", text: "Who owns the sound recording (the master) and the year, for example \"℗ 2026 Came Through Audio\"." },
   cLine: { term: "© (C-line)", text: "Who owns the composition and the year, usually the publisher or writers." },
   roles: { term: "Writer roles", text: "All three are writers; only the role differs. Author wrote the lyrics or melody. Composer made the music, such as the beat or instrumental. Author/Composer did both, and counts as an author and a composer for registration." },
