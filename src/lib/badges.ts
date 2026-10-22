@@ -340,10 +340,10 @@ const LIVE: BadgeDef[] = [
       metric: `instrument:${ins.id}`, goal: step.goal, ...(step.every ? { every: step.every } : {}),
       src: `${P}/live_musicians/${file}`, description: step.description(ins.label), popup: step.popup(ins.label) };
   })),
-  { id: "session_hero", title: "Session Hero", collection: "live", tier: "mega", milestone: "25 performer credits on any instrument", action: "Catalog 25 performer credits", metric: "performerCredits", goal: 25, src: `${P}/live_musicians/session_hero.webp`,
+  { id: "session_hero", title: "Session Hero", collection: "live", tier: "mega", milestone: "25 performer credits on any instrument", action: "Credit performers 25 times", metric: "performerCredits", goal: 25, src: `${P}/live_musicians/session_hero.webp`,
     description: "Twenty-five players credited. Every session you run leaves a paper trail that pays the people who played.",
     popup: "MEGA! 25 performer credits. Session hero." },
-  { id: "live_legend", title: "Live Legend", collection: "live", tier: "ultimate", milestone: "100 performer credits on any instrument, then every 100 more", action: "Catalog 100 performer credits", metric: "performerCredits", goal: 100, every: 100, src: `${P}/live_musicians/live_legend.webp`,
+  { id: "live_legend", title: "Live Legend", collection: "live", tier: "ultimate", milestone: "100 performer credits on any instrument, then every 100 more", action: "Credit performers 100 times", metric: "performerCredits", goal: 100, every: 100, src: `${P}/live_musicians/live_legend.webp`,
     description: "One hundred performer credits. Musicians know that when they play on your records, they get their name and their money.",
     popup: "ULTIMATE! 100 performer credits. Live legend." },
 ];
