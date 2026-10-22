@@ -323,10 +323,10 @@ const LIVE_STEPS = [
   { goal: 1, every: 5 as number | undefined, tier: "instant" as Tier, title: (l: string) => `${l} Credit`, action: (l: string) => `Credit a ${l.toLowerCase()} part`,
     description: (l: string) => `Every ${l.toLowerCase()} part deserves a name. Each ${l.toLowerCase()} credit is how session musicians get paid and get hired again, and every 5 credits earn this badge again.`,
     popup: (l: string) => `${l} credited! The player got their name on the record.` },
-  { goal: 10, every: undefined, tier: "standard" as Tier, title: (l: string) => `${l} Medallion`, action: (l: string) => `Give 10 ${l.toLowerCase()} credits`,
+  { goal: 10, every: undefined, tier: "standard" as Tier, title: (l: string) => `${l} Medallion`, action: (l: string) => `Catalog 10 ${l.toLowerCase()} credits`,
     description: (l: string) => `Ten ${l.toLowerCase()} credits. You treat players like partners, and the record shows it.`,
     popup: (l: string) => `Medallion! 10 ${l.toLowerCase()} credits.` },
-  { goal: 25, every: undefined, tier: "standard" as Tier, title: (l: string) => `Star-Studded ${l}`, action: (l: string) => `Give 25 ${l.toLowerCase()} credits`,
+  { goal: 25, every: undefined, tier: "standard" as Tier, title: (l: string) => `Star-Studded ${l}`, action: (l: string) => `Catalog 25 ${l.toLowerCase()} credits`,
     description: (l: string) => `Twenty-five ${l.toLowerCase()} credits. Your sessions are star-studded and every star is named.`,
     popup: (l: string) => `Star-studded! 25 ${l.toLowerCase()} credits.` },
 ];
@@ -339,10 +339,10 @@ const LIVE: BadgeDef[] = [
       metric: `instrument:${ins.id}`, goal: step.goal, ...(step.every ? { every: step.every } : {}),
       src: `${P}/live_musicians/${file}`, description: step.description(ins.label), popup: step.popup(ins.label) };
   })),
-  { id: "session_hero", title: "Session Hero", collection: "live", tier: "mega", milestone: "25 performer credits on any instrument", action: "Give 25 performer credits", metric: "performerCredits", goal: 25, src: `${P}/live_musicians/session_hero.webp`,
+  { id: "session_hero", title: "Session Hero", collection: "live", tier: "mega", milestone: "25 performer credits on any instrument", action: "Catalog 25 performer credits", metric: "performerCredits", goal: 25, src: `${P}/live_musicians/session_hero.webp`,
     description: "Twenty-five players credited. Every session you run leaves a paper trail that pays the people who played.",
     popup: "MEGA! 25 performer credits. Session hero." },
-  { id: "live_legend", title: "Live Legend", collection: "live", tier: "ultimate", milestone: "100 performer credits on any instrument, then every 100 more", action: "Give 100 performer credits", metric: "performerCredits", goal: 100, every: 100, src: `${P}/live_musicians/live_legend.webp`,
+  { id: "live_legend", title: "Live Legend", collection: "live", tier: "ultimate", milestone: "100 performer credits on any instrument, then every 100 more", action: "Catalog 100 performer credits", metric: "performerCredits", goal: 100, every: 100, src: `${P}/live_musicians/live_legend.webp`,
     description: "One hundred performer credits. Musicians know that when they play on your records, they get their name and their money.",
     popup: "ULTIMATE! 100 performer credits. Live legend." },
 ];
