@@ -295,11 +295,12 @@ const PRODUCER: BadgeDef[] = [
 ];
 
 /** Instruments with badge art, matched against the performer's Instrument field (most specific first). */
-export const INSTRUMENTS: { id: string; label: string; match: RegExp; art: string[] }[] = [
+/** `action`: a shorter first-credit line where "Credit a … part" would run past the next-badge card. */
+export const INSTRUMENTS: { id: string; label: string; match: RegExp; art: string[]; action?: string }[] = [
   { id: "vocals", label: "Vocal", match: /vocal|voice|sing|choir/i, art: ["vocal_mic.webp"] },
   { id: "steel_pan", label: "Steel Pan", match: /steel ?pan|handpan|hang drum|steel drum/i, art: ["handpan_medallion.png", "star_studded_steel_pan.webp"] },
   { id: "ukulele", label: "Ukulele", match: /ukulele|\buke\b/i, art: ["ukulele_medallion.png", "star_studded_ukulele.webp"] },
-  { id: "electric_guitar", label: "Electric Guitar", match: /electric guitar|e-guitar|lead guitar/i, art: ["electric_guitar.png"] },
+  { id: "electric_guitar", label: "Electric Guitar", match: /electric guitar|e-guitar|lead guitar/i, art: ["electric_guitar.png"], action: "Credit an electric guitar" },
   { id: "acoustic_guitar", label: "Guitar", match: /guitar/i, art: ["acoustic_guitar.png"] },
   { id: "piano", label: "Piano", match: /piano|keys|keyboard|organ|synth/i, art: ["keyboard.webp", "grand_piano_medallion.webp", "star_studded_piano.webp"] },
   { id: "drums", label: "Drum", match: /drum|percussion/i, art: ["drum_kit.webp"] },
@@ -335,7 +336,7 @@ const LIVE: BadgeDef[] = [
   ...INSTRUMENTS.flatMap((ins) => ins.art.map((file): BadgeDef => {
     const step = LIVE_STEPS[stepOf(file)]!;
     return { id: `live_${ins.id}_${step.goal}`, title: step.title(ins.label), collection: "live", tier: step.tier,
-      milestone: step.every ? `1st ${ins.label.toLowerCase()} credit, then every ${step.every} credits` : `${step.goal} ${ins.label.toLowerCase()} credits`, action: step.action(ins.label),
+      milestone: step.every ? `1st ${ins.label.toLowerCase()} credit, then every ${step.every} credits` : `${step.goal} ${ins.label.toLowerCase()} credits`, action: (step.goal === 1 && ins.action) || step.action(ins.label),
       metric: `instrument:${ins.id}`, goal: step.goal, ...(step.every ? { every: step.every } : {}),
       src: `${P}/live_musicians/${file}`, description: step.description(ins.label), popup: step.popup(ins.label) };
   })),
