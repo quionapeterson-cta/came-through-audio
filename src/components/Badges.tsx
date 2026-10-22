@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Switch } from "@/components/ui/switch";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { CelebrationStage, SharePanel } from "@/components/BadgeCelebration";
 import { useBadges } from "@/hooks/useBadges";
 import { badgePrefs, loadOnboarding, saveOnboarding, type Onboarding } from "@/lib/artist-profile";
@@ -203,18 +204,28 @@ export function NextBadgeHint({ userId, collections, className = "" }: { userId:
   if (!next) return null;
   const pct = Math.round((Math.min(next.count, next.badge.goal) / next.badge.goal) * 100);
   return (
+    <TooltipProvider delayDuration={150}>
+    <Tooltip>
+    <TooltipTrigger asChild>
     <Link to="/profile" hash="badges" aria-label={`Next badge: ${next.badge.title}. ${next.badge.milestone}. ${pct}% there.`}
       className={`flex w-full items-center gap-2.5 rounded-lg border border-border bg-card px-2.5 py-2 text-left transition hover:border-primary sm:w-56 ${className}`}>
       <img src={next.badge.src} alt="" className="h-8 w-8 shrink-0 object-contain opacity-60 grayscale" />
       <span className="min-w-0 flex-1 space-y-0.5">
         <span className="block text-[9px] font-bold uppercase tracking-widest text-primary">Badge</span>
         <span className="block truncate text-xs font-semibold leading-tight">{next.badge.title}</span>
-        <span className="line-clamp-2 block text-[11px] leading-snug text-muted-foreground">{next.badge.milestone}</span>
+        <span className="block truncate text-[11px] leading-snug text-muted-foreground">{next.badge.action}</span>
         <span role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={pct} className="mt-1 block h-1 overflow-hidden rounded-full bg-muted">
           <span className="block h-full rounded-full bg-primary transition-[width] duration-700" style={{ width: `${Math.max(pct, 4)}%` }} />
         </span>
       </span>
     </Link>
+    </TooltipTrigger>
+    <TooltipContent side="bottom" align="end" className="max-w-64 space-y-1 border border-border bg-popover px-3 py-2 text-popover-foreground">
+      <p className="font-semibold">{next.badge.milestone}</p>
+      <p className="text-muted-foreground">{next.badge.description}</p>
+    </TooltipContent>
+    </Tooltip>
+    </TooltipProvider>
   );
 }
 
