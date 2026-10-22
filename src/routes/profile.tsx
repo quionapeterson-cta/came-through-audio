@@ -222,7 +222,7 @@ function PasswordDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (
 
 const longDate = (iso: string) => new Date(iso).toLocaleDateString(undefined, { month: "long", day: "numeric", year: "numeric" });
 
-/** Opens Stripe's billing page for this account: cancel, change the card, download invoices, switch plans. */
+/** Opens Stripe's billing page for this account: change the card, download invoices, switch plans. */
 function ManageBilling() {
   const [busy, setBusy] = useState(false);
   async function open() {
