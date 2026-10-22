@@ -75,7 +75,7 @@ Touches writer field layout (order and titles only, no field or data changes); p
 
 ## 5. My Catalog on one page + liquid health meter (v2, 2026-10-22, APPROVED and BUILT)
 
-Founder changes (v2): gold darkened to Medallion Gold `#B98339` (the CTA seal on the Piggy Bank Split badge), added to BRANDING §1 with Platinum `#E5E4E2` for dark mode; song meters thin; master meter tall enough to show the liquid (wave, sloshing front, bubbles, sheen).
+Founder changes (v2): gold back to the original bright Gold `#FFD700` (Medallion Gold `#B98339` tried, then removed); Platinum `#E5E4E2` for dark mode; song meters thin; master meter tall enough to show the liquid (wave, sloshing front, bubbles, sheen).
 
 Founder request: put the whole catalog on one page, edit right there, and add a liquid master health meter at the top (gold in light mode, platinum in Studio Mode). Replaces the bar in §2 and uses idea 1 (progress) and idea 2 (Fix next).
 Preview: https://claude.ai/artifact/Hocb9vXMVMs1R6B8dnVM8w

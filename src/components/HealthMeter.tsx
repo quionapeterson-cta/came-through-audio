@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 
 /**
- * A glass tube of liquid Medallion Gold (light) or Platinum (Studio Mode). Fills from empty on mount, then eases to new
+ * A glass tube of liquid Gold (light) or Platinum (Studio Mode). Fills from empty on mount, then eases to new
  * values. `live` adds the rippling surface, sloshing front and bubbles, for tubes tall enough to show them.
  */
 export function HealthLiquid({ pct, className = "h-1.5", ticks, live }: { pct: number; className?: string; ticks?: boolean; live?: boolean }) {

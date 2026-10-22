@@ -188,10 +188,10 @@
 .dark .text-primary { color: #4D8CFF; }
 
 /*
- * Catalog health meter (BRANDING.md §1 exception): liquid Medallion Gold #B98339 in light mode, liquid Platinum
+ * Catalog health meter (BRANDING.md §1 exception): liquid Gold #FFD700 in light mode, liquid Platinum
  * #E5E4E2 in Studio Mode. The fill eases up when the % changes and a slow sheen runs through it like poured metal.
  */
-:root { --meter-top: #E7AF4E; --meter-liquid: #B98339; --meter-deep: #824600; --meter-glass: oklch(0.95 0.004 85); }
+:root { --meter-top: #FFE55C; --meter-liquid: #FFD700; --meter-deep: #C9A100; --meter-glass: oklch(0.95 0.004 85); }
 .dark { --meter-top: #FFFFFF; --meter-liquid: #E5E4E2; --meter-deep: #9C9EA3; --meter-glass: oklch(0.22 0 0); }
 .health-liquid {
   position: relative; overflow: hidden; height: 100%; border-radius: inherit;

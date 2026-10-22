@@ -35,11 +35,10 @@
 | --- | --- | --- |
 | Gold | `#FFD700` | Badges, milestones, prestige seals. Use sparingly: never ordinary buttons or large background blocks. |
 | Platinum | `#E5E4E2` | Badges and awards. |
-| Medallion Gold | `#B98339` | The deeper liquid gold of the CTA seal on the Piggy Bank Split badge. Catalog health meter in light mode. |
 
 Gold and platinum are a nod to gold and platinum record sales, signaling prestige and luxury. Slight stone-to-stone variation in badge artwork is expected.
 
-**Exception:** the Catalog health meter in My Catalog is a prestige gauge: liquid Medallion Gold `#B98339` in light mode, liquid Platinum `#E5E4E2` in dark mode.
+**Exception:** the Catalog health meter in My Catalog is a prestige gauge: liquid Gold `#FFD700` in light mode, liquid Platinum `#E5E4E2` in dark mode.
 
 ## 2. Logo and wordmark contrast
 
