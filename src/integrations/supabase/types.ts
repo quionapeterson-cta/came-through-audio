@@ -14,6 +14,56 @@ export type Database = {
   }
   public: {
     Tables: {
+      account_pauses: {
+        Row: {
+          created_at: string
+          ended_at: string | null
+          ends_at: string
+          environment: string
+          id: string
+          kind: string
+          months: number | null
+          purchase_id: string | null
+          starts_at: string
+          stripe_subscription_id: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          ended_at?: string | null
+          ends_at: string
+          environment?: string
+          id?: string
+          kind: string
+          months?: number | null
+          purchase_id?: string | null
+          starts_at: string
+          stripe_subscription_id?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          ended_at?: string | null
+          ends_at?: string
+          environment?: string
+          id?: string
+          kind?: string
+          months?: number | null
+          purchase_id?: string | null
+          starts_at?: string
+          stripe_subscription_id?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "account_pauses_purchase_id_fkey"
+            columns: ["purchase_id"]
+            isOneToOne: false
+            referencedRelation: "purchases"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       admin_whitelist: {
         Row: {
           assigned_role: Database["public"]["Enums"]["user_role"] | null
@@ -314,6 +364,39 @@ export type Database = {
         }
         Relationships: []
       }
+      catalog_lapses: {
+        Row: {
+          created_at: string
+          emptied_at: string | null
+          empty_after: string
+          plan_ended_at: string
+          reminders: string[]
+          songs_emptied: number | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          emptied_at?: string | null
+          empty_after: string
+          plan_ended_at: string
+          reminders?: string[]
+          songs_emptied?: number | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          emptied_at?: string | null
+          empty_after?: string
+          plan_ended_at?: string
+          reminders?: string[]
+          songs_emptied?: number | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       catalogs: {
         Row: {
           album_title: string | null
@@ -423,6 +506,118 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      contract_parties: {
+        Row: {
+          contract_id: string
+          created_at: string
+          email: string
+          id: string
+          invited_at: string | null
+          is_owner: boolean
+          legal_name: string
+          position: number
+          role: string
+          signature_hash: string | null
+          signature_name: string | null
+          signed_at: string | null
+        }
+        Insert: {
+          contract_id: string
+          created_at?: string
+          email?: string
+          id?: string
+          invited_at?: string | null
+          is_owner?: boolean
+          legal_name?: string
+          position?: number
+          role: string
+          signature_hash?: string | null
+          signature_name?: string | null
+          signed_at?: string | null
+        }
+        Update: {
+          contract_id?: string
+          created_at?: string
+          email?: string
+          id?: string
+          invited_at?: string | null
+          is_owner?: boolean
+          legal_name?: string
+          position?: number
+          role?: string
+          signature_hash?: string | null
+          signature_name?: string | null
+          signed_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contract_parties_contract_id_fkey"
+            columns: ["contract_id"]
+            isOneToOne: false
+            referencedRelation: "contracts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      contracts: {
+        Row: {
+          blueprint: string
+          body: string
+          body_hash: string | null
+          catalog_id: string | null
+          completed_at: string | null
+          created_at: string
+          fields: Json
+          id: string
+          is_company: boolean
+          sent_at: string | null
+          status: string
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          blueprint: string
+          body?: string
+          body_hash?: string | null
+          catalog_id?: string | null
+          completed_at?: string | null
+          created_at?: string
+          fields?: Json
+          id?: string
+          is_company?: boolean
+          sent_at?: string | null
+          status?: string
+          title: string
+          updated_at?: string
+          user_id?: string
+        }
+        Update: {
+          blueprint?: string
+          body?: string
+          body_hash?: string | null
+          catalog_id?: string | null
+          completed_at?: string | null
+          created_at?: string
+          fields?: Json
+          id?: string
+          is_company?: boolean
+          sent_at?: string | null
+          status?: string
+          title?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contracts_catalog_id_fkey"
+            columns: ["catalog_id"]
+            isOneToOne: false
+            referencedRelation: "catalogs"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       contributors: {
         Row: {
@@ -720,6 +915,119 @@ export type Database = {
         }
         Relationships: []
       }
+      registration_orders: {
+        Row: {
+          access_confirmed: Json
+          agencies: string[]
+          agreement_body: string | null
+          agreement_hash: string | null
+          agreement_name: string | null
+          agreement_signed_at: string | null
+          alerted_at: string | null
+          created_at: string
+          purchase_id: string
+          reminded_at: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          access_confirmed?: Json
+          agencies?: string[]
+          agreement_body?: string | null
+          agreement_hash?: string | null
+          agreement_name?: string | null
+          agreement_signed_at?: string | null
+          alerted_at?: string | null
+          created_at?: string
+          purchase_id: string
+          reminded_at?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          access_confirmed?: Json
+          agencies?: string[]
+          agreement_body?: string | null
+          agreement_hash?: string | null
+          agreement_name?: string | null
+          agreement_signed_at?: string | null
+          alerted_at?: string | null
+          created_at?: string
+          purchase_id?: string
+          reminded_at?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "registration_orders_purchase_id_fkey"
+            columns: ["purchase_id"]
+            isOneToOne: true
+            referencedRelation: "purchases"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      registration_songs: {
+        Row: {
+          created_at: string
+          id: string
+          pending_artist: string | null
+          pending_title: string | null
+          position: number
+          purchase_id: string
+          snapshot: Json | null
+          status: Json
+          submitted_at: string | null
+          track_id: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          pending_artist?: string | null
+          pending_title?: string | null
+          position?: number
+          purchase_id: string
+          snapshot?: Json | null
+          status?: Json
+          submitted_at?: string | null
+          track_id?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          pending_artist?: string | null
+          pending_title?: string | null
+          position?: number
+          purchase_id?: string
+          snapshot?: Json | null
+          status?: Json
+          submitted_at?: string | null
+          track_id?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "registration_songs_purchase_id_fkey"
+            columns: ["purchase_id"]
+            isOneToOne: false
+            referencedRelation: "registration_orders"
+            referencedColumns: ["purchase_id"]
+          },
+          {
+            foreignKeyName: "registration_songs_track_id_fkey"
+            columns: ["track_id"]
+            isOneToOne: false
+            referencedRelation: "catalogs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       repertoire_checks: {
         Row: {
           checked_at: string
@@ -918,6 +1226,7 @@ export type Database = {
       }
       split_sheets: {
         Row: {
+          artist_name: string | null
           assigned_percentage: number
           catalog_id: string | null
           collaborator_email: string
@@ -925,8 +1234,10 @@ export type Database = {
           invited_at: string | null
           ipi_number: string | null
           is_owner: boolean
+          isrc: string | null
           legal_name: string | null
           notes: string | null
+          owner_id: string | null
           performer_name: string | null
           pro_affiliation: string | null
           publisher_ipi: string | null
@@ -937,8 +1248,10 @@ export type Database = {
           signature_hash: string | null
           signature_name: string | null
           signed_at: string | null
+          track_title: string | null
         }
         Insert: {
+          artist_name?: string | null
           assigned_percentage: number
           catalog_id?: string | null
           collaborator_email: string
@@ -946,8 +1259,10 @@ export type Database = {
           invited_at?: string | null
           ipi_number?: string | null
           is_owner?: boolean
+          isrc?: string | null
           legal_name?: string | null
           notes?: string | null
+          owner_id?: string | null
           performer_name?: string | null
           pro_affiliation?: string | null
           publisher_ipi?: string | null
@@ -958,8 +1273,10 @@ export type Database = {
           signature_hash?: string | null
           signature_name?: string | null
           signed_at?: string | null
+          track_title?: string | null
         }
         Update: {
+          artist_name?: string | null
           assigned_percentage?: number
           catalog_id?: string | null
           collaborator_email?: string
@@ -967,8 +1284,10 @@ export type Database = {
           invited_at?: string | null
           ipi_number?: string | null
           is_owner?: boolean
+          isrc?: string | null
           legal_name?: string | null
           notes?: string | null
+          owner_id?: string | null
           performer_name?: string | null
           pro_affiliation?: string | null
           publisher_ipi?: string | null
@@ -979,16 +1298,9 @@ export type Database = {
           signature_hash?: string | null
           signature_name?: string | null
           signed_at?: string | null
+          track_title?: string | null
         }
-        Relationships: [
-          {
-            foreignKeyName: "split_sheets_catalog_id_fkey"
-            columns: ["catalog_id"]
-            isOneToOne: false
-            referencedRelation: "catalogs"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       subscriptions: {
         Row: {
@@ -1002,6 +1314,8 @@ export type Database = {
           paddle_subscription_id: string | null
           price_id: string
           product_id: string
+          renewal_reminders: string[]
+          renewal_reminders_for: string | null
           status: string
           stripe_customer_id: string | null
           stripe_subscription_id: string | null
@@ -1019,6 +1333,8 @@ export type Database = {
           paddle_subscription_id?: string | null
           price_id: string
           product_id: string
+          renewal_reminders?: string[]
+          renewal_reminders_for?: string | null
           status?: string
           stripe_customer_id?: string | null
           stripe_subscription_id?: string | null
@@ -1036,6 +1352,8 @@ export type Database = {
           paddle_subscription_id?: string | null
           price_id?: string
           product_id?: string
+          renewal_reminders?: string[]
+          renewal_reminders_for?: string | null
           status?: string
           stripe_customer_id?: string | null
           stripe_subscription_id?: string | null
@@ -1083,6 +1401,36 @@ export type Database = {
           subject?: string
           updated_at?: string
           user_id?: string | null
+        }
+        Relationships: []
+      }
+      trial_grants: {
+        Row: {
+          created_at: string
+          email_domain: string | null
+          id: string
+          inviter_id: string | null
+          ip_hash: string | null
+          source: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          email_domain?: string | null
+          id?: string
+          inviter_id?: string | null
+          ip_hash?: string | null
+          source: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          email_domain?: string | null
+          id?: string
+          inviter_id?: string | null
+          ip_hash?: string | null
+          source?: string
+          user_id?: string
         }
         Relationships: []
       }
@@ -1253,6 +1601,14 @@ export type Database = {
       can_issue_ai_certificate: { Args: { _user_id: string }; Returns: boolean }
       can_manage_badges: { Args: { _user_id: string }; Returns: boolean }
       can_manage_staff: { Args: { _user_id: string }; Returns: boolean }
+      catalog_lapse_candidates: {
+        Args: never
+        Returns: {
+          plan_ended_at: string
+          user_id: string
+        }[]
+      }
+      get_contract_invite: { Args: { _party_id: string }; Returns: Json }
       get_split_invite: { Args: { _row_id: string }; Returns: Json }
       has_active_subscription: {
         Args: { check_env?: string; user_uuid: string }
@@ -1265,10 +1621,12 @@ export type Database = {
         }
         Returns: boolean
       }
+      has_tier: { Args: { _needed: string; _uid: string }; Returns: boolean }
       in_department: {
         Args: { _dept: string; _user_id: string }
         Returns: boolean
       }
+      is_paused: { Args: { _uid: string }; Returns: boolean }
       is_room_host: {
         Args: { _room_id: string; _user_id: string }
         Returns: boolean
@@ -1278,7 +1636,25 @@ export type Database = {
         Returns: boolean
       }
       is_staff: { Args: { _user_id: string }; Returns: boolean }
+      my_contract_invites: {
+        Args: never
+        Returns: {
+          completed_at: string
+          party_id: string
+          role: string
+          sent_at: string
+          signed_at: string
+          status: string
+          title: string
+        }[]
+      }
       norm_artist_name: { Args: { v: string }; Returns: string }
+      reopen_contract: { Args: { _contract_id: string }; Returns: undefined }
+      send_contract: { Args: { _contract_id: string }; Returns: string }
+      sign_contract: {
+        Args: { _party_id: string; _signature_name: string }
+        Returns: undefined
+      }
       sign_split_invite: {
         Args: {
           _hash: string
@@ -1290,6 +1666,7 @@ export type Database = {
         Returns: undefined
       }
       user_id_by_email: { Args: { _email: string }; Returns: string }
+      user_tier: { Args: { _uid: string }; Returns: string }
     }
     Enums: {
       agency_name: "MLC" | "SoundExchange" | "ASCAP" | "BMI"
