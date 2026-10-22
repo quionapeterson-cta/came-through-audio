@@ -1,6 +1,6 @@
 # PLAN — Empty the catalog after a plan ends, with a grace period · v2
 
-Status: **v1 (emptying, §1–8) approved 2026-10-21. v2 adds §9–12 (Need more time, Pause with Vault fee, cancel offers), awaiting approval.**
+Status: **v1 (emptying, §1–8) approved 2026-10-21. v2 (§9–12) answered 2026-10-21. BUILT 2026-10-22 except the policy pages (§7, §13), which wait for wording approval.**
 Source: founder request, 2026-10-21 (Refund Policy already says "once a plan ends its catalog is emptied, so download first").
 
 ---

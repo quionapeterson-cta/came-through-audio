@@ -55,3 +55,4 @@ Embedding is forgiving; registration is strict. Never block a user from saving o
 ### Before making changes
 - If a change touches writer fields, roles, readiness logic, or export templates, explain the plan and list affected files before editing.
 - Never delete or overwrite existing writer data. Any schema change needs a migration that preserves current data.
+  - Exception (approved 2026-10-21): a catalog is emptied 30 days after its plan ends, as the Refund Policy states (`runCatalogLapses` in src/lib/retention.server.ts). Signed split sheets, contracts, AI Protection certificates and agency registration records are kept.

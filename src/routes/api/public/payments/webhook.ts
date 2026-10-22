@@ -38,8 +38,14 @@ async function checkoutCompleted(session: Stripe.Checkout.Session, env: StripeEn
   if (!row) return console.warn(`Checkout ${session.id} has no paid one-time purchase to record`);
   const { data: saved, error } = await db().from("purchases").upsert(row as never, { onConflict: "stripe_session_id" }).select("id, user_id, details").single();
   if (error) throw error;
-  // Expert Assistance: set up the intake, check every paid song and alert the user right away.
   const purchase = saved as unknown as { id: string; user_id: string; details: Record<string, string> } | null;
+  // Vault fee paid: start the pause it bought. A failure returns 500 so Stripe retries (it's paid for).
+  if (row.kind === "vault" && purchase) {
+    const { admin, startPause } = await import("@/lib/retention.server");
+    await startPause(await admin(), purchase, env);
+    return;
+  }
+  // Expert Assistance: set up the intake, check every paid song and alert the user right away.
   if (row.kind === "expert" && purchase) {
     // Never fails the payment: if this can't run now, the checklist sets it up when the user opens it.
     try {
@@ -64,6 +70,23 @@ async function markRefunded(env: StripeEnv, charge: Stripe.Charge) {
   if (error) throw error;
 }
 
+/** A subscription just set to cancel (it wasn't before this event) gets the "your plan ends on DATE" email once. */
+async function cancelNotice(env: StripeEnv, sub: StripeSubscriptionLike, previous: Record<string, unknown> | undefined) {
+  const now = !!sub.cancel_at_period_end || !!sub.cancel_at;
+  const was = previous && (("cancel_at_period_end" in previous && previous["cancel_at_period_end"] === false) || ("cancel_at" in previous && previous["cancel_at"] === null));
+  if (!now || !was) return;
+  const row = subscriptionRow(sub, env);
+  let userId = sub.metadata?.["userId"];
+  if (!userId) {
+    const { data } = await db().from("subscriptions").select("user_id").eq("stripe_subscription_id", sub.id).maybeSingle();
+    userId = (data as { user_id?: string } | null)?.user_id;
+  }
+  const endsOn = sub.cancel_at ? new Date(sub.cancel_at * 1000).toISOString() : row?.current_period_end;
+  if (!userId || !endsOn) return;
+  const { admin, sendCancelledEmail } = await import("@/lib/retention.server");
+  await sendCancelledEmail(await admin(), userId, sub.id, endsOn);
+}
+
 /** Renewals: the invoice points at its subscription (location differs by Stripe API version). */
 function invoiceSubscriptionId(invoice: Stripe.Invoice): string | null {
   const i = invoice as unknown as { subscription?: string | { id: string } | null; parent?: { subscription_details?: { subscription?: string | { id: string } } | null } | null };
@@ -76,7 +99,7 @@ export const Route = createFileRoute("/api/public/payments/webhook")({
     handlers: {
       POST: async ({ request }) => {
         const env: StripeEnv = new URL(request.url).searchParams.get("env") === "live" ? "live" : "sandbox";
-        let event: { type: string; data: { object: any } }; // eslint-disable-line @typescript-eslint/no-explicit-any
+        let event: { type: string; data: { object: any; previous_attributes?: Record<string, unknown> } }; // eslint-disable-line @typescript-eslint/no-explicit-any
         try {
           event = await verifyWebhook(request, env);
         } catch (e) {
@@ -89,8 +112,13 @@ export const Route = createFileRoute("/api/public/payments/webhook")({
               await checkoutCompleted(event.data.object, env);
               break;
             case "customer.subscription.created":
+              await syncSubscription(env, event.data.object.id);
+              break;
             case "customer.subscription.updated":
               await syncSubscription(env, event.data.object.id);
+              // Never fails the event: the email is a courtesy, the plan state is already saved.
+              try { await cancelNotice(env, event.data.object as StripeSubscriptionLike, event.data.previous_attributes); }
+              catch (e) { console.error("Cancel email failed:", e); }
               break;
             case "customer.subscription.deleted":
               await saveSubscription(event.data.object as unknown as StripeSubscriptionLike, env, true);

@@ -106,3 +106,31 @@ export function saveBlob(blob: Blob, filename: string) {
 }
 
 export const safeName = (s: string) => s.replace(/[<>:"/\\|?*]+/g, "_").trim() || "track";
+
+/**
+ * Download my catalog: one ZIP with every master (named exactly as the title, `Song Title.mp3`), its artwork, lyrics
+ * PDFs and the catalog PDF. Files that can't be fetched are skipped and counted, so one bad file never blocks the rest.
+ */
+export async function downloadWholeCatalog(onProgress?: (done: number, total: number) => void): Promise<{ songs: number; skipped: number }> {
+  const [{ makeZip, uniqueName }, { buildCatalogPdf }, { buildLyricsPdf }] = await Promise.all([import("@/lib/zip"), import("@/lib/catalog-pdf"), import("@/lib/lyrics-pdf")]);
+  const tracks = await listTracks();
+  const taken = new Set<string>();
+  const entries: { name: string; data: Uint8Array }[] = [];
+  const bytes = async (b: Blob) => new Uint8Array(await b.arrayBuffer());
+  let skipped = 0;
+  for (const [i, t] of tracks.entries()) {
+    onProgress?.(i, tracks.length);
+    const name = safeName(t.title);
+    for (const [path, file] of [[t.metadata.audioPath, `${name}.mp3`], [t.metadata.artPath, `Artwork/${name}.${t.metadata.artPath?.split(".").pop() ?? "jpg"}`]] as const) {
+      if (!path) continue;
+      const { data, error } = await supabase.storage.from(BUCKET).download(path);
+      if (error || !data) { skipped += 1; continue; }
+      entries.push({ name: uniqueName(file, taken), data: await bytes(data) });
+    }
+    if (t.metadata.lyrics?.trim()) entries.push({ name: uniqueName(`Lyrics/${name} - lyrics.pdf`, taken), data: await bytes((await buildLyricsPdf(t)).output("blob")) });
+  }
+  if (tracks.length) entries.push({ name: uniqueName("Catalog.pdf", taken), data: await bytes((await buildCatalogPdf(tracks)).output("blob")) });
+  onProgress?.(tracks.length, tracks.length);
+  saveBlob(makeZip(entries), "My Catalog.zip");
+  return { songs: tracks.length, skipped };
+}

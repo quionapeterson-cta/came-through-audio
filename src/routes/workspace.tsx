@@ -35,6 +35,8 @@ import { BadgeViewer } from "@/components/BadgeViewer";
 import type { ShareInfo } from "@/components/BadgeCelebration";
 import { isBadgeImage, type CollectionId } from "@/lib/badges";
 import { UpgradeLock } from "@/components/UpgradeLock";
+import { CatalogLapseBanner } from "@/components/CatalogLapseBanner";
+import { inGrace, isPaused } from "@/lib/retention";
 
 export const Route = createFileRoute("/workspace")({
   head: () => ({
@@ -79,7 +81,7 @@ function Workspace() {
   const [catalogKey, setCatalogKey] = useState(0);
   const [protectTrack, setProtectTrack] = useState<CatalogTrack>();
   const [catalogFix, setCatalogFix] = useState<{ trackId: string; field: string }>();
-  const { tier: realTier, purchases, loaded: billingLoaded } = useBilling(user?.id);
+  const { tier: realTier, purchases, loaded: billingLoaded, lapse, pauses } = useBilling(user?.id);
   const [previewTier, setPreviewTier] = useState<Tier | "real">("real");
   // The test-mode tier preview is for super admins only, so testers can't hand themselves a paid plan in the UI.
   const staff = useQuery({ queryKey: ["staff-role", user?.id], queryFn: () => getStaffRole(), enabled: !!user && getPaymentsEnvironment() === "sandbox" });
@@ -91,6 +93,8 @@ function Workspace() {
   const canCatalog = hasTier(tier, "plus");
   const canSplit = hasTier(tier, "plus");
   const canCollect = hasTier(tier, "collaborate");
+  // After a plan ends (30 days before emptying) or while paused, the catalog stays viewable and downloadable.
+  const catalogReadOnly = !canCatalog && (inGrace(lapse) || isPaused(pauses));
   const [onboard, setOnboard] = useState<Onboarding | null>(null);
   const names = useArtistName(user, onboard?.stageName);
   const name = names.display;
@@ -199,6 +203,7 @@ function Workspace() {
         onSaved={(o) => { setOnboard(o); setEmbedKey((k) => k + 1); setTab(canCatalog ? "embed" : "health"); }} />
       <BadgeWatcher userId={user.id} artist={names.artist} />
       <main className="mx-auto max-w-7xl px-6 py-8">
+        <CatalogLapseBanner lapse={lapse} pauses={pauses} onRenew={upgrade} />
         <Tabs value={tab} onValueChange={setTab}>
           <TabsList className="h-auto w-full flex-nowrap justify-start gap-1 overflow-x-auto bg-muted p-1">
             {tabs.map(({ id, label, icon: Icon }, i) => (
@@ -229,8 +234,8 @@ function Workspace() {
               : <PlusLock title="Embed Metadata starts with Catalog Plus" onQuickCheck={openQuickCheck} onUpgrade={upgrade} />}
           </TabsContent>
           <TabsContent value="catalog" forceMount className="data-[state=inactive]:hidden">
-            {!canCatalog ? <PlusLock title="My Catalog starts with Catalog Plus" onQuickCheck={openQuickCheck} onUpgrade={upgrade} /> : <>
-            <MetadataUploader key={catalogKey} userId={user.id} mode="catalog" onShareInfo={(i) => setTabShare((m) => ({ ...m, catalog: i }))} canSplit={canSplit} canExport={canCollect} focus={catalogFix} onFocused={() => setCatalogFix(undefined)} onSplitSheet={(t) => { setSplitTrackId(t.id); setTab("splits"); }} onProtect={(t) => { setProtectTrack(t); setTab("protect"); }} /></>}
+            {!canCatalog && !catalogReadOnly ? <PlusLock title="My Catalog starts with Catalog Plus" onQuickCheck={openQuickCheck} onUpgrade={upgrade} /> : <>
+            <MetadataUploader key={catalogKey} userId={user.id} mode="catalog" readOnly={catalogReadOnly} onShareInfo={(i) => setTabShare((m) => ({ ...m, catalog: i }))} canSplit={canSplit} canExport={canCollect} focus={catalogFix} onFocused={() => setCatalogFix(undefined)} onSplitSheet={(t) => { setSplitTrackId(t.id); setTab("splits"); }} onProtect={(t) => { setProtectTrack(t); setTab("protect"); }} /></>}
           </TabsContent>
           <TabsContent value="protect"><AIProtectionHub userId={user.id} purchases={purchases} justPaid={search.checkout === "success" && search.tab === "protect"} track={protectTrack} /></TabsContent>
           <TabsContent value="splits"><SplitSheets userId={user.id} canSplit={canSplit} canCollect={canCollect} prefillTrackId={splitTrackId} onUpgrade={upgrade} /></TabsContent>

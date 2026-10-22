@@ -22,6 +22,7 @@ import { TIER_LABEL } from "@/lib/plans";
 import { openBilling } from "@/lib/checkout";
 import { passwordValid } from "@/lib/password";
 import { PasswordField } from "@/components/PasswordField";
+import { RetentionControls } from "@/components/RetentionControls";
 
 export const Route = createFileRoute("/profile")({
   head: () => ({ meta: [{ title: "Profile — Came Through Audio" }, { name: "description", content: "Your artist profile, account and awards." }] }),
@@ -34,7 +35,7 @@ const SIZE_KEY = "cta-awards-size";
 function ProfilePage() {
   const { user, loading } = useAuth();
   const navigate = useNavigate();
-  const { tier, plan } = useBilling(user?.id);
+  const { tier, plan, sub, pauses, lapse, reload } = useBilling(user?.id);
   const [ob, setOb] = useState<Onboarding | null>(null);
   const names = useArtistName(user, ob?.stageName);
   const [profile, setProfile] = useState<ArtistProfile | null>(null);
@@ -116,6 +117,7 @@ function ProfilePage() {
             <div className="flex flex-wrap gap-3 border-t border-border pt-5">
               {tier !== "management" && <Button asChild size="lg" className="w-full text-base font-bold"><Link to="/plans"><ArrowUpCircle />Upgrade plan</Link></Button>}
               {plan && <ManageBilling />}
+              <RetentionControls tier={tier} sub={sub} lapse={lapse} pauses={pauses} onChanged={() => void reload()} />
               <Button variant="outline" onClick={() => setPasswordOpen(true)}>Change password</Button>
               <Button variant="ghost" onClick={async () => { await supabase.auth.signOut(); navigate({ to: "/" }); }}><LogOut />Log out</Button>
             </div>

@@ -18,6 +18,7 @@ import { listChecks } from "@/lib/repertoire-checks";
 import { listStatuses, type SongStatus } from "@/lib/health-songs";
 import type { RepertoireCheck } from "@/lib/health";
 import { HealthLiquid, HealthMeter } from "@/components/HealthMeter";
+import { DownloadCatalogButton } from "@/components/CatalogLapseBanner";
 import { deleteTrack, downloadCatalogFile, listTracks, safeName, saveTrack, uploadCatalogFile, type CatalogTrack } from "@/lib/catalog";
 import { AGENCY_LABEL, downloadAgencyExport, downloadNeighbouringPack, type Agency, type Held } from "@/lib/agency-export";
 import { registrationReadiness, type MissingItem } from "@/lib/readiness";
@@ -34,7 +35,7 @@ import type { ShareInfo } from "@/components/BadgeCelebration";
 const normArtist = (v: string) => v.trim().replace(/\s+/g, " ").toLowerCase();
 import { Link } from "@tanstack/react-router";
 
-export function MetadataUploader({ onShareInfo, userId, mode = "embed", onSubmitted, onSplitSheet, onProtect, canSplit, canExport, focus, onFocused }: { onShareInfo?: (s: Partial<ShareInfo> & Pick<ShareInfo, "ctx">) => void; onFocused?: () => void; userId?: string; mode?: "embed" | "catalog"; focus?: { trackId: string; field: string } | undefined; onSubmitted?: () => void; onSplitSheet?: (t: CatalogTrack) => void; onProtect?: (t: CatalogTrack) => void; canSplit?: boolean; canExport?: boolean }) {
+export function MetadataUploader({ onShareInfo, userId, mode = "embed", readOnly, onSubmitted, onSplitSheet, onProtect, canSplit, canExport, focus, onFocused }: { readOnly?: boolean; onShareInfo?: (s: Partial<ShareInfo> & Pick<ShareInfo, "ctx">) => void; onFocused?: () => void; userId?: string; mode?: "embed" | "catalog"; focus?: { trackId: string; field: string } | undefined; onSubmitted?: () => void; onSplitSheet?: (t: CatalogTrack) => void; onProtect?: (t: CatalogTrack) => void; canSplit?: boolean; canExport?: boolean }) {
   const full = mode === "catalog";
   // One artist per account: the artist name from setup. A different name gets a gentle add-an-artist note.
   const registeredArtist = loadOnboarding(userId)?.stageName?.trim() ?? "";
@@ -165,6 +166,8 @@ export function MetadataUploader({ onShareInfo, userId, mode = "embed", onSubmit
     } finally { setSaving(false); }
   }
   function open(t: CatalogTrack) {
+    // After a plan ends or while paused, songs can be viewed and downloaded but not edited.
+    if (readOnly) { toast.info("Your catalog is read-only right now. Renew your plan to edit songs."); return; }
     // Blanks fill from the profile (Embed Defaults + Catalog Profile), so only this song's own details are left.
     setMetadata(withProfileFilled({ ...emptyMetadata(), ...t.metadata }, loadProfile(userId)));
     setEditingId(t.id);
@@ -178,6 +181,7 @@ export function MetadataUploader({ onShareInfo, userId, mode = "embed", onSubmit
   function closeSong() { startNew(); setAdding(false); }
   /** Open a catalog song and jump to the field a ⚠️ readiness item points at. */
   function fix(t: CatalogTrack, field: string) {
+    if (readOnly) { open(t); return; }
     open(t);
     setHeld(undefined);
     setTimeout(() => jumpTo(field), 150);
@@ -512,7 +516,8 @@ export function MetadataUploader({ onShareInfo, userId, mode = "embed", onSubmit
         <div className="flex flex-wrap items-center gap-3">
           <h1 className="text-2xl font-bold">{full ? "My Catalog" : "Embed Metadata"}</h1>
         </div>
-        {full && userId ? (
+        {full && userId && readOnly ? <div className="flex flex-wrap items-center gap-3"><span className="text-sm text-muted-foreground"><Lock className="mr-1 inline h-3.5 w-3.5" />Read-only</span><DownloadCatalogButton /></div>
+        : full && userId ? (
           <DropdownMenu>
             <DropdownMenuTrigger asChild><Button type="button"><Plus />Add song</Button></DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="max-w-xs">
@@ -539,7 +544,7 @@ export function MetadataUploader({ onShareInfo, userId, mode = "embed", onSubmit
       {userId && full && (() => { const newest = [...tracks].sort((a, b) => String(b.updatedAt).localeCompare(String(a.updatedAt)))[0]; return (
         <div className="pb-12">
           {health && tracks.length > 0 && <div className="mb-8 rounded-2xl border border-border bg-card p-5">
-            <HealthMeter pct={health.pct} ready={health.ready} registered={health.registered} total={tracks.length} next={health.next?.track.title}
+            <HealthMeter pct={health.pct} ready={health.ready} registered={health.registered} total={tracks.length} next={readOnly ? undefined : health.next?.track.title}
               onNext={() => { const n = health.next; if (n) { if (n.field) fix(n.track, n.field); else open(n.track); } }} />
           </div>}
           {adding && <div id="song-new" className="mb-8 scroll-mt-4 rounded-2xl border border-primary p-4">
@@ -578,7 +583,7 @@ export function MetadataUploader({ onShareInfo, userId, mode = "embed", onSubmit
                     <div className="mt-1 text-right text-xs tabular-nums text-muted-foreground">{pctOf(t.id)}%</div>
                   </div>}
                   <div className="flex flex-wrap gap-2">
-                    {t.id === editingId
+                    {readOnly ? null : t.id === editingId
                       ? <Button type="button" size="sm" onClick={closeSong}>Close</Button>
                       : <Button type="button" variant="outline" size="sm" onClick={() => open(t)}><Pencil />Edit</Button>}
                     {(t.metadata.audioPath || t.metadata.artPath || t.metadata.lyrics) && (
@@ -592,9 +597,11 @@ export function MetadataUploader({ onShareInfo, userId, mode = "embed", onSubmit
                       </DropdownMenu>
                     )}
                     {exportMenu("Agency Export", [t], t.title)}
-                    {onProtect && <Button type="button" variant={t.metadata.aiProtection ? "default" : "outline"} size="sm" onClick={() => onProtect(t)}><ShieldCheck />{t.metadata.aiProtection ? "Add AI Protection Proof" : "Protect Track"}</Button>}
+                    {!readOnly && onProtect && <Button type="button" variant={t.metadata.aiProtection ? "default" : "outline"} size="sm" onClick={() => onProtect(t)}><ShieldCheck />{t.metadata.aiProtection ? "Add AI Protection Proof" : "Protect Track"}</Button>}
+                    {!readOnly && <>
                     <Button type="button" size="sm" onClick={() => { if (!canSplit) { setUpsell("split"); return; } onSplitSheet?.(t); }}>{!canSplit && <Lock />}Generate Split Sheet</Button>
                     <Button type="button" variant="ghost" size="icon" aria-label={`Delete ${t.title}`} onClick={() => remove(t.id)}><Trash2 /></Button>
+                    </>}
                   </div>
                   </div>
                   {t.id === editingId ? <div className="mt-3 border-t border-border pt-4">{formBlock}</div> : <div className="mt-3 space-y-3 border-t border-border pt-3">

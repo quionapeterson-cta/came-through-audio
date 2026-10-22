@@ -2,6 +2,7 @@ import { z } from "zod";
 import { assistanceItems, assistanceType, PRICE_TIER } from "@/lib/plans";
 import { PACKAGES, TRACKS_PER_KEY, packageSongs } from "@/lib/proof";
 import { ASSISTANCE_AGENCIES, MAX_NEW_SONGS, newSongKeys } from "@/lib/registration";
+import { VAULT_LOOKUP_KEY } from "@/lib/retention";
 
 /**
  * What the browser may ask to buy. Prices, quantities and the buyer are never taken from the browser: the server
@@ -14,6 +15,8 @@ export const checkoutInput = z.discriminatedUnion("kind", [
     package: z.enum(PACKAGES.map((p) => p.id) as [string, ...string[]]),
     trackIds: z.array(z.string().uuid()).max(20).optional(),
   }),
+  // Pause: the Vault fee, one per month paused, paid up front (PLAN-catalog-emptying §10).
+  z.object({ kind: z.literal("vault"), months: z.number().int().min(1).max(3) }),
   z.object({
     kind: z.literal("expert"),
     // Catalog songs picked, plus songs that aren't in the catalog yet (PLAN-registration-intake §1–2).
@@ -43,6 +46,9 @@ export type CheckoutPlan = {
 export function planCheckout(input: CheckoutInput, userId: string): CheckoutPlan {
   if (input.kind === "plan") {
     return { mode: "subscription", items: [{ lookupKey: input.priceId, quantity: 1 }], metadata: { userId }, managed: true };
+  }
+  if (input.kind === "vault") {
+    return { mode: "payment", items: [{ lookupKey: VAULT_LOOKUP_KEY, quantity: input.months }], metadata: { userId, kind: "vault", months: String(input.months) }, managed: true };
   }
   if (input.kind === "ai") {
     // Singles are bought per song (1–3); the other packages are one price for up to their song count.

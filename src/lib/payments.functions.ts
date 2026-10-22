@@ -96,7 +96,8 @@ async function planSwitchConfiguration(stripe: Stripe) {
         proration_behavior: "always_invoice",
         products: [...byProduct].map(([product, ids]) => ({ product, prices: ids })),
       },
-      subscription_cancel: { enabled: true, mode: "at_period_end" },
+      // Cancelling goes through Profile → Cancel plan, so the Need more time and Pause offers are always seen first.
+      subscription_cancel: { enabled: false },
       payment_method_update: { enabled: true },
       invoice_history: { enabled: true },
     },
@@ -117,6 +118,13 @@ export const createCheckoutSession = createServerFn({ method: "POST" })
     const stripe = createStripeClient(env);
     const origin = await appOrigin();
     const plan = planCheckout(data, context.userId);
+    if (data.kind === "vault") {
+      // Pause is only sold when it can start: around renewal, after a failed renewal or during the grace period.
+      const [{ admin, loadState }, { offers }] = await Promise.all([import("@/lib/retention.server"), import("@/lib/retention")]);
+      const s = await loadState(await admin(), context.userId, env);
+      const o = offers(s.sub, s.lapse, s.pauses);
+      if (!o.canPause) throw new Error(o.pauseAgain ? "Pause can be used once every 12 months." : "Pause opens 30 days before your renewal.");
+    }
 
     try {
       if (plan.mode === "subscription") {
