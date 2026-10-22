@@ -75,7 +75,7 @@ states."* It changes only with your approval.
 - Profile → **Renew now** (and the button in every renewal reminder email) pays next year early at the plan's own price.
   The next charge moves a full year past the current renewal date, so no days are lost. One year ahead at a time; not
   while cancelling, failing or paused. Refundable within 30 days of paying; a full refund puts the renewal date back. Built.
-- Refund Policy line: awaiting wording approval.
+- Refund Policy line: added 2026-10-22 (approved).
 
 ## 9. Need more time (renewal extension)
 - **Who:** anyone on a paid yearly plan, from 30 days before renewal until a failed renewal is fixed.
