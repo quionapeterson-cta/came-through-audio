@@ -49,7 +49,7 @@ export function IosInstallHelp({ open, onOpenChange }: { open: boolean; onOpenCh
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-sm">
         <DialogHeader>
-          <DialogTitle>Install CTAudio</DialogTitle>
+          <DialogTitle>Install Came Through</DialogTitle>
           <DialogDescription>Add it to your home screen to open it like an app, full screen.</DialogDescription>
         </DialogHeader>
         <ol className="space-y-3 text-sm">
@@ -58,7 +58,7 @@ export function IosInstallHelp({ open, onOpenChange }: { open: boolean; onOpenCh
           <li className="flex items-center gap-3"><span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary text-xs font-bold text-primary-foreground">2</span>
             <span>Scroll and tap <PlusSquare className="inline h-4 w-4 align-text-bottom text-primary" aria-hidden /> <span className="font-semibold">Add to Home Screen</span>.</span></li>
           <li className="flex items-center gap-3"><span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary text-xs font-bold text-primary-foreground">3</span>
-            <span>Tap <span className="font-semibold">Add</span>. CTAudio appears on your home screen.</span></li>
+            <span>Tap <span className="font-semibold">Add</span>. Came Through appears on your home screen.</span></li>
         </ol>
         <Button variant="outline" onClick={() => onOpenChange(false)}>Got it</Button>
       </DialogContent>
