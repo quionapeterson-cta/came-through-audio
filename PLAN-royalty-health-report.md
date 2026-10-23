@@ -72,7 +72,28 @@ More examples it would write:
 - *"Mixed signals from the brain."* Jordan Lee has two different IPI numbers across your songs. **Treatment:** check the right one in Jordan's PRO account, correct it here, then update the songs registered with the wrong one.
 - *"Clean bill of health. Strong pulse."* Every song is registered and confirmed. Next checkup suggested in 90 days.
 
-**Plans:** everyone gets the full report and every step. The one-click agency files stay on Catalog & Collaborate (current rule); on Free and Catalog Plus, step 2 shows a 🔒 "Get the 1-click file" upgrade and the plain field-by-field guide so they can still register by hand.
+**Plans (confirmed 2026-10-23):** everyone gets the full report and every step. The one-click agency files stay on Catalog & Collaborate; on Free and Catalog Plus, step 2 shows a 🔒 "Get the 1-click file" upgrade and the plain field-by-field guide so they can still register by hand.
+
+### More real fixes (outside Came Through Audio), shown as "More ways to fix it" under each treatment
+- **Update-registration pack:** when a song is ticked Registered we save a snapshot of its details; if it changes later, the Pulse lists exactly which fields changed and gives the updated agency file, so the user knows what to change in each portal.
+- **Ask a co-writer:** a branded email (`emailLayout()`) asking a co-writer to add their PRO and IPI, or to register their share at their own PRO. Uses the existing invite opt-out.
+- **Distributor correction message:** when the streaming lookup shows a different title, artist or ISRC, a ready-to-send message for the distributor's support with the exact before and after.
+- **Join a PRO:** writers with no PRO get the worldwide list with join links, then the register steps.
+- **Royalties waiting for you:** after registering with SoundExchange or The MLC, a link to check for royalties they're holding (links checked before shipping).
+- **Confirm reminder:** a calendar file (.ics) plus an email reminder when new registrations usually start showing up.
+- **Split sheet:** a Spine problem with co-writers offers "Send a split sheet for signatures", then register with the agreed splits.
+- **Let our agents do it:** Expert Assistance, gated by the existing `registrationCheck`.
+
+### One consolidated page
+Everything on the Royalty Health Check becomes one report, in collapsible sections with a summary line (⚠️ sections open on their own):
+1. **Your checkup** (top line, body diagram, treatment, since last checkup, PDF), replacing the score-ring header
+2. **Organ sections**: problems first; healthy organs grouped into one closed row
+3. **Song by song**: the Song Health Checklist (Albums, EPs, Singles)
+4. **Confirm with your agency lists** (upload, §3A)
+5. **Check a song that isn't in your catalog** (Royalty Inspector)
+6. **Past checkups** (saved reports with their PDFs)
+7. **Why this matters**: the two red warning boxes and the mismatch tips move here, so the page has no loose cards
+Preview: https://claude.ai/artifact/5Dto9RMV4saF2zr6tqEPkU (report preview + full wording list for approval).
 
 Wording has a few variants per condition so repeat reports don't read the same, but the facts in it always come from the catalog.
 
