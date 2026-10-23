@@ -28,6 +28,7 @@ import { Route as ContractPartyIdRouteImport } from './routes/contract.$partyId'
 import { Route as DocsSlugRouteImport } from './routes/docs.$slug'
 import { Route as InvitesStopRouteImport } from './routes/invites.stop'
 import { Route as SignRowIdRouteImport } from './routes/sign.$rowId'
+import { Route as VerifyIdRouteImport } from './routes/verify.$id'
 import { Route as ShareOwnerCardRouteImport } from './routes/share.$owner.$card'
 import { Route as ApiPublicCronCatalogLapsesRouteImport } from './routes/api/public/cron/catalog-lapses'
 import { Route as ApiPublicCronRegistrationRemindersRouteImport } from './routes/api/public/cron/registration-reminders'
@@ -129,6 +130,11 @@ const SignRowIdRoute = SignRowIdRouteImport.update({
   path: '/sign/$rowId',
   getParentRoute: () => rootRouteImport,
 } as any)
+const VerifyIdRoute = VerifyIdRouteImport.update({
+  id: '/verify/$id',
+  path: '/verify/$id',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ShareOwnerCardRoute = ShareOwnerCardRouteImport.update({
   id: '/share/$owner/$card',
   path: '/share/$owner/$card',
@@ -179,6 +185,7 @@ export interface FileRoutesByFullPath {
   '/docs/$slug': typeof DocsSlugRoute
   '/invites/stop': typeof InvitesStopRoute
   '/sign/$rowId': typeof SignRowIdRoute
+  '/verify/$id': typeof VerifyIdRoute
   '/share/$owner/$card': typeof ShareOwnerCardRoute
   '/api/public/cron/catalog-lapses': typeof ApiPublicCronCatalogLapsesRoute
   '/api/public/cron/registration-reminders': typeof ApiPublicCronRegistrationRemindersRoute
@@ -205,6 +212,7 @@ export interface FileRoutesByTo {
   '/docs/$slug': typeof DocsSlugRoute
   '/invites/stop': typeof InvitesStopRoute
   '/sign/$rowId': typeof SignRowIdRoute
+  '/verify/$id': typeof VerifyIdRoute
   '/share/$owner/$card': typeof ShareOwnerCardRoute
   '/api/public/cron/catalog-lapses': typeof ApiPublicCronCatalogLapsesRoute
   '/api/public/cron/registration-reminders': typeof ApiPublicCronRegistrationRemindersRoute
@@ -232,6 +240,7 @@ export interface FileRoutesById {
   '/docs/$slug': typeof DocsSlugRoute
   '/invites/stop': typeof InvitesStopRoute
   '/sign/$rowId': typeof SignRowIdRoute
+  '/verify/$id': typeof VerifyIdRoute
   '/share/$owner/$card': typeof ShareOwnerCardRoute
   '/api/public/cron/catalog-lapses': typeof ApiPublicCronCatalogLapsesRoute
   '/api/public/cron/registration-reminders': typeof ApiPublicCronRegistrationRemindersRoute
@@ -260,6 +269,7 @@ export interface FileRouteTypes {
     | '/docs/$slug'
     | '/invites/stop'
     | '/sign/$rowId'
+    | '/verify/$id'
     | '/share/$owner/$card'
     | '/api/public/cron/catalog-lapses'
     | '/api/public/cron/registration-reminders'
@@ -286,6 +296,7 @@ export interface FileRouteTypes {
     | '/docs/$slug'
     | '/invites/stop'
     | '/sign/$rowId'
+    | '/verify/$id'
     | '/share/$owner/$card'
     | '/api/public/cron/catalog-lapses'
     | '/api/public/cron/registration-reminders'
@@ -312,6 +323,7 @@ export interface FileRouteTypes {
     | '/docs/$slug'
     | '/invites/stop'
     | '/sign/$rowId'
+    | '/verify/$id'
     | '/share/$owner/$card'
     | '/api/public/cron/catalog-lapses'
     | '/api/public/cron/registration-reminders'
@@ -339,6 +351,7 @@ export interface RootRouteChildren {
   DocsSlugRoute: typeof DocsSlugRoute
   InvitesStopRoute: typeof InvitesStopRoute
   SignRowIdRoute: typeof SignRowIdRoute
+  VerifyIdRoute: typeof VerifyIdRoute
   ShareOwnerCardRoute: typeof ShareOwnerCardRoute
   ApiPublicCronCatalogLapsesRoute: typeof ApiPublicCronCatalogLapsesRoute
   ApiPublicCronRegistrationRemindersRoute: typeof ApiPublicCronRegistrationRemindersRoute
@@ -481,6 +494,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SignRowIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/verify/$id': {
+      id: '/verify/$id'
+      path: '/verify/$id'
+      fullPath: '/verify/$id'
+      preLoaderRoute: typeof VerifyIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/share/$owner/$card': {
       id: '/share/$owner/$card'
       path: '/share/$owner/$card'
@@ -539,6 +559,7 @@ const rootRouteChildren: RootRouteChildren = {
   DocsSlugRoute: DocsSlugRoute,
   InvitesStopRoute: InvitesStopRoute,
   SignRowIdRoute: SignRowIdRoute,
+  VerifyIdRoute: VerifyIdRoute,
   ShareOwnerCardRoute: ShareOwnerCardRoute,
   ApiPublicCronCatalogLapsesRoute: ApiPublicCronCatalogLapsesRoute,
   ApiPublicCronRegistrationRemindersRoute:

@@ -25,10 +25,9 @@ Source: founder, 2026-10-21 and 2026-10-23 (Lovable Pro ends Nov 11; no budget a
 | `STRIPE_LIVE_SECRET_KEY` | Stripe (live account) → Developers → API keys → Secret key `sk_live_…` (when you go live) |
 | `PAYMENTS_SANDBOX_WEBHOOK_SECRET` | Made in step 4 (`whsec_…`) |
 | `PAYMENTS_LIVE_WEBHOOK_SECRET` | Made in step 4, on the live account |
-| `LOVABLE_API_KEY` (optional) | Only for the AI Protection draft-date scan. See note 2. |
 
 **Note 1, SESSION_SECRET:** it signs the pre-launch gate, company signing links and invite opt-out links. A new value means everyone types the passcode again, and company signing links already sent stop working (just click Resend on those).
-**Note 2, draft-date scan:** it reads dates from draft videos using Lovable's AI. Without the key, users enter the dates by hand. To keep it automatic after Lovable, we can switch it to another AI provider (cents per scan); decide later.
+**Note 2:** nothing else uses Lovable after the move. The AI draft-date scan was removed on 2026-10-23 (artists can type their draft dates as an optional note instead).
 
 ## Steps
 1. **Create the Worker.** Cloudflare dashboard (free account) → Workers & Pages → Create → **Import a repository** → GitHub → `came-through-audio`.

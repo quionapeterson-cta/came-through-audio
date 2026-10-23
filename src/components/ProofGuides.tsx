@@ -90,7 +90,7 @@ export function NoteGuide() {
       <div className="flex h-[200px] items-center rounded-xl bg-muted/60"><Animation key={app} id={app} /></div>
       <p className="text-center text-xs text-muted-foreground">{a.gesture}</p>
       <ol className="list-decimal space-y-1 pl-5 text-xs">{a.steps.map((s) => <li key={s}>{s}</li>)}</ol>
-      <p className="text-xs font-semibold text-primary">Showing 2 dates days apart in 1 video = Strong Chain (Human Creation)</p>
+      <p className="text-xs font-semibold text-primary">Tip: show your oldest draft and your newest draft, with their dates on screen, in one video. Drafts days or weeks apart are your strongest evidence.</p>
     </div>
   );
 }

@@ -84,9 +84,3 @@ export function videoDuration(file: File): Promise<number> {
     v.src = url;
   });
 }
-
-/** Days apart → Strong/Human chain; same day → Weak/timestamp only. */
-export function chainStrength(first: Date, last: Date): "Strong Chain / Human Chain Certificate" | "Weak Chain / Timestamp Only" {
-  const days = Math.abs(last.getTime() - first.getTime()) / 86_400_000;
-  return days >= 1 ? "Strong Chain / Human Chain Certificate" : "Weak Chain / Timestamp Only";
-}

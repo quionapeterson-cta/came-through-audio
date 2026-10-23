@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { listTracks, type CatalogTrack } from "@/lib/catalog";
-import { Check, ChevronDown, Download, Info, Loader2, Lock, Music2, Plus, Trash2, ShieldCheck, Video, Fingerprint, Link2, Gavel, AlertTriangle } from "lucide-react";
+import { Check, ChevronDown, Download, Loader2, Lock, Music2, Plus, Trash2, ShieldCheck, Video, Fingerprint, Link2, Gavel, AlertTriangle } from "lucide-react";
 
 const EXPLAINERS = [
   { icon: Fingerprint, title: "DAW & Draft Hashing (SHA-256)", tag: "Your song's tamper-proof digital fingerprint",
@@ -16,7 +16,6 @@ const EXPLAINERS = [
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { InfoTip } from "@/components/InfoTip";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
@@ -25,8 +24,7 @@ import { PACKAGES, MIN_PROOF_SECONDS, MAX_PROOF_SECONDS, MAX_PROOF_BYTES, sha256
 import { useServerFn } from "@tanstack/react-start";
 import { openCheckout, getPaymentsEnvironment } from "@/lib/checkout";
 import { stampDigest } from "@/lib/ots.functions";
-import { scanDraftFrames } from "@/lib/draft-scan.functions";
-import { extractFrames, rateChain, gradeProof, compressTo720p, type ChainResult } from "@/lib/draft-chain";
+import { compressTo720p } from "@/lib/draft-chain";
 import { proofManifest } from "@/lib/ots";
 import { saveBitcoinProof, saveCertificatePdf, type Certificate } from "@/lib/certificate";
 import { registrationWriters } from "@/lib/readiness";
@@ -46,7 +44,6 @@ const blankWriters = (): WriterRow[] => [{ name: "", role: "both" }];
 
 export function AIProtectionHub({ userId, purchases, justPaid, track }: { userId: string; purchases: Purchase[]; justPaid: boolean; track?: CatalogTrack | undefined }) {
   const stamp = useServerFn(stampDigest);
-  const scan = useServerFn(scanDraftFrames);
   const [tracks, setTracks] = useState<CatalogTrack[]>([]);
   const [certs, setCerts] = useState<Certificate[]>();
   const [unlocked, setUnlocked] = useState(false);
@@ -141,28 +138,20 @@ export function AIProtectionHub({ userId, purchases, justPaid, track }: { userId
   // ---- Proof videos -----------------------------------------------------------------------------------------------
   const [daw, setDaw] = useState<Proof>();
   const [notes, setNotes] = useState<Proof>();
-  const [dawFile, setDawFile] = useState<File>();
-  const [draftFile, setDraftFile] = useState<File>();
   const [draftNotes, setDraftNotes] = useState("");
+  /** Optional: the draft dates the artist can see in their video, as a plain note. Stamped with the manifest; never required. */
+  const [draftDates, setDraftDates] = useState("");
   const [status, setStatus] = useState<Record<Kind, Status>>({ daw: {}, drafts: {} });
   const [attest, setAttest] = useState(false);
-  const [chain, setChain] = useState<ChainResult>();
-  const [dawDate, setDawDate] = useState<string>();
-  const [scanning, setScanning] = useState(false);
   const [busy, setBusy] = useState(false);
   const [issued, setIssued] = useState<Certificate>();
   function resetProof() {
-    setDaw(undefined); setNotes(undefined); setDawFile(undefined); setDraftFile(undefined); setDraftNotes("");
-    setStatus({ daw: {}, drafts: {} }); setAttest(false); setChain(undefined); setDawDate(undefined); backups.current = {};
+    setDaw(undefined); setNotes(undefined); setDraftNotes(""); setDraftDates("");
+    setStatus({ daw: {}, drafts: {} }); setAttest(false); backups.current = {};
   }
-  const scanned = !!chain;
-  const grade = gradeProof(chain, dawDate);
-  const chainStatus = chain?.status === "strong" ? `Strong Chain${grade === "A+" ? " A+ (Triple-Verified Human Origin)" : " (Human Creation)"} · ${chain.days} days apart`
-    : chain?.status === "weak" ? `Weak Chain · drafts only ${chain.days} day${chain.days === 1 ? "" : "s"} apart — show an older draft for Strong Chain`
-    : "Pending — Make sure both timestamps clearly visible in 1 video";
 
   const setKind = (kind: Kind, s: Status) => setStatus((all) => ({ ...all, [kind]: s }));
-  // The fingerprint and the date scan both use the original video on the device, so file size never blocks a
+  // The fingerprint uses the original video on the device, so file size never blocks a
   // certificate. Only the private backup copy has a storage limit; it uploads in the background.
   async function proof(file: File | undefined, kind: Kind, done: (p: Proof, file: File) => void) {
     if (!file) return;
@@ -175,7 +164,6 @@ export function AIProtectionHub({ userId, purchases, justPaid, track }: { userId
     setKind(kind, { busy: `Fingerprinting your video (${(file.size / 1048576).toFixed(1)}MB)…` });
     const hash = await sha256(await file.arrayBuffer());
     setKind(kind, {});
-    setChain(undefined);
     done({ name: file.name, hash, size: file.size, created: file.lastModified || Date.now(), backup: "saving" }, file);
     backups.current[kind] = saveBackup(file, kind, hash, d);
   }
@@ -205,36 +193,22 @@ export function AIProtectionHub({ userId, purchases, justPaid, track }: { userId
     }
   }
 
-  const scanMissing = [
+  const proofMissing = [
     !daw && (status.daw.error ? `DAW Session video: ${status.daw.error}` : "Add your DAW Session video (step 2)"),
     !notes && (status.drafts.error ? `Draft History video: ${status.drafts.error}` : "Add your Draft History video (step 2)"),
     !attest && "Check the attestation (step 3)",
   ].filter(Boolean) as string[];
-  async function scanAndRate() {
-    if (!draftFile || !dawFile) return;
-    setScanning(true); setChain(undefined); setDawDate(undefined);
-    try {
-      const [drafts, dawScan] = await Promise.all([
-        extractFrames(draftFile).then((frames) => scan({ data: { frames, kind: "drafts" } })),
-        extractFrames(dawFile).then((frames) => scan({ data: { frames, kind: "daw" } })).catch(() => ({ dates: [] })),
-      ]);
-      setChain(rateChain(drafts.dates.map((d) => d.date)));
-      setDawDate(dawScan.dates.map((d) => d.date).sort().pop());
-    } catch (e) { toast.error(e instanceof Error ? e.message : "Date scan failed."); setChain({ status: "pending" }); }
-    finally { setScanning(false); }
-  }
 
   async function generate() {
-    if (detailsMissing.length || !daw || !notes || !scanned || !attest) return;
+    if (detailsMissing.length || !daw || !notes || !attest) return;
     setBusy(true);
     try {
       // Usually finished long before this; waits only if a backup copy is still uploading.
       const [dawPath, notesPath] = await Promise.all([backups.current.daw ?? daw.path ?? DEVICE_ONLY, backups.current.drafts ?? notes.path ?? DEVICE_ONLY]);
-      const strength = `Grade ${grade} · ${chainStatus}${dawDate ? ` · DAW session dated ${dawDate}` : ""}`;
       const manifest = proofManifest({
         Track: f.title, Artist: f.artist, Writers: writers, Composers: composers, Producers: producers || "-",
-        ISRC: f.isrc || "-", UPC: f.upc || "-", ISWC: f.iswc || "-", Chain: strength,
-        "DAW session SHA-256": daw.hash, "Draft history SHA-256": notes.hash, "Draft notes": draftNotes || "-",
+        ISRC: f.isrc || "-", UPC: f.upc || "-", ISWC: f.iswc || "-",
+        "DAW session SHA-256": daw.hash, "Draft history SHA-256": notes.hash, "Draft dates shown in video (entered by the artist)": draftDates.trim() || "-", "Draft notes": draftNotes || "-",
       });
       const manifestBytes = new TextEncoder().encode(manifest);
       const digest = await sha256(manifestBytes.buffer as ArrayBuffer);
@@ -244,7 +218,7 @@ export function AIProtectionHub({ userId, purchases, justPaid, track }: { userId
         user_id: userId, catalog_id: targetTrack?.id ?? null, format_type: (purchases.find((p) => p.kind === "ai")?.details["package"] ?? "Single") as PackageId, track_title: f.title, artist_name: f.artist,
         legal_credits: { writers, composers, producers },
         isrc: f.isrc || null, upc: f.upc || null, iswc: f.iswc || null,
-        session_hash: daw.hash, notes_hash: notes.hash, chain_strength: strength, attested: true,
+        session_hash: daw.hash, notes_hash: notes.hash, attested: true,
         session_video_url: dawPath, notes_proof_url: notesPath, manifest,
         proof_digest: digest, ots_receipt: ots?.receipt ?? null, ots_calendar: ots?.calendar ?? null,
         blockchain_status: ots ? "pending_bitcoin" : "none",
@@ -292,7 +266,7 @@ export function AIProtectionHub({ userId, purchases, justPaid, track }: { userId
               {certs.map((c) => (
                 <li key={c.id} className={`grid items-center gap-3 py-3 sm:grid-cols-[1fr_auto_auto] ${issued?.id === c.id ? "rounded-lg bg-primary/5 px-3" : ""}`}>
                   <SongCell title={c.track_title} artist={c.artist_name} />
-                  <span className="text-xs font-semibold text-primary">{c.chain_strength?.split(" · ")[0] ?? "Issued"} · {c.ots_receipt ? "Anchored on Bitcoin" : "No Bitcoin stamp"} · {c.issued_at ? new Date(c.issued_at).toLocaleDateString() : ""}</span>
+                  <span className="text-xs font-semibold text-primary">Issued · {c.ots_receipt ? "Anchored on Bitcoin" : "No Bitcoin stamp"} · {c.issued_at ? new Date(c.issued_at).toLocaleDateString() : ""}</span>
                   <div className="flex gap-2">
                     <Button size="sm" variant="outline" onClick={() => void saveCertificatePdf(c)}><Download className="h-4 w-4" />PDF</Button>
                     {c.ots_receipt && <Button size="sm" variant="outline" title={c.manifest ? "Manifest .txt + .ots receipt" : "Use with the manifest .txt you downloaded when the certificate was issued"} onClick={() => saveBitcoinProof(c)}><Download className="h-4 w-4" />Bitcoin proof</Button>}
@@ -417,13 +391,13 @@ export function AIProtectionHub({ userId, purchases, justPaid, track }: { userId
                   <p><b>Start with your melody.</b> Copyright protects melody and lyrics, not drum patterns or chord progressions, so your melody is the most important thing to prove. Solo your lead vocal or melody line first, then solo as many other tracks as you can, then play the full mix.</p>
                 </div>
                 <div className="grid gap-4 md:grid-cols-2">
-                  <ProofBox title="DAW Session" proof={daw} status={status.daw} on={(file) => proof(file, "daw", (p, file) => { setDaw(p); setDawFile(file); setDawDate(undefined); })}
+                  <ProofBox title="DAW Session" proof={daw} status={status.daw} on={(file) => proof(file, "daw", (p) => setDaw(p))}
                     tip="Screen-record your open project (FL Studio, Logic, Ableton, Pro Tools, BandLab…). Melody first, then each track solo, then the full mix. This proves you own the real session, not just the final song.">
-                    <InfoTip title="Pro tip: earn an A+" text="Also show your project's save or created date in the recording (your project folder, File → Project Info, or the file's date column). It's optional — but it earns a Strong Chain A+ certificate for going the extra mile."
-                      className="inline-flex w-fit cursor-help items-center gap-1 rounded-full border border-primary px-3 py-1 text-xs font-semibold text-primary"><Info className="h-3.5 w-3.5" />Pro tip: earn an A+</InfoTip>
                   </ProofBox>
-                  <ProofBox title="Draft History" proof={notes} status={status.drafts} on={(file) => proof(file, "drafts", (p, file) => { setNotes(p); setDraftFile(file); })}
-                    tip="Screen-record your earlier versions: voice memos, rough takes, lyric notes, or a folder showing file dates. Early melody ideas (hummed voice memos, rough toplines) are your strongest drafts. Drafts days apart earn a Strong Chain.">
+                  <ProofBox title="Draft History" proof={notes} status={status.drafts} on={(file) => proof(file, "drafts", (p) => setNotes(p))}
+                    tip="Screen-record your earlier versions: voice memos, rough takes, lyric notes, or a folder showing file dates. Early melody ideas (hummed voice memos, rough toplines) are your strongest drafts, and showing their dates makes your evidence stronger.">
+                    <div className="space-y-1"><Label htmlFor="draft-dates">Draft dates shown in your video (optional)</Label><Input id="draft-dates" value={draftDates} onChange={(e) => setDraftDates(e.target.value)} placeholder="e.g. Voice memo March 3, 2026; lyrics note April 20, 2026" />
+                      <p className="text-xs text-muted-foreground">A quick index for anyone reviewing your proof later. It's stamped with your certificate. Leave it blank if you like.</p></div>
                     <div className="space-y-1"><Label>Notes (optional)</Label><Input value={draftNotes} onChange={(e) => setDraftNotes(e.target.value)} /></div>
                   </ProofBox>
                 </div>
@@ -440,22 +414,9 @@ export function AIProtectionHub({ userId, purchases, justPaid, track }: { userId
                 </label>
               </Step>
 
-              <Step n={4} title="Scan & Rate" done={scanned}>
-                <p className="text-sm text-muted-foreground">We read the dates in both videos to rate how strong your proof chain is.</p>
-                {scanMissing.length > 0 && <Checklist items={scanMissing} />}
-                <Button size="lg" disabled={scanMissing.length > 0 || scanning} onClick={scanAndRate}>{scanning ? <><Loader2 className="h-4 w-4 animate-spin" />Scanning your videos…</> : scanned ? "Scan again" : "Scan & Rate"}</Button>
-                {scanned && !scanning && (
-                  <div className="space-y-1 rounded-xl border border-primary/40 p-4">
-                    <p className="text-2xl font-extrabold text-primary">Grade {grade}</p>
-                    <p className="text-sm font-semibold text-primary">{chainStatus}</p>
-                    <p className="text-xs text-muted-foreground">Old draft {chain?.first ?? "—"} → New draft {chain?.latest ?? "—"} · DAW session date {dawDate ?? "not shown (no penalty)"}</p>
-                  </div>
-                )}
-              </Step>
-
-              <Step n={5} title="Generate your certificate" done={false} last>
-                {(detailsMissing.length > 0 || !scanned) && <Checklist items={[...detailsMissing.map((m) => `${m} (step 1)`), ...(!scanned ? ["Run Scan & Rate (step 4)"] : [])]} />}
-                <Button size="lg" disabled={busy || detailsMissing.length > 0 || !scanned || scanMissing.length > 0} onClick={generate}>{busy ? <><Loader2 className="h-4 w-4 animate-spin" />{daw?.backup === "saving" || notes?.backup === "saving" ? "Finishing your backup copies…" : "Generating…"}</> : "Generate & download certificate"}</Button>
+              <Step n={4} title="Generate your certificate" done={false} last>
+                {(detailsMissing.length > 0 || proofMissing.length > 0) && <Checklist items={[...detailsMissing.map((m) => `${m} (step 1)`), ...proofMissing]} />}
+                <Button size="lg" disabled={busy || detailsMissing.length > 0 || proofMissing.length > 0} onClick={generate}>{busy ? <><Loader2 className="h-4 w-4 animate-spin" />{daw?.backup === "saving" || notes?.backup === "saving" ? "Finishing your backup copies…" : "Generating…"}</> : "Generate & download certificate"}</Button>
                 <p className="text-xs text-muted-foreground">You'll get the PDF certificate plus a manifest .txt and .ots file. Keep those two together: anyone can verify them at opentimestamps.org. All three stay downloadable under My certificates.</p>
               </Step>
             </ol>

@@ -1,10 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { certificateCredits, chainStrength, PACKAGES, packageFor, packagePrice, proofFileError } from "./proof";
+import { certificateCredits, PACKAGES, packageFor, packagePrice, proofFileError } from "./proof";
 import { assistanceTotal } from "@/lib/plans";
 
 describe("proof rules", () => {
-  it("days apart is a strong chain", () => expect(chainStrength(new Date("2026-01-01"), new Date("2026-01-04"))).toMatch(/^Strong/));
-  it("same day is weak", () => expect(chainStrength(new Date("2026-01-01T10:00"), new Date("2026-01-01T10:00"))).toMatch(/^Weak/));
   it("big phone videos are accepted", () => expect(proofFileError({ type: "video/quicktime", name: "IMG_1.MOV", size: 76 * 1048576 })).toBeNull());
   it("videos over 1GB are rejected", () => expect(proofFileError({ type: "video/mp4", name: "a.mp4", size: 1_073_741_825 })).not.toBeNull());
   it("blank file type is read from the extension", () => expect(proofFileError({ type: "", name: "clip.m4v", size: 10 })).toBeNull());
