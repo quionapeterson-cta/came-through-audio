@@ -75,6 +75,20 @@ def checks(f):
                 continue
             priv = "SELECT"
             out.append((f"{priv} grant on {t} to {role}", f"coalesce(has_table_privilege({q(role)}, to_regclass({q('public.' + t)}), {q(priv)}), false)"))
+    # New enum values (ALTER TYPE ... ADD VALUE).
+    for typ, val in re.findall(r"ALTER\s+TYPE\s+(?:public\.)?" + ident + r"\s+ADD\s+VALUE\s+(?:IF\s+NOT\s+EXISTS\s+)?'([^']+)'", sql, re.I):
+        out.append((f"{typ} value {val}", f"EXISTS (SELECT 1 FROM pg_enum e JOIN pg_type t ON t.oid = e.enumtypid WHERE t.typname = {q(typ)} AND e.enumlabel = {q(val)})"))
+    # Function permissions, when no later file changes them again.
+    for verb, fn, args, roles in re.findall(r"(GRANT|REVOKE)\s+EXECUTE\s+ON\s+FUNCTION\s+(?:public\.)?(\w+)\s*\(([^)]*)\)\s+(?:TO|FROM)\s+([\w ,]+)", sql, re.I):
+        if later(f, r"(GRANT|REVOKE)\s+EXECUTE\s+ON\s+FUNCTION\s+(public\.)?" + re.escape(fn) + r"\s*\(") or later(f, r"FUNCTION\s+(public\.)?" + re.escape(fn) + r"\s*\("):
+            continue
+        sig = f"public.{fn}({args.strip()})"
+        for role in [r.strip() for r in roles.split(",")]:
+            if role.lower() not in ("anon", "authenticated", "service_role"):
+                continue
+            has = f"coalesce(has_function_privilege({q(role.lower())}, to_regprocedure({q(sig)}), 'EXECUTE'), false)"
+            granted = verb.upper() == "GRANT"
+            out.append((f"{fn} {'callable by' if granted else 'blocked for'} {role.lower()}", has if granted else f"(to_regprocedure({q(sig)}) IS NOT NULL AND NOT {has})"))
     # One check per label, in file order.
     seen, uniq = set(), []
     for label, expr in out:
@@ -87,7 +101,9 @@ for f in FILES:
     name = os.path.basename(f)
     cs = checks(f)
     if not cs:
-        rows.append(f"({q(name)}, NULL::text, 'nothing to check automatically: open the file to confirm')")
+        body = re.sub(r"\s+", " ", strip_comments(open(f).read())).strip().rstrip(";").strip()
+        note = "empty file, nothing to run" if body.upper() in ("", "SELECT 1") else "data only (starter rows), nothing to check" if re.match(r"^(INSERT|UPDATE)\b", body, re.I) else "nothing to check automatically: open the file to confirm"
+        rows.append(f"({q(name)}, NULL::text, {q(note)})")
         continue
     missing = " ".join(f"WHEN NOT {expr} THEN {q(label)}" for label, expr in cs)
     rows.append(f"({q(name)}, CASE {missing} ELSE NULL END, {q(f'{len(cs)} checks')})")
@@ -96,7 +112,7 @@ sql = f"""-- Came Through Audio: which migrations has this database already got?
 -- Copy the WHOLE file (Ctrl+A, Ctrl+C), paste into the Supabase SQL editor and Run. It only reads; it changes nothing.
 -- Run every MISSING file from supabase/migrations, oldest first, then run this again.
 SELECT migration,
-       CASE WHEN missing IS NULL AND note LIKE 'nothing%' THEN 'check by hand' WHEN missing IS NULL THEN 'applied' ELSE 'MISSING' END AS status,
+       CASE WHEN missing IS NULL AND note LIKE 'nothing to check automatically%' THEN 'check by hand' WHEN missing IS NULL AND note NOT LIKE '%checks' THEN 'ok' WHEN missing IS NULL THEN 'applied' ELSE 'MISSING' END AS status,
        coalesce('not found: ' || missing, note) AS details
 FROM (VALUES
   {(","+chr(10)+"  ").join(rows)}
