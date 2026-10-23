@@ -357,7 +357,7 @@ export function BadgeSettings({ userId, open, onOpenChange, onSaved }: { userId:
             </div>
           </fieldset>
           <label className="flex items-start justify-between gap-4">
-            <span><span className="block text-sm font-semibold">Next-badge hints</span><span className="text-xs text-muted-foreground">Shows how close you are to your next badge in My Catalog, Embed Metadata and the Royalty Health Check.</span></span>
+            <span><span className="block text-sm font-semibold">Next-badge hints</span><span className="text-xs text-muted-foreground">Shows how close you are to your next badge in My Catalog, Embed Metadata and the Royalty Health Hub.</span></span>
             <Switch checked={prefs.hints} onCheckedChange={(v) => save({ ...prefs, hints: v })} />
           </label>
           <label className="flex items-start justify-between gap-4">

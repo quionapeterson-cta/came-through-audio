@@ -17,7 +17,7 @@ export interface Onboarding {
   avatar: string; // badge path, uploaded photo (data URL), or "" for none
   stageName: string;
   legalName: string;
-  /** Country whose collection societies the Royalty Health Check uses (src/lib/repertoires.ts code). */
+  /** Country whose collection societies the Royalty Health Hub uses (src/lib/repertoires.ts code). */
   healthCountry?: string;
   /** What badges show (celebrations, hints, hidden collections, sharing). Badges are always earned regardless. */
   badgePrefs?: BadgePrefs;

@@ -74,7 +74,7 @@ export const BLUEPRINT_GUIDES: Guide[] = [
       s("Register each song with your PRO", "In My Catalog, a song marked Ready to register has every writer, role and split it needs. Register it with your PRO using those details."),
       s("Register with The MLC", "The MLC collects US streaming mechanical royalties. Register as a self-administered publisher or through your administrator."),
       s("Register the recording with SoundExchange", "SoundExchange pays the recording owner and artists when recordings play on digital radio. Register each recording with its ISRC."),
-      s("Check statements every quarter", "Compare what you're paid with what you released. Use Royalty Health Check to spot songs that aren't fully registered."),
+      s("Check statements every quarter", "Compare what you're paid with what you released. Use the Royalty Health Hub to spot songs that aren't fully registered."),
     ],
     checklist: ["PRO writer account", "IPI saved in My Catalog", "Publishing set up", "Songs registered with PRO", "The MLC", "SoundExchange", "Quarterly check"],
   },

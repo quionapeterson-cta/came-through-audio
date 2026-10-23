@@ -128,7 +128,7 @@ export function songChecklist(r: TrackReport, country: Country, status?: SongSta
 }
 
 /**
- * The My Catalog health meter: how ready each song is to register (the same readiness steps the Royalty Health Check
+ * The My Catalog health meter: how ready each song is to register (the same readiness steps the Royalty Health Hub
  * ticks) and their average, how many registrations are ticked off, and the first missing field so "Fix next" can jump to it.
  */
 export function catalogHealth(tracks: CatalogTrack[], country: Country, checks: RepertoireCheck[], statuses: SongStatus[]) {
@@ -156,7 +156,7 @@ export function encouragement(c: SongChecklist): string {
   return `${c.pct}% ready to register. Every detail you add makes it easier to get paid.`;
 }
 
-/** A song's release type, shared by My Catalog and the Health Check: EP, Album (incl. Compilation), else Single. */
+/** A song's release type, shared by My Catalog and the Health Hub: EP, Album (incl. Compilation), else Single. */
 export function releaseKind(m: Pick<Metadata, "releaseType">): "Single" | "EP" | "Album" {
   const r = m.releaseType;
   return r === "EP" ? "EP" : r === "Album" || r === "Compilation" ? "Album" : "Single";

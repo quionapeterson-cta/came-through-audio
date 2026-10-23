@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { CheckCircle2, XCircle, ExternalLink, ListChecks, Loader2, Search } from "lucide-react";
+import { CheckCircle2, XCircle, ExternalLink, ListChecks, Loader2, Search, Stethoscope } from "lucide-react";
 import { InfoTip } from "@/components/InfoTip";
 import type { GlossaryKey } from "@/lib/glossary";
 import { Button } from "@/components/ui/button";
@@ -27,22 +27,27 @@ const fromTrack = (t: CatalogTrack): Form => {
 
 /**
  * The Royalty Inspector: type in any song's details for an instant check, free and unlimited on every plan.
- * Saved songs join the Song Health Checklist (public.health_songs), so Free accounts can track them to 100%.
+ * Saved songs join the Song Health Checklist (public.health_songs), so Free accounts can track them to 100%, and
+ * "Run a Royalty Health Check" saves the song and takes it to check-in, the way in for songs outside the catalog.
  */
-export function RoyaltyInspector({ onEmbed, onExpert, onSave, editing, onDoneEditing }: {
+export function RoyaltyInspector({ onEmbed, onExpert, onSave, onRunCheck, editing, onDoneEditing }: {
   onEmbed: () => void; onExpert: () => void;
-  onSave: (fields: InspectorFields, id?: string) => Promise<void>;
+  onSave: (fields: InspectorFields, id?: string) => Promise<CatalogTrack>;
+  onRunCheck?: (id: string) => void;
   editing?: CatalogTrack | undefined; onDoneEditing: () => void;
 }) {
   const [f, setF] = useState(blank);
   const [issues, setIssues] = useState<Issue[]>();
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [savedId, setSavedId] = useState<string>();
   // One writer here, so the split box simply can't go past 100% (same shared cap as Embed Metadata).
   const set = (k: keyof Form) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const value = k === "split" ? capShare([{ percentage: f.split }], 0, e.target.value).value : e.target.value;
     setF({ ...f, [k]: value }); setSaved(false);
   };
+  // Self-published comes from the check-in, so editing the song here keeps it.
+  const fields = () => ({ ...toFields(f), ...(editing?.metadata.selfPublished ? { selfPublished: true } : {}) });
   useEffect(() => { if (editing) { setF(fromTrack(editing)); setIssues(undefined); setSaved(false); } }, [editing?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   function run() {
@@ -52,9 +57,13 @@ export function RoyaltyInspector({ onEmbed, onExpert, onSave, editing, onDoneEdi
   async function save() {
     if (!f.title.trim()) return;
     setSaving(true);
-    try { await onSave(toFields(f), editing?.id); setSaved(true); if (editing) onDoneEditing(); } finally { setSaving(false); }
+    try { const t = await onSave(fields(), editing?.id ?? savedId); setSaved(true); setSavedId(t.id); if (editing) onDoneEditing(); return t; } finally { setSaving(false); }
   }
-  const reset = () => { setF(blank); setIssues(undefined); setSaved(false); if (editing) onDoneEditing(); };
+  async function check() {
+    const t = saved && savedId ? { id: savedId } : await save().catch(() => undefined);
+    if (t) onRunCheck?.(t.id);
+  }
+  const reset = () => { setF(blank); setIssues(undefined); setSaved(false); setSavedId(undefined); if (editing) onDoneEditing(); };
 
   const field = (k: keyof Form, label: string, ph = "", term?: GlossaryKey) => (
     <label className="space-y-1 text-sm"><span className="inline-flex items-center">{label}{term && <InfoTip term={term} />}</span>
@@ -65,7 +74,7 @@ export function RoyaltyInspector({ onEmbed, onExpert, onSave, editing, onDoneEdi
   return (
     <div className="rounded-2xl border border-border bg-card p-6">
       <div className="flex items-center gap-2"><Search className="h-6 w-6 text-primary" /><h3 className="text-xl font-bold">{editing ? `Edit "${editing.title}"` : "Royalty Inspector"}</h3></div>
-      <p className="mt-1 text-sm text-muted-foreground">Check any song in seconds, free and unlimited. Save it to your checklist to track every step to 100% health.</p>
+      <p className="mt-1 text-sm text-muted-foreground">Check any song in seconds, free and unlimited. Type in its details, then run a Royalty Health Check for its full report, or save it to your checklist to track every step to 100% health.</p>
       <div className="mt-4 grid gap-3 md:grid-cols-3">
         {field("title", "Song title")}{field("artist", "Artist")}{field("duration", "Duration", "3:25")}
         {field("isrc", "ISRC", "US-XXX-26-00001", "isrc")}
@@ -78,7 +87,8 @@ export function RoyaltyInspector({ onEmbed, onExpert, onSave, editing, onDoneEdi
         {field("publisher", "Publisher", "", "publisher")}{field("pubIpi", "Publisher IPI #", "", "ipi")}
       </div>
       <div className="mt-4 flex flex-wrap gap-2">
-        <Button onClick={run}>Inspect Song</Button>
+        {onRunCheck && <Button onClick={() => void check()} disabled={!f.title.trim() || saving}><Stethoscope />Run a Royalty Health Check</Button>}
+        <Button variant={onRunCheck ? "outline" : "default"} onClick={run}>Inspect Song</Button>
         <Button variant="outline" onClick={() => void save()} disabled={!f.title.trim() || saving || saved}>
           {saving ? <Loader2 className="animate-spin" /> : saved ? <CheckCircle2 /> : <ListChecks />}{saved ? "Saved to your checklist" : editing ? "Update song" : "Save to my checklist"}
         </Button>

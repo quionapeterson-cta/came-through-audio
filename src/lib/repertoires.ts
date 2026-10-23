@@ -1,7 +1,7 @@
 import type { Pillar } from "@/lib/audit";
 
 /**
- * Collection societies by country, for the Royalty Health Check. None of these offer an open lookup API, so each
+ * Collection societies by country, for the Royalty Health Hub. None of these offer an open lookup API, so each
  * links to its own site: the public search where one exists, otherwise the member login. "Search" copies the key that
  * society searches best by (searchBy) first, so it can be pasted straight in. Society ids are stored in repertoire_checks, so never rename one.
  */

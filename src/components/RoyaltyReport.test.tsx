@@ -30,7 +30,7 @@ describe("RoyaltyReport", () => {
     expect(within(report).getAllByRole("button", { name: /Get the 1-click file/ }).length).toBeGreaterThan(0);
     fireEvent.click(within(report).getAllByRole("button", { name: "Open the field" })[0]!);
     expect(onAction).toHaveBeenCalledWith(expect.objectContaining({ kind: "field" }));
-    fireEvent.click(screen.getByRole("button", { name: /Run a new checkup/ }));
+    fireEvent.click(screen.getByRole("button", { name: /Run it again/ }));
     expect(onRun).toHaveBeenCalled();
     // The explainer: captioned scenes, Back / Next.
     fireEvent.click(within(report).getAllByRole("button", { name: /Watch the 30-second explainer/ })[0]!);

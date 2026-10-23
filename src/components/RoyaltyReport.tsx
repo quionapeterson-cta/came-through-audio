@@ -20,6 +20,9 @@ type Props = {
   onReminder: (calendar: "google" | "ics") => void;
   /** Shown when a co-writer is missing their PRO or IPI. */
   onAskCowriter?: (() => void) | undefined;
+  /** What this check covered ("Song A", "Summer Tape (EP)", "Whole catalog"), and the way back to the Hub. */
+  scope?: string | undefined;
+  onBack?: (() => void) | undefined;
 };
 
 const KEY: [OrganState, string, string][] = [
@@ -47,7 +50,7 @@ function stepButton(a: StepAction, canExport: boolean): { label: string; locked?
 }
 
 /** The Royalty Health Report: the clickable body, the main finding with its ℞ treatment, and a full report per organ. */
-export function RoyaltyReport({ checkup, since, date, country, countryPicker, running, canExport, onRunCheckup, onPdf, onAction, onExpert, onReminder, onAskCowriter }: Props) {
+export function RoyaltyReport({ checkup, since, date, country, countryPicker, running, canExport, onRunCheckup, onPdf, onAction, onExpert, onReminder, onAskCowriter, scope, onBack }: Props) {
   const { organs, lead } = checkup;
   const first = lead?.organ ?? organs.find((o) => o.state !== "healthy")?.id ?? organs[0]!.id;
   const [selected, setSelected] = useState<OrganId>(first);
@@ -61,16 +64,17 @@ export function RoyaltyReport({ checkup, since, date, country, countryPicker, ru
   return (
     <div className="rr space-y-8">
       <ArtDefs />
+      {onBack && <Button variant="ghost" className="-mb-4" onClick={onBack}><ChevronLeft />Back to the Hub</Button>}
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <div className="rr-eyebrow text-primary">Checkup · {date} · {checkup.songs} song{checkup.songs === 1 ? "" : "s"} · {country}</div>
+          <div className="rr-eyebrow text-primary">Checkup · {date} · {scope ? `${scope}${scope.startsWith("Whole") || scope.includes("(") ? ` · ${checkup.songs} song${checkup.songs === 1 ? "" : "s"}` : ""}` : `${checkup.songs} song${checkup.songs === 1 ? "" : "s"}`} · {country}</div>
           <h2 className="mt-1 text-3xl font-extrabold tracking-tight md:text-4xl">Royalty Health Report</h2>
           <p className="mt-1 text-muted-foreground">A checkup on every way your music gets paid, and exactly how to fix what's blocking it.</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           {countryPicker}
           {onPdf && <Button variant="outline" onClick={onPdf}><FileDown />Download PDF</Button>}
-          <Button onClick={onRunCheckup} disabled={running}><Stethoscope />{running ? "Checking…" : "Run a new checkup"}</Button>
+          <Button onClick={onRunCheckup} disabled={running}><Stethoscope />{running ? "Checking…" : "Run it again"}</Button>
         </div>
       </div>
 

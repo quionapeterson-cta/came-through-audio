@@ -1,4 +1,4 @@
-import { hasPro, isIpi, publisherCovered } from "@/lib/audit";
+import { hasPro, isBmi, isIpi, publisherCovered } from "@/lib/audit";
 import type { TrackReport } from "@/lib/health";
 import type { SongChecklist } from "@/lib/health-checklist";
 import type { SongStatus } from "@/lib/health-songs";
@@ -38,7 +38,8 @@ export type StepAction =
   | { kind: "changes"; trackId: string }
   | { kind: "upload" };
 export type TreatmentStep = { title: string; text: string; action?: StepAction | undefined };
-export type AffectedSong = { id: string; title: string; why: string; field?: string | undefined; registration?: boolean; society?: Society | undefined };
+/** `unsure`: the check-in answer was "Not sure", so the treatment starts with searching for it at the agency. */
+export type AffectedSong = { id: string; title: string; why: string; field?: string | undefined; registration?: boolean; society?: Society | undefined; unsure?: boolean };
 export type Finding = {
   id: ConditionId;
   organ: OrganId;
@@ -120,6 +121,10 @@ export function royaltyCheckup({ rows, signedSheets, today = new Date().toISOStr
   for (const { r, c, status } of rows) {
     const t = r.track, m = t.metadata, id = t.id, title = t.title || "Untitled";
     const song = (why: string, field?: string, registration = false): AffectedSong => ({ id, title, why, field, registration });
+    // Check-in answers (HealthCheckIn): "Not sure" about a registration, a split sheet signed elsewhere, a release still to come.
+    const answer = (k: string) => status?.steps[`checkin:${k}`];
+    const unsure = (s?: Society): Partial<AffectedSong> => (s && answer(s.id) === "unsure" ? { unsure: true, why: `not sure it's registered with ${s.name}` } : {});
+    const unreleased = answer("delivered") === "no" && !r.streaming?.hit;
     const step = (stage: string, pillar: string) => c.steps.find((s) => s.stage === stage && s.pillar === pillar);
     const writers = writersOf(m);
     const pubs = named(m.publishers);
@@ -128,28 +133,32 @@ export function royaltyCheckup({ rows, signedSheets, today = new Date().toISOStr
       if (step("register", p.pillar)?.done || step("register", p.pillar)?.update) registered[p.pillar]++;
     }
 
-    // Heart: both halves (writer and publisher) must be there; BMI writers with no publisher are covered by BMI.
+    // Heart: both halves (writer and publisher) must be there. A missing publisher never stops the writer share, and BMI
+    // writers with no publisher are covered: BMI pays them the publisher share too. Only the other writers need one.
     const noWriter = !writers.length;
     const noPublisher = !pubs.length && !publisherCovered(m);
-    if (noWriter || noPublisher) hit("broken", song(noWriter ? "no writer" : "no publisher", noWriter ? "writers-0-legalName" : "selfPublished"));
+    const needPublisher = writers.some(isBmi) ? `no publisher for ${plain(writers.filter((w) => !isBmi(w)).map(creditName))}` : "no publisher";
+    if (noWriter || noPublisher) hit("broken", song(noWriter ? "no writer" : needPublisher, noWriter ? "writers-0-legalName" : "selfPublished"));
     if (!noPro && writers.length) {
       const why: string[] = [];
       const missingIpi = [...m.writers.map((w, i) => ({ w, f: `writers-${i}-ipi` })), ...m.composers.map((w, i) => ({ w, f: `composers-${i}-ipi` }))]
         .find(({ w }) => creditName(w) && hasPro(w.pro) && !isIpi(w.ipi ?? ""));
       if (missingIpi) why.push("IPI missing");
       const reg = step("register", "performance");
-      if (reg && !reg.done && !reg.update) why.push(`not registered with ${reg.society?.name ?? "your PRO"}`);
-      if (why.length) hit("artery-left", song(why.join(", "), missingIpi?.f, !missingIpi));
+      const notSure = reg && !reg.done && !reg.update && reg.society && answer(reg.society.id) === "unsure";
+      if (reg && !reg.done && !reg.update) why.push(notSure ? `not sure it's registered with ${reg.society!.name}` : `not registered with ${reg.society?.name ?? "your PRO"}`);
+      if (why.length) hit("artery-left", { ...song(why.join(", "), missingIpi?.f, !missingIpi), ...(notSure ? { unsure: true } : {}) });
     }
     const pubIpi = m.publishers.findIndex((p) => creditName(p) && !isIpi(p.ipi ?? ""));
     if (pubIpi >= 0) hit("artery-right", song(`${creditName(m.publishers[pubIpi]!)}: IPI missing`, `publishers-${pubIpi}-ipi`));
 
     // Lungs (mechanicals) and kidneys (the recording's digital performance), when the country has those agencies.
     const mech = step("register", "mechanical");
-    if (mech && !mech.done && !mech.update) hit("lungs-hold", song(`not registered with ${mech.society?.name}`, undefined, true));
+    if (mech && !mech.done && !mech.update) hit("lungs-hold", { ...song(`not registered with ${mech.society?.name}`, undefined, true), ...unsure(mech.society) });
     else if (mech && !m.isrc.trim()) hit("lungs-one", song("no ISRC", "isrc"));
     const dig = step("register", "digital");
-    if (dig && !dig.done && !dig.update) hit("kidney-none", song(`not registered with ${dig.society?.name}`, undefined, true));
+    // A recording that isn't out yet gets registered once it's released, so it isn't a finding until then.
+    if (dig && !dig.done && !dig.update && !unreleased) hit("kidney-none", { ...song(`not registered with ${dig.society?.name}`, undefined, true), ...unsure(dig.society) });
     if (dig && dig.society?.id === "soundexchange" && m.isrc.trim()) {
       const owner = registrationCheck(m, "soundexchange").missing.filter((x) => x.code !== "isrc");
       if (owner.length) hit("kidney-one", song(owner.map((x) => (x.code === "upc" ? "UPC missing" : "master share missing")).join(", "), owner[0]!.field));
@@ -165,7 +174,10 @@ export function royaltyCheckup({ rows, signedSheets, today = new Date().toISOStr
     const pubSplit = splitStatus(pubs);
     if (split.state === "over" || (split.state === "under" && split.total > 0) || (split.state === "empty" && writers.length > 1)) hit("spine-align", song(split.state === "empty" ? "no shares entered" : `writers total ${split.total}%`, "writers-0-share"));
     else if (pubSplit.state === "over" || (pubSplit.state === "under" && pubSplit.total > 0)) hit("spine-align", song(`publishers total ${pubSplit.total}%`, "publishers-0-share"));
-    if (signedSheets && writers.length > 1 && !signedSheets.get(id)) hit("spine-back", song(signedSheets.has(id) ? "split sheet not signed by everyone" : "no split sheet"));
+    // A sheet signed outside Came Through Audio counts once the check-in says so; without either, there's nothing to read.
+    const sheet = answer("split");
+    if ((signedSheets || sheet) && writers.length > 1 && !signedSheets?.get(id) && sheet !== "yes")
+      hit("spine-back", song(signedSheets?.has(id) ? "split sheet not signed by everyone" : sheet === "unsure" ? "not sure a split sheet was signed" : "no split sheet"));
 
     // Pulse: registrations that went stale (edited since) or were never confirmed.
     const stale = c.steps.filter((s) => s.update).map((s) => s.society?.name).filter(Boolean) as string[];
@@ -211,7 +223,7 @@ export function royaltyCheckup({ rows, signedSheets, today = new Date().toISOStr
   }
   for (const list of byIsrc.values()) if (list.length > 1) list.forEach((s) => hit("brain-double", s));
 
-  const findings = PRIORITY.filter((id) => hits.get(id)?.length).map((id) => word(id, hits.get(id)!, rows));
+  const findings = PRIORITY.filter((id) => hits.get(id)?.length).map((id) => checkFirst(word(id, hits.get(id)!, rows)));
   const organs = ORGAN_ORDER.map((id): Organ => {
     const mine = findings.filter((f) => f.organ === id);
     const pillar = id === "heart" ? "performance" : id === "lungs" ? "mechanical" : id === "kidneys" ? "digital" : undefined;
@@ -234,13 +246,20 @@ const SYSTEM: Record<OrganId, string> = {
 };
 /** What each organ examines, listed as "what we examined" when it's healthy. */
 const CHECKS: Record<OrganId, string[]> = {
-  heart: ["Every song has a writer and a publisher side (or Self-published)", "Writers in a PRO have their IPI", "Publishers have their IPI", "Songs are registered with your PRO"],
+  heart: ["Every song has a writer and a publisher side (Self-published, or BMI writers with no publisher: BMI pays them both)", "Writers in a PRO have their IPI", "Publishers have their IPI", "Songs are registered with your PRO"],
   lungs: ["Songs are registered for mechanicals", "Registered songs have an ISRC to link the recording"],
   kidneys: ["Recordings are registered for digital performance", "Recordings have a UPC and master share"],
   brain: ["Every song has an ISRC", "Registered songs have their ISWC", "No writer has two different IPIs or spellings", "No ISRC is used twice", "Streaming matches your titles and artist name"],
   spine: ["Writer splits total 100%", "Publisher shares total 100%", "Songs with co-writers have a signed split sheet"],
   pulse: ["Registrations match your latest details", `Registrations are confirmed within ${CONFIRM_AFTER_DAYS / 7} weeks`],
 };
+
+/** "Not sure" at check-in: the treatment starts by searching the agency, so nothing gets registered twice. */
+function checkFirst(f: Finding): Finding {
+  const doubt = f.songs.find((s) => s.unsure);
+  if (!doubt) return f;
+  return { ...f, steps: [{ title: "Check first", text: "Not sure it's registered? Search for it at the agency before registering, so it isn't registered twice.", action: { kind: "changes", trackId: doubt.id } }, ...f.steps] };
+}
 
 /** The approved wording (PLAN-royalty-health-report §2), filled in from the songs. */
 function word(id: ConditionId, list: AffectedSong[], rows: CheckupInput["rows"]): Finding {
@@ -257,10 +276,12 @@ function word(id: ConditionId, list: AffectedSong[], rows: CheckupInput["rows"])
   const base = { id, organ: ORGAN_OF[id], severity: SEVERITY[id], songs: list, scan: SCAN_OF[id] ?? (id as ScanId) };
   switch (id) {
     case "broken": {
-      const half = list.every((s) => s.why === "no publisher") ? "the publisher half" : list.every((s) => s.why === "no writer") ? "the writer half" : "half";
-      return { ...base, dx: "Your heart is broken in two.", what: `${songs(n)} ${n === 1 ? "has" : "have"} only one half set up, so ${half} of the money has nowhere to go.`,
+      const noPub = (s: AffectedSong) => s.why.startsWith("no publisher");
+      const half = list.every(noPub) ? "the publisher half" : list.every((s) => s.why === "no writer") ? "the writer half" : "half";
+      const bmi = list.some((s) => s.why.startsWith("no publisher for"));
+      return { ...base, dx: "Your heart is broken in two.", what: `${songs(n)} ${n === 1 ? "has" : "have"} only one half set up, so ${half} of the money has nowhere to go.${list.every(noPub) ? " The writer share still gets paid." : ""}`,
         symptom: "Performance royalties for that half can't be paid to anyone, even when the song plays.",
-        cause: list.some((s) => s.why === "no publisher") ? "No publisher is listed and Self-published isn't checked." : "No writer is listed.",
+        cause: list.some(noPub) ? `No publisher is listed and Self-published isn't checked.${bmi ? " BMI writers are covered: with no publisher, BMI pays them the publisher share too. The other writers need a publisher, or Self-published." : ""}` : "No writer is listed.",
         steps: [fix("Fill the gap", "Add the missing half in the song's Writer or Publisher section, or check Self-published."), dl("pro", "Download your PRO cheat sheet", "Every field your PRO asks for, filled in."),
           at(pro, `Register at ${proName}`, `Register or update the ${n === 1 ? "song" : "songs"} in ${pro ? portal(pro).name : "your PRO's member portal"}.`), tick()],
         note: "A heart needs both halves to beat." };

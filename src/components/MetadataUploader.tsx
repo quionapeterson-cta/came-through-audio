@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent, type ReactNode } from "react";
 import { confirmAction } from "@/components/ConfirmHost";
-import { ChevronDown, Disc3, Lock, ShieldCheck, CheckCircle2, Download, FileAudio, FileText, ImagePlus, Pencil, Plus, Save, Trash2, Upload } from "lucide-react";
+import { ChevronDown, Disc3, Lock, ShieldCheck, CheckCircle2, Download, FileAudio, FileText, ImagePlus, Pencil, Plus, Save, Stethoscope, Trash2, Upload } from "lucide-react";
 import { capShare, splitStatus, splitSummary } from "@/lib/splits-total";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -35,7 +35,7 @@ import type { ShareInfo } from "@/components/BadgeCelebration";
 const normArtist = (v: string) => v.trim().replace(/\s+/g, " ").toLowerCase();
 import { Link } from "@tanstack/react-router";
 
-export function MetadataUploader({ onShareInfo, userId, mode = "embed", readOnly, onSubmitted, onSplitSheet, onProtect, canSplit, canExport, focus, onFocused }: { readOnly?: boolean; onShareInfo?: (s: Partial<ShareInfo> & Pick<ShareInfo, "ctx">) => void; onFocused?: () => void; userId?: string; mode?: "embed" | "catalog"; focus?: { trackId: string; field: string } | undefined; onSubmitted?: () => void; onSplitSheet?: (t: CatalogTrack) => void; onProtect?: (t: CatalogTrack) => void; canSplit?: boolean; canExport?: boolean }) {
+export function MetadataUploader({ onShareInfo, userId, mode = "embed", readOnly, onSubmitted, onSplitSheet, onProtect, canSplit, canExport, focus, onFocused, onHealthCheck }: { onHealthCheck?: (trackId?: string, release?: boolean) => void; readOnly?: boolean; onShareInfo?: (s: Partial<ShareInfo> & Pick<ShareInfo, "ctx">) => void; onFocused?: () => void; userId?: string; mode?: "embed" | "catalog"; focus?: { trackId: string; field: string } | undefined; onSubmitted?: () => void; onSplitSheet?: (t: CatalogTrack) => void; onProtect?: (t: CatalogTrack) => void; canSplit?: boolean; canExport?: boolean }) {
   const full = mode === "catalog";
   // One artist per account: the artist name from setup. A different name gets a gentle add-an-artist note.
   const registeredArtist = loadOnboarding(userId)?.stageName?.trim() ?? "";
@@ -111,7 +111,7 @@ export function MetadataUploader({ onShareInfo, userId, mode = "embed", readOnly
   useEffect(() => {
     onShareInfo?.(full ? { ctx: "catalog", count: tracks.length, genre: shareGenre } : { ctx: "embed", artist: metadata.artist.trim(), title: metadata.title, genre: shareGenre });
   }, [full, tracks.length, metadata.artist, metadata.title, shareGenre]); // eslint-disable-line react-hooks/exhaustive-deps
-  // The health meter reads the same saved checks and checklist ticks as the Royalty Health Check.
+  // The health meter reads the same saved checks and checklist ticks as the Royalty Health Hub.
   const [checks, setChecks] = useState<RepertoireCheck[]>([]);
   const [statuses, setStatuses] = useState<SongStatus[]>([]);
   useEffect(() => {
@@ -546,6 +546,10 @@ export function MetadataUploader({ onShareInfo, userId, mode = "embed", readOnly
           {health && tracks.length > 0 && <div className="mb-8 rounded-2xl border border-border bg-card p-5">
             <HealthMeter pct={health.pct} ready={health.ready} registered={health.registered} total={tracks.length} next={readOnly ? undefined : health.next?.track.title}
               onNext={() => { const n = health.next; if (n) { if (n.field) fix(n.track, n.field); else open(n.track); } }} />
+            {onHealthCheck && <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-border pt-4">
+              <p className="text-sm text-muted-foreground">Get a full Royalty Health Report: what's blocking your money, and exactly how to fix it.</p>
+              <Button type="button" onClick={() => onHealthCheck()}><Stethoscope />Run a Royalty Health Check</Button>
+            </div>}
           </div>}
           {adding && <div id="song-new" className="mb-8 scroll-mt-4 rounded-2xl border border-primary p-4">
             <h2 className="mb-4 text-xl font-bold">Add a song</h2>
@@ -555,7 +559,7 @@ export function MetadataUploader({ onShareInfo, userId, mode = "embed", readOnly
             <h2 className="text-xl font-bold">Your songs</h2>
             {tracks.length > 0 && <Button type="button" variant="outline" size="sm" onClick={() => { const list = filter === "All" ? tracks : tracks.filter((t) => releaseGroup(t) === filter); downloadCatalogPdf(list, filter === "All" ? "Catalog" : `Catalog - ${filter}s`).catch(() => toast.error("Could not create the catalog PDF.")); }}><FileText />{filter === "All" ? "Catalog PDF" : `${filter}s PDF`}</Button>}
           </div>
-          {tracks.length === 0 ? <p className="text-sm text-muted-foreground">No songs yet. Use Add song to save a song you already embedded, or embed a new one in Embed Metadata. Every song you save runs through the Royalty Health Check automatically.</p> : (
+          {tracks.length === 0 ? <p className="text-sm text-muted-foreground">No songs yet. Use Add song to save a song you already embedded, or embed a new one in Embed Metadata. Every song you save is checked automatically in the Royalty Health Hub.</p> : (
             <>
             <div className="mb-5 flex flex-wrap gap-2" role="tablist" aria-label="Filter by release type">
               {(["Album", "EP", "Single", "All"] as const).map((f) => {
@@ -596,6 +600,7 @@ export function MetadataUploader({ onShareInfo, userId, mode = "embed", readOnly
                         </DropdownMenuContent>
                       </DropdownMenu>
                     )}
+                    {onHealthCheck && <Button type="button" variant="outline" size="sm" onClick={() => onHealthCheck(t.id)}><Stethoscope />Health check</Button>}
                     {exportMenu("Agency Export", [t], t.title)}
                     {!readOnly && onProtect && <Button type="button" variant={t.metadata.aiProtection ? "default" : "outline"} size="sm" onClick={() => onProtect(t)}><ShieldCheck />{t.metadata.aiProtection ? "Add AI Protection Proof" : "Protect Track"}</Button>}
                     {!readOnly && <>
@@ -649,6 +654,7 @@ export function MetadataUploader({ onShareInfo, userId, mode = "embed", readOnly
                           <div className="truncate text-xl font-bold">{p.title}</div>
                           <div className="text-sm text-muted-foreground">{p.artist} · {p.tracks.length} {p.tracks.length === 1 ? "track" : "tracks"}</div>
                         </div>
+                        {onHealthCheck && <Button type="button" variant="outline" size="sm" onClick={(e) => { e.preventDefault(); onHealthCheck(p.tracks[0]!.id, true); }}><Stethoscope />Health check</Button>}
                         {exportMenu("Export Release", p.tracks, p.title)}
                       </summary>
                       <ul className="mt-4 grid gap-3">{p.tracks.map(row)}</ul>

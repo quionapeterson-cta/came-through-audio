@@ -107,4 +107,26 @@ describe("royalty checkup", () => {
     expect(sinceLast(now, before)).toMatchObject({ healed: ["Heart", "Lungs", "Kidneys"], fresh: 0 });
     expect(sinceLast(now, null)).toBeNull();
   });
+
+  it("BMI writers with no publisher are covered; only the other writers need one, and the writer share still pays", () => {
+    const bmiOnly = run([track("a", { publishers: [], writers: [writer({ pro: "BMI" })] })], [registeredAll("a")]);
+    expect(ids(bmiOnly)).not.toContain("broken");
+    const mixed = run([track("b", { publishers: [], writers: [writer({ pro: "BMI", percentage: "50" }), writer({ legalName: "Kim Roe", pro: "ASCAP", percentage: "50" })] })]);
+    const broken = mixed.organs.flatMap((o) => o.findings).find((f) => f.id === "broken")!;
+    expect(broken.songs[0]!.why).toBe("no publisher for Kim Roe");
+    expect(broken.what).toContain("The writer share still gets paid.");
+    expect(broken.cause).toContain("BMI pays them the publisher share too");
+  });
+
+  it("reads check-in answers: not sure starts with a search, a split sheet signed elsewhere counts, unreleased recordings wait", () => {
+    const two = { writers: [writer({ percentage: "50" }), writer({ legalName: "Kim Roe", percentage: "50" })] };
+    const unsure: SongStatus = { ...emptyStatus("a"), steps: { "checkin:mlc": "unsure", "checkin:split": "no", "checkin:delivered": "no" } };
+    const c = run([track("a", two)], [unsure]);
+    const lungs = c.organs.flatMap((o) => o.findings).find((f) => f.id === "lungs-hold")!;
+    expect(lungs.steps[0]!.title).toBe("Check first");
+    expect(ids(c)).toContain("spine-back");
+    expect(ids(c)).not.toContain("kidney-none");
+    const signed = run([track("a", two)], [{ ...emptyStatus("a"), steps: { "checkin:split": "yes" } }]);
+    expect(ids(signed)).not.toContain("spine-back");
+  });
 });

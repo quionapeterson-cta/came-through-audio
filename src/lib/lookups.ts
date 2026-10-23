@@ -1,5 +1,5 @@
 /**
- * Live lookups for the Royalty Health Check, from open sources that allow apps to query them:
+ * Live lookups for the Royalty Health Hub, from open sources that allow apps to query them:
  * MusicBrainz (recordings, their compositions, ISWCs and writers) and Deezer (is the ISRC live on streaming).
  * These run on the server; `fetcher` is injectable so tests don't touch the network.
  */

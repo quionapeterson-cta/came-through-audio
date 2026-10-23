@@ -64,8 +64,11 @@ export const DOCS: Doc[] = [
     description: "Find out if your songs are registered where royalties are collected, and fix what's missing.",
     intro: "Unregistered songs mean missed payouts. The Royalty Health Suite shows where each song stands and what to do next.",
     sections: [
-      { heading: "Royalty Health Check (free)", bullets: [
-        "The Royalty Inspector checks any song you type in, free and unlimited. Save it to your Song Health Checklist to track it.",
+      { heading: "Royalty Health Hub (free)", bullets: [
+        "The Royalty Health Hub is home base for your songs' royalty health: your catalog at a glance, your Song Health Checklist and every report you've run.",
+        "Run a Royalty Health Check on one song, a release or your whole catalog, from the Hub or from My Catalog. A quick check-in asks what you've already registered, then your Royalty Health Report shows what's blocking your money and how to fix it. Every report is kept in My reports, so you can run it again and see what healed.",
+        "Checking a song that isn't in your catalog, or on a free account? Type it into the Royalty Inspector and run its Royalty Health Check, free and unlimited.",
+        "BMI writers with no publisher still get their writer share, and BMI pays them the publisher share too. Writers at other PROs need a publisher, or Self-published.",
         "Every song gets a simple step-by-step checklist: fix the song details, register it, then confirm it shows up. Tick steps at your own pace until it's 100% healthy.",
         "Not showing up yet? Each step lists the common, harmless reasons (still processing, not matched or reconciled yet, spelled differently) and what to do.",
         "Organize songs into Needs attention, Saved for later (with a note and reminder date) and 100% Healthy.",

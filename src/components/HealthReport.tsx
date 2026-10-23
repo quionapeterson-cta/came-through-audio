@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import { Check, Disc3, ExternalLink, Radar } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -17,7 +18,8 @@ export type HealthActions = {
   onExpert: () => void;
 };
 type Running = { done: number; total: number; trackId?: string | undefined };
-type Props = HealthActions & { report: Report; country: Country; running?: Running | undefined; canCatalog: boolean; onEmbed: () => void };
+/** `action`: the Hub's "Run a Royalty Health Check" button, under the country picker. */
+type Props = HealthActions & { report: Report; country: Country; running?: Running | undefined; canCatalog: boolean; onEmbed: () => void; action?: ReactNode };
 
 function ScoreRing({ value }: { value: number }) {
   const r = 52, c = 2 * Math.PI * r;
@@ -111,7 +113,7 @@ export function LiveRecords({ r, onRun, running }: { r: TrackReport; onRun: () =
 
 const STEP = { fix: "Fix song info", register: "Register", confirm: "Confirm" } as const;
 
-export function HealthReport({ report, country, running, canCatalog, onEmbed, ...actions }: Props) {
+export function HealthReport({ report, country, running, canCatalog, onEmbed, action, ...actions }: Props) {
   const needsPro = (r: TrackReport) => r.issues.some((i) => i.field?.endsWith("-pro"));
   const rowOf = (id: string) => report.rows.find((r) => r.track.id === id)!;
   const todos = todoList(report).filter((t) => !(t.kind === "confirm" && t.pillar === "performance" && needsPro(rowOf(t.track.id))));
@@ -126,12 +128,12 @@ export function HealthReport({ report, country, running, canCatalog, onEmbed, ..
       <section className="overflow-hidden rounded-3xl bg-ink p-6 text-ink-foreground md:p-8">
         <div className="flex flex-col gap-6 md:flex-row md:items-start md:justify-between">
           <div>
-            <h2 className="text-3xl font-extrabold tracking-tight md:text-4xl">Royalty Health Check</h2>
+            <h2 className="text-3xl font-extrabold tracking-tight md:text-4xl">Royalty Health Hub</h2>
             <p className="mt-2 max-w-xl text-ink-muted">{canCatalog || report.rows.length
               ? "Make sure every song is registered and matched, so every royalty it earns can reach you."
               : "Enter a song's details below to see if it's registered and matched, so every royalty it earns can reach you."}</p>
           </div>
-          <CountryPicker country={country} onCountry={actions.onCountry} />
+          <div className="flex flex-col items-start gap-3 md:items-end"><CountryPicker country={country} onCountry={actions.onCountry} />{action}</div>
         </div>
         {report.rows.length > 0 && (
           <div className="mt-8 flex flex-col gap-6 lg:flex-row lg:items-center">
@@ -160,7 +162,7 @@ export function HealthReport({ report, country, running, canCatalog, onEmbed, ..
         canCatalog ? (
           <div className="rounded-2xl border border-border p-8 text-center">
             <p className="text-lg font-semibold">Your songs are checked automatically.</p>
-            <p className="mx-auto mt-1 max-w-xl text-muted-foreground">Every song you embed and save to My Catalog runs through the Royalty Health Check on its own. Embed your first song to see its report here.</p>
+            <p className="mx-auto mt-1 max-w-xl text-muted-foreground">Every song you embed and save to My Catalog is checked on its own. Embed your first song, then run a Royalty Health Check to get its report.</p>
             <Button className="mt-4" onClick={onEmbed}>Embed a song</Button>
           </div>
         ) : null

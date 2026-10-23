@@ -22,7 +22,7 @@ import { ArtistAvatar, ArtistOnboarding } from "@/components/ArtistOnboarding";
 import { loadOnboarding, syncFromCloud, type Onboarding } from "@/lib/artist-profile";
 import { RoyaltyUtilitySuite } from "@/components/RoyaltyUtilitySuite";
 import { ExpertAssistance } from "@/components/ExpertAssistance";
-import { RoyaltyHealthCheck } from "@/components/RoyaltyHealthCheck";
+import { RoyaltyHealthCheck, type HealthStart } from "@/components/RoyaltyHealthCheck";
 import { NextBadgeHint } from "@/components/Badges";
 import { PaymentTestModeBanner } from "@/components/PaymentTestModeBanner";
 import { toast } from "sonner";
@@ -59,7 +59,7 @@ const tabs = [
   { id: "catalog", label: "My Catalog", icon: Disc3 },
   { id: "splits", label: "Split Sheets", icon: FileSignature },
   { id: "protect", label: "AI Protection Hub", icon: ShieldCheck },
-  { id: "health", label: "Royalty Health Check", icon: Activity },
+  { id: "health", label: "Royalty Health Hub", icon: Activity },
   { id: "learn", label: "Contracts & Blueprints", icon: GraduationCap },
 ];
 
@@ -82,6 +82,10 @@ function Workspace() {
   const [catalogKey, setCatalogKey] = useState(0);
   const [protectTrack, setProtectTrack] = useState<CatalogTrack>();
   const [catalogFix, setCatalogFix] = useState<{ trackId: string; field: string }>();
+  // A Royalty Health Check started from My Catalog: opens the Hub on that song's (or release's, or the catalog's) check-in.
+  const [healthStart, setHealthStart] = useState<HealthStart>();
+  // Used once: leaving the tab clears it, so coming back opens the Hub itself.
+  useEffect(() => { if (tab !== "health") setHealthStart(undefined); }, [tab]);
   const { tier: realTier, purchases, loaded: billingLoaded, lapse, pauses, sub, reload: reloadBilling } = useBilling(user?.id);
   const [previewTier, setPreviewTier] = useState<Tier | "real">("real");
   // The test-mode tier preview is for super admins only, so testers can't hand themselves a paid plan in the UI.
@@ -117,7 +121,7 @@ function Workspace() {
     return () => { live = false; };
   }, [user]);
   // The setup walkthrough (embed defaults, catalog profile) is for plans that can embed. Free accounts skip it and
-  // land on the Royalty Health Check; it opens the first time they upgrade.
+  // land on the Royalty Health Hub; it opens the first time they upgrade.
   useEffect(() => {
     if (billingLoaded && onboardSynced && !onboard?.done && hasTier(tier, "plus")) setProfileOpen(true);
   }, [billingLoaded, onboardSynced, onboard?.done, tier]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -125,7 +129,7 @@ function Workspace() {
   const openQuickCheck = () => { setTab("health"); setTimeout(() => document.getElementById("quick-check")?.scrollIntoView({ behavior: "smooth" }), 50); };
   const studio = useStudioMode();
   const app = useInstallApp();
-  // Free accounts open on the Royalty Health Check (Royalty Inspector) instead of the locked Embed tab.
+  // Free accounts open on the Royalty Health Hub (Royalty Inspector) instead of the locked Embed tab.
   useEffect(() => { if (billingLoaded && !search.tab && !hasTier(realTier, "plus")) setTab((t) => (t === "embed" ? "health" : t)); }, [billingLoaded]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // A plan picked before signup ("Sign up to start") goes straight to that plan's checkout once billing has loaded.
@@ -244,11 +248,11 @@ function Workspace() {
           </TabsContent>
           <TabsContent value="catalog" forceMount className="data-[state=inactive]:hidden">
             {!canCatalog && !catalogReadOnly ? <PlusLock title="My Catalog starts with Catalog Plus" onQuickCheck={openQuickCheck} onUpgrade={upgrade} /> : <>
-            <MetadataUploader key={catalogKey} userId={user.id} mode="catalog" readOnly={catalogReadOnly} onShareInfo={(i) => setTabShare((m) => ({ ...m, catalog: i }))} canSplit={canSplit} canExport={canCollect} focus={catalogFix} onFocused={() => setCatalogFix(undefined)} onSplitSheet={(t) => { setSplitTrackId(t.id); setTab("splits"); }} onProtect={(t) => { setProtectTrack(t); setTab("protect"); }} /></>}
+            <MetadataUploader key={catalogKey} userId={user.id} mode="catalog" readOnly={catalogReadOnly} onShareInfo={(i) => setTabShare((m) => ({ ...m, catalog: i }))} canSplit={canSplit} canExport={canCollect} focus={catalogFix} onFocused={() => setCatalogFix(undefined)} onSplitSheet={(t) => { setSplitTrackId(t.id); setTab("splits"); }} onProtect={(t) => { setProtectTrack(t); setTab("protect"); }} onHealthCheck={(trackId, release) => { setHealthStart({ trackId, release, nonce: Date.now() }); setTab("health"); }} /></>}
           </TabsContent>
           <TabsContent value="protect"><AIProtectionHub userId={user.id} purchases={purchases} justPaid={search.checkout === "success" && search.tab === "protect"} track={protectTrack} /></TabsContent>
           <TabsContent value="splits"><SplitSheets userId={user.id} canSplit={canSplit} canCollect={canCollect} prefillTrackId={splitTrackId} onUpgrade={upgrade} /></TabsContent>
-          <TabsContent value="health"><Health startView={search.view === "expert" || (search.tab === "health" && search.checkout === "success") ? "expert" : "check"} justPaid={search.tab === "health" && search.checkout === "success"} canCatalog={canCatalog} onFix={() => setTab("catalog")} onFixField={(trackId, field) => { setCatalogFix({ trackId, field }); setTab("catalog"); }} onEmbed={() => setTab("embed")} userId={user.id} purchases={purchases} canUtility={canCollect} onUpgrade={upgrade} onSplitSheet={(id) => { setSplitTrackId(id); setTab("splits"); }} /></TabsContent>
+          <TabsContent value="health"><Health startView={search.view === "expert" || (search.tab === "health" && search.checkout === "success") ? "expert" : "check"} justPaid={search.tab === "health" && search.checkout === "success"} canCatalog={canCatalog} onFix={() => setTab("catalog")} onFixField={(trackId, field) => { setCatalogFix({ trackId, field }); setTab("catalog"); }} onEmbed={() => setTab("embed")} userId={user.id} purchases={purchases} canUtility={canCollect} onUpgrade={upgrade} onSplitSheet={(id) => { setSplitTrackId(id); setTab("splits"); }} start={healthStart} /></TabsContent>
           <TabsContent value="learn"><Learn userId={user.id} unlocked={hasTier(tier, "management")} onUpgrade={upgrade} /></TabsContent>
         </Tabs>
       </main>
@@ -345,10 +349,11 @@ function Coaching({ userId }: { userId: string }) {
   );
 }
 
-function Health({ startView, justPaid, canCatalog, onFix, onFixField, onEmbed, userId, purchases, canUtility, onUpgrade, onSplitSheet }: { startView: "check" | "expert"; justPaid: boolean; canCatalog: boolean; userId: string; purchases: Purchase[]; canUtility: boolean; onUpgrade: () => void; onFix: () => void; onFixField: (trackId: string, field: string) => void; onEmbed: () => void; onSplitSheet: (trackId: string) => void }) {
+function Health({ startView, justPaid, canCatalog, onFix, onFixField, onEmbed, userId, purchases, canUtility, onUpgrade, onSplitSheet, start }: { startView: "check" | "expert"; justPaid: boolean; canCatalog: boolean; userId: string; purchases: Purchase[]; canUtility: boolean; onUpgrade: () => void; onFix: () => void; onFixField: (trackId: string, field: string) => void; onEmbed: () => void; onSplitSheet: (trackId: string) => void; start?: HealthStart | undefined }) {
   // Three tools, one at a time, switched like Contracts & Blueprints.
   const [view, setView] = useState<"check" | "expert" | "utility">(startView);
-  const views = [["check", "Health Check", Activity], ["expert", "Expert Help", Users], ["utility", "Utility Suite", Calculator]] as const;
+  useEffect(() => { if (start) setView("check"); }, [start?.nonce]); // eslint-disable-line react-hooks/exhaustive-deps
+  const views = [["check", "Health Hub", Activity], ["expert", "Expert Help", Users], ["utility", "Utility Suite", Calculator]] as const;
   return (
     <div className="mt-6 space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -357,7 +362,7 @@ function Health({ startView, justPaid, canCatalog, onFix, onFixField, onEmbed, u
         </div>
       </div>
       {view === "check" && <RoyaltyHealthCheck userId={userId} canCatalog={canCatalog} canExport={canUtility} onUpgrade={onUpgrade} onFixField={onFixField} onEmbed={onEmbed} onSplitSheet={canCatalog ? onSplitSheet : undefined}
-        onExpert={() => { setView("expert"); window.scrollTo({ top: 0, behavior: "smooth" }); }} />}
+        onExpert={() => { setView("expert"); window.scrollTo({ top: 0, behavior: "smooth" }); }} start={start} />}
       {view === "expert" && <div id="expert-assistance"><ExpertAssistance userId={userId} purchases={purchases} justPaid={justPaid} onFix={onFixField} onCatalog={onFix} /></div>}
       {view === "utility" && <RoyaltyUtilitySuite unlocked={canUtility} onUpgrade={onUpgrade} />}
     </div>

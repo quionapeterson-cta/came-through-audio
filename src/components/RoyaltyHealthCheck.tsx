@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import { AlertTriangle, ChevronRight, Hourglass } from "lucide-react";
+import { AlertTriangle, ChevronRight, Hourglass, Stethoscope } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { listTracks, type CatalogTrack } from "@/lib/catalog";
@@ -10,7 +10,9 @@ import { CountryPicker, HealthReport } from "@/components/HealthReport";
 import { RoyaltyReport } from "@/components/RoyaltyReport";
 import { ACCOUNT_REF, releaseGroups, SINGLES_KEY, songChecklist } from "@/lib/health-checklist";
 import { CONFIRM_AFTER_DAYS, ORGAN_NAME, royaltyCheckup, sinceLast, STATE_LABEL, summarize, type StepAction } from "@/lib/royalty-checkup";
-import { listReports, sameSummary, saveReport, type SavedReport } from "@/lib/health-reports";
+import { catalogScope, listReports, releaseScope, sameScope, saveReport, scopeName, songScope, type ReportScope, type SavedReport } from "@/lib/health-reports";
+import { HealthCheckIn } from "@/components/HealthCheckIn";
+import { creditName } from "@/lib/metadata";
 import { downloadCheckupPdf } from "@/lib/checkup-pdf";
 import { AgencyLists } from "@/components/AgencyLists";
 import { listKey, type ListResult, type SavedListSummary } from "@/lib/agency-lists";
@@ -38,7 +40,17 @@ function distributorMessage(t: CatalogTrack, differences: string[]) {
     "The correct details are:", `- Title: ${t.title}`, `- Artist: ${t.artist}`, ...(m.isrc ? [`- ISRC: ${m.isrc}`] : []), "", "Thank you."].join("\n");
 }
 
-export function RoyaltyHealthCheck({ userId, canCatalog, canExport, onUpgrade, onFixField, onEmbed, onExpert, onSplitSheet }: { userId: string; canCatalog: boolean; canExport: boolean; onUpgrade: () => void; onFix?: () => void; onFixField: (trackId: string, field: string) => void; onEmbed: () => void; onExpert?: () => void; onSplitSheet?: ((trackId: string) => void) | undefined }) {
+/** Where a Royalty Health Check starts from outside the Hub: a song or its release in My Catalog, or the whole catalog. */
+export type HealthStart = { trackId?: string | undefined; release?: boolean | undefined; nonce: number };
+
+/**
+ * The Royalty Health Hub (PLAN-health-hub-reports): home base for catalog health, the checklist and every report.
+ * A Royalty Health Check runs from here, My Catalog or the Royalty Inspector: check-in first, then the report,
+ * which is saved to My reports.
+ */
+type View = { kind: "hub" } | { kind: "checkin"; scope: ReportScope; from?: string | undefined } | { kind: "report"; scope: ReportScope; baseline: SavedReport | null };
+
+export function RoyaltyHealthCheck({ userId, canCatalog, canExport, onUpgrade, onFixField, onEmbed, onExpert, onSplitSheet, start }: { userId: string; canCatalog: boolean; canExport: boolean; onUpgrade: () => void; onFix?: () => void; onFixField: (trackId: string, field: string) => void; onEmbed: () => void; onExpert?: () => void; onSplitSheet?: ((trackId: string) => void) | undefined; start?: HealthStart | undefined }) {
   const [tracks, setTracks] = useState<CatalogTrack[]>();
   const [checks, setChecks] = useState<RepertoireCheck[]>([]);
   const [code, setCode] = useState(() => loadOnboarding(userId)?.healthCountry);
@@ -49,9 +61,10 @@ export function RoyaltyHealthCheck({ userId, canCatalog, canExport, onUpgrade, o
   const [editing, setEditing] = useState<CatalogTrack>();
   const autoRan = useRef(false);
   const [reports, setReports] = useState<SavedReport[]>();
-  // The report this visit is compared with: the latest one saved before the page opened.
-  const [baseline, setBaseline] = useState<SavedReport | null>(null);
-  const [saveAfterRun, setSaveAfterRun] = useState(false);
+  const [view, setView] = useState<View>({ kind: "hub" });
+  // Set when a check runs; the report is saved once its live lookups finish.
+  const [pendingSave, setPendingSave] = useState(false);
+  const [inspectorOpen, setInspectorOpen] = useState(false);
 
   useEffect(() => {
     Promise.all([
@@ -61,7 +74,7 @@ export function RoyaltyHealthCheck({ userId, canCatalog, canExport, onUpgrade, o
       listInspectorSongs().then(setInspectorSongs).catch(() => {}),
       listStatuses().then(setStatuses).catch(() => {}),
       // Report history arrives with the 20261024130000 migration; until then there's simply no history.
-      listReports().then((r) => { setReports(r); setBaseline(r[0] ?? null); }).catch(() => setReports([])),
+      listReports().then(setReports).catch(() => setReports([])),
     ]).then(() => setLoaded(true));
   }, []);
 
@@ -91,6 +104,7 @@ export function RoyaltyHealthCheck({ userId, canCatalog, canExport, onUpgrade, o
       const t = await saveInspectorSong(fields, id);
       setInspectorSongs((all) => [t, ...all.filter((x) => x.id !== t.id)]);
       toast.success(id ? "Song updated." : "Saved to your Song Health Checklist.");
+      return t;
     } catch (e) { toast.error(e instanceof Error ? e.message : "Couldn't save the song."); throw e; }
   }
   async function removeInspector(id: string) {
@@ -99,7 +113,8 @@ export function RoyaltyHealthCheck({ userId, canCatalog, canExport, onUpgrade, o
   function fixField(trackId: string, field: string) {
     if (!isInspectorSong(trackId)) { onFixField(trackId, field); return; }
     setEditing(inspectorSongs.find((x) => x.id === trackId));
-    document.getElementById("quick-check")?.scrollIntoView({ behavior: "smooth" });
+    setView({ kind: "hub" }); setInspectorOpen(true);
+    setTimeout(() => document.getElementById("quick-check")?.scrollIntoView({ behavior: "smooth" }), 50);
   }
 
   const [focusRequest, setFocusRequest] = useState<{ id: string; nonce: number }>();
@@ -126,24 +141,82 @@ export function RoyaltyHealthCheck({ userId, canCatalog, canExport, onUpgrade, o
     const status = statuses.find((x) => x.songRef === r.track.id);
     return { r, c: songChecklist(r, country, status, statuses.find((x) => x.songRef === ACCOUNT_REF)), status };
   }), [report, country, statuses]);
-  const checkup = useMemo(() => royaltyCheckup({ rows: checkupRows, signedSheets }), [checkupRows, signedSheets]);
+  /** The songs a check covers: the whole catalog means catalog songs (not Royalty Inspector ones), as they are now. */
+  const rowsIn = (scope: ReportScope) => checkupRows.filter(({ r }) => (scope.kind === "catalog" ? !isInspectorSong(r.track.id) : scope.refs.includes(r.track.id)));
+  const reportRows = useMemo(() => (view.kind === "report" ? rowsIn(view.scope) : []), [view, checkupRows]); // eslint-disable-line react-hooks/exhaustive-deps
+  const checkup = useMemo(() => royaltyCheckup({ rows: reportRows, signedSheets }), [reportRows, signedSheets]);
   const summary = useMemo(() => summarize(checkup), [checkup]);
-  const since = sinceLast(summary, baseline?.summary);
+  const since = sinceLast(summary, view.kind === "report" ? view.baseline?.summary : null);
 
-  // Each visit adds to Past reports once a day when something changed; "Run a new checkup" always adds one.
-  const autoSaved = useRef(false);
+  // Every check that runs is saved to My reports, once its live lookups have finished.
   useEffect(() => {
-    if (!loaded || running || !reports || !report.rows.length) return;
-    const latest = reports[0];
-    const force = saveAfterRun;
-    if (!force && (autoSaved.current || (latest && (latest.createdAt.slice(0, 10) === new Date().toISOString().slice(0, 10) || sameSummary(latest.summary, summary))))) return;
-    autoSaved.current = true;
-    setSaveAfterRun(false);
-    saveReport(summary).then((r) => setReports((all) => [r, ...(all ?? [])])).catch(() => {});
-  }, [loaded, running, reports, summary, saveAfterRun, report.rows.length]);
+    if (!pendingSave || running || view.kind !== "report" || !reportRows.length) return;
+    setPendingSave(false);
+    saveReport(summary, view.scope).then((r) => setReports((all) => [r, ...(all ?? [])])).catch(() => {});
+  }, [pendingSave, running, view, summary, reportRows.length]);
 
-  /** Opens one song's checklist in "Song by song". */
+  const top = () => setTimeout(() => window.scrollTo({ top: 0, behavior: "smooth" }), 30);
+  /** Check-in: the song it was opened from can widen to its release or the whole catalog. */
+  function startCheck(scope: ReportScope, from = scope.kind === "song" || scope.kind === "outside" ? scope.refs[0] : undefined) {
+    setView({ kind: "checkin", scope, from });
+    top();
+  }
+  function checkSong(trackId: string, release?: boolean) {
+    const t = allTracks.find((x) => x.id === trackId);
+    if (!t) return;
+    const rel = release ? releaseScope(t, allTracks) : undefined;
+    startCheck(rel ?? songScope(t), trackId);
+  }
+  function scopeOptions(from?: string): ReportScope[] {
+    const t = from ? allTracks.find((x) => x.id === from) : undefined;
+    if (t && isInspectorSong(t.id)) return [songScope(t)];
+    const rel = t && releaseScope(t, allTracks);
+    return [t && songScope(t), rel, (tracks ?? []).length ? catalogScope(tracks ?? []) : undefined].filter((x): x is ReportScope => !!x);
+  }
+  /** Runs the check: live lookups for its catalog songs, then the report, compared with the last one on the same songs. */
+  function runCheck(scope: ReportScope) {
+    setView({ kind: "report", scope, baseline: reports?.find((r) => sameScope(r.scope, scope)) ?? null });
+    setPendingSave(true);
+    const ids = new Set(rowsIn(scope).map(({ r }) => r.track.id));
+    void runAll((tracks ?? []).filter((t) => ids.has(t.id)), false);
+    top();
+  }
+  // Opened from My Catalog: straight to that song's (or release's, or the catalog's) check-in.
+  useEffect(() => {
+    if (!start || !loaded || !tracks) return;
+    if (start.trackId) checkSong(start.trackId, start.release);
+    else if (tracks.length) startCheck(catalogScope(tracks));
+  }, [start?.nonce, loaded]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  /** Check-in answers are checklist steps; null removes one. */
+  function answer(changes: { id: string; steps: Record<string, string | null> }[]) {
+    for (const { id, steps } of changes) {
+      const cur = statusOf(id), next = { ...cur.steps };
+      for (const [k, v] of Object.entries(steps)) { if (v === null) delete next[k]; else next[k] = v; }
+      void updateStatus({ ...cur, steps: next });
+    }
+  }
+  /** "No, I'm self-published": ticks Self-published on songs with no publisher listed. Nothing already entered changes. */
+  async function selfPublish(ids: string[]) {
+    try {
+      for (const id of ids) {
+        const t = allTracks.find((x) => x.id === id);
+        if (!t || t.metadata.selfPublished || t.metadata.publishers.some(creditName)) continue;
+        const m = { ...t.metadata, selfPublished: true };
+        if (isInspectorSong(id)) {
+          const saved = await saveInspectorSong({ title: m.title, artist: m.artist, duration: m.duration, isrc: m.isrc, iswc: m.iswc, writers: m.writers, publishers: m.publishers, selfPublished: true }, id);
+          setInspectorSongs((all) => all.map((x) => (x.id === id ? saved : x)));
+        } else {
+          await saveTrack(m, userId, id);
+          setTracks((all) => all?.map((x) => (x.id === id ? { ...x, metadata: m } : x)));
+        }
+      }
+    } catch (e) { toast.error(e instanceof Error ? e.message : "Couldn't save that. Try again."); }
+  }
+
+  /** Opens one song's checklist in the Hub. */
   function showSong(id?: string) {
+    setView({ kind: "hub" });
     setSongsOpen(true);
     if (id) setFocusRequest({ id, nonce: Date.now() });
     else setTimeout(() => document.getElementById("song-by-song")?.scrollIntoView({ behavior: "smooth", block: "start" }), 30);
@@ -156,7 +229,7 @@ export function RoyaltyHealthCheck({ userId, canCatalog, canExport, onUpgrade, o
     if (a.kind === "portal") return void window.open(a.url, "_blank", "noopener,noreferrer");
     if (a.kind === "split") return onSplitSheet ? onSplitSheet(a.trackId) : onUpgrade();
     if (a.kind === "join") return void window.open("/docs/royalty-health-suite", "_blank", "noopener");
-    if (a.kind === "upload") { setListsOpen(true); setTimeout(() => document.getElementById("agency-lists")?.scrollIntoView({ behavior: "smooth", block: "start" }), 30); return; }
+    if (a.kind === "upload") { setView({ kind: "hub" }); setListsOpen(true); setTimeout(() => document.getElementById("agency-lists")?.scrollIntoView({ behavior: "smooth", block: "start" }), 30); return; }
     if (a.kind === "distributor") {
       const t = allTracks.find((x) => x.id === a.trackId);
       const r = report.rows.find((x) => x.track.id === a.trackId);
@@ -316,8 +389,8 @@ export function RoyaltyHealthCheck({ userId, canCatalog, canExport, onUpgrade, o
   if (!tracks) return <div className="rounded-3xl bg-ink p-8 text-ink-muted">Scanning your catalog…</div>;
 
   const checklist = <HealthChecklist rows={report.rows} country={country} statuses={statuses} onStatus={(x) => void updateStatus(x)} actions={actions} bare={report.rows.length > 0}
-    runningId={running?.trackId} canCatalog={canCatalog} onUpgrade={onUpgrade} onEditInspector={(id) => fixField(id, "")} onDeleteInspector={(id) => void removeInspector(id)} focusRequest={focusRequest} />;
-  const inspector = <div id="quick-check" className="scroll-mt-4"><RoyaltyInspector onEmbed={onEmbed} onExpert={book} onSave={saveInspector} editing={editing} onDoneEditing={() => setEditing(undefined)} /></div>;
+    runningId={running?.trackId} canCatalog={canCatalog} onUpgrade={onUpgrade} onEditInspector={(id) => fixField(id, "")} onDeleteInspector={(id) => void removeInspector(id)} focusRequest={focusRequest} onCheck={checkSong} />;
+  const inspector = <div id="quick-check" className="scroll-mt-4"><RoyaltyInspector onEmbed={onEmbed} onExpert={book} onSave={saveInspector} onRunCheck={(id) => checkSong(id)} editing={editing} onDoneEditing={() => setEditing(undefined)} /></div>;
   const why = (
     <div className="space-y-4">
       <div className="grid gap-4 md:grid-cols-2">
@@ -335,11 +408,39 @@ export function RoyaltyHealthCheck({ userId, canCatalog, canExport, onUpgrade, o
       {tracks.length > 0 && <MismatchTips />}
     </div>
   );
+  const askDialog = <AskCowriterDialog open={askOpen} cowriters={cowriters} artistName={artistName} existing={ipiRequests} onClose={() => setAskOpen(false)}
+    onCreated={(r) => { setIpiRequests((all) => [r, ...all.filter((x) => x.id !== r.id)]); setRequestsOpen(true); }} />;
+  const countryPicker = <CountryPicker country={country} onCountry={chooseCountry} />;
 
-  // Free accounts with no songs yet: the Royalty Inspector is the way in.
+  if (view.kind === "checkin") {
+    const rows = rowsIn(view.scope);
+    if (rows.length) return (
+      <HealthCheckIn scope={view.scope} options={scopeOptions(view.from)} onScope={(scope) => setView({ ...view, scope })} rows={rows} countryPicker={countryPicker}
+        signedSheets={signedSheets} onAnswer={answer} onSelfPublished={(ids) => void selfPublish(ids)} onFixField={fixField} onRun={() => runCheck(view.scope)} onBack={() => setView({ kind: "hub" })} />
+    );
+  }
+  if (view.kind === "report" && reportRows.length) return (
+    <div className="space-y-6">
+      <RoyaltyReport checkup={checkup} since={since} scope={scopeName(view.scope)} onBack={() => setView({ kind: "hub" })} date={new Date().toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })} country={country.name}
+        countryPicker={countryPicker} running={!!running} canExport={canExport} onRunCheckup={() => runCheck(view.scope)}
+        onPdf={() => downloadCheckupPdf(checkup, mostCommon(reportRows.map(({ r }) => r.track.artist)), country.name).catch(() => toast.error("Couldn't create the PDF. Try again."))} onAction={(a) => void act(a)} onExpert={book} onReminder={reminder}
+        onAskCowriter={canCatalog && cowriters.length ? askCowriter : undefined} />
+      {askDialog}
+      {running && <p className="text-sm text-muted-foreground">Looking up song {running.done + 1} of {running.total} on streaming and MusicBrainz…</p>}
+    </div>
+  );
+
+  const runButton = (
+    <Button size="lg" variant="secondary" onClick={() => (tracks.length ? startCheck(catalogScope(tracks)) : inspectorSongs[0] ? checkSong(inspectorSongs[0].id) : (setInspectorOpen(true), setTimeout(() => document.getElementById("quick-check")?.scrollIntoView({ behavior: "smooth" }), 50)))}>
+      <Stethoscope />Run a Royalty Health Check
+    </Button>
+  );
+  const hub = <HealthReport {...actions} report={report} country={country} running={running} canCatalog={canCatalog} onEmbed={onEmbed} action={report.rows.length ? runButton : undefined} />;
+
+  // No songs yet (free accounts start here): type a song into the Royalty Inspector to run its check.
   if (!report.rows.length) return (
     <div className="space-y-6">
-      <HealthReport {...actions} report={report} country={country} running={running} canCatalog={canCatalog} onEmbed={onEmbed} />
+      {hub}
       {inspector}
       <Section title="Why this matters" summary="Your distributor only collects part of your money · unclaimed royalties don't wait forever">{why}</Section>
     </div>
@@ -347,19 +448,34 @@ export function RoyaltyHealthCheck({ userId, canCatalog, canExport, onUpgrade, o
 
   const kinds = releaseGroups(report.rows.map((r) => ({ r, c: songChecklist(r, country, statusOf(r.track.id), statusOf(ACCOUNT_REF)) })), "az");
   const attention = checkupRows.filter((x) => x.c.group === "attention").length;
+  // Follow-up: each report's songs as they are now, so My reports shows what's changed since.
+  const scoreNow = (scope: ReportScope) => { const rows = rowsIn(scope); return rows.length ? Math.round(rows.reduce((n, { c }) => n + (c.total ? c.done / c.total : 0), 0) / rows.length * 100) : undefined; };
+  const latest = reports?.[0];
   return (
     <div className="space-y-6">
-      <RoyaltyReport checkup={checkup} since={since} date={new Date().toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })} country={country.name}
-        countryPicker={<CountryPicker country={country} onCountry={chooseCountry} />} running={!!running} canExport={canExport}
-        onRunCheckup={() => { setSaveAfterRun(true); void runAll(); }}
-        onPdf={() => downloadCheckupPdf(checkup, mostCommon((tracks ?? []).map((t) => t.artist)), country.name).catch(() => toast.error("Couldn't create the PDF. Try again."))} onAction={(a) => void act(a)} onExpert={book} onReminder={reminder}
-        onAskCowriter={canCatalog && cowriters.length ? askCowriter : undefined} />
-      <AskCowriterDialog open={askOpen} cowriters={cowriters} artistName={artistName} existing={ipiRequests} onClose={() => setAskOpen(false)}
-        onCreated={(r) => { setIpiRequests((all) => [r, ...all.filter((x) => x.id !== r.id)]); setRequestsOpen(true); }} />
+      {hub}
+      {askDialog}
       {running && <p className="text-sm text-muted-foreground">Looking up song {running.done + 1} of {running.total} on streaming and MusicBrainz…</p>}
 
       <div className="space-y-3">
-        <h3 className="pt-4 text-2xl font-extrabold">Your songs and records</h3>
+        <Section id="my-reports" title="My reports" summary={latest ? `${reports!.length} report${reports!.length === 1 ? "" : "s"} · latest ${shortDate(latest.createdAt)}: ${scopeName(latest.scope)} · ${latest.summary.lead ? `"${latest.summary.lead}"` : "Clean bill of health"} · ${latest.score}%` : "Run a Royalty Health Check on a song, a release or your whole catalog. Each report is kept here."}>
+          {reports?.length ? <ul className="divide-y divide-border">{reports.map((r) => {
+            const now = scoreNow(r.scope);
+            return (
+              <li key={r.id} className="flex flex-wrap items-center gap-x-4 gap-y-2 py-3 text-sm">
+                <span className="w-28 shrink-0 font-semibold">{shortDate(r.createdAt)}</span>
+                <span className="min-w-0 flex-1"><b className="block">{scopeName(r.scope)}</b><span className="text-muted-foreground">{r.summary.lead ?? "Clean bill of health. Strong pulse."}</span></span>
+                <span className="flex gap-1" aria-label="Organ states">{Object.entries(r.summary.organs).map(([id, o]) => <span key={id} title={`${ORGAN_NAME[id as keyof typeof ORGAN_NAME]}: ${STATE_LABEL[o!.state]}`} className={`rr-pill rr-pill-${o!.state} px-2 py-0.5`}>{ORGAN_NAME[id as keyof typeof ORGAN_NAME][0]}</span>)}</span>
+                <span className="w-24 text-right"><b>{r.score}%</b>{now !== undefined && now !== r.score && <span className="block text-xs text-muted-foreground">now {now}%</span>}</span>
+                <Button size="sm" variant="outline" disabled={now === undefined} onClick={() => startCheck(r.scope)}>Run it again</Button>
+              </li>
+            );
+          })}</ul> : <div className="space-y-3 text-sm text-muted-foreground"><p>No reports yet. Run a Royalty Health Check from here, from any song in the checklist, or from My Catalog.</p>{runButton}</div>}
+        </Section>
+        <Section id="song-by-song" title="Song Health Checklist" open={songsOpen} onToggle={setSongsOpen}
+          summary={`${songsLabel(report.rows.length)} · ${kinds.filter((g) => g.key !== SINGLES_KEY && !g.key.startsWith("~")).length} albums & EPs · ${kinds.find((g) => g.key === SINGLES_KEY)?.songs.length ?? 0} singles · ${attention ? `⚠️ ${attention} need attention` : "✓ all on track"}`}>
+          {checklist}
+        </Section>
         {(ipiRequests.length > 0 || cowriters.length > 0) && canCatalog && <Section id="cowriter-requests" title="Co-writer details" open={requestsOpen ?? answered > 0} onToggle={setRequestsOpen}
           summary={answered ? `⚠️ ${answered} answer${answered === 1 ? "" : "s"} to approve${waiting ? ` · ${waiting} waiting` : ""}` : waiting ? `${waiting} request${waiting === 1 ? "" : "s"} waiting for an answer` : `${cowriters.length} co-writer${cowriters.length === 1 ? " is" : "s are"} missing a PRO or IPI`}>
           <div className="space-y-4">
@@ -367,24 +483,11 @@ export function RoyaltyHealthCheck({ userId, canCatalog, canExport, onUpgrade, o
             {cowriters.length > 0 && <Button variant="outline" onClick={askCowriter}>Ask a co-writer for their PRO and IPI</Button>}
           </div>
         </Section>}
-        <Section id="song-by-song" title="Song by song" open={songsOpen} onToggle={setSongsOpen}
-          summary={`${songsLabel(report.rows.length)} · ${kinds.filter((g) => g.key !== SINGLES_KEY && !g.key.startsWith("~")).length} albums & EPs · ${kinds.find((g) => g.key === SINGLES_KEY)?.songs.length ?? 0} singles · ${attention ? `⚠️ ${attention} need attention` : "✓ all on track"}`}>
-          {checklist}
-        </Section>
         <Section id="agency-lists" title="Confirm with your agency lists" open={listsOpen} onToggle={setListsOpen}
           summary={Object.values(listSummaries).some(Boolean) ? Object.entries(listSummaries).filter(([, v]) => v).map(([id, v]) => `${listSocieties.find((x) => x.id === id)?.name}: ${v!.matched} matched${v!.differences ? `, ⚠️ ${v!.differences} different` : ""}`).join(" · ") : "Upload what each agency has on file · turns estimates into confirmed matches"}>
           <AgencyLists societies={listSocieties} songsFor={songsFor} summaries={listSummaries} onApply={applyList} />
         </Section>
-        <Section title="Check a song that isn't in your catalog" summary={`Royalty Inspector · ${songsLabel(inspectorSongs.length)} checked`}>{inspector}</Section>
-        <Section title="Past reports" summary={reports?.length ? `${reports.length} report${reports.length === 1 ? "" : "s"} since ${shortDate(reports.at(-1)!.createdAt)}${since?.healed.length ? ` · healed: ${since.healed.join(", ")}` : ""}` : "Your first report is saved after this checkup"}>
-          {reports?.length ? <ul className="divide-y divide-border">{reports.map((r) => (
-            <li key={r.id} className="flex flex-wrap items-center gap-x-4 gap-y-1 py-3 text-sm">
-              <span className="w-28 shrink-0 font-semibold">{shortDate(r.createdAt)}</span>
-              <span className="min-w-0 flex-1">{r.summary.lead ?? "Clean bill of health. Strong pulse."}</span>
-              <span className="flex gap-1" aria-label="Organ states">{Object.entries(r.summary.organs).map(([id, o]) => <span key={id} title={`${ORGAN_NAME[id as keyof typeof ORGAN_NAME]}: ${STATE_LABEL[o!.state]}`} className={`rr-pill rr-pill-${o!.state} px-2 py-0.5`}>{ORGAN_NAME[id as keyof typeof ORGAN_NAME][0]}</span>)}</span>
-              <span className="w-12 text-right font-bold">{r.score}%</span>
-            </li>))}</ul> : <p className="text-sm text-muted-foreground">Each checkup is saved here, so you can see your catalog get healthier over time.</p>}
-        </Section>
+        <Section title="Check a song that isn't in your catalog" open={inspectorOpen} onToggle={setInspectorOpen} summary={`Royalty Inspector · type in any song to run its Royalty Health Check · ${songsLabel(inspectorSongs.length)} checked`}>{inspector}</Section>
         <Section title="Why this matters" summary="Your distributor only collects part of your money · unclaimed royalties don't wait forever · common mismatches">{why}</Section>
       </div>
     </div>

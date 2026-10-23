@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { confirmAction } from "@/components/ConfirmHost";
-import { Archive, Bell, Check, CheckCircle2, ChevronDown, Copy, ExternalLink, Info, Pencil, PartyPopper, RotateCcw, Search, Trash2, Undo2 } from "lucide-react";
+import { Archive, Bell, Stethoscope, Check, CheckCircle2, ChevronDown, Copy, ExternalLink, Info, Pencil, PartyPopper, RotateCcw, Search, Trash2, Undo2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -41,12 +41,14 @@ type Props = {
   onDeleteInspector: (id: string) => void;
   /** Opens this song's checklist (from a Royalty Health Report treatment step). The nonce lets the same song be asked for twice. */
   focusRequest?: { id: string; nonce: number } | undefined;
-  /** Inside the report's "Song by song" section, which already has the title. */
+  /** Inside the Hub's checklist section, which already has the title. */
   bare?: boolean;
+  /** Runs a Royalty Health Check on this song, or (`release`) on the album or EP it's on. */
+  onCheck?: ((trackId: string, release?: boolean) => void) | undefined;
 };
 
 /** Every song's step-by-step path to 100% health, in three lists: needs attention, saved for later and healthy. */
-export function HealthChecklist({ rows, country, statuses, onStatus, actions, runningId, canCatalog, onUpgrade, onEditInspector, onDeleteInspector, focusRequest, bare }: Props) {
+export function HealthChecklist({ rows, country, statuses, onStatus, actions, runningId, canCatalog, onUpgrade, onEditInspector, onDeleteInspector, focusRequest, bare, onCheck }: Props) {
   const statusOf = (id: string) => statuses.find((s) => s.songRef === id) ?? emptyStatus(id);
   // Account-wide steps (international airplay) are ticked once and count on every song.
   const account = statusOf(ACCOUNT_REF);
@@ -152,6 +154,7 @@ export function HealthChecklist({ rows, country, statuses, onStatus, actions, ru
                           </li>
                         );
                       })}
+                      {onCheck && g.type && <li className="p-1"><Button size="sm" variant="ghost" className="w-full justify-start" onClick={() => onCheck(g.songs[0]!.r.track.id, true)}><Stethoscope />Check this {g.type}</Button></li>}
                     </ul>
                   )}
                 </div>
@@ -159,7 +162,7 @@ export function HealthChecklist({ rows, country, statuses, onStatus, actions, ru
             })}
           </div>
           {focused && <SongDetail key={focused.r.track.id} r={focused.r} c={focused.c} country={country} status={statusOf(focused.r.track.id)} onStatus={onStatus}
-            actions={actions} running={runningId === focused.r.track.id} onEditInspector={onEditInspector} onDeleteInspector={onDeleteInspector} onIntl={setIntl} />}
+            actions={actions} running={runningId === focused.r.track.id} onEditInspector={onEditInspector} onDeleteInspector={onDeleteInspector} onIntl={setIntl} onCheck={onCheck} />}
         </div>
       )}
 
@@ -187,9 +190,9 @@ function Ring({ pct }: { pct: number }) {
   );
 }
 
-function SongDetail({ r, c, country, status, onStatus, actions, running, onEditInspector, onDeleteInspector, onIntl }: {
+function SongDetail({ r, c, country, status, onStatus, actions, running, onEditInspector, onDeleteInspector, onIntl, onCheck }: {
   r: TrackReport; c: SongChecklist; country: Country; status: SongStatus; onStatus: (s: SongStatus) => void; actions: HealthActions; running: boolean;
-  onEditInspector: (id: string) => void; onDeleteInspector: (id: string) => void; onIntl: (on: boolean) => void;
+  onEditInspector: (id: string) => void; onDeleteInspector: (id: string) => void; onIntl: (on: boolean) => void; onCheck?: Props["onCheck"];
 }) {
   const id = r.track.id;
   const inspector = isInspectorSong(id);
@@ -256,6 +259,7 @@ function SongDetail({ r, c, country, status, onStatus, actions, running, onEditI
       {!inspector && <div className="mt-6"><LiveRecords r={r} running={running} onRun={() => actions.onRunOne(id)} /></div>}
 
       <div className="mt-6 flex flex-wrap gap-2 border-t border-border pt-4">
+        {onCheck && <Button size="sm" onClick={() => onCheck(id)}><Stethoscope />Run a Royalty Health Check</Button>}
         {status.list !== "later" && c.group !== "healthy" && <Button size="sm" variant="outline" onClick={() => setLater(!later)}><Archive />Save for later</Button>}
         {inspector && <>
           <Button size="sm" variant="outline" onClick={() => onEditInspector(id)}><Pencil />Edit song details</Button>
