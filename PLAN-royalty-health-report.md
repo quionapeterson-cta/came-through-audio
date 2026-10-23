@@ -52,17 +52,27 @@ All of it comes from what's already computed: `auditTrack`, `registrationCheck`,
 Each organ gets a state: **Healthy · Watch · Blocked · No flow** (no flow = nothing registered for that stream at all).
 
 ### The top line (changes every report, based on what's entered)
-The worst organ (severity × songs affected) leads, in three parts: **Diagnosis** (the metaphor), **Cause** (plain words), **Treatment** (the one next step).
+The worst organ (severity × songs affected) leads, in three parts: **Diagnosis** (the metaphor), **Cause** (plain words), **Treatment**.
+
+**Rule (founder, 2026-10-23): the Treatment always ends with the real fix at the agency, not only inside Came Through Audio.** Fixing the catalog is never the last step, because the agency still has the old (or no) data. Every treatment runs in this order:
+1. **Fill the gap** in the catalog, if anything is missing (link straight to the field).
+2. **Download the agency file** right from the Health Check, one click: The MLC Bulk Work Registration (.xlsx), SoundExchange Direct ISRC Ingest (.xlsx), or the BMI / ASCAP Registration Cheat Sheet (.csv). These are the existing agency exports, now reachable from each organ.
+3. **Register at the agency:** upload the file in that agency's portal (The MLC, SoundExchange), or type the cheat sheet's fields into ASCAP Member Access / BMI Online Services. Portal link + the plain-language steps from `register-guides.ts`.
+4. **Tick Registered** (the checklist step that already exists). The Pulse then watches for confirmation, and an uploaded agency list (§3A) confirms it for real.
+Songs already registered get the *update your registration* version of step 3 instead.
 
 > **Blockage in the left heart artery.**
-> 3 of 8 songs can't pay your writer share from ASCAP. **Cause:** your IPI number is missing on those songs.
-> **Treatment:** add your IPI once in Catalog Profile; it fills all 3 songs. *Then take a deep breath: the other two steps are quick.*
+> 3 of 8 songs can't pay your writer share from ASCAP. **Cause:** your IPI number is missing, and those songs aren't registered with ASCAP yet.
+> **Treatment:** add your IPI once in Catalog Profile (it fills all 3), download your **ASCAP cheat sheet**, then register the 3 songs in ASCAP Member Access and tick Registered. *Strong, even breaths: one song at a time.*
 
 More examples it would write:
-- *"Your lungs are only breathing on one side."* 5 songs are registered with The MLC but aren't linked to their recordings. **Cause:** no ISWC/ISRC pair. **Treatment:** add the ISRC from your distributor.
-- *"Your spine is out of alignment."* "Midnight" splits total 110%. **Treatment:** lower one writer's share.
-- *"Mixed signals from the brain."* Jordan Lee has two different IPI numbers across your songs. **Treatment:** check which one is right in your PRO account.
+- *"Your lungs are only breathing on one side."* 5 songs are registered with The MLC but aren't linked to their recordings. **Cause:** no ISRC on file. **Treatment:** add the ISRC from your distributor, download **The MLC file**, upload it in The MLC Portal to update those 5 songs.
+- *"Your kidneys aren't filtering."* 4 recordings aren't with SoundExchange, so internet and satellite radio plays can't reach you. **Treatment:** download the **SoundExchange file** and upload it in SoundExchange Direct.
+- *"Your spine is out of alignment."* "Midnight" splits total 110%. **Treatment:** lower one writer's share, then update the registration at your PRO and The MLC with the new splits (cheat sheet + MLC file).
+- *"Mixed signals from the brain."* Jordan Lee has two different IPI numbers across your songs. **Treatment:** check the right one in Jordan's PRO account, correct it here, then update the songs registered with the wrong one.
 - *"Clean bill of health. Strong pulse."* Every song is registered and confirmed. Next checkup suggested in 90 days.
+
+**Plans:** everyone gets the full report and every step. The one-click agency files stay on Catalog & Collaborate (current rule); on Free and Catalog Plus, step 2 shows a 🔒 "Get the 1-click file" upgrade and the plain field-by-field guide so they can still register by hand.
 
 Wording has a few variants per condition so repeat reports don't read the same, but the facts in it always come from the catalog.
 
@@ -82,7 +92,7 @@ Wording has a few variants per condition so repeat reports don't read the same, 
 │ [Download report (PDF)]                                     │
 └─────────────────────────────────────────────────────────────┘
 ```
-- Each organ section: **Symptom** (what you'd notice: "no checks from ASCAP for these songs") → **Cause** → **Treatment** with a link straight to the field (⚠️ + link, never a dead end), and the songs affected.
+- Each organ section: **Symptom** (what you'd notice: "no checks from ASCAP for these songs") → **Cause** → **Treatment** (fill the field → download the agency file → register at the agency → tick Registered), with links straight to each step (⚠️ + link, never a dead end), and the songs affected.
 - **Broken heart 💔:** when a song is missing one side of the heart (no writer share set up, or no publisher share: no publisher and not Self-published), the Heart shows as a broken heart. **Exception:** BMI writers with no publisher aren't broken, because BMI pays them the publisher share (same rule as `publisherCovered`).
 - **Pictures:** a clean front-view body outline with the six organs; each lights **cobalt** when healthy, shows **⚠️** when Watch/Blocked, and goes **hollow grey** for No flow. Black/white/cobalt only, no gore, no red. I draw it as SVG now; it can be swapped for commissioned art later.
 - **Honest source line** under the top line: *"Based on your catalog, the steps you've confirmed and live streaming/MusicBrainz lookups. Agency databases can't be searched automatically yet."* Once an agency connection exists (§3D), that organ is marked **Verified**.
