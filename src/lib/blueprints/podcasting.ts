@@ -1,0 +1,101 @@
+import { CLAUSE, DATE, FEE, STATE, doc, field, need, type Blueprint } from "./common";
+
+const SHOW = need("showName", "Show name", "The podcast's name.", { placeholder: "The Booth" });
+const appearanceRelease = (role: string, what: string) => [
+  ["PERMISSION", `${role} allows Host to record ${role}'s ${what} (the "Recording") and to edit, publish, distribute and promote it, in audio and video, on any platform, worldwide and forever.`],
+  ["EDITING", "Host may edit, shorten and clip the Recording, but will not change the meaning of what " + role + " said."],
+  ["NAME AND LIKENESS", `Host may use ${role}'s name, image, voice and short bio with the Recording and its promotion.`],
+  ["PAYMENT", `${role} receives {{consideration}}. No other payment or royalty is owed.`],
+  ["OWNERSHIP", `Host owns the Recording. ${role} may share the published episode and clips of it.`],
+] satisfies [string, string][];
+
+export const PODCASTING: Blueprint[] = [
+  {
+    id: "podcast-cohost",
+    name: "Podcast Co-Host Agreement",
+    category: "Podcasting",
+    summary: "Co-hosts agree who owns the show, how money is split, and what happens if someone leaves.",
+    whenToUse: "Use it before you launch a show with someone else, while you're still friends.",
+    keyTerms: ["Co-owned show, 50/50 by default.", "Big decisions made together.", "Leaving: the one who stays keeps the name."],
+    roles: ["Host", "Co-Host"],
+    fields: [
+      DATE, SHOW, need("split", "Revenue split", "How income is split.", { value: "50% Host and 50% Co-Host" }),
+      field("schedule", "Episode schedule", "How often episodes come out.", { value: "one episode a week" }),
+      STATE,
+    ],
+    body: doc("Podcast Co-Host Agreement", ["Host", "Co-Host"], [
+      ["THE SHOW", "Host and Co-Host will create and host \"{{showName}}\" (the \"Show\") together, releasing {{schedule}}."],
+      ["OWNERSHIP AND MONEY", "The Show, its name, episodes and accounts are owned in the same shares as its income: {{split}}. Costs are shared the same way. Income and costs are settled every month."],
+      ["DECISIONS", "Sponsors, big spending, a new name or a new host need both parties' approval."],
+      ["LEAVING", "Either party may leave with 30 days' notice. The party who leaves keeps their share of income from episodes made while they were on the Show, but the remaining party keeps the Show's name and accounts. If both leave, the Show ends and its archive stays up."],
+      CLAUSE.confidential,
+    ]),
+  },
+  {
+    id: "podcast-guest-release",
+    name: "Podcast Guest Release",
+    category: "Podcasting",
+    summary: "A guest agrees you can publish and clip their episode.",
+    whenToUse: "Use it with every guest, before or right after you record.",
+    keyTerms: ["Worldwide and forever.", "Edits allowed without changing meaning.", "Free appearance unless you add a fee."],
+    roles: ["Host", "Guest"],
+    fields: [DATE, field("showName", "Show name", "The podcast's name.", { fallback: "Host's podcast" }), field("consideration", "What they receive", "A fee, a gift or nothing.", { value: "promotion on the show, with no payment" }), STATE],
+    body: doc("Podcast Guest Release", ["Host", "Guest"], appearanceRelease("Guest", "appearance on {{showName}}")),
+  },
+  {
+    id: "podcast-producer",
+    name: "Podcast Producer & Editor Agreement",
+    category: "Podcasting",
+    summary: "A producer edits your episodes for a per-episode fee.",
+    whenToUse: "Use it when you hire someone to edit, mix or produce your show.",
+    keyTerms: ["Fee per episode.", "3-day turnaround, 1 round of changes.", "The show owns everything."],
+    roles: ["Show", "Producer"],
+    fields: [
+      DATE, FEE("Fee per episode", "$75", "What's paid for each episode."),
+      field("services", "What they do", "Editing, mixing, video, show notes.", { value: "editing, sound mixing and show notes" }),
+      field("turnaround", "Turnaround", "How fast each episode is delivered.", { value: "3 days after receiving the recording" }),
+      STATE,
+    ],
+    body: doc("Podcast Producer and Editor Agreement", ["Show", "Producer"], [
+      ["SERVICES", "Producer will provide {{services}} for each episode, delivered within {{turnaround}}, with one round of changes."],
+      ["FEE", "Show pays Producer {{fee}}, every two weeks for the episodes delivered."],
+      ["OWNERSHIP", "Show owns every episode, recording and file. Producer delivers the project files when asked."],
+      ["ENDING", "Either party may end this agreement with 14 days' notice."],
+      CLAUSE.contractor, CLAUSE.confidential, CLAUSE.noAI,
+    ]),
+  },
+  {
+    id: "podcast-sponsorship",
+    name: "Podcast Sponsorship & Advertising Agreement",
+    category: "Podcasting",
+    summary: "A sponsor pays for ad reads in your episodes.",
+    whenToUse: "Use it when a brand sponsors your show.",
+    keyTerms: ["Host-read ads in a set number of episodes.", "Sponsor approves the script.", "A missed read is made up in the next episode."],
+    roles: ["Sponsor", "Show"],
+    fields: [
+      DATE, FEE("Fee", "$500", "What the sponsor pays in total."),
+      need("episodes", "Episodes", "How many episodes include a read.", { placeholder: "4 weekly episodes" }),
+      field("adType", "Ad type", "Where and how long the ad is.", { value: "a 60-second host-read ad in the middle of each episode" }),
+      STATE,
+    ],
+    body: doc("Podcast Sponsorship Agreement", ["Sponsor", "Show"], [
+      ["ADS", "Show will include {{adType}} in {{episodes}}."],
+      ["SCRIPT", "Sponsor provides talking points; Show writes the read in its own voice and shares it for approval 48 hours before recording."],
+      ["FEE", "Sponsor pays {{fee}}: half before the first episode and half after the last."],
+      ["MAKEGOODS", "If an ad is missed or wrong, Show adds it to the next episode at no cost."],
+      CLAUSE.disclosure,
+      ["REPORT", "Show sends download numbers for each episode 30 days after it's published."],
+    ]),
+  },
+  {
+    id: "interview-release",
+    name: "Interview & Media Appearance Release",
+    category: "Podcasting",
+    summary: "Someone you interview agrees you can publish and clip it.",
+    whenToUse: "Use it for interviews, documentaries, livestreams and press features you record.",
+    keyTerms: ["Worldwide and forever.", "Edits allowed without changing meaning.", "Free unless you add a fee."],
+    roles: ["Host", "Interviewee"],
+    fields: [DATE, field("project", "Project", "Where the interview appears.", { fallback: "Host's interview, video and media projects" }), field("consideration", "What they receive", "A fee, a gift or nothing.", { value: "promotion, with no payment" }), STATE],
+    body: doc("Interview and Media Appearance Release", ["Host", "Interviewee"], appearanceRelease("Interviewee", "interview for {{project}}")),
+  },
+];

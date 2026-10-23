@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { confirmAction } from "@/components/ConfirmHost";
-import { AlertTriangle, CalendarDays, Check, ChevronLeft, Copy, Download, FileSignature, Loader2, Lock, Mail, PenLine, Plus, RotateCcw, ScrollText, ShieldCheck, Trash2, Unlock, Vault } from "lucide-react";
+import { AlertTriangle, BookOpen, CalendarDays, Check, ChevronDown, ChevronLeft, Copy, Download, FileSignature, Loader2, Lock, Mail, PenLine, Plus, RotateCcw, ScrollText, ShieldCheck, Trash2, Unlock, Vault } from "lucide-react";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -8,23 +8,25 @@ import { Button } from "@/components/ui/button";
 import { UpgradeLock } from "@/components/UpgradeLock";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { format, isValid, parse } from "date-fns";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { InfoTip } from "@/components/InfoTip";
 import { listTracks, type CatalogTrack } from "@/lib/catalog";
-import { BLUEPRINTS, COMPANY_BLUEPRINTS, CONTRACT_DISCLAIMER, blueprintById, renderContract, type Blueprint, type BlueprintField } from "@/lib/contract-blueprints";
+import { BLUEPRINTS, CATEGORIES, COMPANY_BLUEPRINTS, CONTRACT_DISCLAIMER, blueprintById, fillBlanks, georgiaLaw, initialFields, missingFields, renderContract, type Blueprint, type BlueprintField } from "@/lib/contract-blueprints";
 import { downloadContractPdf } from "@/lib/contract-pdf";
 import { sendContractInvite } from "@/lib/contracts-email.functions";
 import { companySignLink } from "@/lib/contract-sign.functions";
 import { logBadgeEvent } from "@/lib/badge-events";
+import { BLUEPRINT_GUIDES, CHEAT_SHEETS, type Guide } from "@/lib/guides";
 import {
   contractLink, deleteContract, emptyParty, getContract, isValidEmail, listContracts, listReceivedContracts, loadCompanyTemplates, reopenContract, saveCompanyTemplate, saveContract, sendContract, signContract,
   type Contract, type ContractParty, type ReceivedContract,
 } from "@/lib/contracts";
 
-type View = "blueprints" | "contracts" | "vault";
+type View = "blueprints" | "guides" | "contracts" | "vault";
 
 const STATUS: Record<Contract["status"], { label: string; className: string }> = {
   draft: { label: "Draft", className: "border-border text-muted-foreground" },
@@ -46,7 +48,7 @@ export function Contracts({ userId, unlocked, onUpgrade, company = false }: { us
   const [editing, setEditing] = useState<Contract | null>(null);
   const [templates, setTemplates] = useState<Record<string, string>>({});
   /** Company templates with any wording a super admin saved in place of the original. */
-  const companyBlueprints = useMemo(() => COMPANY_BLUEPRINTS.map((bp) => templates[bp.id] ? { ...bp, body: templates[bp.id]! } : bp), [templates]);
+  const companyBlueprints = useMemo(() => COMPANY_BLUEPRINTS.map((bp) => templates[bp.id] ? { ...bp, body: georgiaLaw(templates[bp.id]!) } : bp), [templates]);
   const blueprintFor = (id: string) => (company ? companyBlueprints.find((b) => b.id === id) : undefined) ?? blueprintById(id);
 
   const load = async () => {
@@ -64,7 +66,7 @@ export function Contracts({ userId, unlocked, onUpgrade, company = false }: { us
   const start = (bp: Blueprint) => {
     if (!unlocked) { onUpgrade(); return; }
     setEditing({
-      blueprint: bp.id, title: bp.name, catalogId: null, fields: {}, body: "", status: "draft", bodyHash: "",
+      blueprint: bp.id, title: bp.name, catalogId: null, fields: { ...initialFields(bp), ...remembered(bp) }, body: "", status: "draft", bodyHash: "",
       sentAt: null, completedAt: null, updatedAt: new Date().toISOString(),
       parties: bp.roles.map((role, i) => emptyParty(role, i === 0)),
       ...(company && { isCompany: true }),
@@ -85,7 +87,7 @@ export function Contracts({ userId, unlocked, onUpgrade, company = false }: { us
           <div className="inline-flex flex-wrap gap-1 rounded-lg bg-muted p-1" role="tablist" aria-label="Contracts">
             {(company
               ? [["blueprints", "Templates", ScrollText], ["contracts", "Drafts & out for signature", FileSignature], ["vault", "Signed", Vault]] as const
-              : [["blueprints", "Blueprints", ScrollText], ["contracts", "My Contracts", FileSignature], ["vault", "Signed Vault", Vault]] as const).map(([id, label, Icon]) => (
+              : [["blueprints", "Contracts", ScrollText], ["guides", "Blueprints", BookOpen], ["contracts", "My Contracts", FileSignature], ["vault", "Signed Vault", Vault]] as const).map(([id, label, Icon]) => (
               <Button key={id} role="tab" aria-selected={view === id} size="sm" variant={view === id ? "default" : "ghost"} onClick={() => setView(id)}>
                 <Icon className="h-4 w-4" />{label}
                 {id === "contracts" && open.length > 0 && <span className="ml-1 opacity-70">{open.length}</span>}
@@ -99,6 +101,10 @@ export function Contracts({ userId, unlocked, onUpgrade, company = false }: { us
         {view === "blueprints" && (company
           ? <CompanyTemplates blueprints={companyBlueprints} edited={templates} onUse={start} onSaved={() => void loadCompanyTemplates().then(setTemplates)} />
           : <Blueprints unlocked={unlocked} onUse={start} />)}
+
+        {view === "guides" && (!unlocked
+          ? <UpgradeLock className="" title="Blueprints" tier="management" onUpgrade={onUpgrade} text="Step-by-step guides to running your music business, from royalty registration to touring, plus home recording cheat sheets for every genre." />
+          : <Guides />)}
 
         {view === "contracts" && (!unlocked ? (
           <Locked onUpgrade={onUpgrade} text="Build custom contracts from any blueprint, send them for e-signature and keep every signed copy in your vault." />
@@ -148,40 +154,136 @@ export function Contracts({ userId, unlocked, onUpgrade, company = false }: { us
   );
 }
 
+/** Details people tend to repeat (governing law, the admin's title) start as whatever this browser last signed with. */
+const REMEMBER = ["governingLaw", "signerTitle"] as const;
+function remembered(bp: Blueprint): Record<string, string> {
+  const out: Record<string, string> = {};
+  for (const key of REMEMBER) {
+    if (!bp.fields.some((f) => f.key === key)) continue;
+    try { const v = localStorage.getItem(`cta.contract.${key}`); if (v) out[key] = v; } catch { /* storage blocked */ }
+  }
+  return out;
+}
+function remember(fields: Record<string, string>) {
+  for (const key of REMEMBER) {
+    try { if (fields[key]?.trim()) localStorage.setItem(`cta.contract.${key}`, fields[key]!.trim()); } catch { /* storage blocked */ }
+  }
+}
+
+/** The blueprint library: search, then one collapsible section per category (BRANDING §3). */
 function Blueprints({ unlocked, onUse }: { unlocked: boolean; onUse: (bp: Blueprint) => void }) {
   const [openId, setOpenId] = useState<string>();
+  const [query, setQuery] = useState("");
+  const [openCats, setOpenCats] = useState<Set<string>>(new Set());
+  const q = query.trim().toLowerCase();
+  const matches = (bp: Blueprint) => !q || `${bp.name} ${bp.summary} ${bp.category}`.toLowerCase().includes(q);
+  const toggle = (cat: string) => setOpenCats((x) => { const n = new Set(x); if (n.has(cat)) n.delete(cat); else n.add(cat); return n; });
   return (
     <section className="space-y-4">
       <p className="flex items-start gap-2 rounded-xl border border-border bg-muted/50 p-3 text-sm text-muted-foreground"><AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-primary" />{CONTRACT_DISCLAIMER}</p>
-      <div className="grid gap-4 md:grid-cols-2">
-        {BLUEPRINTS.map((bp) => {
-          const expanded = openId === bp.id;
-          return (
-            <article key={bp.id} className={`flex flex-col rounded-2xl border p-5 transition ${expanded ? "border-primary" : "border-border hover:border-primary"}`}>
-              <p className="text-xs font-bold uppercase tracking-widest text-primary">{bp.category}</p>
-              <h3 className="mt-1 text-lg font-bold">{bp.name}</h3>
-              <p className="mt-1 text-sm text-muted-foreground">{bp.summary}</p>
-              {expanded && (
-                <div className="mt-4 space-y-3 text-sm">
-                  <p><span className="font-semibold">When to use it: </span>{bp.whenToUse}</p>
-                  <div>
-                    <p className="font-semibold">Key terms to watch</p>
-                    <ul className="mt-1 space-y-1">{bp.keyTerms.map((k) => <li key={k} className="flex gap-2"><Check className="mt-0.5 h-4 w-4 shrink-0 text-primary" strokeWidth={3} /><span>{k}</span></li>)}</ul>
-                  </div>
-                  <p className="text-muted-foreground">Parties: {bp.roles.join(" and ")}</p>
-                </div>
-              )}
-              <div className="mt-auto flex flex-wrap gap-2 pt-4">
-                <Button size="sm" variant="ghost" onClick={() => { if (!expanded) logBadgeEvent("blueprint_read"); setOpenId(expanded ? undefined : bp.id); }}>{expanded ? "Hide guide" : "Read the guide"}</Button>
-                <Button size="sm" variant="outline" onClick={() => unlocked ? void downloadContractPdf({ title: bp.name, body: renderContract(bp, {}, []), parties: bp.roles.map((role) => ({ name: "", role, signedAt: null })), status: "draft" }) : onUse(bp)}>
-                  {unlocked ? <Download className="h-4 w-4" /> : <Lock className="h-4 w-4" />}Blank PDF
-                </Button>
-                <Button size="sm" onClick={() => onUse(bp)}>{unlocked ? <PenLine className="h-4 w-4" /> : <Lock className="h-4 w-4" />}Use this blueprint</Button>
+      <Input aria-label="Search contracts" value={query} onChange={(e) => setQuery(e.target.value)} placeholder={`Search ${BLUEPRINTS.length} contracts, e.g. "producer", "photo", "DJ"`} />
+      {CATEGORIES.map((cat) => {
+        const list = BLUEPRINTS.filter((bp) => bp.category === cat && matches(bp));
+        if (!list.length) return null;
+        const open = !!q || openCats.has(cat);
+        return (
+          <div key={cat} className="rounded-2xl border border-border">
+            <button type="button" aria-expanded={open} onClick={() => toggle(cat)} className="flex w-full items-center gap-2 p-4 text-left">
+              <span className="text-lg font-bold">{cat}</span>
+              <span className="truncate text-sm text-muted-foreground">· {list.length} {list.length === 1 ? "contract" : "contracts"}</span>
+              <ChevronDown className={`ml-auto h-5 w-5 shrink-0 transition ${open ? "rotate-180" : ""}`} />
+            </button>
+            {open && (
+              <div className="grid gap-4 p-4 pt-0 md:grid-cols-2">
+                {list.map((bp) => {
+                  const expanded = openId === bp.id;
+                  return (
+                    <article key={bp.id} className={`flex flex-col rounded-2xl border p-5 transition ${expanded ? "border-primary" : "border-border hover:border-primary"}`}>
+                      <h3 className="text-lg font-bold">{bp.name}</h3>
+                      <p className="mt-1 text-sm text-muted-foreground">{bp.summary}</p>
+                      {expanded && (
+                        <div className="mt-4 space-y-3 text-sm">
+                          <p><span className="font-semibold">When to use it: </span>{bp.whenToUse}</p>
+                          <div>
+                            <p className="font-semibold">Key terms to watch</p>
+                            <ul className="mt-1 space-y-1">{bp.keyTerms.map((k) => <li key={k} className="flex gap-2"><Check className="mt-0.5 h-4 w-4 shrink-0 text-primary" strokeWidth={3} /><span>{k}</span></li>)}</ul>
+                          </div>
+                          <p className="text-muted-foreground">Parties: {bp.roles.join(" and ")} · You fill in: {bp.fields.filter((f) => f.required).map((f) => f.label).join(", ") || "nothing, it's all filled in"}</p>
+                        </div>
+                      )}
+                      <div className="mt-auto flex flex-wrap gap-2 pt-4">
+                        <Button size="sm" variant="ghost" onClick={() => { if (!expanded) logBadgeEvent("blueprint_read"); setOpenId(expanded ? undefined : bp.id); }}>{expanded ? "Hide guide" : "Read the guide"}</Button>
+                        <Button size="sm" variant="outline" onClick={() => unlocked ? void downloadContractPdf({ title: bp.name, body: renderContract(bp, { ...initialFields(bp), effectiveDate: "" }, []), parties: bp.roles.map((role) => ({ name: "", role, signedAt: null })), status: "draft" }) : onUse(bp)}>
+                          {unlocked ? <Download className="h-4 w-4" /> : <Lock className="h-4 w-4" />}Blank PDF
+                        </Button>
+                        <Button size="sm" onClick={() => onUse(bp)}>{unlocked ? <PenLine className="h-4 w-4" /> : <Lock className="h-4 w-4" />}Use this contract</Button>
+                      </div>
+                    </article>
+                  );
+                })}
               </div>
-            </article>
-          );
-        })}
-      </div>
+            )}
+          </div>
+        );
+      })}
+      {q && !BLUEPRINTS.some(matches) && <p className="text-sm text-muted-foreground">No contract matches "{query}". Try another word, or start from the closest one and customize the wording.</p>}
+    </section>
+  );
+}
+
+/** Blueprints (business guides) and home recording cheat sheets, in two titled, collapsible groups. */
+function Guides() {
+  const [openId, setOpenId] = useState<string>();
+  const [openGroup, setOpenGroup] = useState<string | undefined>("Blueprints");
+  const groups: [string, string, Guide[]][] = [["Blueprints", "Step-by-step guides to running your music business", BLUEPRINT_GUIDES], ["Home recording cheat sheets", "Setup, genre tips and quick fixes", CHEAT_SHEETS]];
+  return (
+    <section className="space-y-4">
+      {groups.map(([name, hint, list]) => {
+        const open = openGroup === name;
+        return (
+          <div key={name} className="rounded-2xl border border-border">
+            <button type="button" aria-expanded={open} onClick={() => setOpenGroup(open ? undefined : name)} className="flex w-full items-center gap-2 p-4 text-left">
+              <span className="text-lg font-bold">{name}</span>
+              <span className="truncate text-sm text-muted-foreground">· {list.length} · {hint}</span>
+              <ChevronDown className={`ml-auto h-5 w-5 shrink-0 transition ${open ? "rotate-180" : ""}`} />
+            </button>
+            {open && (
+              <div className="grid gap-4 p-4 pt-0 md:grid-cols-2">
+                {list.map((g) => {
+                  const expanded = openId === g.id;
+                  return (
+                    <article key={g.id} className={`flex flex-col rounded-2xl border p-5 transition ${expanded ? "border-primary md:col-span-2" : "border-border hover:border-primary"}`}>
+                      <h3 className="text-lg font-bold">{g.title}</h3>
+                      <p className="mt-1 text-sm text-muted-foreground">{g.summary}</p>
+                      {expanded && (
+                        <div className="mt-4 space-y-4 text-sm">
+                          <ol className="space-y-3">
+                            {g.steps.map((st, i) => (
+                              <li key={st.title} className="flex gap-3">
+                                <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary text-xs font-bold text-primary-foreground">{i + 1}</span>
+                                <span><span className="font-semibold">{st.title}. </span>{st.text}</span>
+                              </li>
+                            ))}
+                          </ol>
+                          {g.checklist && (
+                            <div>
+                              <p className="font-semibold">Checklist</p>
+                              <ul className="mt-1 grid gap-1 sm:grid-cols-2">{g.checklist.map((k) => <li key={k} className="flex gap-2"><Check className="mt-0.5 h-4 w-4 shrink-0 text-primary" strokeWidth={3} /><span>{k}</span></li>)}</ul>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                      <div className="mt-auto pt-4">
+                        <Button size="sm" variant="ghost" onClick={() => { if (!expanded) logBadgeEvent("blueprint_read"); setOpenId(expanded ? undefined : g.id); }}>{expanded ? "Close" : "Read it"}</Button>
+                      </div>
+                    </article>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        );
+      })}
     </section>
   );
 }
@@ -224,7 +326,7 @@ function CompanyTemplates({ blueprints, edited, onUse, onSaved }: { blueprints: 
             ) : (
               <div className="mt-auto flex flex-wrap gap-2 pt-4">
                 <Button size="sm" variant="ghost" onClick={() => { setText(bp.body); setEditingId(bp.id); }}><PenLine className="h-4 w-4" />Edit terms</Button>
-                <Button size="sm" variant="outline" onClick={() => void downloadContractPdf({ title: bp.name, body: renderContract(bp, {}, []), parties: bp.roles.map((role) => ({ name: "", role, signedAt: null })), status: "draft" })}><Download className="h-4 w-4" />Blank PDF</Button>
+                <Button size="sm" variant="outline" onClick={() => void downloadContractPdf({ title: bp.name, body: renderContract(bp, { ...initialFields(bp), effectiveDate: "" }, []), parties: bp.roles.map((role) => ({ name: "", role, signedAt: null })), status: "draft" })}><Download className="h-4 w-4" />Blank PDF</Button>
                 <Button size="sm" onClick={() => onUse(bp)}><FileSignature className="h-4 w-4" />Use this template</Button>
               </div>
             )}
@@ -276,18 +378,38 @@ function ContractEditor({ userId, initial, tracks, blueprint, onClose }: { userI
     void Promise.all([supabase.from("profiles").select("legal_name").eq("id", userId).maybeSingle(), supabase.auth.getUser()]).then(([{ data }, { data: auth }]) => {
       const a = { email: auth.user?.email ?? "", legalName: data?.legal_name ?? "" };
       setAccount(a);
-      if (initial.status === "draft") setC((x) => ({ ...x, parties: x.parties.map((p) => p.isOwner ? { ...p, email: a.email, legalName: p.legalName || a.legalName } : p) }));
+      // Company agreements may come from a department address, so a saved owner email is kept there.
+      if (initial.status === "draft") setC((x) => ({ ...x, parties: x.parties.map((p) => p.isOwner ? { ...p, email: x.isCompany ? p.email || a.email : a.email, legalName: p.legalName || a.legalName } : p) }));
     });
   }, [userId]);
 
   const rendered = useMemo(() => renderContract(bp, c.fields, c.parties), [bp, c.fields, c.parties]);
-  const body = customized ? c.body : rendered;
-  const blanks = draft ? [...new Set(body.match(/\[[^\]\n]{2,60}\]/g) ?? [])] : [];
-  const partyIssues = c.parties.flatMap((p, i) => [
-    !p.legalName.trim() && `${p.role || `Party ${i + 1}`}: add a legal name`,
-    !isValidEmail(p.email) && `${p.role || `Party ${i + 1}`}: add a valid email`,
-  ]).filter((x): x is string => !!x);
-  const ready = c.parties.length >= 2 && partyIssues.length === 0 && blanks.length === 0;
+  const body = customized ? fillBlanks(bp, c.body, c.fields, c.parties) : rendered;
+  const owner = c.parties.find((p) => p.isOwner);
+  /**
+   * You sign in the app with your login email. On a company agreement sent from another (department) address, the
+   * owner signs from the private link emailed there instead, like every other company signer.
+   */
+  const signsHere = !!owner && (!c.isCompany || owner.email.trim().toLowerCase() === account.email.toLowerCase());
+  const others = c.parties.filter((p) => !p.isOwner || !signsHere);
+  /** What still holds back signing: required details, and each party's legal name and email. Shown only when signing. */
+  const missing: Missing[] = draft ? [
+    ...missingFields(bp, c.fields).filter((f) => !customized || body.includes(`[${f.label}]`)).map((f) => ({ label: f.label, target: `cf-${f.key}`, section: "details" as const })),
+    ...(c.parties.length < 2 ? [{ label: "A second person to sign", target: "cp-add", section: "parties" as const }] : []),
+    ...c.parties.flatMap((p, i): Missing[] => [
+      ...(!p.legalName.trim() ? [{ label: `${p.isOwner ? "Your" : `${p.role || `Party ${i + 1}`}'s`} legal name`, target: `cp-${i}-name`, section: "parties" as const }] : []),
+      ...((!p.isOwner || c.isCompany) && !isValidEmail(p.email) ? [{ label: `${p.role || `Party ${i + 1}`}'s email`, target: `cp-${i}-email`, section: "parties" as const }] : []),
+    ]),
+  ] : [];
+  const [sections, setSections] = useState({ details: true, parties: true, text: true });
+  const [showMissing, setShowMissing] = useState(false);
+  const goTo = (m: Missing) => {
+    setShowMissing(false);
+    setSections((x) => ({ ...x, [m.section]: true }));
+    window.setTimeout(() => { const el = document.getElementById(m.target); el?.scrollIntoView({ behavior: "smooth", block: "center" }); el?.focus(); }, 150);
+  };
+  const required = bp.fields.filter((f) => f.required);
+  const filled = required.filter((f) => c.fields[f.key]?.trim()).length;
 
   const setField = (key: string, value: string) => setC((x) => ({ ...x, fields: { ...x.fields, [key]: value } }));
   const setParty = (i: number, patch: Partial<ContractParty>) => setC((x) => ({ ...x, parties: x.parties.map((p, idx) => idx === i ? { ...p, ...patch } : p) }));
@@ -296,7 +418,11 @@ function ContractEditor({ userId, initial, tracks, blueprint, onClose }: { userI
     : { ...p, isOwner: false, email: p.isOwner ? "" : p.email }) }));
   const pickSong = (id: string) => {
     const t = tracks.find((x) => x.id === id);
-    setC((x) => ({ ...x, catalogId: id || null, ...(t && { fields: { ...x.fields, songTitle: t.title }, title: `${bp.name} – ${t.title}` }) }));
+    // A split agreement also takes the song's writers, by legal name, from My Catalog (read only).
+    const splits = t && bp.fields.some((f) => f.key === "splits")
+      ? t.metadata.writers.filter((w) => w.legalName?.trim()).map((w) => `${w.legalName!.trim()}${w.role ? ` (${w.role})` : ""}: ${w.percentage || "?"}%`).join("\n")
+      : "";
+    setC((x) => ({ ...x, catalogId: id || null, ...(t && { fields: { ...x.fields, songTitle: t.title, ...(splits && { splits }) }, title: `${bp.name} – ${t.title}` }) }));
   };
 
   const save = async (quiet = false) => {
@@ -312,20 +438,30 @@ function ContractEditor({ userId, initial, tracks, blueprint, onClose }: { userI
     } finally { setBusy(false); }
   };
 
-  const lockAndSend = async () => {
+  const refresh = async () => { const fresh = c.id ? await getContract(c.id) : null; if (fresh) setC(fresh); };
+
+  /**
+   * Signing happens at the bottom, after reading: it locks the text (frozen, with its SHA-256) and records your
+   * signature. Sending to the others is a separate click afterwards, so nothing goes out by accident.
+   */
+  const signAndLock = async () => {
+    if (missing.length) { setShowMissing(true); return; }
+    if (signsHere && typed.trim().toLowerCase() !== owner!.legalName.trim().toLowerCase()) { toast.error(`Type your legal name exactly as listed: ${owner.legalName}`); return; }
     const saved = await save(true);
     if (!saved?.id) return;
     setBusy(true);
     try {
       await sendContract(saved.id);
+      const me = signsHere ? saved.parties.find((p) => p.isOwner) : undefined;
+      if (me?.id) await signContract(me.id, typed);
+      remember(c.fields);
+      setTyped("");
       const fresh = await getContract(saved.id);
       if (fresh) setC(fresh);
-      toast.success("Locked. Now send each party their signature request.");
-    } catch (e) { toast.error(e instanceof Error ? e.message : "Could not lock the contract."); }
+      toast.success(me ? "Signed. Now send it to the others." : owner ? `Locked. Send it, then sign from the email sent to ${owner.email}.` : "Locked. Now send it for signature.");
+    } catch (e) { toast.error(e instanceof Error ? e.message : "Could not sign the contract."); await refresh(); }
     finally { setBusy(false); }
   };
-
-  const refresh = async () => { const fresh = c.id ? await getContract(c.id) : null; if (fresh) setC(fresh); };
 
   const email = async (p: ContractParty) => {
     if (!p.id) return;
@@ -336,6 +472,21 @@ function ContractEditor({ userId, initial, tracks, blueprint, onClose }: { userI
       await refresh();
     } catch (e) { toast.error(e instanceof Error ? e.message : "Could not send the email."); }
     finally { setSending(undefined); }
+  };
+
+  /** Emails everyone who hasn't been sent a request yet, in one click. */
+  const unsent = c.status === "sent" ? others.filter((p) => !p.signedAt && !p.invitedAt) : [];
+  const sendAll = async () => {
+    setSending("all");
+    let sent = 0;
+    try {
+      for (const p of unsent) {
+        await sendInvite({ data: { partyId: p.id!, origin: window.location.origin } });
+        sent++;
+      }
+      toast.success(sent === 1 ? `Sent to ${unsent[0]!.email}.` : `Sent to ${sent} people.`);
+    } catch (e) { toast.error(e instanceof Error ? e.message : "Could not send the email."); }
+    finally { setSending(undefined); await refresh(); }
   };
 
   const signAsOwner = async (p: ContractParty) => {
@@ -370,10 +521,12 @@ function ContractEditor({ userId, initial, tracks, blueprint, onClose }: { userI
 
         {draft && (
           <>
-            <Step n={1} title="Deal details">
+            <Step n={1} title="Details" open={sections.details} onToggle={() => setSections((x) => ({ ...x, details: !x.details }))}
+              summary={required.length ? `${filled} of ${required.length} required filled${filled === required.length ? " ✓" : ""}` : "Nothing required · common terms already filled in ✓"}
+              hint={required.length ? "Only the fields marked * are needed. Everything else is already filled in with common terms; change anything you like." : "Everything is already filled in with common terms. Change anything you like."}>
               <div className="grid gap-4 sm:grid-cols-2">
                 {tracks.length > 0 && bp.fields.some((f) => f.key === "songTitle") && (
-                  <Field label="Catalog song (optional)" tip="Pick a song from My Catalog to fill in its title.">
+                  <Field label="Catalog song" tip="Pick a song from My Catalog to fill in its title.">
                     <select value={c.catalogId ?? ""} onChange={(e) => pickSong(e.target.value)} className="flex h-10 w-full rounded-md border border-input bg-background px-3 text-sm">
                       <option value="">Not linked to a catalog song</option>
                       {[...tracks].sort((a, b) => a.title.localeCompare(b.title)).map((t) => <option key={t.id} value={t.id}>{t.title}</option>)}
@@ -381,28 +534,30 @@ function ContractEditor({ userId, initial, tracks, blueprint, onClose }: { userI
                   </Field>
                 )}
                 {bp.fields.map((f) => (
-                  <Field key={f.key} label={f.label} tip={f.tip} wide={f.multiline}>
+                  <Field key={f.key} label={f.label} tip={f.tip} wide={f.multiline} required={f.required}>
                     {f.multiline
-                      ? <textarea rows={3} value={c.fields[f.key] ?? ""} placeholder={f.placeholder} onChange={(e) => setField(f.key, e.target.value)} className="w-full rounded-md border border-input bg-background p-3 text-sm" />
-                      : f.date ? <DateInput field={f} value={c.fields[f.key] ?? ""} onChange={(v) => setField(f.key, v)} />
-                      : <Input value={c.fields[f.key] ?? ""} placeholder={f.placeholder} onChange={(e) => setField(f.key, e.target.value)} />}
+                      ? <textarea id={`cf-${f.key}`} rows={3} value={c.fields[f.key] ?? ""} placeholder={f.placeholder ?? f.fallback} onChange={(e) => setField(f.key, e.target.value)} className="w-full rounded-md border border-input bg-background p-3 text-sm" />
+                      : f.date ? <DateInput id={`cf-${f.key}`} field={f} value={c.fields[f.key] ?? ""} onChange={(v) => setField(f.key, v)} />
+                      : <Input id={`cf-${f.key}`} value={c.fields[f.key] ?? ""} placeholder={f.placeholder ?? f.fallback} onChange={(e) => setField(f.key, e.target.value)} />}
                   </Field>
                 ))}
               </div>
             </Step>
 
-            <Step n={2} title="Parties" hint="Use each person's legal name. Mark which party is you; you'll sign with your account email.">
+            <Step n={2} title="Who's signing" open={sections.parties} onToggle={() => setSections((x) => ({ ...x, parties: !x.parties }))}
+              summary={c.parties.map((p) => p.isOwner ? "You" : p.legalName.trim() || p.role).join(" + ")}
+              hint="Use each person's legal name. Mark which one is you; you sign with your account email.">
               <div className="space-y-3">
                 {c.parties.map((p, i) => (
                   <div key={p.id ?? i} className={`grid gap-3 rounded-xl border p-3 sm:grid-cols-[10rem_1fr_1fr_auto] sm:items-end ${p.isOwner ? "border-primary bg-primary/5" : "border-border"}`}>
                     <Field label="Role" tip="This party's role in the deal, for example Artist or Producer.">
                       <Input list={`roles-${bp.id}`} value={p.role} onChange={(e) => setParty(i, { role: e.target.value })} />
                     </Field>
-                    <Field label="Legal name" tip="The person's or company's full legal name, exactly as it should appear on the contract.">
-                      <Input value={p.legalName} onChange={(e) => setParty(i, { legalName: e.target.value })} placeholder="Full legal name" />
+                    <Field label="Legal name" tip="The person's or company's full legal name, exactly as it should appear on the contract." required>
+                      <Input id={`cp-${i}-name`} value={p.legalName} onChange={(e) => setParty(i, { legalName: e.target.value })} placeholder="Full legal name" />
                     </Field>
-                    <Field label="Email" tip="Where the signature request goes. They sign by logging in with this email.">
-                      <Input type="email" value={p.email} disabled={p.isOwner} onChange={(e) => setParty(i, { email: e.target.value })} placeholder="name@example.com" />
+                    <Field label="Email" tip={c.isCompany ? p.isOwner ? "Your email, or a department address such as registration@camethroughaudio.com. If it isn't your login email, you sign from the link sent there." : "Where the signing link goes. They sign with a code emailed here; no account needed." : "Where the signature request goes. They sign by logging in with this email."} required={!p.isOwner || c.isCompany}>
+                      <Input id={`cp-${i}-email`} type="email" value={p.email} disabled={p.isOwner && !c.isCompany} onChange={(e) => setParty(i, { email: e.target.value })} placeholder="name@example.com" />
                     </Field>
                     <div className="flex items-center gap-2 pb-1">
                       <label className="flex items-center gap-1.5 text-sm"><input type="radio" name="owner" checked={p.isOwner} onChange={() => markOwner(i)} className="accent-[var(--primary)]" />Me</label>
@@ -411,13 +566,14 @@ function ContractEditor({ userId, initial, tracks, blueprint, onClose }: { userI
                   </div>
                 ))}
                 <datalist id={`roles-${bp.id}`}>{bp.roles.map((r) => <option key={r} value={r} />)}</datalist>
-                <Button variant="outline" size="sm" onClick={() => setC({ ...c, parties: [...c.parties, emptyParty(bp.roles[1])] })}><Plus className="h-4 w-4" />Add party</Button>
+                <Button id="cp-add" variant="outline" size="sm" onClick={() => setC({ ...c, parties: [...c.parties, emptyParty(bp.roles[1])] })}><Plus className="h-4 w-4" />Add party</Button>
               </div>
             </Step>
           </>
         )}
 
-        <Step n={draft ? 3 : undefined} title="Contract text" hint={draft ? "Fills in as you type. Customize the wording if you need to." : c.bodyHash ? `Locked · SHA-256 ${c.bodyHash.slice(0, 16)}…` : undefined}>
+        <Step n={draft ? 3 : undefined} title={draft ? "Read it over, then sign" : "Contract text"} open={sections.text} onToggle={() => setSections((x) => ({ ...x, text: !x.text }))}
+          summary="Fills in as you type" hint={draft ? "Fills in as you type. Read it all the way through; your signature goes at the bottom." : c.bodyHash ? `Locked · SHA-256 ${c.bodyHash.slice(0, 16)}…` : undefined}>
           {draft && (
             <div className="mb-3 flex flex-wrap gap-2">
               {!customized
@@ -426,29 +582,34 @@ function ContractEditor({ userId, initial, tracks, blueprint, onClose }: { userI
             </div>
           )}
           {draft && customized
-            ? <textarea aria-label="Contract text" rows={22} value={c.body} onChange={(e) => setC({ ...c, body: e.target.value })} className="w-full rounded-xl border border-input bg-background p-4 font-mono text-sm leading-relaxed" />
+            ? <textarea aria-label="Contract text" rows={22} value={body} onChange={(e) => setC({ ...c, body: e.target.value })} className="w-full rounded-xl border border-input bg-background p-4 font-mono text-sm leading-relaxed" />
             : <div className="max-h-[32rem] overflow-y-auto whitespace-pre-wrap rounded-xl border border-border bg-muted/30 p-5 text-sm leading-relaxed">{body}</div>}
-          <p className="mt-2 text-xs text-muted-foreground">{CONTRACT_DISCLAIMER}</p>
+
+          {draft && (
+            <div className="mt-5 border-t border-border pt-5">
+              {owner && !signsHere ? <p className="text-sm text-muted-foreground">You'll sign from the link emailed to <span className="font-semibold text-foreground">{owner.email || "your department address"}</span> once it's locked and sent.</p>
+                : owner ? (
+                <label className="block space-y-1 text-sm"><span className="font-medium">Type your legal name to sign{owner.legalName.trim() && <>: <span className="font-bold">{owner.legalName}</span></>}</span>
+                  <Input value={typed} onChange={(e) => setTyped(e.target.value)} placeholder={owner.legalName || "Your legal name"} className="max-w-md font-serif text-lg italic" /></label>
+              ) : <p className="text-sm text-muted-foreground">You're not signing this one. Lock it, then send it to everyone who signs.</p>}
+              <div className="mt-4 flex flex-wrap gap-3">
+                <Button disabled={busy} onClick={() => void signAndLock()}>{busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileSignature className="h-4 w-4" />}{signsHere ? "Sign" : "Lock"}</Button>
+                <Button variant="outline" disabled={busy} onClick={() => void save()}><Check className="h-4 w-4" />Save draft</Button>
+                {c.id && <Button variant="ghost" className="ml-auto" disabled={busy} onClick={async () => { if (await confirmAction({ title: "Delete this draft?" })) void deleteContract(c.id!).then(onClose); }}><Trash2 className="h-4 w-4" />Delete</Button>}
+              </div>
+              <p className="mt-2 text-xs text-muted-foreground">Signing locks the wording and records its fingerprint, so nobody can change it after you sign. You'll send it to the others next.</p>
+            </div>
+          )}
         </Step>
 
-        {draft ? (
-          <Step n={4} title="Save and request signatures">
-            {!ready && (
-              <ul className="mb-4 space-y-1 text-sm">
-                {c.parties.length < 2 && <li>⚠️ Add at least two parties.</li>}
-                {partyIssues.map((x) => <li key={x}>⚠️ {x}</li>)}
-                {blanks.map((b) => <li key={b}>⚠️ Fill in {b.slice(1, -1)}</li>)}
-              </ul>
-            )}
-            <div className="flex flex-wrap gap-3">
-              <Button variant="outline" disabled={busy} onClick={() => void save()}>{busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}Save draft</Button>
-              <Button disabled={busy || !ready} onClick={() => void lockAndSend()}><Lock className="h-4 w-4" />Lock &amp; request signatures</Button>
-              {c.id && <Button variant="ghost" className="ml-auto" disabled={busy} onClick={async () => { if (await confirmAction({ title: "Delete this draft?" })) void deleteContract(c.id!).then(onClose); }}><Trash2 className="h-4 w-4" />Delete</Button>}
-            </div>
-            <p className="mt-2 text-xs text-muted-foreground">Locking freezes the text and records its fingerprint, so nobody can change it after people start signing.</p>
-          </Step>
-        ) : (
+        {!draft && (
           <Step title="Signatures">
+            {unsent.length > 0 && (
+              <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-primary bg-primary/5 p-4">
+                <p className="text-sm"><span className="font-semibold">Ready to send.</span> {unsent.map((p) => p.legalName).join(", ")} {unsent.length === 1 ? "gets" : "get"} an email to review and sign.</p>
+                <Button disabled={!!sending} onClick={() => void sendAll()}>{sending === "all" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Mail className="h-4 w-4" />}Send{unsent.length > 1 ? ` to all ${unsent.length}` : ""}</Button>
+              </div>
+            )}
             <ul className="space-y-3">
               {c.parties.map((p) => (
                 <li key={p.id} className="rounded-xl border border-border p-4">
@@ -457,14 +618,14 @@ function ContractEditor({ userId, initial, tracks, blueprint, onClose }: { userI
                       <div className="font-semibold">{p.legalName} <span className="text-sm font-normal text-muted-foreground">· {p.role}{p.isOwner ? " · you" : ""}</span></div>
                       <div className="text-xs text-muted-foreground">{p.signedAt ? `Signed ${new Date(p.signedAt).toLocaleString()}` : p.invitedAt ? `Request sent ${new Date(p.invitedAt).toLocaleDateString()}` : p.email}</div>
                     </div>
-                    {p.signedAt ? <span className="flex items-center gap-1 text-sm font-semibold text-primary"><ShieldCheck className="h-4 w-4" />Signed</span> : !p.isOwner && (
+                    {p.signedAt ? <span className="flex items-center gap-1 text-sm font-semibold text-primary"><ShieldCheck className="h-4 w-4" />Signed</span> : (!p.isOwner || !signsHere) && (
                       <div className="flex gap-2">
                         <Button size="sm" variant="outline" onClick={() => void copyLink(p)}><Copy className="h-4 w-4" />Copy link</Button>
                         <Button size="sm" disabled={sending === p.id} onClick={() => void email(p)}>{sending === p.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Mail className="h-4 w-4" />}{p.invitedAt ? "Resend" : "Email request"}</Button>
                       </div>
                     )}
                   </div>
-                  {p.isOwner && !p.signedAt && c.status === "sent" && (
+                  {p.isOwner && signsHere && !p.signedAt && c.status === "sent" && (
                     <div className="mt-3 flex flex-wrap items-end gap-3 border-t border-border pt-3">
                       <label className="min-w-60 flex-1 space-y-1 text-sm"><span className="font-medium">Type your legal name to sign: <span className="font-bold">{p.legalName}</span></span>
                         <Input value={typed} onChange={(e) => setTyped(e.target.value)} placeholder={p.legalName} className="font-serif text-lg italic" /></label>
@@ -481,18 +642,46 @@ function ContractEditor({ userId, initial, tracks, blueprint, onClose }: { userI
           </Step>
         )}
       </div>
+
+      <Dialog open={showMissing} onOpenChange={setShowMissing}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Almost there: {missing.length} {missing.length === 1 ? "thing" : "things"} to add</DialogTitle>
+            <DialogDescription>Everything else is optional.</DialogDescription>
+          </DialogHeader>
+          <ul className="divide-y divide-border">
+            {missing.map((m) => (
+              <li key={m.target} className="flex items-center justify-between gap-3 py-2.5 text-sm">
+                <span>{m.label}</span>
+                <Button size="sm" variant="ghost" className="text-primary" onClick={() => goTo(m)}>Take me there →</Button>
+              </li>
+            ))}
+          </ul>
+          <Button variant="outline" onClick={() => setShowMissing(false)}>Keep editing</Button>
+        </DialogContent>
+      </Dialog>
     </TooltipProvider>
   );
 }
 
-function Step({ n, title, hint, children }: { n?: number | undefined; title: string; hint?: string | undefined; children: React.ReactNode }) {
+type Missing = { label: string; target: string; section: "details" | "parties" };
+
+/** A titled editor section. With onToggle it collapses to its title and a one-line summary (BRANDING §3). */
+function Step({ n, title, hint, summary, open = true, onToggle, children }: { n?: number | undefined; title: string; hint?: string | undefined; summary?: string; open?: boolean; onToggle?: () => void; children: React.ReactNode }) {
+  const heading = <>{n && <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary text-xs text-primary-foreground">{n}</span>}{title}</>;
   return (
     <section className="rounded-2xl border border-border p-5">
-      <h3 className="flex items-center gap-2 text-lg font-bold">
-        {n && <span className="flex h-6 w-6 items-center justify-center rounded-full bg-primary text-xs text-primary-foreground">{n}</span>}{title}
-      </h3>
-      {hint && <p className="mt-1 text-sm text-muted-foreground">{hint}</p>}
-      <div className="mt-4">{children}</div>
+      {onToggle ? (
+        <button type="button" aria-expanded={open} onClick={onToggle} className="flex w-full items-center gap-2 text-left text-lg font-bold">
+          {heading}
+          {!open && summary && <span className="ml-1 truncate text-sm font-normal text-muted-foreground">· {summary}</span>}
+          <ChevronDown className={`ml-auto h-5 w-5 shrink-0 transition ${open ? "rotate-180" : ""}`} />
+        </button>
+      ) : <h3 className="flex items-center gap-2 text-lg font-bold">{heading}</h3>}
+      {open && <>
+        {hint && <p className="mt-1 text-sm text-muted-foreground">{hint}</p>}
+        <div className="mt-4">{children}</div>
+      </>}
     </section>
   );
 }
@@ -500,7 +689,7 @@ function Step({ n, title, hint, children }: { n?: number | undefined; title: str
 const DATE_FORMAT = "MMMM d, yyyy";
 
 /** A date field with a calendar beside it. Typing still works, for wording like "Within 6 months of delivery". */
-function DateInput({ field, value, onChange }: { field: BlueprintField; value: string; onChange: (v: string) => void }) {
+function DateInput({ id, field, value, onChange }: { id?: string; field: BlueprintField; value: string; onChange: (v: string) => void }) {
   const [open, setOpen] = useState(false);
   const many = field.date === "many";
   const last = value.split(";").pop()?.trim() ?? "";
@@ -513,7 +702,7 @@ function DateInput({ field, value, onChange }: { field: BlueprintField; value: s
   };
   return (
     <div className="flex gap-2">
-      <Input value={value} placeholder={field.placeholder} onChange={(e) => onChange(e.target.value)} />
+      <Input id={id} value={value} placeholder={field.placeholder ?? field.fallback} onChange={(e) => onChange(e.target.value)} />
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger asChild>
           <Button type="button" variant="outline" size="icon" className="shrink-0" aria-label={`Pick ${field.label.toLowerCase()} on a calendar`}><CalendarDays className="h-4 w-4" /></Button>
@@ -527,11 +716,12 @@ function DateInput({ field, value, onChange }: { field: BlueprintField; value: s
   );
 }
 
-function Field({ label, tip, wide, children }: { label: string; tip: string; wide?: boolean | undefined; children: React.ReactNode }) {
+/** A labelled form field. Required ones get a * and nothing else: cautions only appear when signing. */
+function Field({ label, tip, wide, required, children }: { label: string; tip: string; wide?: boolean | undefined; required?: boolean | undefined; children: React.ReactNode }) {
   return (
     <div className={`space-y-1.5 ${wide ? "sm:col-span-2" : ""}`}>
       <span className="flex items-center text-sm font-medium">
-        {label}
+        {label}{required && <span className="ml-0.5 text-primary" aria-label="required">*</span>}
         <InfoTip title={label} text={tip} />
       </span>
       {children}

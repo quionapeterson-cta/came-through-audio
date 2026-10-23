@@ -59,7 +59,7 @@ const tabs = [
   { id: "splits", label: "Split Sheets", icon: FileSignature },
   { id: "protect", label: "AI Protection Hub", icon: ShieldCheck },
   { id: "health", label: "Royalty Health Check", icon: Activity },
-  { id: "learn", label: "Contracts & Masterclasses", icon: GraduationCap },
+  { id: "learn", label: "Contracts & Blueprints", icon: GraduationCap },
 ];
 
 /** Which badge collections each tab's next-badge card suggests from. */
@@ -329,7 +329,7 @@ function Masterclasses({ userId }: { userId: string }) {
 }
 
 function Health({ startView, justPaid, canCatalog, onFix, onFixField, onEmbed, userId, purchases, canUtility, onUpgrade }: { startView: "check" | "expert"; justPaid: boolean; canCatalog: boolean; userId: string; purchases: Purchase[]; canUtility: boolean; onUpgrade: () => void; onFix: () => void; onFixField: (trackId: string, field: string) => void; onEmbed: () => void }) {
-  // Three tools, one at a time, switched like Contracts & Masterclasses.
+  // Three tools, one at a time, switched like Contracts & Blueprints.
   const [view, setView] = useState<"check" | "expert" | "utility">(startView);
   const views = [["check", "Health Check", Activity], ["expert", "Expert Help", Users], ["utility", "Utility Suite", Calculator]] as const;
   return (

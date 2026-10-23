@@ -1,6 +1,6 @@
 # PLAN — Simpler contracts: fewer fields, * for required, cautions only when you sign · v1
 
-Status: **Awaiting founder approval (2026-10-23). Nothing built yet.**
+Status: **Approved and BUILT 2026-10-23.** Founder answers: 1 yes (common money terms pre-filled); 2 sign at the bottom after reading, THEN a separate Send (nobody can say it went out before they read it); 3 guides live in Contracts & Blueprints (tab renamed from Contracts & Masterclasses), Catalog Management tier; 4 .docx removed; 5 order yes, and the repeated "not legal advice" note removed from the editor (the section banner says it). Also: admin contracts get the same rules, and the admin's own email is editable (department addresses); if it isn't the login email, the admin signs from the emailed private link. Fixed: cautions that stayed after filling a field (customized wording didn't refill its [gaps]).
 Source: founder request, 2026-10-23: "the written testimonial says optional but it's acting as a requirement", "the process is a little tedious", clean up the 107 uploaded files in resources/contracts_blueprints, "get user input fields down to a minimum", "* next to the required field", cautions pop up only when clicking sign, "all admin contracts are governed in the state of Georgia".
 
 ---
@@ -47,6 +47,8 @@ Source: founder request, 2026-10-23: "the written testimonial says optional but 
 ---
 
 ## 2. Fewer steps
+
+**As built:** 1 Details · 2 Who's signing · 3 Read it over, then sign (type your name at the bottom → Sign locks + signs) → then **Send** emails everyone not yet sent. The one-click Sign & send below was replaced by this at the founder's request.
 
 The editor becomes three titled, collapsible sections (BRANDING §3), with a one-line summary when closed:
 
