@@ -509,11 +509,13 @@ export type Database = {
       }
       contract_parties: {
         Row: {
+          consent_at: string | null
           contract_id: string
           created_at: string
           email: string
           id: string
           invited_at: string | null
+          ip_hash: string | null
           is_owner: boolean
           legal_name: string
           position: number
@@ -521,13 +523,16 @@ export type Database = {
           signature_hash: string | null
           signature_name: string | null
           signed_at: string | null
+          user_agent: string | null
         }
         Insert: {
+          consent_at?: string | null
           contract_id: string
           created_at?: string
           email?: string
           id?: string
           invited_at?: string | null
+          ip_hash?: string | null
           is_owner?: boolean
           legal_name?: string
           position?: number
@@ -535,13 +540,16 @@ export type Database = {
           signature_hash?: string | null
           signature_name?: string | null
           signed_at?: string | null
+          user_agent?: string | null
         }
         Update: {
+          consent_at?: string | null
           contract_id?: string
           created_at?: string
           email?: string
           id?: string
           invited_at?: string | null
+          ip_hash?: string | null
           is_owner?: boolean
           legal_name?: string
           position?: number
@@ -549,6 +557,7 @@ export type Database = {
           signature_hash?: string | null
           signature_name?: string | null
           signed_at?: string | null
+          user_agent?: string | null
         }
         Relationships: [
           {
@@ -556,6 +565,38 @@ export type Database = {
             columns: ["contract_id"]
             isOneToOne: false
             referencedRelation: "contracts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      contract_sign_codes: {
+        Row: {
+          attempts: number
+          code_hash: string
+          expires_at: string
+          party_id: string
+          sent_at: string
+        }
+        Insert: {
+          attempts?: number
+          code_hash: string
+          expires_at: string
+          party_id: string
+          sent_at?: string
+        }
+        Update: {
+          attempts?: number
+          code_hash?: string
+          expires_at?: string
+          party_id?: string
+          sent_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contract_sign_codes_party_id_fkey"
+            columns: ["party_id"]
+            isOneToOne: true
+            referencedRelation: "contract_parties"
             referencedColumns: ["id"]
           },
         ]
@@ -1654,6 +1695,15 @@ export type Database = {
       sign_contract: {
         Args: { _party_id: string; _signature_name: string }
         Returns: undefined
+      }
+      sign_contract_by_link: {
+        Args: {
+          _ip_hash: string
+          _party_id: string
+          _signature_name: string
+          _user_agent: string
+        }
+        Returns: Json
       }
       sign_split_invite: {
         Args: {
