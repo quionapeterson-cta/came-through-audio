@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Guide, LiveRecords, openSearch, type HealthActions } from "@/components/HealthReport";
 import { ACCOUNT_REF, encouragement, INTL_KEY, printKey, registrationPrint, releaseGroups, searchKey, SINGLES_KEY, songChecklist, STAGE_LABEL, type ChecklistStep, type SongChecklist, type SongSort, type Stage } from "@/lib/health-checklist";
 import { updateGuide } from "@/lib/register-guides";
+import { listKey } from "@/lib/agency-lists";
 import { InfoTip } from "@/components/InfoTip";
 import type { GlossaryKey } from "@/lib/glossary";
 import type { Pillar } from "@/lib/audit";
@@ -275,6 +276,17 @@ function SongDetail({ r, c, country, status, onStatus, actions, running, onEditI
   );
 }
 
+const CONFIRM_SONG = [
+  { id: "writers", ask: "Are all the writers listed?", issue: "A writer is missing on the registration" },
+  { id: "shares", ask: "Do the shares match your split?", issue: "The shares don't match your split" },
+  { id: "publisher", ask: "Is the publisher right (or none, if you're self-published)?", issue: "The publisher on the registration isn't right" },
+];
+const CONFIRM_RECORDING = [
+  { id: "artist", ask: "Is your artist name right?", issue: "The artist name on the registration isn't right" },
+  { id: "isrc", ask: "Is the ISRC the same as yours?", issue: "The ISRC on the registration is different" },
+  { id: "owner", ask: "Are you (or your label) listed as the rights owner?", issue: "The rights owner isn't listed" },
+];
+
 type Apply = (changes: Record<string, string | null>, mark?: { society: string; status: "found" | "not_listed" | null }) => void;
 
 function StepRow({ s, r, country, open, onFix, apply, actions, onIntl }: {
@@ -291,7 +303,16 @@ function StepRow({ s, r, country, open, onFix, apply, actions, onIntl }: {
   // Ticking "registered" or "found" remembers the details as they are, so a later edit reopens the step as an update.
   const print = s.society && s.pillar ? { [printKey(s.society.id)]: registrationPrint(m, s.pillar) } : {};
   const registered = () => s.society && apply({ [`registered:${s.society.id}`]: now(), ...print });
-  const markFound = () => s.society && apply(print, { society: s.society.id, status: "found" });
+  // Guided confirm: "it's there" asks what's on the registration, so a mismatch becomes a precise finding in the report.
+  const [asking, setAsking] = useState(false);
+  const questions = s.pillar === "digital" ? CONFIRM_RECORDING : CONFIRM_SONG;
+  const [answers, setAnswers] = useState<Record<string, boolean>>({});
+  const markFound = () => {
+    if (!s.society) return;
+    const issues = questions.filter((q) => answers[q.id] === false).map((q) => q.issue);
+    apply({ ...print, [listKey(s.society.id)]: issues.length ? JSON.stringify({ at: now(), issues }) : null }, { society: s.society.id, status: "found" });
+    setAsking(false);
+  };
   const untick = () => {
     setConfirming(false);
     if (intl) { onIntl(false); return; }
@@ -376,12 +397,30 @@ function StepRow({ s, r, country, open, onFix, apply, actions, onIntl }: {
                 {!s.done && (
                   <div className="flex flex-wrap gap-2">
                     <Button size="sm" onClick={() => void openSearch(s.society!, key.value || r.track.title)}><Search />Open {s.society.name}<ExternalLink /></Button>
-                    <Button size="sm" variant="outline" onClick={markFound}><CheckCircle2 />Yes, it's there</Button>
+                    <Button size="sm" variant="outline" onClick={() => { setAnswers({}); setAsking(true); }}><CheckCircle2 />Yes, it's there</Button>
                     {!notListed && <Button size="sm" variant="outline" onClick={() => apply({}, { society: s.society!.id, status: "not_listed" })}>Not showing up</Button>}
                     {notListed && <Button size="sm" variant="ghost" onClick={() => apply({}, { society: s.society!.id, status: null })}><RotateCcw />Undo</Button>}
                   </div>
                 )}
               </>}
+              {s.stage === "confirm" && asking && !s.done && (
+                <div className="space-y-3 rounded-lg border border-primary/40 p-4">
+                  <p className="font-semibold">Great. Three quick checks against what {s.society!.name} shows:</p>
+                  {questions.map((q) => (
+                    <div key={q.id} className="flex flex-wrap items-center justify-between gap-2">
+                      <span>{q.ask}</span>
+                      <span className="flex gap-1">{([true, false] as const).map((v) => (
+                        <Button key={String(v)} size="sm" variant={answers[q.id] === v ? "default" : "outline"} aria-pressed={answers[q.id] === v} onClick={() => setAnswers({ ...answers, [q.id]: v })}>{v ? "Yes" : "No"}</Button>
+                      ))}</span>
+                    </div>
+                  ))}
+                  <div className="flex flex-wrap gap-2">
+                    <Button size="sm" disabled={questions.some((q) => answers[q.id] === undefined)} onClick={markFound}><Check />Save</Button>
+                    <Button size="sm" variant="ghost" onClick={() => setAsking(false)}>Cancel</Button>
+                  </div>
+                  {questions.some((q) => answers[q.id] === false) && <p className="text-xs text-muted-foreground">⚠️ We'll add this to your Royalty Health Report with the steps to update the registration.</p>}
+                </div>
+              )}
               {s.stage === "confirm" && reasons && !s.done && (
                 <details open={notListed} className="rounded-lg bg-muted p-4">
                   <summary className="cursor-pointer font-semibold text-primary">Not showing up yet? Relax, this is common.</summary>

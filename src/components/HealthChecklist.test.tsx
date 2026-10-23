@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
-import { render, screen, fireEvent } from "@testing-library/react";
+import { render, screen, fireEvent, within } from "@testing-library/react";
 import { HealthChecklist } from "@/components/HealthChecklist";
 import { emptyMetadata } from "@/lib/metadata";
 import { trackReport } from "@/lib/health";
@@ -24,5 +24,14 @@ describe("HealthChecklist", () => {
     fireEvent.click(screen.getByText(/Confirm it shows up in BMI/));
     expect(screen.getByText(/Relax, this is common/)).toBeTruthy();
     expect(screen.getAllByText(/Not reconciled yet/).length).toBeGreaterThan(0);
+    // Guided confirm: a "No" becomes a finding for the report.
+    fireEvent.click(screen.getByRole("button", { name: /Yes, it's there/ }));
+    for (const q of [/all the writers/, /shares match/, /publisher right/]) {
+      const row = screen.getByText(q).parentElement!;
+      fireEvent.click(within(row).getByRole("button", { name: q.source.includes("shares") ? "No" : "Yes" }));
+    }
+    fireEvent.click(screen.getByRole("button", { name: "Save" }));
+    expect(onMark).toHaveBeenCalledWith("c1", "bmi", "found");
+    expect(onStatus).toHaveBeenLastCalledWith(expect.objectContaining({ steps: expect.objectContaining({ "list:bmi": expect.stringContaining("The shares don't match your split") }) }));
   });
 });
