@@ -32,5 +32,11 @@ describe("RoyaltyReport", () => {
     expect(onAction).toHaveBeenCalledWith(expect.objectContaining({ kind: "field" }));
     fireEvent.click(screen.getByRole("button", { name: /Run a new checkup/ }));
     expect(onRun).toHaveBeenCalled();
+    // The explainer: captioned scenes, Back / Next.
+    fireEvent.click(within(report).getAllByRole("button", { name: /Watch the 30-second explainer/ })[0]!);
+    const dialog = screen.getByRole("dialog");
+    expect(within(dialog).getByText("Your heart is broken in two.")).toBeTruthy();
+    fireEvent.click(within(dialog).getByRole("button", { name: "Next" }));
+    expect(within(dialog).getByText("What you'd notice")).toBeTruthy();
   });
 });

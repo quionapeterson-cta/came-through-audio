@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import { ChevronLeft, ChevronRight, FileDown, Lock, Stethoscope } from "lucide-react";
+import { ChevronLeft, ChevronRight, FileDown, Lock, PlayCircle, Stethoscope } from "lucide-react";
+import { Explainer } from "@/components/Explainer";
 import { Button } from "@/components/ui/button";
 import { ArtDefs, BodyDiagram, MiniRhythm, MONITOR, OrganIcon, RHYTHM, Scan, Tool } from "@/components/royalty-art";
 import { CLEAR_DX, CLEAR_WHAT, STATE_LABEL, type Checkup, type Finding, type Organ, type OrganId, type OrganState, type StepAction, type TreatmentStep, sinceLast } from "@/lib/royalty-checkup";
@@ -16,7 +17,7 @@ type Props = {
   onPdf?: (() => void) | undefined;
   onAction: (a: StepAction) => void;
   onExpert: () => void;
-  onReminder: () => void;
+  onReminder: (calendar: "google" | "ics") => void;
 };
 
 const KEY: [OrganState, string, string][] = [
@@ -53,6 +54,7 @@ export function RoyaltyReport({ checkup, since, date, country, countryPicker, ru
   const open = (id: OrganId, scroll = true) => { setSelected(id); if (scroll) setTimeout(() => reportRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 30); };
   const organ = organs.find((o) => o.id === selected) ?? organs[0]!;
   const ring = Math.round((checkup.score / 100) * 188.5 * 10) / 10;
+  const [explain, setExplain] = useState<Finding | null>(null);
 
   return (
     <div className="rr space-y-8">
@@ -108,7 +110,8 @@ export function RoyaltyReport({ checkup, since, date, country, countryPicker, ru
               {lead.note && <p className="rr-muted mt-3 text-sm italic">{lead.note}</p>}
             </div>
             <div className="flex flex-wrap gap-2">
-              <Button variant="secondary" onClick={() => open(lead.organ)}>Open the {organs.find((o) => o.id === lead.organ)?.name.toLowerCase()} report</Button>
+              <Button variant="secondary" onClick={() => setExplain(lead)}><PlayCircle />Watch the 30-second explainer</Button>
+              <Button variant="outline" className="border-white/30 bg-transparent text-white hover:bg-white/10" onClick={() => open(lead.organ)}>Open the {organs.find((o) => o.id === lead.organ)?.name.toLowerCase()} report</Button>
               <Button variant="outline" className="border-white/30 bg-transparent text-white hover:bg-white/10" onClick={onExpert}>Let our agents do it</Button>
             </div>
           </> : <>
@@ -138,14 +141,15 @@ export function RoyaltyReport({ checkup, since, date, country, countryPicker, ru
           ))}
         </div>
         <div ref={reportRef} className="scroll-mt-4">
-          <OrganReport key={organ.id} organ={organ} organs={organs} canExport={canExport} onAction={onAction} onOpen={(id) => open(id, false)} onExpert={onExpert} onReminder={onReminder} />
+          <OrganReport key={organ.id} organ={organ} organs={organs} canExport={canExport} onAction={onAction} onOpen={(id) => open(id, false)} onExpert={onExpert} onReminder={onReminder} onExplain={setExplain} />
         </div>
       </div>
+      <Explainer finding={explain} organ={explain ? organs.find((o) => o.id === explain.organ) : undefined} onClose={() => setExplain(null)} />
     </div>
   );
 }
 
-function OrganReport({ organ, organs, canExport, onAction, onOpen, onExpert, onReminder }: { organ: Organ; organs: Organ[]; canExport: boolean; onAction: (a: StepAction) => void; onOpen: (id: OrganId) => void; onExpert: () => void; onReminder: () => void }) {
+function OrganReport({ organ, organs, canExport, onAction, onOpen, onExpert, onReminder, onExplain }: { organ: Organ; organs: Organ[]; canExport: boolean; onAction: (a: StepAction) => void; onOpen: (id: OrganId) => void; onExpert: () => void; onReminder: (calendar: "google" | "ics") => void; onExplain: (f: Finding) => void }) {
   const i = organs.findIndex((o) => o.id === organ.id);
   const prev = organs[(i + organs.length - 1) % organs.length]!, next = organs[(i + 1) % organs.length]!;
   const main = organ.findings[0];
@@ -175,11 +179,12 @@ function OrganReport({ organ, organs, canExport, onAction, onOpen, onExpert, onR
               </a>)}
             </div>
           </div>
-          {organ.findings.map((f, n) => <FindingBlock key={f.id} f={f} n={organ.findings.length > 1 ? n + 1 : 0} canExport={canExport} onAction={onAction} />)}
+          {organ.findings.map((f, n) => <FindingBlock key={f.id} f={f} n={organ.findings.length > 1 ? n + 1 : 0} canExport={canExport} onAction={onAction} onExplain={() => onExplain(f)} />)}
           <div>
             <div className="rr-eyebrow mb-3">More ways to fix it</div>
             <div className="flex flex-wrap gap-2">
-              <Button variant="outline" onClick={onReminder}>Add a confirm reminder to my calendar</Button>
+              <Button variant="outline" onClick={() => onReminder("google")}>Add a confirm reminder to Google Calendar</Button>
+              <Button variant="outline" onClick={() => onReminder("ics")}>Apple or Outlook calendar (.ics)</Button>
               <Button variant="outline" onClick={onExpert}>Let our agents register them</Button>
             </div>
           </div>
@@ -199,11 +204,14 @@ function OrganReport({ organ, organs, canExport, onAction, onOpen, onExpert, onR
   );
 }
 
-function FindingBlock({ f, n, canExport, onAction }: { f: Finding; n: number; canExport: boolean; onAction: (a: StepAction) => void }) {
+function FindingBlock({ f, n, canExport, onAction, onExplain }: { f: Finding; n: number; canExport: boolean; onAction: (a: StepAction) => void; onExplain: () => void }) {
   const locked = f.steps.some((s) => s.action?.kind === "download") && !canExport;
   return (
     <section id={`finding-${f.id}`} className="scroll-mt-4 space-y-5">
-      {n > 0 && <h5 className="rr-divider pb-3 text-lg font-extrabold">Finding {n} · {f.dx}</h5>}
+      <div className="rr-divider flex flex-wrap items-center justify-between gap-2 pb-3">
+        <h5 className="text-lg font-extrabold">{n > 0 ? `Finding ${n} · ` : ""}{f.dx}</h5>
+        <Button size="sm" variant="outline" onClick={onExplain}><PlayCircle />Watch the 30-second explainer</Button>
+      </div>
       <div className="grid gap-3 md:grid-cols-3">
         <div className="rr-fact rounded-2xl p-4"><div className="rr-eyebrow" style={{ color: "var(--rr-cobalt-text)" }}>Symptom</div><p className="mt-2 text-sm">{f.symptom}</p></div>
         <div className="rr-fact rounded-2xl p-4"><div className="rr-eyebrow" style={{ color: "var(--rr-cobalt-text)" }}>Cause</div><p className="mt-2 text-sm">{f.cause}</p></div>
@@ -219,7 +227,7 @@ function FindingBlock({ f, n, canExport, onAction }: { f: Finding; n: number; ca
         <ol className="rr-num mt-3 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
           {f.steps.map((s) => <Step key={s.title} s={s} canExport={canExport} onAction={onAction} />)}
         </ol>
-        {locked && <p className="mt-2 text-xs text-muted-foreground">One-click agency files come with Catalog &amp; Collaborate. On other plans, each song's checklist shows the same fields to copy by hand.</p>}
+        {locked && <p className="mt-2 text-xs text-muted-foreground">One-click agency files come with Catalog &amp; Collaborate and Catalog Management. On other plans, each song's checklist shows the same fields to copy by hand.</p>}
         {f.note && <p className="mt-3 border-l-[3px] pl-3 text-sm italic text-muted-foreground" style={{ borderColor: "var(--rr-prestige)" }}>{f.note}</p>}
       </div>
     </section>

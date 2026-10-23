@@ -80,6 +80,19 @@
 .rr-section[open] { border-color: var(--rr-c32); }
 .rr-section[open] .rr-chev { transform: rotate(90deg); }
 
+/* Explainer stage */
+.rr-stage { position: relative; display: flex; min-height: 260px; align-items: center; justify-content: center; padding: 28px; color: #fff; background-color: #0b0b0b;
+  background-image: radial-gradient(circle at 20% 10%, rgb(0 74 173 / 0.45), transparent 55%), linear-gradient(rgb(77 140 255 / 0.1) 1px, transparent 1px), linear-gradient(90deg, rgb(77 140 255 / 0.1) 1px, transparent 1px);
+  background-size: auto, 20px 20px, 20px 20px; }
+.rr-scene { display: flex; width: 100%; justify-content: center; }
+.rr-tool-big { width: 120px; height: 120px; border-radius: 32px; }
+.rr-tool-big svg { width: 84px; height: 84px; }
+@keyframes rr-pop { from { opacity: 0; transform: scale(0.7); } to { opacity: 1; transform: none; } }
+@keyframes rr-zoom { from { transform: scale(1); } to { transform: scale(1.25); } }
+.rr-pop { animation: rr-pop 0.45s cubic-bezier(0.2, 0.9, 0.3, 1.2); }
+.rr-zoom { animation: rr-zoom 3.5s ease-in-out forwards; transform-origin: 55% 45%; }
+.rr-beat-loop { animation: rr-beat 1.1s ease-in-out infinite; }
+
 /* Motion: once, on open. The organ that needs treatment beats four times, then rests. */
 @keyframes rr-beat { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.07); } }
 @keyframes rr-halo { 0% { opacity: 0.55; transform: scale(0.9); } 100% { opacity: 0; transform: scale(1.35); } }
@@ -93,7 +106,7 @@
 .rr-gauge { animation: rr-fill 1.4s ease-out 0.3s backwards; }
 .rr-rise { animation: rr-rise 0.35s ease-out; }
 @media (prefers-reduced-motion: reduce) {
-  .rr-beat, .rr-halo, .rr-ekg, .rr-mini path, .rr-gauge, .rr-rise { animation: none !important; stroke-dashoffset: 0 !important; }
+  .rr-beat, .rr-halo, .rr-ekg, .rr-mini path, .rr-gauge, .rr-rise, .rr-pop, .rr-zoom, .rr-beat-loop { animation: none !important; stroke-dashoffset: 0 !important; }
   .rr-halo { opacity: 0; }
 }
 @media (max-width: 520px) {

@@ -1,4 +1,4 @@
-import type { KeyboardEvent, ReactElement } from "react";
+import type { CSSProperties, KeyboardEvent, ReactElement } from "react";
 import type { Organ, OrganId, OrganState, ScanId, StepAction } from "@/lib/royalty-checkup";
 
 /**
@@ -20,8 +20,8 @@ export function ArtDefs() {
 }
 
 export const organSymbol = (o: Pick<Organ, "id" | "broken">) => (o.id === "heart" && o.broken ? "rr-i-heart-broken" : `rr-i-${o.id}`);
-export function OrganIcon({ organ, className = "h-11 w-11" }: { organ: Pick<Organ, "id" | "broken">; className?: string }) {
-  return <svg className={className} viewBox="0 0 64 64" aria-hidden="true"><use href={`#${organSymbol(organ)}`} /></svg>;
+export function OrganIcon({ organ, className = "h-11 w-11", style }: { organ: Pick<Organ, "id" | "broken">; className?: string; style?: CSSProperties }) {
+  return <svg className={className} style={style} viewBox="0 0 64 64" aria-hidden="true"><use href={`#${organSymbol(organ)}`} /></svg>;
 }
 
 /** Each rhythm takes its status colour, shown on a small dark monitor so Cobalt, Gold and red all read. */
@@ -162,7 +162,7 @@ const TOOL: Record<StepAction["kind"] | "none", { label: string; svg: string }> 
   upload: { label: "Test tube: lab results", svg: `<path d="M12 3h8M13 3v18a3 3 0 006 0V3" fill="none" stroke="var(--rr-heart)" stroke-width="2.5" stroke-linecap="round"/><path d="M13 14h6v7a3 3 0 01-6 0z" fill="var(--rr-rose)"/><circle cx="16" cy="18" r="1" fill="#fff"/>` },
   none: { label: "Capsule", svg: `<g transform="rotate(-40 16 16)"><rect x="5" y="11" width="22" height="10" rx="5" fill="var(--rr-rose)"/><path d="M16 11h6a5 5 0 010 10h-6z" fill="var(--rr-heart)"/></g>` },
 };
-export function Tool({ kind }: { kind?: StepAction["kind"] | undefined }) {
+export function Tool({ kind, big }: { kind?: StepAction["kind"] | undefined; big?: boolean }) {
   const t = TOOL[kind ?? "none"];
-  return <span className="rr-tool" title={t.label}><svg viewBox="0 0 32 32" role="img" aria-label={t.label} dangerouslySetInnerHTML={{ __html: t.svg }} /></span>;
+  return <span className={big ? "rr-tool rr-tool-big" : "rr-tool"} title={t.label}><svg viewBox="0 0 32 32" role="img" aria-label={t.label} dangerouslySetInnerHTML={{ __html: t.svg }} /></span>;
 }

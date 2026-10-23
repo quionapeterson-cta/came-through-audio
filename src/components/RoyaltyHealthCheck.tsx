@@ -181,13 +181,24 @@ export function RoyaltyHealthCheck({ userId, canCatalog, canExport, onUpgrade, o
     await updateStatus({ ...account, steps: { ...account.steps, [key]: JSON.stringify(summary) } });
   }
 
-  /** A calendar reminder to confirm registrations, six weeks out (new registrations take a few weeks to show). */
-  function reminder() {
-    const d = new Date(Date.now() + CONFIRM_AFTER_DAYS * 86_400_000);
-    const day = d.toISOString().slice(0, 10).replace(/-/g, "");
+  /**
+   * A reminder to confirm registrations, six weeks out (new registrations take a few weeks to show). Google Calendar
+   * gets its free "add event" link; Apple and Outlook take a calendar file.
+   */
+  function reminder(calendar: "google" | "ics") {
+    const start = new Date(Date.now() + CONFIRM_AFTER_DAYS * 86_400_000);
+    const ymd = (d: Date) => d.toISOString().slice(0, 10).replace(/-/g, "");
+    const end = new Date(start.getTime() + 86_400_000);
+    const title = "Confirm your song registrations showed up";
+    const details = `Open your Royalty Health Report and run a new checkup: ${window.location.origin}/workspace`;
+    if (calendar === "google") {
+      const url = `https://calendar.google.com/calendar/render?${new URLSearchParams({ action: "TEMPLATE", text: title, dates: `${ymd(start)}/${ymd(end)}`, details })}`;
+      window.open(url, "_blank", "noopener,noreferrer");
+      return;
+    }
     const ics = ["BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//Came Through Audio//Royalty Health Report//EN", "BEGIN:VEVENT",
-      `UID:rhr-${Date.now()}@camethroughaudio.com`, `DTSTAMP:${new Date().toISOString().replace(/[-:]/g, "").slice(0, 15)}Z`, `DTSTART;VALUE=DATE:${day}`,
-      "SUMMARY:Confirm your song registrations showed up", "DESCRIPTION:Open your Royalty Health Report and run a new checkup.", "END:VEVENT", "END:VCALENDAR"].join("\r\n");
+      `UID:rhr-${Date.now()}@camethroughaudio.com`, `DTSTAMP:${new Date().toISOString().replace(/[-:]/g, "").slice(0, 15)}Z`,
+      `DTSTART;VALUE=DATE:${ymd(start)}`, `DTEND;VALUE=DATE:${ymd(end)}`, `SUMMARY:${title}`, `DESCRIPTION:${details}`, "END:VEVENT", "END:VCALENDAR"].join("\r\n");
     const url = URL.createObjectURL(new Blob([ics], { type: "text/calendar" }));
     const link = Object.assign(document.createElement("a"), { href: url, download: "Confirm registrations.ics" });
     link.click();
