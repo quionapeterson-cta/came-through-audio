@@ -1,6 +1,6 @@
 # PLAN — Royalty Health Check: Singles in the sidebar + a real checkup report · v1
 
-Status: **approved 2026-10-23.** §1 built. Answers: organ mapping approved; free accounts get the full report; agency list upload (§3A) is built this round.
+Status: **approved 2026-10-23 and BUILT 2026-10-23** (f9c6411 Singles, 9679196 engine, 640ba88 page, a170093 history, a2937e0 PDF, 61be9dc agency lists, 5ec69ef guided confirm). Founder applies migration 20261024130000. Not built yet: co-writer IPI request email, 'royalties waiting for you' links (need verified URLs), explainer videos (decision pending). Answers: organ mapping approved; free accounts get the full report; agency list upload (§3A) is built this round.
 Source: founder notes, 2026-10-23. Follows PLAN-health-hub-round2.md.
 
 ---
