@@ -156,10 +156,18 @@ export function encouragement(c: SongChecklist): string {
   return `${c.pct}% ready to register. Every detail you add makes it easier to get paid.`;
 }
 
-/** The song list's release groups: catalog albums, then Singles (no album), then Royalty Inspector songs. */
+/** A song's release type, shared by My Catalog and the Health Check: EP, Album (incl. Compilation), else Single. */
+export function releaseKind(m: Pick<Metadata, "releaseType">): "Single" | "EP" | "Album" {
+  const r = m.releaseType;
+  return r === "EP" ? "EP" : r === "Album" || r === "Compilation" ? "Album" : "Single";
+}
+
+/** The song list's release groups: each album and EP, then every single in one Singles group, then Royalty Inspector songs. */
 export type SongSort = "least" | "az" | "recent";
 export type ReleaseGroup<T> = { key: string; name: string; type: string; songs: T[]; pct: number; updatedAt: string };
 type Listed = { r: TrackReport; c: SongChecklist };
+
+export const SINGLES_KEY = "~singles";
 
 export function releaseGroups<T extends Listed>(songs: T[], sort: SongSort, query = ""): ReleaseGroup<T>[] {
   const q = query.trim().toLowerCase();
@@ -169,20 +177,29 @@ export function releaseGroups<T extends Listed>(songs: T[], sort: SongSort, quer
     const m = x.r.track.metadata;
     const inspector = isInspectorSong(x.r.track.id);
     const album = m.album.trim();
-    const key = inspector ? "~inspector" : album ? `album:${album.toLowerCase()}` : "~singles";
-    const g = groups.get(key) ?? { key, name: inspector ? "Royalty Inspector songs" : album || "Singles", type: inspector || !album ? "" : m.releaseType, songs: [], pct: 0, updatedAt: "" };
+    const kind = releaseKind(m);
+    const project = !inspector && kind !== "Single";
+    const key = inspector ? "~inspector" : project ? `${kind}:${(album || "Untitled " + kind).toLowerCase()}` : SINGLES_KEY;
+    const g = groups.get(key) ?? { key, name: inspector ? "Royalty Inspector songs" : project ? album || `Untitled ${kind}` : "Singles", type: project ? kind : "", songs: [], pct: 0, updatedAt: "" };
     g.songs.push(x);
     if (x.r.track.updatedAt > g.updatedAt) g.updatedAt = x.r.track.updatedAt;
     groups.set(key, g);
   }
   const trackNo = (x: Listed) => Number(x.r.track.metadata.trackNumber) || 999;
+  const title = (a: Listed, b: Listed) => a.r.track.title.localeCompare(b.r.track.title);
+  // Albums and EPs keep track order; Singles have none, so they follow the chosen sort.
+  const inGroup = (key: string) => key.startsWith("~")
+    ? sort === "least" ? (a: Listed, b: Listed) => a.c.pct - b.c.pct || title(a, b)
+      : sort === "recent" ? (a: Listed, b: Listed) => b.r.track.updatedAt.localeCompare(a.r.track.updatedAt) || title(a, b)
+      : title
+    : (a: Listed, b: Listed) => trackNo(a) - trackNo(b) || title(a, b);
   const list = [...groups.values()].map((g) => ({
     ...g,
-    songs: g.songs.sort((a, b) => trackNo(a) - trackNo(b) || a.r.track.title.localeCompare(b.r.track.title)),
+    songs: g.songs.sort(inGroup(g.key)),
     pct: Math.round(g.songs.reduce((n, x) => n + x.c.pct, 0) / g.songs.length),
   }));
-  // Albums are sorted; Singles and Royalty Inspector songs always come after them.
-  const rank = (g: ReleaseGroup<T>) => (g.key === "~inspector" ? 2 : g.key === "~singles" ? 1 : 0);
+  // Albums and EPs are sorted; Singles and Royalty Inspector songs always come after them.
+  const rank = (g: ReleaseGroup<T>) => (g.key === "~inspector" ? 2 : g.key === SINGLES_KEY ? 1 : 0);
   const by = sort === "az" ? (a: ReleaseGroup<T>, b: ReleaseGroup<T>) => a.name.localeCompare(b.name)
     : sort === "recent" ? (a: ReleaseGroup<T>, b: ReleaseGroup<T>) => b.updatedAt.localeCompare(a.updatedAt)
     : (a: ReleaseGroup<T>, b: ReleaseGroup<T>) => a.pct - b.pct;

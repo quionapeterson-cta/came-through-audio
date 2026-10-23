@@ -5,7 +5,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Guide, LiveRecords, openSearch, type HealthActions } from "@/components/HealthReport";
-import { ACCOUNT_REF, encouragement, INTL_KEY, printKey, registrationPrint, releaseGroups, searchKey, songChecklist, STAGE_LABEL, type ChecklistStep, type SongChecklist, type SongSort, type Stage } from "@/lib/health-checklist";
+import { ACCOUNT_REF, encouragement, INTL_KEY, printKey, registrationPrint, releaseGroups, searchKey, SINGLES_KEY, songChecklist, STAGE_LABEL, type ChecklistStep, type SongChecklist, type SongSort, type Stage } from "@/lib/health-checklist";
 import { updateGuide } from "@/lib/register-guides";
 import { InfoTip } from "@/components/InfoTip";
 import type { GlossaryKey } from "@/lib/glossary";
@@ -129,7 +129,7 @@ export function HealthChecklist({ rows, country, statuses, onStatus, actions, ru
                             <button type="button" aria-current={selected || undefined}
                               onClick={() => { setFocus(r.track.id); if (window.innerWidth < 1024) setTimeout(() => document.getElementById("song-health-detail")?.scrollIntoView({ behavior: "smooth" }), 50); }}
                               className={`flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-sm ${selected ? "bg-primary/10 font-semibold ring-1 ring-primary" : "hover:bg-muted"}`}>
-                              {r.track.metadata.trackNumber && <span className="w-5 shrink-0 text-xs text-muted-foreground">{r.track.metadata.trackNumber}</span>}
+                              {g.key !== SINGLES_KEY && r.track.metadata.trackNumber && <span className="w-5 shrink-0 text-xs text-muted-foreground">{r.track.metadata.trackNumber}</span>}
                               <span className="min-w-0 flex-1 truncate">{r.track.title || "Untitled"}</span>
                               <span className="h-1.5 w-12 shrink-0 rounded-full bg-muted"><span className="block h-1.5 rounded-full bg-primary" style={{ width: `${c.pct}%` }} /></span>
                               <span className="w-16 shrink-0 text-right text-xs text-muted-foreground">

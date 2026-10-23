@@ -13,7 +13,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { PRE_DIST_NOTE, PRO_TIP } from "@/lib/copy";
 import { readMetadata, CREDIT_ROLES, isPerformer, performers, emptyContributor, emptyMetadata, embedMetadata, creditName, metadataSchema, GENRES, MASTER_BASES, PRODUCTION_TYPES, RELEASE_TYPES, WRITER_ROLES, writerRole, type Contributor, type Metadata } from "@/lib/metadata";
 import { COUNTRIES, countryByCode, guessCountry } from "@/lib/repertoires";
-import { catalogHealth } from "@/lib/health-checklist";
+import { catalogHealth, releaseKind } from "@/lib/health-checklist";
 import { listChecks } from "@/lib/repertoire-checks";
 import { listStatuses, type SongStatus } from "@/lib/health-songs";
 import type { RepertoireCheck } from "@/lib/health";
@@ -995,10 +995,7 @@ function creditGroups(t: CatalogTrack) {
     .filter((g) => g.rows.length > 0);
 }
 
-function releaseGroup(t: CatalogTrack): "Single" | "EP" | "Album" {
-  const r = t.metadata.releaseType;
-  return r === "EP" ? "EP" : r === "Album" || r === "Compilation" ? "Album" : "Single";
-}
+const releaseGroup = (t: CatalogTrack) => releaseKind(t.metadata);
 
 async function makeThumb(file: File): Promise<string> {
   const img = await createImageBitmap(file);

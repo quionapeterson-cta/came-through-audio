@@ -74,8 +74,8 @@ describe("song health checklist", () => {
   });
 
   it("groups songs by release in track order, with Singles and Inspector songs last", () => {
-    const song = (id: string, album: string, trackNumber: string, pct: number) => {
-      const t = { ...track({ album, trackNumber }), id, title: id };
+    const song = (id: string, album: string, trackNumber: string, pct: number, releaseType = album ? "Album" : "Single") => {
+      const t = { ...track({ album, trackNumber, releaseType }), id, title: id };
       return { r: trackReport(t, us, []), c: { ...songChecklist(trackReport(t, us, []), us), pct } };
     };
     const songs = [song("b2", "Karma Season", "2", 40), song("b1", "Karma Season", "1", 80), song("s1", "", "", 10), song("e1", "Came Through", "1", 90), song("h:x", "", "", 0)];
@@ -85,6 +85,18 @@ describe("song health checklist", () => {
     expect(groups[0]!.pct).toBe(60);
     expect(releaseGroups(songs, "az").map((g) => g.name).slice(0, 2)).toEqual(["Came Through", "Karma Season"]);
     expect(releaseGroups(songs, "least", "karma").flatMap((g) => g.songs).length).toBe(2);
+  });
+
+  it("puts every single in one Singles group, even when its title is typed in Album", () => {
+    const song = (id: string, album: string, releaseType: string, pct: number) => {
+      const t = { ...track({ album, releaseType, trackNumber: "1" }), id, title: id };
+      return { r: trackReport(t, us, []), c: { ...songChecklist(trackReport(t, us, []), us), pct } };
+    };
+    const songs = [song("Zed", "Zed", "Single", 20), song("Alpha", "Alpha", "", 70), song("Beta", "", "Single", 10), song("e1", "Tape", "EP", 50)];
+    const groups = releaseGroups(songs, "least");
+    expect(groups.map((g) => [g.name, g.type])).toEqual([["Tape", "EP"], ["Singles", ""]]);
+    expect(groups[1]!.songs.map((x) => x.r.track.id)).toEqual(["Beta", "Zed", "Alpha"]);
+    expect(releaseGroups(songs, "az")[1]!.songs.map((x) => x.r.track.id)).toEqual(["Alpha", "Beta", "Zed"]);
   });
 
   it("asks US users once per account to collect international airplay", () => {
