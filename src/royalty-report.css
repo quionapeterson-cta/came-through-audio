@@ -1,0 +1,103 @@
+/*
+ * Royalty Health Report (BRANDING.md §1 exception, approved 2026-10-23): organs, problems and scans use reds and
+ * pinks; the prestige accent is Gold #FFD700 in light mode and Platinum #E5E4E2 in Studio Mode, for step numbers,
+ * the score ring, scan markers and short dividers. Cobalt carries everything else at transparency levels (60/30/10).
+ * Rhythm colour = status colour: Cobalt steady = healthy, prestige uneven = watch, red irregular = treat, grey = no flow.
+ */
+.rr {
+  --rr-c04: rgb(0 74 173 / 0.04); --rr-c08: rgb(0 74 173 / 0.08); --rr-c16: rgb(0 74 173 / 0.16); --rr-c32: rgb(0 74 173 / 0.32);
+  --rr-cobalt-text: #004AAD;
+  --rr-prestige: #FFD700; --rr-prestige-ink: #0b0b0b; --rr-prestige-soft: #fff8cc;
+  --rr-heart: #C1121F; --rr-heart-deep: #8E0E18; --rr-rose: #E5566F; --rr-pink: #F28CA6; --rr-blush: #fde8ec;
+  --rr-hollow: #9aa0ab;
+  --rr-hero-line: #2a2d33; --rr-hero-muted: #c9ccd3;
+}
+.dark .rr {
+  --rr-c04: rgb(77 140 255 / 0.06); --rr-c08: rgb(77 140 255 / 0.11); --rr-c16: rgb(77 140 255 / 0.2); --rr-c32: rgb(77 140 255 / 0.38);
+  --rr-cobalt-text: #4D8CFF;
+  --rr-prestige: #E5E4E2; --rr-prestige-soft: #232325;
+  --rr-heart: #E0313F; --rr-heart-deep: #a3111c; --rr-rose: #F0687F; --rr-pink: #F59AB1; --rr-blush: #24141a;
+  --rr-hollow: #7d828c; --rr-hero-muted: #b8bcc4;
+}
+.rr-eyebrow { font-size: 11px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; }
+
+/* Hero: the body is the biggest thing on the page and sits at the top. */
+.rr-hero { position: relative; overflow: hidden; display: grid; grid-template-columns: minmax(300px, 440px) minmax(0, 1fr); gap: 40px; align-items: start;
+  border-radius: 32px; border: 1px solid var(--rr-hero-line); background: var(--ink); color: #fff; padding: clamp(20px, 4vw, 40px); }
+.dark .rr-hero { background: oklch(0.19 0 0); }
+.rr-hero::before { content: ""; position: absolute; inset: -140px auto auto -120px; width: 460px; height: 460px; border-radius: 50%; background: radial-gradient(closest-side, rgb(0 74 173 / 0.45), transparent); pointer-events: none; }
+.rr-hero::after { content: ""; position: absolute; inset: auto -80px -120px auto; width: 320px; height: 320px; border-radius: 50%; background: radial-gradient(closest-side, rgb(193 18 31 / 0.16), transparent); pointer-events: none; }
+.rr-hero > * { position: relative; z-index: 1; }
+.rr-body { margin: 0; display: flex; flex-direction: column; align-items: center; gap: 8px; }
+.rr-body svg { width: 100%; max-width: 420px; height: auto; overflow: visible; }
+.rr-hit { cursor: pointer; outline: none; }
+.rr-ring { fill: none; stroke: transparent; opacity: 0; transition: opacity 0.15s; }
+.rr-hit:hover .rr-ring, .rr-hit:focus-visible .rr-ring, .rr-hit.rr-sel .rr-ring { stroke: var(--rr-prestige); stroke-width: 3; opacity: 1; }
+.rr-hint { font-size: 12px; color: var(--rr-hero-muted); }
+.rr-muted { color: var(--rr-hero-muted); }
+.rr-score { display: flex; align-items: center; gap: 14px; }
+.rr-monitor { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 14px; align-items: center; border: 1px solid var(--rr-hero-line); border-radius: 18px; padding: 10px 16px; }
+.rr-monitor svg { width: 100%; height: 48px; }
+.rr-vitals { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
+.rr-vital { display: flex; gap: 10px; align-items: center; border: 1px solid var(--rr-hero-line); border-radius: 14px; padding: 10px 12px; }
+.rr-vital svg { width: 26px; height: 26px; flex: 0 0 auto; }
+.rr-rx { font-family: Georgia, serif; font-size: 26px; font-weight: 700; line-height: 1; color: var(--rr-prestige); }
+.rr-pad { border: 1px solid var(--rr-hero-line); border-radius: 20px; padding: 18px; background: repeating-linear-gradient(transparent 0 27px, rgb(255 255 255 / 0.04) 27px 28px); }
+.rr-num { counter-reset: rr; list-style: none; margin: 0; padding: 0; }
+.rr-num > li { counter-increment: rr; }
+.rr-num > li::before { content: counter(rr); display: flex; align-items: center; justify-content: center; width: 28px; height: 28px; border-radius: 50%; background: var(--rr-prestige); color: var(--rr-prestige-ink); font-size: 13px; font-weight: 800; flex: 0 0 auto; }
+
+/* Organ cards, colour key and pills */
+.rr-key { display: flex; flex-wrap: wrap; gap: 8px 18px; font-size: 12px; }
+.rr-key i { width: 12px; height: 12px; border-radius: 50%; display: inline-block; }
+.rr-card { transition: transform 0.15s, border-color 0.15s, background 0.15s; }
+.rr-card:hover { transform: translateY(-2px); background: var(--rr-c04); border-color: var(--rr-c32); }
+.rr-card[aria-pressed="true"] { border-color: var(--primary); background: var(--rr-c08); box-shadow: 0 0 0 3px var(--rr-prestige); }
+.rr-pill { display: inline-flex; align-items: center; align-self: flex-start; gap: 6px; padding: 4px 10px; border-radius: 999px; font-size: 11px; font-weight: 700; white-space: nowrap; }
+.rr-pill-healthy { background: var(--primary); color: #fff; }
+.rr-pill-watch { background: var(--rr-prestige); color: var(--rr-prestige-ink); }
+.rr-pill-treat { background: var(--rr-heart); color: #fff; }
+.rr-pill-noflow { border: 1.5px dashed var(--rr-hollow); color: var(--muted-foreground); }
+
+/* Organ report */
+.rr-head { background: var(--rr-c08); border-bottom: 1px solid var(--rr-c16); }
+.rr-fact { background: var(--rr-c04); border: 1px solid var(--rr-c08); }
+.rr-tint { background: var(--rr-c08); }
+.rr-mini { width: 150px; height: 42px; display: block; background: #0b0b0b; border-radius: 10px; padding: 4px 6px; border: 1px solid var(--rr-c32); }
+.rr-scan { position: relative; overflow: hidden; border-radius: 16px; border: 1px solid var(--rr-c32); background-color: #0b0b0b; color: #fff;
+  background-image: linear-gradient(rgb(77 140 255 / 0.14) 1px, transparent 1px), linear-gradient(90deg, rgb(77 140 255 / 0.14) 1px, transparent 1px); background-size: 20px 20px; }
+.rr-scan svg { display: block; width: 100%; height: auto; max-height: 220px; }
+.rr-scan-label { position: absolute; top: 8px; left: 12px; font-size: 10px; font-weight: 700; letter-spacing: 2px; color: #E5E4E2; opacity: 0.85; }
+.rr-tool { width: 44px; height: 44px; flex: 0 0 auto; border-radius: 14px; background: var(--rr-blush); display: flex; align-items: center; justify-content: center; }
+.rr-tool svg { width: 30px; height: 30px; }
+.rr-check::before { content: ""; flex: 0 0 18px; height: 18px; margin-top: 2px; border-radius: 50%; background: var(--primary); }
+.dark .rr-check::before { background: #4D8CFF; }
+.rr-divider { position: relative; border-bottom: 2px solid var(--rr-c16); }
+.rr-divider::after { content: ""; position: absolute; left: 0; bottom: -3px; width: 72px; height: 4px; border-radius: 2px; background: var(--rr-prestige); }
+.rr-section > summary { list-style: none; cursor: pointer; }
+.rr-section > summary::-webkit-details-marker { display: none; }
+.rr-section > summary:hover { background: var(--rr-c04); }
+.rr-section[open] { border-color: var(--rr-c32); }
+.rr-section[open] .rr-chev { transform: rotate(90deg); }
+
+/* Motion: once, on open. The organ that needs treatment beats four times, then rests. */
+@keyframes rr-beat { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.07); } }
+@keyframes rr-halo { 0% { opacity: 0.55; transform: scale(0.9); } 100% { opacity: 0; transform: scale(1.35); } }
+@keyframes rr-draw { to { stroke-dashoffset: 0; } }
+@keyframes rr-fill { from { stroke-dasharray: 0 188.5; } }
+@keyframes rr-rise { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+.rr-beat { transform-box: fill-box; transform-origin: center; animation: rr-beat 1.3s ease-in-out 1.2s 4; }
+.rr-halo { transform-box: fill-box; transform-origin: center; opacity: 0; animation: rr-halo 1.6s ease-out 1.2s 3; }
+.rr-ekg { stroke-dasharray: 900; stroke-dashoffset: 900; animation: rr-draw 2.2s ease-out 0.2s forwards; }
+.rr-mini path { stroke-dasharray: 300; stroke-dashoffset: 300; animation: rr-draw 1.2s ease-out forwards; }
+.rr-gauge { animation: rr-fill 1.4s ease-out 0.3s backwards; }
+.rr-rise { animation: rr-rise 0.35s ease-out; }
+@media (prefers-reduced-motion: reduce) {
+  .rr-beat, .rr-halo, .rr-ekg, .rr-mini path, .rr-gauge, .rr-rise { animation: none !important; stroke-dashoffset: 0 !important; }
+  .rr-halo { opacity: 0; }
+}
+@media (max-width: 960px) {
+  .rr-hero { grid-template-columns: minmax(0, 1fr); }
+  .rr-body svg { max-width: 340px; }
+  .rr-vitals { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}

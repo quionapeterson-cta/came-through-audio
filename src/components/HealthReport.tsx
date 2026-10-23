@@ -35,7 +35,7 @@ function ScoreRing({ value }: { value: number }) {
   );
 }
 
-function CountryPicker({ country, onCountry }: { country: Country; onCountry: (code: string) => void }) {
+export function CountryPicker({ country, onCountry }: { country: Country; onCountry: (code: string) => void }) {
   return (
     <label className="flex flex-col gap-1 text-xs font-semibold uppercase tracking-[2px] text-ink-muted">
       Where you get paid

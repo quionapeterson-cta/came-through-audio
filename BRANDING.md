@@ -40,6 +40,8 @@ Gold and platinum are a nod to gold and platinum record sales, signaling prestig
 
 **Exception:** the Catalog health meter in My Catalog is a prestige gauge: liquid Gold `#FFD700` in light mode, liquid Platinum `#E5E4E2` in dark mode.
 
+**Exception (approved 2026-10-23):** the Royalty Health Report draws organs, problems and scan pictures in reds and pinks, and uses Gold `#FFD700` (light mode) / Platinum `#E5E4E2` (dark mode) as a small accent for step numbers, the score ring, scan markers and short dividers. Black, white and Cobalt (at transparency levels) carry the rest, about 60/30/10.
+
 ## 2. Logo and wordmark contrast
 
 Apply these rules across the website, emails and PDFs.

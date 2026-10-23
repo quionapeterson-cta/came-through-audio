@@ -2,6 +2,7 @@
 @source "../src";
 @import "tw-animate-css";
 @import "./came-icons.css";
+@import "./royalty-report.css";
 
 @custom-variant dark (&:is(.dark *));
 

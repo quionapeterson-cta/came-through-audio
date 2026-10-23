@@ -38,10 +38,14 @@ type Props = {
   onUpgrade: () => void;
   onEditInspector: (id: string) => void;
   onDeleteInspector: (id: string) => void;
+  /** Opens this song's checklist (from a Royalty Health Report treatment step). The nonce lets the same song be asked for twice. */
+  focusRequest?: { id: string; nonce: number } | undefined;
+  /** Inside the report's "Song by song" section, which already has the title. */
+  bare?: boolean;
 };
 
 /** Every song's step-by-step path to 100% health, in three lists: needs attention, saved for later and healthy. */
-export function HealthChecklist({ rows, country, statuses, onStatus, actions, runningId, canCatalog, onUpgrade, onEditInspector, onDeleteInspector }: Props) {
+export function HealthChecklist({ rows, country, statuses, onStatus, actions, runningId, canCatalog, onUpgrade, onEditInspector, onDeleteInspector, focusRequest, bare }: Props) {
   const statusOf = (id: string) => statuses.find((s) => s.songRef === id) ?? emptyStatus(id);
   // Account-wide steps (international airplay) are ticked once and count on every song.
   const account = statusOf(ACCOUNT_REF);
@@ -60,6 +64,14 @@ export function HealthChecklist({ rows, country, statuses, onStatus, actions, ru
   const [opened, setOpened] = useState<Record<string, boolean>>({});
   const focusedKey = releases.find((g) => g.songs.some((x) => x.r.track.id === focused?.r.track.id))?.key;
   const isOpen = (key: string) => opened[key] ?? (!!query.trim() || key === focusedKey);
+  useEffect(() => {
+    if (!focusRequest) return;
+    const hit = lists.find((x) => x.r.track.id === focusRequest.id);
+    if (!hit) return;
+    setGroup(hit.c.group);
+    setFocus(focusRequest.id);
+    setTimeout(() => document.getElementById("song-health-detail")?.scrollIntoView({ behavior: "smooth", block: "start" }), 80);
+  }, [focusRequest?.nonce]); // eslint-disable-line react-hooks/exhaustive-deps
   // Open on the first list that has songs, so nobody lands on an empty tab.
   useEffect(() => {
     if (!lists.some((x) => x.c.group === group)) { const first = GROUPS.find((g) => lists.some((x) => x.c.group === g.id)); if (first) setGroup(first.id); }
@@ -69,7 +81,7 @@ export function HealthChecklist({ rows, country, statuses, onStatus, actions, ru
   return (
     <section className="space-y-4">
       <div>
-        <h3 className="text-2xl font-extrabold">Song Health Checklist</h3>
+        {!bare && <h3 className="text-2xl font-extrabold">Song Health Checklist</h3>}
         <p className="text-muted-foreground">Your catalog ticks off what each agency needs, so you can see how ready every song is to register. Then register it and confirm it shows up, at your own pace.</p>
         <p className="mt-2 flex gap-2 text-sm text-muted-foreground"><Info className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
           <span><span className="font-semibold text-foreground">Fix it</span> corrects your Came Through Audio catalog, so your exports and 1-click agency files are right from now on. It doesn't change what SoundExchange, The MLC or your PRO already have. If the song is already registered there, log in and update it too; we'll add that step for you.</span></p>
