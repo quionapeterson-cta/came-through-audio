@@ -8,7 +8,8 @@ import { deleteInspectorSong, emptyStatus, inspectorChecks, isInspectorSong, lis
 import { CountryPicker, HealthReport } from "@/components/HealthReport";
 import { RoyaltyReport } from "@/components/RoyaltyReport";
 import { ACCOUNT_REF, releaseGroups, SINGLES_KEY, songChecklist } from "@/lib/health-checklist";
-import { CONFIRM_AFTER_DAYS, royaltyCheckup, type StepAction } from "@/lib/royalty-checkup";
+import { CONFIRM_AFTER_DAYS, ORGAN_NAME, royaltyCheckup, sinceLast, STATE_LABEL, summarize, type StepAction } from "@/lib/royalty-checkup";
+import { listReports, sameSummary, saveReport, type SavedReport } from "@/lib/health-reports";
 import { downloadAgencyExport } from "@/lib/agency-export";
 import { listSplitSheets, splitStatus as sheetStatus } from "@/lib/splits";
 import { healthReport, type RepertoireCheck } from "@/lib/health";
@@ -37,6 +38,10 @@ export function RoyaltyHealthCheck({ userId, canCatalog, canExport, onUpgrade, o
   const [statuses, setStatuses] = useState<SongStatus[]>([]);
   const [editing, setEditing] = useState<CatalogTrack>();
   const autoRan = useRef(false);
+  const [reports, setReports] = useState<SavedReport[]>();
+  // The report this visit is compared with: the latest one saved before the page opened.
+  const [baseline, setBaseline] = useState<SavedReport | null>(null);
+  const [saveAfterRun, setSaveAfterRun] = useState(false);
 
   useEffect(() => {
     Promise.all([
@@ -45,6 +50,8 @@ export function RoyaltyHealthCheck({ userId, canCatalog, canExport, onUpgrade, o
       // Checklist tables arrive with the 20261020120000 migration; until then the checklist simply starts empty.
       listInspectorSongs().then(setInspectorSongs).catch(() => {}),
       listStatuses().then(setStatuses).catch(() => {}),
+      // Report history arrives with the 20261024130000 migration; until then there's simply no history.
+      listReports().then((r) => { setReports(r); setBaseline(r[0] ?? null); }).catch(() => setReports([])),
     ]).then(() => setLoaded(true));
   }, []);
 
@@ -97,6 +104,20 @@ export function RoyaltyHealthCheck({ userId, canCatalog, canExport, onUpgrade, o
     return { r, c: songChecklist(r, country, status, statuses.find((x) => x.songRef === ACCOUNT_REF)), status };
   }), [report, country, statuses]);
   const checkup = useMemo(() => royaltyCheckup({ rows: checkupRows, signedSheets }), [checkupRows, signedSheets]);
+  const summary = useMemo(() => summarize(checkup), [checkup]);
+  const since = sinceLast(summary, baseline?.summary);
+
+  // Each visit adds to Past reports once a day when something changed; "Run a new checkup" always adds one.
+  const autoSaved = useRef(false);
+  useEffect(() => {
+    if (!loaded || running || !reports || !report.rows.length) return;
+    const latest = reports[0];
+    const force = saveAfterRun;
+    if (!force && (autoSaved.current || (latest && (latest.createdAt.slice(0, 10) === new Date().toISOString().slice(0, 10) || sameSummary(latest.summary, summary))))) return;
+    autoSaved.current = true;
+    setSaveAfterRun(false);
+    saveReport(summary).then((r) => setReports((all) => [r, ...(all ?? [])])).catch(() => {});
+  }, [loaded, running, reports, summary, saveAfterRun, report.rows.length]);
 
   /** Opens one song's checklist in "Song by song". */
   function showSong(id?: string) {
@@ -232,9 +253,9 @@ export function RoyaltyHealthCheck({ userId, canCatalog, canExport, onUpgrade, o
   const attention = checkupRows.filter((x) => x.c.group === "attention").length;
   return (
     <div className="space-y-6">
-      <RoyaltyReport checkup={checkup} since={null} date={new Date().toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })} country={country.name}
+      <RoyaltyReport checkup={checkup} since={since} date={new Date().toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })} country={country.name}
         countryPicker={<CountryPicker country={country} onCountry={chooseCountry} />} running={!!running} canExport={canExport}
-        onRunCheckup={() => void runAll()} onAction={(a) => void act(a)} onExpert={book} onReminder={reminder} />
+        onRunCheckup={() => { setSaveAfterRun(true); void runAll(); }} onAction={(a) => void act(a)} onExpert={book} onReminder={reminder} />
       {running && <p className="text-sm text-muted-foreground">Looking up song {running.done + 1} of {running.total} on streaming and MusicBrainz…</p>}
 
       <div className="space-y-3">
@@ -244,12 +265,22 @@ export function RoyaltyHealthCheck({ userId, canCatalog, canExport, onUpgrade, o
           {checklist}
         </Section>
         <Section title="Check a song that isn't in your catalog" summary={`Royalty Inspector · ${songsLabel(inspectorSongs.length)} checked`}>{inspector}</Section>
+        <Section title="Past reports" summary={reports?.length ? `${reports.length} report${reports.length === 1 ? "" : "s"} since ${shortDate(reports.at(-1)!.createdAt)}${since?.healed.length ? ` · healed: ${since.healed.join(", ")}` : ""}` : "Your first report is saved after this checkup"}>
+          {reports?.length ? <ul className="divide-y divide-border">{reports.map((r) => (
+            <li key={r.id} className="flex flex-wrap items-center gap-x-4 gap-y-1 py-3 text-sm">
+              <span className="w-28 shrink-0 font-semibold">{shortDate(r.createdAt)}</span>
+              <span className="min-w-0 flex-1">{r.summary.lead ?? "Clean bill of health. Strong pulse."}</span>
+              <span className="flex gap-1" aria-label="Organ states">{Object.entries(r.summary.organs).map(([id, o]) => <span key={id} title={`${ORGAN_NAME[id as keyof typeof ORGAN_NAME]}: ${STATE_LABEL[o!.state]}`} className={`rr-pill rr-pill-${o!.state} px-2 py-0.5`}>{ORGAN_NAME[id as keyof typeof ORGAN_NAME][0]}</span>)}</span>
+              <span className="w-12 text-right font-bold">{r.score}%</span>
+            </li>))}</ul> : <p className="text-sm text-muted-foreground">Each checkup is saved here, so you can see your catalog get healthier over time.</p>}
+        </Section>
         <Section title="Why this matters" summary="Your distributor only collects part of your money · unclaimed royalties don't wait forever · common mismatches">{why}</Section>
       </div>
     </div>
   );
 }
 
+const shortDate = (iso: string) => new Date(iso).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
 const songsLabel = (n: number) => `${n} song${n === 1 ? "" : "s"}`;
 
 /** One collapsible section of the report page, with a one-line summary when closed (BRANDING.md §3). */
