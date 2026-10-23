@@ -31,7 +31,7 @@ export type BadgeDef = {
   tier: Tier;
   /** Plain-language milestone, shown on locked badges. */
   milestone: string;
-  /** Short action that earns it ("Write 5 lyrics"), on the next-badge card; the milestone and description show on hover. */
+  /** Short action that earns it ("Embed 5 lyrics"), on the next-badge card; the milestone and description show on hover. */
   action: string;
   description: string;
   /** Short unlock message; "{artist}" becomes the user's artist name. */
@@ -174,28 +174,28 @@ const NIGHT: BadgeDef[] = [
 // The founder's lyric set (copy approved 2026-10-20).
 const L = `${P}/lyrics`;
 const LYRICS: BadgeDef[] = [
-  { id: "first_lyric_entry", title: "First Lyric Entry", collection: "lyrics", tier: "instant", milestone: "1 lyric", action: "Write your first lyric", metric: "lyrics", goal: 1, src: `${L}/1_first_lyric_entry.webp`,
+  { id: "first_lyric_entry", title: "First Lyric Entry", collection: "lyrics", tier: "instant", milestone: "1 lyric", action: "Embed your first lyric", metric: "lyrics", goal: 1, src: `${L}/1_first_lyric_entry.webp`,
     description: "You did it. The hardest lyric is the first one, and you just broke through. This pen drop is proof your voice matters. Welcome to Came Through Audio — you’re officially in motion.",
     popup: "First ink! One lyric down — the universe just heard you." },
-  { id: "word_weaver", title: "Word Weaver", collection: "lyrics", tier: "standard", milestone: "5 lyrics", action: "Write 5 lyrics", metric: "lyrics", goal: 5, src: `${L}/5_word_weaver.webp`,
+  { id: "word_weaver", title: "Word Weaver", collection: "lyrics", tier: "standard", milestone: "5 lyrics", action: "Embed 5 lyrics", metric: "lyrics", goal: 5, src: `${L}/5_word_weaver.webp`,
     description: "Look at you weaving. You're not just writing words, you're braiding feelings into sound. Five stories stitched with heart — your thread is getting stronger.",
     popup: "You're weaving magic. 5 lyrics — your patterns are forming!" },
-  { id: "lyrical_genius", title: "Lyrical Genius", collection: "lyrics", tier: "standard", milestone: "10 lyrics", action: "Write 10 lyrics", metric: "lyrics", goal: 10, src: `${L}/creative_flow_brain_a.webp`,
+  { id: "lyrical_genius", title: "Lyrical Genius", collection: "lyrics", tier: "standard", milestone: "10 lyrics", action: "Embed 10 lyrics", metric: "lyrics", goal: 10, src: `${L}/creative_flow_brain_a.webp`,
     description: "Genius unlocked. Ten times you chose to feel and say it anyway. That heart splash? That's your signature showing. You're not trying — you're becoming.",
     popup: "Genius level: 10 lyrics! Your heart has its own handwriting now." },
-  { id: "lyric_lover", title: "Lyric Lover", collection: "lyrics", tier: "standard", milestone: "15 lyrics", action: "Write 15 lyrics", metric: "lyrics", goal: 15, src: `${L}/creative_flow_brain_b.webp`,
+  { id: "lyric_lover", title: "Lyric Lover", collection: "lyrics", tier: "standard", milestone: "15 lyrics", action: "Embed 15 lyrics", metric: "lyrics", goal: 15, src: `${L}/creative_flow_brain_b.webp`,
     description: "You're in love with the process and it shows. 15 lyrics means you've stayed when it got hard. Your brain and heart are starting to dance together.",
     popup: "15 deep. You're officially a Lyric Lover — heart and head in sync." },
-  { id: "hook_keeper", title: "Hook Keeper", collection: "lyrics", tier: "standard", milestone: "25 lyrics", action: "Write 25 lyrics", metric: "lyrics", goal: 25, src: `${L}/25_hook_keeper.webp`,
+  { id: "hook_keeper", title: "Hook Keeper", collection: "lyrics", tier: "standard", milestone: "25 lyrics", action: "Embed 25 lyrics", metric: "lyrics", goal: 25, src: `${L}/25_hook_keeper.webp`,
     description: "You catch feelings and you KEEP them. 25 lyrics means you know how to hold onto what matters and let it drip with meaning. Your vault of hits is starting.",
     popup: "Hooked! 25 lyrics — you're keeping the ones that stick." },
-  { id: "brain_to_diamond", title: "Brain to Diamond", collection: "lyrics", tier: "mega", milestone: "40 lyrics", action: "Write 40 lyrics", metric: "lyrics", goal: 40, src: `${L}/40_mega_accomplishment.webp`,
+  { id: "brain_to_diamond", title: "Brain to Diamond", collection: "lyrics", tier: "mega", milestone: "40 lyrics", action: "Embed 40 lyrics", metric: "lyrics", goal: 40, src: `${L}/40_mega_accomplishment.webp`,
     description: "This is the big one. 40 lyrics is head to heart, brain to diamond — you've turned thoughts into treasure. This is not a milestone, it's a transformation. You are the chain, the spark, and the gem.",
     popup: "MEGA! 40 lyrics — your brain just became a diamond. This is huge, {artist}." },
-  { id: "verse_vault", title: "Verse Vault", collection: "lyrics", tier: "standard", milestone: "50 lyrics", action: "Write 50 lyrics", metric: "lyrics", goal: 50, src: `${L}/50_verse_vault.webp`,
+  { id: "verse_vault", title: "Verse Vault", collection: "lyrics", tier: "standard", milestone: "50 lyrics", action: "Embed 50 lyrics", metric: "lyrics", goal: 50, src: `${L}/50_verse_vault.webp`,
     description: "Half a hundred stories safe inside you. You've built a vault, not just a list. Your verses have a home now and they're worth protecting. You are prolific, period.",
     popup: "Vault unlocked! 50 lyrics — you're rich in verses." },
-  { id: "lyrical_legacy", title: "Lyrical Legacy", collection: "lyrics", tier: "ultimate", milestone: "100 lyrics, then every 100 more", action: "Write 100 lyrics", metric: "lyrics", goal: 100, every: 100, src: `${L}/100_lyrical_legacy.webp`,
+  { id: "lyrical_legacy", title: "Lyrical Legacy", collection: "lyrics", tier: "ultimate", milestone: "100 lyrics, then every 100 more", action: "Embed 100 lyrics", metric: "lyrics", goal: 100, every: 100, src: `${L}/100_lyrical_legacy.webp`,
     description: "Legacy. Crown on. You didn't just write 100 lyrics — you built a body of work that will outlive a mood, a day, a year. You are the architect of your own sound legacy. Wear this crown, you earned it.",
     popup: "LEGACY. 100 lyrics — crown on, {artist}. You made history." },
 ];
