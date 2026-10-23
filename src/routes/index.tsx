@@ -40,7 +40,7 @@ const steps = [
   { badge: VaultBadge, title: "Save to your catalog", text: "Your masters, art, lyrics and credits live in one vault you can download from anywhere." },
   { badge: SplitBadge, title: "Create a split sheet", text: "Splits pull from your catalog automatically. Sign as the owner in seconds." },
   { badge: SignBadge, title: "Collect signatures", text: "Collaborators get a link, sign up free and sign. Every signature is verified." },
-  { badge: ShieldBadge, title: "AI Protection", text: "Show you made it, and made it first, with a Certificate of Human Origin timestamped on the Bitcoin blockchain." },
+  { badge: ShieldBadge, title: "AI Protection", text: "Lock in timestamped, independently verifiable proof of your creative process with a Certificate of Human Origin, anchored on the Bitcoin blockchain." },
 ];
 
 const faqs = [
@@ -48,7 +48,7 @@ const faqs = [
   { q: "What does it mean to \"embed\" metadata?", a: "Embedding means permanently injecting tracking blocks, legal credits, and identifiers (like your real legal name, ISRC, UPC, and lyrics) directly inside the structural code of your MP3 or audio file container. Instead of keeping credits separate in a text document, embedding locks the data directly into the audio file itself. Wherever that file travels, your data travels with it, protecting your ownership." },
   { q: "Can I download my songs and artwork later?", a: "Yes! Every song you submit is saved in your private catalog vault. Download your embedded master MP3, cover art and lyrics anytime from My Catalog — no re-embedding needed." },
   { q: "What if I don't have my ISRC or UPC yet?", a: `${PRE_DIST_NOTE} Pro Tip: ${PRO_TIP}` },
-  { q: "How does the AI Protection Hub prove human origin?", a: "The hub issues a Certificate of Human Origin. Short screen recordings of your DAW session and draft history are fingerprinted (SHA-256), paired with a sworn human-authorship attestation, and timestamped on the Bitcoin blockchain — proving you made it, and that you made it first." },
+  { q: "How does the AI Protection Hub document human origin?", a: "The hub issues a Certificate of Human Origin. Short screen recordings of your DAW session and draft history are fingerprinted (SHA-256), paired with a sworn human-authorship attestation, and timestamped on the Bitcoin blockchain. Together they're strong, independently verifiable evidence that your session and drafts existed by that date. For the strongest protection, also register important songs with the U.S. Copyright Office." },
 ];
 
 type FooterLink = { label: string; to?: "/terms-of-service" | "/refund-policy" | "/privacy-policy" | "/contact"; search?: { type: "support" | "contact" }; doc?: string };

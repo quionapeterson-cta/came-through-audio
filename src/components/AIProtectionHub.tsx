@@ -5,13 +5,13 @@ import { Check, ChevronDown, Download, Loader2, Lock, Music2, Plus, Trash2, Shie
 const EXPLAINERS = [
   { icon: Fingerprint, title: "DAW & Draft Hashing (SHA-256)", tag: "Your song's tamper-proof digital fingerprint",
     plain: "When you upload a short screen recording of your DAW session (Logic, FL Studio, Ableton, Pro Tools) or lyric drafts, we create a unique 64-character fingerprint of that file.",
-    why: "Change even one detail and the fingerprint changes completely — proving your session and arrangement existed in your hands first." },
+    why: "Change even one detail and the fingerprint changes completely — showing your session and arrangement existed, exactly as recorded, by that date." },
   { icon: Link2, title: "Bitcoin Blockchain Anchored", tag: "Permanent, public proof of when",
     plain: "Your song's fingerprint is recorded on the public Bitcoin blockchain through OpenTimestamps. Your actual music is never uploaded there.",
     why: "No company, platform or label can alter, backdate or delete it. Anyone — a lawyer, distributor or judge — can verify the date at opentimestamps.org." },
   { icon: Gavel, title: "17 U.S.C. §504 Attestation", tag: "Your sworn human-creation record",
     plain: "A formal statement, made under penalty of law, that you and your listed contributors created this work as humans.",
-    why: "U.S. copyright law allows statutory damages of up to $150,000 per work for willful infringement. A sworn, time-stamped record strengthens takedowns, PRO disputes and AI claims." },
+    why: "U.S. copyright law allows statutory damages of up to $150,000 per work for willful infringement of registered works. A sworn, time-stamped record supports takedowns, PRO disputes and AI claims." },
 ];
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -249,7 +249,7 @@ export function AIProtectionHub({ userId, purchases, justPaid, track }: { userId
       <header className="flex flex-wrap items-start justify-between gap-4">
         <div className="space-y-1">
           <div className="flex items-center gap-3"><ShieldCheck className="h-8 w-8 text-primary" /><h1 className="text-2xl font-bold">AI Protection Hub</h1></div>
-          <p className="max-w-2xl text-sm text-muted-foreground">Prove a human made your song, and that you made it first. Each Certificate of Human Origin is fingerprinted, sworn and anchored on the Bitcoin blockchain before your master reaches DSPs or social media.</p>
+          <p className="max-w-2xl text-sm text-muted-foreground">Lock in timestamped, independently verifiable proof of your creative process. Each Certificate of Human Origin is fingerprinted, sworn and anchored on the Bitcoin blockchain before your master reaches DSPs or social media.</p>
         </div>
         {getPaymentsEnvironment() === "sandbox" && left === 0 && (
           <Button variant="outline" size="sm" onClick={() => setUnlocked((v) => !v)}>{unlocked ? "Exit test preview" : "Preview steps (Test Mode)"}</Button>
@@ -392,7 +392,7 @@ export function AIProtectionHub({ userId, purchases, justPaid, track }: { userId
                 </div>
                 <div className="grid gap-4 md:grid-cols-2">
                   <ProofBox title="DAW Session" proof={daw} status={status.daw} on={(file) => proof(file, "daw", (p) => setDaw(p))}
-                    tip="Screen-record your open project (FL Studio, Logic, Ableton, Pro Tools, BandLab…). Melody first, then each track solo, then the full mix. This proves you own the real session, not just the final song.">
+                    tip="Screen-record your open project (FL Studio, Logic, Ableton, Pro Tools, BandLab…). Melody first, then each track solo, then the full mix. This shows you have the real working session, not just the final song.">
                   </ProofBox>
                   <ProofBox title="Draft History" proof={notes} status={status.drafts} on={(file) => proof(file, "drafts", (p) => setNotes(p))}
                     tip="Screen-record your earlier versions: voice memos, rough takes, lyric notes, or a folder showing file dates. Early melody ideas (hummed voice memos, rough toplines) are your strongest drafts, and showing their dates makes your evidence stronger.">
@@ -415,9 +415,16 @@ export function AIProtectionHub({ userId, purchases, justPaid, track }: { userId
               </Step>
 
               <Step n={4} title="Generate your certificate" done={false} last>
+                <div className="flex gap-3 rounded-xl border-l-4 border-primary bg-primary/5 p-4 text-sm">
+                  <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-primary" />
+                  <div className="space-y-1">
+                    <p><b>Keep your original videos, unchanged.</b> Your certificate's fingerprints only match the exact files you upload. Don't edit, trim, re-export or delete them; back them up with your project files and stems.</p>
+                    <p className="text-muted-foreground">This certificate is strong supporting evidence of when your work existed. For the strongest protection, also register important songs with the U.S. Copyright Office.</p>
+                  </div>
+                </div>
                 {(detailsMissing.length > 0 || proofMissing.length > 0) && <Checklist items={[...detailsMissing.map((m) => `${m} (step 1)`), ...proofMissing]} />}
                 <Button size="lg" disabled={busy || detailsMissing.length > 0 || proofMissing.length > 0} onClick={generate}>{busy ? <><Loader2 className="h-4 w-4 animate-spin" />{daw?.backup === "saving" || notes?.backup === "saving" ? "Finishing your backup copies…" : "Generating…"}</> : "Generate & download certificate"}</Button>
-                <p className="text-xs text-muted-foreground">You'll get the PDF certificate plus a manifest .txt and .ots file. Keep those two together: anyone can verify them at opentimestamps.org. All three stay downloadable under My certificates.</p>
+                <p className="text-xs text-muted-foreground">You'll get the PDF certificate and a Bitcoin proof ZIP (manifest .txt, .ots file and how to verify). Keep the ZIP with your original videos. Everything stays downloadable under My certificates.</p>
               </Step>
             </ol>
           </Card>
