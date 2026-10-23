@@ -42,7 +42,7 @@ export const Route = createFileRoute("/workspace")({
   head: () => ({
     meta: [
       { title: "Workspace — Came Through Audio" },
-      { name: "description", content: "Your Came Through Audio workspace: catalog, royalty health, splits, contracts and masterclasses." },
+      { name: "description", content: "Your Came Through Audio workspace: catalog, royalty health, splits, contracts and coaching." },
       { property: "og:title", content: "Workspace — Came Through Audio" },
       { property: "og:description", content: "Manage your music business from one secure dashboard." },
       { property: "og:type", content: "website" },
@@ -276,13 +276,13 @@ function Learn({ userId, unlocked, onUpgrade }: { userId: string; unlocked: bool
     <div className="mt-6">
       <div className="inline-flex gap-1 rounded-lg bg-muted p-1">
         <Button size="sm" variant={view === "contracts" ? "default" : "ghost"} onClick={() => setView("contracts")}><ScrollText className="h-4 w-4" />Contracts & Blueprints</Button>
-        <Button size="sm" variant={view === "classes" ? "default" : "ghost"} onClick={() => setView("classes")}><GraduationCap className="h-4 w-4" />Masterclasses</Button>
+        <Button size="sm" variant={view === "classes" ? "default" : "ghost"} onClick={() => setView("classes")}><GraduationCap className="h-4 w-4" />One on One Coaching</Button>
       </div>
       {/* Contracts handles its own gating: blueprint guides are a preview for everyone, and contracts sent to you are always visible. */}
       {view === "contracts" ? <Contracts userId={userId} unlocked={unlocked} onUpgrade={onUpgrade} />
-        : !unlocked ? <UpgradeLock title="Music Business Masterclasses" tier="management" onUpgrade={onUpgrade}
-            text="Live group classes with an industry expert, covering sync, publishing and royalties." />
-        : <Masterclasses userId={userId} />}
+        : !unlocked ? <UpgradeLock title="One on One Coaching" tier="management" onUpgrade={onUpgrade}
+            text="Private sessions with a music business expert on your catalog, releases, royalties or deals." />
+        : <Coaching userId={userId} />}
     </div>
   );
 }
@@ -303,7 +303,8 @@ function PlansDialog({ tier }: { tier: Tier }) {
   );
 }
 
-function Masterclasses({ userId }: { userId: string }) {
+/** One on One Coaching (was Masterclasses): a notify list until booking opens. Keeps the "masterclasses" interest key, so earlier sign-ups carry over. */
+function Coaching({ userId }: { userId: string }) {
   const [asked, setAsked] = useState(false);
   const [busy, setBusy] = useState(false);
   async function notifyMe() {
@@ -312,17 +313,21 @@ function Masterclasses({ userId }: { userId: string }) {
     setBusy(false);
     if (error) { toast.error("Couldn't save that. Try again."); return; }
     setAsked(true);
-    toast.success("You're on the list. We'll email you when the first class opens.");
+    toast.success("You're on the list. We'll email you as soon as coaching opens.");
   }
   return (
     <div className="mt-6 grid gap-6 md:grid-cols-2">
       <div className="rounded-2xl border border-border p-6">
         <GraduationCap className="h-8 w-8 text-primary" />
-        <h2 className="mt-3 text-2xl font-bold">Music Business Masterclasses</h2>
-        <p className="mt-2 text-muted-foreground">Live group classes with an industry expert.</p>
-        <div className="mt-4 flex items-center justify-between rounded-lg bg-muted p-4"><span className="font-semibold">1 class slot</span><span className="text-xl font-bold text-primary">$19/slot</span></div>
-        <p className="mt-4 text-sm text-muted-foreground">The first classes are being scheduled now. Join the list and we'll email you the dates as soon as booking opens.</p>
-        <Button className="mt-3 w-full" disabled={busy || asked} onClick={() => void notifyMe()}>{asked ? "You're on the list" : "Notify me when classes open"}</Button>
+        <h2 className="mt-3 text-2xl font-bold">One on One Coaching</h2>
+        <p className="mt-2 text-muted-foreground">A private video session with a music business expert, about your catalog, releases, royalties or deals.</p>
+        <div className="mt-4 space-y-2">
+          {([["30-minute session", "$25"], ["60-minute session", "$45"]] as const).map(([label, price]) => (
+            <div key={label} className="flex items-center justify-between rounded-lg bg-muted p-4"><span className="font-semibold">{label}</span><span className="text-xl font-bold text-primary">{price}</span></div>
+          ))}
+        </div>
+        <p className="mt-4 text-sm text-muted-foreground">Coaching sessions are being scheduled now. Join the list and we'll email you as soon as booking opens.</p>
+        <Button className="mt-3 w-full" disabled={busy || asked} onClick={() => void notifyMe()}>{asked ? "You're on the list" : "Notify me when coaching opens"}</Button>
       </div>
     </div>
   );

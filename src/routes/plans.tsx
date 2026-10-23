@@ -12,7 +12,7 @@ export const Route = createFileRoute("/plans")({
       { title: "Plans & Pricing — Came Through Audio" },
       { name: "description", content: "Compare Catalog Plus, Catalog & Collaborate, and Catalog Management yearly plans for independent musicians." },
       { property: "og:title", content: "Plans & Pricing — Came Through Audio" },
-      { property: "og:description", content: "Yearly plans for metadata embedding, cataloging, split sheets, contracts and masterclasses." },
+      { property: "og:description", content: "Yearly plans for metadata embedding, cataloging, split sheets, contracts and coaching." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
     ],

@@ -85,7 +85,7 @@ export const PLAN_FEATURES: Feature[] = [
   { group: "Business & education", from: "management", title: "Music Industry Blueprints", tip: "Producer agreements, beat licenses, feature, session, videographer and label blueprints, with plain-language guides" },
   { group: "Business & education", from: "management", title: "Contract Signature Requests & Signing", tip: "Send contracts to every party to e-sign; each signature is time-stamped and hashed" },
   { group: "Business & education", from: "management", title: "Signed Contract Vault", tip: "Fully signed contracts are locked and stored, ready to download as a signed PDF" },
-  { group: "Business & education", from: "management", title: "Industry Masterclasses", tip: "In-depth masterclasses covering sync, publishing and royalties", soon: true },
+  { group: "Business & education", from: "management", title: "One on One Coaching", tip: "Private sessions with a music business expert on your catalog, releases, royalties or deals", soon: true },
 ];
 
 /**
