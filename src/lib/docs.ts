@@ -2,6 +2,8 @@
  * Public product and learning pages linked from the homepage footer (/docs/$slug).
  * Keep every claim true to what the app does today; update a page whenever its feature changes.
  */
+import { ACCESS_STEPS } from "@/lib/registration";
+
 export type DocSection = { heading: string; paragraphs?: string[]; bullets?: string[] };
 export type Doc = { slug: string; group: "Product" | "Learn"; title: string; description: string; intro: string; sections: DocSection[] };
 
@@ -129,7 +131,8 @@ export const DOCS: Doc[] = [
       ] },
       { heading: "Contracts", bullets: [
         "Contracts & Blueprints is in your workspace (Catalog Management).",
-        "Pick a blueprint, fill in the deal, add each party's legal name and email, then lock and request signatures.",
+        "Pick a contract, fill in the few fields marked *, and add each party's legal name and email. Everything else is pre-filled and can be changed.",
+        "Read it over, sign at the bottom, then click Send to email everyone else.",
         "Fully signed contracts move to your Signed Vault and download as a signed PDF.",
         "Blueprints are templates, not legal advice. Have an attorney review before you sign.",
       ] },
@@ -174,5 +177,34 @@ export const DOCS: Doc[] = [
     ],
   },
 ];
+
+/**
+ * How to add Came Through Audio as a representative at each agency, built from the same steps the Expert Help order
+ * shows (ACCESS_STEPS), so the two never disagree. Public, so it leaves out the representative email: customers get
+ * the details in their order.
+ */
+const DETAILS = "the representative details shown in your Expert Help order";
+DOCS.push({
+  slug: "add-representative",
+  group: "Learn",
+  title: "Add Came Through Audio as Your Representative",
+  description: "Step-by-step: give Came Through Audio registration-only access at ASCAP, BMI, The MLC and SoundExchange, without sharing your password or payments.",
+  intro: "When you buy Expert Help, our team registers your songs and recordings for you. To do that, you add us as a representative (an authorized user) in each of your accounts. You never share your password, and we never get access to your bank or payment details.",
+  sections: [
+    { heading: "Before you start", bullets: [
+      `You'll need ${DETAILS}: an email address, a first name and a last name. They appear after you sign the Registration Authorization.`,
+      "Have your own login for each organization ready. Only the account owner can add a representative.",
+      "You can remove our access at any time, and we'll ask you to once your registrations are done.",
+    ] },
+    ...Object.entries(ACCESS_STEPS).map(([agency, a]) => ({
+      heading: `${agency} (${a.where})`,
+      bullets: [
+        ...a.steps.map((st, i) => `${i + 1}. ${st.replace(/the details below/g, DETAILS)}`),
+        `Permission to choose: ${a.permission}.`,
+      ],
+    })),
+    { heading: "When you're done", paragraphs: ["Go back to your Expert Help order and click Done on each organization you've added us to. We'll take it from there and let you know if anything needs your attention. Menus at each organization change from time to time; if a step doesn't match what you see, open a support ticket from the Contact page and we'll help."] },
+  ],
+});
 
 export const docBySlug = (slug: string) => DOCS.find((d) => d.slug === slug);
