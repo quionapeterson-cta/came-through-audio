@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import { AlertTriangle, ChevronRight, Hourglass } from "lucide-react";
+import { AlertTriangle, ChevronRight, Hourglass, Lock } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { listTracks, type CatalogTrack } from "@/lib/catalog";
 import { RoyaltyInspector, MismatchTips } from "@/components/RoyaltyInspector";
@@ -15,7 +16,12 @@ import { AgencyLists } from "@/components/AgencyLists";
 import { listKey, type ListResult, type SavedListSummary } from "@/lib/agency-lists";
 import type { Society } from "@/lib/repertoires";
 import { downloadAgencyExport } from "@/lib/agency-export";
-import { listSplitSheets, splitStatus as sheetStatus } from "@/lib/splits";
+import { listContributors, listSplitSheets, splitStatus as sheetStatus } from "@/lib/splits";
+import { AskCowriterDialog, IpiRequestList, type Cowriter } from "@/components/IpiRequests";
+import { cowritersMissing, fillWriter, listIpiRequests, nameKey, setIpiRequestStatus, type IpiRequest } from "@/lib/ipi-requests";
+import { sendIpiRequest } from "@/lib/ipi-request.functions";
+import { saveTrack } from "@/lib/catalog";
+import { useServerFn } from "@tanstack/react-start";
 import { healthReport, type RepertoireCheck } from "@/lib/health";
 import { clearCheck, listChecks, markCheck } from "@/lib/repertoire-checks";
 import { runSongLookups } from "@/lib/lookups.functions";
@@ -100,9 +106,21 @@ export function RoyaltyHealthCheck({ userId, canCatalog, canExport, onUpgrade, o
   const [songsOpen, setSongsOpen] = useState(false);
   const [listsOpen, setListsOpen] = useState(false);
   const [signedSheets, setSignedSheets] = useState<Map<string, boolean>>();
+  // Co-writer emails we already know, from split sheets and the Contributor Library, keyed by name.
+  const [emails, setEmails] = useState<Map<string, string>>(new Map());
+  const [ipiRequests, setIpiRequests] = useState<IpiRequest[]>([]);
+  const [askOpen, setAskOpen] = useState(false);
+  const [requestsOpen, setRequestsOpen] = useState<boolean>();
+  const sendRequest = useServerFn(sendIpiRequest);
   useEffect(() => {
     if (!canCatalog) return;
-    listSplitSheets().then((m) => setSignedSheets(new Map([...m].map(([id, list]) => [id, sheetStatus(list) === "signed"])))).catch(() => {});
+    listSplitSheets().then((m) => {
+      setSignedSheets(new Map([...m].map(([id, list]) => [id, sheetStatus(list) === "signed"])));
+      setEmails((e) => { const n = new Map(e); for (const list of m.values()) for (const c of list) if (c.email && !n.has(nameKey(c.name))) n.set(nameKey(c.name), c.email); return n; });
+    }).catch(() => {});
+    listContributors().then((list) => setEmails((e) => { const n = new Map(e); for (const c of list) if (c.email) n.set(nameKey(c.name), c.email); return n; })).catch(() => {});
+    // Arrives with the 20261024140000 migration; until then there are simply no requests.
+    listIpiRequests().then(setIpiRequests).catch(() => {});
   }, [canCatalog]);
   const checkupRows = useMemo(() => report.rows.map((r) => {
     const status = statuses.find((x) => x.songRef === r.track.id);
@@ -179,6 +197,40 @@ export function RoyaltyHealthCheck({ userId, canCatalog, canExport, onUpgrade, o
     const account = statusOf(ACCOUNT_REF);
     const summary: SavedListSummary = { at, file, works: result.works, matched: result.matched.length, differences: result.differences.length, notListed: result.notListed.length };
     await updateStatus({ ...account, steps: { ...account.steps, [key]: JSON.stringify(summary) } });
+  }
+
+  const catalogTracks = useMemo(() => (tracks ?? []).filter((t) => !isInspectorSong(t.id)), [tracks]);
+  const artistName = mostCommon(catalogTracks.map((t) => t.artist));
+  const cowriters: Cowriter[] = useMemo(() => cowritersMissing(catalogTracks, loadOnboarding(userId)?.legalName ?? "").map((c) => ({ ...c, email: emails.get(nameKey(c.name)) })), [catalogTracks, emails, userId]);
+  const answered = ipiRequests.filter((r) => r.status === "answered").length;
+  const waiting = ipiRequests.filter((r) => r.status === "pending").length;
+  const askCowriter = () => (canExport ? setAskOpen(true) : onUpgrade());
+
+  /** Approving a co-writer's answer fills their blank PRO and IPI on each song; nothing already entered changes. */
+  async function applyAnswer(r: IpiRequest) {
+    if (!r.answer) return;
+    let n = 0;
+    try {
+      for (const s of r.songs) {
+        const t = catalogTracks.find((x) => x.id === s.catalog_id);
+        const next = t && fillWriter(t.metadata, r.writerName, r.answer);
+        if (!t || !next) continue;
+        await saveTrack(next, userId, t.id);
+        setTracks((all) => all?.map((x) => (x.id === t.id ? { ...x, metadata: next } : x)));
+        n++;
+      }
+      await setIpiRequestStatus(r.id, "applied");
+      setIpiRequests((all) => all.map((x) => (x.id === r.id ? { ...x, status: "applied" } : x)));
+      toast.success(n ? `Added to ${n} song${n === 1 ? "" : "s"}. Now update the registrations.` : "Those songs already had their PRO and IPI.");
+    } catch (e) { toast.error(e instanceof Error ? e.message : "Couldn't update the songs. Try again."); }
+  }
+  async function dismissRequest(r: IpiRequest) {
+    try { await setIpiRequestStatus(r.id, "dismissed"); setIpiRequests((all) => all.map((x) => (x.id === r.id ? { ...x, status: "dismissed" } : x))); }
+    catch { toast.error("Couldn't update that request. Try again."); }
+  }
+  async function resendRequest(r: IpiRequest) {
+    try { await sendRequest({ data: { id: r.id, origin: window.location.origin } }); setIpiRequests((all) => all.map((x) => (x.id === r.id ? { ...x, sentAt: new Date().toISOString() } : x))); toast.success(`Sent to ${r.writerName}.`); }
+    catch (e) { toast.error(e instanceof Error ? e.message : "Couldn't send it. Try again."); }
   }
 
   /**
@@ -300,11 +352,21 @@ export function RoyaltyHealthCheck({ userId, canCatalog, canExport, onUpgrade, o
       <RoyaltyReport checkup={checkup} since={since} date={new Date().toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })} country={country.name}
         countryPicker={<CountryPicker country={country} onCountry={chooseCountry} />} running={!!running} canExport={canExport}
         onRunCheckup={() => { setSaveAfterRun(true); void runAll(); }}
-        onPdf={() => downloadCheckupPdf(checkup, mostCommon((tracks ?? []).map((t) => t.artist)), country.name).catch(() => toast.error("Couldn't create the PDF. Try again."))} onAction={(a) => void act(a)} onExpert={book} onReminder={reminder} />
+        onPdf={() => downloadCheckupPdf(checkup, mostCommon((tracks ?? []).map((t) => t.artist)), country.name).catch(() => toast.error("Couldn't create the PDF. Try again."))} onAction={(a) => void act(a)} onExpert={book} onReminder={reminder}
+        onAskCowriter={canCatalog && cowriters.length ? askCowriter : undefined} />
+      <AskCowriterDialog open={askOpen} cowriters={cowriters} artistName={artistName} existing={ipiRequests} onClose={() => setAskOpen(false)}
+        onCreated={(r) => { setIpiRequests((all) => [r, ...all.filter((x) => x.id !== r.id)]); setRequestsOpen(true); }} />
       {running && <p className="text-sm text-muted-foreground">Looking up song {running.done + 1} of {running.total} on streaming and MusicBrainz…</p>}
 
       <div className="space-y-3">
         <h3 className="pt-4 text-2xl font-extrabold">Your songs and records</h3>
+        {(ipiRequests.length > 0 || cowriters.length > 0) && canCatalog && <Section id="cowriter-requests" title="Co-writer details" open={requestsOpen ?? answered > 0} onToggle={setRequestsOpen}
+          summary={answered ? `⚠️ ${answered} answer${answered === 1 ? "" : "s"} to approve${waiting ? ` · ${waiting} waiting` : ""}` : waiting ? `${waiting} request${waiting === 1 ? "" : "s"} waiting for an answer` : `${cowriters.length} co-writer${cowriters.length === 1 ? " is" : "s are"} missing a PRO or IPI`}>
+          <div className="space-y-4">
+            <IpiRequestList requests={ipiRequests} onApply={applyAnswer} onDismiss={dismissRequest} onResend={resendRequest} />
+            {cowriters.length > 0 && <Button variant="outline" onClick={askCowriter}>{!canExport && <Lock />}Ask a co-writer for their PRO and IPI</Button>}
+          </div>
+        </Section>}
         <Section id="song-by-song" title="Song by song" open={songsOpen} onToggle={setSongsOpen}
           summary={`${songsLabel(report.rows.length)} · ${kinds.filter((g) => g.key !== SINGLES_KEY && !g.key.startsWith("~")).length} albums & EPs · ${kinds.find((g) => g.key === SINGLES_KEY)?.songs.length ?? 0} singles · ${attention ? `⚠️ ${attention} need attention` : "✓ all on track"}`}>
           {checklist}

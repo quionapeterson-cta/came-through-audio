@@ -1,6 +1,6 @@
 # PLAN — Co-writer PRO / IPI request · v1
 
-Status: **awaiting approval.** Touches writer fields (PRO, IPI), so per AGENTS.md this plan comes first.
+Status: **approved and BUILT 2026-10-23.** Founder applies migration 20261024140000.
 Preview: https://claude.ai/artifact/QWgd4ibVseNHYZfVo2sgok
 
 ## The flow

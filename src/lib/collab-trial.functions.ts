@@ -14,17 +14,20 @@ export const grantCollaboratorTrial = createServerFn({ method: "POST" })
   .inputValidator((d) => z.object({
     rowId: z.string().uuid().optional(),
     partyId: z.string().uuid().optional(),
+    ipiRequestId: z.string().uuid().optional(),
     environment: z.enum(["sandbox", "live"]),
-  }).refine((v) => !!v.rowId !== !!v.partyId, "Send a rowId or a partyId").parse(d))
+  }).refine((v) => [v.rowId, v.partyId, v.ipiRequestId].filter(Boolean).length === 1, "Send one invite id").parse(d))
   .handler(async ({ data, context }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { trialBlockReason, inviterOf, hashIp } = await import("./collab-trial.server");
 
     // Throws unless the invite was sent to the caller's email.
-    const source = data.rowId ? "split_sheet" as const : "contract" as const;
+    const source = data.rowId ? "split_sheet" as const : data.ipiRequestId ? "ipi_request" as const : "contract" as const;
     const { data: invite, error } = data.rowId
       ? await context.supabase.rpc("get_split_invite", { _row_id: data.rowId })
-      : await context.supabase.rpc("get_contract_invite" as never, { _party_id: data.partyId } as never);
+      : data.ipiRequestId
+        ? await context.supabase.rpc("get_ipi_request" as never, { _id: data.ipiRequestId } as never)
+        : await context.supabase.rpc("get_contract_invite" as never, { _party_id: data.partyId } as never);
     if (error || !invite) return { granted: false };
     if (source === "contract" && !(invite as { can_sign?: boolean }).can_sign) return { granted: false };
     // Company agreements (testimonial releases and the like) never start a trial; gifts come from Admin at launch.
@@ -37,7 +40,7 @@ export const grantCollaboratorTrial = createServerFn({ method: "POST" })
     const { data: existing } = await supabaseAdmin.from("subscriptions").select("id").eq("paddle_subscription_id", subId).maybeSingle();
     if (existing) return { granted: false };
 
-    const inviterId = await inviterOf(supabaseAdmin, source, (data.rowId ?? data.partyId)!);
+    const inviterId = await inviterOf(supabaseAdmin, source, (data.rowId ?? data.partyId ?? data.ipiRequestId)!);
     const { getRequestHeader, getRequestIP } = await import("@tanstack/react-start/server");
     const ip = getRequestHeader("cf-connecting-ip") ?? getRequestIP({ xForwardedFor: true }) ?? "";
     const ipHash = ip ? hashIp(ip) : null;

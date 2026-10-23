@@ -27,6 +27,7 @@ import { Route as AdminStaffRouteImport } from './routes/admin_.staff'
 import { Route as ContractPartyIdRouteImport } from './routes/contract.$partyId'
 import { Route as DocsSlugRouteImport } from './routes/docs.$slug'
 import { Route as InvitesStopRouteImport } from './routes/invites.stop'
+import { Route as IpiIdRouteImport } from './routes/ipi.$id'
 import { Route as SignRowIdRouteImport } from './routes/sign.$rowId'
 import { Route as VerifyIdRouteImport } from './routes/verify.$id'
 import { Route as ShareOwnerCardRouteImport } from './routes/share.$owner.$card'
@@ -125,6 +126,11 @@ const InvitesStopRoute = InvitesStopRouteImport.update({
   path: '/invites/stop',
   getParentRoute: () => rootRouteImport,
 } as any)
+const IpiIdRoute = IpiIdRouteImport.update({
+  id: '/ipi/$id',
+  path: '/ipi/$id',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const SignRowIdRoute = SignRowIdRouteImport.update({
   id: '/sign/$rowId',
   path: '/sign/$rowId',
@@ -184,6 +190,7 @@ export interface FileRoutesByFullPath {
   '/contract/$partyId': typeof ContractPartyIdRoute
   '/docs/$slug': typeof DocsSlugRoute
   '/invites/stop': typeof InvitesStopRoute
+  '/ipi/$id': typeof IpiIdRoute
   '/sign/$rowId': typeof SignRowIdRoute
   '/verify/$id': typeof VerifyIdRoute
   '/share/$owner/$card': typeof ShareOwnerCardRoute
@@ -211,6 +218,7 @@ export interface FileRoutesByTo {
   '/contract/$partyId': typeof ContractPartyIdRoute
   '/docs/$slug': typeof DocsSlugRoute
   '/invites/stop': typeof InvitesStopRoute
+  '/ipi/$id': typeof IpiIdRoute
   '/sign/$rowId': typeof SignRowIdRoute
   '/verify/$id': typeof VerifyIdRoute
   '/share/$owner/$card': typeof ShareOwnerCardRoute
@@ -239,6 +247,7 @@ export interface FileRoutesById {
   '/contract/$partyId': typeof ContractPartyIdRoute
   '/docs/$slug': typeof DocsSlugRoute
   '/invites/stop': typeof InvitesStopRoute
+  '/ipi/$id': typeof IpiIdRoute
   '/sign/$rowId': typeof SignRowIdRoute
   '/verify/$id': typeof VerifyIdRoute
   '/share/$owner/$card': typeof ShareOwnerCardRoute
@@ -268,6 +277,7 @@ export interface FileRouteTypes {
     | '/contract/$partyId'
     | '/docs/$slug'
     | '/invites/stop'
+    | '/ipi/$id'
     | '/sign/$rowId'
     | '/verify/$id'
     | '/share/$owner/$card'
@@ -295,6 +305,7 @@ export interface FileRouteTypes {
     | '/contract/$partyId'
     | '/docs/$slug'
     | '/invites/stop'
+    | '/ipi/$id'
     | '/sign/$rowId'
     | '/verify/$id'
     | '/share/$owner/$card'
@@ -322,6 +333,7 @@ export interface FileRouteTypes {
     | '/contract/$partyId'
     | '/docs/$slug'
     | '/invites/stop'
+    | '/ipi/$id'
     | '/sign/$rowId'
     | '/verify/$id'
     | '/share/$owner/$card'
@@ -350,6 +362,7 @@ export interface RootRouteChildren {
   ContractPartyIdRoute: typeof ContractPartyIdRoute
   DocsSlugRoute: typeof DocsSlugRoute
   InvitesStopRoute: typeof InvitesStopRoute
+  IpiIdRoute: typeof IpiIdRoute
   SignRowIdRoute: typeof SignRowIdRoute
   VerifyIdRoute: typeof VerifyIdRoute
   ShareOwnerCardRoute: typeof ShareOwnerCardRoute
@@ -487,6 +500,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof InvitesStopRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/ipi/$id': {
+      id: '/ipi/$id'
+      path: '/ipi/$id'
+      fullPath: '/ipi/$id'
+      preLoaderRoute: typeof IpiIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/sign/$rowId': {
       id: '/sign/$rowId'
       path: '/sign/$rowId'
@@ -558,6 +578,7 @@ const rootRouteChildren: RootRouteChildren = {
   ContractPartyIdRoute: ContractPartyIdRoute,
   DocsSlugRoute: DocsSlugRoute,
   InvitesStopRoute: InvitesStopRoute,
+  IpiIdRoute: IpiIdRoute,
   SignRowIdRoute: SignRowIdRoute,
   VerifyIdRoute: VerifyIdRoute,
   ShareOwnerCardRoute: ShareOwnerCardRoute,

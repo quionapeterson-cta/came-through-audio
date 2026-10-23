@@ -18,6 +18,8 @@ type Props = {
   onAction: (a: StepAction) => void;
   onExpert: () => void;
   onReminder: (calendar: "google" | "ics") => void;
+  /** Shown when a co-writer is missing their PRO or IPI. */
+  onAskCowriter?: (() => void) | undefined;
 };
 
 const KEY: [OrganState, string, string][] = [
@@ -45,7 +47,7 @@ function stepButton(a: StepAction, canExport: boolean): { label: string; locked?
 }
 
 /** The Royalty Health Report: the clickable body, the main finding with its ℞ treatment, and a full report per organ. */
-export function RoyaltyReport({ checkup, since, date, country, countryPicker, running, canExport, onRunCheckup, onPdf, onAction, onExpert, onReminder }: Props) {
+export function RoyaltyReport({ checkup, since, date, country, countryPicker, running, canExport, onRunCheckup, onPdf, onAction, onExpert, onReminder, onAskCowriter }: Props) {
   const { organs, lead } = checkup;
   const first = lead?.organ ?? organs.find((o) => o.state !== "healthy")?.id ?? organs[0]!.id;
   const [selected, setSelected] = useState<OrganId>(first);
@@ -141,7 +143,7 @@ export function RoyaltyReport({ checkup, since, date, country, countryPicker, ru
           ))}
         </div>
         <div ref={reportRef} className="scroll-mt-4">
-          <OrganReport key={organ.id} organ={organ} organs={organs} canExport={canExport} onAction={onAction} onOpen={(id) => open(id, false)} onExpert={onExpert} onReminder={onReminder} onExplain={setExplain} />
+          <OrganReport key={organ.id} organ={organ} organs={organs} canExport={canExport} onAction={onAction} onOpen={(id) => open(id, false)} onExpert={onExpert} onReminder={onReminder} onExplain={setExplain} onAskCowriter={onAskCowriter} />
         </div>
       </div>
       <Explainer finding={explain} organ={explain ? organs.find((o) => o.id === explain.organ) : undefined} onClose={() => setExplain(null)} />
@@ -149,7 +151,7 @@ export function RoyaltyReport({ checkup, since, date, country, countryPicker, ru
   );
 }
 
-function OrganReport({ organ, organs, canExport, onAction, onOpen, onExpert, onReminder, onExplain }: { organ: Organ; organs: Organ[]; canExport: boolean; onAction: (a: StepAction) => void; onOpen: (id: OrganId) => void; onExpert: () => void; onReminder: (calendar: "google" | "ics") => void; onExplain: (f: Finding) => void }) {
+function OrganReport({ organ, organs, canExport, onAction, onOpen, onExpert, onReminder, onExplain, onAskCowriter }: { organ: Organ; organs: Organ[]; canExport: boolean; onAction: (a: StepAction) => void; onOpen: (id: OrganId) => void; onExpert: () => void; onReminder: (calendar: "google" | "ics") => void; onExplain: (f: Finding) => void; onAskCowriter?: (() => void) | undefined }) {
   const i = organs.findIndex((o) => o.id === organ.id);
   const prev = organs[(i + organs.length - 1) % organs.length]!, next = organs[(i + 1) % organs.length]!;
   const main = organ.findings[0];
@@ -183,6 +185,7 @@ function OrganReport({ organ, organs, canExport, onAction, onOpen, onExpert, onR
           <div>
             <div className="rr-eyebrow mb-3">More ways to fix it</div>
             <div className="flex flex-wrap gap-2">
+              {onAskCowriter && (organ.id === "heart" || organ.id === "brain") && <Button variant="outline" onClick={onAskCowriter}>Ask a co-writer for their PRO and IPI</Button>}
               <Button variant="outline" onClick={() => onReminder("google")}>Add a confirm reminder to Google Calendar</Button>
               <Button variant="outline" onClick={() => onReminder("ics")}>Apple or Outlook calendar (.ics)</Button>
               <Button variant="outline" onClick={onExpert}>Let our agents register them</Button>

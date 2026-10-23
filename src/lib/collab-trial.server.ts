@@ -104,7 +104,11 @@ export function hashIp(ip: string) {
 }
 
 /** Who sent the invite: the catalog owner for a split sheet row, the contract owner for a contract party. */
-export async function inviterOf(admin: Admin, source: "split_sheet" | "contract", id: string): Promise<string | null> {
+export async function inviterOf(admin: Admin, source: "split_sheet" | "contract" | "ipi_request", id: string): Promise<string | null> {
+  if (source === "ipi_request") {
+    const { data: r } = await admin.from("ipi_requests" as never).select("owner_id").eq("id", id).maybeSingle();
+    return (r as { owner_id?: string } | null)?.owner_id ?? null;
+  }
   if (source === "split_sheet") {
     const { data: row } = await admin.from("split_sheets").select("catalog_id").eq("id", id).maybeSingle();
     if (!row?.catalog_id) return null;
@@ -123,7 +127,7 @@ export async function inviterOf(admin: Admin, source: "split_sheet" | "contract"
  * the caller invited themselves, hasn't confirmed their email, uses a throwaway inbox, the inviter isn't a paying
  * member (trial accounts can't hand out more trials), or the inviter or network already used this month's allowance.
  */
-export async function trialBlockReason(admin: Admin, o: { userId: string; inviterId: string | null; source: "split_sheet" | "contract"; ipHash: string | null; environment: "sandbox" | "live" }): Promise<string | null> {
+export async function trialBlockReason(admin: Admin, o: { userId: string; inviterId: string | null; source: "split_sheet" | "contract" | "ipi_request"; ipHash: string | null; environment: "sandbox" | "live" }): Promise<string | null> {
   if (!o.inviterId) return "no inviter";
   if (o.inviterId === o.userId) return "self invite";
   const { data: u } = await admin.auth.admin.getUserById(o.userId);
