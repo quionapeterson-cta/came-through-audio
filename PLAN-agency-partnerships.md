@@ -1,6 +1,6 @@
 # PLAN — Agency data partnerships (The MLC, ASCAP, BMI, SoundExchange, SESAC) · v1
 
-Status: **approved 2026-10-23**, except the signature (name question open). Nothing is sent until the founder sends it.
+Status: **approved 2026-10-23**. Nothing is sent until the founder sends it.
 Goal: written permission to search each agency's public repertoire from the Royalty Health Check, when the user clicks one button, so the report shows **verified** matches and mismatches instead of catalog-only estimates.
 
 ---
@@ -54,7 +54,7 @@ Rule until each yes: **no automated scraping** of any agency site. Users keep cl
 
 > Hello {First name},
 >
-> I'm Karma Came, founder of **Came Through Audio**, an Atlanta company built to be independent artists' **first stop before distribution**. Before a song reaches a distributor or an agency, our members embed their metadata, keep one master catalog, settle their splits and run a **Royalty Health Check** that shows what's missing before they register.
+> I'm **Qui-Ona Peterson**, known in music as **Karma Came**, founder of **Came Through Audio**, an Atlanta company built to be independent artists' **first stop before distribution**. Before a song reaches a distributor or an agency, our members embed their metadata, keep one master catalog, settle their splits and run a **Royalty Health Check** that shows what's missing before they register.
 >
 > {Agency paragraph}
 >
@@ -68,7 +68,8 @@ Rule until each yes: **no automated scraping** of any agency site. Users keep cl
 > I've attached a one-page data-use statement. Could we set up a 20-minute call in the next two weeks? I'm glad to share a short demo under NDA.
 >
 > Thank you for your time,
-> Karma Came · Founder, Came Through Audio
+> **Qui-Ona Peterson**
+> Founder, Came Through Audio, LLC
 > registrations@camethroughaudio.com
 
 **Agency paragraphs:**
@@ -89,6 +90,6 @@ Designed HTML version: rendered with the shared `emailLayout()` brand shell (log
 | On each yes | Build that agency's lookup; its organ in the report becomes **Verified** |
 
 ## Decisions for you
-1. Sign as **Karma Came, Founder**? (Or another name/title.)
+1. ~~Signature~~ Decided 2026-10-23: sign with the legal name **Qui-Ona Peterson**, stage name Karma Came mentioned once in the opening line.
 2. OK to offer a demo under mutual NDA before launch?
 3. Send from registrations@camethroughaudio.com, or a new partnerships@ address?
