@@ -6,7 +6,7 @@ import type { Metadata } from "./metadata";
 
 // Service-role client (bypasses RLS); only ever used inside server functions and routes.
 type Admin = Awaited<typeof import("@/integrations/supabase/client.server")>["supabaseAdmin"];
-const FROM = "Came Through Audio <registration@camethroughaudio.com>";
+const FROM = "Came Through Audio <registrations@camethroughaudio.com>";
 const DAY = 86400000;
 
 export const admin = async () => (await import("@/integrations/supabase/client.server")).supabaseAdmin;

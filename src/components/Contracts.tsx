@@ -556,7 +556,7 @@ function ContractEditor({ userId, initial, tracks, blueprint, onClose }: { userI
                     <Field label="Legal name" tip="The person's or company's full legal name, exactly as it should appear on the contract." required>
                       <Input id={`cp-${i}-name`} value={p.legalName} onChange={(e) => setParty(i, { legalName: e.target.value })} placeholder="Full legal name" />
                     </Field>
-                    <Field label="Email" tip={c.isCompany ? p.isOwner ? "Your email, or a department address such as registration@camethroughaudio.com. If it isn't your login email, you sign from the link sent there." : "Where the signing link goes. They sign with a code emailed here; no account needed." : "Where the signature request goes. They sign by logging in with this email."} required={!p.isOwner || c.isCompany}>
+                    <Field label="Email" tip={c.isCompany ? p.isOwner ? "Your email, or a department address such as registrations@camethroughaudio.com. If it isn't your login email, you sign from the link sent there." : "Where the signing link goes. They sign with a code emailed here; no account needed." : "Where the signature request goes. They sign by logging in with this email."} required={!p.isOwner || c.isCompany}>
                       <Input id={`cp-${i}-email`} type="email" value={p.email} disabled={p.isOwner && !c.isCompany} onChange={(e) => setParty(i, { email: e.target.value })} placeholder="name@example.com" />
                     </Field>
                     <div className="flex items-center gap-2 pb-1">

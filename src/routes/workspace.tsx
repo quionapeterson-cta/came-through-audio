@@ -2,7 +2,8 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { getStaffRole } from "@/lib/admin.functions";
-import { ShieldCheck, FileAudio, Disc3, Activity, FileSignature, ScrollText, GraduationCap, LogOut, Moon, Sun, UserRound, Gem, Users, Calculator } from "lucide-react";
+import { ShieldCheck, FileAudio, Disc3, Activity, FileSignature, ScrollText, GraduationCap, LogOut, Moon, Sun, UserRound, Gem, Users, Calculator, Smartphone } from "lucide-react";
+import { IosInstallHelp, useInstallApp } from "@/components/InstallApp";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -123,6 +124,7 @@ function Workspace() {
   const upgrade = () => document.getElementById("plans-trigger")?.click();
   const openQuickCheck = () => { setTab("health"); setTimeout(() => document.getElementById("quick-check")?.scrollIntoView({ behavior: "smooth" }), 50); };
   const studio = useStudioMode();
+  const app = useInstallApp();
   // Free accounts open on the Royalty Health Check (Royalty Inspector) instead of the locked Embed tab.
   useEffect(() => { if (billingLoaded && !search.tab && !hasTier(realTier, "plus")) setTab((t) => (t === "embed" ? "health" : t)); }, [billingLoaded]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -177,6 +179,7 @@ function Workspace() {
               <DropdownMenuItem onSelect={() => navigate({ to: "/profile" })}><UserRound />Profile</DropdownMenuItem>
               <DropdownMenuItem onSelect={upgrade}><Gem />View Plans</DropdownMenuItem>
               <DropdownMenuItem onSelect={studio.toggle}>{studio.on ? <Sun /> : <Moon />}{studio.on ? "Light mode" : "Studio Mode"}</DropdownMenuItem>
+              {app.canInstall && <DropdownMenuItem onSelect={() => void app.install()}><Smartphone />Install the app</DropdownMenuItem>}
               <DropdownMenuSeparator />
               <DropdownMenuItem onSelect={async () => { await supabase.auth.signOut(); navigate({ to: "/" }); }}><LogOut />Log out</DropdownMenuItem>
             </DropdownMenuContent>
@@ -190,6 +193,11 @@ function Workspace() {
               className="text-ink-muted hover:bg-ink-border hover:text-ink-foreground" onClick={studio.toggle}>
               {studio.on ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
             </Button>
+            {app.canInstall && (
+              <Button variant="ghost" size="icon" aria-label="Install the app" title="Install the app" className="text-ink-muted hover:bg-ink-border hover:text-ink-foreground" onClick={() => void app.install()}>
+                <Smartphone className="h-4 w-4" />
+              </Button>
+            )}
             <PlansDialog tier={tier} />
             <Button variant="ghost" size="icon" aria-label="Log out" className="text-ink-muted hover:bg-ink-border hover:text-ink-foreground"
               onClick={async () => { await supabase.auth.signOut(); navigate({ to: "/" }); }}>
@@ -198,6 +206,7 @@ function Workspace() {
           </div>
         </div>
       </header>
+      <IosInstallHelp open={app.iosHelp} onOpenChange={app.setIosHelp} />
 
       <ArtistOnboarding userId={user.id} open={profileOpen} onOpenChange={setProfileOpen} firstRun={!onboard?.done}
         onSaved={(o) => { setOnboard(o); setEmbedKey((k) => k + 1); setTab(canCatalog ? "embed" : "health"); }} />

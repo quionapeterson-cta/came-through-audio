@@ -19,6 +19,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { takeReturn } from "@/lib/password";
 import { redirect } from "@tanstack/react-router";
 import { getGateStatus } from "@/lib/gate.functions";
+// Listens for the browser's one-time install prompt from the first page, for "Install the app" in the workspace.
+import "@/components/InstallApp";
 
 function NotFoundComponent() {
   return (

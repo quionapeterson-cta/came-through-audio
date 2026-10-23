@@ -9,7 +9,7 @@ export const MAX_NEW_SONGS = 20;
 export type NewSong = { title: string; artist: string };
 
 /** Who users add as their representative/user at each agency (founder, 2026-10-22). */
-export const REPRESENTATIVE = { email: "registration@camethroughaudio.com", firstName: "Came", lastName: "Through Audio" } as const;
+export const REPRESENTATIVE = { email: "registrations@camethroughaudio.com", firstName: "Came", lastName: "Through Audio" } as const;
 
 export type SongStatus = "pending" | "in_progress" | "registered";
 export const SONG_STATUS_LABEL: Record<SongStatus, string> = { pending: "Pending", in_progress: "In progress", registered: "Registered" };
