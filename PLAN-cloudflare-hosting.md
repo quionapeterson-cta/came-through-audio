@@ -44,6 +44,7 @@ Source: founder, 2026-10-21 and 2026-10-23 (Lovable Pro ends Nov 11; no budget a
    - Then Worker → Settings → Domains & Routes → Add **Custom domain** `camethroughaudio.com` (and `www`).
    - Stripe webhooks: change the URLs from `workers.dev` to `https://camethroughaudio.com/api/public/payments/webhook?env=…`.
    - Supabase → Authentication → URL Configuration: Site URL `https://camethroughaudio.com`.
+   - Tell Claude: email links still point to the Lovable address (`SITE_URL` in src/lib/email-layout.ts); switch it to `https://camethroughaudio.com` in the same push.
 6. **Disconnect the domain in Lovable** (Project → Settings → Domains) once Cloudflare serves it. Keep the Lovable project and GitHub connection: edits there still push to GitHub, and Cloudflare deploys every push.
 
 ## After the move
