@@ -110,7 +110,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { name: "theme-color", content: "#0b0b0b" },
       { name: "apple-mobile-web-app-capable", content: "yes" },
       { name: "mobile-web-app-capable", content: "yes" },
-      { name: "apple-mobile-web-app-title", content: "Came Through" },
+      { name: "apple-mobile-web-app-title", content: "CTAudio" },
       { name: "apple-mobile-web-app-status-bar-style", content: "black" },
     ],
     links: [
