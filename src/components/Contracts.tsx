@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { confirmAction } from "@/components/ConfirmHost";
-import { AlertTriangle, BookOpen, CalendarDays, Check, ChevronDown, ChevronLeft, Copy, Download, FileSignature, Loader2, Lock, Mail, PenLine, Plus, RotateCcw, ScrollText, ShieldCheck, Trash2, Unlock, Vault } from "lucide-react";
+import { AlertTriangle, BookOpen, CalendarDays, Gift, Check, ChevronDown, ChevronLeft, Copy, Download, FileSignature, Loader2, Lock, Mail, PenLine, Plus, RotateCcw, ScrollText, ShieldCheck, Trash2, Unlock, Vault } from "lucide-react";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -19,6 +19,7 @@ import { BLUEPRINTS, CATEGORIES, COMPANY_BLUEPRINTS, CONTRACT_DISCLAIMER, bluepr
 import { downloadContractPdf } from "@/lib/contract-pdf";
 import { sendContractInvite } from "@/lib/contracts-email.functions";
 import { companySignLink } from "@/lib/contract-sign.functions";
+import { grantLaunchGift, listLaunchGifts, type LaunchGiftRow } from "@/lib/launch-gift.functions";
 import { logBadgeEvent } from "@/lib/badge-events";
 import { BLUEPRINT_GUIDES, CHEAT_SHEETS, type Guide } from "@/lib/guides";
 import {
@@ -26,7 +27,7 @@ import {
   type Contract, type ContractParty, type ReceivedContract,
 } from "@/lib/contracts";
 
-type View = "blueprints" | "guides" | "contracts" | "vault";
+type View = "blueprints" | "guides" | "contracts" | "vault" | "gifts";
 
 const STATUS: Record<Contract["status"], { label: string; className: string }> = {
   draft: { label: "Draft", className: "border-border text-muted-foreground" },
@@ -86,7 +87,7 @@ export function Contracts({ userId, unlocked, onUpgrade, company = false }: { us
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="inline-flex flex-wrap gap-1 rounded-lg bg-muted p-1" role="tablist" aria-label="Contracts">
             {(company
-              ? [["blueprints", "Templates", ScrollText], ["contracts", "Drafts & out for signature", FileSignature], ["vault", "Signed", Vault]] as const
+              ? [["blueprints", "Templates", ScrollText], ["contracts", "Drafts & out for signature", FileSignature], ["vault", "Signed", Vault], ["gifts", "Launch gifts", Gift]] as const
               : [["blueprints", "Contracts", ScrollText], ["guides", "Blueprints", BookOpen], ["contracts", "My Contracts", FileSignature], ["vault", "Signed Vault", Vault]] as const).map(([id, label, Icon]) => (
               <Button key={id} role="tab" aria-selected={view === id} size="sm" variant={view === id ? "default" : "ghost"} onClick={() => setView(id)}>
                 <Icon className="h-4 w-4" />{label}
@@ -101,6 +102,8 @@ export function Contracts({ userId, unlocked, onUpgrade, company = false }: { us
         {view === "blueprints" && (company
           ? <CompanyTemplates blueprints={companyBlueprints} edited={templates} onUse={start} onSaved={() => void loadCompanyTemplates().then(setTemplates)} />
           : <Blueprints unlocked={unlocked} onUse={start} />)}
+
+        {view === "gifts" && company && <LaunchGifts />}
 
         {view === "guides" && (!unlocked
           ? <UpgradeLock className="" title="Blueprints" tier="management" onUpgrade={onUpgrade} text="Step-by-step guides to running your music business, from royalty registration to touring, plus home recording cheat sheets for every genre." />
@@ -284,6 +287,48 @@ function Guides() {
           </div>
         );
       })}
+    </section>
+  );
+}
+
+/**
+ * Admin: the free 3-month Catalog Plus promised in the testimonial release (§11). Lists everyone who fully signed a
+ * release; grant it at launch. The server checks the release, the account and that it's granted only once.
+ */
+function LaunchGifts() {
+  const list = useServerFn(listLaunchGifts);
+  const grant = useServerFn(grantLaunchGift);
+  const [rows, setRows] = useState<LaunchGiftRow[]>();
+  const [busy, setBusy] = useState<string>();
+  const load = () => list().then(setRows).catch((e: Error) => { toast.error(e.message); setRows([]); });
+  useEffect(() => { void load(); }, []);
+  const give = async (r: LaunchGiftRow) => {
+    if (!await confirmAction({ title: `Start ${r.name}'s launch gift?`, text: `Catalog Plus, free for 3 months starting today, on the account for ${r.email}. We email them that it's active. It ends on its own.`, action: "Grant gift" })) return;
+    setBusy(r.partyId);
+    try { await grant({ data: { partyId: r.partyId } }); toast.success(`Launch gift started for ${r.name}.`); await load(); }
+    catch (e) { toast.error(e instanceof Error ? e.message : "Couldn't grant the gift."); }
+    finally { setBusy(undefined); }
+  };
+  const date = (d: string) => new Date(d).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+  if (!rows) return <Spinner />;
+  return (
+    <section className="space-y-4">
+      <p className="text-sm text-muted-foreground">Everyone who fully signed a testimonial release gets 3 months of Catalog Plus free, starting on launch day (release §11). Grant each one on launch day. They need a free account with the email they signed with.</p>
+      {rows.length === 0 ? <Empty icon={Gift} text="No fully signed testimonial releases yet." /> : (
+        <ul className="grid gap-3">
+          {rows.map((r) => (
+            <li key={r.partyId} className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border p-4">
+              <div className="min-w-0">
+                <div className="truncate font-bold">{r.name}</div>
+                <div className="text-xs text-muted-foreground">{r.email} · signed {date(r.signedAt)} · {r.contractTitle}</div>
+              </div>
+              {r.giftEndsAt ? <Badge variant="outline" className="border-primary text-primary">Gift active · ends {date(r.giftEndsAt)}</Badge>
+                : !r.hasAccount ? <span className="text-sm text-muted-foreground">No account with this email yet</span>
+                : <Button size="sm" disabled={busy === r.partyId} onClick={() => void give(r)}>{busy === r.partyId ? <Loader2 className="h-4 w-4 animate-spin" /> : <Gift className="h-4 w-4" />}Grant launch gift</Button>}
+            </li>
+          ))}
+        </ul>
+      )}
     </section>
   );
 }
