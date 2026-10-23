@@ -6,6 +6,7 @@ import { creditName, type Contributor, type Metadata } from "@/lib/metadata";
 import { registrationCheck } from "@/lib/readiness";
 import type { Society } from "@/lib/repertoires";
 import { splitStatus } from "@/lib/splits-total";
+import { readNote } from "@/lib/agency-lists";
 
 /**
  * The Royalty Health Report: the catalog read as a body, one organ per way music gets paid (PLAN-royalty-health-report §2).
@@ -18,7 +19,12 @@ export type ConditionId =
   | "noheart" | "broken" | "artery-left" | "artery-right"
   | "lungs-hold" | "lungs-one" | "kidney-none" | "kidney-one"
   | "brain-fog" | "brain-mixed" | "brain-double" | "brain-tag"
-  | "spine-align" | "spine-back" | "pulse-skip" | "pulse-faint";
+  | "spine-align" | "spine-back" | "pulse-skip" | "pulse-faint"
+  | "brain-agency" | "pulse-missing";
+
+/** Findings from an uploaded agency list reuse the closest picture. */
+export type ScanId = Exclude<ConditionId, "brain-agency" | "pulse-missing">;
+const SCAN_OF: Partial<Record<ConditionId, ScanId>> = { "brain-agency": "brain-mixed", "pulse-missing": "pulse-faint" };
 
 /** What a treatment step's button does. `agency` picks the one-click file: the PRO cheat sheet, The MLC or SoundExchange. */
 export type StepAction =
@@ -32,7 +38,7 @@ export type StepAction =
   | { kind: "changes"; trackId: string }
   | { kind: "upload" };
 export type TreatmentStep = { title: string; text: string; action?: StepAction | undefined };
-export type AffectedSong = { id: string; title: string; why: string; field?: string | undefined; registration?: boolean };
+export type AffectedSong = { id: string; title: string; why: string; field?: string | undefined; registration?: boolean; society?: Society | undefined };
 export type Finding = {
   id: ConditionId;
   organ: OrganId;
@@ -44,8 +50,8 @@ export type Finding = {
   cause: string;
   steps: TreatmentStep[];
   note?: string;
-  /** A short label for the scan picture's caption and the songs list. */
-  scan: ConditionId;
+  /** Which scan picture shows it. */
+  scan: ScanId;
 };
 export type Organ = { id: OrganId; name: string; system: string; state: OrganState; findings: Finding[]; checks: string[]; broken: boolean };
 export type Checkup = { score: number; songs: number; organs: Organ[]; lead: Finding | null; rhythm: OrganState };
@@ -64,15 +70,15 @@ const PORTAL: Record<string, { name: string; url: string }> = {
 const portal = (s: Society) => PORTAL[s.id] ?? { name: `your ${s.name} account`, url: s.url };
 
 /** Most serious first; ties in the lead go to the finding touching the most songs, then this order. */
-const PRIORITY: ConditionId[] = ["noheart", "broken", "artery-left", "artery-right", "spine-align", "brain-double", "lungs-hold", "kidney-none",
+const PRIORITY: ConditionId[] = ["noheart", "broken", "artery-left", "artery-right", "spine-align", "pulse-missing", "brain-agency", "brain-double", "lungs-hold", "kidney-none",
   "pulse-skip", "lungs-one", "kidney-one", "brain-mixed", "brain-tag", "brain-fog", "spine-back", "pulse-faint"];
 const SEVERITY: Record<ConditionId, "treat" | "watch"> = {
-  noheart: "treat", broken: "treat", "artery-left": "treat", "artery-right": "treat", "spine-align": "treat", "brain-double": "treat", "lungs-hold": "treat", "kidney-none": "treat",
+  noheart: "treat", broken: "treat", "artery-left": "treat", "artery-right": "treat", "spine-align": "treat", "brain-double": "treat", "pulse-missing": "treat", "brain-agency": "treat", "lungs-hold": "treat", "kidney-none": "treat",
   "pulse-skip": "watch", "lungs-one": "watch", "kidney-one": "watch", "brain-mixed": "watch", "brain-tag": "watch", "brain-fog": "watch", "spine-back": "watch", "pulse-faint": "watch",
 };
 const ORGAN_OF: Record<ConditionId, OrganId> = {
   noheart: "heart", broken: "heart", "artery-left": "heart", "artery-right": "heart", "lungs-hold": "lungs", "lungs-one": "lungs", "kidney-none": "kidneys", "kidney-one": "kidneys",
-  "brain-fog": "brain", "brain-mixed": "brain", "brain-double": "brain", "brain-tag": "brain", "spine-align": "spine", "spine-back": "spine", "pulse-skip": "pulse", "pulse-faint": "pulse",
+  "brain-fog": "brain", "brain-mixed": "brain", "brain-double": "brain", "brain-tag": "brain", "spine-align": "spine", "spine-back": "spine", "pulse-skip": "pulse", "pulse-faint": "pulse", "brain-agency": "brain", "pulse-missing": "pulse",
 };
 /** New registrations usually show up within a few weeks; after six, an unconfirmed one is worth a look. */
 export const CONFIRM_AFTER_DAYS = 42;
@@ -170,6 +176,17 @@ export function royaltyCheckup({ rows, signedSheets, today = new Date().toISOStr
       return at && !confirmed && ageDays(at) > CONFIRM_AFTER_DAYS;
     });
     if (faint.length) hit("pulse-faint", song(`not confirmed at ${plain(faint.map((s) => s.society!.name))}`));
+
+    // Uploaded agency lists: what the agency has on file, compared with the catalog.
+    for (const [k, v] of Object.entries(status?.steps ?? {})) {
+      if (!k.startsWith("list:")) continue;
+      const note = readNote(v);
+      const sid = k.slice(5);
+      const society = c.steps.find((x) => x.society?.id === sid)?.society;
+      const name = society?.name ?? sid.toUpperCase();
+      if (note && "issues" in note && note.issues.length) hit("brain-agency", { ...song(`${name}: ${note.issues[0]}${note.issues.length > 1 ? ` (+${note.issues.length - 1} more)` : ""}`), society });
+      if (note && "missing" in note && status?.steps[`registered:${sid}`]) hit("pulse-missing", { ...song(`not on your ${name} list`), society });
+    }
   }
   if (noPro) for (const { r } of rows) if (writersOf(r.track.metadata).length) hit("noheart", { id: r.track.id, title: r.track.title || "Untitled", why: "no PRO", field: "writers-0-pro" });
 
@@ -237,7 +254,7 @@ function word(id: ConditionId, list: AffectedSong[], rows: CheckupInput["rows"])
   const dl = (agency: "pro" | "mlc" | "soundexchange", title: string, text: string): TreatmentStep => ({ title, text, action: { kind: "download", agency } });
   const tick = (title = "Tick Registered", text = "New registrations take a few weeks to show up. We'll remind you to confirm."): TreatmentStep => ({ title, text, action: { kind: "tick" } });
   const total = rows.length;
-  const base = { id, organ: ORGAN_OF[id], severity: SEVERITY[id], songs: list, scan: id };
+  const base = { id, organ: ORGAN_OF[id], severity: SEVERITY[id], songs: list, scan: SCAN_OF[id] ?? (id as ScanId) };
   switch (id) {
     case "broken": {
       const half = list.every((s) => s.why === "no publisher") ? "the publisher half" : list.every((s) => s.why === "no writer") ? "the writer half" : "half";
@@ -318,6 +335,22 @@ function word(id: ConditionId, list: AffectedSong[], rows: CheckupInput["rows"])
       return { ...base, dx: "Your pulse skipped a beat.", what: `${songs(n)} changed after you registered ${n === 1 ? "it" : "them"}. The agencies still have the old details.`,
         symptom: "Royalties can be paid on old details, or held while the agency and your catalog disagree.", cause: "Changes made here haven't reached the agencies.",
         steps: [{ title: "See what changed", text: "The song's checklist shows which registrations need updating.", action: { kind: "changes", trackId: first.id } }, dl("pro", "Download the updated file", "For each agency the song is registered with."), { title: "Update each registration", text: "Change the same details in each agency's portal." }, tick("Tick Updated", "The pulse steadies once every agency has the new details.")] };
+    case "brain-agency": {
+      const s = first.society, name = s?.name ?? first.why.split(":")[0]!;
+      return { ...base, dx: "Mixed signals from the brain.", what: `${songs(n)} ${n === 1 ? "doesn't" : "don't"} match what ${name} has on file.`,
+        symptom: "Agencies pay by what they have on file, so money can go to the wrong people or in the wrong shares.",
+        cause: `Your catalog and your registration say different things: ${first.why.slice(name.length + 2)}.`,
+        steps: [{ title: "See the differences", text: "Each song's checklist lists exactly what's different.", action: { kind: "changes", trackId: first.id } },
+          { title: "Decide which is right", text: "If your catalog is right, update the registration. If the agency is right, fix it here." },
+          at(s, `Update at ${name}`, `Change the registration in ${s ? portal(s).name : name}.`), tick("Tick Updated", "Then upload a fresh list to confirm.")] };
+    }
+    case "pulse-missing": {
+      const s = first.society, name = s?.name ?? "the agency";
+      const file = s?.id === "mlc" ? "mlc" : s?.id === "soundexchange" ? "soundexchange" : "pro";
+      return { ...base, dx: "Your pulse is faint.", what: `${songs(n)} you marked registered ${n === 1 ? "isn't" : "aren't"} on your ${name} list.`,
+        symptom: "If a registration didn't go through, the money for it isn't coming.", cause: `${name}'s list doesn't have ${n === 1 ? "it" : "them"}.`,
+        steps: [at(s, `Check at ${name}`, "It may still be processing, or it didn't go through."), dl(file, "Register again if it's missing", "Download the file and register the songs that aren't there."), tick()] };
+    }
     case "pulse-faint":
       return { ...base, dx: "Your pulse is faint.", what: `${songs(n)} ${n === 1 ? "was" : "were"} registered over ${CONFIRM_AFTER_DAYS / 7} weeks ago but ${n === 1 ? "hasn't" : "haven't"} been confirmed.`,
         symptom: "If a registration didn't go through, you won't know until the money doesn't come.", cause: "Not confirmed yet.",

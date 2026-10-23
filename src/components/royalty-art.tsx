@@ -1,5 +1,5 @@
 import type { KeyboardEvent, ReactElement } from "react";
-import type { ConditionId, Organ, OrganId, OrganState, StepAction } from "@/lib/royalty-checkup";
+import type { Organ, OrganId, OrganState, ScanId, StepAction } from "@/lib/royalty-checkup";
 
 /**
  * Artwork for the Royalty Health Report: organ symbols, the clickable body, a scan picture for every finding and a
@@ -119,7 +119,7 @@ const ARTERY = (px: number, label: string) => `
 const KIDNEY_L = "M86 24c-16 0-24 16-24 36s8 44 24 44c12 0 16-12 12-20-4-6-4-14 0-20 4-8 4-16 0-24-2-10-6-16-12-16z";
 const KIDNEY_R = "M154 24c16 0 24 16 24 36s-8 44-24 44c-12 0-16-12-12-20 4-6 4-14 0-20-4-8-4-16 0-24 2-10 6-16 12-16z";
 const HOLLOW = `fill="none" stroke="#7d828c" stroke-width="2.5" stroke-dasharray="5 4"`;
-const SCANS: Record<ConditionId, string> = {
+const SCANS: Record<ScanId, string> = {
   "artery-left": ARTERY(110, "LEFT ARTERY · WRITER SHARE"),
   "artery-right": ARTERY(150, "RIGHT ARTERY · PUBLISHER SHARE"),
   broken: `<g transform="translate(56 4) scale(1.95)"><path d="M30 55S6 41 6 23a12 12 0 0124-4l-4 9 6 6-4 7 2 14z" fill="#E0313F"/><g transform="translate(6 2) rotate(8 46 30)"><path d="M36 55s22-14 22-32a12 12 0 00-22-4l-2 9 6 6-4 7z" fill="#F0687F" opacity=".55"/></g></g>${MK(124, 64, 22)}${TX(72, 132, "FILLED")}${TX(170, 132, "EMPTY HALF")}`,
@@ -139,7 +139,7 @@ const SCANS: Record<ConditionId, string> = {
 };
 const CLEAR = (organ: Pick<Organ, "id" | "broken">) => `${USE(organSymbol(organ), 80, 6, 80, 80)}<circle cx="170" cy="78" r="16" fill="#004AAD"/><path d="M162 78l6 6 11-12" fill="none" stroke="#fff" stroke-width="3"/>${TX(120, 128, "CLEAR SCAN")}`;
 
-export function Scan({ condition, organ, label = "SCAN" }: { condition?: ConditionId; organ?: Pick<Organ, "id" | "broken">; label?: string }) {
+export function Scan({ condition, organ, label = "SCAN" }: { condition?: ScanId; organ?: Pick<Organ, "id" | "broken">; label?: string }) {
   const art = condition ? SCANS[condition] : organ ? CLEAR(organ) : "";
   return (
     <div className="rr-scan">

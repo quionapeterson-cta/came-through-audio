@@ -11,6 +11,9 @@ import { ACCOUNT_REF, releaseGroups, SINGLES_KEY, songChecklist } from "@/lib/he
 import { CONFIRM_AFTER_DAYS, ORGAN_NAME, royaltyCheckup, sinceLast, STATE_LABEL, summarize, type StepAction } from "@/lib/royalty-checkup";
 import { listReports, sameSummary, saveReport, type SavedReport } from "@/lib/health-reports";
 import { downloadCheckupPdf } from "@/lib/checkup-pdf";
+import { AgencyLists } from "@/components/AgencyLists";
+import { listKey, type ListResult, type SavedListSummary } from "@/lib/agency-lists";
+import type { Society } from "@/lib/repertoires";
 import { downloadAgencyExport } from "@/lib/agency-export";
 import { listSplitSheets, splitStatus as sheetStatus } from "@/lib/splits";
 import { healthReport, type RepertoireCheck } from "@/lib/health";
@@ -95,6 +98,7 @@ export function RoyaltyHealthCheck({ userId, canCatalog, canExport, onUpgrade, o
 
   const [focusRequest, setFocusRequest] = useState<{ id: string; nonce: number }>();
   const [songsOpen, setSongsOpen] = useState(false);
+  const [listsOpen, setListsOpen] = useState(false);
   const [signedSheets, setSignedSheets] = useState<Map<string, boolean>>();
   useEffect(() => {
     if (!canCatalog) return;
@@ -134,7 +138,7 @@ export function RoyaltyHealthCheck({ userId, canCatalog, canExport, onUpgrade, o
     if (a.kind === "portal") return void window.open(a.url, "_blank", "noopener,noreferrer");
     if (a.kind === "split") return onSplitSheet ? onSplitSheet(a.trackId) : onUpgrade();
     if (a.kind === "join") return void window.open("/docs/royalty-health-suite", "_blank", "noopener");
-    if (a.kind === "upload") return showSong();
+    if (a.kind === "upload") { setListsOpen(true); setTimeout(() => document.getElementById("agency-lists")?.scrollIntoView({ behavior: "smooth", block: "start" }), 30); return; }
     if (a.kind === "distributor") {
       const t = allTracks.find((x) => x.id === a.trackId);
       const r = report.rows.find((x) => x.track.id === a.trackId);
@@ -147,6 +151,34 @@ export function RoyaltyHealthCheck({ userId, canCatalog, canExport, onUpgrade, o
     const catalogOnly = (tracks ?? []).filter((t) => !isInspectorSong(t.id));
     const held = await downloadAgencyExport(a.agency, catalogOnly, a.agency === "pro" ? "PRO cheat sheet" : a.agency === "mlc" ? "MLC registration" : "SoundExchange registration");
     if (held.length) toast.warning(`${held.length} song${held.length === 1 ? " was" : "s were"} left out until ${held.length === 1 ? "its" : "their"} writer details are complete.`);
+  }
+
+  // Agency lists: the societies this catalog registers with, and the songs that belong on each one's list.
+  const listSocieties = useMemo(() => {
+    const seen = new Map<string, Society>();
+    for (const { c } of checkupRows) for (const st of c.steps) if (st.stage === "register" && st.society) seen.set(st.society.id, st.society);
+    return [...seen.values()];
+  }, [checkupRows]);
+  const songsFor = (sid: string) => checkupRows.filter(({ c }) => c.steps.some((st) => st.stage === "register" && st.society?.id === sid)).map(({ r }) => r.track);
+  const listSummaries = Object.fromEntries(listSocieties.map((x) => {
+    try { const v = statusOf(ACCOUNT_REF).steps[listKey(x.id)]; return [x.id, v ? (JSON.parse(v) as SavedListSummary) : undefined]; } catch { return [x.id, undefined]; }
+  }));
+
+  /** Saves an uploaded list's comparison: matches confirm the song, differences and missing songs go to the report. */
+  async function applyList(society: Society, result: ListResult, file: string) {
+    const at = new Date().toISOString(), key = listKey(society.id);
+    const found = new Map([...result.matched, ...result.differences].map((m) => [m.trackId, m]));
+    for (const t of songsFor(society.id)) {
+      const m = found.get(t.id), cur = statusOf(t.id), steps = { ...cur.steps };
+      if (m && !isInspectorSong(t.id)) await mark(t.id, society.id, "found", m.work?.workId || undefined);
+      if (m && isInspectorSong(t.id)) { delete steps[`not_listed:${society.id}`]; steps[`found:${society.id}`] = at; }
+      if (m && !m.issues.length) delete steps[key];
+      else steps[key] = JSON.stringify(m ? { at, issues: m.issues } : { at, missing: true });
+      if (JSON.stringify(steps) !== JSON.stringify(cur.steps)) await updateStatus({ ...cur, steps });
+    }
+    const account = statusOf(ACCOUNT_REF);
+    const summary: SavedListSummary = { at, file, works: result.works, matched: result.matched.length, differences: result.differences.length, notListed: result.notListed.length };
+    await updateStatus({ ...account, steps: { ...account.steps, [key]: JSON.stringify(summary) } });
   }
 
   /** A calendar reminder to confirm registrations, six weeks out (new registrations take a few weeks to show). */
@@ -265,6 +297,10 @@ export function RoyaltyHealthCheck({ userId, canCatalog, canExport, onUpgrade, o
         <Section id="song-by-song" title="Song by song" open={songsOpen} onToggle={setSongsOpen}
           summary={`${songsLabel(report.rows.length)} · ${kinds.filter((g) => g.key !== SINGLES_KEY && !g.key.startsWith("~")).length} albums & EPs · ${kinds.find((g) => g.key === SINGLES_KEY)?.songs.length ?? 0} singles · ${attention ? `⚠️ ${attention} need attention` : "✓ all on track"}`}>
           {checklist}
+        </Section>
+        <Section id="agency-lists" title="Confirm with your agency lists" open={listsOpen} onToggle={setListsOpen}
+          summary={Object.values(listSummaries).some(Boolean) ? Object.entries(listSummaries).filter(([, v]) => v).map(([id, v]) => `${listSocieties.find((x) => x.id === id)?.name}: ${v!.matched} matched${v!.differences ? `, ⚠️ ${v!.differences} different` : ""}`).join(" · ") : "Upload what each agency has on file · turns estimates into confirmed matches"}>
+          <AgencyLists societies={listSocieties} songsFor={songsFor} summaries={listSummaries} onApply={applyList} />
         </Section>
         <Section title="Check a song that isn't in your catalog" summary={`Royalty Inspector · ${songsLabel(inspectorSongs.length)} checked`}>{inspector}</Section>
         <Section title="Past reports" summary={reports?.length ? `${reports.length} report${reports.length === 1 ? "" : "s"} since ${shortDate(reports.at(-1)!.createdAt)}${since?.healed.length ? ` · healed: ${since.healed.join(", ")}` : ""}` : "Your first report is saved after this checkup"}>

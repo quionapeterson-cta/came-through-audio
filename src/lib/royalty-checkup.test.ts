@@ -92,6 +92,15 @@ describe("royalty checkup", () => {
     expect(ids(run([track("a")], [edited]))).toContain("pulse-skip");
   });
 
+  it("turns an uploaded agency list into mixed signals and faint pulses", () => {
+    const st = (steps: Record<string, string>): SongStatus => ({ ...registeredAll("a"), steps: { ...registeredAll("a").steps, ...steps } });
+    const mixed = run([track("a", { iswc: "T1234567890" })], [st({ "list:ascap": JSON.stringify({ at: "x", issues: ["Bo Ray isn't on the agency's registration"] }) })]);
+    expect(mixed.lead).toMatchObject({ id: "brain-agency", what: "1 song doesn't match what ASCAP has on file.", cause: "Your catalog and your registration say different things: Bo Ray isn't on the agency's registration." });
+    expect(mixed.lead!.scan).toBe("brain-mixed");
+    const missing = run([track("a", { iswc: "T1234567890" })], [st({ "list:mlc": JSON.stringify({ at: "x", missing: true }) })]);
+    expect(missing.lead).toMatchObject({ id: "pulse-missing", what: "1 song you marked registered isn't on your The MLC list." });
+  });
+
   it("compares with the last checkup", () => {
     const before = summarize(run([track("a", { publishers: [] })]));
     const now = summarize(run([track("a", { iswc: "T1234567890" })], [registeredAll("a")]));
