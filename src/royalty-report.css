@@ -96,6 +96,10 @@
   .rr-beat, .rr-halo, .rr-ekg, .rr-mini path, .rr-gauge, .rr-rise { animation: none !important; stroke-dashoffset: 0 !important; }
   .rr-halo { opacity: 0; }
 }
+@media (max-width: 520px) {
+  .rr-monitor { grid-template-columns: minmax(0, 1fr) auto; }
+  .rr-monitor svg { grid-column: 1 / -1; grid-row: 2; }
+}
 @media (max-width: 960px) {
   .rr-hero { grid-template-columns: minmax(0, 1fr); }
   .rr-body svg { max-width: 340px; }

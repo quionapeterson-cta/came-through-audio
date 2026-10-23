@@ -57,16 +57,16 @@ export function BodyDiagram({ organs, selected, onSelect }: { organs: Organ[]; s
   };
   const look = (id: OrganId) => {
     const s = of(id)?.state ?? "healthy";
-    return { opacity: s === "noflow" ? 0.22 : 1, filter: s === "noflow" ? "grayscale(1)" : undefined };
+    return { opacity: s === "noflow" ? 0.4 : 1, filter: s === "noflow" ? "grayscale(1)" : undefined };
   };
   const mark = (id: OrganId, shape: ReactElement) => {
     const s = of(id)?.state;
-    if (!s || !STATE_RING[s]) return s === "noflow" ? shape : null;
-    return shape;
+    // Rings only for watch (dashed prestige) and treat (red); no-flow organs are simply drawn hollow grey.
+    return s && STATE_RING[s] ? shape : null;
   };
   const ringStyle = (id: OrganId) => {
     const s = of(id)?.state ?? "healthy";
-    return s === "noflow" ? { stroke: "var(--rr-hollow)", strokeDasharray: "5 5" } : { stroke: STATE_RING[s], strokeDasharray: s === "watch" ? "6 4" : undefined };
+    return { stroke: STATE_RING[s], strokeDasharray: s === "watch" ? "6 4" : undefined };
   };
   const heart = of("heart");
   return (
@@ -122,7 +122,7 @@ const HOLLOW = `fill="none" stroke="#7d828c" stroke-width="2.5" stroke-dasharray
 const SCANS: Record<ConditionId, string> = {
   "artery-left": ARTERY(110, "LEFT ARTERY · WRITER SHARE"),
   "artery-right": ARTERY(150, "RIGHT ARTERY · PUBLISHER SHARE"),
-  broken: `<g transform="translate(56 4) scale(1.95)"><path d="M30 55S6 41 6 23a12 12 0 0124-4l-4 9 6 6-4 7 2 14z" fill="#E0313F"/><g transform="translate(6 2) rotate(8 46 30)"><path d="M36 55s22-14 22-32a12 12 0 00-22-4l-2 9 6 6-4 7z" fill="#F0687F" opacity=".55"/></g></g>${MK(124, 64, 22)}${TX(84, 132, "ONE HALF")}${TX(168, 132, "OTHER HALF · EMPTY")}`,
+  broken: `<g transform="translate(56 4) scale(1.95)"><path d="M30 55S6 41 6 23a12 12 0 0124-4l-4 9 6 6-4 7 2 14z" fill="#E0313F"/><g transform="translate(6 2) rotate(8 46 30)"><path d="M36 55s22-14 22-32a12 12 0 00-22-4l-2 9 6 6-4 7z" fill="#F0687F" opacity=".55"/></g></g>${MK(124, 64, 22)}${TX(72, 132, "FILLED")}${TX(170, 132, "EMPTY HALF")}`,
   noheart: `<path d="M120 112S72 84 72 52a24 24 0 0148-8 24 24 0 0148 8c0 32-48 60-48 60z" ${HOLLOW}/><path d="M14 70H226" stroke="#E0313F" stroke-width="3"/>${TX(120, 132, "NO PRO · NO HEARTBEAT")}`,
   "lungs-hold": `${USE("rr-i-lungs", 70, 8, 100, 100)}<path d="M98 10l44 0" stroke="var(--rr-prestige)" stroke-width="4"/><path d="M104 2l32 16M136 2l-32 16" stroke="var(--rr-prestige)" stroke-width="3"/>${TX(120, 128, "AIRWAY CLOSED · NOT REGISTERED")}`,
   "lungs-one": `<path d="M104 30c-24 6-36 34-36 60 0 12 8 20 20 16 10-3 14-8 14-16V36c0-5-1-6-2-6z" fill="#F59AB1"/><path d="M136 30c24 6 36 34 36 60 0 12-8 20-20 16-10-3-14-8-14-16V36c0-5 1-6 2-6z" ${HOLLOW}/><path d="M120 8v30" stroke="#F0687F" stroke-width="4"/>${MK(152, 70, 34)}${TX(120, 130, "RECORDING NOT LINKED · NO ISRC")}`,
