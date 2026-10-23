@@ -5,24 +5,31 @@ import { emailLayout } from "./email-layout";
 const REMINDED = "collab_trial_reminded";
 const REMINDER_WINDOW_DAYS = 5;
 
-function reminderHtml(daysLeft: number, when: string, plansUrl: string): string {
-  return emailLayout(`<p style="font-size:12px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:#004AAD;margin:0">Your Catalog &amp; Collaborate Trial</p>
+/** Trials are Catalog & Collaborate (split sheets, contracts) or Catalog Plus (co-writer IPI requests), by price. */
+export const trialPlan = (priceId?: string | null) => (priceId?.startsWith("catalog_plus") ? "Catalog Plus" : "Catalog & Collaborate");
+
+function reminderHtml(daysLeft: number, when: string, plansUrl: string, plan: string): string {
+  const html = plan.replace("&", "&amp;");
+  const loses = plan === "Catalog Plus"
+    ? "On Free you can still run Royalty Health Checks and sign split sheets you're invited to, but you won't be able to embed metadata or add songs to your catalog. Your saved catalog stays safe."
+    : "On Free you can still sign split sheets you're invited to, but you won't be able to create split sheets or use Collaborate features. Your saved catalog stays safe.";
+  return emailLayout(`<p style="font-size:12px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:#004AAD;margin:0">Your ${html} Trial</p>
 <h1 style="font-size:24px;margin:8px 0 16px">Your free trial ends in ${daysLeft} day${daysLeft === 1 ? "" : "s"}</h1>
-<p style="font-size:15px;line-height:1.6">Your 30-day Catalog &amp; Collaborate access ends on <b>${when}</b>. After that your account moves to the Free plan automatically. You won't be charged.</p>
-<p style="font-size:15px;line-height:1.6">On Free you can still sign split sheets you're invited to, but you won't be able to create split sheets or use Collaborate features. Your saved catalog stays safe.</p>
-<a href="${plansUrl}" style="display:inline-block;background:#004AAD;color:#ffffff;text-decoration:none;font-weight:700;padding:14px 28px;border-radius:8px">Keep Collaborate Access</a>`,
-    { reason: "You're receiving this account notice because your free Catalog & Collaborate Trial on Came Through Audio is ending soon." });
+<p style="font-size:15px;line-height:1.6">Your 30-day ${html} access ends on <b>${when}</b>. After that your account moves to the Free plan automatically. You won't be charged.</p>
+<p style="font-size:15px;line-height:1.6">${loses}</p>
+<a href="${plansUrl}" style="display:inline-block;background:#004AAD;color:#ffffff;text-decoration:none;font-weight:700;padding:14px 28px;border-radius:8px">Keep ${plan === "Catalog Plus" ? "Catalog Plus" : "Collaborate"} Access</a>`,
+    { reason: `You're receiving this account notice because your free ${plan} Trial on Came Through Audio is ending soon.` });
 }
 
-async function sendReminderEmail(key: string, idempotencyKey: string, email: string, daysLeft: number, when: string, plansUrl: string): Promise<boolean> {
+async function sendReminderEmail(key: string, idempotencyKey: string, email: string, daysLeft: number, when: string, plansUrl: string, plan: string): Promise<boolean> {
   const res = await fetch("https://api.resend.com/emails", {
     method: "POST",
     headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json", "Idempotency-Key": idempotencyKey },
     body: JSON.stringify({
       from: "Came Through Audio <collaborate@camethroughaudio.com>",
       to: [email],
-      subject: `Your Catalog & Collaborate Trial ends in ${daysLeft} day${daysLeft === 1 ? "" : "s"}`,
-      html: reminderHtml(daysLeft, when, plansUrl),
+      subject: `Your ${plan} Trial ends in ${daysLeft} day${daysLeft === 1 ? "" : "s"}`,
+      html: reminderHtml(daysLeft, when, plansUrl, plan),
     }),
   });
   if (!res.ok) { console.error(`Trial reminder failed [${res.status}]: ${await res.text()}`); return false; }
@@ -48,7 +55,7 @@ export function formatEndDate(periodEnd: string): string {
 /** Sends the reminder for one trial row owned by the given email. Returns true if sent and marked. */
 export async function sendReminderForTrial(
   supabaseAdmin: any,
-  sub: { id: string; current_period_end: string | null },
+  sub: { id: string; current_period_end: string | null; price_id?: string | null },
   email: string,
   plansUrl: string,
 ): Promise<boolean> {
@@ -56,7 +63,7 @@ export async function sendReminderForTrial(
   const key = resendKey();
   const daysLeft = daysLeftInWindow(sub.current_period_end);
   if (!key || daysLeft === null) return false;
-  const ok = await sendReminderEmail(key, `trial-reminder-${sub.id}`, email, daysLeft, formatEndDate(sub.current_period_end), plansUrl);
+  const ok = await sendReminderEmail(key, `trial-reminder-${sub.id}`, email, daysLeft, formatEndDate(sub.current_period_end), plansUrl, trialPlan(sub.price_id));
   if (!ok) return false;
   await supabaseAdmin.from("subscriptions").update({ paddle_customer_id: REMINDED }).eq("id", sub.id);
   return true;
@@ -71,7 +78,7 @@ export async function sendAllDueTrialReminders(plansUrl: string): Promise<{ scan
   const now = new Date();
   const windowEnd = new Date(now.getTime() + REMINDER_WINDOW_DAYS * 86400000);
   const { data: subs, error } = await supabaseAdmin.from("subscriptions")
-    .select("id, user_id, current_period_end")
+    .select("id, user_id, current_period_end, price_id")
     .like("paddle_subscription_id", "collab_trial_%")
     .neq("paddle_customer_id", REMINDED)
     .eq("status", "trialing")
@@ -136,7 +143,8 @@ export async function trialBlockReason(admin: Admin, o: { userId: string; invite
   if (DISPOSABLE.includes(domain)) return "disposable email";
 
   const { data: subs } = await admin.from("subscriptions").select("price_id, status, current_period_end, paddle_subscription_id, environment").eq("user_id", o.inviterId).eq("environment", o.environment);
-  const needed = o.source === "contract" ? "management" : "collaborate";
+  // Co-writer IPI requests can come from any paid plan; the inviter just has to be paying (not on a trial).
+  const needed = o.source === "contract" ? "management" : o.source === "ipi_request" ? "plus" : "collaborate";
   const paying = (subs ?? []).some((s) => !s.paddle_subscription_id?.startsWith("collab_trial_") && isActiveSub(s) && hasTier(tierFromPrice(s.price_id), needed));
   const { data: roles } = await admin.from("user_roles").select("role").eq("user_id", o.inviterId);
   if (!paying && !(roles ?? []).some((r) => r.role === "super_admin")) return "inviter is not a paying member";

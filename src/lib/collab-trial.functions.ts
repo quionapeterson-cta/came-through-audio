@@ -54,7 +54,8 @@ export const grantCollaboratorTrial = createServerFn({ method: "POST" })
       paddle_subscription_id: subId,
       paddle_customer_id: "collab_trial",
       product_id: "collab_trial",
-      price_id: "catalog_collaborate_yearly",
+      // Co-writers asked for their IPI get Catalog Plus (their own catalog); split and contract signers get Collaborate.
+      price_id: source === "ipi_request" ? "catalog_plus_yearly" : "catalog_collaborate_yearly",
       status: "trialing",
       current_period_start: now.toISOString(),
       current_period_end: end.toISOString(),
@@ -74,7 +75,7 @@ export const sendTrialEndingReminder = createServerFn({ method: "POST" })
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { sendReminderForTrial, daysLeftInWindow } = await import("./collab-trial.server");
     const { data: sub } = await supabaseAdmin.from("subscriptions")
-      .select("id, paddle_customer_id, current_period_end")
+      .select("id, paddle_customer_id, current_period_end, price_id")
       .eq("paddle_subscription_id", `collab_trial_${context.userId}`)
       .eq("environment", data.environment).maybeSingle();
     if (!sub || sub.paddle_customer_id === "collab_trial_reminded" || !sub.current_period_end) return { sent: false };

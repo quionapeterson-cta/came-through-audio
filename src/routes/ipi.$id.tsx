@@ -67,7 +67,7 @@ function IpiPage() {
         setLegal(d?.answer?.legal_name ?? d?.writer_name ?? "");
         clearReturn();
         if (d) grantTrial({ data: { ipiRequestId: id, environment: getPaymentsEnvironment() } })
-          .then((r) => { if (r.granted) toast.success("Welcome! You've unlocked a free 30-day Catalog & Collaborate account."); })
+          .then((r) => { if (r.granted) toast.success("Welcome! You've unlocked a free 30-day Catalog Plus account."); })
           .catch(() => {});
       })
       .catch((e) => setError(e instanceof Error ? e.message : "Could not open this request."));
@@ -110,7 +110,7 @@ function IpiPage() {
               <Music4 className="h-10 w-10 text-primary" />
               <h1 className="text-3xl font-bold">A co-writer needs your PRO and IPI</h1>
               <p className="text-muted-foreground">Create your free account using the same email the request was sent to, or log in. Then add your details in about a minute, so your writer share gets paid.</p>
-              <p className="rounded-lg border border-primary p-3 text-sm font-medium">Bonus: a free 30-day Catalog &amp; Collaborate account when you join.</p>
+              <p className="rounded-lg border border-primary p-3 text-sm font-medium">Bonus: a free 30-day Catalog Plus account when you join, for your own catalog.</p>
             </div>
             <SignupCard returnPath={`/ipi/${id}`} onAuthed={() => {}} inviteMode />
           </div>

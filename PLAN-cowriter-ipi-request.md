@@ -1,6 +1,6 @@
 # PLAN — Co-writer PRO / IPI request · v1
 
-Status: **approved and BUILT 2026-10-23.** Founder applies migration 20261024140000.
+Status: **approved and BUILT 2026-10-23.** Founder applies migrations 20261024140000 and 20261024150000.
 Preview: https://claude.ai/artifact/QWgd4ibVseNHYZfVo2sgok
 
 ## The flow
@@ -20,5 +20,5 @@ Preview: https://claude.ai/artifact/QWgd4ibVseNHYZfVo2sgok
 - `src/lib/ipi-request.functions.ts` (send email, server), `src/lib/ipi-requests.ts` (create, list, apply answer: fills blanks only), `src/routes/ipi.$token.tsx` (public page, gate-exempt like /sign), `src/components/IpiRequestDialog.tsx`, report + checklist buttons, tests.
 
 ## Decided
-- **Who can send:** Catalog & Collaborate and up, like signature requests.
-- **Recipients:** free account required; the email carries the 30-day Catalog & Collaborate trial line, as split invites do.
+- **Who can send:** Catalog Plus and up, at no extra charge (founder, 2026-10-23; migration 20261024150000). Free accounts have no catalog songs to fill.
+- **Recipients:** free account required; they get a **30-day Catalog Plus trial** (their own catalog) when the sender is on a paid plan, through the existing trial fraud guard. Split-sheet and contract signers keep the Catalog & Collaborate trial.

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import { AlertTriangle, ChevronRight, Hourglass, Lock } from "lucide-react";
+import { AlertTriangle, ChevronRight, Hourglass } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { listTracks, type CatalogTrack } from "@/lib/catalog";
@@ -204,7 +204,7 @@ export function RoyaltyHealthCheck({ userId, canCatalog, canExport, onUpgrade, o
   const cowriters: Cowriter[] = useMemo(() => cowritersMissing(catalogTracks, loadOnboarding(userId)?.legalName ?? "").map((c) => ({ ...c, email: emails.get(nameKey(c.name)) })), [catalogTracks, emails, userId]);
   const answered = ipiRequests.filter((r) => r.status === "answered").length;
   const waiting = ipiRequests.filter((r) => r.status === "pending").length;
-  const askCowriter = () => (canExport ? setAskOpen(true) : onUpgrade());
+  const askCowriter = () => (canCatalog ? setAskOpen(true) : onUpgrade());
 
   /** Approving a co-writer's answer fills their blank PRO and IPI on each song; nothing already entered changes. */
   async function applyAnswer(r: IpiRequest) {
@@ -364,7 +364,7 @@ export function RoyaltyHealthCheck({ userId, canCatalog, canExport, onUpgrade, o
           summary={answered ? `⚠️ ${answered} answer${answered === 1 ? "" : "s"} to approve${waiting ? ` · ${waiting} waiting` : ""}` : waiting ? `${waiting} request${waiting === 1 ? "" : "s"} waiting for an answer` : `${cowriters.length} co-writer${cowriters.length === 1 ? " is" : "s are"} missing a PRO or IPI`}>
           <div className="space-y-4">
             <IpiRequestList requests={ipiRequests} onApply={applyAnswer} onDismiss={dismissRequest} onResend={resendRequest} />
-            {cowriters.length > 0 && <Button variant="outline" onClick={askCowriter}>{!canExport && <Lock />}Ask a co-writer for their PRO and IPI</Button>}
+            {cowriters.length > 0 && <Button variant="outline" onClick={askCowriter}>Ask a co-writer for their PRO and IPI</Button>}
           </div>
         </Section>}
         <Section id="song-by-song" title="Song by song" open={songsOpen} onToggle={setSongsOpen}

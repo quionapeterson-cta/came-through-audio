@@ -9,7 +9,7 @@ const esc = escapeHtml;
 
 /**
  * Emails a co-writer the link to add their PRO and IPI (PLAN-cowriter-ipi-request.md). Same limits, blocklist and
- * opt-out as split-sheet invites, counted from the server's own send log. Catalog & Collaborate and up.
+ * opt-out as split-sheet invites, counted from the server's own send log. Catalog Plus and up.
  */
 export const sendIpiRequest = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
@@ -17,12 +17,12 @@ export const sendIpiRequest = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const key = process.env["RESEND_API_KEY"] || process.env["CameThroughAudio"];
     if (!key) throw new Error("Email sending is not configured yet.");
-    const { data: canSend, error: tierErr } = await context.supabase.rpc("has_tier" as never, { _uid: context.userId, _needed: "collaborate" } as never);
+    const { data: canSend, error: tierErr } = await context.supabase.rpc("has_tier" as never, { _uid: context.userId, _needed: "plus" } as never);
     if (tierErr) {
       console.error("has_tier failed:", tierErr);
       throw new Error(`Couldn't check your plan (${tierErr.message}). Contact support and we'll help right away.`);
     }
-    if (!canSend) throw new Error("Co-writer requests are included with Catalog & Collaborate.");
+    if (!canSend) throw new Error("Co-writer requests are included with Catalog Plus and up.");
 
     const { data: req, error } = await context.supabase.from("ipi_requests" as never)
       .select("id, writer_name, role, email, songs, artist_name, status").eq("id", data.id).maybeSingle();
@@ -68,7 +68,7 @@ export const sendIpiRequest = createServerFn({ method: "POST" })
 <p style="margin:6px 0 0;font-size:17px;font-weight:700;line-height:1.5">${shown.map((t) => `"${esc(t)}"`).join("<br>")}${titles.length > shown.length ? `<br><span style="font-weight:400;color:#555">and ${titles.length - shown.length} more</span>` : ""}</p>
 <p style="margin:10px 0 0;font-size:14px;color:#555">Listed as: <b style="color:#0b0b0b">${esc(name)}${role ? ` · ${esc(role)}` : ""}</b></p></div>
 <a href="${link}" style="display:inline-block;background:#004AAD;color:#ffffff;text-decoration:none;font-weight:700;padding:14px 28px;border-radius:8px">Add my PRO &amp; IPI</a>
-<p style="font-size:13px;line-height:1.6;color:#555;margin-top:24px"><b>Adding your details is always 100% free.</b> Create your free account with this email (<b>${esc(recipient)}</b>) and you'll also get a complimentary <b>30-day Catalog &amp; Collaborate Trial</b>: split sheets, catalog tools and metadata embedding, no credit card required.</p>
+<p style="font-size:13px;line-height:1.6;color:#555;margin-top:24px"><b>Adding your details is always 100% free.</b> Create your free account with this email (<b>${esc(recipient)}</b>) and you'll also get a complimentary <b>30-day Catalog Plus Trial</b>: your own master catalog, metadata embedding and free Royalty Health Checks, no credit card required.</p>
 <p style="font-size:13px;line-height:1.6;color:#555">It takes about a minute. Your IPI number is in your PRO account (ASCAP, BMI, SESAC or your country's society). Not in a PRO yet? Just say so; you can join one and add it later.</p>
 <p style="font-size:13px;line-height:1.6;color:#555">Only ${esc(artist)} sees what you enter. It's used to register these songs and is never published or added to the music files.</p>`,
       { reason: `You're receiving this because ${artist} listed you as a co-writer and asked for your PRO and IPI details.`, optOutUrl });
