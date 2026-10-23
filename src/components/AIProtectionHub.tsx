@@ -145,6 +145,7 @@ export function AIProtectionHub({ userId, purchases, justPaid, track }: { userId
   const [attest, setAttest] = useState(false);
   const [busy, setBusy] = useState(false);
   const [issued, setIssued] = useState<Certificate>();
+  const [videosFor, setVideosFor] = useState<string>();
   function resetProof() {
     setDaw(undefined); setNotes(undefined); setDraftNotes(""); setDraftDates("");
     setStatus({ daw: {}, drafts: {} }); setAttest(false); backups.current = {};
@@ -182,7 +183,8 @@ export function AIProtectionHub({ userId, purchases, justPaid, track }: { userId
         if (copy.size > MAX_PROOF_BYTES) throw new Error("too big");
       }
       const ext = copy.name.split(".").pop()?.toLowerCase() || "mp4";
-      const path = `${userId}/${Date.now()}_${kind}.${ext}`;
+      // "_720p" marks a shrunk copy, whose fingerprint differs from the original's (shown when downloading it back).
+      const path = `${userId}/${Date.now()}_${kind}${copy === file ? "" : "_720p"}.${ext}`;
       const { error } = await supabase.storage.from("proof-videos").upload(path, copy, { contentType: proofVideoType(copy) ?? copy.type });
       if (error) throw error;
       patchProof(kind, hash, { backup: "saved", path, progress: undefined });
@@ -270,7 +272,9 @@ export function AIProtectionHub({ userId, purchases, justPaid, track }: { userId
                   <div className="flex gap-2">
                     <Button size="sm" variant="outline" onClick={() => void saveCertificatePdf(c)}><Download className="h-4 w-4" />PDF</Button>
                     {c.ots_receipt && <Button size="sm" variant="outline" title={c.manifest ? "Manifest .txt + .ots receipt" : "Use with the manifest .txt you downloaded when the certificate was issued"} onClick={() => saveBitcoinProof(c)}><Download className="h-4 w-4" />Bitcoin proof</Button>}
+                    <Button size="sm" variant="outline" aria-expanded={videosFor === c.id} onClick={() => setVideosFor(videosFor === c.id ? undefined : c.id)}><Video className="h-4 w-4" />Proof videos</Button>
                   </div>
+                  {videosFor === c.id && <ProofVideos cert={c} />}
                 </li>
               ))}
               {waiting.map((id) => (
@@ -494,6 +498,42 @@ function ProofBox({ title, tip, proof, status, on, children }: { title: string; 
         <p className="text-muted-foreground">{proof.backup === "saving" ? `Saving a private backup copy${proof.progress !== undefined ? ` · ${proof.progress}%` : ""}. You can keep going.`
           : proof.backup === "saved" ? "Private backup copy saved." : "Keep this original video: its fingerprint is on your certificate. (We couldn't store a backup copy.)"}</p></div>}
       {children}
+    </div>
+  );
+}
+
+/**
+ * Downloads a certificate's private backup videos (signed links, 10 minutes). A "_720p" copy was shrunk to fit the
+ * storage limit, so only the artist's original file matches the fingerprint.
+ */
+function ProofVideos({ cert }: { cert: Certificate }) {
+  const [busy, setBusy] = useState<string>();
+  const videos = [["DAW session video", cert.session_video_url], ["Draft history video", cert.notes_proof_url]] as const;
+  async function get(label: string, path: string) {
+    setBusy(path);
+    try {
+      const name = `${(cert.track_title || "song").replace(/[^\w-]+/g, "_")} - ${label}.${path.split(".").pop()}`;
+      const { data, error } = await supabase.storage.from("proof-videos").createSignedUrl(path, 600, { download: name });
+      if (error || !data) throw error ?? new Error("missing");
+      window.location.assign(data.signedUrl);
+    } catch { toast.error("Couldn't get that video. Try again in a moment."); }
+    finally { setBusy(undefined); }
+  }
+  return (
+    <div className="space-y-2 rounded-xl bg-muted/50 p-3 text-sm sm:col-span-3">
+      {videos.map(([label, path]) => {
+        const saved = !!path && path !== DEVICE_ONLY;
+        return (
+          <div key={label} className="flex flex-wrap items-center justify-between gap-2">
+            <span>
+              <span className="font-semibold">{label}</span>{" "}
+              <span className="text-xs text-muted-foreground">{!saved ? "· No backup saved. Keep your original file." : path.includes("_720p") ? "· 720p copy. Your original file is the one that matches the certificate." : ""}</span>
+            </span>
+            {saved && <Button size="sm" variant="ghost" disabled={busy === path} onClick={() => void get(label, path)}>{busy === path ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}Download</Button>}
+          </div>
+        );
+      })}
+      <p className="text-xs text-muted-foreground">Backups are private to your account. The fingerprints on your certificate match your original files exactly.</p>
     </div>
   );
 }
