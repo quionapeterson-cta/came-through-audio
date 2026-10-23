@@ -1,4 +1,6 @@
 import { supabase } from "@/integrations/supabase/client";
+import { SITE_URL } from "@/lib/email-layout";
+import { trustedOrigin } from "@/lib/invite-limits";
 import { hasPro, isIpi } from "@/lib/audit";
 import type { CatalogTrack } from "@/lib/catalog";
 import { creditName, writerRole, type Contributor, type Metadata } from "@/lib/metadata";
@@ -69,7 +71,8 @@ export async function setIpiRequestStatus(id: string, status: "applied" | "dismi
   if (error) throw error;
 }
 
-export const ipiLink = (id: string) => `${window.location.origin}/ipi/${id}`;
+/** Shared links always open the live site, never a Lovable editor preview (which needs a Lovable login). */
+export const ipiLink = (id: string) => `${trustedOrigin(window.location.origin, SITE_URL)}/ipi/${id}`;
 
 /** The invitee's view (their account email must match the invited email). */
 export type IpiInvite = { id: string; writer_name: string; role: string; artist_name: string; songs: string[]; answered: boolean; expired: boolean; answer: IpiAnswer | null };

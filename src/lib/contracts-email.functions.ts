@@ -1,7 +1,8 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-import { emailLayout, escapeHtml } from "./email-layout";
+import { emailLayout, escapeHtml, SITE_URL } from "./email-layout";
+import { trustedOrigin } from "./invite-limits";
 import { COMPANY_LEGAL_NAME } from "./contract-blueprints";
 
 const FROM = "Came Through Audio <collaborate@camethroughaudio.com>";
@@ -47,7 +48,7 @@ export const sendContractInvite = createServerFn({ method: "POST" })
     const { data: owner } = await context.supabase.from("profiles").select("stage_name, legal_name").eq("id", context.userId).maybeSingle();
     const from = k.is_company ? COMPANY_LEGAL_NAME : owner?.stage_name || owner?.legal_name || "A Came Through Audio member";
     // Company agreements sign without an account, through a private link (contract-sign.functions.ts).
-    const origin = new URL(data.origin).origin;
+    const origin = trustedOrigin(data.origin, SITE_URL);
     const link = k.is_company ? (await import("./contract-sign.server")).signLink(origin, p.id) : `${origin}/contract/${p.id}`;
     const howToSign = k.is_company
       ? `<b>No account needed.</b> Open the agreement, read it, and sign with a 6-digit code we email to this address (<b>${esc(email)}</b>). Your signature is time-stamped and secured with a verification hash, and you'll get the signed copy when everyone has signed. Take your time, and talk to an attorney if you have questions before signing.`

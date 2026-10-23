@@ -39,13 +39,19 @@ export function inviteBlockReason(c: InviteCounts, now = Date.now()): string | n
   return null;
 }
 
-const TRUSTED_HOSTS = /(^|\.)(camethroughaudio\.com|lovable\.app|lovableproject\.com)$|^localhost$/;
+const TRUSTED_HOSTS = /(^|\.)camethroughaudio\.com$|^localhost$/;
 
-/** The site address used in email links: the sender's page origin only when it's one of ours, so a link can't point elsewhere. */
+/**
+ * The site address used in email links: the sender's page origin only when it's the live site (our domain or the
+ * published address in `fallback`), so a link can't point elsewhere. Lovable editor previews (id-preview--….lovable.app,
+ * ….lovableproject.com) need a Lovable login, so recipients would land on Lovable's own "no permission" page: those
+ * fall back to the published site too.
+ */
 export function trustedOrigin(origin: string, fallback: string) {
   try {
     const u = new URL(origin);
-    return TRUSTED_HOSTS.test(u.hostname) && (u.protocol === "https:" || u.hostname === "localhost") ? u.origin : fallback;
+    const live = TRUSTED_HOSTS.test(u.hostname) || u.hostname === new URL(fallback).hostname;
+    return live && (u.protocol === "https:" || u.hostname === "localhost") ? u.origin : fallback;
   } catch {
     return fallback;
   }

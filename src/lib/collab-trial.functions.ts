@@ -1,6 +1,8 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { SITE_URL } from "@/lib/email-layout";
+import { trustedOrigin } from "@/lib/invite-limits";
 
 export const COLLAB_TRIAL_DAYS = 30;
 
@@ -81,7 +83,7 @@ export const sendTrialEndingReminder = createServerFn({ method: "POST" })
     if (!sub || sub.paddle_customer_id === "collab_trial_reminded" || !sub.current_period_end) return { sent: false };
     const email = (context.claims as { email?: string }).email;
     if (!email) return { sent: false };
-    const plans = `${new URL(data.origin).origin}/plans`;
+    const plans = `${trustedOrigin(data.origin, SITE_URL)}/plans`;
     const sent = await sendReminderForTrial(supabaseAdmin, sub, email, plans);
     return { sent, daysLeft: daysLeftInWindow(sub.current_period_end) ?? undefined };
   });

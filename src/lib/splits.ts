@@ -1,4 +1,6 @@
 import { supabase } from "@/integrations/supabase/client";
+import { SITE_URL } from "@/lib/email-layout";
+import { trustedOrigin } from "@/lib/invite-limits";
 import { requestBadgeCheck } from "@/lib/badge-events";
 import type { CatalogTrack } from "@/lib/catalog";
 import { PROS, creditName, type Metadata } from "@/lib/metadata";
@@ -212,7 +214,8 @@ export async function saveSplitSheet(catalogId: string, collaborators: SplitColl
   return saved;
 }
 
-export const signLink = (rowId: string) => `${window.location.origin}/sign/${rowId}`;
+/** Shared links always open the live site, never a Lovable editor preview (which needs a Lovable login). */
+export const signLink = (rowId: string) => `${trustedOrigin(window.location.origin, SITE_URL)}/sign/${rowId}`;
 
 export type SplitInvite = {
   row_id: string; track_title: string; artist_name: string; isrc: string | null;

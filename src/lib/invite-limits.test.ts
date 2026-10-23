@@ -35,7 +35,10 @@ describe("trustedOrigin", () => {
   const site = "https://pixel-perfect-studio-382.lovable.app";
   it("keeps our own addresses", () => {
     expect(trustedOrigin("https://camethroughaudio.com/workspace", site)).toBe("https://camethroughaudio.com");
-    expect(trustedOrigin("https://id-preview--abc.lovable.app", site)).toBe("https://id-preview--abc.lovable.app");
+    // Editor previews need a Lovable login, so recipients get the published site instead.
+    expect(trustedOrigin("https://id-preview--abc.lovable.app", site)).toBe(site);
+    expect(trustedOrigin("https://abc.lovableproject.com", site)).toBe(site);
+    expect(trustedOrigin(`${site}/workspace`, site)).toBe(site);
   });
   it("replaces anyone else's", () => {
     expect(trustedOrigin("https://evil-lovable.app", site)).toBe(site);

@@ -1,4 +1,6 @@
 import { supabase } from "@/integrations/supabase/client";
+import { SITE_URL } from "@/lib/email-layout";
+import { trustedOrigin } from "@/lib/invite-limits";
 import { requestBadgeCheck } from "@/lib/badge-events";
 
 export type ContractStatus = "draft" | "sent" | "signed";
@@ -147,7 +149,8 @@ export async function listReceivedContracts(): Promise<ReceivedContract[]> {
   return (data ?? []) as unknown as ReceivedContract[];
 }
 
-export const contractLink = (partyId: string) => `${window.location.origin}/contract/${partyId}`;
+/** Shared links always open the live site, never a Lovable editor preview (which needs a Lovable login). */
+export const contractLink = (partyId: string) => `${trustedOrigin(window.location.origin, SITE_URL)}/contract/${partyId}`;
 
 export const isValidEmail = (e: string) => /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(e.trim());
 
