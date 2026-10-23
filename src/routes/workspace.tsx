@@ -42,7 +42,7 @@ export const Route = createFileRoute("/workspace")({
   head: () => ({
     meta: [
       { title: "Workspace — Came Through Audio" },
-      { name: "description", content: "Your Came Through Audio workspace: catalog, royalty health, splits, contracts and coaching." },
+      { name: "description", content: "Your Came Through Audio workspace: catalog, royalty health, splits and contracts." },
       { property: "og:title", content: "Workspace — Came Through Audio" },
       { property: "og:description", content: "Manage your music business from one secure dashboard." },
       { property: "og:type", content: "website" },
@@ -270,16 +270,19 @@ function useStudioMode() {
   return { on, toggle: () => setOn((v) => !v) };
 }
 
+/** One on One Coaching stays hidden until there's a plan for it (founder, 2026-10-23). Set to true to bring it back. */
+const SHOW_COACHING = false;
+
 function Learn({ userId, unlocked, onUpgrade }: { userId: string; unlocked: boolean; onUpgrade: () => void }) {
   const [view, setView] = useState<"contracts" | "classes">("contracts");
   return (
     <div className="mt-6">
-      <div className="inline-flex gap-1 rounded-lg bg-muted p-1">
+      {SHOW_COACHING && <div className="inline-flex gap-1 rounded-lg bg-muted p-1">
         <Button size="sm" variant={view === "contracts" ? "default" : "ghost"} onClick={() => setView("contracts")}><ScrollText className="h-4 w-4" />Contracts & Blueprints</Button>
         <Button size="sm" variant={view === "classes" ? "default" : "ghost"} onClick={() => setView("classes")}><GraduationCap className="h-4 w-4" />One on One Coaching</Button>
-      </div>
+      </div>}
       {/* Contracts handles its own gating: blueprint guides are a preview for everyone, and contracts sent to you are always visible. */}
-      {view === "contracts" ? <Contracts userId={userId} unlocked={unlocked} onUpgrade={onUpgrade} />
+      {view === "contracts" || !SHOW_COACHING ? <Contracts userId={userId} unlocked={unlocked} onUpgrade={onUpgrade} />
         : !unlocked ? <UpgradeLock title="One on One Coaching" tier="management" onUpgrade={onUpgrade}
             text="Private sessions with a music business expert on your catalog, releases, royalties or deals." />
         : <Coaching userId={userId} />}

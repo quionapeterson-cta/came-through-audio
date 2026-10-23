@@ -82,10 +82,10 @@ export const PLAN_FEATURES: Feature[] = [
   { group: "Collaboration & registration", from: "collaborate", title: "1-Click Agency Exports", tip: "Download registration-ready files for The MLC, SoundExchange and ASCAP/BMI from your catalog, plus a Neighbouring Rights Pack listing every performer for international airplay" },
   { group: "Collaboration & registration", from: "collaborate", title: "Royalty Utility Suite", tip: "BMI/ASCAP Formula Converter & Projected Royalty Earnings Calculator" },
   { group: "Business & education", from: "management", title: "Custom Music Industry Contracts", tip: "Fill in a contract from a blueprint, adjust the terms, and keep it with your catalog" },
-  { group: "Business & education", from: "management", title: "Music Industry Blueprints", tip: "Producer agreements, beat licenses, feature, session, videographer and label blueprints, with plain-language guides" },
+  { group: "Business & education", from: "management", title: "Music Industry Blueprints", tip: "75+ ready-to-sign contracts with plain-language guides, plus step-by-step business blueprints and home recording cheat sheets" },
   { group: "Business & education", from: "management", title: "Contract Signature Requests & Signing", tip: "Send contracts to every party to e-sign; each signature is time-stamped and hashed" },
   { group: "Business & education", from: "management", title: "Signed Contract Vault", tip: "Fully signed contracts are locked and stored, ready to download as a signed PDF" },
-  { group: "Business & education", from: "management", title: "One on One Coaching", tip: "Private sessions with a music business expert on your catalog, releases, royalties or deals", soon: true },
+  // One on One Coaching (management, soon) is hidden until there's a plan for it (founder, 2026-10-23).
 ];
 
 /**
