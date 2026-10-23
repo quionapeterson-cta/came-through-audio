@@ -15,9 +15,21 @@ export function getConnectionApiKey(env: StripeEnv): string {
     : getEnv('STRIPE_LIVE_API_KEY');
 }
 
-// Routes api.stripe.com requests through the connector gateway.
+const API_VERSION = '2026-03-25.dahlia';
+
+/**
+ * Hosting off Lovable (e.g. Cloudflare): set STRIPE_SANDBOX_SECRET_KEY / STRIPE_LIVE_SECRET_KEY to the account's own
+ * secret keys (sk_test_… / sk_live_…) and Stripe is called directly. Without them, calls go through Lovable's gateway.
+ */
+function directSecretKey(env: StripeEnv): string | undefined {
+  return process.env[env === 'sandbox' ? 'STRIPE_SANDBOX_SECRET_KEY' : 'STRIPE_LIVE_SECRET_KEY'] || undefined;
+}
+
+// Routes api.stripe.com requests through the connector gateway, unless the account's own secret key is set.
 // Only api.stripe.com is proxied (not files.stripe.com or connect.stripe.com).
 export function createStripeClient(env: StripeEnv): Stripe {
+  const direct = directSecretKey(env);
+  if (direct) return new Stripe(direct, { apiVersion: API_VERSION, httpClient: Stripe.createFetchHttpClient() });
   const connectionApiKey = getConnectionApiKey(env);
   const lovableApiKey = getEnv('LOVABLE_API_KEY');
 
@@ -27,7 +39,7 @@ export function createStripeClient(env: StripeEnv): Stripe {
     // don't silently change if a future SDK bump lands a new default or
     // if the installed `stripe` package resolves to a different major.
     // The surrounding knowledge files assume dahlia semantics.
-    apiVersion: '2026-03-25.dahlia',
+    apiVersion: API_VERSION,
     httpClient: Stripe.createFetchHttpClient((input, init) => {
       const stripeUrl = input instanceof Request ? input.url : input.toString();
       const gatewayUrl = stripeUrl.replace('https://api.stripe.com', GATEWAY_STRIPE_BASE);
