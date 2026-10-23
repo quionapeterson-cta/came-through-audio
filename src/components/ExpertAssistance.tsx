@@ -10,6 +10,7 @@ import { listTracks, type CatalogTrack } from "@/lib/catalog";
 import { assistanceFees, assistanceTotal, assistanceType } from "@/lib/plans";
 import { openCheckout } from "@/lib/checkout";
 import { creditName } from "@/lib/metadata";
+import { isBmi } from "@/lib/audit";
 import {
   ACCESS_STEPS, ASSISTANCE_AGENCIES, MAX_NEW_SONGS, REPRESENTATIVE, SONG_STATUS_LABEL, intakeStep, missingFor, orderAgencies, writerLine,
   type NewSong, type RegistrationOrder, type RegistrationSong,
@@ -239,7 +240,7 @@ function Checklist({ purchase, tracks, justPaid, onFix, onCatalog }: { purchase:
             <div key={s.id} className="rounded-lg border border-border p-3 text-sm">
               <div className="flex items-center justify-between gap-2"><span className="font-semibold">{title}</span>{!s.submitted_at && <SongPicker label="Swap" tracks={free} disabled={busy} onPick={(id) => link(s.id, id)} compact />}</div>
               <p className="mt-1 text-muted-foreground">Writers: {writerLine(m) || "—"}</p>
-              <p className="text-muted-foreground">Publishers: {m.selfPublished ? "Self-published" : m.publishers.filter(creditName).map((p) => `${creditName(p)}${p.percentage ? ` (${p.percentage}%)` : ""}`).join(", ") || "—"}</p>
+              <p className="text-muted-foreground">Publishers: {m.selfPublished ? "Self-published" : m.publishers.filter(creditName).map((p) => `${creditName(p)}${p.percentage ? ` (${p.percentage}%)` : ""}`).join(", ") || ([...m.writers, ...m.composers].some((w) => creditName(w) && isBmi(w)) ? "None, BMI pays the writers" : "—")}</p>
               <p className="text-muted-foreground">ISRC: {m.isrc || "—"} · {order.agencies.join(", ")}</p>
             </div>
           ))}

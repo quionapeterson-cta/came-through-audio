@@ -208,14 +208,17 @@ function QuestionRow({ label, tip, value, locked, note, small, onChoose, choices
 
 /**
  * "Do you have a publisher?" BMI writers with no publisher still get their writer share, and BMI pays them the
- * publisher share too, so for them "No" simply confirms it. Writers at other PROs need a publisher or Self-published.
+ * publisher share too (any role), so for them "No" is simply recorded. Writers at other PROs need a publisher or Self-published.
  */
 function PublisherRow({ rows, many, onAnswer, onSelfPublished, onFixField }: { rows: CheckInRow[]; many: boolean; onAnswer: Props["onAnswer"]; onSelfPublished: Props["onSelfPublished"]; onFixField: Props["onFixField"] }) {
   const states = rows.map((x) => ({ x, p: publisherState(x) }));
   const open = states.filter((s): s is { x: CheckInRow; p: Extract<PublisherState, { kind: "ask" }> } => s.p.kind === "ask");
+  // "No" on a song whose writers are all with BMI just records it: BMI needs no publisher or Self-published.
   const choose = (targets: typeof open, a: Answer) => {
-    if (a === "no") onSelfPublished(targets.map((s) => s.x.r.track.id));
-    else onAnswer(targets.map((s) => ({ id: s.x.r.track.id, steps: { "checkin:publisher": a } })));
+    const self = a === "no" ? targets.filter((s) => s.p.bmi !== "all") : [];
+    if (self.length) onSelfPublished(self.map((s) => s.x.r.track.id));
+    const rest = targets.filter((s) => !self.includes(s));
+    if (rest.length) onAnswer(rest.map((s) => ({ id: s.x.r.track.id, steps: { "checkin:publisher": a } })));
   };
   const choices: [Answer, string][] = [["yes", "Yes"], ["no", "No, I'm self-published"], ["unsure", "Not sure"]];
   const bmi = open.length && open.every((s) => s.p.bmi === "all") ? "all" : open.some((s) => s.p.bmi !== "none") ? "some" : "none";

@@ -28,6 +28,10 @@ describe("agency exports", () => {
     expect(row[6]).toBe("");
   });
   it("PRO cheat sheet keeps IPI as text", () => expect(proCheatSheet([track()])).toContain('"=""00123456789"""'));
+  it("PRO cheat sheet says BMI pays the publisher share when there's no publisher", () => {
+    expect(proCheatSheet([track({ publishers: [] })])).toContain("None: BMI pays the publisher share to its writers");
+    expect(proCheatSheet([track()])).not.toContain("None: BMI");
+  });
   it("Neighbouring Rights Pack lists every performer, featured first, and leaves out songs without an ISRC", () => {
     const t = track({ featured: ["OG PI"], phonographic: "℗ 2026 Came Through Audio", recordedIn: "United States", recordedYear: "",
       credits: [{ role: "Session musician", name: "Jane Doe", instrument: "Guitar" }, { role: "Mixing engineer", name: "Sam", instrument: "" }] });

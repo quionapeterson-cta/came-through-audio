@@ -1,5 +1,6 @@
 import type { CatalogTrack } from "@/lib/catalog";
 import { MLC_ROLE, performers, writerRole, type Contributor } from "@/lib/metadata";
+import { isBmi } from "@/lib/audit";
 import { registrationReadiness, registrationWriters, type MissingItem } from "@/lib/readiness";
 
 export type Agency = "mlc" | "soundexchange" | "pro";
@@ -92,6 +93,8 @@ export function proCheatSheet(tracks: CatalogTrack[]): string {
     const base = [m.title, m.iswc, m.isrc, m.artist];
     for (const w of registrationWriters(m)) rows.push([...base, "Writer", w.name, w.role, w.percentage, w.pro, idText(w.ipi)]);
     for (const p of named(m.publishers)) rows.push([...base, "Publisher", p.name, "Original Publisher", p.percentage, p.pro, idText(p.ipi)]);
+    // No publisher: BMI pays its writers the publisher share, so the sheet says so instead of leaving it blank.
+    if (!named(m.publishers).length && registrationWriters(m).some(isBmi)) rows.push([...base, "Publisher", "None: BMI pays the publisher share to its writers", "", "", "BMI", ""]);
   }
   return rows.map((r) => r.map(cell).join(",")).join("\r\n");
 }

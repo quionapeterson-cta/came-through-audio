@@ -177,6 +177,18 @@ describe("per-agency registration checks", () => {
     expect(need(full({ selfPublished: false, publishers: [pub] }), "ascap")).toEqual([]);
     expect(need(full({ selfPublished: false, publishers: [pub] }), "bmi")).toEqual(["publishers-0-ipi"]);
   });
+  it("BMI writers of any role with no publisher need neither a publisher nor Self-published at BMI; ASCAP and The MLC still do", () => {
+    const other = { Author: [writer({ pro: "BMI", role: "Composer", legalName: "Kim Roe" })], Composer: [writer({ pro: "BMI", role: "Author", legalName: "Kim Roe" })], "Author/Composer": [] };
+    for (const role of ["Author", "Composer", "Author/Composer"] as const) {
+      const m = full({ selfPublished: false, publishers: [], writers: [writer({ pro: "BMI", role, percentage: other[role].length ? "50" : "100" }), ...other[role].map((x) => ({ ...x, percentage: "50" }))] });
+      expect(need(m, "bmi")).toEqual([]);
+      expect(registrationCheck(m, "bmi", "2026-10-21").tips.map((t) => t.code)).toContain("publisher");
+      expect(need(m, "mlc")).toEqual(["selfPublished"]);
+    }
+    expect(need(full({ selfPublished: false, publishers: [] }), "bmi")).toEqual(["selfPublished"]);
+    const pub = { name: "Lee Songs", pro: "BMI", ipi: "00987654321", percentage: "100" };
+    expect(need(full({ selfPublished: true, publishers: [pub], writers: [writer({ pro: "BMI" })] }), "bmi")).toEqual(["selfPublished"]);
+  });
   it("asks PROs about samples, and BMI about duration, genre, productions and the label once released", () => {
     expect(need(full({ samples: "" }), "ascap")).toEqual(["samples"]);
     expect(need(full({ samples: "Yes" }), "bmi")).toEqual(["sampleTitle", "sampleWriters"]);

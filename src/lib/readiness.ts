@@ -1,5 +1,6 @@
 import { creditName, writerRole, type Contributor, type Metadata } from "@/lib/metadata";
 import { splitStatus } from "@/lib/splits-total";
+import { isBmi } from "@/lib/audit";
 
 /** Registration targets. Only PRO registration (BMI/ASCAP) also needs each writer's PRO affiliation. */
 export type ReadinessTarget = "mlc" | "soundexchange" | "pro";
@@ -120,9 +121,13 @@ export function registrationCheck(m: Metadata, agency: RegistrationAgency, today
     if (hasPro(row) && !row.ipi?.trim()) need("ipi", `Add the IPI name number for ${creditName(row) || `writer ${index + 1}`}. Find it in their ${row.pro} account.`, `${group}-${index}-ipi`);
   }
 
-  // Who collects the publisher share: a listed publisher, or nobody (self-published / self-administered).
+  // Who collects the publisher share: a listed publisher, or nobody (self-published / self-administered). At BMI, a
+  // writer of any role with no publisher is paid the publisher share too, so BMI needs neither (PLAN-bmi-no-publisher).
   if (m.selfPublished && pubs.length) need("publisher", "You checked Self-published but also listed a publisher. Keep one.", "selfPublished");
-  else if (!m.selfPublished && !pubs.length) need("publisher", "Add the song's publisher, or check Self-published (no publisher).", "selfPublished");
+  else if (!m.selfPublished && !pubs.length) {
+    if (agency === "bmi" && listed(m).some(({ row }) => isBmi(row))) tip("publisher", "No publisher: BMI pays you the publisher share too, in proportion to your split.", "selfPublished");
+    else need("publisher", "Add the song's publisher, or check Self-published (no publisher).", "selfPublished");
+  }
   for (const { row, index } of pubs) {
     const who = creditName(row) || `publisher ${index + 1}`;
     if (!creditName(row)) need("publisher", `Add a name for ${who}.`, `publishers-${index}-name`);

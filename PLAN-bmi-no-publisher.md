@@ -1,6 +1,6 @@
 # PLAN — BMI writers with no publisher: ready to register without ticking Self-published · v1
 
-Status: **awaiting approval.**
+Status: **approved and BUILT 2026-10-23.** Founder: any BMI writer (Author, Composer or Author/Composer) with no separate publisher still gets the publisher share. Question 1 answered yes: the cheat sheet says "None: BMI pays the publisher share to its writers".
 Source: founder, 2026-10-23 ("writers with no publishers on BMI still get their writers share"). Follows
 PLAN-health-hub-reports.md. This changes the shared readiness rules, so it needs approval before any edit (AGENTS.md).
 

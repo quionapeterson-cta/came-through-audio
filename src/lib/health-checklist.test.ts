@@ -26,9 +26,12 @@ describe("song health checklist", () => {
     expect(c.steps.find((s) => s.id === "ready:digital")?.items?.map((i) => i.field)).toEqual(["upc"]);
     expect(c.pct).toBe(0);
   });
-  it("counts a BMI song with no publisher as ready once Self-published is checked", () => {
+  it("counts a BMI song with no publisher as ready with BMI, without Self-published (BMI pays its writers the publisher share)", () => {
     const m = { publishers: [{ name: "", pro: "", ipi: "", percentage: "" }] };
-    expect(songChecklist(trackReport(track(m), us, []), us).steps.find((s) => s.id === "ready:performance")?.done).toBe(false);
+    const steps = songChecklist(trackReport(track(m), us, []), us).steps;
+    expect(steps.find((s) => s.id === "ready:performance")?.done).toBe(true);
+    // The MLC still needs a publisher or Self-published.
+    expect(steps.find((s) => s.id === "ready:mechanical")?.done).toBe(false);
     expect(songChecklist(trackReport(track({ ...m, selfPublished: true }), us, []), us).pct).toBe(100);
   });
   it("averages readiness across the catalog and counts ticked registrations", () => {

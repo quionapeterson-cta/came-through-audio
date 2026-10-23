@@ -30,8 +30,15 @@ describe("HealthCheckIn", () => {
   });
 
   it("asks about a publisher, and tells BMI writers their writer share still pays", () => {
-    const { onSelfPublished } = setup("BMI");
+    const bmi = setup("BMI");
     expect(screen.getByText(/BMI still pays your writer share/)).toBeTruthy();
+    // All-BMI writers need no Self-published, so "No" is only recorded.
+    fireEvent.click(within(screen.getByRole("radiogroup", { name: "Do you have a publisher?" })).getByRole("radio", { name: "No, I'm self-published" }));
+    expect(bmi.onSelfPublished).not.toHaveBeenCalled();
+    expect(bmi.onAnswer).toHaveBeenCalledWith([{ id: "a", steps: { "checkin:publisher": "no" } }]);
+  });
+  it("ticks Self-published for writers at other PROs", () => {
+    const { onSelfPublished } = setup("ASCAP");
     fireEvent.click(within(screen.getByRole("radiogroup", { name: "Do you have a publisher?" })).getByRole("radio", { name: "No, I'm self-published" }));
     expect(onSelfPublished).toHaveBeenCalledWith(["a"]);
   });
