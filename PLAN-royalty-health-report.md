@@ -84,6 +84,13 @@ More examples it would write:
 - **Split sheet:** a Spine problem with co-writers offers "Send a split sheet for signatures", then register with the agreed splits.
 - **Let our agents do it:** Expert Assistance, gated by the existing `registrationCheck`.
 
+### Design direction (founder, 2026-10-23)
+- Page title: **Royalty Health Report**.
+- **Organs are clickable** (in the body diagram and the organ cards) and open that organ's own report: diagnosis, symptom, cause, songs affected, ℞ treatment plan, more ways to fix it; healthy organs show the checklist of what was examined. Previous/next organ buttons.
+- **Report colour exception** (goes into BRANDING.md §1 when built, like the health meter): organs use reds and pinks; the prestige accent is **Gold in light mode, Platinum in dark mode** for step numbers, the score ring, the selected-organ ring and section rules. Black, white and cobalt stay for text, buttons and Healthy.
+- **Checkup instruments as visuals:** a "royalty rhythm" heart monitor whose line reflects the worst finding (steady / uneven / irregular / flat), vitals tiles, ℞ treatment plan, clipboard checklist for healthy organs, stethoscope on Run a new checkup. Each organ report shows a small rhythm line for its state.
+- **Animation, purposeful and finite:** the monitor line draws once, the score ring fills once, the organ needing treatment beats 4 times then rests, organ reports fade in. Nothing loops forever; all motion is off for people who turn on Reduce motion.
+
 ### One consolidated page
 Everything on the Royalty Health Check becomes one report, in collapsible sections with a summary line (⚠️ sections open on their own):
 1. **Your checkup** (top line, body diagram, treatment, since last checkup, PDF), replacing the score-ring header
