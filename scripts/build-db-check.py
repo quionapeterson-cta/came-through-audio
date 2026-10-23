@@ -60,10 +60,11 @@ def checks(f):
             if lines:
                 line = max(lines, key=len)
                 out.append((f"newest version of {name}", f"EXISTS (SELECT 1 FROM pg_proc WHERE proname = {q(name.lower())} AND pronamespace = 'public'::regnamespace AND prosrc LIKE {q('%' + line.replace('%', '_') + '%')})"))
-    for p, t in re.findall(r"CREATE\s+POLICY\s+\"([^\"]+)\"\s+ON\s+(?:public\.)?" + ident, sql, re.I):
+    for p, schema, t in re.findall(r"CREATE\s+POLICY\s+\"([^\"]+)\"\s+ON\s+(?:(\w+)\.)?" + ident, sql, re.I):
         if later(f, r"DROP\s+POLICY\s+(IF\s+EXISTS\s+)?\"" + re.escape(p) + r"\""):
             continue
-        out.append((f"policy {p}", f"EXISTS (SELECT 1 FROM pg_policies WHERE schemaname = 'public' AND tablename = {q(t)} AND policyname = {q(p)})"))
+        schema = schema or "public"
+        out.append((f"policy {p}", f"EXISTS (SELECT 1 FROM pg_policies WHERE schemaname = {q(schema)} AND tablename = {q(t)} AND policyname = {q(p)})"))
     for privs, tables, role in re.findall(r"GRANT\s+([A-Z, ]+?)\s+ON\s+(?:TABLE\s+)?((?:public\.)?\w+(?:\s*,\s*(?:public\.)?\w+)*)\s+TO\s+(\w+)", sql, re.I):
         if "FUNCTION" in tables.upper() or privs.upper().strip() in ("EXECUTE", "USAGE"):
             continue
