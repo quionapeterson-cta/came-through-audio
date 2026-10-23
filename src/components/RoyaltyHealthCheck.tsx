@@ -10,6 +10,7 @@ import { RoyaltyReport } from "@/components/RoyaltyReport";
 import { ACCOUNT_REF, releaseGroups, SINGLES_KEY, songChecklist } from "@/lib/health-checklist";
 import { CONFIRM_AFTER_DAYS, ORGAN_NAME, royaltyCheckup, sinceLast, STATE_LABEL, summarize, type StepAction } from "@/lib/royalty-checkup";
 import { listReports, sameSummary, saveReport, type SavedReport } from "@/lib/health-reports";
+import { downloadCheckupPdf } from "@/lib/checkup-pdf";
 import { downloadAgencyExport } from "@/lib/agency-export";
 import { listSplitSheets, splitStatus as sheetStatus } from "@/lib/splits";
 import { healthReport, type RepertoireCheck } from "@/lib/health";
@@ -255,7 +256,8 @@ export function RoyaltyHealthCheck({ userId, canCatalog, canExport, onUpgrade, o
     <div className="space-y-6">
       <RoyaltyReport checkup={checkup} since={since} date={new Date().toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })} country={country.name}
         countryPicker={<CountryPicker country={country} onCountry={chooseCountry} />} running={!!running} canExport={canExport}
-        onRunCheckup={() => { setSaveAfterRun(true); void runAll(); }} onAction={(a) => void act(a)} onExpert={book} onReminder={reminder} />
+        onRunCheckup={() => { setSaveAfterRun(true); void runAll(); }}
+        onPdf={() => downloadCheckupPdf(checkup, mostCommon((tracks ?? []).map((t) => t.artist)), country.name).catch(() => toast.error("Couldn't create the PDF. Try again."))} onAction={(a) => void act(a)} onExpert={book} onReminder={reminder} />
       {running && <p className="text-sm text-muted-foreground">Looking up song {running.done + 1} of {running.total} on streaming and MusicBrainz…</p>}
 
       <div className="space-y-3">
@@ -280,6 +282,11 @@ export function RoyaltyHealthCheck({ userId, canCatalog, canExport, onUpgrade, o
   );
 }
 
+const mostCommon = (values: string[]) => {
+  const counts = new Map<string, number>();
+  for (const v of values.filter(Boolean)) counts.set(v, (counts.get(v) ?? 0) + 1);
+  return [...counts.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] ?? "";
+};
 const shortDate = (iso: string) => new Date(iso).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
 const songsLabel = (n: number) => `${n} song${n === 1 ? "" : "s"}`;
 
