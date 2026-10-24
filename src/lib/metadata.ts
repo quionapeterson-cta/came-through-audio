@@ -27,6 +27,8 @@ export const contributorSchema = z.object({
   ipi: z.string().trim().default("").refine((value) => !value || /^\d{9,11}$/.test(value), "IPI numbers are 9–11 digits."),
   percentage: z.string().trim().default("").refine((value) => value === "" || (Number.isFinite(Number(value)) && Number(value) >= 0 && Number(value) <= 100), "Enter a percentage between 0 and 100."),
   role: z.string().optional(),
+  /** Publishers only: the HFA account number (P#), which is also the publisher number on The MLC's bulk upload. Catalog-only, never embedded. */
+  hfa: z.string().trim().optional(),
 });
 
 export const metadataSchema = z.object({
@@ -93,6 +95,8 @@ export const metadataSchema = z.object({
 
 export type Metadata = z.infer<typeof metadataSchema>;
 export type Contributor = z.infer<typeof contributorSchema>;
+/** HFA P#s are 6 letters or numbers (P12345). Anything else gets a gentle warning, never a block. */
+export const hfaLooksOff = (v: string | undefined) => !!v?.trim() && !/^[A-Z0-9]{6}$/i.test(v.trim());
 export const emptyContributor = (): Contributor => ({ name: "", pro: "", ipi: "", percentage: "" });
 export const emptyMetadata = (): Metadata => ({
   title: "", trackNumber: "", trackTotal: "", artist: "", featured: [""], album: "", duration: "", releaseType: "", releaseDate: "", label: "", copyright: "", phonographic: "", language: "",

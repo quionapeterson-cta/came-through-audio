@@ -185,6 +185,7 @@ function People({ title, rows, writer }: { title: string; rows?: Contributor[] |
         {list.map((r, i) => <li key={i} className="flex flex-wrap items-baseline justify-between gap-x-3">
           <span className="font-medium">{creditName(r)}</span>
           {writer && <span className="text-xs text-muted-foreground">{writerRole(r.role)}</span>}
+          {!writer && r.hfa && <span className="text-xs text-muted-foreground">HFA P# {r.hfa}</span>}
         </li>)}
       </ul>
     </div>

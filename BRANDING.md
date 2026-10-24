@@ -89,7 +89,7 @@ Apply these rules across the website, emails and PDFs.
 - A producer's royalty-split identity belongs under Writer as Composer, using their legal name.
 - PRO/IPI information can be left blank and added after registration; explain this concisely.
 - PRO affiliation fields always offer the worldwide PRO list, with Other for unlisted societies.
-- Publisher rows read: Legal name, PRO affiliation, IPI name number, Share.
+- Publisher rows read: Legal name, PRO affiliation, IPI name number, Share, HFA P#. The HFA P# (Harry Fox Agency only, optional) is also the publisher number on The MLC bulk upload, separate from the IPI; it is never embedded.
 - For MLC exports: Author = A, Composer = C, Author/Composer = CA.
 
 ## 6. Catalog and split sheets

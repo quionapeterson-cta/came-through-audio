@@ -337,9 +337,10 @@ function Rows({ title, rows, onChange, seed, writer }: { title: string; rows?: C
         <span className="inline-flex items-center">PRO<InfoTip term="pro" /></span>
         <span className="inline-flex items-center">IPI<InfoTip term="ipi" /></span>
         <span className="inline-flex items-center">Share<InfoTip term={writer ? "split" : "publisher"} /></span>
+        {!writer && <span className="inline-flex items-center">HFA P#<InfoTip term="hfa" /></span>}
       </p>
       {list.map((r, i) => (
-        <div key={i} className={`grid items-start gap-x-4 gap-y-2 ${writer ? "sm:grid-cols-[1.6fr_1.1fr_1.1fr_1fr_0.7fr_auto]" : "sm:grid-cols-[1.6fr_1.1fr_1fr_0.7fr_auto]"}`}>
+        <div key={i} className={`grid items-start gap-x-4 gap-y-2 ${writer ? "sm:grid-cols-[1.6fr_1.1fr_1.1fr_1fr_0.7fr_auto]" : "sm:grid-cols-[1.6fr_1.1fr_1fr_0.7fr_0.8fr_auto]"}`}>
           {writer
             ? <Input aria-label="Legal name" placeholder="Legal name" value={r.legalName ?? ""} onChange={(e) => upd(i, "legalName", e.target.value)} />
             : <Input aria-label={`${title} legal name`} placeholder="Legal name" value={r.name} onChange={(e) => upd(i, "name", e.target.value)} />}
@@ -350,6 +351,7 @@ function Rows({ title, rows, onChange, seed, writer }: { title: string; rows?: C
           <ProSelect value={r.pro} onChange={(v) => upd(i, "pro", v)} className="h-9 w-full rounded-md border border-input bg-background px-2 text-sm" />
           <Input aria-label="IPI name number" placeholder="IPI name number" inputMode="numeric" value={r.ipi} onChange={(e) => upd(i, "ipi", e.target.value.replace(/\D/g, "").slice(0, 11))} />
           <Input aria-label="Default share %" placeholder="Share %" inputMode="decimal" value={r.percentage} onChange={(e) => upd(i, "percentage", capShare(list, i, e.target.value).value)} />
+          {!writer && <Input aria-label="HFA P#" placeholder="HFA P#" value={r.hfa ?? ""} onChange={(e) => upd(i, "hfa", e.target.value.toUpperCase())} />}
           <Button type="button" variant="ghost" size="icon" aria-label="Remove" onClick={() => onChange(list.filter((_, j) => j !== i))}><Trash2 /></Button>
         </div>
       ))}

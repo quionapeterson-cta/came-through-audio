@@ -12,6 +12,13 @@ describe("agency exports", () => {
     expect(row[8]).toBe("00123456789");
     expect(row[12]).toBe("00987654321");
   });
+  it("MLC puts the publisher's HFA P# in the MLC Publisher Number column, apart from its IPI", () => {
+    const pub = { name: "Lee Songs", pro: "BMI", ipi: "00987654321", percentage: "100", hfa: "p12345" };
+    const row = mlcRows([track({ publishers: [pub] })])[0]!;
+    expect(row[10]).toBe("P12345");
+    expect(row[12]).toBe("00987654321");
+    expect(mlcRows([track()])[0]![10]).toBe("");
+  });
   it("SoundExchange claims 100% as 1 with real dates and blank inception dates", () => {
     const row = soundExchangeRows([track({ featured: ["B"] })])[0]!;
     expect(row[0]).toBe("Q feat. B");

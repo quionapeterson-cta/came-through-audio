@@ -8,10 +8,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { InfoTip } from "@/components/InfoTip";
-import { GLOSSARY, type GlossaryKey } from "@/lib/glossary";
+import { EXPORT_REQUIRED, GLOSSARY, type GlossaryKey } from "@/lib/glossary";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { PRE_DIST_NOTE, PRO_TIP } from "@/lib/copy";
-import { readMetadata, CREDIT_ROLES, isPerformer, performers, emptyContributor, emptyMetadata, embedMetadata, creditName, metadataSchema, GENRES, MASTER_BASES, PRODUCTION_TYPES, RELEASE_TYPES, WRITER_ROLES, writerRole, type Contributor, type Metadata } from "@/lib/metadata";
+import { readMetadata, CREDIT_ROLES, isPerformer, performers, emptyContributor, emptyMetadata, embedMetadata, creditName, metadataSchema, GENRES, MASTER_BASES, PRODUCTION_TYPES, RELEASE_TYPES, WRITER_ROLES, writerRole, hfaLooksOff, type Contributor, type Metadata } from "@/lib/metadata";
 import { COUNTRIES, countryByCode, guessCountry } from "@/lib/repertoires";
 import { catalogHealth, releaseKind } from "@/lib/health-checklist";
 import { listChecks } from "@/lib/repertoire-checks";
@@ -88,7 +88,7 @@ export function MetadataUploader({ onShareInfo, userId, mode = "embed", readOnly
     <DropdownMenu>
       <DropdownMenuTrigger asChild><Button type="button" variant="outline" size={size} onClick={(e) => e.stopPropagation()}>{!canExport && <Lock />}{label}</Button></DropdownMenuTrigger>
       <DropdownMenuContent align="end">
-        {(["mlc", "soundexchange", "pro"] as Agency[]).map((a) => <DropdownMenuItem key={a} onClick={() => runExport(a, list, name)}>{AGENCY_LABEL[a]}</DropdownMenuItem>)}
+        {(["mlc", "soundexchange", "pro"] as Agency[]).map((a) => <DropdownMenuItem key={a} onClick={() => runExport(a, list, name)}>{AGENCY_LABEL[a]}<InfoTip title="Required fields" text={EXPORT_REQUIRED[a]} /></DropdownMenuItem>)}
         <DropdownMenuItem onClick={() => runPack(list, name)}>Neighbouring Rights Pack (.csv)</DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
@@ -951,6 +951,7 @@ function Contributors({ title, singular, group, rows, onChange, disabled, publis
   const removeButton = (index: number) => <Button type="button" size="icon" variant="ghost" aria-label={`Remove ${singular} ${index + 1}`} disabled={rows.length === 1} onClick={() => onChange(rows.filter((_, i) => i !== index))}><Trash2 /></Button>;
   const share = (row: Contributor, index: number) => <div className="space-y-2"><Label htmlFor={`${group}-${index}-share`}>{publisher ? "Share (%)" : "Split (%)"}<InfoTip term={publisher ? "publisher" : "split"} /></Label><Input id={`${group}-${index}-share`} type="number" min="0" max="100" step="0.01" value={row.percentage} onChange={(event) => changeShare(index, event.target.value)} />{capped?.index === index && <p className="text-xs text-muted-foreground">Capped at {capped.at}%, the share that's left.</p>}</div>;
   const ipi = (row: Contributor, index: number) => <Field label="IPI name number" term="ipi" id={`${group}-${index}-ipi`} value={row.ipi} placeholder="9–11 digits" onChange={(value) => change(index, "ipi", value)} />;
+  const hfa = (row: Contributor, index: number) => <Field label="HFA P#" term="hfa" id={`${group}-${index}-hfa`} value={row.hfa ?? ""} placeholder="P12345" onChange={(value) => change(index, "hfa", value.toUpperCase())} />;
   const pro = (row: Contributor, index: number) => <div className="min-w-0 space-y-2"><Label htmlFor={`${group}-${index}-pro`}>PRO affiliation<InfoTip term="pro" /></Label>
     <ProSelect id={`${group}-${index}-pro`} value={row.pro} onChange={(value) => change(index, "pro", value)} className="flex h-9 w-full rounded-md border border-input bg-background px-3 text-sm shadow-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" /></div>;
   return <fieldset disabled={disabled} className={bare ? "min-w-0 space-y-5" : "space-y-5 border-t border-border pt-6"}>
@@ -967,10 +968,11 @@ function Contributors({ title, singular, group, rows, onChange, disabled, publis
             <div className="grid items-end gap-x-6 gap-y-4 sm:grid-cols-3">{share(row, index)}{ipi(row, index)}{pro(row, index)}</div>
             {rowNote?.(row, index)}
           </div>
-        : <div key={index} className={`grid items-end gap-4 ${publisher ? "sm:grid-cols-[1fr_170px_150px_110px_36px]" : "sm:grid-cols-[1fr_110px_150px_150px_36px]"}`}>
+        : <div key={index} className={`grid items-end gap-4 ${publisher ? "sm:grid-cols-[1fr_170px_150px_110px_120px_36px]" : "sm:grid-cols-[1fr_110px_150px_150px_36px]"}`}>
             <Field label="Legal name" id={`${group}-${index}-name`} value={row.name} onChange={(value) => change(index, "name", value)} />
-            {publisher ? <>{pro(row, index)}{ipi(row, index)}{share(row, index)}</> : <>{share(row, index)}{ipi(row, index)}{pro(row, index)}</>}
+            {publisher ? <>{pro(row, index)}{ipi(row, index)}{share(row, index)}{hfa(row, index)}</> : <>{share(row, index)}{ipi(row, index)}{pro(row, index)}</>}
             {removeButton(index)}
+            {publisher && hfaLooksOff(row.hfa) && <p className="text-xs text-muted-foreground sm:col-span-full">⚠️ HFA P#s are 6 letters or numbers, like P12345. Check it in the HFA Portal.</p>}
           </div>)}
     {children}
     <div className="flex flex-wrap items-center justify-between gap-3"><Button type="button" variant="outline" onClick={() => onChange([...rows, emptyContributor()])}><Plus />Add {singular}</Button>{totals && <span className={`text-sm ${totals.state === "over" || totals.state === "under" ? "font-medium text-foreground" : "text-muted-foreground"}`}>{totals.state === "over" || totals.state === "under" ? "⚠️ " : ""}{splitSummary(rows)}</span>}</div>

@@ -130,7 +130,7 @@ export function restoreRows(m: Partial<Metadata>, p: ArtistProfile | null): Part
     if (!rows) continue;
     out[g] = rows.map((r) => {
       const saved = creditName(r) && p[g]?.find((s) => creditName(s).toLowerCase() === creditName(r).toLowerCase());
-      return saved ? { ...r, legalName: r.legalName || saved.legalName, pro: r.pro || saved.pro, ipi: r.ipi || saved.ipi, percentage: r.percentage || saved.percentage } : r;
+      return saved ? { ...r, legalName: r.legalName || saved.legalName, pro: r.pro || saved.pro, ipi: r.ipi || saved.ipi, percentage: r.percentage || saved.percentage, hfa: r.hfa || saved.hfa } : r;
     });
   }
   return out;

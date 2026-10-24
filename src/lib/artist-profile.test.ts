@@ -39,5 +39,13 @@ describe("withProfileFilled", () => {
     expect(m.writers[0]).toMatchObject({ ipi: "00999999999", percentage: "50", pro: "BMI" });
     expect(m.selfPublished).toBe(false);
   });
+  it("prefills the publisher's HFA P# from the profile, without replacing one the song has", () => {
+    const withPub = { publishers: [{ ...emptyContributor(), name: "Lee Songs", ipi: "00987654321", hfa: "P12345" }] };
+    expect(withProfileFilled({ ...emptyMetadata(), title: "Song" }, withPub).publishers[0]?.hfa).toBe("P12345");
+    const named = { ...emptyMetadata(), publishers: [{ ...emptyContributor(), name: "lee songs" }] };
+    expect(withProfileFilled(named, withPub).publishers[0]?.hfa).toBe("P12345");
+    const own = { ...emptyMetadata(), publishers: [{ ...emptyContributor(), name: "Lee Songs", hfa: "P99999" }] };
+    expect(withProfileFilled(own, withPub).publishers[0]?.hfa).toBe("P99999");
+  });
 });
 

@@ -3,20 +3,28 @@
  * Style: one or two short sentences, "what it is → why it matters → where to get it". Founder-approved 2026-10-20;
  * ask before rewording. Examples use the brand ("Came Through Audio"), never made-up company names.
  */
+/** What each agency's own template or form requires, shown in its info box and beside each Export option. */
+export const EXPORT_REQUIRED = {
+  mlc: "The MLC's bulk upload requires: song title, each writer's legal name and role, a publisher name and publisher IPI on every writer's row (plus the HFA P# if you have one), and a collection share above 0%. Self-published without a publisher IPI? The MLC doesn't accept bulk uploads without one, so register those songs one at a time in The MLC Portal.",
+  soundexchange: "SoundExchange's ingest form requires: artist, recording title, ISRC, basis of claim, percentage claimed, rights begin and end dates, release artist, release title, UPC and release label.",
+  pro: "To register: song title, each writer's legal name, role, PRO and IPI, splits that total 100%, and a publisher (PRO, IPI and share) or Self-published. BMI also asks for duration, genre and the label once the song is released. If all the writers are with BMI, you don't need a publisher.",
+} as const;
+
 export const GLOSSARY = {
   isrc: { term: "ISRC", text: "Your recording's ID, like a barcode for one version of a song. Streaming services use it to pay you. Your distributor gives you one free when you release." },
   iswc: { term: "ISWC", text: "Your song's ID, for the written song rather than the recording. Your PRO or publisher assigns it after you register the song, so it's fine to leave blank until then." },
   upc: { term: "UPC", text: "The barcode for a whole release (single, EP or album). Stores use it to list your release. Your distributor assigns it." },
   ipi: { term: "IPI name number", text: "A 9–11 digit number that identifies you as a writer or publisher worldwide, so royalties reach the right person. You get one when you join a PRO. Leave it blank until then." },
   pro: { term: "PRO (performing rights organization)", text: "Pays songwriters when a song is played on radio, TV, live, in venues and on streaming. In the US that's BMI, ASCAP or SESAC. Each writer belongs to only one." },
-  mlc: { term: "The MLC", text: "Pays songwriters and publishers mechanical royalties from US streaming services like Spotify and Apple Music. It's free to join." },
-  soundexchange: { term: "SoundExchange", text: "Pays the featured artist, the other performers on the recording and the master owner when it plays on digital radio, like Pandora and SiriusXM. You register each recording's details there (title, artist, performers, master owner and ISRC), and the ISRC is how SoundExchange matches each play to your recording. It's free to join." },
+  mlc: { term: "The MLC", text: `Pays songwriters and publishers mechanical royalties from US streaming services like Spotify and Apple Music. It's free to join. ${EXPORT_REQUIRED.mlc}` },
+  soundexchange: { term: "SoundExchange", text: `Pays the featured artist, the other performers on the recording and the master owner when it plays on digital radio, like Pandora and SiriusXM. You register each recording's details there (title, artist, performers, master owner and ISRC), and the ISRC is how SoundExchange matches each play to your recording. It's free to join. ${EXPORT_REQUIRED.soundexchange}` },
   performance: { term: "Performance royalties", text: "Earned by the song when it's played publicly: radio, TV, live shows, venues and streaming. Your PRO collects them." },
   mechanical: { term: "Mechanical royalties", text: "Earned by the song each time it's copied: a stream, download or CD. In the US, The MLC collects them for streaming." },
   digitalPerformance: { term: "Digital performance royalties", text: "Earned by the recording on digital radio like Pandora and SiriusXM. SoundExchange collects them." },
   masterVsComposition: { term: "Master vs. composition", text: "Every track has two copyrights. The master is the recording and the composition is the song itself (lyrics and music), and each earns its own royalties." },
   split: { term: "Split", text: "Each writer's percentage of the song. Splits must add up to exactly 100%, or agencies won't register the song." },
   publisher: { term: "Publisher", text: "Manages the song and collects the publisher share, which is half of the song's royalties. Self-published? Enter your own publishing name. Publisher shares here add up to 100% of that half." },
+  hfa: { term: "HFA P#", text: "Only if this publisher is signed with the Harry Fox Agency (HFA). HFA gives this account number when you join; it's at the top right of the HFA Portal. It's also your publisher number for The MLC's bulk upload, and it's a different number from your IPI. HFA songs are usually carried over to The MLC, but check The MLC Portal to make sure. Registering with The MLC does not register you with HFA." },
   selfPublished: { term: "Self-published", text: "No publisher has rights to your songs. Your PRO then pays the publisher half to the writers too, so you collect both halves. BMI pays the publisher share to the writers automatically, in proportion to their writer splits. Have your own publishing company? List it as a publisher instead." },
   pLine: { term: "℗ (P-line)", text: "Who owns the sound recording (the master) and the year, for example \"℗ 2026 Came Through Audio\"." },
   cLine: { term: "© (C-line)", text: "Who owns the composition and the year, usually the publisher or writers." },

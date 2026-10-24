@@ -38,7 +38,10 @@ const hms = (d: string) => {
   return [Math.floor(t / 3600), Math.floor((t % 3600) / 60), t % 60].map((n) => String(n).padStart(2, "0")).join(":");
 };
 
-/** Rows for the official MLC "Format" sheet (21 columns), one row per writer; title only on the first row of a work. */
+/**
+ * Rows for the official MLC "Format" sheet (21 columns), one row per writer; title only on the first row of a work.
+ * The publisher's HFA P# fills the MLC PUBLISHER NUMBER column, separate from its IPI.
+ */
 export function mlcRows(tracks: CatalogTrack[]): (string | number)[][] {
   const rows: (string | number)[][] = [];
   for (const { metadata: m } of tracks) {
@@ -50,7 +53,7 @@ export function mlcRows(tracks: CatalogTrack[]): (string | number)[][] {
       const pub = pubs.length === 1 ? pubs[0] : pubs[i];
       rows.push([
         i === 0 ? m.title : "", "", "", i === 0 ? m.iswc.replace(/[.\s-]/g, "").toUpperCase() : "", "", "",
-        last.toUpperCase(), first.toUpperCase(), ipi(c.ipi), role, "",
+        last.toUpperCase(), first.toUpperCase(), ipi(c.ipi), role, pub?.hfa?.trim().toUpperCase() ?? "",
         pub?.name.toUpperCase() ?? "", pub ? ipi(pub.ipi) : "", "", "", "",
         num(c.percentage), i === 0 ? m.title : "", i === 0 ? m.artist : "", i === 0 ? m.isrc.replace(/-/g, "").toUpperCase() : "", i === 0 ? m.label : "",
       ]);
