@@ -134,7 +134,7 @@ export function MismatchTips() {
   return (
     <div className="rounded-xl border border-primary/40 bg-muted p-4 text-sm">
       <div className="font-bold">Already registered but showing as missing?</div>
-      <p className="mt-1 text-muted-foreground">We check the details you enter here — we don't read the registries directly. If you registered a song but it shows issues, search for it below and compare: title spelling, artist name, <span className="font-semibold text-foreground">duration</span>, ISRC/ISWC and writer IPI. One small difference (like a wrong duration) can stop a match. Fix it in the registry portal, then update your song details here.</p>
+      <p className="mt-1 text-muted-foreground">We check the details you enter here — we don't read the registries directly. If you registered a song but it shows issues, search for it below and compare what agencies match by: the <span className="font-semibold text-foreground">ISRC and ISWC, the exact title and every writer with their IPI</span>. One small difference (like a misspelled title or a wrong ISRC) can stop a match. Fix it in the registry portal, then update your song details here.</p>
       <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1">
         {PILLARS.map((p) => <a key={p.id} className="inline-flex items-center gap-1 text-primary underline" href={p.search} target="_blank" rel="noreferrer">{p.searchLabel}<ExternalLink className="h-3 w-3" /></a>)}
         <a className="inline-flex items-center gap-1 text-primary underline" href={BMI_SEARCH} target="_blank" rel="noreferrer">BMI Songview<ExternalLink className="h-3 w-3" /></a>

@@ -2,6 +2,7 @@ import { auditTrack, type Issue, type Pillar } from "@/lib/audit";
 import type { CatalogTrack } from "@/lib/catalog";
 import { compareLookup, type Finding, type StreamingHit } from "@/lib/lookups";
 import { INTERNATIONAL, societyForPro, type Country, type Society } from "@/lib/repertoires";
+import { matchChecks, matchScore, weightedScore } from "@/lib/match-fields";
 
 /** A saved repertoire check (public.repertoire_checks). */
 export type RepertoireCheck = { trackId: string; society: string; status: "found" | "not_listed"; source: "self" | "auto"; workId?: string | null; details?: unknown; checkedAt: string };
@@ -71,22 +72,27 @@ export const songHealthy = (r: TrackReport) =>
   !r.issues.length && !r.findings.some((f) => f.level === "warn") && r.pillars.length > 0 && r.pillars.every((p) => p.state === "confirmed");
 
 /**
- * The whole catalog's health. Data = share of song × pillar cells with complete data; Registered = share confirmed
- * in a society. The headline score weighs both equally, so a perfectly filled-in but unregistered catalog is 50%.
+ * The whole catalog's health. Data = each song's details, where the fields agencies match by (codes, title, writers)
+ * weigh most (match-fields.ts) and the rest is its share of pillars with complete data; Registered = share of song ×
+ * pillar cells confirmed in a society. The headline score weighs both equally, so a perfectly filled-in but
+ * unregistered catalog is 50%.
  */
 export function healthReport(tracks: CatalogTrack[], country: Country, checks: RepertoireCheck[]) {
   const rows = tracks.map((t) => trackReport(t, country, checks));
   const cells = rows.flatMap((r) => r.pillars);
   const dataOk = cells.filter((c) => !c.dataIssues.length).length;
+  const songData = rows.map((r) => weightedScore(matchScore(matchChecks(r.track.metadata, r.findings)), r.pillars.length ? r.pillars.filter((p) => !p.dataIssues.length).length / r.pillars.length : 1));
+  const dataScore = rows.length ? Math.round((songData.reduce((a, b) => a + b, 0) / rows.length) * 100) : 0;
   const confirmed = cells.filter((c) => c.state === "confirmed").length;
   const pct = (n: number) => (cells.length ? Math.round((n / cells.length) * 100) : 0);
   const warnings = rows.reduce((n, r) => n + r.findings.filter((f) => f.level === "warn").length, 0);
   return {
     rows,
     cells: cells.length,
-    dataScore: pct(dataOk),
+    dataScore,
+    dataCells: dataOk,
     registeredScore: pct(confirmed),
-    score: cells.length ? Math.round((pct(dataOk) + pct(confirmed)) / 2) : 0,
+    score: cells.length ? Math.round((dataScore + pct(confirmed)) / 2) : 0,
     confirmed,
     missing: cells.filter((c) => c.state === "missing").length,
     unchecked: cells.filter((c) => c.state === "unchecked").length,

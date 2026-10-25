@@ -32,8 +32,8 @@ describe("royalty audit", () => {
       expect(auditTrack({ ...ready, metadata: { ...ready.metadata, writers: [{ ...ready.metadata.writers[0]!, pro }] } })).toEqual([]);
     }
   });
-  it("needs a duration to reach 100%", () => {
-    expect(auditTrack({ ...ready, metadata: { ...ready.metadata, duration: "" } }).map((i) => i.field)).toEqual(["duration"]);
+  it("doesn't require a duration (founder: not mandatory)", () => {
+    expect(auditTrack({ ...ready, metadata: { ...ready.metadata, duration: "" } })).toEqual([]);
   });
   it("needs a PRO for a listed publisher, but not for Self-published or BMI writers with no publisher", () => {
     expect(auditTrack({ ...ready, metadata: { ...ready.metadata, publishers: [{ ...ready.metadata.publishers[0]!, pro: "" }] } }).map((i) => i.field)).toEqual(["publishers-0-pro"]);

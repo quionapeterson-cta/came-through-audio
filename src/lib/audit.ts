@@ -44,8 +44,6 @@ export function auditTrack(t: CatalogTrack): Issue[] {
     if (split.state === "over") out.push({ pillar: "performance", text: `Writer splits total ${split.total}%, ${split.over}% over 100%. Lower one to fix it.`, field: "writers-0-share" });
     else if (split.state === "under" && Math.round(split.total) !== 100) out.push({ pillar: "performance", text: `Writer splits total ${split.total}%, ${split.left}% short of 100%`, field: "writers-0-share" });
   }
-  // PROs and BMI ask for the length when a song is registered, so a song isn't 100% healthy without it.
-  if (!(m.duration ?? "").trim()) out.push({ pillar: "performance", text: "Missing duration (BMI and PROs ask for it, e.g. 3:25)", field: "duration" });
   if (!m.isrc) out.push({ pillar: "digital", text: "Missing ISRC", field: "isrc" });
   else if (!isIsrc(m.isrc)) out.push({ pillar: "digital", text: "ISRC is not 12 characters (CC-XXX-YY-NNNNN)", field: "isrc" });
   if (!t.artist.trim()) out.push({ pillar: "digital", text: "No featured artist name", field: "artist" });

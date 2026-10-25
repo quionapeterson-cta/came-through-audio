@@ -46,6 +46,14 @@ describe("health report", () => {
     expect(all.registeredScore).toBe(100);
     expect(all.score).toBe(100);
   });
+  it("weighs what agencies match by (codes, title, writers) more than other details", () => {
+    const noIsrc = healthReport([track({ ...ready.metadata, isrc: "" })], US, []).dataScore;
+    const noPubIpi = healthReport([track({ ...ready.metadata, publishers: [{ name: "Pub", pro: "SOCAN", ipi: "", percentage: "100" }] })], US, []).dataScore;
+    const noWriterIpi = healthReport([track({ ...ready.metadata, writers: [{ ...ready.metadata.writers[0]!, ipi: "" }] })], US, []).dataScore;
+    expect(noIsrc).toBeLessThan(noPubIpi);
+    expect(noWriterIpi).toBeLessThan(noPubIpi);
+    expect(noPubIpi).toBeLessThan(100);
+  });
   it("ignores MusicBrainz results saved before it was removed", () => {
     const r = healthReport([track({ ...ready.metadata, iswc: "" })], US, [check("musicbrainz", "found", { recordingTitle: "Cut to the Feeling", artist: "Carly Rae Jepsen", iswcs: ["T-919.481.654-1"], writers: ["Simon Wilcox"], link: "" })]);
     expect(r.rows[0]!.findings).toEqual([]);
