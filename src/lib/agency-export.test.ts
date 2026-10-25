@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { emptyMetadata } from "@/lib/metadata";
-import { MLC_PLACEHOLDER_IPI, mlcPlaceholderSongs, mlcRows, neighbouringRows, proCheatSheet, soundExchangeRows } from "@/lib/agency-export";
+import { MLC_MAX_ROWS, MLC_PLACEHOLDER_IPI, mlcFiles, mlcPlaceholderSongs, mlcRows, neighbouringRows, proCheatSheet, soundExchangeRows } from "@/lib/agency-export";
 
 const track = (extra = {}) => ({ id: "1", title: "Song", artist: "Q", updatedAt: "", metadata: { ...emptyMetadata(), title: "Song", artist: "Q", releaseDate: "2026-03-14", isrc: "US-CTA-26-00001", upc: "012345678905",
   writers: [{ name: "", legalName: "Ann Lee", role: "Author/Composer", pro: "BMI", ipi: "00123456789", percentage: "100" }],
@@ -25,6 +25,14 @@ describe("agency exports", () => {
     const noPub = track({ publishers: [] });
     expect(mlcRows([noPub])[0]!.slice(11, 13)).toEqual(["ANN LEE", MLC_PLACEHOLDER_IPI]);
     expect(mlcPlaceholderSongs([track(), hfaOnly, noPub])).toEqual(["Song", "Song"]);
+  });
+  it("splits big MLC exports into files of at most 300 rows without splitting a song", () => {
+    const two = (i: number) => ({ ...track({ writers: [
+      { name: "", legalName: "Ann Lee", role: "Author", pro: "BMI", ipi: "00123456789", percentage: "50" },
+      { name: "", legalName: "Kim Roe", role: "Composer", pro: "BMI", ipi: "00123456780", percentage: "50" }] }), id: String(i) });
+    const files = mlcFiles(Array.from({ length: 151 }, (_, i) => two(i)));
+    expect(files.map((f) => f.length)).toEqual([150, 1]);
+    expect(files.every((f) => mlcRows(f).length <= MLC_MAX_ROWS)).toBe(true);
   });
   it("SoundExchange claims 100% as 1 with real dates and blank inception dates", () => {
     const row = soundExchangeRows([track({ featured: ["B"] })])[0]!;

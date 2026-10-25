@@ -208,11 +208,34 @@ export function exportGate(agency: Agency, tracks: CatalogTrack[]) {
   return { ready, held };
 }
 
+/** The MLC accepts at most this many rows per bulk file (one row per writer). */
+export const MLC_MAX_ROWS = 300;
+/** Splits songs into MLC files of at most 300 rows, never splitting one song's rows across files. */
+export function mlcFiles(tracks: CatalogTrack[]): CatalogTrack[][] {
+  const files: CatalogTrack[][] = [];
+  let cur: CatalogTrack[] = [], rows = 0;
+  for (const t of tracks) {
+    const n = Math.max(1, mlcRows([t]).length);
+    if (cur.length && rows + n > MLC_MAX_ROWS) { files.push(cur); cur = []; rows = 0; }
+    cur.push(t); rows += n;
+  }
+  if (cur.length) files.push(cur);
+  return files;
+}
+
 /** Exports the ready songs and returns the ones held back so the UI can say what to fix. */
 export async function downloadAgencyExport(agency: Agency, tracks: CatalogTrack[], name: string): Promise<Held[]> {
   const { ready, held } = exportGate(agency, tracks);
   if (!ready.length) return held;
-  if (agency === "mlc") save(await fillTemplate("/templates/MLCBulkWork_V1.2.xlsx", "Format", 2, 11, mlcRows(ready)), `${name} - MLC Bulk Work Registration.xlsx`);
+  if (agency === "mlc") {
+    const files = mlcFiles(ready);
+    for (const [i, part] of files.entries()) {
+      const suffix = files.length > 1 ? ` (${i + 1} of ${files.length})` : "";
+      save(await fillTemplate("/templates/MLCBulkWork_V1.2.xlsx", "Format", 2, 11, mlcRows(part)), `${name} - MLC Bulk Work Registration${suffix}.xlsx`);
+      // Browsers can drop back-to-back downloads; a short pause lets each file through.
+      if (i < files.length - 1) await new Promise((r) => setTimeout(r, 600));
+    }
+  }
   else if (agency === "soundexchange") save(await fillTemplate("/templates/ISRC_Ingest_Form.xlsx", "Form", 11, 11, soundExchangeRows(ready), [5]), `${name} - SoundExchange ISRC Ingest.xlsx`);
   else save(new Blob([proCheatSheet(ready)], { type: "text/csv;charset=utf-8" }), `${name} - BMI-ASCAP Registration Cheat Sheet.csv`);
   return held;

@@ -10,6 +10,32 @@ export const EXPORT_REQUIRED = {
   pro: "To register: song title, each writer's legal name, role, PRO and IPI, splits that total 100%, and a publisher (PRO, IPI and share) or Self-published. BMI also asks for duration, genre and the label once the song is released. If all the writers are with BMI, you don't need a publisher.",
 } as const;
 
+/**
+ * How to upload each export at the agency, shown in the export box and after a download. Menu names come from each
+ * agency's help pages (checked 2026-10-25); agencies rename menus, so steps name the area, not every click.
+ */
+export const AGENCY_UPLOAD_STEPS = {
+  mlc: [
+    "Sign in to The MLC Portal (portal.themlc.com) and choose your member account.",
+    "In the left menu, open Works Registration (or Catalog) and choose the bulk registration tool (Register Bulk Works).",
+    "Upload the .xlsx file from Came Through Audio as it is: don't rename the sheet or move columns.",
+    "The MLC checks the file and lists anything it couldn't accept. Fix those songs in My Catalog, export just them, and upload again.",
+    "Then open each song in the portal: remove the placeholder IPI 123456789 if we used it, and add the recording's release date and duration.",
+  ],
+  soundexchange: [
+    "Sign in to SoundExchange Direct (SXDirect).",
+    "Go to My Catalog → Submit Recordings and choose the bulk (ISRC Ingest Form) upload.",
+    "Upload the .xlsx file from Came Through Audio as it is.",
+    "SoundExchange matches your recordings by ISRC. Check My Catalog in SXDirect over the next few weeks to see them listed.",
+  ],
+  pro: [
+    "BMI and ASCAP register songs one at a time for writers, so this file is a cheat sheet, not an upload.",
+    "Sign in to BMI Online Services or ASCAP Member Access and start a new work registration.",
+    "Copy each field from the cheat sheet (title, writers, roles, IPIs, splits, publisher) into the form, one song per registration.",
+    "Save the confirmation for each song, then tick Registered for it in the Royalty Health Hub.",
+  ],
+} as const;
+
 /** Notes shown when exporting to The MLC (founder-verified process, 2026-10-25). */
 export const MLC_EXPORT_NOTES = {
   placeholder: "These songs have no publisher IPI, so the file uses the placeholder IPI 123456789 (and lists the writer as publisher when there's no publisher). It's only there so The MLC accepts the upload: after it goes through, open each song in The MLC Portal and remove the placeholder IPI.",

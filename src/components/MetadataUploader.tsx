@@ -22,7 +22,7 @@ import { DownloadCatalogButton } from "@/components/CatalogLapseBanner";
 import { deleteTrack, downloadCatalogFile, listTracks, safeName, saveTrack, uploadCatalogFile, type CatalogTrack } from "@/lib/catalog";
 import { AGENCY_LABEL, downloadAgencyExport, downloadNeighbouringPack, mlcPlaceholderSongs, recordExports, type Agency, type Held } from "@/lib/agency-export";
 import { AgencyExportDialog } from "@/components/AgencyExportDialog";
-import { MLC_EXPORT_NOTES } from "@/lib/glossary";
+import { AGENCY_UPLOAD_STEPS, MLC_EXPORT_NOTES } from "@/lib/glossary";
 import { registrationReadiness, type MissingItem } from "@/lib/readiness";
 import { isBmi } from "@/lib/audit";
 import { downloadLyricsPdf } from "@/lib/lyrics-pdf";
@@ -72,6 +72,8 @@ export function MetadataUploader({ onShareInfo, userId, mode = "embed", readOnly
   const [filter, setFilter] = useState<"All" | "Single" | "EP" | "Album">("All");
   const [picked, setPicked] = useState<Set<string>>(new Set());
   const [exportOpen, setExportOpen] = useState(false);
+  // After a download: how to upload the file at that agency (and, for The MLC, which songs use the placeholder IPI).
+  const [nextSteps, setNextSteps] = useState<{ agency: Agency; placeholders: string[] }>();
   const togglePick = (id: string) => setPicked((s) => { const n = new Set(s); if (n.has(id)) n.delete(id); else n.add(id); return n; });
   const runExport = (a: Agency, list: CatalogTrack[], name: string) => {
     if (!canExport) { setUpsell("export"); return; }
@@ -80,10 +82,8 @@ export function MetadataUploader({ onShareInfo, userId, mode = "embed", readOnly
         const sent = list.filter((t) => !songs.some((h) => h.track.id === t.id));
         if (sent.length) { logBadgeEvent("agency_export"); void recordExports(a, sent.map((t) => t.id)).catch(() => {}); }
         // The MLC: say which songs carry the placeholder publisher IPI, and what the file can't hold.
-        if (a === "mlc" && sent.length) {
-          const ph = mlcPlaceholderSongs(sent);
-          toast.info(`${ph.length ? `${MLC_EXPORT_NOTES.placeholder} (${ph.join(", ")}) ` : ""}${MLC_EXPORT_NOTES.recording}`, { duration: 20000 });
-        }
+        // Songs held back open their own "what to fix" box first; the upload steps show when nothing was held.
+        if (sent.length && !songs.length) setNextSteps({ agency: a, placeholders: a === "mlc" ? mlcPlaceholderSongs(sent) : [] });
         if (songs.length) setHeld({ agency: a, songs, exported: list.length - songs.length });
         // Splits that don't add up to 100% are exported anyway, with a heads-up: agencies reject them.
         const off = list.filter((t) => !songs.some((h) => h.track.id === t.id) && registrationReadiness(t.metadata, a).warnings.length);
@@ -728,6 +728,17 @@ export function MetadataUploader({ onShareInfo, userId, mode = "embed", readOnly
       ); })()}
       {full && <AgencyExportDialog open={exportOpen} onOpenChange={setExportOpen} tracks={tracks}
         releases={groupProjects(tracks.filter((t) => releaseKind(t.metadata) !== "Single"))} run={runExport} />}
+      <Dialog open={!!nextSteps} onOpenChange={(o) => !o && setNextSteps(undefined)}>
+        <DialogContent className="bg-card text-card-foreground">
+          <DialogHeader><DialogTitle className="text-xl font-bold">Downloaded. Now upload it at {nextSteps && AGENCY_LABEL[nextSteps.agency].split(" (")[0]}</DialogTitle></DialogHeader>
+          {nextSteps && <ol className="list-decimal space-y-1 pl-5 text-sm">{AGENCY_UPLOAD_STEPS[nextSteps.agency].map((step) => <li key={step}>{step}</li>)}</ol>}
+          {nextSteps?.agency === "mlc" && <div className="space-y-2 rounded-lg bg-muted p-3 text-sm">
+            {nextSteps.placeholders.length > 0 && <p>⚠️ {MLC_EXPORT_NOTES.placeholder} <span className="text-muted-foreground">({nextSteps.placeholders.join(", ")})</span></p>}
+            <p>{MLC_EXPORT_NOTES.recording}</p>
+          </div>}
+          <div className="flex justify-end"><Button type="button" onClick={() => setNextSteps(undefined)}>Got it</Button></div>
+        </DialogContent>
+      </Dialog>
       <Dialog open={!!held} onOpenChange={(o) => !o && setHeld(undefined)}>
         <DialogContent className="bg-card text-card-foreground">
           <DialogHeader><DialogTitle className="text-xl font-bold">{held?.exported ? `Exported ${held.exported} ${held.exported === 1 ? "song" : "songs"}` : "Nothing exported yet"}</DialogTitle></DialogHeader>

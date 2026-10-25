@@ -55,7 +55,11 @@ still gets 100% of the publisher share from BMI; an HFA-only publisher can uploa
 
 ---
 
-## PHASE 2 — Design and layout
+## PHASE 2 — Design and layout · ✅ approved 2026-10-25 (building)
+
+### 2.0 Agency upload instructions ✅ (founder asked 2026-10-25)
+Step-by-step "How to upload it" for The MLC, SoundExchange and the BMI/ASCAP cheat sheet, in the export box and in a box after
+each download (`AGENCY_UPLOAD_STEPS` in glossary.ts, menu names from each agency's help pages). MLC files split at 300 rows.
 
 ### 2.1 Global rules (added to BRANDING.md once approved)
 - Every email header (logo + name) links to the CTA homepage.

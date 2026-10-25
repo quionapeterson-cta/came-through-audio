@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { InfoTip } from "@/components/InfoTip";
-import { EXPORT_REQUIRED, MLC_EXPORT_NOTES } from "@/lib/glossary";
+import { AGENCY_UPLOAD_STEPS, EXPORT_REQUIRED, MLC_EXPORT_NOTES } from "@/lib/glossary";
 import { releaseKind } from "@/lib/health-checklist";
 import { AGENCY_LABEL, exportGate, listExports, mlcPlaceholderSongs, type Agency } from "@/lib/agency-export";
 import type { CatalogTrack } from "@/lib/catalog";
@@ -98,6 +98,11 @@ export function AgencyExportDialog({ open, onOpenChange, tracks, releases, run }
             <p>{MLC_EXPORT_NOTES.recording}</p>
           </>}
         </section>
+
+        <details className="rounded-xl border border-border p-4 text-sm" open>
+          <summary className="cursor-pointer font-semibold">How to upload it at {short(agency)}</summary>
+          <ol className="mt-2 list-decimal space-y-1 pl-5">{AGENCY_UPLOAD_STEPS[agency].map((step) => <li key={step}>{step}</li>)}</ol>
+        </details>
 
         <div className="flex justify-end gap-2">
           <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>Cancel</Button>
