@@ -47,6 +47,22 @@ still gets 100% of the publisher share from BMI; an HFA-only publisher can uploa
   placeholder IPI, same note. *Question 1.*
 - Readiness stays the single shared module; this only changes what the MLC file writes and the wording.
 
+### 1.4 BMI writers get the publisher share only if they keep it (founder, 2026-10-25) — PROPOSAL, awaiting approval
+Founder: BMI pays a writer the publisher share only when that writer actually keeps their publishing on the song (no
+publishing deal giving it to someone else). Today we assume it whenever every writer is with BMI and no publisher is listed.
+**Proposal (keeps the system intact: no new writer fields, one shared readiness module):**
+- The song's existing **Self-published (no publisher)** box becomes the answer: for an all-BMI song with no publisher, the
+  Publishers section asks "Do the writers keep their publishing share on this song (no publishing deal)?"
+  **Yes** → ticks Self-published (meaning: no publisher; BMI pays the writers the publisher share). **No** → "Add the
+  publisher who holds it" (the publisher row opens).
+- Until it's answered, the song shows ⚠️ "Answer: do the writers keep their publishing share?" with a link to the question
+  (a warning, never a block on saving or embedding), and the publisher half isn't counted complete in the health %.
+- Once Yes: the publisher half counts complete from the writer fields (legal name, PRO, IPI), as now; the MLC file lists
+  the writers as publisher with the placeholder IPI; BMI registration needs no publisher.
+- Songs already saved: nothing is changed or deleted; all-BMI songs with no publisher simply show the one question.
+- Files: `src/lib/readiness.ts`, `src/lib/audit.ts` (publisherCovered), `src/lib/royalty-checkup.ts`, the Publishers
+  section in `MetadataUploader.tsx`, tests, AGENTS.md wording. No migration.
+
 **Phase 1 answers (founder, 2026-10-25)**
 1. BMI writer with no publisher and no HFA account: the MLC file lists the writer as their own publisher with the placeholder
    IPI 123456789, and the export box says clearly it's a placeholder to remove in The MLC Portal after upload. (The MLC bulk

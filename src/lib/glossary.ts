@@ -20,7 +20,7 @@ export const AGENCY_UPLOAD_STEPS = {
     "In the left menu, open Works Registration (or Catalog) and choose the bulk registration tool (Register Bulk Works).",
     "Upload the .xlsx file from Came Through Audio as it is: don't rename the sheet or move columns.",
     "The MLC checks the file and lists anything it couldn't accept. Fix those songs in My Catalog, export just them, and upload again.",
-    "Then open each song in the portal: remove the placeholder IPI 123456789 if we used it, and add the recording's release date and duration.",
+    "Then open each song in the portal and remove the placeholder IPI 123456789 if we used it. Optional: add the recording's release date and duration there too.",
   ],
   soundexchange: [
     "Sign in to SoundExchange Direct (SXDirect).",
@@ -39,7 +39,7 @@ export const AGENCY_UPLOAD_STEPS = {
 /** Notes shown when exporting to The MLC (founder-verified process, 2026-10-25). */
 export const MLC_EXPORT_NOTES = {
   placeholder: "These songs have no publisher IPI, so the file uses the placeholder IPI 123456789 (and lists the writer as publisher when there's no publisher). It's only there so The MLC accepts the upload: after it goes through, open each song in The MLC Portal and remove the placeholder IPI.",
-  recording: "The MLC's bulk file has no place for the recording's release date or duration. Have them ready: after the upload, open each song in The MLC Portal and add them under its recording. Tip: close the song in My Catalog to see all its details on one row.",
+  recording: "Optional at The MLC: the recording's release date and duration. The bulk file has no place for them, so if you want them on file, open each song in The MLC Portal after the upload and add them under its recording. Tip: close the song in My Catalog to see all its details on one row.",
 } as const;
 
 export const GLOSSARY = {

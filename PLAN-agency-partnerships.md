@@ -93,3 +93,16 @@ Designed HTML version: rendered with the shared `emailLayout()` brand shell (log
 1. ~~Signature~~ Decided 2026-10-23: sign with the legal name **Qui-Ona Peterson**, stage name Karma Came mentioned once in the opening line.
 2. ~~Demo under mutual NDA before launch?~~ Yes (founder, 2026-10-25).
 3. ~~Sender address?~~ partners@camethroughaudio.com (founder, 2026-10-25).
+
+
+## Ask The MLC to add recording release date and duration to the bulk template (founder, 2026-10-25)
+**Pain point (founder-verified):** the Bulk Work Registration template has no columns for a recording's release date or
+duration. Both are optional in The MLC Portal, but adding them after a bulk upload means re-entering the whole recording and
+deleting what the upload created, song by song. Independent writers registering a catalog lose the time the bulk tool saves.
+**Ask:** two optional columns, RECORDING RELEASE DATE and RECORDING DURATION, in the next template version (they already
+version it: V1.2), mapped to the same fields as the Portal.
+**Also raise:** a documented placeholder path for writers with no publisher IPI (BMI writers paid the publisher share by BMI,
+HFA-only publishers), since bulk upload requires a publisher IPI today.
+**How:** part of the MLC-first outreach above, from partners@camethroughaudio.com, signed Qui-Ona Peterson, Founder & CEO;
+attach a sample exported file and a 3-step screen recording of the current workaround. Follow up in 10 business days.
+**Milestones:** draft email (founder review) → send → follow-up → if accepted, update our export the week the new template ships.
