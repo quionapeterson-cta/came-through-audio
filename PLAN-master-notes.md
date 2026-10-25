@@ -278,7 +278,7 @@ says "You Came Through: your 12th signed split sheet", Badge Reference PDF lists
 - Automatic chat that answers from our FAQ and docs (trained on our own content), hands over to a live agent when one is
   online, and offers a support ticket when none is. Needs an AI provider and a chat backend (cost to decide). *Question 6.*
 
-### 3.11 Security
+### 3.11 Security · ✅ forms BUILT 2026-10-25 (12 minimum on sign-up and reset); founder: set Supabase minimum to 12
 - Passwords: 12 characters minimum. Two places: our sign-up/reset forms (I change), and Supabase → Authentication → Providers →
   Email → Minimum password length = 12 (you change; it's the real lock).
 

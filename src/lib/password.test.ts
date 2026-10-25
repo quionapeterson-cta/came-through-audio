@@ -2,15 +2,15 @@ import { describe, it, expect } from "vitest";
 import { passwordStrength, passwordValid } from "./password";
 
 describe("password rules", () => {
-  it("rejects under 8 characters", () => expect(passwordValid("Ab!cdef")).toBe(false));
-  it("requires a lowercase letter", () => expect(passwordValid("ABCDEFG!")).toBe(false));
-  it("requires a capital letter", () => expect(passwordValid("abcdefg!")).toBe(false));
-  it("requires a symbol", () => expect(passwordValid("Abcdefg1")).toBe(false));
-  it("requires a number", () => expect(passwordValid("Abcdefg!")).toBe(false));
-  it("rejects easy-to-guess words", () => expect(passwordValid("Password1!")).toBe(false));
-  it("accepts a valid password", () => expect(passwordValid("Abcdef1!")).toBe(true));
+  it("rejects under 12 characters", () => expect(passwordValid("Abcdefgh1!x")).toBe(false));
+  it("requires a lowercase letter", () => expect(passwordValid("ABCDEFGHIJ1!")).toBe(false));
+  it("requires a capital letter", () => expect(passwordValid("abcdefghij1!")).toBe(false));
+  it("requires a symbol", () => expect(passwordValid("Abcdefghij12")).toBe(false));
+  it("requires a number", () => expect(passwordValid("Abcdefghij!!")).toBe(false));
+  it("rejects easy-to-guess words", () => expect(passwordValid("MyPassword12!")).toBe(false));
+  it("accepts a valid password", () => expect(passwordValid("Abcdefgh1!xy")).toBe(true));
   it("rates longer passwords stronger", () => {
     expect(passwordStrength("")).toBe(0);
-    expect(passwordStrength("Abcdef1!")).toBeLessThan(passwordStrength("Abcdef1!ghijklmnop"));
+    expect(passwordStrength("Abcdefgh1!xy")).toBeLessThan(passwordStrength("Abcdefgh1!xyzwvutsrq"));
   });
 });
