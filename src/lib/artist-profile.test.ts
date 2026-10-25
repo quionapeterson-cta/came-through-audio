@@ -49,3 +49,20 @@ describe("withProfileFilled", () => {
   });
 });
 
+
+describe("registration defaults from the profile", () => {
+  it("fill a song's unanswered sample and written-for questions, never answered ones", async () => {
+    const { withProfileFilled } = await import("@/lib/artist-profile");
+    const { emptyMetadata } = await import("@/lib/metadata");
+    const p = { samples: "No" as const, writtenFor: "No" as const, credits: [{ role: "Mixing engineer", name: "Dre Lane", instrument: "" }] };
+    const filled = withProfileFilled({ ...emptyMetadata(), title: "A" }, p);
+    expect([filled.samples, filled.writtenFor, filled.credits[0]?.name]).toEqual(["No", "No", "Dre Lane"]);
+    const kept = withProfileFilled({ ...emptyMetadata(), title: "B", samples: "Yes", writtenFor: "TV" }, p);
+    expect([kept.samples, kept.writtenFor]).toEqual(["Yes", "TV"]);
+  });
+  it("keep a song's own defaults when a profile answer is blank", async () => {
+    const { withProfile } = await import("@/lib/artist-profile");
+    expect(withProfile({ masterShare: "" }).masterShare).toBe("100");
+    expect(withProfile({ masterShare: "50" }).masterShare).toBe("50");
+  });
+});

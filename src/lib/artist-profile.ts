@@ -7,6 +7,8 @@ import { currentBadge, DEFAULT_BADGE_PREFS, type BadgePrefs } from "@/lib/badges
 export const PROFILE_KEYS = [
   "artist", "label", "primaryGenre", "secondaryGenre", "releaseType", "explicit", "copyright", "phonographic", "language",
   "writers", "composers", "producers", "publishers", "selfPublished", "bmiWriterPublishing", "recordedIn",
+  // Usual answers that aren't song-specific (founder, 2026-10-25): they fill blanks only, never what a song already has.
+  "samples", "writtenFor", "masterShare", "masterBasis", "credits",
 ] as const;
 export type ArtistProfile = Partial<Pick<Metadata, (typeof PROFILE_KEYS)[number]>>;
 
@@ -101,8 +103,10 @@ export function withProfile(p: ArtistProfile | null): Metadata {
   const base = emptyMetadata();
   if (!p) return base;
   const rows = (r?: Contributor[]) => (hasName(r).length ? hasName(r) : [emptyContributor()]);
+  // Blank profile answers keep the song's own defaults (e.g. a blank master share stays 100%, not empty).
+  const set = Object.fromEntries(Object.entries(p).filter(([, v]) => v !== "" && v !== undefined));
   return {
-    ...base, ...p,
+    ...base, ...set,
     writers: rows(p.writers), composers: rows(p.composers), producers: rows(p.producers), publishers: rows(p.publishers),
   };
 }

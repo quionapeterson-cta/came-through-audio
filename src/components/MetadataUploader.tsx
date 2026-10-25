@@ -429,6 +429,9 @@ export function MetadataUploader({ onShareInfo, userId, mode = "embed", readOnly
           const count = (rows: Contributor[] | undefined) => (rows ?? []).filter(creditName).length;
           const filled = (pairs: [string, string][]) => pairs.filter(([, v]) => v.trim()).map(([k]) => k).join(" · ");
           const writersWarn = warnIn("writers-", "composers-");
+          // A usual answer from the Catalog Profile that this song still uses, so it's easy to spot and change.
+          const profile = loadProfile(userId);
+          const fromProfile = (k: "samples" | "writtenFor") => !!profile?.[k] && profile[k] === metadata[k];
           const publishersWarn = warnIn("publishers-", "bmiWriterPublishing");
           // With no publisher, BMI pays the publisher share to its writers, so say so where it matters.
           const bmiNoPublisher = full && !count(metadata.publishers) && [...metadata.writers, ...metadata.composers].some((w) => creditName(w) && isBmi(w));
@@ -523,6 +526,7 @@ export function MetadataUploader({ onShareInfo, userId, mode = "embed", readOnly
               <div className="space-y-2">
                 <Label>Uses a sample or based on another song?<Tip text={TIPS.samples} title="Samples" /></Label>
                 <Choice id="samples" label="Uses a sample or based on another song" value={metadata.samples} options={["No", "Yes"]} onChange={(v) => update("samples", v as Metadata["samples"])} />
+                {fromProfile("samples") && <p className="text-xs text-muted-foreground">From your profile. Change it if this song is different.</p>}
               </div>
               {metadata.samples === "Yes" && <div className="grid gap-5 sm:grid-cols-3">
                 <Field label="Original song title" id="sampleTitle" value={metadata.sampleTitle} onChange={(v) => update("sampleTitle", v)} />
@@ -532,6 +536,7 @@ export function MetadataUploader({ onShareInfo, userId, mode = "embed", readOnly
               <div className="space-y-2">
                 <Label>Written for film, TV, stage or an ad?<Tip text={TIPS.writtenFor} title="Written for" /></Label>
                 <Choice id="writtenFor" label="Written for film, TV, stage or an ad" value={metadata.writtenFor} options={["No", ...PRODUCTION_TYPES]} onChange={(v) => update("writtenFor", v as Metadata["writtenFor"])} />
+                {fromProfile("writtenFor") && <p className="text-xs text-muted-foreground">From your profile. Change it if this song is different.</p>}
               </div>
               {metadata.writtenFor && metadata.writtenFor !== "No" && <Field label="Production title" id="productionTitle" value={metadata.productionTitle} placeholder="Name of the film, show or ad" onChange={(v) => update("productionTitle", v)} />}
             </FormSection>}

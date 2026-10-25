@@ -212,6 +212,16 @@ contract) · 3 Adjust the wording if you need to · 4 Sign · 5 Send for signatu
   non-BMI co-writer gets a ⚠️ to add their publisher or Self-published. Field `bmiWriterPublishing`, catalog only.
 - Inspector gained a Publisher PRO box (publishers need a PRO).
 
+### 3.3c Per-agency scores, per-writer publishing, more profile defaults (founder, 2026-10-25) · ✅ BUILT
+- **One score per agency** on every song (chips in the Song Health Checklist): each agency counts only its own fields
+  (the writer's own PRO list, The MLC, SoundExchange), match fields 60% / other required 35% / duration 5% (PROs only).
+  The song's details score is the average of the agencies that apply; SoundExchange waits until the release date.
+  Hub and Royalty Health Report = half details, half registration. "How your score works" card in both + FAQ.
+- **Publishing on this song** on every writer row: My publisher / Self-published / BMI pays me (BMI writers) / None: no
+  publishing on this song. Usual answer per writer in the Catalog Profile. Shared rule: `publishingGaps` in readiness.ts.
+- **Catalog Profile → Registration Defaults:** usual sample answer, written-for answer, master share, how you hold the
+  master, regular performers and crew. They fill blanks only; the song form says "From your profile".
+
 ### 3.4 Calculators and converters
 - Country setting switches the calculator to that country's society and split rules.
 - Add SESAC to the formula converter.

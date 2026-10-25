@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { ProSelect } from "@/components/ProSelect";
-import { emptyContributor, GENRES, RELEASE_TYPES, WRITER_ROLES, writerRole, type Contributor } from "@/lib/metadata";
+import { CREDIT_ROLES, emptyContributor, GENRES, MASTER_BASES, PRODUCTION_TYPES, RELEASE_TYPES, WRITER_ROLES, writerRole, type Contributor, type Metadata } from "@/lib/metadata";
 import { isBadgeImage } from "@/lib/badges";
 import { isBmi } from "@/lib/audit";
 import { PUBLISHING_LABEL } from "@/lib/readiness";
@@ -212,6 +212,14 @@ export function ArtistOnboarding({ userId, open, onOpenChange, onSaved, firstRun
               <Field label="Default Release Type" term="releaseType"><Pick value={p.releaseType ?? ""} options={RELEASE_TYPES} empty="Ask each time" onChange={(v) => set("releaseType", v)} /></Field>
               <label className="flex items-center gap-2 text-sm sm:col-span-2"><input type="checkbox" className="h-4 w-4 accent-[var(--primary)]" checked={!!p.explicit} onChange={(e) => set("explicit", e.target.checked)} />My songs are usually Explicit (you can change this per song)<InfoTip term="explicit" /></label>
             </Group>
+            {/* Usual answers that aren't song-specific, so songs start closer to 100% health; each song can change them. */}
+            <Group title="Registration Defaults">
+              <Field label="Do your songs usually use a sample?" term="samples"><Pick value={p.samples ?? ""} options={["No", "Yes"]} empty="Ask each time" onChange={(v) => set("samples", v as Metadata["samples"])} /></Field>
+              <Field label="Usually written for film, TV, stage or an ad?" term="writtenFor"><Pick value={p.writtenFor ?? ""} options={["No", ...PRODUCTION_TYPES]} empty="Ask each time" onChange={(v) => set("writtenFor", v as Metadata["writtenFor"])} /></Field>
+              <Field label="Share of the master you usually own (%)" term="masterShare"><Input inputMode="decimal" value={p.masterShare ?? ""} placeholder="100" onChange={(e) => set("masterShare", e.target.value.replace(/[^\d.]/g, "").slice(0, 6))} /></Field>
+              <Field label="How you usually hold the master" term="masterBasis"><Pick value={p.masterBasis ?? ""} options={MASTER_BASES} empty="Copyright Owner" onChange={(v) => set("masterBasis", (v || "Copyright Owner") as Metadata["masterBasis"])} /></Field>
+              <div className="sm:col-span-2"><Crew rows={p.credits ?? []} onChange={(r) => set("credits", r)} /></div>
+            </Group>
             <Group title="Copyright Lines">
               <Field label="Composition Copyright (©)" term="cLine"><CopyrightInput symbol="©" value={p.copyright ?? ""} onChange={(v) => set("copyright", v)} /></Field>
               <Field label="Sound Recording Copyright (℗)" term="pLine"><CopyrightInput symbol="℗" value={p.phonographic ?? ""} onChange={(v) => set("phonographic", v)} /></Field>
@@ -303,6 +311,25 @@ function Nav({ onBack, onNext, onSave, nextLabel = "Continue" }: { onBack?: (() 
         {onSave && <Button variant="outline" onClick={onSave}><Save />Save &amp; exit</Button>}
         <Button onClick={onNext}>{nextLabel}{nextLabel !== "Save & exit" && <ArrowRight />}</Button>
       </div>
+    </div>
+  );
+}
+
+/** Regular performers and crew (session players, backup vocals, engineers) who are on most songs. */
+function Crew({ rows, onChange }: { rows: Metadata["credits"]; onChange: (r: Metadata["credits"]) => void }) {
+  const upd = (i: number, k: "role" | "name" | "instrument", v: string) => onChange(rows.map((r, j) => (j === i ? { ...r, [k]: v } : r)));
+  return (
+    <div className="space-y-2">
+      <Label className="text-xs">Regular performers and crew (optional)<InfoTip term="neighbouringRights" /></Label>
+      {rows.map((r, i) => (
+        <div key={i} className="grid items-center gap-2 sm:grid-cols-[1fr_1.2fr_1fr_auto]">
+          <select aria-label="Role" value={r.role} onChange={(e) => upd(i, "role", e.target.value)} className="h-9 rounded-md border border-input bg-background px-2 text-sm">{CREDIT_ROLES.map((o) => <option key={o}>{o}</option>)}</select>
+          <Input aria-label="Name" placeholder="Name" value={r.name} onChange={(e) => upd(i, "name", e.target.value)} />
+          <Input aria-label="Instrument" placeholder="Instrument (players)" value={r.instrument} onChange={(e) => upd(i, "instrument", e.target.value)} />
+          <Button type="button" variant="ghost" size="icon" aria-label="Remove" onClick={() => onChange(rows.filter((_, j) => j !== i))}><Trash2 /></Button>
+        </div>
+      ))}
+      <Button type="button" variant="outline" size="sm" onClick={() => onChange([...rows, { role: CREDIT_ROLES[0], name: "", instrument: "" }])}><Plus />Add a regular</Button>
     </div>
   );
 }
