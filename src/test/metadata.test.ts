@@ -62,3 +62,45 @@ d2("embed privacy", () => {
     e2(text).not.toContain("987654321");
   });
 });
+
+describe("WAV metadata", () => {
+  /** A tiny valid WAV: fmt chunk + 4 bytes of 16-bit mono PCM. */
+  const wav = () => {
+    const fmt = [1, 0, 1, 0, 0x44, 0xac, 0, 0, 0x88, 0x58, 1, 0, 2, 0, 16, 0];
+    const pcm = [1, 2, 3, 4];
+    const le = (n: number) => [n & 255, (n >> 8) & 255, (n >> 16) & 255, (n >> 24) & 255];
+    const body = [..."WAVE"].map((c) => c.charCodeAt(0)).concat([..."fmt "].map((c) => c.charCodeAt(0)), le(16), fmt, [..."data"].map((c) => c.charCodeAt(0)), le(4), pcm);
+    return new Uint8Array([..."RIFF"].map((c) => c.charCodeAt(0)).concat(le(body.length), body)).buffer;
+  };
+  const bytes = (blob: Blob) => new Promise<Uint8Array<ArrayBuffer>>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => reader.result instanceof ArrayBuffer ? resolve(new Uint8Array(reader.result)) : reject(new Error("Expected binary data"));
+    reader.onerror = () => reject(reader.error);
+    reader.readAsArrayBuffer(blob);
+  });
+
+  it("keeps the audio, adds an INFO list and an id3 chunk, and reads it back", async () => {
+    const data = { ...emptyMetadata(), title: "Therapy", artist: "Karma Came", isrc: "USABC2600001", lyrics: "la la", publishers: [{ name: "Came Pub", pro: "BMI", ipi: "123456789", percentage: "" }] };
+    const out = await bytes(await embedMetadata(wav(), data));
+    const text = String.fromCharCode(...out);
+    expect(text.slice(0, 4)).toBe("RIFF");
+    expect(text.slice(8, 12)).toBe("WAVE");
+    expect(new DataView(out.buffer).getUint32(4, true)).toBe(out.length - 8);
+    expect(text).toContain("data\u0004\u0000\u0000\u0000\u0001\u0002\u0003\u0004");
+    expect(text).toContain("INFOINAM");
+    expect(text).toContain("id3 ");
+    // Publisher details never go in the file.
+    expect(text.replace(/\0/g, "")).not.toContain("Came Pub");
+    const back = readMetadata(out.buffer);
+    expect(back).toMatchObject({ title: "Therapy", artist: "Karma Came", isrc: "USABC2600001", lyrics: "la la" });
+  });
+
+  it("replaces earlier tags instead of stacking them", async () => {
+    const once = await bytes(await embedMetadata(wav(), { ...emptyMetadata(), title: "One", artist: "A" }));
+    const twice = await bytes(await embedMetadata(once.buffer, { ...emptyMetadata(), title: "Two", artist: "A" }));
+    const text = String.fromCharCode(...twice);
+    expect(text.split("id3 ").length).toBe(2);
+    expect(text.split("INFOINAM").length).toBe(2);
+    expect(readMetadata(twice.buffer).title).toBe("Two");
+  });
+});

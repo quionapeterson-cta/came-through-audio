@@ -132,9 +132,84 @@ export function performers(m: Pick<Metadata, "artist" | "featured" | "credits">)
   ];
 }
 
+/** True for a RIFF/WAVE file (the "RIFF....WAVE" header). */
+export function isWav(buf: ArrayBuffer) {
+  const b = new Uint8Array(buf, 0, Math.min(12, buf.byteLength));
+  return b.length === 12 && String.fromCharCode(...b.subarray(0, 4)) === "RIFF" && String.fromCharCode(...b.subarray(8, 12)) === "WAVE";
+}
+
+/** File extension for a master: "wav" for WAV, otherwise "mp3". */
+export const audioExt = (buf: ArrayBuffer) => (isWav(buf) ? "wav" : "mp3");
+
+type Chunk = { id: string; start: number; size: number };
+
+/** Top-level chunks of a WAV file (start = first byte of the chunk's data). */
+function wavChunks(b: Uint8Array): Chunk[] {
+  const view = new DataView(b.buffer, b.byteOffset, b.byteLength);
+  const out: Chunk[] = [];
+  let i = 12;
+  while (i + 8 <= b.length) {
+    const id = String.fromCharCode(...b.subarray(i, i + 4));
+    const size = view.getUint32(i + 4, true);
+    out.push({ id, start: i + 8, size: Math.min(size, b.length - i - 8) });
+    i += 8 + size + (size % 2);
+  }
+  return out;
+}
+
+const ascii = (s: string) => new TextEncoder().encode(s);
+function chunk(id: string, data: Uint8Array) {
+  const out = new Uint8Array(8 + data.length + (data.length % 2));
+  out.set(ascii(id), 0);
+  new DataView(out.buffer).setUint32(4, data.length, true);
+  out.set(data, 8);
+  return out;
+}
+
+/**
+ * WAV masters: the same ID3 tag as an MP3 goes in an "id3 " chunk (read by most music apps and taggers), plus a
+ * RIFF INFO list with the basics for players that only read that. Earlier tags are replaced; audio stays untouched.
+ */
+function wavWithTags(audio: ArrayBuffer, id3: ArrayBuffer, data: Metadata): Blob {
+  const b = new Uint8Array(audio);
+  const keep = wavChunks(b).filter((c) => {
+    if (c.id === "id3 " || c.id === "ID3 ") return false;
+    // Only our INFO list is replaced; other LIST chunks (e.g. adtl cue labels) stay.
+    return !(c.id === "LIST" && String.fromCharCode(...b.subarray(c.start, c.start + 4)) === "INFO");
+  });
+  const info: [string, string][] = [["INAM", data.title], ["IART", [data.artist, ...data.featured.filter(Boolean)].join(", ")], ["IPRD", data.album],
+    ["ICRD", data.releaseDate], ["IGNR", [data.primaryGenre, data.secondaryGenre].filter(Boolean).join("; ")], ["ICOP", data.copyright],
+    ["ITRK", data.trackNumber]];
+  const infoBody = info.filter(([, v]) => v?.trim()).map(([id, v]) => chunk(id, ascii(`${v.trim()}\0`)));
+  const list = infoBody.length ? chunk("LIST", new Uint8Array([...ascii("INFO"), ...infoBody.flatMap((c) => [...c])])) : new Uint8Array();
+  const parts: Uint8Array[] = keep.map((c) => {
+    const raw = b.subarray(c.start - 8, c.start + c.size + (c.size % 2));
+    // A last chunk missing its pad byte gets one, so the file stays valid with chunks after it.
+    return raw.length % 2 ? new Uint8Array([...raw, 0]) : raw;
+  });
+  parts.push(list, chunk("id3 ", new Uint8Array(id3)));
+  const out = new Uint8Array(12 + parts.reduce((n, p) => n + p.length, 0));
+  out.set(ascii("RIFF"), 0);
+  new DataView(out.buffer).setUint32(4, out.length - 8, true);
+  out.set(ascii("WAVE"), 8);
+  let at = 12;
+  for (const p of parts) { out.set(p, at); at += p.length; }
+  return new Blob([out.buffer], { type: "audio/wav" });
+}
+
+/** The ID3 tag inside a WAV's "id3 " chunk, so readMetadata can pre-fill from a tagged WAV. */
+function wavId3(buf: ArrayBuffer): ArrayBuffer | null {
+  const b = new Uint8Array(buf);
+  const c = wavChunks(b).find((x) => x.id === "id3 " || x.id === "ID3 ");
+  return c ? b.slice(c.start, c.start + c.size).buffer : null;
+}
+
 export async function embedMetadata(audio: ArrayBuffer, metadata: Metadata, artwork?: ArrayBuffer): Promise<Blob> {
   const data = metadataSchema.parse(metadata);
-  const writer = new ID3Writer(audio);
+  const wav = isWav(audio);
+  const writer = new ID3Writer(wav ? new ArrayBuffer(0) : audio);
+  // No spare padding inside a WAV chunk (the library adds 4 KB for MP3s, for later in-place edits).
+  if (wav) (writer as unknown as { padding: number }).padding = 0;
   writer.setFrame("TIT2", data.title).setFrame("TPE1", [data.artist, ...data.featured.filter(Boolean)]);
   if (data.trackNumber) writer.setFrame("TRCK", data.trackTotal ? `${data.trackNumber}/${data.trackTotal}` : data.trackNumber);
   if (data.album) writer.setFrame("TALB", data.album);
@@ -167,11 +242,13 @@ export async function embedMetadata(audio: ArrayBuffer, metadata: Metadata, artw
   const credits = data.credits.filter((c) => c.name);
   if (credits.length) writer.setFrame("TXXX", { description: "CREDITS", value: JSON.stringify(credits) });
   if (artwork) writer.setFrame("APIC", { type: 3, data: artwork, description: "Front cover" });
+  if (wav) return wavWithTags(audio, writer.addTag(), data);
   return new Blob([writer.addTag()], { type: "audio/mpeg" });
 }
 
 /** Reads ID3v2.3/2.4 text frames written by embedMetadata so re-uploads pre-fill the form. */
 export function readMetadata(buf: ArrayBuffer): Partial<Metadata> & { picture?: Blob } {
+  if (isWav(buf)) { const tag = wavId3(buf); return tag ? readMetadata(tag) : {}; }
   const b = new Uint8Array(buf);
   if (b.length < 10 || b[0] !== 0x49 || b[1] !== 0x44 || b[2] !== 0x33) return {};
   const ver = b[3];

@@ -26,7 +26,7 @@ export const DOCS: Doc[] = [
       { heading: "How it works", bullets: [
         "Drop in your final MP3 in Embed Metadata.",
         "Fill in the details, or let your saved Embed Defaults fill them for you.",
-        "Click Embed & Download. The tagged file is created in your browser and saved as \"Song Title.mp3\".",
+        "Click Embed & Download. The tagged file is created in your browser and saved as \"Song Title.mp3\" (or \"Song Title.wav\" for a WAV).",
         "Submit it to My Catalog to keep the master, artwork and lyrics ready to download again anytime.",
       ] },
       { heading: "No ISRC or UPC yet?", paragraphs: ["Most distributors assign them free when you release. Embed now, then add your codes in My Catalog when they arrive, or drop your tagged MP3 back in to repopulate everything automatically."] },

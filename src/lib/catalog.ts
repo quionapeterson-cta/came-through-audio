@@ -121,7 +121,7 @@ export async function downloadWholeCatalog(onProgress?: (done: number, total: nu
   for (const [i, t] of tracks.entries()) {
     onProgress?.(i, tracks.length);
     const name = safeName(t.title);
-    for (const [path, file] of [[t.metadata.audioPath, `${name}.mp3`], [t.metadata.artPath, `Artwork/${name}.${t.metadata.artPath?.split(".").pop() ?? "jpg"}`]] as const) {
+    for (const [path, file] of [[t.metadata.audioPath, `${name}.${/\.wav$/i.test(t.metadata.audioPath ?? "") ? "wav" : "mp3"}`], [t.metadata.artPath, `Artwork/${name}.${t.metadata.artPath?.split(".").pop() ?? "jpg"}`]] as const) {
       if (!path) continue;
       const { data, error } = await supabase.storage.from(BUCKET).download(path);
       if (error || !data) { skipped += 1; continue; }

@@ -35,6 +35,10 @@ import type { ShareInfo } from "@/components/BadgeCelebration";
 const normArtist = (v: string) => v.trim().replace(/\s+/g, " ").toLowerCase();
 import { Link } from "@tanstack/react-router";
 
+const AUDIO_FILE = /\.(mp3|wav)$/i;
+/** "wav" for a WAV file name or storage path, otherwise "mp3" (masters keep the format they were uploaded in). */
+const extOf = (name?: string) => (/\.wav$/i.test(name ?? "") ? "wav" : "mp3");
+
 /** What another tab asks My Catalog to open: a field on a saved song, or a new song with its title typed in. */
 export type CatalogFocus = { trackId: string; field: string } | { newTitle: string; artist?: string | undefined; nonce: number };
 
@@ -162,7 +166,7 @@ export function MetadataUploader({ onShareInfo, userId, mode = "embed", readOnly
       }
       let filesChanged = false;
       try {
-        if (master) { data.audioPath = await uploadCatalogFile(userId, id, "master", master, "mp3"); filesChanged = true; }
+        if (master) { data.audioPath = await uploadCatalogFile(userId, id, "master", master, extOf(audio?.name)); filesChanged = true; }
         if (artwork) { data.artPath = await uploadCatalogFile(userId, id, "artwork", artwork, artwork.type === "image/png" ? "png" : "jpg"); filesChanged = true; }
         if (filesChanged) await saveTrack(data, userId, id);
       } catch { toast.warning("Details saved, but your audio or artwork could not be stored. Try saving again."); }
@@ -231,10 +235,10 @@ export function MetadataUploader({ onShareInfo, userId, mode = "embed", readOnly
     if (file) selectAudio(file);
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
-  /** Drop or pick several MP3s: the first fills the form if it's free, the rest wait in the session queue. */
+  /** Drop or pick several MP3s or WAVs: the first fills the form if it's free, the rest wait in the session queue. */
   function addFiles(list: FileList | File[]) {
-    const files = [...list].filter((f) => /\.mp3$/i.test(f.name));
-    if (!files.length) { setError("Choose MP3 audio files. WAV and FLAC embedding are not available yet."); return; }
+    const files = [...list].filter((f) => AUDIO_FILE.test(f.name));
+    if (!files.length) { setError("Choose MP3 or WAV audio files. FLAC embedding isn't available yet."); return; }
     const [first, ...rest] = files;
     if (!audio && !full) { selectAudio(first); setQueue((q) => [...q, ...rest]); }
     else if (full) selectAudio(first);
@@ -265,7 +269,7 @@ export function MetadataUploader({ onShareInfo, userId, mode = "embed", readOnly
   function selectAudio(file?: File) {
     if (!file) return;
     setResult(undefined);
-    if (!/\.mp3$/i.test(file.name)) { setError("Choose an MP3 audio file. WAV and FLAC embedding are not available yet."); return; }
+    if (!AUDIO_FILE.test(file.name)) { setError("Choose an MP3 or WAV audio file. FLAC embedding isn't available yet."); return; }
     setAudio(file);
     setError("");
     const probe = new Audio();
@@ -295,13 +299,13 @@ export function MetadataUploader({ onShareInfo, userId, mode = "embed", readOnly
     event.preventDefault();
     setResult(undefined);
     setError("");
-    if (!audio) { setError("Choose an MP3 file first."); return; }
+    if (!audio) { setError("Choose an MP3 or WAV file first."); return; }
     const parsed = metadataSchema.safeParse(metadata);
     if (!parsed.success) { setError(parsed.error.issues[0]?.message ?? "Check your metadata."); return; }
     setBusy(true);
     try {
       const blob = await embedMetadata(await audio.arrayBuffer(), parsed.data, artwork ? await artwork.arrayBuffer() : undefined);
-      const file = { url: URL.createObjectURL(blob), name: `${safeName(parsed.data.title)}.mp3` };
+      const file = { url: URL.createObjectURL(blob), name: `${safeName(parsed.data.title)}.${extOf(audio.name)}` };
       const a = document.createElement("a");
       a.href = file.url; a.download = file.name;
       document.body.appendChild(a); a.click(); a.remove();
@@ -309,7 +313,7 @@ export function MetadataUploader({ onShareInfo, userId, mode = "embed", readOnly
       setResult(file);
       setSessionDone((d) => [...d, parsed.data.title.trim() || file.name]);
     } catch {
-      setError("This file could not be tagged. Check that it is a valid MP3 and the cover is a valid JPEG or PNG.");
+      setError("This file could not be tagged. Check that it is a valid MP3 or WAV and the cover is a valid JPEG or PNG.");
     } finally { setBusy(false); }
   }
 
@@ -328,11 +332,11 @@ export function MetadataUploader({ onShareInfo, userId, mode = "embed", readOnly
         <fieldset disabled={busy} className="grid gap-5 sm:grid-cols-[1fr_220px]">
           <div onDragOver={(event) => event.preventDefault()} onDrop={(event) => { event.preventDefault(); if (!busy) addFiles(event.dataTransfer.files); }} className="flex min-h-44 flex-col items-center justify-center gap-3 rounded-lg border border-dashed border-primary bg-accent/30 p-5 text-center">
             <FileAudio className="h-8 w-8 text-primary" />
-            <div className="max-w-full break-all text-sm font-semibold">{audio ? audio.name : full ? (editingId ? "Replace audio (optional)" : "MP3 (optional)") : "Audio file"}</div>
+            <div className="max-w-full break-all text-sm font-semibold">{audio ? audio.name : full ? (editingId ? "Replace audio (optional)" : "MP3 or WAV (optional)") : "Audio file"}</div>
             {audio && <span className="text-xs text-muted-foreground">{(audio.size / 1024 / 1024).toFixed(1)} MB</span>}
-            <Button type="button" variant="outline" onClick={() => audioInput.current?.click()}><Upload />{audio ? (full ? "Replace MP3" : "Add more songs") : full ? "Choose MP3" : "Choose MP3s"}</Button>
+            <Button type="button" variant="outline" onClick={() => audioInput.current?.click()}><Upload />{audio ? (full ? "Replace audio" : "Add more songs") : full ? "Choose MP3 or WAV" : "Choose MP3s or WAVs"}</Button>
             {!full && !audio && <span className="text-xs text-muted-foreground">Drop a whole EP or album. Songs wait in your session queue.</span>}
-            <input ref={audioInput} type="file" accept=".mp3,audio/mpeg" multiple={!full} aria-label="MP3 audio files" className="sr-only" onChange={(event) => { if (event.target.files) addFiles(event.target.files); event.target.value = ""; }} />
+            <input ref={audioInput} type="file" accept=".mp3,.wav,audio/mpeg,audio/wav,audio/x-wav" multiple={!full} aria-label="MP3 or WAV audio files" className="sr-only" onChange={(event) => { if (event.target.files) addFiles(event.target.files); event.target.value = ""; }} />
           </div>
           <div className="flex min-h-44 flex-col items-center justify-center gap-3 rounded-lg border border-dashed border-border p-4">
             {cover ? <img src={cover} alt="Selected cover artwork" className="h-20 w-20 rounded object-cover" /> : <ImagePlus className="h-8 w-8 text-primary" />}
@@ -533,16 +537,16 @@ export function MetadataUploader({ onShareInfo, userId, mode = "embed", readOnly
             <DropdownMenuTrigger asChild><Button type="button"><Plus />Add song</Button></DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="max-w-xs">
               <DropdownMenuItem onClick={() => addSong(true)} className="flex-col items-start gap-0.5">
-                <span className="font-semibold">Upload an MP3 you already embedded</span>
+                <span className="font-semibold">Upload an MP3 or WAV you already embedded</span>
                 <span className="text-xs text-muted-foreground">We read its tags and fill in the details for you.</span>
               </DropdownMenuItem>
               <DropdownMenuItem onClick={() => addSong(false)} className="flex-col items-start gap-0.5">
                 <span className="font-semibold">Add without audio</span>
-                <span className="text-xs text-muted-foreground">Type in the details. Add the MP3 anytime later.</span>
+                <span className="text-xs text-muted-foreground">Type in the details. Add the audio anytime later.</span>
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
-        ) : <span className="text-sm text-muted-foreground">{full ? "Saved songs, identifiers and splits" : "MP3 · ID3v2.3"}</span>}
+        ) : <span className="text-sm text-muted-foreground">{full ? "Saved songs, identifiers and splits" : "MP3 or WAV · ID3v2.3"}</span>}
       </div>
       {!full && <div className="lg:grid lg:grid-cols-[13rem_minmax(0,1fr)_17rem] lg:items-start lg:gap-6">
       <SessionRail audio={audio} queue={queue} done={sessionDone} onAdd={() => audioInput.current?.click()} onRemove={(i) => setQueue((q) => q.filter((_, j) => j !== i))} />
@@ -605,7 +609,7 @@ export function MetadataUploader({ onShareInfo, userId, mode = "embed", readOnly
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild><Button type="button" variant="outline" size="sm"><Download />Downloads</Button></DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
-                          {t.metadata.audioPath && <DropdownMenuItem onClick={() => downloadCatalogFile(t.metadata.audioPath, `${safeName(t.title)}.mp3`).catch(() => toast.error("Could not download the song."))}>Master MP3</DropdownMenuItem>}
+                          {t.metadata.audioPath && <DropdownMenuItem onClick={() => downloadCatalogFile(t.metadata.audioPath, `${safeName(t.title)}.${extOf(t.metadata.audioPath)}`).catch(() => toast.error("Could not download the song."))}>Master {extOf(t.metadata.audioPath).toUpperCase()}</DropdownMenuItem>}
                           {t.metadata.artPath && <DropdownMenuItem onClick={() => downloadCatalogFile(t.metadata.artPath, `${safeName(t.title)}-artwork.${t.metadata.artPath.split(".").pop()}`).catch(() => toast.error("Could not download the artwork."))}>Artwork</DropdownMenuItem>}
                           {t.metadata.lyrics && <DropdownMenuItem onClick={() => void downloadLyricsPdf(t)}>Lyrics PDF</DropdownMenuItem>}
                         </DropdownMenuContent>
@@ -833,7 +837,7 @@ function NextSong({ queue, carry, onCarry, onNext, compact }: { queue: File[]; c
         ))}
       </div>
       <Button type="button" size="lg" className={`mt-4 ${compact ? "" : "mx-auto"}`} onClick={onNext} autoFocus={!compact}>
-        <Plus />{queue[0] ? `Next song: ${queue[0].name.replace(/\.mp3$/i, "")}` : "Next song"}
+        <Plus />{queue[0] ? `Next song: ${queue[0].name.replace(AUDIO_FILE, "")}` : "Next song"}
       </Button>
     </div>
   );
@@ -856,11 +860,11 @@ function SessionRail({ audio, queue, done, onAdd, onRemove }: { audio: File | un
       </div>
       <ol className="mt-3 max-h-[60vh] space-y-1.5 overflow-y-auto text-sm">
         {done.map((t, i) => <li key={`d${i}`} className="flex items-center gap-2 text-muted-foreground"><CheckCircle2 className="h-4 w-4 shrink-0 text-primary" /><span className="truncate">{t}</span></li>)}
-        {audio && <li className="flex items-center gap-2 rounded-lg bg-primary/10 px-2 py-1.5 font-semibold"><FileAudio className="h-4 w-4 shrink-0 text-primary" /><span className="truncate">{audio.name.replace(/\.mp3$/i, "")}</span></li>}
+        {audio && <li className="flex items-center gap-2 rounded-lg bg-primary/10 px-2 py-1.5 font-semibold"><FileAudio className="h-4 w-4 shrink-0 text-primary" /><span className="truncate">{audio.name.replace(AUDIO_FILE, "")}</span></li>}
         {queue.map((f, i) => (
           <li key={`q${i}`} className="group flex items-center gap-2 px-2">
             <span className="w-4 shrink-0 text-center text-xs text-muted-foreground">{i + 1}</span>
-            <span className="min-w-0 flex-1 truncate">{f.name.replace(/\.mp3$/i, "")}</span>
+            <span className="min-w-0 flex-1 truncate">{f.name.replace(AUDIO_FILE, "")}</span>
             <button type="button" aria-label={`Remove ${f.name} from the queue`} onClick={() => onRemove(i)} className="text-muted-foreground opacity-0 transition hover:text-destructive group-hover:opacity-100 focus:opacity-100"><Trash2 className="h-3.5 w-3.5" /></button>
           </li>
         ))}
