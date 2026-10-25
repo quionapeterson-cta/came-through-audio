@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { PRE_DIST_NOTE, PRO_TIP } from "@/lib/copy";
+import { HOME_FAQS } from "@/lib/faq";
 import { Check, Music, Upload, Download } from "lucide-react";
 import { SignupCard } from "@/components/SignupCard";
 import { BrandLogo } from "@/components/BrandLogo";
@@ -43,18 +43,12 @@ const steps = [
   { badge: ShieldBadge, title: "AI Protection", text: "Lock in timestamped, independently verifiable proof of your creative process with a Certificate of Human Origin, anchored on the Bitcoin blockchain." },
 ];
 
-const faqs = [
-  { q: "What is a Catalog?", a: "In the music industry, your Catalog is the complete collection of musical works, masters, and intellectual property that you own or control. Inside Came Through Audio, the \"My Catalog\" tab acts as your private, institutional-grade digital vault. It organizes your master files, high-resolution cover art, precise tracking tags, splits, and credit data in one secure dashboard so you never lose track of an asset or miss out on a royalty payout." },
-  { q: "What does it mean to \"embed\" metadata?", a: "Embedding means permanently injecting tracking blocks, legal credits, and identifiers (like your real legal name, ISRC, UPC, and lyrics) directly inside the structural code of your MP3 or audio file container. Instead of keeping credits separate in a text document, embedding locks the data directly into the audio file itself. Wherever that file travels, your data travels with it, protecting your ownership." },
-  { q: "Can I download my songs and artwork later?", a: "Yes! Every song you submit is saved in your private catalog vault. Download your embedded master MP3, cover art and lyrics anytime from My Catalog — no re-embedding needed." },
-  { q: "What if I don't have my ISRC or UPC yet?", a: `${PRE_DIST_NOTE} Pro Tip: ${PRO_TIP}` },
-  { q: "How does the AI Protection Hub document human origin?", a: "The hub issues a Certificate of Human Origin. Short screen recordings of your DAW session and draft history are fingerprinted (SHA-256), paired with a sworn human-authorship attestation, and timestamped on the Bitcoin blockchain. Together they're strong, independently verifiable evidence that your session and drafts existed by that date. For the strongest protection, also register important songs with the U.S. Copyright Office." },
-];
 
-type FooterLink = { label: string; to?: "/terms-of-service" | "/refund-policy" | "/privacy-policy" | "/contact"; search?: { type: "support" | "contact" }; doc?: string };
+
+type FooterLink = { label: string; to?: "/terms-of-service" | "/refund-policy" | "/privacy-policy" | "/contact" | "/faq"; search?: { type: "support" | "contact" }; doc?: string };
 const footerCols: { title: string; links: FooterLink[] }[] = [
   { title: "Product", links: [{ label: "Metadata Embedding", doc: "metadata-embedding" }, { label: "Centralized Master Catalog", doc: "master-catalog" }, { label: "Royalty Health Hub", doc: "royalty-health-suite" }, { label: "System Security Metrics", doc: "security" }] },
-  { title: "Learn", links: [{ label: "Help Center", doc: "help-center" }, { label: "Industry Insights", doc: "industry-insights" }, { label: "The Studio-to-Catalog Guide", doc: "studio-to-catalog-guide" }, { label: "Add Us as Your Representative", doc: "add-representative" }] },
+  { title: "Learn", links: [{ label: "FAQ", to: "/faq" }, { label: "Help Center", doc: "help-center" }, { label: "Industry Insights", doc: "industry-insights" }, { label: "The Studio-to-Catalog Guide", doc: "studio-to-catalog-guide" }, { label: "Add Us as Your Representative", doc: "add-representative" }] },
   { title: "Legal", links: [{ label: "Terms of Service", to: "/terms-of-service" }, { label: "Refund Policy", to: "/refund-policy" }, { label: "Privacy Policy", to: "/privacy-policy" }] },
   { title: "Access", links: [{ label: "Support Tickets", to: "/contact", search: { type: "support" } }, { label: "Contact Us", to: "/contact", search: { type: "contact" } }] },
 ];
@@ -183,13 +177,14 @@ function Landing() {
       <section className="mx-auto max-w-4xl px-6 pb-20">
         <h2 className="text-center text-3xl font-bold md:text-4xl">Frequently Asked Questions</h2>
         <Accordion type="single" collapsible className="mt-10 rounded-2xl border-2 border-foreground">
-          {faqs.map((f, i) => (
+          {HOME_FAQS.map((f, i) => (
             <AccordionItem key={f.q} value={`faq-${i}`} className="px-6 last:border-b-0">
               <AccordionTrigger className="text-left text-lg font-bold">{f.q}</AccordionTrigger>
               <AccordionContent className="text-base leading-relaxed text-foreground">{f.a}</AccordionContent>
             </AccordionItem>
           ))}
         </Accordion>
+        <p className="mt-6 text-center"><Link to="/faq" className="font-semibold text-primary hover:underline">See all questions →</Link></p>
       </section>
 
       <footer className="bg-ink text-ink-muted">

@@ -83,7 +83,7 @@ function ErrorComponent({ error, reset }: ErrorComponentProps) {
 }
 
 /** Open during pre-launch so Paddle's website review can see the business (founder, 2026-10-20). Search engines stay blocked. */
-const REVIEW_PAGES = new Set(["/", "/plans", "/contact", "/terms-of-service", "/terms-and-conditions", "/privacy-policy", "/privacy-notice", "/refund-policy"]);
+const REVIEW_PAGES = new Set(["/", "/faq", "/plans", "/contact", "/terms-of-service", "/terms-and-conditions", "/privacy-policy", "/privacy-notice", "/refund-policy"]);
 
 export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()({
   // Staging passcode gate: clear SITE_PASSWORD to open the site at launch.
