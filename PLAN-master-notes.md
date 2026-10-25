@@ -263,6 +263,10 @@ contract) · 3 Adjust the wording if you need to · 4 Sign · 5 Send for signatu
   guides and plan pages (we feed it our content and it quotes it; nothing is trained from scratch), with live-agent handoff in
   the staff queue and a support ticket when no agent is online. Needs an AI model API (e.g. a small, low-cost Claude model)
   for the answers; content updates go live as soon as the pages change.
+  **Without an AI model (founder asked, 2026-10-25): yes, possible.** Version 1 can be a search-based answer bot: it matches the
+  question's words against our FAQ and docs and replies with the best-matching answer and a link (plus "Was this helpful? /
+  Talk to an agent"). Free to run and never makes things up, but it can't understand unusual wording or combine two answers.
+  Start there; add the AI model later only if unanswered questions pile up (the staff queue shows which ones).
 - **Employee badges:** the 33 staff badges rendering now, then milestone badges per department.
 - **Backups and rebuilding:** the code is safe in GitHub (rebuild = clone, `bun install`, set secrets, deploy to Cloudflare per
   PLAN-cloudflare-hosting). What isn't safe yet: the database and stored files. Plan: a weekly automatic database dump and
