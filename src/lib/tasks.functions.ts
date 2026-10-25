@@ -7,9 +7,13 @@ export const TASK_STATUSES = ["idea", "planned", "in_progress", "done"] as const
 export type TaskStatus = (typeof TASK_STATUSES)[number];
 export const TASK_IMPORTANCE = ["top", "high", "normal", "low"] as const;
 export type TaskImportance = (typeof TASK_IMPORTANCE)[number];
+/** Repeating tasks (Phase 4 item 7): marking one done creates the next with the next due date (database trigger). */
+export const TASK_REPEATS = ["weekly", "monthly", "quarterly"] as const;
+export type TaskRepeat = (typeof TASK_REPEATS)[number];
 export type DepartmentTask = {
   id: string; department: string; title: string; body: string; status: TaskStatus; created_at: string; updated_at: string;
   importance: TaskImportance; due_at: string | null; owner_id: string | null; completed_at: string | null; completed_by: string | null;
+  repeat?: TaskRepeat | null;
 };
 
 const taskSchema = z.object({
@@ -21,6 +25,8 @@ const taskSchema = z.object({
   importance: z.enum(TASK_IMPORTANCE).default("normal"),
   due_at: z.string().datetime({ offset: true }).nullable().default(null),
   owner_id: z.string().uuid().nullable().default(null),
+  /** Left out when unchanged, so saving works before the repeat column exists (migration 20261025200000). */
+  repeat: z.enum(TASK_REPEATS).nullable().optional(),
 });
 
 /** Staff only: tasks for every department the caller belongs to (RLS narrows the rows to in_department). */
@@ -39,7 +45,7 @@ export const saveTask = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const { data: allowed } = await context.supabase.rpc("in_department", { _user_id: context.userId, _dept: data.department });
     if (!allowed) throw new Error("Forbidden");
-    const row = { department: data.department, title: data.title, body: data.body, status: data.status, importance: data.importance, due_at: data.due_at, owner_id: data.owner_id, updated_at: new Date().toISOString() };
+    const row = { department: data.department, title: data.title, body: data.body, status: data.status, importance: data.importance, due_at: data.due_at, owner_id: data.owner_id, ...(data.repeat !== undefined ? { repeat: data.repeat } : {}), updated_at: new Date().toISOString() };
     const { error } = data.id
       ? await context.supabase.from("department_tasks" as never).update(row as never).eq("id", data.id)
       : await context.supabase.from("department_tasks" as never).insert(row as never);
@@ -95,6 +101,23 @@ export const loadLaunchMilestones = createServerFn({ method: "POST" })
     if (rows.length) {
       const { error } = await context.supabase.from("department_tasks" as never).insert(rows as never);
       if (error) throw new Error(/check constraint/i.test(error.message) ? "Run migration 20261025170000 (launch department) first." : "Couldn't add the milestones.");
+    }
+    return { added: rows.length };
+  });
+
+/** Market Research members or super admins: adds the team's repeating starter tasks (skips any already there). */
+export const loadResearchPlan = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { data: allowed } = await context.supabase.rpc("in_department", { _user_id: context.userId, _dept: "research" });
+    if (!allowed) throw new Error("Only the Market Research team can load its plan.");
+    const { researchTasks } = await import("./research-plan");
+    const { data: have } = await context.supabase.from("department_tasks" as never).select("title").eq("department", "research");
+    const titles = new Set(((have ?? []) as { title: string }[]).map((t) => t.title));
+    const rows = researchTasks().filter((t) => !titles.has(t.title)).map((t) => ({ department: "research", status: "planned", ...t }));
+    if (rows.length) {
+      const { error } = await context.supabase.from("department_tasks" as never).insert(rows as never);
+      if (error) throw new Error(/check constraint|repeat/i.test(error.message) ? "Run migration 20261025200000 (Market Research) first." : "Couldn't add the plan.");
     }
     return { added: rows.length };
   });

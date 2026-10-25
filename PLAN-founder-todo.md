@@ -29,6 +29,7 @@ All GitHub links need you logged in to GitHub (the repo is private). On each fil
 | 8 | [20261025160000 paid-contracts](https://github.com/quionapeterson-cta/came-through-audio/blob/main/supabase/migrations/20261025160000_f3b8d2a6-paid-contracts.sql) | $3.99 contracts on any plan |
 
 - [ ] Run db-check.sql again; send me a screenshot if anything still says MISSING.
+- [ ] Also run [20261025200000 market-research-repeat](https://github.com/quionapeterson-cta/came-through-audio/blob/main/supabase/migrations/20261025200000_d7a1c9e3-market-research-repeat.sql) (Market Research team, repeating tasks).
 - [ ] Also run [20261025190000 outreach-emails](https://github.com/quionapeterson-cta/came-through-audio/blob/main/supabase/migrations/20261025190000_c5f2a8d1-outreach-emails.sql) (outreach email log).
 - [ ] Also run [20261025180000 beta-feedback](https://github.com/quionapeterson-cta/came-through-audio/blob/main/supabase/migrations/20261025180000_b3e7f1a5-beta-feedback.sql) (beta checklist results).
 - [ ] Also run [20261025170000 launch-department](https://github.com/quionapeterson-cta/came-through-audio/blob/main/supabase/migrations/20261025170000_a9d4e2c7-launch-department.sql) (pre-launch milestones), then Admin → Task Bank → Load pre-launch milestones.

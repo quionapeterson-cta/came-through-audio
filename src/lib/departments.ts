@@ -2,7 +2,7 @@
  * Staff roles and departments. Mirrors public.in_department / public.can_manage_staff so the
  * dashboard shows exactly the tabs the database will let each person read.
  */
-export const DEPARTMENTS = ["registration", "royalty_accounts", "finance", "branding", "marketing", "marketing_sales", "support", "ai", "software", "security", "hr", "launch"] as const;
+export const DEPARTMENTS = ["registration", "royalty_accounts", "finance", "branding", "marketing", "marketing_sales", "support", "ai", "software", "security", "hr", "research", "launch"] as const;
 export type Department = (typeof DEPARTMENTS)[number];
 /**
  * Departments staff can be placed in. "launch" holds the pre-launch milestones (Phase 4, 2026-10-25) and is never
@@ -23,6 +23,7 @@ export const DEPARTMENT_LABEL: Record<Department, string> = {
   software: "Software",
   security: "Security",
   hr: "HR",
+  research: "Market Research",
   launch: "Launch (Super Admin)",
 };
 

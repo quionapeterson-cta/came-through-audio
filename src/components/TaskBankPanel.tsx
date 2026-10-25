@@ -2,18 +2,21 @@ import { useState } from "react";
 import { confirmAction } from "@/components/ConfirmHost";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { Pencil, Plus, Rocket, Trash2 } from "lucide-react";
+import { Pencil, Plus, Rocket, Telescope, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { DEPARTMENT_LABEL, type Department } from "@/lib/departments";
 import { LAUNCH_MILESTONES } from "@/lib/launch-milestones";
-import { deleteTask, listTaskOwners, listTasks, loadLaunchMilestones, saveTask, TASK_IMPORTANCE, TASK_STATUSES, type DepartmentTask, type TaskImportance, type TaskStatus } from "@/lib/tasks.functions";
+import { RESEARCH_TITLES } from "@/lib/research-plan";
+import { deleteTask, listTaskOwners, listTasks, loadLaunchMilestones, loadResearchPlan, saveTask, TASK_REPEATS, type TaskRepeat, TASK_IMPORTANCE, TASK_STATUSES, type DepartmentTask, type TaskImportance, type TaskStatus } from "@/lib/tasks.functions";
 import { IMPORTANCE_LABEL, dueLabel, importanceChip, sortTasks, toLocalInput, fromLocalInput } from "@/lib/task-alerts";
 
 const STATUS_LABEL: Record<TaskStatus, string> = { idea: "Idea", planned: "Planned", in_progress: "In Progress", done: "Done" };
-type Draft = { id?: string; department: Department; title: string; body: string; status: TaskStatus; importance: TaskImportance; due_at: string | null; owner_id: string | null };
+type Draft = { id?: string; department: Department; title: string; body: string; status: TaskStatus; importance: TaskImportance; due_at: string | null; owner_id: string | null;
+  repeat: TaskRepeat | null; /** The saved value, so an unchanged repeat isn't sent. */ wasRepeat: TaskRepeat | null };
+const REPEAT_LABEL: Record<TaskRepeat, string> = { weekly: "Every week", monthly: "Every month", quarterly: "Every 3 months" };
 
 /** Each department's bank of ideas and plans for later. Rows are limited to the caller's departments by RLS. */
 export function TaskBankPanel({ departments }: { departments: Department[] }) {
@@ -21,6 +24,7 @@ export function TaskBankPanel({ departments }: { departments: Department[] }) {
   const save = useServerFn(saveTask);
   const remove = useServerFn(deleteTask);
   const loadMilestones = useServerFn(loadLaunchMilestones);
+  const loadResearch = useServerFn(loadResearchPlan);
   const qc = useQueryClient();
   const q = useQuery({ queryKey: ["department-tasks"], queryFn: () => fetchTasks() });
   const fetchOwners = useServerFn(listTaskOwners);
@@ -40,6 +44,18 @@ export function TaskBankPanel({ departments }: { departments: Department[] }) {
   // Super admins: the pre-launch milestones not loaded yet into the Launch department.
   const launchTitles = new Set(mine.filter((t) => t.department === "launch").map((t) => t.title));
   const missingMilestones = departments.includes("launch") ? LAUNCH_MILESTONES.filter((m) => !launchTitles.has(m.title)).length : 0;
+  const researchTitles = new Set(mine.filter((t) => t.department === "research").map((t) => t.title));
+  const missingResearch = departments.includes("research") ? RESEARCH_TITLES.filter((t) => !researchTitles.has(t)).length : 0;
+  const addResearch = async () => {
+    setBusy(true);
+    try {
+      const { added } = await loadResearch();
+      await qc.invalidateQueries({ queryKey: ["department-tasks"] });
+      setDept("research");
+      toast.success(`${added} repeating Market Research task${added === 1 ? "" : "s"} added.`);
+    } catch (e) { toast.error(e instanceof Error ? e.message : "Couldn't add the plan."); }
+    finally { setBusy(false); }
+  };
   const addMilestones = async () => {
     setBusy(true);
     try {
@@ -55,7 +71,8 @@ export function TaskBankPanel({ departments }: { departments: Department[] }) {
     if (!draft) return;
     setBusy(true);
     try {
-      await save({ data: draft });
+      const { wasRepeat, repeat, ...rest } = draft;
+      await save({ data: { ...rest, ...(repeat !== wasRepeat ? { repeat } : {}) } });
       setDraft(null);
       await qc.invalidateQueries({ queryKey: ["department-tasks"] });
       toast.success("Task saved.");
@@ -83,8 +100,9 @@ export function TaskBankPanel({ departments }: { departments: Department[] }) {
           ))}
         </div>
         <div className="flex flex-wrap gap-2">
+        {missingResearch > 0 && <Button size="sm" variant="outline" disabled={busy} onClick={() => void addResearch()}><Telescope className="h-4 w-4" />Load Market Research plan ({missingResearch})</Button>}
         {missingMilestones > 0 && <Button size="sm" variant="outline" disabled={busy} onClick={() => void addMilestones()}><Rocket className="h-4 w-4" />Load pre-launch milestones ({missingMilestones})</Button>}
-        <Button size="sm" onClick={() => setDraft({ department: dept === "all" ? departments[0]! : dept, title: "", body: "", status: "idea", importance: "normal", due_at: null, owner_id: owners.data?.me ?? null })}><Plus className="h-4 w-4" />New task</Button>
+        <Button size="sm" onClick={() => setDraft({ department: dept === "all" ? departments[0]! : dept, title: "", body: "", status: "idea", importance: "normal", due_at: null, owner_id: owners.data?.me ?? null, repeat: null, wasRepeat: null })}><Plus className="h-4 w-4" />New task</Button>
         </div>
       </div>
       <div className="flex flex-wrap gap-2">
@@ -106,7 +124,12 @@ export function TaskBankPanel({ departments }: { departments: Department[] }) {
               {TASK_STATUSES.map((s) => <option key={s} value={s}>{STATUS_LABEL[s]}</option>)}
             </select>
           </div>
-          <div className="grid gap-3 sm:grid-cols-3">
+          <div className="grid gap-3 sm:grid-cols-4">
+            <label className="space-y-1 text-sm"><span className="font-semibold">Repeats</span>
+              <select aria-label="Repeats" value={draft.repeat ?? ""} onChange={(e) => setDraft({ ...draft, repeat: (e.target.value || null) as TaskRepeat | null })} className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm">
+                {TASK_REPEATS.map((r) => <option key={r} value={r}>{REPEAT_LABEL[r]}</option>)}
+                <option value="">Doesn't repeat</option>
+              </select></label>
             <label className="space-y-1 text-sm"><span className="font-semibold">Importance</span>
               <select aria-label="Importance" value={draft.importance} onChange={(e) => setDraft({ ...draft, importance: e.target.value as TaskImportance })} className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm">
                 {TASK_IMPORTANCE.map((i) => <option key={i} value={i}>{IMPORTANCE_LABEL[i]}</option>)}
@@ -136,6 +159,7 @@ export function TaskBankPanel({ departments }: { departments: Department[] }) {
               <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
                 <span className={importanceChip(t.importance)}>{IMPORTANCE_LABEL[t.importance]}</span>
                 {t.due_at && t.status !== "done" && <span className={dueLabel(t.due_at).overdue ? "font-semibold text-destructive" : ""}>{dueLabel(t.due_at).text}</span>}
+                {t.repeat && <span>· Repeats {REPEAT_LABEL[t.repeat].toLowerCase()}</span>}
                 <span>{DEPARTMENT_LABEL[t.department as Department] ?? t.department}{ownerName(t.owner_id) ? ` · ${ownerName(t.owner_id)}` : ""} · updated {new Date(t.updated_at).toLocaleDateString()}</span>
               </div>
             </button>
@@ -150,7 +174,7 @@ export function TaskBankPanel({ departments }: { departments: Department[] }) {
             <div className="mt-3 border-t border-border pt-3">
               <p className="whitespace-pre-wrap text-sm leading-relaxed">{t.body || "No details yet."}</p>
               <div className="mt-3 flex gap-2">
-                <Button size="sm" variant="outline" onClick={() => setDraft({ id: t.id, department: t.department as Department, title: t.title, body: t.body, status: t.status, importance: t.importance ?? "normal", due_at: t.due_at, owner_id: t.owner_id })}><Pencil className="h-4 w-4" />Edit</Button>
+                <Button size="sm" variant="outline" onClick={() => setDraft({ id: t.id, department: t.department as Department, title: t.title, body: t.body, status: t.status, importance: t.importance ?? "normal", due_at: t.due_at, owner_id: t.owner_id , repeat: t.repeat ?? null, wasRepeat: t.repeat ?? null })}><Pencil className="h-4 w-4" />Edit</Button>
                 <Button size="sm" variant="ghost" onClick={async () => { if (await confirmAction({ title: "Delete this task?" })) void remove({ data: { id: t.id } }).then(() => qc.invalidateQueries({ queryKey: ["department-tasks"] })); }}><Trash2 className="h-4 w-4" />Delete</Button>
               </div>
             </div>
