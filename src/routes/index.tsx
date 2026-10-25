@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { HOME_FAQS } from "@/lib/faq";
-import { Check, Music, Upload, Download } from "lucide-react";
+import { Check, Music, Upload, Download, Infinity as InfinityIcon } from "lucide-react";
 import { SignupCard } from "@/components/SignupCard";
 import { BrandLogo } from "@/components/BrandLogo";
 import { FitHeadline } from "@/components/FitHeadline";
@@ -56,17 +56,20 @@ const footerCols: { title: string; links: FooterLink[] }[] = [
   { title: "Access", links: [{ label: "Support Tickets", to: "/contact", search: { type: "support" } }, { label: "Contact Us", to: "/contact", search: { type: "contact" } }] },
 ];
 
+/** Who It's For photos: free Unsplash License photos, toned toward Cobalt (public/home/). Focus keeps each face in the crop. */
 const roles = [
-  { badge: ArtistBadge, title: "Artists", question: "Final mix still ringing in your headphones?", text: "Lock your name, credits and codes inside that master before it leaves the room." },
-  { badge: MusicianBadge, title: "Musicians", question: "Felt that bass line shake the booth?", text: "Get your part credited on every release, so you get paid and hired again." },
-  { badge: ProducerBadge, title: "Producers", question: "Beat still warm on the laptop?", text: "Put your production credit and split on paper before the song takes off." },
-  { badge: SongwriterBadge, title: "Songwriters", question: "Lyrics still in your notes app?", text: "Turn them into registered songs with your name and share on file." },
-  { badge: ComposerBadge, title: "Composers", question: "Score still filling the room?", text: "Anchor your compositions and publishing shares so every placement pays you." },
+  { badge: ArtistBadge, photo: "/home/who-artist.webp", focus: "5% center", title: "Artists", question: "Final mix still ringing in your headphones?", text: "Lock your name, credits and codes inside that master before it leaves the room." },
+  { badge: MusicianBadge, photo: "/home/who-musician.webp", focus: "center", title: "Musicians", question: "Felt that bass line shake the booth?", text: "Get your part credited on every release, so you get paid and hired again." },
+  { badge: ProducerBadge, photo: "/home/who-producer.webp", focus: "center", title: "Producers", question: "Beat still warm on the laptop?", text: "Put your production credit and split on paper before the song takes off." },
+  { badge: SongwriterBadge, photo: "/home/who-songwriter.webp", focus: "center 15%", title: "Songwriters", question: "Lyrics still in your notes app?", text: "Turn them into registered songs with your name and share on file." },
+  { badge: ComposerBadge, photo: "/home/who-composer.webp", focus: "center", title: "Composers", question: "Score still filling the room?", text: "Anchor your compositions and publishing shares so every placement pays you." },
 ];
 
 /** Every "start free" button on the page scrolls to the sign-up box in the hero. */
+const goSignup = () => document.getElementById("signup")?.scrollIntoView({ behavior: "smooth", block: "center" });
+
 function StartFree({ label = "Sign up free", variant = "primary" }: { label?: string; variant?: "primary" | "outline" | "link" }) {
-  const go = () => document.getElementById("signup")?.scrollIntoView({ behavior: "smooth", block: "center" });
+  const go = goSignup;
   if (variant === "link") return <button type="button" onClick={go} className="text-sm font-semibold text-primary hover:underline">{label} →</button>;
   return <button type="button" onClick={go} className={`inline-flex h-12 items-center rounded-md px-6 font-semibold transition ${variant === "primary" ? "bg-primary text-primary-foreground hover:bg-primary/90" : "border border-current hover:bg-foreground/5"}`}>{label}</button>;
 }
@@ -118,10 +121,11 @@ function Landing() {
         <div className="mx-auto max-w-7xl px-6 py-14">
           <h2 className="text-center text-3xl font-extrabold uppercase tracking-wide text-primary md:text-4xl">Everything in the {PLUS.price}/yr plan</h2>
           <p className="mb-8 mt-2 text-center text-sm text-muted-foreground"><span className="font-semibold text-foreground">{PLUS.monthly.replace("Only ", "").replace(" / month", " a month")}, less than a single coffee.</span> Plus free Royalty Health Checks and split sheet signing. Billed annually, with a <span className="font-semibold text-foreground">30-day full refund</span> if it isn't for you.</p>
+          <p className="mb-6 flex items-center justify-center gap-2 text-lg font-bold"><InfinityIcon className="h-6 w-6 shrink-0 text-primary" strokeWidth={3} />Every feature. Unlimited. No per-song fees.</p>
           <div className="flex flex-wrap items-center justify-center gap-x-10 gap-y-4">
             {includes.map((i) => (
               <span key={i} className="flex items-center gap-2 text-lg font-semibold">
-                <Check className="h-5 w-5 text-primary" strokeWidth={3} /> Unlimited {i}
+                <Check className="h-5 w-5 text-primary" strokeWidth={3} /> {i}
               </span>
             ))}
           </div>
@@ -154,20 +158,25 @@ function Landing() {
       <section className="mx-auto max-w-7xl px-6 py-20">
         <h2 className="text-center text-3xl font-bold md:text-4xl">Who It's For</h2>
         <div className="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-5">
-          {roles.map(({ badge: Badge, title, question, text }) => (
+          {roles.map(({ badge: Badge, photo, focus, title, question, text }) => (
             <div key={title} className="group flex flex-col">
               <h3 className="mb-3 text-center text-lg font-extrabold uppercase tracking-[2px] text-primary">{title}</h3>
-              <div className="flex-1 overflow-hidden rounded-xl border border-border">
-                <div className="flex aspect-[16/10] items-center justify-center bg-ink sm:aspect-square"><Badge /></div>
-                <div className="p-5">
+              <div className="flex flex-1 flex-col overflow-hidden rounded-xl border border-border">
+                <img src={photo} alt="" loading="lazy" className="aspect-[16/10] w-full object-cover sm:aspect-square" style={{ objectPosition: focus }} />
+                <div className="flex-1 p-5 pb-2">
                   <p className="text-lg font-bold">{question}</p>
                   <p className="mt-1 text-sm text-muted-foreground">{text}</p>
-                  <div className="mt-3"><StartFree label="Start free" variant="link" /></div>
                 </div>
+                {/* The badge is the card's way to sign up; the section has one Sign up free button below. */}
+                <button type="button" onClick={goSignup} aria-label={`Sign up free: ${title}`}
+                  className="mx-auto mb-4 rounded-full transition hover:-translate-y-1 hover:scale-105 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring [&>svg]:h-24 [&>svg]:w-24">
+                  <Badge />
+                </button>
               </div>
             </div>
           ))}
         </div>
+        <div className="mt-10 flex justify-center"><StartFree /></div>
       </section>
 
       {testimonials.length > 0 && <section id="testimonials" className="scroll-mt-4 bg-muted/50 py-20">

@@ -87,12 +87,13 @@ each download (`AGENCY_UPLOAD_STEPS` in glossary.ts, menu names from each agency
   without a reason to stay) and propose sensory, story-led rewrites using pricing psychology: anchoring (show the time an
   agency export saves next to the price), loss aversion ("royalties you're not collecting"), social proof near each CTA,
   one clear next step per section, risk reversal (30-day refund line by the buttons). Delivered as before → after for approval.
-- **How it works + Who it's for:** ⏳ preview sent 2026-10-25 (11 Unsplash photos toned Black/Cobalt, awaiting approval; then real CTA screenshots go into the phone/laptop screens). Royalty-free photos of real people doing each step (e.g. uploading from a phone), with the
+- **How it works + Who it's for:** ✅ Who It's For BUILT 2026-10-25 (5 Unsplash photos toned toward Cobalt in public/home/, faces kept clear; animated badge under each description is the card's sign-up button; one Sign up free button for the section; Start free links removed). How It Works photos: founder adds them later. Original idea: Royalty-free photos of real people doing each step (e.g. uploading from a phone), with the
   real CTA screen shown in the photo, toned to CTA colors and dimmed behind the existing animated icons and text so it stays
   easy to read. Sources: Unsplash/Pexels (free commercial licence) + our own screenshots composited in. Titles and text get
   re-spaced around the images.
 - **Testimonials:** Admin → Homepage editor (Super admin + Marketing) to swap photo, quote, artist name and location, with
   guard rails (photo crop preview, character limits, can't publish an empty card, undo). One font and size for every card.
+- **$24.99 plan band:** ✅ "Unlimited" said once ("Every feature. Unlimited. No per-song fees."), not on every item, matching the plan chart (2026-10-25).
 - **Tier cards (polished copy):** ✅ applied 2026-10-25 for 1-Click Agency Exports and E-Signature Requests. *Royalty Utility Suite* (pick a song, SESAC) and *Catalog Management* (brand your contracts) wait until 3.4 and 3.6 are built, so the cards never promise what isn't there yet.
   - *1-Click Agency Exports:* "Export your whole catalog, a release or chosen songs into each agency's own template and
     register in minutes. Save hours of retyping."
