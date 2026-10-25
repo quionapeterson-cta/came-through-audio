@@ -14,7 +14,7 @@ export type Society = {
   /** Names this society goes by in writers' PRO affiliations (src/lib/metadata.ts PROS). */
   aliases?: string[];
   /** What its search finds a song by most exactly. Default: the title. Writer names are more unique than titles. */
-  searchBy?: "isrc" | "writer";
+  searchBy?: "isrc" | "writer" | "title-performer";
 };
 export type Country = {
   code: string;
@@ -30,9 +30,11 @@ const s = (id: string, name: string, url: string, access: Society["access"] = "p
   ({ id, name, url, access, ...(aliases && { aliases }), ...(searchBy && { searchBy }) });
 
 const ASCAP = s("ascap", "ASCAP", "https://www.ascap.com/repertory", "public", undefined, "writer");
-const BMI = s("bmi", "BMI", "https://repertoire.bmi.com/", "public", undefined, "writer");
+// BMI finds a song most reliably by its title plus the performer (artist), not the writer (founder, 2026-10-25).
+const BMI = s("bmi", "BMI", "https://repertoire.bmi.com/", "public", undefined, "title-performer");
 const SESAC = s("sesac", "SESAC", "https://www.sesac.com/repertory/", "public", undefined, "writer");
 const GMR = s("gmr", "GMR", "https://globalmusicrights.com/", "member");
+// SoundExchange's public ISRC search (with IFPI): anyone can search by ISRC or artist and title.
 const SOUNDEXCHANGE = s("soundexchange", "SoundExchange", "https://isrc.soundexchange.com/", "public", undefined, "isrc");
 const MLC = s("mlc", "The MLC", "https://portal.themlc.com/search", "public", undefined, "writer");
 const PRS = s("prs", "PRS for Music", "https://www.prsformusic.com/", "member", ["PRS for Music", "PRS", "MCPS"]);

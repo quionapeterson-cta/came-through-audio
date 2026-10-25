@@ -146,6 +146,8 @@ export function HealthChecklist({ rows, country, statuses, onStatus, actions, ru
                               className={`flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-sm ${selected ? "bg-primary/10 font-semibold ring-1 ring-primary" : "hover:bg-muted"}`}>
                               {g.key !== SINGLES_KEY && r.track.metadata.trackNumber && <span className="w-5 shrink-0 text-xs text-muted-foreground">{r.track.metadata.trackNumber}</span>}
                               <span className="min-w-0 flex-1 truncate">{r.track.title || "Untitled"}</span>
+                              {/* Songs checked in the Royalty Inspector (not in My Catalog) say so. */}
+                              {isInspectorSong(r.track.id) && <span className="shrink-0 rounded bg-muted px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Inspector</span>}
                               <span className="h-1.5 w-12 shrink-0 rounded-full bg-muted"><span className="block h-1.5 rounded-full bg-primary" style={{ width: `${c.pct}%` }} /></span>
                               <span className="w-16 shrink-0 text-right text-xs text-muted-foreground">
                                 {due ? <span className="font-semibold text-primary">Reminder</span> : group === "later" ? "Later" : c.done < c.total ? `${c.total - c.done} left` : "Done"}
@@ -220,7 +222,7 @@ function SongDetail({ r, c, country, status, onStatus, actions, running, onEditI
     <article id="song-health-detail" className="scroll-mt-4 rounded-2xl border border-border bg-card p-5 md:p-6">
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div className="min-w-0">
-          <div className="text-xs font-bold uppercase tracking-[2px] text-primary">Song health</div>
+          <div className="text-xs font-bold uppercase tracking-[2px] text-primary">Song health · {inspector ? "From the Royalty Inspector" : "From My Catalog"}</div>
           <h4 className="truncate text-2xl font-extrabold md:text-3xl">{r.track.title || "Untitled"}</h4>
           <p className="text-muted-foreground">{encouragement(c)}</p>
         </div>
@@ -394,6 +396,10 @@ function StepRow({ s, r, country, open, onFix, apply, actions, onIntl }: {
                   <div className="flex flex-wrap items-center gap-2">
                     <span>Your {key.by}: <span className="font-semibold">{key.value}</span></span>
                     <Button size="sm" variant="ghost" onClick={() => void copy(key.value)}><Copy />Copy</Button>
+                    {key.also?.value && <>
+                      <span>Your {key.also.by}: <span className="font-semibold">{key.also.value}</span></span>
+                      <Button size="sm" variant="ghost" onClick={() => void copy(key.also!.value)}><Copy />Copy</Button>
+                    </>}
                   </div>
                 ) : (
                   <p>⚠️ Add the {key.by} first, so you can search for it. <button type="button" onClick={() => onFix(key.field)} className="font-semibold text-primary underline">Add it</button></p>

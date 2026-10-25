@@ -42,9 +42,14 @@ export const INTL_KEY = "intl:setup";
 export const STAGE_LABEL: Record<Stage, string> = { details: "Ready to register", register: "Register it", confirm: "Confirm it shows up" };
 
 /** What each society's search finds a song by most exactly, and the value to copy. Missing values point at their field. */
-export type SearchKey = { by: string; value: string; field?: string; hint: string };
+/** `also` is a second detail to search with (BMI: the performer next to the title). */
+export type SearchKey = { by: string; value: string; field?: string; hint: string; also?: { by: string; value: string; field: string } };
 export function searchKey(society: Society, m: Metadata): SearchKey {
-  if (society.searchBy === "isrc") return { by: "ISRC", value: m.isrc.trim(), field: "isrc", hint: `Search ${society.name} by ISRC. It's the most exact match.` };
+  if (society.searchBy === "isrc") return { by: "ISRC", value: m.isrc.trim(), field: "isrc", hint: society.id === "soundexchange"
+    ? "Search SoundExchange's public ISRC database by your ISRC (or by artist and title). It's the most exact match."
+    : `Search ${society.name} by ISRC. It's the most exact match.` };
+  if (society.searchBy === "title-performer") return { by: "title", value: m.title.trim(), field: "title", also: { by: "performer", value: m.artist.trim(), field: "artist" },
+    hint: `Search ${society.name} by the song title, then pick the result with your artist name as the performer.` };
   if (society.searchBy === "writer") {
     const writer = [...m.writers, ...m.composers].map(creditName).find(Boolean) ?? "";
     return { by: "writer name", value: writer, field: "writers-0-legalName", hint: `Search ${society.name} by writer name, then find the song in that writer's list.` };

@@ -186,13 +186,13 @@ contract) · 3 Adjust the wording if you need to · 4 Sign · 5 Send for signatu
 - Album/EP queue: sort dropped files by track number in the tags, then by number in the file name, then name; first song first.
 - WAV ✅ (publish to see it in My Catalog).
 
-### 3.2 Catalog
+### 3.2 Catalog · delete pop-up ✅ (already fits its message); prorated countdown waiting on one question
 - Prorated upgrade countdown: "N days left to upgrade at the prorated price" in Profile, the plan banner and every upgrade pop-up;
   upgrade prompts wherever a higher-tier feature is tapped (already locked features show the pop-up; I'll add the countdown).
   *Question 4.*
 - Delete-song pop-up sized to its message (global rule 2.1).
 
-### 3.3 Royalty Health Hub
+### 3.3 Royalty Health Hub · ✅ BUILT 2026-10-25 (MusicBrainz removed; one song no longer counted twice in a finding; delete reports; publisher PRO + duration required for 100%; Inspector already runs a check → report for free users; checklist labels Inspector vs My Catalog songs; BMI search by title + performer; SoundExchange public ISRC search at Confirm it shows up)
 - Remove MusicBrainz from the checks and the score (most independent artists aren't listed).
 - Bug: 1 song shows as 2. Reproduce and fix.
 - Delete Royalty Health reports (My reports → Delete, with confirm).

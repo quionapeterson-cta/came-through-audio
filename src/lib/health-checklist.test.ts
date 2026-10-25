@@ -73,6 +73,8 @@ describe("song health checklist", () => {
     expect(searchKey(socs.mechanical![0]!, m)).toMatchObject({ by: "writer name", value: "Ann Lee" });
     expect(searchKey(socs.performance![0]!, m)).toMatchObject({ by: "writer name", value: "Ann Lee" });
     expect(searchKey(countryByCode("GB")!.societies.performance![0]!, m)).toMatchObject({ by: "title", value: "Song" });
+    // BMI: the title plus the performer, not the writer.
+    expect(searchKey(socs.performance!.find((x) => x.id === "bmi")!, m)).toMatchObject({ by: "title", value: "Song", also: { by: "performer", value: m.artist } });
     expect(searchKey(socs.digital![0]!, { ...m, isrc: "" })).toMatchObject({ value: "", field: "isrc" });
   });
 
