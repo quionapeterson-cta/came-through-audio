@@ -18,6 +18,8 @@ import { listTracks, type CatalogTrack } from "@/lib/catalog";
 import { BLUEPRINTS, CATEGORIES, COMPANY_BLUEPRINTS, CONTRACT_DISCLAIMER, blueprintById, fillBlanks, georgiaLaw, initialFields, missingFields, renderContract, type Blueprint, type BlueprintField } from "@/lib/contract-blueprints";
 import { downloadContractPdf } from "@/lib/contract-pdf";
 import { myBrand } from "@/lib/brand-load";
+import { ContractGenerator } from "@/components/ContractGenerator";
+import type { GeneratedDraft } from "@/lib/contract-generator";
 import { sendContractInvite } from "@/lib/contracts-email.functions";
 import { companySignLink } from "@/lib/contract-sign.functions";
 import { grantLaunchGift, listLaunchGifts, type LaunchGiftRow } from "@/lib/launch-gift.functions";
@@ -65,12 +67,13 @@ export function Contracts({ userId, unlocked, onUpgrade, company = false }: { us
   };
   useEffect(() => { void load(); }, [unlocked]);
 
-  const start = (bp: Blueprint) => {
+  /** A new contract from a blueprint; a Contract Generator draft adds the details and names it filled in. */
+  const start = (bp: Blueprint, draft?: GeneratedDraft) => {
     if (!unlocked) { onUpgrade(); return; }
     setEditing({
-      blueprint: bp.id, title: bp.name, catalogId: null, fields: { ...initialFields(bp), ...remembered(bp) }, body: "", status: "draft", bodyHash: "",
+      blueprint: bp.id, title: bp.name, catalogId: null, fields: { ...initialFields(bp), ...remembered(bp), ...draft?.fields }, body: "", status: "draft", bodyHash: "",
       sentAt: null, completedAt: null, updatedAt: new Date().toISOString(),
-      parties: bp.roles.map((role, i) => emptyParty(role, i === 0)),
+      parties: bp.roles.map((role, i) => ({ ...emptyParty(role, i === 0), legalName: draft?.parties[role] ?? "" })),
       ...(company && { isCompany: true }),
     });
   };
@@ -99,6 +102,8 @@ export function Contracts({ userId, unlocked, onUpgrade, company = false }: { us
           </div>
           {!unlocked && <Button size="sm" onClick={onUpgrade}><Lock className="h-4 w-4" />Unlock with Catalog Management</Button>}
         </div>
+
+        {view === "blueprints" && <ContractGenerator blueprints={company ? companyBlueprints : BLUEPRINTS} unlocked={unlocked} company={company} onUpgrade={onUpgrade} onDraft={start} onUse={(bp) => start(bp)} />}
 
         {view === "blueprints" && (company
           ? <CompanyTemplates blueprints={companyBlueprints} edited={templates} onUse={start} onSaved={() => void loadCompanyTemplates().then(setTemplates)} />

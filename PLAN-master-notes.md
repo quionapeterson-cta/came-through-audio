@@ -376,6 +376,14 @@ it down for things only a released song can have. Plan to write and approve befo
   question's words against our FAQ and docs and replies with the best-matching answer and a link (plus "Was this helpful? /
   Talk to an agent"). Free to run and never makes things up, but it can't understand unusual wording or combine two answers.
   Start there; add the AI model later only if unanswered questions pile up (the staff queue shows which ones).
+- **Contract Generator ✅ BUILT 2026-10-25 on Cloudflare Workers AI's free tier (founder: "we can just use cloudflare free").**
+  Contracts tab (Catalog Management) and Admin → Company Contracts (super admins, company templates). Llama 3.3 70B in JSON
+  mode picks one blueprint and fills its fields and party names; the wording is always the blueprint's own. Lists ⚠️ required
+  fields still blank and "not covered by this blueprint" items. About 240 of the free 10,000 daily neurons per draft (≈40 a
+  day for everyone), 10 per person per day (migration 20261025150000 logs drafts, never the description). Out of
+  allowance or not set up → the 3 closest blueprints by keyword, never an error. Secrets: CLOUDFLARE_ACCOUNT_ID,
+  CLOUDFLARE_AI_TOKEN (Lovable Cloud → Secrets now, Cloudflare Worker after the move). Free with Catalog Management for
+  now; founder to decide whether it becomes a $3.99 add-on. Original plan notes below.
 - **Contract Generator (founder, 2026-10-25): growth plan, no paid AI for now.** Catalog Management add-on, plus a free
   version for Super Admin (company signature block from 3.9, Georgia law). They describe their situation and a new contract
   opens in the normal contract editor (sign at the bottom, then Send), with the lawyer-review disclaimer on every draft.
