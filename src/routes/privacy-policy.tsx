@@ -23,7 +23,7 @@ function Privacy() {
       title="Privacy Policy"
       updated="October 22, 2026"
       sections={[
-        { heading: "1. Who We Are", body: <p>Came Through Audio, LLC ("Came Through Audio") is the data controller for the personal information, account profiles, lyrics, track metadata identifiers (ISRC, UPC, ISWC), and file hashes you provide on our platform. Contact: <a className="text-primary underline" href="mailto:support@camethroughaudio.com">support@camethroughaudio.com</a>.</p> },
+        { heading: "1. Who We Are", body: <p>Came Through Audio, LLC ("Came Through Audio") is the data controller for the personal information, account profiles, lyrics, track metadata identifiers (ISRC, UPC, ISWC), and file hashes you provide on our platform. Contact: <a className="text-primary underline" href="mailto:legal@camethroughaudio.com">legal@camethroughaudio.com</a>.</p> },
         { heading: "2. Data We Collect", body: <ul className="list-disc space-y-1 pl-5">
           <li>Account data: stage name, legal name, email, login credentials.</li>
           <li>Music data: track details, contributor legal names, splits, identifiers, lyrics, audio, cover art, and session recordings.</li>

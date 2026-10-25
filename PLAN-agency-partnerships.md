@@ -92,4 +92,4 @@ Designed HTML version: rendered with the shared `emailLayout()` brand shell (log
 ## Decisions for you
 1. ~~Signature~~ Decided 2026-10-23: sign with the legal name **Qui-Ona Peterson**, stage name Karma Came mentioned once in the opening line.
 2. ~~Demo under mutual NDA before launch?~~ Yes (founder, 2026-10-25).
-3. ~~Sender address?~~ A new partnerships@camethroughaudio.com (founder, 2026-10-25).
+3. ~~Sender address?~~ partners@camethroughaudio.com (founder, 2026-10-25).

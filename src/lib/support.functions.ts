@@ -1,7 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-import { emailLayout, escapeHtml, SUPPORT_EMAIL } from "./email-layout";
+import { BILLING_EMAIL, emailLayout, escapeHtml, INFO_EMAIL, SUPPORT_EMAIL } from "./email-layout";
 
 export const TICKET_CATEGORIES = ["General Inquiry", "Royalty Help", "Split Sheets", "AI Protection", "Billing", "Technical Issue"] as const;
 export const TICKET_STATUSES = ["open", "in_progress", "resolved"] as const;
@@ -40,10 +40,12 @@ export const submitTicket = createServerFn({ method: "POST" })
 <p style="font-size:14px;margin:0"><b>From:</b> ${escapeHtml(data.name)} (${escapeHtml(data.email)})<br/><b>Category:</b> ${escapeHtml(data.category)}</p>
 <p style="font-size:15px;line-height:1.6;white-space:pre-wrap">${escapeHtml(data.message)}</p>`,
         { reason: "You're receiving this staff notice because a new message was submitted on the Came Through Audio website." });
+      // Billing questions go to billing@, support tickets to support@, Contact Us messages to info@.
+      const inbox = data.category === "Billing" ? BILLING_EMAIL : data.kind === "support" ? SUPPORT_EMAIL : INFO_EMAIL;
       await fetch("https://api.resend.com/emails", {
         method: "POST",
         headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json", "Idempotency-Key": `ticket-${row.id}` },
-        body: JSON.stringify({ from: "Came Through Audio <collaborate@camethroughaudio.com>", to: [SUPPORT_EMAIL], reply_to: data.email, subject: `[${label}] ${data.subject}`, html }),
+        body: JSON.stringify({ from: "Came Through Audio <collaborate@camethroughaudio.com>", to: [inbox], reply_to: data.email, subject: `[${label}] ${data.subject}`, html }),
       }).catch((e) => console.error("Ticket notify failed", e));
     }
     return { ok: true };

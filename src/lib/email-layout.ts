@@ -5,7 +5,11 @@
 export const SITE_URL = "https://pixel-perfect-studio-382.lovable.app";
 export const BUSINESS_NAME = "Came Through Audio, LLC";
 export const BUSINESS_ADDRESS = "789 Garden Walk Blvd, Atlanta, GA 30349";
+/** Company mailboxes (founder, 2026-10-25). Each kind of mail goes to and from its own box. */
 export const SUPPORT_EMAIL = "support@camethroughaudio.com";
+export const INFO_EMAIL = "info@camethroughaudio.com";
+export const LEGAL_EMAIL = "legal@camethroughaudio.com";
+export const ADMIN_EMAIL = "admin@camethroughaudio.com";
 /** Billing and payments mail (renewals, failed payments, refunds) goes out from and comes back to this address. */
 export const BILLING_EMAIL = "billing@camethroughaudio.com";
 export const TAGLINE = "YOUR FIRST STOP BEFORE DISTRIBUTION";
