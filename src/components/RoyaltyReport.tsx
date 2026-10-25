@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { ChevronLeft, ChevronRight, FileDown, Lock, PlayCircle, Stethoscope } from "lucide-react";
+import { StarsAligned } from "@/components/StarsAligned";
 import { Explainer } from "@/components/Explainer";
 import { Button } from "@/components/ui/button";
 import { ArtDefs, BodyDiagram, MiniRhythm, MONITOR, OrganIcon, RHYTHM, Scan, Tool } from "@/components/royalty-art";
@@ -60,10 +61,18 @@ export function RoyaltyReport({ checkup, since, date, country, countryPicker, ru
   const organ = organs.find((o) => o.id === selected) ?? organs[0]!;
   const ring = Math.round((checkup.score / 100) * 188.5 * 10) / 10;
   const [explain, setExplain] = useState<Finding | null>(null);
+  // 100%: the score glows green for a beat, then the stars align over the song's title (once per report).
+  const [stars, setStars] = useState(false);
+  useEffect(() => {
+    if (checkup.score !== 100) return;
+    const t = window.setTimeout(() => setStars(true), 1200);
+    return () => window.clearTimeout(t);
+  }, [checkup.score, date]);
 
   return (
     <div className="rr space-y-8">
       <ArtDefs />
+      {stars && <StarsAligned title={scope && !scope.startsWith("Whole") ? scope.replace(/\s*\(.*\)$/, "") : "Your catalog"} onDone={() => setStars(false)} />}
       {onBack && <Button variant="ghost" className="-mb-4" onClick={onBack}><ChevronLeft />Back to the Hub</Button>}
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
@@ -84,7 +93,7 @@ export function RoyaltyReport({ checkup, since, date, country, countryPicker, ru
           <figcaption className="rr-hint">Tap an organ to open its report</figcaption>
         </figure>
         <div className="flex min-w-0 flex-col gap-5">
-          <div className="rr-score">
+          <div className={`rr-score${checkup.score === 100 ? " rr-score-win" : ""}`}>
             <svg width="72" height="72" viewBox="0 0 72 72" aria-hidden="true"><circle cx="36" cy="36" r="30" fill="none" stroke="var(--rr-hero-line)" strokeWidth="7" />
               <circle className="rr-gauge" cx="36" cy="36" r="30" fill="none" stroke="var(--rr-prestige)" strokeWidth="7" strokeLinecap="round" strokeDasharray={`${ring} 188.5`} transform="rotate(-90 36 36)" /></svg>
             <div><div className="text-3xl font-extrabold leading-none">{checkup.score}%</div>
