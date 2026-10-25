@@ -292,7 +292,7 @@ export function AIProtectionHub({ userId, purchases, justPaid, track }: { userId
         <div className="flex items-center gap-3 rounded-2xl border-2 border-primary bg-card p-5 text-sm font-semibold"><Loader2 className="h-5 w-5 animate-spin text-primary" />Payment received. Confirming it with Stripe, which usually takes a few seconds…</div>
       )}
       {justPaid && timedOut && left === 0 && (
-        <div className="flex items-center gap-3 rounded-2xl border border-border bg-card p-5 text-sm"><AlertTriangle className="h-5 w-5 text-primary" />We haven't received your payment confirmation yet. Refresh in a minute; if it still doesn't show, contact support@camethroughaudio.com.</div>
+        <div className="flex items-center gap-3 rounded-2xl border border-border bg-card p-5 text-sm"><AlertTriangle className="h-5 w-5 text-primary" />We haven't received your payment confirmation yet. Refresh in a minute; if it still doesn't show, contact billing@camethroughaudio.com.</div>
       )}
 
       {/* 2 · Buy */}

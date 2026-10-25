@@ -1,5 +1,6 @@
 import { createFileRoute, Link, notFound } from "@tanstack/react-router";
 import { BrandLogo } from "@/components/BrandLogo";
+import { SITE_URL } from "@/lib/email-layout";
 import { isShareId, shareCardImage } from "@/lib/share-cards";
 
 const TITLE = "Made with Came Through Audio";
@@ -12,7 +13,7 @@ const DESCRIPTION = "YOUR FIRST STOP BEFORE DISTRIBUTION. Embed your metadata an
 export const Route = createFileRoute("/share/$owner/$card")({
   loader: ({ params }) => {
     if (!isShareId(params.owner) || !isShareId(params.card)) throw notFound();
-    return { image: shareCardImage(params.owner, params.card) };
+    return { image: shareCardImage(params.owner, params.card), url: `${SITE_URL}/share/${params.owner}/${params.card}` };
   },
   head: ({ loaderData }) => ({
     meta: loaderData ? [
@@ -21,6 +22,7 @@ export const Route = createFileRoute("/share/$owner/$card")({
       { property: "og:title", content: TITLE },
       { property: "og:description", content: DESCRIPTION },
       { property: "og:type", content: "website" },
+      { property: "og:url", content: loaderData.url },
       { property: "og:image", content: loaderData.image },
       { property: "og:image:type", content: "image/png" },
       { property: "og:image:width", content: "1080" },

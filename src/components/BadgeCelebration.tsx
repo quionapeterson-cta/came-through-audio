@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
-import { Copy, Download, RefreshCw, Share2 } from "lucide-react";
+import { Copy, Download, Link2, RefreshCw, Share2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -177,6 +177,7 @@ export function SharePanel({ avatar, round, share }: { avatar: string; round?: b
         <Button type="button" variant="outline" disabled={!card} onClick={() => openWithLink((u) => `https://www.threads.net/intent/post?text=${encodeURIComponent(`${caption}\n\n${u}`)}`)}>Threads</Button>
         <Button type="button" variant="outline" disabled={!card} onClick={() => openWithLink((u) => `https://wa.me/?text=${encodeURIComponent(`${caption}\n\n${u}`)}`)}>WhatsApp</Button>
         <Button type="button" variant="outline" onClick={() => void copy()}><Copy />Copy caption</Button>
+        <Button type="button" variant="outline" disabled={!card} onClick={() => void link().then((u) => navigator.clipboard.writeText(u)).then(() => toast.success("Link copied. Paste it in iMessage, Discord or any post: it shows your card.")).catch(() => toast.error("Couldn't copy the link."))}><Link2 />Copy link</Button>
         <Button type="button" variant="outline" disabled={!card} onClick={save}><Download />Save image</Button>
       </div>
       <p className="text-xs text-muted-foreground">X, Facebook, Threads and WhatsApp show your card in the post preview. Instagram and TikTok don't allow link posts, so use Share… on your phone, or Save image and Copy caption, then post from the app.</p>

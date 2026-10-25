@@ -46,7 +46,7 @@ export const getAdminOverview = createServerFn({ method: "GET" })
     const has = (d: StaffAccess["departments"][number]) => access.departments.includes(d);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const [certs, regs, splits, purchases, plans] = await Promise.all([
-      has("registration") || has("ai") ? supabaseAdmin.from("ai_protection_certificates").select("id, track_title, artist_name, format_type, blockchain_status, is_verified, issued_at").order("issued_at", { ascending: false }).limit(100) : null,
+      has("ai") ? supabaseAdmin.from("ai_protection_certificates").select("id, track_title, artist_name, format_type, blockchain_status, is_verified, issued_at").order("issued_at", { ascending: false }).limit(100) : null,
       has("registration") ? supabaseAdmin.from("agency_registrations").select("id, target_agency, status, has_signed_authorization, created_at").order("created_at", { ascending: false }).limit(100) : null,
       has("royalty_accounts") ? supabaseAdmin.from("split_sheets").select("id, collaborator_email, role, assigned_percentage, is_owner, signed_at, invited_at").order("invited_at", { ascending: false, nullsFirst: false }).limit(200) : null,
       has("finance") ? supabaseAdmin.from("purchases").select("kind, details, environment, created_at").order("created_at", { ascending: false }).limit(100) : null,

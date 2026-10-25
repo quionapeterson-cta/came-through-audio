@@ -17,6 +17,28 @@ import { PlansPanel } from "@/components/PlansPanel";
 import { TestimonialFilterPanel } from "@/components/TestimonialFilterPanel";
 import { TaskBankPanel } from "@/components/TaskBankPanel";
 import { RegistrationQueuePanel } from "@/components/RegistrationQueuePanel";
+import { supabase } from "@/integrations/supabase/client";
+
+/** Founding 100 seats used in each mode (PLAN-founding-upgrades); hidden until the migration runs. */
+function FoundingSeats() {
+  const { data } = useQuery({
+    queryKey: ["founding-spots"],
+    queryFn: async () => {
+      const rows = await Promise.all((["live", "sandbox"] as const).map(async (env) => {
+        const { data: r } = await supabase.rpc("founding_spots" as never, { _env: env } as never);
+        return ((r ?? []) as unknown as { paid_tier: string; taken: number }[]).map((x) => ({ env, ...x }));
+      }));
+      return rows.flat();
+    },
+  });
+  if (!data?.length) return null;
+  const seats = (env: string, t: string) => data.find((x) => x.env === env && x.paid_tier === t)?.taken ?? 0;
+  return (
+    <p className="mb-4 text-sm text-muted-foreground">
+      Founding seats: live Plus {seats("live", "plus")}/100 · live Collaborate {seats("live", "collaborate")}/100 · sandbox Plus {seats("sandbox", "plus")} · sandbox Collaborate {seats("sandbox", "collaborate")}
+    </p>
+  );
+}
 
 export const Route = createFileRoute("/admin")({
   ssr: false,
@@ -143,6 +165,7 @@ function AdminPage() {
               rows={d?.splits.map((s) => [s.collaborator_email, s.role, `${s.assigned_percentage}%`, s.is_owner ? "Owner" : "Collaborator", s.signed_at ? `Signed ${fmt(s.signed_at)}` : "Pending"])} />
           </TabsContent>
           <TabsContent value="purchases">
+            <FoundingSeats />
             <Table head={["Type", "Mode", "Status", "Date"]} rows={d?.purchases.map((p) => [p.type, p.environment, p.status, fmt(p.created_at)])} />
           </TabsContent>
           {show("support") && <TabsContent value="support"><SupportTicketsPanel /></TabsContent>}

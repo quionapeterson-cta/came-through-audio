@@ -29,7 +29,7 @@ describe("resolveAccess", () => {
 describe("visibleTabs", () => {
   it("shows employees only their department tabs", () => {
     const branding = resolveAccess([{ role: "employee", departments: ["registration", "royalty_accounts", "branding"] }])!;
-    expect(visibleTabs(branding).map((t) => t.value)).toEqual(["ai", "reg", "splits", "badges", "homepage", "tasks"]);
+    expect(visibleTabs(branding).map((t) => t.value)).toEqual(["reg", "splits", "badges", "homepage", "tasks"]);
     const billing = resolveAccess([{ role: "employee", departments: ["finance", "support", "marketing_sales"] }])!;
     expect(visibleTabs(billing).map((t) => t.value)).toEqual(["purchases", "support", "badges", "tasks"]);
   });

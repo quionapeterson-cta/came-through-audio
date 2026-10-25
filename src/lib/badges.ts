@@ -171,10 +171,11 @@ const NIGHT: BadgeDef[] = [
     popup: "In the quiet. You beat the sunrise." },
 ];
 
-// The founder's lyric set (copy approved 2026-10-20).
+// The founder's lyric set (copy approved 2026-10-20). First Lyric Entry comes with every lyric embedded, on top of the
+// milestones (founder, 2026-10-25: "It's a victory just having written them down!").
 const L = `${P}/lyrics`;
 const LYRICS: BadgeDef[] = [
-  { id: "first_lyric_entry", title: "First Lyric Entry", collection: "lyrics", tier: "instant", milestone: "1 lyric", action: "Embed your first lyric", metric: "lyrics", goal: 1, src: `${L}/1_first_lyric_entry.webp`,
+  { id: "first_lyric_entry", title: "First Lyric Entry", collection: "lyrics", tier: "instant", milestone: "Every lyric you embed (a victory just having written it down)", action: "Embed a lyric", metric: "lyrics", goal: 1, every: 1, src: `${L}/1_first_lyric_entry.webp`,
     description: "You did it. The hardest lyric is the first one, and you just broke through. This pen drop is proof your voice matters. Welcome to Came Through Audio — you’re officially in motion.",
     popup: "First ink! One lyric down — the universe just heard you." },
   { id: "word_weaver", title: "Word Weaver", collection: "lyrics", tier: "standard", milestone: "5 lyrics", action: "Embed 5 lyrics", metric: "lyrics", goal: 5, src: `${L}/5_word_weaver.webp`,

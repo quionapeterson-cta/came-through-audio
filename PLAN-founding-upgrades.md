@@ -1,6 +1,6 @@
 # PLAN — Founding 100: automatic plan upgrade for the first 100 paying users · v1
 
-Status: **awaiting approval.**
+Status: **approved 2026-10-25 and BUILT** (migration 20261025090000: founding_upgrades + trigger on subscriptions, user_tier lifts one tier; Plans page spots left, Profile line, Admin → Purchases seat counts). Founder answers: 1 (a) forever while paying without a gap; 2 no, sandbox has its own count; 3 yes; 4 yes, this replaces the free-year Founding 100 idea. Not built yet: a Founding Member badge (needs art).
 Source: founder, 2026-10-21. Related: the earlier "Founding 100" idea in PLAN-pricing-badges.md (free year of Plus); this replaces or adjusts it (see questions).
 
 ---

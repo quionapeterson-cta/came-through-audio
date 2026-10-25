@@ -72,7 +72,7 @@ export function staffChangeError(o: { actorId: string; actorIsSuper: boolean; ta
 export const BADGE_DEPARTMENTS = ["branding", "marketing", "support"] as const satisfies readonly Department[];
 
 export const ADMIN_TABS = [
-  { value: "ai", label: "AI Protection", departments: ["registration", "ai"] },
+  { value: "ai", label: "AI Protection", departments: ["ai"] },
   { value: "reg", label: "Registrations", departments: ["registration"] },
   { value: "splits", label: "Split Sheets", departments: ["royalty_accounts"] },
   { value: "purchases", label: "Purchases", departments: ["finance"] },

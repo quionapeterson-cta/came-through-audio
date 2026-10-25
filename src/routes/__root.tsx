@@ -91,7 +91,10 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     // Public share cards stay reachable so social sites can read their preview image; they show only the card.
     // Password reset links stay reachable so the one-time token in the link isn't lost on a detour through /unlock.
     // Invite opt-out links stay reachable so anyone who got an invite can stop them without a passcode.
-    if (location.pathname === "/unlock" || location.pathname === "/reset-password" || location.pathname === "/invites/stop" || location.pathname.startsWith("/share/") || location.pathname.startsWith("/verify/")) return { siteLocked: false };
+    // Company agreement links (/contract/<id>?t=<private token>) stay reachable: the signer has no account or passcode,
+    // and the token plus the emailed 6-digit code already protect them.
+    const companyLink = location.pathname.startsWith("/contract/") && !!(location.search as { t?: unknown }).t;
+    if (companyLink || location.pathname === "/unlock" || location.pathname === "/reset-password" || location.pathname === "/invites/stop" || location.pathname.startsWith("/share/") || location.pathname.startsWith("/verify/")) return { siteLocked: false };
     const { unlocked } = await getGateStatus();
     // The pages a payment provider reviews (product, pricing, legal, contact) are open to everyone; signup on them
     // waits until launch (siteLocked). The workspace, admin and everything else stay behind the passcode.

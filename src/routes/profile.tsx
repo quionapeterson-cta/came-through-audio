@@ -35,7 +35,7 @@ const SIZE_KEY = "cta-awards-size";
 function ProfilePage() {
   const { user, loading } = useAuth();
   const navigate = useNavigate();
-  const { tier, plan, sub, pauses, lapse, reload } = useBilling(user?.id);
+  const { tier, paidTier, founding, plan, sub, pauses, lapse, reload } = useBilling(user?.id);
   const [ob, setOb] = useState<Onboarding | null>(null);
   const names = useArtistName(user, ob?.stageName);
   const [profile, setProfile] = useState<ArtistProfile | null>(null);
@@ -112,12 +112,13 @@ function ProfilePage() {
 
           <Card title="Account">
             <Rows rows={[["Email", user.email], ["Plan", TIER_LABEL[tier]],
+              ...(founding ? [["Founding member", `#${founding.seat}: you get ${TIER_LABEL[founding.granted_tier]} for the price of ${TIER_LABEL[founding.paid_tier]}, as long as your plan stays active`] as [string, string]] : []),
               ...(plan?.periodEnd ? [[plan.cancelling ? "Ends" : "Renews", longDate(plan.periodEnd)] as [string, string]] : []),
               ["Member since", memberSince]]} />
             <div className="flex flex-wrap gap-3 border-t border-border pt-5">
-              {tier !== "management" && <Button asChild size="lg" className="w-full text-base font-bold"><Link to="/plans"><ArrowUpCircle />Upgrade plan</Link></Button>}
+              {paidTier !== "management" && <Button asChild size="lg" className="w-full text-base font-bold"><Link to="/plans"><ArrowUpCircle />Upgrade plan</Link></Button>}
               {plan && <ManageBilling />}
-              <RetentionControls tier={tier} sub={sub} lapse={lapse} pauses={pauses} onChanged={() => void reload()} />
+              <RetentionControls tier={paidTier} sub={sub} lapse={lapse} pauses={pauses} onChanged={() => void reload()} />
               <Button variant="outline" onClick={() => setPasswordOpen(true)}>Change password</Button>
               <Button variant="ghost" onClick={async () => { await supabase.auth.signOut(); navigate({ to: "/" }); }}><LogOut />Log out</Button>
             </div>

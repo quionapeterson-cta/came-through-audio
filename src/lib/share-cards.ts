@@ -1,4 +1,6 @@
 import { supabase } from "@/integrations/supabase/client";
+import { SITE_URL } from "@/lib/email-layout";
+import { trustedOrigin } from "@/lib/invite-limits";
 
 const BUCKET = "share-cards";
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -21,5 +23,6 @@ export async function publishShareCard(blob: Blob): Promise<string> {
   const card = crypto.randomUUID();
   const { error } = await supabase.storage.from(BUCKET).upload(`${owner}/${card}.png`, blob, { contentType: "image/png", upsert: false });
   if (error) throw error;
-  return `${window.location.origin}/share/${owner}/${card}`;
+  // Never the editor preview's address: social sites can't open it, so the preview would come up empty.
+  return `${trustedOrigin(window.location.origin, SITE_URL)}/share/${owner}/${card}`;
 }

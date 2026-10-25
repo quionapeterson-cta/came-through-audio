@@ -139,6 +139,13 @@ Registration accuracy (test task) · knowledge of local societies · written Eng
 
 ---
 
+## Founder answers (2026-10-25)
+1. Founder couldn't find a Finance table: it's the proposal in §1 of this plan (not built). Cron heartbeat tile: still to answer.
+2. Staff awards: badges only.
+3. Training: USA first, then the Global basics, then regions.
+4. Hiring: United States first. Africa is wanted too; requirements and timing still to research.
+5. A lawyer will be hired to review the customer authorisation agreement. Clients log in to their own accounts and grant access themselves.
+
 ## Questions for you
 1. Finance: is the table in §1 right? Should Finance also see the cron heartbeat tile?
 2. Staff awards: badges only, or tied to a quarterly bonus later?

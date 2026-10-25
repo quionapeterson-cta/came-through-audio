@@ -1,6 +1,6 @@
 # PLAN — Sign-in and email link fixes · v1
 
-Status: **awaiting approval (bug fixes, small).**
+Status: **founder reports sign-in fixed (2026-10-25).** Company agreement links were still sent to the passcode page; fixed 2026-10-25 (gate lets /contract/<id>?t=… through).
 Source: founder testing notes, 2026-10-21.
 
 ---

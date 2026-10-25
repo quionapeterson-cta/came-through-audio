@@ -1,8 +1,8 @@
 import { resendKey } from "./collab-trial.server";
-import { emailLayout, escapeHtml, SITE_URL } from "./email-layout";
+import { BILLING_EMAIL, emailLayout, escapeHtml, SITE_URL } from "./email-layout";
 
 /** Account notices about a plan ending, Need more time, Pause and catalog emptying (PLAN-catalog-emptying.md §5). */
-const FROM = "Came Through Audio <collaborate@camethroughaudio.com>";
+const FROM = `Came Through Audio Billing <${BILLING_EMAIL}>`;
 const REASON = "You're receiving this account notice because of a change to your Came Through Audio plan.";
 
 export const longDate = (d: string | Date) => new Date(d).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" });
@@ -105,7 +105,7 @@ export async function sendRetentionEmail(to: string, email: RetentionEmail, idem
   const res = await fetch("https://api.resend.com/emails", {
     method: "POST",
     headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json", "Idempotency-Key": idempotencyKey },
-    body: JSON.stringify({ from: FROM, to: [to], subject, html: emailLayout(html, { reason: REASON }) }),
+    body: JSON.stringify({ from: FROM, to: [to], reply_to: BILLING_EMAIL, subject, html: emailLayout(html, { reason: REASON }) }),
   });
   if (!res.ok) { console.error(`Retention email ${email.kind} failed [${res.status}]: ${await res.text()}`); return false; }
   return true;

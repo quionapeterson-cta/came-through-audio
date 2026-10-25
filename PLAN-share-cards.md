@@ -1,6 +1,6 @@
 # PLAN — Social share image cards that actually show · v1
 
-Status: **awaiting approval (investigation + fix).**
+Status: **approved 2026-10-25** (ready for launch even if not shared before then).
 Source: founder testing notes, 2026-10-21.
 
 ---
