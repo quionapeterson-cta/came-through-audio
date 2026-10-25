@@ -9,8 +9,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { InfoTip } from "@/components/InfoTip";
-import { BRAND_FONTS, BRANDING_PRICE, emptyKit, fontFile, isHex, kitFromRow, type BrandKit as Kit } from "@/lib/brand-kit";
+import { BRAND_FONTS, BRANDING_PRICE, emptyKit, isHex, kitFromRow, type BrandKit as Kit } from "@/lib/brand-kit";
 import { FONT_GROUPS } from "@/lib/brand-fonts";
+import { loadWebFont } from "@/lib/web-fonts";
 import { getBrandAccess } from "@/lib/brand-kit.functions";
 import { openCheckout } from "@/lib/checkout";
 import { TIER_LABEL, type Tier } from "@/lib/plans";
@@ -52,7 +53,7 @@ export function BrandKit({ userId, tier, artistName }: { userId: string; tier: T
   }, [userId, tier]);
 
   // Only the chosen font is downloaded, for the preview (the PDF loads the same files).
-  useEffect(() => { loadPreviewFont(kit.font); }, [kit.font]);
+  useEffect(() => { loadWebFont(kit.font); }, [kit.font]);
 
   const edit = (patch: Partial<Kit>) => { setKit((k) => ({ ...k, ...patch })); setSaved(false); };
   const setColor = (i: number, v: string) => edit({ colors: kit.colors.map((c, j) => (j === i ? v : c)) });
@@ -206,11 +207,3 @@ export function BrandKit({ userId, tier, artistName }: { userId: string; tier: T
   );
 }
 
-const previewFonts = new Set<string>(["Poppins"]);
-function loadPreviewFont(f: string) {
-  if (previewFonts.has(f) || typeof FontFace === "undefined") return;
-  previewFonts.add(f);
-  for (const [weight, w] of [["500", "medium"], ["700", "bold"]] as const) {
-    new FontFace(f, `url(/fonts/${fontFile(f, w)}.ttf)`, { weight }).load().then((face) => document.fonts.add(face)).catch(() => previewFonts.delete(f));
-  }
-}

@@ -1,7 +1,7 @@
-import { brandFooter, brandHeader, COBALT, ensureSpace, INK, MUTED, newBrandedPdf, sectionTitle } from "@/lib/brand-pdf";
+import { addSignatureFont, brandFooter, brandHeader, COBALT, ensureSpace, INK, MUTED, newBrandedPdf, sectionTitle } from "@/lib/brand-pdf";
 import type { PdfBrand } from "@/lib/brand-kit";
 import { safeName } from "@/lib/catalog";
-import { CONTRACT_DISCLAIMER } from "@/lib/contract-blueprints";
+import { COMPANY_LEGAL_NAME, CONTRACT_DISCLAIMER, SIGNATURE_FONT } from "@/lib/contract-blueprints";
 
 export type PdfSignature = { name: string; role: string; signedAt: string | null; signatureName?: string | null; signatureHash?: string | null };
 
@@ -9,8 +9,14 @@ export type PdfSignature = { name: string; role: string; signedAt: string | null
  * A contract as a branded PDF: the text, then a signature block per party. Signed copies add each typed signature,
  * its time stamp and verification hash, and the SHA-256 of the locked text, so any later change is detectable.
  */
-export async function downloadContractPdf(o: { title: string; body: string; parties: PdfSignature[]; bodyHash?: string | null; status: string; brand?: PdfBrand | null }) {
+export async function downloadContractPdf(o: {
+  title: string; body: string; parties: PdfSignature[]; bodyHash?: string | null; status: string; brand?: PdfBrand | null;
+  /** Company agreements: the Company party signs in the LLC's block (Company Name / By / Printed Name / Title, 3.9). */
+  company?: { signerTitle: string } | undefined;
+}) {
   const pdf = await newBrandedPdf(o.brand);
+  const cursive = await addSignatureFont(pdf, SIGNATURE_FONT);
+  const signature = (text: string, x: number, y: number) => (cursive ? pdf.setFont(SIGNATURE_FONT, "bold").setFontSize(20) : pdf.setFont("times", "italic").setFontSize(18)).setTextColor(...INK).text(text, x, y);
   const w = pdf.internal.pageSize.getWidth();
   const label = o.status === "signed" ? "Fully signed" : o.status === "sent" ? "Out for signature" : "Draft";
   let y = brandHeader(pdf, o.title, label, undefined, o.brand);
@@ -34,11 +40,27 @@ export async function downloadContractPdf(o: { title: string; body: string; part
   y = ensureSpace(pdf, y + 6, 20 + o.parties.length * 30);
   y = sectionTitle(pdf, y, "Signatures");
   for (const p of o.parties) {
+    if (o.company && p.role === "Company") {
+      // Company Name: Came Through Audio, LLC · By: (signature) · Printed Name · Title.
+      y = ensureSpace(pdf, y, 40);
+      const row = (k: string, v: string) => { pdf.setFont("helvetica", "bold").setFontSize(9).setTextColor(...MUTED).text(k, 18, y); pdf.setFont("helvetica", "normal").setTextColor(...INK).text(v, 48, y); };
+      row("Company Name:", COMPANY_LEGAL_NAME); y += 9;
+      pdf.setFont("helvetica", "bold").setFontSize(9).setTextColor(...MUTED).text("By:", 18, y);
+      if (p.signedAt && p.signatureName) signature(p.signatureName, 48, y - 1);
+      pdf.setDrawColor(...MUTED).setLineWidth(0.3).line(48, y + 1.5, 130, y + 1.5);
+      if (p.signedAt) pdf.setFont("helvetica", "normal").setFontSize(9).setTextColor(...MUTED).text(`Signed ${new Date(p.signedAt).toLocaleString()}`, 135, y);
+      y += 7;
+      row("Printed Name:", p.name || "Legal name"); y += 5.5;
+      row("Title:", o.company.signerTitle || "Founder & CEO"); y += 4.5;
+      if (p.signatureHash) { pdf.setFont("helvetica", "normal").setFontSize(6.5).setTextColor(...MUTED).text(`Verification hash: ${p.signatureHash}`, 18, y); y += 4; }
+      y += 6;
+      continue;
+    }
     y = ensureSpace(pdf, y, 30);
     pdf.setFont("helvetica", "bold").setFontSize(8).setTextColor(...COBALT).text(p.role.toUpperCase(), 18, y);
     y += 7;
     if (p.signedAt && p.signatureName) {
-      pdf.setFont("times", "italic").setFontSize(18).setTextColor(...INK).text(p.signatureName, 18, y);
+      signature(p.signatureName, 18, y);
     }
     y += 2;
     pdf.setDrawColor(...MUTED).setLineWidth(0.3).line(18, y, 110, y);

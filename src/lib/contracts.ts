@@ -126,6 +126,8 @@ export type ContractInvite = {
   party_id: string; contract_id: string; title: string; blueprint: string; body: string; body_hash: string;
   status: ContractStatus; sent_at: string | null; completed_at: string | null;
   legal_name: string; role: string; signed_at: string | null; can_sign: boolean;
+  /** Company agreements opened by private link: the signer's title for the Company signature block. */
+  company_title?: string;
   parties: { name: string; role: string; signed_at: string | null; signature_name: string | null; signature_hash: string | null }[];
 };
 

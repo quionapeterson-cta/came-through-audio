@@ -71,6 +71,15 @@ export async function newBrandedPdf(brand?: PdfBrand | null) {
   return pdf;
 }
 
+/** Adds the cursive signature font to a PDF; returns false (Times italic is used) if it can't load. */
+export async function addSignatureFont(pdf: JsPDF, family: string) {
+  const files = await loadBrandFont(family);
+  if (!files) return false;
+  pdf.addFileToVFS(`${fontFile(family, "bold")}.ttf`, files.bold);
+  pdf.addFont(`${fontFile(family, "bold")}.ttf`, family, "bold");
+  return true;
+}
+
 /** Sets the brand kit's header font (falls back to Poppins). */
 function kitFont(pdf: JsPDF, brand: PdfBrand, weight: "medium" | "bold", size: number) {
   if (brand.font !== "Poppins" && withBrandFont.has(pdf)) return pdf.setFont(brand.font, weight).setFontSize(size);

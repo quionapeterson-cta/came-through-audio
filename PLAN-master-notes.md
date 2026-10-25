@@ -290,7 +290,7 @@ says "You Came Through: your 12th signed split sheet", Badge Reference PDF lists
   ruling. It shows your files existed in this exact form by this date: the Bitcoin timestamp can be checked by anyone, and any
   change to a file changes its fingerprint. Courts decide how much weight evidence gets. Keep your originals."
 
-### 3.9 Contracts and Admin
+### 3.9 Contracts and Admin · ✅ BUILT 2026-10-25 (company block in the editor and PDF: Company Name / By (legible cursive, Dancing Script) / Printed Name pre-filled Qui-Ona Peterson / Title; typed signatures on every contract PDF now use the same cursive; contract lists alphabetical, grouped by type, with type / date filters and a name-signer-email search, for Admin and customers)
 - Company contract signature block (from Super Admin, every new agreement):
   Company Name: Came Through Audio, LLC · By: (signature, cursive-style but legible) · Printed Name: Qui-Ona Peterson ·
   Title: Founder & CEO. Pre-filled; you sign right before sending.

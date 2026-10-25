@@ -25,6 +25,10 @@ export const CONTRACT_DISCLAIMER =
 export const BLUEPRINTS: Blueprint[] = [...MUSIC_PRODUCTION, ...MANAGEMENT, ...RIGHTS, ...VISUAL, ...FASHION, ...INFLUENCERS, ...PODCASTING, ...LIVE, ...BUSINESS, ...EVENTS];
 
 export const COMPANY_LEGAL_NAME = "Came Through Audio, LLC";
+/** Who signs company agreements by default (founder, 2026-10-25): pre-filled, still editable for another admin. */
+export const COMPANY_SIGNER_NAME = "Qui-Ona Peterson";
+/** Legible cursive for typed signatures (public/fonts, Script & hand-drawn group). */
+export const SIGNATURE_FONT = "Dancing Script";
 
 /** Company agreements name the LLC as the party; the founder signs as its authorized representative. */
 const SIGNER: BlueprintField = { key: "signerTitle", label: "Your title", value: "Founder & CEO", tip: "Your title at Came Through Audio, LLC. You sign with your own legal name on the company's behalf. We remember your last one." };

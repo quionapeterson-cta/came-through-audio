@@ -15,9 +15,10 @@ import { format, isValid, parse } from "date-fns";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { InfoTip } from "@/components/InfoTip";
 import { listTracks, type CatalogTrack } from "@/lib/catalog";
-import { BLUEPRINTS, CATEGORIES, COMPANY_BLUEPRINTS, CONTRACT_DISCLAIMER, blueprintById, fillBlanks, georgiaLaw, initialFields, missingFields, renderContract, type Blueprint, type BlueprintField } from "@/lib/contract-blueprints";
+import { BLUEPRINTS, CATEGORIES, COMPANY_BLUEPRINTS, COMPANY_LEGAL_NAME, COMPANY_SIGNER_NAME, CONTRACT_DISCLAIMER, SIGNATURE_FONT, blueprintById, fillBlanks, georgiaLaw, initialFields, missingFields, renderContract, type Blueprint, type BlueprintField } from "@/lib/contract-blueprints";
 import { downloadContractPdf } from "@/lib/contract-pdf";
 import { myBrand } from "@/lib/brand-load";
+import { loadWebFont } from "@/lib/web-fonts";
 import { ContractGenerator } from "@/components/ContractGenerator";
 import type { GeneratedDraft } from "@/lib/contract-generator";
 import { sendContractInvite } from "@/lib/contracts-email.functions";
@@ -83,7 +84,8 @@ export function Contracts({ userId, unlocked, onUpgrade, company = false }: { us
     setEditing({
       blueprint: bp.id, title: bp.name, catalogId: null, fields: { ...initialFields(bp), ...remembered(bp), ...draft?.fields }, body: "", status: "draft", bodyHash: "",
       sentAt: null, completedAt: null, updatedAt: new Date().toISOString(),
-      parties: bp.roles.map((role, i) => ({ ...emptyParty(role, i === 0), legalName: draft?.parties[role] ?? "" })),
+      // Company agreements: the founder's printed name is pre-filled for the Company block (3.9).
+      parties: bp.roles.map((role, i) => ({ ...emptyParty(role, i === 0), legalName: draft?.parties[role] ?? (company && i === 0 ? COMPANY_SIGNER_NAME : "") })),
       ...(company && { isCompany: true }),
     });
   };
@@ -135,7 +137,7 @@ export function Contracts({ userId, unlocked, onUpgrade, company = false }: { us
             </div>
             {open.length === 0
               ? <Empty icon={FileSignature} text={company ? "No company agreements yet. Pick a template to send the first one." : "No contracts yet. Pick a blueprint to create your first one."} />
-              : <ul className="grid gap-3">{open.map((c) => <ContractRow key={c.id} contract={c} onOpen={() => setEditing(c)} />)}</ul>}
+              : <ContractList contracts={open} onOpen={setEditing} />}
           </section>
         ))}
 
@@ -145,7 +147,7 @@ export function Contracts({ userId, unlocked, onUpgrade, company = false }: { us
               <h3 className="mb-3 text-sm font-bold uppercase tracking-widest text-primary">{company ? "Signed company agreements" : "Your signed contracts"} <span className="opacity-70">{signed.length}</span></h3>
               {!unlocked && !signed.length ? <p className="text-sm text-muted-foreground">Contracts you create with Catalog Management or the Contract Generator are stored here once everyone signs.</p>
                 : signed.length === 0 ? <p className="text-sm text-muted-foreground">Fully signed contracts are locked and stored here, ready to download.</p>
-                : <ul className="grid gap-3">{signed.map((c) => <ContractRow key={c.id} contract={c} onOpen={() => setEditing(c)} />)}</ul>}
+                : <ContractList contracts={signed} onOpen={setEditing} />}
             </section>
             {!company && <section className="rounded-2xl border border-border p-5">
               <h3 className="mb-3 text-sm font-bold uppercase tracking-widest text-primary">Sent to you <span className="opacity-70">{received.length}</span></h3>
@@ -399,13 +401,57 @@ function CompanyTemplates({ blueprints, edited, onUse, onSaved }: { blueprints: 
   );
 }
 
+const DATE_RANGES = [["7", "Last 7 days"], ["30", "Last 30 days"], ["365", "Last 12 months"], ["all", "Any date"]] as const;
+
+/**
+ * Contracts alphabetical by title, grouped by type, with filters for type, date and a search over names, signers and
+ * emails (BRANDING.md §3; Admin → Company Contracts, 3.9). Specific choices come first, "All" last.
+ */
+function ContractList({ contracts, onOpen }: { contracts: Contract[]; onOpen: (c: Contract) => void }) {
+  const [q, setQ] = useState("");
+  const [type, setType] = useState("all");
+  const [range, setRange] = useState("all");
+  const typeOf = (c: Contract) => blueprintById(c.blueprint)?.name ?? "Custom";
+  const types = [...new Set(contracts.map(typeOf))].sort((a, b) => a.localeCompare(b));
+  const needle = q.trim().toLowerCase();
+  const since = range === "all" ? 0 : Date.now() - Number(range) * 86400000;
+  const shown = contracts
+    .filter((c) => type === "all" || typeOf(c) === type)
+    .filter((c) => !since || Date.parse(c.updatedAt) >= since)
+    .filter((c) => !needle || [c.title, typeOf(c), ...c.parties.flatMap((p) => [p.legalName, p.email, p.role])].some((v) => v?.toLowerCase().includes(needle)))
+    .sort((a, b) => a.title.localeCompare(b.title));
+  const groups = types.map((t) => [t, shown.filter((c) => typeOf(c) === t)] as const).filter(([, list]) => list.length);
+  const select = "h-9 rounded-md border border-input bg-background px-2 text-sm";
+  return (
+    <div className="space-y-4">
+      {contracts.length > 3 && (
+        <div className="flex flex-wrap gap-2">
+          <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search by name, signer or email" aria-label="Search contracts" className="h-9 max-w-xs" />
+          <select aria-label="Contract type" value={type} onChange={(e) => setType(e.target.value)} className={select}>
+            {types.map((t) => <option key={t} value={t}>{t}</option>)}<option value="all">All types</option>
+          </select>
+          <select aria-label="Date" value={range} onChange={(e) => setRange(e.target.value)} className={select}>
+            {DATE_RANGES.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+          </select>
+        </div>
+      )}
+      {groups.length === 0 ? <p className="text-sm text-muted-foreground">No contracts match. Try another search or filter.</p> : groups.map(([t, list]) => (
+        <div key={t} className="space-y-2">
+          {types.length > 1 && <h4 className="text-xs font-bold uppercase tracking-widest text-muted-foreground">{t} <span className="opacity-70">{list.length}</span></h4>}
+          <ul className="grid gap-3">{list.map((c) => <ContractRow key={c.id} contract={c} onOpen={() => onOpen(c)} />)}</ul>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 function ContractRow({ contract: c, onOpen }: { contract: Contract; onOpen: () => void }) {
   const done = c.parties.filter((p) => p.signedAt).length;
   return (
     <li className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border p-4 transition hover:border-primary">
       <div className="min-w-0">
         <div className="truncate font-bold">{c.title}</div>
-        <div className="text-xs text-muted-foreground">{blueprintById(c.blueprint)?.name ?? "Custom"} · {c.parties.map((p) => p.legalName || p.role).join(", ")}</div>
+        <div className="text-xs text-muted-foreground">{blueprintById(c.blueprint)?.name ?? "Custom"} · {c.parties.map((p) => p.legalName || p.role).join(", ")} · {new Date(c.completedAt ?? c.updatedAt).toLocaleDateString()}</div>
       </div>
       <div className="flex items-center gap-2">
         {c.status !== "draft" && <span className="text-xs text-muted-foreground">{done}/{c.parties.length} signed</span>}
@@ -418,6 +464,7 @@ function ContractRow({ contract: c, onOpen }: { contract: Contract; onOpen: () =
 
 function ContractEditor({ userId, initial, tracks, blueprint, onClose }: { userId: string; initial: Contract; tracks: CatalogTrack[]; blueprint?: Blueprint | undefined; onClose: () => void }) {
   const bp = blueprint ?? blueprintById(initial.blueprint) ?? BLUEPRINTS[0]!;
+  useEffect(() => { loadWebFont(SIGNATURE_FONT); }, []);
   const [c, setC] = useState<Contract>(initial);
   const [customized, setCustomized] = useState(!!initial.body && initial.body !== renderContract(bp, initial.fields, initial.parties));
   const [busy, setBusy] = useState(false);
@@ -562,6 +609,7 @@ function ContractEditor({ userId, initial, tracks, blueprint, onClose }: { userI
 
   // Company agreements keep the Came Through Audio header; the user's own contracts carry their brand kit (Catalog Management).
   const pdf = async () => downloadContractPdf({ title: c.title, body, bodyHash: c.bodyHash, status: c.status, brand: c.isCompany ? null : await myBrand("contracts"),
+    company: c.isCompany ? { signerTitle: c.fields["signerTitle"] || "Founder & CEO" } : undefined,
     parties: c.parties.map((p) => ({ name: p.legalName, role: p.role, signedAt: p.signedAt, signatureName: p.signatureName, signatureHash: p.signatureHash })) });
 
   return (
@@ -663,8 +711,18 @@ function ContractEditor({ userId, initial, tracks, blueprint, onClose }: { userI
             <div className="mt-5 border-t border-border pt-5">
               {owner && !signsHere ? <p className="text-sm text-muted-foreground">You'll sign from the link emailed to <span className="font-semibold text-foreground">{owner.email || "your department address"}</span> once it's locked and sent.</p>
                 : owner ? (
+                c.isCompany ? (
+                  // Company Name / By / Printed Name / Title, signed right before sending (3.9).
+                  <dl className="grid max-w-xl grid-cols-[8rem_1fr] items-center gap-x-3 gap-y-2 rounded-xl border border-border p-4 text-sm">
+                    <dt className="font-semibold text-muted-foreground">Company Name</dt><dd>{COMPANY_LEGAL_NAME}</dd>
+                    <dt className="font-semibold text-muted-foreground"><label htmlFor="company-sign">By</label></dt>
+                    <dd><Input id="company-sign" value={typed} onChange={(e) => setTyped(e.target.value)} placeholder={owner.legalName || "Type your legal name to sign"} className="text-2xl" style={{ fontFamily: `"${SIGNATURE_FONT}", cursive` }} /></dd>
+                    <dt className="font-semibold text-muted-foreground">Printed Name</dt><dd>{owner.legalName || "Add your legal name in Parties"}</dd>
+                    <dt className="font-semibold text-muted-foreground">Title</dt><dd>{c.fields["signerTitle"] || "Founder & CEO"}</dd>
+                  </dl>
+                ) : (
                 <label className="block space-y-1 text-sm"><span className="font-medium">Type your legal name to sign{owner.legalName.trim() && <>: <span className="font-bold">{owner.legalName}</span></>}</span>
-                  <Input value={typed} onChange={(e) => setTyped(e.target.value)} placeholder={owner.legalName || "Your legal name"} className="max-w-md font-serif text-lg italic" /></label>
+                  <Input value={typed} onChange={(e) => setTyped(e.target.value)} placeholder={owner.legalName || "Your legal name"} className="max-w-md text-2xl" style={{ fontFamily: `"${SIGNATURE_FONT}", cursive` }} /></label>)
               ) : <p className="text-sm text-muted-foreground">You're not signing this one. Lock it, then send it to everyone who signs.</p>}
               <div className="mt-4 flex flex-wrap gap-3">
                 <Button disabled={busy} onClick={() => void signAndLock()}>{busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileSignature className="h-4 w-4" />}{signsHere ? "Sign" : "Lock"}</Button>

@@ -20,7 +20,7 @@ const esc = escapeHtml;
 const linkInput = z.object({ partyId: z.string().uuid(), token: z.string().min(16).max(64) });
 
 type Party = { id: string; contract_id: string; legal_name: string; email: string; role: string; is_owner: boolean; position: number; signed_at: string | null; signature_name: string | null; signature_hash: string | null; created_at: string };
-type CompanyContract = { id: string; title: string; blueprint: string; body: string; body_hash: string | null; status: "draft" | "sent" | "signed"; sent_at: string | null; completed_at: string | null; is_company: boolean };
+type CompanyContract = { id: string; title: string; blueprint: string; fields: Record<string, string> | null; body: string; body_hash: string | null; status: "draft" | "sent" | "signed"; sent_at: string | null; completed_at: string | null; is_company: boolean };
 
 async function admin() {
   return (await import("@/integrations/supabase/client.server")).supabaseAdmin;
@@ -35,7 +35,7 @@ async function openByLink(partyId: string, token: string) {
   const { data: party } = await db.from("contract_parties" as never).select("*").eq("id", partyId).maybeSingle();
   const p = party as Party | null;
   if (!p) throw fail;
-  const { data: contract } = await db.from("contracts" as never).select("id, title, blueprint, body, body_hash, status, sent_at, completed_at, is_company").eq("id", p.contract_id).maybeSingle();
+  const { data: contract } = await db.from("contracts" as never).select("id, title, blueprint, fields, body, body_hash, status, sent_at, completed_at, is_company").eq("id", p.contract_id).maybeSingle();
   const k = contract as CompanyContract | null;
   if (!k?.is_company) throw fail;
   if (k.status === "draft") throw new Error("This agreement is being edited. Try your link again later.");
@@ -70,6 +70,7 @@ export const openSignLink = createServerFn({ method: "POST" })
       can_sign: k.status === "sent" && !p.signed_at,
       parties: parties.map((x) => ({ name: x.legal_name, role: x.role, signed_at: x.signed_at, signature_name: x.signature_name, signature_hash: x.signature_hash })),
       email_hint: maskEmail(p.email),
+      company_title: k.fields?.["signerTitle"] || "Founder & CEO",
     };
     return invite;
   });

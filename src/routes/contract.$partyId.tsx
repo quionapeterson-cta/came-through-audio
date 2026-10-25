@@ -52,7 +52,7 @@ function Shell({ children, right }: { children: React.ReactNode; right?: React.R
 }
 
 // The sender's brand kit when they have Personal Branding (company agreements and signed-out links keep ours).
-const pdf = async (i: ContractInvite) => downloadContractPdf({ title: i.title, body: i.body, bodyHash: i.body_hash, status: i.status, brand: i.contract_id ? await contractBrand(i.contract_id) : null,
+const pdf = async (i: ContractInvite) => downloadContractPdf({ title: i.title, body: i.body, bodyHash: i.body_hash, status: i.status, brand: i.contract_id ? await contractBrand(i.contract_id) : null, company: i.company_title ? { signerTitle: i.company_title } : undefined,
   parties: i.parties.map((p) => ({ name: p.name, role: p.role, signedAt: p.signed_at, signatureName: p.signature_name, signatureHash: p.signature_hash })) });
 
 /** The agreement, who has signed, and the locked text, shared by both ways of signing. */
