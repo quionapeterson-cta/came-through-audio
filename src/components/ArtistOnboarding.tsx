@@ -196,7 +196,8 @@ export function ArtistOnboarding({ userId, open, onOpenChange, onSaved, firstRun
         {step === 2 && (
           <div className="space-y-5">
             <DialogHeader><DialogTitle className="text-2xl">Set Your Embed Defaults</DialogTitle>
-              <DialogDescription>Enter it once, prefill every embed. Add the public release details you use most and each new song starts closer to distribution-ready. You can always change details for an individual track.</DialogDescription></DialogHeader>
+              <DialogDescription><span className="font-semibold text-foreground">Fill in as much as you can here. It's the biggest time-saver in Came Through Audio.</span> Everything you enter carries over to every embed, every catalog entry and your health checks, so each new song starts closer to 100%. Don't have something yet? Skip it and add it anytime in Profile.</DialogDescription></DialogHeader>
+            <ProfileProgress ob={ob} p={p} />
             <Group title="Artist & Label">
               <Field label="Primary Artist / Stage Name"><Input value={ob.stageName} onChange={(e) => { setOb((o) => ({ ...o, stageName: e.target.value })); set("artist", e.target.value); }} />
                 {savedName && <p className="mt-1 text-xs text-muted-foreground">{nameRuleText(nameRule)}</p>}</Field>
@@ -233,7 +234,8 @@ export function ArtistOnboarding({ userId, open, onOpenChange, onSaved, firstRun
         {step === 3 && (
           <div className="space-y-5">
             <DialogHeader><DialogTitle className="text-2xl">Build Your Artist Catalog Profile</DialogTitle>
-              <DialogDescription>Save your private credit and registration details once. We’ll prefill every catalog entry, split sheet and registration file — so you never have to enter them again.</DialogDescription></DialogHeader>
+              <DialogDescription><span className="font-semibold text-foreground">The more you fill in now, the less you type later.</span> Your writer, publisher and registration details carry over to every catalog entry, split sheet, agency export and Royalty Health Check. Missing a PRO, IPI or publisher? Leave it blank and add it after you register.</DialogDescription></DialogHeader>
+            <ProfileProgress ob={ob} p={p} />
             <Field label="Legal Name"><Input value={ob.legalName} onChange={(e) => setOb((o) => ({ ...o, legalName: e.target.value }))} placeholder="As registered with your PRO" /></Field>
             <Rows title="Writer" rows={p.writers} onChange={(r) => set("writers", r)} seed={ob.legalName} writer />
             <label className="flex items-center gap-2 text-sm"><input type="checkbox" className="h-4 w-4 accent-[var(--primary)]" checked={!!p.selfPublished} onChange={(e) => set("selfPublished", e.target.checked)} />I'm self-published (no publisher)<InfoTip term="selfPublished" /></label>
@@ -311,6 +313,24 @@ function Nav({ onBack, onNext, onSave, nextLabel = "Continue" }: { onBack?: (() 
         {onSave && <Button variant="outline" onClick={onSave}><Save />Save &amp; exit</Button>}
         <Button onClick={onNext}>{nextLabel}{nextLabel !== "Save & exit" && <ArrowRight />}</Button>
       </div>
+    </div>
+  );
+}
+
+/** "Profile 6 of 10 filled": the details that carry over to every song, so people see the payoff of filling them in. */
+function ProfileProgress({ ob, p }: { ob: Onboarding; p: ArtistProfile }) {
+  const named = (rows?: Contributor[]) => (rows ?? []).some((r) => (r.legalName ?? r.name ?? "").trim());
+  const writer = (p.writers ?? []).find((r) => (r.legalName ?? "").trim());
+  const checks = [
+    !!ob.stageName.trim(), !!p.label?.trim(), !!p.primaryGenre, !!p.language?.trim(), !!p.recordedIn?.trim(),
+    !!(p.copyright?.trim() || p.phonographic?.trim()), !!p.samples, !!p.writtenFor,
+    !!ob.legalName.trim(), !!writer?.pro?.trim(), !!writer?.ipi?.trim(), named(p.publishers) || !!p.selfPublished || !!p.bmiWriterPublishing,
+  ];
+  const done = checks.filter(Boolean).length;
+  return (
+    <div className="space-y-1.5">
+      <div className="h-1.5 rounded-full bg-muted"><div className="h-1.5 rounded-full bg-primary transition-all" style={{ width: `${(done / checks.length) * 100}%` }} /></div>
+      <p className="text-xs text-muted-foreground">Profile {done} of {checks.length} filled · every field you add saves time on every song</p>
     </div>
   );
 }

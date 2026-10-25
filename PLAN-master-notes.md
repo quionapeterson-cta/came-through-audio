@@ -311,6 +311,14 @@ says "You Came Through: your 12th signed split sheet", Badge Reference PDF lists
 
 ---
 
+### 3.3d Publisher-share pie + onboarding wording (founder, 2026-10-25) · ✅ BUILT
+- The publisher half is one pie that must total exactly 100%: listed publishers' shares + each Self-published or
+  BMI-paid writer's **Publisher share (%)** (starts at their writer split, editable, e.g. a BMI writer taking the
+  remaining 20%). "None" writers add 0. Same treatment as writer splits: ⚠️ on exports, blocks registration, holds
+  health below 100%. Running total in Publishers. Shared rule: `publisherPie` in readiness.ts. Exports unchanged.
+- Onboarding Embed Defaults and Catalog Profile steps stress filling in as much as possible (add the rest later), with
+  a "Profile N of 12 filled" progress line. Founder welcome message unchanged.
+
 ## NEXT (after Phase 3): Pre-distribution health analysis (founder idea, 2026-10-25) · to plan
 A "This song isn't released yet" box on a song routes it to a **Release checklist** inside the Song Health Checklist,
 and the Royalty Health Report gets a pre-distribution reading alongside it: what to have ready before distributing

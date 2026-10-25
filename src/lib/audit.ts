@@ -1,7 +1,7 @@
 import type { CatalogTrack } from "@/lib/catalog";
 import { creditName, type Contributor } from "@/lib/metadata";
 import { isBmi } from "@/lib/publishing";
-import { publishingGaps } from "@/lib/readiness";
+import { pieMessage, publisherPie, publishingGaps } from "@/lib/readiness";
 import { splitStatus } from "@/lib/splits-total";
 
 export type Pillar = "performance" | "digital" | "mechanical";
@@ -57,8 +57,10 @@ export function auditTrack(t: CatalogTrack): Issue[] {
   const pubs = m.publishers.filter((p) => p.name.trim());
   if (pubs.length && m.bmiWriterPublishing) out.push({ pillar: "mechanical", text: "You said there's no publishing company but also listed a publisher. Keep one.", field: "bmiWriterPublishing" });
   for (const g of publishingGaps(m)) out.push({ pillar: "mechanical", text: g.message, field: g.field });
-  const pubSplit = splitStatus(pubs);
-  if (pubSplit.state === "over") out.push({ pillar: "mechanical", text: `Publisher shares total ${pubSplit.total}%, ${pubSplit.over}% over 100%. Lower one to fix it.`, field: "publishers-0-share" });
+  // The publisher half as one pie (readiness.ts publisherPie): it has to total exactly 100% for 100% health.
+  const pie = publisherPie(m);
+  const pieText = publishingGaps(m).length || splitStatus(m.writers.filter(creditName)).state !== "full" ? undefined : pieMessage(pie);
+  if (pieText) out.push({ pillar: "mechanical", text: pieText, field: pie.parts[0]?.field ?? "publishers-0-name" });
   m.publishers.forEach((p, index) => {
     // A listed publisher collects its share through a PRO, so it needs one too (Self-published and BMI writers with no
     // publisher list none, so they're never asked).

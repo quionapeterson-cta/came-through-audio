@@ -35,6 +35,8 @@ export const contributorSchema = z.object({
    * publishing on this song. Blank: not answered (the song's Self-published / BMI answers apply). Catalog-only, never embedded.
    */
   publishing: z.enum(["", "publisher", "self", "bmi", "none"]).optional(),
+  /** Writers who are Self-published or paid by BMI: their part of the publisher half, in % (blank = their writer split). */
+  pubShare: z.string().trim().default("").refine((value) => value === "" || (Number.isFinite(Number(value)) && Number(value) >= 0 && Number(value) <= 100), "Enter a percentage between 0 and 100.").optional(),
 });
 
 export const metadataSchema = z.object({

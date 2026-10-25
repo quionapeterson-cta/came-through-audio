@@ -47,6 +47,40 @@ export function writerPublishing(w: Contributor, m: Partial<Pick<Metadata, "self
 }
 
 /**
+ * The publisher half as one pie (founder, 2026-10-25): listed publishers' shares, plus each Self-published or
+ * BMI-paid writer's own publisher share (blank = their writer split). Writers with "None" or "My publisher" add 0.
+ * It must total exactly 100%, like writer splits: a warning on exports, a block on registration.
+ */
+export type PiePart = { label: string; share: number; field: string };
+export function publisherPie(m: PubSong): { parts: PiePart[]; total: number; state: "ok" | "under" | "over" | "empty" } {
+  const parts: PiePart[] = [];
+  const pubs = (m.publishers ?? []).map((row, index) => ({ row, index })).filter(({ row }) => creditName(row) || row.percentage?.trim() || row.ipi?.trim());
+  for (const { row, index } of pubs) parts.push({ label: creditName(row) || `Publisher ${index + 1}`, share: Number(row.percentage) || 0, field: `publishers-${index}-share` });
+  for (const { row, group, index } of listed(m)) {
+    const answer = writerPublishing(row, m);
+    // The song-wide Self-published / BMI answer next to a listed publisher is a conflict reported on its own.
+    if (!row.publishing && pubs.length) continue;
+    // A BMI writer with no answer and no publisher listed is paid the publisher share by BMI.
+    const paidByBmi = answer === "bmi" || (answer === "" && !pubs.length && isBmi(row));
+    if (answer !== "self" && !paidByBmi) continue;
+    const share = Number(row.pubShare?.trim() || row.percentage) || 0;
+    parts.push({ label: `${creditName(row) || `Writer ${index + 1}`}, ${paidByBmi ? "paid by BMI" : "self-published"}`, share, field: `${group}-${index}-pubShare` });
+  }
+  const total = Math.round(parts.reduce((n, p) => n + p.share, 0) * 100) / 100;
+  // Everyone marked "None" and no publisher listed: the publishing belongs to someone, so they need to be listed.
+  if (!parts.length) return { parts, total, state: listed(m).length && listed(m).every(({ row }) => writerPublishing(row, m) === "none") ? "empty" : "ok" };
+  return { parts, total, state: total === 100 ? "ok" : total < 100 ? "under" : "over" };
+}
+/** One line for the pie, e.g. "Publisher shares total 80% (Lee Songs 50% · Ann Lee, self-published 30%)." */
+export function pieMessage(pie: ReturnType<typeof publisherPie>): string | undefined {
+  const who = pie.parts.map((p) => `${p.label} ${p.share}%`).join(" · ");
+  if (pie.state === "empty") return "Every writer is marked \"None\" for publishing. Add the publisher that holds this song's publishing.";
+  if (pie.state === "under") return `Publisher shares total ${pie.total}% (${who}). Add the missing ${Math.round((100 - pie.total) * 100) / 100}% so they equal exactly 100%.`;
+  if (pie.state === "over") return `Publisher shares total ${pie.total}% (${who}). Lower them by ${Math.round((pie.total - 100) * 100) / 100}% so they equal exactly 100%.`;
+  return undefined;
+}
+
+/**
  * Writers whose publisher share has nowhere to go on this song. Each writer is covered by a listed publisher,
  * Self-published, "no publishing on this song", or BMI (BMI writers only: BMI pays them the publisher share too, so
  * with no publisher they need nothing else at BMI and The MLC). `rules` "pro" is ASCAP's: a publisher or Self-published.
@@ -79,7 +113,7 @@ export function publishingGaps(m: PubSong, rules: "pro" | "bmi" | "mlc" = "mlc")
  * user decides, so warnings never hold back an export. Registration assistance does block on them. SoundExchange registers the recording, so it skips splits.
  * Author/Composer counts toward both. Embedding and saving are never gated on this.
  */
-export function registrationReadiness(m: Pick<Metadata, "writers" | "composers" | "instrumental"> & { publishers?: Contributor[] }, target?: ReadinessTarget): Readiness {
+export function registrationReadiness(m: Pick<Metadata, "writers" | "composers" | "instrumental"> & { publishers?: Contributor[]; selfPublished?: boolean; bmiWriterPublishing?: boolean }, target?: ReadinessTarget): Readiness {
   const people = listed(m);
   const missing: MissingItem[] = [];
   const first = people[0];
@@ -99,13 +133,12 @@ export function registrationReadiness(m: Pick<Metadata, "writers" | "composers" 
     else if (split.state === "under") warnings.push({ code: "split", message: `Writer splits total ${split.total}%. Add the missing ${split.left}% so they equal exactly 100%.`, field: at });
     else if (split.state === "over") warnings.push({ code: "split", message: `Writer splits total ${split.total}%. Lower them by ${split.over}% so they equal exactly 100%.`, field: at });
   }
-  const pubs = (m.publishers ?? []).map((row, index) => ({ row, index })).filter(({ row }) => row.name.trim() || row.percentage?.trim() || row.ipi?.trim());
-  if (pubs.length && target !== "soundexchange") {
-    const share = splitStatus(pubs.map((p) => p.row));
-    const at = `publishers-${pubs[0]!.index}-share`;
-    if (share.state === "empty") warnings.push({ code: "split", message: "Add each publisher's share. Publisher shares must add up to exactly 100%.", field: at });
-    else if (share.state === "under") warnings.push({ code: "split", message: `Publisher shares total ${share.total}%. Add the missing ${share.left}% so they equal exactly 100%.`, field: at });
-    else if (share.state === "over") warnings.push({ code: "split", message: `Publisher shares total ${share.total}%. Lower them by ${share.over}% so they equal exactly 100%.`, field: at });
+  // The publisher half as one pie: listed publishers plus Self-published / BMI-paid writers, exactly 100%.
+  // Only once every writer's publishing has an answer and the writer splits add up: until then the pie can't be right.
+  if (target !== "soundexchange" && !warnings.length && !publishingGaps({ ...m, publishers: m.publishers ?? [] }).length) {
+    const pie = publisherPie({ ...m, publishers: m.publishers ?? [] });
+    const message = pieMessage(pie);
+    if (message) warnings.push({ code: "split", message, field: pie.parts.find((p) => p.share === 0)?.field ?? pie.parts[0]?.field ?? "publishers-0-name" });
   }
   return { ready: missing.length === 0, missing, warnings };
 }

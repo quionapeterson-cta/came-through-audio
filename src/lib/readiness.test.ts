@@ -58,7 +58,7 @@ describe("registration readiness", () => {
     expect(codes(song({ writers, publishers: [pub("100")] }))).toEqual([]);
     expect(codes(song({ writers, publishers: [pub("50"), { ...pub("50"), name: "Co Pub" }] }))).toEqual([]);
     expect(registrationReadiness(song({ writers, publishers: [pub("50")] })).warnings).toEqual([
-      { code: "split", message: "Publisher shares total 50%. Add the missing 50% so they equal exactly 100%.", field: "publishers-0-share" },
+      { code: "split", message: "Publisher shares total 50% (Lee Songs 50%). Add the missing 50% so they equal exactly 100%.", field: "publishers-0-share" },
     ]);
     expect(codes(song({ writers, publishers: [pub("")] }))).toEqual(["split"]);
   });
@@ -196,11 +196,25 @@ describe("per-agency registration checks", () => {
   it("lets each writer answer who collects their publishing on this song", () => {
     const two = (extra: object) => full({ selfPublished: false, publishers: [], writers: [writer({ percentage: "50" }), writer({ legalName: "Kim Roe", percentage: "50", ...extra })] });
     expect(need(two({}), "mlc")).toEqual(["writers-0-publishing", "writers-1-publishing"]);
-    // Kim gets no publishing on this song; Ann is self-published: both covered, no publisher needed.
-    expect(need(full({ selfPublished: false, publishers: [], writers: [writer({ percentage: "50", publishing: "self" }), writer({ legalName: "Kim Roe", percentage: "50", publishing: "none" })] }), "ascap")).toEqual([]);
+    // Kim gets no publishing on this song; Ann is self-published and holds the whole publisher half: covered.
+    const annSelf = (pubShare: string) => full({ selfPublished: false, publishers: [], writers: [writer({ percentage: "50", publishing: "self", pubShare }), writer({ legalName: "Kim Roe", percentage: "50", publishing: "none" })] });
+    expect(need(annSelf("100"), "ascap")).toEqual([]);
+    // Left at her writer split (50%), the publisher half only adds up to 50%.
+    expect(need(annSelf(""), "ascap")).toEqual(["writers-0-pubShare"]);
     // "BMI pays me" only works for BMI writers; "my publisher" needs one listed.
     expect(need(two({ publishing: "bmi" }), "mlc")).toContain("writers-1-publishing");
     expect(need(full({ selfPublished: false, publishers: [], writers: [writer({ publishing: "publisher" })] }), "mlc")).toEqual(["publishers-0-name"]);
+  });
+  it("adds the publisher half up as one pie: listed publishers, self-published and BMI-paid writers (founder's examples)", () => {
+    const pub = (name: string, percentage: string) => ({ name, pro: "ASCAP", ipi: "00987654321", percentage });
+    const three = (third: Partial<Contributor>) => full({ selfPublished: false, publishers: [pub("Lee Songs", "50"), pub("Roe Music", "30")], writers: [
+      writer({ percentage: "40", publishing: "publisher" }), writer({ legalName: "Kim Roe", percentage: "40", publishing: "publisher" }), writer({ legalName: "Bo Ray", percentage: "20", ...third })] });
+    // 3 ASCAP writers, 2 with publishing at 80%, the third gets none: the publisher half is 20% short.
+    expect(need(three({ publishing: "none" }), "mlc")).toEqual(["publishers-0-share"]);
+    // The third is a BMI writer who takes the remaining 20% from BMI: 80% + 20% = 100%.
+    expect(need(three({ pro: "BMI", publishing: "bmi", pubShare: "20" }), "mlc")).toEqual([]);
+    // One BMI writer with no publisher: BMI pays them the whole publisher half.
+    expect(need(full({ selfPublished: false, publishers: [], writers: [writer({ pro: "BMI" })] }), "mlc")).toEqual([]);
   });
   it("asks PROs about samples, and BMI about duration, genre, productions and the label once released", () => {
     expect(need(full({ samples: "" }), "ascap")).toEqual(["samples"]);

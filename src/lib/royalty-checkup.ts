@@ -3,7 +3,7 @@ import { songDataScore, type TrackReport } from "@/lib/health";
 import type { SongChecklist } from "@/lib/health-checklist";
 import type { SongStatus } from "@/lib/health-songs";
 import { creditName, type Contributor, type Metadata } from "@/lib/metadata";
-import { publishingGaps, registrationCheck } from "@/lib/readiness";
+import { publisherPie, publishingGaps, registrationCheck } from "@/lib/readiness";
 import type { Society } from "@/lib/repertoires";
 import { splitStatus } from "@/lib/splits-total";
 import { readNote } from "@/lib/agency-lists";
@@ -183,9 +183,9 @@ export function royaltyCheckup({ rows, signedSheets, today = new Date().toISOStr
 
     // Spine: splits that add up, and a signed split sheet whenever there's more than one writer.
     const split = splitStatus(writers);
-    const pubSplit = splitStatus(pubs);
+    const pie = publisherPie(m);
     if (split.state === "over" || (split.state === "under" && split.total > 0) || (split.state === "empty" && writers.length > 1)) hit("spine-align", song(split.state === "empty" ? "no shares entered" : `writers total ${split.total}%`, "writers-0-share"));
-    else if (pubSplit.state === "over" || (pubSplit.state === "under" && pubSplit.total > 0)) hit("spine-align", song(`publishers total ${pubSplit.total}%`, "publishers-0-share"));
+    else if (pie.state === "over" || pie.state === "under") hit("spine-align", song(`publisher shares total ${pie.total}%`, pie.parts[0]?.field ?? "publishers-0-share"));
     // A sheet signed outside Came Through Audio counts once the check-in says so; without either, there's nothing to read.
     const sheet = answer("split");
     if ((signedSheets || sheet) && writers.length > 1 && !signedSheets?.get(id) && sheet !== "yes")
