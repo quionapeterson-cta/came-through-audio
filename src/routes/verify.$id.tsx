@@ -1,6 +1,10 @@
 import { useState } from "react";
 import { createFileRoute, Link, notFound } from "@tanstack/react-router";
-import { CheckCircle2, Download, ExternalLink, ShieldCheck, XCircle } from "lucide-react";
+import { CheckCircle2, Download, ExternalLink, FolderOpen, Loader2, ShieldCheck, XCircle } from "lucide-react";
+import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
+import { saveBitcoinProof, saveCertificatePdf, type Certificate } from "@/lib/certificate";
 import { BrandLogo } from "@/components/BrandLogo";
 import { Button } from "@/components/ui/button";
 import { getPublicCertificate } from "@/lib/certificate-verify.functions";
@@ -19,6 +23,12 @@ export const Route = createFileRoute("/verify/$id")({
     return cert;
   },
   head: () => ({ meta: [{ title: "Verify a certificate — Came Through Audio" }, { name: "robots", content: "noindex" }] }),
+  // Our own loading screen while the certificate loads, so nothing else flashes first.
+  pendingComponent: () => (
+    <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-background text-foreground">
+      <BrandLogo tone="light" /><p className="flex items-center gap-2 text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" />Loading the certificate…</p>
+    </div>
+  ),
   component: VerifyPage,
 });
 
@@ -27,6 +37,20 @@ function VerifyPage() {
   const [check, setCheck] = useState<"match" | "nomatch">();
   const issued = c.issued_at ? new Date(c.issued_at).toUTCString() : "—";
   const base = (c.track_title || "certificate").replace(/[^\w-]+/g, "_");
+  const { user } = useAuth();
+  const [busy, setBusy] = useState(false);
+
+  /** The owner's own proof files, on the same phone that opened the QR code (no second device needed). */
+  async function downloadProof() {
+    if (!user) { toast.error("Log in with the account that owns this certificate to download its proof files."); return; }
+    setBusy(true);
+    try {
+      const { data } = await supabase.from("ai_protection_certificates").select("*").eq("id", c.id).maybeSingle();
+      if (!data) { toast.error("Only the account that owns this certificate can download its proof files."); return; }
+      await saveCertificatePdf(data as Certificate);
+      saveBitcoinProof(data as Certificate);
+    } finally { setBusy(false); }
+  }
 
   async function checkFile(file: File | undefined) {
     if (!file) return;
@@ -45,6 +69,13 @@ function VerifyPage() {
           <h1 className="mt-2 text-3xl font-bold md:text-4xl">{c.track_title || "Untitled"}</h1>
           <p className="mt-1 text-lg text-muted-foreground">{c.artist_name}</p>
         </div>
+
+        {/* Already on the phone that scanned the code? Open it or download the files here. */}
+        <div className="flex flex-wrap gap-2">
+          <Button asChild><Link to="/workspace" search={{ tab: "protect" }}><FolderOpen className="h-4 w-4" />Open your certificate</Link></Button>
+          <Button variant="outline" disabled={busy} onClick={() => void downloadProof()}>{busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}Download proof files</Button>
+        </div>
+        <p className="-mt-3 text-xs text-muted-foreground">For the artist who owns this certificate: log in to open it or download the PDF and Bitcoin proof. Anyone can check it below.</p>
 
         <dl className="grid gap-3 rounded-2xl border border-border p-5 text-sm sm:grid-cols-[10rem_1fr]">
           <dt className="font-semibold">Issued</dt><dd>{issued}</dd>

@@ -1,6 +1,8 @@
 import type { Database } from "@/integrations/supabase/types";
 import { buildOtsFile, download } from "@/lib/ots";
 import { makeZip } from "@/lib/zip";
+import { SITE_URL } from "@/lib/email-layout";
+import { trustedOrigin } from "@/lib/invite-limits";
 
 export type Certificate = Database["public"]["Tables"]["ai_protection_certificates"]["Row"];
 type Credits = { writers?: string; composers?: string; producers?: string };
@@ -20,8 +22,9 @@ export async function saveCertificatePdf(c: Certificate) {
     `Writers: ${credits.writers || "—"}`, `Composers: ${credits.composers || "—"}`, `Producers: ${credits.producers || "—"}`,
     `ISRC: ${c.isrc || "—"}   UPC: ${c.upc || "—"}   ISWC: ${c.iswc || "—"}`, ...(c.chain_strength ? [`Chain: ${c.chain_strength}`] : []),
     `DAW session SHA-256: ${c.session_hash ?? "—"}`, `Draft history SHA-256: ${c.notes_hash ?? "—"}`,
+    ...[STORED_COPY.daw, STORED_COPY.drafts].flatMap((k) => { const v = manifestLine(c.manifest, k); return v ? [`${k.replace(" SHA-256", "")}: ${v}`] : []; }),
     `Proof manifest SHA-256: ${c.proof_digest ?? "—"}`,
-    "Keep your original proof videos unchanged: the fingerprints above match only those exact files.",
+    "Keep your original proof videos unchanged: the fingerprints above match those exact files (and our stored copies, listed in your manifest).",
     c.ots_receipt ? `Bitcoin timestamp: submitted via OpenTimestamps (${c.ots_calendar}); anchors within a few hours.` : "Bitcoin timestamp: not available",
     c.ots_receipt ? "To verify on the Bitcoin blockchain: open opentimestamps.org, drop in the .ots file from your Bitcoin proof ZIP, then the proof-manifest.txt (not this PDF). It shows as pending for the first few hours." : "",
     `Scan the QR code or visit ${verifyUrl(c.id)} to check this certificate.`];
@@ -32,7 +35,17 @@ export async function saveCertificatePdf(c: Certificate) {
   pdf.save(`${fileBase(c.track_title)}-proof-certificate.pdf`);
 }
 
-export const verifyUrl = (id: string) => `${typeof window !== "undefined" ? window.location.origin : "https://camethroughaudio.com"}/verify/${id}`;
+/** Always the published site (never the Lovable editor preview, which asks visitors to log in to Lovable). */
+export const verifyUrl = (id: string) => `${typeof window !== "undefined" ? trustedOrigin(window.location.origin, SITE_URL) : SITE_URL}/verify/${id}`;
+
+/** Manifest lines for the stored backup copies, so the original file and our copy both verify (PLAN-master-notes 3.8). */
+export const STORED_COPY = { daw: "DAW session stored copy SHA-256", drafts: "Draft history stored copy SHA-256" } as const;
+export function storedCopyLine(originalHash: string, copy: { path: string; hash: string }) {
+  if (!copy.hash) return "no copy stored (keep your original file)";
+  return copy.hash === originalHash ? "same file as the original" : `${copy.hash} (720p copy stored by Came Through Audio)`;
+}
+/** One "Key: value" line from a manifest. */
+export const manifestLine = (manifest: string | null, key: string) => manifest?.split("\n").find((l) => l.startsWith(`${key}: `))?.slice(key.length + 2);
 
 const HOW_TO_VERIFY = (c: Certificate, base: string) => `HOW TO VERIFY THIS CERTIFICATE ON THE BITCOIN BLOCKCHAIN
 
@@ -48,6 +61,15 @@ Check the certificate online: ${verifyUrl(c.id)}
 
 Keep your original proof videos too: the fingerprints in the manifest match those exact files.
 `;
+
+/** The manifest .txt on its own (the file opentimestamps.org asks for). */
+export function saveManifestTxt(c: Certificate) {
+  if (c.manifest) download(`${fileBase(c.track_title)}-proof-manifest.txt`, new TextEncoder().encode(c.manifest), "text/plain");
+}
+/** The .ots timestamp receipt on its own. */
+export function saveOtsFile(c: Certificate) {
+  if (c.ots_receipt && c.proof_digest) download(`${fileBase(c.track_title)}-proof-manifest.txt.ots`, buildOtsFile(c.proof_digest, c.ots_receipt), "application/octet-stream");
+}
 
 /** One ZIP with the manifest .txt, its .ots receipt and how to verify them, so the pair never gets split up. */
 export function saveBitcoinProof(c: Certificate) {

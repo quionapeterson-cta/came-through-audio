@@ -276,7 +276,7 @@ Build: a `rotation` list on each badge (art only; the rules engine already count
 says "You Came Through: your 12th signed split sheet", Badge Reference PDF lists the rotations. Files: `src/lib/badges.ts`,
 `badge-rules.ts`, `Badges.tsx`, `badge-reference-pdf.ts`, tests. No migration (earnings already log each time).
 
-### 3.8 AI Protection Hub
+### 3.8 AI Protection Hub · ✅ BUILT 2026-10-25 (Add date calendar list; manifest stamps the stored copy's fingerprint too, so the original and our 720p copy both verify (Question 5 unanswered: built the no-cost option, originals not kept); certificate QR/verify links always the published site + branded loading screen; manifest .txt and .ots download separately besides the ZIP; verify page has Open your certificate / Download proof files for the owner; legal-proof answer was already on the page)
 - Draft dates: **Add dates** button with a calendar; add as many as the proof shows (you chose user-entered dates).
 - **Fingerprint must match the copy we keep.** Today the certificate fingerprints the original; our backup is compressed
   (720p) so its fingerprint differs. Fix: the manifest stamps **both** fingerprints, the original (the user keeps it) and our

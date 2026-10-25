@@ -26,7 +26,7 @@ import { openCheckout, getPaymentsEnvironment } from "@/lib/checkout";
 import { stampDigest } from "@/lib/ots.functions";
 import { compressTo720p } from "@/lib/draft-chain";
 import { proofManifest } from "@/lib/ots";
-import { saveBitcoinProof, saveCertificatePdf, type Certificate } from "@/lib/certificate";
+import { STORED_COPY, saveBitcoinProof, saveCertificatePdf, saveManifestTxt, saveOtsFile, storedCopyLine, type Certificate } from "@/lib/certificate";
 import { registrationWriters } from "@/lib/readiness";
 import { requestBadgeCheck } from "@/lib/badge-events";
 import type { Purchase } from "@/hooks/useBilling";
@@ -36,6 +36,10 @@ type WriterRow = { name: string; role: WriterRole };
 /** A fingerprinted proof video. The backup copy uploads in the background; the fingerprint never waits for it. */
 type Proof = { name: string; hash: string; path?: string; size: number; created: number; backup: "saving" | "saved" | "device"; progress?: number | undefined };
 type Kind = "daw" | "drafts";
+/** Where a proof video's private backup was stored, and that copy's fingerprint ("" when none was stored). */
+type Backup = { path: string; hash: string };
+/** "2026-03-03" → "March 3, 2026". */
+const longDate = (iso: string) => new Date(`${iso}T12:00:00`).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" });
 /** What a proof box is doing right now, shown inline under its file picker. */
 type Status = { busy?: string; progress?: number; error?: string };
 
@@ -141,15 +145,16 @@ export function AIProtectionHub({ userId, purchases, justPaid, track }: { userId
   const [daw, setDaw] = useState<Proof>();
   const [notes, setNotes] = useState<Proof>();
   const [draftNotes, setDraftNotes] = useState("");
-  /** Optional: the draft dates the artist can see in their video, as a plain note. Stamped with the manifest; never required. */
-  const [draftDates, setDraftDates] = useState("");
+  /** Optional: the draft dates the artist can see in their video, added one by one. Stamped with the manifest; never required. */
+  const [draftDates, setDraftDates] = useState<string[]>([]);
+  const [dateInput, setDateInput] = useState("");
   const [status, setStatus] = useState<Record<Kind, Status>>({ daw: {}, drafts: {} });
   const [attest, setAttest] = useState(false);
   const [busy, setBusy] = useState(false);
   const [issued, setIssued] = useState<Certificate>();
   const [videosFor, setVideosFor] = useState<string>();
   function resetProof() {
-    setDaw(undefined); setNotes(undefined); setDraftNotes(""); setDraftDates("");
+    setDaw(undefined); setNotes(undefined); setDraftNotes(""); setDraftDates([]); setDateInput("");
     setStatus({ daw: {}, drafts: {} }); setAttest(false); backups.current = {};
   }
 
@@ -171,11 +176,14 @@ export function AIProtectionHub({ userId, purchases, justPaid, track }: { userId
     backups.current[kind] = saveBackup(file, kind, hash, d);
   }
 
-  const backups = useRef<Partial<Record<Kind, Promise<string>>>>({});
+  const backups = useRef<Partial<Record<Kind, Promise<Backup>>>>({});
   const patchProof = (kind: Kind, hash: string, patch: Partial<Proof>) =>
     (kind === "daw" ? setDaw : setNotes)((p) => (p?.hash === hash ? { ...p, ...patch } : p));
-  /** Stores a private backup copy (shrunk to 720p when over 50MB). Resolves to its path, or DEVICE_ONLY if it can't. */
-  async function saveBackup(file: File, kind: Kind, hash: string, seconds: number): Promise<string> {
+  /**
+   * Stores a private backup copy (shrunk to 720p when over 50MB). Resolves to its path and fingerprint (a shrunk copy
+   * has its own, so the manifest stamps both and either file verifies), or DEVICE_ONLY if it can't.
+   */
+  async function saveBackup(file: File, kind: Kind, hash: string, seconds: number): Promise<Backup> {
     try {
       let copy = file;
       if (file.size > MAX_PROOF_BYTES) {
@@ -190,10 +198,10 @@ export function AIProtectionHub({ userId, purchases, justPaid, track }: { userId
       const { error } = await supabase.storage.from("proof-videos").upload(path, copy, { contentType: proofVideoType(copy) ?? copy.type });
       if (error) throw error;
       patchProof(kind, hash, { backup: "saved", path, progress: undefined });
-      return path;
+      return { path, hash: copy === file ? hash : await sha256(await copy.arrayBuffer()) };
     } catch {
       patchProof(kind, hash, { backup: "device", progress: undefined });
-      return DEVICE_ONLY;
+      return { path: DEVICE_ONLY, hash: "" };
     }
   }
 
@@ -208,11 +216,15 @@ export function AIProtectionHub({ userId, purchases, justPaid, track }: { userId
     setBusy(true);
     try {
       // Usually finished long before this; waits only if a backup copy is still uploading.
-      const [dawPath, notesPath] = await Promise.all([backups.current.daw ?? daw.path ?? DEVICE_ONLY, backups.current.drafts ?? notes.path ?? DEVICE_ONLY]);
+      const none = { path: DEVICE_ONLY, hash: "" };
+      const [dawCopy, notesCopy] = await Promise.all([backups.current.daw ?? (daw.path ? { path: daw.path, hash: "" } : none), backups.current.drafts ?? (notes.path ? { path: notes.path, hash: "" } : none)]);
+      const dawPath = dawCopy.path, notesPath = notesCopy.path;
       const manifest = proofManifest({
         Track: f.title, Artist: f.artist, Writers: writers, Composers: composers, Producers: producers || "-",
         ISRC: f.isrc || "-", UPC: f.upc || "-", ISWC: f.iswc || "-",
-        "DAW session SHA-256": daw.hash, "Draft history SHA-256": notes.hash, "Draft dates shown in video (entered by the artist)": draftDates.trim() || "-", "Draft notes": draftNotes || "-",
+        "DAW session SHA-256": daw.hash, "Draft history SHA-256": notes.hash,
+        [STORED_COPY.daw]: storedCopyLine(daw.hash, dawCopy), [STORED_COPY.drafts]: storedCopyLine(notes.hash, notesCopy),
+        "Draft dates shown in video (entered by the artist)": draftDates.length ? draftDates.map(longDate).join("; ") : "-", "Draft notes": draftNotes || "-",
       });
       const manifestBytes = new TextEncoder().encode(manifest);
       const digest = await sha256(manifestBytes.buffer as ArrayBuffer);
@@ -280,9 +292,12 @@ export function AIProtectionHub({ userId, purchases, justPaid, track }: { userId
                   <span className="text-xs font-semibold text-primary">Issued · {c.ots_receipt ? "Anchored on Bitcoin" : "No Bitcoin stamp"} · {c.issued_at ? new Date(c.issued_at).toLocaleDateString() : ""}</span>
                   <div className="flex gap-2">
                     <Button size="sm" variant="outline" onClick={() => void saveCertificatePdf(c)}><Download className="h-4 w-4" />PDF</Button>
-                    {c.ots_receipt && <Button size="sm" variant="outline" title={c.manifest ? "Manifest .txt + .ots receipt" : "Use with the manifest .txt you downloaded when the certificate was issued"} onClick={() => saveBitcoinProof(c)}><Download className="h-4 w-4" />Bitcoin proof</Button>}
+                    {c.ots_receipt && <Button size="sm" variant="outline" title={c.manifest ? "Manifest .txt + .ots receipt in one ZIP" : "Use with the manifest .txt you downloaded when the certificate was issued"} onClick={() => saveBitcoinProof(c)}><Download className="h-4 w-4" />Bitcoin proof</Button>}
                     <Button size="sm" variant="outline" aria-expanded={videosFor === c.id} onClick={() => setVideosFor(videosFor === c.id ? undefined : c.id)}><Video className="h-4 w-4" />Proof videos</Button>
                   </div>
+                  {c.ots_receipt && c.manifest && <p className="text-xs text-muted-foreground sm:col-span-3">Or download them one at a time:{" "}
+                    <button type="button" className="font-semibold text-primary hover:underline" onClick={() => saveManifestTxt(c)}>manifest .txt</button>{" · "}
+                    <button type="button" className="font-semibold text-primary hover:underline" onClick={() => saveOtsFile(c)}>timestamp receipt .ots</button></p>}
                   {videosFor === c.id && <ProofVideos cert={c} />}
                 </li>
               ))}
@@ -439,8 +454,16 @@ export function AIProtectionHub({ userId, purchases, justPaid, track }: { userId
                   </ProofBox>
                   <ProofBox title="Draft History" proof={notes} status={status.drafts} on={(file) => proof(file, "drafts", (p) => setNotes(p))}
                     tip="Screen-record your earlier versions: voice memos, rough takes, lyric notes, or a folder showing file dates. Early melody ideas (hummed voice memos, rough toplines) and drafts made days or weeks apart are strong evidence, and showing their dates makes it stronger.">
-                    <div className="space-y-1"><Label htmlFor="draft-dates">Draft dates shown in your video (optional)</Label><Input id="draft-dates" value={draftDates} onChange={(e) => setDraftDates(e.target.value)} placeholder="e.g. Voice memo March 3, 2026; lyrics note April 20, 2026" />
-                      <p className="text-xs text-muted-foreground">A quick index for anyone reviewing your proof later. It's stamped with your certificate. Leave it blank if you like.</p></div>
+                    <div className="space-y-1.5"><Label htmlFor="draft-dates">Draft dates shown in your video (optional)</Label>
+                      <div className="flex gap-2">
+                        <Input id="draft-dates" type="date" value={dateInput} max={new Date().toISOString().slice(0, 10)} onChange={(e) => setDateInput(e.target.value)} className="w-auto" />
+                        <Button type="button" variant="outline" size="sm" className="h-10" disabled={!dateInput || draftDates.includes(dateInput)}
+                          onClick={() => { setDraftDates((d) => [...d, dateInput].sort()); setDateInput(""); }}><Plus className="h-4 w-4" />Add date</Button>
+                      </div>
+                      {draftDates.length > 0 && <ul className="flex flex-wrap gap-1.5">{draftDates.map((d) => (
+                        <li key={d} className="flex items-center gap-1 rounded-full border border-border bg-muted px-2.5 py-1 text-xs font-medium">{longDate(d)}
+                          <button type="button" aria-label={`Remove ${longDate(d)}`} className="text-muted-foreground hover:text-foreground" onClick={() => setDraftDates((all) => all.filter((x) => x !== d))}><Trash2 className="h-3.5 w-3.5" /></button></li>))}</ul>}
+                      <p className="text-xs text-muted-foreground">Add every date your video shows (a voice memo, a lyric note, a file date). It's a quick index for anyone reviewing your proof, stamped with your certificate. Leave it empty if you like.</p></div>
                     <div className="space-y-1"><Label>Notes (optional)</Label><Input value={draftNotes} onChange={(e) => setDraftNotes(e.target.value)} /></div>
                   </ProofBox>
                 </div>
@@ -566,13 +589,13 @@ function ProofVideos({ cert }: { cert: Certificate }) {
           <div key={label} className="flex flex-wrap items-center justify-between gap-2">
             <span>
               <span className="font-semibold">{label}</span>{" "}
-              <span className="text-xs text-muted-foreground">{!saved ? "· No backup saved. Keep your original file." : path.includes("_720p") ? "· 720p copy. Your original file is the one that matches the certificate." : ""}</span>
+              <span className="text-xs text-muted-foreground">{!saved ? "· No backup saved. Keep your original file." : path.includes("_720p") ? "· 720p copy. Its own fingerprint is in your manifest too, so this copy and your original both verify." : ""}</span>
             </span>
             {saved && <Button size="sm" variant="ghost" disabled={busy === path} onClick={() => void get(label, path)}>{busy === path ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}Download</Button>}
           </div>
         );
       })}
-      <p className="text-xs text-muted-foreground">Backups are private to your account. The fingerprints on your certificate match your original files exactly.</p>
+      <p className="text-xs text-muted-foreground">Backups are private to your account. Your manifest stamps the fingerprint of your original files and of these stored copies.</p>
     </div>
   );
 }
