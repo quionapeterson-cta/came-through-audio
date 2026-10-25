@@ -44,7 +44,7 @@ const extOf = (name?: string) => (/\.wav$/i.test(name ?? "") ? "wav" : "mp3");
 /** What another tab asks My Catalog to open: a field on a saved song, or a new song with its title typed in. */
 export type CatalogFocus = { trackId: string; field: string } | { newTitle: string; artist?: string | undefined; nonce: number };
 
-export function MetadataUploader({ onShareInfo, userId, mode = "embed", readOnly, onSubmitted, onSplitSheet, onProtect, canSplit, canExport, focus, onFocused, onHealthCheck }: { onHealthCheck?: (trackId?: string, release?: boolean) => void; readOnly?: boolean; onShareInfo?: (s: Partial<ShareInfo> & Pick<ShareInfo, "ctx">) => void; onFocused?: () => void; userId?: string; mode?: "embed" | "catalog"; focus?: CatalogFocus | undefined; onSubmitted?: () => void; onSplitSheet?: (t: CatalogTrack) => void; onProtect?: (t: CatalogTrack) => void; canSplit?: boolean; canExport?: boolean }) {
+export function MetadataUploader({ onShareInfo, userId, mode = "embed", readOnly, onSubmitted, onSplitSheet, onProtect, canSplit, canExport, canWav, focus, onFocused, onHealthCheck }: { canWav?: boolean; onHealthCheck?: (trackId?: string, release?: boolean) => void; readOnly?: boolean; onShareInfo?: (s: Partial<ShareInfo> & Pick<ShareInfo, "ctx">) => void; onFocused?: () => void; userId?: string; mode?: "embed" | "catalog"; focus?: CatalogFocus | undefined; onSubmitted?: () => void; onSplitSheet?: (t: CatalogTrack) => void; onProtect?: (t: CatalogTrack) => void; canSplit?: boolean; canExport?: boolean }) {
   const full = mode === "catalog";
   // One artist per account: the artist name from setup. A different name gets a gentle add-an-artist note.
   const registeredArtist = loadOnboarding(userId)?.stageName?.trim() ?? "";
@@ -62,7 +62,7 @@ export function MetadataUploader({ onShareInfo, userId, mode = "embed", readOnly
   // My Catalog: adding a song directly (an already-embedded MP3, or details only) instead of going through Embed.
   const [adding, setAdding] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [upsell, setUpsell] = useState<false | "split" | "export">(false);
+  const [upsell, setUpsell] = useState<false | "split" | "export" | "wav">(false);
   const [held, setHeld] = useState<{ agency: Agency; songs: Held[]; exported: number }>();
   // Embed session: songs waiting their turn, songs finished this sitting, and what carries over to the next song.
   const [queue, setQueue] = useState<File[]>([]);
@@ -246,6 +246,8 @@ export function MetadataUploader({ onShareInfo, userId, mode = "embed", readOnly
   }
   /** Drop or pick several MP3s or WAVs: the first fills the form if it's free, the rest wait in the session queue. */
   function addFiles(list: FileList | File[]) {
+    // WAV embedding is a Catalog Management feature (founder, 2026-10-25); other plans see the upgrade box.
+    if (!canWav && [...list].some((f) => /\.wav$/i.test(f.name))) { setUpsell("wav"); list = [...list].filter((f) => !/\.wav$/i.test(f.name)); if (!list.length) return; }
     const files = [...list].filter((f) => AUDIO_FILE.test(f.name));
     if (!files.length) { setError("Choose MP3 or WAV audio files. FLAC embedding isn't available yet."); return; }
     const [first, ...rest] = files;
@@ -288,6 +290,7 @@ export function MetadataUploader({ onShareInfo, userId, mode = "embed", readOnly
   function selectAudio(file?: File) {
     if (!file) return;
     setResult(undefined);
+    if (!canWav && /\.wav$/i.test(file.name)) { setUpsell("wav"); return; }
     if (!AUDIO_FILE.test(file.name)) { setError("Choose an MP3 or WAV audio file. FLAC embedding isn't available yet."); return; }
     setAudio(file);
     setError("");
@@ -754,8 +757,8 @@ export function MetadataUploader({ onShareInfo, userId, mode = "embed", readOnly
       </Dialog>
       <Dialog open={!!upsell} onOpenChange={(o) => !o && setUpsell(false)}>
         <DialogContent className="bg-card text-card-foreground">
-          <DialogHeader><DialogTitle className="flex items-center gap-2 text-xl font-bold"><Lock className="h-5 w-5 text-primary" />{upsell === "export" ? "1-Click Official Agency Exports are locked" : "Split Sheets are locked"}</DialogTitle></DialogHeader>
-          <p className="text-base font-medium">{upsell === "export" ? "Upgrade to Catalog & Collaborate to export official The MLC and SoundExchange Direct bulk spreadsheets, plus BMI and ASCAP registration cheat sheets." : "Generate unlimited split sheets from your catalog starting with Catalog Plus ($24.99/yr). Add collaborator e-signatures with Catalog & Collaborate."}</p>
+          <DialogHeader><DialogTitle className="flex items-center gap-2 text-xl font-bold"><Lock className="h-5 w-5 text-primary" />{upsell === "wav" ? "WAV embedding is part of Catalog Management" : upsell === "export" ? "1-Click Official Agency Exports are locked" : "Split Sheets are locked"}</DialogTitle></DialogHeader>
+          <p className="text-base font-medium">{upsell === "wav" ? "Embed your metadata into WAV masters and keep them in My Catalog with Catalog Management. MP3 embedding is included in your plan." : upsell === "export" ? "Upgrade to Catalog & Collaborate to export official The MLC and SoundExchange Direct bulk spreadsheets, plus BMI and ASCAP registration cheat sheets." : "Generate unlimited split sheets from your catalog starting with Catalog Plus ($24.99/yr). Add collaborator e-signatures with Catalog & Collaborate."}</p>
           <Button onClick={() => setUpsell(false)}>Got it</Button>
         </DialogContent>
       </Dialog>
