@@ -1,3 +1,4 @@
+import { ScoreInfo } from "@/components/ScoreInfo";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { ChevronLeft, ChevronRight, FileDown, Lock, PlayCircle, Stethoscope } from "lucide-react";
 import { Explainer } from "@/components/Explainer";
@@ -91,6 +92,7 @@ export function RoyaltyReport({ checkup, since, date, country, countryPicker, ru
             <div><div className="text-3xl font-extrabold leading-none">{checkup.score}%</div>
               <div className="rr-muted text-sm">Overall health{since ? ` · ${since.delta >= 0 ? "up" : "down"} ${Math.abs(since.delta)} since your last report` : ""}</div></div>
           </div>
+          <ScoreInfo />
           <div className="rr-monitor" aria-label={`Royalty rhythm: ${RHYTHM[checkup.rhythm].label}`}>
             <span className="rr-eyebrow" style={{ color: "var(--rr-pink)" }}>Royalty<br />rhythm</span>
             <svg viewBox="0 0 400 60" preserveAspectRatio="none" aria-hidden="true"><path key={checkup.rhythm} className="rr-ekg" d={MONITOR[checkup.rhythm]} fill="none" stroke={RHYTHM[checkup.rhythm].color} strokeWidth="3" strokeLinejoin="round" strokeLinecap="round" /></svg>

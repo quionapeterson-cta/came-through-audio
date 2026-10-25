@@ -8,6 +8,15 @@ export type Faq = { q: string; a: string; category: FaqCategory; home?: boolean 
 export const FAQ_CATEGORIES = ["Getting started", "Plans & billing", "Embedding", "My Catalog", "Agency exports & registration", "Royalty Health Hub", "Split sheets & contracts", "AI Protection Hub", "Account & security"] as const;
 export type FaqCategory = (typeof FAQ_CATEGORIES)[number];
 
+/** How Royalty Health scores work: the info card in the Hub and the report, and the FAQ answer, say the same thing. */
+export const SCORE_STEPS = [
+  "Each agency gets its own score, counting only the details that agency needs. A missing UPC lowers SoundExchange, not BMI.",
+  "Within each agency, what it matches your song by counts most (60%): the ISRC and ISWC, the exact title, and every writer with their IPI. Its other required details count 35%, and the duration 5% (PROs only: it helps tell apart songs with similar titles).",
+  "Only agencies that apply count. SoundExchange waits until the release date, and Royalty Inspector songs only need the details the Inspector asks for.",
+  "Your score is half details (the average of those agency scores) and half registration: registered and confirmed with each agency.",
+  "100% means every applicable agency has everything it needs and has your song on file.",
+];
+
 export const FAQS: Faq[] = [
   // Getting started
   { category: "Getting started", home: true, q: "What is a Catalog?", a: "In the music industry, your Catalog is the complete collection of musical works, masters, and intellectual property that you own or control. Inside Came Through Audio, the \"My Catalog\" tab acts as your private, institutional-grade digital vault. It organizes your master files, high-resolution cover art, precise tracking tags, splits, and credit data in one secure dashboard so you never lose track of an asset or miss out on a royalty payout." },
@@ -43,6 +52,7 @@ export const FAQS: Faq[] = [
 
   // Royalty Health Hub
   { category: "Royalty Health Hub", q: "What is a Royalty Health Check?", a: "A check of each song against what every agency needs to find and pay it, with a score, what's missing and how to fix it. Free and unlimited." },
+  { category: "Royalty Health Hub", q: "How is my Royalty Health score worked out?", a: SCORE_STEPS.join(" ") },
   { category: "Royalty Health Hub", q: "What is the Royalty Inspector?", a: "Check a song that isn't in your catalog: enter its details and get the same health check and report." },
   { category: "Royalty Health Hub", q: "Are the royalty calculators exact?", a: "No. They're estimates to help you understand and register your splits. Agencies decide the final numbers." },
 

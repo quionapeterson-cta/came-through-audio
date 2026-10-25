@@ -14,7 +14,7 @@ import type { Pillar } from "@/lib/audit";
 import { notShowingReasons } from "@/lib/health-reasons";
 import { emptyStatus, isInspectorSong, type SongStatus } from "@/lib/health-songs";
 import { performers } from "@/lib/metadata";
-import type { TrackReport } from "@/lib/health";
+import { agencyScores, type TrackReport } from "@/lib/health";
 import type { Country } from "@/lib/repertoires";
 
 type Group = SongChecklist["group"];
@@ -228,6 +228,15 @@ function SongDetail({ r, c, country, status, onStatus, actions, running, onEditI
         </div>
         <Ring pct={c.pct} />
       </div>
+      {/* One score per agency: each counts only the details that agency needs (founder, 2026-10-25). */}
+      <ul className="mt-4 flex flex-wrap gap-2" aria-label="Score by agency">
+        {agencyScores(r).map((a) => (
+          <li key={a.pillar} title={a.waiting ?? (a.missing.length ? a.missing.map((i) => i.text).join(" · ") : `${a.society.name} has the details it needs`)}
+            className={`rounded-full border px-3 py-1 text-xs font-semibold ${a.waiting ? "border-dashed border-border text-muted-foreground" : a.data === 1 && a.registered ? "border-primary bg-primary text-primary-foreground" : "border-border"}`}>
+            {a.society.name} · {a.waiting ? "after release" : `${Math.round(a.data * 100)}% details`}{!a.waiting && (a.registered ? " · on file ✓" : " · not confirmed yet")}
+          </li>
+        ))}
+      </ul>
 
       {c.group === "healthy" && (
         <div className="mt-4 flex items-center gap-3 rounded-xl bg-primary p-4 text-primary-foreground">

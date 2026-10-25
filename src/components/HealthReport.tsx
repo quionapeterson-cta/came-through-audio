@@ -1,3 +1,4 @@
+import { ScoreInfo } from "@/components/ScoreInfo";
 import type { ReactNode } from "react";
 import { Check, Disc3, ExternalLink, Radar } from "lucide-react";
 import { toast } from "sonner";
@@ -145,6 +146,7 @@ export function HealthReport({ report, country, running, canCatalog, onEmbed, ac
                 {running ? `Looking up song ${running.done + 1} of ${running.total} on streaming…` : `Live lookups ran for ${looked} of ${report.rows.length} songs.`}
                 {!running && <button type="button" onClick={actions.onRunAll} className="font-semibold text-ink-foreground underline hover:text-primary">Re-check all</button>}
               </div>
+              <ScoreInfo className="max-w-2xl" />
             </div>
           </div>
         )}
