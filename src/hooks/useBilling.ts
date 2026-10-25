@@ -5,12 +5,12 @@ import { isActiveSub, tierFromPrice, type Tier } from "@/lib/plans";
 import { isPaused, type Lapse, type Pause, type PlanSub } from "@/lib/retention";
 
 /** The plan in force: when it renews, or when it ends if it was cancelled. */
-export type PlanStatus = { periodEnd: string | null; cancelling: boolean } | null;
+export type PlanStatus = { periodEnd: string | null; cancelling: boolean; orderedAt: string | null } | null;
 /** A Founding 100 seat: paying for `paid_tier` unlocks `granted_tier` (PLAN-founding-upgrades). */
 export type FoundingSeat = { paid_tier: Tier; granted_tier: Tier; seat: number };
 export type Purchase = { id: string; kind: string; price_ids: string[]; details: Record<string, string>; created_at: string };
 
-type SubRow = PlanSub & { price_id: string };
+type SubRow = PlanSub & { price_id: string; created_at?: string };
 
 /**
  * Current plan + one-time purchases for the signed-in user, refreshed after checkout. Also the plan's Stripe
@@ -32,7 +32,7 @@ export function useBilling(userId: string | undefined) {
   const load = useCallback(async () => {
     if (!userId) return;
     const [subs, buys, paused, lapsed, seats] = await Promise.all([
-      supabase.from("subscriptions" as never).select("price_id, status, current_period_start, current_period_end, cancel_at_period_end, stripe_subscription_id").eq("user_id", userId).eq("environment", env).order("created_at", { ascending: false }),
+      supabase.from("subscriptions" as never).select("price_id, status, current_period_start, current_period_end, cancel_at_period_end, stripe_subscription_id, created_at").eq("user_id", userId).eq("environment", env).order("created_at", { ascending: false }),
       supabase.from("purchases" as never).select("id, kind, price_ids, details, created_at").eq("user_id", userId).eq("environment", env).order("created_at", { ascending: false }),
       // Missing until the retention migrations run; then these simply come back empty.
       supabase.from("account_pauses" as never).select("id, kind, months, starts_at, ends_at, ended_at, created_at").eq("user_id", userId).eq("environment", env).order("created_at", { ascending: false }),
@@ -53,7 +53,8 @@ export function useBilling(userId: string | undefined) {
     setTier(isPaused(pauseRows) ? "free" : seat ? seat.granted_tier : best);
     const row = live.find((r) => tierFromPrice(r.price_id) === best);
     // (plan and sub below follow the tier they pay for, so billing shows the real price)
-    setPlan(row ? { periodEnd: row.current_period_end, cancelling: !!row.cancel_at_period_end || row.status === "canceled" } : null);
+    // orderedAt: when the plan was first bought, for the 30-day full refund countdown.
+    setPlan(row ? { periodEnd: row.current_period_end, cancelling: !!row.cancel_at_period_end || row.status === "canceled", orderedAt: row.created_at ?? null } : null);
     setSub(live.find((r) => r.stripe_subscription_id && tierFromPrice(r.price_id) === best) ?? null);
     setPauses(pauseRows);
     setLapse((lapsed.data as Lapse | null) ?? null);

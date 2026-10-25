@@ -61,6 +61,18 @@ export const ARTIST_SEAT_PRICES: { tier: Exclude<Tier, "free">; price: string }[
   { tier: "plus", price: "$19.99" }, { tier: "collaborate", price: "$36.99" }, { tier: "management", price: "$69.99" },
 ];
 
+/** Days left in the 30-day full refund window after a plan order (Refund Policy), or 0 once it has passed. */
+export function refundDaysLeft(orderedAt: string | null | undefined, now = new Date()): number {
+  const t = orderedAt ? Date.parse(orderedAt) : NaN;
+  if (!Number.isFinite(t)) return 0;
+  return Math.max(0, Math.ceil((t + 30 * 86400000 - now.getTime()) / 86400000));
+}
+/** The upgrade note in Profile and the plan pop-ups: upgrades are prorated all year (founder, 2026-10-25). */
+export function upgradeNote(orderedAt: string | null | undefined, now = new Date()): string {
+  const left = refundDaysLeft(orderedAt, now);
+  return `Upgrading? You pay only the prorated difference for the rest of your year.${left ? ` Your 30-day full refund window has ${left} day${left === 1 ? "" : "s"} left.` : ""}`;
+}
+
 /** Pricing columns, cheapest first. Free has no price ID (signup only). */
 export const PLAN_TIERS: PlanTier[] = [
   { tier: "free", price: "$0", monthly: "Free forever" },

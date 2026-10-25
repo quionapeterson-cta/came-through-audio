@@ -13,7 +13,7 @@ const GROUPS = [...new Set(PLAN_FEATURES.map((f) => f.group))];
  * price goes up. A filled check marks what a plan adds; a plain check is carried over from the plan before.
  * The highlighted column is the viewer's own plan, or "Most popular" when nobody is signed in.
  */
-export function PlanComparison({ currentTier, action }: { currentTier?: Tier | undefined; action: (p: PlanTier) => PlanAction }) {
+export function PlanComparison({ currentTier, action, note }: { currentTier?: Tier | undefined; action: (p: PlanTier) => PlanAction; note?: string | undefined }) {
   const highlight: Tier = currentTier ?? "collaborate";
   const tag = currentTier ? "Your plan" : "Most popular";
 
@@ -22,6 +22,7 @@ export function PlanComparison({ currentTier, action }: { currentTier?: Tier | u
       <p className="flex items-center justify-center gap-2 text-center text-lg font-extrabold uppercase tracking-[2px] text-primary">
         <InfinityIcon className="h-6 w-6 shrink-0" strokeWidth={3} />Every feature. Unlimited. No per-song fees.
       </p>
+      {note && <p className="mt-2 text-center text-sm text-muted-foreground">{note}</p>}
 
       {/* Desktop: one aligned grid. */}
       <div className="mt-8 hidden grid-cols-[minmax(13rem,1.5fr)_repeat(4,minmax(0,1fr))] md:grid" role="table" aria-label="Plan comparison">

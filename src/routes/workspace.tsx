@@ -29,7 +29,7 @@ import { toast } from "sonner";
 import { sendTrialEndingReminder } from "@/lib/collab-trial.functions";
 import { useBilling, type Purchase } from "@/hooks/useBilling";
 import { openCheckout, getPaymentsEnvironment } from "@/lib/checkout";
-import { PRICE_TIER, TIER_LABEL, hasTier, takePlanIntent, type Tier } from "@/lib/plans";
+import { PRICE_TIER, TIER_LABEL, hasTier, takePlanIntent, upgradeNote, type Tier } from "@/lib/plans";
 import { PlanComparison, planAction } from "@/components/PlanComparison";
 import { BadgeWatcher } from "@/components/Badges";
 import { BadgeViewer } from "@/components/BadgeViewer";
@@ -86,7 +86,7 @@ function Workspace() {
   const [healthStart, setHealthStart] = useState<HealthStart>();
   // Used once: leaving the tab clears it, so coming back opens the Hub itself.
   useEffect(() => { if (tab !== "health") setHealthStart(undefined); }, [tab]);
-  const { tier: realTier, purchases, loaded: billingLoaded, lapse, pauses, sub, reload: reloadBilling } = useBilling(user?.id);
+  const { tier: realTier, purchases, loaded: billingLoaded, lapse, pauses, sub, plan, reload: reloadBilling } = useBilling(user?.id);
   const [previewTier, setPreviewTier] = useState<Tier | "real">("real");
   // The test-mode tier preview is for super admins only, so testers can't hand themselves a paid plan in the UI.
   const staff = useQuery({ queryKey: ["staff-role", user?.id], queryFn: () => getStaffRole(), enabled: !!user && getPaymentsEnvironment() === "sandbox" });
@@ -202,7 +202,7 @@ function Workspace() {
                 <Smartphone className="h-4 w-4" />
               </Button>
             )}
-            <PlansDialog tier={tier} />
+            <PlansDialog tier={tier} note={plan ? upgradeNote(plan.orderedAt) : undefined} />
             <Button variant="ghost" size="icon" aria-label="Log out" className="text-ink-muted hover:bg-ink-border hover:text-ink-foreground"
               onClick={async () => { await supabase.auth.signOut(); navigate({ to: "/" }); }}>
               <LogOut className="h-4 w-4" />
@@ -303,7 +303,7 @@ function Learn({ userId, unlocked, onUpgrade }: { userId: string; unlocked: bool
   );
 }
 
-function PlansDialog({ tier }: { tier: Tier }) {
+function PlansDialog({ tier, note }: { tier: Tier; note?: string | undefined }) {
   const buy = async (priceId: string) => {
     try { await openCheckout({ kind: "plan", priceId }); }
     catch (e) { toast.error(e instanceof Error ? e.message : "Checkout could not open."); }
@@ -313,7 +313,7 @@ function PlansDialog({ tier }: { tier: Tier }) {
       <DialogTrigger asChild><Button id="plans-trigger" className="font-semibold">View Plans</Button></DialogTrigger>
       <DialogContent className="max-h-[90vh] max-w-6xl overflow-y-auto">
         <DialogHeader><DialogTitle className="text-2xl font-bold">Choose your plan</DialogTitle></DialogHeader>
-        <PlanComparison currentTier={tier} action={(p) => planAction(p, { tier, onBuy: (id) => void buy(id), onSignup: () => {} })} />
+        <PlanComparison currentTier={tier} note={note} action={(p) => planAction(p, { tier, onBuy: (id) => void buy(id), onSignup: () => {} })} />
       </DialogContent>
     </Dialog>
   );

@@ -5,6 +5,7 @@ import { BrandLogo } from "@/components/BrandLogo";
 import { PlanComparison, planAction } from "@/components/PlanComparison";
 import { useAuth } from "@/hooks/useAuth";
 import { useBilling } from "@/hooks/useBilling";
+import { upgradeNote } from "@/lib/plans";
 import { getPaymentsEnvironment, openCheckout } from "@/lib/checkout";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -38,7 +39,7 @@ function PlansPage() {
   const { user } = useAuth();
   const navigate = useNavigate();
   // Buttons follow the plan they pay for: a founding Plus member can still buy Catalog & Collaborate.
-  const { paidTier: tier } = useBilling(user?.id);
+  const { paidTier: tier, plan } = useBilling(user?.id);
   const spots = useFoundingSpots();
   const left = (t: Spots["paid_tier"]) => spots.find((s) => s.paid_tier === t)?.spots_left ?? 0;
   const buy = async (priceId: string) => {
@@ -67,7 +68,7 @@ function PlansPage() {
           </div>
         )}
         <div className="mt-12">
-          <PlanComparison currentTier={user ? tier : undefined} action={(p) => planAction(p, { tier: user ? tier : undefined, onBuy: (id) => void buy(id), onSignup: () => navigate({ to: "/", hash: "signup" }) })} />
+          <PlanComparison currentTier={user ? tier : undefined} note={plan ? upgradeNote(plan.orderedAt) : undefined} action={(p) => planAction(p, { tier: user ? tier : undefined, onBuy: (id) => void buy(id), onSignup: () => navigate({ to: "/", hash: "signup" }) })} />
         </div>
       </main>
 

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { assistanceFees, assistanceItems, assistanceTotal, convertShare, hasTier, tierFromPrice } from "./plans";
+import { assistanceFees, assistanceItems, assistanceTotal, convertShare, hasTier, refundDaysLeft, tierFromPrice, upgradeNote } from "./plans";
 
 describe("plans", () => {
   it("single/EP: $14.99 setup + $4.99 per song per agency", () => {
@@ -55,5 +55,19 @@ describe("plan comparison", () => {
     expect(planAction(free!, { ...o, tier: "plus" })).toMatchObject({ label: "Included", disabled: true });
     expect(planAction(collab!, { ...o, tier: "plus" }).label).toBe("Upgrade");
     expect(planAction(collab!, { ...o, tier: "free" }).label).toBe("Get started");
+  });
+});
+
+describe("refund countdown", () => {
+  const now = new Date("2026-10-25T12:00:00Z");
+  it("counts down the 30-day full refund window, then stops", () => {
+    expect(refundDaysLeft("2026-10-25T10:00:00Z", now)).toBe(30);
+    expect(refundDaysLeft("2026-10-01T12:00:00Z", now)).toBe(6);
+    expect(refundDaysLeft("2026-09-01T00:00:00Z", now)).toBe(0);
+    expect(refundDaysLeft(null, now)).toBe(0);
+  });
+  it("always says upgrades are prorated, and adds the countdown only inside the window", () => {
+    expect(upgradeNote("2026-10-24T12:00:00Z", now)).toBe("Upgrading? You pay only the prorated difference for the rest of your year. Your 30-day full refund window has 29 days left.");
+    expect(upgradeNote("2026-08-01T00:00:00Z", now)).toBe("Upgrading? You pay only the prorated difference for the rest of your year.");
   });
 });

@@ -18,7 +18,7 @@ import { badgePrefs, loadOnboarding, loadProfile, saveOnboarding, syncFromCloud,
 import { isBadgeImage } from "@/lib/badges";
 import { BadgeDetail, BadgeSettings, BadgeSettingsButton, BadgeShelf, BadgeWatcher, useBadgeStates, type BadgeState } from "@/components/Badges";
 import { creditName, writerRole, type Contributor } from "@/lib/metadata";
-import { TIER_LABEL } from "@/lib/plans";
+import { TIER_LABEL, refundDaysLeft } from "@/lib/plans";
 import { openBilling } from "@/lib/checkout";
 import { passwordValid } from "@/lib/password";
 import { PasswordField } from "@/components/PasswordField";
@@ -115,6 +115,8 @@ function ProfilePage() {
             <Rows rows={[["Email", user.email], ["Plan", TIER_LABEL[tier]],
               ...(founding ? [["Founding member", `#${founding.seat}: you get ${TIER_LABEL[founding.granted_tier]} for the price of ${TIER_LABEL[founding.paid_tier]}, as long as your plan stays active`] as [string, string]] : []),
               ...(plan?.periodEnd ? [[plan.cancelling ? "Ends" : "Renews", longDate(plan.periodEnd)] as [string, string]] : []),
+              // The Refund Policy's 30-day window; upgrades stay prorated all year either way.
+              ...(plan && refundDaysLeft(plan.orderedAt) ? [["Full refund", `${refundDaysLeft(plan.orderedAt)} day${refundDaysLeft(plan.orderedAt) === 1 ? "" : "s"} left to ask for a full refund · upgrades are always prorated`] as [string, string]] : []),
               ["Member since", memberSince]]} />
             <div className="flex flex-wrap gap-3 border-t border-border pt-5">
               {paidTier !== "management" && <Button asChild size="lg" className="w-full text-base font-bold"><Link to="/plans"><ArrowUpCircle />Upgrade plan</Link></Button>}

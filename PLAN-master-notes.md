@@ -186,7 +186,7 @@ contract) · 3 Adjust the wording if you need to · 4 Sign · 5 Send for signatu
 - Album/EP queue: sort dropped files by track number in the tags, then by number in the file name, then name; first song first.
 - WAV ✅ (publish to see it in My Catalog).
 
-### 3.2 Catalog · delete pop-up ✅ (already fits its message); prorated countdown waiting on one question
+### 3.2 Catalog · ✅ BUILT 2026-10-25 (delete pop-up already fits; founder kept anytime proration, so Profile and the plan pop-ups show "upgrades are prorated" plus the 30-day full refund countdown)
 - Prorated upgrade countdown: "N days left to upgrade at the prorated price" in Profile, the plan banner and every upgrade pop-up;
   upgrade prompts wherever a higher-tier feature is tapped (already locked features show the pop-up; I'll add the countdown).
   *Question 4.*
