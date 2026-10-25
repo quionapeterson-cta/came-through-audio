@@ -123,6 +123,7 @@ export function SignupCard({ returnPath, onAuthed, inviteMode }: { returnPath?: 
             <Button type="submit" disabled={busy} className="h-12 w-full text-base font-semibold">
               {busy ? "Please wait…" : mode === "signup" ? (paid ? "Sign up now" : "Create my free account") : mode === "forgot" ? "Send reset link" : "Log in"}
             </Button>
+            {mode === "signup" && !paid && <p className="text-center text-xs text-muted-foreground">Free forever plan. No card needed.</p>}
             {mode === "signup" && paid && <button type="button" className="w-full text-center text-sm font-semibold text-primary" onClick={() => rememberPlanIntent(undefined)}>Rather start free? Sign up free instead</button>}
           </form>
           <p className="mt-4 text-center text-sm text-muted-foreground">

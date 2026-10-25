@@ -57,12 +57,19 @@ const footerCols: { title: string; links: FooterLink[] }[] = [
 ];
 
 const roles = [
-  { badge: ArtistBadge, title: "Artists", question: "Recording in the studio?", text: "Centralize your master files and preserve your recording legacy safely." },
-  { badge: MusicianBadge, title: "Musicians", question: "Do you play music live?", text: "Ensure your performance tracking metadata is locked into every release." },
-  { badge: ProducerBadge, title: "Producers", question: "Are you working on beats?", text: "Secure your production splits and protect your sample history upfront." },
-  { badge: SongwriterBadge, title: "Songwriters", question: "Are you writing songs?", text: "Lock down your lyrical ownership and claim your mechanical collection stakes." },
-  { badge: ComposerBadge, title: "Composers", question: "Do you score music?", text: "Anchor your cinematic compositions and publishing percentages flawlessly." },
+  { badge: ArtistBadge, title: "Artists", question: "Final mix still ringing in your headphones?", text: "Lock your name, credits and codes inside that master before it leaves the room." },
+  { badge: MusicianBadge, title: "Musicians", question: "Felt that bass line shake the booth?", text: "Get your part credited on every release, so you get paid and hired again." },
+  { badge: ProducerBadge, title: "Producers", question: "Beat still warm on the laptop?", text: "Put your production credit and split on paper before the song takes off." },
+  { badge: SongwriterBadge, title: "Songwriters", question: "Lyrics still in your notes app?", text: "Turn them into registered songs with your name and share on file." },
+  { badge: ComposerBadge, title: "Composers", question: "Score still filling the room?", text: "Anchor your compositions and publishing shares so every placement pays you." },
 ];
+
+/** Every "start free" button on the page scrolls to the sign-up box in the hero. */
+function StartFree({ label = "Sign up free", variant = "primary" }: { label?: string; variant?: "primary" | "outline" | "link" }) {
+  const go = () => document.getElementById("signup")?.scrollIntoView({ behavior: "smooth", block: "center" });
+  if (variant === "link") return <button type="button" onClick={go} className="text-sm font-semibold text-primary hover:underline">{label} →</button>;
+  return <button type="button" onClick={go} className={`inline-flex h-12 items-center rounded-md px-6 font-semibold transition ${variant === "primary" ? "bg-primary text-primary-foreground hover:bg-primary/90" : "border border-current hover:bg-foreground/5"}`}>{label}</button>;
+}
 
 function Landing() {
   const { filter, testimonials } = Route.useLoaderData();
@@ -87,7 +94,7 @@ function Landing() {
               // "Before" is filled with the background so overlapping inner strokes don't show; only the outline reads.
               { text: <>Stop <span className="font-bold text-ink [-webkit-text-stroke:1.5px_var(--ink-foreground)]">before</span></>, className: "text-5xl font-extrabold md:text-6xl lg:text-7xl" },
               { text: "Distribution", className: "text-5xl font-extrabold text-primary [-webkit-text-stroke:1px_var(--ink-foreground)] md:text-6xl lg:text-7xl" },
-            ]} sub="Embed your metadata & organize your music business like a pro." subClassName="text-xl font-semibold text-ink-foreground" />
+            ]} sub="From the last bounce in the studio to the first royalty in your account: embed your credits, organize your catalog and get your songs registered, all before you hit distribute." subClassName="text-xl font-semibold text-ink-foreground" />
           </div>
           <div id="signup">{siteLocked ? <LaunchingSoon /> : <SignupCard />}</div>
         </div>
@@ -97,12 +104,12 @@ function Landing() {
       <section className="border-b border-border bg-background">
         <div className="mx-auto grid max-w-7xl gap-10 px-6 py-16 md:grid-cols-2 md:items-center md:gap-16">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:gap-6">
-            <span className="shrink-0 text-7xl font-black leading-none tracking-tight text-primary md:text-8xl">70%</span>
-            <p className="border-l-4 border-primary pl-6 text-lg"><span className="font-bold">of independent artists</span> lose royalties because credits aren’t embedded, catalogs are scattered, and accounts aren’t set up to collect Worldwide.</p>
+            <span className="shrink-0 text-6xl font-black leading-none tracking-tight text-primary md:text-7xl">$424M</span>
+            <p className="border-l-4 border-primary pl-6 text-lg">That's how much in <span className="font-bold">unmatched streaming royalties</span> The MLC received from streaming services in February 2021: money that couldn't find its songwriters. <a href="https://www.themlc.com/news/billboard-mlc-receives-over-424m-unmatched-black-box-streaming-royalties" target="_blank" rel="noreferrer" className="text-sm text-primary underline">Source: The MLC</a></p>
           </div>
           <p className="text-lg text-muted-foreground">
             <span className="mb-2 block text-3xl font-extrabold tracking-tight text-foreground md:text-4xl">Every unembedded song is lost income.</span>
-            Embed your metadata and ensure your music is properly tracked everywhere it's played — so you never miss a royalty you earned.
+            Embed your credits and register every song, so the money you earned can find you.
           </p>
         </div>
       </section>
@@ -110,7 +117,7 @@ function Landing() {
       <section className="border-y border-border bg-muted">
         <div className="mx-auto max-w-7xl px-6 py-14">
           <h2 className="text-center text-3xl font-extrabold uppercase tracking-wide text-primary md:text-4xl">Everything in the {PLUS.price}/yr plan</h2>
-          <p className="mb-8 mt-2 text-center text-sm text-muted-foreground">Plus free Royalty Health Checks and split sheet signing. {PLUS.monthly.replace(" / month", " a month")}, billed annually.</p>
+          <p className="mb-8 mt-2 text-center text-sm text-muted-foreground"><span className="font-semibold text-foreground">{PLUS.monthly.replace("Only ", "").replace(" / month", " a month")}, less than a single coffee.</span> Plus free Royalty Health Checks and split sheet signing. Billed annually, with a <span className="font-semibold text-foreground">30-day full refund</span> if it isn't for you.</p>
           <div className="flex flex-wrap items-center justify-center gap-x-10 gap-y-4">
             {includes.map((i) => (
               <span key={i} className="flex items-center gap-2 text-lg font-semibold">
@@ -137,6 +144,10 @@ function Landing() {
               </li>
             ))}
           </ol>
+          <div className="mt-10 flex flex-col items-center gap-2 text-center">
+            <StartFree label="Start free: run your first Royalty Health Check" />
+            <span className="text-sm text-ink-muted">Takes about two minutes.</span>
+          </div>
         </div>
       </section>
 
@@ -151,6 +162,7 @@ function Landing() {
                 <div className="p-5">
                   <p className="text-lg font-bold">{question}</p>
                   <p className="mt-1 text-sm text-muted-foreground">{text}</p>
+                  <div className="mt-3"><StartFree label="Start free" variant="link" /></div>
                 </div>
               </div>
             </div>
@@ -164,6 +176,10 @@ function Landing() {
           <div className="mt-12 grid gap-6 md:grid-cols-3">
             {testimonials.map((t) => <TestimonialCard key={t.name} t={t} filter={filter} />)}
           </div>
+          <div className="mt-10 flex flex-col items-center gap-4 text-center">
+            <p className="text-xl font-bold">Came Through Audio came through for them. Let's come through for you.</p>
+            <StartFree />
+          </div>
         </div>
       </section>}
 
@@ -174,6 +190,7 @@ function Landing() {
           <div className="mt-10">
             <PlanComparison action={(p) => planAction(p, { onBuy: () => {}, onSignup: () => document.getElementById("signup")?.scrollIntoView({ behavior: "smooth" }) })} />
           </div>
+          <p className="mt-6 text-center text-sm font-semibold">30-day full refund on every plan · Upgrade anytime, pay only the difference · Founding offer: the first 100 members move up a tier (while spots last)</p>
         </div>
       </section>
 
@@ -188,6 +205,17 @@ function Landing() {
           ))}
         </Accordion>
         <p className="mt-6 text-center"><Link to="/faq" className="font-semibold text-primary hover:underline">See all questions →</Link></p>
+      </section>
+
+      <section className="bg-ink text-ink-foreground">
+        <div className="mx-auto flex max-w-4xl flex-col items-center gap-4 px-6 py-16 text-center">
+          <h2 className="text-3xl font-extrabold md:text-4xl">Your songs already did the work. Make sure they get paid.</h2>
+          <p className="text-sm font-bold uppercase tracking-[2px] text-brand-electric">Your first stop before distribution</p>
+          <div className="mt-2 flex flex-wrap justify-center gap-3">
+            <StartFree />
+            <Link to="/plans" className="inline-flex h-12 items-center rounded-md border border-ink-border px-6 font-semibold hover:bg-ink-border">Compare plans</Link>
+          </div>
+        </div>
       </section>
 
       <footer className="bg-ink text-ink-muted">

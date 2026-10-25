@@ -83,7 +83,7 @@ each download (`AGENCY_UPLOAD_STEPS` in glossary.ts, menu names from each agency
 - Every list of contracts, songs and records is alphabetical by default, with filters (type, name, date, signer, email).
 
 ### 2.2 Homepage
-- **Sales copy review (plan first, you review before any change):** I'll mark the "leaky" spots (where a visitor can leave
+- ✅ **Sales copy review: approved and applied 2026-10-25** (hero story line + "Free forever plan. No card needed.", sourced $424M MLC proof band, coffee anchor + 30-day refund, Start-free buttons after How It Works / each Who It's For card / testimonials, pricing reassurance line, closing band). I'll mark the "leaky" spots (where a visitor can leave
   without a reason to stay) and propose sensory, story-led rewrites using pricing psychology: anchoring (show the time an
   agency export saves next to the price), loss aversion ("royalties you're not collecting"), social proof near each CTA,
   one clear next step per section, risk reversal (30-day refund line by the buttons). Delivered as before → after for approval.
