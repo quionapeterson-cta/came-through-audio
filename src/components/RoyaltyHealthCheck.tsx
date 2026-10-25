@@ -11,7 +11,7 @@ import { CountryPicker, HealthReport } from "@/components/HealthReport";
 import { RoyaltyReport } from "@/components/RoyaltyReport";
 import { ACCOUNT_REF, releaseGroups, SINGLES_KEY, songChecklist } from "@/lib/health-checklist";
 import { CONFIRM_AFTER_DAYS, ORGAN_NAME, royaltyCheckup, sinceLast, STATE_LABEL, summarize, type StepAction } from "@/lib/royalty-checkup";
-import { catalogScope, listReports, releaseScope, sameScope, saveReport, scopeName, songScope, type ReportScope, type SavedReport } from "@/lib/health-reports";
+import { catalogScope, deleteReport, listReports, releaseScope, sameScope, saveReport, scopeName, songScope, type ReportScope, type SavedReport } from "@/lib/health-reports";
 import { HealthCheckIn } from "@/components/HealthCheckIn";
 import { creditName } from "@/lib/metadata";
 import { downloadCheckupPdf } from "@/lib/checkup-pdf";
@@ -108,6 +108,10 @@ export function RoyaltyHealthCheck({ userId, canCatalog, canExport, onUpgrade, o
       toast.success(id ? "Song updated." : "Saved to your Song Health Checklist.");
       return t;
     } catch (e) { toast.error(e instanceof Error ? e.message : "Couldn't save the song."); throw e; }
+  }
+  async function removeReport(r: SavedReport) {
+    if (!(await confirmAction({ title: "Delete this report?", text: `The ${shortDate(r.createdAt)} report for ${scopeName(r.scope)} is removed from My reports. Your songs and checklist aren't changed.`, action: "Delete" }))) return;
+    try { await deleteReport(r.id); setReports((all) => (all ?? []).filter((x) => x.id !== r.id)); } catch { toast.error("Couldn't delete the report. Try again."); }
   }
   async function removeInspector(id: string) {
     try { await deleteInspectorSong(id); setInspectorSongs((all) => all.filter((x) => x.id !== id)); } catch { toast.error("Couldn't remove the song. Try again."); }
@@ -483,6 +487,7 @@ export function RoyaltyHealthCheck({ userId, canCatalog, canExport, onUpgrade, o
                 <span className="flex gap-1" aria-label="Organ states">{Object.entries(r.summary.organs).map(([id, o]) => <span key={id} title={`${ORGAN_NAME[id as keyof typeof ORGAN_NAME]}: ${STATE_LABEL[o!.state]}`} className={`rr-pill rr-pill-${o!.state} px-2 py-0.5`}>{ORGAN_NAME[id as keyof typeof ORGAN_NAME][0]}</span>)}</span>
                 <span className="w-24 text-right"><b>{r.score}%</b>{now !== undefined && now !== r.score && <span className="block text-xs text-muted-foreground">now {now}%</span>}</span>
                 <Button size="sm" variant="outline" disabled={now === undefined} onClick={() => startCheck(r.scope)}>Run it again</Button>
+                <Button size="icon" variant="ghost" aria-label={`Delete the ${shortDate(r.createdAt)} report`} onClick={() => void removeReport(r)}><Trash2 /></Button>
               </li>
             );
           })}</ul> : <div className="space-y-3 text-sm text-muted-foreground"><p>No reports yet. Run a Royalty Health Check from here, from any song in the checklist, or from My Catalog.</p>{runButton}</div>}

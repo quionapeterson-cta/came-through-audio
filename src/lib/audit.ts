@@ -44,6 +44,8 @@ export function auditTrack(t: CatalogTrack): Issue[] {
     if (split.state === "over") out.push({ pillar: "performance", text: `Writer splits total ${split.total}%, ${split.over}% over 100%. Lower one to fix it.`, field: "writers-0-share" });
     else if (split.state === "under" && Math.round(split.total) !== 100) out.push({ pillar: "performance", text: `Writer splits total ${split.total}%, ${split.left}% short of 100%`, field: "writers-0-share" });
   }
+  // PROs and BMI ask for the length when a song is registered, so a song isn't 100% healthy without it.
+  if (!(m.duration ?? "").trim()) out.push({ pillar: "performance", text: "Missing duration (BMI and PROs ask for it, e.g. 3:25)", field: "duration" });
   if (!m.isrc) out.push({ pillar: "digital", text: "Missing ISRC", field: "isrc" });
   else if (!isIsrc(m.isrc)) out.push({ pillar: "digital", text: "ISRC is not 12 characters (CC-XXX-YY-NNNNN)", field: "isrc" });
   if (!t.artist.trim()) out.push({ pillar: "digital", text: "No featured artist name", field: "artist" });
@@ -51,7 +53,12 @@ export function auditTrack(t: CatalogTrack): Issue[] {
   if (!pubs.length && !publisherCovered(m)) out.push({ pillar: "mechanical", text: "No publisher listed. Add one, or check Self-published if there isn't one.", field: "selfPublished" });
   const pubSplit = splitStatus(pubs);
   if (pubSplit.state === "over") out.push({ pillar: "mechanical", text: `Publisher shares total ${pubSplit.total}%, ${pubSplit.over}% over 100%. Lower one to fix it.`, field: "publishers-0-share" });
-  m.publishers.forEach((p, index) => { if (p.name.trim() && !isIpi(p.ipi ?? "")) out.push({ pillar: "mechanical", text: `${p.name}: missing publisher IPI`, field: `publishers-${index}-ipi` }); });
+  m.publishers.forEach((p, index) => {
+    // A listed publisher collects its share through a PRO, so it needs one too (Self-published and BMI writers with no
+    // publisher list none, so they're never asked).
+    if (p.name.trim() && !hasPro(p.pro)) out.push({ pillar: "performance", text: `${p.name}: no PRO affiliation for the publisher`, field: `publishers-${index}-pro` });
+    if (p.name.trim() && !isIpi(p.ipi ?? "")) out.push({ pillar: "mechanical", text: `${p.name}: missing publisher IPI`, field: `publishers-${index}-ipi` });
+  });
   if (!m.iswc) out.push({ pillar: "mechanical", text: "Missing ISWC — sound recording can't be linked to its composition", field: "iswc" });
   else if (!isIswc(m.iswc)) out.push({ pillar: "mechanical", text: "ISWC format should be T-123.456.789-0", field: "iswc" });
   return out;

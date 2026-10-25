@@ -48,5 +48,11 @@ export async function saveReport(summary: CheckupSummary, scope: ReportScope): P
   return { ...toReport(data as unknown as Row), scope };
 }
 
+/** Removes one of the user's own reports from My reports (row-level security keeps it to their own). */
+export async function deleteReport(id: string) {
+  const { error } = await supabase.from("royalty_health_reports" as never).delete().eq("id", id);
+  if (error) throw error;
+}
+
 /** Same organs, states and findings: nothing worth a new entry in My reports. */
 export const sameSummary = (a: CheckupSummary, b: CheckupSummary) => a.score === b.score && JSON.stringify(a.organs) === JSON.stringify(b.organs);

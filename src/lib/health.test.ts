@@ -10,7 +10,7 @@ const track = (patch: Partial<ReturnType<typeof emptyMetadata>>, id = "t1"): Cat
   return { id, title: m.title, artist: m.artist, updatedAt: "", metadata: m };
 };
 const ready = track({
-  isrc: "USUM71703861", iswc: "T-919.481.654-1",
+  isrc: "USUM71703861", iswc: "T-919.481.654-1", duration: "3:27",
   writers: [{ name: "", legalName: "Carly Rae Jepsen", pro: "SOCAN", ipi: "123456789", percentage: "100" }],
   composers: [], publishers: [{ name: "Pub", pro: "SOCAN", ipi: "987654321", percentage: "100" }],
 });
