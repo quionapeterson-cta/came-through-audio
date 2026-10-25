@@ -21,7 +21,7 @@ export const grantCollaboratorTrial = createServerFn({ method: "POST" })
   }).refine((v) => [v.rowId, v.partyId, v.ipiRequestId].filter(Boolean).length === 1, "Send one invite id").parse(d))
   .handler(async ({ data, context }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { trialBlockReason, inviterOf, hashIp } = await import("./collab-trial.server");
+    const { trialBlockReason, inviterOf, hashIp, hashEmail } = await import("./collab-trial.server");
 
     // Throws unless the invite was sent to the caller's email.
     const source = data.rowId ? "split_sheet" as const : data.ipiRequestId ? "ipi_request" as const : "contract" as const;
@@ -65,7 +65,10 @@ export const grantCollaboratorTrial = createServerFn({ method: "POST" })
     });
     if (insErr) { console.error("Trial insert failed", insErr); return { granted: false }; }
     const email = String((context.claims as { email?: string }).email ?? "");
-    await supabaseAdmin.from("trial_grants" as never).insert({ user_id: context.userId, inviter_id: inviterId, source, ip_hash: ipHash, email_domain: email.split("@")[1]?.toLowerCase() ?? null } as never);
+    const grant = { user_id: context.userId, inviter_id: inviterId, source, ip_hash: ipHash, email_domain: email.split("@")[1]?.toLowerCase() ?? null };
+    // Until migration 20261025130000 adds email_hash, the grant saves without it.
+    const { error: grantErr } = await supabaseAdmin.from("trial_grants" as never).insert({ ...grant, email_hash: email ? hashEmail(email) : null } as never);
+    if (grantErr) await supabaseAdmin.from("trial_grants" as never).insert(grant as never);
     return { granted: true, endsAt: end.toISOString() };
   });
 

@@ -73,7 +73,11 @@ export function SplitSheets({ userId, canSplit, canCollect, prefillTrackId, onUp
     }
   }, [prefillTrackId, loading]);
 
-  if (!canSplit) {
+  // After a free trial (or a plan) ends, split sheets already made stay here to view and download; signing sheets
+  // others send stays free. Only new split sheets and new requests need a plan again.
+  const readOnly = !canSplit && sheets.size > 0;
+  if (!canSplit && loading) return <div className="mt-6 flex items-center gap-2 text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" /> Loading…</div>;
+  if (!canSplit && !readOnly) {
     return (
       <UpgradeLock title="Split sheets start with Catalog Plus" tier="plus" onUpgrade={onUpgrade}
         text="Generate unlimited split sheets from your catalog. Collaborator e-signature requests come with Catalog & Collaborate. Split sheets someone sends you are always free to sign." />
@@ -110,11 +114,17 @@ export function SplitSheets({ userId, canSplit, canCollect, prefillTrackId, onUp
           <p className="text-sm text-muted-foreground">Create industry-standard split sheets from your catalog songs and sign as the owner. Collaborators receive an email invitation to review and sign, plus a free 30-day trial of the Catalog & Collaborate account.</p>
         </div>
       </div>
+      {readOnly && (
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-primary p-4 text-sm">
+          <p className="min-w-0 flex-1 basis-72"><span className="font-semibold">Your split sheets are safe.</span> View and download them anytime, and keep signing split sheets others send you. Adding songs to split sheets and sending new signature requests starts with Catalog Plus.</p>
+          <Button size="sm" onClick={onUpgrade}>Upgrade</Button>
+        </div>
+      )}
 
       {/* One glance row: the library you draw from on the left, what needs attention and what's done on the right.
           Opening the library's editor moves it below the row, full width, so the status cards never jump away. */}
       <div className="grid gap-4 lg:grid-cols-[1.6fr_1fr_1fr]">
-        <ContributorLibrary userId={userId} refreshKey={libKey} />
+        {readOnly ? <div className="hidden lg:block" /> : <ContributorLibrary userId={userId} refreshKey={libKey} />}
         <a href="#split-pending" className="group flex flex-col rounded-2xl border border-border p-5 transition hover:border-primary">
           <div className="flex items-center justify-between">
             <h3 className="font-bold">Pending Signatures</h3>
@@ -150,7 +160,7 @@ export function SplitSheets({ userId, canSplit, canCollect, prefillTrackId, onUp
         </div>
       ) : (
         <>
-        <div className="flex flex-wrap items-end gap-3 rounded-2xl border border-primary p-5">
+        {!readOnly && <div className="flex flex-wrap items-end gap-3 rounded-2xl border border-primary p-5">
           <div className="min-w-60 flex-1 space-y-2">
             <label htmlFor="split-song" className="text-sm font-semibold">Choose a song for a split sheet</label>
             <select id="split-song" value={pick} onChange={(e) => setPick(e.target.value)} className="flex h-10 w-full rounded-md border border-input bg-background px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
@@ -159,7 +169,7 @@ export function SplitSheets({ userId, canSplit, canCollect, prefillTrackId, onUp
             </select>
           </div>
           <Button disabled={!pick} onClick={() => { const t = tracks.find((x) => x.id === pick); if (t) { setEditing(t); setPick(""); } }}><PenLine className="h-4 w-4" /> Generate</Button>
-        </div>
+        </div>}
         {([["Pending Signatures", false], ["Signed Split Sheet Vault", true]] as const).map(([heading, signedGroup]) => {
           const list = tracks.filter((t) => { const c = sheets.get(t.id); return c && (splitStatus(c) === "signed") === signedGroup; });
           const groups = new Map<string, CatalogTrack[]>();
@@ -194,7 +204,8 @@ export function SplitSheets({ userId, canSplit, canCollect, prefillTrackId, onUp
                         <span className="flex items-center gap-2">
                           {c.signedAt ? <Check className="h-3.5 w-3.5 text-primary" /> : <span className="h-1.5 w-1.5 rounded-full bg-muted-foreground" />}
                           {c.name} <span className="text-muted-foreground">· {c.role}</span>
-                          {!c.signedAt && <span className="text-xs text-destructive">Not signed</span>}
+                          {/* "Not signed" only once a request went out (or for the owner, who signs here); before that, nothing is late. */}
+                          {!c.signedAt && (c.invitedAt || c.isOwner ? <span className="text-xs text-destructive">Not signed</span> : <span className="text-xs text-muted-foreground">Not yet requested</span>)}
                         </span>
                         <span className="font-semibold">{c.percentage}%</span>
                       </div>
@@ -204,6 +215,7 @@ export function SplitSheets({ userId, canSplit, canCollect, prefillTrackId, onUp
                     </div>
                   </div>
                 <div className="mt-4 flex gap-2">
+                  {readOnly ? <Button size="sm" variant="outline" className="flex-1" onClick={() => void downloadSplitPdf(track, collaborators)}><Download className="h-4 w-4" /> Download PDF</Button> : <>
                   <Button size="sm" className="flex-1" onClick={() => setEditing(track)}>
                     <PenLine className="h-4 w-4" /> {signedGroup ? "View split sheet" : "Edit split sheet"}
                   </Button>
@@ -221,6 +233,7 @@ export function SplitSheets({ userId, canSplit, canCollect, prefillTrackId, onUp
                         }}>
                         <Trash2 className="h-4 w-4" />
                       </Button>
+                  </>}
                 </div>
               </div>
             );

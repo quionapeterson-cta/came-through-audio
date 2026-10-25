@@ -212,7 +212,7 @@ contract) · 3 Adjust the wording if you need to · 4 Sign · 5 Send for signatu
   SoundCloud, Audiomack, TikTok, Instagram/Facebook, plus SiriusXM/radio as performance) and by territory, using published
   per-stream averages with sources and a "rates vary" note.
 
-### 3.5 Split sheets
+### 3.5 Split sheets · ✅ BUILT 2026-10-25 (Not yet requested / Not signed; one trial per email per rolling year, migration 20261025130000; after a trial, split sheets stay viewable and downloadable)
 - Status says **Not yet requested** until a request is sent; **Not signed** only after sending.
 - Trial guard: one free Catalog & Collaborate trial per email per rolling year (today the limits are per account, per inviter
   and per network each month; I'll add the per-email yearly rule, which also stops a deleted-and-recreated account). After the trial: can view and download what they entered and still sign what they're sent, but can't add songs

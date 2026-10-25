@@ -110,6 +110,21 @@ export function hashIp(ip: string) {
   return createHash("sha256").update(`${process.env["SESSION_SECRET"] ?? "cta"}|${ip}`).digest("hex");
 }
 
+/**
+ * The same inbox however it's typed: lowercase, without a "+tag", and for Gmail without dots (Gmail ignores both),
+ * so one person can't collect a trial per spelling.
+ */
+export function normalizeEmail(email: string) {
+  const [local = "", domain = ""] = email.trim().toLowerCase().split("@");
+  const gmail = domain === "gmail.com" || domain === "googlemail.com";
+  const base = local.split("+")[0]!;
+  return `${gmail ? base.replace(/\./g, "") : base}@${gmail ? "gmail.com" : domain}`;
+}
+/** A salted fingerprint of the normalized email: enough to spot a repeat, never readable back into the address. */
+export function hashEmail(email: string) {
+  return createHash("sha256").update(`${process.env["SESSION_SECRET"] ?? "cta"}|email|${normalizeEmail(email)}`).digest("hex");
+}
+
 /** Who sent the invite: the catalog owner for a split sheet row, the contract owner for a contract party. */
 export async function inviterOf(admin: Admin, source: "split_sheet" | "contract" | "ipi_request", id: string): Promise<string | null> {
   if (source === "ipi_request") {
@@ -149,6 +164,12 @@ export async function trialBlockReason(admin: Admin, o: { userId: string; invite
   const { data: roles } = await admin.from("user_roles").select("role").eq("user_id", o.inviterId);
   if (!paying && !(roles ?? []).some((r) => r.role === "super_admin")) return "inviter is not a paying member";
 
+  // One trial per email per rolling year, even if the account was deleted and made again (grants outlive accounts).
+  if (u.user.email) {
+    const yearAgo = new Date(Date.now() - 365 * 86400000).toISOString();
+    const { count: byEmail } = await admin.from("trial_grants" as never).select("id", { count: "exact", head: true }).eq("email_hash", hashEmail(u.user.email)).gte("created_at", yearAgo);
+    if ((byEmail ?? 0) > 0) return "email already had a trial this year";
+  }
   const since = new Date(Date.now() - 30 * 86400000).toISOString();
   const { count: byInviter } = await admin.from("trial_grants" as never).select("id", { count: "exact", head: true }).eq("inviter_id", o.inviterId).gte("created_at", since);
   if ((byInviter ?? 0) >= TRIAL_LIMITS.perInviterPer30Days) return "inviter trial limit";
