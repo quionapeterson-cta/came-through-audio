@@ -19,6 +19,23 @@ Builds on PLAN.md (departments, /admin/staff) and PLAN-pricing-badges.md §F (Fi
 - **Account ownership register:** for each free account (the 4 Gmails, cron-job.org, Cloudflare): owner, recovery email, 2FA on (yes/no), where the password is kept. Login details are never stored in the app.
 - **Upgrade trigger:** when you hire your first non-founder employee, move the inboxes to Google Workspace (about $7 per user per month, verify current price). Then the company owns every inbox and can take access back on someone's last day.
 
+### ISRC registrant: codes included with Catalog & Collaborate (founder, 2026-10-25)
+Become a US ISRC registrant through the US ISRC Agency (usisrc.org, run by RIAA) so Came Through Audio can give ISRC
+codes to members as part of the Catalog & Collaborate plan.
+
+| Item | Cost | Notes |
+| --- | --- | --- |
+| US ISRC registrant code (one-time) | **$95** | One registrant code covers up to 100,000 ISRCs a year. Record it in the expense ledger (Finance records, founder approves). |
+
+- **Check before applying:** a plain registrant code is for recordings the registrant owns. Assigning codes to *members'*
+  recordings needs approval as an **ISRC Manager** (the agency's program for distributors and services that assign codes
+  for others). Confirm the current Manager terms and any extra fee on usisrc.org before paying.
+- **Product side (later build, needs its own plan):** an "Assign an ISRC" button in Embed Metadata / My Catalog for
+  Catalog & Collaborate and up; codes issued in order from our registrant prefix, never reused, one per recording; a log
+  of who got which code and when (Finance + Registration can see it); the member's own ISRC always wins if they have one.
+- **Price check:** most distributors include ISRCs free, so this is a convenience perk for songs not yet distributed
+  (and for re-recordings), not a selling point on its own.
+
 ### Should Finance see gross profit? I agree with you: no.
 | Finance department sees | Super admin only |
 | --- | --- |

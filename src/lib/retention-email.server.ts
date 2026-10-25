@@ -83,7 +83,7 @@ function render(e: RetentionEmail): { subject: string; html: string } {
       const d = escapeHtml(longDate(e.renewsOn));
       return { subject: `You're renewed through ${d}`, html: page("Renewed early", `You're renewed through ${d}`, [
         "Thanks for renewing early. Your next year is paid, and you kept every day you had left, so nothing is charged until then.",
-        "Your 30-day refund window starts today, the day you paid.",
+        "Early renewals aren't refundable: your new year simply starts the day your current paid plan ends.",
       ], [profile, "Open Profile"]) };
     }
     case "paused": {
