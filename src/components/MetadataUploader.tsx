@@ -533,6 +533,9 @@ export function MetadataUploader({ onShareInfo, userId, mode = "embed", readOnly
         </div>
         {full && userId && readOnly ? <div className="flex flex-wrap items-center gap-3"><span className="text-sm text-muted-foreground"><Lock className="mr-1 inline h-3.5 w-3.5" />Read-only</span><DownloadCatalogButton /></div>
         : full && userId ? (
+          <div className="flex flex-wrap items-center gap-2">
+          {/* 1-click agency export of the whole catalog: every song goes into the agency's template. */}
+          {tracks.length > 0 && exportMenu("Export whole catalog", tracks, "Full Catalog", "default")}
           <DropdownMenu>
             <DropdownMenuTrigger asChild><Button type="button"><Plus />Add song</Button></DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="max-w-xs">
@@ -546,6 +549,7 @@ export function MetadataUploader({ onShareInfo, userId, mode = "embed", readOnly
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
+          </div>
         ) : <span className="text-sm text-muted-foreground">{full ? "Saved songs, identifiers and splits" : "MP3 or WAV · ID3v2.3"}</span>}
       </div>
       {!full && <div className="lg:grid lg:grid-cols-[13rem_minmax(0,1fr)_17rem] lg:items-start lg:gap-6">

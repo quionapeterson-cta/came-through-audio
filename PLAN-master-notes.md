@@ -16,7 +16,8 @@ land on the passcode page · ✅ First Lyric Entry on every lyric · ✅ share l
 ### 1.1 Export your whole catalog, a release, or picked singles (one clear button)
 Today: exports exist per song, per release (Export Release on each EP/album card) and for checked songs (checkbox on each row →
 bar at the bottom), but they're easy to miss, so it feels like one song at a time.
-- New **Agency Export** button at the top of My Catalog, next to Add song. It opens a 3-step box:
+- ✅ **Export whole catalog** button next to Add song (founder, 2026-10-25): one click → pick the agency → every song in its template.
+- Then an **Agency Export** box for choosing a release or picked songs. It opens a 3-step box:
   1. **Which agency?** The MLC · SoundExchange · ASCAP/BMI cheat sheet (each with its ⓘ required fields).
   2. **Which songs?** (•) Whole catalog ( ) A release: [EP/Album list] ( ) Pick songs: checklist grouped Singles · EPs · Albums,
      with "Not exported yet" filter (we record each song's last export per agency, so after registering the whole catalog they
