@@ -125,6 +125,19 @@ each download (`AGENCY_UPLOAD_STEPS` in glossary.ts, menu names from each agency
 - **Master badge list** (how users see them, in awarding order): generated from `badges.ts` as a page in Admin → Badges and
   a PDF (the existing Badge Reference PDF, reordered).
 
+### 2.4b "You Came Through" wording — PROPOSAL, awaiting approval (before → after)
+| Badge | Now | Proposed |
+| --- | --- | --- |
+| Master Crowned (pop-up) | Came through! Your credits ride with every play. | **You Came Through!** Your credits ride with every play. |
+| Came Strong (pop-up) | Came strong! Your first song is ready to register. | **You Came Through strong!** Your first song is ready to register. |
+| Full Release (pop-up) | Came through for the whole project! Every track is ready to collect. | **You Came Through for the whole project!** Every track is ready to collect. |
+| Full EP (pop-up) | Full EP! The whole project came through. | Full EP! **You Came Through for the whole project.** |
+| Full Album (pop-up) | MEGA! A full album came through. | MEGA! **You Came Through with a full album.** |
+| Jeweled Crown (description) | …Every one of them came through. | …**You came through for every one of them.** |
+| High Five (pop-up) | High five! Another signature came through. | High five! **You Came Through:** another signature is on file. |
+| Executive Legacy (pop-up) | ULTIMATE! 75 contracts. Came Through Audio came through for your legacy. | ULTIMATE! 75 contracts. **You Came Through for your legacy.** |
+Unchanged (already about the user): Genesis Crown, Came Strong description, Doubled Up, Catalog Complete ("You came through for every song you own").
+
 ### 2.5 Embed and Catalog layout
 - Your new upload icon on the Upload song fields, browser tab icon and app icon (you upload sizes to Lovable; I wire them in).
 - In My Catalog, "Replace audio (optional)" becomes **Re-embed**: opens Embed Metadata with this song's details loaded, so

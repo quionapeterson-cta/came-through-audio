@@ -34,8 +34,10 @@ function row(pdf: JsPDF, y: number, step: number, b: BadgeDef, art: BadgeArt) {
   font(pdf, "regular", 9.5);
   const milestone = pdf.splitTextToSize(b.milestone, textW) as string[];
   font(pdf, "regular", 8.5);
+  // What the user reads when they open the badge, then its unlock pop-up.
+  const description = pdf.splitTextToSize(b.description.replace(/\{artist\}/g, "[artist name]"), textW) as string[];
   const popup = pdf.splitTextToSize(`Pop-up: "${b.popup.replace(/\{artist\}/g, "[artist name]")}"`, textW) as string[];
-  const h = Math.max(ART, 6 + milestone.length * 4.6 + 1.5 + popup.length * 4) + 6;
+  const h = Math.max(ART, 6 + milestone.length * 4.6 + 1.5 + description.length * 4 + 1.5 + popup.length * 4) + 6;
   y = ensureSpace(pdf, y, h);
 
   font(pdf, "semibold", 9).setTextColor(...MUTED).text(String(step), MARGIN + 3, y + ART / 2 + 1.5, { align: "center" });
@@ -58,6 +60,9 @@ function row(pdf: JsPDF, y: number, step: number, b: BadgeDef, art: BadgeArt) {
   font(pdf, "regular", 9.5).setTextColor(...INK);
   milestone.forEach((line, i) => pdf.text(line, textX, ty + i * 4.6));
   ty += milestone.length * 4.6 + 1.5;
+  font(pdf, "regular", 8.5).setTextColor(...INK);
+  description.forEach((line, i) => pdf.text(line, textX, ty + i * 4));
+  ty += description.length * 4 + 1.5;
   font(pdf, "regular", 8.5).setTextColor(...MUTED);
   popup.forEach((line, i) => pdf.text(line, textX, ty + i * 4));
 
@@ -91,7 +96,8 @@ export async function buildBadgeReferencePdf(loadArt: ArtLoader = browserArt) {
 
   const art = new Map(await Promise.all(ALL_BADGES.map(async (b) => [b.id, b.artPending ? null : await loadArt(b.src)] as const)));
   for (const c of COLLECTIONS) {
-    const list = ALL_BADGES.filter((b) => b.collection === c.id);
+    // Awarding order: the first goal reached first (repeating badges by their first time).
+    const list = ALL_BADGES.filter((b) => b.collection === c.id).map((b, i) => ({ b, i })).sort((x, y) => x.b.goal - y.b.goal || x.i - y.i).map((x) => x.b);
     if (!list.length) continue;
     y = ensureSpace(pdf, y, 16 + ART);
     font(pdf, "bold", 14).setTextColor(...COBALT).text(c.title, MARGIN, y + 2);
