@@ -55,11 +55,12 @@ export const Route = createFileRoute("/workspace")({
 });
 
 const tabs = [
+  // Order (founder, 2026-10-25): the Hub sits right after My Catalog (they work together), Split Sheets right before Contracts.
   { id: "embed", label: "Embed Metadata", icon: FileAudio },
   { id: "catalog", label: "My Catalog", icon: Disc3 },
-  { id: "splits", label: "Split Sheets", icon: FileSignature },
-  { id: "protect", label: "AI Protection Hub", icon: ShieldCheck },
   { id: "health", label: "Royalty Health Hub", icon: Activity },
+  { id: "protect", label: "AI Protection Hub", icon: ShieldCheck },
+  { id: "splits", label: "Split Sheets", icon: FileSignature },
   { id: "learn", label: "Contracts & Blueprints", icon: GraduationCap },
 ];
 
