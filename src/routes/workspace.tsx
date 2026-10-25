@@ -23,7 +23,7 @@ import { loadOnboarding, syncFromCloud, type Onboarding } from "@/lib/artist-pro
 import { RoyaltyUtilitySuite } from "@/components/RoyaltyUtilitySuite";
 import { ExpertAssistance } from "@/components/ExpertAssistance";
 import { RoyaltyHealthCheck, type HealthStart } from "@/components/RoyaltyHealthCheck";
-import { NextBadgeCircle } from "@/components/Badges";
+import { NextBadgeHint } from "@/components/Badges";
 import { PaymentTestModeBanner } from "@/components/PaymentTestModeBanner";
 import { toast } from "sonner";
 import { sendTrialEndingReminder } from "@/lib/collab-trial.functions";
@@ -235,10 +235,10 @@ function Workspace() {
             ))}
           </TabsList>
 
-          {/* Same row on every tab: the next badge as a round medal on the left (revealed when earned), the artist name
-              centered. Fixed side columns and height keep the medal in the exact same spot from tab to tab. */}
-          <div className="mt-8 grid items-center gap-4 sm:min-h-24 sm:grid-cols-[10rem_minmax(0,1fr)_10rem]">
-            <NextBadgeCircle userId={user.id} collections={TAB_BADGES[tab] ?? ["core"]} className="justify-self-center sm:justify-self-start" />
+          {/* Same row on every tab: the artist name centered, the next-badge card pinned top right (founder, 2026-10-25:
+              back to the card, not the round medal). Fixed side columns and height keep it in the same spot on every tab. */}
+          <div className="mt-8 grid items-center gap-4 sm:min-h-24 sm:grid-cols-[14rem_minmax(0,1fr)_14rem]">
+            <div className="hidden sm:block" />
             <h1 className="flex items-center justify-center gap-[0.3em] text-center text-4xl font-extrabold leading-none tracking-tight md:text-5xl">
               <span className="min-w-0 break-words">{name}</span>
               {/* Avatar matches the name's height so badges can be enjoyed up close; click for full size. */}
@@ -246,7 +246,7 @@ function Workspace() {
                 <ArtistAvatar src={onboard.avatar} className="h-[1.15em] w-[1.15em]" />
               </button>}
             </h1>
-            <div className="hidden sm:block" />
+            <NextBadgeHint userId={user.id} collections={TAB_BADGES[tab] ?? ["core"]} />
           </div>
           <BadgeViewer src={viewAvatar ? onboard?.avatar : undefined} round={!isBadgeImage(onboard?.avatar)} onClose={() => setViewAvatar(false)}
             share={{ ...share, artist: share.artist || names.artist || name }} />

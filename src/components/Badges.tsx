@@ -1,3 +1,4 @@
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { ChevronLeft, ChevronRight, Lock, Settings2, Share2 } from "lucide-react";
@@ -195,33 +196,38 @@ const remaining = (s: BadgeState) => Math.max(0, s.badge.goal - s.count);
  * it (no counts, which read like song credits). Says "Badge" so nobody mistakes it for a real record certification.
  * Links to the profile shelf.
  */
-/**
- * The next badge as a round medal beside the artist name (founder, 2026-10-25): dimmed with a progress ring until it's
- * earned; a badge earned in the last day shows revealed, in full color, before the next one takes its place.
- */
-export function NextBadgeCircle({ userId, collections, className = "" }: { userId: string; collections: CollectionId[]; className?: string }) {
+export function NextBadgeHint({ userId, collections, className = "" }: { userId: string; collections: CollectionId[]; className?: string }) {
   const { states } = useBadgeStates(userId);
   const prefs = badgePrefs(loadOnboarding(userId));
   if (!prefs.hints) return null;
-  const mine = states.filter((s) => collections.includes(s.badge.collection) && !prefs.hidden.includes(s.badge.collection) && !s.off);
-  const day = Date.now() - 24 * 60 * 60 * 1000;
-  const fresh = mine.filter((s) => s.earned && new Date(s.earned.earnedAt).getTime() > day).sort((a, b) => b.earned!.earnedAt.localeCompare(a.earned!.earnedAt))[0];
-  const next = mine.filter((s) => !s.earned).sort((a, b) => remaining(a) / a.badge.goal - remaining(b) / b.badge.goal)[0];
-  const show = fresh ?? next;
-  if (!show) return null;
-  const pct = fresh ? 100 : Math.round((Math.min(show.count, show.badge.goal) / show.badge.goal) * 100);
+  const next = states
+    .filter((s) => collections.includes(s.badge.collection) && !prefs.hidden.includes(s.badge.collection) && !s.earned && !s.off)
+    .sort((a, b) => remaining(a) / a.badge.goal - remaining(b) / b.badge.goal)[0];
+  if (!next) return null;
+  const pct = Math.round((Math.min(next.count, next.badge.goal) / next.badge.goal) * 100);
   return (
-    <Link to="/profile" hash="badges" aria-label={fresh ? `Badge earned: ${show.badge.title}` : `Next badge: ${show.badge.title}. ${show.badge.milestone}. ${pct}% there.`}
-      title={fresh ? `Earned: ${show.badge.title}` : `${show.badge.title} · ${show.badge.action} · ${pct}%`}
-      className={`group flex flex-col items-center gap-1.5 ${className}`}>
-      <span className="relative flex h-24 w-24 items-center justify-center rounded-full p-1" style={{ background: `conic-gradient(var(--primary) ${pct * 3.6}deg, var(--muted) 0deg)` }}>
-        <span className="flex h-full w-full items-center justify-center rounded-full bg-card">
-          <img src={shelfArt(show)} alt="" className={`h-16 w-16 object-contain transition ${fresh ? "drop-shadow-lg" : "opacity-40 grayscale group-hover:opacity-70"}`} />
+    <TooltipProvider delayDuration={150}>
+    <Tooltip>
+    <TooltipTrigger asChild>
+    <Link to="/profile" hash="badges" aria-label={`Next badge: ${next.badge.title}. ${next.badge.milestone}. ${pct}% there.`}
+      className={`flex w-full items-center gap-2.5 rounded-lg border border-border bg-card px-2.5 py-2 text-left transition hover:border-primary sm:w-56 ${className}`}>
+      <img src={shelfArt(next)} alt="" className="h-8 w-8 shrink-0 object-contain opacity-60 grayscale" />
+      <span className="min-w-0 flex-1 space-y-0.5">
+        <span className="block text-[9px] font-bold uppercase tracking-widest text-primary">Badge</span>
+        <span className="block truncate text-xs font-semibold leading-tight">{next.badge.title}</span>
+        <span className="block truncate text-[11px] leading-snug text-muted-foreground">{next.badge.action}</span>
+        <span role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={pct} className="mt-1 block h-1 overflow-hidden rounded-full bg-muted">
+          <span className="block h-full rounded-full bg-primary transition-[width] duration-700" style={{ width: `${Math.max(pct, 4)}%` }} />
         </span>
       </span>
-      <span className="max-w-32 truncate text-xs font-semibold">{fresh ? "Earned!" : show.badge.title}</span>
-      {!fresh && <span className="max-w-32 truncate text-[11px] text-muted-foreground">{show.badge.action}</span>}
     </Link>
+    </TooltipTrigger>
+    <TooltipContent side="bottom" align="end" className="max-w-64 space-y-1 border border-border bg-popover px-3 py-2 text-popover-foreground">
+      <p className="font-semibold">{next.badge.milestone}</p>
+      <p className="text-muted-foreground">{next.badge.description}</p>
+    </TooltipContent>
+    </Tooltip>
+    </TooltipProvider>
   );
 }
 
