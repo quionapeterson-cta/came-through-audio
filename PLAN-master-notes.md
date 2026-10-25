@@ -233,6 +233,25 @@ contract) · 3 Adjust the wording if you need to · 4 Sign · 5 Send for signatu
   rendering now; you approve it before it goes live. New badges in this plan get art the same way.
 - Share cards on Facebook: fixed links pushed today; after Publish, test one link in the Facebook Sharing Debugger.
 
+### 3.7b Every task earns a badge, every time (founder, 2026-10-25) — PROPOSAL, awaiting approval
+"Each task is work within itself and each time deserves a badge… we celebrate your wins." One **main badge per task**,
+awarded every single time; after every 10 of the same, the next art in that task's rotation takes over (the count and
+dates keep showing as ×N). Milestone badges (10, 25, 50…) stay on top as they are. The 6-month badge drops in Admin → Badges
+can swap a task's rotation.
+| Task (each time) | Main badge | Rotates in after each 10 |
+| --- | --- | --- |
+| Embed a master | **Embedded** (new, bedazzled mic art) | bedazzled note → vinyl → band |
+| Save a song Ready to register (catalog entry) | **Came Strong** | Doubled Up → Full Band → Vault art |
+| Embed lyrics | **First Lyric Entry** (already every time; description counts "your 37th lyric") | Word Weaver → Lyrical Genius → Lyric Lover → Hook Keeper → Verse Vault art |
+| Song reaches 100% royalty health | **Silver Crown** | Jeweled Crown → Gold Crown art |
+| AI Protection certificate | **Time Witness** (already every time) | Shield Up art → (new AI set) |
+| Split sheet fully signed | **Sealed** | Fist Bump → Three-Way → Studio Circle → Piggy Bank → Hands In art |
+| Contract fully signed | **Blueprints Checked** | Secure Structure → Terms Architected → Crossin' Your T's → Dottin' Your I's art |
+| Album art uploaded | **Cover Story** (new art, drawn in the CTA style) | 2 more new pieces |
+Build: a `rotation` list on each badge (art only; the rules engine already counts every time via `every: 1`), the pop-up
+says "You Came Through: your 12th signed split sheet", Badge Reference PDF lists the rotations. Files: `src/lib/badges.ts`,
+`badge-rules.ts`, `Badges.tsx`, `badge-reference-pdf.ts`, tests. No migration (earnings already log each time).
+
 ### 3.8 AI Protection Hub
 - Draft dates: **Add dates** button with a calendar; add as many as the proof shows (you chose user-entered dates).
 - **Fingerprint must match the copy we keep.** Today the certificate fingerprints the original; our backup is compressed
