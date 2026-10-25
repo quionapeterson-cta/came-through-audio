@@ -171,7 +171,7 @@ describe("per-agency registration checks", () => {
     expect(need(m, "soundexchange")).toEqual([]);
   });
   it("needs a publisher or Self-published, never both", () => {
-    expect(need(full({ selfPublished: false }), "ascap")).toEqual(["selfPublished"]);
+    expect(need(full({ selfPublished: false }), "ascap")).toEqual(["writers-0-publishing"]);
     const pub = { name: "Lee Songs", pro: "BMI", ipi: "", percentage: "100" };
     expect(need(full({ selfPublished: true, publishers: [pub] }), "mlc")).toEqual(["selfPublished"]);
     expect(need(full({ selfPublished: false, publishers: [pub] }), "ascap")).toEqual([]);
@@ -184,14 +184,23 @@ describe("per-agency registration checks", () => {
       expect(need(m, "bmi")).toEqual([]);
       expect(registrationCheck(m, "bmi", "2026-10-21").tips.map((t) => t.code)).toContain("publisher");
       expect(need(m, "mlc")).toEqual([]);
-      expect(need(m, "ascap")).toContain("selfPublished");
+      expect(need(m, "ascap")).toContain("writers-0-publishing");
     }
-    // BMI writers are the exception: one writer outside BMI and the song needs a publisher or Self-published at The MLC.
+    // BMI writers are the exception: a writer outside BMI still needs a home for their publisher share, on their own row.
     const mixed = full({ selfPublished: false, publishers: [], writers: [writer({ pro: "BMI", percentage: "50" }), writer({ pro: "ASCAP", legalName: "Kim Roe", percentage: "50" })] });
-    expect(need(mixed, "mlc")).toEqual(["selfPublished"]);
-    expect(need(full({ selfPublished: false, publishers: [] }), "bmi")).toEqual(["selfPublished"]);
+    expect(need(mixed, "mlc")).toEqual(["writers-1-publishing"]);
+    expect(need(full({ selfPublished: false, publishers: [] }), "bmi")).toEqual(["writers-0-publishing"]);
     const pub = { name: "Lee Songs", pro: "BMI", ipi: "00987654321", percentage: "100" };
     expect(need(full({ selfPublished: true, publishers: [pub], writers: [writer({ pro: "BMI" })] }), "bmi")).toEqual(["selfPublished"]);
+  });
+  it("lets each writer answer who collects their publishing on this song", () => {
+    const two = (extra: object) => full({ selfPublished: false, publishers: [], writers: [writer({ percentage: "50" }), writer({ legalName: "Kim Roe", percentage: "50", ...extra })] });
+    expect(need(two({}), "mlc")).toEqual(["writers-0-publishing", "writers-1-publishing"]);
+    // Kim gets no publishing on this song; Ann is self-published: both covered, no publisher needed.
+    expect(need(full({ selfPublished: false, publishers: [], writers: [writer({ percentage: "50", publishing: "self" }), writer({ legalName: "Kim Roe", percentage: "50", publishing: "none" })] }), "ascap")).toEqual([]);
+    // "BMI pays me" only works for BMI writers; "my publisher" needs one listed.
+    expect(need(two({ publishing: "bmi" }), "mlc")).toContain("writers-1-publishing");
+    expect(need(full({ selfPublished: false, publishers: [], writers: [writer({ publishing: "publisher" })] }), "mlc")).toEqual(["publishers-0-name"]);
   });
   it("asks PROs about samples, and BMI about duration, genre, productions and the label once released", () => {
     expect(need(full({ samples: "" }), "ascap")).toEqual(["samples"]);

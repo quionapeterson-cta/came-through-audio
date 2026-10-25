@@ -29,6 +29,12 @@ export const contributorSchema = z.object({
   role: z.string().optional(),
   /** Publishers only: the HFA account number (P#), which is also the publisher number on The MLC's bulk upload. Catalog-only, never embedded. */
   hfa: z.string().trim().optional(),
+  /**
+   * Writers only: who collects this writer's publisher share on this song (founder, 2026-10-25). "publisher": a
+   * publisher listed below; "self": self-published; "bmi": BMI pays it (BMI writers only); "none": this writer gets no
+   * publishing on this song. Blank: not answered (the song's Self-published / BMI answers apply). Catalog-only, never embedded.
+   */
+  publishing: z.enum(["", "publisher", "self", "bmi", "none"]).optional(),
 });
 
 export const metadataSchema = z.object({

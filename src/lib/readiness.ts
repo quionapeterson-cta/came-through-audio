@@ -1,6 +1,6 @@
 import { creditName, writerRole, type Contributor, type Metadata } from "@/lib/metadata";
 import { splitStatus } from "@/lib/splits-total";
-import { isBmi } from "@/lib/audit";
+import { isBmi } from "@/lib/publishing";
 
 /** Registration targets. Only PRO registration (BMI/ASCAP) also needs each writer's PRO affiliation. */
 export type ReadinessTarget = "mlc" | "soundexchange" | "pro";
@@ -30,6 +30,45 @@ const listed = (m: Pick<Metadata, "writers" | "composers">): Listed[] => {
   });
   return out;
 };
+
+/** Who collects a writer's publisher share on a song (founder, 2026-10-25). Blank = not answered. */
+export type WriterPublishing = "" | "publisher" | "self" | "bmi" | "none";
+export const PUBLISHING_LABEL: Record<Exclude<WriterPublishing, "">, string> = {
+  publisher: "My publisher (listed below)", self: "Self-published", bmi: "BMI pays me the publisher share", none: "None: no publishing on this song",
+};
+type PubSong = Pick<Metadata, "writers" | "composers" | "publishers"> & Partial<Pick<Metadata, "selfPublished" | "bmiWriterPublishing">>;
+
+/** A writer row's answer, or the song's Self-published / BMI answer when the row has none. */
+export function writerPublishing(w: Contributor, m: Partial<Pick<Metadata, "selfPublished" | "bmiWriterPublishing">>): WriterPublishing {
+  if (w.publishing) return w.publishing;
+  if (m.selfPublished) return "self";
+  if (m.bmiWriterPublishing && isBmi(w)) return "bmi";
+  return "";
+}
+
+/**
+ * Writers whose publisher share has nowhere to go on this song. Each writer is covered by a listed publisher,
+ * Self-published, "no publishing on this song", or BMI (BMI writers only: BMI pays them the publisher share too, so
+ * with no publisher they need nothing else at BMI and The MLC). `rules` "pro" is ASCAP's: a publisher or Self-published.
+ */
+export function publishingGaps(m: PubSong, rules: "pro" | "bmi" | "mlc" = "mlc"): (MissingItem & { who: string })[] {
+  const pubs = (m.publishers ?? []).filter((p) => creditName(p));
+  const out: (MissingItem & { who: string })[] = [];
+  for (const { row, group, index } of listed(m)) {
+    const who = creditName(row) || `writer ${index + 1}`;
+    const field = `${group}-${index}-publishing`;
+    const answer = writerPublishing(row, m);
+    if (answer === "self" || answer === "none") continue;
+    if (answer === "bmi") {
+      if (!isBmi(row)) out.push({ code: "publisher", who, field, message: `${who} isn't with BMI, so BMI can't pay their publisher share. Choose another publishing answer on their row.` });
+    } else if (answer === "publisher") {
+      if (!pubs.length) out.push({ code: "publisher", who, field: "publishers-0-name", message: `Add ${who}'s publisher under Publishers, or change the publishing answer on their row.` });
+    } else if (!pubs.length && !(isBmi(row) && rules !== "pro")) {
+      out.push({ code: "publisher", who, field, message: `Who collects ${who}'s publisher share? Add their publisher, or choose Self-published or "None: no publishing on this song" on their row.` });
+    }
+  }
+  return out;
+}
 
 /**
  * The single source of truth for registration readiness. Every feature (embed indicator, catalog badge,
@@ -123,22 +162,19 @@ export function registrationCheck(m: Metadata, agency: RegistrationAgency, today
 
   // Who collects the publisher share: a listed publisher, or nobody (self-published / self-administered). At BMI, a
   // writer of any role with no publisher is paid the publisher share too, so BMI needs neither (PLAN-bmi-no-publisher).
-  // "I'm a BMI writer with no publishing company" (founder, 2026-10-25): honored only when every writer is with BMI.
-  const notBmi = listed(m).filter(({ row }) => !isBmi(row)).map(({ row }) => creditName(row)).filter(Boolean);
+  // Each writer's publisher share needs a home (publishingGaps): a listed publisher, Self-published, BMI (BMI writers
+  // only) or "no publishing on this song". The song-level answers can't sit next to a listed publisher.
   if (m.selfPublished && pubs.length) need("publisher", "You checked Self-published but also listed a publisher. Keep one.", "selfPublished");
   else if (m.bmiWriterPublishing && pubs.length) need("publisher", "You said there's no publishing company but also listed a publisher. Keep one.", "bmiWriterPublishing");
-  else if (m.bmiWriterPublishing && !m.selfPublished && notBmi.length) need("publisher", `${notBmi.join(", ")} ${notBmi.length === 1 ? "isn't" : "aren't"} with BMI, so BMI can't pay the publisher share for them. Add their publisher, or check Self-published.`, "bmiWriterPublishing");
-  else if (m.bmiWriterPublishing && !m.selfPublished) {
-    if (agency === "mlc") tip("publisher", "BMI writer with no publishing company: The MLC file lists you as publisher with the placeholder IPI 123456789; remove it in The MLC Portal after the upload.", "bmiWriterPublishing");
-    else tip("publisher", "BMI writer with no publishing company: BMI pays you the publisher share too, in proportion to your split.", "bmiWriterPublishing");
-  }
-  else if (!m.selfPublished && !pubs.length) {
-    if (agency === "bmi" && listed(m).some(({ row }) => isBmi(row))) tip("publisher", "No publisher: BMI pays you the publisher share too, in proportion to your split.", "selfPublished");
+  else {
+    const gaps = publishingGaps(m, agency === "bmi" ? "bmi" : agency === "mlc" ? "mlc" : "pro");
+    for (const g of gaps) need(g.code, g.message, g.field);
     // The MLC: BMI writers with no publisher still upload; the bulk file lists the writer as publisher with the
     // placeholder IPI, removed in The MLC Portal afterwards (founder-verified, 2026-10-25), so it never costs health.
-    // Only when every writer is with BMI: BMI writers are the exception, everyone else needs a publisher or Self-published.
-    else if (agency === "mlc" && listed(m).length > 0 && listed(m).every(({ row }) => isBmi(row))) tip("publisher", "No publisher: BMI pays you the publisher share. The MLC file lists you as publisher with the placeholder IPI 123456789; remove it in The MLC Portal after the upload.", "selfPublished");
-    else need("publisher", "Add the song's publisher, or check Self-published (no publisher).", "selfPublished");
+    if (!gaps.length && !pubs.length && listed(m).some(({ row }) => isBmi(row) && writerPublishing(row, m) !== "none" && writerPublishing(row, m) !== "self")) {
+      if (agency === "mlc") tip("publisher", "No publisher: BMI pays you the publisher share. The MLC file lists you as publisher with the placeholder IPI 123456789; remove it in The MLC Portal after the upload.", "selfPublished");
+      else if (agency === "bmi") tip("publisher", "No publisher: BMI pays you the publisher share too, in proportion to your split.", "selfPublished");
+    }
   }
   for (const { row, index } of pubs) {
     const who = creditName(row) || `publisher ${index + 1}`;

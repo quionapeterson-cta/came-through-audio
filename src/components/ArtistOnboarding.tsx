@@ -11,6 +11,7 @@ import { ProSelect } from "@/components/ProSelect";
 import { emptyContributor, GENRES, RELEASE_TYPES, WRITER_ROLES, writerRole, type Contributor } from "@/lib/metadata";
 import { isBadgeImage } from "@/lib/badges";
 import { isBmi } from "@/lib/audit";
+import { PUBLISHING_LABEL } from "@/lib/readiness";
 import { loadOnboarding, loadProfile, saveOnboarding, saveProfile, withOwnWriter, type ArtistProfile, type Onboarding } from "@/lib/artist-profile";
 import { capShare, splitTotal } from "@/lib/splits-total";
 import { ARTIST_SEAT_PRICES, TIER_LABEL } from "@/lib/plans";
@@ -360,6 +361,13 @@ function Rows({ title, rows, onChange, seed, writer }: { title: string; rows?: C
           <Input aria-label="Default share %" placeholder="Share %" inputMode="decimal" value={r.percentage} onChange={(e) => upd(i, "percentage", capShare(list, i, e.target.value).value)} />
           {!writer && <Input aria-label="HFA P#" placeholder="HFA P#" value={r.hfa ?? ""} onChange={(e) => upd(i, "hfa", e.target.value.toUpperCase())} />}
           <Button type="button" variant="ghost" size="icon" aria-label="Remove" onClick={() => onChange(list.filter((_, j) => j !== i))}><Trash2 /></Button>
+          {/* Usual answer for who collects this writer's publisher share; each song can change it. */}
+          {writer && <label className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground sm:col-span-full">
+            <span className="inline-flex items-center">Usual publishing<InfoTip term="publishing" /></span>
+            <select aria-label="Usual publishing" value={r.publishing ?? ""} onChange={(e) => upd(i, "publishing", e.target.value)} className="h-8 rounded-md border border-input bg-background px-2 text-sm text-foreground">
+              <option value="">Decide per song</option>
+              {(Object.keys(PUBLISHING_LABEL) as (keyof typeof PUBLISHING_LABEL)[]).filter((k) => k !== "bmi" || isBmi(r) || r.publishing === "bmi").map((k) => <option key={k} value={k}>{PUBLISHING_LABEL[k]}</option>)}
+            </select></label>}
         </div>
       ))}
       <div className="flex items-center justify-between">

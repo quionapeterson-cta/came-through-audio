@@ -39,7 +39,7 @@ describe("royalty audit", () => {
     const bmi = { ...ready.metadata, publishers: [], bmiWriterPublishing: true };
     expect(auditTrack({ ...ready, metadata: bmi })).toEqual([]);
     const mixed = { ...bmi, writers: [...bmi.writers, { name: "Bo Ray", pro: "ASCAP", ipi: "123456780", percentage: "0" }] };
-    expect(auditTrack({ ...ready, metadata: mixed }).map((i) => i.field)).toContain("bmiWriterPublishing");
+    expect(auditTrack({ ...ready, metadata: mixed }).map((i) => i.field)).toContain("writers-1-publishing");
   });
   it("needs a PRO for a listed publisher, but not for Self-published or BMI writers with no publisher", () => {
     expect(auditTrack({ ...ready, metadata: { ...ready.metadata, publishers: [{ ...ready.metadata.publishers[0]!, pro: "" }] } }).map((i) => i.field)).toEqual(["publishers-0-pro"]);

@@ -1,10 +1,10 @@
 import { hasDuration, matchChecks, matchScore, weightedScore } from "@/lib/match-fields";
-import { hasPro, isBmi, isIpi, publisherCovered } from "@/lib/audit";
+import { hasPro, isBmi, isIpi } from "@/lib/audit";
 import type { TrackReport } from "@/lib/health";
 import type { SongChecklist } from "@/lib/health-checklist";
 import type { SongStatus } from "@/lib/health-songs";
 import { creditName, type Contributor, type Metadata } from "@/lib/metadata";
-import { registrationCheck } from "@/lib/readiness";
+import { publishingGaps, registrationCheck } from "@/lib/readiness";
 import type { Society } from "@/lib/repertoires";
 import { splitStatus } from "@/lib/splits-total";
 import { readNote } from "@/lib/agency-lists";
@@ -147,9 +147,11 @@ export function royaltyCheckup({ rows, signedSheets, today = new Date().toISOStr
     // Heart: both halves (writer and publisher) must be there. A missing publisher never stops the writer share, and BMI
     // writers with no publisher are covered: BMI pays them the publisher share too. Only the other writers need one.
     const noWriter = !writers.length;
-    const noPublisher = !pubs.length && !publisherCovered(m);
-    const needPublisher = writers.some(isBmi) ? `no publisher for ${plain(writers.filter((w) => !isBmi(w)).map(creditName))}` : "no publisher";
-    if (noWriter || noPublisher) hit("broken", song(noWriter ? "no writer" : needPublisher, noWriter ? "writers-0-legalName" : "selfPublished"));
+    // Per writer (readiness.ts publishingGaps): a writer marked "no publishing on this song" or Self-published is covered.
+    const gaps = publishingGaps(m);
+    const noPublisher = gaps.length > 0;
+    const needPublisher = gaps.length < writers.length ? `no publisher for ${plain(gaps.map((g) => g.who))}` : "no publisher";
+    if (noWriter || noPublisher) hit("broken", song(noWriter ? "no writer" : needPublisher, noWriter ? "writers-0-legalName" : gaps[0]?.field ?? "selfPublished"));
     if (!noPro && writers.length) {
       const why: string[] = [];
       const missingIpi = [...m.writers.map((w, i) => ({ w, f: `writers-${i}-ipi` })), ...m.composers.map((w, i) => ({ w, f: `composers-${i}-ipi` }))]

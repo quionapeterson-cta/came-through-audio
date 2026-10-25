@@ -1,6 +1,7 @@
 import type { CatalogTrack } from "@/lib/catalog";
 import { creditName, type Contributor } from "@/lib/metadata";
-import { societyForPro } from "@/lib/repertoires";
+import { isBmi } from "@/lib/publishing";
+import { publishingGaps } from "@/lib/readiness";
 import { splitStatus } from "@/lib/splits-total";
 
 export type Pillar = "performance" | "digital" | "mechanical";
@@ -21,16 +22,13 @@ export const isIpi = (v: string) => /^\d{9,11}$/.test(v.trim());
 /** Any society counts, from the worldwide PRO list or typed in under "Other"; only a blank or "None" means unaffiliated. */
 export const hasPro = (pro?: string) => !["", "none", "other"].includes((pro ?? "").trim().toLowerCase());
 
-/** A BMI writer: with no publisher, BMI pays the publisher share to the writers, in proportion to their splits. */
-export const isBmi = (w: Contributor) => societyForPro(w.pro)?.id === "bmi";
+export { isBmi } from "@/lib/publishing";
 /**
- * No publisher is needed: Self-published is checked, or every named writer is with BMI (BMI pays its writers the
- * publisher share too; "I'm a BMI writer with no publishing company" says so out loud, and is only honored then).
+ * Every writer's publisher share has a home: a listed publisher, Self-published, BMI (BMI writers only) or "no
+ * publishing on this song" (readiness.ts publishingGaps, the shared rule).
  */
-export function publisherCovered(m: { writers: Contributor[]; composers: Contributor[]; selfPublished?: boolean; bmiWriterPublishing?: boolean }) {
-  if (m.selfPublished) return true;
-  const named = [...m.writers, ...m.composers].filter(creditName);
-  return named.length > 0 && named.every(isBmi);
+export function publisherCovered(m: { writers: Contributor[]; composers: Contributor[]; publishers?: Contributor[]; selfPublished?: boolean; bmiWriterPublishing?: boolean }) {
+  return publishingGaps({ ...m, publishers: m.publishers ?? [] }).length === 0;
 }
 /** Writers on a song marked "BMI writer with no publishing company" who aren't with BMI (BMI can't pay them). */
 export const notBmiWriters = (m: { writers: Contributor[]; composers: Contributor[] }) =>
@@ -58,12 +56,7 @@ export function auditTrack(t: CatalogTrack): Issue[] {
   if (!t.artist.trim()) out.push({ pillar: "digital", text: "No featured artist name", field: "artist" });
   const pubs = m.publishers.filter((p) => p.name.trim());
   if (pubs.length && m.bmiWriterPublishing) out.push({ pillar: "mechanical", text: "You said there's no publishing company but also listed a publisher. Keep one.", field: "bmiWriterPublishing" });
-  if (!pubs.length && !publisherCovered(m)) {
-    const others = m.bmiWriterPublishing ? notBmiWriters(m) : [];
-    out.push(others.length
-      ? { pillar: "mechanical", text: `${others.join(", ")} ${others.length === 1 ? "isn't" : "aren't"} with BMI, so BMI can't pay the publisher share for them. Add their publisher, or check Self-published.`, field: "bmiWriterPublishing" }
-      : { pillar: "mechanical", text: "No publisher listed. Add one, or check Self-published if there isn't one.", field: "selfPublished" });
-  }
+  for (const g of publishingGaps(m)) out.push({ pillar: "mechanical", text: g.message, field: g.field });
   const pubSplit = splitStatus(pubs);
   if (pubSplit.state === "over") out.push({ pillar: "mechanical", text: `Publisher shares total ${pubSplit.total}%, ${pubSplit.over}% over 100%. Lower one to fix it.`, field: "publishers-0-share" });
   m.publishers.forEach((p, index) => {

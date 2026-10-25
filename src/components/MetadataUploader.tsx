@@ -25,7 +25,7 @@ import { deleteTrack, downloadCatalogFile, listTracks, safeName, saveTrack, uplo
 import { AGENCY_LABEL, downloadAgencyExport, downloadNeighbouringPack, mlcPlaceholderSongs, recordExports, type Agency, type Held } from "@/lib/agency-export";
 import { AgencyExportDialog } from "@/components/AgencyExportDialog";
 import { AGENCY_UPLOAD_STEPS, MLC_EXPORT_NOTES } from "@/lib/glossary";
-import { registrationReadiness, type MissingItem } from "@/lib/readiness";
+import { PUBLISHING_LABEL, registrationReadiness, type MissingItem } from "@/lib/readiness";
 import { isBmi, notBmiWriters } from "@/lib/audit";
 import { downloadLyricsPdf } from "@/lib/lyrics-pdf";
 import { downloadCatalogPdf } from "@/lib/catalog-pdf";
@@ -498,7 +498,8 @@ export function MetadataUploader({ onShareInfo, userId, mode = "embed", readOnly
             </FormSection>
 
             <FormSection title={`Writers · ${count(metadata.writers)}`} open={!full || writersWarn} warn={writersWarn} ok={!writersWarn && count(metadata.writers) > 0} summary={writersWarn ? "Needs info to register" : count(metadata.writers) ? "Ready to register" : "Who wrote the song"}>
-              <Contributors bare title="Writers" singular="writer" group="writers" writer rows={metadata.writers} disabled={busy} onChange={(rows) => update("writers", rows)} tip={full ? "Choose Author (lyrics/melody), Composer (music/beat) or Author/Composer for each writer. Writer splits must total 100%." : undefined} simple={!full}
+              <Contributors bare title="Writers" singular="writer" group="writers" writer rows={metadata.writers} disabled={busy} onChange={(rows) => update("writers", rows)}
+                songPublishing={full ? (metadata.selfPublished ? "Self-published (the song's answer)" : metadata.bmiWriterPublishing ? "The song's answer (BMI pays BMI writers)" : "") : undefined} tip={full ? "Choose Author (lyrics/melody), Composer (music/beat) or Author/Composer for each writer. Writer splits must total 100%." : undefined} simple={!full}
                 rowNote={(row) => bmiNoPublisher && isBmi(row) && <p className="text-sm text-muted-foreground">💡 With no publisher, BMI pays this writer's part of the publisher share too, in proportion to their split.</p>}>
                 <label className="flex items-center gap-2 text-sm"><input id="instrumental" type="checkbox" className="h-4 w-4 accent-[var(--primary)]" checked={metadata.instrumental} onChange={(e) => update("instrumental", e.target.checked)} />Instrumental (no lyrics)<Tip text={TIPS.instrumental} /></label>
               </Contributors>
@@ -832,6 +833,7 @@ const TIPS = {
   alternateTitles: "Other names the song goes by, like a short title or a translation. Agencies use them to match plays to your song.",
   samples: "Answer Yes if the song uses a sample, borrows from another song, or is based on an older song (public-domain songs too). PROs ask for the original song's details when you register.",
   writtenFor: "Was the song made for a movie, TV show, stage show or commercial? BMI asks this when you register.",
+  publishing: "Who collects this writer's publisher share on this song. My publisher: a publisher listed under Publishers. Self-published: no publisher, so the writer collects it. BMI pays me: BMI writers with no publishing company get it from BMI. None: this writer gets no publishing on this song (for example, they signed it to someone else's publisher, or the deal gives it away).",
   bmiWriterPublishing: "Check this if every writer on the song is with BMI and none of you has a publishing company. BMI pays you the publisher share too, so no publisher or publisher IPI is needed.",
   selfPublished: "Check this if no publisher has rights to the song. Your PRO then pays the publisher half to the writers. Have your own publishing company? List it as a publisher instead.",
   masterShare: "How much of the recording (the master) you own. Most independent artists own 100%. SoundExchange pays the master owner by this share.",
@@ -1062,7 +1064,7 @@ function SelectField({ label, id, value, options, onChange, term }: { label: str
     </select></div>;
 }
 
-function Contributors({ title, singular, group, rows, onChange, disabled, publisher, tip, tipOnly, simple, writer, bare, rowNote, children }: { rowNote?: (row: Contributor, index: number) => ReactNode; bare?: boolean; title: string; singular: string; group: string; rows: Contributor[]; onChange: (rows: Contributor[]) => void; disabled: boolean; publisher?: boolean; tip?: string | undefined; tipOnly?: boolean; simple?: boolean; writer?: boolean; children?: ReactNode }) {
+function Contributors({ title, singular, group, rows, onChange, disabled, publisher, tip, tipOnly, simple, writer, bare, rowNote, songPublishing, children }: { songPublishing?: string | undefined; rowNote?: (row: Contributor, index: number) => ReactNode; bare?: boolean; title: string; singular: string; group: string; rows: Contributor[]; onChange: (rows: Contributor[]) => void; disabled: boolean; publisher?: boolean; tip?: string | undefined; tipOnly?: boolean; simple?: boolean; writer?: boolean; children?: ReactNode }) {
   const roleSelect = (row: Contributor, index: number) => writer && <SelectField label="Role" term="roles" id={`${group}-${index}-role`} value={writerRole(row.role)} options={WRITER_ROLES} onChange={(value) => change(index, "role", value)} />;
   // Writers (and pre-role composer entries) have one name: their legal name, used for credits and registration.
   const legal = writer || group === "composers";
@@ -1083,6 +1085,14 @@ function Contributors({ title, singular, group, rows, onChange, disabled, publis
   const share = (row: Contributor, index: number) => <div className="space-y-2"><Label htmlFor={`${group}-${index}-share`}>{publisher ? "Share (%)" : "Split (%)"}<InfoTip term={publisher ? "publisher" : "split"} /></Label><Input id={`${group}-${index}-share`} type="number" min="0" max="100" step="0.01" value={row.percentage} onChange={(event) => changeShare(index, event.target.value)} />{capped?.index === index && <p className="text-xs text-muted-foreground">Capped at {capped.at}%, the share that's left.</p>}</div>;
   const ipi = (row: Contributor, index: number) => <Field label="IPI name number" term="ipi" id={`${group}-${index}-ipi`} value={row.ipi} placeholder="9–11 digits" onChange={(value) => change(index, "ipi", value)} />;
   const hfa = (row: Contributor, index: number) => <Field label="HFA P#" term="hfa" id={`${group}-${index}-hfa`} value={row.hfa ?? ""} placeholder="P12345" onChange={(value) => change(index, "hfa", value.toUpperCase())} />;
+  // Who collects this writer's publisher share on this song (founder, 2026-10-25). Blank follows the song's answer.
+  const publishing = (row: Contributor, index: number) => songPublishing !== undefined && <div className="min-w-0 space-y-2">
+    <Label htmlFor={`${group}-${index}-publishing`}>Publishing on this song<Tip text={TIPS.publishing} title="Publishing on this song" /></Label>
+    <select id={`${group}-${index}-publishing`} value={row.publishing ?? ""} onChange={(e) => change(index, "publishing", e.target.value)}
+      className="flex h-9 w-full rounded-md border border-input bg-background px-3 text-sm shadow-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+      <option value="">{songPublishing || "Choose who collects it…"}</option>
+      {(Object.keys(PUBLISHING_LABEL) as (keyof typeof PUBLISHING_LABEL)[]).filter((k) => k !== "bmi" || isBmi(row) || row.publishing === "bmi").map((k) => <option key={k} value={k}>{PUBLISHING_LABEL[k]}</option>)}
+    </select></div>;
   const pro = (row: Contributor, index: number) => <div className="min-w-0 space-y-2"><Label htmlFor={`${group}-${index}-pro`}>PRO affiliation<InfoTip term="pro" /></Label>
     <ProSelect id={`${group}-${index}-pro`} value={row.pro} onChange={(value) => change(index, "pro", value)} className="flex h-9 w-full rounded-md border border-input bg-background px-3 text-sm shadow-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" /></div>;
   return <fieldset disabled={disabled} className={bare ? "min-w-0 space-y-5" : "space-y-5 border-t border-border pt-6"}>
@@ -1096,7 +1106,7 @@ function Contributors({ title, singular, group, rows, onChange, disabled, publis
       : legal
         ? <div key={index} className="space-y-4 rounded-lg border border-border p-3">
             <div className={`grid items-end gap-x-6 gap-y-4 ${writer ? "sm:grid-cols-[1fr_180px_36px]" : "sm:grid-cols-[1fr_36px]"}`}>{names(row, index)}{roleSelect(row, index)}{removeButton(index)}</div>
-            <div className="grid items-end gap-x-6 gap-y-4 sm:grid-cols-3">{share(row, index)}{ipi(row, index)}{pro(row, index)}</div>
+            <div className={`grid items-end gap-x-6 gap-y-4 sm:grid-cols-3 ${songPublishing !== undefined ? "lg:grid-cols-4" : ""}`}>{share(row, index)}{ipi(row, index)}{pro(row, index)}{publishing(row, index)}</div>
             {rowNote?.(row, index)}
           </div>
         : <div key={index} className={`grid items-end gap-4 ${publisher ? "sm:grid-cols-[1fr_170px_150px_110px_120px_36px]" : "sm:grid-cols-[1fr_110px_150px_150px_36px]"}`}>
