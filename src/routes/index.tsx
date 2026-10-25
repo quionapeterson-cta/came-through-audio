@@ -163,15 +163,15 @@ function Landing() {
               <h3 className="mb-3 text-center text-lg font-extrabold uppercase tracking-[2px] text-primary">{title}</h3>
               <div className="flex flex-1 flex-col overflow-hidden rounded-xl border border-border">
                 <img src={photo} alt="" loading="lazy" className="aspect-[16/10] w-full object-cover sm:aspect-square" style={{ objectPosition: focus }} />
-                <div className="flex-1 p-5 pb-2">
+                {/* The badge sits between the photo and the copy and is the card's way to sign up; the section has one Sign up free button below. */}
+                <button type="button" onClick={goSignup} aria-label={`Sign up free: ${title}`}
+                  className="mx-auto mt-4 rounded-full transition hover:-translate-y-1 hover:scale-105 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring [&>svg]:h-[5.5rem] [&>svg]:w-[5.5rem]">
+                  <Badge />
+                </button>
+                <div className="flex-1 p-5 pt-2 text-center">
                   <p className="text-lg font-bold">{question}</p>
                   <p className="mt-1 text-sm text-muted-foreground">{text}</p>
                 </div>
-                {/* The badge is the card's way to sign up; the section has one Sign up free button below. */}
-                <button type="button" onClick={goSignup} aria-label={`Sign up free: ${title}`}
-                  className="mx-auto mb-4 rounded-full transition hover:-translate-y-1 hover:scale-105 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring [&>svg]:h-24 [&>svg]:w-24">
-                  <Badge />
-                </button>
               </div>
             </div>
           ))}

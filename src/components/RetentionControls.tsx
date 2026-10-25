@@ -115,7 +115,7 @@ export function RetentionControls({ tier, ...account }: Account & { tier: Tier }
     if (!renews || !price) return;
     if (!(await confirmAction({ tone: "primary", action: `Pay ${price} and renew`, cancel: "Not now",
       title: `Renew ${TIER_LABEL[tier]} now?`,
-      text: `You'll pay ${price} today (plus tax where it applies) for your next year. You keep the time you have left, so your plan runs until ${longDate(earlyRenewalTarget(renews))}, with nothing charged on ${longDate(renews)}. Early renewals aren't refundable.` }))) return;
+      text: `You'll pay ${price} today (plus tax where it applies) for your next year. You keep the time you have left, so your plan runs until ${longDate(earlyRenewalTarget(renews))}, with nothing charged on ${longDate(renews)}. Refundable within 30 days of today.` }))) return;
     try { await openCheckout({ kind: "renew" }); }
     catch (e) { toast.error(e instanceof Error ? e.message : "Checkout could not open. Contact support and we'll help right away."); }
   }
