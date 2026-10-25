@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import { AlertTriangle, ChevronRight, Hourglass, Stethoscope } from "lucide-react";
+import { AlertTriangle, ChevronRight, Hourglass, Stethoscope, Trash2 } from "lucide-react";
+import { confirmAction } from "@/components/ConfirmHost";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { listTracks, type CatalogTrack } from "@/lib/catalog";
@@ -390,7 +391,21 @@ export function RoyaltyHealthCheck({ userId, canCatalog, canExport, onUpgrade, o
 
   const checklist = <HealthChecklist rows={report.rows} country={country} statuses={statuses} onStatus={(x) => void updateStatus(x)} actions={actions} bare={report.rows.length > 0}
     runningId={running?.trackId} canCatalog={canCatalog} onUpgrade={onUpgrade} onEditInspector={(id) => fixField(id, "")} onDeleteInspector={(id) => void removeInspector(id)} focusRequest={focusRequest} onCheck={checkSong} />;
-  const inspector = <div id="quick-check" className="scroll-mt-4"><RoyaltyInspector onEmbed={onEmbed} onExpert={book} onSave={saveInspector} onRunCheck={(id) => checkSong(id)} editing={editing} onDoneEditing={() => setEditing(undefined)} /></div>;
+  const inspector = <div id="quick-check" className="scroll-mt-4 space-y-4">
+    {/* Songs checked here, in one clear list (founder: they felt hidden): open, check or remove each. */}
+    {inspectorSongs.length > 0 && <div className="rounded-2xl border border-border p-4">
+      <div className="mb-2 text-sm font-bold uppercase tracking-widest text-primary">Songs you've inspected · {inspectorSongs.length}</div>
+      <ul className="divide-y divide-border">{[...inspectorSongs].sort((a, b) => a.title.localeCompare(b.title)).map((t) => (
+        <li key={t.id} className="flex flex-wrap items-center gap-2 py-2 text-sm">
+          <span className="min-w-0 flex-1 truncate font-semibold">{t.title || "Untitled"}<span className="font-normal text-muted-foreground">{t.artist ? ` · ${t.artist}` : ""}</span></span>
+          <Button size="sm" variant="ghost" onClick={() => setEditing(t)}>Edit</Button>
+          <Button size="sm" variant="outline" onClick={() => checkSong(t.id)}><Stethoscope />Check</Button>
+          <Button size="icon" variant="ghost" aria-label={`Remove ${t.title}`} onClick={() => void confirmAction({ title: `Remove "${t.title || "Untitled"}"?`, text: "It's removed from the Royalty Inspector and your Song Health Checklist. Saved reports stay in My reports.", action: "Remove" }).then((ok) => { if (ok) void removeInspector(t.id); })}><Trash2 /></Button>
+        </li>
+      ))}</ul>
+    </div>}
+    <RoyaltyInspector onEmbed={onEmbed} onExpert={book} onSave={saveInspector} onRunCheck={(id) => checkSong(id)} editing={editing} onDoneEditing={() => setEditing(undefined)} />
+  </div>;
   const why = (
     <div className="space-y-4">
       <div className="grid gap-4 md:grid-cols-2">
@@ -487,7 +502,7 @@ export function RoyaltyHealthCheck({ userId, canCatalog, canExport, onUpgrade, o
           summary={Object.values(listSummaries).some(Boolean) ? Object.entries(listSummaries).filter(([, v]) => v).map(([id, v]) => `${listSocieties.find((x) => x.id === id)?.name}: ${v!.matched} matched${v!.differences ? `, ⚠️ ${v!.differences} different` : ""}`).join(" · ") : "Upload what each agency has on file · turns estimates into confirmed matches"}>
           <AgencyLists societies={listSocieties} songsFor={songsFor} summaries={listSummaries} onApply={applyList} />
         </Section>
-        <Section title="Check a song that isn't in your catalog" open={inspectorOpen} onToggle={setInspectorOpen} summary={`Royalty Inspector · type in any song to run its Royalty Health Check · ${songsLabel(inspectorSongs.length)} checked`}>{inspector}</Section>
+        <Section title="Royalty Inspector" open={inspectorOpen} onToggle={setInspectorOpen} summary={`Check a song that isn't in your catalog · ${songsLabel(inspectorSongs.length)} inspected`}>{inspector}</Section>
         <Section title="Why this matters" summary="Your distributor only collects part of your money · unclaimed royalties don't wait forever · common mismatches">{why}</Section>
       </div>
     </div>

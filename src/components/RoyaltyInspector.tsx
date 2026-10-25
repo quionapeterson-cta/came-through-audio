@@ -73,17 +73,24 @@ export function RoyaltyInspector({ onEmbed, onExpert, onSave, onRunCheck, editin
 
   return (
     <div className="rounded-2xl border border-border bg-card p-6">
-      <div className="flex items-center gap-2"><Search className="h-6 w-6 text-primary" /><h3 className="text-xl font-bold">{editing ? `Edit "${editing.title}"` : "Royalty Inspector"}</h3></div>
+      <div className="flex items-center gap-2"><Search className="h-6 w-6 text-primary" /><h3 className="text-xl font-bold">{editing ? `Edit "${editing.title}"` : "Inspect a song"}</h3></div>
       <p className="mt-1 text-sm text-muted-foreground">Check any song in seconds, free and unlimited. Type in its details, then run a Royalty Health Check for its full report, or save it to your checklist to track every step to 100% health.</p>
-      <div className="mt-4 grid gap-3 md:grid-cols-3">
+      <div className="mt-4 grid gap-3 md:grid-cols-3 lg:grid-cols-5">
         {field("title", "Song title")}{field("artist", "Artist")}{field("duration", "Duration", "3:25")}
         {field("isrc", "ISRC", "US-XXX-26-00001", "isrc")}
         {field("iswc", "ISWC (optional)", "T-123.456.789-0", "iswc")}
-        {field("writer", "Writer legal name", "", "legalName")}
-        <label className="space-y-1 text-sm"><span className="inline-flex items-center">Writer role<InfoTip term="roles" /></span>
+      </div>
+      {/* One writer's details on one line: legal name, role, PRO, IPI and split together. */}
+      <div className="mt-4 text-xs font-bold uppercase tracking-widest text-primary">Writer</div>
+      <div className="mt-2 grid gap-3 md:grid-cols-3 lg:grid-cols-5">
+        {field("writer", "Legal name", "", "legalName")}
+        <label className="space-y-1 text-sm"><span className="inline-flex items-center">Role<InfoTip term="roles" /></span>
           <select value={f.role} onChange={set("role")} className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm">{WRITER_ROLES.map((r) => <option key={r} value={r}>{r}</option>)}</select></label>
-        <div className="space-y-1 text-sm"><label htmlFor="inspector-pro" className="inline-flex items-center">Writer PRO<InfoTip term="pro" /></label><ProSelect id="inspector-pro" value={f.pro} onChange={(pro) => { setF({ ...f, pro }); setSaved(false); }} /></div>
-        {field("ipi", "Writer IPI #", "", "ipi")}{field("split", "Writer split %", "", "split")}
+        <div className="space-y-1 text-sm"><label htmlFor="inspector-pro" className="inline-flex items-center">PRO<InfoTip term="pro" /></label><ProSelect id="inspector-pro" value={f.pro} onChange={(pro) => { setF({ ...f, pro }); setSaved(false); }} /></div>
+        {field("ipi", "IPI #", "", "ipi")}{field("split", "Split %", "", "split")}
+      </div>
+      <div className="mt-4 text-xs font-bold uppercase tracking-widest text-primary">Publisher</div>
+      <div className="mt-2 grid gap-3 md:grid-cols-3 lg:grid-cols-5">
         {field("publisher", "Publisher", "", "publisher")}{field("pubIpi", "Publisher IPI #", "", "ipi")}
       </div>
       <div className="mt-4 flex flex-wrap gap-2">
