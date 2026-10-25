@@ -155,14 +155,15 @@ export function ArtistOnboarding({ userId, open, onOpenChange, onSaved, firstRun
           <div className="space-y-4 text-center">
             <img src={FIRST_BADGE} alt="Your first badge" className="mx-auto h-28 w-28" />
             <DialogHeader><DialogTitle className="text-center text-2xl">Hi {ob.stageName || "there"}!</DialogTitle></DialogHeader>
+            {/* Founder welcome message, approved rewrite 2026-10-25. Don't edit without the founder's permission. */}
             <div className="max-h-[45vh] space-y-4 overflow-y-auto text-left">
-              <p className="text-muted-foreground">At CTA we celebrate your wins! Handling your music business isn’t an easy feat so enjoy unlocking badges as you complete embeds, log catalog entries,protect your creations and properly register your music!</p>
-              <p className="text-muted-foreground">I built this platform from the ground up and worked tediously (and tirelessly) to solve the mass problem we face as independent artists: organizing the pre distribution/after the studio process and demystifying music business into clear, tangible steps.Not to mention protecting our original creations that come from the heart and mind from Ai accusations. From Metadata embedding and Legal Blockchain Anchored Proof of creation as AI protection to song registrations, here’s what “They” don’t tell you; but matters the most, all in one place!</p>
-              <p className="font-semibold">Here’s your first badge! A celebration of believing in yourself &amp; your artistry!</p>
-              <p className="text-muted-foreground">This one is for the independent artist community, and is well over due! Quit Playing with Us’!</p>
-              <p className="text-sm text-muted-foreground">Cheers,</p>
-              <p className="text-sm font-semibold text-foreground">We’re on your Team!</p>
-              <p className="text-sm text-muted-foreground">Karma Came,<br /><span className="italic">“Don’t you evah! Let em’ knock you out cho’ Crown”. “Nah, nevah dat”.</span><br />Founder<br />Came Through Audio<br />Independent Record Label</p>
+              <p className="text-muted-foreground">At Came Through Audio we celebrate your wins. Running your music business isn’t easy, so you’ll unlock badges as you embed, catalog, protect and register your music.</p>
+              <p className="text-muted-foreground">I built this from the ground up, and worked tirelessly to solve the problem every independent artist faces: what to do after the studio and before distribution. From metadata embedding and Blockchain Anchored Proof of creation (your AI protection) to song registrations, here’s what “they” don’t tell you, all in one place.</p>
+              <p className="font-semibold">Here’s your first badge: a celebration of believing in yourself and your artistry.</p>
+              <p className="text-muted-foreground">Next: two minutes to set up your profile. Everything you fill in carries over to every song, so the more you add now, the faster every embed gets.</p>
+              <p className="text-muted-foreground">This one is for the independent artist community, and it’s long overdue. Quit playing with us!</p>
+              <p className="text-sm text-muted-foreground">We’re on your team,<br /><span className="font-semibold text-foreground">Karma Came</span>, Founder, Came Through Audio<br /><span className="italic">“Don’t you evah let ’em knock you out cho’ crown.”</span></p>
+              <p className="text-xs font-bold uppercase tracking-[2px] text-foreground">YOUR FIRST STOP BEFORE DISTRIBUTION</p>
             </div>
             <p className="text-lg font-bold text-primary">Let’s goooo!</p>
             <Button className="w-full" onClick={() => { setOb((o) => ({ ...o, welcomed: true })); setStep(1); }}>Claim my badge &amp; set up my profile<ArrowRight /></Button>
