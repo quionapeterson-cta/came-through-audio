@@ -38,7 +38,7 @@ const errText = (e: unknown, fallback: string) => (e instanceof Error ? e.messag
 
 type FixFn = (trackId: string, field: string) => void;
 
-export function ExpertAssistance({ purchases, justPaid, onFix, onCatalog }: { userId: string; purchases: Purchase[]; justPaid?: boolean; onFix?: FixFn; onCatalog?: () => void }) {
+export function ExpertAssistance({ purchases, justPaid, onFix, onCatalog, onAddSong }: { userId: string; purchases: Purchase[]; justPaid?: boolean; onFix?: FixFn; onCatalog?: () => void; onAddSong?: (title: string, artist?: string) => void }) {
   const [tracks, setTracks] = useState<CatalogTrack[]>([]);
   useEffect(() => { listTracks().then(setTracks).catch(() => {}); }, []);
   const orders = useMemo(() => purchases.filter((p) => p.kind === "expert"), [purchases]);
@@ -66,7 +66,7 @@ export function ExpertAssistance({ purchases, justPaid, onFix, onCatalog }: { us
       <div className="mt-6">
         {!current || ordering
           ? <OrderForm tracks={tracks} onCancel={current ? () => setOrdering(false) : undefined} />
-          : <Checklist key={current.id} purchase={current} tracks={tracks} justPaid={!!justPaid} onFix={onFix} onCatalog={onCatalog} />}
+          : <Checklist key={current.id} purchase={current} tracks={tracks} justPaid={!!justPaid} onFix={onFix} onCatalog={onCatalog} onAddSong={onAddSong} />}
       </div>
     </div>
   );
@@ -159,7 +159,7 @@ function OrderForm({ tracks, onCancel }: { tracks: CatalogTrack[]; onCancel?: ((
 
 // ── Intake checklist (§3) ────────────────────────────────────────────────────
 
-function Checklist({ purchase, tracks, justPaid, onFix, onCatalog }: { purchase: Purchase; tracks: CatalogTrack[]; justPaid: boolean; onFix?: FixFn | undefined; onCatalog?: (() => void) | undefined }) {
+function Checklist({ purchase, tracks, justPaid, onFix, onCatalog, onAddSong }: { purchase: Purchase; tracks: CatalogTrack[]; justPaid: boolean; onFix?: FixFn | undefined; onCatalog?: (() => void) | undefined; onAddSong?: ((title: string, artist?: string) => void) | undefined }) {
   const [order, setOrder] = useState<RegistrationOrder | null>();
   const [songs, setSongs] = useState<RegistrationSong[]>([]);
   const [busy, setBusy] = useState(false);
@@ -216,7 +216,11 @@ function Checklist({ purchase, tracks, justPaid, onFix, onCatalog }: { purchase:
               <div className="font-semibold">{title}</div>
               {!m ? (
                 <div className="mt-1 space-y-2">
-                  <button type="button" className="text-left text-primary underline-offset-2 hover:underline" onClick={() => { onCatalog?.(); toast.info(`Add "${title}" in My Catalog, then come back and pick it here.`); }}>⚠️ Add this song to My Catalog →</button>
+                  <button type="button" className="text-left text-primary underline-offset-2 hover:underline" onClick={() => {
+                    // Opens Add song with the title they typed at checkout; once saved, they pick it here.
+                    if (onAddSong && s.pending_title) onAddSong(s.pending_title, s.pending_artist ?? undefined); else onCatalog?.();
+                    toast.info(`Finish "${title}" in My Catalog and save it, then come back and pick it here.`);
+                  }}>⚠️ Add this song to My Catalog →</button>
                   <SongPicker label="Already added? Pick it" tracks={free} disabled={busy} onPick={(id) => link(s.id, id)} />
                 </div>
               ) : (

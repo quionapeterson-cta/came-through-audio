@@ -278,6 +278,7 @@ function Guides() {
                       )}
                       <div className="mt-auto pt-4">
                         <Button size="sm" variant="ghost" onClick={() => { if (!expanded) logBadgeEvent("blueprint_read"); setOpenId(expanded ? undefined : g.id); }}>{expanded ? "Close" : "Read it"}</Button>
+                        <Button size="sm" variant="ghost" onClick={() => void import("@/lib/guide-pdf").then((m) => m.downloadGuidePdf(g)).catch(() => toast.error("Couldn't make the PDF. Try again."))}><Download />PDF</Button>
                       </div>
                     </article>
                   );

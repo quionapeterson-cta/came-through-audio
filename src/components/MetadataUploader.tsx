@@ -35,7 +35,10 @@ import type { ShareInfo } from "@/components/BadgeCelebration";
 const normArtist = (v: string) => v.trim().replace(/\s+/g, " ").toLowerCase();
 import { Link } from "@tanstack/react-router";
 
-export function MetadataUploader({ onShareInfo, userId, mode = "embed", readOnly, onSubmitted, onSplitSheet, onProtect, canSplit, canExport, focus, onFocused, onHealthCheck }: { onHealthCheck?: (trackId?: string, release?: boolean) => void; readOnly?: boolean; onShareInfo?: (s: Partial<ShareInfo> & Pick<ShareInfo, "ctx">) => void; onFocused?: () => void; userId?: string; mode?: "embed" | "catalog"; focus?: { trackId: string; field: string } | undefined; onSubmitted?: () => void; onSplitSheet?: (t: CatalogTrack) => void; onProtect?: (t: CatalogTrack) => void; canSplit?: boolean; canExport?: boolean }) {
+/** What another tab asks My Catalog to open: a field on a saved song, or a new song with its title typed in. */
+export type CatalogFocus = { trackId: string; field: string } | { newTitle: string; artist?: string | undefined; nonce: number };
+
+export function MetadataUploader({ onShareInfo, userId, mode = "embed", readOnly, onSubmitted, onSplitSheet, onProtect, canSplit, canExport, focus, onFocused, onHealthCheck }: { onHealthCheck?: (trackId?: string, release?: boolean) => void; readOnly?: boolean; onShareInfo?: (s: Partial<ShareInfo> & Pick<ShareInfo, "ctx">) => void; onFocused?: () => void; userId?: string; mode?: "embed" | "catalog"; focus?: CatalogFocus | undefined; onSubmitted?: () => void; onSplitSheet?: (t: CatalogTrack) => void; onProtect?: (t: CatalogTrack) => void; canSplit?: boolean; canExport?: boolean }) {
   const full = mode === "catalog";
   // One artist per account: the artist name from setup. A different name gets a gentle add-an-artist note.
   const registeredArtist = loadOnboarding(userId)?.stageName?.trim() ?? "";
@@ -127,6 +130,14 @@ export function MetadataUploader({ onShareInfo, userId, mode = "embed", readOnly
   const pctOf = (id: string) => health?.songs.find((x) => x.track.id === id)?.pct ?? 0;
   // A ⚠️ link elsewhere (e.g. Expert Assistance) asked to fix a field on one of these songs.
   useEffect(() => {
+    // A song bought for registration before it was cataloged: open Add song with what they typed.
+    if (focus && "newTitle" in focus) {
+      if (readOnly) return;
+      addSong(false);
+      setMetadata((m) => ({ ...m, title: focus.newTitle, artist: focus.artist || m.artist }));
+      onFocused?.();
+      return;
+    }
     const t = focus && tracks.find((x) => x.id === focus.trackId);
     if (!t) return;
     fix(t, focus.field);
