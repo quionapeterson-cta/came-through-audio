@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { CopyrightInput } from "@/components/CopyrightInput";
 import { ArrowLeft, ArrowRight, Camera, Lock, Plus, Save, Trash2, UserRound } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -210,8 +211,9 @@ export function ArtistOnboarding({ userId, open, onOpenChange, onSaved, firstRun
               <label className="flex items-center gap-2 text-sm sm:col-span-2"><input type="checkbox" className="h-4 w-4 accent-[var(--primary)]" checked={!!p.explicit} onChange={(e) => set("explicit", e.target.checked)} />My songs are usually Explicit (you can change this per song)<InfoTip term="explicit" /></label>
             </Group>
             <Group title="Copyright Lines">
-              <Field label="Composition Copyright (©)" term="cLine"><Input value={p.copyright ?? ""} onChange={(e) => set("copyright", e.target.value)} placeholder={`© ${year} Publisher or rights holder`} /></Field>
-              <Field label="Sound Recording Copyright (℗)" term="pLine"><Input value={p.phonographic ?? ""} onChange={(e) => set("phonographic", e.target.value)} placeholder={`℗ ${year} Label or rights holder`} /></Field>
+              <Field label="Composition Copyright (©)" term="cLine"><CopyrightInput symbol="©" value={p.copyright ?? ""} onChange={(v) => set("copyright", v)} /></Field>
+              <Field label="Sound Recording Copyright (℗)" term="pLine"><CopyrightInput symbol="℗" value={p.phonographic ?? ""} onChange={(v) => set("phonographic", v)} /></Field>
+              <p className="text-xs text-muted-foreground sm:col-span-2">Type the year, then the owner's name (you, your publishing company or your label), e.g. "{year} Came Through Audio".</p>
             </Group>
             <PrivacyNote />
             <Nav onBack={() => setStep(1)} onNext={() => setStep(3)} nextLabel={firstRun ? "Continue" : "Change and Continue"} onSave={firstRun ? undefined : finish} />

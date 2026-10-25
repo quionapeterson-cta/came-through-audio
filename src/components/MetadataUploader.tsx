@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { InfoTip } from "@/components/InfoTip";
+import { CopyrightInput } from "@/components/CopyrightInput";
 import { EXPORT_REQUIRED, GLOSSARY, type GlossaryKey } from "@/lib/glossary";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { PRE_DIST_NOTE, PRO_TIP } from "@/lib/copy";
@@ -433,10 +434,10 @@ export function MetadataUploader({ onShareInfo, userId, mode = "embed", readOnly
                   <Field label="Release date" id="releaseDate" type="date" value={metadata.releaseDate} onChange={(value) => update("releaseDate", value)} />
                 </>}
                 <Field label="Record label" term="label" id="label" value={metadata.label} onChange={(value) => update("label", value)} />
-                <Field label="Composition copyright (©)" term="cLine" id="copyright" value={metadata.copyright} onChange={(value) => update("copyright", value)} />
+                <div className="min-w-0 space-y-2"><Label htmlFor="copyright" className="leading-5">Composition copyright (©)<InfoTip term="cLine" /></Label><CopyrightInput symbol="©" id="copyright" value={metadata.copyright} onChange={(value) => update("copyright", value)} /></div>
                 {/* ℗ and language are catalog details; they aren't embedded in the MP3. */}
                 {full && <>
-                  <Field label="Sound recording copyright (℗)" term="pLine" id="phonographic" value={metadata.phonographic} onChange={(value) => update("phonographic", value)} />
+                  <div className="min-w-0 space-y-2"><Label htmlFor="phonographic" className="leading-5">Sound recording copyright (℗)<InfoTip term="pLine" /></Label><CopyrightInput symbol="℗" id="phonographic" value={metadata.phonographic} onChange={(value) => update("phonographic", value)} /></div>
                   <Field label="Language" id="language" value={metadata.language} onChange={(value) => update("language", value)} />
                 </>}
               </div>
