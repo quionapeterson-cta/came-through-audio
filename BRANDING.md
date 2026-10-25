@@ -61,6 +61,8 @@ Apply these rules across the website, emails and PDFs.
 - Keep controls in natural workflow order: complete inputs first, then confirmations, saving and final actions.
 - Keep later actions unavailable until their prerequisites are complete.
 - Never show a delete button that can't delete: a required field or the last row of a list has no delete button.
+- Every pop-up and message box is only as big as its message: no oversized boxes around short messages.
+- Lists of contracts, songs and records are alphabetical by default, with filters (type or name, date, signer, email) to find things fast.
 - List specific filter categories first; "All" always comes last, to keep the interface organized and decluttered.
 
 ## 4. Naming and writing
@@ -116,6 +118,7 @@ Apply these rules across the website, emails and PDFs.
 - Marketing emails require a working unsubscribe link and honest subject lines.
 - Never include "Or paste this link" raw-link fallback wording.
 - All outgoing emails use the same shared branded email layout (`emailLayout()` in `src/lib/email-layout.ts`).
+- The email header (logo, name and tagline) always links to the Came Through Audio homepage.
 
 ## 8. Awards direction (deferred, not a finished specification)
 

@@ -1,6 +1,6 @@
 /**
  * Shared Came Through Audio email shell. Every outgoing email MUST use this so it carries
- * the brand header (dark logo on the white email background) and the compliant legal footer.
+ * the brand header (dark logo on the white email background, linking to the homepage) and the compliant legal footer.
  */
 export const SITE_URL = "https://pixel-perfect-studio-382.lovable.app";
 export const BUSINESS_NAME = "Came Through Audio, LLC";
@@ -41,9 +41,11 @@ export function emailLayout(bodyHtml: string, opts: EmailLayoutOptions): string 
   return `<!doctype html><html><body style="margin:0;background:#ffffff;font-family:Poppins,Arial,sans-serif;color:#0b0b0b">
 <div style="max-width:560px;margin:0 auto;padding:32px 24px">
 <div style="text-align:center;padding-bottom:20px;border-bottom:2px solid #004AAD;margin-bottom:24px">
+<a href="${SITE_URL}/" style="text-decoration:none;color:#0b0b0b;display:block">
 <img src="${SITE_URL}/email-logo-dark.png" alt="Came Through Audio logo" width="120" style="display:block;margin:0 auto 10px;height:auto;border:0" />
 <div style="font-size:20px;font-weight:700;color:#0b0b0b">Came Through <span style="color:#004AAD">Audio</span></div>
 <div style="font-size:11px;font-weight:700;letter-spacing:2px;color:#004AAD;margin-top:4px">${TAGLINE}</div>
+</a>
 </div>
 ${bodyHtml}
 <div style="margin-top:32px;padding-top:16px;border-top:1px solid #e5e5e5;font-size:12px;line-height:1.6;color:#666">

@@ -134,7 +134,8 @@ function Mark({ feature, tier }: { feature: Feature; tier: Tier }) {
  * remembers the pick and leads to signup; the workspace then opens that plan's checkout right after.
  */
 export function planAction(p: PlanTier, o: { tier?: Tier | undefined; onBuy: (priceId: string) => void; onSignup: () => void }): PlanAction {
-  if (!o.tier) return { label: p.priceId ? "Sign up to start" : "Sign up free", onClick: () => { rememberPlanIntent(p.priceId); o.onSignup(); } };
+  // Paid tiers: create the account, then that tier's checkout opens (it needs the account to credit the payment).
+  if (!o.tier) return { label: p.priceId ? "Sign up now" : "Sign up free", onClick: () => { rememberPlanIntent(p.priceId); o.onSignup(); } };
   if (o.tier === p.tier) return { label: "Current plan", disabled: true };
   if (hasTier(o.tier, p.tier) || !p.priceId) return { label: "Included", disabled: true };
   const priceId = p.priceId;

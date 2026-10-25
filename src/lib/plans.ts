@@ -30,7 +30,14 @@ export function hasTier(current: Tier, needed: Tier) {
 const PLAN_INTENT_KEY = "cta.planIntent";
 export function rememberPlanIntent(priceId: string | undefined) {
   try { if (priceId) localStorage.setItem(PLAN_INTENT_KEY, priceId); else localStorage.removeItem(PLAN_INTENT_KEY); } catch { /* storage blocked */ }
+  // The sign-up form on the same page shows which plan they're signing up for.
+  if (typeof window !== "undefined") window.dispatchEvent(new Event(PLAN_INTENT_KEY));
 }
+/** The plan picked before signing up, without clearing it (the sign-up form shows it). */
+export function peekPlanIntent(): string | null {
+  try { const v = localStorage.getItem(PLAN_INTENT_KEY); return v && PRICE_TIER[v] ? v : null; } catch { return null; }
+}
+export const PLAN_INTENT_EVENT = PLAN_INTENT_KEY;
 export function takePlanIntent(): string | null {
   try {
     const v = localStorage.getItem(PLAN_INTENT_KEY);

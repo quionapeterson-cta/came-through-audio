@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { passwordValid, rememberReturn } from "@/lib/password";
 import { PasswordField } from "@/components/PasswordField";
+import { PLAN_INTENT_EVENT, PLAN_TIERS, PRICE_TIER, TIER_LABEL, peekPlanIntent, rememberPlanIntent } from "@/lib/plans";
 
 export function SignupCard({ returnPath, onAuthed, inviteMode }: { returnPath?: string; onAuthed?: () => void; inviteMode?: boolean } = {}) {
   const navigate = useNavigate();
@@ -19,6 +20,15 @@ export function SignupCard({ returnPath, onAuthed, inviteMode }: { returnPath?: 
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
   const [sent, setSent] = useState(false);
+  // A paid tier picked on the plan cards: this is that tier's sign-up, and its checkout opens right after.
+  const [intent, setIntent] = useState<string | null>(null);
+  useEffect(() => {
+    const read = () => setIntent(inviteMode ? null : peekPlanIntent());
+    read();
+    window.addEventListener(PLAN_INTENT_EVENT, read);
+    return () => window.removeEventListener(PLAN_INTENT_EVENT, read);
+  }, [inviteMode]);
+  const paid = intent ? PLAN_TIERS.find((t) => t.priceId === intent) : undefined;
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -73,7 +83,9 @@ export function SignupCard({ returnPath, onAuthed, inviteMode }: { returnPath?: 
         <>
           <h2 className="text-2xl font-bold leading-tight">
             {mode === "signup" ? (
-              <>Musicians, sign up free.<span className="mt-1 block text-lg font-normal text-primary">Includes Free Unlimited Royalty Health Checks.</span></>
+              paid
+                ? <>Sign up for {TIER_LABEL[PRICE_TIER[intent!]!]}<span className="mt-1 block text-lg font-normal text-primary">{paid.price} / year. Create your account and checkout opens next.</span></>
+                : <>Musicians, sign up free.<span className="mt-1 block text-lg font-normal text-primary">Includes Free Unlimited Royalty Health Checks.</span></>
             ) : mode === "forgot" ? (
               <>Reset your password<span className="mt-1 block text-base font-normal text-muted-foreground">Enter your account email and we'll send you a reset link.</span></>
             ) : (
@@ -109,8 +121,9 @@ export function SignupCard({ returnPath, onAuthed, inviteMode }: { returnPath?: 
               </div>
             )}
             <Button type="submit" disabled={busy} className="h-12 w-full text-base font-semibold">
-              {busy ? "Please wait…" : mode === "signup" ? "Create my free account" : mode === "forgot" ? "Send reset link" : "Log in"}
+              {busy ? "Please wait…" : mode === "signup" ? (paid ? "Sign up now" : "Create my free account") : mode === "forgot" ? "Send reset link" : "Log in"}
             </Button>
+            {mode === "signup" && paid && <button type="button" className="w-full text-center text-sm font-semibold text-primary" onClick={() => rememberPlanIntent(undefined)}>Rather start free? Sign up free instead</button>}
           </form>
           <p className="mt-4 text-center text-sm text-muted-foreground">
             {mode === "signup" ? "Already have an account?" : mode === "forgot" ? "Remembered it?" : "New here?"}{" "}
