@@ -1000,7 +1000,9 @@ function Contributors({ title, singular, group, rows, onChange, disabled, publis
   };
   const totals = !simple && (publisher || legal) ? splitStatus(rows) : undefined;
   const names = (row: Contributor, index: number) => <Field label="Legal name" id={`${group}-${index}-legalName`} value={row.legalName ?? ""} term="legalName" onChange={(value) => change(index, "legalName", value)} />;
-  const removeButton = (index: number) => <Button type="button" size="icon" variant="ghost" aria-label={`Remove ${singular} ${index + 1}`} disabled={rows.length === 1} onClick={() => onChange(rows.filter((_, i) => i !== index))}><Trash2 /></Button>;
+  // The last row can't be removed, so it shows no delete button (an empty space keeps the columns lined up).
+  const removeButton = (index: number) => rows.length === 1 ? <span aria-hidden className="h-9 w-9 shrink-0" />
+    : <Button type="button" size="icon" variant="ghost" aria-label={`Remove ${singular} ${index + 1}`} onClick={() => onChange(rows.filter((_, i) => i !== index))}><Trash2 /></Button>;
   const share = (row: Contributor, index: number) => <div className="space-y-2"><Label htmlFor={`${group}-${index}-share`}>{publisher ? "Share (%)" : "Split (%)"}<InfoTip term={publisher ? "publisher" : "split"} /></Label><Input id={`${group}-${index}-share`} type="number" min="0" max="100" step="0.01" value={row.percentage} onChange={(event) => changeShare(index, event.target.value)} />{capped?.index === index && <p className="text-xs text-muted-foreground">Capped at {capped.at}%, the share that's left.</p>}</div>;
   const ipi = (row: Contributor, index: number) => <Field label="IPI name number" term="ipi" id={`${group}-${index}-ipi`} value={row.ipi} placeholder="9–11 digits" onChange={(value) => change(index, "ipi", value)} />;
   const hfa = (row: Contributor, index: number) => <Field label="HFA P#" term="hfa" id={`${group}-${index}-hfa`} value={row.hfa ?? ""} placeholder="P12345" onChange={(value) => change(index, "hfa", value.toUpperCase())} />;

@@ -381,7 +381,7 @@ export function AIProtectionHub({ userId, purchases, justPaid, track }: { userId
                         <option value="both">Author/Composer</option>
                         <option value="producer">Producer</option>
                       </select>
-                      <Button type="button" variant="ghost" size="icon" aria-label="Remove writer" disabled={writerRows.length === 1} onClick={() => setWriterRows(writerRows.filter((_, j) => j !== i))}><Trash2 className="h-4 w-4" /></Button>
+                      {writerRows.length > 1 ? <Button type="button" variant="ghost" size="icon" aria-label="Remove writer" onClick={() => setWriterRows(writerRows.filter((_, j) => j !== i))}><Trash2 className="h-4 w-4" /></Button> : <span aria-hidden className="h-9 w-9 shrink-0" />}
                     </div>
                   ))}
                   <Button type="button" variant="outline" size="sm" onClick={() => setWriterRows([...writerRows, { name: "", role: "both" }])}><Plus className="h-4 w-4" />Add writer</Button>
