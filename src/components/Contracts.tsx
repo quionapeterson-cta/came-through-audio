@@ -17,6 +17,7 @@ import { InfoTip } from "@/components/InfoTip";
 import { listTracks, type CatalogTrack } from "@/lib/catalog";
 import { BLUEPRINTS, CATEGORIES, COMPANY_BLUEPRINTS, CONTRACT_DISCLAIMER, blueprintById, fillBlanks, georgiaLaw, initialFields, missingFields, renderContract, type Blueprint, type BlueprintField } from "@/lib/contract-blueprints";
 import { downloadContractPdf } from "@/lib/contract-pdf";
+import { myBrand } from "@/lib/brand-load";
 import { sendContractInvite } from "@/lib/contracts-email.functions";
 import { companySignLink } from "@/lib/contract-sign.functions";
 import { grantLaunchGift, listLaunchGifts, type LaunchGiftRow } from "@/lib/launch-gift.functions";
@@ -216,7 +217,7 @@ function Blueprints({ unlocked, onUse }: { unlocked: boolean; onUse: (bp: Bluepr
                       )}
                       <div className="mt-auto flex flex-wrap gap-2 pt-4">
                         <Button size="sm" variant="ghost" onClick={() => { if (!expanded) logBadgeEvent("blueprint_read"); setOpenId(expanded ? undefined : bp.id); }}>{expanded ? "Hide guide" : "Read the guide"}</Button>
-                        <Button size="sm" variant="outline" onClick={() => unlocked ? void downloadContractPdf({ title: bp.name, body: renderContract(bp, { ...initialFields(bp), effectiveDate: "" }, []), parties: bp.roles.map((role) => ({ name: "", role, signedAt: null })), status: "draft" }) : onUse(bp)}>
+                        <Button size="sm" variant="outline" onClick={() => unlocked ? void myBrand("contracts").then((brand) => downloadContractPdf({ title: bp.name, body: renderContract(bp, { ...initialFields(bp), effectiveDate: "" }, []), parties: bp.roles.map((role) => ({ name: "", role, signedAt: null })), status: "draft", brand })) : onUse(bp)}>
                           {unlocked ? <Download className="h-4 w-4" /> : <Lock className="h-4 w-4" />}Blank PDF
                         </Button>
                         <Button size="sm" onClick={() => onUse(bp)}>{unlocked ? <PenLine className="h-4 w-4" /> : <Lock className="h-4 w-4" />}Use this contract</Button>
@@ -544,7 +545,8 @@ function ContractEditor({ userId, initial, tracks, blueprint, onClose }: { userI
     finally { setBusy(false); }
   };
 
-  const pdf = () => downloadContractPdf({ title: c.title, body, bodyHash: c.bodyHash, status: c.status,
+  // Company agreements keep the Came Through Audio header; the user's own contracts carry their brand kit (Catalog Management).
+  const pdf = async () => downloadContractPdf({ title: c.title, body, bodyHash: c.bodyHash, status: c.status, brand: c.isCompany ? null : await myBrand("contracts"),
     parties: c.parties.map((p) => ({ name: p.legalName, role: p.role, signedAt: p.signedAt, signatureName: p.signatureName, signatureHash: p.signatureHash })) });
 
   return (

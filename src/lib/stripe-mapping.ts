@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { BRANDING_LOOKUP_KEY } from "@/lib/brand-kit";
 import { assistanceItems, assistanceType, PRICE_TIER } from "@/lib/plans";
 import { PACKAGES, TRACKS_PER_KEY, packageSongs } from "@/lib/proof";
 import { ASSISTANCE_AGENCIES, MAX_NEW_SONGS, newSongKeys } from "@/lib/registration";
@@ -17,6 +18,8 @@ export const checkoutInput = z.discriminatedUnion("kind", [
   }),
   // Pause: the Vault fee, one per month paused, paid up front (PLAN-catalog-emptying §10).
   z.object({ kind: z.literal("vault"), months: z.number().int().min(1).max(3) }),
+  // Personal Branding on split sheets: 12 months, bought once at a time (PLAN-master-notes 3.6).
+  z.object({ kind: z.literal("branding") }),
   // Renew now: next year's plan paid early. The server reads the plan and price from the user's own subscription.
   z.object({ kind: z.literal("renew") }),
   z.object({
@@ -37,7 +40,8 @@ export type CheckoutPlan = {
   items: { lookupKey: string; quantity: number }[];
   /** Copied onto the Stripe session (and subscription) and back into purchases.details by the webhook. */
   metadata: Record<string, string>;
-  returnTab?: "protect" | "health";
+  /** Workspace tab to come back to after paying; "profile" returns to Profile → Brand kit. */
+  returnTab?: "protect" | "health" | "profile";
   /**
    * Sold through Stripe Managed Payments (Link is merchant of record). Only fully automated digital products
    * qualify, so services our team delivers (Expert Assistance) are sold by Came Through Audio, LLC directly.
@@ -53,6 +57,9 @@ export function planCheckout(input: CheckoutInput, userId: string): CheckoutPlan
   }
   if (input.kind === "vault") {
     return { mode: "payment", items: [{ lookupKey: VAULT_LOOKUP_KEY, quantity: input.months }], metadata: { userId, kind: "vault", months: String(input.months) }, managed: true };
+  }
+  if (input.kind === "branding") {
+    return { mode: "payment", items: [{ lookupKey: BRANDING_LOOKUP_KEY, quantity: 1 }], metadata: { userId, kind: "branding" }, returnTab: "profile", managed: true };
   }
   if (input.kind === "ai") {
     // Singles are bought per song (1–3); the other packages are one price for up to their song count.

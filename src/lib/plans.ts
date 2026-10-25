@@ -99,11 +99,12 @@ export const PLAN_FEATURES: Feature[] = [
   { group: "Catalog & metadata", from: "plus", title: "Split Sheet Generator", tip: "Generate split sheets from your catalog songs, sign as the owner and download the PDF. Collecting collaborators' e-signatures starts with Catalog & Collaborate." },
   { group: "Collaboration & registration", from: "collaborate", title: "Collaborator E-Signature Requests", tip: "Email collaborators a secure link to e-sign your split sheets, with instant free account invitations. Download signed split sheets." },
   { group: "Collaboration & registration", from: "collaborate", title: "1-Click Agency Exports", tip: "Export your whole catalog, a release or chosen songs into each agency's own template (The MLC, SoundExchange, ASCAP/BMI) and register in minutes. Save hours of retyping. Includes a Neighbouring Rights Pack listing every performer for international airplay." },
-  { group: "Collaboration & registration", from: "collaborate", title: "Royalty Utility Suite", tip: "BMI/ASCAP Formula Converter & Projected Royalty Earnings Calculator" },
+  { group: "Collaboration & registration", from: "collaborate", title: "Royalty Utility Suite", tip: "Pick a song and the converters turn your catalog splits into the exact numbers ASCAP, BMI and SESAC ask for (each counts shares differently), plus a projected earnings calculator by platform and country." },
   { group: "Catalog & metadata", from: "management", title: "WAV Embedding", tip: "Embed your metadata into WAV masters (same credits, lyrics, artwork and identifiers as MP3) and keep them in My Catalog" },
   { group: "Business & education", from: "management", title: "Custom Music Industry Contracts", tip: "Fill in a contract from a blueprint, adjust the terms, and keep it with your catalog" },
   { group: "Business & education", from: "management", title: "Music Industry Blueprints", tip: "75+ ready-to-sign contracts with plain-language guides, plus step-by-step business blueprints and home recording cheat sheets" },
   { group: "Business & education", from: "management", title: "Contract Signature Requests & Signing", tip: "Send contracts to every party to e-sign; each signature is time-stamped and hashed" },
+  { group: "Business & education", from: "management", title: "Personal Branding", tip: "Brand your contracts: your logo, colors, tagline and font on every contract and split sheet you send. Catalog & Collaborate can add it to split sheets for $14.99/year." },
   { group: "Business & education", from: "management", title: "Signed Contract Vault", tip: "Fully signed contracts are locked and stored, ready to download as a signed PDF" },
   // One on One Coaching (management, soon) is hidden until there's a plan for it (founder, 2026-10-23).
 ];

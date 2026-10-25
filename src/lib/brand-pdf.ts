@@ -1,5 +1,7 @@
 import type { jsPDF as JsPDF } from "jspdf";
 import { LOGO_PATH, LOGO_RATIO, LOGO_VIEWBOX } from "@/lib/brand-logo";
+import { SITE_URL } from "@/lib/email-layout";
+import { fontFile, hexRgb, type BrandFont, type PdfBrand } from "@/lib/brand-kit";
 
 export const COBALT: [number, number, number] = [0, 74, 173];
 export const INK: [number, number, number] = [11, 11, 11];
@@ -31,10 +33,27 @@ function loadPoppins() {
   return fontCache;
 }
 
-export async function newBrandedPdf() {
+/** A Personal Branding header font (medium + bold), fetched once per session; Poppins is used if it can't load. */
+const brandFontCache = new Map<BrandFont, Promise<Record<"medium" | "bold", string> | null>>();
+function loadBrandFont(f: BrandFont) {
+  let p = brandFontCache.get(f);
+  if (!p) {
+    p = Promise.all((["medium", "bold"] as const).map(async (w) => {
+      const res = await fetch(`/fonts/${fontFile(f, w)}.ttf`);
+      if (!res.ok) throw new Error(`font ${f} ${w}`);
+      return [w, toBase64(await res.arrayBuffer())] as const;
+    })).then((pairs) => Object.fromEntries(pairs) as Record<"medium" | "bold", string>).catch(() => { brandFontCache.delete(f); return null; });
+    brandFontCache.set(f, p);
+  }
+  return p;
+}
+const withBrandFont = new WeakSet<JsPDF>();
+
+/** A new letter-size PDF with Poppins, plus the header font of a Personal Branding kit when one is given. */
+export async function newBrandedPdf(brand?: PdfBrand | null) {
   const { jsPDF } = await import("jspdf");
   const pdf = new jsPDF({ unit: "mm", format: "letter" });
-  const fonts = await loadPoppins();
+  const [fonts, extra] = await Promise.all([loadPoppins(), brand && brand.font !== "Poppins" ? loadBrandFont(brand.font) : null]);
   if (fonts) {
     for (const [w, data] of Object.entries(fonts) as [Weight, string][]) {
       pdf.addFileToVFS(`${WEIGHT_FILES[w]}.ttf`, data);
@@ -42,7 +61,20 @@ export async function newBrandedPdf() {
     }
     withPoppins.add(pdf);
   }
+  if (brand && extra) {
+    for (const w of ["medium", "bold"] as const) {
+      pdf.addFileToVFS(`${fontFile(brand.font, w)}.ttf`, extra[w]);
+      pdf.addFont(`${fontFile(brand.font, w)}.ttf`, brand.font, w);
+    }
+    withBrandFont.add(pdf);
+  }
   return pdf;
+}
+
+/** Sets the brand kit's header font (falls back to Poppins). */
+function kitFont(pdf: JsPDF, brand: PdfBrand, weight: "medium" | "bold", size: number) {
+  if (brand.font !== "Poppins" && withBrandFont.has(pdf)) return pdf.setFont(brand.font, weight).setFontSize(size);
+  return font(pdf, weight === "bold" ? "semibold" : "medium", size);
 }
 
 /** Sets the brand font at a weight and size. */
@@ -74,19 +106,25 @@ export function drawLogo(pdf: JsPDF, x: number, y: number, w: number) {
   pdf.setFillColor(...INK).fillEvenOdd();
 }
 
-/** Branded header: vector logo, wordmark, tagline, cobalt rule, then the document title. `meta` sits right-aligned on the subtitle line. Returns next y. */
-export function brandHeader(pdf: JsPDF, title: string, subtitle?: string, meta?: string) {
+/**
+ * Branded header: vector logo, wordmark, tagline, cobalt rule, then the document title. `meta` sits right-aligned on
+ * the subtitle line. With a Personal Branding kit, their logo, name, tagline and colors replace ours. Returns next y.
+ */
+export function brandHeader(pdf: JsPDF, title: string, subtitle?: string, meta?: string, brand?: PdfBrand | null) {
   const w = pdf.internal.pageSize.getWidth();
-  const logoW = 23;
-  // Logo centered on the two text lines (wordmark cap top ≈ 15.6, tagline baseline 23.2).
-  drawLogo(pdf, MARGIN, 19.4 - (logoW * LOGO_RATIO) / 2, logoW);
-  const x = MARGIN + logoW + 5;
-  font(pdf, "semibold", 12).setTextColor(...INK).text("CAME THROUGH", x, 18.6, { charSpace: 0.2 });
-  const cameW = pdf.getTextWidth("CAME THROUGH ") + 0.2 * 12;
-  pdf.setTextColor(...COBALT).text("AUDIO", x + cameW, 18.6, { charSpace: 0.2 });
-  // Tagline: always uppercase with 2px (≈0.53 mm) letter spacing.
-  font(pdf, "medium", 7).setTextColor(...MUTED).text("YOUR FIRST STOP BEFORE DISTRIBUTION", x, 23.2, { charSpace: 0.53 });
-  pdf.setFillColor(...COBALT).rect(MARGIN, 28.5, w - MARGIN * 2, 0.8, "F");
+  if (brand) kitHeader(pdf, brand);
+  else {
+    const logoW = 23;
+    // Logo centered on the two text lines (wordmark cap top ≈ 15.6, tagline baseline 23.2).
+    drawLogo(pdf, MARGIN, 19.4 - (logoW * LOGO_RATIO) / 2, logoW);
+    const x = MARGIN + logoW + 5;
+    font(pdf, "semibold", 12).setTextColor(...INK).text("CAME THROUGH", x, 18.6, { charSpace: 0.2 });
+    const cameW = pdf.getTextWidth("CAME THROUGH ") + 0.2 * 12;
+    pdf.setTextColor(...COBALT).text("AUDIO", x + cameW, 18.6, { charSpace: 0.2 });
+    // Tagline: always uppercase with 2px (≈0.53 mm) letter spacing.
+    font(pdf, "medium", 7).setTextColor(...MUTED).text("YOUR FIRST STOP BEFORE DISTRIBUTION", x, 23.2, { charSpace: 0.53 });
+    pdf.setFillColor(...COBALT).rect(MARGIN, 28.5, w - MARGIN * 2, 0.8, "F");
+  }
 
   font(pdf, "bold", 24).setTextColor(...INK);
   const titleLines = (pdf.splitTextToSize(title, w - MARGIN * 2) as string[]).slice(0, 2);
@@ -101,6 +139,28 @@ export function brandHeader(pdf: JsPDF, title: string, subtitle?: string, meta?:
   return y + 12;
 }
 
+/** Their logo (fit in a 34 × 16 mm box), name in the first color, tagline in the second, and one stripe of every color. */
+function kitHeader(pdf: JsPDF, brand: PdfBrand) {
+  const w = pdf.internal.pageSize.getWidth();
+  let x = MARGIN;
+  if (brand.logo) {
+    try {
+      const p = pdf.getImageProperties(brand.logo.dataUrl);
+      const s = Math.min(34 / p.width, 16 / p.height);
+      const lw = p.width * s, lh = p.height * s;
+      pdf.addImage(brand.logo.dataUrl, p.fileType, MARGIN, 19.4 - lh / 2, lw, lh);
+      x += lw + 5;
+    } catch { /* an unreadable logo leaves the name on its own */ }
+  }
+  const colors = brand.colors.map(hexRgb);
+  const nameY = brand.tagline ? 18.6 : 21;
+  if (brand.name) kitFont(pdf, brand, "bold", 14).setTextColor(...(colors[0] ?? INK)).text(brand.name, x, nameY);
+  if (brand.tagline) kitFont(pdf, brand, "medium", 7.5).setTextColor(...(colors[1] ?? MUTED)).text(brand.tagline, x, 24);
+  const stripe = colors.length ? colors : [INK];
+  const seg = (w - MARGIN * 2) / stripe.length;
+  stripe.forEach((c, i) => pdf.setFillColor(...c).rect(MARGIN + i * seg, 28.5, seg + 0.05, 0.8, "F"));
+}
+
 /** "2026-03-03" → "Mar 3, 2026"; anything else is shown as typed. */
 export function prettyDate(v: string | undefined) {
   const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(v ?? "");
@@ -108,8 +168,13 @@ export function prettyDate(v: string | undefined) {
   return new Date(Date.UTC(+m[1]!, +m[2]! - 1, +m[3]!)).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" });
 }
 
-/** Footer on every page with brand and page numbers. */
-export function brandFooter(pdf: JsPDF) {
+export const GENERATED_ON = "Generated on camethroughaudio.com";
+
+/**
+ * Footer on every page with brand and page numbers. A Personal Branding document names its owner instead, plus the
+ * "Generated on camethroughaudio.com · YOUR FIRST STOP BEFORE DISTRIBUTION" link unless they turned it off.
+ */
+export function brandFooter(pdf: JsPDF, brand?: PdfBrand | null) {
   const pages = pdf.getNumberOfPages();
   const w = pdf.internal.pageSize.getWidth();
   const h = pdf.internal.pageSize.getHeight();
@@ -118,8 +183,15 @@ export function brandFooter(pdf: JsPDF) {
     pdf.setPage(i);
     pdf.setDrawColor(...RULE).setLineWidth(0.3).line(MARGIN, h - 17, w - MARGIN, h - 17);
     font(pdf, "regular", 8.5).setTextColor(...MUTED);
-    pdf.text(`Came Through Audio, LLC  ·  Generated ${generated}`, MARGIN, h - 11);
+    pdf.text(brand ? [brand.name, `Generated ${generated}`].filter(Boolean).join("  ·  ") : `Came Through Audio, LLC  ·  Generated ${generated}`, MARGIN, h - 11);
     pdf.text(`Page ${i} of ${pages}`, w - MARGIN, h - 11, { align: "right" });
+    if (brand?.showFooter) {
+      font(pdf, "regular", 7).setTextColor(...MUTED);
+      pdf.textWithLink(`${GENERATED_ON}  ·  `, MARGIN, h - 6.5, { url: SITE_URL });
+      const at = MARGIN + pdf.getTextWidth(`${GENERATED_ON}  ·  `);
+      font(pdf, "medium", 7).setTextColor(...COBALT);
+      pdf.textWithLink("YOUR FIRST STOP BEFORE DISTRIBUTION", at, h - 6.5, { url: SITE_URL, charSpace: 0.53 } as never);
+    }
   }
 }
 

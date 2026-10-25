@@ -94,7 +94,7 @@ each download (`AGENCY_UPLOAD_STEPS` in glossary.ts, menu names from each agency
 - **Testimonials:** Admin → Homepage editor (Super admin + Marketing) to swap photo, quote, artist name and location, with
   guard rails (photo crop preview, character limits, can't publish an empty card, undo). One font and size for every card.
 - **$24.99 plan band:** ✅ "Unlimited" said once ("Every feature. Unlimited. No per-song fees."), not on every item, matching the plan chart (2026-10-25).
-- **Tier cards (polished copy):** ✅ applied 2026-10-25 for 1-Click Agency Exports and E-Signature Requests. *Royalty Utility Suite* (pick a song, SESAC) and *Catalog Management* (brand your contracts) wait until 3.4 and 3.6 are built, so the cards never promise what isn't there yet.
+- **Tier cards (polished copy):** ✅ applied 2026-10-25 for 1-Click Agency Exports and E-Signature Requests. *Royalty Utility Suite* and *Catalog Management* (Personal Branding) ✅ applied 2026-10-25 now that 3.4 and 3.6 are built.
   - *1-Click Agency Exports:* "Export your whole catalog, a release or chosen songs into each agency's own template and
     register in minutes. Save hours of retyping."
   - *Royalty Utility Suite:* "Pick a song and the converters turn your catalog splits into the exact numbers ASCAP, BMI and
@@ -238,7 +238,7 @@ contract) · 3 Adjust the wording if you need to · 4 Sign · 5 Send for signatu
   and per network each month; I'll add the per-email yearly rule, which also stops a deleted-and-recreated account). After the trial: can view and download what they entered and still sign what they're sent, but can't add songs
   to split sheets or send new requests.
 
-### 3.6 Personal branding add-on (contracts and split sheets)
+### 3.6 Personal branding add-on (contracts and split sheets) · ✅ BUILT 2026-10-25 (Profile → Brand kit: logo, name, tagline, unlimited colors (founder), font from Poppins / Montserrat / Playfair Display / Roboto Slab, footer switch; one-time $14.99 for 12 months, purchases stack (founder chose option 1); server checks the plan before a PDF gets the kit; migration 20261025140000; founder: create Stripe price `branding_yearly` in sandbox + live)
 - Catalog Management: brand kit in Profile (logo, two colors, tagline, font from a short list); their header replaces CTA's on
   contracts they send.
 - Footer: "Generated on camethroughaudio.com · YOUR FIRST STOP BEFORE DISTRIBUTION" (link). Management users and add-on buyers can

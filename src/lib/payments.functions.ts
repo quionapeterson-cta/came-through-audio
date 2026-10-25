@@ -153,6 +153,12 @@ export const createCheckoutSession = createServerFn({ method: "POST" })
     const origin = await appOrigin();
     if (data.kind === "renew") return renewCheckout(stripe, env, context.userId, (context.claims as { email?: string }).email, origin);
     const plan = planCheckout(data, context.userId);
+    if (data.kind === "branding") {
+      // The add-on is for Catalog & Collaborate (Catalog Management already includes Personal Branding).
+      const { data: tier } = await context.supabase.rpc("user_tier" as never, { _uid: context.userId } as never);
+      if ((tier as unknown as string) === "management") throw new Error("Catalog Management already includes Personal Branding.");
+      if ((tier as unknown as string) !== "collaborate") throw new Error("Personal Branding on split sheets is an add-on for Catalog & Collaborate.");
+    }
     if (data.kind === "vault") {
       // Pause is only sold when it can start: around renewal, after a failed renewal or during the grace period.
       const [{ admin, loadState }, { offers }] = await Promise.all([import("@/lib/retention.server"), import("@/lib/retention")]);
@@ -188,7 +194,7 @@ export const createCheckoutSession = createServerFn({ method: "POST" })
 
       const email = (context.claims as { email?: string }).email;
       const customer = await resolveOrCreateCustomer(stripe, { email, userId: context.userId });
-      const back = `${origin}/workspace${plan.returnTab ? `?tab=${plan.returnTab}&` : "?"}checkout=success`;
+      const back = plan.returnTab === "profile" ? `${origin}/profile?checkout=success#brand-kit` : `${origin}/workspace${plan.returnTab ? `?tab=${plan.returnTab}&` : "?"}checkout=success`;
       const metadata = { ...plan.metadata, priceIds: plan.items.map((i) => i.lookupKey).join(",") };
 
       const session = await stripe.checkout.sessions.create({

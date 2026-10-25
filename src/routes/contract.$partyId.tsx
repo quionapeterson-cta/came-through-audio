@@ -9,6 +9,7 @@ import { SignupCard } from "@/components/SignupCard";
 import { Button } from "@/components/ui/button";
 import { COMPANY_LEGAL_NAME, CONTRACT_DISCLAIMER } from "@/lib/contract-blueprints";
 import { downloadContractPdf } from "@/lib/contract-pdf";
+import { contractBrand } from "@/lib/brand-load";
 import { getContractInvite, signContract, type ContractInvite } from "@/lib/contracts";
 import { clearReturn, rememberReturn } from "@/lib/password";
 import { useServerFn } from "@tanstack/react-start";
@@ -50,7 +51,8 @@ function Shell({ children, right }: { children: React.ReactNode; right?: React.R
   );
 }
 
-const pdf = (i: ContractInvite) => downloadContractPdf({ title: i.title, body: i.body, bodyHash: i.body_hash, status: i.status,
+// The sender's brand kit when they have Personal Branding (company agreements and signed-out links keep ours).
+const pdf = async (i: ContractInvite) => downloadContractPdf({ title: i.title, body: i.body, bodyHash: i.body_hash, status: i.status, brand: i.contract_id ? await contractBrand(i.contract_id) : null,
   parties: i.parties.map((p) => ({ name: p.name, role: p.role, signedAt: p.signed_at, signatureName: p.signature_name, signatureHash: p.signature_hash })) });
 
 /** The agreement, who has signed, and the locked text, shared by both ways of signing. */

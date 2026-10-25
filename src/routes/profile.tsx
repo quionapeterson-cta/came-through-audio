@@ -23,6 +23,7 @@ import { openBilling } from "@/lib/checkout";
 import { passwordValid } from "@/lib/password";
 import { PasswordField } from "@/components/PasswordField";
 import { RetentionControls } from "@/components/RetentionControls";
+import { BrandKit } from "@/components/BrandKit";
 
 export const Route = createFileRoute("/profile")({
   head: () => ({ meta: [{ title: "Profile — Came Through Audio" }, { name: "description", content: "Your artist profile, account and awards." }] }),
@@ -127,6 +128,10 @@ function ProfilePage() {
             </div>
           </Card>
         </div>
+
+        <Card id="brand-kit" title="Brand kit">
+          <BrandKit userId={user.id} tier={tier} artistName={names.artist || name} />
+        </Card>
 
         <Card id="badges" title="Awards & Badges" aside={<>
           <span className="text-sm text-muted-foreground">{earnedCount} earned</span>

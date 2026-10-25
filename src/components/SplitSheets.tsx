@@ -552,12 +552,14 @@ async function buildSplitPdf(track: CatalogTrack, rawCollaborators: SplitCollabo
   const t = (v: unknown) => (v === null || v === undefined ? "" : String(v));
   const collaborators = rawCollaborators.map((c) => ({ ...c, name: t(c.name), role: t(c.role) as SplitCollaborator["role"], pro: t(c.pro), ipi: t(c.ipi), performerName: t(c.performerName), publisherName: t(c.publisherName), publisherPro: t(c.publisherPro), publisherIpi: t(c.publisherIpi), signatureName: t(c.signatureName) || t(c.name), signatureHash: t(c.signatureHash), percentage: Number(c.percentage) || 0 }));
   track = { ...track, title: t(track.title) || "Untitled", artist: t(track.artist), metadata: { ...track.metadata, isrc: t(track.metadata?.isrc), iswc: t(track.metadata?.iswc) } };
-  const { newBrandedPdf, brandHeader, brandFooter, infoGrid, sectionTitle, ensureSpace, COBALT, INK, MUTED, RULE } = await import("@/lib/brand-pdf");
-  const pdf = await newBrandedPdf();
+  const [{ newBrandedPdf, brandHeader, brandFooter, infoGrid, sectionTitle, ensureSpace, COBALT, INK, MUTED, RULE }, { myBrand }] = await Promise.all([import("@/lib/brand-pdf"), import("@/lib/brand-load")]);
+  // Personal Branding (Catalog Management, or the split sheet add-on) swaps in their header; otherwise ours.
+  const brand = await myBrand("splits");
+  const pdf = await newBrandedPdf(brand);
   const w = pdf.internal.pageSize.getWidth();
   const rows = collaborators.filter((c) => c.name);
   const status = splitStatus(collaborators);
-  let y = brandHeader(pdf, "Split Sheet Agreement", `${track.title} — ${track.artist}`);
+  let y = brandHeader(pdf, "Split Sheet Agreement", `${track.title} — ${track.artist}`, undefined, brand);
   y = infoGrid(pdf, y, [
     ["Song title", track.title], ["Artist", track.artist],
     ["ISRC", track.metadata.isrc], ["ISWC", track.metadata.iswc],
@@ -638,7 +640,7 @@ async function buildSplitPdf(track: CatalogTrack, rawCollaborators: SplitCollabo
     if (c.signedAt && c.signatureHash) pdf.setTextColor(...COBALT).text(`Hash ${c.signatureHash.slice(0, 32)}…`, x + 5, y + 28.5);
     if (i % 2 === 1 || i === rows.length - 1) y += 36;
   });
-  brandFooter(pdf);
+  brandFooter(pdf, brand);
   pdf.save(`${track.title.replace(/[^a-z0-9]+/gi, "-") || "split-sheet"}-split-sheet.pdf`);
 }
 

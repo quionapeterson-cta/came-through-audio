@@ -1,4 +1,5 @@
 import { brandFooter, brandHeader, COBALT, ensureSpace, INK, MUTED, newBrandedPdf, sectionTitle } from "@/lib/brand-pdf";
+import type { PdfBrand } from "@/lib/brand-kit";
 import { safeName } from "@/lib/catalog";
 import { CONTRACT_DISCLAIMER } from "@/lib/contract-blueprints";
 
@@ -8,11 +9,11 @@ export type PdfSignature = { name: string; role: string; signedAt: string | null
  * A contract as a branded PDF: the text, then a signature block per party. Signed copies add each typed signature,
  * its time stamp and verification hash, and the SHA-256 of the locked text, so any later change is detectable.
  */
-export async function downloadContractPdf(o: { title: string; body: string; parties: PdfSignature[]; bodyHash?: string | null; status: string }) {
-  const pdf = await newBrandedPdf();
+export async function downloadContractPdf(o: { title: string; body: string; parties: PdfSignature[]; bodyHash?: string | null; status: string; brand?: PdfBrand | null }) {
+  const pdf = await newBrandedPdf(o.brand);
   const w = pdf.internal.pageSize.getWidth();
   const label = o.status === "signed" ? "Fully signed" : o.status === "sent" ? "Out for signature" : "Draft";
-  let y = brandHeader(pdf, o.title, label);
+  let y = brandHeader(pdf, o.title, label, undefined, o.brand);
 
   // The first line repeats the title in capitals; skip it since the header already shows the title.
   const lines = o.body.split("\n");
@@ -60,6 +61,6 @@ export async function downloadContractPdf(o: { title: string; body: string; part
   }
   for (const part of pdf.splitTextToSize(CONTRACT_DISCLAIMER, w - 36) as string[]) { pdf.text(part, 18, y); y += 4; }
 
-  brandFooter(pdf);
+  brandFooter(pdf, o.brand);
   pdf.save(`${safeName(o.title)}${o.status === "signed" ? " - Signed" : ""}.pdf`);
 }
