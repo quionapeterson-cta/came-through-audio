@@ -311,6 +311,14 @@ says "You Came Through: your 12th signed split sheet", Badge Reference PDF lists
 
 ---
 
+## NEXT (after Phase 3): Pre-distribution health analysis (founder idea, 2026-10-25) · to plan
+A "This song isn't released yet" box on a song routes it to a **Release checklist** inside the Song Health Checklist,
+and the Royalty Health Report gets a pre-distribution reading alongside it: what to have ready before distributing
+(codes, credits, splits signed, metadata embedded, registrations that can happen before release) instead of marking
+it down for things only a released song can have. Plan to write and approve before building.
+
+---
+
 ## PHASE 4 — Admin, team and future plans (plans to write, then build)
 - **Pre-launch milestone list** in Super Admin (Task Bank, super admin only), seeded with everything I've asked you to remember:
   switch SITE_URL to camethroughaudio.com · remove the passcode gate and `noindex` · Cloudflare move before Nov 11 (cron jobs,
