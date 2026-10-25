@@ -270,6 +270,16 @@ export function MetadataUploader({ onShareInfo, userId, mode = "embed", readOnly
   }, [artwork]);
   useEffect(() => () => { if (result) URL.revokeObjectURL(result.url); }, [result]);
 
+  /** Self-published means no publisher: offer to remove a listed one (often filled in from the Catalog Profile). */
+  async function setSelfPublished(on: boolean) {
+    const listed = (metadata.publishers ?? []).filter(creditName);
+    if (on && listed.length) {
+      const names = listed.map(creditName).join(", ");
+      if (!(await confirmAction({ title: "Remove the listed publisher?", text: `Self-published means this song has no publisher, so ${names} would be removed from this song only. Your Catalog Profile keeps it.` }))) return;
+      update("publishers", [emptyContributor()]);
+    }
+    update("selfPublished", on);
+  }
   function update<K extends keyof Metadata>(key: K, value: Metadata[K]) {
     setMetadata((current) => ({ ...current, [key]: value }));
     setResult(undefined);
@@ -468,7 +478,7 @@ export function MetadataUploader({ onShareInfo, userId, mode = "embed", readOnly
             </FormSection>}
 
             {full && <FormSection title={metadata.selfPublished && !count(metadata.publishers) ? "Publishers · self-published" : `Publishers · ${count(metadata.publishers)}`} open={publishersWarn} warn={publishersWarn} summary={metadata.selfPublished ? "No publisher" : (metadata.publishers ?? []).filter(creditName).map(creditName).join(", ") || "Who publishes the song"}>
-              <label className="flex items-center gap-2 text-sm"><input id="selfPublished" type="checkbox" className="h-4 w-4 accent-[var(--primary)]" disabled={busy} checked={metadata.selfPublished} onChange={(e) => update("selfPublished", e.target.checked)} />Self-published (no publisher)<Tip text={TIPS.selfPublished} title="Self-published" /></label>
+              <label className="flex items-center gap-2 text-sm"><input id="selfPublished" type="checkbox" className="h-4 w-4 accent-[var(--primary)]" disabled={busy} checked={metadata.selfPublished} onChange={(e) => void setSelfPublished(e.target.checked)} />Self-published (no publisher)<Tip text={TIPS.selfPublished} title="Self-published" /></label>
               {bmiNoPublisher && <p className="rounded-lg border border-primary/40 bg-accent/30 p-3 text-sm text-muted-foreground"><span className="font-semibold text-foreground">💡 No publisher? BMI has you covered.</span> When a song has no publisher, BMI pays the publisher share to the writers automatically. It's split between all the writers in proportion to their writer splits, so a 60/40 split gets 60% and 40% of the publisher share too. Nothing else to set up.{!metadata.selfPublished && " Check Self-published so your registration says so."}</p>}
               {(!metadata.selfPublished || count(metadata.publishers) > 0) && <Contributors bare title="Publishers" singular="publisher" group="publishers" rows={metadata.publishers} disabled={busy} publisher onChange={(rows) => update("publishers", rows)} tip={GLOSSARY.publisher.text} />}
               {metadata.selfPublished && count(metadata.publishers) > 0 && <p className="text-sm">⚠️ You checked Self-published but also listed a publisher. Uncheck Self-published, or remove the publisher.</p>}

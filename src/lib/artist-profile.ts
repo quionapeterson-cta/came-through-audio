@@ -112,6 +112,8 @@ export function fillMissing(detected: Partial<Metadata>, p: ArtistProfile | null
   if (!p) return detected;
   const out: Partial<Metadata> = { ...detected };
   for (const k of PROFILE_KEYS) {
+    // A self-published song has its answer: the profile's publisher never fills in (it would contradict it).
+    if (k === "publishers" && out.selfPublished) continue;
     const cur = out[k] as unknown;
     const empty = cur === undefined || cur === "" || (Array.isArray(cur) && hasName(cur as Contributor[]).length === 0);
     if (empty && p[k] !== undefined) (out as Record<string, unknown>)[k] = p[k];
