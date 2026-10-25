@@ -311,6 +311,22 @@ says "You Came Through: your 12th signed split sheet", Badge Reference PDF lists
   lifetime access** (any tier) for Super Admin and the Head of Marketing; a tester checklist page (worked / didn't / notes); a
   tier-by-tier test plan proving each tier sees only its features.
 - **Department plan generator:** tasks → metric goals → milestone deadlines → progress bars; each 100% task earns a badge.
+- **Task priority, alerts and sign-in celebrations (founder, 2026-10-25) — PROPOSAL, awaiting approval:**
+  - Every Task Bank task gets an **importance level** (Top priority · High · Normal · Low), an optional **deadline**, an
+    **owner** (one staff member) and a **completed** date (migration: additive columns on `department_tasks`).
+  - **On sign-in to Admin**, in this order: (1) any **Top priority** task assigned to you (or your department) that isn't
+    done opens a full-screen alert first: red bar, the task, its deadline and time left ("due in 3 hours" / "2 days
+    overdue"), a short alarm tone, and **Open task** / **Snooze 1 hour** (snooze can't pass the deadline). (2) Otherwise a
+    celebration card: your **last completed task** ("You Came Through: Closed the October books, 2 days ago") with a
+    short cheer sound and confetti, then **your next task** with its deadline and importance.
+  - **Reminders:** a bell in Admin with tasks due in 24 hours and overdue ones; Top priority deadlines also email the
+    owner (from admin@) 24 hours and 1 hour before.
+  - **Sounds:** short, original tones (no copyrighted audio), off by default for people who prefer reduced motion,
+    with a mute switch in Admin; never autoplay before the first click (browsers block it), so the alert shows a
+    "Tap to hear" first.
+  - Completing a task can earn the department's staff badge (with the staff badge system, when it's switched on).
+  - Files: migration, `TaskBankPanel.tsx`, new `AdminWelcome.tsx` (alert + celebration), `src/routes/admin.tsx`,
+    a reminder cron route, tests.
 - **Help chat (native, later):** our own chat window inside the site (no outside chat product), answering from our FAQ, docs,
   guides and plan pages (we feed it our content and it quotes it; nothing is trained from scratch), with live-agent handoff in
   the staff queue and, when no agent is online, an **Open a support ticket** option that links straight to the submission form
