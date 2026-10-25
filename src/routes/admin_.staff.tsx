@@ -156,6 +156,8 @@ function StaffDialog({ editing, actorIsSuper, onClose }: { editing: Editing; act
   const [role, setRole] = useState<ManagedRole>(member && member.role !== "super_admin" ? member.role : "employee");
   const [departments, setDepartments] = useState<Department[]>(member?.departments ?? []);
   const isHr = role === "hr_admin";
+  // Project Managers see every team's Task Bank and calendar without being placed in a department.
+  const isPm = role === "project_manager";
 
   const qc = useQueryClient();
   const invite = useServerFn(inviteStaff);
@@ -175,7 +177,7 @@ function StaffDialog({ editing, actorIsSuper, onClose }: { editing: Editing; act
   });
 
   const toggle = (d: Department, on: boolean) => setDepartments((cur) => (on ? [...cur, d] : cur.filter((x) => x !== d)));
-  const valid = (member || /\S+@\S+\.\S+/.test(email)) && (isHr || departments.length > 0);
+  const valid = (member || /\S+@\S+\.\S+/.test(email)) && (isHr || isPm || departments.length > 0);
 
   return (
     <Dialog open onOpenChange={(o) => { if (!o) onClose(); }}>
@@ -209,7 +211,9 @@ function StaffDialog({ editing, actorIsSuper, onClose }: { editing: Editing; act
 
           <fieldset className="space-y-2">
             <legend className="text-sm font-medium">Departments</legend>
-            {isHr ? (
+            {isPm ? (
+              <p className="text-sm text-muted-foreground">Project Managers see every team's Task Bank and calendar (read only) and their own badges. They don't see customer data, payments or support tickets.</p>
+            ) : isHr ? (
               <p className="text-sm text-muted-foreground">HR Admins manage staff only — they don't see Finance, settings or department queues.</p>
             ) : (
               <div className="grid grid-cols-2 gap-2">

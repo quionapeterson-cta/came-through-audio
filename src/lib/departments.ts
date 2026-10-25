@@ -28,7 +28,7 @@ export const DEPARTMENT_LABEL: Record<Department, string> = {
 };
 
 /** Roles HR can hand out from /admin/staff. super_admin is never granted from the UI. */
-export const MANAGED_ROLES = ["employee", "department_lead", "hr_admin"] as const;
+export const MANAGED_ROLES = ["employee", "department_lead", "project_manager", "hr_admin"] as const;
 export type ManagedRole = (typeof MANAGED_ROLES)[number];
 export type StaffRole = "super_admin" | ManagedRole;
 
@@ -36,18 +36,23 @@ export const ROLE_LABEL: Record<StaffRole, string> = {
   super_admin: "Super Admin",
   hr_admin: "HR Admin",
   department_lead: "Department Lead",
+  project_manager: "Project Manager",
   employee: "Employee",
 };
 
-const ROLE_RANK: StaffRole[] = ["super_admin", "hr_admin", "department_lead", "employee"];
+const ROLE_RANK: StaffRole[] = ["super_admin", "hr_admin", "project_manager", "department_lead", "employee"];
 
-export type StaffAccess = { role: StaffRole; departments: Department[]; canManageStaff: boolean };
+/**
+ * `allTeams`: sees every team's Task Bank and calendar (super admins and Project Managers, Phase 4 item 8). A Project
+ * Manager reads them only; `departments` is still just what they work in and can edit.
+ */
+export type StaffAccess = { role: StaffRole; departments: Department[]; canManageStaff: boolean; allTeams?: boolean };
 
 /** Resolves a user's user_roles rows into one access summary, or null for non-staff. */
 export function resolveAccess(rows: { role: string; departments?: string[] | null }[]): StaffAccess | null {
   const role = ROLE_RANK.find((r) => rows.some((row) => row.role === r));
   if (!role) return null;
-  if (role === "super_admin") return { role, departments: [...DEPARTMENTS], canManageStaff: true };
+  if (role === "super_admin") return { role, departments: [...DEPARTMENTS], canManageStaff: true, allTeams: true };
   const set = new Set<Department>();
   for (const row of rows) {
     if (row.role === "employee" || row.role === "department_lead") {
@@ -55,12 +60,15 @@ export function resolveAccess(rows: { role: string; departments?: string[] | nul
     }
     if (row.role === "hr_admin") set.add("hr");
   }
-  return { role, departments: DEPARTMENTS.filter((d) => set.has(d)), canManageStaff: role === "hr_admin" };
+  const allTeams = rows.some((r) => r.role === "project_manager");
+  return { role, departments: DEPARTMENTS.filter((d) => set.has(d)), canManageStaff: role === "hr_admin", ...(allTeams && { allTeams }) };
 }
 
 /** HR Admins only ever hold the HR department; everyone else needs at least one. */
 export function normalizeDepartments(role: ManagedRole, departments: readonly string[]): Department[] {
   if (role === "hr_admin") return ["hr"];
+  // Project Managers see every team without being placed in one.
+  if (role === "project_manager") return [];
   return DEPARTMENTS.filter((d) => departments.includes(d));
 }
 
@@ -96,9 +104,10 @@ export function viewDepartments(access: StaffAccess, view: Department | "all" = 
 /** Tabs for the caller, optionally narrowed to one department. Every department gets the Task Bank; super admins also get Company Contracts and Plans. */
 export function visibleTabs(access: StaffAccess, view: Department | "all" = "all"): { value: string; label: string }[] {
   const tabs = ADMIN_TABS.filter((t) => t.departments.some((d: Department) => access.departments.includes(d) && (view === "all" || d === view)));
-  const base = viewDepartments(access, view).length ? [...tabs, { value: "tasks", label: "Task Bank" }] : tabs;
-  // Everyone on the team sees their own staff badges (Phase 4 item 6); nobody with no access at all gets a tab.
-  const withTasks = base.length ? [...base, { value: "recognition", label: "My Recognition" }] : base;
+  const base = viewDepartments(access, view).length || (access.allTeams && view === "all") ? [...tabs, { value: "tasks", label: "Task Bank" }] : tabs;
+  // Everyone on the team gets the Calendar (Phase 4 item 8) and their own staff badges (item 6); nobody with no access
+  // at all gets a tab.
+  const withTasks = base.length ? [...base, { value: "calendar", label: "Calendar" }, { value: "recognition", label: "My Recognition" }] : base;
   // Company contracts and plans are for super admins only, in the all-departments view.
   return access.role === "super_admin" && view === "all" ? [...withTasks, { value: "company", label: "Company Contracts" }, { value: "plans", label: "Plans" }] : withTasks;
 }

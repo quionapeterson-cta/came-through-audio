@@ -19,7 +19,8 @@ type Draft = { id?: string; department: Department; title: string; body: string;
 const REPEAT_LABEL: Record<TaskRepeat, string> = { weekly: "Every week", monthly: "Every month", quarterly: "Every 3 months" };
 
 /** Each department's bank of ideas and plans for later. Rows are limited to the caller's departments by RLS. */
-export function TaskBankPanel({ departments }: { departments: Department[] }) {
+export function TaskBankPanel({ departments, editable = departments }: { departments: Department[]; /** Departments the caller can change (Project Managers read the rest). */ editable?: Department[] }) {
+  const canEdit = (d: string) => editable.includes(d as Department);
   const fetchTasks = useServerFn(listTasks);
   const save = useServerFn(saveTask);
   const remove = useServerFn(deleteTask);
@@ -102,7 +103,7 @@ export function TaskBankPanel({ departments }: { departments: Department[] }) {
         <div className="flex flex-wrap gap-2">
         {missingResearch > 0 && <Button size="sm" variant="outline" disabled={busy} onClick={() => void addResearch()}><Telescope className="h-4 w-4" />Load Market Research plan ({missingResearch})</Button>}
         {missingMilestones > 0 && <Button size="sm" variant="outline" disabled={busy} onClick={() => void addMilestones()}><Rocket className="h-4 w-4" />Load pre-launch milestones ({missingMilestones})</Button>}
-        <Button size="sm" onClick={() => setDraft({ department: dept === "all" ? departments[0]! : dept, title: "", body: "", status: "idea", importance: "normal", due_at: null, owner_id: owners.data?.me ?? null, repeat: null, wasRepeat: null })}><Plus className="h-4 w-4" />New task</Button>
+        {editable.length > 0 && <Button size="sm" onClick={() => setDraft({ department: dept !== "all" && canEdit(dept) ? dept : editable[0]!, title: "", body: "", status: "idea", importance: "normal", due_at: null, owner_id: owners.data?.me ?? null, repeat: null, wasRepeat: null })}><Plus className="h-4 w-4" />New task</Button>}
         </div>
       </div>
       <div className="flex flex-wrap gap-2">
@@ -118,7 +119,7 @@ export function TaskBankPanel({ departments }: { departments: Department[] }) {
           <div className="grid gap-3 sm:grid-cols-[1fr_12rem_10rem]">
             <Input aria-label="Task title" placeholder="Task title" value={draft.title} onChange={(e) => setDraft({ ...draft, title: e.target.value })} />
             <select aria-label="Department" value={draft.department} onChange={(e) => setDraft({ ...draft, department: e.target.value as Department })} className="h-10 rounded-md border border-input bg-background px-3 text-sm">
-              {departments.map((d) => <option key={d} value={d}>{DEPARTMENT_LABEL[d]}</option>)}
+              {editable.map((d) => <option key={d} value={d}>{DEPARTMENT_LABEL[d]}</option>)}
             </select>
             <select aria-label="Status" value={draft.status} onChange={(e) => setDraft({ ...draft, status: e.target.value as TaskStatus })} className="h-10 rounded-md border border-input bg-background px-3 text-sm">
               {TASK_STATUSES.map((s) => <option key={s} value={s}>{STATUS_LABEL[s]}</option>)}
@@ -164,19 +165,19 @@ export function TaskBankPanel({ departments }: { departments: Department[] }) {
               </div>
             </button>
             <div className="flex items-center gap-2">
-              <select aria-label="Status" value={t.status} onChange={(e) => void quickStatus(t, e.target.value as TaskStatus)} className="h-8 rounded-md border border-input bg-background px-2 text-sm">
+              {canEdit(t.department) && <select aria-label="Status" value={t.status} onChange={(e) => void quickStatus(t, e.target.value as TaskStatus)} className="h-8 rounded-md border border-input bg-background px-2 text-sm">
                 {TASK_STATUSES.map((s) => <option key={s} value={s}>{STATUS_LABEL[s]}</option>)}
-              </select>
+              </select>}
               <Badge variant="outline">{STATUS_LABEL[t.status]}</Badge>
             </div>
           </div>
           {openId === t.id && (
             <div className="mt-3 border-t border-border pt-3">
               <p className="whitespace-pre-wrap text-sm leading-relaxed">{t.body || "No details yet."}</p>
-              <div className="mt-3 flex gap-2">
+              {canEdit(t.department) && <div className="mt-3 flex gap-2">
                 <Button size="sm" variant="outline" onClick={() => setDraft({ id: t.id, department: t.department as Department, title: t.title, body: t.body, status: t.status, importance: t.importance ?? "normal", due_at: t.due_at, owner_id: t.owner_id , repeat: t.repeat ?? null, wasRepeat: t.repeat ?? null })}><Pencil className="h-4 w-4" />Edit</Button>
                 <Button size="sm" variant="ghost" onClick={async () => { if (await confirmAction({ title: "Delete this task?" })) void remove({ data: { id: t.id } }).then(() => qc.invalidateQueries({ queryKey: ["department-tasks"] })); }}><Trash2 className="h-4 w-4" />Delete</Button>
-              </div>
+              </div>}
             </div>
           )}
         </div>

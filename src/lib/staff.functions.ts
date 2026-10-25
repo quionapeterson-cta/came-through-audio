@@ -35,7 +35,7 @@ async function applyRole(actor: { userId: string; actorIsSuper: boolean }, targe
   const problem = staffChangeError({ actorId: actor.userId, actorIsSuper: actor.actorIsSuper, targetId, targetRoles: (current ?? []).map((r) => r.role), nextRole: role });
   if (problem) throw new Error(problem);
   const departments = normalizeDepartments(role, input);
-  if (!departments.length) throw new Error("Pick at least one department.");
+  if (!departments.length && role !== "project_manager") throw new Error("Pick at least one department.");
   const { error } = await db.from("user_roles").upsert({ user_id: targetId, role, departments }, { onConflict: "user_id,role" });
   if (error) throw new Error("Couldn't save staff access.");
   await db.from("user_roles").delete().eq("user_id", targetId).in("role", MANAGED_ROLES.filter((r) => r !== role));

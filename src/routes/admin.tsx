@@ -1,4 +1,5 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { AdminCalendar } from "@/components/AdminCalendar";
 import { MyRecognition } from "@/components/MyRecognition";
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useState, type ReactNode } from "react";
@@ -11,7 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { getAdminOverview, getStaffRole } from "@/lib/admin.functions";
-import { DEPARTMENTS, DEPARTMENT_LABEL, ROLE_LABEL, viewDepartments, visibleTabs, type Department } from "@/lib/departments";
+import { ASSIGNABLE_DEPARTMENTS, DEPARTMENTS, DEPARTMENT_LABEL, ROLE_LABEL, viewDepartments, visibleTabs, type Department } from "@/lib/departments";
 import { SupportTicketsPanel } from "@/components/SupportTicketsPanel";
 import { BadgeSwitchboard } from "@/components/BadgeSwitchboard";
 import { PlansPanel } from "@/components/PlansPanel";
@@ -178,9 +179,10 @@ function AdminPage() {
           {show("support") && <TabsContent value="support"><SupportTicketsPanel /></TabsContent>}
           {show("badges") && <TabsContent value="badges"><BadgeSwitchboard /></TabsContent>}
           {show("homepage") && <TabsContent value="homepage"><TestimonialsEditor /><TestimonialFilterPanel /></TabsContent>}
-          {show("tasks") && <TabsContent value="tasks"><TaskBankPanel departments={viewDepartments(access, view)} /></TabsContent>}
+          {show("tasks") && <TabsContent value="tasks"><TaskBankPanel departments={access.allTeams && access.role !== "super_admin" ? [...ASSIGNABLE_DEPARTMENTS] : viewDepartments(access, view)} editable={viewDepartments(access, view)} /></TabsContent>}
           {show("company") && <TabsContent value="company"><Contracts userId={user.id} unlocked company onUpgrade={() => {}} /></TabsContent>}
           {show("plans") && <TabsContent value="plans"><PlansPanel /></TabsContent>}
+          {show("calendar") && <TabsContent value="calendar"><AdminCalendar me={user.id} access={access} /></TabsContent>}
           {show("recognition") && <TabsContent value="recognition"><MyRecognition /></TabsContent>}
         </Tabs>
         </>)}
