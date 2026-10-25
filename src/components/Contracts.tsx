@@ -566,6 +566,17 @@ function ContractEditor({ userId, initial, tracks, blueprint, onClose }: { userI
         </div>
 
         {draft && (
+          <ol aria-label="How it works" className="grid gap-2 rounded-xl bg-muted p-4 text-sm sm:grid-cols-5">
+            {[["Read it", "Look over the contract below."], ["Fill in your details", "They fill into the contract as you type."], ["Adjust the wording", "Only if you need to; common terms are in."], ["Sign", "Sign at the bottom with your legal name."], ["Send", "Email each party a link to sign."]].map(([t, d], i) => (
+              <li key={t} className="flex gap-2 sm:flex-col sm:gap-1">
+                <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary text-xs font-bold text-primary-foreground">{i + 1}</span>
+                <span><span className="font-semibold">{t}.</span> <span className="text-muted-foreground">{d}</span></span>
+              </li>
+            ))}
+          </ol>
+        )}
+
+        {draft && (
           <>
             <Step n={1} title="Details" open={sections.details} onToggle={() => setSections((x) => ({ ...x, details: !x.details }))}
               summary={required.length ? `${filled} of ${required.length} required filled${filled === required.length ? " ✓" : ""}` : "Nothing required · common terms already filled in ✓"}
