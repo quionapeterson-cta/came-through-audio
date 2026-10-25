@@ -1,11 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "@tanstack/react-router";
-import { ChevronRight, Lock, Settings2, Share2 } from "lucide-react";
+import { ChevronLeft, ChevronRight, Lock, Settings2, Share2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Switch } from "@/components/ui/switch";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { CelebrationStage, SharePanel } from "@/components/BadgeCelebration";
 import { useBadges } from "@/hooks/useBadges";
 import { badgePrefs, loadOnboarding, saveOnboarding, type Onboarding } from "@/lib/artist-profile";
@@ -194,38 +193,33 @@ const remaining = (s: BadgeState) => Math.max(0, s.badge.goal - s.count);
  * it (no counts, which read like song credits). Says "Badge" so nobody mistakes it for a real record certification.
  * Links to the profile shelf.
  */
-export function NextBadgeHint({ userId, collections, className = "" }: { userId: string; collections: CollectionId[]; className?: string }) {
+/**
+ * The next badge as a round medal beside the artist name (founder, 2026-10-25): dimmed with a progress ring until it's
+ * earned; a badge earned in the last day shows revealed, in full color, before the next one takes its place.
+ */
+export function NextBadgeCircle({ userId, collections, className = "" }: { userId: string; collections: CollectionId[]; className?: string }) {
   const { states } = useBadgeStates(userId);
   const prefs = badgePrefs(loadOnboarding(userId));
   if (!prefs.hints) return null;
-  const next = states
-    .filter((s) => collections.includes(s.badge.collection) && !prefs.hidden.includes(s.badge.collection) && !s.earned && !s.off)
-    .sort((a, b) => remaining(a) / a.badge.goal - remaining(b) / b.badge.goal)[0];
-  if (!next) return null;
-  const pct = Math.round((Math.min(next.count, next.badge.goal) / next.badge.goal) * 100);
+  const mine = states.filter((s) => collections.includes(s.badge.collection) && !prefs.hidden.includes(s.badge.collection) && !s.off);
+  const day = Date.now() - 24 * 60 * 60 * 1000;
+  const fresh = mine.filter((s) => s.earned && new Date(s.earned.earnedAt).getTime() > day).sort((a, b) => b.earned!.earnedAt.localeCompare(a.earned!.earnedAt))[0];
+  const next = mine.filter((s) => !s.earned).sort((a, b) => remaining(a) / a.badge.goal - remaining(b) / b.badge.goal)[0];
+  const show = fresh ?? next;
+  if (!show) return null;
+  const pct = fresh ? 100 : Math.round((Math.min(show.count, show.badge.goal) / show.badge.goal) * 100);
   return (
-    <TooltipProvider delayDuration={150}>
-    <Tooltip>
-    <TooltipTrigger asChild>
-    <Link to="/profile" hash="badges" aria-label={`Next badge: ${next.badge.title}. ${next.badge.milestone}. ${pct}% there.`}
-      className={`flex w-full items-center gap-2.5 rounded-lg border border-border bg-card px-2.5 py-2 text-left transition hover:border-primary sm:w-56 ${className}`}>
-      <img src={next.badge.src} alt="" className="h-8 w-8 shrink-0 object-contain opacity-60 grayscale" />
-      <span className="min-w-0 flex-1 space-y-0.5">
-        <span className="block text-[9px] font-bold uppercase tracking-widest text-primary">Badge</span>
-        <span className="block truncate text-xs font-semibold leading-tight">{next.badge.title}</span>
-        <span className="block truncate text-[11px] leading-snug text-muted-foreground">{next.badge.action}</span>
-        <span role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={pct} className="mt-1 block h-1 overflow-hidden rounded-full bg-muted">
-          <span className="block h-full rounded-full bg-primary transition-[width] duration-700" style={{ width: `${Math.max(pct, 4)}%` }} />
+    <Link to="/profile" hash="badges" aria-label={fresh ? `Badge earned: ${show.badge.title}` : `Next badge: ${show.badge.title}. ${show.badge.milestone}. ${pct}% there.`}
+      title={fresh ? `Earned: ${show.badge.title}` : `${show.badge.title} · ${show.badge.action} · ${pct}%`}
+      className={`group flex flex-col items-center gap-1.5 ${className}`}>
+      <span className="relative flex h-24 w-24 items-center justify-center rounded-full p-1" style={{ background: `conic-gradient(var(--primary) ${pct * 3.6}deg, var(--muted) 0deg)` }}>
+        <span className="flex h-full w-full items-center justify-center rounded-full bg-card">
+          <img src={shelfArt(show)} alt="" className={`h-16 w-16 object-contain transition ${fresh ? "drop-shadow-lg" : "opacity-40 grayscale group-hover:opacity-70"}`} />
         </span>
       </span>
+      <span className="max-w-32 truncate text-xs font-semibold">{fresh ? "Earned!" : show.badge.title}</span>
+      {!fresh && <span className="max-w-32 truncate text-[11px] text-muted-foreground">{show.badge.action}</span>}
     </Link>
-    </TooltipTrigger>
-    <TooltipContent side="bottom" align="end" className="max-w-64 space-y-1 border border-border bg-popover px-3 py-2 text-popover-foreground">
-      <p className="font-semibold">{next.badge.milestone}</p>
-      <p className="text-muted-foreground">{next.badge.description}</p>
-    </TooltipContent>
-    </Tooltip>
-    </TooltipProvider>
   );
 }
 
@@ -233,7 +227,7 @@ type Size = "large" | "small";
 const UP_NEXT = 3;
 
 /** Profile shelf: earned badges and the next few locked ones, grouped by collection. */
-export function BadgeShelf({ userId, size, onOpen }: { userId: string; size: Size; onOpen: (s: BadgeState) => void }) {
+export function BadgeShelf({ userId, size, onOpen }: { userId: string; size: Size; onOpen: (s: BadgeState, list: BadgeState[]) => void }) {
   const { states, isLoading, isError } = useBadgeStates(userId);
   const prefs = badgePrefs(loadOnboarding(userId));
   if (isLoading) return <p className="text-sm text-muted-foreground">Loading your badges…</p>;
@@ -243,20 +237,20 @@ export function BadgeShelf({ userId, size, onOpen }: { userId: string; size: Siz
     const earned = mine.filter((s) => s.earned);
     const started = c.always || earned.length > 0 || mine.some((s) => s.count > 0);
     const locked = started ? mine.filter((s) => !s.earned && !s.off).slice(0, UP_NEXT) : [];
-    return { ...c, earned, locked };
+    return { ...c, earned, locked, total: mine.length };
   }).filter((g) => g.earned.length || g.locked.length);
   const grid = size === "large" ? "grid-cols-2 sm:grid-cols-3" : "grid-cols-3 sm:grid-cols-6";
   return (
     <div className="space-y-8">
-      {groups.map((g) => (
-        <section key={g.id} className="space-y-4 border-t border-border pt-6 first:border-t-0 first:pt-0">
-          <div className="flex items-baseline justify-between gap-3">
+      {groups.map((g, gi) => (
+        <details key={g.id} open={gi === 0 || g.earned.some(isNew)} className="group/c border-t border-border pt-4 first:border-t-0 first:pt-0">
+          <summary className="flex cursor-pointer list-none items-baseline justify-between gap-3">
             <h3 className="text-xs font-bold uppercase tracking-widest text-primary">{g.title}</h3>
-            <span className="text-xs text-muted-foreground">{g.earned.length} earned</span>
-          </div>
-          <ul className={`grid gap-6 ${grid}`}>
+            <span className="flex items-center gap-2 text-xs text-muted-foreground">{g.earned.length} of {g.total} earned<ChevronRight className="h-4 w-4 transition group-open/c:rotate-90" /></span>
+          </summary>
+          <ul className={`mt-4 grid gap-6 ${grid}`}>
             {[...g.earned, ...g.locked].map((s) => <li key={s.badge.id}>
-              <button type="button" onClick={() => onOpen(s)} aria-label={s.earned ? `View ${s.badge.title}` : `${s.badge.title} (locked): ${s.badge.milestone}`}
+              <button type="button" onClick={() => onOpen(s, groups.flatMap((x) => [...x.earned, ...x.locked]))} aria-label={s.earned ? `View ${s.badge.title}` : `${s.badge.title} (locked): ${s.badge.milestone}`}
                 className="group flex w-full flex-col items-center gap-2 rounded-xl p-3 text-center transition hover:bg-accent/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
                 <span className="relative flex aspect-square w-full items-center justify-center">
                   <img src={shelfArt(s)} alt="" loading="lazy" className={`h-full w-full object-contain transition ${s.earned ? "drop-shadow-lg group-hover:drop-shadow-2xl" : "opacity-30 grayscale"}`} />
@@ -269,38 +263,56 @@ export function BadgeShelf({ userId, size, onOpen }: { userId: string; size: Siz
               </button>
             </li>)}
           </ul>
-        </section>
+        </details>
       ))}
     </div>
   );
 }
 
-/** Close-up of one badge: what it's for, when it was earned, or how far along the user is. */
-export function BadgeDetail({ state, artist, onClose, onShare }: { state?: BadgeState | undefined; artist?: string | undefined; onClose: () => void; onShare?: ((s: BadgeState) => void) | undefined }) {
+/**
+ * Close-up of one badge, floating large in the middle of the screen with no box (founder, 2026-10-25): description
+ * underneath, ← → (keys or swipe) to browse the list it was opened from, and earned badges can become the profile picture.
+ */
+export function BadgeDetail({ state, list = [], artist, onClose, onShare, onMove, onUseAsAvatar }: {
+  state?: BadgeState | undefined; list?: BadgeState[]; artist?: string | undefined; onClose: () => void;
+  onShare?: ((s: BadgeState) => void) | undefined; onMove?: ((s: BadgeState) => void) | undefined; onUseAsAvatar?: ((src: string) => void) | undefined;
+}) {
   const s = state;
+  const at = s ? list.findIndex((x) => x.badge.id === s.badge.id) : -1;
+  const go = (d: number) => { if (at < 0 || !list.length || !onMove) return; onMove(list[(at + d + list.length) % list.length]!); };
+  const touch = useRef<number | null>(null);
   return (
     <Dialog open={!!s} onOpenChange={(o) => !o && onClose()}>
-      {s && <DialogContent className="max-h-[95svh] max-w-[min(94vw,52rem)] overflow-y-auto bg-card text-card-foreground">
-        <div className="grid items-center gap-6 md:grid-cols-2">
-          <img src={shelfArt(s)} alt="" className={`mx-auto max-h-[40svh] w-full object-contain ${s.earned ? "drop-shadow-2xl" : "opacity-40 grayscale"}`} />
-          <div className="space-y-3">
-            <TierChip badge={s.badge} />
-            <DialogTitle className="text-2xl font-bold">{s.badge.title}</DialogTitle>
-            <DialogDescription className="text-base text-muted-foreground">{s.earned ? s.badge.description : `Locked. ${s.badge.milestone}.`}</DialogDescription>
-            {s.earned
-              ? <p className="text-sm"><span className="font-semibold">Earned </span>{new Date(s.earned.earnedAt).toLocaleDateString(undefined, { month: "long", day: "numeric", year: "numeric" })}{s.earned.times > 1 ? ` · ${s.earned.times} times` : ""}</p>
-              : <>
-                <p className="text-sm"><span className="font-semibold">Progress: </span>{Math.min(s.count, s.badge.goal)} of {s.badge.goal}</p>
-                <div className="h-2 overflow-hidden rounded-full bg-muted" role="progressbar" aria-valuemin={0} aria-valuemax={s.badge.goal} aria-valuenow={Math.min(s.count, s.badge.goal)}>
-                  <div className="h-full bg-primary" style={{ width: `${Math.min(100, (s.count / s.badge.goal) * 100)}%` }} />
-                </div>
-              </>}
-            {s.earned && s.badge.every && <p className="text-sm"><span className="font-semibold">Earn it again: </span>{s.count} of {nextGoal(s.badge, s.count)}</p>}
-            {s.earned && <p className="text-sm italic text-muted-foreground">“{withArtist(s.badge.popup, artist)}”</p>}
-            {s.earned && onShare && <Button onClick={() => onShare(s)}>Share your badge</Button>}
-          </div>
+      {s && <DialogContent className="max-h-[95svh] max-w-[min(94vw,46rem)] overflow-y-auto border-0 bg-transparent p-2 text-white shadow-none [&>button]:text-white"
+        onKeyDown={(e) => { if (e.key === "ArrowRight") go(1); if (e.key === "ArrowLeft") go(-1); }}
+        onTouchStart={(e) => { touch.current = e.touches[0]?.clientX ?? null; }}
+        onTouchEnd={(e) => { const x = e.changedTouches[0]?.clientX; if (touch.current != null && x != null && Math.abs(x - touch.current) > 50) go(x < touch.current ? 1 : -1); touch.current = null; }}>
+        <div className="flex items-center gap-2">
+          {list.length > 1 && onMove && <Button type="button" variant="ghost" size="icon" aria-label="Previous badge" className="shrink-0 text-white hover:bg-white/10 hover:text-white" onClick={() => go(-1)}><ChevronLeft className="h-7 w-7" /></Button>}
+          <img src={shelfArt(s)} alt="" className={`cta-badge-float mx-auto max-h-[52svh] w-full min-w-0 object-contain ${s.earned ? "drop-shadow-2xl" : "opacity-40 grayscale"}`} />
+          {list.length > 1 && onMove && <Button type="button" variant="ghost" size="icon" aria-label="Next badge" className="shrink-0 text-white hover:bg-white/10 hover:text-white" onClick={() => go(1)}><ChevronRight className="h-7 w-7" /></Button>}
         </div>
-        {s.earned && s.earned.times > 1 && <Earnings state={s} />}
+        <div className="mx-auto max-w-lg space-y-2 text-center">
+          <TierChip badge={s.badge} />
+          <DialogTitle className="text-2xl font-bold text-white">{s.badge.title}</DialogTitle>
+          <DialogDescription className="text-base text-white/80">{s.earned ? s.badge.description : `Locked. ${s.badge.milestone}.`}</DialogDescription>
+          {s.earned
+            ? <p className="text-sm text-white/80"><span className="font-semibold text-white">Earned </span>{new Date(s.earned.earnedAt).toLocaleDateString(undefined, { month: "long", day: "numeric", year: "numeric" })}{s.earned.times > 1 ? ` · ${s.earned.times} times` : ""}</p>
+            : <>
+              <p className="text-sm text-white/80"><span className="font-semibold text-white">Progress: </span>{Math.min(s.count, s.badge.goal)} of {s.badge.goal}</p>
+              <div className="mx-auto h-2 max-w-xs overflow-hidden rounded-full bg-white/20" role="progressbar" aria-valuemin={0} aria-valuemax={s.badge.goal} aria-valuenow={Math.min(s.count, s.badge.goal)}>
+                <div className="h-full bg-primary" style={{ width: `${Math.min(100, (s.count / s.badge.goal) * 100)}%` }} />
+              </div>
+            </>}
+          {s.earned && s.badge.every && <p className="text-sm text-white/80"><span className="font-semibold text-white">Earn it again: </span>{s.count} of {nextGoal(s.badge, s.count)}</p>}
+          {s.earned && <p className="text-sm italic text-white/70">“{withArtist(s.badge.popup, artist)}”</p>}
+          {s.earned && (onShare || onUseAsAvatar) && <div className="flex flex-wrap justify-center gap-2 pt-1">
+            {onUseAsAvatar && <Button variant="secondary" onClick={() => onUseAsAvatar(shelfArt(s))}>Use as my profile picture</Button>}
+            {onShare && <Button onClick={() => onShare(s)}>Share your badge</Button>}
+          </div>}
+          {list.length > 1 && <p className="text-xs text-white/50">{at + 1} of {list.length}</p>}
+        </div>
+        {s.earned && s.earned.times > 1 && <div className="rounded-2xl bg-card p-4 text-card-foreground"><Earnings state={s} /></div>}
       </DialogContent>}
     </Dialog>
   );

@@ -14,7 +14,7 @@ import { BrandLogo } from "@/components/BrandLogo";
 import { ArtistAvatar, ArtistOnboarding } from "@/components/ArtistOnboarding";
 import { BadgeViewer } from "@/components/BadgeViewer";
 import type { ShareInfo } from "@/components/BadgeCelebration";
-import { badgePrefs, loadOnboarding, loadProfile, syncFromCloud, type ArtistProfile, type Onboarding } from "@/lib/artist-profile";
+import { badgePrefs, loadOnboarding, loadProfile, saveOnboarding, syncFromCloud, type ArtistProfile, type Onboarding } from "@/lib/artist-profile";
 import { isBadgeImage } from "@/lib/badges";
 import { BadgeDetail, BadgeSettings, BadgeSettingsButton, BadgeShelf, BadgeWatcher, useBadgeStates, type BadgeState } from "@/components/Badges";
 import { creditName, writerRole, type Contributor } from "@/lib/metadata";
@@ -43,6 +43,7 @@ function ProfilePage() {
   const [passwordOpen, setPasswordOpen] = useState(false);
   const [viewing, setViewing] = useState<{ src: string; name?: string; round?: boolean; share?: ShareInfo }>();
   const [badge, setBadge] = useState<BadgeState>();
+  const [badgeList, setBadgeList] = useState<BadgeState[]>([]);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const { states } = useBadgeStates(user?.id);
   const [size, setSize] = useState<Size>(() => { try { return localStorage.getItem(SIZE_KEY) === "small" ? "small" : "large"; } catch { return "large"; } });
@@ -137,11 +138,12 @@ function ProfilePage() {
             ))}
           </div>
         </>}>
-          <BadgeShelf userId={user.id} size={size} onOpen={setBadge} />
+          <BadgeShelf userId={user.id} size={size} onOpen={(s, list) => { setBadge(s); setBadgeList(list); }} />
         </Card>
       </main>
 
-      <BadgeDetail state={badge} artist={names.artist} onClose={() => setBadge(undefined)}
+      <BadgeDetail state={badge} list={badgeList} artist={names.artist} onClose={() => setBadge(undefined)} onMove={setBadge}
+        onUseAsAvatar={(src) => { if (!ob) return; const next = { ...ob, avatar: src }; saveOnboarding(user.id, next); setOb(next); toast.success("Your profile picture is updated."); }}
         onShare={badgePrefs(ob).share ? (s) => { setBadge(undefined); setViewing({ src: s.badge.src, name: s.badge.title, share: { ctx: "profile", artist: names.artist, genre: profile?.primaryGenre } }); } : undefined} />
       <BadgeSettings userId={user.id} open={settingsOpen} onOpenChange={setSettingsOpen} onSaved={setOb} />
       <BadgeWatcher userId={user.id} artist={names.artist} />
