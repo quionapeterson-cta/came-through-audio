@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { ChevronLeft, ChevronRight, FileDown, Lock, PlayCircle, Stethoscope } from "lucide-react";
-import { StarsAligned } from "@/components/StarsAligned";
 import { Explainer } from "@/components/Explainer";
 import { Button } from "@/components/ui/button";
 import { ArtDefs, BodyDiagram, MiniRhythm, MONITOR, OrganIcon, RHYTHM, Scan, Tool } from "@/components/royalty-art";
@@ -61,18 +60,11 @@ export function RoyaltyReport({ checkup, since, date, country, countryPicker, ru
   const organ = organs.find((o) => o.id === selected) ?? organs[0]!;
   const ring = Math.round((checkup.score / 100) * 188.5 * 10) / 10;
   const [explain, setExplain] = useState<Finding | null>(null);
-  // 100%: the score glows green for a beat, then the stars align over the song's title (once per report).
-  const [stars, setStars] = useState(false);
-  useEffect(() => {
-    if (checkup.score !== 100) return;
-    const t = window.setTimeout(() => setStars(true), 1200);
-    return () => window.clearTimeout(t);
-  }, [checkup.score, date]);
+  // 100% royalty health: the score pulses green (the night sky is for a fully completed catalog, in My Catalog).
 
   return (
     <div className="rr space-y-8">
       <ArtDefs />
-      {stars && <StarsAligned title={scope && !scope.startsWith("Whole") ? scope.replace(/\s*\(.*\)$/, "") : "Your catalog"} onDone={() => setStars(false)} />}
       {onBack && <Button variant="ghost" className="-mb-4" onClick={onBack}><ChevronLeft />Back to the Hub</Button>}
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>

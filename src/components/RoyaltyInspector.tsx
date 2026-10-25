@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 import { CheckCircle2, XCircle, ExternalLink, ListChecks, Loader2, Search, Stethoscope } from "lucide-react";
-import { StarsAligned } from "@/components/StarsAligned";
 import { InfoTip } from "@/components/InfoTip";
 import type { GlossaryKey } from "@/lib/glossary";
 import { Button } from "@/components/ui/button";
@@ -71,13 +70,7 @@ export function RoyaltyInspector({ onEmbed, onExpert, onSave, onRunCheck, editin
       <Input value={f[k]} placeholder={ph} onChange={set(k)} /></label>
   );
   const score = issues ? Math.round((PILLARS.filter((p) => !issues.some((i) => i.pillar === p.id)).length / 3) * 100) : 0;
-  // A 100% inspection gets the same celebration as a 100% report.
-  const [stars, setStars] = useState(false);
-  useEffect(() => {
-    if (!issues || issues.length) return undefined;
-    const t = window.setTimeout(() => setStars(true), 900);
-    return () => window.clearTimeout(t);
-  }, [issues]);
+  // A 100% inspection pulses green, like a 100% report.
 
   return (
     <div className="rounded-2xl border border-border bg-card p-6">
@@ -115,7 +108,6 @@ export function RoyaltyInspector({ onEmbed, onExpert, onSave, onRunCheck, editin
           <div className="flex items-center gap-3">
             {issues.length ? <XCircle className="h-6 w-6 text-destructive" /> : <CheckCircle2 className="h-6 w-6 text-primary" />}
             <span className={`text-2xl font-extrabold text-primary${issues.length ? "" : " cta-win-pulse rounded-lg px-2"}`}>{score}% Royalty Ready</span>
-            {stars && <StarsAligned title={f.title.trim() || "Your song"} onDone={() => setStars(false)} />}
           </div>
           {issues.length > 0 && <ul className="grid gap-1 text-sm md:grid-cols-2">
             {issues.map((i, k) => <li key={k}><span className="font-semibold text-primary">{PILLARS.find((p) => p.id === i.pillar)!.registry}:</span> {i.text}</li>)}

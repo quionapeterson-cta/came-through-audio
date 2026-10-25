@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { InfoTip } from "@/components/InfoTip";
 import { CopyrightInput } from "@/components/CopyrightInput";
+import { StarsAligned } from "@/components/StarsAligned";
 import { EXPORT_REQUIRED, GLOSSARY, type GlossaryKey } from "@/lib/glossary";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { PRE_DIST_NOTE, PRO_TIP } from "@/lib/copy";
@@ -143,6 +144,16 @@ export function MetadataUploader({ onShareInfo, userId, mode = "embed", readOnly
     return catalogHealth(tracks, countryByCode(code) ?? countryByCode("US")!, checks, statuses);
   }, [full, userId, tracks, checks, statuses]);
   const pctOf = (id: string) => health?.songs.find((x) => x.track.id === id)?.pct ?? 0;
+  // Fully completed catalog: the night sky spells the most recent song, once per completed set of songs.
+  const [starsFor, setStarsFor] = useState<string>();
+  useEffect(() => {
+    if (!full || !userId || !health || !tracks.length || health.pct !== 100) return;
+    const sig = tracks.map((t) => t.id).sort().join(",");
+    const key = `cta.catalogComplete.${userId}`;
+    try { if (localStorage.getItem(key) === sig) return; localStorage.setItem(key, sig); } catch { /* storage blocked: still celebrate */ }
+    const latest = [...tracks].sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))[0]!;
+    setStarsFor(latest.title || "Your catalog");
+  }, [full, userId, health?.pct, tracks]); // eslint-disable-line react-hooks/exhaustive-deps
   // A ⚠️ link elsewhere (e.g. Expert Assistance) asked to fix a field on one of these songs.
   useEffect(() => {
     // A song bought for registration before it was cataloged: open Add song with what they typed.
@@ -749,6 +760,7 @@ export function MetadataUploader({ onShareInfo, userId, mode = "embed", readOnly
           )}
         </div>
       ); })()}
+      {starsFor && <StarsAligned title={starsFor} onDone={() => setStarsFor(undefined)} />}
       {full && <AgencyExportDialog open={exportOpen} onOpenChange={setExportOpen} tracks={tracks}
         releases={groupProjects(tracks.filter((t) => releaseKind(t.metadata) !== "Single"))} run={runExport} />}
       <Dialog open={!!nextSteps} onOpenChange={(o) => !o && setNextSteps(undefined)}>

@@ -109,7 +109,7 @@ const CORE: BadgeDef[] = [
   { id: "paper_ready", title: "Paper Ready", collection: "core", tier: "standard", milestone: "Download your first agency export, then every 10 more", action: "Download an agency export", metric: "agencyExports", goal: 1, every: 10, src: `${S}/award_folder.png`,
     description: "Your songs left the building in the format the agencies want. This is the paperwork that turns plays into payments.",
     popup: "Exported! Your songs are on their way to get paid." },
-  { id: "checkup_champ", title: "Checkup Champ", collection: "core", tier: "standard", milestone: "Run a Royalty Health Check, once each month", action: "Run a monthly Health Check", metric: "healthCheckMonths", goal: 1, every: 1, src: `${S}/key_holder.png`,
+  { id: "checkup_champ", title: "Checkup Champ", collection: "core", tier: "standard", milestone: "Run a Royalty Health Check, once each month", action: "Run a monthly Health Check", metric: "healthCheckMonths", goal: 1, every: 1, src: `${P}/checkup_champ.webp`,
     description: "You unlocked where your money is instead of guessing. Every fix you make from here is money you were missing. Check in every month to earn it again.",
     popup: "Checkup done! Now you know where your money is." },
   { id: "chain_of_title", title: "Chain of Title", collection: "core", tier: "standard", milestone: "Every song with writers complete, splits at 100%, a fully signed split sheet and a timestamp", action: "Seal a song's paperwork", metric: "chainOfTitle", goal: 1, every: 1, src: `${S}/came_chain_gold.png`,
@@ -133,16 +133,15 @@ const CORE: BadgeDef[] = [
   { id: "unbreakable", title: "Unbreakable", collection: "core", tier: "standard", milestone: "1 year as a member", action: "Stay a member 1 year", metric: "memberYears", goal: 1, src: `${P}/unbreakable.png`,
     description: "A full year of showing up for your music business. Consistency is the chain that holds everything else together.",
     popup: "Unbreakable! One year strong." },
-  // Each year after gets an upgraded chain. Art is coming: public/icons/playful/unbreakable_<years>.webp.
+  // Each year after gets an upgraded chain (public/icons/playful/unbreakable_<years>.webp).
   ...[2, 3, 4, 5].map((years): BadgeDef => ({ id: `unbreakable_${years}`, title: `Unbreakable · ${years} Years`, collection: "core", tier: years === 5 ? "mega" : "standard",
-    milestone: `${years} years as a member`, action: `Stay a member ${years} years`, metric: "memberYears", goal: years, artPending: true, src: `${P}/unbreakable_${years}.webp`,
+    milestone: `${years} years as a member`, action: `Stay a member ${years} years`, metric: "memberYears", goal: years, src: `${P}/unbreakable_${years}.webp`,
     description: `${years} years of showing up for your music business. The chain gets heavier every year, and so does everything you've built.`,
     popup: `Unbreakable! ${years} years strong. Came Through Audio came through with you.` })),
-  // Art is coming: public/icons/playful/full_ep.webp and full_album.webp.
-  { id: "full_ep", title: "Full EP", collection: "core", tier: "standard", milestone: "Every full EP (4 to 6 songs) in your catalog", action: "Catalog a full EP", metric: "fullEps", goal: 1, every: 1, artPending: true, src: `${P}/full_ep.webp`,
+  { id: "full_ep", title: "Full EP", collection: "core", tier: "standard", milestone: "Every full EP (4 to 6 songs) in your catalog", action: "Catalog a full EP", metric: "fullEps", goal: 1, every: 1, src: `${P}/full_ep.webp`,
     description: "Every song on the EP, embedded and filed together. A complete project with your credits riding inside every track.",
     popup: "Full EP! The whole project came through." },
-  { id: "full_album", title: "Full Album", collection: "core", tier: "mega", milestone: "Every full album (7 or more songs) in your catalog", action: "Catalog a full album", metric: "fullAlbums", goal: 1, every: 1, artPending: true, src: `${P}/full_album.webp`,
+  { id: "full_album", title: "Full Album", collection: "core", tier: "mega", milestone: "Every full album (7 or more songs) in your catalog", action: "Catalog a full album", metric: "fullAlbums", goal: 1, every: 1, src: `${P}/full_album.webp`,
     description: "A whole album, every track embedded and filed. That's a body of work with your name on every song.",
     popup: "MEGA! A full album came through." },
 ];
@@ -299,8 +298,8 @@ const PRODUCER: BadgeDef[] = [
 /** `action`: a shorter first-credit line where "Credit a … part" would run past the next-badge card. */
 export const INSTRUMENTS: { id: string; label: string; match: RegExp; art: string[]; action?: string }[] = [
   { id: "vocals", label: "Vocal", match: /vocal|voice|sing|choir/i, art: ["vocal_mic.webp"] },
-  { id: "steel_pan", label: "Steel Pan", match: /steel ?pan|handpan|hang drum|steel drum/i, art: ["handpan_medallion.png", "star_studded_steel_pan.webp"] },
-  { id: "ukulele", label: "Ukulele", match: /ukulele|\buke\b/i, art: ["ukulele_medallion.png", "star_studded_ukulele.webp"] },
+  { id: "steel_pan", label: "Steel Pan", match: /steel ?pan|handpan|hang drum|steel drum/i, art: ["steel_pan.webp", "handpan_medallion.png", "star_studded_steel_pan.webp"] },
+  { id: "ukulele", label: "Ukulele", match: /ukulele|\buke\b/i, art: ["ukulele.webp", "ukulele_medallion.png", "star_studded_ukulele.webp"] },
   { id: "electric_guitar", label: "Electric Guitar", match: /electric guitar|e-guitar|lead guitar/i, art: ["electric_guitar.png"], action: "Credit an electric guitar" },
   { id: "acoustic_guitar", label: "Guitar", match: /guitar/i, art: ["acoustic_guitar.png"] },
   { id: "piano", label: "Piano", match: /piano|keys|keyboard|organ|synth/i, art: ["keyboard.webp", "grand_piano_medallion.webp", "star_studded_piano.webp"] },
@@ -308,12 +307,12 @@ export const INSTRUMENTS: { id: string; label: string; match: RegExp; art: strin
   { id: "trumpet", label: "Trumpet", match: /trumpet|flugelhorn|cornet/i, art: ["trumpet.webp"] },
   { id: "saxophone", label: "Saxophone", match: /sax/i, art: ["saxophone.png"] },
   { id: "violin", label: "Violin", match: /\bviolin|fiddle/i, art: ["violin.webp"] },
-  { id: "cello", label: "Cello", match: /cello/i, art: ["star_studded_cello.png"] },
-  { id: "banjo", label: "Banjo", match: /banjo/i, art: ["banjo_medallion.png", "star_studded_banjo.png"] },
-  { id: "clarinet", label: "Clarinet", match: /clarinet/i, art: ["clarinet_medallion.png", "star_studded_clarinet.png"] },
-  { id: "trombone", label: "Trombone", match: /trombone/i, art: ["trombone_medallion.png", "star_studded_trombone.webp"] },
-  { id: "harp", label: "Harp", match: /\bharp\b/i, art: ["star_studded_harp.png"] },
-  { id: "xylophone", label: "Xylophone", match: /xylophone|marimba|vibraphone|glockenspiel/i, art: ["xylophone_medallion.png", "star_studded_double_xylophone.webp"] },
+  { id: "cello", label: "Cello", match: /cello/i, art: ["cello.webp", "star_studded_cello.png"] },
+  { id: "banjo", label: "Banjo", match: /banjo/i, art: ["banjo.webp", "banjo_medallion.png", "star_studded_banjo.png"] },
+  { id: "clarinet", label: "Clarinet", match: /clarinet/i, art: ["clarinet.webp", "clarinet_medallion.png", "star_studded_clarinet.png"] },
+  { id: "trombone", label: "Trombone", match: /trombone/i, art: ["trombone.webp", "trombone_medallion.png", "star_studded_trombone.webp"] },
+  { id: "harp", label: "Harp", match: /\bharp\b/i, art: ["harp.webp", "star_studded_harp.png"] },
+  { id: "xylophone", label: "Xylophone", match: /xylophone|marimba|vibraphone|glockenspiel/i, art: ["xylophone.webp", "xylophone_medallion.png", "star_studded_double_xylophone.webp"] },
 ];
 
 /**

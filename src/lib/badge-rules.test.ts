@@ -25,17 +25,17 @@ describe("badge catalog", () => {
     const missing = BADGES.filter((b) => !existsSync(`public${b.src}`)).map((b) => b.src);
     expect(missing).toEqual([]);
   });
-  it("keeps badges waiting on art out of play", () => {
+  it("keeps badges waiting on art out of play (none waiting since the 2026-10-25 art)", () => {
     expect(BADGES.filter((b) => b.collection === "lyrics")).toHaveLength(8);
-    expect(ALL_BADGES.filter((b) => b.artPending).map((b) => b.id).sort())
-      .toEqual(["full_album", "full_ep", "unbreakable_2", "unbreakable_3", "unbreakable_4", "unbreakable_5"]);
+    expect(ALL_BADGES.filter((b) => b.artPending).map((b) => b.id)).toEqual([]);
+    expect(BADGES.map((b) => b.id)).toEqual(expect.arrayContaining(["full_album", "full_ep", "unbreakable_2", "unbreakable_5"]));
   });
   it("only offers art choices that exist", () => {
     for (const b of ALL_BADGES) for (const c of b.choices ?? []) expect(existsSync(`public${c}`)).toBe(true);
   });
   it("places live-musician art at its step: cobalt at 1 (again every 5), medallion at 10, star-studded at 25", () => {
     expect(badgeById("live_vocals_1")).toMatchObject({ goal: 1, every: 5 });
-    expect(badgeById("live_steel_pan_1")).toBeUndefined();
+    expect(badgeById("live_steel_pan_1")).toMatchObject({ goal: 1, every: 5, src: expect.stringContaining("live_musicians/steel_pan.webp") });
     expect(badgeById("live_steel_pan_10")?.src).toContain("medallion");
     expect(badgeById("live_steel_pan_25")?.src).toContain("star_studded");
     expect(badgeById("live_cello_25")?.src).toContain("star_studded_cello");

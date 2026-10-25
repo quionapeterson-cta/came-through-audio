@@ -1,9 +1,10 @@
 import { useEffect, useRef } from "react";
 
 /**
- * 100% royalty-ready celebration (founder, 2026-10-25): the CTA night sky fills the screen, stars twinkle and shoot,
- * and some of them fly in to spell the song's title, with a short "the stars aligned" line. Click or Esc closes it;
- * it ends on its own after a few seconds. With reduced motion the sky and title simply appear.
+ * Fully completed catalog celebration (founder, 2026-10-25): a lit CTA night sky fills the screen, stars twinkle and
+ * shoot, and some fly in to spell the most recent song's title, with a short "the stars aligned" line. (100% royalty
+ * health on one song gets the green pulse instead.) Click or Esc closes it; it ends on its own after a few seconds.
+ * With reduced motion the sky and title simply appear.
  */
 export function StarsAligned({ title, onDone }: { title: string; onDone: () => void }) {
   const canvas = useRef<HTMLCanvasElement>(null);
@@ -78,9 +79,9 @@ export function StarsAligned({ title, onDone }: { title: string; onDone: () => v
     <div role="dialog" aria-label={`The stars aligned for ${title}`} className="fixed inset-0 z-[100] cursor-pointer" onClick={onDone}>
       <canvas ref={canvas} className="absolute inset-0 h-full w-full" />
       <div className="absolute inset-x-0 bottom-[22%] mx-auto max-w-xl px-6 text-center text-white">
-        <p className="text-xs font-bold uppercase tracking-[2px] text-[#4D8CFF]">100% royalty ready</p>
+        <p className="text-xs font-bold uppercase tracking-[2px] text-[#4D8CFF]">Catalog complete</p>
         <p className="mt-2 text-xl font-bold">The stars aligned.</p>
-        <p className="mt-1 text-white/80">Every way this song gets paid is in place. You Came Through for it.</p>
+        <p className="mt-1 text-white/80">Every song in your catalog is ready to get paid. You Came Through for your whole catalog.</p>
         <p className="mt-4 text-xs text-white/50">Tap anywhere to close</p>
       </div>
     </div>
