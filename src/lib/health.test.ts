@@ -10,8 +10,9 @@ const track = (patch: Partial<ReturnType<typeof emptyMetadata>>, id = "t1"): Cat
   return { id, title: m.title, artist: m.artist, updatedAt: "", metadata: m };
 };
 const ready = track({
-  isrc: "USUM71703861", iswc: "T-919.481.654-1", duration: "3:27",
-  writers: [{ name: "", legalName: "Carly Rae Jepsen", pro: "SOCAN", ipi: "123456789", percentage: "100" }],
+  isrc: "USUM71703861", iswc: "T-919.481.654-1", duration: "3:27", upc: "123456789012", masterShare: "100",
+  samples: "No", writtenFor: "No", primaryGenre: "Pop",
+  writers: [{ name: "", legalName: "Carly Rae Jepsen", role: "Author/Composer", pro: "SOCAN", ipi: "123456789", percentage: "100" }],
   composers: [], publishers: [{ name: "Pub", pro: "SOCAN", ipi: "987654321", percentage: "100" }],
 });
 const US = countryByCode("US")!;
@@ -53,6 +54,21 @@ describe("health report", () => {
     expect(noIsrc).toBeLessThan(noPubIpi);
     expect(noWriterIpi).toBeLessThan(noPubIpi);
     expect(noPubIpi).toBeLessThan(100);
+  });
+  it("needs every required field for 100%: a missing genre keeps the song below it", () => {
+    const r = healthReport([track({ ...ready.metadata, primaryGenre: "" })], US, []);
+    expect(r.rows[0]!.issues.map((i) => i.field)).toContain("primaryGenre");
+    expect(r.dataScore).toBeLessThan(100);
+  });
+  it("lets a BMI writer with no publishing company reach 100%", () => {
+    const bmi = track({ ...ready.metadata, writers: [{ ...ready.metadata.writers[0]!, pro: "BMI" }], publishers: [], bmiWriterPublishing: true });
+    const r = healthReport([bmi], US, [check("bmi", "found"), check("soundexchange", "found"), check("mlc", "found")]);
+    expect(r.rows[0]!.issues).toEqual([]);
+    expect(r.score).toBe(100);
+  });
+  it("counts duration as a small part of the score", () => {
+    const noDuration = healthReport([track({ ...ready.metadata, duration: "" })], US, []).dataScore;
+    expect(noDuration).toBe(95);
   });
   it("ignores MusicBrainz results saved before it was removed", () => {
     const r = healthReport([track({ ...ready.metadata, iswc: "" })], US, [check("musicbrainz", "found", { recordingTitle: "Cut to the Feeling", artist: "Carly Rae Jepsen", iswcs: ["T-919.481.654-1"], writers: ["Simon Wilcox"], link: "" })]);

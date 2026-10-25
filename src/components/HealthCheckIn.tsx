@@ -16,7 +16,8 @@ import { registrationReadiness } from "@/lib/readiness";
  * the rest are saved as `checkin:*` steps the checkup reads. Nothing here blocks the check.
  */
 export type CheckInRow = { r: TrackReport; c: SongChecklist; status?: SongStatus | undefined };
-export type Answer = "yes" | "no" | "unsure";
+/** "bmi" only answers the publisher question: a BMI writer with no publishing company. */
+export type Answer = "yes" | "no" | "unsure" | "bmi";
 type Value = { answer?: Answer | undefined; locked?: string | undefined };
 type Question = { id: string; ask: (rows: CheckInRow[]) => string; tip: string; applies: (x: CheckInRow) => boolean; value: (x: CheckInRow) => Value; set: (x: CheckInRow, a: Answer) => Record<string, string | null> };
 
@@ -78,12 +79,13 @@ function questions(signedSheets?: Map<string, boolean>): Question[] {
 }
 
 /** The publisher question reads the song's own Publisher and Self-published fields rather than a separate answer. */
-type PublisherState = { kind: "listed"; names: string[] } | { kind: "self" } | { kind: "ask"; answer?: Answer | undefined; bmi: "all" | "some" | "none" };
+type PublisherState = { kind: "listed"; names: string[] } | { kind: "self" } | { kind: "bmi" } | { kind: "ask"; answer?: Answer | undefined; bmi: "all" | "some" | "none" };
 function publisherState(x: CheckInRow): PublisherState {
   const m = x.r.track.metadata;
   const names = m.publishers.map(creditName).filter(Boolean);
   if (names.length) return { kind: "listed", names };
   if (m.selfPublished) return { kind: "self" };
+  if (m.bmiWriterPublishing) return { kind: "bmi" };
   const w = writersOf(x);
   const bmi = w.length && w.every(isBmi) ? "all" : w.some(isBmi) ? "some" : "none";
   return { kind: "ask", answer: checkin(x, "publisher"), bmi };
@@ -103,12 +105,14 @@ type Props = {
   onAnswer: (changes: { id: string; steps: Record<string, string | null> }[]) => void;
   /** "No, I'm self-published": ticks Self-published on songs with no publisher listed. */
   onSelfPublished: (ids: string[]) => void;
+  /** "No, I'm a BMI writer with no publishing company": ticks that on songs with no publisher listed. */
+  onBmiWriter: (ids: string[]) => void;
   onFixField: (trackId: string, field: string) => void;
   onRun: () => void;
   onBack: () => void;
 };
 
-export function HealthCheckIn({ scope, options, onScope, rows, countryPicker, signedSheets, onAnswer, onSelfPublished, onFixField, onRun, onBack }: Props) {
+export function HealthCheckIn({ scope, options, onScope, rows, countryPicker, signedSheets, onAnswer, onSelfPublished, onBmiWriter, onFixField, onRun, onBack }: Props) {
   const many = rows.length > 1;
   const list = questions(signedSheets);
   // Missing writer details are shown so they can be fixed, but never hold the check back (Writer Credits rules).
@@ -170,7 +174,7 @@ export function HealthCheckIn({ scope, options, onScope, rows, countryPicker, si
                 </li>
               );
             })}
-            <PublisherRow rows={rows} many={many} onAnswer={onAnswer} onSelfPublished={onSelfPublished} onFixField={onFixField} />
+            <PublisherRow rows={rows} many={many} onAnswer={onAnswer} onSelfPublished={onSelfPublished} onBmiWriter={onBmiWriter} onFixField={onFixField} />
           </ul>
         </div>
 
@@ -207,21 +211,26 @@ function QuestionRow({ label, tip, value, locked, note, small, onChoose, choices
 }
 
 /**
- * "Do you have a publisher?" BMI writers with no publisher still get their writer share, and BMI pays them the
- * publisher share too (any role), so for them "No" is simply recorded. Writers at other PROs need a publisher or Self-published.
+ * "Do you have a publisher?" BMI writers get their own answer, "No, I'm a BMI writer with no publishing company": BMI
+ * pays them the publisher share too, so their songs can reach 100% with no publisher (founder, 2026-10-25).
+ * "No, I'm self-published" ticks Self-published. Writers at other PROs need a publisher or Self-published.
  */
-function PublisherRow({ rows, many, onAnswer, onSelfPublished, onFixField }: { rows: CheckInRow[]; many: boolean; onAnswer: Props["onAnswer"]; onSelfPublished: Props["onSelfPublished"]; onFixField: Props["onFixField"] }) {
+function PublisherRow({ rows, many, onAnswer, onSelfPublished, onBmiWriter, onFixField }: { rows: CheckInRow[]; many: boolean; onAnswer: Props["onAnswer"]; onSelfPublished: Props["onSelfPublished"]; onBmiWriter: Props["onBmiWriter"]; onFixField: Props["onFixField"] }) {
   const states = rows.map((x) => ({ x, p: publisherState(x) }));
   const open = states.filter((s): s is { x: CheckInRow; p: Extract<PublisherState, { kind: "ask" }> } => s.p.kind === "ask");
-  // "No" on a song whose writers are all with BMI just records it: BMI needs no publisher or Self-published.
   const choose = (targets: typeof open, a: Answer) => {
-    const self = a === "no" ? targets.filter((s) => s.p.bmi !== "all") : [];
+    // The BMI answer goes on songs with a BMI writer; any non-BMI co-writer then gets a ⚠️ asking for their publisher.
+    const bmiSongs = a === "bmi" ? targets.filter((s) => s.p.bmi !== "none") : [];
+    const self = a === "no" ? targets : [];
+    if (bmiSongs.length) onBmiWriter(bmiSongs.map((s) => s.x.r.track.id));
     if (self.length) onSelfPublished(self.map((s) => s.x.r.track.id));
-    const rest = targets.filter((s) => !self.includes(s));
+    const rest = targets.filter((s) => !self.includes(s) && !bmiSongs.includes(s) && a !== "bmi");
     if (rest.length) onAnswer(rest.map((s) => ({ id: s.x.r.track.id, steps: { "checkin:publisher": a } })));
   };
-  const choices: [Answer, string][] = [["yes", "Yes"], ["no", "No, I'm self-published"], ["unsure", "Not sure"]];
   const bmi = open.length && open.every((s) => s.p.bmi === "all") ? "all" : open.some((s) => s.p.bmi !== "none") ? "some" : "none";
+  const choices: [Answer, string][] = bmi === "none"
+    ? [["yes", "Yes"], ["no", "No, I'm self-published"], ["unsure", "Not sure"]]
+    : [["yes", "Yes"], ["bmi", "No, I'm a BMI writer with no publishing company"], ["no", "No, I'm self-published"], ["unsure", "Not sure"]];
   const same = open.length && open.every((s) => s.p.answer === open[0]!.p.answer) ? open[0]!.p.answer : undefined;
   const missingName = open.filter((s) => s.p.answer === "yes");
   const tip = "A publisher collects the publisher half of your songwriting royalties. If you don't have one, you're self-published.";
@@ -231,12 +240,12 @@ function PublisherRow({ rows, many, onAnswer, onSelfPublished, onFixField }: { r
     <li className="p-4">
       {!open.length
         ? <QuestionRow label="Do you have a publisher?" tip={tip} onChoose={() => {}}
-            locked={many ? `${settled} song${settled === 1 ? "" : "s"} set in your catalog` : states[0]?.p.kind === "listed" ? (states[0].p as { names: string[] }).names.join(", ") : "self-published"} />
+            locked={many ? `${settled} song${settled === 1 ? "" : "s"} set in your catalog` : states[0]?.p.kind === "listed" ? (states[0].p as { names: string[] }).names.join(", ") : states[0]?.p.kind === "bmi" ? "BMI writer, no publishing company" : "self-published"} />
         : <QuestionRow label="Do you have a publisher?" tip={tip} value={same} choices={choices} onChoose={(a) => choose(open, a)}
             note={many && settled ? `${settled} song${settled === 1 ? " is" : "s are"} already set in your catalog` : undefined} />}
       {bmi !== "none" && open.length > 0 && <p className="mt-2 text-sm text-muted-foreground">
-        {bmi === "all" ? "Your writers are with BMI. With no publisher, BMI still pays your writer share, and pays you the publisher share too."
-          : "BMI writers with no publisher still get their writer share, and BMI pays them the publisher share too. Writers at other PROs need a publisher, or Self-published."}</p>}
+        {bmi === "all" ? "Your writers are with BMI. With no publishing company, BMI pays you both halves: your writer share and the publisher share too."
+          : "BMI writers with no publishing company get both halves from BMI: the writer share and the publisher share. Writers at other PROs need a publisher, or Self-published."}</p>}
       {missingName.length > 0 && <div className="mt-2 space-y-1 text-sm">{missingName.slice(0, 3).map((s) => (
         <button key={s.x.r.track.id} type="button" onClick={() => onFixField(s.x.r.track.id, "selfPublished")} className="block text-left text-primary underline-offset-2 hover:underline">⚠️ {s.x.r.track.title}: add your publisher's name</button>))}</div>}
       {many && open.length > 1 && <details className="mt-2">

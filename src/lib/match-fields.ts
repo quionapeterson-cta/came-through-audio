@@ -7,10 +7,12 @@ import { creditName, type Metadata } from "@/lib/metadata";
  * numbers). These carry the most weight in every health score (founder, 2026-10-25); everything else is the rest.
  */
 export const MATCH_WEIGHT = 0.6;
+/** Duration is required for 100% but weighs little: it only helps tell apart songs with similar titles and artists. */
+export const DURATION_WEIGHT = 0.05;
 
 export type MatchCheck = { id: "title" | "isrc" | "iswc" | "writers" | "ipi" | "live"; label: string; ok: boolean };
 
-export function matchChecks(m: Pick<Metadata, "title" | "isrc" | "iswc" | "writers" | "composers">, findings: Finding[] = []): MatchCheck[] {
+export function matchChecks(m: Pick<Metadata, "title" | "isrc" | "iswc" | "writers" | "composers" | "duration">, findings: Finding[] = []): MatchCheck[] {
   const writers = [...m.writers, ...m.composers].filter((w) => creditName(w) || w.ipi?.trim());
   const live = findings.some((f) => f.level === "warn" && (f.field === "title" || f.field === "isrc"));
   return [
@@ -27,8 +29,12 @@ export function matchChecks(m: Pick<Metadata, "title" | "isrc" | "iswc" | "write
 /** Share of the match checks passed, 0–1. */
 export const matchScore = (checks: MatchCheck[]) => checks.filter((c) => c.ok).length / checks.length;
 
-/** One song's score: match fields weigh MATCH_WEIGHT, the rest (0–1) the remainder; 100% only when both are complete. */
-export function weightedScore(match: number, rest: number) {
-  const v = MATCH_WEIGHT * match + (1 - MATCH_WEIGHT) * rest;
-  return match === 1 && rest === 1 ? 1 : Math.min(v, 0.99);
+/**
+ * One song's score: match fields 60%, every other required field 35%, duration 5%. 100% only when all three are
+ * complete; anything missing keeps it below 100%.
+ */
+export function weightedScore(match: number, rest: number, duration = 1) {
+  const v = MATCH_WEIGHT * match + (1 - MATCH_WEIGHT - DURATION_WEIGHT) * rest + DURATION_WEIGHT * duration;
+  return match === 1 && rest === 1 && duration === 1 ? 1 : Math.min(v, 0.99);
 }
+export const hasDuration = (m: Pick<Metadata, "duration">) => ((m.duration ?? "").trim() ? 1 : 0);

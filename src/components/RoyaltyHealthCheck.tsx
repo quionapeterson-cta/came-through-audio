@@ -202,15 +202,18 @@ export function RoyaltyHealthCheck({ userId, canCatalog, canExport, onUpgrade, o
       void updateStatus({ ...cur, steps: next });
     }
   }
-  /** "No, I'm self-published": ticks Self-published on songs with no publisher listed. Nothing already entered changes. */
-  async function selfPublish(ids: string[]) {
+  /**
+   * "No, I'm self-published" or "No, I'm a BMI writer with no publishing company": ticks that answer on songs with no
+   * publisher listed. Nothing already entered changes.
+   */
+  async function selfPublish(ids: string[], key: "selfPublished" | "bmiWriterPublishing" = "selfPublished") {
     try {
       for (const id of ids) {
         const t = allTracks.find((x) => x.id === id);
-        if (!t || t.metadata.selfPublished || t.metadata.publishers.some(creditName)) continue;
-        const m = { ...t.metadata, selfPublished: true };
+        if (!t || t.metadata[key] || t.metadata.publishers.some(creditName)) continue;
+        const m = { ...t.metadata, [key]: true };
         if (isInspectorSong(id)) {
-          const saved = await saveInspectorSong({ title: m.title, artist: m.artist, duration: m.duration, isrc: m.isrc, iswc: m.iswc, writers: m.writers, publishers: m.publishers, selfPublished: true }, id);
+          const saved = await saveInspectorSong({ title: m.title, artist: m.artist, duration: m.duration, isrc: m.isrc, iswc: m.iswc, writers: m.writers, publishers: m.publishers, selfPublished: m.selfPublished, bmiWriterPublishing: m.bmiWriterPublishing }, id);
           setInspectorSongs((all) => all.map((x) => (x.id === id ? saved : x)));
         } else {
           await saveTrack(m, userId, id);
@@ -435,7 +438,7 @@ export function RoyaltyHealthCheck({ userId, canCatalog, canExport, onUpgrade, o
     const rows = rowsIn(view.scope);
     if (rows.length) return (
       <HealthCheckIn scope={view.scope} options={scopeOptions(view.from)} onScope={(scope) => setView({ ...view, scope })} rows={rows} countryPicker={countryPicker}
-        signedSheets={signedSheets} onAnswer={answer} onSelfPublished={(ids) => void selfPublish(ids)} onFixField={fixField} onRun={() => runCheck(view.scope)} onBack={() => setView({ kind: "hub" })} />
+        signedSheets={signedSheets} onAnswer={answer} onSelfPublished={(ids) => void selfPublish(ids)} onBmiWriter={(ids) => void selfPublish(ids, "bmiWriterPublishing")} onFixField={fixField} onRun={() => runCheck(view.scope)} onBack={() => setView({ kind: "hub" })} />
     );
   }
   if (view.kind === "report" && reportRows.length) return (

@@ -123,7 +123,15 @@ export function registrationCheck(m: Metadata, agency: RegistrationAgency, today
 
   // Who collects the publisher share: a listed publisher, or nobody (self-published / self-administered). At BMI, a
   // writer of any role with no publisher is paid the publisher share too, so BMI needs neither (PLAN-bmi-no-publisher).
+  // "I'm a BMI writer with no publishing company" (founder, 2026-10-25): honored only when every writer is with BMI.
+  const notBmi = listed(m).filter(({ row }) => !isBmi(row)).map(({ row }) => creditName(row)).filter(Boolean);
   if (m.selfPublished && pubs.length) need("publisher", "You checked Self-published but also listed a publisher. Keep one.", "selfPublished");
+  else if (m.bmiWriterPublishing && pubs.length) need("publisher", "You said there's no publishing company but also listed a publisher. Keep one.", "bmiWriterPublishing");
+  else if (m.bmiWriterPublishing && !m.selfPublished && notBmi.length) need("publisher", `${notBmi.join(", ")} ${notBmi.length === 1 ? "isn't" : "aren't"} with BMI, so BMI can't pay the publisher share for them. Add their publisher, or check Self-published.`, "bmiWriterPublishing");
+  else if (m.bmiWriterPublishing && !m.selfPublished) {
+    if (agency === "mlc") tip("publisher", "BMI writer with no publishing company: The MLC file lists you as publisher with the placeholder IPI 123456789; remove it in The MLC Portal after the upload.", "bmiWriterPublishing");
+    else tip("publisher", "BMI writer with no publishing company: BMI pays you the publisher share too, in proportion to your split.", "bmiWriterPublishing");
+  }
   else if (!m.selfPublished && !pubs.length) {
     if (agency === "bmi" && listed(m).some(({ row }) => isBmi(row))) tip("publisher", "No publisher: BMI pays you the publisher share too, in proportion to your split.", "selfPublished");
     // The MLC: BMI writers with no publisher still upload; the bulk file lists the writer as publisher with the

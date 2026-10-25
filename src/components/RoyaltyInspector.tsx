@@ -6,23 +6,25 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ProSelect } from "@/components/ProSelect";
 import type { CatalogTrack } from "@/lib/catalog";
-import { auditTrack, BMI_SEARCH, PILLARS, type Issue } from "@/lib/audit";
+import { auditTrack, BMI_SEARCH, isBmi, PILLARS, type Issue } from "@/lib/audit";
 import { creditName, WRITER_ROLES, writerRole } from "@/lib/metadata";
 import type { InspectorFields } from "@/lib/health-songs";
 import { capShare } from "@/lib/splits-total";
 
-const blank = { title: "", artist: "", duration: "", isrc: "", iswc: "", writer: "", role: "Author/Composer", pro: "", ipi: "", split: "100", publisher: "", pubIpi: "" };
+// bmiWriter: "yes" when a BMI writer has no publishing company (BMI pays them the publisher share too).
+const blank = { title: "", artist: "", duration: "", isrc: "", iswc: "", writer: "", role: "Author/Composer", pro: "", ipi: "", split: "100", publisher: "", pubPro: "", pubIpi: "", bmiWriter: "" };
 type Form = typeof blank;
 
 const toFields = (f: Form): InspectorFields => ({
   title: f.title.trim(), artist: f.artist.trim(), duration: f.duration.trim(), isrc: f.isrc.trim(), iswc: f.iswc.trim(),
   writers: f.writer.trim() ? [{ name: "", legalName: f.writer.trim(), role: f.role, pro: f.pro, ipi: f.ipi.trim(), percentage: f.split.trim() }] : [],
-  publishers: f.publisher.trim() ? [{ name: f.publisher.trim(), pro: "", ipi: f.pubIpi.trim(), percentage: "" }] : [],
+  publishers: f.publisher.trim() ? [{ name: f.publisher.trim(), pro: f.pubPro, ipi: f.pubIpi.trim(), percentage: "100" }] : [],
+  bmiWriterPublishing: f.bmiWriter === "yes" && !f.publisher.trim(),
 });
 const fromTrack = (t: CatalogTrack): Form => {
   const w = t.metadata.writers[0], p = t.metadata.publishers[0];
   return { ...blank, title: t.title, artist: t.artist, duration: t.metadata.duration, isrc: t.metadata.isrc, iswc: t.metadata.iswc,
-    writer: w ? creditName(w) : "", role: writerRole(w?.role), pro: w?.pro ?? "", ipi: w?.ipi ?? "", split: w?.percentage || "100", publisher: p?.name ?? "", pubIpi: p?.ipi ?? "" };
+    writer: w ? creditName(w) : "", role: writerRole(w?.role), pro: w?.pro ?? "", ipi: w?.ipi ?? "", split: w?.percentage || "100", publisher: p?.name ?? "", pubPro: p?.pro ?? "", pubIpi: p?.ipi ?? "", bmiWriter: t.metadata.bmiWriterPublishing ? "yes" : "" };
 };
 
 /**
@@ -92,8 +94,14 @@ export function RoyaltyInspector({ onEmbed, onExpert, onSave, onRunCheck, editin
       </div>
       <div className="mt-4 text-xs font-bold uppercase tracking-widest text-primary">Publisher</div>
       <div className="mt-2 grid gap-3 md:grid-cols-3 lg:grid-cols-5">
-        {field("publisher", "Publisher", "", "publisher")}{field("pubIpi", "Publisher IPI #", "", "ipi")}
+        {field("publisher", "Publisher", "", "publisher")}
+        <div className="space-y-1 text-sm"><label htmlFor="inspector-pub-pro" className="inline-flex items-center">Publisher PRO<InfoTip term="pro" /></label><ProSelect id="inspector-pub-pro" value={f.pubPro} onChange={(pubPro) => { setF({ ...f, pubPro }); setSaved(false); }} /></div>
+        {field("pubIpi", "Publisher IPI #", "", "ipi")}
       </div>
+      {/* BMI writers with no publishing company (founder, 2026-10-25): BMI pays the publisher share too. */}
+      {isBmi({ name: "", pro: f.pro, ipi: "", percentage: "" }) && !f.publisher.trim() && <label className="mt-3 flex items-start gap-2 text-sm">
+        <input type="checkbox" className="mt-0.5 h-4 w-4 accent-[var(--primary)]" checked={f.bmiWriter === "yes"} onChange={(e) => { setF({ ...f, bmiWriter: e.target.checked ? "yes" : "" }); setSaved(false); }} />
+        <span><span className="font-semibold">I'm a BMI writer with no publishing company</span><InfoTip term="bmiWriterPublishing" /><span className="block text-muted-foreground">BMI pays you both halves of your royalties, the writer share and the publisher share, so you don't need a publisher or a publisher IPI.</span></span></label>}
       <div className="mt-4 flex flex-wrap gap-2">
         {onRunCheck && <Button onClick={() => void check()} disabled={!f.title.trim() || saving}><Stethoscope />Run a Royalty Health Check</Button>}
         <Button variant={onRunCheck ? "outline" : "default"} onClick={run}>Inspect Song</Button>

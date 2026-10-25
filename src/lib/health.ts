@@ -2,7 +2,9 @@ import { auditTrack, type Issue, type Pillar } from "@/lib/audit";
 import type { CatalogTrack } from "@/lib/catalog";
 import { compareLookup, type Finding, type StreamingHit } from "@/lib/lookups";
 import { INTERNATIONAL, societyForPro, type Country, type Society } from "@/lib/repertoires";
-import { matchChecks, matchScore, weightedScore } from "@/lib/match-fields";
+import { hasDuration, matchChecks, matchScore, weightedScore } from "@/lib/match-fields";
+import { registrationCheck, type RegistrationAgency } from "@/lib/readiness";
+import { isInspectorSong } from "@/lib/health-songs";
 
 /** A saved repertoire check (public.repertoire_checks). */
 export type RepertoireCheck = { trackId: string; society: string; status: "found" | "not_listed"; source: "self" | "auto"; workId?: string | null; details?: unknown; checkedAt: string };
@@ -45,9 +47,36 @@ export function societiesFor(t: CatalogTrack, country: Country, pillar: Pillar):
   return country.societies[pillar] ?? [];
 }
 
+/**
+ * Each pillar's field list. Performance uses BMI's, the strictest PRO list (duration, genre, written-for, label), so
+ * "every field" means the same thing for every writer; it still lets BMI writers go without a publisher.
+ */
+const PILLAR_AGENCY: Record<Pillar, RegistrationAgency> = { performance: "bmi", mechanical: "mlc", digital: "soundexchange" };
+
+/**
+ * Every field the agencies require counts toward 100% (founder, 2026-10-25), read from the shared readiness check
+ * (registrationCheck), never re-implemented here. Catalog songs only: Royalty Inspector songs are held to the fields
+ * the Inspector asks for. Duration comes from the audit as a low-weight item.
+ */
+function requiredIssues(t: CatalogTrack, pillars: Pillar[], have: Issue[]): Issue[] {
+  if (isInspectorSong(t.id)) return [];
+  const seen = new Set(have.map((i) => i.field));
+  const agency = PILLAR_AGENCY;
+  const out: Issue[] = [];
+  for (const pillar of pillars) {
+    for (const x of registrationCheck(t.metadata, agency[pillar]).missing) {
+      if (x.code === "duration" || seen.has(x.field)) continue;
+      seen.add(x.field);
+      out.push({ pillar, text: x.message, field: x.field });
+    }
+  }
+  return out;
+}
+
 export function trackReport(t: CatalogTrack, country: Country, checks: RepertoireCheck[]): TrackReport {
   const mine = checks.filter((c) => c.trackId === t.id);
-  const issues = auditTrack(t);
+  const audited = auditTrack(t);
+  const issues = [...audited, ...requiredIssues(t, PILLAR_ORDER.filter((p) => societiesFor(t, country, p).length), audited)];
   const pillars = PILLAR_ORDER.flatMap((pillar): PillarRow[] => {
     const list = societiesFor(t, country, pillar);
     if (!list.length) return [];
@@ -81,7 +110,9 @@ export function healthReport(tracks: CatalogTrack[], country: Country, checks: R
   const rows = tracks.map((t) => trackReport(t, country, checks));
   const cells = rows.flatMap((r) => r.pillars);
   const dataOk = cells.filter((c) => !c.dataIssues.length).length;
-  const songData = rows.map((r) => weightedScore(matchScore(matchChecks(r.track.metadata, r.findings)), r.pillars.length ? r.pillars.filter((p) => !p.dataIssues.length).length / r.pillars.length : 1));
+  // Low-weight items (duration) don't make a pillar incomplete here; they count through their own small weight.
+  const full = (p: PillarRow) => !p.dataIssues.some((i) => !i.low);
+  const songData = rows.map((r) => weightedScore(matchScore(matchChecks(r.track.metadata, r.findings)), r.pillars.length ? r.pillars.filter(full).length / r.pillars.length : 1, hasDuration(r.track.metadata)));
   const dataScore = rows.length ? Math.round((songData.reduce((a, b) => a + b, 0) / rows.length) * 100) : 0;
   const confirmed = cells.filter((c) => c.state === "confirmed").length;
   const pct = (n: number) => (cells.length ? Math.round((n / cells.length) * 100) : 0);

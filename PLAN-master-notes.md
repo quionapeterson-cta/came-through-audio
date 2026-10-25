@@ -202,6 +202,16 @@ contract) · 3 Adjust the wording if you need to · 4 Sign · 5 Send for signatu
 - Song Health Checklist: covers catalog songs and inspected songs (I'll confirm and label each source).
 - Copy section: BMI search by title and performer (not writer); SoundExchange public repertoire link at "confirm it shows up".
 
+### 3.3b Every field counts toward 100%, and the BMI writer choice (founder, 2026-10-25) · ✅ BUILT
+- A song reaches 100% only with every field the agencies require (read from the shared readiness check, BMI's list for
+  performance plus The MLC and SoundExchange). Score per song: match fields 60% (ISRC, ISWC, title, writers + IPIs,
+  streaming agrees), other required fields 35%, duration 5% (required, but it only helps tell similar songs apart).
+- New choice wherever Self-published appears (song form, Catalog Profile, check-in, Inspector): **"I'm a BMI writer with
+  no publishing company"**, with the explainer "BMI pays you both halves of your royalties, the writer share and the
+  publisher share, so you don't need a publisher or a publisher IPI." Honored only when every writer is with BMI; a
+  non-BMI co-writer gets a ⚠️ to add their publisher or Self-published. Field `bmiWriterPublishing`, catalog only.
+- Inspector gained a Publisher PRO box (publishers need a PRO).
+
 ### 3.4 Calculators and converters
 - Country setting switches the calculator to that country's society and split rules.
 - Add SESAC to the formula converter.

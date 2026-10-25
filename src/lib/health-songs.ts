@@ -11,8 +11,8 @@ import type { RepertoireCheck } from "@/lib/health";
 export const INSPECTOR_PREFIX = "h:";
 export const isInspectorSong = (id: string) => id.startsWith(INSPECTOR_PREFIX);
 
-/** `selfPublished` is set from the check-in ("No, I'm self-published"); the form itself never clears it. */
-export type InspectorFields = Pick<Metadata, "title" | "artist" | "duration" | "isrc" | "iswc" | "writers" | "publishers"> & Partial<Pick<Metadata, "selfPublished">>;
+/** `selfPublished` and `bmiWriterPublishing` are set from the check-in ("No, I'm self-published" / the BMI answer); the form keeps them. */
+export type InspectorFields = Pick<Metadata, "title" | "artist" | "duration" | "isrc" | "iswc" | "writers" | "publishers"> & Partial<Pick<Metadata, "selfPublished" | "bmiWriterPublishing">>;
 
 type SongRow = { id: string; title: string; artist: string; metadata: Partial<Metadata>; updated_at: string };
 const toTrack = (r: SongRow): CatalogTrack => ({

@@ -6,7 +6,7 @@ import { currentBadge, DEFAULT_BADGE_PREFS, type BadgePrefs } from "@/lib/badges
 /** Recurring details a user can opt to prefill on every embed. Stored only in this browser. */
 export const PROFILE_KEYS = [
   "artist", "label", "primaryGenre", "secondaryGenre", "releaseType", "explicit", "copyright", "phonographic", "language",
-  "writers", "composers", "producers", "publishers", "selfPublished", "recordedIn",
+  "writers", "composers", "producers", "publishers", "selfPublished", "bmiWriterPublishing", "recordedIn",
 ] as const;
 export type ArtistProfile = Partial<Pick<Metadata, (typeof PROFILE_KEYS)[number]>>;
 
@@ -113,7 +113,7 @@ export function fillMissing(detected: Partial<Metadata>, p: ArtistProfile | null
   const out: Partial<Metadata> = { ...detected };
   for (const k of PROFILE_KEYS) {
     // A self-published song has its answer: the profile's publisher never fills in (it would contradict it).
-    if (k === "publishers" && out.selfPublished) continue;
+    if (k === "publishers" && (out.selfPublished || out.bmiWriterPublishing)) continue;
     const cur = out[k] as unknown;
     const empty = cur === undefined || cur === "" || (Array.isArray(cur) && hasName(cur as Contributor[]).length === 0);
     if (empty && p[k] !== undefined) (out as Record<string, unknown>)[k] = p[k];
@@ -147,5 +147,7 @@ export function withProfileFilled(m: Metadata, p: ArtistProfile | null): Metadat
   if (!p) return m;
   const out = { ...m, ...restoreRows(fillMissing(m, p), p) } as Metadata;
   if (p.selfPublished && !out.selfPublished && !hasName(out.publishers).length) out.selfPublished = true;
+  // Same for a BMI writer with no publishing company: the profile's answer fills songs that have no publisher.
+  if (p.bmiWriterPublishing && !out.bmiWriterPublishing && !hasName(out.publishers).length) out.bmiWriterPublishing = true;
   return out;
 }

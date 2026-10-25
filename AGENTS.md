@@ -42,6 +42,7 @@ Embedding is forgiving; registration is strict. Never block a user from saving o
   - **The MLC:** IPI for writers in a PRO, publisher or Self-published (the exception: a song whose writers are all with BMI and has no publisher needs neither; the bulk file lists the writer as publisher with the placeholder IPI 123456789, removed in The MLC Portal after upload), ISRC.
   - **SoundExchange:** recording only, with no writer checks: ISRC, master share, UPC.
   - Saving, embedding and the user's own exports are never held to these.
+  - A song's "I'm a BMI writer with no publishing company" choice (`bmiWriterPublishing`) states the BMI no-publisher case out loud; it only counts when every writer is with BMI.
 
 ### Data flow
 - Embed → Catalog → Agency export templates. Changes to writer fields must be carried through all three.

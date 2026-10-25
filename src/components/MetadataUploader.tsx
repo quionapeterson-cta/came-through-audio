@@ -26,7 +26,7 @@ import { AGENCY_LABEL, downloadAgencyExport, downloadNeighbouringPack, mlcPlaceh
 import { AgencyExportDialog } from "@/components/AgencyExportDialog";
 import { AGENCY_UPLOAD_STEPS, MLC_EXPORT_NOTES } from "@/lib/glossary";
 import { registrationReadiness, type MissingItem } from "@/lib/readiness";
-import { isBmi } from "@/lib/audit";
+import { isBmi, notBmiWriters } from "@/lib/audit";
 import { downloadLyricsPdf } from "@/lib/lyrics-pdf";
 import { downloadCatalogPdf } from "@/lib/catalog-pdf";
 import { ProSelect } from "@/components/ProSelect";
@@ -429,7 +429,7 @@ export function MetadataUploader({ onShareInfo, userId, mode = "embed", readOnly
           const count = (rows: Contributor[] | undefined) => (rows ?? []).filter(creditName).length;
           const filled = (pairs: [string, string][]) => pairs.filter(([, v]) => v.trim()).map(([k]) => k).join(" · ");
           const writersWarn = warnIn("writers-", "composers-");
-          const publishersWarn = warnIn("publishers-");
+          const publishersWarn = warnIn("publishers-", "bmiWriterPublishing");
           // With no publisher, BMI pays the publisher share to its writers, so say so where it matters.
           const bmiNoPublisher = full && !count(metadata.publishers) && [...metadata.writers, ...metadata.composers].some((w) => creditName(w) && isBmi(w));
           return <div className="space-y-3">
@@ -535,9 +535,14 @@ export function MetadataUploader({ onShareInfo, userId, mode = "embed", readOnly
               {metadata.writtenFor && metadata.writtenFor !== "No" && <Field label="Production title" id="productionTitle" value={metadata.productionTitle} placeholder="Name of the film, show or ad" onChange={(v) => update("productionTitle", v)} />}
             </FormSection>}
 
-            {full && <FormSection title={metadata.selfPublished && !count(metadata.publishers) ? "Publishers · self-published" : `Publishers · ${count(metadata.publishers)}`} open={publishersWarn} warn={publishersWarn} summary={metadata.selfPublished ? "No publisher" : (metadata.publishers ?? []).filter(creditName).map(creditName).join(", ") || "Who publishes the song"}>
+            {full && <FormSection title={metadata.bmiWriterPublishing && !count(metadata.publishers) ? "Publishers · BMI pays the publisher share" : metadata.selfPublished && !count(metadata.publishers) ? "Publishers · self-published" : `Publishers · ${count(metadata.publishers)}`} open={publishersWarn} warn={publishersWarn} summary={metadata.bmiWriterPublishing && !count(metadata.publishers) ? "BMI writer, no publishing company" : metadata.selfPublished ? "No publisher" : (metadata.publishers ?? []).filter(creditName).map(creditName).join(", ") || "Who publishes the song"}>
               <label className="flex items-center gap-2 text-sm"><input id="selfPublished" type="checkbox" className="h-4 w-4 accent-[var(--primary)]" disabled={busy} checked={metadata.selfPublished} onChange={(e) => void setSelfPublished(e.target.checked)} />Self-published (no publisher)<Tip text={TIPS.selfPublished} title="Self-published" /></label>
-              {bmiNoPublisher && <p className="rounded-lg border border-primary/40 bg-accent/30 p-3 text-sm text-muted-foreground"><span className="font-semibold text-foreground">💡 No publisher? BMI has you covered.</span> When a song has no publisher, BMI pays the publisher share to the writers automatically. It's split between all the writers in proportion to their writer splits, so a 60/40 split gets 60% and 40% of the publisher share too. Nothing else to set up.{!metadata.selfPublished && " Check Self-published so your registration says so."}</p>}
+              {/* BMI writers with no publishing company say so here (founder, 2026-10-25); it teaches why no publisher is needed. */}
+              {(bmiNoPublisher || metadata.bmiWriterPublishing) && <label className="flex items-start gap-2 text-sm"><input id="bmiWriterPublishing" type="checkbox" className="mt-0.5 h-4 w-4 accent-[var(--primary)]" disabled={busy} checked={!!metadata.bmiWriterPublishing} onChange={(e) => update("bmiWriterPublishing", e.target.checked)} />
+                <span><span className="font-semibold">I'm a BMI writer with no publishing company</span><Tip text={TIPS.bmiWriterPublishing} title="BMI writer, no publishing company" /><span className="block text-muted-foreground">BMI pays you both halves of your royalties, the writer share and the publisher share, so you don't need a publisher or a publisher IPI.</span></span></label>}
+              {bmiNoPublisher && !metadata.bmiWriterPublishing && <p className="rounded-lg border border-primary/40 bg-accent/30 p-3 text-sm text-muted-foreground"><span className="font-semibold text-foreground">💡 No publisher? BMI has you covered.</span> When a song has no publisher, BMI pays the publisher share to the writers automatically. It's split between all the writers in proportion to their writer splits, so a 60/40 split gets 60% and 40% of the publisher share too. Check the box above so your songs say so.</p>}
+              {metadata.bmiWriterPublishing && notBmiWriters(metadata).length > 0 && !count(metadata.publishers) && <p className="text-sm">⚠️ {notBmiWriters(metadata).join(", ")} {notBmiWriters(metadata).length === 1 ? "isn't" : "aren't"} with BMI, so BMI can't pay the publisher share for them. Add their publisher, or check Self-published.</p>}
+              {metadata.bmiWriterPublishing && count(metadata.publishers) > 0 && <p className="text-sm">⚠️ You said there's no publishing company but also listed a publisher. Uncheck the BMI box, or remove the publisher.</p>}
               {(!metadata.selfPublished || count(metadata.publishers) > 0) && <Contributors bare title="Publishers" singular="publisher" group="publishers" rows={metadata.publishers} disabled={busy} publisher onChange={(rows) => update("publishers", rows)} tip={GLOSSARY.publisher.text} />}
               {metadata.selfPublished && count(metadata.publishers) > 0 && <p className="text-sm">⚠️ You checked Self-published but also listed a publisher. Uncheck Self-published, or remove the publisher.</p>}
             </FormSection>}
@@ -827,6 +832,7 @@ const TIPS = {
   alternateTitles: "Other names the song goes by, like a short title or a translation. Agencies use them to match plays to your song.",
   samples: "Answer Yes if the song uses a sample, borrows from another song, or is based on an older song (public-domain songs too). PROs ask for the original song's details when you register.",
   writtenFor: "Was the song made for a movie, TV show, stage show or commercial? BMI asks this when you register.",
+  bmiWriterPublishing: "Check this if every writer on the song is with BMI and none of you has a publishing company. BMI pays you the publisher share too, so no publisher or publisher IPI is needed.",
   selfPublished: "Check this if no publisher has rights to the song. Your PRO then pays the publisher half to the writers. Have your own publishing company? List it as a publisher instead.",
   masterShare: "How much of the recording (the master) you own. Most independent artists own 100%. SoundExchange pays the master owner by this share.",
   masterBasis: "I own it: you own the recording. Authorized designee: you collect for the owner, for example as their label or administrator.",

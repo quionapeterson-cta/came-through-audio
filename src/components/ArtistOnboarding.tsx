@@ -10,6 +10,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { ProSelect } from "@/components/ProSelect";
 import { emptyContributor, GENRES, RELEASE_TYPES, WRITER_ROLES, writerRole, type Contributor } from "@/lib/metadata";
 import { isBadgeImage } from "@/lib/badges";
+import { isBmi } from "@/lib/audit";
 import { loadOnboarding, loadProfile, saveOnboarding, saveProfile, withOwnWriter, type ArtistProfile, type Onboarding } from "@/lib/artist-profile";
 import { capShare, splitTotal } from "@/lib/splits-total";
 import { ARTIST_SEAT_PRICES, TIER_LABEL } from "@/lib/plans";
@@ -227,7 +228,11 @@ export function ArtistOnboarding({ userId, open, onOpenChange, onSaved, firstRun
             <Field label="Legal Name"><Input value={ob.legalName} onChange={(e) => setOb((o) => ({ ...o, legalName: e.target.value }))} placeholder="As registered with your PRO" /></Field>
             <Rows title="Writer" rows={p.writers} onChange={(r) => set("writers", r)} seed={ob.legalName} writer />
             <label className="flex items-center gap-2 text-sm"><input type="checkbox" className="h-4 w-4 accent-[var(--primary)]" checked={!!p.selfPublished} onChange={(e) => set("selfPublished", e.target.checked)} />I'm self-published (no publisher)<InfoTip term="selfPublished" /></label>
-            {(!p.selfPublished || hasPublisher) && <Rows title="Publisher" rows={p.publishers} onChange={(r) => set("publishers", r)} />}
+            {/* BMI writers with no publishing company (founder, 2026-10-25): new songs fill this in from the profile. */}
+            {((p.writers ?? []).some((w) => isBmi(w)) || p.bmiWriterPublishing) && <label className="flex items-start gap-2 text-sm"><input type="checkbox" className="mt-0.5 h-4 w-4 accent-[var(--primary)]" checked={!!p.bmiWriterPublishing} onChange={(e) => set("bmiWriterPublishing", e.target.checked)} />
+              <span><span className="font-semibold">I'm a BMI writer with no publishing company</span><InfoTip term="bmiWriterPublishing" /><span className="block text-muted-foreground">BMI pays you both halves of your royalties, the writer share and the publisher share, so you don't need a publisher.</span></span></label>}
+            {(!p.selfPublished || hasPublisher) && (!p.bmiWriterPublishing || hasPublisher) && <Rows title="Publisher" rows={p.publishers} onChange={(r) => set("publishers", r)} />}
+            {p.bmiWriterPublishing && hasPublisher && <p className="text-sm">⚠️ You said there's no publishing company but also listed a publisher. Uncheck the BMI box, or remove the publisher.</p>}
             {p.selfPublished && hasPublisher && <p className="text-sm">⚠️ You checked Self-published but also listed a publisher. Uncheck Self-published, or remove the publisher.</p>}
             <p className="flex items-start gap-2 rounded-lg bg-muted p-3 text-xs text-muted-foreground"><Lock className="mt-0.5 h-4 w-4 shrink-0 text-primary" />Private: PRO affiliations, IPI name numbers and shares stay in your catalog and are never embedded in your music files.</p>
             <IpiNote />

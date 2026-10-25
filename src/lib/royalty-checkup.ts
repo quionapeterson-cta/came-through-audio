@@ -1,4 +1,4 @@
-import { matchChecks, matchScore, weightedScore } from "@/lib/match-fields";
+import { hasDuration, matchChecks, matchScore, weightedScore } from "@/lib/match-fields";
 import { hasPro, isBmi, isIpi, publisherCovered } from "@/lib/audit";
 import type { TrackReport } from "@/lib/health";
 import type { SongChecklist } from "@/lib/health-checklist";
@@ -246,7 +246,7 @@ export function royaltyCheckup({ rows, signedSheets, today = new Date().toISOStr
   }).filter((o) => o.id !== "kidneys" || pillarSongs.digital > 0).filter((o) => o.id !== "lungs" || pillarSongs.mechanical > 0);
   const lead = [...findings].sort((a, b) => (a.severity === b.severity ? 0 : a.severity === "treat" ? -1 : 1) || b.songs.length - a.songs.length || PRIORITY.indexOf(a.id) - PRIORITY.indexOf(b.id))[0] ?? null;
   // Each song: the fields agencies match by (codes, title, writers) weigh most, then its checklist steps done.
-  const score = rows.length ? Math.round(rows.reduce((n, { r, c }) => n + weightedScore(matchScore(matchChecks(r.track.metadata, r.findings)), c.total ? c.done / c.total : 0), 0) / rows.length * 100) : 0;
+  const score = rows.length ? Math.round(rows.reduce((n, { r, c }) => n + weightedScore(matchScore(matchChecks(r.track.metadata, r.findings)), c.total ? c.done / c.total : 0, hasDuration(r.track.metadata)), 0) / rows.length * 100) : 0;
   const rank: OrganState[] = ["treat", "noflow", "watch", "healthy"];
   const rhythm = rank.find((s) => organs.some((o) => o.state === s)) ?? "healthy";
   return { score, songs: rows.length, organs, lead, rhythm };

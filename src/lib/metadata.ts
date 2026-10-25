@@ -71,6 +71,9 @@ export const metadataSchema = z.object({
   /** Registration details (PRO, MLC, SoundExchange forms). Kept in the catalog, never embedded. */
   alternateTitles: z.array(z.string().trim()).default([""]),
   selfPublished: z.boolean().default(false),
+  /** "I'm a BMI writer with no publishing company": BMI pays its writers the publisher share too, so the song needs no
+   *  publisher (founder, 2026-10-25). Only counts when every writer is with BMI. Catalog only, never embedded. */
+  bmiWriterPublishing: z.boolean().default(false),
   /** "" = not answered yet. Samples or songs this one is based on (public-domain sources included). */
   samples: z.enum(["", "No", "Yes"]).default(""),
   sampleTitle: z.string().trim().default(""),
@@ -103,7 +106,7 @@ export const emptyMetadata = (): Metadata => ({
   isrc: "", upc: "", iswc: "", explicit: false, instrumental: false, primaryGenre: "", secondaryGenre: "",
   writers: [emptyContributor()], composers: [emptyContributor()], producers: [emptyContributor()], publishers: [emptyContributor()],
   lyrics: "", coverThumb: "", audioPath: "", artPath: "", aiProtection: false, credits: [], recordedIn: "", recordedYear: "",
-  alternateTitles: [""], selfPublished: false, samples: "", sampleTitle: "", sampleWriters: "", sampleSource: "", writtenFor: "", productionTitle: "",
+  alternateTitles: [""], selfPublished: false, bmiWriterPublishing: false, samples: "", sampleTitle: "", sampleWriters: "", sampleSource: "", writtenFor: "", productionTitle: "",
   masterShare: "100", masterBasis: "Copyright Owner", rightsStart: "", rightsEnd: "",
 });
 

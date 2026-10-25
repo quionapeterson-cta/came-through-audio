@@ -5,7 +5,8 @@ import { splitStatus } from "@/lib/splits-total";
 
 export type Pillar = "performance" | "digital" | "mechanical";
 /** `field` is the catalog form field id to jump to, so each warning can link straight to the fix. */
-export type Issue = { pillar: Pillar; text: string; field?: string };
+/** `low`: still needed for 100%, but weighs little in the score (duration). */
+export type Issue = { pillar: Pillar; text: string; field?: string; low?: boolean };
 
 export const PILLARS: { id: Pillar; label: string; registry: string; search: string; searchLabel: string }[] = [
   { id: "performance", label: "Performance Royalties", registry: "ASCAP · BMI", search: "https://www.ascap.com/repertory", searchLabel: "ASCAP Repertory" },
@@ -22,12 +23,18 @@ export const hasPro = (pro?: string) => !["", "none", "other"].includes((pro ?? 
 
 /** A BMI writer: with no publisher, BMI pays the publisher share to the writers, in proportion to their splits. */
 export const isBmi = (w: Contributor) => societyForPro(w.pro)?.id === "bmi";
-/** No publisher is needed: Self-published is checked, or every named writer is with BMI. */
-export function publisherCovered(m: { writers: Contributor[]; composers: Contributor[]; selfPublished?: boolean }) {
+/**
+ * No publisher is needed: Self-published is checked, or every named writer is with BMI (BMI pays its writers the
+ * publisher share too; "I'm a BMI writer with no publishing company" says so out loud, and is only honored then).
+ */
+export function publisherCovered(m: { writers: Contributor[]; composers: Contributor[]; selfPublished?: boolean; bmiWriterPublishing?: boolean }) {
   if (m.selfPublished) return true;
   const named = [...m.writers, ...m.composers].filter(creditName);
   return named.length > 0 && named.every(isBmi);
 }
+/** Writers on a song marked "BMI writer with no publishing company" who aren't with BMI (BMI can't pay them). */
+export const notBmiWriters = (m: { writers: Contributor[]; composers: Contributor[] }) =>
+  [...m.writers, ...m.composers].filter((w) => creditName(w) && !isBmi(w)).map(creditName);
 
 /** Checks one catalog track against what each repertoire system needs to match and pay it. */
 export function auditTrack(t: CatalogTrack): Issue[] {
@@ -44,11 +51,19 @@ export function auditTrack(t: CatalogTrack): Issue[] {
     if (split.state === "over") out.push({ pillar: "performance", text: `Writer splits total ${split.total}%, ${split.over}% over 100%. Lower one to fix it.`, field: "writers-0-share" });
     else if (split.state === "under" && Math.round(split.total) !== 100) out.push({ pillar: "performance", text: `Writer splits total ${split.total}%, ${split.left}% short of 100%`, field: "writers-0-share" });
   }
+  // Needed for 100%, but only a small part of the score: it helps agencies tell apart songs with similar titles and artists.
+  if (!(m.duration ?? "").trim()) out.push({ pillar: "performance", text: "Add the duration (mm:ss). It helps agencies tell apart songs with similar titles and artists.", field: "duration", low: true });
   if (!m.isrc) out.push({ pillar: "digital", text: "Missing ISRC", field: "isrc" });
   else if (!isIsrc(m.isrc)) out.push({ pillar: "digital", text: "ISRC is not 12 characters (CC-XXX-YY-NNNNN)", field: "isrc" });
   if (!t.artist.trim()) out.push({ pillar: "digital", text: "No featured artist name", field: "artist" });
   const pubs = m.publishers.filter((p) => p.name.trim());
-  if (!pubs.length && !publisherCovered(m)) out.push({ pillar: "mechanical", text: "No publisher listed. Add one, or check Self-published if there isn't one.", field: "selfPublished" });
+  if (pubs.length && m.bmiWriterPublishing) out.push({ pillar: "mechanical", text: "You said there's no publishing company but also listed a publisher. Keep one.", field: "bmiWriterPublishing" });
+  if (!pubs.length && !publisherCovered(m)) {
+    const others = m.bmiWriterPublishing ? notBmiWriters(m) : [];
+    out.push(others.length
+      ? { pillar: "mechanical", text: `${others.join(", ")} ${others.length === 1 ? "isn't" : "aren't"} with BMI, so BMI can't pay the publisher share for them. Add their publisher, or check Self-published.`, field: "bmiWriterPublishing" }
+      : { pillar: "mechanical", text: "No publisher listed. Add one, or check Self-published if there isn't one.", field: "selfPublished" });
+  }
   const pubSplit = splitStatus(pubs);
   if (pubSplit.state === "over") out.push({ pillar: "mechanical", text: `Publisher shares total ${pubSplit.total}%, ${pubSplit.over}% over 100%. Lower one to fix it.`, field: "publishers-0-share" });
   m.publishers.forEach((p, index) => {

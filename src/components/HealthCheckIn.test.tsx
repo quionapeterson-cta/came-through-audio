@@ -12,10 +12,10 @@ const t = (pro: string) => ({ id: "a", title: "Midnight", artist: "Q", updatedAt
   writers: [{ name: "", legalName: "Ann Lee", role: "Author/Composer", pro, ipi: "00123456789", percentage: "100" }], composers: [], publishers: [] } });
 const setup = (pro = "ASCAP") => {
   const track = t(pro), r = trackReport(track, us, []);
-  const onAnswer = vi.fn(), onSelfPublished = vi.fn(), onRun = vi.fn();
+  const onAnswer = vi.fn(), onSelfPublished = vi.fn(), onBmiWriter = vi.fn(), onRun = vi.fn();
   render(<HealthCheckIn scope={songScope(track)} options={[songScope(track)]} onScope={vi.fn()} rows={[{ r, c: songChecklist(r, us) }]} countryPicker={null}
-    onAnswer={onAnswer} onSelfPublished={onSelfPublished} onFixField={vi.fn()} onRun={onRun} onBack={vi.fn()} />);
-  return { onAnswer, onSelfPublished, onRun };
+    onAnswer={onAnswer} onSelfPublished={onSelfPublished} onBmiWriter={onBmiWriter} onFixField={vi.fn()} onRun={onRun} onBack={vi.fn()} />);
+  return { onAnswer, onSelfPublished, onBmiWriter, onRun };
 };
 
 describe("HealthCheckIn", () => {
@@ -29,13 +29,16 @@ describe("HealthCheckIn", () => {
     expect(onRun).toHaveBeenCalled();
   });
 
-  it("asks about a publisher, and tells BMI writers their writer share still pays", () => {
+  it("offers BMI writers their own answer, and explains BMI pays both halves", () => {
     const bmi = setup("BMI");
-    expect(screen.getByText(/BMI still pays your writer share/)).toBeTruthy();
-    // All-BMI writers need no Self-published, so "No" is only recorded.
-    fireEvent.click(within(screen.getByRole("radiogroup", { name: "Do you have a publisher?" })).getByRole("radio", { name: "No, I'm self-published" }));
+    expect(screen.getByText(/BMI pays you both halves/)).toBeTruthy();
+    fireEvent.click(within(screen.getByRole("radiogroup", { name: "Do you have a publisher?" })).getByRole("radio", { name: "No, I'm a BMI writer with no publishing company" }));
+    expect(bmi.onBmiWriter).toHaveBeenCalledWith(["a"]);
     expect(bmi.onSelfPublished).not.toHaveBeenCalled();
-    expect(bmi.onAnswer).toHaveBeenCalledWith([{ id: "a", steps: { "checkin:publisher": "no" } }]);
+  });
+  it("doesn't offer the BMI answer to writers at other PROs", () => {
+    setup("ASCAP");
+    expect(screen.queryByRole("radio", { name: "No, I'm a BMI writer with no publishing company" })).toBeNull();
   });
   it("ticks Self-published for writers at other PROs", () => {
     const { onSelfPublished } = setup("ASCAP");
