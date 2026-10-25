@@ -85,6 +85,35 @@ export type Database = {
         }
         Relationships: []
       }
+      agency_exports: {
+        Row: {
+          agency: string
+          exported_at: string
+          track_id: string
+          user_id: string
+        }
+        Insert: {
+          agency: string
+          exported_at?: string
+          track_id: string
+          user_id?: string
+        }
+        Update: {
+          agency?: string
+          exported_at?: string
+          track_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "agency_exports_track_id_fkey"
+            columns: ["track_id"]
+            isOneToOne: false
+            referencedRelation: "catalogs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       agency_registrations: {
         Row: {
           assigned_employee_id: string | null
@@ -705,30 +734,48 @@ export type Database = {
       department_tasks: {
         Row: {
           body: string
+          completed_at: string | null
+          completed_by: string | null
           created_at: string
           created_by: string | null
           department: string
+          due_at: string | null
           id: string
+          importance: string
+          owner_id: string | null
+          reminders_sent: string[]
           status: string
           title: string
           updated_at: string
         }
         Insert: {
           body?: string
+          completed_at?: string | null
+          completed_by?: string | null
           created_at?: string
           created_by?: string | null
           department: string
+          due_at?: string | null
           id?: string
+          importance?: string
+          owner_id?: string | null
+          reminders_sent?: string[]
           status?: string
           title: string
           updated_at?: string
         }
         Update: {
           body?: string
+          completed_at?: string | null
+          completed_by?: string | null
           created_at?: string
           created_by?: string | null
           department?: string
+          due_at?: string | null
           id?: string
+          importance?: string
+          owner_id?: string | null
+          reminders_sent?: string[]
           status?: string
           title?: string
           updated_at?: string
@@ -784,6 +831,39 @@ export type Database = {
         Update: {
           created_at?: string
           feature?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      founding_upgrades: {
+        Row: {
+          ended_at: string | null
+          environment: string
+          granted_at: string
+          granted_tier: string
+          id: string
+          paid_tier: string
+          seat: number
+          user_id: string
+        }
+        Insert: {
+          ended_at?: string | null
+          environment: string
+          granted_at?: string
+          granted_tier: string
+          id?: string
+          paid_tier: string
+          seat: number
+          user_id: string
+        }
+        Update: {
+          ended_at?: string | null
+          environment?: string
+          granted_at?: string
+          granted_tier?: string
+          id?: string
+          paid_tier?: string
+          seat?: number
           user_id?: string
         }
         Relationships: []
@@ -866,6 +946,7 @@ export type Database = {
       invite_sends: {
         Row: {
           id: string
+          ipi_request_id: string | null
           recipient_email: string
           sender_id: string
           sent_at: string
@@ -873,6 +954,7 @@ export type Database = {
         }
         Insert: {
           id?: string
+          ipi_request_id?: string | null
           recipient_email: string
           sender_id: string
           sent_at?: string
@@ -880,10 +962,59 @@ export type Database = {
         }
         Update: {
           id?: string
+          ipi_request_id?: string | null
           recipient_email?: string
           sender_id?: string
           sent_at?: string
           split_row_id?: string | null
+        }
+        Relationships: []
+      }
+      ipi_requests: {
+        Row: {
+          answer: Json | null
+          answered_at: string | null
+          artist_name: string
+          created_at: string
+          email: string
+          expires_at: string
+          id: string
+          owner_id: string
+          role: string
+          sent_at: string | null
+          songs: Json
+          status: string
+          writer_name: string
+        }
+        Insert: {
+          answer?: Json | null
+          answered_at?: string | null
+          artist_name?: string
+          created_at?: string
+          email: string
+          expires_at?: string
+          id?: string
+          owner_id?: string
+          role?: string
+          sent_at?: string | null
+          songs?: Json
+          status?: string
+          writer_name: string
+        }
+        Update: {
+          answer?: Json | null
+          answered_at?: string | null
+          artist_name?: string
+          created_at?: string
+          email?: string
+          expires_at?: string
+          id?: string
+          owner_id?: string
+          role?: string
+          sent_at?: string | null
+          songs?: Json
+          status?: string
+          writer_name?: string
         }
         Relationships: []
       }
@@ -1195,6 +1326,39 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      royalty_health_reports: {
+        Row: {
+          created_at: string
+          id: string
+          label: string
+          scope: string
+          score: number
+          song_refs: string[]
+          summary: Json
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          label?: string
+          scope?: string
+          score: number
+          song_refs?: string[]
+          summary: Json
+          user_id?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          label?: string
+          scope?: string
+          score?: number
+          song_refs?: string[]
+          summary?: Json
+          user_id?: string
+        }
+        Relationships: []
       }
       scheduled_events: {
         Row: {
@@ -1631,6 +1795,16 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      answer_ipi_request: {
+        Args: {
+          _id: string
+          _ipi: string
+          _legal_name: string
+          _no_pro: boolean
+          _pro: string
+        }
+        Returns: undefined
+      }
       artist_name_status: { Args: { uid?: string }; Returns: Json }
       badge_earned_counts: {
         Args: never
@@ -1649,7 +1823,16 @@ export type Database = {
           user_id: string
         }[]
       }
+      founding_spots: {
+        Args: { _env: string }
+        Returns: {
+          paid_tier: string
+          spots_left: number
+          taken: number
+        }[]
+      }
       get_contract_invite: { Args: { _party_id: string }; Returns: Json }
+      get_ipi_request: { Args: { _id: string }; Returns: Json }
       get_split_invite: { Args: { _row_id: string }; Returns: Json }
       has_active_subscription: {
         Args: { check_env?: string; user_uuid: string }
@@ -1690,6 +1873,7 @@ export type Database = {
         }[]
       }
       norm_artist_name: { Args: { v: string }; Returns: string }
+      paid_tier: { Args: { _env?: string; _uid: string }; Returns: string }
       reopen_contract: { Args: { _contract_id: string }; Returns: undefined }
       send_contract: { Args: { _contract_id: string }; Returns: string }
       sign_contract: {
