@@ -222,7 +222,7 @@ contract) · 3 Adjust the wording if you need to · 4 Sign · 5 Send for signatu
 - **Catalog Profile → Registration Defaults:** usual sample answer, written-for answer, master share, how you hold the
   master, regular performers and crew. They fill blanks only; the song form says "From your profile".
 
-### 3.4 Calculators and converters
+### 3.4 Calculators and converters · ✅ BUILT 2026-10-25 (BMI 200% / ASCAP + SESAC 100% converter with a song picker and a country setting; earnings by platform from sourced 2025 averages, editable, unsourced platforms start at 0; Terms §1 estimates line)
 - Country setting switches the calculator to that country's society and split rules.
 - Add SESAC to the formula converter.
 - "Choose a song" picker above the Share-on-scale dropdown fills shares from the catalog; manual entry stays.
