@@ -252,7 +252,7 @@ contract) · 3 Adjust the wording if you need to · 4 Sign · 5 Send for signatu
 - Lyrics: every lyric earns First Lyric Entry ✅; the description counts: "Your 1st lyric", "your 2nd", … "your 100th".
 - Same idea for: each album art uploaded, each completed catalog entry, each 100% healthy song, each AI-protected song (Time
   Witness already repeats), each signature (High Five already repeats).
-- AI Protection Hub badges: Time Witness exists; I'll add a small AI set (first certificate, 5, 25, first Bitcoin seal).
+- AI Protection Hub badges: ✅ BUILT 2026-10-25 from the serious art (founder): new **AI Protection** collection with Time Witness (every protected song), **Sound Sealed** (first certificate with a Bitcoin timestamp, locked sound wave art), Shield Up (10, every 10) and **Key Keeper** (25, every 25, gold key art, MEGA). Time Witness rotates Shield Up → Sound Sealed → Key Keeper art after each 10. No serious art was left for a "5 protected" badge, so it was skipped.
 - Badge art: the code-drawn 4K bedazzled set (instruments, Unbreakable 2–5, Full EP/Album, Checkup Champ, 33 staff badges) is
   rendering now; you approve it before it goes live. New badges in this plan get art the same way.
 - Share cards on Facebook: fixed links pushed today; after Publish, test one link in the Facebook Sharing Debugger.

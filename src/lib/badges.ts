@@ -9,7 +9,7 @@ export const TIER_LABEL: Record<Tier, string> = { standard: "", instant: "Instan
 /** MEGA and Ultimate get the full celebration even when a user picks "Big moments only". */
 export const isBigTier = (t: Tier) => t === "mega" || t === "ultimate";
 
-export type CollectionId = "core" | "health" | "night" | "lyrics" | "splits" | "contracts" | "producer" | "live" | "hiphop" | "spiritual";
+export type CollectionId = "core" | "health" | "ai" | "night" | "lyrics" | "splits" | "contracts" | "producer" | "live" | "hiphop" | "spiritual";
 /** `always`: locked badges show even before any progress. The rest appear once the user starts that kind of work. */
 export const COLLECTIONS: { id: CollectionId; title: string; always?: boolean }[] = [
   { id: "core", title: "Came Through", always: true },
@@ -17,6 +17,7 @@ export const COLLECTIONS: { id: CollectionId; title: string; always?: boolean }[
   { id: "splits", title: "Split Sheets", always: true },
   { id: "contracts", title: "Contracts & Blueprints", always: true },
   { id: "health", title: "Royalty Health" },
+  { id: "ai", title: "AI Protection" },
   { id: "producer", title: "Producer" },
   { id: "live", title: "Live Musicians" },
   { id: "hiphop", title: "Hip-Hop/Rap" },
@@ -63,7 +64,7 @@ export type BadgeDef = {
 /** Singular and plural names for each count, for hints like "3 more lyrics to Lyric Lover". */
 export const METRIC_UNIT: Record<string, [string, string]> = {
   songs: ["song", "songs"], ready: ["Registration Ready song", "Registration Ready songs"], masters: ["stored master", "stored masters"],
-  lyrics: ["lyric", "lyrics"], healthy: ["100% healthy song", "100% healthy songs"], protected: ["protected song", "protected songs"],
+  lyrics: ["lyric", "lyrics"], healthy: ["100% healthy song", "100% healthy songs"], protected: ["protected song", "protected songs"], timestamped: ["Bitcoin timestamped certificate", "Bitcoin timestamped certificates"],
   splitsSigned: ["fully signed split sheet", "fully signed split sheets"], contractsSigned: ["fully signed contract", "fully signed contracts"],
   deals: ["signed agreement", "signed agreements"], produced: ["produced song", "produced songs"], performerCredits: ["performer credit", "performer credits"],
   hiphop: ["hip-hop track", "hip-hop tracks"], spiritual: ["spiritual hip-hop track", "spiritual hip-hop tracks"],
@@ -116,13 +117,20 @@ const CORE: BadgeDef[] = [
   { id: "key_holder", title: "Key Holder", collection: "core", tier: "standard", milestone: "A collaborator signs one of your split sheets or contracts", action: "Get a collaborator to sign", metric: "collaboratorSigned", goal: 1, src: `${S}/award_certificate.png`,
     description: "You opened the door and someone shook on it. Good business is built with people you trust, and your first collaborator just signed.",
     popup: "Deal shook! Your first collaborator signed." },
-  { id: "time_witness", title: "Time Witness", collection: "core", tier: "standard", milestone: "Every song protected in the AI Protection Hub", action: "Protect a song", metric: "protected", goal: 1, every: 1, src: `${S}/time_witness.png`,
-    rotation: ["shield_up"],
+  { id: "time_witness", title: "Time Witness", collection: "ai", tier: "standard", milestone: "Every song protected in the AI Protection Hub", action: "Protect a song", metric: "protected", goal: 1, every: 1, src: `${S}/time_witness.png`,
+    rotation: ["shield_up", "sound_sealed", "key_keeper"],
     description: "The clock saw it. You have proof this file existed on this date, sealed where nobody can change it. Every song you protect earns another.",
     popup: "Witnessed! Another song protected and timestamped.", repeatPopup: "Witnessed! Your {nth} protected song is timestamped." },
-  { id: "shield_up", title: "Shield Up", collection: "core", tier: "standard", milestone: "10 songs protected in the AI Protection Hub, then every 10 more", action: "Protect 10 songs", metric: "protected", goal: 10, every: 10, src: `${S}/award_shield.png`,
+  { id: "shield_up", title: "Shield Up", collection: "ai", tier: "standard", milestone: "10 songs protected in the AI Protection Hub, then every 10 more", action: "Protect 10 songs", metric: "protected", goal: 10, every: 10, src: `${S}/award_shield.png`,
     description: "Ten songs guarded in the AI Protection Hub. You protect what you make before anyone else gets ideas.",
     popup: "Shield up! 10 songs protected." },
+  // AI Protection set (PLAN-master-notes 3.7): serious art already in the repo, picked 2026-10-25.
+  { id: "sound_sealed", title: "Sound Sealed", collection: "ai", tier: "instant", milestone: "Your first AI Protection certificate with a Bitcoin timestamp", action: "Timestamp a song on Bitcoin", metric: "timestamped", goal: 1, src: `${S}/lyrical_genesis.png`,
+    description: "Your sound, locked in time. Anyone can check the Bitcoin timestamp and see your files existed in this exact form on this date. Keep your originals safe.",
+    popup: "Sound sealed! Your first song is timestamped on Bitcoin." },
+  { id: "key_keeper", title: "Key Keeper", collection: "ai", tier: "mega", milestone: "25 songs protected in the AI Protection Hub, then every 25 more", action: "Protect 25 songs", metric: "protected", goal: 25, every: 25, src: `${S}/key_holder.png`,
+    description: "Twenty five songs with proof of when they were made. You hold the keys to your catalog, and the receipts to back it up.",
+    popup: "Key Keeper! 25 songs protected." },
   { id: "paper_ready", title: "Paper Ready", collection: "core", tier: "standard", milestone: "Download your first agency export, then every 10 more", action: "Download an agency export", metric: "agencyExports", goal: 1, every: 10, src: `${S}/award_folder.png`,
     description: "Your songs left the building in the format the agencies want. This is the paperwork that turns plays into payments.",
     popup: "Exported! Your songs are on their way to get paid." },
