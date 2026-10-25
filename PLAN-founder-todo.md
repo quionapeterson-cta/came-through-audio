@@ -29,6 +29,7 @@ All GitHub links need you logged in to GitHub (the repo is private). On each fil
 | 8 | [20261025160000 paid-contracts](https://github.com/quionapeterson-cta/came-through-audio/blob/main/supabase/migrations/20261025160000_f3b8d2a6-paid-contracts.sql) | $3.99 contracts on any plan |
 
 - [ ] Run db-check.sql again; send me a screenshot if anything still says MISSING.
+- [ ] Also run [20261025180000 beta-feedback](https://github.com/quionapeterson-cta/came-through-audio/blob/main/supabase/migrations/20261025180000_b3e7f1a5-beta-feedback.sql) (beta checklist results).
 - [ ] Also run [20261025170000 launch-department](https://github.com/quionapeterson-cta/came-through-audio/blob/main/supabase/migrations/20261025170000_a9d4e2c7-launch-department.sql) (pre-launch milestones), then Admin → Task Bank → Load pre-launch milestones.
 - [ ] Refresh Admin → Plans (this list shows there too): open `plans-load.sql` in the Codespace file list (kept out of GitHub on purpose), select all, paste in SQL Editor, Run.
 
@@ -109,6 +110,11 @@ Publish in Lovable first, then test on the published site in the sandbox (card 4
 - [ ] Royalty Health Report: organs, scans, PDF, My reports, agency list upload.
 - [ ] Co-writer IPI request between two accounts.
 - [ ] Catalog Plus lock on a free account; install the app on your phone (CTAudio).
+
+**Beta (from Nov 9)**
+- [ ] Admin → Company Contracts → Templates → Beta Tester Agreement: have your lawyer read it, then send it to each tester.
+- [ ] Testers sign, make a free account with the same email, and use yourdomain/beta for their checklist.
+- [ ] After the beta: Company Contracts → Beta testers → Grant lifetime access. Read the results there.
 
 ## 7. Art and content you owe
 - [ ] Badge art: the code-drawn badges are placeholders (19 customer, 33 staff). File names in [PLAN-badge-art-placeholders.md](https://github.com/quionapeterson-cta/came-through-audio/blob/main/PLAN-badge-art-placeholders.md); a new file with the same name and folder swaps in.

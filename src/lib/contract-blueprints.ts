@@ -63,6 +63,49 @@ export const COMPANY_BLUEPRINTS: Blueprint[] = [
     body: asCompany(`${RELEASE_TERMS}${LAUNCH_GIFT(11)}${PRELAUNCH(12)}${general(13)}`),
   },
   {
+    // Phase 4 item 3 (founder, 2026-10-25): beta testers, paid in lifetime access. Lawyer review before sending.
+    id: "company-beta-agreement",
+    name: "Beta Tester Agreement",
+    category: "Company",
+    summary: "A beta tester tests Came Through Audio before launch, keeps it confidential and shares feedback, in exchange for lifetime access.",
+    whenToUse: "Send it to every beta tester before they get access. Grant their lifetime access from Admin → Company Contracts → Beta testers once the beta is done.",
+    keyTerms: [
+      "Schedule: the beta dates and session times.",
+      "Compensation: lifetime access at the plan named here, granted after the beta, with no cash value.",
+      "Confidentiality: nothing about the app is shared until launch.",
+      "Feedback: Came Through Audio may use the tester's suggestions to improve the service.",
+    ],
+    roles: ["Company", "Participant"],
+    fields: [
+      SIGNER, DATE,
+      { key: "betaDates", label: "Beta dates and times", value: "November 9 to November 26, 2026, Monday to Thursday, 12 PM to 2 PM Eastern", tip: "When testing happens.", required: true },
+      { key: "tier", label: "Lifetime plan", value: "Catalog Management", tip: "The plan the tester gets for life: Catalog Plus, Catalog & Collaborate or Catalog Management.", required: true },
+    ],
+    body: asCompany(`BETA TESTER AGREEMENT
+
+This Beta Tester Agreement is made on {{effectiveDate}} between {{party:Company}} ("Company") and {{party:Participant}} ("Participant").
+
+1. TESTING
+Participant will use the Came Through Audio service before its public launch, try the features on the beta checklist, and report what works, what doesn't and any suggestions through the beta checklist page or by email.
+
+2. SCHEDULE
+The beta runs {{betaDates}}. Participant will take part in the sessions they can and let Company know ahead of time if they can't.
+
+3. COMPENSATION
+After the beta ends, and as long as Participant took part as described in section 1, Company will give Participant lifetime access to the {{tier}} plan at no charge, for as long as Company offers that plan or a plan that replaces it. Lifetime access is personal, can't be transferred or sold, and has no cash value. Company may end it if Participant breaks this agreement or the Terms of Service.
+
+4. FEEDBACK
+Participant gives Company permission to use, for any purpose and without payment, the feedback, ideas and suggestions Participant shares about the service. Participant keeps every right to their own music and content.
+
+5. TEST DATA
+Participant should use test songs or songs they own. Company may reset beta accounts and data before launch.
+
+6. NO WARRANTY
+The beta is pre-release software. It may have errors, change or be unavailable, and it is provided as is. Company isn't responsible for any loss from using it during the beta.
+
+${PRELAUNCH(7)}${general(8)}`),
+  },
+  {
     id: "company-blank",
     name: "Blank company agreement",
     category: "Company",

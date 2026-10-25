@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AdminRouteImport } from './routes/admin'
+import { Route as BetaRouteImport } from './routes/beta'
 import { Route as ContactRouteImport } from './routes/contact'
 import { Route as FaqRouteImport } from './routes/faq'
 import { Route as PlansRouteImport } from './routes/plans'
@@ -46,6 +47,11 @@ const IndexRoute = IndexRouteImport.update({
 const AdminRoute = AdminRouteImport.update({
   id: '/admin',
   path: '/admin',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const BetaRoute = BetaRouteImport.update({
+  id: '/beta',
+  path: '/beta',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ContactRoute = ContactRouteImport.update({
@@ -187,6 +193,7 @@ const ApiPublicPaymentsWebhookRoute =
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/admin': typeof AdminRoute
+  '/beta': typeof BetaRoute
   '/contact': typeof ContactRoute
   '/faq': typeof FaqRoute
   '/plans': typeof PlansRoute
@@ -217,6 +224,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/admin': typeof AdminRoute
+  '/beta': typeof BetaRoute
   '/contact': typeof ContactRoute
   '/faq': typeof FaqRoute
   '/plans': typeof PlansRoute
@@ -248,6 +256,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/admin': typeof AdminRoute
+  '/beta': typeof BetaRoute
   '/contact': typeof ContactRoute
   '/faq': typeof FaqRoute
   '/plans': typeof PlansRoute
@@ -280,6 +289,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/admin'
+    | '/beta'
     | '/contact'
     | '/faq'
     | '/plans'
@@ -310,6 +320,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/admin'
+    | '/beta'
     | '/contact'
     | '/faq'
     | '/plans'
@@ -340,6 +351,7 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/admin'
+    | '/beta'
     | '/contact'
     | '/faq'
     | '/plans'
@@ -371,6 +383,7 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AdminRoute: typeof AdminRoute
+  BetaRoute: typeof BetaRoute
   ContactRoute: typeof ContactRoute
   FaqRoute: typeof FaqRoute
   PlansRoute: typeof PlansRoute
@@ -413,6 +426,13 @@ declare module '@tanstack/react-router' {
       path: '/admin'
       fullPath: '/admin'
       preLoaderRoute: typeof AdminRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/beta': {
+      id: '/beta'
+      path: '/beta'
+      fullPath: '/beta'
+      preLoaderRoute: typeof BetaRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/contact': {
@@ -603,6 +623,7 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AdminRoute: AdminRoute,
+  BetaRoute: BetaRoute,
   ContactRoute: ContactRoute,
   FaqRoute: FaqRoute,
   PlansRoute: PlansRoute,

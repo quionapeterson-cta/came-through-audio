@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { confirmAction } from "@/components/ConfirmHost";
-import { AlertTriangle, BookOpen, CalendarDays, Gift, Check, ChevronDown, ChevronLeft, Copy, Download, FileSignature, Loader2, Lock, Mail, PenLine, Plus, RotateCcw, ScrollText, ShieldCheck, Trash2, Unlock, Vault } from "lucide-react";
+import { AlertTriangle, BookOpen, CalendarDays, Gift, Check, ChevronDown, ChevronLeft, Copy, Download, FileSignature, FlaskConical, Loader2, Lock, Mail, PenLine, Plus, RotateCcw, ScrollText, ShieldCheck, Trash2, Unlock, Vault } from "lucide-react";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -24,6 +24,9 @@ import type { GeneratedDraft } from "@/lib/contract-generator";
 import { sendContractInvite } from "@/lib/contracts-email.functions";
 import { companySignLink } from "@/lib/contract-sign.functions";
 import { grantLaunchGift, listLaunchGifts, type LaunchGiftRow } from "@/lib/launch-gift.functions";
+import { grantLifetimeAccess, listBetaFeedback, listBetaTesters, type BetaFeedbackRow, type BetaTesterRow } from "@/lib/beta.functions";
+import { BETA_ITEMS, BETA_WINDOW } from "@/lib/beta";
+import { TIER_LABEL } from "@/lib/plans";
 import { logBadgeEvent } from "@/lib/badge-events";
 import { BLUEPRINT_GUIDES, CHEAT_SHEETS, type Guide } from "@/lib/guides";
 import {
@@ -31,7 +34,7 @@ import {
   type Contract, type ContractParty, type ReceivedContract,
 } from "@/lib/contracts";
 
-type View = "blueprints" | "guides" | "contracts" | "vault" | "gifts";
+type View = "blueprints" | "guides" | "contracts" | "vault" | "gifts" | "beta";
 
 const STATUS: Record<Contract["status"], { label: string; className: string }> = {
   draft: { label: "Draft", className: "border-border text-muted-foreground" },
@@ -103,7 +106,7 @@ export function Contracts({ userId, unlocked, onUpgrade, company = false }: { us
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="inline-flex flex-wrap gap-1 rounded-lg bg-muted p-1" role="tablist" aria-label="Contracts">
             {(company
-              ? [["blueprints", "Templates", ScrollText], ["contracts", "Drafts & out for signature", FileSignature], ["vault", "Signed", Vault], ["gifts", "Launch gifts", Gift]] as const
+              ? [["blueprints", "Templates", ScrollText], ["contracts", "Drafts & out for signature", FileSignature], ["vault", "Signed", Vault], ["gifts", "Launch gifts", Gift], ["beta", "Beta testers", FlaskConical]] as const
               : [["blueprints", "Contracts", ScrollText], ["guides", "Blueprints", BookOpen], ["contracts", "My Contracts", FileSignature], ["vault", "Signed Vault", Vault]] as const).map(([id, label, Icon]) => (
               <Button key={id} role="tab" aria-selected={view === id} size="sm" variant={view === id ? "default" : "ghost"} onClick={() => setView(id)}>
                 <Icon className="h-4 w-4" />{label}
@@ -122,6 +125,7 @@ export function Contracts({ userId, unlocked, onUpgrade, company = false }: { us
           : <Blueprints unlocked={unlocked} onUse={start} />)}
 
         {view === "gifts" && company && <LaunchGifts />}
+        {view === "beta" && company && <BetaTesters />}
 
         {view === "guides" && (!unlocked
           ? <UpgradeLock className="" title="Blueprints" tier="management" onUpgrade={onUpgrade} text="Step-by-step guides to running your music business, from royalty registration to touring, plus home recording cheat sheets for every genre." />
@@ -314,6 +318,67 @@ function Guides() {
  * Admin: the free 3-month Catalog Plus promised in the testimonial release (§11). Lists everyone who fully signed a
  * release; grant it at launch. The server checks the release, the account and that it's granted only once.
  */
+/**
+ * Beta testers (Phase 4 item 3): signed Beta Tester Agreements with Grant lifetime access, then every item's results
+ * from the /beta checklist (worked, didn't work, notes). Super admins only.
+ */
+function BetaTesters() {
+  const list = useServerFn(listBetaTesters);
+  const grant = useServerFn(grantLifetimeAccess);
+  const feedback = useServerFn(listBetaFeedback);
+  const [rows, setRows] = useState<BetaTesterRow[]>();
+  const [results, setResults] = useState<BetaFeedbackRow[]>([]);
+  const [busy, setBusy] = useState<string>();
+  const load = () => Promise.all([
+    list().then(setRows).catch((e: Error) => { toast.error(e.message); setRows([]); }),
+    feedback().then(setResults).catch(() => setResults([])),
+  ]);
+  useEffect(() => { void load(); }, []);
+  const give = async (r: BetaTesterRow) => {
+    if (!await confirmAction({ title: `Give ${r.name} lifetime ${r.agreedTier}?`, text: `Free for life on the account for ${r.email}, as their Beta Tester Agreement says. We email them that it's active.`, action: "Grant lifetime access" })) return;
+    setBusy(r.partyId);
+    try { const { tier } = await grant({ data: { partyId: r.partyId } }); toast.success(`${r.name} has lifetime ${tier}.`); await load(); }
+    catch (e) { toast.error(e instanceof Error ? e.message : "Couldn't grant lifetime access."); }
+    finally { setBusy(undefined); }
+  };
+  if (!rows) return <Spinner />;
+  const byItem = BETA_ITEMS.map((i) => ({ item: i, rows: results.filter((r) => r.itemId === i.id) })).filter((x) => x.rows.length);
+  return (
+    <section className="space-y-6">
+      <p className="text-sm text-muted-foreground">{BETA_WINDOW}. Send each tester the Beta Tester Agreement from Templates, then point them to <a href="/beta" className="font-semibold text-primary underline">/beta</a> for their checklist. Grant lifetime access once the beta is done.</p>
+      {rows.length === 0 ? <Empty icon={FlaskConical} text="No fully signed Beta Tester Agreements yet." /> : (
+        <ul className="grid gap-3">
+          {rows.map((r) => (
+            <li key={r.partyId} className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border p-4">
+              <div className="min-w-0"><div className="truncate font-bold">{r.name}</div><div className="text-xs text-muted-foreground">{r.email} · agreed: {r.agreedTier}</div></div>
+              {r.lifetime ? <Badge variant="outline" className="border-primary text-primary">Lifetime {r.lifetime}</Badge>
+                : !r.hasAccount ? <span className="text-sm text-muted-foreground">No account with this email yet</span>
+                : <Button size="sm" disabled={busy === r.partyId} onClick={() => void give(r)}>{busy === r.partyId ? <Loader2 className="h-4 w-4 animate-spin" /> : <Gift className="h-4 w-4" />}Grant lifetime access</Button>}
+            </li>
+          ))}
+        </ul>
+      )}
+      <div className="space-y-3">
+        <h3 className="text-sm font-bold uppercase tracking-widest text-primary">Checklist results</h3>
+        {byItem.length === 0 ? <p className="text-sm text-muted-foreground">Results show here as testers mark items on /beta.</p> : (
+          <ul className="grid gap-3">
+            {byItem.map(({ item, rows: rs }) => {
+              const broken = rs.filter((r) => r.result === "broken");
+              return (
+                <li key={item.id} className={`rounded-xl border p-4 ${broken.length ? "border-destructive" : "border-border"}`}>
+                  <div className="flex flex-wrap items-baseline justify-between gap-2"><span className="font-semibold">{item.title} <span className="text-xs font-normal text-muted-foreground">· {TIER_LABEL[item.tier]}</span></span>
+                    <span className="text-sm"><span className="text-primary">{rs.filter((r) => r.result === "worked").length} worked</span> · <span className={broken.length ? "font-semibold text-destructive" : "text-muted-foreground"}>{broken.length} didn't</span></span></div>
+                  {rs.filter((r) => r.note).map((r, k) => <p key={k} className="mt-2 text-sm"><span className="font-semibold">{r.name || r.email}:</span> {r.note}</p>)}
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </div>
+    </section>
+  );
+}
+
 function LaunchGifts() {
   const list = useServerFn(listLaunchGifts);
   const grant = useServerFn(grantLaunchGift);
