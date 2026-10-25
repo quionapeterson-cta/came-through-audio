@@ -18,7 +18,7 @@ import {
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { getStaffRole } from "@/lib/admin.functions";
 import { inviteStaff, listStaff, removeStaff, updateStaff, type StaffMember } from "@/lib/staff.functions";
-import { DEPARTMENTS, DEPARTMENT_LABEL, MANAGED_ROLES, ROLE_LABEL, type Department, type ManagedRole } from "@/lib/departments";
+import { DEPARTMENTS, DEPARTMENT_LABEL, MANAGED_ROLES, ROLE_LABEL, type Department, type ManagedRole, ASSIGNABLE_DEPARTMENTS } from "@/lib/departments";
 
 // Staff management. Sits under the root /unlock gate like every route; access is super_admin or hr_admin.
 export const Route = createFileRoute("/admin_/staff")({
@@ -213,7 +213,7 @@ function StaffDialog({ editing, actorIsSuper, onClose }: { editing: Editing; act
               <p className="text-sm text-muted-foreground">HR Admins manage staff only — they don't see Finance, settings or department queues.</p>
             ) : (
               <div className="grid grid-cols-2 gap-2">
-                {DEPARTMENTS.map((d) => (
+                {ASSIGNABLE_DEPARTMENTS.map((d) => (
                   <label key={d} className="flex items-center gap-2 rounded-md border border-border px-3 py-2 text-sm has-[:checked]:border-primary">
                     <Checkbox checked={departments.includes(d)} onCheckedChange={(v) => toggle(d, v === true)} />
                     {DEPARTMENT_LABEL[d]}

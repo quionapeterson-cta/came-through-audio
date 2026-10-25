@@ -5,7 +5,7 @@ import type { Database } from "@/integrations/supabase/types";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { ADMIN_EMAIL, emailLayout, escapeHtml, SITE_URL } from "./email-layout";
 import {
-  DEPARTMENTS, DEPARTMENT_LABEL, MANAGED_ROLES, ROLE_LABEL, normalizeDepartments, resolveAccess, staffChangeError,
+  ASSIGNABLE_DEPARTMENTS, DEPARTMENTS, DEPARTMENT_LABEL, MANAGED_ROLES, ROLE_LABEL, normalizeDepartments, resolveAccess, staffChangeError,
   type Department, type ManagedRole, type StaffRole,
 } from "./departments";
 
@@ -25,7 +25,7 @@ async function admin() {
 
 const memberSchema = z.object({
   role: z.enum(MANAGED_ROLES),
-  departments: z.array(z.enum(DEPARTMENTS)).max(DEPARTMENTS.length),
+  departments: z.array(z.enum(ASSIGNABLE_DEPARTMENTS as [Exclude<(typeof DEPARTMENTS)[number], "launch">, ...Exclude<(typeof DEPARTMENTS)[number], "launch">[]])).max(ASSIGNABLE_DEPARTMENTS.length),
 });
 
 /** Writes the one managed role row (with departments) for a user and drops any other managed role. */

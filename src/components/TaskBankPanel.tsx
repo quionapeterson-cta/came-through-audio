@@ -2,13 +2,14 @@ import { useState } from "react";
 import { confirmAction } from "@/components/ConfirmHost";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { Pencil, Plus, Trash2 } from "lucide-react";
+import { Pencil, Plus, Rocket, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { DEPARTMENT_LABEL, type Department } from "@/lib/departments";
-import { deleteTask, listTaskOwners, listTasks, saveTask, TASK_IMPORTANCE, TASK_STATUSES, type DepartmentTask, type TaskImportance, type TaskStatus } from "@/lib/tasks.functions";
+import { LAUNCH_MILESTONES } from "@/lib/launch-milestones";
+import { deleteTask, listTaskOwners, listTasks, loadLaunchMilestones, saveTask, TASK_IMPORTANCE, TASK_STATUSES, type DepartmentTask, type TaskImportance, type TaskStatus } from "@/lib/tasks.functions";
 import { IMPORTANCE_LABEL, dueLabel, importanceChip, sortTasks, toLocalInput, fromLocalInput } from "@/lib/task-alerts";
 
 const STATUS_LABEL: Record<TaskStatus, string> = { idea: "Idea", planned: "Planned", in_progress: "In Progress", done: "Done" };
@@ -19,6 +20,7 @@ export function TaskBankPanel({ departments }: { departments: Department[] }) {
   const fetchTasks = useServerFn(listTasks);
   const save = useServerFn(saveTask);
   const remove = useServerFn(deleteTask);
+  const loadMilestones = useServerFn(loadLaunchMilestones);
   const qc = useQueryClient();
   const q = useQuery({ queryKey: ["department-tasks"], queryFn: () => fetchTasks() });
   const fetchOwners = useServerFn(listTaskOwners);
@@ -35,6 +37,19 @@ export function TaskBankPanel({ departments }: { departments: Department[] }) {
   const mine = (q.data ?? []).filter((t) => departments.includes(t.department as Department));
   const inDept = mine.filter((t) => dept === "all" || t.department === dept);
   const rows = sortTasks(inDept.filter((t) => status === "all" || t.status === status));
+  // Super admins: the pre-launch milestones not loaded yet into the Launch department.
+  const launchTitles = new Set(mine.filter((t) => t.department === "launch").map((t) => t.title));
+  const missingMilestones = departments.includes("launch") ? LAUNCH_MILESTONES.filter((m) => !launchTitles.has(m.title)).length : 0;
+  const addMilestones = async () => {
+    setBusy(true);
+    try {
+      const { added } = await loadMilestones();
+      await qc.invalidateQueries({ queryKey: ["department-tasks"] });
+      setDept("launch");
+      toast.success(`${added} pre-launch milestone${added === 1 ? "" : "s"} added to Launch.`);
+    } catch (e) { toast.error(e instanceof Error ? e.message : "Couldn't add the milestones."); }
+    finally { setBusy(false); }
+  };
 
   const submit = async () => {
     if (!draft) return;
@@ -67,7 +82,10 @@ export function TaskBankPanel({ departments }: { departments: Department[] }) {
             </button>
           ))}
         </div>
+        <div className="flex flex-wrap gap-2">
+        {missingMilestones > 0 && <Button size="sm" variant="outline" disabled={busy} onClick={() => void addMilestones()}><Rocket className="h-4 w-4" />Load pre-launch milestones ({missingMilestones})</Button>}
         <Button size="sm" onClick={() => setDraft({ department: dept === "all" ? departments[0]! : dept, title: "", body: "", status: "idea", importance: "normal", due_at: null, owner_id: owners.data?.me ?? null })}><Plus className="h-4 w-4" />New task</Button>
+        </div>
       </div>
       <div className="flex flex-wrap gap-2">
         {[...TASK_STATUSES, "all" as const].map((s) => (

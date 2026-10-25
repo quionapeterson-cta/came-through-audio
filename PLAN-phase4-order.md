@@ -1,6 +1,7 @@
 # PLAN — Phase 4 build order · v1
 
-Status: **Preview, awaiting founder approval (2026-10-25). Pick the order (or approve this one) and I build one at a time, each previewed first.**
+Status: **Order APPROVED 2026-10-25 (founder).** Answers: milestones go in the Task Bank (yes); beta = 3 weeks from the second week of November (Mon Nov 9 – Thu Nov 26, Mon–Thu 12–2 PM; Thanksgiving is Thu Nov 26); no Head of Marketing yet, so Grant lifetime access is Super Admin only for now; outreach sender partnerships@ (yes).
+- Item 1 ✅ BUILT 2026-10-25: Launch department (super admin only) + Admin → Task Bank "Load pre-launch milestones" (22 tasks with deadlines); migration 20261025170000.
 Source: PLAN-master-notes.md Phase 4 (founder's master notes). Launch-critical items first; launch target after the Cloudflare move (before Nov 11).
 
 | Order | Item | What you get | Size |

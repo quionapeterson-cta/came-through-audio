@@ -79,3 +79,23 @@ export const listTaskOwners = createServerFn({ method: "GET" })
     }).sort((a, b) => a.name.localeCompare(b.name));
     return { me: context.userId, owners };
   });
+
+/** Super admins: adds the pre-launch milestones to the Launch department (skips any already there). */
+export const loadLaunchMilestones = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { data: isSuper } = await context.supabase.rpc("has_role", { _user_id: context.userId, _role: "super_admin" });
+    if (!isSuper) throw new Error("Only super admins can load the pre-launch milestones.");
+    const { LAUNCH_MILESTONES } = await import("./launch-milestones");
+    const { data: have } = await context.supabase.from("department_tasks" as never).select("title").eq("department", "launch");
+    const titles = new Set(((have ?? []) as { title: string }[]).map((t) => t.title));
+    const rows = LAUNCH_MILESTONES.filter((m) => !titles.has(m.title)).map((m) => ({
+      department: "launch", title: m.title, body: m.body, status: "planned", importance: m.importance, due_at: m.due, owner_id: context.userId,
+    }));
+    if (rows.length) {
+      const { error } = await context.supabase.from("department_tasks" as never).insert(rows as never);
+      if (error) throw new Error(/check constraint/i.test(error.message) ? "Run migration 20261025170000 (launch department) first." : "Couldn't add the milestones.");
+    }
+    return { added: rows.length };
+  });
+
