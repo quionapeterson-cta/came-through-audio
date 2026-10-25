@@ -29,6 +29,7 @@ All GitHub links need you logged in to GitHub (the repo is private). On each fil
 | 8 | [20261025160000 paid-contracts](https://github.com/quionapeterson-cta/came-through-audio/blob/main/supabase/migrations/20261025160000_f3b8d2a6-paid-contracts.sql) | $3.99 contracts on any plan |
 
 - [ ] Run db-check.sql again; send me a screenshot if anything still says MISSING.
+- [ ] Also run [20261025230000 work-queue](https://github.com/quionapeterson-cta/came-through-audio/blob/main/supabase/migrations/20261025230000_b8d2f6a3-work-queue.sql) (My Queue).
 - [ ] Also run [20261025220000 department-plans](https://github.com/quionapeterson-cta/came-through-audio/blob/main/supabase/migrations/20261025220000_a4e8b2d6-department-plans.sql) after the calendar ones (department plans).
 - [ ] Also run [20261025210000 project-manager-role](https://github.com/quionapeterson-cta/came-through-audio/blob/main/supabase/migrations/20261025210000_e2b6d4f8-project-manager-role.sql) FIRST, by itself, then [20261025210100 admin-calendar](https://github.com/quionapeterson-cta/came-through-audio/blob/main/supabase/migrations/20261025210100_f8c3a5e1-admin-calendar.sql) (calendar).
 - [ ] Also run [20261025200000 market-research-repeat](https://github.com/quionapeterson-cta/came-through-audio/blob/main/supabase/migrations/20261025200000_d7a1c9e3-market-research-repeat.sql) (Market Research team, repeating tasks).
@@ -120,6 +121,11 @@ Publish in Lovable first, then test on the published site in the sandbox (card 4
 - [ ] Admin → Company Contracts → Templates → Beta Tester Agreement: have your lawyer read it, then send it to each tester.
 - [ ] Testers sign, make a free account with the same email, and use yourdomain/beta for their checklist.
 - [ ] After the beta: Company Contracts → Beta testers → Grant lifetime access. Read the results there.
+
+**Admin (new Phase 4 tools)**
+- [ ] Admin → Task Bank → Load pre-launch milestones; Load Market Research plan (if you set up that team); Plans → Generate a quarterly plan.
+- [ ] Admin → Staff: Project Manager is now a role you can give.
+- [ ] Admin → Handbook: read it over and tell me what to change; record the tutorial videos when you can.
 
 ## 7. Art and content you owe
 - [ ] Badge art: the code-drawn badges are placeholders (19 customer, 33 staff). File names in [PLAN-badge-art-placeholders.md](https://github.com/quionapeterson-cta/came-through-audio/blob/main/PLAN-badge-art-placeholders.md); a new file with the same name and folder swaps in.

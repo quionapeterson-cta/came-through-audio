@@ -1,4 +1,6 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { MyQueue } from "@/components/MyQueue";
+import { Handbook } from "@/components/Handbook";
 import { AdminCalendar } from "@/components/AdminCalendar";
 import { MyRecognition } from "@/components/MyRecognition";
 import { useQuery } from "@tanstack/react-query";
@@ -184,6 +186,8 @@ function AdminPage() {
           {show("plans") && <TabsContent value="plans"><PlansPanel /></TabsContent>}
           {show("calendar") && <TabsContent value="calendar"><AdminCalendar me={user.id} access={access} /></TabsContent>}
           {show("recognition") && <TabsContent value="recognition"><MyRecognition /></TabsContent>}
+          {show("queue") && <TabsContent value="queue"><MyQueue me={user.id} access={access} onOpen={setActiveTab} /></TabsContent>}
+          {show("handbook") && <TabsContent value="handbook"><Handbook /></TabsContent>}
         </Tabs>
         </>)}
       </main>
