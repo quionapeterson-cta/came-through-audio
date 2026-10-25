@@ -179,7 +179,7 @@ contract) · 3 Adjust the wording if you need to · 4 Sign · 5 Send for signatu
 
 ## PHASE 3 — Functions
 
-### 3.1 Embed
+### 3.1 Embed · ✅ BUILT 2026-10-25 (draft kept in the browser until submitted; Ctrl/⌘+Enter anywhere on the tab; album files ordered by tag track, file-name number, name)
 - Details typed in Embed disappear when you leave the tab: keep the tab mounted and save a draft in the browser until saved.
 - Ctrl+Enter: works on PC (Ctrl) and Mac (⌘) only while the cursor is inside the form; make it work anywhere on the tab and show
   "Ctrl+Enter (⌘+Enter on Mac)".

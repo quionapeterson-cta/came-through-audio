@@ -34,6 +34,7 @@ import { logBadgeEvent } from "@/lib/badge-events";
 import { ARTIST_SEAT_PRICES } from "@/lib/plans";
 import { PACKAGES } from "@/lib/proof";
 import { loadOnboarding, loadProfile, restoreRows, withProfile, withProfileFilled } from "@/lib/artist-profile";
+import { clearEmbedDraft, loadEmbedDraft, orderAudioFiles, saveEmbedDraft } from "@/lib/embed-session";
 import type { ShareInfo } from "@/components/BadgeCelebration";
 
 const normArtist = (v: string) => v.trim().replace(/\s+/g, " ").toLowerCase();
@@ -72,6 +73,19 @@ export function MetadataUploader({ onShareInfo, userId, mode = "embed", readOnly
   const [sessionDone, setSessionDone] = useState<string[]>([]);
   const [carry, setCarry] = useState<Record<CarryKey, boolean>>({ artist: true, release: true, people: true, genre: true });
   const formRef = useRef<HTMLFormElement>(null);
+  // Ctrl+Enter (⌘+Enter on Mac) embeds from anywhere on the tab, not only inside the form. Hidden tabs and open
+  // pop-ups are skipped, so the Embed and My Catalog forms never both fire.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (!(e.metaKey || e.ctrlKey) || e.key !== "Enter") return;
+      const form = formRef.current;
+      if (!form || form.offsetParent === null || form.getAttribute("aria-busy") === "true" || document.querySelector('[role="dialog"], [role="alertdialog"]')) return;
+      e.preventDefault();
+      form.requestSubmit();
+    };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, []);
   const [filter, setFilter] = useState<"All" | "Single" | "EP" | "Album">("All");
   const [picked, setPicked] = useState<Set<string>>(new Set());
   const [exportOpen, setExportOpen] = useState(false);
@@ -114,10 +128,19 @@ export function MetadataUploader({ onShareInfo, userId, mode = "embed", readOnly
   );
   const audioInput = useRef<HTMLInputElement>(null);
   // Embed defaults come from the profile (edited in Profile → Edit profile → Embed Defaults).
+  // An unsaved Embed form comes back after a reload or a trip to another page (the audio file has to be added again).
   useEffect(() => {
+    if (full) return;
+    const draft = loadEmbedDraft(userId);
+    if (draft) { setMetadata(draft); toast.info("Embed Metadata: your unsaved details are back. Add the audio file again to embed."); return; }
     const p = loadProfile(userId);
-    if (p && !full) setMetadata((m) => (m.title || m.artist ? m : withProfile(p)));
+    if (p) setMetadata((m) => (m.title || m.artist ? m : withProfile(p)));
   }, [userId, full]);
+  useEffect(() => {
+    if (full) return;
+    const t = setTimeout(() => saveEmbedDraft(userId, metadata, withProfile(loadProfile(userId))), 400);
+    return () => clearTimeout(t);
+  }, [metadata, userId, full]);
   const artInput = useRef<HTMLInputElement>(null);
 
   const refresh = useCallback(() => {
@@ -197,7 +220,7 @@ export function MetadataUploader({ onShareInfo, userId, mode = "embed", readOnly
       setAdding(false);
       toast.success(editingId ? "Track updated in your catalog." : "Track submitted to your catalog.");
       refresh();
-      if (!full) { setSubmitted(true); onSubmitted?.(); }
+      if (!full) { clearEmbedDraft(userId); setSubmitted(true); onSubmitted?.(); }
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Could not save track.");
     } finally { setSaving(false); }
@@ -258,11 +281,13 @@ export function MetadataUploader({ onShareInfo, userId, mode = "embed", readOnly
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
   /** Drop or pick several MP3s or WAVs: the first fills the form if it's free, the rest wait in the session queue. */
-  function addFiles(list: FileList | File[]) {
+  async function addFiles(list: FileList | File[]) {
     // WAV embedding is a Catalog Management feature (founder, 2026-10-25); other plans see the upgrade box.
     if (!canWav && [...list].some((f) => /\.wav$/i.test(f.name))) { setUpsell("wav"); list = [...list].filter((f) => !/\.wav$/i.test(f.name)); if (!list.length) return; }
-    const files = [...list].filter((f) => AUDIO_FILE.test(f.name));
-    if (!files.length) { setError("Choose MP3 or WAV audio files. FLAC embedding isn't available yet."); return; }
+    const picked = [...list].filter((f) => AUDIO_FILE.test(f.name));
+    if (!picked.length) { setError("Choose MP3 or WAV audio files. FLAC embedding isn't available yet."); return; }
+    // An album dropped in at once lines up first song first: tag track number, then file-name number, then name.
+    const files = await orderAudioFiles(picked);
     const [first, ...rest] = files;
     if (!audio && !full) { selectAudio(first); setQueue((q) => [...q, ...rest]); }
     else if (full) selectAudio(first);
@@ -373,17 +398,16 @@ export function MetadataUploader({ onShareInfo, userId, mode = "embed", readOnly
           <NextSong queue={queue} carry={carry} onCarry={setCarry} onNext={startNext} />
         </div>
       ) : showForm && (
-      <form key={editingId ?? (adding ? "add" : "new")} ref={formRef} onSubmit={submit} className="space-y-8" aria-busy={busy}
-        onKeyDown={(e) => { if ((e.metaKey || e.ctrlKey) && e.key === "Enter") { e.preventDefault(); formRef.current?.requestSubmit(); } }}>
+      <form key={editingId ?? (adding ? "add" : "new")} ref={formRef} onSubmit={submit} className="space-y-8" aria-busy={busy}>
         <fieldset disabled={busy} className="grid gap-5 sm:grid-cols-[1fr_220px]">
-          <div onDragOver={(event) => event.preventDefault()} onDrop={(event) => { event.preventDefault(); if (!busy) addFiles(event.dataTransfer.files); }} className="flex min-h-44 flex-col items-center justify-center gap-3 rounded-lg border border-dashed border-primary bg-accent/30 p-5 text-center">
+          <div onDragOver={(event) => event.preventDefault()} onDrop={(event) => { event.preventDefault(); if (!busy) void addFiles(event.dataTransfer.files); }} className="flex min-h-44 flex-col items-center justify-center gap-3 rounded-lg border border-dashed border-primary bg-accent/30 p-5 text-center">
             <FileAudio className="h-8 w-8 text-primary" />
             <div className="max-w-full break-all text-sm font-semibold">{audio ? audio.name : full ? (editingId ? "Re-embed" : "MP3 or WAV (optional)") : "Audio file"}</div>
             {full && editingId && !audio && <span className="max-w-xs text-xs text-muted-foreground">Choose this song's master again: we embed everything saved here, plus what you add now (codes, producer credits), save the new master and you can download it.</span>}
             {audio && <span className="text-xs text-muted-foreground">{(audio.size / 1024 / 1024).toFixed(1)} MB</span>}
             <Button type="button" variant="outline" onClick={() => audioInput.current?.click()}><Upload />{audio ? (full ? "Choose a different file" : "Add more songs") : full ? (editingId ? "Re-embed" : "Choose MP3 or WAV") : "Choose MP3s or WAVs"}</Button>
             {!full && !audio && <span className="text-xs text-muted-foreground">Drop a whole EP or album. Songs wait in your session queue.</span>}
-            <input ref={audioInput} type="file" accept=".mp3,.wav,audio/mpeg,audio/wav,audio/x-wav" multiple={!full} aria-label="MP3 or WAV audio files" className="sr-only" onChange={(event) => { if (event.target.files) addFiles(event.target.files); event.target.value = ""; }} />
+            <input ref={audioInput} type="file" accept=".mp3,.wav,audio/mpeg,audio/wav,audio/x-wav" multiple={!full} aria-label="MP3 or WAV audio files" className="sr-only" onChange={(event) => { if (event.target.files) void addFiles([...event.target.files]); event.target.value = ""; }} />
           </div>
           <div className="flex min-h-44 flex-col items-center justify-center gap-3 rounded-lg border border-dashed border-border p-4">
             {cover ? <img src={cover} alt="Selected cover artwork" className="h-20 w-20 rounded object-cover" /> : <ImagePlus className="h-8 w-8 text-primary" />}
@@ -566,7 +590,7 @@ export function MetadataUploader({ onShareInfo, userId, mode = "embed", readOnly
             <Button type="submit" size="lg" disabled={busy}><FileAudio />{busy ? "Embedding…" : "Embed & Download"}</Button>
             {userId && <Button type="button" size="lg" variant="outline" disabled={saving} onClick={save}><Save />{saving ? "Saving…" : editingId ? "Update in catalog" : "Submit to catalog"}</Button>}
             {full && (editingId || adding) && <Button type="button" size="lg" variant="ghost" onClick={closeSong}>Close</Button>}
-            {!full && <span className="hidden text-xs text-muted-foreground sm:inline"><kbd className="rounded border border-border px-1.5 py-0.5">Ctrl</kbd> + <kbd className="rounded border border-border px-1.5 py-0.5">Enter</kbd> to embed</span>}
+            {!full && <span className="hidden text-xs text-muted-foreground sm:inline"><kbd className="rounded border border-border px-1.5 py-0.5">Ctrl</kbd> + <kbd className="rounded border border-border px-1.5 py-0.5">Enter</kbd> (<kbd className="rounded border border-border px-1.5 py-0.5">⌘</kbd> + <kbd className="rounded border border-border px-1.5 py-0.5">Enter</kbd> on Mac) to embed</span>}
           </div>
         </div>
       </form>
