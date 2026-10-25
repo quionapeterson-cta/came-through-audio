@@ -1,4 +1,5 @@
 import type { Pillar } from "@/lib/audit";
+import { isUnreleased, releaseItems, releasePct } from "@/lib/release-checklist";
 import { pillarLabel, trackReport, type RepertoireCheck, type TrackReport } from "@/lib/health";
 import type { CatalogTrack } from "@/lib/catalog";
 import { isInspectorSong, type SongStatus } from "@/lib/health-songs";
@@ -11,7 +12,7 @@ import type { Country, Society } from "@/lib/repertoires";
  * Readiness steps tick themselves from the catalog (the shared registrationCheck, one per agency) and make up the %;
  * register and confirm steps are ticked by the user.
  */
-export type Stage = "details" | "register" | "confirm";
+export type Stage = "release" | "details" | "register" | "confirm";
 export type ChecklistStep = {
   id: string;
   stage: Stage;
@@ -24,22 +25,30 @@ export type ChecklistStep = {
   /** Field to jump to when the fix lives in the song's details. */
   field?: string | undefined;
   /** Flagged details to fix, listed under the step. */
-  items?: { text: string; field?: string | undefined }[];
+  items?: { text: string; field?: string | undefined }[] | undefined;
   /** Registered (or found) before the song's details changed: the registration needs updating to match. */
   update?: boolean;
+  /** Release checklist: a tick the person sets, saved under this checklist key. */
+  tick?: string | undefined;
+  /** Not counted in the % (optional, or waiting for the release date). */
+  optional?: boolean | undefined;
+  /** Plain-language reason, shown under release items. */
+  why?: string | undefined;
 };
 /**
  * `pct` is registration readiness: the share of agencies the catalog has everything for. Registering and confirming
  * are still steps the user ticks (`registered`, `done`), but they don't move the %; "healthy" means every step is done.
  */
-export type SongChecklist = { steps: ChecklistStep[]; done: number; total: number; pct: number; registered: { done: number; total: number }; group: "attention" | "later" | "healthy" };
+export type SongChecklist = { steps: ChecklistStep[]; done: number; total: number; pct: number; registered: { done: number; total: number }; group: "attention" | "later" | "healthy";
+  /** Not released yet: `pct` is how ready it is to distribute (Release checklist + PRO/MLC registration), not registration readiness. */
+  prerelease: boolean };
 
 /** Account-wide checklist state lives in its own health_song_status row, under this song_ref (it's not a song). */
 export const ACCOUNT_REF = "account";
 /** Set once per account: international airplay collection through SoundExchange or PPL. */
 export const INTL_KEY = "intl:setup";
 
-export const STAGE_LABEL: Record<Stage, string> = { details: "Ready to register", register: "Register it", confirm: "Confirm it shows up" };
+export const STAGE_LABEL: Record<Stage, string> = { release: "Getting ready to release", details: "Ready to register", register: "Register it", confirm: "Confirm it shows up" };
 
 /** What each society's search finds a song by most exactly, and the value to copy. Missing values point at their field. */
 /** `also` is a second detail to search with (BMI: the performer next to the title). */
@@ -92,6 +101,11 @@ export function songChecklist(r: TrackReport, country: Country, status?: SongSta
   const ticked = status?.steps ?? {};
   const needsPro = r.issues.some((i) => i.field?.endsWith("-pro"));
   const steps: ChecklistStep[] = [];
+  // Not out yet: what to have ready before distributing comes first, and recordings wait for the release date.
+  const prerelease = isUnreleased(m);
+  if (prerelease) {
+    for (const i of releaseItems(m, ticked)) steps.push({ id: `release:${i.id}`, stage: "release", auto: i.auto, done: i.done, title: i.title, field: i.field, items: i.items, tick: i.tick, optional: i.optional, why: i.why });
+  }
 
   // Ready to register: one step per agency, ticked by the catalog itself. These alone make up the song's %.
   for (const p of r.pillars) {
@@ -106,6 +120,12 @@ export function songChecklist(r: TrackReport, country: Country, status?: SongSta
   for (const p of r.pillars) {
     const society = societyOf(p);
     if (!society || (p.pillar === "performance" && needsPro)) continue;
+    // SoundExchange registers recordings once they're out: shown as waiting, never counted against an unreleased song.
+    if (prerelease && p.pillar === "digital") {
+      steps.push({ id: `register:${p.pillar}`, stage: "register", auto: true, pillar: p.pillar, society, optional: true, done: false,
+        title: `Register with ${society.name} after release${m.releaseDate ? ` (${m.releaseDate})` : ""}` });
+      continue;
+    }
     const found = p.state === "confirmed";
     const registered = found || !!ticked[`registered:${society.id}`];
     const saved = ticked[printKey(society.id)];
@@ -124,12 +144,15 @@ export function songChecklist(r: TrackReport, country: Country, status?: SongSta
   if (r.pillars.some((p) => p.pillar === "performance" || p.pillar === "mechanical"))
     steps.push({ id: "iswc", stage: "confirm", auto: true, done: !!m.iswc.trim(), title: "Add the ISWC once it's assigned", field: "iswc" });
 
+  const counted = steps.filter((s) => !s.optional);
   const ready = steps.filter((s) => s.stage === "details");
-  const reg = steps.filter((s) => s.stage === "register");
-  const done = steps.filter((s) => s.done).length;
-  const pct = ready.length ? Math.round((ready.filter((s) => s.done).length / ready.length) * 100) : 0;
-  const group = done === steps.length ? "healthy" : status?.list === "later" ? "later" : "attention";
-  return { steps, done, total: steps.length, pct, registered: { done: reg.filter((s) => s.done).length, total: reg.length }, group };
+  const reg = counted.filter((s) => s.stage === "register");
+  const done = counted.filter((s) => s.done).length;
+  // Unreleased: ready to distribute = the release items plus registering with the PRO and mechanical society.
+  const pct = prerelease ? releasePct([...steps.filter((s) => s.stage === "release"), ...reg.filter((s) => s.id !== "intl")])
+    : ready.length ? Math.round((ready.filter((s) => s.done).length / ready.length) * 100) : 0;
+  const group = done === counted.length ? "healthy" : status?.list === "later" ? "later" : "attention";
+  return { steps, done, total: counted.length, pct, registered: { done: reg.filter((s) => s.done).length, total: reg.length }, group, prerelease };
 }
 
 /**
@@ -141,16 +164,24 @@ export function catalogHealth(tracks: CatalogTrack[], country: Country, checks: 
   const account = statusOf(ACCOUNT_REF);
   const songs = tracks.map((track) => {
     const c = songChecklist(trackReport(track, country, checks), country, statusOf(track.id), account);
-    return { track, pct: c.pct, registered: c.registered, field: c.steps.find((s) => s.stage === "details" && !s.done)?.field };
+    return { track, pct: c.pct, prerelease: c.prerelease, registered: c.registered, field: c.steps.find((s) => (s.stage === "details" || s.stage === "release") && !s.done && s.field)?.field };
   });
-  const pct = songs.length ? Math.round(songs.reduce((sum, s) => sum + s.pct, 0) / songs.length) : 0;
-  const next = songs.filter((s) => s.pct < 100).sort((a, b) => a.pct - b.pct)[0];
-  const registered = songs.reduce((n, s) => ({ done: n.done + s.registered.done, total: n.total + s.registered.total }), { done: 0, total: 0 });
-  return { songs, pct, ready: songs.filter((s) => s.pct === 100).length, registered, next };
+  // Unreleased songs get their own "getting ready" line and stay out of the score until release (founder, 2026-10-25).
+  const out = songs.filter((s) => !s.prerelease);
+  const upcoming = songs.filter((s) => s.prerelease);
+  const avg = (list: typeof songs) => (list.length ? Math.round(list.reduce((sum, s) => sum + s.pct, 0) / list.length) : 0);
+  const pct = avg(out);
+  const next = out.filter((s) => s.pct < 100).sort((a, b) => a.pct - b.pct)[0] ?? upcoming.filter((s) => s.pct < 100).sort((a, b) => a.pct - b.pct)[0];
+  const registered = out.reduce((n, s) => ({ done: n.done + s.registered.done, total: n.total + s.registered.total }), { done: 0, total: 0 });
+  return { songs, pct, ready: out.filter((s) => s.pct === 100).length, released: out.length, registered, next, prerelease: { count: upcoming.length, pct: avg(upcoming) } };
 }
 
 /** A warm, honest line for where the song is. */
 export function encouragement(c: SongChecklist): string {
+  if (c.prerelease) {
+    if (c.pct === 100) return "Ready to distribute. Everything that can happen before release is done; SoundExchange comes after release day.";
+    return `${c.pct}% ready to distribute. Get these done before release so the money can find you from day one.`;
+  }
   if (c.group === "healthy") return "Ready, registered and confirmed. This song is set up to get paid. Nice work.";
   if (c.pct === 100) {
     const left = c.registered.total - c.registered.done;

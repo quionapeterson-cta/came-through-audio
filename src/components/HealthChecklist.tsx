@@ -24,7 +24,7 @@ const GROUPS: { id: Group; label: string }[] = [
   { id: "later", label: "Saved for later" },
   { id: "healthy", label: "100% Healthy" },
 ];
-const STAGES: Stage[] = ["details", "register", "confirm"];
+const STAGES: Stage[] = ["release", "details", "register", "confirm"];
 const PILLAR_TERM: Record<Pillar, GlossaryKey> = { performance: "performance", mechanical: "mechanical", digital: "digitalPerformance" };
 const today = () => new Date().toISOString().slice(0, 10);
 
@@ -147,6 +147,7 @@ export function HealthChecklist({ rows, country, statuses, onStatus, actions, ru
                               {g.key !== SINGLES_KEY && r.track.metadata.trackNumber && <span className="w-5 shrink-0 text-xs text-muted-foreground">{r.track.metadata.trackNumber}</span>}
                               <span className="min-w-0 flex-1 truncate">{r.track.title || "Untitled"}</span>
                               {/* Songs checked in the Royalty Inspector (not in My Catalog) say so. */}
+                              {c.prerelease && <PreReleaseChip small />}
                               {isInspectorSong(r.track.id) && <span className="shrink-0 rounded bg-muted px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Inspector</span>}
                               <span className="h-1.5 w-12 shrink-0 rounded-full bg-muted"><span className="block h-1.5 rounded-full bg-primary" style={{ width: `${c.pct}%` }} /></span>
                               <span className="w-16 shrink-0 text-right text-xs text-muted-foreground">
@@ -179,15 +180,20 @@ export function HealthChecklist({ rows, country, statuses, onStatus, actions, ru
   );
 }
 
-function Ring({ pct }: { pct: number }) {
+/** Black chip that marks a song as pre-release everywhere it appears. */
+function PreReleaseChip({ small }: { small?: boolean }) {
+  return <span className={`shrink-0 rounded bg-ink font-bold uppercase text-ink-foreground ${small ? "px-1.5 py-0.5 text-[9px] tracking-wide" : "px-2 py-0.5 text-[10px] tracking-[2px]"}`}>Pre-release</span>;
+}
+
+function Ring({ pct, prerelease }: { pct: number; prerelease?: boolean }) {
   const r = 52, c = 2 * Math.PI * r;
   return (
-    <div className="relative h-24 w-24 shrink-0" aria-label={`${pct}% ready to register`}>
+    <div className="relative h-24 w-24 shrink-0" aria-label={`${pct}% ready to ${prerelease ? "distribute" : "register"}`}>
       <svg viewBox="0 0 120 120" className="h-full w-full -rotate-90" aria-hidden>
         <circle cx="60" cy="60" r={r} fill="none" stroke="var(--muted)" strokeWidth="12" />
         <circle cx="60" cy="60" r={r} fill="none" stroke="var(--primary)" strokeWidth="12" strokeLinecap="round" strokeDasharray={c} strokeDashoffset={c * (1 - pct / 100)} className="transition-[stroke-dashoffset] duration-700" />
       </svg>
-      <div className="absolute inset-0 flex flex-col items-center justify-center"><span className="text-2xl font-extrabold leading-none">{pct}%</span><span className="mt-1 text-[0.6rem] font-bold uppercase tracking-[1px] text-muted-foreground">ready</span></div>
+      <div className="absolute inset-0 flex flex-col items-center justify-center"><span className="text-2xl font-extrabold leading-none">{pct}%</span><span className="mt-1 text-[0.6rem] font-bold uppercase tracking-[1px] text-muted-foreground">{prerelease ? "to release" : "ready"}</span></div>
     </div>
   );
 }
@@ -222,11 +228,12 @@ function SongDetail({ r, c, country, status, onStatus, actions, running, onEditI
     <article id="song-health-detail" className="scroll-mt-4 rounded-2xl border border-border bg-card p-5 md:p-6">
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div className="min-w-0">
-          <div className="text-xs font-bold uppercase tracking-[2px] text-primary">Song health · {inspector ? "From the Royalty Inspector" : "From My Catalog"}</div>
+          <div className="flex flex-wrap items-center gap-2 text-xs font-bold uppercase tracking-[2px] text-primary">Song health · {inspector ? "From the Royalty Inspector" : "From My Catalog"}
+            {c.prerelease && <PreReleaseChip />}</div>
           <h4 className="truncate text-2xl font-extrabold md:text-3xl">{r.track.title || "Untitled"}</h4>
           <p className="text-muted-foreground">{encouragement(c)}</p>
         </div>
-        <Ring pct={c.pct} />
+        <Ring pct={c.pct} prerelease={c.prerelease} />
       </div>
       {/* One score per agency: each counts only the details that agency needs (founder, 2026-10-25). */}
       <ul className="mt-4 flex flex-wrap gap-2" aria-label="Score by agency">
@@ -255,9 +262,11 @@ function SongDetail({ r, c, country, status, onStatus, actions, running, onEditI
         {STAGES.map((stage, si) => {
           const list = c.steps.filter((s) => s.stage === stage);
           if (!list.length) return null;
+          // The release checklist is its own box (dashed Cobalt, black PRE-RELEASE label) so it never reads as the registration steps.
           return (
-            <div key={stage}>
+            <div key={stage} className={stage === "release" ? "rounded-2xl border-2 border-dashed border-primary/60 bg-primary/5 p-4" : undefined}>
               <h5 className="mb-2 flex items-center gap-2 text-sm font-extrabold uppercase tracking-[2px]"><span className="flex h-5 w-5 items-center justify-center rounded-full bg-primary text-[11px] text-primary-foreground">{si + 1}</span>{STAGE_LABEL[stage]}
+                {stage === "release" && <PreReleaseChip />}
                 {stage === "register" && c.registered.total > 0 && <span className="ml-auto text-xs font-semibold normal-case tracking-normal text-muted-foreground">Registered {c.registered.done} of {c.registered.total}</span>}</h5>
               <ol className="space-y-2">
                 {list.map((s) => <StepRow key={s.id} s={s} r={r} country={country} open={s.id === nextOpen} onFix={fix} apply={apply} actions={actions} onIntl={onIntl} />)}
@@ -337,6 +346,8 @@ function StepRow({ s, r, country, open, onFix, apply, actions, onIntl }: {
     else apply({}, { society: s.society.id, status: null });
   };
   const toggle = () => {
+    // Release items people tick themselves (split sheet signed, UPC from the distributor, AI Protection).
+    if (s.tick) { apply({ [s.tick]: s.done ? null : now() }); return; }
     if (intl) { if (s.done) setConfirming(true); else onIntl(true); return; }
     if (s.auto || !s.society) { onFix(s.field); return; }
     if (s.done) { setConfirming(true); return; }
@@ -373,7 +384,9 @@ function StepRow({ s, r, country, open, onFix, apply, actions, onIntl }: {
           {expanded && (
             <div className="mt-2 space-y-3 text-sm">
               {s.stage === "details" && s.done && s.society && <p className="text-muted-foreground">Your catalog has everything {s.society.name} asks for. Ticked automatically.</p>}
-              {s.auto && s.id !== "iswc" && !s.done && <>
+              {s.why && <p className="text-muted-foreground">{s.why}{s.tick ? " Tick the box when it's done." : s.auto ? " Ticks itself from your song's details." : ""}</p>}
+              {s.optional && s.stage === "register" && <p className="text-muted-foreground">Recordings register once they're out, so this waits for release day and doesn't count against the song.</p>}
+              {s.auto && !s.optional && s.id !== "iswc" && !s.done && <>
                 {s.items?.length ? <ul className="space-y-1">{s.items.map((it, k) => <li key={k}>⚠️ {it.field ? <button type="button" onClick={() => onFix(it.field)} className="text-left underline decoration-primary underline-offset-2 hover:text-primary">{it.text}</button> : it.text}</li>)}</ul> : null}
                 <FixIt onClick={() => onFix(s.field ?? s.items?.[0]?.field)} />
               </>}

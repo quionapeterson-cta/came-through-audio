@@ -443,7 +443,8 @@ export function RoyaltyHealthCheck({ userId, canCatalog, canExport, onUpgrade, o
   }
   if (view.kind === "report" && reportRows.length) return (
     <div className="space-y-6">
-      <RoyaltyReport checkup={checkup} since={since} scope={scopeName(view.scope)} onBack={() => setView({ kind: "hub" })} date={new Date().toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })} country={country.name}
+      <RoyaltyReport checkup={checkup} since={since} prerelease={reportRows.filter(({ c }) => c.prerelease).map(({ r, c }) => ({ id: r.track.id, title: r.track.title || "Untitled", pct: c.pct,
+        items: c.steps.filter((s) => s.stage === "release" || (s.stage === "register" && s.id !== "intl")).map((s) => ({ title: s.title, done: s.done, optional: s.optional })) }))} scope={scopeName(view.scope)} onBack={() => setView({ kind: "hub" })} date={new Date().toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })} country={country.name}
         countryPicker={countryPicker} running={!!running} canExport={canExport} onRunCheckup={() => runCheck(view.scope)}
         onPdf={() => downloadCheckupPdf(checkup, mostCommon(reportRows.map(({ r }) => r.track.artist)), country.name).catch(() => toast.error("Couldn't create the PDF. Try again."))} onAction={(a) => void act(a)} onExpert={book} onReminder={reminder}
         onAskCowriter={canCatalog && cowriters.length ? askCowriter : undefined} />

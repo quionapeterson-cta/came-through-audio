@@ -134,7 +134,9 @@ export function royaltyCheckup({ rows, signedSheets, today = new Date().toISOStr
     // Check-in answers (HealthCheckIn): "Not sure" about a registration, a split sheet signed elsewhere, a release still to come.
     const answer = (k: string) => status?.steps[`checkin:${k}`];
     const unsure = (s?: Society): Partial<AffectedSong> => (s && answer(s.id) === "unsure" ? { unsure: true, why: `not sure it's registered with ${s.name}` } : {});
-    const unreleased = answer("delivered") === "no" && !r.streaming?.hit;
+    // Not out yet: the song's release date / "isn't released yet" box (pre-distribution), or the check-in says so.
+    const unreleased = c.prerelease || (answer("delivered") === "no" && !r.streaming?.hit);
+    const before = unreleased ? ": register before release so it's on file from day one" : "";
     const step = (stage: string, pillar: string) => c.steps.find((s) => s.stage === stage && s.pillar === pillar);
     const writers = writersOf(m);
     const pubs = named(m.publishers);
@@ -158,7 +160,7 @@ export function royaltyCheckup({ rows, signedSheets, today = new Date().toISOStr
       if (missingIpi) why.push("IPI missing");
       const reg = step("register", "performance");
       const notSure = reg && !reg.done && !reg.update && reg.society && answer(reg.society.id) === "unsure";
-      if (reg && !reg.done && !reg.update) why.push(notSure ? `not sure it's registered with ${reg.society!.name}` : `not registered with ${reg.society?.name ?? "your PRO"}`);
+      if (reg && !reg.done && !reg.update) why.push(notSure ? `not sure it's registered with ${reg.society!.name}` : `not registered with ${reg.society?.name ?? "your PRO"}${before}`);
       if (why.length) hit("artery-left", { ...song(why.join(", "), missingIpi?.f, !missingIpi), ...(notSure ? { unsure: true } : {}) });
     }
     const pubIpi = m.publishers.findIndex((p) => creditName(p) && !isIpi(p.ipi ?? ""));
@@ -166,7 +168,7 @@ export function royaltyCheckup({ rows, signedSheets, today = new Date().toISOStr
 
     // Lungs (mechanicals) and kidneys (the recording's digital performance), when the country has those agencies.
     const mech = step("register", "mechanical");
-    if (mech && !mech.done && !mech.update) hit("lungs-hold", { ...song(`not registered with ${mech.society?.name}`, undefined, true), ...unsure(mech.society) });
+    if (mech && !mech.done && !mech.update) hit("lungs-hold", { ...song(`not registered with ${mech.society?.name}${before}`, undefined, true), ...unsure(mech.society) });
     else if (mech && !m.isrc.trim()) hit("lungs-one", song("no ISRC", "isrc"));
     const dig = step("register", "digital");
     // A recording that isn't out yet gets registered once it's released, so it isn't a finding until then.

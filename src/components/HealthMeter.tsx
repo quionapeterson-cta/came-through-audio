@@ -25,7 +25,9 @@ export function HealthLiquid({ pct, className = "h-1.5", ticks, live }: { pct: n
  * My Catalog's master health meter: how ready the catalog is to register, ticked off by the catalog itself.
  * Registrations the user has ticked show underneath but don't move it. Clicking it opens the song furthest from ready.
  */
-export function HealthMeter({ pct, ready, registered, total, next, onNext }: { pct: number; ready: number; registered: { done: number; total: number }; total: number; next?: string | undefined; onNext?: () => void }) {
+export function HealthMeter({ pct, ready, registered, total, next, onNext, prerelease }: { pct: number; ready: number; registered: { done: number; total: number }; total: number; next?: string | undefined; onNext?: () => void;
+  /** Unreleased songs, kept out of the score until release and shown on their own line (black PRE-RELEASE label). */
+  prerelease?: { count: number; pct: number } | undefined }) {
   return (
     <button type="button" onClick={onNext} disabled={!next}
       aria-label={`Catalog health ${pct}% ready to register.${next ? ` Open ${next}, the song furthest from ready.` : ""}`}
@@ -39,10 +41,16 @@ export function HealthMeter({ pct, ready, registered, total, next, onNext }: { p
         <HealthLiquid pct={pct} ticks live className="h-7" />
         <span className="flex justify-between px-0.5 text-[0.6rem] tabular-nums text-muted-foreground" aria-hidden>{[0, 25, 50, 75, 100].map((t) => <span key={t}>{t}</span>)}</span>
         <span className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
-          <span><b className="text-foreground">{ready} of {total}</b> {total === 1 ? "song" : "songs"} ready to register</span>
+          <span><b className="text-foreground">{ready} of {total}</b> {total === 1 ? "released song" : "released songs"} ready to register</span>
           {registered.total > 0 && <span>Registered <b className="text-foreground">{registered.done} of {registered.total}</b></span>}
           {next ? <span className="font-semibold text-primary group-hover:underline">Fix next: {next} →</span> : total > 0 && <span className="font-semibold text-primary">{registered.done < registered.total ? "Every song is ready. Register them in the Royalty Health Hub." : "Every song is ready and registered."}</span>}
         </span>
+        {!!prerelease?.count && (
+          <span className="flex flex-wrap items-center gap-2 rounded-lg border-2 border-dashed border-primary/60 bg-primary/5 px-3 py-1.5 text-xs">
+            <span className="rounded bg-ink px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-ink-foreground">Pre-release</span>
+            <span><b className="text-foreground">{prerelease.count} {prerelease.count === 1 ? "song" : "songs"} getting ready</b>: {prerelease.pct}% ready to distribute. Not counted above until release day.</span>
+          </span>
+        )}
       </span>
     </button>
   );

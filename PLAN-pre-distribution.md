@@ -1,6 +1,6 @@
 # PLAN — Pre-distribution health analysis · v1
 
-Status: **Preview, awaiting founder approval (2026-10-25). Nothing built yet.**
+Status: **✅ Approved and BUILT 2026-10-25** (founder: yes to all 4; "clear distinction with the sections and colors": the release checklist is its own dashed Cobalt box with a black PRE-RELEASE label, also on the song list, the catalog meter line and the report). The release-day email is a one-time note per song (no unsubscribe needed; it never repeats). No database change.
 Source: founder idea, 2026-10-25 (PLAN-master-notes "NEXT (after Phase 3)").
 
 ## The idea in one line

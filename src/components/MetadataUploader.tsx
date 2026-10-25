@@ -432,14 +432,14 @@ export function MetadataUploader({ onShareInfo, userId, mode = "embed", readOnly
             {audio && <span className="text-xs text-muted-foreground">{(audio.size / 1024 / 1024).toFixed(1)} MB</span>}
             <Button type="button" variant="outline" onClick={() => audioInput.current?.click()}><Upload />{audio ? (full ? "Choose a different file" : "Add more songs") : full ? (editingId ? "Re-embed" : "Choose MP3 or WAV") : "Choose MP3s or WAVs"}</Button>
             {!full && !audio && <span className="text-xs text-muted-foreground">Drop a whole EP or album. Songs wait in your session queue.</span>}
-            <input ref={audioInput} type="file" accept=".mp3,.wav,audio/mpeg,audio/wav,audio/x-wav" multiple={!full} aria-label="MP3 or WAV audio files" className="sr-only" onChange={(event) => { if (event.target.files) void addFiles([...event.target.files]); event.target.value = ""; }} />
+            <input id="audio" ref={audioInput} type="file" accept=".mp3,.wav,audio/mpeg,audio/wav,audio/x-wav" multiple={!full} aria-label="MP3 or WAV audio files" className="sr-only" onChange={(event) => { if (event.target.files) void addFiles([...event.target.files]); event.target.value = ""; }} />
           </div>
           <div className="flex min-h-44 flex-col items-center justify-center gap-3 rounded-lg border border-dashed border-border p-4">
             {cover ? <img src={cover} alt="Selected cover artwork" className="h-20 w-20 rounded object-cover" /> : <ImagePlus className="h-8 w-8 text-primary" />}
             <Button type="button" variant="ghost" onClick={() => artInput.current?.click()}>{artwork ? "Replace artwork" : "Add cover art"}</Button>
             <p className="text-center text-xs text-muted-foreground">3000x3000px recommended (streaming standard). JPEG or PNG; any standard album size works.</p>
             {artwork && <Button type="button" size="icon" variant="ghost" aria-label="Remove cover artwork" onClick={() => { setArtwork(undefined); setResult(undefined); }}><Trash2 /></Button>}
-            <input ref={artInput} type="file" accept="image/jpeg,image/png" aria-label="Cover artwork" className="sr-only" onChange={(event) => {
+            <input id="artwork" ref={artInput} type="file" accept="image/jpeg,image/png" aria-label="Cover artwork" className="sr-only" onChange={(event) => {
               const file = event.target.files?.[0];
               if (file && !["image/jpeg", "image/png"].includes(file.type)) { setError("Choose JPEG or PNG artwork."); return; }
               setArtwork(file); setResult(undefined); setError(""); event.target.value = "";
@@ -515,7 +515,11 @@ export function MetadataUploader({ onShareInfo, userId, mode = "embed", readOnly
                 </div>
                 {full && <>
                   <Field label="Album / release title" id="album" value={metadata.album} onChange={(value) => update("album", value)} />
-                  <Field label="Release date" id="releaseDate" type="date" value={metadata.releaseDate} onChange={(value) => update("releaseDate", value)} />
+                  <div className="min-w-0 space-y-2">
+                    <Field label="Release date" id="releaseDate" type="date" value={metadata.releaseDate} onChange={(value) => update("releaseDate", value)} />
+                    {/* Pre-distribution: no date picked yet, but not out. A future date counts on its own. */}
+                    {!metadata.releaseDate && <label className="flex items-center gap-2 text-sm"><input id="unreleased" type="checkbox" className="h-4 w-4 accent-[var(--primary)]" checked={metadata.unreleased} onChange={(e) => update("unreleased", e.target.checked)} />This song isn't released yet<InfoTip text="Unreleased songs get a Release checklist in the Royalty Health Hub: what to have ready before you distribute. On release day they switch to the normal health reading." /></label>}
+                  </div>
                 </>}
                 <Field label="Record label" term="label" id="label" value={metadata.label} onChange={(value) => update("label", value)} />
                 <div className="min-w-0 space-y-2"><Label htmlFor="copyright" className="leading-5">Composition copyright (©)<InfoTip term="cLine" /></Label><CopyrightInput symbol="©" id="copyright" value={metadata.copyright} onChange={(value) => update("copyright", value)} /></div>
@@ -604,7 +608,7 @@ export function MetadataUploader({ onShareInfo, userId, mode = "embed", readOnly
             </FormSection>
 
             <FormSection title="Lyrics" open={!full} disabled={busy} summary={metadata.lyrics.trim() ? "Added" : "None yet"}>
-              <textarea aria-label="Lyrics" rows={6} value={metadata.lyrics} onChange={(e) => update("lyrics", e.target.value)} placeholder="Paste your lyrics" className="w-full rounded-md border border-input bg-background p-3 text-sm" />
+              <textarea id="lyrics" aria-label="Lyrics" rows={6} value={metadata.lyrics} onChange={(e) => update("lyrics", e.target.value)} placeholder="Paste your lyrics" className="w-full rounded-md border border-input bg-background p-3 text-sm" />
             </FormSection>
           </div>;
         })()}
@@ -700,7 +704,7 @@ export function MetadataUploader({ onShareInfo, userId, mode = "embed", readOnly
       {userId && full && (() => { const newest = [...tracks].sort((a, b) => String(b.updatedAt).localeCompare(String(a.updatedAt)))[0]; return (
         <div className="pb-12">
           {health && tracks.length > 0 && <div className="mb-8 rounded-2xl border border-border bg-card p-5">
-            <HealthMeter pct={health.pct} ready={health.ready} registered={health.registered} total={tracks.length} next={readOnly ? undefined : health.next?.track.title}
+            <HealthMeter pct={health.pct} ready={health.ready} registered={health.registered} total={health.released} prerelease={health.prerelease} next={readOnly ? undefined : health.next?.track.title}
               onNext={() => { const n = health.next; if (n) { if (n.field) fix(n.track, n.field); else open(n.track); } }} />
             {onHealthCheck && <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-border pt-4">
               <p className="text-sm text-muted-foreground">Get a full Royalty Health Report: what's blocking your money, and exactly how to fix it.</p>

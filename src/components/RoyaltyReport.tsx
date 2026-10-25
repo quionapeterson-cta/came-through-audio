@@ -24,6 +24,8 @@ type Props = {
   /** What this check covered ("Song A", "Summer Tape (EP)", "Whole catalog"), and the way back to the Hub. */
   scope?: string | undefined;
   onBack?: (() => void) | undefined;
+  /** Songs not released yet: their Release checklist, shown as a pre-distribution reading (PLAN-pre-distribution). */
+  prerelease?: { id: string; title: string; pct: number; items: { title: string; done: boolean; optional?: boolean | undefined }[] }[] | undefined;
 };
 
 const KEY: [OrganState, string, string][] = [
@@ -51,7 +53,7 @@ function stepButton(a: StepAction, canExport: boolean): { label: string; locked?
 }
 
 /** The Royalty Health Report: the clickable body, the main finding with its ℞ treatment, and a full report per organ. */
-export function RoyaltyReport({ checkup, since, date, country, countryPicker, running, canExport, onRunCheckup, onPdf, onAction, onExpert, onReminder, onAskCowriter, scope, onBack }: Props) {
+export function RoyaltyReport({ checkup, since, date, country, countryPicker, running, canExport, onRunCheckup, onPdf, onAction, onExpert, onReminder, onAskCowriter, scope, onBack, prerelease }: Props) {
   const { organs, lead } = checkup;
   const first = lead?.organ ?? organs.find((o) => o.state !== "healthy")?.id ?? organs[0]!.id;
   const [selected, setSelected] = useState<OrganId>(first);
@@ -79,6 +81,23 @@ export function RoyaltyReport({ checkup, since, date, country, countryPicker, ru
           <Button onClick={onRunCheckup} disabled={running}><Stethoscope />{running ? "Checking…" : "Run it again"}</Button>
         </div>
       </div>
+
+      {!!prerelease?.length && (
+        <section aria-label="Pre-distribution reading" className="rounded-2xl border-2 border-dashed border-primary/60 bg-primary/5 p-5">
+          <h3 className="flex flex-wrap items-center gap-2 text-lg font-extrabold"><span className="rounded bg-ink px-2 py-0.5 text-[10px] font-bold uppercase tracking-[2px] text-ink-foreground">Pre-release</span>Pre-distribution reading</h3>
+          <p className="mt-1 text-sm text-muted-foreground">Not out yet, so these are read for what to have ready before you distribute. Nothing that only applies after release counts against them.</p>
+          <ul className="mt-4 grid gap-4 md:grid-cols-2">
+            {prerelease.map((p) => (
+              <li key={p.id} className="rounded-xl border border-border bg-card p-4">
+                <div className="flex items-baseline justify-between gap-3"><span className="truncate font-bold">{p.title}</span><span className="shrink-0 text-sm font-semibold text-primary">{p.pct}% ready to distribute</span></div>
+                <ul className="mt-2 space-y-1 text-sm">
+                  {p.items.map((i) => <li key={i.title} className="flex items-start gap-2">{i.done ? <span className="text-primary">✓</span> : <span>{i.optional ? "○" : "⚠️"}</span>}<span className={i.done ? "text-muted-foreground" : ""}>{i.title}</span></li>)}
+                </ul>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
 
       <section className="rr-hero" aria-label="Checkup summary">
         <figure className="rr-body">
