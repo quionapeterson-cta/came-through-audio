@@ -7,6 +7,7 @@
 import { BUSINESS } from "./blueprints/business";
 import { DATE, general, type Blueprint, type BlueprintField } from "./blueprints/common";
 import { EVENTS } from "./blueprints/events";
+import { outreachBlueprints } from "./blueprints/company-outreach";
 import { FASHION } from "./blueprints/fashion";
 import { INFLUENCERS } from "./blueprints/influencers";
 import { LIVE } from "./blueprints/live";
@@ -105,6 +106,8 @@ The beta is pre-release software. It may have errors, change or be unavailable, 
 
 ${PRELAUNCH(7)}${general(8)}`),
   },
+  // Company outreach kit (Phase 4 item 5): NDA, referral, co-marketing, data sharing, sponsored badge, pilot, API, LOI.
+  ...outreachBlueprints(SIGNER, asCompany),
   {
     id: "company-blank",
     name: "Blank company agreement",

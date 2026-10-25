@@ -26,6 +26,8 @@ import { companySignLink } from "@/lib/contract-sign.functions";
 import { grantLaunchGift, listLaunchGifts, type LaunchGiftRow } from "@/lib/launch-gift.functions";
 import { grantLifetimeAccess, listBetaFeedback, listBetaTesters, type BetaFeedbackRow, type BetaTesterRow } from "@/lib/beta.functions";
 import { BETA_ITEMS, BETA_WINDOW } from "@/lib/beta";
+import { listOutreach, sendOutreach, type OutreachLogRow } from "@/lib/outreach.functions";
+import { OUTREACH_DAILY_LIMIT, OUTREACH_LABEL, outreachDraft, type OutreachFields, type OutreachKind } from "@/lib/outreach-emails";
 import { TIER_LABEL } from "@/lib/plans";
 import { logBadgeEvent } from "@/lib/badge-events";
 import { BLUEPRINT_GUIDES, CHEAT_SHEETS, type Guide } from "@/lib/guides";
@@ -34,7 +36,7 @@ import {
   type Contract, type ContractParty, type ReceivedContract,
 } from "@/lib/contracts";
 
-type View = "blueprints" | "guides" | "contracts" | "vault" | "gifts" | "beta";
+type View = "blueprints" | "guides" | "contracts" | "vault" | "gifts" | "beta" | "outreach";
 
 const STATUS: Record<Contract["status"], { label: string; className: string }> = {
   draft: { label: "Draft", className: "border-border text-muted-foreground" },
@@ -106,7 +108,7 @@ export function Contracts({ userId, unlocked, onUpgrade, company = false }: { us
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="inline-flex flex-wrap gap-1 rounded-lg bg-muted p-1" role="tablist" aria-label="Contracts">
             {(company
-              ? [["blueprints", "Templates", ScrollText], ["contracts", "Drafts & out for signature", FileSignature], ["vault", "Signed", Vault], ["gifts", "Launch gifts", Gift], ["beta", "Beta testers", FlaskConical]] as const
+              ? [["blueprints", "Templates", ScrollText], ["contracts", "Drafts & out for signature", FileSignature], ["vault", "Signed", Vault], ["gifts", "Launch gifts", Gift], ["beta", "Beta testers", FlaskConical], ["outreach", "Outreach", Mail]] as const
               : [["blueprints", "Contracts", ScrollText], ["guides", "Blueprints", BookOpen], ["contracts", "My Contracts", FileSignature], ["vault", "Signed Vault", Vault]] as const).map(([id, label, Icon]) => (
               <Button key={id} role="tab" aria-selected={view === id} size="sm" variant={view === id ? "default" : "ghost"} onClick={() => setView(id)}>
                 <Icon className="h-4 w-4" />{label}
@@ -126,6 +128,7 @@ export function Contracts({ userId, unlocked, onUpgrade, company = false }: { us
 
         {view === "gifts" && company && <LaunchGifts />}
         {view === "beta" && company && <BetaTesters />}
+        {view === "outreach" && company && <Outreach />}
 
         {view === "guides" && (!unlocked
           ? <UpgradeLock className="" title="Blueprints" tier="management" onUpgrade={onUpgrade} text="Step-by-step guides to running your music business, from royalty registration to touring, plus home recording cheat sheets for every genre." />
@@ -372,6 +375,77 @@ function BetaTesters() {
                 </li>
               );
             })}
+          </ul>
+        )}
+      </div>
+    </section>
+  );
+}
+
+/**
+ * Company outreach emails (Phase 4 item 5): pick First email, Follow-up or Demo invite, fill in who it's for, edit the
+ * draft, send from partnerships@. Everything sent is listed below for follow-ups. Super admins only.
+ */
+function Outreach() {
+  const send = useServerFn(sendOutreach);
+  const history = useServerFn(listOutreach);
+  const [kind, setKind] = useState<OutreachKind>("cold");
+  const [to, setTo] = useState("");
+  const [f, setF] = useState<OutreachFields>({ name: "", company: "", line: "", demo: "", sender: COMPANY_SIGNER_NAME });
+  const [draft, setDraft] = useState(() => outreachDraft("cold", { name: "", company: "", line: "", demo: "", sender: COMPANY_SIGNER_NAME }));
+  const [edited, setEdited] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [sent, setSent] = useState<OutreachLogRow[]>();
+  const load = () => history().then(setSent).catch(() => setSent([]));
+  useEffect(() => { void load(); }, []);
+  // The draft follows the fields until it's edited by hand; "Start over" brings the template back.
+  useEffect(() => { if (!edited) setDraft(outreachDraft(kind, f)); }, [kind, f, edited]);
+  const set = (k: keyof OutreachFields) => (e: React.ChangeEvent<HTMLInputElement>) => setF((x) => ({ ...x, [k]: e.target.value }));
+  const go = async () => {
+    if (!isValidEmail(to)) { toast.error("Add a valid email address."); return; }
+    if (!await confirmAction({ title: `Send to ${to}?`, text: `"${draft.subject}" from partnerships@camethroughaudio.com.`, action: "Send email" })) return;
+    setBusy(true);
+    try {
+      await send({ data: { kind, to, name: f.name, company: f.company, subject: draft.subject, body: draft.body } });
+      toast.success(`Sent to ${to}.`);
+      setTo(""); setF((x) => ({ ...x, name: "", company: "", line: "", demo: "" })); setEdited(false);
+      await load();
+    } catch (e) { toast.error(e instanceof Error ? e.message : "Couldn't send the email."); }
+    finally { setBusy(false); }
+  };
+  const date = (d: string) => new Date(d).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+  return (
+    <section className="space-y-6">
+      <p className="text-sm text-muted-foreground">Emails to labels, music-tech and music-creation companies, from partnerships@camethroughaudio.com (replies go there too). Each one has an opt-out line, as the law requires. Up to {OUTREACH_DAILY_LIMIT} a day. Send agreements from Templates.</p>
+      <div className="flex flex-wrap gap-2">
+        {(Object.keys(OUTREACH_LABEL) as OutreachKind[]).map((k) => <Button key={k} size="sm" variant={kind === k ? "default" : "outline"} onClick={() => setKind(k)}>{OUTREACH_LABEL[k]}</Button>)}
+      </div>
+      <div className="grid gap-4 sm:grid-cols-2">
+        <Field label="Their email" tip="Where the email goes."><Input type="email" value={to} onChange={(e) => setTo(e.target.value)} placeholder="name@company.com" /></Field>
+        <Field label="Their name" tip="First name is fine."><Input value={f.name} onChange={set("name")} /></Field>
+        <Field label="Company" tip="Their company's name."><Input value={f.company} onChange={set("company")} /></Field>
+        <Field label="Signed by" tip="Your name at the bottom."><Input value={f.sender} onChange={set("sender")} /></Field>
+        <Field label="A personal line (optional)" tip="One sentence about them, so it doesn't read like a mass email." wide><Input value={f.line} onChange={set("line")} placeholder="Loved your roster's new release on Friday." /></Field>
+        {kind === "demo" && <Field label="Demo time and link" tip="When and where the demo is." wide><Input value={f.demo} onChange={set("demo")} placeholder="Tuesday, Nov 17 at 1 PM Eastern · meeting link" /></Field>}
+      </div>
+      <div className="space-y-3 rounded-xl border border-border p-4">
+        <Field label="Subject" tip="Keep it honest: what the email is about." wide><Input value={draft.subject} onChange={(e) => { setEdited(true); setDraft((d) => ({ ...d, subject: e.target.value })); }} /></Field>
+        <Field label="Message" tip="Edit anything before you send." wide>
+          <textarea rows={12} value={draft.body} onChange={(e) => { setEdited(true); setDraft((d) => ({ ...d, body: e.target.value })); }} className="w-full rounded-md border border-input bg-background p-3 text-sm leading-relaxed" />
+        </Field>
+        <div className="flex flex-wrap gap-2">
+          <Button disabled={busy || !to.trim()} onClick={() => void go()}>{busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Mail className="h-4 w-4" />}Send email</Button>
+          {edited && <Button variant="ghost" onClick={() => setEdited(false)}><RotateCcw className="h-4 w-4" />Start over from the template</Button>}
+        </div>
+      </div>
+      <div className="space-y-2">
+        <h3 className="text-sm font-bold uppercase tracking-widest text-primary">Sent <span className="opacity-70">{sent?.length ?? 0}</span></h3>
+        {!sent ? <Spinner /> : sent.length === 0 ? <p className="text-sm text-muted-foreground">Nothing sent yet.</p> : (
+          <ul className="divide-y divide-border rounded-xl border border-border">
+            {sent.map((r, i) => <li key={i} className="flex flex-wrap items-center justify-between gap-2 px-4 py-2 text-sm">
+              <span className="min-w-0"><span className="font-semibold">{r.company || r.toName || r.toEmail}</span> <span className="text-muted-foreground">· {r.toEmail} · {r.subject}</span></span>
+              <span className="text-xs text-muted-foreground">{OUTREACH_LABEL[r.kind as OutreachKind] ?? r.kind} · {date(r.sentAt)}</span>
+            </li>)}
           </ul>
         )}
       </div>

@@ -29,6 +29,7 @@ All GitHub links need you logged in to GitHub (the repo is private). On each fil
 | 8 | [20261025160000 paid-contracts](https://github.com/quionapeterson-cta/came-through-audio/blob/main/supabase/migrations/20261025160000_f3b8d2a6-paid-contracts.sql) | $3.99 contracts on any plan |
 
 - [ ] Run db-check.sql again; send me a screenshot if anything still says MISSING.
+- [ ] Also run [20261025190000 outreach-emails](https://github.com/quionapeterson-cta/came-through-audio/blob/main/supabase/migrations/20261025190000_c5f2a8d1-outreach-emails.sql) (outreach email log).
 - [ ] Also run [20261025180000 beta-feedback](https://github.com/quionapeterson-cta/came-through-audio/blob/main/supabase/migrations/20261025180000_b3e7f1a5-beta-feedback.sql) (beta checklist results).
 - [ ] Also run [20261025170000 launch-department](https://github.com/quionapeterson-cta/came-through-audio/blob/main/supabase/migrations/20261025170000_a9d4e2c7-launch-department.sql) (pre-launch milestones), then Admin → Task Bank → Load pre-launch milestones.
 - [ ] Refresh Admin → Plans (this list shows there too): open `plans-load.sql` in the Codespace file list (kept out of GitHub on purpose), select all, paste in SQL Editor, Run.
@@ -78,6 +79,7 @@ Create each price in the **sandbox first**, test it, then in **live**. Until the
 - [ ] Set up the weekly backup: 4 steps in [PLAN-backups.md](https://github.com/quionapeterson-cta/came-through-audio/blob/main/PLAN-backups.md) (R2 bucket, database address, passphrase, GitHub secrets), then Run workflow once.
 
 ## 5. Email, accounts and settings
+- [ ] Create the partnerships@camethroughaudio.com mailbox (outreach emails send from it and replies go to it).
 - [ ] Create the billing@camethroughaudio.com mailbox (billing emails send from it; refund requests go to it).
 - [ ] Supabase → Authentication → set the minimum password length to 12, to match the sign-up form.
 - [ ] Demo account: in the Codespace terminal run `DEMO_PASSWORD=your-demo-password npx vitest run scripts/demo/seed.test.ts --environment node`.
