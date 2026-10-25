@@ -16,12 +16,12 @@ describe("Personal Branding", () => {
     expect(brandingUntil([{ kind: "vault", created_at: "2026-10-01T00:00:00Z", details: {} }], now)).toBeNull();
   });
 
-  it("Catalog Management gets contracts and split sheets; the add-on gets split sheets", () => {
+  it("Catalog Management includes it; the add-on turns it on for any plan", () => {
     const until = new Date("2027-01-01");
     expect(brandAccess("management", null)).toEqual({ contracts: true, splits: true });
-    expect(brandAccess("collaborate", until)).toEqual({ contracts: false, splits: true });
-    expect(brandAccess("collaborate", null)).toEqual({ contracts: false, splits: false });
-    expect(brandAccess("free", null)).toEqual({ contracts: false, splits: false });
+    expect(brandAccess("free", until)).toEqual({ contracts: true, splits: true });
+    expect(brandAccess("collaborate", until)).toEqual({ contracts: true, splits: true });
+    expect(brandAccess("plus", null)).toEqual({ contracts: false, splits: false });
   });
 
   it("cleans kit rows and keeps every valid color", () => {

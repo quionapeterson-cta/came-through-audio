@@ -3,7 +3,8 @@ import { hasTier, type Tier } from "@/lib/plans";
 
 /**
  * Personal Branding (PLAN-master-notes 3.6). A user's brand kit replaces the Came Through Audio header on documents
- * they send: Catalog Management includes it on contracts and split sheets; the add-on covers split sheets only.
+ * they send. Catalog Management includes it; anyone else can add it for $14.99 a year (founder, 2026-10-25), on their
+ * split sheets and the contracts they make (a $3.99 generated contract on any plan).
  */
 export const BRANDING_LOOKUP_KEY = "branding_yearly";
 export const BRANDING_PRICE = "$14.99";
@@ -63,10 +64,10 @@ export function brandingUntil(purchases: BrandingPurchase[], now = new Date()): 
   return end > now.getTime() ? new Date(end) : null;
 }
 
-/** Where their brand kit shows: Catalog Management everywhere, the add-on on split sheets. */
+/** Where their brand kit shows: everywhere with Catalog Management or the add-on (any plan). */
 export function brandAccess(tier: Tier, addOnUntil: Date | null): Record<BrandUse, boolean> {
-  const management = hasTier(tier, "management");
-  return { contracts: management, splits: management || !!addOnUntil };
+  const on = hasTier(tier, "management") || !!addOnUntil;
+  return { contracts: on, splits: on };
 }
 
 /** A kit is worth drawing once it has a name or a logo; otherwise the Came Through Audio header stays. */

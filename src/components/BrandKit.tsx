@@ -1,5 +1,4 @@
 import { useEffect, useState } from "react";
-import { Link } from "@tanstack/react-router";
 import { ImagePlus, Loader2, Lock, Plus, Save, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { useServerFn } from "@tanstack/react-start";
@@ -104,19 +103,14 @@ export function BrandKit({ userId, tier, artistName }: { userId: string; tier: T
     return (
       <div className="space-y-4">
         <p className="text-sm text-muted-foreground">Put your own logo, name, tagline, colors and font at the top of the documents you send, in place of ours.</p>
-        <ul className="space-y-1 text-sm">
-          <li><span className="font-semibold">{TIER_LABEL.management}:</span> included, on contracts and split sheets.</li>
-          <li><span className="font-semibold">{TIER_LABEL.collaborate}:</span> add it to split sheets for {BRANDING_PRICE}/year.</li>
-        </ul>
-        {tier === "collaborate"
-          ? <Button onClick={() => void buy()}><Lock className="h-4 w-4" />Add Personal Branding · {BRANDING_PRICE}/year</Button>
-          : <Button asChild><Link to="/plans"><Lock className="h-4 w-4" />See plans</Link></Button>}
+        <p className="text-sm">On your split sheets and the contracts you make. Included with {TIER_LABEL.management}, or add it to any plan for {BRANDING_PRICE}/year.</p>
+        <Button onClick={() => void buy()}><Lock className="h-4 w-4" />Add Personal Branding · {BRANDING_PRICE}/year</Button>
       </div>
     );
   }
 
-  const where = access.contracts ? "Your contracts and split sheets" : "Your split sheets";
-  const ending = access.addOnUntil && !access.contracts ? Date.parse(access.addOnUntil) - Date.now() < 30 * 86400000 : false;
+  const where = "Your contracts and split sheets";
+  const ending = access.addOnUntil && tier !== "management" ? Date.parse(access.addOnUntil) - Date.now() < 30 * 86400000 : false;
   const nameColor = kit.colors[0] && isHex(kit.colors[0]) ? kit.colors[0] : undefined;
   const taglineColor = kit.colors[1] && isHex(kit.colors[1]) ? kit.colors[1] : undefined;
   const stripe = kit.colors.filter(isHex);
@@ -125,7 +119,7 @@ export function BrandKit({ userId, tier, artistName }: { userId: string; tier: T
     <div className="space-y-6">
       <p className="text-sm text-muted-foreground">
         {where} carry this header in place of ours.
-        {access.contracts ? ` Included with ${TIER_LABEL.management}.` : access.addOnUntil ? ` Personal Branding runs until ${longDate(access.addOnUntil)}.` : ""}
+        {tier === "management" ? ` Included with ${TIER_LABEL.management}.` : access.addOnUntil ? ` Personal Branding runs until ${longDate(access.addOnUntil)}.` : ""}
       </p>
       {ending && <Button variant="outline" onClick={() => void buy()}>Add another year · {BRANDING_PRICE}</Button>}
 

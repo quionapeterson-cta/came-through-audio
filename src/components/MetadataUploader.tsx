@@ -33,6 +33,7 @@ import { ProSelect } from "@/components/ProSelect";
 import { logBadgeEvent } from "@/lib/badge-events";
 import { ARTIST_SEAT_PRICES } from "@/lib/plans";
 import { PACKAGES } from "@/lib/proof";
+import { openCheckout } from "@/lib/checkout";
 import { loadOnboarding, loadProfile, restoreRows, withProfile, withProfileFilled } from "@/lib/artist-profile";
 import { clearEmbedDraft, loadEmbedDraft, orderAudioFiles, saveEmbedDraft } from "@/lib/embed-session";
 import type { ShareInfo } from "@/components/BadgeCelebration";
@@ -53,6 +54,15 @@ export function MetadataUploader({ onShareInfo, userId, mode = "embed", readOnly
   const registeredArtist = loadOnboarding(userId)?.stageName?.trim() ?? "";
   const navigate = useNavigate();
   const [aiProtect, setAiProtect] = useState(false);
+  /** What the last save did, shown as a checklist so it's clear whether the master was embedded, downloaded and stored. */
+  const [savedInfo, setSavedInfo] = useState<SavedInfo>();
+  const errorRef = useRef<HTMLParagraphElement>(null);
+  /** An error the person must see: below the buttons, scrolled into view, and as a pop-up (Ctrl+Enter can be pressed anywhere). */
+  const fail = (message: string) => {
+    setError(message);
+    toast.error(message);
+    setTimeout(() => errorRef.current?.scrollIntoView({ behavior: "smooth", block: "center" }), 50);
+  };
   const [submitted, setSubmitted] = useState(false);
   const [metadata, setMetadata] = useState<Metadata>(emptyMetadata);
   const [audio, setAudio] = useState<File>();
@@ -197,33 +207,44 @@ export function MetadataUploader({ onShareInfo, userId, mode = "embed", readOnly
   async function save() {
     if (!userId) return;
     const parsed = metadataSchema.safeParse(metadata);
-    if (!parsed.success) { setError(parsed.error.issues[0]?.message ?? "Check your metadata."); return; }
+    if (!parsed.success) { fail(parsed.error.issues[0]?.message ?? "Check your metadata."); return; }
+    setError("");
     setSaving(true);
     try {
       const data = { ...parsed.data, aiProtection: parsed.data.aiProtection || aiProtect };
       const id = await saveTrack(data, userId, editingId);
       // Always store the fully tagged master (never the raw upload) and artwork in the private vault.
       let master: Blob | undefined;
-      if (result) master = await (await fetch(result.url)).blob();
+      let embedded = false;
+      if (result) { master = await (await fetch(result.url)).blob(); embedded = true; }
       else if (audio) {
-        try { master = await embedMetadata(await audio.arrayBuffer(), data, artwork ? await artwork.arrayBuffer() : undefined); }
+        try { master = await embedMetadata(await audio.arrayBuffer(), data, artwork ? await artwork.arrayBuffer() : undefined); embedded = true; }
         catch { master = audio; }
       }
-      let filesChanged = false;
+      let filesChanged = false, stored = false, artStored = false;
       try {
-        if (master) { data.audioPath = await uploadCatalogFile(userId, id, "master", master, extOf(audio?.name)); filesChanged = true; }
-        if (artwork) { data.artPath = await uploadCatalogFile(userId, id, "artwork", artwork, artwork.type === "image/png" ? "png" : "jpg"); filesChanged = true; }
+        if (master) { data.audioPath = await uploadCatalogFile(userId, id, "master", master, extOf(audio?.name)); filesChanged = stored = true; }
+        if (artwork) { data.artPath = await uploadCatalogFile(userId, id, "artwork", artwork, artwork.type === "image/png" ? "png" : "jpg"); filesChanged = artStored = true; }
         if (filesChanged) await saveTrack(data, userId, id);
       } catch { toast.warning("Details saved, but your audio or artwork could not be stored. Try saving again."); }
       setMetadata(data);
       setEditingId(id);
       setAdding(false);
-      toast.success(editingId ? "Track updated in your catalog." : "Track submitted to your catalog.");
+      const info: SavedInfo = { trackId: id, title: data.title, hadAudio: !!audio || !!result, embedded, downloaded: !!result, stored, art: artStored, protect: aiProtect && !parsed.data.aiProtection };
+      setSavedInfo(info);
+      toast.success(`"${data.title}" ${editingId ? "updated in" : "saved to"} My Catalog${stored ? (embedded ? " with your embedded master" : " (audio stored without embedded details)") : ""}.`);
       refresh();
       if (!full) { clearEmbedDraft(userId); setSubmitted(true); onSubmitted?.(); }
+      // They ticked AI Protection: go straight to its checkout for this song.
+      if (info.protect) void protectNow(id);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Could not save track.");
     } finally { setSaving(false); }
+  }
+  /** AI Protection for one song: the $2.99 Single checkout, back to the AI Protection Hub to record the proof. */
+  async function protectNow(trackId: string) {
+    try { await openCheckout({ kind: "ai", package: "Single", trackIds: [trackId] }); }
+    catch (e) { toast.error(e instanceof Error ? e.message : "Checkout could not open. Try again from the AI Protection Hub."); }
   }
   function open(t: CatalogTrack) {
     // After a plan ends or while paused, songs can be viewed and downloaded but not edited.
@@ -254,6 +275,7 @@ export function MetadataUploader({ onShareInfo, userId, mode = "embed", readOnly
     setResult(undefined);
     setSubmitted(false);
     setAiProtect(false);
+    setSavedInfo(undefined);
   }
   /** Next song in the session: keeps the chosen details from this one, then loads the next queued MP3 if any. */
   function startNext() {
@@ -274,6 +296,7 @@ export function MetadataUploader({ onShareInfo, userId, mode = "embed", readOnly
     setResult(undefined);
     setSubmitted(false);
     setAiProtect(false);
+    setSavedInfo(undefined);
     setError("");
     const [file, ...rest] = queue;
     setQueue(rest);
@@ -370,10 +393,11 @@ export function MetadataUploader({ onShareInfo, userId, mode = "embed", readOnly
     event.preventDefault();
     setResult(undefined);
     setError("");
-    if (!audio) { setError("Choose an MP3 or WAV file first."); return; }
+    if (!audio) { fail("Choose an MP3 or WAV file first, then embed."); return; }
     const parsed = metadataSchema.safeParse(metadata);
-    if (!parsed.success) { setError(parsed.error.issues[0]?.message ?? "Check your metadata."); return; }
+    if (!parsed.success) { fail(parsed.error.issues[0]?.message ?? "Check your metadata."); return; }
     setBusy(true);
+    setSavedInfo(undefined);
     try {
       const blob = await embedMetadata(await audio.arrayBuffer(), parsed.data, artwork ? await artwork.arrayBuffer() : undefined);
       const file = { url: URL.createObjectURL(blob), name: `${safeName(parsed.data.title)}.${extOf(audio.name)}` };
@@ -384,7 +408,7 @@ export function MetadataUploader({ onShareInfo, userId, mode = "embed", readOnly
       setResult(file);
       setSessionDone((d) => [...d, parsed.data.title.trim() || file.name]);
     } catch {
-      setError("This file could not be tagged. Check that it is a valid MP3 or WAV and the cover is a valid JPEG or PNG.");
+      fail("This file could not be tagged. Check that it is a valid MP3 or WAV and the cover is a valid JPEG or PNG.");
     } finally { setBusy(false); }
   }
 
@@ -392,9 +416,10 @@ export function MetadataUploader({ onShareInfo, userId, mode = "embed", readOnly
   // My Catalog shows this form inside the open song's card (or the new-song card); Embed Metadata shows it in the page.
   const formBlock = (<>
       {showForm && submitted && !full ? (
-        <div className="rounded-2xl border border-primary p-8 text-center">
+        <div className="rounded-2xl border border-primary p-8">
           <CheckCircle2 className="mx-auto h-10 w-10 text-primary" />
-          <p className="mt-3 text-lg font-semibold">Submitted to your catalog.</p>
+          <p className="mt-3 text-center text-lg font-semibold">Saved to My Catalog{savedInfo ? `: ${savedInfo.title}` : ""}</p>
+          {savedInfo && <SaveChecklist info={savedInfo} onProtect={() => void protectNow(savedInfo.trackId)} />}
           <NextSong queue={queue} carry={carry} onCarry={setCarry} onNext={startNext} />
         </div>
       ) : showForm && (
@@ -590,20 +615,28 @@ export function MetadataUploader({ onShareInfo, userId, mode = "embed", readOnly
               <span className="font-semibold">Need to change prepopulated metadata?</span> <Link to="/profile" className="font-semibold text-primary hover:underline">Go to Profile</Link> and click Edit profile, then edit Embed Defaults.
             </p>
           )}
-          {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
+          {error && <p ref={errorRef} role="alert" className="text-sm text-destructive">{error}</p>}
+          {full && savedInfo && savedInfo.trackId === editingId && !result && <SaveChecklist info={savedInfo} onProtect={() => void protectNow(savedInfo.trackId)} />}
           {result && (
             <div role="status" className="space-y-3 rounded-xl border border-primary p-5">
-              <p className="flex items-center gap-2 text-lg font-bold">Audio Tagged Successfully! <span className="cta-icon cta-party cta-bedazzled-unlock" aria-hidden /></p>
+              <p className="flex items-center gap-2 text-lg font-bold">Embedded and downloaded <span className="cta-icon cta-party cta-bedazzled-unlock" aria-hidden /></p>
+              <ul className="space-y-1 text-sm">
+                <li className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-primary" />Your details are embedded in the master</li>
+                <li className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-primary" />Downloaded to this device as <span className="font-semibold">{result.name}</span></li>
+                <li className="flex items-center gap-2 font-semibold">⚠️ Not in My Catalog yet: click <span className="text-primary">{editingId ? "Update in My Catalog" : "Save to My Catalog"}</span> to keep it there</li>
+              </ul>
               <label className="flex items-start gap-3 text-sm">
                 <input type="checkbox" className="mt-1 h-4 w-4 accent-[var(--primary)]" checked={aiProtect} onChange={(e) => setAiProtect(e.target.checked)} />
                 <span><span className="font-semibold">Add AI Protection Certificate (+${PACKAGES[0]!.price})</span> — With generative AI cloning and scraping artist catalogs at an alarming rate, secure your time-stamped proof of human origin right now to protect your music from false plagiarism claims and automated platform takedowns before downloading.</span>
               </label>
             </div>
           )}
+          {result && aiProtect && <p className="-mt-1 text-sm font-semibold text-primary">Next: click Save to My Catalog, then pay ${PACKAGES[0]!.price} at checkout. You'll record your proof in the AI Protection Hub.</p>}
+          {userId && !result && <p className="text-xs text-muted-foreground"><span className="font-semibold">Embed &amp; Download</span> writes your details into the audio file and downloads it. <span className="font-semibold">{editingId ? "Update in My Catalog" : "Save to My Catalog"}</span> embeds it the same way and keeps the tagged master in My Catalog, without downloading.</p>}
           {result && !full && <NextSong queue={queue} carry={carry} onCarry={setCarry} onNext={startNext} compact />}
           <div className="flex flex-wrap items-center gap-3">
             <Button type="submit" size="lg" disabled={busy}><FileAudio />{busy ? "Embedding…" : "Embed & Download"}</Button>
-            {userId && <Button type="button" size="lg" variant="outline" disabled={saving} onClick={save}><Save />{saving ? "Saving…" : editingId ? "Update in catalog" : "Submit to catalog"}</Button>}
+            {userId && <Button type="button" size="lg" variant={result ? "default" : "outline"} disabled={saving} onClick={save}><Save />{saving ? "Saving…" : editingId ? "Update in My Catalog" : "Save to My Catalog"}</Button>}
             {full && (editingId || adding) && <Button type="button" size="lg" variant="ghost" onClick={closeSong}>Close</Button>}
             {!full && <span className="hidden text-xs text-muted-foreground sm:inline"><kbd className="rounded border border-border px-1.5 py-0.5">Ctrl</kbd> + <kbd className="rounded border border-border px-1.5 py-0.5">Enter</kbd> (<kbd className="rounded border border-border px-1.5 py-0.5">⌘</kbd> + <kbd className="rounded border border-border px-1.5 py-0.5">Enter</kbd> on Mac) to embed</span>}
           </div>
@@ -949,6 +982,25 @@ type CarryKey = "artist" | "release" | "people" | "genre";
 const CARRY_LABEL: Record<CarryKey, string> = { artist: "Artist", release: "Album, art & release", people: "Writers & producers", genre: "Genre" };
 
 /** "Next song" with carry-over chips, so a whole release can be embedded without retyping what's shared. */
+type SavedInfo = { trackId: string; title: string; hadAudio: boolean; embedded: boolean; downloaded: boolean; stored: boolean; art: boolean; protect: boolean };
+
+/** Exactly what a save did: embedded, downloaded, stored in My Catalog, artwork, and AI Protection if they asked for it. */
+function SaveChecklist({ info, onProtect }: { info: SavedInfo; onProtect: () => void }) {
+  const row = (ok: boolean, text: ReactNode) => <li className="flex items-start gap-2">{ok ? <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-primary" /> : <span className="w-4 shrink-0 text-center">⚠️</span>}<span>{text}</span></li>;
+  return (
+    <ul className="mx-auto mt-4 max-w-md space-y-1.5 rounded-xl border border-border p-4 text-sm">
+      {row(true, "Song details saved to My Catalog")}
+      {info.hadAudio
+        ? <>{row(info.embedded, info.embedded ? "Details embedded in the master" : "The audio couldn't be tagged, so it was stored without embedded details. Try Embed & Download again.")}
+            {row(info.stored, info.stored ? "Tagged master stored in My Catalog" : "The master couldn't be stored. Save again.")}
+            {row(info.downloaded, info.downloaded ? "Downloaded to this device" : "Not downloaded to this device. Download it anytime from My Catalog.")}</>
+        : row(false, "No audio added, so nothing was embedded. Add the MP3 or WAV to embed it.")}
+      {info.art && row(true, "Artwork stored in My Catalog")}
+      {info.protect && <li className="flex flex-wrap items-center justify-between gap-2 border-t border-border pt-2"><span className="font-semibold">AI Protection: checkout opening…</span><Button type="button" size="sm" onClick={onProtect}><ShieldCheck />Pay {`$${PACKAGES[0]!.price}`}</Button></li>}
+    </ul>
+  );
+}
+
 function NextSong({ queue, carry, onCarry, onNext, compact }: { queue: File[]; carry: Record<CarryKey, boolean>; onCarry: (c: Record<CarryKey, boolean>) => void; onNext: () => void; compact?: boolean }) {
   return (
     <div className={compact ? "rounded-xl border border-border p-4" : "mt-5"}>

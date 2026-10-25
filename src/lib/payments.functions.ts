@@ -160,10 +160,9 @@ export const createCheckoutSession = createServerFn({ method: "POST" })
       if (g.contract_id) throw new Error("You already have this contract. Open it in My Contracts.");
     }
     if (data.kind === "branding") {
-      // The add-on is for Catalog & Collaborate (Catalog Management already includes Personal Branding).
+      // Any plan can add it (founder, 2026-10-25); Catalog Management already includes Personal Branding.
       const { data: tier } = await context.supabase.rpc("user_tier" as never, { _uid: context.userId } as never);
       if ((tier as unknown as string) === "management") throw new Error("Catalog Management already includes Personal Branding.");
-      if ((tier as unknown as string) !== "collaborate") throw new Error("Personal Branding on split sheets is an add-on for Catalog & Collaborate.");
     }
     if (data.kind === "vault") {
       // Pause is only sold when it can start: around renewal, after a failed renewal or during the grace period.
