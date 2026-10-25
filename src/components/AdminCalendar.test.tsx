@@ -11,7 +11,7 @@ vi.mock("@/integrations/supabase/client", () => {
     ],
     department_tasks: [{ id: "t1", department: "launch", title: "Move hosting to Cloudflare", due_at: at(17), status: "planned" }],
   };
-  const q = (table: string) => { const b: Record<string, unknown> = {}; for (const m of ["select", "gte", "lte", "order", "not", "neq", "eq"]) b[m] = () => b; b.then = (r: (v: unknown) => void) => r({ data: rows[table], error: null }); return b; };
+  const q = (table: string) => { const b: Record<string, unknown> = {}; for (const m of ["select", "gte", "lte", "order", "not", "neq", "eq"]) b[m] = () => b; b["then"] = (r: (v: unknown) => void) => r({ data: rows[table], error: null }); return b; };
   return { supabase: { from: (t: string) => q(t) } };
 });
 

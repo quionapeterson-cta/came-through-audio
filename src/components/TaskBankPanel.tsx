@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import { DEPARTMENT_LABEL, type Department } from "@/lib/departments";
 import { LAUNCH_MILESTONES } from "@/lib/launch-milestones";
 import { RESEARCH_TITLES } from "@/lib/research-plan";
+import { DepartmentPlans } from "@/components/DepartmentPlans";
 import { deleteTask, listTaskOwners, listTasks, loadLaunchMilestones, loadResearchPlan, saveTask, TASK_REPEATS, type TaskRepeat, TASK_IMPORTANCE, TASK_STATUSES, type DepartmentTask, type TaskImportance, type TaskStatus } from "@/lib/tasks.functions";
 import { IMPORTANCE_LABEL, dueLabel, importanceChip, sortTasks, toLocalInput, fromLocalInput } from "@/lib/task-alerts";
 
@@ -36,6 +37,7 @@ export function TaskBankPanel({ departments, editable = departments }: { departm
   const [openId, setOpenId] = useState<string | null>(null);
   const [draft, setDraft] = useState<Draft | null>(null);
   const [busy, setBusy] = useState(false);
+  const [mode, setMode] = useState<"tasks" | "plans">("tasks");
 
   if (q.isLoading) return <p className="mt-6 text-muted-foreground">Loading…</p>;
   if (q.isError) return <p className="mt-6 text-destructive">Couldn't load the task bank.</p>;
@@ -90,8 +92,16 @@ export function TaskBankPanel({ departments, editable = departments }: { departm
 
   const chip = (on: boolean) => `rounded-full border px-3 py-1 text-sm font-semibold ${on ? "border-primary bg-primary text-primary-foreground" : "border-border"}`;
 
+  const modeSwitch = (
+    <div className="inline-flex gap-1 rounded-lg bg-muted p-1" role="tablist" aria-label="Task Bank">
+      {(["tasks", "plans"] as const).map((m) => <Button key={m} role="tab" aria-selected={mode === m} size="sm" variant={mode === m ? "default" : "ghost"} onClick={() => setMode(m)}>{m === "tasks" ? "Tasks" : "Plans"}</Button>)}
+    </div>
+  );
+  if (mode === "plans") return <div className="mt-4 space-y-4">{modeSwitch}<DepartmentPlans departments={departments} editable={editable} /></div>;
+
   return (
     <div className="mt-4 space-y-4">
+      {modeSwitch}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex flex-wrap gap-2">
           {departments.length > 1 && [...departments, "all" as const].map((d) => (
