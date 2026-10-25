@@ -49,6 +49,13 @@ export type BadgeDef = {
   choices?: string[];
   /** Art isn't uploaded yet: the badge stays out of checks and shelves until this flag is removed. */
   artPending?: boolean;
+  /**
+   * Every-time task badges (founder, 2026-10-25): after each 10 earnings the next badge's art in this list takes over
+   * (11th–20th uses the first, and so on, then it cycles). The count and dates keep growing as ×N.
+   */
+  rotation?: string[];
+  /** Pop-up for the 2nd time on: "{nth}" becomes "12th". The first earning uses `popup`. */
+  repeatPopup?: string;
   /** Already celebrated elsewhere (Genesis is claimed in onboarding), so it lands on the shelf without a pop-up. */
   preSeen?: boolean;
 };
@@ -60,7 +67,7 @@ export const METRIC_UNIT: Record<string, [string, string]> = {
   splitsSigned: ["fully signed split sheet", "fully signed split sheets"], contractsSigned: ["fully signed contract", "fully signed contracts"],
   deals: ["signed agreement", "signed agreements"], produced: ["produced song", "produced songs"], performerCredits: ["performer credit", "performer credits"],
   hiphop: ["hip-hop track", "hip-hop tracks"], spiritual: ["spiritual hip-hop track", "spiritual hip-hop tracks"],
-  agencyExports: ["agency export", "agency exports"],
+  agencyExports: ["agency export", "agency exports"], masterDownloads: ["embedded master", "embedded masters"], artUploads: ["cover art upload", "cover art uploads"],
 };
 
 /** How many times a badge has been earned at this count: once at `goal`, then once per `every` beyond it. */
@@ -91,9 +98,18 @@ const CORE: BadgeDef[] = [
   { id: "mic_check", title: "Mic Check", collection: "core", tier: "standard", milestone: "Credit a vocalist on a song", action: "Credit a vocalist", metric: "vocalSongs", goal: 1, src: `${P}/bedazzled_mic.png`,
     description: "The voice got its credit. Naming who sang it means nobody gets left out of the story or the royalties.",
     popup: "Mic check! Every voice on this record is on the record." },
-  { id: "came_strong", title: "Came Strong", collection: "core", tier: "standard", milestone: "1 song Registration Ready", action: "Ready 1 song to register", metric: "ready", goal: 1, src: `${S}/came_strong_gold.png`,
+  { id: "embedded", title: "Embedded", collection: "core", tier: "instant", milestone: "Every master you embed", action: "Embed a master", metric: "masterDownloads", goal: 1, every: 1, src: `${P}/bedazzled_mic.png`,
+    rotation: ["first_note", "embedded_vinyl", "embedded_band"],
+    description: "Your credits are inside the file now. Wherever this master goes, your name and your codes go with it. Every master you embed earns this again.",
+    popup: "You Came Through! Your first master is embedded.", repeatPopup: "You Came Through: your {nth} embedded master." },
+  { id: "cover_story", title: "Cover Story", collection: "core", tier: "instant", milestone: "Every cover art you upload", action: "Upload album art", metric: "artUploads", goal: 1, every: 1, src: `${P}/cover_story.webp`,
+    rotation: ["cover_story_2", "cover_story_3"],
+    description: "Your cover art is saved with the song, ready to download for every release and share card. Every cover you upload earns this again.",
+    popup: "Cover story! Your first album art is saved.", repeatPopup: "Cover story! Your {nth} cover is saved." },
+  { id: "came_strong", title: "Came Strong", collection: "core", tier: "standard", milestone: "Every song you get Registration Ready", action: "Ready a song to register", metric: "ready", goal: 1, every: 1, src: `${S}/came_strong_gold.png`,
+    rotation: ["came_double", "full_band", "vault"],
     description: "Writers named, roles set, nothing missing. This song is ready to register and ready to collect. You came through for it.",
-    popup: "You Came Through strong! Your first song is ready to register." },
+    popup: "You Came Through strong! Your first song is ready to register.", repeatPopup: "You Came Through strong: your {nth} song is ready to register." },
   { id: "came_double", title: "Doubled Up", collection: "core", tier: "standard", milestone: "10 songs Registration Ready, then every 10 more", action: "Ready 10 songs to register", metric: "ready", goal: 10, every: 10, src: `${S}/came_double_trophy_gold.png`,
     description: "Ten songs with nothing missing. You came up and you came through: you're not hoping the money finds you, you're making sure it does.",
     popup: "Doubled up! 10 more songs ready to collect." },
@@ -101,8 +117,9 @@ const CORE: BadgeDef[] = [
     description: "You opened the door and someone shook on it. Good business is built with people you trust, and your first collaborator just signed.",
     popup: "Deal shook! Your first collaborator signed." },
   { id: "time_witness", title: "Time Witness", collection: "core", tier: "standard", milestone: "Every song protected in the AI Protection Hub", action: "Protect a song", metric: "protected", goal: 1, every: 1, src: `${S}/time_witness.png`,
+    rotation: ["shield_up"],
     description: "The clock saw it. You have proof this file existed on this date, sealed where nobody can change it. Every song you protect earns another.",
-    popup: "Witnessed! Another song protected and timestamped." },
+    popup: "Witnessed! Another song protected and timestamped.", repeatPopup: "Witnessed! Your {nth} protected song is timestamped." },
   { id: "shield_up", title: "Shield Up", collection: "core", tier: "standard", milestone: "10 songs protected in the AI Protection Hub, then every 10 more", action: "Protect 10 songs", metric: "protected", goal: 10, every: 10, src: `${S}/award_shield.png`,
     description: "Ten songs guarded in the AI Protection Hub. You protect what you make before anyone else gets ideas.",
     popup: "Shield up! 10 songs protected." },
@@ -147,9 +164,10 @@ const CORE: BadgeDef[] = [
 ];
 
 const HEALTH: BadgeDef[] = [
-  { id: "silver_crown", title: "Silver Crown", collection: "health", tier: "standard", milestone: "10 songs 100% healthy", action: "Get 10 songs 100% healthy", metric: "healthy", goal: 10, src: `${P}/crowns/silver_tiara.png`,
-    description: "Ten songs with every royalty door open. You fixed what most people never even check.",
-    popup: "Silver crown! 10 healthy songs." },
+  { id: "silver_crown", title: "Silver Crown", collection: "health", tier: "standard", milestone: "Every song that reaches 100% royalty health", action: "Get a song 100% healthy", metric: "healthy", goal: 1, every: 1, src: `${P}/crowns/silver_tiara.png`,
+    rotation: ["jeweled_crown", "gold_crown"],
+    description: "Every royalty door open on this song. You fixed what most people never even check. Every 100% healthy song earns another crown.",
+    popup: "Silver crown! Your first song is 100% royalty healthy.", repeatPopup: "Silver crown! Your {nth} song is 100% royalty healthy." },
   { id: "jeweled_crown", title: "Jeweled Crown", collection: "health", tier: "mega", milestone: "25 songs 100% healthy", action: "Get 25 songs 100% healthy", metric: "healthy", goal: 25, src: `${P}/crowns/cross_crown.png`,
     description: "Twenty-five songs collecting from every direction. You came through for every one of them.",
     popup: "MEGA! 25 healthy songs. Jewels earned." },
@@ -175,8 +193,9 @@ const NIGHT: BadgeDef[] = [
 const L = `${P}/lyrics`;
 const LYRICS: BadgeDef[] = [
   { id: "first_lyric_entry", title: "First Lyric Entry", collection: "lyrics", tier: "instant", milestone: "Every lyric you embed (a victory just having written it down)", action: "Embed a lyric", metric: "lyrics", goal: 1, every: 1, src: `${L}/1_first_lyric_entry.webp`,
+    rotation: ["word_weaver", "lyrical_genius", "lyric_lover", "hook_keeper", "verse_vault"],
     description: "You did it. The hardest lyric is the first one, and you just broke through. This pen drop is proof your voice matters. Welcome to Came Through Audio — you’re officially in motion.",
-    popup: "First ink! One lyric down — the universe just heard you." },
+    popup: "First ink! One lyric down — the universe just heard you.", repeatPopup: "You Came Through: your {nth} lyric is embedded. It's a victory just having written it down." },
   { id: "word_weaver", title: "Word Weaver", collection: "lyrics", tier: "standard", milestone: "5 lyrics", action: "Embed 5 lyrics", metric: "lyrics", goal: 5, src: `${L}/5_word_weaver.webp`,
     description: "Look at you weaving. You're not just writing words, you're braiding feelings into sound. Five stories stitched with heart — your thread is getting stronger.",
     popup: "You're weaving magic. 5 lyrics — your patterns are forming!" },
@@ -205,9 +224,10 @@ const SPLITS: BadgeDef[] = [
   { id: "fist_bump_deal", title: "Fist Bump Deal", collection: "splits", tier: "instant", milestone: "Create your first split sheet", action: "Create a split sheet", metric: "splitsCreated", goal: 1, src: `${SP}/fist_pump_sealed_blue.webp`,
     description: "The conversation most artists avoid, you started it. Splits on paper before the song blows up is how friendships survive.",
     popup: "Deal! Your first split sheet is started." },
-  { id: "sealed", title: "Sealed", collection: "splits", tier: "standard", milestone: "1 split sheet signed by everyone", action: "Get a split sheet signed", metric: "splitsSigned", goal: 1, src: `${SP}/fist_bump_deal.jpg`,
-    description: "Everyone signed. No \"I thought we said…\" later. This song's money has a map.",
-    popup: "Sealed! Your first split sheet is signed by everyone." },
+  { id: "sealed", title: "Sealed", collection: "splits", tier: "standard", milestone: "Every split sheet signed by everyone", action: "Get a split sheet signed", metric: "splitsSigned", goal: 1, every: 1, src: `${SP}/fist_bump_deal.jpg`,
+    rotation: ["fist_bump_deal", "three_way_collab", "studio_circle", "piggy_bank_split", "hands_in"],
+    description: "Everyone signed. No \"I thought we said…\" later. This song's money has a map. Every fully signed split sheet earns this again.",
+    popup: "Sealed! Your first split sheet is signed by everyone.", repeatPopup: "Sealed! Your {nth} split sheet is signed by everyone." },
   { id: "three_way_collab", title: "Three-Way Collab", collection: "splits", tier: "standard", milestone: "A fully signed split sheet with 3+ collaborators", action: "Sign a 3-way split", metric: "signedSplits3", goal: 1, src: `${SP}/three_way_collab.jpg`,
     description: "Three minds, one song, zero confusion. You made sure everyone in the room gets paid.",
     popup: "Three-way! Every collaborator's share is on paper." },
@@ -242,9 +262,10 @@ const CONTRACTS: BadgeDef[] = [
   { id: "cross_your_ts", title: "Cross Your T's", collection: "contracts", tier: "standard", milestone: "Send your first contract for signature", action: "Send a contract to sign", metric: "contractsSent", goal: 1, src: `${CT}/cross_your_ts.webp`,
     description: "Terms clear, names right, sent out. You handle business the way it's supposed to be handled.",
     popup: "T's crossed! Your contract is out for signature." },
-  { id: "blueprints_checked", title: "Blueprints Checked", collection: "contracts", tier: "standard", milestone: "1 contract signed by every party", action: "Get a contract signed", metric: "contractsSigned", goal: 1, src: `${CT}/blueprints_checked.webp`,
-    description: "Signed by every party. Your agreement is real, on file and protecting you.",
-    popup: "Checked! Your first contract is fully signed." },
+  { id: "blueprints_checked", title: "Blueprints Checked", collection: "contracts", tier: "standard", milestone: "Every contract signed by every party", action: "Get a contract signed", metric: "contractsSigned", goal: 1, every: 1, src: `${CT}/blueprints_checked.webp`,
+    rotation: ["secure_structure", "terms_architected", "crossin_your_ts", "dottin_your_is"],
+    description: "Signed by every party. Your agreement is real, on file and protecting you. Every fully signed contract earns this again.",
+    popup: "Checked! Your first contract is fully signed.", repeatPopup: "Checked! Your {nth} contract is fully signed." },
   { id: "secure_structure", title: "Secure the Structure", collection: "contracts", tier: "standard", milestone: "3 contracts signed by every party", action: "Get 3 contracts signed", metric: "contractsSigned", goal: 3, src: `${CT}/secure_structure.webp`,
     description: "Three agreements holding your business up. Structure is what lets creativity run free.",
     popup: "Structure secured! 3 contracts signed." },
@@ -399,6 +420,26 @@ export const ALL_BADGES: BadgeDef[] = [...CORE, ...LYRICS, ...SPLITS, ...CONTRAC
 /** Badges that can be earned and shown today. */
 export const BADGES: BadgeDef[] = ALL_BADGES.filter((b) => !b.artPending);
 export const badgeById = (id: string) => ALL_BADGES.find((b) => b.id === id);
+
+/** "1st", "2nd", "3rd", "11th", "22nd"… */
+export const ordinal = (n: number) => { const t = n % 100; const e = t >= 11 && t <= 13 ? "th" : (["th", "st", "nd", "rd"][n % 10] ?? "th"); return `${n}${e}`; };
+
+/** The art a task badge shows for its Nth earning: its own art for 1–10, then each rotation badge's art for 10 more. */
+export function rotationArt(badge: BadgeDef, times: number): string {
+  if (!badge.rotation?.length || times <= 10) return badge.src;
+  const id = badge.rotation[(Math.floor((times - 1) / 10) - 1) % badge.rotation.length]!;
+  return ROTATION_ART[id] ?? badgeById(id)?.src ?? badge.src;
+}
+/** Rotation art that isn't another badge's (drawn for the every-time set). */
+const ROTATION_ART: Record<string, string> = {
+  embedded_vinyl: `${P}/bedazzled_vinyl.webp`,
+  embedded_band: `${P}/bedazzled_band.png`,
+  cover_story_2: `${P}/cover_story_2.webp`,
+  cover_story_3: `${P}/cover_story_3.webp`,
+};
+
+/** The unlock line for this earning: the first-time pop-up, or the counting one ("your 12th…") after that. */
+export const earningPopup = (badge: BadgeDef, times: number) => (times > 1 && badge.repeatPopup ? badge.repeatPopup.replace("{nth}", ordinal(times)) : badge.popup);
 
 /** Fills "{artist}" with the user's artist name, or drops it cleanly when there isn't one. */
 export const withArtist = (text: string, artist?: string) =>

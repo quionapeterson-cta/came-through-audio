@@ -117,6 +117,7 @@ export function badgeMetrics(d: BadgeData): Record<string, number> {
     songs: d.tracks.length,
     ready: ready.size,
     masters: d.tracks.filter((t) => t.metadata.audioPath).length,
+    artUploads: d.tracks.filter((t) => t.metadata.artPath).length,
     lyrics: d.tracks.filter((t) => t.metadata.lyrics.trim()).length,
     vocalSongs: d.tracks.filter((t) => t.metadata.credits.some((c) => c.name.trim() && isPerformer(c.role) && instrumentOf(c) === "vocals")).length,
     fullBandSongs: d.tracks.filter((t) => t.metadata.credits.filter((c) => c.name.trim() && isPerformer(c.role)).length >= 3).length,

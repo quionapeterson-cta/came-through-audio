@@ -192,3 +192,24 @@ describe("evaluateBadges", () => {
     expect(evaluateBadges({ songs: 1 }, new Set(["first_note"])).some((x) => x.badge.id === "first_note")).toBe(false);
   });
 });
+
+describe("every-time task badges", () => {
+  it("rotates the art after each 10 and counts in the pop-up", async () => {
+    const { badgeById, rotationArt, earningPopup, ordinal } = await import("@/lib/badges");
+    const sealed = badgeById("sealed")!;
+    expect(sealed).toMatchObject({ goal: 1, every: 1 });
+    expect(rotationArt(sealed, 10)).toBe(sealed.src);
+    expect(rotationArt(sealed, 11)).toBe(badgeById("fist_bump_deal")!.src);
+    expect(rotationArt(sealed, 21)).toBe(badgeById("three_way_collab")!.src);
+    expect(rotationArt(sealed, 61)).toBe(badgeById("fist_bump_deal")!.src); // cycles after the last
+    expect(earningPopup(sealed, 1)).toBe(sealed.popup);
+    expect(earningPopup(sealed, 12)).toBe("Sealed! Your 12th split sheet is signed by everyone.");
+    expect([1, 2, 3, 4, 11, 12, 13, 21, 22, 101].map(ordinal)).toEqual(["1st", "2nd", "3rd", "4th", "11th", "12th", "13th", "21st", "22nd", "101st"]);
+  });
+  it("has one every-time badge for each task", async () => {
+    const { badgeById } = await import("@/lib/badges");
+    for (const id of ["embedded", "came_strong", "first_lyric_entry", "silver_crown", "time_witness", "sealed", "blueprints_checked", "cover_story"]) {
+      expect(badgeById(id)).toMatchObject({ goal: 1, every: 1 });
+    }
+  });
+});

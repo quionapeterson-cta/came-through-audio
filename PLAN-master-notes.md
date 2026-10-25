@@ -233,7 +233,7 @@ contract) · 3 Adjust the wording if you need to · 4 Sign · 5 Send for signatu
   rendering now; you approve it before it goes live. New badges in this plan get art the same way.
 - Share cards on Facebook: fixed links pushed today; after Publish, test one link in the Facebook Sharing Debugger.
 
-### 3.7b Every task earns a badge, every time (founder, 2026-10-25) — APPROVED 2026-10-25 (first item of Phase 3)
+### 3.7b Every task earns a badge, every time (founder, 2026-10-25) — ✅ BUILT 2026-10-25 (Embedded and Cover Story are new; Silver Crown now comes with every 100% healthy song; Sealed and Blueprints Checked with every fully signed split sheet / contract; Came Strong with every Ready song; art rotates after each 10; pop-ups count "your 12th")
 "Each task is work within itself and each time deserves a badge… we celebrate your wins." One **main badge per task**,
 awarded every single time; after every 10 of the same, the next art in that task's rotation takes over (the count and
 dates keep showing as ×N). Milestone badges (10, 25, 50…) stay on top as they are. The 6-month badge drops in Admin → Badges

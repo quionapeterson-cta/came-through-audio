@@ -10,7 +10,7 @@ import { useBadges } from "@/hooks/useBadges";
 import { badgePrefs, loadOnboarding, saveOnboarding, type Onboarding } from "@/lib/artist-profile";
 import { useServerFn } from "@tanstack/react-start";
 import { useQueryClient } from "@tanstack/react-query";
-import { BADGES, COLLECTIONS, TIER_LABEL, isBigTier, nextGoal, withArtist, type BadgeDef, type BadgePrefs, type CollectionId } from "@/lib/badges";
+import { BADGES, COLLECTIONS, TIER_LABEL, earningPopup, isBigTier, nextGoal, rotationArt, withArtist, type BadgeDef, type BadgePrefs, type CollectionId } from "@/lib/badges";
 import { markBadgesSeen } from "@/lib/badge-events";
 import { pickBadgeArt, type EarnedBadge } from "@/lib/badges.functions";
 
@@ -29,14 +29,15 @@ export function useBadgeStates(userId: string | undefined) {
 }
 
 /** The art for one earning: the user's pick for badges with choices, otherwise the badge's own art. */
-const artFor = (badge: BadgeDef, pick?: string | null) => (pick && badge.choices?.includes(pick) ? pick : badge.src);
+/** A badge's art: the user's pick where it offers choices, else its rotation art for how many times it's been earned. */
+const artFor = (badge: BadgeDef, pick?: string | null, times = 1) => (pick && badge.choices?.includes(pick) ? pick : rotationArt(badge, times));
 /** The art the shelf shows: the latest pick, or the badge's own art. */
 /** Earned (or earned again) in the last 7 days. */
 const isNew = (s: BadgeState) => {
   const last = s.earned?.log?.[s.earned.log.length - 1]?.at ?? s.earned?.earnedAt;
   return !!last && Date.now() - Date.parse(last) < 7 * 86_400_000;
 };
-const shelfArt = (s: BadgeState) => artFor(s.badge, [...(s.earned?.log ?? [])].reverse().find((e) => e.pick)?.pick);
+const shelfArt = (s: BadgeState) => artFor(s.badge, [...(s.earned?.log ?? [])].reverse().find((e) => e.pick)?.pick, s.earned?.times ?? 1);
 
 function TierChip({ badge }: { badge: BadgeDef }) {
   const label = TIER_LABEL[badge.tier];
@@ -134,7 +135,8 @@ function UnlockPopup({ state, artist, more, onNext, share }: { state: BadgeState
   const [saving, setSaving] = useState(false);
   const [sharing, setSharing] = useState(false);
   const choosing = open >= 0 && !picked;
-  const src = artFor(badge, picked ?? log[log.length - 1]?.pick);
+  const src = artFor(badge, picked ?? log[log.length - 1]?.pick, earned?.times ?? 1);
+  const line = earningPopup(badge, earned?.times ?? 1);
 
   async function choose(pick: string) {
     setSaving(true);
@@ -149,11 +151,11 @@ function UnlockPopup({ state, artist, more, onNext, share }: { state: BadgeState
   return (
     <DialogContent className="h-full max-h-none max-w-none overflow-y-auto border-0 bg-transparent p-0 shadow-none sm:rounded-none [&>button]:!bg-transparent [&>button]:!text-white [&>button]:opacity-90">
       <DialogTitle className="sr-only">New badge: {badge.title}</DialogTitle>
-      <DialogDescription className="sr-only">{withArtist(badge.popup, artist)}</DialogDescription>
+      <DialogDescription className="sr-only">{withArtist(line, artist)}</DialogDescription>
       <div className="mx-auto flex min-h-full w-full max-w-[min(94vw,40rem)] flex-col items-center justify-center gap-6 px-2 py-12 text-center text-white">
         {choosing ? <section className="w-full space-y-6">
           <p className="text-xs font-bold uppercase tracking-[2px] text-[#4d8cff]">{badge.title}</p>
-          <h2 className="text-2xl font-bold sm:text-3xl">{withArtist(badge.popup, artist)}</h2>
+          <h2 className="text-2xl font-bold sm:text-3xl">{withArtist(line, artist)}</h2>
           <ul className="grid grid-cols-3 gap-3 sm:gap-6">
             {badge.choices!.map((c) => <li key={c}>
               <button type="button" disabled={saving} onClick={() => void choose(c)} aria-label={`Pick ${c.split("/").pop()?.replace(/[_-]/g, " ").replace(/\.\w+$/, "")}`}
@@ -168,7 +170,7 @@ function UnlockPopup({ state, artist, more, onNext, share }: { state: BadgeState
             <p className="text-xs font-bold uppercase tracking-[2px] text-[#4d8cff]">
               {TIER_LABEL[badge.tier] || "New badge"}{(earned?.times ?? 0) > 1 ? ` · ×${earned!.times}` : ""}
             </p>
-            <p className="text-2xl font-bold sm:text-3xl">{withArtist(badge.popup, artist)}</p>
+            <p className="text-2xl font-bold sm:text-3xl">{withArtist(line, artist)}</p>
             <p className="text-white/75">{badge.description}</p>
             <p className="text-sm text-white/60"><span className="font-semibold">Milestone: </span>{badge.milestone}</p>
             <div className="flex flex-wrap justify-center gap-3 pt-3">
@@ -305,7 +307,7 @@ export function BadgeDetail({ state, list = [], artist, onClose, onShare, onMove
               </div>
             </>}
           {s.earned && s.badge.every && <p className="text-sm text-white/80"><span className="font-semibold text-white">Earn it again: </span>{s.count} of {nextGoal(s.badge, s.count)}</p>}
-          {s.earned && <p className="text-sm italic text-white/70">“{withArtist(s.badge.popup, artist)}”</p>}
+          {s.earned && <p className="text-sm italic text-white/70">“{withArtist(earningPopup(s.badge, s.earned.times), artist)}”</p>}
           {s.earned && (onShare || onUseAsAvatar) && <div className="flex flex-wrap justify-center gap-2 pt-1">
             {onUseAsAvatar && <Button variant="secondary" onClick={() => onUseAsAvatar(shelfArt(s))}>Use as my profile picture</Button>}
             {onShare && <Button onClick={() => onShare(s)}>Share your badge</Button>}
@@ -331,7 +333,7 @@ function Earnings({ state }: { state: BadgeState }) {
       <h3 className="text-xs font-bold uppercase tracking-widest text-primary">Earned {times} times</h3>
       <ol className="grid grid-cols-4 gap-4 sm:grid-cols-6">
         {items.map((e, i) => <li key={i} className="flex flex-col items-center gap-1 text-center">
-          <img src={artFor(badge, e?.pick)} alt="" loading="lazy" className="aspect-square w-full object-contain drop-shadow-md" />
+          <img src={artFor(badge, e?.pick, i + 1)} alt="" loading="lazy" className="aspect-square w-full object-contain drop-shadow-md" />
           <span className="text-xs text-muted-foreground">{e?.at ? new Date(e.at).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" }) : `#${i + 1}`}</span>
         </li>)}
       </ol>

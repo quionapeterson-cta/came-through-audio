@@ -407,6 +407,27 @@ def checkup_champ():
     return sticker(cv, union(heart, pm, Mask().rect((C - 1650, 3170, C + 1650, 3680)).get()))
 
 
+def cover_story(kind="cobalt", frame="gold"):
+    """An album cover in a jeweled sleeve: a framed picture (sun over hills) and a COVER STORY banner."""
+    cv = blank()
+    sleeve = Mask().rect((520, 420, 3576, 3200), radius=90).get()
+    solid(cv, grow(sleeve, 22), (11, 11, 11))
+    jewel(cv, sleeve, kind=kind, d=36, edge=50, seed=6)
+    pic = Mask().rect((900, 780, 3196, 2840), radius=40).get()
+    deep_black(cv, pic)
+    bead_edge(cv, pic, width=46, kind="gold" if frame == "gold" else "crystal")
+    sun = Mask().circle(2500, 1500, 330).get()
+    jewel(cv, sun, kind="gold", d=30, edge=24)
+    hills = Mask().poly([(940, 2800), (1500, 1900), (1950, 2350), (2400, 1750), (3160, 2800)]).get()
+    jewel(cv, minus(hills, minus(Mask().rect((0, 0, S, S)).get(), pic)), kind="crystal" if kind != "crystal" else "cobalt", d=30, edge=0, setting="silver")
+    for x, y, r in ((1300, 1200, 90), (1700, 1050, 60), (2950, 1050, 70)):
+        sparkle(cv, x, y, r)
+    ribbon(cv, "COVER STORY", 3420, w=2700, size=200)
+    for x, y, r in ((420, 420, 120), (3680, 560, 100), (3700, 2900, 80)):
+        sparkle(cv, x, y, r)
+    return sticker(cv, union(sleeve, Mask().rect((C - 1650, 3170, C + 1650, 3680)).get()))
+
+
 # ---------- staff motifs (drawn on the medallion face, centre (C, FY)) ----------
 
 def m_text(text, sub=None, size=1000, kind="cobalt"):
@@ -724,6 +745,9 @@ DESIGNS: dict[str, tuple[str, object]] = {
     "full_ep": ("playful/full_ep.webp", full_ep),
     "full_album": ("playful/full_album.webp", full_album),
     "checkup_champ": ("playful/checkup_champ.webp", checkup_champ),
+    "cover_story": ("playful/cover_story.webp", lambda: cover_story("cobalt", "gold")),
+    "cover_story_2": ("playful/cover_story_2.webp", lambda: cover_story("crystal", "gold")),
+    "cover_story_3": ("playful/cover_story_3.webp", lambda: cover_story("gold", "crystal")),
     **{k: (f"playful/{k}.webp", (lambda k=k, t=t, f=f: medallion(f, t, ring=RINGS.get(k, "crystal"), seed=hash(k) % 97)))
        for k, (t, f) in STAFF.items()},
 }
