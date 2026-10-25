@@ -87,13 +87,13 @@ const CORE: BadgeDef[] = [
     popup: "First note logged! Your catalog is officially open." },
   { id: "master_crowned", title: "Master Crowned", collection: "core", tier: "instant", milestone: "Embed and download your first master, then every full album of WAV masters", action: "Embed your first master", metric: "masterCrowns", goal: 1, every: 1, src: `${S}/master_crowned.png`,
     description: "Your credits now travel inside the file. Wherever this master goes, your name goes with it. That's how you get found and get paid. Every full album of WAV masters you embed crowns you again.",
-    popup: "Came through! Your credits ride with every play." },
+    popup: "You Came Through! Your credits ride with every play." },
   { id: "mic_check", title: "Mic Check", collection: "core", tier: "standard", milestone: "Credit a vocalist on a song", action: "Credit a vocalist", metric: "vocalSongs", goal: 1, src: `${P}/bedazzled_mic.png`,
     description: "The voice got its credit. Naming who sang it means nobody gets left out of the story or the royalties.",
     popup: "Mic check! Every voice on this record is on the record." },
   { id: "came_strong", title: "Came Strong", collection: "core", tier: "standard", milestone: "1 song Registration Ready", action: "Ready 1 song to register", metric: "ready", goal: 1, src: `${S}/came_strong_gold.png`,
     description: "Writers named, roles set, nothing missing. This song is ready to register and ready to collect. You came through for it.",
-    popup: "Came strong! Your first song is ready to register." },
+    popup: "You Came Through strong! Your first song is ready to register." },
   { id: "came_double", title: "Doubled Up", collection: "core", tier: "standard", milestone: "10 songs Registration Ready, then every 10 more", action: "Ready 10 songs to register", metric: "ready", goal: 10, every: 10, src: `${S}/came_double_trophy_gold.png`,
     description: "Ten songs with nothing missing. You came up and you came through: you're not hoping the money finds you, you're making sure it does.",
     popup: "Doubled up! 10 more songs ready to collect." },
@@ -123,7 +123,7 @@ const CORE: BadgeDef[] = [
     popup: "Vault sealed! 25 masters safe and sound." },
   { id: "full_release", title: "Full Release", collection: "core", tier: "standard", milestone: "Every EP or album (3+ tracks) with every track Registration Ready", action: "Ready a full EP or album", metric: "readyReleases", goal: 1, every: 1, src: `${P}/bedazzled_vinyl.webp`,
     description: "A whole project, nothing missing on any track. That's a release run like a real label.",
-    popup: "Came through for the whole project! Every track is ready to collect." },
+    popup: "You Came Through for the whole project! Every track is ready to collect." },
   { id: "deal_maker", title: "Deal Maker", collection: "core", tier: "mega", milestone: "10 signed agreements (split sheets and contracts together), then every 10 more", action: "Sign 10 agreements", metric: "deals", goal: 10, every: 10, src: `${S}/handshake_diamond_watch.png`,
     description: "Ten deals signed and on file. You handle business like a boss, and everyone who works with you knows where they stand.",
     popup: "MEGA! 10 deals signed. Boss moves." },
@@ -140,10 +140,10 @@ const CORE: BadgeDef[] = [
     popup: `Unbreakable! ${years} years strong. Came Through Audio came through with you.` })),
   { id: "full_ep", title: "Full EP", collection: "core", tier: "standard", milestone: "Every full EP (4 to 6 songs) in your catalog", action: "Catalog a full EP", metric: "fullEps", goal: 1, every: 1, src: `${P}/full_ep.webp`,
     description: "Every song on the EP, embedded and filed together. A complete project with your credits riding inside every track.",
-    popup: "Full EP! The whole project came through." },
+    popup: "Full EP! You Came Through for the whole project." },
   { id: "full_album", title: "Full Album", collection: "core", tier: "mega", milestone: "Every full album (7 or more songs) in your catalog", action: "Catalog a full album", metric: "fullAlbums", goal: 1, every: 1, src: `${P}/full_album.webp`,
     description: "A whole album, every track embedded and filed. That's a body of work with your name on every song.",
-    popup: "MEGA! A full album came through." },
+    popup: "MEGA! You Came Through with a full album." },
 ];
 
 const HEALTH: BadgeDef[] = [
@@ -151,7 +151,7 @@ const HEALTH: BadgeDef[] = [
     description: "Ten songs with every royalty door open. You fixed what most people never even check.",
     popup: "Silver crown! 10 healthy songs." },
   { id: "jeweled_crown", title: "Jeweled Crown", collection: "health", tier: "mega", milestone: "25 songs 100% healthy", action: "Get 25 songs 100% healthy", metric: "healthy", goal: 25, src: `${P}/crowns/cross_crown.png`,
-    description: "Twenty-five songs collecting from every direction. Every one of them came through.",
+    description: "Twenty-five songs collecting from every direction. You came through for every one of them.",
     popup: "MEGA! 25 healthy songs. Jewels earned." },
   { id: "gold_crown", title: "Gold Crown", collection: "health", tier: "ultimate", milestone: "50 songs 100% healthy, then every 50 more", action: "Get 50 songs 100% healthy", metric: "healthy", goal: 50, every: 50, src: `${P}/crowns/king_crown.png`,
     description: "Fifty songs, fully healthy, fully collecting. This is the crown for people who leave no money on the table.",
@@ -228,7 +228,7 @@ const SPLITS: BadgeDef[] = [
     popup: "ULTIMATE! 100 split sheets. Written in the stars." },
   { id: "high_five", title: "High Five", collection: "splits", tier: "standard", milestone: "Every signature you receive on a split sheet or contract", action: "Collect a signature", metric: "signaturesReceived", goal: 1, every: 1, src: `${SP}/high_five.png`,
     description: "Someone put their name next to yours. Getting a music business agreement signed is an accomplishment, every single time.",
-    popup: "High five! Another signature came through." },
+    popup: "High five! You Came Through: another signature is on file." },
 ];
 
 const CT = `${P}/contracts`;
@@ -265,7 +265,7 @@ const CONTRACTS: BadgeDef[] = [
     popup: "MEGA! 50 contracts. Welcome to the executive suite." },
   { id: "executive_legacy", title: "Executive Legacy", collection: "contracts", tier: "ultimate", milestone: "75 contracts signed by every party, then every 75 more", action: "Get 75 contracts signed", metric: "contractsSigned", goal: 75, every: 75, src: `${CT}/bedazzled_v3.webp`,
     description: "Seventy-five signed agreements. Every collaborator, every deal, every term on file. This is how a music business outlasts trends.",
-    popup: "ULTIMATE! 75 contracts. Came Through Audio came through for your legacy." },
+    popup: "ULTIMATE! 75 contracts. You Came Through for your legacy." },
 ];
 
 const PR = `${P}/producer`;

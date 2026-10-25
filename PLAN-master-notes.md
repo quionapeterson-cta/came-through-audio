@@ -125,7 +125,7 @@ each download (`AGENCY_UPLOAD_STEPS` in glossary.ts, menu names from each agency
 - **Master badge list** (how users see them, in awarding order): generated from `badges.ts` as a page in Admin → Badges and
   a PDF (the existing Badge Reference PDF, reordered).
 
-### 2.4b "You Came Through" wording — PROPOSAL, awaiting approval (before → after)
+### 2.4b "You Came Through" wording — ✅ approved and applied 2026-10-25 (before → after)
 | Badge | Now | Proposed |
 | --- | --- | --- |
 | Master Crowned (pop-up) | Came through! Your credits ride with every play. | **You Came Through!** Your credits ride with every play. |
