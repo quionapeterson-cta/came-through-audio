@@ -87,6 +87,9 @@ each download (`AGENCY_UPLOAD_STEPS` in glossary.ts, menu names from each agency
   without a reason to stay) and propose sensory, story-led rewrites using pricing psychology: anchoring (show the time an
   agency export saves next to the price), loss aversion ("royalties you're not collecting"), social proof near each CTA,
   one clear next step per section, risk reversal (30-day refund line by the buttons). Delivered as before → after for approval.
+- **Who It's For badges, v2 (founder, 2026-10-25) ✅ BUILT:** badges back on the photos, smaller (3.25rem), lower right corner; Composers top right so the seated player's face stays clear.
+- **"What does embed mean?" story (founder approved, 2026-10-25) ✅ BUILT:** dark band after the $424M band, the 2 AM single / TV show story (no "No email" line), Track 01.mp3 → Your Song.mp3 before/after cards, "Embed your first master" button.
+- **Optional contact email embed (founder, 2026-10-25) ✅ BUILT:** Embed Defaults → "Contact email to embed (optional)"; written as TXXX CONTACT_EMAIL plus a "Contact: …" comment (players show comments); blank = not embedded; fills blanks only.
 - **How it works + Who it's for:** ✅ Who It's For BUILT 2026-10-25 (5 Unsplash photos toned toward Cobalt in public/home/, faces kept clear; animated badge under each description is the card's sign-up button; one Sign up free button for the section; Start free links removed). How It Works photos: founder adds them later. Original idea: Royalty-free photos of real people doing each step (e.g. uploading from a phone), with the
   real CTA screen shown in the photo, toned to CTA colors and dimmed behind the existing animated icons and text so it stays
   easy to read. Sources: Unsplash/Pexels (free commercial licence) + our own screenshots composited in. Titles and text get
@@ -373,6 +376,19 @@ it down for things only a released song can have. Plan to write and approve befo
   question's words against our FAQ and docs and replies with the best-matching answer and a link (plus "Was this helpful? /
   Talk to an agent"). Free to run and never makes things up, but it can't understand unusual wording or combine two answers.
   Start there; add the AI model later only if unanswered questions pile up (the staff queue shows which ones).
+- **Contract Generator (founder, 2026-10-25): growth plan, no paid AI for now.** Catalog Management add-on, plus a free
+  version for Super Admin (company signature block from 3.9, Georgia law). They describe their situation and a new contract
+  opens in the normal contract editor (sign at the bottom, then Send), with the lawyer-review disclaimer on every draft.
+  - **Version 1, no AI (free to run):** a guided **Contract Wizard**. Plain questions (Who are you? Who's the other side?
+    What's being exchanged: a flat fee, a percentage, rights, a credit? For how long? Which state?) pick the right blueprint
+    from the 77 and fill its fields; extra answers switch on optional clauses from a clause library built from the existing
+    blueprints (producer royalty after recoup, sample clearance, work for hire, exclusivity…). Never makes up terms; it
+    can't handle a situation no blueprint covers, so it says so and suggests the closest one.
+  - **Version 2, AI (later, when revenue covers it):** the same flow, but they can type their situation in their own words.
+    The AI gets our blueprints, guides, FAQ and glossary as reference every time (no training needed; edits go live at once),
+    is told never to invent terms and to ask when something is missing. Same provider and key as the help chat. Pay per use,
+    no monthly fee: about $0.15–0.30 per contract on Claude Opus 5.5 (Sonnet 5.5 about half). Suggested price **$3.99 per
+    contract** (about $3.40 after fees); a $3.99/year unlimited plan would lose money on busy users.
 - **Employee badges:** the 33 staff badges rendering now, then milestone badges per department.
 - **Backups and rebuilding:** the code is safe in GitHub (rebuild = clone, `bun install`, set secrets, deploy to Cloudflare per
   PLAN-cloudflare-hosting). What isn't safe yet: the database and stored files. Plan: a weekly automatic database dump and

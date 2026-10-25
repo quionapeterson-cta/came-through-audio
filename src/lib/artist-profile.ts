@@ -5,7 +5,7 @@ import { currentBadge, DEFAULT_BADGE_PREFS, type BadgePrefs } from "@/lib/badges
 
 /** Recurring details a user can opt to prefill on every embed. Stored only in this browser. */
 export const PROFILE_KEYS = [
-  "artist", "label", "primaryGenre", "secondaryGenre", "releaseType", "explicit", "copyright", "phonographic", "language",
+  "artist", "label", "contactEmail", "primaryGenre", "secondaryGenre", "releaseType", "explicit", "copyright", "phonographic", "language",
   "writers", "composers", "producers", "publishers", "selfPublished", "bmiWriterPublishing", "recordedIn",
   // Usual answers that aren't song-specific (founder, 2026-10-25): they fill blanks only, never what a song already has.
   "samples", "writtenFor", "masterShare", "masterBasis", "credits",

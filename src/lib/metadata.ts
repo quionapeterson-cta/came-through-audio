@@ -51,6 +51,8 @@ export const metadataSchema = z.object({
   releaseType: z.string().default(""),
   releaseDate: z.string(),
   label: z.string().trim().default(""),
+  /** Optional contact email from Embed Defaults (founder, 2026-10-25), so whoever finds the file can reach the artist. Blank = not embedded. */
+  contactEmail: z.string().trim().default("").refine((v) => !v || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v), "Enter a valid email address."),
   copyright: z.string().trim().default(""),
   phonographic: z.string().trim().default(""),
   language: z.string().trim().default(""),
@@ -110,7 +112,7 @@ export type Contributor = z.infer<typeof contributorSchema>;
 export const hfaLooksOff = (v: string | undefined) => !!v?.trim() && !/^[A-Z0-9]{6}$/i.test(v.trim());
 export const emptyContributor = (): Contributor => ({ name: "", pro: "", ipi: "", percentage: "" });
 export const emptyMetadata = (): Metadata => ({
-  title: "", trackNumber: "", trackTotal: "", artist: "", featured: [""], album: "", duration: "", releaseType: "", releaseDate: "", label: "", copyright: "", phonographic: "", language: "",
+  title: "", trackNumber: "", trackTotal: "", artist: "", featured: [""], album: "", duration: "", releaseType: "", releaseDate: "", label: "", contactEmail: "", copyright: "", phonographic: "", language: "",
   isrc: "", upc: "", iswc: "", explicit: false, instrumental: false, primaryGenre: "", secondaryGenre: "",
   writers: [emptyContributor()], composers: [emptyContributor()], producers: [emptyContributor()], publishers: [emptyContributor()],
   lyrics: "", coverThumb: "", audioPath: "", artPath: "", aiProtection: false, credits: [], recordedIn: "", recordedYear: "",
@@ -248,6 +250,11 @@ export async function embedMetadata(audio: ArrayBuffer, metadata: Metadata, artw
   if (composers.length) writer.setFrame("TXXX", { description: "COMPOSER_SPLITS", value: publicOnly(composers) });
   const producers = (data.producers ?? []).filter((row) => row.name);
   if (producers.length) writer.setFrame("TXXX", { description: "PRODUCERS", value: producers.map((row) => row.name).join(", ") });
+  if (data.contactEmail) {
+    writer.setFrame("TXXX", { description: "CONTACT_EMAIL", value: data.contactEmail });
+    // Comments are what most players show, so the contact is visible without special software.
+    writer.setFrame("COMM", { description: "", text: `Contact: ${data.contactEmail}`, language: "eng" });
+  }
   if (data.copyright) writer.setFrame("TCOP", data.copyright);
   if (data.lyrics) writer.setFrame("USLT", { description: "", lyrics: data.lyrics, language: "eng" });
   const credits = data.credits.filter((c) => c.name);
@@ -298,6 +305,7 @@ export function readMetadata(buf: ArrayBuffer): Partial<Metadata> & { picture?: 
   if (txxx["UPC"]) out.upc = txxx["UPC"];
   if (txxx["ISWC"]) out.iswc = txxx["ISWC"];
   if (txxx["LABEL"]) out.label = txxx["LABEL"];
+  if (txxx["CONTACT_EMAIL"]) out.contactEmail = txxx["CONTACT_EMAIL"];
   if (frames["TCOP"]) out.copyright = frames["TCOP"];
   if (txxx["RELEASE_DATE"]) out.releaseDate = txxx["RELEASE_DATE"];
   if (txxx["EXPLICIT"]) out.explicit = txxx["EXPLICIT"] === "Yes";

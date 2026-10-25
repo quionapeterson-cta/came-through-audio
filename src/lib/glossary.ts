@@ -72,6 +72,7 @@ export const GLOSSARY = {
   featured: { term: "Featured artist", text: "An artist who appears on the track (feat.). Streaming services show them on the song and credit them in search." },
   releaseType: { term: "Release type", text: "Single, EP or Album. It tells stores how to group and display the release." },
   explicit: { term: "Explicit", text: "Check this if the lyrics have strong language or adult content. Stores label the song so listeners and parents know." },
+  contactEmail: { term: "Contact email", text: "Optional. An email embedded in your MP3 so a DJ, blog or music supervisor who finds the file can reach you. Anyone with the file can see it, so use a business email. Leave it blank to keep it out." },
   label: { term: "Label", text: "The name the release goes out under. Independent? Use your own label name or your artist name." },
   neighbouringRights: { term: "Neighbouring rights", text: "Royalties for your recording when it's played on radio, TV or in venues outside the US. They pay the performers and the master owner. Collect them through SoundExchange's international mandate or by joining PPL." },
   performers: { term: "Featured / non-featured performer", text: "Featured performers are the artists named on the release. Non-featured performers are session players and backup singers. Both can be paid for airplay outside the US." },

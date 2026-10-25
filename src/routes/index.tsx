@@ -62,10 +62,25 @@ const roles = [
   { badge: MusicianBadge, photo: "/home/who-musician.webp", focus: "center", title: "Musicians", question: "Felt that bass line shake the booth?", text: "Get your part credited on every release, so you get paid and hired again." },
   { badge: ProducerBadge, photo: "/home/who-producer.webp", focus: "center", title: "Producers", question: "Beat still warm on the laptop?", text: "Put your production credit and split on paper before the song takes off." },
   { badge: SongwriterBadge, photo: "/home/who-songwriter.webp", focus: "center 15%", title: "Songwriters", question: "Lyrics still in your notes app?", text: "Turn them into registered songs with your name and share on file." },
-  { badge: ComposerBadge, photo: "/home/who-composer.webp", focus: "center", title: "Composers", question: "Score still filling the room?", text: "Anchor your compositions and publishing shares so every placement pays you." },
+  { badge: ComposerBadge, photo: "/home/who-composer.webp", focus: "center", corner: "top", title: "Composers", question: "Score still filling the room?", text: "Anchor your compositions and publishing shares so every placement pays you." },
 ];
 
 /** Every "start free" button on the page scrolls to the sign-up box in the hero. */
+/** A music file's details as a player shows them: blank before embedding, filled in after. */
+function FileCard({ name, rows, done }: { name: string; rows: [string, string][]; done?: boolean }) {
+  return (
+    <div className={`rounded-2xl border p-5 ${done ? "border-primary bg-ink-border/40" : "border-ink-border"}`}>
+      <p className="flex items-center gap-2 font-semibold text-ink-foreground"><Music className={`h-5 w-5 ${done ? "text-electric" : "text-ink-muted"}`} />{name}</p>
+      <dl className="mt-3 grid grid-cols-[7rem_1fr] gap-y-1.5 text-sm">
+        {rows.map(([k, v]) => <div key={k} className="contents">
+          <dt className="text-ink-muted">{k}</dt>
+          <dd className={v && done ? "flex items-center gap-1.5 font-medium text-ink-foreground" : "text-ink-muted"}>{v && done && <Check className="h-4 w-4 text-electric" strokeWidth={3} />}{v || "—"}</dd>
+        </div>)}
+      </dl>
+    </div>
+  );
+}
+
 const goSignup = () => document.getElementById("signup")?.scrollIntoView({ behavior: "smooth", block: "center" });
 
 function StartFree({ label = "Sign up free", variant = "primary" }: { label?: string; variant?: "primary" | "outline" | "link" }) {
@@ -117,6 +132,26 @@ function Landing() {
         </div>
       </section>
 
+      {/* What embedding is, told as a story (founder approved, 2026-10-25), with the file before and after. */}
+      <section className="bg-ink py-20 text-ink-foreground">
+        <div className="mx-auto grid max-w-6xl gap-12 px-6 md:grid-cols-[1.15fr_1fr] md:items-center">
+          <div className="space-y-4 text-lg leading-relaxed text-ink-muted">
+            <h2 className="text-3xl font-bold text-ink-foreground md:text-4xl">What does embed mean?</h2>
+            <p>Picture this. You finish your single at 2 AM and send it out that same night. A DJ, a blog, and a music supervisor looking for a song for a TV show.</p>
+            <p>Three weeks later the show wants it. They open the file and all it says is Track 01. No artist. No writer. No codes. They can't clear a song they can't trace, so they move on to the next one that tells them who owns it.</p>
+            <p className="font-semibold text-ink-foreground">Your song was good enough. It just couldn't speak up for you.</p>
+            <p><span className="font-bold text-ink-foreground">Embedding fixes that.</span> It writes your name, credits, codes, lyrics and artwork inside the audio file itself, like a name tag sewn into a jacket. Wherever the file goes, your information goes with it, even after it's copied, renamed or shared a hundred times.</p>
+            <p>Make sure every song can say who made it. Came Through Audio came through for every song in your catalog.</p>
+            <div className="pt-2"><StartFree label="Embed your first master" /></div>
+          </div>
+          <div className="space-y-4">
+            <FileCard name="Track 01.mp3" rows={[["Artist", "Unknown"], ["Written by", ""], ["ISRC", ""], ["Lyrics", ""], ["Artwork", ""]]} />
+            <p className="text-center text-sm font-bold uppercase tracking-[2px] text-electric">After embedding</p>
+            <FileCard name="Your Song.mp3" done rows={[["Artist", "Your artist name"], ["Written by", "Your legal name"], ["ISRC", "US-ABC-26-00001"], ["Lyrics", "Saved inside"], ["Artwork", "Saved inside"]]} />
+          </div>
+        </div>
+      </section>
+
       <section className="border-y border-border bg-muted">
         <div className="mx-auto max-w-7xl px-6 py-14">
           <h2 className="text-center text-3xl font-extrabold uppercase tracking-wide text-primary md:text-4xl">Everything in the {PLUS.price}/yr plan</h2>
@@ -158,17 +193,19 @@ function Landing() {
       <section className="mx-auto max-w-7xl px-6 py-20">
         <h2 className="text-center text-3xl font-bold md:text-4xl">Who It's For</h2>
         <div className="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-5">
-          {roles.map(({ badge: Badge, photo, focus, title, question, text }) => (
+          {roles.map(({ badge: Badge, photo, focus, corner, title, question, text }) => (
             <div key={title} className="group flex flex-col">
               <h3 className="mb-3 text-center text-lg font-extrabold uppercase tracking-[2px] text-primary">{title}</h3>
               <div className="flex flex-1 flex-col overflow-hidden rounded-xl border border-border">
-                <img src={photo} alt="" loading="lazy" className="aspect-[16/10] w-full object-cover sm:aspect-square" style={{ objectPosition: focus }} />
-                {/* The badge sits between the photo and the copy and is the card's way to sign up; the section has one Sign up free button below. */}
-                <button type="button" onClick={goSignup} aria-label={`Sign up free: ${title}`}
-                  className="mx-auto mt-4 rounded-full transition hover:-translate-y-1 hover:scale-105 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring [&>svg]:h-[5.5rem] [&>svg]:w-[5.5rem]">
-                  <Badge />
-                </button>
-                <div className="flex-1 p-5 pt-2 text-center">
+                <div className="relative overflow-hidden">
+                  <img src={photo} alt="" loading="lazy" className="aspect-[16/10] w-full object-cover sm:aspect-square" style={{ objectPosition: focus }} />
+                  {/* The badge sits in the photo's lower right corner (top right where a face is there) and is the card's way to sign up; the section has one Sign up free button below. */}
+                  <button type="button" onClick={goSignup} aria-label={`Sign up free: ${title}`}
+                    className={`absolute right-3 ${corner === "top" ? "top-3" : "bottom-3"} rounded-full transition hover:-translate-y-0.5 hover:scale-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring [&>svg]:h-[3.25rem] [&>svg]:w-[3.25rem]`}>
+                    <Badge />
+                  </button>
+                </div>
+                <div className="flex-1 p-5 text-center">
                   <p className="text-lg font-bold">{question}</p>
                   <p className="mt-1 text-sm text-muted-foreground">{text}</p>
                 </div>

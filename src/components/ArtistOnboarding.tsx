@@ -203,6 +203,7 @@ export function ArtistOnboarding({ userId, open, onOpenChange, onSaved, firstRun
               <Field label="Primary Artist / Stage Name"><Input value={ob.stageName} onChange={(e) => { setOb((o) => ({ ...o, stageName: e.target.value })); set("artist", e.target.value); }} />
                 {savedName && <p className="mt-1 text-xs text-muted-foreground">{nameRuleText(nameRule)}</p>}</Field>
               <Field label="Default Label Name (optional)" term="label"><Input value={p.label ?? ""} onChange={(e) => set("label", e.target.value)} placeholder="Your label name" /></Field>
+              <Field label="Contact email to embed (optional)" term="contactEmail"><Input type="email" value={p.contactEmail ?? ""} onChange={(e) => set("contactEmail", e.target.value)} placeholder="bookings@yourname.com" /></Field>
               <Field label="Produced by (optional)" term="producedBy"><Input value={p.producers?.[0]?.name ?? ""} placeholder="Name"
                 onChange={(e) => { const rest = p.producers?.slice(1) ?? []; set("producers", [{ ...(p.producers?.[0] ?? emptyContributor()), name: e.target.value }, ...rest]); }} /></Field>
             </Group>
