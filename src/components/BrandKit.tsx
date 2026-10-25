@@ -9,7 +9,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { InfoTip } from "@/components/InfoTip";
-import { BRAND_FONTS, BRANDING_PRICE, emptyKit, isHex, kitFromRow, type BrandFont, type BrandKit as Kit } from "@/lib/brand-kit";
+import { BRAND_FONTS, BRANDING_PRICE, emptyKit, fontFile, isHex, kitFromRow, type BrandKit as Kit } from "@/lib/brand-kit";
+import { FONT_GROUPS } from "@/lib/brand-fonts";
 import { getBrandAccess } from "@/lib/brand-kit.functions";
 import { openCheckout } from "@/lib/checkout";
 import { TIER_LABEL, type Tier } from "@/lib/plans";
@@ -49,6 +50,9 @@ export function BrandKit({ userId, tier, artistName }: { userId: string; tier: T
     })();
     return () => { live = false; };
   }, [userId, tier]);
+
+  // Only the chosen font is downloaded, for the preview (the PDF loads the same files).
+  useEffect(() => { loadPreviewFont(kit.font); }, [kit.font]);
 
   const edit = (patch: Partial<Kit>) => { setKit((k) => ({ ...k, ...patch })); setSaved(false); };
   const setColor = (i: number, v: string) => edit({ colors: kit.colors.map((c, j) => (j === i ? v : c)) });
@@ -148,10 +152,11 @@ export function BrandKit({ userId, tier, artistName }: { userId: string; tier: T
         </div>
         <div className="space-y-2">
           <Label htmlFor="bk-font" className="flex items-center gap-1.5">Font<InfoTip text="The font for your name and tagline. The rest of the document stays in our easy-to-read font." /></Label>
-          <select id="bk-font" value={kit.font} onChange={(e) => edit({ font: e.target.value as BrandFont })} style={{ fontFamily: kit.font }}
+          <select id="bk-font" value={kit.font} onChange={(e) => edit({ font: e.target.value })}
             className="flex h-10 w-full rounded-md border border-input bg-background px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
-            {BRAND_FONTS.map((f) => <option key={f} value={f} style={{ fontFamily: f }}>{f}</option>)}
+            {FONT_GROUPS.map((g) => <optgroup key={g.group} label={g.group}>{g.fonts.map((f) => <option key={f} value={f}>{f}</option>)}</optgroup>)}
           </select>
+          <p className="text-xs text-muted-foreground">{BRAND_FONTS.length} fonts. Pick one and the preview below shows it.</p>
         </div>
       </div>
 
@@ -199,4 +204,13 @@ export function BrandKit({ userId, tier, artistName }: { userId: string; tier: T
       <Button onClick={() => void save()} disabled={busy || saved}>{busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}{saved ? "Saved" : "Save brand kit"}</Button>
     </div>
   );
+}
+
+const previewFonts = new Set<string>(["Poppins"]);
+function loadPreviewFont(f: string) {
+  if (previewFonts.has(f) || typeof FontFace === "undefined") return;
+  previewFonts.add(f);
+  for (const [weight, w] of [["500", "medium"], ["700", "bold"]] as const) {
+    new FontFace(f, `url(/fonts/${fontFile(f, w)}.ttf)`, { weight }).load().then((face) => document.fonts.add(face)).catch(() => previewFonts.delete(f));
+  }
 }

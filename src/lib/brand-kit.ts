@@ -1,3 +1,4 @@
+import { FONT_GROUPS, SINGLE_WEIGHT } from "@/lib/brand-fonts";
 import { hasTier, type Tier } from "@/lib/plans";
 
 /**
@@ -9,10 +10,10 @@ export const BRANDING_PRICE = "$14.99";
 /** One add-on purchase covers this many days; buying again early adds a year after the current one ends. */
 export const BRANDING_DAYS = 365;
 
-export const BRAND_FONTS = ["Poppins", "Montserrat", "Playfair Display", "Roboto Slab"] as const;
-export type BrandFont = (typeof BRAND_FONTS)[number];
-/** Header font files in public/fonts: medium for the tagline, bold for the name. */
-export const fontFile = (f: BrandFont, weight: "medium" | "bold") => `${f.replace(/ /g, "")}-${weight === "bold" ? "Bold" : "Medium"}`;
+export const BRAND_FONTS: string[] = FONT_GROUPS.flatMap((g) => g.fonts);
+export type BrandFont = string;
+/** Header font files in public/fonts: medium for the tagline, bold for the name (one file for single-weight fonts). */
+export const fontFile = (f: BrandFont, weight: "medium" | "bold") => `${f.replace(/ /g, "")}-${weight === "bold" || SINGLE_WEIGHT.has(f) ? "Bold" : "Medium"}`;
 
 export type BrandKit = {
   name: string;
@@ -46,7 +47,7 @@ export function kitFromRow(r: { name?: string | null; tagline?: string | null; c
     name: (r.name ?? "").trim(),
     tagline: (r.tagline ?? "").trim(),
     colors: (r.colors ?? []).filter(isHex).map((c) => c.toUpperCase()),
-    font: (BRAND_FONTS as readonly string[]).includes(r.font ?? "") ? (r.font as BrandFont) : "Poppins",
+    font: BRAND_FONTS.includes(r.font ?? "") ? r.font! : "Poppins",
     logoPath: r.logo_path || null,
     showFooter: r.show_footer !== false,
   };

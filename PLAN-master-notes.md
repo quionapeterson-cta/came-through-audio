@@ -238,7 +238,7 @@ contract) · 3 Adjust the wording if you need to · 4 Sign · 5 Send for signatu
   and per network each month; I'll add the per-email yearly rule, which also stops a deleted-and-recreated account). After the trial: can view and download what they entered and still sign what they're sent, but can't add songs
   to split sheets or send new requests.
 
-### 3.6 Personal branding add-on (contracts and split sheets) · ✅ BUILT 2026-10-25 (Profile → Brand kit: logo, name, tagline, unlimited colors (founder), font from Poppins / Montserrat / Playfair Display / Roboto Slab, footer switch; one-time $14.99 for 12 months, purchases stack (founder chose option 1); server checks the plan before a PDF gets the kit; migration 20261025140000; founder: create Stripe price `branding_yearly` in sandbox + live)
+### 3.6 Personal branding add-on (contracts and split sheets) · ✅ BUILT 2026-10-25 (Profile → Brand kit: logo, name, tagline, unlimited colors (founder), 124 fonts in 5 groups (founder: as many as possible; src/lib/brand-fonts.ts), footer switch; one-time $14.99 for 12 months, purchases stack (founder chose option 1); server checks the plan before a PDF gets the kit; migration 20261025140000; founder: create Stripe price `branding_yearly` in sandbox + live)
 - Catalog Management: brand kit in Profile (logo, two colors, tagline, font from a short list); their header replaces CTA's on
   contracts they send.
 - Footer: "Generated on camethroughaudio.com · YOUR FIRST STOP BEFORE DISTRIBUTION" (link). Management users and add-on buyers can
