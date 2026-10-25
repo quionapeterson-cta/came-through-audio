@@ -57,6 +57,7 @@ function VerifyPage() {
         <section className="space-y-3 rounded-2xl border border-border p-5">
           <h2 className="text-lg font-bold">Check a proof manifest</h2>
           <p className="text-sm text-muted-foreground">Choose the <b>proof-manifest.txt</b> that came with this certificate. We check it on this device; nothing is uploaded.</p>
+          <p className="text-sm text-muted-foreground">Where to find it: <b>AI Protection Hub → My certificates → Bitcoin proof</b>. It's inside that ZIP; unzip it first (on a phone, open the ZIP in Files and tap the .txt).</p>
           <input type="file" accept=".txt,text/plain" aria-label="Proof manifest" onChange={(e) => void checkFile(e.target.files?.[0])} className="text-sm" />
           {check === "match" && <p className="flex items-center gap-2 font-semibold text-primary"><CheckCircle2 className="h-5 w-5" />It matches. This is the exact manifest this certificate stamped.</p>}
           {check === "nomatch" && <p className="flex items-center gap-2 font-semibold text-destructive"><XCircle className="h-5 w-5" />It doesn't match. Use the proof-manifest.txt from this certificate, unchanged (not the PDF).</p>}

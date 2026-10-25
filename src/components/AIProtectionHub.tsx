@@ -77,6 +77,8 @@ export function AIProtectionHub({ userId, purchases, justPaid, track }: { userId
   // Open/closed is the user's choice once they toggle it; until then it starts open only before the first purchase.
   const [buyOpen, setBuyOpen] = useState<boolean>();
   const [certsOpen, setCertsOpen] = useState(true);
+  const [createOpen, setCreateOpen] = useState(true);
+  const [explainOpen, setExplainOpen] = useState(false);
   useEffect(() => { if (track) { setPicked((p) => (p.includes(track.id) ? p : [...p, track.id])); setTarget(track.id); } }, [track]);
   const togglePick = (id: string) => {
     const next = picked.includes(id) ? picked.filter((x) => x !== id) : [...picked, id];
@@ -252,6 +254,13 @@ export function AIProtectionHub({ userId, purchases, justPaid, track }: { userId
         <div className="space-y-1">
           <div className="flex items-center gap-3"><ShieldCheck className="h-8 w-8 text-primary" /><h1 className="text-2xl font-bold">AI Protection Hub</h1></div>
           <p className="max-w-2xl text-sm text-muted-foreground">Lock in timestamped, independently verifiable proof of your creative process. Each Certificate of Human Origin is fingerprinted, sworn and anchored on the Bitcoin blockchain before your master reaches DSPs or social media.</p>
+          {/* What a certificate gives you, at a glance. */}
+          <ul className="flex flex-wrap gap-2 pt-2 text-xs font-semibold">
+            {[[ShieldCheck, "Human-made, on record"], [Fingerprint, "Fingerprinted files"], [Link2, "Timestamped on Bitcoin"], [Gavel, "Sworn authorship"]].map(([Icon, label]) => {
+              const I = Icon as typeof ShieldCheck;
+              return <li key={label as string} className="flex items-center gap-1.5 rounded-full border border-primary/40 bg-primary/5 px-3 py-1.5 text-primary"><I className="h-4 w-4" />{label as string}</li>;
+            })}
+          </ul>
         </div>
         {getPaymentsEnvironment() === "sandbox" && left === 0 && (
           <Button variant="outline" size="sm" onClick={() => setUnlocked((v) => !v)}>{unlocked ? "Exit test preview" : "Preview steps (Test Mode)"}</Button>
@@ -294,6 +303,36 @@ export function AIProtectionHub({ userId, purchases, justPaid, track }: { userId
       {justPaid && timedOut && left === 0 && (
         <div className="flex items-center gap-3 rounded-2xl border border-border bg-card p-5 text-sm"><AlertTriangle className="h-5 w-5 text-primary" />We haven't received your payment confirmation yet. Refresh in a minute; if it still doesn't show, contact billing@camethroughaudio.com.</div>
       )}
+
+      {/* How it protects you: step by step, with the plain-English answers (founder asked for the explainers back here). */}
+      <Card title="How your certificate protects you" subtitle="Step by step, in plain English" open={explainOpen} onToggle={() => setExplainOpen(!explainOpen)}>
+        <ol className="space-y-5">
+          {EXPLAINERS.map((x, i) => (
+            <li key={x.title} className="flex gap-4">
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground"><x.icon className="h-5 w-5" /></span>
+              <div className="space-y-1 text-sm">
+                <div className="font-bold">{i + 1}. {x.title} <span className="font-semibold text-primary">· {x.tag}</span></div>
+                <p><span className="font-semibold">In plain English: </span>{x.plain}</p>
+                <p className="text-muted-foreground"><span className="font-semibold text-foreground">Why you need it: </span>{x.why}</p>
+              </div>
+            </li>
+          ))}
+          <li className="flex gap-4">
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground"><Check className="h-5 w-5" /></span>
+            <div className="space-y-1 text-sm">
+              <div className="font-bold">{EXPLAINERS.length + 1}. Anyone can check it</div>
+              <p>Scan the QR code on your certificate, or open My certificates → Bitcoin proof. The ZIP has your manifest (.txt), the timestamp receipt (.ots) and how to verify it at opentimestamps.org.</p>
+            </div>
+          </li>
+          <li className="flex gap-4">
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground"><Gavel className="h-5 w-5" /></span>
+            <div className="space-y-1 text-sm">
+              <div className="font-bold">Are certificates legal proof?</div>
+              <p>Your certificate is evidence, not a court ruling. It shows your files existed in this exact form by this date: the Bitcoin timestamp can be checked by anyone, and any change to a file changes its fingerprint. Courts decide how much weight evidence gets. Keep your original files, and register important songs with the U.S. Copyright Office for the strongest protection.</p>
+            </div>
+          </li>
+        </ol>
+      </Card>
 
       {/* 2 · Buy */}
       {!confirming && (
@@ -359,7 +398,7 @@ export function AIProtectionHub({ userId, purchases, justPaid, track }: { userId
       {/* 3 · Create the certificate */}
       {active && (
         <div ref={steps} className="scroll-mt-24">
-          <Card title="Create your certificate" subtitle={justPaid && welcomed ? "Payment received. Follow the five steps below; each song takes a few minutes." : "Five steps, a few minutes per song."}>
+          <Card title="Create your certificate" open={createOpen} onToggle={() => setCreateOpen(!createOpen)} subtitle={justPaid && welcomed ? "Payment received. Follow the five steps below; each song takes a few minutes." : "Five steps, a few minutes per song."}>
             <ol className="space-y-8">
               <Step n={1} title="Song details" done={!detailsMissing.length}>
                 <div className="space-y-1">
@@ -399,7 +438,7 @@ export function AIProtectionHub({ userId, purchases, justPaid, track }: { userId
                     tip="Screen-record your open project (FL Studio, Logic, Ableton, Pro Tools, BandLab…). Melody first, then each track solo, then the full mix. This shows you have the real working session, not just the final song.">
                   </ProofBox>
                   <ProofBox title="Draft History" proof={notes} status={status.drafts} on={(file) => proof(file, "drafts", (p) => setNotes(p))}
-                    tip="Screen-record your earlier versions: voice memos, rough takes, lyric notes, or a folder showing file dates. Early melody ideas (hummed voice memos, rough toplines) are your strongest drafts, and showing their dates makes your evidence stronger.">
+                    tip="Screen-record your earlier versions: voice memos, rough takes, lyric notes, or a folder showing file dates. Early melody ideas (hummed voice memos, rough toplines) and drafts made days or weeks apart are strong evidence, and showing their dates makes it stronger.">
                     <div className="space-y-1"><Label htmlFor="draft-dates">Draft dates shown in your video (optional)</Label><Input id="draft-dates" value={draftDates} onChange={(e) => setDraftDates(e.target.value)} placeholder="e.g. Voice memo March 3, 2026; lyrics note April 20, 2026" />
                       <p className="text-xs text-muted-foreground">A quick index for anyone reviewing your proof later. It's stamped with your certificate. Leave it blank if you like.</p></div>
                     <div className="space-y-1"><Label>Notes (optional)</Label><Input value={draftNotes} onChange={(e) => setDraftNotes(e.target.value)} /></div>
