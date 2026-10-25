@@ -36,7 +36,7 @@ import { loadOnboarding, loadProfile, restoreRows, withProfile, withProfileFille
 import type { ShareInfo } from "@/components/BadgeCelebration";
 
 const normArtist = (v: string) => v.trim().replace(/\s+/g, " ").toLowerCase();
-import { Link } from "@tanstack/react-router";
+import { Link, useNavigate } from "@tanstack/react-router";
 
 const AUDIO_FILE = /\.(mp3|wav)$/i;
 /** "wav" for a WAV file name or storage path, otherwise "mp3" (masters keep the format they were uploaded in). */
@@ -49,6 +49,7 @@ export function MetadataUploader({ onShareInfo, userId, mode = "embed", readOnly
   const full = mode === "catalog";
   // One artist per account: the artist name from setup. A different name gets a gentle add-an-artist note.
   const registeredArtist = loadOnboarding(userId)?.stageName?.trim() ?? "";
+  const navigate = useNavigate();
   const [aiProtect, setAiProtect] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [metadata, setMetadata] = useState<Metadata>(emptyMetadata);
@@ -273,6 +274,17 @@ export function MetadataUploader({ onShareInfo, userId, mode = "embed", readOnly
   }, [artwork]);
   useEffect(() => () => { if (result) URL.revokeObjectURL(result.url); }, [result]);
 
+  /** Clear session: empty the queue and the finished list, start a fresh song (e.g. switching to another album). */
+  async function clearSession() {
+    if (!(await confirmAction({ title: "Clear this session?", text: "Songs waiting in the queue and the embedded list are cleared, and the form starts fresh. Files you already downloaded aren't affected.", action: "Clear session" }))) return;
+    setQueue([]); setSessionDone([]); setAudio(undefined); startNew(); setError("");
+  }
+  /** The artist name is set in the profile; explain and offer to go there. */
+  async function explainArtistName() {
+    if (await confirmAction({ title: "Your artist name comes from your profile", text: "To fix a typo or change your artist name for good, edit it in your profile. New songs use it automatically. Featuring someone? Add them under Featured artist.", action: "Edit profile", tone: "primary" })) {
+      void navigate({ to: "/profile" });
+    }
+  }
   /** Self-published means no publisher: offer to remove a listed one (often filled in from the Catalog Profile). */
   async function setSelfPublished(on: boolean) {
     const listed = (metadata.publishers ?? []).filter(creditName);
@@ -355,9 +367,10 @@ export function MetadataUploader({ onShareInfo, userId, mode = "embed", readOnly
         <fieldset disabled={busy} className="grid gap-5 sm:grid-cols-[1fr_220px]">
           <div onDragOver={(event) => event.preventDefault()} onDrop={(event) => { event.preventDefault(); if (!busy) addFiles(event.dataTransfer.files); }} className="flex min-h-44 flex-col items-center justify-center gap-3 rounded-lg border border-dashed border-primary bg-accent/30 p-5 text-center">
             <FileAudio className="h-8 w-8 text-primary" />
-            <div className="max-w-full break-all text-sm font-semibold">{audio ? audio.name : full ? (editingId ? "Replace audio (optional)" : "MP3 or WAV (optional)") : "Audio file"}</div>
+            <div className="max-w-full break-all text-sm font-semibold">{audio ? audio.name : full ? (editingId ? "Re-embed" : "MP3 or WAV (optional)") : "Audio file"}</div>
+            {full && editingId && !audio && <span className="max-w-xs text-xs text-muted-foreground">Choose this song's master again: we embed everything saved here, plus what you add now (codes, producer credits), save the new master and you can download it.</span>}
             {audio && <span className="text-xs text-muted-foreground">{(audio.size / 1024 / 1024).toFixed(1)} MB</span>}
-            <Button type="button" variant="outline" onClick={() => audioInput.current?.click()}><Upload />{audio ? (full ? "Replace audio" : "Add more songs") : full ? "Choose MP3 or WAV" : "Choose MP3s or WAVs"}</Button>
+            <Button type="button" variant="outline" onClick={() => audioInput.current?.click()}><Upload />{audio ? (full ? "Choose a different file" : "Add more songs") : full ? (editingId ? "Re-embed" : "Choose MP3 or WAV") : "Choose MP3s or WAVs"}</Button>
             {!full && !audio && <span className="text-xs text-muted-foreground">Drop a whole EP or album. Songs wait in your session queue.</span>}
             <input ref={audioInput} type="file" accept=".mp3,.wav,audio/mpeg,audio/wav,audio/x-wav" multiple={!full} aria-label="MP3 or WAV audio files" className="sr-only" onChange={(event) => { if (event.target.files) addFiles(event.target.files); event.target.value = ""; }} />
           </div>
@@ -389,7 +402,13 @@ export function MetadataUploader({ onShareInfo, userId, mode = "embed", readOnly
               <div className="grid gap-5 sm:grid-cols-2">
                 <Field label="Track title" id="title" value={metadata.title} required onChange={(value) => update("title", value)} />
                 <div>
-                  <Field label="Artist name" id="artist" value={metadata.artist} required onChange={(value) => update("artist", value)} />
+                  {/* The artist name comes from the profile (founder, 2026-10-25): clicking it explains where to change it. */}
+                  <div className="min-w-0 space-y-2"><Label htmlFor="artist" className="leading-5">Artist name *</Label>
+                    <div className="relative">{registeredArtist
+                      ? <><Input id="artist" value={metadata.artist} required readOnly className="cursor-pointer pr-9" onClick={() => void explainArtistName()} onKeyDown={(e) => { if (e.key.length === 1 || e.key === "Backspace") { e.preventDefault(); void explainArtistName(); } }} />
+                          <Lock className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" /></>
+                      // No profile name yet: typing stays open so nobody is stuck.
+                      : <Input id="artist" value={metadata.artist} required onChange={(e) => update("artist", e.target.value)} />}</div></div>
                   {registeredArtist && metadata.artist.trim() && normArtist(metadata.artist) !== normArtist(registeredArtist) && (
                     <p role="note" className="mt-2 rounded-md border border-primary/50 bg-accent/30 p-2 text-xs">
                       This account is registered to <span className="font-semibold">{registeredArtist}</span>. Releasing as a different artist? Each artist gets their own catalog with an add-on artist account (from {ARTIST_SEAT_PRICES[0]!.price}/yr), coming soon. Featuring someone? Add them under Featured artist instead.
@@ -588,7 +607,7 @@ export function MetadataUploader({ onShareInfo, userId, mode = "embed", readOnly
         ) : <span className="text-sm text-muted-foreground">{full ? "Saved songs, identifiers and splits" : "MP3 or WAV · ID3v2.3"}</span>}
       </div>
       {!full && <div className="lg:grid lg:grid-cols-[13rem_minmax(0,1fr)_17rem] lg:items-start lg:gap-6">
-      <SessionRail audio={audio} queue={queue} done={sessionDone} onAdd={() => audioInput.current?.click()} onRemove={(i) => setQueue((q) => q.filter((_, j) => j !== i))} />
+      <SessionRail audio={audio} queue={queue} done={sessionDone} onAdd={() => audioInput.current?.click()} onRemove={(i) => setQueue((q) => q.filter((_, j) => j !== i))} onClear={() => void clearSession()} />
       <div className="min-w-0">
       {formBlock}
       </div>
@@ -896,7 +915,7 @@ function NextSong({ queue, carry, onCarry, onNext, compact }: { queue: File[]; c
 }
 
 /** Left rail: what's done this sitting, what's on now, and what's waiting. */
-function SessionRail({ audio, queue, done, onAdd, onRemove }: { audio: File | undefined; queue: File[]; done: string[]; onAdd: () => void; onRemove: (i: number) => void }) {
+function SessionRail({ audio, queue, done, onAdd, onRemove, onClear }: { audio: File | undefined; queue: File[]; done: string[]; onAdd: () => void; onRemove: (i: number) => void; onClear: () => void }) {
   if (!audio && !queue.length && !done.length) return (
     <aside aria-label="Embed session" className="hidden rounded-2xl border border-dashed border-border p-4 lg:sticky lg:top-6 lg:block">
       <h2 className="text-xs font-bold uppercase tracking-[2px] text-primary">Session</h2>
@@ -922,6 +941,7 @@ function SessionRail({ audio, queue, done, onAdd, onRemove }: { audio: File | un
         ))}
       </ol>
       <Button type="button" variant="outline" size="sm" className="mt-3 w-full" onClick={onAdd}><Plus />Add songs</Button>
+      <Button type="button" variant="ghost" size="sm" className="mt-1 w-full" onClick={onClear}><Trash2 />Clear session</Button>
     </aside>
   );
 }
