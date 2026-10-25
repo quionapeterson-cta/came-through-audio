@@ -129,7 +129,7 @@ export function RoyaltyReport({ checkup, since, date, country, countryPicker, ru
             {since.healed.length > 0 && <span className="rounded-full border px-3 py-1.5" style={{ borderColor: "var(--rr-hero-line)" }}><b>Healed:</b> {since.healed.join(", ")}</span>}
             {since.fresh > 0 && <span className="rounded-full border px-3 py-1.5" style={{ borderColor: "var(--rr-hero-line)" }}><b>New:</b> {since.fresh} finding{since.fresh === 1 ? "" : "s"}</span>}
           </div>}
-          <p className="rr-muted text-xs">Based on your catalog, the steps you've confirmed and live streaming and MusicBrainz lookups. Agency databases can't be searched automatically yet; upload your agency lists to confirm for real.</p>
+          <p className="rr-muted text-xs">Based on your catalog, the steps you've confirmed and live streaming lookups. Agency databases can't be searched automatically yet; upload your agency lists to confirm for real.</p>
         </div>
       </section>
 

@@ -101,6 +101,16 @@ describe("royalty checkup", () => {
     expect(missing.lead).toMatchObject({ id: "pulse-missing", what: "1 song you marked registered isn't on your The MLC list." });
   });
 
+  it("counts a song once per finding, even with two reasons", () => {
+    const steps = { ...registeredAll("a").steps, "list:ascap": JSON.stringify({ at: "x", issues: ["Bo Ray isn't on the registration"] }), "list:mlc": JSON.stringify({ at: "x", issues: ["The ISRC differs"] }) };
+    const c = run([track("a", { iswc: "T1234567890" })], [{ ...registeredAll("a"), steps }]);
+    const f = c.organs.flatMap((o) => o.findings).find((x) => x.id === "brain-agency")!;
+    expect(f.songs).toHaveLength(1);
+    expect(f.songs[0]!.why).toContain("Bo Ray");
+    expect(f.songs[0]!.why).toContain("ISRC differs");
+    expect(f.what).toMatch(/^1 song /);
+  });
+
   it("compares with the last checkup", () => {
     const before = summarize(run([track("a", { publishers: [] })]));
     const now = summarize(run([track("a", { iswc: "T1234567890" })], [registeredAll("a")]));

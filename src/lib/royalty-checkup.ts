@@ -111,7 +111,17 @@ function societyFor(list: CheckupInput["rows"], ids: Set<string>, pillar: string
 
 export function royaltyCheckup({ rows, signedSheets, today = new Date().toISOString() }: CheckupInput): Checkup {
   const hits = new Map<ConditionId, AffectedSong[]>();
-  const hit = (id: ConditionId, s: AffectedSong) => hits.set(id, [...(hits.get(id) ?? []), s]);
+  // One song is listed once per finding: a second reason for the same song (e.g. two streaming mismatches, or two
+  // agency lists) joins the first instead of counting the song twice.
+  const hit = (id: ConditionId, s: AffectedSong) => {
+    const list = hits.get(id) ?? [];
+    const same = list.find((x) => x.id === s.id);
+    if (!same) { hits.set(id, [...list, s]); return; }
+    if (!same.why.split("; ").includes(s.why)) same.why = `${same.why}; ${s.why}`;
+    same.field ??= s.field; same.society ??= s.society;
+    if (s.unsure) same.unsure = true;
+    if (s.registration === false) same.registration = false;
+  };
   const allWriters = rows.flatMap(({ r }) => writersOf(r.track.metadata));
   const noPro = allWriters.length > 0 && !allWriters.some((w) => hasPro(w.pro));
   const registered = { performance: 0, mechanical: 0, digital: 0 };

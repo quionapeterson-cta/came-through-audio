@@ -111,7 +111,7 @@ export async function buildCheckupPdf(c: Checkup, artist: string, country: strin
     else y = para(pdf, y, `Healthy and strong. What we examined: ${o.checks.join("; ")}.`, 10.5, MUTED) + 4;
   }
   y = ensureSpace(pdf, y, 16);
-  para(pdf, y, "Based on your catalog, the steps you've confirmed and live streaming and MusicBrainz lookups. Agency databases can't be searched automatically yet; upload your agency lists in the Royalty Health Hub to confirm for real.", 9, MUTED);
+  para(pdf, y, "Based on your catalog, the steps you've confirmed and live streaming lookups. Agency databases can't be searched automatically yet; upload your agency lists in the Royalty Health Hub to confirm for real.", 9, MUTED);
   brandFooter(pdf);
   return pdf;
 }

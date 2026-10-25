@@ -31,7 +31,8 @@ import { runSongLookups } from "@/lib/lookups.functions";
 import { INTERNATIONAL, countryByCode, guessCountry } from "@/lib/repertoires";
 import { loadOnboarding, saveOnboarding } from "@/lib/artist-profile";
 
-const AUTO = [INTERNATIONAL.deezer.id, INTERNATIONAL.musicbrainz.id];
+// Automatic lookups (MusicBrainz rows saved before its removal stay out of the score and can't be undone by hand).
+const AUTO = [INTERNATIONAL.deezer.id, "musicbrainz"];
 
 /** A ready-to-send note for the distributor when streaming shows different details than the catalog. */
 function distributorMessage(t: CatalogTrack, differences: string[]) {
@@ -83,7 +84,7 @@ export function RoyaltyHealthCheck({ userId, canCatalog, canExport, onUpgrade, o
   useEffect(() => {
     if (!loaded || autoRan.current || !tracks?.length) return;
     autoRan.current = true;
-    const fresh = tracks.filter((t) => !checks.some((c) => c.trackId === t.id && AUTO.includes(c.society)));
+    const fresh = tracks.filter((t) => !checks.some((c) => c.trackId === t.id && c.society === INTERNATIONAL.deezer.id));
     if (fresh.length) void runAll(fresh, false);
   }, [loaded]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -343,7 +344,6 @@ export function RoyaltyHealthCheck({ userId, canCatalog, canExport, onUpgrade, o
     const r = await runSongLookups({ data: { trackId } });
     const at = new Date().toISOString();
     upsert({ trackId, society: INTERNATIONAL.deezer.id, status: r.streaming ? "found" : "not_listed", source: "auto", details: r.streaming ?? {}, checkedAt: at });
-    upsert({ trackId, society: INTERNATIONAL.musicbrainz.id, status: r.work ? "found" : "not_listed", source: "auto", details: r.work ?? {}, checkedAt: at });
   }
 
   async function runOne(trackId: string) {
@@ -351,7 +351,7 @@ export function RoyaltyHealthCheck({ userId, canCatalog, canExport, onUpgrade, o
     try { await lookup(trackId); } catch { toast.error("The lookup didn't finish. Try again in a moment."); } finally { setRunning(undefined); }
   }
 
-  /** One song at a time: MusicBrainz allows about one request per second, so a catalog takes a little while. */
+  /** One song at a time, so a big catalog doesn't flood the streaming lookup. */
   async function runAll(list: CatalogTrack[] = tracks ?? [], announce = true) {
     let failed = 0;
     for (const [i, t] of list.entries()) {
@@ -441,7 +441,7 @@ export function RoyaltyHealthCheck({ userId, canCatalog, canExport, onUpgrade, o
         onPdf={() => downloadCheckupPdf(checkup, mostCommon(reportRows.map(({ r }) => r.track.artist)), country.name).catch(() => toast.error("Couldn't create the PDF. Try again."))} onAction={(a) => void act(a)} onExpert={book} onReminder={reminder}
         onAskCowriter={canCatalog && cowriters.length ? askCowriter : undefined} />
       {askDialog}
-      {running && <p className="text-sm text-muted-foreground">Looking up song {running.done + 1} of {running.total} on streaming and MusicBrainz…</p>}
+      {running && <p className="text-sm text-muted-foreground">Looking up song {running.done + 1} of {running.total} on streaming…</p>}
     </div>
   );
 
@@ -470,7 +470,7 @@ export function RoyaltyHealthCheck({ userId, canCatalog, canExport, onUpgrade, o
     <div className="space-y-6">
       {hub}
       {askDialog}
-      {running && <p className="text-sm text-muted-foreground">Looking up song {running.done + 1} of {running.total} on streaming and MusicBrainz…</p>}
+      {running && <p className="text-sm text-muted-foreground">Looking up song {running.done + 1} of {running.total} on streaming…</p>}
 
       <div className="space-y-3">
         <Section id="my-reports" title="My reports" summary={latest ? `${reports!.length} report${reports!.length === 1 ? "" : "s"} · latest ${shortDate(latest.createdAt)}: ${scopeName(latest.scope)} · ${latest.summary.lead ? `"${latest.summary.lead}"` : "Clean bill of health"} · ${latest.score}%` : "Run a Royalty Health Check on a song, a release or your whole catalog. Each report is kept here."}>

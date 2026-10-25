@@ -1,7 +1,6 @@
 import { auditTrack, type Issue, type Pillar } from "@/lib/audit";
 import type { CatalogTrack } from "@/lib/catalog";
-import { compareLookup, type Finding, type StreamingHit, type WorkHit } from "@/lib/lookups";
-import { creditName } from "@/lib/metadata";
+import { compareLookup, type Finding, type StreamingHit } from "@/lib/lookups";
 import { INTERNATIONAL, societyForPro, type Country, type Society } from "@/lib/repertoires";
 
 /** A saved repertoire check (public.repertoire_checks). */
@@ -33,11 +32,8 @@ export type TrackReport = {
   issues: Issue[];
   pillars: PillarRow[];
   streaming?: { hit: StreamingHit | null; checkedAt: string } | undefined;
-  work?: { hit: WorkHit | null; checkedAt: string } | undefined;
   findings: Finding[];
 };
-
-const writerNames = (t: CatalogTrack) => [...t.metadata.writers, ...t.metadata.composers].map(creditName).filter(Boolean);
 
 /** Societies a song should be found in for one pillar. Performance follows the writers' own PROs, wherever they are. */
 export function societiesFor(t: CatalogTrack, country: Country, pillar: Pillar): Society[] {
@@ -61,15 +57,13 @@ export function trackReport(t: CatalogTrack, country: Country, checks: Repertoir
   });
   const auto = (id: string) => { const c = mine.find((x) => x.society === id && x.source === "auto"); return c && { hit: c.status === "found" ? (c.details as never) : null, checkedAt: c.checkedAt }; };
   const streaming = auto(INTERNATIONAL.deezer.id) as TrackReport["streaming"];
-  const work = auto(INTERNATIONAL.musicbrainz.id) as TrackReport["work"];
-  const found = streaming || work ? compareLookup({ streaming: streaming?.hit ?? null, work: work?.hit ?? null }, {
-    title: t.title, artist: t.artist, isrc: t.metadata.isrc, iswc: t.metadata.iswc, writers: writerNames(t),
-  }) : [];
+  // Saved MusicBrainz results from before it was removed are ignored: they never count toward the score.
+  const found = streaming ? compareLookup({ streaming: streaming.hit }, { title: t.title, artist: t.artist, isrc: t.metadata.isrc }) : [];
   const findings = found;
   // When a lookup already says how to fix a field (e.g. "add ISWC T-…"), drop the vaguer data issue for that field.
   const covered = new Set(findings.filter((f) => f.level === "warn").map((f) => f.field));
   const shownIssues = issues.filter((i) => !(i.field && covered.has(i.field as never)));
-  return { track: t, issues: shownIssues, pillars: pillars.map((p) => ({ ...p, dataIssues: p.dataIssues.filter((i) => shownIssues.includes(i)) })), streaming, work, findings };
+  return { track: t, issues: shownIssues, pillars: pillars.map((p) => ({ ...p, dataIssues: p.dataIssues.filter((i) => shownIssues.includes(i)) })), streaming, findings };
 }
 
 /** 100% healthy: no data issues, no lookup warnings, and confirmed in a society for every pillar. */

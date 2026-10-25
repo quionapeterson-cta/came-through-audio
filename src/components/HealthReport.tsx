@@ -80,15 +80,15 @@ export function Guide({ society, pillar, country, title, onExpert, onDone }: { s
 }
 
 export function LiveRecords({ r, onRun, running }: { r: TrackReport; onRun: () => void; running: boolean }) {
-  const checked = r.streaming?.checkedAt ?? r.work?.checkedAt;
-  const s = r.streaming?.hit, w = r.work?.hit;
+  const checked = r.streaming?.checkedAt;
+  const s = r.streaming?.hit;
   return (
     <div className="space-y-3 rounded-2xl bg-muted p-4">
       <div className="flex items-center justify-between gap-2">
         <h4 className="text-sm font-extrabold uppercase tracking-[2px]">What the world sees</h4>
         <Button type="button" size="sm" variant="outline" disabled={running} onClick={onRun}><Radar className={running ? "animate-spin" : ""} />{checked ? "Re-check" : "Look up"}</Button>
       </div>
-      {!checked && <p className="text-sm text-muted-foreground">{running ? "Looking this song up…" : "We'll look this song up on streaming and in MusicBrainz, the open, volunteer music database."}</p>}
+      {!checked && <p className="text-sm text-muted-foreground">{running ? "Looking this song up…" : "We'll look this song up on streaming."}</p>}
       {checked && <>
         <div className="flex gap-3">
           {s?.cover ? <img src={s.cover} alt="" className="h-14 w-14 shrink-0 rounded-lg object-cover" /> : <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-lg bg-ink"><Disc3 className="h-6 w-6 text-primary" /></div>}
@@ -99,13 +99,7 @@ export function LiveRecords({ r, onRun, running }: { r: TrackReport; onRun: () =
             {s?.isrc && <div className="text-xs text-muted-foreground">ISRC {s.isrc}</div>}
           </div>
         </div>
-        <div className="text-sm">
-          <div className="font-bold">In MusicBrainz <span className="font-normal text-muted-foreground">(the open, volunteer music database)</span></div>
-          {w ? <div className="space-y-0.5">
-            <a href={w.link} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-primary underline">{w.workTitle ?? w.recordingTitle} on {INTERNATIONAL.musicbrainz.name}<ExternalLink className="h-3 w-3" /></a>
-            <div className="text-xs text-muted-foreground">{w.iswcs.length ? `ISWC ${w.iswcs.join(" / ")}` : "No ISWC on record"}{w.writers.length ? ` · Writers: ${w.writers.join(", ")}` : ""}</div>
-          </div> : <span className="text-muted-foreground">Not listed there. That's normal for independent releases and doesn't affect your royalties. Agencies like SoundExchange and The MLC don't let apps look songs up, so confirm those with the checklist steps.</span>}
-        </div>
+        <p className="text-xs text-muted-foreground">Agencies like SoundExchange and The MLC don't let apps look songs up, so confirm those with the checklist steps.</p>
       </>}
     </div>
   );
@@ -119,7 +113,7 @@ export function HealthReport({ report, country, running, canCatalog, onEmbed, ac
   const todos = todoList(report).filter((t) => !(t.kind === "confirm" && t.pillar === "performance" && needsPro(rowOf(t.track.id))));
   const needsWork = (r: TrackReport) => !(r.pillars.length && r.pillars.every((p) => p.state === "confirmed") && !r.issues.length && !r.findings.some((f) => f.level === "warn"));
   const ready = report.rows.filter((r) => !needsWork(r)).length;
-  const looked = report.rows.filter((r) => r.streaming || r.work).length;
+  const looked = report.rows.filter((r) => r.streaming).length;
   const counts = (["fix", "register", "confirm"] as const).map((k) => [k, todos.filter((t) => t.kind === k).length] as const);
   const where = inCountry(country);
 
@@ -148,7 +142,7 @@ export function HealthReport({ report, country, running, canCatalog, onEmbed, ac
               </div>
               <div className="flex flex-wrap items-center gap-3 text-sm text-ink-muted">
                 <Radar className={`h-4 w-4 ${running ? "animate-spin text-primary" : ""}`} />
-                {running ? `Looking up song ${running.done + 1} of ${running.total} on streaming and MusicBrainz…` : `Live lookups ran for ${looked} of ${report.rows.length} songs.`}
+                {running ? `Looking up song ${running.done + 1} of ${running.total} on streaming…` : `Live lookups ran for ${looked} of ${report.rows.length} songs.`}
                 {!running && <button type="button" onClick={actions.onRunAll} className="font-semibold text-ink-foreground underline hover:text-primary">Re-check all</button>}
               </div>
             </div>

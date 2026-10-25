@@ -78,7 +78,7 @@ export const COUNTRIES: Country[] = [
 ];
 
 /** "My country isn't listed": only the international checks apply. */
-export const OTHER_COUNTRY: Country = { code: "XX", name: "Other country", region: "Europe", societies: {}, note: "We don't list your local societies yet. Your streaming, MusicBrainz and ISWC checks still run, and you can still track your own PRO." };
+export const OTHER_COUNTRY: Country = { code: "XX", name: "Other country", region: "Europe", societies: {}, note: "We don't list your local societies yet. Your streaming check still runs, and you can still track your own PRO." };
 
 /** "in the United States", "in Germany". */
 export const inCountry = (c: Country) => c.code === OTHER_COUNTRY.code ? "" : ` in ${["US", "GB", "NL"].includes(c.code) ? "the " : ""}${c.name}`;

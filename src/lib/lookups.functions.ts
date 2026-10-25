@@ -20,7 +20,6 @@ export const runSongLookups = createServerFn({ method: "POST" })
     const now = new Date().toISOString();
     const rows = [
       { society: INTERNATIONAL.deezer.id, hit: result.streaming },
-      { society: INTERNATIONAL.musicbrainz.id, hit: result.work },
     ].map(({ society, hit }) => ({
       user_id: context.userId, track_id: t.id, society, source: "auto", status: hit ? "found" : "not_listed",
       details: (hit ?? {}) as never, checked_at: now,

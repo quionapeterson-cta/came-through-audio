@@ -46,32 +46,28 @@ describe("health report", () => {
     expect(all.registeredScore).toBe(100);
     expect(all.score).toBe(100);
   });
+  it("ignores MusicBrainz results saved before it was removed", () => {
+    const r = healthReport([track({ ...ready.metadata, iswc: "" })], US, [check("musicbrainz", "found", { recordingTitle: "Cut to the Feeling", artist: "Carly Rae Jepsen", iswcs: ["T-919.481.654-1"], writers: ["Simon Wilcox"], link: "" })]);
+    expect(r.rows[0]!.findings).toEqual([]);
+  });
   it("a society marked not listed needs action", () => {
     const r = healthReport([ready], US, [check("mlc", "not_listed")]);
     expect(r.rows[0]!.pillars.find((p) => p.pillar === "mechanical")!.state).toBe("missing");
     expect(r.needsAction).toBe(1);
-  });
-  it("turns saved lookups into findings", () => {
-    const r = healthReport([track({ ...ready.metadata, iswc: "" })], US, [check("musicbrainz", "found", { recordingTitle: "Cut to the Feeling", artist: "Carly Rae Jepsen", iswcs: ["T-919.481.654-1"], writers: ["Carly Rae Jepsen", "Simon Wilcox"], link: "" })]);
-    const text = r.rows[0]!.findings.map((f) => f.text).join(" ");
-    expect(text).toContain("T-919.481.654-1");
-    expect(text).toContain("Simon Wilcox");
   });
 });
 
 describe("lookups", () => {
   const responses: Record<string, unknown> = {
     "https://api.deezer.com/track/isrc:USUM71703861": { id: 1, title: "Cut To The Feeling", isrc: "USUM71703861", link: "https://www.deezer.com/track/1", artist: { name: "Carly Rae Jepsen" } },
-    "https://musicbrainz.org/ws/2/isrc/USUM71703861?inc=artist-credits&fmt=json": { recordings: [{ id: "r1", title: "Cut to the Feeling", "artist-credit": [{ name: "Carly Rae Jepsen" }] }] },
-    "https://musicbrainz.org/ws/2/recording/r1?inc=work-rels&fmt=json": { relations: [{ type: "performance", work: { id: "w1", title: "Cut to the Feeling", iswcs: ["T-919.481.654-1"] } }] },
-    "https://musicbrainz.org/ws/2/work/w1?inc=artist-rels&fmt=json": { relations: [{ type: "writer", artist: { name: "Carly Rae Jepsen" } }, { type: "writer", artist: { name: "Sir Nolan" } }] },
   };
   const fake = async (url: string) => url in responses ? new Response(JSON.stringify(responses[url])) : new Response("{}", { status: 404 });
 
-  it("looks up streaming, the composition, its ISWC and writers by ISRC", async () => {
-    const r = await lookupSong({ isrc: "US-UM7-17-03861", title: "Cut to the Feeling", artist: "Carly Rae Jepsen" }, fake, 0);
+  it("looks up streaming by ISRC, and never calls MusicBrainz", async () => {
+    const urls: string[] = [];
+    const r = await lookupSong({ isrc: "US-UM7-17-03861", title: "Cut to the Feeling", artist: "Carly Rae Jepsen" }, async (u: string) => { urls.push(u); return fake(u); });
     expect(r.streaming?.title).toBe("Cut To The Feeling");
-    expect(r.work).toMatchObject({ iswcs: ["T-919.481.654-1"], writers: ["Carly Rae Jepsen", "Sir Nolan"] });
+    expect(urls.some((u) => u.includes("musicbrainz"))).toBe(false);
   });
   it("falls back to a title-only streaming search when the artist search finds nothing", async () => {
     const extra: Record<string, unknown> = {
@@ -79,17 +75,17 @@ describe("lookups", () => {
       "https://api.deezer.com/track/7": { id: 7, title: "Big Booty Bouncing", isrc: "GX8KD2640648", artist: { name: "Karma Came" } },
     };
     const f = async (url: string) => url in extra ? new Response(JSON.stringify(extra[url])) : fake(url);
-    const r = await lookupSong({ title: "Big Booty Bouncing", artist: "Karma Came" }, f, 0);
+    const r = await lookupSong({ title: "Big Booty Bouncing", artist: "Karma Came" }, f);
     expect(r.streaming).toMatchObject({ title: "Big Booty Bouncing", artist: "Karma Came", isrc: "GX8KD2640648" });
   });
   it("returns nothing found rather than failing", async () => {
-    const r = await lookupSong({ isrc: "XX0000000000", title: "", artist: "" }, fake, 0);
-    expect(r).toEqual({ streaming: null, work: null });
+    const r = await lookupSong({ isrc: "XX0000000000", title: "", artist: "" }, fake);
+    expect(r).toEqual({ streaming: null });
   });
   it("flags a title that doesn't match streaming, but ignores case and feat. credits", () => {
-    const hit = { streaming: { title: "Cut To The Feeling (feat. Someone)", artist: "Carly Rae Jepsen", link: "" }, work: null };
-    expect(compareLookup(hit, { title: "Cut to the Feeling", artist: "Carly Rae Jepsen", writers: [] }).filter((f) => f.level === "warn")).toEqual([]);
-    const off = compareLookup({ ...hit, streaming: { ...hit.streaming, title: "Cut 2 the Feeling" } }, { title: "Cut to the Feeling", artist: "Carly Rae Jepsen", writers: [] });
+    const hit = { streaming: { title: "Cut To The Feeling (feat. Someone)", artist: "Carly Rae Jepsen", link: "" } };
+    expect(compareLookup(hit, { title: "Cut to the Feeling", artist: "Carly Rae Jepsen" }).filter((f) => f.level === "warn")).toEqual([]);
+    const off = compareLookup({ ...hit, streaming: { ...hit.streaming, title: "Cut 2 the Feeling" } }, { title: "Cut to the Feeling", artist: "Carly Rae Jepsen" });
     expect(off.some((f) => f.field === "title")).toBe(true);
   });
 });
