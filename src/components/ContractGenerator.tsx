@@ -1,11 +1,12 @@
 import { useState } from "react";
-import { AlertTriangle, Loader2, Lock, PenLine, Sparkles } from "lucide-react";
+import { AlertTriangle, Loader2, PenLine, ShoppingCart, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import { useServerFn } from "@tanstack/react-start";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { CONTRACT_DISCLAIMER, type Blueprint } from "@/lib/contract-blueprints";
-import { SCENARIO_MAX, SCENARIO_MIN, type GeneratedDraft, type GeneratorResult } from "@/lib/contract-generator";
+import { CONTRACT_PRICE, SCENARIO_MAX, SCENARIO_MIN, type GeneratedDraft, type GeneratorResult } from "@/lib/contract-generator";
+import { openCheckout } from "@/lib/checkout";
 import { generateContract } from "@/lib/contract-generator.functions";
 
 const EXAMPLE = "I'm paying a producer $500 for an exclusive beat for my song Bloodline. They keep 50% of the publishing, I own the master, and they get 3% of master royalties after I make my money back.";
@@ -15,8 +16,9 @@ const COMPANY_EXAMPLE = "A testimonial from an artist who used the app during be
  * Contract Generator (founder, 2026-10-25): describe the deal, get a draft from the closest blueprint with its fields
  * filled in, then finish it in the normal editor. The wording always comes from our blueprints.
  */
-export function ContractGenerator({ blueprints, unlocked, company = false, onUpgrade, onDraft, onUse }: {
-  blueprints: Blueprint[]; unlocked: boolean; company?: boolean; onUpgrade: () => void;
+export function ContractGenerator({ blueprints, unlocked, company = false, onDraft, onUse }: {
+  /** Catalog Management: the suggested blueprints open for free (drafts are still $3.99 each). */
+  blueprints: Blueprint[]; unlocked: boolean; company?: boolean;
   onDraft: (bp: Blueprint, draft: GeneratedDraft) => void; onUse: (bp: Blueprint) => void;
 }) {
   const generate = useServerFn(generateContract);
@@ -27,12 +29,17 @@ export function ContractGenerator({ blueprints, unlocked, company = false, onUpg
   const ready = scenario.trim().length >= SCENARIO_MIN;
 
   async function run() {
-    if (!unlocked) { onUpgrade(); return; }
     setBusy(true);
     setResult(undefined);
     try { setResult(await generate({ data: { scenario, company } })); }
     catch (e) { toast.error(e instanceof Error ? e.message : "The generator couldn't run. Try again."); }
     finally { setBusy(false); }
+  }
+
+  async function buy() {
+    if (result?.kind !== "draft" || !result.generationId) return;
+    try { await openCheckout({ kind: "contract", generationId: result.generationId }); }
+    catch (e) { toast.error(e instanceof Error ? e.message : "Checkout could not open. Contact support and we'll help right away."); }
   }
 
   const draft = result?.kind === "draft" ? result.draft : undefined;
@@ -44,13 +51,13 @@ export function ContractGenerator({ blueprints, unlocked, company = false, onUpg
         <h3 className="flex items-center gap-2 text-lg font-bold"><Sparkles className="h-5 w-5 text-primary" />Contract Generator</h3>
         <p className="text-sm text-muted-foreground">{company
           ? "Describe the agreement. We pick the right company template and fill in what you told us."
-          : "Tell us about your deal in your own words. We pick the right blueprint and fill in what you told us, then you check it and finish it."}</p>
+          : `Tell us about your deal in your own words. We pick the right blueprint and fill in what you told us. Seeing the match is free; the contract is ${CONTRACT_PRICE}, on any plan.`}</p>
       </div>
       <Textarea value={scenario} maxLength={SCENARIO_MAX} rows={4} onChange={(e) => setScenario(e.target.value)} placeholder={company ? COMPANY_EXAMPLE : EXAMPLE} aria-label="Describe your deal" />
       <div className="flex flex-wrap items-center justify-between gap-3">
         <p className="text-xs text-muted-foreground">Include who's involved, what each side gets (money, percentages, rights, credit), for how long, and your state.{result ? ` ${result.left} draft${result.left === 1 ? "" : "s"} left today.` : ""}</p>
-        <Button onClick={() => void run()} disabled={busy || (unlocked && !ready)}>
-          {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : unlocked ? <Sparkles className="h-4 w-4" /> : <Lock className="h-4 w-4" />}
+        <Button onClick={() => void run()} disabled={busy || !ready}>
+          {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
           {busy ? "Drafting…" : "Draft my contract"}
         </Button>
       </div>
@@ -68,7 +75,12 @@ export function ContractGenerator({ blueprints, unlocked, company = false, onUpg
             <ul className="ml-6 list-disc text-muted-foreground">{draft.notCovered.map((m) => <li key={m}>{m}</li>)}</ul>
             <p className="mt-1 text-xs text-muted-foreground">Add these with Edit terms, or ask a music attorney to.</p>
           </div>}
-          <Button onClick={() => onDraft(bp, draft)}><PenLine className="h-4 w-4" />Open my draft</Button>
+          {company
+            ? <Button onClick={() => onDraft(bp, draft)}><PenLine className="h-4 w-4" />Open my draft</Button>
+            : <div className="flex flex-wrap items-center gap-3">
+                <Button onClick={() => void buy()} disabled={!result || result.kind !== "draft" || !result.generationId}><ShoppingCart className="h-4 w-4" />Get this contract · {CONTRACT_PRICE}</Button>
+                <span className="text-xs text-muted-foreground">One contract, on any plan: edit it, send it for e-signature and keep the signed copy.</span>
+              </div>}
         </div>
       )}
 
@@ -79,7 +91,7 @@ export function ContractGenerator({ blueprints, unlocked, company = false, onUpg
             ? <ul className="grid gap-2">{result.suggestions.map(byId).filter((b): b is Blueprint => !!b).map((b) => (
                 <li key={b.id} className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border p-3">
                   <div className="min-w-0"><p className="font-semibold">{b.name}</p><p className="text-xs text-muted-foreground">{b.summary}</p></div>
-                  <Button size="sm" variant="outline" onClick={() => onUse(b)}><PenLine className="h-4 w-4" />Use this</Button>
+                  {(unlocked || company) && <Button size="sm" variant="outline" onClick={() => onUse(b)}><PenLine className="h-4 w-4" />Use this</Button>}
                 </li>))}</ul>
             : <p className="text-sm text-muted-foreground">Browse the {company ? "templates" : "blueprints"} below to find the closest one.</p>}
         </div>

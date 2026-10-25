@@ -43,3 +43,43 @@ describe("Contract Generator", () => {
     expect(schema.properties.parties.required).toEqual(["Artist", "Producer"]);
   });
 });
+
+describe("$3.99 generated contracts", () => {
+  it("checks out one contract_generator for the buyer's own draft and returns to Contracts", async () => {
+    const { checkoutInput, planCheckout } = await import("./stripe-mapping");
+    const id = "00000000-0000-4000-8000-000000000001";
+    expect(planCheckout(checkoutInput.parse({ kind: "contract", generationId: id }), "u1")).toMatchObject({
+      mode: "payment", items: [{ lookupKey: "contract_generator", quantity: 1 }], metadata: { userId: "u1", kind: "contract", generation: id }, returnTab: "learn", managed: true,
+    });
+    expect(() => checkoutInput.parse({ kind: "contract", generationId: "nope" })).toThrow();
+  });
+
+  it("turns a paid draft into one paid contract with both parties, once", async () => {
+    const { contractFromPurchase } = await import("./contract-generator.server");
+    const draft = cleanDraft(producer, false, "", { fields: { fee: "$500", songTitle: "Bloodline" }, parties: { Producer: "Jordan Lee" } });
+    const gen = { id: "g1", user_id: "u1", draft, contract_id: null as string | null, company: false };
+    const inserts: Record<string, unknown[]> = {};
+    const db = {
+      from(table: string) {
+        const q = {
+          select: () => q, eq: () => q,
+          maybeSingle: async () => ({ data: table === "contract_generations" ? gen : null }),
+          insert(row: unknown) { (inserts[table] ??= []).push(row); return { select: () => ({ single: async () => ({ data: { id: "k1" }, error: null }) }), error: null, then: (r: (v: unknown) => void) => r({ error: null }) }; },
+          update(row: { contract_id?: string }) { if (row.contract_id) gen.contract_id = row.contract_id; return { eq: async () => ({}) }; },
+        };
+        return q;
+      },
+    };
+    const purchase = { id: "p1", user_id: "u1", details: { generation: "g1" } };
+    expect(await contractFromPurchase(db as never, purchase)).toBe("k1");
+    expect(inserts["contracts"]?.[0]).toMatchObject({ user_id: "u1", blueprint: "producer-agreement", paid_purchase_id: "p1", fields: expect.objectContaining({ fee: "$500", songTitle: "Bloodline" }) });
+    expect(inserts["contract_parties"]?.[0]).toEqual([
+      expect.objectContaining({ role: "Artist", legal_name: "", is_owner: true, position: 0 }),
+      expect.objectContaining({ role: "Producer", legal_name: "Jordan Lee", is_owner: false, position: 1 }),
+    ]);
+    // Stripe retries the webhook: the same payment never makes a second contract.
+    expect(await contractFromPurchase(db as never, purchase)).toBe("k1");
+    expect(inserts["contracts"]).toHaveLength(1);
+    await expect(contractFromPurchase(db as never, { ...purchase, user_id: "someone else" })).rejects.toThrow();
+  });
+});

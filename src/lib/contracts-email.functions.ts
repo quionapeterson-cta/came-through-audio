@@ -24,7 +24,6 @@ export const sendContractInvite = createServerFn({ method: "POST" })
       console.error("has_tier failed:", tierErr);
       throw new Error(`Couldn't check your plan (${tierErr.message}). Contact support and we'll help right away.`);
     }
-    if (!canSend) throw new Error("Contract signature requests are included with Catalog Management.");
 
     const since = new Date(Date.now() - 86400000).toISOString();
     const { count: sentToday } = await context.supabase.from("contract_parties" as never).select("id", { count: "exact", head: true }).gte("invited_at", since);
@@ -44,6 +43,8 @@ export const sendContractInvite = createServerFn({ method: "POST" })
     const { data: contract } = await context.supabase.from("contracts" as never).select("*").eq("id", p.contract_id).maybeSingle();
     const k = contract as { title: string; status: string; is_company?: boolean } | null;
     if (!k || k.status !== "sent") throw new Error("Send the contract for signature first.");
+    // A $3.99 generated contract can request signatures on any plan.
+    if (!canSend && !(k as { paid_purchase_id?: string | null }).paid_purchase_id) throw new Error("Contract signature requests are included with Catalog Management, or with a $3.99 generated contract.");
 
     const { data: owner } = await context.supabase.from("profiles").select("stage_name, legal_name").eq("id", context.userId).maybeSingle();
     const from = k.is_company ? COMPANY_LEGAL_NAME : owner?.stage_name || owner?.legal_name || "A Came Through Audio member";

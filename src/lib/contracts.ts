@@ -32,6 +32,8 @@ export type Contract = {
   parties: ContractParty[];
   /** Came Through Audio, LLC's own agreement (Admin → Company Contracts), kept out of the founder's personal vault. */
   isCompany?: boolean;
+  /** A $3.99 generated contract: editable and sendable on any plan (set only by the payment webhook). */
+  paid?: boolean;
 };
 
 export const emptyParty = (role: string, isOwner = false): ContractParty => ({
@@ -39,12 +41,12 @@ export const emptyParty = (role: string, isOwner = false): ContractParty => ({
 });
 
 type PartyRow = { id: string; role: string; legal_name: string; email: string; is_owner: boolean; position: number; invited_at: string | null; signature_name: string | null; signature_hash: string | null; signed_at: string | null };
-type ContractRow = { id: string; blueprint: string; title: string; catalog_id: string | null; fields: Record<string, string> | null; body: string; status: ContractStatus; body_hash: string | null; sent_at: string | null; completed_at: string | null; updated_at: string; is_company?: boolean; contract_parties: PartyRow[] | null };
+type ContractRow = { id: string; blueprint: string; title: string; catalog_id: string | null; fields: Record<string, string> | null; body: string; status: ContractStatus; body_hash: string | null; sent_at: string | null; completed_at: string | null; updated_at: string; is_company?: boolean; paid_purchase_id?: string | null; contract_parties: PartyRow[] | null };
 
 function fromRow(r: ContractRow): Contract {
   return {
     id: r.id, blueprint: r.blueprint, title: r.title, catalogId: r.catalog_id, fields: r.fields ?? {}, body: r.body, status: r.status,
-    bodyHash: r.body_hash ?? "", sentAt: r.sent_at, completedAt: r.completed_at, updatedAt: r.updated_at, isCompany: !!r.is_company,
+    bodyHash: r.body_hash ?? "", sentAt: r.sent_at, completedAt: r.completed_at, updatedAt: r.updated_at, isCompany: !!r.is_company, paid: !!r.paid_purchase_id,
     parties: [...(r.contract_parties ?? [])].sort((a, b) => a.position - b.position).map((p) => ({
       id: p.id, role: p.role, legalName: p.legal_name, email: p.email, isOwner: p.is_owner, invitedAt: p.invited_at,
       signatureName: p.signature_name ?? "", signatureHash: p.signature_hash ?? "", signedAt: p.signed_at,

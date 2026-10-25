@@ -8,7 +8,8 @@ import {
 } from "./contract-generator";
 
 /**
- * Contract Generator. Catalog Management drafts from the customer blueprints; super admins draft company agreements.
+ * Contract Generator. Anyone signed in drafts from the customer blueprints ($3.99 to open each one as a contract);
+ * super admins draft company agreements for free.
  * Runs on Cloudflare Workers AI's free daily allowance (CLOUDFLARE_ACCOUNT_ID + CLOUDFLARE_AI_TOKEN). When the AI
  * isn't set up, is over its daily allowance or can't decide, people get the closest blueprints instead of an error.
  */
@@ -53,10 +54,8 @@ export const generateContract = createServerFn({ method: "POST" })
     if (data.company) {
       const { data: isSuper } = await context.supabase.rpc("has_role", { _user_id: context.userId, _role: "super_admin" });
       if (!isSuper) throw new Error("Only super admins can draft company agreements.");
-    } else {
-      const { data: tier } = await db.rpc("user_tier" as never, { _uid: context.userId } as never);
-      if ((tier as unknown as string) !== "management") throw new Error("The Contract Generator comes with Catalog Management.");
     }
+    // Customers on any plan can draft; opening the contract is $3.99 (createCheckoutSession kind "contract").
     const list: Blueprint[] = data.company ? COMPANY_BLUEPRINTS : BLUEPRINTS;
 
     const { count } = await db.from("contract_generations" as never).select("id", { count: "exact", head: true }).eq("user_id", context.userId).gte("created_at", startOfUtcDay());
@@ -70,8 +69,10 @@ export const generateContract = createServerFn({ method: "POST" })
       if (!bp) return suggest("None of our blueprints is an exact match for that deal. These are the closest ones; a music attorney can help with anything unusual.");
       const raw = await runAi(FILL_SYSTEM, fillPrompt(data.scenario, bp, data.company), fillSchema(bp, fillableFields(bp, data.company).map((f) => f.key)), 1500);
       if (!raw) return suggest("We couldn't fill that one in automatically. Pick a blueprint below to start it yourself.");
-      await db.from("contract_generations" as never).insert({ user_id: context.userId, blueprint_id: bp.id, company: data.company } as never);
-      return { kind: "draft", draft: cleanDraft(bp, data.company, pick?.reason ?? "", raw), left: Math.max(0, GENERATIONS_PER_DAY - used - 1) };
+      const draft = cleanDraft(bp, data.company, pick?.reason ?? "", raw);
+      // The draft (not the description) is kept so a paid checkout can turn it into the contract.
+      const { data: row } = await db.from("contract_generations" as never).insert({ user_id: context.userId, blueprint_id: bp.id, company: data.company, draft } as never).select("id").single();
+      return { kind: "draft", draft, left: Math.max(0, GENERATIONS_PER_DAY - used - 1), generationId: (row as { id: string } | null)?.id };
     } catch (e) {
       if (e instanceof AiUnavailable) return suggest("Automatic drafting is resting right now. Here are the closest blueprints to start from.");
       throw e;

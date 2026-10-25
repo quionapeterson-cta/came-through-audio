@@ -382,8 +382,13 @@ it down for things only a released song can have. Plan to write and approve befo
   fields still blank and "not covered by this blueprint" items. About 240 of the free 10,000 daily neurons per draft (≈40 a
   day for everyone), 10 per person per day (migration 20261025150000 logs drafts, never the description). Out of
   allowance or not set up → the 3 closest blueprints by keyword, never an error. Secrets: CLOUDFLARE_ACCOUNT_ID,
-  CLOUDFLARE_AI_TOKEN (Lovable Cloud → Secrets now, Cloudflare Worker after the move). Free with Catalog Management for
-  now; founder to decide whether it becomes a $3.99 add-on. Original plan notes below.
+  CLOUDFLARE_AI_TOKEN (Lovable Cloud → Secrets now, Cloudflare Worker after the move).
+  **Pricing (founder, 2026-10-25): $3.99 per contract on every plan, Catalog Management included** (not part of any plan,
+  so everyone can get a contract at a low cost). Seeing the match is free; paying (Stripe lookup key `contract_generator`,
+  one-time, Managed Payments) makes the webhook create that contract in My Contracts, marked paid (contracts.paid_purchase_id,
+  service role only), which lets it be edited, sent for e-signature and kept on any plan (migration 20261025160000:
+  send_contract + party insert policy + invite email accept paid contracts). Refunded before sending → locked again.
+  Super admin company drafts stay free. Original plan notes below.
 - **Contract Generator (founder, 2026-10-25): growth plan, no paid AI for now.** Catalog Management add-on, plus a free
   version for Super Admin (company signature block from 3.9, Georgia law). They describe their situation and a new contract
   opens in the normal contract editor (sign at the bottom, then Send), with the lawyer-review disclaimer on every draft.

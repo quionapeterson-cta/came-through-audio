@@ -7,6 +7,10 @@ import type { Blueprint } from "@/lib/contract-blueprints";
  * terms. Anything the deal needs that the blueprint doesn't cover is listed for them instead of written in.
  */
 
+/** Price per generated contract, any plan (lookup key contract_generator). Company drafts are free. */
+export const CONTRACT_PRICE = "$3.99";
+export const CONTRACT_LOOKUP_KEY = "contract_generator";
+
 /** Drafts per person per day (UTC), so one account can't use up the shared free allowance. */
 export const GENERATIONS_PER_DAY = 10;
 export const SCENARIO_MIN = 20;
@@ -29,7 +33,7 @@ export type GeneratedDraft = {
 
 /** What the generator returns: a draft, or the closest blueprints when the AI can't pick one or isn't available. */
 export type GeneratorResult =
-  | { kind: "draft"; draft: GeneratedDraft; left: number }
+  | { kind: "draft"; draft: GeneratedDraft; left: number; /** Customer drafts: the saved draft that checkout turns into a contract. */ generationId?: string | undefined }
   | { kind: "suggest"; suggestions: string[]; reason: string; left: number };
 
 /** The menu the AI picks from: one line per blueprint. */

@@ -51,6 +51,12 @@ async function checkoutCompleted(session: Stripe.Checkout.Session, env: StripeEn
     await startPause(await admin(), purchase, env);
     return;
   }
+  // Generated contract paid: create it in the buyer's My Contracts. A failure returns 500 so Stripe retries (it's paid for).
+  if (row.kind === "contract" && purchase) {
+    const { contractFromPurchase } = await import("@/lib/contract-generator.server");
+    await contractFromPurchase(db() as never, purchase);
+    return;
+  }
   // Expert Assistance: set up the intake, check every paid song and alert the user right away.
   if (row.kind === "expert" && purchase) {
     // Never fails the payment: if this can't run now, the checklist sets it up when the user opens it.
@@ -74,6 +80,10 @@ async function markRefunded(env: StripeEnv, charge: Stripe.Charge) {
   const { error } = await db().from("purchases")
     .update({ details: { ...purchase.details, refunded_at: new Date().toISOString() } } as never).eq("id", purchase.id);
   if (error) throw error;
+  // A refunded generated contract that hasn't gone out yet goes back to needing payment; sent ones stay as they are.
+  if (purchase.kind === "contract") {
+    await db().from("contracts").update({ paid_purchase_id: null } as never).eq("paid_purchase_id" as never, purchase.id as never).eq("status" as never, "draft" as never);
+  }
   if (purchase.kind === "renew") {
     const { undoEarlyRenewal } = await import("@/lib/retention.server");
     await undoEarlyRenewal(purchase, env);

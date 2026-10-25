@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { BRANDING_LOOKUP_KEY } from "@/lib/brand-kit";
+import { CONTRACT_LOOKUP_KEY } from "@/lib/contract-generator";
 import { assistanceItems, assistanceType, PRICE_TIER } from "@/lib/plans";
 import { PACKAGES, TRACKS_PER_KEY, packageSongs } from "@/lib/proof";
 import { ASSISTANCE_AGENCIES, MAX_NEW_SONGS, newSongKeys } from "@/lib/registration";
@@ -20,6 +21,8 @@ export const checkoutInput = z.discriminatedUnion("kind", [
   z.object({ kind: z.literal("vault"), months: z.number().int().min(1).max(3) }),
   // Personal Branding on split sheets: 12 months, bought once at a time (PLAN-master-notes 3.6).
   z.object({ kind: z.literal("branding") }),
+  // One generated contract, $3.99 on any plan: the server checks the draft is the buyer's own and not yet paid.
+  z.object({ kind: z.literal("contract"), generationId: z.string().uuid() }),
   // Renew now: next year's plan paid early. The server reads the plan and price from the user's own subscription.
   z.object({ kind: z.literal("renew") }),
   z.object({
@@ -41,7 +44,7 @@ export type CheckoutPlan = {
   /** Copied onto the Stripe session (and subscription) and back into purchases.details by the webhook. */
   metadata: Record<string, string>;
   /** Workspace tab to come back to after paying; "profile" returns to Profile → Brand kit. */
-  returnTab?: "protect" | "health" | "profile";
+  returnTab?: "protect" | "health" | "learn" | "profile";
   /**
    * Sold through Stripe Managed Payments (Link is merchant of record). Only fully automated digital products
    * qualify, so services our team delivers (Expert Assistance) are sold by Came Through Audio, LLC directly.
@@ -57,6 +60,9 @@ export function planCheckout(input: CheckoutInput, userId: string): CheckoutPlan
   }
   if (input.kind === "vault") {
     return { mode: "payment", items: [{ lookupKey: VAULT_LOOKUP_KEY, quantity: input.months }], metadata: { userId, kind: "vault", months: String(input.months) }, managed: true };
+  }
+  if (input.kind === "contract") {
+    return { mode: "payment", items: [{ lookupKey: CONTRACT_LOOKUP_KEY, quantity: 1 }], metadata: { userId, kind: "contract", generation: input.generationId }, returnTab: "learn", managed: true };
   }
   if (input.kind === "branding") {
     return { mode: "payment", items: [{ lookupKey: BRANDING_LOOKUP_KEY, quantity: 1 }], metadata: { userId, kind: "branding" }, returnTab: "profile", managed: true };

@@ -58,7 +58,8 @@ export function Contracts({ userId, unlocked, onUpgrade, company = false }: { us
   const load = async () => {
     setLoading(true);
     if (company) void loadCompanyTemplates().then(setTemplates).catch(() => {});
-    const [c, r, t] = await Promise.allSettled([unlocked ? listContracts({ company }) : Promise.resolve([]), company ? Promise.resolve([]) : listReceivedContracts(), company ? Promise.resolve([]) : listTracks()]);
+    // Everyone loads their own contracts: a $3.99 generated contract is theirs on any plan.
+    const [c, r, t] = await Promise.allSettled([listContracts({ company }), company ? Promise.resolve([]) : listReceivedContracts(), company ? Promise.resolve([]) : listTracks()]);
     if (c.status === "fulfilled") setContracts(c.value);
     if (r.status === "fulfilled") setReceived(r.value);
     if (t.status === "fulfilled") setTracks(t.value);
@@ -66,6 +67,15 @@ export function Contracts({ userId, unlocked, onUpgrade, company = false }: { us
     setLoading(false);
   };
   useEffect(() => { void load(); }, [unlocked]);
+  // Back from paying for a generated contract: show My Contracts, where the webhook puts it within a few seconds.
+  useEffect(() => {
+    const q = new URLSearchParams(window.location.search);
+    if (company || q.get("checkout") !== "success" || q.get("tab") !== "learn") return;
+    setView("contracts");
+    toast.success("Your contract is ready in My Contracts. It can take a few seconds to appear.");
+    const t = setTimeout(() => void load(), 6000);
+    return () => clearTimeout(t);
+  }, []);
 
   /** A new contract from a blueprint; a Contract Generator draft adds the details and names it filled in. */
   const start = (bp: Blueprint, draft?: GeneratedDraft) => {
@@ -103,7 +113,7 @@ export function Contracts({ userId, unlocked, onUpgrade, company = false }: { us
           {!unlocked && <Button size="sm" onClick={onUpgrade}><Lock className="h-4 w-4" />Unlock with Catalog Management</Button>}
         </div>
 
-        {view === "blueprints" && <ContractGenerator blueprints={company ? companyBlueprints : BLUEPRINTS} unlocked={unlocked} company={company} onUpgrade={onUpgrade} onDraft={start} onUse={(bp) => start(bp)} />}
+        {view === "blueprints" && <ContractGenerator blueprints={company ? companyBlueprints : BLUEPRINTS} unlocked={unlocked} company={company} onDraft={start} onUse={(bp) => start(bp)} />}
 
         {view === "blueprints" && (company
           ? <CompanyTemplates blueprints={companyBlueprints} edited={templates} onUse={start} onSaved={() => void loadCompanyTemplates().then(setTemplates)} />
@@ -115,13 +125,13 @@ export function Contracts({ userId, unlocked, onUpgrade, company = false }: { us
           ? <UpgradeLock className="" title="Blueprints" tier="management" onUpgrade={onUpgrade} text="Step-by-step guides to running your music business, from royalty registration to touring, plus home recording cheat sheets for every genre." />
           : <Guides />)}
 
-        {view === "contracts" && (!unlocked ? (
-          <Locked onUpgrade={onUpgrade} text="Build custom contracts from any blueprint, send them for e-signature and keep every signed copy in your vault." />
+        {view === "contracts" && (!unlocked && !contracts.length ? (
+          <Locked onUpgrade={onUpgrade} text="Build custom contracts from any blueprint, send them for e-signature and keep every signed copy in your vault. Or draft one with the Contract Generator for $3.99." />
         ) : loading ? <Spinner /> : (
           <section className="space-y-4">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <p className="text-sm text-muted-foreground">{company ? "Company agreements in progress and who still needs to sign. Start a new one from a template." : "Drafts and contracts waiting on signatures. Start a new one from any blueprint."}</p>
-              <Button onClick={() => setView("blueprints")}><Plus className="h-4 w-4" />New contract</Button>
+              <Button onClick={() => setView("blueprints")}><Plus className="h-4 w-4" />{unlocked ? "New contract" : "Generate a contract"}</Button>
             </div>
             {open.length === 0
               ? <Empty icon={FileSignature} text={company ? "No company agreements yet. Pick a template to send the first one." : "No contracts yet. Pick a blueprint to create your first one."} />
@@ -133,7 +143,7 @@ export function Contracts({ userId, unlocked, onUpgrade, company = false }: { us
           <div className="space-y-6">
             <section className="rounded-2xl border border-border p-5">
               <h3 className="mb-3 text-sm font-bold uppercase tracking-widest text-primary">{company ? "Signed company agreements" : "Your signed contracts"} <span className="opacity-70">{signed.length}</span></h3>
-              {!unlocked ? <p className="text-sm text-muted-foreground">Contracts you create with Catalog Management are stored here once everyone signs.</p>
+              {!unlocked && !signed.length ? <p className="text-sm text-muted-foreground">Contracts you create with Catalog Management or the Contract Generator are stored here once everyone signs.</p>
                 : signed.length === 0 ? <p className="text-sm text-muted-foreground">Fully signed contracts are locked and stored here, ready to download.</p>
                 : <ul className="grid gap-3">{signed.map((c) => <ContractRow key={c.id} contract={c} onOpen={() => setEditing(c)} />)}</ul>}
             </section>

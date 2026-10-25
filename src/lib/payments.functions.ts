@@ -153,6 +153,12 @@ export const createCheckoutSession = createServerFn({ method: "POST" })
     const origin = await appOrigin();
     if (data.kind === "renew") return renewCheckout(stripe, env, context.userId, (context.claims as { email?: string }).email, origin);
     const plan = planCheckout(data, context.userId);
+    if (data.kind === "contract") {
+      const { data: gen } = await context.supabase.from("contract_generations" as never).select("id, company, draft, contract_id").eq("id", data.generationId).eq("user_id", context.userId).maybeSingle();
+      const g = gen as { company: boolean; draft: unknown; contract_id: string | null } | null;
+      if (!g || g.company || !g.draft) throw new Error("That draft wasn't found. Draft it again and try once more.");
+      if (g.contract_id) throw new Error("You already have this contract. Open it in My Contracts.");
+    }
     if (data.kind === "branding") {
       // The add-on is for Catalog & Collaborate (Catalog Management already includes Personal Branding).
       const { data: tier } = await context.supabase.rpc("user_tier" as never, { _uid: context.userId } as never);
