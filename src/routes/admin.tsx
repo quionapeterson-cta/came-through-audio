@@ -16,6 +16,7 @@ import { BadgeSwitchboard } from "@/components/BadgeSwitchboard";
 import { PlansPanel } from "@/components/PlansPanel";
 import { TestimonialFilterPanel } from "@/components/TestimonialFilterPanel";
 import { TestimonialsEditor } from "@/components/TestimonialsEditor";
+import { AdminWelcome, TaskBell } from "@/components/AdminWelcome";
 import { TaskBankPanel } from "@/components/TaskBankPanel";
 import { RegistrationQueuePanel } from "@/components/RegistrationQueuePanel";
 import { supabase } from "@/integrations/supabase/client";
@@ -68,6 +69,8 @@ function AdminPage() {
   const access = role.data;
   const overview = useQuery({ queryKey: ["admin-overview", user?.id], queryFn: () => getAdminOverview(), enabled: !!access && access.role !== "hr_admin" });
   const [view, setView] = useState<Department | "all">("all");
+  const [activeTab, setActiveTab] = useState<string>();
+  useEffect(() => setActiveTab(undefined), [view]);
 
   if (loading || !user || role.isLoading) return <Center>Loading…</Center>;
   if (!access) {
@@ -88,6 +91,7 @@ function AdminPage() {
 
   return (
     <div className="min-h-screen bg-background">
+      {show("tasks") && <AdminWelcome me={user.id} onOpenTasks={() => setActiveTab("tasks")} />}
       <header className="bg-ink text-ink-foreground">
         <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-6 py-4">
           <div className="flex items-center gap-3">
@@ -98,6 +102,7 @@ function AdminPage() {
             </div>
           </div>
           <div className="flex items-center gap-3">
+            {show("tasks") && <TaskBell me={user.id} onOpenTasks={() => setActiveTab("tasks")} />}
             {isSuper && (
               <Select value={view} onValueChange={(v) => setView(v as Department | "all")}>
                 <SelectTrigger aria-label="Department" className="w-48 border-ink-border bg-transparent text-ink-foreground"><SelectValue /></SelectTrigger>
@@ -143,7 +148,7 @@ function AdminPage() {
 
         {overview.isError && <p className="mt-6 text-destructive">Couldn't load dashboard data.</p>}
 
-        <Tabs key={view} defaultValue={tabs[0]!.value} className="mt-8">
+        <Tabs key={view} value={activeTab && show(activeTab) ? activeTab : tabs[0]!.value} onValueChange={setActiveTab} className="mt-8">
           <TabsList className="h-auto flex-wrap justify-start gap-1 bg-muted p-1">
             {tabs.map((t) => (
               <TabsTrigger key={t.value} value={t.value} className="font-semibold data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">{t.label}</TabsTrigger>

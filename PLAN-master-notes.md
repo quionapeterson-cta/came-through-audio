@@ -311,7 +311,7 @@ says "You Came Through: your 12th signed split sheet", Badge Reference PDF lists
   lifetime access** (any tier) for Super Admin and the Head of Marketing; a tester checklist page (worked / didn't / notes); a
   tier-by-tier test plan proving each tier sees only its features.
 - **Department plan generator:** tasks → metric goals → milestone deadlines → progress bars; each 100% task earns a badge.
-- **Task priority, alerts and sign-in celebrations (founder, 2026-10-25) — PROPOSAL, awaiting approval:**
+- **Task priority, alerts and sign-in celebrations (founder, 2026-10-25) — ✅ APPROVED and BUILT 2026-10-25** (migration 20261025120000; hourly cron POST /api/public/cron/task-reminders with the CRON_SECRET bearer):
   - Every Task Bank task gets an **importance level** (Top priority · High · Normal · Low), an optional **deadline**, an
     **owner** (one staff member) and a **completed** date (migration: additive columns on `department_tasks`).
   - **On sign-in to Admin**, in this order: (1) any **Top priority** task assigned to you (or your department) that isn't

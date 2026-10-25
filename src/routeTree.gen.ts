@@ -34,6 +34,7 @@ import { Route as VerifyIdRouteImport } from './routes/verify.$id'
 import { Route as ShareOwnerCardRouteImport } from './routes/share.$owner.$card'
 import { Route as ApiPublicCronCatalogLapsesRouteImport } from './routes/api/public/cron/catalog-lapses'
 import { Route as ApiPublicCronRegistrationRemindersRouteImport } from './routes/api/public/cron/registration-reminders'
+import { Route as ApiPublicCronTaskRemindersRouteImport } from './routes/api/public/cron/task-reminders'
 import { Route as ApiPublicCronTrialRemindersRouteImport } from './routes/api/public/cron/trial-reminders'
 import { Route as ApiPublicPaymentsWebhookRouteImport } from './routes/api/public/payments/webhook'
 
@@ -164,6 +165,12 @@ const ApiPublicCronRegistrationRemindersRoute =
     path: '/api/public/cron/registration-reminders',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiPublicCronTaskRemindersRoute =
+  ApiPublicCronTaskRemindersRouteImport.update({
+    id: '/api/public/cron/task-reminders',
+    path: '/api/public/cron/task-reminders',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicCronTrialRemindersRoute =
   ApiPublicCronTrialRemindersRouteImport.update({
     id: '/api/public/cron/trial-reminders',
@@ -203,6 +210,7 @@ export interface FileRoutesByFullPath {
   '/share/$owner/$card': typeof ShareOwnerCardRoute
   '/api/public/cron/catalog-lapses': typeof ApiPublicCronCatalogLapsesRoute
   '/api/public/cron/registration-reminders': typeof ApiPublicCronRegistrationRemindersRoute
+  '/api/public/cron/task-reminders': typeof ApiPublicCronTaskRemindersRoute
   '/api/public/cron/trial-reminders': typeof ApiPublicCronTrialRemindersRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
 }
@@ -232,6 +240,7 @@ export interface FileRoutesByTo {
   '/share/$owner/$card': typeof ShareOwnerCardRoute
   '/api/public/cron/catalog-lapses': typeof ApiPublicCronCatalogLapsesRoute
   '/api/public/cron/registration-reminders': typeof ApiPublicCronRegistrationRemindersRoute
+  '/api/public/cron/task-reminders': typeof ApiPublicCronTaskRemindersRoute
   '/api/public/cron/trial-reminders': typeof ApiPublicCronTrialRemindersRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
 }
@@ -262,6 +271,7 @@ export interface FileRoutesById {
   '/share/$owner/$card': typeof ShareOwnerCardRoute
   '/api/public/cron/catalog-lapses': typeof ApiPublicCronCatalogLapsesRoute
   '/api/public/cron/registration-reminders': typeof ApiPublicCronRegistrationRemindersRoute
+  '/api/public/cron/task-reminders': typeof ApiPublicCronTaskRemindersRoute
   '/api/public/cron/trial-reminders': typeof ApiPublicCronTrialRemindersRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
 }
@@ -293,6 +303,7 @@ export interface FileRouteTypes {
     | '/share/$owner/$card'
     | '/api/public/cron/catalog-lapses'
     | '/api/public/cron/registration-reminders'
+    | '/api/public/cron/task-reminders'
     | '/api/public/cron/trial-reminders'
     | '/api/public/payments/webhook'
   fileRoutesByTo: FileRoutesByTo
@@ -322,6 +333,7 @@ export interface FileRouteTypes {
     | '/share/$owner/$card'
     | '/api/public/cron/catalog-lapses'
     | '/api/public/cron/registration-reminders'
+    | '/api/public/cron/task-reminders'
     | '/api/public/cron/trial-reminders'
     | '/api/public/payments/webhook'
   id:
@@ -351,6 +363,7 @@ export interface FileRouteTypes {
     | '/share/$owner/$card'
     | '/api/public/cron/catalog-lapses'
     | '/api/public/cron/registration-reminders'
+    | '/api/public/cron/task-reminders'
     | '/api/public/cron/trial-reminders'
     | '/api/public/payments/webhook'
   fileRoutesById: FileRoutesById
@@ -381,6 +394,7 @@ export interface RootRouteChildren {
   ShareOwnerCardRoute: typeof ShareOwnerCardRoute
   ApiPublicCronCatalogLapsesRoute: typeof ApiPublicCronCatalogLapsesRoute
   ApiPublicCronRegistrationRemindersRoute: typeof ApiPublicCronRegistrationRemindersRoute
+  ApiPublicCronTaskRemindersRoute: typeof ApiPublicCronTaskRemindersRoute
   ApiPublicCronTrialRemindersRoute: typeof ApiPublicCronTrialRemindersRoute
   ApiPublicPaymentsWebhookRoute: typeof ApiPublicPaymentsWebhookRoute
 }
@@ -562,6 +576,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicCronRegistrationRemindersRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/cron/task-reminders': {
+      id: '/api/public/cron/task-reminders'
+      path: '/api/public/cron/task-reminders'
+      fullPath: '/api/public/cron/task-reminders'
+      preLoaderRoute: typeof ApiPublicCronTaskRemindersRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/cron/trial-reminders': {
       id: '/api/public/cron/trial-reminders'
       path: '/api/public/cron/trial-reminders'
@@ -606,6 +627,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicCronCatalogLapsesRoute: ApiPublicCronCatalogLapsesRoute,
   ApiPublicCronRegistrationRemindersRoute:
     ApiPublicCronRegistrationRemindersRoute,
+  ApiPublicCronTaskRemindersRoute: ApiPublicCronTaskRemindersRoute,
   ApiPublicCronTrialRemindersRoute: ApiPublicCronTrialRemindersRoute,
   ApiPublicPaymentsWebhookRoute: ApiPublicPaymentsWebhookRoute,
 }
