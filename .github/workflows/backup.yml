@@ -1,0 +1,60 @@
+# Weekly backup of the database and every stored file to a private Cloudflare R2 bucket (PLAN-backups.md).
+# Runs Sundays 8:00 UTC (3–4 AM Eastern) and on demand (Actions → Weekly backup → Run workflow).
+# Secrets (repo Settings → Secrets and variables → Actions): SUPABASE_DB_URL, SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY,
+# R2_ACCOUNT_ID, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY, R2_BUCKET, BACKUP_PASSPHRASE.
+name: Weekly backup
+on:
+  schedule:
+    - cron: "0 8 * * 0"
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency: backup
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    env:
+      AWS_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+      AWS_DEFAULT_REGION: auto
+      R2: https://${{ secrets.R2_ACCOUNT_ID }}.r2.cloudflarestorage.com
+      BUCKET: ${{ secrets.R2_BUCKET }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+      - name: Database dump (Supabase's own tool, then encrypted)
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+          BACKUP_PASSPHRASE: ${{ secrets.BACKUP_PASSPHRASE }}
+        run: |
+          day=$(date -u +%Y-%m-%d)
+          mkdir dump
+          supabase db dump --db-url "$SUPABASE_DB_URL" -f dump/roles.sql --role-only
+          supabase db dump --db-url "$SUPABASE_DB_URL" -f dump/schema.sql
+          supabase db dump --db-url "$SUPABASE_DB_URL" -f dump/data.sql --use-copy --data-only
+          tar czf db.tgz dump && rm -rf dump
+          gpg --batch --yes --pinentry-mode loopback --passphrase "$BACKUP_PASSPHRASE" --symmetric --cipher-algo AES256 -o "db-$day.tgz.gpg" db.tgz
+          rm db.tgz
+          aws s3 cp "db-$day.tgz.gpg" "s3://$BUCKET/db/db-$day.tgz.gpg" --endpoint-url "$R2"
+      - name: Keep the newest 12 database backups
+        run: |
+          aws s3 ls "s3://$BUCKET/db/" --endpoint-url "$R2" | awk '{print $4}' | sort | head -n -12 | while read -r f; do
+            [ -n "$f" ] && aws s3 rm "s3://$BUCKET/db/$f" --endpoint-url "$R2"
+          done
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Stored files (only new ones)
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: |
+          # A separate folder, so only the Supabase client is installed (not the whole app).
+          mkdir -p "$RUNNER_TEMP/bk" && cp scripts/backup/storage.mjs "$RUNNER_TEMP/bk/" && cd "$RUNNER_TEMP/bk"
+          npm init -y >/dev/null && npm install --no-audit --no-fund @supabase/supabase-js@2 >/dev/null
+          aws s3api list-objects-v2 --bucket "$BUCKET" --prefix storage/ --endpoint-url "$R2" --query 'Contents[].Key' --output text | tr '\t' '\n' | grep -v '^None$' > existing.txt || true
+          node storage.mjs existing.txt
+          if [ -d storage-backup ]; then aws s3 cp storage-backup "s3://$BUCKET/storage/" --recursive --endpoint-url "$R2" --only-show-errors; fi

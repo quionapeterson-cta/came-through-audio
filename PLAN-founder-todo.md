@@ -29,6 +29,7 @@ All GitHub links need you logged in to GitHub (the repo is private). On each fil
 | 8 | [20261025160000 paid-contracts](https://github.com/quionapeterson-cta/came-through-audio/blob/main/supabase/migrations/20261025160000_f3b8d2a6-paid-contracts.sql) | $3.99 contracts on any plan |
 
 - [ ] Run db-check.sql again; send me a screenshot if anything still says MISSING.
+- [ ] Also run [20261025170000 launch-department](https://github.com/quionapeterson-cta/came-through-audio/blob/main/supabase/migrations/20261025170000_a9d4e2c7-launch-department.sql) (pre-launch milestones), then Admin → Task Bank → Load pre-launch milestones.
 - [ ] Refresh Admin → Plans (this list shows there too): open `plans-load.sql` in the Codespace file list (kept out of GitHub on purpose), select all, paste in SQL Editor, Run.
 
 ## 3. Stripe
@@ -71,6 +72,9 @@ Create each price in the **sandbox first**, test it, then in **live**. Until the
 - [ ] dash.cloudflare.com → AI → Workers AI → Use REST API → copy the Account ID.
 - [ ] Same page → Create a Workers AI API Token → copy it (shown once).
 - [ ] Lovable → Cloud → Secrets: add `CLOUDFLARE_ACCOUNT_ID` and `CLOUDFLARE_AI_TOKEN`. Until then the generator only suggests the closest blueprints.
+
+**Backups (new)**
+- [ ] Set up the weekly backup: 4 steps in [PLAN-backups.md](https://github.com/quionapeterson-cta/came-through-audio/blob/main/PLAN-backups.md) (R2 bucket, database address, passphrase, GitHub secrets), then Run workflow once.
 
 ## 5. Email, accounts and settings
 - [ ] Create the billing@camethroughaudio.com mailbox (billing emails send from it; refund requests go to it).
