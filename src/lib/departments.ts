@@ -95,7 +95,9 @@ export function viewDepartments(access: StaffAccess, view: Department | "all" = 
 /** Tabs for the caller, optionally narrowed to one department. Every department gets the Task Bank; super admins also get Company Contracts and Plans. */
 export function visibleTabs(access: StaffAccess, view: Department | "all" = "all"): { value: string; label: string }[] {
   const tabs = ADMIN_TABS.filter((t) => t.departments.some((d: Department) => access.departments.includes(d) && (view === "all" || d === view)));
-  const withTasks = viewDepartments(access, view).length ? [...tabs, { value: "tasks", label: "Task Bank" }] : tabs;
+  const base = viewDepartments(access, view).length ? [...tabs, { value: "tasks", label: "Task Bank" }] : tabs;
+  // Everyone on the team sees their own staff badges (Phase 4 item 6); nobody with no access at all gets a tab.
+  const withTasks = base.length ? [...base, { value: "recognition", label: "My Recognition" }] : base;
   // Company contracts and plans are for super admins only, in the all-departments view.
   return access.role === "super_admin" && view === "all" ? [...withTasks, { value: "company", label: "Company Contracts" }, { value: "plans", label: "Plans" }] : withTasks;
 }
