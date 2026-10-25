@@ -142,7 +142,7 @@ const CORE: BadgeDef[] = [
   { id: "full_ep", title: "Full EP", collection: "core", tier: "standard", milestone: "Every full EP (4 to 6 songs) in your catalog", action: "Catalog a full EP", metric: "fullEps", goal: 1, every: 1, artPending: true, src: `${P}/full_ep.webp`,
     description: "Every song on the EP, embedded and filed together. A complete project with your credits riding inside every track.",
     popup: "Full EP! The whole project came through." },
-  { id: "full_album", title: "Full Album", collection: "core", tier: "mega", milestone: "Every full album (8 or more songs) in your catalog", action: "Catalog a full album", metric: "fullAlbums", goal: 1, every: 1, artPending: true, src: `${P}/full_album.webp`,
+  { id: "full_album", title: "Full Album", collection: "core", tier: "mega", milestone: "Every full album (7 or more songs) in your catalog", action: "Catalog a full album", metric: "fullAlbums", goal: 1, every: 1, artPending: true, src: `${P}/full_album.webp`,
     description: "A whole album, every track embedded and filed. That's a body of work with your name on every song.",
     popup: "MEGA! A full album came through." },
 ];

@@ -141,10 +141,10 @@ describe("badge metrics", () => {
     expect(m["signaturesReceived"]).toBe(2);
   });
 
-  it("counts full EPs (4 to 6 songs) and albums (8+), using the track totals when entered", () => {
+  it("counts full EPs (4 to 6 songs) and albums (7+), using the track totals when entered", () => {
     const project = (name: string, n: number, total = "", ext = "mp3") => Array.from({ length: n }, (_, i) => track({ album: name, trackTotal: total, audioPath: `u/${name}/${i}.${ext}` }));
     const m = badgeMetrics(data({ tracks: [...project("EP", 5), ...project("Half", 4, "10"), ...project("LP", 8, "", "wav"), ...project("Seven", 7)] }));
-    expect(m).toMatchObject({ fullEps: 1, fullAlbums: 1, masterCrowns: 1 });
+    expect(m).toMatchObject({ fullEps: 1, fullAlbums: 2, masterCrowns: 1 });
     expect(badgeMetrics(data({ events: { agency_export: 0, master_download: 2, blueprint_read: 0 } }))["masterCrowns"]).toBe(1);
   });
 

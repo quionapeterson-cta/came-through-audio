@@ -57,7 +57,7 @@ const releases = (tracks: CatalogTrack[]) => albums(tracks).filter((list) => lis
 function fullProjects(tracks: CatalogTrack[]) {
   return albums(tracks).filter((list) => list.length >= Math.max(0, ...list.map((t) => Number(t.metadata.trackTotal) || 0)));
 }
-const EP_TRACKS = [4, 6], ALBUM_TRACKS = 8;
+const EP_TRACKS = [4, 6], ALBUM_TRACKS = 7;
 
 /** Every count the badges unlock on. Uses the shared readiness and health modules, never its own versions of them. */
 export function badgeMetrics(d: BadgeData): Record<string, number> {
