@@ -5,9 +5,15 @@
  */
 /** What each agency's own template or form requires, shown in its info box and beside each Export option. */
 export const EXPORT_REQUIRED = {
-  mlc: "The MLC's bulk upload requires: song title, each writer's legal name and role, a publisher name and publisher IPI on every writer's row (plus the HFA P# if you have one), and a collection share above 0%. Self-published without a publisher IPI? The MLC doesn't accept bulk uploads without one, so register those songs one at a time in The MLC Portal.",
+  mlc: "The MLC's bulk upload requires: song title, each writer's legal name and role, a publisher name and publisher IPI on every writer's row (plus the HFA P# if you have one), and a collection share above 0%. No publisher IPI (HFA only, BMI writers, or self-published)? We fill the placeholder IPI 123456789 so the file is accepted; remove it in The MLC Portal after the upload.",
   soundexchange: "SoundExchange's ingest form requires: artist, recording title, ISRC, basis of claim, percentage claimed, rights begin and end dates, release artist, release title, UPC and release label.",
   pro: "To register: song title, each writer's legal name, role, PRO and IPI, splits that total 100%, and a publisher (PRO, IPI and share) or Self-published. BMI also asks for duration, genre and the label once the song is released. If all the writers are with BMI, you don't need a publisher.",
+} as const;
+
+/** Notes shown when exporting to The MLC (founder-verified process, 2026-10-25). */
+export const MLC_EXPORT_NOTES = {
+  placeholder: "These songs have no publisher IPI, so the file uses the placeholder IPI 123456789 (and lists the writer as publisher when there's no publisher). It's only there so The MLC accepts the upload: after it goes through, open each song in The MLC Portal and remove the placeholder IPI.",
+  recording: "The MLC's bulk file has no place for the recording's release date or duration. Have them ready: after the upload, open each song in The MLC Portal and add them under its recording. Tip: close the song in My Catalog to see all its details on one row.",
 } as const;
 
 export const GLOSSARY = {

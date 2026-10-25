@@ -39,7 +39,7 @@ Embedding is forgiving; registration is strict. Never block a user from saving o
 - Registration assistance (our agents registering for the user) uses the stricter per-agency check `registrationCheck` in the same module, never the export gate. It builds on the core rules, always blocks on splits, and adds each agency's requirements (PLAN-registration-intake §5):
   - **ASCAP:** writer PRO + IPI, publisher (PRO + share) or Self-published, samples answered.
   - **BMI:** the ASCAP items plus publisher IPI (except that a song with no publisher needs neither a publisher nor Self-published when its writers are with BMI, whatever their role: BMI pays them the publisher share too), duration, genre, "written for film/TV/stage/ad" answered, and a label once released.
-  - **The MLC:** IPI for writers in a PRO, publisher or Self-published, ISRC.
+  - **The MLC:** IPI for writers in a PRO, publisher or Self-published (the exception: a song whose writers are all with BMI and has no publisher needs neither; the bulk file lists the writer as publisher with the placeholder IPI 123456789, removed in The MLC Portal after upload), ISRC.
   - **SoundExchange:** recording only, with no writer checks: ISRC, master share, UPC.
   - Saving, embedding and the user's own exports are never held to these.
 

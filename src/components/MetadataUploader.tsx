@@ -20,7 +20,9 @@ import type { RepertoireCheck } from "@/lib/health";
 import { HealthLiquid, HealthMeter } from "@/components/HealthMeter";
 import { DownloadCatalogButton } from "@/components/CatalogLapseBanner";
 import { deleteTrack, downloadCatalogFile, listTracks, safeName, saveTrack, uploadCatalogFile, type CatalogTrack } from "@/lib/catalog";
-import { AGENCY_LABEL, downloadAgencyExport, downloadNeighbouringPack, type Agency, type Held } from "@/lib/agency-export";
+import { AGENCY_LABEL, downloadAgencyExport, downloadNeighbouringPack, mlcPlaceholderSongs, recordExports, type Agency, type Held } from "@/lib/agency-export";
+import { AgencyExportDialog } from "@/components/AgencyExportDialog";
+import { MLC_EXPORT_NOTES } from "@/lib/glossary";
 import { registrationReadiness, type MissingItem } from "@/lib/readiness";
 import { isBmi } from "@/lib/audit";
 import { downloadLyricsPdf } from "@/lib/lyrics-pdf";
@@ -69,12 +71,19 @@ export function MetadataUploader({ onShareInfo, userId, mode = "embed", readOnly
   const formRef = useRef<HTMLFormElement>(null);
   const [filter, setFilter] = useState<"All" | "Single" | "EP" | "Album">("All");
   const [picked, setPicked] = useState<Set<string>>(new Set());
+  const [exportOpen, setExportOpen] = useState(false);
   const togglePick = (id: string) => setPicked((s) => { const n = new Set(s); if (n.has(id)) n.delete(id); else n.add(id); return n; });
   const runExport = (a: Agency, list: CatalogTrack[], name: string) => {
     if (!canExport) { setUpsell("export"); return; }
     downloadAgencyExport(a, list, safeName(name))
       .then((songs) => {
-        if (songs.length < list.length) logBadgeEvent("agency_export");
+        const sent = list.filter((t) => !songs.some((h) => h.track.id === t.id));
+        if (sent.length) { logBadgeEvent("agency_export"); void recordExports(a, sent.map((t) => t.id)).catch(() => {}); }
+        // The MLC: say which songs carry the placeholder publisher IPI, and what the file can't hold.
+        if (a === "mlc" && sent.length) {
+          const ph = mlcPlaceholderSongs(sent);
+          toast.info(`${ph.length ? `${MLC_EXPORT_NOTES.placeholder} (${ph.join(", ")}) ` : ""}${MLC_EXPORT_NOTES.recording}`, { duration: 20000 });
+        }
         if (songs.length) setHeld({ agency: a, songs, exported: list.length - songs.length });
         // Splits that don't add up to 100% are exported anyway, with a heads-up: agencies reject them.
         const off = list.filter((t) => !songs.some((h) => h.track.id === t.id) && registrationReadiness(t.metadata, a).warnings.length);
@@ -535,7 +544,19 @@ export function MetadataUploader({ onShareInfo, userId, mode = "embed", readOnly
         : full && userId ? (
           <div className="flex flex-wrap items-center gap-2">
           {/* 1-click agency export of the whole catalog: every song goes into the agency's template. */}
-          {tracks.length > 0 && exportMenu("Export whole catalog", tracks, "Full Catalog", "default")}
+          {tracks.length > 0 && (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild><Button type="button" variant="outline">{!canExport && <Lock />}Export whole catalog</Button></DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                {(["mlc", "soundexchange", "pro"] as Agency[]).map((a) => <DropdownMenuItem key={a} onClick={() => runExport(a, tracks, "Full Catalog")}>{AGENCY_LABEL[a]}<InfoTip title="Required fields" text={EXPORT_REQUIRED[a]} /></DropdownMenuItem>)}
+                <DropdownMenuItem onClick={() => runPack(tracks, "Full Catalog")}>Neighbouring Rights Pack (.csv)</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => (canExport ? setExportOpen(true) : setUpsell("export"))} className="flex-col items-start gap-0.5 border-t border-border">
+                  <span className="font-semibold">Choose a release or songs…</span>
+                  <span className="text-xs text-muted-foreground">Just the new album, picked singles, or songs not exported yet.</span>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
           <DropdownMenu>
             <DropdownMenuTrigger asChild><Button type="button"><Plus />Add song</Button></DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="max-w-xs">
@@ -695,6 +716,8 @@ export function MetadataUploader({ onShareInfo, userId, mode = "embed", readOnly
           )}
         </div>
       ); })()}
+      {full && <AgencyExportDialog open={exportOpen} onOpenChange={setExportOpen} tracks={tracks}
+        releases={groupProjects(tracks.filter((t) => releaseKind(t.metadata) !== "Single"))} run={runExport} />}
       <Dialog open={!!held} onOpenChange={(o) => !o && setHeld(undefined)}>
         <DialogContent className="bg-card text-card-foreground">
           <DialogHeader><DialogTitle className="text-xl font-bold">{held?.exported ? `Exported ${held.exported} ${held.exported === 1 ? "song" : "songs"}` : "Nothing exported yet"}</DialogTitle></DialogHeader>

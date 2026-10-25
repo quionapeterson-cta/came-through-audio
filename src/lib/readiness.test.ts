@@ -177,14 +177,18 @@ describe("per-agency registration checks", () => {
     expect(need(full({ selfPublished: false, publishers: [pub] }), "ascap")).toEqual([]);
     expect(need(full({ selfPublished: false, publishers: [pub] }), "bmi")).toEqual(["publishers-0-ipi"]);
   });
-  it("BMI writers of any role with no publisher need neither a publisher nor Self-published at BMI; ASCAP and The MLC still do", () => {
+  it("BMI writers of any role with no publisher need neither a publisher nor Self-published at BMI or The MLC; ASCAP still does", () => {
     const other = { Author: [writer({ pro: "BMI", role: "Composer", legalName: "Kim Roe" })], Composer: [writer({ pro: "BMI", role: "Author", legalName: "Kim Roe" })], "Author/Composer": [] };
     for (const role of ["Author", "Composer", "Author/Composer"] as const) {
       const m = full({ selfPublished: false, publishers: [], writers: [writer({ pro: "BMI", role, percentage: other[role].length ? "50" : "100" }), ...other[role].map((x) => ({ ...x, percentage: "50" }))] });
       expect(need(m, "bmi")).toEqual([]);
       expect(registrationCheck(m, "bmi", "2026-10-21").tips.map((t) => t.code)).toContain("publisher");
-      expect(need(m, "mlc")).toEqual(["selfPublished"]);
+      expect(need(m, "mlc")).toEqual([]);
+      expect(need(m, "ascap")).toContain("selfPublished");
     }
+    // BMI writers are the exception: one writer outside BMI and the song needs a publisher or Self-published at The MLC.
+    const mixed = full({ selfPublished: false, publishers: [], writers: [writer({ pro: "BMI", percentage: "50" }), writer({ pro: "ASCAP", legalName: "Kim Roe", percentage: "50" })] });
+    expect(need(mixed, "mlc")).toEqual(["selfPublished"]);
     expect(need(full({ selfPublished: false, publishers: [] }), "bmi")).toEqual(["selfPublished"]);
     const pub = { name: "Lee Songs", pro: "BMI", ipi: "00987654321", percentage: "100" };
     expect(need(full({ selfPublished: true, publishers: [pub], writers: [writer({ pro: "BMI" })] }), "bmi")).toEqual(["selfPublished"]);

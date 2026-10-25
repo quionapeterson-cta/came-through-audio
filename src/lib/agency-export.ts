@@ -39,8 +39,22 @@ const hms = (d: string) => {
 };
 
 /**
+ * The MLC's bulk file requires a publisher name and IPI on every writer's row. A publisher with no IPI (e.g. HFA only),
+ * or a song with no publisher (BMI writers paid the publisher share by BMI, or self-published), gets this placeholder so
+ * the file is accepted; the user removes it in The MLC Portal after the upload (founder-verified, 2026-10-25).
+ */
+export const MLC_PLACEHOLDER_IPI = "123456789";
+const mlcNeedsPlaceholder = (m: CatalogTrack["metadata"]) => {
+  const pubs = named(m.publishers);
+  return !pubs.length || pubs.some((p) => !ipi(p.ipi));
+};
+/** Titles whose MLC rows carry the placeholder publisher IPI, so the export can say which songs to tidy up. */
+export const mlcPlaceholderSongs = (tracks: CatalogTrack[]) => tracks.filter((t) => mlcNeedsPlaceholder(t.metadata)).map((t) => t.title || "Untitled");
+
+/**
  * Rows for the official MLC "Format" sheet (21 columns), one row per writer; title only on the first row of a work.
- * The publisher's HFA P# fills the MLC PUBLISHER NUMBER column, separate from its IPI.
+ * The publisher's HFA P# fills the MLC PUBLISHER NUMBER column, separate from its IPI. With no publisher, each writer
+ * is listed as their own publisher (legal name) with the placeholder IPI.
  */
 export function mlcRows(tracks: CatalogTrack[]): (string | number)[][] {
   const rows: (string | number)[][] = [];
@@ -54,7 +68,7 @@ export function mlcRows(tracks: CatalogTrack[]): (string | number)[][] {
       rows.push([
         i === 0 ? m.title : "", "", "", i === 0 ? m.iswc.replace(/[.\s-]/g, "").toUpperCase() : "", "", "",
         last.toUpperCase(), first.toUpperCase(), ipi(c.ipi), role, pub?.hfa?.trim().toUpperCase() ?? "",
-        pub?.name.toUpperCase() ?? "", pub ? ipi(pub.ipi) : "", "", "", "",
+        (pub?.name ?? c.name).toUpperCase(), (pub && ipi(pub.ipi)) || MLC_PLACEHOLDER_IPI, "", "", "",
         num(c.percentage), i === 0 ? m.title : "", i === 0 ? m.artist : "", i === 0 ? m.isrc.replace(/-/g, "").toUpperCase() : "", i === 0 ? m.label : "",
       ]);
     });
@@ -202,4 +216,19 @@ export async function downloadAgencyExport(agency: Agency, tracks: CatalogTrack[
   else if (agency === "soundexchange") save(await fillTemplate("/templates/ISRC_Ingest_Form.xlsx", "Form", 11, 11, soundExchangeRows(ready), [5]), `${name} - SoundExchange ISRC Ingest.xlsx`);
   else save(new Blob([proCheatSheet(ready)], { type: "text/csv;charset=utf-8" }), `${name} - BMI-ASCAP Registration Cheat Sheet.csv`);
   return held;
+}
+
+/** When each song was last exported to each agency: `${trackId}:${agency}` → ISO date. Empty until the migration runs. */
+export async function listExports(): Promise<Map<string, string>> {
+  const { supabase } = await import("@/integrations/supabase/client");
+  const { data } = await supabase.from("agency_exports" as never).select("track_id, agency, exported_at");
+  return new Map(((data ?? []) as { track_id: string; agency: string; exported_at: string }[]).map((r) => [`${r.track_id}:${r.agency}`, r.exported_at]));
+}
+
+/** Records an export of these songs (best effort: a failure never blocks the download). */
+export async function recordExports(agency: Agency, trackIds: string[]) {
+  if (!trackIds.length) return;
+  const { supabase } = await import("@/integrations/supabase/client");
+  const now = new Date().toISOString();
+  await supabase.from("agency_exports" as never).upsert(trackIds.map((track_id) => ({ track_id, agency, exported_at: now })) as never, { onConflict: "track_id,agency" });
 }

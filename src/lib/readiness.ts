@@ -126,6 +126,10 @@ export function registrationCheck(m: Metadata, agency: RegistrationAgency, today
   if (m.selfPublished && pubs.length) need("publisher", "You checked Self-published but also listed a publisher. Keep one.", "selfPublished");
   else if (!m.selfPublished && !pubs.length) {
     if (agency === "bmi" && listed(m).some(({ row }) => isBmi(row))) tip("publisher", "No publisher: BMI pays you the publisher share too, in proportion to your split.", "selfPublished");
+    // The MLC: BMI writers with no publisher still upload; the bulk file lists the writer as publisher with the
+    // placeholder IPI, removed in The MLC Portal afterwards (founder-verified, 2026-10-25), so it never costs health.
+    // Only when every writer is with BMI: BMI writers are the exception, everyone else needs a publisher or Self-published.
+    else if (agency === "mlc" && listed(m).length > 0 && listed(m).every(({ row }) => isBmi(row))) tip("publisher", "No publisher: BMI pays you the publisher share. The MLC file lists you as publisher with the placeholder IPI 123456789; remove it in The MLC Portal after the upload.", "selfPublished");
     else need("publisher", "Add the song's publisher, or check Self-published (no publisher).", "selfPublished");
   }
   for (const { row, index } of pubs) {

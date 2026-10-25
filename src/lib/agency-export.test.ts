@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { emptyMetadata } from "@/lib/metadata";
-import { mlcRows, neighbouringRows, proCheatSheet, soundExchangeRows } from "@/lib/agency-export";
+import { MLC_PLACEHOLDER_IPI, mlcPlaceholderSongs, mlcRows, neighbouringRows, proCheatSheet, soundExchangeRows } from "@/lib/agency-export";
 
 const track = (extra = {}) => ({ id: "1", title: "Song", artist: "Q", updatedAt: "", metadata: { ...emptyMetadata(), title: "Song", artist: "Q", releaseDate: "2026-03-14", isrc: "US-CTA-26-00001", upc: "012345678905",
   writers: [{ name: "", legalName: "Ann Lee", role: "Author/Composer", pro: "BMI", ipi: "00123456789", percentage: "100" }],
@@ -18,6 +18,13 @@ describe("agency exports", () => {
     expect(row[10]).toBe("P12345");
     expect(row[12]).toBe("00987654321");
     expect(mlcRows([track()])[0]![10]).toBe("");
+  });
+  it("MLC fills the placeholder IPI for an HFA-only publisher and lists a writer with no publisher as their own publisher", () => {
+    const hfaOnly = track({ publishers: [{ name: "Lee Songs", pro: "", ipi: "", percentage: "100", hfa: "P12345" }] });
+    expect(mlcRows([hfaOnly])[0]!.slice(11, 13)).toEqual(["LEE SONGS", MLC_PLACEHOLDER_IPI]);
+    const noPub = track({ publishers: [] });
+    expect(mlcRows([noPub])[0]!.slice(11, 13)).toEqual(["ANN LEE", MLC_PLACEHOLDER_IPI]);
+    expect(mlcPlaceholderSongs([track(), hfaOnly, noPub])).toEqual(["Song", "Song"]);
   });
   it("SoundExchange claims 100% as 1 with real dates and blank inception dates", () => {
     const row = soundExchangeRows([track({ featured: ["B"] })])[0]!;

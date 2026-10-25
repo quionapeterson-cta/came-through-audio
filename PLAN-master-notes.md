@@ -11,7 +11,7 @@ land on the passcode page · ✅ First Lyric Entry on every lyric · ✅ share l
 
 ---
 
-## PHASE 1 — 1-click agency exports
+## PHASE 1 — 1-click agency exports · ✅ approved and BUILT 2026-10-25 (migration 20261025100000 agency_exports to run)
 
 ### 1.1 Export your whole catalog, a release, or picked singles (one clear button)
 Today: exports exist per song, per release (Export Release on each EP/album card) and for checked songs (checkbox on each row →

@@ -30,8 +30,8 @@ describe("song health checklist", () => {
     const m = { publishers: [{ name: "", pro: "", ipi: "", percentage: "" }] };
     const steps = songChecklist(trackReport(track(m), us, []), us).steps;
     expect(steps.find((s) => s.id === "ready:performance")?.done).toBe(true);
-    // The MLC still needs a publisher or Self-published.
-    expect(steps.find((s) => s.id === "ready:mechanical")?.done).toBe(false);
+    // The MLC too: the bulk file lists the writer as publisher with the placeholder IPI (founder, 2026-10-25).
+    expect(steps.find((s) => s.id === "ready:mechanical")?.done).toBe(true);
     expect(songChecklist(trackReport(track({ ...m, selfPublished: true }), us, []), us).pct).toBe(100);
   });
   it("averages readiness across the catalog and counts ticked registrations", () => {
