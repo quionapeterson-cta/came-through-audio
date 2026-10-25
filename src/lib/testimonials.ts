@@ -84,3 +84,45 @@ export function cleanFilter(v: unknown): TestimonialFilter {
   }
   return out;
 }
+
+/** Limits that keep every card the same shape on the homepage (same fonts and sizes, no overflowing text). */
+export const TESTIMONIAL_LIMITS = { name: 40, title: 70, location: 40, service: 40, quote: 320 } as const;
+export const ZOOM_RANGE = { min: 1, max: 1.6 } as const;
+
+/** A testimonial as Marketing edits it in Admin → Homepage: published only with a signed release date. */
+export type EditableTestimonial = Testimonial & { id: string; published: boolean; releaseSignedOn: string };
+
+/** What blocks publishing a card, in plain words; empty when it's ready. */
+export function testimonialProblems(t: EditableTestimonial): string[] {
+  const out: string[] = [];
+  if (!t.name.trim()) out.push("Add the person's name.");
+  if (!t.quote.trim()) out.push("Add their quote.");
+  if (!t.service.trim()) out.push("Add the service it's about.");
+  if (!t.photo) out.push("Add a photo.");
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(t.releaseSignedOn)) out.push("Enter the date their Photo, Video & Testimonial Release was signed.");
+  for (const k of Object.keys(TESTIMONIAL_LIMITS) as (keyof typeof TESTIMONIAL_LIMITS)[]) {
+    if ((t[k] ?? "").length > TESTIMONIAL_LIMITS[k]) out.push(`Shorten the ${k} to ${TESTIMONIAL_LIMITS[k]} characters.`);
+  }
+  return out;
+}
+
+const str = (v: unknown, max: number) => (typeof v === "string" ? v.trim().slice(0, max) : "");
+/** Saved testimonials, cleaned: limits applied, safe photo URLs only, focus/zoom in range. Published only if ready. */
+export function cleanTestimonials(v: unknown): EditableTestimonial[] {
+  const list = Array.isArray(v) ? v.slice(0, 12) : [];
+  return list.map((raw, i): EditableTestimonial => {
+    const o = (raw && typeof raw === "object" ? raw : {}) as Record<string, unknown>;
+    const photo = typeof o["photo"] === "string" && /^(https:\/\/|\/)[^\s"'<>]+$/.test(o["photo"]) ? o["photo"] : "";
+    const focus = typeof o["focus"] === "string" && /^\d{1,3}% \d{1,3}%$/.test(o["focus"]) ? o["focus"] : "50% 30%";
+    const zoom = Math.min(ZOOM_RANGE.max, Math.max(ZOOM_RANGE.min, Number(o["zoom"]) || 1));
+    const t: EditableTestimonial = {
+      id: str(o["id"], 40) || `t${i}`, name: str(o["name"], TESTIMONIAL_LIMITS.name), title: str(o["title"], TESTIMONIAL_LIMITS.title),
+      location: str(o["location"], TESTIMONIAL_LIMITS.location), service: str(o["service"], TESTIMONIAL_LIMITS.service),
+      quote: str(o["quote"], TESTIMONIAL_LIMITS.quote), photo, focus, zoom, releaseSignedOn: str(o["releaseSignedOn"], 10), published: o["published"] === true,
+    };
+    return { ...t, published: t.published && testimonialProblems(t).length === 0 };
+  });
+}
+
+/** The current file entries as editable cards (their releases are signed; date recorded as the editor's start). */
+export const SEED_TESTIMONIALS: EditableTestimonial[] = TESTIMONIALS.map((t, i) => ({ ...t, id: `seed${i}`, published: true, releaseSignedOn: "2026-10-20" }));

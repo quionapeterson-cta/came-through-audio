@@ -10,7 +10,7 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/
 import { PlanComparison, planAction } from "@/components/PlanComparison";
 import { PLAN_FEATURES, PLAN_TIERS } from "@/lib/plans";
 import { DEFAULT_TESTIMONIAL_FILTER, TESTIMONIALS } from "@/lib/testimonials";
-import { getTestimonialFilter } from "@/lib/testimonials.functions";
+import { getTestimonialFilter, getTestimonials } from "@/lib/testimonials.functions";
 import { TestimonialCard } from "@/components/TestimonialCard";
 
 export const Route = createFileRoute("/")({
@@ -25,7 +25,10 @@ export const Route = createFileRoute("/")({
     ],
   }),
   // The shared testimonial photo filter, loaded with the page so photos never flash with the wrong look.
-  loader: () => getTestimonialFilter().catch(() => DEFAULT_TESTIMONIAL_FILTER),
+  loader: async () => {
+    const [filter, testimonials] = await Promise.all([getTestimonialFilter().catch(() => DEFAULT_TESTIMONIAL_FILTER), getTestimonials().catch(() => TESTIMONIALS)]);
+    return { filter, testimonials };
+  },
   component: Landing,
 });
 
@@ -62,7 +65,7 @@ const roles = [
 ];
 
 function Landing() {
-  const filter = Route.useLoaderData();
+  const { filter, testimonials } = Route.useLoaderData();
   const { siteLocked } = Route.useRouteContext();
   return (
     <div className="min-h-screen bg-background text-foreground">
@@ -155,14 +158,14 @@ function Landing() {
         </div>
       </section>
 
-      <section id="testimonials" className="scroll-mt-4 bg-muted/50 py-20">
+      {testimonials.length > 0 && <section id="testimonials" className="scroll-mt-4 bg-muted/50 py-20">
         <div className="mx-auto max-w-7xl px-6">
           <h2 className="text-center text-3xl font-bold md:text-4xl">What musicians are saying</h2>
           <div className="mt-12 grid gap-6 md:grid-cols-3">
-            {TESTIMONIALS.map((t) => <TestimonialCard key={t.name} t={t} filter={filter} />)}
+            {testimonials.map((t) => <TestimonialCard key={t.name} t={t} filter={filter} />)}
           </div>
         </div>
-      </section>
+      </section>}
 
       <section id="plans" className="scroll-mt-4 bg-background py-20">
         <div className="mx-auto max-w-6xl px-4 sm:px-6">

@@ -1,6 +1,6 @@
 # PLAN — Homepage testimonials editor · v1
 
-Status: **queued for later (founder, 2026-10-20). No code written yet.**
+Status: **BUILT 2026-10-25 (founder master notes 2.2).** Stored as site_settings "testimonials" (no new table); photos in the public site-media bucket (migration 20261025110000); Admin → Homepage editor with character limits, release date required to publish, live preview with the shared filter, tap-to-focus and zoom, order, undo.
 
 Marketing & Social Media and Branding update the homepage testimonials themselves, without a code change.
 

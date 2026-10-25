@@ -15,6 +15,7 @@ import { SupportTicketsPanel } from "@/components/SupportTicketsPanel";
 import { BadgeSwitchboard } from "@/components/BadgeSwitchboard";
 import { PlansPanel } from "@/components/PlansPanel";
 import { TestimonialFilterPanel } from "@/components/TestimonialFilterPanel";
+import { TestimonialsEditor } from "@/components/TestimonialsEditor";
 import { TaskBankPanel } from "@/components/TaskBankPanel";
 import { RegistrationQueuePanel } from "@/components/RegistrationQueuePanel";
 import { supabase } from "@/integrations/supabase/client";
@@ -170,7 +171,7 @@ function AdminPage() {
           </TabsContent>
           {show("support") && <TabsContent value="support"><SupportTicketsPanel /></TabsContent>}
           {show("badges") && <TabsContent value="badges"><BadgeSwitchboard /></TabsContent>}
-          {show("homepage") && <TabsContent value="homepage"><TestimonialFilterPanel /></TabsContent>}
+          {show("homepage") && <TabsContent value="homepage"><TestimonialsEditor /><TestimonialFilterPanel /></TabsContent>}
           {show("tasks") && <TabsContent value="tasks"><TaskBankPanel departments={viewDepartments(access, view)} /></TabsContent>}
           {show("company") && <TabsContent value="company"><Contracts userId={user.id} unlocked company onUpgrade={() => {}} /></TabsContent>}
           {show("plans") && <TabsContent value="plans"><PlansPanel /></TabsContent>}
