@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { Disclaimer } from "@/components/Disclaimer";
 import { useEffect, useState } from "react";
 import { Check, FileSignature, Loader2, LogOut, ShieldCheck } from "lucide-react";
 import { toast } from "sonner";
@@ -152,6 +153,7 @@ function SignPage() {
             )}
           </div>
         )}
+        <Disclaimer k="splits" className="mt-8" />
       </main>
     </div>
   );

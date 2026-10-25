@@ -322,6 +322,12 @@ says "You Came Through: your 12th signed split sheet", Badge Reference PDF lists
 - Onboarding Embed Defaults and Catalog Profile steps stress filling in as much as possible (add the rest later), with
   a "Profile N of 12 filled" progress line. Founder welcome message unchanged.
 
+## After Phase 3 (founder, 2026-10-25) · ✅ BUILT
+- Personal Branding add-on on every plan ($14.99/year): split sheets and the contracts they make; Catalog Management still includes it.
+- Embed clarity: errors pop up and scroll into view (Ctrl+Enter always answers); checklists say exactly what happened (embedded, downloaded, stored in My Catalog); "Save to My Catalog"; ticking AI Protection opens its $2.99 checkout after saving.
+- Disclaimers: one file (src/lib/disclaimers.ts) shown in every footer, under each workspace tab, beside exports, the Contract Generator, brand kit, split sheet signing, AI certificates (page, PDF, verify page) and badges; Terms of Service §7–15 added (no advice, no affiliation, contracts and generator, metadata/registrations/exports, AI certificates, branding materials, third parties, disputes between users, indemnification) and §16 liability excludes lost royalties. **Lawyer to review before launch.**
+- Founder to-do list: PLAN-founder-todo.md (GitHub + Admin → Plans), since the Claude Doc shows "browser not supported" for the founder.
+
 ## NEXT (after Phase 3): Pre-distribution health analysis (founder idea, 2026-10-25) · to plan
 A "This song isn't released yet" box on a song routes it to a **Release checklist** inside the Song Health Checklist,
 and the Royalty Health Report gets a pre-distribution reading alongside it: what to have ready before distributing

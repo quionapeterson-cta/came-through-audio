@@ -24,6 +24,7 @@ import { passwordValid } from "@/lib/password";
 import { PasswordField } from "@/components/PasswordField";
 import { RetentionControls } from "@/components/RetentionControls";
 import { BrandKit } from "@/components/BrandKit";
+import { Disclaimer } from "@/components/Disclaimer";
 
 export const Route = createFileRoute("/profile")({
   head: () => ({ meta: [{ title: "Profile — Came Through Audio" }, { name: "description", content: "Your artist profile, account and awards." }] }),
@@ -146,6 +147,7 @@ function ProfilePage() {
           </div>
         </>}>
           <BadgeShelf userId={user.id} size={size} onOpen={(s, list) => { setBadge(s); setBadgeList(list); }} />
+          <Disclaimer k="badges" />
         </Card>
       </main>
 

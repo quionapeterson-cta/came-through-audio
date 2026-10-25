@@ -7,6 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { CONTRACT_DISCLAIMER, type Blueprint } from "@/lib/contract-blueprints";
 import { CONTRACT_PRICE, SCENARIO_MAX, SCENARIO_MIN, type GeneratedDraft, type GeneratorResult } from "@/lib/contract-generator";
 import { openCheckout } from "@/lib/checkout";
+import { Disclaimer } from "@/components/Disclaimer";
 import { generateContract } from "@/lib/contract-generator.functions";
 
 const EXAMPLE = "I'm paying a producer $500 for an exclusive beat for my song Bloodline. They keep 50% of the publishing, I own the master, and they get 3% of master royalties after I make my money back.";
@@ -98,6 +99,7 @@ export function ContractGenerator({ blueprints, unlocked, company = false, onDra
       )}
 
       <p className="text-xs text-muted-foreground">The wording comes from our blueprints; the generator only fills in the details. Check every detail before you sign. {CONTRACT_DISCLAIMER}</p>
+      <Disclaimer k="generator" />
     </section>
   );
 }

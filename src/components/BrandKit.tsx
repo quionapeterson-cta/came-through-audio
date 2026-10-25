@@ -11,6 +11,7 @@ import { InfoTip } from "@/components/InfoTip";
 import { BRAND_FONTS, BRANDING_PRICE, emptyKit, isHex, kitFromRow, type BrandKit as Kit } from "@/lib/brand-kit";
 import { FONT_GROUPS } from "@/lib/brand-fonts";
 import { loadWebFont } from "@/lib/web-fonts";
+import { Disclaimer } from "@/components/Disclaimer";
 import { getBrandAccess } from "@/lib/brand-kit.functions";
 import { openCheckout } from "@/lib/checkout";
 import { TIER_LABEL, type Tier } from "@/lib/plans";
@@ -168,6 +169,8 @@ export function BrandKit({ userId, tier, artistName }: { userId: string; tier: T
           <Button variant="outline" size="sm" className="h-11" onClick={() => edit({ colors: [...kit.colors, kit.colors.length ? "#4D8CFF" : "#004AAD"] })}><Plus className="h-4 w-4" />Add color</Button>
         </div>
       </div>
+
+      <Disclaimer k="branding" />
 
       <div className="flex items-start justify-between gap-4 rounded-lg border border-border p-4">
         <div className="space-y-1">

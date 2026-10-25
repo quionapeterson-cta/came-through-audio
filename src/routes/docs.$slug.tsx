@@ -1,4 +1,5 @@
 import { planPrice } from "@/components/UpgradeLock";
+import { Disclaimer } from "@/components/Disclaimer";
 import { createFileRoute, Link, notFound } from "@tanstack/react-router";
 import { Check } from "lucide-react";
 import { BrandLogo } from "@/components/BrandLogo";
@@ -86,6 +87,7 @@ function DocPage() {
           <Link to="/privacy-policy" className="hover:text-ink-foreground">Privacy Policy</Link>
         </div>
         <div className="border-t border-ink-border py-6 text-center text-sm">© {new Date().getFullYear()} Came Through Audio, LLC</div>
+        <Disclaimer k="site" tone="ink" className="mx-auto max-w-4xl justify-center px-6 pb-8 text-center" />
       </footer>
     </div>
   );

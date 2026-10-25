@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { Disclaimer } from "@/components/Disclaimer";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { InfoTip } from "@/components/InfoTip";
@@ -104,6 +105,7 @@ export function AgencyExportDialog({ open, onOpenChange, tracks, releases, run }
           <ol className="mt-2 list-decimal space-y-1 pl-5">{AGENCY_UPLOAD_STEPS[agency].map((step) => <li key={step}>{step}</li>)}</ol>
         </details>
 
+        <Disclaimer k="exports" />
         <div className="flex justify-end gap-2">
           <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>Cancel</Button>
           <Button type="button" disabled={!chosen.length} onClick={() => { run(agency, chosen, name); onOpenChange(false); }}>Download {short(agency)} file</Button>

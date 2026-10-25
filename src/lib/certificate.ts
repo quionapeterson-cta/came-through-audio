@@ -3,6 +3,7 @@ import { buildOtsFile, download } from "@/lib/ots";
 import { makeZip } from "@/lib/zip";
 import { SITE_URL } from "@/lib/email-layout";
 import { trustedOrigin } from "@/lib/invite-limits";
+import { DISCLAIMERS } from "@/lib/disclaimers";
 
 export type Certificate = Database["public"]["Tables"]["ai_protection_certificates"]["Row"];
 type Credits = { writers?: string; composers?: string; producers?: string };
@@ -27,7 +28,8 @@ export async function saveCertificatePdf(c: Certificate) {
     "Keep your original proof videos unchanged: the fingerprints above match those exact files (and our stored copies, listed in your manifest).",
     c.ots_receipt ? `Bitcoin timestamp: submitted via OpenTimestamps (${c.ots_calendar}); anchors within a few hours.` : "Bitcoin timestamp: not available",
     c.ots_receipt ? "To verify on the Bitcoin blockchain: open opentimestamps.org, drop in the .ots file from your Bitcoin proof ZIP, then the proof-manifest.txt (not this PDF). It shows as pending for the first few hours." : "",
-    `Scan the QR code or visit ${verifyUrl(c.id)} to check this certificate.`];
+    `Scan the QR code or visit ${verifyUrl(c.id)} to check this certificate.`,
+    DISCLAIMERS.aiProtection];
   let y = 36;
   lines.forEach((l) => { const s = pdf.splitTextToSize(l, 130); pdf.text(s, 15, y); y += 6 * s.length + 3; });
   pdf.addImage(qr, "PNG", 150, 36, 45, 45);

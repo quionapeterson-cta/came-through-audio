@@ -36,6 +36,14 @@ import { BadgeViewer } from "@/components/BadgeViewer";
 import type { ShareInfo } from "@/components/BadgeCelebration";
 import { isBadgeImage, type CollectionId } from "@/lib/badges";
 import { UpgradeLock } from "@/components/UpgradeLock";
+import { Disclaimer } from "@/components/Disclaimer";
+import type { DisclaimerKey } from "@/lib/disclaimers";
+
+/** Which disclaimers sit under each workspace tab. */
+const TAB_DISCLAIMERS: Record<string, DisclaimerKey[]> = {
+  embed: ["embed"], catalog: ["embed", "readiness", "exports"], health: ["health", "expert"], protect: ["aiProtection"],
+  splits: ["splits"], learn: ["generator"],
+};
 import { CatalogLapseBanner } from "@/components/CatalogLapseBanner";
 import { inGrace, isPaused } from "@/lib/retention";
 
@@ -256,6 +264,11 @@ function Workspace() {
           <TabsContent value="health"><Health startView={search.view === "expert" || (search.tab === "health" && search.checkout === "success") ? "expert" : "check"} justPaid={search.tab === "health" && search.checkout === "success"} canCatalog={canCatalog} onFix={() => setTab("catalog")} onFixField={(trackId, field) => { setCatalogFix({ trackId, field }); setTab("catalog"); }} onAddSong={(newTitle, artist) => { setCatalogFix({ newTitle, artist, nonce: Date.now() }); setTab("catalog"); }} onEmbed={() => setTab("embed")} userId={user.id} purchases={purchases} canUtility={canCollect} onUpgrade={upgrade} onSplitSheet={(id) => { setSplitTrackId(id); setTab("splits"); }} start={healthStart} /></TabsContent>
           <TabsContent value="learn"><Learn userId={user.id} unlocked={hasTier(tier, "management")} onUpgrade={upgrade} /></TabsContent>
         </Tabs>
+        {/* The legal notes for the open tab, then the site-wide one (src/lib/disclaimers.ts). */}
+        <footer className="mt-12 space-y-2 border-t border-border pt-6">
+          {(TAB_DISCLAIMERS[tab] ?? []).map((k) => <Disclaimer key={k} k={k} />)}
+          <Disclaimer k="site" />
+        </footer>
       </main>
     </div>
   );

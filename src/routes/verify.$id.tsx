@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Disclaimer } from "@/components/Disclaimer";
 import { createFileRoute, Link, notFound } from "@tanstack/react-router";
 import { CheckCircle2, Download, ExternalLink, FolderOpen, Loader2, ShieldCheck, XCircle } from "lucide-react";
 import { toast } from "sonner";
@@ -111,6 +112,7 @@ function VerifyPage() {
         )}
 
         <p className="text-xs text-muted-foreground">Bitcoin timestamping proves this fingerprint existed at that time and hasn't changed since. It doesn't prove ownership by itself. Issued by <Link to="/" className="underline">Came Through Audio</Link>.</p>
+        <Disclaimer k="aiProtection" />
       </main>
     </div>
   );

@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { Disclaimer } from "@/components/Disclaimer";
 import { listTracks, type CatalogTrack } from "@/lib/catalog";
 import { Check, ChevronDown, Download, Loader2, Lock, Music2, Plus, Trash2, ShieldCheck, Video, Fingerprint, Link2, Gavel, AlertTriangle } from "lucide-react";
 
@@ -274,6 +275,7 @@ export function AIProtectionHub({ userId, purchases, justPaid, track }: { userId
             })}
           </ul>
         </div>
+        <Disclaimer k="aiProtection" className="basis-full" />
         {getPaymentsEnvironment() === "sandbox" && left === 0 && (
           <Button variant="outline" size="sm" onClick={() => setUnlocked((v) => !v)}>{unlocked ? "Exit test preview" : "Preview steps (Test Mode)"}</Button>
         )}

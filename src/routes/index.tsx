@@ -1,4 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { Disclaimer } from "@/components/Disclaimer";
 import { HOME_FAQS } from "@/lib/faq";
 import { Check, Music, Upload, Download, Infinity as InfinityIcon } from "lucide-react";
 import { SignupCard } from "@/components/SignupCard";
@@ -282,6 +283,7 @@ function Landing() {
           ))}
         </div>
         <div className="border-t border-ink-border py-6 text-center text-sm">© {new Date().getFullYear()} Came Through Audio, LLC</div>
+        <Disclaimer k="site" tone="ink" className="mx-auto max-w-4xl justify-center px-6 pb-8 text-center" />
       </footer>
     </div>
   );

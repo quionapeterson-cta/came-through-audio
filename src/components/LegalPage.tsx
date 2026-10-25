@@ -1,4 +1,5 @@
 import { Link } from "@tanstack/react-router";
+import { Disclaimer } from "@/components/Disclaimer";
 import { BrandLogo } from "@/components/BrandLogo";
 import type { ReactNode } from "react";
 
@@ -29,6 +30,7 @@ export function LegalPage({ title, updated, intro, sections }: { title: string; 
             </section>
           ))}
         </div>
+        <Disclaimer k="site" className="mt-12 border-t border-border pt-6" />
       </main>
     </div>
   );
