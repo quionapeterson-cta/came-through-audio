@@ -31,6 +31,6 @@ fits the article (free account, or the tier that article's task needs).
 `/blog/$slug` pages, sitemap route, Admin → Marketing can propose edits through the Task Bank. Written in batches of 20,
 each batch fact-checked against agency sites, founder review per batch.
 
-## Questions
-1. Blog name: "The Came Through Blog" or something else?
-2. Byline: "Came Through Audio" or the founder's name?
+## Decisions (founder, 2026-10-25)
+1. Name: **Came Through Blog**.
+2. Byline: **Karma Came, Came Through Audio**.

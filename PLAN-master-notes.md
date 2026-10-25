@@ -47,7 +47,7 @@ still gets 100% of the publisher share from BMI; an HFA-only publisher can uploa
   placeholder IPI, same note. *Question 1.*
 - Readiness stays the single shared module; this only changes what the MLC file writes and the wording.
 
-### 1.4 BMI writers get the publisher share only if they keep it (founder, 2026-10-25) — PROPOSAL, awaiting approval
+### 1.4 BMI writers get the publisher share only if they keep it (founder, 2026-10-25) — DECLINED by founder 2026-10-25: don't ask; we tell users that BMI writers with no publishing entity automatically get their publishing share (current rule and info box stay)
 Founder: BMI pays a writer the publisher share only when that writer actually keeps their publishing on the song (no
 publishing deal giving it to someone else). Today we assume it whenever every writer is with BMI and no publisher is listed.
 **Proposal (keeps the system intact: no new writer fields, one shared readiness module):**
@@ -233,7 +233,7 @@ contract) · 3 Adjust the wording if you need to · 4 Sign · 5 Send for signatu
   rendering now; you approve it before it goes live. New badges in this plan get art the same way.
 - Share cards on Facebook: fixed links pushed today; after Publish, test one link in the Facebook Sharing Debugger.
 
-### 3.7b Every task earns a badge, every time (founder, 2026-10-25) — PROPOSAL, awaiting approval
+### 3.7b Every task earns a badge, every time (founder, 2026-10-25) — APPROVED 2026-10-25 (first item of Phase 3)
 "Each task is work within itself and each time deserves a badge… we celebrate your wins." One **main badge per task**,
 awarded every single time; after every 10 of the same, the next art in that task's rotation takes over (the count and
 dates keep showing as ×N). Milestone badges (10, 25, 50…) stay on top as they are. The 6-month badge drops in Admin → Badges
