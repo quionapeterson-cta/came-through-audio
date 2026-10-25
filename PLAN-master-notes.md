@@ -47,9 +47,11 @@ still gets 100% of the publisher share from BMI; an HFA-only publisher can uploa
   placeholder IPI, same note. *Question 1.*
 - Readiness stays the single shared module; this only changes what the MLC file writes and the wording.
 
-**Phase 1 questions**
-1. For a BMI writer with no publisher and no HFA account, should the MLC file list the writer as their own publisher with the
-   placeholder IPI (like your HFA case), or leave those songs out with a note to register them one at a time in the Portal?
+**Phase 1 answers (founder, 2026-10-25)**
+1. BMI writer with no publisher and no HFA account: the MLC file lists the writer as their own publisher with the placeholder
+   IPI 123456789, and the export box says clearly it's a placeholder to remove in The MLC Portal after upload. (The MLC bulk
+   template marks PUBLISHER NAME * and PUBLISHER IPI NUMBER * as required, which is why the file needs them.) Founder will log in
+   to The MLC to triple-check the process.
 
 ---
 
@@ -134,10 +136,10 @@ still gets 100% of the publisher share from BMI; an HFA-only publisher can uploa
 Above each contract's fields, a numbered how-it-works strip: 1 Read the contract · 2 Fill in your details (they fill the
 contract) · 3 Adjust the wording if you need to · 4 Sign · 5 Send for signatures.
 
-**Phase 2 questions**
-2. One avatar (left) + next-badge card (right), or avatars on both sides of the artist name?
-3. OK to use free stock photos (Unsplash/Pexels) composited with our screenshots, or do you want to shoot/commission real
-   CTA users later and use stock only until then?
+**Phase 2 answers (founder, 2026-10-25)**
+2. The next badge sits in a **circle like the profile picture, on the left** of the artist name; when it's earned, the badge is
+   revealed there (locked badges show dimmed/silhouetted until then).
+3. Yes: free stock photos (Unsplash/Pexels) composited with our screenshots.
 
 ---
 
@@ -227,11 +229,12 @@ contract) · 3 Adjust the wording if you need to · 4 Sign · 5 Send for signatu
 - Passwords: 12 characters minimum. Two places: our sign-up/reset forms (I change), and Supabase → Authentication → Providers →
   Email → Minimum password length = 12 (you change; it's the real lock).
 
-**Phase 3 questions**
-4. Prorated upgrade: how long is the window (e.g. 30 days after purchase)? Stripe prorates automatically any time; is the
-   countdown about a CTA discount window?
-5. AI proof: stamp both fingerprints (recommended), or keep every original file?
-6. Help chat: OK to use an AI provider (estimate a few dollars a month at launch volume) with live-agent handoff?
+**Phase 3 answers (founder, 2026-10-25)**
+4. Prorated upgrade window: **30 days** (countdown from purchase).
+5. Stamp both fingerprints. It's still **one certificate and the same proof download** (manifest .txt + .ots + how to verify):
+   the one manifest simply lists two fingerprints (the original the user keeps, and the copy CTA stores), and the single Bitcoin
+   timestamp covers that manifest. No extra certificates or files.
+6. Help chat moves to Phase 4 (later).
 
 ---
 
@@ -256,6 +259,10 @@ contract) · 3 Adjust the wording if you need to · 4 Sign · 5 Send for signatu
   lifetime access** (any tier) for Super Admin and the Head of Marketing; a tester checklist page (worked / didn't / notes); a
   tier-by-tier test plan proving each tier sees only its features.
 - **Department plan generator:** tasks → metric goals → milestone deadlines → progress bars; each 100% task earns a badge.
+- **Help chat (native, later):** our own chat window inside the site (no outside chat product), answering from our FAQ, docs,
+  guides and plan pages (we feed it our content and it quotes it; nothing is trained from scratch), with live-agent handoff in
+  the staff queue and a support ticket when no agent is online. Needs an AI model API (e.g. a small, low-cost Claude model)
+  for the answers; content updates go live as soon as the pages change.
 - **Employee badges:** the 33 staff badges rendering now, then milestone badges per department.
 - **Backups and rebuilding:** the code is safe in GitHub (rebuild = clone, `bun install`, set secrets, deploy to Cloudflare per
   PLAN-cloudflare-hosting). What isn't safe yet: the database and stored files. Plan: a weekly automatic database dump and
