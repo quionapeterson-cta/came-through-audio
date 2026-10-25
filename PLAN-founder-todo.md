@@ -113,7 +113,7 @@ Publish in Lovable first, then test on the published site in the sandbox (card 4
 - [ ] Founding Member badge art (not made yet).
 
 ## 8. Decisions waiting on you
-- [ ] Refunds for the new buys: same 30-day full refund for the $14.99 Personal Branding and the $3.99 contracts? (A refunded contract locks again only if it hasn't been sent.) I'll add the wording to the Refund Policy and Terms.
+- [x] Refunds for the new buys: decided 2026-10-25, same 30-day full refund for the $14.99 Personal Branding and the $3.99 contracts. Refund Policy updated.
 - [ ] Cursive signatures: typed signatures on every contract PDF now use the same legible cursive as the company block. Keep, or company only?
 - [ ] Proof videos: certificates record both fingerprints (original and our stored copy). Okay, or also keep full originals up to 1 GB (storage cost)?
 - [ ] Help chat: start with the free search-based answer bot, or wait?
