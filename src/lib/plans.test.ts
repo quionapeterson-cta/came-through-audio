@@ -50,7 +50,7 @@ describe("plan comparison", () => {
     const { PLAN_TIERS } = await import("./plans");
     const [free, plus, collab] = PLAN_TIERS;
     const o = { onBuy: () => {}, onSignup: () => {} };
-    expect(planAction(collab!, { ...o, tier: undefined }).label).toBe("Sign up to start");
+    expect(planAction(collab!, { ...o, tier: undefined }).label).toBe("Sign up now");
     expect(planAction(plus!, { ...o, tier: "plus" })).toMatchObject({ label: "Current plan", disabled: true });
     expect(planAction(free!, { ...o, tier: "plus" })).toMatchObject({ label: "Included", disabled: true });
     expect(planAction(collab!, { ...o, tier: "plus" }).label).toBe("Upgrade");
