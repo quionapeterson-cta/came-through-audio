@@ -3,6 +3,7 @@
 Status: **Order APPROVED 2026-10-25 (founder).** Answers: milestones go in the Task Bank (yes); beta = 3 weeks from the second week of November (Mon Nov 9 – Thu Nov 26, Mon–Thu 12–2 PM; Thanksgiving is Thu Nov 26); no Head of Marketing yet, so Grant lifetime access is Super Admin only for now; outreach sender partnerships@ (yes).
 - Item 1 ✅ BUILT 2026-10-25: Launch department (super admin only) + Admin → Task Bank "Load pre-launch milestones" (22 tasks with deadlines); migration 20261025170000.
 - Item 3 ✅ BUILT 2026-10-25: Beta Tester Agreement (company template, lifetime plan + dates fields, lawyer review), Admin → Company Contracts → Beta testers (Grant lifetime access, super admin only; results per item), tester checklist at /beta by plan (migration 20261025180000 beta_feedback).
+- Item 4 ✅ BUILT 2026-10-25: Help chat v1 (free, no AI): Help button bottom left on every page (not Admin or signing pages), answers from the FAQ, glossary, Help Center and guide summaries by word matching, related questions, Was this helpful?, support ticket when it can't answer. Not logged yet (next step if wanted: record unanswered questions for the staff queue).
 - Item 2 ✅ BUILT 2026-10-25: weekly GitHub Action backup to a private Cloudflare R2 bucket (encrypted database, new files only), restore script; setup steps in PLAN-backups.md.
 Source: PLAN-master-notes.md Phase 4 (founder's master notes). Launch-critical items first; launch target after the Cloudflare move (before Nov 11).
 
