@@ -34,7 +34,8 @@ export const checkBadges = createServerFn({ method: "POST" })
       db.from("ai_protection_certificates").select("catalog_id, track_title, ots_receipt").eq("user_id", uid),
       db.from("badge_events" as never).select("kind").eq("user_id", uid),
       db.from("profiles").select("onboarding, stage_name, legal_name").eq("id", uid).maybeSingle(),
-      db.from("badge_settings" as never).select("badge_id").eq("enabled", false),
+      // Read with the server client: badge settings are staff-only rows, members only need the switched-off ids.
+      supabaseAdmin.from("badge_settings" as never).select("badge_id").eq("enabled", false),
       // Until the badge-log migration runs there's no log column; badges still work, just without per-earning dates.
       supabaseAdmin.from("user_badges" as never).select("badge_id, times, earned_at, seen_at, log").eq("user_id", uid)
         .then((r) => (r.error ? supabaseAdmin.from("user_badges" as never).select("badge_id, times, earned_at, seen_at").eq("user_id", uid) : r)),

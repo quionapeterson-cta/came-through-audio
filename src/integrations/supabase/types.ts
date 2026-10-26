@@ -393,6 +393,102 @@ export type Database = {
         }
         Relationships: []
       }
+      beta_feedback: {
+        Row: {
+          item_id: string
+          note: string
+          result: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          item_id: string
+          note?: string
+          result?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Update: {
+          item_id?: string
+          note?: string
+          result?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      brand_kits: {
+        Row: {
+          colors: string[]
+          font: string
+          logo_path: string | null
+          name: string
+          show_footer: boolean
+          tagline: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          colors?: string[]
+          font?: string
+          logo_path?: string | null
+          name?: string
+          show_footer?: boolean
+          tagline?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Update: {
+          colors?: string[]
+          font?: string
+          logo_path?: string | null
+          name?: string
+          show_footer?: boolean
+          tagline?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      calendar_events: {
+        Row: {
+          all_day: boolean
+          created_at: string
+          department: string | null
+          ends_at: string | null
+          id: string
+          notes: string
+          owner_id: string
+          starts_at: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          all_day?: boolean
+          created_at?: string
+          department?: string | null
+          ends_at?: string | null
+          id?: string
+          notes?: string
+          owner_id?: string
+          starts_at: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          all_day?: boolean
+          created_at?: string
+          department?: string | null
+          ends_at?: string | null
+          id?: string
+          notes?: string
+          owner_id?: string
+          starts_at?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       catalog_lapses: {
         Row: {
           created_at: string
@@ -536,6 +632,39 @@ export type Database = {
         }
         Relationships: []
       }
+      contract_generations: {
+        Row: {
+          blueprint_id: string | null
+          company: boolean
+          contract_id: string | null
+          created_at: string
+          draft: Json | null
+          id: string
+          purchase_id: string | null
+          user_id: string
+        }
+        Insert: {
+          blueprint_id?: string | null
+          company?: boolean
+          contract_id?: string | null
+          created_at?: string
+          draft?: Json | null
+          id?: string
+          purchase_id?: string | null
+          user_id: string
+        }
+        Update: {
+          blueprint_id?: string | null
+          company?: boolean
+          contract_id?: string | null
+          created_at?: string
+          draft?: Json | null
+          id?: string
+          purchase_id?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       contract_parties: {
         Row: {
           consent_at: string | null
@@ -641,6 +770,7 @@ export type Database = {
           fields: Json
           id: string
           is_company: boolean
+          paid_purchase_id: string | null
           sent_at: string | null
           status: string
           title: string
@@ -657,6 +787,7 @@ export type Database = {
           fields?: Json
           id?: string
           is_company?: boolean
+          paid_purchase_id?: string | null
           sent_at?: string | null
           status?: string
           title: string
@@ -673,6 +804,7 @@ export type Database = {
           fields?: Json
           id?: string
           is_company?: boolean
+          paid_purchase_id?: string | null
           sent_at?: string | null
           status?: string
           title?: string
@@ -731,6 +863,42 @@ export type Database = {
         }
         Relationships: []
       }
+      department_plans: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          department: string
+          goals: Json
+          id: string
+          period_end: string
+          period_start: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          department: string
+          goals?: Json
+          id?: string
+          period_end: string
+          period_start: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          department?: string
+          goals?: Json
+          id?: string
+          period_end?: string
+          period_start?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       department_tasks: {
         Row: {
           body: string
@@ -743,7 +911,9 @@ export type Database = {
           id: string
           importance: string
           owner_id: string | null
+          plan_id: string | null
           reminders_sent: string[]
+          repeat: string | null
           status: string
           title: string
           updated_at: string
@@ -759,7 +929,9 @@ export type Database = {
           id?: string
           importance?: string
           owner_id?: string | null
+          plan_id?: string | null
           reminders_sent?: string[]
+          repeat?: string | null
           status?: string
           title: string
           updated_at?: string
@@ -775,12 +947,22 @@ export type Database = {
           id?: string
           importance?: string
           owner_id?: string | null
+          plan_id?: string | null
           reminders_sent?: string[]
+          repeat?: string | null
           status?: string
           title?: string
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "department_tasks_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "department_plans"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       expert_gateways: {
         Row: {
@@ -1015,6 +1197,39 @@ export type Database = {
           songs?: Json
           status?: string
           writer_name?: string
+        }
+        Relationships: []
+      }
+      outreach_emails: {
+        Row: {
+          company: string
+          id: string
+          kind: string
+          sent_at: string
+          sent_by: string | null
+          subject: string
+          to_email: string
+          to_name: string
+        }
+        Insert: {
+          company?: string
+          id?: string
+          kind: string
+          sent_at?: string
+          sent_by?: string | null
+          subject: string
+          to_email: string
+          to_name?: string
+        }
+        Update: {
+          company?: string
+          id?: string
+          kind?: string
+          sent_at?: string
+          sent_by?: string | null
+          subject?: string
+          to_email?: string
+          to_name?: string
         }
         Relationships: []
       }
@@ -1613,29 +1828,32 @@ export type Database = {
         Row: {
           created_at: string
           email_domain: string | null
+          email_hash: string | null
           id: string
           inviter_id: string | null
           ip_hash: string | null
           source: string
-          user_id: string
+          user_id: string | null
         }
         Insert: {
           created_at?: string
           email_domain?: string | null
+          email_hash?: string | null
           id?: string
           inviter_id?: string | null
           ip_hash?: string | null
           source: string
-          user_id: string
+          user_id?: string | null
         }
         Update: {
           created_at?: string
           email_domain?: string | null
+          email_hash?: string | null
           id?: string
           inviter_id?: string | null
           ip_hash?: string | null
           source?: string
-          user_id?: string
+          user_id?: string | null
         }
         Relationships: []
       }
@@ -1790,6 +2008,36 @@ export type Database = {
           },
         ]
       }
+      work_queue: {
+        Row: {
+          item_ref: string
+          kind: string
+          note: string
+          state: string
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          item_ref: string
+          kind: string
+          note?: string
+          state: string
+          title?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Update: {
+          item_ref?: string
+          kind?: string
+          note?: string
+          state?: string
+          title?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
@@ -1850,6 +2098,7 @@ export type Database = {
         Args: { _dept: string; _user_id: string }
         Returns: boolean
       }
+      is_department_lead: { Args: { _user_id: string }; Returns: boolean }
       is_paused: { Args: { _uid: string }; Returns: boolean }
       is_room_host: {
         Args: { _room_id: string; _user_id: string }
@@ -1875,6 +2124,7 @@ export type Database = {
       norm_artist_name: { Args: { v: string }; Returns: string }
       paid_tier: { Args: { _env?: string; _uid: string }; Returns: string }
       reopen_contract: { Args: { _contract_id: string }; Returns: undefined }
+      sees_all_teams: { Args: { _user_id: string }; Returns: boolean }
       send_contract: { Args: { _contract_id: string }; Returns: string }
       sign_contract: {
         Args: { _party_id: string; _signature_name: string }
