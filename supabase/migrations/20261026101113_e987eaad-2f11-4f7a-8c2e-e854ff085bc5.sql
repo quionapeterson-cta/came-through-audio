@@ -1,0 +1,2 @@
+DROP POLICY IF EXISTS "Anyone signed in reads badge settings" ON public.badge_settings;
+CREATE POLICY "Badge managers read badge settings" ON public.badge_settings FOR SELECT TO authenticated USING (public.can_manage_badges(auth.uid()));
