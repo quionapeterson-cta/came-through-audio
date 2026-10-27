@@ -138,8 +138,9 @@ export function BrandKit({ userId, tier, artistName }: { userId: string; tier: T
 
       <div className="grid gap-5 md:grid-cols-2">
         <div className="space-y-2">
-          <Label htmlFor="bk-name" className="flex items-center gap-1.5">Name on the header<InfoTip text="Your artist, label or company name, as it should appear at the top of your documents." /></Label>
-          <Input id="bk-name" value={kit.name} maxLength={80} onChange={(e) => edit({ name: e.target.value })} />
+          <Label htmlFor="bk-name" className="flex items-center gap-1.5">Business or artist name on the header<InfoTip text="The name at the top of your branded contracts and split sheets: your business, label or artist name. It only changes this Branding Kit; your artist name in My Catalog, Embed Metadata and everywhere else stays the same." /></Label>
+          <Input id="bk-name" value={kit.name} maxLength={80} placeholder="Business or artist name" onChange={(e) => edit({ name: e.target.value })} />
+          <p className="text-xs text-muted-foreground">Starts as your artist name. Change it to your business name if you like; it's only used on documents with this kit.</p>
         </div>
         <div className="space-y-2">
           <Label htmlFor="bk-tagline" className="flex items-center gap-1.5">Tagline<InfoTip text="Optional. A short line under your name, like your slogan." /></Label>
