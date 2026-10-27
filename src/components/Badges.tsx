@@ -413,7 +413,7 @@ function StartOver({ userId }: { userId: string }) {
   async function run() {
     if (!(await confirmAction({
       title: "Reset all your badges?",
-      text: "Every badge you've earned is cleared and you start from scratch. Badges for work you still have (like songs in My Catalog) come back right away; the rest you earn again as you go. This can't be undone.",
+      text: "All of your badges will disappear, and you'll have to earn each one again from the start. Badges for work you still have saved, like songs in My Catalog, come back on their own. This can't be undone.",
       action: "Reset badges",
     }))) return;
     setBusy(true);
@@ -430,7 +430,7 @@ function StartOver({ userId }: { userId: string }) {
   return (
     <div className="space-y-2 border-t border-border pt-4">
       <p className="text-sm font-semibold">Start over</p>
-      <p className="text-xs text-muted-foreground">Clear every badge you've earned and see them all again as you rebuild your catalog.</p>
+      <p className="text-xs text-muted-foreground">⚠️ Resetting removes all of your badges. You'll earn them again, and see every celebration again, as you rebuild your catalog.</p>
       <Button type="button" variant="outline" size="sm" disabled={busy} onClick={run}>{busy ? "Resetting…" : "Reset my badges"}</Button>
     </div>
   );
