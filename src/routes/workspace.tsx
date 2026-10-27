@@ -93,8 +93,10 @@ function Workspace() {
   const [catalogFix, setCatalogFix] = useState<CatalogFocus>();
   // A Royalty Health Check started from My Catalog: opens the Hub on that song's (or release's, or the catalog's) check-in.
   const [healthStart, setHealthStart] = useState<HealthStart>();
+  /** My Catalog's "Continue Expert Registration" opens Royalty Health → Expert Help. */
+  const [openExpert, setOpenExpert] = useState(false);
   // Used once: leaving the tab clears it, so coming back opens the Hub itself.
-  useEffect(() => { if (tab !== "health") setHealthStart(undefined); }, [tab]);
+  useEffect(() => { if (tab !== "health") { setHealthStart(undefined); setOpenExpert(false); } }, [tab]);
   const { tier: realTier, purchases, loaded: billingLoaded, lapse, pauses, sub, plan, reload: reloadBilling } = useBilling(user?.id);
   const [previewTier, setPreviewTier] = useState<Tier | "real">("real");
   // The test-mode tier preview is for super admins only, so testers can't hand themselves a paid plan in the UI.
@@ -257,11 +259,11 @@ function Workspace() {
           </TabsContent>
           <TabsContent value="catalog" forceMount className="data-[state=inactive]:hidden">
             {!canCatalog && !catalogReadOnly ? <PlusLock title="My Catalog starts with Catalog Plus" onQuickCheck={openQuickCheck} onUpgrade={upgrade} /> : <>
-            <MetadataUploader key={catalogKey} userId={user.id} mode="catalog" canWav={hasTier(tier, "management")} readOnly={catalogReadOnly} onShareInfo={(i) => setTabShare((m) => ({ ...m, catalog: i }))} canSplit={canSplit} canExport={canCollect} focus={catalogFix} onFocused={() => setCatalogFix(undefined)} onSplitSheet={(t) => { setSplitTrackId(t.id); setTab("splits"); }} onProtect={(t) => { setProtectTrack(t); setTab("protect"); }} onHealthCheck={(trackId, release) => { setHealthStart({ trackId, release, nonce: Date.now() }); setTab("health"); }} /></>}
+            <MetadataUploader key={catalogKey} userId={user.id} mode="catalog" canWav={hasTier(tier, "management")} readOnly={catalogReadOnly} onShareInfo={(i) => setTabShare((m) => ({ ...m, catalog: i }))} canSplit={canSplit} canExport={canCollect} focus={catalogFix} onFocused={() => setCatalogFix(undefined)} onSplitSheet={(t) => { setSplitTrackId(t.id); setTab("splits"); }} onProtect={(t) => { setProtectTrack(t); setTab("protect"); }} onHealthCheck={(trackId, release) => { setHealthStart({ trackId, release, nonce: Date.now() }); setTab("health"); }} onExpert={() => { setOpenExpert(true); setTab("health"); }} /></>}
           </TabsContent>
           <TabsContent value="protect"><AIProtectionHub userId={user.id} purchases={purchases} justPaid={search.checkout === "success" && search.tab === "protect"} track={protectTrack} /></TabsContent>
           <TabsContent value="splits"><SplitSheets userId={user.id} canSplit={canSplit} canCollect={canCollect} prefillTrackId={splitTrackId} onUpgrade={upgrade} /></TabsContent>
-          <TabsContent value="health"><Health startView={search.view === "expert" || (search.tab === "health" && search.checkout === "success") ? "expert" : "check"} justPaid={search.tab === "health" && search.checkout === "success"} canCatalog={canCatalog} onFix={() => setTab("catalog")} onFixField={(trackId, field) => { setCatalogFix({ trackId, field }); setTab("catalog"); }} onAddSong={(newTitle, artist) => { setCatalogFix({ newTitle, artist, nonce: Date.now() }); setTab("catalog"); }} onEmbed={() => setTab("embed")} userId={user.id} purchases={purchases} canUtility={canCollect} onUpgrade={upgrade} onSplitSheet={(id) => { setSplitTrackId(id); setTab("splits"); }} start={healthStart} /></TabsContent>
+          <TabsContent value="health"><Health startView={openExpert || search.view === "expert" || (search.tab === "health" && search.checkout === "success") ? "expert" : "check"} justPaid={search.tab === "health" && search.checkout === "success"} canCatalog={canCatalog} onFix={() => setTab("catalog")} onFixField={(trackId, field) => { setCatalogFix({ trackId, field }); setTab("catalog"); }} onAddSong={(newTitle, artist) => { setCatalogFix({ newTitle, artist, nonce: Date.now() }); setTab("catalog"); }} onEmbed={() => setTab("embed")} userId={user.id} purchases={purchases} canUtility={canCollect} onUpgrade={upgrade} onSplitSheet={(id) => { setSplitTrackId(id); setTab("splits"); }} start={healthStart} /></TabsContent>
           <TabsContent value="learn"><Learn userId={user.id} unlocked={hasTier(tier, "management")} onUpgrade={upgrade} /></TabsContent>
         </Tabs>
         {/* The legal notes for the open tab, then the site-wide one (src/lib/disclaimers.ts). */}

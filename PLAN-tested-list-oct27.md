@@ -1,6 +1,6 @@
 # PLAN — Founder testing list, sorted by urgency · v1
 
-Status: **sorted 2026-10-27, awaiting approval of the order.** Drop box built (Level 0).
+Status: **order approved 2026-10-27; Level 1 in progress.** Drop box built (Level 0).
 Source: founder testing notes, 2026-10-27. Every item from the list is here once; nothing was dropped.
 
 How to read this: work goes top to bottom. **Level 1** is broken or wrong data, so it's fixed first. **Level 2** is
@@ -22,6 +22,8 @@ build is wrapped. Items marked ❓ need a decision from you first.
 ## Level 1 — Broken or wrong data (fix first)
 
 Writer and readiness code is involved, so per the project rules I list the files and findings before editing.
+
+**Items 1–5 built 2026-10-27** (findings approved): typed songs link to their order by title, every order song stays listed, catalog songs in an order show what's left with Continue Expert Registration; saved writers/publishers/producers fill in by name in Embed and My Catalog; a restored Embed draft takes current profile details + Start fresh; Embed shows no split warnings; Contributor Library gains usual role + split, fills itself from saved songs (blanks only) and is in My Catalog. Needs migration 20261027180000. Item 6 (HFA): nothing found counting it; waiting on where it was seen.
 
 1. **Expert Registration lost a song.** Two songs submitted; the fully cataloged one was marked registered and the other
    disappeared. Fix: a song that isn't ready stays in the request with "Fix and continue", and its catalog entry shows a
@@ -87,7 +89,7 @@ Writer and readiness code is involved, so per the project rules I list the files
 - A foolproof agent process so no data or users get mixed up: one queue item per user, the user's name and song list on
   screen while working, checkboxes per step.
 - Passwords for agency accounts made for users: a new password per user, kept in a staff-only, encrypted field on that
-  user's registration record, never shown to other users. ❓ Approve.
+  user's registration record, never shown to other users. **Approved 2026-10-27.**
 - Two-step verification: choose email; the code arrives at registrations@.
 - Making sure we're linked to the right user when they add us as their representative: a per-user reference code to
   include, checked by the agent.
@@ -145,15 +147,15 @@ protect you · My certificates.
 
 ## Level 4 — New features and business plans (after the build is wrapped)
 
-- **More branding kits:** ❓ the list says $8.99 for each kit after the first, and also $13.99 (instead of $14.99) when
-  offered with a $3.99 contract. Which price applies where?
-- **Split sheet trial:** ❓ 2 weeks instead of 30 days, or keep 30 days and offer 10% off to buy right after accepting.
-  My recommendation: keep 30 days (the invite copy and legal terms already promise it) and add the 10% offer.
+- **More branding kits:** **$13.99 per kit per year** (founder, 2026-10-27), offered from the contract generator and the
+  Contracts & Blueprints tab with every $3.99 contract; users can add as many kits as they need.
+- **Split sheet trial:** keep the 30-day trial; add **10% off, good for 14 days** after accepting it (approved 2026-10-27).
 - **Badge award system overhaul**, including the lyric badge bug (First Lyric Entry given every time, showing 5),
   new Royalty Health badges (your tier series), the badge creation process written up as BADGE_PROCESS.md, and the
   badge prompt library saved in Admin for super admins and Marketing.
-- ❓ **"React" in Admin** for Marketing and Branding to generate badges, locked to super admins, and possibly offered on
-  the free plan. What does "React" mean here — a specific app or tool? Tell me and I'll plan it.
+- **React in Admin:** React is the free AI tool the founder uses to make badges. Plan: a launcher in Admin for super
+  admins, Marketing and Branding, with the badge prompt library next to it, and a how-to for free-plan users.
+  ❓ Send the React link so the launcher opens the right place.
 - **Branding & 1-on-1 coaching:** guided worksheet staff fill in with the user, then generated brand guidelines, a
   branding bible, a One Sheet and an Artist Menu. Branding Power Session walkthrough slots with a video engine.
 - **Consultation and email consultation service** (plan for later).

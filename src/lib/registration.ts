@@ -110,3 +110,16 @@ export const ACCESS_STEPS: Record<string, { where: string; steps: string[]; perm
 /** Writers as they'll be registered: legal name (role, share). */
 export const writerLine = (m: Metadata) =>
   m.writers.filter(creditName).map((w) => `${creditName(w)} (${w.role || "—"}${w.percentage ? `, ${w.percentage}%` : ""})`).join(", ");
+
+const sameTitle = (a: string, b: string) => a.trim().replace(/\s+/g, " ").toLowerCase() === b.trim().replace(/\s+/g, " ").toLowerCase();
+
+/**
+ * A song typed at checkout links itself once it's in My Catalog (founder, 2026-10-27: it seemed to disappear when it had
+ * to be picked by hand). Only an exact title match that is unique and not already in the order counts; anything else
+ * stays for the user to pick.
+ */
+export function catalogMatch(pendingTitle: string | null, tracks: { id: string; title: string }[], taken: (string | null)[]): string | undefined {
+  if (!pendingTitle?.trim()) return undefined;
+  const hits = tracks.filter((t) => !taken.includes(t.id) && sameTitle(t.title, pendingTitle));
+  return hits.length === 1 ? hits[0]!.id : undefined;
+}

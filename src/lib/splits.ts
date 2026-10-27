@@ -256,33 +256,49 @@ export async function signCollaborator(collaborator: SplitCollaborator, typedNam
 
 // ---------- Saved contributor library ----------
 export const CONTRIBUTOR_KINDS = ["Writer", "Composer", "Producer", "Artist", "Publisher", "Label"] as const;
-export type SavedContributor = { id?: string; name: string; kind: string; email: string; pro: string; ipi: string; publisher: string; label: string };
+/** `role` and `share` (a writer's usual role and split) are for writers, so a saved writer fills in a song in one go. */
+export type SavedContributor = { id?: string; name: string; kind: string; email: string; pro: string; ipi: string; publisher: string; label: string; role?: string; share?: string };
 
 export async function listContributors(): Promise<SavedContributor[]> {
   const { data, error } = await supabase.from("contributors" as never).select("*").order("name");
   if (error) throw error;
-  return ((data ?? []) as unknown as { id: string; name: string | null; kind: string | null; email: string | null; pro: string | null; ipi: string | null; publisher: string | null; label: string | null }[]).map((r) => ({
+  return ((data ?? []) as unknown as { id: string; name: string | null; kind: string | null; email: string | null; pro: string | null; ipi: string | null; publisher: string | null; label: string | null; role?: string | null; share?: string | null }[]).map((r) => ({
     id: r.id, name: r.name ?? "", kind: r.kind ?? "Writer", email: r.email ?? "",
-    pro: r.pro ?? "", ipi: r.ipi ?? "", publisher: r.publisher ?? "", label: r.label ?? "",
+    pro: r.pro ?? "", ipi: r.ipi ?? "", publisher: r.publisher ?? "", label: r.label ?? "", role: r.role ?? "", share: r.share ?? "",
   }));
 }
 
-/** Upsert contributors into the user's library (keyed by name + kind). Empty fields never overwrite saved values. */
-export async function saveContributors(userId: string, list: SavedContributor[]) {
+const WRITER_KINDS = ["Writer", "Composer"];
+
+/**
+ * Upsert contributors into the user's library (keyed by name + kind). Empty fields never overwrite saved values.
+ * `fillOnly` (songs saved in My Catalog or Embed, founder 2026-10-27) goes further: what's already saved is never
+ * changed, only blanks fill, and a writer already saved as Writer or Composer is updated in place, not added twice.
+ */
+export async function saveContributors(userId: string, list: SavedContributor[], { fillOnly = false } = {}) {
   const clean = list.filter((c) => c.name.trim());
   if (!clean.length) return;
   const existing = await listContributors().catch(() => [] as SavedContributor[]);
+  const same = (e: SavedContributor, c: SavedContributor) =>
+    e.name.trim().toLowerCase() === c.name.trim().toLowerCase() && (e.kind === c.kind || (fillOnly && WRITER_KINDS.includes(e.kind) && WRITER_KINDS.includes(c.kind)));
   const rows = clean.map((c) => {
-    const prev = existing.find((e) => e.name.toLowerCase() === c.name.trim().toLowerCase() && e.kind === c.kind);
-    const pick = (a: string, b?: string) => (a.trim() || b || null);
+    const prev = existing.find((e) => same(e, c));
+    const pick = (a = "", b = "") => (fillOnly ? b || a.trim() : a.trim() || b) || null;
     return {
-      user_id: userId, name: c.name.trim(), kind: c.kind,
+      user_id: userId, name: fillOnly && prev ? prev.name : c.name.trim(), kind: fillOnly && prev ? prev.kind : c.kind,
       email: pick(c.email, prev?.email), pro: pick(c.pro, prev?.pro), ipi: pick(c.ipi, prev?.ipi),
       publisher: pick(c.publisher, prev?.publisher), label: pick(c.label, prev?.label),
+      role: pick(c.role, prev?.role), share: pick(c.share, prev?.share),
       updated_at: new Date().toISOString(),
     };
   });
-  const { error } = await supabase.from("contributors" as never).upsert(rows as never, { onConflict: "user_id,name,kind" });
+  // Unique by name + kind, so two rows in one save can't collide.
+  const unique = [...new Map(rows.map((r) => [`${r.name.toLowerCase()}|${r.kind}`, r])).values()];
+  let { error } = await supabase.from("contributors" as never).upsert(unique as never, { onConflict: "user_id,name,kind" });
+  // Before migration 20261027180000 adds role and share, save everything else.
+  if (error && /role|share/.test(error.message)) {
+    ({ error } = await supabase.from("contributors" as never).upsert(unique.map(({ role: _r, share: _s, ...r }) => r) as never, { onConflict: "user_id,name,kind" }));
+  }
   if (error) throw error;
 }
 

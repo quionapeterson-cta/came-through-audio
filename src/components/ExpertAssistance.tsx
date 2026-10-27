@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { Check, ChevronDown, ClipboardCheck, Copy, ExternalLink, FileSignature, Lock, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -12,7 +12,7 @@ import { openCheckout } from "@/lib/checkout";
 import { creditName } from "@/lib/metadata";
 import { isBmi } from "@/lib/audit";
 import {
-  ACCESS_STEPS, ASSISTANCE_AGENCIES, MAX_NEW_SONGS, REPRESENTATIVE, SONG_STATUS_LABEL, intakeStep, missingFor, orderAgencies, writerLine,
+  ACCESS_STEPS, ASSISTANCE_AGENCIES, MAX_NEW_SONGS, REPRESENTATIVE, SONG_STATUS_LABEL, catalogMatch, intakeStep, missingFor, orderAgencies, writerLine,
   type NewSong, type RegistrationOrder, type RegistrationSong,
 } from "@/lib/registration";
 import {
@@ -180,6 +180,21 @@ function Checklist({ purchase, tracks, justPaid, onFix, onCatalog, onAddSong }: 
   }, [purchase.id]);
   useEffect(() => { void load(); }, [load]);
 
+  // A song typed at checkout links itself once a catalog song with that exact title exists (tried once per song).
+  const tried = useRef(new Set<string>());
+  useEffect(() => {
+    const taken = songs.map((s) => s.track_id);
+    const links = songs.flatMap((s) => {
+      if (s.track_id || s.submitted_at || tried.current.has(s.id)) return [];
+      const id = catalogMatch(s.pending_title, tracks, taken);
+      if (!id) return [];
+      tried.current.add(s.id);
+      taken.push(id);
+      return [linkRegistrationSong({ data: { songId: s.id, trackId: id } })];
+    });
+    if (links.length) void Promise.allSettled(links).then(() => load());
+  }, [songs, tracks, load]);
+
   const byId = useMemo(() => new Map(tracks.map((t) => [t.id, t])), [tracks]);
   const targets = useMemo(() => orderAgencies(order?.agencies ?? []), [order]);
   const rows = songs.map((s) => {
@@ -211,9 +226,10 @@ function Checklist({ purchase, tracks, justPaid, onFix, onCatalog, onAddSong }: 
         summary={allReady || step > 2 ? `All ${rows.length} songs are ready ✓` : `⚠️ ${todo.length} of ${rows.length} song${rows.length === 1 ? "" : "s"} need${todo.length === 1 ? "s" : ""} a few details`}>
         {justPaid && todo.length > 0 && <p className="rounded-lg border border-primary bg-primary/5 p-3 text-sm font-semibold">Payment confirmed. {todo.length} of {rows.length} songs need a few details before our agents can register them. We've emailed you this list too.</p>}
         <ul className="space-y-2 text-sm">
-          {todo.map(({ s, t, m, title, miss }) => (
+          {/* Every song in the order stays listed, so a song that still needs details never looks like it vanished. */}
+          {rows.filter((r) => !r.s.submitted_at).map(({ s, t, m, title, miss }) => (
             <li key={s.id} className="rounded-md bg-muted px-3 py-2">
-              <div className="font-semibold">{title}</div>
+              <div className="flex items-center justify-between gap-2"><span className="font-semibold">{title}</span>{m && !miss.length && <span className="text-primary">✓ Ready</span>}</div>
               {!m ? (
                 <div className="mt-1 space-y-2">
                   <button type="button" className="text-left text-primary underline-offset-2 hover:underline" onClick={() => {
@@ -240,7 +256,9 @@ function Checklist({ purchase, tracks, justPaid, onFix, onCatalog, onAddSong }: 
       <Step n={3} title="Confirm and submit your songs" state={step > 3 ? "done" : step === 3 ? "active" : "locked"}
         summary={step > 3 ? "Submitted ✓" : step === 3 ? "Review each song, then submit" : "Unlocks when every song is ready"}>
         <div className="grid gap-3 md:grid-cols-2">
-          {rows.map(({ s, m, title }) => m && (
+          {rows.map(({ s, m, title }) => !m ? (
+            <div key={s.id} className="rounded-lg border border-dashed border-border p-3 text-sm"><span className="font-semibold">{title}</span><p className="mt-1 text-muted-foreground">⚠️ Add this song to My Catalog first (step 2).</p></div>
+          ) : (
             <div key={s.id} className="rounded-lg border border-border p-3 text-sm">
               <div className="flex items-center justify-between gap-2"><span className="font-semibold">{title}</span>{!s.submitted_at && <SongPicker label="Swap" tracks={free} disabled={busy} onPick={(id) => link(s.id, id)} compact />}</div>
               <p className="mt-1 text-muted-foreground">Writers: {writerLine(m) || "—"}</p>

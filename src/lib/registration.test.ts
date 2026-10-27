@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { intakeStep, newSongKeys, orderSongsOf } from "./registration";
+import { catalogMatch, intakeStep, newSongKeys, orderSongsOf } from "./registration";
 import { registrationAuthorization } from "./contract-blueprints";
 
 const order = (over: Partial<{ agreement_signed_at: string | null; access_confirmed: Record<string, string>; agencies: string[] }> = {}) =>
@@ -43,5 +43,18 @@ describe("registrationAuthorization", () => {
     const t = registrationAuthorization({ ...base, prelaunch: true });
     expect(t).toContain("9. PRE-LAUNCH CONFIDENTIALITY");
     expect(t).toContain("10.1 Entire agreement");
+  });
+});
+
+describe("catalogMatch", () => {
+  const tracks = [{ id: "a", title: "Bloodline" }, { id: "b", title: "Crown  Keeper" }, { id: "c", title: "Twin" }, { id: "d", title: "twin" }];
+  it("links a typed title to the one catalog song with that title", () => {
+    expect(catalogMatch(" crown keeper ", tracks, [])).toBe("b");
+  });
+  it("leaves it for the user when no song, two songs, or a song already in the order matches", () => {
+    expect(catalogMatch("Missing", tracks, [])).toBeUndefined();
+    expect(catalogMatch("Twin", tracks, [])).toBeUndefined();
+    expect(catalogMatch("Bloodline", tracks, ["a"])).toBeUndefined();
+    expect(catalogMatch(null, tracks, [])).toBeUndefined();
   });
 });

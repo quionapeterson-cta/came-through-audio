@@ -36,6 +36,12 @@ import { PACKAGES } from "@/lib/proof";
 import { openCheckout } from "@/lib/checkout";
 import { loadOnboarding, loadProfile, restoreRows, withProfile, withProfileFilled } from "@/lib/artist-profile";
 import { clearEmbedDraft, loadEmbedDraft, orderAudioFiles, saveEmbedDraft } from "@/lib/embed-session";
+import { fillFromSaved, findSaved, libraryRowsOf, savedPeople } from "@/lib/saved-people";
+import { catalogMatch, missingFor, orderAgencies } from "@/lib/registration";
+import { linkRegistrationSong } from "@/lib/registration.functions";
+import { supabase } from "@/integrations/supabase/client";
+import { listContributors, saveContributors, type SavedContributor } from "@/lib/splits";
+import { ContributorLibrary } from "@/components/ContributorLibrary";
 import type { ShareInfo } from "@/components/BadgeCelebration";
 
 const normArtist = (v: string) => v.trim().replace(/\s+/g, " ").toLowerCase();
@@ -45,10 +51,13 @@ const AUDIO_FILE = /\.(mp3|wav)$/i;
 /** "wav" for a WAV file name or storage path, otherwise "mp3" (masters keep the format they were uploaded in). */
 const extOf = (name?: string) => (/\.wav$/i.test(name ?? "") ? "wav" : "mp3");
 
+/** A song in an Expert Registration order that hasn't been submitted yet, with the order's agencies. */
+type OpenRegSong = { id: string; purchase_id: string; track_id: string | null; pending_title: string | null; agencies: string[] };
+
 /** What another tab asks My Catalog to open: a field on a saved song, or a new song with its title typed in. */
 export type CatalogFocus = { trackId: string; field: string } | { newTitle: string; artist?: string | undefined; nonce: number };
 
-export function MetadataUploader({ onShareInfo, userId, mode = "embed", readOnly, onSubmitted, onSplitSheet, onProtect, canSplit, canExport, canWav, focus, onFocused, onHealthCheck }: { canWav?: boolean; onHealthCheck?: (trackId?: string, release?: boolean) => void; readOnly?: boolean; onShareInfo?: (s: Partial<ShareInfo> & Pick<ShareInfo, "ctx">) => void; onFocused?: () => void; userId?: string; mode?: "embed" | "catalog"; focus?: CatalogFocus | undefined; onSubmitted?: () => void; onSplitSheet?: (t: CatalogTrack) => void; onProtect?: (t: CatalogTrack) => void; canSplit?: boolean; canExport?: boolean }) {
+export function MetadataUploader({ onShareInfo, userId, mode = "embed", readOnly, onSubmitted, onSplitSheet, onProtect, canSplit, canExport, canWav, focus, onFocused, onHealthCheck, onExpert }: { onExpert?: () => void; canWav?: boolean; onHealthCheck?: (trackId?: string, release?: boolean) => void; readOnly?: boolean; onShareInfo?: (s: Partial<ShareInfo> & Pick<ShareInfo, "ctx">) => void; onFocused?: () => void; userId?: string; mode?: "embed" | "catalog"; focus?: CatalogFocus | undefined; onSubmitted?: () => void; onSplitSheet?: (t: CatalogTrack) => void; onProtect?: (t: CatalogTrack) => void; canSplit?: boolean; canExport?: boolean }) {
   const full = mode === "catalog";
   // One artist per account: the artist name from setup. A different name gets a gentle add-an-artist note.
   const registeredArtist = loadOnboarding(userId)?.stageName?.trim() ?? "";
@@ -142,7 +151,8 @@ export function MetadataUploader({ onShareInfo, userId, mode = "embed", readOnly
   useEffect(() => {
     if (full) return;
     const draft = loadEmbedDraft(userId);
-    if (draft) { setMetadata(draft); toast.info("Embed Metadata: your unsaved details are back. Add the audio file again to embed."); return; }
+    // Profile changes made since the draft fill its blanks (and saved writers' details), never what was typed.
+    if (draft) { setMetadata(withProfileFilled(draft, loadProfile(userId))); setRestored(true); toast.info("Embed Metadata: your unsaved details are back. Add the audio file again to embed."); return; }
     const p = loadProfile(userId);
     if (p) setMetadata((m) => (m.title || m.artist ? m : withProfile(p)));
   }, [userId, full]);
@@ -152,6 +162,26 @@ export function MetadataUploader({ onShareInfo, userId, mode = "embed", readOnly
     return () => clearTimeout(t);
   }, [metadata, userId, full]);
   const artInput = useRef<HTMLInputElement>(null);
+  /** Embed brought back an unsaved draft: offer to start fresh with the current profile. */
+  const [restored, setRestored] = useState(false);
+  // Everyone the user has worked with (profile, Contributor Library, past songs): typed names bring their details along.
+  const [library, setLibrary] = useState<SavedContributor[]>([]);
+  const [libKey, setLibKey] = useState(0);
+  useEffect(() => { if (userId) listContributors().then(setLibrary).catch(() => {}); }, [userId, libKey]);
+  // Songs in an Expert Registration order that isn't submitted yet: their catalog entry says what's left to fix.
+  const [regSongs, setRegSongs] = useState<OpenRegSong[]>([]);
+  const [regKey, setRegKey] = useState(0);
+  useEffect(() => {
+    if (!userId) return;
+    void (async () => {
+      const { data: songs } = await supabase.from("registration_songs" as never).select("id, purchase_id, track_id, pending_title").is("submitted_at", null);
+      const rows = (songs ?? []) as { id: string; purchase_id: string; track_id: string | null; pending_title: string | null }[];
+      if (!rows.length) { setRegSongs([]); return; }
+      const { data: orders } = await supabase.from("registration_orders" as never).select("purchase_id, agencies").in("purchase_id", [...new Set(rows.map((r) => r.purchase_id))]);
+      const agencies = new Map(((orders ?? []) as { purchase_id: string; agencies: string[] }[]).map((o) => [o.purchase_id, o.agencies]));
+      setRegSongs(rows.map((r) => ({ ...r, agencies: agencies.get(r.purchase_id) ?? [] })));
+    })().catch(() => {});
+  }, [userId, regKey]);
 
   const refresh = useCallback(() => {
     if (!userId) return;
@@ -234,7 +264,14 @@ export function MetadataUploader({ onShareInfo, userId, mode = "embed", readOnly
       setSavedInfo(info);
       toast.success(`"${data.title}" ${editingId ? "updated in" : "saved to"} My Catalog${stored ? (embedded ? " with your embedded master" : " (audio stored without embedded details)") : ""}.`);
       refresh();
-      if (!full) { clearEmbedDraft(userId); setSubmitted(true); onSubmitted?.(); }
+      // A song bought for Expert Registration before it was cataloged links to its order as soon as it's saved.
+      const pending = regSongs.filter((r) => !r.track_id && catalogMatch(r.pending_title, [{ id, title: data.title }], regSongs.map((x) => x.track_id)) === id);
+      if (pending[0] && !regSongs.some((r) => r.track_id === id)) {
+        void linkRegistrationSong({ data: { songId: pending[0].id, trackId: id } }).then(() => { setRegKey((k) => k + 1); toast.success(`"${data.title}" is linked to your Expert Registration order.`); }).catch(() => {});
+      }
+      // Everyone on the song goes into the Contributor Library for next time: blanks only, nothing saved is changed.
+      void saveContributors(userId, libraryRowsOf(data), { fillOnly: true }).then(() => setLibKey((k) => k + 1)).catch(() => {});
+      if (!full) { clearEmbedDraft(userId); setSubmitted(true); setRestored(false); onSubmitted?.(); }
       // They ticked AI Protection: go straight to its checkout for this song.
       if (info.protect) void protectNow(id);
     } catch (e) {
@@ -268,6 +305,7 @@ export function MetadataUploader({ onShareInfo, userId, mode = "embed", readOnly
     setTimeout(() => jumpTo(field), 150);
   }
   function startNew() {
+    setRestored(false);
     setMetadata(withProfile(loadProfile(userId)));
     setEditingId(undefined);
     setAudio(undefined);
@@ -424,6 +462,25 @@ export function MetadataUploader({ onShareInfo, userId, mode = "embed", readOnly
         </div>
       ) : showForm && (
       <form key={editingId ?? (adding ? "add" : "new")} ref={formRef} onSubmit={submit} className="space-y-8" aria-busy={busy}>
+        {restored && !full && (
+          <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-primary/40 bg-accent/30 p-3 text-sm">
+            <span>These are your unsaved details from last time.</span>
+            <Button type="button" variant="outline" size="sm" onClick={() => { clearEmbedDraft(userId); startNew(); }}>Start fresh with my profile</Button>
+          </div>
+        )}
+        {full && editingId && (() => {
+          const reg = regSongs.find((r) => r.track_id === editingId);
+          if (!reg) return null;
+          const miss = missingFor(metadata, orderAgencies(reg.agencies));
+          return (
+            <div className={`rounded-lg border p-3 text-sm ${miss.length ? "border-primary" : "border-primary/40 bg-accent/30"}`}>
+              <p className="font-semibold">{miss.length ? `⚠️ This song is in your Expert Registration order: ${miss.length} item${miss.length === 1 ? "" : "s"} to fix before we can register it.` : "✓ This song is ready for your Expert Registration order."}</p>
+              {miss.length > 0 && <ul className="mt-2 space-y-1">{miss.map((i) => <li key={i.field + i.message}><button type="button" className="text-left hover:text-primary" onClick={() => jumpTo(i.field)}>⚠️ {i.message}</button></li>)}</ul>}
+              {miss.length > 0 && <p className="mt-2 text-muted-foreground">Fix these and click Update in My Catalog, then continue your registration.</p>}
+              {onExpert && <Button type="button" size="sm" variant={miss.length ? "outline" : "default"} className="mt-3" onClick={onExpert}>Continue Expert Registration</Button>}
+            </div>
+          );
+        })()}
         <fieldset disabled={busy} className="grid gap-5 sm:grid-cols-[1fr_220px]">
           <div onDragOver={(event) => event.preventDefault()} onDrop={(event) => { event.preventDefault(); if (!busy) void addFiles(event.dataTransfer.files); }} className="flex min-h-44 flex-col items-center justify-center gap-3 rounded-lg border border-dashed border-primary bg-accent/30 p-5 text-center">
             <FileAudio className="h-8 w-8 text-primary" />
@@ -450,7 +507,8 @@ export function MetadataUploader({ onShareInfo, userId, mode = "embed", readOnly
 
         {(() => {
           const r = registrationReadiness(metadata);
-          const warnIn = (...prefixes: string[]) => [...r.missing, ...r.warnings].some((i) => prefixes.some((p) => i.field.startsWith(p)));
+          // Embed never shows or writes splits, so split warnings belong to My Catalog only (founder, 2026-10-27).
+          const warnIn = (...prefixes: string[]) => [...r.missing, ...(full ? r.warnings : [])].some((i) => prefixes.some((p) => i.field.startsWith(p)));
           const count = (rows: Contributor[] | undefined) => (rows ?? []).filter(creditName).length;
           const filled = (pairs: [string, string][]) => pairs.filter(([, v]) => v.trim()).map(([k]) => k).join(" · ");
           const writersWarn = warnIn("writers-", "composers-");
@@ -458,6 +516,7 @@ export function MetadataUploader({ onShareInfo, userId, mode = "embed", readOnly
           const pie = publisherPie(metadata);
           // A usual answer from the Catalog Profile that this song still uses, so it's easy to spot and change.
           const profile = loadProfile(userId);
+          const people = savedPeople(profile, library, tracks.map((t) => t.metadata));
           const fromProfile = (k: "samples" | "writtenFor") => !!profile?.[k] && profile[k] === metadata[k];
           const publishersWarn = warnIn("publishers-", "bmiWriterPublishing");
           // With no publisher, BMI pays the publisher share to its writers, so say so where it matters.
@@ -532,21 +591,21 @@ export function MetadataUploader({ onShareInfo, userId, mode = "embed", readOnly
             </FormSection>
 
             <FormSection title={`Writers · ${count(metadata.writers)}`} open={!full || writersWarn} warn={writersWarn} ok={!writersWarn && count(metadata.writers) > 0} summary={writersWarn ? "Needs info to register" : count(metadata.writers) ? "Ready to register" : "Who wrote the song"}>
-              <Contributors bare title="Writers" singular="writer" group="writers" writer rows={metadata.writers} disabled={busy} onChange={(rows) => update("writers", rows)}
+              <Contributors bare title="Writers" singular="writer" group="writers" writer rows={metadata.writers} saved={people.writers} disabled={busy} onChange={(rows) => update("writers", rows)}
                 songPublishing={full ? (metadata.selfPublished ? "Self-published (the song's answer)" : metadata.bmiWriterPublishing ? "The song's answer (BMI pays BMI writers)" : "") : undefined}
                 collectsPublishing={full ? (row) => pie.parts.some((p) => p.field.startsWith("writers-") && metadata.writers[Number(p.field.split("-")[1])] === row) : undefined} tip={full ? "Choose Author (lyrics/melody), Composer (music/beat) or Author/Composer for each writer. Writer splits must total 100%." : undefined} simple={!full}
                 rowNote={(row) => bmiNoPublisher && isBmi(row) && <p className="text-sm text-muted-foreground">💡 With no publisher, BMI pays this writer's part of the publisher share too, in proportion to their split.</p>}>
                 <label className="flex items-center gap-2 text-sm"><input id="instrumental" type="checkbox" className="h-4 w-4 accent-[var(--primary)]" checked={metadata.instrumental} onChange={(e) => update("instrumental", e.target.checked)} />Instrumental (no lyrics)<Tip text={TIPS.instrumental} /></label>
               </Contributors>
-              <ReadinessPanel metadata={metadata} />
+              <ReadinessPanel metadata={metadata} embed={!full} />
               {full && <p className="rounded-lg border border-primary/40 bg-accent/30 p-3 text-sm text-muted-foreground"><span className="font-semibold text-foreground">No PRO or IPI number yet?</span> Leave them blank. Add them anytime after you register with a PRO and receive your IPI name number.</p>}
             </FormSection>
             {full && metadata.composers.some(creditName) && <FormSection title={`Composers (earlier entries) · ${count(metadata.composers)}`} open={writersWarn} warn={warnIn("composers-")} summary="Move these into Writers">
-              <Contributors bare title="Composers (earlier entries)" singular="composer" group="composers" rows={metadata.composers} disabled={busy} onChange={(rows) => update("composers", rows)} tip="Saved before Writer roles existed. Move these into Writer with the Composer role when you can." />
+              <Contributors bare title="Composers (earlier entries)" singular="composer" group="composers" rows={metadata.composers} saved={people.writers} disabled={busy} onChange={(rows) => update("composers", rows)} tip="Saved before Writer roles existed. Move these into Writer with the Composer role when you can." />
             </FormSection>}
 
             <FormSection title={`Producers · ${count(metadata.producers)}`} open={!full} summary={(metadata.producers ?? []).filter(creditName).map(creditName).join(", ") || "Produced by"}>
-              <Contributors bare title="Producers" singular="producer" group="producers" rows={metadata.producers ?? [emptyContributor()]} disabled={busy} onChange={(rows) => update("producers", rows)} simple
+              <Contributors bare title="Producers" singular="producer" group="producers" rows={metadata.producers ?? [emptyContributor()]} saved={people.producers} disabled={busy} onChange={(rows) => update("producers", rows)} simple
                 tip={GLOSSARY.producedBy.text} tipOnly />
             </FormSection>
 
@@ -582,7 +641,7 @@ export function MetadataUploader({ onShareInfo, userId, mode = "embed", readOnly
               {metadata.bmiWriterPublishing && notBmiWriters(metadata).length > 0 && !count(metadata.publishers) && <p className="text-sm">⚠️ {notBmiWriters(metadata).join(", ")} {notBmiWriters(metadata).length === 1 ? "isn't" : "aren't"} with BMI, so BMI can't pay the publisher share for them. Add their publisher, or check Self-published.</p>}
               {metadata.bmiWriterPublishing && count(metadata.publishers) > 0 && <p className="text-sm">⚠️ You said there's no publishing company but also listed a publisher. Uncheck the BMI box, or remove the publisher.</p>}
               {pie.parts.length > 0 && <p className={`text-sm ${pie.state === "ok" ? "text-muted-foreground" : "font-medium"}`}>{pie.state === "ok" ? "✓ " : "⚠️ "}Publisher shares: {pie.total}% of 100% ({pie.parts.map((p) => `${p.label} ${p.share}%`).join(" · ")})</p>}
-              {(!metadata.selfPublished || count(metadata.publishers) > 0) && <Contributors bare title="Publishers" singular="publisher" group="publishers" rows={metadata.publishers} disabled={busy} publisher onChange={(rows) => update("publishers", rows)} tip={GLOSSARY.publisher.text} />}
+              {(!metadata.selfPublished || count(metadata.publishers) > 0) && <Contributors bare title="Publishers" singular="publisher" group="publishers" rows={metadata.publishers} saved={people.publishers} disabled={busy} publisher onChange={(rows) => update("publishers", rows)} tip={GLOSSARY.publisher.text} />}
               {metadata.selfPublished && count(metadata.publishers) > 0 && <p className="text-sm">⚠️ You checked Self-published but also listed a publisher. Uncheck Self-published, or remove the publisher.</p>}
             </FormSection>}
 
@@ -715,6 +774,8 @@ export function MetadataUploader({ onShareInfo, userId, mode = "embed", readOnly
             <h2 className="mb-4 text-xl font-bold">Add a song</h2>
             {formBlock}
           </div>}
+          {/* Musicians work with the same people again and again: the library is right here, not only in Split Sheets. */}
+          {!readOnly && <div className="mb-8"><ContributorLibrary userId={userId} refreshKey={libKey} onSaved={() => setLibKey((k) => k + 1)} /></div>}
           <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
             <h2 className="text-xl font-bold">Your songs</h2>
             {tracks.length > 0 && <Button type="button" variant="outline" size="sm" onClick={() => { const list = filter === "All" ? tracks : tracks.filter((t) => releaseGroup(t) === filter); downloadCatalogPdf(list, filter === "All" ? "Catalog" : `Catalog - ${filter}s`).catch(() => toast.error("Could not create the catalog PDF.")); }}><FileText />{filter === "All" ? "Catalog PDF" : `${filter}s PDF`}</Button>}
@@ -1078,10 +1139,10 @@ function NowEmbedding({ metadata: m, cover }: { metadata: Metadata; cover: strin
       <dl className="mt-3 space-y-1 text-xs">
         {rows.map(([k, v]) => <div key={k} className="flex justify-between gap-3"><dt className="text-muted-foreground">{k}</dt><dd className={`truncate font-semibold ${v ? "" : "text-muted-foreground/50"}`}>{v || "—"}</dd></div>)}
       </dl>
-      <p className={`mt-3 rounded-lg px-2 py-1.5 text-xs font-semibold ${r.ready && !r.warnings.length ? "bg-primary/10 text-primary" : "bg-muted"}`}>
-        {!r.ready ? `⚠️ ${r.missing.length} to fix before registering` : r.warnings.length ? "⚠️ Settle splits before registering" : "Ready to register"}
+      <p className={`mt-3 rounded-lg px-2 py-1.5 text-xs font-semibold ${r.ready ? "bg-primary/10 text-primary" : "bg-muted"}`}>
+        {!r.ready ? `⚠️ ${r.missing.length} to fix before registering` : "Writer info ready"}
       </p>
-      <p className="mt-2 text-[11px] leading-snug text-muted-foreground">PRO, IPI and split percentages stay private and are never written into the file.</p>
+      <p className="mt-2 text-[11px] leading-snug text-muted-foreground">PRO, IPI and split percentages stay private and are never written into the file. Splits are set in My Catalog.</p>
     </aside>
   );
 }
@@ -1092,10 +1153,13 @@ function MissingList({ items, onJump }: { items: MissingItem[]; onJump: (field: 
   </li>)}</ul>;
 }
 
-function ReadinessPanel({ metadata }: { metadata: Metadata }) {
-  const r = registrationReadiness(metadata);
+/** Embed shows no split boxes and never writes splits into the file, so its panel leaves split warnings to My Catalog. */
+function ReadinessPanel({ metadata, embed }: { metadata: Metadata; embed?: boolean }) {
+  const all = registrationReadiness(metadata);
+  const r = embed ? { ...all, warnings: [] } : all;
   return <div role="status" className="rounded-lg border border-primary/40 bg-accent/30 p-3 text-sm">
     {r.ready && !r.warnings.length && <p className="flex items-center gap-2 font-semibold"><CheckCircle2 className="h-4 w-4 text-primary" />Writer info is ready to register.</p>}
+    {embed && all.warnings.length > 0 && <p className="mt-1 text-muted-foreground">Splits are set in My Catalog after you save. They stay private and are never put in the file.</p>}
     {r.ready
       ? null
       : <><p className="mb-2"><span className="font-semibold">You can still embed and save.</span> To register this song, fix:</p><MissingList items={r.missing} onJump={jumpTo} /></>}
@@ -1103,8 +1167,8 @@ function ReadinessPanel({ metadata }: { metadata: Metadata }) {
   </div>;
 }
 
-function Field({ label, id, value, onChange, required, type = "text", placeholder, tip, term }: { label: string; id: string; value: string; onChange: (value: string) => void; required?: boolean; type?: string; placeholder?: string | undefined; tip?: string; term?: GlossaryKey | undefined }) {
-  return <div className={`min-w-0 ${tip ? "space-y-3" : "space-y-2"}`}><Label htmlFor={id} className="leading-5">{label}{required ? " *" : ""}{term ? <InfoTip term={term} /> : tip && <Tip text={tip} title={label} />}</Label><Input id={id} value={value} type={type} required={required} placeholder={placeholder} className={type === "date" && !value ? "text-muted-foreground/50" : undefined} onChange={(event) => onChange(event.target.value)} /></div>;
+function Field({ label, id, value, onChange, required, type = "text", placeholder, tip, term, list }: { label: string; id: string; value: string; onChange: (value: string) => void; required?: boolean; type?: string; placeholder?: string | undefined; tip?: string; term?: GlossaryKey | undefined; list?: string | undefined }) {
+  return <div className={`min-w-0 ${tip ? "space-y-3" : "space-y-2"}`}><Label htmlFor={id} className="leading-5">{label}{required ? " *" : ""}{term ? <InfoTip term={term} /> : tip && <Tip text={tip} title={label} />}</Label><Input id={id} value={value} type={type} required={required} placeholder={placeholder} list={list} autoComplete={list ? "off" : undefined} className={type === "date" && !value ? "text-muted-foreground/50" : undefined} onChange={(event) => onChange(event.target.value)} /></div>;
 }
 
 /**
@@ -1130,12 +1194,18 @@ function SelectField({ label, id, value, options, onChange, term }: { label: str
     </select></div>;
 }
 
-function Contributors({ title, singular, group, rows, onChange, disabled, publisher, tip, tipOnly, simple, writer, bare, rowNote, songPublishing, collectsPublishing, children }: { collectsPublishing?: ((row: Contributor) => boolean) | undefined; songPublishing?: string | undefined; rowNote?: (row: Contributor, index: number) => ReactNode; bare?: boolean; title: string; singular: string; group: string; rows: Contributor[]; onChange: (rows: Contributor[]) => void; disabled: boolean; publisher?: boolean; tip?: string | undefined; tipOnly?: boolean; simple?: boolean; writer?: boolean; children?: ReactNode }) {
+function Contributors({ title, singular, group, rows, onChange, disabled, publisher, tip, tipOnly, simple, writer, bare, rowNote, songPublishing, collectsPublishing, saved = [], children }: { saved?: Contributor[]; collectsPublishing?: ((row: Contributor) => boolean) | undefined; songPublishing?: string | undefined; rowNote?: (row: Contributor, index: number) => ReactNode; bare?: boolean; title: string; singular: string; group: string; rows: Contributor[]; onChange: (rows: Contributor[]) => void; disabled: boolean; publisher?: boolean; tip?: string | undefined; tipOnly?: boolean; simple?: boolean; writer?: boolean; children?: ReactNode }) {
   const roleSelect = (row: Contributor, index: number) => writer && <SelectField label="Role" term="roles" id={`${group}-${index}-role`} value={writerRole(row.role)} options={WRITER_ROLES} onChange={(value) => change(index, "role", value)} />;
   // Writers (and pre-role composer entries) have one name: their legal name, used for credits and registration.
   const legal = writer || group === "composers";
   const simpleLabel = group === "producers" ? "Produced by" : `${title} name`;
   function change(index: number, key: keyof Contributor, value: string) { onChange(rows.map((row, i) => i === index ? { ...row, [key]: value } : row)); }
+  // A name that matches someone saved (profile, Contributor Library, past songs) brings their details: blanks only.
+  const listId = saved.length ? `${group}-saved` : undefined;
+  function changeName(index: number, key: "name" | "legalName", value: string) {
+    const match = findSaved(saved, value);
+    onChange(rows.map((row, i) => (i !== index ? row : match ? fillFromSaved({ ...row, [key]: value }, match, legal) : { ...row, [key]: value })));
+  }
   // Shares in a group can't add up past 100%: a box snaps to what's left, with a short note saying so.
   const [capped, setCapped] = useState<{ index: number; at: number }>();
   const changeShare = (index: number, value: string) => {
@@ -1144,7 +1214,7 @@ function Contributors({ title, singular, group, rows, onChange, disabled, publis
     change(index, "percentage", next.value);
   };
   const totals = !simple && (publisher || legal) ? splitStatus(rows) : undefined;
-  const names = (row: Contributor, index: number) => <Field label="Legal name" id={`${group}-${index}-legalName`} value={row.legalName ?? ""} term="legalName" onChange={(value) => change(index, "legalName", value)} />;
+  const names = (row: Contributor, index: number) => <Field label="Legal name" id={`${group}-${index}-legalName`} value={row.legalName ?? ""} term="legalName" list={listId} onChange={(value) => changeName(index, "legalName", value)} />;
   // The last row can't be removed, so it shows no delete button (an empty space keeps the columns lined up).
   const removeButton = (index: number) => rows.length === 1 ? <span aria-hidden className="h-9 w-9 shrink-0" />
     : <Button type="button" size="icon" variant="ghost" aria-label={`Remove ${singular} ${index + 1}`} onClick={() => onChange(rows.filter((_, i) => i !== index))}><Trash2 /></Button>;
@@ -1172,7 +1242,7 @@ function Contributors({ title, singular, group, rows, onChange, disabled, publis
     {rows.map((row, index) => simple
       ? legal
         ? <div key={index} className={`grid items-end gap-x-6 gap-y-3 ${writer ? "sm:grid-cols-[1fr_176px_36px]" : "sm:grid-cols-[1fr_36px]"}`}>{names(row, index)}{roleSelect(row, index)}{removeButton(index)}</div>
-        : <div key={index} className="flex items-end gap-2"><div className="flex-1"><Field label={simpleLabel} id={`${group}-${index}-name`} value={row.name} placeholder={group === "producers" ? "Name" : undefined} onChange={(value) => change(index, "name", value)} /></div>{removeButton(index)}</div>
+        : <div key={index} className="flex items-end gap-2"><div className="flex-1"><Field label={simpleLabel} id={`${group}-${index}-name`} value={row.name} placeholder={group === "producers" ? "Name" : undefined} list={listId} onChange={(value) => changeName(index, "name", value)} /></div>{removeButton(index)}</div>
       : legal
         ? <div key={index} className="space-y-4 rounded-lg border border-border p-3">
             <div className={`grid items-end gap-x-6 gap-y-4 ${writer ? "sm:grid-cols-[1fr_180px_36px]" : "sm:grid-cols-[1fr_36px]"}`}>{names(row, index)}{roleSelect(row, index)}{removeButton(index)}</div>
@@ -1180,11 +1250,13 @@ function Contributors({ title, singular, group, rows, onChange, disabled, publis
             {rowNote?.(row, index)}
           </div>
         : <div key={index} className={`grid items-end gap-4 ${publisher ? "sm:grid-cols-[1fr_170px_150px_110px_120px_36px]" : "sm:grid-cols-[1fr_110px_150px_150px_36px]"}`}>
-            <Field label="Legal name" id={`${group}-${index}-name`} value={row.name} onChange={(value) => change(index, "name", value)} />
+            <Field label="Legal name" id={`${group}-${index}-name`} value={row.name} list={listId} onChange={(value) => changeName(index, "name", value)} />
             {publisher ? <>{pro(row, index)}{ipi(row, index)}{share(row, index)}{hfa(row, index)}</> : <>{share(row, index)}{ipi(row, index)}{pro(row, index)}</>}
             {removeButton(index)}
             {publisher && hfaLooksOff(row.hfa) && <p className="text-xs text-muted-foreground sm:col-span-full">⚠️ HFA P#s are 6 letters or numbers, like P12345. Check it in the HFA Portal.</p>}
           </div>)}
+    {listId && <datalist id={listId}>{saved.map((p) => <option key={creditName(p)} value={creditName(p)} />)}</datalist>}
+    {listId && <p className="text-xs text-muted-foreground">Start typing a name to pick someone you've worked with. Their saved details fill in; you can change anything.</p>}
     {children}
     <div className="flex flex-wrap items-center justify-between gap-3"><Button type="button" variant="outline" onClick={() => onChange([...rows, emptyContributor()])}><Plus />Add {singular}</Button>{totals && <span className={`text-sm ${totals.state === "over" || totals.state === "under" ? "font-medium text-foreground" : "text-muted-foreground"}`}>{totals.state === "over" || totals.state === "under" ? "⚠️ " : ""}{splitSummary(rows)}</span>}</div>
   </fieldset>;
