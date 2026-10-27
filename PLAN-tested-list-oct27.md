@@ -1,6 +1,6 @@
 # PLAN — Founder testing list, sorted by urgency · v1
 
-Status: **order approved 2026-10-27; Level 1 in progress.** Drop box built (Level 0).
+Status: **Level 1 done; Level 2 built/answered (legal + passwords await approval); Level 3 preview and Level 4 plans written, awaiting approval (2026-10-27).** Drop box built (Level 0).
 Source: founder testing notes, 2026-10-27. Every item from the list is here once; nothing was dropped.
 
 How to read this: work goes top to bottom. **Level 1** is broken or wrong data, so it's fixed first. **Level 2** is
@@ -150,6 +150,8 @@ protect you · My certificates.
 **Share caption generator** — more promotional captions, and ideas for varying them by user activity.
 
 ## Level 4 — New features and business plans (after the build is wrapped)
+
+**Plans written 2026-10-27: PLAN-level4-plans.md** (every item below, with the social DM keywords and messages).
 
 - **More branding kits:** **$13.99 per kit per year** (founder, 2026-10-27), offered from the contract generator and the
   Contracts & Blueprints tab with every $3.99 contract; users can add as many kits as they need.
