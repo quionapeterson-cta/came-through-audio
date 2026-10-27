@@ -68,3 +68,17 @@ describe("contract blueprints", () => {
     expect(BLUEPRINTS.length).toBeGreaterThanOrEqual(77);
   });
 });
+
+describe("dropPrelaunch", async () => {
+  const { dropPrelaunch, COMPANY_BLUEPRINTS } = await import("./contract-blueprints");
+  it("removes the pre-launch section and renumbers what follows", () => {
+    const body = "11. LAUNCH GIFT\nGift.\n\n12. PRE-LAUNCH CONFIDENTIALITY\nSecret.\n\n13. GENERAL\nLaw.\n\n14. SIGNATURES\nSign.";
+    expect(dropPrelaunch(body)).toBe("11. LAUNCH GIFT\nGift.\n\n12. GENERAL\nLaw.\n\n13. SIGNATURES\nSign.");
+  });
+  it("cleans every company template that has the clause", () => {
+    for (const bp of COMPANY_BLUEPRINTS) expect(dropPrelaunch(bp.body)).not.toContain("PRE-LAUNCH CONFIDENTIALITY");
+  });
+  it("leaves bodies without the clause alone", () => {
+    expect(dropPrelaunch("1. TERMS\nx")).toBe("1. TERMS\nx");
+  });
+});

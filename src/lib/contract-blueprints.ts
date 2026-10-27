@@ -50,6 +50,19 @@ Until Company publicly announces the launch of its service (or gives written per
 `;
 
 /**
+ * Launch day (founder, 2026-10-27): removing the site passcode removes the pre-launch confidentiality section from
+ * company agreements too, including edited templates, and renumbers the sections after it. Signed copies keep the
+ * text they were signed with.
+ */
+export function dropPrelaunch(body: string): string {
+  const m = /^(\d+)\. PRE-LAUNCH CONFIDENTIALITY\n[\s\S]*?(?=^\d+\. [A-Z]|(?![\s\S]))/m.exec(body);
+  if (!m) return body;
+  const removed = Number(m[1]);
+  const before = body.slice(0, m.index), after = body.slice(m.index + m[0].length);
+  return before + after.replace(/^(\d+)\. (?=[A-Z])/gm, (all, n: string) => (Number(n) > removed ? `${Number(n) - 1}. ` : all));
+}
+
+/**
  * Came Through Audio, LLC's own agreements, sent from Admin → Company Contracts (super admins only). Never shown in
  * the customer blueprint list. Super admins can change a template's wording there (stored in site_settings).
  */

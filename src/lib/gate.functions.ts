@@ -36,3 +36,6 @@ export const unlockSite = createServerFn({ method: "POST" })
     await session.update({ unlocked: true });
     return { ok: true as const };
   });
+
+/** Pre-launch until the site passcode is removed at launch: company agreements drop their confidentiality section then. */
+export const getLaunchStatus = createServerFn({ method: "GET" }).handler(async () => ({ prelaunch: !!process.env["SITE_PASSWORD"] }));

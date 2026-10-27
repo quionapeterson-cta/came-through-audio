@@ -34,3 +34,12 @@ describe("admin sign-in moment", () => {
     expect(dueLabel("2026-10-23T12:00:00Z", NOW)).toMatchObject({ text: "2 days overdue", overdue: true });
   });
 });
+
+describe("weekOf", async () => {
+  const { weekOf } = await import("./task-reminders.server");
+  it("gives the same Monday for every day of a week", () => {
+    expect(weekOf(new Date("2027-01-01T12:00:00Z"))).toBe("2026-12-28");
+    expect(weekOf(new Date("2027-01-03T23:00:00Z"))).toBe("2026-12-28");
+    expect(weekOf(new Date("2027-01-04T00:00:00Z"))).toBe("2027-01-04");
+  });
+});

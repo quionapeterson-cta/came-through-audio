@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { ASSIGNABLE_DEPARTMENTS, DEPARTMENT_LABEL, type Department, type StaffAccess } from "@/lib/departments";
 
 type CalEvent = { id: string; owner_id: string; department: Department | null; title: string; notes: string; starts_at: string; ends_at: string | null; all_day: boolean };
-type Deadline = { id: string; department: Department; title: string; due_at: string };
+type Deadline = { id: string; department: Department; title: string; due_at: string; status?: string };
 type Draft = { id?: string; title: string; notes: string; date: string; start: string; end: string; allDay: boolean; calendar: Department | "private" };
 
 const WEEK = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
@@ -36,7 +36,7 @@ export function AdminCalendar({ me, access }: { me: string; access: StaffAccess 
     const to = new Date(month.getFullYear(), month.getMonth() + 1, 12).toISOString();
     const [e, t] = await Promise.all([
       supabase.from("calendar_events" as never).select("*").gte("starts_at", from).lte("starts_at", to).order("starts_at"),
-      supabase.from("department_tasks" as never).select("id, department, title, due_at, status").not("due_at", "is", null).neq("status", "done").gte("due_at", from).lte("due_at", to),
+      supabase.from("department_tasks" as never).select("id, department, title, due_at, status").not("due_at", "is", null).gte("due_at", from).lte("due_at", to),
     ]);
     if (e.error) toast.error("Couldn't load the calendar. Run migrations 20261025210000 and 20261025210100 first.");
     setEvents((e.data ?? []) as CalEvent[]);
@@ -55,7 +55,7 @@ export function AdminCalendar({ me, access }: { me: string; access: StaffAccess 
     due: deadlines.filter((d) => shown(d.department) && ymd(new Date(d.due_at)) === day),
   });
   const today = ymd(new Date());
-  const upcoming = [...events.filter((e) => shown(e.department)).map((e) => ({ at: e.starts_at, e })), ...deadlines.filter((d) => shown(d.department)).map((d) => ({ at: d.due_at, d }))]
+  const upcoming = [...events.filter((e) => shown(e.department)).map((e) => ({ at: e.starts_at, e })), ...deadlines.filter((d) => shown(d.department) && d.status !== "done").map((d) => ({ at: d.due_at, d }))]
     .filter((x) => x.at >= new Date().toISOString().slice(0, 10)).sort((a, b) => a.at.localeCompare(b.at)).slice(0, 12);
 
   const open = (day: string, e?: CalEvent) => setDraft(e
@@ -144,7 +144,10 @@ export function AdminCalendar({ me, access }: { me: string; access: StaffAccess 
                 <button type="button" onClick={() => open(key)} className={`mb-1 flex h-6 w-6 items-center justify-center rounded-full text-xs font-semibold ${key === today ? "bg-primary text-primary-foreground" : "hover:bg-muted"}`} aria-label={`Add an entry on ${d.toDateString()}`}>{d.getDate()}</button>
                 <div className="space-y-1">
                   {ev.map((e) => <button key={e.id} type="button" onClick={() => open(key, e)} className={`block w-full truncate rounded px-1.5 py-0.5 text-left text-[11px] font-medium ${evClass(e)}`} title={e.title}>{e.all_day ? "" : `${time(e.starts_at)} `}{e.title}</button>)}
-                  {due.map((t) => <div key={t.id} className="truncate rounded border border-dashed border-primary px-1.5 py-0.5 text-[11px]" title={`Task deadline: ${t.title}`}>Due: {t.title}</div>)}
+                  {/* Done tasks stay on their day, crossed off (founder, 2026-10-27). */}
+                  {due.map((t) => t.status === "done"
+                    ? <div key={t.id} className="truncate rounded border border-border px-1.5 py-0.5 text-[11px] text-muted-foreground line-through" title={`Done: ${t.title}`}>✓ {t.title}</div>
+                    : <div key={t.id} className="truncate rounded border border-dashed border-primary px-1.5 py-0.5 text-[11px]" title={`Task deadline: ${t.title}`}>Due: {t.title}</div>)}
                 </div>
               </div>
             );

@@ -71,6 +71,7 @@ Writer and readiness code is involved, so per the project rules I list the files
 - A free, Wi-Fi-based support phone number that also works for two-step verification codes.
 
 **Legal and business:**
+- **Preview ready: PLAN-legal-updates-preview.md** (disclaimers, short names, AI Protection, DBA answer).
 - Global disclaimer: Came Through Audio is a record label offering independent label services; not currently signing
   other artists. Check every disclaimer so none contradicts a service we sell.
 - AI Protection wording: best practice for saying certificates help show proof, while keeping the company out of
@@ -78,13 +79,12 @@ Writer and readiness code is involved, so per the project rules I list the files
 - Add "Came Through" and "Came Thru" to the short company names in the legal documents. ❓ Whether a nickname needs a
   DBA: I'll explain the difference; a lawyer or the Georgia Secretary of State gives the final word.
 - Super Admin and Security can edit the legal documents from Admin.
-- Launch day: remove pre-launch wording and confidentiality notices everywhere (one switch).
+- Launch day: remove pre-launch wording and confidentiality notices everywhere (one switch). **Built 2026-10-27:** removing SITE_PASSWORD now also drops the pre-launch section from company agreements (the gate, homepage notice and registration agreement already followed it).
 
 **Hosting and domain:**
-- Lovable's free plan limits once your domain is connected vs moving to Cloudflare — a pros/cons comparison
-  (builds on PLAN-cloudflare-hosting).
+- Lovable's free plan limits once your domain is connected vs moving to Cloudflare — **done 2026-10-27: PLAN-hosting-comparison.md** (recommends Cloudflare Workers Paid, $5/mo).
 - Calendar reminder: renew camethroughaudio.com on GoDaddy every week from Jan 1 to May 16, 2027; checking it off
-  marks it complete. Notes: $341.82 for 9 years or $37.98 for 1 year.
+  marks it complete. Notes: $341.82 for 9 years or $37.98 for 1 year. **Built 2026-10-27** (Finance task with weekly reminder emails; done tasks show crossed off on the calendar; migration 20261027190000).
 - Subdomains (up to 100) vs blogs: do they affect each other? (Short answer coming with the SEO plan.)
 
 **Registration agents** (update PLAN-registration-intake and PLAN-live-registration):

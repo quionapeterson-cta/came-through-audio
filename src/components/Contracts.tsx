@@ -15,7 +15,8 @@ import { format, isValid, parse } from "date-fns";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { InfoTip } from "@/components/InfoTip";
 import { listTracks, type CatalogTrack } from "@/lib/catalog";
-import { BLUEPRINTS, CATEGORIES, COMPANY_BLUEPRINTS, COMPANY_LEGAL_NAME, COMPANY_SIGNER_NAME, CONTRACT_DISCLAIMER, SIGNATURE_FONT, blueprintById, fillBlanks, georgiaLaw, initialFields, missingFields, renderContract, type Blueprint, type BlueprintField } from "@/lib/contract-blueprints";
+import { getLaunchStatus } from "@/lib/gate.functions";
+import { BLUEPRINTS, CATEGORIES, COMPANY_BLUEPRINTS, dropPrelaunch, COMPANY_LEGAL_NAME, COMPANY_SIGNER_NAME, CONTRACT_DISCLAIMER, SIGNATURE_FONT, blueprintById, fillBlanks, georgiaLaw, initialFields, missingFields, renderContract, type Blueprint, type BlueprintField } from "@/lib/contract-blueprints";
 import { downloadContractPdf } from "@/lib/contract-pdf";
 import { myBrand } from "@/lib/brand-load";
 import { loadWebFont } from "@/lib/web-fonts";
@@ -58,7 +59,13 @@ export function Contracts({ userId, unlocked, onUpgrade, company = false }: { us
   const [editing, setEditing] = useState<Contract | null>(null);
   const [templates, setTemplates] = useState<Record<string, string>>({});
   /** Company templates with any wording a super admin saved in place of the original. */
-  const companyBlueprints = useMemo(() => COMPANY_BLUEPRINTS.map((bp) => templates[bp.id] ? { ...bp, body: georgiaLaw(templates[bp.id]!) } : bp), [templates]);
+  // After launch (site passcode removed) the pre-launch confidentiality section drops out of every company template.
+  const [prelaunch, setPrelaunch] = useState(true);
+  useEffect(() => { if (company) getLaunchStatus().then((r) => setPrelaunch(r.prelaunch)).catch(() => {}); }, [company]);
+  const companyBlueprints = useMemo(() => COMPANY_BLUEPRINTS.map((bp) => {
+    const body = templates[bp.id] ? georgiaLaw(templates[bp.id]!) : bp.body;
+    return { ...bp, body: prelaunch ? body : dropPrelaunch(body) };
+  }), [templates, prelaunch]);
   const blueprintFor = (id: string) => (company ? companyBlueprints.find((b) => b.id === id) : undefined) ?? blueprintById(id);
 
   const load = async () => {

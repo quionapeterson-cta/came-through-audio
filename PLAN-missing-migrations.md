@@ -10,6 +10,7 @@ All links need you logged in to GitHub (the repo is private). On each file, clic
 
 ## 1b. Oct 27 (new)
 - [ ] [20261027180000 contributor-role-share](https://github.com/quionapeterson-cta/came-through-audio/blob/main/supabase/migrations/20261027180000_contributor-role-share.sql) (Contributor Library remembers a writer's usual role and split)
+- [ ] [20261027190000 domain-renewal-reminder](https://github.com/quionapeterson-cta/came-through-audio/blob/main/supabase/migrations/20261027190000_domain-renewal-reminder.sql) (weekly reminders on tasks + the GoDaddy domain renewal task)
 
 ## 2. Oct 25 (newest, most likely missing)
 - [ ] [20261025090000 founding-upgrades](https://github.com/quionapeterson-cta/came-through-audio/blob/main/supabase/migrations/20261025090000_e4b8c2d6-founding-upgrades.sql) (Founding 100 seats)
