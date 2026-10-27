@@ -150,7 +150,11 @@ async function requireRegistrationStaff(context: { supabase: any; userId: string
 export type QueueSong = { id: string; title: string; submitted: boolean; status: Record<string, SongStatus>; snapshot: RegistrationSong["snapshot"]; trackId: string | null; ready: boolean };
 export type QueueOrder = {
   purchaseId: string; customer: string; email: string | null; agencies: string[]; createdAt: string; signedAt: string | null;
+  /** The legal name typed on the Registration Authorization: agency invites come from accounts in this name. */
+  signedName: string | null;
   access: Record<string, string>; songs: QueueSong[]; state: "Waiting on customer" | "Ready to register" | "In progress" | "Registered"; stale: boolean;
+  /** The agent who started (or paused) this order in My Queue, so two agents never work one customer at once. */
+  agent: { name: string; state: "working" | "paused"; me: boolean } | null;
 };
 
 /** Every paid order with its songs, the submitted copies and where each one stands, oldest first. */
@@ -162,6 +166,12 @@ export const listRegistrationQueue = createServerFn({ method: "GET" })
     const db = await admin();
     const { data } = await db.from("registration_orders" as never).select("purchase_id, user_id").order("created_at").limit(200);
     const rows = (data ?? []) as { purchase_id: string; user_id: string }[];
+    // Who has each order open in My Queue (work_queue is private per agent, so it's read with the server client).
+    const { data: claims } = await db.from("work_queue" as never).select("user_id, item_ref, state").like("item_ref", "reg:%").in("state", ["working", "paused"]);
+    const claimRows = (claims ?? []) as { user_id: string; item_ref: string; state: "working" | "paused" }[];
+    const agentIds = [...new Set(claimRows.map((c) => c.user_id))];
+    const { data: agentProfiles } = agentIds.length ? await db.from("profiles").select("id, stage_name, legal_name").in("id", agentIds) : { data: [] };
+    const agentName = new Map(((agentProfiles ?? []) as { id: string; stage_name: string | null; legal_name: string | null }[]).map((p) => [p.id, p.legal_name || p.stage_name || "A teammate"]));
     const out: QueueOrder[] = [];
     for (const r of rows) {
       const [loaded, { data: prof }, { data: u }] = await Promise.all([
@@ -182,9 +192,13 @@ export const listRegistrationQueue = createServerFn({ method: "GET" })
       const submittedAt = loaded.checks.map((c) => c.song.submitted_at).filter(Boolean).sort()[0];
       out.push({
         purchaseId: o.purchase_id, customer: prof?.stage_name || prof?.legal_name || "—", email: u.user?.email ?? null, agencies: o.agencies, createdAt: o.created_at,
-        signedAt: o.agreement_signed_at, access: o.access_confirmed, songs, state,
+        signedAt: o.agreement_signed_at, signedName: o.agreement_name, access: o.access_confirmed, songs, state,
         // Internal target only, never shown to users (§3 step 6).
         stale: state !== "Registered" && !!submittedAt && Date.parse(submittedAt) < Date.now() - 30 * 86400000,
+        agent: (() => {
+          const c = claimRows.find((x) => x.item_ref === `reg:${o.purchase_id}`);
+          return c ? { name: agentName.get(c.user_id) ?? "A teammate", state: c.state, me: c.user_id === context.userId } : null;
+        })(),
       });
     }
     return out;

@@ -87,7 +87,7 @@ Writer and readiness code is involved, so per the project rules I list the files
   marks it complete. Notes: $341.82 for 9 years or $37.98 for 1 year. **Built 2026-10-27** (Finance task with weekly reminder emails; done tasks show crossed off on the calendar; migration 20261027190000).
 - Subdomains (up to 100) vs blogs: do they affect each other? (Short answer coming with the SEO plan.)
 
-**Registration agents** (update PLAN-registration-intake and PLAN-live-registration):
+**Registration agents** — **built and written 2026-10-27: PLAN-registration-agent-process.md** (🔒 who's working each order, legal name on each order, step-by-step; password manager recommended instead of an in-app vault, awaiting OK):
 - A foolproof agent process so no data or users get mixed up: one queue item per user, the user's name and song list on
   screen while working, checkboxes per step.
 - Passwords for agency accounts made for users: a new password per user, kept in a staff-only, encrypted field on that

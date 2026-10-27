@@ -30,6 +30,8 @@ export function RegistrationQueuePanel() {
 
 /** What agents need at hand while registering (founder's testing and call with The MLC, 2026-10-27). */
 const AGENT_TIPS = [
+  "One customer at a time: click Start on the customer in My Queue first, and finish or pause them before opening another. An order with 🔒 belongs to a teammate.",
+  "Match every agency invite to its order before accepting: the invite's account name should match the order's legal name (from the signed agreement) or artist name. Not sure? Don't accept it; ask in Support.",
   "Work on a laptop or desktop. The MLC's bulk registration doesn't work on a phone.",
   "Log in as registrations@camethroughaudio.com. When asked for two-step verification, choose email, then copy the code from the registrations@ inbox.",
   "The MLC: Member Settings is at the bottom left of the Members Hub.",
@@ -66,15 +68,18 @@ function OrderRow({ o, onChange }: { o: QueueOrder; onChange: () => void }) {
   return (
     <details className="group rounded-xl border border-border open:border-primary/60">
       <summary className="flex cursor-pointer list-none flex-wrap items-center gap-x-6 gap-y-1 p-4 text-sm [&::-webkit-details-marker]:hidden">
-        <span className="min-w-40 font-semibold">{o.customer}<span className="block text-xs font-normal text-muted-foreground">{o.email}</span></span>
+        <span className="min-w-40 font-semibold">{o.customer}<span className="block text-xs font-normal text-muted-foreground">{o.email}{o.signedName ? ` · legal name ${o.signedName}` : ""}</span></span>
         <span>Songs {submitted}/{o.songs.length} submitted</span>
         <span>{o.agencies.join(", ")}</span>
         <span>Agreement {o.signedAt ? "✓" : "–"}</span>
         <span>Access {accessDone}/{o.agencies.length}</span>
         <Badge variant={canWork ? "default" : "secondary"}>{o.state}</Badge>
+        {o.agent && <span className={o.agent.me ? "font-semibold text-primary" : "font-semibold"}>{o.agent.me ? "You're on this" : `🔒 ${o.agent.name}`}{o.agent.state === "paused" ? " (paused)" : ""}</span>}
         <span className="ml-auto text-muted-foreground">{o.stale ? "⚠️ " : ""}{daysSince(o.createdAt)} d</span>
       </summary>
       <div className="space-y-3 border-t border-border p-4 text-sm">
+        {o.agent && !o.agent.me && <p className="rounded-lg border border-primary p-3 font-semibold">🔒 {o.agent.name} is working on this customer{o.agent.state === "paused" ? " (paused)" : ""}. Pick a different order so registrations don't get mixed up.</p>}
+        {!o.agent && canWork && <p className="text-xs text-muted-foreground">Before you start: open My Queue and click Start on this customer, so the team sees you're on it.</p>}
         <div className="flex flex-wrap gap-2">
           {o.agencies.map((a) => <Button key={a} size="sm" variant="outline" disabled={!canWork} onClick={() => void exportFor(a)}><Download className="h-4 w-4" />Export for {a}</Button>)}
           {!canWork && <span className="self-center text-xs text-muted-foreground">Exports unlock once every song is submitted, the agreement is signed and access is confirmed.</span>}
