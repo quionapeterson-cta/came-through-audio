@@ -3,11 +3,11 @@ import { hasTier, type Tier } from "@/lib/plans";
 
 /**
  * Personal Branding (PLAN-master-notes 3.6). A user's brand kit replaces the Came Through Audio header on documents
- * they send. Catalog Management includes it; anyone else can add it for $14.99 a year (founder, 2026-10-25), on their
+ * they send. Catalog Management includes it; anyone else can add it for $13.99 a year per kit (founder, 2026-10-27; was $14.99), on their
  * split sheets and the contracts they make (a $3.99 generated contract on any plan).
  */
 export const BRANDING_LOOKUP_KEY = "branding_yearly";
-export const BRANDING_PRICE = "$14.99";
+export const BRANDING_PRICE = "$13.99";
 /** One add-on purchase covers this many days; buying again early adds a year after the current one ends. */
 export const BRANDING_DAYS = 365;
 

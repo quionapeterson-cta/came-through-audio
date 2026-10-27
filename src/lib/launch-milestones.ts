@@ -10,7 +10,7 @@ const at = (d: string) => `${d}T17:00:00.000Z`; // noon Eastern
 export const LAUNCH_MILESTONES: Milestone[] = [
   { title: "Run db-check.sql and every MISSING migration", importance: "top", due: at("2026-10-28"), body: "Supabase → SQL Editor. Links and order in PLAN-founder-todo.md §2. Then refresh Admin → Plans with plans-load.sql." },
   { title: "Find CRON_SECRET and add the hourly Task reminders cron job", importance: "high", due: at("2026-10-28"), body: "cron-job.org: POST /api/public/cron/task-reminders every hour with Authorization: Bearer CRON_SECRET (PLAN-founder-todo.md §4)." },
-  { title: "Stripe sandbox: create branding_yearly ($14.99) and contract_generator ($3.99)", importance: "high", due: at("2026-10-30"), body: "One-time prices with those exact lookup keys. Test both checkouts with card 4242." },
+  { title: "Stripe sandbox: create branding_yearly ($13.99) and contract_generator ($3.99)", importance: "high", due: at("2026-10-30"), body: "One-time prices with those exact lookup keys. Test both checkouts with card 4242." },
   { title: "Add Cloudflare AI secrets for the Contract Generator", importance: "normal", due: at("2026-10-30"), body: "CLOUDFLARE_ACCOUNT_ID and CLOUDFLARE_AI_TOKEN in Lovable → Cloud → Secrets." },
   { title: "Create billing@ mailbox and set it as Stripe's support and receipts email", importance: "high", due: at("2026-10-31"), body: "Billing emails send from it; refund requests go to it." },
   { title: "Supabase: minimum password length 12", importance: "normal", due: at("2026-10-31"), body: "Matches the sign-up form." },

@@ -61,7 +61,7 @@ Writer and readiness code is involved, so per the project rules I list the files
 
 ## Level 2 — Setup and legal answers before launch (answers, small edits)
 
-**Stripe** (I'll answer each one in a short guide with exact clicks):
+**Stripe** — answered 2026-10-27 in PLAN-stripe-setup-guide.md (Branding Kit price set to $13.99 site-wide):
 - Which service type to pick for Stripe branding.
 - Sales tax code for each product (Georgia).
 - Lookup key: what goes in the key field vs the value field.
