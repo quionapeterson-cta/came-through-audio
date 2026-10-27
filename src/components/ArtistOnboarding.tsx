@@ -220,7 +220,7 @@ export function ArtistOnboarding({ userId, open, onOpenChange, onSaved, firstRun
               <Field label="Do your songs usually use a sample?" term="samples"><Pick value={p.samples ?? ""} options={["No", "Yes"]} empty="Ask each time" onChange={(v) => set("samples", v as Metadata["samples"])} /></Field>
               <Field label="Usually written for film, TV, stage or an ad?" term="writtenFor"><Pick value={p.writtenFor ?? ""} options={["No", ...PRODUCTION_TYPES]} empty="Ask each time" onChange={(v) => set("writtenFor", v as Metadata["writtenFor"])} /></Field>
               <Field label="Share of the master you usually own (%)" term="masterShare"><Input inputMode="decimal" value={p.masterShare ?? ""} placeholder="100" onChange={(e) => set("masterShare", percentInput(e.target.value))} /></Field>
-              <Field label="How you usually hold the master" term="masterBasis"><Pick value={p.masterBasis ?? ""} options={MASTER_BASES} empty="Copyright Owner" onChange={(v) => set("masterBasis", (v || "Copyright Owner") as Metadata["masterBasis"])} /></Field>
+              <Field label="How you usually hold the master" term="masterBasis"><Pick value={p.masterBasis || "Copyright Owner"} options={MASTER_BASES} empty={null} onChange={(v) => set("masterBasis", (v || "Copyright Owner") as Metadata["masterBasis"])} /></Field>
               <div className="sm:col-span-2"><Crew rows={p.credits ?? []} onChange={(r) => set("credits", r)} /></div>
             </Group>
             <Group title="Copyright Lines">
@@ -364,10 +364,11 @@ function Field({ label, term, children }: { label: string; term?: GlossaryKey; c
   return <div className="space-y-1.5"><Label className="text-xs">{label}{term && <InfoTip term={term} />}</Label>{children}</div>;
 }
 
-function Pick({ value, options, onChange, empty = "Select…" }: { value: string; options: readonly string[]; onChange: (v: string) => void; empty?: string }) {
+/** `empty={null}` leaves out the blank choice, for a field that always has an answer (each option is listed once). */
+function Pick({ value, options, onChange, empty = "Select…" }: { value: string; options: readonly string[]; onChange: (v: string) => void; empty?: string | null }) {
   return (
     <select value={value} onChange={(e) => onChange(e.target.value)} className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm">
-      <option value="">{empty}</option>{options.map((o) => <option key={o}>{o}</option>)}
+      {empty !== null && <option value="">{empty}</option>}{options.map((o) => <option key={o}>{o}</option>)}
     </select>
   );
 }

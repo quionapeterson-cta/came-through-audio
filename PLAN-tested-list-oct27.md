@@ -98,6 +98,8 @@ Writer and readiness code is involved, so per the project rules I list the files
 
 ## Level 3 — Layout and wording polish (preview before building)
 
+**Preview ready 2026-10-27: PLAN-level3-preview.md** (all items below, with mockups). "Copyright Owner listed twice" fixed as a bug.
+
 **Homepage**
 - Move "Who it's for" above "How it works".
 - Take the icons off "Who it's for" and use them as animated badges.
