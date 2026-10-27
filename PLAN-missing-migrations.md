@@ -8,6 +8,9 @@ All links need you logged in to GitHub (the repo is private). On each file, clic
 - [ ] Run [db-check.sql](https://github.com/quionapeterson-cta/came-through-audio/blob/main/db-check.sql). Each row says **applied** or **MISSING**.
 - [ ] Run only the files that say MISSING, top to bottom. Skip the ones that say applied.
 
+## 1b. Oct 27 (new)
+- [ ] [20261027180000 contributor-role-share](https://github.com/quionapeterson-cta/came-through-audio/blob/main/supabase/migrations/20261027180000_contributor-role-share.sql) (Contributor Library remembers a writer's usual role and split)
+
 ## 2. Oct 25 (newest, most likely missing)
 - [ ] [20261025090000 founding-upgrades](https://github.com/quionapeterson-cta/came-through-audio/blob/main/supabase/migrations/20261025090000_e4b8c2d6-founding-upgrades.sql) (Founding 100 seats)
 - [ ] [20261025100000 agency-exports](https://github.com/quionapeterson-cta/came-through-audio/blob/main/supabase/migrations/20261025100000_f2a9d4c7-agency-exports.sql) (agency export history)
