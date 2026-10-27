@@ -107,8 +107,8 @@ export function visibleTabs(access: StaffAccess, view: Department | "all" = "all
   const base = viewDepartments(access, view).length || (access.allTeams && view === "all") ? [...tabs, { value: "tasks", label: "Task Bank" }] : tabs;
   // Everyone on the team gets the Calendar (Phase 4 item 8) and their own staff badges (item 6); nobody with no access
   // at all gets a tab.
-  // My Queue and the Handbook (item 10) come first for everyone working in Admin.
-  const withTasks = base.length ? [{ value: "queue", label: "My Queue" }, ...base, { value: "calendar", label: "Calendar" }, { value: "handbook", label: "Handbook" }, { value: "recognition", label: "My Recognition" }] : base;
+  // My Queue and the Handbook (item 10) come first for everyone working in Admin; PDF Tools is for everyone too.
+  const withTasks = base.length ? [{ value: "queue", label: "My Queue" }, ...base, { value: "calendar", label: "Calendar" }, { value: "handbook", label: "Handbook" }, { value: "pdf", label: "PDF Tools" }, { value: "recognition", label: "My Recognition" }] : base;
   // Company contracts and plans are for super admins only, in the all-departments view.
   return access.role === "super_admin" && view === "all" ? [...withTasks, { value: "company", label: "Company Contracts" }, { value: "plans", label: "Plans" }] : withTasks;
 }
