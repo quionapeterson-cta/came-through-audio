@@ -33,6 +33,8 @@ export function BrandKit({ userId, tier, artistName }: { userId: string; tier: T
   const [logoUrl, setLogoUrl] = useState<string | null>(null);
   const [saved, setSaved] = useState(true);
   const [busy, setBusy] = useState(false);
+  // Back from buying it (Stripe returns to /profile?checkout=success#brand-kit): say how to use it (founder, 2026-10-27).
+  const [justBought] = useState(() => typeof window !== "undefined" && new URLSearchParams(window.location.search).get("checkout") === "success" && window.location.hash === "#brand-kit");
 
   useEffect(() => {
     let live = true;
@@ -118,6 +120,16 @@ export function BrandKit({ userId, tier, artistName }: { userId: string; tier: T
 
   return (
     <div className="space-y-6">
+      {justBought && (
+        <div className="rounded-xl border border-primary bg-primary/5 p-4 text-sm">
+          <p className="font-semibold">Your Branding Kit is ready.</p>
+          <ol className="mt-2 list-decimal space-y-1 pl-5">
+            <li>Add your logo, name, tagline, colors and font right here, then click Save.</li>
+            <li>Make a contract in Contracts &amp; Blueprints or a split sheet in Split Sheets: your kit replaces our header automatically.</li>
+            <li>Come back to Profile → Brand kit anytime to change it.</li>
+          </ol>
+        </div>
+      )}
       <p className="text-sm text-muted-foreground">
         {where} carry this header in place of ours.
         {tier === "management" ? ` Included with ${TIER_LABEL.management}.` : access.addOnUntil ? ` Personal Branding runs until ${longDate(access.addOnUntil)}.` : ""}
@@ -195,7 +207,7 @@ export function BrandKit({ userId, tier, artistName }: { userId: string; tier: T
             {(stripe.length ? stripe : ["#0b0b0b"]).map((c, i) => <span key={i} className="flex-1" style={{ background: c }} />)}
           </div>
           <p className="mt-4 text-2xl font-bold">Split Sheet Agreement</p>
-          {kit.showFooter && <p className="mt-4 text-[10px] text-[#525252]">Generated on camethroughaudio.com · <span className="font-medium tracking-[2px] text-[#004AAD]">YOUR FIRST STOP BEFORE DISTRIBUTION</span></p>}
+          {kit.showFooter && <p className="mt-4 text-[10px] text-[#525252]">Generated on camethroughaudio.com · <span className="font-medium tracking-[2px]">YOUR FIRST STOP BEFORE DISTRIBUTION</span></p>}
         </div>
       </div>
 

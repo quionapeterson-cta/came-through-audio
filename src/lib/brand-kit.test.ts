@@ -26,7 +26,7 @@ describe("Personal Branding", () => {
 
   it("cleans kit rows and keeps every valid color", () => {
     const k = kitFromRow({ name: " Karma ", colors: ["#004aad", "nope", "#4D8CFF", "#FFFFFF", "#0B0B0B", "#123456"], font: "Comic Sans", show_footer: false });
-    expect(k).toMatchObject({ name: "Karma", colors: ["#004AAD", "#4D8CFF", "#FFFFFF", "#0B0B0B", "#123456"], font: "Poppins", showFooter: false, logoPath: null });
+    expect(k).toMatchObject({ name: "Karma", colors: ["#004AAD", "#4D8CFF", "#FFFFFF", "#0B0B0B", "#123456"], font: "Arial", showFooter: false, logoPath: null });
     expect(kitReady(k)).toBe(true);
     expect(kitReady(kitFromRow({ name: "" }))).toBe(false);
     expect(hexRgb("#004AAD")).toEqual([0, 74, 173]);

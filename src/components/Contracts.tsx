@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { confirmAction } from "@/components/ConfirmHost";
-import { AlertTriangle, BookOpen, CalendarDays, Gift, Check, ChevronDown, ChevronLeft, Copy, Download, FileSignature, FlaskConical, Loader2, Lock, Mail, PenLine, Plus, RotateCcw, ScrollText, ShieldCheck, Trash2, Unlock, Vault } from "lucide-react";
+import { Sparkles, AlertTriangle, BookOpen, CalendarDays, Gift, Check, ChevronDown, ChevronLeft, Copy, Download, FileSignature, FlaskConical, Loader2, Lock, Mail, PenLine, Plus, RotateCcw, ScrollText, ShieldCheck, Trash2, Unlock, Vault } from "lucide-react";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -37,7 +37,7 @@ import {
   type Contract, type ContractParty, type ReceivedContract,
 } from "@/lib/contracts";
 
-type View = "blueprints" | "guides" | "contracts" | "vault" | "gifts" | "beta" | "outreach";
+type View = "generator" | "blueprints" | "guides" | "contracts" | "vault" | "gifts" | "beta" | "outreach";
 
 const STATUS: Record<Contract["status"], { label: string; className: string }> = {
   draft: { label: "Draft", className: "border-border text-muted-foreground" },
@@ -116,7 +116,8 @@ export function Contracts({ userId, unlocked, onUpgrade, company = false }: { us
           <div className="inline-flex flex-wrap gap-1 rounded-lg bg-muted p-1" role="tablist" aria-label="Contracts">
             {(company
               ? [["blueprints", "Templates", ScrollText], ["contracts", "Drafts & out for signature", FileSignature], ["vault", "Signed", Vault], ["gifts", "Launch gifts", Gift], ["beta", "Beta testers", FlaskConical], ["outreach", "Outreach", Mail]] as const
-              : [["blueprints", "Contracts", ScrollText], ["guides", "Blueprints", BookOpen], ["contracts", "My Contracts", FileSignature], ["vault", "Signed Vault", Vault]] as const).map(([id, label, Icon]) => (
+              // The Contract Generator has its own tab, right before the contracts (founder, 2026-10-27).
+              : [["generator", "Contract Generator", Sparkles], ["blueprints", "Contracts", ScrollText], ["guides", "Blueprints", BookOpen], ["contracts", "My Contracts", FileSignature], ["vault", "Signed Vault", Vault]] as const).map(([id, label, Icon]) => (
               <Button key={id} role="tab" aria-selected={view === id} size="sm" variant={view === id ? "default" : "ghost"} onClick={() => setView(id)}>
                 <Icon className="h-4 w-4" />{label}
                 {id === "contracts" && open.length > 0 && <span className="ml-1 opacity-70">{open.length}</span>}
@@ -127,7 +128,7 @@ export function Contracts({ userId, unlocked, onUpgrade, company = false }: { us
           {!unlocked && <Button size="sm" onClick={onUpgrade}><Lock className="h-4 w-4" />Unlock with Catalog Management</Button>}
         </div>
 
-        {view === "blueprints" && <ContractGenerator blueprints={company ? companyBlueprints : BLUEPRINTS} unlocked={unlocked} company={company} onDraft={start} onUse={(bp) => start(bp)} />}
+        {(company ? view === "blueprints" : view === "generator") && <ContractGenerator blueprints={company ? companyBlueprints : BLUEPRINTS} unlocked={unlocked} company={company} onDraft={start} onUse={(bp) => start(bp)} />}
 
         {view === "blueprints" && (company
           ? <CompanyTemplates blueprints={companyBlueprints} edited={templates} onUse={start} onSaved={() => void loadCompanyTemplates().then(setTemplates)} />
@@ -147,7 +148,7 @@ export function Contracts({ userId, unlocked, onUpgrade, company = false }: { us
           <section className="space-y-4">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <p className="text-sm text-muted-foreground">{company ? "Company agreements in progress and who still needs to sign. Start a new one from a template." : "Drafts and contracts waiting on signatures. Start a new one from any blueprint."}</p>
-              <Button onClick={() => setView("blueprints")}><Plus className="h-4 w-4" />{unlocked ? "New contract" : "Generate a contract"}</Button>
+              <Button onClick={() => setView(unlocked || company ? "blueprints" : "generator")}><Plus className="h-4 w-4" />{unlocked ? "New contract" : "Generate a contract"}</Button>
             </div>
             {open.length === 0
               ? <Empty icon={FileSignature} text={company ? "No company agreements yet. Pick a template to send the first one." : "No contracts yet. Pick a blueprint to create your first one."} />
@@ -787,61 +788,9 @@ function ContractEditor({ userId, initial, tracks, blueprint, onClose }: { userI
           </ol>
         )}
 
-        {draft && (
-          <>
-            <Step n={1} title="Details" open={sections.details} onToggle={() => setSections((x) => ({ ...x, details: !x.details }))}
-              summary={required.length ? `${filled} of ${required.length} required filled${filled === required.length ? " ✓" : ""}` : "Nothing required · common terms already filled in ✓"}
-              hint={required.length ? "Only the fields marked * are needed. Everything else is already filled in with common terms; change anything you like." : "Everything is already filled in with common terms. Change anything you like."}>
-              <div className="grid gap-4 sm:grid-cols-2">
-                {tracks.length > 0 && bp.fields.some((f) => f.key === "songTitle") && (
-                  <Field label="Catalog song" tip="Pick a song from My Catalog to fill in its title.">
-                    <select value={c.catalogId ?? ""} onChange={(e) => pickSong(e.target.value)} className="flex h-10 w-full rounded-md border border-input bg-background px-3 text-sm">
-                      <option value="">Not linked to a catalog song</option>
-                      {[...tracks].sort((a, b) => a.title.localeCompare(b.title)).map((t) => <option key={t.id} value={t.id}>{t.title}</option>)}
-                    </select>
-                  </Field>
-                )}
-                {bp.fields.map((f) => (
-                  <Field key={f.key} label={f.label} tip={f.tip} wide={f.multiline} required={f.required}>
-                    {f.multiline
-                      ? <textarea id={`cf-${f.key}`} rows={3} value={c.fields[f.key] ?? ""} placeholder={f.placeholder ?? f.fallback} onChange={(e) => setField(f.key, e.target.value)} className="w-full rounded-md border border-input bg-background p-3 text-sm" />
-                      : f.date ? <DateInput id={`cf-${f.key}`} field={f} value={c.fields[f.key] ?? ""} onChange={(v) => setField(f.key, v)} />
-                      : <Input id={`cf-${f.key}`} value={c.fields[f.key] ?? ""} placeholder={f.placeholder ?? f.fallback} onChange={(e) => setField(f.key, e.target.value)} />}
-                  </Field>
-                ))}
-              </div>
-            </Step>
-
-            <Step n={2} title="Who's signing" open={sections.parties} onToggle={() => setSections((x) => ({ ...x, parties: !x.parties }))}
-              summary={c.parties.map((p) => p.isOwner ? "You" : p.legalName.trim() || p.role).join(" + ")}
-              hint="Use each person's legal name. Mark which one is you; you sign with your account email.">
-              <div className="space-y-3">
-                {c.parties.map((p, i) => (
-                  <div key={p.id ?? i} className={`grid gap-3 rounded-xl border p-3 sm:grid-cols-[10rem_1fr_1fr_auto] sm:items-end ${p.isOwner ? "border-primary bg-primary/5" : "border-border"}`}>
-                    <Field label="Role" tip="This party's role in the deal, for example Artist or Producer.">
-                      <Input list={`roles-${bp.id}`} value={p.role} onChange={(e) => setParty(i, { role: e.target.value })} />
-                    </Field>
-                    <Field label="Legal name" tip="The person's or company's full legal name, exactly as it should appear on the contract." required>
-                      <Input id={`cp-${i}-name`} value={p.legalName} onChange={(e) => setParty(i, { legalName: e.target.value })} placeholder="Full legal name" />
-                    </Field>
-                    <Field label="Email" tip={c.isCompany ? p.isOwner ? "Your email, or a department address such as registrations@camethroughaudio.com. If it isn't your login email, you sign from the link sent there." : "Where the signing link goes. They sign with a code emailed here; no account needed." : "Where the signature request goes. They sign by logging in with this email."} required={!p.isOwner || c.isCompany}>
-                      <Input id={`cp-${i}-email`} type="email" value={p.email} disabled={p.isOwner && !c.isCompany} onChange={(e) => setParty(i, { email: e.target.value })} placeholder="name@example.com" />
-                    </Field>
-                    <div className="flex items-center gap-2 pb-1">
-                      <label className="flex items-center gap-1.5 text-sm"><input type="radio" name="owner" checked={p.isOwner} onChange={() => markOwner(i)} className="accent-[var(--primary)]" />Me</label>
-                      {c.parties.length > 2 && <Button variant="ghost" size="icon" aria-label={`Remove ${p.role}`} onClick={() => setC({ ...c, parties: c.parties.filter((_, idx) => idx !== i) })}><Trash2 className="h-4 w-4" /></Button>}
-                    </div>
-                  </div>
-                ))}
-                <datalist id={`roles-${bp.id}`}>{bp.roles.map((r) => <option key={r} value={r} />)}</datalist>
-                <Button id="cp-add" variant="outline" size="sm" onClick={() => setC({ ...c, parties: [...c.parties, emptyParty(bp.roles[1])] })}><Plus className="h-4 w-4" />Add party</Button>
-              </div>
-            </Step>
-          </>
-        )}
-
-        <Step n={draft ? 3 : undefined} title={draft ? "Read it over, then sign" : "Contract text"} open={sections.text} onToggle={() => setSections((x) => ({ ...x, text: !x.text }))}
-          summary="Fills in as you type" hint={draft ? "Fills in as you type. Read it all the way through; your signature goes at the bottom." : c.bodyHash ? `Locked · SHA-256 ${c.bodyHash.slice(0, 16)}…` : undefined}>
+        {/* Step 1 is Read (founder, 2026-10-27): the contract shows first, then the details to fill in. */}
+        <Step n={draft ? 1 : undefined} title={draft ? "Read the contract" : "Contract text"} open={sections.text} onToggle={() => setSections((x) => ({ ...x, text: !x.text }))}
+          summary="Fills in as you type" hint={draft ? "Read it first. It fills in as you complete steps 2 and 3, and you sign at the bottom." : c.bodyHash ? `Locked · SHA-256 ${c.bodyHash.slice(0, 16)}…` : undefined}>
           {draft && (
             <div className="mb-3 flex flex-wrap gap-2">
               {!customized
@@ -879,6 +828,59 @@ function ContractEditor({ userId, initial, tracks, blueprint, onClose }: { userI
             </div>
           )}
         </Step>
+        {draft && (
+          <>
+            <Step n={2} title="Details" open={sections.details} onToggle={() => setSections((x) => ({ ...x, details: !x.details }))}
+              summary={required.length ? `${filled} of ${required.length} required filled${filled === required.length ? " ✓" : ""}` : "Nothing required · common terms already filled in ✓"}
+              hint={required.length ? "Only the fields marked * are needed. Everything else is already filled in with common terms; change anything you like." : "Everything is already filled in with common terms. Change anything you like."}>
+              <div className="grid gap-4 sm:grid-cols-2">
+                {tracks.length > 0 && bp.fields.some((f) => f.key === "songTitle") && (
+                  <Field label="Catalog song" tip="Pick a song from My Catalog to fill in its title.">
+                    <select value={c.catalogId ?? ""} onChange={(e) => pickSong(e.target.value)} className="flex h-10 w-full rounded-md border border-input bg-background px-3 text-sm">
+                      <option value="">Not linked to a catalog song</option>
+                      {[...tracks].sort((a, b) => a.title.localeCompare(b.title)).map((t) => <option key={t.id} value={t.id}>{t.title}</option>)}
+                    </select>
+                  </Field>
+                )}
+                {bp.fields.map((f) => (
+                  <Field key={f.key} label={f.label} tip={f.tip} wide={f.multiline} required={f.required}>
+                    {f.multiline
+                      ? <textarea id={`cf-${f.key}`} rows={3} value={c.fields[f.key] ?? ""} placeholder={f.placeholder ?? f.fallback} onChange={(e) => setField(f.key, e.target.value)} className="w-full rounded-md border border-input bg-background p-3 text-sm" />
+                      : f.date ? <DateInput id={`cf-${f.key}`} field={f} value={c.fields[f.key] ?? ""} onChange={(v) => setField(f.key, v)} />
+                      : <Input id={`cf-${f.key}`} value={c.fields[f.key] ?? ""} placeholder={f.placeholder ?? f.fallback} onChange={(e) => setField(f.key, e.target.value)} />}
+                  </Field>
+                ))}
+              </div>
+            </Step>
+
+            <Step n={3} title="Who's signing" open={sections.parties} onToggle={() => setSections((x) => ({ ...x, parties: !x.parties }))}
+              summary={c.parties.map((p) => p.isOwner ? "You" : p.legalName.trim() || p.role).join(" + ")}
+              hint="Use each person's legal name. Mark which one is you; you sign with your account email.">
+              <div className="space-y-3">
+                {c.parties.map((p, i) => (
+                  <div key={p.id ?? i} className={`grid gap-3 rounded-xl border p-3 sm:grid-cols-[10rem_1fr_1fr_auto] sm:items-end ${p.isOwner ? "border-primary bg-primary/5" : "border-border"}`}>
+                    <Field label="Role" tip="This party's role in the deal, for example Artist or Producer.">
+                      <Input list={`roles-${bp.id}`} value={p.role} onChange={(e) => setParty(i, { role: e.target.value })} />
+                    </Field>
+                    <Field label="Legal name" tip="The person's or company's full legal name, exactly as it should appear on the contract." required>
+                      <Input id={`cp-${i}-name`} value={p.legalName} onChange={(e) => setParty(i, { legalName: e.target.value })} placeholder="Full legal name" />
+                    </Field>
+                    <Field label="Email" tip={c.isCompany ? p.isOwner ? "Your email, or a department address such as registrations@camethroughaudio.com. If it isn't your login email, you sign from the link sent there." : "Where the signing link goes. They sign with a code emailed here; no account needed." : "Where the signature request goes. They sign by logging in with this email."} required={!p.isOwner || c.isCompany}>
+                      <Input id={`cp-${i}-email`} type="email" value={p.email} disabled={p.isOwner && !c.isCompany} onChange={(e) => setParty(i, { email: e.target.value })} placeholder="name@example.com" />
+                    </Field>
+                    <div className="flex items-center gap-2 pb-1">
+                      <label className="flex items-center gap-1.5 text-sm"><input type="radio" name="owner" checked={p.isOwner} onChange={() => markOwner(i)} className="accent-[var(--primary)]" />Me</label>
+                      {c.parties.length > 2 && <Button variant="ghost" size="icon" aria-label={`Remove ${p.role}`} onClick={() => setC({ ...c, parties: c.parties.filter((_, idx) => idx !== i) })}><Trash2 className="h-4 w-4" /></Button>}
+                    </div>
+                  </div>
+                ))}
+                <datalist id={`roles-${bp.id}`}>{bp.roles.map((r) => <option key={r} value={r} />)}</datalist>
+                <Button id="cp-add" variant="outline" size="sm" onClick={() => setC({ ...c, parties: [...c.parties, emptyParty(bp.roles[1])] })}><Plus className="h-4 w-4" />Add party</Button>
+              </div>
+            </Step>
+          </>
+        )}
+
 
         {!draft && (
           <Step title="Signatures">

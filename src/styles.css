@@ -243,7 +243,15 @@
   --color-ink-border: var(--ink-border);
   --color-electric: var(--electric);
   --color-caution: var(--caution);
-  --font-sans: "Poppins", ui-sans-serif, system-ui, sans-serif;
+  --font-sans: "CTA Symbols", "Poppins", ui-sans-serif, system-ui, sans-serif;
+}
+
+/* © and ℗ in a clear system font everywhere (founder, 2026-10-27; Poppins has no ℗ and its © reads blurry). Only those
+   two characters use this face; everything else stays Poppins. */
+@font-face {
+  font-family: "CTA Symbols";
+  src: local("Arial"), local("Helvetica"), local("Helvetica Neue"), local("Liberation Sans"), local("DejaVu Sans");
+  unicode-range: U+00A9, U+2117;
 }
 
 body { font-family: var(--font-sans); -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; }

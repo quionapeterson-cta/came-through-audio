@@ -63,7 +63,7 @@ const roles = [
   { badge: MusicianBadge, photo: "/home/who-musician.webp", focus: "center", title: "Musicians", question: "Felt that bass line shake the booth?", text: "Get your part credited on every release, so you get paid and hired again." },
   { badge: ProducerBadge, photo: "/home/who-producer.webp", focus: "center", title: "Producers", question: "Beat still warm on the laptop?", text: "Put your production credit and split on paper before the song takes off." },
   { badge: SongwriterBadge, photo: "/home/who-songwriter.webp", focus: "center 15%", title: "Songwriters", question: "Lyrics still in your notes app?", text: "Turn them into registered songs with your name and share on file." },
-  { badge: ComposerBadge, photo: "/home/who-composer.webp", focus: "center", corner: "top", title: "Composers", question: "Score still filling the room?", text: "Anchor your compositions and publishing shares so every placement pays you." },
+  { badge: ComposerBadge, photo: "/home/who-composer.webp", focus: "center", title: "Composers", question: "Score still filling the room?", text: "Anchor your compositions and publishing shares so every placement pays you." },
 ];
 
 /** Every "start free" button on the page scrolls to the sign-up box in the hero. */
@@ -168,6 +168,34 @@ function Landing() {
         </div>
       </section>
 
+      <section className="mx-auto max-w-7xl px-6 py-20">
+        <h2 className="text-center text-3xl font-bold md:text-4xl">Who It's For</h2>
+        <div className="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-5">
+          {roles.map(({ badge: Badge, photo, focus, title, question, text }, i) => (
+            <div key={title} className="group flex flex-col">
+              <h3 className="mb-3 text-center text-lg font-extrabold uppercase tracking-[2px] text-primary">{title}</h3>
+              <div className="flex flex-1 flex-col overflow-hidden rounded-xl border border-border">
+                <div className="relative overflow-hidden">
+                  <img src={photo} alt="" loading="lazy" className="aspect-[16/10] w-full object-cover sm:aspect-square" style={{ objectPosition: focus }} />
+                  {/* The badge sits in the photo's lower right corner and is the card's way to sign up; the section has one Sign up free button below. */}
+                  {/* Animated badges (founder, 2026-10-27): each floats on its own beat, bottom right of the photo. */}
+                  <button type="button" onClick={goSignup} aria-label={`Sign up free: ${title}`}
+                    className="cta-badge-float absolute bottom-3 right-3 rounded-full drop-shadow-lg transition hover:scale-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring [&>svg]:h-[3.25rem] [&>svg]:w-[3.25rem]"
+                    style={{ animationDelay: `${i * -0.8}s` }}>
+                    <Badge />
+                  </button>
+                </div>
+                <div className="flex-1 p-5 text-center">
+                  <p className="text-lg font-bold">{question}</p>
+                  <p className="mt-1 text-sm text-muted-foreground">{text}</p>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+        <div className="mt-10 flex justify-center"><StartFree /></div>
+      </section>
+
       <section className="bg-ink py-24 text-ink-foreground">
         <div className="mx-auto max-w-6xl px-6">
           <h2 className="text-center text-4xl font-bold md:text-5xl lg:text-6xl">How It Works</h2>
@@ -191,31 +219,6 @@ function Landing() {
         </div>
       </section>
 
-      <section className="mx-auto max-w-7xl px-6 py-20">
-        <h2 className="text-center text-3xl font-bold md:text-4xl">Who It's For</h2>
-        <div className="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-5">
-          {roles.map(({ badge: Badge, photo, focus, corner, title, question, text }) => (
-            <div key={title} className="group flex flex-col">
-              <h3 className="mb-3 text-center text-lg font-extrabold uppercase tracking-[2px] text-primary">{title}</h3>
-              <div className="flex flex-1 flex-col overflow-hidden rounded-xl border border-border">
-                <div className="relative overflow-hidden">
-                  <img src={photo} alt="" loading="lazy" className="aspect-[16/10] w-full object-cover sm:aspect-square" style={{ objectPosition: focus }} />
-                  {/* The badge sits in the photo's lower right corner (top right where a face is there) and is the card's way to sign up; the section has one Sign up free button below. */}
-                  <button type="button" onClick={goSignup} aria-label={`Sign up free: ${title}`}
-                    className={`absolute right-3 ${corner === "top" ? "top-3" : "bottom-3"} rounded-full transition hover:-translate-y-0.5 hover:scale-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring [&>svg]:h-[3.25rem] [&>svg]:w-[3.25rem]`}>
-                    <Badge />
-                  </button>
-                </div>
-                <div className="flex-1 p-5 text-center">
-                  <p className="text-lg font-bold">{question}</p>
-                  <p className="mt-1 text-sm text-muted-foreground">{text}</p>
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-        <div className="mt-10 flex justify-center"><StartFree /></div>
-      </section>
 
       {testimonials.length > 0 && <section id="testimonials" className="scroll-mt-4 bg-muted/50 py-20">
         <div className="mx-auto max-w-7xl px-6">

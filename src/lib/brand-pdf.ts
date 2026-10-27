@@ -2,6 +2,7 @@ import type { jsPDF as JsPDF } from "jspdf";
 import { LOGO_PATH, LOGO_RATIO, LOGO_VIEWBOX } from "@/lib/brand-logo";
 import { SITE_URL } from "@/lib/email-layout";
 import { fontFile, hexRgb, type BrandFont, type PdfBrand } from "@/lib/brand-kit";
+import { SYSTEM_FONTS } from "@/lib/brand-fonts";
 
 export const COBALT: [number, number, number] = [0, 74, 173];
 export const INK: [number, number, number] = [11, 11, 11];
@@ -53,7 +54,7 @@ const withBrandFont = new WeakSet<JsPDF>();
 export async function newBrandedPdf(brand?: PdfBrand | null) {
   const { jsPDF } = await import("jspdf");
   const pdf = new jsPDF({ unit: "mm", format: "letter" });
-  const [fonts, extra] = await Promise.all([loadPoppins(), brand && brand.font !== "Poppins" ? loadBrandFont(brand.font) : null]);
+  const [fonts, extra] = await Promise.all([loadPoppins(), brand && brand.font !== "Poppins" && !SYSTEM_FONTS.has(brand.font) ? loadBrandFont(brand.font) : null]);
   if (fonts) {
     for (const [w, data] of Object.entries(fonts) as [Weight, string][]) {
       pdf.addFileToVFS(`${WEIGHT_FILES[w]}.ttf`, data);
@@ -82,6 +83,8 @@ export async function addSignatureFont(pdf: JsPDF, family: string) {
 
 /** Sets the brand kit's header font (falls back to Poppins). */
 function kitFont(pdf: JsPDF, brand: PdfBrand, weight: "medium" | "bold", size: number) {
+  // Arial: the PDF's built-in Helvetica has the same letter shapes and needs no file.
+  if (brand.font === "Arial") return pdf.setFont("helvetica", weight === "bold" ? "bold" : "normal").setFontSize(size);
   if (brand.font !== "Poppins" && withBrandFont.has(pdf)) return pdf.setFont(brand.font, weight).setFontSize(size);
   return font(pdf, weight === "bold" ? "semibold" : "medium", size);
 }
@@ -198,7 +201,8 @@ export function brandFooter(pdf: JsPDF, brand?: PdfBrand | null) {
       font(pdf, "regular", 7).setTextColor(...MUTED);
       pdf.textWithLink(`${GENERATED_ON}  ·  `, MARGIN, h - 6.5, { url: SITE_URL });
       const at = MARGIN + pdf.getTextWidth(`${GENERATED_ON}  ·  `);
-      font(pdf, "medium", 7).setTextColor(...COBALT);
+      // Same gray as "Generated on…", so it blends with any brand's colors (founder, 2026-10-27).
+      font(pdf, "medium", 7).setTextColor(...MUTED);
       pdf.textWithLink("YOUR FIRST STOP BEFORE DISTRIBUTION", at, h - 6.5, { url: SITE_URL, charSpace: 0.53 } as never);
     }
   }

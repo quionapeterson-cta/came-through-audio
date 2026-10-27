@@ -1022,7 +1022,7 @@ function Performers({ metadata: m, disabled, update, bare }: { bare?: boolean; m
       <Button type="button" variant="outline" onClick={() => update("credits", [...credits, { role: CREDIT_ROLES[0], name: "", instrument: "" }])}><Plus />Add performer or credit</Button>
       <div className="grid gap-5 sm:grid-cols-2">
         <div className="min-w-0 space-y-2">
-          <Label htmlFor="recordedIn">Recorded in</Label>
+          <Label htmlFor="recordedIn">Country where it was recorded<Tip text="For airplay royalties outside the US (neighbouring rights). Most US artists can leave it as United States." title="Country where it was recorded" /></Label>
           <Input id="recordedIn" list="recorded-in-countries" value={m.recordedIn} placeholder="United States" onChange={(e) => update("recordedIn", e.target.value)} />
           <datalist id="recorded-in-countries">{COUNTRIES.filter((c) => c.code !== "XX").map((c) => <option key={c.code} value={c.name} />)}</datalist>
         </div>

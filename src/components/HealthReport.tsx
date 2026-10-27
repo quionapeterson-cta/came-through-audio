@@ -7,6 +7,7 @@ import type { Pillar } from "@/lib/audit";
 import { todoList, type healthReport, type RepertoireCheck, type TrackReport } from "@/lib/health";
 import { registerGuide } from "@/lib/register-guides";
 import { COUNTRIES, INTERNATIONAL, OTHER_COUNTRY, REGIONS, inCountry, type Country, type Society } from "@/lib/repertoires";
+import { InfoTip } from "@/components/InfoTip";
 
 export type Report = ReturnType<typeof healthReport>;
 export type HealthActions = {
@@ -87,7 +88,10 @@ export function LiveRecords({ r, onRun, running }: { r: TrackReport; onRun: () =
     <div className="space-y-3 rounded-2xl bg-muted p-4">
       <div className="flex items-center justify-between gap-2">
         <h4 className="text-sm font-extrabold uppercase tracking-[2px]">What the world sees</h4>
-        <Button type="button" size="sm" variant="outline" disabled={running} onClick={onRun}><Radar className={running ? "animate-spin" : ""} />{checked ? "Re-check" : "Look up"}</Button>
+        <span className="flex items-center">
+          <Button type="button" size="sm" variant="outline" disabled={running} onClick={onRun}><Radar className={running ? "animate-spin" : ""} />Check streaming</Button>
+          <InfoTip title="Check streaming" text="Looks this song up on Deezer, a streaming service with an open catalog: whether its ISRC is live on streaming and how the title and artist are credited there." />
+        </span>
       </div>
       {!checked && <p className="text-sm text-muted-foreground">{running ? "Looking this song up…" : "We'll look this song up on streaming."}</p>}
       {checked && <>
@@ -144,7 +148,7 @@ export function HealthReport({ report, country, running, canCatalog, onEmbed, ac
               <div className="flex flex-wrap items-center gap-3 text-sm text-ink-muted">
                 <Radar className={`h-4 w-4 ${running ? "animate-spin text-primary" : ""}`} />
                 {running ? `Looking up song ${running.done + 1} of ${running.total} on streaming…` : `Live lookups ran for ${looked} of ${report.rows.length} songs.`}
-                {!running && <button type="button" onClick={actions.onRunAll} className="font-semibold text-ink-foreground underline hover:text-primary">Re-check all</button>}
+                {!running && <button type="button" onClick={actions.onRunAll} className="font-semibold text-ink-foreground underline hover:text-primary">Check streaming for all</button>}
               </div>
               <ScoreInfo className="max-w-2xl" />
             </div>

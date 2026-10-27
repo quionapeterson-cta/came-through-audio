@@ -31,7 +31,9 @@ export type PdfBrand = Omit<BrandKit, "logoPath"> & { logo: { dataUrl: string } 
 
 export type BrandUse = "splits" | "contracts";
 
-export const emptyKit = (name = ""): BrandKit => ({ name, tagline: "", colors: [], font: "Poppins", logoPath: null, showFooter: true });
+/** New kits start in Arial, a neutral font that fits any brand (founder, 2026-10-27); Poppins is ours. */
+export const DEFAULT_KIT_FONT = "Arial";
+export const emptyKit = (name = ""): BrandKit => ({ name, tagline: "", colors: [], font: DEFAULT_KIT_FONT, logoPath: null, showFooter: true });
 
 export const isHex = (v: string) => /^#[0-9a-f]{6}$/i.test(v);
 
@@ -48,7 +50,7 @@ export function kitFromRow(r: { name?: string | null; tagline?: string | null; c
     name: (r.name ?? "").trim(),
     tagline: (r.tagline ?? "").trim(),
     colors: (r.colors ?? []).filter(isHex).map((c) => c.toUpperCase()),
-    font: BRAND_FONTS.includes(r.font ?? "") ? r.font! : "Poppins",
+    font: BRAND_FONTS.includes(r.font ?? "") ? r.font! : DEFAULT_KIT_FONT,
     logoPath: r.logo_path || null,
     showFooter: r.show_footer !== false,
   };

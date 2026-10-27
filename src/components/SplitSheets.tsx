@@ -121,6 +121,18 @@ export function SplitSheets({ userId, canSplit, canCollect, prefillTrackId, onUp
         </div>
       )}
 
+      {/* Generate comes first (founder, 2026-10-27), above the library and status boxes. */}
+      {!readOnly && !loading && tracks.length > 0 && <div className="flex flex-wrap items-end gap-3 rounded-2xl border border-primary p-5">
+          <div className="min-w-60 flex-1 space-y-2">
+            <label htmlFor="split-song" className="text-sm font-semibold">Choose a song for a split sheet</label>
+            <select id="split-song" value={pick} onChange={(e) => setPick(e.target.value)} className="flex h-10 w-full rounded-md border border-input bg-background px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+              <option value="">Select a song…</option>
+              {[...tracks].sort((a, b) => a.title.localeCompare(b.title)).map((t) => <option key={t.id} value={t.id}>{t.title}{t.metadata.album ? ` — ${t.metadata.album}` : ""}{sheets.has(t.id) ? " (has split sheet)" : ""}</option>)}
+            </select>
+          </div>
+          <Button disabled={!pick} onClick={() => { const t = tracks.find((x) => x.id === pick); if (t) { setEditing(t); setPick(""); } }}><PenLine className="h-4 w-4" /> Generate</Button>
+        </div>}
+
       {/* One glance row: the library you draw from on the left, what needs attention and what's done on the right.
           Opening the library's editor moves it below the row, full width, so the status cards never jump away. */}
       <div className="grid gap-4 lg:grid-cols-[1.6fr_1fr_1fr]">
@@ -160,16 +172,6 @@ export function SplitSheets({ userId, canSplit, canCollect, prefillTrackId, onUp
         </div>
       ) : (
         <>
-        {!readOnly && <div className="flex flex-wrap items-end gap-3 rounded-2xl border border-primary p-5">
-          <div className="min-w-60 flex-1 space-y-2">
-            <label htmlFor="split-song" className="text-sm font-semibold">Choose a song for a split sheet</label>
-            <select id="split-song" value={pick} onChange={(e) => setPick(e.target.value)} className="flex h-10 w-full rounded-md border border-input bg-background px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
-              <option value="">Select a song…</option>
-              {[...tracks].sort((a, b) => a.title.localeCompare(b.title)).map((t) => <option key={t.id} value={t.id}>{t.title}{t.metadata.album ? ` — ${t.metadata.album}` : ""}{sheets.has(t.id) ? " (has split sheet)" : ""}</option>)}
-            </select>
-          </div>
-          <Button disabled={!pick} onClick={() => { const t = tracks.find((x) => x.id === pick); if (t) { setEditing(t); setPick(""); } }}><PenLine className="h-4 w-4" /> Generate</Button>
-        </div>}
         {([["Pending Signatures", false], ["Signed Split Sheet Vault", true]] as const).map(([heading, signedGroup]) => {
           const list = tracks.filter((t) => { const c = sheets.get(t.id); return c && (splitStatus(c) === "signed") === signedGroup; });
           const groups = new Map<string, CatalogTrack[]>();

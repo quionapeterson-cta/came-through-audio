@@ -1,6 +1,6 @@
 import { fontFile } from "@/lib/brand-kit";
 
-const loaded = new Set<string>(["Poppins"]);
+const loaded = new Set<string>(["Poppins", "Arial"]);
 
 /** Loads one of our public/fonts families (medium + bold) into the page, once; the PDFs use the same files. */
 export function loadWebFont(family: string) {
