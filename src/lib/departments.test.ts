@@ -34,9 +34,9 @@ describe("visibleTabs", () => {
     expect(visibleTabs(billing).map((t) => t.value)).toEqual(["queue", "purchases", "support", "badges", "tasks", "calendar", "handbook", "pdf", "recognition"]);
   });
 
-  it("gives the AI department the AI Protection tab; Software and Security start with their Task Bank", () => {
+  it("gives the AI department the AI Protection tab; Security also gets Legal", () => {
     expect(visibleTabs(resolveAccess([{ role: "employee", departments: ["ai"] }])!).map((t) => t.value)).toEqual(["queue", "ai", "tasks", "calendar", "handbook", "pdf", "recognition"]);
-    expect(visibleTabs(resolveAccess([{ role: "employee", departments: ["software", "security"] }])!).map((t) => t.value)).toEqual(["queue", "tasks", "calendar", "handbook", "pdf", "recognition"]);
+    expect(visibleTabs(resolveAccess([{ role: "employee", departments: ["software", "security"] }])!).map((t) => t.value)).toEqual(["queue", "legal", "tasks", "calendar", "handbook", "pdf", "recognition"]);
   });
 
   it("never shows finance to HR admins", () => {

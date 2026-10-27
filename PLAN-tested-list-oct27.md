@@ -78,7 +78,7 @@ Writer and readiness code is involved, so per the project rules I list the files
   people's personal disputes.
 - Add "Came Through" and "Came Thru" to the short company names in the legal documents. ❓ Whether a nickname needs a
   DBA: I'll explain the difference; a lawyer or the Georgia Secretary of State gives the final word.
-- Super Admin and Security can edit the legal documents from Admin.
+- Super Admin and Security can edit the legal documents from Admin. **Built 2026-10-27:** Admin → Legal, section by section, history kept (migration 20261027200000).
 - Launch day: remove pre-launch wording and confidentiality notices everywhere (one switch). **Built 2026-10-27:** removing SITE_PASSWORD now also drops the pre-launch section from company agreements (the gate, homepage notice and registration agreement already followed it).
 
 **Hosting and domain:**

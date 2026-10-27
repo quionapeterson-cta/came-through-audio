@@ -94,6 +94,8 @@ export const ADMIN_TABS = [
   { value: "support", label: "Support Tickets", departments: ["support"] },
   { value: "badges", label: "Badges", departments: BADGE_DEPARTMENTS },
   { value: "homepage", label: "Homepage", departments: ["marketing", "branding"] },
+  // Terms, Privacy and Refund wording (founder, 2026-10-27); super admins see it with every department.
+  { value: "legal", label: "Legal", departments: ["security"] },
 ] as const satisfies readonly { value: string; label: string; departments: readonly Department[] }[];
 
 /** Departments in view: all of the caller's, or the one the super admin switcher picked. */
