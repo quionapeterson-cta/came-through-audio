@@ -87,6 +87,23 @@ export const checkBadges = createServerFn({ method: "POST" })
     return { earned, metrics, disabled };
   });
 
+/**
+ * Start over (founder, 2026-10-27): clears the caller's own earned badges and badge activity counts, so badges are
+ * earned (and celebrated) again from scratch. Badges for work that's still saved come back on the next check, since
+ * badges are counted from the work itself. Only ever the caller's own rows.
+ */
+export const resetMyBadges = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const [badges, events] = await Promise.all([
+      supabaseAdmin.from("user_badges" as never).delete().eq("user_id", context.userId),
+      supabaseAdmin.from("badge_events" as never).delete().eq("user_id", context.userId),
+    ]);
+    if (badges.error || events.error) throw new Error("Couldn't reset your badges. Try again.");
+    return { ok: true };
+  });
+
 /** Saves the art the user picked for one earning of a badge with choices (Self-Produced). A pick can't be changed later. */
 export const pickBadgeArt = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])

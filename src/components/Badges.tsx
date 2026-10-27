@@ -13,7 +13,8 @@ import { useServerFn } from "@tanstack/react-start";
 import { useQueryClient } from "@tanstack/react-query";
 import { BADGES, COLLECTIONS, TIER_LABEL, earningPopup, isBigTier, nextGoal, rotationArt, withArtist, type BadgeDef, type BadgePrefs, type CollectionId } from "@/lib/badges";
 import { markBadgesSeen } from "@/lib/badge-events";
-import { pickBadgeArt, type EarnedBadge } from "@/lib/badges.functions";
+import { pickBadgeArt, resetMyBadges, type EarnedBadge } from "@/lib/badges.functions";
+import { confirmAction } from "@/components/ConfirmHost";
 
 export type BadgeState = { badge: BadgeDef; count: number; earned?: EarnedBadge | undefined; off: boolean };
 
@@ -397,9 +398,41 @@ export function BadgeSettings({ userId, open, onOpenChange, onSaved }: { userId:
               </li>)}
             </ul>
           </fieldset>
+          <StartOver userId={userId} />
         </div>
       </DialogContent>
     </Dialog>
+  );
+}
+
+/** Clears every earned badge so they're earned and celebrated again from scratch (founder, 2026-10-27). */
+function StartOver({ userId }: { userId: string }) {
+  const reset = useServerFn(resetMyBadges);
+  const qc = useQueryClient();
+  const [busy, setBusy] = useState(false);
+  async function run() {
+    if (!(await confirmAction({
+      title: "Reset all your badges?",
+      text: "Every badge you've earned is cleared and you start from scratch. Badges for work you still have (like songs in My Catalog) come back right away; the rest you earn again as you go. This can't be undone.",
+      action: "Reset badges",
+    }))) return;
+    setBusy(true);
+    try {
+      await reset();
+      // The "stars aligned" catalog celebration plays again too.
+      try { localStorage.removeItem(`cta.catalogComplete.${userId}`); } catch { /* storage blocked */ }
+      await qc.invalidateQueries({ queryKey: ["badges", userId] });
+      toast.success("Badges reset. Time to earn them again.");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Couldn't reset your badges.");
+    } finally { setBusy(false); }
+  }
+  return (
+    <div className="space-y-2 border-t border-border pt-4">
+      <p className="text-sm font-semibold">Start over</p>
+      <p className="text-xs text-muted-foreground">Clear every badge you've earned and see them all again as you rebuild your catalog.</p>
+      <Button type="button" variant="outline" size="sm" disabled={busy} onClick={run}>{busy ? "Resetting…" : "Reset my badges"}</Button>
+    </div>
   );
 }
 
