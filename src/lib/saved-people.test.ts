@@ -58,3 +58,34 @@ describe("percentInput and formatDuration", async () => {
     expect(metadataSchema.parse({ ...emptyMetadata(), title: "T", artist: "A", duration: "3:45" }).duration).toBe("03:45");
   });
 });
+
+describe("credit menu", async () => {
+  const { creditChoice, fromCreditChoice, OTHER_INSTRUMENT, BACKUP_VOCALS } = await import("./metadata");
+  it("shows saved credits as one menu choice", () => {
+    expect(creditChoice({ role: "Session musician", instrument: "guitar" })).toBe("Guitar");
+    expect(creditChoice({ role: "Session musician", instrument: "Sitar" })).toBe(OTHER_INSTRUMENT);
+    expect(creditChoice({ role: "Backup vocalist", instrument: "" })).toBe(BACKUP_VOCALS);
+    expect(creditChoice({ role: "Mixing engineer" })).toBe("Mixing engineer");
+  });
+  it("saves a pick the same way as before", () => {
+    expect(fromCreditChoice("Saxophone", { role: "Mixing engineer" })).toEqual({ role: "Session musician", instrument: "Saxophone" });
+    expect(fromCreditChoice(OTHER_INSTRUMENT, { role: "Session musician", instrument: "Sitar" })).toEqual({ role: "Session musician", instrument: "Sitar" });
+    expect(fromCreditChoice(OTHER_INSTRUMENT, { role: "Session musician", instrument: "Guitar" })).toEqual({ role: "Session musician", instrument: "" });
+    expect(fromCreditChoice("Arranger", { role: "Session musician", instrument: "Guitar" })).toEqual({ role: "Arranger", instrument: "" });
+  });
+});
+
+describe("genres", async () => {
+  const { GENRES, parentGenre } = await import("./metadata");
+  const { genreTags } = await import("./promo-copy");
+  it("keeps every original genre and adds subgenres", () => {
+    for (const g of ["Hip-Hop/Rap", "Spiritual Hip-Hop", "R&B/Soul", "Gospel", "Afrobeats", "Other"]) expect(GENRES).toContain(g);
+    expect(GENRES.length).toBeGreaterThan(60);
+  });
+  it("counts a subgenre as its main genre", () => {
+    expect(parentGenre("Trap")).toBe("Hip-Hop/Rap");
+    expect(parentGenre("Amapiano")).toBe("Electronic");
+    expect(parentGenre("Spiritual Hip-Hop")).toBe("Spiritual Hip-Hop");
+    expect(genreTags("Drill")).toEqual(genreTags("Hip-Hop/Rap"));
+  });
+});

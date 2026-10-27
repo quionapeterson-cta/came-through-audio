@@ -1,5 +1,5 @@
 import type { CatalogTrack } from "@/lib/catalog";
-import { MLC_ROLE, performers, writerRole, type Contributor } from "@/lib/metadata";
+import { MLC_ROLE, parentGenre, performers, writerRole, type Contributor } from "@/lib/metadata";
 import { isBmi } from "@/lib/audit";
 import { registrationReadiness, registrationWriters, type MissingItem } from "@/lib/readiness";
 
@@ -97,7 +97,8 @@ export function soundExchangeRows(tracks: CatalogTrack[]): (string | number | Da
     return [
       artistCredit(m.artist, m.featured), m.title, m.isrc.replace(/-/g, "").toUpperCase(), m.masterBasis || "Copyright Owner",
       Number(m.masterShare || 100) / 100, sheetDate(m.rightsStart ?? ""), sheetDate(m.rightsEnd ?? ""), "", "",
-      hms(m.duration), m.primaryGenre ?? "", "", "", "", "", sheetDate(m.releaseDate), "",
+      // SoundExchange gets the main genre ("Trap" goes as Hip-Hop/Rap).
+      hms(m.duration), m.primaryGenre ? parentGenre(m.primaryGenre) : "", "", "", "", "", sheetDate(m.releaseDate), "",
       pLine(m.phonographic) || (year && label ? `${year} ${label}` : ""), m.iswc.replace(/[.\s-]/g, "").toUpperCase(),
       registrationWriters(m).map((c) => c.name).join("; "), named(m.publishers).map((p) => p.name).join("; "),
       m.artist, m.album || m.title, "", m.upc, "", sheetDate(m.releaseDate), "", label,

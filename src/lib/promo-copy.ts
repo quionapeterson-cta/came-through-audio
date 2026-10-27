@@ -1,3 +1,4 @@
+import { parentGenre } from "@/lib/metadata";
 /** Short, shareable promo captions for the badge celebration. Each spot (embed, catalog, profile) has its own voice. */
 export type PromoContext = "embed" | "catalog" | "profile";
 
@@ -24,7 +25,7 @@ export const GENRE_TAGS: Record<string, [string, string, string]> = {
   Alternative: ["#AlternativeMusic", "#AltMusic", "#IndieMusic"],
 };
 const DEFAULT_TAGS: [string, string, string] = ["#NewMusic", "#IndependentArtist", "#UpcomingArtist"];
-export const genreTags = (genre?: string) => (genre && GENRE_TAGS[genre]) || DEFAULT_TAGS;
+export const genreTags = (genre?: string) => (genre && (GENRE_TAGS[genre] ?? GENRE_TAGS[parentGenre(genre)])) || DEFAULT_TAGS;
 
 /** title: the song title, or undefined when blank or hidden. count: catalog song count, or undefined when hidden. genre: primary genre for hashtags. */
 export type PromoInput = { title?: string | undefined; count?: number | undefined; genre?: string | undefined };

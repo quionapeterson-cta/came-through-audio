@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { ProSelect } from "@/components/ProSelect";
-import { CREDIT_ROLES, emptyContributor, GENRES, MASTER_BASES, PRODUCTION_TYPES, RELEASE_TYPES, WRITER_ROLES, writerRole, percentInput, type Contributor, type Metadata } from "@/lib/metadata";
+import { CREDIT_CHOICES, OTHER_INSTRUMENT, creditChoice, fromCreditChoice, emptyContributor, GENRES, GENRE_GROUPS, MASTER_BASES, PRODUCTION_TYPES, RELEASE_TYPES, WRITER_ROLES, writerRole, percentInput, type Contributor, type Metadata } from "@/lib/metadata";
 import { isBadgeImage } from "@/lib/badges";
 import { isBmi } from "@/lib/audit";
 import { PUBLISHING_LABEL } from "@/lib/readiness";
@@ -208,8 +208,8 @@ export function ArtistOnboarding({ userId, open, onOpenChange, onSaved, firstRun
                 onChange={(e) => { const rest = p.producers?.slice(1) ?? []; set("producers", [{ ...(p.producers?.[0] ?? emptyContributor()), name: e.target.value }, ...rest]); }} /></Field>
             </Group>
             <Group title="Release Metadata">
-              <Field label="Primary Genre"><Pick value={p.primaryGenre ?? ""} options={GENRES} onChange={(v) => set("primaryGenre", v)} /></Field>
-              <Field label="Secondary Genre (optional)"><Pick value={p.secondaryGenre ?? ""} options={GENRES} onChange={(v) => set("secondaryGenre", v)} /></Field>
+              <Field label="Primary Genre"><Pick value={p.primaryGenre ?? ""} options={GENRES} groups={GENRE_GROUPS} onChange={(v) => set("primaryGenre", v)} /></Field>
+              <Field label="Secondary Genre (optional)"><Pick value={p.secondaryGenre ?? ""} options={GENRES} groups={GENRE_GROUPS} onChange={(v) => set("secondaryGenre", v)} /></Field>
               <Field label="Default Language"><Input value={p.language ?? ""} onChange={(e) => set("language", e.target.value)} /></Field>
               <Field label="Usually recorded in" term="neighbouringRights"><Input value={p.recordedIn ?? ""} placeholder="United States" onChange={(e) => set("recordedIn", e.target.value)} /></Field>
               <Field label="Default Release Type" term="releaseType"><Pick value={p.releaseType ?? ""} options={RELEASE_TYPES} empty="Ask each time" onChange={(v) => set("releaseType", v)} /></Field>
@@ -340,18 +340,19 @@ function ProfileProgress({ ob, p }: { ob: Onboarding; p: ArtistProfile }) {
 /** Regular performers and crew (session players, backup vocals, engineers) who are on most songs. */
 function Crew({ rows, onChange }: { rows: Metadata["credits"]; onChange: (r: Metadata["credits"]) => void }) {
   const upd = (i: number, k: "role" | "name" | "instrument", v: string) => onChange(rows.map((r, j) => (j === i ? { ...r, [k]: v } : r)));
+  const pick = (i: number, choice: string) => onChange(rows.map((r, j) => (j === i ? { ...r, ...fromCreditChoice(choice, r) } : r)));
   return (
     <div className="space-y-2">
       <Label className="text-xs">Regular performers and crew (optional)<InfoTip term="neighbouringRights" /></Label>
       {rows.map((r, i) => (
         <div key={i} className="grid items-center gap-2 sm:grid-cols-[1fr_1.2fr_1fr_auto]">
-          <select aria-label="Role" value={r.role} onChange={(e) => upd(i, "role", e.target.value)} className="h-9 rounded-md border border-input bg-background px-2 text-sm">{CREDIT_ROLES.map((o) => <option key={o}>{o}</option>)}</select>
+          <select aria-label="Instrument or role" value={creditChoice(r)} onChange={(e) => pick(i, e.target.value)} className="h-9 rounded-md border border-input bg-background px-2 text-sm">{CREDIT_CHOICES.map((o) => <option key={o}>{o}</option>)}</select>
           <Input aria-label="Name" placeholder="Name" value={r.name} onChange={(e) => upd(i, "name", e.target.value)} />
-          <Input aria-label="Instrument" placeholder="Instrument (players)" value={r.instrument} onChange={(e) => upd(i, "instrument", e.target.value)} />
+          {creditChoice(r) === OTHER_INSTRUMENT ? <Input aria-label="Which instrument?" placeholder="Which instrument?" value={r.instrument} onChange={(e) => upd(i, "instrument", e.target.value)} /> : <span aria-hidden />}
           <Button type="button" variant="ghost" size="icon" aria-label="Remove" onClick={() => onChange(rows.filter((_, j) => j !== i))}><Trash2 /></Button>
         </div>
       ))}
-      <Button type="button" variant="outline" size="sm" onClick={() => onChange([...rows, { role: CREDIT_ROLES[0], name: "", instrument: "" }])}><Plus />Add a regular</Button>
+      <Button type="button" variant="outline" size="sm" onClick={() => onChange([...rows, { role: "Session musician", name: "", instrument: "Guitar" }])}><Plus />Add a regular</Button>
     </div>
   );
 }
@@ -365,10 +366,13 @@ function Field({ label, term, children }: { label: string; term?: GlossaryKey; c
 }
 
 /** `empty={null}` leaves out the blank choice, for a field that always has an answer (each option is listed once). */
-function Pick({ value, options, onChange, empty = "Select…" }: { value: string; options: readonly string[]; onChange: (v: string) => void; empty?: string | null }) {
+function Pick({ value, options, onChange, empty = "Select…", groups }: { value: string; options: readonly string[]; onChange: (v: string) => void; empty?: string | null; groups?: { genre: string; subs: string[] }[] }) {
   return (
     <select value={value} onChange={(e) => onChange(e.target.value)} className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm">
-      {empty !== null && <option value="">{empty}</option>}{options.map((o) => <option key={o}>{o}</option>)}
+      {empty !== null && <option value="">{empty}</option>}
+      {groups
+        ? groups.map((g) => <optgroup key={g.genre} label={g.genre}>{[g.genre, ...g.subs].map((o) => <option key={o}>{o}</option>)}</optgroup>)
+        : options.map((o) => <option key={o}>{o}</option>)}
     </select>
   );
 }

@@ -7,7 +7,34 @@ export const PROS = [
   "SABAM", "STIM", "TONO", "KODA", "TEOSTO", "IMRO", "JASRAC", "KOMCA", "SAMRO", "ECAD", "SADAIC", "SAYCE", "SACM", "IPRS", "COSON", "MCSK", "Other", "None",
 ] as const;
 export const RELEASE_TYPES = ["Single", "EP", "Album", "Compilation"] as const;
-export const GENRES = ["Hip-Hop/Rap", "Spiritual Hip-Hop", "R&B/Soul", "Pop", "Rock", "Gospel", "Jazz", "Blues", "Country", "Electronic", "Reggae", "Latin", "Afrobeats", "Classical", "Soundtrack", "Alternative", "Other"] as const;
+/**
+ * Main genres with their subgenres (founder, 2026-10-27: a much longer list). The main genres are the original list,
+ * so saved songs and genre badges keep working; a subgenre counts as its main genre for badges, hashtags and agency
+ * exports (parentGenre).
+ */
+export const GENRE_GROUPS: { genre: string; subs: string[] }[] = [
+  { genre: "Hip-Hop/Rap", subs: ["Trap", "Drill", "Boom Bap", "Conscious Hip-Hop", "Southern Hip-Hop", "West Coast Hip-Hop", "Melodic Rap"] },
+  { genre: "Spiritual Hip-Hop", subs: [] },
+  { genre: "R&B/Soul", subs: ["Contemporary R&B", "Neo-Soul", "Alternative R&B", "Funk"] },
+  { genre: "Pop", subs: ["Dance Pop", "Indie Pop", "K-Pop", "Synth-Pop"] },
+  { genre: "Rock", subs: ["Hard Rock", "Indie Rock", "Punk", "Metal"] },
+  { genre: "Gospel", subs: ["Contemporary Gospel", "Traditional Gospel", "Christian/CCM", "Worship"] },
+  { genre: "Jazz", subs: ["Smooth Jazz", "Jazz Fusion"] },
+  { genre: "Blues", subs: ["Soul Blues"] },
+  { genre: "Country", subs: ["Country Pop", "Americana", "Bluegrass", "Folk"] },
+  { genre: "Electronic", subs: ["House", "Afro House", "Amapiano", "Techno", "EDM", "Dubstep", "Drum & Bass", "Lo-Fi"] },
+  { genre: "Reggae", subs: ["Dancehall", "Roots Reggae"] },
+  { genre: "Latin", subs: ["Reggaeton", "Latin Trap", "Latin Pop", "Bachata", "Salsa", "Regional Mexican"] },
+  { genre: "Afrobeats", subs: ["Afropop", "Afro-fusion", "Highlife"] },
+  { genre: "Classical", subs: ["Orchestral", "Opera", "Choral"] },
+  { genre: "Soundtrack", subs: ["Film Score", "Video Game", "Musical Theatre"] },
+  { genre: "Alternative", subs: ["Indie", "Experimental"] },
+  { genre: "Other", subs: ["World", "Children's", "Spoken Word", "Comedy", "Instrumental"] },
+];
+export const GENRES: readonly string[] = GENRE_GROUPS.flatMap((g) => [g.genre, ...g.subs]);
+const GENRE_PARENT = new Map(GENRE_GROUPS.flatMap((g) => g.subs.map((s) => [s, g.genre] as const)));
+/** The main genre a subgenre belongs to ("Trap" → "Hip-Hop/Rap"); main genres return themselves. */
+export const parentGenre = (g: string) => GENRE_PARENT.get(g) ?? g;
 
 /** "Writer" is the umbrella title; each writer row picks one of these PRO roles. */
 export const PRODUCTION_TYPES = ["Film", "TV", "Stage show", "Ad"] as const;
@@ -145,6 +172,34 @@ export function splitTrack(v: string): { trackNumber: string; trackTotal: string
 }
 
 export const CREDIT_ROLES = ["Session musician", "Backup vocalist", "Arranger", "Mixing engineer", "Recording engineer", "Mastering engineer"] as const;
+/**
+ * One menu for performers and crew (founder, 2026-10-27): the instruments themselves instead of "Session musician" plus
+ * an Instrument box. Saved the same way as before (role + instrument), so nothing already saved changes and instrument
+ * badges keep counting: "Guitar" is stored as a session musician on guitar.
+ */
+export const INSTRUMENT_CHOICES = ["Guitar", "Electric guitar", "Bass", "Drums", "Percussion", "Piano / Keys", "Synths / Programming", "Organ", "Trumpet", "Saxophone", "Trombone", "Clarinet", "Violin", "Cello", "Strings", "Harp", "Banjo", "Ukulele", "Steel pan", "Xylophone / Marimba"] as const;
+export const BACKUP_VOCALS = "Vocals (backup)";
+export const OTHER_INSTRUMENT = "Other instrument…";
+const CREW_ROLES = ["Arranger", "Mixing engineer", "Recording engineer", "Mastering engineer"];
+export const CREDIT_CHOICES = [BACKUP_VOCALS, ...INSTRUMENT_CHOICES, OTHER_INSTRUMENT, ...CREW_ROLES];
+type Credit = { role: string; instrument?: string | undefined };
+
+/** What the menu shows for a saved credit. */
+export function creditChoice(c: Credit): string {
+  if (c.role === "Backup vocalist") return BACKUP_VOCALS;
+  if (c.role !== "Session musician") return c.role;
+  const ins = (c.instrument ?? "").trim().toLowerCase();
+  return INSTRUMENT_CHOICES.find((x) => x.toLowerCase() === ins) ?? OTHER_INSTRUMENT;
+}
+
+/** A menu pick as the role and instrument to save. "Other instrument…" keeps a typed instrument. */
+export function fromCreditChoice(choice: string, prev: Credit): { role: string; instrument: string } {
+  if (choice === BACKUP_VOCALS) return { role: "Backup vocalist", instrument: "Vocals" };
+  if ((INSTRUMENT_CHOICES as readonly string[]).includes(choice)) return { role: "Session musician", instrument: choice };
+  if (choice === OTHER_INSTRUMENT) return { role: "Session musician", instrument: creditChoice(prev) === OTHER_INSTRUMENT ? prev.instrument ?? "" : "" };
+  return { role: choice, instrument: "" };
+}
+
 /** Credit roles that perform on the recording, so neighbouring-rights societies pay them. Engineers are credited, not paid. */
 export const PERFORMER_ROLES: readonly string[] = ["Session musician", "Backup vocalist"];
 export const isPerformer = (role: string) => PERFORMER_ROLES.includes(role);
@@ -328,7 +383,9 @@ export function readMetadata(buf: ArrayBuffer): Partial<Metadata> & { picture?: 
   if (frames["TCON"]) {
     // Genre names contain "/" (e.g. "R&B/Soul"), so match known genres instead of splitting.
     const raw = frames["TCON"];
-    const found = GENRES.filter((g) => raw.includes(g)).sort((a, b) => raw.indexOf(a) - raw.indexOf(b));
+    // Longer names win ("K-Pop" isn't also read as "Pop").
+    const hits = GENRES.filter((g) => raw.includes(g));
+    const found = hits.filter((g) => !hits.some((o) => o !== g && o.includes(g))).sort((a, b) => raw.indexOf(a) - raw.indexOf(b));
     if (found[0]) out.primaryGenre = found[0];
     if (found[1]) out.secondaryGenre = found[1];
   }

@@ -13,7 +13,7 @@ import { StarsAligned } from "@/components/StarsAligned";
 import { EXPORT_REQUIRED, GLOSSARY, type GlossaryKey } from "@/lib/glossary";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { PRE_DIST_NOTE, PRO_TIP } from "@/lib/copy";
-import { readMetadata, CREDIT_ROLES, isPerformer, performers, emptyContributor, emptyMetadata, embedMetadata, creditName, metadataSchema, GENRES, MASTER_BASES, PRODUCTION_TYPES, RELEASE_TYPES, WRITER_ROLES, writerRole, hfaLooksOff, percentInput, formatDuration, type Contributor, type Metadata } from "@/lib/metadata";
+import { readMetadata, CREDIT_CHOICES, OTHER_INSTRUMENT, creditChoice, fromCreditChoice, isPerformer, performers, emptyContributor, emptyMetadata, embedMetadata, creditName, metadataSchema, GENRES, GENRE_GROUPS, MASTER_BASES, PRODUCTION_TYPES, RELEASE_TYPES, WRITER_ROLES, writerRole, hfaLooksOff, percentInput, formatDuration, type Contributor, type Metadata } from "@/lib/metadata";
 import { COUNTRIES, countryByCode, guessCountry } from "@/lib/repertoires";
 import { catalogHealth, releaseKind } from "@/lib/health-checklist";
 import { listChecks } from "@/lib/repertoire-checks";
@@ -555,8 +555,8 @@ export function MetadataUploader({ onShareInfo, userId, mode = "embed", readOnly
                   <Label>Explicit content<InfoTip term="explicit" /></Label>
                   <Choice label="Explicit content" value={metadata.explicit ? "Yes" : "No"} options={["Yes", "No"]} onChange={(v) => update("explicit", v === "Yes")} />
                 </div>
-                <SelectField label="Primary genre" id="primaryGenre" value={metadata.primaryGenre} options={GENRES} onChange={(value) => update("primaryGenre", value)} />
-                <SelectField label="Secondary genre" id="secondaryGenre" value={metadata.secondaryGenre} options={GENRES} onChange={(value) => update("secondaryGenre", value)} />
+                <SelectField label="Primary genre" id="primaryGenre" value={metadata.primaryGenre} options={GENRES} groups={GENRE_GROUPS} onChange={(value) => update("primaryGenre", value)} />
+                <SelectField label="Secondary genre" id="secondaryGenre" value={metadata.secondaryGenre} options={GENRES} groups={GENRE_GROUPS} onChange={(value) => update("secondaryGenre", value)} />
               </div>
             </FormSection>
 
@@ -589,6 +589,19 @@ export function MetadataUploader({ onShareInfo, userId, mode = "embed", readOnly
                 </>}
               </div>
             </FormSection>
+
+            {/* Asked before Writers (founder, 2026-10-27), so the BMI answer is clear before writers are added. */}
+            {full && <FormSection title="Publishing for this song" disabled={busy} open={!metadata.selfPublished && !metadata.bmiWriterPublishing && !count(metadata.publishers)} ok={metadata.selfPublished || !!metadata.bmiWriterPublishing || count(metadata.publishers) > 0}
+              summary={metadata.selfPublished ? "Self-published" : metadata.bmiWriterPublishing ? "BMI writer, no publishing company" : count(metadata.publishers) ? "Publisher listed below" : "Self-published, BMI, or a publisher"}>
+              <div className="space-y-3">
+                <label className="flex items-center gap-2 text-sm"><input id="selfPublished" type="checkbox" className="h-4 w-4 accent-[var(--primary)]" disabled={busy} checked={metadata.selfPublished} onChange={(e) => void setSelfPublished(e.target.checked)} />Self-published (no publisher)<Tip text={TIPS.selfPublished} title="Self-published" /></label>
+                <label className="flex items-start gap-2 text-sm"><input id="bmiWriterPublishing" type="checkbox" className="mt-0.5 h-4 w-4 accent-[var(--primary)]" disabled={busy} checked={!!metadata.bmiWriterPublishing} onChange={(e) => update("bmiWriterPublishing", e.target.checked)} />
+                  <span><span className="font-semibold">I'm a BMI writer with no publishing company</span><Tip text={TIPS.bmiWriterPublishing} title="BMI writer, no publishing company" /><span className="block text-muted-foreground">BMI pays you both halves of your royalties, the writer share and the publisher share, so you don't need a publisher or a publisher IPI. Tick this only if every writer on the song is with BMI; it's why a song can reach 100% without a publisher.</span></span></label>
+                {bmiNoPublisher && !metadata.bmiWriterPublishing && <p className="rounded-lg border border-primary/40 bg-accent/30 p-3 text-sm text-muted-foreground"><span className="font-semibold text-foreground">💡 No publisher? BMI has you covered.</span> When a song has no publisher, BMI pays the publisher share to the writers automatically. It's split between all the writers in proportion to their writer splits, so a 60/40 split gets 60% and 40% of the publisher share too. Check the box above so your songs say so.</p>}
+                {metadata.bmiWriterPublishing && notBmiWriters(metadata).length > 0 && !count(metadata.publishers) && <p className="text-sm">⚠️ {notBmiWriters(metadata).join(", ")} {notBmiWriters(metadata).length === 1 ? "isn't" : "aren't"} with BMI, so BMI can't pay the publisher share for them. Add their publisher, or check Self-published.</p>}
+                <p className="text-xs text-muted-foreground">Have a publishing company? Leave both unchecked and add it under Publishers below.</p>
+              </div>
+            </FormSection>}
 
             <FormSection title={`Writers · ${count(metadata.writers)}`} open={!full || writersWarn} warn={writersWarn} ok={!writersWarn && count(metadata.writers) > 0} summary={writersWarn ? "Needs info to register" : count(metadata.writers) ? "Ready to register" : "Who wrote the song"}>
               <Contributors bare title="Writers" singular="writer" group="writers" writer rows={metadata.writers} saved={people.writers} disabled={busy} onChange={(rows) => update("writers", rows)}
@@ -633,12 +646,6 @@ export function MetadataUploader({ onShareInfo, userId, mode = "embed", readOnly
             </FormSection>}
 
             {full && <FormSection title={metadata.bmiWriterPublishing && !count(metadata.publishers) ? "Publishers · BMI pays the publisher share" : metadata.selfPublished && !count(metadata.publishers) ? "Publishers · self-published" : `Publishers · ${count(metadata.publishers)}`} open={publishersWarn} warn={publishersWarn} summary={metadata.bmiWriterPublishing && !count(metadata.publishers) ? "BMI writer, no publishing company" : metadata.selfPublished ? "No publisher" : (metadata.publishers ?? []).filter(creditName).map(creditName).join(", ") || "Who publishes the song"}>
-              <label className="flex items-center gap-2 text-sm"><input id="selfPublished" type="checkbox" className="h-4 w-4 accent-[var(--primary)]" disabled={busy} checked={metadata.selfPublished} onChange={(e) => void setSelfPublished(e.target.checked)} />Self-published (no publisher)<Tip text={TIPS.selfPublished} title="Self-published" /></label>
-              {/* BMI writers with no publishing company say so here (founder, 2026-10-25); it teaches why no publisher is needed. */}
-              {(bmiNoPublisher || metadata.bmiWriterPublishing) && <label className="flex items-start gap-2 text-sm"><input id="bmiWriterPublishing" type="checkbox" className="mt-0.5 h-4 w-4 accent-[var(--primary)]" disabled={busy} checked={!!metadata.bmiWriterPublishing} onChange={(e) => update("bmiWriterPublishing", e.target.checked)} />
-                <span><span className="font-semibold">I'm a BMI writer with no publishing company</span><Tip text={TIPS.bmiWriterPublishing} title="BMI writer, no publishing company" /><span className="block text-muted-foreground">BMI pays you both halves of your royalties, the writer share and the publisher share, so you don't need a publisher or a publisher IPI.</span></span></label>}
-              {bmiNoPublisher && !metadata.bmiWriterPublishing && <p className="rounded-lg border border-primary/40 bg-accent/30 p-3 text-sm text-muted-foreground"><span className="font-semibold text-foreground">💡 No publisher? BMI has you covered.</span> When a song has no publisher, BMI pays the publisher share to the writers automatically. It's split between all the writers in proportion to their writer splits, so a 60/40 split gets 60% and 40% of the publisher share too. Check the box above so your songs say so.</p>}
-              {metadata.bmiWriterPublishing && notBmiWriters(metadata).length > 0 && !count(metadata.publishers) && <p className="text-sm">⚠️ {notBmiWriters(metadata).join(", ")} {notBmiWriters(metadata).length === 1 ? "isn't" : "aren't"} with BMI, so BMI can't pay the publisher share for them. Add their publisher, or check Self-published.</p>}
               {metadata.bmiWriterPublishing && count(metadata.publishers) > 0 && <p className="text-sm">⚠️ You said there's no publishing company but also listed a publisher. Uncheck the BMI box, or remove the publisher.</p>}
               {pie.parts.length > 0 && <p className={`text-sm ${pie.state === "ok" ? "text-muted-foreground" : "font-medium"}`}>{pie.state === "ok" ? "✓ " : "⚠️ "}Publisher shares: {pie.total}% of 100% ({pie.parts.map((p) => `${p.label} ${p.share}%`).join(" · ")})</p>}
               {(!metadata.selfPublished || count(metadata.publishers) > 0) && <Contributors bare title="Publishers" singular="publisher" group="publishers" rows={metadata.publishers} saved={people.publishers} disabled={busy} publisher onChange={(rows) => update("publishers", rows)} tip={GLOSSARY.publisher.text} />}
@@ -1010,16 +1017,16 @@ function Performers({ metadata: m, disabled, update, bare }: { bare?: boolean; m
         </ul>
       )}
       {credits.map((c, i) => (
-        <div key={i} className="grid items-end gap-3 sm:grid-cols-[200px_1fr_1fr_36px]">
-          <SelectField label="Role" id={`credit-${i}-role`} value={c.role} options={CREDIT_ROLES} onChange={(v) => set(i, { role: v })} />
+        <div key={i} className="grid items-end gap-3 sm:grid-cols-[220px_1fr_1fr_36px]">
+          <SelectField label="Instrument or role" id={`credit-${i}-role`} value={creditChoice(c)} options={CREDIT_CHOICES} onChange={(v) => set(i, fromCreditChoice(v, c))} />
           <Field label="Name" id={`credit-${i}-name`} value={c.name} onChange={(v) => set(i, { name: v })} />
-          {isPerformer(c.role)
-            ? <Field label="Instrument" id={`credit-${i}-instrument`} value={c.instrument ?? ""} placeholder={c.role === "Backup vocalist" ? "Vocals" : "e.g. Guitar"} onChange={(v) => set(i, { instrument: v })} />
-            : <p className="pb-2 text-xs text-muted-foreground">Credited only: engineers and arrangers aren't paid for airplay.</p>}
+          {creditChoice(c) === OTHER_INSTRUMENT
+            ? <Field label="Which instrument?" id={`credit-${i}-instrument`} value={c.instrument ?? ""} placeholder="e.g. Sitar" onChange={(v) => set(i, { instrument: v })} />
+            : isPerformer(c.role) ? <span aria-hidden /> : <p className="pb-2 text-xs text-muted-foreground">Credited only: engineers and arrangers aren't paid for airplay.</p>}
           <Button type="button" size="icon" variant="ghost" aria-label={`Remove credit ${i + 1}`} onClick={() => update("credits", credits.filter((_, j) => j !== i))}><Trash2 /></Button>
         </div>
       ))}
-      <Button type="button" variant="outline" onClick={() => update("credits", [...credits, { role: CREDIT_ROLES[0], name: "", instrument: "" }])}><Plus />Add performer or credit</Button>
+      <Button type="button" variant="outline" onClick={() => update("credits", [...credits, { role: "Session musician", name: "", instrument: "Guitar" }])}><Plus />Add performer or credit</Button>
       <div className="grid gap-5 sm:grid-cols-2">
         <div className="min-w-0 space-y-2">
           <Label htmlFor="recordedIn">Country where it was recorded<Tip text="For airplay royalties outside the US (neighbouring rights). Most US artists can leave it as United States." title="Country where it was recorded" /></Label>
@@ -1186,11 +1193,13 @@ function RightsDate({ label, id, check, tip, value, disabled, onChange }: { labe
   </div>;
 }
 
-function SelectField({ label, id, value, options, onChange, term }: { label: string; id: string; value: string; options: readonly string[]; onChange: (value: string) => void; term?: GlossaryKey }) {
+function SelectField({ label, id, value, options, onChange, term, groups }: { label: string; id: string; value: string; options: readonly string[]; onChange: (value: string) => void; term?: GlossaryKey; groups?: { genre: string; subs: string[] }[] }) {
   return <div className="min-w-0 space-y-2"><Label htmlFor={id}>{label}{term && <InfoTip term={term} />}</Label>
     <select id={id} value={value} onChange={(event) => onChange(event.target.value)} className="flex h-9 w-full rounded-md border border-input bg-background px-3 text-sm shadow-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
       <option value="">Select…</option>
-      {options.map((o) => <option key={o} value={o}>{o}</option>)}
+      {groups
+        ? groups.map((g) => <optgroup key={g.genre} label={g.genre}>{[g.genre, ...g.subs].map((o) => <option key={o} value={o}>{o}</option>)}</optgroup>)
+        : options.map((o) => <option key={o} value={o}>{o}</option>)}
     </select></div>;
 }
 

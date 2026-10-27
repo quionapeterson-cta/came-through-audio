@@ -4,6 +4,7 @@ import { songHealthy, trackReport, type RepertoireCheck } from "@/lib/health";
 import { creditName, isPerformer } from "@/lib/metadata";
 import { registrationReadiness } from "@/lib/readiness";
 import { countryByCode, guessCountry } from "@/lib/repertoires";
+import { parentGenre } from "@/lib/metadata";
 
 /** Everything the award check needs about one user, loaded by the server (badges.functions.ts). */
 export type BadgeData = {
@@ -25,7 +26,8 @@ export type BadgeData = {
 
 const RELEASE_MIN_TRACKS = 3;
 const norm = (s: string) => s.trim().toLowerCase();
-const hasGenre = (t: CatalogTrack, g: string) => t.metadata.primaryGenre === g || t.metadata.secondaryGenre === g;
+/** A subgenre counts as its main genre ("Trap" counts toward Hip-Hop badges). */
+const hasGenre = (t: CatalogTrack, g: string) => parentGenre(t.metadata.primaryGenre) === g || parentGenre(t.metadata.secondaryGenre) === g;
 
 /** Which badge instrument a performer credit counts toward, if any. Backup vocalists count as vocals. */
 export function instrumentOf(c: { role: string; instrument?: string }) {
