@@ -45,6 +45,8 @@ export function fromCatalogRow(row: Record<string, unknown>): CatalogTrack {
     composers: saved.composers?.length ? withLegalName(saved.composers) : [emptyContributor()],
     producers: saved.producers?.length ? saved.producers : [emptyContributor()],
     publishers: saved.publishers?.length ? saved.publishers : [emptyContributor()],
+    // Songs saved before 2026-10-27 read "3:45"; agencies want "03:45". Shown and exported padded; saved as-is.
+    ...(/^\d:[0-5]\d$/.test(saved.duration ?? "") && { duration: `0${saved.duration}` }),
   };
   return { id: row["id"] as string, title: metadata.title, artist: metadata.artist, updatedAt: (row["updated_at"] ?? row["created_at"]) as string, metadata };
 }

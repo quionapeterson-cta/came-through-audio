@@ -38,6 +38,12 @@ const hms = (d: string) => {
   return [Math.floor(t / 3600), Math.floor((t % 3600) / 60), t % 60].map((n) => String(n).padStart(2, "0")).join(":");
 };
 
+/** mm:ss with two-digit minutes ("3:45" → "03:45"), the way agency forms want it, so nobody adds the zero by hand. */
+const mmss = (d: string) => {
+  const m = /^(\d{1,3}):([0-5]\d)$/.exec(d ?? "");
+  return m ? `${m[1]!.padStart(2, "0")}:${m[2]}` : "";
+};
+
 /**
  * The MLC's bulk file requires a publisher name and IPI on every writer's row. A publisher with no IPI (e.g. HFA only),
  * or a song with no publisher (BMI writers paid the publisher share by BMI, or self-published), gets this placeholder so
@@ -107,9 +113,10 @@ const cell = (v: unknown) => {
 const idText = (v: string) => (v && /^\d+$/.test(v) ? `="${v}"` : v);
 /** Field-by-field sheet for typing into ASCAP Member Access / BMI Online Services work registration. */
 export function proCheatSheet(tracks: CatalogTrack[]): string {
-  const rows: unknown[][] = [["Work Title", "ISWC", "ISRC", "Performing Artist", "Party Type", "Name", "Role", "Share %", "PRO", "IPI #"]];
+  const rows: unknown[][] = [["Work Title", "ISWC", "ISRC", "Performing Artist", "Duration (mm:ss)", "Party Type", "Name", "Role", "Share %", "PRO", "IPI #"]];
   for (const { metadata: m } of tracks) {
-    const base = [m.title, m.iswc, m.isrc, m.artist];
+    // BMI asks for the duration; kept as text so a spreadsheet doesn't turn 03:45 into a time of day.
+    const base = [m.title, m.iswc, m.isrc, m.artist, mmss(m.duration) && `="${mmss(m.duration)}"`];
     for (const w of registrationWriters(m)) rows.push([...base, "Writer", w.name, w.role, w.percentage, w.pro, idText(w.ipi)]);
     for (const p of named(m.publishers)) rows.push([...base, "Publisher", p.name, "Original Publisher", p.percentage, p.pro, idText(p.ipi)]);
     // No publisher: BMI pays its writers the publisher share, so the sheet says so instead of leaving it blank.
@@ -134,7 +141,7 @@ export function neighbouringRows(tracks: CatalogTrack[]) {
     const year = m.recordedYear || (m.releaseDate ?? "").slice(0, 4);
     for (const p of performers(m)) {
       rows.push([m.isrc.replace(/-/g, "").toUpperCase(), m.title, artistCredit(m.artist, m.featured), p.name, p.featured ? "Featured" : "Non-featured", p.role, p.instrument,
-        m.recordedIn, year, masterOwner(m), m.label, m.releaseDate, idText(m.upc), m.duration]);
+        m.recordedIn, year, masterOwner(m), m.label, m.releaseDate, idText(m.upc), mmss(m.duration) && `="${mmss(m.duration)}"`]);
     }
   }
   return { csv: rows.map((r) => r.map(cell).join(",")).join("\r\n"), skipped };

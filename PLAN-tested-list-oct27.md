@@ -23,7 +23,7 @@ build is wrapped. Items marked ❓ need a decision from you first.
 
 Writer and readiness code is involved, so per the project rules I list the files and findings before editing.
 
-**Items 1–5 built 2026-10-27** (findings approved): typed songs link to their order by title, every order song stays listed, catalog songs in an order show what's left with Continue Expert Registration; saved writers/publishers/producers fill in by name in Embed and My Catalog; a restored Embed draft takes current profile details + Start fresh; Embed shows no split warnings; Contributor Library gains usual role + split, fills itself from saved songs (blanks only) and is in My Catalog. Needs migration 20261027180000. Item 6 (HFA): nothing found counting it; waiting on where it was seen.
+**Items 1–5 built 2026-10-27** (findings approved): typed songs link to their order by title, every order song stays listed, catalog songs in an order show what's left with Continue Expert Registration; saved writers/publishers/producers fill in by name in Embed and My Catalog; a restored Embed draft takes current profile details + Start fresh; Embed shows no split warnings; Contributor Library gains usual role + split, fills itself from saved songs (blanks only) and is in My Catalog. Needs migration 20261027180000. Item 6 (HFA): closed 2026-10-27, nothing counts it (founder confirmed; HFA stays optional).
 
 **Items 7–14 built 2026-10-27:** master share capped at 100; badge celebration fits the screen and scrolls from the top; sharper pop-up text and smaller ⓘ icons; confirm boxes sized to the message; Change email / Change password need the current password, new email confirmed from its inbox; Support tickets need sign-in (Contact Us stays open); MLC and SoundExchange exports checked against the official templates (match), MLC AKA titles filled; The MLC no longer needs an ISWC in the health score, duration hint and auto-read durations as mm:ss (03:45), MLC Member Settings tip, Agent tips in Admin → Registrations.
 
@@ -154,7 +154,8 @@ protect you · My certificates.
 - **Split sheet trial:** keep the 30-day trial; add **10% off, good for 14 days** after accepting it (approved 2026-10-27).
 - **Badge award system overhaul**, including the lyric badge bug (First Lyric Entry given every time, showing 5),
   new Royalty Health badges (your tier series), the badge creation process written up as BADGE_PROCESS.md, and the
-  badge prompt library saved in Admin for super admins and Marketing.
+  badge prompt library saved in Admin for super admins and Marketing. The founder's badge notes (Oct 27 list: CTA Badge
+  Creation Process + Prompt Guide) are the reference for how the original badges were made.
 - **React in Admin:** React is the free AI tool the founder uses to make badges. Plan: a launcher in Admin for super
   admins, Marketing and Branding, with the badge prompt library next to it, and a how-to for free-plan users.
   ❓ Send the React link so the launcher opens the right place.

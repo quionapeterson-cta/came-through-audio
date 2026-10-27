@@ -34,7 +34,7 @@ const AGENT_TIPS = [
   "Log in as registrations@camethroughaudio.com. When asked for two-step verification, choose email, then copy the code from the registrations@ inbox.",
   "The MLC: Member Settings is at the bottom left of the Members Hub.",
   "A field shows red? Check for spaces before or after the text and delete them.",
-  "The MLC doesn't need an ISWC to register a work. The user adds it later, once their PRO assigns it.",
+  "The MLC doesn't require an ISWC, but if the user has one, include it: it helps The MLC match the song more accurately.",
   "The MLC matches by artist name, song title and ISRC. Release date, duration and other recording details come from the streaming services.",
 ];
 
