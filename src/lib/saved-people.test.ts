@@ -44,3 +44,17 @@ describe("libraryRowsOf", () => {
     expect(rows.map((r) => [r.name, r.kind, r.role])).toEqual([["A", "Writer", "Author"], ["Old Composer", "Writer", "Composer"], ["Pub", "Publisher", undefined]]);
   });
 });
+
+describe("percentInput and formatDuration", async () => {
+  const { percentInput, formatDuration, metadataSchema, emptyMetadata } = await import("./metadata");
+  it("never lets a percentage past 100", () => {
+    expect(percentInput("150")).toBe("100");
+    expect(percentInput("75.5%")).toBe("75.5");
+    expect(percentInput("1.2.3")).toBe("1.23");
+  });
+  it("writes durations as mm:ss with two-digit minutes", () => {
+    expect(formatDuration(225)).toBe("03:45");
+    expect(formatDuration(725)).toBe("12:05");
+    expect(metadataSchema.parse({ ...emptyMetadata(), title: "T", artist: "A", duration: "3:45" }).duration).toBe("03:45");
+  });
+});

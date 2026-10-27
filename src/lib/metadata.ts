@@ -47,7 +47,8 @@ export const metadataSchema = z.object({
   artist: z.string().trim().min(1, "Artist name is required."),
   featured: z.array(z.string().trim()).default([]),
   album: z.string().trim(),
-  duration: z.string().trim().default("").refine((v) => !v || /^\d{1,3}:[0-5]\d$/.test(v), "Enter duration as mm:ss."),
+  // Saved as mm:ss with two-digit minutes ("3:45" becomes "03:45"), as agency forms ask.
+  duration: z.string().trim().default("").refine((v) => !v || /^\d{1,3}:[0-5]\d$/.test(v), "Enter duration as mm:ss.").transform((v) => (/^\d:[0-5]\d$/.test(v) ? `0${v}` : v)),
   releaseType: z.string().default(""),
   releaseDate: z.string(),
   /** "This song isn't released yet" (pre-distribution, 2026-10-25): for songs with no release date picked. */
@@ -123,6 +124,15 @@ export const emptyMetadata = (): Metadata => ({
 });
 
 /** The name shown for a contributor: a writer's legal name, otherwise the plain name (producers, publishers, older entries). */
+/** Seconds as mm:ss with two-digit minutes ("03:45"), the way agency registration forms ask for it (founder, 2026-10-27). */
+export const formatDuration = (sec: number) => `${String(Math.floor(sec / 60)).padStart(2, "0")}:${String(sec % 60).padStart(2, "0")}`;
+
+/** A percentage box that can't go above 100 (founder, 2026-10-27: the master share went past it). Keeps digits and one dot. */
+export const percentInput = (v: string) => {
+  const clean = v.replace(/[^\d.]/g, "").replace(/(\..*)\./g, "$1").slice(0, 6);
+  return Number(clean) > 100 ? "100" : clean;
+};
+
 export const creditName = (r: Contributor) => r.legalName?.trim() || r.name.trim();
 
 /** Writers keep one name, the legal name. A blank legal name is filled from an older saved name; `name` itself is kept, never deleted. */
@@ -322,7 +332,7 @@ export function readMetadata(buf: ArrayBuffer): Partial<Metadata> & { picture?: 
     if (found[0]) out.primaryGenre = found[0];
     if (found[1]) out.secondaryGenre = found[1];
   }
-  if (frames["TLEN"]) { const sec = Math.round(Number(frames["TLEN"]) / 1000); if (sec > 0) out.duration = `${Math.floor(sec / 60)}:${String(sec % 60).padStart(2, "0")}`; }
+  if (frames["TLEN"]) { const sec = Math.round(Number(frames["TLEN"]) / 1000); if (sec > 0) out.duration = formatDuration(sec); }
   if (txxx["RELEASE_TYPE"]) out.releaseType = txxx["RELEASE_TYPE"];
   const pubs = json<Contributor[]>(txxx["PUBLISHERS"]);
   if (pubs?.length) out.publishers = pubs.map((p) => ({ ...emptyContributor(), ...p }));

@@ -103,7 +103,8 @@ export function trackReport(t: CatalogTrack, country: Country, checks: Repertoir
 /** What each agency matches a song by (match-fields.ts): PROs by the composition, SoundExchange by the recording. */
 const AGENCY_MATCH: Record<Pillar, MatchCheck["id"][]> = {
   performance: ["title", "iswc", "writers", "ipi"],
-  mechanical: ["title", "isrc", "iswc", "writers", "ipi"],
+  // The MLC matches by title, ISRC and writers; it doesn't need an ISWC to register (The MLC, to the founder, 2026-10-27).
+  mechanical: ["title", "isrc", "writers", "ipi"],
   digital: ["title", "isrc", "live"],
 };
 const MATCH_FIELD = (f?: string) => !!f && (["title", "isrc", "iswc"].includes(f) || /^(writers|composers)-\d+-(legalName|ipi)$/.test(f));

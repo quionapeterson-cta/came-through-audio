@@ -50,7 +50,9 @@ export function auditTrack(t: CatalogTrack): Issue[] {
     else if (split.state === "under" && Math.round(split.total) !== 100) out.push({ pillar: "performance", text: `Writer splits total ${split.total}%, ${split.left}% short of 100%`, field: "writers-0-share" });
   }
   // Needed for 100%, but only a small part of the score: it helps agencies tell apart songs with similar titles and artists.
-  if (!(m.duration ?? "").trim()) out.push({ pillar: "performance", text: "Add the duration (mm:ss). It helps agencies tell apart songs with similar titles and artists.", field: "duration", low: true });
+  // Recording details (duration, release date) reach The MLC and SoundExchange from the streaming services, so only the
+  // PRO side asks for duration, and lightly (founder's call with The MLC, 2026-10-27).
+  if (!(m.duration ?? "").trim()) out.push({ pillar: "performance", text: "Add the duration (mm:ss). BMI asks for it when you register. The MLC and SoundExchange get it from the streaming services.", field: "duration", low: true });
   if (!m.isrc) out.push({ pillar: "digital", text: "Missing ISRC", field: "isrc" });
   else if (!isIsrc(m.isrc)) out.push({ pillar: "digital", text: "ISRC is not 12 characters (CC-XXX-YY-NNNNN)", field: "isrc" });
   if (!t.artist.trim()) out.push({ pillar: "digital", text: "No featured artist name", field: "artist" });
@@ -67,7 +69,8 @@ export function auditTrack(t: CatalogTrack): Issue[] {
     if (p.name.trim() && !hasPro(p.pro)) out.push({ pillar: "performance", text: `${p.name}: no PRO affiliation for the publisher`, field: `publishers-${index}-pro` });
     if (p.name.trim() && !isIpi(p.ipi ?? "")) out.push({ pillar: "mechanical", text: `${p.name}: missing publisher IPI`, field: `publishers-${index}-ipi` });
   });
-  if (!m.iswc) out.push({ pillar: "mechanical", text: "Missing ISWC — sound recording can't be linked to its composition", field: "iswc" });
+  // Your PRO assigns the ISWC after you register; The MLC doesn't need one to register the song.
+  if (!m.iswc) out.push({ pillar: "performance", text: "No ISWC yet. Your PRO assigns it after you register the song; add it then. The MLC doesn't need it to register.", field: "iswc", low: true });
   else if (!isIswc(m.iswc)) out.push({ pillar: "mechanical", text: "ISWC format should be T-123.456.789-0", field: "iswc" });
   return out;
 }

@@ -18,38 +18,56 @@ const ticketSchema = z.object({
 export type TicketInput = z.infer<typeof ticketSchema>;
 export { ticketSchema };
 
-/** Public: stores a Contact Us / Support ticket and notifies the support inbox. */
+/** Public: Contact Us messages. Support tickets need an account (submitSupportTicket). */
 export const submitTicket = createServerFn({ method: "POST" })
   .inputValidator((d) => ticketSchema.parse(d))
   .handler(async ({ data }) => {
-    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const since = new Date(Date.now() - 60 * 60 * 1000).toISOString();
-    const { count } = await supabaseAdmin.from("support_tickets").select("id", { count: "exact", head: true })
-      .eq("email", data.email).gte("created_at", since);
-    if ((count ?? 0) >= 5) throw new Error("Too many messages — please try again in an hour.");
-    const { data: row, error } = await supabaseAdmin.from("support_tickets").insert({
-      kind: data.kind, name: data.name, email: data.email, category: data.category, subject: data.subject, message: data.message,
-    }).select("id").single();
-    if (error || !row) throw new Error("We couldn't send your message. Please try again.");
+    if (data.kind !== "contact") throw new Error("Log in to open a support ticket.");
+    return storeTicket(data);
+  });
 
-    const key = process.env["RESEND_API_KEY"] || process.env["CameThroughAudio"];
-    if (key) {
-      const label = data.kind === "support" ? "Support Ticket" : "Contact Message";
-      const html = emailLayout(`<p style="font-size:12px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:#004AAD;margin:0">New ${label}</p>
+/**
+ * Support tickets come from signed-in users only (founder, 2026-10-27), so tickets are real and tied to an account.
+ * The reply address is the account's own email, never one typed into the form.
+ */
+export const submitSupportTicket = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d) => ticketSchema.omit({ email: true }).parse(d))
+  .handler(async ({ data, context }) => {
+    const email = (context.claims as { email?: string }).email;
+    if (!email) throw new Error("Your account has no email address. Contact us instead.");
+    return storeTicket({ ...data, kind: "support", email });
+  });
+
+async function storeTicket(data: TicketInput) {
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  const since = new Date(Date.now() - 60 * 60 * 1000).toISOString();
+  const { count } = await supabaseAdmin.from("support_tickets").select("id", { count: "exact", head: true })
+    .eq("email", data.email).gte("created_at", since);
+  if ((count ?? 0) >= 5) throw new Error("Too many messages — please try again in an hour.");
+  const { data: row, error } = await supabaseAdmin.from("support_tickets").insert({
+    kind: data.kind, name: data.name, email: data.email, category: data.category, subject: data.subject, message: data.message,
+  }).select("id").single();
+  if (error || !row) throw new Error("We couldn't send your message. Please try again.");
+
+  const key = process.env["RESEND_API_KEY"] || process.env["CameThroughAudio"];
+  if (key) {
+    const label = data.kind === "support" ? "Support Ticket" : "Contact Message";
+    const html = emailLayout(`<p style="font-size:12px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:#004AAD;margin:0">New ${label}</p>
 <h1 style="font-size:22px;margin:8px 0 16px">${escapeHtml(data.subject)}</h1>
 <p style="font-size:14px;margin:0"><b>From:</b> ${escapeHtml(data.name)} (${escapeHtml(data.email)})<br/><b>Category:</b> ${escapeHtml(data.category)}</p>
 <p style="font-size:15px;line-height:1.6;white-space:pre-wrap">${escapeHtml(data.message)}</p>`,
-        { reason: "You're receiving this staff notice because a new message was submitted on the Came Through Audio website." });
-      // Billing questions go to billing@, support tickets to support@, Contact Us messages to info@.
-      const inbox = data.category === "Billing" ? BILLING_EMAIL : data.kind === "support" ? SUPPORT_EMAIL : INFO_EMAIL;
-      await fetch("https://api.resend.com/emails", {
-        method: "POST",
-        headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json", "Idempotency-Key": `ticket-${row.id}` },
-        body: JSON.stringify({ from: "Came Through Audio <collaborate@camethroughaudio.com>", to: [inbox], reply_to: data.email, subject: `[${label}] ${data.subject}`, html }),
-      }).catch((e) => console.error("Ticket notify failed", e));
-    }
-    return { ok: true };
-  });
+      { reason: "You're receiving this staff notice because a new message was submitted on the Came Through Audio website." });
+    // Billing questions go to billing@, support tickets to support@, Contact Us messages to info@.
+    const inbox = data.category === "Billing" ? BILLING_EMAIL : data.kind === "support" ? SUPPORT_EMAIL : INFO_EMAIL;
+    await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json", "Idempotency-Key": `ticket-${row.id}` },
+      body: JSON.stringify({ from: "Came Through Audio <collaborate@camethroughaudio.com>", to: [inbox], reply_to: data.email, subject: `[${label}] ${data.subject}`, html }),
+    }).catch((e) => console.error("Ticket notify failed", e));
+  }
+  return { ok: true };
+}
 
 /** Support department only: list tickets. */
 export const listTickets = createServerFn({ method: "GET" })

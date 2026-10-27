@@ -43,6 +43,7 @@ function ProfilePage() {
   const [profile, setProfile] = useState<ArtistProfile | null>(null);
   const [editing, setEditing] = useState(false);
   const [passwordOpen, setPasswordOpen] = useState(false);
+  const [emailOpen, setEmailOpen] = useState(false);
   const [viewing, setViewing] = useState<{ src: string; name?: string; round?: boolean; share?: ShareInfo }>();
   const [badge, setBadge] = useState<BadgeState>();
   const [badgeList, setBadgeList] = useState<BadgeState[]>([]);
@@ -114,7 +115,7 @@ function ProfilePage() {
           </Card>
 
           <Card title="Account">
-            <Rows rows={[["Email", user.email], ["Plan", TIER_LABEL[tier]],
+            <Rows rows={[["Email", user.new_email ? `${user.email} (changing to ${user.new_email}: click the link we emailed there to finish)` : user.email], ["Plan", TIER_LABEL[tier]],
               ...(founding ? [["Founding member", `#${founding.seat}: you get ${TIER_LABEL[founding.granted_tier]} for the price of ${TIER_LABEL[founding.paid_tier]}, as long as your plan stays active`] as [string, string]] : []),
               ...(plan?.periodEnd ? [[plan.cancelling ? "Ends" : "Renews", longDate(plan.periodEnd)] as [string, string]] : []),
               // The Refund Policy's 30-day window; upgrades stay prorated all year either way.
@@ -124,6 +125,7 @@ function ProfilePage() {
               {paidTier !== "management" && <Button asChild size="lg" className="w-full text-base font-bold"><Link to="/plans"><ArrowUpCircle />Upgrade plan</Link></Button>}
               {plan && <ManageBilling />}
               <RetentionControls tier={paidTier} sub={sub} lapse={lapse} pauses={pauses} onChanged={() => void reload()} />
+              <Button variant="outline" onClick={() => setEmailOpen(true)}>Change email</Button>
               <Button variant="outline" onClick={() => setPasswordOpen(true)}>Change password</Button>
               <Button variant="ghost" onClick={async () => { await supabase.auth.signOut(); navigate({ to: "/" }); }}><LogOut />Log out</Button>
             </div>
@@ -159,7 +161,8 @@ function ProfilePage() {
       <BadgeViewer src={viewing?.src} name={viewing?.name} round={viewing?.round} share={viewing?.share} onClose={() => setViewing(undefined)} />
       <ArtistOnboarding userId={user.id} open={editing} onOpenChange={setEditing} firstRun={false}
         onSaved={(o) => { setOb(o); setProfile(loadProfile(user.id)); setEditing(false); }} />
-      <PasswordDialog open={passwordOpen} onOpenChange={setPasswordOpen} />
+      <PasswordDialog email={user.email ?? ""} open={passwordOpen} onOpenChange={setPasswordOpen} />
+      <EmailDialog email={user.email ?? ""} open={emailOpen} onOpenChange={setEmailOpen} />
     </div>
   );
 }
@@ -204,7 +207,22 @@ function People({ title, rows, writer }: { title: string; rows?: Contributor[] |
   );
 }
 
-function PasswordDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (o: boolean) => void }) {
+/**
+ * Changing the email or password asks for the current password first (founder, 2026-10-27), so someone using an
+ * unlocked device can't take the account over. Checked by signing in again with it.
+ */
+async function currentPasswordOk(email: string, password: string) {
+  if (!password) return false;
+  const { error } = await supabase.auth.signInWithPassword({ email, password });
+  return !error;
+}
+
+function CurrentPassword({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  return <div className="space-y-2"><Label htmlFor="current-password">Current password</Label><Input id="current-password" type="password" autoComplete="current-password" value={value} onChange={(e) => onChange(e.target.value)} /></div>;
+}
+
+function PasswordDialog({ email, open, onOpenChange }: { email: string; open: boolean; onOpenChange: (o: boolean) => void }) {
+  const [current, setCurrent] = useState("");
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
   const [busy, setBusy] = useState(false);
@@ -213,20 +231,55 @@ function PasswordDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (
     if (!passwordValid(password)) { toast.error("Choose a password that meets every rule."); return; }
     if (password !== confirm) { toast.error("The passwords don't match."); return; }
     setBusy(true);
+    if (!(await currentPasswordOk(email, current))) { setBusy(false); toast.error("That isn't your current password."); return; }
     const { error } = await supabase.auth.updateUser({ password });
     setBusy(false);
     if (error) { toast.error(error.message); return; }
     toast.success("Password updated.");
-    setPassword(""); setConfirm(""); onOpenChange(false);
+    setCurrent(""); setPassword(""); setConfirm(""); onOpenChange(false);
   }
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="bg-card text-card-foreground">
         <DialogHeader><DialogTitle className="text-xl font-bold">Change password</DialogTitle></DialogHeader>
         <form onSubmit={submit} className="space-y-4">
+          <CurrentPassword value={current} onChange={setCurrent} />
           <PasswordField id="new-password" label="New password" value={password} onChange={setPassword} />
           <div className="space-y-2"><Label htmlFor="confirm-password">Confirm new password</Label><Input id="confirm-password" type="password" autoComplete="new-password" value={confirm} onChange={(e) => setConfirm(e.target.value)} /></div>
           <Button type="submit" className="w-full" disabled={busy}>{busy ? "Saving…" : "Update password"}</Button>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+/** The sign-in email. The new address must be confirmed from its own inbox before it takes over. */
+function EmailDialog({ email, open, onOpenChange }: { email: string; open: boolean; onOpenChange: (o: boolean) => void }) {
+  const [current, setCurrent] = useState("");
+  const [next, setNext] = useState("");
+  const [busy, setBusy] = useState(false);
+  async function submit(e: FormEvent) {
+    e.preventDefault();
+    const address = next.trim();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(address)) { toast.error("Enter a valid email address."); return; }
+    if (address.toLowerCase() === email.toLowerCase()) { toast.error("That's already your email."); return; }
+    setBusy(true);
+    if (!(await currentPasswordOk(email, current))) { setBusy(false); toast.error("That isn't your current password."); return; }
+    const { error } = await supabase.auth.updateUser({ email: address }, { emailRedirectTo: `${window.location.origin}/profile` });
+    setBusy(false);
+    if (error) { toast.error(error.message); return; }
+    toast.success(`Almost done: click the link we emailed to ${address}. Your email changes once it's confirmed.`, { duration: 10000 });
+    setCurrent(""); setNext(""); onOpenChange(false);
+  }
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="bg-card text-card-foreground">
+        <DialogHeader><DialogTitle className="text-xl font-bold">Change email</DialogTitle></DialogHeader>
+        <form onSubmit={submit} className="space-y-4">
+          <p className="text-sm text-muted-foreground">You sign in with this email. Now: <span className="font-semibold text-foreground">{email}</span></p>
+          <CurrentPassword value={current} onChange={setCurrent} />
+          <div className="space-y-2"><Label htmlFor="new-email">New email</Label><Input id="new-email" type="email" autoComplete="email" value={next} onChange={(e) => setNext(e.target.value)} /></div>
+          <Button type="submit" className="w-full" disabled={busy}>{busy ? "Checking…" : "Send confirmation link"}</Button>
         </form>
       </DialogContent>
     </Dialog>

@@ -6,7 +6,9 @@ import { BrandLogo } from "@/components/BrandLogo";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { submitTicket, ticketSchema, TICKET_CATEGORIES } from "@/lib/support.functions";
+import { submitSupportTicket, submitTicket, ticketSchema, TICKET_CATEGORIES } from "@/lib/support.functions";
+import { useAuth } from "@/hooks/useAuth";
+import { SignupCard } from "@/components/SignupCard";
 import { BUSINESS_ADDRESS, SUPPORT_EMAIL } from "@/lib/email-layout";
 
 type Search = { type?: "contact" | "support" | undefined };
@@ -29,8 +31,12 @@ export const Route = createFileRoute("/contact")({
 function ContactPage() {
   const { type } = Route.useSearch();
   const send = useServerFn(submitTicket);
+  const sendSupport = useServerFn(submitSupportTicket);
+  const { user, loading } = useAuth();
   const [kind, setKind] = useState<"contact" | "support">(type ?? "contact");
   useEffect(() => { if (type) setKind(type); }, [type]);
+  // Support tickets need an account (founder, 2026-10-27); Contact Us stays open to everyone.
+  const needsLogin = kind === "support" && !loading && !user;
   const [form, setForm] = useState({ name: "", email: "", category: TICKET_CATEGORIES[0] as string, subject: "", message: "", website: "" });
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState(false);
@@ -41,17 +47,32 @@ function ContactPage() {
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     setFailure("");
-    const parsed = ticketSchema.safeParse({ ...form, kind });
+    const parsed = ticketSchema.safeParse({ ...form, kind, email: kind === "support" ? user?.email ?? "" : form.email });
     if (!parsed.success) {
       setErrors(Object.fromEntries(parsed.error.issues.map((i) => [String(i.path[0]), i.message])));
       return;
     }
     setErrors({});
     setBusy(true);
-    try { await send({ data: parsed.data }); setDone(true); }
+    try {
+      if (kind === "support") { const { email: _e, ...rest } = parsed.data; await sendSupport({ data: rest }); }
+      else await send({ data: parsed.data });
+      setDone(true);
+    }
     catch (err) { setFailure(err instanceof Error ? err.message : "Something went wrong."); }
     finally { setBusy(false); }
   }
+
+  const tabs = (
+    <div className="flex gap-2 rounded-lg bg-muted p-1">
+      {(["contact", "support"] as const).map((k) => (
+        <button type="button" key={k} onClick={() => setKind(k)}
+          className={`flex-1 rounded-md py-2 text-sm font-semibold ${kind === k ? "bg-primary text-primary-foreground" : "text-muted-foreground"}`}>
+          {k === "contact" ? "Contact Us" : "Support Ticket"}
+        </button>
+      ))}
+    </div>
+  );
 
   return (
     <div className="min-h-screen bg-background text-foreground">
@@ -66,21 +87,22 @@ function ContactPage() {
           <div className="mt-10 rounded-2xl border-2 border-primary p-8 text-center">
             <CheckCircle2 className="mx-auto h-10 w-10 text-primary" />
             <p className="mt-3 text-xl font-bold">Message received</p>
-            <p className="mt-2 text-muted-foreground">Thanks, {form.name.split(" ")[0]}. Our team will reply to {form.email}.</p>
+            <p className="mt-2 text-muted-foreground">Thanks, {form.name.split(" ")[0]}. Our team will reply to {kind === "support" ? user?.email : form.email}.</p>
             <Button asChild className="mt-6"><Link to="/">Back to home</Link></Button>
+          </div>
+        ) : needsLogin ? (
+          <div className="mt-8 space-y-5">
+            {tabs}
+            <p className="text-sm text-muted-foreground">Log in or create a free account to open a support ticket, so we can look at your account and reply to the right email. Questions before signing up? Use Contact Us.</p>
+            <SignupCard returnPath="/contact?type=support" />
           </div>
         ) : (
           <form onSubmit={onSubmit} className="mt-8 space-y-5" noValidate>
-            <div className="flex gap-2 rounded-lg bg-muted p-1">
-              {(["contact", "support"] as const).map((k) => (
-                <button type="button" key={k} onClick={() => setKind(k)}
-                  className={`flex-1 rounded-md py-2 text-sm font-semibold ${kind === k ? "bg-primary text-primary-foreground" : "text-muted-foreground"}`}>
-                  {k === "contact" ? "Contact Us" : "Support Ticket"}
-                </button>
-              ))}
-            </div>
+            {tabs}
             <Field label="Name" error={errors["name"]}><Input value={form.name} onChange={set("name")} maxLength={100} /></Field>
-            <Field label="Email" error={errors["email"]}><Input type="email" value={form.email} onChange={set("email")} maxLength={255} /></Field>
+            {kind === "support"
+              ? <p className="text-sm text-muted-foreground">We'll reply to your account email, <span className="font-semibold text-foreground">{user?.email}</span>.</p>
+              : <Field label="Email" error={errors["email"]}><Input type="email" value={form.email} onChange={set("email")} maxLength={255} /></Field>}
             <Field label="Category" error={errors["category"]}>
               <select value={form.category} onChange={set("category")} className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm">
                 {TICKET_CATEGORIES.map((c) => <option key={c}>{c}</option>)}

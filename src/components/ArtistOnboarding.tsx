@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { ProSelect } from "@/components/ProSelect";
-import { CREDIT_ROLES, emptyContributor, GENRES, MASTER_BASES, PRODUCTION_TYPES, RELEASE_TYPES, WRITER_ROLES, writerRole, type Contributor, type Metadata } from "@/lib/metadata";
+import { CREDIT_ROLES, emptyContributor, GENRES, MASTER_BASES, PRODUCTION_TYPES, RELEASE_TYPES, WRITER_ROLES, writerRole, percentInput, type Contributor, type Metadata } from "@/lib/metadata";
 import { isBadgeImage } from "@/lib/badges";
 import { isBmi } from "@/lib/audit";
 import { PUBLISHING_LABEL } from "@/lib/readiness";
@@ -219,7 +219,7 @@ export function ArtistOnboarding({ userId, open, onOpenChange, onSaved, firstRun
             <Group title="Registration Defaults">
               <Field label="Do your songs usually use a sample?" term="samples"><Pick value={p.samples ?? ""} options={["No", "Yes"]} empty="Ask each time" onChange={(v) => set("samples", v as Metadata["samples"])} /></Field>
               <Field label="Usually written for film, TV, stage or an ad?" term="writtenFor"><Pick value={p.writtenFor ?? ""} options={["No", ...PRODUCTION_TYPES]} empty="Ask each time" onChange={(v) => set("writtenFor", v as Metadata["writtenFor"])} /></Field>
-              <Field label="Share of the master you usually own (%)" term="masterShare"><Input inputMode="decimal" value={p.masterShare ?? ""} placeholder="100" onChange={(e) => set("masterShare", e.target.value.replace(/[^\d.]/g, "").slice(0, 6))} /></Field>
+              <Field label="Share of the master you usually own (%)" term="masterShare"><Input inputMode="decimal" value={p.masterShare ?? ""} placeholder="100" onChange={(e) => set("masterShare", percentInput(e.target.value))} /></Field>
               <Field label="How you usually hold the master" term="masterBasis"><Pick value={p.masterBasis ?? ""} options={MASTER_BASES} empty="Copyright Owner" onChange={(v) => set("masterBasis", (v || "Copyright Owner") as Metadata["masterBasis"])} /></Field>
               <div className="sm:col-span-2"><Crew rows={p.credits ?? []} onChange={(r) => set("credits", r)} /></div>
             </Group>

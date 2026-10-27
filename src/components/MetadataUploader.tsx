@@ -13,7 +13,7 @@ import { StarsAligned } from "@/components/StarsAligned";
 import { EXPORT_REQUIRED, GLOSSARY, type GlossaryKey } from "@/lib/glossary";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { PRE_DIST_NOTE, PRO_TIP } from "@/lib/copy";
-import { readMetadata, CREDIT_ROLES, isPerformer, performers, emptyContributor, emptyMetadata, embedMetadata, creditName, metadataSchema, GENRES, MASTER_BASES, PRODUCTION_TYPES, RELEASE_TYPES, WRITER_ROLES, writerRole, hfaLooksOff, type Contributor, type Metadata } from "@/lib/metadata";
+import { readMetadata, CREDIT_ROLES, isPerformer, performers, emptyContributor, emptyMetadata, embedMetadata, creditName, metadataSchema, GENRES, MASTER_BASES, PRODUCTION_TYPES, RELEASE_TYPES, WRITER_ROLES, writerRole, hfaLooksOff, percentInput, formatDuration, type Contributor, type Metadata } from "@/lib/metadata";
 import { COUNTRIES, countryByCode, guessCountry } from "@/lib/repertoires";
 import { catalogHealth, releaseKind } from "@/lib/health-checklist";
 import { listChecks } from "@/lib/repertoire-checks";
@@ -409,7 +409,7 @@ export function MetadataUploader({ onShareInfo, userId, mode = "embed", readOnly
     probe.preload = "metadata";
     probe.onloadedmetadata = () => {
       const sec = Math.round(probe.duration);
-      if (Number.isFinite(sec) && sec > 0) setMetadata((m) => ({ ...m, duration: `${Math.floor(sec / 60)}:${String(sec % 60).padStart(2, "0")}` }));
+      if (Number.isFinite(sec) && sec > 0) setMetadata((m) => ({ ...m, duration: formatDuration(sec) }));
       URL.revokeObjectURL(probeUrl);
     };
     probe.onerror = () => URL.revokeObjectURL(probeUrl);
@@ -550,7 +550,7 @@ export function MetadataUploader({ onShareInfo, userId, mode = "embed", readOnly
                     </div>
                   ))}
                 </div>
-                <Field label="Track duration" id="duration" value={metadata.duration} placeholder="3:45" onChange={(value) => update("duration", value)} />
+                <Field label="Track duration" id="duration" value={metadata.duration} placeholder="03:45" onChange={(value) => update("duration", value)} />
                 <div className="space-y-2">
                   <Label>Explicit content<InfoTip term="explicit" /></Label>
                   <Choice label="Explicit content" value={metadata.explicit ? "Yes" : "No"} options={["Yes", "No"]} onChange={(v) => update("explicit", v === "Yes")} />
@@ -647,7 +647,7 @@ export function MetadataUploader({ onShareInfo, userId, mode = "embed", readOnly
 
             {full && <FormSection title="Master ownership" disabled={busy} summary={`${metadata.masterShare || "100"}% · ${metadata.masterBasis === "Collections Designee" ? "Authorized designee" : "Owner"}`}>
               <div className="grid gap-5 sm:grid-cols-2">
-                <Field label="Share of the master you own (%)" id="masterShare" value={metadata.masterShare} placeholder="100" tip={TIPS.masterShare} onChange={(v) => update("masterShare", v.replace(/[^\d.]/g, "").slice(0, 6))} />
+                <Field label="Share of the master you own (%)" id="masterShare" value={metadata.masterShare} placeholder="100" tip={TIPS.masterShare} onChange={(v) => update("masterShare", percentInput(v))} />
                 <div className="space-y-2">
                   <Label>Your claim<Tip text={TIPS.masterBasis} title="Your claim" /></Label>
                   <Choice id="masterBasis" label="Your claim" value={metadata.masterBasis} options={MASTER_BASES} labels={{ "Copyright Owner": "I own it", "Collections Designee": "Authorized designee" }} onChange={(v) => update("masterBasis", v as Metadata["masterBasis"])} />
@@ -1168,7 +1168,7 @@ function ReadinessPanel({ metadata, embed }: { metadata: Metadata; embed?: boole
 }
 
 function Field({ label, id, value, onChange, required, type = "text", placeholder, tip, term, list }: { label: string; id: string; value: string; onChange: (value: string) => void; required?: boolean; type?: string; placeholder?: string | undefined; tip?: string; term?: GlossaryKey | undefined; list?: string | undefined }) {
-  return <div className={`min-w-0 ${tip ? "space-y-3" : "space-y-2"}`}><Label htmlFor={id} className="leading-5">{label}{required ? " *" : ""}{term ? <InfoTip term={term} /> : tip && <Tip text={tip} title={label} />}</Label><Input id={id} value={value} type={type} required={required} placeholder={placeholder} list={list} autoComplete={list ? "off" : undefined} className={type === "date" && !value ? "text-muted-foreground/50" : undefined} onChange={(event) => onChange(event.target.value)} /></div>;
+  return <div className="min-w-0 space-y-1.5"><Label htmlFor={id} className="leading-4">{label}{required ? " *" : ""}{term ? <InfoTip term={term} /> : tip && <Tip text={tip} title={label} />}</Label><Input id={id} value={value} type={type} required={required} placeholder={placeholder} list={list} autoComplete={list ? "off" : undefined} className={type === "date" && !value ? "text-muted-foreground/50" : undefined} onChange={(event) => onChange(event.target.value)} /></div>;
 }
 
 /**

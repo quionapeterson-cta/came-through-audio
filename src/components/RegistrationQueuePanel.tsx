@@ -22,8 +22,31 @@ export function RegistrationQueuePanel() {
   if (q.isLoading) return <p className="mt-6 text-muted-foreground">Loading…</p>;
   if (q.error) return <p className="mt-6 text-muted-foreground">⚠️ Couldn't load the queue ({(q.error as Error).message}). If the registration tables are missing, run migration 20261023090000.</p>;
   const orders = q.data ?? [];
-  if (!orders.length) return <p className="mt-6 text-muted-foreground">No registration orders yet.</p>;
-  return <div className="mt-4 space-y-3">{orders.map((o) => <OrderRow key={o.purchaseId} o={o} onChange={refresh} />)}</div>;
+  return <div className="mt-4 space-y-3">
+    <AgentTips />
+    {orders.length ? orders.map((o) => <OrderRow key={o.purchaseId} o={o} onChange={refresh} />) : <p className="text-muted-foreground">No registration orders yet.</p>}
+  </div>;
+}
+
+/** What agents need at hand while registering (founder's testing and call with The MLC, 2026-10-27). */
+const AGENT_TIPS = [
+  "Work on a laptop or desktop. The MLC's bulk registration doesn't work on a phone.",
+  "Log in as registrations@camethroughaudio.com. When asked for two-step verification, choose email, then copy the code from the registrations@ inbox.",
+  "The MLC: Member Settings is at the bottom left of the Members Hub.",
+  "A field shows red? Check for spaces before or after the text and delete them.",
+  "The MLC doesn't need an ISWC to register a work. The user adds it later, once their PRO assigns it.",
+  "The MLC matches by artist name, song title and ISRC. Release date, duration and other recording details come from the streaming services.",
+];
+
+function AgentTips() {
+  return (
+    <details className="group rounded-xl border border-border bg-muted/40">
+      <summary className="flex cursor-pointer list-none items-center justify-between p-4 text-sm font-semibold [&::-webkit-details-marker]:hidden">
+        Agent tips <span className="font-normal text-muted-foreground">{AGENT_TIPS.length} reminders</span>
+      </summary>
+      <ul className="list-disc space-y-1 border-t border-border p-4 pl-8 text-sm">{AGENT_TIPS.map((t) => <li key={t}>{t}</li>)}</ul>
+    </details>
+  );
 }
 
 function OrderRow({ o, onChange }: { o: QueueOrder; onChange: () => void }) {

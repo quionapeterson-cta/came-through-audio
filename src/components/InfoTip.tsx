@@ -19,7 +19,7 @@ export function InfoTip({ term, text, title, children, className = "" }: { term?
         <button type="button" aria-label={children ? undefined : heading ? `What is ${heading}?` : "More info"} onMouseEnter={hover(true)} onMouseLeave={hover(false)}
           // A click right after hovering keeps the tip open instead of toggling it shut.
           onClick={(e) => { e.stopPropagation(); if (open && window.matchMedia?.("(hover: hover)").matches) e.preventDefault(); }}
-          className={children ? className : `ml-1.5 inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full border border-primary align-middle text-xs font-semibold normal-case tracking-normal text-primary hover:bg-primary hover:text-primary-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${className}`}>
+          className={children ? className : `ml-1 inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-full border border-primary align-middle text-[10px] font-semibold leading-none normal-case tracking-normal text-primary hover:bg-primary hover:text-primary-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${className}`}>
           {children ?? "i"}
         </button>
       </PopoverTrigger>

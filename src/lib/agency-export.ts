@@ -61,12 +61,14 @@ export function mlcRows(tracks: CatalogTrack[]): (string | number)[][] {
   for (const { metadata: m } of tracks) {
     const people = registrationWriters(m).map((w) => ({ c: w, role: MLC_ROLE[writerRole(w.role)] }));
     const pubs = named(m.publishers);
+    // Alternate titles go in the AKA columns, one per writer row ("AT" = alternative title), as the template's example does.
+    const akas = (m.alternateTitles ?? []).map((t) => t.trim()).filter(Boolean);
     people.forEach(({ c, role }, i) => {
       const { last, first } = splitName(c.name);
       // One publisher covers every writer; with several, they pair up with writers in order.
       const pub = pubs.length === 1 ? pubs[0] : pubs[i];
       rows.push([
-        i === 0 ? m.title : "", "", "", i === 0 ? m.iswc.replace(/[.\s-]/g, "").toUpperCase() : "", "", "",
+        i === 0 ? m.title : "", "", "", i === 0 ? m.iswc.replace(/[.\s-]/g, "").toUpperCase() : "", akas[i]?.toUpperCase() ?? "", akas[i] ? "AT" : "",
         last.toUpperCase(), first.toUpperCase(), ipi(c.ipi), role, pub?.hfa?.trim().toUpperCase() ?? "",
         (pub?.name ?? c.name).toUpperCase(), (pub && ipi(pub.ipi)) || MLC_PLACEHOLDER_IPI, "", "", "",
         num(c.percentage), i === 0 ? m.title : "", i === 0 ? m.artist : "", i === 0 ? m.isrc.replace(/-/g, "").toUpperCase() : "", i === 0 ? m.label : "",

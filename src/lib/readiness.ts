@@ -218,7 +218,7 @@ export function registrationCheck(m: Metadata, agency: RegistrationAgency, today
 
   if (agency === "mlc") {
     if (!m.isrc.trim()) need("isrc", "Add the recording's ISRC. The MLC pays by matching streams to the song through its recordings.", "isrc");
-    if (!m.iswc.trim()) tip("iswc", "Add the ISWC if your PRO has assigned one.", "iswc");
+    if (!m.iswc.trim()) tip("iswc", "Not needed to register at The MLC. Add the ISWC later, once your PRO assigns it.", "iswc");
     return { agency, ready: !missing.length, missing, tips };
   }
 

@@ -95,7 +95,7 @@ export const ACCESS_STEPS: Record<string, { where: string; steps: string[]; perm
   },
   "The MLC": {
     where: "The MLC Portal",
-    steps: ["Log in to the MLC Portal and open the Member Hub → Member Settings → User Permissions.", "Click Add User and enter the details below.", "Choose the Copyright User permission group (registers works, no banking)."],
+    steps: ["Log in to the MLC Portal and open the Member Hub. Member Settings is at the bottom left; open it, then User Permissions.", "Click Add User and enter the details below.", "Choose the Copyright User permission group (registers works, no banking)."],
     permission: "Copyright User",
     help: "https://help.themlc.com/en/support/what-are-the-different-types-of-permissions",
   },

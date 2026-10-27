@@ -246,7 +246,11 @@
   --font-sans: "Poppins", ui-sans-serif, system-ui, sans-serif;
 }
 
-body { font-family: var(--font-sans); }
+body { font-family: var(--font-sans); -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; }
+
+/* Help tips and menus read sharp (founder, 2026-10-27: info box text looked blurry). The pop-up layer is positioned with
+   a GPU transform hint that renders text soft on many screens; plain positioning keeps it crisp. */
+[data-radix-popper-content-wrapper] { will-change: auto !important; }
 
 @utility text-brand-electric {
   color: #4D8CFF;

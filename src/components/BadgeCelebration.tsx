@@ -11,7 +11,8 @@ export type ShareInfo = { ctx: PromoContext; artist: string; title?: string | un
 
 const rand = (a: number, b: number) => a + Math.random() * (b - a);
 // Smaller on phones so the share panel starts on the first screen.
-const ROUND_SIZE = "w-[min(70vw,38svh)] md:w-[min(80vw,32rem)]";
+/** Capped by screen height too, so the whole badge fits on a short laptop screen. */
+const ROUND_SIZE = "w-[min(70vw,38svh)] md:w-[min(80vw,28rem,55svh)]";
 const reducedMotion = () => typeof window !== "undefined" && !!window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
 
 /**
@@ -36,7 +37,7 @@ export function CelebrationStage({ src, name, round, float }: { src: string; nam
       {!still && <Rain key={`rain-${run}`} src={src} shape={shape} />}
       {!still && <Burst key={`burst-${run}`} src={src} shape={shape} from={badge} />}
       <div key={`badge-${run}`} className="relative w-full" style={still ? undefined : { animation: "badge-pop 0.6s ease-out" }}>
-        <img ref={badge} src={src} alt={name ?? "Badge"} className={`${round ? `mx-auto aspect-square ${ROUND_SIZE} rounded-full border-4 border-primary object-cover` : "max-h-[38svh] w-full object-contain drop-shadow-2xl md:max-h-[60vh]"}${float ? " badge-float" : ""}`} />
+        <img ref={badge} src={src} alt={name ?? "Badge"} className={`${round ? `mx-auto aspect-square ${ROUND_SIZE} rounded-full border-4 border-primary object-cover` : "max-h-[38svh] w-full object-contain drop-shadow-2xl md:max-h-[55svh]"}${float ? " badge-float" : ""}`} />
         {/* The shine is masked by the badge itself so only the artwork catches the light. */}
         <div aria-hidden className={`pointer-events-none absolute inset-0 ${round ? `mx-auto aspect-square ${ROUND_SIZE} rounded-full` : ""}`}
           style={{ ...(round ? {} : { maskImage: `url("${src}")`, WebkitMaskImage: `url("${src}")`, maskSize: "contain", WebkitMaskSize: "contain", maskRepeat: "no-repeat", WebkitMaskRepeat: "no-repeat", maskPosition: "center", WebkitMaskPosition: "center" }),

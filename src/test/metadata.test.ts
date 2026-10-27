@@ -42,7 +42,7 @@ describe("MP3 metadata", () => {
     const out = readMetadata(buf);
     expect(out.primaryGenre).toBe("R&B/Soul");
     expect(out.releaseType).toBe("EP");
-    expect(out.duration).toBe("3:25");
+    expect(out.duration).toBe("03:25");
     expect(out.publishers).toBeUndefined();
     expect(new TextDecoder("latin1").decode(buf)).not.toContain("Came Pub");
   });

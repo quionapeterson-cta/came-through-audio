@@ -25,6 +25,8 @@ Writer and readiness code is involved, so per the project rules I list the files
 
 **Items 1–5 built 2026-10-27** (findings approved): typed songs link to their order by title, every order song stays listed, catalog songs in an order show what's left with Continue Expert Registration; saved writers/publishers/producers fill in by name in Embed and My Catalog; a restored Embed draft takes current profile details + Start fresh; Embed shows no split warnings; Contributor Library gains usual role + split, fills itself from saved songs (blanks only) and is in My Catalog. Needs migration 20261027180000. Item 6 (HFA): nothing found counting it; waiting on where it was seen.
 
+**Items 7–14 built 2026-10-27:** master share capped at 100; badge celebration fits the screen and scrolls from the top; sharper pop-up text and smaller ⓘ icons; confirm boxes sized to the message; Change email / Change password need the current password, new email confirmed from its inbox; Support tickets need sign-in (Contact Us stays open); MLC and SoundExchange exports checked against the official templates (match), MLC AKA titles filled; The MLC no longer needs an ISWC in the health score, duration hint and auto-read durations as mm:ss (03:45), MLC Member Settings tip, Agent tips in Admin → Registrations.
+
 1. **Expert Registration lost a song.** Two songs submitted; the fully cataloged one was marked registered and the other
    disappeared. Fix: a song that isn't ready stays in the request with "Fix and continue", and its catalog entry shows a
    notice linking back to finish the registration.
