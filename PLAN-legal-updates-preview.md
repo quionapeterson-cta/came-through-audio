@@ -1,6 +1,6 @@
 # PLAN — Legal and disclaimer updates: preview · v1
 
-Status: **preview for approval (Level 2, 2026-10-27). Nothing is changed on the site until you approve.**
+Status: **approved and applied 2026-10-27** (§2–§5). Have your attorney look over the final wording before launch.
 Source: founder testing list, 2026-10-27. Drafted for review, not legal advice: have your attorney look over the
 final wording before launch.
 
@@ -96,8 +96,8 @@ requires."
 
 ## Approve
 
-- [ ] §2 footer disclaimer
-- [ ] §3 Terms §7
-- [ ] §4 short names (Terms and Privacy)
-- [ ] §5 AI Protection disclaimer and Terms §11
+- [x] §2 footer disclaimer
+- [x] §3 Terms §7
+- [x] §4 short names (Terms and Privacy)
+- [x] §5 AI Protection disclaimer and Terms §11
 - Reply with "approve all" or tell me what to change.

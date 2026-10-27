@@ -6,7 +6,7 @@
  */
 export const DISCLAIMERS = {
   /** Every page footer. */
-  site: "Came Through Audio is not a law firm, accountant, publisher, record label, collection society or distributor, and nothing on this site is legal, financial or tax advice. We are not affiliated with or endorsed by ASCAP, BMI, SESAC, GMR, The MLC, SoundExchange, the Harry Fox Agency or any streaming service; their names belong to their owners.",
+  site: "Came Through Audio is an independent record label that offers label services to independent artists. We aren't signing other artists at this time, and using our tools or services doesn't sign you to the label or create a recording, publishing or management deal. Came Through Audio is not a law firm, accountant, publisher, collection society or distributor, and nothing on this site is legal, financial or tax advice. We are not affiliated with or endorsed by ASCAP, BMI, SESAC, GMR, The MLC, SoundExchange, the Harry Fox Agency or any streaming service; their names belong to their owners.",
   /** Embed Metadata and My Catalog. */
   embed: "You're responsible for the accuracy of the details you embed and for having the rights to the audio, artwork and lyrics you upload. Stores, streaming services and other platforms may remove or change embedded metadata, and embedding doesn't register a song or guarantee royalties.",
   /** Agency exports. */
@@ -20,7 +20,7 @@ export const DISCLAIMERS = {
   /** Contract Generator (on top of CONTRACT_DISCLAIMER). */
   generator: "Drafts are put together automatically from what you type and can contain mistakes or miss terms your deal needs. Came Through Audio isn't a party to your contract and isn't responsible for its terms or how it's used.",
   /** AI Protection Hub, certificates, the verify page. */
-  aiProtection: "A certificate is evidence that your files existed in this exact form by a date. It isn't proof of ownership, a copyright registration, legal advice or a guarantee against AI training, imitation, infringement, claims or takedowns, and courts decide how much weight it gets. The attestation is your own statement, so make sure it's true. For the strongest protection, register your work with the U.S. Copyright Office.",
+  aiProtection: "AI Protection certificates are made to help you show proof: evidence that your files existed in this exact form by a date, which you can include with takedown requests, platform disputes and legal claims. A certificate isn't proof of ownership, a copyright registration, legal advice or a guarantee against AI training, imitation, infringement, claims or takedowns, and courts and platforms decide how much weight it gets. The attestation is your own statement, so make sure it's true. Came Through Audio isn't a party to your disputes and doesn't investigate, take sides or act as a witness; anyone can check a certificate themselves on our verify page. For the strongest protection, register your work with the U.S. Copyright Office.",
   /** Personal Branding brand kit. */
   branding: "Only upload logos, names, taglines and fonts you own or have permission to use. You're responsible for anything you put on your documents.",
   /** Expert Registration Assistance. */

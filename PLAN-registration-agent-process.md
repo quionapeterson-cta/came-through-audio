@@ -1,6 +1,6 @@
 # PLAN — Registration agent process (Expert Registration) · v1
 
-Status: **built and written 2026-10-27 (Level 2). One decision open: passwords (§4).**
+Status: **built and written 2026-10-27 (Level 2). Passwords: team password manager approved 2026-10-27 (§4).**
 Source: founder testing list and call with The MLC, 2026-10-27. Builds on PLAN-registration-intake.md.
 
 ---
@@ -57,4 +57,5 @@ recommend **not** building that, and using a **team password manager** instead:
   logs and the ability to remove a staff member's access in one click.
 - Never put agency passwords in the customer's account, chats, spreadsheets, tasks or notes.
 
-- [ ] Approve: password manager (recommended), or tell me to build the in-app encrypted field anyway.
+- [x] **Approved 2026-10-27: team password manager.** No in-app password storage will be built.
+- [ ] Set up the shared "Registrations" vault (Bitwarden or 1Password) and invite the registration team.

@@ -1,6 +1,6 @@
 # PLAN — Founder testing list, sorted by urgency · v1
 
-Status: **Level 1 done; Level 2 built/answered (legal + passwords await approval); Level 3 preview and Level 4 plans written, awaiting approval (2026-10-27).** Drop box built (Level 0).
+Status: **Level 1 done; Level 2 done (legal applied, password manager approved); Level 3 preview and Level 4 plans written, awaiting approval (2026-10-27).** Drop box built (Level 0).
 Source: founder testing notes, 2026-10-27. Every item from the list is here once; nothing was dropped.
 
 How to read this: work goes top to bottom. **Level 1** is broken or wrong data, so it's fixed first. **Level 2** is
@@ -71,7 +71,7 @@ Writer and readiness code is involved, so per the project rules I list the files
 - A free, Wi-Fi-based support phone number that also works for two-step verification codes.
 
 **Legal and business:**
-- **Preview ready: PLAN-legal-updates-preview.md** (disclaimers, short names, AI Protection, DBA answer).
+- **Approved and applied 2026-10-27: PLAN-legal-updates-preview.md** (record label disclaimer, short names, AI Protection, DBA answer).
 - Global disclaimer: Came Through Audio is a record label offering independent label services; not currently signing
   other artists. Check every disclaimer so none contradicts a service we sell.
 - AI Protection wording: best practice for saying certificates help show proof, while keeping the company out of
@@ -87,7 +87,7 @@ Writer and readiness code is involved, so per the project rules I list the files
   marks it complete. Notes: $341.82 for 9 years or $37.98 for 1 year. **Built 2026-10-27** (Finance task with weekly reminder emails; done tasks show crossed off on the calendar; migration 20261027190000).
 - Subdomains (up to 100) vs blogs: do they affect each other? (Short answer coming with the SEO plan.)
 
-**Registration agents** — **built and written 2026-10-27: PLAN-registration-agent-process.md** (🔒 who's working each order, legal name on each order, step-by-step; password manager recommended instead of an in-app vault, awaiting OK):
+**Registration agents** — **built and written 2026-10-27: PLAN-registration-agent-process.md** (🔒 who's working each order, legal name on each order, step-by-step; team password manager approved 2026-10-27, no in-app vault):
 - A foolproof agent process so no data or users get mixed up: one queue item per user, the user's name and song list on
   screen while working, checkboxes per step.
 - Passwords for agency accounts made for users: a new password per user, kept in a staff-only, encrypted field on that
