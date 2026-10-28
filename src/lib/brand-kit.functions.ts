@@ -50,6 +50,14 @@ async function brandFor(db: Db, userId: string, use: BrandUse, kitId?: string | 
     }
   }
   const { logoPath: _path, ...rest } = kit;
+  // Split sheets record who owns a song, so they always show the artist name (founder, 2026-10-27); a kit's business
+  // or DBA name is for contracts only.
+  if (use === "splits") {
+    const { data: prof } = await db.from("profiles").select("stage_name, onboarding").eq("id", userId).maybeSingle();
+    const p = prof as { stage_name?: string | null; onboarding?: { stageName?: string } | null } | null;
+    const artist = (p?.onboarding?.stageName || p?.stage_name || "").trim();
+    if (artist) return { ...rest, name: artist, logo };
+  }
   return { ...rest, logo };
 }
 

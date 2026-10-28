@@ -17,13 +17,29 @@ async function admin() {
   return (await import("@/integrations/supabase/client.server")).supabaseAdmin;
 }
 
-class AiUnavailable extends Error {}
+class AiUnavailable extends Error {
+  constructor(public code: string, public detail = "") { super(code); }
+}
+
+/** What went wrong, in plain words, for super admins only (founder, 2026-10-27: drafting fell back with no reason). */
+function staffNote(e: AiUnavailable) {
+  const why = e.code === "not configured"
+    ? "CLOUDFLARE_ACCOUNT_ID or CLOUDFLARE_AI_TOKEN isn't set where the site runs. In Lovable: Cloud → Secrets, use those exact names (all capitals, underscores), then Publish again so the live site picks them up."
+    : e.code === "401" || e.code === "403"
+      ? "Cloudflare rejected the token. Create a new Workers AI API token (Workers AI → Use REST API → Create a Workers AI API Token), paste it into CLOUDFLARE_AI_TOKEN, then Publish again."
+      : e.code === "400" || e.code === "404"
+        ? "Cloudflare couldn't find that account or model. Check CLOUDFLARE_ACCOUNT_ID is the Account ID from Workers AI → Use REST API (32 letters and numbers), then Publish again."
+        : e.code === "429"
+          ? "Today's free Workers AI allowance is used up. It resets at midnight UTC."
+          : `Cloudflare answered with "${e.code}".`;
+  return ` Staff note: ${why}${e.detail ? ` Cloudflare said: ${e.detail}` : ""}`;
+}
 
 /** One Workers AI call in JSON mode. */
 async function runAi(system: string, prompt: string, schema: object, maxTokens: number): Promise<unknown> {
   const account = process.env["CLOUDFLARE_ACCOUNT_ID"];
   const token = process.env["CLOUDFLARE_AI_TOKEN"];
-  if (!account || !token) throw new AiUnavailable("not configured");
+  if (!account?.trim() || !token?.trim()) throw new AiUnavailable("not configured");
   const res = await fetch(`https://api.cloudflare.com/client/v4/accounts/${account}/ai/run/${AI_MODEL}`, {
     method: "POST",
     headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
@@ -36,11 +52,12 @@ async function runAi(system: string, prompt: string, schema: object, maxTokens: 
   });
   if (!res.ok) {
     // 429 or a neurons error once the free daily allowance is used up; anything else is logged for us to look at.
-    console.error(`Workers AI failed [${res.status}]: ${(await res.text()).slice(0, 300)}`);
-    throw new AiUnavailable(String(res.status));
+    const detail = (await res.text()).slice(0, 300);
+    console.error(`Workers AI failed [${res.status}]: ${detail}`);
+    throw new AiUnavailable(String(res.status), detail.slice(0, 160));
   }
   const body = (await res.json()) as { success?: boolean; result?: { response?: unknown } };
-  if (!body.success) throw new AiUnavailable("unsuccessful");
+  if (!body.success) throw new AiUnavailable("unsuccessful", JSON.stringify(body).slice(0, 160));
   return parseAiJson(body.result?.response);
 }
 
@@ -51,10 +68,8 @@ export const generateContract = createServerFn({ method: "POST" })
   .inputValidator((d) => z.object({ scenario: z.string().trim().min(SCENARIO_MIN, "Tell us a little more about the deal.").max(SCENARIO_MAX), company: z.boolean().default(false) }).parse(d))
   .handler(async ({ data, context }): Promise<GeneratorResult> => {
     const db = await admin();
-    if (data.company) {
-      const { data: isSuper } = await context.supabase.rpc("has_role", { _user_id: context.userId, _role: "super_admin" });
-      if (!isSuper) throw new Error("Only super admins can draft company agreements.");
-    }
+    const { data: isSuper } = await context.supabase.rpc("has_role", { _user_id: context.userId, _role: "super_admin" });
+    if (data.company && !isSuper) throw new Error("Only super admins can draft company agreements.");
     // Customers on any plan can draft; opening the contract is $3.99 (createCheckoutSession kind "contract").
     const list: Blueprint[] = data.company ? COMPANY_BLUEPRINTS : BLUEPRINTS;
 
@@ -74,7 +89,7 @@ export const generateContract = createServerFn({ method: "POST" })
       const { data: row } = await db.from("contract_generations" as never).insert({ user_id: context.userId, blueprint_id: bp.id, company: data.company, draft } as never).select("id").single();
       return { kind: "draft", draft, left: Math.max(0, GENERATIONS_PER_DAY - used - 1), generationId: (row as { id: string } | null)?.id };
     } catch (e) {
-      if (e instanceof AiUnavailable) return suggest("Automatic drafting is resting right now. Here are the closest blueprints to start from.");
+      if (e instanceof AiUnavailable) return suggest(`Automatic drafting is resting right now. Here are the closest blueprints to start from.${isSuper ? staffNote(e) : ""}`);
       throw e;
     }
   });
