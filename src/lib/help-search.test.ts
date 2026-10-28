@@ -17,3 +17,16 @@ describe("help chat search (no AI)", () => {
     if (guide) expect(guide.text).toContain("Contracts & Blueprints");
   });
 });
+
+describe("price and common questions", () => {
+  it.each([
+    ["How much is AI protection", "price-ai"],
+    ["how much do plans cost", "price-plans"],
+    ["what does expert registration cost", "price-expert"],
+    ["how much is the branding kit", "price-branding"],
+    ["difference between embedding and registering", "ask-embed-vs-register"],
+    ["how do I change my email", "ask-change-email"],
+  ])("%s", (q, id) => {
+    expect(searchHelp(q)[0]?.id).toBe(id);
+  });
+});

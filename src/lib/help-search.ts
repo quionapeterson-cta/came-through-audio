@@ -2,6 +2,11 @@ import { DOCS } from "@/lib/docs";
 import { FAQS } from "@/lib/faq";
 import { GLOSSARY } from "@/lib/glossary";
 import { GUIDES } from "@/lib/guides";
+import { PACKAGES } from "@/lib/proof";
+import { PLAN_TIERS, TIER_LABEL } from "@/lib/plans";
+import { BRANDING_PRICE } from "@/lib/brand-kit";
+import { CONTRACT_PRICE } from "@/lib/contract-generator";
+import { VAULT_PRICE } from "@/lib/retention";
 
 /**
  * Help chat, version 1 (PLAN-phase4-order item 4, approved 2026-10-25): free, no AI. Answers come only from our own
@@ -17,7 +22,7 @@ const SAME: Record<string, string> = {
   refunds: "refund", money: "royalties", paid: "royalties", pay: "royalties", payment: "royalties", royalty: "royalties",
   splitsheet: "split", splits: "split", contracts: "contract", sign: "signature", signing: "signature", esign: "signature",
   embedding: "embed", embedded: "embed", tag: "embed", tags: "embed", tagging: "embed", metadata: "embed",
-  cancel: "cancellation", canceling: "cancellation", cancelling: "cancellation", price: "plans", pricing: "plans", cost: "plans", plan: "plans",
+  cancel: "cancellation", canceling: "cancellation", cancelling: "cancellation", price: "plans", prices: "plans", pricing: "plans", cost: "plans", costs: "plans", plan: "plans", much: "plans", fee: "plans", fees: "plans", expensive: "plans", charge: "plans",
   ai: "protection", certificate: "protection", certificates: "protection", bitcoin: "protection",
   register: "registration", registering: "registration", registered: "registration", pro: "pro", ascap: "pro", bmi: "pro", sesac: "pro",
   isrcs: "isrc", upcs: "upc", songs: "song", writers: "writer", publishers: "publisher", password: "login", signin: "login",
@@ -27,8 +32,32 @@ const words = (s: string) => (s.toLowerCase().replace(/[’']/g, "").match(/[a-z
 
 type Entry = HelpAnswer & { terms: string[]; titleTerms: Set<string> };
 
+const money = (n: number) => `$${n.toFixed(2)}`;
+const plans = PLAN_TIERS.filter((p) => p.tier !== "free").map((p) => `${TIER_LABEL[p.tier]} ${p.price}/year`).join(", ");
+
+/**
+ * Prices and the most-asked questions (founder, 2026-10-27: "How much is AI Protection" found nothing). Prices come
+ * from the same settings checkout uses, so the answers change when the prices do.
+ */
+const ASKED: HelpAnswer[] = [
+  { id: "price-ai", title: "How much does AI Protection cost?", text: `AI Protection certificates are one-time purchases: ${PACKAGES.map((p) => `${p.label.split(" ·")[0]} ${money(p.price)}${p.id === "Single" ? " per song" : ` for up to ${p.songs} songs`}`).join(", ")}. Each song gets a time-stamped certificate you can download and anyone can verify.`, link: { label: "Open the AI Protection Hub", to: "/workspace?tab=protect" }, source: "FAQ" },
+  { id: "price-plans", title: "How much do the plans cost?", text: `The Free plan costs nothing. Paid plans are yearly: ${plans}. Upgrade any time and only pay the difference for the rest of your plan year.`, link: { label: "Compare plans", to: "/plans" }, source: "FAQ" },
+  { id: "price-expert", title: "How much is Expert Registration?", text: "Our team registers your songs for you: a setup fee of $14.99 for a single or EP or $29.99 for an album, plus $4.99 per song for each organization (ASCAP or BMI, The MLC, SoundExchange). Refundable for 30 days, until our team starts work.", link: { label: "Start Expert Registration", to: "/workspace?tab=health&view=expert" }, source: "FAQ" },
+  { id: "price-branding", title: "How much is a Branding Kit?", text: `${BRANDING_PRICE} per kit per year, on any plan (Catalog Management includes one). Your logo, colors and font replace our header on your contracts; you can have a kit for each business.`, link: { label: "Set up your Branding Kit", to: "/profile#brand-kit" }, source: "FAQ" },
+  { id: "price-contract", title: "How much is a generated contract?", text: `Describe your deal and the Contract Generator drafts it from our blueprints. Opening a draft as your contract is ${CONTRACT_PRICE}, on any plan, and you can send it for e-signature.`, source: "FAQ" },
+  { id: "price-vault", title: "How much is the Vault (pause)?", text: `Once every 12 months you can pause your plan for 1 to 3 months for ${money(VAULT_PRICE)} per month. Your catalog stays safe and read-only while paused.`, source: "FAQ" },
+  { id: "ask-embed-vs-register", title: "What's the difference between embedding and registering?", text: "Embedding writes your credits and codes into the audio file itself, so the song carries its details wherever it goes. Registering tells the organizations that collect royalties (your PRO, The MLC, SoundExchange) that the song exists and who gets paid. You need both: embedding doesn't register a song.", source: "FAQ" },
+  { id: "ask-which-pro", title: "Do I need a PRO, and which one should I join?", text: "If you write songs, yes: a PRO (performing rights organization) collects your performance royalties. In the US the main ones are ASCAP and BMI (SESAC and GMR are invitation-only). You can only belong to one as a writer. Both are fine; compare their sign-up steps and pick one.", source: "FAQ" },
+  { id: "ask-cancel", title: "How do I cancel or pause my plan?", text: "Profile → Account. You can turn off renewal, push your renewal back 30 days once a year at no charge, or pause for 1 to 3 months with the Vault. Your songs stay downloadable either way.", link: { label: "Go to Profile", to: "/profile" }, source: "FAQ" },
+  { id: "ask-change-email", title: "How do I change my email or password?", text: "Profile → Account → Change email or Change password. Both ask for your current password. A new email changes once you click the link we send to it.", link: { label: "Go to Profile", to: "/profile" }, source: "FAQ" },
+  { id: "ask-badges", title: "What do badges do?", text: "Badges celebrate your progress as you catalog, register and protect your music. Share them to show your work. They have no cash value. Want to earn them again from the start? Profile → Badge settings → Reset my badges.", source: "FAQ" },
+  { id: "ask-invite-split", title: "How do I invite a collaborator to sign a split sheet?", text: "Split Sheets → choose the song → Generate. Add each collaborator's name, email and share, sign as the owner, then send. They get an email to review and sign, plus a free 30-day Catalog & Collaborate trial. Collecting e-signatures starts with Catalog & Collaborate.", source: "FAQ" },
+  { id: "ask-private", title: "Is my music private?", text: "Yes. Your catalog, masters, splits, PRO and IPI numbers are visible only to you. Only what you choose to share (a share card, a split sheet you send) is seen by others.", source: "FAQ" },
+];
+
 /** Account basics people ask the chat that aren't FAQ questions. */
 const BASICS: HelpAnswer[] = [
+  ...ASKED,
   { id: "basic-password", title: "How do I reset my password?", text: "On the sign-in form, click Forgot password?, enter your email and follow the link we send you. Passwords need at least 12 characters. Already signed in? Profile → Change password.", source: "FAQ" },
   { id: "basic-contact", title: "How do I reach a person?", text: "Open a support ticket and our team answers by email. For billing questions, choose Billing so it goes straight to billing@camethroughaudio.com.", link: { label: "Open a support ticket", to: "/contact?type=support" }, source: "FAQ" },
 ];
