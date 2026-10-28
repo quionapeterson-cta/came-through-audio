@@ -11,9 +11,12 @@ const DESCRIPTION = "YOUR FIRST STOP BEFORE DISTRIBUTION. Embed your metadata an
  * It is exempt from the staging gate in __root.tsx and allowed in robots.txt, and shows nothing but the card.
  */
 export const Route = createFileRoute("/share/$owner/$card")({
-  loader: ({ params }) => {
+  loader: async ({ params }) => {
     if (!isShareId(params.owner) || !isShareId(params.card)) throw notFound();
-    return { image: shareCardImage(params.owner, params.card), url: `${SITE_URL}/share/${params.owner}/${params.card}` };
+    // Link previews use the wide 1200 × 630 card when it exists (so nothing is cropped); older cards use the square.
+    const wide = shareCardImage(params.owner, params.card, true);
+    const hasWide = await fetch(wide, { method: "HEAD" }).then((r) => r.ok).catch(() => false);
+    return { image: shareCardImage(params.owner, params.card), preview: hasWide ? wide : shareCardImage(params.owner, params.card), wide: hasWide, url: `${SITE_URL}/share/${params.owner}/${params.card}` };
   },
   head: ({ loaderData }) => ({
     meta: loaderData ? [
@@ -23,15 +26,15 @@ export const Route = createFileRoute("/share/$owner/$card")({
       { property: "og:description", content: DESCRIPTION },
       { property: "og:type", content: "website" },
       { property: "og:url", content: loaderData.url },
-      { property: "og:image", content: loaderData.image },
+      { property: "og:image", content: loaderData.preview },
       { property: "og:image:type", content: "image/png" },
-      { property: "og:image:width", content: "1080" },
-      { property: "og:image:height", content: "1080" },
+      { property: "og:image:width", content: loaderData.wide ? "1200" : "1080" },
+      { property: "og:image:height", content: loaderData.wide ? "630" : "1080" },
       { property: "og:image:alt", content: "Teaser card made with Came Through Audio" },
       { name: "twitter:card", content: "summary_large_image" },
       { name: "twitter:title", content: TITLE },
       { name: "twitter:description", content: DESCRIPTION },
-      { name: "twitter:image", content: loaderData.image },
+      { name: "twitter:image", content: loaderData.preview },
     ] : [],
   }),
   component: SharePage,

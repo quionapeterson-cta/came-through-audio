@@ -96,5 +96,57 @@ export async function drawPromoCard(input: CardInput): Promise<Blob> {
   g.fillStyle = WHITE; g.fillText(a, x0, 970); g.fillStyle = ELECTRIC; g.fillText(b, x0 + wa, 970);
   text("YOUR FIRST STOP BEFORE DISTRIBUTION", 1010, "500 18px Poppins", MUTED, 2);
 
-  return new Promise((ok, fail) => c.toBlob((blob) => (blob ? ok(blob) : fail(new Error("Could not draw the card."))), "image/png"));
+  return toPng(c);
+}
+
+const toPng = (c: HTMLCanvasElement) => new Promise<Blob>((ok, fail) => c.toBlob((blob) => (blob ? ok(blob) : fail(new Error("Could not draw the card."))), "image/png"));
+
+/**
+ * The same card as a 1200 × 630 link preview (founder, 2026-10-27: Facebook cut off the top of the square card).
+ * Link previews are this wide shape, so everything fits: badge on the left, words on the right, wordmark below them.
+ */
+export async function drawPromoPreview(input: CardInput): Promise<Blob> {
+  const W = 1200, H = 630, c = document.createElement("canvas"); c.width = W; c.height = H;
+  const g = c.getContext("2d")! as CanvasRenderingContext2D & { letterSpacing?: string };
+  await Promise.all(["700 64px Poppins", "600 26px Poppins", "500 32px Poppins"].map((f) => document.fonts?.load(f).catch(() => undefined)));
+  const t = cardText(input);
+  g.fillStyle = BLACK; g.fillRect(0, 0, W, H);
+  g.strokeStyle = COBALT; g.lineWidth = 5; g.strokeRect(24, 24, W - 48, H - 48);
+
+  // Badge or photo: left half, centered top to bottom.
+  const box = 400, bx = 80, by = (H - box) / 2;
+  const loaded = await loadImage(input.avatar).catch(() => undefined);
+  const img = loaded && (input.round ? loaded : trimmed(loaded));
+  if (img) {
+    if (input.round) {
+      g.save(); g.beginPath(); g.arc(bx + box / 2, by + box / 2, box / 2, 0, Math.PI * 2); g.clip();
+      const m = Math.min(img.width, img.height);
+      g.drawImage(img, (img.width - m) / 2, (img.height - m) / 2, m, m, bx, by, box, box); g.restore();
+    } else {
+      const k = Math.min(box / img.width, box / img.height), w = img.width * k, h = img.height * k;
+      g.drawImage(img, bx + (box - w) / 2 - ((img as Trimmed).shiftX ?? 0) * k, by + (box - h) / 2, w, h);
+    }
+  }
+
+  // Words: left-aligned in the right half, shrinking to fit.
+  const x = 540, max = W - x - 70;
+  const text = (s: string, y: number, font: string, color: string, spacing = 0) => {
+    if (!s) return;
+    let size = Number(/(\d+)px/.exec(font)?.[1] ?? 32);
+    const set = () => { g.font = font.replace(/\d+px/, `${size}px`) + ", sans-serif"; g.letterSpacing = `${spacing}px`; };
+    set();
+    while (g.measureText(s).width > max && size > 20) { size -= 2; set(); }
+    g.fillStyle = color; g.textAlign = "left"; g.fillText(s, x, y);
+  };
+  text(t.kicker, 175, "600 26px Poppins", ELECTRIC, 6);
+  text(t.headline, 265, "700 64px Poppins", WHITE);
+  text(t.sub, 325, "500 32px Poppins", MUTED);
+  text(t.footer, t.sub ? 390 : 340, "600 22px Poppins", WHITE, 4);
+
+  // Wordmark on dark: "Came Through" in white, "Audio" in Electric Cobalt (BRANDING.md §2).
+  g.font = "700 30px Poppins, sans-serif"; g.letterSpacing = "0px"; g.textAlign = "left";
+  const a = "Came Through ", wa = g.measureText(a).width;
+  g.fillStyle = WHITE; g.fillText(a, x, 500); g.fillStyle = ELECTRIC; g.fillText("Audio", x + wa, 500);
+  text("YOUR FIRST STOP BEFORE DISTRIBUTION", 535, "500 16px Poppins", MUTED, 2);
+  return toPng(c);
 }

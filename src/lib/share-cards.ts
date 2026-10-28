@@ -7,22 +7,24 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export const isShareId = (s: string) => UUID.test(s);
 
-/** Public URL of a stored share card (what og:image points at). */
-export function shareCardImage(owner: string, card: string) {
-  return `${import.meta.env['VITE_SUPABASE_URL']}/storage/v1/object/public/${BUCKET}/${owner}/${card}.png`;
+/** Public URL of a stored share card; `wide` is its 1200 × 630 link preview (cards shared after 2026-10-27). */
+export function shareCardImage(owner: string, card: string, wide = false) {
+  return `${import.meta.env['VITE_SUPABASE_URL']}/storage/v1/object/public/${BUCKET}/${owner}/${card}${wide ? "-wide" : ""}.png`;
 }
 
 /**
  * Uploads the teaser card to the public share-cards bucket and returns its /share page, whose og:image is the card.
  * Social sites only build previews from a public link, so this is what makes the image show up when posted.
  */
-export async function publishShareCard(blob: Blob): Promise<string> {
+export async function publishShareCard(blob: Blob, wide?: Blob): Promise<string> {
   const { data } = await supabase.auth.getUser();
   const owner = data.user?.id;
   if (!owner) throw new Error("Log in to share your card.");
   const card = crypto.randomUUID();
   const { error } = await supabase.storage.from(BUCKET).upload(`${owner}/${card}.png`, blob, { contentType: "image/png", upsert: false });
   if (error) throw error;
+  // The wide link preview, so Facebook and other sites show the whole card (a missing one falls back to the square).
+  if (wide) await supabase.storage.from(BUCKET).upload(`${owner}/${card}-wide.png`, wide, { contentType: "image/png", upsert: false }).catch(() => undefined);
   // Never the editor preview's address: social sites can't open it, so the preview would come up empty.
   return `${trustedOrigin(window.location.origin, SITE_URL)}/share/${owner}/${card}`;
 }

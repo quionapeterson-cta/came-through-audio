@@ -4,7 +4,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { captionForX, promoCaption, promoOrder, type PromoContext } from "@/lib/promo-copy";
-import { drawPromoCard } from "@/lib/promo-card";
+import { drawPromoCard, drawPromoPreview } from "@/lib/promo-card";
 import { publishShareCard } from "@/lib/share-cards";
 
 export type ShareInfo = { ctx: PromoContext; artist: string; title?: string | undefined; count?: number | undefined; genre?: string | undefined };
@@ -130,7 +130,8 @@ export function SharePanel({ avatar, round, share }: { avatar: string; round?: b
   async function link() {
     if (!card) return SITE_URL;
     if (shareLink?.for === card.url) return shareLink.url;
-    const url = await publishShareCard(card.blob);
+    const wide = await drawPromoPreview({ ctx, avatar, round: !!round, artist, ...input }).catch(() => undefined);
+    const url = await publishShareCard(card.blob, wide);
     setShareLink({ for: card.url, url });
     return url;
   }
