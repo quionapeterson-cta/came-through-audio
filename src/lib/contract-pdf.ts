@@ -1,5 +1,5 @@
 import { addSignatureFont, brandFooter, brandHeader, COBALT, ensureSpace, INK, MUTED, newBrandedPdf, sectionTitle } from "@/lib/brand-pdf";
-import type { PdfBrand } from "@/lib/brand-kit";
+import { hexRgb, type PdfBrand } from "@/lib/brand-kit";
 import { safeName } from "@/lib/catalog";
 import { COMPANY_LEGAL_NAME, CONTRACT_DISCLAIMER, SIGNATURE_FONT } from "@/lib/contract-blueprints";
 
@@ -28,7 +28,10 @@ export async function downloadContractPdf(o: {
     const line = raw.trimEnd();
     if (!line.trim()) { y += 3; continue; }
     const heading = /^[A-Z0-9 &().,'-]+$/.test(line) && /[A-Z]/.test(line) && line.length < 60 || /^\d+\.\s+[A-Z][A-Z &()'-]+$/.test(line);
-    pdf.setFont("helvetica", heading ? "bold" : "normal").setFontSize(heading ? 10.5 : 10).setTextColor(...(heading ? COBALT : INK));
+    // Section titles: our cobalt on Came Through Audio documents; with a Branding Kit, their header color or Primary
+    // Black, so our blue never clashes with their brand (founder, 2026-10-27).
+    const headingColor = o.brand ? (o.brand.headerColor ? hexRgb(o.brand.headerColor) : INK) : COBALT;
+    pdf.setFont("helvetica", heading ? "bold" : "normal").setFontSize(heading ? 10.5 : 10).setTextColor(...(heading ? headingColor : INK));
     for (const part of pdf.splitTextToSize(line, w - 36) as string[]) {
       y = ensureSpace(pdf, y, 6);
       pdf.text(part, 18, y);
@@ -38,7 +41,7 @@ export async function downloadContractPdf(o: {
   }
 
   y = ensureSpace(pdf, y + 6, 20 + o.parties.length * 30);
-  y = sectionTitle(pdf, y, "Signatures");
+  y = sectionTitle(pdf, y, "Signatures", o.brand ? (o.brand.headerColor ? hexRgb(o.brand.headerColor) : INK) : COBALT);
   for (const p of o.parties) {
     if (o.company && p.role === "Company") {
       // Company Name: Came Through Audio, LLC · By: (signature) · Printed Name · Title.

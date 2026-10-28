@@ -124,7 +124,8 @@ export function drawLogo(pdf: JsPDF, x: number, y: number, w: number) {
  */
 export function brandHeader(pdf: JsPDF, title: string, subtitle?: string, meta?: string, brand?: PdfBrand | null) {
   const w = pdf.internal.pageSize.getWidth();
-  if (brand) kitHeader(pdf, brand);
+  // Minimal kits have no header band: the logo sits small in the footer instead (brandFooter).
+  if (brand) { if (brand.style !== "minimal") kitHeader(pdf, brand); }
   else {
     const logoW = 23;
     // Logo centered on the two text lines (wordmark cap top ≈ 15.6, tagline baseline 23.2).
@@ -151,9 +152,20 @@ export function brandHeader(pdf: JsPDF, title: string, subtitle?: string, meta?:
   return y + 12;
 }
 
-/** Their logo (fit in a 34 × 16 mm box), name in the first color, tagline in the second, and one stripe of every color. */
+/** Light text on a dark band, dark text on a light one. */
+const onColor = ([r, g, b]: [number, number, number]): [number, number, number] => (0.299 * r + 0.587 * g + 0.114 * b > 150 ? INK : [255, 255, 255]);
+
+/**
+ * Their logo (fit in a 34 × 16 mm box), name in the first color, tagline in the second. Classic: one stripe of every
+ * color under the header. Sidebar: no stripe (the bar down the left edge is drawn on every page by brandFooter).
+ * Banner: a solid band of their first color across the top, with the name and tagline in a readable color on it.
+ */
 function kitHeader(pdf: JsPDF, brand: PdfBrand) {
   const w = pdf.internal.pageSize.getWidth();
+  const colors = brand.colors.map(hexRgb);
+  const banner = brand.style === "banner";
+  const band = colors[0] ?? INK;
+  if (banner) pdf.setFillColor(...band).rect(0, 0, w, 31, "F");
   let x = MARGIN;
   if (brand.logo) {
     try {
@@ -164,10 +176,11 @@ function kitHeader(pdf: JsPDF, brand: PdfBrand) {
       x += lw + 5;
     } catch { /* an unreadable logo leaves the name on its own */ }
   }
-  const colors = brand.colors.map(hexRgb);
   const nameY = brand.tagline ? 18.6 : 21;
-  if (brand.name) kitFont(pdf, brand, "bold", 14).setTextColor(...(colors[0] ?? INK)).text(brand.name, x, nameY);
-  if (brand.tagline) kitFont(pdf, brand, "medium", 7.5).setTextColor(...(colors[1] ?? MUTED)).text(brand.tagline, x, 24);
+  const text = onColor(band);
+  if (brand.name) kitFont(pdf, brand, "bold", 14).setTextColor(...(banner ? text : colors[0] ?? INK)).text(brand.name, x, nameY);
+  if (brand.tagline) kitFont(pdf, brand, "medium", 7.5).setTextColor(...(banner ? text : colors[1] ?? MUTED)).text(brand.tagline, x, 24);
+  if (brand.style !== "classic") return;
   const stripe = colors.length ? colors : [INK];
   const seg = (w - MARGIN * 2) / stripe.length;
   stripe.forEach((c, i) => pdf.setFillColor(...c).rect(MARGIN + i * seg, 28.5, seg + 0.05, 0.8, "F"));
@@ -193,6 +206,16 @@ export function brandFooter(pdf: JsPDF, brand?: PdfBrand | null) {
   const generated = new Date().toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
   for (let i = 1; i <= pages; i++) {
     pdf.setPage(i);
+    // Sidebar kits: a slim bar of their first color down the left edge of every page.
+    if (brand?.style === "sidebar") pdf.setFillColor(...(brand.colors[0] ? hexRgb(brand.colors[0]) : INK)).rect(0, 0, 7, h, "F");
+    // Minimal kits: their logo small at the bottom right, above the page number.
+    if (brand?.style === "minimal" && brand.logo) {
+      try {
+        const p = pdf.getImageProperties(brand.logo.dataUrl);
+        const sc = Math.min(18 / p.width, 8 / p.height);
+        pdf.addImage(brand.logo.dataUrl, p.fileType, w - MARGIN - p.width * sc, h - 27 - p.height * sc, p.width * sc, p.height * sc);
+      } catch { /* an unreadable logo is left out */ }
+    }
     pdf.setDrawColor(...RULE).setLineWidth(0.3).line(MARGIN, h - 17, w - MARGIN, h - 17);
     font(pdf, "regular", 8.5).setTextColor(...MUTED);
     pdf.text(brand ? [brand.name, `Generated ${generated}`].filter(Boolean).join("  ·  ") : `Came Through Audio, LLC  ·  Generated ${generated}`, MARGIN, h - 11);
@@ -233,8 +256,8 @@ export function infoGrid(pdf: JsPDF, y: number, items: [string, string][]) {
   return y + h + 10;
 }
 
-export function sectionTitle(pdf: JsPDF, y: number, text: string) {
-  label(pdf, text, MARGIN, y, COBALT, 9);
+export function sectionTitle(pdf: JsPDF, y: number, text: string, color: [number, number, number] = COBALT) {
+  label(pdf, text, MARGIN, y, color, 9);
   return y + 8;
 }
 

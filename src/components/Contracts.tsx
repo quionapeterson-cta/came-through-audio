@@ -613,6 +613,13 @@ function ContractEditor({ userId, initial, tracks, blueprint, onClose }: { userI
   const bp = blueprint ?? blueprintById(initial.blueprint) ?? BLUEPRINTS[0]!;
   useEffect(() => { loadWebFont(SIGNATURE_FONT); }, []);
   const [c, setC] = useState<Contract>(initial);
+  // Their Branding Kits, for picking which one this contract uses (founder, 2026-10-27).
+  const [kits, setKits] = useState<{ id: string; name: string }[]>([]);
+  useEffect(() => {
+    if (initial.isCompany) return;
+    void supabase.from("brand_kits" as never).select("id, name").eq("user_id", userId).order("created_at" as never, { ascending: true })
+      .then(({ data }) => setKits(((data ?? []) as { id: string; name: string }[]).filter((k) => k.id)));
+  }, [userId, initial.isCompany]);
   const [customized, setCustomized] = useState(!!initial.body && initial.body !== renderContract(bp, initial.fields, initial.parties));
   const [busy, setBusy] = useState(false);
   const [account, setAccount] = useState({ email: "", legalName: "" });
@@ -755,7 +762,7 @@ function ContractEditor({ userId, initial, tracks, blueprint, onClose }: { userI
   };
 
   // Company agreements keep the Came Through Audio header; the user's own contracts carry their brand kit (Catalog Management).
-  const pdf = async () => downloadContractPdf({ title: c.title, body, bodyHash: c.bodyHash, status: c.status, brand: c.isCompany ? null : await myBrand("contracts"),
+  const pdf = async () => downloadContractPdf({ title: c.title, body, bodyHash: c.bodyHash, status: c.status, brand: c.isCompany ? null : await myBrand("contracts", c.brandKitId),
     company: c.isCompany ? { signerTitle: c.fields["signerTitle"] || "Founder & CEO" } : undefined,
     parties: c.parties.map((p) => ({ name: p.legalName, role: p.role, signedAt: p.signedAt, signatureName: p.signatureName, signatureHash: p.signatureHash })) });
 
@@ -775,6 +782,18 @@ function ContractEditor({ userId, initial, tracks, blueprint, onClose }: { userI
           {draft
             ? <Input aria-label="Contract title" value={c.title} onChange={(e) => setC({ ...c, title: e.target.value })} className="mt-1 h-auto border-0 px-0 text-2xl font-bold shadow-none focus-visible:ring-0" />
             : <h2 className="mt-1 text-2xl font-bold">{c.title}</h2>}
+          {!c.isCompany && kits.length > 0 && (
+            <div className="mt-2 flex flex-wrap items-center gap-2 text-sm">
+              {kits.length > 1 && <>
+                <label htmlFor="contract-kit" className="text-muted-foreground">Branding kit</label>
+                <select id="contract-kit" value={c.brandKitId ?? kits[0]!.id} disabled={!draft} onChange={(e) => setC({ ...c, brandKitId: e.target.value })}
+                  className="h-8 rounded-md border border-input bg-background px-2 text-sm">
+                  {kits.map((k, i) => <option key={k.id} value={k.id}>{k.name || `Kit ${i + 1}`}</option>)}
+                </select>
+              </>}
+              <a href="/profile#brand-kit" className="font-semibold text-primary hover:underline">Edit branding kits</a>
+            </div>
+          )}
         </div>
 
         {draft && (

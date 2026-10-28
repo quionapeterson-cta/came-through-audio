@@ -5,8 +5,8 @@ import { getContractBrand, getMyBrand } from "@/lib/brand-kit.functions";
  * The Personal Branding kit for a PDF, or null for the Came Through Audio header. Never blocks a download: if the
  * check can't run (signed out, offline, migration not run yet), the document simply keeps our header.
  */
-export async function myBrand(use: BrandUse): Promise<PdfBrand | null> {
-  try { return await getMyBrand({ data: { use } }); } catch { return null; }
+export async function myBrand(use: BrandUse, kitId?: string | null): Promise<PdfBrand | null> {
+  try { return await getMyBrand({ data: { use, kitId: kitId ?? null } }); } catch { return null; }
 }
 
 /** The sender's kit on a contract the signed-in user owns or was sent. */
