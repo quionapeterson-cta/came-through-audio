@@ -420,30 +420,45 @@ export type Database = {
       brand_kits: {
         Row: {
           colors: string[]
+          created_at: string
           font: string
+          header_color: string | null
+          id: string
           logo_path: string | null
           name: string
+          options: Json
           show_footer: boolean
+          style: string
           tagline: string
           updated_at: string
           user_id: string
         }
         Insert: {
           colors?: string[]
+          created_at?: string
           font?: string
+          header_color?: string | null
+          id?: string
           logo_path?: string | null
           name?: string
+          options?: Json
           show_footer?: boolean
+          style?: string
           tagline?: string
           updated_at?: string
           user_id?: string
         }
         Update: {
           colors?: string[]
+          created_at?: string
           font?: string
+          header_color?: string | null
+          id?: string
           logo_path?: string | null
           name?: string
+          options?: Json
           show_footer?: boolean
+          style?: string
           tagline?: string
           updated_at?: string
           user_id?: string
@@ -764,6 +779,7 @@ export type Database = {
           blueprint: string
           body: string
           body_hash: string | null
+          brand_kit_id: string | null
           catalog_id: string | null
           completed_at: string | null
           created_at: string
@@ -781,6 +797,7 @@ export type Database = {
           blueprint: string
           body?: string
           body_hash?: string | null
+          brand_kit_id?: string | null
           catalog_id?: string | null
           completed_at?: string | null
           created_at?: string
@@ -798,6 +815,7 @@ export type Database = {
           blueprint?: string
           body?: string
           body_hash?: string | null
+          brand_kit_id?: string | null
           catalog_id?: string | null
           completed_at?: string | null
           created_at?: string
@@ -812,6 +830,13 @@ export type Database = {
           user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "contracts_brand_kit_id_fkey"
+            columns: ["brand_kit_id"]
+            isOneToOne: false
+            referencedRelation: "brand_kits"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "contracts_catalog_id_fkey"
             columns: ["catalog_id"]
@@ -832,6 +857,8 @@ export type Database = {
           name: string
           pro: string | null
           publisher: string | null
+          role: string | null
+          share: string | null
           updated_at: string
           user_id: string
         }
@@ -845,6 +872,8 @@ export type Database = {
           name: string
           pro?: string | null
           publisher?: string | null
+          role?: string | null
+          share?: string | null
           updated_at?: string
           user_id: string
         }
@@ -858,6 +887,8 @@ export type Database = {
           name?: string
           pro?: string | null
           publisher?: string | null
+          role?: string | null
+          share?: string | null
           updated_at?: string
           user_id?: string
         }
@@ -912,6 +943,7 @@ export type Database = {
           importance: string
           owner_id: string | null
           plan_id: string | null
+          remind_weekly_from: string | null
           reminders_sent: string[]
           repeat: string | null
           status: string
@@ -930,6 +962,7 @@ export type Database = {
           importance?: string
           owner_id?: string | null
           plan_id?: string | null
+          remind_weekly_from?: string | null
           reminders_sent?: string[]
           repeat?: string | null
           status?: string
@@ -948,6 +981,7 @@ export type Database = {
           importance?: string
           owner_id?: string | null
           plan_id?: string | null
+          remind_weekly_from?: string | null
           reminders_sent?: string[]
           repeat?: string | null
           status?: string
@@ -1197,6 +1231,66 @@ export type Database = {
           songs?: Json
           status?: string
           writer_name?: string
+        }
+        Relationships: []
+      }
+      legal_override_history: {
+        Row: {
+          body: string
+          doc: string
+          id: string
+          removed: boolean
+          replaced_at: string
+          replaced_by: string | null
+          section: string
+          written_at: string
+          written_by: string | null
+        }
+        Insert: {
+          body: string
+          doc: string
+          id?: string
+          removed?: boolean
+          replaced_at?: string
+          replaced_by?: string | null
+          section: string
+          written_at: string
+          written_by?: string | null
+        }
+        Update: {
+          body?: string
+          doc?: string
+          id?: string
+          removed?: boolean
+          replaced_at?: string
+          replaced_by?: string | null
+          section?: string
+          written_at?: string
+          written_by?: string | null
+        }
+        Relationships: []
+      }
+      legal_overrides: {
+        Row: {
+          body: string
+          doc: string
+          section: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          body: string
+          doc: string
+          section: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          body?: string
+          doc?: string
+          section?: string
+          updated_at?: string
+          updated_by?: string | null
         }
         Relationships: []
       }
@@ -2061,6 +2155,7 @@ export type Database = {
           users: number
         }[]
       }
+      can_edit_legal: { Args: { _user_id: string }; Returns: boolean }
       can_issue_ai_certificate: { Args: { _user_id: string }; Returns: boolean }
       can_manage_badges: { Args: { _user_id: string }; Returns: boolean }
       can_manage_staff: { Args: { _user_id: string }; Returns: boolean }

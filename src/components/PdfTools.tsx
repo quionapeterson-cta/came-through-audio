@@ -83,8 +83,9 @@ export function PdfTools() {
     setBusy(true);
     try {
       const bytes = new Uint8Array(await f.arrayBuffer());
-      const pdfjs = await import("pdfjs-dist");
-      pdfjs.GlobalWorkerOptions.workerSrc = (await import("pdfjs-dist/build/pdf.worker.min.mjs?url")).default;
+      // Legacy build bundles polyfills (e.g. Promise.withResolvers) so it works in Safari and older browsers.
+      const pdfjs = await import("pdfjs-dist/legacy/build/pdf.mjs");
+      pdfjs.GlobalWorkerOptions.workerSrc = (await import("pdfjs-dist/legacy/build/pdf.worker.min.mjs?url")).default;
       // pdf.js takes ownership of the bytes it reads, so it gets a copy and the original stays for saving.
       const task = pdfjs.getDocument({ data: bytes.slice() });
       const pdf = await task.promise;
