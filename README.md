@@ -3,6 +3,14 @@
 This is where to send Claude photos, badges, music, videos, icons and screenshots.
 It is a separate, private shelf of the project: **nothing here goes to Lovable or the website** until Claude places it.
 
+## Fastest way: open this link
+
+**https://github.com/quionapeterson-cta/came-through-audio/upload/dropbox**
+
+It opens the upload screen directly (log in to GitHub first if it asks). Drag your files onto the page, or tap
+"choose your files", then scroll down and click the green **Commit changes** button. That's it; tell Claude what you
+dropped.
+
 ## How to drop files (any browser, phone or computer)
 
 1. Open this page: https://github.com/quionapeterson-cta/came-through-audio/tree/dropbox
