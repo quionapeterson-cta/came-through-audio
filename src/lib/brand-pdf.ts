@@ -186,6 +186,55 @@ function kitHeader(pdf: JsPDF, brand: PdfBrand) {
   stripe.forEach((c, i) => pdf.setFillColor(...c).rect(MARGIN + i * seg, 28.5, seg + 0.05, 0.8, "F"));
 }
 
+/**
+ * A Branding Kit's cover page (options.cover): their logo large, their name and tagline, the document title and date,
+ * framed in their accent color (rounded or square corners). The document starts on the next page.
+ */
+export function kitCover(pdf: JsPDF, brand: PdfBrand, title: string, subtitle: string) {
+  const w = pdf.internal.pageSize.getWidth(), h = pdf.internal.pageSize.getHeight();
+  const accent = kitAccent(brand);
+  pdf.setDrawColor(...accent).setLineWidth(1.2);
+  if (brand.options.corners === "rounded") pdf.roundedRect(MARGIN - 6, MARGIN - 6, w - (MARGIN - 6) * 2, h - (MARGIN - 6) * 2, 6, 6, "S");
+  else pdf.rect(MARGIN - 6, MARGIN - 6, w - (MARGIN - 6) * 2, h - (MARGIN - 6) * 2, "S");
+  let y = h * 0.3;
+  if (brand.logo) {
+    try {
+      const p = pdf.getImageProperties(brand.logo.dataUrl);
+      const sc = Math.min(80 / p.width, 50 / p.height);
+      pdf.addImage(brand.logo.dataUrl, p.fileType, (w - p.width * sc) / 2, y - p.height * sc, p.width * sc, p.height * sc);
+      y += 14;
+    } catch { /* an unreadable logo leaves the name on its own */ }
+  }
+  const colors = brand.colors.map(hexRgb);
+  if (brand.name) { kitFont(pdf, brand, "bold", 22).setTextColor(...(colors[0] ?? INK)).text(brand.name, w / 2, y, { align: "center" }); y += 9; }
+  if (brand.tagline) { kitFont(pdf, brand, "medium", 10).setTextColor(...(colors[1] ?? MUTED)).text(brand.tagline, w / 2, y, { align: "center" }); y += 8; }
+  pdf.setFillColor(...accent).rect(w / 2 - 20, y + 4, 40, 0.8, "F");
+  font(pdf, "bold", 24).setTextColor(...INK);
+  const lines = (pdf.splitTextToSize(title, w - MARGIN * 4) as string[]).slice(0, 3);
+  lines.forEach((l, i) => pdf.text(l, w / 2, y + 22 + i * 10, { align: "center" }));
+  font(pdf, "regular", 11).setTextColor(...MUTED).text(subtitle, w / 2, y + 30 + lines.length * 10, { align: "center" });
+  pdf.addPage();
+}
+
+/** A faint copy of the kit's logo in the middle of the current page (options.watermark), under the text drawn after it. */
+export function kitWatermark(pdf: JsPDF, brand: PdfBrand) {
+  if (!brand.logo) return;
+  const w = pdf.internal.pageSize.getWidth(), h = pdf.internal.pageSize.getHeight();
+  try {
+    const p = pdf.getImageProperties(brand.logo.dataUrl);
+    const sc = Math.min(120 / p.width, 120 / p.height);
+    const G = (pdf as unknown as { GState: new (o: { opacity: number }) => unknown }).GState;
+    pdf.saveGraphicsState();
+    (pdf as unknown as { setGState: (g: unknown) => void }).setGState(new G({ opacity: 0.07 }));
+    pdf.addImage(brand.logo.dataUrl, p.fileType, (w - p.width * sc) / 2, (h - p.height * sc) / 2, p.width * sc, p.height * sc);
+    pdf.restoreGraphicsState();
+  } catch { /* no watermark if the logo can't be drawn */ }
+}
+
+/** The kit's second accent color, else its section title color, else Primary Black. */
+export const kitAccent = (brand: PdfBrand): [number, number, number] =>
+  brand.options.accent ? hexRgb(brand.options.accent) : brand.headerColor ? hexRgb(brand.headerColor) : INK;
+
 /** "2026-03-03" → "Mar 3, 2026"; anything else is shown as typed. */
 export function prettyDate(v: string | undefined) {
   const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(v ?? "");
@@ -216,7 +265,7 @@ export function brandFooter(pdf: JsPDF, brand?: PdfBrand | null) {
         pdf.addImage(brand.logo.dataUrl, p.fileType, w - MARGIN - p.width * sc, h - 27 - p.height * sc, p.width * sc, p.height * sc);
       } catch { /* an unreadable logo is left out */ }
     }
-    pdf.setDrawColor(...RULE).setLineWidth(0.3).line(MARGIN, h - 17, w - MARGIN, h - 17);
+    pdf.setDrawColor(...(brand?.options.accent ? hexRgb(brand.options.accent) : RULE)).setLineWidth(0.3).line(MARGIN, h - 17, w - MARGIN, h - 17);
     font(pdf, "regular", 8.5).setTextColor(...MUTED);
     pdf.text(brand ? [brand.name, `Generated ${generated}`].filter(Boolean).join("  ·  ") : `Came Through Audio, LLC  ·  Generated ${generated}`, MARGIN, h - 11);
     pdf.text(`Page ${i} of ${pages}`, w - MARGIN, h - 11, { align: "right" });

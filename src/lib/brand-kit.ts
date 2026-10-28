@@ -39,7 +39,35 @@ export type BrandKit = {
   style: KitStyle;
   /** Contract section titles. Blank = Primary Black #0b0b0b, so our cobalt never clashes with their colors. */
   headerColor: string | null;
+  options: KitOptions;
 };
+
+/** Extra contract styling per kit (founder, 2026-10-28). */
+export type KitOptions = {
+  /** A faint copy of the logo behind the text on page 1. */
+  watermark: boolean;
+  /** An opening page with the logo, name and contract title. */
+  cover: boolean;
+  /** Each signer gets a signature line, or a box around their signature block. */
+  signature: "line" | "box";
+  /** Signer labels, signature lines and boxes, and the footer rule. Blank = the section title color. */
+  accent: string | null;
+  /** Boxes and the cover frame. */
+  corners: "rounded" | "square";
+};
+export const DEFAULT_KIT_OPTIONS: KitOptions = { watermark: false, cover: false, signature: "line", accent: null, corners: "rounded" };
+
+/** Saved options, cleaned: unknown values fall back to the defaults. */
+export function kitOptions(v: unknown): KitOptions {
+  const o = (v && typeof v === "object" ? v : {}) as Record<string, unknown>;
+  return {
+    watermark: o["watermark"] === true,
+    cover: o["cover"] === true,
+    signature: o["signature"] === "box" ? "box" : "line",
+    accent: typeof o["accent"] === "string" && isHex(o["accent"]) ? o["accent"].toUpperCase() : null,
+    corners: o["corners"] === "square" ? "square" : "rounded",
+  };
+}
 
 /** What a PDF needs: the kit plus the logo as a data URL, so it can be drawn without another request. */
 export type PdfBrand = Omit<BrandKit, "logoPath"> & { logo: { dataUrl: string } | null };
@@ -48,7 +76,7 @@ export type BrandUse = "splits" | "contracts";
 
 /** New kits start in Arial, a neutral font that fits any brand (founder, 2026-10-27); Poppins is ours. */
 export const DEFAULT_KIT_FONT = "Arial";
-export const emptyKit = (name = ""): BrandKit => ({ name, tagline: "", colors: [], font: DEFAULT_KIT_FONT, logoPath: null, showFooter: true, style: "classic", headerColor: null });
+export const emptyKit = (name = ""): BrandKit => ({ name, tagline: "", colors: [], font: DEFAULT_KIT_FONT, logoPath: null, showFooter: true, style: "classic", headerColor: null, options: { ...DEFAULT_KIT_OPTIONS } });
 
 export const isHex = (v: string) => /^#[0-9a-f]{6}$/i.test(v);
 
@@ -59,7 +87,7 @@ export function hexRgb(v: string): [number, number, number] {
 }
 
 /** A kit row from the database, cleaned: bad colors and unknown fonts are dropped instead of breaking a PDF. */
-export function kitFromRow(r: { id?: string | null; name?: string | null; tagline?: string | null; colors?: string[] | null; font?: string | null; logo_path?: string | null; show_footer?: boolean | null; style?: string | null; header_color?: string | null } | null): BrandKit | null {
+export function kitFromRow(r: { id?: string | null; name?: string | null; tagline?: string | null; colors?: string[] | null; font?: string | null; logo_path?: string | null; show_footer?: boolean | null; style?: string | null; header_color?: string | null; options?: unknown } | null): BrandKit | null {
   if (!r) return null;
   return {
     ...(r.id && { id: r.id }),
@@ -71,6 +99,7 @@ export function kitFromRow(r: { id?: string | null; name?: string | null; taglin
     showFooter: r.show_footer !== false,
     style: isStyle(r.style) ? r.style : "classic",
     headerColor: r.header_color && isHex(r.header_color) ? r.header_color.toUpperCase() : null,
+    options: kitOptions(r.options),
   };
 }
 

@@ -96,15 +96,18 @@ export function BrandKit({ userId, tier, artistName }: { userId: string; tier: T
   async function save() {
     const bad = kit.colors.find((c) => !isHex(c));
     if (bad) { toast.error(`"${bad}" isn't a color code. Use 6 digits like #004AAD.`); return; }
+    const badExtra = [kit.headerColor, kit.options.accent].find((c) => c && !isHex(c));
+    if (badExtra) { toast.error(`"${badExtra}" isn't a color code. Use 6 digits like #0B0B0B.`); return; }
     setBusy(true);
     try {
       const base = { user_id: userId, name: kit.name.trim(), tagline: kit.tagline.trim(), colors: kit.colors.map((c) => c.toUpperCase()), font: kit.font, logo_path: kit.logoPath, show_footer: kit.showFooter, updated_at: new Date().toISOString() };
-      const row = { ...base, style: kit.style, header_color: kit.headerColor };
+      const row = { ...base, style: kit.style, header_color: kit.headerColor, options: kit.options };
       if (kit.id) {
         const { error } = await supabase.from("brand_kits" as never).update(row as never).eq("id", kit.id);
         if (error) throw error;
       } else {
         const { data, error } = await supabase.from("brand_kits" as never).insert(row as never).select("id").single();
+        if (error && /options/.test(error.message)) throw new Error("The new kit options need the latest database update. Ask support to run migration 20261028090000.");
         if (error) {
           // Before migration 20261027210000: one kit per person and no style or header color yet.
           if (kits.length > 1) throw new Error("More than one Branding Kit needs the latest database update. Ask support to run migration 20261027210000.");
@@ -265,6 +268,43 @@ export function BrandKit({ userId, tier, artistName }: { userId: string; tier: T
         </div>
       </div>
 
+      {/* More ways to style contracts (founder, 2026-10-28). */}
+      <fieldset className="space-y-4 rounded-lg border border-border p-4">
+        <legend className="px-1 text-sm font-semibold">More contract options</legend>
+        <label className="flex items-start justify-between gap-4">
+          <span><span className="block text-sm font-semibold">Logo watermark on page 1</span><span className="text-xs text-muted-foreground">A faint copy of your logo behind the text. Needs a logo.</span></span>
+          <Switch checked={kit.options.watermark} disabled={!kit.logoPath} onCheckedChange={(v) => edit({ options: { ...kit.options, watermark: v } })} />
+        </label>
+        <label className="flex items-start justify-between gap-4">
+          <span><span className="block text-sm font-semibold">Cover page</span><span className="text-xs text-muted-foreground">An opening page with your logo, name and the contract title.</span></span>
+          <Switch checked={kit.options.cover} onCheckedChange={(v) => edit({ options: { ...kit.options, cover: v } })} />
+        </label>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <span className="text-sm font-semibold">Signatures</span>
+          <div role="radiogroup" aria-label="Signature style" className="flex rounded-lg border border-border p-0.5">
+            {([["line", "Line"], ["box", "Box"]] as const).map(([v, label]) => <button key={v} type="button" role="radio" aria-checked={kit.options.signature === v} onClick={() => edit({ options: { ...kit.options, signature: v } })}
+              className={`rounded-md px-3 py-1 text-sm font-semibold ${kit.options.signature === v ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}>{label}</button>)}
+          </div>
+        </div>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <span className="text-sm font-semibold">Corners</span>
+          <div role="radiogroup" aria-label="Corners" className="flex rounded-lg border border-border p-0.5">
+            {([["rounded", "Rounded"], ["square", "Square"]] as const).map(([v, label]) => <button key={v} type="button" role="radio" aria-checked={kit.options.corners === v} onClick={() => edit({ options: { ...kit.options, corners: v } })}
+              className={`rounded-md px-3 py-1 text-sm font-semibold ${kit.options.corners === v ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}>{label}</button>)}
+          </div>
+        </div>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <span><span className="block text-sm font-semibold">Second accent color</span><span className="text-xs text-muted-foreground">For signer names, signature lines and boxes, and the footer line.</span></span>
+          <span className="flex items-center gap-2">
+            <input type="color" aria-label="Second accent color" value={kit.options.accent ?? "#0b0b0b"} onChange={(e) => edit({ options: { ...kit.options, accent: e.target.value.toUpperCase() } })} className="h-8 w-8 cursor-pointer rounded border-0 bg-transparent p-0" />
+            <Input aria-label="Second accent color code" value={kit.options.accent ?? ""} placeholder="Same as titles" maxLength={7}
+              onChange={(e) => { const v = e.target.value.trim(); edit({ options: { ...kit.options, accent: v ? (v.startsWith("#") ? v : `#${v}`).toUpperCase() : null } }); }}
+              className={`h-8 w-32 font-mono text-xs ${!kit.options.accent || isHex(kit.options.accent) ? "" : "border-destructive"}`} />
+            {kit.options.accent && <Button variant="ghost" size="sm" onClick={() => edit({ options: { ...kit.options, accent: null } })}>Clear</Button>}
+          </span>
+        </div>
+      </fieldset>
+
       <Disclaimer k="branding" />
 
       <div className="flex items-start justify-between gap-4 rounded-lg border border-border p-4">
@@ -294,6 +334,11 @@ export function BrandKit({ userId, tier, artistName }: { userId: string; tier: T
           <p className={`relative text-2xl font-bold ${kit.style === "banner" ? "mt-6" : "mt-4"}`}>Producer Agreement</p>
           <p className="relative mt-3 text-sm font-bold" style={{ color: kit.headerColor && isHex(kit.headerColor) ? kit.headerColor : "#0b0b0b" }}>1. TERMS</p>
           <p className="relative text-xs text-[#525252]">The contract text reads in black, with your section titles in this color.</p>
+          {kit.options.watermark && logoUrl && <img src={logoUrl} alt="" aria-hidden className="pointer-events-none absolute left-1/2 top-1/2 h-24 max-w-[60%] -translate-x-1/2 -translate-y-1/2 object-contain opacity-[0.07]" />}
+          <div className={`relative mt-4 border px-3 py-2 text-xs ${kit.options.signature === "box" ? "" : "border-x-0 border-t-0"} ${kit.options.corners === "rounded" ? "rounded-md" : ""}`} style={{ borderColor: kit.options.accent ?? kit.headerColor ?? "#0b0b0b" }}>
+            <span className="font-bold" style={{ color: kit.options.accent ?? kit.headerColor ?? "#0b0b0b" }}>ARTIST</span><span className="ml-2 text-[#525252]">Signature</span>
+          </div>
+          {kit.options.cover && <p className="relative mt-2 text-[10px] text-[#525252]">+ Cover page with your logo, name and the contract title.</p>}
           {kit.style === "minimal" && <div className="relative mt-4 flex items-center justify-between text-[10px] text-[#525252]"><span>{kit.name || "Your name"}</span>{logoUrl && <img src={logoUrl} alt="" className="h-5 max-w-[4rem] object-contain" />}</div>}
           {kit.showFooter && <p className="mt-4 text-[10px] text-[#525252]">Generated on camethroughaudio.com · <span className="font-medium tracking-[2px]">YOUR FIRST STOP BEFORE DISTRIBUTION</span></p>}
         </div>

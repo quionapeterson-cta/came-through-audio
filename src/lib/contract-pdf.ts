@@ -1,4 +1,4 @@
-import { addSignatureFont, brandFooter, brandHeader, COBALT, ensureSpace, INK, MUTED, newBrandedPdf, sectionTitle } from "@/lib/brand-pdf";
+import { addSignatureFont, brandFooter, brandHeader, COBALT, ensureSpace, INK, kitAccent, kitCover, kitWatermark, MUTED, newBrandedPdf, sectionTitle } from "@/lib/brand-pdf";
 import { hexRgb, type PdfBrand } from "@/lib/brand-kit";
 import { safeName } from "@/lib/catalog";
 import { COMPANY_LEGAL_NAME, CONTRACT_DISCLAIMER, SIGNATURE_FONT } from "@/lib/contract-blueprints";
@@ -19,7 +19,12 @@ export async function downloadContractPdf(o: {
   const signature = (text: string, x: number, y: number) => (cursive ? pdf.setFont(SIGNATURE_FONT, "bold").setFontSize(20) : pdf.setFont("times", "italic").setFontSize(18)).setTextColor(...INK).text(text, x, y);
   const w = pdf.internal.pageSize.getWidth();
   const label = o.status === "signed" ? "Fully signed" : o.status === "sent" ? "Out for signature" : "Draft";
+  // Branding Kit extras (founder, 2026-10-28): an optional cover page, then a faint logo watermark behind page 1.
+  if (o.brand?.options.cover) kitCover(pdf, o.brand, o.title, label);
+  if (o.brand?.options.watermark) kitWatermark(pdf, o.brand);
   let y = brandHeader(pdf, o.title, label, undefined, o.brand);
+  const accent = o.brand ? kitAccent(o.brand) : COBALT;
+  const boxed = o.brand?.options.signature === "box", rounded = o.brand?.options.corners !== "square";
 
   // The first line repeats the title in capitals; skip it since the header already shows the title.
   const lines = o.body.split("\n");
@@ -59,14 +64,16 @@ export async function downloadContractPdf(o: {
       y += 6;
       continue;
     }
-    y = ensureSpace(pdf, y, 30);
-    pdf.setFont("helvetica", "bold").setFontSize(8).setTextColor(...COBALT).text(p.role.toUpperCase(), 18, y);
+    y = ensureSpace(pdf, y, boxed ? 38 : 30);
+    const top = y;
+    if (boxed) y += 5;
+    pdf.setFont("helvetica", "bold").setFontSize(8).setTextColor(...accent).text(p.role.toUpperCase(), boxed ? 22 : 18, y);
     y += 7;
     if (p.signedAt && p.signatureName) {
       signature(p.signatureName, 18, y);
     }
     y += 2;
-    pdf.setDrawColor(...MUTED).setLineWidth(0.3).line(18, y, 110, y);
+    pdf.setDrawColor(...(o.brand ? accent : MUTED)).setLineWidth(0.3).line(boxed ? 22 : 18, y, 110, y);
     y += 5;
     pdf.setFont("helvetica", "normal").setFontSize(9).setTextColor(...INK).text(p.name || "Legal name", 18, y);
     pdf.setTextColor(...MUTED).text(p.signedAt ? `Signed ${new Date(p.signedAt).toLocaleString()}` : "Date: ____________________", 120, y);
@@ -74,6 +81,13 @@ export async function downloadContractPdf(o: {
     if (p.signatureHash) {
       pdf.setFontSize(6.5).text(`Verification hash: ${p.signatureHash}`, 18, y);
       y += 4;
+    }
+    // Box style: a frame around this signer's block, in the accent color, rounded or square.
+    if (boxed) {
+      pdf.setDrawColor(...accent).setLineWidth(0.4);
+      if (rounded) pdf.roundedRect(15, top - 1, w - 30, y - top + 2, 3, 3, "S");
+      else pdf.rect(15, top - 1, w - 30, y - top + 2, "S");
+      y += 3;
     }
     y += 6;
   }

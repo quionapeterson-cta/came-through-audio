@@ -52,3 +52,12 @@ describe("several Branding Kits", () => {
     expect(kitFromRow({ name: "Biz", style: "weird", header_color: "red" })).toMatchObject({ style: "classic", headerColor: null });
   });
 });
+
+describe("kit options", async () => {
+  const { kitOptions, DEFAULT_KIT_OPTIONS } = await import("./brand-kit");
+  it("reads saved options and falls back to the defaults", () => {
+    expect(kitOptions(undefined)).toEqual(DEFAULT_KIT_OPTIONS);
+    expect(kitOptions({ watermark: true, cover: true, signature: "box", accent: "#7a1f1f", corners: "square" })).toEqual({ watermark: true, cover: true, signature: "box", accent: "#7A1F1F", corners: "square" });
+    expect(kitOptions({ signature: "fancy", accent: "red", corners: "wavy" })).toEqual(DEFAULT_KIT_OPTIONS);
+  });
+});

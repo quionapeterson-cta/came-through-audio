@@ -13,6 +13,7 @@ All links need you logged in to GitHub (the repo is private). On each file, clic
 - [ ] [20261027190000 domain-renewal-reminder](https://github.com/quionapeterson-cta/came-through-audio/blob/main/supabase/migrations/20261027190000_domain-renewal-reminder.sql) (weekly reminders on tasks + the GoDaddy domain renewal task)
 - [ ] [20261027200000 legal-overrides](https://github.com/quionapeterson-cta/came-through-audio/blob/main/supabase/migrations/20261027200000_legal-overrides.sql) (Admin → Legal: edit Terms, Privacy and Refund wording)
 - [ ] [20261027210000 brand-kits-multi](https://github.com/quionapeterson-cta/came-through-audio/blob/main/supabase/migrations/20261027210000_brand-kits-multi.sql) (several Branding Kits, contract styles, section title color; contracts remember their kit)
+- [ ] [20261028090000 brand-kit-options](https://github.com/quionapeterson-cta/came-through-audio/blob/main/supabase/migrations/20261028090000_brand-kit-options.sql) (kit options: watermark, cover page, signature line or box, second accent color, corners)
 
 ## 2. Oct 25 (newest, most likely missing)
 - [ ] [20261025090000 founding-upgrades](https://github.com/quionapeterson-cta/came-through-audio/blob/main/supabase/migrations/20261025090000_e4b8c2d6-founding-upgrades.sql) (Founding 100 seats)
