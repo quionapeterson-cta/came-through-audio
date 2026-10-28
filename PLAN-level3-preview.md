@@ -1,6 +1,6 @@
 # PLAN — Level 3 layout and wording: preview · v1
 
-Status: **preview for approval (2026-10-27). Nothing below is built until you approve.** Already fixed as a plain
+Status: **approved and built 2026-10-27/28** (share card option A). #18 (hex codes) already existed. #24 (extra kit customizations) waiting for the founder to pick which ones. Kit names: contracts only; split sheets keep the artist name (founder, 2026-10-28). Already fixed as a plain
 bug: "Copyright Owner" was listed twice in "How you usually hold the master"; it's listed once now.
 Source: founder testing list, 2026-10-27. Reply "approve all", or list the numbers to change.
 
