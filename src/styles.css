@@ -383,4 +383,4 @@ body { font-family: var(--font-sans); -webkit-font-smoothing: antialiased; -moz-
 /* Info circles never touch the box below (founder, 2026-10-28): labels holding one get room for the circle and a
    small gap underneath, and long labels wrap cleanly on phones. */
 label:has(> [data-infotip]) { line-height: 1.25rem; padding-bottom: 2px; overflow-wrap: anywhere; }
-[data-radix-popper-content-wrapper] > * { text-rendering: optimizeLegibility; backface-visibility: hidden; }
+[data-radix-popper-content-wrapper] > * { text-rendering: optimizeLegibility; }
