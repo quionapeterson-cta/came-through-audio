@@ -367,6 +367,10 @@ body { font-family: var(--font-sans); -webkit-font-smoothing: antialiased; -moz-
 @keyframes step-sheen { from { transform: skewX(-20deg) translateX(0); } to { transform: skewX(-20deg) translateX(170px); } }
 
 /* Badge close-up: the badge floats gently (no box around it). */
+/* Repeat badges collect like coins on the share screen (BadgeViewer CoinStack). */
+@keyframes cta-coin-in { from { transform: translateX(var(--from, 30px)) scale(0.6); opacity: 0 } to { transform: none; opacity: 1 } }
+.cta-coin { animation: cta-coin-in 0.45s cubic-bezier(0.2, 0.8, 0.2, 1) both }
+@media (prefers-reduced-motion: reduce) { .cta-coin { animation: none } }
 @keyframes cta-badge-float { 0%, 100% { transform: translateY(0) } 50% { transform: translateY(-10px) } }
 .cta-badge-float { animation: cta-badge-float 4s ease-in-out infinite }
 @media (prefers-reduced-motion: reduce) { .cta-badge-float { animation: none } }

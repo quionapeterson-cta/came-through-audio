@@ -39,7 +39,8 @@ const isNew = (s: BadgeState) => {
   const last = s.earned?.log?.[s.earned.log.length - 1]?.at ?? s.earned?.earnedAt;
   return !!last && Date.now() - Date.parse(last) < 7 * 86_400_000;
 };
-const shelfArt = (s: BadgeState) => artFor(s.badge, [...(s.earned?.log ?? [])].reverse().find((e) => e.pick)?.pick, s.earned?.times ?? 1);
+/** The art a badge shows on the shelf and when shared. */
+export const shelfArt = (s: BadgeState) => artFor(s.badge, [...(s.earned?.log ?? [])].reverse().find((e) => e.pick)?.pick, s.earned?.times ?? 1);
 
 function TierChip({ badge }: { badge: BadgeDef }) {
   const label = TIER_LABEL[badge.tier];

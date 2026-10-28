@@ -34,7 +34,7 @@ import { PlanComparison, planAction } from "@/components/PlanComparison";
 import { BadgeWatcher } from "@/components/Badges";
 import { BadgeViewer } from "@/components/BadgeViewer";
 import type { ShareInfo } from "@/components/BadgeCelebration";
-import { isBadgeImage, type CollectionId } from "@/lib/badges";
+import { isBadgeImage, badgeForArt, type CollectionId } from "@/lib/badges";
 import { UpgradeLock } from "@/components/UpgradeLock";
 import { Disclaimer } from "@/components/Disclaimer";
 import type { DisclaimerKey } from "@/lib/disclaimers";
@@ -251,6 +251,7 @@ function Workspace() {
             <NextBadgeHint userId={user.id} collections={TAB_BADGES[tab] ?? ["core"]} />
           </div>
           <BadgeViewer src={viewAvatar ? onboard?.avatar : undefined} round={!isBadgeImage(onboard?.avatar)} onClose={() => setViewAvatar(false)}
+            about={(() => { const b = badgeForArt(onboard?.avatar); return b ? { description: b.description, times: 1 } : undefined; })()}
             share={{ ...share, artist: share.artist || names.artist || name }} />
 
           <TabsContent value="embed" forceMount className="data-[state=inactive]:hidden">

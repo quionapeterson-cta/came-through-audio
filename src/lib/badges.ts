@@ -465,6 +465,9 @@ export const DEFAULT_BADGE_PREFS: BadgePrefs = { celebrations: "all", hints: tru
 /** Avatars are either a badge image (shown whole) or an uploaded photo (shown round). */
 export const isBadgeImage = (src?: string) => !!src && src.startsWith("/icons/");
 
+/** The badge a piece of art belongs to (a profile picture that's a badge), for its description on the share screen. */
+export const badgeForArt = (src?: string) => (src ? ALL_BADGES.find((b) => b.src === src || b.choices?.includes(src)) : undefined);
+
 /** Retired badge art, mapped to its replacement so saved avatars keep working without rewriting profile data. */
 const RETIRED_BADGES: Record<string, string> = {
   "/icons/playful/bedazzled_mpc.png": "/icons/playful/producer/full_gold_beat_machine.png",

@@ -12,11 +12,11 @@ import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { BrandLogo } from "@/components/BrandLogo";
 import { ArtistAvatar, ArtistOnboarding } from "@/components/ArtistOnboarding";
-import { BadgeViewer } from "@/components/BadgeViewer";
+import { BadgeViewer, type BadgeAbout } from "@/components/BadgeViewer";
 import type { ShareInfo } from "@/components/BadgeCelebration";
 import { badgePrefs, loadOnboarding, loadProfile, saveOnboarding, syncFromCloud, type ArtistProfile, type Onboarding } from "@/lib/artist-profile";
 import { isBadgeImage } from "@/lib/badges";
-import { BadgeDetail, BadgeSettings, BadgeSettingsButton, BadgeShelf, BadgeWatcher, useBadgeStates, type BadgeState } from "@/components/Badges";
+import { BadgeDetail, BadgeSettings, BadgeSettingsButton, BadgeShelf, BadgeWatcher, shelfArt, useBadgeStates, type BadgeState } from "@/components/Badges";
 import { creditName, writerRole, type Contributor } from "@/lib/metadata";
 import { TIER_LABEL } from "@/lib/plans";
 import { openBilling } from "@/lib/checkout";
@@ -44,7 +44,7 @@ function ProfilePage() {
   const [editing, setEditing] = useState(false);
   const [passwordOpen, setPasswordOpen] = useState(false);
   const [emailOpen, setEmailOpen] = useState(false);
-  const [viewing, setViewing] = useState<{ src: string; name?: string; round?: boolean; share?: ShareInfo }>();
+  const [viewing, setViewing] = useState<{ src: string; name?: string; round?: boolean; share?: ShareInfo; about?: BadgeAbout; state?: BadgeState }>();
   const [badge, setBadge] = useState<BadgeState>();
   const [badgeList, setBadgeList] = useState<BadgeState[]>([]);
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -148,7 +148,14 @@ function ProfilePage() {
             ))}
           </div>
         </>}>
-          <BadgeShelf userId={user.id} size={size} onOpen={(s, list) => { setBadge(s); setBadgeList(list); }} />
+          {/* An earned badge opens straight to sharing, with its description (founder, 2026-10-27); locked ones show progress. */}
+          <BadgeShelf userId={user.id} size={size} onOpen={(s, list) => {
+            if (s.earned && badgePrefs(ob).share) {
+              setViewing({ src: shelfArt(s), name: s.badge.title, state: s, about: { description: s.badge.description, times: s.earned.times, earnedAt: s.earned.earnedAt }, share: { ctx: "profile", artist: names.artist, genre: profile?.primaryGenre } });
+              return;
+            }
+            setBadge(s); setBadgeList(list);
+          }} />
           <Disclaimer k="badges" />
         </Card>
       </main>
@@ -158,7 +165,11 @@ function ProfilePage() {
         onShare={badgePrefs(ob).share ? (s) => { setBadge(undefined); setViewing({ src: s.badge.src, name: s.badge.title, share: { ctx: "profile", artist: names.artist, genre: profile?.primaryGenre } }); } : undefined} />
       <BadgeSettings userId={user.id} open={settingsOpen} onOpenChange={setSettingsOpen} onSaved={setOb} />
       <BadgeWatcher userId={user.id} artist={names.artist} />
-      <BadgeViewer src={viewing?.src} name={viewing?.name} round={viewing?.round} share={viewing?.share} onClose={() => setViewing(undefined)} />
+      <BadgeViewer src={viewing?.src} name={viewing?.name} round={viewing?.round} share={viewing?.share} about={viewing?.about} onClose={() => setViewing(undefined)}
+        actions={viewing?.state && <>
+          <Button variant="secondary" size="sm" onClick={() => { if (!ob || !viewing) return; const next = { ...ob, avatar: viewing.src }; saveOnboarding(user.id, next); setOb(next); toast.success("Your profile picture is updated."); }}>Use as my profile picture</Button>
+          <Button variant="ghost" size="sm" className="text-white hover:bg-white/10 hover:text-white" onClick={() => { const st = viewing.state!; setViewing(undefined); setBadge(st); }}>{(viewing.about?.times ?? 1) > 1 ? "See every time I earned it" : "Badge details"}</Button>
+        </>} />
       <ArtistOnboarding userId={user.id} open={editing} onOpenChange={setEditing} firstRun={false}
         onSaved={(o) => { setOb(o); setProfile(loadProfile(user.id)); setEditing(false); }} />
       <PasswordDialog email={user.email ?? ""} open={passwordOpen} onOpenChange={setPasswordOpen} />
