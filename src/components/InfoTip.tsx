@@ -19,11 +19,13 @@ export function InfoTip({ term, text, title, children, className = "" }: { term?
         <button type="button" aria-label={children ? undefined : heading ? `What is ${heading}?` : "More info"} onMouseEnter={hover(true)} onMouseLeave={hover(false)}
           // A click right after hovering keeps the tip open instead of toggling it shut.
           onClick={(e) => { e.stopPropagation(); if (open && window.matchMedia?.("(hover: hover)").matches) e.preventDefault(); }}
-          className={children ? className : `ml-1 inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-full border border-primary align-middle text-[10px] font-semibold leading-none normal-case tracking-normal text-primary hover:bg-primary hover:text-primary-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${className}`}>
+          data-infotip=""
+          className={children ? className : `relative -top-px ml-1.5 inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-full border border-primary align-middle text-[10px] font-semibold leading-none normal-case tracking-normal text-primary hover:bg-primary hover:text-primary-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${className}`}>
           {children ?? "i"}
         </button>
       </PopoverTrigger>
-      <PopoverContent side="top" className="w-72 max-w-[calc(100vw-2rem)] p-3 text-sm normal-case tracking-normal" onOpenAutoFocus={(e) => e.preventDefault()}
+      {/* No zoom-in: text scaled mid-animation stays soft on many screens, so the tip only fades in (sharp text). */}
+      <PopoverContent side="top" className="w-72 max-w-[calc(100vw-2rem)] p-3 text-sm normal-case tracking-normal data-[state=open]:zoom-in-100 data-[state=closed]:zoom-out-100 data-[side=top]:slide-in-from-bottom-0" onOpenAutoFocus={(e) => e.preventDefault()}
         onMouseEnter={hover(true)} onMouseLeave={hover(false)}>
         {heading && <p className="font-semibold text-foreground">{heading}</p>}
         <p className="mt-0.5 font-normal leading-snug text-muted-foreground">{body}</p>
