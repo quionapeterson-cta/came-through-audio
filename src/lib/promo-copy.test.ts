@@ -44,3 +44,14 @@ describe("teaser card", () => {
     expect(cardText({ ctx: "profile", artist: "Q" }).headline).toBe("Q");
   });
 });
+
+describe("caption library size", () => {
+  it("has a big, repeat-free set for every spot", () => {
+    for (const ctx of ["embed", "catalog", "profile"] as const) {
+      const all = Array.from({ length: promoCount(ctx) }, (_, i) => promoCaption(ctx, i, { title: "Bloodline", count: 5, genre: "Trap" }).split("\n")[0]);
+      expect(new Set(all).size).toBe(all.length);
+      expect(all.length).toBeGreaterThanOrEqual(40);
+      for (const line of all) expect(line).not.toMatch(/—/);
+    }
+  });
+});
