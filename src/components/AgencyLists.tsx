@@ -50,8 +50,8 @@ export function AgencyLists({ societies, songsFor, summaries, onApply }: Props) 
             <div key={s.id} className={`flex min-h-28 flex-col items-center justify-center gap-1 rounded-2xl border-2 p-3 text-center ${sum ? "border-primary bg-card" : "border-dashed border-border bg-muted/40"}`}>
               <b className="text-sm">{s.name} list</b>
               {sum ? <span className="text-xs text-primary">Uploaded {new Date(sum.at).toLocaleDateString(undefined, { month: "short", day: "numeric" })} · {sum.matched} matched{sum.differences ? ` · ⚠️ ${sum.differences} different` : ""}</span>
-                : <span className="text-xs text-muted-foreground">CSV or Excel (.xlsx)</span>}
-              <input ref={(el) => { inputs.current[s.id] = el; }} type="file" accept=".csv,.tsv,.txt,.xlsx,.xls" className="hidden" aria-label={`Upload your ${s.name} list`}
+                : <span className="text-xs text-muted-foreground">CSV, Excel (.xlsx) or BMI PDF</span>}
+              <input ref={(el) => { inputs.current[s.id] = el; }} type="file" accept=".csv,.tsv,.txt,.xlsx,.xls,.pdf,application/pdf" className="hidden" aria-label={`Upload your ${s.name} list`}
                 onChange={(e) => { const f = e.target.files?.[0]; if (f) void upload(s, f); }} />
               <Button size="sm" variant={sum ? "outline" : "default"} className="mt-1" disabled={!!busy} onClick={() => inputs.current[s.id]?.click()}>
                 {busy === s.id ? <Loader2 className="animate-spin" /> : <FileUp />}{sum ? "Upload a new list" : "Choose file"}
