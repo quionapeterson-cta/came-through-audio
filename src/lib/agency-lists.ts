@@ -47,9 +47,48 @@ export async function readTable(file: File): Promise<string[][]> {
     ws?.eachRow((r) => rows.push((r.values as unknown[]).slice(1).map((v) => cellText(v))));
     return rows.filter((r) => r.some(Boolean));
   }
+  if (/\.pdf$/i.test(file.name) || file.type === "application/pdf") {
+    const pdfjs = await import("pdfjs-dist/legacy/build/pdf.mjs");
+    pdfjs.GlobalWorkerOptions.workerSrc = (await import("pdfjs-dist/legacy/build/pdf.worker.min.mjs?url")).default;
+    const doc = await pdfjs.getDocument({ data: new Uint8Array(await file.arrayBuffer()) }).promise;
+    const items: string[] = [];
+    for (let i = 1; i <= doc.numPages; i++) {
+      const content = await (await doc.getPage(i)).getTextContent();
+      for (const it of content.items) { const t = "str" in it ? it.str.trim() : ""; if (t) items.push(t); }
+    }
+    const rows = bmiPdfRows(items);
+    if (rows.length < 2) throw new Error("We couldn't read songs from this PDF. Upload BMI's Catalog Detail PDF, or a CSV/Excel export.");
+    return rows;
+  }
   if (/\.xls$/i.test(file.name)) throw new Error("Save the file as .xlsx or .csv first (older .xls files can't be read).");
   return parseDelimited(await file.text());
 }
+/**
+ * BMI's "Catalog Detail" PDF: each work is "Title, Registered date, [ISWC], BMI Work #, Participant Name …", then
+ * participant lines "NAME, W|P, share%, affiliation, [CAE/IPI]". Turned into the same one-row-per-writer table a CSV gives.
+ */
+export function bmiPdfRows(items: string[]): string[][] {
+  const rows: string[][] = [["Title", "ISWC", "BMI Work #", "Writer", "Party Type", "Share", "IPI"]];
+  for (let i = 0; i < items.length; i++) {
+    if (items[i] !== "Participant Name") continue;
+    const workId = items[i - 1] ?? "";
+    if (!/^\d{5,12}$/.test(workId)) continue;
+    const hasIswc = /^T\d/.test(items[i - 2] ?? "");
+    const title = items[i - (hasIswc ? 4 : 3)] ?? "";
+    const iswc = hasIswc ? items[i - 2]! : "";
+    if (!title) continue;
+    let any = false;
+    for (let j = i + 1; j < items.length && items[j] !== "Participant Name"; j++) {
+      const share = items[j + 1] ?? "";
+      if (!/^(W|P)$/.test(items[j]!) || !/%$/.test(share)) continue;
+      const ipi = /^\d{8,11}$/.test(items[j + 3] ?? "") ? items[j + 3]! : "";
+      if (items[j] === "W") { rows.push([title, iswc, workId, items[j - 1] ?? "", "Writer", share, ipi]); any = true; }
+    }
+    if (!any) rows.push([title, iswc, workId, "", "", "", ""]);
+  }
+  return rows;
+}
+
 function cellText(v: unknown): string {
   if (v == null) return "";
   if (v instanceof Date) return v.toISOString().slice(0, 10);

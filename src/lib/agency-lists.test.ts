@@ -38,3 +38,16 @@ describe("agency lists", () => {
     expect(() => readWorks([["a", "b"], ["1", "2"]])).toThrow(/title or ISRC column/);
   });
 });
+
+import { bmiPdfRows as _bmiPdfRows, readWorks as _readWorks } from "./agency-lists";
+describe("BMI Catalog Detail PDF", () => {
+  it("reads each work with its writers, skipping the publisher", () => {
+    const items = ["10K", "07/01/2025", "T3335071513", "74058036", "Participant Name", "Work Name:", "PETERSON QUI ONA LASHAY", "W", "100.00%", "BMI", "00658645500", "STEPHENS CALVIN ANDRE", "W", "100.00%", "BMI", "00549852210", "MANUSCRIPT", "P", "0.00%", "NA", "00686021835",
+      "BEAUTY KING", "06/06/2017", "24494803", "Participant Name", "PARIS JOSHUA", "W", "33.00%", "NA", "PETERSON QUI ONA LASHAY", "W", "167.00%", "BMI", "00658645500"];
+    const works = _readWorks(_bmiPdfRows(items));
+    expect(works).toHaveLength(2);
+    expect(works[0]).toMatchObject({ title: "10K", workId: "74058036", iswc: "T3335071513" });
+    expect(works[0]!.writers.map((w) => w.name)).toEqual(["PETERSON QUI ONA LASHAY", "STEPHENS CALVIN ANDRE"]);
+    expect(works[1]!.writers[0]).toMatchObject({ name: "PARIS JOSHUA", share: 33, ipi: undefined });
+  });
+});
