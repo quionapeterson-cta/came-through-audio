@@ -60,9 +60,9 @@ function cellText(v: unknown): string {
 type Columns = Partial<Record<"title" | "iswc" | "isrc" | "workId" | "writer" | "share" | "ipi" | "party", number>>;
 const HEADINGS: [keyof Columns, RegExp][] = [
   ["iswc", /\biswc\b/i], ["isrc", /\bisrc\b/i], ["ipi", /\b(ipi|cae)\b/i],
-  ["workId", /(work\s*(id|#|number|no)|song\s*code|mlc\s*song|work\s*code|registration\s*(id|#))/i],
-  ["share", /(share|%|percent|ownership|split)/i], ["party", /(party\s*type|capacity|role)/i],
-  ["writer", /(writer|composer|author|songwriter|interested\s*part|party\s*name|^name$)/i],
+  ["workId", /(work\s*(id|#|number|no)|song\s*(code|id|#|number)|mlc\s*song|work\s*code|registration\s*(id|#)|^bmi\s*#|^ascap\s*#)/i],
+  ["share", /(share|%|percent|ownership|split)/i], ["party", /(party\s*type|participant\s*(type|role)|designation|capacity|role|^type$)/i],
+  ["writer", /(writer|composer|author|songwriter|interested\s*part|party\s*name|participant|^name$)/i],
   ["title", /(title|work\s*name|song\s*name|track\s*name|^song$|^work$)/i],
 ];
 function columns(header: string[]): Columns {

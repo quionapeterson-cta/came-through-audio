@@ -478,6 +478,20 @@ export function RoyaltyHealthCheck({ userId, canCatalog, canExport, onUpgrade, o
     <div className="space-y-6">
       {hub}
       {askDialog}
+      <section aria-labelledby="doctor-in" className="rounded-2xl border-2 border-primary/40 bg-card p-6 text-center shadow-sm">
+        <p className="text-xs font-semibold uppercase tracking-[2px] text-primary">Royalty Health Doctor</p>
+        <h2 id="doctor-in" className="mt-1 text-2xl font-bold">The Royalty Health Doctor is in.</h2>
+        <p className="mx-auto mt-2 max-w-xl text-sm text-muted-foreground">Check in at the Office and get your catalog diagnosed for missing royalties, mismatched writers and unregistered songs.</p>
+        <ol className="mx-auto mt-4 grid max-w-2xl gap-3 text-left text-sm sm:grid-cols-3">
+          <li className="rounded-lg border border-border p-3"><b className="block">1. Check in</b><span className="text-muted-foreground">Run your checkup on a song or your whole catalog.</span></li>
+          <li className="rounded-lg border border-border p-3"><b className="block">2. Bring your charts</b><span className="text-muted-foreground">Upload your BMI, ASCAP or MLC song list.</span></li>
+          <li className="rounded-lg border border-border p-3"><b className="block">3. Get your diagnosis</b><span className="text-muted-foreground">Read your report and tap each organ for treatment.</span></li>
+        </ol>
+        <div className="mt-4 flex flex-wrap justify-center gap-2">
+          {runButton}
+          <Button variant="outline" onClick={() => { setListsOpen(true); setTimeout(() => document.getElementById("agency-lists")?.scrollIntoView({ behavior: "smooth", block: "start" }), 30); }}>Upload agency list</Button>
+        </div>
+      </section>
       {running && <p className="text-sm text-muted-foreground">Looking up song {running.done + 1} of {running.total} on streaming…</p>}
 
       <div className="space-y-3">
