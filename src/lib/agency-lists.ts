@@ -77,7 +77,7 @@ function columns(header: string[]): Columns {
 
 /** Finds the heading row (the first with a title or ISRC column among the first 15) and groups rows into works. */
 export function readWorks(rows: string[][]): ListWork[] {
-  const at = rows.slice(0, 15).findIndex((r) => { const c = columns(r); return c.title !== undefined || c.isrc !== undefined; });
+  const at = rows.slice(0, 40).findIndex((r) => { const c = columns(r); return c.title !== undefined || c.isrc !== undefined; });
   if (at < 0) throw new Error("Couldn't find a title or ISRC column. Upload the list as your agency exported it.");
   const col = columns(rows[at]!);
   const get = (r: string[], k: keyof Columns) => (col[k] === undefined ? "" : (r[col[k]!] ?? "").trim());
@@ -103,6 +103,8 @@ export function readWorks(rows: string[][]): ListWork[] {
   return [...works.values()].filter((w) => w.title || w.isrc);
 }
 
+const loose = (s: string) => norm(s.replace(/\(.*?\)|\[.*?\]/g, "").replace(/\b(feat|ft)\.?\b.*$/i, ""));
+
 /** Shares on any scale (100, 200 or the writer half) compared as each writer's part of the total. */
 const parts = (list: { key: string; share?: number | undefined }[]) => {
   const total = list.reduce((n, x) => n + (x.share ?? 0), 0);
@@ -120,7 +122,8 @@ export function compareList(works: ListWork[], tracks: CatalogTrack[], recording
     const m = t.metadata;
     const work = (m.iswc && works.find((w) => w.iswc && w.iswc === code(m.iswc)))
       || (m.isrc && works.find((w) => w.isrc && w.isrc === code(m.isrc)))
-      || works.find((w) => w.title && norm(w.title) === norm(t.title));
+      || works.find((w) => w.title && norm(w.title) === norm(t.title))
+      || works.find((w) => w.title && loose(w.title) === loose(t.title));
     if (!work) { notListed.push({ trackId: t.id, title: t.title }); continue; }
     used.add(work);
     const issues: string[] = [];
