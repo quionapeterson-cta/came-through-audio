@@ -6,7 +6,7 @@ import { creditName } from "@/lib/metadata";
  * works or recordings from an agency account and uploads it. The file is read in the browser and never stored; only
  * the comparison is saved. Every agency formats its export differently, so columns are found by their headings.
  */
-export type ListWriter = { name: string; share?: number | undefined; ipi?: string | undefined };
+export type ListWriter = { name: string; share?: number | undefined; ipi?: string | undefined; pro?: string | undefined };
 export type ListWork = { title: string; iswc: string; isrc: string; workId: string; writers: ListWriter[] };
 export type ListMatch = { trackId: string; title: string; work?: ListWork; issues: string[] };
 export type ListResult = { matched: ListMatch[]; differences: ListMatch[]; notListed: { trackId: string; title: string }[]; extra: ListWork[]; works: number };
@@ -96,11 +96,11 @@ function cellText(v: unknown): string {
   return String(v).trim();
 }
 
-type Columns = Partial<Record<"title" | "iswc" | "isrc" | "workId" | "writer" | "share" | "ipi" | "party", number>>;
+type Columns = Partial<Record<"title" | "iswc" | "isrc" | "workId" | "writer" | "share" | "ipi" | "party" | "pro", number>>;
 const HEADINGS: [keyof Columns, RegExp][] = [
-  ["iswc", /\biswc\b/i], ["isrc", /\bisrc\b/i], ["ipi", /\b(ipi|cae)\b/i],
-  ["workId", /(work\s*(id|#|number|no)|song\s*(code|id|#|number)|mlc\s*song|work\s*code|registration\s*(id|#)|^bmi\s*#|^ascap\s*#)/i],
-  ["share", /(share|%|percent|ownership|split)/i], ["party", /(party\s*type|participant\s*(type|role)|designation|capacity|role|^type$)/i],
+  ["iswc", /iswc/i], ["isrc", /isrc/i], ["ipi", /(\b(ipi|cae)|ip\s*name\s*n(umber|o))/i],
+  ["workId", /(title\s*(number|no|#|code|id)|work\s*(id|#|number|no)|song\s*(code|id|#|number)|mlc\s*song|work\s*code|registration\s*(id|#)|^bmi\s*#|^ascap\s*#)/i],
+  ["share", /(share|%|percent|ownership|split)/i], ["pro", /(affil|^society$|^pro$)/i], ["party", /(indicator|party\s*type|participant\s*(type|role)|designation|capacity|role|^type$)/i],
   ["writer", /(writer|composer|author|songwriter|interested\s*part|party\s*name|participant|^name$)/i],
   ["title", /(title|work\s*name|song\s*name|track\s*name|^song$|^work$)/i],
 ];
@@ -133,16 +133,16 @@ export function readWorks(rows: string[][]): ListWork[] {
     if (!work.isrc && isrc) work.isrc = isrc;
     const party = get(r, "party");
     const name = get(r, "writer");
-    if (name && !/publisher|^e$|^op$|^se$/i.test(party)) {
+    if (name && !/publisher|^p$|^e$|^op$|^se$|^am$|^pa$/i.test(party)) {
       const share = Number(get(r, "share").replace(/[%\s]/g, "").replace(",", "."));
-      work.writers.push({ name, share: Number.isFinite(share) && share > 0 ? share : undefined, ipi: digits(get(r, "ipi")) || undefined });
+      work.writers.push({ name, share: Number.isFinite(share) && share > 0 ? share : undefined, ipi: digits(get(r, "ipi")) || undefined, pro: get(r, "pro").replace(/^na$/i, "") || undefined });
     }
     last = work;
   }
   return [...works.values()].filter((w) => w.title || w.isrc);
 }
 
-const loose = (s: string) => norm(s.replace(/\(.*?\)|\[.*?\]/g, "").replace(/\b(feat|ft)\.?\b.*$/i, ""));
+export const loose = (s: string) => norm(s.replace(/\(.*?\)|\[.*?\]/g, "").replace(/\b(feat|ft)\.?\b.*$/i, ""));
 
 /** Shares on any scale (100, 200 or the writer half) compared as each writer's part of the total. */
 const parts = (list: { key: string; share?: number | undefined }[]) => {
