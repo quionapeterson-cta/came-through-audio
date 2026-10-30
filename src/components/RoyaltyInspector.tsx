@@ -32,13 +32,16 @@ const fromTrack = (t: CatalogTrack): Form => {
  * Saved songs join the Song Health Checklist (public.health_songs), so Free accounts can track them to 100%, and
  * "Run a Royalty Health Check" saves the song and takes it to check-in, the way in for songs outside the catalog.
  */
-export function RoyaltyInspector({ onEmbed, onExpert, onSave, onRunCheck, editing, onDoneEditing }: {
+export function RoyaltyInspector({ onEmbed, onExpert, onSave, onRunCheck, editing, onDoneEditing, defaults }: {
   onEmbed: () => void; onExpert: () => void;
   onSave: (fields: InspectorFields, id?: string) => Promise<CatalogTrack>;
   onRunCheck?: (id: string) => void;
   editing?: CatalogTrack | undefined; onDoneEditing: () => void;
+  /** The patient file's saved writer details, so they never have to be typed twice. */
+  defaults?: Partial<Form> | undefined;
 }) {
-  const [f, setF] = useState(blank);
+  const start = { ...blank, ...defaults };
+  const [f, setF] = useState(start);
   const [issues, setIssues] = useState<Issue[]>();
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -65,7 +68,7 @@ export function RoyaltyInspector({ onEmbed, onExpert, onSave, onRunCheck, editin
     const t = saved && savedId ? { id: savedId } : await save().catch(() => undefined);
     if (t) onRunCheck?.(t.id);
   }
-  const reset = () => { setF(blank); setIssues(undefined); setSaved(false); setSavedId(undefined); if (editing) onDoneEditing(); };
+  const reset = () => { setF(start); setIssues(undefined); setSaved(false); setSavedId(undefined); if (editing) onDoneEditing(); };
 
   const field = (k: keyof Form, label: string, ph = "", term?: GlossaryKey) => (
     <label className="space-y-1 text-sm"><span className="inline-flex items-center">{label}{term && <InfoTip term={term} />}</span>
@@ -76,8 +79,8 @@ export function RoyaltyInspector({ onEmbed, onExpert, onSave, onRunCheck, editin
 
   return (
     <div className="rounded-2xl border border-border bg-card p-6">
-      <div className="flex items-center gap-2"><Search className="h-6 w-6 text-primary" /><h3 className="text-xl font-bold">{editing ? `Edit "${editing.title}"` : "Inspect a song"}</h3></div>
-      <p className="mt-1 text-sm text-muted-foreground">Check any song in seconds, free and unlimited. Type in its details, then run a Royalty Health Check for its full report, or save it to your checklist to track every step to 100% health.</p>
+      <div className="flex items-center gap-2"><Search className="h-6 w-6 text-primary" /><h3 className="text-xl font-bold">{editing ? `Edit "${editing.title}"` : "Patient Intake Form"}</h3></div>
+      <p className="mt-1 text-sm text-muted-foreground">If previously registered, enter exactly as filed with your agency; otherwise, fill in as much as known for an accurate diagnosis.</p>
       <div className="mt-4 grid gap-3 md:grid-cols-3 lg:grid-cols-5">
         {field("title", "Song title")}{field("artist", "Artist")}{field("duration", "Duration", "3:25")}
         {field("isrc", "ISRC", "US-XXX-26-00001", "isrc")}
