@@ -1,12 +1,17 @@
 import { safeRedirectPath } from "@/lib/safe-redirect";
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, redirect } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useState } from "react";
 import { z } from "zod";
-import { unlockSite } from "@/lib/gate.functions";
+import { getGateStatus, unlockSite } from "@/lib/gate.functions";
 
 export const Route = createFileRoute("/unlock")({
   validateSearch: z.object({ next: z.string().optional() }),
+  // The passcode is off: old links skip straight to where they were going.
+  beforeLoad: async ({ search }) => {
+    const { unlocked } = await getGateStatus();
+    if (unlocked) throw redirect({ href: safeRedirectPath(search.next, "/") });
+  },
   head: () => ({
     meta: [
       { title: "Private Preview · Came Through Audio" },
