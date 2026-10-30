@@ -100,7 +100,7 @@ type Columns = Partial<Record<"title" | "iswc" | "isrc" | "workId" | "writer" | 
 const HEADINGS: [keyof Columns, RegExp][] = [
   ["iswc", /iswc/i], ["isrc", /isrc/i], ["ipi", /(\b(ipi|cae)|ip\s*name\s*n(umber|o))/i],
   ["workId", /(title\s*(number|no|#|code|id)|work\s*(id|#|number|no)|song\s*(code|id|#|number)|mlc\s*song|work\s*code|registration\s*(id|#)|^bmi\s*#|^ascap\s*#)/i],
-  ["share", /(share|%|percent|ownership|split)/i], ["pro", /(affil|^society$|^pro$)/i], ["party", /(indicator|party\s*type|participant\s*(type|role)|designation|capacity|role|^type$)/i],
+  ["share", /(share|%|percent|ownership|split)/i], ["pro", /(affil|afflia|^society$|^pro$)/i], ["party", /(indicator|party\s*type|participant\s*(type|role)|designation|capacity|role|^type$)/i],
   ["writer", /(writer|composer|author|songwriter|interested\s*part|party\s*name|participant|^name$)/i],
   ["title", /(title|work\s*name|song\s*name|track\s*name|^song$|^work$)/i],
 ];
