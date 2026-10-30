@@ -9,8 +9,8 @@ import type { CheckupSummary } from "@/lib/royalty-checkup";
  * `refs` are catalog ids (or "h:" Inspector ids), so "Run it again" checks the same songs.
  */
 export type ReportScope = { kind: "catalog" | "release" | "song" | "outside"; refs: string[]; label: string };
-export const SCOPE_WORD: Record<ReportScope["kind"], string> = { catalog: "Whole catalog", release: "Release", song: "Song", outside: "Outside song" };
-export const scopeName = (s: ReportScope) => (s.kind === "catalog" ? "Whole catalog" : s.kind === "outside" ? `Outside song: ${s.label}` : s.label);
+export const SCOPE_WORD: Record<ReportScope["kind"], string> = { catalog: "Catalog Examination", release: "Release", song: "Single Track Checkup", outside: "Single Track Checkup" };
+export const scopeName = (s: ReportScope) => (s.kind === "catalog" ? "Catalog Examination" : s.kind === "outside" ? `Single Track Checkup: ${s.label}` : s.label);
 export const songScope = (t: Pick<CatalogTrack, "id" | "title">): ReportScope => ({ kind: isInspectorSong(t.id) ? "outside" : "song", refs: [t.id], label: t.title || "Untitled" });
 export const catalogScope = (tracks: CatalogTrack[]): ReportScope => ({ kind: "catalog", refs: tracks.filter((t) => !isInspectorSong(t.id)).map((t) => t.id), label: "" });
 /** The album or EP a song is on (the same grouping as the song list); singles have none. */
