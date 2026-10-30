@@ -301,7 +301,6 @@ function LaunchingSoon() {
       <p className="mt-2 text-sm text-muted-foreground">Came Through Audio is in private testing. Plans and pricing are below; questions are welcome any time.</p>
       <div className="mt-5 flex flex-wrap justify-center gap-3">
         <Link to="/contact" className="inline-flex h-10 items-center rounded-md bg-primary px-4 text-sm font-semibold text-primary-foreground hover:bg-primary/90">Contact us</Link>
-        <Link to="/unlock" search={{ next: "/" }} className="inline-flex h-10 items-center rounded-md border border-border px-4 text-sm font-semibold hover:bg-accent">I have early access</Link>
       </div>
     </div>
   );
