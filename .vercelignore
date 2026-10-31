@@ -1,0 +1,12 @@
+art
+art/badges-4k
+public/*.mp3
+public/*.wav
+PLAN-*.md
+roadmap.md
+*.avif
+*.mp4
+.muse
+.claude
+.vite
+dist
