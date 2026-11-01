@@ -133,32 +133,68 @@ Rules:
 - No assumptions about which tier artists pick; all three equally visible. No dropdown, no drawer, no Free column, no big comparison grid.
 - Buttons go to the existing Stripe checkout for that tier (prices from `src/lib/plans.ts`).
 
----
 
-## 4. Streaming Fast-Track (NOTE — how it works)
+## 4. Streaming Fast-Track & Automated Composition Lookup  (NOTE — how it works)
 
-**Why:** automatic searches of agency registries were found not to be allowed. Instead of scraping registries, we use what the artist gives us (streaming links + their own agency exports). This gives instant gratification: catalog entries arrive prefilled.
+
+**Why:** Artists want instant intake without having to dig up spreadsheets or manual exports just to get their baseline catalog started. By entering a Spotify or streaming link, Came Through Audio cross-references released master recordings against federally mandated and public musical work databases (The MLC Public Work Database, Songview, and public PRO repertoires) to retrieve both recording and composition metadata automatically—matching the seamless intake experience of tools like UMogul.
 
 **How it works:**
-1. Artist pastes a streaming artist/album link (Spotify / Apple Music) in Intake & Records.
-2. We read public release metadata from permitted sources (official catalog/search APIs): titles, release, artist/featured artists, ISRC, UPC, release date, album cover.
-3. Agency exports the artist uploads add the composition side: legal names, PRO, IPI, splits, publisher.
-4. Both merge into one entry per song → diagnosed in the scan.
-5. **Paid tiers:** entries **prefill My Catalog** automatically. Artist chooses **Upload audio now** or **Add Audio Later**.
-6. With audio: **`[ Embed Verified Metadata & Download Official Master ]`**
-   Subtext: *"Your Sovereign Backup — an exact, distributor-proof copy kept in your own vault with permanent metadata, ready whenever a platform or distributor takes your music down."*
-7. Album covers attach to the catalog entry and are downloadable with the artist's backup **only where the source's terms allow it** (confirm before build; never promise otherwise).
-8. **Free accounts:** get the diagnosis; saving to catalog / embedding is behind the §3 cards.
+1. **Intake:** Artist pastes their Spotify or streaming artist/album link in Intake & Records, along with their name.
+2. **Master Side (Recording Data):** 
+   - System retrieves released tracks, release titles, artist/featured artists, ISRC codes, UPC barcodes, release dates, and album cover artwork.
+3. **Composition Side (Automated Work Cross-Reference):**
+   - Using the retrieved ISRC, Song Title, and Artist Name, the system automatically queries public composition databases (The MLC Public Search and public PRO repertories).
+   - When a matching work is found, the system automatically populates:
+     - **Writer Legal Name** (exactly as registered with their PRO)
+     - **PRO Affiliation** (BMI, ASCAP, SESAC, etc.)
+     - **IPI / CAE Name Number**
+     - **Publisher Name & Publisher IPI**
+     - **ISWC** (International Standard Musical Work Code)
+4. **Clinical Diagnosis at Scan:**
+   - **Matched Works:** Diagnosed for complete metadata health, publisher representation, and PRO,The MLC and SoundExchange recording registration readiness.
+   - **Unmatched Works (Streams with No Registration):** If a track is active on Spotify but has no matching registration in public composition registries, the Royalty Doctor immediately flags:
+     *`Diagnosis: Unregistered Musical Work : Mechanical and Digital Performance Royalties Uncollected.`*
+5. **Agency File Uploads (Optional Deep Examination):**
+   - Artists are never required to upload agency exports just to get their names or IPI numbers.
+   - Agency exports (BMI, ASCAP, The MLC, SoundExchange, SESAC) are used for deep audits: verifying exact split percentages (which public databases do not display for privacy), auditing unreleased/non-streaming works, and catching catalog discrepancies.
+6. **Paid Tiers:** Entries prefill **My Catalog** automatically with both recording and composition fields filled. Artist chooses **Upload audio now** or **Add Audio Later**.(Artist are informed that their catalog has been prefilled with their data and all they need to do is upload there masters, embed and download them)>
+7. **With Audio:** 
+   - **`[ Embed Verified Metadata & Download Official Master ]`**
+   - Subtext: *"Your Sovereign Backup — an exact, distributor-proof copy kept in your own vault with permanent metadata, ready whenever a platform or distributor takes your music down."*
+8. **Free Accounts:** Receive the complete diagnosis and prescription report; saving to catalog and downloading embedded masters are unlocked via the tier cards.
 
 **Invariants:**
 - Track title written to `TIT2` **exactly as entered/imported** — no "(Master)", "[Official Master]", no casing/punctuation changes.
-- Embeds never carry publisher, ℗ line, language, PRO, IPI or splits (catalog-only).
+- Embeds never carry publisher, ℗ line, language, PRO, IPI, or splits (these remain catalog-only).
 - Browser-safe local download (`browser-id3-writer`); never overwrite existing song values.
 - Mission: artists keep their catalog in their own control even if music is taken down.
 
-**Remove global wording:** find and replace every place on the site that says registries/databases "don't allow automatic searches" (or "we can't search the databases"). Replace with positive copy pointing to Streaming Profile + Agency Examination. Do not promise automatic registry lookups anywhere.
+**Copy Rule:**
+- Eliminate all copy stating registries/databases "don't allow automatic searches" or "we can't search the databases."
+- Position the intake as: *"Streaming Fast-Track connects your released music to official public work registries, pulling your verified legal credits, PRO affiliation, and IPI numbers automatically."*
 
----
+How UMogul Does It (Note)
+
+Spotify itself only stores the master / recording side of the metadata (track titles, artist names, ISRCs, UPCs, release dates, and album art). Spotify does not issue or store IPI numbers or PRO publisher shares.
+
+What Mogul does is a two-step cross-reference:
+
+1. Step 1 (Master / Release Discovery): From your Spotify artist link, they pull your discography, track titles, and ISRC codes.
+2. Step 2 (Composition Registry Match): They take your ISRC and Song Title and immediately query public composition registries—specifically The MLC Public Database (which was created under the US Music Modernization Act and is federally mandated to maintain a publicly searchable database linking ISRCs to musical works), along with Songview (the joint ASCAP/BMI public repertoire) and open music databases.
+3. The Result: The MLC and PRO work records match your ISRC to the underlying musical work, which unlocks:
+   - Your full legal name as registered on the work
+   - Your PRO affiliation (BMI, ASCAP, SESAC, etc.)
+   - Your IPI / CAE name number
+   - The registered publisher name and publisher IPI
+   - The ISWC (International Standard Musical Work Code)
+
+Why the Plan Previously Separated Them
+
+Earlier in the project, we established a rule against attempting to "scrape" private, login-walled PRO member accounts. In drafting the plan, that caution swung too far by assuming all composition data had to come from manual user CSV/PDF uploads. 
+
+However, public work matching via The MLC public search and public repertoire data is completely permitted and industry-standard.
+
 
 ## 5. Affected files (expected)
 
