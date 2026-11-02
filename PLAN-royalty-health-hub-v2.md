@@ -87,7 +87,7 @@ Three intake options (any combination allowed):
 **B. Agency Examination** — subheading **Full Registered Catalog Examination**.
 Copy: *"For songwriters and composers whose registered works may not be on streaming. Upload your official exports from BMI, ASCAP, SESAC, The MLC or SoundExchange to examine your full registered body of work."*
 - Five uploaders, each accepts **CSV, XLSX, PDF**, each with a short "How to get this file" instruction under it.
-- **All works import** into the Health Checklist — including Free accounts — and every song is diagnosed. No "add them in My Catalog first" requirement (this was the 81-song bug).
+- **All works import** into the Health Checklist (all work found from Streaming Profile,PRO's, The MLC and SoundExchange Examinations populate finds into checklist (checks off what is found from the checklist making it easier for artist). — including Free accounts — and every song is diagnosed. No "add them in My Catalog first" requirement (this was the 81-song bug).
 
 **C. Single Track Checkup** — the **Patient Intake Form**. Instruction (exact):
 *"If previously registered, enter exactly as filed with your agency; otherwise, fill in as much as known for an accurate diagnosis."*
