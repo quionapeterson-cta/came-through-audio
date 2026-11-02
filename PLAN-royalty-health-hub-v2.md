@@ -195,6 +195,28 @@ Earlier in the project, we established a rule against attempting to "scrape" pri
 
 However, public work matching via The MLC public search and public repertoire data is completely permitted and industry-standard.
 
+Here is how distribution and release status work across the system:
+
+1. With Streaming Fast-Track (Automated)
+
+If an artist enters their Spotify or streaming link, we do not need to ask.
+Because the track is actively live on DSPs, the system automatically marks it as Delivered & Released, pulls its exact release date, ISRC, and UPC barcode, and verifies distribution instantly.
+2. For Agency Uploads & Manual Entries (Single Track Checkup)
+
+When a song comes from a PRO export or is entered by hand, it could be an unreleased track sitting in their vault. We track this through two simple fields rather than a cumbersome questionnaire:
+Release Date: If the date is in the future, it is automatically treated as unreleased. If it's in the past, it's released.
+"This song isn't released yet" Checkbox: For songs with no release date set, artists can simply check this box.
+3. Why Knowing Distribution Status Matters (Pre-Distribution vs. Released)
+
+We never penalize an artist for a song that hasn't come out yet:
+If Released / Distributed: The Royalty Doctor runs the full exam across live streaming, SoundExchange digital performance royalties, The MLC mechanicals, and PRO performance royalties.
+If Unreleased: The song does not fail its exam or get broken organs for missing streaming plays or SoundExchange registration. Instead, it seamlessly switches to the Pre-Distribution Checklist ("Ready to Distribute: 7 of 10"), ensuring splits are signed, credits are locked, and master metadata is embedded before they send the file to DistroKid, TuneCore, or CD Baby.
+4. What Was Replaced
+
+In the older prototype, there was a manual question asking "Has your distributor delivered it? (Yes / No / Not sure)". In the new Royalty Doctor flow (PLAN-royalty-health-hub-v2.md), this is retired in favor of automatic streaming detection and the simple unreleased toggle.
+
+
+
 
 ## 5. Affected files (expected)
 
