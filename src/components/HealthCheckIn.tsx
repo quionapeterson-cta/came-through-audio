@@ -151,7 +151,6 @@ export function HealthCheckIn({ scope, options, onScope, rows, countryPicker, si
             <h2 className="mt-1 text-3xl font-extrabold tracking-tight">{scopeName(scope)}</h2>
             <p className="mt-1 max-w-[60ch] text-muted-foreground">A few quick questions, so your report knows what's already done. Answers you've given before are filled in.</p>
           </div>
-          {countryPicker}
         </div>
         <div className="mt-5"><OfficeSteps at={1} /></div>
         {/* Step 1 happened at the Front Desk; the visit opens with the file it took down. */}
@@ -165,6 +164,20 @@ export function HealthCheckIn({ scope, options, onScope, rows, countryPicker, si
             <span className="text-xs text-muted-foreground">Taken down at the Front Desk</span>
           </div>
         )}
+
+        {/* Where you get paid picks the societies the Doctor examines against, so check-in asks it first. */}
+        <div className="mt-6 rounded-2xl border-2 border-primary/40 bg-primary/5 p-4">
+          <div className="flex flex-wrap items-end justify-between gap-x-6 gap-y-3">
+            <div className="min-w-0 flex-1">
+              <p className="text-xs font-bold uppercase tracking-[2px] text-primary">Checking in from?</p>
+              <p className="mt-1 max-w-[56ch] text-sm text-muted-foreground">
+                Your country decides which societies the Doctor examines you against. Your PRO, The MLC and SoundExchange
+                all collect by country, so this one answer shapes the whole diagnosis.
+              </p>
+            </div>
+            {countryPicker}
+          </div>
+        </div>
 
         {options.length > 1 && <fieldset className="mt-6">
           <legend className="mb-2 text-sm font-bold">Which songs?</legend>

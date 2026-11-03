@@ -82,7 +82,7 @@ export function PatientFileCard({ userId, defaultName, onSaved }: { userId: stri
             <label className="space-y-1 text-sm sm:col-span-2">Publisher name<Input aria-label="Publisher name" value={file.publisher} onChange={(e) => set("publisher", e.target.value)} /></label>
           )}
           <div className="flex flex-wrap items-center gap-2 sm:col-span-2">
-            <Button size="sm" disabled={!ready} onClick={keep}><CheckCircle2 />Save my details</Button>
+            <Button size="sm" disabled={!ready} onClick={keep}><CheckCircle2 />{saved ? "Save my details" : "Submit to Front Desk"}</Button>
             {!ready && <span className="text-xs text-muted-foreground">A legal name and your publisher status are all the desk needs.</span>}
           </div>
         </div>

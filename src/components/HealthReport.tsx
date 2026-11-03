@@ -39,10 +39,10 @@ function ScoreRing({ value }: { value: number }) {
   );
 }
 
-export function CountryPicker({ country, onCountry }: { country: Country; onCountry: (code: string) => void }) {
+export function CountryPicker({ country, onCountry, label = "Where you get paid" }: { country: Country; onCountry: (code: string) => void; label?: string }) {
   return (
     <label className="flex flex-col gap-1 text-xs font-semibold uppercase tracking-[2px] text-ink-muted">
-      Where you get paid
+      {label}
       <select value={country.code} onChange={(e) => onCountry(e.target.value)} aria-label="Your country"
         className="h-11 min-w-56 rounded-xl border border-ink-border bg-ink px-3 text-sm font-semibold normal-case tracking-normal text-ink-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
         {REGIONS.map((region) => (

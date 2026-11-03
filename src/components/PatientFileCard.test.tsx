@@ -16,9 +16,14 @@ describe("PatientFileCard", () => {
     render(<PatientFileCard userId="u1" defaultName="Ann Lee" onSaved={onSaved} />);
     fireEvent.change(screen.getByRole("textbox", { name: "Legal name" }), { target: { value: "Ann Lee" } });
     fireEvent.change(screen.getByRole("combobox", { name: "Publisher status" }), { target: { value: "self" } });
-    fireEvent.click(screen.getByRole("button", { name: /Save my details/ }));
+    // First visit: nothing on file yet, so the desk asks you to hand it over.
+    fireEvent.click(screen.getByRole("button", { name: /Submit to Front Desk/ }));
     expect(onSaved).toHaveBeenCalledWith(expect.objectContaining({ legalName: "Ann Lee", publishing: "self" }));
     expect(screen.getByText("Your details at the desk")).toBeTruthy();
     expect(screen.getByText(/I'm self-published/)).toBeTruthy();
+    // The form is a first-visit thing; afterwards it only comes back when you edit the file.
+    expect(screen.queryByRole("textbox", { name: "Legal name" })).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: /Edit/ }));
+    expect(screen.getByRole("button", { name: /Save my details/ })).toBeTruthy();
   });
 });

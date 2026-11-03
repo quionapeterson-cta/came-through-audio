@@ -445,11 +445,13 @@ export function RoyaltyHealthCheck({ userId, canCatalog, canExport, onUpgrade, o
   const askDialog = <AskCowriterDialog open={askOpen} cowriters={cowriters} artistName={artistName} existing={ipiRequests} onClose={() => setAskOpen(false)}
     onCreated={(r) => setIpiRequests((all) => [r, ...all.filter((x) => x.id !== r.id)])} />;
   const countryPicker = <CountryPicker country={country} onCountry={chooseCountry} />;
+  /** Check-in asks the same question in its own words: where the patient is checking in from. */
+  const checkinCountry = <CountryPicker country={country} onCountry={chooseCountry} label="Your country" />;
 
   if (view.kind === "checkin") {
     const rows = rowsIn(view.scope);
     return (
-      <HealthCheckIn scope={view.scope} options={scopeOptions(view.from)} onScope={(scope) => setView({ ...view, scope })} rows={rows} countryPicker={countryPicker}
+      <HealthCheckIn scope={view.scope} options={scopeOptions(view.from)} onScope={(scope) => setView({ ...view, scope })} rows={rows} countryPicker={checkinCountry}
         signedSheets={signedSheets} onAnswer={answer} onSelfPublished={(ids) => void selfPublish(ids)} onBmiWriter={(ids) => void selfPublish(ids, "bmiWriterPublishing")} onFixField={fixField}
         initialIntake={intakeWanted} onRun={() => runCheck(view.scope)} onBack={() => setView({ kind: "hub" })}
         patient={patient ? { legalName: patient.legalName, summary: patientSummary(patient) } : undefined}
@@ -518,7 +520,7 @@ export function RoyaltyHealthCheck({ userId, canCatalog, canExport, onUpgrade, o
   // The Hub is the Doctor, the Front Desk and the Waiting Area (plan §1). Everything else happens inside the visit.
   const doctor = (
     <section aria-labelledby="doctor-in" className="mx-auto max-w-3xl overflow-hidden rounded-3xl border-2 border-primary/40 bg-card shadow-sm">
-      <ClinicArt name="exam" className="h-36 w-full rounded-none border-0 object-cover sm:h-44" />
+      <ClinicArt name="exam" className="w-full rounded-none border-0" />
       <div className="p-6 text-center">
         <p className="text-xs font-semibold uppercase tracking-[2px] text-primary">Royalty Health Doctor</p>
         <h2 id="doctor-in" className="mt-1 text-2xl font-bold">
