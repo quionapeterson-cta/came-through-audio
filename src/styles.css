@@ -282,9 +282,10 @@ body { font-family: var(--font-sans); -webkit-font-smoothing: antialiased; -moz-
 .dark .mark-on-light { display: none; }
 .dark .mark-on-dark { display: block; }
 
-/* Kerning off: the ring copy reaches outward from every letter, so a kerned pair (Y-O) closed its gap while the
- * rest stayed open and the word read as unevenly spaced. Even advances give every letter the same slot. */
-.hero-metal { position: relative; display: inline-block; font-kerning: none; }
+/* Outlined capitals need more air than solid ones: the ring reaches ~4px out from every letter, so at the tagline's
+ * 2px tracking a tight pair (Y-O) closed up while the rest kept a slot. Even advances plus wider spacing give every
+ * letter the same slot, which is what makes the outline read as evenly spaced. */
+.hero-metal { position: relative; display: inline-block; font-kerning: none; letter-spacing: 0.05em; }
 .hero-metal-ring { position: absolute; inset: 0; color: transparent; -webkit-text-stroke: 8.2px var(--brand-platinum-deep); }
 .hero-metal-face { position: relative; color: var(--brand-platinum-deep); -webkit-text-stroke: 5px var(--ink); paint-order: stroke fill; }
 
