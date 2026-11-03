@@ -1,10 +1,39 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 480 320" role="img" aria-label="The Royalty Health Doctor's examination desk with a stethoscope, headphones, a vinyl record and a prescription">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 480 320" role="img" aria-label="The Royalty Health Doctor's examination desk with a white coat hanging behind it, carrying a music note and a dollar sign, beside a vinyl record, headphones and a prescription">
   <rect width="480" height="320" fill="#F4F5F7"/>
   <rect x="0" y="0" width="480" height="106" fill="#0b0b0b"/>
   <rect x="24" y="26" width="128" height="12" rx="6" fill="#FFFFFF" opacity="0.9"/>
   <rect x="24" y="48" width="86" height="8" rx="4" fill="#4D8CFF"/>
   <rect x="24" y="66" width="196" height="6" rx="3" fill="#FFFFFF" opacity="0.35"/>
   <path d="M380 74c0-14 11-26 25-26s25 12 25 26" stroke="#4D8CFF" stroke-width="4" fill="none"/>
+
+  <!-- the doctor's coat, hanging behind the desk -->
+  <g>
+    <rect x="395" y="104" width="20" height="9" rx="4" fill="#0b0b0b"/>
+    <path d="M405 113v5" stroke="#0b0b0b" stroke-width="4" stroke-linecap="round" opacity="0.5"/>
+    <path d="M405 118c-8 0-15 2-21 5l-34 14c-6 3-9 8-9 15v74h128v-74c0-7-3-12-9-15l-34-14c-6-3-13-5-21-5z" fill="#FFFFFF" stroke="#0b0b0b" stroke-width="3" stroke-linejoin="round"/>
+    <path d="M405 118l-22 6 22 30 22-30z" fill="#E5E4E2" stroke="#0b0b0b" stroke-width="2.5" stroke-linejoin="round"/>
+    <path d="M384 126l-17 12v26M426 126l17 12v26" fill="none" stroke="#0b0b0b" stroke-width="2.5" opacity="0.35" stroke-linecap="round"/>
+    <path d="M405 152v74" stroke="#0b0b0b" stroke-width="2.5" opacity="0.3"/>
+    <circle cx="405" cy="168" r="3.5" fill="#0b0b0b" opacity="0.45"/>
+    <circle cx="405" cy="194" r="3.5" fill="#0b0b0b" opacity="0.45"/>
+    <!-- chest patch: a music note and a dollar sign -->
+    <rect x="356" y="158" width="50" height="32" rx="8" fill="#E5E4E2" stroke="#0b0b0b" stroke-width="2.5"/>
+    <g fill="#16794A">
+      <circle cx="370" cy="180" r="4.5"/>
+      <rect x="373.4" y="166" width="2.8" height="14"/>
+      <path d="M376 166l8 3.5" stroke="#16794A" stroke-width="2.8" stroke-linecap="round"/>
+    </g>
+    <g fill="none" stroke="#004AAD" stroke-width="2.8" stroke-linecap="round">
+      <path d="M390 166v20"/>
+      <path d="M397 170c-6-3-11 0-11 3s5 3 9 3 9 1 9 4-5 4-11 2"/>
+    </g>
+    <path d="M352 196h32v18h-32zM426 196h32v18h-32z" fill="none" stroke="#0b0b0b" stroke-width="2.5" opacity="0.3" stroke-linejoin="round"/>
+    <!-- the stethoscope, slung over the right shoulder -->
+    <path d="M424 112c8-8 26-8 34 0" fill="none" stroke="#004AAD" stroke-width="5" stroke-linecap="round"/>
+    <path d="M438 118c0 24-5 34-5 48 0 18 10 30 17 36" fill="none" stroke="#004AAD" stroke-width="6" stroke-linecap="round"/>
+    <circle cx="452" cy="206" r="12" fill="#E5E4E2" stroke="#0b0b0b" stroke-width="3"/>
+    <circle cx="452" cy="206" r="5" fill="#4D8CFF"/>
+  </g>
 
   <!-- desk -->
   <rect x="0" y="224" width="480" height="18" fill="#0b0b0b"/>
@@ -21,14 +50,6 @@
   <path d="M196 214a42 42 0 0 1 84 0" stroke="#0b0b0b" stroke-width="8" fill="none" stroke-linecap="round"/>
   <rect x="186" y="206" width="16" height="30" rx="8" fill="#0b0b0b"/>
   <rect x="274" y="206" width="16" height="30" rx="8" fill="#0b0b0b"/>
-
-  <!-- stethoscope -->
-  <path d="M338 118c0 22-10 34-10 50 0 24 18 40 40 40s40-16 40-40" stroke="#004AAD" stroke-width="7" fill="none" stroke-linecap="round"/>
-  <circle cx="338" cy="112" r="9" fill="#004AAD"/>
-  <circle cx="338" cy="112" r="4" fill="#FFFFFF"/>
-  <circle cx="408" cy="178" r="17" fill="#E5E4E2" stroke="#0b0b0b" stroke-width="4"/>
-  <circle cx="408" cy="178" r="7" fill="#4D8CFF"/>
-  <path d="M408 178c8 12 16 16 26 14" stroke="#004AAD" stroke-width="5" fill="none" stroke-linecap="round"/>
 
   <!-- prescription pad -->
   <g transform="rotate(-6 300 250)">
