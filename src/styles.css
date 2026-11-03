@@ -169,7 +169,7 @@
   --ink-border: oklch(0.25 0 0);
   --electric: #4D8CFF; /* Electric Cobalt: accent text and icons on Primary Black (BRANDING.md §2) */
   --brand-platinum-deep: #b4b2ad; /* Darker Platinum: the homepage hero letterforms (BRANDING.md §1 exception) */
-  --brand-platinum-face: #9a9894; /* A touch deeper again for the two remembered words: "YOUR" and "DISTRIBUTION" (founder, 2026-11-03) */
+  --brand-platinum-face: #a3a19d; /* One step deeper for the two remembered words: "YOUR" and "DISTRIBUTION" (founder, 2026-11-03) */
   --caution: oklch(0.86 0.17 92);
 }
 
