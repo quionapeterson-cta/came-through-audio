@@ -10,6 +10,7 @@ import { useEffect, useState, type ReactNode } from "react";
 import { ShieldCheck, Building2, FileSignature, Receipt, Users, ArrowLeft, Lock } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { Contracts } from "@/components/Contracts";
+import { CompanyMail } from "@/components/CompanyMail";
 import { BrandLogo } from "@/components/BrandLogo";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -191,6 +192,7 @@ function AdminPage() {
           {show("queue") && <TabsContent value="queue"><MyQueue me={user.id} access={access} onOpen={setActiveTab} /></TabsContent>}
           {show("handbook") && <TabsContent value="handbook"><Handbook /></TabsContent>}
           {show("pdf") && <TabsContent value="pdf"><PdfTools /></TabsContent>}
+          {show("email") && <TabsContent value="email"><CompanyMail /></TabsContent>}
           {show("legal") && <TabsContent value="legal"><LegalEditor /></TabsContent>}
         </Tabs>
         </>)}

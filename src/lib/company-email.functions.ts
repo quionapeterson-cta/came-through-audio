@@ -1,6 +1,9 @@
 import { createServerFn } from "@tanstack/react-start";
+import type { SupabaseClient } from "@supabase/supabase-js";
+import type { Database } from "@/integrations/supabase/types";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { resolveAccess } from "./departments";
 import { emailLayout } from "./email-layout";
 import {
   COMPANY_MAILBOXES,
@@ -12,30 +15,57 @@ import {
 } from "./company-email";
 
 /**
- * Admin → Company Contracts → Email: one-off correspondence from a company mailbox, super admins only.
+ * Admin → Email: one-off correspondence from a company mailbox, open to every member of staff and nobody else.
  *
  * The mailbox is a key into COMPANY_MAILBOXES, never a raw address, so a caller cannot make us send as anything that
- * isn't ours. Mail is logged in outreach_emails with kind "company" for the daily cap and so nobody answers a thread
- * twice; a failed log never undoes a letter that already went out, it just says so in the server log.
+ * isn't ours. Mail is logged in outreach_emails with kind "company" for the daily cap and so two people don't answer the
+ * same thread; a failed log never undoes a letter that already went out, it just says so in the server log.
  */
 const MAILBOX_KEYS = Object.keys(COMPANY_MAILBOXES) as [CompanyMailbox, ...CompanyMailbox[]];
 
-async function superAdminDb(context: {
-  supabase: {
-    rpc: (
-      fn: "has_role",
-      args: { _user_id: string; _role: "super_admin" },
-    ) => PromiseLike<{ data: unknown }>;
-  };
-  userId: string;
-}) {
-  const { data: isSuper } = await context.supabase.rpc("has_role", {
-    _user_id: context.userId,
-    _role: "super_admin",
-  });
-  if (!isSuper) throw new Error("Only super admins can send company email.");
+/** Any staff role (user_roles through resolveAccess), the same test the rest of the dashboard uses. */
+async function staffDb(context: { supabase: SupabaseClient<Database>; userId: string }) {
+  const { data: roles } = await context.supabase
+    .from("user_roles")
+    .select("role, departments")
+    .eq("user_id", context.userId);
+  if (!resolveAccess(roles ?? [])) throw new Error("Staff access only.");
   return (await import("@/integrations/supabase/client.server")).supabaseAdmin;
 }
+
+export type CompanyEmailRow = {
+  toEmail: string;
+  subject: string;
+  fromEmail: string;
+  sentAt: string;
+};
+
+/** The letters staff have sent, newest first, for the "did someone already answer this?" check. */
+export const listCompanyEmail = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }): Promise<CompanyEmailRow[]> => {
+    const db = await staffDb(context);
+    const { data, error } = await db
+      .from("outreach_emails" as never)
+      .select("to_email, subject, from_email, sent_at")
+      .eq("kind", "company")
+      .order("sent_at", { ascending: false })
+      .limit(100);
+    if (error) throw new Error("Couldn't load company email. Run migration 20261103130000 first.");
+    return (
+      (data ?? []) as {
+        to_email: string;
+        subject: string;
+        from_email: string | null;
+        sent_at: string;
+      }[]
+    ).map((r) => ({
+      toEmail: r.to_email,
+      subject: r.subject,
+      fromEmail: r.from_email ?? "",
+      sentAt: r.sent_at,
+    }));
+  });
 
 export const sendCompanyEmail = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
@@ -51,7 +81,7 @@ export const sendCompanyEmail = createServerFn({ method: "POST" })
       .parse(d),
   )
   .handler(async ({ data, context }) => {
-    const db = await superAdminDb(context);
+    const db = await staffDb(context);
     const key = process.env["RESEND_API_KEY"] || process.env["CameThroughAudio"];
     if (!key) throw new Error("Email sending is not configured yet.");
     const from = companyFrom(data.mailbox);
