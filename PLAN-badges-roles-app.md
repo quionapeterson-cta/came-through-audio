@@ -48,6 +48,15 @@ keeps it on their shelf.
 - **Next-milestone previews:** while embedding, cataloging and running health checks, a small chip shows the next
   badge and progress ("3 more lyrics to Lyric Lover"). Clicking it opens the badge, locked, with its milestone.
 
+  How Catalog Management Tier Status Badges Work
+
+1. Active on Tier: Show the full badge disc cta_eagle_soar_badge.png  — that's the "Soaring" status.
+2. Icon-only active dot: Use the transparent eagle cta_eagle_soar_badge.png alone as a small status indicator next to a username — black feathers blend with your UI, gold beak + blue/gold bedazzle pops as the "active" signal. (Displayed month 1-4 of active Catalog Management Use.
+3.Use the transparent eagle cta_eagle_keep_soaring.png alone as a small status indicator next to a username — black feathers blend with your UI, gold beak + blue/gold bedazzle pops as the "active" signal. (Displayed month 4-8 of active Catalog Management Use)
+4.Use the transparent eagle cta_eagle_I_soar_the_higest.png alone as a small status indicator next to a username — black feathers blend with your UI, gold beak + blue/gold bedazzle pops as the "active" signal. (Displayed month 8-12 and thereafter)/or until new badges are created for year 1, 2, 3, 4 etc of active Catalog Management Use)
+
+5. Inactive/Locked: Add the grayed out version for users not on the tier yet next to the Catalog Management features that lower tiers try to use — creates that FOMO to upgrade and soar.
+
 ---
 
 ## 3. Your lyric copy: suggested edits (preview)
