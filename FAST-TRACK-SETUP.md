@@ -105,7 +105,20 @@ Already specced in the hub plan; renders as soon as step 4 returns data.
 | **B. Link out** with the song pre-filled | Nothing | A human confirms PRO registration in one click | None — it's a link |
 | **C. Licensed vendor** (Soundcharts, Blokur, Music Data Services and similar) | Paid contract | Full PRO and publisher coverage, automated | Cost and contract time |
 
-There is **no free API** for these three. Scraping them breaks their terms and I won't build it — that is the one place where "it's public information" does not hold.
+Songview itself has **no public API**, and scraping it breaks their terms — I won't build that. But the *underlying facts* (who a writer is affiliated with, their legal name, their IPI) are reachable through the routes below, so this is an access problem, not a dead end.
+
+## Other legitimate sources (confirmed 3 Nov 2026)
+
+| Source | What it gives | How you get it |
+|---|---|---|
+| **MLC Bulk Data Access** (BWARM / DDEX) | Works, parties, sound recordings, products, releases in bulk machine-readable form — the MMA requires The MLC to publish it | Enrol in the Data Access Hub, same place as the Public Search API |
+| **SoundExchange Repertoire Search API** | Recording → ISRC in real time, from rights-owner-supplied data | **Request-gated.** Their page says to email them to request use; aimed at licensees and third-party reporting vendors. There is also a free ISRC search site and a bulk Repertoire Matching Service inside Licensee Direct |
+| **CISAC IPI Pocket Edition** | Every IP code with **the member society each party is affiliated with**, plus the IP-Name-Number | Provided **to publishers on request**. This is the clean route to "BMI affiliation + legal name + IPI" from a name |
+| **CISAC ISWC IPI Context Search API** | Creator IPI numbers found from a name plus known work titles | Launched Dec 2025 for music publishers |
+
+**Read this against your Umogal observation.** A new service can show BMI affiliation, registered legal name and IPI because those three fields are exactly what the IPI Pocket Edition carries, and what MLC bulk data carries for works and parties. That is available to a company that signs up as a publisher/administrator — and you already register works with The MLC, so you are in that category. The alternative explanation is scraping Songview, which works until it doesn't.
+
+The practical upshot: **ask The MLC for Data Access Hub enrolment and the IPI Pocket Edition in the same breath.** They are two doors in the same building.
 
 ---
 
