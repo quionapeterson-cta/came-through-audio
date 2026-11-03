@@ -40,11 +40,13 @@ Files: `src/lib/health-checklist.ts` (`releaseGroups`), `src/components/Metadata
 
 | Organ | Royalty system | What it checks (from data we already have) |
 | --- | --- | --- |
-| 🧠 **Brain** | Your identity: codes and names | Legal names, IPI, ISRC, ISWC, UPC filled and **consistent across songs** (same writer with two IPIs, a name spelled two ways, one ISRC on two songs) |
+| 🧠 **Brain** | Your identity: metadata and identifiers | Legal names, IPI, ISRC, ISWC, UPC filled and **consistent across songs** (same writer with two IPIs, a name spelled two ways, one ISRC on two songs) |
 | ❤️ **Heart** | Performance royalties (ASCAP, BMI, SESAC, GMR) | **Left artery = writer share:** writer PRO + IPI, song registered. **Right artery = publisher share:** publisher or Self-published (BMI writers covered), publisher IPI |
 | 🫁 **Lungs** | Mechanicals (The MLC): every stream is a breath | **Left lung:** song registered with shares. **Right lung:** recording linked to the song (ISRC + ISWC) |
 | 🫘 **Kidneys** | Digital performance (SoundExchange): filters internet & satellite radio plays | **Left:** featured artist registered. **Right:** master owner/label registered. ISRC present |
-| 🦴 **Spine** | Splits & paperwork | Writer splits = 100%, publisher shares = 100%, signed split sheet on file |
+| 🦴 **Spine** | Splits & paperwork | Writer splits = 100%, publisher shares = 100% of the publisher half, signed split sheet on file |
+
+**This table is the source of truth for what each organ means.** The Waiting Area pamphlets, the Hub copy and PLAN-royalty-health-hub-v2 §1 follow it (founder decision, 2026-11-03): the diagnosis wording was already correct, so everything else was brought to it.
 | 💓 **Pulse** | Follow-through | Registered songs confirmed showing up; songs edited after registering that still need updating at the agency |
 
 All of it comes from what's already computed: `auditTrack`, `registrationCheck`, checklist ticks (registered / confirmed / dates), live streaming + MusicBrainz lookups, and split totals. **No new data entry.**

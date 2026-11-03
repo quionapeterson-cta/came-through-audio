@@ -270,7 +270,7 @@ const CHECKS: Record<OrganId, string[]> = {
   lungs: ["Songs are registered for mechanicals", "Registered songs have an ISRC to link the recording"],
   kidneys: ["Recordings are registered for digital performance", "Recordings have a UPC and master share"],
   brain: ["Every song has an ISRC", "Registered songs have their ISWC", "No writer has two different IPIs or spellings", "No ISRC is used twice", "Streaming matches your titles and artist name"],
-  spine: ["Writer splits total 100%", "Publisher shares total 100%", "Songs with co-writers have a signed split sheet"],
+  spine: ["Writer splits total 100%", "Publisher shares total 100% of the publisher half", "Songs with co-writers have a signed split sheet"],
   pulse: ["Registrations match your latest details", `Registrations are confirmed within ${CONFIRM_AFTER_DAYS / 7} weeks`],
 };
 
