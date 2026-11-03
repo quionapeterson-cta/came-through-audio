@@ -40,6 +40,8 @@ Gold and platinum are a nod to gold and platinum record sales, signaling prestig
 
 **Exception:** the Catalog health meter in My Catalog is a prestige gauge: liquid Gold `#FFD700` in light mode, liquid Platinum `#E5E4E2` in dark mode.
 
+**Exception (approved 2026-11-03):** the homepage hero sets "YOUR" and "DISTRIBUTION" in darker Platinum `#B4B2AD`, each outlined in the same colour with a thin gap of Primary Black between the letterform and the outline. Cobalt Blue measured 2.4:1 on Primary Black; this darker Platinum measures 9.3:1, so the tagline reads. This applies to the hero tagline only — every other surface keeps Platinum `#E5E4E2` for badges and awards.
+
 **Exception (approved 2026-10-23):** the Royalty Health Report draws organs, problems and scan pictures in reds and pinks, and uses Gold `#FFD700` (light mode) / Platinum `#E5E4E2` (dark mode) as a small accent for step numbers, the score ring, scan markers and short dividers. Black, white and Cobalt (at transparency levels) carry the rest, about 60/30/10.
 
 ## 2. Logo and wordmark contrast

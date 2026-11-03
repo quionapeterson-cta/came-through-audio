@@ -1,7 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { Disclaimer } from "@/components/Disclaimer";
 import { HOME_FAQS } from "@/lib/faq";
-import { Check, Music, Upload, Download, Infinity as InfinityIcon } from "lucide-react";
+import { Building2, Camera, Check, Cloud, Download, HardDrive, Infinity as InfinityIcon, Mail, MessageSquare, Mic, Music, Palette, StickyNote, Upload } from "lucide-react";
 import { SignupCard } from "@/components/SignupCard";
 import { BrandLogo } from "@/components/BrandLogo";
 import { FitHeadline } from "@/components/FitHeadline";
@@ -67,23 +66,161 @@ const roles = [
 ];
 
 /** Every "start free" button on the page scrolls to the sign-up box in the hero. */
-/** A music file's details as a player shows them: blank before embedding, filled in after. */
-function FileCard({ name, rows, done }: { name: string; rows: [string, string][]; done?: boolean }) {
+/**
+ * "YOUR" and "DISTRIBUTION" in the hero: darker Platinum letterforms inside a same-colour ring, with a thin gap of hero
+ * black between the two (founder, 2026-11-03). Two stacked copies of the word keep the ring aligned; see .hero-metal.
+ */
+function MetalWord({ children }: { children: string }) {
   return (
-    <div className={`rounded-2xl border p-5 ${done ? "border-primary bg-ink-border/40" : "border-ink-border"}`}>
-      <p className="flex items-center gap-2 font-semibold text-ink-foreground"><Music className={`h-5 w-5 ${done ? "text-electric" : "text-ink-muted"}`} />{name}</p>
-      <dl className="mt-3 grid grid-cols-[7rem_1fr] gap-y-1.5 text-sm">
-        {rows.map(([k, v]) => <div key={k} className="contents">
-          <dt className="text-ink-muted">{k}</dt>
-          <dd className={v && done ? "flex items-center gap-1.5 font-medium text-ink-foreground" : "text-ink-muted"}>{v && done && <Check className="h-4 w-4 text-electric" strokeWidth={3} />}{v || "—"}</dd>
-        </div>)}
-      </dl>
+    <span className="hero-metal">
+      <span aria-hidden className="hero-metal-ring select-none">{children}</span>
+      <span className="hero-metal-face">{children}</span>
+    </span>
+  );
+}
+
+/**
+ * A music file as a player shows it: the same 22 slots, empty before embedding and filled after, in collapsible groups
+ * so the section stays short. Both cards open the first group, so the pair sits at the same height and every empty slot
+ * lines up with the filled one beside it.
+ */
+function FileCard({ name, groups, done }: { name: string; groups: { heading: string; rows: [string, string][] }[]; done?: boolean }) {
+  const [firstGroup] = groups;
+  return (
+    <div className={`flex h-full flex-col rounded-2xl border p-5 ${done ? "border-primary bg-ink-border/40" : "border-ink-border"}`}>
+      <p className="flex items-center justify-center gap-2 font-semibold text-ink-foreground"><Music className={`h-5 w-5 ${done ? "text-electric" : "text-ink-muted"}`} />{name}</p>
+      <Accordion type="multiple" defaultValue={firstGroup ? [firstGroup.heading] : []} className="mt-1">
+        {groups.map((g, i) => (
+          <AccordionItem key={g.heading} value={g.heading} className={`border-ink-border ${i === groups.length - 1 ? "border-b-0" : ""}`}>
+            <AccordionTrigger className={`py-3 text-xs font-bold uppercase tracking-[1.5px] hover:no-underline [&>svg]:text-ink-muted ${done ? "text-electric" : "text-ink-muted"}`}>
+              <span className="flex-1 text-left">{g.heading}<span className="ml-2 font-semibold normal-case tracking-normal text-ink-muted">{g.rows.length} fields</span></span>
+            </AccordionTrigger>
+            <AccordionContent className="pb-3 text-sm">
+              <dl className="grid grid-cols-[7rem_1fr] gap-y-1.5">
+                {g.rows.map(([k, v]) => <div key={k} className="contents">
+                  <dt className="text-ink-muted">{k}</dt>
+                  <dd className={v && done ? "flex items-center gap-1.5 font-medium text-ink-foreground" : "text-ink-muted"}>{v && done && <Check className="h-4 w-4 text-electric" strokeWidth={3} />}{v || "—"}</dd>
+                </div>)}
+              </dl>
+            </AccordionContent>
+          </AccordionItem>
+        ))}
+      </Accordion>
     </div>
   );
 }
 
-const goSignup = () => document.getElementById("signup")?.scrollIntoView({ behavior: "smooth", block: "center" });
+/**
+ * Every field embedMetadata() writes into the file (src/lib/metadata.ts), grouped under three mini headings so the
+ * after-embedding card reads as a short list instead of one long scroll. If a field isn't here, it isn't embedded.
+ */
+const EMBEDDED_GROUPS: { heading: string; rows: [string, string][] }[] = [
+  {
+    heading: "Song & release",
+    rows: [
+      ["Title", "Your Song"],
+      ["Artist", "Your artist name"],
+      ["Featured artists", "OG PI"],
+      ["Album", "Came Through"],
+      ["Track number", "1 of 12"],
+      ["Genre", "Hip-Hop/Rap"],
+      ["Release date", "2026-03-03"],
+      ["Release type", "Single"],
+      ["Label", "Your label"],
+      ["Explicit", "No"],
+    ],
+  },
+  {
+    heading: "Identifiers and timing",
+    rows: [
+      ["ISRC", "US-ABC-26-00001"],
+      ["UPC", "0123456789012"],
+      ["ISWC", "T1234567890"],
+      ["Duration", "03:12"],
+    ],
+  },
+  {
+    heading: "Credits & art",
+    rows: [
+      ["Writers", "Your legal name"],
+      ["Composers", "Your legal name"],
+      ["Producers", "Your producer"],
+      ["Other credits", "Engineer, studio"],
+      ["Copyright", "© 2026 Your Name"],
+      ["Contact email", "bookings@yourname.com"],
+      ["Lyrics", "Saved inside"],
+      ["Artwork", "Saved inside"],
+    ],
+  },
+];
 
+/**
+ * The catalog spread, shown rather than listed: one song's pieces scattered across apps, devices and rooms on the
+ * left, the same song as one tidy catalog row on the right. Each scattered chip is tilted a little so the pile reads
+ * as loose at a glance; the catalog row is a single card with every part ticked inside it.
+ */
+const CATALOG_SCATTER: { icon: typeof Mail; label: string; tilt: string }[] = [
+  { icon: Mail, label: "Email thread", tilt: "-6deg" },
+  { icon: HardDrive, label: "Old hard drive", tilt: "4deg" },
+  { icon: Cloud, label: "Dropbox link", tilt: "-3deg" },
+  { icon: Building2, label: "Studio computer", tilt: "5deg" },
+  { icon: Palette, label: "Design file", tilt: "-5deg" },
+  { icon: Camera, label: "Camera roll", tilt: "3deg" },
+  { icon: StickyNote, label: "Notes app", tilt: "-4deg" },
+  { icon: MessageSquare, label: "Writer group chat", tilt: "6deg" },
+  { icon: Mic, label: "Voice memo", tilt: "-2deg" },
+];
+
+/** The scattered side: a loose pile of chips, deliberately not lined up. */
+function CatalogScatter() {
+  return (
+    <div className="flex h-full flex-col justify-center gap-3 rounded-2xl border border-dashed border-ink-border p-5">
+      <div className="flex flex-wrap items-center justify-center gap-2">
+        {CATALOG_SCATTER.map(({ icon: Icon, label, tilt }) => (
+          <span key={label} className="inline-flex items-center gap-1.5 rounded-full border border-ink-border bg-ink px-2.5 py-1 text-[11px] text-ink-muted sm:text-xs"
+            style={{ transform: `rotate(${tilt})` }}>
+            <Icon className="h-3.5 w-3.5 shrink-0" aria-hidden /> {label}
+          </span>
+        ))}
+      </div>
+      <p className="text-center text-xs text-ink-muted">Every piece in a different place, and none of them know about each other.</p>
+    </div>
+  );
+}
+
+/** The tidy side: one song, one row, every part of it ticked inside the same card. */
+function CatalogRow() {
+  const parts = ["Master audio", "Cover art", "Lyrics", "Writers & splits", "ISRC", "UPC"];
+  return (
+    <div className="flex h-full flex-col justify-center rounded-2xl border-2 border-primary bg-ink-border/40 p-5">
+      <div className="rounded-xl border border-ink-border bg-ink p-4">
+        <div className="flex items-center gap-3">
+          <span className="grid h-11 w-11 shrink-0 place-items-center rounded-lg bg-primary/15"><Music className="h-5 w-5 text-electric" aria-hidden /></span>
+          <div className="min-w-0">
+            <p className="truncate font-semibold text-ink-foreground">Your Song</p>
+            <p className="truncate text-xs text-ink-muted">Single · 03:12 · 2026-03-03</p>
+          </div>
+        </div>
+        <div className="mt-3 flex flex-wrap gap-1.5">
+          {parts.map((p) => (
+            <span key={p} className="inline-flex items-center gap-1 rounded-full bg-ink-border/60 px-2 py-0.5 text-[11px] font-medium text-ink-foreground">
+              <Check className="h-3 w-3 text-electric" strokeWidth={3} aria-hidden />{p}
+            </span>
+          ))}
+        </div>
+      </div>
+      <p className="mt-3 text-center text-xs text-ink-muted">One row per song. Search it, download it, send it out, and the rest is attached.</p>
+    </div>
+  );
+}
+
+/** The same 22 slots with nothing in them: the before card, so the pair lines up field for field and height for height. */
+const EMPTY_GROUPS: { heading: string; rows: [string, string][] }[] = EMBEDDED_GROUPS.map(({ heading, rows }) => ({
+  heading,
+  rows: rows.map(([k]) => [k, ""] as [string, string]),
+}));
+
+const goSignup = () => document.getElementById("signup")?.scrollIntoView({ behavior: "smooth", block: "center" });
 function StartFree({ label = "Sign up free", variant = "primary" }: { label?: string; variant?: "primary" | "outline" | "link" }) {
   const go = goSignup;
   if (variant === "link") return <button type="button" onClick={go} className="text-sm font-semibold text-primary hover:underline">{label} →</button>;
@@ -109,10 +246,11 @@ function Landing() {
             {/* The tagline: always uppercase with 2px letter spacing (BRANDING.md §1). The first line's negative margin
                 trims the space above the capitals, so the headline block centers optically against the sign-up box. */}
             <FitHeadline className="uppercase leading-none tracking-[2px]" lines={[
-              { text: <><span className="text-primary [-webkit-text-stroke:1px_var(--ink-foreground)]">Your</span> first</>, className: "-mt-[0.13em] text-5xl font-extrabold md:text-6xl lg:text-7xl" },
+              // Platinum, not Cobalt: Cobalt on Primary Black measured 2.4:1 and the tagline was hard to read (founder, 2026-11-03).
+              { text: <><MetalWord>Your</MetalWord> first</>, className: "-mt-[0.13em] text-5xl font-extrabold md:text-6xl lg:text-7xl" },
               // "Before" is filled with the background so overlapping inner strokes don't show; only the outline reads.
               { text: <>Stop <span className="font-bold text-ink [-webkit-text-stroke:1.5px_var(--ink-foreground)]">before</span></>, className: "text-5xl font-extrabold md:text-6xl lg:text-7xl" },
-              { text: "Distribution", className: "text-5xl font-extrabold text-primary [-webkit-text-stroke:1px_var(--ink-foreground)] md:text-6xl lg:text-7xl" },
+              { text: <MetalWord>Distribution</MetalWord>, className: "text-5xl font-extrabold md:text-6xl lg:text-7xl" },
             ]} sub="From the last bounce in the studio to the first royalty in your account: embed your credits, organize your catalog and get your songs registered, all before you hit distribute." subClassName="text-xl font-semibold text-ink-foreground" />
           </div>
           <div id="signup">{siteLocked ? <LaunchingSoon /> : <SignupCard />}</div>
@@ -135,20 +273,56 @@ function Landing() {
 
       {/* What embedding is, told as a story (founder approved, 2026-10-25), with the file before and after. */}
       <section className="bg-ink py-20 text-ink-foreground">
-        <div className="mx-auto grid max-w-6xl gap-12 px-6 md:grid-cols-[1.15fr_1fr] md:items-center">
-          <div className="space-y-4 text-lg leading-relaxed text-ink-muted">
-            <h2 className="text-3xl font-bold text-ink-foreground md:text-4xl">What does embed mean?</h2>
-            <p>Picture this. You finish your single at 2 AM and send it out that same night. A DJ, a blog, and a music supervisor looking for a song for a TV show.</p>
-            <p>Three weeks later the show wants it. They open the file and all it says is Track 01. No artist. No writer. No codes. They can't clear a song they can't trace, so they move on to the next one that tells them who owns it.</p>
-            <p className="font-semibold text-ink-foreground">Your song was good enough. It just couldn't speak up for you.</p>
-            <p><span className="font-bold text-ink-foreground">Embedding fixes that.</span> It writes your name, credits, codes, lyrics and artwork inside the audio file itself, like a name tag sewn into a jacket. Wherever the file goes, your information goes with it, even after it's copied, renamed or shared a hundred times.</p>
-            <p>Make sure every song can say who made it. Came Through Audio came through for every song in your catalog.</p>
-            <div className="pt-2"><StartFree label="Embed your first master" /></div>
+        <div className="mx-auto max-w-5xl px-6">
+          <h2 className="text-center text-3xl font-bold md:text-4xl">What does embed mean?</h2>
+          <p className="mt-2 text-center text-lg text-ink-muted">The same file, before and after.</p>
+
+          {/* Side by side, matching slot for slot and height for height: the comparison is the argument. */}
+          <div className="mt-8 grid items-stretch gap-4 sm:grid-cols-2">
+            <div className="flex flex-col gap-2">
+              <p className="text-center text-sm font-bold uppercase tracking-[2px] text-ink-muted">Before embedding</p>
+              <FileCard name="Track 01.mp3" groups={EMPTY_GROUPS} />
+            </div>
+            <div className="flex flex-col gap-2">
+              <p className="text-center text-sm font-bold uppercase tracking-[2px] text-electric">After embedding</p>
+              <FileCard name="Your Song.mp3" done groups={EMBEDDED_GROUPS} />
+            </div>
           </div>
-          <div className="space-y-4">
-            <FileCard name="Track 01.mp3" rows={[["Artist", "Unknown"], ["Written by", ""], ["ISRC", ""], ["Lyrics", ""], ["Artwork", ""]]} />
-            <p className="text-center text-sm font-bold uppercase tracking-[2px] text-electric">After embedding</p>
-            <FileCard name="Your Song.mp3" done rows={[["Artist", "Your artist name"], ["Written by", "Your legal name"], ["ISRC", "US-ABC-26-00001"], ["Lyrics", "Saved inside"], ["Artwork", "Saved inside"]]} />
+          <p className="mt-4 text-center text-xs leading-relaxed text-ink-muted">
+            Never written into the file: publishers, the ℗ line, language, PRO affiliations, IPI numbers and splits.
+            Those stay private in your catalog and go only to the societies you register with.
+          </p>
+
+          {/* The story underneath, set like a magazine feature: a drop-cap lead, then two columns of body running the same
+              width as the cards above, so the block ends flush with them. */}
+          <div className="mt-14">
+            <p className="text-xl leading-relaxed text-ink-foreground first-letter:float-left first-letter:mr-3 first-letter:mt-1 first-letter:text-6xl first-letter:font-black first-letter:leading-[0.8]">
+              Picture this. You finish your single at 2 AM and send it out that same night to a DJ, a blog, and a music supervisor looking for a song for a TV show.
+            </p>
+            {/* Two flowing columns, not a row grid: each paragraph sits under the one above it instead of being pushed
+                down to match the height of the paragraph beside it. */}
+            <div className="mt-6 grid gap-x-10 gap-y-5 text-lg leading-relaxed text-ink-muted md:grid-cols-2">
+              <div className="space-y-5">
+                <p>Three weeks later the show wants it. They open the file and all it says is Track 01. No artist. No writer. No codes. They can't clear a song they can't trace, so they move on to the next one that tells them who owns it.</p>
+                <p>Make sure every song can say who made it. Came Through Audio came through for every song in your catalog.</p>
+              </div>
+              <div className="space-y-5">
+                <p className="text-xl font-bold leading-snug text-ink-foreground md:text-2xl">Your song was good enough. It just couldn't speak up for you.</p>
+                <p><span className="font-bold text-ink-foreground">Embedding fixes that.</span> It writes your name, credits, codes, lyrics and artwork inside the audio file itself, like a name tag sewn into a jacket.</p>
+              </div>
+              <p className="md:col-span-2">Same file, same mix, nothing re-recorded. The only thing that changes is what the file says about itself, which is the difference between Track 01 and a song anyone can license.</p>
+            </div>
+
+            <div className="mt-9 border-l-4 border-electric bg-ink-border/40 px-6 py-5">
+              <p className="text-xs font-bold uppercase tracking-[2px] text-electric">The part that matters</p>
+              <p className="mt-2 text-2xl font-extrabold leading-snug md:text-3xl">Wherever the file goes, your information goes with it.</p>
+              <p className="mt-2 leading-relaxed text-ink-muted">Copied, renamed or shared a hundred times: the credits, codes, lyrics and artwork are still inside.</p>
+            </div>
+
+            {/* Embedding is a paid feature, so this button belongs with the plans, not the free sign-up box. */}
+            <div className="mt-8 flex justify-center">
+              <Link to="/plans" className="inline-flex h-12 items-center rounded-md bg-primary px-6 font-semibold text-primary-foreground transition hover:bg-primary/90">Embed your first master</Link>
+            </div>
           </div>
         </div>
       </section>
@@ -233,12 +407,58 @@ function Landing() {
         </div>
       </section>}
 
+      {/* What a catalog is, told the same way as embedding: the scattered parts before, one row after (founder, 2026-11-03). */}
+      <section className="border-t border-ink-border bg-ink py-20 text-ink-foreground">
+        <div className="mx-auto max-w-5xl px-6">
+          <h2 className="text-center text-3xl font-bold md:text-4xl">What is a music catalog?</h2>
+          <p className="mt-2 text-center text-lg text-ink-muted">Everything one song is made of, in one place.</p>
+
+          <div className="mt-8 grid items-stretch gap-4 sm:grid-cols-2">
+            <div className="flex flex-col gap-2">
+              <p className="text-center text-sm font-bold uppercase tracking-[2px] text-ink-muted">Before cataloging</p>
+              <CatalogScatter />
+            </div>
+            <div className="flex flex-col gap-2">
+              <p className="text-center text-sm font-bold uppercase tracking-[2px] text-electric">After cataloging</p>
+              <CatalogRow />
+            </div>
+          </div>
+
+          {/* The story underneath, set like the embedding spread: a drop-cap lead, two flowing columns, one callout. */}
+          <div className="mt-14">
+            <p className="text-xl leading-relaxed text-ink-foreground first-letter:float-left first-letter:mr-3 first-letter:mt-1 first-letter:text-6xl first-letter:font-black first-letter:leading-[0.8]">
+              A catalog is every piece of a song kept together: the master, the artwork, the lyrics, the credits and the codes, for every song you own.
+            </p>
+            <div className="mt-6 grid gap-x-10 gap-y-5 text-lg leading-relaxed text-ink-muted md:grid-cols-2">
+              <div className="space-y-5">
+                <p>Before cataloging, one song lives in a dozen places. The master is an attachment in an email thread, a copy on a hard drive and a link in a Dropbox folder; the session file is on the studio's computer. The cover art is in a design tool, the lyrics are in your notes app, and the splits are in a group chat with the writers.</p>
+                <p>Cataloging stops the hunt. Search a title, a writer or an ISRC and the song comes back with its master, art, lyrics and credits attached.</p>
+              </div>
+              <div className="space-y-5">
+                <p>None of those places is wrong. The problem is that not one of them knows about the others, so "where is it?" takes an afternoon and the answer changes with every release.</p>
+                <p>One row per song means one place to download from, one place to hand a distributor, and one place to pull a registration from without opening an email from 2019.</p>
+              </div>
+            </div>
+
+            <div className="mt-9 border-l-4 border-electric bg-ink-border/40 px-6 py-5">
+              <p className="text-xs font-bold uppercase tracking-[2px] text-electric">The part that matters</p>
+              <p className="mt-2 text-2xl font-extrabold leading-snug md:text-3xl">One song, one row, every piece of it.</p>
+              <p className="mt-2 leading-relaxed text-ink-muted">Master, artwork, lyrics, credits and codes stay together, so every download comes back complete.</p>
+            </div>
+
+            <div className="mt-8 flex justify-center">
+              <Link to="/plans" className="inline-flex h-12 items-center rounded-md bg-primary px-6 font-semibold text-primary-foreground transition hover:bg-primary/90">Start your catalog</Link>
+            </div>
+          </div>
+        </div>
+      </section>
+
       <section id="plans" className="scroll-mt-4 bg-background py-20">
         <div className="mx-auto max-w-6xl px-4 sm:px-6">
           <h2 className="text-center text-3xl font-bold md:text-5xl">More value at every step</h2>
           <p className="mx-auto mt-3 max-w-2xl text-center text-lg text-muted-foreground">Start free with Royalty Health Checks. Unlock embedding, your catalog and every download for {PLUS.price} a year, then grow into split sheets, agency exports and contracts.</p>
           <div className="mt-10">
-            <PlanComparison action={(p) => planAction(p, { onBuy: () => {}, onSignup: () => document.getElementById("signup")?.scrollIntoView({ behavior: "smooth" }) })} />
+            <PlanComparison tone="dark" action={(p) => planAction(p, { onBuy: () => {}, onSignup: () => document.getElementById("signup")?.scrollIntoView({ behavior: "smooth" }) })} />
           </div>
           <p className="mt-6 text-center text-sm font-semibold">30-day full refund on every plan · Upgrade anytime, pay only the difference · Founding offer: the first 100 members move up a tier (while spots last)</p>
         </div>
@@ -261,6 +481,12 @@ function Landing() {
         <div className="mx-auto flex max-w-4xl flex-col items-center gap-4 px-6 py-16 text-center">
           <h2 className="text-3xl font-extrabold md:text-4xl">Your songs already did the work. Make sure they get paid.</h2>
           <p className="text-sm font-bold uppercase tracking-[2px] text-brand-electric">Your first stop before distribution</p>
+          {/* The brand lockup above the last sign up button: the mark is the C in "Came" (founder, 2026-11-03). */}
+          <p className="mt-5 flex items-center justify-center gap-1">
+            <img src="/cta-mark-light.png" alt="" aria-hidden className="h-7 w-7 shrink-0" />
+            <span aria-hidden className="text-lg font-bold uppercase tracking-[2px] text-ink-foreground">ame Through Audio</span>
+            <span className="sr-only">Came Through Audio</span>
+          </p>
           <div className="mt-2 flex flex-wrap justify-center gap-3">
             <StartFree />
             <Link to="/plans" className="inline-flex h-12 items-center rounded-md border border-ink-border px-6 font-semibold hover:bg-ink-border">Compare plans</Link>
@@ -285,8 +511,12 @@ function Landing() {
             </div>
           ))}
         </div>
-        <div className="border-t border-ink-border py-6 text-center text-sm">© {new Date().getFullYear()} Came Through Audio, LLC</div>
-        <Disclaimer k="site" tone="ink" className="mx-auto max-w-4xl justify-center px-6 pb-8 text-center" />
+        {/* The name and the line it stands for, at the very bottom of the page (founder, 2026-11-03). */}
+        <div className="border-t border-ink-border py-6 text-center text-sm">
+          <p className="font-bold uppercase tracking-[2px] text-brand-electric">Came Through Audio</p>
+          <p className="mt-1 font-semibold text-ink-foreground">Your first stop before distribution</p>
+          <p className="mt-2 text-ink-muted">© {new Date().getFullYear()} Came Through Audio, LLC</p>
+        </div>
       </footer>
     </div>
   );

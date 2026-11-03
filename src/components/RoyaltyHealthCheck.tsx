@@ -463,7 +463,9 @@ export function RoyaltyHealthCheck({ userId, canCatalog, canExport, onUpgrade, o
         initialIntake={intakeWanted} onRun={() => runCheck(view.scope)} onBack={() => setView({ kind: "hub" })}
         patient={patient ? { legalName: patient.legalName, summary: patientSummary(patient) } : undefined}
         intake={{
-          streaming: <StreamingFastTrack />,
+          streaming: <StreamingFastTrack userId={userId} canCatalog={canCatalog} onUpgrade={onUpgrade}
+            onUploadAudio={(id) => { if (id) onFixField(id, "audio"); }}
+            onSaved={() => { void listTracks().then(setTracks).catch(() => {}); }} />,
           agencies: <AgencyLists societies={listSocieties} songsFor={songsFor} summaries={listSummaries} onApply={applyList} />,
           single: inspector,
         }} />

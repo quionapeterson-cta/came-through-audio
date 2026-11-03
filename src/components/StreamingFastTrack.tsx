@@ -1,11 +1,16 @@
 import { useState } from "react";
-import { CloudDownload, Copy, ShieldCheck, ShieldQuestion, ShieldX, Loader2 } from "lucide-react";
+import { CloudDownload, Copy, ShieldCheck, ShieldQuestion, ShieldX, Loader2, Upload } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { UpgradeLock } from "@/components/UpgradeLock";
 import { runStreamingFastTrack, type FastTrackResult } from "@/lib/fast-track.functions";
 import type { ArtistCandidate } from "@/lib/discography";
 import { MLC_SEARCH_URL, UNREGISTERED_DIAGNOSIS, compositionCounts } from "@/lib/composition";
+import { listTracks, saveTrack } from "@/lib/catalog";
+import { loadProfile } from "@/lib/artist-profile";
+import { prefillPlan } from "@/lib/fast-track-prefill";
+import { SOVEREIGN_BACKUP } from "@/lib/copy";
 
 /**
  * Streaming Profile — the Streaming Fast-Track intake (hub plan §4). The recording side is live on Deezer with no
@@ -17,13 +22,72 @@ import { MLC_SEARCH_URL, UNREGISTERED_DIAGNOSIS, compositionCounts } from "@/lib
  */
 type Ok = Extract<FastTrackResult, { ok: true; kind: "discography" }>;
 
-export function StreamingFastTrack() {
+export function StreamingFastTrack({ userId, canCatalog = false, onUpgrade, onUploadAudio, onSaved }: {
+  userId?: string | undefined;
+  /** Prefilling My Catalog is a paid feature (plan §4.6); the diagnosis itself is free on every plan (§4.8). */
+  canCatalog?: boolean | undefined;
+  onUpgrade?: ((priceId?: string) => void) | undefined;
+  /** Opens My Catalog on a prefilled song, at its master upload. */
+  onUploadAudio?: ((trackId?: string) => void) | undefined;
+  /** Told after songs land in My Catalog, so the Doctor examines them in this same visit. */
+  onSaved?: (() => void) | undefined;
+}) {
   const [link, setLink] = useState("");
   const [name, setName] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | undefined>();
   const [result, setResult] = useState<Ok | undefined>();
   const [candidates, setCandidates] = useState<ArtistCandidate[] | undefined>();
+  const [saving, setSaving] = useState(false);
+  /** What the prefill did: songs added, songs left alone, and the first one, to open for audio. */
+  const [saved, setSaved] = useState<{ added: number; existing: number; matched: number; first?: string | undefined }>();
+  const [later, setLater] = useState(false);
+  const [dismissed, setDismissed] = useState(false);
+
+  function forget() {
+    setResult(undefined);
+    setCandidates(undefined);
+    setError(undefined);
+    setSaved(undefined);
+    setLater(false);
+    setDismissed(false);
+  }
+
+  /**
+   * Prefills My Catalog with the pull (plan §4.6): recording details from streaming, composition details only from a
+   * work The MLC actually returned, and blanks filled from the artist's profile. Songs already in the catalog are never
+   * touched, so a second pull cannot overwrite what the artist has filled in since.
+   */
+  async function saveToCatalog() {
+    if (!result || !userId) return;
+    setSaving(true);
+    try {
+      const existing = await listTracks();
+      const plan = prefillPlan({
+        discography: result.discography,
+        matches: result.matches,
+        existing: existing.map((t) => ({ title: t.title, artist: t.artist, isrc: t.metadata.isrc })),
+        profile: loadProfile(userId),
+      });
+      let first: string | undefined;
+      for (const song of plan.songs) {
+        const id = await saveTrack(song, userId);
+        first ??= id;
+      }
+      setSaved({ added: plan.songs.length, existing: plan.existingCount, matched: plan.matchedCount, first });
+      setLater(false);
+      if (plan.songs.length) {
+        toast.success(`${plan.songs.length} song${plan.songs.length === 1 ? "" : "s"} added to My Catalog.`);
+        onSaved?.();
+      } else {
+        toast.success("Every track here is already in your catalog.");
+      }
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Couldn't add these songs to your catalog. Try again.");
+    } finally {
+      setSaving(false);
+    }
+  }
 
   async function run(pick?: ArtistCandidate) {
     setBusy(true);
@@ -49,6 +113,9 @@ export function StreamingFastTrack() {
       }
       setCandidates(undefined);
       setResult(r);
+      setSaved(undefined);
+      setLater(false);
+      setDismissed(false);
     } catch {
       setError("Couldn't reach the server. Try again in a moment.");
     } finally {
@@ -96,14 +163,7 @@ export function StreamingFastTrack() {
           {busy ? "Reading your releases…" : "Pull my streaming releases"}
         </Button>
         {(result || candidates) && (
-          <Button
-            variant="ghost"
-            onClick={() => {
-              setResult(undefined);
-              setCandidates(undefined);
-              setError(undefined);
-            }}
-          >
+          <Button variant="ghost" onClick={forget}>
             Start over
           </Button>
         )}
@@ -183,6 +243,59 @@ export function StreamingFastTrack() {
               </span>
             </div>
           </div>
+
+          {/* §4.6: paid accounts get the pull saved into My Catalog, then choose to upload audio now or later. */}
+          {canCatalog ? (
+            saved ? (
+              <div className="rounded-2xl border-2 border-primary/40 bg-primary/5 p-4 text-sm">
+                <p className="font-bold">Your catalog is prefilled</p>
+                <p className="mt-1 text-muted-foreground">
+                  {saved.added
+                    ? `${saved.added} song${saved.added === 1 ? " is" : "s are"} in My Catalog with ${saved.added === 1 ? "its" : "their"} verified details${saved.matched ? `, ${saved.matched} with the writers and publishers on file at The MLC` : ""}. All you need to do is upload your masters, then embed and download them.`
+                    : "Every track in this pull is already in My Catalog, so nothing was changed."}
+                  {saved.existing ? ` ${saved.existing} song${saved.existing === 1 ? " was" : "s were"} already there and left exactly as ${saved.existing === 1 ? "it is" : "they are"}.` : ""}
+                </p>
+                {later ? (
+                  <p className="mt-2 text-muted-foreground">Kept for later: they're in My Catalog whenever you're ready to add the audio.</p>
+                ) : (
+                  <div className="mt-3 flex flex-wrap items-center gap-2">
+                    <Button onClick={() => onUploadAudio?.(saved.first)} disabled={!saved.first}>
+                      <Upload />Upload audio now
+                    </Button>
+                    <Button variant="outline" onClick={() => setLater(true)}>Add Audio Later</Button>
+                  </div>
+                )}
+                <p className="mt-2 text-xs text-muted-foreground">{SOVEREIGN_BACKUP}</p>
+              </div>
+            ) : (
+              <div className="rounded-2xl border border-border bg-card p-4 text-sm">
+                <p className="font-bold">Keep these releases in your own catalog</p>
+                <p className="mt-1 max-w-[68ch] text-muted-foreground">
+                  Every track can be saved to My Catalog with what streaming confirmed: title, artist, release, track
+                  number, duration, ISRC, UPC and label. Songs you already have are left untouched, and you choose
+                  whether to upload the masters now or later.
+                </p>
+                <Button className="mt-3" onClick={() => void saveToCatalog()} disabled={saving}>
+                  {saving ? <Loader2 className="animate-spin" /> : <CloudDownload />}
+                  {saving
+                    ? "Adding to My Catalog…"
+                    : `Add ${result.discography.trackCount} released track${result.discography.trackCount === 1 ? "" : "s"} to My Catalog`}
+                </Button>
+              </div>
+            )
+          ) : dismissed ? (
+            <p className="rounded-xl border border-dashed border-border p-3 text-sm text-muted-foreground">
+              Your diagnosis below is complete and free. Saving these releases to My Catalog starts with Catalog Plus.
+            </p>
+          ) : (
+            <UpgradeLock
+              tier="plus"
+              title="Save these releases in your own catalog"
+              text="Your diagnosis, report and prescriptions stay free. Saving pulled tracks to My Catalog and downloading embedded masters start with Catalog Plus."
+              onUpgrade={() => onUpgrade?.()}
+              free={{ label: "Not now", onClick: () => setDismissed(true) }}
+            />
+          )}
 
           {counts && !result.mlcActive && (
             <div className="rounded-2xl border border-border bg-muted/40 p-4 text-sm">

@@ -38,7 +38,8 @@ export const TERMS: LegalDoc = {
         { heading: "17. Suspension and Termination", body: <p>We may suspend or terminate your access for material breach of these terms, non-payment, security or fraud risk, or repeated or serious policy violations. You may close your account at any time and download your data before doing so.</p> },
         { heading: "18. Need more time and Pause", body: <p>Once every 12 months you may move your renewal back 30 days at no charge. Separately, once every 12 months you may pause for 1 to 3 months for a Vault fee of $1.99 per month, paid up front and not refundable once the pause starts. While paused your catalog is read-only and is not emptied.</p> },
         { heading: "19. Governing Law", body: <p>These terms are governed by the laws of the State of Georgia, United States, without regard to conflict-of-law principles. Legal actions arising under these terms shall be brought exclusively in courts located in Georgia.</p> },
-        { heading: "20. Contact", body: <p>Questions? Email <a className="text-primary underline" href="mailto:legal@camethroughaudio.com">legal@camethroughaudio.com</a>.</p> },
+        { heading: "20. Badges, Awards and Share Cards", body: <p>Badges, awards, status eagles and share cards celebrate your progress in the Service. They have no cash value, aren't transferable and aren't a payment, prize or reward. Earning one doesn't confirm any registration, ownership or rights, and we may change, rename or retire badge artwork and the conditions for earning them at any time.</p> },
+        { heading: "21. Contact", body: <p>Questions? Email <a className="text-primary underline" href="mailto:legal@camethroughaudio.com">legal@camethroughaudio.com</a>.</p> },
       ],
 };
 

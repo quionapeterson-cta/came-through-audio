@@ -2,7 +2,8 @@
  * Homepage testimonials. Quotes are the client's own words, trimmed for length (… marks a cut); never reword them.
  * Every person here must have a signed Photo, Video & Testimonial Release before their entry goes live.
  *
- * To add one: upload the photo in Lovable (it lands in public/testimonials/*.asset.json), copy its `url` here,
+ * To add one: put the photo in public/testimonials/ and point `photo` at `/testimonials/<file>` (a repo file loads on
+ * every host; a Lovable `/__l5e/...` asset URL only resolves on Lovable's own hosting, so previews show a broken image),
  * and set `focus` (CSS object-position) so the face sits in the wide frame. The shared filter
  * (TestimonialFilter, set in Admin → Homepage) makes every photo match, whatever its original colors.
  */
@@ -26,7 +27,7 @@ export const TESTIMONIALS: Testimonial[] = [
     location: "Atlanta, GA",
     service: "Royalty Account Setups",
     quote: "Before Came Through Audio, I didn't know nothin' about no MLC, no SoundExchange, no ASCAP… but they got me right. Now I have all my accounts properly set up. I'm ready for that bag, feel me?",
-    photo: "/__l5e/assets-v1/b55301ad-f2b6-469f-bd27-38d2475d27e1/biggz.jpg",
+    photo: "/testimonials/biggz.jpg",
     focus: "50% 30%",
   },
   {
@@ -35,7 +36,7 @@ export const TESTIMONIALS: Testimonial[] = [
     location: "Dallas born, LA livin'",
     service: "Branding Power Sessions",
     quote: "My Branding Power Session allowed me to build my Blueprint and Branding Guidelines. They helped me gain greater clarity, strengthen my brand identity, and establish a more consistent and professional presence in the entertainment industry.",
-    photo: "/__l5e/assets-v1/336276e6-b655-4ca5-a1ad-90789826b4d0/hustlemann.jpg",
+    photo: "/testimonials/hustlemann.jpg",
     focus: "50% 12%",
   },
   {
@@ -43,7 +44,7 @@ export const TESTIMONIALS: Testimonial[] = [
     location: "Atlanta, GA",
     service: "Branding Power Sessions",
     quote: "They came up with a perfect blueprint that fits my artistry all around… Most definitely one of the best services ever offered to me as an independent musician.",
-    photo: "/__l5e/assets-v1/15f77a5a-bb9b-4320-8e54-fe5b49395247/lil-flippa.jpg",
+    photo: "/testimonials/lil-flippa.jpg",
     focus: "47% 22%",
     // Kept low: browser zoom stretches pixels, and 1.6 made this photo look grainy.
     zoom: 1.25,

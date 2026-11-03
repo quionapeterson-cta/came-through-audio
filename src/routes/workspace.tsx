@@ -29,21 +29,15 @@ import { toast } from "sonner";
 import { sendTrialEndingReminder } from "@/lib/collab-trial.functions";
 import { useBilling, type Purchase } from "@/hooks/useBilling";
 import { openCheckout, getPaymentsEnvironment } from "@/lib/checkout";
-import { PRICE_TIER, TIER_LABEL, hasTier, takePlanIntent, upgradeNote, type Tier } from "@/lib/plans";
+import { PRICE_TIER, TIER_LABEL, hasTier, isEmailConfirmError, rememberPlanIntent, takePlanIntent, upgradeNote, type Tier } from "@/lib/plans";
 import { PlanComparison, planAction } from "@/components/PlanComparison";
 import { BadgeWatcher } from "@/components/Badges";
 import { BadgeViewer } from "@/components/BadgeViewer";
 import type { ShareInfo } from "@/components/BadgeCelebration";
 import { isBadgeImage, badgeForArt, type CollectionId } from "@/lib/badges";
 import { UpgradeLock } from "@/components/UpgradeLock";
-import { Disclaimer } from "@/components/Disclaimer";
-import type { DisclaimerKey } from "@/lib/disclaimers";
-
-/** Which disclaimers sit under each workspace tab. */
-const TAB_DISCLAIMERS: Record<string, DisclaimerKey[]> = {
-  embed: ["embed"], catalog: ["embed", "readiness", "exports"], health: ["health", "expert"], protect: ["aiProtection"],
-  splits: ["splits"], learn: ["generator"],
-};
+import { EagleStatusBadge } from "@/components/EagleStatusBadge";
+import { eagleStatus } from "@/lib/eagle-status";
 import { CatalogLapseBanner } from "@/components/CatalogLapseBanner";
 import { inGrace, isPaused } from "@/lib/retention";
 
@@ -118,6 +112,8 @@ function Workspace() {
   const [profileOpen, setProfileOpen] = useState(false);
   const [embedKey, setEmbedKey] = useState(0);
   const [viewAvatar, setViewAvatar] = useState(false);
+  // The Catalog Management status eagle opens full size, with its own share card, like the profile badge above.
+  const [viewEagle, setViewEagle] = useState(false);
   // Song share cards reported by Embed and My Catalog; every other tab shares the profile card.
   const [tabShare, setTabShare] = useState<Record<string, Partial<ShareInfo> & Pick<ShareInfo, "ctx">>>({});
   const share = tabShare[tab] ?? { ctx: "profile" as const };
@@ -150,7 +146,11 @@ function Workspace() {
     if (!priceId || hasTier(realTier, PRICE_TIER[priceId]!)) return;
     toast.info(`Opening checkout for ${TIER_LABEL[PRICE_TIER[priceId]!]}…`);
     openCheckout({ kind: "plan", priceId })
-      .catch((e) => toast.error(e instanceof Error ? e.message : "Checkout could not open. Use View Plans to try again."));
+      .catch((e) => {
+        // Turned away until the email is confirmed: keep the pick so checkout resumes the moment they confirm.
+        if (isEmailConfirmError(e)) rememberPlanIntent(priceId);
+        toast.error(e instanceof Error ? e.message : "Checkout could not open. Use View Plans to try again.");
+      });
   }, [user, billingLoaded, realTier]);
 
   useEffect(() => {
@@ -169,6 +169,10 @@ function Workspace() {
     return <div className="flex min-h-screen items-center justify-center bg-ink text-ink-muted">Loading…</div>;
   }
 
+  // One place decides which eagle the account shows (Soaring 1–4, Keep Soaring 4–8, I Soar The Highest 8+), so the
+  // header badge and its share card can never disagree.
+  const eagle = eagleStatus({ onManagement: tier === "management", startedAt: sub?.current_period_start ?? null });
+
   return (
     <div className="min-h-screen bg-background">
       <PaymentTestModeBanner previewTier={previewTier} onPreviewTier={canPreview ? setPreviewTier : undefined} />
@@ -180,6 +184,13 @@ function Workspace() {
               <div className="text-xs uppercase tracking-widest text-ink-muted">Came Through Audio</div>
               <div className="truncate text-xl font-bold">{name}</div>
             </div>
+            {/* Catalog Management status eagle: at the far right of the header's left group, after the wordmark and
+                the artist name. Soaring (months 1–4) → Keep Soaring (4–8) → I Soar The Highest (8+), or grayed out
+                until the account is on the plan (founder art, 2026-11-03). */}
+            <button type="button" aria-label={`View your Catalog Management status: ${eagle.label}`} onClick={() => setViewEagle(true)}
+              className="ml-1 shrink-0 self-center rounded-full transition hover:ring-2 hover:ring-primary/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+              <EagleStatusBadge size={52} status={eagle} />
+            </button>
           </div>
           {/* Phones: everything sits in one menu on the profile picture, so the header never runs off the screen. */}
           <DropdownMenu>
@@ -254,6 +265,10 @@ function Workspace() {
           <BadgeViewer src={viewAvatar ? onboard?.avatar : undefined} round={!isBadgeImage(onboard?.avatar)} onClose={() => setViewAvatar(false)}
             about={(() => { const b = badgeForArt(onboard?.avatar); return b ? { description: b.description, times: 1 } : undefined; })()}
             share={{ ...share, artist: share.artist || names.artist || name }} />
+          {/* The status eagle's share card: the same art the header shows, shared as a card under the artist's name. */}
+          <BadgeViewer src={viewEagle ? eagle.art : undefined} name={eagle.label} round={false} onClose={() => setViewEagle(false)}
+            about={{ description: eagle.locked ? eagle.detail : `${eagle.label}. ${eagle.stage.detail}`, times: 1 }}
+            share={{ ...share, artist: share.artist || names.artist || name }} />
 
           <TabsContent value="embed" forceMount className="data-[state=inactive]:hidden">
             {canCatalog ? <MetadataUploader key={`embed-${embedKey}`} userId={user.id} mode="embed" canWav={hasTier(tier, "management")} onShareInfo={(i) => setTabShare((m) => ({ ...m, embed: i }))} onSubmitted={() => setCatalogKey((k) => k + 1)} />
@@ -268,11 +283,6 @@ function Workspace() {
           <TabsContent value="health"><Health startView={openExpert || search.view === "expert" || (search.tab === "health" && search.checkout === "success") ? "expert" : "check"} justPaid={search.tab === "health" && search.checkout === "success"} canCatalog={canCatalog} onFix={() => setTab("catalog")} onFixField={(trackId, field) => { setCatalogFix({ trackId, field }); setTab("catalog"); }} onAddSong={(newTitle, artist) => { setCatalogFix({ newTitle, artist, nonce: Date.now() }); setTab("catalog"); }} onEmbed={() => setTab("embed")} userId={user.id} purchases={purchases} canUtility={canCollect} onUpgrade={upgrade} onSplitSheet={(id) => { setSplitTrackId(id); setTab("splits"); }} start={healthStart} /></TabsContent>
           <TabsContent value="learn"><Learn userId={user.id} unlocked={hasTier(tier, "management")} onUpgrade={upgrade} /></TabsContent>
         </Tabs>
-        {/* The legal notes for the open tab, then the site-wide one (src/lib/disclaimers.ts). */}
-        <footer className="mt-12 space-y-2 border-t border-border pt-6">
-          {(TAB_DISCLAIMERS[tab] ?? []).map((k) => <Disclaimer key={k} k={k} />)}
-          <Disclaimer k="site" />
-        </footer>
       </main>
     </div>
   );

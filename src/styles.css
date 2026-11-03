@@ -168,6 +168,7 @@
   --ink-muted: oklch(0.75 0 0);
   --ink-border: oklch(0.25 0 0);
   --electric: #4D8CFF; /* Electric Cobalt: accent text and icons on Primary Black (BRANDING.md §2) */
+  --brand-platinum-deep: #b4b2ad; /* Darker Platinum: the homepage hero letterforms (BRANDING.md §1 exception) */
   --caution: oklch(0.86 0.17 92);
 }
 
@@ -263,6 +264,27 @@ body { font-family: var(--font-sans); -webkit-font-smoothing: antialiased; -moz-
 @utility text-brand-electric {
   color: #4D8CFF;
 }
+
+/*
+ * Homepage hero tagline (BRANDING.md §1 exception, founder 2026-11-03): darker Platinum letterforms inside a
+ * same-colour ring, with a thin gap between them that shows the hero's Primary Black behind. The ring is a second copy
+ * of the word stacked behind the first, so the two always line up:
+ *   · the back copy draws only the ring, 7.2px wide — 3.6px of it outside the letterform edge
+ *   · the front copy draws the letters plus 4px of hero black (2px outside the edge), painted behind the fill
+ * That leaves a 2px gap of background, then a 1.6px ring. Cobalt measured 2.4:1 on Primary Black; this is 9.3:1.
+ */
+/*
+ * The brand mark in the audio uploader (founder, 11/3/2026): the ink letterform on light surfaces and the white one in
+ * Studio Mode. Two explicit rules instead of Tailwind's dark: variant, which this theme doesn't generate.
+ */
+.mark-on-light { display: block; }
+.mark-on-dark { display: none; }
+.dark .mark-on-light { display: none; }
+.dark .mark-on-dark { display: block; }
+
+.hero-metal { position: relative; display: inline-block; }
+.hero-metal-ring { position: absolute; inset: 0; color: transparent; -webkit-text-stroke: 8.6px var(--brand-platinum-deep); }
+.hero-metal-face { position: relative; color: var(--brand-platinum-deep); -webkit-text-stroke: 5px var(--ink); paint-order: stroke fill; }
 
 /* Badge celebration: pop, shine, burst, rain (fall + sway + spin) and sparkles. Transforms end at none so badges finish sharp. */
 @keyframes badge-pop {

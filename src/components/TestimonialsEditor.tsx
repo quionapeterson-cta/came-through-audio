@@ -27,7 +27,9 @@ export function TestimonialsEditor() {
   const save = useServerFn(saveTestimonials);
   const upload = useServerFn(uploadTestimonialPhoto);
   const qc = useQueryClient();
-  const q = useQuery({ queryKey: ["testimonial-drafts"], queryFn: () => load() });
+  // Unsaved edits must survive a refetch. Without this a window-focus refetch silently reverted the form and greyed out
+  // Save, which reads as "it won't let me save them to the homepage".
+  const q = useQuery({ queryKey: ["testimonial-drafts"], queryFn: () => load(), staleTime: Infinity, refetchOnWindowFocus: false, refetchOnReconnect: false });
   const f = useQuery({ queryKey: ["testimonial-filter"], queryFn: () => loadFilter() });
   const [list, setList] = useState<EditableTestimonial[]>([]);
   const [busy, setBusy] = useState(false);
@@ -46,9 +48,14 @@ export function TestimonialsEditor() {
     setBusy(true);
     try {
       const saved = await save({ data: list });
-      await qc.invalidateQueries({ queryKey: ["testimonial-drafts"] });
-      const drafts = saved.filter((t) => !t.published).length;
-      toast.success(drafts ? `Saved. ${drafts} card${drafts === 1 ? " is" : "s are"} still drafts (see what's missing).` : "Saved. The homepage shows these cards now.");
+      qc.setQueryData(["testimonial-drafts"], saved);
+      setList(saved);
+      const hidden = saved.filter((t) => !t.published);
+      if (!hidden.length) { toast.success("Saved. The homepage shows these cards now."); return; }
+      // Name the cards that didn't go live and say why, so nothing saves quietly as a draft.
+      const ready = hidden.filter((t) => testimonialProblems(t).length === 0).map((t) => t.name || "Untitled");
+      toast.success(`Saved. ${hidden.length} card${hidden.length === 1 ? " is" : "s are"} not on the homepage yet.`);
+      if (ready.length) toast.message(`Ready to go live: tick "Show on homepage" for ${ready.join(", ")}.`);
     } catch (e) { toast.error(e instanceof Error ? e.message : "Couldn't save."); }
     finally { setBusy(false); }
   }
@@ -88,7 +95,7 @@ export function TestimonialsEditor() {
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <span className="text-sm font-bold">{i + 1}. {t.name || "New testimonial"}</span>
                   <span className="flex items-center gap-1">
-                    <label className="mr-2 flex items-center gap-2 text-sm"><input type="checkbox" className="h-4 w-4 accent-[var(--primary)]" checked={t.published} disabled={problems.length > 0} onChange={(e) => set(i, { published: e.target.checked })} />Show on homepage</label>
+                    <label className="mr-2 flex items-center gap-2 text-sm" title={problems.length > 0 ? "Needs a photo and the release date before it can go live" : undefined}><input type="checkbox" className="h-4 w-4 accent-[var(--primary)]" checked={t.published} disabled={problems.length > 0} onChange={(e) => set(i, { published: e.target.checked })} />Show on homepage</label>
                     <Button size="icon" variant="ghost" aria-label="Move up" disabled={i === 0} onClick={() => move(i, -1)}><ArrowUp /></Button>
                     <Button size="icon" variant="ghost" aria-label="Move down" disabled={i === list.length - 1} onClick={() => move(i, 1)}><ArrowDown /></Button>
                     <Button size="icon" variant="ghost" aria-label={`Delete ${t.name || "this testimonial"}`} onClick={() => void confirmAction({ title: "Delete this testimonial?", text: "It's removed when you save. The person's signed release stays in Company Contracts." }).then((ok) => { if (ok) setList((l) => l.filter((_, j) => j !== i)); })}><Trash2 /></Button>
@@ -108,6 +115,7 @@ export function TestimonialsEditor() {
                 {t.photo && <div className="space-y-1"><Label>Zoom</Label>
                   <Slider min={ZOOM_RANGE.min} max={ZOOM_RANGE.max} step={0.05} value={[t.zoom ?? 1]} onValueChange={([z]) => set(i, { zoom: z ?? 1 })} aria-label="Zoom" /></div>}
                 {problems.length > 0 && <ul className="space-y-0.5 rounded-lg bg-muted p-3 text-sm">{problems.map((p) => <li key={p}>⚠️ {p}</li>)}</ul>}
+                {problems.length === 0 && !t.published && <p className="rounded-lg bg-muted p-3 text-sm">✅ Ready to go live. Tick <span className="font-semibold text-foreground">Show on homepage</span> above, then Save.</p>}
               </div>
               <div className="space-y-2">
                 <p className="text-xs font-bold uppercase tracking-widest text-primary">Preview{t.photo ? " · tap the face to center it" : ""}</p>

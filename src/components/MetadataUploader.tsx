@@ -12,7 +12,7 @@ import { CopyrightInput } from "@/components/CopyrightInput";
 import { StarsAligned } from "@/components/StarsAligned";
 import { EXPORT_REQUIRED, GLOSSARY, type GlossaryKey } from "@/lib/glossary";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { PRE_DIST_NOTE, PRO_TIP } from "@/lib/copy";
+import { OFFICIAL_MASTER_ACTION, PRE_DIST_NOTE, PRO_TIP, SOVEREIGN_BACKUP } from "@/lib/copy";
 import { readMetadata, CREDIT_CHOICES, OTHER_INSTRUMENT, creditChoice, fromCreditChoice, isPerformer, performers, emptyContributor, emptyMetadata, embedMetadata, creditName, metadataSchema, GENRES, GENRE_GROUPS, MASTER_BASES, PRODUCTION_TYPES, RELEASE_TYPES, WRITER_ROLES, writerRole, hfaLooksOff, percentInput, formatDuration, type Contributor, type Metadata } from "@/lib/metadata";
 import { COUNTRIES, countryByCode, guessCountry } from "@/lib/repertoires";
 import { catalogHealth, releaseKind } from "@/lib/health-checklist";
@@ -483,7 +483,10 @@ export function MetadataUploader({ onShareInfo, userId, mode = "embed", readOnly
         })()}
         <fieldset disabled={busy} className="grid gap-5 sm:grid-cols-[1fr_220px]">
           <div onDragOver={(event) => event.preventDefault()} onDrop={(event) => { event.preventDefault(); if (!busy) void addFiles(event.dataTransfer.files); }} className="flex min-h-44 flex-col items-center justify-center gap-3 rounded-lg border border-dashed border-primary bg-accent/30 p-5 text-center">
-            <FileAudio className="h-8 w-8 text-primary" />
+            {/* The brand mark sits where the uploader used to show a plain file icon (founder, 11/3/2026): the light
+                mark on light surfaces, the white one in Studio Mode, so it reads on both themes. */}
+            <img src="/cta-mark-dark.png" alt="" aria-hidden className="mark-on-light h-11 w-11 object-contain" />
+            <img src="/cta-mark-light.png" alt="" aria-hidden className="mark-on-dark h-11 w-11 object-contain" />
             <div className="max-w-full break-all text-sm font-semibold">{audio ? audio.name : full ? (editingId ? "Re-embed" : "MP3 or WAV (optional)") : "Audio file"}</div>
             {full && editingId && !audio && <span className="max-w-xs text-xs text-muted-foreground">Choose this song's master again: we embed everything saved here, plus what you add now (codes, producer credits), save the new master and you can download it.</span>}
             {audio && <span className="text-xs text-muted-foreground">{(audio.size / 1024 / 1024).toFixed(1)} MB</span>}
@@ -702,14 +705,15 @@ export function MetadataUploader({ onShareInfo, userId, mode = "embed", readOnly
             </div>
           )}
           {result && aiProtect && <p className="-mt-1 text-sm font-semibold text-primary">Next: click Save to My Catalog, then pay ${PACKAGES[0]!.price} at checkout. You'll record your proof in the AI Protection Hub.</p>}
-          {userId && !result && <p className="text-xs text-muted-foreground"><span className="font-semibold">Embed &amp; Download</span> writes your details into the audio file and downloads it. <span className="font-semibold">{editingId ? "Update in My Catalog" : "Save to My Catalog"}</span> embeds it the same way and keeps the tagged master in My Catalog, without downloading.</p>}
+          {userId && !result && <p className="text-xs text-muted-foreground"><span className="font-semibold">{OFFICIAL_MASTER_ACTION}</span> writes your details into the audio file and downloads it. <span className="font-semibold">{editingId ? "Update in My Catalog" : "Save to My Catalog"}</span> embeds it the same way and keeps the tagged master in My Catalog, without downloading.</p>}
           {result && !full && <NextSong queue={queue} carry={carry} onCarry={setCarry} onNext={startNext} compact />}
           <div className="flex flex-wrap items-center gap-3">
-            <Button type="submit" size="lg" disabled={busy}><FileAudio />{busy ? "Embedding…" : "Embed & Download"}</Button>
+            <Button type="submit" size="lg" disabled={busy}><FileAudio />{busy ? "Embedding…" : OFFICIAL_MASTER_ACTION}</Button>
             {userId && <Button type="button" size="lg" variant={result ? "default" : "outline"} disabled={saving} onClick={save}><Save />{saving ? "Saving…" : editingId ? "Update in My Catalog" : "Save to My Catalog"}</Button>}
             {full && (editingId || adding) && <Button type="button" size="lg" variant="ghost" onClick={closeSong}>Close</Button>}
             {!full && <span className="hidden text-xs text-muted-foreground sm:inline"><kbd className="rounded border border-border px-1.5 py-0.5">Ctrl</kbd> + <kbd className="rounded border border-border px-1.5 py-0.5">Enter</kbd> (<kbd className="rounded border border-border px-1.5 py-0.5">⌘</kbd> + <kbd className="rounded border border-border px-1.5 py-0.5">Enter</kbd> on Mac) to embed</span>}
           </div>
+          <p className="text-xs text-muted-foreground">{SOVEREIGN_BACKUP}</p>
         </div>
       </form>
       )}
@@ -1063,7 +1067,7 @@ function SaveChecklist({ info, onProtect }: { info: SavedInfo; onProtect: () => 
     <ul className="mx-auto mt-4 max-w-md space-y-1.5 rounded-xl border border-border p-4 text-sm">
       {row(true, "Song details saved to My Catalog")}
       {info.hadAudio
-        ? <>{row(info.embedded, info.embedded ? "Details embedded in the master" : "The audio couldn't be tagged, so it was stored without embedded details. Try Embed & Download again.")}
+        ? <>{row(info.embedded, info.embedded ? "Details embedded in the master" : "The audio couldn't be tagged, so it was stored without embedded details. Try again.")}
             {row(info.stored, info.stored ? "Tagged master stored in My Catalog" : "The master couldn't be stored. Save again.")}
             {row(info.downloaded, info.downloaded ? "Downloaded to this device" : "Not downloaded to this device. Download it anytime from My Catalog.")}</>
         : row(false, "No audio added, so nothing was embedded. Add the MP3 or WAV to embed it.")}

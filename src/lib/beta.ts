@@ -23,7 +23,7 @@ export const BETA_ITEMS: BetaItem[] = [
   { id: "branding-addon", tier: "free", area: "Branding", title: "Personal Branding add-on ($14.99)", how: "Profile → Brand kit → buy with test card 4242 → upload a logo, pick colors and a font." },
   { id: "ai-protection", tier: "free", area: "AI Protection", title: "AI Protection certificate", how: "Buy a Single, record the two proof videos, issue the certificate, scan its QR code." },
   // Catalog Plus
-  { id: "embed", tier: "plus", area: "Embed", title: "Embed and download a master", how: "Embed Metadata → add an MP3, fill the form, Embed & Download, then open the file's details on your computer." },
+  { id: "embed", tier: "plus", area: "Embed", title: "Embed and download a master", how: "Embed Metadata → add an MP3, fill the form, Embed Verified Metadata & Download Official Master, then open the file's details on your computer." },
   { id: "save-catalog", tier: "plus", area: "Embed", title: "Save to My Catalog", how: "After embedding, Save to My Catalog and read the checklist of what happened." },
   { id: "catalog-edit", tier: "plus", area: "My Catalog", title: "Edit a song and fix a ⚠️ item", how: "Open a song with a ⚠️, click the link, fix the field, save." },
   { id: "prerelease", tier: "plus", area: "My Catalog", title: "Pre-release checklist", how: "Give a song a future release date, open it in the Royalty Health Hub, work through the Release checklist." },

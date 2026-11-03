@@ -24,6 +24,16 @@ export function hasTier(current: Tier, needed: Tier) {
 }
 
 /**
+ * Paid access needs a confirmed email (founder, 2026-11-03). The server refuses to open a checkout until Supabase has
+ * confirmed the address, and the client uses this same wording to show the confirm step before Stripe opens, so the
+ * payment form itself is never interrupted by verification.
+ */
+export const EMAIL_CONFIRM_REQUIRED = "Confirm your email before checking out.";
+export function isEmailConfirmError(e: unknown): boolean {
+  return e instanceof Error && e.message.includes(EMAIL_CONFIRM_REQUIRED);
+}
+
+/**
  * The plan a signed-out visitor picked, kept in this browser until they have an account (checkout needs their
  * user ID so the payment webhook can credit the right person). Survives the email-confirmation round trip.
  */
@@ -81,7 +91,7 @@ export const PLAN_TIERS: PlanTier[] = [
   { tier: "management", price: "$89.99", priceId: "catalog_management_yearly", monthly: "Only $7.50 / month" },
 ];
 
-export type Feature = { title: string; tip: string; group: string; from: Tier; soon?: boolean };
+export type Feature = { title: string; tip: string; group: string; from: Tier; soon?: boolean; /** Paperwork and signing, so the plan chart shows the contracts-delivery eagle. */ paperwork?: boolean };
 
 /**
  * Every benefit in one list. A plan includes a feature when hasTier(plan, feature.from), the same rule that gates
@@ -96,16 +106,16 @@ export const PLAN_FEATURES: Feature[] = [
   { group: "Catalog & metadata", from: "plus", title: "Album Art Uploads & Retrieval", tip: "Upload cover art with each song and download it again whenever you need it" },
   { group: "Catalog & metadata", from: "plus", title: "PDF Catalog Downloads", tip: "Download your whole catalog as a branded PDF: titles, artists, identifiers and credits" },
   { group: "Catalog & metadata", from: "plus", title: "PDF Lyric Downloads", tip: "Download any song's lyrics with its credits as a branded PDF" },
-  { group: "Catalog & metadata", from: "plus", title: "Split Sheet Generator", tip: "Generate split sheets from your catalog songs, sign as the owner and download the PDF. Collecting collaborators' e-signatures starts with Catalog & Collaborate." },
-  { group: "Collaboration & registration", from: "collaborate", title: "Collaborator E-Signature Requests", tip: "Email collaborators a secure link to e-sign your split sheets, with instant free account invitations. Download signed split sheets." },
+  { group: "Catalog & metadata", from: "plus", title: "Split Sheet Generator", tip: "Generate split sheets from your catalog songs, sign as the owner and download the PDF. Collecting collaborators' e-signatures starts with Catalog & Collaborate.", paperwork: true },
+  { group: "Collaboration & registration", from: "collaborate", title: "Collaborator E-Signature Requests", tip: "Email collaborators a secure link to e-sign your split sheets, with instant free account invitations. Download signed split sheets.", paperwork: true },
   { group: "Collaboration & registration", from: "collaborate", title: "1-Click Agency Exports", tip: "Export your whole catalog, a release or chosen songs into each agency's own template (The MLC, SoundExchange, ASCAP/BMI) and register in minutes. Save hours of retyping. Includes a Neighbouring Rights Pack listing every performer for international airplay." },
   { group: "Collaboration & registration", from: "collaborate", title: "Royalty Utility Suite", tip: "Pick a song and the converters turn your catalog splits into the exact numbers ASCAP, BMI and SESAC ask for (each counts shares differently), plus a projected earnings calculator by platform and country." },
   { group: "Catalog & metadata", from: "management", title: "WAV Embedding", tip: "Embed your metadata into WAV masters (same credits, lyrics, artwork and identifiers as MP3) and keep them in My Catalog" },
-  { group: "Business & education", from: "management", title: "Custom Music Industry Contracts", tip: "Fill in a contract from a blueprint, adjust the terms, and keep it with your catalog. On any plan, the Contract Generator drafts one from your own words for $3.99 per contract." },
-  { group: "Business & education", from: "management", title: "Music Industry Blueprints", tip: "75+ ready-to-sign contracts with plain-language guides, plus step-by-step business blueprints and home recording cheat sheets" },
-  { group: "Business & education", from: "management", title: "Contract Signature Requests & Signing", tip: "Send contracts to every party to e-sign; each signature is time-stamped and hashed" },
-  { group: "Business & education", from: "management", title: "Personal Branding", tip: "Brand your contracts: your logo, colors, tagline and font on every contract and split sheet you send. Any plan can add it for $13.99/year per kit." },
-  { group: "Business & education", from: "management", title: "Signed Contract Vault", tip: "Fully signed contracts are locked and stored, ready to download as a signed PDF" },
+  { group: "Business & education", from: "management", title: "Custom Music Industry Contracts", tip: "Fill in a contract from a blueprint, adjust the terms, and keep it with your catalog. On any plan, the Contract Generator drafts one from your own words for $3.99 per contract.", paperwork: true },
+  { group: "Business & education", from: "management", title: "Music Industry Blueprints", tip: "75+ ready-to-sign contracts with plain-language guides, plus step-by-step business blueprints and home recording cheat sheets", paperwork: true },
+  { group: "Business & education", from: "management", title: "Contract Signature Requests & Signing", tip: "Send contracts to every party to e-sign; each signature is time-stamped and hashed", paperwork: true },
+  { group: "Business & education", from: "management", title: "Personal Branding", tip: "Make the contracts you send yours: your logo, your colors, your business name and your tagline or slogan on every contract and split sheet. Any plan can add it for $13.99/year per kit.", paperwork: true },
+  { group: "Business & education", from: "management", title: "Signed Contract Vault", tip: "Fully signed contracts are locked and stored, ready to download as a signed PDF", paperwork: true },
   // One on One Coaching (management, soon) is hidden until there's a plan for it (founder, 2026-10-23).
 ];
 

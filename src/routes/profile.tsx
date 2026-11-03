@@ -13,6 +13,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { BrandLogo } from "@/components/BrandLogo";
 import { ArtistAvatar, ArtistOnboarding } from "@/components/ArtistOnboarding";
 import { BadgeViewer, type BadgeAbout } from "@/components/BadgeViewer";
+import { EagleStatusBadge } from "@/components/EagleStatusBadge";
+import { eagleStatus } from "@/lib/eagle-status";
 import type { ShareInfo } from "@/components/BadgeCelebration";
 import { badgePrefs, loadOnboarding, loadProfile, saveOnboarding, syncFromCloud, type ArtistProfile, type Onboarding } from "@/lib/artist-profile";
 import { isBadgeImage } from "@/lib/badges";
@@ -91,7 +93,11 @@ function ProfilePage() {
             <ArtistAvatar src={ob?.avatar} className="h-32 w-32 sm:h-36 sm:w-36" />
           </button>
           <div className="min-w-0 flex-1 space-y-2">
-            <h1 className="break-words text-4xl font-extrabold leading-tight tracking-tight">{name}</h1>
+            {/* The full status disc sits with the name; it turns into its grayed-out locked form off Catalog Management. */}
+            <h1 className="flex flex-wrap items-center gap-3 break-words text-4xl font-extrabold leading-tight tracking-tight">
+              {name}
+              <EagleStatusBadge variant="disc" size={44} status={eagleStatus({ onManagement: tier === "management", startedAt: sub?.current_period_start ?? null })} />
+            </h1>
             <p className="text-muted-foreground">{[legalName, `Member since ${memberSince}`].filter(Boolean).join(" · ")}</p>
             <span className="inline-block rounded-full bg-primary px-3 py-1 text-xs font-semibold text-primary-foreground">{TIER_LABEL[tier]}</span>
           </div>

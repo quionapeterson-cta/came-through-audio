@@ -6,7 +6,10 @@ import { BrandLogo } from "@/components/BrandLogo";
 import { PlanComparison, planAction } from "@/components/PlanComparison";
 import { useAuth } from "@/hooks/useAuth";
 import { useBilling } from "@/hooks/useBilling";
-import { upgradeNote } from "@/lib/plans";
+import { PRICE_TIER, TIER_LABEL, isEmailConfirmError, peekPlanIntent, rememberPlanIntent, takePlanIntent, upgradeNote } from "@/lib/plans";
+import { Button } from "@/components/ui/button";
+import { SignupCard } from "@/components/SignupCard";
+import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { getPaymentsEnvironment, openCheckout } from "@/lib/checkout";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -43,35 +46,99 @@ function PlansPage() {
   const { paidTier: tier, plan } = useBilling(user?.id);
   const spots = useFoundingSpots();
   const left = (t: Spots["paid_tier"]) => spots.find((s) => s.paid_tier === t)?.spots_left ?? 0;
-  const buy = async (priceId: string) => {
-    if (!user) { navigate({ to: "/", hash: "signup" }); return; }
+  // Picked a paid tier while signed out: the sign-up form opens here, and that tier's checkout opens the moment the
+  // account exists (founder, 2026-11-03: the button leads straight to checkout, without a trip to the homepage).
+  const [signupFor, setSignupFor] = useState<string | null>(null);
+  // A confirmed email is required before paying, and it's checked before Stripe opens so the payment form itself is
+  // never interrupted (founder, 2026-11-03).
+  const [confirmFor, setConfirmFor] = useState<string | null>(null);
+  const startCheckout = async (priceId: string) => {
+    const { data } = await supabase.auth.getUser();
+    if (data.user && !data.user.email_confirmed_at) { rememberPlanIntent(priceId); setConfirmFor(priceId); return; }
     try { await openCheckout({ kind: "plan", priceId }); }
-    catch (e) { toast.error(e instanceof Error ? e.message : "Checkout could not open."); }
+    catch (e) {
+      if (isEmailConfirmError(e)) { rememberPlanIntent(priceId); setConfirmFor(priceId); return; }
+      toast.error(e instanceof Error ? e.message : "Checkout could not open.");
+    }
+  };
+  const buy = async (priceId: string) => {
+    if (!user) { rememberPlanIntent(priceId); setSignupFor(priceId); return; }
+    await startCheckout(priceId);
+  };
+  const afterSignup = () => {
+    const priceId = takePlanIntent() ?? signupFor;
+    setSignupFor(null);
+    if (priceId) void startCheckout(priceId);
+  };
+  const retryConfirmed = async () => {
+    await supabase.auth.refreshSession();
+    const { data } = await supabase.auth.getUser();
+    if (!data.user?.email_confirmed_at) { toast.error("That email isn't confirmed yet. Open the link we sent, then try again."); return; }
+    const priceId = confirmFor;
+    setConfirmFor(null);
+    if (priceId) await startCheckout(priceId);
+  };
+  const resendConfirmation = async () => {
+    const { data } = await supabase.auth.getUser();
+    const email = data.user?.email;
+    if (!email) { toast.error("Sign in again to resend the confirmation link."); return; }
+    const { error } = await supabase.auth.resend({ type: "signup", email, options: { emailRedirectTo: `${window.location.origin}/plans` } });
+    if (error) toast.error(error.message); else toast.success(`Confirmation link sent to ${email}.`);
   };
 
   return (
-    <div className="min-h-screen bg-background text-foreground">
+    <div className="min-h-screen bg-ink text-ink-foreground">
       <header className="bg-ink text-ink-foreground">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-5">
           <BrandLogo />
-          <Link to="/workspace" search={{ tab: undefined }} className="text-sm font-semibold text-ink-muted hover:text-primary">{user ? "Back to workspace" : "Log in"}</Link>
+          {/* Log in is small, so it gets the Electric Cobalt with a soft glow to find it at a glance on ink. */}
+          <Link to="/workspace" search={{ tab: undefined }}
+            className={`text-sm font-bold ${user ? "text-ink-muted hover:text-primary" : "text-brand-electric drop-shadow-[0_0_10px_rgba(95,153,255,0.55)] hover:text-ink-foreground"}`}>
+            {user ? "Back to workspace" : "Log in"}
+          </Link>
         </div>
       </header>
 
       <main className="mx-auto max-w-6xl px-4 py-16 sm:px-6">
         <h1 className="text-center text-4xl font-bold md:text-5xl">Choose your plan</h1>
-        <p className="mt-3 text-center text-muted-foreground">Simple yearly pricing. Start free and upgrade anytime.</p>
+        <p className="mt-3 text-center text-ink-muted">Simple yearly pricing. Start free and upgrade anytime.</p>
         {spots.some((s) => s.spots_left > 0) && (
-          <div className="mx-auto mt-8 max-w-3xl rounded-2xl border border-primary/40 bg-primary/5 p-5 text-center">
-            <p className="text-sm font-bold uppercase tracking-[2px] text-primary">Founding offer</p>
-            <p className="mt-2 text-sm">The first 100 members on Catalog Plus get Catalog &amp; Collaborate, and the first 100 on Catalog &amp; Collaborate get Catalog Management, for as long as their plan stays active.</p>
+          <div className="mx-auto mt-8 max-w-3xl rounded-2xl border border-brand-electric/40 bg-brand-electric/10 p-5 text-center">
+            <p className="text-sm font-bold uppercase tracking-[2px] text-brand-electric">Founding offer</p>
+            <p className="mt-2 text-sm text-ink-muted">The first 100 members on Catalog Plus get Catalog &amp; Collaborate, and the first 100 on Catalog &amp; Collaborate get Catalog Management, for as long as their plan stays active.</p>
             <p className="mt-2 text-sm font-semibold">Catalog Plus: {left("plus")} of 100 spots left · Catalog &amp; Collaborate: {left("collaborate")} of 100 spots left</p>
           </div>
         )}
         <div className="mt-12">
-          <PlanComparison currentTier={user ? tier : undefined} note={plan ? upgradeNote(plan.orderedAt) : undefined} action={(p) => planAction(p, { tier: user ? tier : undefined, onBuy: (id) => void buy(id), onSignup: () => navigate({ to: "/", hash: "signup" }) })} />
+          {/* Dark chart on the plans page (founder, 11/3/2026); the homepage keeps the light one. */}
+          <PlanComparison tone="dark" currentTier={user ? tier : undefined} note={plan ? upgradeNote(plan.orderedAt) : undefined} action={(p) => planAction(p, { tier: user ? tier : undefined, onBuy: (id) => void buy(id), onSignup: () => { const id = peekPlanIntent(); if (id) setSignupFor(id); else navigate({ to: "/", hash: "signup" }); } })} />
         </div>
       </main>
+
+      {signupFor && (
+        <Dialog open onOpenChange={(o) => !o && setSignupFor(null)}>
+          <DialogContent className="max-w-md border-0 bg-transparent p-0 shadow-none">
+            <DialogTitle className="sr-only">Sign up for {TIER_LABEL[PRICE_TIER[signupFor]!]}</DialogTitle>
+            <DialogDescription className="sr-only">Create your account and this plan's checkout opens right after.</DialogDescription>
+            <SignupCard onAuthed={afterSignup} />
+          </DialogContent>
+        </Dialog>
+      )}
+
+      {confirmFor && (
+        <Dialog open onOpenChange={(o) => !o && setConfirmFor(null)}>
+          <DialogContent className="max-w-md">
+            <DialogTitle>Confirm your email to finish</DialogTitle>
+            <DialogDescription>
+              We sent a confirmation link to your address. Click it, then continue: {TIER_LABEL[PRICE_TIER[confirmFor]!]} checkout opens right after, with no extra steps.
+            </DialogDescription>
+            <div className="mt-5 space-y-2">
+              <Button className="w-full" onClick={() => void retryConfirmed()}>I've confirmed — continue to checkout</Button>
+              <Button className="w-full" variant="outline" onClick={() => void resendConfirmation()}>Send the link again</Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
 
       <footer className="bg-ink text-ink-muted">
         <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-center gap-6 px-6 py-8 text-sm">
