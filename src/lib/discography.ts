@@ -6,6 +6,11 @@
  * response with backoff, and the finished discography is cached per artist for a few hours. The cache is per server
  * instance (best effort), which is all it needs to be: a miss just costs a few requests.
  *
+ * Names are not identities. Independent artists very often share a name with an established one — measured on Deezer,
+ * "Nova" has five artists with that exact name and "Kai" has five, one of them with 150k fans. So a name search never
+ * auto-picks: one exact match proceeds, anything else asks the artist which one is them. Diagnosing a stranger's
+ * catalog would be worse than asking.
+ *
  * The composition half lives in ./composition.ts. Nothing here can say whether a work is registered — that is The MLC's
  * job, and it stays unverified until that access exists.
  */
@@ -100,7 +105,26 @@ export type Discography = {
   fetchedAt: string;
 };
 
-export type PullInput = { link?: string | undefined; name?: string | undefined };
+/** An artist the name search found: enough for the artist to recognise themselves. */
+export type ArtistCandidate = {
+  id: number;
+  name: string;
+  picture?: string | undefined;
+  releaseCount?: number | undefined;
+  fans?: number | undefined;
+};
+
+export type PullInput = {
+  link?: string | undefined;
+  name?: string | undefined;
+  /** Chosen from a list of candidates: skips the search entirely. */
+  artistId?: number | undefined;
+};
+
+/** Either a finished pull, or the artists that name could mean. */
+export type PullResult =
+  | { kind: "discography"; discography: Discography }
+  | { kind: "choose"; candidates: ArtistCandidate[] };
 
 type Sleep = (ms: number) => Promise<void>;
 const defaultSleep: Sleep = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -185,6 +209,7 @@ export type DzArtist = {
   link?: string;
   picture_medium?: string;
   nb_album?: number;
+  nb_fan?: number;
 };
 type DzAlbum = {
   id?: number;
@@ -212,24 +237,47 @@ type DzTrack = {
 const opt = <K extends string, V>(key: K, value: V | undefined) =>
   (value === undefined ? {} : { [key]: value }) as Record<K, V>;
 
-/** We read the artist's own registry entry when the link points at one of their releases. */
+const toCandidate = (a: DzArtist & { id: number }): ArtistCandidate => ({
+  id: a.id,
+  name: a.name ?? "Unknown artist",
+  ...opt("picture", a.picture_medium),
+  ...opt("releaseCount", a.nb_album),
+  ...opt("fans", a.nb_fan),
+});
+
+type Resolved =
+  { kind: "artist"; artist: DzArtist } | { kind: "choose"; candidates: ArtistCandidate[] };
+
+/**
+ * A link or a chosen id identifies an artist exactly. A typed name does not: it resolves only when exactly one artist
+ * has that name, and otherwise comes back as a list to pick from.
+ */
 async function resolveArtist(
   input: PullInput,
   get: (url: string) => Promise<unknown>,
-): Promise<DzArtist> {
+): Promise<Resolved> {
+  if (input.artistId) {
+    const artist = (await get(`${DEEZER_API}/artist/${input.artistId}`)) as DzArtist;
+    if (!artist?.id)
+      throw new FastTrackError(
+        "That Deezer artist couldn't be opened. Pick another from the list.",
+      );
+    return { kind: "artist", artist };
+  }
+
   const ref = input.link ? parseStreamingLink(input.link) : null;
   if (ref?.platform === "deezer" && ref.id) {
     if (ref.kind === "artist") {
       const artist = (await get(`${DEEZER_API}/artist/${ref.id}`)) as DzArtist;
-      if (artist?.id) return artist;
+      if (artist?.id) return { kind: "artist", artist };
     }
     if (ref.kind === "album") {
       const album = (await get(`${DEEZER_API}/album/${ref.id}`)) as { artist?: DzArtist };
-      if (album?.artist?.id) return album.artist;
+      if (album?.artist?.id) return { kind: "artist", artist: album.artist };
     }
     if (ref.kind === "track") {
       const track = (await get(`${DEEZER_API}/track/${ref.id}`)) as { artist?: DzArtist };
-      if (track?.artist?.id) return track.artist;
+      if (track?.artist?.id) return { kind: "artist", artist: track.artist };
     }
   }
 
@@ -241,18 +289,27 @@ async function resolveArtist(
         : "Paste your Deezer artist link, or type your artist name.",
     );
   }
+
   const found = (await get(
-    `${DEEZER_API}/search/artist?q=${encodeURIComponent(name)}&limit=10`,
+    `${DEEZER_API}/search/artist?q=${encodeURIComponent(name)}&limit=25`,
   )) as { data?: DzArtist[] };
   const list = (found.data ?? []).filter((a): a is DzArtist & { id: number } => !!a?.id);
   if (!list.length)
     throw new FastTrackError(
       `No artist called "${name}" on Deezer. Check the spelling, or paste your Deezer artist link.`,
     );
-  return (
-    list.find((a) => norm(a.name ?? "") === norm(name)) ??
-    [...list].sort((a, b) => (b.nb_album ?? 0) - (a.nb_album ?? 0))[0]!
-  );
+
+  const exact = list.filter((a) => norm(a.name ?? "") === norm(name));
+  if (exact.length === 1) return { kind: "artist", artist: exact[0]! };
+
+  // Several artists answer to this name (or none exactly): the artist picks, we never guess.
+  const pool = exact.length > 1 ? exact : list;
+  const candidates = pool
+    .slice()
+    .sort((a, b) => (b.nb_album ?? 0) - (a.nb_album ?? 0) || (b.nb_fan ?? 0) - (a.nb_fan ?? 0))
+    .slice(0, 6)
+    .map(toCandidate);
+  return { kind: "choose", candidates };
 }
 
 async function listReleases(
@@ -288,13 +345,13 @@ async function inBatches<T, R>(
 }
 
 /**
- * Everything an artist has released, from Deezer alone.
+ * Everything an artist has released, from Deezer alone — or the artists a typed name could mean.
  * Throws FastTrackError with a message that can be shown as-is.
  */
 export async function pullDiscography(
   input: PullInput,
   options: PullOptions = {},
-): Promise<Discography> {
+): Promise<PullResult> {
   const fetcher = options.fetcher ?? fetch;
   const now = options.now ?? Date.now;
   const sleep = options.sleep ?? defaultSleep;
@@ -311,19 +368,26 @@ export async function pullDiscography(
   };
   const get = <T>(url: string) => getJson<T>(url, fetcher, gate, limits);
 
-  // Same artist again (or the same pasted name): reuse the resolved id instead of asking Deezer who it is.
-  const artistKey = input.link?.trim()
-    ? `link:${input.link.trim().toLowerCase()}`
-    : `name:${norm(input.name ?? "")}`;
+  // Same artist again: reuse the resolved record instead of asking Deezer who it is.
+  const artistKey = input.artistId
+    ? `id:${input.artistId}`
+    : input.link?.trim()
+      ? `link:${input.link.trim().toLowerCase()}`
+      : `name:${norm(input.name ?? "")}`;
   const seen = artistStore.get(artistKey);
   const cachedArtist = seen && now() - seen.at < ttl ? seen.value : undefined;
-  const artist = cachedArtist ?? (await resolveArtist(input, get));
+  const resolved: Resolved = cachedArtist
+    ? { kind: "artist", artist: cachedArtist }
+    : await resolveArtist(input, get);
+  if (resolved.kind === "choose") return { kind: "choose", candidates: resolved.candidates };
+
+  const artist = resolved.artist;
   if (!cachedArtist) artistStore.set(artistKey, { at: now(), value: artist });
   if (!artist.id) throw new FastTrackError("That artist has no Deezer profile to read.");
 
   const key = `deezer:${artist.id}:${maxReleases}:${maxTracks}`;
   const hit = store.get(key);
-  if (hit && now() - hit.at < ttl) return hit.value;
+  if (hit && now() - hit.at < ttl) return { kind: "discography", discography: hit.value };
 
   const albums = await listReleases(artist.id, maxReleases, get);
   if (!albums.length) {
@@ -383,7 +447,7 @@ export async function pullDiscography(
     kept.push({ ...release, tracks });
   }
 
-  const value: Discography = {
+  const discography: Discography = {
     artist: {
       id: artist.id,
       name: artist.name ?? "Unknown artist",
@@ -398,9 +462,12 @@ export async function pullDiscography(
     source: "deezer",
     fetchedAt: new Date(now()).toISOString(),
   };
-  store.set(key, { at: now(), value });
-  return value;
+  store.set(key, { at: now(), value: discography });
+  return { kind: "discography", discography };
 }
 
 /** Clears the instance cache. Only used by tests. */
-export const clearDiscographyCache = () => cache.clear();
+export const clearDiscographyCache = () => {
+  cache.clear();
+  artists.clear();
+};

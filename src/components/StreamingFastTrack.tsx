@@ -4,14 +4,18 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { runStreamingFastTrack, type FastTrackResult } from "@/lib/fast-track.functions";
+import type { ArtistCandidate } from "@/lib/discography";
 import { MLC_SEARCH_URL, UNREGISTERED_DIAGNOSIS, compositionCounts } from "@/lib/composition";
 
 /**
  * Streaming Profile — the Streaming Fast-Track intake (hub plan §4). The recording side is live on Deezer with no
  * account or key; the composition side says plainly what it does and does not know. A released track with no MLC
  * answer is "Not yet verified", never "unregistered", unless The MLC actually searched and found nothing.
+ *
+ * Independent artists usually share a name with someone, so a name search that is not uniquely matched shows the
+ * candidates and asks which one is them. Nobody's catalog gets diagnosed against a stranger.
  */
-type Ok = Extract<FastTrackResult, { ok: true }>;
+type Ok = Extract<FastTrackResult, { ok: true; kind: "discography" }>;
 
 export function StreamingFastTrack() {
   const [link, setLink] = useState("");
@@ -19,22 +23,31 @@ export function StreamingFastTrack() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | undefined>();
   const [result, setResult] = useState<Ok | undefined>();
+  const [candidates, setCandidates] = useState<ArtistCandidate[] | undefined>();
 
-  async function run() {
+  async function run(pick?: ArtistCandidate) {
     setBusy(true);
     setError(undefined);
     try {
       const r = await runStreamingFastTrack({
         data: {
-          ...(link.trim() ? { link: link.trim() } : {}),
-          ...(name.trim() ? { name: name.trim() } : {}),
+          ...(pick ? { artistId: pick.id } : {}),
+          ...(!pick && link.trim() ? { link: link.trim() } : {}),
+          ...(!pick && name.trim() ? { name: name.trim() } : {}),
         },
       });
       if (!r.ok) {
         setError(r.error);
         setResult(undefined);
+        setCandidates(undefined);
         return;
       }
+      if (r.kind === "choose") {
+        setCandidates(r.candidates);
+        setResult(undefined);
+        return;
+      }
+      setCandidates(undefined);
       setResult(r);
     } catch {
       setError("Couldn't reach the server. Try again in a moment.");
@@ -73,7 +86,8 @@ export function StreamingFastTrack() {
       </div>
       <p className="text-xs text-muted-foreground">
         A Spotify link can't be opened without a Spotify developer key, so add your artist name with
-        it and we'll match your releases on Deezer.
+        it and we'll match your releases on Deezer. A Deezer artist link is the most exact — it
+        names you, not just your name.
       </p>
 
       <div className="flex flex-wrap items-center gap-2">
@@ -81,11 +95,12 @@ export function StreamingFastTrack() {
           {busy ? <Loader2 className="animate-spin" /> : <CloudDownload />}
           {busy ? "Reading your releases…" : "Pull my streaming releases"}
         </Button>
-        {result && (
+        {(result || candidates) && (
           <Button
             variant="ghost"
             onClick={() => {
               setResult(undefined);
+              setCandidates(undefined);
               setError(undefined);
             }}
           >
@@ -98,6 +113,46 @@ export function StreamingFastTrack() {
         <p className="rounded-xl border border-border bg-muted/40 p-3 text-sm" role="alert">
           {error}
         </p>
+      )}
+
+      {candidates && (
+        <div className="rounded-2xl border-2 border-primary/40 bg-card p-4">
+          <p className="font-bold">Which one is you?</p>
+          <p className="mt-1 text-sm text-muted-foreground">
+            More than one artist uses this name. We won't guess — pick yourself, and every check
+            after this is about your catalog only. A Deezer artist link would skip this step.
+          </p>
+          <ul className="mt-3 grid gap-2 sm:grid-cols-2">
+            {candidates.map((c) => (
+              <li key={c.id}>
+                <button
+                  type="button"
+                  disabled={busy}
+                  onClick={() => void run(c)}
+                  className="flex w-full items-center gap-3 rounded-xl border border-border p-3 text-left transition hover:border-primary disabled:opacity-50"
+                >
+                  {c.picture ? (
+                    <img
+                      src={c.picture}
+                      alt=""
+                      className="h-10 w-10 rounded-full object-cover"
+                      loading="lazy"
+                    />
+                  ) : (
+                    <span className="h-10 w-10 rounded-full bg-muted" />
+                  )}
+                  <span className="min-w-0 flex-1">
+                    <b className="block truncate">{c.name}</b>
+                    <span className="text-xs text-muted-foreground">
+                      {c.releaseCount ?? 0} release{(c.releaseCount ?? 0) === 1 ? "" : "s"}
+                      {c.fans ? ` · ${c.fans.toLocaleString()} fans` : ""}
+                    </span>
+                  </span>
+                </button>
+              </li>
+            ))}
+          </ul>
+        </div>
       )}
 
       {result && (
@@ -170,23 +225,23 @@ export function StreamingFastTrack() {
                 </div>
               </div>
               <ul className="mt-3 divide-y divide-border">
-                {release.tracks.map((track, ti) => {
-                  const match = result.matches[indexOfTrack(result, ri, ti)];
-                  return (
-                    <li
-                      key={`${release.id}-${track.deezerId ?? ti}`}
-                      className="flex flex-wrap items-center gap-x-3 gap-y-1 py-2 text-sm"
-                    >
-                      <span className="min-w-0 flex-1 truncate">
-                        <b className="font-semibold">{track.title}</b>
-                        <span className="block text-xs text-muted-foreground">
-                          {track.isrc ?? "no ISRC on this release"}
-                        </span>
+                {release.tracks.map((track, ti) => (
+                  <li
+                    key={`${release.id}-${track.deezerId ?? ti}`}
+                    className="flex flex-wrap items-center gap-x-3 gap-y-1 py-2 text-sm"
+                  >
+                    <span className="min-w-0 flex-1 truncate">
+                      <b className="font-semibold">{track.title}</b>
+                      <span className="block text-xs text-muted-foreground">
+                        {track.isrc ?? "no ISRC on this release"}
                       </span>
-                      <CompositionChip match={match} title={track.title} />
-                    </li>
-                  );
-                })}
+                    </span>
+                    <CompositionChip
+                      match={result.matches[indexOfTrack(result, ri, ti)]}
+                      title={track.title}
+                    />
+                  </li>
+                ))}
               </ul>
             </div>
           ))}
