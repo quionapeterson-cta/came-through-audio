@@ -455,7 +455,10 @@ export function RoyaltyHealthCheck({ userId, canCatalog, canExport, onUpgrade, o
   }
   if (view.kind === "report" && reportRows.length) return (
     <div className="space-y-6">
-      <OfficeSteps at={3} />
+      <div className="flex items-center gap-4">
+        <ClinicArt name="stethoscope" className="hidden h-20 w-36 shrink-0 object-cover sm:block" />
+        <div className="min-w-0 flex-1"><OfficeSteps at={3} /></div>
+      </div>
       <RoyaltyReport checkup={checkup} since={since} prerelease={reportRows.filter(({ c }) => c.prerelease).map(({ r, c }) => ({ id: r.track.id, title: r.track.title || "Untitled", pct: c.pct,
         items: c.steps.filter((s) => s.stage === "release" || (s.stage === "register" && s.id !== "intl")).map((s) => ({ title: s.title, done: s.done, optional: s.optional })) }))} scope={scopeName(view.scope)} onBack={() => setView({ kind: "hub" })} date={new Date().toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })} country={country.name}
         countryPicker={countryPicker} running={!!running} canExport={canExport} onRunCheckup={() => runCheck(view.scope)}
