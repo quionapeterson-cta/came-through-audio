@@ -122,9 +122,23 @@ The practical upshot: **ask The MLC for Data Access Hub enrolment and the IPI Po
 
 ---
 
+## The Data Access Hub programmes (CTA is a label, so more than one applies)
+
+| Programme | What it actually gives | Verdict |
+|---|---|---|
+| **Public Search API** | GET lookups of musical works already in The MLC's database — the fast track's composition half | **Enrol now.** Nothing works without it |
+| **DURP for Record Labels** | A dashboard of the recordings CTA has released in the US that The MLC could not match to a registered work, i.e. royalties sitting unclaimed on CTA's own roster | **Enrol now.** This is the hub's thesis aimed at the label's catalog instead of one artist |
+| **Data Quality Initiative (DQI)** | Upload a schedule of our works, get discrepancy reports back. Free for MLC members; non-members reach it through a partner (Blokur, Music Data Services, TuneRegistry and others) who charge | After the first two. No code, no API — a spreadsheet in, a report out |
+| **Bulk Data Access** (DDEX BWARM) | The whole works, parties, recordings and releases database in bulk | Later. Needs a storage and query layer we have not built |
+| **DURP** (the distributor version) | Same idea as the label version, but keyed to distributors and aggregators | Only if CTA delivers releases itself |
+| **Radar for CMOs**, **Member Benefits Vendor Portal** | CMOs only; vendors invited into that programme only | Not eligible |
+
+**The condition on DURP that decides whether it is worth the form:** it reads distributor names out of the monthly DSP usage reports. It can show CTA its own releases only if CTA is the label or distributor of record in that metadata — either delivering to DSPs itself or being named by whichever distributor delivers for it. If CTA does admin, splits and registration while someone else's name goes out on the release, DURP will show nothing about us. Settle that before enrolling, because the two answers are "apply this week" and "skip it".
+
 ## What I need from you
 
 - [ ] **Today:** sign up at `dah.themlc.com` and enrol in the Public Search API. Tell me when it is submitted, and when it is approved.
+- [ ] **Also today, if the releases go out under CTA's own name:** enrol in **DURP for Record Labels**.
 - [ ] **Optional, 10 minutes:** create the Spotify app and confirm the account is Premium.
 - [ ] **Decide:** step 6 option A, B or C.
 - [ ] **Store the credentials — don't send them.** Right now that is **Lovable → Cloud → Secrets** (where `RESEND_API_KEY` and the Cloudflare AI token already are), or Vercel → Environment Variables if you are serving from the backup. There is no Cloudflare Worker yet: it is created in step 1 of the move in the week of Dec 7, and its **Settings → Variables and Secrets** is where the same names go after that. Never in chat, never in a file, never `VITE_`-prefixed.
