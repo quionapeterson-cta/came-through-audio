@@ -3,7 +3,7 @@ import { ChevronLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ORGAN_NAME } from "@/lib/royalty-checkup";
 import { PAMPHLETS, type Pamphlet } from "@/lib/waiting-area";
-import { ClinicArt, OrganGlyph } from "@/components/ClinicArt";
+import { ClinicArt } from "@/components/ClinicArt";
 
 /**
  * The Waiting Area (PLAN-royalty-health-hub-v2 section 1): the room you sit in before the appointment. The rack picture
@@ -14,11 +14,11 @@ type Organ = Pamphlet["organ"];
 
 /** Where each title sits on the rack drawing, as a percentage of the 480x320 picture. */
 const ON_RACK: Record<Organ, { x: number; y: number }> = {
-  heart: { x: 36.3, y: 30 },
-  lungs: { x: 50, y: 26.5 },
-  kidneys: { x: 63.8, y: 30 },
-  brain: { x: 50, y: 52 },
-  spine: { x: 50, y: 74 },
+  heart: { x: 36.25, y: 32.8 }, // top-left leaflet, under its heart
+  lungs: { x: 50, y: 29.4 }, // top-middle
+  kidneys: { x: 63.75, y: 29.4 }, // top-right
+  brain: { x: 51.5, y: 51.7 }, // middle shelf, centre
+  spine: { x: 55.8, y: 73.9 }, // front shelf, right
 };
 
 export function WaitingArea() {
@@ -70,8 +70,8 @@ export function WaitingArea() {
         ) : (
           <>
             {/* The rack, with every title printed on its own leaflet: each title is the way into that pamphlet. */}
-            <div className="relative overflow-hidden rounded-xl border-2 border-border bg-card">
-              <ClinicArt name="rack" className="w-full rounded-none border-0" />
+            <div className="relative aspect-[3/2] overflow-hidden rounded-xl border-2 border-border bg-card">
+              <ClinicArt name="rack" className="absolute inset-0 h-full w-full rounded-none border-0" />
               <ul aria-label="Pamphlet rack" className="absolute inset-0">
                 {PAMPHLETS.map((p) => (
                   <li
@@ -83,9 +83,8 @@ export function WaitingArea() {
                       type="button"
                       onClick={() => setOpen(p.organ)}
                       aria-label={`Open the ${ORGAN_NAME[p.organ]} pamphlet`}
-                      className="inline-flex items-center gap-1 whitespace-nowrap rounded-full border border-ink-border bg-ink px-2 py-1 text-[10px] font-extrabold uppercase tracking-[1px] text-ink-foreground shadow-sm transition hover:bg-primary hover:text-primary-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                      className="inline-flex items-center whitespace-nowrap rounded-full border border-ink-border bg-ink px-1.5 py-[3px] text-[9px] font-extrabold uppercase leading-none tracking-[0.5px] text-ink-foreground shadow-sm transition hover:bg-primary hover:text-primary-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring sm:px-2 sm:text-[10px]"
                     >
-                      <OrganGlyph organ={p.organ} className="h-3 w-3 shrink-0" />
                       {ORGAN_NAME[p.organ]}
                     </button>
                   </li>

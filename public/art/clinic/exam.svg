@@ -17,9 +17,9 @@
     <circle cx="405" cy="168" r="3.5" fill="#0b0b0b" opacity="0.45"/>
     <circle cx="405" cy="194" r="3.5" fill="#0b0b0b" opacity="0.45"/>
     <!-- chest patch: a music note and a dollar sign -->
-    <rect x="346" y="150" width="58" height="40" rx="9" fill="#E5E4E2" stroke="#0b0b0b" stroke-width="2.5"/>
-    <text x="363" y="181" font-size="23" text-anchor="middle" font-family="'Apple Color Emoji','Segoe UI Emoji','Noto Color Emoji',sans-serif">🎵</text>
-    <text x="390" y="181" font-size="23" text-anchor="middle" font-family="'Apple Color Emoji','Segoe UI Emoji','Noto Color Emoji',sans-serif">💵</text>
+    <rect x="352" y="155" width="36" height="21" rx="3.5" fill="#E5E4E2" stroke="#0b0b0b" stroke-width="2"/>
+    <text x="362" y="171" font-size="11" text-anchor="middle" font-family="'Apple Color Emoji','Segoe UI Emoji','Noto Color Emoji',sans-serif">🎵</text>
+    <text x="378" y="171" font-size="11" text-anchor="middle" font-family="'Apple Color Emoji','Segoe UI Emoji','Noto Color Emoji',sans-serif">💵</text>
     <path d="M352 196h32v18h-32zM426 196h32v18h-32z" fill="none" stroke="#0b0b0b" stroke-width="2.5" opacity="0.3" stroke-linejoin="round"/>
     <!-- the stethoscope, slung over the right shoulder -->
     <path d="M424 112c8-8 26-8 34 0" fill="none" stroke="#004AAD" stroke-width="5" stroke-linecap="round"/>

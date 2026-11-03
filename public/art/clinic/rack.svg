@@ -14,15 +14,16 @@
   <g>
     <rect x="142" y="60" width="64" height="58" rx="4" fill="#FFFFFF" stroke="#0b0b0b" stroke-width="2"/>
     <rect x="142" y="60" width="64" height="10" rx="4" fill="#004AAD"/>
-    <rect x="150" y="78" width="48" height="4" rx="2" fill="#0b0b0b" opacity="0.3"/>
-    <rect x="150" y="88" width="40" height="4" rx="2" fill="#0b0b0b" opacity="0.3"/>
-    <rect x="150" y="98" width="44" height="4" rx="2" fill="#0b0b0b" opacity="0.2"/>
+    <path d="M174 74c-8-6-14-2-14 4 0 8 14 14 14 14s14-6 14-14c0-6-6-10-14-4z" fill="#E0313F"/>
+    <rect x="150" y="100" width="48" height="4" rx="2" fill="#0b0b0b" opacity="0.3"/>
+    <rect x="150" y="110" width="38" height="4" rx="2" fill="#0b0b0b" opacity="0.2"/>
   </g>
   <g>
     <rect x="208" y="54" width="64" height="64" rx="4" fill="#FFFFFF" stroke="#0b0b0b" stroke-width="2"/>
     <rect x="208" y="54" width="64" height="10" rx="4" fill="#4D8CFF"/>
-    <path d="M240 78c-8-6-14-2-14 4 0 8 14 14 14 14s14-6 14-14c0-6-6-10-14-4z" fill="#E0313F"/>
-    <rect x="216" y="100" width="48" height="4" rx="2" fill="#0b0b0b" opacity="0.25"/>
+    <rect x="216" y="78" width="48" height="4" rx="2" fill="#0b0b0b" opacity="0.3"/>
+    <rect x="216" y="90" width="40" height="4" rx="2" fill="#0b0b0b" opacity="0.25"/>
+    <rect x="216" y="102" width="44" height="4" rx="2" fill="#0b0b0b" opacity="0.2"/>
   </g>
   <g>
     <rect x="274" y="60" width="64" height="58" rx="4" fill="#FFFFFF" stroke="#0b0b0b" stroke-width="2"/>
