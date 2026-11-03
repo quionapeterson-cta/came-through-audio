@@ -82,7 +82,7 @@ Read it as: **STEP 1 alone is enough to ship something honest by Nov 16.** STEP 
 | Who | You — needs company details and a use case |
 | Where | [dah.themlc.com](https://www.dah.themlc.com/) → Data Access Hub → Sign Up → enrol in **Public Search API** |
 | Key needed | Issued after enrolment — either an API key or a client ID/secret pair. The portal is login-walled, so the exact shape is only visible inside |
-| Cost | Free data program; you accept the Data Access Hub Terms of Use |
+| Cost | **Quoted $100 one-time + $25/month** (3 Nov 2026), charged through the Bulk Data Subscription form. Submitting the application is free; the access is not. See `PLAN-mlc-access.md` for the free route and the revenue trigger |
 | Time | Signup in minutes; **approval time is out of our hands** |
 | Gives | Works in the MLC database: writers as registered, publishers, IPI, ISWC, work ID, share splits |
 | Notes | Aimed at publishers and administrators, DSPs, CMOs and music technology companies — that is your category. US mechanicals only |
@@ -126,7 +126,7 @@ The practical upshot: **ask The MLC for Data Access Hub enrolment and the IPI Po
 
 | Programme | What it actually gives | Verdict |
 |---|---|---|
-| **Public Search API** | GET lookups of musical works already in The MLC's database — the fast track's composition half | **Enrol now.** Nothing works without it |
+| **Public Search API** | GET lookups of musical works already in The MLC's database — the fast track's composition half | **Applied for.** Quoted $100 + $25/month: free route and payment trigger in `PLAN-mlc-access.md` |
 | **DURP for Record Labels** | A dashboard of the recordings CTA has released in the US that The MLC could not match to a registered work, i.e. royalties sitting unclaimed on CTA's own releases | **Optional.** There is one artist under the label and that artist is the founder, so the artist-side tools below reach the same facts without an application |
 | **Data Quality Initiative (DQI)** | Upload a schedule of our works, get discrepancy reports back. Free for MLC members; non-members reach it through a partner (Blokur, Music Data Services, TuneRegistry and others) who charge | After the first two. No code, no API — a spreadsheet in, a report out |
 | **Bulk Data Access** (DDEX BWARM) | The whole works, parties, recordings and releases database in bulk | Later. Needs a storage and query layer we have not built. Its subscription form asks whether you represent a DSP, a Significant Non-Blanket Licensee, or an authorised vendor of one: CTA is none of those, so **None of the above** is the honest answer, and it means a fee at marginal cost. Do not tick a category to avoid the fee, and do not pay one before we have a reason to hold the whole database |
@@ -158,5 +158,5 @@ Whichever host is running the app holds the key: the browser calls a server func
 ## What ships by Monday Nov 16, either way
 
 - **If MLC approval has landed:** full fast-track — paste a link, discography pulled, works matched, real diagnosis.
-- **If it hasn't:** the discography pulls and populates My Catalog, and the composition check shows *"Not yet verified — check at The MLC"* with a pre-filled link. **No spinner pretending to work, no invented results.**
+- **If it hasn't:** the discography pulls and populates My Catalog, and the composition check shows *"Not yet verified — check at The MLC"* with a one-click copy of the title and a link to The MLC's public search. **No spinner pretending to work, no invented results.**
 - Either way the retimed schedule holds: Cloudflare in the week of Dec 7, Lovable gone Dec 11.
