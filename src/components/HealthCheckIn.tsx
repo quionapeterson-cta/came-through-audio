@@ -115,6 +115,8 @@ type Props = {
   initialIntake?: IntakeKind | undefined;
   /** The intake panels themselves, rendered in place once chosen. */
   intake?: { streaming: ReactNode; agencies: ReactNode; single: ReactNode } | undefined;
+  /** The patient file handed over at the Front Desk, so step 1 is visible inside the appointment. */
+  patient?: { legalName: string; summary: string } | undefined;
   /** Saves checklist steps for each song (null removes one). */
   onAnswer: (changes: { id: string; steps: Record<string, string | null> }[]) => void;
   /** "No, I'm self-published": ticks Self-published on songs with no publisher listed. */
@@ -126,7 +128,7 @@ type Props = {
   onBack: () => void;
 };
 
-export function HealthCheckIn({ scope, options, onScope, rows, countryPicker, signedSheets, initialIntake, intake, onAnswer, onSelfPublished, onBmiWriter, onFixField, onRun, onBack }: Props) {
+export function HealthCheckIn({ scope, options, onScope, rows, countryPicker, signedSheets, initialIntake, intake, patient, onAnswer, onSelfPublished, onBmiWriter, onFixField, onRun, onBack }: Props) {
   const many = rows.length > 1;
   const [chosen, setChosen] = useState<IntakeKind | undefined>(initialIntake);
   const list = questions(signedSheets);
@@ -152,6 +154,17 @@ export function HealthCheckIn({ scope, options, onScope, rows, countryPicker, si
           {countryPicker}
         </div>
         <div className="mt-5"><OfficeSteps at={1} /></div>
+        {/* Step 1 happened at the Front Desk; the visit opens with the file it took down. */}
+        {patient && (
+          <div className="mt-4 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-border bg-muted/40 px-4 py-3 text-sm">
+            <span className="min-w-0">
+              <span className="font-semibold">Your file: </span>
+              {patient.legalName}
+              {patient.summary ? <span className="text-muted-foreground"> · {patient.summary}</span> : null}
+            </span>
+            <span className="text-xs text-muted-foreground">Taken down at the Front Desk</span>
+          </div>
+        )}
 
         {options.length > 1 && <fieldset className="mt-6">
           <legend className="mb-2 text-sm font-bold">Which songs?</legend>

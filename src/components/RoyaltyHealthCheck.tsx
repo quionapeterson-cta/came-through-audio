@@ -33,7 +33,7 @@ import { loadOnboarding, saveOnboarding } from "@/lib/artist-profile";
 import { WaitingArea } from "@/components/WaitingArea";
 import { ClinicArt } from "@/components/ClinicArt";
 import { ClinicalScan, loadPatientFile, OfficeSteps } from "@/components/DoctorsOffice";
-import { PatientFileCard, patientFileReady } from "@/components/PatientFileCard";
+import { PatientFileCard, patientFileReady, patientSummary } from "@/components/PatientFileCard";
 import { UpgradeCards } from "@/components/UpgradeCards";
 import { StreamingFastTrack } from "@/components/StreamingFastTrack";
 
@@ -452,6 +452,7 @@ export function RoyaltyHealthCheck({ userId, canCatalog, canExport, onUpgrade, o
       <HealthCheckIn scope={view.scope} options={scopeOptions(view.from)} onScope={(scope) => setView({ ...view, scope })} rows={rows} countryPicker={countryPicker}
         signedSheets={signedSheets} onAnswer={answer} onSelfPublished={(ids) => void selfPublish(ids)} onBmiWriter={(ids) => void selfPublish(ids, "bmiWriterPublishing")} onFixField={fixField}
         initialIntake={intakeWanted} onRun={() => runCheck(view.scope)} onBack={() => setView({ kind: "hub" })}
+        patient={patient ? { legalName: patient.legalName, summary: patientSummary(patient) } : undefined}
         intake={{
           streaming: <StreamingFastTrack />,
           agencies: <AgencyLists societies={listSocieties} songsFor={songsFor} summaries={listSummaries} onApply={applyList} />,
@@ -492,6 +493,8 @@ export function RoyaltyHealthCheck({ userId, canCatalog, canExport, onUpgrade, o
           {cowriters.length > 0 && <Button variant="outline" onClick={askCowriter}><Search />Ask a co-writer for their PRO and IPI</Button>}
         </section>
       )}
+      {/* PLAN-royalty-health-hub-v2 section 3: the tier cards come after the diagnosis, never before the visit. */}
+      {!canCatalog && <UpgradeCards onUpgrade={(id) => onUpgrade(id)} />}
       {askDialog}
       {running && <p className="text-sm text-muted-foreground">Looking up song {running.done + 1} of {running.total} on streaming…</p>}
     </div>
@@ -599,7 +602,6 @@ export function RoyaltyHealthCheck({ userId, canCatalog, canExport, onUpgrade, o
       {hub}
       {askDialog}
       {frontDesk}
-      {!canCatalog && <UpgradeCards onUpgrade={(id) => onUpgrade(id)} />}
       {waitingRoom}
       {running && <p className="text-sm text-muted-foreground">Looking up song {running.done + 1} of {running.total} on streaming…</p>}
       {editing && (
