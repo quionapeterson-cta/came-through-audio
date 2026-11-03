@@ -609,8 +609,9 @@ export function RoyaltyHealthCheck({ userId, canCatalog, canExport, onUpgrade, o
 
   return (
     <div className="space-y-6">
-      {doctor}
+      {/* The Royalty Health Hub box, score ring and all, opens the screen (founder, 2026-11-03). */}
       {hub}
+      {doctor}
       {askDialog}
       {frontDesk}
       {waitingRoom}
