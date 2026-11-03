@@ -73,7 +73,9 @@ Read it as: **STEP 1 alone is enough to ship something honest by Nov 16.** STEP 
 | Limits | Development Mode: 5 users, search max 10 results per page (paginate) |
 | Production ceiling | **Extended Quota Mode requires 250,000 MAU and a registered business with a launched service.** Not available to this project now, not worth planning around |
 
-**Verdict:** nice during beta for artist linking and cover art. Do not make it load-bearing. If you skip it entirely, the feature still works.
+**Verdict:** wired, not load-bearing. A pasted Spotify artist, album or track link is now read straight from
+Spotify's Web API (`src/lib/spotify.server.ts`, Client Credentials), and falls back to the Deezer name search if the
+keys are ever removed. Deezer stays the default so a missing key can never take the page down.
 
 ## Step 3 — The MLC Public Search API (the one that matters)
 

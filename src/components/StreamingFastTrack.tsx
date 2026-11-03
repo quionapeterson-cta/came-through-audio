@@ -61,8 +61,9 @@ export function StreamingFastTrack() {
   return (
     <div className="space-y-4">
       <p className="max-w-[70ch] text-sm text-muted-foreground">
-        Paste your Deezer artist link, or just type your artist name. We pull every released track
-        with its ISRC, UPC, release date and artwork — no account, no key and no approval needed.
+        Paste your Deezer or Spotify artist link, or just type your artist name. We pull every
+        released track with its ISRC, UPC, release date and artwork — no account and no approval
+        needed.
       </p>
 
       <div className="grid gap-2 sm:grid-cols-2">
@@ -71,7 +72,7 @@ export function StreamingFastTrack() {
           <Input
             value={link}
             onChange={(e) => setLink(e.target.value)}
-            placeholder="https://www.deezer.com/artist/…"
+            placeholder="https://open.spotify.com/artist/…"
             inputMode="url"
           />
         </label>
@@ -85,9 +86,8 @@ export function StreamingFastTrack() {
         </label>
       </div>
       <p className="text-xs text-muted-foreground">
-        A Spotify link can't be opened without a Spotify developer key, so add your artist name with
-        it and we'll match your releases on Deezer. A Deezer artist link is the most exact — it
-        names you, not just your name.
+        A link is the most exact way to say who you are — it names you, not just your name. Deezer
+        links are read directly; Spotify links are read when our Spotify key is configured.
       </p>
 
       <div className="flex flex-wrap items-center gap-2">
@@ -179,7 +179,7 @@ export function StreamingFastTrack() {
                 </span>
               </div>
               <span className="rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">
-                Recording side · Deezer
+                Recording side · {result.discography.source === "spotify" ? "Spotify" : "Deezer"}
               </span>
             </div>
           </div>

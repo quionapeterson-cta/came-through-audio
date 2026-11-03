@@ -40,9 +40,8 @@ const HOSTS: [RegExp, StreamingPlatform][] = [
 const KINDS: StreamKind[] = ["artist", "album", "track"];
 
 /**
- * What kind of link was pasted. Only Deezer links can be opened directly: Spotify's app links need a Spotify developer
- * key to resolve, and its oEmbed endpoint answers for tracks but not artists, so a Spotify link always needs the
- * artist's name typed in beside it. Guessing which artist a link points at would be worse than asking.
+ * What kind of link was pasted. Deezer links are read by this module; Spotify links are read by ./spotify.server.ts,
+ * which needs the app's credentials. A link that names the artist is always better than a name: names are shared.
  */
 export function parseStreamingLink(raw: string): StreamRef | null {
   const text = raw.trim();
@@ -77,7 +76,7 @@ export type PulledTrack = {
 };
 
 export type PulledRelease = {
-  id: number;
+  id: number | string;
   title: string;
   upc?: string | undefined;
   label?: string | undefined;
@@ -89,7 +88,7 @@ export type PulledRelease = {
 
 export type Discography = {
   artist: {
-    id: number;
+    id: number | string;
     name: string;
     link?: string | undefined;
     picture?: string | undefined;
@@ -101,7 +100,8 @@ export type Discography = {
   withIsrc: number;
   /** True when the artist has more releases than one pull reads. */
   truncated: boolean;
-  source: "deezer";
+  /** Which catalogue answered. Both shapes are identical, so nothing downstream branches on it. */
+  source: "deezer" | "spotify";
   fetchedAt: string;
 };
 
@@ -285,7 +285,7 @@ async function resolveArtist(
   if (!name) {
     throw new FastTrackError(
       ref && ref.platform !== "deezer"
-        ? "A Spotify link can't be opened without a Spotify developer key. Add your artist name and we'll find your releases on Deezer, which needs no key."
+        ? "Spotify isn't available on the server right now. Add your artist name and we'll match your releases on Deezer."
         : "Paste your Deezer artist link, or type your artist name.",
     );
   }

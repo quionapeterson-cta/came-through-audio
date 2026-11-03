@@ -3,16 +3,24 @@ import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import {
   FastTrackError,
+  parseStreamingLink,
   pullDiscography,
   type ArtistCandidate,
   type Discography,
 } from "@/lib/discography";
 import { matchCompositions, type CompositionMatch } from "@/lib/composition";
 import { mlcLookup } from "@/lib/composition.server";
+import {
+  SpotifyNotConfigured,
+  spotifyConfigured,
+  spotifyDiscography,
+  spotifyToken,
+} from "@/lib/spotify.server";
 
 /**
  * The Streaming Fast-Track pull (hub plan §4). Reads an artist's released tracks from Deezer — no key, no approval —
- * then asks the composition side about each recording. That second half answers honestly: with no MLC credentials
+ * or from Spotify when the link is a Spotify one and the app has credentials, then asks the composition side about
+ * each recording. That second half answers honestly: with no MLC credentials
  * every work comes back unverified and the UI says so, rather than inventing registrations.
  *
  * A typed name that several artists share comes back as `choose`, so the artist picks themselves. Nothing is
@@ -40,14 +48,32 @@ export const runStreamingFastTrack = createServerFn({ method: "POST" })
   .inputValidator((d) => input.parse(d))
   .handler(async ({ data }): Promise<FastTrackResult> => {
     try {
-      const result = await pullDiscography({
-        link: data.link,
-        name: data.name,
-        artistId: data.artistId,
-      });
-      if (result.kind === "choose")
-        return { ok: true, kind: "choose", candidates: result.candidates };
-      const { discography } = result;
+      // A pasted Spotify link names the artist exactly, so it is read from Spotify when the app has credentials.
+      // Without them the page still works: the Deezer name search takes over and says why.
+      const ref = data.link ? parseStreamingLink(data.link) : null;
+      let discography: Discography | undefined;
+      if (ref?.platform === "spotify" && ref.id && spotifyConfigured()) {
+        try {
+          discography = await spotifyDiscography(
+            { kind: ref.kind, id: ref.id },
+            { token: await spotifyToken() },
+          );
+        } catch (error) {
+          if (!(error instanceof SpotifyNotConfigured)) throw error;
+        }
+      }
+
+      if (!discography) {
+        const result = await pullDiscography({
+          link: data.link,
+          name: data.name,
+          artistId: data.artistId,
+        });
+        if (result.kind === "choose")
+          return { ok: true, kind: "choose", candidates: result.candidates };
+        discography = result.discography;
+      }
+
       const lookup = mlcLookup();
       const queries = discography.releases.flatMap((r) =>
         r.tracks.map((t) => ({
