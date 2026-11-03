@@ -32,6 +32,7 @@ import { INTERNATIONAL, countryByCode, guessCountry } from "@/lib/repertoires";
 import { loadOnboarding, saveOnboarding } from "@/lib/artist-profile";
 import { WaitingArea } from "@/components/WaitingArea";
 import { UpgradeCards } from "@/components/UpgradeCards";
+import { StreamingFastTrack } from "@/components/StreamingFastTrack";
 
 // Automatic lookups (MusicBrainz rows saved before its removal stay out of the score and can't be undone by hand).
 const AUTO = [INTERNATIONAL.deezer.id, "musicbrainz"];
@@ -471,6 +472,7 @@ export function RoyaltyHealthCheck({ userId, canCatalog, canExport, onUpgrade, o
         <h2 id="doctor-empty" className="mt-1 text-xl font-bold">See the Royalty Health Doctor to file your first diagnostic report.</h2>
         <div className="mt-4 flex flex-wrap justify-center gap-2">{runButton}</div>
       </section>
+      <Section id="streaming-profile" title="Streaming Profile" summary="Streaming Fast-Track · pull your released tracks and ISRCs from Deezer with no account or key"><StreamingFastTrack /></Section>
       {inspector}
       <Section title="Waiting Area" summary="What the Doctor examines · your distributor only collects part of your money · unclaimed royalties don't wait forever"><div className="space-y-4"><WaitingArea />{why}</div></Section>
     </div>
@@ -540,6 +542,7 @@ export function RoyaltyHealthCheck({ userId, canCatalog, canExport, onUpgrade, o
           summary={Object.values(listSummaries).some(Boolean) ? Object.entries(listSummaries).filter(([, v]) => v).map(([id, v]) => `${listSocieties.find((x) => x.id === id)?.name}: ${v!.matched} matched${v!.differences ? `, ⚠️ ${v!.differences} different` : ""}`).join(" · ") : "Upload what each agency has on file · turns estimates into confirmed matches"}>
           <AgencyLists societies={listSocieties} songsFor={songsFor} summaries={listSummaries} onApply={applyList} />
         </Section>
+        <Section id="streaming-profile" title="Streaming Profile" summary="Streaming Fast-Track · pull your released tracks and ISRCs from Deezer with no account or key · composition checks stay unverified until MLC access lands"><StreamingFastTrack /></Section>
         <Section title="Patient Intake Form" open={inspectorOpen} onToggle={setInspectorOpen} summary={`Single Track Checkup · check a song that isn't in your catalog · ${songsLabel(inspectorSongs.length)} inspected`}>{inspector}</Section>
         <Section title="Waiting Area" summary="What the Doctor examines · your distributor only collects part of your money · common mismatches"><div className="space-y-4"><WaitingArea />{why}</div></Section>
       </div>

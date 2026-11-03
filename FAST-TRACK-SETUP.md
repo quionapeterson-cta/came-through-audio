@@ -2,7 +2,7 @@
 
 **Purpose.** Everything needed to make the Streaming Fast-Track (hub plan §4) fully functional, split into what you do, what I do, and what happens if an approval doesn't land in time.
 
-**Status today:** the discography half can run with **no accounts and no keys at all**. Only the composition half needs an application.
+**Status today (3 Nov 2026):** the discography half is **built and live** — no accounts, no keys, no approval. It appears in the hub as **Streaming Profile** (`src/lib/discography.ts`, `src/components/StreamingFastTrack.tsx`). Only the composition half needs an application; until it lands, every work reads **Not yet verified** with a one-click link to The MLC, and nothing is ever called missing.
 
 ---
 
@@ -52,7 +52,7 @@ Read it as: **STEP 1 alone is enough to ship something honest by Nov 16.** STEP 
 
 | | |
 |---|---|
-| Who | Nobody. Already in the codebase (`runSongLookups`) |
+| Who | Nobody. **Built** — `pullDiscography` in `src/lib/discography.ts` |
 | Key needed | **None** |
 | Cost | Free |
 | Time | Zero |
