@@ -28,6 +28,8 @@ import { grantLaunchGift, listLaunchGifts, type LaunchGiftRow } from "@/lib/laun
 import { grantLifetimeAccess, listBetaFeedback, listBetaTesters, type BetaFeedbackRow, type BetaTesterRow } from "@/lib/beta.functions";
 import { BETA_ITEMS, BETA_WINDOW } from "@/lib/beta";
 import { listOutreach, sendOutreach, type OutreachLogRow } from "@/lib/outreach.functions";
+import { sendCompanyEmail } from "@/lib/company-email.functions";
+import { COMPANY_MAILBOXES, COMPANY_MAIL_DAILY_LIMIT, type CompanyMailbox } from "@/lib/company-email";
 import { OUTREACH_DAILY_LIMIT, OUTREACH_LABEL, outreachDraft, type OutreachFields, type OutreachKind } from "@/lib/outreach-emails";
 import { TIER_LABEL } from "@/lib/plans";
 import { logBadgeEvent } from "@/lib/badge-events";
@@ -37,7 +39,7 @@ import {
   type Contract, type ContractParty, type ReceivedContract,
 } from "@/lib/contracts";
 
-type View = "generator" | "blueprints" | "guides" | "contracts" | "vault" | "gifts" | "beta" | "outreach";
+type View = "generator" | "blueprints" | "guides" | "contracts" | "vault" | "gifts" | "beta" | "outreach" | "email";
 
 const STATUS: Record<Contract["status"], { label: string; className: string }> = {
   draft: { label: "Draft", className: "border-border text-muted-foreground" },
@@ -115,7 +117,7 @@ export function Contracts({ userId, unlocked, onUpgrade, company = false }: { us
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="inline-flex flex-wrap gap-1 rounded-lg bg-muted p-1" role="tablist" aria-label="Contracts">
             {(company
-              ? [["blueprints", "Templates", ScrollText], ["contracts", "Drafts & out for signature", FileSignature], ["vault", "Signed", Vault], ["gifts", "Launch gifts", Gift], ["beta", "Beta testers", FlaskConical], ["outreach", "Outreach", Mail]] as const
+              ? [["blueprints", "Templates", ScrollText], ["contracts", "Drafts & out for signature", FileSignature], ["vault", "Signed", Vault], ["gifts", "Launch gifts", Gift], ["beta", "Beta testers", FlaskConical], ["outreach", "Outreach", Mail], ["email", "Email", PenLine]] as const
               // The Contract Generator has its own tab, right before the contracts (founder, 2026-10-27).
               : [["generator", "Contract Generator", Sparkles], ["blueprints", "Contracts", ScrollText], ["guides", "Blueprints", BookOpen], ["contracts", "My Contracts", FileSignature], ["vault", "Signed Vault", Vault]] as const).map(([id, label, Icon]) => (
               <Button key={id} role="tab" aria-selected={view === id} size="sm" variant={view === id ? "default" : "ghost"} onClick={() => setView(id)}>
@@ -137,6 +139,7 @@ export function Contracts({ userId, unlocked, onUpgrade, company = false }: { us
         {view === "gifts" && company && <LaunchGifts />}
         {view === "beta" && company && <BetaTesters />}
         {view === "outreach" && company && <Outreach />}
+        {view === "email" && company && <CompanyMail />}
 
         {view === "guides" && (!unlocked
           ? <UpgradeLock className="" title="Blueprints" tier="management" onUpgrade={onUpgrade} text="Step-by-step guides to running your music business, from royalty registration to touring, plus home recording cheat sheets for every genre." />
@@ -453,6 +456,70 @@ function Outreach() {
             {sent.map((r, i) => <li key={i} className="flex flex-wrap items-center justify-between gap-2 px-4 py-2 text-sm">
               <span className="min-w-0"><span className="font-semibold">{r.company || r.toName || r.toEmail}</span> <span className="text-muted-foreground">· {r.toEmail} · {r.subject}</span></span>
               <span className="text-xs text-muted-foreground">{OUTREACH_LABEL[r.kind as OutreachKind] ?? r.kind} · {date(r.sentAt)}</span>
+            </li>)}
+          </ul>
+        )}
+      </div>
+    </section>
+  );
+}
+
+/**
+ * Company email: write a letter by hand and send it from a named company mailbox — admin@ for the company's own
+ * correspondence, support@ for a customer, and so on. Super admins only, and replies come back to the same box. This is
+ * correspondence rather than marketing, so it carries the transactional footer and a much smaller daily limit.
+ */
+function CompanyMail() {
+  const send = useServerFn(sendCompanyEmail);
+  const history = useServerFn(listOutreach);
+  const [mailbox, setMailbox] = useState<CompanyMailbox>("admin");
+  const [to, setTo] = useState("");
+  const [cc, setCc] = useState("");
+  const [subject, setSubject] = useState("");
+  const [body, setBody] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [sent, setSent] = useState<OutreachLogRow[]>();
+  const load = () => history().then((rows) => setSent(rows.filter((r) => r.kind === "company"))).catch(() => setSent([]));
+  useEffect(() => { void load(); }, []);
+  const go = async () => {
+    if (!isValidEmail(to)) { toast.error("Add a valid email address."); return; }
+    if (!await confirmAction({ title: `Send to ${to}?`, text: `"${subject}" from ${COMPANY_MAILBOXES[mailbox]}.`, action: "Send email" })) return;
+    setBusy(true);
+    try {
+      await send({ data: { mailbox, to, ...(cc.trim() ? { cc: cc.trim() } : {}), subject, body } });
+      toast.success(`Sent from ${COMPANY_MAILBOXES[mailbox]} to ${to}.`);
+      setTo(""); setCc(""); setSubject(""); setBody("");
+      await load();
+    } catch (e) { toast.error(e instanceof Error ? e.message : "Couldn't send the email."); }
+    finally { setBusy(false); }
+  };
+  const date = (d: string) => new Date(d).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+  return (
+    <section className="space-y-6">
+      <p className="text-sm text-muted-foreground">Correspondence from a company mailbox. Replies come back to the same box, the footer is transactional, and it's capped at {COMPANY_MAIL_DAILY_LIMIT} a day. Commercial mail to people who never asked is Outreach, not this.</p>
+      <div className="grid gap-4 sm:grid-cols-2">
+        <Field label="Send from" tip="Which company mailbox this letter comes from. Replies land there.">
+          <select value={mailbox} onChange={(e) => setMailbox(e.target.value as CompanyMailbox)} className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm">
+            {(Object.keys(COMPANY_MAILBOXES) as CompanyMailbox[]).map((k) => <option key={k} value={k}>{COMPANY_MAILBOXES[k]}</option>)}
+          </select>
+        </Field>
+        <Field label="Their email" tip="Where the email goes."><Input type="email" value={to} onChange={(e) => setTo(e.target.value)} placeholder="name@company.com" /></Field>
+        <Field label="Cc (optional)" tip="Anyone who should be copied."><Input type="email" value={cc} onChange={(e) => setCc(e.target.value)} /></Field>
+        <Field label="Subject" tip="What the email is about."><Input value={subject} onChange={(e) => setSubject(e.target.value)} /></Field>
+      </div>
+      <Field label="Message" tip="Plain text. A blank line starts a new paragraph." wide>
+        <textarea rows={12} value={body} onChange={(e) => setBody(e.target.value)} className="w-full rounded-md border border-input bg-background p-3 text-sm leading-relaxed" />
+      </Field>
+      <Button disabled={busy || !to.trim() || subject.trim().length < 3 || body.trim().length < 20} onClick={() => void go()}>
+        {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Mail className="h-4 w-4" />}Send email
+      </Button>
+      <div className="space-y-2">
+        <h3 className="text-sm font-bold uppercase tracking-widest text-primary">Sent from company mailboxes <span className="opacity-70">{sent?.length ?? 0}</span></h3>
+        {!sent ? <Spinner /> : sent.length === 0 ? <p className="text-sm text-muted-foreground">Nothing sent yet.</p> : (
+          <ul className="divide-y divide-border rounded-xl border border-border">
+            {sent.map((r, i) => <li key={i} className="flex flex-wrap items-center justify-between gap-2 px-4 py-2 text-sm">
+              <span className="min-w-0"><span className="font-semibold">{r.toEmail}</span> <span className="text-muted-foreground">· {r.subject}</span></span>
+              <span className="text-xs text-muted-foreground">{date(r.sentAt)}</span>
             </li>)}
           </ul>
         )}
