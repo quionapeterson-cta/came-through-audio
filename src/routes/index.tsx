@@ -121,7 +121,7 @@ const EMBEDDED_GROUPS: { heading: string; rows: [string, string][] }[] = [
       ["Title", "Your Song"],
       ["Artist", "Your artist name"],
       ["Featured artists", "Brother Tim The Ghetto Evangelist"],
-      ["Album", "Came Through"],
+      ["Album", "Came Through For You"],
       ["Track number", "1 of 12"],
       ["Genre", "Hip-Hop/Rap"],
       ["Release date", "2026-03-03"],
