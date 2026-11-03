@@ -12,6 +12,12 @@ const ART = {
   exam: "/art/clinic/exam.svg",
   rack: "/art/clinic/rack.svg",
   stethoscope: "/art/clinic/stethoscope.svg",
+  // The Waiting Area pamphlets: one illustrated leaflet per organ (plan §1).
+  heart: "/art/clinic/pamphlet-heart.svg",
+  lungs: "/art/clinic/pamphlet-lungs.svg",
+  kidneys: "/art/clinic/pamphlet-kidneys.svg",
+  brain: "/art/clinic/pamphlet-brain.svg",
+  spine: "/art/clinic/pamphlet-spine.svg",
 } as const;
 
 export type ClinicArtName = keyof typeof ART;

@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 480 320" role="img" aria-label="A pair of lungs beside a signed publishing agreement and a stack of coins: the publisher half of your royalties">
+  <rect width="480" height="320" fill="#F4F5F7"/>
+  <rect width="480" height="78" fill="#0b0b0b"/>
+  <rect x="28" y="22" width="120" height="10" rx="5" fill="#FFFFFF" opacity="0.9"/>
+  <rect x="28" y="42" width="70" height="8" rx="4" fill="#4D8CFF"/>
+  <rect x="392" y="24" width="60" height="8" rx="4" fill="#FFFFFF" opacity="0.35"/>
+
+  <rect x="234" y="92" width="12" height="36" rx="6" fill="#0b0b0b"/>
+  <path d="M240 126c-12 12-18 24-18 40" fill="none" stroke="#0b0b0b" stroke-width="6" stroke-linecap="round"/>
+  <path d="M240 126c12 12 18 24 18 40" fill="none" stroke="#0b0b0b" stroke-width="6" stroke-linecap="round"/>
+  <path d="M228 120c-42 8-70 48-74 98-4 44 8 70 32 70 26 0 50-26 50-72 0-32 4-62-8-96Z" fill="#004AAD"/>
+  <path d="M252 120c42 8 70 48 74 98 4 44-8 70-32 70-26 0-50-26-50-72 0-32-4-62 8-96Z" fill="#4D8CFF"/>
+
+  <g transform="rotate(-5 78 256)">
+    <rect x="20" y="216" width="116" height="76" rx="6" fill="#FFFFFF" stroke="#0b0b0b" stroke-width="3"/>
+    <rect x="32" y="230" width="58" height="6" rx="3" fill="#004AAD"/>
+    <rect x="32" y="244" width="92" height="4" rx="2" fill="#0b0b0b" opacity="0.25"/>
+    <rect x="32" y="254" width="74" height="4" rx="2" fill="#0b0b0b" opacity="0.25"/>
+    <path d="M32 276c16-10 24 8 38 0s16-8 30 2" fill="none" stroke="#16794A" stroke-width="4" stroke-linecap="round"/>
+  </g>
+
+  <g>
+    <ellipse cx="420" cy="262" rx="30" ry="10" fill="#16794A"/>
+    <rect x="390" y="242" width="60" height="20" fill="#16794A"/>
+    <ellipse cx="420" cy="242" rx="30" ry="10" fill="#16794A"/>
+    <ellipse cx="420" cy="242" rx="16" ry="5" fill="#F4F5F7" opacity="0.4"/>
+  </g>
+</svg>

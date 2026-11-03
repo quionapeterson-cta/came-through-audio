@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 480 320" role="img" aria-label="A heart beating out a pulse line, between a stack of coins and a record: performance royalties collected by your PRO">
+  <rect width="480" height="320" fill="#F4F5F7"/>
+  <rect width="480" height="78" fill="#0b0b0b"/>
+  <rect x="28" y="22" width="120" height="10" rx="5" fill="#FFFFFF" opacity="0.9"/>
+  <rect x="28" y="42" width="78" height="8" rx="4" fill="#4D8CFF"/>
+  <rect x="392" y="24" width="60" height="8" rx="4" fill="#FFFFFF" opacity="0.35"/>
+
+  <path d="M240 288C152 234 96 192 96 142c0-34 26-58 58-58 28 0 52 18 86 54 34-36 58-54 86-54 32 0 58 24 58 58 0 50-56 92-144 146Z" fill="#004AAD"/>
+  <path d="M240 288C152 234 96 192 96 142c0-34 26-58 58-58 28 0 52 18 86 54" fill="none" stroke="#4D8CFF" stroke-width="4" opacity="0.55"/>
+  <path d="M148 160h42l16-30 20 62 18-38 14 6h58" fill="none" stroke="#FFFFFF" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+
+  <g>
+    <ellipse cx="66" cy="252" rx="32" ry="11" fill="#16794A"/>
+    <rect x="34" y="232" width="64" height="20" fill="#16794A"/>
+    <ellipse cx="66" cy="232" rx="32" ry="11" fill="#16794A"/>
+    <ellipse cx="66" cy="232" rx="18" ry="6" fill="#F4F5F7" opacity="0.4"/>
+  </g>
+  <g>
+    <ellipse cx="414" cy="252" rx="28" ry="10" fill="#0b0b0b"/>
+    <rect x="386" y="234" width="56" height="18" fill="#0b0b0b"/>
+    <ellipse cx="414" cy="234" rx="28" ry="10" fill="#0b0b0b"/>
+    <ellipse cx="414" cy="234" rx="15" ry="5" fill="#4D8CFF"/>
+  </g>
+</svg>

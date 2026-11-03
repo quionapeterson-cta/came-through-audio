@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 480 320" role="img" aria-label="A pair of kidneys filtering a stream of music notes into coins: mechanical royalties collected by The MLC">
+  <rect width="480" height="320" fill="#F4F5F7"/>
+  <rect width="480" height="78" fill="#0b0b0b"/>
+  <rect x="28" y="22" width="120" height="10" rx="5" fill="#FFFFFF" opacity="0.9"/>
+  <rect x="28" y="42" width="74" height="8" rx="4" fill="#4D8CFF"/>
+  <rect x="392" y="24" width="60" height="8" rx="4" fill="#FFFFFF" opacity="0.35"/>
+
+  <path d="M206 92c-38-4-64 26-66 76-2 46 20 78 48 78 22 0 34-18 34-44 0-24 8-38 8-60 0-30-10-48-24-50Z" fill="#004AAD"/>
+  <path d="M274 92c38-4 64 26 66 76 2 46-20 78-48 78-22 0-34-18-34-44 0-24-8-38-8-60 0-30 10-48 24-50Z" fill="#4D8CFF"/>
+  <path d="M218 246c0 16 6 26 20 32" fill="none" stroke="#0b0b0b" stroke-width="6" stroke-linecap="round"/>
+  <path d="M262 246c0 16-6 26-20 32" fill="none" stroke="#0b0b0b" stroke-width="6" stroke-linecap="round"/>
+
+  <path d="M96 296c60-26 228-26 288 0" fill="none" stroke="#0b0b0b" stroke-width="2" stroke-dasharray="7 9" opacity="0.4"/>
+  <g fill="#16794A">
+    <circle cx="112" cy="282" r="8"/>
+    <rect x="118" y="252" width="4" height="30" rx="2"/>
+    <path d="M122 252l16 6" stroke="#16794A" stroke-width="5" stroke-linecap="round"/>
+  </g>
+  <g fill="#16794A">
+    <circle cx="336" cy="282" r="8"/>
+    <rect x="342" y="252" width="4" height="30" rx="2"/>
+    <path d="M346 252l16 6" stroke="#16794A" stroke-width="5" stroke-linecap="round"/>
+  </g>
+</svg>
