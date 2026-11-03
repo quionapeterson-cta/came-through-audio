@@ -169,6 +169,7 @@
   --ink-border: oklch(0.25 0 0);
   --electric: #4D8CFF; /* Electric Cobalt: accent text and icons on Primary Black (BRANDING.md §2) */
   --brand-platinum-deep: #b4b2ad; /* Darker Platinum: the homepage hero letterforms (BRANDING.md §1 exception) */
+  --brand-platinum-face: #a3a19d; /* One step deeper for the two remembered words: "YOUR" and "DISTRIBUTION" (founder, 2026-11-03) */
   --caution: oklch(0.86 0.17 92);
 }
 
@@ -287,7 +288,7 @@ body { font-family: var(--font-sans); -webkit-font-smoothing: antialiased; -moz-
  * letter the same slot, which is what makes the outline read as evenly spaced. */
 .hero-metal { position: relative; display: inline-block; font-kerning: none; letter-spacing: 0.05em; }
 .hero-metal-ring { position: absolute; inset: 0; color: transparent; -webkit-text-stroke: 8.2px var(--brand-platinum-deep); }
-.hero-metal-face { position: relative; color: var(--brand-platinum-deep); -webkit-text-stroke: 5px var(--ink); paint-order: stroke fill; }
+.hero-metal-face { position: relative; color: var(--brand-platinum-face); -webkit-text-stroke: 5px var(--ink); paint-order: stroke fill; }
 
 /* Badge celebration: pop, shine, burst, rain (fall + sway + spin) and sparkles. Transforms end at none so badges finish sharp. */
 @keyframes badge-pop {
