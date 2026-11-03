@@ -127,7 +127,7 @@ The practical upshot: **ask The MLC for Data Access Hub enrolment and the IPI Po
 - [ ] **Today:** sign up at `dah.themlc.com` and enrol in the Public Search API. Tell me when it is submitted, and when it is approved.
 - [ ] **Optional, 10 minutes:** create the Spotify app and confirm the account is Premium.
 - [ ] **Decide:** step 6 option A, B or C.
-- [ ] **Store the credentials — don't send them.** Cloudflare → Worker → Settings → Variables and Secrets, as secrets. Vercel → Environment Variables until cutover. Never in chat, never in a file, never `VITE_`-prefixed.
+- [ ] **Store the credentials — don't send them.** Right now that is **Lovable → Cloud → Secrets** (where `RESEND_API_KEY` and the Cloudflare AI token already are), or Vercel → Environment Variables if you are serving from the backup. There is no Cloudflare Worker yet: it is created in step 1 of the move in the week of Dec 7, and its **Settings → Variables and Secrets** is where the same names go after that. Never in chat, never in a file, never `VITE_`-prefixed.
 
 ## Where the keys go (the names I'll code against)
 
@@ -137,7 +137,7 @@ The practical upshot: **ask The MLC for Data Access Hub enrolment and the IPI Po
 | `SPOTIFY_CLIENT_SECRET` | Spotify dashboard | server only |
 | `MLC_API_KEY` | MLC Data Access Hub — or `MLC_CLIENT_ID` + `MLC_CLIENT_SECRET` if issued as a pair | server only |
 
-The browser asks our Worker; the Worker holds the key. Nothing here is ever compiled into the browser bundle.
+Whichever host is running the app holds the key: the browser calls a server function, the server reads `process.env`, and nothing here is ever compiled into the browser bundle. That is also why the names matter more than the host — a key stored in Lovable's secrets today keeps working unchanged when the Worker takes over, because the code asks for the same name either way.
 
 ## What ships by Monday Nov 16, either way
 

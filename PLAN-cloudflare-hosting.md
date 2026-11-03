@@ -27,6 +27,9 @@ Source: founder, 2026-10-21, 2026-10-23 and 2026-11-03 (Lovable Pro ended Nov 11
 | `PAYMENTS_LIVE_WEBHOOK_SECRET` | Made in step 4, on the live account |
 | `CLOUDFLARE_ACCOUNT_ID` | Contract Generator. Cloudflare → AI → Workers AI → **Use REST API** → copy the Account ID |
 | `CLOUDFLARE_AI_TOKEN` | Contract Generator. Same page → **Create a Workers AI API Token** (template has Workers AI Read + Edit) → copy it once |
+| `SPOTIFY_CLIENT_ID` | Fast track (optional). Spotify dashboard → your app → Client ID |
+| `SPOTIFY_CLIENT_SECRET` | Fast track (optional). Same page → **View client secret**. Server-side only |
+| `MLC_API_KEY` (or `MLC_CLIENT_ID` + `MLC_CLIENT_SECRET`) | Fast track. The MLC Data Access Hub, if enrolment is approved by then. See FAST-TRACK-SETUP.md |
 
 **Note 1, SESSION_SECRET:** it signs the pre-launch gate, company signing links and invite opt-out links. A new value means everyone types the passcode again, and company signing links already sent stop working (just click Resend on those).
 **Note 2:** nothing else uses Lovable after the move. The AI draft-date scan was removed on 2026-10-23 (artists can type their draft dates as an optional note instead).
