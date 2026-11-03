@@ -120,7 +120,7 @@ const EMBEDDED_GROUPS: { heading: string; rows: [string, string][] }[] = [
     rows: [
       ["Title", "Your Song"],
       ["Artist", "Your artist name"],
-      ["Featured artists", "OG PI"],
+      ["Featured artists", "Brother Tim The Ghetto Evangelist"],
       ["Album", "Came Through"],
       ["Track number", "1 of 12"],
       ["Genre", "Hip-Hop/Rap"],
