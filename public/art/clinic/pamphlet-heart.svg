@@ -5,8 +5,8 @@
   <rect x="28" y="42" width="78" height="8" rx="4" fill="#4D8CFF"/>
   <rect x="392" y="24" width="60" height="8" rx="4" fill="#FFFFFF" opacity="0.35"/>
 
-  <path d="M240 288C152 234 96 192 96 142c0-34 26-58 58-58 28 0 52 18 86 54 34-36 58-54 86-54 32 0 58 24 58 58 0 50-56 92-144 146Z" fill="#004AAD"/>
-  <path d="M240 288C152 234 96 192 96 142c0-34 26-58 58-58 28 0 52 18 86 54" fill="none" stroke="#4D8CFF" stroke-width="4" opacity="0.55"/>
+  <path d="M240 288C152 234 96 192 96 142c0-34 26-58 58-58 28 0 52 18 86 54 34-36 58-54 86-54 32 0 58 24 58 58 0 50-56 92-144 146Z" fill="#E0313F"/>
+  <path d="M240 288C152 234 96 192 96 142c0-34 26-58 58-58 28 0 52 18 86 54" fill="none" stroke="#F0687F" stroke-width="4" opacity="0.75"/>
   <path d="M148 160h42l16-30 20 62 18-38 14 6h58" fill="none" stroke="#FFFFFF" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
 
   <g>

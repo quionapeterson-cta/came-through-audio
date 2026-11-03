@@ -18,12 +18,12 @@
     <circle cx="405" cy="194" r="3.5" fill="#0b0b0b" opacity="0.45"/>
     <!-- chest patch: a music note and a dollar sign -->
     <rect x="356" y="158" width="50" height="32" rx="8" fill="#E5E4E2" stroke="#0b0b0b" stroke-width="2.5"/>
-    <g fill="#16794A">
+    <g fill="#004AAD">
       <circle cx="370" cy="180" r="4.5"/>
       <rect x="373.4" y="166" width="2.8" height="14"/>
-      <path d="M376 166l8 3.5" stroke="#16794A" stroke-width="2.8" stroke-linecap="round"/>
+      <path d="M376 166l8 3.5" stroke="#004AAD" stroke-width="2.8" stroke-linecap="round"/>
     </g>
-    <g fill="none" stroke="#004AAD" stroke-width="2.8" stroke-linecap="round">
+    <g fill="none" stroke="#16794A" stroke-width="2.8" stroke-linecap="round">
       <path d="M390 166v20"/>
       <path d="M397 170c-6-3-11 0-11 3s5 3 9 3 9 1 9 4-5 4-11 2"/>
     </g>
@@ -61,5 +61,5 @@
   </g>
 
   <!-- heartbeat line -->
-  <path d="M24 200h56l14-26 16 52 18-32 14 6h58" stroke="#4D8CFF" stroke-width="4" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M24 200h56l14-26 16 52 18-32 14 6h58" stroke="#E0313F" stroke-width="4" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
 </svg>

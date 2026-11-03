@@ -22,5 +22,5 @@
   <path d="M389 150c24 4 40 16 44 34-14-8-28-10-44-8z" fill="#0b0b0b"/>
 
   <!-- heartbeat -->
-  <path d="M232 120h44l14-24 16 46 16-30 12 8h48" stroke="#4D8CFF" stroke-width="5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M232 120h44l14-24 16 46 16-30 12 8h48" stroke="#E0313F" stroke-width="5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
 </svg>
