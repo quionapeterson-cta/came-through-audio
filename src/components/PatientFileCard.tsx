@@ -1,0 +1,99 @@
+import { useState } from "react";
+import { CheckCircle2, Pencil } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { InfoTip } from "@/components/InfoTip";
+import { ProSelect } from "@/components/ProSelect";
+import { loadPatientFile, savePatientFile, type PatientFile } from "@/components/DoctorsOffice";
+
+/**
+ * The patient file (PLAN-royalty-health-hub-v2 §2 Step 1), handed over at the Front Desk the way you give your details
+ * to a receptionist before an appointment. Saved on this device per user, so a Free account never retypes it, and the
+ * Doctor reads the same file for the intake form's writer defaults. Nothing here writes to the catalog.
+ */
+export type { PatientFile };
+const blank: PatientFile = { legalName: "", pro: "", ipi: "", publishing: "", publisher: "" };
+
+const PUBLISHING: Record<Exclude<PatientFile["publishing"], "">, string> = {
+  publisher: "I have a publisher",
+  self: "I'm self-published",
+  bmi: "I'm a BMI writer with no publishing company",
+};
+
+/** What the desk needs before it can check you in: a name, and who collects the publisher half. */
+export const patientFileReady = (f: PatientFile | null | undefined) =>
+  !!f && !!f.legalName.trim() && !!f.publishing && (f.publishing !== "publisher" || !!f.publisher.trim());
+
+export const patientSummary = (f: PatientFile) =>
+  [f.pro, f.ipi ? `IPI ${f.ipi}` : "", f.publishing === "publisher" ? f.publisher || "publisher" : f.publishing ? PUBLISHING[f.publishing] : ""]
+    .filter(Boolean)
+    .join(" · ");
+
+export function PatientFileCard({ userId, defaultName, onSaved }: { userId: string; defaultName: string; onSaved?: (f: PatientFile) => void }) {
+  const [saved, setSaved] = useState<PatientFile | null>(() => loadPatientFile(userId));
+  const [file, setFile] = useState<PatientFile>(() => loadPatientFile(userId) ?? { ...blank, legalName: defaultName });
+  const [editing, setEditing] = useState(() => !loadPatientFile(userId));
+  const set = (k: keyof PatientFile, v: string) => setFile((x) => ({ ...x, [k]: v }));
+  const ready = patientFileReady(file);
+
+  function keep() {
+    savePatientFile(userId, file);
+    setSaved(file);
+    setEditing(false);
+    onSaved?.(file);
+  }
+
+  return (
+    <div className="rounded-2xl border border-border bg-muted/40 p-4">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-[2px] text-primary">Patient file</p>
+          <h4 className="mt-0.5 font-bold">{saved && !editing ? "Your details at the desk" : "First visit? Leave your details"}</h4>
+        </div>
+        {editing
+          ? <span className="text-xs text-muted-foreground">Kept on this device, so you never retype it.</span>
+          : <Button size="sm" variant="outline" onClick={() => { setFile(saved ?? file); setEditing(true); }}><Pencil />Edit</Button>}
+      </div>
+
+      {editing ? (
+        <div className="mt-3 grid gap-3 sm:grid-cols-2">
+          <label className="space-y-1 text-sm sm:col-span-2">
+            <span className="inline-flex items-center">Legal name<InfoTip text="Your full legal name, the way your PRO has it on file. Agencies match writers by legal name." /></span>
+            <Input aria-label="Legal name" value={file.legalName} onChange={(e) => set("legalName", e.target.value)} />
+          </label>
+          <label className="space-y-1 text-sm">
+            <span className="inline-flex items-center">PRO<InfoTip text="The performing rights organization you joined as a writer, like BMI or ASCAP." /></span>
+            <ProSelect value={file.pro} onChange={(v) => set("pro", v)} />
+          </label>
+          <label className="space-y-1 text-sm">
+            <span className="inline-flex items-center">IPI number<InfoTip text="Your 9-11 digit writer number. Your PRO gives it to you when you register, so it can wait." /></span>
+            <Input aria-label="IPI number" inputMode="numeric" value={file.ipi} onChange={(e) => set("ipi", e.target.value.replace(/[^0-9]/g, ""))} />
+          </label>
+          <label className="space-y-1 text-sm sm:col-span-2">
+            <span className="inline-flex items-center">Publisher status<InfoTip text="Who collects the publisher half of your songwriter money. If you don't have a publisher, you're self-published." /></span>
+            <select aria-label="Publisher status" className="w-full rounded-md border border-input bg-background px-3 py-2" value={file.publishing} onChange={(e) => set("publishing", e.target.value)}>
+              <option value="">Choose one...</option>
+              <option value="publisher">I have a publisher</option>
+              <option value="self">I&apos;m self-published</option>
+              <option value="bmi">I&apos;m a BMI writer with no publishing company</option>
+            </select>
+          </label>
+          {file.publishing === "publisher" && (
+            <label className="space-y-1 text-sm sm:col-span-2">Publisher name<Input aria-label="Publisher name" value={file.publisher} onChange={(e) => set("publisher", e.target.value)} /></label>
+          )}
+          <div className="flex flex-wrap items-center gap-2 sm:col-span-2">
+            <Button size="sm" disabled={!ready} onClick={keep}><CheckCircle2 />Save my details</Button>
+            {!ready && <span className="text-xs text-muted-foreground">A legal name and your publisher status are all the desk needs.</span>}
+          </div>
+        </div>
+      ) : (
+        saved && (
+          <p className="mt-2 text-sm text-muted-foreground">
+            <b className="text-foreground">{saved.legalName}</b>
+            {patientSummary(saved) ? ` · ${patientSummary(saved)}` : ""}
+          </p>
+        )
+      )}
+    </div>
+  );
+}

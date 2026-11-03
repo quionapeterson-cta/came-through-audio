@@ -32,7 +32,8 @@ import { INTERNATIONAL, countryByCode, guessCountry } from "@/lib/repertoires";
 import { loadOnboarding, saveOnboarding } from "@/lib/artist-profile";
 import { WaitingArea } from "@/components/WaitingArea";
 import { ClinicArt } from "@/components/ClinicArt";
-import { ClinicalScan, OfficeSteps } from "@/components/DoctorsOffice";
+import { ClinicalScan, loadPatientFile, OfficeSteps } from "@/components/DoctorsOffice";
+import { PatientFileCard, patientFileReady } from "@/components/PatientFileCard";
 import { UpgradeCards } from "@/components/UpgradeCards";
 import { StreamingFastTrack } from "@/components/StreamingFastTrack";
 
@@ -75,6 +76,9 @@ export function RoyaltyHealthCheck({ userId, canCatalog, canExport, onUpgrade, o
   const [desk, setDesk] = useState<"reports" | "checklist" | undefined>();
   /** Which intake the visit opened on: Streaming Profile, the agency examination, or the Patient Intake Form. */
   const [intakeWanted, setIntakeWanted] = useState<IntakeKind | undefined>();
+  /** The patient file handed over at the Front Desk. The Doctor reads it for the intake form's writer defaults. */
+  const [patient, setPatient] = useState(() => loadPatientFile(userId));
+  const patientReady = patientFileReady(patient);
 
   useEffect(() => {
     Promise.all([
@@ -418,7 +422,8 @@ export function RoyaltyHealthCheck({ userId, canCatalog, canExport, onUpgrade, o
         </li>
       ))}</ul>
     </div>}
-    <RoyaltyInspector onEmbed={onEmbed} onExpert={book} onSave={saveInspector} onRunCheck={(id) => checkSong(id)} editing={editing} onDoneEditing={() => setEditing(undefined)} />
+    <RoyaltyInspector onEmbed={onEmbed} onExpert={book} onSave={saveInspector} onRunCheck={(id) => checkSong(id)} editing={editing} onDoneEditing={() => setEditing(undefined)}
+      defaults={patient ? { writer: patient.legalName, pro: patient.pro, ipi: patient.ipi } : undefined} />
   </div>;
   const why = (
     <div className="space-y-4">
@@ -521,9 +526,7 @@ export function RoyaltyHealthCheck({ userId, canCatalog, canExport, onUpgrade, o
             ? "Check in and get your catalog diagnosed for missing royalties, mismatched writers and unregistered songs."
             : "Check in, bring your streaming profile or your agency records, and the Doctor examines every song you have."}
         </p>
-        <div className="mt-4 flex flex-wrap justify-center gap-2">
-          <Button size="lg" onClick={() => beginVisit()}><Stethoscope />Check In</Button>
-        </div>
+        <p className="mt-3 text-sm font-semibold text-primary">Check in at the Front Desk below.</p>
       </div>
     </section>
   );
@@ -558,8 +561,14 @@ export function RoyaltyHealthCheck({ userId, canCatalog, canExport, onUpgrade, o
         <ClinicArt name="frontDesk" className="h-28 w-full shrink-0 object-cover sm:h-32 sm:w-48" />
         <div className="min-w-0 flex-1">
           <p className="text-xs font-semibold uppercase tracking-[2px] text-primary">Front Desk</p>
-          <h3 id="front-desk" className="mt-1 text-xl font-bold">Your file</h3>
-          <p className="mt-1 text-sm text-muted-foreground">Everything already filed: the reports the Doctor has written, and the checklist you were working through.</p>
+          <h3 id="front-desk" className="mt-1 text-xl font-bold">Check in here</h3>
+          <p className="mt-1 text-sm text-muted-foreground">Sign in the way you would at any front desk: your details, then the Doctor sees you.</p>
+          <div className="mt-3 flex flex-wrap items-center gap-2">
+            <Button size="lg" onClick={() => beginVisit()} disabled={!patientReady}>
+              <Stethoscope />Check In
+            </Button>
+            {!patientReady && <span className="text-xs text-muted-foreground">Leave your legal name and publisher status below to check in.</span>}
+          </div>
           <div className="mt-3 flex flex-wrap gap-2">
             <Button variant={desk === "reports" ? "default" : "outline"} aria-expanded={desk === "reports"} onClick={() => setDesk(desk === "reports" ? undefined : "reports")}>
               <FileText />Past Royalty Health Reports{reports?.length ? ` · ${reports.length}` : ""}
@@ -569,6 +578,10 @@ export function RoyaltyHealthCheck({ userId, canCatalog, canExport, onUpgrade, o
             </Button>
           </div>
         </div>
+      </div>
+      {/* Step 1 of the visit, at the desk where you would hand it over. */}
+      <div className="border-b border-border p-5">
+        <PatientFileCard userId={userId} defaultName={loadOnboarding(userId)?.legalName ?? ""} onSaved={setPatient} />
       </div>
       {desk === "reports" && <div id="past-reports" className="scroll-mt-4 border-b border-border p-5">{reportsPanel}</div>}
       {desk === "checklist" && <div id="song-by-song" className="scroll-mt-4 p-5">

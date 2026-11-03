@@ -33,7 +33,7 @@ Only **three** things live on the Hub:
               +--------------------------------------+
               |        Royalty Health Doctor         |   (centered)
               |  <existing subheading, unchanged>    |
-              |             [ Check In ]             |
+              |      (check in at the Front Desk)    |
               +--------------------------------------+
 
 +----------------------------+   +----------------------------+
@@ -44,7 +44,7 @@ Only **three** things live on the Hub:
 +----------------------------+   +----------------------------+
 ```
 
-- Doctor check-in card is **centered**. Primary action: **Check In** (they showed up to their appointment).
+- Doctor card is **centered** as the masthead. **Founder decision, 2026-11-03:** **Check In lives at the Front Desk**, not on the Doctor card - at a real appointment you sign in at the desk. The desk holds the patient file, the Check In button, Past Royalty Health Reports and Continue Song Checklist.
 - Empty state (no reports yet): **"See the Royalty Health Doctor to file your first diagnostic report."**
 - **Removed** from the Hub: standalone Royalty Inspector dropdown, "Confirm with your agency" dropdown, standalone Song Checklist accordion. Their work moves *inside* the visit (§2).
 - **Front Desk** = Past Royalty Health Reports (open, download PDF) + **Continue Song Checklist** (the existing `HealthChecklist.tsx`, kept as is: Attention / Later / Healthy groups, agency-specific steps).
