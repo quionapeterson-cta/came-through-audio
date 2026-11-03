@@ -282,8 +282,10 @@ body { font-family: var(--font-sans); -webkit-font-smoothing: antialiased; -moz-
 .dark .mark-on-light { display: none; }
 .dark .mark-on-dark { display: block; }
 
-.hero-metal { position: relative; display: inline-block; }
-.hero-metal-ring { position: absolute; inset: 0; color: transparent; -webkit-text-stroke: 8.6px var(--brand-platinum-deep); }
+/* Kerning off: the ring copy reaches outward from every letter, so a kerned pair (Y-O) closed its gap while the
+ * rest stayed open and the word read as unevenly spaced. Even advances give every letter the same slot. */
+.hero-metal { position: relative; display: inline-block; font-kerning: none; }
+.hero-metal-ring { position: absolute; inset: 0; color: transparent; -webkit-text-stroke: 8.2px var(--brand-platinum-deep); }
 .hero-metal-face { position: relative; color: var(--brand-platinum-deep); -webkit-text-stroke: 5px var(--ink); paint-order: stroke fill; }
 
 /* Badge celebration: pop, shine, burst, rain (fall + sway + spin) and sparkles. Transforms end at none so badges finish sharp. */
