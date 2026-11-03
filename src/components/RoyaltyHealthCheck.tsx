@@ -409,7 +409,7 @@ export function RoyaltyHealthCheck({ userId, canCatalog, canExport, onUpgrade, o
           <span className="min-w-0 flex-1 truncate font-semibold">{t.title || "Untitled"}<span className="font-normal text-muted-foreground">{t.artist ? ` · ${t.artist}` : ""}</span></span>
           <Button size="sm" variant="ghost" onClick={() => setEditing(t)}>Edit</Button>
           <Button size="sm" variant="outline" onClick={() => checkSong(t.id)}><Stethoscope />Check</Button>
-          <Button size="icon" variant="ghost" aria-label={`Remove ${t.title}`} onClick={() => void confirmAction({ title: `Remove "${t.title || "Untitled"}"?`, text: "It's removed from the Royalty Inspector and your Song Health Checklist. Saved reports stay in My reports.", action: "Remove" }).then((ok) => { if (ok) void removeInspector(t.id); })}><Trash2 /></Button>
+          <Button size="icon" variant="ghost" aria-label={`Remove ${t.title}`} onClick={() => void confirmAction({ title: `Remove "${t.title || "Untitled"}"?`, text: "It's removed from the Patient Intake Form and your Song Health Checklist. Saved reports stay in Past Royalty Health Reports.", action: "Remove" }).then((ok) => { if (ok) void removeInspector(t.id); })}><Trash2 /></Button>
         </li>
       ))}</ul>
     </div>}
@@ -471,9 +471,8 @@ export function RoyaltyHealthCheck({ userId, canCatalog, canExport, onUpgrade, o
         <h2 id="doctor-empty" className="mt-1 text-xl font-bold">See the Royalty Health Doctor to file your first diagnostic report.</h2>
         <div className="mt-4 flex flex-wrap justify-center gap-2">{runButton}</div>
       </section>
-      <WaitingArea />
       {inspector}
-      <Section title="Why this matters" summary="Your distributor only collects part of your money · unclaimed royalties don't wait forever">{why}</Section>
+      <Section title="Waiting Area" summary="What the Doctor examines · your distributor only collects part of your money · unclaimed royalties don't wait forever"><div className="space-y-4"><WaitingArea />{why}</div></Section>
     </div>
   );
 
@@ -506,8 +505,6 @@ export function RoyaltyHealthCheck({ userId, canCatalog, canExport, onUpgrade, o
           <Button variant="outline" className="justify-start" onClick={() => showSong()}>Continue Song Checklist</Button>
         </div>
       </section>
-
-      <WaitingArea />
 
       {!canCatalog && <UpgradeCards onUpgrade={(id) => onUpgrade(id)} />}
       {running && <p className="text-sm text-muted-foreground">Looking up song {running.done + 1} of {running.total} on streaming…</p>}
@@ -543,8 +540,8 @@ export function RoyaltyHealthCheck({ userId, canCatalog, canExport, onUpgrade, o
           summary={Object.values(listSummaries).some(Boolean) ? Object.entries(listSummaries).filter(([, v]) => v).map(([id, v]) => `${listSocieties.find((x) => x.id === id)?.name}: ${v!.matched} matched${v!.differences ? `, ⚠️ ${v!.differences} different` : ""}`).join(" · ") : "Upload what each agency has on file · turns estimates into confirmed matches"}>
           <AgencyLists societies={listSocieties} songsFor={songsFor} summaries={listSummaries} onApply={applyList} />
         </Section>
-        <Section title="Royalty Inspector" open={inspectorOpen} onToggle={setInspectorOpen} summary={`Check a song that isn't in your catalog · ${songsLabel(inspectorSongs.length)} inspected`}>{inspector}</Section>
-        <Section title="Why this matters" summary="Your distributor only collects part of your money · unclaimed royalties don't wait forever · common mismatches">{why}</Section>
+        <Section title="Patient Intake Form" open={inspectorOpen} onToggle={setInspectorOpen} summary={`Single Track Checkup · check a song that isn't in your catalog · ${songsLabel(inspectorSongs.length)} inspected`}>{inspector}</Section>
+        <Section title="Waiting Area" summary="What the Doctor examines · your distributor only collects part of your money · common mismatches"><div className="space-y-4"><WaitingArea />{why}</div></Section>
       </div>
     </div>
   );

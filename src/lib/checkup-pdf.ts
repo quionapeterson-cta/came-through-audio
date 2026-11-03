@@ -1,6 +1,6 @@
 import type { jsPDF as JsPDF } from "jspdf";
 import { brandFooter, brandHeader, COBALT, ensureSpace, font, INK, label, MARGIN, MUTED, newBrandedPdf, PANEL, RULE } from "@/lib/brand-pdf";
-import { CLEAR_DX, CLEAR_WHAT, STATE_LABEL, type Checkup, type Finding, type OrganState } from "@/lib/royalty-checkup";
+import { CLEAR_DX, CLEAR_WHAT, STATE_LABEL, diagnosisLine, type Checkup, type Finding, type OrganState } from "@/lib/royalty-checkup";
 
 /** The Royalty Health Report as a branded PDF: the main finding and treatment, then every organ's report. */
 const RED: [number, number, number] = [193, 18, 31];
@@ -78,7 +78,7 @@ export async function buildCheckupPdf(c: Checkup, artist: string, country: strin
   const h = 26 + what.length * 5;
   pdf.setFillColor(...PANEL).roundedRect(MARGIN, y, width(pdf), h, 3, 3, "F");
   label(pdf, `Overall health ${c.score}%  ·  Main finding`, MARGIN + 8, y + 8, COBALT, 8.5);
-  font(pdf, "bold", 16).setTextColor(...INK).text(lead?.dx ?? CLEAR_DX, MARGIN + 8, y + 16);
+  font(pdf, "bold", 16).setTextColor(...INK).text(lead ? diagnosisLine(lead) : CLEAR_DX, MARGIN + 8, y + 16);
   font(pdf, "regular", 11).setTextColor(...INK);
   what.forEach((l, i) => pdf.text(l, MARGIN + 8, y + 23 + i * 5));
   y += h + 8;

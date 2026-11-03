@@ -150,6 +150,12 @@ export function HealthCheckIn({ scope, options, onScope, rows, countryPicker, si
           </div>
         </fieldset>}
 
+        {/* PLAN-royalty-health-hub-v2 §2: the locked recommendation, above the intake options. */}
+        <div className="mt-6 rounded-2xl border border-primary/40 bg-primary/5 p-4 text-sm">
+          <p className="font-bold">Doctor's Recommendation</p>
+          <p className="mt-1 text-muted-foreground"><em>For our strongest diagnosis, provide both your streaming profile and your official agency exports. Streaming verifies what is actively released and generating plays, while agency records verify what your collection societies actually have on file—cross-referencing both catches every uncollected dollar.</em></p>
+        </div>
+
         <div className="mt-6">
           <h3 className="mb-3 text-sm font-bold">What have you done already?</h3>
           <ul className="divide-y divide-border rounded-2xl border border-border">

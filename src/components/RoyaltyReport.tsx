@@ -4,7 +4,7 @@ import { ChevronLeft, ChevronRight, FileDown, Lock, PlayCircle, Stethoscope } fr
 import { Explainer } from "@/components/Explainer";
 import { Button } from "@/components/ui/button";
 import { ArtDefs, BodyDiagram, MiniRhythm, MONITOR, OrganIcon, RHYTHM, Scan, Tool } from "@/components/royalty-art";
-import { CLEAR_DX, CLEAR_WHAT, STATE_LABEL, type Checkup, type Finding, type Organ, type OrganId, type OrganState, type StepAction, type TreatmentStep, sinceLast } from "@/lib/royalty-checkup";
+import { CLEAR_DX, CLEAR_WHAT, STATE_LABEL, diagnosisLine, type Checkup, type Finding, type Organ, type OrganId, type OrganState, type StepAction, type TreatmentStep, sinceLast } from "@/lib/royalty-checkup";
 
 type Props = {
   checkup: Checkup;
@@ -128,7 +128,7 @@ export function RoyaltyReport({ checkup, since, date, country, countryPicker, ru
 
           <div className="rr-eyebrow" style={{ color: "var(--rr-pink)" }}>Main finding</div>
           {lead ? <>
-            <h3 className="-mt-3 text-3xl font-extrabold leading-tight tracking-tight md:text-4xl">{lead.dx}</h3>
+            <h3 className="-mt-3 text-3xl font-extrabold leading-tight tracking-tight md:text-4xl">{diagnosisLine(lead)}</h3>
             <p className="rr-muted -mt-2 max-w-[60ch] text-lg">{lead.what} <b className="text-white">Cause:</b> {lead.cause}</p>
             <div className="rr-pad">
               <div className="flex items-center gap-2"><span className="rr-rx" aria-hidden="true">℞</span><span className="rr-eyebrow" style={{ color: "var(--rr-prestige)" }}>Treatment plan</span></div>
@@ -150,7 +150,7 @@ export function RoyaltyReport({ checkup, since, date, country, countryPicker, ru
             {since.healed.length > 0 && <span className="rounded-full border px-3 py-1.5" style={{ borderColor: "var(--rr-hero-line)" }}><b>Healed:</b> {since.healed.join(", ")}</span>}
             {since.fresh > 0 && <span className="rounded-full border px-3 py-1.5" style={{ borderColor: "var(--rr-hero-line)" }}><b>New:</b> {since.fresh} finding{since.fresh === 1 ? "" : "s"}</span>}
           </div>}
-          <p className="rr-muted text-xs">Based on your catalog, the steps you've confirmed and live streaming lookups. Agency databases can't be searched automatically yet; upload your agency lists to confirm for real.</p>
+          <p className="rr-muted text-xs">Based on your catalog, the steps you've confirmed and live streaming lookups. Upload your agency exports to confirm what your societies have on file in full.</p>
         </div>
       </section>
 
@@ -187,7 +187,7 @@ function OrganReport({ organ, organs, canExport, onAction, onOpen, onExpert, onR
         <OrganIcon organ={organ} className="h-[72px] w-[72px] md:h-28 md:w-28" />
         <div>
           <div className="rr-eyebrow" style={{ color: "var(--rr-cobalt-text)" }}>{organ.name} report · {organ.system}</div>
-          <h4 className="mt-1 text-2xl font-extrabold leading-tight tracking-tight md:text-3xl">{main?.dx ?? "Healthy and strong."}</h4>
+          <h4 className="mt-1 text-2xl font-extrabold leading-tight tracking-tight md:text-3xl">{main ? diagnosisLine(main) : "Healthy and strong."}</h4>
           <p className="mt-1 text-sm text-muted-foreground">{main?.what ?? "Everything we check for this organ passed."}</p>
         </div>
         <div className="col-span-2 flex flex-col items-start gap-1 md:col-span-1 md:items-end">

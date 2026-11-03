@@ -400,6 +400,24 @@ function word(id: ConditionId, list: AffectedSong[], rows: CheckupInput["rows"])
   throw new Error(`Unknown condition ${id as string}`);
 }
 
+/** The Royalty Impact after the colon in a diagnosis headline (PLAN-royalty-health-hub-v2 §2/§4). */
+export const ORGAN_IMPACT: Record<OrganId, string> = {
+  heart: "Performance royalties uncollected",
+  lungs: "Publisher share unclaimed",
+  kidneys: "Mechanical royalties held or unmatched",
+  brain: "Payments can't find the right person",
+  spine: "Digital performance royalties uncollected",
+  pulse: "Registrations unconfirmed, so royalties may not arrive",
+};
+
+/**
+ * The locked diagnosis headline: `Diagnosis: [Organ Condition] : [Royalty Impact]`.
+ * e.g. "Diagnosis: Blockage in the left heart artery : Performance royalties uncollected."
+ */
+export function diagnosisLine(f: { organ: OrganId; dx: string }): string {
+  return `Diagnosis: ${f.dx.replace(/\.$/, "")} : ${ORGAN_IMPACT[f.organ]}.`;
+}
+
 /** The headline when nothing is wrong. */
 export const CLEAR_DX = "Clean bill of health. Strong pulse.";
 export const CLEAR_WHAT = "Every song is registered and confirmed, so every royalty it earns can reach you. Came Through Audio came through for your catalog.";
