@@ -21,19 +21,34 @@ Against $0 MRR in beta that fee is infinite as a percentage. Against $500 MRR it
 
 ## Before paying: one email that might make it free
 
-The registration form conflates the bulk feed with the public API. The statute doesn't: §115(d)(3)(E)(v)'s no-charge access belongs to DSPs and Significant Non-Blanket Licensees, while the Musical Works Database Terms of Use describe a database reachable "by a bulk download and/or public API that any member of the public can obtain or use." It is worth one email before $400 leaves:
+The form lets you tick the Public API on its own — *"You are interested in: ☐ The Bulk Data Feed ☑ The Public API"* — and then asks which address should receive API access. But the payment screen behind it still says, verbatim:
 
-> Hello — I'm the founder of Came Through Audio, a small US label and music technology company. I registered through the Data Access Hub for **Public Search API** access, and the form I was routed to is titled "Registration for The MLC Bulk Data Subscription," quoting $100 setup and $25/month.
+> Access to the MLC Bulk Data Subscription carries a $100.00 setup fee. This fee includes one month of access to the weekly database snapshots.
 >
-> I only need the **Public Search API** — single-work lookups keyed by ISRC or writer and title, a few hundred per week, server-side, cached, never redistributed. I am not requesting the Bulk Data Feed and have no use for a full copy of the database.
+> Each subsequent month of access carries a fee of $25.
+
+Weekly database snapshots **are** the bulk feed, described as though they were what an API-only selection buys. The same page says to contact `publicapi@themlc.com` directly if you already hold a Bulk Data Subscription, which identifies the API team.
+
+**To:** `publicapi@themlc.com` · **Cc:** `bulk_data@themlc.com` · **Subject:** Public API access — is the $100 setup / $25 monthly fee bulk-only?
+
+> Hello,
 >
-> Could you confirm whether Public Search API access alone carries the $100/25 fee, or whether that fee applies only to the bulk delivery, given the form covers "the Bulk Data Feed and/or The MLC Public API"? If a fee does apply, I'd be grateful for the term, cancellation terms, and whether a startup or beta-stage rate exists. Happy to provide any details about the product.
+> I registered on The MLC Data Access Hub and selected **The Public API** only; I did not select The Bulk Data Feed. At the subscription step, the form still quoted the Bulk Data Subscription terms — a $100.00 setup fee including one month of access to the weekly database snapshots, then $25 per month. I have not completed payment, because I do not think I am buying what that page describes.
 >
-> Thank you — [name], Came Through Audio, camethroughaudio.com
+> Could you confirm:
+>
+> 1. Does Public API access on its own carry the $100 setup and $25 monthly fee, or does that fee attach only to the Bulk Data Feed?
+> 2. If there is an API-only arrangement, what are its terms, and what credentials are issued — a single API key, or a client ID and secret?
+> 3. What are the rate limits, and is there a sandbox or test environment?
+> 4. If the fee does apply to the API, is a startup or beta-stage rate available, and what are the minimum term, cancellation and refund terms?
+> 5. Does the API return works and parties only, and can a lookup be keyed by **ISRC** as well as by title and writer?
+>
+> Our use is deliberately small: a few hundred single-work lookups per week, made server-side when a user asks about one release, cached so repeat views cost nothing, and never redistributed. We are not asking for a copy of the database.
+>
+> Thank you,
+> [name], Founder, Came Through Audio — camethroughaudio.com
 
 Three possible answers, all useful: it's free (great), it's $400/yr (pay it when the trigger hits), or it's bulk-only and there is no API-only tier (then the manual route below is the product for beta).
-
----
 
 ## The free route: assisted manual check
 
