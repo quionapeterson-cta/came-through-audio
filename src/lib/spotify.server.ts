@@ -104,6 +104,8 @@ type SpAlbum = {
   tracks?: { items?: SpTrackRef[] };
 };
 
+type AlbumsPage = { items?: SpAlbum[]; next?: string; total?: number };
+
 const newestFirst = (a: SpAlbum, b: SpAlbum) =>
   (b.release_date ?? "").localeCompare(a.release_date ?? "");
 
@@ -180,7 +182,7 @@ export async function spotifyDiscography(
     let url: string | undefined =
       `${SPOTIFY_API}/artists/${artistId}/albums?include_groups=album,single&limit=50&market=US`;
     for (let page = 0; url && page < 4 && found.length < maxReleases; page++) {
-      const body = await call<{ items?: SpAlbum[]; next?: string; total?: number }>(url);
+      const body: AlbumsPage = await call<AlbumsPage>(url);
       total = body.total ?? total;
       for (const album of body.items ?? [])
         if (album?.id && !found.some((a) => a.id === album.id)) found.push(album);
