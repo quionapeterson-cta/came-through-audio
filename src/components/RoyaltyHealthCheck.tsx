@@ -520,7 +520,6 @@ export function RoyaltyHealthCheck({ userId, canCatalog, canExport, onUpgrade, o
   // The Hub is the Doctor, the Front Desk and the Waiting Area (plan §1). Everything else happens inside the visit.
   const doctor = (
     <section aria-labelledby="doctor-in" className="mx-auto max-w-3xl overflow-hidden rounded-3xl border-2 border-primary/40 bg-card shadow-sm">
-      <ClinicArt name="exam" className="w-full rounded-none border-0" />
       <div className="p-6 text-center">
         <p className="text-xs font-semibold uppercase tracking-[2px] text-primary">Royalty Health Doctor</p>
         <h2 id="doctor-in" className="mt-1 text-2xl font-bold">
@@ -533,6 +532,8 @@ export function RoyaltyHealthCheck({ userId, canCatalog, canExport, onUpgrade, o
         </p>
         <p className="mt-3 text-sm font-semibold text-primary">Check in at the Front Desk below.</p>
       </div>
+      {/* The Doctor's picture sits under the name and above the Front Desk, where you check in. */}
+      <div className="border-t border-border"><ClinicArt name="exam" className="w-full rounded-none border-0" /></div>
     </section>
   );
 
