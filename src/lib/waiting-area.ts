@@ -1,9 +1,11 @@
 import type { OrganId } from "@/lib/royalty-checkup";
 
 /**
- * Waiting Area pamphlets (PLAN-royalty-health-hub-v2 §1). The organ, its healthy reading, its bad reading and the
- * royalty meaning are the plan's table; the paragraphs are the education around them, so a visitor can read the whole
- * leaflet and not just the headline. Kept out of the component so the file only exports a component (react-refresh).
+ * Waiting Area pamphlets (PLAN-royalty-health-hub-v2 §1). Each organ means the same thing here as in the diagnosis
+ * (`royalty-checkup.ts`, PLAN-royalty-health-report §2): Heart = performance, Lungs = mechanicals, Kidneys = digital
+ * performance, Brain = metadata, Spine = splits and paperwork. **Founder decision, 2026-11-03:** the plan's pamphlet
+ * table was brought into line with the built diagnosis rather than the other way round. Kept out of the component so the
+ * file only exports a component (react-refresh).
  */
 export type Pamphlet = {
   organ: Extract<OrganId, "heart" | "lungs" | "kidneys" | "brain" | "spine">;
@@ -28,35 +30,35 @@ export const PAMPHLETS: Pamphlet[] = [
       "The money has two halves. The writer half is yours. The publisher half is paid to a publisher, or to you as a self-published writer. Both halves are collected on the same plays, so a song with only one half set up keeps collecting only half of what it earns.",
       "What the Doctor looks for: every song registered with your PRO, a legal name and an IPI for each writer in a PRO, and an answer on the publisher side. A song edited after it was registered counts as needing an update, because the society still has the old details.",
     ],
-    healthy: "Registered with your PRO, with writers and splits on file",
-    unhealthy: "Not registered, or missing writers",
-    meaning: "Performance royalties go uncollected",
+    healthy: "Registered with your PRO, with writers + splits on file",
+    unhealthy: "Not registered / missing writers",
+    meaning: "Performance royalties uncollected",
   },
   {
     organ: "lungs",
-    subject: "Publishing (the publisher half)",
-    lede: "Someone has to collect the publisher half. That someone can be you.",
-    body: [
-      "A publisher registers and administers songs, licenses them, and collects the publisher half of every performance and mechanical royalty. If you don't have one, you are self-published: you keep that half, and you do that work.",
-      "BMI has a special case. A BMI writer with no publishing company is paid both halves by BMI, so those songs need neither a publisher nor the Self-published tick. Writers at other PROs need one or the other, which is why the Doctor asks instead of assuming.",
-      "Publisher shares are entered as 100% of the publisher half, not of the whole song. Shares that add up to 200% are the usual mistake, and they read as out of alignment in the report.",
-    ],
-    healthy: "A publisher (or Self-published) on file, publisher shares adding up to 100%",
-    unhealthy: "No publisher, or shares that don't add up",
-    meaning: "The publisher share goes unclaimed",
-  },
-  {
-    organ: "kidneys",
     subject: "Mechanical royalties (The MLC)",
     lede: "Every stream and download pays a mechanical royalty, separate from the performance one.",
     body: [
       "A mechanical royalty is owed each time a copy of your song is made: a stream, a download, a CD. It's collected by a mechanical society — The MLC in the US — not by your PRO, so registering with one does nothing for the other.",
       "The MLC matches your composition (writers, publishers, IPIs) to a recording by its ISRC. If the ISRC is missing, the stream arrives with nothing to attach it to, and the money is held back or paid out by market share instead.",
-      "What the Doctor looks for: the work registered at the mechanical society, and an ISRC on the recording that points back to it.",
+      "Why the lungs: every stream is a breath, and a song that isn't registered for mechanicals holds its breath on all of them. What the Doctor looks for: the work registered at the mechanical society, and an ISRC on the recording that points back to it.",
     ],
-    healthy: "The work and its ISRC matched at The MLC",
-    unhealthy: "Unmatched, or missing an ISRC",
-    meaning: "Mechanical royalties are held back or unmatched",
+    healthy: "Work + ISRC matched at The MLC",
+    unhealthy: "Unmatched / missing ISRC",
+    meaning: "Mechanical royalties held / unmatched",
+  },
+  {
+    organ: "kidneys",
+    subject: "Digital performance (SoundExchange)",
+    lede: "Internet and satellite radio pay the recording, and that money has its own registry.",
+    body: [
+      "Non-interactive digital radio — radio-style streaming, satellite and cable music channels — pays the recording, not the composition. In the US, SoundExchange collects it. It's a different right from the one your PRO collects, so a song can be registered everywhere and still have nothing coming in from these plays.",
+      "SoundExchange pays the featured artist and the owner of the master, and holds a share for the session musicians and vocalists who played on it. If you own your masters, you register as both the artist and the rights owner; the master share tells them how much of that side is yours.",
+      "Why the kidneys: they filter what arrives out of the airwaves. What the Doctor looks for: the recording registered with its ISRC and UPC, the master share set, and a registration that matches the release you actually put out.",
+    ],
+    healthy: "Recording registered, master share set",
+    unhealthy: "Not registered",
+    meaning: "Digital performance (recording) royalties uncollected",
   },
   {
     organ: "brain",
@@ -67,21 +69,21 @@ export const PAMPHLETS: Pamphlet[] = [
       "Matching is literal. One writer entered two ways — two IPI numbers, or two spellings of a legal name — is two different people to the system, and the payments split between them. One ISRC used on two songs pays the wrong recording.",
       "What the Doctor looks for: an ISRC on every song, an ISWC on registered songs, one IPI per writer, no duplicate ISRCs, and titles and artist names that match what streaming shows.",
     ],
-    healthy: "ISRC, UPC, IPI and legal names all complete",
-    unhealthy: "Identifiers missing or mismatched",
+    healthy: "ISRC, UPC, IPI and legal names complete",
+    unhealthy: "Missing / mismatched IDs",
     meaning: "Payments can't find the right person",
   },
   {
     organ: "spine",
-    subject: "Neighbouring rights (SoundExchange)",
-    lede: "The recording earns its own performance money, separate from the song.",
+    subject: "Splits and paperwork",
+    lede: "Every agency divides your money the same way: by the shares on file.",
     body: [
-      "Non-interactive digital radio — radio-style streaming, satellite and cable music channels — pays the recording, not the composition. In the US, SoundExchange collects it. It's a different right from the one your PRO collects, so a song can be registered everywhere and still have nothing coming from these plays.",
-      "SoundExchange pays the featured artist and the owner of the master, and holds a share for the session musicians and vocalists who played on it. If you own your masters, you register as both the artist and the rights owner; the master share tells them how much of that side is yours.",
-      "What the Doctor looks for: the recording registered with its ISRC and UPC, the master share set, and a registration that matches the release you actually put out.",
+      "A split is each writer's percentage of the song, and the shares must total exactly 100%. When they don't — a typo that leaves 90% or 110% — the agency has no way to divide the money, so the payment is held until someone fixes it.",
+      "Publishers are divided the same way, but separately: publisher shares total 100% of the publisher half, not of the whole song. Entering them as shares of the whole song is the most common way a correct split ends up looking wrong.",
+      "A split sheet is the signed agreement behind those numbers, and with more than one writer a disagreement over shares can freeze every payment for the song. What the Doctor looks for: writer shares at 100%, publisher shares at 100% of their half, and a signed sheet whenever there is more than one writer.",
     ],
-    healthy: "The recording registered with SoundExchange and the master share set",
-    unhealthy: "Not registered",
-    meaning: "Digital performance royalties on the recording go uncollected",
+    healthy: "Writer splits 100%, publisher shares 100% of their half, signed split sheet",
+    unhealthy: "Shares off / no signed sheet",
+    meaning: "Agencies hold payments until the splits add up",
   },
 ];

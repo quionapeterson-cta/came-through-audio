@@ -48,17 +48,19 @@ Only **three** things live on the Hub:
 - Empty state (no reports yet): **"See the Royalty Health Doctor to file your first diagnostic report."**
 - **Removed** from the Hub: standalone Royalty Inspector dropdown, "Confirm with your agency" dropdown, standalone Song Checklist accordion. Their work moves *inside* the visit (§2).
 - **Front Desk** = Past Royalty Health Reports (open, download PDF) + **Continue Song Checklist** (the existing `HealthChecklist.tsx`, kept as is: Attention / Later / Healthy groups, agency-specific steps).
-- **Waiting Area** = doctor's-office style rack cards (pamphlets), one per organ:
+- **Waiting Area** = doctor's-office style rack cards (pamphlets), one per organ. The rack photo is the way in: it opens the tray, and each leaflet opens into a readable pamphlet with its own picture:
 
 | Pamphlet | Organ | Healthy reading | Unhealthy reading | Royalty meaning |
 |---|---|---|---|---|
 | Heart | Performance (PRO) | Registered with PRO, writers + splits on file | Not registered / missing writers | Performance royalties uncollected |
-| Lungs | Publishing | Publisher (or Self-published) on file, publisher shares = 100% | No publisher, shares off | Publisher share unclaimed |
-| Kidneys | Mechanicals (The MLC) | Work + ISRC matched at The MLC | Unmatched / missing ISRC | Mechanical royalties held / unmatched |
+| Lungs | Mechanicals (The MLC) | Work + ISRC matched at The MLC | Unmatched / missing ISRC | Mechanical royalties held / unmatched |
+| Kidneys | Digital performance (SoundExchange) | Recording registered, master share set | Not registered | Digital performance (recording) royalties uncollected |
 | Brain / Nervous System | Metadata & identifiers | ISRC, UPC, IPI, legal names complete | Missing / mismatched IDs | Payments can't find the right person |
-| Spine | Neighbouring rights (SoundExchange) | Recording registered, master share set | Not registered | Digital performance (recording) royalties uncollected |
+| Spine | Splits & paperwork | Writer splits 100%, publisher shares 100% of the publisher half, signed split sheet | Shares off / no signed sheet | Agencies hold payments until the splits add up |
 
-Each pamphlet: title, "What a healthy reading looks like", "What a bad reading looks like", "What it means in your Royalty Health Report".
+Each pamphlet: title, "What a healthy reading looks like", "What a bad reading looks like", "What it means in your Royalty Health Report", plus two or three paragraphs of education and its own picture.
+
+**Founder decision, 2026-11-03:** the pamphlet table follows the built diagnosis (`src/lib/royalty-checkup.ts`, PLAN-royalty-health-report §2) rather than the other way round. The organs mean what the report says they mean: Lungs = mechanicals, Kidneys = digital performance, Spine = splits and paperwork. The earlier draft swapped Lungs (publishing), Kidneys (mechanicals) and Spine (neighbouring rights) and no longer applies.
 
 ---
 

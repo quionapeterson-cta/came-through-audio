@@ -31,7 +31,7 @@ describe("WaitingArea", () => {
     for (const organ of ["Heart", "Lungs", "Kidneys", "Brain", "Spine"]) {
       fireEvent.click(screen.getByRole("button", { name: new RegExp(organ) }));
       expect(screen.getByText(/In your report/)).toBeTruthy();
-      expect(screen.getAllByText(/What the Doctor looks for|Publisher shares are entered|The MLC matches|Matching is literal|SoundExchange pays/).length).toBeGreaterThan(0);
+      expect(screen.getByText(/What the Doctor looks for/)).toBeTruthy();
       fireEvent.click(screen.getByRole("button", { name: /Back to the rack/ }));
     }
   });

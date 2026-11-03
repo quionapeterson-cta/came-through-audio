@@ -261,8 +261,8 @@ export function royaltyCheckup({ rows, signedSheets, today = new Date().toISOStr
 }
 
 const SYSTEM: Record<OrganId, string> = {
-  heart: "Performance royalties", lungs: "Mechanical royalties", kidneys: "Digital performance",
-  brain: "Codes and names", spine: "Splits and paperwork", pulse: "Follow-through",
+  heart: "Performance royalties (your PRO)", lungs: "Mechanicals (The MLC)", kidneys: "Digital performance (SoundExchange)",
+  brain: "Metadata and identifiers", spine: "Splits and paperwork", pulse: "Follow-through",
 };
 /** What each organ examines, listed as "what we examined" when it's healthy. */
 const CHECKS: Record<OrganId, string[]> = {
@@ -403,10 +403,10 @@ function word(id: ConditionId, list: AffectedSong[], rows: CheckupInput["rows"])
 /** The Royalty Impact after the colon in a diagnosis headline (PLAN-royalty-health-hub-v2 §2/§4). */
 export const ORGAN_IMPACT: Record<OrganId, string> = {
   heart: "Performance royalties uncollected",
-  lungs: "Publisher share unclaimed",
-  kidneys: "Mechanical royalties held or unmatched",
+  lungs: "Mechanical royalties held or unmatched",
+  kidneys: "Digital performance royalties uncollected",
   brain: "Payments can't find the right person",
-  spine: "Digital performance royalties uncollected",
+  spine: "Agencies hold payments until the splits add up",
   pulse: "Registrations unconfirmed, so royalties may not arrive",
 };
 

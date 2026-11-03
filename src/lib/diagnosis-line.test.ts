@@ -11,7 +11,7 @@ describe("diagnosis headline", () => {
 
   it("drops a trailing full stop before the colon", () => {
     expect(diagnosisLine({ organ: "kidneys", dx: "Your kidneys aren't filtering." })).toBe(
-      "Diagnosis: Your kidneys aren't filtering : Mechanical royalties held or unmatched.",
+      "Diagnosis: Your kidneys aren't filtering : Digital performance royalties uncollected.",
     );
   });
 
