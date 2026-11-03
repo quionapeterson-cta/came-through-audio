@@ -16,7 +16,7 @@ describe("beta testing", () => {
     const bp = blueprintById("company-beta-agreement")!;
     const text = renderContract(bp, initialFields(bp), [{ role: "Company", legalName: "Qui-Ona Peterson" }, { role: "Participant", legalName: "Jordan Lee" }]);
     expect(text).toContain("Came Through Audio, LLC");
-    expect(text).toContain("November 9 to November 26, 2026");
+    expect(text).toContain("November 16 to December 3, 2026");
     expect(text).toContain("lifetime access to the Catalog Management plan");
     expect(text).toContain("the State of Georgia");
     expect(text).not.toMatch(/\{\{/);

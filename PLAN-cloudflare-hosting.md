@@ -1,7 +1,7 @@
 # PLAN — Move hosting from Lovable to Cloudflare (free) · v1
 
-Status: **Code ready 2026-10-23. Founder follows the steps below, ideally the week of Nov 3 (Lovable Pro ends 2026-11-11), while Lovable hosting still works as a backup.**
-Source: founder, 2026-10-21 and 2026-10-23 (Lovable Pro ends Nov 11; no budget after; Cloudflare is free for this size).
+Status: **Code ready 2026-10-23; deploy config committed 2026-11-03 (`wrangler.jsonc` plus `deploy:cloudflare` and `build:vercel` scripts), so `npx wrangler deploy` now works from the repo root — see "Two hosts, one codebase" below for keeping Vercel as the backup. Founder follows the steps below in the week of Dec 7, after beta ends on Dec 3 (Lovable Pro extended one month to 2026-12-11 on 2026-11-03, so the move isn't rushed), while Lovable hosting still works as a backup.**
+Source: founder, 2026-10-21, 2026-10-23 and 2026-11-03 (Lovable Pro ended Nov 11, extended one month to Dec 11 so beta isn't rushed; move scheduled the week of Dec 7; no budget after; Cloudflare is free for this size).
 
 ---
 
@@ -49,7 +49,22 @@ Source: founder, 2026-10-21 and 2026-10-23 (Lovable Pro ends Nov 11; no budget a
    - Tell Claude: email links still point to the Lovable address (`SITE_URL` in src/lib/email-layout.ts); switch it to `https://camethroughaudio.com` in the same push.
 6. **Disconnect the domain in Lovable** (Project → Settings → Domains) once Cloudflare serves it. Keep the Lovable project and GitHub connection: edits there still push to GitHub, and Cloudflare deploys every push.
 
+## Two hosts, one codebase
+
+Nothing is forked: the same `main` builds for both, because nitro picks the target from the environment.
+
+| | Cloudflare (primary) | Vercel (backup) |
+| --- | --- | --- |
+| Build | `bun run build` (cloudflare-module preset) | `bun run build:vercel` (sets `VERCEL=1`, nitro switches to the vercel preset) |
+| Output | `.output/` | `.vercel/output/` |
+| Deploy | `npx wrangler deploy` (reads `wrangler.jsonc`) | Push to the branch the Vercel project watches — it deploys itself |
+| Config in repo | `wrangler.jsonc`, worker name `came-through-audio` | none needed (Vercel detects `.vercel/output`) |
+
+On Vercel the preset must stay Nitro/Other with the output directory left empty — a Vite preset would look in `dist/` and serve nothing. Set the same secret names in both dashboards.
+
+**Only the live host should hold the Stripe webhooks.** Both hosts writing payment rows from the same events would double the subscriptions; when the backup is promoted, move the endpoints (and the Supabase redirect URLs) across, don't run both.
+
 ## After the move
 - Every push to `main` deploys automatically (about 2 minutes). Lovable's Publish button no longer matters.
 - cron-job.org needs no change if the domain is the same.
-- If something breaks, point the domain back to Lovable (before Nov 11) while we fix it.
+- If something breaks, point the domain back to Lovable (before Dec 11, while Pro is still active) while we fix it.

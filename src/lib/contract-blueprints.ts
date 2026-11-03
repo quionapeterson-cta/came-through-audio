@@ -92,7 +92,7 @@ export const COMPANY_BLUEPRINTS: Blueprint[] = [
     roles: ["Company", "Participant"],
     fields: [
       SIGNER, DATE,
-      { key: "betaDates", label: "Beta dates and times", value: "November 9 to November 26, 2026, Monday to Thursday, 12 PM to 2 PM Eastern", tip: "When testing happens.", required: true },
+      { key: "betaDates", label: "Beta dates and times", value: "November 16 to December 3, 2026, Monday to Thursday, 12 PM to 2 PM Eastern", tip: "When testing happens.", required: true },
       { key: "tier", label: "Lifetime plan", value: "Catalog Management", tip: "The plan the tester gets for life: Catalog Plus, Catalog & Collaborate or Catalog Management.", required: true },
     ],
     body: asCompany(`BETA TESTER AGREEMENT

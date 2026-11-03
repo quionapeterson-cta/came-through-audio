@@ -20,6 +20,9 @@ dist-ssr
 .wrangler/
 .dev.vars
 
+# Vercel (backup host); build:vercel writes .vercel/output locally
+.vercel/
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

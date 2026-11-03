@@ -338,7 +338,7 @@ it down for things only a released song can have. Plan to write and approve befo
 
 ## PHASE 4 — Admin, team and future plans (plans to write, then build)
 - **Pre-launch milestone list** in Super Admin (Task Bank, super admin only), seeded with everything I've asked you to remember:
-  switch SITE_URL to camethroughaudio.com · remove the passcode gate and `noindex` · Cloudflare move before Nov 11 (cron jobs,
+  switch SITE_URL to camethroughaudio.com · remove the passcode gate and `noindex` · Cloudflare move before Dec 11 (extended 2026-11-03; cron jobs,
   Stripe webhook URL, secrets) · Stripe live lookup keys + Terms/Privacy links in Checkout + support/receipt email = billing@ ·
   STRIPE_TAX on once Stripe Tax is active · turn off Stripe's own renewal emails · lawyer review (contracts, blueprints, AI
   certificate wording, authorisation agreement) · grant launch gifts · new app icon · SX Direct + MLC Portal rep logins ·

@@ -2,6 +2,18 @@
 
 Status: **Open. Your checklist from the last few days; tick items off here or tell me what's done.**
 
+## Timeline (revised 2026-11-03)
+
+| Date | What |
+| --- | --- |
+| Thu Nov 5 | **Build frozen** — last features in, then the full test list below (§6) |
+| Nov 5 – 15 | Self-testing and debugging, testers invited, lawyer reads the Beta Tester Agreement |
+| Mon Nov 16 – Thu Dec 3 | **Beta**, 3 weeks, Mon–Thu 12–2 PM (Thanksgiving is Thu Nov 26) |
+| Week of Dec 7 | Move hosting to Cloudflare, point the domain, Stripe live (§9) |
+| Thu Dec 11 | Lovable Pro lapses (extended one month on Nov 3) — the move must be finished before this |
+
+If Admin → Task Bank already has the pre-launch milestones, edit their dates by hand there: loading them again only adds titles that are missing, it never updates an existing one.
+
 Everything below is built and pushed; nothing goes live until you do these. Work top to bottom.
 All GitHub links need you logged in to GitHub (the repo is private). On each file, use **Copy raw file** (two squares, top right).
 
@@ -117,7 +129,7 @@ Publish in Lovable first, then test on the published site in the sandbox (card 4
 - [ ] Co-writer IPI request between two accounts.
 - [ ] Catalog Plus lock on a free account; install the app on your phone (CTAudio).
 
-**Beta (from Nov 9)**
+**Beta (Mon Nov 16 – Thu Dec 3)**
 - [ ] Admin → Company Contracts → Templates → Beta Tester Agreement: have your lawyer read it, then send it to each tester.
 - [ ] Testers sign, make a free account with the same email, and use yourdomain/beta for their checklist.
 - [ ] After the beta: Company Contracts → Beta testers → Grant lifetime access. Read the results there.
@@ -143,7 +155,8 @@ Publish in Lovable first, then test on the published site in the sandbox (card 4
 - [ ] What's next: pre-distribution health analysis, or a Phase 4 plan first (pre-launch milestone list, outreach kit, beta testing, admin calendar)?
 
 ## 9. Before launch
-The Cloudflare move is planned for the week of Nov 3 and must be done before Nov 11. Step by step: [PLAN-cloudflare-hosting.md](https://github.com/quionapeterson-cta/came-through-audio/blob/main/PLAN-cloudflare-hosting.md).
+The Cloudflare move is planned for the week of Dec 7, after beta ends on Dec 3, and must be done before Lovable Pro lapses on Dec 11. Step by step: [PLAN-cloudflare-hosting.md](https://github.com/quionapeterson-cta/came-through-audio/blob/main/PLAN-cloudflare-hosting.md).
+- [ ] Extend Lovable Pro one month (new lapse date Dec 11) so the beta can run on the current host.
 - [ ] Move hosting to Cloudflare: secrets (now including the 2 Cloudflare AI ones), Stripe webhook URLs, the 4 cron job URLs.
 - [ ] Point camethroughaudio.com at the site, then tell me so I switch every email and certificate link to it.
 - [ ] Stripe live: live lookup keys, live secret key and live webhook.

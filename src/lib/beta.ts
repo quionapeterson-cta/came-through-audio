@@ -1,11 +1,12 @@
 import { hasTier, type Tier } from "@/lib/plans";
 
 /**
- * Beta testing (PLAN-phase4-order item 3, approved 2026-10-25): 3 weeks from Mon Nov 9, Mon–Thu 12–2 PM Eastern.
+ * Beta testing (PLAN-phase4-order item 3, approved 2026-10-25; dates revised 2026-11-03): 3 weeks from Mon Nov 16,
+ * Mon–Thu 12–2 PM Eastern (Nov 16 – Dec 3, 2026; Thanksgiving is Thu Nov 26).
  * Each tester works through the items for their plan and every plan below it, and marks each one Worked or Didn't work
  * with a note. The tier-by-tier test plan proves each plan sees only its own features (the "locked" items).
  */
-export const BETA_WINDOW = "November 9 to November 26, 2026 · Monday to Thursday, 12 PM to 2 PM Eastern";
+export const BETA_WINDOW = "November 16 to December 3, 2026 · Monday to Thursday, 12 PM to 2 PM Eastern";
 export const BETA_AGREEMENT = "company-beta-agreement";
 export const BETA_RESULTS = ["worked", "broken"] as const;
 export type BetaResult = (typeof BETA_RESULTS)[number];

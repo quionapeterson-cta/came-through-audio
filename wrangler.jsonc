@@ -1,0 +1,16 @@
+{
+  // Cloudflare Workers target (primary hosting).
+  // `bun run build` builds with nitro's cloudflare-module preset into .output/,
+  // so this config always points at a fresh build.
+  "name": "came-through-audio",
+  "main": ".output/server/index.mjs",
+  "compatibility_date": "2026-11-03",
+  "compatibility_flags": ["nodejs_compat"],
+  "no_bundle": true,
+  "rules": [{ "type": "ESModule", "globs": ["**/*.mjs", "**/*.js"] }],
+  "assets": {
+    "directory": ".output/public",
+    "binding": "ASSETS"
+  },
+  "observability": { "enabled": true }
+}

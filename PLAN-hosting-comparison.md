@@ -1,6 +1,6 @@
 # PLAN — Stay on Lovable or move to Cloudflare: comparison · v1
 
-Status: **for your decision (Level 2, 2026-10-27).** Lovable Pro ends 2026-11-11. The move itself is already written
+Status: **for your decision (Level 2, 2026-10-27).** Lovable Pro ends 2026-11-11 (extended one month to 2026-12-11 on 2026-11-03). The move itself is already written
 up step by step in PLAN-cloudflare-hosting.md (code ready since 2026-10-23).
 Sources: Lovable and Cloudflare pricing information as of October 2026; confirm on lovable.dev/pricing and
 developers.cloudflare.com/workers/platform/pricing before deciding, since plans change.
@@ -35,7 +35,7 @@ building there, and keep camethroughaudio.com pointed at Cloudflare.
 
 **Stay on Lovable Pro**
 - ✅ Nothing to move; payments keep going through Lovable's connector.
-- ❌ About $300 a year, and a monthly bill you planned to stop on Nov 11.
+- ❌ About $300 a year, and a monthly bill you planned to stop on Dec 11 (extended one month on 2026-11-03).
 
 **Lovable Free**
 - ✅ $0.
