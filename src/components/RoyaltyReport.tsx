@@ -131,7 +131,7 @@ export function RoyaltyReport({ checkup, since, date, country, countryPicker, ru
             <h3 className="-mt-3 text-3xl font-extrabold leading-tight tracking-tight md:text-4xl">{diagnosisLine(lead)}</h3>
             <p className="rr-muted -mt-2 max-w-[60ch] text-lg">{lead.what} <b className="text-white">Cause:</b> {lead.cause}</p>
             <div className="rr-pad">
-              <div className="flex items-center gap-2"><span className="rr-rx" aria-hidden="true">℞</span><span className="rr-eyebrow" style={{ color: "var(--rr-prestige)" }}>Treatment plan</span></div>
+              <div className="flex items-center gap-2"><span className="rr-rx" aria-hidden="true">℞</span><span className="rr-eyebrow" style={{ color: "var(--rr-prestige)" }}>Royalty Care Plan</span></div>
               <ol className="rr-num mt-3 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
                 {lead.steps.map((s) => <li key={s.title} className="rr-muted flex flex-col gap-2 text-sm"><span><b className="font-semibold text-white">{s.title}.</b> {s.text}</span></li>)}
               </ol>
