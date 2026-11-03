@@ -32,7 +32,7 @@ import { INTERNATIONAL, countryByCode, guessCountry } from "@/lib/repertoires";
 import { loadOnboarding, saveOnboarding } from "@/lib/artist-profile";
 import { WaitingArea } from "@/components/WaitingArea";
 import { ClinicArt } from "@/components/ClinicArt";
-import { OfficeSteps } from "@/components/DoctorsOffice";
+import { ClinicalScan, OfficeSteps } from "@/components/DoctorsOffice";
 import { UpgradeCards } from "@/components/UpgradeCards";
 import { StreamingFastTrack } from "@/components/StreamingFastTrack";
 
@@ -55,7 +55,7 @@ export type HealthStart = { trackId?: string | undefined; release?: boolean | un
  * A Royalty Health Check runs from here, My Catalog or the Royalty Inspector: check-in first, then the report,
  * which is saved to My reports.
  */
-type View = { kind: "hub" } | { kind: "checkin"; scope: ReportScope; from?: string | undefined } | { kind: "report"; scope: ReportScope; baseline: SavedReport | null };
+type View = { kind: "hub" } | { kind: "checkin"; scope: ReportScope; from?: string | undefined } | { kind: "scan"; scope: ReportScope; baseline: SavedReport | null } | { kind: "report"; scope: ReportScope; baseline: SavedReport | null };
 
 export function RoyaltyHealthCheck({ userId, canCatalog, canExport, onUpgrade, onFixField, onEmbed, onExpert, onSplitSheet, start }: { userId: string; canCatalog: boolean; canExport: boolean; onUpgrade: (priceId?: string) => void; onFix?: () => void; onFixField: (trackId: string, field: string) => void; onEmbed: () => void; onExpert?: () => void; onSplitSheet?: ((trackId: string) => void) | undefined; start?: HealthStart | undefined }) {
   const [tracks, setTracks] = useState<CatalogTrack[]>();
@@ -187,7 +187,8 @@ export function RoyaltyHealthCheck({ userId, canCatalog, canExport, onUpgrade, o
   }
   /** Runs the check: live lookups for its catalog songs, then the report, compared with the last one on the same songs. */
   function runCheck(scope: ReportScope) {
-    setView({ kind: "report", scope, baseline: reports?.find((r) => sameScope(r.scope, scope)) ?? null });
+    // Step 3: the scan runs the live lookups while its vitals tick over, then hands to the diagnosis.
+    setView({ kind: "scan", scope, baseline: reports?.find((r) => sameScope(r.scope, scope)) ?? null });
     setPendingSave(true);
     const ids = new Set(rowsIn(scope).map(({ r }) => r.track.id));
     void runAll((tracks ?? []).filter((t) => ids.has(t.id)), false);
@@ -453,6 +454,16 @@ export function RoyaltyHealthCheck({ userId, canCatalog, canExport, onUpgrade, o
         }} />
     );
   }
+  if (view.kind === "scan") return (
+    <div className="space-y-8">
+      <div className="flex items-center gap-4">
+        <ClinicArt name="stethoscope" className="hidden h-20 w-36 shrink-0 object-cover sm:block" />
+        <div className="min-w-0 flex-1"><OfficeSteps at={2} /></div>
+      </div>
+      <ClinicalScan busy={!!running} progress={running ? `Looked up ${running.done} of ${running.total} songs on streaming…` : undefined}
+        onDone={() => setView({ kind: "report", scope: view.scope, baseline: view.baseline })} />
+    </div>
+  );
   if (view.kind === "report" && reportRows.length) return (
     <div className="space-y-6">
       <div className="flex items-center gap-4">
