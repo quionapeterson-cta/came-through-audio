@@ -30,6 +30,8 @@ import { clearCheck, listChecks, markCheck } from "@/lib/repertoire-checks";
 import { runSongLookups } from "@/lib/lookups.functions";
 import { INTERNATIONAL, countryByCode, guessCountry } from "@/lib/repertoires";
 import { loadOnboarding, saveOnboarding } from "@/lib/artist-profile";
+import { WaitingArea } from "@/components/WaitingArea";
+import { UpgradeCards } from "@/components/UpgradeCards";
 
 // Automatic lookups (MusicBrainz rows saved before its removal stay out of the score and can't be undone by hand).
 const AUTO = [INTERNATIONAL.deezer.id, "musicbrainz"];
@@ -52,7 +54,7 @@ export type HealthStart = { trackId?: string | undefined; release?: boolean | un
  */
 type View = { kind: "hub" } | { kind: "checkin"; scope: ReportScope; from?: string | undefined } | { kind: "report"; scope: ReportScope; baseline: SavedReport | null };
 
-export function RoyaltyHealthCheck({ userId, canCatalog, canExport, onUpgrade, onFixField, onEmbed, onExpert, onSplitSheet, start }: { userId: string; canCatalog: boolean; canExport: boolean; onUpgrade: () => void; onFix?: () => void; onFixField: (trackId: string, field: string) => void; onEmbed: () => void; onExpert?: () => void; onSplitSheet?: ((trackId: string) => void) | undefined; start?: HealthStart | undefined }) {
+export function RoyaltyHealthCheck({ userId, canCatalog, canExport, onUpgrade, onFixField, onEmbed, onExpert, onSplitSheet, start }: { userId: string; canCatalog: boolean; canExport: boolean; onUpgrade: (priceId?: string) => void; onFix?: () => void; onFixField: (trackId: string, field: string) => void; onEmbed: () => void; onExpert?: () => void; onSplitSheet?: ((trackId: string) => void) | undefined; start?: HealthStart | undefined }) {
   const [tracks, setTracks] = useState<CatalogTrack[]>();
   const [checks, setChecks] = useState<RepertoireCheck[]>([]);
   const [code, setCode] = useState(() => loadOnboarding(userId)?.healthCountry);
@@ -464,6 +466,12 @@ export function RoyaltyHealthCheck({ userId, canCatalog, canExport, onUpgrade, o
   if (!report.rows.length) return (
     <div className="space-y-6">
       {hub}
+      <section aria-labelledby="doctor-empty" className="mx-auto max-w-2xl rounded-2xl border-2 border-primary/40 bg-card p-6 text-center shadow-sm">
+        <p className="text-xs font-semibold uppercase tracking-[2px] text-primary">Royalty Health Doctor</p>
+        <h2 id="doctor-empty" className="mt-1 text-xl font-bold">See the Royalty Health Doctor to file your first diagnostic report.</h2>
+        <div className="mt-4 flex flex-wrap justify-center gap-2">{runButton}</div>
+      </section>
+      <WaitingArea />
       {inspector}
       <Section title="Why this matters" summary="Your distributor only collects part of your money · unclaimed royalties don't wait forever">{why}</Section>
     </div>
@@ -478,24 +486,34 @@ export function RoyaltyHealthCheck({ userId, canCatalog, canExport, onUpgrade, o
     <div className="space-y-6">
       {hub}
       {askDialog}
-      <section aria-labelledby="doctor-in" className="rounded-2xl border-2 border-primary/40 bg-card p-6 text-center shadow-sm">
+      <section aria-labelledby="doctor-in" className="mx-auto max-w-2xl rounded-2xl border-2 border-primary/40 bg-card p-6 text-center shadow-sm">
         <p className="text-xs font-semibold uppercase tracking-[2px] text-primary">Royalty Health Doctor</p>
         <h2 id="doctor-in" className="mt-1 text-2xl font-bold">The Royalty Health Doctor is in.</h2>
-        <p className="mx-auto mt-2 max-w-xl text-sm text-muted-foreground">Check in at the Office and get your catalog diagnosed for missing royalties, mismatched writers and unregistered songs.</p>
-        <ol className="mx-auto mt-4 grid max-w-2xl gap-3 text-left text-sm sm:grid-cols-3">
-          <li className="rounded-lg border border-border p-3"><b className="block">1. Check in</b><span className="text-muted-foreground">Run your checkup on a song or your whole catalog.</span></li>
-          <li className="rounded-lg border border-border p-3"><b className="block">2. Bring your charts</b><span className="text-muted-foreground">Upload your BMI, ASCAP or MLC song list.</span></li>
-          <li className="rounded-lg border border-border p-3"><b className="block">3. Get your diagnosis</b><span className="text-muted-foreground">Read your report and tap each organ for treatment.</span></li>
-        </ol>
+        <p className="mx-auto mt-2 max-w-xl text-sm text-muted-foreground">Check in and get your catalog diagnosed for missing royalties, mismatched writers and unregistered songs.</p>
         <div className="mt-4 flex flex-wrap justify-center gap-2">
-          {runButton}
-          <Button variant="outline" onClick={() => { setListsOpen(true); setTimeout(() => document.getElementById("agency-lists")?.scrollIntoView({ behavior: "smooth", block: "start" }), 30); }}>Upload agency list</Button>
+          <Button size="lg" onClick={() => (tracks.length ? startCheck(catalogScope(tracks)) : inspectorSongs[0] ? checkSong(inspectorSongs[0].id) : (setInspectorOpen(true), setTimeout(() => document.getElementById("quick-check")?.scrollIntoView({ behavior: "smooth" }), 50)))}>
+            <Stethoscope />Check In
+          </Button>
         </div>
       </section>
+
+      {/* Front Desk: the reports already on file, and the checklist to pick back up. */}
+      <section aria-labelledby="front-desk" className="rounded-2xl border border-border bg-card p-5">
+        <p className="text-xs font-semibold uppercase tracking-[2px] text-primary">Front Desk</p>
+        <h3 id="front-desk" className="mt-1 text-xl font-bold">Your file</h3>
+        <div className="mt-3 grid gap-2 sm:grid-cols-2">
+          <Button variant="outline" className="justify-start" onClick={() => setTimeout(() => document.getElementById("past-reports")?.scrollIntoView({ behavior: "smooth", block: "start" }), 30)}>Past Royalty Health Reports</Button>
+          <Button variant="outline" className="justify-start" onClick={() => showSong()}>Continue Song Checklist</Button>
+        </div>
+      </section>
+
+      <WaitingArea />
+
+      {!canCatalog && <UpgradeCards onUpgrade={(id) => onUpgrade(id)} />}
       {running && <p className="text-sm text-muted-foreground">Looking up song {running.done + 1} of {running.total} on streaming…</p>}
 
       <div className="space-y-3">
-        <Section id="my-reports" title="My reports" summary={latest ? `${reports!.length} report${reports!.length === 1 ? "" : "s"} · latest ${shortDate(latest.createdAt)}: ${scopeName(latest.scope)} · ${latest.summary.lead ? `"${latest.summary.lead}"` : "Clean bill of health"} · ${latest.score}%` : "Run a Royalty Health Check on a song, a release or your whole catalog. Each report is kept here."}>
+        <Section id="past-reports" title="Past Royalty Health Reports" summary={latest ? `${reports!.length} report${reports!.length === 1 ? "" : "s"} · latest ${shortDate(latest.createdAt)}: ${scopeName(latest.scope)} · ${latest.summary.lead ? `"${latest.summary.lead}"` : "Clean bill of health"} · ${latest.score}%` : "Run a Royalty Health Check on a song, a release or your whole catalog. Each report is kept here."}>
           {reports?.length ? <ul className="divide-y divide-border">{reports.map((r) => {
             const now = scoreNow(r.scope);
             return (
