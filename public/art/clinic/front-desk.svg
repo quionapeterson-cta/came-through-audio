@@ -1,0 +1,42 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 480 320" role="img" aria-label="A welcoming front desk with a service bell, a plant and a clipboard">
+  <rect width="480" height="320" fill="#F4F5F7"/>
+  <circle cx="386" cy="86" r="52" fill="#4D8CFF" opacity="0.12"/>
+  <rect x="28" y="34" width="196" height="16" rx="8" fill="#0b0b0b" opacity="0.08"/>
+  <rect x="28" y="34" width="118" height="16" rx="8" fill="#004AAD" opacity="0.5"/>
+
+  <!-- wall sign -->
+  <rect x="150" y="70" width="180" height="54" rx="10" fill="#0b0b0b"/>
+  <rect x="162" y="82" width="86" height="8" rx="4" fill="#FFFFFF" opacity="0.92"/>
+  <rect x="162" y="96" width="140" height="6" rx="3" fill="#FFFFFF" opacity="0.45"/>
+  <rect x="162" y="108" width="62" height="6" rx="3" fill="#4D8CFF"/>
+
+  <!-- receptionist -->
+  <circle cx="240" cy="168" r="20" fill="#0b0b0b" opacity="0.85"/>
+  <path d="M208 244c0-22 14-38 32-38s32 16 32 38z" fill="#004AAD"/>
+  <path d="M228 226h24v18h-24z" fill="#FFFFFF" opacity="0.9"/>
+
+  <!-- desk -->
+  <rect x="58" y="232" width="364" height="20" rx="6" fill="#0b0b0b"/>
+  <rect x="70" y="252" width="340" height="42" rx="6" fill="#004AAD"/>
+  <rect x="70" y="252" width="340" height="10" rx="5" fill="#FFFFFF" opacity="0.18"/>
+  <rect x="96" y="274" width="120" height="8" rx="4" fill="#FFFFFF" opacity="0.5"/>
+  <rect x="96" y="274" width="64" height="8" rx="4" fill="#4D8CFF"/>
+
+  <!-- service bell -->
+  <path d="M132 232c0-17 13-30 29-30s29 13 29 30z" fill="#E5E4E2"/>
+  <rect x="126" y="230" width="70" height="8" rx="4" fill="#0b0b0b"/>
+  <circle cx="161" cy="196" r="5" fill="#0b0b0b"/>
+  <path d="M168 190c8-6 18-6 24 1" stroke="#004AAD" stroke-width="3" fill="none" stroke-linecap="round"/>
+
+  <!-- clipboard on the desk -->
+  <rect x="322" y="186" width="62" height="48" rx="6" fill="#FFFFFF" stroke="#0b0b0b" stroke-width="3"/>
+  <rect x="340" y="180" width="26" height="10" rx="4" fill="#0b0b0b"/>
+  <rect x="332" y="204" width="42" height="4" rx="2" fill="#0b0b0b" opacity="0.35"/>
+  <rect x="332" y="214" width="34" height="4" rx="2" fill="#0b0b0b" opacity="0.35"/>
+  <rect x="332" y="224" width="24" height="4" rx="2" fill="#004AAD"/>
+
+  <!-- plant -->
+  <path d="M72 232c-2-26 4-46 16-58 6 18 4 38-4 58z" fill="#16794A"/>
+  <path d="M78 232c12-16 28-24 40-24-6 16-20 24-34 24z" fill="#1F9C61"/>
+  <path d="M64 232h44l-6 26H70z" fill="#0b0b0b" opacity="0.85"/>
+</svg>

@@ -45,4 +45,30 @@ describe("HealthCheckIn", () => {
     fireEvent.click(within(screen.getByRole("radiogroup", { name: "Do you have a publisher?" })).getByRole("radio", { name: "No, I'm self-published" }));
     expect(onSelfPublished).toHaveBeenCalledWith(["a"]);
   });
+
+  it("opens the intake options inside check-in, not from a dropdown on the Hub", () => {
+    const track = t("ASCAP"), r = trackReport(track, us, []);
+    const props = { scope: songScope(track), options: [songScope(track)], onScope: vi.fn(), rows: [{ r, c: songChecklist(r, us) }], countryPicker: null,
+      onAnswer: vi.fn(), onSelfPublished: vi.fn(), onBmiWriter: vi.fn(), onFixField: vi.fn(), onRun: vi.fn(), onBack: vi.fn() };
+    render(<HealthCheckIn {...props} intake={{ streaming: <p>streaming panel</p>, agencies: <p>agency panel</p>, single: <p>single panel</p> }} />);
+    expect(screen.queryByText("streaming panel")).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: /Streaming Profile/ }));
+    expect(screen.getByText("streaming panel")).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: /Confirm with your agency/ }));
+    expect(screen.getByText("agency panel")).toBeTruthy();
+    expect(screen.queryByText("streaming panel")).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: /Single Track Checkup/ }));
+    expect(screen.getByText("single panel")).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: /Single Track Checkup/ }));
+    expect(screen.queryByText("single panel")).toBeNull();
+  });
+
+  it("can open straight onto the intake the visit was started for", () => {
+    const track = t("ASCAP"), r = trackReport(track, us, []);
+    render(<HealthCheckIn scope={songScope(track)} options={[songScope(track)]} onScope={vi.fn()} rows={[{ r, c: songChecklist(r, us) }]} countryPicker={null}
+      initialIntake="agencies" onAnswer={vi.fn()} onSelfPublished={vi.fn()} onBmiWriter={vi.fn()} onFixField={vi.fn()} onRun={vi.fn()} onBack={vi.fn()}
+      intake={{ streaming: <p>streaming panel</p>, agencies: <p>agency panel</p>, single: <p>single panel</p> }} />);
+    expect(screen.getByText("agency panel")).toBeTruthy();
+  });
 });
+

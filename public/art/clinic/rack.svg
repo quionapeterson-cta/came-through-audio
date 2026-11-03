@@ -1,0 +1,76 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 480 320" role="img" aria-label="A pamphlet rack with five leaflets, one for each organ the Doctor examines">
+  <rect width="480" height="320" fill="#F4F5F7"/>
+  <circle cx="240" cy="150" r="120" fill="#004AAD" opacity="0.06"/>
+
+  <!-- rack frame -->
+  <rect x="116" y="40" width="248" height="238" rx="14" fill="#0b0b0b"/>
+  <rect x="128" y="52" width="224" height="214" rx="8" fill="#F4F5F7"/>
+
+  <!-- shelves -->
+  <rect x="128" y="122" width="224" height="8" fill="#0b0b0b" opacity="0.8"/>
+  <rect x="128" y="196" width="224" height="8" fill="#0b0b0b" opacity="0.8"/>
+
+  <!-- leaflets: back row (three) -->
+  <g>
+    <rect x="142" y="60" width="64" height="58" rx="4" fill="#FFFFFF" stroke="#0b0b0b" stroke-width="2"/>
+    <rect x="142" y="60" width="64" height="10" rx="4" fill="#004AAD"/>
+    <rect x="150" y="78" width="48" height="4" rx="2" fill="#0b0b0b" opacity="0.3"/>
+    <rect x="150" y="88" width="40" height="4" rx="2" fill="#0b0b0b" opacity="0.3"/>
+    <rect x="150" y="98" width="44" height="4" rx="2" fill="#0b0b0b" opacity="0.2"/>
+  </g>
+  <g>
+    <rect x="208" y="54" width="64" height="64" rx="4" fill="#FFFFFF" stroke="#0b0b0b" stroke-width="2"/>
+    <rect x="208" y="54" width="64" height="10" rx="4" fill="#4D8CFF"/>
+    <path d="M240 78c-8-6-14-2-14 4 0 8 14 14 14 14s14-6 14-14c0-6-6-10-14-4z" fill="#004AAD"/>
+    <rect x="216" y="100" width="48" height="4" rx="2" fill="#0b0b0b" opacity="0.25"/>
+  </g>
+  <g>
+    <rect x="274" y="60" width="64" height="58" rx="4" fill="#FFFFFF" stroke="#0b0b0b" stroke-width="2"/>
+    <rect x="274" y="60" width="64" height="10" rx="4" fill="#0b0b0b" opacity="0.75"/>
+    <rect x="282" y="78" width="48" height="4" rx="2" fill="#0b0b0b" opacity="0.3"/>
+    <rect x="282" y="88" width="34" height="4" rx="2" fill="#0b0b0b" opacity="0.3"/>
+  </g>
+
+  <!-- middle shelf leaflets -->
+  <g>
+    <rect x="136" y="134" width="70" height="58" rx="4" fill="#FFFFFF" stroke="#0b0b0b" stroke-width="2"/>
+    <rect x="136" y="134" width="70" height="9" rx="4" fill="#16794A"/>
+    <rect x="144" y="152" width="54" height="4" rx="2" fill="#0b0b0b" opacity="0.3"/>
+    <rect x="144" y="162" width="42" height="4" rx="2" fill="#0b0b0b" opacity="0.25"/>
+    <rect x="144" y="174" width="48" height="4" rx="2" fill="#004AAD" opacity="0.6"/>
+  </g>
+  <g>
+    <rect x="212" y="130" width="70" height="62" rx="4" fill="#FFFFFF" stroke="#0b0b0b" stroke-width="2"/>
+    <rect x="212" y="130" width="70" height="9" rx="4" fill="#004AAD"/>
+    <rect x="220" y="148" width="54" height="4" rx="2" fill="#0b0b0b" opacity="0.3"/>
+    <rect x="220" y="158" width="38" height="4" rx="2" fill="#0b0b0b" opacity="0.25"/>
+    <rect x="220" y="170" width="44" height="4" rx="2" fill="#004AAD" opacity="0.6"/>
+  </g>
+  <g>
+    <rect x="288" y="134" width="54" height="58" rx="4" fill="#FFFFFF" stroke="#0b0b0b" stroke-width="2"/>
+    <rect x="288" y="134" width="54" height="9" rx="4" fill="#4D8CFF"/>
+    <rect x="295" y="152" width="40" height="4" rx="2" fill="#0b0b0b" opacity="0.3"/>
+    <rect x="295" y="162" width="30" height="4" rx="2" fill="#0b0b0b" opacity="0.25"/>
+  </g>
+
+  <!-- front row -->
+  <g>
+    <rect x="146" y="208" width="76" height="52" rx="4" fill="#FFFFFF" stroke="#0b0b0b" stroke-width="2"/>
+    <rect x="146" y="208" width="76" height="9" rx="4" fill="#E5E4E2"/>
+    <rect x="154" y="226" width="58" height="4" rx="2" fill="#0b0b0b" opacity="0.3"/>
+    <rect x="154" y="236" width="44" height="4" rx="2" fill="#0b0b0b" opacity="0.25"/>
+    <rect x="154" y="246" width="50" height="4" rx="2" fill="#004AAD" opacity="0.55"/>
+  </g>
+  <g>
+    <rect x="230" y="204" width="76" height="56" rx="4" fill="#FFFFFF" stroke="#0b0b0b" stroke-width="2"/>
+    <rect x="230" y="204" width="76" height="9" rx="4" fill="#0b0b0b"/>
+    <rect x="238" y="222" width="58" height="4" rx="2" fill="#0b0b0b" opacity="0.3"/>
+    <rect x="238" y="232" width="40" height="4" rx="2" fill="#0b0b0b" opacity="0.25"/>
+    <rect x="238" y="244" width="46" height="4" rx="2" fill="#004AAD" opacity="0.55"/>
+  </g>
+
+  <!-- feet -->
+  <rect x="150" y="278" width="180" height="10" rx="5" fill="#0b0b0b" opacity="0.85"/>
+  <rect x="170" y="288" width="16" height="10" rx="4" fill="#0b0b0b" opacity="0.6"/>
+  <rect x="294" y="288" width="16" height="10" rx="4" fill="#0b0b0b" opacity="0.6"/>
+</svg>

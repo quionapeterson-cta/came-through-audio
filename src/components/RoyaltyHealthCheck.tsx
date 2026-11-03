@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import { AlertTriangle, ChevronRight, Hourglass, Stethoscope, Trash2 } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { AlertTriangle, FileText, Hourglass, ListChecks, Search, Stethoscope, Trash2 } from "lucide-react";
 import { confirmAction } from "@/components/ConfirmHost";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
@@ -9,10 +9,10 @@ import { HealthChecklist } from "@/components/HealthChecklist";
 import { deleteInspectorSong, emptyStatus, inspectorChecks, isInspectorSong, listInspectorSongs, listStatuses, saveInspectorSong, saveStatus, type InspectorFields, type SongStatus } from "@/lib/health-songs";
 import { CountryPicker, HealthReport } from "@/components/HealthReport";
 import { RoyaltyReport } from "@/components/RoyaltyReport";
-import { ACCOUNT_REF, releaseGroups, SINGLES_KEY, songChecklist } from "@/lib/health-checklist";
+import { ACCOUNT_REF, songChecklist } from "@/lib/health-checklist";
 import { CONFIRM_AFTER_DAYS, ORGAN_NAME, royaltyCheckup, sinceLast, STATE_LABEL, summarize, type StepAction } from "@/lib/royalty-checkup";
 import { catalogScope, deleteReport, listReports, releaseScope, sameScope, saveReport, scopeName, songScope, type ReportScope, type SavedReport } from "@/lib/health-reports";
-import { HealthCheckIn } from "@/components/HealthCheckIn";
+import { HealthCheckIn, type IntakeKind } from "@/components/HealthCheckIn";
 import { creditName } from "@/lib/metadata";
 import { downloadCheckupPdf } from "@/lib/checkup-pdf";
 import { AgencyLists } from "@/components/AgencyLists";
@@ -31,6 +31,8 @@ import { runSongLookups } from "@/lib/lookups.functions";
 import { INTERNATIONAL, countryByCode, guessCountry } from "@/lib/repertoires";
 import { loadOnboarding, saveOnboarding } from "@/lib/artist-profile";
 import { WaitingArea } from "@/components/WaitingArea";
+import { ClinicArt } from "@/components/ClinicArt";
+import { OfficeSteps } from "@/components/DoctorsOffice";
 import { UpgradeCards } from "@/components/UpgradeCards";
 import { StreamingFastTrack } from "@/components/StreamingFastTrack";
 
@@ -69,7 +71,10 @@ export function RoyaltyHealthCheck({ userId, canCatalog, canExport, onUpgrade, o
   const [view, setView] = useState<View>({ kind: "hub" });
   // Set when a check runs; the report is saved once its live lookups finish.
   const [pendingSave, setPendingSave] = useState(false);
-  const [inspectorOpen, setInspectorOpen] = useState(false);
+  /** The Front Desk panel that is open: the reports already filed, or the checklist to pick back up. */
+  const [desk, setDesk] = useState<"reports" | "checklist" | undefined>();
+  /** Which intake the visit opened on: Streaming Profile, the agency examination, or the Patient Intake Form. */
+  const [intakeWanted, setIntakeWanted] = useState<IntakeKind | undefined>();
 
   useEffect(() => {
     Promise.all([
@@ -122,19 +127,16 @@ export function RoyaltyHealthCheck({ userId, canCatalog, canExport, onUpgrade, o
   function fixField(trackId: string, field: string) {
     if (!isInspectorSong(trackId)) { onFixField(trackId, field); return; }
     setEditing(inspectorSongs.find((x) => x.id === trackId));
-    setView({ kind: "hub" }); setInspectorOpen(true);
-    setTimeout(() => document.getElementById("quick-check")?.scrollIntoView({ behavior: "smooth" }), 50);
+    setView({ kind: "hub" });
+    setTimeout(() => document.getElementById("patient-intake-form")?.scrollIntoView({ behavior: "smooth", block: "start" }), 30);
   }
 
   const [focusRequest, setFocusRequest] = useState<{ id: string; nonce: number }>();
-  const [songsOpen, setSongsOpen] = useState(false);
-  const [listsOpen, setListsOpen] = useState(false);
   const [signedSheets, setSignedSheets] = useState<Map<string, boolean>>();
   // Co-writer emails we already know, from split sheets and the Contributor Library, keyed by name.
   const [emails, setEmails] = useState<Map<string, string>>(new Map());
   const [ipiRequests, setIpiRequests] = useState<IpiRequest[]>([]);
   const [askOpen, setAskOpen] = useState(false);
-  const [requestsOpen, setRequestsOpen] = useState<boolean>();
   const sendRequest = useServerFn(sendIpiRequest);
   useEffect(() => {
     if (!canCatalog) return;
@@ -166,7 +168,8 @@ export function RoyaltyHealthCheck({ userId, canCatalog, canExport, onUpgrade, o
 
   const top = () => setTimeout(() => window.scrollTo({ top: 0, behavior: "smooth" }), 30);
   /** Check-in: the song it was opened from can widen to its release or the whole catalog. */
-  function startCheck(scope: ReportScope, from = scope.kind === "song" || scope.kind === "outside" ? scope.refs[0] : undefined) {
+  function startCheck(scope: ReportScope, from = scope.kind === "song" || scope.kind === "outside" ? scope.refs[0] : undefined, intake?: IntakeKind) {
+    setIntakeWanted(intake);
     setView({ kind: "checkin", scope, from });
     top();
   }
@@ -229,7 +232,7 @@ export function RoyaltyHealthCheck({ userId, canCatalog, canExport, onUpgrade, o
   /** Opens one song's checklist in the Hub. */
   function showSong(id?: string) {
     setView({ kind: "hub" });
-    setSongsOpen(true);
+    setDesk("checklist");
     if (id) setFocusRequest({ id, nonce: Date.now() });
     else setTimeout(() => document.getElementById("song-by-song")?.scrollIntoView({ behavior: "smooth", block: "start" }), 30);
   }
@@ -241,7 +244,7 @@ export function RoyaltyHealthCheck({ userId, canCatalog, canExport, onUpgrade, o
     if (a.kind === "portal") return void window.open(a.url, "_blank", "noopener,noreferrer");
     if (a.kind === "split") return onSplitSheet ? onSplitSheet(a.trackId) : onUpgrade();
     if (a.kind === "join") return void window.open("/docs/royalty-health-suite", "_blank", "noopener");
-    if (a.kind === "upload") { setView({ kind: "hub" }); setListsOpen(true); setTimeout(() => document.getElementById("agency-lists")?.scrollIntoView({ behavior: "smooth", block: "start" }), 30); return; }
+    if (a.kind === "upload") return startCheck(catalogScope(tracks ?? []), undefined, "agencies");
     if (a.kind === "distributor") {
       const t = allTracks.find((x) => x.id === a.trackId);
       const r = report.rows.find((x) => x.track.id === a.trackId);
@@ -434,118 +437,152 @@ export function RoyaltyHealthCheck({ userId, canCatalog, canExport, onUpgrade, o
     </div>
   );
   const askDialog = <AskCowriterDialog open={askOpen} cowriters={cowriters} artistName={artistName} existing={ipiRequests} onClose={() => setAskOpen(false)}
-    onCreated={(r) => { setIpiRequests((all) => [r, ...all.filter((x) => x.id !== r.id)]); setRequestsOpen(true); }} />;
+    onCreated={(r) => setIpiRequests((all) => [r, ...all.filter((x) => x.id !== r.id)])} />;
   const countryPicker = <CountryPicker country={country} onCountry={chooseCountry} />;
 
   if (view.kind === "checkin") {
     const rows = rowsIn(view.scope);
-    if (rows.length) return (
+    return (
       <HealthCheckIn scope={view.scope} options={scopeOptions(view.from)} onScope={(scope) => setView({ ...view, scope })} rows={rows} countryPicker={countryPicker}
-        signedSheets={signedSheets} onAnswer={answer} onSelfPublished={(ids) => void selfPublish(ids)} onBmiWriter={(ids) => void selfPublish(ids, "bmiWriterPublishing")} onFixField={fixField} onRun={() => runCheck(view.scope)} onBack={() => setView({ kind: "hub" })} />
+        signedSheets={signedSheets} onAnswer={answer} onSelfPublished={(ids) => void selfPublish(ids)} onBmiWriter={(ids) => void selfPublish(ids, "bmiWriterPublishing")} onFixField={fixField}
+        initialIntake={intakeWanted} onRun={() => runCheck(view.scope)} onBack={() => setView({ kind: "hub" })}
+        intake={{
+          streaming: <StreamingFastTrack />,
+          agencies: <AgencyLists societies={listSocieties} songsFor={songsFor} summaries={listSummaries} onApply={applyList} />,
+          single: inspector,
+        }} />
     );
   }
   if (view.kind === "report" && reportRows.length) return (
     <div className="space-y-6">
+      <OfficeSteps at={3} />
       <RoyaltyReport checkup={checkup} since={since} prerelease={reportRows.filter(({ c }) => c.prerelease).map(({ r, c }) => ({ id: r.track.id, title: r.track.title || "Untitled", pct: c.pct,
         items: c.steps.filter((s) => s.stage === "release" || (s.stage === "register" && s.id !== "intl")).map((s) => ({ title: s.title, done: s.done, optional: s.optional })) }))} scope={scopeName(view.scope)} onBack={() => setView({ kind: "hub" })} date={new Date().toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })} country={country.name}
         countryPicker={countryPicker} running={!!running} canExport={canExport} onRunCheckup={() => runCheck(view.scope)}
         onPdf={() => downloadCheckupPdf(checkup, mostCommon(reportRows.map(({ r }) => r.track.artist)), country.name).catch(() => toast.error("Couldn't create the PDF. Try again."))} onAction={(a) => void act(a)} onExpert={book} onReminder={reminder}
         onAskCowriter={canCatalog && cowriters.length ? askCowriter : undefined} />
+      {/* Step 4: treatment. Registrations need every writer's PRO and IPI, so the requests live with the prescriptions. */}
+      {(ipiRequests.length > 0 || cowriters.length > 0) && canCatalog && (
+        <section className="space-y-4 rounded-2xl border border-border bg-card p-5">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[2px] text-primary">Before you register</p>
+            <h3 className="mt-1 text-lg font-bold">Co-writer details</h3>
+            <p className="mt-1 max-w-[68ch] text-sm text-muted-foreground">Every registration needs each writer's PRO and IPI. Ask the ones we're missing, and approve what comes back.</p>
+          </div>
+          <IpiRequestList requests={ipiRequests} onApply={applyAnswer} onDismiss={dismissRequest} onResend={resendRequest} />
+          {cowriters.length > 0 && <Button variant="outline" onClick={askCowriter}><Search />Ask a co-writer for their PRO and IPI</Button>}
+        </section>
+      )}
       {askDialog}
       {running && <p className="text-sm text-muted-foreground">Looking up song {running.done + 1} of {running.total} on streaming…</p>}
     </div>
   );
 
+  /** Check In: the whole catalog when there is one; with nothing cataloged yet the visit still opens, on the form. */
+  function beginVisit(intake?: IntakeKind) {
+    if (tracks?.length) return startCheck(catalogScope(tracks), undefined, intake);
+    setIntakeWanted(intake ?? "single");
+    setView({ kind: "checkin", scope: { kind: "outside", refs: [], label: "Your first song" } });
+    top();
+  }
+
   const runButton = (
-    <Button size="lg" variant="secondary" onClick={() => (tracks.length ? startCheck(catalogScope(tracks)) : inspectorSongs[0] ? checkSong(inspectorSongs[0].id) : (setInspectorOpen(true), setTimeout(() => document.getElementById("quick-check")?.scrollIntoView({ behavior: "smooth" }), 50)))}>
+    <Button size="lg" variant="secondary" onClick={() => beginVisit()}>
       <Stethoscope />Run a Royalty Health Check
     </Button>
   );
   const hub = <HealthReport {...actions} report={report} country={country} running={running} canCatalog={canCatalog} onEmbed={onEmbed} action={report.rows.length ? runButton : undefined} />;
 
-  // No songs yet (free accounts start here): type a song into the Royalty Inspector to run its check.
-  if (!report.rows.length) return (
-    <div className="space-y-6">
-      {hub}
-      <section aria-labelledby="doctor-empty" className="mx-auto max-w-2xl rounded-2xl border-2 border-primary/40 bg-card p-6 text-center shadow-sm">
+  // The Hub is the Doctor, the Front Desk and the Waiting Area (plan §1). Everything else happens inside the visit.
+  const doctor = (
+    <section aria-labelledby="doctor-in" className="mx-auto max-w-3xl overflow-hidden rounded-3xl border-2 border-primary/40 bg-card shadow-sm">
+      <ClinicArt name="exam" className="h-36 w-full rounded-none border-0 object-cover sm:h-44" />
+      <div className="p-6 text-center">
         <p className="text-xs font-semibold uppercase tracking-[2px] text-primary">Royalty Health Doctor</p>
-        <h2 id="doctor-empty" className="mt-1 text-xl font-bold">See the Royalty Health Doctor to file your first diagnostic report.</h2>
-        <div className="mt-4 flex flex-wrap justify-center gap-2">{runButton}</div>
-      </section>
-      <Section id="streaming-profile" title="Streaming Profile" summary="Streaming Fast-Track · pull your released tracks and ISRCs from Deezer with no account or key"><StreamingFastTrack /></Section>
-      {inspector}
-      <Section title="Waiting Area" summary="What the Doctor examines · your distributor only collects part of your money · unclaimed royalties don't wait forever"><div className="space-y-4"><WaitingArea />{why}</div></Section>
-    </div>
+        <h2 id="doctor-in" className="mt-1 text-2xl font-bold">
+          {report.rows.length ? "The Royalty Health Doctor is in." : "See the Royalty Health Doctor to file your first diagnostic report."}
+        </h2>
+        <p className="mx-auto mt-2 max-w-xl text-sm text-muted-foreground">
+          {report.rows.length
+            ? "Check in and get your catalog diagnosed for missing royalties, mismatched writers and unregistered songs."
+            : "Check in, bring your streaming profile or your agency records, and the Doctor examines every song you have."}
+        </p>
+        <div className="mt-4 flex flex-wrap justify-center gap-2">
+          <Button size="lg" onClick={() => beginVisit()}><Stethoscope />Check In</Button>
+        </div>
+      </div>
+    </section>
   );
 
-  const kinds = releaseGroups(report.rows.map((r) => ({ r, c: songChecklist(r, country, statusOf(r.track.id), statusOf(ACCOUNT_REF)) })), "az");
-  const attention = checkupRows.filter((x) => x.c.group === "attention").length;
-  // Follow-up: each report's songs as they are now, so My reports shows what's changed since.
+  // Front Desk: the reports already on file, and the checklist to pick back up. Both open in place, not in a dropdown.
   const scoreNow = (scope: ReportScope) => { const rows = rowsIn(scope); return rows.length ? Math.round(rows.reduce((n, { c }) => n + (c.total ? c.done / c.total : 0), 0) / rows.length * 100) : undefined; };
   const latest = reports?.[0];
+  const reportsPanel = reports?.length ? (
+    <div className="space-y-3">
+      {latest && <p className="text-sm text-muted-foreground">Latest: {shortDate(latest.createdAt)} · {scopeName(latest.scope)} · {latest.score}%</p>}
+      <ul className="divide-y divide-border">{reports.map((r) => {
+        const now = scoreNow(r.scope);
+        return (
+          <li key={r.id} className="flex flex-wrap items-center gap-x-4 gap-y-2 py-3 text-sm">
+            <span className="w-28 shrink-0 font-semibold">{shortDate(r.createdAt)}</span>
+            <span className="min-w-0 flex-1"><b className="block">{scopeName(r.scope)}</b><span className="text-muted-foreground">{r.summary.lead ?? "Clean bill of health. Strong pulse."}</span></span>
+            <span className="flex gap-1" aria-label="Organ states">{Object.entries(r.summary.organs).map(([id, o]) => <span key={id} title={`${ORGAN_NAME[id as keyof typeof ORGAN_NAME]}: ${STATE_LABEL[o!.state]}`} className={`rr-pill rr-pill-${o!.state} px-2 py-0.5`}>{ORGAN_NAME[id as keyof typeof ORGAN_NAME][0]}</span>)}</span>
+            <span className="w-24 text-right"><b>{r.score}%</b>{now !== undefined && now !== r.score && <span className="block text-xs text-muted-foreground">now {now}%</span>}</span>
+            <Button size="sm" variant="outline" disabled={now === undefined} onClick={() => startCheck(r.scope)}>Run it again</Button>
+            <Button size="icon" variant="ghost" aria-label={`Delete the ${shortDate(r.createdAt)} report`} onClick={() => void removeReport(r)}><Trash2 /></Button>
+          </li>
+        );
+      })}</ul>
+    </div>
+  ) : (
+    <div className="space-y-3 text-sm text-muted-foreground"><p>No reports yet. Check in with the Doctor and every diagnosis is kept here.</p>{runButton}</div>
+  );
+
+  const frontDesk = (
+    <section aria-labelledby="front-desk" className="overflow-hidden rounded-2xl border border-border bg-card">
+      <div className="flex flex-col gap-4 border-b border-border p-5 sm:flex-row">
+        <ClinicArt name="frontDesk" className="h-28 w-full shrink-0 object-cover sm:h-32 sm:w-48" />
+        <div className="min-w-0 flex-1">
+          <p className="text-xs font-semibold uppercase tracking-[2px] text-primary">Front Desk</p>
+          <h3 id="front-desk" className="mt-1 text-xl font-bold">Your file</h3>
+          <p className="mt-1 text-sm text-muted-foreground">Everything already filed: the reports the Doctor has written, and the checklist you were working through.</p>
+          <div className="mt-3 flex flex-wrap gap-2">
+            <Button variant={desk === "reports" ? "default" : "outline"} aria-expanded={desk === "reports"} onClick={() => setDesk(desk === "reports" ? undefined : "reports")}>
+              <FileText />Past Royalty Health Reports{reports?.length ? ` · ${reports.length}` : ""}
+            </Button>
+            <Button variant={desk === "checklist" ? "default" : "outline"} aria-expanded={desk === "checklist"} onClick={() => setDesk(desk === "checklist" ? undefined : "checklist")}>
+              <ListChecks />Continue Song Checklist
+            </Button>
+          </div>
+        </div>
+      </div>
+      {desk === "reports" && <div id="past-reports" className="scroll-mt-4 border-b border-border p-5">{reportsPanel}</div>}
+      {desk === "checklist" && <div id="song-by-song" className="scroll-mt-4 p-5">
+        <p className="mb-3 text-sm text-muted-foreground">{songsLabel(report.rows.length)} · every step, agency by agency.</p>
+        {checklist}
+      </div>}
+    </section>
+  );
+
+  const waitingRoom = <div className="space-y-4"><WaitingArea />{why}</div>;
+
   return (
     <div className="space-y-6">
+      {doctor}
       {hub}
       {askDialog}
-      <section aria-labelledby="doctor-in" className="mx-auto max-w-2xl rounded-2xl border-2 border-primary/40 bg-card p-6 text-center shadow-sm">
-        <p className="text-xs font-semibold uppercase tracking-[2px] text-primary">Royalty Health Doctor</p>
-        <h2 id="doctor-in" className="mt-1 text-2xl font-bold">The Royalty Health Doctor is in.</h2>
-        <p className="mx-auto mt-2 max-w-xl text-sm text-muted-foreground">Check in and get your catalog diagnosed for missing royalties, mismatched writers and unregistered songs.</p>
-        <div className="mt-4 flex flex-wrap justify-center gap-2">
-          <Button size="lg" onClick={() => (tracks.length ? startCheck(catalogScope(tracks)) : inspectorSongs[0] ? checkSong(inspectorSongs[0].id) : (setInspectorOpen(true), setTimeout(() => document.getElementById("quick-check")?.scrollIntoView({ behavior: "smooth" }), 50)))}>
-            <Stethoscope />Check In
-          </Button>
-        </div>
-      </section>
-
-      {/* Front Desk: the reports already on file, and the checklist to pick back up. */}
-      <section aria-labelledby="front-desk" className="rounded-2xl border border-border bg-card p-5">
-        <p className="text-xs font-semibold uppercase tracking-[2px] text-primary">Front Desk</p>
-        <h3 id="front-desk" className="mt-1 text-xl font-bold">Your file</h3>
-        <div className="mt-3 grid gap-2 sm:grid-cols-2">
-          <Button variant="outline" className="justify-start" onClick={() => setTimeout(() => document.getElementById("past-reports")?.scrollIntoView({ behavior: "smooth", block: "start" }), 30)}>Past Royalty Health Reports</Button>
-          <Button variant="outline" className="justify-start" onClick={() => showSong()}>Continue Song Checklist</Button>
-        </div>
-      </section>
-
+      {frontDesk}
       {!canCatalog && <UpgradeCards onUpgrade={(id) => onUpgrade(id)} />}
+      {waitingRoom}
       {running && <p className="text-sm text-muted-foreground">Looking up song {running.done + 1} of {running.total} on streaming…</p>}
-
-      <div className="space-y-3">
-        <Section id="past-reports" title="Past Royalty Health Reports" summary={latest ? `${reports!.length} report${reports!.length === 1 ? "" : "s"} · latest ${shortDate(latest.createdAt)}: ${scopeName(latest.scope)} · ${latest.summary.lead ? `"${latest.summary.lead}"` : "Clean bill of health"} · ${latest.score}%` : "Run a Royalty Health Check on a song, a release or your whole catalog. Each report is kept here."}>
-          {reports?.length ? <ul className="divide-y divide-border">{reports.map((r) => {
-            const now = scoreNow(r.scope);
-            return (
-              <li key={r.id} className="flex flex-wrap items-center gap-x-4 gap-y-2 py-3 text-sm">
-                <span className="w-28 shrink-0 font-semibold">{shortDate(r.createdAt)}</span>
-                <span className="min-w-0 flex-1"><b className="block">{scopeName(r.scope)}</b><span className="text-muted-foreground">{r.summary.lead ?? "Clean bill of health. Strong pulse."}</span></span>
-                <span className="flex gap-1" aria-label="Organ states">{Object.entries(r.summary.organs).map(([id, o]) => <span key={id} title={`${ORGAN_NAME[id as keyof typeof ORGAN_NAME]}: ${STATE_LABEL[o!.state]}`} className={`rr-pill rr-pill-${o!.state} px-2 py-0.5`}>{ORGAN_NAME[id as keyof typeof ORGAN_NAME][0]}</span>)}</span>
-                <span className="w-24 text-right"><b>{r.score}%</b>{now !== undefined && now !== r.score && <span className="block text-xs text-muted-foreground">now {now}%</span>}</span>
-                <Button size="sm" variant="outline" disabled={now === undefined} onClick={() => startCheck(r.scope)}>Run it again</Button>
-                <Button size="icon" variant="ghost" aria-label={`Delete the ${shortDate(r.createdAt)} report`} onClick={() => void removeReport(r)}><Trash2 /></Button>
-              </li>
-            );
-          })}</ul> : <div className="space-y-3 text-sm text-muted-foreground"><p>No reports yet. Run a Royalty Health Check from here, from any song in the checklist, or from My Catalog.</p>{runButton}</div>}
-        </Section>
-        <Section id="song-by-song" title="Song Health Checklist" open={songsOpen} onToggle={setSongsOpen}
-          summary={`${songsLabel(report.rows.length)} · ${kinds.filter((g) => g.key !== SINGLES_KEY && !g.key.startsWith("~")).length} albums & EPs · ${kinds.find((g) => g.key === SINGLES_KEY)?.songs.length ?? 0} singles · ${attention ? `⚠️ ${attention} need attention` : "✓ all on track"}`}>
-          {checklist}
-        </Section>
-        {(ipiRequests.length > 0 || cowriters.length > 0) && canCatalog && <Section id="cowriter-requests" title="Co-writer details" open={requestsOpen ?? answered > 0} onToggle={setRequestsOpen}
-          summary={answered ? `⚠️ ${answered} answer${answered === 1 ? "" : "s"} to approve${waiting ? ` · ${waiting} waiting` : ""}` : waiting ? `${waiting} request${waiting === 1 ? "" : "s"} waiting for an answer` : `${cowriters.length} co-writer${cowriters.length === 1 ? " is" : "s are"} missing a PRO or IPI`}>
-          <div className="space-y-4">
-            <IpiRequestList requests={ipiRequests} onApply={applyAnswer} onDismiss={dismissRequest} onResend={resendRequest} />
-            {cowriters.length > 0 && <Button variant="outline" onClick={askCowriter}>Ask a co-writer for their PRO and IPI</Button>}
-          </div>
-        </Section>}
-        <Section id="agency-lists" title="Confirm with your agency lists" open={listsOpen} onToggle={setListsOpen}
-          summary={Object.values(listSummaries).some(Boolean) ? Object.entries(listSummaries).filter(([, v]) => v).map(([id, v]) => `${listSocieties.find((x) => x.id === id)?.name}: ${v!.matched} matched${v!.differences ? `, ⚠️ ${v!.differences} different` : ""}`).join(" · ") : "Upload what each agency has on file · turns estimates into confirmed matches"}>
-          <AgencyLists societies={listSocieties} songsFor={songsFor} summaries={listSummaries} onApply={applyList} />
-        </Section>
-        <Section id="streaming-profile" title="Streaming Profile" summary="Streaming Fast-Track · pull your released tracks and ISRCs from Deezer with no account or key · composition checks stay unverified until MLC access lands"><StreamingFastTrack /></Section>
-        <Section title="Patient Intake Form" open={inspectorOpen} onToggle={setInspectorOpen} summary={`Single Track Checkup · check a song that isn't in your catalog · ${songsLabel(inspectorSongs.length)} inspected`}>{inspector}</Section>
-        <Section title="Waiting Area" summary="What the Doctor examines · your distributor only collects part of your money · common mismatches"><div className="space-y-4"><WaitingArea />{why}</div></Section>
-      </div>
+      {editing && (
+        <section id="patient-intake-form" className="scroll-mt-4 rounded-2xl border border-border bg-card p-5">
+          <p className="text-xs font-semibold uppercase tracking-[2px] text-primary">Patient Intake Form</p>
+          <h3 className="mt-1 text-xl font-bold">Edit this song</h3>
+          <p className="mt-1 text-sm text-muted-foreground">Saved songs join the Song Health Checklist at the Front Desk.</p>
+          <div className="mt-3">{inspector}</div>
+        </section>
+      )}
     </div>
   );
 }
@@ -557,16 +594,3 @@ const mostCommon = (values: string[]) => {
 };
 const shortDate = (iso: string) => new Date(iso).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
 const songsLabel = (n: number) => `${n} song${n === 1 ? "" : "s"}`;
-
-/** One collapsible section of the report page, with a one-line summary when closed (BRANDING.md §3). */
-function Section({ id, title, summary, open, onToggle, children }: { id?: string; title: string; summary: string; open?: boolean; onToggle?: (open: boolean) => void; children: ReactNode }) {
-  return (
-    <details id={id} open={open} onToggle={(e) => onToggle?.((e.currentTarget as HTMLDetailsElement).open)} className="rr rr-section scroll-mt-4 rounded-2xl border border-border bg-card">
-      <summary className="flex min-h-16 items-center gap-3 rounded-2xl px-5 py-4">
-        <ChevronRight className="rr-chev h-5 w-5 shrink-0 transition-transform" />
-        <span className="min-w-0 flex-1"><b className="block text-lg">{title}</b><span className="block text-sm text-muted-foreground">{summary}</span></span>
-      </summary>
-      <div className="px-5 pb-5">{children}</div>
-    </details>
-  );
-}

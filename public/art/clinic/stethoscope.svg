@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 480 320" role="img" aria-label="A stethoscope whose tube becomes a music note and a heartbeat line">
+  <rect width="480" height="320" fill="#F4F5F7"/>
+  <circle cx="240" cy="160" r="128" fill="#004AAD" opacity="0.07"/>
+
+  <!-- earpieces -->
+  <path d="M126 92c0-16 12-28 28-28" stroke="#0b0b0b" stroke-width="8" fill="none" stroke-linecap="round"/>
+  <path d="M158 64c16 0 28 12 28 28" stroke="#0b0b0b" stroke-width="8" fill="none" stroke-linecap="round"/>
+  <circle cx="126" cy="96" r="10" fill="#004AAD"/>
+  <circle cx="186" cy="96" r="10" fill="#004AAD"/>
+
+  <!-- tube -->
+  <path d="M156 96v56c0 34 26 60 60 60" stroke="#004AAD" stroke-width="9" fill="none" stroke-linecap="round"/>
+  <path d="M216 212c34 0 58 22 58 52 0 14 10 24 24 24" stroke="#004AAD" stroke-width="9" fill="none" stroke-linecap="round"/>
+
+  <!-- chest piece -->
+  <circle cx="156" cy="216" r="30" fill="#E5E4E2" stroke="#0b0b0b" stroke-width="6"/>
+  <circle cx="156" cy="216" r="12" fill="#4D8CFF"/>
+
+  <!-- note head at the end of the tube -->
+  <ellipse cx="356" cy="256" rx="30" ry="22" transform="rotate(-16 356 256)" fill="#0b0b0b"/>
+  <rect x="380" y="150" width="9" height="92" rx="4" fill="#0b0b0b"/>
+  <path d="M389 150c24 4 40 16 44 34-14-8-28-10-44-8z" fill="#0b0b0b"/>
+
+  <!-- heartbeat -->
+  <path d="M232 120h44l14-24 16 46 16-30 12 8h48" stroke="#4D8CFF" stroke-width="5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

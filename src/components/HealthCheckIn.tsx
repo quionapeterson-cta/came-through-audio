@@ -1,7 +1,9 @@
-import type { ReactNode } from "react";
-import { ChevronLeft, Stethoscope } from "lucide-react";
+import { useState, type ReactNode } from "react";
+import { ChevronLeft, ClipboardList, FileUp, Globe2, Stethoscope } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { InfoTip } from "@/components/InfoTip";
+import { ClinicArt } from "@/components/ClinicArt";
+import { OfficeSteps } from "@/components/DoctorsOffice";
 import { isBmi, type Pillar } from "@/lib/audit";
 import type { TrackReport } from "@/lib/health";
 import { printKey, registrationPrint, type SongChecklist } from "@/lib/health-checklist";
@@ -16,6 +18,14 @@ import { registrationReadiness } from "@/lib/readiness";
  * the rest are saved as `checkin:*` steps the checkup reads. Nothing here blocks the check.
  */
 export type CheckInRow = { r: TrackReport; c: SongChecklist; status?: SongStatus | undefined };
+/** The visit's three intake options (PLAN-royalty-health-hub-v2 §2 Step 2). Any combination is allowed. */
+export type IntakeKind = "streaming" | "agencies" | "single";
+const INTAKE: { id: IntakeKind; title: string; text: string; icon: typeof Globe2 }[] = [
+  { id: "streaming", title: "Streaming Profile", text: "Paste your Spotify or Deezer link. We pull every released track with its ISRC.", icon: Globe2 },
+  { id: "agencies", title: "Confirm with your agency", text: "Upload official exports from BMI, ASCAP, SESAC, The MLC or SoundExchange.", icon: FileUp },
+  { id: "single", title: "Single Track Checkup", text: "Fill in one song's Patient Intake Form for a quick diagnosis.", icon: ClipboardList },
+];
+
 /** "bmi" only answers the publisher question: a BMI writer with no publishing company. */
 export type Answer = "yes" | "no" | "unsure" | "bmi";
 type Value = { answer?: Answer | undefined; locked?: string | undefined };
@@ -101,6 +111,10 @@ type Props = {
   rows: CheckInRow[];
   countryPicker: ReactNode;
   signedSheets?: Map<string, boolean> | undefined;
+  /** Which intake to open on, when the visit was started for one (e.g. "upload your agency list" from a report). */
+  initialIntake?: IntakeKind | undefined;
+  /** The intake panels themselves, rendered in place once chosen. */
+  intake?: { streaming: ReactNode; agencies: ReactNode; single: ReactNode } | undefined;
   /** Saves checklist steps for each song (null removes one). */
   onAnswer: (changes: { id: string; steps: Record<string, string | null> }[]) => void;
   /** "No, I'm self-published": ticks Self-published on songs with no publisher listed. */
@@ -112,8 +126,9 @@ type Props = {
   onBack: () => void;
 };
 
-export function HealthCheckIn({ scope, options, onScope, rows, countryPicker, signedSheets, onAnswer, onSelfPublished, onBmiWriter, onFixField, onRun, onBack }: Props) {
+export function HealthCheckIn({ scope, options, onScope, rows, countryPicker, signedSheets, initialIntake, intake, onAnswer, onSelfPublished, onBmiWriter, onFixField, onRun, onBack }: Props) {
   const many = rows.length > 1;
+  const [chosen, setChosen] = useState<IntakeKind | undefined>(initialIntake);
   const list = questions(signedSheets);
   // Missing writer details are shown so they can be fixed, but never hold the check back (Writer Credits rules).
   const warnings = rows.flatMap((x) => registrationReadiness(x.r.track.metadata).missing.slice(0, 2).map((w) => ({ x, w }))).slice(0, 6);
@@ -136,6 +151,7 @@ export function HealthCheckIn({ scope, options, onScope, rows, countryPicker, si
           </div>
           {countryPicker}
         </div>
+        <div className="mt-5"><OfficeSteps at={1} /></div>
 
         {options.length > 1 && <fieldset className="mt-6">
           <legend className="mb-2 text-sm font-bold">Which songs?</legend>
@@ -156,7 +172,49 @@ export function HealthCheckIn({ scope, options, onScope, rows, countryPicker, si
           <p className="mt-1 text-muted-foreground"><em>For our strongest diagnosis, provide both your streaming profile and your official agency exports. Streaming verifies what is actively released and generating plays, while agency records verify what your collection societies actually have on file—cross-referencing both catches every uncollected dollar.</em></p>
         </div>
 
-        <div className="mt-6">
+        {/* Step 2: the intake options, opened right here so nothing lives in a dropdown on the Hub. */}
+        {intake && (
+          <div className="mt-6">
+            <div className="flex flex-wrap items-end justify-between gap-3">
+              <div>
+                <h3 className="text-sm font-bold">Intake &amp; records</h3>
+                <p className="max-w-[62ch] text-sm text-muted-foreground">Bring whatever you have. Any combination works, and more sources make a stronger diagnosis.</p>
+              </div>
+              <ClinicArt name="intake" className="hidden h-16 w-28 object-cover sm:block" />
+            </div>
+            <div className="mt-3 grid gap-3 md:grid-cols-3">
+              {INTAKE.map((o) => {
+                const Icon = o.icon;
+                const on = chosen === o.id;
+                return (
+                  <button key={o.id} type="button" aria-pressed={on} onClick={() => setChosen(on ? undefined : o.id)}
+                    className={`rounded-xl border-2 p-4 text-left transition ${on ? "border-primary bg-primary/5" : "border-border hover:border-primary/60"}`}>
+                    <Icon className="h-5 w-5 text-primary" />
+                    <b className="mt-2 block text-sm">{o.title}</b>
+                    <span className="mt-1 block text-xs text-muted-foreground">{o.text}</span>
+                  </button>
+                );
+              })}
+            </div>
+            {chosen && (
+              <div className="mt-4">
+                <p className="mb-2 text-xs font-semibold uppercase tracking-[2px] text-primary">
+                  {INTAKE.find((o) => o.id === chosen)?.title}
+                  {chosen === "single" ? " · enter it exactly as filed with your agency" : ""}
+                </p>
+                {chosen === "streaming" ? intake.streaming : chosen === "agencies" ? intake.agencies : intake.single}
+              </div>
+            )}
+          </div>
+        )}
+
+        {rows.length === 0 && (
+          <p className="mt-6 rounded-xl border border-dashed border-border p-4 text-sm text-muted-foreground">
+            No songs yet. Bring them in with an intake option above — a streaming link, an agency file, or one song by hand — then run the check.
+          </p>
+        )}
+
+        {rows.length > 0 && <div className="mt-6">
           <h3 className="mb-3 text-sm font-bold">What have you done already?</h3>
           <ul className="divide-y divide-border rounded-2xl border border-border">
             {list.map((q) => {
@@ -182,7 +240,7 @@ export function HealthCheckIn({ scope, options, onScope, rows, countryPicker, si
             })}
             <PublisherRow rows={rows} many={many} onAnswer={onAnswer} onSelfPublished={onSelfPublished} onBmiWriter={onBmiWriter} onFixField={onFixField} />
           </ul>
-        </div>
+        </div>}
 
         {(warnings.length > 0 || noPro.length > 0) && <div className="mt-6 space-y-1 rounded-2xl border border-border p-4 text-sm">
           <p className="font-semibold">A few details to fix (these won't stop your check):</p>
@@ -193,7 +251,7 @@ export function HealthCheckIn({ scope, options, onScope, rows, countryPicker, si
 
         <div className="mt-8 flex flex-wrap justify-end gap-2">
           <Button variant="outline" onClick={onBack}>Back</Button>
-          <Button size="lg" onClick={onRun}><Stethoscope />Run my Royalty Health Check</Button>
+          <Button size="lg" onClick={onRun} disabled={!rows.length}><Stethoscope />Run my Royalty Health Check</Button>
         </div>
       </div>
     </div>
