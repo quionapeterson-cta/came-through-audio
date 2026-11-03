@@ -515,7 +515,8 @@ export function RoyaltyHealthCheck({ userId, canCatalog, canExport, onUpgrade, o
       <Stethoscope />Run a Royalty Health Check
     </Button>
   );
-  const hub = <HealthReport {...actions} report={report} country={country} running={running} canCatalog={canCatalog} onEmbed={onEmbed} action={report.rows.length ? runButton : undefined} />;
+  // Where you get paid is one of the check-in questions, so the Hub no longer offers it (founder, 2026-11-03).
+  const hub = <HealthReport {...actions} report={report} country={country} running={running} canCatalog={canCatalog} onEmbed={onEmbed} pickCountry={false} action={report.rows.length ? runButton : undefined} />;
 
   // The Hub is the Doctor, the Front Desk and the Waiting Area (plan §1). Everything else happens inside the visit.
   const doctor = (
@@ -591,7 +592,7 @@ export function RoyaltyHealthCheck({ userId, canCatalog, canExport, onUpgrade, o
       </div>
       {desk === "reports" && <div id="past-reports" className="scroll-mt-4 border-b border-border p-5">{reportsPanel}</div>}
       {desk === "checklist" && <div id="song-by-song" className="scroll-mt-4 p-5">
-        <p className="mb-3 text-sm text-muted-foreground">{songsLabel(report.rows.length)} · every step, agency by agency.</p>
+        <p className="mb-3 text-sm text-muted-foreground">{songsLabel(report.rows.length)} · every step, agency by agency · checked against {country.name}.</p>
         {checklist}
       </div>}
     </section>

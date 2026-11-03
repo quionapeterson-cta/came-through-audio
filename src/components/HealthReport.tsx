@@ -21,7 +21,9 @@ export type HealthActions = {
 };
 type Running = { done: number; total: number; trackId?: string | undefined };
 /** `action`: the Hub's "Run a Royalty Health Check" button, under the country picker. */
-type Props = HealthActions & { report: Report; country: Country; running?: Running | undefined; canCatalog: boolean; onEmbed: () => void; action?: ReactNode };
+type Props = HealthActions & { report: Report; country: Country; running?: Running | undefined; canCatalog: boolean; onEmbed: () => void; action?: ReactNode;
+  /** Where you get paid is asked at check-in now, so the Hub hides the control (PLAN-royalty-health-hub-v2 section 2). */
+  pickCountry?: boolean };
 
 function ScoreRing({ value }: { value: number }) {
   const r = 52, c = 2 * Math.PI * r;
@@ -112,7 +114,7 @@ export function LiveRecords({ r, onRun, running }: { r: TrackReport; onRun: () =
 
 const STEP = { fix: "Fix song info", register: "Register", confirm: "Confirm" } as const;
 
-export function HealthReport({ report, country, running, canCatalog, onEmbed, action, ...actions }: Props) {
+export function HealthReport({ report, country, running, canCatalog, onEmbed, action, pickCountry = true, ...actions }: Props) {
   const needsPro = (r: TrackReport) => r.issues.some((i) => i.field?.endsWith("-pro"));
   const rowOf = (id: string) => report.rows.find((r) => r.track.id === id)!;
   const todos = todoList(report).filter((t) => !(t.kind === "confirm" && t.pillar === "performance" && needsPro(rowOf(t.track.id))));
@@ -132,7 +134,7 @@ export function HealthReport({ report, country, running, canCatalog, onEmbed, ac
               ? "Make sure every song is registered and matched, so every royalty it earns can reach you."
               : "Enter a song's details below to see if it's registered and matched, so every royalty it earns can reach you."}</p>
           </div>
-          <div className="flex flex-col items-start gap-3 md:items-end"><CountryPicker country={country} onCountry={actions.onCountry} />{action}</div>
+          <div className="flex flex-col items-start gap-3 md:items-end">{pickCountry && <CountryPicker country={country} onCountry={actions.onCountry} />}{action}</div>
         </div>
         {report.rows.length > 0 && (
           <div className="mt-8 flex flex-col gap-6 lg:flex-row lg:items-center">
