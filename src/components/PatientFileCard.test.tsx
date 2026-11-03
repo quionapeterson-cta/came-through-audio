@@ -26,4 +26,11 @@ describe("PatientFileCard", () => {
     fireEvent.click(screen.getByRole("button", { name: /Edit/ }));
     expect(screen.getByRole("button", { name: /Save my details/ })).toBeTruthy();
   });
+
+  it("shows the file the account kept instead of asking for it again", () => {
+    render(<PatientFileCard userId="u2" defaultName="Ann Lee" patient={{ legalName: "Ann Lee", pro: "BMI", ipi: "123456789", publishing: "self", publisher: "" }} />);
+    expect(screen.getByText("Your details at the desk")).toBeTruthy();
+    expect(screen.getByText(/BMI · IPI 123456789 · I'm self-published/)).toBeTruthy();
+    expect(screen.queryByRole("textbox", { name: "Legal name" })).toBeNull();
+  });
 });

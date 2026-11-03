@@ -32,7 +32,7 @@ import { INTERNATIONAL, countryByCode, guessCountry } from "@/lib/repertoires";
 import { loadOnboarding, saveOnboarding } from "@/lib/artist-profile";
 import { WaitingArea } from "@/components/WaitingArea";
 import { ClinicArt } from "@/components/ClinicArt";
-import { ClinicalScan, loadPatientFile, OfficeSteps } from "@/components/DoctorsOffice";
+import { ClinicalScan, loadPatientFile, loadPatientFileFromAccount, OfficeSteps } from "@/components/DoctorsOffice";
 import { PatientFileCard, patientFileReady, patientSummary } from "@/components/PatientFileCard";
 import { UpgradeCards } from "@/components/UpgradeCards";
 import { StreamingFastTrack } from "@/components/StreamingFastTrack";
@@ -79,6 +79,13 @@ export function RoyaltyHealthCheck({ userId, canCatalog, canExport, onUpgrade, o
   /** The patient file handed over at the Front Desk. The Doctor reads it for the intake form's writer defaults. */
   const [patient, setPatient] = useState(() => loadPatientFile(userId));
   const patientReady = patientFileReady(patient);
+  // A new browser has no local copy: the file on the account is the desk's other copy.
+  useEffect(() => {
+    if (patientReady) return;
+    let alive = true;
+    loadPatientFileFromAccount(userId).then((f) => { if (alive && f) setPatient(f); }).catch(() => {});
+    return () => { alive = false; };
+  }, [userId, patientReady]);
 
   useEffect(() => {
     Promise.all([
@@ -588,7 +595,7 @@ export function RoyaltyHealthCheck({ userId, canCatalog, canExport, onUpgrade, o
       </div>
       {/* Step 1 of the visit, at the desk where you would hand it over. */}
       <div className="border-b border-border p-5">
-        <PatientFileCard userId={userId} defaultName={loadOnboarding(userId)?.legalName ?? ""} onSaved={setPatient} />
+        <PatientFileCard userId={userId} defaultName={loadOnboarding(userId)?.legalName ?? ""} patient={patient} onSaved={setPatient} />
       </div>
       {desk === "reports" && <div id="past-reports" className="scroll-mt-4 border-b border-border p-5">{reportsPanel}</div>}
       {desk === "checklist" && <div id="song-by-song" className="scroll-mt-4 p-5">

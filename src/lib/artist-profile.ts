@@ -23,6 +23,8 @@ export interface Onboarding {
   healthCountry?: string;
   /** What badges show (celebrations, hints, hidden collections, sharing). Badges are always earned regardless. */
   badgePrefs?: BadgePrefs;
+  /** The patient file handed over at the Royalty Health Hub's Front Desk, kept with the account, not just this browser. */
+  patientFile?: { legalName: string; pro: string; ipi: string; publishing: "" | "publisher" | "self" | "bmi"; publisher: string };
 }
 
 export const badgePrefs = (o?: Onboarding | null): BadgePrefs => ({ ...DEFAULT_BADGE_PREFS, ...o?.badgePrefs });

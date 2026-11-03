@@ -1,10 +1,10 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { CheckCircle2, Pencil } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { InfoTip } from "@/components/InfoTip";
 import { ProSelect } from "@/components/ProSelect";
-import { loadPatientFile, savePatientFile, type PatientFile } from "@/components/DoctorsOffice";
+import { loadPatientFile, loadPatientFileFromAccount, savePatientFile, type PatientFile } from "@/components/DoctorsOffice";
 
 /**
  * The patient file (PLAN-royalty-health-hub-v2 §2 Step 1), handed over at the Front Desk the way you give your details
@@ -29,16 +29,38 @@ export const patientSummary = (f: PatientFile) =>
     .filter(Boolean)
     .join(" · ");
 
-export function PatientFileCard({ userId, defaultName, onSaved }: { userId: string; defaultName: string; onSaved?: (f: PatientFile) => void }) {
-  const [saved, setSaved] = useState<PatientFile | null>(() => loadPatientFile(userId));
-  const [file, setFile] = useState<PatientFile>(() => loadPatientFile(userId) ?? { ...blank, legalName: defaultName });
-  const [editing, setEditing] = useState(() => !loadPatientFile(userId));
+export function PatientFileCard({ userId, defaultName, patient, onSaved }: {
+  userId: string;
+  defaultName: string;
+  /** The file the Front Desk already holds, so the card and Check In never disagree about whether you're checked in. */
+  patient?: PatientFile | null;
+  onSaved?: (f: PatientFile) => void;
+}) {
+  const [local, setLocal] = useState<PatientFile | null>(() => loadPatientFile(userId));
+  const saved = patient ?? local;
+  const [file, setFile] = useState<PatientFile>(() => saved ?? { ...blank, legalName: defaultName });
+  const [editing, setEditing] = useState(() => !saved);
   const set = (k: keyof PatientFile, v: string) => setFile((x) => ({ ...x, [k]: v }));
   const ready = patientFileReady(file);
 
+  // A file that arrives from the account, or from the hub, replaces the empty form.
+  useEffect(() => {
+    if (!saved) return;
+    setFile(saved);
+    setEditing(false);
+  }, [saved]);
+
+  // Nothing on this device: ask the account before asking the patient to type it all again.
+  useEffect(() => {
+    if (saved) return;
+    let alive = true;
+    loadPatientFileFromAccount(userId).then((f) => { if (alive && f) setLocal(f); }).catch(() => {});
+    return () => { alive = false; };
+  }, [userId, saved]);
+
   function keep() {
     savePatientFile(userId, file);
-    setSaved(file);
+    setLocal(file);
     setEditing(false);
     onSaved?.(file);
   }

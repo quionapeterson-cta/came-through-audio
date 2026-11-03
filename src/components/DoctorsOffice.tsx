@@ -4,6 +4,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ProSelect } from "@/components/ProSelect";
 import { InfoTip } from "@/components/InfoTip";
+import { supabase } from "@/integrations/supabase/client";
+import { loadOnboarding, saveOnboarding } from "@/lib/artist-profile";
 
 /**
  * The Doctor's Office: the Royalty Health Hub's one guided consultation, in order:
@@ -12,10 +14,38 @@ import { InfoTip } from "@/components/InfoTip";
 export type PatientFile = { legalName: string; pro: string; ipi: string; publishing: "" | "publisher" | "self" | "bmi"; publisher: string };
 const blankFile: PatientFile = { legalName: "", pro: "", ipi: "", publishing: "", publisher: "" };
 const fileKey = (userId: string) => `cta_patient_file:${userId}`;
+
+/** The file on this device, or the copy the account keeps, so a new browser doesn't mean filling it in again. */
 export function loadPatientFile(userId: string): PatientFile | null {
-  try { const v = localStorage.getItem(fileKey(userId)); return v ? { ...blankFile, ...(JSON.parse(v) as PatientFile) } : null; } catch { return null; }
+  try { const v = localStorage.getItem(fileKey(userId)); if (v) return { ...blankFile, ...(JSON.parse(v) as PatientFile) }; } catch { /* private mode */ }
+  return loadOnboarding(userId)?.patientFile ?? null;
 }
-export const savePatientFile = (userId: string, f: PatientFile) => { try { localStorage.setItem(fileKey(userId), JSON.stringify(f)); } catch { /* private mode */ } };
+
+/**
+ * Saves the file for the desk, on this device and with the account (profiles.onboarding.patientFile, the same row the
+ * profile defaults sync through), so clearing the browser or moving to another one doesn't lose it.
+ */
+export function savePatientFile(userId: string, f: PatientFile) {
+  try { localStorage.setItem(fileKey(userId), JSON.stringify(f)); } catch { /* private mode */ }
+  if (!userId) return;
+  const ob = loadOnboarding(userId);
+  if (ob) { saveOnboarding(userId, { ...ob, patientFile: f }); return; }
+  // No profile on this device yet: merge into the account's row instead of replacing it.
+  void supabase.from("profiles").select("onboarding").eq("id", userId).maybeSingle().then(({ data }) => {
+    const cloud = (data?.onboarding ?? null) as unknown as Record<string, unknown> | null;
+    void supabase.from("profiles").update({ onboarding: { ...(cloud ?? {}), patientFile: f } } as never).eq("id", userId);
+  });
+}
+
+/** The account's own copy, for a browser whose storage has never seen this user. */
+export async function loadPatientFileFromAccount(userId: string): Promise<PatientFile | null> {
+  if (!userId) return null;
+  const { data } = await supabase.from("profiles").select("onboarding").eq("id", userId).maybeSingle();
+  const f = (data?.onboarding as unknown as { patientFile?: PatientFile } | null)?.patientFile;
+  if (!f) return null;
+  try { localStorage.setItem(fileKey(userId), JSON.stringify(f)); } catch { /* private mode */ }
+  return { ...blankFile, ...f };
+}
 
 export const OFFICE_STEPS = ["Patient Check-in", "Intake & records", "Clinical scan", "Diagnosis"] as const;
 
