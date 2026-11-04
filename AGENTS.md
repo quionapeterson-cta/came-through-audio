@@ -102,5 +102,31 @@ rules keep it consistent as features are added.
 - Eye on the Prize (`EAGLE_ART.eyeOnThePrize`) marks the rows Catalog Management alone has, plus the rows marked
   `prize: true`, which carry it on every tier that includes them (Royalty Utility Suite on Catalog & Collaborate). Any
   other row that starts on a lower tier keeps the check it shows there, on every tier above it.
+- A row may wear a pair of eagles (`eaglePair: true` on the feature, used by PDF Fill, Sign & Download): both stay the
+  full size a single eagle has, the second a step down and in front of the first. It is a highlight, not a new mark, so
+  the pair never appears with a check and is never used on more than one row at a time.
 - New rows pick their mark by that rule inside `Mark` in `src/components/PlanComparison.tsx`. Never add a per-feature
   exception to it without the founder asking for one.
+
+## Brand Lockup (always follow)
+
+- Wherever the brand appears as a lockup, the name comes first and the slogan follows immediately: "Came Through
+  Audio", then "Your first stop before distribution" (`SLOGAN` in `src/lib/social.ts`). Never the other way round, and
+  never the slogan as the lockup on its own. Draw it with `BrandLockup` in `src/components/BrandLockup.tsx`, never by
+  hand: the mark there is sized in em so it stays on the name's baseline on a phone instead of drifting.
+- The home-screen name is "Came Through" (`short_name` in `public/manifest.webmanifest` and
+  `apple-mobile-web-app-title` in `src/routes/__root.tsx`); the full name stays "Came Through Audio".
+- Social accounts: Instagram and TikTok are @camethroughaudio. They are edited in Admin → Homepage → Social, stored in
+  `site_settings` under the id `social_links`, and read through `src/lib/social.functions.ts`. The footer draws only
+  the platforms switched on with an address. A new platform is added to `SOCIAL_PLATFORMS` in `src/lib/social.ts` plus
+  an icon in `src/components/SocialLinks.tsx`, never hard-coded in the footer.
+
+## PDF Output (always follow)
+
+- Text in a PDF the app builds is drawn as text, never rasterized: `pdf-lib` `drawText` with an embedded font (see
+  `buildPdf` in `src/lib/pdf-tools.ts` and `brand-pdf.ts`). Never screenshot a page into an image to "flatten" it, and
+  never downscale an upload before writing it back: the original pages are kept as they are.
+- A placed signature is a PNG at roughly 5x the width it is drawn at (a 900px canvas for a 180pt signature, about
+  360 DPI), so it stays sharp when printed. Keep that ratio when changing the signature pad.
+- Downloads keep the `.pdf` name the member expects (`signedFileName`), and a document with no changes comes back byte
+  for byte, so an untouched upload is never recompressed.

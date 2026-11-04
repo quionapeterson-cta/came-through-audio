@@ -3,7 +3,7 @@ import { HOME_FAQS } from "@/lib/faq";
 import { Building2, Camera, Check, Cloud, Download, HardDrive, Infinity as InfinityIcon, Mail, MessageSquare, Mic, Music, Palette, StickyNote, Upload } from "lucide-react";
 import { SignupCard } from "@/components/SignupCard";
 import { BrandLogo } from "@/components/BrandLogo";
-import { DownloadApp } from "@/components/InstallApp";
+import { AppOrBrowserGate, DownloadApp } from "@/components/InstallApp";
 import { FitHeadline } from "@/components/FitHeadline";
 import { EmbedBadge, ShieldBadge, SignBadge, SplitBadge, UploadBadge, VaultBadge } from "@/components/StepBadges";
 import { ArtistBadge, ComposerBadge, MusicianBadge, ProducerBadge, SongwriterBadge } from "@/components/RoleBadges";
@@ -12,6 +12,10 @@ import { PlanComparison, planAction } from "@/components/PlanComparison";
 import { PLAN_FEATURES, PLAN_TIERS } from "@/lib/plans";
 import { DEFAULT_TESTIMONIAL_FILTER, TESTIMONIALS } from "@/lib/testimonials";
 import { getTestimonialFilter, getTestimonials } from "@/lib/testimonials.functions";
+import { getSiteSocials } from "@/lib/social.functions";
+import { DEFAULT_SOCIALS } from "@/lib/social";
+import { SocialLinks } from "@/components/SocialLinks";
+import { BrandLockup } from "@/components/BrandLockup";
 import { TestimonialCard } from "@/components/TestimonialCard";
 
 export const Route = createFileRoute("/")({
@@ -27,8 +31,8 @@ export const Route = createFileRoute("/")({
   }),
   // The shared testimonial photo filter, loaded with the page so photos never flash with the wrong look.
   loader: async () => {
-    const [filter, testimonials] = await Promise.all([getTestimonialFilter().catch(() => DEFAULT_TESTIMONIAL_FILTER), getTestimonials().catch(() => TESTIMONIALS)]);
-    return { filter, testimonials };
+    const [filter, testimonials, socials] = await Promise.all([getTestimonialFilter().catch(() => DEFAULT_TESTIMONIAL_FILTER), getTestimonials().catch(() => TESTIMONIALS), getSiteSocials().catch(() => DEFAULT_SOCIALS)]);
+    return { filter, testimonials, socials };
   },
   component: Landing,
 });
@@ -229,10 +233,12 @@ function StartFree({ label = "Sign up free", variant = "primary" }: { label?: st
 }
 
 function Landing() {
-  const { filter, testimonials } = Route.useLoaderData();
+  const { filter, testimonials, socials } = Route.useLoaderData();
   const { siteLocked } = Route.useRouteContext();
   return (
     <div className="min-h-screen bg-background text-foreground">
+      {/* App or browser comes first, before the header, so it is the first screen anyone meets. */}
+      <AppOrBrowserGate />
       {/* A white header sets the black hero apart as its own block instead of one long stretch of black. */}
       <header className="border-b border-border bg-background text-foreground">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-5">
@@ -254,7 +260,11 @@ function Landing() {
               { text: <MetalWord>Distribution</MetalWord>, className: "text-5xl font-extrabold md:text-6xl lg:text-7xl" },
             ]} sub="From the last bounce in the studio to the first royalty in your account: embed your credits, organize your catalog and get your songs registered, all before you hit distribute." subClassName="text-xl font-semibold text-ink-foreground" />
           </div>
-          <div id="signup">{siteLocked ? <LaunchingSoon /> : <SignupCard />}</div>
+          <div id="signup">
+            {/* The lockup above the form: the name first, then the line it stands for (AGENTS.md, Brand Lockup). */}
+            <BrandLockup className="mb-4 text-center" nameClassName="text-base text-ink-foreground" sloganClassName="text-xs" />
+            {siteLocked ? <LaunchingSoon /> : <SignupCard />}
+          </div>
         </div>
       </section>
 
@@ -296,25 +306,25 @@ function Landing() {
 
           {/* The story underneath, set like a magazine feature: a drop-cap lead, then two columns of body running the same
               width as the cards above, so the block ends flush with them. */}
-          <div className="mt-14">
-            <p className="text-xl leading-relaxed text-ink-foreground first-letter:float-left first-letter:mr-3 first-letter:mt-1 first-letter:text-6xl first-letter:font-black first-letter:leading-[0.8]">
+          <div className="mt-14 rounded-2xl bg-background px-5 py-9 text-foreground shadow-sm sm:px-8 md:px-10 md:py-10">
+            <p className="text-xl leading-relaxed text-foreground first-letter:float-left first-letter:mr-3 first-letter:mt-1 first-letter:text-6xl first-letter:font-black first-letter:leading-[0.8]">
               Picture this. You finish your single at 2 AM and send it out that same night to a DJ, a blog, and a music supervisor looking for a song for a TV show.
             </p>
             {/* Two flowing columns, not a row grid: each paragraph sits under the one above it instead of being pushed
                 down to match the height of the paragraph beside it. */}
-            <div className="mt-6 grid gap-x-10 gap-y-5 text-lg leading-relaxed text-ink-muted md:grid-cols-2">
+            <div className="mt-6 grid gap-x-10 gap-y-5 text-lg leading-relaxed text-muted-foreground md:grid-cols-2">
               <div className="space-y-5">
                 <p>Three weeks later the show wants it. They open the file and all it says is Track 01. No artist. No writer. No codes. They can't clear a song they can't trace, so they move on to the next one that tells them who owns it.</p>
                 <p>Make sure every song can say who made it. Came Through Audio came through for every song in your catalog.</p>
               </div>
               <div className="space-y-5">
-                <p className="text-xl font-bold leading-snug text-ink-foreground md:text-2xl">Your song was good enough. It just couldn't speak up for you.</p>
-                <p><span className="font-bold text-ink-foreground">Embedding fixes that.</span> It writes your name, credits, codes, lyrics and artwork inside the audio file itself, like a name tag sewn into a jacket.</p>
+                <p className="text-xl font-bold leading-snug text-foreground md:text-2xl">Your song was good enough. It just couldn't speak up for you.</p>
+                <p><span className="font-bold text-foreground">Embedding fixes that.</span> It writes your name, credits, codes, lyrics and artwork inside the audio file itself, like a name tag sewn into a jacket.</p>
               </div>
               <p className="md:col-span-2">Same file, same mix, nothing re-recorded. The only thing that changes is what the file says about itself, which is the difference between Track 01 and a song anyone can license.</p>
             </div>
 
-            <div className="mt-9 border-l-4 border-electric bg-ink-border/40 px-6 py-5">
+            <div className="mt-9 border-l-4 border-electric bg-ink px-6 py-5 text-ink-foreground">
               <p className="text-xs font-bold uppercase tracking-[2px] text-electric">The part that matters</p>
               <p className="mt-2 text-2xl font-extrabold leading-snug md:text-3xl">Wherever the file goes, your information goes with it.</p>
               <p className="mt-2 leading-relaxed text-ink-muted">Copied, renamed or shared a hundred times: the credits, codes, lyrics and artwork are still inside.</p>
@@ -427,11 +437,11 @@ function Landing() {
           </div>
 
           {/* The story underneath, set like the embedding spread: a drop-cap lead, two flowing columns, one callout. */}
-          <div className="mt-14">
-            <p className="text-xl leading-relaxed text-ink-foreground first-letter:float-left first-letter:mr-3 first-letter:mt-1 first-letter:text-6xl first-letter:font-black first-letter:leading-[0.8]">
+          <div className="mt-14 rounded-2xl bg-background px-5 py-9 text-foreground shadow-sm sm:px-8 md:px-10 md:py-10">
+            <p className="text-xl leading-relaxed text-foreground first-letter:float-left first-letter:mr-3 first-letter:mt-1 first-letter:text-6xl first-letter:font-black first-letter:leading-[0.8]">
               A catalog is every piece of a song kept together: the master, the artwork, the lyrics, the credits and the codes, for every song you own.
             </p>
-            <div className="mt-6 grid gap-x-10 gap-y-5 text-lg leading-relaxed text-ink-muted md:grid-cols-2">
+            <div className="mt-6 grid gap-x-10 gap-y-5 text-lg leading-relaxed text-muted-foreground md:grid-cols-2">
               <div className="space-y-5">
                 <p>Before cataloging, one song lives in a dozen places. The master is an attachment in an email thread, a copy on a hard drive and a link in a Dropbox folder; the session file is on the studio's computer. The cover art is in a design tool, the lyrics are in your notes app, and the splits are in a group chat with the writers.</p>
                 <p>Cataloging stops the hunt. Search a title, a writer or an ISRC and the song comes back with its master, art, lyrics and credits attached.</p>
@@ -442,7 +452,7 @@ function Landing() {
               </div>
             </div>
 
-            <div className="mt-9 border-l-4 border-electric bg-ink-border/40 px-6 py-5">
+            <div className="mt-9 border-l-4 border-electric bg-ink px-6 py-5 text-ink-foreground">
               <p className="text-xs font-bold uppercase tracking-[2px] text-electric">The part that matters</p>
               <p className="mt-2 text-2xl font-extrabold leading-snug md:text-3xl">One song, one row, every piece of it.</p>
               <p className="mt-2 leading-relaxed text-ink-muted">Master, artwork, lyrics, credits and codes stay together, so every download comes back complete.</p>
@@ -482,19 +492,17 @@ function Landing() {
       <section className="bg-ink text-ink-foreground">
         <div className="mx-auto flex max-w-4xl flex-col items-center gap-4 px-6 py-16 text-center">
           <h2 className="text-3xl font-extrabold md:text-4xl">Your songs already did the work. Make sure they get paid.</h2>
-          <p className="text-sm font-bold uppercase tracking-[2px] text-brand-electric">Your first stop before distribution</p>
-          {/* The brand lockup above the last sign up button: the mark is the C in "Came" (founder, 2026-11-03). */}
-          <p className="mt-5 flex items-center justify-center gap-1">
-            <img src="/cta-mark-light.png" alt="" aria-hidden className="h-7 w-7 shrink-0" />
-            <span aria-hidden className="text-lg font-bold uppercase tracking-[2px] text-ink-foreground">ame Through Audio</span>
-            <span className="sr-only">Came Through Audio</span>
-          </p>
+          {/* The same lockup as the hero, above the last sign up button (founder, 2026-11-04). */}
+          <BrandLockup className="mt-2 text-center" nameClassName="text-lg text-ink-foreground" sloganClassName="text-sm" />
           <div className="mt-2 flex flex-wrap justify-center gap-3">
             <StartFree />
             <Link to="/plans" className="inline-flex h-12 items-center rounded-md border border-ink-border px-6 font-semibold hover:bg-ink-border">Compare plans</Link>
           </div>
         </div>
       </section>
+
+      {/* A hairline between the last sign-up and the footer links, so the two black blocks don't run together. */}
+      <div aria-hidden className="h-px w-full bg-ink-foreground/25" />
 
       <footer className="bg-ink text-ink-muted">
         <div className="mx-auto grid max-w-7xl gap-10 px-6 py-14 sm:grid-cols-2 lg:grid-cols-4">
@@ -513,11 +521,12 @@ function Landing() {
             </div>
           ))}
         </div>
-        {/* The name and the line it stands for, at the very bottom of the page (founder, 2026-11-03). */}
-        <div className="border-t border-ink-border py-6 text-center text-sm">
-          <p className="font-bold uppercase tracking-[2px] text-brand-electric">Came Through Audio</p>
-          <p className="mt-1 font-semibold text-ink-foreground">Your first stop before distribution</p>
-          <p className="mt-2 text-ink-muted">© {new Date().getFullYear()} Came Through Audio, LLC</p>
+        {/* Social bottom left, the copyright bottom right: the footer's last line (founder, 2026-11-04). */}
+        <div className="border-t border-ink-border px-6 py-6">
+          <div className="mx-auto flex max-w-7xl flex-col-reverse items-center justify-between gap-4 sm:flex-row">
+            <SocialLinks links={socials} />
+            <p className="text-sm text-ink-muted">© {new Date().getFullYear()} Came Through Audio, LLC</p>
+          </div>
         </div>
       </footer>
     </div>

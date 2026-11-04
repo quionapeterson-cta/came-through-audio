@@ -50,7 +50,7 @@ export function IosInstallHelp({ open, onOpenChange }: { open: boolean; onOpenCh
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-sm">
         <DialogHeader>
-          <DialogTitle>Install CTAudio</DialogTitle>
+          <DialogTitle>Install Came Through Audio</DialogTitle>
           <DialogDescription>Add it to your home screen to open it like an app, full screen.</DialogDescription>
         </DialogHeader>
         <ol className="space-y-3 text-sm">
@@ -59,11 +59,84 @@ export function IosInstallHelp({ open, onOpenChange }: { open: boolean; onOpenCh
           <li className="flex items-center gap-3"><span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary text-xs font-bold text-primary-foreground">2</span>
             <span>Scroll and tap <PlusSquare className="inline h-4 w-4 align-text-bottom text-primary" aria-hidden /> <span className="font-semibold">Add to Home Screen</span>.</span></li>
           <li className="flex items-center gap-3"><span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary text-xs font-bold text-primary-foreground">3</span>
-            <span>Tap <span className="font-semibold">Add</span>. CTAudio appears on your home screen.</span></li>
+            <span>Tap <span className="font-semibold">Add</span>. Came Through appears on your home screen.</span></li>
         </ol>
         <Button variant="outline" onClick={() => onOpenChange(false)}>Got it</Button>
       </DialogContent>
     </Dialog>
+  );
+}
+
+/** The steps for a browser that never offers the one-tap install, from its own menu. */
+export function InstallSteps({ open, onOpenChange }: { open: boolean; onOpenChange: (v: boolean) => void }) {
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle>Install Came Through Audio</DialogTitle>
+          <DialogDescription>Your browser didn't offer the one-tap install, so add it from its own menu. It takes a few seconds.</DialogDescription>
+        </DialogHeader>
+        <ol className="space-y-3 text-sm">
+          <li className="flex gap-3"><span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary text-xs font-bold text-primary-foreground">1</span>
+            <span>Open this site in Chrome, Edge or Samsung Internet: the browsers that can install it.</span></li>
+          <li className="flex gap-3"><span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary text-xs font-bold text-primary-foreground">2</span>
+            <span>Tap the browser menu and choose <span className="font-semibold">Install app</span> or <span className="font-semibold">Add to Home screen</span>. On a computer it's the install icon in the address bar.</span></li>
+          <li className="flex gap-3"><span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary text-xs font-bold text-primary-foreground">3</span>
+            <span>On iPhone or iPad: tap <Share className="inline h-4 w-4 align-text-bottom text-primary" aria-label="Share" /> <span className="font-semibold">Share</span>, then <span className="font-semibold">Add to Home Screen</span>.</span></li>
+        </ol>
+        <Button variant="outline" onClick={() => onOpenChange(false)}>Got it</Button>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+/** Where the answer is kept, so the question is asked once rather than on every visit. */
+const ENTRY_KEY = "cta-entry";
+
+/**
+ * The first screen of the site (founder, 2026-11-04): put Came Through Audio on the home screen, or go straight into
+ * the site in the browser. It sits above the header, so it is the whole first screen on arrival; either answer is
+ * remembered and the screen never comes back (an installed app skips it outright). It is not a wall: the page below
+ * scrolls, and "Continue in browser" simply closes it.
+ */
+export function AppOrBrowserGate() {
+  const { canInstall, install, iosHelp, setIosHelp } = useInstallApp();
+  const [asking, setAsking] = useState(true);
+  const [steps, setSteps] = useState(false);
+  useEffect(() => {
+    let chosen: string | null = null;
+    try { chosen = window.localStorage.getItem(ENTRY_KEY); } catch { chosen = null; }
+    if (chosen || isInstalled()) setAsking(false);
+  }, []);
+  const choose = (how: "app" | "browser") => {
+    try { window.localStorage.setItem(ENTRY_KEY, how); } catch { /* private browsing: they'll be asked again */ }
+    setAsking(false);
+    window.scrollTo({ top: 0 });
+  };
+  const addToPhone = () => { if (canInstall) void install().then(() => choose("app")); else setSteps(true); };
+  if (!asking) return null;
+  return (
+    <section className="flex min-h-screen flex-col justify-center border-b border-border bg-ink text-ink-foreground">
+      <div className="mx-auto flex w-full max-w-3xl flex-col items-center gap-5 px-6 py-14 text-center">
+        <img src="/icon-192.png" alt="Came Through Audio" width={80} height={80} className="h-20 w-20 rounded-[22px] shadow-lg" />
+        <p className="text-sm font-bold uppercase tracking-[2px] text-ink-foreground/70">Welcome to Came Through Audio</p>
+        <h1 className="text-4xl font-extrabold tracking-tight md:text-5xl">How do you want to come through?</h1>
+        <p className="max-w-xl text-lg text-ink-foreground/80">Put Came Through Audio on your home screen and it opens full screen like any app, or keep going right here in your browser. Same account, same catalog, either way.</p>
+        <div className="mt-2 grid w-full gap-3 sm:grid-cols-2">
+          <Button size="lg" className="h-auto flex-col items-start gap-1 px-5 py-4 text-left" onClick={addToPhone}>
+            <span className="flex items-center gap-2 text-base font-bold"><Download className="h-5 w-5" aria-hidden />Add to home screen</span>
+            <span className="text-xs font-medium opacity-80">Opens full screen, one tap away, and it's free.</span>
+          </Button>
+          <Button size="lg" variant="outline" className="h-auto flex-col items-start gap-1 border-ink-foreground/30 bg-transparent px-5 py-4 text-left text-ink-foreground hover:bg-ink-foreground/10 hover:text-ink-foreground" onClick={() => choose("browser")}>
+            <span className="flex items-center gap-2 text-base font-bold"><Globe className="h-5 w-5" aria-hidden />Continue in browser</span>
+            <span className="text-xs font-medium opacity-80">Nothing to install, nothing to accept.</span>
+          </Button>
+        </div>
+        <p className="text-xs text-ink-foreground/60">You can add it later from the workspace.</p>
+      </div>
+      <IosInstallHelp open={iosHelp} onOpenChange={setIosHelp} />
+      <InstallSteps open={steps} onOpenChange={setSteps} />
+    </section>
   );
 }
 
@@ -82,7 +155,7 @@ export function DownloadApp() {
     <section className="border-b border-border bg-background">
       <div className="mx-auto flex max-w-4xl flex-col items-center gap-4 px-6 py-16 text-center">
         <span className="grid h-12 w-12 place-items-center rounded-2xl bg-primary/15"><Smartphone className="h-6 w-6 text-primary" aria-hidden /></span>
-        <h2 className="text-3xl font-extrabold md:text-4xl">Take CTAudio with you</h2>
+        <h2 className="text-3xl font-extrabold md:text-4xl">Take Came Through with you</h2>
         <p className="max-w-xl text-lg text-muted-foreground">Install the app for a full-screen home on your phone or computer, or keep working in your browser. Same account, same catalog, either way.</p>
         <div className="mt-2 flex flex-wrap justify-center gap-3">
           <Button size="lg" className="text-base font-bold" onClick={offer}><Download />Download the app</Button>
@@ -91,23 +164,7 @@ export function DownloadApp() {
         <p className="text-sm text-muted-foreground">Android and computers install in one tap. On iPhone it's Share &rarr; Add to Home Screen, and the steps are one tap away on the download button.</p>
       </div>
       <IosInstallHelp open={iosHelp} onOpenChange={setIosHelp} />
-      <Dialog open={steps} onOpenChange={setSteps}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle>Install CTAudio</DialogTitle>
-            <DialogDescription>Your browser didn't offer the one-tap install, so add it from its own menu. It takes a few seconds.</DialogDescription>
-          </DialogHeader>
-          <ol className="space-y-3 text-sm">
-            <li className="flex gap-3"><span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary text-xs font-bold text-primary-foreground">1</span>
-              <span>Open this site in Chrome, Edge or Samsung Internet: the browsers that can install it.</span></li>
-            <li className="flex gap-3"><span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary text-xs font-bold text-primary-foreground">2</span>
-              <span>Tap the browser menu and choose <span className="font-semibold">Install app</span> or <span className="font-semibold">Add to Home screen</span>. On a computer it's the install icon in the address bar.</span></li>
-            <li className="flex gap-3"><span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary text-xs font-bold text-primary-foreground">3</span>
-              <span>On iPhone or iPad: tap <Share className="inline h-4 w-4 align-text-bottom text-primary" aria-label="Share" /> <span className="font-semibold">Share</span>, then <span className="font-semibold">Add to Home Screen</span>.</span></li>
-          </ol>
-          <Button variant="outline" onClick={() => setSteps(false)}>Got it</Button>
-        </DialogContent>
-      </Dialog>
+      <InstallSteps open={steps} onOpenChange={setSteps} />
     </section>
   );
 }

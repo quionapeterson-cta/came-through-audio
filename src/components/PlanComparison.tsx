@@ -189,11 +189,17 @@ function Mark({ feature, tier, t }: { feature: Feature; tier: Tier; t: Palette }
   const prize = feature.prize || (tier === "management" && feature.from === "management");
   const eagle = feature.paperwork ? EAGLE_ART.contractsDelivery : prize ? EAGLE_ART.eyeOnThePrize : null;
   if (eagle) {
+    // A pair (founder, 2026-11-05): both eagles stay the full size a single one has; the second sits a step down and
+    // right of the first, so the pair reads as one mark laid over another rather than two smaller marks side by side.
+    const label = feature.from === tier ? "Included, new in this plan" : "Included";
     return (
-      <span className="flex h-11 w-20 items-center justify-center md:h-16 md:w-32">
-        <span className="flex h-full w-full items-center justify-center overflow-hidden">
-          <img src={eagle} alt={feature.from === tier ? "Included, new in this plan" : "Included"} className="h-full w-full object-cover" />
-        </span>
+      <span className="relative flex h-11 w-20 items-center justify-center md:h-16 md:w-32">
+        <img src={eagle} alt={feature.eaglePair ? "" : label} aria-hidden={feature.eaglePair || undefined}
+          className={`h-full w-full object-cover ${feature.eaglePair ? "-translate-x-1.5 -translate-y-1 opacity-90" : ""}`} />
+        {feature.eaglePair && (
+          <img src={eagle} alt={label}
+            className="absolute inset-0 h-full w-full translate-x-1.5 translate-y-1 object-cover drop-shadow-[0_1px_2px_rgba(0,0,0,0.5)]" />
+        )}
       </span>
     );
   }

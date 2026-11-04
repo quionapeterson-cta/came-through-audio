@@ -118,6 +118,8 @@ export type Feature = {
   paperwork?: boolean;
   /** The eye on the prize marks this row wherever it is included, not only on Catalog Management (founder, 2026-11-04). */
   prize?: boolean;
+  /** Two eagles, both full size and one layered in front of the other: a spotlit paperwork row (founder, 2026-11-05). */
+  eaglePair?: boolean;
 };
 
 /**
@@ -142,6 +144,7 @@ export const PLAN_FEATURES: Feature[] = [
   { group: "Business & education", from: "management", title: "Music Industry Blueprints", tip: "75+ ready-to-sign contracts with plain-language guides, plus step-by-step business blueprints and home recording cheat sheets", paperwork: true },
   { group: "Business & education", from: "management", title: "Contract Signature Requests & Signing", tip: "Send contracts to every party to e-sign; each signature is time-stamped and hashed", paperwork: true },
   { group: "Business & education", from: "management", title: "Personal Branding", tip: "Make everything you hand out yours: your logo, your colors, your business name and your tagline or slogan on every contract, split sheet, lyric download and catalog download. Included with Catalog Management, or $13.99 a year for the kit.", paperwork: true },
+  { group: "Business & education", from: "management", title: "PDF Fill, Sign & Download", tip: "Open any PDF, type into its own fill-in boxes, add text, dates and your signature, then download a clean, finished copy at full quality. The file never leaves your browser.", paperwork: true, eaglePair: true },
   { group: "Business & education", from: "management", title: "Signed Contract Vault", tip: "Fully signed contracts are locked and stored, ready to download as a signed PDF", paperwork: true },
   // One on One Coaching (management, soon) is hidden until there's a plan for it (founder, 2026-10-23).
 ];

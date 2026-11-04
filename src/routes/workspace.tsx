@@ -2,7 +2,7 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { getStaffRole } from "@/lib/admin.functions";
-import { ShieldCheck, FileAudio, Disc3, Activity, FileSignature, ScrollText, GraduationCap, LogOut, Moon, Sun, UserRound, Gem, Users, Calculator, Smartphone } from "lucide-react";
+import { ShieldCheck, FileAudio, Disc3, Activity, FileSignature, ScrollText, GraduationCap, LogOut, Moon, Sun, UserRound, Gem, Users, Calculator, Smartphone , PenLine } from "lucide-react";
 import { IosInstallHelp, useInstallApp } from "@/components/InstallApp";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { supabase } from "@/integrations/supabase/client";
@@ -41,6 +41,7 @@ import { UpgradeLock } from "@/components/UpgradeLock";
 import { EagleStatusBadge } from "@/components/EagleStatusBadge";
 import { eagleStatus } from "@/lib/eagle-status";
 import { CatalogLapseBanner } from "@/components/CatalogLapseBanner";
+import { PdfTools } from "@/components/PdfTools";
 import { inGrace, isPaused } from "@/lib/retention";
 
 export const Route = createFileRoute("/workspace")({
@@ -66,6 +67,7 @@ const tabs = [
   { id: "protect", label: "AI Protection Hub", icon: ShieldCheck },
   { id: "splits", label: "Split Sheets", icon: FileSignature },
   { id: "learn", label: "Contracts & Blueprints", icon: GraduationCap },
+  { id: "pdf", label: "Fill & Sign", icon: PenLine },
 ];
 
 /** Which badge collections each tab's next-badge card suggests from. */
@@ -76,6 +78,7 @@ const TAB_BADGES: Record<string, CollectionId[]> = {
   protect: ["core"],
   health: ["health"],
   learn: ["contracts"],
+  pdf: ["contracts"],
 };
 
 function Workspace() {
@@ -295,6 +298,11 @@ function Workspace() {
           <TabsContent value="splits"><SplitSheets userId={user.id} canSplit={canSplit} canCollect={canCollect} prefillTrackId={splitTrackId} onUpgrade={upgrade} /></TabsContent>
           <TabsContent value="health"><Health startView={openExpert || search.view === "expert" || (search.tab === "health" && search.checkout === "success") ? "expert" : "check"} justPaid={search.tab === "health" && search.checkout === "success"} canCatalog={canCatalog} onFix={() => setTab("catalog")} onFixField={(trackId, field) => { setCatalogFix({ trackId, field }); setTab("catalog"); }} onAddSong={(newTitle, artist) => { setCatalogFix({ newTitle, artist, nonce: Date.now() }); setTab("catalog"); }} onEmbed={() => setTab("embed")} userId={user.id} purchases={purchases} canUtility={canCollect} onUpgrade={upgrade} onSplitSheet={(id) => { setSplitTrackId(id); setTab("splits"); }} start={healthStart} /></TabsContent>
           <TabsContent value="learn"><Learn userId={user.id} unlocked={hasTier(tier, "management")} onUpgrade={upgrade} /></TabsContent>
+          <TabsContent value="pdf">
+            {hasTier(tier, "management")
+              ? <PdfTools canEmail={false} title="Fill, sign and download a PDF" />
+              : <PlusLock title="PDF Fill, Sign & Download starts with Catalog Management" onQuickCheck={openQuickCheck} onUpgrade={upgrade} />}
+          </TabsContent>
         </Tabs>
       </main>
     </div>

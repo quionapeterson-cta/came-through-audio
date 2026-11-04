@@ -55,7 +55,7 @@ export async function buildPdf(original: Uint8Array, values: PdfFieldValues, mar
     if (mark.kind === "text") {
       // Helvetica only covers basic Latin characters; anything else would stop the save.
       const text = mark.text.replace(/[^\x20-\x7E -ÿ]/g, "");
-      if (text.trim()) page.drawText(text, { x: mark.x, y: mark.y, size: mark.size, font, color: rgb(0.043, 0.043, 0.043) });
+      if (text.trim()) page.drawText(text, { x: mark.x, y: mark.y, size: mark.size, font, color: rgb(0, 0, 0) });
     } else {
       const image = await doc.embedPng(mark.png);
       page.drawImage(image, { x: mark.x, y: mark.y, width: mark.width, height: mark.height });

@@ -59,8 +59,11 @@ function trimmedSignature(canvas: HTMLCanvasElement): Signature | null {
   return { src, png: dataUrlBytes(src), ratio: out.width / out.height };
 }
 
-/** Admin → PDF Tools: open any PDF, fill it in, sign it, then download it or email it. The file stays in the browser until it's emailed. */
-export function PdfTools() {
+/**
+ * Open any PDF, fill it in, sign it, then download it (Catalog Management, founder, 2026-11-04). Staff also get the
+ * email path in Admin → PDF Tools; members only download, so `canEmail` is off there. The file stays in the browser.
+ */
+export function PdfTools({ canEmail = true, title = "PDF Tools" }: { canEmail?: boolean; title?: string } = {}) {
   const [file, setFile] = useState<{ name: string; bytes: Uint8Array } | null>(null);
   const [doc, setDoc] = useState<PDFDocumentProxy | null>(null);
   const [pages, setPages] = useState<PageView[]>([]);
@@ -204,8 +207,12 @@ export function PdfTools() {
   return (
     <div className="space-y-4">
       <div className="rounded-2xl border border-border bg-card p-5">
-        <h2 className="text-xl font-bold">PDF Tools</h2>
-        <p className="text-sm text-muted-foreground">Open a PDF, fill it in, sign it, then download it or email it. The file stays on your computer unless you email it.</p>
+        <h2 className="text-xl font-bold">{title}</h2>
+        <p className="text-sm text-muted-foreground">
+          {canEmail
+            ? "Open a PDF, fill it in, sign it, then download it or email it. The file stays on your computer unless you email it."
+            : "Open a PDF, fill in its boxes, add text, dates and your signature, then download it. Nothing is uploaded: the file stays on your computer."}
+        </p>
 
         {!file ? (
           <div
@@ -232,7 +239,7 @@ export function PdfTools() {
               {signature && <Button variant="ghost" onClick={() => setSignOpen(true)}>Change signature</Button>}
               <span className="flex-1" />
               <Button variant="outline" onClick={download} disabled={busy}><Download className="h-4 w-4" />Download</Button>
-              <Button onClick={() => setEmailOpen(true)} disabled={busy}><Mail className="h-4 w-4" />Email</Button>
+              {canEmail && <Button onClick={() => setEmailOpen(true)} disabled={busy}><Mail className="h-4 w-4" />Email</Button>}
             </div>
             <p className="mt-2 text-sm text-muted-foreground">
               {tool === "text" ? "Click on the page where the text goes, then type."
@@ -264,7 +271,7 @@ export function PdfTools() {
       </div>
 
       <SignatureDialog open={signOpen} onOpenChange={setSignOpen} onSave={(s) => { setSignature(s); setTool("sign"); setSignOpen(false); }} />
-      {file && <EmailDialog open={emailOpen} onOpenChange={setEmailOpen} fileName={signedFileName(file.name)} build={finished} />}
+      {file && canEmail && <EmailDialog open={emailOpen} onOpenChange={setEmailOpen} fileName={signedFileName(file.name)} build={finished} />}
     </div>
   );
 }
