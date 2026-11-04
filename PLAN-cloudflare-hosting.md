@@ -52,6 +52,36 @@ Source: founder, 2026-10-21, 2026-10-23 and 2026-11-03 (Lovable Pro ended Nov 11
    - Tell Claude: email links still point to the Lovable address (`SITE_URL` in src/lib/email-layout.ts); switch it to `https://camethroughaudio.com` in the same push.
 6. **Disconnect the domain in Lovable** (Project → Settings → Domains) once Cloudflare serves it. Keep the Lovable project and GitHub connection: edits there still push to GitHub, and Cloudflare deploys every push.
 
+## Art on R2 (badges and clinic art) — do this alongside step 5
+
+Badge and clinic art is served from the R2 bucket, not from the Worker: 512px web copies at the bucket root
+(`icons/…`, `art/clinic/…`) and the 4K masters under `4k/icons/…`, which the app never requests. One variable decides
+where the pictures come from, `VITE_ART_BASE`; with it unset the same paths load from `public/` inside the Worker, which
+is why nothing breaks before this is done.
+
+1. **Make the bucket public.** R2 → the bucket → Settings → **Public access** → R2.dev subdomain → **Allow Access**
+   (type `allow`). That gives `https://pub-….r2.dev`. A private bucket answers **403** to every path, so the app would
+   show no art at all — check the URL in a browser before changing any variable.
+2. **Upload the copies** from your own machine, with an R2 API token (**Manage R2 API Tokens** → Object Read & Write on
+   that bucket only; the keys never go in the repo or in chat):
+   `rclone copy artifacts/r2-web/ r2:<bucket>/` and `rclone copy art/badges-4k/ r2:<bucket>/4k/icons/`.
+   Paths must match exactly: the app asks for `/icons/<serious|playful>/<set>/<name>.webp` and `/art/clinic/<name>.svg`.
+3. **Point the app at it.** Add `VITE_ART_BASE` to the Worker's **build** variables (Settings → **Build** → Variables
+   and Secrets), value = the bucket address, origin only, no trailing slash. Vite bakes `VITE_` values into the
+   JavaScript at build time: a runtime variable alone does nothing, and a redeploy is required either way.
+4. **Give the bucket a real domain once camethroughaudio.com is on Cloudflare.** R2 → the bucket → Settings →
+   **Custom Domains** → Connect Domain → `art.camethroughaudio.com` (Cloudflare writes the DNS record itself). Then set
+   `VITE_ART_BASE` to `https://art.camethroughaudio.com` and redeploy. The r2.dev address is rate-limited and
+   Cloudflare labels it development-only, so it is a testing address, not a launch one.
+5. **CORS, or the badge PDF loses its pictures.** R2 → the bucket → Settings → **CORS Policy**: allow `GET` from
+   `https://camethroughaudio.com`, plus the `…workers.dev` address while testing. The badge-reference PDF draws each
+   badge onto a canvas, and a cross-origin picture without CORS cannot be read back — the row degrades to "Art coming"
+   rather than failing, but it still means no badge.
+6. **Then check it, don't assume it.** Open Profile → Badges with the network panel visible: every badge request should
+   go to the bucket host, and the browser should get 200s. If they 404, the `.webp` copies or their paths are wrong; if
+   they 403, step 1 didn't take. Only after that is confirmed is it safe to stop shipping `public/icons` — for Vercel
+   that means adding `/public/icons` to `.vercelignore` **anchored** (a bare `icons` also strips other paths).
+
 ## Two hosts, one codebase
 
 Nothing is forked: the same `main` builds for both, because nitro picks the target from the environment.
