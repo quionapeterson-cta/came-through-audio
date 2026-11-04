@@ -164,6 +164,7 @@ function FeatureName({ feature, t }: { feature: Feature; t: Palette }) {
     <InfoTip title={feature.title} text={feature.tip} className="text-left">
         <span className={`cursor-help text-sm font-semibold underline underline-offset-4 ${t.rule}`}>
           {feature.title}
+          {feature.badge && <span className={`ml-2 whitespace-nowrap rounded px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider no-underline ${t.chip}`}>{feature.badge}</span>}
           {feature.soon && <span className={`ml-2 whitespace-nowrap rounded px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider no-underline ${t.chip}`}>Coming soon</span>}
         </span>
     </InfoTip>
