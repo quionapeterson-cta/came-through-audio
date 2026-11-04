@@ -105,9 +105,6 @@ rules keep it consistent as features are added.
 - Eye on the Prize (`EAGLE_ART.eyeOnThePrize`) marks the rows Catalog Management alone has, plus the rows marked
   `prize: true`, which carry it on every tier that includes them (Royalty Utility Suite on Catalog & Collaborate). Any
   other row that starts on a lower tier keeps the check it shows there, on every tier above it.
-- A row may wear a pair of eagles (`eaglePair: true` on the feature, used by PDF Fill, Sign & Download): both stay the
-  full size a single eagle has, the second a step down and in front of the first. It is a highlight, not a new mark, so
-  the pair never appears with a check and is never used on more than one row at a time.
 - A spotlit row may also carry a faint accent tint across the whole row (`highlight: true` on the feature), which is
   only a background: the row keeps its eagle mark and never gains a second one.
 - New rows pick their mark by that rule inside `Mark` in `src/components/PlanComparison.tsx`. Never add a per-feature
