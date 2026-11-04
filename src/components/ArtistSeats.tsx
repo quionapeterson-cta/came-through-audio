@@ -196,7 +196,7 @@ export function ArtistSeats({ onClose }: { onClose: () => void }) {
                           const next = Math.max(1, Math.min(SEAT_MAX, Math.trunc(Number(e.target.value)) || 1));
                           setQty((q) => ({ ...q, [s.tier]: next }));
                         }} />
-                      <Button size="sm" disabled={buying !== null} onClick={() => void buy(s.tier)}>
+                      <Button size="sm" disabled={buying === s.tier} onClick={() => void buy(s.tier)}>
                         {buying === s.tier ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
                         Buy {n === 1 ? "1 seat" : `${n} seats`} · ${(s.amount * n).toFixed(2)}/yr
                       </Button>

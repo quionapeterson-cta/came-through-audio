@@ -149,13 +149,13 @@ export function BrandKit({ userId, tier, artistName }: { userId: string; tier: T
     return (
       <div className="space-y-4">
         <p className="text-sm text-muted-foreground">Put your own logo, name, tagline, colors and font at the top of the documents you send, in place of ours.</p>
-        <p className="text-sm">On your split sheets and the contracts you make. Included with {TIER_LABEL.management}, or add it to any plan for {BRANDING_PRICE}/year.</p>
+        <p className="text-sm">On your split sheets, the contracts you make, and your lyric and catalog downloads. Included with {TIER_LABEL.management}, or add it to any plan for {BRANDING_PRICE}/year.</p>
         <Button onClick={() => void buy()}><Lock className="h-4 w-4" />Add Personal Branding · {BRANDING_PRICE}/year</Button>
       </div>
     );
   }
 
-  const where = "Your contracts and split sheets";
+  const where = "Your contracts, split sheets, lyric downloads and catalog downloads";
   // Before the multi-kit update the server doesn't send a count: one kit.
   const allowance = Math.max(1, access.allowance ?? 1);
   const ending = access.addOnUntil && tier !== "management" ? Date.parse(access.addOnUntil) - Date.now() < 30 * 86400000 : false;
@@ -170,7 +170,7 @@ export function BrandKit({ userId, tier, artistName }: { userId: string; tier: T
           <p className="font-semibold">Your Branding Kit is ready.</p>
           <ol className="mt-2 list-decimal space-y-1 pl-5">
             <li>Add your logo, name, tagline, colors and font right here, then click Save.</li>
-            <li>Make a contract in Contracts &amp; Blueprints or a split sheet in Split Sheets: your kit replaces our header automatically.</li>
+            <li>Make a contract in Contracts &amp; Blueprints, a split sheet in Split Sheets, or download a lyric or catalog PDF from My Catalog: your kit replaces our header automatically.</li>
             <li>Come back to Profile → Brand kit anytime to change it.</li>
           </ol>
         </div>

@@ -18,10 +18,10 @@ describe("Personal Branding", () => {
 
   it("Catalog Management includes it; the add-on turns it on for any plan", () => {
     const until = new Date("2027-01-01");
-    expect(brandAccess("management", null)).toEqual({ contracts: true, splits: true });
-    expect(brandAccess("free", until)).toEqual({ contracts: true, splits: true });
-    expect(brandAccess("collaborate", until)).toEqual({ contracts: true, splits: true });
-    expect(brandAccess("plus", null)).toEqual({ contracts: false, splits: false });
+    expect(brandAccess("management", null)).toEqual({ contracts: true, splits: true, lyrics: true, catalog: true });
+    expect(brandAccess("free", until)).toEqual({ contracts: true, splits: true, lyrics: true, catalog: true });
+    expect(brandAccess("collaborate", until)).toEqual({ contracts: true, splits: true, lyrics: true, catalog: true });
+    expect(brandAccess("plus", null)).toEqual({ contracts: false, splits: false, lyrics: false, catalog: false });
   });
 
   it("cleans kit rows and keeps every valid color", () => {

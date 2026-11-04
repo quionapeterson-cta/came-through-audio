@@ -69,10 +69,10 @@ export const getBrandAccess = createServerFn({ method: "POST" })
     return { ...access, addOnUntil: until?.toISOString() ?? null, allowance };
   });
 
-/** The signed-in user's own kit for a split sheet or contract they download. */
+/** The signed-in user's own kit for a split sheet, contract or catalog download. */
 export const getMyBrand = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d) => z.object({ use: z.enum(["splits", "contracts"]), kitId: z.string().uuid().nullish() }).parse(d))
+  .inputValidator((d) => z.object({ use: z.enum(["splits", "contracts", "lyrics", "catalog"]), kitId: z.string().uuid().nullish() }).parse(d))
   .handler(async ({ data, context }) => brandFor(await admin(), context.userId, data.use, data.kitId));
 
 /**

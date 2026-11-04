@@ -185,13 +185,10 @@ function Mark({ feature, tier, t }: { feature: Feature; tier: Tier; t: Palette }
   const eagle = feature.paperwork ? EAGLE_ART.contractsDelivery : tier === "management" ? EAGLE_ART.eyeOnThePrize : null;
   if (eagle) {
     return (
-      <span className="relative flex h-11 w-20 items-center justify-center md:h-16 md:w-32">
+      <span className="flex h-11 w-20 items-center justify-center md:h-16 md:w-32">
         <span className="flex h-full w-full items-center justify-center overflow-hidden">
-          <img src={eagle} alt="Included" className="h-full w-full object-cover" />
+          <img src={eagle} alt={feature.from === tier ? "Included, new in this plan" : "Included"} className="h-full w-full object-cover" />
         </span>
-        {feature.from === tier && (
-          <span className="absolute right-0 top-0 scale-[0.7]" aria-label="New in this plan"><NewCheck /></span>
-        )}
       </span>
     );
   }

@@ -1,5 +1,6 @@
 import type { jsPDF as JsPDF } from "jspdf";
 import type { CatalogTrack } from "@/lib/catalog";
+import type { PdfBrand } from "@/lib/brand-kit";
 import { brandFooter, brandHeader, COBALT, ensureSpace, font, INK, label, MARGIN, MUTED, newBrandedPdf, prettyDate, RULE } from "@/lib/brand-pdf";
 import { creditName, writerRole, type Contributor } from "@/lib/metadata";
 
@@ -111,20 +112,20 @@ function releaseHeading(pdf: JsPDF, y: number, album: string, tracks: CatalogTra
 }
 
 /** The catalog as a branded PDF: songs grouped by release, one card each with identifiers and credits (no splits, PRO or IPI). */
-export async function buildCatalogPdf(tracks: CatalogTrack[]) {
-  const pdf = await newBrandedPdf();
+export async function buildCatalogPdf(tracks: CatalogTrack[], brand?: PdfBrand | null) {
+  const pdf = await newBrandedPdf(brand);
   const artist = mostCommon(tracks.map((t) => t.artist));
   const date = new Date().toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
-  let y = brandHeader(pdf, artist || "Catalog", "Master Catalog", `${tracks.length} ${tracks.length === 1 ? "song" : "songs"}  ·  ${date}`);
+  let y = brandHeader(pdf, artist || "Catalog", "Master Catalog", `${tracks.length} ${tracks.length === 1 ? "song" : "songs"}  ·  ${date}`, brand);
   for (const g of groupByRelease(tracks)) {
     y = releaseHeading(pdf, y, g.album, g.tracks);
     for (const t of g.tracks) y = songCard(pdf, y, t);
     y += 6;
   }
-  brandFooter(pdf);
+  brandFooter(pdf, brand);
   return pdf;
 }
 
-export async function downloadCatalogPdf(tracks: CatalogTrack[], filename = "Catalog") {
-  (await buildCatalogPdf(tracks)).save(`${filename}.pdf`);
+export async function downloadCatalogPdf(tracks: CatalogTrack[], filename = "Catalog", brand?: PdfBrand | null) {
+  (await buildCatalogPdf(tracks, brand)).save(`${filename}.pdf`);
 }

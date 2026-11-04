@@ -205,6 +205,7 @@ function ProfilePage() {
         </DialogContent>
       </Dialog>
       <ArtistOnboarding userId={editTarget?.userId ?? user.id} seatArtist={editTarget ? { name: editTarget.name } : null}
+        canAddArtist={!editTarget && tier !== "free"}
         open={editing || !!editTarget} onOpenChange={(o) => { if (!o) { setEditing(false); setEditTarget(null); } }} firstRun={false}
         onSaved={(o) => { if (editTarget) { setEditTarget(null); return; } setOb(o); setProfile(loadProfile(user.id)); setEditing(false); }} />
       <PasswordDialog email={user.email ?? ""} open={passwordOpen} onOpenChange={setPasswordOpen} />

@@ -73,10 +73,12 @@ function nameRuleText(s?: NameStatus) {
   return `You can change your artist name once a week, up to 3 times a year (${s.changes_left} left). Releasing as another artist? Add an artist to your account.`;
 }
 
-export function ArtistOnboarding({ userId, open, onOpenChange, onSaved, firstRun, seatArtist }: {
+export function ArtistOnboarding({ userId, open, onOpenChange, onSaved, firstRun, seatArtist, canAddArtist = false }: {
   userId: string; open: boolean; onOpenChange: (o: boolean) => void; onSaved: (o: Onboarding) => void; firstRun: boolean;
   /** Set when an owner is editing an artist on their seats instead of their own profile. */
   seatArtist?: { name: string } | null;
+  /** Add-on artist seats are a paid feature: a free account has no one to add, so the option is never shown to it. */
+  canAddArtist?: boolean;
 }) {
   // Another account's defaults: no name-change limit (that rule is the artist's own) and no write to their name columns.
   const other = seatArtist?.name ?? "";
@@ -211,8 +213,9 @@ export function ArtistOnboarding({ userId, open, onOpenChange, onSaved, firstRun
             <Group title="Artist & Label">
               <Field label="Primary Artist / Stage Name"><Input value={ob.stageName} onChange={(e) => { setOb((o) => ({ ...o, stageName: e.target.value })); set("artist", e.target.value); }} />
                 {savedName && !other && <p className="mt-1 text-xs text-muted-foreground">{nameRuleText(nameRule)}</p>}
-                {/* Releasing as someone else? Buy them a seat from right here (founder, 2026-11-04). */}
-                <Button type="button" variant="outline" size="sm" className="mt-2" onClick={() => setSeatBox(true)}><Plus />Add another artist</Button></Field>
+                {/* Releasing as someone else? Buy them a seat from right here (founder, 2026-11-04). Paid accounts only:
+                    a free account can email itself, and editing another artist's defaults never buys seats. */}
+                {canAddArtist && <Button type="button" variant="outline" size="sm" className="mt-2" onClick={() => setSeatBox(true)}><Plus />Add another artist</Button>}</Field>
               <Field label="Default Label Name (optional)" term="label"><Input value={p.label ?? ""} onChange={(e) => set("label", e.target.value)} placeholder="Your label name" /></Field>
               <Field label="Contact email to embed (optional)" term="contactEmail"><Input type="email" value={p.contactEmail ?? ""} onChange={(e) => set("contactEmail", e.target.value)} placeholder="bookings@yourname.com" /></Field>
               <Field label="Produced by (optional)" term="producedBy"><Input value={p.producers?.[0]?.name ?? ""} placeholder="Name"
@@ -270,14 +273,14 @@ export function ArtistOnboarding({ userId, open, onOpenChange, onSaved, firstRun
         </DialogContent>
       </Dialog>
       <NameChangeDialog open={confirmName} onOpenChange={setConfirmName} from={savedName} to={newName()} status={nameRule}
-        seats={seats} onSeats={() => setSeats(true)} onConfirm={() => void save()} />
+        canAddSeats={canAddArtist} seats={seats} onSeats={() => setSeats(true)} onConfirm={() => void save()} />
     </Dialog>
   );
 }
 
-function NameChangeDialog({ open, onOpenChange, from, to, status, seats, onSeats, onConfirm }: {
+function NameChangeDialog({ open, onOpenChange, from, to, status, seats, onSeats, onConfirm, canAddSeats }: {
   open: boolean; onOpenChange: (o: boolean) => void; from: string; to: string; status?: NameStatus | undefined;
-  seats: boolean; onSeats: () => void; onConfirm: () => void;
+  seats: boolean; onSeats: () => void; onConfirm: () => void; canAddSeats: boolean;
 }) {
   const left = status?.changes_left ?? 3;
   const blocked = !!status?.next_change_at || left <= 0;
@@ -302,7 +305,7 @@ function NameChangeDialog({ open, onOpenChange, from, to, status, seats, onSeats
           <p className="text-sm text-muted-foreground">Songs you already saved keep the name they were released under.</p>
           <p className="text-sm"><span className="font-semibold">Releasing music as a different artist?</span> <span className="text-muted-foreground">Add them as another artist instead, so both names stay on your account.</span></p>
           <div className="flex flex-wrap justify-end gap-2">
-            <Button variant="ghost" onClick={onSeats}><Plus />Add another artist</Button>
+            {canAddSeats && <Button variant="ghost" onClick={onSeats}><Plus />Add another artist</Button>}
             <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
             {!blocked && <Button onClick={onConfirm}>Change name</Button>}
           </div>

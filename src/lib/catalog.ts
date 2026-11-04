@@ -114,8 +114,10 @@ export const safeName = (s: string) => s.replace(/[<>:"/\\|?*]+/g, "_").trim() |
  * PDFs and the catalog PDF. Files that can't be fetched are skipped and counted, so one bad file never blocks the rest.
  */
 export async function downloadWholeCatalog(onProgress?: (done: number, total: number) => void): Promise<{ songs: number; skipped: number }> {
-  const [{ makeZip, uniqueName }, { buildCatalogPdf }, { buildLyricsPdf }] = await Promise.all([import("@/lib/zip"), import("@/lib/catalog-pdf"), import("@/lib/lyrics-pdf")]);
+  const [{ makeZip, uniqueName }, { buildCatalogPdf }, { buildLyricsPdf }, { myBrand }] = await Promise.all([import("@/lib/zip"), import("@/lib/catalog-pdf"), import("@/lib/lyrics-pdf"), import("@/lib/brand-load")]);
   const tracks = await listTracks();
+  // Their Personal Branding header on the lyric and catalog PDFs inside the ZIP, when they have a kit.
+  const brand = await myBrand("catalog");
   const taken = new Set<string>();
   const entries: { name: string; data: Uint8Array }[] = [];
   const bytes = async (b: Blob) => new Uint8Array(await b.arrayBuffer());
@@ -129,9 +131,9 @@ export async function downloadWholeCatalog(onProgress?: (done: number, total: nu
       if (error || !data) { skipped += 1; continue; }
       entries.push({ name: uniqueName(file, taken), data: await bytes(data) });
     }
-    if (t.metadata.lyrics?.trim()) entries.push({ name: uniqueName(`Lyrics/${name} - lyrics.pdf`, taken), data: await bytes((await buildLyricsPdf(t)).output("blob")) });
+    if (t.metadata.lyrics?.trim()) entries.push({ name: uniqueName(`Lyrics/${name} - lyrics.pdf`, taken), data: await bytes((await buildLyricsPdf(t, brand)).output("blob")) });
   }
-  if (tracks.length) entries.push({ name: uniqueName("Catalog.pdf", taken), data: await bytes((await buildCatalogPdf(tracks)).output("blob")) });
+  if (tracks.length) entries.push({ name: uniqueName("Catalog.pdf", taken), data: await bytes((await buildCatalogPdf(tracks, brand)).output("blob")) });
   onProgress?.(tracks.length, tracks.length);
   saveBlob(makeZip(entries), "My Catalog.zip");
   return { songs: tracks.length, skipped };

@@ -135,7 +135,7 @@ export const PLAN_FEATURES: Feature[] = [
   { group: "Business & education", from: "management", title: "Custom Music Industry Contracts", tip: "Fill in a contract from a blueprint, adjust the terms, and keep it with your catalog.", paperwork: true },
   { group: "Business & education", from: "management", title: "Music Industry Blueprints", tip: "75+ ready-to-sign contracts with plain-language guides, plus step-by-step business blueprints and home recording cheat sheets", paperwork: true },
   { group: "Business & education", from: "management", title: "Contract Signature Requests & Signing", tip: "Send contracts to every party to e-sign; each signature is time-stamped and hashed", paperwork: true },
-  { group: "Business & education", from: "management", title: "Personal Branding", tip: "Make the contracts you send yours: your logo, your colors, your business name and your tagline or slogan on every contract and split sheet.", paperwork: true },
+  { group: "Business & education", from: "management", title: "Personal Branding", tip: "Make everything you hand out yours: your logo, your colors, your business name and your tagline or slogan on every contract, split sheet, lyric download and catalog download.", paperwork: true },
   { group: "Business & education", from: "management", title: "Signed Contract Vault", tip: "Fully signed contracts are locked and stored, ready to download as a signed PDF", paperwork: true },
   // One on One Coaching (management, soon) is hidden until there's a plan for it (founder, 2026-10-23).
 ];

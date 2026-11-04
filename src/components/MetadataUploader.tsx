@@ -28,6 +28,7 @@ import { AGENCY_UPLOAD_STEPS, MLC_EXPORT_NOTES } from "@/lib/glossary";
 import { PUBLISHING_LABEL, publisherPie, registrationReadiness, type MissingItem } from "@/lib/readiness";
 import { isBmi, notBmiWriters } from "@/lib/audit";
 import { downloadLyricsPdf } from "@/lib/lyrics-pdf";
+import { myBrand } from "@/lib/brand-load";
 import { downloadCatalogPdf } from "@/lib/catalog-pdf";
 import { ProSelect } from "@/components/ProSelect";
 import { logBadgeEvent } from "@/lib/badge-events";
@@ -538,7 +539,7 @@ export function MetadataUploader({ onShareInfo, userId, mode = "embed", readOnly
                       : <Input id="artist" value={metadata.artist} required onChange={(e) => update("artist", e.target.value)} />}</div></div>
                   {registeredArtist && metadata.artist.trim() && normArtist(metadata.artist) !== normArtist(registeredArtist) && (
                     <p role="note" className="mt-2 rounded-md border border-primary/50 bg-accent/30 p-2 text-xs">
-                      This account is registered to <span className="font-semibold">{registeredArtist}</span>. Releasing as a different artist? Each artist gets their own catalog with an add-on artist account (from {ARTIST_SEAT_PRICES[0]!.price}/yr). Add one from Profile → Add another artist. Featuring someone? Add them under Featured artist instead.
+                      This account is registered to <span className="font-semibold">{registeredArtist}</span>. Releasing as a different artist? Each artist gets their own catalog with an add-on artist account (from {ARTIST_SEAT_PRICES[0]!.price}/yr, with any paid plan). Add one from Profile → Add another artist. Featuring someone? Add them under Featured artist instead.
                     </p>
                   )}
                 </div>
@@ -789,7 +790,7 @@ export function MetadataUploader({ onShareInfo, userId, mode = "embed", readOnly
           {!readOnly && <div className="mb-8"><ContributorLibrary userId={userId} refreshKey={libKey} onSaved={() => setLibKey((k) => k + 1)} /></div>}
           <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
             <h2 className="text-xl font-bold">Your songs</h2>
-            {tracks.length > 0 && <Button type="button" variant="outline" size="sm" onClick={() => { const list = filter === "All" ? tracks : tracks.filter((t) => releaseGroup(t) === filter); downloadCatalogPdf(list, filter === "All" ? "Catalog" : `Catalog - ${filter}s`).catch(() => toast.error("Could not create the catalog PDF.")); }}><FileText />{filter === "All" ? "Catalog PDF" : `${filter}s PDF`}</Button>}
+            {tracks.length > 0 && <Button type="button" variant="outline" size="sm" onClick={() => { const list = filter === "All" ? tracks : tracks.filter((t) => releaseGroup(t) === filter); void myBrand("catalog").then((brand) => downloadCatalogPdf(list, filter === "All" ? "Catalog" : `Catalog - ${filter}s`, brand)).catch(() => toast.error("Could not create the catalog PDF.")); }}><FileText />{filter === "All" ? "Catalog PDF" : `${filter}s PDF`}</Button>}
           </div>
           {tracks.length === 0 ? <p className="text-sm text-muted-foreground">No songs yet. Use Add song to save a song you already embedded, or embed a new one in Embed Metadata. Every song you save is checked automatically in the Royalty Health Hub.</p> : (
             <>
@@ -828,7 +829,7 @@ export function MetadataUploader({ onShareInfo, userId, mode = "embed", readOnly
                         <DropdownMenuContent align="end">
                           {t.metadata.audioPath && <DropdownMenuItem onClick={() => downloadCatalogFile(t.metadata.audioPath, `${safeName(t.title)}.${extOf(t.metadata.audioPath)}`).catch(() => toast.error("Could not download the song."))}>Master {extOf(t.metadata.audioPath).toUpperCase()}</DropdownMenuItem>}
                           {t.metadata.artPath && <DropdownMenuItem onClick={() => downloadCatalogFile(t.metadata.artPath, `${safeName(t.title)}-artwork.${t.metadata.artPath.split(".").pop()}`).catch(() => toast.error("Could not download the artwork."))}>Artwork</DropdownMenuItem>}
-                          {t.metadata.lyrics && <DropdownMenuItem onClick={() => void downloadLyricsPdf(t)}>Lyrics PDF</DropdownMenuItem>}
+                          {t.metadata.lyrics && <DropdownMenuItem onClick={() => void myBrand("lyrics").then((brand) => downloadLyricsPdf(t, brand))}>Lyrics PDF</DropdownMenuItem>}
                         </DropdownMenuContent>
                       </DropdownMenu>
                     )}
@@ -899,7 +900,7 @@ export function MetadataUploader({ onShareInfo, userId, mode = "embed", readOnly
                 <span className="font-semibold">{sel.length} {sel.length === 1 ? "track" : "tracks"} selected</span>
                 <div className="flex flex-wrap gap-2">
                   <Button type="button" variant="ghost" size="sm" onClick={() => setPicked(new Set())}>Clear</Button>
-                  <Button type="button" variant="outline" size="sm" onClick={() => downloadCatalogPdf(sel, `Catalog - ${sel.length} Songs`).catch(() => toast.error("Could not create the catalog PDF."))}><FileText />PDF</Button>
+                  <Button type="button" variant="outline" size="sm" onClick={() => void myBrand("catalog").then((brand) => downloadCatalogPdf(sel, `Catalog - ${sel.length} Songs`, brand)).catch(() => toast.error("Could not create the catalog PDF."))}><FileText />PDF</Button>
                   {exportMenu("Export Selected", sel, `${sel.length} Tracks`)}
                 </div>
               </div>

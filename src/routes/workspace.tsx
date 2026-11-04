@@ -235,6 +235,7 @@ function Workspace() {
       <IosInstallHelp open={app.iosHelp} onOpenChange={app.setIosHelp} />
 
       <ArtistOnboarding userId={user.id} open={profileOpen} onOpenChange={setProfileOpen} firstRun={!onboard?.done}
+        canAddArtist={realTier !== "free"}
         onSaved={(o) => { setOnboard(o); setEmbedKey((k) => k + 1); setTab(canCatalog ? "embed" : "health"); }} />
       <BadgeWatcher userId={user.id} artist={names.artist} eagle={tier === "management"} />
       <main className="mx-auto max-w-7xl px-6 py-8">
