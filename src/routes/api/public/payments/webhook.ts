@@ -3,6 +3,7 @@ import { createClient } from "@supabase/supabase-js";
 import type Stripe from "stripe";
 import { createStripeClient, verifyWebhook, type StripeEnv } from "@/lib/stripe.server";
 import { purchaseRow, subscriptionRow, type StripeSubscriptionLike } from "@/lib/stripe-mapping";
+import { SEAT_TIER } from "@/lib/plans";
 
 let _sb: ReturnType<typeof createClient> | null = null;
 function db() {
@@ -16,7 +17,36 @@ async function syncSubscription(env: StripeEnv, subscriptionId: string) {
   await saveSubscription(sub as unknown as StripeSubscriptionLike, env);
 }
 
+/**
+ * An add-on artist seat is a subscription too, but it is never a plan: it is filed on artist_seats, so the owner's own
+ * tier can't move and the invited artist's seat can live or die on its own (founder, 2026-11-04).
+ */
+async function saveSeatSubscription(sub: StripeSubscriptionLike, env: StripeEnv, tier: string, deleted: boolean) {
+  const item = sub.items.data[0];
+  const end = item?.current_period_end ?? sub.current_period_end;
+  const periodEnd = end ? new Date(end * 1000).toISOString() : null;
+  const ownerId = sub.metadata?.["userId"] ?? null;
+  const { data: found } = await db().from("artist_seats").select("id, member_user_id, invite_email, status")
+    .eq("stripe_subscription_id", sub.id).maybeSingle();
+  const seat = found as { id: string; member_user_id: string | null; invite_email: string | null; status: string } | null;
+  if (!seat && !ownerId) return console.warn(`Seat subscription ${sub.id} has no owner to credit`);
+  // Cancelled keeps the seat until the paid period ends; an unclaimed seat simply ends.
+  const status = deleted
+    ? (seat?.member_user_id || seat?.invite_email ? "canceled" : "ended")
+    : (seat?.status && ["invited", "active", "unclaimed"].includes(seat.status) ? seat.status : seat?.member_user_id ? "active" : seat?.invite_email ? "invited" : "unclaimed");
+  const patch = { tier, environment: env, current_period_end: periodEnd, status, updated_at: new Date().toISOString() };
+  if (seat) {
+    const { error } = await db().from("artist_seats").update(patch as never).eq("id", seat.id);
+    if (error) throw error;
+    return;
+  }
+  const { error } = await db().from("artist_seats").insert({ ...patch, owner_id: ownerId, stripe_subscription_id: sub.id } as never);
+  if (error) throw error;
+}
+
 async function saveSubscription(sub: StripeSubscriptionLike, env: StripeEnv, deleted = false) {
+  const seatKey = sub.items.data[0]?.price.lookup_key;
+  if (seatKey && SEAT_TIER[seatKey]) return saveSeatSubscription(sub, env, SEAT_TIER[seatKey], deleted);
   const row = subscriptionRow(sub, env, deleted);
   if (!row) return console.warn(`Skipping subscription ${sub.id}: price has no plan lookup key`);
   const userId = sub.metadata?.["userId"];

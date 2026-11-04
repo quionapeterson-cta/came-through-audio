@@ -42,7 +42,7 @@ export const PRICE_LIST: PriceGroup[] = [
   },
   {
     title: "Add-on artist seats",
-    note: "Per added artist, per year, paid by the owner as its own yearly subscription. An added artist gets their own login and their own catalog at the seat's tier; the owner switches between artists. The Stripe prices exist (keys below), but buying inside the app ships with the add-on artist feature, so the site still says \"coming soon\" and nothing can be bought yet.",
+    note: "Per added artist, per year, paid by the owner as its own yearly subscription. An added artist gets their own login and their own catalog at the seat's tier; the owner switches between artists. The owner buys the seat, names the artist and sends it to their email; the artist signs up with that address and accepts it, the same way an invited signature works. Their own catalog then runs at the seat tier, and the owner sees and manages every artist they pay for.",
     rows: ARTIST_SEAT_PRICES.map((s) => ({
       item: `${TIER_LABEL[s.tier]} seat`,
       price: `${s.price}/yr`,

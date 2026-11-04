@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { BRANDING_LOOKUP_KEY } from "@/lib/brand-kit";
 import { CONTRACT_LOOKUP_KEY } from "@/lib/contract-generator";
-import { assistanceItems, assistanceType, PRICE_TIER } from "@/lib/plans";
+import { assistanceItems, assistanceType, PRICE_TIER, SEAT_TIER, seatLookupKey } from "@/lib/plans";
 import { PACKAGES, TRACKS_PER_KEY, packageSongs } from "@/lib/proof";
 import { ASSISTANCE_AGENCIES, MAX_NEW_SONGS, newSongKeys } from "@/lib/registration";
 import { VAULT_LOOKUP_KEY } from "@/lib/retention";
@@ -25,6 +25,8 @@ export const checkoutInput = z.discriminatedUnion("kind", [
   z.object({ kind: z.literal("contract"), generationId: z.string().uuid() }),
   // Renew now: next year's plan paid early. The server reads the plan and price from the user's own subscription.
   z.object({ kind: z.literal("renew") }),
+  // An add-on artist seat (founder, 2026-11-04): its own yearly subscription, so it never replaces the owner's plan.
+  z.object({ kind: z.literal("seat"), tier: z.enum(["plus", "collaborate", "management"]) }),
   z.object({
     kind: z.literal("expert"),
     // Catalog songs picked, plus songs that aren't in the catalog yet (PLAN-registration-intake §1–2).
@@ -57,6 +59,10 @@ export function planCheckout(input: CheckoutInput, userId: string): CheckoutPlan
   if (input.kind === "renew") throw new Error("Renew now is priced from the subscription itself.");
   if (input.kind === "plan") {
     return { mode: "subscription", items: [{ lookupKey: input.priceId, quantity: 1 }], metadata: { userId }, managed: true };
+  }
+  if (input.kind === "seat") {
+    // The seat's own subscription: the webhook records it on artist_seats, never on the owner's plan.
+    return { mode: "subscription", items: [{ lookupKey: seatLookupKey(input.tier), quantity: 1 }], metadata: { userId, kind: "seat", seatTier: input.tier }, managed: true };
   }
   if (input.kind === "vault") {
     return { mode: "payment", items: [{ lookupKey: VAULT_LOOKUP_KEY, quantity: input.months }], metadata: { userId, kind: "vault", months: String(input.months) }, managed: true };
@@ -121,7 +127,8 @@ export type StripeSubscriptionLike = {
 export function subscriptionRow(sub: StripeSubscriptionLike, env: "sandbox" | "live", deleted = false) {
   const item = sub.items.data[0];
   const priceId = item?.price.lookup_key;
-  if (!item || !priceId || !PRICE_TIER[priceId]) return null;
+  // A seat is a subscription too, but it is not a plan: the webhook files it on artist_seats instead.
+  if (!item || !priceId || !PRICE_TIER[priceId] || SEAT_TIER[priceId]) return null;
   return {
     stripe_subscription_id: sub.id,
     stripe_customer_id: idOf(sub.customer),

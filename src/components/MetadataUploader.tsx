@@ -538,7 +538,7 @@ export function MetadataUploader({ onShareInfo, userId, mode = "embed", readOnly
                       : <Input id="artist" value={metadata.artist} required onChange={(e) => update("artist", e.target.value)} />}</div></div>
                   {registeredArtist && metadata.artist.trim() && normArtist(metadata.artist) !== normArtist(registeredArtist) && (
                     <p role="note" className="mt-2 rounded-md border border-primary/50 bg-accent/30 p-2 text-xs">
-                      This account is registered to <span className="font-semibold">{registeredArtist}</span>. Releasing as a different artist? Each artist gets their own catalog with an add-on artist account (from {ARTIST_SEAT_PRICES[0]!.price}/yr), coming soon. Featuring someone? Add them under Featured artist instead.
+                      This account is registered to <span className="font-semibold">{registeredArtist}</span>. Releasing as a different artist? Each artist gets their own catalog with an add-on artist account (from {ARTIST_SEAT_PRICES[0]!.price}/yr). Add one from Profile → Add another artist. Featuring someone? Add them under Featured artist instead.
                     </p>
                   )}
                 </div>

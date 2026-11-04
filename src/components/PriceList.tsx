@@ -52,8 +52,8 @@ export function PriceList() {
       <p className="max-w-3xl text-xs text-muted-foreground">
         Plan and seat prices live in <code>src/lib/plans.ts</code>; each add-on price sits with its own feature. Never
         quote a price that isn't on this page: if a number here looks wrong, it is wrong on the site too, so tell Software
-        rather than adjusting it in a message. Seat prices are already set up in Stripe, so a seat can be sold by hand from the dashboard at the rate shown here
-        until in-app checkout ships.
+        rather than adjusting it in a message. Seats are sold inside the app from Profile → Add another artist, and checkout buys by the lookup key
+        shown, so a price changed in Stripe must keep its key.
       </p>
     </div>
   );

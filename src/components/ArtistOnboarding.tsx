@@ -14,7 +14,8 @@ import { isBmi } from "@/lib/audit";
 import { PUBLISHING_LABEL } from "@/lib/readiness";
 import { loadOnboarding, loadProfile, saveOnboarding, saveProfile, withOwnWriter, type ArtistProfile, type Onboarding } from "@/lib/artist-profile";
 import { capShare, splitTotal } from "@/lib/splits-total";
-import { ARTIST_SEAT_PRICES, TIER_LABEL } from "@/lib/plans";
+import { TIER_LABEL } from "@/lib/plans";
+import { ArtistSeats } from "@/components/ArtistSeats";
 import { InfoTip } from "@/components/InfoTip";
 import type { GlossaryKey } from "@/lib/glossary";
 
@@ -83,7 +84,6 @@ export function ArtistOnboarding({ userId, open, onOpenChange, onSaved, firstRun
   // The "Change your artist name?" pop-up, and the "Add another artist" coming-soon panel inside it.
   const [confirmName, setConfirmName] = useState(false);
   const [seats, setSeats] = useState(false);
-  const [notified, setNotified] = useState(false);
 
   useEffect(() => {
     if (!open) return;
@@ -111,12 +111,6 @@ export function ArtistOnboarding({ userId, open, onOpenChange, onSaved, firstRun
     await save();
   }
 
-  async function notifySeats() {
-    const { error } = await supabase.from("feature_interest" as never).upsert({ user_id: userId, feature: "artist_seats" } as never, { onConflict: "user_id,feature", ignoreDuplicates: true });
-    if (error) { toast.error("Couldn't save that. Try again."); return; }
-    setNotified(true);
-    toast.success("We'll let you know when you can add more artists.");
-  }
 
   async function save() {
     setConfirmName(false);
@@ -254,17 +248,14 @@ export function ArtistOnboarding({ userId, open, onOpenChange, onSaved, firstRun
         )}
       </DialogContent>
       <NameChangeDialog open={confirmName} onOpenChange={setConfirmName} from={savedName} to={newName()} status={nameRule}
-        seats={seats} onSeats={() => setSeats(true)} notified={notified} onNotify={() => void notifySeats()} onConfirm={() => void save()} />
+        seats={seats} onSeats={() => setSeats(true)} onConfirm={() => void save()} />
     </Dialog>
   );
 }
 
-/** Seat prices (yearly, per added artist); artist seats aren't built yet. */
-const SEAT_PRICES = ARTIST_SEAT_PRICES.map((s) => [TIER_LABEL[s.tier], s.price] as const);
-
-function NameChangeDialog({ open, onOpenChange, from, to, status, seats, onSeats, notified, onNotify, onConfirm }: {
+function NameChangeDialog({ open, onOpenChange, from, to, status, seats, onSeats, onConfirm }: {
   open: boolean; onOpenChange: (o: boolean) => void; from: string; to: string; status?: NameStatus | undefined;
-  seats: boolean; onSeats: () => void; notified: boolean; onNotify: () => void; onConfirm: () => void;
+  seats: boolean; onSeats: () => void; onConfirm: () => void;
 }) {
   const left = status?.changes_left ?? 3;
   const blocked = !!status?.next_change_at || left <= 0;
@@ -273,16 +264,8 @@ function NameChangeDialog({ open, onOpenChange, from, to, status, seats, onSeats
   const freesUp = status?.frees_up_at ?? new Date(Date.now() + 365 * 86_400_000).toISOString();
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md">
-        {seats ? <>
-          <DialogHeader><DialogTitle>Coming soon: add more artists</DialogTitle>
-            <DialogDescription>Manage another artist's catalog from your account, each with their own login. Yearly, per added artist:</DialogDescription></DialogHeader>
-          <ul className="space-y-1 text-sm">{SEAT_PRICES.map(([tier, price]) => <li key={tier} className="flex justify-between rounded-lg bg-muted px-3 py-2"><span>{tier}</span><span className="font-semibold">{price}/yr</span></li>)}</ul>
-          <div className="flex flex-wrap justify-end gap-2">
-            <Button variant="outline" onClick={() => onOpenChange(false)}>Close</Button>
-            <Button onClick={onNotify} disabled={notified}>{notified ? "We'll let you know" : "Notify me"}</Button>
-          </div>
-        </> : <>
+      <DialogContent className="max-h-[90vh] max-w-lg overflow-y-auto">
+        {seats ? <ArtistSeats onClose={() => onOpenChange(false)} /> : <>
           <DialogHeader><DialogTitle>Change your artist name?</DialogTitle>
             <DialogDescription className="font-semibold text-foreground">"{from}" → "{to}"</DialogDescription></DialogHeader>
           {blocked ? (
