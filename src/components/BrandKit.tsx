@@ -177,7 +177,7 @@ export function BrandKit({ userId, tier, artistName }: { userId: string; tier: T
       )}
       <p className="text-sm text-muted-foreground">
         {where} carry this header in place of ours.
-        {tier === "management" ? ` Included with ${TIER_LABEL.management}.` : access.addOnUntil ? ` Personal Branding runs until ${longDate(access.addOnUntil)}.` : ""}
+        {tier === "management" ? ` Included with ${TIER_LABEL.management}.` : access.addOnUntil ? ` Personal Branding runs until ${longDate(access.addOnUntil)}, even if your plan changes before then.` : ""}
       </p>
       {ending && <Button variant="outline" onClick={() => void buy()}>Add another year · {BRANDING_PRICE}</Button>}
 

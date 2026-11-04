@@ -732,37 +732,7 @@ export function MetadataUploader({ onShareInfo, userId, mode = "embed", readOnly
           <h1 className="text-2xl font-bold">{full ? "My Catalog" : "Embed Metadata"}</h1>
         </div>
         {full && userId && readOnly ? <div className="flex flex-wrap items-center gap-3"><span className="text-sm text-muted-foreground"><Lock className="mr-1 inline h-3.5 w-3.5" />Read-only</span><DownloadCatalogButton /></div>
-        : full && userId ? (
-          <div className="flex flex-wrap items-center gap-2">
-          {/* 1-click agency export of the whole catalog: every song goes into the agency's template. */}
-          {tracks.length > 0 && (
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild><Button type="button" variant="outline">{!canExport && <Lock />}Export whole catalog</Button></DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                {(["mlc", "soundexchange", "pro"] as Agency[]).map((a) => <DropdownMenuItem key={a} onClick={() => runExport(a, tracks, "Full Catalog")}>{AGENCY_LABEL[a]}<InfoTip title="Required fields" text={EXPORT_REQUIRED[a]} /></DropdownMenuItem>)}
-                <DropdownMenuItem onClick={() => runPack(tracks, "Full Catalog")}>Neighbouring Rights Pack (.csv)</DropdownMenuItem>
-                <DropdownMenuItem onClick={() => (canExport ? setExportOpen(true) : setUpsell("export"))} className="flex-col items-start gap-0.5 border-t border-border">
-                  <span className="font-semibold">Choose a release or songs…</span>
-                  <span className="text-xs text-muted-foreground">Just the new album, picked singles, or songs not exported yet.</span>
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          )}
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild><Button type="button"><Plus />Add song</Button></DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="max-w-xs">
-              <DropdownMenuItem onClick={() => addSong(true)} className="flex-col items-start gap-0.5">
-                <span className="font-semibold">Upload an MP3 or WAV you already embedded</span>
-                <span className="text-xs text-muted-foreground">We read its tags and fill in the details for you.</span>
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => addSong(false)} className="flex-col items-start gap-0.5">
-                <span className="font-semibold">Add without audio</span>
-                <span className="text-xs text-muted-foreground">Type in the details. Add the audio anytime later.</span>
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-          </div>
-        ) : <span className="text-sm text-muted-foreground">{full ? "Saved songs, identifiers and splits" : "MP3 or WAV · ID3v2.3"}</span>}
+        : <span className="text-sm text-muted-foreground">{full ? "Saved songs, identifiers and splits" : "MP3 or WAV · ID3v2.3"}</span>}
       </div>
       {!full && <div className="lg:grid lg:grid-cols-[13rem_minmax(0,1fr)_17rem] lg:items-start lg:gap-6">
       <SessionRail audio={audio} queue={queue} done={sessionDone} onAdd={() => audioInput.current?.click()} onRemove={(i) => setQueue((q) => q.filter((_, j) => j !== i))} onClear={() => void clearSession()} />
@@ -790,7 +760,38 @@ export function MetadataUploader({ onShareInfo, userId, mode = "embed", readOnly
           {!readOnly && <div className="mb-8"><ContributorLibrary userId={userId} refreshKey={libKey} onSaved={() => setLibKey((k) => k + 1)} /></div>}
           <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
             <h2 className="text-xl font-bold">Your songs</h2>
-            {tracks.length > 0 && <Button type="button" variant="outline" size="sm" onClick={() => { const list = filter === "All" ? tracks : tracks.filter((t) => releaseGroup(t) === filter); void myBrand("catalog").then((brand) => downloadCatalogPdf(list, filter === "All" ? "Catalog" : `Catalog - ${filter}s`, brand)).catch(() => toast.error("Could not create the catalog PDF.")); }}><FileText />{filter === "All" ? "Catalog PDF" : `${filter}s PDF`}</Button>}
+            <div className="flex flex-wrap items-center gap-2">
+              {!readOnly && (<>          <DropdownMenu>
+            <DropdownMenuTrigger asChild><Button type="button" size="sm"><Plus />Add song</Button></DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="max-w-xs">
+              <DropdownMenuItem onClick={() => addSong(true)} className="flex-col items-start gap-0.5">
+                <span className="font-semibold">Upload an MP3 or WAV you already embedded</span>
+                <span className="text-xs text-muted-foreground">We read its tags and fill in the details for you.</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => addSong(false)} className="flex-col items-start gap-0.5">
+                <span className="font-semibold">Add without audio</span>
+                <span className="text-xs text-muted-foreground">Type in the details. Add the audio anytime later.</span>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+</>)}
+              {tracks.length > 0 && (<>          {/* 1-click agency export of the whole catalog: every song goes into the agency's template. */}
+          {tracks.length > 0 && (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild><Button type="button" variant="outline" size="sm">{!canExport && <Lock />}One Click Agency Export</Button></DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                {(["mlc", "soundexchange", "pro"] as Agency[]).map((a) => <DropdownMenuItem key={a} onClick={() => runExport(a, tracks, "Full Catalog")}>{AGENCY_LABEL[a]}<InfoTip title="Required fields" text={EXPORT_REQUIRED[a]} /></DropdownMenuItem>)}
+                <DropdownMenuItem onClick={() => runPack(tracks, "Full Catalog")}>Neighbouring Rights Pack (.csv)</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => (canExport ? setExportOpen(true) : setUpsell("export"))} className="flex-col items-start gap-0.5 border-t border-border">
+                  <span className="font-semibold">Choose a release or songs…</span>
+                  <span className="text-xs text-muted-foreground">Just the new album, picked singles, or songs not exported yet.</span>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
+</>)}
+              {tracks.length > 0 && <Button type="button" variant="outline" size="sm" onClick={() => { const list = filter === "All" ? tracks : tracks.filter((t) => releaseGroup(t) === filter); void myBrand("catalog").then((brand) => downloadCatalogPdf(list, filter === "All" ? "Catalog" : `Catalog - ${filter}s`, brand)).catch(() => toast.error("Could not create the catalog PDF.")); }}><FileText />{filter === "All" ? "Catalog PDF" : `${filter}s PDF`}</Button>}
+            </div>
           </div>
           {tracks.length === 0 ? <p className="text-sm text-muted-foreground">No songs yet. Use Add song to save a song you already embedded, or embed a new one in Embed Metadata. Every song you save is checked automatically in the Royalty Health Hub.</p> : (
             <>

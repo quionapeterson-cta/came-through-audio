@@ -78,11 +78,28 @@ rules keep it consistent as features are added.
 - The server decides, every time a download is made: `getMyBrand` / `getContractBrand` check the plan and verified
   add-on purchases. The browser may only ask for a kit ID it already owns; it never passes an "on" flag, and a saved
   kit never switches itself on.
-- Catalog Management includes Personal Branding; any other plan buys it as a yearly add-on that covers every `BrandUse`
-  at once. A refund ends it immediately for new documents and never alters documents already sent.
+- Branding is never global. It applies on exactly two grounds and no others: the account is on Catalog Management
+  (which includes one kit), or it has paid $13.99 for a kit for the year (`BRANDING_PRICE`, one purchase per kit, on any
+  plan including Free). A lower plan, a seat, a trial or an invitation never turns a kit on.
+- One paid kit covers every `BrandUse` at once for its own year. A refund ends that kit immediately for new documents
+  and never alters documents already sent.
+- A paid kit runs its own twelve months, independent of the plan (founder's decision, 2026-11-04). Cancelling or
+  refunding a plan, inside the 30-day window or after it, never ends a paid kit or shortens its year. Only a refund of
+  the kit itself ends it. The kit included with Catalog Management is not a separate purchase, so it follows the plan.
 - Several kits are allowed (one per business or project): the oldest is the default, and a document that picks a kit
   gets that one only if it is within the member's allowance.
 
 ### When it fails
 - A missing, unreadable or unavailable kit never blocks a download: the document simply keeps the Came Through Audio
   header. Never turn a branding lookup into an error the member sees.
+
+## Plan Chart Marks (always follow)
+
+- The eagle icons replace check marks. Any row the chart marks with eagle art shows only that eagle: never a check, tick
+  or badge on top of it, and never a check beside it in the same cell.
+- Contracts Delivery (`EAGLE_ART.contractsDelivery`) marks the paperwork and signing rows, and 1-Click Agency Exports,
+  wherever those rows are included.
+- Eye on the Prize (`EAGLE_ART.eyeOnThePrize`) marks only the rows Catalog Management alone has. A row that starts on a
+  lower tier keeps the check it shows there, on every tier above it.
+- New rows pick their mark by that rule inside `Mark` in `src/components/PlanComparison.tsx`. Never add a per-feature
+  exception to it without the founder asking for one.

@@ -182,7 +182,10 @@ function Mark({ feature, tier, t }: { feature: Feature; tier: Tier; t: Palette }
   // Those files are square canvases with the eagle painted as a wide band across the middle (36% and 48% of the
   // height), so a square box with object-contain left the art about 20px tall. `object-cover` in a wide box crops the
   // transparent margins instead, which makes the eagle fill the cell at full size.
-  const eagle = feature.paperwork ? EAGLE_ART.contractsDelivery : tier === "management" ? EAGLE_ART.eyeOnThePrize : null;
+  // Eagle art is the mark wherever it appears, and nothing sits on top of it. Contracts delivery marks the paperwork
+  // and signing rows (and 1-Click Agency Exports); the eye on the prize marks only what Catalog Management alone has.
+  // A row that starts on a lower tier keeps the check it shows there (founder, 2026-11-04).
+  const eagle = feature.paperwork ? EAGLE_ART.contractsDelivery : tier === "management" && feature.from === "management" ? EAGLE_ART.eyeOnThePrize : null;
   if (eagle) {
     return (
       <span className="flex h-11 w-20 items-center justify-center md:h-16 md:w-32">

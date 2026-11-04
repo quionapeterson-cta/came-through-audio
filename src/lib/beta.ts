@@ -20,7 +20,7 @@ export const BETA_ITEMS: BetaItem[] = [
   { id: "free-locks", tier: "free", area: "Plans", title: "Paid features show as locked", how: "On a Free account, try Embed, My Catalog and Contracts: each should show the upgrade box, not an error." },
   { id: "sign-invite", tier: "free", area: "Split sheets", title: "Sign a split sheet you're invited to", how: "Open the invite email, sign, check it shows as signed." },
   { id: "contract-generator", tier: "free", area: "Contracts", title: "Contract Generator ($3.99)", how: "Contracts → describe a deal → check the match → pay with test card 4242 → open it in My Contracts." },
-  { id: "branding-addon", tier: "free", area: "Branding", title: "Personal Branding add-on ($14.99)", how: "Profile → Brand kit → buy with test card 4242 → upload a logo, pick colors and a font." },
+  { id: "branding-addon", tier: "free", area: "Branding", title: "Personal Branding add-on ($13.99)", how: "Profile → Brand kit → buy with test card 4242 → upload a logo, pick colors and a font." },
   { id: "ai-protection", tier: "free", area: "AI Protection", title: "AI Protection certificate", how: "Buy a Single, record the two proof videos, issue the certificate, scan its QR code." },
   // Catalog Plus
   { id: "embed", tier: "plus", area: "Embed", title: "Embed and download a master", how: "Embed Metadata → add an MP3, fill the form, Embed Verified Metadata & Download Official Master, then open the file's details on your computer." },
