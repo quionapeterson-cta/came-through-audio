@@ -240,8 +240,9 @@ function Workspace() {
       <main className="mx-auto max-w-7xl px-6 py-8">
         <CatalogLapseBanner sub={sub} lapse={lapse} pauses={pauses} onRenew={upgrade} onChanged={() => void reloadBilling()} />
         <Tabs value={tab} onValueChange={setTab}>
-          {/* Centered on every tab (founder, 2026-11-03); wrapping keeps all six reachable on narrow screens. */}
-          <TabsList className="h-auto w-full flex-wrap justify-center gap-1 bg-muted p-1">
+          {/* One row, left to right, scrolled on narrow screens: all six belong on the same line (founder, 2026-11-04;
+              centering is for the sub-tab strip under the artist name, not this row). */}
+          <TabsList className="h-auto w-full flex-nowrap justify-start gap-1 overflow-x-auto bg-muted p-1">
             {tabs.map(({ id, label, icon: Icon }, i) => (
               <TabsTrigger key={id} value={id} className="shrink-0 gap-2 px-3 py-2.5 font-semibold data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
                 <span className="text-xs opacity-70">{i + 1}.</span><Icon className="h-4 w-4" /> {label}
@@ -384,8 +385,8 @@ function Health({ startView, justPaid, canCatalog, onFix, onFixField, onAddSong,
   const views = [["check", "Health Hub", Activity], ["expert", "Expert Help", Users], ["utility", "Utility Suite", Calculator]] as const;
   return (
     <div className="mt-6 space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="inline-flex flex-wrap gap-1 rounded-lg bg-muted p-1">
+      <div className="flex flex-wrap items-center justify-center gap-3">
+        <div className="inline-flex flex-wrap justify-center gap-1 rounded-lg bg-muted p-1">
           {views.map(([id, label, Icon]) => <Button key={id} size="sm" variant={view === id ? "default" : "ghost"} onClick={() => setView(id)}><Icon className="h-4 w-4" />{label}</Button>)}
         </div>
       </div>

@@ -189,7 +189,7 @@ function ProfilePage() {
       <Dialog open={chooser} onOpenChange={setChooser}>
         <DialogContent className="max-w-lg">
           <DialogHeader><DialogTitle>Whose profile are you editing?</DialogTitle></DialogHeader>
-          <p className="text-sm text-muted-foreground">Your own details, or the Embed Defaults and Artist Catalog Profile of an artist on your seats. Their login, catalog, splits and badges stay theirs.</p>
+          <p className="text-sm text-muted-foreground">Your own details, or the Embed Defaults and Catalog Defaults of an artist on your seats. Their login, catalog, splits and badges stay theirs.</p>
           <ul className="space-y-2">
             <li><Button variant="outline" className="w-full justify-between" onClick={() => { setChooser(false); setEditing(true); }}>My profile<span className="text-xs font-semibold text-muted-foreground">{TIER_LABEL[tier]}</span></Button></li>
             {seatArtists.map((a) => (

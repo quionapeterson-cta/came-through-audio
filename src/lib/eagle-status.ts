@@ -22,7 +22,7 @@ export const EAGLE_ART = {
   closeUp: `${ART}/cta_eagle_close_up.png`,
   /** Eye on the prize: every Catalog Management row that isn't paperwork. */
   eyeOnThePrize: `${ART}/cta_eagle_eye_on_the-prize.png`,
-  /** Contracts delivery art: kept in the repo, no longer on the chart (every plan shows the eye on the prize). */
+  /** Contracts delivery: the paperwork and signing rows. */
   contractsDelivery: `${ART}/cta_eagle_contracts_delivery.png`,
   /** Soft glow behind the disc on hover. */
   glow: `${ART}/cta_hover_glow.png`,

@@ -112,8 +112,8 @@ export function Contracts({ userId, unlocked, onUpgrade, company = false }: { us
   return (
     <TooltipProvider delayDuration={100}>
       <div className="mt-6 space-y-6">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div className="inline-flex flex-wrap gap-1 rounded-lg bg-muted p-1" role="tablist" aria-label="Contracts">
+        <div className="flex flex-wrap items-center justify-center gap-3">
+          <div className="inline-flex flex-wrap justify-center gap-1 rounded-lg bg-muted p-1" role="tablist" aria-label="Contracts">
             {(company
               ? [["blueprints", "Templates", ScrollText], ["contracts", "Drafts & out for signature", FileSignature], ["vault", "Signed", Vault], ["gifts", "Launch gifts", Gift], ["beta", "Beta testers", FlaskConical], ["outreach", "Outreach", Mail]] as const
               // The Contract Generator has its own tab, right before the contracts (founder, 2026-10-27).

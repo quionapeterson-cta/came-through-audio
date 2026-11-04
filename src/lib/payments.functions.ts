@@ -46,6 +46,23 @@ async function resolveOrCreateCustomer(
 type Stripe = ReturnType<typeof createStripeClient>;
 
 /**
+ * Stripe keys only exist where payments are switched on (Lovable's environment, or a deployment with its own secret
+ * keys). A preview without them used to answer with the bare env-var name, which reads as a broken button; this says
+ * what is actually going on and where the purchase does work.
+ */
+function stripeClient(env: "sandbox" | "live"): Stripe {
+  try {
+    return createStripeClient(env);
+  } catch (e) {
+    if (e instanceof Error && e.message.endsWith("is not configured")) {
+      console.error("Payments are not configured here:", e.message);
+      throw new Error("Card payments aren't switched on in this preview (no Stripe key here). Buy it on the published site: it appears on this account the moment Stripe confirms the payment.");
+    }
+    throw e;
+  }
+}
+
+/**
  * A billing-portal page where the customer confirms switching to the plan they picked: Stripe shows the prorated
  * amount and takes the payment. Needs no plan switching set up in the portal settings: if Stripe asks for it, an
  * app-owned portal configuration that allows it is used instead. Picking the plan they already have opens the portal.
@@ -149,7 +166,7 @@ export const createCheckoutSession = createServerFn({ method: "POST" })
   .inputValidator((d) => checkoutInput.parse(d))
   .handler(async ({ data, context }): Promise<{ clientSecret: string } | { portalUrl: string }> => {
     const env = getPaymentsEnvironment();
-    const stripe = createStripeClient(env);
+    const stripe = stripeClient(env);
     const origin = await appOrigin();
     // No payment without a confirmed email (founder, 2026-11-03): checked here, before Stripe's form ever opens, so
     // nothing interrupts someone mid-payment. Applies to every purchase, renewals included.
@@ -252,7 +269,7 @@ export const openBillingPortal = createServerFn({ method: "POST" })
     const customer = subs?.[0]?.stripe_customer_id;
     if (!customer) throw new Error("No plan to manage yet. Pick a plan first.");
     try {
-      const portal = await createStripeClient(env).billingPortal.sessions.create({ customer, return_url: `${await appOrigin()}/workspace` });
+      const portal = await stripeClient(env).billingPortal.sessions.create({ customer, return_url: `${await appOrigin()}/workspace` });
       return { url: portal.url };
     } catch (e) {
       console.error("Stripe portal failed:", getStripeErrorMessage(e));

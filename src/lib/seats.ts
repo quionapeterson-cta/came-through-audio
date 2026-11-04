@@ -50,7 +50,9 @@ export async function listSeatState(): Promise<SeatState> {
 /** The artists on this account's seats who accepted: the profiles an owner can switch between to edit their defaults. */
 export function seatArtistsFor(seats: ArtistSeat[], ownerId: string): { userId: string; name: string; tier: Exclude<Tier, "free"> }[] {
   return seats
-    .filter((s) => s.owner_id === ownerId && !!s.member_user_id && (s.status === "active" || s.status === "canceled"))
+    // Anyone attached to a live seat is an artist whose defaults the owner sets up, whatever the webhook last wrote
+    // to the status: an artist who accepted must never vanish from the list because a row says "invited" (2026-11-04).
+    .filter((s) => s.owner_id === ownerId && !!s.member_user_id && s.status !== "ended")
     .map((s) => ({ userId: s.member_user_id!, name: s.artist_name || "Unnamed artist", tier: s.tier }));
 }
 

@@ -1,6 +1,6 @@
-import { useEffect, useState } from "react";
+import { lazy, Suspense, useEffect, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
-import { Check, Loader2, Mail, Plus } from "lucide-react";
+import { Check, Loader2, Mail, Pencil, Plus } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -9,6 +9,9 @@ import { ARTIST_SEAT_PRICES, SEAT_MAX, TIER_LABEL, type Tier } from "@/lib/plans
 import { listSeatState, seatIsLive, type ArtistSeat, type SeatState } from "@/lib/seats";
 import { inviteSeatArtist } from "@/lib/seats.functions";
 import { openCheckout } from "@/lib/checkout";
+// ArtistOnboarding renders this panel for "Add another artist", so importing it statically here would be a cycle.
+// Loaded on demand only when an owner opens an accepted artist's defaults.
+const ArtistOnboarding = lazy(() => import("@/components/ArtistOnboarding").then((m) => ({ default: m.ArtistOnboarding })));
 
 type SeatTier = Exclude<Tier, "free">;
 
@@ -33,16 +36,23 @@ export function ArtistSeats({ onClose }: { onClose: () => void }) {
   const [artistName, setArtistName] = useState("");
   const [email, setEmail] = useState("");
   const [busy, setBusy] = useState(false);
+  // An artist who accepted: the owner fills in the defaults their songs and embeds start from.
+  const [editingArtist, setEditingArtist] = useState<{ userId: string; name: string } | null>(null);
   // How many artists to add at each tier; one subscription carries all of them (founder, 2026-11-04).
   const [qty, setQty] = useState<Record<SeatTier, number>>({ plus: 1, collaborate: 1, management: 1 });
   const invite = useServerFn(inviteSeatArtist);
+  /** Typing the address the seat was already sent to is a resend; anything else replaces (and voids) the old invite. */
+  const sameEmail = (seat: ArtistSeat) => !!seat.invite_email && seat.invite_email.toLowerCase() === email.trim().toLowerCase();
 
   // A seat only earns its keep once the artist is invited, so the first seat still waiting for an artist opens its
   // invite form by itself (founder, 2026-11-04: buying a seat and then hunting for the button was a dead end).
   const load = () => listSeatState().then((next) => {
     setState(next);
-    const open = next.seats.filter((s) => seatIsLive(s) && !s.member_user_id);
-    setSendingFor((cur) => cur ?? (open.find((s) => s.status === "unclaimed") ?? open[0])?.id ?? null);
+    // A seat with no invite yet opens itself; an invite that already went out stays a row action, so "Resend or
+    // change their email" is on screen rather than hidden behind an open form.
+    const fresh = next.seats.find((s) => seatIsLive(s) && !s.member_user_id && s.status === "unclaimed");
+    setSendingFor((cur) => cur ?? fresh?.id ?? null);
+    if (fresh) { setArtistName((n) => n || fresh.artist_name); setEmail((e) => e || (fresh.invite_email ?? "")); }
   }).catch(() => setState({ ready: false, seats: [] }));
   useEffect(() => { void load(); }, []);
 
@@ -61,7 +71,9 @@ export function ArtistSeats({ onClose }: { onClose: () => void }) {
     setBusy(true);
     try {
       const r = await invite({ data: { seatId: seat.id, email: email.trim(), artistName: artistName.trim(), origin: window.location.origin } });
-      toast.success(`Invite sent to ${email.trim()}. ${r.link ? "The link is in their email." : ""}`);
+      toast.success(sameEmail(seat)
+        ? `Invite resent to ${email.trim()}. ${r.link ? "The same link is in their email." : ""}`
+        : `Invite sent to ${email.trim()}. The previous address can no longer accept this seat.`);
       // Straight on to the next artist who still needs their invite.
       setSendingFor(null);
       setArtistName("");
@@ -72,6 +84,13 @@ export function ArtistSeats({ onClose }: { onClose: () => void }) {
     } finally {
       setBusy(false);
     }
+  };
+
+  /** Opens the invite form filled with the seat's own artist name and address, ready to resend as-is. */
+  const startInvite = (seat: ArtistSeat) => {
+    setSendingFor(seat.id);
+    setArtistName(seat.artist_name);
+    setEmail(seat.invite_email ?? "");
   };
 
   if (!state) return <p className="flex items-center gap-2 text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" />Checking your seats…</p>;
@@ -124,21 +143,33 @@ export function ArtistSeats({ onClose }: { onClose: () => void }) {
                       <Label htmlFor={`seat-email-${seat.id}`}>Their email</Label>
                       <Input id={`seat-email-${seat.id}`} type="email" value={email} placeholder="artist@example.com" onChange={(e) => setEmail(e.target.value)} />
                       <p className="text-xs text-muted-foreground">The seat can only be accepted from this inbox, so double-check it.</p>
+                      {seat.invite_email && !sameEmail(seat) && (
+                        <p className="text-xs font-semibold text-destructive">This seat is already invited at {seat.invite_email}. Sending this one voids that invite: the old email can no longer accept the seat.</p>
+                      )}
                     </div>
                     <div className="flex justify-end gap-2">
                       <Button variant="outline" onClick={() => setSendingFor(null)}>Cancel</Button>
                       <Button disabled={busy || !email.trim() || !artistName.trim()} onClick={() => void send(seat)}>
-                        {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Mail className="h-4 w-4" />}Send the invite
+                        {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Mail className="h-4 w-4" />}
+                        {!seat.invite_email ? "Send the invite" : sameEmail(seat) ? "Resend the invite" : "Change the email & send"}
                       </Button>
                     </div>
                   </div>
                 ) : (
-                  <Button className="mt-3" variant="outline" onClick={() => { setSendingFor(seat.id); setArtistName(seat.artist_name); setEmail(seat.invite_email ?? ""); }}>
-                    <Mail className="h-4 w-4" />{seat.invite_email ? "Resend the invite" : "Send to the artist"}
+                  <Button className="mt-3" variant="outline" onClick={() => startInvite(seat)}>
+                    <Mail className="h-4 w-4" />{seat.invite_email ? "Resend or change their email" : "Send to the artist"}
                   </Button>
                 )
               )}
-              {seat.member_user_id && <p className="mt-2 flex items-center gap-1 text-xs font-semibold text-primary"><Check className="h-3.5 w-3.5" />Accepted by the artist</p>}
+              {seat.member_user_id && (
+                <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
+                  <p className="flex items-center gap-1 text-xs font-semibold text-primary"><Check className="h-3.5 w-3.5" />Accepted by the artist</p>
+                  {/* Their Embed Defaults and Catalog Defaults are the owner's to fill in, so the way in sits here. */}
+                  <Button size="sm" variant="outline" onClick={() => setEditingArtist({ userId: seat.member_user_id!, name: seat.artist_name })}>
+                    <Pencil className="h-4 w-4" />Edit their defaults
+                  </Button>
+                </div>
+              )}
             </li>
           ))}
         </ul>
@@ -177,6 +208,13 @@ export function ArtistSeats({ onClose }: { onClose: () => void }) {
           </ul>
           <p className="mt-2 text-xs text-muted-foreground">Yearly, per added artist, billed separately from your own plan. Cancel any time; the artist keeps the seat until the paid year ends.</p>
       </div>
+
+      {editingArtist && (
+        <Suspense fallback={null}>
+          <ArtistOnboarding userId={editingArtist.userId} seatArtist={{ name: editingArtist.name }} open
+            onOpenChange={(o) => { if (!o) setEditingArtist(null); }} firstRun={false} onSaved={() => setEditingArtist(null)} />
+        </Suspense>
+      )}
 
       <div className="flex justify-end">
         <Button variant="outline" onClick={onClose}>Close</Button>

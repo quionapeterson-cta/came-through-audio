@@ -28,7 +28,7 @@ const AVATAR_BADGES = [
   { src: "/icons/playful/bedazzled_band.png", label: "Live musician" },
   { src: "/icons/playful/bedazzled_cta.png", label: "CTA Badge" },
 ];
-const STEPS = ["Welcome", "Profile Image", "Embed Defaults", "Artist Catalog Profile"];
+const STEPS = ["Welcome", "Profile Image", "Embed Defaults", "Catalog Defaults"];
 const year = new Date().getFullYear();
 
 function resizeImage(file: File): Promise<string> {
@@ -141,7 +141,7 @@ export function ArtistOnboarding({ userId, open, onOpenChange, onSaved, firstRun
     }
     onSaved(final);
     onOpenChange(false);
-    toast.success(other ? `${other}'s embed defaults and catalog profile are saved.` : firstRun ? "You're all set! Your saved details will prefill every new embed and catalog entry." : "Profile saved.");
+    toast.success(other ? `${other}'s embed defaults and catalog defaults are saved.` : firstRun ? "You're all set! Your saved details will prefill every new embed and catalog entry." : "Profile saved.");
   }
 
   return (
@@ -246,7 +246,7 @@ export function ArtistOnboarding({ userId, open, onOpenChange, onSaved, firstRun
 
         {step === 3 && (
           <div className="space-y-5">
-            <DialogHeader><DialogTitle className="text-2xl">Build Your Artist Catalog Profile</DialogTitle>
+            <DialogHeader><DialogTitle className="text-2xl">Build Your Catalog Defaults</DialogTitle>
               <DialogDescription><span className="font-semibold text-foreground">The more you fill in now, the less you type later.</span> Your writer, publisher and registration details carry over to every catalog entry, split sheet, agency export and Royalty Health Check. Missing a PRO, IPI or publisher? Leave it blank and add it after you register.</DialogDescription></DialogHeader>
             <ProfileProgress ob={ob} p={p} />
             <Field label="Legal Name"><Input value={ob.legalName} onChange={(e) => setOb((o) => ({ ...o, legalName: e.target.value }))} placeholder="As registered with your PRO" /></Field>
