@@ -283,30 +283,36 @@ function Landing() {
       </section>
 
       {/* What embedding is, told as a story (founder approved, 2026-10-25), with the file before and after. */}
-      <section className="bg-background py-20">
+      <section className="bg-ink pb-14 pt-20 text-ink-foreground">
         <div className="mx-auto max-w-5xl px-6">
           <h2 className="text-center text-3xl font-bold md:text-4xl">What does embed mean?</h2>
-          <p className="mt-2 text-center text-lg text-muted-foreground">The same file, before and after.</p>
+          <p className="mt-2 text-center text-lg text-ink-muted">The same file, before and after.</p>
 
           {/* Side by side, matching slot for slot and height for height: the comparison is the argument. */}
           <div className="mt-8 grid items-stretch gap-4 sm:grid-cols-2">
             <div className="flex flex-col gap-2">
-              <p className="text-center text-sm font-bold uppercase tracking-[2px] text-muted-foreground">Before embedding</p>
+              <p className="text-center text-sm font-bold uppercase tracking-[2px] text-ink-muted">Before embedding</p>
               <FileCard name="Track 01.mp3" groups={EMPTY_GROUPS} />
             </div>
             <div className="flex flex-col gap-2">
-              <p className="text-center text-sm font-bold uppercase tracking-[2px] text-primary">After embedding</p>
+              <p className="text-center text-sm font-bold uppercase tracking-[2px] text-electric">After embedding</p>
               <FileCard name="Your Song.mp3" done groups={EMBEDDED_GROUPS} />
             </div>
           </div>
-          <p className="mt-4 text-center text-xs leading-relaxed text-muted-foreground">
+          <p className="mt-4 text-center text-xs leading-relaxed text-ink-muted">
             Never written into the file: publishers, the ℗ line, language, PRO affiliations, IPI numbers and splits.
             Those stay private in your catalog and go only to the societies you register with.
           </p>
 
           {/* The story underneath, set like a magazine feature: a drop-cap lead, then two columns of body running the same
               width as the cards above, so the block ends flush with them. */}
-          <div className="mt-14">
+        </div>
+      </section>
+
+      {/* The copy, on white: its own band between the black pictures above and the black callout below. */}
+      <section className="bg-background py-14 text-foreground">
+        <div className="mx-auto max-w-5xl px-6">
+          <div>
             <p className="text-xl leading-relaxed text-foreground first-letter:float-left first-letter:mr-3 first-letter:mt-1 first-letter:text-6xl first-letter:font-black first-letter:leading-[0.8]">
               Picture this. You finish your single at 2 AM and send it out that same night to a DJ, a blog, and a music supervisor looking for a song for a TV show.
             </p>
@@ -324,7 +330,13 @@ function Landing() {
               <p className="md:col-span-2">Same file, same mix, nothing re-recorded. The only thing that changes is what the file says about itself, which is the difference between Track 01 and a song anyone can license.</p>
             </div>
 
-            <div className="mt-9 border-l-4 border-electric bg-ink px-6 py-5 text-ink-foreground">
+          </div>
+        </div>
+      </section>
+
+      <section className="bg-ink py-14 text-ink-foreground">
+        <div className="mx-auto max-w-5xl px-6">
+            <div className="border-l-4 border-electric bg-ink px-6 py-5 text-ink-foreground">
               <p className="text-xs font-bold uppercase tracking-[2px] text-electric">The part that matters</p>
               <p className="mt-2 text-2xl font-extrabold leading-snug md:text-3xl">Wherever the file goes, your information goes with it.</p>
               <p className="mt-2 leading-relaxed text-ink-muted">Copied, renamed or shared a hundred times: the credits, codes, lyrics and artwork are still inside.</p>
@@ -334,7 +346,6 @@ function Landing() {
             <div className="mt-8 flex justify-center">
               <Link to="/plans" className="inline-flex h-12 items-center rounded-md bg-primary px-6 font-semibold text-primary-foreground transition hover:bg-primary/90">Embed your first master</Link>
             </div>
-          </div>
         </div>
       </section>
 
@@ -420,24 +431,30 @@ function Landing() {
       </section>}
 
       {/* What a catalog is, told the same way as embedding: the scattered parts before, one row after (founder, 2026-11-03). */}
-      <section className="border-t border-border bg-background py-20">
+      <section className="border-t border-ink-border bg-ink pb-14 pt-20 text-ink-foreground">
         <div className="mx-auto max-w-5xl px-6">
           <h2 className="text-center text-3xl font-bold md:text-4xl">What is a music catalog?</h2>
-          <p className="mt-2 text-center text-lg text-muted-foreground">Everything one song is made of, in one place.</p>
+          <p className="mt-2 text-center text-lg text-ink-muted">Everything one song is made of, in one place.</p>
 
           <div className="mt-8 grid items-stretch gap-4 sm:grid-cols-2">
             <div className="flex flex-col gap-2">
-              <p className="text-center text-sm font-bold uppercase tracking-[2px] text-muted-foreground">Before cataloging</p>
+              <p className="text-center text-sm font-bold uppercase tracking-[2px] text-ink-muted">Before cataloging</p>
               <CatalogScatter />
             </div>
             <div className="flex flex-col gap-2">
-              <p className="text-center text-sm font-bold uppercase tracking-[2px] text-primary">After cataloging</p>
+              <p className="text-center text-sm font-bold uppercase tracking-[2px] text-electric">After cataloging</p>
               <CatalogRow />
             </div>
           </div>
 
           {/* The story underneath, set like the embedding spread: a drop-cap lead, two flowing columns, one callout. */}
-          <div className="mt-14">
+        </div>
+      </section>
+
+      {/* The copy, on white: its own band between the black pictures above and the black callout below. */}
+      <section className="bg-background py-14 text-foreground">
+        <div className="mx-auto max-w-5xl px-6">
+          <div>
             <p className="text-xl leading-relaxed text-foreground first-letter:float-left first-letter:mr-3 first-letter:mt-1 first-letter:text-6xl first-letter:font-black first-letter:leading-[0.8]">
               A catalog is every piece of a song kept together: the master, the artwork, the lyrics, the credits and the codes, for every song you own.
             </p>
@@ -452,7 +469,13 @@ function Landing() {
               </div>
             </div>
 
-            <div className="mt-9 border-l-4 border-electric bg-ink px-6 py-5 text-ink-foreground">
+          </div>
+        </div>
+      </section>
+
+      <section className="bg-ink py-14 text-ink-foreground">
+        <div className="mx-auto max-w-5xl px-6">
+            <div className="border-l-4 border-electric bg-ink px-6 py-5 text-ink-foreground">
               <p className="text-xs font-bold uppercase tracking-[2px] text-electric">The part that matters</p>
               <p className="mt-2 text-2xl font-extrabold leading-snug md:text-3xl">One song, one row, every piece of it.</p>
               <p className="mt-2 leading-relaxed text-ink-muted">Master, artwork, lyrics, credits and codes stay together, so every download comes back complete.</p>
@@ -461,7 +484,6 @@ function Landing() {
             <div className="mt-8 flex justify-center">
               <Link to="/plans" className="inline-flex h-12 items-center rounded-md bg-primary px-6 font-semibold text-primary-foreground transition hover:bg-primary/90">Start your catalog</Link>
             </div>
-          </div>
         </div>
       </section>
 
