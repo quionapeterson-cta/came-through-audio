@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ARTIST_SEAT_PRICES, TIER_LABEL, type Tier } from "@/lib/plans";
-import { listSeats, seatIsLive, type ArtistSeat } from "@/lib/seats";
+import { listSeatState, seatIsLive, type ArtistSeat, type SeatState } from "@/lib/seats";
 import { inviteSeatArtist } from "@/lib/seats.functions";
 import { openCheckout } from "@/lib/checkout";
 
@@ -27,7 +27,7 @@ const day = (iso: string | null) => (iso ? new Date(iso).toLocaleDateString(unde
  * artist's email. The artist signs up with that address and accepts, exactly like an invited signature request.
  */
 export function ArtistSeats({ onClose }: { onClose: () => void }) {
-  const [seats, setSeats] = useState<ArtistSeat[] | null>(null);
+  const [state, setState] = useState<SeatState | null>(null);
   const [buying, setBuying] = useState<SeatTier | null>(null);
   const [sendingFor, setSendingFor] = useState<string | null>(null);
   const [artistName, setArtistName] = useState("");
@@ -35,7 +35,7 @@ export function ArtistSeats({ onClose }: { onClose: () => void }) {
   const [busy, setBusy] = useState(false);
   const invite = useServerFn(inviteSeatArtist);
 
-  const load = () => listSeats().then(setSeats).catch(() => setSeats([]));
+  const load = () => listSeatState().then(setState).catch(() => setState({ ready: false, seats: [] }));
   useEffect(() => { void load(); }, []);
 
   const buy = async (tier: SeatTier) => {
@@ -65,9 +65,21 @@ export function ArtistSeats({ onClose }: { onClose: () => void }) {
     }
   };
 
-  if (!seats) return <p className="flex items-center gap-2 text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" />Checking your seats…</p>;
+  if (!state) return <p className="flex items-center gap-2 text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" />Checking your seats…</p>;
+  if (!state.ready) {
+    return (
+      <div className="space-y-3">
+        <h2 className="text-xl font-bold">Add another artist</h2>
+        <p className="text-sm text-muted-foreground">
+          Add-on artist seats aren't switched on yet. Nothing can be bought here until they are, so nothing can be
+          charged for a seat that has nowhere to go.
+        </p>
+        <div className="flex justify-end"><Button variant="outline" onClick={onClose}>Close</Button></div>
+      </div>
+    );
+  }
 
-  const live = seats.filter((seat) => seatIsLive(seat));
+  const live = state.seats.filter((seat) => seatIsLive(seat));
   const waiting = live.find((s) => !s.member_user_id);
 
   return (

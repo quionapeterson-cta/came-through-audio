@@ -33,16 +33,18 @@ export type SeatInvite = {
 
 const COLUMNS = "id, owner_id, tier, artist_name, invite_email, member_user_id, status, current_period_end, environment, accepted_at";
 
+/** `ready: false` means the artist-seats migration hasn't run, so buying must stay off (no seat row could be written). */
+export type SeatState = { ready: boolean; seats: ArtistSeat[] };
+
 /** Seats this account owns, plus the seat they were invited to (RLS returns both). */
-export async function listSeats(): Promise<ArtistSeat[]> {
+export async function listSeatState(): Promise<SeatState> {
   const { data, error } = await supabase.from("artist_seats" as never).select(COLUMNS as never)
     .order("created_at", { ascending: false });
   if (error) {
-    // Missing until the artist-seats migration runs; the add-another-artist panel says "coming soon" until then.
-    if (/does not exist|schema cache/i.test(error.message)) return [];
+    if (/does not exist|schema cache/i.test(error.message)) return { ready: false, seats: [] };
     throw error;
   }
-  return ((data ?? []) as unknown as ArtistSeat[]);
+  return { ready: true, seats: (data ?? []) as unknown as ArtistSeat[] };
 }
 
 /** A seat is usable while the owner keeps paying, and for the rest of the period after they cancel. */
