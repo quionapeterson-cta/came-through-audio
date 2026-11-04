@@ -13,17 +13,24 @@ const GOLD: [number, number, number] = [176, 141, 0];
 /** Browser loader: draws each badge onto white and shrinks it, so a 100-badge PDF stays a few MB. */
 export const browserArt: ArtLoader = (src) => new Promise((resolve) => {
   const img = new Image();
+  // The art comes from the R2 bucket, so the canvas needs CORS to stay untainted; if it can't be drawn, the row says
+  // "Art coming" instead of failing the whole document.
+  img.crossOrigin = "anonymous";
   img.onload = () => {
-    const size = 160, canvas = document.createElement("canvas");
-    canvas.width = canvas.height = size;
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return resolve(null);
-    ctx.fillStyle = "#ffffff";
-    ctx.fillRect(0, 0, size, size);
-    const scale = Math.min(size / img.naturalWidth, size / img.naturalHeight);
-    const w = img.naturalWidth * scale, h = img.naturalHeight * scale;
-    ctx.drawImage(img, (size - w) / 2, (size - h) / 2, w, h);
-    resolve({ data: canvas.toDataURL("image/jpeg", 0.85), format: "JPEG" });
+    try {
+      const size = 160, canvas = document.createElement("canvas");
+      canvas.width = canvas.height = size;
+      const ctx = canvas.getContext("2d");
+      if (!ctx) return resolve(null);
+      ctx.fillStyle = "#ffffff";
+      ctx.fillRect(0, 0, size, size);
+      const scale = Math.min(size / img.naturalWidth, size / img.naturalHeight);
+      const w = img.naturalWidth * scale, h = img.naturalHeight * scale;
+      ctx.drawImage(img, (size - w) / 2, (size - h) / 2, w, h);
+      resolve({ data: canvas.toDataURL("image/jpeg", 0.85), format: "JPEG" });
+    } catch {
+      resolve(null);
+    }
   };
   img.onerror = () => resolve(null);
   img.src = artUrl(src);
