@@ -3,6 +3,7 @@ import { HOME_FAQS } from "@/lib/faq";
 import { Building2, Camera, Check, Cloud, Download, HardDrive, Infinity as InfinityIcon, Mail, MessageSquare, Mic, Music, Palette, StickyNote, Upload } from "lucide-react";
 import { SignupCard } from "@/components/SignupCard";
 import { BrandLogo } from "@/components/BrandLogo";
+import { DownloadApp } from "@/components/InstallApp";
 import { FitHeadline } from "@/components/FitHeadline";
 import { EmbedBadge, ShieldBadge, SignBadge, SplitBadge, UploadBadge, VaultBadge } from "@/components/StepBadges";
 import { ArtistBadge, ComposerBadge, MusicianBadge, ProducerBadge, SongwriterBadge } from "@/components/RoleBadges";
@@ -393,6 +394,7 @@ function Landing() {
         </div>
       </section>
 
+      <DownloadApp />
 
       {testimonials.length > 0 && <section id="testimonials" className="scroll-mt-4 bg-muted/50 py-20">
         <div className="mx-auto max-w-7xl px-6">

@@ -80,7 +80,7 @@ export function SplitSheets({ userId, canSplit, canCollect, prefillTrackId, onUp
   if (!canSplit && !readOnly) {
     return (
       <UpgradeLock title="Split sheets start with Catalog Plus" tier="plus" onUpgrade={onUpgrade}
-        text="Generate unlimited split sheets from your catalog. Collaborator e-signature requests come with Catalog & Collaborate. Split sheets someone sends you are always free to sign." />
+        text="Generate unlimited split sheets from your catalog. Split sheet e-signature requests come with Catalog & Collaborate. Split sheets someone sends you are always free to sign." />
     );
   }
 
@@ -482,7 +482,7 @@ function SplitEditor({ userId, track, initial, canCollect, onUpgrade, onClose, o
                     </Button>
                   )
                 ) : !canCollect ? (
-                  <Button size="sm" variant="outline" className="opacity-60" title="Collaborator e-signature requests are included with Catalog & Collaborate"
+                  <Button size="sm" variant="outline" className="opacity-60" title="Split sheet e-signature requests are included with Catalog & Collaborate"
                     onClick={() => void confirmAction({ title: "Collect e-signatures with Catalog & Collaborate", text: "Email collaborators a secure link to sign your split sheet. Upgrade to Catalog & Collaborate to send signature requests.", action: "See upgrade", cancel: "Not now", tone: "primary" }).then((go) => go && onUpgrade())}>
                     <Lock className="h-4 w-4" /> Request e-signature
                   </Button>

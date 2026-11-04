@@ -102,7 +102,7 @@ each download (`AGENCY_UPLOAD_STEPS` in glossary.ts, menu names from each agency
     register in minutes. Save hours of retyping."
   - *Royalty Utility Suite:* "Pick a song and the converters turn your catalog splits into the exact numbers ASCAP, BMI and
     SESAC ask for (each counts shares differently), plus a projected earnings calculator by platform and country."
-  - *Collaborator E-Signature Requests:* add "Download signed split sheets".
+  - *Split Sheet E-Signature Request:* add "Download signed split sheets".
   - *Catalog Management:* add "Brand your contracts: your logo, colors, tagline and font on every contract you send."
 - **Sign-up buttons:** each tier card's button reads **Sign up now** and goes straight to that tier's checkout (account
   creation inside it); only **Sign up free** goes to the free signup.

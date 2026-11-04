@@ -23,7 +23,7 @@ export const sendSplitInvite = createServerFn({ method: "POST" })
       console.error("has_tier failed:", tierErr);
       throw new Error(`Couldn't check your plan (${tierErr.message}). Contact support and we'll help right away.`);
     }
-    if (!canCollect) throw new Error("Collaborator e-signature requests are included with Catalog & Collaborate.");
+    if (!canCollect) throw new Error("Split sheet e-signature requests are included with Catalog & Collaborate.");
 
     const { data: row, error } = await context.supabase
       .from("split_sheets")
