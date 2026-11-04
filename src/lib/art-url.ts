@@ -35,5 +35,6 @@ export function localFallbacks(url: string): string[] {
   const path = url.slice(BASE.length);
   if (!/^\//.test(path)) return [];
   if (!/\.webp$/i.test(path)) return [path];
-  return [path, path.replace(/\.webp$/i, ".png"), path.replace(/\.webp$/i, ".jpg")];
+  // The repo keeps the original picture; the bucket holds the .webp made from it, so try the originals first.
+  return [path.replace(/\.webp$/i, ".png"), path.replace(/\.webp$/i, ".jpg"), path];
 }
