@@ -292,6 +292,60 @@ export type Database = {
         }
         Relationships: []
       }
+      artist_seats: {
+        Row: {
+          accepted_at: string | null
+          artist_name: string
+          created_at: string
+          current_period_end: string | null
+          environment: string
+          id: string
+          invite_email: string | null
+          invited_at: string | null
+          member_user_id: string | null
+          owner_id: string
+          seat_index: number
+          status: string
+          stripe_subscription_id: string | null
+          tier: string
+          updated_at: string
+        }
+        Insert: {
+          accepted_at?: string | null
+          artist_name?: string
+          created_at?: string
+          current_period_end?: string | null
+          environment: string
+          id?: string
+          invite_email?: string | null
+          invited_at?: string | null
+          member_user_id?: string | null
+          owner_id: string
+          seat_index?: number
+          status?: string
+          stripe_subscription_id?: string | null
+          tier: string
+          updated_at?: string
+        }
+        Update: {
+          accepted_at?: string | null
+          artist_name?: string
+          created_at?: string
+          current_period_end?: string | null
+          environment?: string
+          id?: string
+          invite_email?: string | null
+          invited_at?: string | null
+          member_user_id?: string | null
+          owner_id?: string
+          seat_index?: number
+          status?: string
+          stripe_subscription_id?: string | null
+          tier?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       badge_drops: {
         Row: {
           created_at: string
@@ -1297,6 +1351,7 @@ export type Database = {
       outreach_emails: {
         Row: {
           company: string
+          from_email: string
           id: string
           kind: string
           sent_at: string
@@ -1307,6 +1362,7 @@ export type Database = {
         }
         Insert: {
           company?: string
+          from_email?: string
           id?: string
           kind: string
           sent_at?: string
@@ -1317,6 +1373,7 @@ export type Database = {
         }
         Update: {
           company?: string
+          from_email?: string
           id?: string
           kind?: string
           sent_at?: string
@@ -2137,6 +2194,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      accept_artist_seat: { Args: { _seat_id: string }; Returns: Json }
       answer_ipi_request: {
         Args: {
           _id: string
@@ -2174,6 +2232,7 @@ export type Database = {
           taken: number
         }[]
       }
+      get_artist_seat_invite: { Args: { _seat_id: string }; Returns: Json }
       get_contract_invite: { Args: { _party_id: string }; Returns: Json }
       get_ipi_request: { Args: { _id: string }; Returns: Json }
       get_split_invite: { Args: { _row_id: string }; Returns: Json }
@@ -2221,6 +2280,10 @@ export type Database = {
       reopen_contract: { Args: { _contract_id: string }; Returns: undefined }
       sees_all_teams: { Args: { _user_id: string }; Returns: boolean }
       send_contract: { Args: { _contract_id: string }; Returns: string }
+      set_seat_artist_defaults: {
+        Args: { _artist_defaults: Json; _member: string; _onboarding: Json }
+        Returns: boolean
+      }
       sign_contract: {
         Args: { _party_id: string; _signature_name: string }
         Returns: undefined
