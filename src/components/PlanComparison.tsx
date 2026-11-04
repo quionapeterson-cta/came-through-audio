@@ -86,7 +86,7 @@ export function PlanComparison({ currentTier, action, note, tone = "light" }: { 
               {PLAN_TIERS.map((p) => <div key={p.tier} className={`border-b ${t.border} ${p.tier === highlight ? `border-x-2 border-x-primary ${t.panel}` : ""}`} />)}
             </div>
             {PLAN_FEATURES.filter((f) => f.group === group).map((f) => (
-              <div key={f.title} role="row" className="col-span-5 grid grid-cols-subgrid">
+              <div key={f.title} role="row" className={`col-span-5 grid grid-cols-subgrid ${f.highlight ? "bg-primary/[0.07]" : ""}`}>
                 <div role="cell" className={`border-b py-3 pr-4 ${t.border}`}><FeatureName feature={f} t={t} /></div>
                 {PLAN_TIERS.map((p) => (
                   <div key={p.tier} role="cell" className={`flex items-center justify-center border-b py-1.5 ${t.border} ${p.tier === highlight ? `border-x-2 border-x-primary ${t.panel}` : ""}`}>
@@ -115,7 +115,7 @@ export function PlanComparison({ currentTier, action, note, tone = "light" }: { 
               <Button className={`mt-4 w-full ${on ? "" : t.outline}`} variant={on ? "default" : "outline"} disabled={a.disabled} onClick={a.onClick}>{a.label}</Button>
               <ul className="mt-5 space-y-2.5">
                 {PLAN_FEATURES.map((f) => (
-                  <li key={f.title} className={`flex items-start gap-2 text-sm ${hasTier(p.tier, f.from) ? "" : `${t.muted} opacity-60`}`}>
+                  <li key={f.title} className={`flex items-start gap-2 text-sm ${f.highlight ? "-mx-2 rounded-lg bg-primary/[0.07] px-2 py-1" : ""} ${hasTier(p.tier, f.from) ? "" : `${t.muted} opacity-60`}`}>
                     <span className="mt-0.5"><Mark feature={f} tier={p.tier} t={t} /></span><FeatureName feature={f} t={t} />
                   </li>
                 ))}

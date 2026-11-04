@@ -105,6 +105,8 @@ rules keep it consistent as features are added.
 - A row may wear a pair of eagles (`eaglePair: true` on the feature, used by PDF Fill, Sign & Download): both stay the
   full size a single eagle has, the second a step down and in front of the first. It is a highlight, not a new mark, so
   the pair never appears with a check and is never used on more than one row at a time.
+- A spotlit row may also carry a faint accent tint across the whole row (`highlight: true` on the feature), which is
+  only a background: the row keeps its eagle mark and never gains a second one.
 - New rows pick their mark by that rule inside `Mark` in `src/components/PlanComparison.tsx`. Never add a per-feature
   exception to it without the founder asking for one.
 

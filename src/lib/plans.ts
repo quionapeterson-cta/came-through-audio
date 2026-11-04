@@ -122,6 +122,8 @@ export type Feature = {
   prize?: boolean;
   /** Two eagles, both full size and one layered in front of the other: a spotlit paperwork row (founder, 2026-11-05). */
   eaglePair?: boolean;
+  /** A faint accent tint across the whole row, for a row the chart is calling attention to (founder, 2026-11-05). */
+  highlight?: boolean;
 };
 
 /**
@@ -139,10 +141,10 @@ export const PLAN_FEATURES: Feature[] = [
   { group: "Catalog & metadata", from: "plus", title: "PDF Lyric Downloads", tip: "Download any song's lyrics with its credits as a branded PDF" },
   { group: "Catalog & metadata", from: "plus", title: "Split Sheet Generator", tip: "Generate split sheets from your catalog songs, sign as the owner and download the PDF. Collecting collaborators' e-signatures starts with Catalog & Collaborate.", paperwork: true },
   { group: "Collaboration & registration", from: "collaborate", title: "Split Sheet E-Signature Request", tip: "Email collaborators a secure link to e-sign your split sheets, with instant free account invitations. Download signed split sheets.", paperwork: true },
-  { group: "Collaboration & registration", from: "collaborate", title: "1-Click Agency Exports", badge: "Registers in minutes", tip: "Export your whole catalog, a release or chosen songs into each agency's own template (The MLC, SoundExchange, ASCAP/BMI) and register in minutes. Save hours of retyping. Includes a Neighbouring Rights Pack listing every performer for international airplay.", paperwork: true },
+  { group: "Collaboration & registration", from: "collaborate", title: "1-Click Agency Exports", badge: "Registers in minutes", tip: "Export your whole catalog, a release or chosen songs as the file each agency actually takes: a bulk registration for The MLC, the ISRC Ingest form for SoundExchange, and a BMI/ASCAP cheat sheet with every field filled in, so registering is copy-and-paste instead of retyping. Includes a Neighbouring Rights Pack listing every performer for international airplay.", paperwork: true },
   { group: "Collaboration & registration", from: "collaborate", title: "Royalty Utility Suite", tip: "Pick a song and the converters turn your catalog splits into the exact numbers ASCAP, BMI and SESAC ask for (each counts shares differently), plus a projected earnings calculator by platform and country.", prize: true },
   { group: "Catalog & metadata", from: "management", title: "WAV Embedding", tip: "Embed the same credits, identifiers, lyrics and artwork into WAV masters and keep them in My Catalog. Your highest-quality files stay just as traceable as the MP3s, wherever they are shared or sent." },
-  { group: "Business & education", from: "management", title: "PDF Fill, Sign & Download", tip: "Open any PDF, type into its own fill-in boxes, add text, dates and your signature, then download a clean, finished copy at full quality. The file never leaves your browser.", paperwork: true, eaglePair: true },
+  { group: "Business & education", from: "management", title: "PDF Fill, Sign & Download", tip: "Open any PDF, type into its own fill-in boxes, add text, dates and your signature, then download a clean, finished copy at full quality. The file never leaves your browser.", paperwork: true, eaglePair: true, highlight: true },
   { group: "Business & education", from: "management", title: "Custom Music Industry Contracts", tip: "Fill in a contract from a blueprint, adjust the terms, and keep it with your catalog.", paperwork: true },
   { group: "Business & education", from: "management", title: "Contract Signature Requests & Signing", tip: "Send contracts to every party to e-sign; each signature is time-stamped and hashed", paperwork: true },
   { group: "Business & education", from: "management", title: "Music Industry Blueprints", tip: "75+ ready-to-sign contracts with plain-language guides, plus step-by-step business blueprints and home recording cheat sheets", paperwork: true },
