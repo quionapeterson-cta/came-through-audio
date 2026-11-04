@@ -44,3 +44,7 @@ scripts/demo/*.jpg
 scripts/demo/*.jpeg
 scripts/demo/*.png
 scripts/demo/*.webp
+
+# 4K badge masters live in the R2 bucket (4k/icons/), not in git: they are print archives the site never loads.
+/art/badges-4k/*
+!/art/badges-4k/README.md
