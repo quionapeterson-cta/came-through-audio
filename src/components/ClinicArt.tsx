@@ -18,6 +18,7 @@ const ART = {
   kidneys: "/art/clinic/pamphlet-kidneys.svg",
   brain: "/art/clinic/pamphlet-brain.svg",
   spine: "/art/clinic/pamphlet-spine.svg",
+  isrc: "/art/clinic/pamphlet-isrc.svg",
 } as const;
 
 export type ClinicArtName = keyof typeof ART;

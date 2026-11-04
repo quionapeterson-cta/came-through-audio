@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
 import { WaitingArea } from "@/components/WaitingArea";
 
-const TITLES = ["Heart", "Lungs", "Kidneys", "Brain", "Spine"];
+const TITLES = ["Heart", "Lungs", "Kidneys", "Brain", "Spine", "ISRC"];
 
 describe("WaitingArea", () => {
   it("prints every pamphlet's title on the rack, and opens one from its title", () => {
@@ -21,6 +21,12 @@ describe("WaitingArea", () => {
     expect(screen.getByText(/What the Doctor looks for/)).toBeTruthy();
     expect(document.querySelector('img[src="/art/clinic/pamphlet-heart.svg"]')).toBeTruthy();
 
+    // The ISRC leaflet says a recording code is never a precondition for registering the song.
+    fireEvent.click(screen.getByRole("button", { name: /Back to the rack/ }));
+    fireEvent.click(screen.getByRole("button", { name: /Open the ISRC pamphlet/ }));
+    expect(screen.getByRole("heading", { name: "Registering with your PRO, with or without an ISRC" })).toBeTruthy();
+    expect(screen.getByText(/BMI does not ask for it at all/)).toBeTruthy();
+    expect(document.querySelector('img[src="/art/clinic/pamphlet-isrc.svg"]')).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: /Back to the rack/ }));
     expect(screen.queryByRole("heading", { name: "Performance royalties (your PRO)" })).toBeNull();
     expect(screen.getByRole("button", { name: /Open the Lungs pamphlet/ })).toBeTruthy();

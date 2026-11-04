@@ -7,8 +7,11 @@ import type { OrganId } from "@/lib/royalty-checkup";
  * table was brought into line with the built diagnosis rather than the other way round. Kept out of the component so the
  * file only exports a component (react-refresh).
  */
+/** The five organs, plus the ISRC leaflet, which is about a code rather than an organ (founder, 2026-11-05). */
+export type PamphletOrgan = Extract<OrganId, "heart" | "lungs" | "kidneys" | "brain" | "spine"> | "isrc";
+
 export type Pamphlet = {
-  organ: Extract<OrganId, "heart" | "lungs" | "kidneys" | "brain" | "spine">;
+  organ: PamphletOrgan;
   /** What the pamphlet is about, in the language of the money rather than the organ. */
   subject: string;
   /** One line that says why the organ matters, under the title. */
@@ -85,5 +88,19 @@ export const PAMPHLETS: Pamphlet[] = [
     healthy: "Writer splits 100%, publisher shares 100% of their half, signed split sheet",
     unhealthy: "Shares off / no signed sheet",
     meaning: "Agencies hold payments until the splits add up",
+  },
+  {
+    organ: "isrc",
+    subject: "Registering with your PRO, with or without an ISRC",
+    lede: "A PRO registers the song, not the recording. The ISRC belongs to the recording, so it can never be the thing that decides whether the song gets registered.",
+    body: [
+      "The two codes name different copyrights. An ISRC names one recording: this take, this mix, this master. Your PRO registers the composition — the words and music, shared by every recording of it — and identifies it by the writers' legal names, their IPI numbers and the splits, then by an ISWC the PRO assigns itself. That is why the registration form asks for writers and splits and never asks you for a recording code.",
+      "So a song can be registered before a recording of it exists. A songwriter writing for other artists, a composer selling scores or cues, a topliner handing over a demo: none of them hold an ISRC and all of them register. Register the work as soon as the splits are settled. If a recording comes out later, add the recording then — the work is not re-registered, and its writers, shares and IPIs stay as they are.",
+      "One song, many codes: a cover, a remix, a live version and a sync edit each carry their own ISRC, while the composition stays one work with one set of splits. That is also why an ISRC can't stand in for a work ID, and why registering the same song under two recordings creates a duplicate work instead of two registrations.",
+      "Where the ISRC does earn its keep: once a recording is out, plays get matched back to the song through the recordings registered against it, and The MLC and SoundExchange cannot register anything without one. What the Doctor looks for: the work registered at your PRO with its writers, IPIs and splits, and an ISRC only once a recording exists — a missing code is a reason to get one from your distributor before The MLC or SoundExchange, never a reason to wait before registering the song with your PRO. ASCAP treats it as a helpful extra; BMI does not ask for it at all.",
+    ],
+    healthy: "The work registered at your PRO, with or without an ISRC",
+    unhealthy: "Registration put off because the recording has no code yet",
+    meaning: "Performance royalties go uncollected while the song waits",
   },
 ];

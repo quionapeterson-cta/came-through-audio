@@ -2,7 +2,7 @@ import { useState } from "react";
 import { ChevronLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ORGAN_NAME } from "@/lib/royalty-checkup";
-import { PAMPHLETS, type Pamphlet } from "@/lib/waiting-area";
+import { PAMPHLETS, type Pamphlet, type PamphletOrgan } from "@/lib/waiting-area";
 import { ClinicArt } from "@/components/ClinicArt";
 
 /**
@@ -10,7 +10,7 @@ import { ClinicArt } from "@/components/ClinicArt";
  * is the rack itself: each pamphlet's title is printed on the leaflet it belongs to, and tapping a title takes that
  * pamphlet out to read. Copy lives in lib/waiting-area.ts.
  */
-type Organ = Pamphlet["organ"];
+type Organ = PamphletOrgan;
 
 /** Where each title sits on the rack drawing, as a percentage of the 480x320 picture. */
 const ON_RACK: Record<Organ, { x: number; y: number }> = {
@@ -19,6 +19,13 @@ const ON_RACK: Record<Organ, { x: number; y: number }> = {
   kidneys: { x: 63.75, y: 29.4 }, // top-right
   brain: { x: 51.5, y: 51.7 }, // middle shelf, centre
   spine: { x: 55.8, y: 73.9 }, // front shelf, right
+  isrc: { x: 38.3, y: 73.9 }, // front shelf, left: the coding leaflet, beside the splits one
+};
+
+/** The name printed on each leaflet. Five organs, plus the code leaflet, which is not an organ. */
+const LEAFLET: Record<Organ, string> = {
+  heart: ORGAN_NAME.heart, lungs: ORGAN_NAME.lungs, kidneys: ORGAN_NAME.kidneys,
+  brain: ORGAN_NAME.brain, spine: ORGAN_NAME.spine, isrc: "ISRC",
 };
 
 export function WaitingArea() {
@@ -32,7 +39,7 @@ export function WaitingArea() {
         <p className="text-xs font-semibold uppercase tracking-[2px] text-primary">Waiting Area</p>
         <h3 id="waiting-area" className="mt-1 text-xl font-bold">What the Doctor examines</h3>
         <p className="mt-1 max-w-[62ch] text-sm text-muted-foreground">
-          Take a pamphlet while you wait: one per organ, and what each one means for your money.
+          Take a pamphlet while you wait: one per organ, plus the codes behind them, and what each one means for your money.
         </p>
       </div>
 
@@ -43,7 +50,7 @@ export function WaitingArea() {
             <ClinicArt name={leaf.organ} className="w-full rounded-none border-0" />
             <div className="p-5">
               <p className="text-xs font-semibold uppercase tracking-[2px] text-primary">
-                Pamphlet No. {number(leaf.organ)} &middot; {ORGAN_NAME[leaf.organ]}
+                Pamphlet No. {number(leaf.organ)} &middot; {LEAFLET[leaf.organ]}
               </p>
               <h4 id="pamphlet-title" className="mt-1 text-2xl font-extrabold tracking-tight">{leaf.subject}</h4>
               <p className="mt-1 font-semibold">{leaf.lede}</p>
@@ -82,10 +89,10 @@ export function WaitingArea() {
                     <button
                       type="button"
                       onClick={() => setOpen(p.organ)}
-                      aria-label={`Open the ${ORGAN_NAME[p.organ]} pamphlet`}
+                      aria-label={`Open the ${LEAFLET[p.organ]} pamphlet`}
                       className="inline-flex items-center whitespace-nowrap rounded-full border border-ink-border bg-ink px-1.5 py-[3px] text-[9px] font-extrabold uppercase leading-none tracking-[0.5px] text-ink-foreground shadow-sm transition hover:bg-primary hover:text-primary-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring sm:px-2 sm:text-[10px]"
                     >
-                      {ORGAN_NAME[p.organ]}
+                      {LEAFLET[p.organ]}
                     </button>
                   </li>
                 ))}

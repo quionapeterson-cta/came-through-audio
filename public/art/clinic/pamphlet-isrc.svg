@@ -1,0 +1,47 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 480 320" role="img" aria-label="A sheet of music beside a card printed with a barcode and a green seal: the song is registered at your PRO whether or not a recording code exists">
+  <rect width="480" height="320" fill="#F4F5F7"/>
+  <rect width="480" height="78" fill="#0b0b0b"/>
+  <rect x="28" y="22" width="120" height="10" rx="5" fill="#FFFFFF" opacity="0.9"/>
+  <rect x="28" y="42" width="78" height="8" rx="4" fill="#4D8CFF"/>
+  <rect x="392" y="24" width="60" height="8" rx="4" fill="#FFFFFF" opacity="0.35"/>
+
+  <g>
+    <rect x="52" y="104" width="180" height="172" rx="6" fill="#FFFFFF" stroke="#0b0b0b" stroke-width="2"/>
+    <rect x="52" y="104" width="180" height="12" rx="6" fill="#004AAD"/>
+    <g stroke="#0b0b0b" stroke-width="1.4" opacity="0.35">
+      <path d="M70 150h144M70 162h144M70 174h144M70 186h144M70 198h144"/>
+    </g>
+    <path d="M104 150c4-10 12-14 18-10 6 4 2 12-4 14-8 3-16-2-14 8 2 12 18 14 24 6" fill="none" stroke="#004AAD" stroke-width="3.4" stroke-linecap="round"/>
+    <ellipse cx="146" cy="186" rx="9" ry="6.5" transform="rotate(-18 146 186)" fill="#0b0b0b"/>
+    <path d="M154 184V162" stroke="#0b0b0b" stroke-width="2.6" stroke-linecap="round"/>
+    <ellipse cx="184" cy="174" rx="9" ry="6.5" transform="rotate(-18 184 174)" fill="#0b0b0b"/>
+    <path d="M192 172V150" stroke="#0b0b0b" stroke-width="2.6" stroke-linecap="round"/>
+    <rect x="70" y="220" width="90" height="5" rx="2.5" fill="#0b0b0b" opacity="0.3"/>
+    <rect x="70" y="234" width="64" height="5" rx="2.5" fill="#0b0b0b" opacity="0.2"/>
+    <rect x="70" y="248" width="76" height="5" rx="2.5" fill="#004AAD" opacity="0.5"/>
+  </g>
+
+  <g>
+    <rect x="286" y="104" width="140" height="122" rx="10" fill="#0b0b0b"/>
+    <g fill="#FFFFFF">
+      <rect x="302" y="124" width="4" height="60"/><rect x="310" y="124" width="7" height="60"/>
+      <rect x="321" y="124" width="3" height="60"/><rect x="328" y="124" width="9" height="60"/>
+      <rect x="341" y="124" width="4" height="60"/><rect x="349" y="124" width="6" height="60"/>
+      <rect x="359" y="124" width="3" height="60"/><rect x="366" y="124" width="8" height="60"/>
+      <rect x="378" y="124" width="4" height="60"/><rect x="386" y="124" width="6" height="60"/>
+      <rect x="396" y="124" width="3" height="60"/><rect x="403" y="124" width="7" height="60"/>
+    </g>
+    <rect x="302" y="196" width="70" height="8" rx="4" fill="#4D8CFF"/>
+    <rect x="380" y="196" width="30" height="8" rx="4" fill="#FFFFFF" opacity="0.35"/>
+  </g>
+
+  <g>
+    <circle cx="372" cy="252" r="34" fill="#16794A"/>
+    <path d="M356 252l11 11 21-23" fill="none" stroke="#FFFFFF" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+
+  <g fill="none" stroke="#0b0b0b" stroke-width="2" stroke-dasharray="6 5" opacity="0.5">
+    <rect x="286" y="238" width="44" height="34" rx="7"/>
+  </g>
+  <path d="M298 266l20-24" stroke="#0b0b0b" stroke-width="2.6" stroke-linecap="round" opacity="0.5"/>
+</svg>

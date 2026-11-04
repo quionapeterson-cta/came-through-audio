@@ -41,6 +41,9 @@ Embedding is forgiving; registration is strict. Never block a user from saving o
   - **BMI:** the ASCAP items plus publisher IPI (except that a song with no publisher needs neither a publisher nor Self-published when its writers are with BMI, whatever their role: BMI pays them the publisher share too), duration, genre, "written for film/TV/stage/ad" answered, and a label once released.
   - **The MLC:** IPI for writers in a PRO, publisher or Self-published (the exception: a song whose writers are all with BMI and has no publisher needs neither; the bulk file lists the writer as publisher with the placeholder IPI 123456789, removed in The MLC Portal after upload), ISRC.
   - **SoundExchange:** recording only, with no writer checks: ISRC, master share, UPC.
+  - **ASCAP and BMI never require an ISRC** (founder, 2026-11-05): a PRO registers the composition, not the recording, so a
+    songwriter who writes for other artists, a composer selling scores or an unreleased work all register without one. At
+    ASCAP a missing ISRC is a tip; BMI does not ask. Only The MLC and SoundExchange block on it.
   - Saving, embedding and the user's own exports are never held to these.
   - A song's "I'm a BMI writer with no publishing company" choice (`bmiWriterPublishing`) states the BMI no-publisher case out loud; it only counts when every writer is with BMI.
 
