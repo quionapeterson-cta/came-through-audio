@@ -12,6 +12,7 @@ import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { BrandLogo } from "@/components/BrandLogo";
 import { ArtistAvatar, ArtistOnboarding } from "@/components/ArtistOnboarding";
+import { AddArtistDialog } from "@/components/ArtistSeats";
 import { BadgeViewer, type BadgeAbout } from "@/components/BadgeViewer";
 import { EagleStatusBadge } from "@/components/EagleStatusBadge";
 import { eagleStatus } from "@/lib/eagle-status";
@@ -49,6 +50,8 @@ function ProfilePage() {
   const [chooser, setChooser] = useState(false);
   const [editTarget, setEditTarget] = useState<{ userId: string; name: string } | null>(null);
   const [seatArtists, setSeatArtists] = useState<{ userId: string; name: string; tier: Exclude<Tier, "free"> }[]>([]);
+  // The seats panel on its own, opened straight after a seat purchase so the artist's email has somewhere to go.
+  const [seatsOpen, setSeatsOpen] = useState(false);
   const [passwordOpen, setPasswordOpen] = useState(false);
   const [emailOpen, setEmailOpen] = useState(false);
   const [viewing, setViewing] = useState<{ src: string; name?: string; round?: boolean; share?: ShareInfo; about?: BadgeAbout; state?: BadgeState }>();
@@ -68,7 +71,12 @@ function ProfilePage() {
   // The artists this account pays a seat for, so Edit profile can switch to one of theirs.
   useEffect(() => {
     if (!user) return;
-    listSeatState().then((s) => setSeatArtists(seatArtistsFor(s.seats, user.id))).catch(() => setSeatArtists([]));
+    listSeatState().then((s) => {
+      setSeatArtists(seatArtistsFor(s.seats, user.id));
+      // Back from paying for a seat: open the invite form, which is where the artist's email is entered.
+      const uninvited = s.seats.some((seat) => seat.owner_id === user.id && seat.status === "unclaimed");
+      if (uninvited && new URLSearchParams(window.location.search).get("checkout") === "success") setSeatsOpen(true);
+    }).catch(() => setSeatArtists([]));
   }, [user]);
 
   function chooseSize(s: Size) {
@@ -208,6 +216,7 @@ function ProfilePage() {
         canAddArtist={!editTarget && tier !== "free"}
         open={editing || !!editTarget} onOpenChange={(o) => { if (!o) { setEditing(false); setEditTarget(null); } }} firstRun={false}
         onSaved={(o) => { if (editTarget) { setEditTarget(null); return; } setOb(o); setProfile(loadProfile(user.id)); setEditing(false); }} />
+      <AddArtistDialog open={seatsOpen} onOpenChange={setSeatsOpen} canAddArtist={tier !== "free"} />
       <PasswordDialog email={user.email ?? ""} open={passwordOpen} onOpenChange={setPasswordOpen} />
       <EmailDialog email={user.email ?? ""} open={emailOpen} onOpenChange={setEmailOpen} />
     </div>

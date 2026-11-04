@@ -29,6 +29,8 @@ import { toast } from "sonner";
 import { sendTrialEndingReminder } from "@/lib/collab-trial.functions";
 import { useBilling, type Purchase } from "@/hooks/useBilling";
 import { openCheckout, getPaymentsEnvironment } from "@/lib/checkout";
+import { listSeatState } from "@/lib/seats";
+import { AddArtistDialog } from "@/components/ArtistSeats";
 import { PRICE_TIER, TIER_LABEL, hasTier, isEmailConfirmError, rememberPlanIntent, takePlanIntent, upgradeNote, type Tier } from "@/lib/plans";
 import { PlanComparison, planAction } from "@/components/PlanComparison";
 import { BadgeWatcher } from "@/components/Badges";
@@ -92,6 +94,14 @@ function Workspace() {
   // Used once: leaving the tab clears it, so coming back opens the Hub itself.
   useEffect(() => { if (tab !== "health") { setHealthStart(undefined); setOpenExpert(false); } }, [tab]);
   const { tier: realTier, purchases, loaded: billingLoaded, lapse, pauses, sub, plan, reload: reloadBilling } = useBilling(user?.id);
+  // Back from paying for seats: open the invite form, so the artist's email is asked for right away (2026-11-04).
+  const [seatsOpen, setSeatsOpen] = useState(false);
+  useEffect(() => {
+    if (!user || new URLSearchParams(window.location.search).get("checkout") !== "success") return;
+    listSeatState()
+      .then((s) => { if (s.seats.some((seat) => seat.owner_id === user.id && seat.status === "unclaimed")) setSeatsOpen(true); })
+      .catch(() => {});
+  }, [user]);
   const [previewTier, setPreviewTier] = useState<Tier | "real">("real");
   // The test-mode tier preview is for super admins only, so testers can't hand themselves a paid plan in the UI.
   const staff = useQuery({ queryKey: ["staff-role", user?.id], queryFn: () => getStaffRole(), enabled: !!user && getPaymentsEnvironment() === "sandbox" });
@@ -234,6 +244,7 @@ function Workspace() {
       </header>
       <IosInstallHelp open={app.iosHelp} onOpenChange={app.setIosHelp} />
 
+      <AddArtistDialog open={seatsOpen} onOpenChange={setSeatsOpen} canAddArtist={realTier !== "free"} />
       <ArtistOnboarding userId={user.id} open={profileOpen} onOpenChange={setProfileOpen} firstRun={!onboard?.done}
         canAddArtist={realTier !== "free"}
         onSaved={(o) => { setOnboard(o); setEmbedKey((k) => k + 1); setTab(canCatalog ? "embed" : "health"); }} />

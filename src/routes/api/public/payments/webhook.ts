@@ -21,14 +21,20 @@ async function syncSubscription(env: StripeEnv, subscriptionId: string) {
  * An add-on artist seat is a subscription too, but it is never a plan: it is filed on artist_seats, so the owner's own
  * tier can't move and the invited artist's seat can live or die on its own (founder, 2026-11-04).
  */
-async function saveSeatSubscription(sub: StripeSubscriptionLike, env: StripeEnv, tier: string, deleted: boolean) {
-  const item = sub.items.data[0];
-  const end = item?.current_period_end ?? sub.current_period_end;
+async function saveSeatSubscription(sub: StripeSubscriptionLike, env: StripeEnv, deleted: boolean) {
+  const end = sub.items.data[0]?.current_period_end ?? sub.current_period_end;
   const periodEnd = end ? new Date(end * 1000).toISOString() : null;
   const ownerId = sub.metadata?.["userId"] ?? null;
-  // The quantity is how many artists the owner bought: one row per seat, so each artist gets their own invite, name,
-  // acceptance and catalog, and cancelling one seat never touches the others (founder, 2026-11-04).
-  const quantity = Math.max(1, Math.min(SEAT_MAX, item?.quantity ?? 1));
+  // One row per artist bought, so each artist gets their own invite, name, acceptance and catalog, and cancelling one
+  // seat never touches the others. The tier comes from the line that paid for that artist, because one purchase can
+  // mix tiers (founder, 2026-11-04).
+  const bought: string[] = [];
+  for (const item of sub.items.data) {
+    const tier = SEAT_TIER[item.price.lookup_key ?? ""];
+    if (!tier) continue;
+    const count = Math.max(0, Math.min(SEAT_MAX, item.quantity ?? 1));
+    for (let i = 0; i < count; i++) bought.push(tier);
+  }
   const { data: found, error: readErr } = await db().from("artist_seats")
     .select("id, seat_index, member_user_id, invite_email, status")
     .eq("stripe_subscription_id", sub.id);
@@ -41,9 +47,9 @@ async function saveSeatSubscription(sub: StripeSubscriptionLike, env: StripeEnv,
     ? (seat?.member_user_id || seat?.invite_email ? "canceled" : "ended")
     : (seat?.status && ["invited", "active", "unclaimed"].includes(seat.status) ? seat.status : seat?.member_user_id ? "active" : seat?.invite_email ? "invited" : "unclaimed");
 
-  for (let i = 0; i < quantity; i++) {
+  for (let i = 0; i < bought.length; i++) {
     const seat = rows.find((r) => (r.seat_index ?? 0) === i);
-    const patch = { tier, environment: env, current_period_end: periodEnd, status: seatStatus(seat), updated_at: new Date().toISOString() };
+    const patch = { tier: bought[i]!, environment: env, current_period_end: periodEnd, status: seatStatus(seat), updated_at: new Date().toISOString() };
     if (seat) {
       const { error } = await db().from("artist_seats").update(patch as never).eq("id", seat.id);
       if (error) throw error;
@@ -52,9 +58,9 @@ async function saveSeatSubscription(sub: StripeSubscriptionLike, env: StripeEnv,
       if (error) throw error;
     }
   }
-  // Bought fewer than before: the seats past the paid quantity end. An artist who already accepted keeps theirs until
-  // the paid period ends, so they never lose their catalog mid-year.
-  for (const seat of rows.filter((r) => (r.seat_index ?? 0) >= quantity)) {
+  // Bought fewer than before: the seats past the paid count end. An artist who already accepted keeps theirs until the
+  // paid period ends, so they never lose their catalog mid-year.
+  for (const seat of rows.filter((r) => (r.seat_index ?? 0) >= bought.length)) {
     const { error } = await db().from("artist_seats")
       .update({ status: seat.member_user_id ? "canceled" : "ended", updated_at: new Date().toISOString() } as never).eq("id", seat.id);
     if (error) throw error;
@@ -62,8 +68,9 @@ async function saveSeatSubscription(sub: StripeSubscriptionLike, env: StripeEnv,
 }
 
 async function saveSubscription(sub: StripeSubscriptionLike, env: StripeEnv, deleted = false) {
-  const seatKey = sub.items.data[0]?.price.lookup_key;
-  if (seatKey && SEAT_TIER[seatKey]) return saveSeatSubscription(sub, env, SEAT_TIER[seatKey], deleted);
+  // Any seat line makes this a seat subscription, whatever else was bought alongside it.
+  const seatKey = sub.items.data.find((i) => SEAT_TIER[i.price.lookup_key ?? ""])?.price.lookup_key;
+  if (seatKey && SEAT_TIER[seatKey]) return saveSeatSubscription(sub, env, deleted);
   const row = subscriptionRow(sub, env, deleted);
   if (!row) return console.warn(`Skipping subscription ${sub.id}: price has no plan lookup key`);
   const userId = sub.metadata?.["userId"];

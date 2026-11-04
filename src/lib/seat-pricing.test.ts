@@ -22,15 +22,20 @@ describe("artist seats", () => {
   });
 
 
-  it("buys as many seats as the owner picks, on one subscription", () => {
-    const one = planCheckout(checkoutInput.parse({ kind: "seat", tier: "management" }), "u1");
+  it("buys many artists, on several tiers, with one payment", () => {
+    const one = planCheckout(checkoutInput.parse({ kind: "seat", seats: { management: 1 } }), "u1");
     expect(one.items).toEqual([{ lookupKey: "artist_seat_management_yearly", quantity: 1 }]);
-    expect(one.metadata).toMatchObject({ kind: "seat", seatTier: "management", seats: "1" });
-    const three = planCheckout(checkoutInput.parse({ kind: "seat", tier: "plus", quantity: 3 }), "u1");
-    expect(three.items).toEqual([{ lookupKey: "artist_seat_plus_yearly", quantity: 3 }]);
-    expect(three.metadata["seats"]).toBe("3");
-    expect(() => checkoutInput.parse({ kind: "seat", tier: "plus", quantity: 0 })).toThrow();
-    expect(() => checkoutInput.parse({ kind: "seat", tier: "plus", quantity: SEAT_MAX + 1 })).toThrow();
+    expect(one.metadata).toMatchObject({ kind: "seat", seats: "1" });
+    // Mixed tiers: one line each, so each artist's row keeps its own tier.
+    const mixed = planCheckout(checkoutInput.parse({ kind: "seat", seats: { plus: 2, management: 1 } }), "u1");
+    expect(mixed.items).toEqual([
+      { lookupKey: "artist_seat_plus_yearly", quantity: 2 },
+      { lookupKey: "artist_seat_management_yearly", quantity: 1 },
+    ]);
+    expect(mixed.metadata["seats"]).toBe("3");
+    expect(mixed.mode).toBe("subscription");
+    expect(() => checkoutInput.parse({ kind: "seat", seats: {} })).toThrow();
+    expect(() => checkoutInput.parse({ kind: "seat", seats: { plus: SEAT_MAX + 1 } })).toThrow();
   });
 
   it("lifts an artist to the best of their own plan and their seats", () => {

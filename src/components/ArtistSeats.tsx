@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { ARTIST_SEAT_PRICES, SEAT_MAX, TIER_LABEL, type Tier } from "@/lib/plans";
 import { listSeatState, seatIsLive, type ArtistSeat, type SeatState } from "@/lib/seats";
 import { inviteSeatArtist } from "@/lib/seats.functions";
@@ -31,15 +32,16 @@ const day = (iso: string | null) => (iso ? new Date(iso).toLocaleDateString(unde
  */
 export function ArtistSeats({ onClose }: { onClose: () => void }) {
   const [state, setState] = useState<SeatState | null>(null);
-  const [buying, setBuying] = useState<SeatTier | null>(null);
+  const [buying, setBuying] = useState(false);
   const [sendingFor, setSendingFor] = useState<string | null>(null);
   const [artistName, setArtistName] = useState("");
   const [email, setEmail] = useState("");
   const [busy, setBusy] = useState(false);
   // An artist who accepted: the owner fills in the defaults their songs and embeds start from.
   const [editingArtist, setEditingArtist] = useState<{ userId: string; name: string } | null>(null);
-  // How many artists to add at each tier; one subscription carries all of them (founder, 2026-11-04).
-  const [qty, setQty] = useState<Record<SeatTier, number>>({ plus: 1, collaborate: 1, management: 1 });
+  // How many artists at each tier. Artists aren't all on the same tier, so the owner picks a count per tier and pays
+  // for the lot in one go: one subscription, one seat row per artist (founder, 2026-11-04).
+  const [qty, setQty] = useState<Record<SeatTier, number>>({ plus: 0, collaborate: 0, management: 0 });
   const invite = useServerFn(inviteSeatArtist);
   /** Typing the address the seat was already sent to is a resend; anything else replaces (and voids) the old invite. */
   const sameEmail = (seat: ArtistSeat) => !!seat.invite_email && seat.invite_email.toLowerCase() === email.trim().toLowerCase();
@@ -55,15 +57,29 @@ export function ArtistSeats({ onClose }: { onClose: () => void }) {
     if (fresh) { setArtistName((n) => n || fresh.artist_name); setEmail((e) => e || (fresh.invite_email ?? "")); }
   }).catch(() => setState({ ready: false, seats: [] }));
   useEffect(() => { void load(); }, []);
+  // Just back from paying: Stripe's webhook writes the seat a moment later, so keep looking for a few seconds rather
+  // than showing an empty panel exactly when the artist's email needs typing (founder, 2026-11-04).
+  useEffect(() => {
+    if (!state?.ready || state.seats.length) return;
+    if (typeof window === "undefined" || new URLSearchParams(window.location.search).get("checkout") !== "success") return;
+    const poll = setInterval(() => void load(), 3000);
+    const stop = setTimeout(() => clearInterval(poll), 30_000);
+    return () => { clearInterval(poll); clearTimeout(stop); };
+  }, [state]);
 
-  const buy = async (tier: SeatTier) => {
-    setBuying(tier);
+  // What the one button will buy: every tier with a count, and the year's total across them.
+  const chosen = ARTIST_SEAT_PRICES.filter((s) => qty[s.tier] > 0);
+  const totalSeats = chosen.reduce((n, s) => n + qty[s.tier], 0);
+  const totalPrice = `$${chosen.reduce((n, s) => n + s.amount * qty[s.tier], 0).toFixed(2)}`;
+
+  const buy = async () => {
+    setBuying(true);
     try {
-      await openCheckout({ kind: "seat", tier, quantity: qty[tier] });
+      await openCheckout({ kind: "seat", seats: qty });
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Checkout could not open.");
     } finally {
-      setBuying(null);
+      setBuying(false);
     }
   };
 
@@ -176,7 +192,8 @@ export function ArtistSeats({ onClose }: { onClose: () => void }) {
       )}
 
       <div className="rounded-xl border border-border p-3">
-          <p className="text-sm font-semibold">{live.length ? "Buy another seat" : "Choose the seat's tier"}</p>
+          <p className="text-sm font-semibold">{live.length ? "Buy another seat" : "Choose the seats' tiers"}</p>
+          <p className="mt-1 text-xs text-muted-foreground">Artists can be on different tiers. Pick how many at each, then buy them all together.</p>
           <ul className="mt-2 space-y-2">
             {ARTIST_SEAT_PRICES.map((s) => {
               const n = qty[s.tier];
@@ -189,23 +206,31 @@ export function ArtistSeats({ onClose }: { onClose: () => void }) {
                     </span>
                     <div className="flex items-center gap-2">
                       <Label htmlFor={`seat-qty-${s.tier}`} className="text-xs text-muted-foreground">Artists</Label>
-                      <Input id={`seat-qty-${s.tier}`} type="number" inputMode="numeric" min={1} max={SEAT_MAX} value={n}
+                      <Input id={`seat-qty-${s.tier}`} type="number" inputMode="numeric" min={0} max={SEAT_MAX} value={n}
                         aria-label={`How many ${TIER_LABEL[s.tier]} artist seats`}
                         className="h-8 w-16"
                         onChange={(e) => {
-                          const next = Math.max(1, Math.min(SEAT_MAX, Math.trunc(Number(e.target.value)) || 1));
+                          const next = Math.max(0, Math.min(SEAT_MAX, Math.trunc(Number(e.target.value)) || 0));
                           setQty((q) => ({ ...q, [s.tier]: next }));
                         }} />
-                      <Button size="sm" disabled={buying === s.tier} onClick={() => void buy(s.tier)}>
-                        {buying === s.tier ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
-                        Buy {n === 1 ? "1 seat" : `${n} seats`} · ${(s.amount * n).toFixed(2)}/yr
-                      </Button>
+                      <span className="w-24 text-right text-sm text-muted-foreground">{n ? `${(s.amount * n).toFixed(2)}/yr` : "—"}</span>
                     </div>
                   </div>
                 </li>
               );
             })}
           </ul>
+          <div className="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-border pt-3">
+            <p className="text-sm">
+              {totalSeats
+                ? <><span className="font-semibold">{totalSeats} {totalSeats === 1 ? "artist" : "artists"}</span><span className="text-muted-foreground"> · {totalPrice}/yr</span></>
+                : <span className="text-muted-foreground">Pick how many artists at each tier.</span>}
+            </p>
+            <Button disabled={buying || totalSeats === 0} onClick={() => void buy()}>
+              {buying ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
+              {totalSeats ? `Buy ${totalSeats} ${totalSeats === 1 ? "seat" : "seats"} · ${totalPrice}/yr` : "Buy the seats"}
+            </Button>
+          </div>
           <p className="mt-2 text-xs text-muted-foreground">Yearly, per added artist, billed separately from your own plan. Cancel any time; the artist keeps the seat until the paid year ends.</p>
       </div>
 
@@ -220,5 +245,27 @@ export function ArtistSeats({ onClose }: { onClose: () => void }) {
         <Button variant="outline" onClick={onClose}>Close</Button>
       </div>
     </div>
+  );
+}
+
+/**
+ * The seats panel as its own dialog, so a page can open it straight after a seat purchase instead of burying it in the
+ * profile editor. Add-on seats are a paid feature, so a free account gets the reason instead of a checkout.
+ */
+export function AddArtistDialog({ open, onOpenChange, canAddArtist = false }: {
+  open: boolean; onOpenChange: (o: boolean) => void; canAddArtist?: boolean;
+}) {
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-h-[90vh] max-w-2xl overflow-y-auto">
+        {canAddArtist ? <ArtistSeats onClose={() => onOpenChange(false)} /> : (
+          <div className="space-y-3">
+            <h2 className="text-xl font-bold">Add another artist</h2>
+            <p className="text-sm text-muted-foreground">Add-on artist seats come with any paid plan. Pick a plan first, then add as many artists as you need.</p>
+            <div className="flex justify-end"><Button variant="outline" onClick={() => onOpenChange(false)}>Close</Button></div>
+          </div>
+        )}
+      </DialogContent>
+    </Dialog>
   );
 }

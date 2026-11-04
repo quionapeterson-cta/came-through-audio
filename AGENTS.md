@@ -57,3 +57,32 @@ Embedding is forgiving; registration is strict. Never block a user from saving o
 - If a change touches writer fields, roles, readiness logic, or export templates, explain the plan and list affected files before editing.
 - Never delete or overwrite existing writer data. Any schema change needs a migration that preserves current data.
   - Exception (approved 2026-10-21): a catalog is emptied 30 days after its plan ends, as the Refund Policy states (`runCatalogLapses` in src/lib/retention.server.ts). Signed split sheets, contracts, AI Protection certificates and agency registration records are kept.
+
+## Personal Branding Rules (always follow)
+
+Personal Branding is one kit that replaces the Came Through Audio header on everything the member hands out. These
+rules keep it consistent as features are added.
+
+### Which documents carry it
+- `BrandUse` in `src/lib/brand-kit.ts` is the complete list of places a kit may appear: `contracts`, `splits`, `lyrics`
+  and `catalog`. A new branded document adds a `BrandUse` entry, is allowed by `brandAccess()`, and is described on the
+  plan chart and in Profile → Brand kit in the same change. Never gate branding with a second, separate check.
+- Every PDF the app builds for a member goes through `newBrandedPdf(brand)`, `brandHeader(..., brand)` and
+  `brandFooter(pdf, brand)` from `src/lib/brand-pdf.ts`, with the kit fetched by `myBrand(use)` (or `contractBrand()` for
+  a contract the member owns or was sent). Never hard-code the Came Through Audio header in a new PDF.
+- Split sheets always show the artist's stage name, never a kit's business or DBA name: a split sheet records who owns
+  the song. Contracts show the kit's name. Company agreements always keep the Came Through Audio header.
+- Emails are not branded by a kit. Outgoing email stays wrapped in `emailLayout()` (see the rule above).
+
+### Who decides
+- The server decides, every time a download is made: `getMyBrand` / `getContractBrand` check the plan and verified
+  add-on purchases. The browser may only ask for a kit ID it already owns; it never passes an "on" flag, and a saved
+  kit never switches itself on.
+- Catalog Management includes Personal Branding; any other plan buys it as a yearly add-on that covers every `BrandUse`
+  at once. A refund ends it immediately for new documents and never alters documents already sent.
+- Several kits are allowed (one per business or project): the oldest is the default, and a document that picks a kit
+  gets that one only if it is within the member's allowance.
+
+### When it fails
+- A missing, unreadable or unavailable kit never blocks a download: the document simply keeps the Came Through Audio
+  header. Never turn a branding lookup into an error the member sees.

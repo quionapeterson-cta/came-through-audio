@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { BRANDING_LOOKUP_KEY } from "@/lib/brand-kit";
 import { CONTRACT_LOOKUP_KEY } from "@/lib/contract-generator";
-import { assistanceItems, assistanceType, PRICE_TIER, SEAT_MAX, SEAT_TIER, seatLookupKey } from "@/lib/plans";
+import { ARTIST_SEAT_PRICES, assistanceItems, assistanceType, PRICE_TIER, SEAT_MAX, SEAT_TIER } from "@/lib/plans";
 import { PACKAGES, TRACKS_PER_KEY, packageSongs } from "@/lib/proof";
 import { ASSISTANCE_AGENCIES, MAX_NEW_SONGS, newSongKeys } from "@/lib/registration";
 import { VAULT_LOOKUP_KEY } from "@/lib/retention";
@@ -25,9 +25,16 @@ export const checkoutInput = z.discriminatedUnion("kind", [
   z.object({ kind: z.literal("contract"), generationId: z.string().uuid() }),
   // Renew now: next year's plan paid early. The server reads the plan and price from the user's own subscription.
   z.object({ kind: z.literal("renew") }),
-  // An add-on artist seat (founder, 2026-11-04): its own yearly subscription, so it never replaces the owner's plan.
-  // How many artists are being added: one subscription, one seat row per artist (founder, 2026-11-04).
-  z.object({ kind: z.literal("seat"), tier: z.enum(["plus", "collaborate", "management"]), quantity: z.number().int().min(1).max(SEAT_MAX).default(1) }),
+  // Add-on artist seats (founder, 2026-11-04): their own yearly subscription, so they never replace the owner's plan.
+  // Artists can be on different tiers, so one purchase carries a count per tier: one subscription, one seat row each.
+  z.object({
+    kind: z.literal("seat"),
+    seats: z.object({
+      plus: z.number().int().min(0).max(SEAT_MAX).default(0),
+      collaborate: z.number().int().min(0).max(SEAT_MAX).default(0),
+      management: z.number().int().min(0).max(SEAT_MAX).default(0),
+    }),
+  }),
   z.object({
     kind: z.literal("expert"),
     // Catalog songs picked, plus songs that aren't in the catalog yet (PLAN-registration-intake §1–2).
@@ -36,6 +43,7 @@ export const checkoutInput = z.discriminatedUnion("kind", [
     agencies: z.array(z.enum(ASSISTANCE_AGENCIES)).min(1).max(ASSISTANCE_AGENCIES.length),
   }),
 ])
+  .refine((a) => a.kind !== "seat" || ARTIST_SEAT_PRICES.some((s) => a.seats[s.tier] > 0), { message: "Pick at least one artist seat." })
   .refine((a) => a.kind !== "ai" || (a.trackIds?.length ?? 0) <= packageSongs(a.package), { message: "Pick a bigger package for that many songs." })
   .refine((a) => a.kind !== "expert" || new Set(a.trackIds).size + a.newSongs.length > 0, { message: "Choose at least one song." })
   .refine((a) => a.kind !== "expert" || !(a.agencies.includes("ASCAP") && a.agencies.includes("BMI")), { message: "Songwriters can only belong to one PRO. Choose ASCAP or BMI." });
@@ -62,8 +70,11 @@ export function planCheckout(input: CheckoutInput, userId: string): CheckoutPlan
     return { mode: "subscription", items: [{ lookupKey: input.priceId, quantity: 1 }], metadata: { userId }, managed: true };
   }
   if (input.kind === "seat") {
-    // The seat's own subscription: the webhook records it on artist_seats, never on the owner's plan.
-    return { mode: "subscription", items: [{ lookupKey: seatLookupKey(input.tier), quantity: input.quantity }], metadata: { userId, kind: "seat", seatTier: input.tier, seats: String(input.quantity) }, managed: true };
+    // The seats' own subscription: the webhook records them on artist_seats, never on the owner's plan. One line per
+    // tier, so a mixed purchase is one payment and each artist's row still knows its own tier.
+    const items = ARTIST_SEAT_PRICES.filter((s) => input.seats[s.tier] > 0).map((s) => ({ lookupKey: s.lookupKey, quantity: input.seats[s.tier] }));
+    const total = items.reduce((n, i) => n + i.quantity, 0);
+    return { mode: "subscription", items, metadata: { userId, kind: "seat", seats: String(total) }, managed: true };
   }
   if (input.kind === "vault") {
     return { mode: "payment", items: [{ lookupKey: VAULT_LOOKUP_KEY, quantity: input.months }], metadata: { userId, kind: "vault", months: String(input.months) }, managed: true };
