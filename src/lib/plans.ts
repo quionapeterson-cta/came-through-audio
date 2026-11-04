@@ -74,11 +74,15 @@ const perMonth = (yearly: number) => `About $${(yearly / 12).toFixed(2)} / month
  * $18.99 Catalog Plus, $34.99 Catalog & Collaborate, $69.99 Catalog Management. Still not on sale yet, so nothing
  * here has a Stripe price or lookup key behind it.
  */
-export const ARTIST_SEAT_PRICES: { tier: Exclude<Tier, "free">; amount: number; price: string; monthly: string }[] = [
-  { tier: "plus", amount: 18.99, price: "$18.99", monthly: perMonth(18.99) },
-  { tier: "collaborate", amount: 34.99, price: "$34.99", monthly: perMonth(34.99) },
-  { tier: "management", amount: 69.99, price: "$69.99", monthly: perMonth(69.99) },
+export const ARTIST_SEAT_PRICES: { tier: Exclude<Tier, "free">; amount: number; price: string; monthly: string; lookupKey: string }[] = [
+  { tier: "plus", amount: 18.99, price: "$18.99", monthly: perMonth(18.99), lookupKey: "artist_seat_plus_yearly" },
+  { tier: "collaborate", amount: 34.99, price: "$34.99", monthly: perMonth(34.99), lookupKey: "artist_seat_collaborate_yearly" },
+  { tier: "management", amount: 69.99, price: "$69.99", monthly: perMonth(69.99), lookupKey: "artist_seat_management_yearly" },
 ];
+
+/** Seat lookup key → the tier that seat carries. Seats are not plans, so they never grant the owner a tier. */
+export const SEAT_TIER = Object.fromEntries(ARTIST_SEAT_PRICES.map((s) => [s.lookupKey, s.tier])) as Record<string, Exclude<Tier, "free">>;
+export const seatLookupKey = (tier: Exclude<Tier, "free">) => ARTIST_SEAT_PRICES.find((s) => s.tier === tier)!.lookupKey;
 
 /** Days left in the 30-day full refund window after a plan order (Refund Policy), or 0 once it has passed. */
 export function refundDaysLeft(orderedAt: string | null | undefined, now = new Date()): number {

@@ -42,11 +42,12 @@ export const PRICE_LIST: PriceGroup[] = [
   },
   {
     title: "Add-on artist seats",
-    note: "Per added artist, per year. An added artist gets their own login and their own catalog, splits and contracts at the seat's tier; the owner switches between artists. Prices are set, but seats are not on sale yet: there is no Stripe price behind them and the site says \"coming soon\".",
+    note: "Per added artist, per year, paid by the owner as its own yearly subscription. An added artist gets their own login and their own catalog at the seat's tier; the owner switches between artists. The Stripe prices exist (keys below), but buying inside the app ships with the add-on artist feature, so the site still says \"coming soon\" and nothing can be bought yet.",
     rows: ARTIST_SEAT_PRICES.map((s) => ({
       item: `${TIER_LABEL[s.tier]} seat`,
       price: `${s.price}/yr`,
       detail: `${s.monthly} · per added artist`,
+      lookupKey: s.lookupKey,
     })),
   },
   {
