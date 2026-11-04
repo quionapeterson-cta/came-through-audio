@@ -26,6 +26,7 @@ import { TestimonialsEditor } from "@/components/TestimonialsEditor";
 import { AdminWelcome, TaskBell } from "@/components/AdminWelcome";
 import { TaskBankPanel } from "@/components/TaskBankPanel";
 import { RegistrationQueuePanel } from "@/components/RegistrationQueuePanel";
+import { PriceList } from "@/components/PriceList";
 import { supabase } from "@/integrations/supabase/client";
 
 /** Founding 100 seats used in each mode (PLAN-founding-upgrades); hidden until the migration runs. */
@@ -191,6 +192,7 @@ function AdminPage() {
           {show("recognition") && <TabsContent value="recognition"><MyRecognition /></TabsContent>}
           {show("queue") && <TabsContent value="queue"><MyQueue me={user.id} access={access} onOpen={setActiveTab} /></TabsContent>}
           {show("handbook") && <TabsContent value="handbook"><Handbook /></TabsContent>}
+          {show("prices") && <TabsContent value="prices"><PriceList /></TabsContent>}
           {show("pdf") && <TabsContent value="pdf"><PdfTools /></TabsContent>}
           {show("email") && <TabsContent value="email"><CompanyMail /></TabsContent>}
           {show("legal") && <TabsContent value="legal"><LegalEditor /></TabsContent>}

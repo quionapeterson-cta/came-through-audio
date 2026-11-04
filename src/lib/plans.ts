@@ -66,9 +66,18 @@ export function isActiveSub(s: { status: string; current_period_end: string | nu
 
 export type PlanTier = { tier: Tier; price: string; monthly: string; priceId?: string };
 
-/** Add-on artist seats, per added artist per year (PLAN-pricing-badges.md §E). Not on sale yet. */
-export const ARTIST_SEAT_PRICES: { tier: Exclude<Tier, "free">; price: string }[] = [
-  { tier: "plus", price: "$19.99" }, { tier: "collaborate", price: "$36.99" }, { tier: "management", price: "$69.99" },
+/** A yearly price read as a monthly one, in the same "about" wording the plan cards use. */
+const perMonth = (yearly: number) => `About $${(yearly / 12).toFixed(2)} / month`;
+
+/**
+ * Add-on artist seats, per added artist per year (PLAN-pricing-badges.md §E). Prices set 2026-11-04:
+ * $18.99 Catalog Plus, $34.99 Catalog & Collaborate, $69.99 Catalog Management. Still not on sale yet, so nothing
+ * here has a Stripe price or lookup key behind it.
+ */
+export const ARTIST_SEAT_PRICES: { tier: Exclude<Tier, "free">; amount: number; price: string; monthly: string }[] = [
+  { tier: "plus", amount: 18.99, price: "$18.99", monthly: perMonth(18.99) },
+  { tier: "collaborate", amount: 34.99, price: "$34.99", monthly: perMonth(34.99) },
+  { tier: "management", amount: 69.99, price: "$69.99", monthly: perMonth(69.99) },
 ];
 
 /** Days left in the 30-day full refund window after a plan order (Refund Policy), or 0 once it has passed. */
@@ -119,6 +128,9 @@ export const PLAN_FEATURES: Feature[] = [
   // One on One Coaching (management, soon) is hidden until there's a plan for it (founder, 2026-10-23).
 ];
 
+/** Registration assistance, per song, per agency, on top of the setup fee. */
+export const ASSISTANCE_PER_SONG_AGENCY = 4.99;
+
 /**
  * Expert assistance setup fees. Base Fee: $14.99 for Singles/EPs (max 6) or $29.99 for albums (up to 20).
  * Extended Repertoire Fee: beyond 20 album tracks the cycle repeats per block of 20 —
@@ -142,7 +154,7 @@ export const assistanceType = (songs: number): "single" | "album" => (songs > 6 
 export function assistanceTotal(type: "single" | "album", songs: number, agencies: number) {
   if (songs <= 0 || agencies <= 0) return 0;
   const f = assistanceFees(type, songs);
-  return Math.round((f.base + f.extended + 4.99 * f.n * agencies) * 100) / 100;
+  return Math.round((f.base + f.extended + ASSISTANCE_PER_SONG_AGENCY * f.n * agencies) * 100) / 100;
 }
 
 export function assistanceItems(type: "single" | "album", songs: number, agencies: number) {
