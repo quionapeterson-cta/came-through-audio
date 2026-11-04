@@ -6,7 +6,8 @@ import { BrandLogo } from "@/components/BrandLogo";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { submitSupportTicket, submitTicket, ticketSchema, TICKET_CATEGORIES } from "@/lib/support.functions";
+import { submitSupportTicket, submitTicket, ticketSchema } from "@/lib/support.functions";
+import { categoryFor, TICKET_TOPICS } from "@/lib/support-topics";
 import { useAuth } from "@/hooks/useAuth";
 import { SignupCard } from "@/components/SignupCard";
 import { BUSINESS_ADDRESS, SUPPORT_EMAIL } from "@/lib/email-layout";
@@ -37,17 +38,25 @@ function ContactPage() {
   useEffect(() => { if (type) setKind(type); }, [type]);
   // Support tickets need an account (founder, 2026-10-27); Contact Us stays open to everyone.
   const needsLogin = kind === "support" && !loading && !user;
-  const [form, setForm] = useState({ name: "", email: "", category: TICKET_CATEGORIES[0] as string, subject: "", message: "", website: "" });
+  const [form, setForm] = useState<{ name: string; email: string; area: string; issue: string; subject: string; message: string; website: string }>({
+    name: "", email: "", area: TICKET_TOPICS[0].area, issue: TICKET_TOPICS[0].issues[0], subject: "", message: "", website: "",
+  });
+  const issues = TICKET_TOPICS.find((t) => t.area === form.area)?.issues ?? [];
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState(false);
   const [done, setDone] = useState(false);
   const [failure, setFailure] = useState("");
   const set = (k: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => setForm({ ...form, [k]: e.target.value });
+  // The issue list follows the area, and a new area starts on its first issue so the pair is always valid.
+  const pickArea = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const area = e.target.value;
+    setForm({ ...form, area, issue: TICKET_TOPICS.find((t) => t.area === area)?.issues[0] ?? "" });
+  };
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     setFailure("");
-    const parsed = ticketSchema.safeParse({ ...form, kind, email: kind === "support" ? user?.email ?? "" : form.email });
+    const parsed = ticketSchema.safeParse({ ...form, category: categoryFor(form.area, form.issue), kind, email: kind === "support" ? user?.email ?? "" : form.email });
     if (!parsed.success) {
       setErrors(Object.fromEntries(parsed.error.issues.map((i) => [String(i.path[0]), i.message])));
       return;
@@ -103,9 +112,14 @@ function ContactPage() {
             {kind === "support"
               ? <p className="text-sm text-muted-foreground">We'll reply to your account email, <span className="font-semibold text-foreground">{user?.email}</span>.</p>
               : <Field label="Email" error={errors["email"]}><Input type="email" value={form.email} onChange={set("email")} maxLength={255} /></Field>}
-            <Field label="Category" error={errors["category"]}>
-              <select value={form.category} onChange={set("category")} className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm">
-                {TICKET_CATEGORIES.map((c) => <option key={c}>{c}</option>)}
+            <Field label="Where is it?" error={errors["category"]}>
+              <select value={form.area} onChange={pickArea} className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm">
+                {TICKET_TOPICS.map((t) => <option key={t.area}>{t.area}</option>)}
+              </select>
+            </Field>
+            <Field label="What's happening?" error={errors["issue"]}>
+              <select value={form.issue} onChange={set("issue")} className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm">
+                {issues.map((i) => <option key={i}>{i}</option>)}
               </select>
             </Field>
             <Field label="Subject" error={errors["subject"]}><Input value={form.subject} onChange={set("subject")} maxLength={150} /></Field>

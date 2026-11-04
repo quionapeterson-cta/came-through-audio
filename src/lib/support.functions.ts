@@ -2,8 +2,10 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { BILLING_EMAIL, emailLayout, escapeHtml, INFO_EMAIL, SUPPORT_EMAIL } from "./email-layout";
+import { BILLING_AREA, TICKET_CATEGORIES } from "./support-topics";
 
-export const TICKET_CATEGORIES = ["General Inquiry", "Royalty Help", "Split Sheets", "AI Protection", "Billing", "Technical Issue"] as const;
+/** Categories come from the two-step picker (src/lib/support-topics.ts): "Area · Issue". */
+export { TICKET_CATEGORIES } from "./support-topics";
 export const TICKET_STATUSES = ["open", "in_progress", "resolved"] as const;
 
 const ticketSchema = z.object({
@@ -59,7 +61,7 @@ async function storeTicket(data: TicketInput) {
 <p style="font-size:15px;line-height:1.6;white-space:pre-wrap">${escapeHtml(data.message)}</p>`,
       { reason: "You're receiving this staff notice because a new message was submitted on the Came Through Audio website." });
     // Billing questions go to billing@, support tickets to support@, Contact Us messages to info@.
-    const inbox = data.category === "Billing" ? BILLING_EMAIL : data.kind === "support" ? SUPPORT_EMAIL : INFO_EMAIL;
+    const inbox = data.category.startsWith(BILLING_AREA) ? BILLING_EMAIL : data.kind === "support" ? SUPPORT_EMAIL : INFO_EMAIL;
     await fetch("https://api.resend.com/emails", {
       method: "POST",
       headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json", "Idempotency-Key": `ticket-${row.id}` },
