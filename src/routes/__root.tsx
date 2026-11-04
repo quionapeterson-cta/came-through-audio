@@ -16,6 +16,7 @@ import { useEffect, type ReactNode } from "react";
 import { Toaster } from "@/components/ui/sonner";
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
+import { installArtFallback } from "@/lib/art-fallback";
 import { supabase } from "@/integrations/supabase/client";
 import { takeReturn } from "@/lib/password";
 import { redirect } from "@tanstack/react-router";
@@ -157,6 +158,8 @@ function RootShell({ children }: { children: ReactNode }) {
 
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
+  // A bucket picture that fails to load falls back to the copy in public/ (src/lib/art-fallback.ts).
+  useEffect(() => installArtFallback(), []);
 
   // Send people back to the page they were invited to (e.g. a split sheet) after login or email confirmation.
   useEffect(() => {

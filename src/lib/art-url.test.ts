@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { artUrl, resolveArt } from "@/lib/art-url";
+import { artUrl, localFallbacks, resolveArt } from "@/lib/art-url";
 
 const BASE = "https://art.example.com";
 const BADGE = "/icons/playful/bedazzled_band.png";
@@ -23,5 +23,9 @@ describe("artUrl", () => {
 
   it("leaves an address that is already absolute alone", () => {
     expect(resolveArt(`${BASE}/icons/a.webp`, BASE)).toBe(`${BASE}/icons/a.webp`);
+  });
+
+  it("has no local fallback to offer while the bucket is unset", () => {
+    expect(localFallbacks(`${BASE}/icons/a.webp`)).toEqual([]);
   });
 });

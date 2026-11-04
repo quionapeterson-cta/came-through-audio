@@ -25,3 +25,15 @@ export function resolveArt(path: string, base: string): string {
 
 /** A path from `badges.ts`, `eagle-status.ts` or `ClinicArt.tsx` as the browser should request it. */
 export const artUrl = (path: string) => resolveArt(path, BASE);
+
+/**
+ * The copies in `public/` a failed bucket address can fall back to, nearest first: the same path, then the original
+ * `.png`/`.jpg` the bucket's `.webp` copy was made from. Empty when the address isn't ours to fix.
+ */
+export function localFallbacks(url: string): string[] {
+  if (!BASE || !url.startsWith(BASE)) return [];
+  const path = url.slice(BASE.length);
+  if (!/^\//.test(path)) return [];
+  if (!/\.webp$/i.test(path)) return [path];
+  return [path, path.replace(/\.webp$/i, ".png"), path.replace(/\.webp$/i, ".jpg")];
+}
