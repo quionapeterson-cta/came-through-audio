@@ -92,7 +92,7 @@ function MetalWord({ children }: { children: string }) {
 function FileCard({ name, groups, done }: { name: string; groups: { heading: string; rows: [string, string][] }[]; done?: boolean }) {
   const [firstGroup] = groups;
   return (
-    <div className={`flex h-full flex-col rounded-2xl border p-5 ${done ? "border-primary bg-ink-border/40" : "border-ink-border"}`}>
+    <div className={`flex h-full flex-col rounded-2xl border bg-ink p-5 text-ink-foreground ${done ? "border-primary" : "border-ink-border"}`}>
       <p className="flex items-center justify-center gap-2 font-semibold text-ink-foreground"><Music className={`h-5 w-5 ${done ? "text-electric" : "text-ink-muted"}`} />{name}</p>
       <Accordion type="multiple" defaultValue={firstGroup ? [firstGroup.heading] : []} className="mt-1">
         {groups.map((g, i) => (
@@ -179,7 +179,7 @@ const CATALOG_SCATTER: { icon: typeof Mail; label: string; tilt: string }[] = [
 /** The scattered side: a loose pile of chips, deliberately not lined up. */
 function CatalogScatter() {
   return (
-    <div className="flex h-full flex-col justify-center gap-3 rounded-2xl border border-dashed border-ink-border p-5">
+    <div className="flex h-full flex-col justify-center gap-3 rounded-2xl border border-dashed border-ink-border bg-ink p-5 text-ink-foreground">
       <div className="flex flex-wrap items-center justify-center gap-2">
         {CATALOG_SCATTER.map(({ icon: Icon, label, tilt }) => (
           <span key={label} className="inline-flex items-center gap-1.5 rounded-full border border-ink-border bg-ink px-2.5 py-1 text-[11px] text-ink-muted sm:text-xs"
@@ -197,7 +197,7 @@ function CatalogScatter() {
 function CatalogRow() {
   const parts = ["Master audio", "Cover art", "Lyrics", "Writers & splits", "ISRC", "UPC"];
   return (
-    <div className="flex h-full flex-col justify-center rounded-2xl border-2 border-primary bg-ink-border/40 p-5">
+    <div className="flex h-full flex-col justify-center rounded-2xl border-2 border-primary bg-muted p-5">
       <div className="rounded-xl border border-ink-border bg-ink p-4">
         <div className="flex items-center gap-3">
           <span className="grid h-11 w-11 shrink-0 place-items-center rounded-lg bg-primary/15"><Music className="h-5 w-5 text-electric" aria-hidden /></span>
@@ -214,7 +214,7 @@ function CatalogRow() {
           ))}
         </div>
       </div>
-      <p className="mt-3 text-center text-xs text-ink-muted">One row per song. Search it, download it, send it out, and the rest is attached.</p>
+      <p className="mt-3 text-center text-xs text-muted-foreground">One row per song. Search it, download it, send it out, and the rest is attached.</p>
     </div>
   );
 }
@@ -283,30 +283,30 @@ function Landing() {
       </section>
 
       {/* What embedding is, told as a story (founder approved, 2026-10-25), with the file before and after. */}
-      <section className="bg-ink py-20 text-ink-foreground">
+      <section className="bg-background py-20">
         <div className="mx-auto max-w-5xl px-6">
           <h2 className="text-center text-3xl font-bold md:text-4xl">What does embed mean?</h2>
-          <p className="mt-2 text-center text-lg text-ink-muted">The same file, before and after.</p>
+          <p className="mt-2 text-center text-lg text-muted-foreground">The same file, before and after.</p>
 
           {/* Side by side, matching slot for slot and height for height: the comparison is the argument. */}
           <div className="mt-8 grid items-stretch gap-4 sm:grid-cols-2">
             <div className="flex flex-col gap-2">
-              <p className="text-center text-sm font-bold uppercase tracking-[2px] text-ink-muted">Before embedding</p>
+              <p className="text-center text-sm font-bold uppercase tracking-[2px] text-muted-foreground">Before embedding</p>
               <FileCard name="Track 01.mp3" groups={EMPTY_GROUPS} />
             </div>
             <div className="flex flex-col gap-2">
-              <p className="text-center text-sm font-bold uppercase tracking-[2px] text-electric">After embedding</p>
+              <p className="text-center text-sm font-bold uppercase tracking-[2px] text-primary">After embedding</p>
               <FileCard name="Your Song.mp3" done groups={EMBEDDED_GROUPS} />
             </div>
           </div>
-          <p className="mt-4 text-center text-xs leading-relaxed text-ink-muted">
+          <p className="mt-4 text-center text-xs leading-relaxed text-muted-foreground">
             Never written into the file: publishers, the ℗ line, language, PRO affiliations, IPI numbers and splits.
             Those stay private in your catalog and go only to the societies you register with.
           </p>
 
           {/* The story underneath, set like a magazine feature: a drop-cap lead, then two columns of body running the same
               width as the cards above, so the block ends flush with them. */}
-          <div className="mt-14 rounded-2xl bg-background px-5 py-9 text-foreground shadow-sm sm:px-8 md:px-10 md:py-10">
+          <div className="mt-14">
             <p className="text-xl leading-relaxed text-foreground first-letter:float-left first-letter:mr-3 first-letter:mt-1 first-letter:text-6xl first-letter:font-black first-letter:leading-[0.8]">
               Picture this. You finish your single at 2 AM and send it out that same night to a DJ, a blog, and a music supervisor looking for a song for a TV show.
             </p>
@@ -420,24 +420,24 @@ function Landing() {
       </section>}
 
       {/* What a catalog is, told the same way as embedding: the scattered parts before, one row after (founder, 2026-11-03). */}
-      <section className="border-t border-ink-border bg-ink py-20 text-ink-foreground">
+      <section className="border-t border-border bg-background py-20">
         <div className="mx-auto max-w-5xl px-6">
           <h2 className="text-center text-3xl font-bold md:text-4xl">What is a music catalog?</h2>
-          <p className="mt-2 text-center text-lg text-ink-muted">Everything one song is made of, in one place.</p>
+          <p className="mt-2 text-center text-lg text-muted-foreground">Everything one song is made of, in one place.</p>
 
           <div className="mt-8 grid items-stretch gap-4 sm:grid-cols-2">
             <div className="flex flex-col gap-2">
-              <p className="text-center text-sm font-bold uppercase tracking-[2px] text-ink-muted">Before cataloging</p>
+              <p className="text-center text-sm font-bold uppercase tracking-[2px] text-muted-foreground">Before cataloging</p>
               <CatalogScatter />
             </div>
             <div className="flex flex-col gap-2">
-              <p className="text-center text-sm font-bold uppercase tracking-[2px] text-electric">After cataloging</p>
+              <p className="text-center text-sm font-bold uppercase tracking-[2px] text-primary">After cataloging</p>
               <CatalogRow />
             </div>
           </div>
 
           {/* The story underneath, set like the embedding spread: a drop-cap lead, two flowing columns, one callout. */}
-          <div className="mt-14 rounded-2xl bg-background px-5 py-9 text-foreground shadow-sm sm:px-8 md:px-10 md:py-10">
+          <div className="mt-14">
             <p className="text-xl leading-relaxed text-foreground first-letter:float-left first-letter:mr-3 first-letter:mt-1 first-letter:text-6xl first-letter:font-black first-letter:leading-[0.8]">
               A catalog is every piece of a song kept together: the master, the artwork, the lyrics, the credits and the codes, for every song you own.
             </p>
