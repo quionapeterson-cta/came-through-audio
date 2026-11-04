@@ -1,12 +1,14 @@
-art
-art/badges-4k
-public/*.mp3
-public/*.wav
-PLAN-*.md
-roadmap.md
+# What Vercel uploads for the build. A bare name matches at EVERY depth, so `art`
+# also matched public/art and stripped the waiting-room art from production builds.
+# Anchored with a leading slash it only drops the 4K masters at the repo root.
+/art
+/public/*.mp3
+/public/*.wav
+/PLAN-*.md
+/roadmap.md
 *.avif
 *.mp4
 .muse
 .claude
 .vite
-dist
+/dist
