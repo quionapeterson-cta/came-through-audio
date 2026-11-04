@@ -236,7 +236,7 @@ function Workspace() {
 
       <ArtistOnboarding userId={user.id} open={profileOpen} onOpenChange={setProfileOpen} firstRun={!onboard?.done}
         onSaved={(o) => { setOnboard(o); setEmbedKey((k) => k + 1); setTab(canCatalog ? "embed" : "health"); }} />
-      <BadgeWatcher userId={user.id} artist={names.artist} />
+      <BadgeWatcher userId={user.id} artist={names.artist} eagle={tier === "management"} />
       <main className="mx-auto max-w-7xl px-6 py-8">
         <CatalogLapseBanner sub={sub} lapse={lapse} pauses={pauses} onRenew={upgrade} onChanged={() => void reloadBilling()} />
         <Tabs value={tab} onValueChange={setTab}>

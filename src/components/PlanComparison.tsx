@@ -176,15 +176,22 @@ function NewCheck() {
 
 function Mark({ feature, tier, t }: { feature: Feature; tier: Tier; t: Palette }) {
   if (!hasTier(tier, feature.from)) return <Minus className={`h-5 w-5 ${t.minus}`} aria-label="Not included" />;
-  // Catalog Management ($89.99) shows an eagle on every included row instead of a check: the eye on the prize, and
-  // contracts delivery for the paperwork and signing features (founder art, 2026-11-03).
-  // Those two files are square canvases with the eagle painted as a wide band across the middle (36% and 48% of the
+  // An eagle marks the paperwork, wherever it is provided: contracts delivery on Split Sheet Generator in Catalog Plus,
+  // Collaborator E-Signature Requests in Collaborate, and the contract rows in Catalog Management; every other Catalog
+  // Management row gets the eye on the prize (founder art, 2026-11-03; extended to the lower tiers 2026-11-04).
+  // Those files are square canvases with the eagle painted as a wide band across the middle (36% and 48% of the
   // height), so a square box with object-contain left the art about 20px tall. `object-cover` in a wide box crops the
   // transparent margins instead, which makes the eagle fill the cell at full size.
-  if (tier === "management") {
+  const eagle = feature.paperwork ? EAGLE_ART.contractsDelivery : tier === "management" ? EAGLE_ART.eyeOnThePrize : null;
+  if (eagle) {
     return (
-      <span className="flex h-11 w-20 items-center justify-center overflow-hidden md:h-16 md:w-32">
-        <img src={feature.paperwork ? EAGLE_ART.contractsDelivery : EAGLE_ART.eyeOnThePrize} alt="Included" className="h-full w-full object-cover" />
+      <span className="relative flex h-11 w-20 items-center justify-center md:h-16 md:w-32">
+        <span className="flex h-full w-full items-center justify-center overflow-hidden">
+          <img src={eagle} alt="Included" className="h-full w-full object-cover" />
+        </span>
+        {feature.from === tier && (
+          <span className="absolute right-0 top-0 scale-[0.7]" aria-label="New in this plan"><NewCheck /></span>
+        )}
       </span>
     );
   }

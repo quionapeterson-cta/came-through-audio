@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { passwordValid, rememberReturn } from "@/lib/password";
 import { PasswordField } from "@/components/PasswordField";
-import { PLAN_INTENT_EVENT, PLAN_TIERS, PRICE_TIER, TIER_LABEL, peekPlanIntent, rememberPlanIntent } from "@/lib/plans";
+import { PLAN_INTENT_EVENT, PLAN_TIERS, PRICE_TIER, TIER_LABEL, peekPlanIntent } from "@/lib/plans";
 
 export function SignupCard({ returnPath, onAuthed, inviteMode }: { returnPath?: string; onAuthed?: () => void; inviteMode?: boolean } = {}) {
   const navigate = useNavigate();
@@ -124,12 +124,11 @@ export function SignupCard({ returnPath, onAuthed, inviteMode }: { returnPath?: 
               {busy ? "Please wait…" : mode === "signup" ? (paid ? "Sign up now" : "Create my free account") : mode === "forgot" ? "Send reset link" : "Log in"}
             </Button>
             {mode === "signup" && !paid && <p className="text-center text-xs text-muted-foreground">Free forever plan. No card needed.</p>}
-            {mode === "signup" && paid && <button type="button" className="w-full text-center text-sm font-semibold text-primary" onClick={() => rememberPlanIntent(undefined)}>Rather start free? Sign up free instead</button>}
           </form>
           <p className="mt-4 text-center text-sm text-muted-foreground">
             {mode === "signup" ? "Already have an account?" : mode === "forgot" ? "Remembered it?" : "New here?"}{" "}
             <button type="button" className="font-semibold text-primary" onClick={() => setMode(mode === "signup" ? "login" : mode === "forgot" ? "login" : "signup")}>
-              {mode === "signup" || mode === "forgot" ? "Log in" : "Sign up free"}
+              {mode === "signup" || mode === "forgot" ? "Log in" : paid ? "Sign up" : "Sign up free"}
             </button>
           </p>
         </>

@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { getPaymentsEnvironment } from "@/lib/checkout";
-import { isActiveSub, tierFromPrice, type Tier } from "@/lib/plans";
+import { highestTier, isActiveSub, tierFromPrice, type Tier } from "@/lib/plans";
 import { isPaused, type Lapse, type Pause, type PlanSub } from "@/lib/retention";
 
 /** The plan in force: when it renews, or when it ends if it was cancelled. */
@@ -31,7 +31,7 @@ export function useBilling(userId: string | undefined) {
 
   const load = useCallback(async () => {
     if (!userId) return;
-    const [subs, buys, paused, lapsed, seats] = await Promise.all([
+    const [subs, buys, paused, lapsed, seats, memberSeats] = await Promise.all([
       supabase.from("subscriptions" as never).select("price_id, status, current_period_start, current_period_end, cancel_at_period_end, stripe_subscription_id, created_at").eq("user_id", userId).eq("environment", env).order("created_at", { ascending: false }),
       supabase.from("purchases" as never).select("id, kind, price_ids, details, created_at").eq("user_id", userId).eq("environment", env).order("created_at", { ascending: false }),
       // Missing until the retention migrations run; then these simply come back empty.
@@ -39,6 +39,9 @@ export function useBilling(userId: string | undefined) {
       supabase.from("catalog_lapses" as never).select("plan_ended_at, empty_after, emptied_at").eq("user_id", userId).maybeSingle(),
       // Missing until the founding migration runs; then empty for everyone outside the first 100.
       supabase.from("founding_upgrades" as never).select("paid_tier, granted_tier, seat").eq("user_id", userId).eq("environment", env).is("ended_at", null),
+      // Add-on artist seats this account accepted. A seat IS their plan while it's paid for, so the app has to see it
+      // here too: the server's user_tier already counts it, and a page must never show a seat holder as Free.
+      supabase.from("artist_seats" as never).select("tier, status, current_period_end, environment").eq("member_user_id", userId).in("status", ["active", "canceled"]),
     ]);
     const rows = (subs.data ?? []) as SubRow[];
     const pauseRows = (paused.data ?? []) as Pause[];
@@ -50,7 +53,14 @@ export function useBilling(userId: string | undefined) {
     const seat = ((seats.data ?? []) as FoundingSeat[]).find((f) => f.paid_tier === best) ?? null;
     setFounding(seat);
     setPaidTier(isPaused(pauseRows) ? "free" : best);
-    setTier(isPaused(pauseRows) ? "free" : seat ? seat.granted_tier : best);
+    // A seat the artist accepted lifts them to its tier, exactly like the server's user_tier: never lower than their own
+    // plan. The seat is theirs whichever environment it was bought in, so this environment's rows are preferred only
+    // when it has any: a preview/live mismatch must never make a paid seat read Free (founder, 2026-11-04).
+    const usableSeats = ((memberSeats.data ?? []) as { tier: Tier; status: string; current_period_end: string | null; environment?: string }[])
+      .filter((r) => r.status === "active" || (!!r.current_period_end && Date.parse(r.current_period_end) > Date.now()));
+    const hereSeats = usableSeats.filter((r) => r.environment === env);
+    const seatTiers = (hereSeats.length ? hereSeats : usableSeats).map((r) => r.tier);
+    setTier(isPaused(pauseRows) ? "free" : highestTier(seat ? seat.granted_tier : best, ...seatTiers));
     const row = live.find((r) => tierFromPrice(r.price_id) === best);
     // (plan and sub below follow the tier they pay for, so billing shows the real price)
     // orderedAt: when the plan was first bought, for the 30-day full refund countdown.

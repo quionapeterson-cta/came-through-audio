@@ -45,6 +45,27 @@ describe("teaser card", () => {
   });
 });
 
+describe("eagle status captions", () => {
+  it("only come out for Catalog Management members, and keep the house format", () => {
+    const plain = all("profile", {});
+    const withEagle = Array.from({ length: promoCount("profile", true) }, (_, i) => promoCaption("profile", i, { eagle: true }));
+    expect(withEagle.length).toBeGreaterThan(plain.length);
+    expect(plain.join("\n")).not.toMatch(/eagle/i);
+    // Eagle, soaring, high achiever and excellence talk, as the founder asked for.
+    expect(withEagle.filter((c) => /eagle|soar|excellence|high achiever|altitude/i.test(c)).length).toBeGreaterThanOrEqual(10);
+    // The other spots share the same captions whatever the plan.
+    expect(promoCount("embed", true)).toBe(promoCount("embed"));
+    expect(promoCaption("catalog", 0, { count: 3, eagle: true })).toBe(promoCaption("catalog", 0, { count: 3 }));
+    for (const c of withEagle) {
+      const [line, site, tags] = c.split("\n");
+      expect(site).toBe(PROMO_SITE);
+      expect(tags).toBe("#CameThrough #CameThroughAudio #NewMusic #IndependentArtist #UpcomingArtist");
+      expect(line!.length).toBeLessThanOrEqual(130);
+      expect(line).not.toMatch(/—/);
+    }
+  });
+});
+
 describe("caption library size", () => {
   it("has a big, repeat-free set for every spot", () => {
     for (const ctx of ["embed", "catalog", "profile"] as const) {

@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { BRANDING_LOOKUP_KEY } from "@/lib/brand-kit";
 import { CONTRACT_LOOKUP_KEY } from "@/lib/contract-generator";
-import { assistanceItems, assistanceType, PRICE_TIER, SEAT_TIER, seatLookupKey } from "@/lib/plans";
+import { assistanceItems, assistanceType, PRICE_TIER, SEAT_MAX, SEAT_TIER, seatLookupKey } from "@/lib/plans";
 import { PACKAGES, TRACKS_PER_KEY, packageSongs } from "@/lib/proof";
 import { ASSISTANCE_AGENCIES, MAX_NEW_SONGS, newSongKeys } from "@/lib/registration";
 import { VAULT_LOOKUP_KEY } from "@/lib/retention";
@@ -26,7 +26,8 @@ export const checkoutInput = z.discriminatedUnion("kind", [
   // Renew now: next year's plan paid early. The server reads the plan and price from the user's own subscription.
   z.object({ kind: z.literal("renew") }),
   // An add-on artist seat (founder, 2026-11-04): its own yearly subscription, so it never replaces the owner's plan.
-  z.object({ kind: z.literal("seat"), tier: z.enum(["plus", "collaborate", "management"]) }),
+  // How many artists are being added: one subscription, one seat row per artist (founder, 2026-11-04).
+  z.object({ kind: z.literal("seat"), tier: z.enum(["plus", "collaborate", "management"]), quantity: z.number().int().min(1).max(SEAT_MAX).default(1) }),
   z.object({
     kind: z.literal("expert"),
     // Catalog songs picked, plus songs that aren't in the catalog yet (PLAN-registration-intake §1–2).
@@ -62,7 +63,7 @@ export function planCheckout(input: CheckoutInput, userId: string): CheckoutPlan
   }
   if (input.kind === "seat") {
     // The seat's own subscription: the webhook records it on artist_seats, never on the owner's plan.
-    return { mode: "subscription", items: [{ lookupKey: seatLookupKey(input.tier), quantity: 1 }], metadata: { userId, kind: "seat", seatTier: input.tier }, managed: true };
+    return { mode: "subscription", items: [{ lookupKey: seatLookupKey(input.tier), quantity: input.quantity }], metadata: { userId, kind: "seat", seatTier: input.tier, seats: String(input.quantity) }, managed: true };
   }
   if (input.kind === "vault") {
     return { mode: "payment", items: [{ lookupKey: VAULT_LOOKUP_KEY, quantity: input.months }], metadata: { userId, kind: "vault", months: String(input.months) }, managed: true };
@@ -120,7 +121,7 @@ export type StripeSubscriptionLike = {
   ended_at?: number | null;
   current_period_start?: number | null;
   current_period_end?: number | null;
-  items: { data: { price: { lookup_key?: string | null; product: string | { id: string } }; current_period_start?: number | null; current_period_end?: number | null }[] };
+  items: { data: { price: { lookup_key?: string | null; product: string | { id: string } }; quantity?: number | null; current_period_start?: number | null; current_period_end?: number | null }[] };
 };
 
 /** A subscriptions row from a Stripe subscription, or null when it isn't one of our plans. */

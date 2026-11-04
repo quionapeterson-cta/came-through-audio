@@ -38,8 +38,11 @@ export function emailLayout(bodyHtml: string, opts: EmailLayoutOptions): string 
       ? `<p style="margin:8px 0 0"><a href="${opts.unsubscribeUrl}" style="color:#004AAD">Unsubscribe</a> from these emails at any time.</p>`
       : `<p style="margin:8px 0 0">If you weren't expecting this, you can safely ignore it or contact <a href="mailto:${SUPPORT_EMAIL}" style="color:#004AAD">${SUPPORT_EMAIL}</a>.</p>`;
   const invites = opts.optOutUrl ? `<p style="margin:8px 0 0">Don't want these? <a href="${opts.optOutUrl}" style="color:#004AAD">Don't send me invites</a>.</p>` : "";
-  return `<!doctype html><html><body style="margin:0;background:#ffffff;font-family:Poppins,Arial,sans-serif;color:#0b0b0b">
-<div style="max-width:560px;margin:0 auto;padding:32px 24px">
+  // Light mode everywhere (founder, 2026-11-04). These tags and bgcolor attributes are what stop Gmail, Apple Mail and
+  // Outlook from inverting the white shell in a dark inbox, so every email looks the way it was designed.
+  return `<!doctype html><html lang="en"><head><meta charset="utf-8" /><meta name="viewport" content="width=device-width,initial-scale=1" /><meta name="color-scheme" content="light only" /><meta name="supported-color-schemes" content="light only" /><title>Came Through Audio</title><style>:root{color-scheme:light only;supported-color-schemes:light only}body{background:#ffffff !important;color:#0b0b0b !important}</style></head>
+<body style="margin:0;padding:0;background:#ffffff;font-family:Poppins,Arial,sans-serif;color:#0b0b0b" bgcolor="#ffffff">
+<div style="max-width:560px;margin:0 auto;padding:32px 24px;background:#ffffff" bgcolor="#ffffff">
 <div style="text-align:center;padding-bottom:20px;border-bottom:2px solid #004AAD;margin-bottom:24px">
 <a href="${SITE_URL}/" style="text-decoration:none;color:#0b0b0b;display:block">
 <img src="${SITE_URL}/email-logo-dark.png" alt="Came Through Audio logo" width="120" style="display:block;margin:0 auto 10px;height:auto;border:0" />

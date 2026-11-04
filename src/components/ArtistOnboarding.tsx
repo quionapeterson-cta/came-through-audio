@@ -12,7 +12,7 @@ import { CREDIT_CHOICES, OTHER_INSTRUMENT, creditChoice, fromCreditChoice, empty
 import { isBadgeImage } from "@/lib/badges";
 import { isBmi } from "@/lib/audit";
 import { PUBLISHING_LABEL } from "@/lib/readiness";
-import { loadOnboarding, loadProfile, saveOnboarding, saveProfile, withOwnWriter, type ArtistProfile, type Onboarding } from "@/lib/artist-profile";
+import { loadOnboarding, loadProfile, saveOnboarding, saveProfile, saveSeatArtistDefaults, withOwnWriter, type ArtistProfile, type Onboarding } from "@/lib/artist-profile";
 import { capShare, splitTotal } from "@/lib/splits-total";
 import { TIER_LABEL } from "@/lib/plans";
 import { ArtistSeats } from "@/components/ArtistSeats";
@@ -73,9 +73,13 @@ function nameRuleText(s?: NameStatus) {
   return `You can change your artist name once a week, up to 3 times a year (${s.changes_left} left). Releasing as another artist? Add an artist to your account.`;
 }
 
-export function ArtistOnboarding({ userId, open, onOpenChange, onSaved, firstRun }: {
+export function ArtistOnboarding({ userId, open, onOpenChange, onSaved, firstRun, seatArtist }: {
   userId: string; open: boolean; onOpenChange: (o: boolean) => void; onSaved: (o: Onboarding) => void; firstRun: boolean;
+  /** Set when an owner is editing an artist on their seats instead of their own profile. */
+  seatArtist?: { name: string } | null;
 }) {
+  // Another account's defaults: no name-change limit (that rule is the artist's own) and no write to their name columns.
+  const other = seatArtist?.name ?? "";
   const [step, setStep] = useState(firstRun ? 0 : 1);
   const [ob, setOb] = useState<Onboarding>({ done: false, welcomed: false, avatar: "", stageName: "", legalName: "" });
   const [p, setP] = useState<ArtistProfile>({});
@@ -84,6 +88,8 @@ export function ArtistOnboarding({ userId, open, onOpenChange, onSaved, firstRun
   // The "Change your artist name?" pop-up, and the "Add another artist" coming-soon panel inside it.
   const [confirmName, setConfirmName] = useState(false);
   const [seats, setSeats] = useState(false);
+  // "Add another artist" under the stage name opens the seat chooser and checkout.
+  const [seatBox, setSeatBox] = useState(false);
 
   useEffect(() => {
     if (!open) return;
@@ -107,7 +113,7 @@ export function ArtistOnboarding({ userId, open, onOpenChange, onSaved, firstRun
 
   /** Changing a saved artist name counts toward the limit, so it asks first (free typo fixes in the first 72 hours don't). */
   async function finish() {
-    if (nameChanges() && !nameRule?.in_grace) { setSeats(false); setConfirmName(true); return; }
+    if (!other && nameChanges() && !nameRule?.in_grace) { setSeats(false); setConfirmName(true); return; }
     await save();
   }
 
@@ -117,18 +123,25 @@ export function ArtistOnboarding({ userId, open, onOpenChange, onSaved, firstRun
     const stage = newName();
     const final: Onboarding = { ...ob, stageName: stage, done: true, welcomed: true };
     // Artist name changes are limited (see artist_name_status); the database has the final say.
-    if (nameChanges()) {
+    if (!other && nameChanges()) {
       const { error } = await supabase.from("profiles").update({ stage_name: stage }).eq("id", userId);
       if (error) { toast.error(error.message.replace("ARTIST_NAME_LOCKED: ", "")); return; }
       setSavedName(stage);
     }
     const writers = withOwnWriter(p.writers, ob.legalName);
-    saveProfile(userId, { ...p, artist: p.artist?.trim() || stage, ...(writers && { writers }) });
-    saveOnboarding(userId, final);
-    await supabase.from("profiles").update({ stage_name: stage || null, legal_name: ob.legalName.trim() || null }).eq("id", userId);
+    const saved = { ...p, artist: p.artist?.trim() || stage, ...(writers && { writers }) };
+    if (other) {
+      // Seat artist: only their saved defaults are written, through the owner's own seat permission.
+      const problem = await saveSeatArtistDefaults(userId, saved, final);
+      if (problem) { toast.error(`Couldn't save ${other}'s defaults: ${problem}`); return; }
+    } else {
+      saveProfile(userId, saved);
+      saveOnboarding(userId, final);
+      await supabase.from("profiles").update({ stage_name: stage || null, legal_name: ob.legalName.trim() || null }).eq("id", userId);
+    }
     onSaved(final);
     onOpenChange(false);
-    toast.success(firstRun ? "You're all set! Your saved details will prefill every new embed and catalog entry." : "Profile saved.");
+    toast.success(other ? `${other}'s embed defaults and catalog profile are saved.` : firstRun ? "You're all set! Your saved details will prefill every new embed and catalog entry." : "Profile saved.");
   }
 
   return (
@@ -144,6 +157,8 @@ export function ArtistOnboarding({ userId, open, onOpenChange, onSaved, firstRun
               : <button type="button" aria-current={i === step ? "step" : undefined} onClick={() => setStep(i)} className={`${look} transition hover:ring-2 hover:ring-primary/40`}>{i + 1}. {s}</button>}</li>;
           })}
         </ol>
+
+        {other && <p className="rounded-lg bg-muted p-3 text-xs text-muted-foreground">Editing <b className="text-foreground">{other}</b>&rsquo;s saved defaults. Their login, catalog, splits and badges stay theirs: you're filling in what their songs and embeds start from.</p>}
 
         {step === 0 && (
           <div className="space-y-4 text-center">
@@ -195,7 +210,9 @@ export function ArtistOnboarding({ userId, open, onOpenChange, onSaved, firstRun
             <ProfileProgress ob={ob} p={p} />
             <Group title="Artist & Label">
               <Field label="Primary Artist / Stage Name"><Input value={ob.stageName} onChange={(e) => { setOb((o) => ({ ...o, stageName: e.target.value })); set("artist", e.target.value); }} />
-                {savedName && <p className="mt-1 text-xs text-muted-foreground">{nameRuleText(nameRule)}</p>}</Field>
+                {savedName && !other && <p className="mt-1 text-xs text-muted-foreground">{nameRuleText(nameRule)}</p>}
+                {/* Releasing as someone else? Buy them a seat from right here (founder, 2026-11-04). */}
+                <Button type="button" variant="outline" size="sm" className="mt-2" onClick={() => setSeatBox(true)}><Plus />Add another artist</Button></Field>
               <Field label="Default Label Name (optional)" term="label"><Input value={p.label ?? ""} onChange={(e) => set("label", e.target.value)} placeholder="Your label name" /></Field>
               <Field label="Contact email to embed (optional)" term="contactEmail"><Input type="email" value={p.contactEmail ?? ""} onChange={(e) => set("contactEmail", e.target.value)} placeholder="bookings@yourname.com" /></Field>
               <Field label="Produced by (optional)" term="producedBy"><Input value={p.producers?.[0]?.name ?? ""} placeholder="Name"
@@ -247,6 +264,11 @@ export function ArtistOnboarding({ userId, open, onOpenChange, onSaved, firstRun
           </div>
         )}
       </DialogContent>
+      <Dialog open={seatBox} onOpenChange={setSeatBox}>
+        <DialogContent className="max-h-[90vh] max-w-2xl overflow-y-auto">
+          <ArtistSeats onClose={() => setSeatBox(false)} />
+        </DialogContent>
+      </Dialog>
       <NameChangeDialog open={confirmName} onOpenChange={setConfirmName} from={savedName} to={newName()} status={nameRule}
         seats={seats} onSeats={() => setSeats(true)} onConfirm={() => void save()} />
     </Dialog>

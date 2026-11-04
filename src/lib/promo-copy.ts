@@ -28,7 +28,7 @@ const DEFAULT_TAGS: [string, string, string] = ["#NewMusic", "#IndependentArtist
 export const genreTags = (genre?: string) => (genre && (GENRE_TAGS[genre] ?? GENRE_TAGS[parentGenre(genre)])) || DEFAULT_TAGS;
 
 /** title: the song title, or undefined when blank or hidden. count: catalog song count, or undefined when hidden. genre: primary genre for hashtags. */
-export type PromoInput = { title?: string | undefined; count?: number | undefined; genre?: string | undefined };
+export type PromoInput = { title?: string | undefined; count?: number | undefined; genre?: string | undefined; eagle?: boolean | undefined };
 
 const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 
@@ -191,17 +191,39 @@ const PROFILE: (() => string)[] = [
   () => `Doing it right pays off. Literally 💸🔥`,
 ];
 
-export function promoCount(ctx: PromoContext): number {
-  return ctx === "embed" ? EMBED.length : ctx === "catalog" ? CATALOG.length : PROFILE.length;
+/** Eagle status, high achievers and excellence. Only Catalog Management members share captions carrying the eagle. */
+const PROFILE_EAGLE: (() => string)[] = [
+  () => `Soaring, not just showing up 🦅 One more badge earned the right way 🔥`,
+  () => `Eagle status: earned, not handed out 🦅🔥`,
+  () => `High achiever energy 🏆 I collect receipts, not excuses 🔥`,
+  () => `Excellence is a habit, not a mood. Another badge to show for it ✨🔥`,
+  () => `Eyes on the prize, feet on the business 🦅💰 Badge unlocked 🔥`,
+  () => `High standards, higher altitude 🦅 Watch me climb 🔥`,
+  () => `Excellence looks like this: credits handled, splits signed, codes in order ✅🔥`,
+  () => `Another badge, another bar raised 📈🦅 Stay tuned 🔥`,
+  () => `Soaring past the shortcuts 🦅 Everything credited, everything filed 🔥`,
+  () => `High achievers don't wait to be discovered. They get organized 🦅🔥`,
+  () => `Eagle eyed on every detail of my catalog 🦅🔍 Badge earned 🔥`,
+  () => `The view keeps getting better the higher I climb 🦅 Another badge down 🔥`,
+  () => `Mediocre was never the plan. Excellence, badge after badge 🏆🔥`,
+  () => `They said do the work nobody sees. Now the badge shows it 🦅🔥`,
+  () => `Soaring is a standard, not a moment 🦅🔥`,
+];
+
+/** The badge captions: everything, plus the eagle set for Catalog Management members. */
+const profileCaptions = (eagle: boolean) => (eagle ? [...PROFILE, ...PROFILE_EAGLE] : PROFILE);
+
+export function promoCount(ctx: PromoContext, eagle = false): number {
+  return ctx === "embed" ? EMBED.length : ctx === "catalog" ? CATALOG.length : profileCaptions(eagle).length;
 }
 
 /** The i-th caption for this spot: the line, the site, then five hashtags (two brand, three for the genre). */
-export function promoCaption(ctx: PromoContext, i: number, { title, count, genre }: PromoInput): string {
-  const n = promoCount(ctx);
+export function promoCaption(ctx: PromoContext, i: number, { title, count, genre, eagle }: PromoInput): string {
+  const n = promoCount(ctx, !!eagle);
   const k = ((i % n) + n) % n;
   const body = ctx === "embed" ? EMBED[k]!(title ? `"${title}"` : "my new single")
     : ctx === "catalog" ? CATALOG[k]!(count)
-    : PROFILE[k]!();
+    : profileCaptions(!!eagle)[k]!();
   return `${body}\n${PROMO_SITE}\n${[...BRAND_TAGS, ...genreTags(genre)].join(" ")}`;
 }
 
@@ -212,8 +234,8 @@ export function captionForX(caption: string, genre?: string): string {
 }
 
 /** A shuffled order of caption indexes, so Generate goes through every style before repeating. */
-export function promoOrder(ctx: PromoContext, random = Math.random): number[] {
-  const order = Array.from({ length: promoCount(ctx) }, (_, i) => i);
+export function promoOrder(ctx: PromoContext, eagle = false, random = Math.random): number[] {
+  const order = Array.from({ length: promoCount(ctx, eagle) }, (_, i) => i);
   for (let i = order.length - 1; i > 0; i--) { const j = Math.floor(random() * (i + 1)); [order[i], order[j]] = [order[j]!, order[i]!]; }
   return order;
 }

@@ -5,7 +5,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { ARTIST_SEAT_PRICES, TIER_LABEL, type Tier } from "@/lib/plans";
+import { ARTIST_SEAT_PRICES, SEAT_MAX, TIER_LABEL, type Tier } from "@/lib/plans";
 import { listSeatState, seatIsLive, type ArtistSeat, type SeatState } from "@/lib/seats";
 import { inviteSeatArtist } from "@/lib/seats.functions";
 import { openCheckout } from "@/lib/checkout";
@@ -33,15 +33,23 @@ export function ArtistSeats({ onClose }: { onClose: () => void }) {
   const [artistName, setArtistName] = useState("");
   const [email, setEmail] = useState("");
   const [busy, setBusy] = useState(false);
+  // How many artists to add at each tier; one subscription carries all of them (founder, 2026-11-04).
+  const [qty, setQty] = useState<Record<SeatTier, number>>({ plus: 1, collaborate: 1, management: 1 });
   const invite = useServerFn(inviteSeatArtist);
 
-  const load = () => listSeatState().then(setState).catch(() => setState({ ready: false, seats: [] }));
+  // A seat only earns its keep once the artist is invited, so the first seat still waiting for an artist opens its
+  // invite form by itself (founder, 2026-11-04: buying a seat and then hunting for the button was a dead end).
+  const load = () => listSeatState().then((next) => {
+    setState(next);
+    const open = next.seats.filter((s) => seatIsLive(s) && !s.member_user_id);
+    setSendingFor((cur) => cur ?? (open.find((s) => s.status === "unclaimed") ?? open[0])?.id ?? null);
+  }).catch(() => setState({ ready: false, seats: [] }));
   useEffect(() => { void load(); }, []);
 
   const buy = async (tier: SeatTier) => {
     setBuying(tier);
     try {
-      await openCheckout({ kind: "seat", tier });
+      await openCheckout({ kind: "seat", tier, quantity: qty[tier] });
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Checkout could not open.");
     } finally {
@@ -54,6 +62,7 @@ export function ArtistSeats({ onClose }: { onClose: () => void }) {
     try {
       const r = await invite({ data: { seatId: seat.id, email: email.trim(), artistName: artistName.trim(), origin: window.location.origin } });
       toast.success(`Invite sent to ${email.trim()}. ${r.link ? "The link is in their email." : ""}`);
+      // Straight on to the next artist who still needs their invite.
       setSendingFor(null);
       setArtistName("");
       setEmail("");
@@ -80,15 +89,15 @@ export function ArtistSeats({ onClose }: { onClose: () => void }) {
   }
 
   const live = state.seats.filter((seat) => seatIsLive(seat));
-  const waiting = live.find((s) => !s.member_user_id);
 
   return (
     <div className="space-y-4">
       <div>
         <h2 className="text-xl font-bold">Add another artist</h2>
         <p className="mt-1 text-sm text-muted-foreground">
-          Buy a seat, then send it to the artist's email. They sign up with that address and accept it, and their own
-          catalog, embedding and tools open at the seat's tier. You see and manage every artist you pay for.
+          Buy seats, then send each one to the artist's email. They sign up with that address and accept it, and their
+          own catalog, embedding and tools open at the seat's tier. Pick how many artists you're adding and buy them in
+          one go. You see and manage every artist you pay for.
         </p>
       </div>
 
@@ -135,25 +144,39 @@ export function ArtistSeats({ onClose }: { onClose: () => void }) {
         </ul>
       )}
 
-      {!waiting && (
-        <div className="rounded-xl border border-border p-3">
+      <div className="rounded-xl border border-border p-3">
           <p className="text-sm font-semibold">{live.length ? "Buy another seat" : "Choose the seat's tier"}</p>
           <ul className="mt-2 space-y-2">
-            {ARTIST_SEAT_PRICES.map((s) => (
-              <li key={s.tier} className="flex flex-wrap items-center justify-between gap-2 rounded-lg bg-muted px-3 py-2">
-                <span className="text-sm">
-                  <span className="font-semibold">{TIER_LABEL[s.tier]}</span>
-                  <span className="ml-2 text-muted-foreground">{s.price}/yr · {s.monthly}</span>
-                </span>
-                <Button size="sm" disabled={buying !== null} onClick={() => void buy(s.tier)}>
-                  {buying === s.tier ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}Buy
-                </Button>
-              </li>
-            ))}
+            {ARTIST_SEAT_PRICES.map((s) => {
+              const n = qty[s.tier];
+              return (
+                <li key={s.tier} className="rounded-lg bg-muted px-3 py-2">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <span className="text-sm">
+                      <span className="font-semibold">{TIER_LABEL[s.tier]}</span>
+                      <span className="ml-2 text-muted-foreground">{s.price}/yr each · {s.monthly}</span>
+                    </span>
+                    <div className="flex items-center gap-2">
+                      <Label htmlFor={`seat-qty-${s.tier}`} className="text-xs text-muted-foreground">Artists</Label>
+                      <Input id={`seat-qty-${s.tier}`} type="number" inputMode="numeric" min={1} max={SEAT_MAX} value={n}
+                        aria-label={`How many ${TIER_LABEL[s.tier]} artist seats`}
+                        className="h-8 w-16"
+                        onChange={(e) => {
+                          const next = Math.max(1, Math.min(SEAT_MAX, Math.trunc(Number(e.target.value)) || 1));
+                          setQty((q) => ({ ...q, [s.tier]: next }));
+                        }} />
+                      <Button size="sm" disabled={buying !== null} onClick={() => void buy(s.tier)}>
+                        {buying === s.tier ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
+                        Buy {n === 1 ? "1 seat" : `${n} seats`} · ${(s.amount * n).toFixed(2)}/yr
+                      </Button>
+                    </div>
+                  </div>
+                </li>
+              );
+            })}
           </ul>
           <p className="mt-2 text-xs text-muted-foreground">Yearly, per added artist, billed separately from your own plan. Cancel any time; the artist keeps the seat until the paid year ends.</p>
-        </div>
-      )}
+      </div>
 
       <div className="flex justify-end">
         <Button variant="outline" onClick={onClose}>Close</Button>

@@ -3,7 +3,7 @@ import { createClient } from "@supabase/supabase-js";
 import type Stripe from "stripe";
 import { createStripeClient, verifyWebhook, type StripeEnv } from "@/lib/stripe.server";
 import { purchaseRow, subscriptionRow, type StripeSubscriptionLike } from "@/lib/stripe-mapping";
-import { SEAT_TIER } from "@/lib/plans";
+import { SEAT_MAX, SEAT_TIER } from "@/lib/plans";
 
 let _sb: ReturnType<typeof createClient> | null = null;
 function db() {
@@ -26,22 +26,39 @@ async function saveSeatSubscription(sub: StripeSubscriptionLike, env: StripeEnv,
   const end = item?.current_period_end ?? sub.current_period_end;
   const periodEnd = end ? new Date(end * 1000).toISOString() : null;
   const ownerId = sub.metadata?.["userId"] ?? null;
-  const { data: found } = await db().from("artist_seats").select("id, member_user_id, invite_email, status")
-    .eq("stripe_subscription_id", sub.id).maybeSingle();
-  const seat = found as { id: string; member_user_id: string | null; invite_email: string | null; status: string } | null;
-  if (!seat && !ownerId) return console.warn(`Seat subscription ${sub.id} has no owner to credit`);
-  // Cancelled keeps the seat until the paid period ends; an unclaimed seat simply ends.
-  const status = deleted
+  // The quantity is how many artists the owner bought: one row per seat, so each artist gets their own invite, name,
+  // acceptance and catalog, and cancelling one seat never touches the others (founder, 2026-11-04).
+  const quantity = Math.max(1, Math.min(SEAT_MAX, item?.quantity ?? 1));
+  const { data: found, error: readErr } = await db().from("artist_seats")
+    .select("id, seat_index, member_user_id, invite_email, status")
+    .eq("stripe_subscription_id", sub.id);
+  if (readErr) throw readErr;
+  const rows = (found ?? []) as { id: string; seat_index: number | null; member_user_id: string | null; invite_email: string | null; status: string }[];
+  if (!rows.length && !ownerId) return console.warn(`Seat subscription ${sub.id} has no owner to credit`);
+
+  const seatStatus = (seat?: (typeof rows)[number]) => deleted
+    // Cancelled keeps the seat until the paid period ends; an unclaimed seat simply ends.
     ? (seat?.member_user_id || seat?.invite_email ? "canceled" : "ended")
     : (seat?.status && ["invited", "active", "unclaimed"].includes(seat.status) ? seat.status : seat?.member_user_id ? "active" : seat?.invite_email ? "invited" : "unclaimed");
-  const patch = { tier, environment: env, current_period_end: periodEnd, status, updated_at: new Date().toISOString() };
-  if (seat) {
-    const { error } = await db().from("artist_seats").update(patch as never).eq("id", seat.id);
-    if (error) throw error;
-    return;
+
+  for (let i = 0; i < quantity; i++) {
+    const seat = rows.find((r) => (r.seat_index ?? 0) === i);
+    const patch = { tier, environment: env, current_period_end: periodEnd, status: seatStatus(seat), updated_at: new Date().toISOString() };
+    if (seat) {
+      const { error } = await db().from("artist_seats").update(patch as never).eq("id", seat.id);
+      if (error) throw error;
+    } else {
+      const { error } = await db().from("artist_seats").insert({ ...patch, owner_id: ownerId, stripe_subscription_id: sub.id, seat_index: i } as never);
+      if (error) throw error;
+    }
   }
-  const { error } = await db().from("artist_seats").insert({ ...patch, owner_id: ownerId, stripe_subscription_id: sub.id } as never);
-  if (error) throw error;
+  // Bought fewer than before: the seats past the paid quantity end. An artist who already accepted keeps theirs until
+  // the paid period ends, so they never lose their catalog mid-year.
+  for (const seat of rows.filter((r) => (r.seat_index ?? 0) >= quantity)) {
+    const { error } = await db().from("artist_seats")
+      .update({ status: seat.member_user_id ? "canceled" : "ended", updated_at: new Date().toISOString() } as never).eq("id", seat.id);
+    if (error) throw error;
+  }
 }
 
 async function saveSubscription(sub: StripeSubscriptionLike, env: StripeEnv, deleted = false) {

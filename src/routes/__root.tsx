@@ -127,9 +127,9 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { rel: "preconnect", href: "https://fonts.googleapis.com" },
       { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },
       { rel: "stylesheet", href: "https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&family=Dancing+Script:wght@600&display=swap" },
-      /* Two plates, so the tab icon always sits on its own ground: ink on white in light-mode chrome, the white mark on
-         black in dark-mode chrome. Browsers without media support on icon links keep the light plate. */
-      { rel: "icon", href: "/favicon-light.png", type: "image/png", sizes: "64x64" },
+      /* Chrome's tab strip is the ground, so the mark follows it: the ink version in a light browser, the white one in a
+         dark one. Both PNGs are transparent, so the artwork sits straight on the tab with no plate behind it. */
+      { rel: "icon", href: "/favicon-light.png", type: "image/png", sizes: "64x64", media: "(prefers-color-scheme: light)" },
       { rel: "icon", href: "/favicon.png", type: "image/png", sizes: "64x64", media: "(prefers-color-scheme: dark)" },
       { rel: "manifest", href: "/manifest.webmanifest" },
       { rel: "apple-touch-icon", href: "/apple-touch-icon.png" },

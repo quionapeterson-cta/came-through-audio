@@ -16,11 +16,12 @@ import { BadgeViewer, type BadgeAbout } from "@/components/BadgeViewer";
 import { EagleStatusBadge } from "@/components/EagleStatusBadge";
 import { eagleStatus } from "@/lib/eagle-status";
 import type { ShareInfo } from "@/components/BadgeCelebration";
-import { badgePrefs, loadOnboarding, loadProfile, saveOnboarding, syncFromCloud, type ArtistProfile, type Onboarding } from "@/lib/artist-profile";
+import { badgePrefs, loadOnboarding, loadProfile, loadSeatArtistDefaults, saveOnboarding, syncFromCloud, type ArtistProfile, type Onboarding } from "@/lib/artist-profile";
 import { isBadgeImage } from "@/lib/badges";
+import { listSeatState, seatArtistsFor } from "@/lib/seats";
 import { BadgeDetail, BadgeSettings, BadgeSettingsButton, BadgeShelf, BadgeWatcher, shelfArt, useBadgeStates, type BadgeState } from "@/components/Badges";
 import { creditName, writerRole, type Contributor } from "@/lib/metadata";
-import { TIER_LABEL } from "@/lib/plans";
+import { TIER_LABEL, type Tier } from "@/lib/plans";
 import { openBilling } from "@/lib/checkout";
 import { passwordValid } from "@/lib/password";
 import { PasswordField } from "@/components/PasswordField";
@@ -44,6 +45,10 @@ function ProfilePage() {
   const names = useArtistName(user, ob?.stageName);
   const [profile, setProfile] = useState<ArtistProfile | null>(null);
   const [editing, setEditing] = useState(false);
+  // Whose profile Edit opens: this account's, or an artist on one of its seats (founder, 2026-11-04).
+  const [chooser, setChooser] = useState(false);
+  const [editTarget, setEditTarget] = useState<{ userId: string; name: string } | null>(null);
+  const [seatArtists, setSeatArtists] = useState<{ userId: string; name: string; tier: Exclude<Tier, "free"> }[]>([]);
   const [passwordOpen, setPasswordOpen] = useState(false);
   const [emailOpen, setEmailOpen] = useState(false);
   const [viewing, setViewing] = useState<{ src: string; name?: string; round?: boolean; share?: ShareInfo; about?: BadgeAbout; state?: BadgeState }>();
@@ -59,6 +64,11 @@ function ProfilePage() {
     setOb(loadOnboarding(user.id));
     setProfile(loadProfile(user.id));
     syncFromCloud(user.id).then((o) => { setOb(o); setProfile(loadProfile(user.id)); });
+  }, [user]);
+  // The artists this account pays a seat for, so Edit profile can switch to one of theirs.
+  useEffect(() => {
+    if (!user) return;
+    listSeatState().then((s) => setSeatArtists(seatArtistsFor(s.seats, user.id))).catch(() => setSeatArtists([]));
   }, [user]);
 
   function chooseSize(s: Size) {
@@ -101,7 +111,7 @@ function ProfilePage() {
             <p className="text-muted-foreground">{[legalName, `Member since ${memberSince}`].filter(Boolean).join(" · ")}</p>
             <span className="inline-block rounded-full bg-primary px-3 py-1 text-xs font-semibold text-primary-foreground">{TIER_LABEL[tier]}</span>
           </div>
-          <Button variant="outline" onClick={() => setEditing(true)}><Pencil />Edit profile</Button>
+          <Button variant="outline" onClick={() => (seatArtists.length ? setChooser(true) : setEditing(true))}><Pencil />Edit profile</Button>
         </section>
 
         <div className="grid gap-8 md:grid-cols-2">
@@ -157,7 +167,7 @@ function ProfilePage() {
           {/* An earned badge opens straight to sharing, with its description (founder, 2026-10-27); locked ones show progress. */}
           <BadgeShelf userId={user.id} size={size} onOpen={(s, list) => {
             if (s.earned && badgePrefs(ob).share) {
-              setViewing({ src: shelfArt(s), name: s.badge.title, state: s, about: { description: s.badge.description, times: s.earned.times, earnedAt: s.earned.earnedAt }, share: { ctx: "profile", artist: names.artist, genre: profile?.primaryGenre } });
+              setViewing({ src: shelfArt(s), name: s.badge.title, state: s, about: { description: s.badge.description, times: s.earned.times, earnedAt: s.earned.earnedAt }, share: { ctx: "profile", artist: names.artist, genre: profile?.primaryGenre, eagle: tier === "management" } });
               return;
             }
             setBadge(s); setBadgeList(list);
@@ -168,16 +178,35 @@ function ProfilePage() {
 
       <BadgeDetail state={badge} list={badgeList} artist={names.artist} onClose={() => setBadge(undefined)} onMove={setBadge}
         onUseAsAvatar={(src) => { if (!ob) return; const next = { ...ob, avatar: src }; saveOnboarding(user.id, next); setOb(next); toast.success("Your profile picture is updated."); }}
-        onShare={badgePrefs(ob).share ? (s) => { setBadge(undefined); setViewing({ src: s.badge.src, name: s.badge.title, share: { ctx: "profile", artist: names.artist, genre: profile?.primaryGenre } }); } : undefined} />
+        onShare={badgePrefs(ob).share ? (s) => { setBadge(undefined); setViewing({ src: s.badge.src, name: s.badge.title, share: { ctx: "profile", artist: names.artist, genre: profile?.primaryGenre, eagle: tier === "management" } }); } : undefined} />
       <BadgeSettings userId={user.id} open={settingsOpen} onOpenChange={setSettingsOpen} onSaved={setOb} />
-      <BadgeWatcher userId={user.id} artist={names.artist} />
+      <BadgeWatcher userId={user.id} artist={names.artist} eagle={tier === "management"} />
       <BadgeViewer src={viewing?.src} name={viewing?.name} round={viewing?.round} share={viewing?.share} about={viewing?.about} onClose={() => setViewing(undefined)}
         actions={viewing?.state && <>
           <Button variant="secondary" size="sm" onClick={() => { if (!ob || !viewing) return; const next = { ...ob, avatar: viewing.src }; saveOnboarding(user.id, next); setOb(next); toast.success("Your profile picture is updated."); }}>Use as my profile picture</Button>
           <Button variant="ghost" size="sm" className="text-white hover:bg-white/10 hover:text-white" onClick={() => { const st = viewing.state!; setViewing(undefined); setBadge(st); }}>{(viewing.about?.times ?? 1) > 1 ? "See every time I earned it" : "Badge details"}</Button>
         </>} />
-      <ArtistOnboarding userId={user.id} open={editing} onOpenChange={setEditing} firstRun={false}
-        onSaved={(o) => { setOb(o); setProfile(loadProfile(user.id)); setEditing(false); }} />
+      <Dialog open={chooser} onOpenChange={setChooser}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader><DialogTitle>Whose profile are you editing?</DialogTitle></DialogHeader>
+          <p className="text-sm text-muted-foreground">Your own details, or the Embed Defaults and Artist Catalog Profile of an artist on your seats. Their login, catalog, splits and badges stay theirs.</p>
+          <ul className="space-y-2">
+            <li><Button variant="outline" className="w-full justify-between" onClick={() => { setChooser(false); setEditing(true); }}>My profile<span className="text-xs font-semibold text-muted-foreground">{TIER_LABEL[tier]}</span></Button></li>
+            {seatArtists.map((a) => (
+              <li key={a.userId}>
+                <Button variant="outline" className="w-full justify-between" onClick={() => {
+                  setChooser(false);
+                  // Pull their saved defaults first, so the form opens on what they already have.
+                  void loadSeatArtistDefaults(a.userId).then(() => setEditTarget(a));
+                }}>{a.name}<span className="text-xs font-semibold text-muted-foreground">{TIER_LABEL[a.tier]}</span></Button>
+              </li>
+            ))}
+          </ul>
+        </DialogContent>
+      </Dialog>
+      <ArtistOnboarding userId={editTarget?.userId ?? user.id} seatArtist={editTarget ? { name: editTarget.name } : null}
+        open={editing || !!editTarget} onOpenChange={(o) => { if (!o) { setEditing(false); setEditTarget(null); } }} firstRun={false}
+        onSaved={(o) => { if (editTarget) { setEditTarget(null); return; } setOb(o); setProfile(loadProfile(user.id)); setEditing(false); }} />
       <PasswordDialog email={user.email ?? ""} open={passwordOpen} onOpenChange={setPasswordOpen} />
       <EmailDialog email={user.email ?? ""} open={emailOpen} onOpenChange={setEmailOpen} />
     </div>

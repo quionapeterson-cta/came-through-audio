@@ -7,7 +7,7 @@ import { captionForX, promoCaption, promoOrder, type PromoContext } from "@/lib/
 import { drawPromoCard, drawPromoPreview } from "@/lib/promo-card";
 import { publishShareCard } from "@/lib/share-cards";
 
-export type ShareInfo = { ctx: PromoContext; artist: string; title?: string | undefined; count?: number | undefined; genre?: string | undefined };
+export type ShareInfo = { ctx: PromoContext; artist: string; title?: string | undefined; count?: number | undefined; genre?: string | undefined; eagle?: boolean | undefined };
 
 const rand = (a: number, b: number) => a + Math.random() * (b - a);
 // Smaller on phones so the share panel starts on the first screen.
@@ -102,8 +102,8 @@ const fileName = (s: string) => s.replace(/[<>:"/\\|?*]+/g, "_").trim() || "teas
 
 /** Teaser card, a caption that changes with Generate, and ways to post it. */
 export function SharePanel({ avatar, round, share }: { avatar: string; round?: boolean | undefined; share: ShareInfo }) {
-  const { ctx, artist, title, count, genre } = share;
-  const [order] = useState(() => promoOrder(ctx));
+  const { ctx, artist, title, count, genre, eagle } = share;
+  const order = useMemo(() => promoOrder(ctx, !!eagle), [ctx, !!eagle]);
   const [step, setStep] = useState(0);
   const [showDetail, setShowDetail] = useState(true);
   const input = { title: showDetail ? title?.trim() || undefined : undefined, count: showDetail ? count || undefined : undefined, genre };
@@ -112,7 +112,7 @@ export function SharePanel({ avatar, round, share }: { avatar: string; round?: b
   // Public /share link for the current card (uploaded on first share), so link previews show the card image.
   const [shareLink, setShareLink] = useState<{ for: string; url: string }>();
 
-  useEffect(() => { setCaption(promoCaption(ctx, order[step % order.length]!, input)); }, [step, showDetail]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { setCaption(promoCaption(ctx, order[step % order.length]!, { ...input, eagle: !!eagle })); }, [step, showDetail, eagle, order]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => {
     let url = "", live = true;
     drawPromoCard({ ctx, avatar, round: !!round, artist, ...input })

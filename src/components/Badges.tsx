@@ -54,7 +54,7 @@ function TierChip({ badge }: { badge: BadgeDef }) {
  * summary. Badges already waiting when the page opens (earned while away) go straight to the shelf, marked New,
  * so logging in never starts with a string of pop-ups (founder, 2026-10-20).
  */
-export function BadgeWatcher({ userId, artist }: { userId: string; artist?: string | undefined }) {
+export function BadgeWatcher({ userId, artist, eagle }: { userId: string; artist?: string | undefined; eagle?: boolean | undefined }) {
   const { unseen: waiting, isFetched } = useBadgeStates(userId);
   const arrived = useRef(false);
   const [queue, setQueue] = useState<BadgeState[]>([]);
@@ -101,7 +101,7 @@ export function BadgeWatcher({ userId, artist }: { userId: string; artist?: stri
   return <>
     <Dialog open={!!current} onOpenChange={(o) => !o && next()}>
       {current && <UnlockPopup key={`${current.badge.id}:${current.earned?.times}`} state={current} artist={artist} more={queue.length - 1} onNext={next}
-        share={badgePrefs(loadOnboarding(userId)).share} />}
+        share={badgePrefs(loadOnboarding(userId)).share} eagle={!!eagle} />}
     </Dialog>
     <Dialog open={summary.length > 0} onOpenChange={(o) => !o && closeSummary()}>
       <DialogContent className="max-h-[90svh] max-w-2xl overflow-y-auto bg-card text-card-foreground">
@@ -128,7 +128,7 @@ export function BadgeWatcher({ userId, artist }: { userId: string; artist?: stri
  * The unlock pop-up: the big badge pops in, shines, rains and floats, with the message underneath and a Share button
  * that opens the share-card panel. Badges with art choices (Self-Produced) ask for the pick first.
  */
-function UnlockPopup({ state, artist, more, onNext, share }: { state: BadgeState; artist?: string | undefined; more: number; onNext: () => void; share: boolean }) {
+function UnlockPopup({ state, artist, more, onNext, share, eagle }: { state: BadgeState; artist?: string | undefined; more: number; onNext: () => void; share: boolean; eagle: boolean }) {
   const { badge, earned } = state;
   const pickFn = useServerFn(pickBadgeArt);
   const qc = useQueryClient();
@@ -184,7 +184,7 @@ function UnlockPopup({ state, artist, more, onNext, share }: { state: BadgeState
             </div>
             <Link to="/profile" hash="badges" onClick={onNext} className="inline-block pt-1 text-sm text-white/70 underline-offset-4 hover:text-white hover:underline">See all my badges</Link>
           </section>
-          {sharing && <SharePanel avatar={src} share={{ ctx: "profile", artist: artist ?? "" }} />}
+          {sharing && <SharePanel avatar={src} share={{ ctx: "profile", artist: artist ?? "", eagle }} />}
         </>}
       </div>
     </DialogContent>

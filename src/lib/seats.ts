@@ -47,6 +47,13 @@ export async function listSeatState(): Promise<SeatState> {
   return { ready: true, seats: (data ?? []) as unknown as ArtistSeat[] };
 }
 
+/** The artists on this account's seats who accepted: the profiles an owner can switch between to edit their defaults. */
+export function seatArtistsFor(seats: ArtistSeat[], ownerId: string): { userId: string; name: string; tier: Exclude<Tier, "free"> }[] {
+  return seats
+    .filter((s) => s.owner_id === ownerId && !!s.member_user_id && (s.status === "active" || s.status === "canceled"))
+    .map((s) => ({ userId: s.member_user_id!, name: s.artist_name || "Unnamed artist", tier: s.tier }));
+}
+
 /** A seat is usable while the owner keeps paying, and for the rest of the period after they cancel. */
 export function seatIsLive(seat: ArtistSeat, now = new Date()) {
   if (seat.status === "ended") return false;

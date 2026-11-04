@@ -98,6 +98,29 @@ export async function syncFromCloud(userId: string): Promise<Onboarding | null> 
   return row?.onboarding ? withCurrentBadge(row.onboarding) : localO;
 }
 
+/**
+ * A seat artist's saved defaults, read into this browser so an owner can edit them. Nothing is pushed back here: the
+ * artist's account is not ours to overwrite just by opening it.
+ */
+export async function loadSeatArtistDefaults(artistId: string): Promise<{ profile: ArtistProfile | null; onboarding: Onboarding | null }> {
+  const { data } = await supabase.from("profiles").select("artist_defaults, onboarding").eq("id", artistId).maybeSingle();
+  const row = data as { artist_defaults?: ArtistProfile | null; onboarding?: Onboarding | null } | null;
+  if (row?.artist_defaults) localStorage.setItem(key(artistId), JSON.stringify(row.artist_defaults));
+  if (row?.onboarding) localStorage.setItem(onboardKey(artistId), JSON.stringify(row.onboarding));
+  return { profile: row?.artist_defaults ?? null, onboarding: row?.onboarding ?? null };
+}
+
+/**
+ * Saves a seat artist's Embed Defaults and Catalog Profile. The database checks the caller pays for that artist's seat
+ * and writes those two columns only, so an owner can set up an artist without touching their name, plan or role.
+ */
+export async function saveSeatArtistDefaults(artistId: string, profile: ArtistProfile, onboarding: Onboarding): Promise<string | null> {
+  localStorage.setItem(key(artistId), JSON.stringify(profile));
+  localStorage.setItem(onboardKey(artistId), JSON.stringify(onboarding));
+  const { error } = await supabase.rpc("set_seat_artist_defaults" as never, { _member: artistId, _artist_defaults: profile, _onboarding: onboarding } as never);
+  return error ? error.message : null;
+}
+
 const hasName = (rows?: Contributor[]) => (rows ?? []).filter(creditName);
 
 /** Fresh embed form with the saved profile applied (values stay editable). */

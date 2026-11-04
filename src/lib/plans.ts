@@ -19,6 +19,14 @@ export function tierFromPrice(priceId: string | null | undefined): Tier {
   return (priceId && PRICE_TIER[priceId]) || "free";
 }
 
+/** The best tier in the list. An accepted artist seat lifts its artist, and never lowers a plan they already pay for. */
+export function highestTier(...tiers: Tier[]): Tier {
+  return tiers.reduce<Tier>((best, t) => (TIER_RANK[t] > TIER_RANK[best] ? t : best), "free");
+}
+
+/** Most seats one purchase can add at once (founder, 2026-11-04: owners add several artists in one go). */
+export const SEAT_MAX = 10;
+
 export function hasTier(current: Tier, needed: Tier) {
   return TIER_RANK[current] >= TIER_RANK[needed];
 }

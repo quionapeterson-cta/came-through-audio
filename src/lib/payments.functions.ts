@@ -180,18 +180,8 @@ export const createCheckoutSession = createServerFn({ method: "POST" })
     }
 
     try {
-      // A seat is a second subscription on the same customer, so it never goes through "switch plan" — unless they
-      // already pay for a seat at this tier, which would be a duplicate (founder, 2026-11-04).
-      if (plan.mode === "subscription" && data.kind === "seat") {
-        const { data: existing } = await context.supabase.from("artist_seats" as never)
-          .select("id, tier, status")
-          .eq("owner_id" as never, context.userId as never).eq("environment" as never, env as never)
-          .in("status" as never, ["unclaimed", "invited", "active"] as never);
-        const seats = (existing ?? []) as unknown as { tier: string }[];
-        if (seats.some((s) => s.tier === data.tier)) {
-          throw new Error(`You already have a ${data.tier === "plus" ? "Catalog Plus" : data.tier === "collaborate" ? "Catalog & Collaborate" : "Catalog Management"} artist seat. Send it from Profile → Add another artist.`);
-        }
-      }
+      // A seat is a second subscription on the same customer, so it never goes through "switch plan". Buying the same
+      // tier again is allowed: that is how an owner adds a second or third artist (founder, 2026-11-04).
       if (plan.mode === "subscription" && data.kind !== "seat") {
         const { data: subs } = await context.supabase.from("subscriptions")
           .select("stripe_subscription_id, stripe_customer_id, status, current_period_end")
