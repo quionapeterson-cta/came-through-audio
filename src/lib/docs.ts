@@ -11,9 +11,9 @@ export const DOCS: Doc[] = [
   {
     slug: "metadata-embedding",
     group: "Product",
-    title: "Metadata Embedding",
-    description: "Lock your credits, identifiers, lyrics and artwork inside your MP3 so your data travels with your music.",
-    intro: "Embedding writes your song's details directly into the audio file. Wherever the file goes (a music supervisor's inbox, a DJ's crate, a radio submission), your credits go with it.",
+    title: "MP3 Embedding",
+    description: "Lock your credits, identifiers, lyrics and artwork inside your MP3, so your song stays traceable to you wherever it is sent.",
+    intro: "Embedding writes your song's details into the audio file itself, not into a database on the side. Wherever that file goes (a music supervisor's inbox, a DJ's crate, a radio submission, a distributor's upload, a download someone passes along), its credits, identifiers, lyrics and artwork travel inside it. However and wherever you send your music, the song still says who made it and which song it is, so it can be found and credited instead of arriving as an anonymous file.",
     sections: [
       { heading: "What gets embedded", bullets: [
         "Title, artist, featured artists, album, track number (entered as \"1 of 12\" and saved as 1/12), genre, release date and label.",

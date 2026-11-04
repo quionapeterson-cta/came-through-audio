@@ -112,7 +112,13 @@ export const PLAN_TIERS: PlanTier[] = [
   { tier: "management", price: "$89.99", priceId: "catalog_management_yearly", monthly: "Only $7.50 / month" },
 ];
 
-export type Feature = { title: string; tip: string; group: string; from: Tier; soon?: boolean; /** Paperwork and signing, so the plan chart shows the contracts-delivery eagle. */ paperwork?: boolean };
+export type Feature = {
+  title: string; tip: string; group: string; from: Tier; soon?: boolean;
+  /** Paperwork and signing, so the plan chart shows the contracts-delivery eagle. */
+  paperwork?: boolean;
+  /** The eye on the prize marks this row wherever it is included, not only on Catalog Management (founder, 2026-11-04). */
+  prize?: boolean;
+};
 
 /**
  * Every benefit in one list. A plan includes a feature when hasTier(plan, feature.from), the same rule that gates
@@ -121,7 +127,7 @@ export type Feature = { title: string; tip: string; group: string; from: Tier; s
 export const PLAN_FEATURES: Feature[] = [
   { group: "Royalty health", from: "free", title: "Royalty Health Checks", tip: "See if your songs show up in the major public repertoires (PRO, SoundExchange, mechanicals) and what's missing" },
   { group: "Royalty health", from: "free", title: "Sign Split Sheets You're Invited To", tip: "Sign split sheets collaborators send you, free. Creating your own starts with Catalog Plus." },
-  { group: "Catalog & metadata", from: "plus", title: "Metadata Embedding", tip: "Embed complete track details, credits, lyrics, artwork and identifiers directly into your audio files" },
+  { group: "Catalog & metadata", from: "plus", title: "MP3 Embedding", tip: "Embed your credits, identifiers, lyrics and artwork into the MP3 file itself, so the song carries its own details wherever it is sent, streamed, uploaded or downloaded. However your music travels, it still says who made it and which song it is." },
   { group: "Catalog & metadata", from: "plus", title: "Asset Cataloging", tip: "One organized home for every song's credits, identifiers, artwork and lyrics" },
   { group: "Catalog & metadata", from: "plus", title: "Master MP3 Retrieval", tip: "Download your embedded master MP3 from My Catalog anytime, no re-embedding needed" },
   { group: "Catalog & metadata", from: "plus", title: "Album Art Uploads & Retrieval", tip: "Upload cover art with each song and download it again whenever you need it" },
@@ -130,8 +136,8 @@ export const PLAN_FEATURES: Feature[] = [
   { group: "Catalog & metadata", from: "plus", title: "Split Sheet Generator", tip: "Generate split sheets from your catalog songs, sign as the owner and download the PDF. Collecting collaborators' e-signatures starts with Catalog & Collaborate.", paperwork: true },
   { group: "Collaboration & registration", from: "collaborate", title: "Split Sheet E-Signature Request", tip: "Email collaborators a secure link to e-sign your split sheets, with instant free account invitations. Download signed split sheets.", paperwork: true },
   { group: "Collaboration & registration", from: "collaborate", title: "1-Click Agency Exports", tip: "Export your whole catalog, a release or chosen songs into each agency's own template (The MLC, SoundExchange, ASCAP/BMI) and register in minutes. Save hours of retyping. Includes a Neighbouring Rights Pack listing every performer for international airplay.", paperwork: true },
-  { group: "Collaboration & registration", from: "collaborate", title: "Royalty Utility Suite", tip: "Pick a song and the converters turn your catalog splits into the exact numbers ASCAP, BMI and SESAC ask for (each counts shares differently), plus a projected earnings calculator by platform and country." },
-  { group: "Catalog & metadata", from: "management", title: "WAV Embedding", tip: "Embed your metadata into WAV masters (same credits, lyrics, artwork and identifiers as MP3) and keep them in My Catalog" },
+  { group: "Collaboration & registration", from: "collaborate", title: "Royalty Utility Suite", tip: "Pick a song and the converters turn your catalog splits into the exact numbers ASCAP, BMI and SESAC ask for (each counts shares differently), plus a projected earnings calculator by platform and country.", prize: true },
+  { group: "Catalog & metadata", from: "management", title: "WAV Embedding", tip: "Embed the same credits, identifiers, lyrics and artwork into WAV masters and keep them in My Catalog. Your highest-quality files stay just as traceable as the MP3s, wherever they are shared or sent." },
   { group: "Business & education", from: "management", title: "Custom Music Industry Contracts", tip: "Fill in a contract from a blueprint, adjust the terms, and keep it with your catalog.", paperwork: true },
   { group: "Business & education", from: "management", title: "Music Industry Blueprints", tip: "75+ ready-to-sign contracts with plain-language guides, plus step-by-step business blueprints and home recording cheat sheets", paperwork: true },
   { group: "Business & education", from: "management", title: "Contract Signature Requests & Signing", tip: "Send contracts to every party to e-sign; each signature is time-stamped and hashed", paperwork: true },

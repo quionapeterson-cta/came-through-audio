@@ -20,7 +20,7 @@ export const Route = createFileRoute("/")({
       { title: "Came Through Audio — Embed Metadata & Organize Your Music Business" },
       { name: "description", content: "Organize your catalog, embed permanent metadata in your audio and check your royalty health from one secure dashboard." },
       { property: "og:title", content: "Came Through Audio — Organize Your Music Business Like a Pro" },
-      { property: "og:description", content: "Catalog, metadata embedding and royalty health checks for independent musicians." },
+      { property: "og:description", content: "Catalog, MP3 embedding and royalty health checks for independent musicians." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
     ],
@@ -51,7 +51,7 @@ const steps = [
 
 type FooterLink = { label: string; to?: "/terms-of-service" | "/refund-policy" | "/privacy-policy" | "/contact" | "/faq"; search?: { type: "support" | "contact" }; doc?: string };
 const footerCols: { title: string; links: FooterLink[] }[] = [
-  { title: "Product", links: [{ label: "Metadata Embedding", doc: "metadata-embedding" }, { label: "Centralized Master Catalog", doc: "master-catalog" }, { label: "Royalty Health Hub", doc: "royalty-health-suite" }, { label: "System Security Metrics", doc: "security" }] },
+  { title: "Product", links: [{ label: "MP3 Embedding", doc: "metadata-embedding" }, { label: "Centralized Master Catalog", doc: "master-catalog" }, { label: "Royalty Health Hub", doc: "royalty-health-suite" }, { label: "System Security Metrics", doc: "security" }] },
   { title: "Learn", links: [{ label: "FAQ", to: "/faq" }, { label: "Help Center", doc: "help-center" }, { label: "Industry Insights", doc: "industry-insights" }, { label: "The Studio-to-Catalog Guide", doc: "studio-to-catalog-guide" }, { label: "Add Us as Your Representative", doc: "add-representative" }] },
   { title: "Legal", links: [{ label: "Terms of Service", to: "/terms-of-service" }, { label: "Refund Policy", to: "/refund-policy" }, { label: "Privacy Policy", to: "/privacy-policy" }] },
   { title: "Access", links: [{ label: "Support Tickets", to: "/contact", search: { type: "support" } }, { label: "Contact Us", to: "/contact", search: { type: "contact" } }] },

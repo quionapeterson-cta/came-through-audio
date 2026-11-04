@@ -99,7 +99,8 @@ rules keep it consistent as features are added.
   or badge on top of it, and never a check beside it in the same cell.
 - Contracts Delivery (`EAGLE_ART.contractsDelivery`) marks the paperwork and signing rows, and 1-Click Agency Exports,
   wherever those rows are included.
-- Eye on the Prize (`EAGLE_ART.eyeOnThePrize`) marks only the rows Catalog Management alone has. A row that starts on a
-  lower tier keeps the check it shows there, on every tier above it.
+- Eye on the Prize (`EAGLE_ART.eyeOnThePrize`) marks the rows Catalog Management alone has, plus the rows marked
+  `prize: true`, which carry it on every tier that includes them (Royalty Utility Suite on Catalog & Collaborate). Any
+  other row that starts on a lower tier keeps the check it shows there, on every tier above it.
 - New rows pick their mark by that rule inside `Mark` in `src/components/PlanComparison.tsx`. Never add a per-feature
   exception to it without the founder asking for one.

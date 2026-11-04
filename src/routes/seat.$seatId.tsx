@@ -77,7 +77,7 @@ function SeatPage() {
               </h1>
               <p className="mt-3 text-sm text-ink-muted">
                 Accept this seat and your own catalog opens at <b className="text-ink-foreground">{TIER_LABEL[invite.tier]}</b>:
-                metadata embedding, your songs, splits and the tools in that plan. The owner keeps paying for it, and you can
+                MP3 embedding, your songs, splits and the tools in that plan. The owner keeps paying for it, and you can
                 take your catalog with you whenever you go independent.
               </p>
               <p className="mt-3 text-sm">

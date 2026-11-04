@@ -183,9 +183,11 @@ function Mark({ feature, tier, t }: { feature: Feature; tier: Tier; t: Palette }
   // height), so a square box with object-contain left the art about 20px tall. `object-cover` in a wide box crops the
   // transparent margins instead, which makes the eagle fill the cell at full size.
   // Eagle art is the mark wherever it appears, and nothing sits on top of it. Contracts delivery marks the paperwork
-  // and signing rows (and 1-Click Agency Exports); the eye on the prize marks only what Catalog Management alone has.
-  // A row that starts on a lower tier keeps the check it shows there (founder, 2026-11-04).
-  const eagle = feature.paperwork ? EAGLE_ART.contractsDelivery : tier === "management" && feature.from === "management" ? EAGLE_ART.eyeOnThePrize : null;
+  // and signing rows (and 1-Click Agency Exports). The eye on the prize marks what Catalog Management alone has, plus
+  // the rows marked `prize` wherever they are included (Royalty Utility Suite on Catalog & Collaborate).
+  // Every other row carried over from a lower tier keeps the check it shows there (founder, 2026-11-04).
+  const prize = feature.prize || (tier === "management" && feature.from === "management");
+  const eagle = feature.paperwork ? EAGLE_ART.contractsDelivery : prize ? EAGLE_ART.eyeOnThePrize : null;
   if (eagle) {
     return (
       <span className="flex h-11 w-20 items-center justify-center md:h-16 md:w-32">
