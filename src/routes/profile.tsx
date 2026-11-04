@@ -3,6 +3,7 @@ import { useEffect, useState, type FormEvent, type ReactNode } from "react";
 import { ArrowLeft, ArrowUpCircle, Check, LayoutGrid, LogOut, Pencil, Rows3 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { artUrl } from "@/lib/art-url";
 import { useAuth } from "@/hooks/useAuth";
 import { useBilling } from "@/hooks/useBilling";
 import { useArtistName } from "@/hooks/useArtistName";
@@ -186,7 +187,7 @@ function ProfilePage() {
 
       <BadgeDetail state={badge} list={badgeList} artist={names.artist} onClose={() => setBadge(undefined)} onMove={setBadge}
         onUseAsAvatar={(src) => { if (!ob) return; const next = { ...ob, avatar: src }; saveOnboarding(user.id, next); setOb(next); toast.success("Your profile picture is updated."); }}
-        onShare={badgePrefs(ob).share ? (s) => { setBadge(undefined); setViewing({ src: s.badge.src, name: s.badge.title, share: { ctx: "profile", artist: names.artist, genre: profile?.primaryGenre, eagle: tier === "management" } }); } : undefined} />
+        onShare={badgePrefs(ob).share ? (s) => { setBadge(undefined); setViewing({ src: artUrl(s.badge.src), name: s.badge.title, share: { ctx: "profile", artist: names.artist, genre: profile?.primaryGenre, eagle: tier === "management" } }); } : undefined} />
       <BadgeSettings userId={user.id} open={settingsOpen} onOpenChange={setSettingsOpen} onSaved={setOb} />
       <BadgeWatcher userId={user.id} artist={names.artist} eagle={tier === "management"} />
       <BadgeViewer src={viewing?.src} name={viewing?.name} round={viewing?.round} share={viewing?.share} about={viewing?.about} onClose={() => setViewing(undefined)}

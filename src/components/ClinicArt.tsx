@@ -1,8 +1,9 @@
+import { artUrl } from "@/lib/art-url";
 import type { OrganId } from "@/lib/royalty-checkup";
 
 /**
  * The clinic's visual aids (PLAN-royalty-health-hub-v2 §1–§2): real SVG files under public/art/clinic, referenced by
- * literal path so they cache like any other asset and can be read straight from the repo. They're drawings of the
+ * literal path and pointed at the bucket by `artUrl()` (src/lib/art-url.ts). They're drawings of the
  * doctor's-office furniture the flow imitates: the front desk, the intake clipboard, the examination desk, the pamphlet
  * rack. Purely decorative, so they carry an empty alt and sit beside the words that explain them.
  */
@@ -26,7 +27,7 @@ export type ClinicArtName = keyof typeof ART;
 export function ClinicArt({ name, className = "" }: { name: ClinicArtName; className?: string }) {
   return (
     <img
-      src={ART[name]}
+      src={artUrl(ART[name])}
       alt=""
       aria-hidden="true"
       loading="lazy"

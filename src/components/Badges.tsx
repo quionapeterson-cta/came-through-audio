@@ -12,6 +12,7 @@ import { badgePrefs, loadOnboarding, saveOnboarding, type Onboarding } from "@/l
 import { useServerFn } from "@tanstack/react-start";
 import { useQueryClient } from "@tanstack/react-query";
 import { BADGES, COLLECTIONS, TIER_LABEL, earningPopup, isBigTier, nextGoal, rotationArt, withArtist, type BadgeDef, type BadgePrefs, type CollectionId } from "@/lib/badges";
+import { artUrl } from "@/lib/art-url";
 import { markBadgesSeen } from "@/lib/badge-events";
 import { pickBadgeArt, resetMyBadges, type EarnedBadge } from "@/lib/badges.functions";
 import { confirmAction } from "@/components/ConfirmHost";
@@ -32,7 +33,7 @@ export function useBadgeStates(userId: string | undefined) {
 
 /** The art for one earning: the user's pick for badges with choices, otherwise the badge's own art. */
 /** A badge's art: the user's pick where it offers choices, else its rotation art for how many times it's been earned. */
-const artFor = (badge: BadgeDef, pick?: string | null, times = 1) => (pick && badge.choices?.includes(pick) ? pick : rotationArt(badge, times));
+const artFor = (badge: BadgeDef, pick?: string | null, times = 1) => artUrl(pick && badge.choices?.includes(pick) ? pick : rotationArt(badge, times));
 /** The art the shelf shows: the latest pick, or the badge's own art. */
 /** Earned (or earned again) in the last 7 days. */
 const isNew = (s: BadgeState) => {
@@ -111,7 +112,7 @@ export function BadgeWatcher({ userId, artist, eagle }: { userId: string; artist
         </DialogHeader>
         <ul className="grid grid-cols-3 gap-4 sm:grid-cols-4">
           {summary.map((s) => <li key={s.badge.id} className="flex flex-col items-center gap-2 text-center">
-            <img src={s.badge.src} alt="" className="aspect-square w-full object-contain drop-shadow-lg" style={{ animation: "badge-pop 0.6s ease-out" }} />
+            <img src={artUrl(s.badge.src)} alt="" className="aspect-square w-full object-contain drop-shadow-lg" style={{ animation: "badge-pop 0.6s ease-out" }} />
             <span className="text-xs font-semibold">{s.badge.title}</span>
           </li>)}
         </ul>
@@ -163,7 +164,7 @@ function UnlockPopup({ state, artist, more, onNext, share, eagle }: { state: Bad
             {badge.choices!.map((c) => <li key={c}>
               <button type="button" disabled={saving} onClick={() => void choose(c)} aria-label={`Pick ${c.split("/").pop()?.replace(/[_-]/g, " ").replace(/\.\w+$/, "")}`}
                 className="w-full rounded-2xl border border-white/20 p-2 transition hover:border-[#4d8cff] hover:bg-white/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50">
-                <img src={c} alt="" className="aspect-square w-full object-contain drop-shadow-xl" style={{ animation: "badge-pop 0.6s ease-out" }} />
+                <img src={artUrl(c)} alt="" className="aspect-square w-full object-contain drop-shadow-xl" style={{ animation: "badge-pop 0.6s ease-out" }} />
               </button>
             </li>)}
           </ul>

@@ -1,5 +1,6 @@
 import type { jsPDF as JsPDF } from "jspdf";
 import { ALL_BADGES, COLLECTIONS, TIER_LABEL, isBigTier, type BadgeDef } from "@/lib/badges";
+import { artUrl } from "@/lib/art-url";
 import { brandFooter, brandHeader, COBALT, ensureSpace, font, INK, label, MARGIN, MUTED, newBrandedPdf, PANEL, RULE } from "@/lib/brand-pdf";
 
 /** A badge picture ready for the PDF (JPEG on white), or null when it can't be drawn. */
@@ -25,7 +26,7 @@ export const browserArt: ArtLoader = (src) => new Promise((resolve) => {
     resolve({ data: canvas.toDataURL("image/jpeg", 0.85), format: "JPEG" });
   };
   img.onerror = () => resolve(null);
-  img.src = src;
+  img.src = artUrl(src);
 });
 
 function row(pdf: JsPDF, y: number, step: number, b: BadgeDef, art: BadgeArt) {

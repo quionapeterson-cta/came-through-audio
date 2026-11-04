@@ -3,29 +3,34 @@
  * Badges Work", founder art 2026-11-03). Three stages, one per stretch of time on the plan, plus a grayed-out locked
  * state for everyone who isn't on Catalog Management yet, so the gated features advertise what they'd unlock.
  *
- * Art lives in the repo as real files, referenced by literal path (AGENTS.md), never a CDN pointer.
+ * Paths stay literal here and become a URL in one place: `artUrl()` in src/lib/art-url.ts, which points them at the
+ * R2 bucket when VITE_ART_BASE is set and at public/ otherwise (AGENTS.md).
  */
+
+import { artUrl } from "@/lib/art-url";
 
 /** The folder the founder added; the spaces are part of the name, and the browser encodes them. */
 const ART = "/icons/playful/cta-catalog management - eagle- status badges";
+/** Each file as the browser should request it (bucket or public/, never a hard-coded address). */
+const art = (file: string) => artUrl(`${ART}/${file}`);
 
 export const EAGLE_ART = {
   /** The full badge disc: the status shown once you're on Catalog Management. */
-  disc: `${ART}/cta_eagle_soar_badge.png`,
+  disc: art("cta_eagle_soar_badge.png"),
   /** The transparent eagle alone, used as a small dot next to a name. */
-  soar: `${ART}/cta_eagle_soar_badge.png`,
-  keepSoaring: `${ART}/cta_eagle_keep_soaring.png`,
-  highest: `${ART}/cta_eagle_I_soar_the_higest.png`,
+  soar: art("cta_eagle_soar_badge.png"),
+  keepSoaring: art("cta_eagle_keep_soaring.png"),
+  highest: art("cta_eagle_I_soar_the_higest.png"),
   /** Accepted the upgrade offer: the exclusive badge. */
-  upgrade: `${ART}/cta_eagle_upgrade_offer_acceptance_exclusive_badge.png`,
+  upgrade: art("cta_eagle_upgrade_offer_acceptance_exclusive_badge.png"),
   /** The close-up eagle: the main picture above the $89.99 plan's name (founder art, 2026-11-03). */
-  closeUp: `${ART}/cta_eagle_close_up.png`,
+  closeUp: art("cta_eagle_close_up.png"),
   /** Eye on the prize: every Catalog Management row that isn't paperwork. */
-  eyeOnThePrize: `${ART}/cta_eagle_eye_on_the-prize.png`,
+  eyeOnThePrize: art("cta_eagle_eye_on_the-prize.png"),
   /** Contracts delivery: the paperwork and signing rows. */
-  contractsDelivery: `${ART}/cta_eagle_contracts_delivery.png`,
+  contractsDelivery: art("cta_eagle_contracts_delivery.png"),
   /** Soft glow behind the disc on hover. */
-  glow: `${ART}/cta_hover_glow.png`,
+  glow: art("cta_hover_glow.png"),
 } as const;
 
 export type EagleStageKey = "soar" | "keep_soaring" | "highest";

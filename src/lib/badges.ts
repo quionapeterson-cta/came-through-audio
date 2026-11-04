@@ -4,6 +4,8 @@
  * Voice (BRANDING.md §4): lead with "Came Through"; crowns only now and then; no gendered words or fixed names.
  */
 
+import { artUrl } from "@/lib/art-url";
+
 export type Tier = "standard" | "instant" | "mega" | "ultimate";
 export const TIER_LABEL: Record<Tier, string> = { standard: "", instant: "Instant Win", mega: "MEGA", ultimate: "Ultimate" };
 /** MEGA and Ultimate get the full celebration even when a user picks "Big moments only". */
@@ -434,9 +436,9 @@ export const ordinal = (n: number) => { const t = n % 100; const e = t >= 11 && 
 
 /** The art a task badge shows for its Nth earning: its own art for 1–10, then each rotation badge's art for 10 more. */
 export function rotationArt(badge: BadgeDef, times: number): string {
-  if (!badge.rotation?.length || times <= 10) return badge.src;
+  if (!badge.rotation?.length || times <= 10) return artUrl(badge.src);
   const id = badge.rotation[(Math.floor((times - 1) / 10) - 1) % badge.rotation.length]!;
-  return ROTATION_ART[id] ?? badgeById(id)?.src ?? badge.src;
+  return artUrl(ROTATION_ART[id] ?? badgeById(id)?.src ?? badge.src);
 }
 /** Rotation art that isn't another badge's (drawn for the every-time set). */
 const ROTATION_ART: Record<string, string> = {
