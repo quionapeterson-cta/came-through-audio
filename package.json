@@ -5,9 +5,9 @@
   "type": "module",
   "scripts": {
     "dev": "vite dev",
-    "build": "vite build",
+    "build": "vite build && node scripts/prune-served-art.mjs",
     "build:dev": "vite build --mode development",
-    "build:vercel": "VERCEL=1 vite build",
+    "build:vercel": "VERCEL=1 vite build && node scripts/prune-served-art.mjs",
     "deploy:cloudflare": "npx wrangler deploy",
     "preview": "vite preview",
     "lint": "eslint .",
