@@ -36,7 +36,7 @@ Unlimited Royalty Health Checks    ✓   ┃      ✓        ┃       ✓      
 Unlimited Split Sheet Signatures   ✓   ┃      ✓        ┃       ✓         │       ✓        │
 CATALOG & METADATA                     ┃               ┃                 │                │
 Unlimited Core Metadata Embedding  –   ┃      ✓        ┃       ✓         │       ✓        │
-Unlimited Asset Cataloging & Storage – ┃      ✓        ┃       ✓         │       ✓        │
+Unlimited Master Music Cataloging & Storage – ┃      ✓        ┃       ✓         │       ✓        │
 COLLABORATION & REGISTRATION           ┃               ┃                 │                │
 Unlimited Collaborative Split Sheets – ┃      –        ┃       ✓         │       ✓        │
 Unlimited Collaborator E-Signatures  – ┃      –        ┃       ✓         │       ✓        │

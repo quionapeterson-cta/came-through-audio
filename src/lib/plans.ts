@@ -157,7 +157,7 @@ export const PLAN_FEATURES: Feature[] = [
   { group: "Royalty health", from: "free", title: "Royalty Health Checks", tip: "See if your songs show up in the major public repertoires (PRO, SoundExchange, mechanicals) and what's missing" },
   { group: "Royalty health", from: "free", title: "Sign Split Sheets You're Invited To", tip: "Sign split sheets collaborators send you, free. Creating your own starts with Catalog Plus." },
   { group: "Catalog & metadata", from: "plus", title: "MP3 Embedding", tip: "Embed your credits, identifiers, lyrics and artwork into the MP3 file itself, so the song carries its own details wherever it is sent, streamed, uploaded or downloaded. However your music travels, it still says who made it and which song it is." },
-  { group: "Catalog & metadata", from: "plus", title: "Asset Cataloging", tip: "One organized home for every song's credits, identifiers, artwork and lyrics" },
+  { group: "Catalog & metadata", from: "plus", title: "Master Music Cataloging", tip: "One organized home for every song's credits, identifiers, artwork and lyrics" },
   { group: "Catalog & metadata", from: "plus", title: "Master MP3 Retrieval", tip: "Download your embedded master MP3 from My Catalog anytime, no re-embedding needed" },
   { group: "Catalog & metadata", from: "plus", title: "Album Art Uploads & Retrieval", tip: "Upload cover art with each song and download it again whenever you need it" },
   { group: "Catalog & metadata", from: "plus", title: "PDF Catalog Downloads", tip: "Download your whole catalog as a branded PDF: titles, artists, identifiers and credits" },
