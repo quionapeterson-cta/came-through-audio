@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Check, ChevronDown, Clock3, Lock, Pause, Pencil, Play, Plus, RotateCcw, Send, ShieldQuestion, Trash2 } from "lucide-react";
+import { Check, ChevronDown, Clock3, Lock, LockOpen, Pause, Pencil, Play, Plus, RotateCcw, Send, ShieldQuestion, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Confetti } from "@/components/Confetti";
@@ -13,7 +13,7 @@ import { listRegistrationQueue } from "@/lib/registration.functions";
 import { listTickets } from "@/lib/support.functions";
 import type { StaffAccess } from "@/lib/departments";
 import { addStep, decideStepRequest, deleteStep, editStep, listMySteps, listStepRequests, recordWin, requestStepChange, setStepLock, toggleStep, type TaskStep } from "@/lib/queue.functions";
-import { canCheckStep, canEditStep, canLockSteps, completedToday, queueColumns, queueProgress, LOCK_COPY, LOCK_LABEL, type StepLock } from "@/lib/queue-board";
+import { canCheckStep, canEditStep, canLockSteps, completedToday, nextLock, queueColumns, queueProgress, LOCK_COPY, LOCK_LABEL } from "@/lib/queue-board";
 import { cn } from "@/lib/utils";
 
 type Kind = "registration" | "ticket" | "task";
@@ -155,6 +155,21 @@ export function MyQueue({ me, access, onOpen }: { me: string; access: StaffAcces
               onClick={() => setEditing({ id: s.id, title: s.title, request: !canEditStep({ ownerId: me, me, lock: s.lock }) })}>
               {mine ? <Pencil className="h-3 w-3" /> : <Send className="h-3 w-3" />}
             </Button>
+            {canLock && (
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-6 w-6"
+                aria-label={`Lock this step: ${LOCK_LABEL[s.lock]}`}
+                title={LOCK_COPY[s.lock]}
+                onClick={() => {
+                  const next = nextLock(s.lock);
+                  void stepAction(() => lockFn({ data: { id: s.id, lock: next } }), `Step set to ${LOCK_LABEL[next].toLowerCase()}.`);
+                }}
+              >
+                {s.lock === "open" ? <LockOpen className="h-3 w-3 opacity-40" /> : s.lock === "locked" ? <Lock className="h-3 w-3 text-primary" /> : <ShieldQuestion className="h-3 w-3 text-primary" />}
+              </Button>
+            )}
             {mine && (
               <Button variant="ghost" size="icon" className="h-6 w-6" aria-label="Remove step" onClick={() => void stepAction(() => drop({ data: { id: s.id } }), "Step removed.")}>
                 <Trash2 className="h-3 w-3" />
@@ -225,27 +240,7 @@ export function MyQueue({ me, access, onOpen }: { me: string; access: StaffAcces
               }}><Plus className="h-3 w-3" /></Button>
             </div>
             {canLock && mine.length > 0 && (
-              <label className="mt-1 flex items-center gap-2 text-[11px] text-muted-foreground">
-                <Lock className="h-3 w-3" />
-                <span className="sr-only">Lock the newest step</span>
-                <select
-                  aria-label="Lock the newest step"
-                  defaultValue=""
-                  onChange={(e) => {
-                    const mode = e.target.value as StepLock;
-                    const newest = mine[mine.length - 1]!;
-                    if (!mode) return;
-                    void stepAction(() => lockFn({ data: { id: newest.id, lock: mode } }), mode === "open" ? "Step unlocked." : `Step set to ${LOCK_LABEL[mode].toLowerCase()}.`);
-                    e.currentTarget.value = "";
-                  }}
-                  className="h-6 rounded border border-input bg-background px-1"
-                >
-                  <option value="">Lead: lock the newest step…</option>
-                  <option value="open">{LOCK_LABEL.open}</option>
-                  <option value="locked">{LOCK_LABEL.locked}</option>
-                  <option value="approval">{LOCK_LABEL.approval}</option>
-                </select>
-              </label>
+              <p className="pt-1 text-[11px] text-muted-foreground">Leads: hover a step and use its lock to set it open, locked or needing approval.</p>
             )}
           </div>
         )}

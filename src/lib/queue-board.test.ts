@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { canCheckStep, canEditStep, canLockSteps, completedToday, queueColumns, queueProgress, LOCK_LABEL } from "./queue-board";
+import { canCheckStep, canEditStep, canLockSteps, completedToday, nextLock, queueColumns, queueProgress, LOCK_LABEL } from "./queue-board";
 
 const items = [{ ref: "task:1" }, { ref: "task:2" }, { ref: "ticket:3" }];
 
@@ -60,6 +60,12 @@ describe("lock rules", () => {
 
   it("labels every lock mode", () => {
     expect(Object.keys(LOCK_LABEL)).toEqual(["open", "locked", "approval"]);
+  });
+
+  it("cycles a step through open, locked, approval and back", () => {
+    expect(nextLock("open")).toBe("locked");
+    expect(nextLock("locked")).toBe("approval");
+    expect(nextLock("approval")).toBe("open");
   });
 });
 

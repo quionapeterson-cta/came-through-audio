@@ -28,6 +28,9 @@ export function canLockSteps(role: string): boolean {
   return role === "super_admin" || role === "department_lead";
 }
 
+/** The lock button on a step cycles open → locked → needs approval → open. */
+export const nextLock = (lock: StepLock): StepLock => (lock === "open" ? "locked" : lock === "locked" ? "approval" : "open");
+
 /** A step's wording is the owner's to change while it is open; a locked or approval step sends a request instead. */
 export function canEditStep(o: { ownerId: string; me: string; lock: StepLock }): boolean {
   return o.ownerId === o.me && o.lock === "open";
