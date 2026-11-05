@@ -132,3 +132,15 @@ rules keep it consistent as features are added.
   360 DPI), so it stays sharp when printed. Keep that ratio when changing the signature pad.
 - Downloads keep the `.pdf` name the member expects (`signedFileName`), and a document with no changes comes back byte
   for byte, so an untouched upload is never recompressed.
+
+## Deploy Size & Old Deployments (always follow)
+
+- A build must not ship badge art. `scripts/prune-served-art.mjs` runs from `npm run build` and drops `icons/` from
+  `.output/public` (plain Nitro build) and `.vercel/output/static` (the path Vercel actually serves) whenever
+  `VITE_ART_BASE` is set. A prune that covers only `.output` silently does nothing on Vercel: the build-log line
+  starting `[art]` is the only proof it ran, so check it after changing the build.
+- Old deployments are the other half of the storage bill: one pre-R2 build was ~224 MB, and 123 of them held ~27 GB
+  against a 10 GB allowance. `scripts/delete-vercel-deployments.mjs` clears them. It reads the token from
+  `VERCEL_TOKEN` only (hand-pasted into the ignored `.vercel-token`, never committed), always keeps the promoted
+  production deployment plus the newest 10, and dry-runs unless `--delete` is passed. The Vercel connection available
+  to the agent cannot delete deployments, so this always needs a founder-created token.
