@@ -21,6 +21,7 @@ import { ASSIGNABLE_DEPARTMENTS, DEPARTMENTS, DEPARTMENT_LABEL, ROLE_LABEL, view
 import { SupportTicketsPanel } from "@/components/SupportTicketsPanel";
 import { BadgeSwitchboard } from "@/components/BadgeSwitchboard";
 import { BadgeProtocolPanel } from "@/components/BadgeProtocolPanel";
+import { StaffSubmissionsPanel } from "@/components/StaffSubmissionsPanel";
 import { PlansPanel } from "@/components/PlansPanel";
 import { TestimonialFilterPanel } from "@/components/TestimonialFilterPanel";
 import { TestimonialsEditor } from "@/components/TestimonialsEditor";
@@ -189,6 +190,7 @@ function AdminPage() {
           {show("homepage") && <TabsContent value="homepage"><TestimonialsEditor /><TestimonialFilterPanel /><SocialPanel /></TabsContent>}
           {show("tasks") && <TabsContent value="tasks"><TaskBankPanel departments={access.allTeams && access.role !== "super_admin" ? [...ASSIGNABLE_DEPARTMENTS] : viewDepartments(access, view)} editable={viewDepartments(access, view)} /></TabsContent>}
           {show("company") && <TabsContent value="company"><Contracts userId={user.id} unlocked company onUpgrade={() => {}} /></TabsContent>}
+          {show("submissions") && <TabsContent value="submissions"><StaffSubmissionsPanel isSuper={isSuper} /></TabsContent>}
           {show("plans") && <TabsContent value="plans"><PlansPanel /></TabsContent>}
           {show("calendar") && <TabsContent value="calendar"><AdminCalendar me={user.id} access={access} /></TabsContent>}
           {show("recognition") && <TabsContent value="recognition"><MyRecognition /></TabsContent>}

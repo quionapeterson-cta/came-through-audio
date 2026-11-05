@@ -35,6 +35,20 @@
   rejected badge is never a public picture. Art in the bucket is not a live badge: the badge still needs its `BadgeDef`,
   a real `metric` in badge-rules.ts, and one earned run before it ships (see the engineering steps in the panel).
 
+## Staff Idea Box (always follow)
+
+- Admin → Idea Box (`StaffSubmissionsPanel` + `staff-submissions.functions.ts`) is where any staff member sends an idea,
+  paperwork, a video, music, a photo or a project to a super admin (founder, 2026-11-05). Every staff member gets the
+  tab because `visibleTabs` appends it to whatever departments they hold; don't gate it to a department.
+- Files never travel through a server function's payload: the server issues a signed upload URL for the submitter's own
+  folder in the private `staff-submissions` bucket, and the browser uploads straight to it. Keep the path check in
+  `submitStaffIdea` (`startsWith(userId)`) — it is what stops a row pointing at someone else's file.
+- Limits live in `src/lib/staff-submissions.ts` and are enforced in the database too: 25 MB for ideas, photos and other,
+  50 MB for paperwork, video, music and projects (Supabase's own project limit). Bigger files go as a link. A new kind
+  needs its label, hint, limit, accepted types and an entry in the table's `kind` check constraint.
+- Only a super admin reads other people's submissions or downloads a file; the submitter sees their own rows and the
+  note left on them. Never make the bucket public.
+
 ## Writer Credits & Registration Rules (always follow)
 
 ### Core principle
