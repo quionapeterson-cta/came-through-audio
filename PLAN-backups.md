@@ -40,6 +40,11 @@ Everything above, plus: CRON_SECRET, SESSION_SECRET, SITE_PASSWORD, RESEND_API_K
 secrets, CLOUDFLARE_ACCOUNT_ID and CLOUDFLARE_AI_TOKEN, your Supabase and Cloudflare logins, and the Lovable login.
 With those and this repo, the whole site can be rebuilt.
 
+A spare `CRON_SECRET` also sits in Supabase Vault under the name `cron_secret`, because Lovable's Secrets are write-only and
+cron-job.org is the only other place the value is visible. Read it in the SQL Editor with
+`select decrypted_secret from vault.decrypted_secrets where name = 'cron_secret';` — Vault is admin-only and the site
+itself never reads it, so it is a backup, not the live value.
+
 ## Restore (the test before launch, or a real emergency)
 Do the test with Claude's help on a new, empty Supabase project, never the live one.
 1. Download the newest `db/db-YYYY-MM-DD.tgz.gpg` from the R2 bucket.

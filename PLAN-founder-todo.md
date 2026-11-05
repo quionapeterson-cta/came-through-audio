@@ -69,9 +69,11 @@ Create each price in the **sandbox first**, test it, then in **live**. Until the
 
 ## 4. Secrets and cron jobs
 **Find your CRON_SECRET**
-- [ ] Easiest: cron-job.org → open an existing job (catalog-lapses) → Advanced → Headers. The value after `Bearer ` is your CRON_SECRET.
-- [ ] Or Lovable → Cloud → Secrets → `CRON_SECRET`, if it lets you view it.
-- [ ] Lost in both places? Make a new long random value, save it in Lovable as `CRON_SECRET`, then update the header on all 4 jobs. Tell me and I'll walk you through it.
+- [ ] There is now a spare copy in the database itself: Supabase → SQL Editor → `select decrypted_secret from vault.decrypted_secrets where name = 'cron_secret';` (created 2026-11-05 under the Vault name `cron_secret`, readable only by you). Save it in your password manager.
+- [ ] **The site does not read Vault.** The four routes compare the header against `CRON_SECRET` in Lovable → Cloud → Secrets, which is write-only, so the copy there is the one that counts.
+- [ ] If all four jobs already answer 200, there is nothing to do — leave both copies alone.
+- [ ] To switch to the Vault copy instead: paste it into Lovable's `CRON_SECRET` and change the `Authorization` header on **all four** jobs in the same sitting. Doing it piecemeal makes the ones you missed answer 401.
+- [ ] After the Cloudflare move, Cron Triggers replace this entirely and the secret stops being needed.
 
 **The four jobs on cron-job.org** (all POST, all with the same `Authorization` = `Bearer ` + your CRON_SECRET; the untouched three keep the schedule they already have)
 
