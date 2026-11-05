@@ -55,9 +55,12 @@ function PlansPage() {
   const startCheckout = async (priceId: string) => {
     const { data } = await supabase.auth.getUser();
     if (data.user && !data.user.email_confirmed_at) { rememberPlanIntent(priceId); setConfirmFor(priceId); return; }
-    try { await openCheckout({ kind: "plan", priceId }); }
+    try { await openCheckout({ kind: "plan", priceId }); takePlanIntent(); }
     catch (e) {
       if (isEmailConfirmError(e)) { rememberPlanIntent(priceId); setConfirmFor(priceId); return; }
+      // Whatever went wrong, the pick stays in the browser: the workspace and the plan cards both resume it, instead of
+      // the member quietly landing in a free workspace with the purchase forgotten (founder, 2026-11-05).
+      rememberPlanIntent(priceId);
       toast.error(e instanceof Error ? e.message : "Checkout could not open.");
     }
   };
@@ -66,7 +69,9 @@ function PlansPage() {
     await startCheckout(priceId);
   };
   const afterSignup = () => {
-    const priceId = takePlanIntent() ?? signupFor;
+    // Peek, don't take: the pick is only cleared once Stripe actually opens (startCheckout), so a checkout that can't
+    // open yet is still waiting when they come back from confirming their email or reopening the workspace.
+    const priceId = peekPlanIntent() ?? signupFor;
     setSignupFor(null);
     if (priceId) void startCheckout(priceId);
   };

@@ -165,9 +165,10 @@ function Workspace() {
     toast.info(`Opening checkout for ${TIER_LABEL[PRICE_TIER[priceId]!]}…`);
     openCheckout({ kind: "plan", priceId })
       .catch((e) => {
-        // Turned away until the email is confirmed: keep the pick so checkout resumes the moment they confirm.
-        if (isEmailConfirmError(e)) rememberPlanIntent(priceId);
-        toast.error(e instanceof Error ? e.message : "Checkout could not open. Use View Plans to try again.");
+        // Keep the pick whatever went wrong, not only for an unconfirmed email: the next visit and the upgrade button
+        // then resume the purchase instead of leaving them in a free workspace with it forgotten (founder, 2026-11-05).
+        rememberPlanIntent(priceId);
+        toast.error(isEmailConfirmError(e) ? "Confirm your email, then checkout opens." : e instanceof Error ? e.message : "Checkout could not open. Use View Plans to try again.");
       });
   }, [user, billingLoaded, realTier]);
 
