@@ -4,6 +4,9 @@
 // bucket for badges whenever VITE_ART_BASE is set (see src/lib/art-url.ts). Keeping it
 // out of the artifact is what keeps deployments small; the folder itself stays in the
 // repo, since a build without VITE_ART_BASE still serves it as the local fallback.
+//
+// Nitro writes public assets to .output/public for a plain build and to
+// .vercel/output/static for a Vercel build, so both are pruned.
 import { existsSync, rmSync } from "node:fs";
 import { join } from "node:path";
 
@@ -14,17 +17,19 @@ if (!base) {
   process.exit(0);
 }
 
+const publicDirs = [join(".output", "public"), join(".vercel", "output", "static"), join(".vercel", "output", "public")];
 const dropped = [];
-for (const dir of ["icons"]) {
-  const path = join(".output", "public", dir);
+
+for (const publicDir of publicDirs) {
+  const path = join(publicDir, "icons");
   if (existsSync(path)) {
     rmSync(path, { recursive: true, force: true });
-    dropped.push(dir);
+    dropped.push(path);
   }
 }
 
 console.log(
   dropped.length
-    ? `[art] dropped ${dropped.join(", ")} from the build: the site reads them from ${base}.`
+    ? `[art] dropped ${dropped.join(", ")} from the build: the site reads badges from ${base}.`
     : "[art] nothing to drop.",
 );
