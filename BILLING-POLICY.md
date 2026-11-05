@@ -74,8 +74,9 @@ Example: $89.99 Catalog Management, cancelled with 120 days left → $89.99 × 1
 number in for you, and it will not let a past-30-day plan refund go above it. Inside 30 days it is the full amount, and
 a year already used up refunds nothing.
 
-One-time purchases (Expert Registration, AI Protection, a contract, a branding kit) have no term to prorate, so those
-stay a judgement call with a note.
+Proration applies to the plan itself. Purchases bought alongside it (seats, a branding kit, Expert Registration, AI
+Protection, a contract) are not prorated by the console: refund all of it or part of it, your judgement, with a note.
+A seat or a kit does run its own year, so a partial refund is often the fair answer there too.
 
 Rules that never bend:
 
