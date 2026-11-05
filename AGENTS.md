@@ -142,5 +142,5 @@ rules keep it consistent as features are added.
 - Old deployments are the other half of the storage bill: one pre-R2 build was ~224 MB, and 123 of them held ~27 GB
   against a 10 GB allowance. `scripts/delete-vercel-deployments.mjs` clears them. It reads the token from
   `VERCEL_TOKEN` only (hand-pasted into the ignored `.vercel-token`, never committed), always keeps the promoted
-  production deployment plus the newest 10, and dry-runs unless `--delete` is passed. The Vercel connection available
+  production deployment plus the newest 40, and dry-runs unless `--delete` is passed. The Vercel connection available
   to the agent cannot delete deployments, so this always needs a founder-created token.
