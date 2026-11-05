@@ -1,4 +1,5 @@
 import { Link } from "@tanstack/react-router";
+import { MARK_BOX } from "@/components/BrandLockup";
 
 /**
  * Came Through Audio logo + wordmark. Dark headers (default) get the white logo with Electric Cobalt "Audio";
@@ -12,9 +13,13 @@ export function BrandLogo({ showName = true, tone = "dark" }: { showName?: boole
   const light = tone === "light";
   return (
     <Link to="/" aria-label="Came Through Audio home" className="flex items-center gap-3">
-      <img src={light ? "/cta-logo-dark.png" : "/cta-logo-light.png"} alt="Came Through Audio logo" className="h-9 w-auto object-contain" />
-      {showName && <span className={`flex items-center text-lg font-bold tracking-tight ${light ? "text-foreground" : ""}`}>
-        <img src={light ? "/cta-mark-dark.png" : "/cta-mark-light.png"} alt="" aria-hidden className="mr-px h-[1.02em] w-[1.02em] object-contain" />
+      {/* On a phone the logo picture and the wordmark were two marks side by side (founder, 2026-11-05), which is what
+          pushed the C off the name. Small screens show the wordmark alone; the logo returns from sm up, and a
+          showName={false} header keeps its picture at every size because that is all it has. */}
+      <img src={light ? "/cta-logo-dark.png" : "/cta-logo-light.png"} alt="Came Through Audio logo"
+        className={`h-9 w-auto object-contain ${showName ? "hidden sm:block" : ""}`} />
+      {showName && <span className={`flex items-center text-base font-bold tracking-tight sm:text-lg ${light ? "text-foreground" : ""}`}>
+        <img src={light ? "/cta-mark-dark.png" : "/cta-mark-light.png"} alt="" aria-hidden className={`${MARK_BOX} mr-[0.02em]`} />
         <span>ame Through <span className={light ? "text-primary" : "text-brand-electric"}>Audio</span></span>
       </span>}
     </Link>

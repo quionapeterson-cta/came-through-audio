@@ -39,6 +39,9 @@
   or marks the art uploaded (`public.is_founder`, one account claimed once from the panel — never a role check, and never
   a department). A super admin who is not the founder reads the queue but cannot decide it. Never let the submitter
   approve their own idea.
+- **Every badge upload has a transparent background** (founder, 2026-11-05): no white box, no solid plate, no baked
+  shadow or gradient behind the art, and no cropping the glyph to fill the canvas. A badge sits on the app's dark
+  surface, so anything opaque reads as a square behind it. The same rule covers badge art on the homepage and in emails.
 - Naming is fixed by `src/lib/badge-protocol.ts` and enforced in the database too: lowercase words joined by single
   hyphens, starting with a letter, 48 characters at most. The web copy is 512×512 transparent WebP under 120 KB at
   `icons/<serious|playful>/[<set>/]<slug>.webp`; the 4K master is a transparent PNG at `4k/icons/…/<slug>.png`. The

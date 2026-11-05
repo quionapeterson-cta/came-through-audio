@@ -1,6 +1,5 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useRef, useState, type FormEvent } from "react";
-import { artUrl } from "@/lib/art-url";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { BrandLogo } from "@/components/BrandLogo";
@@ -85,22 +84,8 @@ function Login() {
       </header>
       <main className="mx-auto max-w-md px-4 py-8 sm:px-6">
         <div className="rounded-2xl bg-background p-8 text-foreground shadow-2xl">
-          {/* The party popper badge art, not a line icon (founder, 2026-11-05). It is a 1600px master drawn at 64px,
-              so it stays sharp on any screen; the bucket's .webp is preferred and the copy in public/ catches a miss. */}
-          <img
-            src={artUrl("/icons/playful/party_popper.png")}
-            alt=""
-            aria-hidden
-            width={64}
-            height={64}
-            className="h-16 w-16 select-none object-contain drop-shadow-[0_6px_16px_rgba(0,74,173,0.35)]"
-            onError={(e) => {
-              const img = e.currentTarget;
-              if (img.dataset["fallback"]) return;
-              img.dataset["fallback"] = "1";
-              img.src = "/icons/playful/party_popper.png";
-            }}
-          />
+          {/* No celebration art here (founder, 2026-11-05): the popper is for moments worth marking, not for a form
+              somebody opens every week. The card leads with the heading, the same way the workspace does. */}
           {resetSent ? (
             <div className="mt-4 space-y-3">
               <h1 className="text-2xl font-bold">Check your email</h1>

@@ -64,10 +64,15 @@ export function badgeKeys(o: { scope: BadgeScope; slug: string; set?: string | n
   };
 }
 
-/** The two files a badge needs, and what "web-ready" means. Shown under the naming rule. */
+/**
+ * The two files a badge needs, what "web-ready" means, and the one look every badge shares. Shown under the naming rule.
+ * Transparency is not a preference (founder, 2026-11-05): a badge sits on the dark app surface, so a white box or a baked
+ * background shows as a square behind the art.
+ */
 export const FILE_RULES = [
   { file: "Web copy", spec: "512 × 512 px, transparent WebP, 120 KB or smaller, named <slug>.webp" },
   { file: "4K master", spec: "The full-resolution original, transparent PNG, named <slug>.png (never requested by the app)" },
+  { file: "Background", spec: "Transparent, always: no white box, no solid plate and no shadow baked in. Art is drawn on the app's own surface, so anything opaque shows as a square" },
 ] as const;
 
 /** The naming conditions, in the order the panel lists them. */
