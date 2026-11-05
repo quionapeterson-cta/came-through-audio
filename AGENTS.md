@@ -24,9 +24,10 @@
 - Only the founder uploads badge art to the R2 bucket (founder, 2026-11-05). No other person, and no script, puts an
   object in the bucket: staff file ideas, a super admin approves, the founder copies the file to the key the queue prints.
 - Every new badge goes through Admin → Badges → Badge Protocol (`BadgeProtocolPanel` + `badge-submissions.functions.ts`).
-  Branding, Marketing & Social Media and Support submit (public.can_manage_badges); only a super admin approves,
-  rejects or marks the art uploaded (`public.has_role(…,'super_admin')`). Never widen the approval to a department, and
-  never let the submitter approve their own idea.
+  Branding, Marketing & Social Media and Support submit (public.can_manage_badges); only the FOUNDER approves, rejects
+  or marks the art uploaded (`public.is_founder`, one account claimed once from the panel — never a role check, and never
+  a department). A super admin who is not the founder reads the queue but cannot decide it. Never let the submitter
+  approve their own idea.
 - Naming is fixed by `src/lib/badge-protocol.ts` and enforced in the database too: lowercase words joined by single
   hyphens, starting with a letter, 48 characters at most. The web copy is 512×512 transparent WebP under 120 KB at
   `icons/<serious|playful>/[<set>/]<slug>.webp`; the 4K master is a transparent PNG at `4k/icons/…/<slug>.png`. The

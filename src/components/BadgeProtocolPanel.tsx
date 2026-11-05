@@ -13,7 +13,7 @@ import {
   badgeKeys, badgeSlug, slugProblem, type BadgeScope,
 } from "@/lib/badge-protocol";
 import {
-  decideBadgeSubmission, listBadgeSubmissions, markBadgeUploaded, submitBadgeIdea, type BadgeSubmission,
+  claimFounderAccess, decideBadgeSubmission, getFounderAccess, listBadgeSubmissions, markBadgeUploaded, submitBadgeIdea, type BadgeSubmission,
 } from "@/lib/badge-submissions.functions";
 
 const TIERS: Tier[] = ["standard", "instant", "mega", "ultimate"];
@@ -165,7 +165,7 @@ function BadgeIdeaForm() {
   );
 }
 
-function SubmissionRow({ s, isSuper }: { s: BadgeSubmission; isSuper: boolean }) {
+function SubmissionRow({ s, canDecide }: { s: BadgeSubmission; canDecide: boolean }) {
   const decide = useServerFn(decideBadgeSubmission);
   const uploaded = useServerFn(markBadgeUploaded);
   const qc = useQueryClient();
@@ -212,7 +212,7 @@ function SubmissionRow({ s, isSuper }: { s: BadgeSubmission; isSuper: boolean })
         <span>{s.masterName ? `4K: ${s.masterName}` : "No 4K master yet"}</span>
       </div>
 
-      {isSuper && (
+      {canDecide && (
         <div className="mt-3 flex flex-wrap items-center gap-2">
           {s.downloadUrl && (
             <Button asChild variant="outline" size="sm">
@@ -247,7 +247,7 @@ function SubmissionRow({ s, isSuper }: { s: BadgeSubmission; isSuper: boolean })
           )}
         </div>
       )}
-      {!isSuper && s.note ? <p className="mt-2 text-xs text-muted-foreground">Super admin note: {s.note}</p> : null}
+      {!canDecide && s.note ? <p className="mt-2 text-xs text-muted-foreground">Founder note: {s.note}</p> : null}
     </li>
   );
 }
@@ -258,9 +258,27 @@ function SubmissionRow({ s, isSuper }: { s: BadgeSubmission; isSuper: boolean })
  */
 export function BadgeProtocolPanel({ isSuper }: { isSuper: boolean }) {
   const fetchQueue = useServerFn(listBadgeSubmissions);
+  const fetchFounder = useServerFn(getFounderAccess);
+  const claimSeat = useServerFn(claimFounderAccess);
+  const qc = useQueryClient();
   const queue = useQuery({ queryKey: ["badge-submissions"], queryFn: () => fetchQueue(), refetchOnWindowFocus: false });
+  const founder = useQuery({ queryKey: ["founder-access"], queryFn: () => fetchFounder(), refetchOnWindowFocus: false });
+  const [claiming, setClaiming] = useState(false);
+  const isFounder = founder.data?.me ?? false;
   const rows = queue.data ?? [];
   const waiting = rows.filter((r) => r.status === "submitted").length;
+
+  async function claim() {
+    setClaiming(true);
+    try {
+      await claimSeat();
+      toast.success("Founder access claimed. Approvals are yours alone now.");
+      await qc.invalidateQueries({ queryKey: ["founder-access"] });
+      await qc.invalidateQueries({ queryKey: ["badge-submissions"] });
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Couldn't claim founder access.");
+    } finally { setClaiming(false); }
+  }
 
   return (
     <div className="mt-8 space-y-6">
@@ -274,6 +292,26 @@ export function BadgeProtocolPanel({ isSuper }: { isSuper: boolean }) {
           {PROTOCOL_STEPS.map((step, i) => <Step key={step.title} n={i + 1} step={step} />)}
         </ol>
       </section>
+
+      {isSuper && (
+        <section className={`rounded-2xl border p-5 ${isFounder ? "border-primary bg-primary/5" : "border-border bg-card"}`}>
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="min-w-0">
+              <h3 className="text-lg font-bold">{isFounder ? "You are the founder" : "Founder access"}</h3>
+              <p className="mt-1 max-w-2xl text-sm text-muted-foreground">
+                {isFounder
+                  ? "Approving badge art and marking it uploaded in R2 is yours alone, even if another super admin is added later."
+                  : founder.data?.claimed
+                    ? "Badge approvals belong to the founder's account. A super admin can read this queue but cannot approve it."
+                    : "Nobody has claimed this seat yet. Claim it once and approval stops depending on the super admin role."}
+              </p>
+            </div>
+            {founder.data && !founder.data.claimed && (
+              <Button disabled={claiming} onClick={() => void claim()}>{claiming ? "Claiming…" : "Claim founder access"}</Button>
+            )}
+          </div>
+        </section>
+      )}
 
       <section className="grid gap-4 md:grid-cols-2">
         <div className="rounded-2xl border border-border bg-card p-5">
@@ -310,7 +348,7 @@ export function BadgeProtocolPanel({ isSuper }: { isSuper: boolean }) {
         </div>
         {queue.isLoading ? <p className="mt-3 text-sm text-muted-foreground">Loading…</p>
           : queue.isError ? <p className="mt-3 text-sm text-destructive">Couldn't load the queue. Has migration 20261105120000 been run?</p>
-          : rows.length ? <ul className="mt-3 space-y-3">{rows.map((s) => <SubmissionRow key={s.id} s={s} isSuper={isSuper} />)}</ul>
+          : rows.length ? <ul className="mt-3 space-y-3">{rows.map((s) => <SubmissionRow key={s.id} s={s} canDecide={isFounder} />)}</ul>
           : <p className="mt-3 text-sm text-muted-foreground">No badge ideas yet.</p>}
       </section>
 

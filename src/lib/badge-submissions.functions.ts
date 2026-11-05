@@ -24,9 +24,27 @@ async function canManage(context: Ctx): Promise<boolean> {
   return !!data;
 }
 
-async function requireSuper(context: Ctx): Promise<void> {
-  const { data } = await context.supabase.rpc("has_role" as never, { _user_id: context.userId, _role: "super_admin" } as never);
-  if (!data) throw new Error("Only a super admin can approve badge art.");
+/**
+ * Founder-only decisions (founder, 2026-11-05): `public.founder_access` holds one account, claimed once from the panel.
+ * Until it is claimed the first super admin may act, so a fresh environment is never locked out; after that, a super
+ * admin can read the queue but cannot approve it.
+ */
+async function founderState(context: Ctx): Promise<{ claimed: boolean; me: boolean }> {
+  const db = await adminDb();
+  const { data } = await db.from("founder_access" as never).select("user_id").limit(1);
+  const claimant = ((data ?? []) as { user_id: string }[])[0]?.user_id ?? null;
+  const { data: mine } = await context.supabase.rpc("is_founder" as never, { _user_id: context.userId } as never);
+  return { claimed: !!claimant, me: !!mine || claimant === context.userId };
+}
+
+async function requireFounder(context: Ctx): Promise<void> {
+  const state = await founderState(context);
+  if (state.me) return;
+  if (!state.claimed) {
+    const { data: isSuper } = await context.supabase.rpc("has_role" as never, { _user_id: context.userId, _role: "super_admin" } as never);
+    if (isSuper) return;
+  }
+  throw new Error("Only the founder can decide badge art.");
 }
 
 export type BadgeSubmissionStatus = "submitted" | "approved" | "rejected" | "uploaded";
@@ -155,7 +173,7 @@ export const listBadgeSubmissions = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }): Promise<BadgeSubmission[]> => {
     if (!(await canManage(context))) return [];
-    const { data: isSuper } = await context.supabase.rpc("has_role" as never, { _user_id: context.userId, _role: "super_admin" } as never);
+    const founder = await founderState(context);
     const db = await adminDb();
     const { data, error } = await db
       .from("badge_submissions" as never)
@@ -179,7 +197,7 @@ export const listBadgeSubmissions = createServerFn({ method: "GET" })
         const keys = badgeKeys({ scope: r.scope, slug: r.slug, set: r.set_folder });
         let downloadUrl: string | null = null;
         let masterUrl: string | null = null;
-        if (isSuper) {
+        if (founder.me) {
           if (r.art_path) {
             const { data: signed } = await db.storage.from("badge-submissions").createSignedUrl(r.art_path, SIGNED_FOR);
             downloadUrl = signed?.signedUrl ?? null;
@@ -227,7 +245,7 @@ export const decideBadgeSubmission = createServerFn({ method: "POST" })
     z.object({ id: z.string().uuid(), decision: z.enum(["approved", "rejected"]), note: z.string().trim().max(500).default("") }).parse(d),
   )
   .handler(async ({ data, context }) => {
-    await requireSuper(context);
+    await requireFounder(context);
     const db = await adminDb();
     const { error } = await db
       .from("badge_submissions" as never)
@@ -242,7 +260,7 @@ export const markBadgeUploaded = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => z.object({ id: z.string().uuid(), note: z.string().trim().max(500).default("") }).parse(d))
   .handler(async ({ data, context }) => {
-    await requireSuper(context);
+    await requireFounder(context);
     const db = await adminDb();
     const { data: row } = await db.from("badge_submissions" as never).select("status, decision_note").eq("id", data.id).maybeSingle();
     const current = row as unknown as { status: BadgeSubmissionStatus; decision_note: string | null } | null;
@@ -259,4 +277,24 @@ export const markBadgeUploaded = createServerFn({ method: "POST" })
       .eq("id", data.id);
     if (error) throw new Error("Couldn't mark the art uploaded.");
     return { status: "uploaded" as const };
+  });
+
+/** Whether the founder seat is claimed, and whether it is you. The panel shows a claim button to a super admin. */
+export const getFounderAccess = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }): Promise<{ claimed: boolean; me: boolean }> => founderState(context as unknown as Ctx));
+
+/** Claim the one founder seat. Only while it is empty, and only a super admin, so it cannot be taken twice. */
+export const claimFounderAccess = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { data: isSuper } = await context.supabase.rpc("has_role" as never, { _user_id: context.userId, _role: "super_admin" } as never);
+    if (!isSuper) throw new Error("Only a super admin can claim founder access.");
+    const db = await adminDb();
+    const { data: existing, error: readError } = await db.from("founder_access" as never).select("user_id").limit(1);
+    if (readError) throw new Error("Couldn't check founder access. Run migration 20261105140000 first.");
+    if ((existing ?? []).length) throw new Error("Founder access is already claimed.");
+    const { error } = await db.from("founder_access" as never).insert({ user_id: context.userId } as never);
+    if (error) throw new Error("Couldn't claim founder access.");
+    return { me: true };
   });
