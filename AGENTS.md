@@ -69,6 +69,14 @@
   `withinPrepayCap`). Today every payment buys one year and early renewal only reaches a renewal inside a year, so the
   cap is a guard for a future multi-year product, not a limit anyone meets now.
 - The company policy staff are trained on is `BILLING-POLICY.md`; change it in the same commit as any rule here.
+- The card statement descriptor and its card prefix live in `src/lib/plans.ts` (`STATEMENT_DESCRIPTOR`,
+  `STATEMENT_DESCRIPTOR_PREFIX`) and are shown in Admin → Price List (founder, 2026-11-05). Stripe keeps only the first
+  ten characters as the card prefix unless a shortened descriptor is set, so the prefix is what stops the name printing
+  as `CAME THROU`. Keep both an exact substring of the business name — never invent a DBA, never put a service
+  description there — and keep every Stripe product name and description in `STRIPE-PRODUCTS.md`.
+- Pausing is never presented as cancelling (founder, 2026-11-05): the pause dialog says the plan renews by itself, Resume
+  now says it ends the pause rather than the plan, and a member who thought a pause cancelled gets the prorated refund.
+  The renewal reminder email always carries the Cancel-or-change link and that same warning.
 - Money must be idempotent: the panel sends a fresh `requestId` per confirmed action and the server uses it as Stripe's
   idempotency key, so a double click or a retry never refunds twice. Keep that when adding an action.
 - Every attempt writes a `billing_actions` row — refusals and Stripe errors included — with the actor's email. Never

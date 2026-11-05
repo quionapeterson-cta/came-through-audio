@@ -1,6 +1,6 @@
 import { BRANDING_LOOKUP_KEY, BRANDING_PRICE } from "@/lib/brand-kit";
 import { CONTRACT_LOOKUP_KEY, CONTRACT_PRICE } from "@/lib/contract-generator";
-import { ARTIST_SEAT_PRICES, ASSISTANCE_PER_SONG_AGENCY, PLAN_TIERS, TIER_LABEL, assistanceFees } from "@/lib/plans";
+import { ARTIST_SEAT_PRICES, ASSISTANCE_PER_SONG_AGENCY, PLAN_TIERS, STATEMENT_DESCRIPTOR, STATEMENT_DESCRIPTOR_PREFIX, TIER_LABEL, assistanceFees } from "@/lib/plans";
 import { PACKAGES } from "@/lib/proof";
 import { VAULT_LOOKUP_KEY, VAULT_PRICE } from "@/lib/retention";
 
@@ -24,6 +24,12 @@ export type PriceGroup = { title: string; note: string; rows: PriceRow[] };
 
 /** The day this list was last reconciled with the founder's pricing. */
 export const PRICE_LIST_EFFECTIVE = "November 4, 2026";
+
+/**
+ * What a charge reads as on a card statement (founder, 2026-11-05). The full name fits Stripe's 22 characters; the card
+ * prefix exists because Stripe keeps only 10 characters for cards and would otherwise print "CAME THROU".
+ */
+export const CARD_STATEMENT = { full: STATEMENT_DESCRIPTOR, prefix: STATEMENT_DESCRIPTOR_PREFIX };
 
 const usd = (n: number) => `$${n.toFixed(2)}`;
 const singleSetup = usd(assistanceFees("single", 1).base);

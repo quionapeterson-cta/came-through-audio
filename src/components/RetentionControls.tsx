@@ -6,7 +6,8 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { confirmAction } from "@/components/ConfirmHost";
 import { openBilling, openCheckout } from "@/lib/checkout";
 import { needMoreTime, resumeNow, setPlanCancelling } from "@/lib/retention.functions";
-import { hasTier, PLAN_TIERS, TIER_LABEL, type Tier } from "@/lib/plans";
+import { hasTier, PLAN_TIERS, refundDaysLeft, TIER_LABEL, type Tier } from "@/lib/plans";
+import { proratedRefundCents } from "@/lib/billing-console";
 import { canRenewEarly, currentPause, earlyRenewalTarget, extendedRenewal, inGrace, offers, renewalDate, PAUSE_MONTHS, pauseSpan, VAULT_PRICE, type Lapse, type Pause, type PlanSub } from "@/lib/retention";
 
 const longDate = (d: string | Date) => new Date(d).toLocaleDateString(undefined, { month: "long", day: "numeric", year: "numeric" });
@@ -47,7 +48,7 @@ function useRetention({ sub, lapse, pauses, onChanged }: Account) {
     const started = new Date(pause.starts_at) <= new Date();
     if (!(await confirmAction({ tone: "primary", action: "Resume now", cancel: "Stay paused",
       title: started ? "Resume your plan today?" : "Call off your pause?",
-      text: started ? "Your plan renews today and the card on file is charged. The Vault fee isn't refunded." : `Your plan renews on its original date, ${longDate(pause.starts_at)}. The Vault fee isn't refunded.` }))) return;
+      text: started ? "This ends your pause; it doesn't cancel your plan. Your plan renews today and the card on file is charged. The Vault fee isn't refunded." : `This ends your pause; it doesn't cancel your plan. Your plan renews on its original date, ${longDate(pause.starts_at)}. The Vault fee isn't refunded.` }))) return;
     await act(() => resumeNow(), started ? "Welcome back. Your plan is renewing now." : "Pause called off.");
   }
 
@@ -169,6 +170,11 @@ function PauseDialog({ open, onOpenChange, sub }: { open: boolean; onOpenChange:
           <DialogTitle>Pause your plan</DialogTitle>
           <DialogDescription>No plan charge while you're paused. Your catalog is kept safe and read-only: view and download, no adding or editing. Nothing is emptied.</DialogDescription>
         </DialogHeader>
+        <p className="rounded-lg border border-primary/40 bg-accent/30 p-3 text-sm">
+          <b>Pausing is not cancelling.</b> It stops the plan charge while you're paused, then your plan renews by
+          itself{sub?.stripe_subscription_id ? ` on ${longDate(span.ends)}` : " when the pause ends"}. If you meant to
+          stop paying for good, cancel your plan instead: <b>Cancel plan</b> in Profile, before or after pausing.
+        </p>
         <div role="radiogroup" aria-label="How long" className="grid grid-cols-3 gap-2">
           {PAUSE_MONTHS.map((m) => (
             <button key={m} type="button" role="radio" aria-checked={months === m} onClick={() => setMonths(m)}
@@ -196,6 +202,10 @@ function CancelPlanDialog({ open, onOpenChange, tier, sub, offers: o, onExtend, 
 }) {
   const [busy, setBusy] = useState(false);
   const ends = sub?.current_period_end;
+  // Past the 30-day window a cancellation still comes with the unused part of the year (founder, 2026-11-05).
+  const priceCents = Math.round(Number((PLAN_TIERS.find((p) => p.tier === tier)?.price ?? "$0").replace(/[^0-9.]/g, "")) * 100);
+  const prorated = sub?.current_period_start ? proratedRefundCents({ paidCents: priceCents, paidAt: sub.current_period_start }) : 0;
+  const pastWindow = !!sub?.current_period_start && refundDaysLeft(sub.current_period_start) === 0;
   async function switchToPlus() {
     setBusy(true);
     try { await openCheckout({ kind: "plan", priceId: "catalog_plus_yearly" }); }
@@ -224,6 +234,13 @@ function CancelPlanDialog({ open, onOpenChange, tier, sub, offers: o, onExtend, 
           <DialogTitle>Before you go</DialogTitle>
           <DialogDescription>{ends ? `If you cancel, you keep full access until ${longDate(ends)}. Then your catalog stays read-only for 30 days so you can download it, and is emptied after that.` : "If you cancel, your catalog stays read-only for 30 days after your plan ends, then it's emptied."}</DialogDescription>
         </DialogHeader>
+        {pastWindow && prorated > 0 && (
+          <p className="rounded-lg border border-primary/40 bg-accent/30 p-3 text-sm">
+            You're past the first 30 days, so cancelling still comes with the unused part of your year: about{" "}
+            <b>{money(prorated / 100)}</b>. Ask when you cancel (just reply to the confirmation email) and Billing sends it
+            back to the card you paid with.
+          </p>
+        )}
         <div className="space-y-3">
           {o.canExtend && offer("Need more time?", "Move your renewal back 30 days, free, with full access.", "Get 30 days", onExtend)}
           {o.canPause && offer("Take a break", `Pause for 1 to 3 months. No plan charge, catalog kept safe. Vault fee ${money(VAULT_PRICE)} a month.`, "Pause", onPause)}

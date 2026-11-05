@@ -78,6 +78,24 @@ Proration applies to the plan itself. Purchases bought alongside it (seats, a br
 Protection, a contract) are not prorated by the console: refund all of it or part of it, your judgement, with a note.
 A seat or a kit does run its own year, so a partial refund is often the fair answer there too.
 
+### 3.2 Pausing is not cancelling
+
+A pause stops the plan charge for one to three months (the Vault fee, $1.99 a month, paid up front) and then the plan
+**renews by itself**. It does not cancel anything.
+
+- The pause screen says so before anyone pays, Resume now says "this ends your pause, not your plan", and the renewal
+  reminder email repeats it.
+- **If a member says they thought pausing cancelled**, they get the **prorated refund** of the plan (§3.1) even though
+  they were past 30 days. Note: "thought pause cancelled". Do not argue about it; a dispute costs more.
+- If the pause never started, refund the Vault fee as well. If it has started, the fee stays (they used the pause) unless
+  the Head of Finance says otherwise.
+
+### 3.3 A forgotten renewal
+
+The renewal charge has its **own 30-day window**. So "I forgot to cancel" inside 30 days of the renewal is a **full
+refund** of that renewal, every time, no escalation. Past 30 days it is the prorated refund in §3.1 with a note. Either
+way the plan is then cancelled so it can't happen again.
+
 Rules that never bend:
 
 - **Never refund more than was paid**, in total, including earlier partial refunds. The console enforces this.
@@ -102,6 +120,36 @@ The usual triggers, in order of how often they happen:
 4. **They expected something different** — thought a plan included a service, or thought a purchase was a subscription.
 5. **Duplicate charge** — a double click, a retry, two cards.
 6. **Genuine fraud** — someone else used the card.
+
+### 4.1 Making the charge recognisable
+
+The statement says **`CAME THROUGH AUDIO`**, and on most card statements **`CAMETHROU`** (Stripe keeps only ten
+characters for cards unless a shorter prefix is set). Product names and the description of every product are in
+`STRIPE-PRODUCTS.md`, which is what to copy into Stripe and what to read back to a member who asks what a charge was.
+
+When someone doesn't recognise a charge, find it and **say what it was for, with the date and amount**. A clear answer
+is usually the whole fix.
+
+### 4.2 What we do before every renewal (this is the system)
+
+Nobody should ever be surprised by a renewal. Five things run automatically, and together they are what keeps this from
+becoming a dispute:
+
+1. **Reminder emails 90, 60, 30, 7 and 1 day before** every yearly renewal, each naming the plan, the exact date and the
+   amount, with a **Cancel or change plan** link that works without replying.
+2. **The same email says pausing isn't cancelling**, so nobody pauses expecting the renewal to stop.
+3. **The renewal charge starts a fresh 30-day window** (§3.3): a member who forgot gets the whole renewal back if they
+   ask inside 30 days.
+4. **The statement descriptor carries the brand** (§4.1), so the charge is recognisable on the statement itself.
+5. **Pause and Need more time** are offered before cancelling, so a member who only needs a break doesn't have to cancel
+   and come back.
+
+What staff do with that: when a member writes "I didn't mean to renew", check the date. Inside 30 days → refund it in
+full and cancel the plan. Past 30 days → prorated refund, note it, and cancel the plan. Never make them argue for it.
+
+**Duplicates:** if the same person was charged twice for the same thing (double click, retry, two cards), refund one of
+them with the reason "Duplicate charge". Two charges of the same amount on the same day are the usual sign; if it isn't
+obvious which one is the duplicate, refund the later one.
 
 What to do about it:
 
@@ -148,6 +196,11 @@ Ten minutes, then you can do it.
 9. **Check the log** at the bottom of the page: your email, the amount and the note should be the newest line.
 10. **Reply to the member** using the wording in section 7, and tell them it can take 5–10 business days to appear on
     their statement (that is the bank's timing, not ours).
+11. **If it was a renewal they forgot about**, check the renewal date first: inside 30 days it is a full refund (§3.3),
+    past 30 days the prorated amount (§3.1). Then cancel the plan so it can't charge again, and tell them they were
+    reminded 90, 60, 30, 7 and 1 day before, without sounding like an accusation.
+12. **If they say they paused but the plan charged**, that is the pause confusion in §3.2: refund prorated, note it, and
+    point them at Cancel plan for next time.
 
 If something goes wrong — an error, an amount that looks wrong, a payment that isn't listed — **do not** open Stripe and
 do not try a second refund. Copy the message and send it to the Head of Finance.
@@ -178,6 +231,12 @@ do not try a second refund. Copy the message and send it to the Head of Finance.
 
 > Hi [name] — I've set your plan to end on [date]. You keep full access until then, and your catalog stays readable
 > after that. If you change your mind before [date], just reply and I'll turn the renewal back on.
+
+**They thought pausing was cancelling**
+
+> Hi [name] — I'm sorry, that's on us for not making it clearer: pausing holds the plan for a few months and then it
+> renews by itself, so it doesn't stop a charge. I've cancelled the plan so nothing else renews, and refunded the
+> unused part of your year: [amount], back to the card you paid with in 5–10 business days.
 
 **Dispute**
 

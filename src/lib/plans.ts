@@ -92,6 +92,31 @@ export const ARTIST_SEAT_PRICES: { tier: Exclude<Tier, "free">; amount: number; 
 export const SEAT_TIER = Object.fromEntries(ARTIST_SEAT_PRICES.map((s) => [s.lookupKey, s.tier])) as Record<string, Exclude<Tier, "free">>;
 export const seatLookupKey = (tier: Exclude<Tier, "free">) => ARTIST_SEAT_PRICES.find((s) => s.tier === tier)!.lookupKey;
 
+/**
+ * What a customer sees on their card statement and receipt (founder, 2026-11-05). Stripe allows 5–22 Latin characters,
+ * at least one letter, and none of `< > \ ' " *`, and the value must reflect the business name rather than describe a
+ * service. "CAME THROUGH AUDIO" is 18, so it fits the full descriptor — but for card payments Stripe keeps only the
+ * first 10 characters as the prefix unless a shortened descriptor is set, which would print "CAME THROU". Setting the
+ * prefix is what prevents that: it is an exact substring of the business name, so Stripe's name matching accepts it and
+ * it is not a second DBA.
+ */
+export const STATEMENT_DESCRIPTOR = "CAME THROUGH AUDIO";
+export const STATEMENT_DESCRIPTOR_PREFIX = "CAMETHROU";
+export const STATEMENT_DESCRIPTOR_LIMIT = 22;
+export const STATEMENT_DESCRIPTOR_PREFIX_LIMIT = 10;
+
+/** Why Stripe would refuse a descriptor (or a 2–10 character card prefix), or null when it accepts it. */
+export function descriptorProblem(value: string, prefix = false): string | null {
+  const v = value.trim();
+  const limit = prefix ? STATEMENT_DESCRIPTOR_PREFIX_LIMIT : STATEMENT_DESCRIPTOR_LIMIT;
+  const min = prefix ? 2 : 5;
+  if (v.length < min) return `Too short: Stripe needs at least ${min} characters.`;
+  if (v.length > limit) return `Too long: ${v.length} characters, Stripe allows ${limit}.`;
+  if (!/^[A-Za-z0-9 .&-]+$/.test(v)) return "Only Latin letters, numbers, spaces, dots, hyphens and & are allowed.";
+  if (!/[A-Za-z]/.test(v)) return "It needs at least one letter.";
+  return null;
+}
+
 /** Days left in the 30-day full refund window after a plan order (Refund Policy), or 0 once it has passed. */
 export function refundDaysLeft(orderedAt: string | null | undefined, now = new Date()): number {
   const t = orderedAt ? Date.parse(orderedAt) : NaN;

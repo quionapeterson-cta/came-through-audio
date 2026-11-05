@@ -68,7 +68,9 @@ function render(e: RetentionEmail): { subject: string; html: string } {
       const when = e.daysLeft === 1 ? "tomorrow" : `on ${d}`;
       return { subject: `Your ${plan} plan renews ${when}`, html: page("Renewal reminder", `Your ${plan} plan renews ${when}`, [
         `It renews automatically for ${escapeHtml(e.price)} a year (plus tax where it applies), with nothing for you to do. Your catalog, masters and badges carry on as they are.`,
-        "Prefer to get it done now? Renew early and keep every day you have left. Want to change plans or update your card? You can do both from Profile.",
+        `Want to stop it? <a href="${profile}">Cancel or change your plan in Profile</a> before ${d}: it takes two clicks and no email, and you keep every day you've paid for.`,
+        "Pausing isn't cancelling. A pause stops the plan charge for 1 to 3 months and then renews by itself, so it won't stop this renewal.",
+        "If it does renew and you change your mind later, ask us and we refund the unused part of the year. Prefer to get it done now? Renew early and keep every day you have left.",
       ], [`${profile}?renew=1`, "Renew now"]) };
     }
     case "payment-failed": {

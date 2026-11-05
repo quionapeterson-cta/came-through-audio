@@ -1,4 +1,4 @@
-import { PRICE_LIST, PRICE_LIST_EFFECTIVE } from "@/lib/price-list";
+import { CARD_STATEMENT, PRICE_LIST, PRICE_LIST_EFFECTIVE } from "@/lib/price-list";
 
 /**
  * Admin → Price List: the official prices for staff to quote from. Reads src/lib/price-list.ts, which in turn reads the
@@ -14,6 +14,25 @@ export function PriceList() {
           plan charts, the site's copy and checkout all read, so a price quoted here is the price charged.
         </p>
         <p className="mt-3 text-xs font-bold uppercase tracking-[2px] text-primary">Effective {PRICE_LIST_EFFECTIVE} · USD · Billed yearly unless marked one-time</p>
+      </div>
+
+      <div className="rounded-2xl border border-border bg-card p-5">
+        <h3 className="text-lg font-bold">What a charge reads as on a card statement</h3>
+        <p className="mt-1 max-w-3xl text-sm text-muted-foreground">
+          A member who doesn't recognise the charge is the most common reason a payment comes back as a dispute. Stripe
+          shows the full descriptor where it can, and keeps only the first ten characters for most card statements:
+        </p>
+        <p className="mt-3 flex flex-wrap items-center gap-2 text-sm">
+          <span className="text-muted-foreground">Full descriptor</span>
+          <code className="rounded bg-muted px-2 py-1 font-bold tracking-wide">{CARD_STATEMENT.full}</code>
+          <span className="text-muted-foreground">Card prefix</span>
+          <code className="rounded bg-muted px-2 py-1 font-bold tracking-wide">{CARD_STATEMENT.prefix}</code>
+        </p>
+        <p className="mt-2 max-w-3xl text-xs text-muted-foreground">
+          The prefix is set on purpose: leave it blank and Stripe cuts the name to <code>CAME THROU</code>. Both are
+          exact pieces of the business name, so neither creates a second DBA. Product names and descriptions for Stripe
+          are listed in <code>STRIPE-PRODUCTS.md</code>.
+        </p>
       </div>
 
       {PRICE_LIST.map((group) => (
