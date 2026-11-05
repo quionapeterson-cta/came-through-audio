@@ -21,7 +21,7 @@ accounts behind it. Adding a fourth infra seat needs a written reason in this fi
 |---|---|---|---|
 | Cloudflare (DNS, R2) | Super Administrator, account owner | **Administrator** (or, preferred, a scoped API token: R2 Object Read & Write on the art bucket only) | Read Only |
 | Supabase (database, auth, storage) | Organization Owner | Developer on the project (SQL editor, migrations, storage policies) | Read Only where offered; otherwise audit via logs |
-| Stripe (payments) | Administrator | Developer (API keys, webhooks, products) — never the live secret key pasted anywhere | Analyst / View Only |
+| Stripe (payments) | Administrator | **Restricted API key** (`rk_live_`, per-resource) — a Developer seat only if dashboard work is needed | View Only |
 | Vercel (hosting, deploys) | Owner | Member with Developer role on this project | Viewer |
 | GitHub (repository) | Organization Owner | Write access to `came-through-audio` | Security manager |
 | Domain registrar | Registrant | Technical contact only | — |
@@ -35,6 +35,23 @@ Rules that hold for every platform:
 - **Quarterly review.** Re-check this table every quarter and after any departure.
 - **No credentials in the repo, chat, or a commit.** `.env` and `.vercel-token` are gitignored; that is a safety net,
   not a licence to add more.
+
+## Stripe without handing over the account
+
+Stripe never requires giving anyone your login or ownership. Three levels, tightest first:
+
+1. **Restricted API key (`rk_live_`)** — no dashboard, no account. You pick each resource and set it to None, Read or
+   Write (write implies read), so a stolen key can only do what you granted, and you can roll or delete it in seconds.
+   Create it in **Developers → API keys → Create restricted key**. Start from zero permissions and add only what a 403
+   forces: the server reads prices, products, customers and subscriptions, and writes checkout sessions if it creates
+   them. Webhook endpoints are not part of a key — those stay dashboard work for an administrator.
+2. **Team member with the Developer role** — dashboard access, can create secret keys (so still broad), cannot invite
+   team members or change the account owner. Right for the technical lead who must fix webhooks and read logs; wrong for
+   a contractor.
+3. **Sandbox-only** — invite someone to sandboxes with no access to the live account, for testing the integration.
+
+Never hand over the `sk_live_` secret key itself: it grants every API resource and cannot be limited. This project's key
+belongs in the Vercel environment variables (or Supabase secrets), never in a message or a file.
 
 ## Letting someone else get the art uploaded
 
