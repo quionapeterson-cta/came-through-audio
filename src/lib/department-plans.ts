@@ -17,6 +17,8 @@ export const SCORECARD: Record<Exclude<Department, "launch">, { goals: PlanGoal[
     milestones: ["Follow up every unsigned split sheet over 14 days old", "Dispute review and fixes", "Payout FAQ refresh"] },
   finance: { goals: [g("Books closed by the 5th", 3, "months"), g("Reconciliation difference", 0, "$", true), g("Stripe payouts matched to bank within 7 days", 100, "%")],
     milestones: ["Month 1 close", "Month 2 close", "Quarter close and profit check"] },
+  billing: { goals: [g("Refunds and plan changes answered within 1 business day", 95, "%"), g("Billing tickets solved", 200, "tickets"), g("Chargebacks lost", 0, "chargebacks", true)],
+    milestones: ["Refund and cancellation runbook reviewed", "Failed-payment follow-up list worked", "Billing log reconciled against Stripe"] },
   branding: { goals: [g("Assets delivered on time", 95, "%"), g("Brand-rule audit pass rate", 100, "%"), g("Badge drop progress", 50, "%")],
     milestones: ["Brand audit of the site, emails and PDFs", "Badge art for the next drop", "Asset library cleanup"] },
   marketing: { goals: [g("Signups from campaigns", 500, "signups"), g("Honest-claims check pass rate", 100, "%"), g("Trial to paid conversion", 10, "%")],

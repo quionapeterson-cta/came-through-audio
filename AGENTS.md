@@ -53,10 +53,10 @@
 ## Billing Console (always follow)
 
 - Refunds and plan cancellations are done in Admin → Billing (`BillingConsolePanel` + `billing.functions.ts`), not in
-  the Stripe dashboard (founder, 2026-11-05). Finance and super admins only; the browser names the target and nothing
-  else. Never add a second refund path.
-- The server decides, every time: `requireBilling` (super_admin or the finance department, mirroring
-  `public.can_see_billing`), the 30-day Refund Policy window, a $500 cap per action for Finance (none for a super admin),
+  the Stripe dashboard (founder, 2026-11-05). Billing, Finance and super admins only; the browser names the target and
+  nothing else. Never add a second refund path.
+- The server decides, every time: `requireBilling` (super_admin, or the billing or finance department, mirroring
+  `public.can_see_billing`), the 30-day Refund Policy window, a $500 cap per action for Billing and Finance (none for a super admin),
   and never more than was paid minus what already came back. Those limits live in `refundVerdict` in
   `src/lib/billing-console.ts` with its test — never inline in a component.
 - Money must be idempotent: the panel sends a fresh `requestId` per confirmed action and the server uses it as Stripe's

@@ -209,7 +209,7 @@ export function BillingConsolePanel({ isSuper }: { isSuper: boolean }) {
         <p className="mt-1 max-w-3xl text-sm text-muted-foreground">
           Look a member up by the email they paid with, then refund a charge or stop a plan from renewing. The card is
           refunded through our Stripe key; nobody needs a dashboard login, and every action below is logged.
-          {isSuper ? "" : " Finance can refund up to $500 in one go inside 30 days; anything larger or older needs a super admin."}
+          {isSuper ? "" : " Billing and Finance can refund up to $500 in one go inside 30 days; anything larger or older needs a super admin."}
         </p>
         <form onSubmit={(e) => void search(e)} className="mt-4 flex flex-wrap items-end gap-2">
           <label className="min-w-[240px] flex-1 text-xs font-semibold text-muted-foreground">Member's email

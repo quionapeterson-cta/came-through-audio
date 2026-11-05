@@ -1,7 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-import { resolveAccess } from "@/lib/departments";
+import { BILLING_DEPARTMENTS, resolveAccess } from "@/lib/departments";
 import { getPaymentsEnvironment } from "@/lib/payments-env";
 import { createBillingStripeClient, getStripeErrorMessage } from "@/lib/stripe.server";
 import { PRICE_TIER, TIER_LABEL, refundDaysLeft } from "@/lib/plans";
@@ -97,9 +97,10 @@ export type BillingAction = {
 async function requireBilling(context: Ctx): Promise<{ isSuper: boolean; actorEmail: string }> {
   const { data } = await context.supabase.from("user_roles").select("role, departments").eq("user_id", context.userId);
   const access = resolveAccess((data ?? []) as { role: string; departments?: string[] | null }[]);
-  if (!access) throw new Error("Billing is for the Finance team and super admins.");
+  if (!access) throw new Error("Billing is for the Billing and Finance teams and super admins.");
   const isSuper = access.role === "super_admin";
-  if (!isSuper && !access.departments.includes("finance")) throw new Error("Billing is for the Finance team and super admins.");
+  const inBilling = BILLING_DEPARTMENTS.some((d) => access.departments.includes(d));
+  if (!isSuper && !inBilling) throw new Error("Billing is for the Billing and Finance teams and super admins.");
   return { isSuper, actorEmail: context.claims?.email ?? "" };
 }
 

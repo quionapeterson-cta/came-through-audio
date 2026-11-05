@@ -2,7 +2,7 @@
  * Staff roles and departments. Mirrors public.in_department / public.can_manage_staff so the
  * dashboard shows exactly the tabs the database will let each person read.
  */
-export const DEPARTMENTS = ["registration", "royalty_accounts", "finance", "branding", "marketing", "marketing_sales", "support", "ai", "software", "security", "hr", "research", "launch"] as const;
+export const DEPARTMENTS = ["registration", "royalty_accounts", "finance", "billing", "branding", "marketing", "marketing_sales", "support", "ai", "software", "security", "hr", "research", "launch"] as const;
 export type Department = (typeof DEPARTMENTS)[number];
 /**
  * Departments staff can be placed in. "launch" holds the pre-launch milestones (Phase 4, 2026-10-25) and is never
@@ -14,6 +14,8 @@ export const DEPARTMENT_LABEL: Record<Department, string> = {
   registration: "Registration",
   royalty_accounts: "Royalty Accounts",
   finance: "Finance",
+  // Refunds, plan cancellations and billing questions since 2026-11-05; Finance keeps its Purchases tab.
+  billing: "Billing",
   branding: "Branding",
   marketing: "Marketing & Social Media",
   // The id predates the separate Marketing department (2026-10-20); it is the Sales team now.
@@ -86,8 +88,11 @@ export function staffChangeError(o: { actorId: string; actorIsSuper: boolean; ta
 /** Departments that see and control badges in Admin → Badges (super admins hold every department). Mirrors public.can_manage_badges. */
 export const BADGE_DEPARTMENTS = ["branding", "marketing", "support"] as const satisfies readonly Department[];
 
-/** Departments that run the billing console (super admins hold every department). Mirrors public.can_see_billing. */
-export const BILLING_DEPARTMENTS = ["finance"] as const satisfies readonly Department[];
+/**
+ * Departments that run the billing console (super admins hold every department). Mirrors public.can_see_billing.
+ * Billing is the dedicated seat (founder, 2026-11-05); Finance keeps it too, so nobody lost access when it was split out.
+ */
+export const BILLING_DEPARTMENTS = ["billing", "finance"] as const satisfies readonly Department[];
 
 export const ADMIN_TABS = [
   { value: "ai", label: "AI Protection", departments: ["ai"] },
