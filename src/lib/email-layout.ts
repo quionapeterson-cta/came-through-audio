@@ -2,7 +2,21 @@
  * Shared Came Through Audio email shell. Every outgoing email MUST use this so it carries
  * the brand header (dark logo on the white email background, linking to the homepage) and the compliant legal footer.
  */
-export const SITE_URL = "https://pixel-perfect-studio-382.lovable.app";
+/** Where the live site is until camethroughaudio.com moves (PLAN-cloudflare-hosting.md). */
+const PUBLISHED_SITE_URL = "https://pixel-perfect-studio-382.lovable.app";
+
+/**
+ * The address that goes into emails, PDFs and share links: whichever host is actually serving this build. A Cloudflare
+ * deployment sets `SITE_URL`, so a beta build links to its own address instead of sending a password reset to the
+ * Lovable site, and the cutover becomes a variable change rather than a code change (founder, 2026-11-05). Unset keeps
+ * the published address, which is what the Lovable build, the browser bundle and the tests expect.
+ */
+export function resolveSiteUrl(raw: string | undefined = typeof process === "undefined" ? undefined : process.env["SITE_URL"]): string {
+  const value = raw?.trim();
+  return (value || PUBLISHED_SITE_URL).replace(/\/+$/, "");
+}
+
+export const SITE_URL = resolveSiteUrl();
 export const BUSINESS_NAME = "Came Through Audio, LLC";
 export const BUSINESS_ADDRESS = "789 Garden Walk Blvd, Atlanta, GA 30349";
 /** Company mailboxes (founder, 2026-10-25). Each kind of mail goes to and from its own box. */
