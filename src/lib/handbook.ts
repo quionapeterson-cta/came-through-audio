@@ -24,9 +24,10 @@ export const HANDBOOK: HandbookSection[] = [
     "Never share a customer's PRO, IPI numbers, splits, contracts or files with anyone but them. Never put customer data on a personal device or in a personal account.",
     "Nobody on staff can give a customer paid access or change their plan by hand; payments come from Stripe. Staff access is granted only in Admin → Staff.",
     "Use a password manager and two-step sign-in. Report anything suspicious to the founder right away.",
+    "Being a member and working here is allowed, and it isn't a conflict by itself. Acting on your own account is: never work your own ticket, refund, split sheet, badge or registration. Hand it to another admin, and anything about your own money goes to the founder.",
   ] },
   { id: "support", title: "Answering customers", body: [
-    "First reply within 48 hours. High-volume days and holiday breaks can push it past that, and when they do we say so instead of letting the member guess. Be honest: never promise royalties, acceptance or timing; agencies decide those.",
+    "Give a typical wait, never a promise: most replies go out in about 48 hours, and high-volume days and holiday breaks take longer. If it already has, say so instead of letting the member guess. Be honest: never promise royalties, acceptance or timing; agencies decide those.",
     "Billing questions belong to billing@camethroughaudio.com; general support to support@; contact messages to info@.",
     "Not legal, financial or tax advice: point people to a music attorney or accountant for their situation.",
   ] },

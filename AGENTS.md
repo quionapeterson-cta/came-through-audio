@@ -116,14 +116,30 @@
   opens the queue owner's scripts — Billing's on a `BILLING_AREA` ticket, Support's otherwise — with the member's first
   name and the subject filled in. That is the shortcut, not a second catalog: the words still live in
   `src/lib/support-scripts.ts`.
-- **Reply time is 48 hours, not a business day** (founder, 2026-11-05): the usual promise is "within 48 hours", and the
-  copy says plainly that high-volume days and holidays take longer. Never promise a fixed date or a tighter target;
-  the staff handbook and the department scorecards use the same 48 hours.
+- **Reply time is a typical wait, not a promise** (founder, 2026-11-05): member-facing copy says most replies go out in
+  about 48 hours and that high-volume days and holidays take longer. Never turn that into "we will reply within …", a
+  fixed date or a service-level guarantee, in a script, an email, the handbook or a policy page. The scorecards may keep
+  an internal 48-hour target; the copy members read never promises one.
 - **Holiday breaks are announced, not silent** (founder, 2026-11-05): the team takes Christmas and New Year, Thanksgiving
   and spring break off. `support-holiday-break` and `support-holiday-open-ticket` in `src/lib/support-scripts.ts` tell a
-  member we are away, name the day we reopen (`{{date}}`, never a date the founder hasn't set) and promise an answer
-  within 30 days of reopening. `support-holiday-internal` is the staff checklist to run before each break: post it on
-  every open ticket, switch on the auto-reply, and hand anything urgent to the founder before closing.
+  member we are away, name the day we reopen (`{{date}}`, never a date the founder hasn't set) and give a typical wait
+  of about 30 days after reopening, saying a busy week can take longer. That is timing, not a guarantee.
+  `support-holiday-internal` is the staff checklist to run before each break: post it on every open ticket, switch on
+  the auto-reply, and hand anything urgent to the founder before closing.
+
+## Account Help & Holiday Cover (always follow)
+
+- **Who may touch a member's account** (founder, 2026-11-05): Support and super admins correct the person (stage name and
+  legal name via Admin → Accounts, `src/lib/member-account.ts` + `member-account.functions.ts`); Billing and super admins
+  handle payment details. Never a plan change, a tier or a role from here: plans come from Stripe, roles from Admin →
+  Staff. PRO, IPI numbers and splits stay the member's own to edit. The rules live in `accountScope` with their test.
+- **Staff never type a card number** (founder, 2026-11-05): the card is changed on Stripe's own page, opened either by the
+  member in Profile → Manage billing or through a card-update link Billing sends from Admin → Accounts. The steps are one
+  constant (`CARD_UPDATE_STEPS`) and appear in the renewal reminder email too. Never build a card form in the app.
+- **Holiday cover is a rota with undecided pay** (founder, 2026-11-05): one or two department leads work each break, and
+  any employee who wants the extra earnings can ask; overtime and holiday work are approved on a need basis. The plan in
+  `src/lib/holiday-coverage.ts` (Admin → Holiday Cover, super admins and department leads only) carries **no rate, no
+  hours and no bonus** until the founder approves them. Never write a holiday figure into the plan, a script or an email.
 
 ## Catalog Playback & WAV Storage (always follow)
 

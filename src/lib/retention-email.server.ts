@@ -1,5 +1,6 @@
 import { resendKey } from "./collab-trial.server";
 import { BILLING_EMAIL, emailLayout, escapeHtml, SITE_URL } from "./email-layout";
+import { CARD_UPDATE_STEPS } from "./member-account";
 
 /** Account notices about a plan ending, Need more time, Pause and catalog emptying (PLAN-catalog-emptying.md §5). */
 const FROM = `Came Through Audio Billing <${BILLING_EMAIL}>`;
@@ -16,6 +17,10 @@ ${paragraphs.map((p) => `<p style="font-size:15px;line-height:1.6">${p}</p>`).jo
 ${cta ? button(cta[0], cta[1]) : ""}`;
 
 const KEPT = "Your account, badges, signed split sheets, signed contracts and AI Protection certificates are kept.";
+
+/** "Need to change or update your card on file?" with the steps, in the renewal reminder (founder, 2026-11-05). */
+const cardSteps = () => `<b>Need to change or update your card on file?</b>
+<ol style="margin:8px 0 0;padding-left:20px">${CARD_UPDATE_STEPS.map((s) => `<li style="margin:4px 0">${escapeHtml(s)}</li>`).join("")}</ol>`;
 const workspace = `${SITE_URL}/workspace`;
 const profile = `${SITE_URL}/profile`;
 
@@ -70,6 +75,7 @@ function render(e: RetentionEmail): { subject: string; html: string } {
         `It renews automatically for ${escapeHtml(e.price)} a year (plus tax where it applies), with nothing for you to do. Your catalog, masters and badges carry on as they are.`,
         `Want to stop it? <a href="${profile}">Cancel or change your plan in Profile</a> before ${d}: it takes two clicks and no email, and you keep every day you've paid for.`,
         "Pausing isn't cancelling. A pause stops the plan charge for 1 to 3 months and then renews by itself, so it won't stop this renewal.",
+        cardSteps(),
         "If it does renew and you change your mind later, ask us and we refund the unused part of the year. Prefer to get it done now? Renew early and keep every day you have left.",
       ], [`${profile}?renew=1`, "Renew now"]) };
     }

@@ -90,7 +90,7 @@ export const SUPPORT_SCRIPTS: readonly SupportScript[] = [
     department: "support",
     title: "Ticket received",
     when: "First reply on any new ticket, before anyone has looked into it.",
-    body: "Hi {{first_name}},\n\nThanks for writing in — we have your message about {{detail}} and a person is looking at it now. We usually reply within 48 hours. On high-volume days and around holidays it takes longer, and we'll tell you when to expect an answer.\n\nIf you think of anything that helps (a screenshot, the song name, the email on the account), just reply to this email and it lands on the same ticket.\n\nCame Through Audio Support",
+    body: "Hi {{first_name}},\n\nThanks for writing in — we have your message about {{detail}} and a person is looking at it now. We're a small team: most replies go out in about 48 hours. On high-volume days and around holidays they take longer, and we'll say so rather than let you guess.\n\nIf you think of anything that helps (a screenshot, the song name, the email on the account), just reply to this email and it lands on the same ticket.\n\nCame Through Audio Support",
   },
   {
     id: "support-need-detail",
@@ -297,14 +297,14 @@ export const SUPPORT_SCRIPTS: readonly SupportScript[] = [
     department: "support",
     title: "Holiday break — we're away",
     when: "Any ticket that arrives while the team is on a holiday break, before anyone has looked at it.",
-    body: "Hi {{first_name}},\n\nThanks for writing in — your message is safe with us. The team is on a holiday break right now, so replies are slower than usual: we answer everything within 30 days of reopening, and usually much sooner than that.\n\nWe reopen on {{date}}. If something can't wait, reply and tell us what's most pressing, so it's first in line when we're back.\n\nCame Through Audio Support",
+    body: "Hi {{first_name}},\n\nThanks for writing in — your message is safe with us. The team is on a holiday break right now, so replies are slower than usual: most messages are answered in about 30 days after we reopen, and often sooner than that — a busy week can take longer.\n\nWe reopen on {{date}}. If something can't wait, reply and tell us what's most pressing, so it's first in line when we're back.\n\nCame Through Audio Support",
   },
   {
     id: "support-holiday-open-ticket",
     department: "support",
     title: "Holiday break — an open ticket is still waiting",
     when: "They write again on a ticket that is still open while the team is away.",
-    body: "Hi {{first_name}},\n\nYou're not forgotten: your ticket is in the queue and nobody needs to send it again. We're on a holiday break until {{date}}, and every message gets an answer within 30 days of reopening — usually much sooner.\n\nIf it's something new, add it here so it's on the same ticket when we're back.\n\nCame Through Audio Support",
+    body: "Hi {{first_name}},\n\nYou're not forgotten: your ticket is in the queue and nobody needs to send it again. We're on a holiday break until {{date}}, and messages are answered in about 30 days after we reopen, usually sooner.\n\nIf it's something new, add it here so it's on the same ticket when we're back.\n\nCame Through Audio Support",
   },
   {
     id: "support-holiday-internal",

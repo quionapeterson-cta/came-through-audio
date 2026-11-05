@@ -110,6 +110,8 @@ export const ADMIN_TABS = [
   { value: "billing", label: "Billing", departments: BILLING_DEPARTMENTS },
   // Support owns the queue; Billing answers its own billing tickets.
   { value: "support", label: "Support Tickets", departments: TICKET_DEPARTMENTS },
+  // Account help (founder, 2026-11-05): Support corrects a member's names, Billing sends the card-update link.
+  { value: "accounts", label: "Accounts", departments: TICKET_DEPARTMENTS },
   { value: "badges", label: "Badges", departments: BADGE_DEPARTMENTS },
   { value: "homepage", label: "Homepage", departments: ["marketing", "branding"] },
   // Terms, Privacy and Refund wording (founder, 2026-10-27); super admins see it with every department.
@@ -130,6 +132,9 @@ export function visibleTabs(access: StaffAccess, view: Department | "all" = "all
   // My Queue and the Handbook (item 10) come first for everyone working in Admin; PDF Tools is for everyone too.
   // Support Scripts is for every staff member, whichever department: the words to send are shared (founder, 2026-11-05).
   const withTasks = base.length ? [{ value: "queue", label: "My Queue" }, { value: "submissions", label: "Idea Box" }, ...base, { value: "calendar", label: "Calendar" }, { value: "handbook", label: "Handbook" }, { value: "scripts", label: "Support Scripts" }, { value: "prices", label: "Price List" }, { value: "pdf", label: "PDF Tools" }, { value: "email", label: "Email" }, { value: "recognition", label: "My Recognition" }] : base;
+  // Holiday Cover is the rota and the pay plan: super admins and department leads only (founder, 2026-11-05).
+  // It is cross-department, so a super admin sees it in the all-departments view rather than inside a narrowed one.
+  const holiday = access.role === "department_lead" || (access.role === "super_admin" && view === "all") ? [{ value: "holiday", label: "Holiday Cover" }] : [];
   // Company contracts and plans are for super admins only, in the all-departments view.
-  return access.role === "super_admin" && view === "all" ? [...withTasks, { value: "company", label: "Company Contracts" }, { value: "plans", label: "Plans" }] : withTasks;
+  return access.role === "super_admin" && view === "all" ? [...withTasks, ...holiday, { value: "company", label: "Company Contracts" }, { value: "plans", label: "Plans" }] : [...withTasks, ...holiday];
 }

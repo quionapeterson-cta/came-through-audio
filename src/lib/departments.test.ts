@@ -37,7 +37,8 @@ describe("visibleTabs", () => {
     expect(visibleTabs(branding).map((t) => t.value)).toEqual(withDeptTabs(["reg", "splits", "badges", "homepage"]));
     // Finance keeps the billing console, Support gets tickets and badges, Sales just its Task Bank.
     const billing = resolveAccess([{ role: "employee", departments: ["finance", "support", "marketing_sales"] }])!;
-    expect(visibleTabs(billing).map((t) => t.value)).toEqual(withDeptTabs(["purchases", "billing", "support", "badges"]));
+    // Billing also gets Account help, where it sends the card-update link (founder, 2026-11-05).
+    expect(visibleTabs(billing).map((t) => t.value)).toEqual(withDeptTabs(["purchases", "billing", "support", "accounts", "badges"]));
   });
 
   it("gives the AI department the AI Protection tab; Security also gets Legal", () => {
@@ -58,10 +59,10 @@ describe("visibleTabs", () => {
 
   it("narrows the super admin view with the switcher", () => {
     const sa = resolveAccess([{ role: "super_admin" }])!;
-    expect(visibleTabs(sa).map((t) => t.value).slice(-8)).toEqual(["handbook", "scripts", "prices", "pdf", "email", "recognition", "company", "plans"]);
+    expect(visibleTabs(sa).map((t) => t.value).slice(-8)).toEqual(["scripts", "prices", "pdf", "email", "recognition", "holiday", "company", "plans"]);
     expect(visibleTabs(sa)[0]?.value).toBe("queue");
     expect(visibleTabs(sa, "finance").map((t) => t.value)).toEqual(withDeptTabs(["purchases", "billing"]));
-    expect(visibleTabs(sa, "support").map((t) => t.value)).toEqual(withDeptTabs(["support", "badges"]));
+    expect(visibleTabs(sa, "support").map((t) => t.value)).toEqual(withDeptTabs(["support", "accounts", "badges"]));
   });
 
   it("gives Billing the ticket queue and every staff member the scripts", () => {
@@ -70,6 +71,15 @@ describe("visibleTabs", () => {
     expect(visibleTabs(billing).map((t) => t.value)).toContain("scripts");
     expect(visibleTabs(resolveAccess([{ role: "employee", departments: ["ai"] }])!).map((t) => t.value)).toContain("scripts");
     expect(visibleTabs(resolveAccess([{ role: "hr_admin" }])!).map((t) => t.value)).toContain("scripts");
+  });
+
+  it("keeps Holiday Cover to super admins and department leads", () => {
+    const tabs = (role: "super_admin" | "department_lead" | "employee", departments: string[] = ["support"]) =>
+      visibleTabs(resolveAccess([{ role, departments }])!).map((t) => t.value);
+    expect(tabs("super_admin")).toContain("holiday");
+    expect(tabs("department_lead", ["support"])).toContain("holiday");
+    expect(tabs("employee", ["support"])).not.toContain("holiday");
+    expect(tabs("employee", ["support"])).not.toContain("purchases");
   });
 });
 

@@ -28,6 +28,8 @@ import { PlansPanel } from "@/components/PlansPanel";
 import { TestimonialFilterPanel } from "@/components/TestimonialFilterPanel";
 import { TestimonialsEditor } from "@/components/TestimonialsEditor";
 import { AdminWelcome, TaskBell, WelcomeSwitch } from "@/components/AdminWelcome";
+import { AccountHelpPanel } from "@/components/AccountHelpPanel";
+import { HolidayPlan } from "@/components/HolidayPlan";
 import { TaskBankPanel } from "@/components/TaskBankPanel";
 import { RegistrationQueuePanel } from "@/components/RegistrationQueuePanel";
 import { PriceList } from "@/components/PriceList";
@@ -196,6 +198,8 @@ function AdminPage() {
           {show("company") && <TabsContent value="company"><Contracts userId={user.id} unlocked company onUpgrade={() => {}} /></TabsContent>}
           {show("submissions") && <TabsContent value="submissions"><StaffSubmissionsPanel isSuper={isSuper} /></TabsContent>}
           {show("plans") && <TabsContent value="plans"><PlansPanel /></TabsContent>}
+          {show("accounts") && <TabsContent value="accounts"><AccountHelpPanel access={access} /></TabsContent>}
+          {show("holiday") && <TabsContent value="holiday"><HolidayPlan /></TabsContent>}
           {show("calendar") && <TabsContent value="calendar"><AdminCalendar me={user.id} access={access} /></TabsContent>}
           {show("recognition") && <TabsContent value="recognition"><MyRecognition /></TabsContent>}
           {show("queue") && <TabsContent value="queue"><MyQueue me={user.id} access={access} onOpen={setActiveTab} /></TabsContent>}
