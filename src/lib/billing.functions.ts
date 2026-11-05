@@ -5,7 +5,7 @@ import { BILLING_DEPARTMENTS, resolveAccess } from "@/lib/departments";
 import { getPaymentsEnvironment } from "@/lib/payments-env";
 import { createBillingStripeClient, getStripeErrorMessage } from "@/lib/stripe.server";
 import { PRICE_TIER, TIER_LABEL, refundDaysLeft } from "@/lib/plans";
-import { purchaseKindLabel, refundVerdict, type RefundReason } from "@/lib/billing-console";
+import { formatUsd, proratedRefundCents, purchaseKindLabel, refundVerdict, type RefundReason } from "@/lib/billing-console";
 
 /**
  * The billing console's server side (founder, 2026-11-05). Finance and super admins refund a payment or cancel a plan
@@ -79,7 +79,7 @@ export type BillingMember = {
 };
 
 export type PaymentInfo = { paidCents: number; refundedCents: number; currency: string; windowDaysLeft: number; paymentIntent: string | null };
-export type PlanChargeInfo = { chargeId: string; paidCents: number; refundedCents: number; currency: string; windowDaysLeft: number };
+export type PlanChargeInfo = { chargeId: string; paidCents: number; refundedCents: number; currency: string; windowDaysLeft: number; proratedCents: number };
 
 export type BillingAction = {
   createdAt: string;
@@ -310,12 +310,14 @@ export const latestPlanCharge = createServerFn({ method: "POST" })
     if (!sub?.stripe_customer_id) throw new Error("That plan has no Stripe customer, so there's no card charge to refund.");
     const { charge } = await latestChargeFor(sub.stripe_customer_id, env);
     if (!charge) throw new Error("No refundable charge on that plan.");
+    const paidAt = new Date(charge.created * 1000).toISOString();
     return {
       chargeId: charge.id,
       paidCents: charge.amount,
       refundedCents: charge.amount_refunded,
       currency: charge.currency.toUpperCase(),
-      windowDaysLeft: refundDaysLeft(new Date(charge.created * 1000).toISOString()),
+      windowDaysLeft: refundDaysLeft(paidAt),
+      proratedCents: proratedRefundCents({ paidCents: charge.amount - charge.amount_refunded, paidAt }),
     };
   });
 
@@ -342,6 +344,14 @@ export const refundLatestPlanCharge = createServerFn({ method: "POST" })
     });
     if (verdict.ok && verdict.discretionary && !data.note?.trim()) {
       throw new Error("Past the 30-day window a refund needs a note saying why. It's allowed — a dispute costs more — but the reason has to be on the record.");
+    }
+    // Past the window a plan refund covers the unused time only (founder, 2026-11-05), so nobody can refund a year
+    // they have already used.
+    if (verdict.ok && verdict.discretionary) {
+      const unused = proratedRefundCents({ paidCents: charge.amount - charge.amount_refunded, paidAt: new Date(charge.created * 1000).toISOString() });
+      if (data.amountCents > unused) {
+        throw new Error(`Past 30 days a plan refund covers the unused time only: ${formatUsd(unused)} of ${formatUsd(charge.amount)}.`);
+      }
     }
     if (!verdict.ok) {
       await record({ actorId: ctx.userId, actorEmail, targetUserId: null, targetEmail: "", action: "refund", target: data.subscriptionId, stripeObject: charge.id, amountCents: data.amountCents, currency: charge.currency.toUpperCase(), reason: why, status: "failed", error: verdict.reason, environment: env, requestId: data.requestId });

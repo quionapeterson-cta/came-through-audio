@@ -17,14 +17,15 @@ const msg = (e: unknown) => (e instanceof Error ? e.message : "That didn't go th
 const day = (iso: string | null) => (iso ? iso.slice(0, 10) : "—");
 
 /** Amount, reason and a note, then the one button that actually moves money. */
-function RefundBox({ maxCents, needsNote, busy, onCancel, onConfirm }: {
+function RefundBox({ maxCents, defaultCents, needsNote, busy, onCancel, onConfirm }: {
   maxCents: number;
+  defaultCents?: number | undefined;
   needsNote: boolean;
   busy: boolean;
   onCancel: () => void;
   onConfirm: (cents: number, reason: RefundReason, note: string) => void;
 }) {
-  const [dollars, setDollars] = useState((maxCents / 100).toFixed(2));
+  const [dollars, setDollars] = useState(((((defaultCents ?? maxCents)) / 100)).toFixed(2));
   const [reason, setReason] = useState<RefundReason>("requested_by_customer");
   const [note, setNote] = useState("");
   const cents = dollarsToCents(dollars);
@@ -162,6 +163,7 @@ function SubscriptionRow({ sub, onDone }: { sub: BillingSubscription; onDone: ()
       {charge && (
         <RefundBox
           maxCents={Math.max(0, charge.paidCents - charge.refundedCents)}
+          defaultCents={charge.windowDaysLeft <= 0 ? charge.proratedCents : undefined}
           needsNote={charge.windowDaysLeft <= 0}
           busy={busy}
           onCancel={() => setCharge(null)}

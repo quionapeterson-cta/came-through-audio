@@ -71,6 +71,24 @@ export function refundVerdict(o: {
   return { ok: true, discretionary: refundDaysLeft(o.paidAt, o.now) <= 0 };
 }
 
+/**
+ * What a cancelled plan gives back after the 30-day window (founder, 2026-11-05): the unused part of the year, in
+ * proportion to the days left. A plan is a year, so the term ends on the same date a year later; once the term is over
+ * there is nothing left to refund, and anything not yet started refunds in full.
+ */
+export function proratedRefundCents(o: { paidCents: number; paidAt: string; now?: Date }): number {
+  const now = o.now ?? new Date();
+  const start = Date.parse(o.paidAt);
+  if (!Number.isFinite(start) || o.paidCents <= 0) return 0;
+  const end = new Date(start);
+  end.setUTCFullYear(end.getUTCFullYear() + 1);
+  const total = end.getTime() - start;
+  const left = end.getTime() - now.getTime();
+  if (left <= 0) return 0;
+  if (left >= total) return o.paidCents;
+  return Math.max(0, Math.round((o.paidCents * left) / total));
+}
+
 /** Days left in the refund window, for the console's row copy. */
 export function windowDaysLeft(paidAt: string, now = new Date()): number {
   return refundDaysLeft(paidAt, now);

@@ -56,12 +56,26 @@ So the realistic ceiling for a single payment:
 | Situation | What we do |
 |---|---|
 | **Within 30 days of payment** | Full refund on request. No interrogation. Billing staff can do it alone. |
-| **Day 31 or later** | Still allowed, and usually right: **a chargeback costs us more than a refund** (fee, the money, the time, and a mark on the account). A written note is required, and it is a judgement call by Billing, not a rule. |
+| **Day 31 or later, a plan** | **Prorated refund of the unused time.** Cancel on any day and refund the days they won't use (§3.1). Note required; Billing staff can do it. |
+| **Day 31 or later, a one-time purchase** | Still allowed and usually right: **a chargeback costs us more than a refund**. Note required; all or part, your judgement. |
 | **Already used part of what they bought** | Partial refund is fine. Refund what is fair, not necessarily everything. |
 | **Already refunded in full** | Nothing more to refund. The payment is closed. |
 | **Duplicate charge** | Refund one of them, note "duplicate". |
 | **Service work already started** (Expert Registration) | Our published terms: refundable for 30 days **until our team starts work**. After work starts, escalate to the Head of Finance; never refuse flatly and never argue. |
 | **A plan upgrade** | Upgrades are prorated by Stripe. Refund the difference only if something actually went wrong. |
+
+### 3.1 Prorating a plan refund
+
+A plan is a year. After the 30-day window, a cancellation refunds the unused part of that year:
+
+> **refund = what they paid × (days left in the year ÷ 365)**
+
+Example: $89.99 Catalog Management, cancelled with 120 days left → $89.99 × 120/365 = **$29.59**. The console fills that
+number in for you, and it will not let a past-30-day plan refund go above it. Inside 30 days it is the full amount, and
+a year already used up refunds nothing.
+
+One-time purchases (Expert Registration, AI Protection, a contract, a branding kit) have no term to prorate, so those
+stay a judgement call with a note.
 
 Rules that never bend:
 
@@ -123,7 +137,9 @@ Ten minutes, then you can do it.
    date. Confirm the purchase they are asking about is there, and that it is not already marked *Refunded*.
 4. **Press Refund…** on the right purchase, or **Refund last charge…** on the plan. The console shows what they paid and
    what has already come back, and fills in the full remaining amount.
-5. **Change the amount only if it should be partial.** Dollars and cents, e.g. `24.99`.
+5. **Check the amount.** Inside 30 days it is the full payment. A plan cancelled after 30 days shows the prorated
+   unused amount and will not exceed it. Only type a different figure for a one-time purchase that should be partial.
+   Dollars and cents, e.g. `24.99`.
 6. **Pick the reason.** "Asked for it (refund policy)", "Duplicate charge" or "Fraudulent".
 7. **Write the note** — one line in plain words: "asked on day 40, forgot to cancel". It is required past 30 days, and
    it is what we would need if this ever became a dispute.
@@ -151,10 +167,11 @@ do not try a second refund. Copy the message and send it to the Head of Finance.
 > Hi [name] — I've refunded [amount] for [item] today. Your bank usually takes 5–10 business days to show it. Nothing
 > else is needed from you. Thanks for being with us.
 
-**Refund outside the 30-day window**
+**Refund outside the 30-day window (prorated)**
 
-> Hi [name] — no problem, I've refunded [amount] today even though it's past the 30-day window. It should appear within
-> 5–10 business days. If you'd like to stay, I can help you pick the right plan.
+> Hi [name] — no problem. As the plan is past its 30-day window, I've refunded the unused part: [amount] for the [days]
+> days left on your year. It should appear within 5–10 business days. If you'd like to stay, I can help you pick the
+> right plan.
 
 **Cancellation**
 

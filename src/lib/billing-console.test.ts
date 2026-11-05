@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { dollarsToCents, formatUsd, purchaseKindLabel, refundVerdict, windowDaysLeft } from "./billing-console";
+import { dollarsToCents, formatUsd, proratedRefundCents, purchaseKindLabel, refundVerdict, windowDaysLeft } from "./billing-console";
 
 const now = new Date("2026-11-05T12:00:00Z");
 const base = { paidCents: 4499, refundedCents: 0, amountCents: 4499, paidAt: "2026-11-01T12:00:00Z", now };
@@ -44,6 +44,39 @@ describe("refund rules", () => {
   it("rejects a zero or nonsense amount", () => {
     expect(refundVerdict({ ...base, amountCents: 0 }).ok).toBe(false);
     expect(refundVerdict({ ...base, amountCents: Number.NaN }).ok).toBe(false);
+  });
+});
+
+describe("prorated plan refunds", () => {
+  it("gives back the unused part of the year", () => {
+    // $89.99 Catalog Management, six months in: roughly half the year is left.
+    const half = proratedRefundCents({ paidCents: 8999, paidAt: "2026-05-05T12:00:00Z", now });
+    expect(half).toBeGreaterThan(4400);
+    expect(half).toBeLessThan(4550);
+  });
+
+  it("matches the policy example: 120 days left of a $89.99 year", () => {
+    const left = proratedRefundCents({ paidCents: 8999, paidAt: "2026-03-05T12:00:00Z", now });
+    expect(Math.abs(left - 2959)).toBeLessThanOrEqual(1);
+  });
+
+  it("refunds nothing once the year has run out", () => {
+    expect(proratedRefundCents({ paidCents: 8999, paidAt: "2024-11-05T12:00:00Z", now })).toBe(0);
+  });
+
+  it("refunds everything when the term hasn't started", () => {
+    expect(proratedRefundCents({ paidCents: 8999, paidAt: "2026-12-01T12:00:00Z", now })).toBe(8999);
+  });
+
+  it("prorates whatever is left after an earlier partial refund", () => {
+    const left = proratedRefundCents({ paidCents: 8999 - 2000, paidAt: "2026-05-05T12:00:00Z", now });
+    expect(left).toBeGreaterThan(3400);
+    expect(left).toBeLessThan(3600);
+  });
+
+  it("is zero for nonsense input", () => {
+    expect(proratedRefundCents({ paidCents: 0, paidAt: "2026-05-05T12:00:00Z", now })).toBe(0);
+    expect(proratedRefundCents({ paidCents: 8999, paidAt: "not a date", now })).toBe(0);
   });
 });
 

@@ -60,9 +60,11 @@
   ceiling** (founder, 2026-11-05): the payment is the ceiling, because a $500-style cap blocked legitimate refunds on
   the largest orders while doing nothing about the real risk. The rules live in `refundVerdict` in
   `src/lib/billing-console.ts` with its test — never inline in a component.
-- The 30-day Refund Policy window is not a wall (founder, 2026-11-05): past it a refund is still allowed, it just needs
-  a written note, because a chargeback costs more than most refunds. `refundVerdict` returns `discretionary: true` for
-  those and the server refuses one without a note. Never turn that back into a hard block.
+- The 30-day Refund Policy window is not a wall (founder, 2026-11-05): past it a refund is still allowed and needs a
+  written note, because a chargeback costs more than most refunds. **A plan cancelled past the window refunds the unused
+  time only** — `proratedRefundCents` in `src/lib/billing-console.ts`, and the server refuses more than that. One-time
+  purchases stay a judgement call. `refundVerdict` returns `discretionary: true` for those and the server refuses one
+  without a note. Never turn that back into a hard block.
 - Paid-for time is capped at five years (`MAX_PREPAID_YEARS` in `src/lib/retention.ts`, enforced by
   `withinPrepayCap`). Today every payment buys one year and early renewal only reaches a renewal inside a year, so the
   cap is a guard for a future multi-year product, not a limit anyone meets now.
