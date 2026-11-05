@@ -8,6 +8,14 @@ import { SLOGAN } from "@/lib/social";
 export const MARK_BOX = "h-[1.02em] w-[1.02em] shrink-0 -translate-y-[0.04em] object-contain";
 
 /**
+ * The mark's picture is a 256px square with 14px of empty margin on its right (the artwork itself starts at 14 and ends
+ * at 242), and every layout added its own gap on top of that, so the C floated away from "ame". Pull the name back by
+ * the margin that is actually in the art, in em, so the glyph and the letters touch the same way at any size
+ * (founder, 2026-11-05).
+ */
+export const MARK_TUCK = "[margin-right:-0.055em]";
+
+/**
  * The brand lockup: the mark is the C in "Came", the name follows it, and the line it stands for sits underneath
  * (AGENTS.md, Brand Lockup; founder, 2026-11-04). The mark is sized in em, not pixels, so it scales with the name on a
  * phone instead of drifting off the baseline, and it is centred on the cap height with no rotation of its own.
@@ -17,8 +25,8 @@ export function BrandLockup({ className, nameClassName, sloganClassName }: {
 }) {
   return (
     <div className={className ?? "text-center"}>
-      <p className={`flex items-center justify-center gap-[0.12em] font-bold uppercase tracking-[2px] ${nameClassName ?? "text-lg"}`}>
-        <img src="/cta-mark-light.png" alt="" aria-hidden width={28} height={28} className={MARK_BOX} />
+      <p className={`flex items-center justify-center gap-[0.02em] font-bold uppercase tracking-[2px] ${nameClassName ?? "text-lg"}`}>
+        <img src="/cta-mark-light.png" alt="" aria-hidden width={28} height={28} className={`${MARK_BOX} ${MARK_TUCK}`} />
         <span aria-hidden>ame Through Audio</span>
         <span className="sr-only">Came Through Audio</span>
       </p>

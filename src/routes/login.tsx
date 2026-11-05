@@ -3,7 +3,7 @@ import { useEffect, useRef, useState, type FormEvent } from "react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { BrandLogo } from "@/components/BrandLogo";
-import { MARK_BOX } from "@/components/BrandLockup";
+import { MARK_BOX, MARK_TUCK } from "@/components/BrandLockup";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -95,8 +95,8 @@ function Login() {
               letter of the name. No celebration art here — the popper is for moments worth marking, not for a form
               somebody opens every week. The tab icon is white, so the card uses the light-scheme copy the same way the
               tab does; MARK_BOX keeps it on the name's baseline in em, like the header. */}
-          <p className="flex items-center gap-1.5 text-lg font-bold uppercase tracking-[2px] text-foreground">
-            <img src="/favicon-light.png" alt="" aria-hidden width={26} height={26} className={MARK_BOX} />
+          <p className="flex items-center gap-[0.02em] text-lg font-bold uppercase tracking-[2px] text-foreground">
+            <img src="/favicon-light.png" alt="" aria-hidden width={26} height={26} className={`${MARK_BOX} ${MARK_TUCK}`} />
             <span aria-hidden>ame Through Audio</span>
             <span className="sr-only">Came Through Audio</span>
           </p>

@@ -1,5 +1,5 @@
 import { Link } from "@tanstack/react-router";
-import { MARK_BOX } from "@/components/BrandLockup";
+import { MARK_BOX, MARK_TUCK } from "@/components/BrandLockup";
 
 /**
  * Came Through Audio logo + wordmark. Dark headers (default) get the white logo with Electric Cobalt "Audio";
@@ -19,7 +19,7 @@ export function BrandLogo({ showName = true, tone = "dark" }: { showName?: boole
       <img src={light ? "/cta-logo-dark.png" : "/cta-logo-light.png"} alt="Came Through Audio logo"
         className={`h-8 w-auto object-contain ${showName ? "hidden sm:block" : ""}`} />
       {showName && <span className={`flex items-center text-base font-bold tracking-tight sm:text-lg ${light ? "text-foreground" : ""}`}>
-        <img src={light ? "/cta-mark-dark.png" : "/cta-mark-light.png"} alt="" aria-hidden className={`${MARK_BOX} mr-[0.02em]`} />
+        <img src={light ? "/cta-mark-dark.png" : "/cta-mark-light.png"} alt="" aria-hidden className={`${MARK_BOX} ${MARK_TUCK}`} />
         <span>ame Through <span className={light ? "text-primary" : "text-brand-electric"}>Audio</span></span>
       </span>}
     </Link>

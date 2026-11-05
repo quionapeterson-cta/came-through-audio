@@ -327,7 +327,9 @@ rules keep it consistent as features are added.
 - Wherever the brand appears as a lockup, the name comes first and the slogan follows immediately: "Came Through
   Audio", then "Your first stop before distribution" (`SLOGAN` in `src/lib/social.ts`). Never the other way round, and
   never the slogan as the lockup on its own. Draw it with `BrandLockup` in `src/components/BrandLockup.tsx`, never by
-  hand: the mark there is sized in em so it stays on the name's baseline on a phone instead of drifting.
+  hand: the mark there is sized in em so it stays on the name's baseline on a phone instead of drifting. The mark picture
+  carries 14 of its 256 px as empty margin on the right, which is what put daylight between the C and "ame" (founder,
+  2026-11-05): wherever the mark stands in for the C, apply `MARK_TUCK` from `BrandLockup.tsx` and no hand-picked margin.
 - The home-screen name is "Came Through" (`short_name` in `public/manifest.webmanifest` and
   `apple-mobile-web-app-title` in `src/routes/__root.tsx`); the full name stays "Came Through Audio".
 - Social accounts: Instagram and TikTok are @camethroughaudio. They are edited in Admin → Homepage → Social, stored in
