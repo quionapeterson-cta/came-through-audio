@@ -33,13 +33,17 @@ export function useInstallApp() {
   }, []);
   const installed = ready && isInstalled();
   const canInstall = ready && !installed && (!!deferred || isIOS());
-  const install = async () => {
+  /** What came of the attempt, so a caller can tell an install apart from a dismissed prompt or the manual steps. */
+  const install = async (): Promise<"accepted" | "dismissed" | "help"> => {
     if (deferred) {
       await deferred.prompt();
-      await deferred.userChoice;
+      const { outcome } = await deferred.userChoice;
       deferred = null;
       notify();
-    } else setIosHelp(true);
+      return outcome;
+    }
+    setIosHelp(true);
+    return "help";
   };
   return { canInstall, installed, install, iosHelp, setIosHelp };
 }
@@ -94,10 +98,11 @@ export function InstallSteps({ open, onOpenChange }: { open: boolean; onOpenChan
 const ENTRY_KEY = "cta-entry";
 
 /**
- * The first screen of the site (founder, 2026-11-04): put Came Through Audio on the home screen, or go straight into
- * the site in the browser. It sits above the header, so it is the whole first screen on arrival; either answer is
- * remembered and the screen never comes back (an installed app skips it outright). It is not a wall: the page below
- * scrolls, and "Continue in browser" simply closes it.
+ * The entrance screen (founder, 2026-11-04; made a standalone screen 2026-11-05): put Came Through Audio on the home
+ * screen, or go straight into the site in the browser. It covers the whole viewport and holds the page still behind
+ * it, so the question is a decision rather than a section to scroll past: the site is only reachable once one of the
+ * two answers is given. The answer is remembered, so it is asked once, and someone running the installed app skips it
+ * outright.
  */
 export function AppOrBrowserGate() {
   const { canInstall, install, iosHelp, setIosHelp } = useInstallApp();
@@ -108,16 +113,28 @@ export function AppOrBrowserGate() {
     try { chosen = window.localStorage.getItem(ENTRY_KEY); } catch { chosen = null; }
     if (chosen || isInstalled()) setAsking(false);
   }, []);
+  // No scrolling past the question: the page behind it stays where it is until an answer is given.
+  useEffect(() => {
+    if (!asking) return;
+    const { body } = document;
+    const previous = body.style.overflow;
+    body.style.overflow = "hidden";
+    return () => { body.style.overflow = previous; };
+  }, [asking]);
   const choose = (how: "app" | "browser") => {
     try { window.localStorage.setItem(ENTRY_KEY, how); } catch { /* private browsing: they'll be asked again */ }
     setAsking(false);
     window.scrollTo({ top: 0 });
   };
-  const addToPhone = () => { if (canInstall) void install().then(() => choose("app")); else setSteps(true); };
+  /** Only an accepted install counts as choosing the app; a dismissed prompt leaves the question open. */
+  const addToPhone = () => {
+    if (!canInstall) { setSteps(true); return; }
+    void install().then((outcome) => { if (outcome === "accepted") choose("app"); });
+  };
   if (!asking) return null;
   return (
-    <section className="flex min-h-screen flex-col justify-center border-b border-border bg-ink text-ink-foreground">
-      <div className="mx-auto flex w-full max-w-3xl flex-col items-center gap-5 px-6 py-14 text-center">
+    <div role="dialog" aria-modal="true" aria-label="Choose how to open Came Through Audio" className="fixed inset-0 z-50 overflow-y-auto bg-ink text-ink-foreground">
+      <div className="mx-auto flex min-h-full w-full max-w-3xl flex-col items-center justify-center gap-5 px-6 py-14 text-center">
         <img src="/icon-192.png" alt="Came Through Audio" width={80} height={80} className="h-20 w-20 rounded-[22px] shadow-lg" />
         <p className="text-sm font-bold uppercase tracking-[2px] text-ink-foreground/70">Welcome to Came Through Audio</p>
         <h1 className="text-4xl font-extrabold tracking-tight md:text-5xl">How do you want to come through?</h1>
@@ -134,9 +151,10 @@ export function AppOrBrowserGate() {
         </div>
         <p className="text-xs text-ink-foreground/60">You can add it later from the workspace.</p>
       </div>
-      <IosInstallHelp open={iosHelp} onOpenChange={setIosHelp} />
-      <InstallSteps open={steps} onOpenChange={setSteps} />
-    </section>
+      {/* Followed the steps to the end: that is the app, so the site opens rather than asking again. */}
+      <IosInstallHelp open={iosHelp} onOpenChange={(v) => { setIosHelp(v); if (!v) choose("app"); }} />
+      <InstallSteps open={steps} onOpenChange={(v) => { setSteps(v); if (!v) choose("app"); }} />
+    </div>
   );
 }
 
