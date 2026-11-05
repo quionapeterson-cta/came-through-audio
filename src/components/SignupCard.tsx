@@ -31,6 +31,19 @@ export function SignupCard({ returnPath, onAuthed, inviteMode }: { returnPath?: 
   }, [inviteMode]);
   const paid = intent ? PLAN_TIERS.find((t) => t.priceId === intent) : undefined;
 
+  /** Back from the inbox: refresh the session so a confirmed address counts, then carry on where they were going. */
+  async function continueAfterConfirm() {
+    await supabase.auth.refreshSession();
+    if (onAuthed) onAuthed();
+    else navigate({ to: "/workspace", search: { tab: undefined } });
+  }
+
+  async function resendConfirmation() {
+    const { error } = await supabase.auth.resend({ type: "signup", email: email.trim() });
+    if (error) toast.error(error.message);
+    else toast.success(`Sent again to ${email.trim()}.`);
+  }
+
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     if (mode === "signup" && !passwordValid(password)) { setShowRules(true); toast.error("Your password needs to pass every check below."); return; }
@@ -77,8 +90,19 @@ export function SignupCard({ returnPath, onAuthed, inviteMode }: { returnPath?: 
             <p className="text-muted-foreground">If an account uses <span className="font-semibold text-foreground">{email}</span>, we sent a link to reset your password. It expires in one hour.</p>
           ) : (
             <p className="text-muted-foreground">
-              We sent a confirmation link to <span className="font-semibold text-foreground">{email}</span>. Click it to open your workspace.
+              We sent a confirmation link to <span className="font-semibold text-foreground">{email}</span>.{" "}
+              {paid
+                ? `${TIER_LABEL[PRICE_TIER[intent!]!]} checkout opens by itself the moment you click it — no need to come back to this page.`
+                : "Click it to open your workspace."}
             </p>
+          )}
+          {/* A buyer waiting on their inbox is where this flow loses people, so it gets a way forward, not just an
+              instruction: the button re-checks the address and carries on to checkout (founder, 2026-11-05). */}
+          {mode === "signup" && (
+            <div className="space-y-2 pt-1">
+              <Button className="w-full" onClick={() => void continueAfterConfirm()}>{paid ? "I've confirmed — open checkout" : "I've confirmed — open my workspace"}</Button>
+              <button type="button" className="text-sm font-semibold text-primary" onClick={() => void resendConfirmation()}>Send the link again</button>
+            </div>
           )}
           {mode === "forgot" && <button type="button" className="text-sm font-semibold text-primary" onClick={() => { setSent(false); setMode("login"); }}>Back to log in</button>}
         </div>
