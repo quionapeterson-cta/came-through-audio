@@ -52,16 +52,19 @@ export type BadgeSubmission = {
   uploadedAt: string | null;
   artName: string | null;
   artMime: string | null;
+  masterName: string | null;
   webKey: string;
   masterKey: string;
-  /** A short-lived link to the art; only a super admin asks for one and only for a file that exists. */
+  /** Short-lived links to the art; only a super admin asks for one and only for a file that exists. */
   downloadUrl: string | null;
+  masterUrl: string | null;
 };
 
 type Row = {
   id: string; created_at: string; submitted_by: string; title: string; collection: string; tier: string;
   scope: BadgeScope; set_folder: string | null; slug: string; milestone: string; action: string;
   description: string; popup: string; art_path: string | null; art_name: string | null; art_mime: string | null;
+  master_path: string | null; master_name: string | null; master_mime: string | null;
   status: BadgeSubmissionStatus; decision_note: string | null; decided_at: string | null; uploaded_at: string | null;
 };
 
@@ -85,6 +88,14 @@ const ideaInput = z.object({
     })
     .optional()
     .nullable(),
+  master: z
+    .object({
+      name: z.string().trim().min(1).max(160),
+      type: z.enum(ART_TYPES),
+      base64: z.string().min(1).max(MAX_ART),
+    })
+    .optional()
+    .nullable(),
 });
 
 /** Branding, Marketing & Social Media and Support: file a badge idea with its art. It lands as Submitted. */
@@ -100,14 +111,17 @@ export const submitBadgeIdea = createServerFn({ method: "POST" })
     const keys = badgeKeys({ scope: data.scope, slug, set });
 
     const db = await adminDb();
-    let artPath: string | null = null;
-    if (data.art) {
-      artPath = `submissions/${crypto.randomUUID()}/${slug}.${extension(data.art.type)}`;
+    const folder = `submissions/${crypto.randomUUID()}`;
+    const upload = async (file: { name: string; type: string; base64: string }, suffix: string) => {
+      const path = `${folder}/${slug}${suffix}.${extension(file.type)}`;
       const { error } = await db.storage
         .from("badge-submissions")
-        .upload(artPath, Buffer.from(data.art.base64, "base64"), { contentType: data.art.type });
+        .upload(path, Buffer.from(file.base64, "base64"), { contentType: file.type });
       if (error) throw new Error("Couldn't upload the art. Has migration 20261105120000 (badge-submissions) been run?");
-    }
+      return path;
+    };
+    const artPath = data.art ? await upload(data.art, "") : null;
+    const masterPath = data.master ? await upload(data.master, "-4k") : null;
 
     const { data: row, error } = await db
       .from("badge_submissions" as never)
@@ -126,6 +140,9 @@ export const submitBadgeIdea = createServerFn({ method: "POST" })
         art_path: artPath,
         art_name: data.art?.name ?? null,
         art_mime: data.art?.type ?? null,
+        master_path: masterPath,
+        master_name: data.master?.name ?? null,
+        master_mime: data.master?.type ?? null,
       } as never)
       .select("id")
       .single();
@@ -161,9 +178,16 @@ export const listBadgeSubmissions = createServerFn({ method: "GET" })
       rows.map(async (r) => {
         const keys = badgeKeys({ scope: r.scope, slug: r.slug, set: r.set_folder });
         let downloadUrl: string | null = null;
-        if (isSuper && r.art_path) {
-          const { data: signed } = await db.storage.from("badge-submissions").createSignedUrl(r.art_path, SIGNED_FOR);
-          downloadUrl = signed?.signedUrl ?? null;
+        let masterUrl: string | null = null;
+        if (isSuper) {
+          if (r.art_path) {
+            const { data: signed } = await db.storage.from("badge-submissions").createSignedUrl(r.art_path, SIGNED_FOR);
+            downloadUrl = signed?.signedUrl ?? null;
+          }
+          if (r.master_path) {
+            const { data: signed } = await db.storage.from("badge-submissions").createSignedUrl(r.master_path, SIGNED_FOR);
+            masterUrl = signed?.signedUrl ?? null;
+          }
         }
         return {
           id: r.id,
@@ -186,9 +210,11 @@ export const listBadgeSubmissions = createServerFn({ method: "GET" })
           uploadedAt: r.uploaded_at,
           artName: r.art_name,
           artMime: r.art_mime,
+          masterName: r.master_name,
           webKey: keys.web,
           masterKey: keys.master,
           downloadUrl,
+          masterUrl,
         };
       }),
     );

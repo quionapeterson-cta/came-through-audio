@@ -63,7 +63,8 @@ function BadgeIdeaForm() {
   const [action, setAction] = useState("");
   const [description, setDescription] = useState("");
   const [popup, setPopup] = useState("");
-  const [file, setFile] = useState<File | null>(null);
+  const [webFile, setWebFile] = useState<File | null>(null);
+  const [masterFile, setMasterFile] = useState<File | null>(null);
   const [busy, setBusy] = useState(false);
 
   const slug = badgeSlug(title);
@@ -75,12 +76,13 @@ function BadgeIdeaForm() {
     if (problem) { toast.error(problem); return; }
     setBusy(true);
     try {
-      const art = file ? await readArt(file) : null;
+      const art = webFile ? await readArt(webFile) : null;
+      const master = masterFile ? await readArt(masterFile) : null;
       await submit({
-        data: { title, collection, tier, scope, set: set || null, milestone, action, description, popup, art },
+        data: { title, collection, tier, scope, set: set || null, milestone, action, description, popup, art, master },
       });
       toast.success("Idea submitted for super admin approval.");
-      setTitle(""); setMilestone(""); setAction(""); setDescription(""); setPopup(""); setSet(""); setFile(null);
+      setTitle(""); setMilestone(""); setAction(""); setDescription(""); setPopup(""); setSet(""); setWebFile(null); setMasterFile(null);
       await qc.invalidateQueries({ queryKey: ["badge-submissions"] });
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Couldn't submit the idea.");
@@ -146,11 +148,16 @@ function BadgeIdeaForm() {
           <label htmlFor="bp-popup" className="text-sm font-medium">Unlock message</label>
           <Input id="bp-popup" value={popup} onChange={(e) => setPopup(e.target.value)} maxLength={200} placeholder="{artist} came through with 10 embeds" className="mt-1" />
         </div>
-        <div className="md:col-span-2">
-          <label htmlFor="bp-art" className="text-sm font-medium">Art (PNG, JPEG or WebP, up to 9 MB)</label>
+        <div>
+          <label htmlFor="bp-art" className="text-sm font-medium">Web copy (512 × 512, up to 9 MB)</label>
           <Input id="bp-art" type="file" accept="image/png,image/jpeg,image/webp" className="mt-1"
-            onChange={(e) => setFile(e.target.files?.[0] ?? null)} />
-          <p className="mt-1 text-xs text-muted-foreground">The web copy and the 4K master can both be attached now; the founder files each one at its key.</p>
+            onChange={(e) => setWebFile(e.target.files?.[0] ?? null)} />
+        </div>
+        <div>
+          <label htmlFor="bp-master" className="text-sm font-medium">4K master (original, up to 9 MB)</label>
+          <Input id="bp-master" type="file" accept="image/png,image/jpeg,image/webp" className="mt-1"
+            onChange={(e) => setMasterFile(e.target.files?.[0] ?? null)} />
+          <p className="mt-1 text-xs text-muted-foreground">Both files land with the idea; the founder files each one at the key the queue prints.</p>
         </div>
       </div>
       <Button type="submit" className="mt-4" disabled={busy || !title.trim() || !!problem}>{busy ? "Submitting…" : "Submit for approval"}</Button>
@@ -201,14 +208,20 @@ function SubmissionRow({ s, isSuper }: { s: BadgeSubmission; isSuper: boolean })
       <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
         <span>Web: <code className="rounded bg-muted px-1">{s.webKey}</code></span>
         <span>4K: <code className="rounded bg-muted px-1">{s.masterKey}</code></span>
-        <span>{s.artName ? `Art: ${s.artName}` : "No art attached yet"}</span>
+        <span>{s.artName ? `Web: ${s.artName}` : "No web copy yet"}</span>
+        <span>{s.masterName ? `4K: ${s.masterName}` : "No 4K master yet"}</span>
       </div>
 
       {isSuper && (
         <div className="mt-3 flex flex-wrap items-center gap-2">
           {s.downloadUrl && (
             <Button asChild variant="outline" size="sm">
-              <a href={s.downloadUrl} target="_blank" rel="noreferrer"><Download className="h-4 w-4" />Download art</a>
+              <a href={s.downloadUrl} target="_blank" rel="noreferrer"><Download className="h-4 w-4" />Web copy</a>
+            </Button>
+          )}
+          {s.masterUrl && (
+            <Button asChild variant="outline" size="sm">
+              <a href={s.masterUrl} target="_blank" rel="noreferrer"><Download className="h-4 w-4" />4K master</a>
             </Button>
           )}
           <Button variant="outline" size="sm" onClick={() => void copyKeys()}><Copy className="h-4 w-4" />Copy R2 keys</Button>
