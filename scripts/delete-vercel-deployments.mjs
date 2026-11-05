@@ -8,8 +8,8 @@
 //
 // Never kept: nothing. Always kept:
 //   - the newest READY production deployment (the one your domain serves)
-//   - the newest --keep deployments (default 10)
-//   - anything younger than --keep-days days (default 7)
+//   - the newest --keep deployments (default 3)
+//   - anything younger than --keep-days days (default 0, i.e. off)
 //
 // Get a token at https://vercel.com/account/tokens (scope it to this team if you can).
 // Do not commit the token or paste it anywhere public; pass it as an env var.
@@ -27,8 +27,8 @@ const flag = (name, fallback) => {
 const TOKEN = process.env.VERCEL_TOKEN;
 const PROJECT_ID = process.env.VERCEL_PROJECT_ID ?? "prj_eROxy0x9oz8FigV2YwCWzQaMxuXP";
 const TEAM_ID = process.env.VERCEL_TEAM_ID ?? "team_mHqKfIDvXr2KpxykPtjvkVCk";
-const KEEP = flag("keep", 10);
-const KEEP_DAYS = flag("keep-days", 7);
+const KEEP = flag("keep", 3);
+const KEEP_DAYS = flag("keep-days", 0);
 
 if (!TOKEN) {
   console.error("Set VERCEL_TOKEN first, for example: VERCEL_TOKEN=xxx node scripts/delete-vercel-deployments.mjs");
@@ -87,7 +87,11 @@ const mb = (d) => `${Math.round(d.createdAt / 1000)}`;
 console.log(`${deployments.length} deployments found; keeping ${keep.size}, ${DELETE ? "deleting" : "would delete"} ${doomed.length}.`);
 console.log(`Keeping the live one: ${live ? `${live.uid} (${new Date(live.createdAt).toISOString()})` : "none found — aborting for safety"}`);
 if (!live) process.exit(1);
-console.log(`Keeping the newest ${KEEP} and everything from the last ${KEEP_DAYS} days.`);
+console.log(
+  KEEP_DAYS > 0
+    ? `Keeping the newest ${KEEP} and everything from the last ${KEEP_DAYS} days.`
+    : `Keeping only the newest ${KEEP}, plus the live one.`,
+);
 
 if (!DELETE) {
   for (const d of doomed.slice(0, 15)) {
