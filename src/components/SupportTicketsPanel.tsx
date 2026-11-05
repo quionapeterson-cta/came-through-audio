@@ -2,12 +2,15 @@ import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
+import { MessageSquare } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { BADGES, COLLECTIONS } from "@/lib/badges";
 import { grantBadgeForTicket } from "@/lib/badges.functions";
+import { ScriptCard } from "@/components/SupportScriptsPanel";
 import { listTickets, updateTicketStatus, TICKET_STATUSES } from "@/lib/support.functions";
+import { isBillingTicket, scriptsForTicket, ticketScriptValues } from "@/lib/support-scripts";
 
 /**
  * Unlocks a badge for the account behind this ticket's email, when the app should have awarded it but didn't.
@@ -44,6 +47,35 @@ function UnlockBadge({ ticketId, subject }: { ticketId: string; subject: string 
           placeholder="Reason, e.g. split sheet fully signed but Sealed didn't unlock" className="h-9 min-w-0 flex-1" />
         <Button size="sm" disabled={!badgeId || busy} onClick={() => void unlock()}>Unlock</Button>
       </div>
+    </div>
+  );
+}
+
+/**
+ * The ticket's own scripts, one click from the message (founder, 2026-11-05): the queue owner's wording — Billing's on
+ * a billing ticket, Support's otherwise — with the member's first name and the subject already in it. Staff copy one,
+ * fill anything still in braces, and send it from the ticket. The full catalog stays in Admin → Support Scripts.
+ */
+function TicketScripts({ ticket }: { ticket: { category: string; name: string; subject: string } }) {
+  const [open, setOpen] = useState(false);
+  const rows = scriptsForTicket(ticket.category);
+  const values = ticketScriptValues(ticket);
+  const owner = isBillingTicket(ticket.category) ? "Billing" : "Support";
+  return (
+    <div className="rounded-lg border border-border p-3">
+      <div className="flex flex-wrap items-start justify-between gap-2">
+        <div className="min-w-0">
+          <div className="flex items-center gap-2 text-sm font-semibold"><MessageSquare className="h-4 w-4" />Scripts for this ticket</div>
+          <p className="mt-1 text-xs text-muted-foreground">
+            {owner}'s words for this category, with the first name and subject filled in. Copy one, fill anything left in
+            braces, then send it from here. Every department's scripts are in Support Scripts.
+          </p>
+        </div>
+        <Button size="sm" variant="outline" onClick={() => setOpen(!open)}>
+          {open ? "Hide scripts" : `Show ${rows.length} scripts`}
+        </Button>
+      </div>
+      {open && <div className="mt-3 space-y-3">{rows.map((s) => <ScriptCard key={s.id} script={s} values={values} />)}</div>}
     </div>
   );
 }
@@ -101,6 +133,7 @@ export function SupportTicketsPanel({ scope = "all" }: { scope?: "all" | "billin
                   {TICKET_STATUSES.map((s) => <option key={s} value={s}>{LABEL[s]}</option>)}
                 </select>
               </div>
+              <TicketScripts ticket={t} />
               <UnlockBadge ticketId={t.id} subject={t.subject} />
             </div>
           )}

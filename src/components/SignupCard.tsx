@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { passwordValid, rememberReturn } from "@/lib/password";
+import { rememberLoginEmail } from "@/lib/login-memory";
 import { PasswordField } from "@/components/PasswordField";
 import { PLAN_INTENT_EVENT, PLAN_TIERS, PRICE_TIER, TIER_LABEL, peekPlanIntent } from "@/lib/plans";
 
@@ -50,11 +51,13 @@ export function SignupCard({ returnPath, onAuthed, inviteMode }: { returnPath?: 
           },
         });
         if (error) throw error;
-        if (data.session) { if (onAuthed) onAuthed(); else navigate({ to: "/workspace", search: { tab: "health" } }); }
+        if (data.session) { rememberLoginEmail(email); if (onAuthed) onAuthed(); else navigate({ to: "/workspace", search: { tab: "health" } }); }
         else setSent(true);
       } else {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
+        // So /login fills this address in next time, whichever box they used today.
+        rememberLoginEmail(email);
         if (onAuthed) onAuthed(); else navigate({ to: "/workspace", search: { tab: undefined } });
       }
     } catch (err) {

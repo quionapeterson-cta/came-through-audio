@@ -91,11 +91,17 @@ function PlansPage() {
       <header className="bg-ink text-ink-foreground">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-5">
           <BrandLogo />
-          {/* Log in is small, so it gets the Electric Cobalt with a soft glow to find it at a glance on ink. */}
-          <Link to="/workspace" search={{ tab: undefined }}
-            className={`text-sm font-bold ${user ? "text-ink-muted hover:text-primary" : "text-brand-electric drop-shadow-[0_0_10px_rgba(95,153,255,0.55)] hover:text-ink-foreground"}`}>
-            {user ? "Back to workspace" : "Log in"}
-          </Link>
+          {/* Log in is small, so it gets the Electric Cobalt with a soft glow to find it at a glance on ink. Signed out,
+              it goes to the dedicated log-in page, which already has their email filled in (founder, 2026-11-05). */}
+          {user ? (
+            <Link to="/workspace" search={{ tab: undefined }} className="text-sm font-bold text-ink-muted hover:text-primary">
+              Back to workspace
+            </Link>
+          ) : (
+            <Link to="/login" className="text-sm font-bold text-brand-electric drop-shadow-[0_0_10px_rgba(95,153,255,0.55)] hover:text-ink-foreground">
+              Log in
+            </Link>
+          )}
         </div>
       </header>
 

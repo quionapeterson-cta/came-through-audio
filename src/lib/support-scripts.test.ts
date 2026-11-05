@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { ASSIGNABLE_DEPARTMENTS, DEPARTMENTS } from "./departments";
 import {
-  SUPPORT_SCRIPTS, fillScript, isBillingTicket, scriptDepartments, scriptVariables, scriptsFor, searchScripts,
-  ticketOwnerDepartment,
+  SUPPORT_SCRIPTS, fillScript, isBillingTicket, scriptDepartments, scriptVariables, scriptsFor, scriptsForTicket,
+  searchScripts, ticketOwnerDepartment, ticketScriptValues,
 } from "./support-scripts";
 
 describe("the script catalog", () => {
@@ -72,5 +72,21 @@ describe("who answers a ticket", () => {
     expect(ticketOwnerDepartment("My Catalog · A song won't save or upload")).toBe("support");
     expect(isBillingTicket("account & BILLING · Seats and artist seats")).toBe(true);
     expect(isBillingTicket("Something else · A technical problem with the site")).toBe(false);
+  });
+});
+
+describe("scripts one click from a ticket", () => {
+  it("offers the queue owner's scripts and nothing from the other queue", () => {
+    const billing = scriptsForTicket("Account & billing · A charge, invoice or refund");
+    expect(billing.length).toBeGreaterThan(0);
+    expect(billing.every((s) => s.department === "billing")).toBe(true);
+    const support = scriptsForTicket("My Catalog · A song won't save or upload");
+    expect(support.length).toBeGreaterThan(0);
+    expect(support.every((s) => s.department === "support")).toBe(true);
+  });
+
+  it("fills the first name and the subject, and leaves the rest for staff", () => {
+    expect(ticketScriptValues({ name: "Ada Lovelace", subject: "Refund please" })).toEqual({ first_name: "Ada", detail: "Refund please" });
+    expect(ticketScriptValues({ name: "   ", subject: "" })).toEqual({});
   });
 });

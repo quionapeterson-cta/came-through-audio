@@ -9,7 +9,8 @@ import { SCRIPT_VARIABLES, fillScript, scriptDepartments, searchScripts, type Su
 
 const chip = (on: boolean) => `rounded-full border px-3 py-1 text-sm font-semibold ${on ? "border-primary bg-primary text-primary-foreground" : "border-border"}`;
 
-function ScriptCard({ script, values }: { script: SupportScript; values: Record<string, string> }) {
+/** One script with its copy button. Shared with the ticket panel, which passes the member's details in. */
+export function ScriptCard({ script, values }: { script: SupportScript; values: Record<string, string> }) {
   const [copied, setCopied] = useState(false);
   const text = fillScript(script.body, values);
 

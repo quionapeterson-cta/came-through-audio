@@ -243,7 +243,7 @@ function Landing() {
       <header className="border-b border-border bg-background text-foreground">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-5">
           <BrandLogo tone="light" />
-          <nav className="flex items-center gap-4 whitespace-nowrap sm:gap-6"><Link to="/plans" className="text-sm font-semibold text-muted-foreground hover:text-primary">Plans</Link><Link to="/workspace" search={{ tab: undefined }} className="text-sm font-semibold text-muted-foreground hover:text-primary">Log in</Link></nav>
+          <nav className="flex items-center gap-4 whitespace-nowrap sm:gap-6"><Link to="/plans" className="text-sm font-semibold text-muted-foreground hover:text-primary">Plans</Link><Link to="/login" className="text-sm font-semibold text-muted-foreground hover:text-primary">Log in</Link></nav>
         </div>
       </header>
 

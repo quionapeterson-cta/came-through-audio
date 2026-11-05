@@ -347,5 +347,23 @@ export function isBillingTicket(category: string): boolean {
   return ticketOwnerDepartment(category) === "billing";
 }
 
+/**
+ * The scripts to offer inside a ticket (founder, 2026-11-05): the queue owner's wording, one click from the message —
+ * Billing's on a billing ticket, Support's otherwise. The whole catalog is still Admin → Support Scripts.
+ */
+export function scriptsForTicket(category: string): SupportScript[] {
+  return scriptsFor(ticketOwnerDepartment(category));
+}
+
+/**
+ * What a ticket fills in by itself: the member's first name, and the subject as the detail line. Everything else stays
+ * a visible `{{placeholder}}`, so an unfilled amount is obvious before it is sent.
+ */
+export function ticketScriptValues(ticket: { name: string; subject: string }): Record<string, string> {
+  const first = ticket.name.trim().split(/\s+/)[0] ?? "";
+  const detail = ticket.subject.trim();
+  return { ...(first ? { first_name: first } : {}), ...(detail ? { detail } : {}) };
+}
+
 /** The 30-day window the scripts quote, kept next to them so the wording and the rule cannot drift apart. */
 export const SCRIPT_REFUND_WINDOW_DAYS = REFUND_DAYS;

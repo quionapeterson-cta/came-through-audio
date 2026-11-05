@@ -14,6 +14,7 @@ import { Route as AdminRouteImport } from './routes/admin'
 import { Route as BetaRouteImport } from './routes/beta'
 import { Route as ContactRouteImport } from './routes/contact'
 import { Route as FaqRouteImport } from './routes/faq'
+import { Route as LoginRouteImport } from './routes/login'
 import { Route as PlansRouteImport } from './routes/plans'
 import { Route as PrivacyNoticeRouteImport } from './routes/privacy-notice'
 import { Route as PrivacyPolicyRouteImport } from './routes/privacy-policy'
@@ -63,6 +64,11 @@ const ContactRoute = ContactRouteImport.update({
 const FaqRoute = FaqRouteImport.update({
   id: '/faq',
   path: '/faq',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LoginRoute = LoginRouteImport.update({
+  id: '/login',
+  path: '/login',
   getParentRoute: () => rootRouteImport,
 } as any)
 const PlansRoute = PlansRouteImport.update({
@@ -202,6 +208,7 @@ export interface FileRoutesByFullPath {
   '/beta': typeof BetaRoute
   '/contact': typeof ContactRoute
   '/faq': typeof FaqRoute
+  '/login': typeof LoginRoute
   '/plans': typeof PlansRoute
   '/privacy-notice': typeof PrivacyNoticeRoute
   '/privacy-policy': typeof PrivacyPolicyRoute
@@ -234,6 +241,7 @@ export interface FileRoutesByTo {
   '/beta': typeof BetaRoute
   '/contact': typeof ContactRoute
   '/faq': typeof FaqRoute
+  '/login': typeof LoginRoute
   '/plans': typeof PlansRoute
   '/privacy-notice': typeof PrivacyNoticeRoute
   '/privacy-policy': typeof PrivacyPolicyRoute
@@ -267,6 +275,7 @@ export interface FileRoutesById {
   '/beta': typeof BetaRoute
   '/contact': typeof ContactRoute
   '/faq': typeof FaqRoute
+  '/login': typeof LoginRoute
   '/plans': typeof PlansRoute
   '/privacy-notice': typeof PrivacyNoticeRoute
   '/privacy-policy': typeof PrivacyPolicyRoute
@@ -301,6 +310,7 @@ export interface FileRouteTypes {
     | '/beta'
     | '/contact'
     | '/faq'
+    | '/login'
     | '/plans'
     | '/privacy-notice'
     | '/privacy-policy'
@@ -333,6 +343,7 @@ export interface FileRouteTypes {
     | '/beta'
     | '/contact'
     | '/faq'
+    | '/login'
     | '/plans'
     | '/privacy-notice'
     | '/privacy-policy'
@@ -365,6 +376,7 @@ export interface FileRouteTypes {
     | '/beta'
     | '/contact'
     | '/faq'
+    | '/login'
     | '/plans'
     | '/privacy-notice'
     | '/privacy-policy'
@@ -398,6 +410,7 @@ export interface RootRouteChildren {
   BetaRoute: typeof BetaRoute
   ContactRoute: typeof ContactRoute
   FaqRoute: typeof FaqRoute
+  LoginRoute: typeof LoginRoute
   PlansRoute: typeof PlansRoute
   PrivacyNoticeRoute: typeof PrivacyNoticeRoute
   PrivacyPolicyRoute: typeof PrivacyPolicyRoute
@@ -460,6 +473,13 @@ declare module '@tanstack/react-router' {
       path: '/faq'
       fullPath: '/faq'
       preLoaderRoute: typeof FaqRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/login': {
+      id: '/login'
+      path: '/login'
+      fullPath: '/login'
+      preLoaderRoute: typeof LoginRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/plans': {
@@ -646,6 +666,7 @@ const rootRouteChildren: RootRouteChildren = {
   BetaRoute: BetaRoute,
   ContactRoute: ContactRoute,
   FaqRoute: FaqRoute,
+  LoginRoute: LoginRoute,
   PlansRoute: PlansRoute,
   PrivacyNoticeRoute: PrivacyNoticeRoute,
   PrivacyPolicyRoute: PrivacyPolicyRoute,

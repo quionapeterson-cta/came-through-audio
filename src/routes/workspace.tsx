@@ -166,8 +166,10 @@ function Workspace() {
       });
   }, [user, billingLoaded, realTier]);
 
+  // Signed out: the dedicated log-in page, not the homepage. A returning member lands on their own form with their
+  // email already filled in (founder, 2026-11-05), instead of being bounced back to the sign-up box.
   useEffect(() => {
-    if (!loading && !user) navigate({ to: "/" });
+    if (!loading && !user) navigate({ to: "/login", replace: true });
   }, [loading, user, navigate]);
 
   useEffect(() => {

@@ -9,6 +9,17 @@
 > the editor, so keep the branch in a working state.
 <!-- LOVABLE:END -->
 
+## Nothing Is Official Until It's Approved (always follow)
+
+- Never write a number, allowance, limit, price, date or promise into the product, the plan chart, a Stripe product
+  description, a policy document, an email or a support script as if it were settled unless the founder has approved
+  that exact value (founder, 2026-11-05). Propose it in a plan document, mark it **undecided**, and wait.
+- Anything shipped that the founder has not confirmed is a **draft, not an entitlement**: say so plainly, keep the copy
+  free of the unapproved value, and change it the moment the decision lands. Where a value is approved, keep it in one
+  constant and quote it everywhere; where it is not, the copy does not carry it at all.
+- Current example: **WAV master storage**. Embedding and downloading a WAV is unlimited; how much we store, and whether
+  we charge for it, is not decided. No GB figure and no "unlimited WAV storage" claim is official yet.
+
 - Keep metadata embedding in a browser-safe utility using browser-id3-writer; the uploader creates local MP3 downloads without changing catalog persistence or database permissions.
 - Embeds never carry publisher information (no TPUB or publisher tags), nor the ℗ line or language: those stay catalog-only. PRO affiliations, IPI numbers and splits are never embedded either.
 - Catalog entries fill their blanks from the profile (Embed Defaults + Catalog Profile, incl. writer PRO/IPI/share matched by name) via withProfileFilled in src/lib/artist-profile.ts; never overwrite what a song already has.
@@ -101,7 +112,28 @@
   member from Admin → Support Scripts (`SupportScriptsPanel`), whatever department they hold. A new script needs its
   department, a "when to use" line and placeholders from `SCRIPT_VARIABLES`; a change to what we promise (refund window,
   proration, seats) changes `BILLING-POLICY.md` in the same commit. Staff-only wording sets `internal: true` and must
-  never be sent to a member.
+  never be sent to a member. A ticket carries its own copy of them (`TicketScripts` in `SupportTicketsPanel`): one click
+  opens the queue owner's scripts — Billing's on a `BILLING_AREA` ticket, Support's otherwise — with the member's first
+  name and the subject filled in. That is the shortcut, not a second catalog: the words still live in
+  `src/lib/support-scripts.ts`.
+
+## Catalog Playback & WAV Storage (always follow)
+
+- The catalog play button is a **check-the-version preview, not a listening player** (founder, 2026-11-05): one button
+  per song in My Catalog, so a member can hear that it is the right version and that the file is whole — not cut off,
+  wrong mix, silent tail — from their own computer. No queue, playlists, background or lock-screen playback, share
+  links, or playing outside My Catalog. Never grow it into a listening app unless the founder asks.
+- **The bytes never touch the Worker** (founder, 2026-11-05): the server verifies the member owns the path and returns
+  a short-lived signed R2 URL; the browser streams straight from the bucket's custom domain. Never proxy audio through
+  a server function, never cache a private master at the edge, and never transcode or draw waveforms in the Worker
+  (30 s CPU ceiling, 128 MB memory, no ffmpeg). Signed URLs expire in minutes and are issued per play. See
+  `PLAN-catalog-playback.md`.
+- **WAV: unlimited embedding and download, storage not yet promised** (founder, 2026-11-05): embedding a WAV into a
+  master and downloading it again is unlimited, and it runs in the browser, so it costs us nothing. Masters are still
+  stored today, but **the storage limit is undecided** — whether we keep them as they are, cap them, or charge extra to
+  store them is settled before launch. Until the founder approves a number, never write a GB figure or "unlimited WAV
+  storage" in copy, a Stripe description, a support script or an email. When it lands, put it in one constant and quote
+  it from the plan chart, the price list, the FAQ and `STRIPE-PRODUCTS.md`.
 
 ## Writer Credits & Registration Rules (always follow)
 
