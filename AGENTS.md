@@ -193,6 +193,26 @@
   plan ends and keeps the account. Nothing in the app deletes an account except the staff offboarding job above, so
   never describe a canceled plan as "the account is deleted".
 
+## Admin Hub & Team Culture (always follow)
+
+- **Navigation is grouped, not a flat tab list** (founder, 2026-11-05): `groupTabs` in `src/lib/admin-nav.ts` puts every
+  tab into Operations, Roster & Revenue, Legal & Intellectual Property or HR & Internal Knowledge. `visibleTabs` in
+  departments.ts still decides who sees what, so a group never shows a tab the permissions refuse — and an unknown tab
+  falls into a final "More" group rather than disappearing.
+- **My Queue is the primary hub** (founder, 2026-11-05): three columns (Working On Now, Waiting, Completed) and a bar that
+  fills from ticked steps (`queueProgress` in `src/lib/queue-board.ts`), counting items only until steps exist. Real work
+  is still finished in its own tab; the queue tracks it.
+- **A step belongs to whoever does the work**: the owner writes, edits, deletes and ticks their own steps. A super admin
+  or department lead can set one to `locked` or `approval` (`canLockSteps`); the owner still ticks it, because a lock
+  protects the plan, never the work — and a wording change then goes through `step_change_requests` for a lead to decide.
+  Never add a second lock path in a component.
+- **Finishing is a team win** (founder, 2026-11-05): `recordWin` writes `staff_wins`, the finisher gets `Confetti`, and
+  every signed-in staff member sees the toast from the polled header feed (`WinFeed`). Sound is optional; the visual is
+  not — never add a setting that hides other people's wins.
+- **Team Board is cross-department** (founder, 2026-11-05): per-department in-progress counts plus the `team_notices`
+  micro-chat. Leads, super admins and Project Managers post (`canPostNotice`); everyone reads, so a dependency is written
+  down where the other team already looks.
+
 ## Catalog Playback & WAV Storage (always follow)
 
 - The catalog play button is a **check-the-version preview, not a listening player** (founder, 2026-11-05): one button

@@ -1,5 +1,9 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { MyQueue } from "@/components/MyQueue";
+import { AdminNavMobile, AdminSidebar } from "@/components/AdminSidebar";
+import { TeamBoard } from "@/components/TeamBoard";
+import { WinFeed } from "@/components/WinFeed";
+import { tabLabel } from "@/lib/admin-nav";
 import { Handbook } from "@/components/Handbook";
 import { PdfTools } from "@/components/PdfTools";
 import { LegalEditor } from "@/components/LegalEditor";
@@ -15,7 +19,7 @@ import { BrandLogo } from "@/components/BrandLogo";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsContent } from "@/components/ui/tabs";
 import { getAdminOverview, getStaffRole } from "@/lib/admin.functions";
 import { ASSIGNABLE_DEPARTMENTS, DEPARTMENTS, DEPARTMENT_LABEL, ROLE_LABEL, viewDepartments, visibleTabs, type Department } from "@/lib/departments";
 import { SupportTicketsPanel } from "@/components/SupportTicketsPanel";
@@ -104,6 +108,7 @@ function AdminPage() {
   const tabs = visibleTabs(access, view);
   const show = (value: string) => tabs.some((t) => t.value === value);
   const isSuper = access.role === "super_admin";
+  const current = activeTab && show(activeTab) ? activeTab : (tabs[0]?.value ?? "");
 
   return (
     <div className="min-h-screen bg-background">
@@ -112,6 +117,7 @@ function AdminPage() {
         <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-6 py-4">
           <div className="flex items-center gap-3">
             <BrandLogo showName={false} />
+            <AdminNavMobile tabs={tabs} active={current} onSelect={setActiveTab} access={access} />
             <div>
               <div className="text-xs uppercase tracking-widest text-ink-muted">Came Through Audio</div>
               <div className="text-xl font-bold">Admin Dashboard</div>
@@ -119,6 +125,7 @@ function AdminPage() {
           </div>
           <div className="flex items-center gap-3">
             {show("tasks") && <WelcomeSwitch />}
+            <WinFeed me={user.id} />
             {show("tasks") && <TaskBell me={user.id} onOpenTasks={() => setActiveTab("tasks")} />}
             {isSuper && (
               <Select value={view} onValueChange={(v) => setView(v as Department | "all")}>
@@ -142,7 +149,10 @@ function AdminPage() {
         </div>
       </header>
 
-      <main className="mx-auto max-w-7xl px-6 py-8">
+      <div className="mx-auto flex max-w-[100rem] gap-8 px-4 py-6 sm:px-6">
+        <AdminSidebar tabs={tabs} active={current} onSelect={setActiveTab} access={access} />
+        <main className="min-w-0 flex-1">
+        <h1 className="text-2xl font-bold tracking-tight">{tabLabel(tabs, current)}</h1>
         {!isSuper && (
           <div className="mb-6 flex flex-wrap gap-2">
             {access.departments.map((dep) => <Badge key={dep} variant="secondary">{DEPARTMENT_LABEL[dep]}</Badge>)}
@@ -165,12 +175,7 @@ function AdminPage() {
 
         {overview.isError && <p className="mt-6 text-destructive">Couldn't load dashboard data.</p>}
 
-        <Tabs key={view} value={activeTab && show(activeTab) ? activeTab : tabs[0]!.value} onValueChange={setActiveTab} className="mt-8">
-          <TabsList className="h-auto flex-wrap justify-start gap-1 bg-muted p-1">
-            {tabs.map((t) => (
-              <TabsTrigger key={t.value} value={t.value} className="font-semibold data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">{t.label}</TabsTrigger>
-            ))}
-          </TabsList>
+        <Tabs key={view} value={current} onValueChange={setActiveTab} className="mt-6">
           <TabsContent value="ai">
             <Table head={["Track", "Artist", "Package", "Blockchain", "Verified", "Issued"]}
               rows={d?.certificates.map((c) => [c.track_title ?? "—", c.artist_name ?? "—", c.format_type, c.blockchain_status, c.is_verified ? "Yes" : "No", fmt(c.issued_at)])} />
@@ -204,6 +209,7 @@ function AdminPage() {
           {show("calendar") && <TabsContent value="calendar"><AdminCalendar me={user.id} access={access} /></TabsContent>}
           {show("recognition") && <TabsContent value="recognition"><MyRecognition /></TabsContent>}
           {show("queue") && <TabsContent value="queue"><MyQueue me={user.id} access={access} onOpen={setActiveTab} /></TabsContent>}
+          {show("team") && <TabsContent value="team"><TeamBoard /></TabsContent>}
           {show("handbook") && <TabsContent value="handbook"><Handbook /></TabsContent>}
           {show("staff-plan") && <TabsContent value="staff-plan"><StaffPlanPanel access={access} /></TabsContent>}
           {show("scripts") && <TabsContent value="scripts"><SupportScriptsPanel /></TabsContent>}
@@ -213,7 +219,8 @@ function AdminPage() {
           {show("legal") && <TabsContent value="legal"><LegalEditor /></TabsContent>}
         </Tabs>
         </>)}
-      </main>
+        </main>
+      </div>
     </div>
   );
 }

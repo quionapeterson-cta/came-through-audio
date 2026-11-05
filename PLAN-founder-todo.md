@@ -73,18 +73,19 @@ Create each price in the **sandbox first**, test it, then in **live**. Until the
 - [ ] Or Lovable → Cloud → Secrets → `CRON_SECRET`, if it lets you view it.
 - [ ] Lost in both places? Make a new long random value, save it in Lovable as `CRON_SECRET`, then update the header on all 4 jobs. Tell me and I'll walk you through it.
 
-**New job on cron-job.org**
+**The four jobs on cron-job.org** (all POST, all with the same `Authorization` = `Bearer ` + your CRON_SECRET; the untouched three keep the schedule they already have)
 
-| Setting | Value |
-| --- | --- |
-| Title | Task reminders |
-| URL | https://pixel-perfect-studio-382.lovable.app/api/public/cron/task-reminders |
-| Schedule | Every hour |
-| Method | POST |
-| Header | `Authorization` = `Bearer ` + your CRON_SECRET |
+| Job | URL | Schedule | What it does |
+| --- | --- | --- | --- |
+| Catalog lapses | https://pixel-perfect-studio-382.lovable.app/api/public/cron/catalog-lapses | Daily | Renewal reminders (90/60/30/7/1 days), the catalog grace period, and **staff offboarding — the only thing that deletes an account** |
+| Trial reminders | https://pixel-perfect-studio-382.lovable.app/api/public/cron/trial-reminders | Daily | Trial ending emails |
+| Registration reminders | https://pixel-perfect-studio-382.lovable.app/api/public/cron/registration-reminders | Daily | Paperwork still missing on a registration |
+| Task reminders | https://pixel-perfect-studio-382.lovable.app/api/public/cron/task-reminders | Every hour | Top priority task deadlines, 24 hours and 1 hour ahead |
 
-- [ ] Create it, then Test run: it should answer 200, not 401.
-- [ ] Check the other 3 jobs still show green: catalog-lapses (daily), trial-reminders, registration-reminders.
+- [ ] Create the Task reminders job, then Test run: it should answer 200 with counts, not 401.
+- [ ] Check all four jobs show green. **Catalog lapses is the load-bearing one now:** if it stops running, staff departures are never deleted and the 30-day emails stop.
+- [ ] Turn on cron-job.org's own failure email, so a silent job tells you.
+- [ ] After the Cloudflare move (Dec 7), the same four URLs keep working; Cloudflare Cron Triggers replace them then, and the shared secret goes away.
 
 **Contract Generator (Cloudflare, free)**
 - [ ] dash.cloudflare.com → AI → Workers AI → Use REST API → copy the Account ID.
