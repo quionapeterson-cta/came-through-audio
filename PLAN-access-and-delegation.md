@@ -21,7 +21,7 @@ accounts behind it. Adding a fourth infra seat needs a written reason in this fi
 |---|---|---|---|
 | Cloudflare (DNS, R2) | Super Administrator, account owner | **Administrator** (or, preferred, a scoped API token: R2 Object Read & Write on the art bucket only) | Read Only |
 | Supabase (database, auth, storage) | Organization Owner | Developer on the project (SQL editor, migrations, storage policies) | Read Only where offered; otherwise audit via logs |
-| Stripe (payments) | Administrator | **Restricted API key** (`rk_live_`, per-resource) — a Developer seat only if dashboard work is needed | View Only |
+| Stripe (payments) | Administrator | **Restricted API key** (`rk_live_`, per-resource); a Developer seat only for dashboard work (it can pay out and mint live keys) | View Only |
 | Vercel (hosting, deploys) | Owner | Member with Developer role on this project | Viewer |
 | GitHub (repository) | Organization Owner | Write access to `came-through-audio` | Security manager |
 | Domain registrar | Registrant | Technical contact only | — |
@@ -49,6 +49,20 @@ Stripe never requires giving anyone your login or ownership. Three levels, tight
    team members or change the account owner. Right for the technical lead who must fix webhooks and read logs; wrong for
    a contractor.
 3. **Sandbox-only** — invite someone to sandboxes with no access to the live account, for testing the integration.
+
+### What a Developer seat can actually touch
+
+Stripe's role table is specific here (checked 2026-11-05), and two lines matter:
+
+- **Can:** view balance, view payouts, **pay the balance out to the existing bank account**, create and refund payments,
+  view customers, download financial reports, view audit logs, and create live secret keys.
+- **Cannot:** add or edit bank account details, edit the payout schedule, invite team members, or change the owner.
+
+So they cannot redirect money to a different account — changing the destination is a dashboard action the role blocks.
+They can still push the balance to the bank you already have, and a secret key they mint can do anything the API allows.
+That is why the seat is temporary and one-named-person: give it for the length of a dashboard task (webhooks, refunds,
+disputes) and remove it afterwards, while the app itself runs on a restricted key with no Payouts permission. Stripe can
+require two-step authentication on the account — switch that on before the first invite.
 
 Never hand over the `sk_live_` secret key itself: it grants every API resource and cannot be limited. This project's key
 belongs in the Vercel environment variables (or Supabase secrets), never in a message or a file.
