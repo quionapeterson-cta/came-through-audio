@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { passwordValid } from "@/lib/password";
+import { sendPasswordResetEmail } from "@/lib/auth-emails.functions";
 
 export const Route = createFileRoute("/reset-password")({
   ssr: false,
@@ -34,6 +35,8 @@ function ResetPassword() {
   const [email, setEmail] = useState("");
   const [busy, setBusy] = useState(false);
   const [sent, setSent] = useState(false);
+  // The staff invite lands here with ?invite=1 (founder, 2026-11-05): same page, but it has to say what it is for.
+  const [invite] = useState(() => typeof window !== "undefined" && new URLSearchParams(window.location.search).get("invite") === "1");
 
   useEffect(() => {
     const { data: sub } = supabase.auth.onAuthStateChange((event, session) => {
@@ -61,10 +64,14 @@ function ResetPassword() {
   async function resend(e: FormEvent) {
     e.preventDefault();
     setBusy(true);
-    const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), { redirectTo: `${window.location.origin}/reset-password` });
-    setBusy(false);
-    if (error) { toast.error(error.message); return; }
-    setSent(true);
+    try {
+      await sendPasswordResetEmail({ data: { email: email.trim() } });
+      setSent(true);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Couldn't send the reset email.");
+    } finally {
+      setBusy(false);
+    }
   }
 
   return (
@@ -77,7 +84,13 @@ function ResetPassword() {
             <p className="mt-4 flex items-center gap-2 text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" />Checking your reset link…</p>
           ) : state === "ready" ? (
             <form onSubmit={save} className="mt-4 space-y-4">
-              <h1 className="text-2xl font-bold">Choose a new password</h1>
+              <h1 className="text-2xl font-bold">{invite ? "Welcome to the team" : "Choose a new password"}</h1>
+              {invite && (
+                <p className="text-sm text-muted-foreground">
+                  This email is your staff sign-in. Choose a password, then open Admin → My Queue from your workspace.
+                  Your member account, if you have one, stays on its own email.
+                </p>
+              )}
               <PasswordField id="new-password" label="New password" value={password} onChange={setPassword} />
               <div className="space-y-1.5">
                 <Label htmlFor="confirm-password">Confirm new password</Label>

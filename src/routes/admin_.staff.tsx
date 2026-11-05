@@ -6,6 +6,7 @@ import { ArrowLeft, Lock, Pencil, Trash2, UserPlus } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
 import { BrandLogo } from "@/components/BrandLogo";
+import { StaffInviteGuide } from "@/components/StaffInviteGuide";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -94,6 +95,8 @@ function StaffPage() {
           <p className="text-muted-foreground">Invite employees and choose what they can see. Changes apply on their next page load.</p>
           <Button onClick={() => setEditing({ mode: "invite" })}><UserPlus className="h-4 w-4" />Invite Employee</Button>
         </div>
+
+        <StaffInviteGuide />
 
         {staff.isError && <p className="mt-6 text-destructive">Couldn't load staff.</p>}
         {!data && !staff.isError && <p className="mt-6 text-muted-foreground">Loading…</p>}

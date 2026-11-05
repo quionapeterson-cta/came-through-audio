@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useAuth } from "@/hooks/useAuth";
 import { forgetLoginEmail, lastLoginEmail, rememberLoginEmail } from "@/lib/login-memory";
+import { sendPasswordResetEmail } from "@/lib/auth-emails.functions";
 
 export const Route = createFileRoute("/login")({
   // Signing in is a browser session, so there is nothing to render on the server.
@@ -70,10 +71,15 @@ function Login() {
   async function sendReset() {
     if (!email.trim()) { toast.error("Type the email on your account first."); return; }
     setBusy(true);
-    const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), { redirectTo: `${window.location.origin}/reset-password` });
-    setBusy(false);
-    if (error) { toast.error(error.message); return; }
-    setResetSent(true);
+    try {
+      // Our own branded email, not the provider's default template (founder, 2026-11-05).
+      await sendPasswordResetEmail({ data: { email: email.trim() } });
+      setResetSent(true);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Couldn't send the reset email.");
+    } finally {
+      setBusy(false);
+    }
   }
 
   return (

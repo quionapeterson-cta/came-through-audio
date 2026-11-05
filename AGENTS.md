@@ -144,6 +144,26 @@
   `src/lib/holiday-coverage.ts` (Admin → Holiday Cover, super admins and department leads only) carries **no rate, no
   hours and no bonus** until the founder approves them. Never write a holiday figure into the plan, a script or an email.
 
+## Staff Invites & Benefits (always follow)
+
+- **One email, one identity** (founder, 2026-11-05): staff sign in with their own address, never the member account they
+  may already have. `inviteStaff` refuses an address that already belongs to an account (`billing_find_user`) and one
+  already on the team; the rule and the wording live in `src/lib/staff-invites.ts` with its test. Do not add a bypass —
+  this is what stops an employee answering their own ticket or refunding themselves.
+- **The invite lands on our page, not a sign-up form** (founder, 2026-11-05): `generateLink` redirects to
+  `/reset-password?invite=1`, which asks for a password and says what happens next. The invite email repeats the same
+  steps (`ACCEPT_STEPS`) and states that the staff login is separate from any member account.
+- **Every account email is branded and sent by us** (founder, 2026-11-05): password resets go through
+  `sendPasswordResetEmail` in `src/lib/auth-emails.functions.ts` (our link, `emailLayout`, admin@ as the sender), never
+  the provider's default template and never `supabase.auth.resetPasswordForEmail` from a component. The same applies to
+  invites, which are already ours. Any new auth mail follows that pattern.
+- **The email header is smaller than it was** (founder, 2026-11-05): `EMAIL_LOGO_WIDTH`, `WORDMARK_FONT_PX` and
+  `WORDMARK_MARK_PX` in `src/lib/email-layout.ts` are the only sizes; change them there, never inline in a template.
+- **A free account is a benefit of working here, not a plan change** (founder, 2026-11-05): an employee's own account is
+  free while they work here. If they already paid, the paid time runs out first and the free staff plan starts after it;
+  nothing is refunded mid-year, and the benefit ends on their last day. Which plan it is, and every extra benefit, is
+  **undecided** until the founder approves it: the Handbook section says so and carries no figure or tier name.
+
 ## Catalog Playback & WAV Storage (always follow)
 
 - The catalog play button is a **check-the-version preview, not a listening player** (founder, 2026-11-05): one button

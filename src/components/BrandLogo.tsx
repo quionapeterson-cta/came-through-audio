@@ -17,7 +17,7 @@ export function BrandLogo({ showName = true, tone = "dark" }: { showName?: boole
           pushed the C off the name. Small screens show the wordmark alone; the logo returns from sm up, and a
           showName={false} header keeps its picture at every size because that is all it has. */}
       <img src={light ? "/cta-logo-dark.png" : "/cta-logo-light.png"} alt="Came Through Audio logo"
-        className={`h-9 w-auto object-contain ${showName ? "hidden sm:block" : ""}`} />
+        className={`h-8 w-auto object-contain ${showName ? "hidden sm:block" : ""}`} />
       {showName && <span className={`flex items-center text-base font-bold tracking-tight sm:text-lg ${light ? "text-foreground" : ""}`}>
         <img src={light ? "/cta-mark-dark.png" : "/cta-mark-light.png"} alt="" aria-hidden className={`${MARK_BOX} mr-[0.02em]`} />
         <span>ame Through <span className={light ? "text-primary" : "text-brand-electric"}>Audio</span></span>

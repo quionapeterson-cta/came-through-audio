@@ -4,6 +4,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/integrations/supabase/types";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { ADMIN_EMAIL, emailLayout, escapeHtml, SITE_URL } from "./email-layout";
+import { ACCEPT_STEPS, inviteBlocker } from "./staff-invites";
 import {
   ASSIGNABLE_DEPARTMENTS, DEPARTMENTS, DEPARTMENT_LABEL, MANAGED_ROLES, ROLE_LABEL, normalizeDepartments, resolveAccess, staffChangeError,
   type Department, type ManagedRole, type StaffRole,
@@ -85,15 +86,26 @@ export const inviteStaff = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const { actorIsSuper } = await requireStaffManager(context);
     const db = await admin();
-    // generateLink creates the account for new people so user_roles has a real user_id, and lets us send our own branded email.
-    let invite = await db.auth.admin.generateLink({ type: "invite", email: data.email, options: { redirectTo: SITE_URL } });
-    const isNew = !invite.error;
-    if (invite.error) invite = await db.auth.admin.generateLink({ type: "magiclink", email: data.email });
+    // One email, one identity (founder, 2026-11-05): staff sign in with their own address, never the member account they
+    // may already have. generateLink then creates the account so user_roles has a real user_id, and we send our own email.
+    const { data: found } = await db.rpc("billing_find_user" as never, { _email: data.email } as never);
+    const existingId = typeof found === "string" ? found : null;
+    const onTeam = existingId ? ((await db.from("user_roles").select("role").eq("user_id", existingId)).data ?? []).length > 0 : false;
+    const problem = inviteBlocker({ email: data.email, memberAccount: !!existingId, onTeam });
+    if (problem) throw new Error(problem);
+
+    const invite = await db.auth.admin.generateLink({
+      type: "invite",
+      email: data.email,
+      // Our own page, not a sign-up form: the link already signed them in, and the page asks for the password.
+      options: { redirectTo: `${SITE_URL}/reset-password?invite=1` },
+    });
     const user = invite.data?.user;
-    if (invite.error || !user) throw new Error("Couldn't create or find that account.");
+    const link = invite.data?.properties?.action_link;
+    if (invite.error || !user || !link) throw new Error("Couldn't create that account. Check the address and try again.");
 
     const departments = await applyRole({ userId: context.userId, actorIsSuper }, user.id, data.role, data.departments);
-    const emailed = await sendStaffEmail(data.email, data.role, departments, isNew ? invite.data.properties.action_link : `${SITE_URL}/admin`, isNew);
+    const emailed = await sendStaffEmail(data.email, data.role, departments, link);
     return { ok: true, emailed };
   });
 
@@ -122,15 +134,17 @@ export const removeStaff = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
-async function sendStaffEmail(to: string, role: ManagedRole, departments: Department[], link: string, isNew: boolean) {
+async function sendStaffEmail(to: string, role: ManagedRole, departments: Department[], link: string) {
   const key = process.env["RESEND_API_KEY"] || process.env["CameThroughAudio"];
   if (!key) return false;
   const depts = departments.map((d) => DEPARTMENT_LABEL[d]).join(", ");
   const html = emailLayout(`<p style="font-size:12px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:#004AAD;margin:0">Team Access</p>
 <h1 style="font-size:22px;margin:8px 0 16px">You've been added to the Came Through Audio team</h1>
 <p style="font-size:15px;line-height:1.6;margin:0 0 8px"><b>Role:</b> ${escapeHtml(ROLE_LABEL[role])}<br/><b>Departments:</b> ${escapeHtml(depts)}</p>
-<p style="font-size:15px;line-height:1.6">${isNew ? "Accept your invite to set up your account, then open the staff dashboard." : "Sign in with this email to open the staff dashboard."} While we're in private preview you'll also be asked for the preview passcode — your admin will share it with you.</p>
-<p style="margin:24px 0"><a href="${link}" style="background:#004AAD;color:#ffffff;text-decoration:none;font-weight:700;padding:12px 22px;border-radius:8px;display:inline-block">${isNew ? "Accept invite" : "Open staff dashboard"}</a></p>`,
+<p style="font-size:15px;line-height:1.6"><b>Your staff sign-in is separate from any member account.</b> Use this email and the password you choose here; the account you use as an artist stays just as it is.</p>
+<ol style="font-size:15px;line-height:1.6;padding-left:20px">${ACCEPT_STEPS.map((s) => `<li style="margin:4px 0">${escapeHtml(s)}</li>`).join("")}</ol>
+<p style="font-size:15px;line-height:1.6">While we're in private preview you'll also be asked for the preview passcode — your admin will share it with you.</p>
+<p style="margin:24px 0"><a href="${link}" style="background:#004AAD;color:#ffffff;text-decoration:none;font-weight:700;padding:12px 22px;border-radius:8px;display:inline-block">Set your password</a></p>`,
     { reason: "You're receiving this because a Came Through Audio admin gave this email staff access." });
   const res = await fetch("https://api.resend.com/emails", {
     method: "POST",

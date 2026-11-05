@@ -42,6 +42,21 @@ export const HANDBOOK: HandbookSection[] = [
   { id: "escalate", title: "When you're stuck", body: [
     "Ask your department lead first, then the founder. Anything about money, legal terms or a customer's safety goes to the founder the same day.",
   ] },
+  { id: "joining", title: "Joining the team", body: [
+    "Staff sign in with their own email, separate from any member account they already have. Two identities, two passwords: a member account is never turned into a staff login, and staff access is never added to the account an artist works in.",
+    "HR or a super admin invites from Admin → Staff: pick the role, pick the departments, then send it to the work address. An address that already belongs to a member account is refused on purpose — ask for a different one.",
+    "The invite email is branded and lists the steps. The link opens our own page where the person chooses a password; it is not a sign-up form, and nobody has to land on one wondering what to do.",
+    "If the link expires, Forgot password on the login page sends a branded email from admin@camethroughaudio.com within the hour.",
+    "First day: open Admin → My Queue, read this handbook, and check My Recognition. A lead walks the new starter through their department's queue before they answer a customer alone.",
+  ] },
+  { id: "benefits", title: "Your own account while you work here", body: [
+    "Your account is free while you work at Came Through Audio.",
+    "Already paying? Nothing changes now, and nothing is refunded mid-year. When the time you paid for ends, the account moves to the staff plan instead of charging you again.",
+    "Join with no paid plan and it is free from your first day.",
+    "The staff plan ends on your last day. From then the usual plan rules apply, and the catalog follows the retention policy like any member's.",
+    "Which plan the staff account gets is not decided yet: the founder sets it, and until then nothing here promises a tier or a feature list.",
+    "Proposed extras, not switched on: a seat for an artist you manage, AI Protection credits, Expert Registration assistance, a brand kit for your own project and priority support. Each one needs the founder's number before it becomes an entitlement, so ask before you rely on it.",
+  ] },
 ];
 
 /** Tutorial videos the founder will record; each shows as coming soon until it has a link. */
