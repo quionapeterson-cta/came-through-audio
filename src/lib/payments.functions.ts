@@ -3,7 +3,7 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { createStripeClient, getStripeErrorMessage } from "@/lib/stripe.server";
 import { getPaymentsEnvironment } from "@/lib/payments-env";
 import { checkoutInput, planCheckout } from "@/lib/stripe-mapping";
-import { EMAIL_CONFIRM_REQUIRED, isActiveSub, PRICE_TIER } from "@/lib/plans";
+import { isActiveSub, PRICE_TIER } from "@/lib/plans";
 
 /**
  * Sales tax on sales Came Through Audio, LLC makes directly (Expert Assistance). Stays off until Stripe Tax is
@@ -168,13 +168,8 @@ export const createCheckoutSession = createServerFn({ method: "POST" })
     const env = getPaymentsEnvironment();
     const stripe = stripeClient(env);
     const origin = await appOrigin();
-    // No payment without a confirmed email (founder, 2026-11-03): checked here, before Stripe's form ever opens, so
-    // nothing interrupts someone mid-payment. Applies to every purchase, renewals included.
-    {
-      const { admin } = await import("@/lib/retention.server");
-      const { data: account } = await (await admin()).auth.admin.getUserById(context.userId);
-      if (!account?.user?.email_confirmed_at) throw new Error(EMAIL_CONFIRM_REQUIRED);
-    }
+    // No confirmation check here any more (founder, 2026-11-05): paying comes first and the confirmation link is a
+    // reminder that arrives alongside the purchase, so the email gate that used to stand in front of Stripe is gone.
     if (data.kind === "renew") return renewCheckout(stripe, env, context.userId, (context.claims as { email?: string }).email, origin);
     const plan = planCheckout(data, context.userId);
     if (data.kind === "contract") {

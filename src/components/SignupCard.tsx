@@ -64,8 +64,17 @@ export function SignupCard({ returnPath, onAuthed, inviteMode }: { returnPath?: 
           },
         });
         if (error) throw error;
+        // Supabase hands back no session while "Confirm email" is on, and paying must not wait for the link (founder,
+        // 2026-11-05): unverified sign-ins are allowed, so sign the new account in here and let the plan's checkout
+        // open in this same sitting. The confirmation email is already on its way. If the sign-in is refused, the
+        // inbox screen below is the fallback.
         if (data.session) { rememberLoginEmail(email); if (onAuthed) onAuthed(); else navigate({ to: "/workspace", search: { tab: "health" } }); }
-        else setSent(true);
+        else {
+          const { data: signedIn, error: signInError } = await supabase.auth.signInWithPassword({ email, password });
+          if (signInError || !signedIn.session) { setSent(true); return; }
+          rememberLoginEmail(email);
+          if (onAuthed) onAuthed(); else navigate({ to: "/workspace", search: { tab: "health" } });
+        }
       } else {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;

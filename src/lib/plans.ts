@@ -32,16 +32,6 @@ export function hasTier(current: Tier, needed: Tier) {
 }
 
 /**
- * Paid access needs a confirmed email (founder, 2026-11-03). The server refuses to open a checkout until Supabase has
- * confirmed the address, and the client uses this same wording to show the confirm step before Stripe opens, so the
- * payment form itself is never interrupted by verification.
- */
-export const EMAIL_CONFIRM_REQUIRED = "Confirm your email before checking out.";
-export function isEmailConfirmError(e: unknown): boolean {
-  return e instanceof Error && e.message.includes(EMAIL_CONFIRM_REQUIRED);
-}
-
-/**
  * The plan a signed-out visitor picked, kept in this browser until they have an account (checkout needs their
  * user ID so the payment webhook can credit the right person). Survives the email-confirmation round trip.
  */

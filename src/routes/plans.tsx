@@ -6,8 +6,7 @@ import { BrandLogo } from "@/components/BrandLogo";
 import { PlanComparison, planAction } from "@/components/PlanComparison";
 import { useAuth } from "@/hooks/useAuth";
 import { useBilling } from "@/hooks/useBilling";
-import { PRICE_TIER, TIER_LABEL, isEmailConfirmError, peekPlanIntent, rememberPlanIntent, takePlanIntent, upgradeNote } from "@/lib/plans";
-import { Button } from "@/components/ui/button";
+import { PRICE_TIER, TIER_LABEL, peekPlanIntent, rememberPlanIntent, takePlanIntent, upgradeNote } from "@/lib/plans";
 import { SignupCard } from "@/components/SignupCard";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { getPaymentsEnvironment, openCheckout } from "@/lib/checkout";
@@ -49,15 +48,11 @@ function PlansPage() {
   // Picked a paid tier while signed out: the sign-up form opens here, and that tier's checkout opens the moment the
   // account exists (founder, 2026-11-03: the button leads straight to checkout, without a trip to the homepage).
   const [signupFor, setSignupFor] = useState<string | null>(null);
-  // A confirmed email is required before paying, and it's checked before Stripe opens so the payment form itself is
-  // never interrupted (founder, 2026-11-03).
-  const [confirmFor, setConfirmFor] = useState<string | null>(null);
+  // Paying no longer waits for the email confirmation (founder, 2026-11-05): the new account is signed in straight
+  // away, the confirmation link arrives alongside the purchase, and the workspace reminds them to click it.
   const startCheckout = async (priceId: string) => {
-    const { data } = await supabase.auth.getUser();
-    if (data.user && !data.user.email_confirmed_at) { rememberPlanIntent(priceId); setConfirmFor(priceId); return; }
     try { await openCheckout({ kind: "plan", priceId }); takePlanIntent(); }
     catch (e) {
-      if (isEmailConfirmError(e)) { rememberPlanIntent(priceId); setConfirmFor(priceId); return; }
       // Whatever went wrong, the pick stays in the browser: the workspace and the plan cards both resume it, instead of
       // the member quietly landing in a free workspace with the purchase forgotten (founder, 2026-11-05).
       rememberPlanIntent(priceId);
@@ -74,21 +69,6 @@ function PlansPage() {
     const priceId = peekPlanIntent() ?? signupFor;
     setSignupFor(null);
     if (priceId) void startCheckout(priceId);
-  };
-  const retryConfirmed = async () => {
-    await supabase.auth.refreshSession();
-    const { data } = await supabase.auth.getUser();
-    if (!data.user?.email_confirmed_at) { toast.error("That email isn't confirmed yet. Open the link we sent, then try again."); return; }
-    const priceId = confirmFor;
-    setConfirmFor(null);
-    if (priceId) await startCheckout(priceId);
-  };
-  const resendConfirmation = async () => {
-    const { data } = await supabase.auth.getUser();
-    const email = data.user?.email;
-    if (!email) { toast.error("Sign in again to resend the confirmation link."); return; }
-    const { error } = await supabase.auth.resend({ type: "signup", email, options: { emailRedirectTo: `${window.location.origin}/plans` } });
-    if (error) toast.error(error.message); else toast.success(`Confirmation link sent to ${email}.`);
   };
 
   return (
@@ -132,21 +112,6 @@ function PlansPage() {
             <DialogTitle className="sr-only">Sign up for {TIER_LABEL[PRICE_TIER[signupFor]!]}</DialogTitle>
             <DialogDescription className="sr-only">Create your account and this plan's checkout opens right after.</DialogDescription>
             <SignupCard onAuthed={afterSignup} />
-          </DialogContent>
-        </Dialog>
-      )}
-
-      {confirmFor && (
-        <Dialog open onOpenChange={(o) => !o && setConfirmFor(null)}>
-          <DialogContent className="max-w-md">
-            <DialogTitle>Confirm your email to finish</DialogTitle>
-            <DialogDescription>
-              We sent a confirmation link to your address. Click it, then continue: {TIER_LABEL[PRICE_TIER[confirmFor]!]} checkout opens right after, with no extra steps.
-            </DialogDescription>
-            <div className="mt-5 space-y-2">
-              <Button className="w-full" onClick={() => void retryConfirmed()}>I've confirmed — continue to checkout</Button>
-              <Button className="w-full" variant="outline" onClick={() => void resendConfirmation()}>Send the link again</Button>
-            </div>
           </DialogContent>
         </Dialog>
       )}

@@ -31,7 +31,7 @@ import { useBilling, type Purchase } from "@/hooks/useBilling";
 import { openCheckout, getPaymentsEnvironment } from "@/lib/checkout";
 import { listSeatState } from "@/lib/seats";
 import { AddArtistDialog } from "@/components/ArtistSeats";
-import { PRICE_TIER, TIER_LABEL, hasTier, isEmailConfirmError, rememberPlanIntent, takePlanIntent, upgradeNote, type Tier } from "@/lib/plans";
+import { PRICE_TIER, TIER_LABEL, hasTier, rememberPlanIntent, takePlanIntent, upgradeNote, type Tier } from "@/lib/plans";
 import { PlanComparison, planAction } from "@/components/PlanComparison";
 import { BadgeWatcher } from "@/components/Badges";
 import { Confetti } from "@/components/Confetti";
@@ -43,6 +43,7 @@ import { UpgradeLock } from "@/components/UpgradeLock";
 import { EagleStatusBadge } from "@/components/EagleStatusBadge";
 import { eagleStatus } from "@/lib/eagle-status";
 import { CatalogLapseBanner } from "@/components/CatalogLapseBanner";
+import { EmailConfirmBanner } from "@/components/EmailConfirmBanner";
 import { PdfTools } from "@/components/PdfTools";
 import { inGrace, isPaused } from "@/lib/retention";
 
@@ -165,10 +166,10 @@ function Workspace() {
     toast.info(`Opening checkout for ${TIER_LABEL[PRICE_TIER[priceId]!]}…`);
     openCheckout({ kind: "plan", priceId })
       .catch((e) => {
-        // Keep the pick whatever went wrong, not only for an unconfirmed email: the next visit and the upgrade button
-        // then resume the purchase instead of leaving them in a free workspace with it forgotten (founder, 2026-11-05).
+        // Keep the pick whatever went wrong: the next visit and the upgrade button then resume the purchase instead of
+        // leaving them in a free workspace with it forgotten (founder, 2026-11-05).
         rememberPlanIntent(priceId);
-        toast.error(isEmailConfirmError(e) ? "Confirm your email, then checkout opens." : e instanceof Error ? e.message : "Checkout could not open. Use View Plans to try again.");
+        toast.error(e instanceof Error ? e.message : "Checkout could not open. Use View Plans to try again.");
       });
   }, [user, billingLoaded, realTier]);
 
@@ -272,6 +273,7 @@ function Workspace() {
         onSaved={(o) => { setOnboard(o); setEmbedKey((k) => k + 1); setTab(canCatalog ? "embed" : "health"); }} />
       <BadgeWatcher userId={user.id} artist={names.artist} eagle={tier === "management"} />
       <main className="mx-auto max-w-7xl px-6 py-8">
+        {!user.email_confirmed_at && <EmailConfirmBanner email={user.email} />}
         <CatalogLapseBanner sub={sub} lapse={lapse} pauses={pauses} onRenew={upgrade} onChanged={() => void reloadBilling()} />
         <Tabs value={tab} onValueChange={setTab}>
           {/* One row, left to right, scrolled on narrow screens: all six belong on the same line (founder, 2026-11-04;
