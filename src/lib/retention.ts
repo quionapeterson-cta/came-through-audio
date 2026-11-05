@@ -127,10 +127,23 @@ export function dueRenewalReminder(renews: Date, sent: string[], sentFor: string
  * Renew now: pay for the next year early. Only on a plan that's running normally (not cancelling, failing or paused)
  * and only one year ahead, so a renewal more than a year away can't be paid again.
  */
+/**
+ * Most paid-for time an account may hold ahead, renewals included (founder, 2026-11-05): five years. Nothing can reach
+ * it today — every payment buys one year and early renewal only reaches a renewal within a year — so this is the guard
+ * for the day a longer prepay is offered, not a limit anyone meets now.
+ */
+export const MAX_PREPAID_YEARS = 5;
+
+/** Whether a paid-through date still sits inside the five-year prepay cap. */
+export function withinPrepayCap(target: Date, now = new Date()): boolean {
+  return target.getTime() <= addMonths(now, 12 * MAX_PREPAID_YEARS).getTime();
+}
+
 export function canRenewEarly(sub: PlanSub | null, pauses: Pause[], now = new Date()) {
   if (!sub?.stripe_subscription_id || sub.cancel_at_period_end || !["active", "trialing"].includes(sub.status) || currentPause(pauses, now)) return false;
   const renews = renewalDate(sub);
-  return !!renews && renews > now && renews.getTime() - now.getTime() <= 365 * DAY;
+  // One year per payment, and never past five years of paid time however many payments are made.
+  return !!renews && renews > now && renews.getTime() - now.getTime() <= 365 * DAY && withinPrepayCap(earlyRenewalTarget(renews), now);
 }
 
 /** After renewing early, the plan runs a full year past the renewal date that was paid for, so no days are lost. */

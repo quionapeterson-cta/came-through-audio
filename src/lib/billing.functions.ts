@@ -196,7 +196,7 @@ export const lookupBillingMember = createServerFn({ method: "POST" })
           createdAt: p.created_at ?? "",
           refundedAt,
           windowDaysLeft: left,
-          refundable: !refundedAt && left > 0,
+          refundable: !refundedAt,
         };
       }),
     };
@@ -244,7 +244,7 @@ export const refundPurchase = createServerFn({ method: "POST" })
   .inputValidator((d) => z.object({ purchaseId: z.string().uuid(), ...refundFields }).parse(d))
   .handler(async ({ data, context }): Promise<{ refundId: string; amountCents: number; status: string | null }> => {
     const ctx = context as unknown as Ctx;
-    const { isSuper, actorEmail } = await requireBilling(ctx);
+    const { actorEmail } = await requireBilling(ctx);
     const env = getPaymentsEnvironment();
     const d = await db();
     const { data: row } = await d.from("purchases").select("id, user_id, kind, environment, details, stripe_session_id, created_at").eq("id", data.purchaseId).maybeSingle();
@@ -267,8 +267,11 @@ export const refundPurchase = createServerFn({ method: "POST" })
     }
     if (!pi) throw new Error("This payment has no Stripe payment intent, so it can't be refunded automatically.");
 
-    const verdict = refundVerdict({ paidCents, refundedCents, amountCents: data.amountCents, paidAt: p.created_at ?? new Date().toISOString(), superAdmin: isSuper });
-    const why = `${data.reason}${data.note ? `: ${data.note}` : ""}`;
+    const verdict = refundVerdict({ paidCents, refundedCents, amountCents: data.amountCents, paidAt: p.created_at ?? new Date().toISOString() });
+    const why = `${data.reason}${data.note?.trim() ? `: ${data.note.trim()}` : ""}`;
+    if (verdict.ok && verdict.discretionary && !data.note?.trim()) {
+      throw new Error("Past the 30-day window a refund needs a note saying why. It's allowed — a dispute costs more — but the reason has to be on the record.");
+    }
     if (!verdict.ok) {
       await record({ actorId: ctx.userId, actorEmail, targetUserId: p.user_id, targetEmail: "", action: "refund", target: p.id, stripeObject: pi, amountCents: data.amountCents, currency: null, reason: why, status: "failed", error: verdict.reason, environment: env, requestId: data.requestId });
       throw new Error(verdict.reason);
@@ -322,7 +325,7 @@ export const refundLatestPlanCharge = createServerFn({ method: "POST" })
   .inputValidator((d) => z.object({ subscriptionId: z.string().min(3), ...refundFields }).parse(d))
   .handler(async ({ data, context }): Promise<{ refundId: string; amountCents: number; status: string | null }> => {
     const ctx = context as unknown as Ctx;
-    const { isSuper, actorEmail } = await requireBilling(ctx);
+    const { actorEmail } = await requireBilling(ctx);
     const env = getPaymentsEnvironment();
     const d = await db();
     const { data: row } = await d.from("subscriptions").select("stripe_customer_id").eq("stripe_subscription_id", data.subscriptionId).eq("environment", env).maybeSingle();
@@ -330,14 +333,16 @@ export const refundLatestPlanCharge = createServerFn({ method: "POST" })
     if (!sub?.stripe_customer_id) throw new Error("That plan has no Stripe customer, so there's no card charge to refund.");
     const { stripe, charge } = await latestChargeFor(sub.stripe_customer_id, env);
     if (!charge) throw new Error("No refundable charge on that plan.");
-    const why = `${data.reason}${data.note ? `: ${data.note}` : ""}`;
+    const why = `${data.reason}${data.note?.trim() ? `: ${data.note.trim()}` : ""}`;
     const verdict = refundVerdict({
       paidCents: charge.amount,
       refundedCents: charge.amount_refunded,
       amountCents: data.amountCents,
       paidAt: new Date(charge.created * 1000).toISOString(),
-      superAdmin: isSuper,
     });
+    if (verdict.ok && verdict.discretionary && !data.note?.trim()) {
+      throw new Error("Past the 30-day window a refund needs a note saying why. It's allowed — a dispute costs more — but the reason has to be on the record.");
+    }
     if (!verdict.ok) {
       await record({ actorId: ctx.userId, actorEmail, targetUserId: null, targetEmail: "", action: "refund", target: data.subscriptionId, stripeObject: charge.id, amountCents: data.amountCents, currency: charge.currency.toUpperCase(), reason: why, status: "failed", error: verdict.reason, environment: env, requestId: data.requestId });
       throw new Error(verdict.reason);

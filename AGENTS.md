@@ -56,9 +56,17 @@
   the Stripe dashboard (founder, 2026-11-05). Billing, Finance and super admins only; the browser names the target and
   nothing else. Never add a second refund path.
 - The server decides, every time: `requireBilling` (super_admin, or the billing or finance department, mirroring
-  `public.can_see_billing`), the 30-day Refund Policy window, a $500 cap per action for Billing and Finance (none for a super admin),
-  and never more than was paid minus what already came back. Those limits live in `refundVerdict` in
+  `public.can_see_billing`) and never more than was paid minus what already came back. **There is no fixed per-refund
+  ceiling** (founder, 2026-11-05): the payment is the ceiling, because a $500-style cap blocked legitimate refunds on
+  the largest orders while doing nothing about the real risk. The rules live in `refundVerdict` in
   `src/lib/billing-console.ts` with its test — never inline in a component.
+- The 30-day Refund Policy window is not a wall (founder, 2026-11-05): past it a refund is still allowed, it just needs
+  a written note, because a chargeback costs more than most refunds. `refundVerdict` returns `discretionary: true` for
+  those and the server refuses one without a note. Never turn that back into a hard block.
+- Paid-for time is capped at five years (`MAX_PREPAID_YEARS` in `src/lib/retention.ts`, enforced by
+  `withinPrepayCap`). Today every payment buys one year and early renewal only reaches a renewal inside a year, so the
+  cap is a guard for a future multi-year product, not a limit anyone meets now.
+- The company policy staff are trained on is `BILLING-POLICY.md`; change it in the same commit as any rule here.
 - Money must be idempotent: the panel sends a fresh `requestId` per confirmed action and the server uses it as Stripe's
   idempotency key, so a double click or a retry never refunds twice. Keep that when adding an action.
 - Every attempt writes a `billing_actions` row — refusals and Stripe errors included — with the actor's email. Never

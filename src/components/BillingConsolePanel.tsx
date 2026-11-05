@@ -17,8 +17,9 @@ const msg = (e: unknown) => (e instanceof Error ? e.message : "That didn't go th
 const day = (iso: string | null) => (iso ? iso.slice(0, 10) : "—");
 
 /** Amount, reason and a note, then the one button that actually moves money. */
-function RefundBox({ maxCents, busy, onCancel, onConfirm }: {
+function RefundBox({ maxCents, needsNote, busy, onCancel, onConfirm }: {
   maxCents: number;
+  needsNote: boolean;
   busy: boolean;
   onCancel: () => void;
   onConfirm: (cents: number, reason: RefundReason, note: string) => void;
@@ -45,9 +46,12 @@ function RefundBox({ maxCents, busy, onCancel, onConfirm }: {
           <Input className="mt-1" value={note} placeholder="What they asked for" onChange={(e) => setNote(e.target.value)} />
         </label>
       </div>
-      <p className="mt-2 text-xs text-muted-foreground">Most you can refund here: <b>{formatUsd(maxCents)}</b>. The card is refunded in Stripe; nothing else is typed there.</p>
+      <p className="mt-2 text-xs text-muted-foreground">
+        Most you can refund here: <b>{formatUsd(maxCents)}</b> — the payment is the ceiling, there is no fixed cap.
+        {needsNote ? " This one is past 30 days, so the note is required: a refund is cheaper than a dispute." : " The card is refunded in Stripe; nothing else is typed there."}
+      </p>
       <div className="mt-3 flex flex-wrap gap-2">
-        <Button disabled={busy || cents === null} onClick={() => { if (cents) onConfirm(cents, reason, note); }}>
+        <Button disabled={busy || cents === null || (needsNote && !note.trim())} onClick={() => { if (cents) onConfirm(cents, reason, note); }}>
           {busy ? "Refunding…" : cents === null ? "Enter an amount" : `Refund ${formatUsd(cents)}`}
         </Button>
         <Button variant="ghost" disabled={busy} onClick={onCancel}>Cancel</Button>
@@ -84,22 +88,21 @@ function PurchaseRow({ purchase, member, onDone }: { purchase: BillingPurchase; 
           <p className="text-sm font-semibold">{purchase.label}</p>
           <p className="text-xs text-muted-foreground">
             {day(purchase.createdAt)}
-            {purchase.refundedAt ? " · refunded in full" : purchase.windowDaysLeft > 0 ? ` · ${purchase.windowDaysLeft} day${purchase.windowDaysLeft === 1 ? "" : "s"} of the refund window left` : " · refund window closed"}
+            {purchase.refundedAt ? " · refunded in full" : purchase.windowDaysLeft > 0 ? ` · ${purchase.windowDaysLeft} day${purchase.windowDaysLeft === 1 ? "" : "s"} of the refund window left` : " · past 30 days, a note is needed"}
           </p>
         </div>
         <div className="flex items-center gap-2">
           {purchase.refundedAt ? (
             <span className="rounded-full border border-border px-2 py-0.5 text-xs text-muted-foreground">Refunded</span>
-          ) : purchase.refundable ? (
-            <Button size="sm" variant="outline" disabled={busy} onClick={() => void open()}><Undo2 /> Refund…</Button>
           ) : (
-            <span className="rounded-full border border-border px-2 py-0.5 text-xs text-muted-foreground">Outside the window</span>
+            <Button size="sm" variant="outline" disabled={busy} onClick={() => void open()}><Undo2 /> Refund…</Button>
           )}
         </div>
       </div>
       {payment && (
         <RefundBox
           maxCents={Math.max(0, payment.paidCents - payment.refundedCents)}
+          needsNote={payment.windowDaysLeft <= 0}
           busy={busy}
           onCancel={() => setPayment(null)}
           onConfirm={(cents, reason, note) => void confirm(cents, reason, note)}
@@ -159,6 +162,7 @@ function SubscriptionRow({ sub, onDone }: { sub: BillingSubscription; onDone: ()
       {charge && (
         <RefundBox
           maxCents={Math.max(0, charge.paidCents - charge.refundedCents)}
+          needsNote={charge.windowDaysLeft <= 0}
           busy={busy}
           onCancel={() => setCharge(null)}
           onConfirm={(cents, reason, note) => void confirmRefund(cents, reason, note)}
@@ -208,8 +212,10 @@ export function BillingConsolePanel({ isSuper }: { isSuper: boolean }) {
         <h3 className="text-lg font-bold">Billing without Stripe</h3>
         <p className="mt-1 max-w-3xl text-sm text-muted-foreground">
           Look a member up by the email they paid with, then refund a charge or stop a plan from renewing. The card is
-          refunded through our Stripe key; nobody needs a dashboard login, and every action below is logged.
-          {isSuper ? "" : " Billing and Finance can refund up to $500 in one go inside 30 days; anything larger or older needs a super admin."}
+          refunded through our Stripe key; nobody needs a dashboard login, and every action below is logged. Refund up to
+          what they paid, with no fixed ceiling. Past 30 days it still goes through but needs a note, because a dispute
+          costs more than the refund.
+          {isSuper ? " As founder, every refund is yours to approve." : ""}
         </p>
         <form onSubmit={(e) => void search(e)} className="mt-4 flex flex-wrap items-end gap-2">
           <label className="min-w-[240px] flex-1 text-xs font-semibold text-muted-foreground">Member's email

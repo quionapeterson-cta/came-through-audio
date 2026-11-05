@@ -1,24 +1,29 @@
 import { describe, expect, it } from "vitest";
-import { REFUND_CAP_CENTS, dollarsToCents, formatUsd, purchaseKindLabel, refundVerdict, windowDaysLeft } from "./billing-console";
+import { dollarsToCents, formatUsd, purchaseKindLabel, refundVerdict, windowDaysLeft } from "./billing-console";
 
 const now = new Date("2026-11-05T12:00:00Z");
 const base = { paidCents: 4499, refundedCents: 0, amountCents: 4499, paidAt: "2026-11-01T12:00:00Z", now };
 
 describe("refund rules", () => {
-  it("allows a full refund inside the window under the cap", () => {
-    expect(refundVerdict(base)).toEqual({ ok: true });
+  it("allows a full refund inside the window, no ceiling but the payment", () => {
+    expect(refundVerdict(base)).toEqual({ ok: true, discretionary: false });
   });
 
-  it("stops at what was actually paid", () => {
+  it("lets the biggest orders be refunded in full, with no fixed cap", () => {
+    // A five-figure payment is refundable on its own merits; the old $500 cap used to block exactly this.
+    const big = { ...base, paidCents: 1_250_000, amountCents: 1_250_000 };
+    expect(refundVerdict(big)).toEqual({ ok: true, discretionary: false });
+  });
+
+  it("still stops at what was actually paid", () => {
     const v = refundVerdict({ ...base, amountCents: 5000 });
     expect(v.ok).toBe(false);
     if (!v.ok) expect(v.reason).toContain("$44.99");
   });
 
   it("knows what a partial refund leaves", () => {
-    expect(refundVerdict({ ...base, refundedCents: 1000, amountCents: 3499 })).toEqual({ ok: true });
-    const over = refundVerdict({ ...base, refundedCents: 1000, amountCents: 3500 });
-    expect(over.ok).toBe(false);
+    expect(refundVerdict({ ...base, refundedCents: 1000, amountCents: 3499 }).ok).toBe(true);
+    expect(refundVerdict({ ...base, refundedCents: 1000, amountCents: 3500 }).ok).toBe(false);
   });
 
   it("refuses a payment already refunded in full", () => {
@@ -27,22 +32,13 @@ describe("refund rules", () => {
     if (!v.ok) expect(v.reason).toContain("already been refunded");
   });
 
-  it("holds Finance to the cap and the 30-day window, and lets a super admin through", () => {
-    const big = { ...base, paidCents: 120_000, amountCents: 120_000, paidAt: "2026-11-04T12:00:00Z" };
-    const capped = refundVerdict(big);
-    expect(capped.ok).toBe(false);
-    if (!capped.ok) expect(capped.reason).toContain(formatUsd(REFUND_CAP_CENTS));
-    expect(refundVerdict({ ...big, superAdmin: true })).toEqual({ ok: true });
-
-    const old = { ...base, paidAt: "2026-09-01T12:00:00Z" };
-    const late = refundVerdict(old);
-    expect(late.ok).toBe(false);
-    if (!late.ok) expect(late.reason).toContain("window has closed");
-    expect(refundVerdict({ ...old, superAdmin: true })).toEqual({ ok: true });
+  it("treats a refund past 30 days as a judgement call, not a refusal", () => {
+    const late = refundVerdict({ ...base, paidAt: "2026-09-01T12:00:00Z" });
+    expect(late).toEqual({ ok: true, discretionary: true });
   });
 
-  it("never lets anyone refund more than was paid, super admin or not", () => {
-    expect(refundVerdict({ ...base, amountCents: 4500, superAdmin: true }).ok).toBe(false);
+  it("never lets anyone refund more than was paid", () => {
+    expect(refundVerdict({ ...base, amountCents: 4500 }).ok).toBe(false);
   });
 
   it("rejects a zero or nonsense amount", () => {
@@ -63,6 +59,7 @@ describe("console helpers", () => {
   it("labels purchases in plain words", () => {
     expect(purchaseKindLabel("expert")).toBe("Expert Registration");
     expect(purchaseKindLabel("something_new")).toBe("something new");
+    expect(formatUsd(1250000)).toBe("$12500.00");
   });
 
   it("counts the window down from the payment date", () => {
