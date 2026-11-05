@@ -90,7 +90,7 @@ export const SUPPORT_SCRIPTS: readonly SupportScript[] = [
     department: "support",
     title: "Ticket received",
     when: "First reply on any new ticket, before anyone has looked into it.",
-    body: "Hi {{first_name}},\n\nThanks for writing in — we have your message about {{detail}} and a person is looking at it now. You'll hear from us within one business day, usually sooner.\n\nIf you think of anything that helps (a screenshot, the song name, the email on the account), just reply to this email and it lands on the same ticket.\n\nCame Through Audio Support",
+    body: "Hi {{first_name}},\n\nThanks for writing in — we have your message about {{detail}} and a person is looking at it now. We usually reply within 48 hours. On high-volume days and around holidays it takes longer, and we'll tell you when to expect an answer.\n\nIf you think of anything that helps (a screenshot, the song name, the email on the account), just reply to this email and it lands on the same ticket.\n\nCame Through Audio Support",
   },
   {
     id: "support-need-detail",
@@ -290,6 +290,29 @@ export const SUPPORT_SCRIPTS: readonly SupportScript[] = [
     when: "Internal only: asking staff for input on a research question. Never send to a member.",
     internal: true,
     body: "INTERNAL ONLY — not a member reply.\n\nWe're looking at {{detail}} this month. If you've heard members ask about it — on a ticket, a call, or in a feature request — reply with the exact words they used.\n\nQuotes we can trace are worth more than opinions, and nothing is attributed to a member without their permission.\n\nCame Through Audio Research",
+  },
+  // ── Holiday breaks (every department sends these) ─────────────────────────────────────────────────────────────
+  {
+    id: "support-holiday-break",
+    department: "support",
+    title: "Holiday break — we're away",
+    when: "Any ticket that arrives while the team is on a holiday break, before anyone has looked at it.",
+    body: "Hi {{first_name}},\n\nThanks for writing in — your message is safe with us. The team is on a holiday break right now, so replies are slower than usual: we answer everything within 30 days of reopening, and usually much sooner than that.\n\nWe reopen on {{date}}. If something can't wait, reply and tell us what's most pressing, so it's first in line when we're back.\n\nCame Through Audio Support",
+  },
+  {
+    id: "support-holiday-open-ticket",
+    department: "support",
+    title: "Holiday break — an open ticket is still waiting",
+    when: "They write again on a ticket that is still open while the team is away.",
+    body: "Hi {{first_name}},\n\nYou're not forgotten: your ticket is in the queue and nobody needs to send it again. We're on a holiday break until {{date}}, and every message gets an answer within 30 days of reopening — usually much sooner.\n\nIf it's something new, add it here so it's on the same ticket when we're back.\n\nCame Through Audio Support",
+  },
+  {
+    id: "support-holiday-internal",
+    department: "support",
+    title: "INTERNAL — before a holiday break",
+    when: "Internal only: the checklist to run before Christmas and New Year, Thanksgiving and spring break. Never send to a member.",
+    internal: true,
+    body: "INTERNAL ONLY — not a member reply.\n\nBefore every break — Christmas and New Year, Thanksgiving and spring break — run this in order:\n1. Post the holiday script on every open ticket, naming the day we reopen.\n2. Turn on the mailbox auto-reply with the same wording and the same date.\n3. Hand anything urgent, money-related or legal to the founder before we close.\n4. Never invent a reopening date: the founder sets it each year.\n\nMembers are told 30 days or more during a break. Anything still unanswered 30 days after we reopen goes to the founder that day.\n\nCame Through Audio Support",
   },
 ];
 

@@ -10,6 +10,10 @@ import { IMPORTANCE_LABEL, dueLabel, importanceChip, signInMoment, snoozeUntil, 
 const SNOOZE_KEY = "cta.taskSnooze";
 const SOUND_KEY = "cta.adminSound";
 const SEEN_KEY = "cta.adminWelcomeSeen";
+/** The sign-in welcome can be switched off (founder, 2026-11-05): a notice that repeats is a notice nobody reads. */
+const OFF_KEY = "cta.adminWelcomeOff";
+/** The last completed task already celebrated, so the screen opens for news rather than for the same to-do list. */
+const WON_KEY = "cta.adminWelcomeWon";
 const read = <T,>(k: string, fallback: T): T => { try { const v = localStorage.getItem(k); return v ? (JSON.parse(v) as T) : fallback; } catch { return fallback; } };
 const write = (k: string, v: unknown) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch { /* storage blocked */ } };
 
@@ -42,18 +46,26 @@ export function AdminWelcome({ me, onOpenTasks }: { me: string; onOpenTasks: () 
   const q = useQuery({ queryKey: ["department-tasks"], queryFn: () => fetchTasks() });
   const [snoozed, setSnoozed] = useState<Record<string, number>>(() => read(SNOOZE_KEY, {}));
   const [sound, setSound] = useState<boolean>(() => read(SOUND_KEY, !window.matchMedia?.("(prefers-reduced-motion: reduce)").matches));
+  const [off, setOff] = useState<boolean>(() => read(OFF_KEY, false));
   const [open, setOpen] = useState(false);
   const [heard, setHeard] = useState(false);
   const tasks = q.data ?? [];
   const moment = useMemo(() => signInMoment(tasks, me, snoozed), [tasks, me, snoozed]);
   const alert = moment.urgent[0];
 
+  // Open for news, not for a standing to-do list (founder, 2026-11-05): a Top priority task that needs attention, or a
+  // task completed since this screen last showed. "Your next task" repeated every morning is what gets ignored.
   useEffect(() => {
-    if (!q.data) return;
+    if (!q.data || off) return;
     let seen = false;
     try { seen = sessionStorage.getItem(SEEN_KEY) === me; sessionStorage.setItem(SEEN_KEY, me); } catch { /* storage blocked */ }
-    if (alert || !seen) setOpen(!!(alert || moment.last || moment.next));
-  }, [q.data]); // eslint-disable-line react-hooks/exhaustive-deps
+    if (alert) { setOpen(true); return; }
+    const wonAt = moment.last?.completed_at ?? null;
+    if (!seen && wonAt && wonAt !== read<string | null>(WON_KEY, null)) {
+      write(WON_KEY, wonAt);
+      setOpen(true);
+    }
+  }, [q.data, off]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => { if (open && sound) setHeard(playTone(alert ? "alarm" : "cheer")); }, [open, alert?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const snooze = (t: DepartmentTask) => { const next = { ...snoozed, [t.id]: snoozeUntil(t) }; setSnoozed(next); write(SNOOZE_KEY, next); };
@@ -87,11 +99,25 @@ export function AdminWelcome({ me, onOpenTasks }: { me: string; onOpenTasks: () 
             <Button onClick={() => { setOpen(false); onOpenTasks(); }} variant={alert ? "destructive" : "default"}>Open task{alert ? "" : "s"}</Button>
             {alert ? <Button variant="outline" onClick={() => snooze(alert)}>Snooze 1 hour</Button> : <Button variant="ghost" onClick={() => setOpen(false)}>Let's go</Button>}
             {sound && !heard && <Button variant="ghost" size="sm" onClick={() => setHeard(playTone(alert ? "alarm" : "cheer"))}><Volume2 />Tap to hear</Button>}
+            <Button variant="ghost" size="sm" onClick={() => { setOff(true); write(OFF_KEY, true); setOpen(false); }}>Don't show on sign-in</Button>
             <Button variant="ghost" size="icon" className="ml-auto" aria-label={sound ? "Mute admin sounds" : "Turn admin sounds on"} onClick={toggleSound}>{sound ? <Volume2 /> : <VolumeX />}</Button>
           </div>
         </div>
       </div>
     </div>
+  );
+}
+
+/**
+ * Puts the sign-in welcome back after it was switched off. Only rendered while it is off, so the header gains nothing
+ * when the welcome is on: turning it back on takes effect the next time Admin is opened.
+ */
+export function WelcomeSwitch() {
+  const [off, setOff] = useState<boolean>(() => read(OFF_KEY, false));
+  if (!off) return null;
+  return (
+    <Button variant="ghost" size="sm" className="text-ink-muted hover:bg-ink-border hover:text-ink-foreground"
+      onClick={() => { write(OFF_KEY, false); setOff(false); }}>Welcome back: off</Button>
   );
 }
 

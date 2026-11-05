@@ -27,7 +27,7 @@ import { BillingConsolePanel } from "@/components/BillingConsolePanel";
 import { PlansPanel } from "@/components/PlansPanel";
 import { TestimonialFilterPanel } from "@/components/TestimonialFilterPanel";
 import { TestimonialsEditor } from "@/components/TestimonialsEditor";
-import { AdminWelcome, TaskBell } from "@/components/AdminWelcome";
+import { AdminWelcome, TaskBell, WelcomeSwitch } from "@/components/AdminWelcome";
 import { TaskBankPanel } from "@/components/TaskBankPanel";
 import { RegistrationQueuePanel } from "@/components/RegistrationQueuePanel";
 import { PriceList } from "@/components/PriceList";
@@ -115,6 +115,7 @@ function AdminPage() {
             </div>
           </div>
           <div className="flex items-center gap-3">
+            {show("tasks") && <WelcomeSwitch />}
             {show("tasks") && <TaskBell me={user.id} onOpenTasks={() => setActiveTab("tasks")} />}
             {isSuper && (
               <Select value={view} onValueChange={(v) => setView(v as Department | "all")}>

@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { COLLECTIONS, TIER_LABEL, type Tier } from "@/lib/badges";
 import {
-  BADGE_SCOPES, ENGINEERING_STEPS, FILE_RULES, NAMING_RULES, PROTOCOL_STEPS,
+  BADGE_SCOPES, BADGE_STEPS, FILE_RULES, NAMING_RULES,
   badgeKeys, badgeSlug, slugProblem, type BadgeScope,
 } from "@/lib/badge-protocol";
 import {
@@ -283,13 +283,14 @@ export function BadgeProtocolPanel({ isSuper }: { isSuper: boolean }) {
   return (
     <div className="mt-8 space-y-6">
       <section className="rounded-2xl border border-border bg-card p-5">
-        <h2 className="text-xl font-bold">Badge art protocol</h2>
+        <h2 className="text-xl font-bold">Badge creation, start to finish</h2>
         <p className="mt-1 max-w-3xl text-sm text-muted-foreground">
-          Every new badge goes the same way: designed by the teams, approved by a super admin, uploaded to the bucket by
-          the founder alone. Nobody else holds the bucket keys, so nobody else can put art in front of a user.
+          Every step in one list, in the order it happens: designed by the teams, approved by a super admin, uploaded to
+          the bucket by the founder alone, then built by engineering so it can be earned. Nobody else holds the bucket
+          keys, so nobody else can put art in front of a user.
         </p>
         <ol className="mt-4 space-y-3">
-          {PROTOCOL_STEPS.map((step, i) => <Step key={step.title} n={i + 1} step={step} />)}
+          {BADGE_STEPS.map((step, i) => <Step key={step.title} n={i + 1} step={step} />)}
         </ol>
       </section>
 
@@ -352,15 +353,6 @@ export function BadgeProtocolPanel({ isSuper }: { isSuper: boolean }) {
           : <p className="mt-3 text-sm text-muted-foreground">No badge ideas yet.</p>}
       </section>
 
-      {isSuper && (
-        <section className="rounded-2xl border border-border bg-card p-5">
-          <h3 className="text-lg font-bold">After the art is in R2</h3>
-          <p className="mt-1 max-w-3xl text-sm text-muted-foreground">The engineering half of the protocol. Art in the bucket alone never unlocks anything.</p>
-          <ol className="mt-4 space-y-3">
-            {ENGINEERING_STEPS.map((step, i) => <Step key={step.title} n={i + 1} step={step} />)}
-          </ol>
-        </section>
-      )}
     </div>
   );
 }

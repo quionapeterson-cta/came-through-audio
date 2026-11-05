@@ -143,3 +143,10 @@ export const ENGINEERING_STEPS: ProtocolStep[] = [
     who: "Engineering",
   },
 ];
+
+/**
+ * One list, start to finish (founder, 2026-11-05): the idea, the approval, the upload and the engineering used to sit in
+ * two places, and half the people submitting a badge never saw the second half. The panel now shows every step to
+ * everyone, in the order it actually happens.
+ */
+export const BADGE_STEPS: ProtocolStep[] = [...PROTOCOL_STEPS, ...ENGINEERING_STEPS];

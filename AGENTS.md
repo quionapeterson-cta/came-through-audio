@@ -116,6 +116,14 @@
   opens the queue owner's scripts — Billing's on a `BILLING_AREA` ticket, Support's otherwise — with the member's first
   name and the subject filled in. That is the shortcut, not a second catalog: the words still live in
   `src/lib/support-scripts.ts`.
+- **Reply time is 48 hours, not a business day** (founder, 2026-11-05): the usual promise is "within 48 hours", and the
+  copy says plainly that high-volume days and holidays take longer. Never promise a fixed date or a tighter target;
+  the staff handbook and the department scorecards use the same 48 hours.
+- **Holiday breaks are announced, not silent** (founder, 2026-11-05): the team takes Christmas and New Year, Thanksgiving
+  and spring break off. `support-holiday-break` and `support-holiday-open-ticket` in `src/lib/support-scripts.ts` tell a
+  member we are away, name the day we reopen (`{{date}}`, never a date the founder hasn't set) and promise an answer
+  within 30 days of reopening. `support-holiday-internal` is the staff checklist to run before each break: post it on
+  every open ticket, switch on the auto-reply, and hand anything urgent to the founder before closing.
 
 ## Catalog Playback & WAV Storage (always follow)
 

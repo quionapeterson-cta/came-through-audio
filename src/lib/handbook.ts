@@ -26,7 +26,7 @@ export const HANDBOOK: HandbookSection[] = [
     "Use a password manager and two-step sign-in. Report anything suspicious to the founder right away.",
   ] },
   { id: "support", title: "Answering customers", body: [
-    "First reply within 4 business hours. Be honest: never promise royalties, acceptance or timing; agencies decide those.",
+    "First reply within 48 hours. High-volume days and holiday breaks can push it past that, and when they do we say so instead of letting the member guess. Be honest: never promise royalties, acceptance or timing; agencies decide those.",
     "Billing questions belong to billing@camethroughaudio.com; general support to support@; contact messages to info@.",
     "Not legal, financial or tax advice: point people to a music attorney or accountant for their situation.",
   ] },

@@ -27,7 +27,8 @@ describe("the script catalog", () => {
     const internal = SUPPORT_SCRIPTS.filter((s) => s.internal);
     expect(internal.length).toBeGreaterThan(0);
     for (const s of internal) {
-      expect(["hr", "research"]).toContain(s.department);
+      // Support's pre-break checklist is staff-only too: it is the one to send yourself, never a member.
+      expect(["hr", "research", "support"]).toContain(s.department);
       expect(s.body).toContain("INTERNAL ONLY");
     }
   });
