@@ -50,6 +50,23 @@
 - Only a super admin reads other people's submissions or downloads a file; the submitter sees their own rows and the
   note left on them. Never make the bucket public.
 
+## Billing Console (always follow)
+
+- Refunds and plan cancellations are done in Admin → Billing (`BillingConsolePanel` + `billing.functions.ts`), not in
+  the Stripe dashboard (founder, 2026-11-05). Finance and super admins only; the browser names the target and nothing
+  else. Never add a second refund path.
+- The server decides, every time: `requireBilling` (super_admin or the finance department, mirroring
+  `public.can_see_billing`), the 30-day Refund Policy window, a $500 cap per action for Finance (none for a super admin),
+  and never more than was paid minus what already came back. Those limits live in `refundVerdict` in
+  `src/lib/billing-console.ts` with its test — never inline in a component.
+- Money must be idempotent: the panel sends a fresh `requestId` per confirmed action and the server uses it as Stripe's
+  idempotency key, so a double click or a retry never refunds twice. Keep that when adding an action.
+- Every attempt writes a `billing_actions` row — refusals and Stripe errors included — with the actor's email. Never
+  edit or delete those rows: that log is the audit trail that replaces Stripe's dashboard history.
+- Stripe is called through `createBillingStripeClient`, which prefers `STRIPE_BILLING_LIVE_SECRET_KEY` /
+  `STRIPE_BILLING_SANDBOX_SECRET_KEY` (restricted key: Refunds write, Charges and Subscriptions read) and falls back to
+  the account key. Never widen that key to Payouts, and never put it in the browser.
+
 ## Writer Credits & Registration Rules (always follow)
 
 ### Core principle

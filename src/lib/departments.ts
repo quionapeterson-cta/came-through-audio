@@ -86,11 +86,16 @@ export function staffChangeError(o: { actorId: string; actorIsSuper: boolean; ta
 /** Departments that see and control badges in Admin → Badges (super admins hold every department). Mirrors public.can_manage_badges. */
 export const BADGE_DEPARTMENTS = ["branding", "marketing", "support"] as const satisfies readonly Department[];
 
+/** Departments that run the billing console (super admins hold every department). Mirrors public.can_see_billing. */
+export const BILLING_DEPARTMENTS = ["finance"] as const satisfies readonly Department[];
+
 export const ADMIN_TABS = [
   { value: "ai", label: "AI Protection", departments: ["ai"] },
   { value: "reg", label: "Registrations", departments: ["registration"] },
   { value: "splits", label: "Split Sheets", departments: ["royalty_accounts"] },
   { value: "purchases", label: "Purchases", departments: ["finance"] },
+  // Refunds and plan cancellations without a Stripe login (founder, 2026-11-05).
+  { value: "billing", label: "Billing", departments: BILLING_DEPARTMENTS },
   { value: "support", label: "Support Tickets", departments: ["support"] },
   { value: "badges", label: "Badges", departments: BADGE_DEPARTMENTS },
   { value: "homepage", label: "Homepage", departments: ["marketing", "branding"] },

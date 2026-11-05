@@ -57,6 +57,17 @@ export function createStripeClient(env: StripeEnv): Stripe {
   });
 }
 
+/**
+ * The billing console's own client. Set STRIPE_BILLING_LIVE_SECRET_KEY / STRIPE_BILLING_SANDBOX_SECRET_KEY to a
+ * restricted key (Refunds: write; Charges and Subscriptions: read; never Payouts), so a staff refund never needs the
+ * account's full key. Falls back to the normal client when those aren't set.
+ */
+export function createBillingStripeClient(env: StripeEnv): Stripe {
+  const own = process.env[env === 'sandbox' ? 'STRIPE_BILLING_SANDBOX_SECRET_KEY' : 'STRIPE_BILLING_LIVE_SECRET_KEY'];
+  if (own) return new Stripe(own, { apiVersion: API_VERSION, httpClient: Stripe.createFetchHttpClient() });
+  return createStripeClient(env);
+}
+
 export function getStripeErrorMessage(error: unknown): string {
   if (error && typeof error === 'object') {
     const stripeError = error as {
