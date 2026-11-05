@@ -59,10 +59,11 @@ export const HANDBOOK: HandbookSection[] = [
   ] },
   { id: "leaving", title: "If you leave in your first 90 days", body: [
     "If your last day falls inside your first 90 days, your account access ends the same day. There is no wind-down period.",
-    "You then have 30 days to download what is yours: your songs and their files, split sheets, contracts and certificates. Sign in and export them before that date.",
-    "At the end of the 30 days the account and everything in it is deleted. We email you the date when access ends and again a week before deletion, so the date is never a surprise.",
+    "Those 30 days are for keeping what you built, and paying for any plan — the lowest one counts — keeps the account and everything in it: your songs and their files, split sheets, contracts and certificates stay exactly where they are and the deletion stops.",
+    "If you'd rather leave with your work, download it before that date. At the end of the 30 days, if nothing is paid, the account and everything in it is deleted.",
+    "We email you the date when access ends and again a week before deletion, and the email leads with the option to pay and keep it. The date is never a surprise.",
     "If you think the date is wrong, reply to that email: a person looks at it, and a super admin can correct or cancel it.",
-    "Leaving after your first 90 days is not the same rule yet. That is still being decided, so ask before you rely on any timeline.",
+    "This applies to accounts created under the staff plan, and to staff who claim the staff plan offer inside their first 90 days. Leave after 90 days and the plan simply runs to the end of the period it was granted for, then bills as a normal plan like anyone else — nothing is deleted.",
   ] },
 ];
 

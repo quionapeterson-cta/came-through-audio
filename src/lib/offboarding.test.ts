@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { dueDepartureReminder, departureOn, leftWithinProbation } from "./offboarding";
+import { dueDepartureReminder, departureOn, keepsAccountOnPayment, leftWithinProbation, planRecycles } from "./offboarding";
 
 const now = new Date("2026-11-05T12:00:00Z");
 
@@ -30,6 +30,14 @@ describe("offboarding", () => {
     expect(dueDepartureReminder({ ...row, reminders: ["ended"] }, new Date("2026-12-01T12:00:00Z"))).toBe("7");
     expect(dueDepartureReminder({ ...row, reminders: ["ended", "7"] }, new Date("2026-12-01T12:00:00Z"))).toBeNull();
     expect(dueDepartureReminder({ ...row, reminders: ["ended"] }, new Date("2026-12-06T12:00:00Z"))).toBeNull();
+  });
+
+  it("stops the deletion for anyone who pays, and recycles the plan past 90 days", () => {
+    expect(keepsAccountOnPayment("plus")).toBe(true);
+    expect(keepsAccountOnPayment("management")).toBe(true);
+    expect(keepsAccountOnPayment("free")).toBe(false);
+    expect(planRecycles(true)).toBe(false); // an early leaver's plan ends, it doesn't recycle
+    expect(planRecycles(false)).toBe(true); // a longer-serving leaver is billed normally, never deleted
   });
 
   it("sends nothing when no deletion is scheduled", () => {

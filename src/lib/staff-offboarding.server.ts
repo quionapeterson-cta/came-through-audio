@@ -1,6 +1,6 @@
 import { ADMIN_EMAIL, emailLayout, escapeHtml, SITE_URL } from "@/lib/email-layout";
 import { addDays } from "@/lib/retention";
-import { ASSET_DAYS, dueDepartureReminder, leftWithinProbation } from "@/lib/offboarding";
+import { ASSET_DAYS, dueDepartureReminder, keepsAccountOnPayment, leftWithinProbation, SECURE_COPY } from "@/lib/offboarding";
 
 /**
  * Offboarding, server side (founder, 2026-11-05): records the departure, ends the staff plan, schedules the deletion and
@@ -43,8 +43,10 @@ async function sendOffboardingEmail(to: string, kind: "ended" | "7", deleteOn: s
 ${kind === "ended"
     ? `<p style="font-size:15px;line-height:1.6">Your work with Came Through Audio has ended, so this account's access ended the same day.</p>`
     : `<p style="font-size:15px;line-height:1.6">This is a reminder that this account and everything in it is deleted on <b>${escapeHtml(on)}</b>.</p>`}
-<p style="font-size:15px;line-height:1.6"><b>You have until ${escapeHtml(on)} to download your assets.</b> That covers your songs and their files, split sheets, contracts and certificates. Sign in and export them before that date: after it the account is deleted and we can't bring it back.</p>
-<p style="margin:24px 0"><a href="${SITE_URL}/workspace" style="background:#004AAD;color:#ffffff;text-decoration:none;font-weight:700;padding:12px 22px;border-radius:8px;display:inline-block">Download my assets</a></p>
+<p style="font-size:15px;line-height:1.6"><b>Want to keep it? ${escapeHtml(SECURE_COPY)}</b> Any plan, any tier: your songs, their files, split sheets, contracts and certificates stay exactly where they are, and the deletion stops.</p>
+<p style="font-size:15px;line-height:1.6">If you'd rather take your work with you, you have until ${escapeHtml(on)} to download it — the same date the account is deleted if nothing is paid.</p>
+<p style="margin:24px 0"><a href="${SITE_URL}/profile" style="background:#004AAD;color:#ffffff;text-decoration:none;font-weight:700;padding:12px 22px;border-radius:8px;display:inline-block">Keep my account</a>
+<a href="${SITE_URL}/workspace" style="color:#004AAD;font-weight:700;padding:12px 12px;display:inline-block">Download my assets</a></p>
 <p style="font-size:15px;line-height:1.6">If you think this is a mistake, reply to this email and a person will look at it.</p>`,
     { reason: "You're receiving this because this email is on a Came Through Audio account." });
   const res = await fetch("https://api.resend.com/emails", {
@@ -73,10 +75,13 @@ export async function recordStaffDeparture(input: { userId: string; firstDay: st
   const email = user.user?.email ?? "";
   if (!email) return { ok: true as const, within, deleteOn, emailed: false };
 
-  // The grant follows the job, not the account: ending it here is what stops management features the same day.
-  const g = await grants();
-  await g.update({ ended_at: now.toISOString(), updated_at: now.toISOString() }).eq("user_id", input.userId);
-  await g.update({ ended_at: now.toISOString(), updated_at: now.toISOString() }).eq("reported_by", input.userId);
+  // Inside 90 days the grant follows the job, not the account: ending it here is what stops management features that
+  // day. Past 90 days it is left alone, because the plan runs to the end of its period and then bills as a normal plan.
+  if (within) {
+    const g = await grants();
+    await g.update({ ended_at: now.toISOString(), updated_at: now.toISOString() }).eq("user_id", input.userId);
+    await g.update({ ended_at: now.toISOString(), updated_at: now.toISOString() }).eq("reported_by", input.userId);
+  }
 
   const t = await departures();
   const { data: row, error } = await t.insert({
@@ -112,7 +117,14 @@ export async function runStaffOffboarding(now = new Date()) {
       await t.update({ reminders: [...new Set([...row.reminders, reminder])], updated_at: now.toISOString() }).eq("id", row.id);
       result.staffReminded += 1;
     }
+    // Paying at any point in the 30 days keeps the account: re-checked on the day so a late payment still wins.
     if (new Date(row.delete_on) > now) continue;
+    const tier = (await client.rpc("user_tier" as never, { _uid: row.user_id } as never)).data as unknown as string;
+    if (keepsAccountOnPayment(tier ?? "free")) {
+      await t.update({ cancelled_at: now.toISOString(), updated_at: now.toISOString() }).eq("id", row.id);
+      result.staffSkipped += 1;
+      continue;
+    }
 
     const { error: delError } = await client.auth.admin.deleteUser(row.user_id);
     if (delError) { console.error(`Staff offboarding: couldn't delete ${row.user_id}`, delError.message); continue; }

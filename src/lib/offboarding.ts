@@ -2,11 +2,15 @@ import { addDays, DAY } from "./retention";
 
 /**
  * Offboarding (founder, 2026-11-05): an employee who leaves inside their first 90 days loses account access the day it
- * happens, and gets 30 days to download what is theirs before the account is deleted.
+ * happens, and gets 30 days before the account is deleted.
  *
- * The 30 days is the same window a member's catalog gets after a plan ends, so the clock reads the same everywhere. What
- * happens to someone who leaves after 90 days is not decided yet, so this file answers for the early leaver only and
- * returns nothing scheduled for anyone else.
+ * Those 30 days are not only a download window: paying for any plan before the date keeps the account and everything in
+ * it, and the deletion stops. That is the point of the window, so every email and every screen says it first and gives
+ * the deletion date as the outcome of not paying.
+ *
+ * The rule covers accounts created under the staff plan, and staff who claim the offer inside those 90 days. Someone who
+ * leaves after 90 days is not deleted at all: their staff plan runs to the end of the period it was granted for and then
+ * bills as a normal plan like anyone else.
  */
 export const PROBATION_DAYS = 90;
 export const ASSET_DAYS = 30;
@@ -58,3 +62,12 @@ export function dueDepartureReminder(
 /** The day the account is deleted, in words staff and the leaver can check. */
 export const deletionLine = (deleteOn: string | null) =>
   deleteOn ? `Deleted on ${new Date(deleteOn).toLocaleDateString()}` : "No deletion scheduled";
+
+/** Said before the deletion date everywhere, because keeping the account is the option we want them to take. */
+export const SECURE_COPY = "Pay for any plan before that date and the account, songs and paperwork stay.";
+
+/** Paying anything before the date stops the deletion. The cron re-checks the tier on the day, so a late payment wins. */
+export const keepsAccountOnPayment = (tier: string) => tier !== "free";
+
+/** Past 90 days the staff plan is never cut short: it runs to the end of its period, then bills as a normal plan. */
+export const planRecycles = (withinProbation: boolean) => !withinProbation;

@@ -179,8 +179,16 @@
   they reported, writes `staff_departures` and schedules the deletion. Never delete an account from a trigger or an
   admin panel action: `runStaffOffboarding` (daily cron) is the only path, it skips anyone who holds a staff role again,
   and it writes `deleted_at` once.
-- **Nothing is scheduled for a leaver past 90 days**: that policy is undecided, so `departureOn` returns `deleteOn: null`
-  and the job ignores the row. Do not add a grace period, a different window or a silent deletion for them.
+- **The 30 days are a chance to pay, not just a download window** (founder, 2026-11-05): paying for any plan before the
+  date cancels the deletion and keeps the account and its assets. Say that first and give the deletion date as the
+  outcome of not paying (`SECURE_COPY`, `keepsAccountOnPayment`); the job re-checks the tier on the day, so a late
+  payment still wins and the row is cancelled instead of deleted. Never invert that order in an email or a panel.
+- **Past 90 days nothing is deleted and nothing is cut short** (founder, 2026-11-05): `departureOn` returns
+  `deleteOn: null`, the grant is left to run to the end of its period, and the plan then bills as a normal paid plan
+  (`planRecycles`). Do not add a grace period, a different window or a silent deletion for them.
+- **The rule covers staff-plan accounts** (founder, 2026-11-05): accounts created under the staff plan, and staff who
+  claim the offer inside their first 90 days. It is not a retroactive rule for older member accounts that were never on
+  the staff plan.
 - **Catalog emptying is not account deletion**: `runCatalogLapses` removes a member's songs and files 30 days after a
   plan ends and keeps the account. Nothing in the app deletes an account except the staff offboarding job above, so
   never describe a canceled plan as "the account is deleted".

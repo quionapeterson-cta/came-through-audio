@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
 import { BrandLogo } from "@/components/BrandLogo";
 import { StaffInviteGuide } from "@/components/StaffInviteGuide";
+import { StaffDeparturesPanel } from "@/components/StaffDeparturesPanel";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -136,6 +137,8 @@ function StaffPage() {
             </table>
           </div>
         )}
+
+        <StaffDeparturesPanel />
       </main>
 
       {editing && <StaffDialog editing={editing} actorIsSuper={!!data?.actorIsSuper} onClose={() => setEditing(null)} />}
@@ -144,7 +147,11 @@ function StaffPage() {
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Remove {removing?.email} from staff?</AlertDialogTitle>
-            <AlertDialogDescription>They lose dashboard access right away. Their regular account stays.</AlertDialogDescription>
+            <AlertDialogDescription>
+              They lose dashboard access right away. Inside their first 90 days that also starts a 30-day window where
+              paying for any plan keeps their account and assets, after which it is deleted. Past 90 days the plan runs to
+              the end of its period and then bills normally.
+            </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
