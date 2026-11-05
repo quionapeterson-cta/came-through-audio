@@ -57,7 +57,7 @@ So the realistic ceiling for a single payment:
 |---|---|
 | **Within 30 days of payment** | Full refund on request. No interrogation. Billing staff can do it alone. |
 | **Day 31 or later, a plan** | **Prorated refund of the unused time.** Cancel on any day and refund the days they won't use (§3.1). Note required; Billing staff can do it. |
-| **Day 31 or later, a one-time purchase** | Still allowed and usually right: **a chargeback costs us more than a refund**. Note required; all or part, your judgement. |
+| **Day 31 or later, a purchase** | Still allowed and usually right: **a chargeback costs us more than a refund**. Note required; all or part, your judgement. |
 | **Already used part of what they bought** | Partial refund is fine. Refund what is fair, not necessarily everything. |
 | **Already refunded in full** | Nothing more to refund. The payment is closed. |
 | **Duplicate charge** | Refund one of them, note "duplicate". |
