@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Download, Globe, PlusSquare, Share, Smartphone } from "lucide-react";
+import { Download, Globe, PlusSquare, Share } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 
@@ -172,7 +172,25 @@ export function DownloadApp() {
   return (
     <section className="border-b border-border bg-background">
       <div className="mx-auto flex max-w-4xl flex-col items-center gap-4 px-6 py-16 text-center">
-        <span className="grid h-12 w-12 place-items-center rounded-2xl bg-primary/15"><Smartphone className="h-6 w-6 text-primary" aria-hidden /></span>
+        {/* The app icon itself, and the same offer as the button below (founder, 2026-11-05): tapping it installs the
+            app rather than downloading a picture of it. It is the 512px icon the home screen uses, drawn at 88px, so it
+            stays sharp on a retina phone; the button, not the image, carries the label for screen readers. */}
+        <button
+          type="button"
+          onClick={offer}
+          aria-label="Download the app"
+          title="Download the app"
+          className="group rounded-[22px] transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-4 focus-visible:ring-offset-background"
+        >
+          <img
+            src="/icon-512.png"
+            alt=""
+            width={88}
+            height={88}
+            draggable={false}
+            className="h-[88px] w-[88px] rounded-[22px] shadow-lg transition group-hover:-translate-y-0.5 group-hover:shadow-xl group-active:translate-y-0"
+          />
+        </button>
         <h2 className="text-3xl font-extrabold md:text-4xl">Take Came Through with you</h2>
         <p className="max-w-xl text-lg text-muted-foreground">Install the app for a full-screen home on your phone or computer, or keep working in your browser. Same account, same catalog, either way.</p>
         <div className="mt-2 flex flex-wrap justify-center gap-3">

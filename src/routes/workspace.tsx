@@ -19,7 +19,7 @@ import { Contracts } from "@/components/Contracts";
 import { BrandLogo } from "@/components/BrandLogo";
 import type { CatalogTrack } from "@/lib/catalog";
 import { ArtistAvatar, ArtistOnboarding } from "@/components/ArtistOnboarding";
-import { loadOnboarding, syncFromCloud, type Onboarding } from "@/lib/artist-profile";
+import { badgePrefs, loadOnboarding, syncFromCloud, type Onboarding } from "@/lib/artist-profile";
 import { RoyaltyUtilitySuite } from "@/components/RoyaltyUtilitySuite";
 import { ExpertAssistance } from "@/components/ExpertAssistance";
 import { RoyaltyHealthCheck, type HealthStart } from "@/components/RoyaltyHealthCheck";
@@ -34,6 +34,8 @@ import { AddArtistDialog } from "@/components/ArtistSeats";
 import { PRICE_TIER, TIER_LABEL, hasTier, isEmailConfirmError, rememberPlanIntent, takePlanIntent, upgradeNote, type Tier } from "@/lib/plans";
 import { PlanComparison, planAction } from "@/components/PlanComparison";
 import { BadgeWatcher } from "@/components/Badges";
+import { Confetti } from "@/components/Confetti";
+import { maybeCelebrate } from "@/lib/celebrate";
 import { BadgeViewer } from "@/components/BadgeViewer";
 import type { ShareInfo } from "@/components/BadgeCelebration";
 import { isBadgeImage, badgeForArt, type CollectionId } from "@/lib/badges";
@@ -106,6 +108,9 @@ function Workspace() {
       .catch(() => {});
   }, [user]);
   const [previewTier, setPreviewTier] = useState<Tier | "real">("real");
+  // A now-and-then welcome burst, like Admin's (founder, 2026-11-05): at most once a week, and never for someone who
+  // turned celebrations off or asked their device for reduced motion.
+  const [welcomeBurst, setWelcomeBurst] = useState(false);
   // The test-mode tier preview is for super admins only, so testers can't hand themselves a paid plan in the UI.
   const staff = useQuery({ queryKey: ["staff-role", user?.id], queryFn: () => getStaffRole(), enabled: !!user && getPaymentsEnvironment() === "sandbox" });
   const canPreview = staff.data?.role === "super_admin";
@@ -166,6 +171,16 @@ function Workspace() {
       });
   }, [user, billingLoaded, realTier]);
 
+  useEffect(() => {
+    if (!user) return;
+    if (badgePrefs(loadOnboarding(user.id)).celebrations === "off") return;
+    if (window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) return;
+    if (!maybeCelebrate()) return;
+    setWelcomeBurst(true);
+    const t = setTimeout(() => setWelcomeBurst(false), 2800);
+    return () => clearTimeout(t);
+  }, [user?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+
   // Signed out: the dedicated log-in page, not the homepage. A returning member lands on their own form with their
   // email already filled in (founder, 2026-11-05), instead of being bounced back to the sign-up box.
   useEffect(() => {
@@ -190,6 +205,7 @@ function Workspace() {
 
   return (
     <div className="min-h-screen bg-background">
+      {welcomeBurst && <div className="pointer-events-none fixed inset-0 z-[85]"><Confetti /></div>}
       <PaymentTestModeBanner previewTier={previewTier} onPreviewTier={canPreview ? setPreviewTier : undefined} />
       <header className="border-b border-ink-border bg-ink text-ink-foreground">
         <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-6 py-4">

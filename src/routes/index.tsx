@@ -469,16 +469,24 @@ function Landing() {
               </div>
             </div>
 
+            {/* The word as the industry uses it, with reported deals as the proof — and an explicit "not an appraisal" so
+                no one reads a member's catalog as priced by us (founder, 2026-11-05). Set across the spread like a
+                standfirst: same width as the rest, two columns, paragraphs flowing together. */}
+            <p className="mt-8 border-t border-border pt-6 text-xl leading-relaxed text-foreground md:columns-2 md:gap-10">
+              Catalog is also the word the business uses for everything an artist has made, treated as one asset. Bruce Springsteen sold his masters and publishing for a reported $500 million in 2021; Bob Dylan's songwriting catalog went for a reported $300 million or more. Those are superstar deals, not an appraisal of anyone's songs, but they are why the paperwork matters: the artist who can name every song, every writer and every split is the one who gets paid for them.
+            </p>
           </div>
         </div>
       </section>
 
       <section className="bg-ink py-14 text-ink-foreground">
         <div className="mx-auto max-w-5xl px-6">
-            <div className="border-l-4 border-electric bg-ink px-6 py-5 text-ink-foreground">
-              <p className="text-xs font-bold uppercase tracking-[2px] text-electric">The part that matters</p>
-              <p className="mt-2 text-2xl font-extrabold leading-snug md:text-3xl">One song, one row, every piece of it.</p>
-              <p className="mt-2 leading-relaxed text-ink-muted">Master, artwork, lyrics, credits and codes stay together, so every download comes back complete.</p>
+            {/* Blue band with white copy, straight after the story (founder, 2026-11-05). Three beats instead of a
+                comma list, so the line lands like a magazine cover line. */}
+            <div className="rounded-2xl bg-primary px-6 py-8 text-primary-foreground md:px-10 md:py-9">
+              <p className="text-xs font-bold uppercase tracking-[2px] text-primary-foreground/75">The part that matters</p>
+              <p className="mt-2 text-2xl font-extrabold leading-snug md:text-3xl">One song. One row. All of it.</p>
+              <p className="mt-2 max-w-2xl leading-relaxed text-primary-foreground/85">Master, artwork, lyrics, credits and codes stay together, so every download comes back complete.</p>
             </div>
 
             <div className="mt-8 flex justify-center">
