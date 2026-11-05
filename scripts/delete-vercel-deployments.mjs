@@ -8,7 +8,7 @@
 //
 // Never kept: nothing. Always kept:
 //   - the newest READY production deployment (the one your domain serves)
-//   - the newest --keep deployments (default 5)
+//   - the newest --keep deployments (default 10)
 //   - anything younger than --keep-days days (default 0, i.e. off)
 //
 // Get a token at https://vercel.com/account/tokens (scope it to this team if you can).
@@ -27,7 +27,7 @@ const flag = (name, fallback) => {
 const TOKEN = process.env.VERCEL_TOKEN;
 const PROJECT_ID = process.env.VERCEL_PROJECT_ID ?? "prj_eROxy0x9oz8FigV2YwCWzQaMxuXP";
 const TEAM_ID = process.env.VERCEL_TEAM_ID ?? "team_mHqKfIDvXr2KpxykPtjvkVCk";
-const KEEP = flag("keep", 5);
+const KEEP = flag("keep", 10);
 const KEEP_DAYS = flag("keep-days", 0);
 
 if (!TOKEN) {
