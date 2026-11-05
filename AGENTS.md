@@ -159,10 +159,31 @@
   invites, which are already ours. Any new auth mail follows that pattern.
 - **The email header is smaller than it was** (founder, 2026-11-05): `EMAIL_LOGO_WIDTH`, `WORDMARK_FONT_PX` and
   `WORDMARK_MARK_PX` in `src/lib/email-layout.ts` are the only sizes; change them there, never inline in a template.
-- **A free account is a benefit of working here, not a plan change** (founder, 2026-11-05): an employee's own account is
-  free while they work here. If they already paid, the paid time runs out first and the free staff plan starts after it;
-  nothing is refunded mid-year, and the benefit ends on their last day. Which plan it is, and every extra benefit, is
-  **undecided** until the founder approves it: the Handbook section says so and carries no figure or tier name.
+- **The staff plan is Catalog Management, free** (founder, 2026-11-05): `public.user_tier` returns `management` for any
+  account with a staff role (`public.is_staff`) and for any account holding a live `staff_plan_grants` row. Do not gate
+  staff access with a second, separate check: brand kit and contract generator follow the tier, so they come with it.
+  `useBilling` reads `user_tier` too, so a page can never show a staff member as Free.
+- **A reported member account keeps its paid year** (founder, 2026-11-05): staff report the email they already use as an
+  artist in Admin → Staff Plan; a super admin or HR marks it staff. `staffPlanWindow` (`src/lib/staff-plan.ts`) starts the
+  free year when any paid period ends and measures it from that cycle's start, so nothing is refunded mid-term. The grant
+  is reviewed yearly; nothing renews it automatically.
+- **The staff credits are one album of AI Protection and two albums of registrations a year** (founder, 2026-11-05): one
+  album is `packageSongs("Album")` — 12 songs, the Album package's own size, never a new number. Registrations are spent
+  one song at a time and a single batch is capped at one album (`registrationBatchAllowed`). The founder issues the
+  credits; there is no automatic spend path, so the copy says to ask rather than promising an instant balance.
+- **Pay and extra benefits stay undecided**: never write a wage, a holiday rate, a bonus or an extra perk into the
+  handbook, the plan or an email until the founder approves it. The Handbook section says that out loud.
+- **Leaving inside 90 days ends access the same day** (founder, 2026-11-05): `departureOn` in `src/lib/offboarding.ts`
+  returns `immediate: true` and a deletion date 30 days out for anyone whose last day is within their first 90 days of
+  work. `removeStaff` calls `recordStaffDeparture`, which ends the staff grant on that account and on any member account
+  they reported, writes `staff_departures` and schedules the deletion. Never delete an account from a trigger or an
+  admin panel action: `runStaffOffboarding` (daily cron) is the only path, it skips anyone who holds a staff role again,
+  and it writes `deleted_at` once.
+- **Nothing is scheduled for a leaver past 90 days**: that policy is undecided, so `departureOn` returns `deleteOn: null`
+  and the job ignores the row. Do not add a grace period, a different window or a silent deletion for them.
+- **Catalog emptying is not account deletion**: `runCatalogLapses` removes a member's songs and files 30 days after a
+  plan ends and keeps the account. Nothing in the app deletes an account except the staff offboarding job above, so
+  never describe a canceled plan as "the account is deleted".
 
 ## Catalog Playback & WAV Storage (always follow)
 

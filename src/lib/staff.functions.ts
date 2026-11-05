@@ -119,19 +119,25 @@ export const updateStaff = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
-/** Removes staff access. The person keeps their regular account. */
+/** Removes staff access, records the departure and starts the offboarding clock. The person keeps their regular account. */
 export const removeStaff = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d) => z.object({ userId: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
     const { actorIsSuper } = await requireStaffManager(context);
     const db = await admin();
-    const { data: current } = await db.from("user_roles").select("role").eq("user_id", data.userId);
+    const { data: current } = await db.from("user_roles").select("role, created_at").eq("user_id", data.userId);
     const problem = staffChangeError({ actorId: context.userId, actorIsSuper, targetId: data.userId, targetRoles: (current ?? []).map((r) => r.role) });
     if (problem) throw new Error(problem);
+    const firstDay = (current ?? []).map((r) => r.created_at).sort()[0];
     const { error } = await db.from("user_roles").delete().eq("user_id", data.userId).in("role", [...MANAGED_ROLES]);
     if (error) throw new Error("Couldn't remove staff access.");
-    return { ok: true };
+    // Access is gone either way; the record is what starts the 90-day rule and, inside it, the 30 days to download.
+    const { recordStaffDeparture } = await import("./staff-offboarding.server");
+    const departure = firstDay
+      ? await recordStaffDeparture({ userId: data.userId, firstDay, actorId: context.userId })
+      : { within: false, deleteOn: null, emailed: false };
+    return { ok: true, withinProbation: departure.within, deleteOn: departure.deleteOn, emailed: departure.emailed };
   });
 
 async function sendStaffEmail(to: string, role: ManagedRole, departments: Department[], link: string) {

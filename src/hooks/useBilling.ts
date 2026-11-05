@@ -31,7 +31,7 @@ export function useBilling(userId: string | undefined) {
 
   const load = useCallback(async () => {
     if (!userId) return;
-    const [subs, buys, paused, lapsed, seats, memberSeats] = await Promise.all([
+    const [subs, buys, paused, lapsed, seats, memberSeats, serverTierRow] = await Promise.all([
       supabase.from("subscriptions" as never).select("price_id, status, current_period_start, current_period_end, cancel_at_period_end, stripe_subscription_id, created_at").eq("user_id", userId).eq("environment", env).order("created_at", { ascending: false }),
       supabase.from("purchases" as never).select("id, kind, price_ids, details, created_at").eq("user_id", userId).eq("environment", env).order("created_at", { ascending: false }),
       // Missing until the retention migrations run; then these simply come back empty.
@@ -42,6 +42,9 @@ export function useBilling(userId: string | undefined) {
       // Add-on artist seats this account accepted. A seat IS their plan while it's paid for, so the app has to see it
       // here too: the server's user_tier already counts it, and a page must never show a seat holder as Free.
       supabase.from("artist_seats" as never).select("tier, status, current_period_end, environment").eq("member_user_id", userId).in("status", ["active", "canceled"]),
+      // The database's own answer, which already counts staff (management for anyone on the team) and a live staff-plan
+      // grant on a reported member account. Read from one place so the page can never disagree with the gates.
+      supabase.rpc("user_tier" as never, { _uid: userId } as never),
     ]);
     const rows = (subs.data ?? []) as SubRow[];
     const pauseRows = (paused.data ?? []) as Pause[];
@@ -60,7 +63,7 @@ export function useBilling(userId: string | undefined) {
       .filter((r) => r.status === "active" || (!!r.current_period_end && Date.parse(r.current_period_end) > Date.now()));
     const hereSeats = usableSeats.filter((r) => r.environment === env);
     const seatTiers = (hereSeats.length ? hereSeats : usableSeats).map((r) => r.tier);
-    setTier(isPaused(pauseRows) ? "free" : highestTier(seat ? seat.granted_tier : best, ...seatTiers));
+    setTier(isPaused(pauseRows) ? "free" : highestTier(seat ? seat.granted_tier : best, ...seatTiers, ((serverTierRow as unknown as string) || "free") as Tier));
     const row = live.find((r) => tierFromPrice(r.price_id) === best);
     // (plan and sub below follow the tier they pay for, so billing shows the real price)
     // orderedAt: when the plan was first bought, for the 30-day full refund countdown.

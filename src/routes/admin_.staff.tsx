@@ -51,7 +51,11 @@ function StaffPage() {
   const remove = useServerFn(removeStaff);
   const removeMut = useMutation({
     mutationFn: (m: StaffMember) => remove({ data: { userId: m.userId } }),
-    onSuccess: (_r, m) => { toast.success(`${m.email} no longer has staff access.`); qc.invalidateQueries({ queryKey: ["staff-list"] }); },
+    onSuccess: (r, m) => {
+      toast.success(`${m.email} no longer has staff access.`);
+      if (r.deleteOn) toast.info(`They have until ${new Date(r.deleteOn).toLocaleDateString()} to download their assets. The account is deleted that day.`);
+      qc.invalidateQueries({ queryKey: ["staff-list"] });
+    },
     onError: (e) => toast.error(e instanceof Error ? e.message : "Couldn't remove staff access."),
     onSettled: () => setRemoving(null),
   });

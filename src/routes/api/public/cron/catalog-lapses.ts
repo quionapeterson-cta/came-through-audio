@@ -15,10 +15,11 @@ export const Route = createFileRoute("/api/public/cron/catalog-lapses")({
           return new Response("Unauthorized", { status: 401 });
         }
         const { runCatalogLapses, sendRenewalReminders } = await import("@/lib/retention.server");
-        // Each part runs even if the other fails, so a reminder problem never holds up the emptying job.
-        const [renewals, lapses] = await Promise.allSettled([sendRenewalReminders(), runCatalogLapses()]);
+        const { runStaffOffboarding } = await import("@/lib/staff-offboarding.server");
+        // Each part runs even if another fails, so a reminder problem never holds up the emptying or the offboarding.
+        const [renewals, lapses, offboarding] = await Promise.allSettled([sendRenewalReminders(), runCatalogLapses(), runStaffOffboarding()]);
         const out = (r: PromiseSettledResult<object>) => (r.status === "fulfilled" ? r.value : { error: String(r.reason) });
-        return Response.json({ ...out(renewals), ...out(lapses) });
+        return Response.json({ ...out(renewals), ...out(lapses), ...out(offboarding) });
       },
     },
   },

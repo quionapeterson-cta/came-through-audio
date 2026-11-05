@@ -30,6 +30,7 @@ import { TestimonialsEditor } from "@/components/TestimonialsEditor";
 import { AdminWelcome, TaskBell, WelcomeSwitch } from "@/components/AdminWelcome";
 import { AccountHelpPanel } from "@/components/AccountHelpPanel";
 import { HolidayPlan } from "@/components/HolidayPlan";
+import { StaffPlanPanel } from "@/components/StaffPlanPanel";
 import { TaskBankPanel } from "@/components/TaskBankPanel";
 import { RegistrationQueuePanel } from "@/components/RegistrationQueuePanel";
 import { PriceList } from "@/components/PriceList";
@@ -204,6 +205,7 @@ function AdminPage() {
           {show("recognition") && <TabsContent value="recognition"><MyRecognition /></TabsContent>}
           {show("queue") && <TabsContent value="queue"><MyQueue me={user.id} access={access} onOpen={setActiveTab} /></TabsContent>}
           {show("handbook") && <TabsContent value="handbook"><Handbook /></TabsContent>}
+          {show("staff-plan") && <TabsContent value="staff-plan"><StaffPlanPanel access={access} /></TabsContent>}
           {show("scripts") && <TabsContent value="scripts"><SupportScriptsPanel /></TabsContent>}
           {show("prices") && <TabsContent value="prices"><PriceList /></TabsContent>}
           {show("pdf") && <TabsContent value="pdf"><PdfTools /></TabsContent>}

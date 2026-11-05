@@ -50,12 +50,19 @@ export const HANDBOOK: HandbookSection[] = [
     "First day: open Admin → My Queue, read this handbook, and check My Recognition. A lead walks the new starter through their department's queue before they answer a customer alone.",
   ] },
   { id: "benefits", title: "Your own account while you work here", body: [
-    "Your account is free while you work at Came Through Audio.",
-    "Already paying? Nothing changes now, and nothing is refunded mid-year. When the time you paid for ends, the account moves to the staff plan instead of charging you again.",
-    "Join with no paid plan and it is free from your first day.",
-    "The staff plan ends on your last day. From then the usual plan rules apply, and the catalog follows the retention policy like any member's.",
-    "Which plan the staff account gets is not decided yet: the founder sets it, and until then nothing here promises a tier or a feature list.",
-    "Proposed extras, not switched on: a seat for an artist you manage, AI Protection credits, Expert Registration assistance, a brand kit for your own project and priority support. Each one needs the founder's number before it becomes an entitlement, so ask before you rely on it.",
+    "Catalog Management is free while you work at Came Through Audio, with the brand kit and the contract generator included. Your staff login is on it from your first day.",
+    "Already have a member account from before? Report its email in Admin → Staff Plan. It gets marked as staff, so you keep the artist account you already had instead of paying for two.",
+    "If that account is paying, nothing changes yet and nothing is refunded mid-year: you finish the year you paid for, then the free staff year starts and is measured from that billing cycle's start. The plan stays free while you work here.",
+    "Also included: one album of AI Protection credits a year and two albums of song registrations a year, spent one song at a time and never more than twelve songs in one batch. One album means twelve songs, the same size as our Album package. The founder issues these, so ask before you rely on them.",
+    "The staff plan is reviewed yearly. When it comes up, a super admin renews it while you are still on the team.",
+    "Still not decided: pay, holiday rates and any extra benefit beyond the above. Nothing here promises those, so ask before you count on them.",
+  ] },
+  { id: "leaving", title: "If you leave in your first 90 days", body: [
+    "If your last day falls inside your first 90 days, your account access ends the same day. There is no wind-down period.",
+    "You then have 30 days to download what is yours: your songs and their files, split sheets, contracts and certificates. Sign in and export them before that date.",
+    "At the end of the 30 days the account and everything in it is deleted. We email you the date when access ends and again a week before deletion, so the date is never a surprise.",
+    "If you think the date is wrong, reply to that email: a person looks at it, and a super admin can correct or cancel it.",
+    "Leaving after your first 90 days is not the same rule yet. That is still being decided, so ask before you rely on any timeline.",
   ] },
 ];
 

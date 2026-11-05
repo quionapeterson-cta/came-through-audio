@@ -28,7 +28,7 @@ describe("resolveAccess", () => {
 
 /** Every staff member gets My Queue, the Idea Box, their own tabs, Task Bank, Calendar, Handbook, Support Scripts, the Price List, PDF Tools, Email and Recognition. */
 const ALWAYS = ["queue", "submissions"];
-const ALWAYS_AFTER = ["tasks", "calendar", "handbook", "scripts", "prices", "pdf", "email", "recognition"];
+const ALWAYS_AFTER = ["tasks", "calendar", "handbook", "staff-plan", "scripts", "prices", "pdf", "email", "recognition"];
 const withDeptTabs = (tabs: string[]) => [...ALWAYS, ...tabs, ...ALWAYS_AFTER];
 
 describe("visibleTabs", () => {
