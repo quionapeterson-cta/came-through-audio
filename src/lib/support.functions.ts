@@ -71,25 +71,42 @@ async function storeTicket(data: TicketInput) {
   return { ok: true };
 }
 
-/** Support department only: list tickets. */
+/**
+ * Support sees every ticket; Billing sees its own (founder, 2026-11-05). The filter is the same "Account & billing"
+ * prefix the inbox routing and the database policy use, so a ticket can never be in two queues by accident.
+ */
+async function ticketScope(context: { supabase: { rpc: (fn: string, args: Record<string, unknown>) => PromiseLike<{ data: unknown }> }; userId: string }): Promise<"all" | "billing"> {
+  const [support, billing] = await Promise.all([
+    context.supabase.rpc("in_department", { _user_id: context.userId, _dept: "support" }),
+    context.supabase.rpc("in_department", { _user_id: context.userId, _dept: "billing" }),
+  ]);
+  if (support.data) return "all";
+  if (billing.data) return "billing";
+  throw new Error("Tickets are for the Support and Billing teams.");
+}
+
+/** Support department, and Billing for billing tickets: list tickets. */
 export const listTickets = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
-    const { data: allowed } = await context.supabase.rpc("in_department", { _user_id: context.userId, _dept: "support" });
-    if (!allowed) throw new Error("Forbidden");
-    const { data, error } = await context.supabase.from("support_tickets").select("*").order("created_at", { ascending: false }).limit(200);
+    const scope = await ticketScope(context as unknown as Parameters<typeof ticketScope>[0]);
+    const base = context.supabase.from("support_tickets").select("*");
+    const scoped = scope === "billing" ? base.like("category", `${BILLING_AREA}%`) : base;
+    const { data, error } = await scoped.order("created_at", { ascending: false }).limit(200);
     if (error) throw new Error("Couldn't load tickets.");
     return data ?? [];
   });
 
-/** Support department only: change ticket status. */
+/** Support, or Billing on a billing ticket: change ticket status. */
 export const updateTicketStatus = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d) => z.object({ id: z.string().uuid(), status: z.enum(TICKET_STATUSES) }).parse(d))
   .handler(async ({ data, context }) => {
-    const { data: allowed } = await context.supabase.rpc("in_department", { _user_id: context.userId, _dept: "support" });
-    if (!allowed) throw new Error("Forbidden");
-    const { error } = await context.supabase.from("support_tickets").update({ status: data.status }).eq("id", data.id);
+    const scope = await ticketScope(context as unknown as Parameters<typeof ticketScope>[0]);
+    const base = context.supabase.from("support_tickets").update({ status: data.status }).eq("id", data.id);
+    // Billing can only touch a billing ticket, even if a database policy ever let a wider read through.
+    const scoped = scope === "billing" ? base.like("category", `${BILLING_AREA}%`) : base;
+    const { error } = await scoped;
     if (error) throw new Error("Couldn't update ticket.");
     return { ok: true };
   });

@@ -94,6 +94,13 @@ export const BADGE_DEPARTMENTS = ["branding", "marketing", "support"] as const s
  */
 export const BILLING_DEPARTMENTS = ["billing", "finance"] as const satisfies readonly Department[];
 
+/**
+ * Who answers tickets (founder, 2026-11-05). Support is its own department and owns the queue for everything else;
+ * Billing answers its own billing tickets and never the rest. The database enforces the same split, and the inbox
+ * routing already sends "Account & billing" to billing@.
+ */
+export const TICKET_DEPARTMENTS = ["support", "billing"] as const satisfies readonly Department[];
+
 export const ADMIN_TABS = [
   { value: "ai", label: "AI Protection", departments: ["ai"] },
   { value: "reg", label: "Registrations", departments: ["registration"] },
@@ -101,7 +108,8 @@ export const ADMIN_TABS = [
   { value: "purchases", label: "Purchases", departments: ["finance"] },
   // Refunds and plan cancellations without a Stripe login (founder, 2026-11-05).
   { value: "billing", label: "Billing", departments: BILLING_DEPARTMENTS },
-  { value: "support", label: "Support Tickets", departments: ["support"] },
+  // Support owns the queue; Billing answers its own billing tickets.
+  { value: "support", label: "Support Tickets", departments: TICKET_DEPARTMENTS },
   { value: "badges", label: "Badges", departments: BADGE_DEPARTMENTS },
   { value: "homepage", label: "Homepage", departments: ["marketing", "branding"] },
   // Terms, Privacy and Refund wording (founder, 2026-10-27); super admins see it with every department.
@@ -120,7 +128,8 @@ export function visibleTabs(access: StaffAccess, view: Department | "all" = "all
   // Everyone on the team gets the Calendar (Phase 4 item 8) and their own staff badges (item 6); nobody with no access
   // at all gets a tab.
   // My Queue and the Handbook (item 10) come first for everyone working in Admin; PDF Tools is for everyone too.
-  const withTasks = base.length ? [{ value: "queue", label: "My Queue" }, { value: "submissions", label: "Idea Box" }, ...base, { value: "calendar", label: "Calendar" }, { value: "handbook", label: "Handbook" }, { value: "prices", label: "Price List" }, { value: "pdf", label: "PDF Tools" }, { value: "email", label: "Email" }, { value: "recognition", label: "My Recognition" }] : base;
+  // Support Scripts is for every staff member, whichever department: the words to send are shared (founder, 2026-11-05).
+  const withTasks = base.length ? [{ value: "queue", label: "My Queue" }, { value: "submissions", label: "Idea Box" }, ...base, { value: "calendar", label: "Calendar" }, { value: "handbook", label: "Handbook" }, { value: "scripts", label: "Support Scripts" }, { value: "prices", label: "Price List" }, { value: "pdf", label: "PDF Tools" }, { value: "email", label: "Email" }, { value: "recognition", label: "My Recognition" }] : base;
   // Company contracts and plans are for super admins only, in the all-departments view.
   return access.role === "super_admin" && view === "all" ? [...withTasks, { value: "company", label: "Company Contracts" }, { value: "plans", label: "Plans" }] : withTasks;
 }

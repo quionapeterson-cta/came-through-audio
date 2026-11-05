@@ -84,6 +84,24 @@
 - Stripe is called through `createBillingStripeClient`, which prefers `STRIPE_BILLING_LIVE_SECRET_KEY` /
   `STRIPE_BILLING_SANDBOX_SECRET_KEY` (restricted key: Refunds write, Charges and Subscriptions read) and falls back to
   the account key. Never widen that key to Payouts, and never put it in the browser.
+- A "duplicate" refund is **verified, never taken from a screenshot** (founder, 2026-11-05): `src/lib/duplicate-charges.ts`
+  reads a payment as settled, a hold, a refund or nothing, groups same-amount payments within 72 hours, and tells staff
+  which one (if any) to refund. The server refuses a `duplicate` refund unless all four `DUPLICATE_CHECKS` are ticked and
+  Stripe says the payment settled; a hold that never captured clears by itself (7 days typical, 30 at the outside), so
+  never refund it and never tell the member to dispute it. Keep the rules and their test there, not in a component.
+
+## Support Scripts & Ticket Routing (always follow)
+
+- Support is its own department and owns the ticket queue (founder, 2026-11-05). `TICKET_DEPARTMENTS` in
+  `src/lib/departments.ts` gives Admin → Support Tickets to Support and Billing; a **billing ticket** is one whose category
+  starts with `BILLING_AREA` ("Account & billing"), the same prefix the inbox routing uses. Support sees every ticket,
+  Billing only its own — enforced in `ticketScope` (`src/lib/support.functions.ts`) and again by RLS
+  (`20261105170000_support-ticket-routing.sql`). Never widen Billing to the whole queue.
+- The words staff send live in `src/lib/support-scripts.ts`: one catalog for every department, readable by **every** staff
+  member from Admin → Support Scripts (`SupportScriptsPanel`), whatever department they hold. A new script needs its
+  department, a "when to use" line and placeholders from `SCRIPT_VARIABLES`; a change to what we promise (refund window,
+  proration, seats) changes `BILLING-POLICY.md` in the same commit. Staff-only wording sets `internal: true` and must
+  never be sent to a member.
 
 ## Writer Credits & Registration Rules (always follow)
 

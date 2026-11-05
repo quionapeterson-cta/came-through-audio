@@ -26,36 +26,50 @@ describe("resolveAccess", () => {
   });
 });
 
+/** Every staff member gets My Queue, the Idea Box, their own tabs, Task Bank, Calendar, Handbook, Support Scripts, the Price List, PDF Tools, Email and Recognition. */
+const ALWAYS = ["queue", "submissions"];
+const ALWAYS_AFTER = ["tasks", "calendar", "handbook", "scripts", "prices", "pdf", "email", "recognition"];
+const withDeptTabs = (tabs: string[]) => [...ALWAYS, ...tabs, ...ALWAYS_AFTER];
+
 describe("visibleTabs", () => {
   it("shows employees only their department tabs", () => {
     const branding = resolveAccess([{ role: "employee", departments: ["registration", "royalty_accounts", "branding"] }])!;
-    expect(visibleTabs(branding).map((t) => t.value)).toEqual(["queue", "reg", "splits", "badges", "homepage", "tasks", "calendar", "handbook", "prices", "pdf", "email", "recognition"]);
+    expect(visibleTabs(branding).map((t) => t.value)).toEqual(withDeptTabs(["reg", "splits", "badges", "homepage"]));
+    // Finance keeps the billing console, Support gets tickets and badges, Sales just its Task Bank.
     const billing = resolveAccess([{ role: "employee", departments: ["finance", "support", "marketing_sales"] }])!;
-    expect(visibleTabs(billing).map((t) => t.value)).toEqual(["queue", "purchases", "support", "badges", "tasks", "calendar", "handbook", "prices", "pdf", "email", "recognition"]);
+    expect(visibleTabs(billing).map((t) => t.value)).toEqual(withDeptTabs(["purchases", "billing", "support", "badges"]));
   });
 
   it("gives the AI department the AI Protection tab; Security also gets Legal", () => {
-    expect(visibleTabs(resolveAccess([{ role: "employee", departments: ["ai"] }])!).map((t) => t.value)).toEqual(["queue", "ai", "tasks", "calendar", "handbook", "prices", "pdf", "email", "recognition"]);
-    expect(visibleTabs(resolveAccess([{ role: "employee", departments: ["software", "security"] }])!).map((t) => t.value)).toEqual(["queue", "legal", "tasks", "calendar", "handbook", "prices", "pdf", "email", "recognition"]);
+    expect(visibleTabs(resolveAccess([{ role: "employee", departments: ["ai"] }])!).map((t) => t.value)).toEqual(withDeptTabs(["ai"]));
+    expect(visibleTabs(resolveAccess([{ role: "employee", departments: ["software", "security"] }])!).map((t) => t.value)).toEqual(withDeptTabs(["legal"]));
   });
 
   it("never shows finance to HR admins", () => {
-    expect(visibleTabs(resolveAccess([{ role: "hr_admin" }])!).map((t) => t.value)).toEqual(["queue", "tasks", "calendar", "handbook", "prices", "pdf", "email", "recognition"]);
+    expect(visibleTabs(resolveAccess([{ role: "hr_admin" }])!).map((t) => t.value)).toEqual(withDeptTabs([]));
   });
 
   it("gives marketing the Badges and Homepage tabs and its Task Bank; sales gets its Task Bank", () => {
     const marketing = resolveAccess([{ role: "employee", departments: ["marketing"] }])!;
-    expect(visibleTabs(marketing).map((t) => t.value)).toEqual(["queue", "badges", "homepage", "tasks", "calendar", "handbook", "prices", "pdf", "email", "recognition"]);
-    expect(visibleTabs(resolveAccess([{ role: "employee", departments: ["marketing_sales"] }])!).map((t) => t.value)).toEqual(["queue", "tasks", "calendar", "handbook", "prices", "pdf", "email", "recognition"]);
+    expect(visibleTabs(marketing).map((t) => t.value)).toEqual(withDeptTabs(["badges", "homepage"]));
+    expect(visibleTabs(resolveAccess([{ role: "employee", departments: ["marketing_sales"] }])!).map((t) => t.value)).toEqual(withDeptTabs([]));
     expect(visibleTabs(resolveAccess([{ role: "employee", departments: [] }])!)).toEqual([]);
   });
 
   it("narrows the super admin view with the switcher", () => {
     const sa = resolveAccess([{ role: "super_admin" }])!;
-    expect(visibleTabs(sa).map((t) => t.value).slice(-8)).toEqual(["calendar", "handbook", "prices", "pdf", "email", "recognition", "company", "plans"]);
+    expect(visibleTabs(sa).map((t) => t.value).slice(-8)).toEqual(["handbook", "scripts", "prices", "pdf", "email", "recognition", "company", "plans"]);
     expect(visibleTabs(sa)[0]?.value).toBe("queue");
-    expect(visibleTabs(sa, "finance").map((t) => t.value)).toEqual(["queue", "purchases", "tasks", "calendar", "handbook", "prices", "pdf", "email", "recognition"]);
-    expect(visibleTabs(sa, "support").map((t) => t.value)).toEqual(["queue", "support", "badges", "tasks", "calendar", "handbook", "prices", "pdf", "email", "recognition"]);
+    expect(visibleTabs(sa, "finance").map((t) => t.value)).toEqual(withDeptTabs(["purchases", "billing"]));
+    expect(visibleTabs(sa, "support").map((t) => t.value)).toEqual(withDeptTabs(["support", "badges"]));
+  });
+
+  it("gives Billing the ticket queue and every staff member the scripts", () => {
+    const billing = resolveAccess([{ role: "employee", departments: ["billing"] }])!;
+    expect(visibleTabs(billing).map((t) => t.value)).toContain("support");
+    expect(visibleTabs(billing).map((t) => t.value)).toContain("scripts");
+    expect(visibleTabs(resolveAccess([{ role: "employee", departments: ["ai"] }])!).map((t) => t.value)).toContain("scripts");
+    expect(visibleTabs(resolveAccess([{ role: "hr_admin" }])!).map((t) => t.value)).toContain("scripts");
   });
 });
 

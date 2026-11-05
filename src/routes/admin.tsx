@@ -19,6 +19,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { getAdminOverview, getStaffRole } from "@/lib/admin.functions";
 import { ASSIGNABLE_DEPARTMENTS, DEPARTMENTS, DEPARTMENT_LABEL, ROLE_LABEL, viewDepartments, visibleTabs, type Department } from "@/lib/departments";
 import { SupportTicketsPanel } from "@/components/SupportTicketsPanel";
+import { SupportScriptsPanel } from "@/components/SupportScriptsPanel";
 import { BadgeSwitchboard } from "@/components/BadgeSwitchboard";
 import { BadgeProtocolPanel } from "@/components/BadgeProtocolPanel";
 import { StaffSubmissionsPanel } from "@/components/StaffSubmissionsPanel";
@@ -187,7 +188,7 @@ function AdminPage() {
             <Table head={["Type", "Mode", "Status", "Date"]} rows={d?.purchases.map((p) => [p.type, p.environment, p.status, fmt(p.created_at)])} />
           </TabsContent>
           {show("billing") && <TabsContent value="billing"><BillingConsolePanel isSuper={isSuper} /></TabsContent>}
-          {show("support") && <TabsContent value="support"><SupportTicketsPanel /></TabsContent>}
+          {show("support") && <TabsContent value="support"><SupportTicketsPanel scope={access.departments.includes("support") ? "all" : "billing"} /></TabsContent>}
           {show("badges") && <TabsContent value="badges"><BadgeSwitchboard /><BadgeProtocolPanel isSuper={isSuper} /></TabsContent>}
           {show("homepage") && <TabsContent value="homepage"><TestimonialsEditor /><TestimonialFilterPanel /><SocialPanel /></TabsContent>}
           {show("tasks") && <TabsContent value="tasks"><TaskBankPanel departments={access.allTeams && access.role !== "super_admin" ? [...ASSIGNABLE_DEPARTMENTS] : viewDepartments(access, view)} editable={viewDepartments(access, view)} /></TabsContent>}
@@ -198,6 +199,7 @@ function AdminPage() {
           {show("recognition") && <TabsContent value="recognition"><MyRecognition /></TabsContent>}
           {show("queue") && <TabsContent value="queue"><MyQueue me={user.id} access={access} onOpen={setActiveTab} /></TabsContent>}
           {show("handbook") && <TabsContent value="handbook"><Handbook /></TabsContent>}
+          {show("scripts") && <TabsContent value="scripts"><SupportScriptsPanel /></TabsContent>}
           {show("prices") && <TabsContent value="prices"><PriceList /></TabsContent>}
           {show("pdf") && <TabsContent value="pdf"><PdfTools /></TabsContent>}
           {show("email") && <TabsContent value="email"><CompanyMail /></TabsContent>}

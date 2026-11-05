@@ -6,6 +6,10 @@ import { getPaymentsEnvironment } from "@/lib/payments-env";
 import { createBillingStripeClient, getStripeErrorMessage } from "@/lib/stripe.server";
 import { PRICE_TIER, TIER_LABEL, refundDaysLeft } from "@/lib/plans";
 import { formatUsd, proratedRefundCents, purchaseKindLabel, refundVerdict, type RefundReason } from "@/lib/billing-console";
+import {
+  DUPLICATE_CHECK_IDS, duplicateRefundBlock, groupPossibleDuplicates, paymentState, readCharge,
+  type ChargeFacts, type ChargeReading, type DuplicateGroup,
+} from "@/lib/duplicate-charges";
 
 /**
  * The billing console's server side (founder, 2026-11-05). Finance and super admins refund a payment or cancel a plan
@@ -236,6 +240,8 @@ const refundFields = {
   reason: z.enum(["requested_by_customer", "duplicate", "fraudulent"]),
   note: z.string().max(300).optional(),
   requestId: z.string().uuid(),
+  /** Only for reason "duplicate": the four checks the person ticked. The server re-checks Stripe regardless. */
+  duplicateChecks: z.array(z.enum(DUPLICATE_CHECK_IDS)).max(DUPLICATE_CHECK_IDS.length).optional(),
 };
 
 /** Refund a one-time purchase (Expert Registration, AI Protection, branding, renewals, contracts, seats). */
@@ -266,6 +272,28 @@ export const refundPurchase = createServerFn({ method: "POST" })
       throw new Error(`Stripe couldn't read that payment: ${getStripeErrorMessage(e)}`);
     }
     if (!pi) throw new Error("This payment has no Stripe payment intent, so it can't be refunded automatically.");
+
+    // A "duplicate" refund is a claim about the payment itself (founder, 2026-11-05), so Stripe has to agree the money
+    // actually moved before any of it goes back. Otherwise a hold gets "refunded" and the member is paid for a charge
+    // that never happened.
+    if (data.reason === "duplicate") {
+      let state: ReturnType<typeof paymentState> = "failed";
+      try {
+        state = paymentState((await stripe.paymentIntents.retrieve(pi)).status);
+      } catch (e) {
+        throw new Error(`Stripe couldn't confirm whether that payment settled: ${getStripeErrorMessage(e)}`);
+      }
+      const block = duplicateRefundBlock({
+        checks: data.duplicateChecks ?? [],
+        settled: state === "succeeded",
+        held: state === "requires_capture" || state === "processing",
+        refunded: refundedCents >= paidCents,
+      });
+      if (block) {
+        await record({ actorId: ctx.userId, actorEmail, targetUserId: p.user_id, targetEmail: "", action: "refund", target: p.id, stripeObject: pi, amountCents: data.amountCents, currency: null, reason: data.reason, status: "failed", error: block, environment: env, requestId: data.requestId });
+        throw new Error(block);
+      }
+    }
 
     const verdict = refundVerdict({ paidCents, refundedCents, amountCents: data.amountCents, paidAt: p.created_at ?? new Date().toISOString() });
     const why = `${data.reason}${data.note?.trim() ? `: ${data.note.trim()}` : ""}`;
@@ -336,6 +364,20 @@ export const refundLatestPlanCharge = createServerFn({ method: "POST" })
     const { stripe, charge } = await latestChargeFor(sub.stripe_customer_id, env);
     if (!charge) throw new Error("No refundable charge on that plan.");
     const why = `${data.reason}${data.note?.trim() ? `: ${data.note.trim()}` : ""}`;
+    // Same gate as a purchase: "duplicate" means two settled payments, not one charge and the bank's hold.
+    if (data.reason === "duplicate") {
+      const state = paymentState(charge.status, charge.captured);
+      const block = duplicateRefundBlock({
+        checks: data.duplicateChecks ?? [],
+        settled: state === "succeeded",
+        held: state === "requires_capture" || state === "processing",
+        refunded: charge.amount_refunded >= charge.amount,
+      });
+      if (block) {
+        await record({ actorId: ctx.userId, actorEmail, targetUserId: null, targetEmail: "", action: "refund", target: data.subscriptionId, stripeObject: charge.id, amountCents: data.amountCents, currency: charge.currency.toUpperCase(), reason: why, status: "failed", error: block, environment: env, requestId: data.requestId });
+        throw new Error(block);
+      }
+    }
     const verdict = refundVerdict({
       paidCents: charge.amount,
       refundedCents: charge.amount_refunded,
@@ -412,4 +454,84 @@ export const listBillingActions = createServerFn({ method: "GET" })
       createdAt: r.created_at, actorEmail: r.actor_email, action: r.action, targetEmail: r.target_email,
       amountCents: r.amount_cents, currency: r.currency, reason: r.reason, status: r.status, error: r.error,
     }));
+  });
+
+export type DuplicateChargeRow = ChargeFacts & { reading: ChargeReading };
+export type DuplicateCheckResult = { charges: DuplicateChargeRow[]; groups: DuplicateGroup[] };
+
+/**
+ * What each of a member's recent payments actually is, straight from Stripe (founder, 2026-11-05), plus any two that
+ * look like the same charge twice. The panel shows this before anyone can tick "Duplicate charge" — a hold that a bank
+ * app draws like a charge is labelled as a hold, with the date it disappears by.
+ *
+ * One unreadable payment must never hide the rest, so each lookup is allowed to fail on its own.
+ */
+export const checkDuplicateCharges = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d) => z.object({ userId: z.string().uuid() }).parse(d))
+  .handler(async ({ data, context }): Promise<DuplicateCheckResult> => {
+    await requireBilling(context as unknown as Ctx);
+    const env = getPaymentsEnvironment();
+    const d = await db();
+    const stripe = createBillingStripeClient(env);
+    const [{ data: purchases }, { data: subs }] = await Promise.all([
+      d.from("purchases").select("id, kind, stripe_session_id, created_at")
+        .eq("user_id", data.userId).eq("environment", env).not("stripe_session_id", "is", null)
+        .order("created_at", { ascending: false }).limit(12),
+      d.from("subscriptions").select("stripe_customer_id")
+        .eq("user_id", data.userId).eq("environment", env).not("stripe_customer_id", "is", null).limit(3),
+    ]);
+
+    const facts: ChargeFacts[] = [];
+    const buyRows = (purchases ?? []) as { id: string; kind: string; stripe_session_id: string | null; created_at: string | null }[];
+    await Promise.all(buyRows.map(async (p) => {
+      if (!p.stripe_session_id) return;
+      try {
+        const session = await stripe.checkout.sessions.retrieve(p.stripe_session_id);
+        const pi = typeof session.payment_intent === "string" ? session.payment_intent : session.payment_intent?.id ?? null;
+        if (!pi) return;
+        const intent = await stripe.paymentIntents.retrieve(pi, { expand: ["latest_charge"] });
+        const charge = typeof intent.latest_charge === "string" ? null : intent.latest_charge;
+        facts.push({
+          id: charge?.id ?? intent.id,
+          paymentIntent: intent.id,
+          amountCents: charge?.amount ?? intent.amount,
+          refundedCents: charge?.amount_refunded ?? 0,
+          currency: (intent.currency ?? "usd").toLowerCase(),
+          createdAt: new Date((intent.created ?? 0) * 1000).toISOString(),
+          state: paymentState(intent.status, charge?.captured),
+          item: purchaseKindLabel(p.kind),
+          purchaseId: p.id,
+        });
+      } catch { /* one unreadable payment must not hide the others */ }
+    }));
+
+    const customerId = ((subs ?? []) as { stripe_customer_id: string | null }[]).find((s) => s.stripe_customer_id)?.stripe_customer_id;
+    if (customerId) {
+      try {
+        const charges = await stripe.charges.list({ customer: customerId, limit: 20 });
+        for (const c of charges.data) {
+          facts.push({
+            id: c.id,
+            paymentIntent: typeof c.payment_intent === "string" ? c.payment_intent : c.payment_intent?.id ?? null,
+            amountCents: c.amount,
+            refundedCents: c.amount_refunded,
+            currency: c.currency.toLowerCase(),
+            createdAt: new Date(c.created * 1000).toISOString(),
+            state: paymentState(c.status, c.captured),
+            item: "Plan renewal",
+            purchaseId: null,
+          });
+        }
+      } catch { /* the purchases above still answer the question */ }
+    }
+
+    // A renewal bought through "Renew now" is one payment seen from two places: keep the first reading of it.
+    const unique = new Map<string, ChargeFacts>();
+    for (const f of facts) unique.set(f.paymentIntent ?? f.id, f);
+    const charges = [...unique.values()].sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt));
+    return {
+      charges: charges.map((c) => ({ ...c, reading: readCharge(c) })),
+      groups: groupPossibleDuplicates(charges),
+    };
   });

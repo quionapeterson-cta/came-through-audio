@@ -50,7 +50,7 @@ function UnlockBadge({ ticketId, subject }: { ticketId: string; subject: string 
 
 const LABEL: Record<string, string> = { open: "Open", in_progress: "In Progress", resolved: "Resolved" };
 
-export function SupportTicketsPanel() {
+export function SupportTicketsPanel({ scope = "all" }: { scope?: "all" | "billing" }) {
   const fetchTickets = useServerFn(listTickets);
   const setStatus = useServerFn(updateTicketStatus);
   const qc = useQueryClient();
@@ -64,6 +64,11 @@ export function SupportTicketsPanel() {
 
   return (
     <div className="mt-4 space-y-3">
+      <p className="text-sm text-muted-foreground">
+        {scope === "billing"
+          ? "Billing's own tickets: charges, invoices, refunds, plan changes, seats and branding kits. Everything else belongs to Support."
+          : "Every ticket from the site. Billing answers the Account & billing ones in its own tab; answer the rest from here."}
+      </p>
       <div className="flex flex-wrap gap-2">
         {[...TICKET_STATUSES, "all"].map((s) => (
           <button key={s} onClick={() => setFilter(s)}

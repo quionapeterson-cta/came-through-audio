@@ -60,7 +60,7 @@ So the realistic ceiling for a single payment:
 | **Day 31 or later, a purchase** | Still allowed and usually right: **a chargeback costs us more than a refund**. Note required; all or part, your judgement. |
 | **Already used part of what they bought** | Partial refund is fine. Refund what is fair, not necessarily everything. |
 | **Already refunded in full** | Nothing more to refund. The payment is closed. |
-| **Duplicate charge** | Refund one of them, note "duplicate". |
+| **Duplicate charge** | **Verify it first (§4.3)** — a hold is not a charge. Then refund the newer one, note "duplicate". |
 | **Service work already started** (Expert Registration) | Our published terms: refundable for 30 days **until our team starts work**. After work starts, escalate to the Head of Finance; never refuse flatly and never argue. |
 | **A plan upgrade** | Upgrades are prorated by Stripe. Refund the difference only if something actually went wrong. |
 
@@ -147,9 +147,7 @@ becoming a dispute:
 What staff do with that: when a member writes "I didn't mean to renew", check the date. Inside 30 days → refund it in
 full and cancel the plan. Past 30 days → prorated refund, note it, and cancel the plan. Never make them argue for it.
 
-**Duplicates:** if the same person was charged twice for the same thing (double click, retry, two cards), refund one of
-them with the reason "Duplicate charge". Two charges of the same amount on the same day are the usual sign; if it isn't
-obvious which one is the duplicate, refund the later one.
+**Duplicates** have their own check before any money moves — see §4.3. Same amount is not the same charge.
 
 What to do about it:
 
@@ -159,6 +157,31 @@ What to do about it:
   there is clear evidence (usage records, signed terms, delivery dates). Never contest out of principle.
 - **Never contact the customer about a dispute in a way that pressures them.** State the facts, offer the refund, keep
   the tone the brand uses.
+
+### 4.3 "It charged me twice" — check before you refund
+
+Most "you charged me twice" messages are not two charges. Four things look identical in a banking app and only one of
+them is a duplicate:
+
+| What they see | What it actually is | What we do |
+|---|---|---|
+| Two lines, one is a temporary hold | An **authorization** that never settled | **Nothing.** It clears by itself — usually within 7 days, always within 30. A refund fails. |
+| A charge and the money back | The **refund** we already sent | Nothing is owed. |
+| Two amounts for two things | Two seats, two $2.99 certificates, a purchase plus a renewal | Not a duplicate. |
+| Two **settled** payments, same thing, hours apart | A real duplicate | Refund the **newer** one, reason "Duplicate charge". |
+
+The console does that check for you: under the member, **Possible duplicate payments** lists each payment with what it
+actually is, and when two settled payments match it names the one to refund. A hold is labelled with the date it
+disappears by and has no refund button.
+
+Before a "duplicate" refund goes through, four checks must be ticked. The server refuses otherwise, and it refuses a
+payment that hasn't settled or is already refunded. That is not a formality: "duplicate" is the reason the bank sees, and
+a wrong one pays out money for something the member kept.
+
+- **If it is a hold:** reply with the "It looks like two charges, but one is a hold" script and give them the date. Never
+  refund it, and never tell them to dispute it.
+- **If nothing is wrong at all** (one payment shown twice): say so with the date and amount, and offer to check again if
+  the extra line is still there after the date. A calm answer is the whole fix.
 
 ---
 
@@ -201,6 +224,10 @@ Ten minutes, then you can do it.
     reminded 90, 60, 30, 7 and 1 day before, without sounding like an accusation.
 12. **If they say they paused but the plan charged**, that is the pause confusion in §3.2: refund prorated, note it, and
     point them at Cancel plan for next time.
+13. **Before any "duplicate" refund, read Possible duplicate payments** and check what each line is. A hold, a refund and
+    two different products are not duplicates (§4.3). Tick the four checks only when all four are true.
+14. **Answer from Admin → Support Scripts.** Pick the department, fill the name and amount, copy. The billing scripts cover
+    refunds, holds, declines and pause confusion, so nobody writes the wording from scratch.
 
 If something goes wrong — an error, an amount that looks wrong, a payment that isn't listed — **do not** open Stripe and
 do not try a second refund. Copy the message and send it to the Head of Finance.
@@ -237,6 +264,17 @@ do not try a second refund. Copy the message and send it to the Head of Finance.
 > Hi [name] — I'm sorry, that's on us for not making it clearer: pausing holds the plan for a few months and then it
 > renews by itself, so it doesn't stop a charge. I've cancelled the plan so nothing else renews, and refunded the
 > unused part of your year: [amount], back to the card you paid with in 5–10 business days.
+
+**It looked like a duplicate, but one is a hold**
+
+> Hi [name] — thanks for sending that. One of those lines is a hold, not a charge: your bank sets it aside while the
+> payment finishes and it disappears by itself, normally by [date] and always within 30 days. Only one payment has left
+> your account, so there's nothing to refund. If the extra line is still there after [date], reply and we'll look again.
+
+**Duplicate confirmed**
+
+> Hi [name] — you're right, there were two payments for [item] on [date]. Both went through and only one was owed, so
+> we've refunded the newer one. It's back on your card in 5–10 business days and your access hasn't changed.
 
 **Dispute**
 

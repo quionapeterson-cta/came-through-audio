@@ -7,10 +7,12 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { REFUND_REASON_LABEL, REFUND_REASONS, dollarsToCents, formatUsd, type RefundReason } from "@/lib/billing-console";
+import { DUPLICATE_CHECKS, dayLabel, readCharge, type DuplicateCheck } from "@/lib/duplicate-charges";
 import {
-  latestPlanCharge, listBillingActions, lookupBillingMember, purchasePaymentInfo, refundLatestPlanCharge, refundPurchase,
-  setSubscriptionCancellation,
-  type BillingMember, type BillingPurchase, type BillingSubscription, type PaymentInfo, type PlanChargeInfo,
+  checkDuplicateCharges, latestPlanCharge, listBillingActions, lookupBillingMember, purchasePaymentInfo,
+  refundLatestPlanCharge, refundPurchase, setSubscriptionCancellation,
+  type BillingMember, type BillingPurchase, type BillingSubscription, type DuplicateChargeRow, type PaymentInfo,
+  type PlanChargeInfo,
 } from "@/lib/billing.functions";
 
 const msg = (e: unknown) => (e instanceof Error ? e.message : "That didn't go through.");
@@ -23,12 +25,17 @@ function RefundBox({ maxCents, defaultCents, needsNote, busy, onCancel, onConfir
   needsNote: boolean;
   busy: boolean;
   onCancel: () => void;
-  onConfirm: (cents: number, reason: RefundReason, note: string) => void;
+  onConfirm: (cents: number, reason: RefundReason, note: string, checks: DuplicateCheck[]) => void;
 }) {
   const [dollars, setDollars] = useState(((((defaultCents ?? maxCents)) / 100)).toFixed(2));
   const [reason, setReason] = useState<RefundReason>("requested_by_customer");
   const [note, setNote] = useState("");
+  const [checks, setChecks] = useState<DuplicateCheck[]>([]);
   const cents = dollarsToCents(dollars);
+  // "Duplicate" is a claim about the payment, so it unlocks only after the four checks. The server asks Stripe again
+  // and refuses a hold or an already-refunded payment whatever is ticked here.
+  const needsDuplicate = reason === "duplicate";
+  const duplicateReady = !needsDuplicate || DUPLICATE_CHECKS.every((c) => checks.includes(c.id));
   return (
     <div className="mt-3 rounded-xl border border-border bg-background p-4">
       <div className="grid gap-3 sm:grid-cols-3">
@@ -47,12 +54,30 @@ function RefundBox({ maxCents, defaultCents, needsNote, busy, onCancel, onConfir
           <Input className="mt-1" value={note} placeholder="What they asked for" onChange={(e) => setNote(e.target.value)} />
         </label>
       </div>
+      {needsDuplicate ? (
+        <div className="mt-3 rounded-lg border border-border bg-muted/40 p-3">
+          <p className="text-xs font-semibold">Before refunding a &quot;duplicate&quot;</p>
+          <p className="mt-1 text-xs text-muted-foreground">Same amount is not the same charge. A hold, a refund, or two different products are not duplicates.</p>
+          <ul className="mt-2 space-y-1.5">
+            {DUPLICATE_CHECKS.map((c) => (
+              <li key={c.id}>
+                <label className="flex cursor-pointer items-start gap-2 text-xs">
+                  <input type="checkbox" className="mt-0.5" checked={checks.includes(c.id)}
+                    onChange={(e) => setChecks((prev) => (e.target.checked ? [...prev, c.id] : prev.filter((x) => x !== c.id)))} />
+                  <span>{c.label}</span>
+                </label>
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
       <p className="mt-2 text-xs text-muted-foreground">
         Most you can refund here: <b>{formatUsd(maxCents)}</b> — the payment is the ceiling, there is no fixed cap.
         {needsNote ? " This one is past 30 days, so the note is required: a refund is cheaper than a dispute." : " The card is refunded in Stripe; nothing else is typed there."}
+        {needsDuplicate && !duplicateReady ? " Tick all four checks first." : ""}
       </p>
       <div className="mt-3 flex flex-wrap gap-2">
-        <Button disabled={busy || cents === null || (needsNote && !note.trim())} onClick={() => { if (cents) onConfirm(cents, reason, note); }}>
+        <Button disabled={busy || cents === null || (needsNote && !note.trim()) || !duplicateReady} onClick={() => { if (cents) onConfirm(cents, reason, note, checks); }}>
           {busy ? "Refunding…" : cents === null ? "Enter an amount" : `Refund ${formatUsd(cents)}`}
         </Button>
         <Button variant="ghost" disabled={busy} onClick={onCancel}>Cancel</Button>
@@ -72,10 +97,10 @@ function PurchaseRow({ purchase, member, onDone }: { purchase: BillingPurchase; 
     try { setPayment(await info({ data: { purchaseId: purchase.id } })); } catch (e) { toast.error(msg(e)); } finally { setBusy(false); }
   }
 
-  async function confirm(cents: number, reason: RefundReason, note: string) {
+  async function confirm(cents: number, reason: RefundReason, note: string, checks: DuplicateCheck[]) {
     setBusy(true);
     try {
-      await refund({ data: { purchaseId: purchase.id, amountCents: cents, reason, note: note || undefined, requestId: crypto.randomUUID() } });
+      await refund({ data: { purchaseId: purchase.id, amountCents: cents, reason, note: note || undefined, duplicateChecks: checks.length ? checks : undefined, requestId: crypto.randomUUID() } });
       toast.success(`${formatUsd(cents)} refunded to ${member.email}.`);
       setPayment(null);
       onDone();
@@ -106,7 +131,7 @@ function PurchaseRow({ purchase, member, onDone }: { purchase: BillingPurchase; 
           needsNote={payment.windowDaysLeft <= 0}
           busy={busy}
           onCancel={() => setPayment(null)}
-          onConfirm={(cents, reason, note) => void confirm(cents, reason, note)}
+          onConfirm={(cents, reason, note, checks) => void confirm(cents, reason, note, checks)}
         />
       )}
     </li>
@@ -134,10 +159,10 @@ function SubscriptionRow({ sub, onDone }: { sub: BillingSubscription; onDone: ()
     try { setCharge(await preview({ data: { subscriptionId: sub.id } })); } catch (e) { toast.error(msg(e)); } finally { setBusy(false); }
   }
 
-  async function confirmRefund(cents: number, reason: RefundReason, note: string) {
+  async function confirmRefund(cents: number, reason: RefundReason, note: string, checks: DuplicateCheck[]) {
     setBusy(true);
     try {
-      await refund({ data: { subscriptionId: sub.id, amountCents: cents, reason, note: note || undefined, requestId: crypto.randomUUID() } });
+      await refund({ data: { subscriptionId: sub.id, amountCents: cents, reason, note: note || undefined, duplicateChecks: checks.length ? checks : undefined, requestId: crypto.randomUUID() } });
       toast.success(`${formatUsd(cents)} refunded on the last charge.`);
       setCharge(null);
       onDone();
@@ -167,10 +192,72 @@ function SubscriptionRow({ sub, onDone }: { sub: BillingSubscription; onDone: ()
           needsNote={charge.windowDaysLeft <= 0}
           busy={busy}
           onCancel={() => setCharge(null)}
-          onConfirm={(cents, reason, note) => void confirmRefund(cents, reason, note)}
+          onConfirm={(cents, reason, note, checks) => void confirmRefund(cents, reason, note, checks)}
         />
       )}
     </li>
+  );
+}
+
+/**
+ * What each of the member's recent payments actually is, and whether two of them are a real duplicate. This is the
+ * evidence behind a "duplicate" refund: a hold and a refund both look like a second charge in a bank app, and neither
+ * is one.
+ */
+function DuplicateWatch({ userId }: { userId: string }) {
+  const check = useServerFn(checkDuplicateCharges);
+  const q = useQuery({ queryKey: ["duplicate-check", userId], queryFn: () => check({ data: { userId } }), refetchOnWindowFocus: false });
+  const groups = q.data?.groups ?? [];
+  // The serialized server-fn type loses the `reading` intersection, so say what the server returns.
+  const rows = (q.data?.charges ?? []) as DuplicateChargeRow[];
+  const VERDICT: Record<string, string> = { real_duplicate: "Real duplicate: ", wait: "Wait — not a payment yet: ", already_refunded: "Already refunded: ", not_duplicate: "Not a duplicate: " };
+  return (
+    <div className="mt-5">
+      <h4 className="text-sm font-bold">Possible duplicate payments</h4>
+      <p className="mt-1 text-xs text-muted-foreground">
+        Checked against Stripe, not the bank app. A hold looks exactly like a charge and clears by itself; two settled
+        payments for the same thing are the only real duplicate.
+      </p>
+      {q.isLoading ? <p className="mt-2 text-sm text-muted-foreground">Checking Stripe…</p> : null}
+      {q.isError ? <p className="mt-2 text-sm text-destructive">Couldn&apos;t read the payments from Stripe. Don&apos;t refund a duplicate until you can.</p> : null}
+      {!q.isLoading && !q.isError && !groups.length ? (
+        <p className="mt-2 text-sm text-muted-foreground">
+          No two payments of the same amount within 72 hours. If the member still sees two lines, it is a hold, a refund,
+          or one payment shown twice — not a second charge.
+        </p>
+      ) : null}
+      {groups.length ? (
+        <ul className="mt-2 space-y-2">
+          {groups.map((g) => (
+            <li key={`${g.amountCents}-${g.charges[0]?.id ?? "x"}`} className="rounded-xl border border-border p-3">
+              <p className="text-sm font-semibold">{formatUsd(g.amountCents)} × {g.charges.length}</p>
+              <p className="mt-0.5 text-xs text-muted-foreground">{VERDICT[g.verdict.kind] ?? ""}{g.verdict.why}</p>
+              {g.verdict.kind === "wait" ? (
+                <p className="mt-1 text-xs font-semibold text-primary">Should be gone by {dayLabel(g.verdict.clearsBy)} on its own — don&apos;t refund it.</p>
+              ) : null}
+              {g.verdict.kind === "real_duplicate" ? (
+                <p className="mt-1 text-xs font-semibold text-primary">Refund the newer one below with the reason &quot;Duplicate charge&quot;, after the four checks.</p>
+              ) : null}
+              <ul className="mt-2 space-y-1">
+                {g.charges.map((c) => (
+                  <li key={c.id} className="text-xs text-muted-foreground"><b className="text-foreground">{day(c.createdAt)} · {c.item}</b> — {readCharge(c).line}</li>
+                ))}
+              </ul>
+            </li>
+          ))}
+        </ul>
+      ) : null}
+      {rows.length ? (
+        <details className="mt-3">
+          <summary className="cursor-pointer text-xs font-semibold text-muted-foreground">Every payment we checked ({rows.length})</summary>
+          <ul className="mt-2 space-y-1">
+            {rows.map((c) => (
+              <li key={c.id} className="text-xs text-muted-foreground"><b className="text-foreground">{day(c.createdAt)} · {c.item} · {formatUsd(c.amountCents)}</b> — {c.reading.line}</li>
+            ))}
+          </ul>
+        </details>
+      ) : null}
+    </div>
   );
 }
 
@@ -256,6 +343,8 @@ export function BillingConsolePanel({ isSuper }: { isSuper: boolean }) {
               {member.purchases.map((p) => <PurchaseRow key={p.id} purchase={p} member={member} onDone={() => void refresh()} />)}
             </ul>
           ) : <p className="mt-1 text-sm text-muted-foreground">Nothing bought on its own yet.</p>}
+
+          <DuplicateWatch userId={member.userId} />
         </section>
       )}
 
