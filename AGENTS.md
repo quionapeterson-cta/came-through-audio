@@ -19,6 +19,22 @@
 - All outgoing email HTML must be wrapped with emailLayout() from src/lib/email-layout.ts — keeps branding and legal-footer compliance in one place.
 - Badge artwork is served from the Cloudflare R2 bucket (founder, 2026-11-04): the 512px web-ready copies mirror public/icons/<serious|playful>/<set>/ and public/art/clinic/ at the bucket root, and the original 4K masters stay in the bucket's separate 4k/ folder, which the app never requests. Paths stay literal in the data (badges.ts, eagle-status.ts, ClinicArt.tsx); they become a URL in exactly one place, `artUrl()` in src/lib/art-url.ts, which adds `VITE_ART_BASE` and swaps .png/.jpg for the .webp copy. Never hard-code the bucket address anywhere else and never render a raw art path, so the art can move again without a sweep. With `VITE_ART_BASE` unset (local dev, tests) the same paths load from public/, which is the fallback copy. The 4K masters under `art/badges-4k/` are NOT tracked in git (founder, 2026-11-04): they live only in the bucket's `4k/icons/` folder, because they are print archives that the site never loads and they bloat every clone and deploy. Re-rendering them writes to the local folder, which stays ignored. A build with `VITE_ART_BASE` set also drops `public/icons` from `.output` (`scripts/prune-served-art.mjs`, run by `npm run build`), because a deploy that reads the bucket should not ship 179 MB of unused copies; without the variable the folder ships as the fallback.
 
+## Badge Art Protocol (always follow)
+
+- Only the founder uploads badge art to the R2 bucket (founder, 2026-11-05). No other person, and no script, puts an
+  object in the bucket: staff file ideas, a super admin approves, the founder copies the file to the key the queue prints.
+- Every new badge goes through Admin → Badges → Badge Protocol (`BadgeProtocolPanel` + `badge-submissions.functions.ts`).
+  Branding, Marketing & Social Media and Support submit (public.can_manage_badges); only a super admin approves,
+  rejects or marks the art uploaded (`public.has_role(…,'super_admin')`). Never widen the approval to a department, and
+  never let the submitter approve their own idea.
+- Naming is fixed by `src/lib/badge-protocol.ts` and enforced in the database too: lowercase words joined by single
+  hyphens, starting with a letter, 48 characters at most. The web copy is 512×512 transparent WebP under 120 KB at
+  `icons/<serious|playful>/[<set>/]<slug>.webp`; the 4K master is a transparent PNG at `4k/icons/…/<slug>.png`. The
+  badge's `src` in badges.ts uses the same slug, and the picture is only ever a URL through `artUrl()`.
+- Art is submitted to the private `badge-submissions` bucket and read through a signed link a super admin asks for, so a
+  rejected badge is never a public picture. Art in the bucket is not a live badge: the badge still needs its `BadgeDef`,
+  a real `metric` in badge-rules.ts, and one earned run before it ships (see the engineering steps in the panel).
+
 ## Writer Credits & Registration Rules (always follow)
 
 ### Core principle

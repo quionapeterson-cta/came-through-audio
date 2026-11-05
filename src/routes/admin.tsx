@@ -20,6 +20,7 @@ import { getAdminOverview, getStaffRole } from "@/lib/admin.functions";
 import { ASSIGNABLE_DEPARTMENTS, DEPARTMENTS, DEPARTMENT_LABEL, ROLE_LABEL, viewDepartments, visibleTabs, type Department } from "@/lib/departments";
 import { SupportTicketsPanel } from "@/components/SupportTicketsPanel";
 import { BadgeSwitchboard } from "@/components/BadgeSwitchboard";
+import { BadgeProtocolPanel } from "@/components/BadgeProtocolPanel";
 import { PlansPanel } from "@/components/PlansPanel";
 import { TestimonialFilterPanel } from "@/components/TestimonialFilterPanel";
 import { TestimonialsEditor } from "@/components/TestimonialsEditor";
@@ -184,7 +185,7 @@ function AdminPage() {
             <Table head={["Type", "Mode", "Status", "Date"]} rows={d?.purchases.map((p) => [p.type, p.environment, p.status, fmt(p.created_at)])} />
           </TabsContent>
           {show("support") && <TabsContent value="support"><SupportTicketsPanel /></TabsContent>}
-          {show("badges") && <TabsContent value="badges"><BadgeSwitchboard /></TabsContent>}
+          {show("badges") && <TabsContent value="badges"><BadgeSwitchboard /><BadgeProtocolPanel isSuper={isSuper} /></TabsContent>}
           {show("homepage") && <TabsContent value="homepage"><TestimonialsEditor /><TestimonialFilterPanel /><SocialPanel /></TabsContent>}
           {show("tasks") && <TabsContent value="tasks"><TaskBankPanel departments={access.allTeams && access.role !== "super_admin" ? [...ASSIGNABLE_DEPARTMENTS] : viewDepartments(access, view)} editable={viewDepartments(access, view)} /></TabsContent>}
           {show("company") && <TabsContent value="company"><Contracts userId={user.id} unlocked company onUpgrade={() => {}} /></TabsContent>}
