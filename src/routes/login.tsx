@@ -3,6 +3,7 @@ import { useEffect, useRef, useState, type FormEvent } from "react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { BrandLogo } from "@/components/BrandLogo";
+import { MARK_BOX } from "@/components/BrandLockup";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -90,8 +91,15 @@ function Login() {
       </header>
       <main className="mx-auto max-w-md px-4 py-8 sm:px-6">
         <div className="rounded-2xl bg-background p-8 text-foreground shadow-2xl">
-          {/* No celebration art here (founder, 2026-11-05): the popper is for moments worth marking, not for a form
-              somebody opens every week. The card leads with the heading, the same way the workspace does. */}
+          {/* The welcome-back lockup (founder, 2026-11-05): the same C as the browser tab, standing in for the first
+              letter of the name. No celebration art here — the popper is for moments worth marking, not for a form
+              somebody opens every week. The tab icon is white, so the card uses the light-scheme copy the same way the
+              tab does; MARK_BOX keeps it on the name's baseline in em, like the header. */}
+          <p className="flex items-center gap-1.5 text-lg font-bold uppercase tracking-[2px] text-foreground">
+            <img src="/favicon-light.png" alt="" aria-hidden width={26} height={26} className={MARK_BOX} />
+            <span aria-hidden>ame Through Audio</span>
+            <span className="sr-only">Came Through Audio</span>
+          </p>
           {resetSent ? (
             <div className="mt-4 space-y-3">
               <h1 className="text-2xl font-bold">Check your email</h1>
