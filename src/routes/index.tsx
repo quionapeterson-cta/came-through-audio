@@ -513,7 +513,7 @@ function Landing() {
                 it instead of quoting deal figures (founder, 2026-11-05). It says what the member can do the morning
                 after, in their words, with no number and no promise we do not keep. */}
             <div className="mt-8 rounded-xl bg-ink px-6 py-6 text-ink-foreground md:px-8">
-              <p className="text-xs font-bold uppercase tracking-[2px] text-electric">True sovereign backup</p>
+              <p className="text-base font-bold uppercase tracking-[2px] text-electric sm:text-lg">True sovereign backup</p>
               <p className="mt-3 text-xl leading-relaxed text-ink-foreground md:text-2xl">
                 A distributor can take your catalog down: a rights claim, a disputed payout, an account closed over
                 paperwork you never saw. The morning after, the only question that matters is whether your music still
@@ -537,7 +537,6 @@ function Landing() {
             <p>A catalog is not one song. In the music business the word means an artist's cumulative body of work, held as a single asset: every recording, every composition and every share of the writing, valued and traded together rather than a track at a time.</p>
             <p>Michael Jackson bought the Beatles' publishing catalog, and that purchase is still the example people reach for when they explain what a catalog is worth. The songs never moved one at a time; the catalog did, worth millions, because owning the whole body of work is worth more than owning any part of it.</p>
           </div>
-          <p className="mt-6 border-t border-primary-foreground/25 pt-5 text-lg leading-relaxed text-primary-foreground/90">That is the sense of the word this platform uses: your songs, gathered into one asset you can put a name to.</p>
         </div>
       </section>
 
