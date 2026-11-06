@@ -58,7 +58,7 @@ The worst organ (severity × songs affected) leads, in three parts: **Diagnosis*
 
 **Rule (founder, 2026-10-23): the Treatment always ends with the real fix at the agency, not only inside Came Through Audio.** Fixing the catalog is never the last step, because the agency still has the old (or no) data. Every treatment runs in this order:
 1. **Fill the gap** in the catalog, if anything is missing (link straight to the field).
-2. **Download the agency file** right from the Health Check, one click: The MLC Bulk Work Registration (.xlsx), SoundExchange Direct ISRC Ingest (.xlsx), or the BMI / ASCAP Registration Cheat Sheet (.csv). These are the existing agency exports, now reachable from each organ.
+2. **Download the agency file** right from the Health Check, one click: The MLC Bulk Work Registration (.xlsx), SoundExchange Direct ISRC Ingest (.xlsx), or the BMI / ASCAP Registration Cheat Sheet (.xlsx). These are the existing agency exports, now reachable from each organ.
 3. **Register at the agency:** upload the file in that agency's portal (The MLC, SoundExchange), or type the cheat sheet's fields into ASCAP Member Access / BMI Online Services. Portal link + the plain-language steps from `register-guides.ts`.
 4. **Tick Registered** (the checklist step that already exists). The Pulse then watches for confirmation, and an uploaded agency list (§3A) confirms it for real.
 Songs already registered get the *update your registration* version of step 3 instead.

@@ -145,9 +145,11 @@ export function MetadataUploader({ onShareInfo, userId, mode = "embed", readOnly
       .catch((e) => toast.error(e instanceof Error ? `Could not build the export: ${e.message}` : "Could not build the export."));
   };
   /** Performers on each recording for PPL / SoundExchange International. Songs need an ISRC to be matched. */
-  const runPack = (list: CatalogTrack[], name: string) => {
+  const runPack = async (list: CatalogTrack[], name: string) => {
     if (!canExport) { setUpsell("export"); return; }
-    const skipped = downloadNeighbouringPack(list, safeName(name));
+    let skipped: CatalogTrack[];
+    try { skipped = await downloadNeighbouringPack(list, safeName(name)); }
+    catch (e) { toast.error(e instanceof Error ? `Could not build the pack: ${e.message}` : "Could not build the pack."); return; }
     if (skipped.length < list.length) logBadgeEvent("agency_export");
     if (skipped.length) toast.warning(skipped.length === list.length
       ? "Add an ISRC first: societies match recordings by ISRC, so none of these songs could go in the pack."
@@ -158,7 +160,7 @@ export function MetadataUploader({ onShareInfo, userId, mode = "embed", readOnly
       <DropdownMenuTrigger asChild><Button type="button" variant="outline" size={size} onClick={(e) => e.stopPropagation()}>{!canExport && <Lock />}{label}</Button></DropdownMenuTrigger>
       <DropdownMenuContent align="end">
         {(["mlc", "soundexchange", "pro"] as Agency[]).map((a) => <DropdownMenuItem key={a} onClick={() => runExport(a, list, name)}>{AGENCY_LABEL[a]}<InfoTip title="Required fields" text={EXPORT_REQUIRED[a]} /></DropdownMenuItem>)}
-        <DropdownMenuItem onClick={() => runPack(list, name)}>Neighbouring Rights Pack (.csv)</DropdownMenuItem>
+        <DropdownMenuItem onClick={() => void runPack(list, name)}>Neighbouring Rights Pack (.xlsx)</DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
   );
@@ -814,7 +816,7 @@ export function MetadataUploader({ onShareInfo, userId, mode = "embed", readOnly
               <DropdownMenuTrigger asChild><Button type="button" variant="outline" size="sm">{!canExport && <Lock />}One Click Agency Export</Button></DropdownMenuTrigger>
               <DropdownMenuContent align="end">
                 {(["mlc", "soundexchange", "pro"] as Agency[]).map((a) => <DropdownMenuItem key={a} onClick={() => runExport(a, tracks, "Full Catalog")}>{AGENCY_LABEL[a]}<InfoTip title="Required fields" text={EXPORT_REQUIRED[a]} /></DropdownMenuItem>)}
-                <DropdownMenuItem onClick={() => runPack(tracks, "Full Catalog")}>Neighbouring Rights Pack (.csv)</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => void runPack(tracks, "Full Catalog")}>Neighbouring Rights Pack (.xlsx)</DropdownMenuItem>
                 <DropdownMenuItem onClick={() => (canExport ? setExportOpen(true) : setUpsell("export"))} className="flex-col items-start gap-0.5 border-t border-border">
                   <span className="font-semibold">Choose a release or songs…</span>
                   <span className="text-xs text-muted-foreground">Just the new album, picked singles, or songs not exported yet.</span>

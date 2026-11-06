@@ -159,8 +159,8 @@ export function brandHeader(pdf: JsPDF, title: string, subtitle?: string, meta?:
 const onColor = ([r, g, b]: [number, number, number]): [number, number, number] => (0.299 * r + 0.587 * g + 0.114 * b > 150 ? INK : [255, 255, 255]);
 
 /**
- * Their logo (fit in a 34 × 16 mm box), name in the first color, tagline in the second. Classic: one stripe of every
- * color under the header. Sidebar: no stripe (the bar down the left edge is drawn on every page by brandFooter).
+ * Their logo (fit in a 34 × 16 mm box), name in the first color, tagline in the second. Classic: one solid line in the
+ * kit's accent under the header. Sidebar: no stripe (the bar down the left edge is drawn on every page by brandFooter).
  * Banner: a solid band of their first color across the top, with the name and tagline in a readable color on it.
  */
 function kitHeader(pdf: JsPDF, brand: PdfBrand) {
@@ -184,9 +184,8 @@ function kitHeader(pdf: JsPDF, brand: PdfBrand) {
   if (brand.name) kitFont(pdf, brand, "bold", 14).setTextColor(...(banner ? text : colors[0] ?? INK)).text(brand.name, x, nameY);
   if (brand.tagline) kitFont(pdf, brand, "medium", 7.5).setTextColor(...(banner ? text : colors[1] ?? MUTED)).text(brand.tagline, x, 24);
   if (brand.style !== "classic") return;
-  const stripe = colors.length ? colors : [INK];
-  const seg = (w - MARGIN * 2) / stripe.length;
-  stripe.forEach((c, i) => pdf.setFillColor(...c).rect(MARGIN + i * seg, 28.5, seg + 0.05, 0.8, "F"));
+  // One solid line in the kit's accent (founder, 2026-11-06: the multi-colour stripe read as two-tone).
+  pdf.setFillColor(...kitAccent(brand)).rect(MARGIN, 28.5, w - MARGIN * 2, 0.8, "F");
 }
 
 /**

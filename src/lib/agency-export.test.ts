@@ -49,16 +49,22 @@ describe("agency exports", () => {
     expect(row[5]).toEqual(new Date(Date.UTC(2026, 0, 2)));
     expect(row[6]).toBe("");
   });
-  it("PRO cheat sheet keeps IPI as text", () => expect(proCheatSheet([track()])).toContain('"=""00123456789"""'));
+  it("PRO cheat sheet gives IPI and duration exactly as typed, ready to paste", () => {
+    const cells = proCheatSheet([track({ duration: "3:20" })]).flat();
+    expect(cells).toContain("00123456789");
+    expect(cells).toContain("03:20");
+    expect(cells.some((c) => c.startsWith("="))).toBe(false);
+  });
   it("PRO cheat sheet says BMI pays the publisher share when there's no publisher", () => {
-    expect(proCheatSheet([track({ publishers: [] })])).toContain("None: BMI pays the publisher share to its writers");
-    expect(proCheatSheet([track()])).not.toContain("None: BMI");
+    expect(proCheatSheet([track({ publishers: [] })]).flat()).toContain("None: BMI pays the publisher share to its writers");
+    expect(proCheatSheet([track()]).flat().join()).not.toContain("None: BMI");
   });
   it("Neighbouring Rights Pack lists every performer, featured first, and leaves out songs without an ISRC", () => {
     const t = track({ featured: ["OG PI"], phonographic: "℗ 2026 Came Through Audio", recordedIn: "United States", recordedYear: "",
       credits: [{ role: "Session musician", name: "Jane Doe", instrument: "Guitar" }, { role: "Mixing engineer", name: "Sam", instrument: "" }] });
-    const { csv, skipped } = neighbouringRows([t, { ...t, id: "2", metadata: { ...t.metadata, isrc: "" } }]);
-    const lines = csv.split("\r\n");
+    const { rows, skipped } = neighbouringRows([t, { ...t, id: "2", metadata: { ...t.metadata, isrc: "" } }]);
+    const lines = rows.map((r) => r.join(","));
+    const csv = lines.join("\n");
     expect(lines).toHaveLength(4);
     expect(lines[1]).toContain("USCTA2600001,Song,Q feat. OG PI,Q,Featured");
     expect(lines[3]).toContain("Jane Doe,Non-featured,Session musician,Guitar,United States,2026,Came Through Audio");

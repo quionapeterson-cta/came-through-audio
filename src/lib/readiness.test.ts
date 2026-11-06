@@ -109,8 +109,8 @@ describe("agency exports", () => {
   it("uses legal names, never credited names", () => {
     const row = mlcRows([ready])[0]!;
     expect(row.slice(6, 10)).toEqual(["PETERSON", "QUIONA", "", "CA"]);
-    expect(proCheatSheet([ready])).toContain("Quiona Peterson,Author/Composer");
-    expect(proCheatSheet([ready])).not.toContain("Lil Q");
+    expect(proCheatSheet([ready]).map((r) => r.join(","))).toContainEqual(expect.stringContaining("Quiona Peterson,Author/Composer"));
+    expect(proCheatSheet([ready]).flat().join()).not.toContain("Lil Q");
   });
   it("needs PRO affiliation only for the PRO export", () => {
     const noPro = track(song({ title: "NoPro", writers: [w("Lil Q", "Author/Composer", "Quiona Peterson")] }));

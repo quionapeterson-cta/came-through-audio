@@ -265,6 +265,11 @@ Embedding is forgiving; registration is strict. Never block a user from saving o
 - Exports and registrations always use legal_name.
 - When adding a new agency/PRO export template, it must use the shared readiness check and the existing writer fields. Do not create template-specific writer fields.
 
+### Copy-and-paste sheets
+- The BMI / ASCAP Registration Cheat Sheet and the Neighbouring Rights Pack are `.xlsx` files whose cells are all stored
+  as text (`textSheet` in `src/lib/agency-export.ts`), so an IPI keeps its leading zeros and a duration stays `03:20`
+  (founder, 2026-11-06). Never go back to a CSV with `="…"` wrappers: the member had to delete them after pasting.
+
 ### UX conventions
 - Missing writer info shows as a warning (⚠️) with a direct link to the field that needs fixing, never a dead-end error.
 - Any new form field related to writers gets a help tooltip in plain language.
@@ -304,6 +309,17 @@ rules keep it consistent as features are added.
   the kit itself ends it. The kit included with Catalog Management is not a separate purchase, so it follows the plan.
 - Several kits are allowed (one per business or project): the oldest is the default, and a document that picks a kit
   gets that one only if it is within the member's allowance.
+- **Catalog Management includes one kit; every further kit is bought** (founder, 2026-11-06): a member with several
+  businesses buys each extra kit for `BRANDING_PRICE` a year like anyone else (`kitAllowance` counts both). Checkout
+  refuses a Management account's kit purchase only while its included kit is still unused, never "your plan already
+  includes it" once that kit exists.
+
+### The editor
+- Profile → Brand kit shows the editor and the live preview side by side, the preview pinned while scrolling, so every
+  change shows as it is made (founder, 2026-11-06). Save sits under the preview on the left, and the small footer switch
+  across from it on the right.
+- Classic draws one solid line in the kit's accent (`kitAccent`) under the header, never a multi-colour stripe; the
+  preview uses the same colour.
 
 ### When it fails
 - A missing, unreadable or unavailable kit never blocks a download: the document simply keeps the Came Through Audio

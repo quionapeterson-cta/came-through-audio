@@ -7,7 +7,7 @@ export type Agency = "mlc" | "soundexchange" | "pro";
 export const AGENCY_LABEL: Record<Agency, string> = {
   mlc: "The MLC Bulk Work Registration (.xlsx)",
   soundexchange: "SoundExchange Direct ISRC Ingest (.xlsx)",
-  pro: "BMI / ASCAP Registration Cheat Sheet (.csv)",
+  pro: "BMI / ASCAP Registration Cheat Sheet (.xlsx)",
 };
 
 const named = (r: Contributor[] | undefined) => (r ?? []).filter((x) => x.name.trim());
@@ -106,24 +106,40 @@ export function soundExchangeRows(tracks: CatalogTrack[]): (string | number | Da
   });
 }
 
-const cell = (v: unknown) => {
-  const s = String(v ?? "");
-  return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
-};
-/** Keeps digit-only IDs as text when the CSV opens in Excel or Google Sheets, so IPI 00123456789 keeps its zeros. */
-const idText = (v: string) => (v && /^\d+$/.test(v) ? `="${v}"` : v);
+/**
+ * A copy-and-paste sheet (founder, 2026-11-06): an .xlsx where every cell is stored as plain text, so IPI 00549852210
+ * keeps its zeros and a duration stays 03:20, with no `="…"` wrapper to delete after pasting. The header row is bold and
+ * frozen, and columns are sized to their longest value.
+ */
+async function textSheet(rows: string[][], sheetName: string) {
+  const { default: ExcelJS } = await import("exceljs");
+  const wb = new ExcelJS.Workbook();
+  const ws = wb.addWorksheet(sheetName, { views: [{ state: "frozen", ySplit: 1 }] });
+  rows.forEach((r, i) => {
+    const row = ws.addRow(r);
+    row.eachCell({ includeEmpty: true }, (c) => {
+      c.numFmt = "@";
+      c.font = { name: "Calibri", size: 12, bold: i === 0, color: { argb: "FF0B0B0B" } };
+      c.alignment = { vertical: "top", horizontal: "left" };
+    });
+  });
+  (rows[0] ?? []).forEach((_, j) => { ws.getColumn(j + 1).width = Math.min(60, Math.max(10, ...rows.map((r) => (r[j] ?? "").length + 2))); });
+  return new Blob([await wb.xlsx.writeBuffer()], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+}
+const text = (v: unknown) => (v === undefined || v === null ? "" : String(v));
+
 /** Field-by-field sheet for typing into ASCAP Member Access / BMI Online Services work registration. */
-export function proCheatSheet(tracks: CatalogTrack[]): string {
+export function proCheatSheet(tracks: CatalogTrack[]): string[][] {
   const rows: unknown[][] = [["Work Title", "ISWC", "ISRC", "Performing Artist", "Duration (mm:ss)", "Party Type", "Name", "Role", "Share %", "PRO", "IPI #"]];
   for (const { metadata: m } of tracks) {
-    // BMI asks for the duration; kept as text so a spreadsheet doesn't turn 03:45 into a time of day.
-    const base = [m.title, m.iswc, m.isrc, m.artist, mmss(m.duration) && `="${mmss(m.duration)}"`];
-    for (const w of registrationWriters(m)) rows.push([...base, "Writer", w.name, w.role, w.percentage, w.pro, idText(w.ipi)]);
-    for (const p of named(m.publishers)) rows.push([...base, "Publisher", p.name, "Original Publisher", p.percentage, p.pro, idText(p.ipi)]);
+    // BMI asks for the duration; a text cell keeps 03:45 from turning into a time of day.
+    const base = [m.title, m.iswc, m.isrc, m.artist, mmss(m.duration)];
+    for (const w of registrationWriters(m)) rows.push([...base, "Writer", w.name, w.role, w.percentage, w.pro, w.ipi]);
+    for (const p of named(m.publishers)) rows.push([...base, "Publisher", p.name, "Original Publisher", p.percentage, p.pro, p.ipi]);
     // No publisher: BMI pays its writers the publisher share, so the sheet says so instead of leaving it blank.
     if (!named(m.publishers).length && registrationWriters(m).some(isBmi)) rows.push([...base, "Publisher", "None: BMI pays the publisher share to its writers", "", "", "BMI", ""]);
   }
-  return rows.map((r) => r.map(cell).join(",")).join("\r\n");
+  return rows.map((r) => r.map(text));
 }
 
 /** Master owner from the ℗ line ("℗ 2026 Came Through Audio" → "Came Through Audio"), else the label, else the artist. */
@@ -134,7 +150,7 @@ const masterOwner = (m: CatalogTrack["metadata"]) => pLine(m.phonographic).repla
  * ask for. Songs without an ISRC are left out (societies match recordings by ISRC) and returned so the UI can say so.
  */
 export function neighbouringRows(tracks: CatalogTrack[]) {
-  const rows: unknown[][] = [["ISRC", "Title", "Main Artist", "Performer", "Featured / Non-featured", "Role", "Instrument", "Recorded In", "Year Recorded", "Master Owner", "Label", "Release Date", "UPC", "Duration"]];
+  const rows: string[][] = [["ISRC", "Title", "Main Artist", "Performer", "Featured / Non-featured", "Role", "Instrument", "Recorded In", "Year Recorded", "Master Owner", "Label", "Release Date", "UPC", "Duration"]];
   const skipped: CatalogTrack[] = [];
   for (const t of tracks) {
     const m = t.metadata;
@@ -142,15 +158,15 @@ export function neighbouringRows(tracks: CatalogTrack[]) {
     const year = m.recordedYear || (m.releaseDate ?? "").slice(0, 4);
     for (const p of performers(m)) {
       rows.push([m.isrc.replace(/-/g, "").toUpperCase(), m.title, artistCredit(m.artist, m.featured), p.name, p.featured ? "Featured" : "Non-featured", p.role, p.instrument,
-        m.recordedIn, year, masterOwner(m), m.label, m.releaseDate, idText(m.upc), mmss(m.duration) && `="${mmss(m.duration)}"`]);
+        m.recordedIn, year, masterOwner(m), m.label, m.releaseDate, m.upc, mmss(m.duration)].map(text));
     }
   }
-  return { csv: rows.map((r) => r.map(cell).join(",")).join("\r\n"), skipped };
+  return { rows, skipped };
 }
 
-export function downloadNeighbouringPack(tracks: CatalogTrack[], name: string) {
-  const { csv, skipped } = neighbouringRows(tracks);
-  if (skipped.length < tracks.length) save(new Blob([csv], { type: "text/csv;charset=utf-8" }), `${name} - Neighbouring Rights Pack.csv`);
+export async function downloadNeighbouringPack(tracks: CatalogTrack[], name: string) {
+  const { rows, skipped } = neighbouringRows(tracks);
+  if (skipped.length < tracks.length) save(await textSheet(rows, "Neighbouring Rights"), `${name} - Neighbouring Rights Pack.xlsx`);
   return skipped;
 }
 
@@ -244,7 +260,7 @@ export async function downloadAgencyExport(agency: Agency, tracks: CatalogTrack[
     }
   }
   else if (agency === "soundexchange") save(await fillTemplate("/templates/ISRC_Ingest_Form.xlsx", "Form", 11, 11, soundExchangeRows(ready), [5]), `${name} - SoundExchange ISRC Ingest.xlsx`);
-  else save(new Blob([proCheatSheet(ready)], { type: "text/csv;charset=utf-8" }), `${name} - BMI-ASCAP Registration Cheat Sheet.csv`);
+  else save(await textSheet(proCheatSheet(ready), "BMI-ASCAP"), `${name} - BMI-ASCAP Registration Cheat Sheet.xlsx`);
   return held;
 }
 

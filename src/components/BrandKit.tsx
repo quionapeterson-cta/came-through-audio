@@ -162,6 +162,8 @@ export function BrandKit({ userId, tier, artistName }: { userId: string; tier: T
   const nameColor = kit.colors[0] && isHex(kit.colors[0]) ? kit.colors[0] : undefined;
   const taglineColor = kit.colors[1] && isHex(kit.colors[1]) ? kit.colors[1] : undefined;
   const stripe = kit.colors.filter(isHex);
+  // The line under a Classic header: one solid line in the kit's accent, the same colour the PDF draws (kitAccent).
+  const accent = [kit.options.accent, kit.headerColor].find((c) => c && isHex(c)) ?? "#0b0b0b";
 
   return (
     <div className="space-y-6">
@@ -195,7 +197,11 @@ export function BrandKit({ userId, tier, artistName }: { userId: string; tier: T
       </div>
       {kits.length > allowance && <p className="text-sm">⚠️ You have {kits.length} kits and {allowance} {allowance === 1 ? "is" : "are"} active. Documents use your first {allowance === 1 ? "kit" : `${allowance} kits`}; add another kit for {BRANDING_PRICE}/year to use the rest.</p>}
 
-      <div className="grid gap-5 md:grid-cols-2">
+      {/* Editor on the left, the live preview on the right and pinned while scrolling (founder, 2026-11-06): every change
+          shows as it's made. On a phone the preview follows the editor. */}
+      <div className="grid gap-6 lg:grid-cols-2">
+      <div className="min-w-0 space-y-6">
+      <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2">
         <div className="space-y-2">
           <Label htmlFor="bk-name" className="flex items-center gap-1.5">Name on your contracts<InfoTip text="The name at the top of your branded contracts: your business, label, DBA or artist name. Split sheets always show your artist name, and your artist name in My Catalog, Embed Metadata and everywhere else stays the same." /></Label>
           <Input id="bk-name" value={kit.name} maxLength={80} placeholder="Business or artist name" onChange={(e) => edit({ name: e.target.value })} />
@@ -224,12 +230,12 @@ export function BrandKit({ userId, tier, artistName }: { userId: string; tier: T
             className="flex h-10 w-full rounded-md border border-input bg-background px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
             {FONT_GROUPS.map((g) => <optgroup key={g.group} label={g.group}>{g.fonts.map((f) => <option key={f} value={f}>{f}</option>)}</optgroup>)}
           </select>
-          <p className="text-xs text-muted-foreground">{BRAND_FONTS.length} fonts. Pick one and the preview below shows it.</p>
+          <p className="text-xs text-muted-foreground">{BRAND_FONTS.length} fonts. Pick one and the preview shows it.</p>
         </div>
       </div>
 
       <div className="space-y-2">
-        <Label className="flex items-center gap-1.5">Colors<InfoTip text="Add as many as you like. The first colors your name, the second your tagline, and all of them make the stripe under your header." /></Label>
+        <Label className="flex items-center gap-1.5">Colors<InfoTip text="Add as many as you like. The first colors your name and the second your tagline." /></Label>
         <div className="flex flex-wrap gap-3">
           {kit.colors.map((c, i) => (
             <div key={i} className="flex items-center gap-1.5 rounded-lg border border-border p-1.5">
@@ -244,7 +250,7 @@ export function BrandKit({ userId, tier, artistName }: { userId: string; tier: T
 
       <div className="space-y-2">
         <Label className="flex items-center gap-1.5">Contract style<InfoTip text="How your header looks on contracts and split sheets made with this kit." /></Label>
-        <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="grid grid-cols-2 gap-2">
           {KIT_STYLES.map((st) => (
             <button key={st.id} type="button" onClick={() => edit({ style: st.id })} aria-pressed={kit.style === st.id}
               className={`rounded-lg border p-3 text-left text-sm transition ${kit.style === st.id ? "border-primary ring-2 ring-ring" : "border-border hover:border-primary/60"}`}>
@@ -306,17 +312,10 @@ export function BrandKit({ userId, tier, artistName }: { userId: string; tier: T
       </fieldset>
 
       <Disclaimer k="branding" />
-
-      {/* A small control, not a feature (founder, 2026-11-06): only the plans that may drop the footer see it at all. */}
-      {hasTier(tier, "collaborate") && (
-        <label htmlFor="bk-footer" className="flex w-fit items-center gap-2 text-xs text-muted-foreground">
-          <Switch id="bk-footer" className="scale-75" checked={kit.showFooter} onCheckedChange={(v) => edit({ showFooter: v })} />
-          Footer: "Made on Camethroughaudio.com"
-        </label>
-      )}
+      </div>
 
       {/* Preview: the header as it prints (white page, like the PDF). */}
-      <div className="space-y-2">
+      <div className="min-w-0 space-y-2 lg:sticky lg:top-4 lg:self-start">
         <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Preview</p>
         <div className={`relative overflow-hidden rounded-xl border border-border bg-white p-5 text-[#0b0b0b] ${kit.style === "sidebar" ? "pl-8" : ""}`}>
           {kit.style === "sidebar" && <span aria-hidden className="absolute inset-y-0 left-0 w-3" style={{ background: stripe[0] ?? "#0b0b0b" }} />}
@@ -328,9 +327,7 @@ export function BrandKit({ userId, tier, artistName }: { userId: string; tier: T
               {kit.tagline && <p className="truncate text-xs font-medium" style={{ fontFamily: kit.font, color: kit.style === "banner" ? onBand(stripe[0]) : taglineColor ?? "#525252" }}>{kit.tagline}</p>}
             </div>
           </div>
-          {kit.style === "classic" && <div className="mt-3 flex h-1 overflow-hidden rounded-full">
-            {(stripe.length ? stripe : ["#0b0b0b"]).map((c, i) => <span key={i} className="flex-1" style={{ background: c }} />)}
-          </div>}
+          {kit.style === "classic" && <div className="mt-3 h-1 rounded-full" style={{ background: accent }} />}
           <p className={`relative text-2xl font-bold ${kit.style === "banner" ? "mt-6" : "mt-4"}`}>Producer Agreement</p>
           <p className="relative mt-3 text-sm font-bold" style={{ color: kit.headerColor && isHex(kit.headerColor) ? kit.headerColor : "#0b0b0b" }}>1. TERMS</p>
           <p className="relative text-xs text-[#525252]">The contract text reads in black, with your section titles in this color.</p>
@@ -342,9 +339,19 @@ export function BrandKit({ userId, tier, artistName }: { userId: string; tier: T
           {kit.style === "minimal" && <div className="relative mt-4 flex items-center justify-between text-[10px] text-[#525252]"><span>{kit.name || "Your name"}</span>{logoUrl && <img src={logoUrl} alt="" className="h-5 max-w-[4rem] object-contain" />}</div>}
           {kit.showFooter && <p className="mt-4 text-[10px] font-medium text-[#0b0b0b]">Made on Camethroughaudio.com — Your first stop for distribution</p>}
         </div>
+        {/* Save on the left; the footer switch across from it, at the preview's bottom right (founder, 2026-11-06). It is a
+            small control, and only the plans that may drop the footer see it at all. */}
+        <div className="flex flex-wrap items-center justify-between gap-3 pt-2">
+          <Button onClick={() => void save()} disabled={busy || saved}>{busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}{saved ? "Saved" : "Save brand kit"}</Button>
+          {hasTier(tier, "collaborate") && (
+            <label htmlFor="bk-footer" className="flex items-center gap-2 text-xs text-muted-foreground">
+              <Switch id="bk-footer" className="scale-75" checked={kit.showFooter} onCheckedChange={(v) => edit({ showFooter: v })} />
+              Footer: "Made on Camethroughaudio.com"
+            </label>
+          )}
+        </div>
       </div>
-
-      <Button onClick={() => void save()} disabled={busy || saved}>{busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}{saved ? "Saved" : "Save brand kit"}</Button>
+      </div>
     </div>
   );
 }

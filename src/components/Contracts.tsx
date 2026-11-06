@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { confirmAction } from "@/components/ConfirmHost";
-import { Sparkles, AlertTriangle, BookOpen, CalendarDays, Gift, Check, ChevronDown, ChevronLeft, Copy, Download, FileSignature, FlaskConical, Loader2, Lock, Mail, PenLine, Plus, RotateCcw, ScrollText, ShieldCheck, Trash2, Unlock, Vault } from "lucide-react";
+import { Sparkles, AlertTriangle, BookOpen, FolderOpen, Pin, PinOff, CalendarDays, Gift, Check, ChevronDown, ChevronLeft, Copy, Download, FileSignature, FlaskConical, Loader2, Lock, Mail, PenLine, Plus, RotateCcw, ScrollText, ShieldCheck, Trash2, Unlock, Vault } from "lucide-react";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -32,12 +32,16 @@ import { OUTREACH_DAILY_LIMIT, OUTREACH_LABEL, outreachDraft, type OutreachField
 import { TIER_LABEL } from "@/lib/plans";
 import { logBadgeEvent } from "@/lib/badge-events";
 import { BLUEPRINT_GUIDES, CHEAT_SHEETS, type Guide } from "@/lib/guides";
+import { Checkbox } from "@/components/ui/checkbox";
+import { ProgressMeter, WorkingOn } from "@/components/WorkingOn";
+import { useWorkbench, type Workbench } from "@/hooks/useWorkbench";
+import { checklistProgress, workingOnCount } from "@/lib/workbench";
 import {
   contractLink, deleteContract, emptyParty, getContract, isValidEmail, listContracts, listReceivedContracts, loadCompanyTemplates, reopenContract, saveCompanyTemplate, saveContract, sendContract, signContract,
   type Contract, type ContractParty, type ReceivedContract,
 } from "@/lib/contracts";
 
-type View = "generator" | "blueprints" | "guides" | "contracts" | "vault" | "gifts" | "beta" | "outreach";
+type View = "working" | "generator" | "blueprints" | "guides" | "contracts" | "vault" | "gifts" | "beta" | "outreach";
 
 const STATUS: Record<Contract["status"], { label: string; className: string }> = {
   draft: { label: "Draft", className: "border-border text-muted-foreground" },
@@ -66,6 +70,9 @@ export function Contracts({ userId, unlocked, onUpgrade, company = false }: { us
     const body = templates[bp.id] ? georgiaLaw(templates[bp.id]!) : bp.body;
     return { ...bp, body: prelaunch ? body : dropPrelaunch(body) };
   }), [templates, prelaunch]);
+  const workbench = useWorkbench(userId, !company);
+  /** A blueprint opened from Working On: the Blueprints tab opens with it expanded. */
+  const [focusGuide, setFocusGuide] = useState<string>();
   const blueprintFor = (id: string) => (company ? companyBlueprints.find((b) => b.id === id) : undefined) ?? blueprintById(id);
 
   const load = async () => {
@@ -108,6 +115,7 @@ export function Contracts({ userId, unlocked, onUpgrade, company = false }: { us
 
   const open = contracts.filter((c) => c.status !== "signed");
   const signed = contracts.filter((c) => c.status === "signed");
+  const workingCount = company ? 0 : workingOnCount(workbench.entries, contracts);
 
   return (
     <TooltipProvider delayDuration={100}>
@@ -117,9 +125,11 @@ export function Contracts({ userId, unlocked, onUpgrade, company = false }: { us
             {(company
               ? [["blueprints", "Templates", ScrollText], ["contracts", "Drafts & out for signature", FileSignature], ["vault", "Signed", Vault], ["gifts", "Launch gifts", Gift], ["beta", "Beta testers", FlaskConical], ["outreach", "Outreach", Mail]] as const
               // The Contract Generator has its own tab, right before the contracts (founder, 2026-10-27).
-              : [["generator", "Contract Generator", Sparkles], ["blueprints", "Contracts", ScrollText], ["guides", "Blueprints", BookOpen], ["contracts", "My Contracts", FileSignature], ["vault", "Signed Vault", Vault]] as const).map(([id, label, Icon]) => (
-              <Button key={id} role="tab" aria-selected={view === id} size="sm" variant={view === id ? "default" : "ghost"} onClick={() => setView(id)}>
+              // Working On sits right after the generator, for quick access to anything in progress (founder, 2026-11-06).
+              : [["generator", "Contract Generator", Sparkles], ["working", "Working On", FolderOpen], ["blueprints", "Contracts", ScrollText], ["guides", "Blueprints", BookOpen], ["contracts", "My Contracts", FileSignature], ["vault", "Signed Vault", Vault]] as const).map(([id, label, Icon]) => (
+              <Button key={id} role="tab" aria-selected={view === id} size="sm" variant={view === id ? "default" : "ghost"} onClick={() => { setFocusGuide(undefined); setView(id); }}>
                 <Icon className="h-4 w-4" />{label}
+                {id === "working" && workingCount > 0 && <span className="ml-1 opacity-70">{workingCount}</span>}
                 {id === "contracts" && open.length > 0 && <span className="ml-1 opacity-70">{open.length}</span>}
                 {id === "vault" && signed.length + received.length > 0 && <span className="ml-1 opacity-70">{signed.length + received.length}</span>}
               </Button>
@@ -140,7 +150,15 @@ export function Contracts({ userId, unlocked, onUpgrade, company = false }: { us
 
         {view === "guides" && (!unlocked
           ? <UpgradeLock className="" title="Blueprints" tier="management" onUpgrade={onUpgrade} text="Step-by-step guides to running your music business, from royalty registration to touring, plus home recording cheat sheets for every genre." />
-          : <Guides />)}
+          : <Guides workbench={workbench} focusId={focusGuide} />)}
+
+        {view === "working" && !company && (
+          <WorkingOn workbench={workbench} contracts={contracts} loading={loading}
+            statusBadge={(c) => <Badge variant="outline" className={STATUS[c.status].className}>{STATUS[c.status].label}</Badge>}
+            onOpenGuide={(g) => { logBadgeEvent("blueprint_read"); setFocusGuide(g.id); setView("guides"); }}
+            onOpenContract={setEditing}
+            onBrowse={() => { setFocusGuide(undefined); setView("guides"); }} />
+        )}
 
         {view === "contracts" && (!unlocked && !contracts.length ? (
           <Locked onUpgrade={onUpgrade} text="Build custom contracts from any blueprint, send them for e-signature and keep every signed copy in your vault. Or draft one with the Contract Generator for $3.99." />
@@ -152,7 +170,7 @@ export function Contracts({ userId, unlocked, onUpgrade, company = false }: { us
             </div>
             {open.length === 0
               ? <Empty icon={FileSignature} text={company ? "No company agreements yet. Pick a template to send the first one." : "No contracts yet. Pick a blueprint to create your first one."} />
-              : <ContractList contracts={open} onOpen={setEditing} />}
+              : <ContractList contracts={open} onOpen={setEditing} workbench={company ? undefined : workbench} />}
           </section>
         ))}
 
@@ -162,7 +180,7 @@ export function Contracts({ userId, unlocked, onUpgrade, company = false }: { us
               <h3 className="mb-3 text-sm font-bold uppercase tracking-widest text-primary">{company ? "Signed company agreements" : "Your signed contracts"} <span className="opacity-70">{signed.length}</span></h3>
               {!unlocked && !signed.length ? <p className="text-sm text-muted-foreground">Contracts you create with Catalog Management or the Contract Generator are stored here once everyone signs.</p>
                 : signed.length === 0 ? <p className="text-sm text-muted-foreground">Fully signed contracts are locked and stored here, ready to download.</p>
-                : <ContractList contracts={signed} onOpen={setEditing} />}
+                : <ContractList contracts={signed} onOpen={setEditing} workbench={company ? undefined : workbench} />}
             </section>
             {!company && <section className="rounded-2xl border border-border p-5">
               <h3 className="mb-3 text-sm font-bold uppercase tracking-widest text-primary">Sent to you <span className="opacity-70">{received.length}</span></h3>
@@ -268,10 +286,15 @@ function Blueprints({ unlocked, onUse }: { unlocked: boolean; onUse: (bp: Bluepr
 }
 
 /** Blueprints (business guides) and home recording cheat sheets, in two titled, collapsible groups. */
-function Guides() {
-  const [openId, setOpenId] = useState<string>();
-  const [openGroup, setOpenGroup] = useState<string | undefined>("Blueprints");
+function Guides({ workbench, focusId }: { workbench: Workbench; /** Opened from Working On: start with this one expanded. */ focusId?: string | undefined }) {
   const groups: [string, string, Guide[]][] = [["Blueprints", "Step-by-step guides to running your music business", BLUEPRINT_GUIDES], ["Home recording cheat sheets", "Setup, genre tips and quick fixes", CHEAT_SHEETS]];
+  const [openId, setOpenId] = useState<string | undefined>(focusId);
+  const [openGroup, setOpenGroup] = useState<string | undefined>(() => groups.find(([, , list]) => list.some((g) => g.id === focusId))?.[0] ?? "Blueprints");
+  useEffect(() => { if (focusId) document.getElementById(`guide-${focusId}`)?.scrollIntoView({ behavior: "smooth", block: "start" }); }, [focusId]);
+  const pin = (g: Guide, pinned: boolean) => {
+    workbench.setPinned("blueprint", g.id, pinned);
+    toast.success(pinned ? `${g.title} saved to Working On.` : `${g.title} removed from Working On. Your ticks are kept.`);
+  };
   return (
     <section className="space-y-4">
       {groups.map(([name, hint, list]) => {
@@ -287,10 +310,13 @@ function Guides() {
               <div className="grid gap-4 p-4 pt-0 md:grid-cols-2">
                 {list.map((g) => {
                   const expanded = openId === g.id;
+                  const entry = workbench.get("blueprint", g.id);
+                  const progress = checklistProgress(g.checklist, entry.checked);
                   return (
-                    <article key={g.id} className={`flex flex-col rounded-2xl border p-5 transition ${expanded ? "border-primary md:col-span-2" : "border-border hover:border-primary"}`}>
+                    <article key={g.id} id={`guide-${g.id}`} className={`flex scroll-mt-24 flex-col rounded-2xl border p-5 transition ${expanded ? "border-primary md:col-span-2" : "border-border hover:border-primary"}`}>
                       <h3 className="text-lg font-bold">{g.title}</h3>
                       <p className="mt-1 text-sm text-muted-foreground">{g.summary}</p>
+                      {progress.started && <ProgressMeter progress={progress} title={g.title} className="mt-3" />}
                       {expanded && (
                         <div className="mt-4 space-y-4 text-sm">
                           <ol className="space-y-3">
@@ -303,15 +329,27 @@ function Guides() {
                           </ol>
                           {g.checklist && (
                             <div>
-                              <p className="font-semibold">Checklist</p>
-                              <ul className="mt-1 grid gap-1 sm:grid-cols-2">{g.checklist.map((k) => <li key={k} className="flex gap-2"><Check className="mt-0.5 h-4 w-4 shrink-0 text-primary" strokeWidth={3} /><span>{k}</span></li>)}</ul>
+                              <p className="font-semibold" id={`guide-${g.id}-checklist`}>Checklist</p>
+                              <ul className="mt-1 grid gap-1 sm:grid-cols-2" aria-labelledby={`guide-${g.id}-checklist`}>
+                                {g.checklist.map((k, i) => {
+                                  const cid = `guide-${g.id}-item-${i}`;
+                                  const ticked = entry.checked.includes(k);
+                                  return (
+                                    <li key={k} className="flex items-start gap-2">
+                                      <Checkbox id={cid} checked={ticked} onCheckedChange={() => workbench.toggle("blueprint", g.id, k)} className="mt-0.5" />
+                                      <label htmlFor={cid} className={`cursor-pointer ${ticked ? "text-muted-foreground line-through" : ""}`}>{k}</label>
+                                    </li>
+                                  );
+                                })}
+                              </ul>
                             </div>
                           )}
                         </div>
                       )}
-                      <div className="mt-auto pt-4">
+                      <div className="mt-auto flex flex-wrap pt-4">
                         <Button size="sm" variant="ghost" onClick={() => { if (!expanded) logBadgeEvent("blueprint_read"); setOpenId(expanded ? undefined : g.id); }}>{expanded ? "Close" : "Read it"}</Button>
                         <Button size="sm" variant="ghost" onClick={() => void import("@/lib/guide-pdf").then((m) => m.downloadGuidePdf(g)).catch(() => toast.error("Couldn't make the PDF. Try again."))}><Download />PDF</Button>
+                        <Button size="sm" variant="ghost" aria-pressed={entry.pinned} onClick={() => pin(g, !entry.pinned)}>{entry.pinned ? <><PinOff />Remove from Working On</> : <><Pin />Save to Working On</>}</Button>
                       </div>
                     </article>
                   );
@@ -554,7 +592,7 @@ const DATE_RANGES = [["7", "Last 7 days"], ["30", "Last 30 days"], ["365", "Last
  * Contracts alphabetical by title, grouped by type, with filters for type, date and a search over names, signers and
  * emails (BRANDING.md §3; Admin → Company Contracts, 3.9). Specific choices come first, "All" last.
  */
-function ContractList({ contracts, onOpen }: { contracts: Contract[]; onOpen: (c: Contract) => void }) {
+function ContractList({ contracts, onOpen, workbench }: { contracts: Contract[]; onOpen: (c: Contract) => void; /** Members only: Save to Working On. */ workbench?: Workbench | undefined }) {
   const [q, setQ] = useState("");
   const [type, setType] = useState("all");
   const [range, setRange] = useState("all");
@@ -585,15 +623,16 @@ function ContractList({ contracts, onOpen }: { contracts: Contract[]; onOpen: (c
       {groups.length === 0 ? <p className="text-sm text-muted-foreground">No contracts match. Try another search or filter.</p> : groups.map(([t, list]) => (
         <div key={t} className="space-y-2">
           {types.length > 1 && <h4 className="text-xs font-bold uppercase tracking-widest text-muted-foreground">{t} <span className="opacity-70">{list.length}</span></h4>}
-          <ul className="grid gap-3">{list.map((c) => <ContractRow key={c.id} contract={c} onOpen={() => onOpen(c)} />)}</ul>
+          <ul className="grid gap-3">{list.map((c) => <ContractRow key={c.id} contract={c} onOpen={() => onOpen(c)} workbench={workbench} />)}</ul>
         </div>
       ))}
     </div>
   );
 }
 
-function ContractRow({ contract: c, onOpen }: { contract: Contract; onOpen: () => void }) {
+function ContractRow({ contract: c, onOpen, workbench }: { contract: Contract; onOpen: () => void; workbench?: Workbench | undefined }) {
   const done = c.parties.filter((p) => p.signedAt).length;
+  const pinned = !!c.id && !!workbench?.get("contract", c.id).pinned;
   return (
     <li className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border p-4 transition hover:border-primary">
       <div className="min-w-0">
@@ -603,6 +642,11 @@ function ContractRow({ contract: c, onOpen }: { contract: Contract; onOpen: () =
       <div className="flex items-center gap-2">
         {c.status !== "draft" && <span className="text-xs text-muted-foreground">{done}/{c.parties.length} signed</span>}
         <Badge variant="outline" className={STATUS[c.status].className}>{STATUS[c.status].label}</Badge>
+        {workbench && c.id && (
+          <Button size="sm" variant="ghost" aria-pressed={pinned} title={pinned ? "Remove from Working On" : "Save to Working On"} aria-label={pinned ? `Remove ${c.title} from Working On` : `Save ${c.title} to Working On`} onClick={() => workbench.setPinned("contract", c.id!, !pinned)}>
+            {pinned ? <PinOff className="h-4 w-4" /> : <Pin className="h-4 w-4" />}
+          </Button>
+        )}
         <Button size="sm" variant="outline" onClick={onOpen}>{c.status === "draft" ? "Edit" : "Open"}</Button>
       </div>
     </li>
