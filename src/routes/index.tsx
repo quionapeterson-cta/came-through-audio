@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { HOME_FAQS } from "@/lib/faq";
-import { Building2, Camera, Check, Cloud, Download, HardDrive, Infinity as InfinityIcon, Mail, MessageSquare, Mic, Music, Palette, StickyNote, Upload } from "lucide-react";
+import { Building2, Camera, Check, Cloud, Download, FileText, Folder, HardDrive, Image as ImageIcon, Infinity as InfinityIcon, Mail, MessageSquare, Mic, Music, Palette, Smartphone, StickyNote, Upload } from "lucide-react";
 import { SignupCard } from "@/components/SignupCard";
 import { BrandLogo } from "@/components/BrandLogo";
 import { AppOrBrowserGate, DownloadApp } from "@/components/InstallApp";
@@ -164,7 +164,12 @@ const EMBEDDED_GROUPS: { heading: string; rows: [string, string][] }[] = [
  * left, the same song as one tidy catalog row on the right. Each scattered chip is tilted a little so the pile reads
  * as loose at a glance; the catalog row is a single card with every part ticked inside it.
  */
-const CATALOG_SCATTER: { icon: typeof Mail; label: string; tilt: string }[] = [
+/**
+ * `wide` marks the examples that only show from sm up: on a phone the pile wraps so many times that it would climb
+ * into the card's label, so the phone keeps the nine originals and the wider cards get the fuller pile (founder,
+ * 2026-11-05: fill the empty space in the before box).
+ */
+const CATALOG_SCATTER: { icon: typeof Mail; label: string; tilt: string; wide?: boolean }[] = [
   { icon: Mail, label: "Email thread", tilt: "-6deg" },
   { icon: HardDrive, label: "Old hard drive", tilt: "4deg" },
   { icon: Cloud, label: "Dropbox link", tilt: "-3deg" },
@@ -174,25 +179,34 @@ const CATALOG_SCATTER: { icon: typeof Mail; label: string; tilt: string }[] = [
   { icon: StickyNote, label: "Notes app", tilt: "-4deg" },
   { icon: MessageSquare, label: "Writer group chat", tilt: "6deg" },
   { icon: Mic, label: "Voice memo", tilt: "-2deg" },
+  { icon: Folder, label: "Downloads folder", tilt: "2deg", wide: true },
+  { icon: Smartphone, label: "Producer's phone", tilt: "-6deg", wide: true },
+  { icon: FileText, label: "Label email", tilt: "3deg", wide: true },
+  { icon: ImageIcon, label: "Screenshot", tilt: "-3deg", wide: true },
+  { icon: Upload, label: "WeTransfer link", tilt: "5deg", wide: true },
+  { icon: Download, label: "Bounce folder", tilt: "-4deg", wide: true },
+  { icon: Music, label: "Session file", tilt: "2deg", wide: true },
+  { icon: Cloud, label: "Google Drive", tilt: "-2deg", wide: true },
+  { icon: MessageSquare, label: "Text message", tilt: "4deg", wide: true },
 ];
 
 /**
  * Both card labels sit at the same height (founder, 2026-11-05): the after one lives inside the roof triangle, and 30%
  * down the card that triangle has opened wide enough to hold the words on a phone as well as a desktop.
  */
-const CARD_LABEL = "absolute inset-x-0 top-[30%] text-center text-[11px] font-bold uppercase tracking-[1.5px]";
+const CARD_LABEL = "absolute inset-x-0 top-[30%] text-center text-base font-bold uppercase tracking-[2px] sm:text-[17px] lg:text-[18px]";
 
 /** The scattered side: a loose pile of chips, deliberately not lined up, dropped to the bottom to sit level with the rows. */
 function CatalogScatter() {
   return (
-    <div className="relative flex h-full min-h-[21rem] flex-col justify-end rounded-2xl border border-dashed border-ink-border bg-ink p-4 text-ink-foreground">
+    <div className="relative flex h-full min-h-[23rem] flex-col justify-end rounded-2xl border border-dashed border-ink-border bg-ink p-4 text-ink-foreground">
       <p className={`${CARD_LABEL} text-ink-muted`}>Before Embedding</p>
       {/* Same minimum height as the three song rows on the right, so the two stacks start and end on the same lines. */}
-      <div className="relative flex min-h-[7.875rem] flex-wrap items-center justify-center gap-2">
-        {CATALOG_SCATTER.map(({ icon: Icon, label, tilt }) => (
-          <span key={label} className="inline-flex items-center gap-1.5 rounded-full border border-ink-border bg-ink px-2.5 py-1 text-[11px] text-ink-muted sm:text-xs"
+      <div className="relative flex min-h-[9rem] flex-wrap content-center items-center justify-center gap-1.5">
+        {CATALOG_SCATTER.map(({ icon: Icon, label, tilt, wide }) => (
+          <span key={label} className={`${wide ? "hidden sm:inline-flex" : "inline-flex"} items-center gap-1 rounded-full border border-ink-border bg-ink px-2 py-0.5 text-[10px] text-ink-muted`}
             style={{ transform: `rotate(${tilt})` }}>
-            <Icon className="h-3.5 w-3.5 shrink-0" aria-hidden /> {label}
+            <Icon className="h-3 w-3 shrink-0" aria-hidden /> {label}
           </span>
         ))}
       </div>
@@ -203,8 +217,12 @@ function CatalogScatter() {
 
 /** Every row carries the same three groups of embedded fields: no row is special, every song gets all of them. */
 const EMBEDDED_FIELDS = ["Song info", "Credits", "Identifiers"];
-/** Songs, not data: three ordinary titles, so the picture shows a catalog rather than one lucky song. */
-const HOUSE_SONGS = ["Your Song", "Next Single", "Album Cut"];
+/** Songs, not data: three ordinary titles and three covers, so the picture shows a catalog rather than one lucky song. */
+const HOUSE_SONGS = [
+  { title: "Your Song", cover: "from-electric to-primary" },
+  { title: "Next Single", cover: "from-primary to-ink" },
+  { title: "Album Cut", cover: "from-electric/60 via-primary to-ink" },
+];
 
 /**
  * The tidy side: three identical rows sitting inside a house drawn in cobalt — wide eaves, a peaked roof and two walls
@@ -212,7 +230,7 @@ const HOUSE_SONGS = ["Your Song", "Next Single", "Album Cut"];
  */
 function CatalogRow() {
   return (
-    <div className="relative flex h-full min-h-[21rem] flex-col justify-end rounded-2xl border border-dashed border-ink-border bg-ink p-4 text-ink-foreground">
+    <div className="relative flex h-full min-h-[23rem] flex-col justify-end rounded-2xl border border-dashed border-ink-border bg-ink p-4 text-ink-foreground">
       <svg aria-hidden viewBox="0 0 100 100" preserveAspectRatio="none"
         className="pointer-events-none absolute inset-0 h-full w-full text-electric">
         {/* Eaves past the walls, a peaked roof, a ceiling line across the wall tops, then walls down both sides. */}
@@ -222,9 +240,11 @@ function CatalogRow() {
       <p className={`${CARD_LABEL} text-electric`}>After Embedding</p>
       {/* Percentage inset: the rows stay inside the walls on a wide card, not just on a phone. */}
       <div className="relative space-y-1.5 px-[6%]">
-        {HOUSE_SONGS.map((title) => (
+        {HOUSE_SONGS.map(({ title, cover }) => (
           <div key={title} className="flex items-center gap-2 rounded-lg border border-ink-border bg-ink-border/25 px-2 py-1.5">
-            <span className="grid h-6 w-6 shrink-0 place-items-center rounded bg-primary/25"><Music className="h-3 w-3 text-electric" aria-hidden /></span>
+            {/* The cover art is a gradient tile: the platform has no artwork for these example songs, and a tinted tile
+                reads as a cover at this size without pretending to be someone's real release. */}
+            <span aria-hidden className={`h-8 w-8 shrink-0 rounded-md bg-gradient-to-br ring-1 ring-inset ring-ink-border ${cover}`} />
             <p className="min-w-0 flex-1 truncate text-xs font-semibold text-ink-foreground">{title}</p>
             <div className="flex shrink-0 flex-wrap items-center justify-end gap-x-1.5 gap-y-0.5">
               {EMBEDDED_FIELDS.map((f) => (

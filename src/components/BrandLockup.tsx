@@ -9,11 +9,11 @@ export const MARK_BOX = "h-[1.02em] w-[1.02em] shrink-0 -translate-y-[0.04em] ob
 
 /**
  * The mark's picture is a 256px square with 14px of empty margin on its right (the artwork itself starts at 14 and ends
- * at 242), and every layout added its own gap on top of that, so the C floated away from "ame". Pull the name back by
- * the margin that is actually in the art, in em, so the glyph and the letters touch the same way at any size
- * (founder, 2026-11-05).
+ * at 242), and every layout added its own gap on top of that, so the C floated away from "ame". Cancelling that margin
+ * exactly brought the name too close, so the tuck is cancelled and a hair is added back: the name now starts just past
+ * the art's edge at any size (founder, 2026-11-05).
  */
-export const MARK_TUCK = "[margin-right:-0.055em]";
+export const MARK_TUCK = "[margin-right:0.02em]";
 
 /**
  * The brand lockup: the mark is the C in "Came", the name follows it, and the line it stands for sits underneath
