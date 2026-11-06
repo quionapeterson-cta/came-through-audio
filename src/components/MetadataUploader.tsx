@@ -772,9 +772,26 @@ export function MetadataUploader({ onShareInfo, userId, mode = "embed", readOnly
           </div>}
           {/* Musicians work with the same people again and again: the library is right here, not only in Split Sheets. */}
           {!readOnly && <div className="mb-8"><ContributorLibrary userId={userId} refreshKey={libKey} onSaved={() => setLibKey((k) => k + 1)} /></div>}
+          {/* The heading became the filter menu (founder, 2026-11-06): "Your songs" opens the release filters, so the
+              actions sit level with it on the right instead of stacking under a separate row of tabs. */}
           <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-            <h2 className="text-xl font-bold">Your songs</h2>
-            <div className="flex flex-wrap items-center gap-2">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button type="button" variant="outline" className="text-xl font-bold">
+                  {filter === "All" ? "Your songs" : `Your songs · ${filter}s`}
+                  <span aria-hidden className="text-xs">▼</span>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start">
+                {(["All", "Album", "EP", "Single"] as const).map((f) => (
+                  <DropdownMenuItem key={f} onClick={() => setFilter(f)}>
+                    {f === "All" ? "Every song" : `${f}s`}
+                    <span className="ml-auto pl-6 text-xs tabular-nums text-muted-foreground">{f === "All" ? tracks.length : tracks.filter((t) => releaseGroup(t) === f).length}</span>
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+            <div className="flex flex-wrap items-center justify-end gap-2">
               {!readOnly && (<>          <DropdownMenu>
             <DropdownMenuTrigger asChild><Button type="button" size="sm"><Plus />Add song</Button></DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="max-w-xs">
@@ -828,12 +845,6 @@ export function MetadataUploader({ onShareInfo, userId, mode = "embed", readOnly
           </div>
           {tracks.length === 0 ? <p className="text-sm text-muted-foreground">No songs yet. Use Add song to save a song you already embedded, or embed a new one in Embed Metadata. Every song you save is checked automatically in the Royalty Health Hub.</p> : (
             <>
-            <div className="mb-5 flex flex-wrap gap-2" role="tablist" aria-label="Filter by release type">
-              {(["Album", "EP", "Single", "All"] as const).map((f) => {
-                const n = f === "All" ? tracks.length : tracks.filter((t) => releaseGroup(t) === f).length;
-                return <Button key={f} type="button" role="tab" aria-selected={filter === f} size="sm" variant={filter === f ? "default" : "outline"} onClick={() => setFilter(f)}>{f === "All" ? "All" : `${f}s`}<span className="ml-1 opacity-70">{n}</span></Button>;
-              })}
-            </div>
             {(["Album", "EP", "Single"] as const).filter((g) => filter === "All" || filter === g).map((g) => {
               const items = tracks.filter((t) => releaseGroup(t) === g);
               if (!items.length) return null;
