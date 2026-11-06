@@ -180,12 +180,19 @@ export type ZipResult = { songs: number; skipped: number; gaps: DownloadGap[] };
 
 /**
  * One ZIP for a set of songs: every master (named exactly as the title, `Song Title.mp3`), its artwork, its lyrics PDF
- * and the catalog PDF. Files that can't be fetched are skipped, so one bad file never blocks the rest, and every song
+ * and the catalog PDF, in folders by file type and then by Singles, EPs and Albums. Files that can't be fetched are skipped, so one bad file never blocks the rest, and every song
  * that came out incomplete is named with what to add, so the member can fill it in and download again (founder,
  * 2026-11-06: "2 files couldn't be fetched" told them nothing they could act on).
  */
 async function downloadSongsZip(tracks: CatalogTrack[], zipName: string, onProgress?: (done: number, total: number) => void): Promise<ZipResult> {
-  const [{ makeZip, uniqueName }, { buildCatalogPdf }, { buildLyricsPdf }, { myBrand }] = await Promise.all([import("@/lib/zip"), import("@/lib/catalog-pdf"), import("@/lib/lyrics-pdf"), import("@/lib/brand-load")]);
+  const [{ makeZip, uniqueName }, { buildCatalogPdf }, { buildLyricsPdf }, { myBrand }, { releaseKind }] = await Promise.all([import("@/lib/zip"), import("@/lib/catalog-pdf"), import("@/lib/lyrics-pdf"), import("@/lib/brand-load"), import("@/lib/health-checklist")]);
+  // The ZIP is laid out like the catalog (founder, 2026-11-06): "MP3 & WAV", "Artwork" and "Lyrics" at the top, each split
+  // into Singles, EPs and Albums, with every EP and album in its own folder. Catalog.pdf sits at the root.
+  const shelf = (t: CatalogTrack) => {
+    const kind = releaseKind(t.metadata);
+    if (kind === "Single") return "Singles";
+    return `${kind === "EP" ? "EPs" : "Albums"}/${safeName(t.metadata.album?.trim() || `Untitled ${kind === "EP" ? "EP" : "album"}`)}`;
+  };
   // Their Personal Branding header on the lyric and catalog PDFs inside the ZIP, when they have a kit.
   const brand = await myBrand("catalog");
   const taken = new Set<string>();
@@ -196,10 +203,11 @@ async function downloadSongsZip(tracks: CatalogTrack[], zipName: string, onProgr
   for (const [i, t] of tracks.entries()) {
     onProgress?.(i, tracks.length);
     const name = safeName(t.title);
+    const where = shelf(t);
     const items: DownloadGap["items"] = [];
     const files = [
-      { field: "audio", path: t.metadata.audioPath, file: `${name}.${/\.wav$/i.test(t.metadata.audioPath ?? "") ? "wav" : "mp3"}`, none: "No master saved yet: open the song and choose its MP3 or WAV.", lost: "Its saved master couldn't be found: open the song and choose its MP3 or WAV again." },
-      { field: "artwork", path: t.metadata.artPath, file: `Artwork/${name}.${t.metadata.artPath?.split(".").pop() ?? "jpg"}`, none: "", lost: "Its saved cover art couldn't be found: open the song and add the cover again." },
+      { field: "audio", path: t.metadata.audioPath, file: `MP3 & WAV/${where}/${name}.${/\.wav$/i.test(t.metadata.audioPath ?? "") ? "wav" : "mp3"}`, none: "No master saved yet: open the song and choose its MP3 or WAV.", lost: "Its saved master couldn't be found: open the song and choose its MP3 or WAV again." },
+      { field: "artwork", path: t.metadata.artPath, file: `Artwork/${where}/${name}.${t.metadata.artPath?.split(".").pop() ?? "jpg"}`, none: "", lost: "Its saved cover art couldn't be found: open the song and add the cover again." },
     ];
     for (const f of files) {
       // A song without cover art is normal (singles often share one), so only a cover that went missing is reported.
@@ -208,7 +216,7 @@ async function downloadSongsZip(tracks: CatalogTrack[], zipName: string, onProgr
       if (error || !data) { skipped += 1; items.push({ field: f.field, message: f.lost }); continue; }
       entries.push({ name: uniqueName(f.file, taken), data: await bytes(data) });
     }
-    if (t.metadata.lyrics?.trim()) entries.push({ name: uniqueName(`Lyrics/${name} - lyrics.pdf`, taken), data: await bytes((await buildLyricsPdf(t, brand)).output("blob")) });
+    if (t.metadata.lyrics?.trim()) entries.push({ name: uniqueName(`Lyrics/${where}/${name} - lyrics.pdf`, taken), data: await bytes((await buildLyricsPdf(t, brand)).output("blob")) });
     else if (!t.metadata.instrumental) items.push({ field: "lyrics", message: "No lyrics yet: paste them in the song's Lyrics section (or mark it Instrumental)." });
     if (items.length) gaps.push({ track: t, items });
   }

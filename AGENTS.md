@@ -365,6 +365,8 @@ rules keep it consistent as features are added.
 - **A download is the product, not a per-song chore** (founder, 2026-11-06): My Catalog offers one click for the whole
   catalog and one per album or EP. `downloadWholeCatalog`, `downloadRelease` and `groupReleases` in `src/lib/catalog.ts`
   build the ZIP (masters, artwork, lyrics PDFs, catalog PDF) through one shared path; never add a second downloader.
+  Inside the ZIP: `MP3 & WAV/`, `Artwork/` and `Lyrics/`, each split into `Singles/`, `EPs/<EP>/` and `Albums/<album>/`
+  (by `releaseKind`), with `Catalog.pdf` at the root (founder, 2026-11-06).
 - **Every download button must actually fire** (founder, 2026-11-06): saving a file goes through `saveBlob`, which puts
   the anchor in the document before clicking it, because a detached anchor is ignored in Safari and the button looks
   stuck. A failed build must say what failed — never a generic "could not build" toast.
