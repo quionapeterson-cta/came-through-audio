@@ -179,7 +179,7 @@ const CATALOG_SCATTER: { icon: typeof Mail; label: string; tilt: string }[] = [
 /** The scattered side: a loose pile of chips, deliberately not lined up. */
 function CatalogScatter() {
   return (
-    <div className="flex h-full flex-col justify-center gap-3 rounded-2xl border border-dashed border-ink-border bg-ink p-5 text-ink-foreground">
+    <div className="flex h-full min-h-[21rem] flex-col justify-center gap-3 rounded-2xl border border-dashed border-ink-border bg-ink p-5 text-ink-foreground">
       <div className="flex flex-wrap items-center justify-center gap-2">
         {CATALOG_SCATTER.map(({ icon: Icon, label, tilt }) => (
           <span key={label} className="inline-flex items-center gap-1.5 rounded-full border border-ink-border bg-ink px-2.5 py-1 text-[11px] text-ink-muted sm:text-xs"
@@ -193,44 +193,40 @@ function CatalogScatter() {
   );
 }
 
-/** The songs that were scattered, each on its own row and all of them kept in one catalog — drawn as a house. */
-const HOUSE_SONGS = [
-  { title: "Your Song", meta: "Single · 03:12", parts: ["Master", "ISRC"] },
-  { title: "Next Single", meta: "Single · 02:58", parts: ["Art", "Splits"] },
-  { title: "Album Cut", meta: "Album · 04:06", parts: ["Lyrics", "UPC"] },
-];
+/** Every row carries the same three groups of embedded fields: no row is special, every song gets all of them. */
+const EMBEDDED_FIELDS = ["Song info", "Credits", "Identifiers"];
+/** Songs, not data: three ordinary titles, so the picture shows a catalog rather than one lucky song. */
+const HOUSE_SONGS = ["Your Song", "Next Single", "Album Cut"];
 
 /**
- * The tidy side: a few organised rows, sitting inside a simple house line in cobalt — two walls and a roof, so the rows
- * read as one catalog rather than three separate songs (founder, 2026-11-05).
+ * The tidy side: three identical rows sitting inside a house drawn in cobalt — wide eaves, a peaked roof and two walls
+ * that keep the rows under one roof (founder, 2026-11-05). The roof sits clear of the rows so no line crosses a song.
  */
 function CatalogRow() {
   return (
-    <div className="relative flex h-full flex-col justify-center rounded-2xl border border-dashed border-ink-border bg-ink p-4 text-ink-foreground">
+    <div className="relative flex h-full min-h-[21rem] flex-col justify-end rounded-2xl border border-dashed border-ink-border bg-ink p-4 text-ink-foreground">
       <svg aria-hidden viewBox="0 0 100 100" preserveAspectRatio="none"
         className="pointer-events-none absolute inset-0 h-full w-full text-electric">
-        <path d="M3 99 V38 L50 5 L97 38 V99" fill="none" stroke="currentColor" strokeWidth="1.5"
-          strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
+        {/* Eaves run out past the walls to both edges, the roof peaks in the middle, the walls drop from where it meets them. */}
+        <path d="M0 46 L50 6 L100 46" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
+        <path d="M8 39.6 V99 M92 39.6 V99" fill="none" stroke="currentColor" strokeWidth="1.5" vectorEffect="non-scaling-stroke" />
       </svg>
-      <div className="relative space-y-2 px-3 pb-1 pt-12">
-        {HOUSE_SONGS.map(({ title, meta, parts }) => (
-          <div key={title} className="flex items-center gap-3 rounded-xl border border-ink-border bg-ink-border/25 px-3 py-2">
-            <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-primary/20"><Music className="h-4 w-4 text-electric" aria-hidden /></span>
-            <div className="min-w-0 flex-1">
-              <p className="truncate text-sm font-semibold text-ink-foreground">{title}</p>
-              <p className="truncate text-[11px] text-ink-muted">{meta}</p>
-            </div>
-            <div className="flex shrink-0 gap-1">
-              {parts.map((p) => (
-                <span key={p} className="inline-flex items-center gap-0.5 rounded-full bg-ink-border/70 px-1.5 py-0.5 text-[10px] font-medium text-ink-foreground">
-                  <Check className="h-2.5 w-2.5 text-electric" strokeWidth={3} aria-hidden />{p}
+      <div className="relative space-y-1.5 px-4">
+        {HOUSE_SONGS.map((title) => (
+          <div key={title} className="flex items-center gap-2 rounded-lg border border-ink-border bg-ink-border/25 px-2 py-1.5">
+            <span className="grid h-6 w-6 shrink-0 place-items-center rounded bg-primary/25"><Music className="h-3 w-3 text-electric" aria-hidden /></span>
+            <p className="min-w-0 flex-1 truncate text-xs font-semibold text-ink-foreground">{title}</p>
+            <div className="flex shrink-0 flex-wrap items-center justify-end gap-x-1.5 gap-y-0.5">
+              {EMBEDDED_FIELDS.map((f) => (
+                <span key={f} className="inline-flex items-center gap-0.5 text-[9px] font-medium leading-none text-ink-muted">
+                  <Check className="h-2 w-2 text-electric" strokeWidth={4} aria-hidden />{f}
                 </span>
               ))}
             </div>
           </div>
         ))}
       </div>
-      <p className="relative mt-3 text-center text-xs text-ink-muted">Each song gets a row. Every row lives in the same catalog.</p>
+      <p className="relative mt-2.5 text-center text-xs text-ink-muted">Each song gets a row. Every row lives in the same catalog.</p>
     </div>
   );
 }
@@ -515,8 +511,7 @@ function Landing() {
                 to the black band with the cobalt edge, matching the callout above. Three beats instead of a comma list,
                 so the line lands like a magazine cover line. */}
             <div className="border-l-4 border-electric bg-ink px-6 py-5 text-ink-foreground">
-              <p className="text-xs font-bold uppercase tracking-[2px] text-electric">The part that matters</p>
-              <p className="mt-2 text-2xl font-extrabold leading-snug md:text-3xl">One song. One row. All of it.</p>
+              <p className="text-2xl font-extrabold leading-snug md:text-3xl">Every song, embedded. One Catalog. Organized.</p>
               <p className="mt-2 leading-relaxed text-ink-muted">Master, artwork, lyrics, credits and codes stay together, so every download comes back complete.</p>
             </div>
 
