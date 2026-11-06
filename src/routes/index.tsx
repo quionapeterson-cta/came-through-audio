@@ -194,7 +194,7 @@ const CARD_LABEL = "absolute inset-x-0 top-[30%] text-center text-base font-bold
 function CatalogScatter() {
   return (
     <div className="relative flex h-full min-h-[26rem] flex-col justify-end rounded-2xl border border-dashed border-ink-border bg-ink p-4 text-ink-foreground">
-      <p className={`${CARD_LABEL} text-ink-muted`}>Before Embedding</p>
+      <p className={`${CARD_LABEL} text-ink-muted`}>Before Cataloging</p>
       {/* Same minimum height as the three song rows on the right, so the two stacks start and end on the same lines. */}
       <div className="relative flex min-h-[9rem] flex-wrap content-center items-center justify-center gap-2">
         {CATALOG_SCATTER.map(({ icon: Icon, label, tilt, wide }) => (
@@ -231,7 +231,7 @@ function CatalogRow() {
         <path d="M2 43.1 L50 6 L98 43.1" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
         <path d="M6 40 H94 M6 40 V99 M94 40 V99" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
       </svg>
-      <p className={`${CARD_LABEL} text-electric`}>After Embedding</p>
+      <p className={`${CARD_LABEL} text-electric`}>After Cataloging</p>
       {/* Percentage inset: the rows stay inside the walls on a wide card, not just on a phone. */}
       <div className="relative space-y-1.5 px-[6%]">
         {HOUSE_SONGS.map(({ title, cover }) => (
