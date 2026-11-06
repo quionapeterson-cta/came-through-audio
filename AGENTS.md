@@ -370,7 +370,9 @@ rules keep it consistent as features are added.
   stuck. A failed build must say what failed — never a generic "could not build" toast.
 - **Our branding is on every file, on every plan** (founder, 2026-11-06): all downloads carry
   `MADE_ON_LINE` — "Made on Camethroughaudio.com — Your first stop for distribution" — in Primary Black #0b0b0b. The
-  word "Generated" never appears on a download, and no generation date is printed. Only Catalog Management (which
+  word "Generated" never appears on a download, and the footer (the "Made on Camethroughaudio.com" line, page number and
+  owner's name) never carries a date. Today's date may sit at the top, in the header's meta line (`headerDate()`), as it
+  does on the catalog PDF, split sheet and Royalty Health Report (founder, 2026-11-06). Only Catalog Management (which
   includes a kit) or a paid `branding_yearly` add-on replaces our header, and a kit that isn't set up yet
   (`kitReady`) still gets our default header.
 - **One brand per file** (founder, 2026-11-06): a PDF body draws its accent colour through `accentOf(pdf)` (and text on
@@ -382,4 +384,4 @@ rules keep it consistent as features are added.
 - **"Your file is ready" leaves on its own**: one message at a time (`READY_TOAST`), closed on a fixed timer in `saveBlob`.
 - **Only Catalog & Collaborate and Catalog Management may cut the footer off** (founder, 2026-11-06): `brandFor` in
   `src/lib/brand-kit.functions.ts` forces `showFooter: true` on any lower plan, whatever the saved kit says. Never move
-  that check into a component.
+  that check into a component. In Profile → Brand kit the switch is a small one-line control, shown only on those plans.

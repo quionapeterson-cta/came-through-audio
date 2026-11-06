@@ -15,7 +15,7 @@ import { loadWebFont } from "@/lib/web-fonts";
 import { Disclaimer } from "@/components/Disclaimer";
 import { getBrandAccess } from "@/lib/brand-kit.functions";
 import { openCheckout } from "@/lib/checkout";
-import { TIER_LABEL, type Tier } from "@/lib/plans";
+import { hasTier, TIER_LABEL, type Tier } from "@/lib/plans";
 
 const BUCKET = "brand-logos";
 const MAX_LOGO = 2 * 1024 * 1024;
@@ -307,13 +307,13 @@ export function BrandKit({ userId, tier, artistName }: { userId: string; tier: T
 
       <Disclaimer k="branding" />
 
-      <div className="flex items-start justify-between gap-4 rounded-lg border border-border p-4">
-        <div className="space-y-1">
-          <Label htmlFor="bk-footer">Show "Made on Camethroughaudio.com"</Label>
-          <p className="text-xs text-muted-foreground">A small line at the bottom of each page, with our tagline. Catalog &amp; Collaborate and Catalog Management can turn it off; on any other plan it stays on.</p>
-        </div>
-        <Switch id="bk-footer" checked={kit.showFooter} onCheckedChange={(v) => edit({ showFooter: v })} />
-      </div>
+      {/* A small control, not a feature (founder, 2026-11-06): only the plans that may drop the footer see it at all. */}
+      {hasTier(tier, "collaborate") && (
+        <label htmlFor="bk-footer" className="flex w-fit items-center gap-2 text-xs text-muted-foreground">
+          <Switch id="bk-footer" className="scale-75" checked={kit.showFooter} onCheckedChange={(v) => edit({ showFooter: v })} />
+          Footer: "Made on Camethroughaudio.com"
+        </label>
+      )}
 
       {/* Preview: the header as it prints (white page, like the PDF). */}
       <div className="space-y-2">

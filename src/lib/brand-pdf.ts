@@ -248,6 +248,9 @@ export const onAccent = (pdf: JsPDF) => onColor(accentOf(pdf));
 export const kitAccent = (brand: PdfBrand): [number, number, number] =>
   brand.options.accent ? hexRgb(brand.options.accent) : brand.headerColor ? hexRgb(brand.headerColor) : INK;
 
+/** Today's date for the top of a document, e.g. "Nov 6, 2026". The header only: the footer never carries a date. */
+export const headerDate = () => new Date().toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+
 /** "2026-03-03" → "Mar 3, 2026"; anything else is shown as typed. */
 export function prettyDate(v: string | undefined) {
   const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(v ?? "");

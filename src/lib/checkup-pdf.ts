@@ -1,5 +1,5 @@
 import type { jsPDF as JsPDF } from "jspdf";
-import { brandFooter, brandHeader, COBALT, ensureSpace, font, INK, label, MARGIN, MUTED, newBrandedPdf, PANEL, RULE } from "@/lib/brand-pdf";
+import { brandFooter, brandHeader, COBALT, ensureSpace, headerDate, font, INK, label, MARGIN, MUTED, newBrandedPdf, PANEL, RULE } from "@/lib/brand-pdf";
 import { CLEAR_DX, CLEAR_WHAT, STATE_LABEL, diagnosisLine, type Checkup, type Finding, type OrganState } from "@/lib/royalty-checkup";
 
 /** The Royalty Health Report as a branded PDF: the main finding and treatment, then every organ's report. */
@@ -68,8 +68,8 @@ function finding(pdf: JsPDF, y: number, f: Finding) {
 
 export async function buildCheckupPdf(c: Checkup, artist: string, country: string) {
   const pdf = await newBrandedPdf();
-  // No generation date on a download (founder, 2026-11-06).
-  let y = brandHeader(pdf, "Royalty Health Report", artist || undefined, `${c.songs} ${c.songs === 1 ? "song" : "songs"}  ·  ${country}`);
+  // Today's date sits at the top; the footer never carries one (founder, 2026-11-06).
+  let y = brandHeader(pdf, "Royalty Health Report", artist || undefined, `${c.songs} ${c.songs === 1 ? "song" : "songs"}  ·  ${country}  ·  ${headerDate()}`);
 
   // Main finding, in a panel.
   const lead = c.lead;

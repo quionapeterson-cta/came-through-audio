@@ -1,7 +1,7 @@
 import type { jsPDF as JsPDF } from "jspdf";
 import type { CatalogTrack } from "@/lib/catalog";
 import type { PdfBrand } from "@/lib/brand-kit";
-import { accentOf, brandFooter, brandHeader, ensureSpace, font, INK, label, MARGIN, MUTED, newBrandedPdf, prettyDate, RULE } from "@/lib/brand-pdf";
+import { accentOf, brandFooter, brandHeader, ensureSpace, headerDate, font, INK, label, MARGIN, MUTED, newBrandedPdf, prettyDate, RULE } from "@/lib/brand-pdf";
 import { creditName, writerRole, type Contributor } from "@/lib/metadata";
 import { saveBlob } from "@/lib/catalog";
 
@@ -116,8 +116,8 @@ function releaseHeading(pdf: JsPDF, y: number, album: string, tracks: CatalogTra
 export async function buildCatalogPdf(tracks: CatalogTrack[], brand?: PdfBrand | null) {
   const pdf = await newBrandedPdf(brand);
   const artist = mostCommon(tracks.map((t) => t.artist));
-  // No generation date on a download (founder, 2026-11-06).
-  let y = brandHeader(pdf, artist || "Catalog", "Master Catalog", `${tracks.length} ${tracks.length === 1 ? "song" : "songs"}`, brand);
+  // Today's date sits at the top; the footer never carries one (founder, 2026-11-06).
+  let y = brandHeader(pdf, artist || "Catalog", "Master Catalog", `${tracks.length} ${tracks.length === 1 ? "song" : "songs"}  ·  ${headerDate()}`, brand);
   for (const g of groupByRelease(tracks)) {
     y = releaseHeading(pdf, y, g.album, g.tracks);
     for (const t of g.tracks) y = songCard(pdf, y, t);
