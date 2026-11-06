@@ -181,13 +181,9 @@ const CATALOG_SCATTER: { icon: typeof Mail; label: string; tilt: string; wide?: 
   { icon: Mic, label: "Voice memo", tilt: "-2deg" },
   { icon: Folder, label: "Downloads folder", tilt: "2deg", wide: true },
   { icon: Smartphone, label: "Producer's phone", tilt: "-6deg", wide: true },
-  { icon: FileText, label: "Label email", tilt: "3deg", wide: true },
-  { icon: ImageIcon, label: "Screenshot", tilt: "-3deg", wide: true },
   { icon: Upload, label: "WeTransfer link", tilt: "5deg", wide: true },
-  { icon: Download, label: "Bounce folder", tilt: "-4deg", wide: true },
   { icon: Music, label: "Session file", tilt: "2deg", wide: true },
   { icon: Cloud, label: "Google Drive", tilt: "-2deg", wide: true },
-  { icon: MessageSquare, label: "Text message", tilt: "4deg", wide: true },
 ];
 
 /**
@@ -204,13 +200,13 @@ function CatalogScatter() {
       {/* Same minimum height as the three song rows on the right, so the two stacks start and end on the same lines. */}
       <div className="relative flex min-h-[9rem] flex-wrap content-center items-center justify-center gap-1.5">
         {CATALOG_SCATTER.map(({ icon: Icon, label, tilt, wide }) => (
-          <span key={label} className={`${wide ? "hidden sm:inline-flex" : "inline-flex"} items-center gap-1 rounded-full border border-ink-border bg-ink px-2 py-0.5 text-[10px] text-ink-muted`}
+          <span key={label} className={`${wide ? "hidden sm:inline-flex" : "inline-flex"} items-center gap-1.5 rounded-full border border-ink-border bg-ink px-2.5 py-1 text-xs text-ink-muted sm:text-[13px]`}
             style={{ transform: `rotate(${tilt})` }}>
-            <Icon className="h-3 w-3 shrink-0" aria-hidden /> {label}
+            <Icon className="h-3.5 w-3.5 shrink-0" aria-hidden /> {label}
           </span>
         ))}
       </div>
-      <p className="relative mt-2.5 text-center text-xs text-ink-muted">Every piece in a different place, and none of them know about each other.</p>
+      <p className="relative mt-2.5 text-center text-sm leading-snug text-ink-muted">Every piece in a different place, and none of them know about each other.</p>
     </div>
   );
 }
@@ -499,7 +495,7 @@ function Landing() {
                 so the panel is signed rather than labelled. The mark is the favicon's white tone, sized in em and tucked
                 with MARK_TUCK, so it stays on the name's baseline at every width. */}
             <p className="flex items-center gap-2 text-sm font-bold uppercase tracking-[3px] sm:text-base">
-              <img src="/favicon.png" alt="" aria-hidden className={`${MARK_BOX} ${MARK_TUCK}`} />
+              <img src="/cta-mark-white.png" alt="" aria-hidden className={`${MARK_BOX} ${MARK_TUCK}`} />
               <span aria-hidden>ame Through Audio</span>
               <span className="sr-only">Came Through Audio</span>
             </p>
