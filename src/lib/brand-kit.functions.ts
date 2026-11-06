@@ -2,6 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { brandAccess, brandingUntil, kitAllowance, kitFromRow, kitReady, type BrandUse, type PdfBrand } from "./brand-kit";
+import { hasTier } from "./plans";
 import { getPaymentsEnvironment } from "./payments-env";
 import type { Tier } from "./plans";
 
@@ -24,7 +25,7 @@ async function accessFor(db: Db, userId: string) {
   const list = (buys ?? []) as { kind: string; created_at: string; details: Record<string, string> }[];
   const t = ((tier as unknown as string) || "free") as Tier;
   const until = brandingUntil(list);
-  return { access: brandAccess(t, until), until, allowance: kitAllowance(t, list) };
+  return { access: brandAccess(t, until), until, allowance: kitAllowance(t, list), tier: t };
 }
 
 /**
@@ -32,8 +33,11 @@ async function accessFor(db: Db, userId: string) {
  * With several kits, the one asked for if it's among the kits they can use now (their oldest first), else the first.
  */
 async function brandFor(db: Db, userId: string, use: BrandUse, kitId?: string | null): Promise<PdfBrand | null> {
-  const { access, allowance } = await accessFor(db, userId);
+  const { access, allowance, tier } = await accessFor(db, userId);
   if (!access[use]) return null;
+  // Only Catalog & Collaborate and Catalog Management may cut our footer off a download (founder, 2026-11-06); on any
+  // lower plan a saved kit still prints it, whatever the kit row says.
+  const mayDropFooter = hasTier(tier, "collaborate");
   const { data } = await db.from("brand_kits" as never).select("*").eq("user_id", userId).order("created_at" as never, { ascending: true });
   const usable = ((data ?? []) as Record<string, unknown>[]).slice(0, Math.max(1, allowance)).map((r) => kitFromRow(r as never));
   const kit = usable.find((k) => k?.id && k.id === kitId) ?? usable[0] ?? null;
@@ -56,9 +60,9 @@ async function brandFor(db: Db, userId: string, use: BrandUse, kitId?: string | 
     const { data: prof } = await db.from("profiles").select("stage_name, onboarding").eq("id", userId).maybeSingle();
     const p = prof as { stage_name?: string | null; onboarding?: { stageName?: string } | null } | null;
     const artist = (p?.onboarding?.stageName || p?.stage_name || "").trim();
-    if (artist) return { ...rest, name: artist, logo };
+    if (artist) return { ...rest, name: artist, logo, showFooter: mayDropFooter ? rest.showFooter : true };
   }
-  return { ...rest, logo };
+  return { ...rest, logo, showFooter: mayDropFooter ? rest.showFooter : true };
 }
 
 /** Where the signed-in user's kit applies, and when the add-on ends, for Profile → Brand kit. */

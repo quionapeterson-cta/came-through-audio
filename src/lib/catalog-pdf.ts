@@ -3,6 +3,7 @@ import type { CatalogTrack } from "@/lib/catalog";
 import type { PdfBrand } from "@/lib/brand-kit";
 import { brandFooter, brandHeader, COBALT, ensureSpace, font, INK, label, MARGIN, MUTED, newBrandedPdf, prettyDate, RULE } from "@/lib/brand-pdf";
 import { creditName, writerRole, type Contributor } from "@/lib/metadata";
+import { saveBlob } from "@/lib/catalog";
 
 const names = (rows: Contributor[] | undefined) => (rows ?? []).map(creditName).filter(Boolean).join(", ");
 
@@ -127,5 +128,8 @@ export async function buildCatalogPdf(tracks: CatalogTrack[], brand?: PdfBrand |
 }
 
 export async function downloadCatalogPdf(tracks: CatalogTrack[], filename = "Catalog", brand?: PdfBrand | null) {
-  (await buildCatalogPdf(tracks, brand)).save(`${filename}.pdf`);
+  const pdf = await buildCatalogPdf(tracks, brand);
+  // Save through our own link rather than jsPDF's helper, so a blocked or suspended download raises instead of
+  // silently doing nothing (founder, 2026-11-06: the buttons looked like they were sticking).
+  saveBlob(pdf.output("blob"), `${filename}.pdf`);
 }

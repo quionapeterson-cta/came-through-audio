@@ -100,22 +100,52 @@ export async function downloadCatalogFile(path: string, filename: string) {
 }
 
 export function saveBlob(blob: Blob, filename: string) {
+  const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
-  a.href = URL.createObjectURL(blob);
+  a.href = url;
   a.download = filename;
+  a.rel = "noopener";
+  a.style.display = "none";
+  // The link has to be in the document before it is clicked: Safari ignores a click on a detached anchor, which made
+  // every download button look dead with no error at all (founder, 2026-11-06).
+  document.body.append(a);
   a.click();
-  setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 10000);
 }
 
 export const safeName = (s: string) => s.replace(/[<>:"/\\|?*]+/g, "_").trim() || "track";
 
+/** A release in the catalog: an album or an EP, its songs in track order. */
+export type Release = { key: string; album: string; type: "Album" | "EP"; tracks: CatalogTrack[] };
+
 /**
- * Download my catalog: one ZIP with every master (named exactly as the title, `Song Title.mp3`), its artwork, lyrics
- * PDFs and the catalog PDF. Files that can't be fetched are skipped and counted, so one bad file never blocks the rest.
+ * The catalog grouped into releases (one per album title, A–Z). Songs with no album are singles, which are downloaded
+ * one at a time from their own row, so they are not a release here.
  */
-export async function downloadWholeCatalog(onProgress?: (done: number, total: number) => void): Promise<{ songs: number; skipped: number }> {
+export function groupReleases(tracks: CatalogTrack[]): Release[] {
+  const groups = new Map<string, CatalogTrack[]>();
+  for (const t of tracks) {
+    const album = (t.metadata.album ?? "").trim();
+    if (!album) continue;
+    const key = album.toLowerCase();
+    groups.set(key, [...(groups.get(key) ?? []), t]);
+  }
+  const trackNo = (t: CatalogTrack) => Number(t.metadata.trackNumber) || 999;
+  return [...groups.entries()]
+    .map(([key, list]) => {
+      const ordered = [...list].sort((a, b) => trackNo(a) - trackNo(b) || a.title.localeCompare(b.title));
+      return { key, album: (ordered[0]!.metadata.album ?? "").trim(), type: /^ep$/i.test(ordered[0]!.metadata.releaseType ?? "") ? "EP" as const : "Album" as const, tracks: ordered };
+    })
+    .sort((a, b) => a.album.localeCompare(b.album));
+}
+
+/**
+ * One ZIP for a set of songs: every master (named exactly as the title, `Song Title.mp3`), its artwork, its lyrics PDF
+ * and the catalog PDF. Files that can't be fetched are skipped and counted, so one bad file never blocks the rest.
+ */
+async function downloadSongsZip(tracks: CatalogTrack[], zipName: string, onProgress?: (done: number, total: number) => void): Promise<{ songs: number; skipped: number }> {
   const [{ makeZip, uniqueName }, { buildCatalogPdf }, { buildLyricsPdf }, { myBrand }] = await Promise.all([import("@/lib/zip"), import("@/lib/catalog-pdf"), import("@/lib/lyrics-pdf"), import("@/lib/brand-load")]);
-  const tracks = await listTracks();
   // Their Personal Branding header on the lyric and catalog PDFs inside the ZIP, when they have a kit.
   const brand = await myBrand("catalog");
   const taken = new Set<string>();
@@ -135,6 +165,19 @@ export async function downloadWholeCatalog(onProgress?: (done: number, total: nu
   }
   if (tracks.length) entries.push({ name: uniqueName("Catalog.pdf", taken), data: await bytes((await buildCatalogPdf(tracks, brand)).output("blob")) });
   onProgress?.(tracks.length, tracks.length);
-  saveBlob(makeZip(entries), "My Catalog.zip");
+  saveBlob(makeZip(entries), zipName);
   return { songs: tracks.length, skipped };
+}
+
+/** Every song in the catalog as one ZIP. */
+export async function downloadWholeCatalog(onProgress?: (done: number, total: number) => void) {
+  const tracks = await listTracks();
+  if (!tracks.length) throw new Error("Your catalog is empty, so there is nothing to zip yet.");
+  return downloadSongsZip(tracks, "My Catalog.zip", onProgress);
+}
+
+/** One album or EP as its own ZIP, so a release can be handed over in one click without the whole catalog. */
+export async function downloadRelease(release: Release, onProgress?: (done: number, total: number) => void) {
+  if (!release.tracks.length) throw new Error("That release has no songs in it yet.");
+  return downloadSongsZip(release.tracks, `${safeName(release.album)} (${release.type}).zip`, onProgress);
 }

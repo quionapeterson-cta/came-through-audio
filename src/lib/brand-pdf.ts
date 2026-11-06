@@ -242,7 +242,12 @@ export function prettyDate(v: string | undefined) {
   return new Date(Date.UTC(+m[1]!, +m[2]! - 1, +m[3]!)).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" });
 }
 
-export const GENERATED_ON = "Generated on camethroughaudio.com";
+/**
+ * Every file we make is signed the same way (founder, 2026-11-06): "Made on …", in Primary Black, and never the word
+ * "Generated". One constant so the catalog, lyrics, split sheets and contracts can never drift apart.
+ */
+export const MADE_ON = "Made on Camethroughaudio.com";
+export const MADE_ON_LINE = `${MADE_ON} — Your first stop for distribution`;
 
 /**
  * Footer on every page with brand and page numbers. A Personal Branding document names its owner instead, plus the
@@ -252,7 +257,6 @@ export function brandFooter(pdf: JsPDF, brand?: PdfBrand | null) {
   const pages = pdf.getNumberOfPages();
   const w = pdf.internal.pageSize.getWidth();
   const h = pdf.internal.pageSize.getHeight();
-  const generated = new Date().toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
   for (let i = 1; i <= pages; i++) {
     pdf.setPage(i);
     // Sidebar kits: a slim bar of their first color down the left edge of every page.
@@ -267,15 +271,14 @@ export function brandFooter(pdf: JsPDF, brand?: PdfBrand | null) {
     }
     pdf.setDrawColor(...(brand?.options.accent ? hexRgb(brand.options.accent) : RULE)).setLineWidth(0.3).line(MARGIN, h - 17, w - MARGIN, h - 17);
     font(pdf, "regular", 8.5).setTextColor(...MUTED);
-    pdf.text(brand ? [brand.name, `Generated ${generated}`].filter(Boolean).join("  ·  ") : `Came Through Audio, LLC  ·  Generated ${generated}`, MARGIN, h - 11);
+    // The file says who made it, never when: no "Generated on" date anywhere on a download (founder, 2026-11-06).
+    pdf.text(brand ? brand.name : "Came Through Audio, LLC", MARGIN, h - 11);
     pdf.text(`Page ${i} of ${pages}`, w - MARGIN, h - 11, { align: "right" });
-    if (brand?.showFooter) {
-      font(pdf, "regular", 7).setTextColor(...MUTED);
-      pdf.textWithLink(`${GENERATED_ON}  ·  `, MARGIN, h - 6.5, { url: SITE_URL });
-      const at = MARGIN + pdf.getTextWidth(`${GENERATED_ON}  ·  `);
-      // Same gray as "Generated on…", so it blends with any brand's colors (founder, 2026-10-27).
-      font(pdf, "medium", 7).setTextColor(...MUTED);
-      pdf.textWithLink("YOUR FIRST STOP BEFORE DISTRIBUTION", at, h - 6.5, { url: SITE_URL, charSpace: 0.53 } as never);
+    // Our line sits on every file we make, on every plan, in Primary Black. A Personal Branding kit may turn it off only
+    // on Catalog & Collaborate and Catalog Management, which the server checks before the PDF is built.
+    if (!brand || brand.showFooter) {
+      font(pdf, "medium", 7).setTextColor(...INK);
+      pdf.textWithLink(MADE_ON_LINE, MARGIN, h - 6.5, { url: SITE_URL });
     }
   }
 }

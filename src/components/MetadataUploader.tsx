@@ -21,7 +21,7 @@ import { listStatuses, type SongStatus } from "@/lib/health-songs";
 import type { RepertoireCheck } from "@/lib/health";
 import { HealthLiquid, HealthMeter } from "@/components/HealthMeter";
 import { DownloadCatalogButton } from "@/components/CatalogLapseBanner";
-import { deleteTrack, downloadCatalogFile, listTracks, safeName, saveTrack, uploadCatalogFile, type CatalogTrack } from "@/lib/catalog";
+import { deleteTrack, downloadCatalogFile, downloadRelease, downloadWholeCatalog, groupReleases, listTracks, safeName, saveTrack, uploadCatalogFile, type CatalogTrack } from "@/lib/catalog";
 import { AGENCY_LABEL, downloadAgencyExport, downloadNeighbouringPack, mlcPlaceholderSongs, recordExports, type Agency, type Held } from "@/lib/agency-export";
 import { AgencyExportDialog } from "@/components/AgencyExportDialog";
 import { AGENCY_UPLOAD_STEPS, MLC_EXPORT_NOTES } from "@/lib/glossary";
@@ -112,6 +112,18 @@ export function MetadataUploader({ onShareInfo, userId, mode = "embed", readOnly
   // After a download: how to upload the file at that agency (and, for The MLC, which songs use the placeholder IPI).
   const [nextSteps, setNextSteps] = useState<{ agency: Agency; placeholders: string[] }>();
   const togglePick = (id: string) => setPicked((s) => { const n = new Set(s); if (n.has(id)) n.delete(id); else n.add(id); return n; });
+  // One click for a release or the whole catalog (founder, 2026-11-06): the ZIP is the point of the catalog, so it never
+  // hides behind a per-song menu.
+  const [zipping, setZipping] = useState<string | null>(null);
+  const zip = async (label: string, run: () => Promise<{ songs: number; skipped: number }>) => {
+    setZipping(label);
+    try {
+      const r = await run();
+      if (r.skipped) toast.warning(`${r.skipped} file${r.skipped === 1 ? "" : "s"} couldn't be fetched and ${r.skipped === 1 ? "was" : "were"} left out of the ZIP. The rest downloaded.`);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Could not build the download. Try again in a moment.");
+    } finally { setZipping(null); }
+  };
   const runExport = (a: Agency, list: CatalogTrack[], name: string) => {
     if (!canExport) { setUpsell("export"); return; }
     downloadAgencyExport(a, list, safeName(name))
@@ -126,7 +138,8 @@ export function MetadataUploader({ onShareInfo, userId, mode = "embed", readOnly
         const off = list.filter((t) => !songs.some((h) => h.track.id === t.id) && registrationReadiness(t.metadata, a).warnings.length);
         if (off.length) toast.warning(`${off.length === 1 ? `"${off[0]!.title}" has splits` : `${off.length} songs have splits`} that don't add up to exactly 100%. Agencies reject splits under or over 100%, so fix ${off.length === 1 ? "it" : "them"} before you submit.`, { duration: 10000 });
       })
-      .catch(() => toast.error("Could not build the export."));
+      // Say what actually went wrong: a generic "could not build" hid every real failure from the person clicking.
+      .catch((e) => toast.error(e instanceof Error ? `Could not build the export: ${e.message}` : "Could not build the export."));
   };
   /** Performers on each recording for PPL / SoundExchange International. Songs need an ISRC to be matched. */
   const runPack = (list: CatalogTrack[], name: string) => {
@@ -790,7 +803,26 @@ export function MetadataUploader({ onShareInfo, userId, mode = "embed", readOnly
             </DropdownMenu>
           )}
 </>)}
-              {tracks.length > 0 && <Button type="button" variant="outline" size="sm" onClick={() => { const list = filter === "All" ? tracks : tracks.filter((t) => releaseGroup(t) === filter); void myBrand("catalog").then((brand) => downloadCatalogPdf(list, filter === "All" ? "Catalog" : `Catalog - ${filter}s`, brand)).catch(() => toast.error("Could not create the catalog PDF.")); }}><FileText />{filter === "All" ? "Catalog PDF" : `${filter}s PDF`}</Button>}
+              {tracks.length > 0 && (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button type="button" variant="outline" size="sm" disabled={!!zipping}><Download />{zipping ?? "Download"}</Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="max-h-80 overflow-y-auto">
+                    <DropdownMenuItem disabled={!!zipping} onClick={() => void zip(`Zipping ${tracks.length} songs…`, () => downloadWholeCatalog())} className="flex-col items-start gap-0.5">
+                      <span className="font-semibold">The whole catalog</span>
+                      <span className="text-xs text-muted-foreground">Every master, its artwork, lyrics and the catalog PDF in one ZIP.</span>
+                    </DropdownMenuItem>
+                    {groupReleases(tracks).map((r) => (
+                      <DropdownMenuItem key={r.key} disabled={!!zipping} onClick={() => void zip(`Zipping ${r.album}…`, () => downloadRelease(r))} className="flex-col items-start gap-0.5 border-t border-border">
+                        <span className="font-semibold">Just {r.album}</span>
+                        <span className="text-xs text-muted-foreground">{r.type} · {r.tracks.length} {r.tracks.length === 1 ? "song" : "songs"}</span>
+                      </DropdownMenuItem>
+                    ))}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              )}
+              {tracks.length > 0 && <Button type="button" variant="outline" size="sm" onClick={() => { const list = filter === "All" ? tracks : tracks.filter((t) => releaseGroup(t) === filter); void myBrand("catalog").then((brand) => downloadCatalogPdf(list, filter === "All" ? "Catalog" : `Catalog - ${filter}s`, brand)).catch((e) => toast.error(e instanceof Error ? `Could not create the catalog PDF: ${e.message}` : "Could not create the catalog PDF.")); }}><FileText />{filter === "All" ? "Catalog PDF" : `${filter}s PDF`}</Button>}
             </div>
           </div>
           {tracks.length === 0 ? <p className="text-sm text-muted-foreground">No songs yet. Use Add song to save a song you already embedded, or embed a new one in Embed Metadata. Every song you save is checked automatically in the Royalty Health Hub.</p> : (

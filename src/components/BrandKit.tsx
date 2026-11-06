@@ -309,8 +309,8 @@ export function BrandKit({ userId, tier, artistName }: { userId: string; tier: T
 
       <div className="flex items-start justify-between gap-4 rounded-lg border border-border p-4">
         <div className="space-y-1">
-          <Label htmlFor="bk-footer">Show "Generated on camethroughaudio.com"</Label>
-          <p className="text-xs text-muted-foreground">A small line at the bottom of each page, with our tagline. You can turn it off.</p>
+          <Label htmlFor="bk-footer">Show "Made on Camethroughaudio.com"</Label>
+          <p className="text-xs text-muted-foreground">A small line at the bottom of each page, with our tagline. Catalog &amp; Collaborate and Catalog Management can turn it off; on any other plan it stays on.</p>
         </div>
         <Switch id="bk-footer" checked={kit.showFooter} onCheckedChange={(v) => edit({ showFooter: v })} />
       </div>
@@ -340,7 +340,7 @@ export function BrandKit({ userId, tier, artistName }: { userId: string; tier: T
           </div>
           {kit.options.cover && <p className="relative mt-2 text-[10px] text-[#525252]">+ Cover page with your logo, name and the contract title.</p>}
           {kit.style === "minimal" && <div className="relative mt-4 flex items-center justify-between text-[10px] text-[#525252]"><span>{kit.name || "Your name"}</span>{logoUrl && <img src={logoUrl} alt="" className="h-5 max-w-[4rem] object-contain" />}</div>}
-          {kit.showFooter && <p className="mt-4 text-[10px] text-[#525252]">Generated on camethroughaudio.com · <span className="font-medium tracking-[2px]">YOUR FIRST STOP BEFORE DISTRIBUTION</span></p>}
+          {kit.showFooter && <p className="mt-4 text-[10px] font-medium text-[#0b0b0b]">Made on Camethroughaudio.com — Your first stop for distribution</p>}
         </div>
       </div>
 

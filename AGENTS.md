@@ -359,3 +359,20 @@ rules keep it consistent as features are added.
   `VERCEL_TOKEN` only (hand-pasted into the ignored `.vercel-token`, never committed), always keeps the promoted
   production deployment plus the newest 40, and dry-runs unless `--delete` is passed. The Vercel connection available
   to the agent cannot delete deployments, so this always needs a founder-created token.
+
+## Downloads: One Click, Our Branding (always follow)
+
+- **A download is the product, not a per-song chore** (founder, 2026-11-06): My Catalog offers one click for the whole
+  catalog and one per album or EP. `downloadWholeCatalog`, `downloadRelease` and `groupReleases` in `src/lib/catalog.ts`
+  build the ZIP (masters, artwork, lyrics PDFs, catalog PDF) through one shared path; never add a second downloader.
+- **Every download button must actually fire** (founder, 2026-11-06): saving a file goes through `saveBlob`, which puts
+  the anchor in the document before clicking it, because a detached anchor is ignored in Safari and the button looks
+  stuck. A failed build must say what failed — never a generic "could not build" toast.
+- **Our branding is on every file, on every plan** (founder, 2026-11-06): all downloads carry
+  `MADE_ON_LINE` — "Made on Camethroughaudio.com — Your first stop for distribution" — in Primary Black #0b0b0b. The
+  word "Generated" never appears on a download, and no generation date is printed. Only Catalog Management (which
+  includes a kit) or a paid `branding_yearly` add-on replaces our header, and a kit that isn't set up yet
+  (`kitReady`) still gets our default header.
+- **Only Catalog & Collaborate and Catalog Management may cut the footer off** (founder, 2026-11-06): `brandFor` in
+  `src/lib/brand-kit.functions.ts` forces `showFooter: true` on any lower plan, whatever the saved kit says. Never move
+  that check into a component.
