@@ -208,8 +208,8 @@ function CatalogRow() {
       <svg aria-hidden viewBox="0 0 100 100" preserveAspectRatio="none"
         className="pointer-events-none absolute inset-0 h-full w-full text-electric">
         {/* Eaves past the walls, a peaked roof, a ceiling line across the wall tops, then walls down both sides. */}
-        <path d="M0 43 L50 6 L100 43" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
-        <path d="M4 40 H96 M4 40 V99 M96 40 V99" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
+        <path d="M2 43.1 L50 6 L98 43.1" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
+        <path d="M6 40 H94 M6 40 V99 M94 40 V99" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
       </svg>
       {/* Percentage inset: the rows stay inside the walls on a wide card, not just on a phone. */}
       <div className="relative space-y-1.5 px-[6%]">
