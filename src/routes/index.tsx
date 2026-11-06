@@ -187,7 +187,8 @@ function CatalogScatter() {
   return (
     <div className="relative flex h-full min-h-[21rem] flex-col justify-end rounded-2xl border border-dashed border-ink-border bg-ink p-4 text-ink-foreground">
       <p className={`${CARD_LABEL} text-ink-muted`}>Before Embedding</p>
-      <div className="relative flex flex-wrap items-center justify-center gap-2">
+      {/* Same minimum height as the three song rows on the right, so the two stacks start and end on the same lines. */}
+      <div className="relative flex min-h-[7.875rem] flex-wrap items-center justify-center gap-2">
         {CATALOG_SCATTER.map(({ icon: Icon, label, tilt }) => (
           <span key={label} className="inline-flex items-center gap-1.5 rounded-full border border-ink-border bg-ink px-2.5 py-1 text-[11px] text-ink-muted sm:text-xs"
             style={{ transform: `rotate(${tilt})` }}>
