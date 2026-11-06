@@ -479,6 +479,20 @@ function Landing() {
         </div>
       </section>
 
+      {/* The word as the industry uses it, in its own blue band above the callout (founder, 2026-11-05): a catalog
+          is an asset artists and companies trade, not only the folder a song lives in. No figure and no year — the
+          example carries itself without us asserting a price. */}
+      <section className="bg-primary py-14 text-primary-foreground">
+        <div className="mx-auto max-w-5xl px-6">
+          <h2 className="text-3xl font-extrabold md:text-4xl">What the industry means by a catalog</h2>
+          <div className="mt-4 grid gap-6 text-lg leading-relaxed text-primary-foreground/90 md:grid-cols-2">
+            <p>A catalog is not one song. In the music business the word means an artist's cumulative body of work, held as a single asset: every recording, every composition and every share of the writing, valued and traded together rather than a track at a time.</p>
+            <p>Michael Jackson bought the Beatles' publishing catalog, and that purchase is still the example people reach for when they explain what a catalog is worth. The songs never moved one at a time; the catalog did, worth millions, because owning the whole body of work is worth more than owning any part of it.</p>
+          </div>
+          <p className="mt-6 border-t border-primary-foreground/25 pt-5 text-lg leading-relaxed text-primary-foreground/90">That is the sense of the word this platform uses: your songs, gathered into one asset you can put a name to.</p>
+        </div>
+      </section>
+
       <section className="bg-ink py-14 text-ink-foreground">
         <div className="mx-auto max-w-5xl px-6">
             {/* Black callout, straight after the story (founder, 2026-11-05): it was blue for one pass and goes back
