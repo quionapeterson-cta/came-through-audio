@@ -561,7 +561,7 @@ function Landing() {
           <h2 className="text-3xl font-extrabold md:text-4xl">What the industry means by a catalog</h2>
           <div className="mt-4 grid gap-6 text-lg leading-relaxed text-primary-foreground/90 md:grid-cols-2">
             <p>A catalog is not one song. In the music business the word means an artist's cumulative body of work, held as a single asset: every recording, every composition and every share of the writing, valued and traded together rather than a track at a time. A single song is a credit; a catalog is an estate, because the worth sits in the body of work and the income it already earns, not in any one release. That is why catalogs get bought, licensed and insured whole, and why an artist who owns one sits down to a very different conversation than an artist with a good song on a hard drive.</p>
-            <p>Michael Jackson bought the Beatles' publishing catalog, and that purchase is still the example people reach for. The songs never moved one at a time; the catalog did, because owning the whole body of work is worth more than owning any part of it.</p>
+            <p>Michael Jackson bought the Beatles' publishing catalog, and that purchase is still the example people reach for. He was not buying a hit; he was buying the body of work: the songs, the shares in them and the right to say yes or no when someone wants to use one. The songs never moved one at a time; the catalog moved whole, as a single asset on a single contract. That is the lesson worth carrying: owning the body of work is worth more than owning any part of it, because a catalog keeps earning long after any one release stops being new. That is what a buyer is paying for.</p>
           </div>
         </div>
       </section>
