@@ -207,11 +207,12 @@ function CatalogRow() {
     <div className="relative flex h-full min-h-[21rem] flex-col justify-end rounded-2xl border border-dashed border-ink-border bg-ink p-4 text-ink-foreground">
       <svg aria-hidden viewBox="0 0 100 100" preserveAspectRatio="none"
         className="pointer-events-none absolute inset-0 h-full w-full text-electric">
-        {/* Eaves run out past the walls to both edges, the roof peaks in the middle, the walls drop from where it meets them. */}
-        <path d="M0 46 L50 6 L100 46" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
-        <path d="M8 39.6 V99 M92 39.6 V99" fill="none" stroke="currentColor" strokeWidth="1.5" vectorEffect="non-scaling-stroke" />
+        {/* Eaves past the walls, a peaked roof, a ceiling line across the wall tops, then walls down both sides. */}
+        <path d="M0 43 L50 6 L100 43" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
+        <path d="M4 40 H96 M4 40 V99 M96 40 V99" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
       </svg>
-      <div className="relative space-y-1.5 px-4">
+      {/* Percentage inset: the rows stay inside the walls on a wide card, not just on a phone. */}
+      <div className="relative space-y-1.5 px-[6%]">
         {HOUSE_SONGS.map((title) => (
           <div key={title} className="flex items-center gap-2 rounded-lg border border-ink-border bg-ink-border/25 px-2 py-1.5">
             <span className="grid h-6 w-6 shrink-0 place-items-center rounded bg-primary/25"><Music className="h-3 w-3 text-electric" aria-hidden /></span>
