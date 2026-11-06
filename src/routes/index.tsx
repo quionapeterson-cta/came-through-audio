@@ -489,14 +489,14 @@ function Landing() {
       <section className="bg-background py-16 md:py-20">
         <div className="mx-auto max-w-5xl px-6">
           <div className="rounded-2xl bg-primary px-6 py-12 text-primary-foreground ring-1 ring-inset ring-primary-foreground/20 md:px-12 md:py-14">
-            {/* The panel is signed with the words and the mark as its own small tile in the corner (founder, 2026-11-06):
-                the mark standing in for the C read as a typo at this size, so the name is typed plainly and the logo
-                sits apart from it. The tile is ink because the mark's arrow is the same cobalt as the panel, which
-                would swallow it on blue; on ink the white C and the cobalt arrow both read. */}
+            {/* The panel is signed with the words, and the mark sits in its corner as a badge (founder, 2026-11-06): the
+                mark standing in for the C read as a typo at this size, so the name is typed plainly and the logo is
+                set apart from it. On cobalt the mark's own arrow would dissolve into the panel, so the badge is drawn
+                as a single white silhouette here rather than on a plate of its own. */}
             <div className="flex items-start justify-between gap-4">
               <p className="text-sm font-bold uppercase tracking-[3px] sm:text-base">Came Through Audio</p>
-              <img src="/cta-mark-white.png" alt="Came Through Audio" width={48} height={48}
-                className="-mt-1 h-11 w-11 shrink-0 rounded-xl bg-ink p-1.5 object-contain md:h-12 md:w-12" />
+              <img src="/cta-mark-white.png" alt="" aria-hidden width={48} height={48}
+                className="-mt-1 h-11 w-11 shrink-0 object-contain brightness-0 invert md:h-12 md:w-12" />
             </div>
             <p className="mt-6 text-4xl font-extrabold leading-[1.1] md:text-5xl lg:text-6xl">Your music. One Home.</p>
             <p className="mt-3 text-3xl font-extrabold leading-[1.2] md:text-4xl lg:text-5xl">
