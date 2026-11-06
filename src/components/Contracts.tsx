@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { confirmAction } from "@/components/ConfirmHost";
-import { Sparkles, AlertTriangle, BookOpen, FolderOpen, Pin, PinOff, CalendarDays, Gift, Check, ChevronDown, ChevronLeft, Copy, Download, FileSignature, FlaskConical, Loader2, Lock, Mail, PenLine, Plus, RotateCcw, ScrollText, ShieldCheck, StickyNote, Trash2, Unlock, Vault } from "lucide-react";
+import { ArrowUpRight, Sparkles, AlertTriangle, BookOpen, FolderOpen, Pin, PinOff, CalendarDays, Gift, Check, ChevronDown, ChevronLeft, Copy, Download, FileSignature, FlaskConical, Loader2, Lock, Mail, PenLine, Plus, RotateCcw, ScrollText, ShieldCheck, StickyNote, Trash2, Unlock, Vault } from "lucide-react";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -32,7 +32,7 @@ import { listOutreach, sendOutreach, type OutreachLogRow } from "@/lib/outreach.
 import { OUTREACH_DAILY_LIMIT, OUTREACH_LABEL, outreachDraft, type OutreachFields, type OutreachKind } from "@/lib/outreach-emails";
 import { TIER_LABEL } from "@/lib/plans";
 import { logBadgeEvent, requestBadgeCheck } from "@/lib/badge-events";
-import { BLUEPRINT_GUIDES, CHEAT_SHEETS, type Guide } from "@/lib/guides";
+import { BLUEPRINT_GUIDES, CHEAT_SHEETS, linkFor, type Guide, type GuideLink } from "@/lib/guides";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ProgressMeter, WorkingOn } from "@/components/WorkingOn";
 import { useWorkbench, type Workbench } from "@/hooks/useWorkbench";
@@ -55,7 +55,7 @@ const STATUS: Record<Contract["status"], { label: string; className: string }> =
  * request signatures, and keep fully signed contracts in the vault. Creating requires Catalog Management;
  * contracts other people send you are always visible, since signing is free.
  */
-export function Contracts({ userId, unlocked, onUpgrade, company = false }: { userId: string; unlocked: boolean; onUpgrade: () => void; /** Admin → Company Contracts: the LLC's own agreements and templates. */ company?: boolean }) {
+export function Contracts({ userId, unlocked, onUpgrade, company = false, onOpen }: { userId: string; unlocked: boolean; onUpgrade: () => void; /** Admin → Company Contracts: the LLC's own agreements and templates. */ company?: boolean; /** Opens the screen a checklist item is done on (founder, 2026-11-06); absent in Admin, where there is no workspace. */ onOpen?: (link: GuideLink) => void }) {
   const [view, setView] = useState<View>("blueprints");
   const [contracts, setContracts] = useState<Contract[]>([]);
   const [received, setReceived] = useState<ReceivedContract[]>([]);
@@ -151,7 +151,7 @@ export function Contracts({ userId, unlocked, onUpgrade, company = false }: { us
 
         {view === "guides" && (!unlocked
           ? <UpgradeLock className="" title="Blueprints" tier="management" onUpgrade={onUpgrade} text="Step-by-step guides to running your music business, from royalty registration to touring, plus home recording cheat sheets for every genre." />
-          : <Guides workbench={workbench} focusId={focusGuide} />)}
+          : <Guides workbench={workbench} focusId={focusGuide} onOpen={onOpen} />)}
 
         {view === "working" && !company && (
           <WorkingOn workbench={workbench} contracts={contracts} loading={loading}
@@ -287,7 +287,7 @@ function Blueprints({ unlocked, onUse }: { unlocked: boolean; onUse: (bp: Bluepr
 }
 
 /** Blueprints (business guides) and home recording cheat sheets, in two titled, collapsible groups. */
-function Guides({ workbench, focusId }: { workbench: Workbench; /** Opened from Working On: start with this one expanded. */ focusId?: string | undefined }) {
+function Guides({ workbench, focusId, onOpen }: { workbench: Workbench; /** Opened from Working On: start with this one expanded. */ focusId?: string | undefined; onOpen?: ((link: GuideLink) => void) | undefined }) {
   const groups: [string, string, Guide[]][] = [["Blueprints", "Step-by-step guides to running your music business", BLUEPRINT_GUIDES], ["Home recording cheat sheets", "Setup, genre tips and quick fixes", CHEAT_SHEETS]];
   const [openId, setOpenId] = useState<string | undefined>(focusId);
   const [openGroup, setOpenGroup] = useState<string | undefined>(() => groups.find(([, , list]) => list.some((g) => g.id === focusId))?.[0] ?? "Blueprints");
@@ -317,6 +317,19 @@ function Guides({ workbench, focusId }: { workbench: Workbench; /** Opened from 
       toast.success(`${g.title} complete — every box ticked.`);
       requestBadgeCheck();
     }
+  };
+  /**
+   * A checklist item's own shortcut: another guide opens in place, and every other target asks the workspace to change
+   * tab, so a blueprint can be worked from its list instead of from memory (founder, 2026-11-06).
+   */
+  const openLink = (link: GuideLink) => {
+    if (link.where === "blueprint" && link.guideId) {
+      setOpenGroup(groups.find(([, , list]) => list.some((x) => x.id === link.guideId))?.[0] ?? "Blueprints");
+      setOpenId(link.guideId);
+      document.getElementById(`guide-${link.guideId}`)?.scrollIntoView({ behavior: "smooth", block: "start" });
+      return;
+    }
+    onOpen?.(link);
   };
   return (
     <section className="space-y-4">
@@ -362,11 +375,16 @@ function Guides({ workbench, focusId }: { workbench: Workbench; /** Opened from 
                                   const key = `${g.id}:${k}`;
                                   const open = openNote === key;
                                   const late = !!meta.due && !ticked && isOverdue(meta.due);
+                                  const link = linkFor(g.id, k);
                                   return (
                                     <li key={k}>
                                       <div className="flex items-start gap-2">
                                         <Checkbox id={cid} checked={ticked} onCheckedChange={() => tick(g, k)} className="mt-0.5" />
                                         <label htmlFor={cid} className={`min-w-0 flex-1 cursor-pointer ${ticked ? "text-muted-foreground line-through" : ""}`}>{k}</label>
+                                        {link && (link.where === "blueprint" || onOpen) && (
+                                          <button type="button" onClick={() => openLink(link)} aria-label={link.label} title={link.label}
+                                            className="shrink-0 rounded p-0.5 text-muted-foreground hover:text-primary"><ArrowUpRight className="h-4 w-4" /></button>
+                                        )}
                                         <button type="button" aria-expanded={open} aria-label={`Note or due date for ${k}`} title="Add a note or a due date"
                                           className={`shrink-0 rounded p-0.5 hover:text-foreground ${meta.note || meta.due ? "text-primary" : "text-muted-foreground"}`}
                                           onClick={() => setOpenNote(open ? undefined : key)}><StickyNote className="h-4 w-4" /></button>

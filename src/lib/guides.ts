@@ -5,6 +5,20 @@
 export type GuideStep = { title: string; text: string };
 export type Guide = { id: string; kind: "Blueprint" | "Cheat sheet"; title: string; summary: string; steps: GuideStep[]; checklist?: string[] };
 
+/**
+ * Where one checklist item is actually done, so a blueprint reads as a to-do list you can work from instead of notes you
+ * then have to hunt down (founder, 2026-11-06). A link is optional: no link means the step happens outside the app, like
+ * joining a PRO.
+ */
+export type GuideLink = {
+  /** The tooltip and screen-reader words, e.g. "Open My Catalog". */
+  label: string;
+  /** The screen that finishes the item; "blueprint" opens another guide in the same section. */
+  where: "catalog" | "health" | "splits" | "profile" | "blueprint";
+  /** The guide to open when `where` is "blueprint". */
+  guideId?: string;
+};
+
 const s = (title: string, text: string): GuideStep => ({ title, text });
 
 export const BLUEPRINT_GUIDES: Guide[] = [
@@ -340,3 +354,22 @@ export const CHEAT_SHEETS: Guide[] = [
 ];
 
 export const GUIDES: Guide[] = [...BLUEPRINT_GUIDES, ...CHEAT_SHEETS];
+
+/**
+ * The checklist items the app can open, by guide id and then by the item's exact wording. Kept beside the guides so the
+ * wording and its link can't drift apart, and checked by a test.
+ */
+export const GUIDE_LINKS: Record<string, Record<string, GuideLink>> = {
+  "royalty-registration": {
+    "PRO writer account": { label: "Open your writer details", where: "profile" },
+    "IPI saved in My Catalog": { label: "Open your writer details", where: "profile" },
+    "Publishing set up": { label: "Read the Publishing Company blueprint", where: "blueprint", guideId: "publishing-company" },
+    "Songs registered with PRO": { label: "Open My Catalog", where: "catalog" },
+    "The MLC": { label: "Open My Catalog for the MLC export", where: "catalog" },
+    SoundExchange: { label: "Open My Catalog for the recordings", where: "catalog" },
+    "Quarterly check": { label: "Open the Royalty Health Hub", where: "health" },
+  },
+};
+
+/** The screen one checklist item opens, or nothing when that step happens outside the app. */
+export const linkFor = (guideId: string, item: string): GuideLink | undefined => GUIDE_LINKS[guideId]?.[item];

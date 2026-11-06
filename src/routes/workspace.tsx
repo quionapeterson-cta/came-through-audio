@@ -47,6 +47,7 @@ import { EmailConfirmBanner } from "@/components/EmailConfirmBanner";
 import { PlanPendingBanner } from "@/components/PlanPendingBanner";
 import { PdfTools } from "@/components/PdfTools";
 import { inGrace, isPaused } from "@/lib/retention";
+import type { GuideLink } from "@/lib/guides";
 
 export const Route = createFileRoute("/workspace")({
   head: () => ({
@@ -333,7 +334,11 @@ function Workspace() {
           <TabsContent value="protect"><AIProtectionHub userId={user.id} purchases={purchases} justPaid={search.checkout === "success" && search.tab === "protect"} track={protectTrack} /></TabsContent>
           <TabsContent value="splits"><SplitSheets userId={user.id} canSplit={canSplit} canCollect={canCollect} prefillTrackId={splitTrackId} onUpgrade={upgrade} /></TabsContent>
           <TabsContent value="health"><Health startView={openExpert || search.view === "expert" || (search.tab === "health" && search.checkout === "success") ? "expert" : "check"} justPaid={search.tab === "health" && search.checkout === "success"} canCatalog={canCatalog} onFix={() => setTab("catalog")} onFixField={(trackId, field) => { setCatalogFix({ trackId, field }); setTab("catalog"); }} onAddSong={(newTitle, artist) => { setCatalogFix({ newTitle, artist, nonce: Date.now() }); setTab("catalog"); }} onEmbed={() => setTab("embed")} userId={user.id} purchases={purchases} canUtility={canCollect} onUpgrade={upgrade} onSplitSheet={(id) => { setSplitTrackId(id); setTab("splits"); }} start={healthStart} /></TabsContent>
-          <TabsContent value="learn"><Learn userId={user.id} unlocked={hasTier(tier, "management")} onUpgrade={upgrade} /></TabsContent>
+          <TabsContent value="learn"><Learn userId={user.id} unlocked={hasTier(tier, "management")} onUpgrade={upgrade}
+            onOpen={(link) => {
+              if (link.where === "profile") setProfileOpen(true);
+              else if (link.where === "catalog" || link.where === "health" || link.where === "splits") setTab(link.where);
+            }} /></TabsContent>
           <TabsContent value="pdf">
             {hasTier(tier, "management")
               ? <PdfTools canEmail={false} title="Fill, sign and download a PDF" />
@@ -371,7 +376,7 @@ function useStudioMode() {
 /** One on One Coaching stays hidden until there's a plan for it (founder, 2026-10-23). Set to true to bring it back. */
 const SHOW_COACHING = false;
 
-function Learn({ userId, unlocked, onUpgrade }: { userId: string; unlocked: boolean; onUpgrade: () => void }) {
+function Learn({ userId, unlocked, onUpgrade, onOpen }: { userId: string; unlocked: boolean; onUpgrade: () => void; /** A checklist item's shortcut, so a blueprint can be worked from its own list (founder, 2026-11-06). */ onOpen: (link: GuideLink) => void }) {
   const [view, setView] = useState<"contracts" | "classes">("contracts");
   return (
     <div className="mt-6">
@@ -380,7 +385,7 @@ function Learn({ userId, unlocked, onUpgrade }: { userId: string; unlocked: bool
         <Button size="sm" variant={view === "classes" ? "default" : "ghost"} onClick={() => setView("classes")}><GraduationCap className="h-4 w-4" />One on One Coaching</Button>
       </div>}
       {/* Contracts handles its own gating: blueprint guides are a preview for everyone, and contracts sent to you are always visible. */}
-      {view === "contracts" || !SHOW_COACHING ? <Contracts userId={userId} unlocked={unlocked} onUpgrade={onUpgrade} />
+      {view === "contracts" || !SHOW_COACHING ? <Contracts userId={userId} unlocked={unlocked} onUpgrade={onUpgrade} onOpen={onOpen} />
         : !unlocked ? <UpgradeLock title="One on One Coaching" tier="management" onUpgrade={onUpgrade}
             text="Private sessions with a music business expert on your catalog, releases, royalties or deals." />
         : <Coaching userId={userId} />}
