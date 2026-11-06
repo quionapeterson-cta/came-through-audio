@@ -487,15 +487,15 @@ function Landing() {
         </div>
       </section>
 
-      {/* The copy runs on black with the pictures above (founder, 2026-11-05): one dark block from the cards to the
-          callout, so the page does not flash white between the picture and the words that explain it. */}
-      <section className="bg-ink py-14 text-ink-foreground">
+      {/* The copy sits on white again (founder, 2026-11-05), and the industry-deals standfirst gives way to the point
+          that actually keeps an artist up at night: the backup that survives a distributor taking the release down. */}
+      <section className="bg-background py-14 text-foreground">
         <div className="mx-auto max-w-5xl px-6">
           <div>
-            <p className="text-xl leading-relaxed text-ink-foreground first-letter:float-left first-letter:mr-3 first-letter:mt-1 first-letter:text-6xl first-letter:font-black first-letter:leading-[0.8]">
-              A catalog is every piece of a song kept together: the master, the artwork, the lyrics, the credits and the codes, <span className="font-semibold text-electric">for every song you own</span>.
+            <p className="text-xl leading-relaxed text-foreground first-letter:float-left first-letter:mr-3 first-letter:mt-1 first-letter:text-6xl first-letter:font-black first-letter:leading-[0.8]">
+              A catalog is every piece of a song kept together: the master, the artwork, the lyrics, the credits and the codes, <span className="font-semibold text-primary">for every song you own</span>.
             </p>
-            <div className="mt-6 grid gap-x-10 gap-y-5 text-lg leading-relaxed text-ink-muted md:grid-cols-2">
+            <div className="mt-6 grid gap-x-10 gap-y-5 text-lg leading-relaxed text-muted-foreground md:grid-cols-2">
               <div className="space-y-5">
                 <p>Before cataloging, one song lives in a dozen places. The master is an attachment in an email thread, a copy on a hard drive and a link in a Dropbox folder; the session file is on the studio's computer. The cover art is in a design tool, the lyrics are in your notes app, and the splits are in a group chat with the writers.</p>
                 <p>Cataloging stops the hunt. Search a title, a writer or an ISRC and the song comes back with its master, art, lyrics and credits attached.</p>
@@ -509,15 +509,20 @@ function Landing() {
             {/* The word as the industry uses it, with reported deals as the proof — and an explicit "not an appraisal" so
                 no one reads a member's catalog as priced by us (founder, 2026-11-05). Set across the spread like a
                 standfirst: same width as the rest, two columns, paragraphs flowing together. */}
-            <p className="mt-8 border-t border-ink-border pt-6 text-xl leading-relaxed text-ink-foreground md:columns-2 md:gap-10">
-              Catalog is also the word the business uses for everything an artist has made,{" "}
-              <span className="font-semibold text-electric">treated as one asset</span>. Bruce Springsteen sold his masters and
-              publishing for a reported <span className="font-extrabold text-electric">$500 million</span> in 2021; Bob Dylan's
-              songwriting catalog went for a reported <span className="font-extrabold text-electric">$300 million or more</span>.
-              Those are superstar deals, <span className="font-semibold text-ink-foreground">not an appraisal</span> of anyone's
-              songs, but they are why the paperwork matters:{" "}
-              <span className="font-semibold text-ink-foreground">the artist who can name every song, every writer and every split is the one who gets paid for them.</span>
-            </p>
+            {/* A distributor taking a release down is a fear an artist has actually lived through, so this block answers
+                it instead of quoting deal figures (founder, 2026-11-05). It says what the member can do the morning
+                after, in their words, with no number and no promise we do not keep. */}
+            <div className="mt-8 border-t border-border pt-6">
+              <p className="text-xs font-bold uppercase tracking-[2px] text-primary">True sovereign backup</p>
+              <p className="mt-3 text-xl leading-relaxed text-foreground md:text-2xl">
+                A distributor can take your catalog down: a rights claim, a disputed payout, an account closed over
+                paperwork you never saw. The morning after, the only question that matters is whether your music still
+                exists somewhere you can reach. Here it does — log in from any computer, download your masters with the
+                metadata already embedded, and hand the next distributor a complete record: song, credits, artwork and
+                codes, without retyping a field. That is what sovereign means:{" "}
+                <span className="font-semibold text-primary">the catalog stays with you, not with whoever happens to be distributing it</span>.
+              </p>
+            </div>
           </div>
         </div>
       </section>
