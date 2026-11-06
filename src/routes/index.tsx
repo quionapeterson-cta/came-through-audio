@@ -502,10 +502,22 @@ function Landing() {
             <p className="mt-3 text-3xl font-extrabold leading-[1.2] md:text-4xl lg:text-5xl">
               <span className="inline-block bg-ink px-3 py-1 text-ink-foreground">One asset you can count on.</span>
             </p>
-            <p className="mt-7 text-lg leading-relaxed text-primary-foreground/90 md:text-xl">
-              The data that tracks a song — title, writers, credits, artwork and codes — is written into the master
-              itself, not filed somewhere beside it. So the whole catalog stays one asset you own: something you can
-              download, hand to a distributor or re-release without hunting through drives and inboxes for the pieces.
+            {/* The copy pops by getting shorter and harder (founder, 2026-11-06): one bold line that states the mechanism,
+                a three-beat rhythm line under it, and a payoff sentence that keeps the practical promise. Same facts as
+                before — nothing added, nothing claimed. */}
+            <p className="mt-8 max-w-3xl text-xl font-semibold leading-snug md:text-2xl">
+              Title, writers, credits, artwork and codes — written into the master itself, not filed beside it.
+            </p>
+            <p className="mt-4 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm font-bold uppercase tracking-[2.5px] text-primary-foreground/75 md:text-base">
+              <span>One file</span>
+              <span aria-hidden className="text-primary-foreground/40">·</span>
+              <span>Every piece</span>
+              <span aria-hidden className="text-primary-foreground/40">·</span>
+              <span>Yours to hand over</span>
+            </p>
+            <p className="mt-6 max-w-3xl text-lg leading-relaxed text-primary-foreground/90 md:text-xl">
+              So the whole catalog stays one asset you own. Download it whole, hand it to a distributor, or re-release
+              it — without hunting through drives and inboxes for the pieces.
             </p>
           </div>
         </div>
