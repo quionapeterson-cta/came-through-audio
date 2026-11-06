@@ -499,10 +499,9 @@ function Landing() {
               <span className="h-px w-10 bg-primary-foreground/60" />
               Came Through Audio
             </p>
-            <p className="mt-6 text-4xl font-extrabold leading-[1.1] md:text-5xl lg:text-6xl">
-              Your music. One Home.
-              <br />
-              <span className="bg-ink px-2 text-ink-foreground">One asset you can count on.</span>
+            <p className="mt-6 text-4xl font-extrabold leading-[1.1] md:text-5xl lg:text-6xl">Your music. One Home.</p>
+            <p className="mt-3 text-3xl font-extrabold leading-[1.2] md:text-4xl lg:text-5xl">
+              <span className="inline-block bg-ink px-3 py-1 text-ink-foreground">One asset you can count on.</span>
             </p>
             <p className="mt-7 text-lg leading-relaxed text-primary-foreground/90 md:text-xl">
               The data that tracks a song — title, writers, credits, artwork and codes — is written into the master
