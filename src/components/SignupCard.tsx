@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { passwordValid, rememberReturn } from "@/lib/password";
 import { rememberLoginEmail } from "@/lib/login-memory";
 import { PasswordField } from "@/components/PasswordField";
-import { PLAN_INTENT_EVENT, PLAN_TIERS, PRICE_TIER, TIER_LABEL, peekPlanIntent, planSignupNext, rememberPlanIntent, takePlanIntent } from "@/lib/plans";
+import { PLAN_INTENT_EVENT, PLAN_TIERS, PRICE_TIER, TIER_LABEL, peekPlanIntent, planIntentFromSearch, planSignupNext, rememberPlanIntent, takePlanIntent } from "@/lib/plans";
 import { openCheckout } from "@/lib/checkout";
 
 export function SignupCard({ returnPath, onAuthed, inviteMode }: { returnPath?: string; onAuthed?: () => void; inviteMode?: boolean } = {}) {
@@ -25,7 +25,9 @@ export function SignupCard({ returnPath, onAuthed, inviteMode }: { returnPath?: 
   // A paid tier picked on the plan cards: this is that tier's sign-up, and its checkout opens right after.
   const [intent, setIntent] = useState<string | null>(null);
   useEffect(() => {
-    const read = () => setIntent(inviteMode ? null : peekPlanIntent());
+    // The plan can arrive in the URL (a link that names it) as well as in this browser, so the form still knows which
+    // tier it is signing up for when storage was blocked or the link came from somewhere else.
+    const read = () => setIntent(inviteMode ? null : (planIntentFromSearch(new URLSearchParams(window.location.search).get("plan")) ?? peekPlanIntent()));
     read();
     window.addEventListener(PLAN_INTENT_EVENT, read);
     return () => window.removeEventListener(PLAN_INTENT_EVENT, read);
