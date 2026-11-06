@@ -487,14 +487,15 @@ function Landing() {
         </div>
       </section>
 
-      {/* The copy, on white: its own band between the black pictures above and the black callout below. */}
-      <section className="bg-background py-14 text-foreground">
+      {/* The copy runs on black with the pictures above (founder, 2026-11-05): one dark block from the cards to the
+          callout, so the page does not flash white between the picture and the words that explain it. */}
+      <section className="bg-ink py-14 text-ink-foreground">
         <div className="mx-auto max-w-5xl px-6">
           <div>
-            <p className="text-xl leading-relaxed text-foreground first-letter:float-left first-letter:mr-3 first-letter:mt-1 first-letter:text-6xl first-letter:font-black first-letter:leading-[0.8]">
-              A catalog is every piece of a song kept together: the master, the artwork, the lyrics, the credits and the codes, for every song you own.
+            <p className="text-xl leading-relaxed text-ink-foreground first-letter:float-left first-letter:mr-3 first-letter:mt-1 first-letter:text-6xl first-letter:font-black first-letter:leading-[0.8]">
+              A catalog is every piece of a song kept together: the master, the artwork, the lyrics, the credits and the codes, <span className="font-semibold text-electric">for every song you own</span>.
             </p>
-            <div className="mt-6 grid gap-x-10 gap-y-5 text-lg leading-relaxed text-muted-foreground md:grid-cols-2">
+            <div className="mt-6 grid gap-x-10 gap-y-5 text-lg leading-relaxed text-ink-muted md:grid-cols-2">
               <div className="space-y-5">
                 <p>Before cataloging, one song lives in a dozen places. The master is an attachment in an email thread, a copy on a hard drive and a link in a Dropbox folder; the session file is on the studio's computer. The cover art is in a design tool, the lyrics are in your notes app, and the splits are in a group chat with the writers.</p>
                 <p>Cataloging stops the hunt. Search a title, a writer or an ISRC and the song comes back with its master, art, lyrics and credits attached.</p>
@@ -508,8 +509,14 @@ function Landing() {
             {/* The word as the industry uses it, with reported deals as the proof — and an explicit "not an appraisal" so
                 no one reads a member's catalog as priced by us (founder, 2026-11-05). Set across the spread like a
                 standfirst: same width as the rest, two columns, paragraphs flowing together. */}
-            <p className="mt-8 border-t border-border pt-6 text-xl leading-relaxed text-foreground md:columns-2 md:gap-10">
-              Catalog is also the word the business uses for everything an artist has made, treated as one asset. Bruce Springsteen sold his masters and publishing for a reported $500 million in 2021; Bob Dylan's songwriting catalog went for a reported $300 million or more. Those are superstar deals, not an appraisal of anyone's songs, but they are why the paperwork matters: the artist who can name every song, every writer and every split is the one who gets paid for them.
+            <p className="mt-8 border-t border-ink-border pt-6 text-xl leading-relaxed text-ink-foreground md:columns-2 md:gap-10">
+              Catalog is also the word the business uses for everything an artist has made,{" "}
+              <span className="font-semibold text-electric">treated as one asset</span>. Bruce Springsteen sold his masters and
+              publishing for a reported <span className="font-extrabold text-electric">$500 million</span> in 2021; Bob Dylan's
+              songwriting catalog went for a reported <span className="font-extrabold text-electric">$300 million or more</span>.
+              Those are superstar deals, <span className="font-semibold text-ink-foreground">not an appraisal</span> of anyone's
+              songs, but they are why the paperwork matters:{" "}
+              <span className="font-semibold text-ink-foreground">the artist who can name every song, every writer and every split is the one who gets paid for them.</span>
             </p>
           </div>
         </div>
