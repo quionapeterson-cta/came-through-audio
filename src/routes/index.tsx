@@ -512,15 +512,15 @@ function Landing() {
             {/* A distributor taking a release down is a fear an artist has actually lived through, so this block answers
                 it instead of quoting deal figures (founder, 2026-11-05). It says what the member can do the morning
                 after, in their words, with no number and no promise we do not keep. */}
-            <div className="mt-8 border-t border-border pt-6">
-              <p className="text-xs font-bold uppercase tracking-[2px] text-primary">True sovereign backup</p>
-              <p className="mt-3 text-xl leading-relaxed text-foreground md:text-2xl">
+            <div className="mt-8 rounded-xl bg-ink px-6 py-6 text-ink-foreground md:px-8">
+              <p className="text-xs font-bold uppercase tracking-[2px] text-electric">True sovereign backup</p>
+              <p className="mt-3 text-xl leading-relaxed text-ink-foreground md:text-2xl">
                 A distributor can take your catalog down: a rights claim, a disputed payout, an account closed over
                 paperwork you never saw. The morning after, the only question that matters is whether your music still
                 exists somewhere you can reach. Here it does — log in from any computer, download your masters with the
                 metadata already embedded, and hand the next distributor a complete record: song, credits, artwork and
                 codes, without retyping a field. That is what sovereign means:{" "}
-                <span className="font-semibold text-primary">the catalog stays with you, not with whoever happens to be distributing it</span>.
+                <span className="font-semibold text-electric">the catalog stays with you, not with whoever happens to be distributing it</span>.
               </p>
             </div>
           </div>
