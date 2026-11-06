@@ -231,6 +231,15 @@
   through the Badge Art Protocol — don't add one without the founder.
 - **The Fill & Sign tab is called PDF Fill & Sign** (founder, 2026-11-06), in the workspace tabs and in the support
   topics, so a ticket's area matches the tab the member sees.
+- **The profile defaults are blueprints too** (founder, 2026-11-06): `embed-defaults` ("Set Your Embed Defaults") and
+  `catalog-defaults` ("Build Your Catalog Defaults") in `src/lib/guides.ts` walk the same fields setup asks for, so they
+  can be saved to Working On and downloaded like any other blueprint. When a default field changes, change the step that
+  describes it in the same commit.
+- **A downloaded blueprint is still a checklist** (founder, 2026-11-06): its PDF carries real, tickable form boxes, not
+  just the drawn squares. jsPDF can't make fields, so `buildGuidePdfBytes` in `src/lib/guide-pdf.ts` reopens the finished
+  pages with pdf-lib and adds a `PDFCheckBox` over each square (border width 0, so the drawn box is the only frame). A
+  copy that loses its boxes is still a readable guide, so the failure is logged, never shown as an error, and downloads
+  go through `saveBlob`.
 
 ## Catalog Playback & WAV Storage (always follow)
 
