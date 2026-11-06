@@ -119,7 +119,8 @@ export function MetadataUploader({ onShareInfo, userId, mode = "embed", readOnly
     setZipping(label);
     try {
       const r = await run();
-      if (r.skipped) toast.warning(`${r.skipped} file${r.skipped === 1 ? "" : "s"} couldn't be fetched and ${r.skipped === 1 ? "was" : "were"} left out of the ZIP. The rest downloaded.`);
+      // "Ready", never "downloaded": if the browser blocked the file, the message under it carries a Save button.
+      if (r.skipped) toast.warning(`Your ZIP is ready with ${r.songs} song${r.songs === 1 ? "" : "s"}. ${r.skipped} file${r.skipped === 1 ? "" : "s"} couldn't be fetched and ${r.skipped === 1 ? "was" : "were"} left out.`);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Could not build the download. Try again in a moment.");
     } finally { setZipping(null); }

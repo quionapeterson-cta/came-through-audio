@@ -1,4 +1,4 @@
-import type { CatalogTrack } from "@/lib/catalog";
+import { saveBlob, type CatalogTrack } from "@/lib/catalog";
 import { MLC_ROLE, parentGenre, performers, writerRole, type Contributor } from "@/lib/metadata";
 import { isBmi } from "@/lib/audit";
 import { registrationReadiness, registrationWriters, type MissingItem } from "@/lib/readiness";
@@ -154,12 +154,9 @@ export function downloadNeighbouringPack(tracks: CatalogTrack[], name: string) {
   return skipped;
 }
 
+/** One save path for every file: it says so honestly and offers a Save button when the browser blocks it. */
 function save(blob: Blob, filename: string) {
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url; a.download = filename;
-  document.body.appendChild(a); a.click(); a.remove();
-  setTimeout(() => URL.revokeObjectURL(url), 30_000);
+  saveBlob(blob, filename);
 }
 
 type Cell = string | number | Date;

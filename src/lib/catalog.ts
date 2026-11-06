@@ -1,3 +1,4 @@
+import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { requestBadgeCheck } from "@/lib/badge-events";
 import { creditName, emptyContributor, emptyMetadata, splitTrack, withLegalName, type Metadata } from "@/lib/metadata";
@@ -99,19 +100,41 @@ export async function downloadCatalogFile(path: string, filename: string) {
   saveBlob(data, filename);
 }
 
-export function saveBlob(blob: Blob, filename: string) {
-  const url = URL.createObjectURL(blob);
+/** The last file we handed over, kept so a blocked download can be saved again with one tap. */
+let pending: { url: string; name: string } | null = null;
+
+/** Preview panes are iframes, and a sandboxed iframe swallows downloads its host didn't allow. */
+const inFrame = () => { try { return window.self !== window.top; } catch { return true; } };
+
+/** Clicks a link that is in the document: a detached anchor is ignored, which is what made buttons look dead. */
+function clickSave(href: string, name: string) {
   const a = document.createElement("a");
-  a.href = url;
-  a.download = filename;
+  a.href = href;
+  a.download = name;
   a.rel = "noopener";
   a.style.display = "none";
-  // The link has to be in the document before it is clicked: Safari ignores a click on a detached anchor, which made
-  // every download button look dead with no error at all (founder, 2026-11-06).
   document.body.append(a);
   a.click();
   a.remove();
-  setTimeout(() => URL.revokeObjectURL(url), 10000);
+}
+
+/**
+ * Hands a finished file to the browser, then says so honestly: the browser can still refuse it (a preview pane blocks
+ * downloads, Safari drops the odd click), so the member gets a real Save button to press instead of a message claiming
+ * a download that never arrived (founder, 2026-11-06).
+ */
+export function saveBlob(blob: Blob, filename: string) {
+  if (pending) URL.revokeObjectURL(pending.url);
+  const url = URL.createObjectURL(blob);
+  pending = { url, name: filename };
+  clickSave(url, filename);
+  toast("Your file is ready", {
+    description: inFrame()
+      ? `${filename} — this preview window blocks downloads. Open Came Through Audio in its own tab, or tap Save.`
+      : `${filename} — if it didn't arrive, tap Save.`,
+    duration: 20000,
+    action: { label: "Save", onClick: () => { if (pending) clickSave(pending.url, pending.name); } },
+  });
 }
 
 export const safeName = (s: string) => s.replace(/[<>:"/\\|?*]+/g, "_").trim() || "track";

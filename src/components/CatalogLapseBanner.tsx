@@ -16,8 +16,9 @@ export function DownloadCatalogButton({ variant = "default" }: { variant?: "defa
     setProgress("Preparing…");
     try {
       const r = await downloadWholeCatalog((done, total) => setProgress(`${done} of ${total} songs…`));
-      if (r.skipped) toast.warning(`Downloaded ${r.songs} songs. ${r.skipped} file${r.skipped === 1 ? "" : "s"} couldn't be fetched; try those from each song's Downloads.`);
-      else toast.success(`Downloaded ${r.songs} song${r.songs === 1 ? "" : "s"}.`);
+      // "Ready", not "downloaded": the browser can still refuse the file, and the Save button on the file message is
+      // the honest way to finish it (founder, 2026-11-06).
+      if (r.skipped) toast.warning(`Your ZIP is ready with ${r.songs} song${r.songs === 1 ? "" : "s"}. ${r.skipped} file${r.skipped === 1 ? "" : "s"} couldn't be fetched; try those from each song's Downloads.`);
     } catch {
       toast.error("Your catalog couldn't be downloaded. Try again, or download each song from its Downloads menu.");
     } finally { setProgress(undefined); }
