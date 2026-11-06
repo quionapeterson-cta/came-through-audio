@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { getPaymentsEnvironment } from "@/lib/checkout";
-import { highestTier, isActiveSub, tierFromPrice, type Tier } from "@/lib/plans";
+import { highestTier, isActiveSub, serverTier, tierFromPrice, type Tier } from "@/lib/plans";
 import { isPaused, type Lapse, type Pause, type PlanSub } from "@/lib/retention";
 
 /** The plan in force: when it renews, or when it ends if it was cancelled. */
@@ -92,16 +92,3 @@ export function useBilling(userId: string | undefined) {
   return { tier, plan, purchases, loaded, reload: load, sub, pauses, lapse, founding, paidTier };
 }
 
-
-/**
- * The database's answer, whatever shape it comes back in. `user_tier` returns one text value, but a PostgREST client can
- * hand back an array or an object depending on how the function is called, and reading that as `[object Object]` silently
- * turned a super admin into Free on the published site (founder, 2026-11-06). Only a real tier counts. Pass the response's
- * `data`, never the response itself: its first value is `error` (null), which read every staff login as Free.
- */
-function serverTier(v: unknown): Tier {
-  const first = Array.isArray(v) ? v[0] : v;
-  const raw = first && typeof first === "object" ? Object.values(first as Record<string, unknown>)[0] : first;
-  const s = typeof raw === "string" ? raw.trim().toLowerCase() : "";
-  return s === "management" || s === "collaborate" || s === "plus" ? (s as Tier) : "free";
-}

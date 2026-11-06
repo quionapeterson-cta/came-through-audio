@@ -1,7 +1,7 @@
 import type { jsPDF as JsPDF } from "jspdf";
 import type { CatalogTrack } from "@/lib/catalog";
 import type { PdfBrand } from "@/lib/brand-kit";
-import { brandFooter, brandHeader, COBALT, ensureSpace, font, INK, label, MARGIN, MUTED, newBrandedPdf, prettyDate, RULE } from "@/lib/brand-pdf";
+import { accentOf, brandFooter, brandHeader, ensureSpace, font, INK, label, MARGIN, MUTED, newBrandedPdf, prettyDate, RULE } from "@/lib/brand-pdf";
 import { creditName, writerRole, type Contributor } from "@/lib/metadata";
 import { saveBlob } from "@/lib/catalog";
 
@@ -65,7 +65,7 @@ function songCard(pdf: JsPDF, y: number, t: CatalogTrack) {
   pdf.setDrawColor(...RULE).setLineWidth(0.35).roundedRect(MARGIN, y, w, height, 2.5, 2.5, "S");
   const x = MARGIN + PAD;
   let yy = y + PAD + 4.2;
-  if (m.trackNumber) font(pdf, "semibold", 14).setTextColor(...COBALT).text(m.trackNumber, x, yy);
+  if (m.trackNumber) font(pdf, "semibold", 14).setTextColor(...accentOf(pdf)).text(m.trackNumber, x, yy);
   font(pdf, "semibold", 14).setTextColor(...INK);
   titleLines.forEach((line, i) => pdf.text(line, x + 12, yy + i * 6.4));
   if (m.duration) font(pdf, "medium", 11.5).setTextColor(...MUTED).text(m.duration, x + inner, yy, { align: "right" });
@@ -87,13 +87,13 @@ function songCard(pdf: JsPDF, y: number, t: CatalogTrack) {
   // Credits: labels in one fixed column, a thin blue rule, then names; long names wrap under the value, never under the label.
   const creditsTop = yy - 4;
   for (const c of creditCells) {
-    // Blue credit labels match their entries in size.
-    font(pdf, "semibold", 11.5).setTextColor(...COBALT).text(c.label, x, yy);
+    // Accent credit labels match their entries in size.
+    font(pdf, "semibold", 11.5).setTextColor(...accentOf(pdf)).text(c.label, x, yy);
     font(pdf, "regular", 11.5).setTextColor(...(c.lines[0] === "—" ? MUTED : INK));
     c.lines.forEach((line, li) => pdf.text(line, x + CREDIT_LABEL_W, yy + li * CREDIT_LINE));
     yy += c.lines.length * CREDIT_LINE + 2.5;
   }
-  pdf.setDrawColor(...COBALT).setLineWidth(0.5).line(x + CREDIT_RULE_X, creditsTop, x + CREDIT_RULE_X, yy - 2.5 - CREDIT_LINE + 1.6);
+  pdf.setDrawColor(...accentOf(pdf)).setLineWidth(0.5).line(x + CREDIT_RULE_X, creditsTop, x + CREDIT_RULE_X, yy - 2.5 - CREDIT_LINE + 1.6);
   return y + height + 5;
 }
 
@@ -108,7 +108,7 @@ function releaseHeading(pdf: JsPDF, y: number, album: string, tracks: CatalogTra
   const name = album || "Singles";
   pdf.text(name, MARGIN, y);
   font(pdf, "regular", 10).setTextColor(...MUTED).text(detail, w - MARGIN, y, { align: "right" });
-  pdf.setFillColor(...COBALT).rect(MARGIN, y + 2.8, 14, 0.8, "F");
+  pdf.setFillColor(...accentOf(pdf)).rect(MARGIN, y + 2.8, 14, 0.8, "F");
   return y + 9;
 }
 
@@ -116,8 +116,8 @@ function releaseHeading(pdf: JsPDF, y: number, album: string, tracks: CatalogTra
 export async function buildCatalogPdf(tracks: CatalogTrack[], brand?: PdfBrand | null) {
   const pdf = await newBrandedPdf(brand);
   const artist = mostCommon(tracks.map((t) => t.artist));
-  const date = new Date().toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
-  let y = brandHeader(pdf, artist || "Catalog", "Master Catalog", `${tracks.length} ${tracks.length === 1 ? "song" : "songs"}  ·  ${date}`, brand);
+  // No generation date on a download (founder, 2026-11-06).
+  let y = brandHeader(pdf, artist || "Catalog", "Master Catalog", `${tracks.length} ${tracks.length === 1 ? "song" : "songs"}`, brand);
   for (const g of groupByRelease(tracks)) {
     y = releaseHeading(pdf, y, g.album, g.tracks);
     for (const t of g.tracks) y = songCard(pdf, y, t);

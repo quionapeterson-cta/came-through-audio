@@ -234,9 +234,15 @@ export function kitWatermark(pdf: JsPDF, brand: PdfBrand) {
   } catch { /* no watermark if the logo can't be drawn */ }
 }
 
-/** The colour our blue furniture is drawn in: the kit's own once a kit replaces our header, else cobalt. */
+/**
+ * The colour our blue furniture is drawn in: the kit's own once a kit replaces our header, else cobalt. Every PDF body
+ * draws its accents through this, never COBALT directly, so a branded download carries one brand from top to bottom
+ * (founder, 2026-11-06).
+ */
 const accents = new WeakMap<JsPDF, [number, number, number]>();
-const accentOf = (pdf: JsPDF) => accents.get(pdf) ?? COBALT;
+export const accentOf = (pdf: JsPDF) => accents.get(pdf) ?? COBALT;
+/** Readable text on a band filled with the document's accent: white on dark, Primary Black on light. */
+export const onAccent = (pdf: JsPDF) => onColor(accentOf(pdf));
 
 /** The kit's second accent color, else its section title color, else Primary Black. */
 export const kitAccent = (brand: PdfBrand): [number, number, number] =>

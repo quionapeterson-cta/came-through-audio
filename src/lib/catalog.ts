@@ -102,6 +102,9 @@ export async function downloadCatalogFile(path: string, filename: string) {
 
 /** The last file we handed over, kept so a blocked download can be saved again with one tap. */
 let pending: { url: string; name: string } | null = null;
+/** The "Your file is ready" message: one at a time, and gone on a fixed clock. */
+const READY_TOAST = "file-ready";
+let readyTimer: ReturnType<typeof setTimeout> | undefined;
 
 /** Preview panes are iframes, and a sandboxed iframe swallows downloads its host didn't allow. */
 const inFrame = () => { try { return window.self !== window.top; } catch { return true; } };
@@ -128,13 +131,21 @@ export function saveBlob(blob: Blob, filename: string) {
   const url = URL.createObjectURL(blob);
   pending = { url, name: filename };
   clickSave(url, filename);
+  // The message leaves on its own (founder, 2026-11-06: it lingered after the file arrived). Sonner pauses its timer while
+  // the pointer is over it or the browser's download sheet has focus, so a plain timer closes it, and a new file replaces
+  // the old message rather than stacking under it. The preview pane keeps it longer, since there Save is the only way.
+  const frame = inFrame();
+  const ms = frame ? 20000 : 7000;
   toast("Your file is ready", {
-    description: inFrame()
+    id: READY_TOAST,
+    description: frame
       ? `${filename} — this preview window blocks downloads. Open Came Through Audio in its own tab, or tap Save.`
       : `${filename} — if it didn't arrive, tap Save.`,
-    duration: 20000,
+    duration: ms,
     action: { label: "Save", onClick: () => { if (pending) clickSave(pending.url, pending.name); } },
   });
+  clearTimeout(readyTimer);
+  readyTimer = setTimeout(() => toast.dismiss(READY_TOAST), ms);
 }
 
 export const safeName = (s: string) => s.replace(/[<>:"/\\|?*]+/g, "_").trim() || "track";
@@ -163,11 +174,17 @@ export function groupReleases(tracks: CatalogTrack[]): Release[] {
     .sort((a, b) => a.album.localeCompare(b.album));
 }
 
+/** What one song was missing from a ZIP, each with the form field that fixes it (`audio`, `artwork`, `lyrics`). */
+export type DownloadGap = { track: CatalogTrack; items: { field: string; message: string }[] };
+export type ZipResult = { songs: number; skipped: number; gaps: DownloadGap[] };
+
 /**
  * One ZIP for a set of songs: every master (named exactly as the title, `Song Title.mp3`), its artwork, its lyrics PDF
- * and the catalog PDF. Files that can't be fetched are skipped and counted, so one bad file never blocks the rest.
+ * and the catalog PDF. Files that can't be fetched are skipped, so one bad file never blocks the rest, and every song
+ * that came out incomplete is named with what to add, so the member can fill it in and download again (founder,
+ * 2026-11-06: "2 files couldn't be fetched" told them nothing they could act on).
  */
-async function downloadSongsZip(tracks: CatalogTrack[], zipName: string, onProgress?: (done: number, total: number) => void): Promise<{ songs: number; skipped: number }> {
+async function downloadSongsZip(tracks: CatalogTrack[], zipName: string, onProgress?: (done: number, total: number) => void): Promise<ZipResult> {
   const [{ makeZip, uniqueName }, { buildCatalogPdf }, { buildLyricsPdf }, { myBrand }] = await Promise.all([import("@/lib/zip"), import("@/lib/catalog-pdf"), import("@/lib/lyrics-pdf"), import("@/lib/brand-load")]);
   // Their Personal Branding header on the lyric and catalog PDFs inside the ZIP, when they have a kit.
   const brand = await myBrand("catalog");
@@ -175,21 +192,30 @@ async function downloadSongsZip(tracks: CatalogTrack[], zipName: string, onProgr
   const entries: { name: string; data: Uint8Array }[] = [];
   const bytes = async (b: Blob) => new Uint8Array(await b.arrayBuffer());
   let skipped = 0;
+  const gaps: DownloadGap[] = [];
   for (const [i, t] of tracks.entries()) {
     onProgress?.(i, tracks.length);
     const name = safeName(t.title);
-    for (const [path, file] of [[t.metadata.audioPath, `${name}.${/\.wav$/i.test(t.metadata.audioPath ?? "") ? "wav" : "mp3"}`], [t.metadata.artPath, `Artwork/${name}.${t.metadata.artPath?.split(".").pop() ?? "jpg"}`]] as const) {
-      if (!path) continue;
-      const { data, error } = await supabase.storage.from(BUCKET).download(path);
-      if (error || !data) { skipped += 1; continue; }
-      entries.push({ name: uniqueName(file, taken), data: await bytes(data) });
+    const items: DownloadGap["items"] = [];
+    const files = [
+      { field: "audio", path: t.metadata.audioPath, file: `${name}.${/\.wav$/i.test(t.metadata.audioPath ?? "") ? "wav" : "mp3"}`, none: "No master saved yet: open the song and choose its MP3 or WAV.", lost: "Its saved master couldn't be found: open the song and choose its MP3 or WAV again." },
+      { field: "artwork", path: t.metadata.artPath, file: `Artwork/${name}.${t.metadata.artPath?.split(".").pop() ?? "jpg"}`, none: "", lost: "Its saved cover art couldn't be found: open the song and add the cover again." },
+    ];
+    for (const f of files) {
+      // A song without cover art is normal (singles often share one), so only a cover that went missing is reported.
+      if (!f.path) { if (f.none) items.push({ field: f.field, message: f.none }); continue; }
+      const { data, error } = await supabase.storage.from(BUCKET).download(f.path);
+      if (error || !data) { skipped += 1; items.push({ field: f.field, message: f.lost }); continue; }
+      entries.push({ name: uniqueName(f.file, taken), data: await bytes(data) });
     }
     if (t.metadata.lyrics?.trim()) entries.push({ name: uniqueName(`Lyrics/${name} - lyrics.pdf`, taken), data: await bytes((await buildLyricsPdf(t, brand)).output("blob")) });
+    else if (!t.metadata.instrumental) items.push({ field: "lyrics", message: "No lyrics yet: paste them in the song's Lyrics section (or mark it Instrumental)." });
+    if (items.length) gaps.push({ track: t, items });
   }
   if (tracks.length) entries.push({ name: uniqueName("Catalog.pdf", taken), data: await bytes((await buildCatalogPdf(tracks, brand)).output("blob")) });
   onProgress?.(tracks.length, tracks.length);
   saveBlob(makeZip(entries), zipName);
-  return { songs: tracks.length, skipped };
+  return { songs: tracks.length, skipped, gaps };
 }
 
 /** Every song in the catalog as one ZIP. */

@@ -21,7 +21,7 @@ import { listStatuses, type SongStatus } from "@/lib/health-songs";
 import type { RepertoireCheck } from "@/lib/health";
 import { HealthLiquid, HealthMeter } from "@/components/HealthMeter";
 import { DownloadCatalogButton } from "@/components/CatalogLapseBanner";
-import { deleteTrack, downloadCatalogFile, downloadRelease, downloadWholeCatalog, groupReleases, listTracks, safeName, saveTrack, uploadCatalogFile, type CatalogTrack } from "@/lib/catalog";
+import { deleteTrack, downloadCatalogFile, downloadRelease, downloadWholeCatalog, groupReleases, listTracks, safeName, saveTrack, uploadCatalogFile, type CatalogTrack, type DownloadGap, type ZipResult } from "@/lib/catalog";
 import { AGENCY_LABEL, downloadAgencyExport, downloadNeighbouringPack, mlcPlaceholderSongs, recordExports, type Agency, type Held } from "@/lib/agency-export";
 import { AgencyExportDialog } from "@/components/AgencyExportDialog";
 import { AGENCY_UPLOAD_STEPS, MLC_EXPORT_NOTES } from "@/lib/glossary";
@@ -115,12 +115,14 @@ export function MetadataUploader({ onShareInfo, userId, mode = "embed", readOnly
   // One click for a release or the whole catalog (founder, 2026-11-06): the ZIP is the point of the catalog, so it never
   // hides behind a per-song menu.
   const [zipping, setZipping] = useState<string | null>(null);
-  const zip = async (label: string, run: () => Promise<{ songs: number; skipped: number }>) => {
+  // Songs that came out of a ZIP incomplete, each with what to add: shown as a list with a Fix link per item.
+  const [gaps, setGaps] = useState<DownloadGap[]>();
+  const zip = async (label: string, run: () => Promise<ZipResult>) => {
     setZipping(label);
     try {
       const r = await run();
       // "Ready", never "downloaded": if the browser blocked the file, the message under it carries a Save button.
-      if (r.skipped) toast.warning(`Your ZIP is ready with ${r.songs} song${r.songs === 1 ? "" : "s"}. ${r.skipped} file${r.skipped === 1 ? "" : "s"} couldn't be fetched and ${r.skipped === 1 ? "was" : "were"} left out.`);
+      if (r.gaps.length) setGaps(r.gaps);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Could not build the download. Try again in a moment.");
     } finally { setZipping(null); }
@@ -981,6 +983,19 @@ export function MetadataUploader({ onShareInfo, userId, mode = "embed", readOnly
           <Button onClick={() => setHeld(undefined)}>Got it</Button>
         </DialogContent>
       </Dialog>
+      <Dialog open={!!gaps} onOpenChange={(o) => !o && setGaps(undefined)}>
+        <DialogContent className="bg-card text-card-foreground">
+          <DialogHeader><DialogTitle className="text-xl font-bold">Your ZIP is ready, with {gaps?.length === 1 ? "1 song" : `${gaps?.length} songs`} to finish</DialogTitle></DialogHeader>
+          <p className="text-sm text-muted-foreground">Everything else is in the ZIP. Fill these in, then download again for the full set.</p>
+          <div className="max-h-80 space-y-3 overflow-y-auto">
+            {gaps?.map(({ track, items }) => <div key={track.id} className="rounded-lg border border-border p-3">
+              <div className="mb-1 font-semibold">{track.title || "Untitled"}</div>
+              <MissingList items={items} onJump={(field) => { setGaps(undefined); fix(track, field); }} />
+            </div>)}
+          </div>
+          <Button onClick={() => setGaps(undefined)}>Got it</Button>
+        </DialogContent>
+      </Dialog>
       <Dialog open={!!upsell} onOpenChange={(o) => !o && setUpsell(false)}>
         <DialogContent className="bg-card text-card-foreground">
           <DialogHeader><DialogTitle className="flex items-center gap-2 text-xl font-bold"><Lock className="h-5 w-5 text-primary" />{upsell === "wav" ? "WAV embedding is part of Catalog Management" : upsell === "export" ? "1-Click Official Agency Exports are locked" : "Split Sheets are locked"}</DialogTitle></DialogHeader>
@@ -1204,8 +1219,8 @@ function NowEmbedding({ metadata: m, cover }: { metadata: Metadata; cover: strin
   );
 }
 
-function MissingList({ items, onJump }: { items: MissingItem[]; onJump: (field: string) => void }) {
-  return <ul className="space-y-1">{items.map((i) => <li key={i.code + i.field}>
+function MissingList({ items, onJump }: { items: Pick<MissingItem, "field" | "message">[]; onJump: (field: string) => void }) {
+  return <ul className="space-y-1">{items.map((i) => <li key={i.field + i.message}>
     <button type="button" className="text-left text-sm hover:text-primary" onClick={() => onJump(i.field)}>⚠️ {i.message}</button>
   </li>)}</ul>;
 }

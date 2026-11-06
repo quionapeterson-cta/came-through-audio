@@ -68,8 +68,8 @@ function finding(pdf: JsPDF, y: number, f: Finding) {
 
 export async function buildCheckupPdf(c: Checkup, artist: string, country: string) {
   const pdf = await newBrandedPdf();
-  const date = new Date().toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
-  let y = brandHeader(pdf, "Royalty Health Report", artist || undefined, `${c.songs} ${c.songs === 1 ? "song" : "songs"}  ·  ${country}  ·  ${date}`);
+  // No generation date on a download (founder, 2026-11-06).
+  let y = brandHeader(pdf, "Royalty Health Report", artist || undefined, `${c.songs} ${c.songs === 1 ? "song" : "songs"}  ·  ${country}`);
 
   // Main finding, in a panel.
   const lead = c.lead;

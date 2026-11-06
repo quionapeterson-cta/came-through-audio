@@ -20,6 +20,18 @@ export function tierFromPrice(priceId: string | null | undefined): Tier {
 }
 
 /** The best tier in the list. An accepted artist seat lifts its artist, and never lowers a plan they already pay for. */
+/**
+ * The database's `user_tier` answer, whatever shape it comes back in (a string, an array or an object), and Free unless
+ * it is a real tier. Pass the response's `data`, never the response itself: its first value is `error` (null), which read
+ * every staff login as Free (founder, 2026-11-06). The page and the server both read the tier through this.
+ */
+export function serverTier(v: unknown): Tier {
+  const first = Array.isArray(v) ? v[0] : v;
+  const raw = first && typeof first === "object" ? Object.values(first as Record<string, unknown>)[0] : first;
+  const s = typeof raw === "string" ? raw.trim().toLowerCase() : "";
+  return s === "management" || s === "collaborate" || s === "plus" ? (s as Tier) : "free";
+}
+
 export function highestTier(...tiers: Tier[]): Tier {
   return tiers.reduce<Tier>((best, t) => (TIER_RANK[t] > TIER_RANK[best] ? t : best), "free");
 }

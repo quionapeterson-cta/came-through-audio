@@ -554,7 +554,7 @@ async function buildSplitPdf(track: CatalogTrack, rawCollaborators: SplitCollabo
   const t = (v: unknown) => (v === null || v === undefined ? "" : String(v));
   const collaborators = rawCollaborators.map((c) => ({ ...c, name: t(c.name), role: t(c.role) as SplitCollaborator["role"], pro: t(c.pro), ipi: t(c.ipi), performerName: t(c.performerName), publisherName: t(c.publisherName), publisherPro: t(c.publisherPro), publisherIpi: t(c.publisherIpi), signatureName: t(c.signatureName) || t(c.name), signatureHash: t(c.signatureHash), percentage: Number(c.percentage) || 0 }));
   track = { ...track, title: t(track.title) || "Untitled", artist: t(track.artist), metadata: { ...track.metadata, isrc: t(track.metadata?.isrc), iswc: t(track.metadata?.iswc) } };
-  const [{ newBrandedPdf, brandHeader, brandFooter, infoGrid, sectionTitle, ensureSpace, COBALT, INK, MUTED, RULE }, { myBrand }] = await Promise.all([import("@/lib/brand-pdf"), import("@/lib/brand-load")]);
+  const [{ newBrandedPdf, brandHeader, brandFooter, infoGrid, sectionTitle, ensureSpace, accentOf, onAccent, INK, MUTED, RULE }, { myBrand }] = await Promise.all([import("@/lib/brand-pdf"), import("@/lib/brand-load")]);
   // Personal Branding (Catalog Management, or the split sheet add-on) swaps in their header; otherwise ours.
   const brand = await myBrand("splits");
   const pdf = await newBrandedPdf(brand);
@@ -570,8 +570,8 @@ async function buildSplitPdf(track: CatalogTrack, rawCollaborators: SplitCollabo
 
   y = sectionTitle(pdf, y, "Ownership splits");
   const cols = [18, 80, 115, 145, 175];
-  pdf.setFillColor(...COBALT).rect(18, y, w - 36, 8, "F");
-  pdf.setFont("helvetica", "bold").setFontSize(8).setTextColor(255, 255, 255);
+  pdf.setFillColor(...accentOf(pdf)).rect(18, y, w - 36, 8, "F");
+  pdf.setFont("helvetica", "bold").setFontSize(8).setTextColor(...onAccent(pdf));
   ["NAME", "ROLE", "PRO", "IPI", "SHARE"].forEach((h, i) => pdf.text(h, cols[i]! + 3, y + 5.5));
   y += 8;
   rows.forEach((c, i) => {
@@ -585,17 +585,17 @@ async function buildSplitPdf(track: CatalogTrack, rawCollaborators: SplitCollabo
     pdf.setFont("helvetica", "bold").text(`${c.percentage}%`, cols[4]! + 3, y + 6);
     y += c.performerName ? 11 : 9;
   });
-  pdf.setDrawColor(...COBALT).setLineWidth(0.6).line(18, y, w - 18, y);
+  pdf.setDrawColor(...accentOf(pdf)).setLineWidth(0.6).line(18, y, w - 18, y);
   pdf.setFont("helvetica", "bold").setFontSize(10).setTextColor(...INK).text("TOTAL", cols[0]! + 3, y + 6);
-  pdf.setTextColor(...COBALT).text(`${splitTotal(collaborators)}%`, cols[4]! + 3, y + 6);
+  pdf.setTextColor(...accentOf(pdf)).text(`${splitTotal(collaborators)}%`, cols[4]! + 3, y + 6);
   y += 18;
 
   const pubs = rows.filter((c) => c.publisherName);
   if (pubs.length) {
     y = ensureSpace(pdf, y, 20 + pubs.length * 9);
     y = sectionTitle(pdf, y, "Publishing");
-    pdf.setFillColor(...COBALT).rect(18, y, w - 36, 8, "F");
-    pdf.setFont("helvetica", "bold").setFontSize(8).setTextColor(255, 255, 255);
+    pdf.setFillColor(...accentOf(pdf)).rect(18, y, w - 36, 8, "F");
+    pdf.setFont("helvetica", "bold").setFontSize(8).setTextColor(...onAccent(pdf));
     ["PUBLISHER", "FOR WRITER", "PRO", "IPI", "SHARE"].forEach((h, i) => pdf.text(h, cols[i]! + 3, y + 5.5));
     y += 8;
     pubs.forEach((c, i) => {
@@ -639,7 +639,7 @@ async function buildSplitPdf(track: CatalogTrack, rawCollaborators: SplitCollabo
     pdf.setFont("helvetica", "bold").setFontSize(9).setTextColor(...INK).text(`${c.name}${c.isOwner ? "  (Account owner)" : ""}`, x + 5, y + 20);
     pdf.setFont("helvetica", "normal").setFontSize(7.5).setTextColor(...MUTED);
     pdf.text(c.signedAt ? `Signed ${new Date(c.signedAt).toLocaleString()}` : `${c.role} · ${c.percentage}%`, x + 5, y + 24.5);
-    if (c.signedAt && c.signatureHash) pdf.setTextColor(...COBALT).text(`Hash ${c.signatureHash.slice(0, 32)}…`, x + 5, y + 28.5);
+    if (c.signedAt && c.signatureHash) pdf.setTextColor(...accentOf(pdf)).text(`Hash ${c.signatureHash.slice(0, 32)}…`, x + 5, y + 28.5);
     if (i % 2 === 1 || i === rows.length - 1) y += 36;
   });
   brandFooter(pdf, brand);

@@ -2,9 +2,8 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { brandAccess, brandingUntil, kitAllowance, kitFromRow, kitReady, type BrandUse, type PdfBrand } from "./brand-kit";
-import { hasTier } from "./plans";
+import { hasTier, serverTier } from "./plans";
 import { getPaymentsEnvironment } from "./payments-env";
-import type { Tier } from "./plans";
 
 /**
  * Personal Branding for PDFs. The server decides whether a user's brand kit may replace the Came Through Audio header
@@ -23,7 +22,7 @@ async function accessFor(db: Db, userId: string) {
     db.from("purchases").select("kind, created_at, details").eq("user_id", userId).eq("kind", "branding").eq("environment", getPaymentsEnvironment()),
   ]);
   const list = (buys ?? []) as { kind: string; created_at: string; details: Record<string, string> }[];
-  const t = ((tier as unknown as string) || "free") as Tier;
+  const t = serverTier(tier);
   const until = brandingUntil(list);
   return { access: brandAccess(t, until), until, allowance: kitAllowance(t, list), tier: t };
 }

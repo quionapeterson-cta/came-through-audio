@@ -18,7 +18,11 @@ export function DownloadCatalogButton({ variant = "default" }: { variant?: "defa
       const r = await downloadWholeCatalog((done, total) => setProgress(`${done} of ${total} songs…`));
       // "Ready", not "downloaded": the browser can still refuse the file, and the Save button on the file message is
       // the honest way to finish it (founder, 2026-11-06).
-      if (r.skipped) toast.warning(`Your ZIP is ready with ${r.songs} song${r.songs === 1 ? "" : "s"}. ${r.skipped} file${r.skipped === 1 ? "" : "s"} couldn't be fetched; try those from each song's Downloads.`);
+      // Name the songs that came out incomplete and what each is missing, never just a count of files.
+      if (r.gaps.length) toast.warning(`Your ZIP is ready. ${r.gaps.length === 1 ? "1 song is" : `${r.gaps.length} songs are`} incomplete:`, {
+        description: r.gaps.map((g) => `${g.track.title || "Untitled"}: ${g.items.map((i) => ({ audio: "master", artwork: "cover art", lyrics: "lyrics" })[i.field] ?? i.field).join(", ")}`).join("; "),
+        duration: 15000,
+      });
     } catch {
       toast.error("Your catalog couldn't be downloaded. Try again, or download each song from its Downloads menu.");
     } finally { setProgress(undefined); }

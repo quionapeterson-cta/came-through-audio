@@ -373,6 +373,13 @@ rules keep it consistent as features are added.
   word "Generated" never appears on a download, and no generation date is printed. Only Catalog Management (which
   includes a kit) or a paid `branding_yearly` add-on replaces our header, and a kit that isn't set up yet
   (`kitReady`) still gets our default header.
+- **One brand per file** (founder, 2026-11-06): a PDF body draws its accent colour through `accentOf(pdf)` (and text on
+  an accent band through `onAccent(pdf)`) from `src/lib/brand-pdf.ts`, never `COBALT` directly, so a kit's header is
+  never followed by our blue. Our own documents get Cobalt from the same call.
+- **An incomplete ZIP names what to add** (founder, 2026-11-06): `downloadSongsZip` returns `gaps`, each song with the
+  form field that fixes it (master, cover art that went missing, lyrics unless Instrumental), and My Catalog lists them
+  with a Fix link. Never report a bare count of files that "couldn't be fetched".
+- **"Your file is ready" leaves on its own**: one message at a time (`READY_TOAST`), closed on a fixed timer in `saveBlob`.
 - **Only Catalog & Collaborate and Catalog Management may cut the footer off** (founder, 2026-11-06): `brandFor` in
   `src/lib/brand-kit.functions.ts` forces `showFooter: true` on any lower plan, whatever the saved kit says. Never move
   that check into a component.
