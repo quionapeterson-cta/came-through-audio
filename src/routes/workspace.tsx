@@ -31,7 +31,7 @@ import { useBilling, type Purchase } from "@/hooks/useBilling";
 import { openCheckout, getPaymentsEnvironment } from "@/lib/checkout";
 import { listSeatState } from "@/lib/seats";
 import { AddArtistDialog } from "@/components/ArtistSeats";
-import { PRICE_TIER, TIER_LABEL, hasTier, rememberPlanIntent, takePlanIntent, upgradeNote, type Tier } from "@/lib/plans";
+import { PRICE_TIER, TIER_LABEL, hasTier, planIntentFromSearch, rememberPlanIntent, takePlanIntent, upgradeNote, type Tier } from "@/lib/plans";
 import { PlanComparison, planAction } from "@/components/PlanComparison";
 import { BadgeWatcher } from "@/components/Badges";
 import { Confetti } from "@/components/Confetti";
@@ -44,6 +44,7 @@ import { EagleStatusBadge } from "@/components/EagleStatusBadge";
 import { eagleStatus } from "@/lib/eagle-status";
 import { CatalogLapseBanner } from "@/components/CatalogLapseBanner";
 import { EmailConfirmBanner } from "@/components/EmailConfirmBanner";
+import { PlanPendingBanner } from "@/components/PlanPendingBanner";
 import { PdfTools } from "@/components/PdfTools";
 import { inGrace, isPaused } from "@/lib/retention";
 
@@ -58,7 +59,9 @@ export const Route = createFileRoute("/workspace")({
       { name: "twitter:card", content: "summary" },
     ],
   }),
-  validateSearch: (s: Record<string, unknown>) => ({ tab: typeof s["tab"] === "string" ? (s["tab"] as string) : undefined, checkout: s["checkout"] === "success" ? "success" : undefined, view: s["view"] === "expert" ? "expert" : undefined } as { tab?: string | undefined; checkout?: "success" | undefined; view?: "expert" | undefined }),
+  // `plan` names a plan picked before the account existed: the workspace opens its checkout, so the purchase survives the
+  // email round trip (and a link opened on another device, where the browser never held the pick).
+  validateSearch: (s: Record<string, unknown>) => ({ tab: typeof s["tab"] === "string" ? (s["tab"] as string) : undefined, checkout: s["checkout"] === "success" ? "success" : undefined, view: s["view"] === "expert" ? "expert" : undefined, plan: planIntentFromSearch(s["plan"]) ?? undefined } as { tab?: string | undefined; checkout?: "success" | undefined; view?: "expert" | undefined; plan?: string | undefined }),
   component: Workspace,
 });
 
@@ -158,20 +161,31 @@ function Workspace() {
   // Free accounts open on the Royalty Health Hub (Royalty Inspector) instead of the locked Embed tab.
   useEffect(() => { if (billingLoaded && !search.tab && !hasTier(realTier, "plus")) setTab((t) => (t === "embed" ? "health" : t)); }, [billingLoaded]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // A plan picked before signup ("Sign up to start") goes straight to that plan's checkout once billing has loaded.
+  // A plan picked before or during sign-up goes straight to that plan's checkout once billing has loaded. The plan
+  // arrives two ways: named in the URL (the sign-up's confirmation link) or left in this browser (founder, 2026-11-06).
+  // Until Stripe actually opens, it stays on screen as a banner, so nobody is left in a free workspace wondering where
+  // the purchase went.
+  const [pendingPlan, setPendingPlan] = useState<string | null>(() => planIntentFromSearch(search.plan));
+  // One automatic attempt per plan per visit; the banner is the retry, so a closed checkout doesn't reopen itself.
+  const [triedPlan, setTriedPlan] = useState<string | null>(null);
   useEffect(() => {
     if (!user || !billingLoaded) return;
-    const priceId = takePlanIntent();
-    if (!priceId || hasTier(realTier, PRICE_TIER[priceId]!)) return;
+    const priceId = planIntentFromSearch(search.plan) ?? takePlanIntent();
+    if (!priceId || hasTier(realTier, PRICE_TIER[priceId]!)) { setPendingPlan(null); return; }
+    setPendingPlan(priceId);
+    if (triedPlan === priceId) return;
+    setTriedPlan(priceId);
     toast.info(`Opening checkout for ${TIER_LABEL[PRICE_TIER[priceId]!]}…`);
     openCheckout({ kind: "plan", priceId })
+      .then(() => setPendingPlan(null))
       .catch((e) => {
-        // Keep the pick whatever went wrong: the next visit and the upgrade button then resume the purchase instead of
-        // leaving them in a free workspace with it forgotten (founder, 2026-11-05).
+        // Keep the pick whatever went wrong: the banner, the next visit and the upgrade button all resume the purchase
+        // instead of leaving them in a free workspace with it forgotten (founder, 2026-11-05).
         rememberPlanIntent(priceId);
-        toast.error(e instanceof Error ? e.message : "Checkout could not open. Use View Plans to try again.");
+        setPendingPlan(priceId);
+        toast.error(e instanceof Error ? e.message : "Checkout could not open. Use the button at the top to try again.");
       });
-  }, [user, billingLoaded, realTier]);
+  }, [user, billingLoaded, realTier]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (!user) return;
@@ -273,6 +287,7 @@ function Workspace() {
         onSaved={(o) => { setOnboard(o); setEmbedKey((k) => k + 1); setTab(canCatalog ? "embed" : "health"); }} />
       <BadgeWatcher userId={user.id} artist={names.artist} eagle={tier === "management"} />
       <main className="mx-auto max-w-7xl px-6 py-8">
+        {pendingPlan && <PlanPendingBanner priceId={pendingPlan} />}
         {!user.email_confirmed_at && <EmailConfirmBanner email={user.email} />}
         <CatalogLapseBanner sub={sub} lapse={lapse} pauses={pauses} onRenew={upgrade} onChanged={() => void reloadBilling()} />
         <Tabs value={tab} onValueChange={setTab}>

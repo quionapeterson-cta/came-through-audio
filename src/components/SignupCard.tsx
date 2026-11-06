@@ -8,7 +8,8 @@ import { Label } from "@/components/ui/label";
 import { passwordValid, rememberReturn } from "@/lib/password";
 import { rememberLoginEmail } from "@/lib/login-memory";
 import { PasswordField } from "@/components/PasswordField";
-import { PLAN_INTENT_EVENT, PLAN_TIERS, PRICE_TIER, TIER_LABEL, peekPlanIntent } from "@/lib/plans";
+import { PLAN_INTENT_EVENT, PLAN_TIERS, PRICE_TIER, TIER_LABEL, peekPlanIntent, planSignupNext, rememberPlanIntent, takePlanIntent } from "@/lib/plans";
+import { openCheckout } from "@/lib/checkout";
 
 export function SignupCard({ returnPath, onAuthed, inviteMode }: { returnPath?: string; onAuthed?: () => void; inviteMode?: boolean } = {}) {
   const navigate = useNavigate();
@@ -30,6 +31,24 @@ export function SignupCard({ returnPath, onAuthed, inviteMode }: { returnPath?: 
     return () => window.removeEventListener(PLAN_INTENT_EVENT, read);
   }, [inviteMode]);
   const paid = intent ? PLAN_TIERS.find((t) => t.priceId === intent) : undefined;
+
+  /**
+   * The account exists and is signed in: paying for the plan they picked is part of this same step (founder, 2026-11-06),
+   * so Stripe opens right here over the page they signed up on. If it cannot open, the plan is kept and the workspace
+   * shows it waiting, rather than dropping them into a free account with the purchase forgotten.
+   */
+  async function afterAuth() {
+    rememberLoginEmail(email);
+    if (onAuthed) { onAuthed(); return; }
+    if (intent) {
+      try { await openCheckout({ kind: "plan", priceId: intent }); takePlanIntent(); return; }
+      catch (e) {
+        rememberPlanIntent(intent);
+        toast.error(e instanceof Error ? e.message : "Checkout could not open. Your plan is saved — finish it in your workspace.");
+      }
+    }
+    navigate({ to: "/workspace", search: { tab: "health", plan: intent ?? undefined } });
+  }
 
   /** Back from the inbox: refresh the session so a confirmed address counts, then carry on where they were going. */
   async function continueAfterConfirm() {
@@ -59,7 +78,8 @@ export function SignupCard({ returnPath, onAuthed, inviteMode }: { returnPath?: 
           email,
           password,
           options: {
-            emailRedirectTo: `${window.location.origin}/verified?next=${encodeURIComponent(returnPath ?? "/workspace?tab=health")}`,
+            // The link names the plan, so confirming on another device still resumes the purchase in the workspace.
+            emailRedirectTo: `${window.location.origin}/verified?next=${encodeURIComponent(planSignupNext(intent, returnPath ?? "/workspace?tab=health"))}`,
             data: { stage_name: stageName, legal_name: legalName },
           },
         });
@@ -68,19 +88,17 @@ export function SignupCard({ returnPath, onAuthed, inviteMode }: { returnPath?: 
         // 2026-11-05): unverified sign-ins are allowed, so sign the new account in here and let the plan's checkout
         // open in this same sitting. The confirmation email is already on its way. If the sign-in is refused, the
         // inbox screen below is the fallback.
-        if (data.session) { rememberLoginEmail(email); if (onAuthed) onAuthed(); else navigate({ to: "/workspace", search: { tab: "health" } }); }
+        if (data.session) await afterAuth();
         else {
           const { data: signedIn, error: signInError } = await supabase.auth.signInWithPassword({ email, password });
           if (signInError || !signedIn.session) { setSent(true); return; }
-          rememberLoginEmail(email);
-          if (onAuthed) onAuthed(); else navigate({ to: "/workspace", search: { tab: "health" } });
+          await afterAuth();
         }
       } else {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
         // So /login fills this address in next time, whichever box they used today.
-        rememberLoginEmail(email);
-        if (onAuthed) onAuthed(); else navigate({ to: "/workspace", search: { tab: undefined } });
+        await afterAuth();
       }
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Something went wrong");
@@ -101,7 +119,7 @@ export function SignupCard({ returnPath, onAuthed, inviteMode }: { returnPath?: 
             <p className="text-muted-foreground">
               We sent a confirmation link to <span className="font-semibold text-foreground">{email}</span>.{" "}
               {paid
-                ? `${TIER_LABEL[PRICE_TIER[intent!]!]} checkout opens by itself the moment you click it — no need to come back to this page.`
+                ? `${TIER_LABEL[PRICE_TIER[intent!]!]} checkout opens by itself the moment you click it, on this device or any other — no need to come back to this page.`
                 : "Click it to open your workspace."}
             </p>
           )}
@@ -120,7 +138,7 @@ export function SignupCard({ returnPath, onAuthed, inviteMode }: { returnPath?: 
           <h2 className="text-2xl font-bold leading-tight">
             {mode === "signup" ? (
               paid
-                ? <>Sign up for {TIER_LABEL[PRICE_TIER[intent!]!]}<span className="mt-1 block text-lg font-normal text-primary">{paid.price} / year. Create your account and checkout opens next.</span></>
+                ? <>Sign up and pay for {TIER_LABEL[PRICE_TIER[intent!]!]}<span className="mt-1 block text-lg font-normal text-primary">{paid.price} a year. Your account is created, then Stripe&apos;s checkout opens in the same step.</span></>
                 : <>Musicians, sign up free.<span className="mt-1 block text-lg font-normal text-primary">Includes Free Unlimited Royalty Health Checks.</span></>
             ) : mode === "forgot" ? (
               <>Reset your password<span className="mt-1 block text-base font-normal text-muted-foreground">Enter your account email and we'll send you a reset link.</span></>
@@ -157,9 +175,11 @@ export function SignupCard({ returnPath, onAuthed, inviteMode }: { returnPath?: 
               </div>
             )}
             <Button type="submit" disabled={busy} className="h-12 w-full text-base font-semibold">
-              {busy ? "Please wait…" : mode === "signup" ? (paid ? "Sign up now" : "Create my free account") : mode === "forgot" ? "Send reset link" : "Log in"}
+              {busy ? "Please wait…" : mode === "signup" ? (paid ? `Sign up & pay ${paid.price}` : "Create my free account") : mode === "forgot" ? "Send reset link" : "Log in"}
             </Button>
-            {mode === "signup" && !paid && <p className="text-center text-xs text-muted-foreground">Free forever plan. No card needed.</p>}
+            {mode === "signup" && (paid
+              ? <p className="text-center text-xs text-muted-foreground">One step: your account is created, then you pay. Card details stay in Stripe.</p>
+              : <p className="text-center text-xs text-muted-foreground">Free forever plan. No card needed.</p>)}
           </form>
           <p className="mt-4 text-center text-sm text-muted-foreground">
             {mode === "signup" ? "Already have an account?" : mode === "forgot" ? "Remembered it?" : "New here?"}{" "}

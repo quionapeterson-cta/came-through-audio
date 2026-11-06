@@ -208,7 +208,8 @@ function Mark({ feature, tier, t }: { feature: Feature; tier: Tier; t: Palette }
  */
 export function planAction(p: PlanTier, o: { tier?: Tier | undefined; onBuy: (priceId: string) => void; onSignup: () => void }): PlanAction {
   // Paid tiers: create the account, then that tier's checkout opens (it needs the account to credit the payment).
-  if (!o.tier) return { label: p.priceId ? "Sign up now" : "Sign up free", onClick: () => { rememberPlanIntent(p.priceId); o.onSignup(); } };
+  // "Sign up & pay": the account and the payment are one sitting, so the button says both (founder, 2026-11-06).
+  if (!o.tier) return { label: p.priceId ? "Sign up & pay" : "Sign up free", onClick: () => { rememberPlanIntent(p.priceId); o.onSignup(); } };
   if (o.tier === p.tier) return { label: "Current plan", disabled: true };
   if (hasTier(o.tier, p.tier) || !p.priceId) return { label: "Included", disabled: true };
   const priceId = p.priceId;

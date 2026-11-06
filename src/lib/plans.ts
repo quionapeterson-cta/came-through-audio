@@ -46,6 +46,17 @@ export function peekPlanIntent(): string | null {
   try { const v = localStorage.getItem(PLAN_INTENT_KEY); return v && PRICE_TIER[v] ? v : null; } catch { return null; }
 }
 export const PLAN_INTENT_EVENT = PLAN_INTENT_KEY;
+/**
+ * A plan carried in the URL, which is how a purchase survives storage being blocked or the confirmation link being
+ * opened on another device: the sign-up's own link names the plan, and the workspace opens its checkout.
+ */
+export function planIntentFromSearch(value: unknown): string | null {
+  return typeof value === "string" && PRICE_TIER[value] ? value : null;
+}
+/** The page a paid sign-up lands on: the workspace, with the plan named so it can resume the checkout there. */
+export function planSignupNext(priceId: string | null | undefined, fallback = "/workspace?tab=health") {
+  return priceId && PRICE_TIER[priceId] ? `/workspace?tab=health&plan=${priceId}` : fallback;
+}
 export function takePlanIntent(): string | null {
   try {
     const v = localStorage.getItem(PLAN_INTENT_KEY);
