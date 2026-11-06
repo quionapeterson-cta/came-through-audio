@@ -15,7 +15,7 @@ import { getTestimonialFilter, getTestimonials } from "@/lib/testimonials.functi
 import { getSiteSocials } from "@/lib/social.functions";
 import { DEFAULT_SOCIALS } from "@/lib/social";
 import { SocialLinks } from "@/components/SocialLinks";
-import { BrandLockup, MARK_BOX, MARK_TUCK } from "@/components/BrandLockup";
+import { BrandLockup } from "@/components/BrandLockup";
 import { TestimonialCard } from "@/components/TestimonialCard";
 
 export const Route = createFileRoute("/")({
@@ -298,7 +298,7 @@ function Landing() {
           </div>
           <div id="signup">
             {/* The lockup above the form: the name first, then the line it stands for (AGENTS.md, Brand Lockup). */}
-            <BrandLockup className="mb-4 text-center" nameClassName="text-base text-ink-foreground" sloganClassName="text-xs" />
+            <BrandLockup className="mb-4 text-center" nameClassName="text-lg text-ink-foreground" sloganClassName="text-sm" />
             {siteLocked ? <LaunchingSoon /> : <SignupCard />}
           </div>
         </div>
@@ -489,14 +489,15 @@ function Landing() {
       <section className="bg-background py-16 md:py-20">
         <div className="mx-auto max-w-5xl px-6">
           <div className="rounded-2xl bg-primary px-6 py-12 text-primary-foreground ring-1 ring-inset ring-primary-foreground/20 md:px-12 md:py-14">
-            {/* The brand line is the mark standing in for the C, the same way the header draws it (founder, 2026-11-06),
-                so the panel is signed rather than labelled. The mark is the favicon's white tone, sized in em and tucked
-                with MARK_TUCK, so it stays on the name's baseline at every width. */}
-            <p className="flex items-center gap-2 text-sm font-bold uppercase tracking-[3px] sm:text-base">
-              <img src="/cta-mark-white.png" alt="" aria-hidden className={`${MARK_BOX} ${MARK_TUCK}`} />
-              <span aria-hidden>ame Through Audio</span>
-              <span className="sr-only">Came Through Audio</span>
-            </p>
+            {/* The panel is signed with the words and the mark as its own small tile in the corner (founder, 2026-11-06):
+                the mark standing in for the C read as a typo at this size, so the name is typed plainly and the logo
+                sits apart from it. The tile is ink because the mark's arrow is the same cobalt as the panel, which
+                would swallow it on blue; on ink the white C and the cobalt arrow both read. */}
+            <div className="flex items-start justify-between gap-4">
+              <p className="text-sm font-bold uppercase tracking-[3px] sm:text-base">Came Through Audio</p>
+              <img src="/cta-mark-white.png" alt="Came Through Audio" width={48} height={48}
+                className="-mt-1 h-11 w-11 shrink-0 rounded-xl bg-ink p-1.5 object-contain md:h-12 md:w-12" />
+            </div>
             <p className="mt-6 text-4xl font-extrabold leading-[1.1] md:text-5xl lg:text-6xl">Your music. One Home.</p>
             <p className="mt-3 text-3xl font-extrabold leading-[1.2] md:text-4xl lg:text-5xl">
               <span className="inline-block bg-ink px-3 py-1 text-ink-foreground">One asset you can count on.</span>
@@ -536,7 +537,9 @@ function Landing() {
                 it instead of quoting deal figures (founder, 2026-11-05). It says what the member can do the morning
                 after, in their words, with no number and no promise we do not keep. */}
             <div className="mt-8 rounded-xl bg-ink px-6 py-6 text-ink-foreground md:px-8">
-              <p className="text-base font-bold uppercase tracking-[2px] text-electric sm:text-lg">True sovereign backup</p>
+              {/* The kicker is the invitation, not a label (founder, 2026-11-06): one line that names what the panel
+                  offers and goes to the plans page where the backups are sold. */}
+              <Link to="/plans" className="inline-block text-lg font-bold text-electric underline-offset-4 hover:underline sm:text-xl">Start Your True Sovereign Backups</Link>
               <p className="mt-3 text-xl leading-relaxed text-ink-foreground md:text-2xl">
                 A distributor can take your catalog down: a rights claim, a disputed payout, an account closed over
                 paperwork you never saw. The morning after, the only question that matters is whether your music still
