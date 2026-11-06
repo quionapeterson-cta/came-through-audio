@@ -488,23 +488,28 @@ function Landing() {
       </section>
 
       {/* The banner line between the spread and the story (founder, 2026-11-06): the whole idea in one breath, in the
-          brand's own voice, so the cards land as proof rather than the last word. The key phrase sits on ink like a
-          marker stroke, which is what makes the band read in a glance. */}
-      <section className="bg-primary py-16 text-primary-foreground md:py-20">
+          brand's own voice, so the cards land as proof rather than the last word. It stands alone in its own white
+          section as a cobalt panel, so it reads as a separate statement instead of flowing into the story underneath,
+          and its copy runs the full width of the page's text column. The payoff phrase sits on ink like a marker
+          stroke, which is what makes the panel land in a glance. */}
+      <section className="bg-background py-16 md:py-20">
         <div className="mx-auto max-w-5xl px-6">
-          <p className="flex items-center gap-3 text-xs font-bold uppercase tracking-[3px]">
-            <span className="h-px w-10 bg-primary-foreground/60" />
-            Came Through Audio
-          </p>
-          <p className="mt-5 max-w-4xl text-3xl font-extrabold leading-[1.15] md:text-5xl">
-            Every song, embedded.{" "}
-            <span className="bg-ink px-2 text-ink-foreground">One asset you can count on.</span>
-          </p>
-          <p className="mt-5 max-w-2xl text-lg leading-relaxed text-primary-foreground/85 md:text-xl">
-            The data that tracks a song — title, writers, credits, artwork and codes — is written into the master
-            itself, not filed somewhere beside it. So the whole catalog stays one asset you own: something you can
-            download, hand to a distributor or re-release without hunting through drives and inboxes for the pieces.
-          </p>
+          <div className="rounded-2xl bg-primary px-6 py-12 text-primary-foreground ring-1 ring-inset ring-primary-foreground/20 md:px-12 md:py-14">
+            <p className="flex items-center gap-3 text-xs font-bold uppercase tracking-[3px]">
+              <span className="h-px w-10 bg-primary-foreground/60" />
+              Came Through Audio
+            </p>
+            <p className="mt-6 text-4xl font-extrabold leading-[1.1] md:text-5xl lg:text-6xl">
+              Your music. One Home.
+              <br />
+              <span className="bg-ink px-2 text-ink-foreground">One asset you can count on.</span>
+            </p>
+            <p className="mt-7 text-lg leading-relaxed text-primary-foreground/90 md:text-xl">
+              The data that tracks a song — title, writers, credits, artwork and codes — is written into the master
+              itself, not filed somewhere beside it. So the whole catalog stays one asset you own: something you can
+              download, hand to a distributor or re-release without hunting through drives and inboxes for the pieces.
+            </p>
+          </div>
         </div>
       </section>
 
