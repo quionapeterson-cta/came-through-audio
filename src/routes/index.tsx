@@ -176,11 +176,18 @@ const CATALOG_SCATTER: { icon: typeof Mail; label: string; tilt: string }[] = [
   { icon: Mic, label: "Voice memo", tilt: "-2deg" },
 ];
 
-/** The scattered side: a loose pile of chips, deliberately not lined up. */
+/**
+ * Both card labels sit at the same height (founder, 2026-11-05): the after one lives inside the roof triangle, and 30%
+ * down the card that triangle has opened wide enough to hold the words on a phone as well as a desktop.
+ */
+const CARD_LABEL = "absolute inset-x-0 top-[30%] text-center text-[11px] font-bold uppercase tracking-[1.5px]";
+
+/** The scattered side: a loose pile of chips, deliberately not lined up, dropped to the bottom to sit level with the rows. */
 function CatalogScatter() {
   return (
-    <div className="flex h-full min-h-[21rem] flex-col justify-center gap-3 rounded-2xl border border-dashed border-ink-border bg-ink p-5 text-ink-foreground">
-      <div className="flex flex-wrap items-center justify-center gap-2">
+    <div className="relative flex h-full min-h-[21rem] flex-col justify-end rounded-2xl border border-dashed border-ink-border bg-ink p-4 text-ink-foreground">
+      <p className={`${CARD_LABEL} text-ink-muted`}>Before Embedding</p>
+      <div className="relative flex flex-wrap items-center justify-center gap-2">
         {CATALOG_SCATTER.map(({ icon: Icon, label, tilt }) => (
           <span key={label} className="inline-flex items-center gap-1.5 rounded-full border border-ink-border bg-ink px-2.5 py-1 text-[11px] text-ink-muted sm:text-xs"
             style={{ transform: `rotate(${tilt})` }}>
@@ -188,7 +195,7 @@ function CatalogScatter() {
           </span>
         ))}
       </div>
-      <p className="text-center text-xs text-ink-muted">Every piece in a different place, and none of them know about each other.</p>
+      <p className="relative mt-2.5 text-center text-xs text-ink-muted">Every piece in a different place, and none of them know about each other.</p>
     </div>
   );
 }
@@ -211,6 +218,7 @@ function CatalogRow() {
         <path d="M2 43.1 L50 6 L98 43.1" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
         <path d="M6 40 H94 M6 40 V99 M94 40 V99" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
       </svg>
+      <p className={`${CARD_LABEL} text-electric`}>After Embedding</p>
       {/* Percentage inset: the rows stay inside the walls on a wide card, not just on a phone. */}
       <div className="relative space-y-1.5 px-[6%]">
         {HOUSE_SONGS.map((title) => (
@@ -450,14 +458,8 @@ function Landing() {
           <p className="mt-2 text-center text-lg text-ink-muted">Everything one song is made of, in one place.</p>
 
           <div className="mt-8 grid items-stretch gap-4 sm:grid-cols-2">
-            <div className="flex flex-col gap-2">
-              <p className="text-center text-sm font-bold uppercase tracking-[2px] text-ink-muted">Before cataloging</p>
-              <CatalogScatter />
-            </div>
-            <div className="flex flex-col gap-2">
-              <p className="text-center text-sm font-bold uppercase tracking-[2px] text-electric">After cataloging</p>
-              <CatalogRow />
-            </div>
+            <CatalogScatter />
+            <CatalogRow />
           </div>
 
           {/* The story underneath, set like the embedding spread: a drop-cap lead, two flowing columns, one callout. */}
