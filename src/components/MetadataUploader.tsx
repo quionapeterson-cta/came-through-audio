@@ -43,6 +43,8 @@ import { linkRegistrationSong } from "@/lib/registration.functions";
 import { supabase } from "@/integrations/supabase/client";
 import { listContributors, saveContributors, type SavedContributor } from "@/lib/splits";
 import { ContributorLibrary } from "@/components/ContributorLibrary";
+import { BrandKitChoice } from "@/components/BrandKitChoice";
+import { useBrandKits } from "@/hooks/useBrandKits";
 import type { ShareInfo } from "@/components/BadgeCelebration";
 
 const normArtist = (v: string) => v.trim().replace(/\s+/g, " ").toLowerCase();
@@ -63,6 +65,8 @@ export function MetadataUploader({ onShareInfo, userId, mode = "embed", readOnly
   // One artist per account: the artist name from setup. A different name gets a gentle add-an-artist note.
   const registeredArtist = loadOnboarding(userId)?.stageName?.trim() ?? "";
   const navigate = useNavigate();
+  // Which of their kits brands catalog and lyric downloads, when they have more than one (founder, 2026-11-06).
+  const { kits, kitId, setKitId } = useBrandKits(userId);
   const [aiProtect, setAiProtect] = useState(false);
   /** What the last save did, shown as a checklist so it's clear whether the master was embedded, downloaded and stored. */
   const [savedInfo, setSavedInfo] = useState<SavedInfo>();
@@ -831,12 +835,12 @@ export function MetadataUploader({ onShareInfo, userId, mode = "embed", readOnly
                     <Button type="button" variant="outline" size="sm" disabled={!!zipping}><Download />{zipping ?? "Download"}</Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end" className="max-h-80 overflow-y-auto">
-                    <DropdownMenuItem disabled={!!zipping} onClick={() => void zip(`Zipping ${tracks.length} songs…`, () => downloadWholeCatalog())} className="flex-col items-start gap-0.5">
+                    <DropdownMenuItem disabled={!!zipping} onClick={() => void zip(`Zipping ${tracks.length} songs…`, () => downloadWholeCatalog(undefined, kitId))} className="flex-col items-start gap-0.5">
                       <span className="font-semibold">The whole catalog</span>
                       <span className="text-xs text-muted-foreground">Every master, its artwork, lyrics and the catalog PDF in one ZIP.</span>
                     </DropdownMenuItem>
                     {groupReleases(tracks).map((r) => (
-                      <DropdownMenuItem key={r.key} disabled={!!zipping} onClick={() => void zip(`Zipping ${r.album}…`, () => downloadRelease(r))} className="flex-col items-start gap-0.5 border-t border-border">
+                      <DropdownMenuItem key={r.key} disabled={!!zipping} onClick={() => void zip(`Zipping ${r.album}…`, () => downloadRelease(r, undefined, kitId))} className="flex-col items-start gap-0.5 border-t border-border">
                         <span className="font-semibold">Just {r.album}</span>
                         <span className="text-xs text-muted-foreground">{r.type} · {r.tracks.length} {r.tracks.length === 1 ? "song" : "songs"}</span>
                       </DropdownMenuItem>
@@ -844,7 +848,8 @@ export function MetadataUploader({ onShareInfo, userId, mode = "embed", readOnly
                   </DropdownMenuContent>
                 </DropdownMenu>
               )}
-              {tracks.length > 0 && <Button type="button" variant="outline" size="sm" onClick={() => { const list = filter === "All" ? tracks : tracks.filter((t) => releaseGroup(t) === filter); void myBrand("catalog").then((brand) => downloadCatalogPdf(list, filter === "All" ? "Catalog" : `Catalog - ${filter}s`, brand)).catch((e) => toast.error(e instanceof Error ? `Could not create the catalog PDF: ${e.message}` : "Could not create the catalog PDF.")); }}><FileText />{filter === "All" ? "Catalog PDF" : `${filter}s PDF`}</Button>}
+              {tracks.length > 0 && <BrandKitChoice kits={kits} kitId={kitId} onChange={setKitId} />}
+              {tracks.length > 0 && <Button type="button" variant="outline" size="sm" onClick={() => { const list = filter === "All" ? tracks : tracks.filter((t) => releaseGroup(t) === filter); void myBrand("catalog", kitId ?? null).then((brand) => downloadCatalogPdf(list, filter === "All" ? "Catalog" : `Catalog - ${filter}s`, brand)).catch((e) => toast.error(e instanceof Error ? `Could not create the catalog PDF: ${e.message}` : "Could not create the catalog PDF.")); }}><FileText />{filter === "All" ? "Catalog PDF" : `${filter}s PDF`}</Button>}
             </div>
           </div>
           {tracks.length === 0 ? <p className="text-sm text-muted-foreground">No songs yet. Use Add song to save a song you already embedded, or embed a new one in Embed Metadata. Every song you save is checked automatically in the Royalty Health Hub.</p> : (
@@ -878,7 +883,7 @@ export function MetadataUploader({ onShareInfo, userId, mode = "embed", readOnly
                         <DropdownMenuContent align="end">
                           {t.metadata.audioPath && <DropdownMenuItem onClick={() => downloadCatalogFile(t.metadata.audioPath, `${safeName(t.title)}.${extOf(t.metadata.audioPath)}`).catch(() => toast.error("Could not download the song."))}>Master {extOf(t.metadata.audioPath).toUpperCase()}</DropdownMenuItem>}
                           {t.metadata.artPath && <DropdownMenuItem onClick={() => downloadCatalogFile(t.metadata.artPath, `${safeName(t.title)}-artwork.${t.metadata.artPath.split(".").pop()}`).catch(() => toast.error("Could not download the artwork."))}>Artwork</DropdownMenuItem>}
-                          {t.metadata.lyrics && <DropdownMenuItem onClick={() => void myBrand("lyrics").then((brand) => downloadLyricsPdf(t, brand))}>Lyrics PDF</DropdownMenuItem>}
+                          {t.metadata.lyrics && <DropdownMenuItem onClick={() => void myBrand("lyrics", kitId ?? null).then((brand) => downloadLyricsPdf(t, brand))}>Lyrics PDF</DropdownMenuItem>}
                         </DropdownMenuContent>
                       </DropdownMenu>
                     )}
@@ -949,7 +954,7 @@ export function MetadataUploader({ onShareInfo, userId, mode = "embed", readOnly
                 <span className="font-semibold">{sel.length} {sel.length === 1 ? "track" : "tracks"} selected</span>
                 <div className="flex flex-wrap gap-2">
                   <Button type="button" variant="ghost" size="sm" onClick={() => setPicked(new Set())}>Clear</Button>
-                  <Button type="button" variant="outline" size="sm" onClick={() => void myBrand("catalog").then((brand) => downloadCatalogPdf(sel, `Catalog - ${sel.length} Songs`, brand)).catch(() => toast.error("Could not create the catalog PDF."))}><FileText />PDF</Button>
+                  <Button type="button" variant="outline" size="sm" onClick={() => void myBrand("catalog", kitId ?? null).then((brand) => downloadCatalogPdf(sel, `Catalog - ${sel.length} Songs`, brand)).catch(() => toast.error("Could not create the catalog PDF."))}><FileText />PDF</Button>
                   {exportMenu("Export Selected", sel, `${sel.length} Tracks`)}
                 </div>
               </div>

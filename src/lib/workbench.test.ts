@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { checklistProgress, isEmptyEntry, progressLabel, savedGuides, sortByProgress, toggleChecked, workingOnCount, type WorkbenchEntry } from "./workbench";
+import { GUIDES } from "./guides";
+import { checklistProgress, dueLabel, isEmptyEntry, isOverdue, metaFor, nextDue, nextStep, progressLabel, savedGuides, sortByProgress, toggleChecked, withMeta, workingOnCount, type WorkbenchEntry } from "./workbench";
 
 const list = ["A", "B", "C", "D", "E", "F", "G", "H"];
 
@@ -27,13 +28,13 @@ describe("checklistProgress", () => {
 describe("toggleChecked", () => {
   const blank: WorkbenchEntry = { kind: "blueprint", itemId: "x", checked: [], pinned: false };
 
-  it("saves a blueprint to Working On on the first tick", () => {
-    expect(toggleChecked(blank, "A")).toMatchObject({ checked: ["A"], pinned: true });
+  it("leaves Working On alone when an item is ticked", () => {
+    expect(toggleChecked(blank, "A")).toMatchObject({ checked: ["A"], pinned: false });
   });
 
-  it("does not re-save one the member removed", () => {
-    const removed = { ...blank, checked: ["A"], pinned: false };
-    expect(toggleChecked(removed, "B").pinned).toBe(false);
+  it("keeps a blueprint the member saved, and one they removed stays removed", () => {
+    expect(toggleChecked({ ...blank, pinned: true }, "A").pinned).toBe(true);
+    expect(toggleChecked({ ...blank, checked: ["A"], pinned: false }, "B").pinned).toBe(false);
   });
 
   it("unticks, and an unpinned row with nothing ticked is empty", () => {
@@ -41,6 +42,38 @@ describe("toggleChecked", () => {
     expect(next.checked).toEqual([]);
     expect(isEmptyEntry(next)).toBe(true);
     expect(isEmptyEntry({ checked: [], pinned: true })).toBe(false);
+  });
+});
+
+describe("notes and due dates", () => {
+  const blank: WorkbenchEntry = { kind: "blueprint", itemId: "x", checked: [], pinned: false };
+
+  it("keeps a note and a real date, and drops a malformed one", () => {
+    const noted = withMeta(blank, "A", { note: "  Ask the accountant  ", due: "2026-11-12" });
+    expect(metaFor(noted, "A")).toEqual({ note: "Ask the accountant", due: "2026-11-12" });
+    expect(metaFor(withMeta(blank, "A", { due: "next week" }), "A")).toEqual({});
+  });
+
+  it("clearing both leaves nothing behind", () => {
+    const noted = withMeta(blank, "A", { note: "x", due: "2026-11-12" });
+    const cleared = withMeta(noted, "A", { note: "", due: "" });
+    expect(cleared.meta).toEqual({});
+    expect(isEmptyEntry(cleared)).toBe(true);
+  });
+
+  it("keeps an annotated row even with no ticks and no save", () => {
+    expect(isEmptyEntry(withMeta(blank, "A", { note: "later" }))).toBe(false);
+  });
+
+  it("reads the soonest open due date only", () => {
+    const entry = withMeta(withMeta({ ...blank, checked: ["A"] }, "A", { due: "2026-11-01" }), "B", { due: "2026-11-20" });
+    expect(nextDue(entry, ["A", "B"])).toBe("2026-11-20");
+    expect(dueLabel("2026-11-20")).toBe("Nov 20");
+  });
+
+  it("knows when a date has gone by", () => {
+    expect(isOverdue("2026-11-05", new Date(2026, 10, 6))).toBe(true);
+    expect(isOverdue("2026-11-06", new Date(2026, 10, 6))).toBe(false);
   });
 });
 
@@ -63,5 +96,37 @@ describe("savedGuides and workingOnCount", () => {
     ];
     expect(savedGuides(entries).map((x) => x.guide.id)).toEqual(["music-business-startup"]);
     expect(workingOnCount(entries, [{ status: "draft" }, { status: "signed" }])).toBe(2);
+  });
+});
+
+describe("nextStep", () => {
+  it("suggests the dated item first, then the next unticked one", () => {
+    const entries: WorkbenchEntry[] = [
+      { kind: "blueprint", itemId: "music-business-startup", checked: ["Name checked"], pinned: true, meta: { "Business bank account": { due: "2026-11-30" } } },
+      { kind: "blueprint", itemId: "record-label", checked: [], pinned: true },
+    ];
+    const step = nextStep(entries, []);
+    expect(step.kind).toBe("item");
+    expect(step.guideId).toBe("music-business-startup");
+    expect(step.detail).toContain("Business bank account");
+    expect(step.detail).toContain("due Nov 30");
+  });
+
+  it("falls back to a draft, then a contract out for signature", () => {
+    const draft = nextStep([], [{ id: "c1", title: "Producer Agreement", status: "draft" }, { id: "c2", title: "Beat Lease", status: "sent" }]);
+    expect(draft).toMatchObject({ kind: "contract", contractId: "c1" });
+    const sent = nextStep([], [{ id: "c2", title: "Beat Lease", status: "sent" }]);
+    expect(sent).toMatchObject({ kind: "contract", contractId: "c2" });
+  });
+
+  it("points at the library when nothing is in progress", () => {
+    expect(nextStep([], []).kind).toBe("browse");
+  });
+
+  it("skips a finished blueprint", () => {
+    const guide = GUIDES.find((g) => g.id === "record-label")!;
+    const done = [{ kind: "blueprint" as const, itemId: guide.id, checked: [...(guide.checklist ?? [])], pinned: true }];
+    expect(savedGuides(done)).toHaveLength(1);
+    expect(nextStep(done, []).kind).toBe("browse");
   });
 });

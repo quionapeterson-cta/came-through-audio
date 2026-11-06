@@ -3,6 +3,8 @@ import { confirmAction } from "@/components/ConfirmHost";
 import { FileSignature, Plus, Trash2, Download, Lock, PenLine, Check, ChevronLeft, Loader2, Mail, Copy } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { ContributorLibrary } from "@/components/ContributorLibrary";
+import { BrandKitChoice } from "@/components/BrandKitChoice";
+import { useBrandKits } from "@/hooks/useBrandKits";
 import { ProSelect } from "@/components/ProSelect";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -255,6 +257,8 @@ export function SplitSheets({ userId, canSplit, canCollect, prefillTrackId, onUp
 }
 
 function SplitEditor({ userId, track, initial, canCollect, onUpgrade, onClose, onSaved }: { userId: string; track: CatalogTrack; initial: SplitCollaborator[] | undefined; canCollect: boolean; onUpgrade: () => void; onClose: () => void; onSaved: () => void }) {
+  // Which kit brands the PDF they download from here, when they have more than one (founder, 2026-11-06).
+  const { kits, kitId, setKitId } = useBrandKits(userId);
   const [collaborators, setCollaborators] = useState<SplitCollaborator[]>(initial?.length ? initial : collaboratorsFromTrack(track));
   const [signingIndex, setSigningIndex] = useState<number | null>(null);
   const [typedName, setTypedName] = useState("");
@@ -530,19 +534,20 @@ function SplitEditor({ userId, track, initial, canCollect, onUpgrade, onClose, o
           <Button onClick={() => void save()} disabled={saving || !totalOk}>
             {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileSignature className="h-4 w-4" />} Save split sheet
           </Button>
-          <Button variant="outline" onClick={() => void downloadSplitPdf(track, collaborators.map((c) => ({ ...c, notes })))} disabled={!collaborators.some((c) => c.name)}>
+          <Button variant="outline" onClick={() => void downloadSplitPdf(track, collaborators.map((c) => ({ ...c, notes })), kitId)} disabled={!collaborators.some((c) => c.name)}>
             <Download className="h-4 w-4" /> Download PDF
           </Button>
+          <BrandKitChoice kits={kits} kitId={kitId} onChange={setKitId} />
         </div>
       </div>
     </div>
   );
 }
 
-async function downloadSplitPdf(track: CatalogTrack, collaborators: SplitCollaborator[]) {
+async function downloadSplitPdf(track: CatalogTrack, collaborators: SplitCollaborator[], kitId?: string) {
   const id = toast.loading("Preparing your split sheet PDF…");
   try {
-    await buildSplitPdf(track, collaborators);
+    await buildSplitPdf(track, collaborators, kitId);
     toast.success("Split sheet downloaded.", { id });
   } catch (e) {
     console.error("Split sheet PDF failed", e);
@@ -550,13 +555,14 @@ async function downloadSplitPdf(track: CatalogTrack, collaborators: SplitCollabo
   }
 }
 
-async function buildSplitPdf(track: CatalogTrack, rawCollaborators: SplitCollaborator[]) {
+async function buildSplitPdf(track: CatalogTrack, rawCollaborators: SplitCollaborator[], kitId?: string) {
   const t = (v: unknown) => (v === null || v === undefined ? "" : String(v));
   const collaborators = rawCollaborators.map((c) => ({ ...c, name: t(c.name), role: t(c.role) as SplitCollaborator["role"], pro: t(c.pro), ipi: t(c.ipi), performerName: t(c.performerName), publisherName: t(c.publisherName), publisherPro: t(c.publisherPro), publisherIpi: t(c.publisherIpi), signatureName: t(c.signatureName) || t(c.name), signatureHash: t(c.signatureHash), percentage: Number(c.percentage) || 0 }));
   track = { ...track, title: t(track.title) || "Untitled", artist: t(track.artist), metadata: { ...track.metadata, isrc: t(track.metadata?.isrc), iswc: t(track.metadata?.iswc) } };
   const [{ newBrandedPdf, brandHeader, brandFooter, infoGrid, sectionTitle, ensureSpace, accentOf, onAccent, headerDate, INK, MUTED, RULE }, { myBrand }] = await Promise.all([import("@/lib/brand-pdf"), import("@/lib/brand-load")]);
   // Personal Branding (Catalog Management, or the split sheet add-on) swaps in their header; otherwise ours.
-  const brand = await myBrand("splits");
+  // Which of their kits brands this sheet, if they picked one (the server still decides whether it may be used).
+  const brand = await myBrand("splits", kitId ?? null);
   const pdf = await newBrandedPdf(brand);
   const w = pdf.internal.pageSize.getWidth();
   const rows = collaborators.filter((c) => c.name);

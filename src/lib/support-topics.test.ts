@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { BILLING_AREA, categoryFor, TICKET_CATEGORIES, TICKET_TOPICS } from "./support-topics";
 
-const WORKSPACE_TABS = ["Embed Metadata", "My Catalog", "Royalty Health Hub", "AI Protection Hub", "Split Sheets", "Contracts & Blueprints", "Fill & Sign"];
+const WORKSPACE_TABS = ["Embed Metadata", "My Catalog", "Royalty Health Hub", "AI Protection Hub", "Split Sheets", "Contracts & Blueprints", "PDF Fill & Sign"];
 
 describe("support topics", () => {
   it("offers every workspace tab as a first choice, plus the account side and a catch-all", () => {

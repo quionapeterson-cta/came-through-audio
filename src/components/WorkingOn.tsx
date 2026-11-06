@@ -1,11 +1,11 @@
 import { useState } from "react";
-import { BookOpen, Check, ChevronDown, FileSignature, FolderOpen, Pin, PinOff } from "lucide-react";
+import { ArrowRight, BookOpen, Check, ChevronDown, FileSignature, FolderOpen, Pin, PinOff } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import type { Guide } from "@/lib/guides";
 import type { Contract } from "@/lib/contracts";
-import { progressLabel, savedGuides, sortByProgress, type ChecklistProgress } from "@/lib/workbench";
+import { dueLabel, guideForStep, isOverdue, nextDue, nextStep, progressLabel, savedGuides, sortByProgress, type ChecklistProgress } from "@/lib/workbench";
 import type { Workbench } from "@/hooks/useWorkbench";
 
 /** "3 of 8 · 38%" over a bar in the primary colour. */
@@ -37,6 +37,9 @@ export function WorkingOn({ workbench, contracts, loading, statusBadge, onOpenGu
 }) {
   const [closed, setClosed] = useState<Set<string>>(new Set());
   const { inProgress, finished } = sortByProgress(savedGuides(workbench.entries));
+  // One useful thing to do next, at the top of the folder (founder, 2026-11-06).
+  const step = nextStep(workbench.entries, contracts);
+  const stepGuide = guideForStep(workbench.entries, step);
   const isPinned = (c: Contract) => !!c.id && workbench.get("contract", c.id).pinned;
   const abc = (a: Contract, b: Contract) => a.title.localeCompare(b.title);
   const openContracts = contracts.filter((c) => c.status !== "signed").sort(abc);
@@ -80,6 +83,9 @@ export function WorkingOn({ workbench, contracts, loading, statusBadge, onOpenGu
         </div>
       </div>
       {progress.total > 0 && <ProgressMeter progress={progress} title={g.title} className="mt-3" />}
+      {(() => { const due = nextDue(workbench.get("blueprint", g.id), g.checklist); return due ? (
+        <p className={`mt-2 text-xs ${isOverdue(due) ? "font-semibold text-destructive" : "text-muted-foreground"}`}>{isOverdue(due) ? "Overdue" : "Next due"} {dueLabel(due)}</p>
+      ) : null; })()}
       <div className="mt-3 flex flex-wrap gap-2">
         <Button size="sm" variant={progress.finished ? "outline" : "default"} onClick={() => onOpenGuide(g)}>Open</Button>
         <Button size="sm" variant="ghost" onClick={() => remove(g)}><PinOff className="h-4 w-4" />Remove</Button>
@@ -111,8 +117,20 @@ export function WorkingOn({ workbench, contracts, loading, statusBadge, onOpenGu
   return (
     <section className="space-y-4">
       <p className="text-sm text-muted-foreground">Everything in progress, in one place. Blueprints you start or save stay here, with your checklist progress.</p>
+      <div className="rounded-2xl border border-primary/60 bg-primary/5 p-4">
+        <p className="text-xs font-bold uppercase tracking-widest text-primary">Next step</p>
+        <p className="mt-1 font-bold">{step.title}</p>
+        <p className="text-sm text-muted-foreground">{step.detail}</p>
+        <Button size="sm" className="mt-3" onClick={() => {
+          if (step.kind === "item" && stepGuide) onOpenGuide(stepGuide);
+          else if (step.kind === "contract" && step.contractId) { const c = contracts.find((x) => x.id === step.contractId); if (c) onOpenContract(c); else onBrowse(); }
+          else onBrowse();
+        }}>
+          {step.kind === "browse" ? "Browse blueprints" : step.kind === "contract" ? "Open the contract" : "Open the blueprint"}<ArrowRight className="h-4 w-4" />
+        </Button>
+      </div>
       {section("blueprints", "Blueprints", guideCount ? `${inProgress.length} in progress${finished.length ? ` · ${finished.length} complete` : ""}` : "none saved yet", guideCount === 0
-        ? <p className="text-sm text-muted-foreground">Tick a checklist item or tap Save to Working On on any blueprint. <button type="button" className="font-semibold text-primary underline" onClick={onBrowse}>Browse blueprints</button></p>
+        ? <p className="text-sm text-muted-foreground">Tick a checklist item, or tap Save on any blueprint. <button type="button" className="font-semibold text-primary underline" onClick={onBrowse}>Browse blueprints</button></p>
         : (
           <div className="space-y-4">
             {inProgress.length > 0 && <ul className="grid gap-3 md:grid-cols-2">{inProgress.map(guideCard)}</ul>}

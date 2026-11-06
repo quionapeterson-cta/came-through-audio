@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { confirmAction } from "@/components/ConfirmHost";
-import { ImagePlus, Loader2, Lock, Plus, Save, Trash2 } from "lucide-react";
+import { AlertTriangle, Check, FileDown, ImagePlus, Loader2, Lock, Plus, Save, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
@@ -9,7 +9,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { InfoTip } from "@/components/InfoTip";
-import { BRAND_FONTS, BRANDING_PRICE, KIT_STYLES, emptyKit, isHex, kitFromRow, type BrandKit as Kit, type KitStyle } from "@/lib/brand-kit";
+import { BRAND_FONTS, BRANDING_PRICE, KIT_STYLES, contrastWarnings, emptyKit, isHex, kitFromRow, type BrandKit as Kit, type KitStyle } from "@/lib/brand-kit";
+import { logoPalette } from "@/lib/logo-colors";
+import { downloadSamplePdf, type SampleKind } from "@/lib/sample-pdf";
 import { FONT_GROUPS } from "@/lib/brand-fonts";
 import { loadWebFont } from "@/lib/web-fonts";
 import { Disclaimer } from "@/components/Disclaimer";
@@ -38,6 +40,10 @@ export function BrandKit({ userId, tier, artistName }: { userId: string; tier: T
   const setKit = (next: Kit | ((k: Kit) => Kit)) => setKits((all) => all.map((k, i) => (i === current ? (typeof next === "function" ? next(k) : next) : k)));
   const [logoUrls, setLogoUrls] = useState<Record<string, string>>({});
   const logoUrl = kit.logoPath ? logoUrls[kit.logoPath] ?? null : null;
+  // Colours read from the logo just uploaded: suggestions, applied only when the member clicks (founder, 2026-11-06).
+  const [fromLogo, setFromLogo] = useState<string[]>([]);
+  /** Which document the preview shows (founder, 2026-11-06). */
+  const [preview, setPreview] = useState<SampleKind>("contract");
   const [saved, setSaved] = useState(true);
   const [busy, setBusy] = useState(false);
   // Back from buying it (Stripe returns to /profile?checkout=success#brand-kit): say how to use it (founder, 2026-10-27).
@@ -57,9 +63,11 @@ export function BrandKit({ userId, tier, artistName }: { userId: string; tier: T
       setKits(list.map((k) => ({ ...k, name: k.name || artistName })));
       const urls: Record<string, string> = {};
       for (const k of list) {
-        if (!k.logoPath) continue;
-        const { data: signed } = await supabase.storage.from(BUCKET).createSignedUrl(k.logoPath, 3600);
-        if (signed?.signedUrl) urls[k.logoPath] = signed.signedUrl;
+        for (const path of k.logoPaths) {
+          if (urls[path]) continue;
+          const { data: signed } = await supabase.storage.from(BUCKET).createSignedUrl(path, 3600);
+          if (signed?.signedUrl) urls[path] = signed.signedUrl;
+        }
       }
       if (live) setLogoUrls(urls);
     })();
@@ -81,16 +89,40 @@ export function BrandKit({ userId, tier, artistName }: { userId: string; tier: T
       const path = `${userId}/logo${current === 0 ? "" : `-${crypto.randomUUID().slice(0, 8)}`}.${file.type === "image/png" ? "png" : "jpg"}`;
       const { error } = await supabase.storage.from(BUCKET).upload(path, file, { upsert: true, contentType: file.type });
       if (error) throw error;
-      if (kit.logoPath && kit.logoPath !== path) await supabase.storage.from(BUCKET).remove([kit.logoPath]);
-      edit({ logoPath: path });
+      // Every version is kept, so one can be switched in later without rebuilding the kit (founder, 2026-11-06).
+      edit({ logoPath: path, logoPaths: [path, ...kit.logoPaths.filter((p) => p !== path)] });
       setLogoUrls((m) => ({ ...m, [path]: URL.createObjectURL(file) }));
+      // Read its colours while the browser already has the file: nothing extra is uploaded and no server work is spent.
+      setFromLogo(await logoPalette(file));
     } catch { toast.error("Your logo couldn't upload. Try again."); }
     finally { setBusy(false); }
   }
 
-  async function removeLogo() {
-    if (kit.logoPath) await supabase.storage.from(BUCKET).remove([kit.logoPath]);
-    edit({ logoPath: null });
+  /** Deletes one logo version; if it was the one in use, the next version takes over. */
+  async function removeLogoVersion(path: string) {
+    await supabase.storage.from(BUCKET).remove([path]);
+    const left = kit.logoPaths.filter((p) => p !== path);
+    setLogoUrls((m) => { const next = { ...m }; delete next[path]; return next; });
+    edit({ logoPaths: left, logoPath: kit.logoPath === path ? left[0] ?? null : kit.logoPath });
+  }
+
+  /** Switches the version this kit prints, without touching anything else in the kit. */
+  const useLogo = (path: string) => edit({ logoPath: path });
+
+  /** A one-page print of the kit, drawn with the same header and footer every download uses (founder, 2026-11-06). */
+  async function sample() {
+    setBusy(true);
+    try {
+      const dataUrl = logoUrl ? await (await fetch(logoUrl)).blob().then((b) => new Promise<string>((ok, no) => {
+        const fr = new FileReader();
+        fr.onload = () => ok(String(fr.result));
+        fr.onerror = () => no(new Error("logo"));
+        fr.readAsDataURL(b);
+      })) : null;
+      const { logoPath: _active, ...rest } = kit;
+      await downloadSamplePdf({ ...rest, logo: dataUrl ? { dataUrl } : null }, preview, artistName);
+    } catch { toast.error("Couldn't make the sample PDF. Try again."); }
+    finally { setBusy(false); }
   }
 
   async function save() {
@@ -100,7 +132,7 @@ export function BrandKit({ userId, tier, artistName }: { userId: string; tier: T
     if (badExtra) { toast.error(`"${badExtra}" isn't a color code. Use 6 digits like #0B0B0B.`); return; }
     setBusy(true);
     try {
-      const base = { user_id: userId, name: kit.name.trim(), tagline: kit.tagline.trim(), colors: kit.colors.map((c) => c.toUpperCase()), font: kit.font, logo_path: kit.logoPath, show_footer: kit.showFooter, updated_at: new Date().toISOString() };
+      const base = { user_id: userId, name: kit.name.trim(), tagline: kit.tagline.trim(), colors: kit.colors.map((c) => c.toUpperCase()), font: kit.font, logo_path: kit.logoPath, logo_paths: kit.logoPaths, show_footer: kit.showFooter, updated_at: new Date().toISOString() };
       const row = { ...base, style: kit.style, header_color: kit.headerColor, options: kit.options };
       if (kit.id) {
         const { error } = await supabase.from("brand_kits" as never).update(row as never).eq("id", kit.id);
@@ -108,6 +140,7 @@ export function BrandKit({ userId, tier, artistName }: { userId: string; tier: T
       } else {
         const { data, error } = await supabase.from("brand_kits" as never).insert(row as never).select("id").single();
         if (error && /options/.test(error.message)) throw new Error("The new kit options need the latest database update. Ask support to run migration 20261028090000.");
+        if (error && /logo_paths/.test(error.message)) throw new Error("Logo versions need the latest database update. Ask support to run migration 20261106140000.");
         if (error) {
           // Before migration 20261027210000: one kit per person and no style or header color yet.
           if (kits.length > 1) throw new Error("More than one Branding Kit needs the latest database update. Ask support to run migration 20261027210000.");
@@ -164,6 +197,10 @@ export function BrandKit({ userId, tier, artistName }: { userId: string; tier: T
   const stripe = kit.colors.filter(isHex);
   // The line under a Classic header: one solid line in the kit's accent, the same colour the PDF draws (kitAccent).
   const accent = [kit.options.accent, kit.headerColor].find((c) => c && isHex(c)) ?? "#0b0b0b";
+  // Colours that will be hard to read on the white page: a warning, never a block (founder, 2026-11-06).
+  const warns = contrastWarnings(kit);
+  // A split sheet shows the artist's name, never a business name; the server swaps it for the real download too.
+  const previewName = preview === "split" ? artistName.trim() || kit.name : kit.name;
 
   return (
     <div className="space-y-6">
@@ -205,6 +242,7 @@ export function BrandKit({ userId, tier, artistName }: { userId: string; tier: T
         <div className="space-y-2">
           <Label htmlFor="bk-name" className="flex items-center gap-1.5">Name on your contracts<InfoTip text="The name at the top of your branded contracts: your business, label, DBA or artist name. Split sheets always show your artist name, and your artist name in My Catalog, Embed Metadata and everywhere else stays the same." /></Label>
           <Input id="bk-name" value={kit.name} maxLength={80} placeholder="Business or artist name" onChange={(e) => edit({ name: e.target.value })} />
+          {!kit.name.trim() && artistName.trim() && <Button size="sm" variant="ghost" className="h-7 px-2" onClick={() => edit({ name: artistName.trim() })}><Check className="h-3.5 w-3.5" />Use my artist name: {artistName.trim()}</Button>}
           <p className="text-xs text-muted-foreground">Starts as your artist name. Change it to a company or DBA name if you like; it's used on contracts only. Split sheets keep your artist name.</p>
         </div>
         <div className="space-y-2">
@@ -213,16 +251,46 @@ export function BrandKit({ userId, tier, artistName }: { userId: string; tier: T
         </div>
 
         <div className="space-y-2">
-          <Label className="flex items-center gap-1.5">Logo<InfoTip text="Optional. PNG or JPG, up to 2 MB. A wide logo with a clear background looks best." /></Label>
+          <Label className="flex items-center gap-1.5">Logo<InfoTip text="Optional. PNG or JPG, up to 2 MB. A wide logo with a clear background looks best. Keep as many versions as you like and switch between them." /></Label>
           <div className="flex flex-wrap items-center gap-3">
             {logoUrl && <img src={logoUrl} alt="Your logo" className="h-12 max-w-[10rem] rounded border border-border bg-white object-contain p-1" />}
             <Button asChild variant="outline" size="sm" disabled={busy}>
-              <label className="cursor-pointer"><ImagePlus className="h-4 w-4" />{kit.logoPath ? "Replace logo" : "Upload logo"}
+              <label className="cursor-pointer"><ImagePlus className="h-4 w-4" />{kit.logoPaths.length ? "Add a version" : "Upload logo"}
                 <input type="file" accept="image/png,image/jpeg" className="sr-only" onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ""; if (f) void uploadLogo(f); }} />
               </label>
             </Button>
-            {kit.logoPath && <Button variant="ghost" size="sm" onClick={() => void removeLogo()}><Trash2 className="h-4 w-4" />Remove</Button>}
           </div>
+          {kit.logoPaths.length > 0 && (
+            <div className="space-y-1">
+              <p className="text-xs font-semibold">Logo versions <span className="font-normal text-muted-foreground">— click one to use it</span></p>
+              <ul className="flex flex-wrap gap-2">
+                {kit.logoPaths.map((path, i) => (
+                  <li key={path} className={`flex items-center gap-1 rounded-lg border p-1 ${path === kit.logoPath ? "border-primary ring-1 ring-ring" : "border-border"}`}>
+                    <button type="button" onClick={() => useLogo(path)} aria-pressed={path === kit.logoPath} title={`Use logo version ${i + 1}`} className="h-9 w-16 overflow-hidden rounded bg-white">
+                      {logoUrls[path] ? <img src={logoUrls[path]} alt={`Logo version ${i + 1}`} className="h-full w-full object-contain" /> : <span className="block text-center text-[10px] text-muted-foreground">…</span>}
+                    </button>
+                    <Button variant="ghost" size="icon" className="h-7 w-7" aria-label={`Delete logo version ${i + 1}`} onClick={() => void removeLogoVersion(path)}><Trash2 className="h-3.5 w-3.5" /></Button>
+                  </li>
+                ))}
+              </ul>
+              <p className="text-xs text-muted-foreground">Switching a version changes the logo only; the rest of the kit stays as it is.</p>
+            </div>
+          )}
+          {fromLogo.length > 0 && (
+            <div className="rounded-lg border border-border p-3">
+              <p className="text-xs font-semibold">Colours from your logo</p>
+              <div className="mt-2 flex flex-wrap items-center gap-2">
+                {fromLogo.map((c) => (
+                  <button key={c} type="button" title={`Add ${c}`} aria-label={`Add ${c}`} onClick={() => edit({ colors: kit.colors.includes(c) ? kit.colors : [...kit.colors, c] })}
+                    className="flex items-center gap-1.5 rounded border border-border px-2 py-1 text-xs">
+                    <span aria-hidden className="h-4 w-4 rounded" style={{ background: c }} />{c}<Plus className="h-3 w-3" />
+                  </button>
+                ))}
+                <Button size="sm" variant="outline" onClick={() => { edit({ colors: fromLogo }); toast.success("Your logo's colours are in. The first colors your name, the second your tagline."); }}>Use these colours</Button>
+              </div>
+              <p className="mt-1 text-xs text-muted-foreground">Drawn from the file you uploaded, not guessed. Tap one to add it alone, or take them all.</p>
+            </div>
+          )}
         </div>
         <div className="space-y-2">
           <Label htmlFor="bk-font" className="flex items-center gap-1.5">Font<InfoTip text="The font for your name and tagline. The rest of the document stays in our easy-to-read font." /></Label>
@@ -246,6 +314,16 @@ export function BrandKit({ userId, tier, artistName }: { userId: string; tier: T
           ))}
           <Button variant="outline" size="sm" className="h-11" onClick={() => edit({ colors: [...kit.colors, kit.colors.length ? "#4D8CFF" : "#004AAD"] })}><Plus className="h-4 w-4" />Add color</Button>
         </div>
+        {warns.length > 0 && (
+          <ul className="space-y-1 rounded-lg border border-border bg-muted/40 p-3 text-xs">
+            {warns.map((w) => (
+              <li key={`${w.field}-${w.hex}`} className={`flex items-start gap-2 ${w.severe ? "text-destructive" : "text-muted-foreground"}`}>
+                <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+                <span><span className="font-semibold">{w.label}</span> in {w.hex} is {w.severe ? "very hard" : "hard"} to read on a white page ({w.ratio}:1). {w.severe ? "Pick a darker or lighter colour." : "4.5:1 or more reads comfortably."}</span>
+              </li>
+            ))}
+          </ul>
+        )}
       </div>
 
       <div className="space-y-2">
@@ -316,33 +394,66 @@ export function BrandKit({ userId, tier, artistName }: { userId: string; tier: T
 
       {/* Preview: the header as it prints (white page, like the PDF). */}
       <div className="min-w-0 space-y-2 lg:sticky lg:top-4 lg:self-start">
-        <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Preview</p>
+        <div role="tablist" aria-label="Preview on a document" className="flex flex-wrap gap-1 rounded-lg bg-muted p-1">
+          {(["contract", "split", "lyrics", "catalog"] as const).map((id) => (
+            <Button key={id} role="tab" aria-selected={preview === id} size="sm" variant={preview === id ? "default" : "ghost"} onClick={() => setPreview(id)}>
+              {{ contract: "Contract", split: "Split sheet", lyrics: "Lyrics", catalog: "Catalog" }[id]}
+            </Button>
+          ))}
+        </div>
         <div className={`relative overflow-hidden rounded-xl border border-border bg-white p-5 text-[#0b0b0b] ${kit.style === "sidebar" ? "pl-8" : ""}`}>
           {kit.style === "sidebar" && <span aria-hidden className="absolute inset-y-0 left-0 w-3" style={{ background: stripe[0] ?? "#0b0b0b" }} />}
           {kit.style === "banner" && <span aria-hidden className="absolute inset-x-0 top-0 h-[4.5rem]" style={{ background: stripe[0] ?? "#0b0b0b" }} />}
           <div className={`relative flex items-center gap-4 ${kit.style === "minimal" ? "hidden" : ""}`}>
             {logoUrl && <img src={logoUrl} alt="" className="h-12 max-w-[9rem] object-contain" />}
             <div className="min-w-0">
-              <p className="truncate text-xl font-bold" style={{ fontFamily: kit.font, color: kit.style === "banner" ? onBand(stripe[0]) : nameColor }}>{kit.name || "Your name"}</p>
+              <p className="truncate text-xl font-bold" style={{ fontFamily: kit.font, color: kit.style === "banner" ? onBand(stripe[0]) : nameColor }}>{previewName || "Your name"}</p>
               {kit.tagline && <p className="truncate text-xs font-medium" style={{ fontFamily: kit.font, color: kit.style === "banner" ? onBand(stripe[0]) : taglineColor ?? "#525252" }}>{kit.tagline}</p>}
             </div>
           </div>
           {kit.style === "classic" && <div className="mt-3 h-1 rounded-full" style={{ background: accent }} />}
-          <p className={`relative text-2xl font-bold ${kit.style === "banner" ? "mt-6" : "mt-4"}`}>Producer Agreement</p>
-          <p className="relative mt-3 text-sm font-bold" style={{ color: kit.headerColor && isHex(kit.headerColor) ? kit.headerColor : "#0b0b0b" }}>1. TERMS</p>
-          <p className="relative text-xs text-[#525252]">The contract text reads in black, with your section titles in this color.</p>
+          <p className={`relative text-2xl font-bold ${kit.style === "banner" ? "mt-6" : "mt-4"}`}>
+            {preview === "contract" ? "Producer Agreement" : preview === "split" ? "Split Sheet Agreement" : preview === "lyrics" ? "Song Title" : "Catalog"}
+          </p>
+          {preview === "lyrics" ? (
+            <>
+              <p className="relative mt-3 text-sm font-bold" style={{ color: kit.headerColor && isHex(kit.headerColor) ? kit.headerColor : "#0b0b0b" }}>LYRICS</p>
+              <p className="relative mt-1 whitespace-pre-line text-sm leading-6">First line of your song{"\n"}Second line, printed in black{"\n"}Third line, under your own header{"\n"}Fourth line, ready to download</p>
+            </>
+          ) : preview === "catalog" ? (
+            <>
+              <p className="relative mt-3 text-sm font-bold" style={{ color: kit.headerColor && isHex(kit.headerColor) ? kit.headerColor : "#0b0b0b" }}>TRACKS</p>
+              <ul className="relative mt-1 space-y-1 text-sm">
+                {["Song one · 04:12", "Song two · 03:28", "Song three · 02:59"].map((line) => (
+                  <li key={line} className="flex items-center gap-2"><span aria-hidden className="h-1.5 w-1.5 rounded-full" style={{ background: accent }} />{line}</li>
+                ))}
+              </ul>
+            </>
+          ) : (
+            <>
+              <p className="relative mt-3 text-sm font-bold" style={{ color: kit.headerColor && isHex(kit.headerColor) ? kit.headerColor : "#0b0b0b" }}>{preview === "split" ? "1. OWNERSHIP SPLITS" : "1. TERMS"}</p>
+              <p className="relative text-xs text-[#525252]">{preview === "split" ? "The split sheet reads in black, with draws and shares in your accent colour." : "The contract text reads in black, with your section titles in this color."}</p>
+            </>
+          )}
           {kit.options.watermark && logoUrl && <img src={logoUrl} alt="" aria-hidden className="pointer-events-none absolute left-1/2 top-1/2 h-24 max-w-[60%] -translate-x-1/2 -translate-y-1/2 object-contain opacity-[0.07]" />}
-          <div className={`relative mt-4 border px-3 py-2 text-xs ${kit.options.signature === "box" ? "" : "border-x-0 border-t-0"} ${kit.options.corners === "rounded" ? "rounded-md" : ""}`} style={{ borderColor: kit.options.accent ?? kit.headerColor ?? "#0b0b0b" }}>
-            <span className="font-bold" style={{ color: kit.options.accent ?? kit.headerColor ?? "#0b0b0b" }}>ARTIST</span><span className="ml-2 text-[#525252]">Signature</span>
-          </div>
-          {kit.options.cover && <p className="relative mt-2 text-[10px] text-[#525252]">+ Cover page with your logo, name and the contract title.</p>}
-          {kit.style === "minimal" && <div className="relative mt-4 flex items-center justify-between text-[10px] text-[#525252]"><span>{kit.name || "Your name"}</span>{logoUrl && <img src={logoUrl} alt="" className="h-5 max-w-[4rem] object-contain" />}</div>}
+          {preview === "contract" && (
+            <>
+              <div className={`relative mt-4 border px-3 py-2 text-xs ${kit.options.signature === "box" ? "" : "border-x-0 border-t-0"} ${kit.options.corners === "rounded" ? "rounded-md" : ""}`} style={{ borderColor: kit.options.accent ?? kit.headerColor ?? "#0b0b0b" }}>
+                <span className="font-bold" style={{ color: kit.options.accent ?? kit.headerColor ?? "#0b0b0b" }}>ARTIST</span><span className="ml-2 text-[#525252]">Signature</span>
+              </div>
+              {kit.options.cover && <p className="relative mt-2 text-[10px] text-[#525252]">+ Cover page with your logo, name and the contract title.</p>}
+            </>
+          )}
+          {kit.style === "minimal" && <div className="relative mt-4 flex items-center justify-between text-[10px] text-[#525252]"><span>{previewName || "Your name"}</span>{logoUrl && <img src={logoUrl} alt="" className="h-5 max-w-[4rem] object-contain" />}</div>}
           {kit.showFooter && <p className="mt-4 text-[10px] font-medium text-[#0b0b0b]">Made on Camethroughaudio.com — Your first stop for distribution</p>}
         </div>
         {/* Save on the left; the footer switch across from it, at the preview's bottom right (founder, 2026-11-06). It is a
             small control, and only the plans that may drop the footer see it at all. */}
         <div className="flex flex-wrap items-center justify-between gap-3 pt-2">
-          <Button onClick={() => void save()} disabled={busy || saved}>{busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}{saved ? "Saved" : "Save brand kit"}</Button>
+          <div className="flex flex-wrap items-center gap-2">
+            <Button onClick={() => void save()} disabled={busy || saved}>{busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}{saved ? "Saved" : "Save brand kit"}</Button>
+            <Button variant="outline" size="sm" disabled={busy} onClick={() => void sample()} title="A one-page test print using this kit"><FileDown className="h-4 w-4" />Sample PDF</Button>
+          </div>
           {hasTier(tier, "collaborate") && (
             <label htmlFor="bk-footer" className="flex items-center gap-2 text-xs text-muted-foreground">
               <Switch id="bk-footer" className="scale-75" checked={kit.showFooter} onCheckedChange={(v) => edit({ showFooter: v })} />

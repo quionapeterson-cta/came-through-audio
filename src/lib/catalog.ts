@@ -184,7 +184,7 @@ export type ZipResult = { songs: number; skipped: number; gaps: DownloadGap[] };
  * that came out incomplete is named with what to add, so the member can fill it in and download again (founder,
  * 2026-11-06: "2 files couldn't be fetched" told them nothing they could act on).
  */
-async function downloadSongsZip(tracks: CatalogTrack[], zipName: string, onProgress?: (done: number, total: number) => void): Promise<ZipResult> {
+async function downloadSongsZip(tracks: CatalogTrack[], zipName: string, onProgress?: (done: number, total: number) => void, kitId?: string): Promise<ZipResult> {
   const [{ makeZip, uniqueName }, { buildCatalogPdf }, { buildLyricsPdf }, { myBrand }, { releaseKind }] = await Promise.all([import("@/lib/zip"), import("@/lib/catalog-pdf"), import("@/lib/lyrics-pdf"), import("@/lib/brand-load"), import("@/lib/health-checklist")]);
   // The ZIP is laid out like the catalog (founder, 2026-11-06): "MP3 & WAV", "Artwork" and "Lyrics" at the top, each split
   // into Singles, EPs and Albums, with every EP and album in its own folder. Catalog.pdf sits at the root.
@@ -194,7 +194,7 @@ async function downloadSongsZip(tracks: CatalogTrack[], zipName: string, onProgr
     return `${kind === "EP" ? "EPs" : "Albums"}/${safeName(t.metadata.album?.trim() || `Untitled ${kind === "EP" ? "EP" : "album"}`)}`;
   };
   // Their Personal Branding header on the lyric and catalog PDFs inside the ZIP, when they have a kit.
-  const brand = await myBrand("catalog");
+  const brand = await myBrand("catalog", kitId ?? null);
   const taken = new Set<string>();
   const entries: { name: string; data: Uint8Array }[] = [];
   const bytes = async (b: Blob) => new Uint8Array(await b.arrayBuffer());
@@ -227,14 +227,14 @@ async function downloadSongsZip(tracks: CatalogTrack[], zipName: string, onProgr
 }
 
 /** Every song in the catalog as one ZIP. */
-export async function downloadWholeCatalog(onProgress?: (done: number, total: number) => void) {
+export async function downloadWholeCatalog(onProgress?: (done: number, total: number) => void, kitId?: string) {
   const tracks = await listTracks();
   if (!tracks.length) throw new Error("Your catalog is empty, so there is nothing to zip yet.");
-  return downloadSongsZip(tracks, "My Catalog.zip", onProgress);
+  return downloadSongsZip(tracks, "My Catalog.zip", onProgress, kitId);
 }
 
 /** One album or EP as its own ZIP, so a release can be handed over in one click without the whole catalog. */
-export async function downloadRelease(release: Release, onProgress?: (done: number, total: number) => void) {
+export async function downloadRelease(release: Release, onProgress?: (done: number, total: number) => void, kitId?: string) {
   if (!release.tracks.length) throw new Error("That release has no songs in it yet.");
-  return downloadSongsZip(release.tracks, `${safeName(release.album)} (${release.type}).zip`, onProgress);
+  return downloadSongsZip(release.tracks, `${safeName(release.album)} (${release.type}).zip`, onProgress, kitId);
 }
