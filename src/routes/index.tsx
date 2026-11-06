@@ -242,8 +242,8 @@ function CatalogRow() {
             <p className="min-w-0 flex-1 truncate text-xs font-semibold text-ink-foreground">{title}</p>
             <div className="flex shrink-0 flex-wrap items-center justify-end gap-x-1.5 gap-y-0.5">
               {EMBEDDED_FIELDS.map((f) => (
-                <span key={f} className="inline-flex items-center gap-0.5 text-[9px] font-medium leading-none text-ink-muted">
-                  <Check className="h-2 w-2 text-electric" strokeWidth={4} aria-hidden />{f}
+                <span key={f} className="inline-flex items-center gap-1 text-[11px] font-medium leading-none text-ink-muted sm:text-xs">
+                  <Check className="h-2.5 w-2.5 text-electric" strokeWidth={4} aria-hidden />{f}
                 </span>
               ))}
             </div>
