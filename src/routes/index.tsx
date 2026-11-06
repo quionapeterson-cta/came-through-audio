@@ -193,7 +193,7 @@ const CARD_LABEL = "absolute inset-x-0 top-[30%] text-center text-base font-bold
 /** The scattered side: a loose pile of chips, deliberately not lined up, dropped to the bottom to sit level with the rows. */
 function CatalogScatter() {
   return (
-    <div className="relative flex h-full min-h-[23rem] flex-col justify-end rounded-2xl border border-dashed border-ink-border bg-ink p-4 text-ink-foreground">
+    <div className="relative flex h-full min-h-[26rem] flex-col justify-end rounded-2xl border border-dashed border-ink-border bg-ink p-4 text-ink-foreground">
       <p className={`${CARD_LABEL} text-ink-muted`}>Before Embedding</p>
       {/* Same minimum height as the three song rows on the right, so the two stacks start and end on the same lines. */}
       <div className="relative flex min-h-[9rem] flex-wrap content-center items-center justify-center gap-2">
@@ -224,7 +224,7 @@ const HOUSE_SONGS = [
  */
 function CatalogRow() {
   return (
-    <div className="relative flex h-full min-h-[23rem] flex-col justify-end rounded-2xl border border-dashed border-ink-border bg-ink p-4 text-ink-foreground">
+    <div className="relative flex h-full min-h-[26rem] flex-col justify-end rounded-2xl border border-dashed border-ink-border bg-ink p-4 text-ink-foreground">
       <svg aria-hidden viewBox="0 0 100 100" preserveAspectRatio="none"
         className="pointer-events-none absolute inset-0 h-full w-full text-electric">
         {/* Eaves past the walls, a peaked roof, a ceiling line across the wall tops, then walls down both sides. */}
