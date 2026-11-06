@@ -15,7 +15,7 @@ import { getTestimonialFilter, getTestimonials } from "@/lib/testimonials.functi
 import { getSiteSocials } from "@/lib/social.functions";
 import { DEFAULT_SOCIALS } from "@/lib/social";
 import { SocialLinks } from "@/components/SocialLinks";
-import { BrandLockup } from "@/components/BrandLockup";
+import { BrandLockup, MARK_BOX, MARK_TUCK } from "@/components/BrandLockup";
 import { TestimonialCard } from "@/components/TestimonialCard";
 
 export const Route = createFileRoute("/")({
@@ -495,9 +495,13 @@ function Landing() {
       <section className="bg-background py-16 md:py-20">
         <div className="mx-auto max-w-5xl px-6">
           <div className="rounded-2xl bg-primary px-6 py-12 text-primary-foreground ring-1 ring-inset ring-primary-foreground/20 md:px-12 md:py-14">
-            <p className="flex items-center gap-3 text-xs font-bold uppercase tracking-[3px]">
-              <span className="h-px w-10 bg-primary-foreground/60" />
-              Came Through Audio
+            {/* The brand line is the mark standing in for the C, the same way the header draws it (founder, 2026-11-06),
+                so the panel is signed rather than labelled. The mark is the favicon's white tone, sized in em and tucked
+                with MARK_TUCK, so it stays on the name's baseline at every width. */}
+            <p className="flex items-center gap-2 text-sm font-bold uppercase tracking-[3px] sm:text-base">
+              <img src="/favicon.png" alt="" aria-hidden className={`${MARK_BOX} ${MARK_TUCK}`} />
+              <span aria-hidden>ame Through Audio</span>
+              <span className="sr-only">Came Through Audio</span>
             </p>
             <p className="mt-6 text-4xl font-extrabold leading-[1.1] md:text-5xl lg:text-6xl">Your music. One Home.</p>
             <p className="mt-3 text-3xl font-extrabold leading-[1.2] md:text-4xl lg:text-5xl">
@@ -559,8 +563,8 @@ function Landing() {
         <div className="mx-auto max-w-5xl px-6">
           <h2 className="text-3xl font-extrabold md:text-4xl">What the industry means by a catalog</h2>
           <div className="mt-4 grid gap-6 text-lg leading-relaxed text-primary-foreground/90 md:grid-cols-2">
-            <p>A catalog is not one song. In the music business the word means an artist's cumulative body of work, held as a single asset: every recording, every composition and every share of the writing, valued and traded together rather than a track at a time.</p>
-            <p>Michael Jackson bought the Beatles' publishing catalog, and that purchase is still the example people reach for when they explain what a catalog is worth. The songs never moved one at a time; the catalog did, worth millions, because owning the whole body of work is worth more than owning any part of it.</p>
+            <p>A catalog is not one song. In the music business the word means an artist's cumulative body of work, held as a single asset: every recording, every composition and every share of the writing, valued and traded together rather than a track at a time. A single song is a credit; a catalog is an estate, because the worth sits in the body of work and the income it already earns, not in any one release. That is why catalogs get bought, licensed and insured whole, and why an artist who owns one sits down to a very different conversation than an artist with a good song on a hard drive.</p>
+            <p>Michael Jackson bought the Beatles' publishing catalog, and that purchase is still the example people reach for. The songs never moved one at a time; the catalog did, because owning the whole body of work is worth more than owning any part of it.</p>
           </div>
         </div>
       </section>
