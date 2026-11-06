@@ -229,6 +229,10 @@
 - **Finishing a checklist is a moment** (founder, 2026-11-06): the last tick shows `Confetti`, one toast and runs the
   awards check (`requestBadgeCheck`). A completion badge of its own still needs its `BadgeDef`, metric and art approved
   through the Badge Art Protocol — don't add one without the founder.
+- **The welcome burst waits 30 days** (founder, 2026-11-06, replacing the weekly burst of 2026-11-05): `celebrateReturn`
+  in `src/lib/celebrate.ts` records every visit under `cta.lastSeen` and reports a return only when the previous visit was
+  `RETURN_AFTER_DAYS` (30) or more days ago. A first visit, a routine return and a browser that blocks storage all stay
+  quiet, and the burst never replaces a completion: work being finished is what the real celebration is for.
 - **The Fill & Sign tab is called PDF Fill & Sign** (founder, 2026-11-06), in the workspace tabs and in the support
   topics, so a ticket's area matches the tab the member sees.
 - **The profile defaults are blueprints too** (founder, 2026-11-06): `embed-defaults` ("Set Your Embed Defaults") and

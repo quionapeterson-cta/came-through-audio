@@ -35,7 +35,7 @@ import { PRICE_TIER, TIER_LABEL, hasTier, planIntentFromSearch, rememberPlanInte
 import { PlanComparison, planAction } from "@/components/PlanComparison";
 import { BadgeWatcher } from "@/components/Badges";
 import { Confetti } from "@/components/Confetti";
-import { maybeCelebrate } from "@/lib/celebrate";
+import { celebrateReturn } from "@/lib/celebrate";
 import { BadgeViewer } from "@/components/BadgeViewer";
 import type { ShareInfo } from "@/components/BadgeCelebration";
 import { isBadgeImage, badgeForArt, type CollectionId } from "@/lib/badges";
@@ -113,8 +113,8 @@ function Workspace() {
       .catch(() => {});
   }, [user]);
   const [previewTier, setPreviewTier] = useState<Tier | "real">("real");
-  // A now-and-then welcome burst, like Admin's (founder, 2026-11-05): at most once a week, and never for someone who
-  // turned celebrations off or asked their device for reduced motion.
+  // A welcome burst only after 30 days away (founder, 2026-11-06): a routine visit gets none, and finishing a
+  // blueprint checklist keeps its own celebration. Never for someone who turned celebrations off or asked for reduced motion.
   const [welcomeBurst, setWelcomeBurst] = useState(false);
   // The test-mode tier preview is for super admins only, so testers can't hand themselves a paid plan in the UI.
   const staff = useQuery({ queryKey: ["staff-role", user?.id], queryFn: () => getStaffRole(), enabled: !!user && getPaymentsEnvironment() === "sandbox" });
@@ -192,7 +192,7 @@ function Workspace() {
     if (!user) return;
     if (badgePrefs(loadOnboarding(user.id)).celebrations === "off") return;
     if (window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) return;
-    if (!maybeCelebrate()) return;
+    if (!celebrateReturn()) return;
     setWelcomeBurst(true);
     const t = setTimeout(() => setWelcomeBurst(false), 2800);
     return () => clearTimeout(t);
