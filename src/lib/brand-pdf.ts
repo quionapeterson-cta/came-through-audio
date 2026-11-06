@@ -62,6 +62,9 @@ export async function newBrandedPdf(brand?: PdfBrand | null) {
     }
     withPoppins.add(pdf);
   }
+  // One brand per document (founder, 2026-11-06): with a kit in play, the labels under the header follow the kit too, so a
+  // split sheet never reads as half Karma Came and half Came Through Audio.
+  if (brand) accents.set(pdf, kitAccent(brand));
   if (brand && extra) {
     for (const w of ["medium", "bold"] as const) {
       pdf.addFileToVFS(`${fontFile(brand.font, w)}.ttf`, extra[w]);
@@ -231,6 +234,10 @@ export function kitWatermark(pdf: JsPDF, brand: PdfBrand) {
   } catch { /* no watermark if the logo can't be drawn */ }
 }
 
+/** The colour our blue furniture is drawn in: the kit's own once a kit replaces our header, else cobalt. */
+const accents = new WeakMap<JsPDF, [number, number, number]>();
+const accentOf = (pdf: JsPDF) => accents.get(pdf) ?? COBALT;
+
 /** The kit's second accent color, else its section title color, else Primary Black. */
 export const kitAccent = (brand: PdfBrand): [number, number, number] =>
   brand.options.accent ? hexRgb(brand.options.accent) : brand.headerColor ? hexRgb(brand.headerColor) : INK;
@@ -299,7 +306,7 @@ export function infoGrid(pdf: JsPDF, y: number, items: [string, string][]) {
     r.forEach((c, ci) => {
       const x = MARGIN + 8 + ci * colW;
       // Blue labels match their entries in size.
-      font(pdf, "semibold", 11.5).setTextColor(...COBALT).text(c.label, x, yy);
+      font(pdf, "semibold", 11.5).setTextColor(...accentOf(pdf)).text(c.label, x, yy);
       font(pdf, "regular", 11.5).setTextColor(...(c.lines[0] === "—" ? MUTED : INK));
       c.lines.forEach((line, li) => pdf.text(line, x, yy + 6 + li * 5.6));
     });
@@ -308,8 +315,8 @@ export function infoGrid(pdf: JsPDF, y: number, items: [string, string][]) {
   return y + h + 10;
 }
 
-export function sectionTitle(pdf: JsPDF, y: number, text: string, color: [number, number, number] = COBALT) {
-  label(pdf, text, MARGIN, y, color, 9);
+export function sectionTitle(pdf: JsPDF, y: number, text: string, color?: [number, number, number]) {
+  label(pdf, text, MARGIN, y, color ?? accentOf(pdf), 9);
   return y + 8;
 }
 
