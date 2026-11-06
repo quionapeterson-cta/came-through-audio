@@ -193,28 +193,44 @@ function CatalogScatter() {
   );
 }
 
-/** The tidy side: one song, one row, every part of it ticked inside the same card. */
+/** The songs that were scattered, each on its own row and all of them kept in one catalog — drawn as a house. */
+const HOUSE_SONGS = [
+  { title: "Your Song", meta: "Single · 03:12", parts: ["Master", "ISRC"] },
+  { title: "Next Single", meta: "Single · 02:58", parts: ["Art", "Splits"] },
+  { title: "Album Cut", meta: "Album · 04:06", parts: ["Lyrics", "UPC"] },
+];
+
+/**
+ * The tidy side: a few organised rows, sitting inside a simple house line in cobalt — two walls and a roof, so the rows
+ * read as one catalog rather than three separate songs (founder, 2026-11-05).
+ */
 function CatalogRow() {
-  const parts = ["Master audio", "Cover art", "Lyrics", "Writers & splits", "ISRC", "UPC"];
   return (
-    <div className="flex h-full flex-col justify-center rounded-2xl border-2 border-primary bg-muted p-5">
-      <div className="rounded-xl border border-ink-border bg-ink p-4">
-        <div className="flex items-center gap-3">
-          <span className="grid h-11 w-11 shrink-0 place-items-center rounded-lg bg-primary/15"><Music className="h-5 w-5 text-electric" aria-hidden /></span>
-          <div className="min-w-0">
-            <p className="truncate font-semibold text-ink-foreground">Your Song</p>
-            <p className="truncate text-xs text-ink-muted">Single · 03:12 · 2026-03-03</p>
+    <div className="relative flex h-full flex-col justify-center rounded-2xl border border-dashed border-ink-border bg-ink p-4 text-ink-foreground">
+      <svg aria-hidden viewBox="0 0 100 100" preserveAspectRatio="none"
+        className="pointer-events-none absolute inset-0 h-full w-full text-electric">
+        <path d="M3 99 V38 L50 5 L97 38 V99" fill="none" stroke="currentColor" strokeWidth="1.5"
+          strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
+      </svg>
+      <div className="relative space-y-2 px-3 pb-1 pt-12">
+        {HOUSE_SONGS.map(({ title, meta, parts }) => (
+          <div key={title} className="flex items-center gap-3 rounded-xl border border-ink-border bg-ink-border/25 px-3 py-2">
+            <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-primary/20"><Music className="h-4 w-4 text-electric" aria-hidden /></span>
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-sm font-semibold text-ink-foreground">{title}</p>
+              <p className="truncate text-[11px] text-ink-muted">{meta}</p>
+            </div>
+            <div className="flex shrink-0 gap-1">
+              {parts.map((p) => (
+                <span key={p} className="inline-flex items-center gap-0.5 rounded-full bg-ink-border/70 px-1.5 py-0.5 text-[10px] font-medium text-ink-foreground">
+                  <Check className="h-2.5 w-2.5 text-electric" strokeWidth={3} aria-hidden />{p}
+                </span>
+              ))}
+            </div>
           </div>
-        </div>
-        <div className="mt-3 flex flex-wrap gap-1.5">
-          {parts.map((p) => (
-            <span key={p} className="inline-flex items-center gap-1 rounded-full bg-ink-border/60 px-2 py-0.5 text-[11px] font-medium text-ink-foreground">
-              <Check className="h-3 w-3 text-electric" strokeWidth={3} aria-hidden />{p}
-            </span>
-          ))}
-        </div>
+        ))}
       </div>
-      <p className="mt-3 text-center text-xs text-muted-foreground">One row per song. Search it, download it, send it out, and the rest is attached.</p>
+      <p className="relative mt-3 text-center text-xs text-ink-muted">Each song gets a row. Every row lives in the same catalog.</p>
     </div>
   );
 }
