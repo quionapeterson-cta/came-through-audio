@@ -63,7 +63,7 @@ export function useBilling(userId: string | undefined) {
       .filter((r) => r.status === "active" || (!!r.current_period_end && Date.parse(r.current_period_end) > Date.now()));
     const hereSeats = usableSeats.filter((r) => r.environment === env);
     const seatTiers = (hereSeats.length ? hereSeats : usableSeats).map((r) => r.tier);
-    setTier(isPaused(pauseRows) ? "free" : highestTier(seat ? seat.granted_tier : best, ...seatTiers, serverTier(serverTierRow)));
+    setTier(isPaused(pauseRows) ? "free" : highestTier(seat ? seat.granted_tier : best, ...seatTiers, serverTier(serverTierRow.data)));
     const row = live.find((r) => tierFromPrice(r.price_id) === best);
     // (plan and sub below follow the tier they pay for, so billing shows the real price)
     // orderedAt: when the plan was first bought, for the 30-day full refund countdown.
@@ -96,7 +96,8 @@ export function useBilling(userId: string | undefined) {
 /**
  * The database's answer, whatever shape it comes back in. `user_tier` returns one text value, but a PostgREST client can
  * hand back an array or an object depending on how the function is called, and reading that as `[object Object]` silently
- * turned a super admin into Free on the published site (founder, 2026-11-06). Only a real tier counts.
+ * turned a super admin into Free on the published site (founder, 2026-11-06). Only a real tier counts. Pass the response's
+ * `data`, never the response itself: its first value is `error` (null), which read every staff login as Free.
  */
 function serverTier(v: unknown): Tier {
   const first = Array.isArray(v) ? v[0] : v;
