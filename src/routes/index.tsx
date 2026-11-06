@@ -181,8 +181,6 @@ const CATALOG_SCATTER: { icon: typeof Mail; label: string; tilt: string; wide?: 
   { icon: Mic, label: "Voice memo", tilt: "-2deg" },
   { icon: Folder, label: "Downloads folder", tilt: "2deg", wide: true },
   { icon: Smartphone, label: "Producer's phone", tilt: "-6deg", wide: true },
-  { icon: Upload, label: "WeTransfer link", tilt: "5deg", wide: true },
-  { icon: Music, label: "Session file", tilt: "2deg", wide: true },
   { icon: Cloud, label: "Google Drive", tilt: "-2deg", wide: true },
 ];
 
@@ -198,9 +196,9 @@ function CatalogScatter() {
     <div className="relative flex h-full min-h-[23rem] flex-col justify-end rounded-2xl border border-dashed border-ink-border bg-ink p-4 text-ink-foreground">
       <p className={`${CARD_LABEL} text-ink-muted`}>Before Embedding</p>
       {/* Same minimum height as the three song rows on the right, so the two stacks start and end on the same lines. */}
-      <div className="relative flex min-h-[9rem] flex-wrap content-center items-center justify-center gap-1.5">
+      <div className="relative flex min-h-[9rem] flex-wrap content-center items-center justify-center gap-2">
         {CATALOG_SCATTER.map(({ icon: Icon, label, tilt, wide }) => (
-          <span key={label} className={`${wide ? "hidden sm:inline-flex" : "inline-flex"} items-center gap-1.5 rounded-full border border-ink-border bg-ink px-2.5 py-1 text-xs text-ink-muted sm:text-[13px]`}
+          <span key={label} className={`${wide ? "hidden sm:inline-flex" : "inline-flex"} items-center gap-1.5 rounded-full border border-ink-border bg-ink px-2.5 py-1 text-[13px] text-ink-muted sm:text-sm`}
             style={{ transform: `rotate(${tilt})` }}>
             <Icon className="h-3.5 w-3.5 shrink-0" aria-hidden /> {label}
           </span>
