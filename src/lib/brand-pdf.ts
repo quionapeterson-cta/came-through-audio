@@ -166,6 +166,12 @@ const onColor = ([r, g, b]: [number, number, number]): [number, number, number] 
 function kitHeader(pdf: JsPDF, brand: PdfBrand) {
   const w = pdf.internal.pageSize.getWidth();
   const colors = brand.colors.map(hexRgb);
+  // Four styles added on 2026-11-07 set the whole page, so each draws its own heading. Frame only adds a border and then
+  // falls through to the settled heading below, so a logo's side, line and fine movement mean the same thing there.
+  if (brand.style === "label") return labelHeader(pdf, brand, colors, w);
+  if (brand.style === "ticket") return ticketHeader(pdf, brand, colors, w);
+  if (brand.style === "frame") frameBorder(pdf, brand, w);
+  if (brand.style === "editorial") return editorialHeader(pdf, brand, colors, w);
   const banner = brand.style === "banner";
   const band = colors[0] ?? INK;
   if (banner) pdf.setFillColor(...band).rect(0, 0, w, 31, "F");
@@ -190,9 +196,86 @@ function kitHeader(pdf: JsPDF, brand: PdfBrand) {
   const text = onColor(band);
   if (brand.name) kitFont(pdf, brand, "bold", 14).setTextColor(...(banner ? text : colors[0] ?? INK)).text(brand.name, x, nameY, { align });
   if (brand.tagline) kitFont(pdf, brand, "medium", 7.5).setTextColor(...(banner ? text : colors[1] ?? MUTED)).text(brand.tagline, x, 24, { align });
-  if (brand.style !== "classic") return;
+  if (brand.style !== "classic" && brand.style !== "frame") return;
   // One solid line in the kit's accent (founder, 2026-11-06: the multi-colour stripe read as two-tone).
   pdf.setFillColor(...kitAccent(brand)).rect(MARGIN, 28.5, w - MARGIN * 2, 0.8, "F");
+}
+
+/** The kit's logo inside a box, lined up to its left edge, right edge or centre. Returns the width drawn, 0 without one. */
+function fitLogo(pdf: JsPDF, brand: PdfBrand, box: { x: number; y: number; w: number; h: number }, align: "left" | "right" | "centre" = "left") {
+  if (!brand.logo) return 0;
+  try {
+    const p = pdf.getImageProperties(brand.logo.dataUrl);
+    const s = Math.min(box.w / p.width, box.h / p.height);
+    const lw = p.width * s, lh = p.height * s;
+    const x = align === "right" ? box.x - lw : align === "centre" ? box.x + (box.w - lw) / 2 : box.x;
+    pdf.addImage(brand.logo.dataUrl, p.fileType, x, box.y, lw, lh);
+    return lw;
+  } catch { return 0; }
+}
+
+/** A kit's fine movement, kept inside the band a style leaves for the picture. */
+const nudgeIn = (nudge: number, min: number, max: number) => Math.max(min, Math.min(max, nudge));
+
+/**
+ * Label (founder, 2026-11-07): centred like a record sleeve — the logo, then a short accent rule, then the name, then the
+ * tagline. Nothing sits left or right here, so the logo's side has no meaning; its snap and fine movement still move it.
+ */
+function labelHeader(pdf: JsPDF, brand: PdfBrand, colors: [number, number, number][], w: number) {
+  const accent = kitAccent(brand);
+  const lw = fitLogo(pdf, brand, { x: MARGIN, y: 7 + nudgeIn(brand.options.logoNudge, -1, 5), w: w - MARGIN * 2, h: 8 }, "centre");
+  pdf.setFillColor(...accent).rect(w / 2 - 7, lw ? 18 : 13.5, 14, 1, "F");
+  const nameY = lw ? 24.5 : 21;
+  if (brand.name) kitFont(pdf, brand, "bold", 14).setTextColor(...(colors[0] ?? INK)).text(brand.name, w / 2, nameY, { align: "center", charSpace: 0.3 });
+  if (brand.tagline) kitFont(pdf, brand, "medium", 7.5).setTextColor(...(colors[1] ?? MUTED)).text(brand.tagline, w / 2, nameY + 5.8, { align: "center", charSpace: 0.4 });
+}
+
+/**
+ * Ticket (founder, 2026-11-07): the heading inside a thin accent box, with punched notches along its foot, so it reads as a
+ * tear-off stub rather than another rule. The notches are white discs with an accent rim, which is what "punches" the line.
+ */
+function ticketHeader(pdf: JsPDF, brand: PdfBrand, colors: [number, number, number][], w: number) {
+  const accent = kitAccent(brand);
+  const top = 9, bottom = 30, left = MARGIN, right = w - MARGIN;
+  pdf.setDrawColor(...accent).setLineWidth(0.4).rect(left, top, right - left, bottom - top, "S");
+  // White discs with no rim eat the foot of the box, so the line reads as a perforation. With a rim they looked like a
+  // chain of beads sitting on the border instead.
+  for (let x = left + 7; x < right - 5; x += 5.5) pdf.setFillColor(255, 255, 255).circle(x, bottom, 1.2, "F");
+  const onRight = brand.options.logoAlign === "right";
+  const lw = fitLogo(pdf, brand, { x: onRight ? right - 5 : left + 5, y: 11.5 + nudgeIn(brand.options.logoNudge, -3, 5), w: 34, h: 10 }, onRight ? "right" : "left");
+  const rightSide = onRight && lw > 0;
+  const x = rightSide ? right - 5 - lw - 5 : left + 5 + (lw ? lw + 5 : 0);
+  const align = rightSide ? "right" as const : "left" as const;
+  if (brand.name) kitFont(pdf, brand, "bold", 14).setTextColor(...(colors[0] ?? INK)).text(brand.name, x, 18.5, { align });
+  if (brand.tagline) kitFont(pdf, brand, "medium", 7.5).setTextColor(...(colors[1] ?? MUTED)).text(brand.tagline, x, 24, { align });
+}
+
+/** Frame: a fine accent keyline around the first page, stopped above the footer rule so it never cuts the page line. */
+function frameBorder(pdf: JsPDF, brand: PdfBrand, w: number) {
+  const h = pdf.internal.pageSize.getHeight();
+  const inset = 8;
+  pdf.setDrawColor(...kitAccent(brand)).setLineWidth(0.7).rect(inset, inset, w - inset * 2, h - inset - 24, "S");
+}
+
+/**
+ * Editorial (founder, 2026-11-07): a heavy accent bar, the name set large on the left, the logo in the far column and the
+ * tagline under it, closed by a hairline. A long name shrinks rather than running into that column.
+ */
+function editorialHeader(pdf: JsPDF, brand: PdfBrand, colors: [number, number, number][], w: number) {
+  const accent = kitAccent(brand);
+  pdf.setFillColor(...accent).rect(MARGIN, 9, 18, 1.6, "F");
+  const onRight = brand.options.logoAlign !== "left";
+  const lw = fitLogo(pdf, brand, { x: onRight ? w - MARGIN : MARGIN, y: 10 + nudgeIn(brand.options.logoNudge, -3, 2), w: 34, h: 8 }, onRight ? "right" : "left");
+  // The right column is the tagline's, so a long name shrinks rather than running into it.
+  const avail = w - MARGIN * 2 - 68;
+  let size = 20;
+  if (brand.name) {
+    kitFont(pdf, brand, "bold", size);
+    while (size > 11 && pdf.getTextWidth(brand.name) > avail) { size -= 1; kitFont(pdf, brand, "bold", size); }
+    kitFont(pdf, brand, "bold", size).setTextColor(...(colors[0] ?? INK)).text(brand.name, onRight ? MARGIN : MARGIN + (lw ? lw + 5 : 0), 22);
+  }
+  if (brand.tagline) kitFont(pdf, brand, "medium", 7).setTextColor(...(colors[1] ?? MUTED)).text(brand.tagline, w - MARGIN, 22, { align: "right", charSpace: 0.4 });
+  pdf.setFillColor(...accent).rect(MARGIN, 28, w - MARGIN * 2, 0.4, "F");
 }
 
 /**

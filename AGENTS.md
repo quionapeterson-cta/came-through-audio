@@ -498,6 +498,15 @@ rules keep it consistent as features are added.
   no logo the heading keeps its left edge whatever side is chosen, and Minimal still carries the logo in the footer,
   where these controls don't apply.
 
+- **Four styles set the page, not just the header** (founder, 2026-11-07): Label centres the logo, a short accent rule, the
+  name and the tagline like a record sleeve — with the logo's side control replaced by a line that says so, since a centred
+  heading has no left or right; Ticket puts the heading in a thin accent box with punched notches along its foot (white
+  discs that eat the line, which is what punches it); Frame draws a fine keyline around the first page,
+  stopped above the footer rule, and then uses the settled heading unchanged; Editorial sets the name large on the left
+  with the logo in the far column and the tagline under it, closing on a hairline, and shrinks a long name rather than
+  letting it run into that column. Each is a branch in `kitHeader` (Frame falls through to the original one), a sketch in
+  `StyleThumb` and its own preview, and the four styles that already shipped print exactly as they did.
+
 ### When it fails
 - A missing, unreadable or unavailable kit never blocks a download: the document simply keeps the Came Through Audio
   header. Never turn a branding lookup into an error the member sees.

@@ -274,6 +274,8 @@ export function BrandKit({ userId, tier, artistName }: { userId: string; tier: T
   const warns = contrastWarnings(kit);
   // A split sheet shows the artist's name, never a business name; the server swaps it for the real download too.
   const previewName = preview === "split" ? artistName.trim() || kit.name : kit.name;
+  // The four styles added on 2026-11-07 draw their own heading in the preview, so the settled one steps aside for them.
+  const freshHeader = kit.style === "label" || kit.style === "ticket" || kit.style === "frame" || kit.style === "editorial";
 
   return (
     <div className="space-y-6">
@@ -385,15 +387,20 @@ export function BrandKit({ userId, tier, artistName }: { userId: string; tier: T
               because a logo file often carries empty space above its ink and no snap can find the ink by itself. */}
           {kit.logoPath && (
             <div className="space-y-3 rounded-lg border border-border p-3">
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <span className="text-sm font-semibold">Logo side</span>
-                <div role="radiogroup" aria-label="Logo side" className="flex rounded-lg border border-border p-0.5">
-                  {([["left", "Left"], ["right", "Right"]] as const).map(([v, label]) => (
-                    <button key={v} type="button" role="radio" aria-checked={kit.options.logoAlign === v} onClick={() => edit({ options: { ...kit.options, logoAlign: v } })}
-                      className={`rounded-md px-3 py-1 text-sm font-semibold ${kit.options.logoAlign === v ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}>{label}</button>
-                  ))}
+              {/* Label centres the heading, so a side would be a control that does nothing: it says so instead. */}
+              {kit.style === "label" ? (
+                <p className="text-xs text-muted-foreground">Label centres your logo above your name, so the side doesn't apply. The line-up and the movement still move it.</p>
+              ) : (
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <span className="text-sm font-semibold">Logo side</span>
+                  <div role="radiogroup" aria-label="Logo side" className="flex rounded-lg border border-border p-0.5">
+                    {([["left", "Left"], ["right", "Right"]] as const).map(([v, label]) => (
+                      <button key={v} type="button" role="radio" aria-checked={kit.options.logoAlign === v} onClick={() => edit({ options: { ...kit.options, logoAlign: v } })}
+                        className={`rounded-md px-3 py-1 text-sm font-semibold ${kit.options.logoAlign === v ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}>{label}</button>
+                    ))}
+                  </div>
                 </div>
-              </div>
+              )}
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <span className="text-sm font-semibold">Line up with your name</span>
                 <div role="radiogroup" aria-label="Logo line" className="flex rounded-lg border border-border p-0.5">
@@ -603,16 +610,51 @@ export function BrandKit({ userId, tier, artistName }: { userId: string; tier: T
         <div className={`relative overflow-hidden rounded-xl border border-border bg-white p-5 text-[#0b0b0b] ${kit.style === "sidebar" ? "pl-8" : ""}`}>
           {kit.style === "sidebar" && <span aria-hidden className="absolute inset-y-0 left-0 w-3" style={{ background: stripe[0] ?? "#0b0b0b" }} />}
           {kit.style === "banner" && <span aria-hidden className="absolute inset-x-0 top-0 h-[4.5rem]" style={{ background: stripe[0] ?? "#0b0b0b" }} />}
+          {/* Frame: the keyline the PDF draws around the first page, shown here as the card's own border. */}
+          {kit.style === "frame" && <span aria-hidden className="pointer-events-none absolute inset-2 border" style={{ borderColor: accent }} />}
           {/* The preview is a preview (founder, 2026-11-07): no guides, handles or controls are drawn over it. It shows the
               header as it will print, and every tool for moving the logo lives with the other editing tools. */}
-          <div className={`relative flex gap-4 ${snapClass} ${kit.style === "minimal" ? "hidden" : ""}`}>
+          <div className={`relative flex gap-4 ${snapClass} ${kit.style === "minimal" || freshHeader ? "hidden" : ""}`}>
             <div className={`min-w-0 flex-1 ${logoRight ? "order-1" : "order-2"}`}>
               <p className="truncate text-xl font-bold" style={{ fontFamily: kit.font, color: kit.style === "banner" ? onBand(stripe[0]) : nameColor }}>{previewName || "Your name"}</p>
               {kit.tagline && <p className="truncate text-xs font-medium" style={{ fontFamily: kit.font, color: kit.style === "banner" ? onBand(stripe[0]) : taglineColor ?? "#525252" }}>{kit.tagline}</p>}
             </div>
             {logoImage}
           </div>
-          {kit.style === "classic" && <div className="mt-3 h-1 rounded-full" style={{ background: accent }} />}
+          {kit.style === "label" && (
+            <div className="relative text-center">
+              {logoUrl && <img src={logoUrl} alt="" className="mx-auto h-8 max-w-[10rem] object-contain" style={{ transform: `translateY(${(shownNudge * pxPerMm).toFixed(1)}px)` }} />}
+              <span aria-hidden className="mx-auto mt-2 block h-0.5 w-12 rounded-full" style={{ background: accent }} />
+              <p className="mt-2 truncate text-xl font-bold" style={{ fontFamily: kit.font, color: nameColor }}>{previewName || "Your name"}</p>
+              {kit.tagline && <p className="truncate text-xs font-medium" style={{ fontFamily: kit.font, color: taglineColor ?? "#525252" }}>{kit.tagline}</p>}
+            </div>
+          )}
+          {kit.style === "ticket" && (
+            <div className="relative rounded-sm border px-3 pb-2.5 pt-3" style={{ borderColor: accent }}>
+              <div className={`flex gap-3 ${snapClass}`}>
+                <div className={`min-w-0 flex-1 ${logoRight ? "order-1" : "order-2"}`}>
+                  <p className="truncate text-xl font-bold" style={{ fontFamily: kit.font, color: nameColor }}>{previewName || "Your name"}</p>
+                  {kit.tagline && <p className="truncate text-xs font-medium" style={{ fontFamily: kit.font, color: taglineColor ?? "#525252" }}>{kit.tagline}</p>}
+                </div>
+                {logoImage}
+              </div>
+              {/* The perforation: a dashed foot, the way the PDF punches the box's bottom edge. */}
+              <div aria-hidden className="mt-2 border-t border-dashed" style={{ borderColor: accent }} />
+            </div>
+          )}
+          {kit.style === "editorial" && (
+            <div className="relative">
+              <span aria-hidden className="block h-1.5 w-10 rounded" style={{ background: accent }} />
+              <div className={`mt-2 flex gap-4 ${snapClass}`}>
+                {!logoRight && logoUrl && <img src={logoUrl} alt="" className="h-10 max-w-[8rem] shrink-0 object-contain" style={{ transform: `translateY(${(shownNudge * pxPerMm).toFixed(1)}px)` }} />}
+                <p className="min-w-0 flex-1 truncate text-2xl font-bold" style={{ fontFamily: kit.font, color: nameColor }}>{previewName || "Your name"}</p>
+                {logoRight && logoUrl && <img src={logoUrl} alt="" className="h-10 max-w-[8rem] shrink-0 object-contain" style={{ transform: `translateY(${(shownNudge * pxPerMm).toFixed(1)}px)` }} />}
+              </div>
+              {kit.tagline && <p className="mt-1 truncate text-right text-[11px] uppercase tracking-wider" style={{ fontFamily: kit.font, color: taglineColor ?? "#525252" }}>{kit.tagline}</p>}
+              <span aria-hidden className="mt-2 block h-px w-full" style={{ background: accent }} />
+            </div>
+          )}
+          {(kit.style === "classic" || kit.style === "frame") && <div className="mt-3 h-1 rounded-full" style={{ background: accent }} />}
           <p className={`relative text-2xl font-bold ${kit.style === "banner" ? "mt-6" : "mt-4"}`}
             style={{ color: kit.options.titleColor && isHex(kit.options.titleColor) ? kit.options.titleColor : undefined }}>
             {preview === "contract" ? "Producer Agreement" : preview === "split" ? "Split Sheet Agreement" : preview === "lyrics" ? "Song Title" : "Catalog"}
@@ -684,6 +726,16 @@ function StyleThumb({ style, color }: { style: KitStyle; color: string }) {
       {style === "banner" && <span className="absolute inset-x-0 top-0 h-4" style={{ background: color }} />}
       {style === "classic" && <span className="absolute left-2 right-2 top-4 h-0.5" style={{ background: color }} />}
       {style === "minimal" && <span className="absolute bottom-1.5 right-2 h-1.5 w-4 rounded-sm" style={{ background: color }} />}
+      {style === "label" && <>
+        <span className="absolute left-1/2 top-1.5 h-1.5 w-6 -translate-x-1/2 rounded-sm bg-[#d4d4d4]" />
+        <span className="absolute left-1/2 top-4 h-0.5 w-5 -translate-x-1/2" style={{ background: color }} />
+      </>}
+      {style === "ticket" && <span className="absolute left-2 right-2 top-1.5 h-5 rounded-sm border" style={{ borderColor: color }} />}
+      {style === "frame" && <span className="absolute inset-1.5 rounded-sm border" style={{ borderColor: color }} />}
+      {style === "editorial" && <>
+        <span className="absolute left-2 top-1.5 h-1 w-5" style={{ background: color }} />
+        <span className="absolute left-2 right-2 top-4 h-px bg-[#d4d4d4]" />
+      </>}
       <span className={`absolute left-3 right-3 h-1 rounded bg-[#d4d4d4] ${style === "banner" ? "top-6" : "top-6"}`} />
       <span className="absolute left-3 right-6 top-9 h-1 rounded bg-[#e5e5e5]" />
       <span className="absolute left-3 right-4 top-11 h-1 rounded bg-[#e5e5e5]" />

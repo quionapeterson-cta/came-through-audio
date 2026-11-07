@@ -22,6 +22,11 @@ export const KIT_STYLES = [
   { id: "sidebar", label: "Sidebar", hint: "A slim color bar down the left edge of every page." },
   { id: "banner", label: "Banner", hint: "A solid color band across the top." },
   { id: "minimal", label: "Minimal", hint: "No header band; your logo small in the footer." },
+  // Four that set the page, not just the header (founder, 2026-11-07).
+  { id: "label", label: "Label", hint: "Centred: logo above a short rule, your name and tagline under it." },
+  { id: "ticket", label: "Ticket", hint: "Your header in a thin box with punched notches, like a tear-off stub." },
+  { id: "frame", label: "Frame", hint: "A thin colour frame around the whole first page." },
+  { id: "editorial", label: "Editorial", hint: "Your name large on the left, your tagline in the right column." },
 ] as const;
 export type KitStyle = (typeof KIT_STYLES)[number]["id"];
 const isStyle = (v: unknown): v is KitStyle => KIT_STYLES.some((s) => s.id === v);
