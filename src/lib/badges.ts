@@ -126,10 +126,9 @@ const CORE: BadgeDef[] = [
     rotation: ["shield_up", "sound_sealed", "key_keeper"],
     description: "The clock saw it. You have proof these files existed on this date, sealed where nobody can change it. AI Slayer comes with every certificate; Time Witness comes back every 10 protected songs.",
     popup: "Witnessed! Another song protected and timestamped.", repeatPopup: "Witnessed! {nth} times over: 10 more songs timestamped." },
-  // Every completed AI Protection certificate (founder, 2026-11-06). Its art is in the bucket now (founder, 2026-11-07), so
-  // the badge is live; this one picture has no fallback copy in the repo.
+  // Every completed AI Protection certificate (founder, 2026-11-06). Its art is in the bucket (founder, 2026-11-07) and the
+  // repo keeps a 512px copy too (founder, 2026-11-07), so the tile still shows wherever the bucket isn't configured.
   { id: "ai_slayer", title: "AI Slayer", collection: "ai", tier: "standard", milestone: "Every AI Protection certificate you complete", action: "Protect a song", metric: "protected", goal: 1, every: 1, src: `${S}/ai_slayer.png`,
-    artInBucket: true,
     description: "Certificate on file, timestamped and yours. Your proof travels with the song, and every certificate you complete earns this again.",
     popup: "AI slayer! Your certificate is on file.", repeatPopup: "AI slayer! Your {nth} protected song is on file." },
   { id: "shield_up", title: "Shield Up", collection: "ai", tier: "standard", milestone: "10 songs protected in the AI Protection Hub, then every 10 more", action: "Protect 10 songs", metric: "protected", goal: 10, every: 10, src: `${S}/award_shield.png`,

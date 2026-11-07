@@ -252,7 +252,12 @@ export function BadgeShelf({ userId, size, onOpen }: { userId: string; size: Siz
     const locked = started ? mine.filter((s) => !s.earned && !s.off).slice(0, UP_NEXT) : [];
     return { ...c, earned, locked, total: mine.length };
   }).filter((g) => g.earned.length || g.locked.length);
-  const grid = size === "large" ? "grid-cols-2 sm:grid-cols-3" : "grid-cols-3 sm:grid-cols-6";
+  // Large is the size small used to be and small is half that (founder, 2026-11-07): each step doubles the columns, so a
+  // logo's width halves while every tile stays square. The spacing shrinks with the tiles so the halving is real, not eaten
+  // by gaps the same width as a logo.
+  const grid = size === "large" ? "grid-cols-3 sm:grid-cols-6" : "grid-cols-6 sm:grid-cols-12";
+  const gap = size === "large" ? "gap-6" : "gap-2 sm:gap-3";
+  const pad = size === "large" ? "p-3" : "p-1.5";
   return (
     <div className="space-y-8">
       {groups.map((g, gi) => (
@@ -261,17 +266,17 @@ export function BadgeShelf({ userId, size, onOpen }: { userId: string; size: Siz
             <h3 className="text-xs font-bold uppercase tracking-widest text-primary">{g.title}</h3>
             <span className="flex items-center gap-2 text-xs text-muted-foreground">{g.earned.length} of {g.total} earned<ChevronRight className="h-4 w-4 transition group-open/c:rotate-90" /></span>
           </summary>
-          <ul className={`mt-4 grid gap-6 ${grid}`}>
+          <ul className={`mt-4 grid ${gap} ${grid}`}>
             {[...g.earned, ...g.locked].map((s) => <li key={s.badge.id}>
               <button type="button" onClick={() => onOpen(s, groups.flatMap((x) => [...x.earned, ...x.locked]))} aria-label={s.earned ? `View ${s.badge.title}` : `${s.badge.title} (locked): ${s.badge.milestone}`}
-                className="group flex w-full flex-col items-center gap-2 rounded-xl p-3 text-center transition hover:bg-accent/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+                className={`group flex w-full flex-col items-center gap-2 rounded-xl ${pad} text-center transition hover:bg-accent/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring`}>
                 <span className="relative flex aspect-square w-full items-center justify-center">
                   <img src={shelfArt(s)} alt="" loading="lazy" className={`h-full w-full object-contain transition ${s.earned ? "drop-shadow-lg group-hover:drop-shadow-2xl" : "opacity-30 grayscale"}`} />
                   {!s.earned && <Lock className="absolute h-6 w-6 text-muted-foreground" />}
                   {(s.earned?.times ?? 0) > 1 && <span className="cta-badge-count absolute right-0 top-0" aria-label={`Earned ${s.earned!.times} times`}>×{s.earned!.times}</span>}
                   {isNew(s) && <span className="absolute left-0 top-0 rounded-full bg-primary px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-primary-foreground">New</span>}
                 </span>
-                <span className={`font-semibold ${size === "large" ? "text-sm" : "text-xs"} ${s.earned ? "" : "text-muted-foreground"}`}>{s.badge.title}</span>
+                <span className={`font-semibold ${size === "large" ? "text-sm" : "text-[10px] leading-tight"} ${s.earned ? "" : "text-muted-foreground"}`}>{s.badge.title}</span>
                 {!s.earned && s.badge.goal > 1 && <span className="text-xs text-muted-foreground">{Math.min(s.count, s.badge.goal)}/{s.badge.goal}</span>}
               </button>
             </li>)}

@@ -59,7 +59,9 @@
   full size when clicked (`PeekDialog`, founder, 2026-11-06), so the art can be judged, approved or replaced before it
   goes near a member's shelf.
 - **Some pictures live only in the bucket** (founder, 2026-11-07): `artInBucket` on a `BadgeDef` says the founder uploaded
-  that picture to R2 by hand and the repo keeps no fallback copy — AI Slayer is the first. A badge goes live the moment its
+  that picture to R2 by hand and the repo keeps no fallback copy. No picture uses it today: AI Slayer did, and its tile
+  went blank wherever `VITE_ART_BASE` was unset (local dev, tests, a preview without the variable), so it now keeps its
+  own 512px copy in `public/icons/serious/`. A badge goes live the moment its
   file is in the bucket (drop `artPending`, never leave both), and the served copy must be the `.webp` at the same path,
   because `artUrl` rewrites `.png`/`.jpg` to `.webp`; without it the shelf shows a blank tile. `badge-rules.test.ts` names
   every bucket-only picture, so a mistyped path can't hide behind the exemption.

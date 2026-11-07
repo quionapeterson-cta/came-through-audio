@@ -60,7 +60,8 @@ function ProfilePage() {
   const [badgeList, setBadgeList] = useState<BadgeState[]>([]);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const { states } = useBadgeStates(user?.id);
-  const [size, setSize] = useState<Size>(() => { try { return localStorage.getItem(SIZE_KEY) === "small" ? "small" : "large"; } catch { return "large"; } });
+  // Small opens the shelf at half the old small size (founder, 2026-11-07); a stored "large" still wins on this device.
+  const [size, setSize] = useState<Size>(() => { try { return localStorage.getItem(SIZE_KEY) === "large" ? "large" : "small"; } catch { return "small"; } });
 
   useEffect(() => { if (!loading && !user) navigate({ to: "/" }); }, [loading, user, navigate]);
   useEffect(() => {
