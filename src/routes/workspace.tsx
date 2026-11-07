@@ -342,7 +342,7 @@ function Workspace() {
           <TabsContent value="pdf">
             {hasTier(tier, "management")
               ? <PdfTools canEmail={false} title="Fill, sign and download a PDF" />
-              : <PlusLock title="PDF Fill, Sign & Download starts with Catalog Management" onQuickCheck={openQuickCheck} onUpgrade={upgrade} />}
+              : <PlusLock title="PDF Fill & Sign starts with Catalog Management" onQuickCheck={openQuickCheck} onUpgrade={upgrade} />}
           </TabsContent>
         </Tabs>
       </main>
