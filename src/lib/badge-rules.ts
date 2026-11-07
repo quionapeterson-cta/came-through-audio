@@ -5,16 +5,21 @@ import { creditName, isPerformer } from "@/lib/metadata";
 import { registrationReadiness } from "@/lib/readiness";
 import { countryByCode, guessCountry } from "@/lib/repertoires";
 import { parentGenre } from "@/lib/metadata";
+import { GUIDES } from "@/lib/guides";
+import { blueprintById } from "@/lib/contract-blueprints";
+import { checklistProgress, guideIdOf } from "@/lib/workbench";
 
 /** Everything the award check needs about one user, loaded by the server (badges.functions.ts). */
 export type BadgeData = {
   tracks: (CatalogTrack & { createdAt: string })[];
   /** split_sheets rows for the user's own catalog songs. */
   splits: { catalogId: string; isOwner: boolean; role: string; signedAt: string | null }[];
-  contracts: { status: string; parties: { isOwner: boolean; signedAt: string | null }[] }[];
+  contracts: { status: string; blueprint?: string; parties: { isOwner: boolean; signedAt: string | null }[] }[];
   checks: RepertoireCheck[];
   certificates: { catalogId: string | null; trackTitle: string; timestamped: boolean }[];
   events: { agency_export: number; master_download: number; blueprint_read: number };
+  /** The member's own blueprint rows: one per run, with its ticks (public.workbench_items). */
+  blueprints?: { itemId: string; checked: string[] }[];
   welcomed: boolean;
   /** The user's own names (stage, legal), to find songs where they're in Produced by. */
   names: string[];
@@ -25,6 +30,10 @@ export type BadgeData = {
 };
 
 const RELEASE_MIN_TRACKS = 3;
+/** Contract categories whose fully signed deals carry the executive badge (founder, 2026-11-06). */
+export const EXECUTIVE_CATEGORIES = ["Management", "Rights & Distribution"] as const;
+const isExecutive = (blueprint: string) =>
+  (EXECUTIVE_CATEGORIES as readonly string[]).includes(blueprintById(blueprint)?.category ?? "");
 const norm = (s: string) => s.trim().toLowerCase();
 /** A subgenre counts as its main genre ("Trap" counts toward Hip-Hop badges). */
 const hasGenre = (t: CatalogTrack, g: string) => parentGenre(t.metadata.primaryGenre) === g || parentGenre(t.metadata.secondaryGenre) === g;
@@ -73,6 +82,7 @@ export function badgeMetrics(d: BadgeData): Record<string, number> {
   const collaborators = (rows: BadgeData["splits"]) => rows.filter((r) => r.role !== "Publisher").length;
 
   const signedContracts = d.contracts.filter((c) => c.status === "signed").length;
+  const signedExecutive = d.contracts.filter((c) => c.status === "signed" && isExecutive(c.blueprint ?? "")).length;
   const collaboratorSigned = [...sheets.values()].some((rows) => rows.some((r) => !r.isOwner && r.signedAt))
     || d.contracts.some((c) => c.parties.some((p) => !p.isOwner && p.signedAt));
 
@@ -132,6 +142,12 @@ export function badgeMetrics(d: BadgeData): Record<string, number> {
     fullEps: full.filter((list) => list.length >= EP_TRACKS[0]! && list.length <= EP_TRACKS[1]!).length,
     fullAlbums: full.filter((list) => list.length >= ALBUM_TRACKS).length,
     blueprintReads: d.events.blueprint_read,
+    // One earning per finished run: a blueprint started again is a new row, so it counts again (founder, 2026-11-06).
+    blueprintsChecked: (d.blueprints ?? []).filter((r) => {
+      const guide = GUIDES.find((g) => g.id === guideIdOf(r.itemId));
+      return !!guide?.checklist?.length && checklistProgress(guide.checklist, r.checked).finished;
+    }).length,
+    contractsSignedExecutive: signedExecutive,
     healthChecks: d.checks.length,
     healthCheckMonths: checkMonths.size,
     chainOfTitle: d.tracks.filter((t) => {

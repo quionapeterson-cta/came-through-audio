@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { isEmptyEntry, toggleChecked, withMeta, workbenchKey, type ItemMeta, type WorkbenchEntry, type WorkbenchKind } from "@/lib/workbench";
+import { isEmptyEntry, toggleChecked, withCustomItem, withMeta, workbenchKey, type ItemMeta, type WorkbenchEntry, type WorkbenchKind } from "@/lib/workbench";
 
 type Stored = WorkbenchEntry & { /** Saved while the table was unreachable; sent up on the next good load. */ pending?: boolean };
 type Row = { kind: WorkbenchKind; item_id: string; checked: string[] | null; pinned: boolean | null; item_meta: Record<string, ItemMeta> | null; updated_at: string | null };
@@ -95,7 +95,13 @@ export function useWorkbench(userId: string | undefined, enabled = true) {
     save(withMeta(cur, item, patch));
   }, [save]);
 
-  return { entries: Object.values(entries), get, toggle, setPinned, setMeta, loaded };
+  /** The member's own checklist item on one blueprint: one, replaced or cleared, never touching their notes or ticks. */
+  const setCustom = useCallback((kind: WorkbenchKind, itemId: string, item: string) => {
+    const cur = latest.current[workbenchKey(kind, itemId)] ?? { kind, itemId, checked: [], pinned: false };
+    save(withCustomItem(cur, item));
+  }, [save]);
+
+  return { entries: Object.values(entries), get, toggle, setPinned, setMeta, setCustom, loaded };
 }
 
 export type Workbench = ReturnType<typeof useWorkbench>;

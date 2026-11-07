@@ -1,8 +1,44 @@
 import { describe, expect, it } from "vitest";
 import { GUIDES } from "./guides";
-import { checklistProgress, dueLabel, isEmptyEntry, isOverdue, metaFor, nextDue, nextStep, progressLabel, savedGuides, sortByProgress, toggleChecked, withMeta, workingOnCount, type WorkbenchEntry } from "./workbench";
+import { checklistProgress, customItems, defaultsFinished, dueLabel, guideIdOf, isEmptyEntry, isOverdue, metaFor, nextDue, nextRunId, nextStep, progressLabel, runId, runOf, savedGuides, sortByProgress, toggleChecked, withCustomItem, withMeta, workingOnCount, type WorkbenchEntry } from "./workbench";
 
 const list = ["A", "B", "C", "D", "E", "F", "G", "H"];
+
+describe("working the same blueprint again", () => {
+  const guide = GUIDES.find((g) => (g.checklist?.length ?? 0) > 0)!;
+  const saved = (itemId: string, checked: string[] = []): WorkbenchEntry => ({ kind: "blueprint", itemId, checked, pinned: true });
+
+  it("names the first run with the guide id and numbers the rest", () => {
+    expect(runId(guide.id, 1)).toBe(guide.id);
+    expect(runId(guide.id, 2)).toBe(`${guide.id}~2`);
+    expect(guideIdOf(`${guide.id}~3`)).toBe(guide.id);
+    expect(runOf(`${guide.id}~3`)).toBe(3);
+    expect(runOf(guide.id)).toBe(1);
+  });
+
+  it("starts the next run after the last one, whatever was skipped", () => {
+    expect(nextRunId([], guide.id)).toBe(guide.id);
+    expect(nextRunId([saved(guide.id)], guide.id)).toBe(`${guide.id}~2`);
+    expect(nextRunId([saved(guide.id), saved(`${guide.id}~2`)], guide.id)).toBe(`${guide.id}~3`);
+  });
+
+  it("lifts the defaults sky only when both profile blueprints have a finished run", () => {
+    const embed = GUIDES.find((g) => g.id === "embed-defaults")!;
+    const catalog = GUIDES.find((g) => g.id === "catalog-defaults")!;
+    const row = (itemId: string, checked: string[]): WorkbenchEntry => ({ kind: "blueprint", itemId, checked, pinned: true });
+    expect(defaultsFinished([])).toBe(false);
+    expect(defaultsFinished([row(embed.id, embed.checklist!)])).toBe(false);
+    // Half of the other one is not finished, and a finished earlier run still counts.
+    expect(defaultsFinished([row(embed.id, embed.checklist!), row(catalog.id, catalog.checklist!.slice(1))])).toBe(false);
+    expect(defaultsFinished([row(catalog.id, catalog.checklist!), row(`${embed.id}~2`, embed.checklist!)])).toBe(true);
+  });
+
+  it("keeps every saved run as its own record, named by run", () => {
+    const rows = savedGuides([saved(guide.id, guide.checklist!), saved(`${guide.id}~2`, guide.checklist!.slice(1))]);
+    expect(rows.map((r) => [r.itemId, r.run, r.progress.finished])).toEqual([[guide.id, 1, true], [`${guide.id}~2`, 2, false]]);
+    expect(rows[1]!.title).toBe(`${guide.title} · Run 2`);
+  });
+});
 
 describe("checklistProgress", () => {
   it("counts ticked out of total with a rounded percent", () => {
@@ -74,6 +110,37 @@ describe("notes and due dates", () => {
   it("knows when a date has gone by", () => {
     expect(isOverdue("2026-11-05", new Date(2026, 10, 6))).toBe(true);
     expect(isOverdue("2026-11-06", new Date(2026, 10, 6))).toBe(false);
+  });
+});
+
+describe("the member's own checklist item", () => {
+  const blank: WorkbenchEntry = { kind: "blueprint", itemId: "x", checked: [], pinned: false };
+
+  it("keeps one item of their own, trimmed", () => {
+    expect(customItems(withCustomItem(blank, "  Ask about the split  "))).toEqual(["Ask about the split"]);
+    expect(customItems(blank)).toEqual([]);
+  });
+
+  it("holds its note and stays the member's item", () => {
+    const own = withCustomItem(blank, "Ask about the split");
+    const noted = withMeta(own, "Ask about the split", { note: "Tuesday" });
+    expect(customItems(noted)).toEqual(["Ask about the split"]);
+    expect(metaFor(noted, "Ask about the split")).toMatchObject({ note: "Tuesday", custom: true });
+    expect(customItems(withMeta(noted, "Ask about the split", { note: "" }))).toEqual(["Ask about the split"]);
+  });
+
+  it("replaces it rather than adding a second, and drops the old tick", () => {
+    const own = withCustomItem({ ...blank, checked: ["Ask about the split"] }, "Ask about the split");
+    const renamed = toggleChecked(withCustomItem(own, "Ask about the splits"), "Ask about the splits");
+    expect(customItems(renamed)).toEqual(["Ask about the splits"]);
+    expect(renamed.checked).toEqual(["Ask about the splits"]);
+  });
+
+  it("goes away, with its tick, when the wording is cleared", () => {
+    const own = toggleChecked(withCustomItem(blank, "Ask about the split"), "Ask about the split");
+    const cleared = withCustomItem(own, "  ");
+    expect(customItems(cleared)).toEqual([]);
+    expect(cleared.checked).toEqual([]);
   });
 });
 

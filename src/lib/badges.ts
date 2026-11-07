@@ -71,6 +71,7 @@ export const METRIC_UNIT: Record<string, [string, string]> = {
   deals: ["signed agreement", "signed agreements"], produced: ["produced song", "produced songs"], performerCredits: ["performer credit", "performer credits"],
   hiphop: ["hip-hop track", "hip-hop tracks"], spiritual: ["spiritual hip-hop track", "spiritual hip-hop tracks"],
   agencyExports: ["agency export", "agency exports"], masterDownloads: ["embedded master", "embedded masters"], artUploads: ["cover art upload", "cover art uploads"],
+  blueprintsChecked: ["blueprint finished", "blueprints finished"], contractsSignedExecutive: ["management or rights deal signed", "management or rights deals signed"],
 };
 
 /** How many times a badge has been earned at this count: once at `goal`, then once per `every` beyond it. */
@@ -119,10 +120,15 @@ const CORE: BadgeDef[] = [
   { id: "key_holder", title: "Key Holder", collection: "core", tier: "standard", milestone: "A collaborator signs one of your split sheets or contracts", action: "Get a collaborator to sign", metric: "collaboratorSigned", goal: 1, src: `${S}/award_certificate.png`,
     description: "You opened the door and someone shook on it. Good business is built with people you trust, and your first collaborator just signed.",
     popup: "Deal shook! Your first collaborator signed." },
-  { id: "time_witness", title: "Time Witness", collection: "ai", tier: "standard", milestone: "Every song protected in the AI Protection Hub", action: "Protect a song", metric: "protected", goal: 1, every: 1, src: `${S}/time_witness.png`,
+  { id: "time_witness", title: "Time Witness", collection: "ai", tier: "standard", milestone: "Every 10 songs protected in the AI Protection Hub", action: "Protect 10 songs", metric: "protected", goal: 1, every: 10, src: `${S}/time_witness.png`,
     rotation: ["shield_up", "sound_sealed", "key_keeper"],
-    description: "The clock saw it. You have proof this file existed on this date, sealed where nobody can change it. Every song you protect earns another.",
-    popup: "Witnessed! Another song protected and timestamped.", repeatPopup: "Witnessed! Your {nth} protected song is timestamped." },
+    description: "The clock saw it. You have proof these files existed on this date, sealed where nobody can change it. AI Slayer comes with every certificate; Time Witness comes back every 10 protected songs.",
+    popup: "Witnessed! Another song protected and timestamped.", repeatPopup: "Witnessed! {nth} times over: 10 more songs timestamped." },
+  // Every completed AI Protection certificate (founder, 2026-11-06). Art waits on the bucket key; see artPending below.
+  { id: "ai_slayer", title: "AI Slayer", collection: "ai", tier: "standard", milestone: "Every AI Protection certificate you complete", action: "Protect a song", metric: "protected", goal: 1, every: 1, src: `${S}/ai_slayer.png`,
+    artPending: true,
+    description: "Certificate on file, timestamped and yours. Your proof travels with the song, and every certificate you complete earns this again.",
+    popup: "AI slayer! Your certificate is on file.", repeatPopup: "AI slayer! Your {nth} protected song is on file." },
   { id: "shield_up", title: "Shield Up", collection: "ai", tier: "standard", milestone: "10 songs protected in the AI Protection Hub, then every 10 more", action: "Protect 10 songs", metric: "protected", goal: 10, every: 10, src: `${S}/award_shield.png`,
     description: "Ten songs guarded in the AI Protection Hub. You protect what you make before anyone else gets ideas.",
     popup: "Shield up! 10 songs protected." },
@@ -272,10 +278,17 @@ const CONTRACTS: BadgeDef[] = [
   { id: "cross_your_ts", title: "Cross Your T's", collection: "contracts", tier: "standard", milestone: "Send your first contract for signature", action: "Send a contract to sign", metric: "contractsSent", goal: 1, src: `${CT}/cross_your_ts.webp`,
     description: "Terms clear, names right, sent out. You handle business the way it's supposed to be handled.",
     popup: "T's crossed! Your contract is out for signature." },
-  { id: "blueprints_checked", title: "Blueprints Checked", collection: "contracts", tier: "standard", milestone: "Every contract signed by every party", action: "Get a contract signed", metric: "contractsSigned", goal: 1, every: 1, src: `${CT}/blueprints_checked.webp`,
-    rotation: ["secure_structure", "terms_architected", "crossin_your_ts", "dottin_your_is"],
+  // The blueprint badge is the checklist one now (founder, 2026-11-06): one earning per finished run of a blueprint.
+  { id: "blueprints_checked", title: "Blueprints Checked", collection: "contracts", tier: "standard", milestone: "Every blueprint checklist you finish, top to bottom", action: "Finish a blueprint checklist", metric: "blueprintsChecked", goal: 1, every: 1, src: `${CT}/blueprints_checked.webp`,
+    description: "Every numbered step done and every box ticked. You worked the plan instead of guessing, and your business is built on it. Start the same blueprint again and this comes back.",
+    popup: "Checked! Every step of the blueprint is done.", repeatPopup: "Checked! Your {nth} blueprint, finished." },
+  // Fully signed contracts: one earning each, art rotating to bedazzled_v3 for management and rights deals.
+  { id: "contract_signed", title: "Fully Executed", collection: "contracts", tier: "standard", milestone: "Every contract signed by every party", action: "Get a contract signed", metric: "contractsSigned", goal: 1, every: 1, src: `${CT}/secure_structure.webp`,
     description: "Signed by every party. Your agreement is real, on file and protecting you. Every fully signed contract earns this again.",
-    popup: "Checked! Your first contract is fully signed.", repeatPopup: "Checked! Your {nth} contract is fully signed." },
+    popup: "Executed! Your first contract is fully signed.", repeatPopup: "Executed! Your {nth} contract is fully signed." },
+  { id: "executive_contract", title: "Executive Contracts", collection: "contracts", tier: "standard", milestone: "Every Management or Rights & Distribution contract signed by every party", action: "Fully sign a management or rights deal", metric: "contractsSignedExecutive", goal: 1, every: 1, src: `${CT}/bedazzled_v3.webp`,
+    description: "A management or rights and distribution agreement, signed by every party. These are the deals that decide who runs your business and where your music goes, and they are on file.",
+    popup: "Executed! A management or rights deal, fully signed.", repeatPopup: "Executed! Your {nth} management or rights deal, fully signed." },
   { id: "secure_structure", title: "Secure the Structure", collection: "contracts", tier: "standard", milestone: "3 contracts signed by every party", action: "Get 3 contracts signed", metric: "contractsSigned", goal: 3, src: `${CT}/secure_structure.webp`,
     description: "Three agreements holding your business up. Structure is what lets creativity run free.",
     popup: "Structure secured! 3 contracts signed." },

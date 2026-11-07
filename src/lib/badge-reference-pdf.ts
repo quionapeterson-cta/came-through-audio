@@ -82,7 +82,7 @@ function row(pdf: JsPDF, y: number, step: number, b: BadgeDef, art: BadgeArt) {
  * Every badge and its milestone, in the order users earn them, one collection at a time. Built from src/lib/badges.ts,
  * so it always matches the app. The founder and the Branding, Marketing and Social Media teams use the same document.
  */
-export async function buildBadgeReferencePdf(loadArt: ArtLoader = browserArt) {
+export async function buildBadgeReferencePdf(loadArt: ArtLoader = browserArt, overrides: Record<string, string> = {}) {
   const pdf = await newBrandedPdf();
   const live = ALL_BADGES.filter((b) => !b.artPending).length;
   let y = brandHeader(pdf, "Badge Reference", "Every badge and milestone, in earning order", `${live} live · ${ALL_BADGES.length - live} waiting on art`);
@@ -102,7 +102,8 @@ export async function buildBadgeReferencePdf(loadArt: ArtLoader = browserArt) {
   lines.forEach((l, i) => pdf.text(l, MARGIN + 6, y + 2 + i * 4.8));
   y += boxH + 6;
 
-  const art = new Map(await Promise.all(ALL_BADGES.map(async (b) => [b.id, b.artPending ? null : await loadArt(b.src)] as const)));
+  // Art the founder replaced comes from its own key, so the document matches what members see.
+  const art = new Map(await Promise.all(ALL_BADGES.map(async (b) => [b.id, b.artPending ? null : await loadArt(overrides[b.id] ?? b.src)] as const)));
   for (const c of COLLECTIONS) {
     // Awarding order: the first goal reached first (repeating badges by their first time).
     const list = ALL_BADGES.filter((b) => b.collection === c.id).map((b, i) => ({ b, i })).sort((x, y) => x.b.goal - y.b.goal || x.i - y.i).map((x) => x.b);
@@ -118,6 +119,6 @@ export async function buildBadgeReferencePdf(loadArt: ArtLoader = browserArt) {
   return pdf;
 }
 
-export async function downloadBadgeReferencePdf() {
-  (await buildBadgeReferencePdf()).save("Came Through Audio Badge Reference.pdf");
+export async function downloadBadgeReferencePdf(overrides: Record<string, string> = {}) {
+  (await buildBadgeReferencePdf(browserArt, overrides)).save("Came Through Audio Badge Reference.pdf");
 }

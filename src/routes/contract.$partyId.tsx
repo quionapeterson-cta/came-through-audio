@@ -6,6 +6,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { BrandLogo } from "@/components/BrandLogo";
 import { SignupCard } from "@/components/SignupCard";
+import { StarSky } from "@/components/StarSky";
+import { BadgeWatcher } from "@/components/Badges";
+import { requestBadgeCheck } from "@/lib/badge-events";
 import { Button } from "@/components/ui/button";
 import { COMPANY_LEGAL_NAME, CONTRACT_DISCLAIMER } from "@/lib/contract-blueprints";
 import { downloadContractPdf } from "@/lib/contract-pdf";
@@ -106,6 +109,8 @@ function LinkSigning({ token }: { token: string }) {
   const [consent, setConsent] = useState(false);
   const [typed, setTyped] = useState("");
   const [busy, setBusy] = useState(false);
+  /** The last signature landed: "It's a done deal!" in the stars (founder, 2026-11-06). */
+  const [sky, setSky] = useState(false);
 
   const load = () => open({ data: { partyId, token } }).then(setInvite).catch((e) => setError(e instanceof Error ? e.message : "Could not open this agreement."));
   useEffect(() => { void load(); }, [partyId, token]);
@@ -123,14 +128,18 @@ function LinkSigning({ token }: { token: string }) {
     setBusy(true);
     try {
       await signFn({ data: { partyId, token, code: code.replace(/\D/g, ""), signatureName: typed, consent: true, origin: window.location.origin } });
+      const next = await open({ data: { partyId, token } });
+      setInvite(next);
       toast.success("Signed! Thank you.");
-      await load();
+      // Only the signature that finishes the agreement gets the sky; a partial signature stays a plain confirmation.
+      if (next.status === "signed") setSky(true);
     } catch (e) { toast.error(e instanceof Error ? e.message : "Could not sign."); }
     finally { setBusy(false); }
   }
 
   return (
     <Shell>
+      {sky && <StarSky message="It's a done deal!" sub="Every party has signed. The agreement is locked, and the signed copy is ready to download." onDone={() => { setSky(false); requestBadgeCheck(); }} />}
       {error ? (
         <div className="rounded-2xl border border-destructive p-8 text-center"><p className="font-semibold">{error}</p></div>
       ) : !invite ? (
@@ -168,6 +177,8 @@ function AccountSigning() {
   const [typed, setTyped] = useState("");
   const [agreed, setAgreed] = useState(false);
   const [busy, setBusy] = useState(false);
+  /** The last signature landed: "It's a done deal!" in the stars, then the badge moment (founder, 2026-11-06). */
+  const [sky, setSky] = useState(false);
 
   const grantTrial = useServerFn(grantCollaboratorTrial);
   const load = () => {
@@ -193,8 +204,10 @@ function AccountSigning() {
     setBusy(true);
     try {
       await signContract(partyId, typed);
+      const next = await getContractInvite(partyId);
+      setInvite(next);
       toast.success("Signed! Everyone on the contract can now see your signature.");
-      load();
+      if (next?.status === "signed") setSky(true);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Could not sign.");
     } finally { setBusy(false); }
@@ -202,6 +215,8 @@ function AccountSigning() {
 
   return (
     <Shell right={user && <Button variant="ghost" size="sm" className="text-ink-muted hover:bg-ink-border hover:text-ink-foreground" onClick={() => supabase.auth.signOut()}><LogOut className="h-4 w-4" /> Log out</Button>}>
+        {sky && <StarSky message="It's a done deal!" sub="Every party has signed. The agreement is locked and stored, and the signed copy is ready for you." onDone={() => { setSky(false); requestBadgeCheck(); }} />}
+        {user && <BadgeWatcher userId={user.id} />}
         {loading ? (
           <Loader2 className="mx-auto h-6 w-6 animate-spin text-primary" />
         ) : !user ? (

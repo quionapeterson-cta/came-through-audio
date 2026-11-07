@@ -57,9 +57,9 @@ export function WorkingOn({ workbench, contracts, loading, statusBadge, onOpenGu
     );
   }
 
-  const remove = (g: Guide) => {
-    workbench.setPinned("blueprint", g.id, false);
-    toast.success(`${g.title} removed from Working On. Your ticks are kept.`);
+  const remove = (itemId: string, title: string) => {
+    workbench.setPinned("blueprint", itemId, false);
+    toast.success(`${title} removed from Working On. Your ticks are kept.`);
   };
   const section = (id: string, title: string, summary: string, body: React.ReactNode) => {
     const open = !closed.has(id);
@@ -74,21 +74,22 @@ export function WorkingOn({ workbench, contracts, loading, statusBadge, onOpenGu
       </div>
     );
   };
-  const guideCard = ({ guide: g, progress }: { guide: Guide; progress: ChecklistProgress }) => (
-    <li key={g.id} className={`flex flex-col rounded-xl border p-4 transition ${progress.finished ? "border-border bg-muted/40" : "border-border hover:border-primary"}`}>
+  // Each saved run is its own card, so a blueprint worked twice keeps both records (founder, 2026-11-06).
+  const guideCard = ({ guide: g, itemId, title, progress }: { guide: Guide; itemId: string; title: string; progress: ChecklistProgress }) => (
+    <li key={itemId} className={`flex flex-col rounded-xl border p-4 transition ${progress.finished ? "border-border bg-muted/40" : "border-border hover:border-primary"}`}>
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
-          <div className={`truncate font-bold ${progress.finished ? "text-muted-foreground" : ""}`}>{g.title}</div>
+          <div className={`truncate font-bold ${progress.finished ? "text-muted-foreground" : ""}`}>{title}</div>
           <div className="text-xs text-muted-foreground">{g.kind}</div>
         </div>
       </div>
-      {progress.total > 0 && <ProgressMeter progress={progress} title={g.title} className="mt-3" />}
-      {(() => { const due = nextDue(workbench.get("blueprint", g.id), g.checklist); return due ? (
+      {progress.total > 0 && <ProgressMeter progress={progress} title={title} className="mt-3" />}
+      {(() => { const due = nextDue(workbench.get("blueprint", itemId), g.checklist); return due ? (
         <p className={`mt-2 text-xs ${isOverdue(due) ? "font-semibold text-destructive" : "text-muted-foreground"}`}>{isOverdue(due) ? "Overdue" : "Next due"} {dueLabel(due)}</p>
       ) : null; })()}
       <div className="mt-3 flex flex-wrap gap-2">
         <Button size="sm" variant={progress.finished ? "outline" : "default"} onClick={() => onOpenGuide(g)}>Open</Button>
-        <Button size="sm" variant="ghost" onClick={() => remove(g)}><PinOff className="h-4 w-4" />Remove</Button>
+        <Button size="sm" variant="ghost" onClick={() => remove(itemId, title)}><PinOff className="h-4 w-4" />Remove</Button>
       </div>
     </li>
   );
@@ -129,19 +130,13 @@ export function WorkingOn({ workbench, contracts, loading, statusBadge, onOpenGu
           {step.kind === "browse" ? "Browse blueprints" : step.kind === "contract" ? "Open the contract" : "Open the blueprint"}<ArrowRight className="h-4 w-4" />
         </Button>
       </div>
-      {section("blueprints", "Blueprints", guideCount ? `${inProgress.length} in progress${finished.length ? ` · ${finished.length} complete` : ""}` : "none saved yet", guideCount === 0
+      {section("running", "In progress", inProgress.length ? `${inProgress.length} blueprint${inProgress.length === 1 ? "" : "s"} on the go` : "none saved yet", inProgress.length === 0
         ? <p className="text-sm text-muted-foreground">Tick a checklist item, or tap Save on any blueprint. <button type="button" className="font-semibold text-primary underline" onClick={onBrowse}>Browse blueprints</button></p>
-        : (
-          <div className="space-y-4">
-            {inProgress.length > 0 && <ul className="grid gap-3 md:grid-cols-2">{inProgress.map(guideCard)}</ul>}
-            {finished.length > 0 && (
-              <div className="space-y-2">
-                <h4 className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Complete <span className="opacity-70">{finished.length}</span></h4>
-                <ul className="grid gap-3 md:grid-cols-2">{finished.map(guideCard)}</ul>
-              </div>
-            )}
-          </div>
-        ))}
+        : <ul className="grid gap-3 md:grid-cols-2">{inProgress.map(guideCard)}</ul>)}
+      {/* Finished is its own folder (founder, 2026-11-06), so a done blueprint leaves the way open instead of sitting in it. */}
+      {guideCount > 0 && section("done", "Finished", finished.length ? `${finished.length} complete` : "nothing yet", finished.length === 0
+        ? <p className="text-sm text-muted-foreground">A blueprint moves here the moment its last box is ticked. Start it again from Blueprints whenever you need to repeat the process, and both runs keep their record.</p>
+        : <ul className="grid gap-3 md:grid-cols-2">{finished.map(guideCard)}</ul>)}
       {section("contracts", "Contracts", loading ? "loading…" : contractCount ? `${openContracts.length} waiting${savedSigned.length ? ` · ${savedSigned.length} signed, saved` : ""}` : "none in progress", loading
         ? <p className="text-sm text-muted-foreground">Loading…</p>
         : contractCount === 0

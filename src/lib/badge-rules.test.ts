@@ -25,9 +25,9 @@ describe("badge catalog", () => {
     const missing = BADGES.filter((b) => !existsSync(`public${b.src}`)).map((b) => b.src);
     expect(missing).toEqual([]);
   });
-  it("keeps badges waiting on art out of play (none waiting since the 2026-10-25 art)", () => {
+  it("keeps badges waiting on art out of play (only AI Slayer, waiting on its bucket key)", () => {
     expect(BADGES.filter((b) => b.collection === "lyrics")).toHaveLength(8);
-    expect(ALL_BADGES.filter((b) => b.artPending).map((b) => b.id)).toEqual([]);
+    expect(ALL_BADGES.filter((b) => b.artPending).map((b) => b.id)).toEqual(["ai_slayer"]);
     expect(BADGES.map((b) => b.id)).toEqual(expect.arrayContaining(["full_album", "full_ep", "unbreakable_2", "unbreakable_5"]));
   });
   it("only offers art choices that exist", () => {
@@ -206,20 +206,20 @@ describe("every-time task badges", () => {
     expect(earningPopup(sealed, 12)).toBe("Sealed! Your 12th split sheet is signed by everyone.");
     expect([1, 2, 3, 4, 11, 12, 13, 21, 22, 101].map(ordinal)).toEqual(["1st", "2nd", "3rd", "4th", "11th", "12th", "13th", "21st", "22nd", "101st"]);
   });
-  it("AI Protection set: Time Witness each song, Sound Sealed on the first Bitcoin timestamp, Shield Up at 10, Key Keeper at 25", () => {
+  it("AI Protection set: Time Witness every 10 songs, Sound Sealed on the first Bitcoin timestamp, Shield Up at 10, Key Keeper at 25", () => {
     const m = badgeMetrics(data({ certificates: [
       { catalogId: "a", trackTitle: "A", timestamped: false },
       { catalogId: "b", trackTitle: "B", timestamped: true },
     ] }));
     expect(m).toMatchObject({ protected: 2, timestamped: 1 });
     const earned = (metrics: Record<string, number>) => evaluateBadges(metrics).filter((x) => x.earned && x.badge.collection === "ai").map((x) => [x.badge.id, x.times]);
-    expect(earned(m)).toEqual([["time_witness", 2], ["sound_sealed", 1]]);
-    expect(earned({ protected: 50, timestamped: 50 })).toEqual([["time_witness", 50], ["shield_up", 5], ["sound_sealed", 1], ["key_keeper", 2]]);
+    expect(earned(m)).toEqual([["time_witness", 1], ["sound_sealed", 1]]);
+    expect(earned({ protected: 50, timestamped: 50 })).toEqual([["time_witness", 6], ["shield_up", 5], ["sound_sealed", 1], ["key_keeper", 2]]);
     expect(badgeById("time_witness")?.rotation).toEqual(["shield_up", "sound_sealed", "key_keeper"]);
   });
   it("has one every-time badge for each task", async () => {
     const { badgeById } = await import("@/lib/badges");
-    for (const id of ["embedded", "came_strong", "first_lyric_entry", "silver_crown", "time_witness", "sealed", "blueprints_checked", "cover_story"]) {
+    for (const id of ["embedded", "came_strong", "first_lyric_entry", "silver_crown", "sealed", "blueprints_checked", "contract_signed", "executive_contract", "cover_story"]) {
       expect(badgeById(id)).toMatchObject({ goal: 1, every: 1 });
     }
   });

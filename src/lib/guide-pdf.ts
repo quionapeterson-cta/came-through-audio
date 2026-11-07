@@ -51,6 +51,30 @@ export async function buildGuidePdf(g: Guide) {
       y += LINE + 1;
     }
   }
+  // The pamphlet: the long-form detail behind the steps, so the downloaded copy reads on its own (founder, 2026-11-06).
+  if (g.pamphlet?.length) {
+    y = ensureSpace(pdf, y, 22);
+    y = sectionTitle(pdf, y + 2, "The pamphlet");
+    for (const part of g.pamphlet) {
+      const lines = pdf.splitTextToSize(part.body, width) as string[];
+      y = ensureSpace(pdf, y, 8 + lines.length * LINE);
+      font(pdf, "semibold", 11).setTextColor(...INK).text(part.heading, MARGIN, y);
+      y += LINE + 1.4;
+      font(pdf, "regular", 10).setTextColor(...MUTED);
+      for (const line of lines) { pdf.text(line, MARGIN, y); y += LINE; }
+      // Same order as the screen: the bullets sit under the paragraph they belong to. The bullet glyphs stay on screen;
+      // jsPDF's built-in fonts have no emoji, so the PDF prints the same sentence with the bullet instead.
+      for (const point of part.points ?? []) {
+        const plain = point.replace(/[\u{1F000}-\u{1FAFF}\u{2190}-\u{21FF}\u{2600}-\u{27BF}\u{2B00}-\u{2BFF}\u{FE0F}]/gu, "").replace(/\s+/g, " ").trim();
+        const pointLines = pdf.splitTextToSize(`• ${plain}`, width - 4) as string[];
+        y = ensureSpace(pdf, y, pointLines.length * LINE + 1);
+        font(pdf, "regular", 10).setTextColor(...MUTED);
+        for (const line of pointLines) { pdf.text(line, MARGIN + 4, y); y += LINE; }
+        y += 1;
+      }
+      y += 4;
+    }
+  }
   brandFooter(pdf);
   return { pdf, ticks };
 }

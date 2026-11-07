@@ -12,6 +12,23 @@ export const LAST_SEEN_KEY = "cta.lastSeen";
 /** How long away counts as coming back. Thirty days: long enough that the burst means something. */
 export const RETURN_AFTER_DAYS = 30;
 
+/**
+ * The defaults sky (founder, 2026-11-06): both profile blueprints finished is a once-in-a-lifetime moment, so the
+ * shooting stars and the rocket play once per browser rather than every time a defaults run is finished again.
+ */
+export const DEFAULTS_SKY_KEY = "cta.defaultsSky";
+
+/** True the first time only; records it as played. A browser that blocks storage still gets the celebration once. */
+export function claimDefaultsSky(now = new Date()): boolean {
+  try {
+    if (localStorage.getItem(DEFAULTS_SKY_KEY)) return false;
+    localStorage.setItem(DEFAULTS_SKY_KEY, now.toISOString());
+    return true;
+  } catch {
+    return true;
+  }
+}
+
 /** True when the gap since the last visit is at least `days`. A missing or unreadable date is not a return. */
 export function isReturning(last: string | null | undefined, now = new Date(), days = RETURN_AFTER_DAYS): boolean {
   if (!last) return false;

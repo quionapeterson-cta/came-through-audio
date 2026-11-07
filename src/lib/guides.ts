@@ -3,7 +3,22 @@
  * Blueprints for Catalog Management. Plain reading material: general information, not legal, tax or financial advice.
  */
 export type GuideStep = { title: string; text: string };
-export type Guide = { id: string; kind: "Blueprint" | "Cheat sheet"; title: string; summary: string; steps: GuideStep[]; checklist?: string[] };
+/** One section of a guide's pamphlet: the long-form read behind the steps (founder, 2026-11-06). */
+export type GuideSection = { heading: string; body: string; /** Short bullet points under the body, printed in order. */ points?: string[] };
+export type Guide = {
+  id: string; kind: "Blueprint" | "Cheat sheet"; title: string; summary: string; steps: GuideStep[]; checklist?: string[];
+  /**
+   * Which numbered step each checklist item proves, by position: `stepOf[2] = 4` means the third item finishes step 5.
+   * Without it an item follows the step at its own position, which is right for most blueprints. Once every item that
+   * points at a step is ticked, that step crosses out in the list above (founder, 2026-11-06).
+   */
+  stepOf?: number[];
+  /**
+   * A pamphlet, for the guides that need more than a paragraph per step (founder, 2026-11-06): the detail sits below the
+   * steps on screen and in the downloaded PDF, so the numbered steps stay the quick read.
+   */
+  pamphlet?: GuideSection[];
+};
 
 /**
  * Where one checklist item is actually done, so a blueprint reads as a to-do list you can work from instead of notes you
@@ -38,17 +53,16 @@ export const BLUEPRINT_GUIDES: Guide[] = [
   },
   {
     id: "embed-defaults", kind: "Blueprint", title: "Set Your Embed Defaults",
-    summary: "Fill your details in once, so every master you embed starts with your credits already in place.",
+    summary: "Fill your details in once, so every master you embed starts with your credits already in place. PRO affiliations, IPI numbers, splits and registration details stay in your catalog: they are never written into your music files.",
     steps: [
-      s("Open Profile → Edit profile", "These are the same three steps setup asks for the first time you sign in. Afterwards they live in Profile → Edit profile, and you can change any of them whenever your details do."),
-      s("Artist, label and contact", "Your primary artist or stage name is what every embed credits. Add your label name if you release under one, the contact email you want inside the file, and who usually produces, if that's always the same person."),
+      s("Artist, label and contact", "Open Profile → Edit profile. These are the same three steps setup asks for the first time you sign in, and you can change any of them whenever your details do. Your primary artist or stage name is what every embed credits. Add your label name if you release under one, the contact email you want inside the file, and who usually produces, if that's always the same person."),
       s("Release details", "Pick your primary genre (and a secondary one if you use one), the language you usually record in, the country it's usually recorded in, your usual release type, and whether your songs are usually Explicit. Each song can still change these."),
       s("Registration answers", "Say whether your songs usually use a sample and whether they're usually written for film, TV, stage or an ad. Those are the two questions BMI asks, so answering them once saves the same answer on every song."),
       s("Master and copyright lines", "Set the share of the master you usually own and how you hold it, then your © (composition) and ℗ (sound recording) lines: the year, then the owner's name."),
       s("Add your regulars", "List the session players, backup vocalists and engineers who are on most of your songs, so neighbouring-rights registration has them ready."),
-      s("Know what stays private", "PRO affiliations, IPI numbers, splits and registration details stay in your catalog: they are never written into your music files."),
     ],
     checklist: ["Artist name and label", "Contact email to embed", "Genre, language and recorded-in", "Usual release type and Explicit", "Samples and written-for answered", "Master share and basis", "© and ℗ lines", "Regular performers and crew"],
+    stepOf: [0, 0, 1, 1, 2, 3, 3, 4],
   },
   {
     id: "catalog-defaults", kind: "Blueprint", title: "Build Your Catalog Defaults",
@@ -59,10 +73,10 @@ export const BLUEPRINT_GUIDES: Guide[] = [
       s("Add each writer's PRO and IPI", "Pick their PRO from the worldwide list and add their IPI name number. Both are needed to register a song, so leave them blank until a writer has them rather than guessing."),
       s("Make the default shares add to 100%", "A new song's split sheet starts from these shares, and it has to total exactly 100% before a song can be registered."),
       s("Say how publishing works for you", "Tick Self-published if you have no publisher, or list each publisher with its PRO, share and HFA number. A BMI writer with no publishing company has its own box, because BMI pays both halves."),
-      s("Watch the profile meter fill", "The bar at the top counts the details that carry over to every song. It's a guide, not a gate: nothing here holds back saving or embedding."),
-      s("Save, then check one song", "Open a song in My Catalog and confirm the details arrived with it. Anything you type on the song itself stays as you wrote it."),
+      s("Save, watch the meter, then check one song", "Save your defaults and watch the profile meter fill: the bar at the top counts the details that carry over to every song. It's a guide, not a gate, so nothing here holds back saving or embedding. Then open a song in My Catalog and confirm the details arrived with it. Anything you type on the song itself stays as you wrote it."),
     ],
     checklist: ["Legal name added", "Every writer has a role", "PRO on every writer", "IPI on every writer", "Writer shares total 100%", "Publisher or Self-published", "Publisher details and HFA", "Checked on a song"],
+    stepOf: [0, 1, 2, 2, 3, 4, 4, 5],
   },
   {
     id: "record-label", kind: "Blueprint", title: "Start and Operate an Independent Record Label",
@@ -90,7 +104,8 @@ export const BLUEPRINT_GUIDES: Guide[] = [
       s("Collect mechanicals", "Register the publisher with The MLC for US streaming mechanicals."),
       s("Consider an administrator", "Collecting worldwide is hard. A publishing administrator collects for a percentage while you keep ownership (see the Publishing Administration contract)."),
     ],
-    checklist: ["Publisher name approved", "PRO publisher account", "Publisher IPI saved", "Songs registered with shares", "The MLC", "Administrator decision"],
+    checklist: ["Writer and publisher halves", "Publisher name approved", "PRO publisher account", "Publisher IPI saved", "Songs registered with shares", "The MLC", "Administrator decision"],
+    stepOf: [0, 1, 2, 3, 4, 5, 6],
   },
   {
     id: "production-business", kind: "Blueprint", title: "Build a Music Production Business",
@@ -103,7 +118,8 @@ export const BLUEPRINT_GUIDES: Guide[] = [
       s("Register your work", "Join a PRO as a writer, add your songs and credits to My Catalog, and claim producer credits on streaming services where you can."),
       s("Build repeat clients", "Deliver on time, communicate clearly and follow up after releases. Most production income comes from repeat artists."),
     ],
-    checklist: ["Price list", "Contracts ready", "PRO writer account", "Backups in two places", "Catalog credits", "Client follow-up"],
+    checklist: ["Price list", "Contracts ready", "Writer share on split sheets", "PRO writer account", "Backups in two places", "Catalog credits", "Client follow-up"],
+    stepOf: [0, 1, 2, 4, 3, 4, 5],
   },
   {
     id: "royalty-registration", kind: "Blueprint", title: "Music Royalty Registration and Collection",
@@ -118,19 +134,109 @@ export const BLUEPRINT_GUIDES: Guide[] = [
       s("Check statements every quarter", "Compare what you're paid with what you released. Use the Royalty Health Hub to spot songs that aren't fully registered."),
     ],
     checklist: ["PRO writer account", "IPI saved in My Catalog", "Publishing set up", "Songs registered with PRO", "The MLC", "SoundExchange", "Quarterly check"],
+    pamphlet: [
+      { heading: "Join a PRO as a writer",
+        body: "The PRO is where your performance money starts, and the account is yours personally, not the artist page's. Pick the society for your territory (ASCAP, BMI or SESAC in the U.S., PRS in the U.K., GEMA in Germany, SOCAN in Canada, APRA AMCOS in Australia) and apply online as a writer under your legal name.",
+        points: [
+          "Fill in the legal name on your ID, your address, and the tax details the society asks for. A stage name is not a legal name.",
+          "You get a writer account and an IPI name number. Every later registration uses that number, so save it.",
+          "Register each song once it is finished and the splits are settled, then keep the title and writers identical everywhere.",
+          "Add your IPI to your writer details in My Catalog, so a registration sheet carries it without retyping.",
+        ] },
+      { heading: "Register with The MLC",
+        body: "The MLC pays the U.S. streaming mechanical for the composition. Register as a self-administered publisher if you have no publisher, or as a publisher administrator if you handle other writers too. It is a separate account from the PRO and does not replace it.",
+        points: [
+          "Create the account at themlc.com and take the self-administered publisher path, or add yourself as a publisher inside an existing administrator account.",
+          "Add the songs you wrote, with every writer's legal name, IPI and share, exactly as the PRO has them.",
+          "Give each recording its ISRC, because the MLC matches streams to the composition through it.",
+          "Read the catalogue after upload: a writer listed as their own publisher with a placeholder IPI is the error to fix in the portal.",
+        ] },
+      { heading: "Register with SoundExchange",
+        body: "SoundExchange pays the recording, so this account belongs to whoever owns the master and to the performers on it. If you wrote the song but did not perform on the record and do not own the master, skip this one.",
+        points: [
+          "Create an account as an artist, a rights owner, or both if you did both jobs.",
+          "Register each recording with its ISRC and the release's UPC, then claim the tracks already linked to your name.",
+          "Add the featured artists and session players where they are known, because their shares come out of the same recording.",
+          "Check the unclaimed list every few months: a track that is registered but unclaimed pays nobody.",
+        ] },
+      { heading: "The order that saves you rework",
+        body: "Each account needs something the one before it gives you, so the order matters more than the date: the PRO issues the IPI, The MLC consumes it, and SoundExchange works from the ISRC and UPC that arrive with the release.",
+        points: [
+          "1. PRO first, because the IPI it issues is used by The MLC and on your registration sheets.",
+          "2. The MLC next, because it wants that IPI and the same writer splits.",
+          "3. SoundExchange last, because it works from ISRCs and the UPC your distributor issues at delivery.",
+          "4. Then come back to My Catalog and fill in anything the three accounts returned, so the next registration is one click.",
+        ] },
+    ],
   },
   {
     id: "copyright-protection", kind: "Blueprint", title: "Copyright and Intellectual Property Protection",
-    summary: "Prove you own your music and art, and know what to do if someone uses it without permission.",
+    summary: "Prove you own your music and art, know exactly what a composition and a master are, and know what to do if someone uses it without permission. The pamphlet below goes into the detail behind every step.",
     steps: [
-      s("Know what's protected", "A song (lyrics and music) and its recording are two separate copyrights. Your artist name and logo can be protected as trademarks."),
+      s("Know what's protected", "Two copyrights live in every release, and they are owned and licensed separately. The composition is the song itself: the lyrics and the melody, owned by whoever wrote them (usually split between writers or their publisher). The sound recording is that specific performance and mix, owned by whoever paid for and made the master (often the artist or label). Registering one does not register the other, a sync license covers only the composition while a master use license covers only the recording, and your artist name and logo sit outside copyright as trademarks. The pamphlet explains both works line by line."),
       s("Keep proof as you create", "Save dated drafts, voice memos, session files and split sheets. Use the AI Protection Hub to create time-stamped proof of your files."),
       s("Register important works", "In the US, registering with the Copyright Office is needed before you can sue, and gives you stronger remedies. Register finished songs and recordings that matter."),
       s("Put ownership in writing", "Paying someone doesn't automatically give you the copyright. Use contracts that say who owns what (see Copyright Assignment and the production contracts)."),
       s("Clear what you use", "Samples, beats, photos, fonts and footage need permission. Use the Sample Clearance and license contracts."),
       s("If someone copies you", "Save evidence, then send a takedown notice to the platform. If it's serious, talk to a music attorney before contacting them."),
     ],
-    checklist: ["Proof of creation saved", "Key works registered", "Ownership in writing", "Everything used is cleared", "Takedown process known"],
+    checklist: ["Song and recording understood", "Proof of creation saved", "Key works registered", "Ownership in writing", "Everything used is cleared", "Takedown process known"],
+    stepOf: [0, 1, 2, 3, 4, 5],
+    pamphlet: [
+      { heading: "What a composition is, exactly",
+        body: "The composition is the song itself, before anyone performs it: the lyrics as written plus the music (melody, chords, harmony, bass line, hook and structure). It exists from the moment you fix it down in some form, and it belongs to the people who wrote it, not to whoever recorded it.",
+        points: [
+          "📱 The \"Phone Memo\" rule: you don't need a fancy studio or a lawyer to protect your song. The exact second you record a hummed melody or a lyric into your phone, it is legally copyrighted to you.",
+          "🤝 You own the whole pie together: if you write the lyrics and your friend writes the guitar chords, you don't just own the words and they don't just own the guitar. Legally, you both own a percentage of the entire combined song.",
+          "🎤 Topliners are songwriters: if a producer gives you an instrumental track and you write the words and vocal melody to go on top of it, you didn't just \"help\". You co-wrote the composition and are legally entitled to your name on the song's paperwork (called a split sheet).",
+          "🎹 Beats vs. songs: in modern music, the track/beat maker and the melody/lyric writer usually split the songwriting ownership 50/50, regardless of who spent more time on it.",
+        ] },
+      { heading: "What the master is, exactly",
+        body: "The master, short for master recording, is one specific recording of that composition: the performance you can hear, the instruments, the room, the mix, the final master and the file itself, meaning the MP3 or WAV you press play on and listen to. Record the same song again with a different arrangement, or have another artist cover it, and you have a different master with its own copyright. The master is normally owned by whoever paid for and organised the session, which is why a producer who charges a flat fee and hands you the files is not automatically a co-owner, and why a label that fronts the studio time usually ends up owning the recording unless the contract says otherwise. The master copyright covers that recording only: someone can own the song and not your recording, or own your recording and none of the song." },
+      { heading: "Mechanicals through The MLC, performances through your PRO",
+        body: "Two different kinds of money come out of the same stream, and two different organisations collect them: The MLC collects your \"streaming print\" money, and your PRO collects your \"airplay\" money. You cannot pick one. To collect 100% of your songwriting money from streams, register the song with both.",
+        points: [
+          "📀 Mechanicals through The MLC: every time your song is streamed (Spotify, Apple Music) or bought as a download, a mechanical royalty is generated, a digital reproduction fee for the right to \"print\" and play your song on a listener's device.",
+          "🏛️ The MLC (Mechanical Licensing Collective) is the organisation the U.S. government designated to collect that streaming money from the platforms and pay it directly to songwriters and publishers.",
+          "📻 Performance through your PRO: every time your song is played publicly, a performance royalty is generated, because your song is being broadcast out into the world.",
+          "🎯 Your PRO (Performance Rights Organisation: ASCAP, BMI or SESAC in the U.S.) monitors those public spaces, collects the licence fees and splits the money between the songwriter and the publisher.",
+          "📍 Where performance money comes from: radio stations, TV shows and commercials, cafés, restaurants and bars, live concert venues, and internet radio like Pandora.",
+          "🧠 The simple rules: streams and downloads = The MLC. Public broadcasts and airplay = your PRO.",
+        ] },
+      { heading: "SoundExchange pays the recording, not the song",
+        body: "SoundExchange has absolutely nothing to do with songwriter royalties. It pays you for the recording, not the lyrics or the melody. If you only wrote the song and did not sing or play an instrument on the final track, SoundExchange owes you nothing: you sign up only if you performed on it or you own the audio file. It collects money from non-interactive digital radio only, meaning platforms where the listener picks a genre or a station but cannot hit play on a specific track or build a custom playlist. That is why on-demand Spotify and Apple Music plays are not SoundExchange money, and why a songwriter who never performed on the record cannot collect from it.",
+        points: [
+          "📡 Satellite and internet radio: 🛰️ SiriusXM satellite radio, 📻 the free radio version of Pandora, 🌐 iHeartRadio's digital stations and cable TV music channels are the money, not on-demand streaming.",
+          "👑 50% to the master owner: the person or label who paid to record the song.",
+          "🎤 45% to the featured artist: the main singer or band whose name is on the track.",
+          "🥁 5% to the session players: a fund for the background musicians and studio drummers who played on the session.",
+          "⚖️ The cheat sheet: songwriter royalties (PRO and The MLC) pay you for the intellectual property, your brain wrote the words and music. SoundExchange royalties pay you for the physical recording, your voice sang it, your hands played it, or your bank account paid for the studio time.",
+          "🤔 The check before you sign up: did you sing or perform on the track you are getting ready to release, or did you only write the lyrics and melody for another artist? That answer decides whether SoundExchange applies to you.",
+        ] },
+      { heading: "The four places SoundExchange collects, and the two it never does",
+        body: "SoundExchange only collects from non-interactive digital radio: services that play a station or a channel at you instead of letting you choose the exact next track. There are four categories, and knowing them tells you where your recording is earning and, just as usefully, where it is not. The exclusions matter as much as the list, because that money already reaches you through your distributor.",
+        points: [
+          "🛰️ Satellite radio: every music channel on SiriusXM.",
+          "🌐 Internet radio and webcasters: the thousands of customised or algorithmic radio tiers where you can't pick the exact next song, including Pandora's free radio tiers, iHeartRadio streams, Live365, and even the \"Station\" or \"Radio\" modes on platforms like Amazon Music.",
+          "📺 Cable TV music channels: the background music channels high up the TV guide, like Music Choice or Stingray, pay SoundExchange when they play your recording.",
+          "📡 Online broadcast simulcasts: when a traditional AM/FM station takes its live over-the-air broadcast and streams it over the internet or an app, that digital web stream has to pay SoundExchange.",
+          "🚫 Major platforms it excludes: SoundExchange never collects your master royalties from interactive, on-demand streaming where a user clicks a specific song to play it immediately. Spotify, Apple Music, Tidal, Amazon Music on demand and YouTube Music pay your digital distributor (DistroKid, TuneCore, CD Baby) directly, and the distributor passes 100% of that master royalty to you.",
+          "❌ Terrestrial AM/FM radio is excluded too: traditional over-the-air car radio in the United States legally pays no master recording royalty at all, so SoundExchange cannot collect from it.",
+        ] },
+      { heading: "How they all work together",
+        body: "Every track has two separate sides of ownership, and each side uses completely different companies to collect your money. The composition side pays the people who wrote the lyrics, melody and chords. The master side pays the people who performed on or paid for the actual audio file, and SoundExchange lives entirely on that side.",
+        points: [
+          "🎼 Composition side (the songwriters): your PRO collects your performance royalties wherever the song is broadcast to the public (radio, TV, venues, restaurants and streaming platforms), and The MLC collects your mechanical royalties wherever the song is reproduced digitally (every interactive stream on Spotify and Apple Music, and every download).",
+          "🎙️ Master side (the recording): SoundExchange collects digital performance royalties for the recording on non-interactive platforms where a listener cannot pick the exact next song (SiriusXM, Pandora Radio, cable TV music channels and AM/FM web streams), and your distributor collects your standard streaming royalties on interactive platforms where a user clicks play on a specific track (Spotify, Apple Music, Tidal).",
+          "⚖️ The takeaway: if you are an independent singer-songwriter who wrote, recorded and released a track yourself, you must register with your PRO, The MLC and SoundExchange to collect 100% of your money. Each one pays a different share, and skipping one leaves that share behind.",
+        ] },
+      { heading: "What copyright does not cover",
+        body: "Copyright protects the expression, not the idea, and not a genre. A title, a chord progression, a drum pattern, a groove, a subject or a two-word hook are not protected on their own: another writer can make a song about the same thing over the same four chords. Your artist name, your logo and the name of your label are trademarks, protected by using them in business and by registering them, not by copyright. Your voice, your face and your likeness are covered by right-of-publicity rules that differ by state, not by copyright. A beat you bought a lease for is licensed to you, not owned by you, so read the lease before you claim the composition, and check whether it allows the release you are planning." },
+      { heading: "The \"poor man's copyright\" myth",
+        body: "Mailing yourself a copy, or uploading a private video, proves a date at best and is not a registration. In the US, registering with the Copyright Office is what lets you sue for infringement and what opens up statutory damages and attorney's fees for a timely claim, and it is done online, separately for the song and for the recording, or together for a release. A timestamp from the AI Protection Hub is evidence that a file existed in that exact form on that date, which is genuinely useful in a dispute, but it is not a government registration and it does not replace one. Keep the session files, the stems, the dated drafts and the split sheets too: they show how the song came together, which a hash on its own cannot." },
+      { heading: "If someone uses your work",
+        body: "Screenshot or download the post with its address and the date, note the account, and save your own proof of ownership before you contact anyone. Platforms run a notice-and-takedown process and most keep the form in their help centre: that is usually the fastest way to get a post removed, and a knowingly false claim can come back on you, so be accurate about which work and which right. A cover version released by someone else is normally allowed with a mechanical licence for the composition, but that licence never gives them your master. A sample, a remix or a beat built on your recording needs your permission, and if they use your song as well, the writer's. For anything earning real money, or anything involving a label, talk to a music attorney before you negotiate: a badly worded demand can cost more than the use did." },
+    ],
   },
   {
     id: "release-distribution", kind: "Blueprint", title: "Independent Music Release and Distribution",
@@ -400,3 +506,25 @@ export const GUIDE_LINKS: Record<string, Record<string, GuideLink>> = {
 
 /** The screen one checklist item opens, or nothing when that step happens outside the app. */
 export const linkFor = (guideId: string, item: string): GuideLink | undefined => GUIDE_LINKS[guideId]?.[item];
+
+/** The numbered step a checklist item points at, when that step exists. */
+export function stepFor(g: Guide, index: number): number | undefined {
+  const at = g.stepOf?.[index] ?? index;
+  return at >= 0 && at < g.steps.length ? at : undefined;
+}
+
+/**
+ * The numbered steps whose checklist items are all ticked, so the instructions above cross out as the list fills in
+ * (founder, 2026-11-06). A step no item points at is never crossed out: the ticked checklist is the proof, not the reading.
+ */
+export function crossedSteps(g: Guide, checked: readonly string[]): Set<number> {
+  const ticked = new Set(checked);
+  const byStep = new Map<number, string[]>();
+  (g.checklist ?? []).forEach((item, i) => {
+    const at = stepFor(g, i);
+    if (at !== undefined) byStep.set(at, [...(byStep.get(at) ?? []), item]);
+  });
+  const out = new Set<number>();
+  for (const [step, items] of byStep) if (items.every((item) => ticked.has(item))) out.add(step);
+  return out;
+}

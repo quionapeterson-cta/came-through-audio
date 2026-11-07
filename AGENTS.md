@@ -47,6 +47,13 @@
   hyphens, starting with a letter, 48 characters at most. The web copy is 512×512 transparent WebP under 120 KB at
   `icons/<serious|playful>/[<set>/]<slug>.webp`; the 4K master is a transparent PNG at `4k/icons/…/<slug>.png`. The
   badge's `src` in badges.ts uses the same slug, and the picture is only ever a URL through `artUrl()`.
+- **The founder can point a badge at different art from Admin → Badges** (founder, 2026-11-06): the row saves the bucket
+  key in `public.badge_art` (`setBadgeArt`, founder-only) and every surface reads it through `checkBadges` /
+  `listBadgeSettings` before falling back to the path in `badges.ts`. The file itself still goes into R2 by hand (the
+  upload rule above is unchanged); the panel only records which key to request. The list also has its own "Repeatable
+  badges" section, so every `every` badge, its interval and its art sit together. Every badge picture in that panel opens
+  full size when clicked (`PeekDialog`, founder, 2026-11-06), so the art can be judged, approved or replaced before it
+  goes near a member's shelf.
 - Art is submitted to the private `badge-submissions` bucket and read through a signed link a super admin asks for, so a
   rejected badge is never a public picture. Art in the bucket is not a live badge: the badge still needs its `BadgeDef`,
   a real `metric` in badge-rules.ts, and one earned run before it ships (see the engineering steps in the panel).
@@ -223,12 +230,48 @@
 - **Notes and due dates sit on each checklist item** (founder, 2026-11-06): `item_meta` in `public.workbench_items` maps
   the item's own wording to `{ note, due }`, and the rules live in `src/lib/workbench.ts` (`withMeta`, `metaFor`,
   `nextDue`, `isOverdue`) with their test. An overdue open item shows in red; a note or a date never blocks a tick.
+- **A blueprint can hold one item of the member's own** (founder, 2026-11-06): `customItems` / `withCustomItem` in
+  `src/lib/workbench.ts` flag it `custom: true` in `item_meta`, so it needs no new column. It is ticked and annotated like
+  the guide's items but stays out of `checklistProgress`, so the blueprint's own 100% still means the blueprint's list.
+- **The numbered steps cross out with the checklist** (founder, 2026-11-06): `stepOf` and `crossedSteps` in
+  `src/lib/guides.ts`. An item points at a step (or at its own position when `stepOf` is absent), and a step crosses out
+  only once every item that points at it is ticked. A step no item points at never crosses out, so **every numbered step
+  must be pointed at by at least one checklist item** (founder, 2026-11-06) — merge the step or add the item, never
+  leave an instruction the checklist skips. The test in `src/lib/guides.test.ts` fails on an unclaimed step.
+- **The same blueprint can be worked again** (founder, 2026-11-06): the first run keeps the guide's own id, and every
+  later run adds `~2`, `~3`… to it (`runId`, `nextRunId`, `guideIdOf` in `src/lib/workbench.ts`). A run has its own
+  ticks, notes and due dates, the finished ones stay in Working On as the record of that time through, and "Start again"
+  appears on a blueprint only once its newest run is finished. Never overwrite a finished run to restart one.
+- **A blueprint can carry a pamphlet** (founder, 2026-11-06): `pamphlet` in `src/lib/guides.ts` is the long-form detail
+  behind the numbered steps (the copyright guide explains the composition and the master section by section). It shows
+  on screen as one compact row that opens the sections in a pop-up (founder, 2026-11-06), so a long pamphlet never
+  pushes the steps or the checklist down the page, and it prints after the checklist in the downloaded PDF. The steps
+  stay the quick read: deep explanation belongs in the pamphlet, never padding out a step. Short, sign-up-shaped
+  pamphlets (the royalty registration guide's PRO / The MLC / SoundExchange steps) use the same pop-up.
+- **Finished is its own folder in Working On** (founder, 2026-11-06): "In progress" and "Finished" are separate
+  folders, and a run moves into Finished the moment its last box is ticked. Starting the blueprint again opens a new run
+  in In progress and leaves the finished one where it is.
+- **Finishing both profile defaults lifts the rocket** (founder, 2026-11-06): `defaultsFinished` in
+  `src/lib/workbench.ts` (a finished run of `embed-defaults` and of `catalog-defaults`, in either order) shows `StarSky`
+  with the rocket and "Zero to one." over the usual checklist burst, once per browser (`claimDefaultsSky` in
+  `src/lib/celebrate.ts`). It is a launch, not a badge: no art, no metric.
+- **A sky is rare, and that is the point** (founder, 2026-11-06): the full-screen `StarSky` is used for exactly two
+  events, both profile defaults and a fully signed agreement, and `PLAN-celebration-moments.md` is the gate for adding a
+  third. A candidate has to be rare or once, identity-level rather than progress, done by the member, the end of a
+  chapter, and impossible to fire twice; if a badge already covers it, it gets the badge and nothing else. Never add a
+  sky for a count, a purchase, a renewal or a routine finish, and never stack a sky on a screen that already shows one.
+- **The contract sky waits for the last signature** (founder, 2026-11-06): only the signature that makes an agreement
+  fully signed shows `StarSky` with "It's a done deal!"; a partial signature stays a plain confirmation. When it closes,
+  the badge check runs, so the contract badge celebration follows the sky instead of arriving with it.
+- **Working On is the last tab** in Contracts & Blueprints (founder, 2026-11-06): the generator opens the row and the
+  folder closes it, after Contracts, Blueprints and the Signed Vault.
 - **Working On always offers one next step** (founder, 2026-11-06): `nextStep` picks a dated item first, then the next
   unticked item of the blueprint furthest along, then a draft, then a contract out for signature, then the library. Never
   invent work when the folder is empty.
 - **Finishing a checklist is a moment** (founder, 2026-11-06): the last tick shows `Confetti`, one toast and runs the
-  awards check (`requestBadgeCheck`). A completion badge of its own still needs its `BadgeDef`, metric and art approved
-  through the Badge Art Protocol — don't add one without the founder.
+  awards check (`requestBadgeCheck`). The finish earns **Blueprints Checked** (`blueprints_checked`, art
+  `playful/contracts/blueprints_checked.webp`), once per finished run. A completion badge of its own still needs its
+  `BadgeDef`, metric and art approved through the Badge Art Protocol — don't add one without the founder.
 - **The welcome burst waits 30 days** (founder, 2026-11-06, replacing the weekly burst of 2026-11-05): `celebrateReturn`
   in `src/lib/celebrate.ts` records every visit under `cta.lastSeen` and reports a return only when the previous visit was
   `RETURN_AFTER_DAYS` (30) or more days ago. A first visit, a routine return and a browser that blocks storage all stay

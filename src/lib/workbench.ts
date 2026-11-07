@@ -2,15 +2,56 @@
  * Working On (founder, 2026-11-06): the member's own folder of blueprints and contracts in progress, plus the ticks on
  * each blueprint checklist. Pure helpers only; reading and writing live in src/hooks/useWorkbench.ts.
  */
-import { GUIDES, type Guide } from "./guides";
+import { BLUEPRINT_GUIDES, GUIDES, type Guide } from "./guides";
 
 export type WorkbenchKind = "blueprint" | "contract";
 /** A note and a due date on one checklist item, so a blueprint reads like a small project plan (founder, 2026-11-06). */
-export type ItemMeta = { note?: string; due?: string };
+export type ItemMeta = {
+  note?: string;
+  due?: string;
+  /** The member's own item rather than one from the guide (founder, 2026-11-06). */
+  custom?: true;
+};
 export type WorkbenchEntry = { kind: WorkbenchKind; itemId: string; checked: string[]; pinned: boolean; meta?: Record<string, ItemMeta>; updatedAt?: string | undefined };
 export type ChecklistProgress = { done: number; total: number; pct: number; started: boolean; finished: boolean };
 
 export const workbenchKey = (kind: WorkbenchKind, itemId: string) => `${kind}:${itemId}`;
+
+/**
+ * Worked more than once (founder, 2026-11-06): a blueprint can be started again so the process can be repeated without
+ * losing the record of the last run. The first run keeps the guide's own id and every later run adds `~2`, `~3`…
+ */
+/** The two profile blueprints that walk the same fields setup asks for: finishing both is the defaults moment. */
+export const DEFAULT_BLUEPRINTS = ["embed-defaults", "catalog-defaults"] as const;
+
+/** True once both profile defaults have a finished run (the newest run of either counts), whatever order they were done in. */
+export function defaultsFinished(entries: WorkbenchEntry[], guides: Guide[] = BLUEPRINT_GUIDES): boolean {
+  return DEFAULT_BLUEPRINTS.every((id) => {
+    const g = guides.find((x) => x.id === id);
+    if (!g?.checklist?.length) return false;
+    return entries.some((e) => e.kind === "blueprint" && guideIdOf(e.itemId) === id && checklistProgress(g.checklist, e.checked).finished);
+  });
+}
+
+export const RUN_SEP = "~";
+export const guideIdOf = (itemId: string) => itemId.split(RUN_SEP)[0]!;
+export function runOf(itemId: string) {
+  const n = Number(itemId.slice(guideIdOf(itemId).length + 1));
+  return Number.isInteger(n) && n > 1 ? n : 1;
+}
+export const runId = (guideId: string, run: number) => (run > 1 ? `${guideId}${RUN_SEP}${run}` : guideId);
+/** "Set Your Embed Defaults · Run 2" */
+export const runTitle = (title: string, run: number) => (run > 1 ? `${title} · Run ${run}` : title);
+/** Every run saved for one blueprint, oldest first. */
+export function runsOf(entries: readonly WorkbenchEntry[], guideId: string) {
+  return entries.filter((e) => e.kind === "blueprint" && guideIdOf(e.itemId) === guideId)
+    .map((e) => ({ entry: e, run: runOf(e.itemId) })).sort((a, b) => a.run - b.run);
+}
+/** The id a new run of this blueprint takes: the next number after the last one. */
+export function nextRunId(entries: readonly WorkbenchEntry[], guideId: string) {
+  const runs = runsOf(entries, guideId);
+  return runId(guideId, (runs[runs.length - 1]?.run ?? 0) + 1);
+}
 
 /** Ticked out of the checklist as it reads today: a tick on wording that has since changed does not count. */
 export function checklistProgress(checklist: readonly string[] | undefined, checked: readonly string[] | undefined): ChecklistProgress {
@@ -49,10 +90,31 @@ export function withMeta(entry: WorkbenchEntry, item: string, patch: ItemMeta): 
   const note = (merged.note ?? "").trim();
   if (note) clean.note = note.slice(0, 500);
   if (merged.due && isDue(merged.due)) clean.due = merged.due;
+  if (merged.custom) clean.custom = true;
   const meta = { ...(entry.meta ?? {}) };
-  if (clean.note || clean.due) meta[item] = clean;
+  if (clean.note || clean.due || clean.custom) meta[item] = clean;
   else delete meta[item];
   return { ...entry, meta };
+}
+
+/**
+ * The member's own checklist item, if they added one (founder, 2026-11-06): one per blueprint, ticked and annotated like
+ * the guide's own items. It is kept out of `checklistProgress`, so the blueprint's own 100% still means the blueprint.
+ */
+export function customItems(entry: Pick<WorkbenchEntry, "meta">): string[] {
+  return Object.entries(entry.meta ?? {}).filter(([, m]) => m.custom).map(([item]) => item);
+}
+
+/** Adds, renames or clears the member's own item. Empty wording removes it and its tick, leaving their notes alone. */
+export function withCustomItem(entry: WorkbenchEntry, item: string): WorkbenchEntry {
+  const meta = { ...(entry.meta ?? {}) };
+  const old = customItems(entry)[0];
+  for (const key of customItems(entry)) delete meta[key];
+  const clean = item.trim().slice(0, 120);
+  const checked = old && old !== clean ? entry.checked.filter((c) => c !== old) : entry.checked;
+  if (!clean) return { ...entry, meta, checked };
+  meta[clean] = { ...(meta[clean] ?? {}), custom: true };
+  return { ...entry, meta, checked };
 }
 
 /** A row worth keeping: anything ticked, saved or annotated. An empty one is deleted instead. */
@@ -91,10 +153,14 @@ export function sortByProgress<T extends { title: string; progress: ChecklistPro
   };
 }
 
-/** Blueprints the member saved to Working On, with their progress. */
+/** Blueprints the member saved to Working On, with their progress. Each run is its own row, so finished ones are kept. */
 export function savedGuides(entries: readonly WorkbenchEntry[]) {
-  const byId = new Map(entries.filter((e) => e.kind === "blueprint" && e.pinned).map((e) => [e.itemId, e]));
-  return GUIDES.filter((g) => byId.has(g.id)).map((g) => ({ guide: g, title: g.title, progress: checklistProgress(g.checklist, byId.get(g.id)!.checked) }));
+  return entries.filter((e) => e.kind === "blueprint" && e.pinned).flatMap((e) => {
+    const guide = GUIDES.find((g) => g.id === guideIdOf(e.itemId));
+    if (!guide) return [];
+    const run = runOf(e.itemId);
+    return [{ guide, itemId: e.itemId, run, title: runTitle(guide.title, run), progress: checklistProgress(guide.checklist, e.checked) }];
+  });
 }
 
 /** What the Working On tab counts: blueprints still in progress plus contracts still waiting on someone. */
@@ -114,7 +180,7 @@ export function nextStep(entries: readonly WorkbenchEntry[], contracts: readonly
   const byId = new Map(entries.filter((e) => e.kind === "blueprint").map((e) => [e.itemId, e]));
   const open = savedGuides(entries).filter((s) => !s.progress.finished);
   const candidates = open.flatMap((s) => {
-    const entry = byId.get(s.guide.id);
+    const entry = byId.get(s.itemId);
     const unticked = (s.guide.checklist ?? []).filter((k) => !(entry?.checked ?? []).includes(k));
     // A dated item jumps the queue: a plan is only useful if the date pulls the work forward. With no dates, the
     // blueprint that is furthest along comes first.

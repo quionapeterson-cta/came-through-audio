@@ -17,7 +17,7 @@ import { markBadgesSeen } from "@/lib/badge-events";
 import { pickBadgeArt, resetMyBadges, type EarnedBadge } from "@/lib/badges.functions";
 import { confirmAction } from "@/components/ConfirmHost";
 
-export type BadgeState = { badge: BadgeDef; count: number; earned?: EarnedBadge | undefined; off: boolean };
+export type BadgeState = { badge: BadgeDef; count: number; earned?: EarnedBadge | undefined; off: boolean; /** Art the founder replaced, if any. */ art?: string | undefined };
 
 /** Every badge with the user's progress, plus the earned ones still waiting for their pop-up. */
 export function useBadgeStates(userId: string | undefined) {
@@ -26,14 +26,16 @@ export function useBadgeStates(userId: string | undefined) {
     const d = query.data;
     const held = new Map((d?.earned ?? []).map((e) => [e.id, e]));
     const off = new Set(d?.disabled ?? []);
-    return BADGES.map((badge): BadgeState => ({ badge, count: d?.metrics[badge.metric] ?? 0, earned: held.get(badge.id), off: off.has(badge.id) }));
+    const art = d?.art ?? {};
+    return BADGES.map((badge): BadgeState => ({ badge, count: d?.metrics[badge.metric] ?? 0, earned: held.get(badge.id), off: off.has(badge.id), art: art[badge.id] }));
   }, [query.data]);
   return { ...query, states, unseen: states.filter((s) => s.earned && !s.earned.seenAt) };
 }
 
 /** The art for one earning: the user's pick for badges with choices, otherwise the badge's own art. */
 /** A badge's art: the user's pick where it offers choices, else its rotation art for how many times it's been earned. */
-const artFor = (badge: BadgeDef, pick?: string | null, times = 1) => artUrl(pick && badge.choices?.includes(pick) ? pick : rotationArt(badge, times));
+const artFor = (badge: BadgeDef, pick?: string | null, times = 1, override?: string) =>
+  override ? artUrl(override) : artUrl(pick && badge.choices?.includes(pick) ? pick : rotationArt(badge, times));
 /** The art the shelf shows: the latest pick, or the badge's own art. */
 /** Earned (or earned again) in the last 7 days. */
 const isNew = (s: BadgeState) => {
@@ -41,7 +43,7 @@ const isNew = (s: BadgeState) => {
   return !!last && Date.now() - Date.parse(last) < 7 * 86_400_000;
 };
 /** The art a badge shows on the shelf and when shared. */
-export const shelfArt = (s: BadgeState) => artFor(s.badge, [...(s.earned?.log ?? [])].reverse().find((e) => e.pick)?.pick, s.earned?.times ?? 1);
+export const shelfArt = (s: BadgeState) => artFor(s.badge, [...(s.earned?.log ?? [])].reverse().find((e) => e.pick)?.pick, s.earned?.times ?? 1, s.art);
 
 function TierChip({ badge }: { badge: BadgeDef }) {
   const label = TIER_LABEL[badge.tier];
@@ -112,7 +114,7 @@ export function BadgeWatcher({ userId, artist, eagle }: { userId: string; artist
         </DialogHeader>
         <ul className="grid grid-cols-3 gap-4 sm:grid-cols-4">
           {summary.map((s) => <li key={s.badge.id} className="flex flex-col items-center gap-2 text-center">
-            <img src={artUrl(s.badge.src)} alt="" className="aspect-square w-full object-contain drop-shadow-lg" style={{ animation: "badge-pop 0.6s ease-out" }} />
+            <img src={artFor(s.badge, undefined, s.earned?.times ?? 1, s.art)} alt="" className="aspect-square w-full object-contain drop-shadow-lg" style={{ animation: "badge-pop 0.6s ease-out" }} />
             <span className="text-xs font-semibold">{s.badge.title}</span>
           </li>)}
         </ul>
@@ -139,7 +141,7 @@ function UnlockPopup({ state, artist, more, onNext, share, eagle }: { state: Bad
   const [saving, setSaving] = useState(false);
   const [sharing, setSharing] = useState(false);
   const choosing = open >= 0 && !picked;
-  const src = artFor(badge, picked ?? log[log.length - 1]?.pick, earned?.times ?? 1);
+  const src = artFor(badge, picked ?? log[log.length - 1]?.pick, earned?.times ?? 1, state.art);
   const line = earningPopup(badge, earned?.times ?? 1);
 
   async function choose(pick: string) {
@@ -342,7 +344,7 @@ function Earnings({ state }: { state: BadgeState }) {
       <h3 className="text-xs font-bold uppercase tracking-widest text-primary">Earned {times} times</h3>
       <ol className="grid grid-cols-4 gap-4 sm:grid-cols-6">
         {items.map((e, i) => <li key={i} className="flex flex-col items-center gap-1 text-center">
-          <img src={artFor(badge, e?.pick, i + 1)} alt="" loading="lazy" className="aspect-square w-full object-contain drop-shadow-md" />
+          <img src={artFor(badge, e?.pick, i + 1, state.art)} alt="" loading="lazy" className="aspect-square w-full object-contain drop-shadow-md" />
           <span className="text-xs text-muted-foreground">{e?.at ? new Date(e.at).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" }) : `#${i + 1}`}</span>
         </li>)}
       </ol>

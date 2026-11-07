@@ -9,7 +9,7 @@ import { fromCatalogRow } from "@/lib/catalog";
 export type BadgeEarning = { at: string; pick?: string | null };
 export type EarnedBadge = { id: string; times: number; earnedAt: string; seenAt: string | null; log: BadgeEarning[] };
 type HeldRow = { badge_id: string; times: number; earned_at: string; seen_at: string | null; log: BadgeEarning[] | null };
-export type BadgeCheck = { earned: EarnedBadge[]; metrics: Record<string, number>; disabled: string[] };
+export type BadgeCheck = { earned: EarnedBadge[]; metrics: Record<string, number>; disabled: string[]; /** Founder-replaced art, by badge id. */ art: Record<string, string> };
 
 const validZone = (tz: string) => { try { new Intl.DateTimeFormat("en-US", { timeZone: tz }); return true; } catch { return false; } };
 
@@ -26,19 +26,24 @@ export const checkBadges = createServerFn({ method: "POST" })
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const fail = (what: string) => { throw new Error(`Couldn't check badges (${what}).`); };
 
-    const [catalogs, splits, contracts, checks, certs, events, profile, settings, held, account] = await Promise.all([
+    const [catalogs, splits, contracts, checks, certs, events, workbench, profile, settings, held, artRows, account] = await Promise.all([
       db.from("catalogs").select("*").eq("user_id", uid),
       db.from("split_sheets").select("catalog_id, is_owner, role, signed_at"),
-      db.from("contracts" as never).select("status, contract_parties(is_owner, signed_at)").eq("user_id", uid),
+      db.from("contracts" as never).select("status, blueprint, contract_parties(is_owner, signed_at)").eq("user_id", uid),
       db.from("repertoire_checks").select("track_id, society, status, source, work_id, details, checked_at").eq("user_id", uid),
       db.from("ai_protection_certificates").select("catalog_id, track_title, ots_receipt").eq("user_id", uid),
       db.from("badge_events" as never).select("kind").eq("user_id", uid),
+      // One row per run of a blueprint; read with the member's own session, so it is only ever their checklist.
+      db.from("workbench_items" as never).select("item_id, checked").eq("user_id", uid).eq("kind", "blueprint"),
       db.from("profiles").select("onboarding, stage_name, legal_name").eq("id", uid).maybeSingle(),
       // Read with the server client: badge settings are staff-only rows, members only need the switched-off ids.
       supabaseAdmin.from("badge_settings" as never).select("badge_id").eq("enabled", false),
       // Until the badge-log migration runs there's no log column; badges still work, just without per-earning dates.
       supabaseAdmin.from("user_badges" as never).select("badge_id, times, earned_at, seen_at, log").eq("user_id", uid)
         .then((r) => (r.error ? supabaseAdmin.from("user_badges" as never).select("badge_id, times, earned_at, seen_at").eq("user_id", uid) : r)),
+      // Art the founder replaced from Admin → Badges (founder, 2026-11-06); missing until its migration runs.
+      supabaseAdmin.from("badge_art" as never).select("badge_id, src")
+        .then((r) => (r.error ? { data: [] as { badge_id: string; src: string }[], error: null } : r)),
       supabaseAdmin.auth.admin.getUserById(uid),
     ]);
     if (catalogs.error) fail("catalog");
@@ -49,11 +54,13 @@ export const checkBadges = createServerFn({ method: "POST" })
     const input: BadgeData = {
       tracks: (catalogs.data ?? []).map((r) => ({ ...fromCatalogRow(r as Record<string, unknown>), createdAt: (r.created_at ?? r.updated_at) as string })),
       splits: (splits.data ?? []).filter((r) => r.catalog_id).map((r) => ({ catalogId: r.catalog_id!, isOwner: r.is_owner, role: r.role, signedAt: r.signed_at })),
-      contracts: ((contracts.data ?? []) as { status: string; contract_parties: { is_owner: boolean; signed_at: string | null }[] }[])
-        .map((c) => ({ status: c.status, parties: (c.contract_parties ?? []).map((p) => ({ isOwner: p.is_owner, signedAt: p.signed_at })) })),
+      contracts: ((contracts.data ?? []) as { status: string; blueprint: string; contract_parties: { is_owner: boolean; signed_at: string | null }[] }[])
+        .map((c) => ({ status: c.status, blueprint: c.blueprint, parties: (c.contract_parties ?? []).map((p) => ({ isOwner: p.is_owner, signedAt: p.signed_at })) })),
       checks: (checks.data ?? []).map((r) => ({ trackId: r.track_id, society: r.society, status: r.status as "found" | "not_listed", source: r.source as "self" | "auto", workId: r.work_id, details: r.details, checkedAt: r.checked_at })),
       certificates: (certs.data ?? []).map((c) => ({ catalogId: c.catalog_id, trackTitle: c.track_title ?? "", timestamped: !!c.ots_receipt })),
       events: { agency_export: count("agency_export"), master_download: count("master_download"), blueprint_read: count("blueprint_read") },
+      blueprints: ((workbench.data ?? []) as { item_id: string; checked: string[] | null }[])
+        .map((r) => ({ itemId: r.item_id, checked: r.checked ?? [] })),
       welcomed: !!ob.welcomed,
       names: [ob.stageName, ob.legalName, profile.data?.stage_name, profile.data?.legal_name].filter((n): n is string => !!n?.trim()),
       healthCountry: ob.healthCountry,
@@ -84,7 +91,8 @@ export const checkBadges = createServerFn({ method: "POST" })
 
     const earned = [...mine.values()].filter((r) => badgeById(r.badge_id))
       .map((r) => ({ id: r.badge_id, times: r.times, earnedAt: r.earned_at, seenAt: r.seen_at, log: r.log ?? [] }));
-    return { earned, metrics, disabled };
+    const art = Object.fromEntries(((artRows.data ?? []) as { badge_id: string; src: string }[]).map((r) => [r.badge_id, r.src])) as Record<string, string>;
+    return { earned, metrics, disabled, art };
   });
 
 /**
@@ -136,10 +144,13 @@ export const listBadgeSettings = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
     await assertBadgeStaff(context as never);
-    const [settings, counts, drops] = await Promise.all([
+    const [settings, counts, drops, artRows] = await Promise.all([
       context.supabase.from("badge_settings" as never).select("badge_id, enabled, updated_at"),
       context.supabase.rpc("badge_earned_counts" as never),
       context.supabase.from("badge_drops" as never).select("note, created_at").order("created_at", { ascending: false }).limit(1),
+      // Missing until the badge-art migration runs; the list then shows the art in badges.ts.
+      context.supabase.from("badge_art" as never).select("badge_id, src")
+        .then((r) => (r.error ? { data: [] as { badge_id: string; src: string }[] } : r)),
     ]);
     if (settings.error || counts.error) throw new Error("Couldn't load badge settings.");
     return {
@@ -147,7 +158,27 @@ export const listBadgeSettings = createServerFn({ method: "GET" })
       lastDrop: ((drops.data ?? []) as { note: string; created_at: string }[])[0] ?? null,
       settings: (settings.data ?? []) as unknown as { badge_id: string; enabled: boolean; updated_at: string }[],
       earned: Object.fromEntries(((counts.data ?? []) as { badge_id: string; users: number }[]).map((r) => [r.badge_id, Number(r.users)])) as Record<string, number>,
+      art: Object.fromEntries(((artRows.data ?? []) as { badge_id: string; src: string }[]).map((r) => [r.badge_id, r.src])) as Record<string, string>,
     };
+  });
+
+/**
+ * Admin → Badges: point a badge at different art (founder, 2026-11-06). The file itself is still uploaded to the R2
+ * bucket by hand, at the key this records; only the founder may change which key the app requests.
+ */
+export const setBadgeArt = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d) => z.object({
+    badgeId: z.string().max(80).refine((id) => !!badgeById(id), "Pick a badge."),
+    src: z.string().trim().max(200).regex(/^\/(icons|art)\/[A-Za-z0-9/_.-]+$/, "Use a path like /icons/serious/name.webp"),
+  }).parse(d))
+  .handler(async ({ data, context }) => {
+    const { data: founder } = await context.supabase.rpc("is_founder" as never, { _user_id: context.userId } as never);
+    if (!founder) throw new Error("Only the founder can change badge art.");
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { error } = await supabaseAdmin.from("badge_art" as never).upsert({ badge_id: data.badgeId, src: data.src, updated_by: context.userId, updated_at: new Date().toISOString() } as never, { onConflict: "badge_id" });
+    if (error) throw new Error("Couldn't save the badge art. Has the badge-art migration run?");
+    return { ok: true };
   });
 
 /** Turns badges on or off for new unlocks site-wide. Anyone who already earned one keeps it. */
