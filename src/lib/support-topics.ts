@@ -30,7 +30,7 @@ export const TICKET_TOPICS = [
     issues: ["Finding the right contract or blueprint", "A contract won't generate or download", "Signature requests and signing a contract"],
   },
   {
-    area: "Fill & Sign",
+    area: "PDF Fill & Sign",
     issues: ["My PDF won't open in the tool", "Text or my signature landed in the wrong place", "The downloaded PDF looks unclear"],
   },
   {

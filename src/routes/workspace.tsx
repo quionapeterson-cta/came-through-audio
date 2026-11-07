@@ -73,7 +73,7 @@ const tabs = [
   { id: "protect", label: "AI Protection Hub", icon: ShieldCheck },
   { id: "splits", label: "Split Sheets", icon: FileSignature },
   { id: "learn", label: "Contracts & Blueprints", icon: GraduationCap },
-  { id: "pdf", label: "Fill & Sign", icon: PenLine },
+  { id: "pdf", label: "PDF Fill & Sign", icon: PenLine },
 ];
 
 /** Which badge collections each tab's next-badge card suggests from. */
@@ -337,7 +337,7 @@ function Workspace() {
           <TabsContent value="pdf">
             {hasTier(tier, "management")
               ? <PdfTools canEmail={false} title="Fill, sign and download a PDF" />
-              : <PlusLock title="PDF Fill, Sign & Download starts with Catalog Management" onQuickCheck={openQuickCheck} onUpgrade={upgrade} />}
+              : <PlusLock title="PDF Fill & Sign starts with Catalog Management" onQuickCheck={openQuickCheck} onUpgrade={upgrade} />}
           </TabsContent>
         </Tabs>
       </main>

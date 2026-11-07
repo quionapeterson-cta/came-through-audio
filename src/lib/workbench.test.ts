@@ -27,8 +27,8 @@ describe("checklistProgress", () => {
 describe("toggleChecked", () => {
   const blank: WorkbenchEntry = { kind: "blueprint", itemId: "x", checked: [], pinned: false };
 
-  it("saves a blueprint to Working On on the first tick", () => {
-    expect(toggleChecked(blank, "A")).toMatchObject({ checked: ["A"], pinned: true });
+  it("never saves a blueprint to Working On by ticking: only the Save button does", () => {
+    expect(toggleChecked(blank, "A")).toMatchObject({ checked: ["A"], pinned: false });
   });
 
   it("does not re-save one the member removed", () => {
