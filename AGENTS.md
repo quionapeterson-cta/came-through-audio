@@ -471,7 +471,7 @@ rules keep it consistent as features are added.
   counts the biggest shades but returns them sorted darkest to lightest, so the first colour names the document, the
   second sets the tagline, and "Use these colours" also fills the section-title colour with the darkest — only when the
   member hasn't picked one. Never go back to most-used-first: a mostly-pale logo used to hand members white-on-white type.
-- **Every colour lives in Colors, with its title** (founder, 2026-11-07): Your name, Your tagline, Extra 1…, then Section
+- **Every colour lives in Colors, with its title** (founder, 2026-11-07): Your name/banner, Your tagline, Extra 1…, then Section
   titles, Document title and Second accent, so a member sets every colour the kit draws in one place instead of hunting
   for three fields elsewhere. The tagline's own picker stays in the Tagline box as the shortcut to that same **second
   colour** — one value in two places, never a third field. Section titles are `headerColor`, the document title is

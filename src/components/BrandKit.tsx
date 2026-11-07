@@ -782,7 +782,7 @@ export function BrandKit({ userId, tier, artistName }: { userId: string; tier: T
 }
 
 /** What each colour in the Colours area paints: the first names the documents, the second is the tagline (founder, 2026-11-07). */
-const colorTitle = (i: number) => (i === 0 ? "Your name" : i === 1 ? "Your tagline" : `Extra ${i - 1}`);
+const colorTitle = (i: number) => (i === 0 ? "Your name/banner" : i === 1 ? "Your tagline" : `Extra ${i - 1}`);
 
 /** Light text on a dark band, dark text on a light one (matches the PDF). */
 function onBand(hex?: string) {
