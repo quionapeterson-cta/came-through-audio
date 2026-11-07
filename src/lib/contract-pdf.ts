@@ -24,7 +24,8 @@ export async function downloadContractPdf(o: {
   if (o.brand?.options.watermark) kitWatermark(pdf, o.brand);
   let y = brandHeader(pdf, o.title, label, undefined, o.brand);
   const accent = o.brand ? kitAccent(o.brand) : COBALT;
-  const boxed = o.brand?.options.signature === "box", rounded = o.brand?.options.corners !== "square";
+  // A line is its own choice (founder, 2026-11-07): a straight rule with square ends, so corners only ever belong to a box.
+  const boxed = o.brand?.options.signature === "box", rounded = boxed && o.brand?.options.corners !== "square";
 
   // The first line repeats the title in capitals; skip it since the header already shows the title.
   const lines = o.body.split("\n");

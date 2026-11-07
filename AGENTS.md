@@ -481,6 +481,16 @@ rules keep it consistent as features are added.
   (`recordHistory` / `undoHistory` / `redoHistory` in `src/lib/brand-kit.ts`), the buttons and ⌘Z / ⇧⌘Z step through it,
   and a text field keeps its own undo so typing is never hijacked. The stack is cleared when another kit is opened, and
   it covers the kit's fields only — never a logo file deleted from storage.
+- **Leaving a kit never needs a Save, and one click puts it back** (founder, 2026-11-07): opening another kit or adding one
+  is never blocked on unsaved edits. It asks once — "Discard changes" — and then the copy the editor holds is put back
+  from `origin`, the kits exactly as the load or the last save left them, so the dropped edits can't ride along into a
+  later Save. That same copy is **Revert**, beside Undo and Redo, so a disliked round of changes goes in one click instead
+  of fifty undos; the revert is itself pushed onto the undo stack, so ⌘Z brings the changes back. Keep `origin` in step
+  wherever `kits` changes (load, save, add, delete) or a kit's baseline quietly points at the wrong kit.
+- **Adding a logo adds a version; it never replaces the one in use** (founder, 2026-11-07): every upload writes its own
+  file (`logo-<random>.png`/`.jpg` in the member's folder), so `logo_paths` really grows and the previous logo is still
+  there to switch back to. A kit's original `logo.png` is just one more version. Uploading to the same path each time
+  left a member with one logo and no way back, whatever the versions list said.
 - **A palette can be saved and brought back in one click** (founder, 2026-11-07): `colorSets` on the kit row (`color_sets`,
   migration 20261107120000), cleaned by `kitColorSets` and written with `withColorSet` / `withoutColorSet`. Palettes belong
   to the kit, so each business keeps its own and they follow the member to any device.
@@ -506,6 +516,12 @@ rules keep it consistent as features are added.
   with the logo in the far column and the tagline under it, closing on a hairline, and shrinks a long name rather than
   letting it run into that column. Each is a branch in `kitHeader` (Frame falls through to the original one), a sketch in
   `StyleThumb` and its own preview, and the four styles that already shipped print exactly as they did.
+
+- **A signature line is a choice of its own** (founder, 2026-11-07): `options.signature: "line"` draws one straight rule under
+  each signer and takes no corners at all; `"box"` frames the whole block, and that frame is the only thing
+  `options.corners` shapes (the cover page takes corners too). The editor calls the control **Box corners**, not
+  "Corners", and says in the row that the line has no corners, because a rounded bottom border in the preview curved the
+  line and made the two settings look joined. Keep the line's ends square in the preview as well as the PDF.
 
 ### When it fails
 - A missing, unreadable or unavailable kit never blocks a download: the document simply keeps the Came Through Audio

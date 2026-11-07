@@ -1,6 +1,6 @@
-import { useEffect, useState, type KeyboardEvent as ReactKeyboardEvent, type PointerEvent } from "react";
+import { useEffect, useRef, useState, type KeyboardEvent as ReactKeyboardEvent, type PointerEvent } from "react";
 import { confirmAction } from "@/components/ConfirmHost";
-import { AlertTriangle, ArrowDown, ArrowUp, Check, FileDown, ImagePlus, Loader2, Lock, Plus, Redo2, Save, Trash2, Undo2 } from "lucide-react";
+import { AlertTriangle, ArrowDown, ArrowUp, Check, FileDown, ImagePlus, Loader2, Lock, Plus, Redo2, RotateCcw, Save, Trash2, Undo2 } from "lucide-react";
 import { toast } from "sonner";
 import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
@@ -49,6 +49,12 @@ export function BrandKit({ userId, tier, artistName }: { userId: string; tier: T
   /** Undo and redo of the kit being edited; cleared when another kit is opened (founder, 2026-11-07). */
   const [history, setHistory] = useState<KitHistory>(emptyHistory);
   const [setName, setSetName] = useState("");
+  /**
+   * Every kit exactly as the load or the last save left it, indexed like `kits` (founder, 2026-11-07). Leaving a kit with
+   * unsaved edits puts its copy back, and Revert does the same in one click, so a disliked change never needs fifty undos
+   * and a dropped edit can't ride along into a later Save.
+   */
+  const origin = useRef<Kit[]>([]);
   // Back from buying it (Stripe returns to /profile?checkout=success#brand-kit): say how to use it (founder, 2026-10-27).
   const [justBought] = useState(() => typeof window !== "undefined" && new URLSearchParams(window.location.search).get("checkout") === "success" && window.location.hash === "#brand-kit");
 
@@ -62,8 +68,10 @@ export function BrandKit({ userId, tier, artistName }: { userId: string; tier: T
       const list = ((res.data ?? []) as Record<string, unknown>[]).map((r) => kitFromRow(r as never)).filter((k): k is Kit => !!k);
       if (!live) return;
       // Nothing saved yet: the name starts as their artist name, ready to save.
-      if (!list.length) return setSaved(false);
-      setKits(list.map((k) => ({ ...k, name: k.name || artistName })));
+      if (!list.length) { origin.current = [emptyKit(artistName)]; return setSaved(false); }
+      const loaded = list.map((k) => ({ ...k, name: k.name || artistName }));
+      setKits(loaded);
+      origin.current = loaded.map((k) => structuredClone(k));
       const urls: Record<string, string> = {};
       for (const k of list) {
         for (const path of k.logoPaths) {
@@ -100,13 +108,67 @@ export function BrandKit({ userId, tier, artistName }: { userId: string; tier: T
   const redo = () => { const step = redoHistory(history, kit); if (!step) return; setHistory(step.history); setKit(step.kit); setSaved(false); };
   const setColor = (i: number, v: string) => edit({ colors: kit.colors.map((c, j) => (j === i ? v : c)) });
 
+  /** Puts the saved copy back, so edits the member is leaving behind can't be saved later by accident. */
+  const restoreSaved = () => {
+    const back = origin.current[current];
+    if (back) setKit(structuredClone(back));
+  };
+
+  /**
+   * Opening another kit or adding one never waits for a Save (founder, 2026-11-07): it asks once, because leaving with
+   * unsaved edits drops them, and the kit then opens exactly as it was last saved.
+   */
+  async function leaveCurrent(): Promise<boolean> {
+    if (saved) return true;
+    const ok = await confirmAction({
+      title: `Leave "${kit.name || `Kit ${current + 1}`}" without saving?`,
+      text: "Your unsaved changes to this kit are dropped and it opens as you last saved it. Cancel, then Save, to keep them.",
+      action: "Discard changes",
+    });
+    if (!ok) return false;
+    restoreSaved();
+    setSaved(true);
+    return true;
+  }
+
+  async function openKit(i: number) {
+    if (i === current) return;
+    if (!(await leaveCurrent())) return;
+    setHistory(emptyHistory());
+    setSetName("");
+    setCurrent(i);
+    setSaved(true);
+  }
+
+  async function addKit() {
+    if (!(await leaveCurrent())) return;
+    const fresh = emptyKit("");
+    origin.current.push(structuredClone(fresh));
+    setHistory(emptyHistory());
+    setSetName("");
+    setKits((all) => [...all, fresh]);
+    setCurrent(kits.length);
+    setSaved(false);
+  }
+
+  /** One click back to the saved kit instead of undoing every change; the revert itself can be undone (⌘Z). */
+  function revert() {
+    const back = origin.current[current];
+    if (!back || saved) return;
+    setHistory((h) => recordHistory(h, kit));
+    setKit(structuredClone(back));
+    setSaved(true);
+    toast.success("Back to your last saved kit.");
+  }
+
   async function uploadLogo(file: File) {
     if (!["image/png", "image/jpeg"].includes(file.type)) { toast.error("Use a PNG or JPG logo."); return; }
     if (file.size > MAX_LOGO) { toast.error("That logo is over 2 MB. Try a smaller file."); return; }
     setBusy(true);
     try {
-      // One logo file per kit (the first kit keeps its original logo.png / logo.jpg name).
-      const path = `${userId}/logo${current === 0 ? "" : `-${crypto.randomUUID().slice(0, 8)}`}.${file.type === "image/png" ? "png" : "jpg"}`;
+      // Every upload writes its own file, so adding a logo adds a version instead of overwriting the one already in use
+      // (founder, 2026-11-07). A kit's original logo.png is simply one more version alongside the new ones.
+      const path = `${userId}/logo-${crypto.randomUUID().slice(0, 8)}.${file.type === "image/png" ? "png" : "jpg"}`;
       const { error } = await supabase.storage.from(BUCKET).upload(path, file, { upsert: true, contentType: file.type });
       if (error) throw error;
       // Every version is kept, so one can be switched in later without rebuilding the kit (founder, 2026-11-06).
@@ -195,6 +257,7 @@ export function BrandKit({ userId, tier, artistName }: { userId: string; tier: T
     try {
       const base = { user_id: userId, name: kit.name.trim(), tagline: kit.tagline.trim(), colors: kit.colors.map((c) => c.toUpperCase()), font: kit.font, logo_path: kit.logoPath, logo_paths: kit.logoPaths, show_footer: kit.showFooter, updated_at: new Date().toISOString() };
       const row = { ...base, style: kit.style, header_color: kit.headerColor, options: kit.options, color_sets: kit.colorSets };
+      let newId: string | undefined;
       if (kit.id) {
         const { error } = await supabase.from("brand_kits" as never).update(row as never).eq("id", kit.id);
         if (error) throw error;
@@ -208,8 +271,10 @@ export function BrandKit({ userId, tier, artistName }: { userId: string; tier: T
           if (kits.length > 1) throw new Error("More than one Branding Kit needs the latest database update. Ask support to run migration 20261027210000.");
           const { error: legacy } = await supabase.from("brand_kits" as never).upsert(base as never, { onConflict: "user_id" });
           if (legacy) throw legacy;
-        } else setKit((k) => ({ ...k, id: (data as { id: string }).id }));
+        } else { const id = (data as { id: string }).id; newId = id; setKit((k) => ({ ...k, id })); }
       }
+      // What Revert goes back to, carrying the id a first save has just gained (founder, 2026-11-07).
+      origin.current[current] = { ...kit, name: kit.name.trim(), tagline: kit.tagline.trim(), colors: kit.colors.map((c) => c.toUpperCase()), ...(newId ? { id: newId } : {}) };
       setSaved(true);
       toast.success(`"${kit.name || "Your kit"}" is saved.`);
     } catch (e) { toast.error(e instanceof Error && e.message.includes("migration") ? e.message : "Your brand kit couldn't save. Try again."); }
@@ -226,6 +291,7 @@ export function BrandKit({ userId, tier, artistName }: { userId: string; tier: T
       if (error) throw error;
       if (kit.logoPath && !kits.some((k, i) => i !== current && k.logoPath === kit.logoPath)) await supabase.storage.from(BUCKET).remove([kit.logoPath]);
       setKits((all) => all.filter((_, i) => i !== current));
+      origin.current.splice(current, 1);
       setCurrent(0);
       setSaved(true);
       toast.success("Kit deleted.");
@@ -298,12 +364,12 @@ export function BrandKit({ userId, tier, artistName }: { userId: string; tier: T
       {/* Several kits, one per business or project; each contract picks its kit. */}
       <div className="flex flex-wrap items-center gap-2">
         {kits.map((k, i) => (
-          <Button key={k.id ?? `new-${i}`} size="sm" variant={i === current ? "default" : "outline"} onClick={() => { if (!saved && i !== current) { toast.info("Save this kit first."); return; } setHistory(emptyHistory()); setSetName(""); setCurrent(i); }}>
+          <Button key={k.id ?? `new-${i}`} size="sm" variant={i === current ? "default" : "outline"} onClick={() => void openKit(i)} title={i === current ? undefined : saved ? `Open ${k.name || `Kit ${i + 1}`}` : "Opens as you last saved it; the unsaved changes here are dropped"}>
             {k.name || `Kit ${i + 1}`}{i === 0 && kits.length > 1 ? " · main" : ""}
           </Button>
         ))}
         {kits.length < allowance
-          ? <Button size="sm" variant="ghost" disabled={!saved} onClick={() => { setHistory(emptyHistory()); setSetName(""); setKits((all) => [...all, emptyKit("")]); setCurrent(kits.length); setSaved(false); }}><Plus className="h-4 w-4" />Add a kit</Button>
+          ? <Button size="sm" variant="ghost" onClick={() => void addKit()}><Plus className="h-4 w-4" />Add a kit</Button>
           : <Button size="sm" variant="ghost" onClick={() => void buy()}><Plus className="h-4 w-4" />Add another kit · {BRANDING_PRICE}/year</Button>}
         {kits.length > 1 && kit.id && <Button size="sm" variant="ghost" className="ml-auto" disabled={busy} onClick={() => void removeKit()}><Trash2 className="h-4 w-4" />Delete this kit</Button>}
       </div>
@@ -579,16 +645,21 @@ export function BrandKit({ userId, tier, artistName }: { userId: string; tier: T
           <span><span className="block text-sm font-semibold">Cover page</span><span className="text-xs text-muted-foreground">An opening page with your logo, name and the contract title.</span></span>
           <Switch checked={kit.options.cover} onCheckedChange={(v) => edit({ options: { ...kit.options, cover: v } })} />
         </label>
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <span className="text-sm font-semibold">Signatures</span>
-          <div role="radiogroup" aria-label="Signature style" className="flex rounded-lg border border-border p-0.5">
-            {([["line", "Line"], ["box", "Box"]] as const).map(([v, label]) => <button key={v} type="button" role="radio" aria-checked={kit.options.signature === v} onClick={() => edit({ options: { ...kit.options, signature: v } })}
-              className={`rounded-md px-3 py-1 text-sm font-semibold ${kit.options.signature === v ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}>{label}</button>)}
+        {/* A line is its own choice, never shaped by the corner setting (founder, 2026-11-07): the line is a straight rule,
+            and only a box (and the cover page) has corners to round. */}
+        <div className="space-y-1.5">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <span className="flex items-center gap-1.5 text-sm font-semibold">Signatures<InfoTip text="Line: one straight rule under each signer's name, in your accent colour. Box: a frame around each signer's whole block. The line keeps square ends whatever the corners are set to." /></span>
+            <div role="radiogroup" aria-label="Signature style" className="flex rounded-lg border border-border p-0.5">
+              {([["line", "Line"], ["box", "Box"]] as const).map(([v, label]) => <button key={v} type="button" role="radio" aria-checked={kit.options.signature === v} onClick={() => edit({ options: { ...kit.options, signature: v } })}
+                className={`rounded-md px-3 py-1 text-sm font-semibold ${kit.options.signature === v ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}>{label}</button>)}
+            </div>
           </div>
+          <p className="text-xs text-muted-foreground">Line is one straight rule under each signer, and nothing shapes it. Box frames the whole block, and that frame is the only thing the corners below round off.</p>
         </div>
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <span className="text-sm font-semibold">Corners</span>
-          <div role="radiogroup" aria-label="Corners" className="flex rounded-lg border border-border p-0.5">
+          <span className="flex items-center gap-1.5 text-sm font-semibold">Box corners<InfoTip text="Only the signature box and the cover page have corners. A signature line has none, so rounding or squaring never bends it." /></span>
+          <div role="radiogroup" aria-label="Box corners" className="flex rounded-lg border border-border p-0.5">
             {([["rounded", "Rounded"], ["square", "Square"]] as const).map(([v, label]) => <button key={v} type="button" role="radio" aria-checked={kit.options.corners === v} onClick={() => edit({ options: { ...kit.options, corners: v } })}
               className={`rounded-md px-3 py-1 text-sm font-semibold ${kit.options.corners === v ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}>{label}</button>)}
           </div>
@@ -682,7 +753,8 @@ export function BrandKit({ userId, tier, artistName }: { userId: string; tier: T
           {kit.options.watermark && logoUrl && <img src={logoUrl} alt="" aria-hidden className="pointer-events-none absolute left-1/2 top-1/2 h-24 max-w-[60%] -translate-x-1/2 -translate-y-1/2 object-contain opacity-[0.07]" />}
           {preview === "contract" && (
             <>
-              <div className={`relative mt-4 border px-3 py-2 text-xs ${kit.options.signature === "box" ? "" : "border-x-0 border-t-0"} ${kit.options.corners === "rounded" ? "rounded-md" : ""}`} style={{ borderColor: kit.options.accent ?? kit.headerColor ?? "#0b0b0b" }}>
+              {/* A line never takes a corner: rounding a bottom border bends it, which is exactly what a line must not do. */}
+              <div className={`relative mt-4 border px-3 py-2 text-xs ${kit.options.signature === "box" ? (kit.options.corners === "rounded" ? "rounded-md" : "") : "border-x-0 border-t-0"}`} style={{ borderColor: kit.options.accent ?? kit.headerColor ?? "#0b0b0b" }}>
                 <span className="font-bold" style={{ color: kit.options.accent ?? kit.headerColor ?? "#0b0b0b" }}>ARTIST</span><span className="ml-2 text-[#525252]">Signature</span>
               </div>
               {kit.options.cover && <p className="relative mt-2 text-[10px] text-[#525252]">+ Cover page with your logo, name and the contract title.</p>}
@@ -699,6 +771,7 @@ export function BrandKit({ userId, tier, artistName }: { userId: string; tier: T
             <Button onClick={() => void save()} disabled={busy || saved}>{busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}{saved ? "Saved" : "Save brand kit"}</Button>
             <Button variant="outline" size="sm" onClick={undo} disabled={!history.past.length} title="Undo the last change (Ctrl+Z)" aria-label="Undo the last change"><Undo2 className="h-4 w-4" />Undo</Button>
             <Button variant="outline" size="sm" onClick={redo} disabled={!history.future.length} title="Redo (Ctrl+Shift+Z)" aria-label="Redo the last undo"><Redo2 className="h-4 w-4" />Redo</Button>
+            <Button variant="outline" size="sm" onClick={revert} disabled={saved || !origin.current[current]} title="Drop your unsaved changes and go back to the kit you last saved" aria-label="Revert to the last saved kit"><RotateCcw className="h-4 w-4" />Revert</Button>
             <Button variant="outline" size="sm" disabled={busy} onClick={() => void sample()} title="A one-page test print using this kit"><FileDown className="h-4 w-4" />Sample PDF</Button>
           </div>
         </div>
