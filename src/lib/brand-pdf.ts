@@ -211,7 +211,8 @@ export function kitCover(pdf: JsPDF, brand: PdfBrand, title: string, subtitle: s
   if (brand.name) { kitFont(pdf, brand, "bold", 22).setTextColor(...(colors[0] ?? INK)).text(brand.name, w / 2, y, { align: "center" }); y += 9; }
   if (brand.tagline) { kitFont(pdf, brand, "medium", 10).setTextColor(...(colors[1] ?? MUTED)).text(brand.tagline, w / 2, y, { align: "center" }); y += 8; }
   pdf.setFillColor(...accent).rect(w / 2 - 20, y + 4, 40, 0.8, "F");
-  font(pdf, "bold", 24).setTextColor(...INK);
+  // The cover carries the same title colour the body header uses (founder, 2026-11-07).
+  font(pdf, "bold", 24).setTextColor(...titleInk(brand));
   const lines = (pdf.splitTextToSize(title, w - MARGIN * 4) as string[]).slice(0, 3);
   lines.forEach((l, i) => pdf.text(l, w / 2, y + 22 + i * 10, { align: "center" }));
   font(pdf, "regular", 11).setTextColor(...MUTED).text(subtitle, w / 2, y + 30 + lines.length * 10, { align: "center" });
