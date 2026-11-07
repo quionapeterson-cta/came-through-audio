@@ -52,6 +52,8 @@ export type BadgeDef = {
   choices?: string[];
   /** Art isn't uploaded yet: the badge stays out of checks and shelves until this flag is removed. */
   artPending?: boolean;
+  /** The picture lives only in the R2 bucket, uploaded by hand, so the repo keeps no fallback copy of it. */
+  artInBucket?: boolean;
   /**
    * Every-time task badges (founder, 2026-10-25): after each 10 earnings the next badge's art in this list takes over
    * (11th–20th uses the first, and so on, then it cycles). The count and dates keep growing as ×N.
@@ -124,9 +126,10 @@ const CORE: BadgeDef[] = [
     rotation: ["shield_up", "sound_sealed", "key_keeper"],
     description: "The clock saw it. You have proof these files existed on this date, sealed where nobody can change it. AI Slayer comes with every certificate; Time Witness comes back every 10 protected songs.",
     popup: "Witnessed! Another song protected and timestamped.", repeatPopup: "Witnessed! {nth} times over: 10 more songs timestamped." },
-  // Every completed AI Protection certificate (founder, 2026-11-06). Art waits on the bucket key; see artPending below.
+  // Every completed AI Protection certificate (founder, 2026-11-06). Its art is in the bucket now (founder, 2026-11-07), so
+  // the badge is live; this one picture has no fallback copy in the repo.
   { id: "ai_slayer", title: "AI Slayer", collection: "ai", tier: "standard", milestone: "Every AI Protection certificate you complete", action: "Protect a song", metric: "protected", goal: 1, every: 1, src: `${S}/ai_slayer.png`,
-    artPending: true,
+    artInBucket: true,
     description: "Certificate on file, timestamped and yours. Your proof travels with the song, and every certificate you complete earns this again.",
     popup: "AI slayer! Your certificate is on file.", repeatPopup: "AI slayer! Your {nth} protected song is on file." },
   { id: "shield_up", title: "Shield Up", collection: "ai", tier: "standard", milestone: "10 songs protected in the AI Protection Hub, then every 10 more", action: "Protect 10 songs", metric: "protected", goal: 10, every: 10, src: `${S}/award_shield.png`,

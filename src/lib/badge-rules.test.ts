@@ -21,14 +21,16 @@ describe("badge catalog", () => {
   it("has unique ids", () => {
     expect(new Set(ALL_BADGES.map((b) => b.id)).size).toBe(ALL_BADGES.length);
   });
-  it("only offers badges whose art is in the repo", () => {
-    const missing = BADGES.filter((b) => !existsSync(`public${b.src}`)).map((b) => b.src);
+  it("only offers badges whose art is in the repo, unless it lives in the bucket on purpose", () => {
+    const missing = BADGES.filter((b) => !b.artInBucket && !existsSync(`public${b.src}`)).map((b) => b.src);
     expect(missing).toEqual([]);
+    // A picture with no repo copy is a deliberate, named state — never a typo.
+    expect(BADGES.filter((b) => b.artInBucket).map((b) => b.id)).toEqual(["ai_slayer"]);
   });
-  it("keeps badges waiting on art out of play (only AI Slayer, waiting on its bucket key)", () => {
+  it("has nothing left waiting on art, so every badge can be earned", () => {
     expect(BADGES.filter((b) => b.collection === "lyrics")).toHaveLength(8);
-    expect(ALL_BADGES.filter((b) => b.artPending).map((b) => b.id)).toEqual(["ai_slayer"]);
-    expect(BADGES.map((b) => b.id)).toEqual(expect.arrayContaining(["full_album", "full_ep", "unbreakable_2", "unbreakable_5"]));
+    expect(ALL_BADGES.filter((b) => b.artPending).map((b) => b.id)).toEqual([]);
+    expect(BADGES.map((b) => b.id)).toEqual(expect.arrayContaining(["ai_slayer", "full_album", "full_ep", "unbreakable_2", "unbreakable_5"]));
   });
   it("only offers art choices that exist", () => {
     for (const b of ALL_BADGES) for (const c of b.choices ?? []) expect(existsSync(`public${c}`)).toBe(true);
@@ -213,8 +215,9 @@ describe("every-time task badges", () => {
     ] }));
     expect(m).toMatchObject({ protected: 2, timestamped: 1 });
     const earned = (metrics: Record<string, number>) => evaluateBadges(metrics).filter((x) => x.earned && x.badge.collection === "ai").map((x) => [x.badge.id, x.times]);
-    expect(earned(m)).toEqual([["time_witness", 1], ["sound_sealed", 1]]);
-    expect(earned({ protected: 50, timestamped: 50 })).toEqual([["time_witness", 6], ["shield_up", 5], ["sound_sealed", 1], ["key_keeper", 2]]);
+    // AI Slayer ships with every certificate, so it comes with the first protected song (founder, 2026-11-07).
+    expect(earned(m)).toEqual([["time_witness", 1], ["ai_slayer", 2], ["sound_sealed", 1]]);
+    expect(earned({ protected: 50, timestamped: 50 })).toEqual([["time_witness", 6], ["ai_slayer", 50], ["shield_up", 5], ["sound_sealed", 1], ["key_keeper", 2]]);
     expect(badgeById("time_witness")?.rotation).toEqual(["shield_up", "sound_sealed", "key_keeper"]);
   });
   it("has one every-time badge for each task", async () => {

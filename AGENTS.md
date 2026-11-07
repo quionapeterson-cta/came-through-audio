@@ -54,6 +54,11 @@
   badges" section, so every `every` badge, its interval and its art sit together. Every badge picture in that panel opens
   full size when clicked (`PeekDialog`, founder, 2026-11-06), so the art can be judged, approved or replaced before it
   goes near a member's shelf.
+- **Some pictures live only in the bucket** (founder, 2026-11-07): `artInBucket` on a `BadgeDef` says the founder uploaded
+  that picture to R2 by hand and the repo keeps no fallback copy — AI Slayer is the first. A badge goes live the moment its
+  file is in the bucket (drop `artPending`, never leave both), and the served copy must be the `.webp` at the same path,
+  because `artUrl` rewrites `.png`/`.jpg` to `.webp`; without it the shelf shows a blank tile. `badge-rules.test.ts` names
+  every bucket-only picture, so a mistyped path can't hide behind the exemption.
 - Art is submitted to the private `badge-submissions` bucket and read through a signed link a super admin asks for, so a
   rejected badge is never a public picture. Art in the bucket is not a live badge: the badge still needs its `BadgeDef`,
   a real `metric` in badge-rules.ts, and one earned run before it ships (see the engineering steps in the panel).
