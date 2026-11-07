@@ -256,6 +256,17 @@ export function BrandKit({ userId, tier, artistName }: { userId: string; tier: T
   const ending = access.addOnUntil && tier !== "management" ? Date.parse(access.addOnUntil) - Date.now() < 30 * 86400000 : false;
   const nameColor = kit.colors[0] && isHex(kit.colors[0]) ? kit.colors[0] : undefined;
   const taglineColor = kit.colors[1] && isHex(kit.colors[1]) ? kit.colors[1] : undefined;
+  /**
+   * A tagline's colour is the kit's second colour, so the picker by the tagline field and the Colours area are the same
+   * value seen in two places (founder, 2026-11-07). With no colours yet, black names the documents and grey stays the
+   * tagline's default.
+   */
+  function setTaglineColor(hex: string) {
+    const next = [...kit.colors];
+    while (next.length < 2) next.push(next.length === 0 ? "#0b0b0b" : "#525252");
+    next[1] = hex;
+    edit({ colors: next });
+  }
   const stripe = kit.colors.filter(isHex);
   // The line under a Classic header: one solid line in the kit's accent, the same colour the PDF draws (kitAccent).
   const accent = [kit.options.accent, kit.headerColor].find((c) => c && isHex(c)) ?? "#0b0b0b";
@@ -318,6 +329,14 @@ export function BrandKit({ userId, tier, artistName }: { userId: string; tier: T
         <div className="space-y-2">
           <Label htmlFor="bk-tagline" className="flex items-center gap-1.5">Tagline<InfoTip text="Optional. A short line under your name, like your slogan." /></Label>
           <Input id="bk-tagline" value={kit.tagline} maxLength={80} onChange={(e) => edit({ tagline: e.target.value })} />
+          {/* The tagline's colour lives with the tagline (founder, 2026-11-07), and it is the same value as Colours 2. */}
+          <div className="flex flex-wrap items-center gap-2">
+            <input type="color" aria-label="Tagline color" value={taglineColor ?? "#525252"} onChange={(e) => setTaglineColor(e.target.value.toUpperCase())} className="h-8 w-8 cursor-pointer rounded border-0 bg-transparent p-0" />
+            <Input aria-label="Tagline color code" value={kit.colors[1] ?? ""} maxLength={7} placeholder="#525252 (grey)"
+              onChange={(e) => { const v = e.target.value.trim(); if (v) setTaglineColor(v.startsWith("#") ? v.toUpperCase() : `#${v.toUpperCase()}`); }}
+              className={`h-8 w-28 font-mono text-xs ${!kit.colors[1] || isHex(kit.colors[1]) ? "" : "border-destructive"}`} />
+          </div>
+          <p className="text-xs text-muted-foreground">Your tagline&apos;s colour — the same as the second colour in Colors. Grey unless you pick one.</p>
         </div>
 
         <div className="space-y-2">
@@ -437,10 +456,14 @@ export function BrandKit({ userId, tier, artistName }: { userId: string; tier: T
         <Label className="flex items-center gap-1.5">Colors<InfoTip text="Add as many as you like. The first colors your name and the second your tagline." /></Label>
         <div className="flex flex-wrap gap-3">
           {kit.colors.map((c, i) => (
-            <div key={i} className="flex items-center gap-1.5 rounded-lg border border-border p-1.5">
-              <input type="color" aria-label={`Color ${i + 1}`} value={isHex(c) ? c : "#000000"} onChange={(e) => setColor(i, e.target.value.toUpperCase())} className="h-8 w-8 cursor-pointer rounded border-0 bg-transparent p-0" />
-              <Input aria-label={`Color ${i + 1} code`} value={c} maxLength={7} onChange={(e) => setColor(i, e.target.value.startsWith("#") ? e.target.value : `#${e.target.value}`)} className={`h-8 w-24 font-mono text-xs ${isHex(c) ? "" : "border-destructive"}`} />
-              <Button variant="ghost" size="icon" className="h-8 w-8" aria-label={`Remove color ${i + 1}`} onClick={() => edit({ colors: kit.colors.filter((_, j) => j !== i) })}><Trash2 className="h-4 w-4" /></Button>
+            // Every colour says what it paints (founder, 2026-11-07), so a member never removes the wrong one.
+            <div key={i} className="flex flex-col gap-1.5 rounded-lg border border-border p-1.5">
+              <span className="px-0.5 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">{colorTitle(i)}</span>
+              <div className="flex items-center gap-1.5">
+                <input type="color" aria-label={`${colorTitle(i)} color`} value={isHex(c) ? c : "#000000"} onChange={(e) => setColor(i, e.target.value.toUpperCase())} className="h-8 w-8 cursor-pointer rounded border-0 bg-transparent p-0" />
+                <Input aria-label={`${colorTitle(i)} color code`} value={c} maxLength={7} onChange={(e) => setColor(i, e.target.value.startsWith("#") ? e.target.value : `#${e.target.value}`)} className={`h-8 w-24 font-mono text-xs ${isHex(c) ? "" : "border-destructive"}`} />
+                <Button variant="ghost" size="icon" className="h-8 w-8" aria-label={`Remove the ${colorTitle(i).toLowerCase()} color`} onClick={() => edit({ colors: kit.colors.filter((_, j) => j !== i) })}><Trash2 className="h-4 w-4" /></Button>
+              </div>
             </div>
           ))}
           <Button variant="outline" size="sm" className="h-11" onClick={() => edit({ colors: [...kit.colors, kit.colors.length ? "#4D8CFF" : "#004AAD"] })}><Plus className="h-4 w-4" />Add color</Button>
@@ -639,6 +662,9 @@ export function BrandKit({ userId, tier, artistName }: { userId: string; tier: T
     </div>
   );
 }
+
+/** What each colour in the Colours area paints: the first names the documents, the second is the tagline (founder, 2026-11-07). */
+const colorTitle = (i: number) => (i === 0 ? "Your name" : i === 1 ? "Your tagline" : `Extra ${i - 1}`);
 
 /** Light text on a dark band, dark text on a light one (matches the PDF). */
 function onBand(hex?: string) {

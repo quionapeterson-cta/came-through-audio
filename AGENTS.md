@@ -470,6 +470,9 @@ rules keep it consistent as features are added.
   counts the biggest shades but returns them sorted darkest to lightest, so the first colour names the document, the
   second sets the tagline, and "Use these colours" also fills the section-title colour with the darkest — only when the
   member hasn't picked one. Never go back to most-used-first: a mostly-pale logo used to hand members white-on-white type.
+- **Every colour says what it paints** (founder, 2026-11-07): each swatch in the Colours area carries its title — Your
+  name, Your tagline, then Extra 1, Extra 2 — and the tagline's own picker sits in the Tagline box next to the field it
+  colours. That picker edits the kit's **second colour**, so the two places are one value, never a third field.
 - **The editor has undo and redo** (founder, 2026-11-07): every `edit()` records the kit it replaced
   (`recordHistory` / `undoHistory` / `redoHistory` in `src/lib/brand-kit.ts`), the buttons and ⌘Z / ⇧⌘Z step through it,
   and a text field keeps its own undo so typing is never hijacked. The stack is cleared when another kit is opened, and
