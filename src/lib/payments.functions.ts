@@ -3,7 +3,7 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { createStripeClient, getStripeErrorMessage } from "@/lib/stripe.server";
 import { getPaymentsEnvironment } from "@/lib/payments-env";
 import { checkoutInput, planCheckout } from "@/lib/stripe-mapping";
-import { isActiveSub, PRICE_TIER, serverTier } from "@/lib/plans";
+import { isActiveSub, PRICE_TIER } from "@/lib/plans";
 
 /**
  * Sales tax on sales Came Through Audio, LLC makes directly (Expert Assistance). Stays off until Stripe Tax is
@@ -178,21 +178,9 @@ export const createCheckoutSession = createServerFn({ method: "POST" })
       if (!g || g.company || !g.draft) throw new Error("That draft wasn't found. Draft it again and try once more.");
       if (g.contract_id) throw new Error("You already have this contract. Open it in My Contracts.");
     }
-    if (data.kind === "branding") {
-      // Any plan can add it (founder, 2026-10-25). Catalog Management includes ONE kit; a second business or project buys
-      // its own kit like anyone else (founder, 2026-11-06), so the purchase is refused only while the included kit is
-      // still unused: nobody pays for a kit their plan already gives them.
-      const { data: tier } = await context.supabase.rpc("user_tier" as never, { _uid: context.userId } as never);
-      if (serverTier(tier) === "management") {
-        const [{ count }, { data: buys }, { kitAllowance }] = await Promise.all([
-          context.supabase.from("brand_kits" as never).select("id", { count: "exact", head: true }).eq("user_id", context.userId),
-          context.supabase.from("purchases").select("kind, created_at, details").eq("user_id", context.userId).eq("kind", "branding").eq("environment", env),
-          import("@/lib/brand-kit"),
-        ]);
-        const allowance = kitAllowance("management", (buys ?? []) as { kind: string; created_at: string; details: Record<string, string> }[]);
-        if ((count ?? 0) < allowance) throw new Error("Your plan includes a Branding Kit you haven't used yet. Set it up in Profile → Brand kit, then add more kits here.");
-      }
-    }
+    // Kits are never refused at checkout (founder, 2026-11-07): anyone can buy as many as they like, whether or not the
+    // kit their plan includes is set up yet. The old guard counted saved kits, so buying a second kit waited on filling in
+    // the first, which is exactly what the founder hit while testing.
     if (data.kind === "vault") {
       // Pause is only sold when it can start: around renewal, after a failed renewal or during the grace period.
       const [{ admin, loadState }, { offers }] = await Promise.all([import("@/lib/retention.server"), import("@/lib/retention")]);

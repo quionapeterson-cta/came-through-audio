@@ -26,6 +26,10 @@
 - Use shared semantic primary, accent and ring tokens for brand accents, so all controls follow the global theme.
 
 - Paid access comes from payment-provider webhook rows (Stripe; subscriptions for yearly tiers, purchases for one-time buys) keyed by human-readable price IDs in src/lib/plans.ts (Stripe lookup keys); the client never writes them, so payment state cannot be forged.
+- **A checkout return opens what was bought, once** (founder, 2026-11-07): `?checkout=success` may open the seat invite
+  form, but only for an unclaimed seat on the buyer's own account and only the first time the page settles
+  (`seatPrompted` in Profile and Workspace). It never re-opens after being closed, whatever causes a re-render, and a
+  branding kit's return never opens it at all.
 - **Paying never waits for the email confirmation** (founder, 2026-11-05, replacing the 2026-11-03 rule): someone who picks a plan signs up and reaches Stripe in the same sitting. Supabase sends no session while "Confirm email" is on, so `SignupCard` signs the brand-new account straight in (the project allows unverified sign-ins) and the confirmation email travels alongside it; `EmailConfirmBanner` then reminds them in the workspace, with a resend and an "I've confirmed" re-check, until the address is confirmed. Never put a confirmation check back in front of checkout, and never describe an unconfirmed account as unable to pay.
 - Staff roles live in public.user_roles (checked via is_staff/has_role); profile role/tier are trigger-protected from self-edits, so admin access cannot be self-granted. Admin reads go through staff-verified server functions.
 - All outgoing email HTML must be wrapped with emailLayout() from src/lib/email-layout.ts — keeps branding and legal-footer compliance in one place.
@@ -439,8 +443,9 @@ rules keep it consistent as features are added.
   gets that one only if it is within the member's allowance.
 - **Catalog Management includes one kit; every further kit is bought** (founder, 2026-11-06): a member with several
   businesses buys each extra kit for `BRANDING_PRICE` a year like anyone else (`kitAllowance` counts both). Checkout
-  refuses a Management account's kit purchase only while its included kit is still unused, never "your plan already
-  includes it" once that kit exists.
+  never refuses a kit purchase (founder, 2026-11-07): anyone buys as many kits as they like, whether or not the kit their
+  plan includes is set up yet. The old guard counted saved kits, so buying a second kit waited on filling in the first —
+  exactly what the founder hit while testing.
 
 ### The editor
 - Profile → Brand kit shows the editor and the live preview side by side, the preview pinned while scrolling, so every

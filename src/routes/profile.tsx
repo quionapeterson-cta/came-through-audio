@@ -1,5 +1,5 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useEffect, useState, type FormEvent, type ReactNode } from "react";
+import { useEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
 import { ArrowLeft, ArrowUpCircle, Check, LayoutGrid, LogOut, Pencil, Rows3 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -70,13 +70,22 @@ function ProfilePage() {
     syncFromCloud(user.id).then((o) => { setOb(o); setProfile(loadProfile(user.id)); });
   }, [user]);
   // The artists this account pays a seat for, so Edit profile can switch to one of theirs.
+  /**
+   * Back from paying for a seat the invite form opens by itself, since that is where the artist's email is entered —
+   * once per visit (founder, 2026-11-07). It used to open again on every re-render, so closing it brought it straight
+   * back, and any checkout return (a branding kit included) could trigger it. The panel is still one click away, and an
+   * unclaimed seat opens its own invite row when it is opened.
+   */
+  const seatPrompted = useRef(false);
   useEffect(() => {
     if (!user) return;
     listSeatState().then((s) => {
       setSeatArtists(seatArtistsFor(s.seats, user.id));
-      // Back from paying for a seat: open the invite form, which is where the artist's email is entered.
+      if (seatPrompted.current) return;
       const uninvited = s.seats.some((seat) => seat.owner_id === user.id && seat.status === "unclaimed");
-      if (uninvited && new URLSearchParams(window.location.search).get("checkout") === "success") setSeatsOpen(true);
+      if (!uninvited || new URLSearchParams(window.location.search).get("checkout") !== "success") return;
+      seatPrompted.current = true;
+      setSeatsOpen(true);
     }).catch(() => setSeatArtists([]));
   }, [user]);
 

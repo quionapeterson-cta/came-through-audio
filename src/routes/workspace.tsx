@@ -1,5 +1,5 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { getStaffRole } from "@/lib/admin.functions";
 import { ShieldCheck, FileAudio, Disc3, Activity, FileSignature, ScrollText, GraduationCap, LogOut, Moon, Sun, UserRound, Gem, Users, Calculator, Smartphone , PenLine } from "lucide-react";
@@ -104,10 +104,13 @@ function Workspace() {
   // Used once: leaving the tab clears it, so coming back opens the Hub itself.
   useEffect(() => { if (tab !== "health") { setHealthStart(undefined); setOpenExpert(false); } }, [tab]);
   const { tier: realTier, purchases, loaded: billingLoaded, lapse, pauses, sub, plan, reload: reloadBilling } = useBilling(user?.id);
-  // Back from paying for seats: open the invite form, so the artist's email is asked for right away (2026-11-04).
+  // Back from paying for seats: open the invite form, so the artist's email is asked for right away (2026-11-04) — once
+  // per visit, never again after it is closed (founder, 2026-11-07).
   const [seatsOpen, setSeatsOpen] = useState(false);
+  const seatPrompted = useRef(false);
   useEffect(() => {
-    if (!user || new URLSearchParams(window.location.search).get("checkout") !== "success") return;
+    if (!user || seatPrompted.current || new URLSearchParams(window.location.search).get("checkout") !== "success") return;
+    seatPrompted.current = true;
     listSeatState()
       .then((s) => { if (s.seats.some((seat) => seat.owner_id === user.id && seat.status === "unclaimed")) setSeatsOpen(true); })
       .catch(() => {});
