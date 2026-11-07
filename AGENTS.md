@@ -214,6 +214,37 @@
   micro-chat. Leads, super admins and Project Managers post (`canPostNotice`); everyone reads, so a dependency is written
   down where the other team already looks.
 
+## Blueprint Checklists & Working On (always follow)
+
+- **Saving is a click, never a side effect** (founder, 2026-11-06): a tick keeps its progress and nothing more; a
+  blueprint joins Working On only when the member presses Save, because some people want to tick through a list without
+  filing it (`toggleChecked` never sets `pinned`). The button reads "Save" / "Remove", with "Save to Working On" in its
+  tooltip and screen-reader label.
+- **Notes and due dates sit on each checklist item** (founder, 2026-11-06): `item_meta` in `public.workbench_items` maps
+  the item's own wording to `{ note, due }`, and the rules live in `src/lib/workbench.ts` (`withMeta`, `metaFor`,
+  `nextDue`, `isOverdue`) with their test. An overdue open item shows in red; a note or a date never blocks a tick.
+- **Working On always offers one next step** (founder, 2026-11-06): `nextStep` picks a dated item first, then the next
+  unticked item of the blueprint furthest along, then a draft, then a contract out for signature, then the library. Never
+  invent work when the folder is empty.
+- **Finishing a checklist is a moment** (founder, 2026-11-06): the last tick shows `Confetti`, one toast and runs the
+  awards check (`requestBadgeCheck`). A completion badge of its own still needs its `BadgeDef`, metric and art approved
+  through the Badge Art Protocol — don't add one without the founder.
+- **The welcome burst waits 30 days** (founder, 2026-11-06, replacing the weekly burst of 2026-11-05): `celebrateReturn`
+  in `src/lib/celebrate.ts` records every visit under `cta.lastSeen` and reports a return only when the previous visit was
+  `RETURN_AFTER_DAYS` (30) or more days ago. A first visit, a routine return and a browser that blocks storage all stay
+  quiet, and the burst never replaces a completion: work being finished is what the real celebration is for.
+- **The Fill & Sign tab is called PDF Fill & Sign** (founder, 2026-11-06), in the workspace tabs and in the support
+  topics, so a ticket's area matches the tab the member sees.
+- **The profile defaults are blueprints too** (founder, 2026-11-06): `embed-defaults` ("Set Your Embed Defaults") and
+  `catalog-defaults` ("Build Your Catalog Defaults") in `src/lib/guides.ts` walk the same fields setup asks for, so they
+  can be saved to Working On and downloaded like any other blueprint. When a default field changes, change the step that
+  describes it in the same commit.
+- **A downloaded blueprint is still a checklist** (founder, 2026-11-06): its PDF carries real, tickable form boxes, not
+  just the drawn squares. jsPDF can't make fields, so `buildGuidePdfBytes` in `src/lib/guide-pdf.ts` reopens the finished
+  pages with pdf-lib and adds a `PDFCheckBox` over each square (border width 0, so the drawn box is the only frame). A
+  copy that loses its boxes is still a readable guide, so the failure is logged, never shown as an error, and downloads
+  go through `saveBlob`.
+
 ## Catalog Playback & WAV Storage (always follow)
 
 - The catalog play button is a **check-the-version preview, not a listening player** (founder, 2026-11-05): one button
@@ -318,6 +349,17 @@ rules keep it consistent as features are added.
 - Profile → Brand kit shows the editor and the live preview side by side, the preview pinned while scrolling, so every
   change shows as it is made (founder, 2026-11-06). Save sits under the preview on the left, and the small footer switch
   across from it on the right.
+- **Logo versions, colours from the logo, contrast warnings, preview tabs and a sample PDF** (founder, 2026-11-06):
+  `logo_paths` keeps every version uploaded and `logo_path` is the one in use, so switching the logo never means changing
+  the rest of the kit (`kitFromRow` reads an older kit's single logo as its first version). The palette is read in the
+  browser from the uploaded file (`dominantColors` in `src/lib/logo-colors.ts`) and a suggestion is applied only when the
+  member clicks; an image cannot suggest a tagline, so don't claim it does. `contrastWarnings` in `src/lib/brand-kit.ts`
+  warns under the colour fields when a colour will be hard to read on the white page, and never blocks a save. The preview
+  switches between Contract, Split sheet, Lyrics and Catalog (split sheets show the artist name), and `downloadSamplePdf`
+  prints a real one-page sample through the same header and footer as a download.
+- **A document picks its kit** (founder, 2026-11-06): contracts already carry `brand_kit_id`; split sheets, catalog and
+  lyric downloads pass the chosen kit to `myBrand(use, kitId)` through `useBrandKits` + `BrandKitChoice`. The server still
+  decides, and falls back to the member's first kit when the one asked for isn't within their allowance.
 - Classic draws one solid line in the kit's accent (`kitAccent`) under the header, never a multi-colour stripe; the
   preview uses the same colour.
 

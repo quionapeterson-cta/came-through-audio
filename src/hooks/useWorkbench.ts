@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { isEmptyEntry, toggleChecked, workbenchKey, type WorkbenchEntry, type WorkbenchKind } from "@/lib/workbench";
+import { isEmptyEntry, toggleChecked, withMeta, workbenchKey, type ItemMeta, type WorkbenchEntry, type WorkbenchKind } from "@/lib/workbench";
 
 type Stored = WorkbenchEntry & { /** Saved while the table was unreachable; sent up on the next good load. */ pending?: boolean };
-type Row = { kind: WorkbenchKind; item_id: string; checked: string[] | null; pinned: boolean | null; updated_at: string | null };
+type Row = { kind: WorkbenchKind; item_id: string; checked: string[] | null; pinned: boolean | null; item_meta: Record<string, ItemMeta> | null; updated_at: string | null };
 
 const storageKey = (userId: string) => `cta.workbench.${userId}`;
 function readLocal(userId: string): Record<string, Stored> {
@@ -16,9 +16,10 @@ function writeLocal(userId: string, all: Record<string, Stored>) {
 const table = () => supabase.from("workbench_items" as never);
 
 /**
- * Working On: checklist ticks and saved items, per member, in public.workbench_items. Writes are optimistic. If the
- * table can't be reached (the migration hasn't run, or the network drops) everything carries on in this browser's
- * storage under the member's id, without an error, and is sent up the next time the table answers.
+ * Working On: checklist ticks, per-item notes and due dates, and saved items, per member, in public.workbench_items.
+ * Writes are optimistic. If the table can't be reached (the migration hasn't run, or the network drops) everything
+ * carries on in this browser's storage under the member's id, without an error, and is sent up the next time the table
+ * answers.
  */
 export function useWorkbench(userId: string | undefined, enabled = true) {
   const [entries, setEntries] = useState<Record<string, Stored>>({});
@@ -31,7 +32,7 @@ export function useWorkbench(userId: string | undefined, enabled = true) {
     if (!userId) return Promise.resolve(false);
     const req = isEmptyEntry(e)
       ? table().delete().eq("user_id" as never, userId as never).eq("kind" as never, e.kind as never).eq("item_id" as never, e.itemId as never)
-      : table().upsert({ user_id: userId, kind: e.kind, item_id: e.itemId, checked: e.checked, pinned: e.pinned, updated_at: new Date().toISOString() } as never, { onConflict: "user_id,kind,item_id" });
+      : table().upsert({ user_id: userId, kind: e.kind, item_id: e.itemId, checked: e.checked, pinned: e.pinned, item_meta: e.meta ?? {}, updated_at: new Date().toISOString() } as never, { onConflict: "user_id,kind,item_id" });
     return Promise.resolve(req).then(({ error }) => !error, () => false);
   }, [userId]);
 
@@ -41,13 +42,13 @@ export function useWorkbench(userId: string | undefined, enabled = true) {
     const local = readLocal(userId);
     latest.current = local; setEntries(local);
     void (async () => {
-      const { data, error } = await Promise.resolve(table().select("kind, item_id, checked, pinned, updated_at").eq("user_id" as never, userId as never))
+      const { data, error } = await Promise.resolve(table().select("kind, item_id, checked, pinned, item_meta, updated_at").eq("user_id" as never, userId as never))
         .catch(() => ({ data: null, error: new Error("offline") }));
       if (!live) return;
       if (error || !Array.isArray(data)) { remote.current = false; setLoaded(true); return; }
       remote.current = true;
       const next: Record<string, Stored> = {};
-      for (const r of data as Row[]) next[workbenchKey(r.kind, r.item_id)] = { kind: r.kind, itemId: r.item_id, checked: r.checked ?? [], pinned: !!r.pinned, updatedAt: r.updated_at ?? undefined };
+      for (const r of data as Row[]) next[workbenchKey(r.kind, r.item_id)] = { kind: r.kind, itemId: r.item_id, checked: r.checked ?? [], pinned: !!r.pinned, meta: r.item_meta ?? {}, updatedAt: r.updated_at ?? undefined };
       for (const [key, e] of Object.entries(local)) {
         if (!e.pending) continue;
         if (isEmptyEntry(e)) delete next[key]; else next[key] = { ...e, pending: false };
@@ -88,7 +89,13 @@ export function useWorkbench(userId: string | undefined, enabled = true) {
     save({ ...cur, pinned });
   }, [save]);
 
-  return { entries: Object.values(entries), get, toggle, setPinned, loaded };
+  /** A note or due date on one checklist item: empty values clear that part of it. */
+  const setMeta = useCallback((kind: WorkbenchKind, itemId: string, item: string, patch: ItemMeta) => {
+    const cur = latest.current[workbenchKey(kind, itemId)] ?? { kind, itemId, checked: [], pinned: false };
+    save(withMeta(cur, item, patch));
+  }, [save]);
+
+  return { entries: Object.values(entries), get, toggle, setPinned, setMeta, loaded };
 }
 
 export type Workbench = ReturnType<typeof useWorkbench>;

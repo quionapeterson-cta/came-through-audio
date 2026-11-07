@@ -5,10 +5,9 @@
 import { GUIDES, type Guide } from "./guides";
 
 export type WorkbenchKind = "blueprint" | "contract";
-/** A note and an optional due date on one checklist item, keyed by the item's wording (founder, 2026-11-06). */
-export type ItemNote = { note?: string; due?: string };
-export type ItemNotes = Record<string, ItemNote>;
-export type WorkbenchEntry = { kind: WorkbenchKind; itemId: string; checked: string[]; pinned: boolean; notes?: ItemNotes | undefined; updatedAt?: string | undefined };
+/** A note and a due date on one checklist item, so a blueprint reads like a small project plan (founder, 2026-11-06). */
+export type ItemMeta = { note?: string; due?: string };
+export type WorkbenchEntry = { kind: WorkbenchKind; itemId: string; checked: string[]; pinned: boolean; meta?: Record<string, ItemMeta>; updatedAt?: string | undefined };
 export type ChecklistProgress = { done: number; total: number; pct: number; started: boolean; finished: boolean };
 
 export const workbenchKey = (kind: WorkbenchKind, itemId: string) => `${kind}:${itemId}`;
@@ -26,73 +25,61 @@ export function checklistProgress(checklist: readonly string[] | undefined, chec
 export const progressLabel = (p: ChecklistProgress) => `${p.done} of ${p.total} · ${p.pct}%`;
 
 /**
- * Tick or untick one item. Ticking never saves a blueprint to Working On (founder, 2026-11-06): only the Save button
- * does, so a curious tick doesn't fill the folder.
+ * Tick or untick one item. Ticking never adds the blueprint to Working On: saving one there is the member's own click
+ * (founder, 2026-11-06), so a checklist they are just reading through stays out of their folder until they ask.
  */
 export function toggleChecked(entry: WorkbenchEntry, item: string): WorkbenchEntry {
   const has = entry.checked.includes(item);
-  return { ...entry, checked: has ? entry.checked.filter((c) => c !== item) : [...entry.checked, item] };
+  const checked = has ? entry.checked.filter((c) => c !== item) : [...entry.checked, item];
+  return { ...entry, checked };
 }
 
-/** True only on the tick that takes a checklist to 100%, so a page load or a re-tick of a finished one stays quiet. */
-export const justCompleted = (checklist: readonly string[] | undefined, before: readonly string[], after: readonly string[]) =>
-  !checklistProgress(checklist, before).finished && checklistProgress(checklist, after).finished;
+const isDue = (v: string) => /^\d{4}-\d{2}-\d{2}$/.test(v);
 
-/** A row worth keeping: anything ticked, saved or noted. An empty one is deleted instead. */
-export const isEmptyEntry = (e: Pick<WorkbenchEntry, "checked" | "pinned" | "notes">) =>
-  !e.pinned && e.checked.length === 0 && Object.keys(e.notes ?? {}).length === 0;
+/** The note and due date on one checklist item, if any. */
+export const metaFor = (entry: Pick<WorkbenchEntry, "meta">, item: string): ItemMeta => entry.meta?.[item] ?? {};
 
-/** Longest note on one checklist item. */
-export const NOTE_MAX = 500;
-
-/** Plain text, no control characters (line breaks kept), trimmed and cut to NOTE_MAX. */
-export function sanitizeNote(text: unknown): string {
-  if (typeof text !== "string") return "";
-  // eslint-disable-next-line no-control-regex
-  return text.replace(/\r\n?/g, "\n").replace(/[\u0000-\u0009\u000B-\u001F\u007F]/g, "").trim().slice(0, NOTE_MAX).trim();
+/**
+ * Sets or clears one item's note and due date. An empty patch value deletes that part, and an item with neither keeps
+ * no entry, so a cleared item leaves nothing behind.
+ */
+export function withMeta(entry: WorkbenchEntry, item: string, patch: ItemMeta): WorkbenchEntry {
+  const merged = { ...metaFor(entry, item), ...patch };
+  const clean: ItemMeta = {};
+  const note = (merged.note ?? "").trim();
+  if (note) clean.note = note.slice(0, 500);
+  if (merged.due && isDue(merged.due)) clean.due = merged.due;
+  const meta = { ...(entry.meta ?? {}) };
+  if (clean.note || clean.due) meta[item] = clean;
+  else delete meta[item];
+  return { ...entry, meta };
 }
 
-/** A real calendar date as YYYY-MM-DD, or "" for anything else. */
-export function sanitizeDue(due: unknown): string {
-  if (typeof due !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(due)) return "";
-  const [y, m, d] = due.split("-").map(Number) as [number, number, number];
-  const t = new Date(Date.UTC(y, m - 1, d));
-  return t.getUTCFullYear() === y && t.getUTCMonth() === m - 1 && t.getUTCDate() === d ? due : "";
+/** A row worth keeping: anything ticked, saved or annotated. An empty one is deleted instead. */
+export const isEmptyEntry = (e: Pick<WorkbenchEntry, "checked" | "pinned" | "meta">) =>
+  !e.pinned && e.checked.length === 0 && Object.keys(e.meta ?? {}).length === 0;
+
+/** "2026-11-12" → "Nov 12"; anything else is shown as typed. */
+export function dueLabel(due: string) {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(due);
+  if (!m) return due;
+  return new Date(Date.UTC(+m[1]!, +m[2]! - 1, +m[3]!)).toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" });
 }
 
-/** Cleans notes read from storage or the table: drops blanks, bad dates and anything that isn't a note. */
-export function sanitizeNotes(raw: unknown): ItemNotes {
-  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return {};
-  const out: ItemNotes = {};
-  for (const [item, v] of Object.entries(raw as Record<string, unknown>)) {
-    if (!item || !v || typeof v !== "object") continue;
-    const note = sanitizeNote((v as ItemNote).note), due = sanitizeDue((v as ItemNote).due);
-    if (note || due) out[item] = { ...(note && { note }), ...(due && { due }) };
-  }
-  return out;
+/** True once a due date has gone by: today is still on time. */
+export function isOverdue(due: string, today = new Date()) {
+  if (!isDue(due)) return false;
+  const todayISO = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
+  return due < todayISO;
 }
 
-/** Sets (or clears, when both are blank) the note and due date on one checklist item. */
-export function setItemNote(entry: WorkbenchEntry, item: string, value: ItemNote): WorkbenchEntry {
-  const notes = { ...entry.notes };
-  delete notes[item];
-  const clean = sanitizeNotes({ [item]: value })[item];
-  if (clean) notes[item] = clean;
-  return { ...entry, notes };
-}
-
-/** Today in the member's own time zone, as YYYY-MM-DD. */
-export const todayIso = (now = new Date()) =>
-  `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
-
-/** Due before today and not ticked yet. */
-export const isOverdue = (due: string | undefined, ticked: boolean, today: string) => !!due && !ticked && due < today;
-
-/** "Due Nov 20", with the year only when it isn't this year's. */
-export function dueLabel(due: string, today: string) {
-  const [y, m, d] = due.split("-").map(Number) as [number, number, number];
-  const opts: Intl.DateTimeFormatOptions = { month: "short", day: "numeric", timeZone: "UTC", ...(due.slice(0, 4) !== today.slice(0, 4) && { year: "numeric" }) };
-  return `Due ${new Date(Date.UTC(y, m - 1, d)).toLocaleDateString("en-US", opts)}`;
+/** The soonest due date still open on a checklist (untick'd items only), if there is one. */
+export function nextDue(entry: Pick<WorkbenchEntry, "meta" | "checked">, checklist?: readonly string[]): string | undefined {
+  const items = new Set(checklist ?? []);
+  return Object.entries(entry.meta ?? {})
+    .filter(([item, m]) => (!items.size || items.has(item)) && !!m.due && !entry.checked.includes(item))
+    .map(([, m]) => m.due!)
+    .sort()[0];
 }
 
 /** In progress first, then finished; alphabetical within each group (BRANDING §3). */
@@ -104,51 +91,57 @@ export function sortByProgress<T extends { title: string; progress: ChecklistPro
   };
 }
 
-/** Blueprints saved to Working On with the Save button, with their progress. */
-export function savedGuides(entries: readonly WorkbenchEntry[], guides: readonly Guide[] = GUIDES) {
+/** Blueprints the member saved to Working On, with their progress. */
+export function savedGuides(entries: readonly WorkbenchEntry[]) {
   const byId = new Map(entries.filter((e) => e.kind === "blueprint" && e.pinned).map((e) => [e.itemId, e]));
-  return guides.filter((g) => byId.has(g.id)).map((g) => {
-    const entry = byId.get(g.id)!;
-    return { guide: g, entry, title: g.title, progress: checklistProgress(g.checklist, entry.checked) };
-  });
-}
-
-/** The soonest due date still open on a blueprint's checklist (ticked items and stale wording don't count). */
-export function nextDue(guide: Pick<Guide, "checklist">, entry: WorkbenchEntry): { item: string; due: string } | undefined {
-  return (guide.checklist ?? [])
-    .filter((item) => !entry.checked.includes(item) && entry.notes?.[item]?.due)
-    .map((item) => ({ item, due: entry.notes![item]!.due! }))
-    .sort((a, b) => a.due.localeCompare(b.due))[0];
-}
-
-export type NextStep =
-  | { kind: "overdue" | "due" | "progress"; guide: Guide; item: string; due?: string | undefined }
-  | { kind: "contract"; contractId: string; title: string };
-
-type ContractLike = { id?: string | undefined; title: string; status: string; sentAt?: string | null; updatedAt: string };
-
-/**
- * The single most useful thing to do next, from what the member saved (founder, 2026-11-06): an overdue checklist
- * item (earliest first), else the item due soonest, else the first open item of the saved blueprint furthest along
- * (below 100%), else the oldest contract still waiting on a signature. Undefined when there's nothing to do.
- */
-export function pickNextStep(entries: readonly WorkbenchEntry[], contracts: readonly ContractLike[], today: string, guides: readonly Guide[] = GUIDES): NextStep | undefined {
-  const saved = savedGuides(entries, guides).sort((a, b) => a.title.localeCompare(b.title));
-  const dated = saved
-    .map((s) => ({ guide: s.guide, next: nextDue(s.guide, s.entry) }))
-    .filter((x): x is { guide: Guide; next: { item: string; due: string } } => !!x.next)
-    .sort((a, b) => a.next.due.localeCompare(b.next.due));
-  const first = dated[0];
-  if (first) return { kind: isOverdue(first.next.due, false, today) ? "overdue" : "due", guide: first.guide, item: first.next.item, due: first.next.due };
-  const furthest = saved.filter((s) => s.progress.total > 0 && !s.progress.finished).sort((a, b) => b.progress.pct - a.progress.pct)[0];
-  const item = furthest?.guide.checklist?.find((i) => !furthest.entry.checked.includes(i));
-  if (furthest && item) return { kind: "progress", guide: furthest.guide, item };
-  const when = (c: ContractLike) => c.sentAt ?? c.updatedAt;
-  const oldest = contracts.filter((c) => c.status !== "signed" && c.id).sort((a, b) => when(a).localeCompare(when(b)) || a.title.localeCompare(b.title))[0];
-  return oldest ? { kind: "contract", contractId: oldest.id!, title: oldest.title } : undefined;
+  return GUIDES.filter((g) => byId.has(g.id)).map((g) => ({ guide: g, title: g.title, progress: checklistProgress(g.checklist, byId.get(g.id)!.checked) }));
 }
 
 /** What the Working On tab counts: blueprints still in progress plus contracts still waiting on someone. */
 export function workingOnCount(entries: readonly WorkbenchEntry[], contracts: readonly { status: string }[]) {
   return savedGuides(entries).filter((x) => !x.progress.finished).length + contracts.filter((c) => c.status !== "signed").length;
 }
+
+/** The one most useful thing to do next, shown at the top of Working On (founder, 2026-11-06). */
+export type NextStep = { kind: "item" | "contract" | "browse"; title: string; detail: string; guideId?: string | undefined; contractId?: string | undefined };
+
+/**
+ * Reads the folder and picks one thing: the saved blueprint item that is due soonest (dated items first, then the
+ * blueprint furthest along), otherwise the next unticked item, then a draft or a contract out for signature. With
+ * nothing in progress it points at the library rather than inventing work.
+ */
+export function nextStep(entries: readonly WorkbenchEntry[], contracts: readonly { id?: string | undefined; title: string; status: string }[]): NextStep {
+  const byId = new Map(entries.filter((e) => e.kind === "blueprint").map((e) => [e.itemId, e]));
+  const open = savedGuides(entries).filter((s) => !s.progress.finished);
+  const candidates = open.flatMap((s) => {
+    const entry = byId.get(s.guide.id);
+    const unticked = (s.guide.checklist ?? []).filter((k) => !(entry?.checked ?? []).includes(k));
+    // A dated item jumps the queue: a plan is only useful if the date pulls the work forward. With no dates, the
+    // blueprint that is furthest along comes first.
+    const dated = unticked.filter((k) => !!entry && !!metaFor(entry, k).due);
+    const items = dated.length ? dated : unticked.slice(0, 1);
+    return items.map((item) => ({ guide: s.guide, item, due: entry ? metaFor(entry, item).due : undefined, pct: s.progress.pct }));
+  });
+  candidates.sort((a, b) => {
+    if (a.due && b.due) return a.due.localeCompare(b.due);
+    if (a.due) return -1;
+    if (b.due) return 1;
+    return b.pct - a.pct || a.guide.title.localeCompare(b.guide.title);
+  });
+  const first = candidates[0];
+  if (first) {
+    return {
+      kind: "item", guideId: first.guide.id, title: first.guide.title,
+      detail: `${first.item}${first.due ? ` · due ${dueLabel(first.due)}` : ""}`,
+    };
+  }
+  const draft = contracts.find((c) => c.status === "draft");
+  if (draft) return { kind: "contract", contractId: draft.id, title: draft.title, detail: "Your draft is still open. Finish it and send it for signature." };
+  const waiting = contracts.find((c) => c.status !== "signed");
+  if (waiting) return { kind: "contract", contractId: waiting.id, title: waiting.title, detail: "Out for signature. Open it to see who is left and send a reminder." };
+  return { kind: "browse", title: "Pick your next blueprint", detail: "Nothing is in progress. Browse the blueprints and save the one you want to work on next." };
+}
+
+/** The saved guide a next step points at, for opening it. */
+export const guideForStep = (entries: readonly WorkbenchEntry[], step: NextStep): Guide | undefined =>
+  step.guideId ? savedGuides(entries).find((s) => s.guide.id === step.guideId)?.guide : undefined;

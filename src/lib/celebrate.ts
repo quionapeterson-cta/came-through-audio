@@ -1,43 +1,49 @@
 /**
- * The member's now-and-then confetti (founder, 2026-11-05): a short burst on arriving in the workspace, like the one
- * Admin gets at sign-in, but at most once a week per browser so it stays a nice surprise instead of a tic.
+ * The member's welcome confetti (founder, 2026-11-06, replacing the weekly burst of 2026-11-05): it fires only when
+ * someone comes back after 30 days or more away, so it marks a return instead of decorating every visit. Finishing a
+ * blueprint checklist keeps its own burst, which is the celebration that means something.
  *
- * A browser that blocks storage never celebrates: without somewhere to remember the last one, every page load would
- * burst. The workspace also skips it when the member turned celebrations off or asked for reduced motion.
+ * The last visit is remembered per browser. A browser that blocks storage never celebrates: without somewhere to remember
+ * the last visit, every page load would burst. A first-ever visit never celebrates either — there is nothing to come back
+ * from — and the workspace still skips it when celebrations are off or reduced motion is asked for.
  */
-export const CELEBRATED_KEY = "cta.lastCelebrated";
+export const LAST_SEEN_KEY = "cta.lastSeen";
 
-/** How long between bursts. Seven days: often enough to notice, rare enough not to be noise. */
-export const CELEBRATION_INTERVAL_DAYS = 7;
+/** How long away counts as coming back. Thirty days: long enough that the burst means something. */
+export const RETURN_AFTER_DAYS = 30;
 
-/** True when it has been at least `days` since the last burst, or when there has never been one. */
-export function shouldCelebrate(last: string | null | undefined, now = new Date(), days = CELEBRATION_INTERVAL_DAYS): boolean {
-  if (!last) return true;
+/** True when the gap since the last visit is at least `days`. A missing or unreadable date is not a return. */
+export function isReturning(last: string | null | undefined, now = new Date(), days = RETURN_AFTER_DAYS): boolean {
+  if (!last) return false;
   const at = Date.parse(last);
-  if (!Number.isFinite(at)) return true;
+  if (!Number.isFinite(at)) return false;
   return now.getTime() - at >= days * 86400000;
 }
 
-export function readLastCelebration(): string | null {
+export function readLastVisit(): string | null {
   try {
-    return localStorage.getItem(CELEBRATED_KEY);
+    return localStorage.getItem(LAST_SEEN_KEY);
   } catch {
     return null;
   }
 }
 
-/** Records the burst, or reports that it could not be recorded (and so should not happen). */
-export function markCelebrated(now = new Date()): boolean {
+/** Records this visit, or reports that it could not be recorded (and so should not burst). */
+export function markVisit(now = new Date()): boolean {
   try {
-    localStorage.setItem(CELEBRATED_KEY, now.toISOString());
+    localStorage.setItem(LAST_SEEN_KEY, now.toISOString());
     return true;
   } catch {
     return false;
   }
 }
 
-/** One call per visit: celebrates and records when it is time, and does nothing otherwise. */
-export function maybeCelebrate(now = new Date()): boolean {
-  if (!shouldCelebrate(readLastCelebration(), now)) return false;
-  return markCelebrated(now);
+/**
+ * One call per visit: records the visit and says whether it was a return after 30 days or more. The visit is recorded
+ * either way, so the next one measures from today rather than from the last burst.
+ */
+export function celebrateReturn(now = new Date()): boolean {
+  const back = isReturning(readLastVisit(), now);
+  if (!markVisit(now)) return false;
+  return back;
 }

@@ -5,6 +5,20 @@
 export type GuideStep = { title: string; text: string };
 export type Guide = { id: string; kind: "Blueprint" | "Cheat sheet"; title: string; summary: string; steps: GuideStep[]; checklist?: string[] };
 
+/**
+ * Where one checklist item is actually done, so a blueprint reads as a to-do list you can work from instead of notes you
+ * then have to hunt down (founder, 2026-11-06). A link is optional: no link means the step happens outside the app, like
+ * joining a PRO.
+ */
+export type GuideLink = {
+  /** The tooltip and screen-reader words, e.g. "Open My Catalog". */
+  label: string;
+  /** The screen that finishes the item; "blueprint" opens another guide in the same section. */
+  where: "catalog" | "health" | "splits" | "profile" | "blueprint";
+  /** The guide to open when `where` is "blueprint". */
+  guideId?: string;
+};
+
 const s = (title: string, text: string): GuideStep => ({ title, text });
 
 export const BLUEPRINT_GUIDES: Guide[] = [
@@ -20,8 +34,35 @@ export const BLUEPRINT_GUIDES: Guide[] = [
       s("Set up your catalog", "Add every song to My Catalog with writers, splits and codes, so registrations and exports are one click later."),
       s("Get it in writing", "Use a contract every time someone works on your music: producers, features, videographers, managers. Start from Contracts in this section."),
       s("Track money monthly", "Once a month, record income and expenses, save receipts and set aside a share for taxes (often 25–30% if you're self-employed)."),
+    ],      checklist: ["Name checked", "Business type chosen", "EIN or tax ID", "Business bank account", "PRO, MLC, SoundExchange", "Catalog up to date", "Contracts for every collaborator", "Monthly money check"],
+  },
+  {
+    id: "embed-defaults", kind: "Blueprint", title: "Set Your Embed Defaults",
+    summary: "Fill your details in once, so every master you embed starts with your credits already in place.",
+    steps: [
+      s("Open Profile → Edit profile", "These are the same three steps setup asks for the first time you sign in. Afterwards they live in Profile → Edit profile, and you can change any of them whenever your details do."),
+      s("Artist, label and contact", "Your primary artist or stage name is what every embed credits. Add your label name if you release under one, the contact email you want inside the file, and who usually produces, if that's always the same person."),
+      s("Release details", "Pick your primary genre (and a secondary one if you use one), the language you usually record in, the country it's usually recorded in, your usual release type, and whether your songs are usually Explicit. Each song can still change these."),
+      s("Registration answers", "Say whether your songs usually use a sample and whether they're usually written for film, TV, stage or an ad. Those are the two questions BMI asks, so answering them once saves the same answer on every song."),
+      s("Master and copyright lines", "Set the share of the master you usually own and how you hold it, then your © (composition) and ℗ (sound recording) lines: the year, then the owner's name."),
+      s("Add your regulars", "List the session players, backup vocalists and engineers who are on most of your songs, so neighbouring-rights registration has them ready."),
+      s("Know what stays private", "PRO affiliations, IPI numbers, splits and registration details stay in your catalog: they are never written into your music files."),
     ],
-    checklist: ["Name checked", "Business type chosen", "EIN or tax ID", "Business bank account", "PRO, MLC, SoundExchange", "Catalog up to date", "Contracts for every collaborator", "Monthly money check"],
+    checklist: ["Artist name and label", "Contact email to embed", "Genre, language and recorded-in", "Usual release type and Explicit", "Samples and written-for answered", "Master share and basis", "© and ℗ lines", "Regular performers and crew"],
+  },
+  {
+    id: "catalog-defaults", kind: "Blueprint", title: "Build Your Catalog Defaults",
+    summary: "Your writer, publisher and registration details, filled in once, so every song, split sheet and export starts complete.",
+    steps: [
+      s("Add your legal name", "Legal name is what registration uses, on every song and every agency file. It can be added later if you haven't registered with a PRO yet."),
+      s("List every writer with a role", "Author, Composer or Author/Composer. Author/Composer counts as both, and a song is only ready to register when it has an author (or is Instrumental) and a composer."),
+      s("Add each writer's PRO and IPI", "Pick their PRO from the worldwide list and add their IPI name number. Both are needed to register a song, so leave them blank until a writer has them rather than guessing."),
+      s("Make the default shares add to 100%", "A new song's split sheet starts from these shares, and it has to total exactly 100% before a song can be registered."),
+      s("Say how publishing works for you", "Tick Self-published if you have no publisher, or list each publisher with its PRO, share and HFA number. A BMI writer with no publishing company has its own box, because BMI pays both halves."),
+      s("Watch the profile meter fill", "The bar at the top counts the details that carry over to every song. It's a guide, not a gate: nothing here holds back saving or embedding."),
+      s("Save, then check one song", "Open a song in My Catalog and confirm the details arrived with it. Anything you type on the song itself stays as you wrote it."),
+    ],
+    checklist: ["Legal name added", "Every writer has a role", "PRO on every writer", "IPI on every writer", "Writer shares total 100%", "Publisher or Self-published", "Publisher details and HFA", "Checked on a song"],
   },
   {
     id: "record-label", kind: "Blueprint", title: "Start and Operate an Independent Record Label",
@@ -340,3 +381,22 @@ export const CHEAT_SHEETS: Guide[] = [
 ];
 
 export const GUIDES: Guide[] = [...BLUEPRINT_GUIDES, ...CHEAT_SHEETS];
+
+/**
+ * The checklist items the app can open, by guide id and then by the item's exact wording. Kept beside the guides so the
+ * wording and its link can't drift apart, and checked by a test.
+ */
+export const GUIDE_LINKS: Record<string, Record<string, GuideLink>> = {
+  "royalty-registration": {
+    "PRO writer account": { label: "Open your writer details", where: "profile" },
+    "IPI saved in My Catalog": { label: "Open your writer details", where: "profile" },
+    "Publishing set up": { label: "Read the Publishing Company blueprint", where: "blueprint", guideId: "publishing-company" },
+    "Songs registered with PRO": { label: "Open My Catalog", where: "catalog" },
+    "The MLC": { label: "Open My Catalog for the MLC export", where: "catalog" },
+    SoundExchange: { label: "Open My Catalog for the recordings", where: "catalog" },
+    "Quarterly check": { label: "Open the Royalty Health Hub", where: "health" },
+  },
+};
+
+/** The screen one checklist item opens, or nothing when that step happens outside the app. */
+export const linkFor = (guideId: string, item: string): GuideLink | undefined => GUIDE_LINKS[guideId]?.[item];

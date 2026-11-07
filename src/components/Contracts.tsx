@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { confirmAction } from "@/components/ConfirmHost";
-import { Sparkles, AlertTriangle, BookOpen, FolderOpen, Pin, PinOff, CalendarDays, Gift, Check, ChevronDown, ChevronLeft, Copy, Download, FileSignature, FlaskConical, Loader2, Lock, Mail, PenLine, Plus, RotateCcw, ScrollText, ShieldCheck, Trash2, Unlock, Vault } from "lucide-react";
+import { ArrowUpRight, Sparkles, AlertTriangle, BookOpen, FolderOpen, Pin, PinOff, CalendarDays, Gift, Check, ChevronDown, ChevronLeft, Copy, Download, FileSignature, FlaskConical, Loader2, Lock, Mail, PenLine, Plus, RotateCcw, ScrollText, ShieldCheck, StickyNote, Trash2, Unlock, Vault } from "lucide-react";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -14,6 +14,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { format, isValid, parse } from "date-fns";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { InfoTip } from "@/components/InfoTip";
+import { Confetti } from "@/components/Confetti";
 import { listTracks, type CatalogTrack } from "@/lib/catalog";
 import { getLaunchStatus } from "@/lib/gate.functions";
 import { BLUEPRINTS, CATEGORIES, COMPANY_BLUEPRINTS, dropPrelaunch, COMPANY_LEGAL_NAME, COMPANY_SIGNER_NAME, CONTRACT_DISCLAIMER, SIGNATURE_FONT, blueprintById, fillBlanks, georgiaLaw, initialFields, missingFields, renderContract, type Blueprint, type BlueprintField } from "@/lib/contract-blueprints";
@@ -30,12 +31,12 @@ import { BETA_ITEMS, BETA_WINDOW } from "@/lib/beta";
 import { listOutreach, sendOutreach, type OutreachLogRow } from "@/lib/outreach.functions";
 import { OUTREACH_DAILY_LIMIT, OUTREACH_LABEL, outreachDraft, type OutreachFields, type OutreachKind } from "@/lib/outreach-emails";
 import { TIER_LABEL } from "@/lib/plans";
-import { logBadgeEvent } from "@/lib/badge-events";
-import { BLUEPRINT_GUIDES, CHEAT_SHEETS, type Guide } from "@/lib/guides";
+import { logBadgeEvent, requestBadgeCheck } from "@/lib/badge-events";
+import { BLUEPRINT_GUIDES, CHEAT_SHEETS, linkFor, type Guide, type GuideLink } from "@/lib/guides";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ProgressMeter, WorkingOn } from "@/components/WorkingOn";
 import { useWorkbench, type Workbench } from "@/hooks/useWorkbench";
-import { checklistProgress, workingOnCount } from "@/lib/workbench";
+import { checklistProgress, dueLabel, isOverdue, metaFor, toggleChecked, workingOnCount } from "@/lib/workbench";
 import {
   contractLink, deleteContract, emptyParty, getContract, isValidEmail, listContracts, listReceivedContracts, loadCompanyTemplates, reopenContract, saveCompanyTemplate, saveContract, sendContract, signContract,
   type Contract, type ContractParty, type ReceivedContract,
@@ -54,7 +55,7 @@ const STATUS: Record<Contract["status"], { label: string; className: string }> =
  * request signatures, and keep fully signed contracts in the vault. Creating requires Catalog Management;
  * contracts other people send you are always visible, since signing is free.
  */
-export function Contracts({ userId, unlocked, onUpgrade, company = false }: { userId: string; unlocked: boolean; onUpgrade: () => void; /** Admin → Company Contracts: the LLC's own agreements and templates. */ company?: boolean }) {
+export function Contracts({ userId, unlocked, onUpgrade, company = false, onOpen }: { userId: string; unlocked: boolean; onUpgrade: () => void; /** Admin → Company Contracts: the LLC's own agreements and templates. */ company?: boolean; /** Opens the screen a checklist item is done on (founder, 2026-11-06); absent in Admin, where there is no workspace. */ onOpen?: (link: GuideLink) => void }) {
   const [view, setView] = useState<View>("blueprints");
   const [contracts, setContracts] = useState<Contract[]>([]);
   const [received, setReceived] = useState<ReceivedContract[]>([]);
@@ -150,7 +151,7 @@ export function Contracts({ userId, unlocked, onUpgrade, company = false }: { us
 
         {view === "guides" && (!unlocked
           ? <UpgradeLock className="" title="Blueprints" tier="management" onUpgrade={onUpgrade} text="Step-by-step guides to running your music business, from royalty registration to touring, plus home recording cheat sheets for every genre." />
-          : <Guides workbench={workbench} focusId={focusGuide} />)}
+          : <Guides workbench={workbench} focusId={focusGuide} onOpen={onOpen} />)}
 
         {view === "working" && !company && (
           <WorkingOn workbench={workbench} contracts={contracts} loading={loading}
@@ -286,7 +287,7 @@ function Blueprints({ unlocked, onUse }: { unlocked: boolean; onUse: (bp: Bluepr
 }
 
 /** Blueprints (business guides) and home recording cheat sheets, in two titled, collapsible groups. */
-function Guides({ workbench, focusId }: { workbench: Workbench; /** Opened from Working On: start with this one expanded. */ focusId?: string | undefined }) {
+function Guides({ workbench, focusId, onOpen }: { workbench: Workbench; /** Opened from Working On: start with this one expanded. */ focusId?: string | undefined; onOpen?: ((link: GuideLink) => void) | undefined }) {
   const groups: [string, string, Guide[]][] = [["Blueprints", "Step-by-step guides to running your music business", BLUEPRINT_GUIDES], ["Home recording cheat sheets", "Setup, genre tips and quick fixes", CHEAT_SHEETS]];
   const [openId, setOpenId] = useState<string | undefined>(focusId);
   const [openGroup, setOpenGroup] = useState<string | undefined>(() => groups.find(([, , list]) => list.some((g) => g.id === focusId))?.[0] ?? "Blueprints");
@@ -295,8 +296,44 @@ function Guides({ workbench, focusId }: { workbench: Workbench; /** Opened from 
     workbench.setPinned("blueprint", g.id, pinned);
     toast.success(pinned ? `${g.title} saved to Working On.` : `${g.title} removed from Working On. Your ticks are kept.`);
   };
+  /** The note or date editor open on one item, as `guideId:item`. */
+  const [openNote, setOpenNote] = useState<string>();
+  const [celebrating, setCelebrating] = useState<string>();
+  useEffect(() => {
+    if (!celebrating) return;
+    const t = setTimeout(() => setCelebrating(undefined), 4000);
+    return () => clearTimeout(t);
+  }, [celebrating]);
+  /**
+   * A tick that finishes a checklist is a moment (founder, 2026-11-06): confetti, one toast, and the awards check runs, so
+   * anything the finish unlocks lands on the shelf too.
+   */
+  const tick = (g: Guide, item: string) => {
+    const before = workbench.get("blueprint", g.id);
+    const next = toggleChecked(before, item);
+    workbench.toggle("blueprint", g.id, item);
+    if (checklistProgress(g.checklist, next.checked).finished && !checklistProgress(g.checklist, before.checked).finished) {
+      setCelebrating(g.id);
+      toast.success(`${g.title} complete — every box ticked.`);
+      requestBadgeCheck();
+    }
+  };
+  /**
+   * A checklist item's own shortcut: another guide opens in place, and every other target asks the workspace to change
+   * tab, so a blueprint can be worked from its list instead of from memory (founder, 2026-11-06).
+   */
+  const openLink = (link: GuideLink) => {
+    if (link.where === "blueprint" && link.guideId) {
+      setOpenGroup(groups.find(([, , list]) => list.some((x) => x.id === link.guideId))?.[0] ?? "Blueprints");
+      setOpenId(link.guideId);
+      document.getElementById(`guide-${link.guideId}`)?.scrollIntoView({ behavior: "smooth", block: "start" });
+      return;
+    }
+    onOpen?.(link);
+  };
   return (
     <section className="space-y-4">
+      {celebrating && <div className="pointer-events-none fixed inset-0 z-[85]"><Confetti /></div>}
       {groups.map(([name, hint, list]) => {
         const open = openGroup === name;
         return (
@@ -330,14 +367,44 @@ function Guides({ workbench, focusId }: { workbench: Workbench; /** Opened from 
                           {g.checklist && (
                             <div>
                               <p className="font-semibold" id={`guide-${g.id}-checklist`}>Checklist</p>
-                              <ul className="mt-1 grid gap-1 sm:grid-cols-2" aria-labelledby={`guide-${g.id}-checklist`}>
+                              <ul className="mt-1 grid gap-2 sm:grid-cols-2" aria-labelledby={`guide-${g.id}-checklist`}>
                                 {g.checklist.map((k, i) => {
                                   const cid = `guide-${g.id}-item-${i}`;
                                   const ticked = entry.checked.includes(k);
+                                  const meta = metaFor(entry, k);
+                                  const key = `${g.id}:${k}`;
+                                  const open = openNote === key;
+                                  const late = !!meta.due && !ticked && isOverdue(meta.due);
+                                  const link = linkFor(g.id, k);
                                   return (
-                                    <li key={k} className="flex items-start gap-2">
-                                      <Checkbox id={cid} checked={ticked} onCheckedChange={() => workbench.toggle("blueprint", g.id, k)} className="mt-0.5" />
-                                      <label htmlFor={cid} className={`cursor-pointer ${ticked ? "text-muted-foreground line-through" : ""}`}>{k}</label>
+                                    <li key={k}>
+                                      <div className="flex items-start gap-2">
+                                        <Checkbox id={cid} checked={ticked} onCheckedChange={() => tick(g, k)} className="mt-0.5" />
+                                        <label htmlFor={cid} className={`min-w-0 flex-1 cursor-pointer ${ticked ? "text-muted-foreground line-through" : ""}`}>{k}</label>
+                                        {link && (link.where === "blueprint" || onOpen) && (
+                                          <button type="button" onClick={() => openLink(link)} aria-label={link.label} title={link.label}
+                                            className="shrink-0 rounded p-0.5 text-muted-foreground hover:text-primary"><ArrowUpRight className="h-4 w-4" /></button>
+                                        )}
+                                        <button type="button" aria-expanded={open} aria-label={`Note or due date for ${k}`} title="Add a note or a due date"
+                                          className={`shrink-0 rounded p-0.5 hover:text-foreground ${meta.note || meta.due ? "text-primary" : "text-muted-foreground"}`}
+                                          onClick={() => setOpenNote(open ? undefined : key)}><StickyNote className="h-4 w-4" /></button>
+                                      </div>
+                                      {!open && (meta.due || meta.note) && (
+                                        <p className="ml-6 mt-1 text-xs text-muted-foreground">
+                                          {meta.due && <span className={late ? "font-semibold text-destructive" : "font-medium"}>{late ? "Overdue" : "Due"} {dueLabel(meta.due)}</span>}
+                                          {meta.due && meta.note ? " · " : ""}
+                                          {meta.note}
+                                        </p>
+                                      )}
+                                      {open && (
+                                        <div className="ml-6 mt-2 flex flex-wrap items-center gap-2">
+                                          <Input type="date" aria-label={`Due date for ${k}`} value={meta.due ?? ""} className="h-8 w-40"
+                                            onChange={(e) => workbench.setMeta("blueprint", g.id, k, { due: e.target.value })} />
+                                          <Input aria-label={`Note for ${k}`} defaultValue={meta.note ?? ""} placeholder="Note (optional)" maxLength={500} className="h-8 min-w-0 flex-1"
+                                            onBlur={(e) => workbench.setMeta("blueprint", g.id, k, { note: e.target.value })} />
+                                          {(meta.note || meta.due) && <Button size="sm" variant="ghost" onClick={() => { workbench.setMeta("blueprint", g.id, k, { note: "", due: "" }); setOpenNote(undefined); }}>Clear</Button>}
+                                        </div>
+                                      )}
                                     </li>
                                   );
                                 })}
@@ -349,7 +416,7 @@ function Guides({ workbench, focusId }: { workbench: Workbench; /** Opened from 
                       <div className="mt-auto flex flex-wrap pt-4">
                         <Button size="sm" variant="ghost" onClick={() => { if (!expanded) logBadgeEvent("blueprint_read"); setOpenId(expanded ? undefined : g.id); }}>{expanded ? "Close" : "Read it"}</Button>
                         <Button size="sm" variant="ghost" onClick={() => void import("@/lib/guide-pdf").then((m) => m.downloadGuidePdf(g)).catch(() => toast.error("Couldn't make the PDF. Try again."))}><Download />PDF</Button>
-                        <Button size="sm" variant="ghost" aria-pressed={entry.pinned} onClick={() => pin(g, !entry.pinned)}>{entry.pinned ? <><PinOff />Remove from Working On</> : <><Pin />Save to Working On</>}</Button>
+                        <Button size="sm" variant="ghost" aria-pressed={entry.pinned} title={entry.pinned ? "Remove from Working On" : "Save to Working On"} aria-label={entry.pinned ? `Remove ${g.title} from Working On` : `Save ${g.title} to Working On`} onClick={() => pin(g, !entry.pinned)}>{entry.pinned ? <><PinOff />Remove</> : <><Pin />Save</>}</Button>
                       </div>
                     </article>
                   );

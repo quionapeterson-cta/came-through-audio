@@ -1,13 +1,30 @@
 import { brandFooter, brandHeader, COBALT, ensureSpace, font, INK, MARGIN, MUTED, newBrandedPdf, sectionTitle } from "@/lib/brand-pdf";
-import { safeName } from "@/lib/catalog";
+import { safeName, saveBlob } from "@/lib/catalog";
 import type { Guide } from "@/lib/guides";
 
 const LINE = 5.6;
+/** jsPDF works in mm from the top-left corner; a PDF form field is in points from the bottom-left. */
+const MM_TO_PT = 72 / 25.4;
+const BOX_MM = 4;
+
+/** One tick box, where jsPDF drew it: millimetres from the page's top-left corner. */
+type Tick = { page: number; left: number; top: number };
+
+/** Where that drawn box sits in the finished PDF, in points from the bottom-left — what a form field needs. */
+export function tickBox(pageHeightMm: number, tick: Pick<Tick, "left" | "top">, sizeMm = BOX_MM) {
+  return {
+    x: tick.left * MM_TO_PT,
+    y: (pageHeightMm - tick.top - sizeMm) * MM_TO_PT,
+    width: sizeMm * MM_TO_PT,
+    height: sizeMm * MM_TO_PT,
+  };
+}
 
 /** A blueprint or cheat sheet as a branded PDF: numbered steps, then the checklist with tick boxes. */
 export async function buildGuidePdf(g: Guide) {
   const pdf = await newBrandedPdf();
   const width = pdf.internal.pageSize.getWidth() - MARGIN * 2;
+  const ticks: Tick[] = [];
   let y = brandHeader(pdf, g.title, g.kind);
   font(pdf, "regular", 10.5).setTextColor(...MUTED);
   for (const line of pdf.splitTextToSize(g.summary, width) as string[]) { pdf.text(line, MARGIN, y); y += LINE; }
@@ -28,15 +45,43 @@ export async function buildGuidePdf(g: Guide) {
     font(pdf, "regular", 10.5).setTextColor(...INK);
     for (const item of g.checklist) {
       y = ensureSpace(pdf, y, LINE + 1);
-      pdf.setDrawColor(...COBALT).setLineWidth(0.4).rect(MARGIN, y - 3.4, 4, 4);
+      pdf.setDrawColor(...COBALT).setLineWidth(0.4).rect(MARGIN, y - 3.4, BOX_MM, BOX_MM);
+      ticks.push({ page: pdf.getNumberOfPages(), left: MARGIN, top: y - 3.4 });
       pdf.text(item, MARGIN + 7, y);
       y += LINE + 1;
     }
   }
   brandFooter(pdf);
-  return pdf;
+  return { pdf, ticks };
+}
+
+/**
+ * The same guide with real, tickable checkboxes (founder, 2026-11-06), so a downloaded blueprint still works as a
+ * checklist in a PDF reader or in PDF Fill & Sign. jsPDF can't create form fields, so the finished pages are reopened
+ * with pdf-lib and a box is added on top of each square that was drawn. A PDF that comes back without its boxes is
+ * still a readable guide, so a failure here is logged rather than turned into an error the member sees.
+ */
+export async function buildGuidePdfBytes(g: Guide) {
+  const { pdf, ticks } = await buildGuidePdf(g);
+  const bytes = pdf.output("arraybuffer");
+  try {
+    const { PDFDocument } = await import("pdf-lib");
+    const doc = await PDFDocument.load(bytes);
+    const form = doc.getForm();
+    const pages = doc.getPages();
+    const height = pdf.internal.pageSize.getHeight();
+    ticks.forEach((tick, i) => {
+      const page = pages[tick.page - 1];
+      if (!page) return;
+      form.createCheckBox(`checklist-${i + 1}`).addToPage(page, { ...tickBox(height, tick), borderWidth: 0 });
+    });
+    return await doc.save();
+  } catch (e) {
+    console.warn("Blueprint PDF came out without tick boxes:", e);
+    return new Uint8Array(bytes);
+  }
 }
 
 export async function downloadGuidePdf(g: Guide) {
-  (await buildGuidePdf(g)).save(`${safeName(g.title)}.pdf`);
+  saveBlob(new Blob([new Uint8Array(await buildGuidePdfBytes(g))], { type: "application/pdf" }), `${safeName(g.title)}.pdf`);
 }

@@ -35,6 +35,8 @@ export type BrandKit = {
   colors: string[];
   font: BrandFont;
   logoPath: string | null;
+  /** Every logo version uploaded for this kit, so a member can switch one in without rebuilding the kit (founder, 2026-11-06). */
+  logoPaths: string[];
   showFooter: boolean;
   style: KitStyle;
   /** Contract section titles. Blank = Primary Black #0b0b0b, so our cobalt never clashes with their colors. */
@@ -77,7 +79,7 @@ export type BrandUse = "splits" | "contracts" | "lyrics" | "catalog";
 
 /** New kits start in Arial, a neutral font that fits any brand (founder, 2026-10-27); Poppins is ours. */
 export const DEFAULT_KIT_FONT = "Arial";
-export const emptyKit = (name = ""): BrandKit => ({ name, tagline: "", colors: [], font: DEFAULT_KIT_FONT, logoPath: null, showFooter: true, style: "classic", headerColor: null, options: { ...DEFAULT_KIT_OPTIONS } });
+export const emptyKit = (name = ""): BrandKit => ({ name, tagline: "", colors: [], font: DEFAULT_KIT_FONT, logoPath: null, logoPaths: [], showFooter: true, style: "classic", headerColor: null, options: { ...DEFAULT_KIT_OPTIONS } });
 
 export const isHex = (v: string) => /^#[0-9a-f]{6}$/i.test(v);
 
@@ -88,15 +90,19 @@ export function hexRgb(v: string): [number, number, number] {
 }
 
 /** A kit row from the database, cleaned: bad colors and unknown fonts are dropped instead of breaking a PDF. */
-export function kitFromRow(r: { id?: string | null; name?: string | null; tagline?: string | null; colors?: string[] | null; font?: string | null; logo_path?: string | null; show_footer?: boolean | null; style?: string | null; header_color?: string | null; options?: unknown } | null): BrandKit | null {
+export function kitFromRow(r: { id?: string | null; name?: string | null; tagline?: string | null; colors?: string[] | null; font?: string | null; logo_path?: string | null; logo_paths?: string[] | null; show_footer?: boolean | null; style?: string | null; header_color?: string | null; options?: unknown } | null): BrandKit | null {
   if (!r) return null;
+  // A kit saved before logo versions existed keeps its single logo as the first version.
+  const saved = (Array.isArray(r.logo_paths) ? r.logo_paths : []).filter((p): p is string => typeof p === "string" && !!p);
+  const active = r.logo_path || null;
   return {
     ...(r.id && { id: r.id }),
     name: (r.name ?? "").trim(),
     tagline: (r.tagline ?? "").trim(),
     colors: (r.colors ?? []).filter(isHex).map((c) => c.toUpperCase()),
     font: BRAND_FONTS.includes(r.font ?? "") ? r.font! : DEFAULT_KIT_FONT,
-    logoPath: r.logo_path || null,
+    logoPath: active,
+    logoPaths: active && !saved.includes(active) ? [active, ...saved] : saved,
     showFooter: r.show_footer !== false,
     style: isStyle(r.style) ? r.style : "classic",
     headerColor: r.header_color && isHex(r.header_color) ? r.header_color.toUpperCase() : null,
@@ -130,3 +136,48 @@ export function brandAccess(tier: Tier, addOnUntil: Date | null): Record<BrandUs
 
 /** A kit is worth drawing once it has a name or a logo; otherwise the Came Through Audio header stays. */
 export const kitReady = (k: Pick<BrandKit, "name" | "logoPath"> | null) => !!k && (!!k.name || !!k.logoPath);
+
+/**
+ * How readable a colour is, the WCAG way (founder, 2026-11-06): relative luminance, then the contrast ratio between two
+ * colours. The page a PDF prints on is white, so that is what the editor checks against.
+ */
+export function luminance(hex: string): number {
+  const [r, g, b] = hexRgb(hex).map((v) => { const c = v / 255; return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4; }) as [number, number, number];
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+}
+
+/** 1 (identical) to 21 (black on white), rounded to one decimal. */
+export function contrastRatio(a: string, b: string): number {
+  if (!isHex(a) || !isHex(b)) return 21;
+  const [hi, lo] = [luminance(a), luminance(b)].sort((x, y) => y - x) as [number, number];
+  return Math.round(((hi + 0.05) / (lo + 0.05)) * 10) / 10;
+}
+
+/** Body text needs 4.5:1; large bold text may go to 3:1. */
+export const CONTRAST_MIN = 4.5;
+export const CONTRAST_LARGE = 3;
+
+/** A colour that will be hard to read where it is drawn. A warning only: any colour can still be saved. */
+export type ContrastWarning = { field: "name" | "tagline" | "sectionTitles"; label: string; hex: string; ratio: number; severe: boolean };
+
+/**
+ * Which of the kit's colours will be hard to read on the white page (founder, 2026-11-06). A banner puts the name and
+ * tagline on a band of their first colour, where the PDF picks readable text automatically, so only the section titles
+ * are checked for that style.
+ */
+export function contrastWarnings(kit: Pick<BrandKit, "colors" | "headerColor" | "style" | "options">, page = "#FFFFFF"): ContrastWarning[] {
+  const out: ContrastWarning[] = [];
+  const check = (field: ContrastWarning["field"], label: string, value: string | null | undefined, min: number) => {
+    if (!value || !isHex(value)) return;
+    const ratio = contrastRatio(value, page);
+    if (ratio >= min) return;
+    out.push({ field, label, hex: value.toUpperCase(), ratio, severe: ratio < CONTRAST_LARGE });
+  };
+  if (kit.style !== "banner") {
+    check("name", "Your name", kit.colors[0], CONTRAST_LARGE);
+    check("tagline", "Your tagline", kit.colors[1], CONTRAST_MIN);
+  }
+  check("sectionTitles", "Your section titles", kit.headerColor, CONTRAST_MIN);
+  if (kit.options.accent) check("sectionTitles", "Your second accent colour", kit.options.accent, CONTRAST_LARGE);
+  return out;
+}
