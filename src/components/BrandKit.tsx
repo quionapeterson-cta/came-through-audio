@@ -467,6 +467,41 @@ export function BrandKit({ userId, tier, artistName }: { userId: string; tier: T
             </div>
           ))}
           <Button variant="outline" size="sm" className="h-11" onClick={() => edit({ colors: [...kit.colors, kit.colors.length ? "#4D8CFF" : "#004AAD"] })}><Plus className="h-4 w-4" />Add color</Button>
+
+          {/* The colours that used to sit in their own fields (founder, 2026-11-07): now they line up with the palette, each
+              with its own title, so every colour choice is in one place. Blank still prints the black it always printed. */}
+          <div className="flex flex-col gap-1.5 rounded-lg border border-border p-1.5">
+            <span className="flex items-center gap-1 px-0.5 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Section titles<InfoTip text="The color of the numbered titles in your contracts (1. TERMS, 2. PAYMENT…). Black unless you pick a color. Dark colors read best." /></span>
+            <div className="flex items-center gap-1.5">
+              <input type="color" aria-label="Section title color" value={kit.headerColor ?? "#0b0b0b"} onChange={(e) => edit({ headerColor: e.target.value.toUpperCase() })} className="h-8 w-8 cursor-pointer rounded border-0 bg-transparent p-0" />
+              <Input aria-label="Section title color code" value={kit.headerColor ?? ""} placeholder="#0B0B0B (black)" maxLength={7}
+                onChange={(e) => { const v = e.target.value.trim(); edit({ headerColor: v ? (v.startsWith("#") ? v : `#${v}`).toUpperCase() : null }); }}
+                className={`h-8 w-28 font-mono text-xs ${!kit.headerColor || isHex(kit.headerColor) ? "" : "border-destructive"}`} />
+              {kit.headerColor && <Button variant="ghost" size="sm" className="h-8 px-2 text-xs" onClick={() => edit({ headerColor: null })}>Black</Button>}
+            </div>
+          </div>
+
+          <div className="flex flex-col gap-1.5 rounded-lg border border-border p-1.5">
+            <span className="flex items-center gap-1 px-0.5 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Document title<InfoTip text="The colour of the document's own title, like “Producer Agreement” at the top of a contract. Black unless you pick a colour. Dark colours read best." /></span>
+            <div className="flex items-center gap-1.5">
+              <input type="color" aria-label="Document title color" value={kit.options.titleColor ?? "#0b0b0b"} onChange={(e) => edit({ options: { ...kit.options, titleColor: e.target.value.toUpperCase() } })} className="h-8 w-8 cursor-pointer rounded border-0 bg-transparent p-0" />
+              <Input aria-label="Document title color code" value={kit.options.titleColor ?? ""} placeholder="#0B0B0B (black)" maxLength={7}
+                onChange={(e) => { const v = e.target.value.trim(); edit({ options: { ...kit.options, titleColor: v ? (v.startsWith("#") ? v : `#${v}`).toUpperCase() : null } }); }}
+                className={`h-8 w-28 font-mono text-xs ${!kit.options.titleColor || isHex(kit.options.titleColor) ? "" : "border-destructive"}`} />
+              {kit.options.titleColor && <Button variant="ghost" size="sm" className="h-8 px-2 text-xs" onClick={() => edit({ options: { ...kit.options, titleColor: null } })}>Black</Button>}
+            </div>
+          </div>
+
+          <div className="flex flex-col gap-1.5 rounded-lg border border-border p-1.5">
+            <span className="flex items-center gap-1 px-0.5 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Second accent<InfoTip text="For signer names, signature lines and boxes. Blank uses your section titles' colour." /></span>
+            <div className="flex items-center gap-1.5">
+              <input type="color" aria-label="Second accent color" value={kit.options.accent ?? "#0b0b0b"} onChange={(e) => edit({ options: { ...kit.options, accent: e.target.value.toUpperCase() } })} className="h-8 w-8 cursor-pointer rounded border-0 bg-transparent p-0" />
+              <Input aria-label="Second accent color code" value={kit.options.accent ?? ""} placeholder="Same as titles" maxLength={7}
+                onChange={(e) => { const v = e.target.value.trim(); edit({ options: { ...kit.options, accent: v ? (v.startsWith("#") ? v : `#${v}`).toUpperCase() : null } }); }}
+                className={`h-8 w-28 font-mono text-xs ${!kit.options.accent || isHex(kit.options.accent) ? "" : "border-destructive"}`} />
+              {kit.options.accent && <Button variant="ghost" size="sm" className="h-8 px-2 text-xs" onClick={() => edit({ options: { ...kit.options, accent: null } })}>Clear</Button>}
+            </div>
+          </div>
         </div>
         {warns.length > 0 && (
           <ul className="space-y-1 rounded-lg border border-border bg-muted/40 p-3 text-xs">
@@ -523,30 +558,7 @@ export function BrandKit({ userId, tier, artistName }: { userId: string; tier: T
         </div>
       </div>
 
-      <div className="space-y-2">
-        <Label className="flex items-center gap-1.5">Contract section titles<InfoTip text="The color of the numbered titles in your contracts (1. TERMS, 2. PAYMENT…). Black unless you pick a color. Dark colors read best." /></Label>
-        <div className="flex flex-wrap items-center gap-2">
-          <input type="color" aria-label="Section title color" value={kit.headerColor ?? "#0b0b0b"} onChange={(e) => edit({ headerColor: e.target.value.toUpperCase() })} className="h-8 w-8 cursor-pointer rounded border-0 bg-transparent p-0" />
-          <Input aria-label="Section title color code" value={kit.headerColor ?? ""} placeholder="#0B0B0B (black)" maxLength={7}
-            onChange={(e) => { const v = e.target.value.trim(); edit({ headerColor: v ? (v.startsWith("#") ? v : `#${v}`).toUpperCase() : null }); }}
-            className={`h-8 w-36 font-mono text-xs ${!kit.headerColor || isHex(kit.headerColor) ? "" : "border-destructive"}`} />
-          {kit.headerColor && <Button variant="ghost" size="sm" onClick={() => edit({ headerColor: null })}>Use black</Button>}
-          <span className="text-xs text-muted-foreground">Dark colors read best.</span>
-        </div>
-      </div>
-
-      {/* The document title's own colour, for everyone with a kit (founder, 2026-11-07). Blank prints Primary Black. */}
-      <div className="space-y-2">
-        <Label className="flex items-center gap-1.5">Document title<InfoTip text="The colour of the document's own title, like “Producer Agreement” at the top of a contract. Black unless you pick a colour. Dark colours read best." /></Label>
-        <div className="flex flex-wrap items-center gap-2">
-          <input type="color" aria-label="Document title color" value={kit.options.titleColor ?? "#0b0b0b"} onChange={(e) => edit({ options: { ...kit.options, titleColor: e.target.value.toUpperCase() } })} className="h-8 w-8 cursor-pointer rounded border-0 bg-transparent p-0" />
-          <Input aria-label="Document title color code" value={kit.options.titleColor ?? ""} placeholder="#0B0B0B (black)" maxLength={7}
-            onChange={(e) => { const v = e.target.value.trim(); edit({ options: { ...kit.options, titleColor: v ? (v.startsWith("#") ? v : `#${v}`).toUpperCase() : null } }); }}
-            className={`h-8 w-36 font-mono text-xs ${!kit.options.titleColor || isHex(kit.options.titleColor) ? "" : "border-destructive"}`} />
-          {kit.options.titleColor && <Button variant="ghost" size="sm" onClick={() => edit({ options: { ...kit.options, titleColor: null } })}>Use black</Button>}
-          <span className="text-xs text-muted-foreground">Black unless you pick one.</span>
-        </div>
-      </div>
+      {/* Every colour the kit draws is set in Colors now (founder, 2026-11-07), so they sit together. */}
 
       {/* More ways to style contracts (founder, 2026-10-28). */}
       <fieldset className="space-y-4 rounded-lg border border-border p-4">
@@ -572,16 +584,6 @@ export function BrandKit({ userId, tier, artistName }: { userId: string; tier: T
             {([["rounded", "Rounded"], ["square", "Square"]] as const).map(([v, label]) => <button key={v} type="button" role="radio" aria-checked={kit.options.corners === v} onClick={() => edit({ options: { ...kit.options, corners: v } })}
               className={`rounded-md px-3 py-1 text-sm font-semibold ${kit.options.corners === v ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}>{label}</button>)}
           </div>
-        </div>
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <span><span className="block text-sm font-semibold">Second accent color</span><span className="text-xs text-muted-foreground">For signer names, signature lines and boxes, and the footer line.</span></span>
-          <span className="flex items-center gap-2">
-            <input type="color" aria-label="Second accent color" value={kit.options.accent ?? "#0b0b0b"} onChange={(e) => edit({ options: { ...kit.options, accent: e.target.value.toUpperCase() } })} className="h-8 w-8 cursor-pointer rounded border-0 bg-transparent p-0" />
-            <Input aria-label="Second accent color code" value={kit.options.accent ?? ""} placeholder="Same as titles" maxLength={7}
-              onChange={(e) => { const v = e.target.value.trim(); edit({ options: { ...kit.options, accent: v ? (v.startsWith("#") ? v : `#${v}`).toUpperCase() : null } }); }}
-              className={`h-8 w-32 font-mono text-xs ${!kit.options.accent || isHex(kit.options.accent) ? "" : "border-destructive"}`} />
-            {kit.options.accent && <Button variant="ghost" size="sm" onClick={() => edit({ options: { ...kit.options, accent: null } })}>Clear</Button>}
-          </span>
         </div>
       </fieldset>
 
