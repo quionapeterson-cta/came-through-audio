@@ -1,7 +1,7 @@
 import type { jsPDF as JsPDF } from "jspdf";
 import { LOGO_PATH, LOGO_RATIO, LOGO_VIEWBOX } from "@/lib/brand-logo";
 import { SITE_URL } from "@/lib/email-layout";
-import { fontFile, hexRgb, type BrandFont, type PdfBrand } from "@/lib/brand-kit";
+import { fontFile, hexRgb, logoTop, type BrandFont, type PdfBrand } from "@/lib/brand-kit";
 import { SYSTEM_FONTS } from "@/lib/brand-fonts";
 
 export const COBALT: [number, number, number] = [0, 74, 173];
@@ -169,20 +169,27 @@ function kitHeader(pdf: JsPDF, brand: PdfBrand) {
   const banner = brand.style === "banner";
   const band = colors[0] ?? INK;
   if (banner) pdf.setFillColor(...band).rect(0, 0, w, 31, "F");
-  let x = MARGIN;
+  // The logo's side is the member's own (founder, 2026-11-07): left is how every kit printed before, right mirrors the
+  // block. Without a logo the heading keeps its left edge, whatever side is chosen.
+  let lw = 0, right = false;
   if (brand.logo) {
     try {
       const p = pdf.getImageProperties(brand.logo.dataUrl);
       const s = Math.min(34 / p.width, 16 / p.height);
-      const lw = p.width * s, lh = p.height * s;
-      pdf.addImage(brand.logo.dataUrl, p.fileType, MARGIN, 19.4 - lh / 2, lw, lh);
-      x += lw + 5;
-    } catch { /* an unreadable logo leaves the name on its own */ }
+      lw = p.width * s;
+      const lh = p.height * s;
+      right = brand.options.logoAlign === "right";
+      // Its own line and fine movement, so a picture with empty space above its ink can be lined up by eye.
+      const y = logoTop({ snap: brand.options.logoSnap, nudge: brand.options.logoNudge, height: lh, hasTagline: !!brand.tagline });
+      pdf.addImage(brand.logo.dataUrl, p.fileType, right ? w - MARGIN - lw : MARGIN, y, lw, lh);
+    } catch { /* an unreadable logo leaves the name on its own */ lw = 0; right = false; }
   }
+  const x = right ? w - MARGIN - lw - 5 : MARGIN + (lw ? lw + 5 : 0);
+  const align = right ? "right" : "left";
   const nameY = brand.tagline ? 18.6 : 21;
   const text = onColor(band);
-  if (brand.name) kitFont(pdf, brand, "bold", 14).setTextColor(...(banner ? text : colors[0] ?? INK)).text(brand.name, x, nameY);
-  if (brand.tagline) kitFont(pdf, brand, "medium", 7.5).setTextColor(...(banner ? text : colors[1] ?? MUTED)).text(brand.tagline, x, 24);
+  if (brand.name) kitFont(pdf, brand, "bold", 14).setTextColor(...(banner ? text : colors[0] ?? INK)).text(brand.name, x, nameY, { align });
+  if (brand.tagline) kitFont(pdf, brand, "medium", 7.5).setTextColor(...(banner ? text : colors[1] ?? MUTED)).text(brand.tagline, x, 24, { align });
   if (brand.style !== "classic") return;
   // One solid line in the kit's accent (founder, 2026-11-06: the multi-colour stripe read as two-tone).
   pdf.setFillColor(...kitAccent(brand)).rect(MARGIN, 28.5, w - MARGIN * 2, 0.8, "F");

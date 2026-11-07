@@ -445,7 +445,9 @@ rules keep it consistent as features are added.
 ### The editor
 - Profile → Brand kit shows the editor and the live preview side by side, the preview pinned while scrolling, so every
   change shows as it is made (founder, 2026-11-06). Save sits under the preview on the left, and the small footer switch
-  across from it on the right.
+  sits at the foot of the **Name on your contracts** box (founder, 2026-11-07), not beside Save. **The preview shows the
+  header, never a footer** (founder, 2026-11-07): the made-on line
+  lives on the printed file, so the preview stops at the page body and the switch still turns that line on and off.
 - **Logo versions, colours from the logo, contrast warnings, preview tabs and a sample PDF** (founder, 2026-11-06):
   `logo_paths` keeps every version uploaded and `logo_path` is the one in use, so switching the logo never means changing
   the rest of the kit (`kitFromRow` reads an older kit's single logo as its first version). The palette is read in the
@@ -475,6 +477,19 @@ rules keep it consistent as features are added.
 - **A palette can be saved and brought back in one click** (founder, 2026-11-07): `colorSets` on the kit row (`color_sets`,
   migration 20261107120000), cleaned by `kitColorSets` and written with `withColorSet` / `withoutColorSet`. Palettes belong
   to the kit, so each business keeps its own and they follow the member to any device.
+- **A logo can sit on either side and be moved to the millimetre** (founder, 2026-11-07): `options.logoAlign`,
+  `logoSnap` and `logoNudge` in `src/lib/brand-kit.ts`, drawn by `logoTop()`. Left, Middle and 0 mm are the defaults and
+  reproduce every kit printed before the controls — `middle` is still the settled 19.4 mm line, so an untouched kit never
+  moves. `top` and `bottom` come from `HEADING`, and `logoTop()` clamps the picture inside the header so it can never
+  leave the page or climb into the document title. The fine movement is the point, not a nicety: a logo file often
+  carries empty space above its ink, so a snap lines up the file's box and can still look low — never sell a snap as
+  alignment. The member clicks and grabs the logo thumbnail in the editor and drags it up or down — the whole gesture is
+  one change, so undo takes back the drag rather than a tenth of a millimetre of it — or nudges it with the arrows, the
+  number field or a shift-arrow for a tenth. The preview is a preview and nothing else (founder, 2026-11-07): no guides,
+  handles or controls are ever drawn over it, and every tool lives with the other editing tools; it shows the header as
+  it will print, and its own scale keeps a millimetre of print movement the same fraction of the name on screen. With
+  no logo the heading keeps its left edge whatever side is chosen, and Minimal still carries the logo in the footer,
+  where these controls don't apply.
 
 ### When it fails
 - A missing, unreadable or unavailable kit never blocks a download: the document simply keeps the Came Through Audio

@@ -57,11 +57,47 @@ describe("kit options", async () => {
   const { kitOptions, DEFAULT_KIT_OPTIONS } = await import("./brand-kit");
   it("reads saved options and falls back to the defaults", () => {
     expect(kitOptions(undefined)).toEqual(DEFAULT_KIT_OPTIONS);
-    expect(kitOptions({ watermark: true, cover: true, signature: "box", accent: "#7a1f1f", corners: "square" })).toEqual({ watermark: true, cover: true, signature: "box", accent: "#7A1F1F", titleColor: null, corners: "square" });
+    expect(kitOptions({ watermark: true, cover: true, signature: "box", accent: "#7a1f1f", corners: "square" })).toEqual({ watermark: true, cover: true, signature: "box", accent: "#7A1F1F", titleColor: null, corners: "square", logoAlign: "left", logoSnap: "middle", logoNudge: 0 });
     // The document title's own colour (founder, 2026-11-07): blank until picked, and cleaned like the accent.
     expect(kitOptions({ titleColor: "#7a1f1f" }).titleColor).toBe("#7A1F1F");
     expect(kitOptions({ titleColor: "red" }).titleColor).toBeNull();
     expect(kitOptions({ signature: "fancy", accent: "red", corners: "wavy" })).toEqual(DEFAULT_KIT_OPTIONS);
+  });
+});
+
+describe("where the logo sits in the header", async () => {
+  const { kitOptions, logoTop, logoNudgeValue, HEADING, LOGO_NUDGE_MAX } = await import("./brand-kit");
+
+  it("keeps the settled middle and puts the top and bottom edges on the name", () => {
+    // Middle is the 19.4 mm line every kit has printed at since the header existed: untouched kits never move.
+    expect(logoTop({ snap: "middle", nudge: 0, height: 10, hasTagline: true })).toBeCloseTo(14.4, 5);
+    expect(logoTop({ snap: "top", nudge: 0, height: 10, hasTagline: true })).toBeCloseTo(HEADING.withTagline.top, 5);
+    expect(logoTop({ snap: "bottom", nudge: 0, height: 10, hasTagline: true })).toBeCloseTo(HEADING.withTagline.bottom - 10, 5);
+    // No tagline is a shorter heading, so its bottom sits higher.
+    expect(logoTop({ snap: "bottom", nudge: 0, height: 10, hasTagline: false })).toBeCloseTo(HEADING.nameOnly.bottom - 10, 5);
+  });
+
+  it("moves by the fine amount, and never climbs into the title or off the page", () => {
+    expect(logoTop({ snap: "middle", nudge: 2.5, height: 10, hasTagline: true })).toBeCloseTo(16.9, 5);
+    // An impossible movement is read as ±12 mm, and the picture still never leaves the header.
+    expect(logoTop({ snap: "middle", nudge: -100, height: 10, hasTagline: true })).toBe(6);
+    expect(logoTop({ snap: "middle", nudge: 100, height: 10, hasTagline: true })).toBeCloseTo(26.4, 5);
+    expect(logoTop({ snap: "middle", nudge: 12, height: 16, hasTagline: true })).toBe(22);
+  });
+
+  it("reads the fine amount as millimetres: one decimal, inside ±12, unreadable is none", () => {
+    expect(logoNudgeValue("2.44")).toBe(2.4);
+    expect(logoNudgeValue(-99)).toBe(-LOGO_NUDGE_MAX);
+    expect(logoNudgeValue(undefined)).toBe(0);
+    expect(logoNudgeValue("nope")).toBe(0);
+  });
+
+  it("cleans a saved side, line and movement, defaulting to how every kit already prints", () => {
+    expect(kitOptions({ logoAlign: "right", logoSnap: "top", logoNudge: 3.2 })).toMatchObject({ logoAlign: "right", logoSnap: "top", logoNudge: 3.2 });
+    expect(kitOptions({ logoAlign: "sideways", logoSnap: "diagonal", logoNudge: "nope" })).toMatchObject({ logoAlign: "left", logoSnap: "middle", logoNudge: 0 });
+    expect(kitOptions({ logoSnap: "bottom" }).logoSnap).toBe("bottom");
+    // A kit saved before these controls existed keeps printing exactly as it did.
+    expect(kitFromRow({ name: "Biz" })?.options).toMatchObject({ logoAlign: "left", logoSnap: "middle", logoNudge: 0 });
   });
 });
 

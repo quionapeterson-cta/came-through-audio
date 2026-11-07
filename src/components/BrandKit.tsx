@@ -1,6 +1,6 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, type KeyboardEvent as ReactKeyboardEvent, type PointerEvent } from "react";
 import { confirmAction } from "@/components/ConfirmHost";
-import { AlertTriangle, Check, FileDown, ImagePlus, Loader2, Lock, Plus, Redo2, Save, Trash2, Undo2 } from "lucide-react";
+import { AlertTriangle, ArrowDown, ArrowUp, Check, FileDown, ImagePlus, Loader2, Lock, Plus, Redo2, Save, Trash2, Undo2 } from "lucide-react";
 import { toast } from "sonner";
 import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { InfoTip } from "@/components/InfoTip";
-import { BRAND_FONTS, BRANDING_PRICE, KIT_STYLES, contrastWarnings, emptyHistory, emptyKit, isHex, kitFromRow, recordHistory, redoHistory, undoHistory, withColorSet, withoutColorSet, type BrandKit as Kit, type KitHistory, type KitStyle } from "@/lib/brand-kit";
+import { BRAND_FONTS, BRANDING_PRICE, KIT_STYLES, LOGO_NUDGE_MAX, contrastWarnings, emptyHistory, emptyKit, isHex, kitFromRow, logoNudgeValue, recordHistory, redoHistory, undoHistory, withColorSet, withoutColorSet, type BrandKit as Kit, type KitHistory, type KitStyle } from "@/lib/brand-kit";
 import { logoPalette } from "@/lib/logo-colors";
 import { downloadSamplePdf, type SampleKind } from "@/lib/sample-pdf";
 import { FONT_GROUPS } from "@/lib/brand-fonts";
@@ -128,6 +128,47 @@ export function BrandKit({ userId, tier, artistName }: { userId: string; tier: T
 
   /** Switches the version this kit prints, without touching anything else in the kit. */
   const useLogo = (path: string) => edit({ logoPath: path });
+  /** Moves the logo by half a millimetre, kept inside the kit's limits (founder, 2026-11-07). */
+  const nudgeLogo = (d: number) => edit({ options: { ...kit.options, logoNudge: logoNudgeValue(kit.options.logoNudge + d) } });
+  // Dragging the logo thumbnail moves it while the pointer is down, and the whole gesture lands as one change, so undo
+  // takes back the drag rather than a tenth of a millimetre of it (founder, 2026-11-07).
+  const [dragFrom, setDragFrom] = useState<{ y: number; nudge: number } | null>(null);
+  const [dragNudge, setDragNudge] = useState<number | null>(null);
+  const shownNudge = dragNudge ?? kit.options.logoNudge;
+  /** Pixels of drag per millimetre: a short throw on a 48px thumbnail still reaches the whole range. */
+  const DRAG_PX_PER_MM = 4;
+  function startLogoDrag(e: PointerEvent<HTMLDivElement>) {
+    if (e.button !== 0) return;
+    e.currentTarget.setPointerCapture(e.pointerId);
+    setDragFrom({ y: e.clientY, nudge: kit.options.logoNudge });
+    setDragNudge(kit.options.logoNudge);
+  }
+  function moveLogoDrag(e: PointerEvent<HTMLDivElement>) {
+    if (!dragFrom) return;
+    setDragNudge(logoNudgeValue(dragFrom.nudge + (e.clientY - dragFrom.y) / DRAG_PX_PER_MM));
+  }
+  function endLogoDrag(e: PointerEvent<HTMLDivElement>) {
+    if (e.currentTarget.hasPointerCapture(e.pointerId)) e.currentTarget.releasePointerCapture(e.pointerId);
+    const settled = dragNudge;
+    setDragFrom(null);
+    setDragNudge(null);
+    if (settled !== null && settled !== kit.options.logoNudge) edit({ options: { ...kit.options, logoNudge: settled } });
+  }
+  function onLogoKey(e: ReactKeyboardEvent<HTMLDivElement>) {
+    const step = e.shiftKey ? 0.1 : 0.5;
+    if (e.key === "ArrowUp") { e.preventDefault(); nudgeLogo(-step); }
+    else if (e.key === "ArrowDown") { e.preventDefault(); nudgeLogo(step); }
+  }
+  // The preview's own scale: the name is 20px here for the PDF's 14 pt, so a millimetre of movement in print covers the
+  // same fraction of the name on screen. That ratio is what has to match for the artwork to line up with the letters.
+  const pxPerMm = 20 / 4.94;
+  const logoRight = !!logoUrl && kit.options.logoAlign === "right";
+  const snapClass = kit.options.logoSnap === "top" ? "items-start" : kit.options.logoSnap === "bottom" ? "items-end" : "items-center";
+  // The side is a flex order rather than the DOM order, so the name stays first for a screen reader either way.
+  const logoImage = logoUrl ? (
+    <img src={logoUrl} alt="" className={`h-12 max-w-[9rem] shrink-0 object-contain ${logoRight ? "order-2" : "order-1"}`}
+      style={{ transform: `translateY(${(shownNudge * pxPerMm).toFixed(1)}px)` }} />
+  ) : null;
 
   /** A one-page print of the kit, drawn with the same header and footer every download uses (founder, 2026-11-06). */
   async function sample() {
@@ -265,6 +306,14 @@ export function BrandKit({ userId, tier, artistName }: { userId: string; tier: T
           <Input id="bk-name" value={kit.name} maxLength={80} placeholder="Business or artist name" onChange={(e) => edit({ name: e.target.value })} />
           {!kit.name.trim() && artistName.trim() && <Button size="sm" variant="ghost" className="h-7 px-2" onClick={() => edit({ name: artistName.trim() })}><Check className="h-3.5 w-3.5" />Use my artist name: {artistName.trim()}</Button>}
           <p className="text-xs text-muted-foreground">Starts as your artist name. Change it to a company or DBA name if you like; it's used on contracts only. Split sheets keep your artist name.</p>
+          {/* The footer switch lives here now, at the foot of the name box (founder, 2026-11-07). Only the plans that may
+              drop the footer see it at all. */}
+          {hasTier(tier, "collaborate") && (
+            <label htmlFor="bk-footer" className="flex items-center gap-2 pt-1 text-xs text-muted-foreground">
+              <Switch id="bk-footer" className="scale-75" checked={kit.showFooter} onCheckedChange={(v) => edit({ showFooter: v })} />
+              Footer: "Made on Camethroughaudio.com"
+            </label>
+          )}
         </div>
         <div className="space-y-2">
           <Label htmlFor="bk-tagline" className="flex items-center gap-1.5">Tagline<InfoTip text="Optional. A short line under your name, like your slogan." /></Label>
@@ -274,7 +323,23 @@ export function BrandKit({ userId, tier, artistName }: { userId: string; tier: T
         <div className="space-y-2">
           <Label className="flex items-center gap-1.5">Logo<InfoTip text="Optional. PNG or JPG, up to 2 MB. A wide logo with a clear background looks best. Keep as many versions as you like and switch between them." /></Label>
           <div className="flex flex-wrap items-center gap-3">
-            {logoUrl && <img src={logoUrl} alt="Your logo" className="h-12 max-w-[10rem] rounded border border-border bg-white object-contain p-1" />}
+            {logoUrl && (
+              // Click and grab to move it (founder, 2026-11-07): the thumbnail itself is the handle, so nothing has to sit
+              // over the preview. The arrows work too, for a keyboard.
+              <div
+                role="slider" tabIndex={0}
+                aria-label="Your logo: drag up or down, or press the arrow keys, to line it up with your name"
+                aria-valuemin={-LOGO_NUDGE_MAX} aria-valuemax={LOGO_NUDGE_MAX} aria-valuenow={shownNudge}
+                aria-valuetext={`${shownNudge > 0 ? "Down" : shownNudge < 0 ? "Up" : "On the line"} ${Math.abs(shownNudge).toFixed(1)} millimetres`}
+                title="Drag up or down to line your logo up with your name"
+                onPointerDown={startLogoDrag} onPointerMove={moveLogoDrag} onPointerUp={endLogoDrag} onPointerCancel={endLogoDrag}
+                onKeyDown={onLogoKey}
+                className={`touch-none select-none rounded ${dragFrom ? "cursor-grabbing ring-2 ring-ring" : "cursor-ns-resize"}`}
+              >
+                <img src={logoUrl} alt="Your logo" draggable={false}
+                  className="pointer-events-none h-12 max-w-[10rem] rounded border border-border bg-white object-contain p-1" />
+              </div>
+            )}
             <Button asChild variant="outline" size="sm" disabled={busy}>
               <label className="cursor-pointer"><ImagePlus className="h-4 w-4" />{kit.logoPaths.length ? "Add a version" : "Upload logo"}
                 <input type="file" accept="image/png,image/jpeg" className="sr-only" onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ""; if (f) void uploadLogo(f); }} />
@@ -295,6 +360,45 @@ export function BrandKit({ userId, tier, artistName }: { userId: string; tier: T
                 ))}
               </ul>
               <p className="text-xs text-muted-foreground">Switching a version changes the logo only; the rest of the kit stays as it is.</p>
+            </div>
+          )}
+          {/* Where the logo sits (founder, 2026-11-07): a side, a line to line up with, then movement by the millimetre,
+              because a logo file often carries empty space above its ink and no snap can find the ink by itself. */}
+          {kit.logoPath && (
+            <div className="space-y-3 rounded-lg border border-border p-3">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <span className="text-sm font-semibold">Logo side</span>
+                <div role="radiogroup" aria-label="Logo side" className="flex rounded-lg border border-border p-0.5">
+                  {([["left", "Left"], ["right", "Right"]] as const).map(([v, label]) => (
+                    <button key={v} type="button" role="radio" aria-checked={kit.options.logoAlign === v} onClick={() => edit({ options: { ...kit.options, logoAlign: v } })}
+                      className={`rounded-md px-3 py-1 text-sm font-semibold ${kit.options.logoAlign === v ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}>{label}</button>
+                  ))}
+                </div>
+              </div>
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <span className="text-sm font-semibold">Line up with your name</span>
+                <div role="radiogroup" aria-label="Logo line" className="flex rounded-lg border border-border p-0.5">
+                  {([["top", "Top"], ["middle", "Middle"], ["bottom", "Bottom"]] as const).map(([v, label]) => (
+                    <button key={v} type="button" role="radio" aria-checked={kit.options.logoSnap === v} onClick={() => edit({ options: { ...kit.options, logoSnap: v } })}
+                      className={`rounded-md px-3 py-1 text-sm font-semibold ${kit.options.logoSnap === v ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}>{label}</button>
+                  ))}
+                </div>
+              </div>
+              <div className="space-y-1.5">
+                <span className="flex items-center gap-1.5 text-sm font-semibold">Move it up or down<InfoTip text="Grab the logo above and drag it up or down, or nudge it with the arrows. A logo file often has empty space above the artwork, so moving it a few millimetres is what lines the artwork itself — not the empty box — up with your name." /></span>
+                <div className="flex flex-wrap items-center gap-2">
+                  <Button variant="outline" size="icon" className="h-7 w-7" aria-label="Move the logo up" onClick={() => nudgeLogo(-0.5)}><ArrowUp className="h-3.5 w-3.5" /></Button>
+                  <Button variant="outline" size="icon" className="h-7 w-7" aria-label="Move the logo down" onClick={() => nudgeLogo(0.5)}><ArrowDown className="h-3.5 w-3.5" /></Button>
+                  <input type="range" aria-label="Move the logo up or down" min={-LOGO_NUDGE_MAX} max={LOGO_NUDGE_MAX} step={0.5} value={kit.options.logoNudge}
+                    onChange={(e) => edit({ options: { ...kit.options, logoNudge: logoNudgeValue(e.target.value) } })} className="h-8 min-w-[8rem] flex-1 accent-primary" />
+                  <Input type="number" aria-label="Logo movement in millimetres" step={0.1} min={-LOGO_NUDGE_MAX} max={LOGO_NUDGE_MAX} value={kit.options.logoNudge}
+                    onChange={(e) => edit({ options: { ...kit.options, logoNudge: logoNudgeValue(e.target.value) } })} className="h-8 w-20 font-mono text-xs" />
+                  <span className="text-xs text-muted-foreground">mm</span>
+                  {kit.options.logoNudge !== 0 && <Button variant="ghost" size="sm" className="h-7 px-2" onClick={() => edit({ options: { ...kit.options, logoNudge: 0 } })}>Reset</Button>}
+                </div>
+                <p className="text-xs text-muted-foreground">{shownNudge === 0 ? "On the line you picked." : `${shownNudge > 0 ? "Down" : "Up"} ${Math.abs(shownNudge).toFixed(1)} mm from the line you picked.`} Positive moves it down. Drag the logo to do it by eye, and the preview shows where it lands.</p>
+              </div>
+              {kit.style === "minimal" && <p className="text-xs text-muted-foreground">Minimal kits put the logo in the footer, so these only matter if you switch to another style.</p>}
             </div>
           )}
           {fromLogo.length > 0 && (
@@ -473,12 +577,14 @@ export function BrandKit({ userId, tier, artistName }: { userId: string; tier: T
         <div className={`relative overflow-hidden rounded-xl border border-border bg-white p-5 text-[#0b0b0b] ${kit.style === "sidebar" ? "pl-8" : ""}`}>
           {kit.style === "sidebar" && <span aria-hidden className="absolute inset-y-0 left-0 w-3" style={{ background: stripe[0] ?? "#0b0b0b" }} />}
           {kit.style === "banner" && <span aria-hidden className="absolute inset-x-0 top-0 h-[4.5rem]" style={{ background: stripe[0] ?? "#0b0b0b" }} />}
-          <div className={`relative flex items-center gap-4 ${kit.style === "minimal" ? "hidden" : ""}`}>
-            {logoUrl && <img src={logoUrl} alt="" className="h-12 max-w-[9rem] object-contain" />}
-            <div className="min-w-0">
+          {/* The preview is a preview (founder, 2026-11-07): no guides, handles or controls are drawn over it. It shows the
+              header as it will print, and every tool for moving the logo lives with the other editing tools. */}
+          <div className={`relative flex gap-4 ${snapClass} ${kit.style === "minimal" ? "hidden" : ""}`}>
+            <div className={`min-w-0 flex-1 ${logoRight ? "order-1" : "order-2"}`}>
               <p className="truncate text-xl font-bold" style={{ fontFamily: kit.font, color: kit.style === "banner" ? onBand(stripe[0]) : nameColor }}>{previewName || "Your name"}</p>
               {kit.tagline && <p className="truncate text-xs font-medium" style={{ fontFamily: kit.font, color: kit.style === "banner" ? onBand(stripe[0]) : taglineColor ?? "#525252" }}>{kit.tagline}</p>}
             </div>
+            {logoImage}
           </div>
           {kit.style === "classic" && <div className="mt-3 h-1 rounded-full" style={{ background: accent }} />}
           <p className={`relative text-2xl font-bold ${kit.style === "banner" ? "mt-6" : "mt-4"}`}
@@ -515,10 +621,11 @@ export function BrandKit({ userId, tier, artistName }: { userId: string; tier: T
             </>
           )}
           {kit.style === "minimal" && <div className="relative mt-4 flex items-center justify-between text-[10px] text-[#525252]"><span>{previewName || "Your name"}</span>{logoUrl && <img src={logoUrl} alt="" className="h-5 max-w-[4rem] object-contain" />}</div>}
-          {kit.showFooter && <p className="mt-4 text-[10px] font-medium text-[#0b0b0b]">Made on Camethroughaudio.com — Your First Stop For Distribution</p>}
+          {/* No footer in the preview (founder, 2026-11-07): the made-on line belongs on the file, and the preview shows
+              the header alone. The switch below the preview still turns it on and off. */}
         </div>
-        {/* Save on the left; the footer switch across from it, at the preview's bottom right (founder, 2026-11-06). It is a
-            small control, and only the plans that may drop the footer see it at all. */}
+        {/* Save and the rest, under the preview (founder, 2026-11-06). The footer switch moved into the name box
+            (founder, 2026-11-07). */}
         <div className="flex flex-wrap items-center justify-between gap-3 pt-2">
           <div className="flex flex-wrap items-center gap-2">
             <Button onClick={() => void save()} disabled={busy || saved}>{busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}{saved ? "Saved" : "Save brand kit"}</Button>
@@ -526,12 +633,6 @@ export function BrandKit({ userId, tier, artistName }: { userId: string; tier: T
             <Button variant="outline" size="sm" onClick={redo} disabled={!history.future.length} title="Redo (Ctrl+Shift+Z)" aria-label="Redo the last undo"><Redo2 className="h-4 w-4" />Redo</Button>
             <Button variant="outline" size="sm" disabled={busy} onClick={() => void sample()} title="A one-page test print using this kit"><FileDown className="h-4 w-4" />Sample PDF</Button>
           </div>
-          {hasTier(tier, "collaborate") && (
-            <label htmlFor="bk-footer" className="flex items-center gap-2 text-xs text-muted-foreground">
-              <Switch id="bk-footer" className="scale-75" checked={kit.showFooter} onCheckedChange={(v) => edit({ showFooter: v })} />
-              Footer: "Made on Camethroughaudio.com"
-            </label>
-          )}
         </div>
       </div>
       </div>

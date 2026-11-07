@@ -49,20 +49,20 @@ describe("contrast helpers", () => {
   });
 
   it("warns about a pale name and tagline but not a strong blue", () => {
-    const strong = contrastWarnings({ colors: ["#004AAD", "#0B0B0B"], headerColor: null, style: "classic", options: { watermark: false, cover: false, signature: "line", accent: null, titleColor: null, corners: "rounded" } });
+    const strong = contrastWarnings({ colors: ["#004AAD", "#0B0B0B"], headerColor: null, style: "classic", options: { watermark: false, cover: false, signature: "line", accent: null, titleColor: null, corners: "rounded", logoAlign: "left" as const, logoSnap: "middle" as const, logoNudge: 0 } });
     expect(strong).toEqual([]);
-    const pale = contrastWarnings({ colors: ["#FFC0CB", "#EEEEEE"], headerColor: null, style: "classic", options: { watermark: false, cover: false, signature: "line", accent: null, titleColor: null, corners: "rounded" } });
+    const pale = contrastWarnings({ colors: ["#FFC0CB", "#EEEEEE"], headerColor: null, style: "classic", options: { watermark: false, cover: false, signature: "line", accent: null, titleColor: null, corners: "rounded", logoAlign: "left" as const, logoSnap: "middle" as const, logoNudge: 0 } });
     expect(pale.map((w) => w.field)).toEqual(["name", "tagline"]);
     expect(pale[0]!.severe).toBe(true);
   });
 
   it("leaves a banner's name alone because the PDF picks readable text on the band", () => {
-    const banner = contrastWarnings({ colors: ["#FFC0CB"], headerColor: null, style: "banner", options: { watermark: false, cover: false, signature: "line", accent: null, titleColor: null, corners: "rounded" } });
+    const banner = contrastWarnings({ colors: ["#FFC0CB"], headerColor: null, style: "banner", options: { watermark: false, cover: false, signature: "line", accent: null, titleColor: null, corners: "rounded", logoAlign: "left" as const, logoSnap: "middle" as const, logoNudge: 0 } });
     expect(banner).toEqual([]);
   });
 
   it("checks the section title and accent colours too", () => {
-    const kit = { colors: [], headerColor: "#EFEFEF", style: "classic" as const, options: { watermark: false, cover: false, signature: "line" as const, accent: "#F5F5F5", titleColor: null, corners: "rounded" as const } };
+    const kit = { colors: [], headerColor: "#EFEFEF", style: "classic" as const, options: { watermark: false, cover: false, signature: "line" as const, accent: "#F5F5F5", titleColor: null, corners: "rounded" as const, logoAlign: "left" as const, logoSnap: "middle" as const, logoNudge: 0 } };
     expect(contrastWarnings(kit).map((w) => w.label)).toEqual(["Your section titles", "Your second accent colour"]);
     // The document title is checked at the large-text ratio, because it is set at 24 pt bold.
     expect(contrastWarnings({ ...kit, options: { ...kit.options, accent: null, titleColor: "#EFEFEF" } }).map((w) => w.field)).toEqual(["sectionTitles", "documentTitle"]);

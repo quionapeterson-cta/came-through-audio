@@ -46,6 +46,11 @@ export type BrandKit = {
   options: KitOptions;
 };
 
+/** Which side of the heading a kit's logo sits on. */
+export type LogoSide = "left" | "right";
+/** The line on the heading a logo lines up with. */
+export type LogoSnap = "top" | "middle" | "bottom";
+
 /** Extra contract styling per kit (founder, 2026-10-28). */
 export type KitOptions = {
   /** A faint copy of the logo behind the text on page 1. */
@@ -60,8 +65,17 @@ export type KitOptions = {
   titleColor: string | null;
   /** Boxes and the cover frame. */
   corners: "rounded" | "square";
+  /** The side of the heading the logo sits on. Left is how every kit printed before the control (founder, 2026-11-07). */
+  logoAlign: LogoSide;
+  /** The line of the heading the logo lines up with: the name's top, the settled middle, or its bottom. */
+  logoSnap: LogoSnap;
+  /**
+   * Fine movement in mm, positive = down (founder, 2026-11-07). Artwork with empty space above its ink can never be
+   * snapped into line by its box alone, so the member moves it until the ink looks level with the name.
+   */
+  logoNudge: number;
 };
-export const DEFAULT_KIT_OPTIONS: KitOptions = { watermark: false, cover: false, signature: "line", accent: null, titleColor: null, corners: "rounded" };
+export const DEFAULT_KIT_OPTIONS: KitOptions = { watermark: false, cover: false, signature: "line", accent: null, titleColor: null, corners: "rounded", logoAlign: "left", logoSnap: "middle", logoNudge: 0 };
 
 /** Saved options, cleaned: unknown values fall back to the defaults. */
 export function kitOptions(v: unknown): KitOptions {
@@ -73,7 +87,47 @@ export function kitOptions(v: unknown): KitOptions {
     accent: typeof o["accent"] === "string" && isHex(o["accent"]) ? o["accent"].toUpperCase() : null,
     titleColor: typeof o["titleColor"] === "string" && isHex(o["titleColor"]) ? o["titleColor"].toUpperCase() : null,
     corners: o["corners"] === "square" ? "square" : "rounded",
+    logoAlign: o["logoAlign"] === "right" ? "right" : "left",
+    logoSnap: o["logoSnap"] === "top" ? "top" : o["logoSnap"] === "bottom" ? "bottom" : "middle",
+    logoNudge: logoNudgeValue(o["logoNudge"]),
   };
+}
+
+/* ----------------------------------------------------------------------------------------------------------------
+ * Where the logo sits in the header (founder, 2026-11-07): the member picks a side, a line to line up with, and then
+ * moves the picture by the millimetre, because a logo file often carries empty space above its ink and no snap can
+ * guess where that ink starts. The PDF and the editor's guides read the same numbers from here.
+ * --------------------------------------------------------------------------------------------------------------*/
+
+/** How far the logo may be moved from its line, in mm: enough to fix any artwork's padding, not enough to lose it. */
+export const LOGO_NUDGE_MAX = 12;
+
+/** The logo's fine movement: one decimal, kept inside ±LOGO_NUDGE_MAX, anything unreadable is no movement at all. */
+export function logoNudgeValue(v: unknown): number {
+  const n = typeof v === "number" ? v : Number(v);
+  if (!Number.isFinite(n)) return 0;
+  return Math.round(Math.max(-LOGO_NUDGE_MAX, Math.min(LOGO_NUDGE_MAX, n)) * 10) / 10;
+}
+
+/**
+ * A kit header's heading on the page, in mm from the top of a letter page: the cap-top of the name, the line the logo
+ * has always been centred on, and the bottom of the tagline — or of the name when the kit has no tagline.
+ */
+export const HEADING = {
+  withTagline: { top: 15.1, centre: 19.4, bottom: 24.6 },
+  nameOnly: { top: 17.5, centre: 19.4, bottom: 22.1 },
+} as const;
+
+/**
+ * The logo's top edge in mm. `middle` is the settled 19.4 mm every kit has always printed at, so a kit that never
+ * touches these controls prints exactly as it did; `top` and `bottom` put the picture's own edges on the heading's.
+ * The member's fine movement is added last, and the whole thing is kept inside the header: never off the page, never
+ * into the document title drawn at 42 mm.
+ */
+export function logoTop(o: { snap: LogoSnap; nudge: number; height: number; hasTagline: boolean }): number {
+  const band = o.hasTagline ? HEADING.withTagline : HEADING.nameOnly;
+  const y = o.snap === "top" ? band.top : o.snap === "bottom" ? band.bottom - o.height : band.centre - o.height / 2;
+  return Math.max(6, Math.min(38 - o.height, y + logoNudgeValue(o.nudge)));
 }
 
 /** What a PDF needs: the kit plus the logo as a data URL, so it can be drawn without another request. */
