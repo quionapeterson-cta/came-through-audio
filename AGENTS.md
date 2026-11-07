@@ -455,6 +455,22 @@ rules keep it consistent as features are added.
 - Classic draws one solid line in the kit's accent (`kitAccent`) under the header, never a multi-colour stripe; the
   preview uses the same colour.
 
+- **The document title has its own colour** (founder, 2026-11-07): `options.titleColor` in `src/lib/brand-kit.ts` is
+  drawn through `titleInk` in `src/lib/brand-pdf.ts`; blank means Primary Black, exactly how every kit printed it before
+  the control existed, so an untouched kit never changes. Section titles keep their own `headerColor`, and
+  `contrastWarnings` checks both (the title at the large-text ratio, since it is 24 pt bold).
+- **A logo's colours come back darkest first** (founder, 2026-11-07): `dominantColors` in `src/lib/logo-colors.ts` still
+  counts the biggest shades but returns them sorted darkest to lightest, so the first colour names the document, the
+  second sets the tagline, and "Use these colours" also fills the section-title colour with the darkest — only when the
+  member hasn't picked one. Never go back to most-used-first: a mostly-pale logo used to hand members white-on-white type.
+- **The editor has undo and redo** (founder, 2026-11-07): every `edit()` records the kit it replaced
+  (`recordHistory` / `undoHistory` / `redoHistory` in `src/lib/brand-kit.ts`), the buttons and ⌘Z / ⇧⌘Z step through it,
+  and a text field keeps its own undo so typing is never hijacked. The stack is cleared when another kit is opened, and
+  it covers the kit's fields only — never a logo file deleted from storage.
+- **A palette can be saved and brought back in one click** (founder, 2026-11-07): `colorSets` on the kit row (`color_sets`,
+  migration 20261107120000), cleaned by `kitColorSets` and written with `withColorSet` / `withoutColorSet`. Palettes belong
+  to the kit, so each business keeps its own and they follow the member to any device.
+
 ### When it fails
 - A missing, unreadable or unavailable kit never blocks a download: the document simply keeps the Came Through Audio
   header. Never turn a branding lookup into an error the member sees.

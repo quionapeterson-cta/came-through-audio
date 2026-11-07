@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { confirmAction } from "@/components/ConfirmHost";
-import { AlertTriangle, Check, FileDown, ImagePlus, Loader2, Lock, Plus, Save, Trash2 } from "lucide-react";
+import { AlertTriangle, Check, FileDown, ImagePlus, Loader2, Lock, Plus, Redo2, Save, Trash2, Undo2 } from "lucide-react";
 import { toast } from "sonner";
 import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { InfoTip } from "@/components/InfoTip";
-import { BRAND_FONTS, BRANDING_PRICE, KIT_STYLES, contrastWarnings, emptyKit, isHex, kitFromRow, type BrandKit as Kit, type KitStyle } from "@/lib/brand-kit";
+import { BRAND_FONTS, BRANDING_PRICE, KIT_STYLES, contrastWarnings, emptyHistory, emptyKit, isHex, kitFromRow, recordHistory, redoHistory, undoHistory, withColorSet, withoutColorSet, type BrandKit as Kit, type KitHistory, type KitStyle } from "@/lib/brand-kit";
 import { logoPalette } from "@/lib/logo-colors";
 import { downloadSamplePdf, type SampleKind } from "@/lib/sample-pdf";
 import { FONT_GROUPS } from "@/lib/brand-fonts";
@@ -46,6 +46,9 @@ export function BrandKit({ userId, tier, artistName }: { userId: string; tier: T
   const [preview, setPreview] = useState<SampleKind>("contract");
   const [saved, setSaved] = useState(true);
   const [busy, setBusy] = useState(false);
+  /** Undo and redo of the kit being edited; cleared when another kit is opened (founder, 2026-11-07). */
+  const [history, setHistory] = useState<KitHistory>(emptyHistory);
+  const [setName, setSetName] = useState("");
   // Back from buying it (Stripe returns to /profile?checkout=success#brand-kit): say how to use it (founder, 2026-10-27).
   const [justBought] = useState(() => typeof window !== "undefined" && new URLSearchParams(window.location.search).get("checkout") === "success" && window.location.hash === "#brand-kit");
 
@@ -77,7 +80,24 @@ export function BrandKit({ userId, tier, artistName }: { userId: string; tier: T
   // Only the chosen font is downloaded, for the preview (the PDF loads the same files).
   useEffect(() => { loadWebFont(kit.font); }, [kit.font]);
 
-  const edit = (patch: Partial<Kit>) => { setKit((k) => ({ ...k, ...patch })); setSaved(false); };
+  // ⌘Z and ⇧⌘Z (Ctrl on Windows) anywhere in the editor; a text field keeps its own undo, so typing is never hijacked.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (!(e.metaKey || e.ctrlKey)) return;
+      const el = e.target as HTMLElement | null;
+      if (el && /^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName)) return;
+      const key = e.key.toLowerCase();
+      if (key === "z" && !e.shiftKey) { e.preventDefault(); undo(); }
+      else if ((key === "z" && e.shiftKey) || key === "y") { e.preventDefault(); redo(); }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  });
+
+  const edit = (patch: Partial<Kit>) => { setHistory((h) => recordHistory(h, kit)); setKit((k) => ({ ...k, ...patch })); setSaved(false); };
+  /** Back and forward through every edit above, so a colour can be tried and taken back without retyping the kit. */
+  const undo = () => { const step = undoHistory(history, kit); if (!step) return; setHistory(step.history); setKit(step.kit); setSaved(false); };
+  const redo = () => { const step = redoHistory(history, kit); if (!step) return; setHistory(step.history); setKit(step.kit); setSaved(false); };
   const setColor = (i: number, v: string) => edit({ colors: kit.colors.map((c, j) => (j === i ? v : c)) });
 
   async function uploadLogo(file: File) {
@@ -133,7 +153,7 @@ export function BrandKit({ userId, tier, artistName }: { userId: string; tier: T
     setBusy(true);
     try {
       const base = { user_id: userId, name: kit.name.trim(), tagline: kit.tagline.trim(), colors: kit.colors.map((c) => c.toUpperCase()), font: kit.font, logo_path: kit.logoPath, logo_paths: kit.logoPaths, show_footer: kit.showFooter, updated_at: new Date().toISOString() };
-      const row = { ...base, style: kit.style, header_color: kit.headerColor, options: kit.options };
+      const row = { ...base, style: kit.style, header_color: kit.headerColor, options: kit.options, color_sets: kit.colorSets };
       if (kit.id) {
         const { error } = await supabase.from("brand_kits" as never).update(row as never).eq("id", kit.id);
         if (error) throw error;
@@ -141,6 +161,7 @@ export function BrandKit({ userId, tier, artistName }: { userId: string; tier: T
         const { data, error } = await supabase.from("brand_kits" as never).insert(row as never).select("id").single();
         if (error && /options/.test(error.message)) throw new Error("The new kit options need the latest database update. Ask support to run migration 20261028090000.");
         if (error && /logo_paths/.test(error.message)) throw new Error("Logo versions need the latest database update. Ask support to run migration 20261106140000.");
+        if (error && /color_sets/.test(error.message)) throw new Error("Saved colour sets need the latest database update. Ask support to run migration 20261107120000.");
         if (error) {
           // Before migration 20261027210000: one kit per person and no style or header color yet.
           if (kits.length > 1) throw new Error("More than one Branding Kit needs the latest database update. Ask support to run migration 20261027210000.");
@@ -223,12 +244,12 @@ export function BrandKit({ userId, tier, artistName }: { userId: string; tier: T
       {/* Several kits, one per business or project; each contract picks its kit. */}
       <div className="flex flex-wrap items-center gap-2">
         {kits.map((k, i) => (
-          <Button key={k.id ?? `new-${i}`} size="sm" variant={i === current ? "default" : "outline"} onClick={() => { if (!saved && i !== current) { toast.info("Save this kit first."); return; } setCurrent(i); }}>
+          <Button key={k.id ?? `new-${i}`} size="sm" variant={i === current ? "default" : "outline"} onClick={() => { if (!saved && i !== current) { toast.info("Save this kit first."); return; } setHistory(emptyHistory()); setSetName(""); setCurrent(i); }}>
             {k.name || `Kit ${i + 1}`}{i === 0 && kits.length > 1 ? " · main" : ""}
           </Button>
         ))}
         {kits.length < allowance
-          ? <Button size="sm" variant="ghost" disabled={!saved} onClick={() => { setKits((all) => [...all, emptyKit("")]); setCurrent(kits.length); setSaved(false); }}><Plus className="h-4 w-4" />Add a kit</Button>
+          ? <Button size="sm" variant="ghost" disabled={!saved} onClick={() => { setHistory(emptyHistory()); setSetName(""); setKits((all) => [...all, emptyKit("")]); setCurrent(kits.length); setSaved(false); }}><Plus className="h-4 w-4" />Add a kit</Button>
           : <Button size="sm" variant="ghost" onClick={() => void buy()}><Plus className="h-4 w-4" />Add another kit · {BRANDING_PRICE}/year</Button>}
         {kits.length > 1 && kit.id && <Button size="sm" variant="ghost" className="ml-auto" disabled={busy} onClick={() => void removeKit()}><Trash2 className="h-4 w-4" />Delete this kit</Button>}
       </div>
@@ -286,9 +307,15 @@ export function BrandKit({ userId, tier, artistName }: { userId: string; tier: T
                     <span aria-hidden className="h-4 w-4 rounded" style={{ background: c }} />{c}<Plus className="h-3 w-3" />
                   </button>
                 ))}
-                <Button size="sm" variant="outline" onClick={() => { edit({ colors: fromLogo }); toast.success("Your logo's colours are in. The first colors your name, the second your tagline."); }}>Use these colours</Button>
+                <Button size="sm" variant="outline" onClick={() => {
+                  // Darkest first, so the name and tagline are the darkest shades and the section heads take the darkest too
+                  // (founder, 2026-11-07). A section-title colour the member already picked is left alone.
+                  const darkest = fromLogo[0];
+                  edit({ colors: fromLogo, ...(darkest && !kit.headerColor ? { headerColor: darkest } : {}) });
+                  toast.success(darkest ? "Your logo's colours are in, darkest first: the darkest names your documents and heads your sections, the next sets your tagline." : "Your logo's colours are in.");
+                }}>Use these colours</Button>
               </div>
-              <p className="mt-1 text-xs text-muted-foreground">Drawn from the file you uploaded, not guessed. Tap one to add it alone, or take them all.</p>
+              <p className="mt-1 text-xs text-muted-foreground">Darkest first. Drawn from the file you uploaded, not guessed. Tap one to add it alone, or take them all.</p>
             </div>
           )}
         </div>
@@ -326,6 +353,35 @@ export function BrandKit({ userId, tier, artistName }: { userId: string; tier: T
         )}
       </div>
 
+      {/* Saved palettes (founder, 2026-11-07): name the colours once, put the whole set back in one click. */}
+      <div className="space-y-2">
+        <Label className="flex items-center gap-1.5">Colour sets<InfoTip text="Save the colours you use as a palette, then put a whole palette back in one click. Saved with this kit, so they're there on any device." /></Label>
+        <div className="flex flex-wrap items-center gap-2">
+          <Input aria-label="New colour set name" value={setName} maxLength={40} placeholder="Name this palette" onChange={(e) => setSetName(e.target.value)} className="h-9 w-52" />
+          <Button size="sm" variant="outline" disabled={!setName.trim() || !kit.colors.length} onClick={() => {
+            const name = setName.trim();
+            if (!name) return;
+            edit({ colorSets: withColorSet(kit.colorSets, { name, colors: kit.colors }) });
+            setSetName("");
+            toast.success(`“${name}” is ready. Click Save to keep it.`);
+          }}><Plus className="h-4 w-4" />Save this palette</Button>
+        </div>
+        {kit.colorSets.length > 0 ? (
+          <ul className="flex flex-wrap gap-2">
+            {kit.colorSets.map((set) => (
+              <li key={set.name} className="flex items-center gap-2 rounded-lg border border-border p-1.5">
+                <span aria-hidden className="flex overflow-hidden rounded">
+                  {set.colors.map((c) => <span key={c} className="h-6 w-3" style={{ background: c }} />)}
+                </span>
+                <span className="text-xs font-semibold">{set.name}</span>
+                <Button size="sm" variant="ghost" className="h-7 px-2" onClick={() => { edit({ colors: set.colors }); toast.success(`“${set.name}” is in your colours. Click Save to keep it.`); }}>Apply</Button>
+                <Button variant="ghost" size="icon" className="h-7 w-7" aria-label={`Delete ${set.name}`} onClick={() => edit({ colorSets: withoutColorSet(kit.colorSets, set.name) })}><Trash2 className="h-3.5 w-3.5" /></Button>
+              </li>
+            ))}
+          </ul>
+        ) : <p className="text-xs text-muted-foreground">No saved palettes yet. Pick your colours, name them, and save the set here.</p>}
+      </div>
+
       <div className="space-y-2">
         <Label className="flex items-center gap-1.5">Contract style<InfoTip text="How your header looks on contracts and split sheets made with this kit." /></Label>
         <div className="grid grid-cols-2 gap-2">
@@ -349,6 +405,19 @@ export function BrandKit({ userId, tier, artistName }: { userId: string; tier: T
             className={`h-8 w-36 font-mono text-xs ${!kit.headerColor || isHex(kit.headerColor) ? "" : "border-destructive"}`} />
           {kit.headerColor && <Button variant="ghost" size="sm" onClick={() => edit({ headerColor: null })}>Use black</Button>}
           <span className="text-xs text-muted-foreground">Dark colors read best.</span>
+        </div>
+      </div>
+
+      {/* The document title's own colour, for everyone with a kit (founder, 2026-11-07). Blank prints Primary Black. */}
+      <div className="space-y-2">
+        <Label className="flex items-center gap-1.5">Document title<InfoTip text="The colour of the document's own title, like “Producer Agreement” at the top of a contract. Black unless you pick a colour. Dark colours read best." /></Label>
+        <div className="flex flex-wrap items-center gap-2">
+          <input type="color" aria-label="Document title color" value={kit.options.titleColor ?? "#0b0b0b"} onChange={(e) => edit({ options: { ...kit.options, titleColor: e.target.value.toUpperCase() } })} className="h-8 w-8 cursor-pointer rounded border-0 bg-transparent p-0" />
+          <Input aria-label="Document title color code" value={kit.options.titleColor ?? ""} placeholder="#0B0B0B (black)" maxLength={7}
+            onChange={(e) => { const v = e.target.value.trim(); edit({ options: { ...kit.options, titleColor: v ? (v.startsWith("#") ? v : `#${v}`).toUpperCase() : null } }); }}
+            className={`h-8 w-36 font-mono text-xs ${!kit.options.titleColor || isHex(kit.options.titleColor) ? "" : "border-destructive"}`} />
+          {kit.options.titleColor && <Button variant="ghost" size="sm" onClick={() => edit({ options: { ...kit.options, titleColor: null } })}>Use black</Button>}
+          <span className="text-xs text-muted-foreground">Black unless you pick one.</span>
         </div>
       </div>
 
@@ -412,7 +481,8 @@ export function BrandKit({ userId, tier, artistName }: { userId: string; tier: T
             </div>
           </div>
           {kit.style === "classic" && <div className="mt-3 h-1 rounded-full" style={{ background: accent }} />}
-          <p className={`relative text-2xl font-bold ${kit.style === "banner" ? "mt-6" : "mt-4"}`}>
+          <p className={`relative text-2xl font-bold ${kit.style === "banner" ? "mt-6" : "mt-4"}`}
+            style={{ color: kit.options.titleColor && isHex(kit.options.titleColor) ? kit.options.titleColor : undefined }}>
             {preview === "contract" ? "Producer Agreement" : preview === "split" ? "Split Sheet Agreement" : preview === "lyrics" ? "Song Title" : "Catalog"}
           </p>
           {preview === "lyrics" ? (
@@ -452,6 +522,8 @@ export function BrandKit({ userId, tier, artistName }: { userId: string; tier: T
         <div className="flex flex-wrap items-center justify-between gap-3 pt-2">
           <div className="flex flex-wrap items-center gap-2">
             <Button onClick={() => void save()} disabled={busy || saved}>{busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}{saved ? "Saved" : "Save brand kit"}</Button>
+            <Button variant="outline" size="sm" onClick={undo} disabled={!history.past.length} title="Undo the last change (Ctrl+Z)" aria-label="Undo the last change"><Undo2 className="h-4 w-4" />Undo</Button>
+            <Button variant="outline" size="sm" onClick={redo} disabled={!history.future.length} title="Redo (Ctrl+Shift+Z)" aria-label="Redo the last undo"><Redo2 className="h-4 w-4" />Redo</Button>
             <Button variant="outline" size="sm" disabled={busy} onClick={() => void sample()} title="A one-page test print using this kit"><FileDown className="h-4 w-4" />Sample PDF</Button>
           </div>
           {hasTier(tier, "collaborate") && (

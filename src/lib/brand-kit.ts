@@ -33,6 +33,8 @@ export type BrandKit = {
   tagline: string;
   /** #RRGGBB, as many as they like. The first colors the name, the second the tagline; all of them make the header stripe. */
   colors: string[];
+  /** Palettes the member saved, so a whole set of colours comes back in one click (founder, 2026-11-07). */
+  colorSets: ColorSet[];
   font: BrandFont;
   logoPath: string | null;
   /** Every logo version uploaded for this kit, so a member can switch one in without rebuilding the kit (founder, 2026-11-06). */
@@ -54,10 +56,12 @@ export type KitOptions = {
   signature: "line" | "box";
   /** Signer labels, signature lines and boxes, and the footer rule. Blank = the section title color. */
   accent: string | null;
+  /** The document's own title ("Producer Agreement"). Blank = Primary Black, the way every kit prints it today. */
+  titleColor: string | null;
   /** Boxes and the cover frame. */
   corners: "rounded" | "square";
 };
-export const DEFAULT_KIT_OPTIONS: KitOptions = { watermark: false, cover: false, signature: "line", accent: null, corners: "rounded" };
+export const DEFAULT_KIT_OPTIONS: KitOptions = { watermark: false, cover: false, signature: "line", accent: null, titleColor: null, corners: "rounded" };
 
 /** Saved options, cleaned: unknown values fall back to the defaults. */
 export function kitOptions(v: unknown): KitOptions {
@@ -67,6 +71,7 @@ export function kitOptions(v: unknown): KitOptions {
     cover: o["cover"] === true,
     signature: o["signature"] === "box" ? "box" : "line",
     accent: typeof o["accent"] === "string" && isHex(o["accent"]) ? o["accent"].toUpperCase() : null,
+    titleColor: typeof o["titleColor"] === "string" && isHex(o["titleColor"]) ? o["titleColor"].toUpperCase() : null,
     corners: o["corners"] === "square" ? "square" : "rounded",
   };
 }
@@ -79,7 +84,7 @@ export type BrandUse = "splits" | "contracts" | "lyrics" | "catalog";
 
 /** New kits start in Arial, a neutral font that fits any brand (founder, 2026-10-27); Poppins is ours. */
 export const DEFAULT_KIT_FONT = "Arial";
-export const emptyKit = (name = ""): BrandKit => ({ name, tagline: "", colors: [], font: DEFAULT_KIT_FONT, logoPath: null, logoPaths: [], showFooter: true, style: "classic", headerColor: null, options: { ...DEFAULT_KIT_OPTIONS } });
+export const emptyKit = (name = ""): BrandKit => ({ name, tagline: "", colors: [], colorSets: [], font: DEFAULT_KIT_FONT, logoPath: null, logoPaths: [], showFooter: true, style: "classic", headerColor: null, options: { ...DEFAULT_KIT_OPTIONS } });
 
 export const isHex = (v: string) => /^#[0-9a-f]{6}$/i.test(v);
 
@@ -90,7 +95,7 @@ export function hexRgb(v: string): [number, number, number] {
 }
 
 /** A kit row from the database, cleaned: bad colors and unknown fonts are dropped instead of breaking a PDF. */
-export function kitFromRow(r: { id?: string | null; name?: string | null; tagline?: string | null; colors?: string[] | null; font?: string | null; logo_path?: string | null; logo_paths?: string[] | null; show_footer?: boolean | null; style?: string | null; header_color?: string | null; options?: unknown } | null): BrandKit | null {
+export function kitFromRow(r: { id?: string | null; name?: string | null; tagline?: string | null; colors?: string[] | null; font?: string | null; logo_path?: string | null; logo_paths?: string[] | null; show_footer?: boolean | null; style?: string | null; header_color?: string | null; options?: unknown; color_sets?: unknown } | null): BrandKit | null {
   if (!r) return null;
   // A kit saved before logo versions existed keeps its single logo as the first version.
   const saved = (Array.isArray(r.logo_paths) ? r.logo_paths : []).filter((p): p is string => typeof p === "string" && !!p);
@@ -100,6 +105,7 @@ export function kitFromRow(r: { id?: string | null; name?: string | null; taglin
     name: (r.name ?? "").trim(),
     tagline: (r.tagline ?? "").trim(),
     colors: (r.colors ?? []).filter(isHex).map((c) => c.toUpperCase()),
+    colorSets: kitColorSets(r.color_sets),
     font: BRAND_FONTS.includes(r.font ?? "") ? r.font! : DEFAULT_KIT_FONT,
     logoPath: active,
     logoPaths: active && !saved.includes(active) ? [active, ...saved] : saved,
@@ -158,7 +164,7 @@ export const CONTRAST_MIN = 4.5;
 export const CONTRAST_LARGE = 3;
 
 /** A colour that will be hard to read where it is drawn. A warning only: any colour can still be saved. */
-export type ContrastWarning = { field: "name" | "tagline" | "sectionTitles"; label: string; hex: string; ratio: number; severe: boolean };
+export type ContrastWarning = { field: "name" | "tagline" | "sectionTitles" | "documentTitle"; label: string; hex: string; ratio: number; severe: boolean };
 
 /**
  * Which of the kit's colours will be hard to read on the white page (founder, 2026-11-06). A banner puts the name and
@@ -178,6 +184,75 @@ export function contrastWarnings(kit: Pick<BrandKit, "colors" | "headerColor" | 
     check("tagline", "Your tagline", kit.colors[1], CONTRAST_MIN);
   }
   check("sectionTitles", "Your section titles", kit.headerColor, CONTRAST_MIN);
+  // The document title is 24 pt bold, so it may go to the large-text ratio.
+  check("documentTitle", "Your document title", kit.options.titleColor, CONTRAST_LARGE);
   if (kit.options.accent) check("sectionTitles", "Your second accent colour", kit.options.accent, CONTRAST_LARGE);
   return out;
+}
+
+/* ----------------------------------------------------------------------------------------------------------------
+ * Saved colour sets (founder, 2026-11-07): a palette the member names once and can put back in one click. Kept on the
+ * kit's row (`color_sets`), so the palettes follow them to any device and each business keeps its own.
+ * --------------------------------------------------------------------------------------------------------------*/
+
+/** A named palette. */
+export type ColorSet = { name: string; colors: string[] };
+/** A kit keeps this many palettes, and a palette this many colours: enough for any brand, small enough to draw. */
+export const MAX_COLOR_SETS = 20;
+export const MAX_SET_COLORS = 20;
+export const COLOR_SET_NAME_MAX = 40;
+
+/** Saved palettes, cleaned: an unnamed set or an unreadable colour is dropped instead of breaking the editor. */
+export function kitColorSets(v: unknown): ColorSet[] {
+  if (!Array.isArray(v)) return [];
+  const out: ColorSet[] = [];
+  for (const raw of v) {
+    const o = (raw && typeof raw === "object" ? raw : {}) as Record<string, unknown>;
+    const name = typeof o["name"] === "string" ? o["name"].trim().slice(0, COLOR_SET_NAME_MAX) : "";
+    const colors = (Array.isArray(o["colors"]) ? o["colors"] : [])
+      .filter((c): c is string => typeof c === "string" && isHex(c)).map((c) => c.toUpperCase()).slice(0, MAX_SET_COLORS);
+    if (!name || !colors.length) continue;
+    if (out.some((s) => s.name.toLowerCase() === name.toLowerCase())) continue;
+    out.push({ name, colors });
+    if (out.length >= MAX_COLOR_SETS) break;
+  }
+  return out;
+}
+
+/** Saves a palette under its name, replacing one already saved under that name; the newest set sits last. */
+export function withColorSet(sets: ColorSet[], raw: { name: string; colors: string[] }): ColorSet[] {
+  const name = raw.name.trim().slice(0, COLOR_SET_NAME_MAX);
+  const colors = raw.colors.filter(isHex).map((c) => c.toUpperCase()).slice(0, MAX_SET_COLORS);
+  if (!name || !colors.length) return sets;
+  return [...sets.filter((s) => s.name.toLowerCase() !== name.toLowerCase()), { name, colors }].slice(-MAX_COLOR_SETS);
+}
+
+/** Deletes a saved palette by its name. */
+export const withoutColorSet = (sets: ColorSet[], name: string): ColorSet[] => sets.filter((s) => s.name !== name);
+
+/* ----------------------------------------------------------------------------------------------------------------
+ * Undo and redo in the kit editor (founder, 2026-11-07): whole-kit snapshots, so a restyle can be taken back without
+ * retyping every colour. History belongs to the kit being edited and is cleared when another kit is opened.
+ * --------------------------------------------------------------------------------------------------------------*/
+
+export const HISTORY_LIMIT = 50;
+export type KitHistory = { past: BrandKit[]; future: BrandKit[] };
+export const emptyHistory = (): KitHistory => ({ past: [], future: [] });
+
+/** Records the kit as it was before a change and makes that change the newest one: redo starts fresh. */
+export const recordHistory = (h: KitHistory, previous: BrandKit): KitHistory =>
+  ({ past: [...h.past, previous].slice(-HISTORY_LIMIT), future: [] });
+
+/** One step back, or null when there is nothing to go back to. The kit being left becomes the next redo. */
+export function undoHistory(h: KitHistory, current: BrandKit): { history: KitHistory; kit: BrandKit } | null {
+  const previous = h.past[h.past.length - 1];
+  if (!previous) return null;
+  return { history: { past: h.past.slice(0, -1), future: [current, ...h.future].slice(0, HISTORY_LIMIT) }, kit: previous };
+}
+
+/** One step forward again, or null when nothing was undone. */
+export function redoHistory(h: KitHistory, current: BrandKit): { history: KitHistory; kit: BrandKit } | null {
+  const next = h.future[0];
+  if (!next) return null;
+  return { history: { past: [...h.past, current].slice(-HISTORY_LIMIT), future: h.future.slice(1) }, kit: next };
 }

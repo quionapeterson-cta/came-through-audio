@@ -57,7 +57,59 @@ describe("kit options", async () => {
   const { kitOptions, DEFAULT_KIT_OPTIONS } = await import("./brand-kit");
   it("reads saved options and falls back to the defaults", () => {
     expect(kitOptions(undefined)).toEqual(DEFAULT_KIT_OPTIONS);
-    expect(kitOptions({ watermark: true, cover: true, signature: "box", accent: "#7a1f1f", corners: "square" })).toEqual({ watermark: true, cover: true, signature: "box", accent: "#7A1F1F", corners: "square" });
+    expect(kitOptions({ watermark: true, cover: true, signature: "box", accent: "#7a1f1f", corners: "square" })).toEqual({ watermark: true, cover: true, signature: "box", accent: "#7A1F1F", titleColor: null, corners: "square" });
+    // The document title's own colour (founder, 2026-11-07): blank until picked, and cleaned like the accent.
+    expect(kitOptions({ titleColor: "#7a1f1f" }).titleColor).toBe("#7A1F1F");
+    expect(kitOptions({ titleColor: "red" }).titleColor).toBeNull();
     expect(kitOptions({ signature: "fancy", accent: "red", corners: "wavy" })).toEqual(DEFAULT_KIT_OPTIONS);
+  });
+});
+
+describe("saved colour sets", async () => {
+  const { kitColorSets, withColorSet, withoutColorSet, MAX_COLOR_SETS } = await import("./brand-kit");
+
+  it("keeps only named sets with readable colours", () => {
+    expect(kitColorSets(undefined)).toEqual([]);
+    expect(kitColorSets([{ name: " Wine ", colors: ["#7a1f1f", "nope"] }, { name: "", colors: ["#000000"] }, { name: "wine", colors: ["#FFFFFF"] }]))
+      .toEqual([{ name: "Wine", colors: ["#7A1F1F"] }]);
+    expect(kitFromRow({ name: "Biz", color_sets: [{ name: "Ink", colors: ["#0B0B0B"] }] })?.colorSets).toEqual([{ name: "Ink", colors: ["#0B0B0B"] }]);
+    expect(kitFromRow({ name: "Biz" })?.colorSets).toEqual([]);
+  });
+
+  it("saves a set under its name, replaces the same name, and deletes by name", () => {
+    const one = withColorSet([], { name: "Ink", colors: ["#0b0b0b"] });
+    expect(one).toEqual([{ name: "Ink", colors: ["#0B0B0B"] }]);
+    expect(withColorSet(one, { name: "ink", colors: ["#004aad"] })).toEqual([{ name: "ink", colors: ["#004AAD"] }]);
+    expect(withColorSet(one, { name: "", colors: ["#004AAD"] })).toEqual(one);
+    expect(withColorSet(one, { name: "Wine", colors: ["nope"] })).toEqual(one);
+    expect(withoutColorSet([...one, { name: "Wine", colors: ["#7A1F1F"] }], "Ink")).toEqual([{ name: "Wine", colors: ["#7A1F1F"] }]);
+  });
+
+  it("never grows past the cap", () => {
+    let sets: { name: string; colors: string[] }[] = [];
+    for (let i = 0; i < MAX_COLOR_SETS + 5; i++) sets = withColorSet(sets, { name: `Set ${i}`, colors: ["#0B0B0B"] });
+    expect(sets).toHaveLength(MAX_COLOR_SETS);
+    expect(sets[sets.length - 1]!.name).toBe(`Set ${MAX_COLOR_SETS + 4}`);
+  });
+});
+
+describe("undo and redo in the kit editor", async () => {
+  const { emptyHistory, recordHistory, redoHistory, undoHistory, emptyKit } = await import("./brand-kit");
+  const before = { ...emptyKit("Karma"), tagline: "one" };
+  const after = { ...emptyKit("Karma"), tagline: "two" };
+
+  it("steps back and forward through the kit's own edits", () => {
+    const history = recordHistory(emptyHistory(), before);
+    const back = undoHistory(history, after)!;
+    expect(back.kit.tagline).toBe("one");
+    const forward = redoHistory(back.history, back.kit)!;
+    expect(forward.kit.tagline).toBe("two");
+    expect(redoHistory(forward.history, forward.kit)).toBeNull();
+    expect(undoHistory(emptyHistory(), after)).toBeNull();
+  });
+
+  it("drops the redo trail as soon as a new edit is made", () => {
+    const back = undoHistory(recordHistory(emptyHistory(), before), after)!;
+    expect(recordHistory(back.history, back.kit).future).toEqual([]);
   });
 });

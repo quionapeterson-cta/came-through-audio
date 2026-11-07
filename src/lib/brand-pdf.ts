@@ -142,7 +142,7 @@ export function brandHeader(pdf: JsPDF, title: string, subtitle?: string, meta?:
     pdf.setFillColor(...COBALT).rect(MARGIN, 28.5, w - MARGIN * 2, 0.8, "F");
   }
 
-  font(pdf, "bold", 24).setTextColor(...INK);
+  font(pdf, "bold", 24).setTextColor(...titleInk(brand));
   const titleLines = (pdf.splitTextToSize(title, w - MARGIN * 2) as string[]).slice(0, 2);
   let y = 42;
   titleLines.forEach((line, i) => pdf.text(line, MARGIN, y + i * 9.5));
@@ -246,6 +246,13 @@ export const onAccent = (pdf: JsPDF) => onColor(accentOf(pdf));
 /** The kit's second accent color, else its section title color, else Primary Black. */
 export const kitAccent = (brand: PdfBrand): [number, number, number] =>
   brand.options.accent ? hexRgb(brand.options.accent) : brand.headerColor ? hexRgb(brand.headerColor) : INK;
+
+/**
+ * The document title's colour (founder, 2026-11-07): the kit's own when the member picks one, else Primary Black, which is
+ * exactly how every kit printed it before the control existed.
+ */
+export const titleInk = (brand?: PdfBrand | null): [number, number, number] =>
+  brand?.options.titleColor ? hexRgb(brand.options.titleColor) : INK;
 
 /** Today's date for the top of a document, e.g. "Nov 6, 2026". The header only: the footer never carries a date. */
 export const headerDate = () => new Date().toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });

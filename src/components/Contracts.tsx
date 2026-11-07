@@ -861,7 +861,7 @@ function ContractEditor({ userId, initial, tracks, blueprint, onClose }: { userI
       ...((!p.isOwner || c.isCompany) && !isValidEmail(p.email) ? [{ label: `${p.role || `Party ${i + 1}`}'s email`, target: `cp-${i}-email`, section: "parties" as const }] : []),
     ]),
   ] : [];
-  const [sections, setSections] = useState({ details: true, parties: true, text: true });
+  const [sections, setSections] = useState({ details: true, parties: true, sign: true, text: true });
   const [showMissing, setShowMissing] = useState(false);
   const goTo = (m: Missing) => {
     setShowMissing(false);
@@ -1017,32 +1017,6 @@ function ContractEditor({ userId, initial, tracks, blueprint, onClose }: { userI
           {draft && customized
             ? <textarea aria-label="Contract text" rows={22} value={body} onChange={(e) => setC({ ...c, body: e.target.value })} className="w-full rounded-xl border border-input bg-background p-4 font-mono text-sm leading-relaxed" />
             : <div className="max-h-[32rem] overflow-y-auto whitespace-pre-wrap rounded-xl border border-border bg-muted/30 p-5 text-sm leading-relaxed">{body}</div>}
-
-          {draft && (
-            <div className="mt-5 border-t border-border pt-5">
-              {owner && !signsHere ? <p className="text-sm text-muted-foreground">You'll sign from the link emailed to <span className="font-semibold text-foreground">{owner.email || "your department address"}</span> once it's locked and sent.</p>
-                : owner ? (
-                c.isCompany ? (
-                  // Company Name / By / Printed Name / Title, signed right before sending (3.9).
-                  <dl className="grid max-w-xl grid-cols-[8rem_1fr] items-center gap-x-3 gap-y-2 rounded-xl border border-border p-4 text-sm">
-                    <dt className="font-semibold text-muted-foreground">Company Name</dt><dd>{COMPANY_LEGAL_NAME}</dd>
-                    <dt className="font-semibold text-muted-foreground"><label htmlFor="company-sign">By</label></dt>
-                    <dd><Input id="company-sign" value={typed} onChange={(e) => setTyped(e.target.value)} placeholder={owner.legalName || "Type your legal name to sign"} className="text-2xl" style={{ fontFamily: `"${SIGNATURE_FONT}", cursive` }} /></dd>
-                    <dt className="font-semibold text-muted-foreground">Printed Name</dt><dd>{owner.legalName || "Add your legal name in Parties"}</dd>
-                    <dt className="font-semibold text-muted-foreground">Title</dt><dd>{c.fields["signerTitle"] || "Founder & CEO"}</dd>
-                  </dl>
-                ) : (
-                <label className="block space-y-1 text-sm"><span className="font-medium">Type your legal name to sign{owner.legalName.trim() && <>: <span className="font-bold">{owner.legalName}</span></>}</span>
-                  <Input value={typed} onChange={(e) => setTyped(e.target.value)} placeholder={owner.legalName || "Your legal name"} className="max-w-md text-2xl" style={{ fontFamily: `"${SIGNATURE_FONT}", cursive` }} /></label>)
-              ) : <p className="text-sm text-muted-foreground">You're not signing this one. Lock it, then send it to everyone who signs.</p>}
-              <div className="mt-4 flex flex-wrap gap-3">
-                <Button disabled={busy} onClick={() => void signAndLock()}>{busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileSignature className="h-4 w-4" />}{signsHere ? "Sign" : "Lock"}</Button>
-                <Button variant="outline" disabled={busy} onClick={() => void save()}><Check className="h-4 w-4" />Save draft</Button>
-                {c.id && <Button variant="ghost" className="ml-auto" disabled={busy} onClick={async () => { if (await confirmAction({ title: "Delete this draft?" })) void deleteContract(c.id!).then(onClose); }}><Trash2 className="h-4 w-4" />Delete</Button>}
-              </div>
-              <p className="mt-2 text-xs text-muted-foreground">Signing locks the wording and records its fingerprint, so nobody can change it after you sign. You'll send it to the others next.</p>
-            </div>
-          )}
         </Step>
         {draft && (
           <>
@@ -1093,6 +1067,31 @@ function ContractEditor({ userId, initial, tracks, blueprint, onClose }: { userI
                 <datalist id={`roles-${bp.id}`}>{bp.roles.map((r) => <option key={r} value={r} />)}</datalist>
                 <Button id="cp-add" variant="outline" size="sm" onClick={() => setC({ ...c, parties: [...c.parties, emptyParty(bp.roles[1])] })}><Plus className="h-4 w-4" />Add party</Button>
               </div>
+            </Step>
+
+            {/* Step 4 is the signature (founder, 2026-11-07): it sits after Who's signing, the last step before it goes out. */}
+            <Step n={4} title="Sign" open={sections.sign} onToggle={() => setSections((x) => ({ ...x, sign: !x.sign }))} summary="Locks the wording, then you send">
+              {owner && !signsHere ? <p className="text-sm text-muted-foreground">You'll sign from the link emailed to <span className="font-semibold text-foreground">{owner.email || "your department address"}</span> once it's locked and sent.</p>
+                : owner ? (
+                c.isCompany ? (
+                  // Company Name / By / Printed Name / Title, signed right before sending (3.9).
+                  <dl className="grid max-w-xl grid-cols-[8rem_1fr] items-center gap-x-3 gap-y-2 rounded-xl border border-border p-4 text-sm">
+                    <dt className="font-semibold text-muted-foreground">Company Name</dt><dd>{COMPANY_LEGAL_NAME}</dd>
+                    <dt className="font-semibold text-muted-foreground"><label htmlFor="company-sign">By</label></dt>
+                    <dd><Input id="company-sign" value={typed} onChange={(e) => setTyped(e.target.value)} placeholder={owner.legalName || "Type your legal name to sign"} className="text-2xl" style={{ fontFamily: `"${SIGNATURE_FONT}", cursive` }} /></dd>
+                    <dt className="font-semibold text-muted-foreground">Printed Name</dt><dd>{owner.legalName || "Add your legal name in Parties"}</dd>
+                    <dt className="font-semibold text-muted-foreground">Title</dt><dd>{c.fields["signerTitle"] || "Founder & CEO"}</dd>
+                  </dl>
+                ) : (
+                <label className="block space-y-1 text-sm"><span className="font-medium">Type your legal name to sign{owner.legalName.trim() && <>: <span className="font-bold">{owner.legalName}</span></>}</span>
+                  <Input value={typed} onChange={(e) => setTyped(e.target.value)} placeholder={owner.legalName || "Your legal name"} className="max-w-md text-2xl" style={{ fontFamily: `"${SIGNATURE_FONT}", cursive` }} /></label>)
+              ) : <p className="text-sm text-muted-foreground">You're not signing this one. Lock it, then send it to everyone who signs.</p>}
+              <div className="mt-4 flex flex-wrap gap-3">
+                <Button disabled={busy} onClick={() => void signAndLock()}>{busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileSignature className="h-4 w-4" />}{signsHere ? "Sign" : "Lock"}</Button>
+                <Button variant="outline" disabled={busy} onClick={() => void save()}><Check className="h-4 w-4" />Save draft</Button>
+                {c.id && <Button variant="ghost" className="ml-auto" disabled={busy} onClick={async () => { if (await confirmAction({ title: "Delete this draft?" })) void deleteContract(c.id!).then(onClose); }}><Trash2 className="h-4 w-4" />Delete</Button>}
+              </div>
+              <p className="mt-2 text-xs text-muted-foreground">Signing locks the wording and records its fingerprint, so nobody can change it after you sign. You'll send it to the others next.</p>
             </Step>
           </>
         )}

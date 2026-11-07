@@ -14,11 +14,18 @@ const distance = (a: string, b: { r: number; g: number; b: number }) => {
   const c = parse(a);
   return Math.sqrt((c.r - b.r) ** 2 + (c.g - b.g) ** 2 + (c.b - b.b) ** 2);
 };
+/** Relative luminance, the WCAG way: higher is lighter. This is what puts the darkest colour first. */
+const luminance = (hex: string) => {
+  const { r, g, b } = parse(hex);
+  const ch = (v: number) => { const c = v / 255; return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4; };
+  return 0.2126 * ch(r) + 0.7152 * ch(g) + 0.0722 * ch(b);
+};
 
 /**
- * The colours a logo is mostly made of, biggest first, as `#RRGGBB`. Transparent pixels and near-white paper are ignored:
- * a logo is normally drawn on a white page, so paper would win every time. Shades close enough to be the same colour to
- * the eye are merged, so five swatches really are five choices.
+ * The colours a logo is mostly made of, as `#RRGGBB`. Transparent pixels and near-white paper are ignored: a logo is
+ * normally drawn on a white page, so paper would win every time. Shades close enough to be the same colour to the eye are
+ * merged, so five swatches really are five choices, and the list comes back darkest first (founder, 2026-11-07): the
+ * darkest names the document, the second sets the tagline, and the darkest is what heads the sections.
  */
 export function dominantColors(pixels: ArrayLike<number>, { max = 5, alphaMin = 160 }: { max?: number; alphaMin?: number } = {}): string[] {
   const bins = new Map<number, Bin>();
@@ -41,7 +48,8 @@ export function dominantColors(pixels: ArrayLike<number>, { max = 5, alphaMin = 
     out.push(toHex(c));
     if (out.length >= max) break;
   }
-  return out;
+  // Darkest first: a mostly-pale logo would otherwise hand a member white-on-white type (founder, 2026-11-07).
+  return out.sort((a, b) => luminance(a) - luminance(b));
 }
 
 /**
