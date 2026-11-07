@@ -444,7 +444,8 @@ rules keep it consistent as features are added.
 
 ### The editor
 - Profile → Brand kit shows the editor and the live preview side by side, the preview pinned while scrolling, so every
-  change shows as it is made (founder, 2026-11-06). Save sits under the preview on the left, and the small footer switch
+  change shows as it is made (founder, 2026-11-06). The sections run name, logo and font, then contract style, then
+  Colors (founder, 2026-11-07), so the look is chosen before the palette. Save sits under the preview on the left, and the small footer switch
   sits at the foot of the **Name on your contracts** box (founder, 2026-11-07), not beside Save. **The preview shows the
   header, never a footer** (founder, 2026-11-07): the made-on line
   lives on the printed file, so the preview stops at the page body and the switch still turns that line on and off.

@@ -452,6 +452,21 @@ export function BrandKit({ userId, tier, artistName }: { userId: string; tier: T
         </div>
       </div>
 
+      {/* Contract style sits above Colors and under the font (founder, 2026-11-07): pick the look, then the colours it wears. */}
+      <div className="space-y-2">
+        <Label className="flex items-center gap-1.5">Contract style<InfoTip text="How your header looks on contracts and split sheets made with this kit." /></Label>
+        <div className="grid grid-cols-2 gap-2">
+          {KIT_STYLES.map((st) => (
+            <button key={st.id} type="button" onClick={() => edit({ style: st.id })} aria-pressed={kit.style === st.id}
+              className={`rounded-lg border p-3 text-left text-sm transition ${kit.style === st.id ? "border-primary ring-2 ring-ring" : "border-border hover:border-primary/60"}`}>
+              <StyleThumb style={st.id} color={kit.colors.find(isHex) ?? "#0b0b0b"} />
+              <span className="mt-2 block font-semibold">{st.label}</span>
+              <span className="block text-xs text-muted-foreground">{st.hint}</span>
+            </button>
+          ))}
+        </div>
+      </div>
+
       <div className="space-y-2">
         <Label className="flex items-center gap-1.5">Colors<InfoTip text="Add as many as you like. The first colors your name and the second your tagline." /></Label>
         <div className="flex flex-wrap gap-3">
@@ -542,20 +557,6 @@ export function BrandKit({ userId, tier, artistName }: { userId: string; tier: T
             ))}
           </ul>
         ) : <p className="text-xs text-muted-foreground">No saved palettes yet. Pick your colours, name them, and save the set here.</p>}
-      </div>
-
-      <div className="space-y-2">
-        <Label className="flex items-center gap-1.5">Contract style<InfoTip text="How your header looks on contracts and split sheets made with this kit." /></Label>
-        <div className="grid grid-cols-2 gap-2">
-          {KIT_STYLES.map((st) => (
-            <button key={st.id} type="button" onClick={() => edit({ style: st.id })} aria-pressed={kit.style === st.id}
-              className={`rounded-lg border p-3 text-left text-sm transition ${kit.style === st.id ? "border-primary ring-2 ring-ring" : "border-border hover:border-primary/60"}`}>
-              <StyleThumb style={st.id} color={kit.colors.find(isHex) ?? "#0b0b0b"} />
-              <span className="mt-2 block font-semibold">{st.label}</span>
-              <span className="block text-xs text-muted-foreground">{st.hint}</span>
-            </button>
-          ))}
-        </div>
       </div>
 
       {/* Every colour the kit draws is set in Colors now (founder, 2026-11-07), so they sit together. */}
