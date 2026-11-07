@@ -330,7 +330,7 @@ function Pamphlet({ parts }: { parts: GuideSection[] }) {
 
 /** Blueprints (business guides) and home recording cheat sheets, in two titled, collapsible groups. */
 function Guides({ workbench, focusId, onOpen, lastSong }: { workbench: Workbench; /** Opened from Working On: start with this one expanded. */ focusId?: string | undefined; onOpen?: ((link: GuideLink) => void) | undefined; /** The newest catalogued song, written in the stars the way `StarsAligned` writes a title (founder, 2026-11-07). */ lastSong?: string | undefined }) {
-  const groups: [string, string, Guide[]][] = [["Blueprints", "Step-by-step guides to running your music business", BLUEPRINT_GUIDES], ["Home recording cheat sheets", "Setup, genre tips and quick fixes", CHEAT_SHEETS]];
+  const groups: [string, string, Guide[]][] = [["Blueprints", `${BLUEPRINT_GUIDES.length} step by step guides to running your music business`, BLUEPRINT_GUIDES], ["Home recording cheat sheets", "Setup, genre tips and quick fixes", CHEAT_SHEETS]];
   const [openId, setOpenId] = useState<string | undefined>(focusId);
   /** What the member is typing into "add your own item", per guide. */
   const [ownDraft, setOwnDraft] = useState<Record<string, string>>({});

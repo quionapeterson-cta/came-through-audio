@@ -262,11 +262,13 @@ export function prettyDate(v: string | undefined) {
  * "Generated". One constant so the catalog, lyrics, split sheets and contracts can never drift apart.
  */
 export const MADE_ON = "Made on Camethroughaudio.com";
-export const MADE_ON_LINE = `${MADE_ON} — Your first stop for distribution`;
+/** Capitalised exactly like this in every footer (founder, 2026-11-07). */
+export const MADE_ON_LINE = `${MADE_ON} — Your First Stop For Distribution`;
 
 /**
- * Footer on every page with brand and page numbers. A Personal Branding document names its owner instead, plus the
- * "Generated on camethroughaudio.com · YOUR FIRST STOP BEFORE DISTRIBUTION" link unless they turned it off.
+ * Footer on every page: the page counter on the right and our made-on line under it in Primary Black and Poppins
+ * (founder, 2026-11-07). No owner or business name sits beside it, so a Personal Branding kit never reads as a second
+ * footer, and the footer never carries a date.
  */
 export function brandFooter(pdf: JsPDF, brand?: PdfBrand | null) {
   const pages = pdf.getNumberOfPages();
@@ -276,7 +278,7 @@ export function brandFooter(pdf: JsPDF, brand?: PdfBrand | null) {
     pdf.setPage(i);
     // Sidebar kits: a slim bar of their first color down the left edge of every page.
     if (brand?.style === "sidebar") pdf.setFillColor(...(brand.colors[0] ? hexRgb(brand.colors[0]) : INK)).rect(0, 0, 7, h, "F");
-    // Minimal kits: their logo small at the bottom right, above the page number.
+    // Minimal kits: their logo small at the bottom right, above the rule.
     if (brand?.style === "minimal" && brand.logo) {
       try {
         const p = pdf.getImageProperties(brand.logo.dataUrl);
@@ -285,9 +287,9 @@ export function brandFooter(pdf: JsPDF, brand?: PdfBrand | null) {
       } catch { /* an unreadable logo is left out */ }
     }
     pdf.setDrawColor(...(brand?.options.accent ? hexRgb(brand.options.accent) : RULE)).setLineWidth(0.3).line(MARGIN, h - 17, w - MARGIN, h - 17);
+    // The footer is the page counter and the made-on line, and no owner or business name (founder, 2026-11-07): our line
+    // never sits beside a kit's. It says who made it, never when.
     font(pdf, "regular", 8.5).setTextColor(...MUTED);
-    // The file says who made it, never when: no "Generated on" date anywhere on a download (founder, 2026-11-06).
-    pdf.text(brand ? brand.name : "Came Through Audio, LLC", MARGIN, h - 11);
     pdf.text(`Page ${i} of ${pages}`, w - MARGIN, h - 11, { align: "right" });
     // Our line sits on every file we make, on every plan, in Primary Black. A Personal Branding kit may turn it off only
     // on Catalog & Collaborate and Catalog Management, which the server checks before the PDF is built.

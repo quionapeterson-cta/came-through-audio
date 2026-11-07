@@ -1,7 +1,7 @@
 import { addSignatureFont, brandFooter, brandHeader, COBALT, ensureSpace, INK, kitAccent, kitCover, kitWatermark, MUTED, newBrandedPdf, sectionTitle } from "@/lib/brand-pdf";
 import { hexRgb, type PdfBrand } from "@/lib/brand-kit";
 import { safeName } from "@/lib/catalog";
-import { COMPANY_LEGAL_NAME, CONTRACT_DISCLAIMER, SIGNATURE_FONT } from "@/lib/contract-blueprints";
+import { COMPANY_LEGAL_NAME, SIGNATURE_FONT } from "@/lib/contract-blueprints";
 
 export type PdfSignature = { name: string; role: string; signedAt: string | null; signatureName?: string | null; signatureHash?: string | null };
 
@@ -98,7 +98,8 @@ export async function downloadContractPdf(o: {
     pdf.text(`Contract text SHA-256: ${o.bodyHash}`, 18, y);
     y += 5;
   }
-  for (const part of pdf.splitTextToSize(CONTRACT_DISCLAIMER, w - 36) as string[]) { pdf.text(part, 18, y); y += 4; }
+  // A downloaded contract carries the document and nothing else (founder, 2026-11-07): the contract-drafts disclaimer
+  // stays on screen, in the Contracts tab and under the Contract Generator, never inside the signed PDF.
 
   brandFooter(pdf, o.brand);
   pdf.save(`${safeName(o.title)}${o.status === "signed" ? " - Signed" : ""}.pdf`);

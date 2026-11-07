@@ -521,9 +521,14 @@ rules keep it consistent as features are added.
   the anchor in the document before clicking it, because a detached anchor is ignored in Safari and the button looks
   stuck. A failed build must say what failed — never a generic "could not build" toast.
 - **Our branding is on every file, on every plan** (founder, 2026-11-06): all downloads carry
-  `MADE_ON_LINE` — "Made on Camethroughaudio.com — Your first stop for distribution" — in Primary Black #0b0b0b. The
-  word "Generated" never appears on a download, and the footer (the "Made on Camethroughaudio.com" line, page number and
-  owner's name) never carries a date. Today's date may sit at the top, in the header's meta line (`headerDate()`), as it
+  `MADE_ON_LINE` — "Made on Camethroughaudio.com — Your First Stop For Distribution", capitalised exactly like that, in
+  Primary Black #0b0b0b, in Poppins. The word "Generated" never appears on a download, and no download ever carries a
+  date in its footer.
+- **Every footer is the same two things** (founder, 2026-11-07): the made-on line and the `Page 1 of 3` counter — on
+  our files and on a kit's alike, and nothing else. **No owner or business name goes in a footer**, ours or a kit's, so a
+  branded file never reads as having two footers. `brandFooter` in `src/lib/brand-pdf.ts` is the one footer every
+  download goes through, so a new PDF calls it rather than drawing its own. Today's date may sit at the top, in the
+  header's meta line (`headerDate()`), as it
   does on the catalog PDF, split sheet and Royalty Health Report (founder, 2026-11-06). Only Catalog Management (which
   includes a kit) or a paid `branding_yearly` add-on replaces our header, and a kit that isn't set up yet
   (`kitReady`) still gets our default header.

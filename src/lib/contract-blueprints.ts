@@ -20,7 +20,7 @@ import { RELEASE_TERMS, VISUAL } from "./blueprints/visual";
 export { CATEGORIES, type Blueprint, type BlueprintField, type Category } from "./blueprints/common";
 
 export const CONTRACT_DISCLAIMER =
-  "Blueprints are general templates to help you organize a deal. They are not legal advice. Have a qualified music attorney review any contract before you sign it.";
+  "Contract drafts are general templates to help you organize a deal. They are not legal advice. Have a qualified music attorney review any contract before you sign it.";
 
 /** The customer blueprint library, in category order. */
 export const BLUEPRINTS: Blueprint[] = [...MUSIC_PRODUCTION, ...MANAGEMENT, ...RIGHTS, ...VISUAL, ...FASHION, ...INFLUENCERS, ...PODCASTING, ...LIVE, ...BUSINESS, ...EVENTS];

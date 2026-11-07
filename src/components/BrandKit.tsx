@@ -445,7 +445,7 @@ export function BrandKit({ userId, tier, artistName }: { userId: string; tier: T
             </>
           )}
           {kit.style === "minimal" && <div className="relative mt-4 flex items-center justify-between text-[10px] text-[#525252]"><span>{previewName || "Your name"}</span>{logoUrl && <img src={logoUrl} alt="" className="h-5 max-w-[4rem] object-contain" />}</div>}
-          {kit.showFooter && <p className="mt-4 text-[10px] font-medium text-[#0b0b0b]">Made on Camethroughaudio.com — Your first stop for distribution</p>}
+          {kit.showFooter && <p className="mt-4 text-[10px] font-medium text-[#0b0b0b]">Made on Camethroughaudio.com — Your First Stop For Distribution</p>}
         </div>
         {/* Save on the left; the footer switch across from it, at the preview's bottom right (founder, 2026-11-06). It is a
             small control, and only the plans that may drop the footer see it at all. */}
