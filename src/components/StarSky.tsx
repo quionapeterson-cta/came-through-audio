@@ -1,15 +1,24 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type RefObject } from "react";
 
 /**
  * The sky celebration (founder, 2026-11-06): a dark sky of twinkling stars, shooting stars crossing it, and — when the
  * moment is a launch — a rocket lifting off through them. It is used twice, and only twice: both profile defaults
- * finished ("Zero to one."), and the last signature landing on a contract ("It's a done deal!").
+ * finished (the newest catalogued song title), and the last signature landing on a contract ("It's a done deal!").
+ *
+ * The line itself is written by the stars (founder, 2026-11-07): the words are sampled in Poppins and single stars fly
+ * in from across the sky onto that shape until they spell it, exactly the way `StarsAligned` has drawn a title since
+ * 2026-10-25. It is never ordinary type set on top of the sky.
  *
  * It never carries a count, a date or a promise, just the line. A click, Escape or the button closes it, and the caller
  * decides what happens next (the badge check, for instance). Motion is dropped entirely when the visitor asked for less.
  *
- * Timings (reviewed 2026-11-06): the sky fades in over 0.45 s, the line lands at 0.35 s, the sub-line at 1.05 s and the
- * button at 1.75 s. A rocket idles on the pad for 0.55 s, then the flight takes 3.3 s with an accelerating curve, so it
+ * This is the approved template (founder, 2026-11-07): the star field, this motion and the way the line sits in the
+ * stars are settled as they were approved, and anything new is added on top of them — the rocket was — never by
+ * retiming, repositioning, re-lettering or restyling what is already here. The line is always written out in the stars,
+ * which is why `message` is required: a caller with no title has nothing to celebrate yet and does not mount this.
+ *
+ * Timings (reviewed 2026-11-06): the sky fades in over 0.45 s, the title's stars start flying in at 0.3 s and hold the
+ * words by about 2.7 s, the sub-line lands at 1.05 s and the button at 1.75 s. A rocket idles on the pad for 0.55 s, then the flight takes 3.3 s with an accelerating curve, so it
  * clears the top around 3.9 s and the words stay on their own for the rest of the hold (8 s by default).
  */
 
@@ -90,6 +99,97 @@ const KEYFRAMES = `
 }
 `;
 
+/**
+ * The title, spelled by stars themselves (founder, 2026-11-07; the way `StarsAligned` draws one since 2026-10-25): the
+ * words go down on an offscreen canvas in Poppins, that shape is sampled, and single stars fly in from across the sky
+ * onto it until they hold the letters. Nothing else about the sky is touched — this only draws the line that used to be
+ * plain type — so the field, the shooting stars, the rocket and every timing stay as approved. The words stay a real
+ * heading for screen readers (in `StarSky`); this drawing is decorative.
+ */
+function StarTitle({ text, slot }: { text: string; slot: RefObject<HTMLDivElement | null> }) {
+  const canvas = useRef<HTMLCanvasElement>(null);
+
+  useEffect(() => {
+    const c = canvas.current;
+    const ctx = c?.getContext("2d");
+    if (!c || !ctx) return;
+    const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+
+    type Dot = { sx: number; sy: number; tx: number; ty: number; r: number; tw: number; gold: boolean; halo: boolean };
+    let W = 0, H = 0, dots: Dot[] = [], raf = 0, start = 0, laid = false;
+
+    const lay = () => {
+      W = window.innerWidth; H = window.innerHeight;
+      c.width = W * dpr; c.height = H * dpr;
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      const box = slot.current?.getBoundingClientRect();
+      const cx = box && box.width ? box.left + box.width / 2 : W / 2;
+      const cy = box && box.height ? box.top + box.height / 2 : H / 2;
+      const maxW = (box && box.width ? box.width : W * 0.9) * 0.96;
+      const maxH = (box && box.height ? box.height : H * 0.2) * 0.88;
+
+      // Where the title's stars land: sample the words drawn in Poppins on an offscreen canvas.
+      const off = document.createElement("canvas");
+      off.width = W; off.height = H;
+      const o = off.getContext("2d");
+      if (!o) return;
+      let size = Math.max(12, Math.min(maxH, 120));
+      const font = () => `800 ${size}px Poppins, system-ui, sans-serif`;
+      o.font = font();
+      while ((o.measureText(text).width > maxW || size > maxH) && size > 12) { size -= 2; o.font = font(); }
+      o.textAlign = "center"; o.textBaseline = "middle"; o.fillStyle = "#fff";
+      o.fillText(text, cx, cy);
+      const img = o.getImageData(0, 0, W, H).data;
+      // Dense enough that the letters read as a solid fall of stars rather than a dotted outline, then thinned if the
+      // shape would be too heavy to draw every frame on a phone.
+      const step = Math.max(3, Math.round(size / 20));
+      const MAX_DOTS = 4200;
+      const reach = Math.max(W, H) * 0.6;
+      const found: Dot[] = [];
+      for (let y = 0; y < H; y += step) for (let x = 0; x < W; x += step) {
+        if (img[(y * W + x) * 4 + 3]! <= 110) continue;
+        const a = Math.random() * Math.PI * 2, d = reach * (0.5 + Math.random() * 0.6);
+        found.push({ sx: cx + Math.cos(a) * d, sy: cy + Math.sin(a) * d, tx: x, ty: y, r: Math.random() * 0.9 + 0.9, tw: Math.random() * Math.PI * 2, gold: Math.random() < 0.12, halo: Math.random() < 0.18 });
+      }
+      const every = Math.ceil(found.length / MAX_DOTS);
+      dots = every > 1 ? found.filter((_, i) => i % every === 0) : found;
+      // The first layout starts the flight; a resize only re-samples where they land, so it never replays.
+      if (!laid) { start = performance.now(); laid = true; } else { start = performance.now() - 6000; }
+    };
+
+    const ease = (t: number) => 1 - Math.pow(1 - t, 3);
+    const draw = (now: number) => {
+      const t = (now - start) / 1000;
+      ctx.clearRect(0, 0, W, H);
+      const k = reduce ? 1 : ease(Math.min(1, Math.max(0, (t - 0.3) / 2.4)));
+      for (const d of dots) {
+        const x = d.sx + (d.tx - d.sx) * k;
+        const y = d.sy + (d.ty - d.sy) * k;
+        const a = reduce ? 0.95 : (0.82 + 0.18 * Math.sin(t * 2.4 + d.tw)) * Math.min(1, k * 4);
+        // A few carry a faint halo, so the words read as lit rather than filled in.
+        if (d.halo) {
+          ctx.fillStyle = d.gold ? `rgba(255,215,0,${a * 0.2})` : `rgba(159,188,255,${a * 0.24})`;
+          ctx.beginPath(); ctx.arc(x, y, d.r * 2.6, 0, Math.PI * 2); ctx.fill();
+        }
+        ctx.fillStyle = d.gold ? `rgba(255,215,0,${a})` : `rgba(244,249,255,${a})`;
+        ctx.beginPath(); ctx.arc(x, y, d.r, 0, Math.PI * 2); ctx.fill();
+      }
+      if (!reduce) raf = requestAnimationFrame(draw);
+    };
+
+    lay();
+    raf = requestAnimationFrame(draw);
+    const onResize = () => lay();
+    window.addEventListener("resize", onResize);
+    // Poppins may still be loading when the sky opens, so re-sample onto the loaded face once it is in.
+    void document.fonts?.ready.then(() => lay());
+    return () => { cancelAnimationFrame(raf); window.removeEventListener("resize", onResize); };
+  }, [text, slot]);
+
+  return <canvas ref={canvas} aria-hidden className="pointer-events-none absolute inset-0 h-full w-full" />;
+}
+
 export function StarSky({ message, sub, rocket = false, holdMs = 8000, onDone }: {
   /** The line written in the stars. */
   message: string;
@@ -103,6 +203,8 @@ export function StarSky({ message, sub, rocket = false, holdMs = 8000, onDone }:
 }) {
   const stars = useStars(rocket ? 150 : 110);
   const button = useRef<HTMLButtonElement>(null);
+  /** The space the words take, so the stars are placed where the line would have sat in the column. */
+  const slot = useRef<HTMLDivElement>(null);
   const [leaving, setLeaving] = useState(false);
 
   // Every way out fades the sky first, so it never cuts to black between two celebrations (the sky, then the badge).
@@ -141,11 +243,14 @@ export function StarSky({ message, sub, rocket = false, holdMs = 8000, onDone }:
         </div>
       )}
 
+      {/* The line, written by the stars: drawn above the rocket so it flies behind the words. */}
+      <StarTitle text={message} slot={slot} />
+
       <div className="relative flex h-full flex-col items-center justify-center gap-5 px-6 text-center">
         <p className="cta-sky-line text-xs font-bold uppercase tracking-[0.35em] text-[#9fbcff]" style={{ animation: "cta-sky-line .6s ease-out .1s both" }}>Came Through Audio</p>
-        <h2 className="cta-sky-line max-w-[18ch] text-balance text-4xl font-bold leading-tight drop-shadow-[0_0_24px_rgba(159,188,255,.45)] sm:text-6xl" style={{ animation: "cta-sky-line .9s cubic-bezier(.2,.7,.3,1) .35s both" }}>
-          {message}
-        </h2>
+        {/* The words are drawn in stars by `StarTitle`; this keeps the heading real for screen readers and search. */}
+        <h2 className="sr-only">{message}</h2>
+        <div ref={slot} aria-hidden className="h-[16vh] w-full max-w-3xl sm:h-[18vh]" />
         {sub && <p className="cta-sky-line max-w-md text-base text-white/75 sm:text-lg" style={{ animation: "cta-sky-line .8s ease-out 1.05s both" }}>{sub}</p>}
         <button ref={button} type="button" onClick={(e) => { e.stopPropagation(); close(); }}
           className="cta-sky-line mt-4 rounded-full border border-white/40 px-6 py-2.5 text-sm font-semibold text-white transition hover:border-white hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70"

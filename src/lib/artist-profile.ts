@@ -50,6 +50,23 @@ export function loadProfile(userId?: string): ArtistProfile | null {
 }
 
 /**
+ * The defaults that carry over to every song, as the twelve checks behind the meter in setup (founder, 2026-11-06). A
+ * full profile is the other way to earn the defaults sky, without ticking the two blueprint checklists.
+ */
+export function profileChecks(ob: Onboarding, p: ArtistProfile): boolean[] {
+  const named = (rows?: Contributor[]) => (rows ?? []).some((r) => (r.legalName ?? r.name ?? "").trim());
+  const writer = (p.writers ?? []).find((r) => (r.legalName ?? "").trim());
+  return [
+    !!ob.stageName.trim(), !!p.label?.trim(), !!p.primaryGenre, !!p.language?.trim(), !!p.recordedIn?.trim(),
+    !!(p.copyright?.trim() || p.phonographic?.trim()), !!p.samples, !!p.writtenFor,
+    !!ob.legalName.trim(), !!writer?.pro?.trim(), !!writer?.ipi?.trim(), named(p.publishers) || !!p.selfPublished || !!p.bmiWriterPublishing,
+  ];
+}
+
+/** Every default filled in: the catalog (and stage name) is 100% complete. */
+export const profileFilled = (ob: Onboarding, p: ArtistProfile) => profileChecks(ob, p).every(Boolean);
+
+/**
  * The user's own writer row. Setup shows it prefilled with their legal name, but only stored the name once the row was
  * typed in, so a lone unnamed row (often holding their IPI/PRO) or no row at all takes the account's legal name.
  * Only fills a blank: an existing name is never replaced.

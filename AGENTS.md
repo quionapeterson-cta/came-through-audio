@@ -253,8 +253,19 @@
   in In progress and leaves the finished one where it is.
 - **Finishing both profile defaults lifts the rocket** (founder, 2026-11-06): `defaultsFinished` in
   `src/lib/workbench.ts` (a finished run of `embed-defaults` and of `catalog-defaults`, in either order) shows `StarSky`
-  with the rocket and "Zero to one." over the usual checklist burst, once per browser (`claimDefaultsSky` in
-  `src/lib/celebrate.ts`). It is a launch, not a badge: no art, no metric.
+  with the rocket over the usual checklist burst, once per browser (`claimDefaultsSky` in
+  `src/lib/celebrate.ts`). The line in the stars is the member's newest catalogued song title in curly quotes
+  (`listTracks`, newest first), with "Both of your defaults are set, so every master you embed and every song you
+  catalog starts finished." underneath. A title celebration always writes its title in the stars, so with no song to
+  name there is no sky (founder, 2026-11-07). The rocket and the sky's own motion are approved as they are — the rocket
+  was added to the original and nothing else about it moved — so never retune, reposition or re-letter it without being
+  asked (founder, 2026-11-07). It is a launch, not a badge: no art, no metric.
+- **A 100% filled profile is the same moment** (founder, 2026-11-06): saving the profile with every default filled
+  (`profileChecks` / `profileFilled` in `src/lib/artist-profile.ts`, the same twelve checks behind the setup meter) shows
+  the same rocket sky, same line, from `ArtistOnboarding`, so a member who fills the catalog directly gets the
+  celebration without ever ticking the two defaults blueprints. Both routes share `claimDefaultsSky`, so it still
+  happens once per browser, never twice for doing both. The defaults sky, that profile save and the contract sky are
+  the three firings the celebration has; keep all three alive (founder, 2026-11-07).
 - **A sky is rare, and that is the point** (founder, 2026-11-06): the full-screen `StarSky` is used for exactly two
   events, both profile defaults and a fully signed agreement, and `PLAN-celebration-moments.md` is the gate for adding a
   third. A candidate has to be rare or once, identity-level rather than progress, done by the member, the end of a
@@ -287,6 +298,44 @@
   pages with pdf-lib and adds a `PDFCheckBox` over each square (border width 0, so the drawn box is the only frame). A
   copy that loses its boxes is still a readable guide, so the failure is logged, never shown as an error, and downloads
   go through `saveBlob`.
+
+## Don't Remove What Is Already There (always follow)
+
+- **Additive first** (founder, 2026-11-07): never delete, rewrite, retime, reposition or replace something that is
+  already shipped and approved as part of a new change. The new idea goes on top of it, the way the rocket was added to
+  the sky. Removing or restructuring what exists — a component, a behaviour, a piece of copy, a shape, an animation —
+  needs the founder to approve that specific removal first; when a change cannot be additive, describe it and wait.
+- **Restoring a previous version is also a deletion** of the current one: if an older version is wanted, replace only
+  that and leave everything else exactly as it is, then say what changed.
+- Before touching anything the founder has already called right, re-read the surrounding code and keep its behaviour.
+  When in doubt, add a new layer rather than editing the approved one.
+
+## The Star Sky Is The Approved Template (always follow)
+
+- **The approved sky is the working template, not a starting point** (founder, 2026-11-07): the star field, the sky's own
+  motion and the way the line sits in the stars are settled exactly as they were approved. Every later change is
+  **additive** — the rocket's launch was added to that sky and altered none of it — so a new idea is a new layer on top
+  (a rocket, another shooting star, a badge), never a retime, a reposition, a re-letter or a restyle of what is already
+  there. A change that cannot be additive waits for the founder to ask for it by name.
+- **A title is always written out in the stars** (founder, 2026-11-07): the sky shows its line as words in the sky, the
+  way the original does. A celebration may name a song, an agreement or a milestone, but the words are drawn in the
+  stars: never an image-only sky, never an icon or a badge standing in for the line, and never a slogan where a title
+  belongs. `StarSky`'s `message` is that line, so a caller with no title has nothing to celebrate yet and does not fire
+  the sky.
+- **The stars themselves spell the words** (founder, 2026-11-07): a title in a sky is *made of stars*, not type set on
+  top of one. `StarTitle` in `StarSky.tsx` does what `StarsAligned` has done since 2026-10-25 — draw the line offscreen
+  in Poppins, sample that shape, and fly single stars onto it until they hold the letters. Keep that method when adding
+  a title anywhere: never fall back to a styled `h1`/`h2` over a star field. The words stay a real heading for screen
+  readers (`sr-only`) and the drawing stays decorative, and it is dropped to its settled position under reduced motion.
+- **The title is drawn by the stars themselves** (founder, 2026-11-07): `StarsAligned` (`src/components/StarsAligned.tsx`,
+  founder, 2026-10-25) is the original title celebration and stays exactly as it is: it samples the last song's title
+  in Poppins, flies individual stars onto that shape so the words are spelled in the sky, and closes with "Catalog
+  complete / The stars aligned." `MetadataUploader` fires it when the catalog completes. Every celebration that shows a
+  title follows that one — the words are written out in the stars, never a slogan or a picture in their place — and
+  neither it nor its wiring is retimed, restyled or replaced on the way past.
+- **One sky, always** (founder, 2026-11-07): `StarSky` is the only overlay sky component. A second overlay is how this
+  template gets forked, so never add one — a new moment that passes the rarity gate below is a new caller, not a new
+  sky. (`StarsAligned` is the canvas title ceremony and is its own, approved thing; do not merge the two.)
 
 ## Catalog Playback & WAV Storage (always follow)
 

@@ -28,6 +28,7 @@ import { Route as VerifiedRouteImport } from './routes/verified'
 import { Route as WorkspaceRouteImport } from './routes/workspace'
 import { Route as AdminStaffRouteImport } from './routes/admin_.staff'
 import { Route as ContractPartyIdRouteImport } from './routes/contract.$partyId'
+import { Route as DevSkyRouteImport } from './routes/dev.sky'
 import { Route as DocsSlugRouteImport } from './routes/docs.$slug'
 import { Route as InvitesStopRouteImport } from './routes/invites.stop'
 import { Route as IpiIdRouteImport } from './routes/ipi.$id'
@@ -136,6 +137,11 @@ const ContractPartyIdRoute = ContractPartyIdRouteImport.update({
   path: '/contract/$partyId',
   getParentRoute: () => rootRouteImport,
 } as any)
+const DevSkyRoute = DevSkyRouteImport.update({
+  id: '/dev/sky',
+  path: '/dev/sky',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const DocsSlugRoute = DocsSlugRouteImport.update({
   id: '/docs/$slug',
   path: '/docs/$slug',
@@ -222,6 +228,7 @@ export interface FileRoutesByFullPath {
   '/workspace': typeof WorkspaceRoute
   '/admin/staff': typeof AdminStaffRoute
   '/contract/$partyId': typeof ContractPartyIdRoute
+  '/dev/sky': typeof DevSkyRoute
   '/docs/$slug': typeof DocsSlugRoute
   '/invites/stop': typeof InvitesStopRoute
   '/ipi/$id': typeof IpiIdRoute
@@ -255,6 +262,7 @@ export interface FileRoutesByTo {
   '/workspace': typeof WorkspaceRoute
   '/admin/staff': typeof AdminStaffRoute
   '/contract/$partyId': typeof ContractPartyIdRoute
+  '/dev/sky': typeof DevSkyRoute
   '/docs/$slug': typeof DocsSlugRoute
   '/invites/stop': typeof InvitesStopRoute
   '/ipi/$id': typeof IpiIdRoute
@@ -289,6 +297,7 @@ export interface FileRoutesById {
   '/workspace': typeof WorkspaceRoute
   '/admin_/staff': typeof AdminStaffRoute
   '/contract/$partyId': typeof ContractPartyIdRoute
+  '/dev/sky': typeof DevSkyRoute
   '/docs/$slug': typeof DocsSlugRoute
   '/invites/stop': typeof InvitesStopRoute
   '/ipi/$id': typeof IpiIdRoute
@@ -324,6 +333,7 @@ export interface FileRouteTypes {
     | '/workspace'
     | '/admin/staff'
     | '/contract/$partyId'
+    | '/dev/sky'
     | '/docs/$slug'
     | '/invites/stop'
     | '/ipi/$id'
@@ -357,6 +367,7 @@ export interface FileRouteTypes {
     | '/workspace'
     | '/admin/staff'
     | '/contract/$partyId'
+    | '/dev/sky'
     | '/docs/$slug'
     | '/invites/stop'
     | '/ipi/$id'
@@ -390,6 +401,7 @@ export interface FileRouteTypes {
     | '/workspace'
     | '/admin_/staff'
     | '/contract/$partyId'
+    | '/dev/sky'
     | '/docs/$slug'
     | '/invites/stop'
     | '/ipi/$id'
@@ -424,6 +436,7 @@ export interface RootRouteChildren {
   WorkspaceRoute: typeof WorkspaceRoute
   AdminStaffRoute: typeof AdminStaffRoute
   ContractPartyIdRoute: typeof ContractPartyIdRoute
+  DevSkyRoute: typeof DevSkyRoute
   DocsSlugRoute: typeof DocsSlugRoute
   InvitesStopRoute: typeof InvitesStopRoute
   IpiIdRoute: typeof IpiIdRoute
@@ -573,6 +586,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ContractPartyIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/dev/sky': {
+      id: '/dev/sky'
+      path: '/dev/sky'
+      fullPath: '/dev/sky'
+      preLoaderRoute: typeof DevSkyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/docs/$slug': {
       id: '/docs/$slug'
       path: '/docs/$slug'
@@ -680,6 +700,7 @@ const rootRouteChildren: RootRouteChildren = {
   WorkspaceRoute: WorkspaceRoute,
   AdminStaffRoute: AdminStaffRoute,
   ContractPartyIdRoute: ContractPartyIdRoute,
+  DevSkyRoute: DevSkyRoute,
   DocsSlugRoute: DocsSlugRoute,
   InvitesStopRoute: InvitesStopRoute,
   IpiIdRoute: IpiIdRoute,

@@ -11,7 +11,7 @@ want to overdo it".)
 | Welcome back | Any workspace page, `celebrateReturn` in `src/lib/celebrate.ts` | `Confetti` when the last visit was 30+ days ago | No: once per return, at most every 30 days |
 | Checklist finished | Blueprints, `Guides` in `src/components/Contracts.tsx` | `Confetti` + one toast + badge check (`Blueprints Checked`) | Per finished run, on purpose |
 | Badge unlocked | `UnlockPopup` in `src/components/Badges.tsx` | The badge, its art and its message | Per badge, and per repeat for repeatable badges |
-| **Both defaults set** | `Guides`, `defaultsFinished` + `StarSky rocket` | Full sky, shooting stars, rocket launch, "Zero to one." | Once per browser (`claimDefaultsSky`) |
+| **Both defaults set** | `Guides`, `defaultsFinished` + `StarSky rocket` | Approved sky as it was, plus the rocket: the newest catalogued song title written in the stars | Once per browser (`claimDefaultsSky`) |
 | **Contract fully signed** | `contract.$partyId.tsx` + `src/components/StarSky.tsx` | Full sky, "It's a done deal!", then the badge check | Once per agreement that reaches fully signed |
 
 So the full-screen sky is used for **two** things, and there are three "big" moments in total once the welcome burst is
