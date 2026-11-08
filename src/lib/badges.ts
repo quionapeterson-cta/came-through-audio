@@ -241,8 +241,9 @@ const NIGHT: BadgeDef[] = [
 // milestones (founder, 2026-10-25: "It's a victory just having written them down!").
 const L = `${P}/lyrics`;
 const LYRICS: BadgeDef[] = [
+  // Every lyric earning uses the gold lock, with no rotation (founder, 2026-11-08): the 5, 10, 15, 25, 40, 50 and 100
+  // lyric milestones are their own badges, so the every-time badge keeps one picture.
   { id: "first_lyric_entry", title: "First Lyric Entry", collection: "lyrics", tier: "instant", milestone: "Every lyric you embed (a victory just having written it down)", action: "Embed a lyric", metric: "lyrics", goal: 1, every: 1, src: `${P}/lyric_locked_gold_512x512.webp`, artInBucket: true,
-    rotation: ["word_weaver", "lyrical_genius", "lyric_lover", "hook_keeper", "verse_vault"],
     description: "You did it. The hardest lyric is the first one, and you just broke through. This pen drop is proof your voice matters. Welcome to Came Through Audio — you’re officially in motion.",
     popup: "First ink! One lyric down — the universe just heard you.", repeatPopup: "You Came Through: your {nth} lyric is embedded. It's a victory just having written it down." },
   { id: "word_weaver", title: "Word Weaver", collection: "lyrics", tier: "standard", milestone: "5 lyrics", action: "Embed 5 lyrics", metric: "lyrics", goal: 5, src: `${L}/5_word_weaver.webp`,

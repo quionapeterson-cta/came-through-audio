@@ -54,6 +54,10 @@ describe("badge catalog", () => {
     expect(art[2]).toBe(art[0]);
     // The ordinary rule still holds: the art holds for ten earnings, then the rotation takes over.
     expect(rotationArt(badgeById("embedded")!, 10)).toBe(artUrl(badgeById("embedded")!.src));
+    expect(rotationArt(badgeById("embedded")!, 11)).not.toBe(artUrl(badgeById("embedded")!.src));
+    // A lyric is the gold lock every time it is earned: the milestones carry their own art (founder, 2026-11-08).
+    const lyric = badgeById("first_lyric_entry")!;
+    expect([1, 12, 40].map((n) => rotationArt(lyric, n))).toEqual([1, 12, 40].map(() => artUrl(lyric.src)));
   });
 
   it("fills or drops the artist name in pop-ups", () => {
