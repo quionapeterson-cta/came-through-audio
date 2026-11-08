@@ -60,8 +60,8 @@
   goes near a member's shelf.
 - **Some pictures live only in the bucket** (founder, 2026-11-07): `artInBucket` on a `BadgeDef` says the founder uploaded
   that picture to R2 by hand and the repo keeps no fallback copy. Six pictures use it today (founder, 2026-11-08), all in
-  `icons/playful/`: `song_embedded_512x512.webp` (Embedded), `cta-first-lyric-entry.webp` (First Lyric Entry, once, for
-  the very first lyric) and `lyric_locked_gold_512x512.webp` (Lyric Locked Gold, every lyric — two different badges),
+  `icons/playful/`: `song_embedded_512x512.webp` (Embedded), `lyrics/cta-first-lyric-entry.webp` (First Lyric Entry, once,
+  for the very first lyric) and `lyric_locked_gold_512x512.webp` (Lyric Locked Gold, every lyric — two different badges),
   `100_Royalty_Health.webp` (Silver Crown, which no longer rotates), `100_Royalty_Health_Fully_Matched.webp` (Fully
   Matched) and `brand_kit_512x512.webp` (Kit On File). Their tiles are blank wherever `VITE_ART_BASE` is unset, which is
   local dev, the tests and any preview that leaves the variable off — that is the trade the founder chose, and the fix is
