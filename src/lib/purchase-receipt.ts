@@ -63,11 +63,24 @@ export function money(amount: number | null | undefined, currency: string | null
 export type ReceiptCopy = { subject: string; eyebrow: string; heading: string; paragraphs: string[]; cta: string };
 
 /** What one purchase's email says. `paid` is the real charge on that session, and is left out when Stripe didn't say. */
+/** A date in the same long form every account email uses, or null when it isn't a date. */
+function renewalDate(value: string | null | undefined): string | null {
+  if (!value) return null;
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return null;
+  return d.toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" });
+}
+
 export function receiptCopy(i: {
   kind: PurchaseKind;
   plan?: Tier | null;
   paid?: string | null;
   managed?: boolean;
+  /**
+   * The date the plan next renews, when this purchase moved it (Renew now). It is the renewal date, never the end of a
+   * Stripe trial: the confirmation says "renews", because that is what the member is being told (founder, 2026-11-08).
+   */
+  renewsOn?: string | null;
 }): ReceiptCopy {
   const paid = i.paid ?? null;
   const money_line = paid ? `We charged ${paid}.` : "Your payment went through.";
@@ -167,19 +180,22 @@ export function receiptCopy(i: {
         cta: "Open Expert Help",
       };
       break;
-    case "renew":
+    case "renew": {
+      const renews = renewalDate(i.renewsOn);
       copy = {
         ...base,
-        subject: "Your renewal is in",
+        subject: renews ? `Your plan now renews on ${renews}` : "Your renewal is in",
         heading: "You're renewed for another year",
         paragraphs: [
           money_line,
+          ...(renews ? [`Your plan now renews on ${renews}, with nothing charged before then.`] : []),
           "Every day you had left is kept, and the next charge sits a year past the renewal this paid for.",
           "Your catalog, masters and badges carry on as they are.",
         ],
         cta: "Open Profile",
       };
       break;
+    }
   }
 
   if (i.managed) {

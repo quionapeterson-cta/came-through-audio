@@ -92,6 +92,15 @@ describe("receiptCopy", () => {
     }
   });
 
+  it("names the renewal date when a Renew now moved it, never a trial end", () => {
+    const moved = receiptCopy({ kind: "renew", renewsOn: "2028-10-23T23:08:44.000Z" });
+    expect(moved.paragraphs.join(" ")).toContain("Your plan now renews on October 23, 2028");
+    expect(moved.subject).toBe("Your plan now renews on October 23, 2028");
+    // An unknown or broken date says nothing rather than guessing.
+    expect(receiptCopy({ kind: "renew" }).paragraphs.join(" ")).not.toContain("renews on");
+    expect(receiptCopy({ kind: "renew", renewsOn: "not-a-date" }).paragraphs.join(" ")).not.toContain("renews on");
+  });
+
   it("says a pause is not a cancellation, as the policy does", () => {
     expect(receiptCopy({ kind: "vault" }).paragraphs.join(" ")).toContain("not a cancellation");
   });

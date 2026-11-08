@@ -198,3 +198,50 @@ email repeats that date. Nothing is collected at the handoff beyond the card.
 5. **The freed seat** — **released at the next renewal, built.** The owner's seat line loses that one artist at renewal,
    with no refund for the period already paid for.
 6. **Contracts inside a seat** — confirm read-only forever (recommendation), so the Terms promise stays true.
+
+## 9. What is still open, and the plan for each
+
+Nothing in this section is built. Each part is a proposal, and the ones marked **undecided** need the founder's answer
+before any code or copy carries it.
+
+### 9.1 An owner can offer a handoff
+
+The artist already starts a handoff from Profile. An offer would let the owner say "this plan is yours if you want it"
+instead of writing it in an email: `artist_seats` gains `handoff_offered_at`, the owner's seats panel shows **Offer the
+plan**, and the artist's card explains that accepting opens the same `seat_handoff` checkout. Nothing in billing moves
+until the artist completes that checkout, and an offer dies with the seat.
+
+**Undecided:** how long an offer stands (no number until the founder sets one), and whether the owner is told when the
+artist declines or ignores it.
+
+### 9.2 Seats end by themselves
+
+A seat's access already stops at `current_period_end`, through `seat_is_live()` and the rebuilt policies. What is missing
+is the record: a daily job (a `runSeatEndings` beside `runCatalogLapses`) sets `status = 'ended'` on any seat whose paid
+period has passed and that is not `handed_off`, so the owner's list, the seat count and the buyer's bill agree. It writes
+once and never deletes the seat.
+
+**Undecided:** whether the artist is emailed when their seat ends, and how long before — no timing is approved.
+
+### 9.3 Seat-ending notices
+
+Once 9.2 runs, the owner and the artist can be told the seat ended: what stays (catalog, split sheets, contracts) and
+what stops (the owner's access). **Undecided:** the wording, the timing, and whether a notice goes out before the date as
+well as after it.
+
+### 9.4 Delete rights on a lapsed seat
+
+The expiry fix stops edits, but whether an artist may delete their own songs and files after their plan ends is still
+open (section 5.3). **Needs a decision**, because the Refund Policy and the Free-plan copy promise read-only viewing and
+downloading, not deletion.
+
+### 9.5 The Terms effective date
+
+The seat terms in section 3 are written but not in force: `LegalPage` still needs the effective date the founder sets.
+**Undecided:** the date. Nothing in the copy names one until then.
+
+### 9.6 Verified by hand, not yet by test
+
+Nothing in the handoff has run against a real Stripe subscription: `trial_end` at checkout, the one-seat quantity
+reduction on a multi-seat purchase, both emails, and the Profile card. The next test buys a two-seat tier in sandbox,
+hands one seat over, and checks that the owner's next invoice shows one fewer artist with no proration.

@@ -5,6 +5,7 @@ import { createStripeClient, verifyWebhook, type StripeEnv } from "@/lib/stripe.
 import { purchaseRow, subscriptionRow, type StripeSubscriptionLike } from "@/lib/stripe-mapping";
 import { SEAT_MAX, SEAT_TIER } from "@/lib/plans";
 import { purchaseKind } from "@/lib/purchase-receipt";
+import { earlyRenewalTarget } from "@/lib/retention";
 import { sendPurchaseReceipt } from "@/lib/purchase-emails.server";
 import { sendSeatHandoffEmails } from "@/lib/seat-handoff.server";
 
@@ -42,6 +43,9 @@ async function sendReceipt(session: Stripe.Checkout.Session, env: StripeEnv) {
       amount: session.amount_total ?? null,
       currency: session.currency ?? null,
       managed: md["managed_payments"] === "true",
+      // Renew now: the session carries the renewal it paid for, so the confirmation names the date the plan now
+      // renews on rather than leaving the member to guess (founder, 2026-11-08).
+      renewsOn: kind === "renew" && md["renews"] ? earlyRenewalTarget(md["renews"]).toISOString() : null,
     });
     if (!res.sent) console.warn(`Purchase confirmation for ${session.id} (${env}) not sent: ${res.reason}`);
   } catch (e) {
