@@ -4,6 +4,7 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { ALL_BADGES, BADGES, badgeById } from "@/lib/badges";
 import { badgeMetrics, evaluateBadges, type BadgeData } from "@/lib/badge-rules";
 import { fromCatalogRow } from "@/lib/catalog";
+import { getPaymentsEnvironment } from "@/lib/payments-env";
 
 /** One earning of a badge; `pick` is the art the user chose, for badges with choices. */
 export type BadgeEarning = { at: string; pick?: string | null };
@@ -53,8 +54,9 @@ export const checkBadges = createServerFn({ method: "POST" })
     const [registrationSubmissions, brandBuys, seats] = await Promise.all([
       db.from("registration_songs" as never).select("submitted_at").eq("user_id", uid)
         .then((r) => (r.error ? 0 : ((r.data ?? []) as { submitted_at: string | null }[]).filter((s) => s.submitted_at).length)),
-      // Brand kits the member bought: a refunded purchase unlocks nothing, here as everywhere else.
-      db.from("purchases").select("kind, details").eq("user_id", uid).eq("kind", "branding")
+      // Brand kits the member bought: a refunded purchase unlocks nothing, here as everywhere else, and only the rows
+      // from the environment being served count, so a sandbox test buy never earns a live badge (founder, 2026-11-08).
+      db.from("purchases").select("kind, details").eq("user_id", uid).eq("kind", "branding").eq("environment", getPaymentsEnvironment())
         .then((r) => (r.error ? 0 : ((r.data ?? []) as { details: Record<string, unknown> | null }[]).filter((p) => !(p.details ?? {})["refunded_at"]).length)),
       // Seats this member owns: one key for the invite, another when the artist accepts it.
       db.from("artist_seats" as never).select("invite_email, accepted_at").eq("owner_id", uid)
