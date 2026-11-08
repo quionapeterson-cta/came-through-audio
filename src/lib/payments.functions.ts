@@ -4,6 +4,7 @@ import { createStripeClient, getStripeErrorMessage } from "@/lib/stripe.server";
 import { getPaymentsEnvironment } from "@/lib/payments-env";
 import { checkoutInput, planCheckout } from "@/lib/stripe-mapping";
 import { isActiveSub, PRICE_TIER } from "@/lib/plans";
+import { purchaseLanding } from "@/lib/purchase-receipt";
 
 /**
  * Sales tax on sales Came Through Audio, LLC makes directly (Expert Assistance). Stays off until Stripe Tax is
@@ -140,7 +141,7 @@ async function renewCheckout(stripe: Stripe, env: "sandbox" | "live", userId: st
       line_items: [{ price_data: { currency: price.currency, product, unit_amount: price.unit_amount }, quantity: 1 }],
       mode: "payment",
       ui_mode: "embedded_page",
-      return_url: `${origin}/profile?checkout=success`,
+      return_url: `${origin}${purchaseLanding("renew")}`,
       customer: await resolveOrCreateCustomer(stripe, { email, userId }),
       client_reference_id: userId,
       payment_intent_data: { description: `${name}: next year, renewed early` },
@@ -218,7 +219,8 @@ export const createCheckoutSession = createServerFn({ method: "POST" })
 
       const email = (context.claims as { email?: string }).email;
       const customer = await resolveOrCreateCustomer(stripe, { email, userId: context.userId });
-      const back = plan.returnTab === "profile" ? `${origin}/profile?checkout=success#brand-kit` : `${origin}/workspace${plan.returnTab ? `?tab=${plan.returnTab}&` : "?"}checkout=success`;
+      // The page the purchase landed on is the same one the confirmation email's button opens (purchase-receipt.ts).
+      const back = `${origin}${purchaseLanding(data.kind)}`;
       const metadata = { ...plan.metadata, priceIds: plan.items.map((i) => i.lookupKey).join(",") };
 
       const session = await stripe.checkout.sessions.create({

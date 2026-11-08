@@ -4,11 +4,48 @@ import type Stripe from "stripe";
 import { createStripeClient, verifyWebhook, type StripeEnv } from "@/lib/stripe.server";
 import { purchaseRow, subscriptionRow, type StripeSubscriptionLike } from "@/lib/stripe-mapping";
 import { SEAT_MAX, SEAT_TIER } from "@/lib/plans";
+import { purchaseKind } from "@/lib/purchase-receipt";
+import { sendPurchaseReceipt } from "@/lib/purchase-emails.server";
 
 let _sb: ReturnType<typeof createClient> | null = null;
 function db() {
   if (!_sb) _sb = createClient(process.env['SUPABASE_URL']!, process.env['SUPABASE_SERVICE_ROLE_KEY']!);
   return _sb;
+}
+
+/** The member's own address, for a confirmation when the session didn't carry one. */
+async function userEmail(userId: string | undefined): Promise<string | null> {
+  if (!userId) return null;
+  const { data } = await db().auth.admin.getUserById(userId);
+  return data.user?.email ?? null;
+}
+
+/**
+ * One confirmation per checkout, keyed to its session so a retried event can't send it twice. Never fails the event:
+ * the purchase is already recorded by the time this runs, and the email is a courtesy.
+ */
+async function sendReceipt(session: Stripe.Checkout.Session, env: StripeEnv) {
+  try {
+    // A delayed payment method completes unpaid and clears on async_payment_succeeded: the receipt waits for the money.
+    if (session.mode === "payment" && session.payment_status !== "paid") return;
+    const md = session.metadata ?? {};
+    const kind = md["kind"] || (session.mode === "subscription" ? "plan" : "");
+    if (!purchaseKind(kind)) return console.warn(`Checkout ${session.id} has no purchase kind to confirm`);
+    const email = session.customer_details?.email || (await userEmail(md["userId"]));
+    if (!email) return console.warn(`Checkout ${session.id} has no email to confirm`);
+    const res = await sendPurchaseReceipt({
+      sessionId: session.id,
+      email,
+      kind,
+      priceIds: (md["priceIds"] ?? "").split(",").filter(Boolean),
+      amount: session.amount_total ?? null,
+      currency: session.currency ?? null,
+      managed: md["managed_payments"] === "true",
+    });
+    if (!res.sent) console.warn(`Purchase confirmation for ${session.id} (${env}) not sent: ${res.reason}`);
+  } catch (e) {
+    console.error(`Purchase confirmation for ${session.id} failed:`, e);
+  }
 }
 
 /** Writes the subscription's current state. Fetched fresh from Stripe so out-of-order events can't roll it back. */
@@ -182,8 +219,12 @@ export const Route = createFileRoute("/api/public/payments/webhook")({
         }
         try {
           switch (event.type) {
+            // A delayed payment method completes unpaid and clears later: both events are handled, or a bank debit
+            // buyer pays and gets nothing. checkoutCompleted is idempotent (both writes upsert on their Stripe id).
             case "checkout.session.completed":
-              await checkoutCompleted(event.data.object, env);
+            case "checkout.session.async_payment_succeeded":
+              await checkoutCompleted(event.data.object as Stripe.Checkout.Session, env);
+              await sendReceipt(event.data.object as Stripe.Checkout.Session, env);
               break;
             case "customer.subscription.created":
               await syncSubscription(env, event.data.object.id);

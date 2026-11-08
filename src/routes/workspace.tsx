@@ -166,7 +166,9 @@ function Workspace() {
   const studio = useStudioMode();
   const app = useInstallApp();
   // Free accounts open on the Royalty Health Hub (Royalty Inspector) instead of the locked Embed tab.
-  useEffect(() => { if (billingLoaded && !search.tab && !hasTier(realTier, "plus")) setTab((t) => (t === "embed" ? "health" : t)); }, [billingLoaded]); // eslint-disable-line react-hooks/exhaustive-deps
+  // A checkout return is never redirected: the webhook can still be in flight, so a brand-new Plus member would be
+  // read as Free and moved off the tab they just bought (founder, 2026-11-08).
+  useEffect(() => { if (billingLoaded && !search.tab && !search.checkout && !hasTier(realTier, "plus")) setTab((t) => (t === "embed" ? "health" : t)); }, [billingLoaded]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // A plan picked before or during sign-up goes straight to that plan's checkout once billing has loaded. The plan
   // arrives two ways: named in the URL (the sign-up's confirmation link) or left in this browser (founder, 2026-11-06).
@@ -177,6 +179,9 @@ function Workspace() {
   const [triedPlan, setTriedPlan] = useState<string | null>(null);
   useEffect(() => {
     if (!user || !billingLoaded) return;
+    // Back from Stripe is the purchase itself: never reopen its checkout here. The webhook lands seconds later, so the
+    // tier still reads Free at this moment and a second session for the same plan would charge them twice.
+    if (search.checkout === "success") { takePlanIntent(); setPendingPlan(null); return; }
     const priceId = planIntentFromSearch(search.plan) ?? takePlanIntent();
     if (!priceId || hasTier(realTier, PRICE_TIER[priceId]!)) { setPendingPlan(null); return; }
     setPendingPlan(priceId);
@@ -184,7 +189,7 @@ function Workspace() {
     setTriedPlan(priceId);
     toast.info(`Opening checkout for ${TIER_LABEL[PRICE_TIER[priceId]!]}…`);
     openCheckout({ kind: "plan", priceId })
-      .then(() => setPendingPlan(null))
+      .then(() => { takePlanIntent(); setPendingPlan(null); })
       .catch((e) => {
         // Keep the pick whatever went wrong: the banner, the next visit and the upgrade button all resume the purchase
         // instead of leaving them in a free workspace with it forgotten (founder, 2026-11-05).
