@@ -242,7 +242,7 @@ const NIGHT: BadgeDef[] = [
 // badge, a different picture, and the 5, 10, 15, 25, 40, 50 and 100 lyric milestones arrive as their own badges too.
 const L = `${P}/lyrics`;
 const LYRICS: BadgeDef[] = [
-  { id: "first_lyric_entry", title: "First Lyric Entry", collection: "lyrics", tier: "instant", milestone: "Your very first lyric", action: "Embed your first lyric", metric: "lyrics", goal: 1, src: `${L}/cta-first-lyric-entry.webp`, artInBucket: true,
+  { id: "first_lyric_entry", title: "First Lyric Entry", collection: "lyrics", tier: "instant", milestone: "Your very first lyric", action: "Embed your first lyric", metric: "lyrics", goal: 1, src: `${L}/1_first_lyric_entry_alt.webp`,
     description: "You did it. The hardest lyric is the first one, and you just broke through. This pen drop is proof your voice matters. Welcome to Came Through Audio — you’re officially in motion.",
     popup: "First ink! One lyric down — the universe just heard you." },
   { id: "lyric_locked_gold", title: "Lyric Locked Gold", collection: "lyrics", tier: "instant", milestone: "Every lyric you embed (a victory just having written it down)", action: "Embed a lyric", metric: "lyrics", goal: 1, every: 1, src: `${P}/lyric_locked_gold_512x512.webp`, artInBucket: true,

@@ -28,7 +28,7 @@ describe("badge catalog", () => {
     // Only the pictures the founder uploaded to R2 by hand may skip the repo copy, and every one of them is named here,
     // so a mistyped path can't hide behind the exemption. With VITE_ART_BASE unset these tiles are blank by design.
     expect(BADGES.filter((b) => b.artInBucket).map((b) => b.id).sort()).toEqual(
-      ["brand_kit_bought", "double_protection", "embedded", "first_lyric_entry", "health_report_matched", "lyric_locked_gold", "silver_crown"].sort(),
+      ["brand_kit_bought", "double_protection", "embedded", "health_report_matched", "lyric_locked_gold", "silver_crown"].sort(),
     );
   });
   it("has nothing left waiting on art, so every badge can be earned", () => {
@@ -58,7 +58,9 @@ describe("badge catalog", () => {
     // The gold lock is the every-time lyric badge, and the first lyric has its own badge beside it (founder, 2026-11-08).
     const lyric = badgeById("lyric_locked_gold")!;
     expect([1, 12, 40].map((n) => rotationArt(lyric, n))).toEqual([1, 12, 40].map(() => artUrl(lyric.src)));
-    expect(badgeById("first_lyric_entry")).toMatchObject({ goal: 1, src: expect.stringContaining("cta-first-lyric-entry") });
+    // First Lyric Entry keeps its own copy in the repo, so it draws everywhere, bucket base or not (founder, 2026-11-08).
+    expect(badgeById("first_lyric_entry")).toMatchObject({ goal: 1, src: expect.stringContaining("lyrics/1_first_lyric_entry_alt.webp") });
+    expect(badgeById("first_lyric_entry")?.artInBucket).toBeFalsy();
     expect(badgeById("first_lyric_entry")?.every).toBeUndefined();
   });
 
