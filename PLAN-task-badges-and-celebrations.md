@@ -194,11 +194,12 @@ Built and pushed in this change:
   artist accepts, counted from `artist_seats`.
 - **Fully Matched** (`health_report_matched`, `playful/100_Royalty_Health_Fully_Matched.webp`): one earning per month
   whose health check found every song 100% healthy.
-- **Embedded** now wears `playful/song_embedded_512x512.webp` for every master embedded, **First Lyric Entry** wears
+- **Embedded** now wears `playful/song_embedded_512x512.webp` for every master embedded, **Lyric Locked Gold** wears
   `playful/lyric_locked_gold_512x512.webp` on **every** earning with no rotation left on it (the 5, 10, 15, 25, 40, 50 and
-  100 lyric milestones keep their own art as separate badges), and **Silver Crown** wears
-  `playful/100_Royalty_Health.webp` with no rotation (founder, 2026-11-08). Its celebration is unchanged.
-- Those five pictures live in R2 only, so `artInBucket` is set on their badges and `badge-rules.test.ts` names each one;
-  their tiles are blank in local dev and tests until a 512px copy is added to `public/icons/playful/`.
+  100 lyric milestones keep their own art as separate badges), and **First Lyric Entry** keeps
+  `playful/lyrics/1_first_lyric_entry_alt.webp` for the once-only first lyric. The crowns are gone (2026-11-08).
+- Embedded, Lyric Locked Gold, Fully Matched and Kit On File now have 512px copies in `public/`, pulled from the bucket at
+  the exact path their `src` names (founder, 2026-11-08), so they draw in local dev and tests as well. Double Protection
+  is the one badge still `artInBucket`: its picture lives in R2 only, and `badge-rules.test.ts` names it.
 - Two measurements are mine, not yours, and are easy to change: a "finished song entry" is master + cover art +
   Registration Ready, and "100% healthy report" is a check month where every song is healthy.

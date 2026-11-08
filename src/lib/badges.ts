@@ -112,7 +112,7 @@ const CORE: BadgeDef[] = [
   { id: "mic_check", title: "Mic Check", collection: "core", tier: "standard", milestone: "Credit a vocalist on a song", action: "Credit a vocalist", metric: "vocalSongs", goal: 1, src: `${P}/bedazzled_mic.png`,
     description: "The voice got its credit. Naming who sang it means nobody gets left out of the story or the royalties.",
     popup: "Mic check! Every voice on this record is on the record." },
-  { id: "embedded", title: "Embedded", collection: "core", tier: "instant", milestone: "Every master you embed", action: "Embed a master", metric: "masterDownloads", goal: 1, every: 1, src: `${P}/song_embedded_512x512.webp`, artInBucket: true,
+  { id: "embedded", title: "Embedded", collection: "core", tier: "instant", milestone: "Every master you embed", action: "Embed a master", metric: "masterDownloads", goal: 1, every: 1, src: `${P}/song_embedded_512x512.webp`,
     rotation: ["first_note", "embedded_vinyl", "embedded_band"],
     description: "Your credits are inside the file now. Wherever this master goes, your name and your codes go with it. Every master you embed earns this again.",
     popup: "You Came Through! Your first master is embedded.", repeatPopup: "You Came Through: your {nth} embedded master." },
@@ -186,7 +186,7 @@ const CORE: BadgeDef[] = [
     description: "Your embed defaults and your catalog defaults are both set, so every master and every song starts finished, and a song entry with its master, artwork and writers done earns this again. That is the catalog protecting itself.",
     popup: "Embed defaults & Catalog Defaults 100% Filled! Both are set and your catalog is protected.", repeatPopup: "You Came Through: your {nth} finished song entry." },
   // Every purchased brand kit, once the payment has gone through (founder, 2026-11-08).
-  { id: "brand_kit_bought", title: "Kit On File", collection: "core", tier: "standard", milestone: "Every brand kit you buy, after the payment clears", action: "Buy a brand kit", metric: "brandKits", goal: 1, every: 1, src: `${P}/brand_kit_512x512.webp`, artInBucket: true,
+  { id: "brand_kit_bought", title: "Kit On File", collection: "core", tier: "standard", milestone: "Every brand kit you buy, after the payment clears", action: "Buy a brand kit", metric: "brandKits", goal: 1, every: 1, src: `${P}/brand_kit_512x512.webp`,
     description: "Your own name, logo and colours on the documents you hand out. Every kit you buy is another business with its own face on the paperwork.",
     popup: "Kit on file! Your documents carry your brand now.", repeatPopup: "Another kit on file: your {nth} brand kit." },
   // Inviting a seat earns a key, and so does the artist accepting it (founder, 2026-11-08).
@@ -194,7 +194,7 @@ const CORE: BadgeDef[] = [
     description: "You opened the door for another artist: one key for the invite, another when they turn it. Every seat you fill earns this again.",
     popup: "A key handed over! Your first seat invite is out.", repeatPopup: "A key handed over: your {nth} seat." },
   // A Royalty Health Report where every song is 100% healthy: the fully matched report (founder, 2026-11-08).
-  { id: "health_report_matched", title: "Fully Matched", collection: "health", tier: "standard", milestone: "Every Royalty Health Report where every song is 100% healthy", action: "Get a 100% healthy report", metric: "healthyReports", goal: 1, every: 1, src: `${P}/100_Royalty_Health_Fully_Matched.webp`, artInBucket: true,
+  { id: "health_report_matched", title: "Fully Matched", collection: "health", tier: "standard", milestone: "Every Royalty Health Report where every song is 100% healthy", action: "Get a 100% healthy report", metric: "healthyReports", goal: 1, every: 1, src: `${P}/100_Royalty_Health_Fully_Matched.webp`,
     description: "Every song on the report matched to a society, a work and a payday. Nothing left unclaimed. Each report that comes back fully healthy earns this again.",
     popup: "Fully matched! Every song on the report is 100% healthy.", repeatPopup: "Fully matched again: your {nth} clean report." },
   { id: "unbreakable", title: "Unbreakable", collection: "core", tier: "standard", milestone: "1 year as a member", action: "Stay a member 1 year", metric: "memberYears", goal: 1, src: `${P}/unbreakable.png`,
@@ -238,7 +238,7 @@ const LYRICS: BadgeDef[] = [
   { id: "first_lyric_entry", title: "First Lyric Entry", collection: "lyrics", tier: "instant", milestone: "Your very first lyric", action: "Embed your first lyric", metric: "lyrics", goal: 1, src: `${L}/1_first_lyric_entry_alt.webp`,
     description: "You did it. The hardest lyric is the first one, and you just broke through. This pen drop is proof your voice matters. Welcome to Came Through Audio — you’re officially in motion.",
     popup: "First ink! One lyric down — the universe just heard you." },
-  { id: "lyric_locked_gold", title: "Lyric Locked Gold", collection: "lyrics", tier: "instant", milestone: "Every lyric you embed (a victory just having written it down)", action: "Embed a lyric", metric: "lyrics", goal: 1, every: 1, src: `${P}/lyric_locked_gold_512x512.webp`, artInBucket: true,
+  { id: "lyric_locked_gold", title: "Lyric Locked Gold", collection: "lyrics", tier: "instant", milestone: "Every lyric you embed (a victory just having written it down)", action: "Embed a lyric", metric: "lyrics", goal: 1, every: 1, src: `${P}/lyric_locked_gold_512x512.webp`,
     description: "Every lyric you lock in earns this again. The words stop being a mood and start being a catalogue, and that is a victory just having written it down.",
     popup: "Gold lock! Your first lyric is locked in — it's a victory just having written it down.",
     repeatPopup: "You Came Through: your {nth} lyric is locked in. It's a victory just having written it down." },

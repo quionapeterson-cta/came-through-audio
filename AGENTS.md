@@ -59,16 +59,15 @@
   full size when clicked (`PeekDialog`, founder, 2026-11-06), so the art can be judged, approved or replaced before it
   goes near a member's shelf.
 - **Some pictures live only in the bucket** (founder, 2026-11-07): `artInBucket` on a `BadgeDef` says the founder uploaded
-  that picture to R2 by hand and the repo keeps no fallback copy. Five pictures use it today (founder, 2026-11-08), every
-  one in `icons/playful/` except Double Protection, which sits in `icons/serious/`: `song_embedded_512x512.webp`
-  (Embedded), `lyric_locked_gold_512x512.webp` (Lyric Locked Gold, every lyric),
-  `100_Royalty_Health_Fully_Matched.webp` (Fully Matched), `brand_kit_512x512.webp` (Kit On File) and
-  `cta-double-protection-trophies.png` (Double Protection, served as the `.webp` at that same path). The three crown
+  that picture to R2 by hand and the repo keeps no fallback copy. That is **one picture now**: Double Protection, at
+  `icons/serious/cta-double-protection-trophies.png` (served as the `.webp` at that same path). Embedded, Lyric Locked
+  Gold, Fully Matched and Kit On File each got a 512px repo copy on 2026-11-08, pulled from the bucket into `public/` at
+  the exact path their `src` names, so they draw with or without `VITE_ART_BASE`. The three crown
   pictures are no longer a badge at all (founder, 2026-11-08). First Lyric Entry
   is the once-only lyric badge and keeps its own copy at `public/icons/playful/lyrics/1_first_lyric_entry_alt.webp`, so it
-  draws everywhere, bucket base or not. Their tiles are blank wherever `VITE_ART_BASE` is unset, which is
-  local dev, the tests and any preview that leaves the variable off — that is the trade the founder chose, and the fix is
-  still a 512px copy in `public/`. AI Slayer used the exemption once and went blank that way, so it keeps its own copy in
+  draws everywhere, bucket base or not. A bucket-only tile is blank wherever `VITE_ART_BASE` is unset, which is
+  local dev, the tests and any preview that leaves the variable off — the fix is a 512px copy in `public/`, which is why
+  those four got one. AI Slayer used the exemption once and went blank that way, so it keeps its own copy in
   `public/icons/serious/`. A badge goes live the moment its
   file is in the bucket (drop `artPending`, never leave both), and the served copy must be the `.webp` at the same path,
   because `artUrl` rewrites `.png`/`.jpg` to `.webp`; without it the shelf shows a blank tile. `badge-rules.test.ts` names
