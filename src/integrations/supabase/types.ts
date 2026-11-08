@@ -346,6 +346,27 @@ export type Database = {
         }
         Relationships: []
       }
+      badge_art: {
+        Row: {
+          badge_id: string
+          src: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          badge_id: string
+          src: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          badge_id?: string
+          src?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: []
+      }
       badge_drops: {
         Row: {
           created_at: string
@@ -447,6 +468,90 @@ export type Database = {
         }
         Relationships: []
       }
+      badge_submissions: {
+        Row: {
+          action: string
+          art_mime: string | null
+          art_name: string | null
+          art_path: string | null
+          collection: string
+          created_at: string
+          decided_at: string | null
+          decided_by: string | null
+          decision_note: string | null
+          description: string
+          id: string
+          master_mime: string | null
+          master_name: string | null
+          master_path: string | null
+          milestone: string
+          popup: string
+          scope: string
+          set_folder: string | null
+          slug: string
+          status: string
+          submitted_by: string
+          tier: string
+          title: string
+          uploaded_at: string | null
+          uploaded_by: string | null
+        }
+        Insert: {
+          action?: string
+          art_mime?: string | null
+          art_name?: string | null
+          art_path?: string | null
+          collection: string
+          created_at?: string
+          decided_at?: string | null
+          decided_by?: string | null
+          decision_note?: string | null
+          description?: string
+          id?: string
+          master_mime?: string | null
+          master_name?: string | null
+          master_path?: string | null
+          milestone?: string
+          popup?: string
+          scope?: string
+          set_folder?: string | null
+          slug: string
+          status?: string
+          submitted_by: string
+          tier?: string
+          title: string
+          uploaded_at?: string | null
+          uploaded_by?: string | null
+        }
+        Update: {
+          action?: string
+          art_mime?: string | null
+          art_name?: string | null
+          art_path?: string | null
+          collection?: string
+          created_at?: string
+          decided_at?: string | null
+          decided_by?: string | null
+          decision_note?: string | null
+          description?: string
+          id?: string
+          master_mime?: string | null
+          master_name?: string | null
+          master_path?: string | null
+          milestone?: string
+          popup?: string
+          scope?: string
+          set_folder?: string | null
+          slug?: string
+          status?: string
+          submitted_by?: string
+          tier?: string
+          title?: string
+          uploaded_at?: string | null
+          uploaded_by?: string | null
+        }
+        Relationships: []
+      }
       beta_feedback: {
         Row: {
           item_id: string
@@ -471,14 +576,73 @@ export type Database = {
         }
         Relationships: []
       }
+      billing_actions: {
+        Row: {
+          action: string
+          actor_email: string
+          actor_id: string
+          amount_cents: number | null
+          created_at: string
+          currency: string | null
+          environment: string
+          error: string | null
+          id: string
+          reason: string
+          request_id: string | null
+          status: string
+          stripe_object: string | null
+          target: string
+          target_email: string
+          target_user_id: string | null
+        }
+        Insert: {
+          action: string
+          actor_email?: string
+          actor_id: string
+          amount_cents?: number | null
+          created_at?: string
+          currency?: string | null
+          environment?: string
+          error?: string | null
+          id?: string
+          reason?: string
+          request_id?: string | null
+          status?: string
+          stripe_object?: string | null
+          target?: string
+          target_email?: string
+          target_user_id?: string | null
+        }
+        Update: {
+          action?: string
+          actor_email?: string
+          actor_id?: string
+          amount_cents?: number | null
+          created_at?: string
+          currency?: string | null
+          environment?: string
+          error?: string | null
+          id?: string
+          reason?: string
+          request_id?: string | null
+          status?: string
+          stripe_object?: string | null
+          target?: string
+          target_email?: string
+          target_user_id?: string | null
+        }
+        Relationships: []
+      }
       brand_kits: {
         Row: {
+          color_sets: Json
           colors: string[]
           created_at: string
           font: string
           header_color: string | null
           id: string
           logo_path: string | null
+          logo_paths: string[]
           name: string
           options: Json
           show_footer: boolean
@@ -488,12 +652,14 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          color_sets?: Json
           colors?: string[]
           created_at?: string
           font?: string
           header_color?: string | null
           id?: string
           logo_path?: string | null
+          logo_paths?: string[]
           name?: string
           options?: Json
           show_footer?: boolean
@@ -503,12 +669,14 @@ export type Database = {
           user_id?: string
         }
         Update: {
+          color_sets?: Json
           colors?: string[]
           created_at?: string
           font?: string
           header_color?: string | null
           id?: string
           logo_path?: string | null
+          logo_paths?: string[]
           name?: string
           options?: Json
           show_footer?: boolean
@@ -1101,6 +1269,21 @@ export type Database = {
         Update: {
           created_at?: string
           feature?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      founder_access: {
+        Row: {
+          claimed_at: string
+          user_id: string
+        }
+        Insert: {
+          claimed_at?: string
+          user_id: string
+        }
+        Update: {
+          claimed_at?: string
           user_id?: string
         }
         Relationships: []
@@ -1873,6 +2056,230 @@ export type Database = {
         }
         Relationships: []
       }
+      staff_departures: {
+        Row: {
+          access_ended_at: string
+          cancelled_at: string | null
+          created_at: string
+          delete_on: string | null
+          deleted_at: string | null
+          first_day: string
+          id: string
+          last_day: string
+          member_email: string
+          recorded_by: string | null
+          reminders: string[]
+          updated_at: string
+          user_id: string | null
+          within_probation: boolean
+        }
+        Insert: {
+          access_ended_at: string
+          cancelled_at?: string | null
+          created_at?: string
+          delete_on?: string | null
+          deleted_at?: string | null
+          first_day: string
+          id?: string
+          last_day: string
+          member_email: string
+          recorded_by?: string | null
+          reminders?: string[]
+          updated_at?: string
+          user_id?: string | null
+          within_probation: boolean
+        }
+        Update: {
+          access_ended_at?: string
+          cancelled_at?: string | null
+          created_at?: string
+          delete_on?: string | null
+          deleted_at?: string | null
+          first_day?: string
+          id?: string
+          last_day?: string
+          member_email?: string
+          recorded_by?: string | null
+          reminders?: string[]
+          updated_at?: string
+          user_id?: string | null
+          within_probation?: boolean
+        }
+        Relationships: []
+      }
+      staff_plan_grants: {
+        Row: {
+          created_at: string
+          ended_at: string | null
+          ends_at: string | null
+          granted_at: string | null
+          granted_by: string | null
+          id: string
+          member_email: string
+          reported_by: string | null
+          starts_at: string | null
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          ended_at?: string | null
+          ends_at?: string | null
+          granted_at?: string | null
+          granted_by?: string | null
+          id?: string
+          member_email: string
+          reported_by?: string | null
+          starts_at?: string | null
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          ended_at?: string | null
+          ends_at?: string | null
+          granted_at?: string | null
+          granted_by?: string | null
+          id?: string
+          member_email?: string
+          reported_by?: string | null
+          starts_at?: string | null
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      staff_submissions: {
+        Row: {
+          created_at: string
+          decided_at: string | null
+          decided_by: string | null
+          details: string
+          file_mime: string | null
+          file_name: string | null
+          file_path: string | null
+          file_size: number | null
+          id: string
+          kind: string
+          link: string | null
+          note: string
+          status: string
+          submitted_by: string
+          title: string
+        }
+        Insert: {
+          created_at?: string
+          decided_at?: string | null
+          decided_by?: string | null
+          details?: string
+          file_mime?: string | null
+          file_name?: string | null
+          file_path?: string | null
+          file_size?: number | null
+          id?: string
+          kind?: string
+          link?: string | null
+          note?: string
+          status?: string
+          submitted_by: string
+          title: string
+        }
+        Update: {
+          created_at?: string
+          decided_at?: string | null
+          decided_by?: string | null
+          details?: string
+          file_mime?: string | null
+          file_name?: string | null
+          file_path?: string | null
+          file_size?: number | null
+          id?: string
+          kind?: string
+          link?: string | null
+          note?: string
+          status?: string
+          submitted_by?: string
+          title?: string
+        }
+        Relationships: []
+      }
+      staff_wins: {
+        Row: {
+          actor_name: string
+          created_at: string
+          id: string
+          item_ref: string | null
+          kind: string
+          title: string
+          user_id: string
+        }
+        Insert: {
+          actor_name: string
+          created_at?: string
+          id?: string
+          item_ref?: string | null
+          kind?: string
+          title: string
+          user_id: string
+        }
+        Update: {
+          actor_name?: string
+          created_at?: string
+          id?: string
+          item_ref?: string | null
+          kind?: string
+          title?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      step_change_requests: {
+        Row: {
+          created_at: string
+          decided_at: string | null
+          decided_by: string | null
+          id: string
+          proposed_title: string | null
+          reason: string
+          requested_by: string
+          status: string
+          step_id: string
+        }
+        Insert: {
+          created_at?: string
+          decided_at?: string | null
+          decided_by?: string | null
+          id?: string
+          proposed_title?: string | null
+          reason?: string
+          requested_by: string
+          status?: string
+          step_id: string
+        }
+        Update: {
+          created_at?: string
+          decided_at?: string | null
+          decided_by?: string | null
+          id?: string
+          proposed_title?: string | null
+          reason?: string
+          requested_by?: string
+          status?: string
+          step_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "step_change_requests_step_id_fkey"
+            columns: ["step_id"]
+            isOneToOne: false
+            referencedRelation: "task_steps"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       subscriptions: {
         Row: {
           cancel_at_period_end: boolean | null
@@ -1972,6 +2379,75 @@ export type Database = {
           subject?: string
           updated_at?: string
           user_id?: string | null
+        }
+        Relationships: []
+      }
+      task_steps: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          done_at: string | null
+          id: string
+          item_ref: string
+          lock_mode: string
+          locked_by: string | null
+          position: number
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          done_at?: string | null
+          id?: string
+          item_ref: string
+          lock_mode?: string
+          locked_by?: string | null
+          position?: number
+          title: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          done_at?: string | null
+          id?: string
+          item_ref?: string
+          lock_mode?: string
+          locked_by?: string | null
+          position?: number
+          title?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      team_notices: {
+        Row: {
+          author_id: string
+          author_name: string
+          body: string
+          created_at: string
+          department: string | null
+          id: string
+        }
+        Insert: {
+          author_id: string
+          author_name: string
+          body: string
+          created_at?: string
+          department?: string | null
+          id?: string
+        }
+        Update: {
+          author_id?: string
+          author_name?: string
+          body?: string
+          created_at?: string
+          department?: string | null
+          id?: string
         }
         Relationships: []
       }
@@ -2189,6 +2665,36 @@ export type Database = {
         }
         Relationships: []
       }
+      workbench_items: {
+        Row: {
+          checked: string[]
+          item_id: string
+          item_meta: Json
+          kind: string
+          pinned: boolean
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          checked?: string[]
+          item_id: string
+          item_meta?: Json
+          kind: string
+          pinned?: boolean
+          updated_at?: string
+          user_id?: string
+        }
+        Update: {
+          checked?: string[]
+          item_id?: string
+          item_meta?: Json
+          kind?: string
+          pinned?: boolean
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
@@ -2213,10 +2719,12 @@ export type Database = {
           users: number
         }[]
       }
+      billing_find_user: { Args: { _email: string }; Returns: string }
       can_edit_legal: { Args: { _user_id: string }; Returns: boolean }
       can_issue_ai_certificate: { Args: { _user_id: string }; Returns: boolean }
       can_manage_badges: { Args: { _user_id: string }; Returns: boolean }
       can_manage_staff: { Args: { _user_id: string }; Returns: boolean }
+      can_see_billing: { Args: { _user_id: string }; Returns: boolean }
       catalog_lapse_candidates: {
         Args: never
         Returns: {
@@ -2253,6 +2761,7 @@ export type Database = {
         Returns: boolean
       }
       is_department_lead: { Args: { _user_id: string }; Returns: boolean }
+      is_founder: { Args: { _user_id: string }; Returns: boolean }
       is_paused: { Args: { _uid: string }; Returns: boolean }
       is_room_host: {
         Args: { _room_id: string; _user_id: string }
@@ -2307,6 +2816,8 @@ export type Database = {
         }
         Returns: undefined
       }
+      staff_offboarded: { Args: { _uid: string }; Returns: boolean }
+      staff_plan_active: { Args: { _uid: string }; Returns: boolean }
       user_id_by_email: { Args: { _email: string }; Returns: string }
       user_tier: { Args: { _uid: string }; Returns: string }
     }
