@@ -28,7 +28,9 @@ describe("badge catalog", () => {
     // Only a picture the founder uploaded to R2 by hand, with no repo copy yet, may skip the check, and each one is named
     // here so a mistyped path can't hide behind the exemption. With VITE_ART_BASE unset that tile is blank by design.
     // Embedded, Lyric Locked Gold, Fully Matched and Kit On File got their 512px repo copies on 2026-11-08.
-    expect(BADGES.filter((b) => b.artInBucket).map((b) => b.id).sort()).toEqual(["double_protection"].sort());
+    // No badge is bucket-only any more (2026-11-08): a new exemption has to be added deliberately, with its id written
+    // out in this list.
+    expect(BADGES.filter((b) => b.artInBucket).map((b) => b.id)).toEqual([]);
   });
   it("carries no crown badge, and Royalty Health keeps only the clean-report badge", () => {
     // The founder removed all three crowns as a poor fit (2026-11-08); a healthy song earns no badge of its own now.

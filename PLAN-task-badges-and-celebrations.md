@@ -200,6 +200,7 @@ Built and pushed in this change:
   `playful/lyrics/1_first_lyric_entry_alt.webp` for the once-only first lyric. The crowns are gone (2026-11-08).
 - Embedded, Lyric Locked Gold, Fully Matched and Kit On File now have 512px copies in `public/`, pulled from the bucket at
   the exact path their `src` names (founder, 2026-11-08), so they draw in local dev and tests as well. Double Protection
-  is the one badge still `artInBucket`: its picture lives in R2 only, and `badge-rules.test.ts` names it.
+  needs no exemption either: its picture is `serious/came_double_trophy_gold.png`, which the repo already held, so no
+  badge is bucket-only now.
 - Two measurements are mine, not yours, and are easy to change: a "finished song entry" is master + cover art +
   Registration Ready, and "100% healthy report" is a check month where every song is healthy.

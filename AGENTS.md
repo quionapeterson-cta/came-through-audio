@@ -59,10 +59,10 @@
   full size when clicked (`PeekDialog`, founder, 2026-11-06), so the art can be judged, approved or replaced before it
   goes near a member's shelf.
 - **Some pictures live only in the bucket** (founder, 2026-11-07): `artInBucket` on a `BadgeDef` says the founder uploaded
-  that picture to R2 by hand and the repo keeps no fallback copy. That is **one picture now**: Double Protection, at
-  `icons/serious/cta-double-protection-trophies.png` (served as the `.webp` at that same path). Embedded, Lyric Locked
-  Gold, Fully Matched and Kit On File each got a 512px repo copy on 2026-11-08, pulled from the bucket into `public/` at
-  the exact path their `src` names, so they draw with or without `VITE_ART_BASE`. The three crown
+  that picture to R2 by hand and the repo keeps no fallback copy. **No badge uses it today** (founder, 2026-11-08):
+  Embedded, Lyric Locked Gold, Fully Matched and Kit On File got their 512px repo copies, pulled from the bucket into
+  `public/` at the exact path their `src` names, and Double Protection turned out to be `came_double_trophy_gold.png`,
+  which the repo already had. The three crown
   pictures are no longer a badge at all (founder, 2026-11-08). First Lyric Entry
   is the once-only lyric badge and keeps its own copy at `public/icons/playful/lyrics/1_first_lyric_entry_alt.webp`, so it
   draws everywhere, bucket base or not. A bucket-only tile is blank wherever `VITE_ART_BASE` is unset, which is

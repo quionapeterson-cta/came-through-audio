@@ -182,7 +182,7 @@ const CORE: BadgeDef[] = [
   // Both profile defaults filled shows the rocket sky; the trophy is what the shelf keeps (founder, 2026-11-08). The same
   // badge comes again for a song entry finished 100% (master, cover art and Registration Ready), so the art is earned on
   // either route.
-  { id: "double_protection", title: "Double Protection", collection: "core", tier: "standard", milestone: "Both profile defaults filled, and every song entry finished 100%", action: "Fill both defaults", metric: "protectionTrophies", goal: 1, every: 1, src: `${S}/cta-double-protection-trophies.png`, artInBucket: true,
+  { id: "double_protection", title: "Double Protection", collection: "core", tier: "standard", milestone: "Both profile defaults filled, and every song entry finished 100%", action: "Fill both defaults", metric: "protectionTrophies", goal: 1, every: 1, src: `${S}/came_double_trophy_gold.png`,
     description: "Your embed defaults and your catalog defaults are both set, so every master and every song starts finished, and a song entry with its master, artwork and writers done earns this again. That is the catalog protecting itself.",
     popup: "Embed defaults & Catalog Defaults 100% Filled! Both are set and your catalog is protected.", repeatPopup: "You Came Through: your {nth} finished song entry." },
   // Every purchased brand kit, once the payment has gone through (founder, 2026-11-08).
