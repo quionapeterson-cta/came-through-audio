@@ -250,7 +250,10 @@
   date. On the date a still-Free account loses the files stored for it (masters, artwork, anything in the bucket) and
   its catalog entries even if it signed in during the notice, and keeps the account; an account that never signed in
   during the notice is deleted with them, and one email goes to that address the day after, offering a new account. Any paid
-  plan before the date keeps everything. Staff accounts and live seats are scheduled like everyone else (founder,
+  plan before the date keeps everything. The account that came back then gets one more window: its signed split sheets,
+  contracts and AI Protection certificates stay 30 days longer, with 30/14/7/1 day reminders of their own, and are then
+  deleted unless a plan is paid for (founder, 2026-11-08). Signing in never restarts that clock, because the account is
+  already saved; only a paid plan stops it. Staff accounts and live seats are scheduled like everyone else (founder,
   2026-11-08): only a live paid plan stops the deadline. `runStaffOffboarding` remains the other path, unchanged.
 
 ## Admin Hub & Team Culture (always follow)
@@ -457,7 +460,8 @@ Embedding is forgiving; registration is strict. Never block a user from saving o
     the Refund Policy now says. Removal happens only through `runInactiveAccounts` (two years without a sign-in: stored
     files go for a Free account, the account itself only if it never signed in, with reminders) or staff offboarding.
     Signed split sheets, contracts, AI Protection certificates and agency registration records are kept with the
-    account.
+    account, until a signed-in account's own inactivity window runs out (30 days after the files, with 30/14/7/1
+    reminders).
 
 ## Personal Branding Rules (always follow)
 

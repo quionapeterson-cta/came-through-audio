@@ -2,12 +2,17 @@ import { describe, expect, it } from "vitest";
 import {
   INACTIVITY_FIRST_NOTICE_DAYS,
   INACTIVITY_MONTHS,
+  INACTIVITY_SIGNED_DAYS,
+  SIGNED_REMINDER_DAYS,
   daysUntil,
   dueInactivityReminder,
+  dueSignedReminder,
+  fullySignedSheetIds,
   hasBeenActiveSince,
   inactivityDeleteOn,
   inactivityOutcome,
   noticeLine,
+  signedDeleteOn,
 } from "./inactivity";
 
 const now = new Date("2026-11-08T00:00:00Z");
@@ -56,5 +61,39 @@ describe("reminders before deletion", () => {
   it("names the time left in words", () => {
     expect(noticeLine("2027-01-07T00:00:00Z", new Date("2026-11-08T00:00:00Z"))).toBe("60 days");
     expect(noticeLine("2026-11-09T00:00:00Z", now)).toBe("last day");
+  });
+});
+
+describe("the signed paperwork window", () => {
+  it("opens 30 days after the files came off", () => {
+    expect(signedDeleteOn("2027-01-07T00:00:00Z").toISOString()).toBe("2027-02-06T00:00:00.000Z");
+    expect(INACTIVITY_SIGNED_DAYS).toBe(30);
+    expect(SIGNED_REMINDER_DAYS).toEqual([30, 14, 7, 1]);
+  });
+
+  it("sends 30, 14, 7 and 1 days out, once each", () => {
+    const row = (signed: string | null, sent: string[] = []) => ({ signed_delete_on: signed, signed_reminders: sent });
+    const d = "2027-02-06T00:00:00Z";
+    expect(dueSignedReminder(row(d), new Date("2027-01-07T00:00:00Z"))).toBe("30");
+    expect(dueSignedReminder(row(d, ["30"]), new Date("2027-01-23T00:00:00Z"))).toBe("14");
+    expect(dueSignedReminder(row(d, ["30", "14"]), new Date("2027-01-30T00:00:00Z"))).toBe("7");
+    expect(dueSignedReminder(row(d, ["30", "14", "7"]), new Date("2027-02-05T00:00:00Z"))).toBe("1");
+  });
+
+  it("stays quiet with no window, after a reminder, and once the date has passed", () => {
+    expect(dueSignedReminder({ signed_delete_on: null, signed_reminders: [] }, now)).toBeNull();
+    expect(dueSignedReminder({ signed_delete_on: "2027-01-07T00:00:00Z", signed_reminders: ["30"] }, now)).toBeNull();
+    expect(dueSignedReminder({ signed_delete_on: "2026-11-01T00:00:00Z", signed_reminders: [] }, now)).toBeNull();
+  });
+
+  it("counts only a sheet everyone signed, even after its song is gone", () => {
+    const rows = [
+      { id: "a1", catalog_id: null, track_title: "Song", isrc: "US1", signed_at: "2026-01-01T00:00:00Z" },
+      { id: "a2", catalog_id: null, track_title: "Song", isrc: "US1", signed_at: "2026-01-02T00:00:00Z" },
+      { id: "b1", catalog_id: "song-2", track_title: "Other", isrc: null, signed_at: "2026-01-01T00:00:00Z" },
+      { id: "b2", catalog_id: "song-2", track_title: "Other", isrc: null, signed_at: null },
+    ];
+    expect(fullySignedSheetIds(rows)).toEqual(["a1", "a2"]);
+    expect(fullySignedSheetIds([])).toEqual([]);
   });
 });

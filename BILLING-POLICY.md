@@ -131,12 +131,18 @@ and 1 day before — each naming the date and the last chance to upgrade. Buying
 account and every stored file.
 
 On the date, an account still on Free loses the files stored for it (masters, artwork and anything else in the bucket)
-and its catalog entries. Signing in during the notice keeps the account and its signed records on Free, but does not
-keep the files or the catalog; the member can upload again. An account with no sign-in at all is deleted with its files, and the address is emailed once
-afterwards so a new account can be started. A paying account is never touched. A staff account and a live artist seat
-(as owner or artist) are treated like any other account: two years without a sign-in reaches the same date. The
-deletion record is the only copy of the address, and it is dropped once that last email has gone (or after 30 days if
+and its catalog entries. Signing in during the notice keeps the account on Free, but does not keep the files or the
+catalog; the member can upload again. An account with no sign-in at all is deleted with its files, and the address is
+emailed once afterwards so a new account can be started. A paying account is never touched. A staff account and a live
+artist seat (as owner or artist) are treated like any other account: two years without a sign-in reaches the same date.
+The deletion record is the only copy of the address, and it is dropped once that last email has gone (or after 30 days if
 it could not be sent).
+
+**The signed paperwork gets one more window** (founder, 2026-11-08). An account that signed in and still holds signed
+split sheets, contracts or AI Protection certificates is not finished on its date: those records stay for 30 more days,
+with 30, 14, 7 and 1 day emails of their own, and are then deleted unless a plan has been paid for. Signing in no longer
+stops that clock, because the account is already saved; only a paid plan does. Staff quote the paperwork date from the
+email and never say the paperwork is kept forever.
 
 ---
 
