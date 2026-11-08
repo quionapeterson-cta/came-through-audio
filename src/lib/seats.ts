@@ -7,7 +7,7 @@ import type { Tier } from "@/lib/plans";
  * while the migration hasn't been run, so the pages that mention seats still work.
  */
 
-export type SeatStatus = "unclaimed" | "invited" | "active" | "canceled" | "ended";
+export type SeatStatus = "unclaimed" | "invited" | "active" | "canceled" | "ended" | "handed_off";
 
 export type ArtistSeat = {
   id: string;
@@ -20,6 +20,7 @@ export type ArtistSeat = {
   current_period_end: string | null;
   environment: string;
   accepted_at: string | null;
+  handed_off_at?: string | null;
 };
 
 export type SeatInvite = {
@@ -60,7 +61,8 @@ export function seatArtistsFor(seats: ArtistSeat[], ownerId: string): { userId: 
 
 /** A seat is usable while the owner keeps paying, and for the rest of the period after they cancel. */
 export function seatIsLive(seat: ArtistSeat, now = new Date()) {
-  if (seat.status === "ended") return false;
+  // A handed-off seat is the artist's own plan now: the owner's access ended with the handoff.
+  if (seat.status === "ended" || seat.status === "handed_off") return false;
   if (seat.status === "canceled") return !!seat.current_period_end && new Date(seat.current_period_end) > now;
   return true;
 }

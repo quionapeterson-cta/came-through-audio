@@ -182,6 +182,15 @@ export function SignupCard({ returnPath, onAuthed, inviteMode }: { returnPath?: 
             {mode === "signup" && (paid
               ? <p className="text-center text-xs text-muted-foreground">One step: your account is created, then you pay. Card details stay in Stripe.</p>
               : <p className="text-center text-xs text-muted-foreground">Free forever plan. No card needed.</p>)}
+            {mode === "signup" && (
+              <p className="text-center text-xs text-muted-foreground">
+                By creating an account you agree to our{" "}
+                <a className="font-semibold text-primary underline" href="/terms-of-service" target="_blank" rel="noreferrer">Terms of Service</a>{" "}
+                and{" "}
+                <a className="font-semibold text-primary underline" href="/privacy-policy" target="_blank" rel="noreferrer">Privacy Policy</a>,
+                including how an artist seat shares catalog, split-sheet and contract access with the account that pays for it.
+              </p>
+            )}
           </form>
           <p className="mt-4 text-center text-sm text-muted-foreground">
             {mode === "signup" ? "Already have an account?" : mode === "forgot" ? "Remembered it?" : "New here?"}{" "}

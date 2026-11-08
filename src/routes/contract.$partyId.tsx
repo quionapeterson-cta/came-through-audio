@@ -156,7 +156,7 @@ function LinkSigning({ token }: { token: string }) {
                 {codeSent && <label className="space-y-1 text-sm"><span className="font-medium">Code from your email</span>
                   <input value={code} onChange={(e) => setCode(e.target.value)} inputMode="numeric" autoComplete="one-time-code" maxLength={7} placeholder="123 456" className="block w-40 rounded-md border border-input bg-background px-3 py-2 text-lg tracking-widest" /></label>}
               </div>
-              <label className="flex items-start gap-2 text-sm"><input type="checkbox" checked={consent} onChange={(e) => setConsent(e.target.checked)} className="mt-0.5 h-4 w-4 accent-[var(--primary)]" />I've read the full agreement above, agree to its terms, and agree to sign electronically. My typed name is my legal signature.</label>
+              <label className="flex items-start gap-2 text-sm"><input type="checkbox" checked={consent} onChange={(e) => setConsent(e.target.checked)} className="mt-0.5 h-4 w-4 accent-[var(--primary)]" />I've read the full agreement above, agree to its terms, and agree to sign electronically. My typed name is my legal signature. If this artist is on an artist seat, the account that pays for it can read this agreement and who signed it.</label>
               <label className="block space-y-1 text-sm"><span className="font-medium">Type your legal name to sign: <span className="font-bold">{invite.legal_name}</span></span>
                 <input value={typed} onChange={(e) => setTyped(e.target.value)} placeholder={invite.legal_name} className="w-full rounded-md border border-input bg-background px-3 py-3 font-serif text-2xl italic" /></label>
               <p className="text-xs text-muted-foreground">Your signature is time-stamped and secured with a SHA-256 hash tied to this exact agreement text, along with the time you agreed and a private record of the device you signed from.</p>
@@ -245,7 +245,7 @@ function AccountSigning() {
             {invite.signed_at ? <SignedNote invite={invite} /> : invite.can_sign && invite.status === "sent" ? (
               <div className="space-y-4 rounded-2xl border-2 border-primary p-6">
                 <h2 className="text-xl font-bold">Sign as {invite.role}</h2>
-                <label className="flex items-start gap-2 text-sm"><input type="checkbox" checked={agreed} onChange={(e) => setAgreed(e.target.checked)} className="mt-0.5 h-4 w-4 accent-[var(--primary)]" />I've read the full contract above and agree to its terms.</label>
+                <label className="flex items-start gap-2 text-sm"><input type="checkbox" checked={agreed} onChange={(e) => setAgreed(e.target.checked)} className="mt-0.5 h-4 w-4 accent-[var(--primary)]" />I've read the full contract above and agree to its terms. If this artist is on an artist seat, the account that pays for it can read this contract and who signed it; only the artist sends it.</label>
                 <label className="block space-y-1 text-sm"><span className="font-medium">Type your legal name to sign: <span className="font-bold">{invite.legal_name}</span></span>
                   <input value={typed} onChange={(e) => setTyped(e.target.value)} placeholder={invite.legal_name} className="w-full rounded-md border border-input bg-background px-3 py-3 font-serif text-2xl italic" /></label>
                 <p className="text-xs text-muted-foreground">Your signature is time-stamped and secured with a SHA-256 hash tied to this exact contract text.</p>

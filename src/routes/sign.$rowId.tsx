@@ -147,7 +147,7 @@ function SignPage() {
                 )}
                 <label className="block space-y-1 text-sm"><span className="font-medium">Type your legal name to sign: <span className="font-bold">{invite.legal_name}</span></span>
                   <input value={typed} onChange={(e) => setTyped(e.target.value)} placeholder={invite.legal_name} className="w-full rounded-md border border-input bg-background px-3 py-3 font-serif text-2xl italic" /></label>
-                <p className="text-xs text-muted-foreground">By signing, you agree the ownership percentages above are accurate. Your signature is time-stamped and secured with a SHA-256 hash.</p>
+                <p className="text-xs text-muted-foreground">By signing, you agree the ownership percentages above are accurate. Your signature is time-stamped and secured with a SHA-256 hash. If this artist is on an artist seat, the account that pays for it can read this split sheet and who signed it.</p>
                 <Button size="lg" onClick={() => void sign()} disabled={busy}>{busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileSignature className="h-4 w-4" />} Sign split sheet</Button>
               </div>
             )}

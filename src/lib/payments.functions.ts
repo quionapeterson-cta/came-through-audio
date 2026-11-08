@@ -172,6 +172,58 @@ export const createCheckoutSession = createServerFn({ method: "POST" })
     // No confirmation check here any more (founder, 2026-11-05): paying comes first and the confirmation link is a
     // reminder that arrives alongside the purchase, so the email gate that used to stand in front of Stripe is gone.
     if (data.kind === "renew") return renewCheckout(stripe, env, context.userId, (context.claims as { email?: string }).email, origin);
+    // Seat handoff: the artist starts a normal plan at the seat's tier, and the first charge waits for the seat's paid
+    // period to end. The seat is read here, so the tier, the buyer and the date can't come from the browser.
+    if (data.kind === "seat_handoff") {
+      const { data: row, error } = await context.supabase.from("artist_seats" as never)
+        .select("id, tier, status, member_user_id, current_period_end" as never)
+        .eq("id" as never, data.seatId as never).maybeSingle();
+      if (error) throw new Error(`Couldn't open that seat (${error.message}).`);
+      const seat = row as { id: string; tier: string; status: string; member_user_id: string | null; current_period_end: string | null } | null;
+      if (!seat || seat.member_user_id !== context.userId) throw new Error("That artist seat isn't on your account.");
+      if (seat.status === "handed_off") throw new Error("You're already paying for this plan yourself.");
+      if (seat.status === "ended") throw new Error("This seat has ended, so there is nothing to take over.");
+      // A second click while the first handoff settles must not open a second plan: one live plan is the limit.
+      const { data: mine } = await context.supabase.from("subscriptions")
+        .select("status, current_period_end")
+        .eq("user_id", context.userId).eq("environment", env)
+        .not("stripe_subscription_id", "is", null);
+      if (((mine ?? []) as { status: string; current_period_end: string | null }[]).some((s) => isActiveSub(s))) {
+        throw new Error("You already have a plan of your own. Change or cancel it first in Profile → Manage billing, so you're never charged twice.");
+      }
+      const end = seat.current_period_end ? new Date(seat.current_period_end) : null;
+      if (!end || end.getTime() <= Date.now()) throw new Error("This seat's paid period has ended, so there is nothing to take over.");
+      const lookupKey = Object.entries(PRICE_TIER).find(([, t]) => t === seat.tier)?.[0];
+      if (!lookupKey) throw new Error("This seat's plan isn't available right now. Contact support and we'll help.");
+      try {
+        const prices = await stripe.prices.list({ lookup_keys: [lookupKey], active: true, expand: ["data.product"], limit: 1 });
+        const price = prices.data[0];
+        if (!price) throw new Error("This seat's plan isn't available right now. Contact support and we'll help.");
+        // Stripe's earliest trial_end is 48 hours out; a handoff in the last two days of the period therefore starts its
+        // first charge just after the renewal rather than before it. Nothing is ever charged at handoff.
+        const trialEnd = Math.max(
+          Math.floor(end.getTime() / 1000),
+          Math.floor(Date.now() / 1000) + 48 * 60 * 60,
+        );
+        const session = await stripe.checkout.sessions.create({
+          line_items: [{ price: price.id, quantity: 1 }],
+          mode: "subscription",
+          ui_mode: "embedded_page",
+          return_url: `${origin}/profile?checkout=success`,
+          customer: await resolveOrCreateCustomer(stripe, { email: (context.claims as { email?: string }).email, userId: context.userId }),
+          client_reference_id: context.userId,
+          metadata: { userId: context.userId, kind: "seat_handoff", seatId: seat.id, priceIds: lookupKey, managed_payments: "true" },
+          subscription_data: { trial_end: trialEnd, metadata: { userId: context.userId, kind: "seat_handoff", seatId: seat.id } },
+          managed_payments: { enabled: true },
+        } as Parameters<typeof stripe.checkout.sessions.create>[0]);
+        if (!session.client_secret) throw new Error("Stripe did not return a client secret");
+        return { clientSecret: session.client_secret };
+      } catch (e) {
+        const reason = getStripeErrorMessage(e);
+        console.error(`Seat handoff checkout failed (${env}):`, reason, e);
+        throw new Error(`Checkout could not open (${reason.slice(0, 200)}). Try again, or contact support and we'll help right away.`);
+      }
+    }
     const plan = planCheckout(data, context.userId);
     if (data.kind === "contract") {
       const { data: gen } = await context.supabase.from("contract_generations" as never).select("id, company, draft, contract_id").eq("id", data.generationId).eq("user_id", context.userId).maybeSingle();

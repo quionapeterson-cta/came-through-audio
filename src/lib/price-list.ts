@@ -48,7 +48,7 @@ export const PRICE_LIST: PriceGroup[] = [
   },
   {
     title: "Add-on artist seats",
-    note: "Per added artist, per year, paid by the owner as its own yearly subscription. An added artist gets their own login and their own catalog at the seat's tier; the owner switches between artists. The owner buys the seat, names the artist and sends it to their email; the artist signs up with that address and accepts it, the same way an invited signature works. Their own catalog then runs at the seat tier, and the owner sees and manages every artist they pay for.",
+    note: "Per added artist, per year, paid by the owner as its own yearly subscription. An added artist gets their own login and their own catalog at the seat's tier; the owner switches between artists. The owner buys the seat, names the artist and sends it to their email; the artist signs up with that address and accepts it, the same way an invited signature works. Their own catalog then runs at the seat tier, and the owner sees and manages every artist they pay for, including their split sheets and contracts. The owner can read a contract but never send one: only the artist sends under their own name.",
     rows: ARTIST_SEAT_PRICES.map((s) => ({
       item: `${TIER_LABEL[s.tier]} seat`,
       price: `${s.price}/yr`,

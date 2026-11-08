@@ -1,4 +1,4 @@
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { Check, Loader2, Music4, Sparkles } from "lucide-react";
 import { toast } from "sonner";
@@ -7,6 +7,7 @@ import { SignupCard } from "@/components/SignupCard";
 import { BrandLogo } from "@/components/BrandLogo";
 import { Button } from "@/components/ui/button";
 import { TIER_LABEL } from "@/lib/plans";
+import { supabase } from "@/integrations/supabase/client";
 import { acceptSeat, getSeatInvite, type SeatInvite } from "@/lib/seats";
 
 export const Route = createFileRoute("/seat/$seatId")({
@@ -29,7 +30,6 @@ export const Route = createFileRoute("/seat/$seatId")({
 function SeatPage() {
   const { seatId } = Route.useParams();
   const { user, loading } = useAuth();
-  const navigate = useNavigate();
   const [invite, setInvite] = useState<SeatInvite | null>();
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
@@ -44,8 +44,9 @@ function SeatPage() {
     setBusy(true);
     try {
       const r = await acceptSeat(seatId);
-      toast.success(`You're in as ${r.artist_name}. Your catalog is ready.`);
-      navigate({ to: "/workspace" });
+      toast.success(`You're in as ${r.artist_name} — ${TIER_LABEL[r.tier]} is open.`);
+      // A full load, so the workspace reads the new tier from the database instead of a page that was already open.
+      window.location.assign("/workspace");
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "That seat couldn't be accepted.");
     } finally {
@@ -78,7 +79,8 @@ function SeatPage() {
               <p className="mt-3 text-sm text-ink-muted">
                 Accept this seat and your own catalog opens at <b className="text-ink-foreground">{TIER_LABEL[invite.tier]}</b>:
                 MP3 embedding, your songs, splits and the tools in that plan. The owner keeps paying for it, and you can
-                take your catalog with you whenever you go independent.
+                take your catalog with you whenever you go independent. They will be able to read your split sheets and
+                contracts, but only you can send a contract under your name.
               </p>
               <p className="mt-3 text-sm">
                 <Music4 className="mr-1 inline h-4 w-4 align-[-2px] text-brand-electric" />
@@ -95,16 +97,26 @@ function SeatPage() {
                   <p className="text-sm text-ink-muted">This seat is already claimed. Signed in as {user.email}.</p>
                 ) : (
                   <>
+                    {!invite.claimed && user.email?.toLowerCase() !== invite.email.toLowerCase() ? (
+                      <div className="space-y-3">
+                        <p className="text-sm text-ink-muted">
+                          You're signed in as {user.email}, but this seat was sent to <b className="text-ink-foreground">{invite.email}</b>.
+                          Sign out and sign in with that address to accept it.
+                        </p>
+                        <Button variant="outline" onClick={() => void supabase.auth.signOut().then(load)}>Sign out</Button>
+                      </div>
+                    ) : (<>
                     <p className="text-sm">Signed in as {user.email}.</p>
                     <Button className="mt-3" disabled={busy} onClick={() => void accept()}>
                       {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
                       {invite.claimed ? "Open my catalog" : "Accept my artist seat"}
                     </Button>
+                    </>)}
                   </>
                 )}
               </div>
             ) : (
-              <SignupCard onAuthed={load} />
+              <SignupCard returnPath={`/seat/${seatId}`} onAuthed={load} />
             )}
 
             <p className="flex items-start gap-2 text-xs text-ink-muted">

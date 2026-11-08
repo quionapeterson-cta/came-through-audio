@@ -22,6 +22,7 @@ const STATUS_LABEL: Record<ArtistSeat["status"], string> = {
   active: "Active",
   canceled: "Ends when the paid year ends",
   ended: "Ended",
+  handed_off: "The artist took this plan over",
 };
 
 const day = (iso: string | null) => (iso ? new Date(iso).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" }) : "");
@@ -123,7 +124,8 @@ export function ArtistSeats({ onClose }: { onClose: () => void }) {
     );
   }
 
-  const live = state.seats.filter((seat) => seatIsLive(seat));
+  // Handed-off seats stay on the list as the owner's record, without any of the actions a live seat has.
+  const live = state.seats.filter((seat) => seatIsLive(seat) || seat.status === "handed_off");
 
   return (
     <div className="space-y-4">
@@ -177,7 +179,13 @@ export function ArtistSeats({ onClose }: { onClose: () => void }) {
                   </Button>
                 )
               )}
-              {seat.member_user_id && (
+              {seat.status === "handed_off" && (
+                <p className="mt-2 text-xs text-muted-foreground">
+                  The artist pays for this plan themselves now. Your access to their catalog ended here, and your seat
+                  payment stops at the end of the period you already paid for.
+                </p>
+              )}
+              {seat.member_user_id && seat.status !== "handed_off" && (
                 <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
                   <p className="flex items-center gap-1 text-xs font-semibold text-primary"><Check className="h-3.5 w-3.5" />Accepted by the artist</p>
                   {/* Their Embed Defaults and Catalog Defaults are the owner's to fill in, so the way in sits here. */}

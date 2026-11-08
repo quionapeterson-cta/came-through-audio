@@ -28,4 +28,11 @@ describe("artist seats", () => {
     expect(seatIsLive(seat({ status: "canceled", current_period_end: "2026-10-01T00:00:00Z" }), now)).toBe(false);
     expect(seatIsLive(seat({ status: "ended" }), now)).toBe(false);
   });
+
+  it("ends the owner's access the moment the artist takes the plan over", () => {
+    const now = new Date("2026-11-08T00:00:00Z");
+    const handedOff = seat({ status: "handed_off", member_user_id: "u1", current_period_end: "2027-01-01T00:00:00Z" });
+    expect(seatIsLive(handedOff, now)).toBe(false);
+    expect(seatArtistsFor([handedOff], "owner")).toEqual([]);
+  });
 });

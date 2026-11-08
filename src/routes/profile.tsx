@@ -14,6 +14,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { BrandLogo } from "@/components/BrandLogo";
 import { ArtistAvatar, ArtistOnboarding } from "@/components/ArtistOnboarding";
 import { AddArtistDialog } from "@/components/ArtistSeats";
+import { SeatHandoffCard } from "@/components/SeatHandoffCard";
 import { BadgeViewer, type BadgeAbout } from "@/components/BadgeViewer";
 import { EagleStatusBadge } from "@/components/EagleStatusBadge";
 import { eagleStatus } from "@/lib/eagle-status";
@@ -132,6 +133,9 @@ function ProfilePage() {
           </div>
           <Button variant="outline" onClick={() => (seatArtists.length ? setChooser(true) : setEditing(true))}><Pencil />Edit profile</Button>
         </section>
+
+        {/* Someone paying for the artist's seat: the way to keep the plan when that year ends (2026-11-08). */}
+        <SeatHandoffCard userId={user.id} />
 
         <div className="grid gap-8 md:grid-cols-2">
           <Card title="Artist Profile">

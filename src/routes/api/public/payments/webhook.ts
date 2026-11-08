@@ -6,6 +6,7 @@ import { purchaseRow, subscriptionRow, type StripeSubscriptionLike } from "@/lib
 import { SEAT_MAX, SEAT_TIER } from "@/lib/plans";
 import { purchaseKind } from "@/lib/purchase-receipt";
 import { sendPurchaseReceipt } from "@/lib/purchase-emails.server";
+import { sendSeatHandoffEmails } from "@/lib/seat-handoff.server";
 
 let _sb: ReturnType<typeof createClient> | null = null;
 function db() {
@@ -74,19 +75,26 @@ async function saveSeatSubscription(sub: StripeSubscriptionLike, env: StripeEnv,
   }
   const { data: found, error: readErr } = await db().from("artist_seats")
     .select("id, seat_index, member_user_id, invite_email, status")
-    .eq("stripe_subscription_id", sub.id);
+    .eq("stripe_subscription_id", sub.id)
+    .order("seat_index", { ascending: true });
   if (readErr) throw readErr;
   const rows = (found ?? []) as { id: string; seat_index: number | null; member_user_id: string | null; invite_email: string | null; status: string }[];
   if (!rows.length && !ownerId) return console.warn(`Seat subscription ${sub.id} has no owner to credit`);
 
-  const seatStatus = (seat?: (typeof rows)[number]) => deleted
-    // Cancelled keeps the seat until the paid period ends; an unclaimed seat simply ends.
-    ? (seat?.member_user_id || seat?.invite_email ? "canceled" : "ended")
-    : (seat?.status && ["invited", "active", "unclaimed"].includes(seat.status) ? seat.status : seat?.member_user_id ? "active" : seat?.invite_email ? "invited" : "unclaimed");
+  const seatStatus = (seat?: (typeof rows)[number]) => seat?.status === "handed_off"
+    // The artist pays for their own plan now; nothing the old seat subscription does can reopen the owner's access.
+    ? "handed_off"
+    : deleted
+      // Cancelled keeps the seat until the paid period ends; an unclaimed seat simply ends.
+      ? (seat?.member_user_id || seat?.invite_email ? "canceled" : "ended")
+      : (seat?.status && ["invited", "active", "unclaimed"].includes(seat.status) ? seat.status : seat?.member_user_id ? "active" : seat?.invite_email ? "invited" : "unclaimed");
 
+  // A handed-off seat is the artist's own plan now, so it no longer takes one of this subscription's paid places. The
+  // rest stay in order, so a handoff can never shift the paid units onto the wrong artist (2026-11-08).
+  const live = rows.filter((r) => r.status !== "handed_off");
   for (let i = 0; i < bought.length; i++) {
-    const seat = rows.find((r) => (r.seat_index ?? 0) === i);
-    const patch = { tier: bought[i]!, environment: env, current_period_end: periodEnd, status: seatStatus(seat), updated_at: new Date().toISOString() };
+    const seat = live[i];
+    const patch = { tier: bought[i]!, environment: env, current_period_end: periodEnd, status: seatStatus(seat), seat_index: i, updated_at: new Date().toISOString() };
     if (seat) {
       const { error } = await db().from("artist_seats").update(patch as never).eq("id", seat.id);
       if (error) throw error;
@@ -97,10 +105,75 @@ async function saveSeatSubscription(sub: StripeSubscriptionLike, env: StripeEnv,
   }
   // Bought fewer than before: the seats past the paid count end. An artist who already accepted keeps theirs until the
   // paid period ends, so they never lose their catalog mid-year.
-  for (const seat of rows.filter((r) => (r.seat_index ?? 0) >= bought.length)) {
+  for (const seat of live.slice(bought.length)) {
     const { error } = await db().from("artist_seats")
       .update({ status: seat.member_user_id ? "canceled" : "ended", updated_at: new Date().toISOString() } as never).eq("id", seat.id);
     if (error) throw error;
+  }
+}
+
+/**
+ * The artist's own plan replaced the seat (founder, 2026-11-08). The seat becomes handed_off: the owner's access to that
+ * artist's catalog ends here, and the owner's seat subscription is set to stop at the period already paid for. Nothing
+ * is refunded or credited, and nothing is charged twice.
+ */
+async function completeSeatHandoff(env: StripeEnv, sub: StripeSubscriptionLike, seatId: string, userId: string) {
+  const { data, error } = await db().from("artist_seats")
+    .select("id, owner_id, artist_name, tier, status, member_user_id, stripe_subscription_id, current_period_end")
+    .eq("id", seatId).maybeSingle();
+  if (error) throw error;
+  const seat = data as {
+    id: string; owner_id: string; artist_name: string; tier: string; status: string;
+    member_user_id: string | null; stripe_subscription_id: string | null; current_period_end: string | null;
+  } | null;
+  if (!seat) return console.warn(`Seat handoff ${sub.id}: seat ${seatId} was not found`);
+  if (seat.member_user_id && seat.member_user_id !== userId) {
+    return console.warn(`Seat handoff ${sub.id}: seat ${seatId} belongs to another artist`);
+  }
+  const periodEnd = seat.current_period_end
+    ?? (sub.items.data[0]?.current_period_end ? new Date(sub.items.data[0].current_period_end * 1000).toISOString() : null);
+  // Two Stripe events for the same handoff can arrive at once. Only the update that actually moves the row does the
+  // billing change and the emails, so a retry can never take a second seat off the bill or send twice.
+  const { data: marked, error: seatErr } = await db().from("artist_seats").update({
+    status: "handed_off", handed_off_at: new Date().toISOString(), updated_at: new Date().toISOString(),
+  } as never).eq("id", seat.id).neq("status", "handed_off").select("id");
+  if (seatErr) throw seatErr;
+  if (!marked?.length) return;
+
+  // The owner already paid for this period. Take this one seat out of what renews — never a refund or a credit for the
+  // time paid for — and never cancel their other artists: one subscription can carry several seats (founder, 2026-11-08).
+  if (seat.stripe_subscription_id && seat.stripe_subscription_id !== sub.id) {
+    try {
+      const stripe = createStripeClient(env);
+      const ownerSub = await stripe.subscriptions.retrieve(seat.stripe_subscription_id);
+      const items = ownerSub.items.data;
+      const line = items.find((i) => SEAT_TIER[i.price.lookup_key ?? ""] === seat.tier);
+      const units = items.reduce((n, i) => n + (i.quantity ?? 1), 0);
+      if (!line) {
+        console.warn(`Seat ${seat.id}: no ${seat.tier} line on ${ownerSub.id} to stop`);
+      } else if (units <= 1) {
+        await stripe.subscriptions.update(ownerSub.id, { cancel_at_period_end: true });
+      } else {
+        const quantity = line.quantity ?? 1;
+        await stripe.subscriptions.update(ownerSub.id, {
+          items: quantity <= 1 ? [{ id: line.id, deleted: true }] : [{ id: line.id, quantity: quantity - 1 }],
+          proration_behavior: "none",
+        });
+      }
+    } catch (e) {
+      console.error(`Seat ${seat.id}: the owner's seat could not be taken off the renewal`, e);
+    }
+  }
+  try {
+    await sendSeatHandoffEmails({
+      artistEmail: await userEmail(userId),
+      ownerEmail: await userEmail(seat.owner_id),
+      artistName: seat.artist_name,
+      tier: seat.tier,
+      periodEnd,
+    });
+  } catch (e) {
+    console.error(`Seat ${seat.id}: handoff emails failed`, e);
   }
 }
 
@@ -114,6 +187,9 @@ async function saveSubscription(sub: StripeSubscriptionLike, env: StripeEnv, del
   if (userId) {
     const { error } = await db().from("subscriptions").upsert({ ...row, user_id: userId } as never, { onConflict: "stripe_subscription_id" });
     if (error) throw error;
+    // The artist's plan replaced their seat: record the handoff once the subscription exists, so their tier never dips.
+    const seatId = sub.metadata?.["seatId"];
+    if (sub.metadata?.["kind"] === "seat_handoff" && seatId) await completeSeatHandoff(env, sub, seatId, userId);
   } else {
     // Created outside our checkout (e.g. in the Stripe dashboard): only update a row we already know.
     const { error } = await db().from("subscriptions").update(row as never).eq("stripe_subscription_id", sub.id);
