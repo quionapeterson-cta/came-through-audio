@@ -213,17 +213,10 @@ const CORE: BadgeDef[] = [
     popup: "MEGA! You Came Through with a full album." },
 ];
 
-const HEALTH: BadgeDef[] = [
-  { id: "silver_crown", title: "Silver Crown", collection: "health", tier: "standard", milestone: "Every song that reaches 100% royalty health", action: "Get a song 100% healthy", metric: "healthy", goal: 1, every: 1, src: `${P}/100_Royalty_Health.webp`, artInBucket: true,
-    description: "Every royalty door open on this song. You fixed what most people never even check. Every 100% healthy song earns another crown.",
-    popup: "Silver crown! Your first song is 100% royalty healthy.", repeatPopup: "Silver crown! Your {nth} song is 100% royalty healthy." },
-  { id: "jeweled_crown", title: "Jeweled Crown", collection: "health", tier: "mega", milestone: "25 songs 100% healthy", action: "Get 25 songs 100% healthy", metric: "healthy", goal: 25, src: `${P}/crowns/cross_crown.png`,
-    description: "Twenty-five songs collecting from every direction. You came through for every one of them.",
-    popup: "MEGA! 25 healthy songs. Jewels earned." },
-  { id: "gold_crown", title: "Gold Crown", collection: "health", tier: "ultimate", milestone: "50 songs 100% healthy, then every 50 more", action: "Get 50 songs 100% healthy", metric: "healthy", goal: 50, every: 50, src: `${P}/crowns/king_crown.png`,
-    description: "Fifty songs, fully healthy, fully collecting. This is the crown for people who leave no money on the table.",
-    popup: "ULTIMATE! 50 healthy songs. Wear the gold." },
-];
+// The three crown badges (Silver, Jeweled and Gold) were removed on 2026-11-08: the founder judged the crowns a poor fit
+// for Royalty Health, so a healthy song earns the report badge (Fully Matched) and nothing per song. Their art stays in the
+// bucket and in public/icons/playful/crowns/; no badge points at it now, and any row already earned keeps its id in the
+// database (it just has no definition to draw on).
 
 const NIGHT: BadgeDef[] = [
   { id: "marathon", title: "Marathon", collection: "night", tier: "standard", milestone: "Save 5 songs to your catalog between 9 PM and midnight in one night", action: "Catalog 5 songs, 9 PM–12 AM", metric: "marathonNights", goal: 1, every: 1, src: `${P}/marathon.png`,
@@ -476,7 +469,7 @@ const SPIRITUAL: BadgeDef[] = [
 ];
 
 /** Every badge, including ones waiting on art. */
-export const ALL_BADGES: BadgeDef[] = [...CORE, ...LYRICS, ...SPLITS, ...CONTRACTS, ...HEALTH, ...PRODUCER, ...LIVE, ...HIPHOP, ...SPIRITUAL, ...NIGHT];
+export const ALL_BADGES: BadgeDef[] = [...CORE, ...LYRICS, ...SPLITS, ...CONTRACTS, ...PRODUCER, ...LIVE, ...HIPHOP, ...SPIRITUAL, ...NIGHT];
 /** Badges that can be earned and shown today. */
 export const BADGES: BadgeDef[] = ALL_BADGES.filter((b) => !b.artPending);
 export const badgeById = (id: string) => ALL_BADGES.find((b) => b.id === id);

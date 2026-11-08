@@ -121,8 +121,8 @@ The mechanics are built (`every`, `×N`, the Repeatable section, per-badge art r
 
 | Task | Badge | First earning | Repeats every | Art on later repeats |
 | --- | --- | --- | --- | --- |
-| Get a song 100% healthy | Silver Crown | 1 | 1 | Jeweled Crown → Gold Crown (its own art for the first 10, then one per 10) |
-| Get 50 songs 100% healthy | Gold Crown | 50 | 50 | no, the same picture |
+| Get a 100% healthy report | Fully Matched | 1 | 1 | no, the same picture |
+| Get a song 100% healthy | — the crown badges were removed (founder, 2026-11-08) | — | — | — |
 
 **AI Protection** — 4 repeating badges
 

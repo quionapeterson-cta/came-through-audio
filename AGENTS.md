@@ -59,11 +59,12 @@
   full size when clicked (`PeekDialog`, founder, 2026-11-06), so the art can be judged, approved or replaced before it
   goes near a member's shelf.
 - **Some pictures live only in the bucket** (founder, 2026-11-07): `artInBucket` on a `BadgeDef` says the founder uploaded
-  that picture to R2 by hand and the repo keeps no fallback copy. Six pictures use it today (founder, 2026-11-08), every
+  that picture to R2 by hand and the repo keeps no fallback copy. Five pictures use it today (founder, 2026-11-08), every
   one in `icons/playful/` except Double Protection, which sits in `icons/serious/`: `song_embedded_512x512.webp`
-  (Embedded), `lyric_locked_gold_512x512.webp` (Lyric Locked Gold, every lyric), `100_Royalty_Health.webp` (Silver Crown,
-  which no longer rotates), `100_Royalty_Health_Fully_Matched.webp` (Fully Matched), `brand_kit_512x512.webp` (Kit On File)
-  and `cta-double-protection-trophies.png` (Double Protection, served as the `.webp` at that same path). First Lyric Entry
+  (Embedded), `lyric_locked_gold_512x512.webp` (Lyric Locked Gold, every lyric),
+  `100_Royalty_Health_Fully_Matched.webp` (Fully Matched), `brand_kit_512x512.webp` (Kit On File) and
+  `cta-double-protection-trophies.png` (Double Protection, served as the `.webp` at that same path). The three crown
+  pictures are no longer a badge at all (founder, 2026-11-08). First Lyric Entry
   is the once-only lyric badge and keeps its own copy at `public/icons/playful/lyrics/1_first_lyric_entry_alt.webp`, so it
   draws everywhere, bucket base or not. Their tiles are blank wherever `VITE_ART_BASE` is unset, which is
   local dev, the tests and any preview that leaves the variable off — that is the trade the founder chose, and the fix is

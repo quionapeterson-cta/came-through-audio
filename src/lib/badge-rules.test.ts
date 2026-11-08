@@ -28,8 +28,13 @@ describe("badge catalog", () => {
     // Only the pictures the founder uploaded to R2 by hand may skip the repo copy, and every one of them is named here,
     // so a mistyped path can't hide behind the exemption. With VITE_ART_BASE unset these tiles are blank by design.
     expect(BADGES.filter((b) => b.artInBucket).map((b) => b.id).sort()).toEqual(
-      ["brand_kit_bought", "double_protection", "embedded", "health_report_matched", "lyric_locked_gold", "silver_crown"].sort(),
+      ["brand_kit_bought", "double_protection", "embedded", "health_report_matched", "lyric_locked_gold"].sort(),
     );
+  });
+  it("carries no crown badge, and Royalty Health keeps only the clean-report badge", () => {
+    // The founder removed all three crowns as a poor fit (2026-11-08); a healthy song earns no badge of its own now.
+    expect(["silver_crown", "jeweled_crown", "gold_crown"].filter((id) => badgeById(id))).toEqual([]);
+    expect(ALL_BADGES.filter((b) => b.collection === "health").map((b) => b.id)).toEqual(["health_report_matched"]);
   });
   it("has nothing left waiting on art, so every badge can be earned", () => {
     expect(BADGES.filter((b) => b.collection === "lyrics")).toHaveLength(9);
@@ -244,7 +249,7 @@ describe("every-time task badges", () => {
   });
   it("has one every-time badge for each task", async () => {
     const { badgeById } = await import("@/lib/badges");
-    for (const id of ["embedded", "came_strong", "lyric_locked_gold", "silver_crown", "sealed", "blueprints_checked", "contract_signed", "executive_contract", "cover_story"]) {
+    for (const id of ["embedded", "came_strong", "lyric_locked_gold", "sealed", "blueprints_checked", "contract_signed", "executive_contract", "cover_story"]) {
       expect(badgeById(id)).toMatchObject({ goal: 1, every: 1 });
     }
   });

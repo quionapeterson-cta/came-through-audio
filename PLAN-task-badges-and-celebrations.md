@@ -86,8 +86,8 @@ today; 57 of them repeat, and the full task→badge table for those is in
 | Task | Badge today | Repeats | Celebration today |
 | --- | --- | --- | --- |
 | Run a Royalty Health Check | Checkup Champ | once a month | pop-up |
-| A song reaches 100% healthy | Silver Crown | every song | pop-up (unchanged — founder, 2026-11-08) |
-| 25 / 50 healthy songs | Jeweled Crown / Gold Crown | milestones; 50 every 50 | pop-up |
+| A song reaches 100% healthy | none — the crowns were removed (founder, 2026-11-08) | — | the report's own celebration, unchanged |
+| 25 / 50 healthy songs | removed with the crowns | — | — |
 | Writers complete, splits 100%, a signed sheet and a timestamp on one song | Chain of Title | every song | pop-up |
 | A whole release Ready | Full Release | every release | pop-up |
 
@@ -137,7 +137,9 @@ founder's art and a `BadgeDef` through Admin → Badges → Badge Protocol, and 
   the pop-up counts "your Nth lyric". First Lyric Entry is a different badge, once only, for the very first lyric, and
   the 5, 10, 15, 25, 40, 50 and 100 lyric badges arrive as well, each on its own.
 - **100% blueprints** — Blueprints Checked, `every: 1`, one earning per finished run.
-- **100% royalty health** — Silver Crown, `every: 1` per 100% song; its celebration stays exactly as it is.
+- **100% royalty health** — no badge since 2026-11-08: the founder removed all three crowns (Silver, Jeweled, Gold) as a
+  poor fit, so a healthy song no longer earns a pop-up of its own. The Royalty Health Report's celebration is unchanged,
+  and Fully Matched still marks a report where every song is 100% healthy.
 - **100% embed** — not defined yet, so not built: see the last row of §3.
 
 ## 5. The two skies, as changed on 2026-11-08 (built)
