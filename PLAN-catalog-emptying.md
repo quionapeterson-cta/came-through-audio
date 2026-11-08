@@ -1,7 +1,8 @@
 # PLAN — Empty the catalog after a plan ends, with a grace period · v2
 
 > **SUPERSEDED 2026-11-08 (founder): catalog emptying is retired.** A plan that ends now leaves the catalog read-only on
-> Free and removes nothing; the only deletion is a two-year inactivity deletion with email reminders. The 30-day grace,
+> Free and removes nothing; the only removals are the two-year inactivity ones (stored files, and the account itself only
+> if it never came back), with email reminders. The 30-day grace,
 > its reminders, the emptying job and the emptying emails are no longer sent. Kept for the record; `src/lib/inactivity.ts`
 > and `src/lib/retention.server.ts` are the live rules.
 

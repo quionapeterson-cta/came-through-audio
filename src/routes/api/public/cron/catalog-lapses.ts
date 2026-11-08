@@ -2,7 +2,8 @@ import { createFileRoute } from "@tanstack/react-router";
 
 /**
  * Daily cron endpoint: renewal reminders (90, 60, 30, 7 and 1 day ahead), keeping ended plans read-only on Free, the
- * two-year inactivity deletion and its notices, staff offboarding, and the seats whose paid period has passed. Protected
+ * two-year inactivity deadline (stored files, and the account when it never came back) and its notices, staff
+ * offboarding, and the seats whose paid period has passed. Protected
  * by the same bearer secret as the trial reminders; returns counts only.
  */
 export const Route = createFileRoute("/api/public/cron/catalog-lapses")({

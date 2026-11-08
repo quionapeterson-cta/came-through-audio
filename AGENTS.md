@@ -242,12 +242,16 @@
 - **The rule covers staff-plan accounts** (founder, 2026-11-05): accounts created under the staff plan, and staff who
   claim the offer inside their first 90 days. It is not a retroactive rule for older member accounts that were never on
   the staff plan.
-- **A plan ending keeps the account on Free; inactivity deletes it** (founder, 2026-11-08, replacing catalog emptying):
-  `runCatalogLapses` removes nothing. A plan that ends leaves the catalog read-only on Free, kept for as long as the
-  account is used, and the member starts a paid plan whenever they are ready. Never describe a plan ending as deletion,
-  emptying or a download deadline. The only deletion without the member asking is `runInactiveAccounts`
-  (`src/lib/inactivity.ts`), two years after the last sign-in, with 60/30/7/1-day emails first; signing in, any paid plan,
-  a staff role or a live seat cancels it. `runStaffOffboarding` remains the other path, unchanged.
+- **A plan ending keeps the account on Free; two years without a sign-in removes what it has not kept** (founder,
+  2026-11-08, replacing catalog emptying): `runCatalogLapses` removes nothing. A plan that ends leaves the catalog
+  read-only on Free, kept for as long as the account is used, and the member starts a paid plan whenever they are ready.
+  Never describe a plan ending as deletion, emptying or a download deadline. `runInactiveAccounts`
+  (`src/lib/inactivity.ts`) schedules an account two years after its last sign-in and emails 60/30/7/1 days before the
+  date. On the date a still-Free account loses the files stored for it (masters, artwork, anything in the bucket) even
+  if it signed in during the notice, and keeps the account and catalog; an account that never signed in during the
+  notice is deleted with its files, and one email goes to that address the day after, offering a new account. Any paid
+  plan before the date keeps everything; a staff role or a live seat is never scheduled. `runStaffOffboarding` remains
+  the other path, unchanged.
 
 ## Admin Hub & Team Culture (always follow)
 
@@ -450,9 +454,10 @@ Embedding is forgiving; registration is strict. Never block a user from saving o
 - If a change touches writer fields, roles, readiness logic, or export templates, explain the plan and list affected files before editing.
 - Never delete or overwrite existing writer data. Any schema change needs a migration that preserves current data.
   - No exception any more (founder, 2026-11-08): a plan ending deletes nothing — the catalog stays read-only on Free, as
-    the Refund Policy now says. Deletion happens only through `runInactiveAccounts` (two years without a sign-in, with
-    reminders) or staff offboarding. Signed split sheets, contracts, AI Protection certificates and agency registration
-    records are kept with the account.
+    the Refund Policy now says. Removal happens only through `runInactiveAccounts` (two years without a sign-in: stored
+    files go for a Free account, the account itself only if it never signed in, with reminders) or staff offboarding.
+    Signed split sheets, contracts, AI Protection certificates and agency registration records are kept with the
+    account.
 
 ## Personal Branding Rules (always follow)
 

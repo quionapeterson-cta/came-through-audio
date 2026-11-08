@@ -124,13 +124,18 @@ emptied, and the member can view and download everything and start a paid plan w
 refund and changes no payment, and it never deletes the account. The old 30-day emptying window is retired (founder,
 2026-11-08), so staff never tell a member their songs will be removed after a plan ends.
 
-### 3.6 Two years of inactivity deletes the account
+### 3.6 Two years without a sign-in: the files go, and the account if it never came back
 
-An account with no sign-in for two years is deleted (founder, 2026-11-08). Several emails go out first — 60, 30, 7 and 1
-days before the date, as a draft schedule — each naming the date and saying that one sign-in keeps the account and
-everything in it. Signing in, or buying any plan, cancels the deletion. A paying account, a staff account and an account on
-a live artist seat (as owner or artist) is never deleted for inactivity. The deletion removes the account, its catalog
-files and its records, so nothing is kept beyond what the Privacy Policy requires.
+An account with no sign-in for two years reaches its date (founder, 2026-11-08). Four emails go out first — 60, 30, 7
+and 1 day before — each naming the date and the last chance to upgrade. Buying any plan before the date keeps the
+account and every stored file.
+
+On the date, an account still on Free loses the files stored for it: masters, artwork and anything else in the bucket.
+Signing in during the notice keeps the account and its catalog on Free, but does not keep the files; the member can
+upload masters again. An account with no sign-in at all is deleted with its files, and the address is emailed once
+afterwards so a new account can be started. A paying account, a staff account and an account on a live artist seat (as
+owner or artist) is never touched. The deletion record is the only copy of the address, and it is dropped once that
+last email has gone (or after 30 days if it could not be sent).
 
 ---
 

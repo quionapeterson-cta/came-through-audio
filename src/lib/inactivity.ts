@@ -1,13 +1,13 @@
 import { addDays, addMonths, DAY } from "./retention";
 
 /**
- * Two years of inactivity deletes an account (founder, 2026-11-08). This replaces the old emptying: a plan that ends
- * now leaves the catalog read-only on Free for as long as the account is used. Deletion is the only thing that removes
- * an account without the member asking, and it always comes with emails first.
+ * Two years without a sign-in is the account deadline (founder, 2026-11-08). A plan that ends is a different, smaller
+ * thing: it leaves the catalog read-only on Free and removes nothing for as long as the account is used.
  *
- * Inactivity means no sign-in: the schedule is built from the account's last sign-in (or its creation, for an account
- * that never signed in). The reminder lead times below are a draft: the founder set the two years, not the notice
- * periods, so they live in one constant and nothing in the product promises them.
+ * On the deadline the account is not what always goes. The files stored for it — masters, artwork and anything else in
+ * storage — are deleted for anyone still on Free, and the account itself is deleted only if there has been no sign-in
+ * at all since the schedule was written. Upgrading before the date keeps both. The notice periods are the founder's:
+ * 60, 30, 7 and 1 day before the date.
  */
 export const INACTIVITY_MONTHS = 24;
 /** The least notice anyone gets, including an account that was already dormant the first time the job ran. */
@@ -25,7 +25,7 @@ export type InactivityRow = {
   deleted_at: string | null;
 };
 
-/** The day the account goes: two years after the last activity, but never less than the first notice from today. */
+/** The date two years after the last activity, but never less than the first notice from today. */
 export function inactivityDeleteOn(lastActive: string | Date, now = new Date()): Date {
   const twoYears = addMonths(lastActive, INACTIVITY_MONTHS);
   const firstNotice = addDays(now, INACTIVITY_FIRST_NOTICE_DAYS);
@@ -35,14 +35,22 @@ export function inactivityDeleteOn(lastActive: string | Date, now = new Date()):
 export const daysUntil = (iso: string | Date, now = new Date()) =>
   Math.ceil((new Date(iso).getTime() - now.getTime()) / DAY);
 
-/** Signing in (or changing the profile) after the schedule was written calls the deletion off. */
+/**
+ * A sign-in after the schedule was written saves the account, not the files: the files go on the date unless the
+ * account is on a paid plan by then.
+ */
 export const hasBeenActiveSince = (
   row: Pick<InactivityRow, "last_active_at">,
   lastActive: string | Date | null | undefined,
 ): boolean => !!lastActive && new Date(lastActive).getTime() > new Date(row.last_active_at).getTime();
 
+/** What the date removes: the files of a free account that came back, or everything when it never did. */
+export type InactivityOutcome = "files" | "account";
+export const inactivityOutcome = (signedInSinceSchedule: boolean): InactivityOutcome =>
+  signedInSinceSchedule ? "files" : "account";
+
 /**
- * The reminder due now, or null. Each of 60, 30, 7 and 1 days before the deletion goes out once, so a member who never
+ * The reminder due now, or null. Each of 60, 30, 7 and 1 days before the date goes out once, so a member who never
  * signs in hears from us four times before anything is removed.
  */
 export function dueInactivityReminder(

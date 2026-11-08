@@ -6,6 +6,7 @@ import {
   dueInactivityReminder,
   hasBeenActiveSince,
   inactivityDeleteOn,
+  inactivityOutcome,
   noticeLine,
 } from "./inactivity";
 
@@ -22,11 +23,16 @@ describe("two years of inactivity", () => {
     expect(daysUntil(already, now)).toBe(INACTIVITY_FIRST_NOTICE_DAYS);
   });
 
-  it("calls the deletion off when the account signs in after the schedule was written", () => {
+  it("notices a sign-in after the schedule was written, which saves the account but not the files", () => {
     const row = { last_active_at: "2024-01-01T00:00:00Z" };
     expect(hasBeenActiveSince(row, "2024-01-01T00:00:00Z")).toBe(false);
     expect(hasBeenActiveSince(row, "2026-11-01T00:00:00Z")).toBe(true);
     expect(hasBeenActiveSince(row, null)).toBe(false);
+  });
+
+  it("removes everything only when nobody signed in during the notice", () => {
+    expect(inactivityOutcome(true)).toBe("files");
+    expect(inactivityOutcome(false)).toBe("account");
   });
 });
 

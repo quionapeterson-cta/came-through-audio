@@ -2,8 +2,8 @@
 -- emptying: a plan that ends now leaves the catalog read-only on Free and nothing is removed.
 --
 -- The table is the notice record: last_active_at is the last sign-in (or the account's creation) the schedule was built from,
--- delete_on is the day the account goes, and reminders lists the notices already sent. A sign-in after that activity
--- cancels the row. Nothing here deletes anything by itself; the daily job does, once.
+-- delete_on is the day the deadline lands, and reminders lists the notices already sent. A sign-in after that activity
+-- saves the account but not its files. Nothing here deletes anything by itself; the daily job does, once.
 CREATE TABLE IF NOT EXISTS public.account_inactivity (
   user_id uuid PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
   last_active_at timestamptz NOT NULL,
@@ -21,6 +21,18 @@ CREATE POLICY "Users see their own inactivity notice" ON public.account_inactivi
   FOR SELECT TO authenticated USING (auth.uid() = user_id);
 CREATE INDEX IF NOT EXISTS account_inactivity_delete_on_idx
   ON public.account_inactivity (delete_on) WHERE deleted_at IS NULL;
+
+-- The deletion receipt: the only copy of the address once auth.users is gone, kept just long enough for the day-after
+-- email and then dropped. No foreign key, because the account it names no longer exists.
+CREATE TABLE IF NOT EXISTS public.account_deletions (
+  user_id uuid PRIMARY KEY,
+  email text NOT NULL,
+  deleted_at timestamptz NOT NULL DEFAULT now()
+);
+GRANT ALL ON public.account_deletions TO service_role;
+ALTER TABLE public.account_deletions ENABLE ROW LEVEL SECURITY;
+REVOKE ALL ON public.account_deletions FROM anon, authenticated;
+CREATE INDEX IF NOT EXISTS account_deletions_deleted_at_idx ON public.account_deletions (deleted_at);
 
 -- Who is dormant enough to schedule. Never a staff account, never anyone with a live plan (they are paying, even if
 -- they have not signed in), and never anyone on a live artist seat in either direction (deleting a seat's owner would

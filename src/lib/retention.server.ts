@@ -174,8 +174,8 @@ export async function emptyCatalog(db: Admin, userId: string): Promise<number> {
 /**
  * Daily job: clears the lapse row for anyone who has a plan again, and keeps every other ended plan read-only on Free.
  * Nothing is emptied (founder, 2026-11-08, replacing catalog emptying): the songs, masters and artwork stay, the account
- * can download them, and a paid plan can start whenever the member is ready. An unused account is only deleted by the
- * separate two-year inactivity job, never because a plan ended.
+ * can download them, and a paid plan can start whenever the member is ready. An unused account's stored files (and the
+ * account itself, if it never signs in) are only removed by the separate two-year inactivity job, never by a plan ending.
  */
 export async function runCatalogLapses(now = new Date()) {
   const db = await admin();
