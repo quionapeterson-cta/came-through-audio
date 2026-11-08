@@ -36,6 +36,8 @@ async function db(): Promise<Admin> {
 }
 
 const BUCKET = "catalog-files";
+/** AI Protection proof videos are kept apart from the catalog bucket, and go with the certificates that point at them. */
+const PROOF_BUCKET = "proof-videos";
 const NOW = () => new Date().toISOString();
 /** How long a deletion receipt waits for its email before the address is dropped unsent. */
 const RECEIPT_DAYS = 30;
@@ -62,9 +64,9 @@ async function paidAccount(client: Admin, userId: string): Promise<boolean> {
   });
 }
 
-/** Every file under the member's own folder: song folders, and anything saved at the top (a kit's logos). */
-async function removeUserFiles(client: Admin, userId: string) {
-  const bucket = client.storage.from(BUCKET);
+/** Every file under the member's own folder in a bucket: song folders, and anything saved at the top (a kit's logos). */
+async function removeBucketFiles(client: Admin, bucketName: string, userId: string) {
+  const bucket = client.storage.from(bucketName);
   const { data: top, error: topError } = await bucket.list(userId);
   if (topError) throw new Error(topError.message);
   const paths: string[] = [];
@@ -78,6 +80,9 @@ async function removeUserFiles(client: Admin, userId: string) {
   const { error } = await bucket.remove(paths);
   if (error) throw new Error(error.message);
 }
+
+/** The masters, artwork and anything else stored for the account's catalog. */
+const removeUserFiles = (client: Admin, userId: string) => removeBucketFiles(client, BUCKET, userId);
 
 /** The catalog itself: the songs and their health ticks, so no entry survives the files it pointed at. */
 async function removeCatalogEntries(client: Admin, userId: string) {
@@ -120,6 +125,8 @@ async function hasSignedRecords(client: Admin, userId: string): Promise<boolean>
 
 /** The second date: the signed contracts, fully signed split sheets and certificates go. The account itself stays. */
 async function removeSignedRecords(client: Admin, userId: string) {
+  // A certificate's proof videos are only meaningful with the certificate, so they go now, never at the earlier date.
+  await removeBucketFiles(client, PROOF_BUCKET, userId);
   const ids = fullySignedSheetIds(await splitSheets(client, userId));
   if (ids.length) {
     const { error } = await client.from("split_sheets").delete().in("id", ids);
@@ -225,9 +232,9 @@ export async function runInactiveAccounts(now = new Date()) {
           console.error(`Inactivity: couldn't read the signed paperwork for ${row.user_id}`, String(e));
           continue;
         }
-        result.inactivityCleared += 1;
         if (!paperwork) {
           await client.from("account_inactivity" as never).delete().eq("user_id", row.user_id);
+          result.inactivityCleared += 1;
           continue;
         }
         // The files are off and signed records remain, so the paperwork gets its own date and the first notice now.
@@ -236,6 +243,7 @@ export async function runInactiveAccounts(now = new Date()) {
           .update({ cleared_at: NOW(), signed_delete_on: signedOn, signed_reminders: [], updated_at: NOW() } as never)
           .eq("user_id", row.user_id);
         if (keepError) { console.error(`Inactivity: couldn't start the paperwork window for ${row.user_id}`, keepError.message); continue; }
+        result.inactivityCleared += 1;
         if (email) {
           const sent = await sendInactivityEmail(
             email,
