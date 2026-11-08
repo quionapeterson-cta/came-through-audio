@@ -34,9 +34,9 @@ ALTER TABLE public.account_deletions ENABLE ROW LEVEL SECURITY;
 REVOKE ALL ON public.account_deletions FROM anon, authenticated;
 CREATE INDEX IF NOT EXISTS account_deletions_deleted_at_idx ON public.account_deletions (deleted_at);
 
--- Who is dormant enough to schedule. Never a staff account, never anyone with a live plan (they are paying, even if
--- they have not signed in), and never anyone on a live artist seat in either direction (deleting a seat's owner would
--- take an artist's plan with it). The 24 months and the 60-day head start mirror src/lib/inactivity.ts.
+-- Who is dormant enough to schedule. Anyone with no sign-in for two years, whatever their role or seat: staff accounts
+-- and live seats are treated like every other account (founder, 2026-11-08). The one exemption is a live paid plan (they
+-- are paying, even if they have not signed in). The 24 months and the 60-day head start mirror src/lib/inactivity.ts.
 CREATE OR REPLACE FUNCTION public.inactivity_candidates()
 RETURNS TABLE (user_id uuid, last_active_at timestamptz)
 LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public AS $$
@@ -49,7 +49,6 @@ LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public AS $$
   SELECT a.id, a.last_active_at
   FROM activity a
   WHERE a.last_active_at <= now() - interval '24 months' + interval '60 days'
-    AND NOT public.is_staff(a.id)
     AND NOT EXISTS (
       SELECT 1 FROM public.subscriptions s
       WHERE s.user_id = a.id
@@ -58,12 +57,6 @@ LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public AS $$
           (s.status IN ('active', 'trialing', 'past_due') AND (s.current_period_end IS NULL OR s.current_period_end > now()))
           OR (s.status = 'canceled' AND s.current_period_end > now())
         )
-    )
-    AND NOT EXISTS (
-      SELECT 1 FROM public.artist_seats seat
-      WHERE (seat.owner_id = a.id OR seat.member_user_id = a.id)
-        AND seat.status IN ('unclaimed', 'invited', 'active', 'canceled')
-        AND seat.current_period_end > now()
     )
 $$;
 REVOKE ALL ON FUNCTION public.inactivity_candidates() FROM PUBLIC, anon, authenticated;

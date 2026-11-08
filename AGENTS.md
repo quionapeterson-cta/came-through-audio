@@ -250,8 +250,8 @@
   date. On the date a still-Free account loses the files stored for it (masters, artwork, anything in the bucket) even
   if it signed in during the notice, and keeps the account and catalog; an account that never signed in during the
   notice is deleted with its files, and one email goes to that address the day after, offering a new account. Any paid
-  plan before the date keeps everything; a staff role or a live seat is never scheduled. `runStaffOffboarding` remains
-  the other path, unchanged.
+  plan before the date keeps everything. Staff accounts and live seats are scheduled like everyone else (founder,
+  2026-11-08): only a live paid plan stops the deadline. `runStaffOffboarding` remains the other path, unchanged.
 
 ## Admin Hub & Team Culture (always follow)
 

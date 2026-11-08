@@ -1,3 +1,4 @@
+import { getPaymentsEnvironment } from "./payments-env";
 import { DAY } from "./retention";
 import {
   dueInactivityReminder,
@@ -13,9 +14,9 @@ import { sendInactivityEmail } from "./inactivity-email.server";
  * notices, and on the date removes what the account has not earned the right to keep: the stored files go for anyone
  * still on Free, and the account goes only if it never came back.
  *
- * Guards, all re-checked on the day so a payment always wins: a paid plan, a staff role or a live artist seat in either
- * direction cancels everything. A sign-in is different — it saves the account and leaves it on Free, but it does not
- * save the files.
+ * Guards, all re-checked on the day so a payment always wins: a live paid plan cancels everything. Staff accounts and
+ * live artist seats are on the same footing as everyone else (founder, 2026-11-08), so only a plan stops the deadline.
+ * A sign-in is different — it saves the account and leaves it on Free, but it does not save the files.
  *
  * It never touches a plan ending: a lapsed plan is kept read-only on Free elsewhere.
  */
@@ -35,17 +36,22 @@ const RECEIPT_DAYS = 30;
 const lastActiveOf = (user: { last_sign_in_at?: string | null; created_at: string }) =>
   user.last_sign_in_at && new Date(user.last_sign_in_at) > new Date(user.created_at) ? user.last_sign_in_at : user.created_at;
 
-/** A paid plan, a staff role or a live seat in either direction: never touched for inactivity. */
-async function protectedAccount(client: Admin, userId: string): Promise<boolean> {
-  const [tier, roles, seats] = await Promise.all([
-    client.rpc("user_tier" as never, { _uid: userId } as never),
-    client.from("user_roles").select("role").eq("user_id", userId),
-    client.from("artist_seats" as never).select("id")
-      .or(`owner_id.eq.${userId},member_user_id.eq.${userId}`)
-      .in("status" as never, ["unclaimed", "invited", "active", "canceled"] as never)
-      .gt("current_period_end", NOW()),
-  ]);
-  return String(tier.data) !== "free" || (roles.data ?? []).length > 0 || (seats.data ?? []).length > 0;
+/**
+ * A live paid plan is the only thing that stops the deadline (founder, 2026-11-08): staff accounts, seat owners and seat
+ * artists are scheduled like everyone else, so nothing here asks who someone works for or what seat they hold.
+ */
+async function paidAccount(client: Admin, userId: string): Promise<boolean> {
+  const { data } = await client.from("subscriptions")
+    .select("status, current_period_end")
+    .eq("user_id", userId).eq("environment", getPaymentsEnvironment())
+    .not("stripe_subscription_id", "is", null)
+    .in("status", ["active", "trialing", "past_due", "canceled"]);
+  const rows = (data ?? []) as unknown as { status: string; current_period_end: string | null }[];
+  return rows.some((s) => {
+    const end = s.current_period_end ? new Date(s.current_period_end) : null;
+    if (s.status === "canceled") return !!end && end > new Date();
+    return !end || end > new Date();
+  });
 }
 
 /** Every file under the member's own folder: song folders, and anything saved at the top (a kit's logos). */
@@ -91,7 +97,7 @@ export async function runInactiveAccounts(now = new Date()) {
       await client.from("account_inactivity" as never).delete().eq("user_id", row.user_id);
       continue;
     }
-    if (await protectedAccount(client, row.user_id)) {
+    if (await paidAccount(client, row.user_id)) {
       await client.from("account_inactivity" as never).delete().eq("user_id", row.user_id);
       result.inactivityCancelled += 1;
       continue;
