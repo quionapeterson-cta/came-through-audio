@@ -31,7 +31,8 @@ today; 57 of them repeat, and the full task→badge table for those is in
 | Task | Badge today | Repeats | Celebration today |
 | --- | --- | --- | --- |
 | Embed a master | Embedded | every master | pop-up, art rotates each 10 |
-| Embed lyrics | First Lyric Entry | every lyric | pop-up, the gold lock every time |
+| Embed your first lyric | First Lyric Entry | once | pop-up |
+| Embed lyrics | Lyric Locked Gold | every lyric | pop-up, the gold lock every time |
 | Upload cover art | Cover Story | every upload | pop-up, 3-art rotation |
 | Save your first song | First Note | once | pop-up |
 | Credit a vocalist | Mic Check | once | pop-up |
@@ -132,8 +133,9 @@ founder's art and a `BadgeDef` through Admin → Badges → Badge Protocol, and 
 
 ## 4. Already covered by the four you named
 
-- **Every lyric added** — First Lyric Entry, `every: 1`, the gold lock on every earning (no rotation since 2026-11-08);
-  the pop-up counts "your Nth lyric". The 5, 10, 15, 25, 40, 50 and 100 lyric badges come as well, each on its own.
+- **Every lyric added** — Lyric Locked Gold, `every: 1`, the gold lock on every earning (no rotation since 2026-11-08);
+  the pop-up counts "your Nth lyric". First Lyric Entry is a different badge, once only, for the very first lyric, and
+  the 5, 10, 15, 25, 40, 50 and 100 lyric badges arrive as well, each on its own.
 - **100% blueprints** — Blueprints Checked, `every: 1`, one earning per finished run.
 - **100% royalty health** — Silver Crown, `every: 1` per 100% song; its celebration stays exactly as it is.
 - **100% embed** — not defined yet, so not built: see the last row of §3.

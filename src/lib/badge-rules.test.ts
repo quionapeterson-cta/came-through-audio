@@ -28,11 +28,11 @@ describe("badge catalog", () => {
     // Only the pictures the founder uploaded to R2 by hand may skip the repo copy, and every one of them is named here,
     // so a mistyped path can't hide behind the exemption. With VITE_ART_BASE unset these tiles are blank by design.
     expect(BADGES.filter((b) => b.artInBucket).map((b) => b.id).sort()).toEqual(
-      ["brand_kit_bought", "double_protection", "embedded", "first_lyric_entry", "health_report_matched", "silver_crown"].sort(),
+      ["brand_kit_bought", "double_protection", "embedded", "first_lyric_entry", "health_report_matched", "lyric_locked_gold", "silver_crown"].sort(),
     );
   });
   it("has nothing left waiting on art, so every badge can be earned", () => {
-    expect(BADGES.filter((b) => b.collection === "lyrics")).toHaveLength(8);
+    expect(BADGES.filter((b) => b.collection === "lyrics")).toHaveLength(9);
     expect(ALL_BADGES.filter((b) => b.artPending).map((b) => b.id)).toEqual([]);
     expect(BADGES.map((b) => b.id)).toEqual(expect.arrayContaining(["ai_slayer", "full_album", "full_ep", "unbreakable_2", "unbreakable_5"]));
   });
@@ -55,9 +55,11 @@ describe("badge catalog", () => {
     // The ordinary rule still holds: the art holds for ten earnings, then the rotation takes over.
     expect(rotationArt(badgeById("embedded")!, 10)).toBe(artUrl(badgeById("embedded")!.src));
     expect(rotationArt(badgeById("embedded")!, 11)).not.toBe(artUrl(badgeById("embedded")!.src));
-    // A lyric is the gold lock every time it is earned: the milestones carry their own art (founder, 2026-11-08).
-    const lyric = badgeById("first_lyric_entry")!;
+    // The gold lock is the every-time lyric badge, and the first lyric has its own badge beside it (founder, 2026-11-08).
+    const lyric = badgeById("lyric_locked_gold")!;
     expect([1, 12, 40].map((n) => rotationArt(lyric, n))).toEqual([1, 12, 40].map(() => artUrl(lyric.src)));
+    expect(badgeById("first_lyric_entry")).toMatchObject({ goal: 1, src: expect.stringContaining("cta-first-lyric-entry") });
+    expect(badgeById("first_lyric_entry")?.every).toBeUndefined();
   });
 
   it("fills or drops the artist name in pop-ups", () => {
@@ -240,7 +242,7 @@ describe("every-time task badges", () => {
   });
   it("has one every-time badge for each task", async () => {
     const { badgeById } = await import("@/lib/badges");
-    for (const id of ["embedded", "came_strong", "first_lyric_entry", "silver_crown", "sealed", "blueprints_checked", "contract_signed", "executive_contract", "cover_story"]) {
+    for (const id of ["embedded", "came_strong", "lyric_locked_gold", "silver_crown", "sealed", "blueprints_checked", "contract_signed", "executive_contract", "cover_story"]) {
       expect(badgeById(id)).toMatchObject({ goal: 1, every: 1 });
     }
   });

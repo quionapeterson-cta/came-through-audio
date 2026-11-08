@@ -96,7 +96,8 @@ The mechanics are built (`every`, `×N`, the Repeatable section, per-badge art r
 
 | Task | Badge | First earning | Repeats every | Art on later repeats |
 | --- | --- | --- | --- | --- |
-| Embed a lyric | First Lyric Entry | 1 | 1 | no, the gold lock on every earning (it only rotated for its first ten before 2026-11-08); the 5/10/15/25/40/50/100 lyric badges each come separately |
+| Embed your first lyric | First Lyric Entry | 1 | — | once only |
+| Embed a lyric | Lyric Locked Gold | 1 | 1 | no, the gold lock on every earning; the 5/10/15/25/40/50/100 lyric badges each come separately |
 | Embed 100 lyrics | Lyrical Legacy | 100 | 100 | no, the same picture |
 
 **Split Sheets** — 3 repeating badges

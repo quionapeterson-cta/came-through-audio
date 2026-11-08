@@ -237,15 +237,18 @@ const NIGHT: BadgeDef[] = [
     popup: "In the quiet. You beat the sunrise." },
 ];
 
-// The founder's lyric set (copy approved 2026-10-20). First Lyric Entry comes with every lyric embedded, on top of the
-// milestones (founder, 2026-10-25: "It's a victory just having written them down!").
+// The founder's lyric set (copy approved 2026-10-20; two badges on the lyric task since 2026-11-08). First Lyric Entry
+// is the once-only badge for the very first lyric, and Lyric Locked Gold is the every-time one on top of it: a different
+// badge, a different picture, and the 5, 10, 15, 25, 40, 50 and 100 lyric milestones arrive as their own badges too.
 const L = `${P}/lyrics`;
 const LYRICS: BadgeDef[] = [
-  // Every lyric earning uses the gold lock, with no rotation (founder, 2026-11-08): the 5, 10, 15, 25, 40, 50 and 100
-  // lyric milestones are their own badges, so the every-time badge keeps one picture.
-  { id: "first_lyric_entry", title: "First Lyric Entry", collection: "lyrics", tier: "instant", milestone: "Every lyric you embed (a victory just having written it down)", action: "Embed a lyric", metric: "lyrics", goal: 1, every: 1, src: `${P}/lyric_locked_gold_512x512.webp`, artInBucket: true,
+  { id: "first_lyric_entry", title: "First Lyric Entry", collection: "lyrics", tier: "instant", milestone: "Your very first lyric", action: "Embed your first lyric", metric: "lyrics", goal: 1, src: `${P}/cta-first-lyric-entry.webp`, artInBucket: true,
     description: "You did it. The hardest lyric is the first one, and you just broke through. This pen drop is proof your voice matters. Welcome to Came Through Audio — you’re officially in motion.",
-    popup: "First ink! One lyric down — the universe just heard you.", repeatPopup: "You Came Through: your {nth} lyric is embedded. It's a victory just having written it down." },
+    popup: "First ink! One lyric down — the universe just heard you." },
+  { id: "lyric_locked_gold", title: "Lyric Locked Gold", collection: "lyrics", tier: "instant", milestone: "Every lyric you embed (a victory just having written it down)", action: "Embed a lyric", metric: "lyrics", goal: 1, every: 1, src: `${P}/lyric_locked_gold_512x512.webp`, artInBucket: true,
+    description: "Every lyric you lock in earns this again. The words stop being a mood and start being a catalogue, and that is a victory just having written it down.",
+    popup: "Gold lock! Your first lyric is locked in — it's a victory just having written it down.",
+    repeatPopup: "You Came Through: your {nth} lyric is locked in. It's a victory just having written it down." },
   { id: "word_weaver", title: "Word Weaver", collection: "lyrics", tier: "standard", milestone: "5 lyrics", action: "Embed 5 lyrics", metric: "lyrics", goal: 5, src: `${L}/5_word_weaver.webp`,
     description: "Look at you weaving. You're not just writing words, you're braiding feelings into sound. Five stories stitched with heart — your thread is getting stronger.",
     popup: "You're weaving magic. 5 lyrics — your patterns are forming!" },
