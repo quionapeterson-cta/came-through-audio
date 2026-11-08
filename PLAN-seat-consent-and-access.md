@@ -1,6 +1,7 @@
 # PLAN — Artist seats: consent, visibility and taking over the payments
 
-Status: **terms and read access built (2026-11-08); the payment takeover is planned, not built.** The Terms section was
+Status: **terms, read access, seat expiry and the payment takeover built and applied (2026-11-08); the open decisions
+are section 8.** The Terms section was
 written to the founder's instruction; have an attorney read it before it is relied on. This file is product and risk
 analysis, not legal advice.
 
@@ -99,10 +100,9 @@ sections ship under the current date until the founder sets the date the change 
 
 ## 5. Remaining exposure and the fixes planned
 
-1. **Read and update never expire.** The original catalog read/update policies, the profile-read policy and
-   `set_seat_artist_defaults` check `status` but not `current_period_end`. A cancelled seat past its year still lets the
-   owner read and edit. The new split-sheet and contract policies use `seat_is_live()`, which checks the date; the older
-   four need the same. Fix in the next migration.
+1. **Seat access expires with the paid period.** Fixed in `20261108160000_seat-handoff.sql`: the catalog read/update
+   policies, the profile-read policy and `set_seat_artist_defaults` now check `current_period_end` too, so a cancelled
+   seat past its year stops reading and editing, and a handed-off seat stops the owner the moment the artist takes over.
 2. **Status is never written to `ended`** for an accepted seat; it stays `canceled` forever, which is why every policy
    repeats the date test. A daily job should write `ended` once the period passes, as `runCatalogLapses` already does for
    plans.
@@ -114,7 +114,7 @@ sections ship under the current date until the founder sets the date the change 
 
 ---
 
-## 6. Taking over the payments (mechanic decided, nothing built)
+## 6. Taking over the payments (built 2026-11-08)
 
 Founder, 2026-11-08: "A seat handoff can take place at anytime but what is paid is paid and no new payments are done
 from the artist taking over until the billing cycle is ready to renew."
@@ -122,8 +122,9 @@ from the artist taking over until the billing cycle is ready to renew."
 That settles the shape: the handoff is available immediately, the owner's paid year is used up rather than refunded or
 credited, and the artist's first payment is the renewal.
 
-**The sequence.** Either the artist asks from their seat card ("Keep my plan") or the owner offers it from their seats
-panel; the other side is told. Nothing moves until the artist completes their own checkout.
+**The sequence.** The artist asks from their seat card on Profile ("Keep this plan after …"); the owner is told by
+email. An owner-side offer is not built, because nothing may move without the artist's own checkout. Nothing moves until
+the artist completes it.
 
 1. The artist opens a normal plan checkout at the seat's tier, with the subscription created on a trial ending on the
    seat's `current_period_end` (`subscription_data.trial_end`). Stripe shows nothing due today and collects a card for
@@ -131,8 +132,9 @@ panel; the other side is told. Nothing moves until the artist completes their ow
    never drops during the changeover.
 2. The webhook records the artist's own subscription. Only then is the seat marked `handed_off`: the owner's access ends
    at that moment, and the seat stops lifting the artist's tier because their own subscription now supplies it.
-3. The owner's seat subscription is set to cancel at period end. Nothing further is charged to the owner, and there is
-   no refund or credit for the part of the year they will not use.
+3. That one seat is taken off the owner's renewal: its tier's line loses one artist (`proration_behavior: "none"`, so
+   no refund or credit for the time already paid for), and the whole subscription is set to cancel at period end only
+   when it was its last seat. Other artists on the same purchase are untouched.
 4. At `current_period_end` the trial ends and the artist is charged normally at that tier's plan price. From then on it
    is an ordinary plan: renewals, card updates, pause, the refund window, all unchanged.
 
@@ -148,11 +150,11 @@ mid-year if their checkout failed. Doing it after means an abandoned handoff lea
 - The seat row keeps `owner_id`, `member_user_id` and a new `handed_off_at` as history. A handed-off seat is not reused
   for another artist in the same year.
 
-**What gets built.** A handoff action on the seat (server function that checks the seat is live and the caller is its
-owner or its member), a `kind = "seat_handoff"` checkout carrying the seat id, `trial_end` in `subscription_data`, a
-webhook branch that marks the seat `handed_off` and sets the owner's seat subscription to cancel at period end, one
-email to each side, and a `handed_off_at` column plus a new status value. No catalog or account migration: the account
-was always the artist's.
+**What is built.** A `kind = "seat_handoff"` checkout that reads the seat, its tier and its end date on the server (only
+its member may start it, and only one live plan is allowed), `trial_end` in `subscription_data`, a webhook branch that
+marks the seat `handed_off` with `handed_off_at`, takes that one seat off the owner's renewal, and emails both sides
+through `emailLayout`, the artist's card on Profile, and the owner's seats list showing the handed-off state. No catalog
+or account migration: the account was always the artist's.
 
 **Ruled out by this decision.** Prorating the rest of the year back to the owner, crediting it to the artist, or
 charging the artist anything before renewal.
@@ -179,8 +181,8 @@ email repeats that date. Nothing is collected at the handoff beyond the card.
 
 1. **Done now:** Terms §22, Privacy §10 and §7, sign-up acknowledgement, seat-page copy and invite-return fix, owner
    read access to split sheets and contracts, artist-only `send_contract`, price-list note, db-check entry.
-2. **Next (small):** `current_period_end` in the four older seat policies; `ended` job; notices.
-3. **Then:** the handoff in section 6.
+2. **Done:** `current_period_end` in the older seat policies. **Still open:** the `ended` job and seat-ending notices.
+3. **Done:** the handoff in section 6, with the artist-only start and the one-seat billing change.
 4. **Only if asked:** delete rights after cancellation (needs approval), contract visibility audit trail, seat access
    flags if the founder ever wants artist controls again — that reverses the no-revocation decision, so it waits.
 
@@ -191,8 +193,8 @@ email repeats that date. Nothing is collected at the handoff beyond the card.
 1. **Terms effective date** — the sections are live under the current date; name the date the change takes effect.
 2. **Delete after cancellation** — keep as is, or make a cancelled seat read-only? Recommendation: read-only.
 3. **Notice timing** before a seat ends — needs a day count from the founder.
-4. **Who may start a handoff** — artist only, owner only, or either with the other told? Recommendation: either, but
-   nothing moves until the artist completes their own checkout.
-5. **The freed seat** — after a handoff, does the owner's place become available at the next renewal, or only when they
-   next buy? Recommendation: at the next renewal.
+4. **Who may start a handoff** — **artist only, built.** The owner is emailed when it happens; an owner-initiated offer
+   is not built, because nothing may move without the artist's own checkout.
+5. **The freed seat** — **released at the next renewal, built.** The owner's seat line loses that one artist at renewal,
+   with no refund for the period already paid for.
 6. **Contracts inside a seat** — confirm read-only forever (recommendation), so the Terms promise stays true.

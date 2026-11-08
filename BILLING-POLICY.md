@@ -103,6 +103,20 @@ Rules that never bend:
 - **One refund per payment event** — the console will not double-refund, and neither should we.
 - **Cancelling a plan is not a refund.** It stops the *next* charge. The member keeps the time they paid for.
 
+### 3.4 An artist takes their seat over
+
+An add-on artist seat can be handed to its artist at any time. The artist starts their own plan at the seat's tier,
+enters a card, and the first charge is the seat's renewal. Nothing is charged at the handoff.
+
+- **What is paid is paid.** The owner is not refunded or credited for the rest of the seat's year, and the artist is not
+  charged for that time either.
+- **Access ends at handoff.** From the moment the artist's own plan is recorded, the owner can no longer read or edit
+  that artist's catalog, split sheets or contracts. The artist's account, catalog, masters and files are unchanged.
+- **Only that seat stops.** The owner's other artists on the same purchase and the owner's own plan are untouched. The
+  handed-off seat keeps its record and cannot be re-invited; the owner buys a new seat to add another artist.
+- **If the artist cancels during the handoff period,** the handoff still stands: nothing was charged to them, the owner's
+  seat already stopped renewing, and neither side is refunded.
+
 ---
 
 ## 4. What actually causes a dispute (chargeback)
@@ -227,7 +241,10 @@ Ten minutes, then you can do it.
 13. **Before any "duplicate" refund, read Possible duplicate payments** and check what each line is. A hold, a refund and
     two different products are not duplicates (§4.3). Tick the four checks only when all four are true.
 14. **Answer from Admin → Support Scripts.** Pick the department, fill the name and amount, copy. The billing scripts cover
-    refunds, holds, declines and pause confusion, so nobody writes the wording from scratch.
+    refunds, holds, declines, pause confusion and artist-seat handoffs, so nobody writes the wording from scratch.
+15. **If an artist seat changed hands,** use "Artist seat handed over". It says who pays now, the renewal date nothing
+    was charged before, and that the owner's access and seat payment ended with the handoff. Do not offer a refund or
+    credit for the part of the seat's year the owner did not use: §3.4 says it is not refunded.
 
 If something goes wrong — an error, an amount that looks wrong, a payment that isn't listed — **do not** open Stripe and
 do not try a second refund. Copy the message and send it to the Head of Finance.
@@ -275,6 +292,13 @@ do not try a second refund. Copy the message and send it to the Head of Finance.
 
 > Hi [name] — you're right, there were two payments for [item] on [date]. Both went through and only one was owed, so
 > we've refunded the newer one. It's back on your card in 5–10 business days and your access hasn't changed.
+
+**Artist seat handed over**
+
+> Hi [name] — [artist] is paying for their own plan now. Their first charge is at the seat's renewal on [date], and
+> nothing was charged at the handoff. The seat you paid for stops renewing from that date: the time already paid for is
+> not refunded or credited, and your access to their catalog, split sheets and contracts ended when the handoff
+> completed. Your own plan and your other seats are unchanged.
 
 **Dispute**
 

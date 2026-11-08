@@ -83,6 +83,13 @@ export const SUPPORT_SCRIPTS: readonly SupportScript[] = [
     when: "A plan is cancelled and they ask whether their catalog survives.",
     body: "Hi {{first_name}},\n\nYour plan is cancelled and won't renew. You keep everything until {{date}}.\n\nAfter that your catalog stays where it is for 30 days, so you can renew and pick up exactly where you left off, or download everything. We email you before anything is removed, and signed split sheets, contracts and AI certificates are never deleted.\n\nCame Through Audio",
   },
+  {
+    id: "billing-seat-handed-over",
+    department: "billing",
+    title: "Artist seat handed over to the artist",
+    when: "An owner asks why an artist seat stopped, or either side asks what an artist taking their plan over means.",
+    body: "Hi {{first_name}},\n\n{{detail}} is paying for their own plan now. Their first charge is at the seat's renewal on {{date}}, and nothing was charged at the handoff.\n\nThe seat you paid for stops renewing from that date. The time already paid for is not refunded or credited, and your access to their catalog, split sheets and contracts ended when the handoff completed. Your own plan and your other seats are unchanged.\n\nCame Through Audio",
+  },
 
   // ── Support ────────────────────────────────────────────────────────────────────────────────────────────────────
   {
