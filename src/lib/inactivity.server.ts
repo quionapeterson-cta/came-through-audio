@@ -123,6 +123,24 @@ async function hasSignedRecords(client: Admin, userId: string): Promise<boolean>
   return fullySignedSheetIds(await splitSheets(client, userId)).length > 0;
 }
 
+/**
+ * Everything a deleted account owned that the auth cascade does not reach: its proof videos, and every split sheet on its
+ * songs. Contracts and certificates cascade with the account; split sheets have no foreign key left, so they would
+ * otherwise linger as rows nobody can open.
+ */
+async function removeAccountPaperwork(client: Admin, userId: string) {
+  await removeBucketFiles(client, PROOF_BUCKET, userId);
+  const { data: songs, error: songError } = await client.from("catalogs").select("id").eq("user_id", userId);
+  if (songError) throw new Error(songError.message);
+  const ids = ((songs ?? []) as unknown as { id: string }[]).map((s) => s.id);
+  if (ids.length) {
+    const { error } = await client.from("split_sheets").delete().in("catalog_id", ids);
+    if (error) throw new Error(error.message);
+  }
+  const { error: ownedError } = await client.from("split_sheets").delete().eq("owner_id", userId);
+  if (ownedError) throw new Error(ownedError.message);
+}
+
 /** The second date: the signed contracts, fully signed split sheets and certificates go. The account itself stays. */
 async function removeSignedRecords(client: Admin, userId: string) {
   // A certificate's proof videos are only meaningful with the certificate, so they go now, never at the earlier date.
@@ -256,6 +274,12 @@ export async function runInactiveAccounts(now = new Date()) {
             result.inactivityPaperworkReminded += 1;
           }
         }
+        continue;
+      }
+      try {
+        await removeAccountPaperwork(client, row.user_id);
+      } catch (e) {
+        console.error(`Inactivity: couldn't clear the paperwork of ${row.user_id}`, String(e));
         continue;
       }
       const { error: delError } = await client.auth.admin.deleteUser(row.user_id);
