@@ -2,29 +2,26 @@ import { getPaymentsEnvironment } from "./payments-env";
 import { DAY } from "./retention";
 import {
   dueInactivityReminder,
-  dueSignedReminder,
-  fullySignedSheetIds,
   hasBeenActiveSince,
   inactivityDeleteOn,
   inactivityOutcome,
-  signedDeleteOn,
   type InactivityRow,
 } from "./inactivity";
 import { sendInactivityEmail } from "./inactivity-email.server";
 
 /**
  * The daily two-year inactivity job (founder, 2026-11-08). It schedules dormant accounts, sends the four upgrade
- * notices, and on the date removes what the account has not earned the right to keep: the stored files and catalog
- * entries go for anyone still on Free, and the account goes only if it never came back.
+ * notices, and on the date removes what the account has not earned the right to keep: the stored files (masters,
+ * artwork and AI Protection proof videos) and catalog entries go for anyone still on Free, and the account goes only if
+ * it never came back.
  *
- * A sign-in saves the account, and then the paperwork gets a second, shorter window of its own (founder, 2026-11-08):
- * signed split sheets, contracts and certificates stay for 30 days after the files came off, with 30/14/7/1 day
- * reminders, and are deleted then unless a plan has been paid for.
+ * Everything that is not storage stays with the account on Free for as long as it exists (founder, 2026-11-08,
+ * replacing the 30-day paperwork window): split sheets, contracts, AI Protection certificates, blueprints and Working
+ * On are removed only when the account itself is deleted.
  *
- * Guards, all re-checked on the day so a payment always wins: a live paid plan cancels everything, at either date.
+ * Guards, all re-checked on the day so a payment always wins: a live paid plan cancels everything before the date.
  * Staff accounts and live artist seats are on the same footing as everyone else (founder, 2026-11-08), so only a plan
- * stops a deadline. A sign-in is different — it saves the account and leaves it on Free, but it does not save the files,
- * and it does not stop the paperwork clock once that has started.
+ * stops a deadline. A sign-in saves the account and leaves it on Free, but it does not save the files or the catalog.
  *
  * It never touches a plan ending: a lapsed plan is kept read-only on Free elsewhere.
  */
@@ -36,7 +33,7 @@ async function db(): Promise<Admin> {
 }
 
 const BUCKET = "catalog-files";
-/** AI Protection proof videos are kept apart from the catalog bucket, and go with the certificates that point at them. */
+/** AI Protection proof videos live in their own bucket and are the biggest files an account stores, so they go on the date. */
 const PROOF_BUCKET = "proof-videos";
 const NOW = () => new Date().toISOString();
 /** How long a deletion receipt waits for its email before the address is dropped unsent. */
@@ -97,32 +94,6 @@ async function removeCatalogEntries(client: Admin, userId: string) {
   if (delError) throw new Error(delError.message);
 }
 
-type Sheet = { id: string; catalog_id: string | null; track_title: string | null; isrc: string | null; signed_at: string | null };
-
-/** The split sheet rows of the songs this account owns, including the ones whose catalog row is already gone. */
-async function splitSheets(client: Admin, userId: string): Promise<Sheet[]> {
-  const { data, error } = await client.from("split_sheets")
-    .select("id, catalog_id, track_title, isrc, signed_at").eq("owner_id", userId);
-  if (error) throw new Error(error.message);
-  return (data ?? []) as unknown as Sheet[];
-}
-
-/**
- * Whether anything signed is still on the account: a contract everyone has signed, a split sheet every collaborator has
- * signed, or an issued AI Protection certificate. Unsigned drafts are not part of this, so they never start the clock.
- */
-async function hasSignedRecords(client: Admin, userId: string): Promise<boolean> {
-  const { data: contracts, error: contractError } = await client.from("contracts" as never)
-    .select("id").eq("user_id", userId).eq("status", "signed").limit(1);
-  if (contractError) throw new Error(contractError.message);
-  if ((contracts ?? []).length) return true;
-  const { data: certificates, error: certificateError } = await client.from("ai_protection_certificates" as never)
-    .select("id").eq("user_id", userId).limit(1);
-  if (certificateError) throw new Error(certificateError.message);
-  if ((certificates ?? []).length) return true;
-  return fullySignedSheetIds(await splitSheets(client, userId)).length > 0;
-}
-
 /**
  * Everything a deleted account owned that the auth cascade does not reach: its proof videos, and every split sheet on its
  * songs. Contracts and certificates cascade with the account; split sheets have no foreign key left, so they would
@@ -141,26 +112,9 @@ async function removeAccountPaperwork(client: Admin, userId: string) {
   if (ownedError) throw new Error(ownedError.message);
 }
 
-/** The second date: the signed contracts, fully signed split sheets and certificates go. The account itself stays. */
-async function removeSignedRecords(client: Admin, userId: string) {
-  // A certificate's proof videos are only meaningful with the certificate, so they go now, never at the earlier date.
-  await removeBucketFiles(client, PROOF_BUCKET, userId);
-  const ids = fullySignedSheetIds(await splitSheets(client, userId));
-  if (ids.length) {
-    const { error } = await client.from("split_sheets").delete().in("id", ids);
-    if (error) throw new Error(error.message);
-  }
-  const { error: contractError } = await client.from("contracts" as never).delete()
-    .eq("user_id", userId).eq("status", "signed");
-  if (contractError) throw new Error(contractError.message);
-  const { error: certificateError } = await client.from("ai_protection_certificates" as never).delete()
-    .eq("user_id", userId);
-  if (certificateError) throw new Error(certificateError.message);
-}
-
 /**
  * Daily job. Schedules anyone dormant past the notice window, sends the reminders that are due, removes the files and
- * account on the date, runs the paperwork window a signed-in account is given, and sends the day-after confirmation to
+ * account on the date, and sends the day-after confirmation to
  * an address whose account has just been deleted.
  */
 export async function runInactiveAccounts(now = new Date()) {
@@ -170,14 +124,12 @@ export async function runInactiveAccounts(now = new Date()) {
     inactivityCancelled: 0,
     inactivityReminded: 0,
     inactivityCleared: 0,
-    inactivityPaperworkReminded: 0,
-    inactivityPaperworkCleared: 0,
     inactivityDeleted: 0,
     inactivityNotified: 0,
   };
 
   const { data, error } = await client.from("account_inactivity" as never)
-    .select("user_id, last_active_at, delete_on, reminders, deleted_at, cleared_at, signed_delete_on, signed_reminders")
+    .select("user_id, last_active_at, delete_on, reminders, deleted_at")
     .is("deleted_at", null);
   if (error) throw error;
   const rows = (data ?? []) as unknown as InactivityRow[];
@@ -196,36 +148,6 @@ export async function runInactiveAccounts(now = new Date()) {
 
     const email = found.user.email ?? null;
 
-    // The paperwork window: the files and catalog are already off, so only the signed records are left to decide.
-    if (row.signed_delete_on) {
-      if (new Date(row.signed_delete_on) <= now) {
-        try {
-          await removeSignedRecords(client, row.user_id);
-        } catch (e) {
-          // Leave the schedule in place and try again tomorrow rather than claim paperwork was cleared.
-          console.error(`Inactivity: couldn't clear the signed paperwork for ${row.user_id}`, String(e));
-          continue;
-        }
-        await client.from("account_inactivity" as never).delete().eq("user_id", row.user_id);
-        result.inactivityPaperworkCleared += 1;
-        continue;
-      }
-      const dueSigned = dueSignedReminder(row, now);
-      if (!dueSigned || !email) continue;
-      const sentPaperwork = await sendInactivityEmail(
-        email,
-        { kind: dueSigned, stage: "signed", deleteOn: row.signed_delete_on },
-        `inactivity-signed-${dueSigned}-${row.user_id}-${row.signed_delete_on.slice(0, 10)}`,
-      );
-      if (sentPaperwork) {
-        await client.from("account_inactivity" as never)
-          .update({ signed_reminders: [...new Set([...(row.signed_reminders ?? []), dueSigned])], updated_at: NOW() } as never)
-          .eq("user_id", row.user_id);
-        result.inactivityPaperworkReminded += 1;
-      }
-      continue;
-    }
-
     const signedIn = hasBeenActiveSince(row, lastActiveOf(found.user));
 
     if (new Date(row.delete_on) <= now) {
@@ -238,42 +160,17 @@ export async function runInactiveAccounts(now = new Date()) {
       }
       if (inactivityOutcome(signedIn) === "catalog") {
         try {
+          // The proof videos are the biggest files an account stores, so they go with the masters even though the
+          // certificates that point at them stay on the account.
+          await removeBucketFiles(client, PROOF_BUCKET, row.user_id);
           await removeCatalogEntries(client, row.user_id);
         } catch (e) {
           console.error(`Inactivity: couldn't clear the catalog for ${row.user_id}`, String(e));
           continue;
         }
-        let paperwork = false;
-        try {
-          paperwork = await hasSignedRecords(client, row.user_id);
-        } catch (e) {
-          console.error(`Inactivity: couldn't read the signed paperwork for ${row.user_id}`, String(e));
-          continue;
-        }
-        if (!paperwork) {
-          await client.from("account_inactivity" as never).delete().eq("user_id", row.user_id);
-          result.inactivityCleared += 1;
-          continue;
-        }
-        // The files are off and signed records remain, so the paperwork gets its own date and the first notice now.
-        const signedOn = signedDeleteOn(now).toISOString();
-        const { error: keepError } = await client.from("account_inactivity" as never)
-          .update({ cleared_at: NOW(), signed_delete_on: signedOn, signed_reminders: [], updated_at: NOW() } as never)
-          .eq("user_id", row.user_id);
-        if (keepError) { console.error(`Inactivity: couldn't start the paperwork window for ${row.user_id}`, keepError.message); continue; }
+        // Nothing else is scheduled: the account, its paperwork and everything that is not storage stay on Free.
+        await client.from("account_inactivity" as never).delete().eq("user_id", row.user_id);
         result.inactivityCleared += 1;
-        if (email) {
-          const sent = await sendInactivityEmail(
-            email,
-            { kind: "30", stage: "signed", deleteOn: signedOn },
-            `inactivity-signed-30-${row.user_id}-${signedOn.slice(0, 10)}`,
-          );
-          if (sent) {
-            await client.from("account_inactivity" as never)
-              .update({ signed_reminders: ["30"], updated_at: NOW() } as never).eq("user_id", row.user_id);
-            result.inactivityPaperworkReminded += 1;
-          }
-        }
         continue;
       }
       try {

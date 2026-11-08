@@ -1,24 +1,22 @@
 import { resendKey } from "./collab-trial.server";
 import { BILLING_EMAIL, emailLayout, escapeHtml, SITE_URL } from "./email-layout";
-import { noticeLine, SIGNED_RECORDS, type InactivityReminder, type SignedReminder } from "./inactivity";
+import { noticeLine, type InactivityReminder } from "./inactivity";
 
 /**
- * The four notices before the deadline, the four before the signed paperwork goes, and the one after a deletion
- * (founder, 2026-11-08). Upgrading is the way to keep things, so the main button goes to the plans page; downloading is
- * offered beside it. Every notice in a run carries the same date. The last email only goes out after an account has
- * actually been deleted, and offers a fresh start.
+ * The four notices before the deadline and the one after a deletion (founder, 2026-11-08). Upgrading is the way to
+ * keep the stored files, so the main button goes to the plans page; downloading is offered beside it. Every notice in
+ * a run carries the same date. The last email only goes out after an account has actually been deleted, and offers a
+ * fresh start.
  */
 const FROM = `Came Through Audio <${BILLING_EMAIL}>`;
 const REASON = "You're receiving this because this email is on a Came Through Audio account with no recent sign-in.";
 const DELETED_REASON = "You're receiving this because this email was on a Came Through Audio account that has now been deleted.";
-const SIGNED_REASON = "You're receiving this because this email is on a Came Through Audio account with no recent sign-in that still holds signed documents.";
 
 export const longDate = (d: string | Date) =>
   new Date(d).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" });
 
 export type InactivityEmail =
   | { kind: InactivityReminder; deleteOn: string; keepsAccount: boolean }
-  | { kind: SignedReminder; stage: "signed"; deleteOn: string }
   | { kind: "deleted"; deletedOn: string };
 
 function render(e: InactivityEmail): { subject: string; html: string; reason: string } {
@@ -36,32 +34,13 @@ function render(e: InactivityEmail): { subject: string; html: string; reason: st
     };
   }
 
-  if ("stage" in e) {
-    const d = escapeHtml(longDate(e.deleteOn));
-    const left = escapeHtml(noticeLine(e.deleteOn));
-    const subject = e.kind === "1" ? `Last day: your signed documents are deleted on ${d}` : `On ${d}, your signed documents are deleted`;
-    return {
-      subject,
-      reason: SIGNED_REASON,
-      html: `<p style="font-size:12px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:#004AAD;margin:0">Your account</p>
-<h1 style="font-size:24px;margin:8px 0 16px">${subject}</h1>
-<p style="font-size:15px;line-height:1.6">The files and catalog for this account have been deleted, and the account itself is on the Free plan. What is left is the paperwork you signed here: split sheets, contracts and AI Protection certificates.</p>
-<p style="font-size:15px;line-height:1.6">That paperwork has <b>${left}</b> left: on <b>${d}</b> it is deleted from the account.</p>
-<p style="font-size:15px;line-height:1.6"><b>Upgrading before ${d} keeps it.</b> Any paid plan keeps the ${SIGNED_RECORDS} with the account. Signing in keeps the account, but from here only a plan keeps these documents.</p>
-<p style="font-size:15px;line-height:1.6">If you want your own copies, download them before ${d}.</p>
-<p style="margin:24px 0"><a href="${SITE_URL}/plans" style="background:#004AAD;color:#ffffff;text-decoration:none;font-weight:700;padding:12px 22px;border-radius:8px;display:inline-block">Upgrade and keep my paperwork</a>
-<a href="${SITE_URL}/workspace" style="color:#004AAD;font-weight:700;padding:12px 12px;display:inline-block">Download my paperwork</a></p>
-<p style="font-size:15px;line-height:1.6">If you think this is a mistake, reply to this email and a person will look at it.</p>`,
-    };
-  }
-
   const d = escapeHtml(longDate(e.deleteOn));
   const left = escapeHtml(noticeLine(e.deleteOn));
   const what = e.keepsAccount ? "the stored files and catalog" : "this account";
   const heading = e.kind === "1" ? `Last day: ${what} ${e.keepsAccount ? "are" : "is"} deleted on ${d}` : `On ${d}, ${what} ${e.keepsAccount ? "are" : "is"} deleted`;
   const body = e.keepsAccount
-    ? `<p style="font-size:15px;line-height:1.6">This account has had no sign-in for two years. It has <b>${left}</b> left: on <b>${d}</b> the files stored for it — masters, artwork and anything else in storage — and its catalog entries are deleted.</p>
-<p style="font-size:15px;line-height:1.6"><b>Your account stays on Free.</b> Upgrading before ${d} keeps every file and every catalog entry exactly where they are. Signing in keeps the account, but not the files or the catalog. Signed split sheets, contracts and certificates stay for now: if the account is still on Free after ${d}, they get 30 more days and four reminders of their own before they are deleted too.</p>
+    ? `<p style="font-size:15px;line-height:1.6">This account has had no sign-in for two years. It has <b>${left}</b> left: on <b>${d}</b> the files stored for it — masters, artwork, AI Protection proof videos and anything else in storage — and its catalog entries are deleted.</p>
+<p style="font-size:15px;line-height:1.6"><b>Your account stays on Free, and your paperwork stays with it.</b> Upgrading before ${d} keeps every file and every catalog entry exactly where they are. Signing in keeps the account, but not the files or the catalog. Split sheets, contracts, AI Protection certificates, your blueprints and everything in Working On stay on the account for as long as it exists; they are removed only if the account itself is deleted.</p>
 <p style="font-size:15px;line-height:1.6">If you'd rather take your work with you, download everything before ${d}.</p>
 <p style="margin:24px 0"><a href="${SITE_URL}/plans" style="background:#004AAD;color:#ffffff;text-decoration:none;font-weight:700;padding:12px 22px;border-radius:8px;display:inline-block">Upgrade and keep everything</a>
 <a href="${SITE_URL}/workspace" style="color:#004AAD;font-weight:700;padding:12px 12px;display:inline-block">Download my assets</a></p>`

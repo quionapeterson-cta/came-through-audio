@@ -138,11 +138,10 @@ artist seat (as owner or artist) are treated like any other account: two years w
 The deletion record is the only copy of the address, and it is dropped once that last email has gone (or after 30 days if
 it could not be sent).
 
-**The signed paperwork gets one more window** (founder, 2026-11-08). An account that signed in and still holds signed
-split sheets, contracts or AI Protection certificates is not finished on its date: those records stay for 30 more days,
-with 30, 14, 7 and 1 day emails of their own, and are then deleted unless a plan has been paid for. Signing in no longer
-stops that clock, because the account is already saved; only a paid plan does. Staff quote the paperwork date from the
-email and never say the paperwork is kept forever.
+**The paperwork stays with the account** (founder, 2026-11-08, replacing the 30-day paperwork window). An account that
+comes back keeps everything that is not storage: split sheets, contracts, AI Protection certificates, blueprints and
+Working On. They are removed only when the account itself is deleted, so staff never give a member a paperwork deadline.
+AI Protection proof videos are storage, so they go with the masters on the date.
 
 ---
 
