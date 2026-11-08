@@ -155,7 +155,7 @@ export function ArtistOnboarding({ userId, open, onOpenChange, onSaved, firstRun
 
   return (
     <Dialog open={open} onOpenChange={(o) => { if (!firstRun) onOpenChange(o); }}>
-      {sky && <StarSky rocket message="Embed defaults + Catalog Defaults 100%" sub="Both of your defaults are set, so every master you embed and every song you catalog starts finished." onDone={() => setSky(false)} />}
+      {sky && <StarSky rocket message="Embed defaults & Catalog Defaults 100% Filled!" sub="Both of your defaults are set, so every master you embed and every song you catalog starts finished." onDone={() => setSky(false)} />}
       <DialogContent className="max-h-[90vh] max-w-5xl overflow-y-auto" onInteractOutside={(e) => firstRun && e.preventDefault()} onEscapeKeyDown={(e) => firstRun && e.preventDefault()}>
         <ol className="flex flex-wrap gap-2 text-xs" aria-label="Setup steps">
           {STEPS.map((s, i) => {

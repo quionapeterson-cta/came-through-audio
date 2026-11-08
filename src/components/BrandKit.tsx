@@ -10,6 +10,9 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { InfoTip } from "@/components/InfoTip";
 import { BRAND_FONTS, BRANDING_PRICE, KIT_STYLES, LOGO_NUDGE_MAX, contrastWarnings, emptyHistory, emptyKit, isHex, kitFromRow, logoNudgeValue, recordHistory, redoHistory, undoHistory, withColorSet, withoutColorSet, type BrandKit as Kit, type KitHistory, type KitStyle } from "@/lib/brand-kit";
+import { burstConfetti } from "@/components/Confetti";
+import { claimFirstBurst } from "@/lib/celebrate";
+import { requestBadgeCheck } from "@/lib/badge-events";
 import { logoPalette } from "@/lib/logo-colors";
 import { downloadSamplePdf, type SampleKind } from "@/lib/sample-pdf";
 import { FONT_GROUPS } from "@/lib/brand-fonts";
@@ -57,6 +60,13 @@ export function BrandKit({ userId, tier, artistName }: { userId: string; tier: T
   const origin = useRef<Kit[]>([]);
   // Back from buying it (Stripe returns to /profile?checkout=success#brand-kit): say how to use it (founder, 2026-10-27).
   const [justBought] = useState(() => typeof window !== "undefined" && new URLSearchParams(window.location.search).get("checkout") === "success" && window.location.hash === "#brand-kit");
+  // Back from a paid kit (founder, 2026-11-08): confetti on the first return and a badge check every time, so each kit
+  // bought is counted from the payment row rather than from the page.
+  useEffect(() => {
+    if (!justBought) return;
+    requestBadgeCheck();
+    if (claimFirstBurst("brand_kit")) burstConfetti();
+  }, [justBought]);
 
   useEffect(() => {
     let live = true;

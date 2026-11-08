@@ -397,7 +397,7 @@ function Guides({ workbench, focusId, onOpen }: { workbench: Workbench; /** Open
   return (
     <section className="space-y-4">
       {celebrating && <div className="pointer-events-none fixed inset-0 z-[85]"><Confetti /></div>}
-      {sky && <StarSky rocket message="Embed defaults + Catalog Defaults 100%" sub="Both of your defaults are set, so every master you embed and every song you catalog starts finished." onDone={() => setSky(false)} />}
+      {sky && <StarSky rocket message="Embed defaults & Catalog Defaults 100% Filled!" sub="Both of your defaults are set, so every master you embed and every song you catalog starts finished." onDone={() => setSky(false)} />}
       {groups.map(([name, hint, list]) => {
         const open = openGroup === name;
         return (

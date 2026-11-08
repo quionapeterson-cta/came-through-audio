@@ -177,15 +177,22 @@ Built and pushed in this change:
   counted from `registration_songs.submitted_at`, art alternating between `dripping_ice_boombox` and
   `cta_chain_medallion` on every earning (`alternate` on a `BadgeDef`, read by `rotationArt`).
 
-Waiting on the picture, and on nothing else in the code:
+## 8. Built on 2026-11-08, second pass (every item approved)
 
-- `cta-double-protection-trophies.png`, `brand_kit_512x512.webp`, `song_embedded_512x512.webp`,
-  `lyric_locked_gold_512x512.webp`, `100_Royalty_Health.webp` and `100_Royalty_Health_Fully_Matched.webp` are not in the
-  repo, and `badge-rules.test.ts` refuses any badge whose art is missing from `public/` (the tile would be blank
-  wherever `VITE_ART_BASE` is unset). Not one of the six exists under `public/`, `art/` or `incoming/` today. Drop the
-  512px transparent WebP copies in and each badge is a one-line `BadgeDef` away; until then they are not added rather
-  than added broken.
-- Two definitions still needed: what "a song entry filled 100%" measures, and what a "100% embed" is (a master embedded
-  on a song, or something more).
-- Metrics still to build once the art lands: purchased brand kits (payment rows) and seat invites accepted (`artist_seats`
-  already records `invited_at` and `accepted_at`).
+- **Double Protection** (`double_protection`, `serious/cta-double-protection-trophies.png`): one earning for both profile
+  defaults filled — the rocket-sky moment, now titled **Embed defaults & Catalog Defaults 100% Filled!** — and one more
+  for every song entry finished 100% (master and cover art in, Registration Ready). One blueprint finished on its own
+  keeps its confetti and Blueprints Checked; the sky still waits for both.
+- **Kit On File** (`brand_kit_bought`, `playful/brand_kit_512x512.webp`): one earning per brand kit bought, counted from
+  the non-refunded `purchases` rows of kind `branding`, plus confetti the first time the purchase return opens.
+- **Set of Keys** (`seat_keys`, `serious/key_holder.png`): a key for every seat invited and another for every seat the
+  artist accepts, counted from `artist_seats`.
+- **Fully Matched** (`health_report_matched`, `playful/100_Royalty_Health_Fully_Matched.webp`): one earning per month
+  whose health check found every song 100% healthy.
+- **Embedded** now wears `playful/song_embedded_512x512.webp` for every master embedded, **First Lyric Entry** wears
+  `playful/lyric_locked_gold_512x512.webp` for every lyric, and **Silver Crown** wears
+  `playful/100_Royalty_Health.webp` with no rotation (founder, 2026-11-08). Its celebration is unchanged.
+- Those five pictures live in R2 only, so `artInBucket` is set on their badges and `badge-rules.test.ts` names each one;
+  their tiles are blank in local dev and tests until a 512px copy is added to `public/icons/playful/`.
+- Two measurements are mine, not yours, and are easy to change: a "finished song entry" is master + cover art +
+  Registration Ready, and "100% healthy report" is a check month where every song is healthy.

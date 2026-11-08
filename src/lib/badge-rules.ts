@@ -22,6 +22,11 @@ export type BadgeData = {
   blueprints?: { itemId: string; checked: string[] }[];
   /** Songs already submitted for Expert Registration Assistance (public.registration_songs.submitted_at). */
   registrationSubmissions?: number;
+  /** Paid brand kits, refunds excluded (public.purchases, kind "branding"). */
+  brandKits?: number;
+  /** Seats this member invited, and seats the invited artists accepted (public.artist_seats). */
+  seatsInvited?: number;
+  seatsAccepted?: number;
   welcomed: boolean;
   /** The user's own names (stage, legal), to find songs where they're in Produced by. */
   names: string[];
@@ -126,6 +131,15 @@ export function badgeMetrics(d: BadgeData): Record<string, number> {
   const years = Math.floor((d.now.getTime() - new Date(d.accountCreatedAt).getTime()) / (365.25 * 24 * 3600 * 1000));
   const allReady = (list: CatalogTrack[]) => list.every((t) => ready.has(t.id));
 
+  // The two profile defaults, finished: the same rule the rocket sky uses, read from the saved runs (founder, 2026-11-08).
+  const finishedGuides = new Set((d.blueprints ?? []).filter((r) => {
+    const guide = GUIDES.find((g) => g.id === guideIdOf(r.itemId));
+    return !!guide?.checklist?.length && checklistProgress(guide.checklist, r.checked).finished;
+  }).map((r) => guideIdOf(r.itemId)));
+  const defaultsBoth = finishedGuides.has("embed-defaults") && finishedGuides.has("catalog-defaults");
+  // A finished song entry: its master and its cover art are in, and it's Registration Ready (founder, 2026-11-08).
+  const fullEntries = d.tracks.filter((t) => ready.has(t.id) && !!t.metadata.audioPath && !!t.metadata.artPath).length;
+
   return {
     welcomed: d.welcomed ? 1 : 0,
     songs: d.tracks.length,
@@ -168,6 +182,10 @@ export function badgeMetrics(d: BadgeData): Record<string, number> {
     signedSplits3: signedSheets.filter(([, rows]) => collaborators(rows) >= 3).length,
     signedSplits4: signedSheets.filter(([, rows]) => collaborators(rows) >= 4).length,
     registrationSubmissions: d.registrationSubmissions ?? 0,
+    protectionTrophies: (defaultsBoth ? 1 : 0) + fullEntries,
+    brandKits: d.brandKits ?? 0,
+    seatKeys: (d.seatsInvited ?? 0) + (d.seatsAccepted ?? 0),
+    healthyReports: d.tracks.length > 0 && healthy === d.tracks.length ? checkMonths.size : 0,
     contractsDrafted: d.contracts.length,
     contractsSent: d.contracts.filter((c) => c.status === "sent" || c.status === "signed").length,
     contractsSigned: signedContracts,

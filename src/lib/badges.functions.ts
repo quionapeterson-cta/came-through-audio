@@ -50,8 +50,18 @@ export const checkBadges = createServerFn({ method: "POST" })
     if (held.error) fail("badges");
 
     // Songs already sent to the agencies for registration assistance: a submission is stamped, a saved draft isn't.
-    const registrationSubmissions = await db.from("registration_songs" as never).select("submitted_at").eq("user_id", uid)
-      .then((r) => (r.error ? 0 : ((r.data ?? []) as { submitted_at: string | null }[]).filter((s) => s.submitted_at).length));
+    const [registrationSubmissions, brandBuys, seats] = await Promise.all([
+      db.from("registration_songs" as never).select("submitted_at").eq("user_id", uid)
+        .then((r) => (r.error ? 0 : ((r.data ?? []) as { submitted_at: string | null }[]).filter((s) => s.submitted_at).length)),
+      // Brand kits the member bought: a refunded purchase unlocks nothing, here as everywhere else.
+      db.from("purchases").select("kind, details").eq("user_id", uid).eq("kind", "branding")
+        .then((r) => (r.error ? 0 : ((r.data ?? []) as { details: Record<string, unknown> | null }[]).filter((p) => !(p.details ?? {})["refunded_at"]).length)),
+      // Seats this member owns: one key for the invite, another when the artist accepts it.
+      db.from("artist_seats" as never).select("invite_email, accepted_at").eq("owner_id", uid)
+        .then((r) => (r.error ? [] : ((r.data ?? []) as { invite_email: string | null; accepted_at: string | null }[]))),
+    ]);
+    const seatsInvited = seats.filter((s) => !!s.invite_email).length;
+    const seatsAccepted = seats.filter((s) => !!s.accepted_at).length;
 
     const ob = (profile.data?.onboarding ?? {}) as { welcomed?: boolean; stageName?: string; legalName?: string; healthCountry?: string };
     const count = (kind: string) => ((events.data ?? []) as { kind: string }[]).filter((e) => e.kind === kind).length;
@@ -66,6 +76,9 @@ export const checkBadges = createServerFn({ method: "POST" })
       blueprints: ((workbench.data ?? []) as { item_id: string; checked: string[] | null }[])
         .map((r) => ({ itemId: r.item_id, checked: r.checked ?? [] })),
       registrationSubmissions,
+      brandKits: brandBuys,
+      seatsInvited,
+      seatsAccepted,
       welcomed: !!ob.welcomed,
       names: [ob.stageName, ob.legalName, profile.data?.stage_name, profile.data?.legal_name].filter((n): n is string => !!n?.trim()),
       healthCountry: ob.healthCountry,

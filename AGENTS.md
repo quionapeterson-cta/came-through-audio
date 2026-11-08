@@ -59,9 +59,13 @@
   full size when clicked (`PeekDialog`, founder, 2026-11-06), so the art can be judged, approved or replaced before it
   goes near a member's shelf.
 - **Some pictures live only in the bucket** (founder, 2026-11-07): `artInBucket` on a `BadgeDef` says the founder uploaded
-  that picture to R2 by hand and the repo keeps no fallback copy. No picture uses it today: AI Slayer did, and its tile
-  went blank wherever `VITE_ART_BASE` was unset (local dev, tests, a preview without the variable), so it now keeps its
-  own 512px copy in `public/icons/serious/`. A badge goes live the moment its
+  that picture to R2 by hand and the repo keeps no fallback copy. Five pictures use it today (founder, 2026-11-08), all in
+  `icons/playful/`: `song_embedded_512x512.webp` (Embedded), `lyric_locked_gold_512x512.webp` (First Lyric Entry),
+  `100_Royalty_Health.webp` (Silver Crown, which no longer rotates), `100_Royalty_Health_Fully_Matched.webp` (Fully
+  Matched) and `brand_kit_512x512.webp` (Kit On File). Their tiles are blank wherever `VITE_ART_BASE` is unset, which is
+  local dev, the tests and any preview that leaves the variable off — that is the trade the founder chose, and the fix is
+  still a 512px copy in `public/`. AI Slayer used the exemption once and went blank that way, so it keeps its own copy in
+  `public/icons/serious/`. A badge goes live the moment its
   file is in the bucket (drop `artPending`, never leave both), and the served copy must be the `.webp` at the same path,
   because `artUrl` rewrites `.png`/`.jpg` to `.webp`; without it the shelf shows a blank tile. `badge-rules.test.ts` names
   every bucket-only picture, so a mistyped path can't hide behind the exemption.
@@ -265,12 +269,15 @@
 - **Finishing both profile defaults lifts the rocket** (founder, 2026-11-06): `defaultsFinished` in
   `src/lib/workbench.ts` (a finished run of `embed-defaults` and of `catalog-defaults`, in either order) shows `StarSky`
   with the rocket over the usual checklist burst, once per browser (`claimDefaultsSky` in
-  `src/lib/celebrate.ts`). The line is the fixed title **Embed defaults + Catalog Defaults 100%** (founder, 2026-11-08),
+  `src/lib/celebrate.ts`). The line is the fixed title **Embed defaults & Catalog Defaults 100% Filled!** (founder, 2026-11-08),
   with "Both of your defaults are set, so every master you embed and every song you catalog starts finished." underneath.
   The fixed title replaced the newest song's title written in the stars, so the sky no longer needs a catalogued song to
   fire. The rocket and the sky's own motion are approved as they are — the rocket
   was added to the original and nothing else about it moved — so never retune, reposition or re-letter it without being
-  asked (founder, 2026-11-07). It is a launch, not a badge: no art, no metric.
+  asked (founder, 2026-11-07). It is a launch **and** a badge: the same moment earns **Double Protection**
+  (`double_protection`, art `serious/cta-double-protection-trophies.png`), and the badge comes again for every song entry
+  finished 100% — its master and cover art in, and Registration Ready (founder, 2026-11-08). Finishing one blueprint on
+  its own keeps the usual checklist burst and earns Blueprints Checked; the sky waits for both.
 - **A 100% filled profile is the same moment** (founder, 2026-11-06): saving the profile with every default filled
   (`profileChecks` / `profileFilled` in `src/lib/artist-profile.ts`, the same twelve checks behind the setup meter) shows
   the same rocket sky, same line, from `ArtistOnboarding`, so a member who fills the catalog directly gets the

@@ -26,7 +26,7 @@ function SkyLab() {
         </button>
       </div>
       {sky === "defaults" && (
-        <StarSky rocket message="Embed defaults + Catalog Defaults 100%" sub="Both of your defaults are set, so every master you embed and every song you catalog starts finished." onDone={() => setSky(null)} />
+        <StarSky rocket message="Embed defaults & Catalog Defaults 100% Filled!" sub="Both of your defaults are set, so every master you embed and every song you catalog starts finished." onDone={() => setSky(null)} />
       )}
       {sky === "contract" && (
         <StarSky rocket names={["Karma Came", "Cardi B", "Nicki Minaj"]} message="Karma Came X Cardi B X Nicki Minaj" sub="It's a done deal! Every party has signed. The agreement is locked, and the signed copy is ready to download." onDone={() => setSky(null)} />

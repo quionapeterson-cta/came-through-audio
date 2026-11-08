@@ -25,9 +25,11 @@ describe("badge catalog", () => {
   it("only offers badges whose art is in the repo, unless it lives in the bucket on purpose", () => {
     const missing = BADGES.filter((b) => !b.artInBucket && !existsSync(`public${b.src}`)).map((b) => b.src);
     expect(missing).toEqual([]);
-    // No badge may depend on the bucket alone: with VITE_ART_BASE unset the shelf reads public/, so a bucket-only
-    // picture is a blank tile in local dev, tests and any preview that leaves the variable off.
-    expect(BADGES.filter((b) => b.artInBucket).map((b) => b.id)).toEqual([]);
+    // Only the pictures the founder uploaded to R2 by hand may skip the repo copy, and every one of them is named here,
+    // so a mistyped path can't hide behind the exemption. With VITE_ART_BASE unset these tiles are blank by design.
+    expect(BADGES.filter((b) => b.artInBucket).map((b) => b.id).sort()).toEqual(
+      ["brand_kit_bought", "double_protection", "embedded", "first_lyric_entry", "health_report_matched", "silver_crown"].sort(),
+    );
   });
   it("has nothing left waiting on art, so every badge can be earned", () => {
     expect(BADGES.filter((b) => b.collection === "lyrics")).toHaveLength(8);
