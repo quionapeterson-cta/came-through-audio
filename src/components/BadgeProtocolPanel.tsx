@@ -165,7 +165,7 @@ function BadgeIdeaForm() {
   );
 }
 
-function SubmissionRow({ s, canDecide }: { s: BadgeSubmission; canDecide: boolean }) {
+function SubmissionRow({ s, canDecide, canUpload }: { s: BadgeSubmission; canDecide: boolean; canUpload: boolean }) {
   const decide = useServerFn(decideBadgeSubmission);
   const uploaded = useServerFn(markBadgeUploaded);
   const qc = useQueryClient();
@@ -238,23 +238,24 @@ function SubmissionRow({ s, canDecide }: { s: BadgeSubmission; canDecide: boolea
                   </Button>
                 </>
               )}
-              {s.status === "approved" && (
-                <Button size="sm" disabled={busy} onClick={() => void run(() => uploaded({ data: { id: s.id, note } }), "Marked uploaded.")}>
-                  <Check className="h-4 w-4" />Art is in R2
-                </Button>
-              )}
             </>
+          )}
+          {canUpload && s.status === "approved" && (
+            <Button size="sm" disabled={busy} onClick={() => void run(() => uploaded({ data: { id: s.id, note } }), "Marked uploaded.")}>
+              <Check className="h-4 w-4" />Art is in R2
+            </Button>
           )}
         </div>
       )}
-      {!canDecide && s.note ? <p className="mt-2 text-xs text-muted-foreground">Founder note: {s.note}</p> : null}
+      {!canDecide && s.note ? <p className="mt-2 text-xs text-muted-foreground">Note: {s.note}</p> : null}
     </li>
   );
 }
 
 /**
  * Admin → Badges → Badge Protocol: the conditions, the steps and the approval queue for badge art. Branding, Marketing
- * & Social Media and Support submit; a super admin decides; only the founder uploads to R2 (founder, 2026-11-05).
+ * & Social Media and Support submit; the founder or the Branding department lead decides; only the founder uploads to R2
+ * (founder, 2026-11-05, widened 2026-11-08).
  */
 export function BadgeProtocolPanel({ isSuper }: { isSuper: boolean }) {
   const fetchQueue = useServerFn(listBadgeSubmissions);
@@ -265,6 +266,7 @@ export function BadgeProtocolPanel({ isSuper }: { isSuper: boolean }) {
   const founder = useQuery({ queryKey: ["founder-access"], queryFn: () => fetchFounder(), refetchOnWindowFocus: false });
   const [claiming, setClaiming] = useState(false);
   const isFounder = founder.data?.me ?? false;
+  const canApprove = founder.data?.canApprove ?? false;
   const rows = queue.data ?? [];
   const waiting = rows.filter((r) => r.status === "submitted").length;
 
@@ -285,9 +287,9 @@ export function BadgeProtocolPanel({ isSuper }: { isSuper: boolean }) {
       <section className="rounded-2xl border border-border bg-card p-5">
         <h2 className="text-xl font-bold">Badge creation, start to finish</h2>
         <p className="mt-1 max-w-3xl text-sm text-muted-foreground">
-          Every step in one list, in the order it happens: designed by the teams, approved by a super admin, uploaded to
-          the bucket by the founder alone, then built by engineering so it can be earned. Nobody else holds the bucket
-          keys, so nobody else can put art in front of a user.
+          Every step in one list, in the order it happens: designed by the teams, approved by the founder or the Branding
+          department lead, uploaded to the bucket by the founder alone, then built by engineering so it can be earned.
+          Nobody else holds the bucket keys, so nobody else can put art in front of a user.
         </p>
         <ol className="mt-4 space-y-3">
           {BADGE_STEPS.map((step, i) => <Step key={step.title} n={i + 1} step={step} />)}
@@ -301,9 +303,9 @@ export function BadgeProtocolPanel({ isSuper }: { isSuper: boolean }) {
               <h3 className="text-lg font-bold">{isFounder ? "You are the founder" : "Founder access"}</h3>
               <p className="mt-1 max-w-2xl text-sm text-muted-foreground">
                 {isFounder
-                  ? "Approving badge art and marking it uploaded in R2 is yours alone, even if another super admin is added later."
+                  ? "Approving badge art and marking it uploaded in R2 is yours alone, even if another super admin is added later. The Branding department lead can decide too (2026-11-08); the upload is still yours."
                   : founder.data?.claimed
-                    ? "Badge approvals belong to the founder's account. A super admin can read this queue but cannot approve it."
+                    ? "Badge approvals belong to the founder and the Branding department lead. Everyone else reads this queue but cannot approve it."
                     : "Nobody has claimed this seat yet. Claim it once and approval stops depending on the super admin role."}
               </p>
             </div>
@@ -345,11 +347,11 @@ export function BadgeProtocolPanel({ isSuper }: { isSuper: boolean }) {
         <div className="flex flex-wrap items-center gap-3">
           <h3 className="text-lg font-bold">Approval queue</h3>
           <Badge variant={waiting ? "default" : "secondary"}>{waiting} waiting</Badge>
-          {!isSuper && <span className="text-xs text-muted-foreground">A super admin approves every idea.</span>}
+          {!isSuper && <span className="text-xs text-muted-foreground">The founder or the Branding department lead approves every idea.</span>}
         </div>
         {queue.isLoading ? <p className="mt-3 text-sm text-muted-foreground">Loading…</p>
           : queue.isError ? <p className="mt-3 text-sm text-destructive">Couldn't load the queue. Has migration 20261105120000 been run?</p>
-          : rows.length ? <ul className="mt-3 space-y-3">{rows.map((s) => <SubmissionRow key={s.id} s={s} canDecide={isFounder} />)}</ul>
+          : rows.length ? <ul className="mt-3 space-y-3">{rows.map((s) => <SubmissionRow key={s.id} s={s} canDecide={canApprove} canUpload={isFounder} />)}</ul>
           : <p className="mt-3 text-sm text-muted-foreground">No badge ideas yet.</p>}
       </section>
 

@@ -38,12 +38,15 @@
 ## Badge Art Protocol (always follow)
 
 - Only the founder uploads badge art to the R2 bucket (founder, 2026-11-05). No other person, and no script, puts an
-  object in the bucket: staff file ideas, a super admin approves, the founder copies the file to the key the queue prints.
+  object in the bucket: staff file ideas, the founder or the Branding lead approves, the founder copies the file to the
+  key the queue prints.
 - Every new badge goes through Admin → Badges → Badge Protocol (`BadgeProtocolPanel` + `badge-submissions.functions.ts`).
-  Branding, Marketing & Social Media and Support submit (public.can_manage_badges); only the FOUNDER approves, rejects
-  or marks the art uploaded (`public.is_founder`, one account claimed once from the panel — never a role check, and never
-  a department). A super admin who is not the founder reads the queue but cannot decide it. Never let the submitter
-  approve their own idea.
+  Branding, Marketing & Social Media and Support submit (public.can_manage_badges); the FOUNDER or the **Branding
+  department lead** approves or rejects (founder, 2026-11-08 — one named lead of one department, never a whole department
+  and never another department's lead), and the rule lives in `mayApproveBadgeArt` in `src/lib/badge-protocol.ts` with
+  its test. Marking the art uploaded in R2 is still the founder's alone, because the upload is: nothing uploads itself.
+  Until the founder seat is claimed the first super admin may decide, so a fresh environment is never locked out. Never
+  let the submitter approve their own idea.
 - **Every badge upload has a transparent background** (founder, 2026-11-05): no white box, no solid plate, no baked
   shadow or gradient behind the art, and no cropping the glyph to fill the canvas. A badge sits on the app's dark
   surface, so anything opaque reads as a square behind it. The same rule covers badge art on the homepage and in emails.

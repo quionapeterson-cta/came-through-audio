@@ -1,12 +1,13 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-import { badgeKeys, badgeSlug, setFolderProblem, slugProblem, type BadgeScope } from "@/lib/badge-protocol";
+import { badgeKeys, badgeSlug, mayApproveBadgeArt, setFolderProblem, slugProblem, type BadgeScope } from "@/lib/badge-protocol";
 
 /**
  * Badge art protocol (founder, 2026-11-05). Branding, Marketing & Social Media and Support submit ideas plus art
- * (public.can_manage_badges); a super admin approves or rejects; only the founder uploads to R2 and marks it uploaded.
- * The art lives in a private bucket, so a rejected idea is never a public picture.
+ * (public.can_manage_badges); the founder or the Branding department lead approves or rejects (founder, 2026-11-08);
+ * only the founder uploads to R2 and marks it uploaded. The art lives in a private bucket, so a rejected idea is never a
+ * public picture.
  */
 
 const ART_TYPES = ["image/png", "image/jpeg", "image/webp"] as const;
@@ -25,26 +26,38 @@ async function canManage(context: Ctx): Promise<boolean> {
 }
 
 /**
- * Founder-only decisions (founder, 2026-11-05): `public.founder_access` holds one account, claimed once from the panel.
- * Until it is claimed the first super admin may act, so a fresh environment is never locked out; after that, a super
- * admin can read the queue but cannot approve it.
+ * Who is deciding (founder, 2026-11-05; widened 2026-11-08): `public.founder_access` holds one account, claimed once
+ * from the panel, and the lead of the Branding department may decide too. Until the seat is claimed the first super
+ * admin may act, so a fresh environment is never locked out; after that, a super admin who is not the founder reads the
+ * queue but cannot decide it.
  */
-async function founderState(context: Ctx): Promise<{ claimed: boolean; me: boolean }> {
+type Approver = { claimed: boolean; me: boolean; canApprove: boolean };
+
+async function approverState(context: Ctx): Promise<Approver> {
   const db = await adminDb();
-  const { data } = await db.from("founder_access" as never).select("user_id").limit(1);
-  const claimant = ((data ?? []) as { user_id: string }[])[0]?.user_id ?? null;
-  const { data: mine } = await context.supabase.rpc("is_founder" as never, { _user_id: context.userId } as never);
-  return { claimed: !!claimant, me: !!mine || claimant === context.userId };
+  const [{ data: claimRows }, { data: mine }, { data: isSuper }] = await Promise.all([
+    db.from("founder_access" as never).select("user_id").limit(1),
+    context.supabase.rpc("is_founder" as never, { _user_id: context.userId } as never),
+    context.supabase.rpc("has_role" as never, { _user_id: context.userId, _role: "super_admin" } as never),
+  ]);
+  const claimant = ((claimRows ?? []) as { user_id: string }[])[0]?.user_id ?? null;
+  const founder = !!mine || claimant === context.userId;
+  // One named lead of one department: the Branding lead, never the whole department and never another department's lead.
+  const { data: roles } = await db.from("user_roles" as never).select("role, departments").eq("user_id", context.userId);
+  const brandingLead = ((roles ?? []) as { role: string; departments: string[] | null }[])
+    .some((r) => r.role === "department_lead" && (r.departments ?? []).includes("branding"));
+  return { claimed: !!claimant, me: founder, canApprove: mayApproveBadgeArt({ founder, brandingLead, superAdmin: !!isSuper, seatClaimed: !!claimant }) };
 }
 
+async function requireApprover(context: Ctx): Promise<void> {
+  if ((await approverState(context)).canApprove) return;
+  throw new Error("Only the founder or the Branding department lead can decide badge art.");
+}
+
+/** Marking the art uploaded is the founder's alone, whoever may approve the idea. */
 async function requireFounder(context: Ctx): Promise<void> {
-  const state = await founderState(context);
-  if (state.me) return;
-  if (!state.claimed) {
-    const { data: isSuper } = await context.supabase.rpc("has_role" as never, { _user_id: context.userId, _role: "super_admin" } as never);
-    if (isSuper) return;
-  }
-  throw new Error("Only the founder can decide badge art.");
+  if ((await approverState(context)).me) return;
+  throw new Error("Only the founder can mark badge art uploaded.");
 }
 
 export type BadgeSubmissionStatus = "submitted" | "approved" | "rejected" | "uploaded";
@@ -173,7 +186,7 @@ export const listBadgeSubmissions = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }): Promise<BadgeSubmission[]> => {
     if (!(await canManage(context))) return [];
-    const founder = await founderState(context);
+    const approver = await approverState(context);
     const db = await adminDb();
     const { data, error } = await db
       .from("badge_submissions" as never)
@@ -197,7 +210,7 @@ export const listBadgeSubmissions = createServerFn({ method: "GET" })
         const keys = badgeKeys({ scope: r.scope, slug: r.slug, set: r.set_folder });
         let downloadUrl: string | null = null;
         let masterUrl: string | null = null;
-        if (founder.me) {
+        if (approver.canApprove) {
           if (r.art_path) {
             const { data: signed } = await db.storage.from("badge-submissions").createSignedUrl(r.art_path, SIGNED_FOR);
             downloadUrl = signed?.signedUrl ?? null;
@@ -245,7 +258,7 @@ export const decideBadgeSubmission = createServerFn({ method: "POST" })
     z.object({ id: z.string().uuid(), decision: z.enum(["approved", "rejected"]), note: z.string().trim().max(500).default("") }).parse(d),
   )
   .handler(async ({ data, context }) => {
-    await requireFounder(context);
+    await requireApprover(context);
     const db = await adminDb();
     const { error } = await db
       .from("badge_submissions" as never)
@@ -279,10 +292,14 @@ export const markBadgeUploaded = createServerFn({ method: "POST" })
     return { status: "uploaded" as const };
   });
 
-/** Whether the founder seat is claimed, and whether it is you. The panel shows a claim button to a super admin. */
+/**
+ * Whether the founder seat is claimed, whether it is you, and whether you may decide a badge idea at all (the founder,
+ * the Branding department lead, or a super admin while the seat is unclaimed). The panel shows a claim button to a super
+ * admin.
+ */
 export const getFounderAccess = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .handler(async ({ context }): Promise<{ claimed: boolean; me: boolean }> => founderState(context as unknown as Ctx));
+  .handler(async ({ context }): Promise<Approver> => approverState(context as unknown as Ctx));
 
 /** Claim the one founder seat. Only while it is empty, and only a super admin, so it cannot be taken twice. */
 export const claimFounderAccess = createServerFn({ method: "POST" })

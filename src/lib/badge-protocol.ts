@@ -109,9 +109,9 @@ export const PROTOCOL_STEPS: ProtocolStep[] = [
     who: "Branding, Marketing & Social Media, Support",
   },
   {
-    title: "Super admin approves",
-    body: "A super admin reads every submission and approves or rejects it with a reason. Rejected ideas keep their note so nobody re-submits the same thing next quarter.",
-    who: "Super admin",
+    title: "It gets approved",
+    body: "The founder or the Branding department lead reads every submission and approves or rejects it with a reason. Rejected ideas keep their note so nobody re-submits the same thing next quarter.",
+    who: "Founder · Branding lead",
   },
   {
     title: "The founder uploads to R2",
@@ -148,6 +148,19 @@ export const ENGINEERING_STEPS: ProtocolStep[] = [
     who: "Engineering",
   },
 ];
+
+/**
+ * Who may approve or reject a badge idea (founder, 2026-11-08): the founder's own account, and now the lead of the
+ * Branding department, so a decision never has to wait on one person. It is one named lead of one department, never the
+ * whole department and never another department's lead; uploading the picture to the bucket stays the founder's alone,
+ * and a super admin can still only decide while the founder seat is unclaimed. The rule lives here so the panel, the
+ * server and the tests agree, rather than being spelled out in a component.
+ */
+export function mayApproveBadgeArt(o: { founder: boolean; brandingLead: boolean; superAdmin: boolean; seatClaimed: boolean }): boolean {
+  if (o.founder) return true;
+  if (o.brandingLead) return true;
+  return !o.seatClaimed && o.superAdmin;
+}
 
 /**
  * One list, start to finish (founder, 2026-11-05): the idea, the approval, the upload and the engineering used to sit in
