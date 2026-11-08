@@ -358,6 +358,38 @@ export function fillScript(body: string, values: Partial<Record<string, string>>
 }
 
 /**
+ * Which scripts usually answer which area (founder, 2026-11-08): the rail opens on the three most likely rows instead of
+ * the whole catalog, and staff can still scroll or search everything. Ids only — the wording stays where it already is,
+ * and a suggestion outside the ticket owner's department (or marked internal) is dropped rather than offered.
+ */
+const SUGGESTED_BY_AREA: Record<string, string[]> = {
+  "Embed Metadata": ["support-received", "support-need-detail"],
+  "My Catalog": ["support-received", "software-bug-received"],
+  "Royalty Health Hub": ["support-need-detail", "support-received"],
+  "AI Protection Hub": ["support-received", "support-need-detail"],
+  "Split Sheets": ["support-need-detail", "support-received"],
+  "Contracts & Blueprints": ["support-need-detail", "support-received"],
+  "PDF Fill & Sign": ["support-need-detail", "support-received"],
+  "Account & billing": ["billing-duplicate-is-a-hold", "billing-refund-approved", "billing-card-declined", "billing-pause-is-not-cancel"],
+  "Something else": ["support-received", "support-need-detail"],
+};
+
+/** The area half of a stored "Area · Issue" category. */
+export function ticketArea(category: string): string {
+  return category.split("·")[0]?.trim() ?? "";
+}
+
+/** The scripts worth putting first for this ticket's area, limited to the queue owner's member-facing wording. */
+export function suggestedScripts(category: string): SupportScript[] {
+  const owned = scriptsForTicket(category);
+  const ids = SUGGESTED_BY_AREA[ticketArea(category)] ?? [];
+  return ids
+    .map((id) => owned.find((s) => s.id === id))
+    .filter((s): s is SupportScript => !!s && !s.internal)
+    .slice(0, 3);
+}
+
+/**
  * Who answers a ticket. Support owns the queue for everything; Billing answers its own billing tickets
  * (founder, 2026-11-05), which is why a billing ticket never appears in Support's pile by accident.
  */

@@ -2340,13 +2340,54 @@ export type Database = {
         }
         Relationships: []
       }
+      support_ticket_messages: {
+        Row: {
+          author_id: string | null
+          author_kind: string
+          author_name: string
+          body: string
+          created_at: string
+          emailed_at: string | null
+          id: string
+          internal: boolean
+          request_id: string | null
+          ticket_id: string
+        }
+        Insert: {
+          author_id?: string | null
+          author_kind: string
+          author_name: string
+          body: string
+          created_at?: string
+          emailed_at?: string | null
+          id?: string
+          internal?: boolean
+          request_id?: string | null
+          ticket_id: string
+        }
+        Update: {
+          author_id?: string | null
+          author_kind?: string
+          author_name?: string
+          body?: string
+          created_at?: string
+          emailed_at?: string | null
+          id?: string
+          internal?: boolean
+          request_id?: string | null
+          ticket_id?: string
+        }
+        Relationships: []
+      }
       support_tickets: {
         Row: {
           category: string
           created_at: string
+          first_reply_at: string | null
           email: string
           id: string
           kind: string
+          member_read_at: string | null
           message: string
           name: string
           status: string
@@ -2357,9 +2398,11 @@ export type Database = {
         Insert: {
           category?: string
           created_at?: string
+          first_reply_at?: string | null
           email: string
           id?: string
           kind?: string
+          member_read_at?: string | null
           message: string
           name: string
           status?: string
@@ -2370,9 +2413,11 @@ export type Database = {
         Update: {
           category?: string
           created_at?: string
+          first_reply_at?: string | null
           email?: string
           id?: string
           kind?: string
+          member_read_at?: string | null
           message?: string
           name?: string
           status?: string

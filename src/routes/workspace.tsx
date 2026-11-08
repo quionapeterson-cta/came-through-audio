@@ -2,7 +2,7 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { getStaffRole } from "@/lib/admin.functions";
-import { ShieldCheck, FileAudio, Disc3, Activity, FileSignature, ScrollText, GraduationCap, LogOut, Moon, Sun, UserRound, Gem, Users, Calculator, Smartphone , PenLine } from "lucide-react";
+import { ShieldCheck, FileAudio, Disc3, Activity, FileSignature, ScrollText, GraduationCap, LogOut, Moon, Sun, UserRound, Gem, Users, Calculator, Smartphone , PenLine, LifeBuoy } from "lucide-react";
 import { IosInstallHelp, useInstallApp } from "@/components/InstallApp";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { supabase } from "@/integrations/supabase/client";
@@ -46,6 +46,7 @@ import { CatalogLapseBanner } from "@/components/CatalogLapseBanner";
 import { EmailConfirmBanner } from "@/components/EmailConfirmBanner";
 import { PlanPendingBanner } from "@/components/PlanPendingBanner";
 import { PdfTools } from "@/components/PdfTools";
+import { SupportCenter } from "@/components/SupportCenter";
 import { inGrace, isPaused } from "@/lib/retention";
 import type { GuideLink } from "@/lib/guides";
 
@@ -62,7 +63,7 @@ export const Route = createFileRoute("/workspace")({
   }),
   // `plan` names a plan picked before the account existed: the workspace opens its checkout, so the purchase survives the
   // email round trip (and a link opened on another device, where the browser never held the pick).
-  validateSearch: (s: Record<string, unknown>) => ({ tab: typeof s["tab"] === "string" ? (s["tab"] as string) : undefined, checkout: s["checkout"] === "success" ? "success" : undefined, view: s["view"] === "expert" ? "expert" : undefined, plan: planIntentFromSearch(s["plan"]) ?? undefined } as { tab?: string | undefined; checkout?: "success" | undefined; view?: "expert" | undefined; plan?: string | undefined }),
+  validateSearch: (s: Record<string, unknown>) => ({ tab: typeof s["tab"] === "string" ? (s["tab"] as string) : undefined, checkout: s["checkout"] === "success" ? "success" : undefined, view: s["view"] === "expert" ? "expert" : undefined, plan: planIntentFromSearch(s["plan"]) ?? undefined, ticket: typeof s["ticket"] === "string" ? (s["ticket"] as string) : undefined } as { tab?: string | undefined; checkout?: "success" | undefined; view?: "expert" | undefined; plan?: string | undefined; ticket?: string | undefined }),
   component: Workspace,
 });
 
@@ -75,6 +76,8 @@ const tabs = [
   { id: "splits", label: "Split Sheets", icon: FileSignature },
   { id: "learn", label: "Contracts & Blueprints", icon: GraduationCap },
   { id: "pdf", label: "PDF Fill & Sign", icon: PenLine },
+  // Their own tickets last (founder, 2026-11-08): a reply email links straight here.
+  { id: "support", label: "Support", icon: LifeBuoy },
 ];
 
 /** Which badge collections each tab's next-badge card suggests from. */
@@ -346,6 +349,9 @@ function Workspace() {
             {hasTier(tier, "management")
               ? <PdfTools canEmail={false} title="Fill, sign and download a PDF" />
               : <PlusLock title="PDF Fill & Sign starts with Catalog Management" onQuickCheck={openQuickCheck} onUpgrade={upgrade} />}
+          </TabsContent>
+          <TabsContent value="support">
+            <SupportCenter userId={user.id} openTicketId={search.ticket} />
           </TabsContent>
         </Tabs>
       </main>

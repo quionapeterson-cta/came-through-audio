@@ -159,6 +159,22 @@
   `support-holiday-internal` is the staff checklist to run before each break: post it on every open ticket, switch on
   the auto-reply, and hand anything urgent to the founder before closing.
 
+- **A reply is written on the ticket, not in a mailbox** (founder, 2026-11-08): `support_ticket_messages` holds the
+  conversation (author kind, name, body, `internal`, `emailed_at`), and `replyToTicket` stores the reply, sets the
+  ticket's next state in the same click (`stay` → in_progress, `waiting`, `resolved`) and emails the member the words plus
+  a button that opens their own thread with the message box ready (`ticketLink`, `SupportCenter` in the workspace's
+  Support tab). `resolved` is closed: the member reads the thread and opens a new ticket instead of replying. An
+  `internal` note is staff-only everywhere — never emailed, never in the member's thread rows, never in the member branch
+  of an RLS policy. The old `mailto:` reply link is gone; the address lives under Actions.
+- **The scripts sit to the right of the message box** (founder, 2026-11-08): `ScriptRail` in `SupportTicketDetail` shows
+  the queue owner's wording beside the reply in its own scroll, `suggestedScripts` opens on the three likely ones for the
+  ticket's area, and inserting fills the first name and subject (`ticketScriptValues`) — the catalog is still only
+  `src/lib/support-scripts.ts`. A member-facing reply may not carry a placeholder (`canSendReply` refuses `{{…}}`); an
+  internal note may keep them.
+- **`waiting` is a status of its own** (founder, 2026-11-08): parked on the member without pretending to be open or
+  resolved. The three that shipped stay; labels live in `src/lib/support-replies.ts`, and the member sees `waiting` as
+  "Waiting on you".
+
 ## Account Help & Holiday Cover (always follow)
 
 - **Who may touch a member's account** (founder, 2026-11-05): Support and super admins correct the person (stage name and
