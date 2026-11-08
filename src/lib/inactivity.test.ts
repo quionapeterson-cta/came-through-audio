@@ -31,7 +31,7 @@ describe("two years of inactivity", () => {
   });
 
   it("removes everything only when nobody signed in during the notice", () => {
-    expect(inactivityOutcome(true)).toBe("files");
+    expect(inactivityOutcome(true)).toBe("catalog");
     expect(inactivityOutcome(false)).toBe("account");
   });
 });

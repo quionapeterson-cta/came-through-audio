@@ -5,9 +5,9 @@ import { addDays, addMonths, DAY } from "./retention";
  * thing: it leaves the catalog read-only on Free and removes nothing for as long as the account is used.
  *
  * On the deadline the account is not what always goes. The files stored for it — masters, artwork and anything else in
- * storage — are deleted for anyone still on Free, and the account itself is deleted only if there has been no sign-in
- * at all since the schedule was written. Upgrading before the date keeps both. The notice periods are the founder's:
- * 60, 30, 7 and 1 day before the date.
+ * storage — and its catalog entries are deleted for anyone still on Free, and the account itself is deleted only if
+ * there has been no sign-in at all since the schedule was written. Upgrading before the date keeps both. The notice
+ * periods are the founder's: 60, 30, 7 and 1 day before the date.
  */
 export const INACTIVITY_MONTHS = 24;
 /** The least notice anyone gets, including an account that was already dormant the first time the job ran. */
@@ -36,18 +36,18 @@ export const daysUntil = (iso: string | Date, now = new Date()) =>
   Math.ceil((new Date(iso).getTime() - now.getTime()) / DAY);
 
 /**
- * A sign-in after the schedule was written saves the account, not the files: the files go on the date unless the
- * account is on a paid plan by then.
+ * A sign-in after the schedule was written saves the account, not the files or catalog: those go on the date unless
+ * the account is on a paid plan by then.
  */
 export const hasBeenActiveSince = (
   row: Pick<InactivityRow, "last_active_at">,
   lastActive: string | Date | null | undefined,
 ): boolean => !!lastActive && new Date(lastActive).getTime() > new Date(row.last_active_at).getTime();
 
-/** What the date removes: the files of a free account that came back, or everything when it never did. */
-export type InactivityOutcome = "files" | "account";
+/** What the date removes: the files and catalog of a free account that came back, or everything when it never did. */
+export type InactivityOutcome = "catalog" | "account";
 export const inactivityOutcome = (signedInSinceSchedule: boolean): InactivityOutcome =>
-  signedInSinceSchedule ? "files" : "account";
+  signedInSinceSchedule ? "catalog" : "account";
 
 /**
  * The reminder due now, or null. Each of 60, 30, 7 and 1 days before the date goes out once, so a member who never

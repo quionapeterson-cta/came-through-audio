@@ -95,7 +95,7 @@ export const SUPPORT_SCRIPTS: readonly SupportScript[] = [
     department: "billing",
     title: "An account is due for deletion after two years of inactivity",
     when: "A member asks about the inactivity emails, or wants the scheduled deletion stopped.",
-    body: "Hi {{first_name}},\n\nThis account has had no sign-in for two years, so it reaches its date on {{date}}. Upgrading before then keeps the account and every stored file.\n\nOn the date, an account still on Free loses the files stored for it: masters, artwork and anything else in storage. Signing in keeps the account and its catalog on Free, but not the files. An account that never signs in is deleted with its files.\n\nDownload anything you want to keep before {{date}}. A plan ending is different and much less serious: that never deletes an account or empties a catalog, it just leaves it read-only on Free.\n\nCame Through Audio",
+    body: "Hi {{first_name}},\n\nThis account has had no sign-in for two years, so it reaches its date on {{date}}. Upgrading before then keeps the account and every stored file.\n\nOn the date, an account still on Free loses the files stored for it (masters, artwork and anything else in storage) and its catalog entries. Signing in keeps the account on Free, but not the files or catalog. An account that never signs in is deleted with its files and catalog.\n\nDownload anything you want to keep before {{date}}. A plan ending is different and much less serious: that never deletes an account or empties a catalog, it just leaves it read-only on Free.\n\nCame Through Audio",
   },
   {
     id: "billing-keep-on-free",

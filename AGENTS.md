@@ -247,9 +247,9 @@
   read-only on Free, kept for as long as the account is used, and the member starts a paid plan whenever they are ready.
   Never describe a plan ending as deletion, emptying or a download deadline. `runInactiveAccounts`
   (`src/lib/inactivity.ts`) schedules an account two years after its last sign-in and emails 60/30/7/1 days before the
-  date. On the date a still-Free account loses the files stored for it (masters, artwork, anything in the bucket) even
-  if it signed in during the notice, and keeps the account and catalog; an account that never signed in during the
-  notice is deleted with its files, and one email goes to that address the day after, offering a new account. Any paid
+  date. On the date a still-Free account loses the files stored for it (masters, artwork, anything in the bucket) and
+  its catalog entries even if it signed in during the notice, and keeps the account; an account that never signed in
+  during the notice is deleted with them, and one email goes to that address the day after, offering a new account. Any paid
   plan before the date keeps everything. Staff accounts and live seats are scheduled like everyone else (founder,
   2026-11-08): only a live paid plan stops the deadline. `runStaffOffboarding` remains the other path, unchanged.
 

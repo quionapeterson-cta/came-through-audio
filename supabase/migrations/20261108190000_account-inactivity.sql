@@ -3,7 +3,7 @@
 --
 -- The table is the notice record: last_active_at is the last sign-in (or the account's creation) the schedule was built from,
 -- delete_on is the day the deadline lands, and reminders lists the notices already sent. A sign-in after that activity
--- saves the account but not its files. Nothing here deletes anything by itself; the daily job does, once.
+-- saves the account but not its files or catalog. Nothing here deletes anything by itself; the daily job does, once.
 CREATE TABLE IF NOT EXISTS public.account_inactivity (
   user_id uuid PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
   last_active_at timestamptz NOT NULL,

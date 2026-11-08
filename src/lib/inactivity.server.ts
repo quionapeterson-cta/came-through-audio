@@ -11,8 +11,8 @@ import { sendInactivityEmail } from "./inactivity-email.server";
 
 /**
  * The daily two-year inactivity job (founder, 2026-11-08). It schedules dormant accounts, sends the four upgrade
- * notices, and on the date removes what the account has not earned the right to keep: the stored files go for anyone
- * still on Free, and the account goes only if it never came back.
+ * notices, and on the date removes what the account has not earned the right to keep: the stored files and catalog
+ * entries go for anyone still on Free, and the account goes only if it never came back.
  *
  * Guards, all re-checked on the day so a payment always wins: a live paid plan cancels everything. Staff accounts and
  * live artist seats are on the same footing as everyone else (founder, 2026-11-08), so only a plan stops the deadline.
@@ -71,6 +71,19 @@ async function removeUserFiles(client: Admin, userId: string) {
   if (error) throw new Error(error.message);
 }
 
+/** The catalog itself: the songs and their health ticks, so no entry survives the files it pointed at. */
+async function removeCatalogEntries(client: Admin, userId: string) {
+  const { data: songs, error } = await client.from("catalogs").select("id").eq("user_id", userId);
+  if (error) throw new Error(error.message);
+  const ids = ((songs ?? []) as unknown as { id: string }[]).map((s) => s.id);
+  if (!ids.length) return;
+  const { error: healthError } = await client.from("health_song_status" as never)
+    .delete().eq("user_id", userId).in("song_ref" as never, ids as never);
+  if (healthError) throw new Error(healthError.message);
+  const { error: delError } = await client.from("catalogs").delete().eq("user_id", userId);
+  if (delError) throw new Error(delError.message);
+}
+
 /**
  * Daily job. Schedules anyone dormant past the notice window, sends the reminders that are due, removes the files and
  * account on the date, and sends the day-after confirmation to an address whose account has just been deleted.
@@ -81,7 +94,7 @@ export async function runInactiveAccounts(now = new Date()) {
     inactivityScheduled: 0,
     inactivityCancelled: 0,
     inactivityReminded: 0,
-    inactivityFilesCleared: 0,
+    inactivityCleared: 0,
     inactivityDeleted: 0,
     inactivityNotified: 0,
   };
@@ -114,9 +127,15 @@ export async function runInactiveAccounts(now = new Date()) {
         console.error(`Inactivity: couldn't clear files for ${row.user_id}`, String(e));
         continue;
       }
-      if (inactivityOutcome(signedIn) === "files") {
+      if (inactivityOutcome(signedIn) === "catalog") {
+        try {
+          await removeCatalogEntries(client, row.user_id);
+        } catch (e) {
+          console.error(`Inactivity: couldn't clear the catalog for ${row.user_id}`, String(e));
+          continue;
+        }
         await client.from("account_inactivity" as never).delete().eq("user_id", row.user_id);
-        result.inactivityFilesCleared += 1;
+        result.inactivityCleared += 1;
         continue;
       }
       const { error: delError } = await client.auth.admin.deleteUser(row.user_id);

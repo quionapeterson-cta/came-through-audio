@@ -130,9 +130,9 @@ An account with no sign-in for two years reaches its date (founder, 2026-11-08).
 and 1 day before — each naming the date and the last chance to upgrade. Buying any plan before the date keeps the
 account and every stored file.
 
-On the date, an account still on Free loses the files stored for it: masters, artwork and anything else in the bucket.
-Signing in during the notice keeps the account and its catalog on Free, but does not keep the files; the member can
-upload masters again. An account with no sign-in at all is deleted with its files, and the address is emailed once
+On the date, an account still on Free loses the files stored for it (masters, artwork and anything else in the bucket)
+and its catalog entries. Signing in during the notice keeps the account and its signed records on Free, but does not
+keep the files or the catalog; the member can upload again. An account with no sign-in at all is deleted with its files, and the address is emailed once
 afterwards so a new account can be started. A paying account is never touched. A staff account and a live artist seat
 (as owner or artist) are treated like any other account: two years without a sign-in reaches the same date. The
 deletion record is the only copy of the address, and it is dropped once that last email has gone (or after 30 days if
