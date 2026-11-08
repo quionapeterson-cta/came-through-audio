@@ -9,6 +9,9 @@ import type { Tier } from "@/lib/plans";
 
 export type SeatStatus = "unclaimed" | "invited" | "active" | "canceled" | "ended" | "handed_off";
 
+/** The statuses a seat can still be paid for: the paid units of a subscription, in its order. */
+export const LIVE_SEAT_STATUSES: SeatStatus[] = ["unclaimed", "invited", "active", "canceled"];
+
 export type ArtistSeat = {
   id: string;
   owner_id: string;
@@ -64,8 +67,9 @@ export function seatArtistsFor(seats: ArtistSeat[], ownerId: string): { userId: 
 export function seatIsLive(seat: ArtistSeat, now = new Date()) {
   // A handed-off seat is the artist's own plan now: the owner's access ended with the handoff.
   if (seat.status === "ended" || seat.status === "handed_off") return false;
-  if (seat.status === "canceled") return !!seat.current_period_end && new Date(seat.current_period_end) > now;
-  return true;
+  // The database ends the owner's access at the paid-through date, so the list has to as well: an artist never stays
+  // editable on a seat whose paid year has run out (2026-11-08).
+  return !seat.current_period_end || new Date(seat.current_period_end) > now;
 }
 
 /**
@@ -76,7 +80,7 @@ export const handoffOffered = (seat: Pick<ArtistSeat, "handoff_offered_at">) => 
 
 /** A seat whose paid period has passed is ended by the daily job. A handed-off seat is the artist's own plan now. */
 export const seatShouldEnd = (seat: Pick<ArtistSeat, "status" | "current_period_end">, now = new Date()) =>
-  ["unclaimed", "invited", "active", "canceled"].includes(seat.status)
+  LIVE_SEAT_STATUSES.includes(seat.status)
   && !!seat.current_period_end && new Date(seat.current_period_end) <= now;
 
 /** The invite behind /seat/<id>, readable without an account (the link is what the email carries). */

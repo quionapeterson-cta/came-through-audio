@@ -17,14 +17,18 @@ export const offerSeatHandoff = createServerFn({ method: "POST" })
   .inputValidator((d) => z.object({ seatId: z.string().uuid(), offer: z.boolean() }).parse(d))
   .handler(async ({ data, context }) => {
     const { data: seat, error } = await context.supabase.from("artist_seats" as never)
-      .select("id, owner_id, status, member_user_id")
+      .select("id, owner_id, status, member_user_id, current_period_end")
       .eq("id" as never, data.seatId as never).maybeSingle();
     if (error) throw new Error(`Couldn't open that seat (${error.message}).`);
-    const s = seat as { id: string; owner_id: string; status: string; member_user_id: string | null } | null;
+    const s = seat as { id: string; owner_id: string; status: string; member_user_id: string | null; current_period_end: string | null } | null;
     if (!s || s.owner_id !== context.userId) throw new Error("That seat isn't on your account.");
     if (s.status === "handed_off") throw new Error("The artist pays for this plan themselves now.");
     if (s.status === "ended") throw new Error("That seat has ended.");
     if (!s.member_user_id) throw new Error("Send the seat invite first: an offer needs the artist on the seat.");
+    // An offer on a seat whose paid year is over would only lead the artist to a checkout that refuses them.
+    if (!s.current_period_end || new Date(s.current_period_end) <= new Date()) {
+      throw new Error("This seat's paid year has ended, so there is nothing to offer. Buy a new seat to add the artist.");
+    }
     const { error: saveError } = await context.supabase.from("artist_seats" as never)
       .update({ handoff_offered_at: data.offer ? new Date().toISOString() : null, updated_at: new Date().toISOString() } as never)
       .eq("id" as never, s.id as never);

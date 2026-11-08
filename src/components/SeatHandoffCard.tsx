@@ -34,7 +34,8 @@ export function SeatHandoffCard({ userId }: { userId: string }) {
         <section className="rounded-2xl border border-border bg-card p-6 sm:p-8">
           <h2 className="text-lg font-bold">Your plan</h2>
           <p className="mt-1 text-sm text-muted-foreground">
-            You pay for this plan yourself now. {handedOff.current_period_end ? `It is paid through ${day(handedOff.current_period_end)}, and the card on file is used at the renewal.` : ""}
+            You pay for this plan yourself now, and the card on file is charged at each renewal. You can change or cancel
+            it in Profile whenever you like. Your artist seat is closed.
           </p>
         </section>
       )

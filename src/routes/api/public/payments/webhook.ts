@@ -88,14 +88,19 @@ async function saveSeatSubscription(sub: StripeSubscriptionLike, env: StripeEnv,
   const seatStatus = (seat?: (typeof rows)[number]) => seat?.status === "handed_off"
     // The artist pays for their own plan now; nothing the old seat subscription does can reopen the owner's access.
     ? "handed_off"
-    : deleted
-      // Cancelled keeps the seat until the paid period ends; an unclaimed seat simply ends.
-      ? (seat?.member_user_id || seat?.invite_email ? "canceled" : "ended")
-      : (seat?.status && ["invited", "active", "unclaimed"].includes(seat.status) ? seat.status : seat?.member_user_id ? "active" : seat?.invite_email ? "invited" : "unclaimed");
+    : seat?.status === "ended"
+      // An ended seat is finished. Buying seats again must never revive it, or the owner's access to that artist's
+      // catalog would reopen without the artist ever accepting a new seat (2026-11-08).
+      ? "ended"
+      : deleted
+        // Cancelled keeps the seat until the paid period ends; an unclaimed seat simply ends.
+        ? (seat?.member_user_id || seat?.invite_email ? "canceled" : "ended")
+        : (seat?.status && ["invited", "active", "unclaimed"].includes(seat.status) ? seat.status : seat?.member_user_id ? "active" : seat?.invite_email ? "invited" : "unclaimed");
 
-  // A handed-off seat is the artist's own plan now, so it no longer takes one of this subscription's paid places. The
-  // rest stay in order, so a handoff can never shift the paid units onto the wrong artist (2026-11-08).
-  const live = rows.filter((r) => r.status !== "handed_off");
+  // A handed-off seat is the artist's own plan now, and an ended seat is finished. Neither takes one of this
+  // subscription's paid places any more, and neither is ever written to again: the rest stay in order, so a handoff or
+  // a seat ending can never shift the paid units onto the wrong artist (2026-11-08).
+  const live = rows.filter((r) => r.status !== "handed_off" && r.status !== "ended");
   for (let i = 0; i < bought.length; i++) {
     const seat = live[i];
     const patch = { tier: bought[i]!, environment: env, current_period_end: periodEnd, status: seatStatus(seat), seat_index: i, updated_at: new Date().toISOString() };

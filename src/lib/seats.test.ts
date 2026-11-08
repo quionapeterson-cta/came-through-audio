@@ -29,6 +29,14 @@ describe("artist seats", () => {
     expect(seatIsLive(seat({ status: "ended" }), now)).toBe(false);
   });
 
+  it("stops treating a seat as live the day its paid year ends, whatever the webhook last wrote", () => {
+    const now = new Date("2026-11-08T00:00:00Z");
+    expect(seatIsLive(seat({ status: "active", current_period_end: "2026-11-07T00:00:00Z" }), now)).toBe(false);
+    expect(seatIsLive(seat({ status: "invited", current_period_end: "2026-11-07T00:00:00Z" }), now)).toBe(false);
+    expect(seatIsLive(seat({ status: "active", current_period_end: "2027-11-07T00:00:00Z" }), now)).toBe(true);
+    expect(seatArtistsFor([seat({ status: "active", member_user_id: "u1", current_period_end: "2026-11-07T00:00:00Z" })], "owner")).toEqual([]);
+  });
+
   it("ends a seat once its paid period has passed, and leaves a taken-over seat alone", () => {
     const now = new Date("2026-11-08T00:00:00Z");
     expect(seatShouldEnd(seat({ status: "active", current_period_end: "2026-11-01T00:00:00Z" }), now)).toBe(true);
