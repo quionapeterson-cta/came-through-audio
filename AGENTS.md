@@ -30,6 +30,14 @@
   form, but only for an unclaimed seat on the buyer's own account and only the first time the page settles
   (`seatPrompted` in Profile and Workspace). It never re-opens after being closed, whatever causes a re-render, and a
   branding kit's return never opens it at all.
+- **The owner works as each artist on their seats** (founder, 2026-11-08): the workspace switcher lists the account and
+  every accepted artist on a live seat, and Embed Metadata + My Catalog follow the pick (`profile-switch.ts`, and
+  `listTracks(ownerId)`); work happens at the seat's own tier, never the owner's plan. The database decides the writes
+  (`20261108130000_seat-owner-catalog-writes.sql`). Every catalog read is scoped to a user id — the seat policies let an
+  owner read their artists' songs too, so an unfiltered query mixes every seat into My Catalog.
+- **A profile correction reaches the catalog only with a yes** (founder, 2026-11-08): `propagationPlan` counts the songs
+  that gain a PRO or IPI and the ones holding a different one, and nothing is written until the member confirms; only
+  those two fields move (`profile-propagation.ts`). Never turn that into a silent rewrite on profile save.
 - **Paying never waits for the email confirmation** (founder, 2026-11-05, replacing the 2026-11-03 rule): someone who picks a plan signs up and reaches Stripe in the same sitting. Supabase sends no session while "Confirm email" is on, so `SignupCard` signs the brand-new account straight in (the project allows unverified sign-ins) and the confirmation email travels alongside it; `EmailConfirmBanner` then reminds them in the workspace, with a resend and an "I've confirmed" re-check, until the address is confirmed. Never put a confirmation check back in front of checkout, and never describe an unconfirmed account as unable to pay.
 - Staff roles live in public.user_roles (checked via is_staff/has_role); profile role/tier are trigger-protected from self-edits, so admin access cannot be self-granted. Admin reads go through staff-verified server functions.
 - All outgoing email HTML must be wrapped with emailLayout() from src/lib/email-layout.ts — keeps branding and legal-footer compliance in one place.

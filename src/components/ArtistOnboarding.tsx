@@ -14,6 +14,8 @@ import { isBmi } from "@/lib/audit";
 import { PUBLISHING_LABEL } from "@/lib/readiness";
 import { loadOnboarding, loadProfile, profileChecks, profileFilled, saveOnboarding, saveProfile, saveSeatArtistDefaults, withOwnWriter, type ArtistProfile, type Onboarding } from "@/lib/artist-profile";
 import { StarSky } from "@/components/StarSky";
+import { listTracks, saveTrack } from "@/lib/catalog";
+import { propagated, propagationPlan, type Propagation } from "@/lib/profile-propagation";
 import { claimDefaultsSky } from "@/lib/celebrate";
 import { capShare, splitTotal } from "@/lib/splits-total";
 import { TIER_LABEL } from "@/lib/plans";
@@ -96,6 +98,9 @@ export function ArtistOnboarding({ userId, open, onOpenChange, onSaved, firstRun
   const [seatBox, setSeatBox] = useState(false);
   /** Saved at 100% filled: the defaults sky, the same celebration the two defaults blueprints lift (founder, 2026-11-06). */
   const [sky, setSky] = useState(false);
+  /** Songs this save would reach, shown before anything is written (founder, 2026-11-08). */
+  const [propagate, setPropagate] = useState<{ plan: Propagation; songs: { id: string; metadata: Metadata }[]; profile: ArtistProfile; final: Onboarding } | null>(null);
+  const [filling, setFilling] = useState(false);
 
   useEffect(() => {
     if (!open) return;
@@ -145,6 +150,11 @@ export function ArtistOnboarding({ userId, open, onOpenChange, onSaved, firstRun
       saveOnboarding(userId, final);
       await supabase.from("profiles").update({ stage_name: stage || null, legal_name: ob.legalName.trim() || null }).eq("id", userId);
     }
+    await offerFill(final, saved);
+  }
+
+  /** Done saving: the sky, the toast and the close, whichever way the catalog question is answered. */
+  function finishSave(final: Onboarding, saved: ArtistProfile) {
     onSaved(final);
     onOpenChange(false);
     // A profile filled 100% is the defaults moment too, not just the two blueprints' checklists (founder, 2026-11-06).
@@ -153,9 +163,65 @@ export function ArtistOnboarding({ userId, open, onOpenChange, onSaved, firstRun
     toast.success(other ? `${other}'s embed defaults and catalog defaults are saved.` : firstRun ? "You're all set! Your saved details will prefill every new embed and catalog entry." : "Profile saved.");
   }
 
+  /**
+   * What this save would carry into songs already cataloged (founder, 2026-11-08): a corrected IPI never reached them
+   * before, because blanks were all that filled. The count is shown first and nothing is written without the answer.
+   */
+  async function offerFill(final: Onboarding, saved: ArtistProfile) {
+    const songs = await listTracks(userId).catch(() => []);
+    const plan = propagationPlan(saved, songs);
+    if (!plan.total) { finishSave(final, saved); return; }
+    setPropagate({ plan, songs: songs.map((s) => ({ id: s.id, metadata: s.metadata })), profile: saved, final });
+  }
+
+  /** Fills and corrects the songs the member agreed to, through the same save path the catalog itself uses. */
+  async function applyFill() {
+    if (!propagate) return;
+    const ids = new Set([...propagate.plan.fill, ...propagate.plan.change].map((s) => s.id));
+    setFilling(true);
+    try {
+      let updated = 0;
+      for (const song of propagate.songs) {
+        if (!ids.has(song.id)) continue;
+        await saveTrack(propagated(song.metadata, propagate.profile), userId, song.id);
+        updated += 1;
+      }
+      toast.success(`${updated} song${updated === 1 ? "" : "s"} updated from this profile.`);
+      finishSave(propagate.final, propagate.profile);
+      setPropagate(null);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "The catalog fill stopped part-way. Run it again from the profile.");
+    } finally { setFilling(false); }
+  }
+
   return (
     <Dialog open={open} onOpenChange={(o) => { if (!firstRun) onOpenChange(o); }}>
       {sky && <StarSky rocket message="Embed defaults & Catalog Defaults 100% Filled!" sub="Both of your defaults are set, so every master you embed and every song you catalog starts finished." onDone={() => setSky(false)} />}
+      {/* The corrected details reach the songs already saved only with this yes (founder, 2026-11-08). */}
+      <Dialog open={!!propagate} onOpenChange={(o) => { if (!o && propagate) { finishSave(propagate.final, propagate.profile); setPropagate(null); } }}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Carry this into {other || "your"} catalog?</DialogTitle>
+            <DialogDescription>
+              {propagate ? [
+                propagate.plan.fill.length ? `${propagate.plan.fill.length} song${propagate.plan.fill.length === 1 ? " is" : "s are"} missing a value this profile now has` : "",
+                propagate.plan.change.length ? `${propagate.plan.change.length} song${propagate.plan.change.length === 1 ? " holds" : "s hold"} a different IPI or PRO` : "",
+              ].filter(Boolean).join(", and ") + ". Nothing changes unless you choose it." : ""}
+            </DialogDescription>
+          </DialogHeader>
+          {propagate && propagate.plan.change.length > 0 && (
+            <ul className="max-h-40 space-y-1 overflow-y-auto rounded-lg bg-muted p-3 text-xs text-muted-foreground">
+              {propagate.plan.change.map((c) => <li key={c.id}><b className="text-foreground">{c.title}</b> · {c.what}</li>)}
+            </ul>
+          )}
+          <div className="flex flex-wrap justify-end gap-2">
+            <Button variant="outline" onClick={() => { if (propagate) { finishSave(propagate.final, propagate.profile); setPropagate(null); } }}>Not now</Button>
+            <Button disabled={filling} onClick={() => void applyFill()}>
+              {filling ? "Updating…" : `Fill ${propagate?.plan.total ?? 0} song${propagate?.plan.total === 1 ? "" : "s"}`}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
       <DialogContent className="max-h-[90vh] max-w-5xl overflow-y-auto" onInteractOutside={(e) => firstRun && e.preventDefault()} onEscapeKeyDown={(e) => firstRun && e.preventDefault()}>
         <ol className="flex flex-wrap gap-2 text-xs" aria-label="Setup steps">
           {STEPS.map((s, i) => {

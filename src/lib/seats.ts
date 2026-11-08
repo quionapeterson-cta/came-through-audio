@@ -52,7 +52,9 @@ export function seatArtistsFor(seats: ArtistSeat[], ownerId: string): { userId: 
   return seats
     // Anyone attached to a live seat is an artist whose defaults the owner sets up, whatever the webhook last wrote
     // to the status: an artist who accepted must never vanish from the list because a row says "invited" (2026-11-04).
-    .filter((s) => s.owner_id === ownerId && !!s.member_user_id && s.status !== "ended")
+    // A cancelled seat stays usable until its paid year ends, and stops the day it does — the same rule the tier
+    // function and every policy use, so the chooser can never offer an artist whose seat has lapsed.
+    .filter((s) => s.owner_id === ownerId && !!s.member_user_id && seatIsLive(s))
     .map((s) => ({ userId: s.member_user_id!, name: s.artist_name || "Unnamed artist", tier: s.tier }));
 }
 

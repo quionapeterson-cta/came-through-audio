@@ -213,7 +213,7 @@ export function MetadataUploader({ onShareInfo, userId, mode = "embed", readOnly
 
   const refresh = useCallback(() => {
     if (!userId) return;
-    listTracks().then(setTracks).catch((e) => toast.error(e.message ?? "Could not load your catalog."));
+    listTracks(userId).then(setTracks).catch((e) => toast.error(e.message ?? "Could not load your catalog."));
   }, [userId]);
   useEffect(() => { refresh(); }, [refresh]);
   // The page's share card (artist avatar next to the name): song count on My Catalog, the song being embedded on Embed.
@@ -385,7 +385,7 @@ export function MetadataUploader({ onShareInfo, userId, mode = "embed", readOnly
   async function remove(id: string) {
     if (!(await confirmAction({ title: "Delete this song from your catalog?", text: "Its master, artwork and lyrics are removed too. Badges you earned stay on your profile." }))) return;
     try {
-      await deleteTrack(id);
+      await deleteTrack(id, userId);
       if (id === editingId) startNew();
       refresh();
     } catch (e) { toast.error(e instanceof Error ? e.message : "Could not delete track."); }
@@ -840,7 +840,7 @@ export function MetadataUploader({ onShareInfo, userId, mode = "embed", readOnly
                     <Button type="button" variant="outline" size="sm" disabled={!!zipping}><Download />{zipping ?? "Download"}</Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end" className="max-h-80 overflow-y-auto">
-                    <DropdownMenuItem disabled={!!zipping} onClick={() => void zip(`Zipping ${tracks.length} songs…`, () => downloadWholeCatalog(undefined, kitId), "catalog_zip")} className="flex-col items-start gap-0.5">
+                    <DropdownMenuItem disabled={!!zipping} onClick={() => void zip(`Zipping ${tracks.length} songs…`, () => downloadWholeCatalog(undefined, kitId, userId), "catalog_zip")} className="flex-col items-start gap-0.5">
                       <span className="font-semibold">The whole catalog</span>
                       <span className="text-xs text-muted-foreground">Every master, its artwork, lyrics and the catalog PDF in one ZIP.</span>
                     </DropdownMenuItem>

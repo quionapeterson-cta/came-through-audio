@@ -2,7 +2,7 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { getStaffRole } from "@/lib/admin.functions";
-import { ShieldCheck, FileAudio, Disc3, Activity, FileSignature, ScrollText, GraduationCap, LogOut, Moon, Sun, UserRound, Gem, Users, Calculator, Smartphone , PenLine, LifeBuoy } from "lucide-react";
+import { ShieldCheck, FileAudio, Disc3, Activity, FileSignature, ScrollText, GraduationCap, LogOut, Moon, Sun, UserRound, Gem, Users, Calculator, Smartphone , PenLine, LifeBuoy, ChevronDown } from "lucide-react";
 import { IosInstallHelp, useInstallApp } from "@/components/InstallApp";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { supabase } from "@/integrations/supabase/client";
@@ -19,7 +19,7 @@ import { Contracts } from "@/components/Contracts";
 import { BrandLogo } from "@/components/BrandLogo";
 import type { CatalogTrack } from "@/lib/catalog";
 import { ArtistAvatar, ArtistOnboarding } from "@/components/ArtistOnboarding";
-import { badgePrefs, loadOnboarding, syncFromCloud, type Onboarding } from "@/lib/artist-profile";
+import { badgePrefs, loadOnboarding, loadSeatArtistDefaults, syncFromCloud, type Onboarding } from "@/lib/artist-profile";
 import { RoyaltyUtilitySuite } from "@/components/RoyaltyUtilitySuite";
 import { ExpertAssistance } from "@/components/ExpertAssistance";
 import { RoyaltyHealthCheck, type HealthStart } from "@/components/RoyaltyHealthCheck";
@@ -29,10 +29,11 @@ import { toast } from "sonner";
 import { sendTrialEndingReminder } from "@/lib/collab-trial.functions";
 import { useBilling, type Purchase } from "@/hooks/useBilling";
 import { openCheckout, getPaymentsEnvironment } from "@/lib/checkout";
-import { listSeatState } from "@/lib/seats";
+import { listSeatState, seatArtistsFor } from "@/lib/seats";
 import { AddArtistDialog } from "@/components/ArtistSeats";
 import { PRICE_TIER, TIER_LABEL, hasTier, planIntentFromSearch, rememberPlanIntent, takePlanIntent, upgradeNote, type Tier } from "@/lib/plans";
 import { PlanComparison, planAction } from "@/components/PlanComparison";
+import { readWorkingAs, rememberWorkingAs, scopedTier, workingProfiles, type WorkingProfile } from "@/lib/profile-switch";
 import { BadgeWatcher } from "@/components/Badges";
 import { Confetti } from "@/components/Confetti";
 import { celebrateReturn } from "@/lib/celebrate";
@@ -110,6 +111,10 @@ function Workspace() {
   // Back from paying for seats: open the invite form, so the artist's email is asked for right away (2026-11-04) — once
   // per visit, never again after it is closed (founder, 2026-11-07).
   const [seatsOpen, setSeatsOpen] = useState(false);
+  // The artists on this account's live seats, and which one is being worked as. Declared here because the seat prompt
+  // below fills the list as soon as the page settles.
+  const [seatArtists, setSeatArtists] = useState<{ userId: string; name: string; tier: Exclude<Tier, "free"> }[]>([]);
+  const [actingId, setActingId] = useState<string | null>(null);
   const seatPrompted = useRef(false);
   useEffect(() => {
     if (!user || seatPrompted.current || new URLSearchParams(window.location.search).get("checkout") !== "success") return;
@@ -118,6 +123,19 @@ function Workspace() {
       .then((s) => { if (s.seats.some((seat) => seat.owner_id === user.id && seat.status === "unclaimed")) setSeatsOpen(true); })
       .catch(() => {});
   }, [user]);
+  // The artists this account can work as: everyone who accepted a seat that is still paid for.
+  useEffect(() => {
+    if (!user) return;
+    listSeatState()
+      .then((s) => setSeatArtists(seatArtistsFor(s.seats, user.id)))
+      .catch(() => setSeatArtists([]));
+  }, [user?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+  // A reload lands back on the artist being worked on, and only while that seat is still one of theirs.
+  useEffect(() => {
+    if (!user || !seatArtists.length) return;
+    const remembered = readWorkingAs(workingProfiles({ userId: user.id, name: "", tier }, seatArtists));
+    if (remembered) setActingId(remembered);
+  }, [seatArtists.length]); // eslint-disable-line react-hooks/exhaustive-deps
   const [previewTier, setPreviewTier] = useState<Tier | "real">("real");
   // A welcome burst only after 30 days away (founder, 2026-11-06): a routine visit gets none, and finishing a
   // blueprint checklist keeps its own celebration. Never for someone who turned celebrations off or asked for reduced motion.
@@ -129,14 +147,35 @@ function Workspace() {
   // Free accounts may only sign invited split sheets (/sign/$token). Generating one starts at Plus; collecting
   // collaborator e-signatures, agency exports and the utility suite need Collaborate. The database enforces both.
   // Free accounts use the Royalty Inspector with their own song details; embedding and the catalog start at Plus.
-  const canCatalog = hasTier(tier, "plus");
-  const canSplit = hasTier(tier, "plus");
-  const canCollect = hasTier(tier, "collaborate");
+  // Working as an artist on one of this account's seats (founder, 2026-11-08): the switch is the same login, and the
+  // workspace works at the seat's own tier, so an owner never borrows their plan's tools inside someone else's account.
+  const actingSeat = seatArtists.find((a) => a.userId === actingId) ?? null;
+  const actingAs: WorkingProfile | null = actingSeat ? { ...actingSeat, seat: true } : null;
+  const workTier: Tier = scopedTier(actingAs, tier);
+  // Every catalog read and write inside the two working tabs follows this id, never the browser's own account.
+  const catalogOwner = actingSeat?.userId ?? user?.id ?? "";
+  const canCatalog = hasTier(workTier, "plus");
+  const canSplit = hasTier(workTier, "plus");
+  const canCollect = hasTier(workTier, "collaborate");
   // After a plan ends (30 days before emptying) or while paused, the catalog stays viewable and downloadable.
   const catalogReadOnly = !canCatalog && (inGrace(lapse) || isPaused(pauses));
   const [onboard, setOnboard] = useState<Onboarding | null>(null);
   const names = useArtistName(user, onboard?.stageName);
   const name = names.display;
+  // You, then each artist on a live seat: exactly the list the switcher shows.
+  const profiles = workingProfiles({ userId: user?.id ?? "", name: name || "You", tier }, seatArtists);
+  const [seatDefaultsFor, setSeatDefaultsFor] = useState<{ userId: string; name: string } | null>(null);
+  /**
+   * Switching remounts both working tabs, so the editor opens on the selected artist's saved defaults instead of the
+   * last one's. Their defaults are read first: nothing is ever written by the switch itself.
+   */
+  const workAs = async (p: WorkingProfile) => {
+    if (p.seat) await loadSeatArtistDefaults(p.userId).catch(() => {});
+    setActingId(p.seat ? p.userId : null);
+    rememberWorkingAs(p.seat ? p.userId : null);
+    setEmbedKey((k) => k + 1);
+    setCatalogKey((k) => k + 1);
+  };
   const [onboardSynced, setOnboardSynced] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
   const [embedKey, setEmbedKey] = useState(0);
@@ -261,6 +300,15 @@ function Workspace() {
             <DropdownMenuContent align="end" className="w-56">
               <DropdownMenuLabel className="font-normal text-muted-foreground">{TIER_LABEL[tier]}</DropdownMenuLabel>
               <DropdownMenuSeparator />
+              {profiles.length > 1 && (<>
+                {profiles.map((p) => (
+                  <DropdownMenuItem key={p.userId} onSelect={() => void workAs(p)} className="justify-between gap-3">
+                    <span className="truncate">{p.seat ? p.name : "You"}</span>
+                    <span className="text-xs font-semibold text-muted-foreground">{TIER_LABEL[p.tier]}</span>
+                  </DropdownMenuItem>
+                ))}
+                <DropdownMenuSeparator />
+              </>)}
               <DropdownMenuItem onSelect={() => navigate({ to: "/profile" })}><UserRound />Profile</DropdownMenuItem>
               <DropdownMenuItem onSelect={upgrade}><Gem />View Plans</DropdownMenuItem>
               <DropdownMenuItem onSelect={studio.toggle}>{studio.on ? <Sun /> : <Moon />}{studio.on ? "Light mode" : "Studio Mode"}</DropdownMenuItem>
@@ -270,6 +318,32 @@ function Workspace() {
             </DropdownMenuContent>
           </DropdownMenu>
           <div className="hidden items-center gap-3 sm:flex">
+            {/* Working as an artist on a seat: the same shape as switching accounts in Instagram or TikTok (founder, 2026-11-08). */}
+            {profiles.length > 1 && (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" className="gap-2 text-ink-foreground hover:bg-ink-border hover:text-ink-foreground" aria-label="Switch the artist you are working as">
+                    <Users className="h-4 w-4" />{actingAs ? actingAs.name : "You"}<ChevronDown className="h-4 w-4 opacity-70" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-64">
+                  <DropdownMenuLabel className="font-normal text-muted-foreground">Working as</DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  {profiles.map((p) => (
+                    <DropdownMenuItem key={p.userId} onSelect={() => void workAs(p)} className="justify-between gap-3">
+                      <span className="truncate">{p.seat ? p.name : "You"}</span>
+                      <span className="text-xs font-semibold text-muted-foreground">{TIER_LABEL[p.tier]}</span>
+                    </DropdownMenuItem>
+                  ))}
+                  {actingAs && (<>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onSelect={() => setSeatDefaultsFor({ userId: actingAs.userId, name: actingAs.name })}>
+                      <UserRound />Edit their defaults
+                    </DropdownMenuItem>
+                  </>)}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
             <Badge variant="outline" className="border-ink-border text-ink-foreground">{TIER_LABEL[tier]}</Badge>
             <Button variant="ghost" className="gap-2 text-ink-foreground hover:bg-ink-border hover:text-ink-foreground" onClick={() => navigate({ to: "/profile" })}>
               <ArtistAvatar src={onboard?.avatar} className="h-7 w-7" />Profile
@@ -297,11 +371,27 @@ function Workspace() {
       <ArtistOnboarding userId={user.id} open={profileOpen} onOpenChange={setProfileOpen} firstRun={!onboard?.done}
         canAddArtist={realTier !== "free"}
         onSaved={(o) => { setOnboard(o); setEmbedKey((k) => k + 1); setTab(canCatalog ? "embed" : "health"); }} />
+      {/* The same defaults editor, on a seat artist's account, reachable from the switcher without leaving the workspace. */}
+      {seatDefaultsFor && (
+        <ArtistOnboarding userId={seatDefaultsFor.userId} seatArtist={{ name: seatDefaultsFor.name }} open firstRun={false}
+          onOpenChange={(o) => { if (!o) setSeatDefaultsFor(null); }}
+          onSaved={() => { setSeatDefaultsFor(null); setEmbedKey((k) => k + 1); setCatalogKey((k) => k + 1); }} />
+      )}
       <BadgeWatcher userId={user.id} artist={names.artist} eagle={tier === "management"} />
       <main className="mx-auto max-w-7xl px-6 py-8">
         {pendingPlan && <PlanPendingBanner priceId={pendingPlan} />}
         {!user.email_confirmed_at && <EmailConfirmBanner email={user.email} />}
         <CatalogLapseBanner sub={sub} lapse={lapse} pauses={pauses} onRenew={upgrade} onChanged={() => void reloadBilling()} />
+        {/* Which artist the two working tabs are on, so a saved song can never land in the wrong catalog by mistake. */}
+        {actingAs && (
+          <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-primary/40 bg-accent/30 p-3 text-sm">
+            <span>
+              Working in <b>{actingAs.name}</b>&rsquo;s catalog at {TIER_LABEL[actingAs.tier]}. Embed Metadata and My Catalog save to their
+              account; everything else in the workspace is still yours.
+            </span>
+            <Button variant="outline" size="sm" onClick={() => void workAs(profiles[0]!)}>Back to mine</Button>
+          </div>
+        )}
         <Tabs value={tab} onValueChange={setTab}>
           {/* One row, left to right, scrolled on narrow screens: all six belong on the same line (founder, 2026-11-04;
               centering is for the sub-tab strip under the artist name, not this row). */}
@@ -335,12 +425,12 @@ function Workspace() {
             share={{ ...share, artist: share.artist || names.artist || name }} />
 
           <TabsContent value="embed" forceMount className="data-[state=inactive]:hidden">
-            {canCatalog ? <MetadataUploader key={`embed-${embedKey}`} userId={user.id} mode="embed" canWav={hasTier(tier, "management")} onShareInfo={(i) => setTabShare((m) => ({ ...m, embed: i }))} onSubmitted={() => setCatalogKey((k) => k + 1)} />
+            {canCatalog ? <MetadataUploader key={`embed-${catalogOwner}-${embedKey}`} userId={catalogOwner} mode="embed" canWav={hasTier(workTier, "management")} onShareInfo={(i) => setTabShare((m) => ({ ...m, embed: i }))} onSubmitted={() => setCatalogKey((k) => k + 1)} />
               : <PlusLock title="Embed Metadata starts with Catalog Plus" onQuickCheck={openQuickCheck} onUpgrade={upgrade} />}
           </TabsContent>
           <TabsContent value="catalog" forceMount className="data-[state=inactive]:hidden">
             {!canCatalog && !catalogReadOnly ? <PlusLock title="My Catalog starts with Catalog Plus" onQuickCheck={openQuickCheck} onUpgrade={upgrade} /> : <>
-            <MetadataUploader key={catalogKey} userId={user.id} mode="catalog" canWav={hasTier(tier, "management")} readOnly={catalogReadOnly} onShareInfo={(i) => setTabShare((m) => ({ ...m, catalog: i }))} canSplit={canSplit} canExport={canCollect} focus={catalogFix} onFocused={() => setCatalogFix(undefined)} onSplitSheet={(t) => { setSplitTrackId(t.id); setTab("splits"); }} onProtect={(t) => { setProtectTrack(t); setTab("protect"); }} onHealthCheck={(trackId, release) => { setHealthStart({ trackId, release, nonce: Date.now() }); setTab("health"); }} onExpert={() => { setOpenExpert(true); setTab("health"); }} /></>}
+            <MetadataUploader key={`catalog-${catalogOwner}-${catalogKey}`} userId={catalogOwner} mode="catalog" canWav={hasTier(workTier, "management")} readOnly={catalogReadOnly} onShareInfo={(i) => setTabShare((m) => ({ ...m, catalog: i }))} canSplit={canSplit} canExport={canCollect} focus={catalogFix} onFocused={() => setCatalogFix(undefined)} onSplitSheet={(t) => { setSplitTrackId(t.id); setTab("splits"); }} onProtect={(t) => { setProtectTrack(t); setTab("protect"); }} onHealthCheck={(trackId, release) => { setHealthStart({ trackId, release, nonce: Date.now() }); setTab("health"); }} onExpert={() => { setOpenExpert(true); setTab("health"); }} /></>}
           </TabsContent>
           <TabsContent value="protect"><AIProtectionHub userId={user.id} purchases={purchases} justPaid={search.checkout === "success" && search.tab === "protect"} track={protectTrack} /></TabsContent>
           <TabsContent value="splits"><SplitSheets userId={user.id} canSplit={canSplit} canCollect={canCollect} prefillTrackId={splitTrackId} onUpgrade={upgrade} /></TabsContent>

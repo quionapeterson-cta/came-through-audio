@@ -52,8 +52,16 @@ export function fromCatalogRow(row: Record<string, unknown>): CatalogTrack {
   return { id: row["id"] as string, title: metadata.title, artist: metadata.artist, updatedAt: (row["updated_at"] ?? row["created_at"]) as string, metadata };
 }
 
-export async function listTracks(): Promise<CatalogTrack[]> {
-  const { data, error } = await supabase.from("catalogs").select("*").order("created_at", { ascending: false });
+/**
+ * Songs in one account's catalog. Always scoped: the seat policies let an owner read their artists' songs too, so an
+ * unfiltered read would mix every seat into their own My Catalog (founder, 2026-11-08). Pass the working profile's id,
+ * or leave it out for the signed-in account itself.
+ */
+export async function listTracks(ownerId?: string): Promise<CatalogTrack[]> {
+  const userId = ownerId ?? (await supabase.auth.getUser()).data.user?.id;
+  let query = supabase.from("catalogs").select("*").order("created_at", { ascending: false });
+  if (userId) query = query.eq("user_id", userId);
+  const { data, error } = await query;
   if (error) throw error;
   return (data ?? []).map((r) => fromCatalogRow(r as Record<string, unknown>));
 }
@@ -70,12 +78,14 @@ export async function saveTrack(m: Metadata, userId: string, id?: string): Promi
 }
 
 /** Deletes a song and its stored master and artwork (everything in its private folder). */
-export async function deleteTrack(id: string) {
+export async function deleteTrack(id: string, ownerId?: string) {
   const { error } = await supabase.from("catalogs").delete().eq("id", id);
   if (error) throw error;
-  // Files go after the row, so a failed delete never leaves a song without its master.
+  // Files go after the row, so a failed delete never leaves a song without its master. The folder belongs to the song's
+  // own account, which is the artist's when an owner is working in a seat.
   const { data: auth } = await supabase.auth.getUser();
-  const folder = auth.user ? `${auth.user.id}/${id}` : "";
+  const owner = ownerId ?? auth.user?.id;
+  const folder = owner ? `${owner}/${id}` : "";
   if (!folder) return;
   const { data: files } = await supabase.storage.from(BUCKET).list(folder);
   if (files?.length) {
@@ -227,8 +237,8 @@ async function downloadSongsZip(tracks: CatalogTrack[], zipName: string, onProgr
 }
 
 /** Every song in the catalog as one ZIP. */
-export async function downloadWholeCatalog(onProgress?: (done: number, total: number) => void, kitId?: string) {
-  const tracks = await listTracks();
+export async function downloadWholeCatalog(onProgress?: (done: number, total: number) => void, kitId?: string, ownerId?: string) {
+  const tracks = await listTracks(ownerId);
   if (!tracks.length) throw new Error("Your catalog is empty, so there is nothing to zip yet.");
   return downloadSongsZip(tracks, "My Catalog.zip", onProgress, kitId);
 }
