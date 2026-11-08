@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { canRenewEarly, dueRenewalReminder, dueReminder, earlyRenewalTarget, extendedRenewal, isPaused, offers, pauseSpan, shiftedEmptyAfter, type Pause, type PlanSub } from "@/lib/retention";
+import { canRenewEarly, dueRenewalReminder, dueReminder, earlyRenewalTarget, extendedRenewal, inGrace, isPaused, keptOnFree, offers, pauseSpan, shiftedEmptyAfter, type Pause, type PlanSub } from "@/lib/retention";
 import { planCheckout, checkoutInput } from "@/lib/stripe-mapping";
 import { crc32, uniqueName, zipBytes } from "@/lib/zip";
 
@@ -48,6 +48,18 @@ describe("emptying reminders", () => {
     expect(dueReminder(lapse("2026-10-28T12:00:00Z", ["start"]), now)?.send).toBe("7");
     // A late start skips straight to the most urgent one and counts the earlier ones as sent.
     expect(dueReminder(lapse("2026-10-23T12:00:00Z"), now)).toEqual({ send: "1", covers: ["start", "7", "1"] });
+  });
+});
+
+describe("keeping a catalog on Free", () => {
+  it("stops the emptying and its countdown, and nothing else", () => {
+    const lapse = { plan_ended_at: "2026-10-01T00:00:00Z", empty_after: "2026-11-01T12:00:00Z", emptied_at: null, kept_free_at: "2026-10-25T00:00:00Z" };
+    expect(keptOnFree(lapse)).toBe(true);
+    expect(inGrace(lapse, now)).toBe(false);
+    expect(keptOnFree({ ...lapse, kept_free_at: null })).toBe(false);
+    expect(inGrace({ ...lapse, kept_free_at: null }, now)).toBe(true);
+    // A catalog already emptied is not kept after the fact.
+    expect(keptOnFree({ ...lapse, emptied_at: "2026-11-01T12:00:00Z" })).toBe(false);
   });
 });
 

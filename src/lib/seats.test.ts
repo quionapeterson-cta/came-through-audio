@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { seatArtistsFor, seatIsLive, type ArtistSeat } from "./seats";
+import { handoffOffered, seatArtistsFor, seatIsLive, seatShouldEnd, type ArtistSeat } from "./seats";
 
 const seat = (over: Partial<ArtistSeat>): ArtistSeat => ({
   id: "s1", owner_id: "owner", tier: "plus", artist_name: "Karma", invite_email: null,
@@ -27,6 +27,21 @@ describe("artist seats", () => {
     expect(seatIsLive(seat({ status: "canceled", current_period_end: "2026-12-01T00:00:00Z" }), now)).toBe(true);
     expect(seatIsLive(seat({ status: "canceled", current_period_end: "2026-10-01T00:00:00Z" }), now)).toBe(false);
     expect(seatIsLive(seat({ status: "ended" }), now)).toBe(false);
+  });
+
+  it("ends a seat once its paid period has passed, and leaves a taken-over seat alone", () => {
+    const now = new Date("2026-11-08T00:00:00Z");
+    expect(seatShouldEnd(seat({ status: "active", current_period_end: "2026-11-01T00:00:00Z" }), now)).toBe(true);
+    expect(seatShouldEnd(seat({ status: "canceled", current_period_end: "2027-01-01T00:00:00Z" }), now)).toBe(false);
+    expect(seatShouldEnd(seat({ status: "handed_off", current_period_end: "2026-11-01T00:00:00Z" }), now)).toBe(false);
+    expect(seatShouldEnd(seat({ status: "active", current_period_end: null }), now)).toBe(false);
+  });
+
+  it("treats an offer as an offer and nothing more", () => {
+    expect(handoffOffered(seat({ handoff_offered_at: "2026-11-08T00:00:00Z" }))).toBe(true);
+    expect(handoffOffered(seat({ handoff_offered_at: null }))).toBe(false);
+    // An offer changes nothing about whether the seat is live.
+    expect(seatIsLive(seat({ status: "active", handoff_offered_at: "2026-11-08T00:00:00Z" }))).toBe(true);
   });
 
   it("ends the owner's access the moment the artist takes the plan over", () => {

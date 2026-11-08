@@ -36,7 +36,7 @@ export function useBilling(userId: string | undefined) {
       supabase.from("purchases" as never).select("id, kind, price_ids, details, created_at").eq("user_id", userId).eq("environment", env).order("created_at", { ascending: false }),
       // Missing until the retention migrations run; then these simply come back empty.
       supabase.from("account_pauses" as never).select("id, kind, months, starts_at, ends_at, ended_at, created_at").eq("user_id", userId).eq("environment", env).order("created_at", { ascending: false }),
-      supabase.from("catalog_lapses" as never).select("plan_ended_at, empty_after, emptied_at").eq("user_id", userId).maybeSingle(),
+      supabase.from("catalog_lapses" as never).select("plan_ended_at, empty_after, emptied_at, kept_free_at").eq("user_id", userId).maybeSingle(),
       // Missing until the founding migration runs; then empty for everyone outside the first 100.
       supabase.from("founding_upgrades" as never).select("paid_tier, granted_tier, seat").eq("user_id", userId).eq("environment", env).is("ended_at", null),
       // Add-on artist seats this account accepted. A seat IS their plan while it's paid for, so the app has to see it

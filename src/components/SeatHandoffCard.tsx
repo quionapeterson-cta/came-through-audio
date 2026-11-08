@@ -59,6 +59,12 @@ export function SeatHandoffCard({ userId }: { userId: string }) {
         You work on <span className="font-semibold text-foreground">{TIER_LABEL[seat.tier]}</span> through an add-on seat
         another account pays for. It is paid through {day(seat.current_period_end)}.
       </p>
+      {seat.handoff_offered_at ? (
+        <p className="mt-2 text-sm font-semibold text-primary">
+          The account that pays for this seat has offered it to you. It's your choice: take it over below, or stay on the
+          seat.
+        </p>
+      ) : null}
       <p className="mt-2 text-sm text-muted-foreground">
         You can keep this plan yourself when that year ends. Enter a card now and nothing is charged until the seat's
         paid year is over; the card is only used from that renewal on.

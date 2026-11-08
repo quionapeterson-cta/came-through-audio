@@ -7,8 +7,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { ARTIST_SEAT_PRICES, SEAT_MAX, TIER_LABEL, type Tier } from "@/lib/plans";
-import { listSeatState, seatIsLive, type ArtistSeat, type SeatState } from "@/lib/seats";
-import { inviteSeatArtist } from "@/lib/seats.functions";
+import { handoffOffered, listSeatState, seatIsLive, type ArtistSeat, type SeatState } from "@/lib/seats";
+import { inviteSeatArtist, offerSeatHandoff } from "@/lib/seats.functions";
 import { openCheckout } from "@/lib/checkout";
 // ArtistOnboarding renders this panel for "Add another artist", so importing it statically here would be a cycle.
 // Loaded on demand only when an owner opens an accepted artist's defaults.
@@ -38,12 +38,14 @@ export function ArtistSeats({ onClose }: { onClose: () => void }) {
   const [artistName, setArtistName] = useState("");
   const [email, setEmail] = useState("");
   const [busy, setBusy] = useState(false);
+  const [offerBusy, setOfferBusy] = useState<string | null>(null);
   // An artist who accepted: the owner fills in the defaults their songs and embeds start from.
   const [editingArtist, setEditingArtist] = useState<{ userId: string; name: string } | null>(null);
   // How many artists at each tier. Artists aren't all on the same tier, so the owner picks a count per tier and pays
   // for the lot in one go: one subscription, one seat row per artist (founder, 2026-11-04).
   const [qty, setQty] = useState<Record<SeatTier, number>>({ plus: 0, collaborate: 0, management: 0 });
   const invite = useServerFn(inviteSeatArtist);
+  const offer = useServerFn(offerSeatHandoff);
   /** Typing the address the seat was already sent to is a resend; anything else replaces (and voids) the old invite. */
   const sameEmail = (seat: ArtistSeat) => !!seat.invite_email && seat.invite_email.toLowerCase() === email.trim().toLowerCase();
 
@@ -100,6 +102,22 @@ export function ArtistSeats({ onClose }: { onClose: () => void }) {
       toast.error(e instanceof Error ? e.message : "The invite could not be sent.");
     } finally {
       setBusy(false);
+    }
+  };
+
+  /** Offer the seat's plan to its artist, or take the offer back. Only an offer: the checkout is still theirs. */
+  const toggleOffer = async (seat: ArtistSeat, next: boolean) => {
+    setOfferBusy(seat.id);
+    try {
+      await offer({ data: { seatId: seat.id, offer: next } });
+      toast.success(next
+        ? `Offered to ${seat.artist_name || "the artist"}. Nothing changes until they take it over.`
+        : "Offer withdrawn. Nothing changed in billing.");
+      await load();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "The offer didn't go through.");
+    } finally {
+      setOfferBusy(null);
     }
   };
 
@@ -178,6 +196,21 @@ export function ArtistSeats({ onClose }: { onClose: () => void }) {
                     <Mail className="h-4 w-4" />{seat.invite_email ? "Resend or change their email" : "Send to the artist"}
                   </Button>
                 )
+              )}
+              {seat.member_user_id && seat.status !== "handed_off" && (
+                <div className="mt-2 flex flex-wrap items-center gap-2">
+                  {handoffOffered(seat) ? (
+                    <>
+                      <p className="text-xs text-muted-foreground">You offered this plan to {seat.artist_name || "the artist"}. Nothing changes until they take it over.</p>
+                      <Button size="sm" variant="ghost" disabled={offerBusy === seat.id} onClick={() => void toggleOffer(seat, false)}>Withdraw the offer</Button>
+                    </>
+                  ) : (
+                    <>
+                      <Button size="sm" variant="outline" disabled={offerBusy === seat.id} onClick={() => void toggleOffer(seat, true)}>Offer this plan to the artist</Button>
+                      <p className="text-xs text-muted-foreground">They can take it over at their next renewal. Nothing changes until they do.</p>
+                    </>
+                  )}
+                </div>
               )}
               {seat.status === "handed_off" && (
                 <p className="mt-2 text-xs text-muted-foreground">

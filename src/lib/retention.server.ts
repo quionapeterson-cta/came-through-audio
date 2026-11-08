@@ -2,7 +2,7 @@ import { createStripeClient, type StripeEnv } from "@/lib/stripe.server";
 import { isActiveSub, PLAN_TIERS, TIER_LABEL, TIER_RANK, tierFromPrice } from "@/lib/plans";
 import { getPaymentsEnvironment } from "@/lib/payments-env";
 import {
-  addDays, dueReminder, dueRenewalReminder, earlyRenewalTarget, extendedRenewal, RENEWAL_REMINDER_DAYS, GRACE_DAYS, offers, pauseSpan, shiftedEmptyAfter,
+  addDays, dueReminder, dueRenewalReminder, earlyRenewalTarget, extendedRenewal, keptOnFree, RENEWAL_REMINDER_DAYS, GRACE_DAYS, offers, pauseSpan, shiftedEmptyAfter,
   type Lapse, type Pause, type PlanSub,
 } from "@/lib/retention";
 import { sendRetentionEmail } from "@/lib/retention-email.server";
@@ -26,7 +26,7 @@ export async function loadState(db: Admin, userId: string, env: StripeEnv): Prom
   const [subs, lapse, pauses] = await Promise.all([
     db.from("subscriptions").select("stripe_subscription_id, status, price_id, current_period_start, current_period_end, cancel_at_period_end")
       .eq("user_id", userId).eq("environment", env).not("stripe_subscription_id", "is", null),
-    db.from("catalog_lapses" as never).select("plan_ended_at, empty_after, emptied_at, reminders").eq("user_id", userId).maybeSingle(),
+    db.from("catalog_lapses" as never).select("plan_ended_at, empty_after, emptied_at, kept_free_at, reminders").eq("user_id", userId).maybeSingle(),
     db.from("account_pauses" as never).select("id, kind, months, starts_at, ends_at, ended_at, created_at").eq("user_id", userId).eq("environment", env).order("created_at", { ascending: false }),
   ]);
   const live = ((subs.data ?? []) as SubRow[]).filter((s) => isActiveSub(s));
@@ -131,6 +131,30 @@ export async function setCancelling(db: Admin, userId: string, env: StripeEnv, c
   await createStripeClient(env).subscriptions.update(s.sub.stripe_subscription_id, { cancel_at_period_end: cancel });
 }
 
+/**
+ * Keep it on Free (founder, 2026-11-08): before the emptying date, the member may choose the Free plan instead. The
+ * catalog stays read-only and is never emptied, and a paid plan can be started whenever they are ready. Choosing it is
+ * not a refund and changes no payment.
+ */
+export async function keepOnFree(db: Admin, userId: string) {
+  const [{ data }, { data: tier }] = await Promise.all([
+    db.from("catalog_lapses" as never).select("plan_ended_at, empty_after, emptied_at, kept_free_at").eq("user_id", userId).maybeSingle(),
+    db.rpc("user_tier" as never, { _uid: userId } as never),
+  ]);
+  const lapse = data as { empty_after: string; emptied_at: string | null; kept_free_at: string | null } | null;
+  if (!lapse) throw new Error("There's no plan ending here, so there is nothing to keep on Free.");
+  if (lapse.emptied_at) throw new Error("This catalog was already emptied, so there is nothing left to keep.");
+  if (String(tier) !== "free") throw new Error("Your plan is running, so there is nothing to keep on Free.");
+  if (lapse.kept_free_at) return { kept: true, emptyAfter: lapse.empty_after };
+  const now = new Date().toISOString();
+  const { error } = await db.from("catalog_lapses" as never)
+    .update({ kept_free_at: now, updated_at: now } as never).eq("user_id", userId);
+  if (error) throw error;
+  const email = await emailOf(db, userId);
+  if (email) await sendRetentionEmail(email, { kind: "kept-free" }, `kept-free-${userId}`);
+  return { kept: true, emptyAfter: lapse.empty_after };
+}
+
 /** Removes every catalog song with its files and health ticks. Split sheets keep a snapshot of the song (trigger). */
 export async function emptyCatalog(db: Admin, userId: string): Promise<number> {
   const { data: songs, error } = await db.from("catalogs").select("id").eq("user_id", userId);
@@ -157,7 +181,7 @@ export async function runCatalogLapses(now = new Date()) {
   const tierOf = async (uid: string) => (await db.rpc("user_tier" as never, { _uid: uid } as never)).data as unknown as string;
   const pausedNow = async (uid: string) => !!(await db.rpc("is_paused" as never, { _uid: uid } as never)).data;
 
-  const { data: rows, error } = await db.from("catalog_lapses" as never).select("user_id, plan_ended_at, empty_after, emptied_at, reminders");
+  const { data: rows, error } = await db.from("catalog_lapses" as never).select("user_id, plan_ended_at, empty_after, emptied_at, kept_free_at, reminders");
   if (error) throw error;
   const lapses = (rows ?? []) as unknown as (Lapse & { user_id: string; reminders: string[] })[];
   for (const l of lapses) {
@@ -177,7 +201,8 @@ export async function runCatalogLapses(now = new Date()) {
   }
 
   for (const l of lapses) {
-    if (l.emptied_at || (await pausedNow(l.user_id))) continue;
+    // Kept on Free means the emptying and its reminders stop for good; a paid plan later clears the whole row above.
+    if (l.emptied_at || keptOnFree(l) || (await pausedNow(l.user_id))) continue;
     const { data: still } = await db.from("catalog_lapses" as never).select("user_id").eq("user_id", l.user_id).maybeSingle();
     if (!still) continue;
     if (new Date(l.empty_after) <= now) {

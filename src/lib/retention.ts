@@ -25,7 +25,7 @@ export type PlanSub = {
   cancel_at_period_end: boolean | null;
 };
 export type Pause = { id: string; kind: "extend" | "pause"; months: number | null; starts_at: string; ends_at: string; ended_at: string | null; created_at: string };
-export type Lapse = { plan_ended_at: string; empty_after: string; emptied_at: string | null };
+export type Lapse = { plan_ended_at: string; empty_after: string; emptied_at: string | null; kept_free_at?: string | null };
 
 export const addDays = (iso: string | Date, days: number) => new Date(new Date(iso).getTime() + days * DAY);
 export function addMonths(iso: string | Date, months: number) {
@@ -51,8 +51,15 @@ export function renewalDate(sub: PlanSub): Date | null {
   return at ? new Date(at) : null;
 }
 
-/** Grace period running: the plan ended, the catalog isn't emptied yet. */
-export const inGrace = (lapse: Lapse | null, now = new Date()) => !!lapse && !lapse.emptied_at && new Date(lapse.empty_after) > now;
+/** Grace period running: the plan ended, the catalog isn't emptied yet, and Free wasn't chosen in its place. */
+export const inGrace = (lapse: Lapse | null, now = new Date()) =>
+  !!lapse && !lapse.emptied_at && !lapse.kept_free_at && new Date(lapse.empty_after) > now;
+
+/**
+ * The member chose the Free plan before the emptying date: the catalog stays read-only and is never emptied, and a paid
+ * plan can be started whenever they are ready (founder, 2026-11-08).
+ */
+export const keptOnFree = (lapse: Lapse | null) => !!lapse && !lapse.emptied_at && !!lapse.kept_free_at;
 
 export type Offers = {
   /** A renewal payment failed and Stripe is retrying it. */

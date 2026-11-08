@@ -201,7 +201,7 @@ email repeats that date. Nothing is collected at the handoff beyond the card.
 
 ## 9. What is still open, and the plan for each
 
-Nothing in this section is built. Each part is a proposal, and the ones marked **undecided** need the founder's answer
+9.1 and 9.2 are built (2026-11-08). The rest are proposals, and the ones marked **undecided** need the founder's answer
 before any code or copy carries it.
 
 ### 9.1 An owner can offer a handoff
@@ -210,6 +210,9 @@ The artist already starts a handoff from Profile. An offer would let the owner s
 instead of writing it in an email: `artist_seats` gains `handoff_offered_at`, the owner's seats panel shows **Offer the
 plan**, and the artist's card explains that accepting opens the same `seat_handoff` checkout. Nothing in billing moves
 until the artist completes that checkout, and an offer dies with the seat.
+
+**Built:** `handoff_offered_at` on the seat, **Offer this plan to the artist** / **Withdraw the offer** on the owner's
+list, and a line on the artist's card. The artist still starts the checkout themselves.
 
 **Undecided:** how long an offer stands (no number until the founder sets one), and whether the owner is told when the
 artist declines or ignores it.
@@ -221,6 +224,8 @@ is the record: a daily job (a `runSeatEndings` beside `runCatalogLapses`) sets `
 period has passed and that is not `handed_off`, so the owner's list, the seat count and the buyer's bill agree. It writes
 once and never deletes the seat.
 
+**Built:** `runSeatEndings` (`src/lib/seats.server.ts`) runs in the daily catalog-lapses cron and marks the seat `ended`.
+
 **Undecided:** whether the artist is emailed when their seat ends, and how long before — no timing is approved.
 
 ### 9.3 Seat-ending notices
@@ -229,11 +234,12 @@ Once 9.2 runs, the owner and the artist can be told the seat ended: what stays (
 what stops (the owner's access). **Undecided:** the wording, the timing, and whether a notice goes out before the date as
 well as after it.
 
-### 9.4 Delete rights on a lapsed seat
+### 9.4 Delete rights and keeping a catalog on Free
 
-The expiry fix stops edits, but whether an artist may delete their own songs and files after their plan ends is still
-open (section 5.3). **Needs a decision**, because the Refund Policy and the Free-plan copy promise read-only viewing and
-downloading, not deletion.
+**Decided (founder, 2026-11-08):** before the emptying date a member may keep the catalog on Free. Nothing is emptied,
+it stays read-only (view and download, no adding or editing), and a paid plan can be started whenever they are ready.
+The emptying still happens for anyone who does nothing, and it is not an account deletion: the account always stays.
+Deleting songs and files still needs a paid plan, which is why the Free state is read-only.
 
 ### 9.5 The Terms effective date
 

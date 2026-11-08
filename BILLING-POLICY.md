@@ -117,6 +117,13 @@ enters a card, and the first charge is the seat's renewal. Nothing is charged at
 - **If the artist cancels during the handoff period,** the handoff still stands: nothing was charged to them, the owner's
   seat already stopped renewing, and neither side is refunded.
 
+### 3.5 When a plan ends: Free keeps the catalog read-only
+
+A plan that ends stays read-only for 30 days so the member can download everything. Before the emptying date they can
+keep it on the Free plan instead: the catalog stays read-only and is not emptied, and they can start a paid plan
+whenever they are ready. Choosing Free is not a refund and changes no payment, and it never deletes the account — the
+account always stays.
+
 ---
 
 ## 4. What actually causes a dispute (chargeback)

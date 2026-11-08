@@ -32,7 +32,8 @@ export type RetentionEmail =
   | { kind: "paused"; startsOn: string; endsOn: string; plan: boolean }
   | { kind: "renewal"; plan: string; price: string; renewsOn: string; daysLeft: number }
   | { kind: "payment-failed"; plan: string; reminder: boolean }
-  | { kind: "renewed"; renewsOn: string };
+  | { kind: "renewed"; renewsOn: string }
+  | { kind: "kept-free" };
 
 function render(e: RetentionEmail): { subject: string; html: string } {
   switch (e.kind) {
@@ -52,6 +53,7 @@ function render(e: RetentionEmail): { subject: string; html: string } {
         : e.kind === "lapse-7" ? `7 days left: your catalog will be emptied on ${d}` : `Last day: your catalog will be emptied on ${d}`;
       return { subject: e.kind === "lapse-start" ? "Your plan ended: download your catalog" : e.kind === "lapse-7" ? "7 days left to download your catalog" : "Last day to download your catalog", html: page("Your catalog", heading, [
         `Your songs, masters and artwork are read-only until then. Download everything with one click, or renew to keep it all.`,
+        `You can also keep it on Free instead: your catalog stays read-only and is not emptied, and you can start a paid plan whenever you're ready. Choose it in Profile before this date.`,
         `Need more time? You can push the date back 30 days, or pause for 1 to 3 months, from Profile.`,
         KEPT,
       ], [workspace, "Download or renew"]) };
@@ -94,6 +96,12 @@ function render(e: RetentionEmail): { subject: string; html: string } {
         "Your 30-day refund window starts today, the day you paid.",
       ], [profile, "Open Profile"]) };
     }
+    case "kept-free":
+      return { subject: "Your catalog is kept, read-only, on Free", html: page("Your catalog", "Your catalog is kept on Free", [
+        "Nothing was emptied, and nothing will be. Your songs, masters and artwork stay right where they are, read-only: view and download, no adding or editing.",
+        "You can start a paid plan whenever you're ready and pick up exactly where you left off.",
+        KEPT,
+      ], [`${SITE_URL}/plans`, "See plans"]) };
     case "paused": {
       const s = escapeHtml(longDate(e.startsOn)), end = escapeHtml(longDate(e.endsOn));
       return { subject: `Your plan is paused until ${end}`, html: page("Pause", `Paused from ${s} to ${end}`, [

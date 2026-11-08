@@ -33,6 +33,14 @@ export const resumeNow = createServerFn({ method: "POST" })
     return { ok: true };
   }));
 
+/** Keep it on Free: the catalog stays read-only and is never emptied; a paid plan can start whenever they like. */
+export const keepCatalogOnFree = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => run("Keeping it on Free", async () => {
+    const { admin, keepOnFree } = await import("@/lib/retention.server");
+    return keepOnFree(await admin(), context.userId);
+  }));
+
 export const setPlanCancelling = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d) => z.object({ cancel: z.boolean() }).parse(d))

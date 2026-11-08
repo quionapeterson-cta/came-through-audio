@@ -9,6 +9,30 @@ const FROM = "Came Through Audio <collaborate@camethroughaudio.com>";
 const esc = escapeHtml;
 
 /**
+ * The owner's offer (founder, 2026-11-08): "this plan is yours if you want it". It changes nothing in billing; the
+ * artist still completes the same seat-handoff checkout, and withdrawing it changes nothing either.
+ */
+export const offerSeatHandoff = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d) => z.object({ seatId: z.string().uuid(), offer: z.boolean() }).parse(d))
+  .handler(async ({ data, context }) => {
+    const { data: seat, error } = await context.supabase.from("artist_seats" as never)
+      .select("id, owner_id, status, member_user_id")
+      .eq("id" as never, data.seatId as never).maybeSingle();
+    if (error) throw new Error(`Couldn't open that seat (${error.message}).`);
+    const s = seat as { id: string; owner_id: string; status: string; member_user_id: string | null } | null;
+    if (!s || s.owner_id !== context.userId) throw new Error("That seat isn't on your account.");
+    if (s.status === "handed_off") throw new Error("The artist pays for this plan themselves now.");
+    if (s.status === "ended") throw new Error("That seat has ended.");
+    if (!s.member_user_id) throw new Error("Send the seat invite first: an offer needs the artist on the seat.");
+    const { error: saveError } = await context.supabase.from("artist_seats" as never)
+      .update({ handoff_offered_at: data.offer ? new Date().toISOString() : null, updated_at: new Date().toISOString() } as never)
+      .eq("id" as never, s.id as never);
+    if (saveError) throw new Error(saveError.message);
+    return { offered: data.offer };
+  });
+
+/**
  * Sends an add-on artist seat to the artist's email (founder, 2026-11-04). The seat must be one the caller paid for;
  * RLS on artist_seats means a seat belonging to someone else is simply not found. The email carries a link to
  * /seat/<id>, where the artist signs up with that address and accepts, the same way an invited signature works.

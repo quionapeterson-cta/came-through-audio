@@ -1,14 +1,14 @@
 import { useEffect, useState, type ReactNode } from "react";
-import { CalendarClock, CreditCard, PauseCircle, PlayCircle, RefreshCw, TriangleAlert, XCircle } from "lucide-react";
+import { CalendarClock, CreditCard, Leaf, PauseCircle, PlayCircle, RefreshCw, TriangleAlert, XCircle } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { confirmAction } from "@/components/ConfirmHost";
 import { openBilling, openCheckout } from "@/lib/checkout";
-import { needMoreTime, resumeNow, setPlanCancelling } from "@/lib/retention.functions";
+import { keepCatalogOnFree, needMoreTime, resumeNow, setPlanCancelling } from "@/lib/retention.functions";
 import { hasTier, PLAN_TIERS, refundDaysLeft, TIER_LABEL, type Tier } from "@/lib/plans";
 import { proratedRefundCents } from "@/lib/billing-console";
-import { canRenewEarly, currentPause, earlyRenewalTarget, extendedRenewal, inGrace, offers, renewalDate, PAUSE_MONTHS, pauseSpan, VAULT_PRICE, type Lapse, type Pause, type PlanSub } from "@/lib/retention";
+import { canRenewEarly, currentPause, earlyRenewalTarget, extendedRenewal, inGrace, keptOnFree, offers, renewalDate, PAUSE_MONTHS, pauseSpan, VAULT_PRICE, type Lapse, type Pause, type PlanSub } from "@/lib/retention";
 
 const longDate = (d: string | Date) => new Date(d).toLocaleDateString(undefined, { month: "long", day: "numeric", year: "numeric" });
 const money = (n: number) => `$${n.toFixed(2)}`;
@@ -43,6 +43,13 @@ function useRetention({ sub, lapse, pauses, onChanged }: Account) {
     await act(() => needMoreTime(), plan ? `Your plan now renews on ${longDate(until)}.` : `Your catalog is kept until ${longDate(until)}.`);
   }
 
+  async function keepFree() {
+    if (!(await confirmAction({ tone: "primary", action: "Keep it on Free", cancel: "Not now",
+      title: "Keep your catalog read-only on Free?",
+      text: "Nothing is emptied. Your songs, masters and artwork stay read-only, so you can view and download them, and you can start a paid plan whenever you're ready." }))) return;
+    await act(() => keepCatalogOnFree(), "Your catalog stays read-only on Free. Nothing is emptied.");
+  }
+
   async function resume() {
     if (!pause) return;
     const started = new Date(pause.starts_at) <= new Date();
@@ -58,7 +65,7 @@ function useRetention({ sub, lapse, pauses, onChanged }: Account) {
   }
 
   const pauseDialog = <PauseDialog open={pauseOpen} onOpenChange={setPauseOpen} sub={sub} />;
-  return { o, pause, busy, act, extend, resume, updateCard, openPause: () => setPauseOpen(true), pauseDialog };
+  return { o, pause, busy, act, extend, keepFree, resume, updateCard, openPause: () => setPauseOpen(true), pauseDialog };
 }
 
 /** Plan B buttons: Need more time and Pause, when they're available. */
@@ -94,7 +101,7 @@ export function FailedRenewalBanner(props: Account) {
 export function GraceOffers(props: Account) {
   const r = useRetention(props);
   if (!inGrace(props.lapse) || props.sub?.stripe_subscription_id) return null;
-  return <><OfferButtons r={r} />{r.pauseDialog}</>;
+  return <><Button variant="outline" disabled={r.busy} onClick={() => void r.keepFree()}><Leaf />Keep it on Free</Button><OfferButtons r={r} />{r.pauseDialog}</>;
 }
 
 /**
@@ -106,7 +113,9 @@ export function RetentionControls({ tier, ...account }: Account & { tier: Tier }
   const [cancelOpen, setCancelOpen] = useState(false);
   const { sub, lapse } = account;
   const pause = r.pause;
-  const ended = !sub?.stripe_subscription_id && inGrace(lapse);
+  // Kept on Free is its own state: the plan ended, the catalog stays read-only, and there is no emptying date.
+  const kept = keptOnFree(lapse);
+  const ended = !sub?.stripe_subscription_id && (kept || inGrace(lapse));
   const renewable = canRenewEarly(sub, account.pauses);
 
   /** Renew now: pay next year early; the plan then runs a full year past the current renewal date. */
@@ -135,8 +144,13 @@ export function RetentionControls({ tier, ...account }: Account & { tier: Tier }
         {new Date(pause.starts_at) > new Date() ? `Paused from ${longDate(pause.starts_at)} to ${longDate(pause.ends_at)}.` : `Paused until ${longDate(pause.ends_at)}.`}{" "}
         <span className="text-muted-foreground">Your catalog is read-only while paused.</span>
       </p>}
-      {ended && <>
-        <p className="w-full text-sm text-muted-foreground">Your plan ended. Your catalog will be emptied on {longDate(lapse!.empty_after)} unless you renew.</p>
+      {kept && <p className="w-full rounded-lg border border-primary/40 bg-accent/30 p-3 text-sm">
+        Your catalog is read-only on Free and will not be emptied. Start a paid plan whenever you are ready and pick up
+        exactly where you left off.
+      </p>}
+      {ended && !kept && <>
+        <p className="w-full text-sm text-muted-foreground">Your plan ended. Your catalog will be emptied on {longDate(lapse!.empty_after)} unless you renew or keep it on Free.</p>
+        <Button variant="outline" disabled={r.busy} onClick={() => void r.keepFree()}><Leaf />Keep it on Free</Button>
         <OfferButtons r={r} />
       </>}
       {renewable && <Button variant="outline" disabled={r.busy} onClick={() => void renewNow()}><RefreshCw />Renew now</Button>}

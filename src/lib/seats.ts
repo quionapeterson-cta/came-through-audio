@@ -21,6 +21,7 @@ export type ArtistSeat = {
   environment: string;
   accepted_at: string | null;
   handed_off_at?: string | null;
+  handoff_offered_at?: string | null;
 };
 
 export type SeatInvite = {
@@ -32,7 +33,7 @@ export type SeatInvite = {
   ends_on: string | null;
 };
 
-const COLUMNS = "id, owner_id, tier, artist_name, invite_email, member_user_id, status, current_period_end, environment, accepted_at";
+const COLUMNS = "id, owner_id, tier, artist_name, invite_email, member_user_id, status, current_period_end, environment, accepted_at, handoff_offered_at";
 
 /** `ready: false` means the artist-seats migration hasn't run, so buying must stay off (no seat row could be written). */
 export type SeatState = { ready: boolean; seats: ArtistSeat[] };
@@ -66,6 +67,17 @@ export function seatIsLive(seat: ArtistSeat, now = new Date()) {
   if (seat.status === "canceled") return !!seat.current_period_end && new Date(seat.current_period_end) > now;
   return true;
 }
+
+/**
+ * An owner offered this plan to the artist (founder, 2026-11-08). Only an offer: nothing in billing moves until the
+ * artist completes the same handoff checkout, and the offer dies with the seat.
+ */
+export const handoffOffered = (seat: Pick<ArtistSeat, "handoff_offered_at">) => !!seat.handoff_offered_at;
+
+/** A seat whose paid period has passed is ended by the daily job. A handed-off seat is the artist's own plan now. */
+export const seatShouldEnd = (seat: Pick<ArtistSeat, "status" | "current_period_end">, now = new Date()) =>
+  ["unclaimed", "invited", "active", "canceled"].includes(seat.status)
+  && !!seat.current_period_end && new Date(seat.current_period_end) <= now;
 
 /** The invite behind /seat/<id>, readable without an account (the link is what the email carries). */
 export async function getSeatInvite(seatId: string): Promise<SeatInvite | null> {

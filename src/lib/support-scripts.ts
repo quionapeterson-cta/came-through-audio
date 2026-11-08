@@ -90,6 +90,13 @@ export const SUPPORT_SCRIPTS: readonly SupportScript[] = [
     when: "An owner asks why an artist seat stopped, or either side asks what an artist taking their plan over means.",
     body: "Hi {{first_name}},\n\n{{detail}} is paying for their own plan now. Their first charge is at the seat's renewal on {{date}}, and nothing was charged at the handoff.\n\nThe seat you paid for stops renewing from that date. The time already paid for is not refunded or credited, and your access to their catalog, split sheets and contracts ended when the handoff completed. Your own plan and your other seats are unchanged.\n\nCame Through Audio",
   },
+  {
+    id: "billing-keep-on-free",
+    department: "billing",
+    title: "Keeping a catalog on Free",
+    when: "A member's plan has ended and they ask what happens to their catalog, or whether they have to pay to keep it.",
+    body: "Hi {{first_name}},\n\nYour plan has ended, so your catalog is read-only until {{date}}. You can download everything before then, or keep it on the Free plan instead: it stays read-only and is not emptied, and you can start a paid plan whenever you're ready.\n\nSigned split sheets, contracts and AI Protection certificates are always kept, and your account itself is never deleted when a plan ends.\n\nCame Through Audio",
+  },
 
   // ── Support ────────────────────────────────────────────────────────────────────────────────────────────────────
   {
