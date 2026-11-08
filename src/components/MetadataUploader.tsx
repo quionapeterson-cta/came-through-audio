@@ -10,6 +10,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { InfoTip } from "@/components/InfoTip";
 import { CopyrightInput } from "@/components/CopyrightInput";
 import { StarsAligned } from "@/components/StarsAligned";
+import { burstConfetti } from "@/components/Confetti";
+import { claimFirstBurst } from "@/lib/celebrate";
 import { EXPORT_REQUIRED, GLOSSARY, type GlossaryKey } from "@/lib/glossary";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { OFFICIAL_MASTER_ACTION, PRE_DIST_NOTE, PRO_TIP, SOVEREIGN_BACKUP } from "@/lib/copy";
@@ -121,12 +123,15 @@ export function MetadataUploader({ onShareInfo, userId, mode = "embed", readOnly
   const [zipping, setZipping] = useState<string | null>(null);
   // Songs that came out of a ZIP incomplete, each with what to add: shown as a list with a Fix link per item.
   const [gaps, setGaps] = useState<DownloadGap[]>();
-  const zip = async (label: string, run: () => Promise<ZipResult>) => {
+  // `first`: the task's first-time burst (founder, 2026-11-08) — one ZIP of the whole catalog and one release ZIP each
+  // celebrate once per browser, and every later download stays quiet.
+  const zip = async (label: string, run: () => Promise<ZipResult>, first?: string) => {
     setZipping(label);
     try {
       const r = await run();
       // "Ready", never "downloaded": if the browser blocked the file, the message under it carries a Save button.
       if (r.gaps.length) setGaps(r.gaps);
+      if (first && claimFirstBurst(first)) burstConfetti();
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Could not build the download. Try again in a moment.");
     } finally { setZipping(null); }
@@ -835,12 +840,12 @@ export function MetadataUploader({ onShareInfo, userId, mode = "embed", readOnly
                     <Button type="button" variant="outline" size="sm" disabled={!!zipping}><Download />{zipping ?? "Download"}</Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end" className="max-h-80 overflow-y-auto">
-                    <DropdownMenuItem disabled={!!zipping} onClick={() => void zip(`Zipping ${tracks.length} songs…`, () => downloadWholeCatalog(undefined, kitId))} className="flex-col items-start gap-0.5">
+                    <DropdownMenuItem disabled={!!zipping} onClick={() => void zip(`Zipping ${tracks.length} songs…`, () => downloadWholeCatalog(undefined, kitId), "catalog_zip")} className="flex-col items-start gap-0.5">
                       <span className="font-semibold">The whole catalog</span>
                       <span className="text-xs text-muted-foreground">Every master, its artwork, lyrics and the catalog PDF in one ZIP.</span>
                     </DropdownMenuItem>
                     {groupReleases(tracks).map((r) => (
-                      <DropdownMenuItem key={r.key} disabled={!!zipping} onClick={() => void zip(`Zipping ${r.album}…`, () => downloadRelease(r, undefined, kitId))} className="flex-col items-start gap-0.5 border-t border-border">
+                      <DropdownMenuItem key={r.key} disabled={!!zipping} onClick={() => void zip(`Zipping ${r.album}…`, () => downloadRelease(r, undefined, kitId), "release_zip")} className="flex-col items-start gap-0.5 border-t border-border">
                         <span className="font-semibold">Just {r.album}</span>
                         <span className="text-xs text-muted-foreground">{r.type} · {r.tracks.length} {r.tracks.length === 1 ? "song" : "songs"}</span>
                       </DropdownMenuItem>

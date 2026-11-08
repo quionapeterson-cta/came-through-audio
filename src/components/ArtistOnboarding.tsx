@@ -15,7 +15,6 @@ import { PUBLISHING_LABEL } from "@/lib/readiness";
 import { loadOnboarding, loadProfile, profileChecks, profileFilled, saveOnboarding, saveProfile, saveSeatArtistDefaults, withOwnWriter, type ArtistProfile, type Onboarding } from "@/lib/artist-profile";
 import { StarSky } from "@/components/StarSky";
 import { claimDefaultsSky } from "@/lib/celebrate";
-import { listTracks } from "@/lib/catalog";
 import { capShare, splitTotal } from "@/lib/splits-total";
 import { TIER_LABEL } from "@/lib/plans";
 import { ArtistSeats } from "@/components/ArtistSeats";
@@ -97,8 +96,6 @@ export function ArtistOnboarding({ userId, open, onOpenChange, onSaved, firstRun
   const [seatBox, setSeatBox] = useState(false);
   /** Saved at 100% filled: the defaults sky, the same celebration the two defaults blueprints lift (founder, 2026-11-06). */
   const [sky, setSky] = useState(false);
-  /** The newest catalogued song, written in the stars the way `StarsAligned` writes a title (founder, 2026-11-07). */
-  const [lastSong, setLastSong] = useState("");
 
   useEffect(() => {
     if (!open) return;
@@ -151,21 +148,14 @@ export function ArtistOnboarding({ userId, open, onOpenChange, onSaved, firstRun
     onSaved(final);
     onOpenChange(false);
     // A profile filled 100% is the defaults moment too, not just the two blueprints' checklists (founder, 2026-11-06).
-    // A title celebration writes its title in the stars, so the sky waits for the newest song to name (2026-11-07).
-    if (!other && profileFilled(final, saved)) {
-      void listTracks()
-        .then((tracks) => {
-          const title = tracks[0]?.title?.trim();
-          if (title && claimDefaultsSky()) { setLastSong(title); setSky(true); }
-        })
-        .catch(() => {});
-    }
+    // The sky names itself since 2026-11-08, so it no longer waits for a catalogued song to write in the stars.
+    if (!other && profileFilled(final, saved) && claimDefaultsSky()) setSky(true);
     toast.success(other ? `${other}'s embed defaults and catalog defaults are saved.` : firstRun ? "You're all set! Your saved details will prefill every new embed and catalog entry." : "Profile saved.");
   }
 
   return (
     <Dialog open={open} onOpenChange={(o) => { if (!firstRun) onOpenChange(o); }}>
-      {sky && lastSong && <StarSky rocket message={`\u201c${lastSong}\u201d`} sub="Both of your defaults are set, so every master you embed and every song you catalog starts finished." onDone={() => setSky(false)} />}
+      {sky && <StarSky rocket message="Embed defaults + Catalog Defaults 100%" sub="Both of your defaults are set, so every master you embed and every song you catalog starts finished." onDone={() => setSky(false)} />}
       <DialogContent className="max-h-[90vh] max-w-5xl overflow-y-auto" onInteractOutside={(e) => firstRun && e.preventDefault()} onEscapeKeyDown={(e) => firstRun && e.preventDefault()}>
         <ol className="flex flex-wrap gap-2 text-xs" aria-label="Setup steps">
           {STEPS.map((s, i) => {

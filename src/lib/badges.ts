@@ -59,6 +59,11 @@ export type BadgeDef = {
    * (11th–20th uses the first, and so on, then it cycles). The count and dates keep growing as ×N.
    */
   rotation?: string[];
+  /**
+   * `rotation` changes the art on every earning instead of after ten (founder, 2026-11-08): the badge's own `src` comes
+   * first, then each rotation art in turn, and the cycle starts again.
+   */
+  alternate?: boolean;
   /** Pop-up for the 2nd time on: "{nth}" becomes "12th". The first earning uses `popup`. */
   repeatPopup?: string;
   /** Already celebrated elsewhere (Genesis is claimed in onboarding), so it lands on the shelf without a pop-up. */
@@ -74,6 +79,7 @@ export const METRIC_UNIT: Record<string, [string, string]> = {
   hiphop: ["hip-hop track", "hip-hop tracks"], spiritual: ["spiritual hip-hop track", "spiritual hip-hop tracks"],
   agencyExports: ["agency export", "agency exports"], masterDownloads: ["embedded master", "embedded masters"], artUploads: ["cover art upload", "cover art uploads"],
   blueprintsChecked: ["blueprint finished", "blueprints finished"], contractsSignedExecutive: ["management or rights deal signed", "management or rights deals signed"],
+  registrationSubmissions: ["registration submitted", "registrations submitted"],
 };
 
 /** How many times a badge has been earned at this count: once at `goal`, then once per `every` beyond it. */
@@ -144,6 +150,12 @@ const CORE: BadgeDef[] = [
   { id: "paper_ready", title: "Paper Ready", collection: "core", tier: "standard", milestone: "Download your first agency export, then every 10 more", action: "Download an agency export", metric: "agencyExports", goal: 1, every: 10, src: `${S}/award_folder.png`,
     description: "Your songs left the building in the format the agencies want. This is the paperwork that turns plays into payments.",
     popup: "Exported! Your songs are on their way to get paid." },
+  // Every song submitted for Expert Registration Assistance (founder, 2026-11-08). One earning per submission, and the
+  // art swaps between the two pictures on each earning, so two submissions already look different on the shelf.
+  { id: "registration_submitted", title: "Registration Runner", collection: "core", tier: "standard", milestone: "Every song you submit for registration assistance", action: "Submit a song for registration", metric: "registrationSubmissions", goal: 1, every: 1, alternate: true, src: `${P}/hip_hop/dripping_ice_boombox.png`,
+    rotation: [`${P}/hip_hop/cta_chain_medallion.png`],
+    description: "Your song went to the agencies with every writer, share and code already checked. Each one you submit earns this again, and the art changes with it.",
+    popup: "Submitted! Your registration is on its way.", repeatPopup: "Submitted! Your {nth} registration is on its way." },
   { id: "checkup_champ", title: "Checkup Champ", collection: "core", tier: "standard", milestone: "Run a Royalty Health Check, once each month", action: "Run a monthly Health Check", metric: "healthCheckMonths", goal: 1, every: 1, src: `${P}/checkup_champ.webp`,
     description: "You unlocked where your money is instead of guessing. Every fix you make from here is money you were missing. Check in every month to earn it again.",
     popup: "Checkup done! Now you know where your money is." },
@@ -450,10 +462,20 @@ export const badgeById = (id: string) => ALL_BADGES.find((b) => b.id === id);
 export const ordinal = (n: number) => { const t = n % 100; const e = t >= 11 && t <= 13 ? "th" : (["th", "st", "nd", "rd"][n % 10] ?? "th"); return `${n}${e}`; };
 
 /** The art a task badge shows for its Nth earning: its own art for 1–10, then each rotation badge's art for 10 more. */
+/** A rotation entry is another badge's id, or a picture's own path (the registration badge's two pictures). */
+const rotationSrc = (entry: string, fallback: string) =>
+  entry.startsWith("/") ? entry : ROTATION_ART[entry] ?? badgeById(entry)?.src ?? fallback;
+
 export function rotationArt(badge: BadgeDef, times: number): string {
-  if (!badge.rotation?.length || times <= 10) return artUrl(badge.src);
-  const id = badge.rotation[(Math.floor((times - 1) / 10) - 1) % badge.rotation.length]!;
-  return artUrl(ROTATION_ART[id] ?? badgeById(id)?.src ?? badge.src);
+  if (!badge.rotation?.length) return artUrl(badge.src);
+  // A badge marked `alternate` swaps its picture on every earning, starting with its own art (founder, 2026-11-08).
+  if (badge.alternate) {
+    const all = [badge.src, ...badge.rotation.map((entry) => rotationSrc(entry, badge.src))];
+    return artUrl(all[(Math.max(1, times) - 1) % all.length]!);
+  }
+  if (times <= 10) return artUrl(badge.src);
+  const entry = badge.rotation[(Math.floor((times - 1) / 10) - 1) % badge.rotation.length]!;
+  return artUrl(rotationSrc(entry, badge.src));
 }
 /** Rotation art that isn't another badge's (drawn for the every-time set). */
 const ROTATION_ART: Record<string, string> = {

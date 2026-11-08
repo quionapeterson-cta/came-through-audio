@@ -153,7 +153,7 @@ export function Contracts({ userId, unlocked, onUpgrade, company = false, onOpen
 
         {view === "guides" && (!unlocked
           ? <UpgradeLock className="" title="Blueprints" tier="management" onUpgrade={onUpgrade} text="Step-by-step guides to running your music business, from royalty registration to touring, plus home recording cheat sheets for every genre." />
-          : <Guides workbench={workbench} focusId={focusGuide} onOpen={onOpen} lastSong={tracks[0]?.title} />)}
+          : <Guides workbench={workbench} focusId={focusGuide} onOpen={onOpen} />)}
 
         {view === "working" && !company && (
           <WorkingOn workbench={workbench} contracts={contracts} loading={loading}
@@ -329,7 +329,7 @@ function Pamphlet({ parts }: { parts: GuideSection[] }) {
 }
 
 /** Blueprints (business guides) and home recording cheat sheets, in two titled, collapsible groups. */
-function Guides({ workbench, focusId, onOpen, lastSong }: { workbench: Workbench; /** Opened from Working On: start with this one expanded. */ focusId?: string | undefined; onOpen?: ((link: GuideLink) => void) | undefined; /** The newest catalogued song, written in the stars the way `StarsAligned` writes a title (founder, 2026-11-07). */ lastSong?: string | undefined }) {
+function Guides({ workbench, focusId, onOpen }: { workbench: Workbench; /** Opened from Working On: start with this one expanded. */ focusId?: string | undefined; onOpen?: ((link: GuideLink) => void) | undefined }) {
   const groups: [string, string, Guide[]][] = [["Blueprints", `${BLUEPRINT_GUIDES.length} step by step guides to running your music business`, BLUEPRINT_GUIDES], ["Home recording cheat sheets", "Setup, genre tips and quick fixes", CHEAT_SHEETS]];
   const [openId, setOpenId] = useState<string | undefined>(focusId);
   /** What the member is typing into "add your own item", per guide. */
@@ -377,8 +377,8 @@ function Guides({ workbench, focusId, onOpen, lastSong }: { workbench: Workbench
       const at = ticked.findIndex((e) => e.kind === "blueprint" && e.itemId === entryId);
       if (at >= 0) ticked[at] = { ...ticked[at]!, checked: next.checked };
       else ticked.push({ kind: "blueprint", itemId: entryId, checked: next.checked, pinned: false });
-      // A title celebration always writes its title in the stars, so no title means no sky (founder, 2026-11-07).
-      if (defaultsFinished(ticked) && lastSong && claimDefaultsSky()) setSky(true);
+      // The sky names the moment itself since 2026-11-08, so it no longer waits for a song title to write in the stars.
+      if (defaultsFinished(ticked) && claimDefaultsSky()) setSky(true);
     }
   };
   /**
@@ -397,7 +397,7 @@ function Guides({ workbench, focusId, onOpen, lastSong }: { workbench: Workbench
   return (
     <section className="space-y-4">
       {celebrating && <div className="pointer-events-none fixed inset-0 z-[85]"><Confetti /></div>}
-      {sky && lastSong && <StarSky rocket message={`\u201c${lastSong}\u201d`} sub="Both of your defaults are set, so every master you embed and every song you catalog starts finished." onDone={() => setSky(false)} />}
+      {sky && <StarSky rocket message="Embed defaults + Catalog Defaults 100%" sub="Both of your defaults are set, so every master you embed and every song you catalog starts finished." onDone={() => setSky(false)} />}
       {groups.map(([name, hint, list]) => {
         const open = openGroup === name;
         return (

@@ -64,3 +64,22 @@ export function celebrateReturn(now = new Date()): boolean {
   if (!markVisit(now)) return false;
   return back;
 }
+
+/**
+ * The first-time burst for a workspace task that earns confetti once and nothing after (founder, 2026-11-08): the whole
+ * catalog ZIP, a release ZIP, a Royalty Health Report and a filled-and-signed PDF. Each task has its own key, so the
+ * first time a member does it the confetti plays and the next time it stays quiet. A browser that blocks storage still
+ * celebrates once, like the defaults sky, rather than silently never.
+ */
+export const FIRST_BURST_PREFIX = "cta.firstBurst.";
+
+export function claimFirstBurst(task: string, now = new Date()): boolean {
+  const key = `${FIRST_BURST_PREFIX}${task}`;
+  try {
+    if (localStorage.getItem(key)) return false;
+    localStorage.setItem(key, now.toISOString());
+    return true;
+  } catch {
+    return true;
+  }
+}

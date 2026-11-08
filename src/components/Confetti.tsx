@@ -1,4 +1,5 @@
 import { useEffect, useRef } from "react";
+import { createRoot } from "react-dom/client";
 
 /**
  * A short burst of brand-coloured confetti (founder, 2026-11-05). Shared by Admin's sign-in welcome and the member
@@ -27,4 +28,19 @@ export function Confetti({ pieces = 120, frames = 150, className = "pointer-even
     return () => cancelAnimationFrame(raf);
   }, [pieces, frames]);
   return <canvas ref={ref} aria-hidden className={className} />;
+}
+
+/**
+ * The same burst, played over the page for a task with no celebration of its own (founder, 2026-11-08): the whole catalog
+ * ZIP, a release ZIP, a Royalty Health Report and a filled-and-signed PDF. It mounts the shared `Confetti` for a couple of
+ * seconds and takes it away again, so a caller needs one line and no overlay of its own, and reduced motion still skips it.
+ */
+export function burstConfetti(ms = 2600) {
+  if (typeof document === "undefined") return;
+  const at = document.createElement("div");
+  at.className = "pointer-events-none fixed inset-0 z-[95]";
+  document.body.appendChild(at);
+  const root = createRoot(at);
+  root.render(<Confetti />);
+  window.setTimeout(() => { root.unmount(); at.remove(); }, ms);
 }

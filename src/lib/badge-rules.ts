@@ -20,6 +20,8 @@ export type BadgeData = {
   events: { agency_export: number; master_download: number; blueprint_read: number };
   /** The member's own blueprint rows: one per run, with its ticks (public.workbench_items). */
   blueprints?: { itemId: string; checked: string[] }[];
+  /** Songs already submitted for Expert Registration Assistance (public.registration_songs.submitted_at). */
+  registrationSubmissions?: number;
   welcomed: boolean;
   /** The user's own names (stage, legal), to find songs where they're in Produced by. */
   names: string[];
@@ -165,6 +167,7 @@ export function badgeMetrics(d: BadgeData): Record<string, number> {
     splitsSigned: signedSheets.length,
     signedSplits3: signedSheets.filter(([, rows]) => collaborators(rows) >= 3).length,
     signedSplits4: signedSheets.filter(([, rows]) => collaborators(rows) >= 4).length,
+    registrationSubmissions: d.registrationSubmissions ?? 0,
     contractsDrafted: d.contracts.length,
     contractsSent: d.contracts.filter((c) => c.status === "sent" || c.status === "signed").length,
     contractsSigned: signedContracts,

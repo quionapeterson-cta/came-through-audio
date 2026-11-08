@@ -139,7 +139,7 @@ function LinkSigning({ token }: { token: string }) {
 
   return (
     <Shell>
-      {sky && <StarSky message="It's a done deal!" sub="Every party has signed. The agreement is locked, and the signed copy is ready to download." onDone={() => { setSky(false); requestBadgeCheck(); }} />}
+      {sky && invite && <StarSky rocket names={invite.parties.map((p) => p.name)} message={invite.parties.map((p) => p.name).join(" X ") || "It's a done deal!"} sub="It's a done deal! Every party has signed. The agreement is locked, and the signed copy is ready to download." onDone={() => { setSky(false); requestBadgeCheck(); }} />}
       {error ? (
         <div className="rounded-2xl border border-destructive p-8 text-center"><p className="font-semibold">{error}</p></div>
       ) : !invite ? (
@@ -215,7 +215,7 @@ function AccountSigning() {
 
   return (
     <Shell right={user && <Button variant="ghost" size="sm" className="text-ink-muted hover:bg-ink-border hover:text-ink-foreground" onClick={() => supabase.auth.signOut()}><LogOut className="h-4 w-4" /> Log out</Button>}>
-        {sky && <StarSky message="It's a done deal!" sub="Every party has signed. The agreement is locked and stored, and the signed copy is ready for you." onDone={() => { setSky(false); requestBadgeCheck(); }} />}
+        {sky && invite && <StarSky rocket names={invite.parties.map((p) => p.name)} message={invite.parties.map((p) => p.name).join(" X ") || "It's a done deal!"} sub="It's a done deal! Every party has signed. The agreement is locked and stored, and the signed copy is ready for you." onDone={() => { setSky(false); requestBadgeCheck(); }} />}
         {user && <BadgeWatcher userId={user.id} />}
         {loading ? (
           <Loader2 className="mx-auto h-6 w-6 animate-spin text-primary" />

@@ -13,6 +13,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { confirmAction } from "@/components/ConfirmHost";
 import { sendPdfEmail } from "@/lib/pdf-email.functions";
 import { buildPdf, PDF_EMAIL_MAX_BYTES, PDF_MAILBOXES, signedFileName, toBase64, type PdfFieldValues, type PdfMailbox, type PdfMark } from "@/lib/pdf-tools";
+import { burstConfetti } from "@/components/Confetti";
+import { claimFirstBurst } from "@/lib/celebrate";
 
 /** A fill-in box from the PDF's own form, in on-screen pixels. */
 type FieldBox = {
@@ -185,6 +187,8 @@ export function PdfTools({ canEmail = true, title = "PDF Tools" }: { canEmail?: 
 
   async function download() {
     setBusy(true);
+    // The first filled-and-signed PDF is a first (founder, 2026-11-08): confetti once per browser, then quiet.
+    const first = claimFirstBurst("pdf_signed");
     try {
       const bytes = await finished();
       const url = URL.createObjectURL(new Blob([bytes as BlobPart], { type: "application/pdf" }));
@@ -193,6 +197,7 @@ export function PdfTools({ canEmail = true, title = "PDF Tools" }: { canEmail?: 
       a.download = signedFileName(file!.name);
       a.click();
       setTimeout(() => URL.revokeObjectURL(url), 1000);
+      if (first) burstConfetti();
     } catch (e) {
       console.error(e);
       toast.error("Couldn't build the PDF. Try again, or tell the Software team which file it was.");

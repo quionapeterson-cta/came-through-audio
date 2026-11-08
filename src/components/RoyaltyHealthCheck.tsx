@@ -15,6 +15,8 @@ import { catalogScope, deleteReport, listReports, releaseScope, sameScope, saveR
 import { HealthCheckIn, type IntakeKind } from "@/components/HealthCheckIn";
 import { creditName } from "@/lib/metadata";
 import { downloadCheckupPdf } from "@/lib/checkup-pdf";
+import { burstConfetti } from "@/components/Confetti";
+import { claimFirstBurst } from "@/lib/celebrate";
 import { AgencyLists } from "@/components/AgencyLists";
 import { listKey, type ListResult, type SavedListSummary } from "@/lib/agency-lists";
 import type { Society } from "@/lib/repertoires";
@@ -490,7 +492,7 @@ export function RoyaltyHealthCheck({ userId, canCatalog, canExport, onUpgrade, o
       <RoyaltyReport checkup={checkup} since={since} prerelease={reportRows.filter(({ c }) => c.prerelease).map(({ r, c }) => ({ id: r.track.id, title: r.track.title || "Untitled", pct: c.pct,
         items: c.steps.filter((s) => s.stage === "release" || (s.stage === "register" && s.id !== "intl")).map((s) => ({ title: s.title, done: s.done, optional: s.optional })) }))} scope={scopeName(view.scope)} onBack={() => setView({ kind: "hub" })} date={new Date().toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })} country={country.name}
         countryPicker={countryPicker} running={!!running} canExport={canExport} onRunCheckup={() => runCheck(view.scope)}
-        onPdf={() => downloadCheckupPdf(checkup, mostCommon(reportRows.map(({ r }) => r.track.artist)), country.name).catch(() => toast.error("Couldn't create the PDF. Try again."))} onAction={(a) => void act(a)} onExpert={book} onReminder={reminder}
+        onPdf={() => { const first = claimFirstBurst("health_report"); void downloadCheckupPdf(checkup, mostCommon(reportRows.map(({ r }) => r.track.artist)), country.name).then(() => { if (first) burstConfetti(); }).catch(() => toast.error("Couldn't create the PDF. Try again.")); }} onAction={(a) => void act(a)} onExpert={book} onReminder={reminder}
         onAskCowriter={canCatalog && cowriters.length ? askCowriter : undefined} />
       {/* Step 4: treatment. Registrations need every writer's PRO and IPI, so the requests live with the prescriptions. */}
       {(ipiRequests.length > 0 || cowriters.length > 0) && canCatalog && (

@@ -69,6 +69,109 @@ The mechanics are built (`every`, `×N`, the Repeatable section, per-badge art r
    product decision, so a proposal to retune them (for example making the 100-song badges repeat at 50) waits for an
    explicit yes, and is listed in `PLAN-pricing-badges.md` rather than slipped in here.
 
+### Every repeatable badge, and the task it repeats on
+
+57 of the 125 live badges repeat: each has `every` set in `src/lib/badges.ts`, so it comes back each time the member does the task again. The numbers are always in the task's own unit (masters, lyrics, split sheets, songs), the shelf shows the earnings as `×N` ("Earned … · 3 times"), and a badge with `repeatPopup` counts out loud ("your 4th…"). Nothing here is new: these are the intervals live today, and retuning one is a product decision (§3.3).
+
+**Came Through** — 14 repeating badges
+
+| Task | Badge | First earning | Repeats every | Art on later repeats |
+| --- | --- | --- | --- | --- |
+| Ready a song to register | Came Strong | 1 | 1 | Doubled Up → Full Band → The Vault (its own art for the first 10, then one per 10) |
+| Seal a song's paperwork | Chain of Title | 1 | 1 | no, the same picture |
+| Run a monthly Health Check | Checkup Champ | 1 | 1 | no, the same picture |
+| Upload album art | Cover Story | 1 | 1 | the second cover art → the third cover art (its own art for the first 10, then one per 10) |
+| Embed a master | Embedded | 1 | 1 | First Note → the vinyl art → the band art (its own art for the first 10, then one per 10) |
+| Catalog a full album | Full Album | 1 | 1 | no, the same picture |
+| Credit 3+ performers | Full Band | 1 | 1 | no, the same picture |
+| Catalog a full EP | Full EP | 1 | 1 | no, the same picture |
+| Ready a full EP or album | Full Release | 1 | 1 | no, the same picture |
+| Embed your first master | Master Crowned | 1 | 1 | no, the same picture |
+| Download an agency export | Paper Ready | 1 | 10 | no, the same picture |
+| Sign 10 agreements | Deal Maker | 10 | 10 | no, the same picture |
+| Ready 10 songs to register | Doubled Up | 10 | 10 | no, the same picture |
+| Store 25 masters | The Vault | 25 | 25 | no, the same picture |
+
+**Lyrics** — 2 repeating badges
+
+| Task | Badge | First earning | Repeats every | Art on later repeats |
+| --- | --- | --- | --- | --- |
+| Embed a lyric | First Lyric Entry | 1 | 1 | Word Weaver → Lyrical Genius → Lyric Lover → Hook Keeper → Verse Vault (its own art for the first 10, then one per 10) |
+| Embed 100 lyrics | Lyrical Legacy | 100 | 100 | no, the same picture |
+
+**Split Sheets** — 3 repeating badges
+
+| Task | Badge | First earning | Repeats every | Art on later repeats |
+| --- | --- | --- | --- | --- |
+| Collect a signature | High Five | 1 | 1 | no, the same picture |
+| Get a split sheet signed | Sealed | 1 | 1 | Fist Bump Deal → Three-Way Collab → Studio Circle → Piggy Bank Split → Hands In (its own art for the first 10, then one per 10) |
+| Get 100 splits signed | Written in the Stars | 100 | 100 | no, the same picture |
+
+**Contracts & Blueprints** — 4 repeating badges
+
+| Task | Badge | First earning | Repeats every | Art on later repeats |
+| --- | --- | --- | --- | --- |
+| Finish a blueprint checklist | Blueprints Checked | 1 | 1 | no, the same picture |
+| Fully sign a management or rights deal | Executive Contracts | 1 | 1 | no, the same picture |
+| Get a contract signed | Fully Executed | 1 | 1 | no, the same picture |
+| Get 75 contracts signed | Executive Legacy | 75 | 75 | no, the same picture |
+
+**Royalty Health** — 2 repeating badges
+
+| Task | Badge | First earning | Repeats every | Art on later repeats |
+| --- | --- | --- | --- | --- |
+| Get a song 100% healthy | Silver Crown | 1 | 1 | Jeweled Crown → Gold Crown (its own art for the first 10, then one per 10) |
+| Get 50 songs 100% healthy | Gold Crown | 50 | 50 | no, the same picture |
+
+**AI Protection** — 4 repeating badges
+
+| Task | Badge | First earning | Repeats every | Art on later repeats |
+| --- | --- | --- | --- | --- |
+| Protect a song | AI Slayer | 1 | 1 | no, the same picture |
+| Protect 10 songs | Time Witness | 1 | 10 | Shield Up → Sound Sealed → Key Keeper (its own art for the first 10, then one per 10) |
+| Protect 10 songs | Shield Up | 10 | 10 | no, the same picture |
+| Protect 25 songs | Key Keeper | 25 | 25 | no, the same picture |
+
+**Producer** — 2 repeating badges
+
+| Task | Badge | First earning | Repeats every | Art on later repeats |
+| --- | --- | --- | --- | --- |
+| Self-produce a ready song | Self-Produced | 1 | 1 | no, the same picture |
+| Produce 100 songs | Full Gold Beat Machine | 100 | 100 | no, the same picture |
+
+**Live Musicians** — 17 repeating badges
+
+| Task | Badge | First earning | Repeats every | Art on later repeats |
+| --- | --- | --- | --- | --- |
+| Credit players 100 times | Live Legend | 100 | 100 | no, the same picture |
+| Credit a performer on an instrument | Vocal Credit, Steel Pan Credit, Ukulele Credit, Electric Guitar Credit, Guitar Credit, Piano Credit, Drum Credit, Trumpet Credit, Saxophone Credit, Violin Credit, Cello Credit, Banjo Credit, Clarinet Credit, Trombone Credit, Harp Credit, Xylophone Credit (one badge per instrument) | 1 | 5 | no, the same picture |
+
+**Hip-Hop/Rap** — 3 repeating badges
+
+| Task | Badge | First earning | Repeats every | Art on later repeats |
+| --- | --- | --- | --- | --- |
+| Ready a hip-hop EP or album | Diamond Vinyl | 1 | 1 | no, the same picture |
+| Sign splits on a hip-hop song | Iced Dollar | 1 | 1 | no, the same picture |
+| Catalog 100 hip-hop songs | Dripping Ice Boombox | 100 | 100 | no, the same picture |
+
+**Spiritual Hip-Hop** — 3 repeating badges
+
+| Task | Badge | First earning | Repeats every | Art on later repeats |
+| --- | --- | --- | --- | --- |
+| Catalog a spiritual song | Positive Vibes | 1 | 1 | no, the same picture |
+| Catalog 5 more spiritual songs | Encourager | 5 | 5 | no, the same picture |
+| Catalog 50 spiritual songs | God-Led | 50 | 50 | no, the same picture |
+
+**Night Shift** — 3 repeating badges
+
+| Task | Badge | First earning | Repeats every | Art on later repeats |
+| --- | --- | --- | --- | --- |
+| Catalog a song 4–6 AM | In the Quiet | 1 | 1 | no, the same picture |
+| Catalog 5 songs, 9 PM–12 AM | Marathon | 1 | 1 | no, the same picture |
+| Catalog a song 12–4 AM | Midnight Oil | 1 | 1 | no, the same picture |
+
+The instrument credits are generated from `INSTRUMENTS` + `LIVE_STEPS` in `badges.ts`, so a new instrument gets its repeating credit badge as soon as its art and `every: 5` exist; the Medallion (10) and Star-Studded (25) steps above them do not repeat.
+
 ## 4. Celebration moments — one decision outstanding
 
 The three firings (both defaults, the 100% profile save, the fully signed contract) are built and approved, and the sky

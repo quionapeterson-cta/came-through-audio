@@ -49,6 +49,10 @@ export const checkBadges = createServerFn({ method: "POST" })
     if (catalogs.error) fail("catalog");
     if (held.error) fail("badges");
 
+    // Songs already sent to the agencies for registration assistance: a submission is stamped, a saved draft isn't.
+    const registrationSubmissions = await db.from("registration_songs" as never).select("submitted_at").eq("user_id", uid)
+      .then((r) => (r.error ? 0 : ((r.data ?? []) as { submitted_at: string | null }[]).filter((s) => s.submitted_at).length));
+
     const ob = (profile.data?.onboarding ?? {}) as { welcomed?: boolean; stageName?: string; legalName?: string; healthCountry?: string };
     const count = (kind: string) => ((events.data ?? []) as { kind: string }[]).filter((e) => e.kind === kind).length;
     const input: BadgeData = {
@@ -61,6 +65,7 @@ export const checkBadges = createServerFn({ method: "POST" })
       events: { agency_export: count("agency_export"), master_download: count("master_download"), blueprint_read: count("blueprint_read") },
       blueprints: ((workbench.data ?? []) as { item_id: string; checked: string[] | null }[])
         .map((r) => ({ itemId: r.item_id, checked: r.checked ?? [] })),
+      registrationSubmissions,
       welcomed: !!ob.welcomed,
       names: [ob.stageName, ob.legalName, profile.data?.stage_name, profile.data?.legal_name].filter((n): n is string => !!n?.trim()),
       healthCountry: ob.healthCountry,

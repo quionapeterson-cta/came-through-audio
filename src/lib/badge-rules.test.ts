@@ -1,6 +1,7 @@
 import { existsSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { ALL_BADGES, BADGES, badgeById, nextGoal, timesEarned, withArtist } from "@/lib/badges";
+import { ALL_BADGES, BADGES, badgeById, nextGoal, rotationArt, timesEarned, withArtist } from "@/lib/badges";
+import { artUrl } from "@/lib/art-url";
 import { badgeMetrics, evaluateBadges, instrumentOf, localTime, type BadgeData } from "@/lib/badge-rules";
 import { emptyMetadata, type Contributor, type Metadata } from "@/lib/metadata";
 
@@ -43,6 +44,16 @@ describe("badge catalog", () => {
     expect(badgeById("live_steel_pan_25")?.src).toContain("star_studded");
     expect(badgeById("live_cello_25")?.src).toContain("star_studded_cello");
   });
+  it("swaps the art on every earning for a badge marked alternate", () => {
+    const b = badgeById("registration_submitted")!;
+    const art = [1, 2, 3].map((n) => rotationArt(b, n));
+    expect(art[0]).toBe(artUrl(b.src));
+    expect(art[1]).toBe(artUrl(b.rotation![0]!));
+    expect(art[2]).toBe(art[0]);
+    // The ordinary rule still holds: the art holds for ten earnings, then the rotation takes over.
+    expect(rotationArt(badgeById("embedded")!, 10)).toBe(artUrl(badgeById("embedded")!.src));
+  });
+
   it("fills or drops the artist name in pop-ups", () => {
     expect(withArtist("This is huge, {artist}.", "Karma Came")).toBe("This is huge, Karma Came.");
     expect(withArtist("crown on, {artist}. You made history.", "")).toBe("crown on. You made history.");

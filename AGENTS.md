@@ -265,10 +265,10 @@
 - **Finishing both profile defaults lifts the rocket** (founder, 2026-11-06): `defaultsFinished` in
   `src/lib/workbench.ts` (a finished run of `embed-defaults` and of `catalog-defaults`, in either order) shows `StarSky`
   with the rocket over the usual checklist burst, once per browser (`claimDefaultsSky` in
-  `src/lib/celebrate.ts`). The line in the stars is the member's newest catalogued song title in curly quotes
-  (`listTracks`, newest first), with "Both of your defaults are set, so every master you embed and every song you
-  catalog starts finished." underneath. A title celebration always writes its title in the stars, so with no song to
-  name there is no sky (founder, 2026-11-07). The rocket and the sky's own motion are approved as they are — the rocket
+  `src/lib/celebrate.ts`). The line is the fixed title **Embed defaults + Catalog Defaults 100%** (founder, 2026-11-08),
+  with "Both of your defaults are set, so every master you embed and every song you catalog starts finished." underneath.
+  The fixed title replaced the newest song's title written in the stars, so the sky no longer needs a catalogued song to
+  fire. The rocket and the sky's own motion are approved as they are — the rocket
   was added to the original and nothing else about it moved — so never retune, reposition or re-letter it without being
   asked (founder, 2026-11-07). It is a launch, not a badge: no art, no metric.
 - **A 100% filled profile is the same moment** (founder, 2026-11-06): saving the profile with every default filled
@@ -283,8 +283,10 @@
   chapter, and impossible to fire twice; if a badge already covers it, it gets the badge and nothing else. Never add a
   sky for a count, a purchase, a renewal or a routine finish, and never stack a sky on a screen that already shows one.
 - **The contract sky waits for the last signature** (founder, 2026-11-06): only the signature that makes an agreement
-  fully signed shows `StarSky` with "It's a done deal!"; a partial signature stays a plain confirmation. When it closes,
-  the badge check runs, so the contract badge celebration follows the sky instead of arriving with it.
+  fully signed shows `StarSky`; a partial signature stays a plain confirmation. The title is the signers' own names, one
+  after another with " X " between them ("Karma Came X Cardi B X Nicki Minaj"), and "It's a done deal!" is the line
+  under it; the sky carries the rocket too (founder, 2026-11-08). When it closes, the badge check runs, so the contract
+  badge celebration follows the sky instead of arriving with it.
 - **Working On is the last tab** in Contracts & Blueprints (founder, 2026-11-06): the generator opens the row and the
   folder closes it, after Contracts, Blueprints and the Signed Vault.
 - **Working On always offers one next step** (founder, 2026-11-06): `nextStep` picks a dated item first, then the next
@@ -328,16 +330,12 @@
   **additive** — the rocket's launch was added to that sky and altered none of it — so a new idea is a new layer on top
   (a rocket, another shooting star, a badge), never a retime, a reposition, a re-letter or a restyle of what is already
   there. A change that cannot be additive waits for the founder to ask for it by name.
-- **A title is always written out in the stars** (founder, 2026-11-07): the sky shows its line as words in the sky, the
-  way the original does. A celebration may name a song, an agreement or a milestone, but the words are drawn in the
-  stars: never an image-only sky, never an icon or a badge standing in for the line, and never a slogan where a title
-  belongs. `StarSky`'s `message` is that line, so a caller with no title has nothing to celebrate yet and does not fire
-  the sky.
-- **The stars themselves spell the words** (founder, 2026-11-07): a title in a sky is *made of stars*, not type set on
-  top of one. `StarTitle` in `StarSky.tsx` does what `StarsAligned` has done since 2026-10-25 — draw the line offscreen
-  in Poppins, sample that shape, and fly single stars onto it until they hold the letters. Keep that method when adding
-  a title anywhere: never fall back to a styled `h1`/`h2` over a star field. The words stay a real heading for screen
-  readers (`sr-only`) and the drawing stays decorative, and it is dropped to its settled position under reduced motion.
+- **The sky's line is Poppins type again** (founder, 2026-11-08, replacing the star-drawn title of 2026-11-07): both
+  skies show their line as a real Poppins heading — words, never a picture, and never an icon or a badge where a title
+  belongs. `SkyTitle` in `StarSky.tsx` draws it, and a signers list arrives one name at a time with " X " between them
+  (reduced motion shows them all at once). The star-drawn title (`StarTitle`) is retired: do not restore it, or re-set a
+  line as a canvas, without the founder asking for it by name. The star field, the shooting stars, the rocket and every
+  timing around the line are untouched. `StarsAligned` is separate and stays exactly as it is.
 - **The title is drawn by the stars themselves** (founder, 2026-11-07): `StarsAligned` (`src/components/StarsAligned.tsx`,
   founder, 2026-10-25) is the original title celebration and stays exactly as it is: it samples the last song's title
   in Poppins, flies individual stars onto that shape so the words are spelled in the sky, and closes with "Catalog
