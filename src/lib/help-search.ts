@@ -3,7 +3,7 @@ import { FAQS } from "@/lib/faq";
 import { GLOSSARY } from "@/lib/glossary";
 import { GUIDES } from "@/lib/guides";
 import { PACKAGES } from "@/lib/proof";
-import { PLAN_TIERS, TIER_LABEL } from "@/lib/plans";
+import { ARTIST_SEAT_PRICES, PLAN_TIERS, TIER_LABEL } from "@/lib/plans";
 import { BRANDING_PRICE } from "@/lib/brand-kit";
 import { CONTRACT_PRICE } from "@/lib/contract-generator";
 import { VAULT_PRICE } from "@/lib/retention";
@@ -46,13 +46,14 @@ const ASKED: HelpAnswer[] = [
   { id: "price-branding", title: "How much is a Branding Kit?", text: `${BRANDING_PRICE} per kit per year, on any plan (Catalog Management includes one). Your logo, colors and font replace our header on your contracts; you can have a kit for each business.`, link: { label: "Set up your Branding Kit", to: "/profile#brand-kit" }, source: "FAQ" },
   { id: "price-contract", title: "How much is a generated contract?", text: `Describe your deal and the Contract Generator drafts it from our blueprints. Opening a draft as your contract is ${CONTRACT_PRICE}, on any plan, and you can send it for e-signature.`, source: "FAQ" },
   { id: "price-vault", title: "How much is the Vault (pause)?", text: `Once every 12 months you can pause your plan for 1 to 3 months for ${money(VAULT_PRICE)} per month. Your catalog stays safe and read-only while paused.`, source: "FAQ" },
+  { id: "price-seat", title: "How much is an add-on artist seat?", text: `Per added artist, per year: ${ARTIST_SEAT_PRICES.map((s) => `${TIER_LABEL[s.tier]} ${s.price}`).join(", ")}. The seat is its own yearly subscription paid by the owner, and the artist gets their own login, catalog and tools at the seat's tier.`, source: "FAQ" },
   { id: "ask-embed-vs-register", title: "What's the difference between embedding and registering?", text: "Embedding writes your credits and codes into the audio file itself, so the song carries its details wherever it goes. Registering tells the organizations that collect royalties (your PRO, The MLC, SoundExchange) that the song exists and who gets paid. You need both: embedding doesn't register a song.", source: "FAQ" },
   { id: "ask-which-pro", title: "Do I need a PRO, and which one should I join?", text: "If you write songs, yes: a PRO (performing rights organization) collects your performance royalties. In the US the main ones are ASCAP and BMI (SESAC and GMR are invitation-only). You can only belong to one as a writer. Both are fine; compare their sign-up steps and pick one.", source: "FAQ" },
   { id: "ask-cancel", title: "How do I cancel or pause my plan?", text: "Profile → Account. You can turn off renewal, push your renewal back 30 days once a year at no charge, or pause for 1 to 3 months with the Vault. Your songs stay downloadable either way.", link: { label: "Go to Profile", to: "/profile" }, source: "FAQ" },
   { id: "ask-change-email", title: "How do I change my email or password?", text: "Profile → Account → Change email or Change password. Both ask for your current password. A new email changes once you click the link we send to it.", link: { label: "Go to Profile", to: "/profile" }, source: "FAQ" },
   { id: "ask-badges", title: "What do badges do?", text: "Badges celebrate your progress as you catalog, register and protect your music. Share them to show your work. They have no cash value. Want to earn them again from the start? Profile → Badge settings → Reset my badges.", source: "FAQ" },
   { id: "ask-invite-split", title: "How do I invite a collaborator to sign a split sheet?", text: "Split Sheets → choose the song → Generate. Add each collaborator's name, email and share, sign as the owner, then send. They get an email to review and sign, plus a free 30-day Catalog & Collaborate trial. Collecting e-signatures starts with Catalog & Collaborate.", source: "FAQ" },
-  { id: "ask-private", title: "Is my music private?", text: "Yes. Your catalog, masters, splits, PRO and IPI numbers are visible only to you. Only what you choose to share (a share card, a split sheet you send) is seen by others.", source: "FAQ" },
+  { id: "ask-private", title: "Is my music private?", text: "Yes, with one exception: if another account pays for your artist seat, it can see your catalog, split sheets and contracts while that seat is live, because it's paying for your plan. Otherwise your catalog, masters, splits, PRO and IPI numbers are visible only to you. Only what you choose to share (a share card, a split sheet you send) is seen by others.", source: "FAQ" },
 ];
 
 /** Account basics people ask the chat that aren't FAQ questions. */
