@@ -1,9 +1,9 @@
 import { createFileRoute } from "@tanstack/react-router";
 
 /**
- * Daily cron endpoint: renewal reminders (90, 60, 30, 7 and 1 day ahead), the 30-day grace period for catalogs whose
- * plan ended, its reminders, and emptying on the date (PLAN-catalog-emptying.md), plus the seats whose paid period has
- * passed. Protected by the same bearer secret as the trial reminders; returns counts only.
+ * Daily cron endpoint: renewal reminders (90, 60, 30, 7 and 1 day ahead), keeping ended plans read-only on Free, the
+ * two-year inactivity deletion and its notices, staff offboarding, and the seats whose paid period has passed. Protected
+ * by the same bearer secret as the trial reminders; returns counts only.
  */
 export const Route = createFileRoute("/api/public/cron/catalog-lapses")({
   server: {
@@ -17,10 +17,11 @@ export const Route = createFileRoute("/api/public/cron/catalog-lapses")({
         const { runCatalogLapses, sendRenewalReminders } = await import("@/lib/retention.server");
         const { runStaffOffboarding } = await import("@/lib/staff-offboarding.server");
         const { runSeatEndings } = await import("@/lib/seats.server");
-        // Each part runs even if another fails, so a reminder problem never holds up the emptying or the offboarding.
-        const [renewals, lapses, offboarding, seats] = await Promise.allSettled([sendRenewalReminders(), runCatalogLapses(), runStaffOffboarding(), runSeatEndings()]);
+        const { runInactiveAccounts } = await import("@/lib/inactivity.server");
+        // Each part runs even if another fails, so a reminder problem never holds up the offboarding or a deletion.
+        const [renewals, lapses, offboarding, seats, inactivity] = await Promise.allSettled([sendRenewalReminders(), runCatalogLapses(), runStaffOffboarding(), runSeatEndings(), runInactiveAccounts()]);
         const out = (r: PromiseSettledResult<object>) => (r.status === "fulfilled" ? r.value : { error: String(r.reason) });
-        return Response.json({ ...out(renewals), ...out(lapses), ...out(offboarding), ...out(seats) });
+        return Response.json({ ...out(renewals), ...out(lapses), ...out(offboarding), ...out(seats), ...out(inactivity) });
       },
     },
   },

@@ -242,9 +242,12 @@
 - **The rule covers staff-plan accounts** (founder, 2026-11-05): accounts created under the staff plan, and staff who
   claim the offer inside their first 90 days. It is not a retroactive rule for older member accounts that were never on
   the staff plan.
-- **Catalog emptying is not account deletion**: `runCatalogLapses` removes a member's songs and files 30 days after a
-  plan ends and keeps the account. Nothing in the app deletes an account except the staff offboarding job above, so
-  never describe a canceled plan as "the account is deleted".
+- **A plan ending keeps the account on Free; inactivity deletes it** (founder, 2026-11-08, replacing catalog emptying):
+  `runCatalogLapses` removes nothing. A plan that ends leaves the catalog read-only on Free, kept for as long as the
+  account is used, and the member starts a paid plan whenever they are ready. Never describe a plan ending as deletion,
+  emptying or a download deadline. The only deletion without the member asking is `runInactiveAccounts`
+  (`src/lib/inactivity.ts`), two years after the last sign-in, with 60/30/7/1-day emails first; signing in, any paid plan,
+  a staff role or a live seat cancels it. `runStaffOffboarding` remains the other path, unchanged.
 
 ## Admin Hub & Team Culture (always follow)
 
@@ -446,7 +449,10 @@ Embedding is forgiving; registration is strict. Never block a user from saving o
 ### Before making changes
 - If a change touches writer fields, roles, readiness logic, or export templates, explain the plan and list affected files before editing.
 - Never delete or overwrite existing writer data. Any schema change needs a migration that preserves current data.
-  - Exception (approved 2026-10-21): a catalog is emptied 30 days after its plan ends, as the Refund Policy states (`runCatalogLapses` in src/lib/retention.server.ts). Signed split sheets, contracts, AI Protection certificates and agency registration records are kept.
+  - No exception any more (founder, 2026-11-08): a plan ending deletes nothing — the catalog stays read-only on Free, as
+    the Refund Policy now says. Deletion happens only through `runInactiveAccounts` (two years without a sign-in, with
+    reminders) or staff offboarding. Signed split sheets, contracts, AI Protection certificates and agency registration
+    records are kept with the account.
 
 ## Personal Branding Rules (always follow)
 

@@ -26,8 +26,6 @@ const profile = `${SITE_URL}/profile`;
 
 export type RetentionEmail =
   | { kind: "cancelled"; endsOn: string }
-  | { kind: "lapse-start" | "lapse-7" | "lapse-1"; emptyOn: string }
-  | { kind: "emptied"; songs: number }
   | { kind: "extended"; renewsOn: string; plan: boolean }
   | { kind: "paused"; startsOn: string; endsOn: string; plan: boolean }
   | { kind: "renewal"; plan: string; price: string; renewsOn: string; daysLeft: number }
@@ -40,29 +38,11 @@ function render(e: RetentionEmail): { subject: string; html: string } {
     case "cancelled": {
       const d = escapeHtml(longDate(e.endsOn));
       return { subject: `Your plan ends on ${d}`, html: page("Plan cancelled", `Your plan ends on ${d}`, [
-        `You keep full access until then. After that your catalog stays read-only for 30 days so you can download everything, then it's emptied.`,
+        `You keep full access until then. After that your catalog stays read-only on the Free plan and is not emptied: you can view and download everything, and start a paid plan whenever you're ready.`,
         `Changed your mind? Keep your plan anytime before ${d} in Profile.`,
         KEPT,
       ], [profile, "Keep my plan"]) };
     }
-    case "lapse-start":
-    case "lapse-7":
-    case "lapse-1": {
-      const d = escapeHtml(longDate(e.emptyOn));
-      const heading = e.kind === "lapse-start" ? `Your plan ended. Your catalog will be emptied on ${d}.`
-        : e.kind === "lapse-7" ? `7 days left: your catalog will be emptied on ${d}` : `Last day: your catalog will be emptied on ${d}`;
-      return { subject: e.kind === "lapse-start" ? "Your plan ended: download your catalog" : e.kind === "lapse-7" ? "7 days left to download your catalog" : "Last day to download your catalog", html: page("Your catalog", heading, [
-        `Your songs, masters and artwork are read-only until then. Download everything with one click, or renew to keep it all.`,
-        `You can also keep it on Free instead: your catalog stays read-only and is not emptied, and you can start a paid plan whenever you're ready. Choose it in Profile before this date.`,
-        `Need more time? You can push the date back 30 days, or pause for 1 to 3 months, from Profile.`,
-        KEPT,
-      ], [workspace, "Download or renew"]) };
-    }
-    case "emptied":
-      return { subject: "Your catalog was emptied", html: page("Your catalog", "Your catalog was emptied today", [
-        `${e.songs} song${e.songs === 1 ? "" : "s"}, with ${e.songs === 1 ? "its" : "their"} masters and artwork, ${e.songs === 1 ? "was" : "were"} removed 30 days after your plan ended.`,
-        `${KEPT} Come back anytime on a plan and start again.`,
-      ], [`${SITE_URL}/plans`, "See plans"]) };
     case "extended": {
       const d = escapeHtml(longDate(e.renewsOn));
       return { subject: `More time: ${e.plan ? "your plan now renews" : "your catalog is kept until"} ${d}`, html: page("Need more time", e.plan ? `Your plan now renews on ${d}` : `Your catalog is kept until ${d}`, [
@@ -86,7 +66,7 @@ function render(e: RetentionEmail): { subject: string; html: string } {
       return { subject: e.reminder ? "Reminder: your renewal still didn't go through" : "Your renewal didn't go through", html: page("Renewal payment", e.reminder ? "Your renewal still didn't go through" : "Your renewal didn't go through", [
         `We couldn't charge your card for ${plan}. Update your card to keep your plan; Stripe will try again over the next few weeks, and you keep full access meanwhile.`,
         "Need a little longer? You can move your renewal back 30 days free, or pause for 1 to 3 months, from Profile.",
-        "If it's never paid, your plan ends and your catalog stays read-only for 30 days before it's emptied.",
+        "If it's never paid, your plan ends and your catalog stays read-only on Free. Nothing is emptied, and you can start a paid plan whenever you're ready.",
       ], [profile, "Update my card"]) };
     }
     case "renewed": {

@@ -81,7 +81,7 @@ export const SUPPORT_SCRIPTS: readonly SupportScript[] = [
     department: "billing",
     title: "Cancelled — what happens to the music",
     when: "A plan is cancelled and they ask whether their catalog survives.",
-    body: "Hi {{first_name}},\n\nYour plan is cancelled and won't renew. You keep everything until {{date}}.\n\nAfter that your catalog stays where it is for 30 days, so you can renew and pick up exactly where you left off, or download everything. We email you before anything is removed, and signed split sheets, contracts and AI certificates are never deleted.\n\nCame Through Audio",
+    body: "Hi {{first_name}},\n\nYour plan is cancelled and won't renew. You keep everything until {{date}}.\n\nAfter that your account moves to the Free plan: your catalog stays read-only and nothing is emptied, so you can download everything or start a paid plan again whenever you're ready. Signed split sheets, contracts and AI certificates are always kept.\n\nCame Through Audio",
   },
   {
     id: "billing-seat-handed-over",
@@ -91,11 +91,18 @@ export const SUPPORT_SCRIPTS: readonly SupportScript[] = [
     body: "Hi {{first_name}},\n\n{{detail}} is paying for their own plan now. Their first charge is at the seat's renewal on {{date}}, and nothing was charged at the handoff.\n\nThe seat you paid for stops renewing from that date. The time already paid for is not refunded or credited, and your access to their catalog, split sheets and contracts ended when the handoff completed. Your own plan and your other seats are unchanged.\n\nCame Through Audio",
   },
   {
+    id: "billing-inactive-deletion",
+    department: "billing",
+    title: "An account is due for deletion after two years of inactivity",
+    when: "A member asks about the inactivity emails, or wants the scheduled deletion stopped.",
+    body: "Hi {{first_name}},\n\nThis account has had no sign-in for two years, so it is scheduled for deletion on {{date}}. Signing in before then keeps it: your songs, masters, artwork, split sheets, contracts and certificates stay exactly where they are, and the deletion is cancelled.\n\nIf you'd rather take your work with you, download everything before {{date}}. A plan ending is different and much less serious: that never deletes an account or empties a catalog, it just leaves it read-only on Free.\n\nCame Through Audio",
+  },
+  {
     id: "billing-keep-on-free",
     department: "billing",
     title: "Keeping a catalog on Free",
     when: "A member's plan has ended and they ask what happens to their catalog, or whether they have to pay to keep it.",
-    body: "Hi {{first_name}},\n\nYour plan has ended, so your catalog is read-only until {{date}}. You can download everything before then, or keep it on the Free plan instead: it stays read-only and is not emptied, and you can start a paid plan whenever you're ready.\n\nSigned split sheets, contracts and AI Protection certificates are always kept, and your account itself is never deleted when a plan ends.\n\nCame Through Audio",
+    body: "Hi {{first_name}},\n\nYour plan has ended, so your catalog is read-only on the Free plan. Nothing is emptied: your songs, masters and artwork stay exactly where they are, and you can download them or start a paid plan whenever you're ready.\n\nSigned split sheets, contracts and AI Protection certificates are always kept, and a plan ending never deletes your account.\n\nCame Through Audio",
   },
 
   // ── Support ────────────────────────────────────────────────────────────────────────────────────────────────────

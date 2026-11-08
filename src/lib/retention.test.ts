@@ -12,10 +12,11 @@ describe("need more time and pause", () => {
     expect(offers(sub({ current_period_end: "2027-06-10T00:00:00Z" }), null, [], now)).toMatchObject({ failing: false, canExtend: true, canPause: true });
     expect(offers(sub({ cancel_at_period_end: true }), null, [], now).canExtend).toBe(false);
   });
-  it("open after a failed renewal, and during the grace period once the plan has ended", () => {
+  it("open after a failed renewal, never once the plan has ended", () => {
     expect(offers(sub({ status: "past_due", current_period_end: "2027-10-01T00:00:00Z" }), null, [], now)).toMatchObject({ failing: true, canExtend: true });
+    // A lapsed plan is kept on Free automatically, so there is no countdown left to buy time in.
     const lapse = { plan_ended_at: "2026-10-10T00:00:00Z", empty_after: "2026-11-09T00:00:00Z", emptied_at: null };
-    expect(offers(null, lapse, [], now).canPause).toBe(true);
+    expect(offers(null, lapse, [], now).canPause).toBe(false);
     expect(offers(null, { ...lapse, emptied_at: "2026-11-09T00:00:00Z" }, [], now).canPause).toBe(false);
   });
   it("are each once every 12 months", () => {
@@ -51,14 +52,15 @@ describe("emptying reminders", () => {
   });
 });
 
-describe("keeping a catalog on Free", () => {
-  it("stops the emptying and its countdown, and nothing else", () => {
+describe("a plan that ends is kept on Free", () => {
+  it("keeps the catalog read-only with no countdown, whether or not the member pressed anything", () => {
     const lapse = { plan_ended_at: "2026-10-01T00:00:00Z", empty_after: "2026-11-01T12:00:00Z", emptied_at: null, kept_free_at: "2026-10-25T00:00:00Z" };
     expect(keptOnFree(lapse)).toBe(true);
     expect(inGrace(lapse, now)).toBe(false);
-    expect(keptOnFree({ ...lapse, kept_free_at: null })).toBe(false);
-    expect(inGrace({ ...lapse, kept_free_at: null }, now)).toBe(true);
-    // A catalog already emptied is not kept after the fact.
+    // Automatic now: a lapse nobody answered is still kept, with no emptying window to act in.
+    expect(keptOnFree({ ...lapse, kept_free_at: null })).toBe(true);
+    expect(inGrace({ ...lapse, kept_free_at: null }, now)).toBe(false);
+    // A catalog already emptied under the old rule is not kept after the fact.
     expect(keptOnFree({ ...lapse, emptied_at: "2026-11-01T12:00:00Z" })).toBe(false);
   });
 });

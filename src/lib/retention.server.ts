@@ -2,7 +2,7 @@ import { createStripeClient, type StripeEnv } from "@/lib/stripe.server";
 import { isActiveSub, PLAN_TIERS, TIER_LABEL, TIER_RANK, tierFromPrice } from "@/lib/plans";
 import { getPaymentsEnvironment } from "@/lib/payments-env";
 import {
-  addDays, dueReminder, dueRenewalReminder, earlyRenewalTarget, extendedRenewal, keptOnFree, RENEWAL_REMINDER_DAYS, GRACE_DAYS, offers, pauseSpan, shiftedEmptyAfter,
+  addDays, dueRenewalReminder, earlyRenewalTarget, extendedRenewal, keptOnFree, RENEWAL_REMINDER_DAYS, GRACE_DAYS, offers, pauseSpan, shiftedEmptyAfter,
   type Lapse, type Pause, type PlanSub,
 } from "@/lib/retention";
 import { sendRetentionEmail } from "@/lib/retention-email.server";
@@ -172,21 +172,25 @@ export async function emptyCatalog(db: Admin, userId: string): Promise<number> {
 }
 
 /**
- * Daily job: clears lapses for accounts that have a plan again, starts the 30 days for accounts whose plan ended,
- * sends the reminders that are due and empties catalogs on their date. Paused accounts are left alone.
+ * Daily job: clears the lapse row for anyone who has a plan again, and keeps every other ended plan read-only on Free.
+ * Nothing is emptied (founder, 2026-11-08, replacing catalog emptying): the songs, masters and artwork stay, the account
+ * can download them, and a paid plan can start whenever the member is ready. An unused account is only deleted by the
+ * separate two-year inactivity job, never because a plan ended.
  */
 export async function runCatalogLapses(now = new Date()) {
   const db = await admin();
-  const result = { cleared: 0, started: 0, reminded: 0, emptied: 0 };
+  const result = { cleared: 0, kept: 0 };
   const tierOf = async (uid: string) => (await db.rpc("user_tier" as never, { _uid: uid } as never)).data as unknown as string;
-  const pausedNow = async (uid: string) => !!(await db.rpc("is_paused" as never, { _uid: uid } as never)).data;
 
   const { data: rows, error } = await db.from("catalog_lapses" as never).select("user_id, plan_ended_at, empty_after, emptied_at, kept_free_at, reminders");
   if (error) throw error;
   const lapses = (rows ?? []) as unknown as (Lapse & { user_id: string; reminders: string[] })[];
+  // The ids cleared here must not be kept (or emailed) below: their plan is running again.
+  const paid = new Set<string>();
   for (const l of lapses) {
-    if ((await tierOf(l.user_id)) !== "free" && !(await pausedNow(l.user_id))) {
+    if ((await tierOf(l.user_id)) !== "free") {
       await db.from("catalog_lapses" as never).delete().eq("user_id", l.user_id);
+      paid.add(l.user_id);
       result.cleared += 1;
     }
   }
@@ -194,35 +198,20 @@ export async function runCatalogLapses(now = new Date()) {
   const { data: candidates } = await db.rpc("catalog_lapse_candidates" as never);
   for (const c of (candidates ?? []) as unknown as { user_id: string; plan_ended_at: string }[]) {
     if (known.has(c.user_id)) continue;
-    // Counted from when the plan ended, but never less than the full 30 days from today.
+    // empty_after is written only so the row keeps its shape; nothing acts on it any more.
     const from = new Date(Math.max(new Date(c.plan_ended_at).getTime(), now.getTime()));
-    const { error: insError } = await db.from("catalog_lapses" as never).insert({ user_id: c.user_id, plan_ended_at: c.plan_ended_at, empty_after: addDays(from, GRACE_DAYS).toISOString() } as never);
-    if (!insError) { result.started += 1; lapses.push({ user_id: c.user_id, plan_ended_at: c.plan_ended_at, empty_after: addDays(from, GRACE_DAYS).toISOString(), emptied_at: null, reminders: [] }); }
+    const emptyAfter = addDays(from, GRACE_DAYS).toISOString();
+    const { error: insError } = await db.from("catalog_lapses" as never).insert({ user_id: c.user_id, plan_ended_at: c.plan_ended_at, empty_after: emptyAfter } as never);
+    if (!insError) { result.kept += 1; lapses.push({ user_id: c.user_id, plan_ended_at: c.plan_ended_at, empty_after: emptyAfter, emptied_at: null, reminders: [] }); }
   }
 
   for (const l of lapses) {
-    // Kept on Free means the emptying and its reminders stop for good; a paid plan later clears the whole row above.
-    if (l.emptied_at || keptOnFree(l) || (await pausedNow(l.user_id))) continue;
-    const { data: still } = await db.from("catalog_lapses" as never).select("user_id").eq("user_id", l.user_id).maybeSingle();
-    if (!still) continue;
-    if (new Date(l.empty_after) <= now) {
-      // Re-checked right before deleting, so a renewal that landed this morning still wins.
-      if ((await tierOf(l.user_id)) !== "free") continue;
-      const songs = await emptyCatalog(db, l.user_id);
-      await db.from("catalog_lapses" as never).update({ emptied_at: now.toISOString(), songs_emptied: songs, updated_at: now.toISOString() } as never).eq("user_id", l.user_id);
-      const email = await emailOf(db, l.user_id);
-      if (email && songs) await sendRetentionEmail(email, { kind: "emptied", songs }, `emptied-${l.user_id}-${l.empty_after.slice(0, 10)}`);
-      result.emptied += 1;
-      continue;
-    }
-    const due = dueReminder(l, now);
-    if (!due) continue;
+    // Already emptied under the old rule: nothing left to keep, and never a promise that it came back.
+    if (paid.has(l.user_id) || l.emptied_at || l.kept_free_at) continue;
+    await db.from("catalog_lapses" as never).update({ kept_free_at: now.toISOString(), updated_at: now.toISOString() } as never).eq("user_id", l.user_id);
+    result.kept += 1;
     const email = await emailOf(db, l.user_id);
-    if (!email) continue;
-    if (await sendRetentionEmail(email, { kind: `lapse-${due.send}` as "lapse-start" | "lapse-7" | "lapse-1", emptyOn: l.empty_after }, `lapse-${due.send}-${l.user_id}-${l.empty_after.slice(0, 10)}`)) {
-      await db.from("catalog_lapses" as never).update({ reminders: [...new Set([...l.reminders, ...due.covers])], updated_at: now.toISOString() } as never).eq("user_id", l.user_id);
-      result.reminded += 1;
-    }
+    if (email) await sendRetentionEmail(email, { kind: "kept-free" }, `kept-free-${l.user_id}`);
   }
   return result;
 }

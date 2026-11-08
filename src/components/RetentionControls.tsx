@@ -97,7 +97,7 @@ export function FailedRenewalBanner(props: Account) {
   return <div className="mb-6"><FailingNotice r={r}>{r.pauseDialog}</FailingNotice></div>;
 }
 
-/** The workspace's grace-period offers (after a plan has ended, before the catalog is emptied). */
+/** Legacy countdown offers. The 30-day emptying is retired, so there is no window after a plan ends to offer them in. */
 export function GraceOffers(props: Account) {
   const r = useRetention(props);
   if (!inGrace(props.lapse) || props.sub?.stripe_subscription_id) return null;
@@ -149,7 +149,7 @@ export function RetentionControls({ tier, ...account }: Account & { tier: Tier }
         exactly where you left off.
       </p>}
       {ended && !kept && <>
-        <p className="w-full text-sm text-muted-foreground">Your plan ended. Your catalog will be emptied on {longDate(lapse!.empty_after)} unless you renew or keep it on Free.</p>
+        <p className="w-full text-sm text-muted-foreground">Your plan ended. Your catalog is read-only on Free and nothing is emptied; start a paid plan whenever you are ready.</p>
         <Button variant="outline" disabled={r.busy} onClick={() => void r.keepFree()}><Leaf />Keep it on Free</Button>
         <OfferButtons r={r} />
       </>}
@@ -246,7 +246,7 @@ function CancelPlanDialog({ open, onOpenChange, tier, sub, offers: o, onExtend, 
       <DialogContent className="max-w-lg">
         <DialogHeader>
           <DialogTitle>Before you go</DialogTitle>
-          <DialogDescription>{ends ? `If you cancel, you keep full access until ${longDate(ends)}. Then your catalog stays read-only for 30 days so you can download it, and is emptied after that.` : "If you cancel, your catalog stays read-only for 30 days after your plan ends, then it's emptied."}</DialogDescription>
+          <DialogDescription>{ends ? `If you cancel, you keep full access until ${longDate(ends)}. Then the account moves to Free: your catalog stays read-only and nothing is emptied, so you can download everything or start a paid plan whenever you're ready.` : "If you cancel, the account moves to Free: your catalog stays read-only and nothing is emptied."}</DialogDescription>
         </DialogHeader>
         {pastWindow && prorated > 0 && (
           <p className="rounded-lg border border-primary/40 bg-accent/30 p-3 text-sm">

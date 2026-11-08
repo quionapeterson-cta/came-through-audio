@@ -117,12 +117,20 @@ enters a card, and the first charge is the seat's renewal. Nothing is charged at
 - **If the artist cancels during the handoff period,** the handoff still stands: nothing was charged to them, the owner's
   seat already stopped renewing, and neither side is refunded.
 
-### 3.5 When a plan ends: Free keeps the catalog read-only
+### 3.5 When a plan ends: the account becomes Free, read-only
 
-A plan that ends stays read-only for 30 days so the member can download everything. Before the emptying date they can
-keep it on the Free plan instead: the catalog stays read-only and is not emptied, and they can start a paid plan
-whenever they are ready. Choosing Free is not a refund and changes no payment, and it never deletes the account — the
-account always stays.
+A plan that ends removes nothing. The account moves to the Free plan automatically: the catalog is read-only, nothing is
+emptied, and the member can view and download everything and start a paid plan whenever they are ready. This is not a
+refund and changes no payment, and it never deletes the account. The old 30-day emptying window is retired (founder,
+2026-11-08), so staff never tell a member their songs will be removed after a plan ends.
+
+### 3.6 Two years of inactivity deletes the account
+
+An account with no sign-in for two years is deleted (founder, 2026-11-08). Several emails go out first — 60, 30, 7 and 1
+days before the date, as a draft schedule — each naming the date and saying that one sign-in keeps the account and
+everything in it. Signing in, or buying any plan, cancels the deletion. A paying account, a staff account and an account on
+a live artist seat (as owner or artist) is never deleted for inactivity. The deletion removes the account, its catalog
+files and its records, so nothing is kept beyond what the Privacy Policy requires.
 
 ---
 

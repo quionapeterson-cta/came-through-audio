@@ -6,7 +6,10 @@
  */
 
 export const DAY = 86_400_000;
-/** Days a catalog stays read-only after a plan ends, before it's emptied. */
+/**
+ * Legacy: the 30-day emptying window is retired (founder, 2026-11-08). The column is still written so old rows keep
+ * their shape, but a plan that ends keeps the catalog read-only on Free and nothing is emptied.
+ */
 export const GRACE_DAYS = 30;
 /** Need more time moves the renewal back this many days. */
 export const EXTEND_DAYS = 30;
@@ -51,15 +54,19 @@ export function renewalDate(sub: PlanSub): Date | null {
   return at ? new Date(at) : null;
 }
 
-/** Grace period running: the plan ended, the catalog isn't emptied yet, and Free wasn't chosen in its place. */
+/**
+ * The old countdown is retired (founder, 2026-11-08): any lapse that has not been emptied is already kept on Free, so
+ * there is no window left to act in and every offer that depended on it stays closed. Kept for the components that ask.
+ */
 export const inGrace = (lapse: Lapse | null, now = new Date()) =>
-  !!lapse && !lapse.emptied_at && !lapse.kept_free_at && new Date(lapse.empty_after) > now;
+  !!lapse && !lapse.emptied_at && !keptOnFree(lapse) && new Date(lapse.empty_after) > now;
 
 /**
- * The member chose the Free plan before the emptying date: the catalog stays read-only and is never emptied, and a paid
- * plan can be started whenever they are ready (founder, 2026-11-08).
+ * A plan that ends is kept read-only on Free automatically (founder, 2026-11-08, replacing catalog emptying): nothing is
+ * removed, the catalog can be downloaded, and a paid plan can be started whenever the member is ready. Rows emptied
+ * under the old rule stay emptied, because their songs are already gone.
  */
-export const keptOnFree = (lapse: Lapse | null) => !!lapse && !lapse.emptied_at && !!lapse.kept_free_at;
+export const keptOnFree = (lapse: Lapse | null) => !!lapse && !lapse.emptied_at;
 
 export type Offers = {
   /** A renewal payment failed and Stripe is retrying it. */

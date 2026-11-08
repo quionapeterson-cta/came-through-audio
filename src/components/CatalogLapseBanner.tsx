@@ -31,8 +31,8 @@ export function DownloadCatalogButton({ variant = "default" }: { variant?: "defa
 }
 
 /**
- * The workspace banner while a renewal payment is failing, a plan has ended (30-day grace before the catalog is
- * emptied) or is paused. Need more time and Pause are offered right here when they're available.
+ * The workspace banner while a renewal payment is failing or a plan is paused. The old 30-day emptying countdown is
+ * retired, so the branch that drew it stays closed; a plan that ends is simply kept read-only on Free.
  */
 export function CatalogLapseBanner({ sub, lapse, pauses, onRenew, onChanged }: { sub: PlanSub | null; lapse: Lapse | null; pauses: Pause[]; onRenew: () => void; onChanged: () => void }) {
   const pause = currentPause(pauses);
@@ -52,8 +52,8 @@ export function CatalogLapseBanner({ sub, lapse, pauses, onRenew, onChanged }: {
   return (
     <div className="mb-6 flex flex-wrap items-center gap-4 rounded-2xl border-2 border-primary bg-card p-4">
       <TriangleAlert className="h-6 w-6 shrink-0 text-primary" />
-      <p className="min-w-0 flex-1 text-sm"><span className="font-semibold">Your plan ended. Your catalog will be emptied on {longDate(lapse!.empty_after)}.</span>{" "}
-        <span className="text-muted-foreground">Download everything now, or renew to keep it.</span></p>
+      <p className="min-w-0 flex-1 text-sm"><span className="font-semibold">Your plan ended. Your catalog is read-only on Free and will not be emptied.</span>{" "}
+        <span className="text-muted-foreground">Download everything, or start a paid plan whenever you're ready.</span></p>
       <DownloadCatalogButton />
       <Button variant="outline" onClick={onRenew}>Renew</Button>
       <GraceOffers sub={sub} lapse={lapse} pauses={pauses} onChanged={onChanged} />
