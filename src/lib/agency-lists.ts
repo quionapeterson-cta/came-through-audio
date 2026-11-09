@@ -1,5 +1,5 @@
 import type { CatalogTrack } from "@/lib/catalog";
-import { creditName } from "@/lib/metadata";
+import { creditName, type Contributor } from "@/lib/metadata";
 
 /**
  * "Confirm with your agency lists" (PLAN-royalty-health-report §3A): the user downloads their own list of registered
@@ -144,6 +144,53 @@ export function readWorks(rows: string[][]): ListWork[] {
 
 export const loose = (s: string) => norm(s.replace(/\(.*?\)|\[.*?\]/g, "").replace(/\b(feat|ft)\.?\b.*$/i, ""));
 
+/**
+ * The work on an agency list that is this song: the ISRC first, because that is the code the agencies match recordings
+ * by, then the ISWC, which names the composition exactly, and the title last, because two recordings can share a name.
+ * One rule for the comparison and for filling a catalog from a list, so the two can't disagree.
+ */
+export function matchWork(
+  works: ListWork[],
+  t: { title: string; metadata: { iswc?: string | undefined; isrc?: string | undefined; writers?: Contributor[] | undefined; composers?: Contributor[] | undefined } },
+): ListWork | undefined {
+  const iswc = t.metadata.iswc ?? "", isrc = t.metadata.isrc ?? "";
+  const byIsrc = isrc ? works.find((w) => w.isrc && w.isrc === code(isrc)) : undefined;
+  if (byIsrc) return byIsrc;
+  const byIswc = iswc ? works.find((w) => w.iswc && w.iswc === code(iswc)) : undefined;
+  if (byIswc) return byIswc;
+  // A shared title is real (a re-record, a live version, two artists' songs): the writers say which work it is.
+  const exact = works.filter((w) => w.title && norm(w.title) === norm(t.title));
+  const titled = exact.length ? exact : works.filter((w) => w.title && loose(w.title) === loose(t.title));
+  if (titled.length <= 1) return titled[0];
+  const mine = new Set([...(t.metadata.writers ?? []), ...(t.metadata.composers ?? [])].map((w) => nameKey(creditName(w))).filter(Boolean));
+  let best = titled[0], bestHits = 0;
+  for (const w of titled) {
+    const hits = w.writers.filter((x) => mine.has(nameKey(x.name))).length;
+    if (hits > bestHits) { best = w; bestHits = hits; }
+  }
+  return best;
+}
+
+/**
+ * What the agency's own record leaves out: the codes and writer details its portals match a work by. Read from the
+ * uploaded file itself, so a member with nothing catalogued yet still gets a real check out of their list.
+ */
+export function listGaps(w: ListWork, recording = false): string[] {
+  // SoundExchange registers the recording, not the composition: only the ISRC is what it matches by.
+  if (recording) return w.isrc ? [] : ["No ISRC — SoundExchange matches a recording by it"];
+  const gaps: string[] = [];
+  if (!w.isrc) gaps.push("No ISRC — The MLC and SoundExchange match a recording by it");
+  if (!w.iswc) gaps.push("No ISWC — your PRO registers the composition by it");
+  if (!w.writers.length) gaps.push("No writers on the list");
+  else {
+    if (w.writers.some((x) => !x.ipi)) gaps.push("A writer with no IPI number");
+    // Lists use the whole song or the writer half, so 100 and 200 both add up; anything else is a split to settle.
+    const total = w.writers.reduce((n, x) => n + (x.share ?? 0), 0);
+    if (total > 0 && Math.abs(total - 100) > 1 && Math.abs(total - 200) > 1) gaps.push("The shares don't add up to 100%");
+  }
+  return gaps;
+}
+
 /** Shares on any scale (100, 200 or the writer half) compared as each writer's part of the total. */
 const parts = (list: { key: string; share?: number | undefined }[]) => {
   const total = list.reduce((n, x) => n + (x.share ?? 0), 0);
@@ -151,7 +198,8 @@ const parts = (list: { key: string; share?: number | undefined }[]) => {
 };
 
 /**
- * Compares one agency's list with the songs that should be registered there. Matches by ISWC, then ISRC, then title.
+ * Compares one agency's list with the songs that should be registered there. Matches by ISRC, then ISWC, then title
+ * (the writers break a shared title).
  * `recordings` lists (SoundExchange) carry no writers, so only presence is compared.
  */
 export function compareList(works: ListWork[], tracks: CatalogTrack[], recordings = false): ListResult {
@@ -159,10 +207,7 @@ export function compareList(works: ListWork[], tracks: CatalogTrack[], recording
   const matched: ListMatch[] = [], differences: ListMatch[] = [], notListed: ListResult["notListed"] = [];
   for (const t of tracks) {
     const m = t.metadata;
-    const work = (m.iswc && works.find((w) => w.iswc && w.iswc === code(m.iswc)))
-      || (m.isrc && works.find((w) => w.isrc && w.isrc === code(m.isrc)))
-      || works.find((w) => w.title && norm(w.title) === norm(t.title))
-      || works.find((w) => w.title && loose(w.title) === loose(t.title));
+    const work = matchWork(works, t);
     if (!work) { notListed.push({ trackId: t.id, title: t.title }); continue; }
     used.add(work);
     const issues: string[] = [];

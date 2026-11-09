@@ -23,4 +23,15 @@ describe("AgencyLists", () => {
     expect(result.notListed.map((m: { trackId: string }) => m.trackId)).toEqual(["b"]);
     expect(await screen.findByText(/Confirmed · 1/)).toBeTruthy();
   });
+
+  it("shows a free member what their list is missing, and offers the catalog instead of a dead end", async () => {
+    const onUpgrade = vi.fn();
+    render(<AgencyLists userId="u1" canCatalog={false} onUpgrade={onUpgrade} societies={[ascap]} songsFor={() => [track("a", "Midnight")]} summaries={{}} onApply={vi.fn().mockResolvedValue(undefined)} />);
+    const file = new File(["Work Title,Writer Name,IPI,Share\nGold Teeth,LEE ANN,,100\n"], "ascap.csv", { type: "text/csv" });
+    fireEvent.change(screen.getByLabelText("Upload your ASCAP list"), { target: { files: [file] } });
+    expect(await screen.findByText("What the list itself shows")).toBeTruthy();
+    expect(screen.getAllByText(/No ISRC/).length).toBeGreaterThan(0);
+    fireEvent.click(screen.getByRole("button", { name: /Save to my catalog/ }));
+    expect(onUpgrade).toHaveBeenCalled();
+  });
 });

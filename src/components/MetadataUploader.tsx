@@ -468,7 +468,11 @@ export function MetadataUploader({ onShareInfo, userId, mode = "embed", readOnly
       const filled = Object.fromEntries(Object.entries(found).filter(([, v]) => Array.isArray(v) ? v.some((x) => (typeof x === "string" ? x : x?.name)) : v !== "" && v != null));
       // Private PRO/IPI/splits never live in files — restore them from the saved profile for matching names.
       const restored = restoreRows(filled as Partial<Metadata>, loadProfile(userId));
-      if (Object.keys(filled).length || picture) { setMetadata((m) => ({ ...m, ...restored })); toast.success("Existing metadata found and pre-filled. You can still edit every field."); }
+      // A carried release wins over the file's tags: the queue is one album, and a missing or different album tag in the
+      // next file filed that song as its own single even though the form held the album title.
+      const kept: Record<string, string> = {};
+      if (carry.release && !full) for (const k of ["album", "releaseType", "releaseDate", "label", "upc", "trackTotal"] as const) { const v = metadata[k]; if (v) kept[k] = v; }
+      if (Object.keys(filled).length || picture) { setMetadata((m) => ({ ...m, ...restored, ...kept })); toast.success("Existing metadata found and pre-filled. You can still edit every field."); }
     }).catch(() => {});
   }
   async function submit(event: FormEvent) {
@@ -619,14 +623,12 @@ export function MetadataUploader({ onShareInfo, userId, mode = "embed", readOnly
                   </div>
                   <p className="text-xs text-muted-foreground">Example: track 1 of 12 on the album</p>
                 </div>
-                {full && <>
-                  <Field label="Album / release title" id="album" value={metadata.album} onChange={(value) => update("album", value)} />
-                  <div className="min-w-0 space-y-2">
+                <Field label="Album / release title" id="album" value={metadata.album} onChange={(value) => update("album", value)} />
+                {full && <div className="min-w-0 space-y-2">
                     <Field label="Release date" id="releaseDate" type="date" value={metadata.releaseDate} onChange={(value) => update("releaseDate", value)} />
                     {/* Pre-distribution: no date picked yet, but not out. A future date counts on its own. */}
                     {!metadata.releaseDate && <label className="flex items-center gap-2 text-sm"><input id="unreleased" type="checkbox" className="h-4 w-4 accent-[var(--primary)]" checked={metadata.unreleased} onChange={(e) => update("unreleased", e.target.checked)} />This song isn't released yet<InfoTip text="Unreleased songs get a Release checklist in the Royalty Health Hub: what to have ready before you distribute. On release day they switch to the normal health reading." /></label>}
-                  </div>
-                </>}
+                  </div>}
                 <Field label="Record label" term="label" id="label" value={metadata.label} onChange={(value) => update("label", value)} />
                 <div className="min-w-0 space-y-2"><Label htmlFor="copyright" className="leading-5">Composition copyright (©)<InfoTip term="cLine" /></Label><CopyrightInput symbol="©" id="copyright" value={metadata.copyright} onChange={(value) => update("copyright", value)} /></div>
                 {/* ℗ and language are catalog details; they aren't embedded in the MP3. */}
@@ -1395,7 +1397,13 @@ function creditGroups(t: CatalogTrack) {
     .filter((g) => g.rows.length > 0);
 }
 
-const releaseGroup = (t: CatalogTrack) => releaseKind(t.metadata);
+// A song with an album title but no release type picked is a track on that album, not a single: the album is what
+// Files it, which is the grouping every download already uses.
+const releaseGroup = (t: CatalogTrack) => {
+  const album = t.metadata.album.trim().toLowerCase();
+  if (album && !t.metadata.releaseType.trim() && album !== t.title.trim().toLowerCase()) return "Album" as const;
+  return releaseKind(t.metadata);
+};
 
 async function makeThumb(file: File): Promise<string> {
   const img = await createImageBitmap(file);

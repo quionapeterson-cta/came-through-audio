@@ -52,3 +52,6 @@ scripts/demo/*.webp
 # Local Vercel API token, pasted by hand for one-off deploy cleanup. Never commit.
 .vercel-token
 .vercel-token.*
+
+# Demo account password for scripts/demo (never committed)
+.demo-password.local

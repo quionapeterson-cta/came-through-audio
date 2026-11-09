@@ -305,8 +305,11 @@ export function RoyaltyHealthCheck({ userId, canCatalog, canExport, onUpgrade, o
   const listSocieties = useMemo(() => {
     const seen = new Map<string, Society>();
     for (const { c } of checkupRows) for (const st of c.steps) if (st.stage === "register" && st.society) seen.set(st.society.id, st.society);
+    // With nothing catalogued yet (a Free account, or a member who starts from their agencies) there is still a list to
+    // insert: every society the member's country uses, so the check runs from the file itself.
+    if (!seen.size) for (const group of Object.values(country.societies)) for (const x of group ?? []) seen.set(x.id, x);
     return [...seen.values()];
-  }, [checkupRows]);
+  }, [checkupRows, country]);
   const songsFor = (sid: string) => checkupRows.filter(({ c }) => c.steps.some((st) => st.stage === "register" && st.society?.id === sid)).map(({ r }) => r.track);
   const listSummaries = Object.fromEntries(listSocieties.map((x) => {
     try { const v = statusOf(ACCOUNT_REF).steps[listKey(x.id)]; return [x.id, v ? (JSON.parse(v) as SavedListSummary) : undefined]; } catch { return [x.id, undefined]; }
@@ -523,7 +526,8 @@ export function RoyaltyHealthCheck({ userId, canCatalog, canExport, onUpgrade, o
           streaming: <StreamingFastTrack userId={userId} canCatalog={canCatalog} onUpgrade={onUpgrade}
             onUploadAudio={(id) => { if (id) onFixField(id, "audio"); }}
             onSaved={() => { void listTracks().then(setTracks).catch(() => {}); }} />,
-          agencies: <AgencyLists userId={userId} societies={listSocieties} songsFor={songsFor} summaries={listSummaries} onApply={applyList} onRemove={removeList} />,
+          agencies: <AgencyLists userId={userId} societies={listSocieties} songsFor={songsFor} summaries={listSummaries} onApply={applyList} onRemove={removeList} canCatalog={canCatalog}
+            onUpgrade={() => onUpgrade()} onFilled={() => { void listTracks().then(setTracks).catch(() => {}); }} />,
           single: inspector,
         }} />
     );
