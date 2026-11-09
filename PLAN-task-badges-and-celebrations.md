@@ -213,16 +213,19 @@ Built and pushed in this change:
   `gold_ep_512px.webp`; an **album** runs `Platinum_album_512px.webp` → `album_cover_dropped_platinum_512px.webp` →
   `album_cover_dropped_gold_512px.webp` → back to platinum.
 - **Cover Star** comes every 12 single covers and every 3 EP covers (`coverStarSteps`); **Gold Cover Star**
-  (`CTA_cover_star_gold_512.webp`) every 4 album covers; **Diamond Drop** (`CTA_diamond_drop_512.webp`) for an album of
-  20+ songs with its art; **Gold Standard** (`CTA_gold_standard_512.webp`) for an EP or album whose cover is 3000×3000;
-  **Platinum Press** (`CTA_platinum_press_512.webp`) for an album that was saved while unreleased and is now off
-  unreleased, with a 3000×3000 cover and a release date ahead.
-- **Inferred, not dictated** (flag for the founder): "award for every 20 singles" has no art named, so it uses
-  `CTA_cover_star_platinum_1_512.webp` — the same picture as Cover Star. If 20 singles should carry its own picture, that
-  is a one-line swap.
+  (`CTA_cover_star_gold_512.webp`) every 4 album covers, and every one of those four must be 3000×3000; **Diamond Drop**
+  (`CTA_diamond_drop_512.webp`) for an album of 20+ songs with its art; **Gold Standard** (`CTA_gold_standard_512.webp`)
+  for an EP or album whose cover is 3000×3000; **Platinum Press** (`CTA_platinum_press_512.webp`) for an album that was
+  saved while unreleased and is now off unreleased, with a 3000×3000 cover and a release date ahead.
+- **The second platinum star** (`CTA_cover_star_platinum_2_512.webp`) marks the hi-res milestones: **Platinum Albums**
+  every 3 album covers at 3000×3000, and **Platinum Singles** every 20 single covers at 3000×3000 (founder, 2026-11-09).
+  Both read the same measured size, so a 1400×1400 cover earns neither.
+- **Settled**: the every-20-singles award the founder first left without a picture is now the 3000×3000 rule above, so it
+  carries `CTA_cover_star_platinum_2_512.webp` instead of borrowing Cover Star's platinum picture.
 - **Data the rules needed**, both catalog-only and never embedded: `artWidth`/`artHeight`, read from the file the member
   picked (so a 3000×3000 cover is a real measurement, and covers added before this date read 0 and earn nothing on that
   rule until re-picked), and `wasUnreleased`, set the first time a song is saved while marked unreleased.
-- **Art location**: the nine pictures live in the bucket under `icons/playful/album art badges/` (`artInBucket: true`).
-  The repo copies the founder mentioned are not in `public/` yet, so a build without `VITE_ART_BASE` shows blank tiles
-  for them; `badge-rules.test.ts` names each one so a mistyped path can't hide.
+- **Art location**: the twelve pictures are in the repo at `public/icons/playful/album art badges/` (founder,
+  2026-11-09), so no cover badge depends on the bucket any more and no tile goes blank without `VITE_ART_BASE`. The folder
+  name's space is literal; the album picture's file name is lower-case (`platinum_album_512px.webp`), and
+  `badge-rules.test.ts` refuses any badge whose art is missing from the repo.
