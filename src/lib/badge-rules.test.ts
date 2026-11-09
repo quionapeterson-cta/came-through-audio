@@ -31,9 +31,7 @@ describe("badge catalog", () => {
     // No badge is bucket-only any more (2026-11-08): a new exemption has to be added deliberately, with its id written
     // out in this list.
     // The album-art set the founder uploaded on 2026-11-09 is bucket-only until its 512px repo copies land.
-    expect(BADGES.filter((b) => b.artInBucket).map((b) => b.id)).toEqual([
-      "cover_single", "cover_ep", "cover_album", "cover_star", "cover_star_20", "album_cover_star", "diamond_drop", "gold_standard", "platinum_press",
-    ]);
+    expect(BADGES.filter((b) => b.artInBucket).map((b) => b.id)).toEqual([]);
   });
   it("carries no crown badge, and Royalty Health keeps only the clean-report badge", () => {
     // The founder removed all three crowns as a poor fit (2026-11-08); a healthy song earns no badge of its own now.
@@ -298,4 +296,21 @@ describe("cover art by release kind", () => {
     expect(badgeMetrics(data({ tracks: many("Album", 2, { wasUnreleased: true, unreleased: true, releaseDate: "2026-12-01" }) }))["platinumPress"]).toBe(0);
     expect(badgeMetrics(data({ tracks: many("Album", 2, { wasUnreleased: true, unreleased: false, releaseDate: "2026-12-01", artWidth: 1400, artHeight: 1400 }) }))["platinumPress"]).toBe(0);
   });
+    it("counts only 3000×3000 art toward the platinum stars", () => {
+      const hi = { artWidth: 3000, artHeight: 3000 };
+      const small = { artWidth: 1400, artHeight: 1400 };
+      // An album is one cover, so each album needs its own art path to count on its own.
+      const albumAt = (i: number, size: number) => track({
+        releaseType: "Album", title: `Album ${i}`, album: `Album ${i}`,
+        artPath: `u/t/album-${size}-${i}.jpg`, artWidth: size, artHeight: size,
+      });
+      expect(badgeMetrics(data({ tracks: [0, 1, 2].map((i) => albumAt(i, 3000)) }))).toMatchObject({ hiResAlbumArt: 3 });
+      expect(badgeMetrics(data({ tracks: [0, 1, 2].map((i) => albumAt(i, 1400)) }))).toMatchObject({ hiResAlbumArt: 0 });
+      expect(badgeMetrics(data({ tracks: many("Single", 20, hi) }))).toMatchObject({ hiResSingleArt: 20 });
+      expect(badgeMetrics(data({ tracks: many("Single", 20, small) }))).toMatchObject({ hiResSingleArt: 0 });
+      // Gold Cover Star and Platinum Albums both read the hi-res album count, so a 4th hi-res album is their 2nd/1st.
+      expect(timesEarned(badgeById("album_cover_star")!, 8)).toBe(2);
+      expect(timesEarned(badgeById("album_cover_star_platinum")!, 3)).toBe(1);
+      expect(timesEarned(badgeById("album_cover_star_platinum")!, 6)).toBe(2);
+    });
 });

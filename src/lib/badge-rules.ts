@@ -131,6 +131,10 @@ export function badgeMetrics(d: BadgeData): Record<string, number> {
   const albumArt = withArt.filter((t) => kindOf(t) === "Album").length;
   const coverStarSteps = Math.floor(singleArt / 12) + Math.floor(epArt / 3);
   const at3000 = (t: CatalogTrack) => t.metadata.artWidth >= 3000 && t.metadata.artHeight >= 3000;
+  // The platinum stars count only 3000×3000 art, so they read the saved pixel size (founder, 2026-11-09).
+  const hiResSingleArt = withArt.filter((t) => kindOf(t) === "Single" && at3000(t)).length;
+  const hiResAlbumArt = albums(d.tracks).filter((list) => kindOf(list[0]!) === "Album"
+    && list.some((t) => t.metadata.artPath && at3000(t))).length;
   const bigAlbums = albums(d.tracks).filter((list) => list.length >= 20 && list.some((t) => t.metadata.artPath)).length;
   const hiResCovers = albums(d.tracks).filter((list) => list.some((t) => t.metadata.artPath && at3000(t))
     && (kindOf(list[0]!) === "EP" || kindOf(list[0]!) === "Album")).length;
@@ -165,7 +169,7 @@ export function badgeMetrics(d: BadgeData): Record<string, number> {
     ready: ready.size,
     masters: d.tracks.filter((t) => t.metadata.audioPath).length,
     artUploads: d.tracks.filter((t) => t.metadata.artPath).length,
-    singleArt, epArt, albumArt, coverStarSteps, bigAlbums, hiResCovers, platinumPress,
+    singleArt, epArt, albumArt, coverStarSteps, bigAlbums, hiResCovers, platinumPress, hiResSingleArt, hiResAlbumArt,
     lyrics: d.tracks.filter((t) => t.metadata.lyrics.trim()).length,
     vocalSongs: d.tracks.filter((t) => t.metadata.credits.some((c) => c.name.trim() && isPerformer(c.role) && instrumentOf(c) === "vocals")).length,
     fullBandSongs: d.tracks.filter((t) => t.metadata.credits.filter((c) => c.name.trim() && isPerformer(c.role)).length >= 3).length,

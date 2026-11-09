@@ -85,6 +85,7 @@ export const METRIC_UNIT: Record<string, [string, string]> = {
   singleArt: ["single cover", "single covers"], epArt: ["EP cover", "EP covers"], albumArt: ["album cover", "album covers"],
   coverStarSteps: ["cover star step", "cover star steps"], bigAlbums: ["20-song album", "20-song albums"],
   hiResCovers: ["3000×3000 cover", "3000×3000 covers"], platinumPress: ["scheduled release", "scheduled releases"],
+  hiResSingleArt: ["3000×3000 single cover", "3000×3000 single covers"], hiResAlbumArt: ["3000×3000 album cover", "3000×3000 album covers"],
 };
 
 /** How many times a badge has been earned at this count: once at `goal`, then once per `every` beyond it. */
@@ -101,7 +102,7 @@ export function nextGoal(badge: Pick<BadgeDef, "goal" | "every">, count: number)
 
 const I = "/icons";
 const S = `${I}/serious`, P = `${I}/playful`;
-/** The album-art set the founder uploaded to the bucket (2026-11-09); the folder name is literal. */
+/** The album-art set (founder, 2026-11-09). Repo and bucket both keep it; the folder name is literal. */
 const A = `${P}/album art badges`;
 
 const CORE: BadgeDef[] = [
@@ -124,39 +125,43 @@ const CORE: BadgeDef[] = [
   // Cover art earns by release kind (founder, 2026-11-09). A single alternates platinum and gold; an EP has its own
   // picture; an album runs through three (platinum, then the two dropped-cover pictures) and starts again. The
   // milestones above them are their own badges, so a heavy cover-art catalog collects the pair, not one badge ×40.
-  { id: "cover_single", title: "Single Cover", collection: "core", tier: "instant", milestone: "Every single's cover art you add", action: "Add a single's cover art", metric: "singleArt", goal: 1, every: 1, alternate: true, artInBucket: true,
+  { id: "cover_single", title: "Single Cover", collection: "core", tier: "instant", milestone: "Every single's cover art you add", action: "Add a single's cover art", metric: "singleArt", goal: 1, every: 1, alternate: true,
     src: `${A}/platinum_single_512px.webp`, rotation: [`${A}/gold_single_512px.webp`],
     description: "Your single's cover art is saved with the song, ready for every release and share card. Every single cover you add earns this again, alternating platinum and gold.",
     popup: "Cover story! Your first single cover is saved.", repeatPopup: "Cover story! Your {nth} single cover is saved." },
-  { id: "cover_ep", title: "EP Cover", collection: "core", tier: "instant", milestone: "Every EP's cover art you add", action: "Add an EP's cover art", metric: "epArt", goal: 1, every: 1, artInBucket: true,
+  { id: "cover_ep", title: "EP Cover", collection: "core", tier: "instant", milestone: "Every EP's cover art you add", action: "Add an EP's cover art", metric: "epArt", goal: 1, every: 1,
     src: `${A}/gold_ep_512px.webp`,
     description: "A whole EP has its cover art on file. Every EP cover you add earns this again.",
     popup: "Cover story! Your first EP cover is saved.", repeatPopup: "Cover story! Your {nth} EP cover is saved." },
-  { id: "cover_album", title: "Album Cover", collection: "core", tier: "instant", milestone: "Every album's cover art you add", action: "Add an album's cover art", metric: "albumArt", goal: 1, every: 1, alternate: true, artInBucket: true,
-    src: `${A}/Platinum_album_512px.webp`, rotation: [`${A}/album_cover_dropped_platinum_512px.webp`, `${A}/album_cover_dropped_gold_512px.webp`],
+  { id: "cover_album", title: "Album Cover", collection: "core", tier: "instant", milestone: "Every album's cover art you add", action: "Add an album's cover art", metric: "albumArt", goal: 1, every: 1, alternate: true,
+    src: `${A}/platinum_album_512px.webp`, rotation: [`${A}/album_cover_dropped_platinum_512px.webp`, `${A}/album_cover_dropped_gold_512px.webp`],
     description: "Your album's cover art is saved with the songs. Every album cover you add earns this again, and the picture turns over as you go.",
     popup: "Cover story! Your first album cover is saved.", repeatPopup: "Cover story! Your {nth} album cover is saved." },
-  { id: "cover_star", title: "Cover Star", collection: "core", tier: "standard", milestone: "Every 12 single covers, and every 3 EP covers", action: "Keep adding cover art", metric: "coverStarSteps", goal: 1, every: 1, artInBucket: true,
+  { id: "cover_star", title: "Cover Star", collection: "core", tier: "standard", milestone: "Every 12 single covers, and every 3 EP covers", action: "Keep adding cover art", metric: "coverStarSteps", goal: 1, every: 1,
     src: `${A}/CTA_cover_star_platinum_1_512.webp`,
     description: "Twelve singles or three EPs of cover art, finished and on file. Every 12 single covers and every 3 EP covers earns this again.",
     popup: "Cover star! Your cover art is stacking up.", repeatPopup: "Cover star! {nth} times over." },
-  { id: "cover_star_20", title: "Cover Star Platinum", collection: "core", tier: "mega", milestone: "Every 20 single covers", action: "Add 20 single covers", metric: "singleArt", goal: 20, every: 20, artInBucket: true,
-    src: `${A}/CTA_cover_star_platinum_1_512.webp`,
-    description: "Twenty single covers, all on file. Platinum cover star: every 20 single covers earns this again.",
-    popup: "Platinum cover star! 20 single covers on file.", repeatPopup: "Platinum cover star! {nth} time, 20 more single covers." },
-  { id: "album_cover_star", title: "Gold Cover Star", collection: "core", tier: "mega", milestone: "Every 4 album covers", action: "Add 4 album covers", metric: "albumArt", goal: 4, every: 4, artInBucket: true,
+  { id: "cover_star_20", title: "Platinum Singles", collection: "core", tier: "mega", milestone: "Every 20 single covers at 3000×3000 px", action: "Add 20 single covers at 3000×3000", metric: "hiResSingleArt", goal: 20, every: 20,
+    src: `${A}/CTA_cover_star_platinum_2_512.webp`,
+    description: "Twenty single covers at 3000×3000, the size the stores ask for. Every 20 at that size earns this again.",
+    popup: "Platinum singles! 20 covers at 3000×3000.", repeatPopup: "Platinum singles! {nth} time, 20 more hi-res covers." },
+  { id: "album_cover_star", title: "Gold Cover Star", collection: "core", tier: "mega", milestone: "Every 4 album covers at 3000×3000 px", action: "Add 4 album covers at 3000×3000", metric: "hiResAlbumArt", goal: 4, every: 4,
     src: `${A}/CTA_cover_star_gold_512.webp`,
-    description: "Four albums with their cover art on file. Every 4 album covers earns this again.",
-    popup: "Gold cover star! Four album covers on file.", repeatPopup: "Gold cover star! {nth} time, four more albums." },
-  { id: "diamond_drop", title: "Diamond Drop", collection: "core", tier: "mega", milestone: "An album with 20 or more songs and its cover art", action: "Finish a 20-song album cover", metric: "bigAlbums", goal: 1, every: 1, artInBucket: true,
+    description: "Four albums with 3000×3000 covers on file. Every one of the four has to be at the size the stores ask for; every 4 earns this again.",
+    popup: "Gold cover star! Four albums at 3000×3000.", repeatPopup: "Gold cover star! {nth} time, four more hi-res albums." },
+  { id: "album_cover_star_platinum", title: "Platinum Albums", collection: "core", tier: "mega", milestone: "Every 3 album covers at 3000×3000 px", action: "Add 3 album covers at 3000×3000", metric: "hiResAlbumArt", goal: 3, every: 3,
+    src: `${A}/CTA_cover_star_platinum_2_512.webp`,
+    description: "Three albums with 3000×3000 covers on file: print-ready art three times over. Every 3 at that size earns this again.",
+    popup: "Platinum albums! Three hi-res album covers.", repeatPopup: "Platinum albums! {nth} time, three more hi-res albums." },
+  { id: "diamond_drop", title: "Diamond Drop", collection: "core", tier: "mega", milestone: "An album with 20 or more songs and its cover art", action: "Finish a 20-song album cover", metric: "bigAlbums", goal: 1, every: 1,
     src: `${A}/CTA_diamond_drop_512.webp`,
     description: "A twenty-song album with its cover art in place. That's a body of work, not a drop in the bucket.",
     popup: "Diamond Drop! A 20-song album with its cover art.", repeatPopup: "Diamond Drop! {nth} album this size." },
-  { id: "gold_standard", title: "Gold Standard", collection: "core", tier: "standard", milestone: "An EP or album whose cover is 3000×3000 px", action: "Add a 3000×3000 cover", metric: "hiResCovers", goal: 1, every: 1, artInBucket: true,
+  { id: "gold_standard", title: "Gold Standard", collection: "core", tier: "standard", milestone: "An EP or album whose cover is 3000×3000 px", action: "Add a 3000×3000 cover", metric: "hiResCovers", goal: 1, every: 1,
     src: `${A}/CTA_gold_standard_512.webp`,
     description: "A 3000×3000 cover on an EP or album: the size the stores ask for, on file without a warning. Every EP or album at that size earns this again.",
     popup: "Gold standard! Your cover is 3000×3000.", repeatPopup: "Gold standard! {nth} release at 3000×3000." },
-  { id: "platinum_press", title: "Platinum Press", collection: "core", tier: "ultimate", milestone: "An album that was unreleased, now scheduled with a 3000×3000 cover", action: "Schedule a release that was unreleased", metric: "platinumPress", goal: 1, every: 1, artInBucket: true,
+  { id: "platinum_press", title: "Platinum Press", collection: "core", tier: "ultimate", milestone: "An album that was unreleased, now scheduled with a 3000×3000 cover", action: "Schedule a release that was unreleased", metric: "platinumPress", goal: 1, every: 1,
     src: `${A}/CTA_platinum_press_512.webp`,
     description: "It sat unreleased, then it got its 3000×3000 cover and a release date. That's the press run: finished, scheduled and ready.",
     popup: "Platinum Press! Your release is scheduled and finished.", repeatPopup: "Platinum Press! {nth} release ready for the press." },
