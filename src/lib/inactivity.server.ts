@@ -140,9 +140,9 @@ export async function runInactiveAccounts(now = new Date()) {
     inactivityNotified: 0,
   };
 
+  // Rows whose deadline has already run are read too: they are what keeps a cleared account out of the queue below.
   const { data, error } = await client.from("account_inactivity" as never)
-    .select("user_id, last_active_at, delete_on, reminders, deleted_at")
-    .is("deleted_at", null);
+    .select("user_id, last_active_at, delete_on, reminders, deleted_at");
   if (error) throw error;
   const rows = (data ?? []) as unknown as InactivityRow[];
 
@@ -152,6 +152,17 @@ export async function runInactiveAccounts(now = new Date()) {
       await client.from("account_inactivity" as never).delete().eq("user_id", row.user_id);
       continue;
     }
+    const signedIn = hasBeenActiveSince(row, lastActiveOf(found.user));
+
+    // A row whose deadline already ran keeps the account out of the queue: its files are gone, so scheduling the same
+    // last sign-in again would only repeat the notices for something that no longer exists. Coming back clears the mark,
+    // so a later stretch of dormancy can schedule the account afresh.
+    if (row.deleted_at) {
+      if (!signedIn) continue;
+      await client.from("account_inactivity" as never).delete().eq("user_id", row.user_id);
+      continue;
+    }
+
     if (await paidAccount(client, row.user_id)) {
       await client.from("account_inactivity" as never).delete().eq("user_id", row.user_id);
       result.inactivityCancelled += 1;
@@ -159,8 +170,6 @@ export async function runInactiveAccounts(now = new Date()) {
     }
 
     const email = found.user.email ?? null;
-
-    const signedIn = hasBeenActiveSince(row, lastActiveOf(found.user));
 
     if (new Date(row.delete_on) <= now) {
       try {
@@ -181,9 +190,12 @@ export async function runInactiveAccounts(now = new Date()) {
           console.error(`Inactivity: couldn't clear the catalog for ${row.user_id}`, String(e));
           continue;
         }
-        // Nothing else is scheduled: the account, its paperwork and everything that is not storage stay on Free.
-        await client.from("account_inactivity" as never).delete().eq("user_id", row.user_id);
-        result.inactivityCleared += 1;
+        // Nothing else is scheduled: the account, its paperwork and everything that is not storage stay on Free. The row
+        // stays as a spent mark, so the same last sign-in can never start a second round of notices.
+        const { error: doneError } = await client.from("account_inactivity" as never)
+          .update({ deleted_at: NOW(), updated_at: NOW() } as never).eq("user_id", row.user_id);
+        if (doneError) console.error(`Inactivity: couldn't close the schedule for ${row.user_id}`, doneError.message);
+        else result.inactivityCleared += 1;
         continue;
       }
       try {

@@ -45,6 +45,7 @@ import { EagleStatusBadge } from "@/components/EagleStatusBadge";
 import { eagleStatus } from "@/lib/eagle-status";
 import { CatalogLapseBanner } from "@/components/CatalogLapseBanner";
 import { EmailConfirmBanner } from "@/components/EmailConfirmBanner";
+import { InactivityBanner } from "@/components/InactivityBanner";
 import { PlanPendingBanner } from "@/components/PlanPendingBanner";
 import { PdfTools } from "@/components/PdfTools";
 import { SupportCenter } from "@/components/SupportCenter";
@@ -382,6 +383,7 @@ function Workspace() {
         {pendingPlan && <PlanPendingBanner priceId={pendingPlan} />}
         {!user.email_confirmed_at && <EmailConfirmBanner email={user.email} />}
         <CatalogLapseBanner sub={sub} lapse={lapse} pauses={pauses} onRenew={upgrade} onChanged={() => void reloadBilling()} />
+        <InactivityBanner userId={user.id} paid={realTier !== "free"} />
         {/* Which artist the two working tabs are on, so a saved song can never land in the wrong catalog by mistake. */}
         {actingAs && (
           <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-primary/40 bg-accent/30 p-3 text-sm">

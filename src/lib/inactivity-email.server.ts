@@ -53,7 +53,7 @@ function render(e: InactivityEmail): { subject: string; html: string; reason: st
       reason: DELETED_REASON,
       html: `<p style="font-size:12px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:#004AAD;margin:0">Your account</p>
 <h1 style="font-size:24px;margin:8px 0 16px">This account was deleted on ${gone}</h1>
-<p style="font-size:15px;line-height:1.6">The account, its files and its catalog were deleted on <b>${gone}</b>, after two years without a sign-in and four email reminders.</p>
+<p style="font-size:15px;line-height:1.6">The account, its files and its catalog were deleted on <b>${gone}</b>, after two years without a sign-in and the reminders before it.</p>
 <p style="font-size:15px;line-height:1.6">You're welcome back at any time. Start a new account with this address whenever you're ready, and every blueprint and tool will be waiting.</p>
 <p style="margin:24px 0"><a href="${SITE_URL}/login" style="background:#004AAD;color:#ffffff;text-decoration:none;font-weight:700;padding:12px 22px;border-radius:8px;display:inline-block">Start a new account</a></p>
 <p style="font-size:15px;line-height:1.6">If you think this is a mistake, reply to this email and a person will look at it.</p>`,
