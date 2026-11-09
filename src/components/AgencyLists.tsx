@@ -5,6 +5,7 @@ import { confirmAction } from "@/components/ConfirmHost";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { fillPlan, type FillPlan } from "@/lib/agency-fill";
+import { RELEASE_TYPES } from "@/lib/metadata";
 import { loadOnboarding, loadProfile } from "@/lib/artist-profile";
 import { saveTrack } from "@/lib/catalog";
 import { clearIntake, readIntake, writeIntake } from "@/lib/intake-session";
@@ -52,6 +53,8 @@ export function AgencyLists({ userId, societies, songsFor, summaries, onApply, o
   const [filling, setFilling] = useState(false);
   /** Which of the new works to add: every one is ticked until the member unticks it. */
   const [picked, setPicked] = useState<Record<string, boolean>>({});
+  /** Where the ticked new songs go: each its own single, or one EP/album they all belong to. */
+  const [release, setRelease] = useState<{ one: boolean; type: string; title: string }>({ one: false, type: "", title: "" });
   const inputs = useRef<Record<string, HTMLInputElement | null>>({});
 
   // Leaving the check-in (or opening the workspace in another window) used to empty this panel. The comparison is the
@@ -120,6 +123,7 @@ export function AgencyLists({ userId, societies, songsFor, summaries, onApply, o
     setChoices({});
     const plan = fillPlan(result, songsFor(society.id), artist);
     setPicked(Object.fromEntries(plan.creates.map((c) => [workKey(c.work), true])));
+    setRelease({ one: false, type: "", title: "" });
     setFill({ society, plan });
   }
   /**
@@ -131,7 +135,12 @@ export function AgencyLists({ userId, societies, songsFor, summaries, onApply, o
     setFilling(true);
     try {
       const adding = fill.plan.creates.filter((c) => picked[workKey(c.work)] !== false);
-      for (const c of adding) await saveTrack(c.metadata, userId);
+      // The release the member picked is written with each song, so My Catalog files them together straight away.
+      const placing = release.one && !!release.type;
+      for (const c of adding) {
+        const m = placing ? { ...c.metadata, releaseType: release.type, album: release.title.trim() || c.metadata.album } : c.metadata;
+        await saveTrack(m, userId);
+      }
       let replaced = 0;
       for (const d of fill.plan.duplicates) if (choices[d.track.id] === "agency") { await saveTrack(d.agency, userId, d.track.id); replaced += 1; }
       const added = adding.length;
@@ -139,7 +148,9 @@ export function AgencyLists({ userId, societies, songsFor, summaries, onApply, o
       toast.success(
         `${added ? `${added} song${added === 1 ? "" : "s"} added to My Catalog` : "No new songs added"}${replaced ? `, ${replaced} replaced with the agency's version` : ""}. ` +
         (kept ? `${kept} kept as yours, so ${fill.society.name} still needs updating to match. ` : "") +
-        "Finish each new entry in My Catalog: the list doesn't carry the album, release date, genre or duration.",
+        placing
+          ? `File them under ${release.title.trim() || release.type}${release.title.trim() ? ` (${release.type})` : ""}; the list still leaves the release date, genre and duration for you in My Catalog.`
+          : "Each new entry starts as a single. Change its release type in My Catalog if it belongs to an EP or album.",
         { duration: 12000 },
       );
       // The works just added are no longer "on the list but not in the catalog", so the offer can't run twice; a song
@@ -288,6 +299,25 @@ export function AgencyLists({ userId, societies, songsFor, summaries, onApply, o
                 })}
               </ul>
             </div>}
+            {fill.plan.creates.length > 0 && <fieldset className="space-y-2 rounded-xl border border-border p-3">
+              <legend className="px-1 text-sm font-bold">Where do these songs belong?</legend>
+              <label className="flex items-start gap-2 text-sm">
+                <input type="radio" name="fill-release" className="mt-1 h-4 w-4 accent-[var(--primary)]" checked={!release.one} onChange={() => setRelease((r) => ({ ...r, one: false }))} />
+                <span><span className="font-semibold">Each one is its own single</span><span className="block text-xs text-muted-foreground">They show under Singles in My Catalog. An agency list names works, not the release they came out on, so this is the safe default.</span></span>
+              </label>
+              <label className="flex items-start gap-2 text-sm">
+                <input type="radio" name="fill-release" className="mt-1 h-4 w-4 accent-[var(--primary)]" checked={release.one} onChange={() => setRelease((r) => ({ ...r, one: true }))} />
+                <span><span className="font-semibold">They all belong to one release</span><span className="block text-xs text-muted-foreground">Choose the type and title now, so My Catalog files every ticked song under that EP or album.</span></span>
+              </label>
+              {release.one && <div className="grid gap-2 pl-6 sm:grid-cols-[11rem_1fr]">
+                <select aria-label="Release type" value={release.type} onChange={(e) => setRelease((r) => ({ ...r, type: e.target.value }))} className="h-9 rounded-md border border-input bg-background px-2 text-sm">
+                  <option value="">Release type…</option>
+                  {RELEASE_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
+                </select>
+                <input aria-label="Release title" value={release.title} onChange={(e) => setRelease((r) => ({ ...r, title: e.target.value }))} placeholder="Album or EP title" className="h-9 rounded-md border border-input bg-background px-3 text-sm" />
+                <p className="text-xs text-muted-foreground sm:col-span-2">One release per fill. Songs from another EP or album: fill again from that list, or change the one that's left out in My Catalog.</p>
+              </div>}
+            </fieldset>}
             {fill.plan.duplicates.length > 0 && <div className="space-y-2">
               <h4 className="text-sm font-bold">Already in your catalog: which version is official?</h4>
               <p className="text-xs text-muted-foreground">
@@ -336,7 +366,7 @@ export function AgencyLists({ userId, societies, songsFor, summaries, onApply, o
             </div>}
             <div className="flex justify-end gap-2">
               <Button type="button" variant="ghost" disabled={filling} onClick={() => setFill(undefined)}>Cancel</Button>
-              <Button type="button" disabled={filling || (!chosenCreates.length && !fill.plan.duplicates.some((d) => choices[d.track.id] === "agency"))} onClick={() => void runFill()}>
+              <Button type="button" disabled={filling || (release.one && !release.type) || (!chosenCreates.length && !fill.plan.duplicates.some((d) => choices[d.track.id] === "agency"))} onClick={() => void runFill()}>
                 {filling ? <Loader2 className="animate-spin" /> : <ListPlus />}
                 {chosenCreates.length ? `Add ${chosenCreates.length} song${chosenCreates.length === 1 ? "" : "s"}` : "Update songs"}
               </Button>

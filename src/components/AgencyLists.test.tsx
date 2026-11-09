@@ -76,4 +76,22 @@ describe("AgencyLists", () => {
     await waitFor(() => expect(vi.mocked(saveTrack)).toHaveBeenCalledTimes(1));
     expect(vi.mocked(saveTrack).mock.calls[0]![2]).toBe("a");
   });
+
+  it("files the new songs into the release the member picks", async () => {
+    vi.mocked(saveTrack).mockClear();
+    render(<AgencyLists userId="u1" societies={[ascap]} songsFor={() => []} summaries={{}} onApply={vi.fn().mockResolvedValue(undefined)} />);
+    const file = new File(["Work Title,Writer Name,Share\nGold Teeth,RAY BO,100\nAmber,RAY BO,100\n"], "ascap.csv", { type: "text/csv" });
+    fireEvent.change(screen.getByLabelText("Upload your ASCAP list"), { target: { files: [file] } });
+    fireEvent.click(await screen.findByRole("button", { name: /Fill my catalog/ }));
+    expect(await screen.findByText("2 of 2 selected")).toBeTruthy();
+    fireEvent.click(screen.getByRole("radio", { name: /They all belong to one release/ }));
+    fireEvent.change(screen.getByLabelText("Release type"), { target: { value: "EP" } });
+    fireEvent.change(screen.getByLabelText("Release title"), { target: { value: "Bloom" } });
+    fireEvent.click(screen.getByRole("button", { name: /Add 2 songs/ }));
+    await waitFor(() => expect(vi.mocked(saveTrack)).toHaveBeenCalledTimes(2));
+    for (const call of vi.mocked(saveTrack).mock.calls) {
+      expect(call[0].releaseType).toBe("EP");
+      expect(call[0].album).toBe("Bloom");
+    }
+  });
 });
