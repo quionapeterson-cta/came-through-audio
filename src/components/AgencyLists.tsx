@@ -275,7 +275,7 @@ export function AgencyLists({ userId, societies, songsFor, summaries, onApply, o
                   <button type="button" className="font-semibold text-primary" onClick={() => setPicked(Object.fromEntries(fill.plan.creates.map((c) => [workKey(c.work), false])))}>Clear</button>
                 </span>
               </div>
-              <ul className="max-h-64 divide-y divide-border/60 overflow-y-auto py-1">
+              <ul className="max-h-64 divide-y divide-border/60 overflow-y-auto scroll-pt-2 py-1 [overflow-anchor:none]">
                 {fill.plan.creates.map((c, i) => {
                   const key = workKey(c.work);
                   return <li key={key} className="flex items-center gap-2 px-3 py-2 text-sm">
