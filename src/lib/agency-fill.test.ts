@@ -102,11 +102,14 @@ describe("planning a fill", () => {
   });
 
   it("puts the agency's writers and codes on a duplicate without losing the catalog's release details", () => {
-    const existing = track("t1", "Bloodline", { album: "BAM", releaseType: "Album", trackNumber: "1" });
+    const existing = track("t1", "Bloodline", { album: "BAM", releaseType: "Album", trackNumber: "1", audioPath: "u/t1/master.mp3", artPath: "u/t1/art.jpg" });
     const m = agencyVersion(existing.metadata, work({ isrc: "USCTA1600001", writers: [{ name: "Qui-Ona Peterson", share: 100 }] }), "Karma Came");
     expect(m.album).toBe("BAM");
     expect(m.releaseType).toBe("Album");
     expect(m.trackNumber).toBe("1");
+    // The master and the artwork are the member's own files: adopting the writers and codes never detaches them.
+    expect(m.audioPath).toBe("u/t1/master.mp3");
+    expect(m.artPath).toBe("u/t1/art.jpg");
     expect(m.isrc).toBe("USCTA1600001");
     expect(m.writers[0]!.legalName).toBe("Qui-Ona Peterson");
   });

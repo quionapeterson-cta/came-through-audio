@@ -37,6 +37,9 @@ type StoredLists = { byId: Record<string, { file: string; result: ListResult }>;
 
 const STORE = "agency-lists";
 
+/** One work's own key: the same one the panel lists it under, so a pick survives a re-render. */
+const workKey = (w: ListWork) => w.workId || w.iswc || w.isrc || w.title;
+
 /** "Confirm with your agency lists": upload what each agency has on file, and see what matches. */
 export function AgencyLists({ userId, societies, songsFor, summaries, onApply, onRemove, onFilled, canCatalog = true, onUpgrade, onExpert }: Props) {
   const [busy, setBusy] = useState<string>();
@@ -47,6 +50,8 @@ export function AgencyLists({ userId, societies, songsFor, summaries, onApply, o
   const [fill, setFill] = useState<{ society: Society; plan: FillPlan }>();
   const [choices, setChoices] = useState<Record<string, "keep" | "agency">>({});
   const [filling, setFilling] = useState(false);
+  /** Which of the new works to add: every one is ticked until the member unticks it. */
+  const [picked, setPicked] = useState<Record<string, boolean>>({});
   const inputs = useRef<Record<string, HTMLInputElement | null>>({});
 
   // Leaving the check-in (or opening the workspace in another window) used to empty this panel. The comparison is the
@@ -113,7 +118,9 @@ export function AgencyLists({ userId, societies, songsFor, summaries, onApply, o
     if (!result || !userId) return;
     const artist = loadOnboarding(userId)?.stageName?.trim() || loadProfile(userId)?.artist?.trim() || "";
     setChoices({});
-    setFill({ society, plan: fillPlan(result, songsFor(society.id), artist) });
+    const plan = fillPlan(result, songsFor(society.id), artist);
+    setPicked(Object.fromEntries(plan.creates.map((c) => [workKey(c.work), true])));
+    setFill({ society, plan });
   }
   /**
    * Adds the new works and, only for the duplicates the member picked, writes the agency's version over the catalog's.
@@ -123,10 +130,11 @@ export function AgencyLists({ userId, societies, songsFor, summaries, onApply, o
     if (!fill || !userId) return;
     setFilling(true);
     try {
-      for (const c of fill.plan.creates) await saveTrack(c.metadata, userId);
+      const adding = fill.plan.creates.filter((c) => picked[workKey(c.work)] !== false);
+      for (const c of adding) await saveTrack(c.metadata, userId);
       let replaced = 0;
       for (const d of fill.plan.duplicates) if (choices[d.track.id] === "agency") { await saveTrack(d.agency, userId, d.track.id); replaced += 1; }
-      const added = fill.plan.creates.length;
+      const added = adding.length;
       const kept = fill.plan.duplicates.filter((d) => choices[d.track.id] !== "agency").length;
       toast.success(
         `${added ? `${added} song${added === 1 ? "" : "s"} added to My Catalog` : "No new songs added"}${replaced ? `, ${replaced} replaced with the agency's version` : ""}. ` +
@@ -136,7 +144,7 @@ export function AgencyLists({ userId, societies, songsFor, summaries, onApply, o
       );
       // The works just added are no longer "on the list but not in the catalog", so the offer can't run twice; a song
       // replaced with the agency's version is no longer different either, so the report stops naming it.
-      const justAdded = new Set(fill.plan.creates.map((c) => c.work));
+      const justAdded = new Set(adding.map((c) => c.work));
       const settled = new Set(fill.plan.duplicates.filter((d) => choices[d.track.id] === "agency").map((d) => d.track.id));
       setStored((state) => {
         const entry = state.byId[fill.society.id];
@@ -163,6 +171,7 @@ export function AgencyLists({ userId, societies, songsFor, summaries, onApply, o
   const shown = shownId ? societies.find((s) => s.id === shownId) : undefined;
   const shownResult = shownId ? stored.byId[shownId]?.result : undefined;
   // The list read on its own, without needing a catalog: what each work's agency record is missing.
+  const chosenCreates = fill ? fill.plan.creates.filter((c) => picked[workKey(c.work)] !== false) : [];
   const gaps = shownResult
     ? [...shownResult.matched, ...shownResult.differences].map((m) => m.work).concat(shownResult.extra)
       .filter((w): w is ListWork => !!w)
@@ -254,20 +263,36 @@ export function AgencyLists({ userId, societies, songsFor, summaries, onApply, o
           {fill && <>
             <p className="text-sm text-muted-foreground">
               {fill.plan.creates.length
-                ? `${fill.plan.creates.length} work${fill.plan.creates.length === 1 ? " is" : "s are"} on the agency's list and not in your catalog yet. Each entry starts with the title, codes, writers, IPI numbers and shares the list carries.`
+                ? `${fill.plan.creates.length} work${fill.plan.creates.length === 1 ? " is" : "s are"} on the agency's list and not in your catalog yet. Tick the ones you want; each entry starts with the title, codes, writers, IPI numbers and shares the list carries.`
                 : "Every work on this list is already in your catalog."}
               {" "}You finish the rest — album, release date, genre, duration — in My Catalog.
             </p>
-            {fill.plan.creates.length > 0 && <ul className="max-h-40 space-y-1 overflow-y-auto rounded-lg border border-border p-3 text-sm">
-              {fill.plan.creates.map((c) => <li key={c.work.workId || c.work.iswc || c.work.isrc || c.metadata.title} className="flex justify-between gap-3">
-                <span className="truncate">{c.metadata.title}</span><span className="shrink-0 text-xs text-muted-foreground">{c.metadata.isrc || c.metadata.iswc || "no code on the list"}</span>
-              </li>)}
-            </ul>}
+            {fill.plan.creates.length > 0 && <div className="rounded-lg border border-border">
+              <div className="flex items-center justify-between gap-2 border-b border-border px-3 py-2 text-xs">
+                <span className="text-muted-foreground">{chosenCreates.length} of {fill.plan.creates.length} selected</span>
+                <span className="flex gap-3">
+                  <button type="button" className="font-semibold text-primary" onClick={() => setPicked(Object.fromEntries(fill.plan.creates.map((c) => [workKey(c.work), true])))}>Select all</button>
+                  <button type="button" className="font-semibold text-primary" onClick={() => setPicked(Object.fromEntries(fill.plan.creates.map((c) => [workKey(c.work), false])))}>Clear</button>
+                </span>
+              </div>
+              <ul className="max-h-64 divide-y divide-border/60 overflow-y-auto py-1">
+                {fill.plan.creates.map((c, i) => {
+                  const key = workKey(c.work);
+                  return <li key={key} className="flex items-center gap-2 px-3 py-2 text-sm">
+                    <input id={`fill-pick-${i}`} type="checkbox" checked={picked[key] !== false} onChange={(e) => setPicked((p) => ({ ...p, [key]: e.target.checked }))} />
+                    <label htmlFor={`fill-pick-${i}`} className="flex min-w-0 flex-1 cursor-pointer items-center justify-between gap-3">
+                      <span className="truncate">{c.metadata.title}</span>
+                      <span className="shrink-0 text-xs text-muted-foreground">{c.metadata.isrc || c.metadata.iswc || "no code on the list"}</span>
+                    </label>
+                  </li>;
+                })}
+              </ul>
+            </div>}
             {fill.plan.duplicates.length > 0 && <div className="space-y-2">
               <h4 className="text-sm font-bold">Already in your catalog: which version is official?</h4>
               <p className="text-xs text-muted-foreground">
-                These songs match the list by name or code, but the details don't. The agency's copy is usually the right one, because it is
-                what {fill.society.name} pays on: using it fixes your catalog in one click. Keeping yours means the registration at {fill.society.name} has to be updated instead.
+                These songs match the list by name or code, but the details don't. The agency's copy is what {fill.society.name} pays on, so check
+                that it is the correct version: using it copies their codes and writers into your catalog in one click, while keeping yours means updating the registration at {fill.society.name} instead.
               </p>
               {fill.plan.duplicates.map((d) => {
                 const choice = choices[d.track.id] ?? "keep";
@@ -289,7 +314,7 @@ export function AgencyLists({ userId, societies, songsFor, summaries, onApply, o
                   <div className="mt-3 grid gap-2 sm:grid-cols-2">
                     <label className={`flex cursor-pointer items-start gap-2 rounded-lg border p-2 ${choice === "agency" ? "border-primary bg-accent/40" : "border-border"}`}>
                       <input type="radio" className="mt-0.5" name={`fill-${d.track.id}`} checked={choice === "agency"} onChange={() => setChoices((c) => ({ ...c, [d.track.id]: "agency" }))} />
-                      <span><b>Use the agency's version</b><span className="block text-xs text-muted-foreground">Usually correct: your catalog then matches what {fill.society.name} has registered.</span></span>
+                      <span><b>Use the agency's version</b><span className="block text-xs text-muted-foreground">Check that it's correct: your catalog then matches what {fill.society.name} has registered.</span></span>
                     </label>
                     <label className={`flex cursor-pointer items-start gap-2 rounded-lg border p-2 ${choice === "keep" ? "border-primary bg-accent/40" : "border-border"}`}>
                       <input type="radio" className="mt-0.5" name={`fill-${d.track.id}`} checked={choice === "keep"} onChange={() => setChoices((c) => ({ ...c, [d.track.id]: "keep" }))} />
@@ -298,6 +323,9 @@ export function AgencyLists({ userId, societies, songsFor, summaries, onApply, o
                   </div>
                   {choice === "keep" && <p className="mt-2 text-xs text-muted-foreground">
                     Keeping this one leaves the difference in place at {fill.society.name}.
+                  </p>}
+                  {choice === "agency" && !!(d.track.metadata.audioPath || d.track.metadata.artPath || d.track.metadata.coverThumb) && <p className="mt-2 text-xs text-muted-foreground">
+                    Your master and artwork stay attached. Re-embed this song in My Catalog afterwards, so the file itself carries the corrected credits, ISRC and ISWC.
                   </p>}
                 </div>;
               })}
@@ -308,9 +336,9 @@ export function AgencyLists({ userId, societies, songsFor, summaries, onApply, o
             </div>}
             <div className="flex justify-end gap-2">
               <Button type="button" variant="ghost" disabled={filling} onClick={() => setFill(undefined)}>Cancel</Button>
-              <Button type="button" disabled={filling || (!fill.plan.creates.length && !fill.plan.duplicates.some((d) => choices[d.track.id] === "agency"))} onClick={() => void runFill()}>
+              <Button type="button" disabled={filling || (!chosenCreates.length && !fill.plan.duplicates.some((d) => choices[d.track.id] === "agency"))} onClick={() => void runFill()}>
                 {filling ? <Loader2 className="animate-spin" /> : <ListPlus />}
-                {fill.plan.creates.length ? `Add ${fill.plan.creates.length} song${fill.plan.creates.length === 1 ? "" : "s"}` : "Update songs"}
+                {chosenCreates.length ? `Add ${chosenCreates.length} song${chosenCreates.length === 1 ? "" : "s"}` : "Update songs"}
               </Button>
             </div>
           </>}
