@@ -82,3 +82,21 @@ describe("dropPrelaunch", async () => {
     expect(dropPrelaunch("1. TERMS\nx")).toBe("1. TERMS\nx");
   });
 });
+
+import { draftingRole, takesOwnRegistration, blueprintById } from "@/lib/contract-blueprints";
+
+describe("own PRO and IPI prefill, gated by who drafts", () => {
+  const producerDeal = blueprintById("beat-license-exclusive")!;
+  const artistDeal = blueprintById("producer-agreement")!;
+  const fieldOf = (bp: typeof producerDeal, key: string) => bp.fields.find((f) => f.key === key)!;
+  it("fills a producer's own details on the deal the producer drafts", () => {
+    expect(draftingRole(producerDeal)).toBe("Producer");
+    expect(takesOwnRegistration(fieldOf(producerDeal, "pro"), draftingRole(producerDeal))).toBe(true);
+    expect(takesOwnRegistration(fieldOf(producerDeal, "ipi"), draftingRole(producerDeal))).toBe(true);
+  });
+  it("leaves the producer's details blank on the deal the artist drafts", () => {
+    expect(draftingRole(artistDeal)).toBe("Artist");
+    expect(takesOwnRegistration(fieldOf(artistDeal, "pro"), draftingRole(artistDeal))).toBe(false);
+    expect(takesOwnRegistration(fieldOf(artistDeal, "ipi"), draftingRole(artistDeal))).toBe(false);
+  });
+});

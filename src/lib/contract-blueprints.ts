@@ -202,6 +202,20 @@ export function initialFields(bp: Blueprint, today = new Date()): Record<string,
   return out;
 }
 
+/** The role the member drafting is in: the editor gives the owner's party the blueprint's first role. */
+export const draftingRole = (bp: Blueprint) => bp.roles[0] ?? "";
+
+/**
+ * Whether a field asks for the drafting member's own PRO or IPI, so their catalog defaults may fill it (founder,
+ * 2026-11-09). On a deal the artist drafts, "Producer's PRO affiliation" belongs to the other party and stays blank:
+ * filling it with the artist's own number would state a false detail in a document that gets signed.
+ */
+export function takesOwnRegistration(f: BlueprintField, drafting: string): boolean {
+  if (f.key !== "pro" && f.key !== "ipi") return false;
+  const named = f.label.includes("'s ") ? f.label.slice(0, f.label.indexOf("'s ")) : "";
+  return !named || named.toLowerCase() === drafting.trim().toLowerCase();
+}
+
 /** The required details still blank, in form order. Only these (plus party names and emails) hold back signing. */
 export const missingFields = (bp: Blueprint, fields: Record<string, string>) => bp.fields.filter((f) => f.required && !fields[f.key]?.trim());
 

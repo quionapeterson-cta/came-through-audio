@@ -20,6 +20,7 @@ import { listTracks, type CatalogTrack } from "@/lib/catalog";
 import { getLaunchStatus } from "@/lib/gate.functions";
 import { BLUEPRINTS, CATEGORIES, COMPANY_BLUEPRINTS, dropPrelaunch, COMPANY_LEGAL_NAME, COMPANY_SIGNER_NAME, CONTRACT_DISCLAIMER, SIGNATURE_FONT, blueprintById, fillBlanks, georgiaLaw, initialFields, missingFields, renderContract, type Blueprint, type BlueprintField } from "@/lib/contract-blueprints";
 import { ownProIpi } from "@/lib/artist-profile";
+import { draftingRole, takesOwnRegistration } from "@/lib/contract-blueprints";
 import { downloadContractPdf } from "@/lib/contract-pdf";
 import { myBrand } from "@/lib/brand-load";
 import { loadWebFont } from "@/lib/web-fonts";
@@ -104,12 +105,14 @@ export function Contracts({ userId, unlocked, onUpgrade, company = false, onOpen
   /** A new contract from a blueprint; a Contract Generator draft adds the details and names it filled in. */
   const start = (bp: Blueprint, draft?: GeneratedDraft) => {
     if (!unlocked) { onUpgrade(); return; }
-    // A deal that asks for a PRO affiliation or IPI number starts from the member's own catalog defaults (founder,
-    // 2026-11-09). Whoever is the producer confirms or replaces them; an artist can see what's still the producer's to give.
+    // A deal that asks for the drafting member's own PRO affiliation or IPI number starts from their catalog defaults
+    // (founder, 2026-11-09). A field naming the other party stays blank: the artist drafting a producer deal must not put
+    // their own number where the producer's belongs.
     const fields = { ...initialFields(bp), ...remembered(bp), ...draft?.fields };
     const own = ownProIpi(userId);
+    const drafting = draftingRole(bp);
     for (const f of bp.fields) {
-      if (fields[f.key]?.trim() || (f.key !== "pro" && f.key !== "ipi")) continue;
+      if (fields[f.key]?.trim() || !takesOwnRegistration(f, drafting)) continue;
       fields[f.key] = f.key === "pro" ? own.pro : own.ipi;
     }
     setEditing({
