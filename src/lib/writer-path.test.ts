@@ -21,6 +21,14 @@ describe("writer path: someone else performs it", () => {
     expect(auditTrack(song()).some((i) => i.field === "isrc")).toBe(true);
     expect(auditTrack(song()).some((i) => i.field === "artist")).toBe(true);
   });
+  it("never grades an ISRC pasted in from the artist's release", () => {
+    expect(auditTrack(external({ isrc: "nope" })).filter((i) => i.field === "isrc")).toEqual([]);
+  });
+  it("keeps the lyrics item while dropping the artwork one", () => {
+    const items = releaseItems(external({ writers: written() }).metadata, {});
+    expect(items.map((i) => i.id)).toContain("lyrics");
+    expect(items.find((i) => i.id === "lyrics")!.title).toBe("Lyrics");
+  });
   it("drops the release's recording items, and keeps the composition's", () => {
     const ids = releaseItems(external({ writers: written() }).metadata, {}).map((i) => i.id);
     expect(ids).not.toContain("isrc");

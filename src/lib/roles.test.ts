@@ -25,6 +25,11 @@ describe("roles", () => {
     expect(roleDefaults({ situations: ["released", "planning"] }).unreleased).toBe(false);
     expect(roleDefaults({ situations: ["writer"], roles: ["Songwriter"] }).unreleased).toBe(false);
   });
+  it("treats the writer situation alone as the writer's path", () => {
+    expect(roleDefaults({ situations: ["writer"] })).toEqual({ recordingSide: "external", unreleased: false });
+    // The situation beside a release answer is not a writer-only account.
+    expect(roleDefaults({ situations: ["writer", "released"] }).recordingSide).toBe("");
+  });
   it("asks about beats only of a producer who says they sell them", () => {
     expect(sellsBeats({ roles: ["Producer"], sellBeats: true })).toBe(true);
     expect(sellsBeats({ roles: ["Producer"] })).toBe(false);

@@ -29,8 +29,9 @@ const RELEASING: AccountRole[] = ["Recording artist", "Label"];
 /** No answers, or Recording artist among them, keeps today's catalog exactly (founder, 2026-11-09). */
 export const picksArtist = (a: RoleAnswers) => !a.roles?.length || a.roles.includes("Recording artist");
 
-/** Songs registered as a writer while someone else performs them, and no release of their own. */
-export const writerOnly = (a: RoleAnswers) => !!a.roles?.includes("Songwriter")
+/** Songs registered as a writer while someone else performs them, and no release of their own. Ticking only the
+ *  situation is enough: the roles are optional, so one answer must never be ignored. */
+export const writerOnly = (a: RoleAnswers) => (!!a.roles?.includes("Songwriter") || (a.situations?.length === 1 && a.situations[0] === "writer"))
   && !(a.roles ?? []).some((r) => RELEASING.includes(r))
   && !a.situations?.some((s) => s === "released" || s === "planning");
 

@@ -66,8 +66,12 @@ export function releaseItems(m: Metadata, ticks: Record<string, string | undefin
     { id: "ai", title: "AI Protection certificate (optional)", auto: false, optional: true, tick: RELEASE_TICK.ai, done: !!ticks[RELEASE_TICK.ai],
       why: "Proof of creation dated before the song is public." },
   ];
-  // Someone else performs it: the ISRC, UPC, master and artwork come with their release (§10).
-  return isExternal(m) ? items.filter((i) => !["isrc", "upc", "master", "art"].includes(i.id)) : items;
+  // Someone else performs it: the ISRC, UPC, master and artwork come with their release (§10). The lyrics stay, because
+  // they are the composition's, not the recording's.
+  if (!isExternal(m)) return items;
+  return items.flatMap((i) => i.id === "art"
+    ? [{ ...i, id: "lyrics", title: "Lyrics", field: "lyrics", done: has(m.lyrics) || m.instrumental, why: "Lyric sites and your PRO registration ask for the words." }]
+    : ["isrc", "upc", "master"].includes(i.id) ? [] : [i]);
 }
 
 /** Share of required release items done (0–100), counting any extra required steps passed in (the PRO/MLC registrations). */
