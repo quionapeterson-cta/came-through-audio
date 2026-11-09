@@ -1,9 +1,12 @@
-# PLAN — One answer per release, fair pre-release health, roles, and the producer and songwriter paths · v4
+# PLAN — One answer per release, fair pre-release health, roles, and the producer and songwriter paths · v5
 
 Status: **v4 — everything planned, nothing built from it yet.**
 v1 (2026-11-09) set out the findings; v2 recorded the founder's answers and planned the producer and songwriter paths; v3
 approved the help box and made the artist's catalog the floor; v4 adds the sell-beats question, the sold beat and its
-linked master, the four destinations for filled songs, the dialog layout fix and a bug check of what is already shipped.
+linked master, the four destinations for filled songs, the dialog layout fix and a bug check of what is already shipped;
+v5 adds the songwriter who never performs, the artist who also writes for other people, the credit check that runs after
+another artist's release, the master checkup that triggers a beat renegotiation, and the blueprint and agreement that
+carry it (§10–§16).
 Builds on: PLAN-pre-distribution (built 2026-10-25), PLAN-catalog-organization, PLAN-badges-roles-app.
 
 ## 0. Decisions taken (founder, 2026-11-09)
@@ -23,8 +26,9 @@ Builds on: PLAN-pre-distribution (built 2026-10-25), PLAN-catalog-organization, 
 | 11 | A sold beat gets **"This beat is sold"**, a new **master recording** entry, a **link** between the two, and the **deal plus its stream threshold**. §4.5. |
 | 12 | In the comparison the two version cards sit under the column each describes: keep-mine under **Your catalog**, use-the-agency's under **The agency**. §4.8. |
 | 13 | Filled songs can go to **an existing release**, a **new release**, **each as its own single**, or straight into **Unreleased**. §4.4. |
+| 14 | The **chip only**: unreleased songs are counted in their type section ("2 unreleased →") and listed once, in the Unreleased section. §4.2. |
 
-Still to confirm: the three questions at the end (§9).
+Still to confirm: §9 questions 2 and 3, and §16.
 
 ---
 
@@ -389,9 +393,204 @@ answers, master link, deal), `HealthChecklist.tsx`, `RoyaltyReport.tsx`, `Health
 
 ## 9. Open questions
 
-1. **The chip** (§4.2): chip only (recommended, one row per song), or list unreleased songs in their type section **as
-   well** (more familiar, longer catalog)?
+1. ~~**The chip** (§4.2)~~ — answered (founder, 2026-11-09): **chip only**, one row per song. See decision 14.
 2. **The deal fields** (§4.5): are deal type, date, stream threshold and a contract link enough, or is there something
    else a beat license needs recorded?
 3. **A sold beat stays in Unreleased** (recommended — it isn't a release), rather than getting a "Sold beats" line of its
    own. Confirm?
+
+
+---
+
+## 10. The two songwriter shapes
+
+A songwriter is not one person. Two shapes matter, and they are not the same path:
+
+| Shape | What they hold | What they are never asked for |
+| --- | --- | --- |
+| **Writer only** (never performs) | The composition: writers, roles, splits, publishing answers, PRO, IPI, ISWC when the PRO assigns it. | A master, artwork, UPC, SoundExchange, an ISRC of their own. |
+| **Artist who also writes for others** | Both, song by song: their own releases keep today's full path, and the songs they wrote for other artists take the writer's path. | Nothing extra — the outside songs simply drop the recording items. |
+
+**It is decided per song, not per account.** The account answers (§4.7) only choose the default for a new entry. A song
+that was written for someone else keeps its own answer even when the member also releases music, and an artist's own
+release is never converted into a writer-only song by ticking Songwriter.
+
+- **One new catalog answer**, in `details` beside the rest (no migration): `recordingSide: "own" | "external"`. `"own"`
+  is the default and today's behaviour; `"external"` means *someone else recorded and released this*. Blank reads as
+  `"own"`, so every existing row is unchanged.
+- With `"external"`, the song records **who released it** (`artist` becomes the recording artist's name, and the field's
+  label reads *Recording artist (who released it)*), and the ISRC is optional until that release exists.
+- **My Catalog gets a filter** — *My releases · Written for others* — which is a view over that one field, so nothing is
+  moved or hidden by default. The fill dialog's destination step already knows a writer's list is compositions (§4.4).
+- **A placed song is a released song for the artist, not for the writer.** Its Release panel still shows the artist's
+  release date and status, because that date is what starts the MLC matching.
+- **The composer credit is the money.** The PRO pays the writer's share on the registration, The MLC pays mechanicals on
+  the same registration, and neither pays on the release's credit line. What goes wrong when the credits disagree is not
+  ownership but *matching*: a different spelling or a missing IPI on the registration is what leaves money unclaimed. The
+  next section is built around that one sentence.
+
+## 11. The credit check: what runs after another artist releases the song
+
+This is the process the founder asked for, and it is a loop rather than a screen.
+
+```
+catalogue the work → register it → the artist releases → check the three copies → fix → check again
+```
+
+1. **Catalogue it** — title, writers with roles, splits, publishing, lyrics, PRO and IPI. Nothing here needs a recording.
+2. **Register it** — the PRO first (it assigns the ISWC), then The MLC. The ISRC is not needed by either, and the check
+   says so (§4.6).
+3. **The artist releases** — their distributor issues the ISRC and the UPC, and the release carries a credit line for
+   every writer. That credit line is the third copy of the same fact.
+4. **Run the credit check.** It compares three copies of the same song side by side:
+
+   | Your catalog | Your agency registration | The released recording |
+   | --- | --- | --- |
+   | legal name, IPI, share | the work as BMI/ASCAP/The MLC has it | the artist's credits as released |
+
+5. **It shows differences only.** Everything that matches is a line with a tick; the screen opens on the differences,
+   the way the fill dialog does. Each difference has one action: *fix this field*, *open the agency's list*, *start the
+   split sheet*, or *nothing to do yet*.
+6. **The member supplies the release credits once.** We cannot read Spotify, Apple Music or a distributor's dashboard, and
+   the plan never pretends to. The form is short — name, role, share, IPI — prefilled from the catalog, so confirming a
+   match is one click and correcting a spelling is one field. Nothing is uploaded, stored or shared.
+7. **Each run is saved on the song** (`details.creditCheck: { at, state, findings }`), so the next run can say what
+   changed, and the report can say *"checked 14 Aug · 2 differences fixed, 1 open"*. No new table.
+8. **It is done when the release exists and the three copies agree** — not when the song is registered. A writer whose
+   song is registered but still shows the wrong legal name on the release is not finished, and the card says exactly
+   which copy to fix.
+
+**What the check may and may not claim.** It may say the registration and the release disagree, and name the field. It
+may not say a writer is owed money, that a royalty was lost, or that the artist did anything wrong — a credit line and a
+registration are different documents, and the app does not have the artist's paperwork. The finding is always "these two
+say different things; fix the one you control".
+
+**For the artist who writes for others**, the same screen is where the two halves meet: their own release is checked
+against their registration like any artist's, and each outside song is checked against that artist's release. The two
+never share a score, because one is a master and one is a composition.
+
+## 12. The master checkup and the beat renegotiation
+
+The producer's side is the same engine with a different lens, which is why it belongs in this plan rather than beside it.
+
+**One module, two checks.** `src/lib/process-check.ts` (new, pure) exposes:
+
+- `creditCheck(song, agencyWork, releaseCredits)` → the findings in §11.
+- `masterCheck(song, deal, reading)` → where the recording stands against its license.
+- Both return the same shape — `{ state, findings[], next, checkedAt }` — using the checkup's existing `Finding` and
+  `StepAction` vocabulary (`royalty-checkup.ts`), so one renderer serves both and nothing is re-implemented.
+- `renegotiationDue(deal, reading)` → *not yet · close · due · over*, from the stream count the member entered.
+
+**The process, in the producer's words:**
+
+1. **Record the deal with the beat** (§4.5): type, date, the stream count where it changes, the contract.
+2. **Check the master** when the member has a number: paste the streams from the distributor's report (or type them).
+   The reading is stamped with its date and is never shown as live.
+3. **The check says where it stands**, in one line: *"63,200 of 50,000 — the license point has passed."* With no reading
+   it says *"no reading yet — check the master's streams in your distributor report"*, never "0 streams".
+4. **Prepare the ask.** The report turns the numbers into the three things a renegotiation needs: what the license allows
+   today, what the recording has done, and what the member wants (a new cap, a new fee, a new share, or a buyout).
+5. **Make the agreement** — the new contract in §13, prefilled from the beat's deal and attached to the master.
+6. **File it back.** The signed amendment sits on the master's card, the old terms stay readable, and the reminder waits
+   for the new cap instead of repeating.
+7. **Check again on a date.** The checkup sets a due date on the Working On item, so the existing "next step" line picks
+   it up; there is no email promise and no automatic renewal of anything.
+
+**Honest limits, stated in the copy:** the app never polls a distributor, never estimates a stream count, and never
+promises that a license holder will renegotiate. It records what the member tells it, on the date they told it.
+
+## 13. The blueprint and the agreement
+
+Three additions, all using machinery that already exists — no new screens and no migration.
+
+**1. Blueprint — "Songwriter Credits and Placements" (`songwriter-placements`).** For the writer-only member and for the
+outside songs of an artist who writes for others.
+
+Steps: catalogue the work without a recording · settle the splits and sign the sheet · register with the PRO and save the
+ISWC · register with The MLC · when the artist releases, collect the release credits · run the credit check and fix what
+differs · keep the proof with the song.
+
+Checklist (each item points at its step through `stepOf`, and every step is claimed by an item, which `guides.test`
+enforces): *Work catalogued without a master · Splits settled and sheet signed · PRO registration and ISWC saved · MLC
+registration · Release credits added · Credit check run · Differences fixed · Proof kept*.
+
+Links through `GUIDE_LINKS`: open the song, open the Health Hub's credit check, open Contracts for the split sheet.
+No numbered step is left unclaimed.
+
+**2. Blueprint — "Beat License Checkups and Renegotiation" (`beat-renegotiation`).** Steps: know what the license allows
+· record the deal on the beat · read the master's numbers on a date · compare against the cap · decide the ask · sign the
+amendment · file it and set the next check. Checklist: *License terms read · Deal recorded · First reading entered ·
+Position checked · Ask decided · Amendment signed · New terms filed · Next check dated*.
+
+**3. Contract — "Beat License Renegotiation & Amendment" (`beat-license-amendment`)** in `blueprints/music-production.ts`,
+category Music Production, roles Producer / Artist, built with `doc()` and the shared clauses so it reads like the
+licenses it amends. Fields: effective date, beat title, song title, the original license date, the original cap and fee,
+the new cap, the new fee (if any), the producer's royalty and composition share going forward, credit, earlier leases,
+governing law. Every value prefills from the beat's recorded deal when it exists and stays blank when it does not — no
+number is invented by us.
+
+Clauses: recitals naming the original agreement · what changes and what does not · the new cap and fee · **prospective
+only** (nothing already earned or already licensed changes, and copies already signed keep the terms they were signed
+with) · credit · ownership unchanged · no waiver of either side's rights · general terms.
+
+**How it is linked into the process.** `Contract.catalogId` already exists, so the amendment is attached to the beat's
+master entry from the song picker (the title becomes *Beat License Renegotiation & Amendment – Gold Teeth*). From the
+renegotiation card, one button opens Contracts with that song already chosen and the old terms prefilled; when it is
+signed, the master's card shows *Amended 9 Nov 2026 · cap 50,000 → 250,000* and the reminder moves to the new cap. The
+signed PDF goes to the Signed Vault like every other contract, because it is one.
+
+## 14. What else makes this better
+
+Proposals, all additive, none of them a new promise:
+
+1. **One renderer, two checkups.** The credit check and the master check share the finding shape, so a member learns one
+   report layout and the codebase keeps one component. A third check later is a lens, not a screen.
+2. **Difference-first, everywhere.** The fill dialog already does it; the credit check should open on the differences with
+   the matches collapsed, so a 40-song writer is not asked to read 40 rows to find two.
+3. **Prefill, then confirm.** The release-credits form and the amendment both start from what the member already typed.
+   Confirming is one click; correcting is one field.
+4. **Say which copy pays.** A one-line legend on the check: the registration is what the PRO and The MLC pay on; the
+   release credit is what listeners and the artist's paperwork show. That stops the member fixing the wrong document.
+5. **Match by code before name.** `matchWork` already tries ISRC, then ISWC, then title with the writers breaking a tie;
+   the credit check keeps that order and never matches on a name alone.
+6. **One song, one line.** A song with two disagreeing sources is listed once, with both reasons joined, the way
+   `royaltyCheckup` already de-duplicates.
+7. **Nothing new is gated.** A missing ISRC, an unchecked credit line or a beat with no master never blocks saving,
+   embedding or an export (§ the writer-credits rules). The check is a reading, not a gate.
+8. **The contract remembers.** Governing law, the producer's name and the beat title are already remembered by the
+   contract form; the amendment adds nothing new to remember.
+9. **The checkup dates itself.** A saved run carries its date, and `nextDue` on the Working On item already surfaces the
+   next one, so the routine is the member's calendar rather than a notification we cannot guarantee.
+10. **A signed amendment ends the prompt.** Once the new terms are filed, the reminder waits for the new cap; it does not
+    keep asking about the old one.
+
+## 15. Bug check (read from the shipped code, 2026-11-09)
+
+| # | What is wrong | Where | Fix |
+| --- | --- | --- | --- |
+| 1 | **A writer-only song cannot be saved at all.** `metadataSchema` requires `artist` to be at least one character, and `MetadataUploader` stops on the first issue at both Save and Embed, so a songwriter with no recording of their own is told *"Artist name is required."* This contradicts §4.6 and blocks the whole first step of §11. | `metadata.ts` `metadataSchema.artist`, `MetadataUploader.tsx` (281, 483) | Require an artist only when the entry has a recording of the member's own. For `recordingSide: "external"`, the field is labelled *Recording artist (who released it)* and may be blank, with a warning rather than a block. |
+| 2 | **Every composition list is told it is missing an ISRC.** `listGaps` adds *"No ISRC — The MLC and SoundExchange match a recording by it"* unless the list is SoundExchange, including on BMI and ASCAP catalogues, and the agency card prints it as a gap. AGENTS says ASCAP and BMI never require an ISRC. | `agency-lists.ts` `listGaps`, called from `AgencyLists.tsx` | Ask for an ISRC only on The MLC's and SoundExchange's lists. A PRO list never does, whatever the song. |
+| 3 | **An absent catalog ISRC reads as a difference for a song the member did not record.** `workIssues` says *"The agency has ISRC …, your catalog has none"*, which for a placed song is simply "the release hasn't happened yet". | `agency-lists.ts` `workIssues` | For `recordingSide: "external"` with no own recording, a missing ISRC is "waiting for the artist's release", not a difference. The ISWC still compares. |
+| 4 | **`bmiPdfRows` throws away every publisher line** (it keeps only `W` participants), so the comparison can never say whether publishing is registered, and a writer's 200% total (writer + publisher) arrives as one 200% writer row. | `agency-lists.ts` `bmiPdfRows` | Keep the `P` rows as publisher entries so both halves of the registration are compared. Existing `listGaps` totals already accept the 200 scale. |
+| 5 | **A shared title can attach the wrong work.** `matchWork` falls back to the title and takes the first candidate; two different songs with the same name and no code on either side match by name alone. For a writer with many placements that silently compares against another writer's registration. | `agency-lists.ts` `matchWork` | When more than one work carries the title and no writer or IPI agrees, return "couldn't tell which work this is" and ask, rather than picking the first. |
+| 6 | **The contract form can only prefill a title and splits.** `pickSong` fills `songTitle` and `splits`, so the amendment's cap, fee and original license date have no way in from the beat. | `Contracts.tsx` `pickSong` | For the amendment blueprint only, also read the beat's `details` (beat title, cap, fee, license date) into the fields. |
+| 7 | **A new blueprint renders without links unless it is registered.** `linkFor` has one guide in `GUIDE_LINKS`, so the two new blueprints' items would show no action. Not a bug, a gap the plan must close in the same change. | `guides.ts` `GUIDE_LINKS` | Add both guides' links; the existing test already fails a link pointing at an item or guide that does not exist. |
+| 8 | **The new guides have to satisfy rules the suite enforces**: `stepOf` must be exactly as long as the checklist, every step must be claimed by at least one item, and a cheat sheet may carry no links. | `guides.test.ts` | Write both checklists with an explicit `stepOf`; treat a failing guide test as a build error, not a test to loosen. |
+
+Checked and **not** bugs: `workIssues` compares shares as each writer's part of the total, so a 100-scale and a
+200-scale list still compare correctly; `matchWork` tries ISRC, then ISWC, then title with the writers breaking a tie,
+which is the right order for a placement; `Contract.catalogId` already exists, so attaching an amendment to a song needs
+no migration; `royaltyCheckup` already de-duplicates one song listed for two reasons, which is what the credit check
+needs; the beat license templates and `doc()`/`CLAUSE` cover the amendment with no new machinery.
+
+## 16. Open questions
+
+1. ~~The chip~~ — answered: chip only (§4.2, decision 14).
+2. **The deal fields** (§4.5): deal type, date, stream threshold and a contract link — enough for a beat license?
+3. **A sold beat stays in Unreleased** (recommended), rather than getting its own line. Confirm?
+4. **What counts as the release's credits** (§11.6): the member types them into a short prefilled form (recommended, and
+   nothing is uploaded), or also allows a file such as the artist's split sheet, which would mean storing it.
+5. **Where the credit check lives**: a tab in the Royalty Health Hub beside the agency lists (recommended), or a card on
+   the song in My Catalog?
+6. **Who sees it**: everyone whose song is `recordingSide: "external"` (recommended), or only members who answered
+   *registered as a writer while someone else performs them*?
