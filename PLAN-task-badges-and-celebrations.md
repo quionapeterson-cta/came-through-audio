@@ -204,3 +204,25 @@ Built and pushed in this change:
   badge is bucket-only now.
 - Two measurements are mine, not yours, and are easy to change: a "finished song entry" is master + cover art +
   Registration Ready, and "100% healthy report" is a check month where every song is healthy.
+
+
+## Cover art badges by release kind (founder, 2026-11-09)
+
+- **Cover Story is retired** and its three pictures with it. Every cover art embed still earns a badge, now by what was
+  released: a **single** alternates `platinum_single_512px.webp` / `gold_single_512px.webp`; an **EP** earns
+  `gold_ep_512px.webp`; an **album** runs `Platinum_album_512px.webp` → `album_cover_dropped_platinum_512px.webp` →
+  `album_cover_dropped_gold_512px.webp` → back to platinum.
+- **Cover Star** comes every 12 single covers and every 3 EP covers (`coverStarSteps`); **Gold Cover Star**
+  (`CTA_cover_star_gold_512.webp`) every 4 album covers; **Diamond Drop** (`CTA_diamond_drop_512.webp`) for an album of
+  20+ songs with its art; **Gold Standard** (`CTA_gold_standard_512.webp`) for an EP or album whose cover is 3000×3000;
+  **Platinum Press** (`CTA_platinum_press_512.webp`) for an album that was saved while unreleased and is now off
+  unreleased, with a 3000×3000 cover and a release date ahead.
+- **Inferred, not dictated** (flag for the founder): "award for every 20 singles" has no art named, so it uses
+  `CTA_cover_star_platinum_1_512.webp` — the same picture as Cover Star. If 20 singles should carry its own picture, that
+  is a one-line swap.
+- **Data the rules needed**, both catalog-only and never embedded: `artWidth`/`artHeight`, read from the file the member
+  picked (so a 3000×3000 cover is a real measurement, and covers added before this date read 0 and earn nothing on that
+  rule until re-picked), and `wasUnreleased`, set the first time a song is saved while marked unreleased.
+- **Art location**: the nine pictures live in the bucket under `icons/playful/album art badges/` (`artInBucket: true`).
+  The repo copies the founder mentioned are not in `public/` yet, so a build without `VITE_ART_BASE` shows blank tiles
+  for them; `badge-rules.test.ts` names each one so a mistyped path can't hide.

@@ -2,6 +2,7 @@ import { BADGES, INSTRUMENTS, timesEarned, type BadgeDef } from "@/lib/badges";
 import type { CatalogTrack } from "@/lib/catalog";
 import { songHealthy, trackReport, type RepertoireCheck } from "@/lib/health";
 import { creditName, isPerformer } from "@/lib/metadata";
+import { releaseKind } from "@/lib/health-checklist";
 import { registrationReadiness } from "@/lib/readiness";
 import { countryByCode, guessCountry } from "@/lib/repertoires";
 import { parentGenre } from "@/lib/metadata";
@@ -121,6 +122,24 @@ export function badgeMetrics(d: BadgeData): Record<string, number> {
   const signatures = [...sheets.values()].flat().filter((r) => !r.isOwner && r.signedAt).length
     + d.contracts.flatMap((c) => c.parties).filter((p) => !p.isOwner && p.signedAt).length;
 
+  // Cover art by release kind, and the milestones above them (founder, 2026-11-09). The art's pixel size is saved with the
+  // song when it is chosen, so the 3000×3000 rule reads a real number instead of guessing from the file.
+  const withArt = d.tracks.filter((t) => t.metadata.artPath);
+  const kindOf = (t: CatalogTrack) => releaseKind(t.metadata);
+  const singleArt = withArt.filter((t) => kindOf(t) === "Single").length;
+  const epArt = withArt.filter((t) => kindOf(t) === "EP").length;
+  const albumArt = withArt.filter((t) => kindOf(t) === "Album").length;
+  const coverStarSteps = Math.floor(singleArt / 12) + Math.floor(epArt / 3);
+  const at3000 = (t: CatalogTrack) => t.metadata.artWidth >= 3000 && t.metadata.artHeight >= 3000;
+  const bigAlbums = albums(d.tracks).filter((list) => list.length >= 20 && list.some((t) => t.metadata.artPath)).length;
+  const hiResCovers = albums(d.tracks).filter((list) => list.some((t) => t.metadata.artPath && at3000(t))
+    && (kindOf(list[0]!) === "EP" || kindOf(list[0]!) === "Album")).length;
+  // Platinum Press: a release that was saved while unreleased, now off unreleased, with a 3000×3000 cover and a date ahead.
+  const today = d.now.toISOString().slice(0, 10);
+  const platinumPress = albums(d.tracks).filter((list) => kindOf(list[0]!) === "Album"
+    && list.some((t) => t.metadata.wasUnreleased) && list.some((t) => !t.metadata.unreleased && !!t.metadata.releaseDate && t.metadata.releaseDate >= today)
+    && list.some((t) => t.metadata.artPath && at3000(t))).length;
+
   const full = fullProjects(d.tracks);
   const isWav = (t: CatalogTrack) => /\.wav$/i.test(t.metadata.audioPath);
   const wavAlbums = full.filter((list) => list.length >= ALBUM_TRACKS && list.every(isWav)).length;
@@ -146,6 +165,7 @@ export function badgeMetrics(d: BadgeData): Record<string, number> {
     ready: ready.size,
     masters: d.tracks.filter((t) => t.metadata.audioPath).length,
     artUploads: d.tracks.filter((t) => t.metadata.artPath).length,
+    singleArt, epArt, albumArt, coverStarSteps, bigAlbums, hiResCovers, platinumPress,
     lyrics: d.tracks.filter((t) => t.metadata.lyrics.trim()).length,
     vocalSongs: d.tracks.filter((t) => t.metadata.credits.some((c) => c.name.trim() && isPerformer(c.role) && instrumentOf(c) === "vocals")).length,
     fullBandSongs: d.tracks.filter((t) => t.metadata.credits.filter((c) => c.name.trim() && isPerformer(c.role)).length >= 3).length,

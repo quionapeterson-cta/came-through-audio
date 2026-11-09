@@ -30,7 +30,10 @@ describe("badge catalog", () => {
     // Embedded, Lyric Locked Gold, Fully Matched and Kit On File got their 512px repo copies on 2026-11-08.
     // No badge is bucket-only any more (2026-11-08): a new exemption has to be added deliberately, with its id written
     // out in this list.
-    expect(BADGES.filter((b) => b.artInBucket).map((b) => b.id)).toEqual([]);
+    // The album-art set the founder uploaded on 2026-11-09 is bucket-only until its 512px repo copies land.
+    expect(BADGES.filter((b) => b.artInBucket).map((b) => b.id)).toEqual([
+      "cover_single", "cover_ep", "cover_album", "cover_star", "cover_star_20", "album_cover_star", "diamond_drop", "gold_standard", "platinum_press",
+    ]);
   });
   it("carries no crown badge, and Royalty Health keeps only the clean-report badge", () => {
     // The founder removed all three crowns as a poor fit (2026-11-08); a healthy song earns no badge of its own now.
@@ -250,8 +253,49 @@ describe("every-time task badges", () => {
   });
   it("has one every-time badge for each task", async () => {
     const { badgeById } = await import("@/lib/badges");
-    for (const id of ["embedded", "came_strong", "lyric_locked_gold", "sealed", "blueprints_checked", "contract_signed", "executive_contract", "cover_story"]) {
+    for (const id of ["embedded", "came_strong", "lyric_locked_gold", "sealed", "blueprints_checked", "contract_signed", "executive_contract", "cover_single", "cover_ep", "cover_album"]) {
       expect(badgeById(id)).toMatchObject({ goal: 1, every: 1 });
     }
+  });
+});
+
+describe("cover art by release kind", () => {
+  const art = { artPath: "u/t/artwork.jpg", artWidth: 3000, artHeight: 3000 };
+  const many = (kind: string, count: number, patch: Partial<Metadata> = {}) =>
+    Array.from({ length: count }, (_, i) => track({ releaseType: kind, title: `${kind} ${i}`, album: kind === "Single" ? "" : `The ${kind}`, ...art, ...patch }));
+
+  it("counts each kind on its own, so a single never earns the album picture", () => {
+    const m = badgeMetrics(data({ tracks: [...many("Single", 2), ...many("EP", 1), ...many("Album", 1)] }));
+    expect(m).toMatchObject({ singleArt: 2, epArt: 1, albumArt: 1, artUploads: 4 });
+  });
+  it("awards a cover star every 12 singles and every 3 EPs", () => {
+    expect(badgeMetrics(data({ tracks: many("Single", 11) }))["coverStarSteps"]).toBe(0);
+    expect(badgeMetrics(data({ tracks: many("Single", 12) }))["coverStarSteps"]).toBe(1);
+    expect(badgeMetrics(data({ tracks: many("EP", 3) }))["coverStarSteps"]).toBe(1);
+    expect(badgeMetrics(data({ tracks: [...many("Single", 24), ...many("EP", 6)] }))["coverStarSteps"]).toBe(4);
+  });
+  it("turns an album's picture over on every earning", () => {
+    const album = badgeById("cover_album")!;
+    expect(rotationArt(album, 1)).toBe(artUrl(album.src));
+    expect(rotationArt(album, 2)).toBe(artUrl(album.rotation![0]!));
+    expect(rotationArt(album, 3)).toBe(artUrl(album.rotation![1]!));
+    expect(rotationArt(album, 4)).toBe(artUrl(album.src));
+    // A single alternates its two pictures.
+    const single = badgeById("cover_single")!;
+    expect(rotationArt(single, 1)).toBe(artUrl(single.src));
+    expect(rotationArt(single, 2)).toBe(artUrl(single.rotation![0]!));
+  });
+  it("gives Gold Cover Star every 4 albums, and counts a 20-song album for Diamond Drop", () => {
+    const albums20 = badgeMetrics(data({ tracks: many("Album", 20) }));
+    expect(albums20).toMatchObject({ albumArt: 20, bigAlbums: 1, hiResCovers: 1 });
+    expect(timesEarned(badgeById("album_cover_star")!, 4)).toBe(1);
+    expect(timesEarned(badgeById("album_cover_star")!, 8)).toBe(2);
+    expect(timesEarned(badgeById("cover_star_20")!, 40)).toBe(2);
+  });
+  it("holds Platinum Press until a release that was unreleased is scheduled with a 3000×3000 cover", () => {
+    const scheduled = many("Album", 2, { wasUnreleased: true, unreleased: false, releaseDate: "2026-12-01" });
+    expect(badgeMetrics(data({ tracks: scheduled }))["platinumPress"]).toBe(1);
+    expect(badgeMetrics(data({ tracks: many("Album", 2, { wasUnreleased: true, unreleased: true, releaseDate: "2026-12-01" }) }))["platinumPress"]).toBe(0);
+    expect(badgeMetrics(data({ tracks: many("Album", 2, { wasUnreleased: true, unreleased: false, releaseDate: "2026-12-01", artWidth: 1400, artHeight: 1400 }) }))["platinumPress"]).toBe(0);
   });
 });

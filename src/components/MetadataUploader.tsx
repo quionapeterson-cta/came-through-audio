@@ -94,6 +94,9 @@ export function MetadataUploader({ onShareInfo, userId, mode = "embed", readOnly
     if (!userId) return;
     if (!next) { clearEmbedCover(userId); return; }
     void coverForDraft(next).then((url) => saveEmbedCover(userId, url)).catch(() => {});
+    // The badge rules ask whether a cover is 3000×3000, so the size is read once here and saved with the song
+    // (founder, 2026-11-09). A file that can't be read simply keeps 0 and earns nothing on that rule.
+    void createImageBitmap(next).then((b) => setMetadata((m) => ({ ...m, artWidth: b.width, artHeight: b.height }))).catch(() => {});
   };
   const [cover, setCover] = useState("");
   const [error, setError] = useState("");
@@ -305,7 +308,8 @@ export function MetadataUploader({ onShareInfo, userId, mode = "embed", readOnly
     setError("");
     setSaving(true);
     try {
-      const data = { ...parsed.data, aiProtection: parsed.data.aiProtection || aiProtect };
+      // Platinum Press reads this later: a song saved while unreleased keeps that fact even after it's scheduled.
+      const data = { ...parsed.data, aiProtection: parsed.data.aiProtection || aiProtect, wasUnreleased: parsed.data.wasUnreleased || parsed.data.unreleased };
       const id = await saveTrack(data, userId, editingId);
       // Always store the fully tagged master (never the raw upload) and artwork in the private vault.
       let master: Blob | undefined;

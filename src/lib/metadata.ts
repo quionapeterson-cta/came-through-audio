@@ -80,6 +80,9 @@ const metadataObject = z.object({
   releaseDate: z.string(),
   /** "This song isn't released yet" (pre-distribution, 2026-10-25): for songs with no release date picked. */
   unreleased: z.boolean().default(false),
+  /** Set the first time a song is saved while it is marked unreleased (founder, 2026-11-09). Platinum Press needs to know a
+   *  release once sat unreleased before it was scheduled; a saved song keeps the flag whatever it says later. Catalog-only. */
+  wasUnreleased: z.boolean().default(false),
   label: z.string().trim().default(""),
   /** Optional contact email from Embed Defaults (founder, 2026-10-25), so whoever finds the file can reach the artist. Blank = not embedded. */
   contactEmail: z.string().trim().default("").refine((v) => !v || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v), "Enter a valid email address."),
@@ -102,6 +105,9 @@ const metadataObject = z.object({
   coverThumb: z.string().default(""),
   audioPath: z.string().default(""),
   artPath: z.string().default(""),
+  /** The cover's pixel size, read when the art is chosen (founder, 2026-11-09): the 3000×3000 Gold Standard rule reads it. */
+  artWidth: z.coerce.number().int().nonnegative().default(0),
+  artHeight: z.coerce.number().int().nonnegative().default(0),
   aiProtection: z.boolean().default(false),
   /** Credits and performers. `instrument` matters for performers (session players, backup vocalists): it's what neighbouring-rights societies pay on. */
   credits: z.array(z.object({ role: z.string(), name: z.string().trim(), instrument: z.string().trim().default("") })).default([]),
@@ -151,10 +157,10 @@ export type Contributor = z.infer<typeof contributorSchema>;
 export const hfaLooksOff = (v: string | undefined) => !!v?.trim() && !/^[A-Z0-9]{6}$/i.test(v.trim());
 export const emptyContributor = (): Contributor => ({ name: "", pro: "", ipi: "", percentage: "" });
 export const emptyMetadata = (): Metadata => ({
-  title: "", trackNumber: "", trackTotal: "", artist: "", featured: [""], album: "", duration: "", releaseType: "", releaseDate: "", unreleased: false, label: "", contactEmail: "", copyright: "", phonographic: "", language: "",
+  title: "", trackNumber: "", trackTotal: "", artist: "", featured: [""], album: "", duration: "", releaseType: "", releaseDate: "", unreleased: false, wasUnreleased: false, label: "", contactEmail: "", copyright: "", phonographic: "", language: "",
   isrc: "", upc: "", iswc: "", explicit: false, instrumental: false, primaryGenre: "", secondaryGenre: "",
   writers: [emptyContributor()], composers: [emptyContributor()], producers: [emptyContributor()], publishers: [emptyContributor()],
-  lyrics: "", coverThumb: "", audioPath: "", artPath: "", aiProtection: false, credits: [], recordedIn: "", recordedYear: "",
+  lyrics: "", coverThumb: "", audioPath: "", artPath: "", artWidth: 0, artHeight: 0, aiProtection: false, credits: [], recordedIn: "", recordedYear: "",
   alternateTitles: [""], selfPublished: false, bmiWriterPublishing: false, samples: "", sampleTitle: "", sampleWriters: "", sampleSource: "", writtenFor: "", productionTitle: "",
   masterShare: "100", masterBasis: "Copyright Owner", rightsStart: "", rightsEnd: "",
 });

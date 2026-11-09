@@ -82,6 +82,9 @@ export const METRIC_UNIT: Record<string, [string, string]> = {
   registrationSubmissions: ["registration submitted", "registrations submitted"],
   protectionTrophies: ["finished entry", "finished entries"], brandKits: ["brand kit", "brand kits"],
   seatKeys: ["key", "keys"], healthyReports: ["fully healthy report", "fully healthy reports"],
+  singleArt: ["single cover", "single covers"], epArt: ["EP cover", "EP covers"], albumArt: ["album cover", "album covers"],
+  coverStarSteps: ["cover star step", "cover star steps"], bigAlbums: ["20-song album", "20-song albums"],
+  hiResCovers: ["3000×3000 cover", "3000×3000 covers"], platinumPress: ["scheduled release", "scheduled releases"],
 };
 
 /** How many times a badge has been earned at this count: once at `goal`, then once per `every` beyond it. */
@@ -98,6 +101,8 @@ export function nextGoal(badge: Pick<BadgeDef, "goal" | "every">, count: number)
 
 const I = "/icons";
 const S = `${I}/serious`, P = `${I}/playful`;
+/** The album-art set the founder uploaded to the bucket (2026-11-09); the folder name is literal. */
+const A = `${P}/album art badges`;
 
 const CORE: BadgeDef[] = [
   { id: "genesis", title: "Genesis Crown", collection: "core", tier: "instant", milestone: "Set up your profile", action: "Set up your profile", metric: "welcomed", goal: 1, preSeen: true, src: `${S}/came_genesis_gold.png`,
@@ -116,10 +121,45 @@ const CORE: BadgeDef[] = [
     rotation: ["first_note", "embedded_vinyl", "embedded_band"],
     description: "Your credits are inside the file now. Wherever this master goes, your name and your codes go with it. Every master you embed earns this again.",
     popup: "You Came Through! Your first master is embedded.", repeatPopup: "You Came Through: your {nth} embedded master." },
-  { id: "cover_story", title: "Cover Story", collection: "core", tier: "instant", milestone: "Every cover art you upload", action: "Upload album art", metric: "artUploads", goal: 1, every: 1, src: `${P}/cover_story.webp`,
-    rotation: ["cover_story_2", "cover_story_3"],
-    description: "Your cover art is saved with the song, ready to download for every release and share card. Every cover you upload earns this again.",
-    popup: "Cover story! Your first album art is saved.", repeatPopup: "Cover story! Your {nth} cover is saved." },
+  // Cover art earns by release kind (founder, 2026-11-09). A single alternates platinum and gold; an EP has its own
+  // picture; an album runs through three (platinum, then the two dropped-cover pictures) and starts again. The
+  // milestones above them are their own badges, so a heavy cover-art catalog collects the pair, not one badge ×40.
+  { id: "cover_single", title: "Single Cover", collection: "core", tier: "instant", milestone: "Every single's cover art you add", action: "Add a single's cover art", metric: "singleArt", goal: 1, every: 1, alternate: true, artInBucket: true,
+    src: `${A}/platinum_single_512px.webp`, rotation: [`${A}/gold_single_512px.webp`],
+    description: "Your single's cover art is saved with the song, ready for every release and share card. Every single cover you add earns this again, alternating platinum and gold.",
+    popup: "Cover story! Your first single cover is saved.", repeatPopup: "Cover story! Your {nth} single cover is saved." },
+  { id: "cover_ep", title: "EP Cover", collection: "core", tier: "instant", milestone: "Every EP's cover art you add", action: "Add an EP's cover art", metric: "epArt", goal: 1, every: 1, artInBucket: true,
+    src: `${A}/gold_ep_512px.webp`,
+    description: "A whole EP has its cover art on file. Every EP cover you add earns this again.",
+    popup: "Cover story! Your first EP cover is saved.", repeatPopup: "Cover story! Your {nth} EP cover is saved." },
+  { id: "cover_album", title: "Album Cover", collection: "core", tier: "instant", milestone: "Every album's cover art you add", action: "Add an album's cover art", metric: "albumArt", goal: 1, every: 1, alternate: true, artInBucket: true,
+    src: `${A}/Platinum_album_512px.webp`, rotation: [`${A}/album_cover_dropped_platinum_512px.webp`, `${A}/album_cover_dropped_gold_512px.webp`],
+    description: "Your album's cover art is saved with the songs. Every album cover you add earns this again, and the picture turns over as you go.",
+    popup: "Cover story! Your first album cover is saved.", repeatPopup: "Cover story! Your {nth} album cover is saved." },
+  { id: "cover_star", title: "Cover Star", collection: "core", tier: "standard", milestone: "Every 12 single covers, and every 3 EP covers", action: "Keep adding cover art", metric: "coverStarSteps", goal: 1, every: 1, artInBucket: true,
+    src: `${A}/CTA_cover_star_platinum_1_512.webp`,
+    description: "Twelve singles or three EPs of cover art, finished and on file. Every 12 single covers and every 3 EP covers earns this again.",
+    popup: "Cover star! Your cover art is stacking up.", repeatPopup: "Cover star! {nth} times over." },
+  { id: "cover_star_20", title: "Cover Star Platinum", collection: "core", tier: "mega", milestone: "Every 20 single covers", action: "Add 20 single covers", metric: "singleArt", goal: 20, every: 20, artInBucket: true,
+    src: `${A}/CTA_cover_star_platinum_1_512.webp`,
+    description: "Twenty single covers, all on file. Platinum cover star: every 20 single covers earns this again.",
+    popup: "Platinum cover star! 20 single covers on file.", repeatPopup: "Platinum cover star! {nth} time, 20 more single covers." },
+  { id: "album_cover_star", title: "Gold Cover Star", collection: "core", tier: "mega", milestone: "Every 4 album covers", action: "Add 4 album covers", metric: "albumArt", goal: 4, every: 4, artInBucket: true,
+    src: `${A}/CTA_cover_star_gold_512.webp`,
+    description: "Four albums with their cover art on file. Every 4 album covers earns this again.",
+    popup: "Gold cover star! Four album covers on file.", repeatPopup: "Gold cover star! {nth} time, four more albums." },
+  { id: "diamond_drop", title: "Diamond Drop", collection: "core", tier: "mega", milestone: "An album with 20 or more songs and its cover art", action: "Finish a 20-song album cover", metric: "bigAlbums", goal: 1, every: 1, artInBucket: true,
+    src: `${A}/CTA_diamond_drop_512.webp`,
+    description: "A twenty-song album with its cover art in place. That's a body of work, not a drop in the bucket.",
+    popup: "Diamond Drop! A 20-song album with its cover art.", repeatPopup: "Diamond Drop! {nth} album this size." },
+  { id: "gold_standard", title: "Gold Standard", collection: "core", tier: "standard", milestone: "An EP or album whose cover is 3000×3000 px", action: "Add a 3000×3000 cover", metric: "hiResCovers", goal: 1, every: 1, artInBucket: true,
+    src: `${A}/CTA_gold_standard_512.webp`,
+    description: "A 3000×3000 cover on an EP or album: the size the stores ask for, on file without a warning. Every EP or album at that size earns this again.",
+    popup: "Gold standard! Your cover is 3000×3000.", repeatPopup: "Gold standard! {nth} release at 3000×3000." },
+  { id: "platinum_press", title: "Platinum Press", collection: "core", tier: "ultimate", milestone: "An album that was unreleased, now scheduled with a 3000×3000 cover", action: "Schedule a release that was unreleased", metric: "platinumPress", goal: 1, every: 1, artInBucket: true,
+    src: `${A}/CTA_platinum_press_512.webp`,
+    description: "It sat unreleased, then it got its 3000×3000 cover and a release date. That's the press run: finished, scheduled and ready.",
+    popup: "Platinum Press! Your release is scheduled and finished.", repeatPopup: "Platinum Press! {nth} release ready for the press." },
   { id: "came_strong", title: "Came Strong", collection: "core", tier: "standard", milestone: "Every song you get Registration Ready", action: "Ready a song to register", metric: "ready", goal: 1, every: 1, src: `${S}/came_strong_gold.png`,
     rotation: ["came_double", "full_band", "vault"],
     description: "Writers named, roles set, nothing missing. This song is ready to register and ready to collect. You came through for it.",
@@ -497,8 +537,6 @@ export function rotationArt(badge: BadgeDef, times: number): string {
 const ROTATION_ART: Record<string, string> = {
   embedded_vinyl: `${P}/bedazzled_vinyl.webp`,
   embedded_band: `${P}/bedazzled_band.png`,
-  cover_story_2: `${P}/cover_story_2.webp`,
-  cover_story_3: `${P}/cover_story_3.webp`,
 };
 
 /** The unlock line for this earning: the first-time pop-up, or the counting one ("your 12th…") after that. */

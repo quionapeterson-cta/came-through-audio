@@ -158,7 +158,10 @@ function UnlockPopup({ state, artist, more, onNext, share, eagle }: { state: Bad
     <DialogContent className="h-full max-h-none max-w-none overflow-y-auto border-0 bg-transparent p-0 shadow-none sm:rounded-none [&>button]:!bg-transparent [&>button]:!text-white [&>button]:opacity-90">
       <DialogTitle className="sr-only">New badge: {badge.title}</DialogTitle>
       <DialogDescription className="sr-only">{withArtist(line, artist)}</DialogDescription>
-      <div className="mx-auto flex min-h-full w-full max-w-[min(94vw,40rem)] flex-col items-center justify-center gap-6 px-2 py-12 text-center text-white">
+      {/* The share screen's layout, applied to every badge celebration (founder, 2026-11-09): a safe-centred grid starts at
+          the top when the badge and its message are taller than the screen, instead of centring the overflow past the top
+          edge where the badge was cut off and nothing could scroll to it. */}
+      <div className="mx-auto grid min-h-full w-full max-w-[min(94vw,40rem)] justify-items-center gap-6 px-2 py-12 text-center text-white [align-content:safe_center]">
         {choosing ? <section className="w-full space-y-6">
           <p className="text-xs font-bold uppercase tracking-[2px] text-[#4d8cff]">{badge.title}</p>
           <h2 className="text-2xl font-bold sm:text-3xl">{withArtist(line, artist)}</h2>
@@ -178,13 +181,15 @@ function UnlockPopup({ state, artist, more, onNext, share, eagle }: { state: Bad
             </p>
             <p className="text-2xl font-bold sm:text-3xl">{withArtist(line, artist)}</p>
             <p className="text-white/75">{badge.description}</p>
-            <p className="text-sm text-white/60"><span className="font-semibold">Milestone: </span>{badge.milestone}</p>
+            {/* Keep going sits straight under the description (founder, 2026-11-09), so the way on is the first thing after
+                the words rather than below the milestone and the shelf link. */}
             <div className="flex flex-wrap justify-center gap-3 pt-3">
               {share && <Button size="lg" onClick={() => setSharing((v) => !v)} aria-expanded={sharing}><Share2 />Share</Button>}
               <Button size="lg" variant="outline" className="border-white/60 bg-transparent text-white hover:bg-white/10 hover:text-white" onClick={onNext}>
                 {more > 0 ? <>Next badge ({more} more)<ChevronRight /></> : "Keep going"}
               </Button>
             </div>
+            <p className="text-sm text-white/60"><span className="font-semibold">Milestone: </span>{badge.milestone}</p>
             <Link to="/profile" hash="badges" onClick={onNext} className="inline-block pt-1 text-sm text-white/70 underline-offset-4 hover:text-white hover:underline">See all my badges</Link>
           </section>
           {sharing && <SharePanel avatar={src} share={{ ctx: "profile", artist: artist ?? "", eagle }} />}
