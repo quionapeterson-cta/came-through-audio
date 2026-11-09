@@ -9,7 +9,7 @@ const CREDIT = (fallback: string, placeholder: string) => field("credit", "Credi
  * lyrics and melody usually asks, and 100% is only for a producer who is the only writer. Editable, and a split sheet
  * always wins.
  */
-const COMPOSITION = (value: string) => field("publishingShare", "Producer's share of the composition", "Out of the composition's 100%. 50% is the even split when you write the song together, 25% is usual when the producer supplied the beat and the artist wrote the lyrics and melody, and 100% only when the producer is the only writer. Put the same split on your split sheet.", { value });
+const COMPOSITION = (value: string) => field("publishingShare", "Producer's share of the composition", "Out of the composition's 100%. 50% is the even split when you and the producer work closely and split the publishing, and 25% is usual when the producer supplied the beat and you wrote the lyrics and melody. A beat licence is for a song you write, so 100% doesn't belong here: a producer who wrote the song alone licenses the beat directly instead. Put the same split on your split sheet.", { value });
 /**
  * The producer's own registration details, in the deal rather than in a message (founder, 2026-11-09): the artist cannot
  * register the song without them. They start from the catalog defaults when the producer is the member signing up.
@@ -22,7 +22,7 @@ const BEAT = need("beatTitle", "Beat title", "The producer's name for the beat."
  * producer is registered as a composer under their legal name, and names the check the artist can make afterwards.
  */
 const COMPOSITION_CLAUSE: [string, string] = ["COMPOSITION, COMPOSER CREDIT AND REGISTRATION",
-  "Producer wrote the Beat and is its composer. Producer's share of the Song's composition is {{publishingShare}} of the composition's 100%, and it carries the writer's share and the publisher's share of that percentage. The share follows how the Song was made: 50% where Artist and Producer write the Song together and split the publishing evenly, as when Producer records the Song; 25% where Producer supplied the Beat and Artist wrote the lyrics and melody, as with a beat bought or leased online; 100% where Producer is the Song's only writer. If anyone else writes any part of the Song, every writer is named on a split sheet and these shares change to match it. " +
+  "Producer wrote the Beat and is its composer. Producer's share of the Song's composition is {{publishingShare}} of the composition's 100%, and it carries the writer's share and the publisher's share of that percentage. The share follows how closely the two work together: 50% where Artist and Producer work closely and split the publishing evenly; 25% where Producer supplied the Beat and is someone Artist doesn't work closely with, as with a beat bought or leased online. If anyone else writes any part of the Song, every writer is named on a split sheet and these shares change to match it. This licence covers a Song Artist writes: where Producer is the Song's only writer there is no beat licence to give an artist, and Producer licenses the Beat under a synchronization licence and a master use licence instead. " +
   "Producer is registered as a composer of the Song under their legal name. Producer's PRO affiliation ({{pro}}) and IPI name number ({{ipi}}) are recorded in this agreement, in every registration and in every deal for the Song. Producer will check that registration in the society's public repertoire and in The MLC's public search, by legal name, song title, ISWC or ISRC, and will tell Artist of any error in it."];
 
 export const MUSIC_PRODUCTION: Blueprint[] = [
@@ -66,7 +66,7 @@ export const MUSIC_PRODUCTION: Blueprint[] = [
     keyTerms: [
       "Exclusive: the producer stops licensing the beat to anyone new. Earlier leases may still exist, so they're listed.",
       "No caps: unlimited streams and sales, worldwide.",
-      "Composition: 25% of the song is the usual share when the producer supplied the beat; 50% when you write it together, and only 100% if the producer is the only writer.",
+      "Composition: 50% is the even split when you work closely and split the publishing; 25% is usual when the producer supplied the beat and you wrote the lyrics and melody. A beat licence only exists because you write the song.",
       "Registration: the producer is registered as its composer, and gives their legal name, PRO and IPI number here.",
       "Ownership: the producer still owns the beat itself; the artist owns their new song and recording.",
     ],
@@ -76,7 +76,7 @@ export const MUSIC_PRODUCTION: Blueprint[] = [
       FEE("Exclusive fee", "$1,500", "What the artist pays for exclusive rights."),
       field("points", "Producer royalty (points)", "The producer's percentage of master income, if any.", { value: "0%" }),
       field("priorLicenses", "Earlier leases of this beat", "Any non-exclusive leases sold before this deal. Those artists may keep their versions.", { value: "none" }),
-      COMPOSITION("25%"), PRO_FIELD, IPI_FIELD, CREDIT("\"Produced by\" with Producer's name", "Produced by Jane Doe"), STATE,
+      COMPOSITION("50%"), PRO_FIELD, IPI_FIELD, CREDIT("\"Produced by\" with Producer's name", "Produced by Jane Doe"), STATE,
     ],
     body: doc("Exclusive Beat License", ["Producer", "Artist"], [
       ["GRANT", "Producer grants Artist the exclusive right to use the instrumental \"{{beatTitle}}\" (the \"Beat\") in {{songTitle}} (the \"Song\"), worldwide and with no time limit. From signing, Producer will not license or sell the Beat to anyone else."],
@@ -100,7 +100,7 @@ export const MUSIC_PRODUCTION: Blueprint[] = [
       "Non-exclusive: the producer can lease the same beat to other artists.",
       "Caps: stream and sales limits. Going over means upgrading the license.",
       "Term: how long the lease lasts.",
-      "Composition: 25% of the song is the usual share when the producer supplied the beat; 50% when you write it together, and only 100% if the producer is the only writer.",
+      "Composition: 50% is the even split when you work closely and split the publishing; 25% is usual when the producer supplied the beat and you wrote the lyrics and melody. A beat licence only exists because you write the song.",
       "Registration: the producer is registered as its composer, and gives their legal name, PRO and IPI number here.",
       "No Content ID: you can't claim the beat on YouTube Content ID, because others use it too.",
     ],

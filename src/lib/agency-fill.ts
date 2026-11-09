@@ -1,4 +1,4 @@
-import { matchWork, scaledShares, workIssues, type ListMatch, type ListResult, type ListWork, type ListWriter } from "@/lib/agency-lists";
+import { matchWork, sameWriter, scaledShares, workIssues, type ListMatch, type ListResult, type ListWork, type ListWriter } from "@/lib/agency-lists";
 import type { CatalogTrack } from "@/lib/catalog";
 import { creditName, emptyContributor, emptyMetadata, type Contributor, type Metadata } from "@/lib/metadata";
 
@@ -48,12 +48,16 @@ export function agencyMetadata(work: ListWork, artist: string): Metadata {
 /** The agency's version of a song already in the catalog: its codes and writers replace the catalog's, the rest stays. */
 export function agencyVersion(existing: Metadata, work: ListWork, artist: string): Metadata {
   const agency = agencyMetadata(work, artist || existing.artist);
+  // The list never says author or composer, so it leaves the role blank; a role the catalog already knows is kept rather
+  // than wiped by adopting the agency's writers, which would throw away the member's own answer.
+  const known = [...existing.writers, ...existing.composers].filter((w) => (w.role ?? "").trim());
+  const keptRole = (name: string) => (known.find((k) => sameWriter(creditName(k) || k.name, name))?.role ?? "");
   return {
     ...existing,
     artist: existing.artist || agency.artist,
     isrc: agency.isrc || existing.isrc,
     iswc: agency.iswc || existing.iswc,
-    writers: work.writers.length ? agency.writers : existing.writers,
+    writers: work.writers.length ? agency.writers.map((w) => ({ ...w, role: (w.role ?? "").trim() ? w.role : keptRole(w.name) })) : existing.writers,
   };
 }
 

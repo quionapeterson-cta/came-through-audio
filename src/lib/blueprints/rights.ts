@@ -81,7 +81,7 @@ export const RIGHTS: Blueprint[] = [
     category: "Rights & Distribution",
     summary: "Let a film, show, ad or video use your song's composition, in sync with pictures.",
     whenToUse: "Use it with a master use license when your song goes in a video project. This one covers the songwriting.",
-    keyTerms: ["Sync covers the composition; the recording needs a master use license too.", "Non-exclusive by default.", "Cue sheet: the producer files it, so you get performance royalties."],
+    keyTerms: ["Sync covers the composition; the recording needs a master use license too.", "Non-exclusive by default.", "Cue sheet: the producer files it, so you get performance royalties.", "A producer who wrote the beat alone licenses it here, with a master use license for the recording, not through a beat licence."],
     roles: ["Rights Owner", "Licensee"],
     fields: [
       DATE, SONG, PROJECT, FEE("Sync fee", "$1,000", "The one-time fee for the license."),

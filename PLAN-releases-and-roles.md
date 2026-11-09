@@ -34,13 +34,13 @@ Builds on: PLAN-pre-distribution (built 2026-10-25), PLAN-catalog-organization, 
 | 18 | Say **"someone else performs it"**, not "someone else's recording", wherever the outside-song case is explained. §10. |
 | 19 | Every **beat licence** gives the producer **100% of the composition** — the writer's share and the publisher's share — editable when a second producer or an artist's writing is added. §13, §17. |
 | 20 | A list printed on BMI's **200% scale** is read on the **100% scale**; word order and titles are ignored, but **a different set of name parts is reported with both spellings**, so the catalog can be brought up to the registration. §11.6, §17. |
-| 21 | A producer's share names the arrangement — **50%** when artist and producer write together, **25%** when the producer supplied the beat, **100%** only for a sole writer — and every producer deal carries the producer's legal name, PRO affiliation and IPI number. A PRO fill leaves each writer's author/composer role blank. §17. |
+| 21 | A producer's share names the arrangement — **50%** when artist and producer work closely and split the publishing (the exclusive licence opens here), **25%** when the producer supplied a beat for a song the artist wrote — and a beat licence only exists where the artist writes the song: a producer who wrote it alone licenses it under a sync licence and a master use licence. Every producer deal carries the producer's legal name, PRO affiliation and IPI number, and a PRO fill leaves each writer's author/composer role blank. §17, §18. |
 
 Still to confirm: §9 questions 2 and 3, and §16.
 
 ---
 
-- **Producer terms carry the whole registration** (founder, 2026-11-09, `src/lib/blueprints/music-production.ts`): all three beat licences share one composition clause that names the three usual splits instead of asserting 100%, says the producer is registered as the song's composer under their legal name, and requires their PRO affiliation and IPI name number in the deal. Those two are real fields, prefilled from the member's catalog defaults in every blueprint that asks for them (`ownProIpi`, `src/components/Contracts.tsx`). A fill from a PRO list now leaves each writer's author/composer role blank (`agency-fill.ts`), because a registration doesn't say which, and lists it in what the entry still needs.
+- **Producer terms carry the whole registration** (founder, 2026-11-09, `src/lib/blueprints/music-production.ts`): all three beat licences share one composition clause naming the two usual splits — 50% when artist and producer work closely and split the publishing evenly, 25% when the producer supplied a beat to a song the artist wrote — and saying a beat licence exists only where the artist writes the song: a producer who wrote it alone licenses the beat under a sync licence and a master use licence (`rights.ts` says so too). The exclusive licence opens at 50%, the non-exclusive and the buyout at 25%. The clause has the producer registered as the song's composer under their legal name, with their PRO affiliation and IPI name number as real fields prefilled from the member's catalog defaults (`ownProIpi`, `src/components/Contracts.tsx`). A fill from a PRO list leaves each writer's author/composer role blank (`agency-fill.ts`) and lists it in what the entry still needs, and "Use the agency's version" keeps a role the catalog already knew.
 
 ## 1. What is already true (keep it, don't rebuild it)
 
@@ -715,3 +715,17 @@ Two of §11's fixes went in ahead of the check itself, because the founder hit b
 
 Still open from §15: the false ISRC gap on PRO lists, `bmiPdfRows` dropping publisher lines, and the writer-only save
 blocker — none of them touched by these two.
+
+## §18 Planned, not built
+
+- **Registration assistance** (founder, 2026-11-09): not offered yet. The producer deals now carry the producer's legal name,
+  PRO affiliation and IPI name number, so a future offer can start from the signed contract instead of asking the member
+  again — and the same two fields already ride on every writer row. `registrationCheck` (PLAN-registration-intake §5) stays
+  the strict per-agency gate; nothing here changes it. Price, turnaround and what an agent may do on the member's behalf
+  are all undecided: no figure or promise goes into copy until the founder sets it.
+- **Choosing a writer's role while filling from an agency list** (founder, 2026-11-09, proposed, not built): the list gives
+  the writers but never says who wrote the words. The proposal is one choice per **person**, not per song, because the
+  same co-writers appear across a whole catalog: `Author`, `Composer` and `Author/Composer` boxes set once per writer found
+  in the uploaded list, applied to every work they appear on, with a per-song override only where it differs. The value is
+  written into the writer rows `agencyMetadata` already creates; blank stays blank until the member chooses, and saving,
+  embedding and the member's own exports are never blocked by it.

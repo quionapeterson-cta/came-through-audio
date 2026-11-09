@@ -114,3 +114,18 @@ describe("planning a fill", () => {
     expect(m.writers[0]!.legalName).toBe("Qui-Ona Peterson");
   });
 });
+
+import { describe as rolesDescribe, expect as rolesExpect, it as rolesIt } from "vitest";
+import { agencyVersion as versionKeepingRoles } from "@/lib/agency-fill";
+import { emptyContributor as blankWriter, emptyMetadata as blankMetadata } from "@/lib/metadata";
+
+rolesDescribe("adopting the agency's version", () => {
+  rolesIt("keeps the role the catalog already knows, because the list never says one", () => {
+    const existing = {
+      ...blankMetadata(), title: "Big Booty Bouncing",
+      writers: [{ ...blankWriter(), name: "Calvin Stephens", legalName: "Calvin Stephens", role: "Composer", percentage: "100" }],
+    };
+    const work = { title: "Big Booty Bouncing", iswc: "", isrc: "", workId: "", writers: [{ name: "STEPHENS CALVIN ANDRE JR (MR)", share: 100 }] };
+    rolesExpect(versionKeepingRoles(existing, work, "Qui-Ona").writers[0]?.role).toBe("Composer");
+  });
+});
