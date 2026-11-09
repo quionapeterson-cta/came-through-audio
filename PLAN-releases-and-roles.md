@@ -1,8 +1,8 @@
 # PLAN — One answer per release, fair pre-release health, roles, and the producer and songwriter paths · v2
 
-Status: **v2 — decisions recorded. Nothing built yet.**
-v1 (2026-11-09) set out the findings; this version records the founder's answers and plans the producer and songwriter
-paths in full.
+Status: **v3 — decisions recorded, nothing built yet.**
+v1 (2026-11-09) set out the findings; v2 recorded the founder's answers and planned the producer and songwriter paths in
+full; v3 adds the approved help box and the rule that an artist's catalog never changes because of another role.
 Builds on: PLAN-pre-distribution (built 2026-10-25), PLAN-catalog-organization, PLAN-badges-roles-app.
 
 ## 0. Decisions taken (founder, 2026-11-09)
@@ -15,8 +15,10 @@ Builds on: PLAN-pre-distribution (built 2026-10-25), PLAN-catalog-organization, 
 | 4 | **Unreleased music gets its own section**, not just a line under the catalog meter. §4.2. |
 | 5 | The producer's **"This beat is unsold"** answer and its help box are approved. §4.5. |
 | 6 | Onboarding asks whether the member has released songs, none yet but planning a release, or works registered as a writer while someone else performs them. §4.7. |
+| 7 | The producer help-box copy in §4.5 is approved as drafted. |
+| 8 | Picking **Recording artist** keeps today's catalog exactly, even when other roles or answers are ticked too. §4.7. |
 
-Still to confirm: the six music roles (§4.7), and the two small questions at the end.
+Still to confirm: the six music roles (§4.7) and the two questions left at the end.
 
 ---
 
@@ -132,7 +134,7 @@ releases becomes a single action later. Shipped in 4c49a4a.
   Unreleased, is never scored, and its checklist stops asking for the things only a release can have.
 - It is a statement, not a sale: never shown as "sold", never marks the song released, never invents a code.
 
-**The help box under it** (draft copy, awaiting your wording):
+**The help box under it** (approved 2026-11-09, keep the wording):
 
 > **When this beat is sold**
 > - The artist's distributor creates the ISRC for that release. You don't need one now, and nothing here is late.
@@ -189,6 +191,11 @@ and then what they do: Songwriter · Recording artist · Producer · Label · Ar
 
 - Stored in the account's existing onboarding data (`profiles.onboarding`) — no migration. `profiles.role` stays the
   account/staff role and is never reused for this.
+- **Artist is never downgraded** (founder, 2026-11-09): picking **Recording artist** keeps today's catalog exactly as it
+  is — master, artwork, ISRC/UPC, PRO/MLC, SoundExchange after release, and the embed prompts — even when Producer,
+  Songwriter, Label, Manager or Session musician is ticked alongside it. Another role may add an option (the unsold-beat
+  answer, a split-sheet reminder, a roster view); it never removes, hides or reorders anything the artist already has.
+  An account with no answers is identical to today.
 - Editable in Profile → Edit profile. No answers = today's behaviour exactly.
 - What the answers change:
 
@@ -234,4 +241,5 @@ Nothing here adds a paywall or promises a number.
    every unreleased instrumental — a songwriter's instrumental cue can be unsold too.)*
 3. **Unreleased section and the type groups**: chip in the type section pointing to it (recommended), or the unreleased
    song stays in its type group as well?
-4. The help-box wording in §4.5 — approve as drafted, or send your own?
+
+The help-box wording is approved (§4.5) and needs nothing further.
