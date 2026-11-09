@@ -24,6 +24,32 @@ export function saveEmbedDraft(userId: string | undefined, m: Metadata, defaults
   } catch { /* storage full or blocked: the form still works, it just won't survive a reload */ }
 }
 
+const coverKey = (userId?: string) => `cta-embed-cover:${userId ?? "guest"}`;
+
+/**
+ * The cover the member picked, kept beside the draft (founder, 2026-11-09). The catalog tile holds a 160px thumbnail: blown
+ * up in the preview it looked blurry, and it was never what went into a file. A restored session gets this copy instead, so
+ * the preview is sharp and the master is tagged with the artwork the member actually chose.
+ */
+export async function coverForDraft(file: File): Promise<string> {
+  const bitmap = await createImageBitmap(file);
+  const scale = Math.min(1, 1400 / Math.max(bitmap.width, bitmap.height));
+  const canvas = document.createElement("canvas");
+  canvas.width = Math.max(1, Math.round(bitmap.width * scale));
+  canvas.height = Math.max(1, Math.round(bitmap.height * scale));
+  canvas.getContext("2d")?.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+  return canvas.toDataURL("image/jpeg", 0.9);
+}
+export function saveEmbedCover(userId: string | undefined, dataUrl: string) {
+  try { localStorage.setItem(coverKey(userId), dataUrl); } catch { /* storage full: the session still works, the cover just won't return */ }
+}
+export function loadEmbedCover(userId?: string): string | undefined {
+  try { const v = localStorage.getItem(coverKey(userId)); return v?.startsWith("data:image/") ? v : undefined; } catch { return undefined; }
+}
+export function clearEmbedCover(userId?: string) {
+  try { localStorage.removeItem(coverKey(userId)); } catch { /* storage blocked */ }
+}
+
 export function clearEmbedDraft(userId?: string) {
   try { localStorage.removeItem(draftKey(userId)); } catch { /* storage blocked */ }
 }

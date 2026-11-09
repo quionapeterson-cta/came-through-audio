@@ -144,3 +144,38 @@ societyDescribe("what a society's own list leaves out", () => {
     societyExpect(gapsFor(work)).toEqual(["No ISRC — The MLC and SoundExchange match a recording by it"]);
   });
 });
+
+import { describe as halfDescribe, expect as halfExpect, it as halfIt } from "vitest";
+import { bmiPdfRows as pdfRows, matchWork as match, readWorks as readList } from "@/lib/agency-lists";
+import { emptyContributor as writerRow } from "@/lib/metadata";
+
+halfDescribe("both halves of a BMI list", () => {
+  const items = ["Bloom", "Jan 2, 2026", "T1234567890", "123456789", "Participant Name", "LEE ANN", "W", "50%", "ASCAP", "123456789", "LEE SONGS", "P", "50%", "ASCAP", "987654321", "Participant Name"];
+  halfIt("keeps the publisher row instead of dropping it", () => {
+    const rows = pdfRows(items);
+    halfExpect(rows.some((r) => r[4] === "Publisher")).toBe(true);
+    const [work] = readList(rows);
+    halfExpect(work!.writers.map((w) => w.name)).toEqual(["LEE ANN"]);
+    halfExpect(work!.publishers?.map((p) => p.name)).toEqual(["LEE SONGS"]);
+  });
+  halfIt("names a publisher with no IPI, because the agency matches it by one", () => {
+    const rows = pdfRows(["Bloom", "Jan 2, 2026", "T1234567890", "123456789", "Participant Name", "LEE ANN", "W", "50%", "ASCAP", "123456789", "LEE SONGS", "P", "50%", "ASCAP", "", "Participant Name"]);
+    const [work] = readList(rows);
+    halfExpect(work!.publishers?.[0]?.name).toBe("LEE SONGS");
+    halfExpect(gapsFor(work!, false, "bmi")).toContain("A publisher with no IPI number");
+  });
+});
+
+halfDescribe("a shared title", () => {
+  const works = [
+    { title: "Bloom", iswc: "", isrc: "", workId: "1", writers: [{ name: "Ann Lee", share: 100 }] },
+    { title: "Bloom", iswc: "", isrc: "", workId: "2", writers: [{ name: "Bo Ray", share: 100 }] },
+  ];
+  const song = (name: string) => ({ title: "Bloom", metadata: { writers: [{ ...writerRow(), name, legalName: name, role: "Author/Composer" }], iswc: "", isrc: "" } });
+  halfIt("matches the work whose writers agree", () => {
+    halfExpect(match(works, song("Bo Ray"))?.workId).toBe("2");
+  });
+  halfIt("refuses to guess when no writer agrees, so another writer's registration is never pinned on the song", () => {
+    halfExpect(match(works, song("Cal Ray"))).toBeUndefined();
+  });
+});

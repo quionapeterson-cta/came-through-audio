@@ -730,6 +730,16 @@ blocker are fixed in §17.
   longer requires an artist name, while embedding a master still does, because a master's artist tag is the artist. The
   share rules run on both schemas.
 
+- **A restored embed session gets its cover back at full size** (fixed 2026-11-09, `coverForDraft` / `loadEmbedCover` in
+  `src/lib/embed-session.ts`): the catalog rows hold a 160px tile, which the preview showed blown up as blur and which never
+  went into a file, so a session resumed after a reload embedded a master with no artwork at all. A copy up to 1400px is
+  kept beside the draft, restored as the artwork itself, and cleared when the cover is removed or a new song starts.
+- **A shared title with no writer in common is no longer a match** (fixed 2026-11-09, `matchWork`): the comparison reports
+  the song as not on the list instead of pinning the first same-titled work — and its registration — to the member's song.
+- **Registration waits for the writer's role** (fixed 2026-11-09, `registrationCheck`): a blank role is never registered as
+  author and composer by default; the strict per-agency gate asks what each writer wrote. Saving, embedding and the
+  member's own exports are untouched.
+
 ## §18 Planned, not built
 
 - **Registration assistance** (founder, 2026-11-09): not offered yet. The producer deals now carry the producer's legal name,

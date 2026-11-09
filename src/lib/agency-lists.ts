@@ -7,7 +7,7 @@ import { creditName, type Contributor, type Metadata } from "@/lib/metadata";
  * the comparison is saved. Every agency formats its export differently, so columns are found by their headings.
  */
 export type ListWriter = { name: string; share?: number | undefined; ipi?: string | undefined; pro?: string | undefined };
-export type ListWork = { title: string; iswc: string; isrc: string; workId: string; writers: ListWriter[] };
+export type ListWork = { title: string; iswc: string; isrc: string; workId: string; writers: ListWriter[]; /** BMI prints the publisher half as its own P rows; kept so a published work is not read as writers only. */ publishers?: ListWriter[] };
 export type ListMatch = { trackId: string; title: string; work?: ListWork; issues: string[] };
 export type ListResult = { matched: ListMatch[]; differences: ListMatch[]; notListed: { trackId: string; title: string }[]; extra: ListWork[]; works: number };
 
@@ -111,7 +111,9 @@ export function bmiPdfRows(items: string[]): string[][] {
       const share = items[j + 1] ?? "";
       if (!/^(W|P)$/.test(items[j]!) || !/%$/.test(share)) continue;
       const ipi = /^\d{8,11}$/.test(items[j + 3] ?? "") ? items[j + 3]! : "";
-      if (items[j] === "W") { rows.push([title, iswc, workId, items[j - 1] ?? "", "Writer", share, ipi]); any = true; }
+      // Both halves are kept: a W row is a writer, a P row is a publisher, and dropping P lost the publisher half entirely.
+      rows.push([title, iswc, workId, items[j - 1] ?? "", items[j] === "W" ? "Writer" : "Publisher", share, ipi]);
+      if (items[j] === "W") any = true;
     }
     if (!any) rows.push([title, iswc, workId, "", "", "", ""]);
   }
@@ -162,9 +164,14 @@ export function readWorks(rows: string[][]): ListWork[] {
     if (!work.isrc && isrc) work.isrc = isrc;
     const party = get(r, "party");
     const name = get(r, "writer");
-    if (name && !/publisher|^p$|^e$|^op$|^se$|^am$|^pa$/i.test(party)) {
+    const isPublisherRow = /publisher|^p$/i.test(party);
+    if (name && (isPublisherRow || !/^e$|^op$|^se$|^am$|^pa$/i.test(party))) {
       const share = Number(get(r, "share").replace(/[%\s]/g, "").replace(",", "."));
-      work.writers.push({ name, share: Number.isFinite(share) && share > 0 ? share : undefined, ipi: digits(get(r, "ipi")) || undefined, pro: get(r, "pro").replace(/^na$/i, "") || undefined });
+      const row = { name, share: Number.isFinite(share) && share > 0 ? share : undefined, ipi: digits(get(r, "ipi")) || undefined, pro: get(r, "pro").replace(/^na$/i, "") || undefined };
+      // The publisher half belongs to the publisher, never to the writers: keeping it apart is what stops a P row
+      // being compared as a co-writer.
+      if (isPublisherRow) (work.publishers ??= []).push(row);
+      else work.writers.push(row);
     }
     last = work;
   }
@@ -197,7 +204,9 @@ export function matchWork(
     const hits = w.writers.filter((x) => mine.has(nameKey(x.name))).length;
     if (hits > bestHits) { best = w; bestHits = hits; }
   }
-  return best;
+  // Two works share this title and not one writer is in common: that is a different song, not this one. Saying "not on
+  // the list" is honest; matching the first same-titled work put someone else's registration on the member's song.
+  return bestHits > 0 ? best : undefined;
 }
 
 /**
@@ -216,6 +225,7 @@ export function listGaps(w: ListWork, recording = false, society = ""): string[]
   if (!w.writers.length) gaps.push("No writers on the list");
   else {
     if (w.writers.some((x) => !x.ipi)) gaps.push("A writer with no IPI number");
+    if (w.publishers?.some((x) => !x.ipi)) gaps.push("A publisher with no IPI number");
     // Lists use the whole song or the writer half, so 100 and 200 both add up; anything else is a split to settle.
     const total = w.writers.reduce((n, x) => n + (x.share ?? 0), 0);
     if (total > 0 && Math.abs(total - 100) > 1 && Math.abs(total - 200) > 1) gaps.push("The shares don't add up to 100%");

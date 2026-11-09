@@ -4,7 +4,7 @@ import { isBmi } from "@/lib/publishing";
 
 /** Registration targets. Only PRO registration (BMI/ASCAP) also needs each writer's PRO affiliation. */
 export type ReadinessTarget = "mlc" | "soundexchange" | "pro";
-export type MissingCode = "author" | "composer" | "legal_name" | "pro" | "split"
+export type MissingCode = "author" | "composer" | "legal_name" | "pro" | "role" | "split"
   | "ipi" | "publisher" | "samples" | "written_for" | "duration" | "genre" | "release" | "isrc" | "upc" | "master" | "iswc";
 /** `field` is the form input id to jump to, e.g. "writers-1-legalName". */
 export type MissingItem = { code: MissingCode; message: string; field: string };
@@ -191,6 +191,13 @@ export function registrationCheck(m: Metadata, agency: RegistrationAgency, today
   // Every writer who belongs to a PRO has an IPI number; all three agencies identify writers by it.
   for (const { row, group, index } of listed(m)) {
     if (hasPro(row) && !row.ipi?.trim()) need("ipi", `Add the IPI name number for ${creditName(row) || `writer ${index + 1}`}. Find it in their ${row.pro} account.`, `${group}-${index}-ipi`);
+  }
+  // A writer's role is the member's own answer (founder, 2026-11-09): a PRO list never says who wrote the words and who
+  // wrote the music, so a blank role would otherwise be registered as both. Saving and embedding stay unblocked; only
+  // registration waits for the answer.
+  for (const { row, group, index } of listed(m)) {
+    if (group !== "writers" || row.role?.trim()) continue;
+    need("role", `Say what ${creditName(row) || `writer ${index + 1}`} wrote: the words, the music, or both. A registration never tells us.`, `writers-${index}-role`);
   }
 
   // Who collects the publisher share: a listed publisher, or nobody (self-published / self-administered). At BMI, a
