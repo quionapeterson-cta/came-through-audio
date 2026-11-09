@@ -3,7 +3,7 @@ import { emptyMetadata } from "./metadata";
 import type { CatalogTrack } from "./catalog";
 import { compareLookup, lookupSong } from "./lookups";
 import { countryByCode, guessCountry, societyForPro } from "./repertoires";
-import { agencyScores, healthReport, societiesFor, type RepertoireCheck } from "./health";
+import { agencyScores, healthReport, societiesFor, todoList, type RepertoireCheck } from "./health";
 
 const track = (patch: Partial<ReturnType<typeof emptyMetadata>>, id = "t1"): CatalogTrack => {
   const m = { ...emptyMetadata(), title: "Cut to the Feeling", artist: "Carly Rae Jepsen", ...patch };
@@ -74,6 +74,16 @@ describe("health report", () => {
     const a = agencyScores(healthReport([later], US, []).rows[0]!).find((x) => x.society.id === "soundexchange")!;
     expect(a.waiting).toBeTruthy();
     expect(healthReport([later], US, []).dataScore).toBe(100);
+  });
+  it("reads the isn't-released-yet box, and never asks to register or confirm an unreleased song", () => {
+    const boxed = track({ ...ready.metadata, releaseDate: "", unreleased: true });
+    const rows = healthReport([boxed], US, []).rows;
+    expect(agencyScores(rows[0]!).find((x) => x.society.id === "soundexchange")!.waiting).toBeTruthy();
+    const kinds = todoList({ rows }).map((x) => x.kind);
+    expect(kinds).not.toContain("register");
+    expect(kinds).not.toContain("confirm");
+    // A released song still gets its register and confirm steps.
+    expect(todoList(healthReport([ready], US, [])).map((x) => x.kind)).toContain("confirm");
   });
   it("lets a BMI writer with no publishing company reach 100%", () => {
     const bmi = track({ ...ready.metadata, writers: [{ ...ready.metadata.writers[0]!, pro: "BMI" }], publishers: [], bmiWriterPublishing: true });

@@ -741,6 +741,12 @@ blocker are fixed in §17.
   again if the work is theirs; leave the catalog alone if it is another writer's song. The agency's writers are never
   offered for copying over the member's, and the list's works are marked accounted for so the fill dialog can't add them
   as duplicates.
+- **The pre-release box counts wherever "unreleased" is decided** (fixed 2026-11-09, `agencyScores` and `todoList` in
+  `src/lib/health.ts`): `agencyScores` had its own date-only test, so a song with the box ticked and no date was scored
+  as released and its SoundExchange step counted instead of waiting; it now asks `isUnreleased`, the one helper, like
+  the checklist does. `todoList` no longer asks anyone to register or confirm a song that isn't out — its own pre-release
+  items stay, and every released song keeps both steps. Still open from §5: the scores themselves still include
+  unreleased songs in their numerator and denominator, which is the `healthReport` half of the same fix.
 - **Registration waits for the writer's role** (fixed 2026-11-09, `registrationCheck`): a blank role is never registered as
   author and composer by default; the strict per-agency gate asks what each writer wrote. Saving, embedding and the
   member's own exports are untouched.

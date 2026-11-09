@@ -5,6 +5,7 @@ import { INTERNATIONAL, societyForPro, type Country, type Society } from "@/lib/
 import { hasDuration, matchChecks, matchScore, weightedScore, type MatchCheck } from "@/lib/match-fields";
 import { registrationCheck, type RegistrationAgency } from "@/lib/readiness";
 import { isInspectorSong } from "@/lib/health-songs";
+import { isUnreleased } from "@/lib/release-checklist";
 
 /** A saved repertoire check (public.repertoire_checks). */
 export type RepertoireCheck = { trackId: string; society: string; status: "found" | "not_listed"; source: "self" | "auto"; workId?: string | null; details?: unknown; checkedAt: string };
@@ -118,7 +119,7 @@ export type AgencyScore = { pillar: Pillar; society: Society; data: number; regi
 export function agencyScores(r: TrackReport, today = new Date().toISOString().slice(0, 10)): AgencyScore[] {
   const m = r.track.metadata;
   const checks = matchChecks(m, r.findings);
-  const unreleased = !!m.releaseDate && m.releaseDate > today;
+  const unreleased = isUnreleased(m, today);
   return r.pillars.map((p) => {
     const society = p.societies.find((s) => s.check?.status === "found")?.society ?? p.societies[0]!.society;
     const match = matchScore(checks.filter((c) => AGENCY_MATCH[p.pillar].includes(c.id)));
@@ -186,6 +187,8 @@ export function todoList(report: { rows: TrackReport[] }): TodoItem[] {
   for (const r of report.rows) {
     for (const i of r.issues) fix.push({ kind: "fix", track: r.track, text: i.text, field: i.field });
     for (const f of r.findings) if (f.level === "warn") fix.push({ kind: "fix", track: r.track, text: f.text, field: f.field === "writers" ? "writers-0-legalName" : f.field });
+    // Never ask anyone to register or confirm a song that isn't out (founder, 2026-11-09): its own checklist covers the wait.
+    if (isUnreleased(r.track.metadata)) continue;
     for (const p of r.pillars) {
       if (p.state === "confirmed") continue;
       for (const { society, check } of p.societies) {
