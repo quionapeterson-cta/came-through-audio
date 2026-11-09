@@ -9,7 +9,7 @@ import { RELEASE_TYPES } from "@/lib/metadata";
 import { loadOnboarding, loadProfile } from "@/lib/artist-profile";
 import { saveTrack } from "@/lib/catalog";
 import { clearIntake, readIntake, writeIntake } from "@/lib/intake-session";
-import { compareList, downloadSteps, listGaps, readTable, readWorks, type ListResult, type ListWork, type SavedListSummary } from "@/lib/agency-lists";
+import { combinedHalves, compareList, downloadSteps, listGaps, listShareTotal, readTable, readWorks, type ListResult, type ListWork, type SavedListSummary } from "@/lib/agency-lists";
 import type { CatalogTrack } from "@/lib/catalog";
 import type { Society } from "@/lib/repertoires";
 
@@ -338,6 +338,9 @@ export function AgencyLists({ userId, societies, songsFor, summaries, onApply, o
                       <span>{ch.agency}</span>
                     </div>)}
                   </div>}
+                  {combinedHalves(d.work) && <p className="mt-2 text-xs text-muted-foreground">
+                    {fill.society.name} prints the writer's half and the publisher's half together, so {listShareTotal(d.work)}% there is 100% of the composition. The share above is shown on the 100% scale.
+                  </p>}
                   {d.issues.length > 0 && <ul className="mt-2 space-y-0.5 text-xs text-muted-foreground">
                     {d.issues.map((i) => <li key={i}>⚠️ {i}</li>)}
                   </ul>}

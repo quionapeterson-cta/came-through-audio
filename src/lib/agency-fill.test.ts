@@ -87,7 +87,7 @@ describe("planning a fill", () => {
 
   it("doesn't call a same-title work a duplicate of a song the writers say it isn't", () => {
     const plan = fillPlan(result({
-      matched: [{ trackId: "t1", title: "Midnight", work: work({ title: "Midnight", workId: "1", writers: [{ name: "Ann Lee", share: 50 }] }), issues: [] }],
+      matched: [{ trackId: "t1", title: "Midnight", work: work({ title: "Midnight", workId: "1", writers: [{ name: "Ann Lee", share: 50 }, { name: "Bo Ray", share: 50 }] }), issues: [] }],
       extra: [work({ title: "Midnight", workId: "2", writers: [{ name: "Someone Else", share: 100 }] })],
     }), [track("t1", "Midnight", { writers: [{ name: "", legalName: "Ann Lee", role: "Author/Composer", pro: "", ipi: "", percentage: "100" }] })], "Karma Came");
     expect(plan.creates.map((c) => c.work.workId)).toEqual(["2"]);

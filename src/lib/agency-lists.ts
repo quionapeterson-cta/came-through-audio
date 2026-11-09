@@ -13,8 +13,28 @@ export type ListResult = { matched: ListMatch[]; differences: ListMatch[]; notLi
 
 const norm = (s: string) => s.toLowerCase().normalize("NFKD").replace(/[̀-ͯ]/g, "")
   .replace(/\s*[([](feat|ft|featuring)\.?[^)\]]*[)\]]/g, "").replace(/\b(feat|ft|featuring)\.?\s.*$/, "").replace(/[^a-z0-9]/g, "");
+/**
+ * Titles an agency prints as part of a party name — "STEPHENS CALVIN ANDRE JR (MR)". They are noise when comparing two
+ * spellings of one writer, and never shown or written into a catalog. A generation ("Jr") stays, because it is sometimes
+ * the only thing telling a father and son apart.
+ */
+const NAME_NOISE = new Set(["mr", "mrs", "ms", "miss", "dr", "esq", "phd", "md"]);
 /** Agencies often list writers "LAST FIRST" or "LAST, FIRST": compare the name's words in any order. */
-const nameKey = (s: string) => s.toLowerCase().normalize("NFKD").replace(/[̀-ͯ]/g, "").replace(/[^a-z\s]/g, " ").split(/\s+/).filter(Boolean).sort().join(" ");
+const nameKey = (s: string) => s.toLowerCase().normalize("NFKD").replace(/[̀-ͯ]/g, "").replace(/[^a-z\s]/g, " ").split(/\s+/).filter(Boolean).filter((w) => !NAME_NOISE.has(w)).sort().join(" ");
+/**
+ * Two spellings of one writer (founder, 2026-11-09). BMI prints "PETERSON QUI ONA LASHAY" where the catalog holds
+ * "Qui-Ona Peterson", and both are the same person: one key's words contain the other's. Only a name long enough to be a
+ * person may match that way, so a single word never swallows a full name.
+ */
+export function sameWriter(a: string, b: string): boolean {
+  const x = nameKey(a), y = nameKey(b);
+  if (!x || !y) return false;
+  if (x === y) return true;
+  const xs = x.split(" "), ys = y.split(" ");
+  if (Math.min(xs.length, ys.length) < 2) return false;
+  const [small, large] = xs.length <= ys.length ? [xs, ys] : [ys, xs];
+  return small.every((w) => large.includes(w));
+}
 const digits = (s: string) => s.replace(/\D/g, "").replace(/^0+/, "");
 const code = (s: string) => s.replace(/[^A-Za-z0-9]/g, "").toUpperCase();
 
@@ -191,6 +211,25 @@ export function listGaps(w: ListWork, recording = false): string[] {
   return gaps;
 }
 
+/**
+ * A list's shares on the composition's own 100% scale (founder, 2026-11-09). BMI prints the writer's half and the
+ * publisher's half together, so a fully published work totals 200% there and 100% here — both correct. Every scale is
+ * brought back to 100, so the comparison, the dialog and the fill read the same numbers. Rounding is carried by the last
+ * writer with a share, so three 33.33% rows still total 100.
+ */
+export function scaledShares(writers: ListWriter[]): number[] {
+  const total = writers.reduce((n, w) => n + (w.share ?? 0), 0);
+  const out = writers.map((w) => (w.share === undefined || total <= 0 ? 0 : Math.round((w.share / total) * 10000) / 100));
+  const sum = out.reduce((n, x) => n + x, 0);
+  const last = out.map((v, i) => [v, i] as const).filter(([v]) => v > 0).pop();
+  if (last && Math.abs(sum - 100) >= 0.01) out[last[1]] = Math.round((out[last[1]]! + (100 - sum)) * 100) / 100;
+  return out;
+}
+/** The total the list itself prints, to explain a 200% column without calling it wrong. */
+export const listShareTotal = (work: ListWork) => work.writers.reduce((n, x) => n + (x.share ?? 0), 0);
+/** True when the list counts the writer's half and the publisher's half together (BMI's 200%). */
+export const combinedHalves = (work: ListWork) => listShareTotal(work) > 100.5;
+
 /** Shares on any scale (100, 200 or the writer half) compared as each writer's part of the total. */
 const parts = (list: { key: string; share?: number | undefined }[]) => {
   const total = list.reduce((n, x) => n + (x.share ?? 0), 0);
@@ -210,7 +249,8 @@ export function workIssues(work: ListWork, metadata: Metadata, recordings = fals
   if (recordings || !work.writers.length) return issues;
   const mine = [...metadata.writers, ...metadata.composers].filter((w) => creditName(w)).map((w) => ({ key: nameKey(creditName(w)), name: creditName(w), ipi: digits(w.ipi ?? ""), share: Number(w.percentage) || undefined }));
   const theirs = work.writers.map((w) => ({ ...w, key: nameKey(w.name) }));
-  const same = (a: { key: string; ipi?: string | undefined }, b: { key: string; ipi?: string | undefined }) => a.key === b.key || (!!a.ipi && a.ipi === b.ipi);
+  const same = (a: { key: string; name?: string; ipi?: string | undefined }, b: { key: string; name?: string; ipi?: string | undefined }) =>
+    a.key === b.key || (!!a.ipi && a.ipi === b.ipi) || (!!a.name && !!b.name && sameWriter(a.name, b.name));
   for (const w of mine) if (!theirs.some((x) => same(w, x))) issues.push(`${w.name} isn't on the agency's registration`);
   for (const x of theirs) if (!mine.some((w) => same(w, x))) issues.push(`The agency lists ${x.name}, who isn't in your catalog`);
   for (const w of mine) {

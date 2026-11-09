@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { emptyMetadata } from "@/lib/metadata";
-import { compareList, listGaps, parseDelimited, readWorks } from "@/lib/agency-lists";
+import { compareList, listGaps, parseDelimited, readWorks, sameWriter, scaledShares } from "@/lib/agency-lists";
 
 const track = (id: string, title: string, extra = {}) => ({ id, title, artist: "Q", updatedAt: "", metadata: { ...emptyMetadata(), title, artist: "Q", composers: [],
   writers: [{ name: "", legalName: "Ann Lee", role: "Author/Composer", pro: "ASCAP", ipi: "00123456789", percentage: "50" }, { name: "", legalName: "Bo Ray", role: "Composer", pro: "BMI", ipi: "", percentage: "50" }],
@@ -86,5 +86,31 @@ describe("BMI Catalog Detail PDF", () => {
     expect(works[0]).toMatchObject({ title: "10K", workId: "74058036", iswc: "T3335071513" });
     expect(works[0]!.writers.map((w) => w.name)).toEqual(["PETERSON QUI ONA LASHAY", "STEPHENS CALVIN ANDRE"]);
     expect(works[1]!.writers[0]).toMatchObject({ name: "PARIS JOSHUA", share: 33, ipi: undefined });
+  });
+});
+
+describe("BMI's 200% column and its spelling of a name", () => {
+  it("reads the writer's half and the publisher's half on the composition's 100% scale", () => {
+    const [w] = readWorks(parseDelimited("Title,Writer,Share\nBig Booty Bouncing,PETERSON QUI ONA LASHAY,200"));
+    expect(scaledShares(w!.writers)).toEqual([100]);
+    // Two writers BMI prints at 100% each are 50/50 of the composition, which is what the catalog holds.
+    expect(scaledShares([{ name: "A", share: 100 }, { name: "B", share: 100 }])).toEqual([50, 50]);
+  });
+
+  it("sees one writer behind an agency's middle name, title and word order", () => {
+    expect(sameWriter("PETERSON QUI ONA LASHAY", "Qui-Ona Peterson")).toBe(true);
+    expect(sameWriter("STEPHENS CALVIN ANDRE JR (MR)", "Calvin Andre Stephens Jr")).toBe(true);
+    expect(sameWriter("LEE ANN", "Ann Lee")).toBe(true);
+    expect(sameWriter("Ann Lee", "Bo Ray")).toBe(false);
+    expect(sameWriter("Lee", "Ann Lee")).toBe(false);
+  });
+
+  it("says nothing is different when 200% there is the 100% here", () => {
+    const [w] = readWorks(parseDelimited("Title,Writer,Share\nBig Booty Bouncing feat. OG PI,PETERSON QUI ONA LASHAY,200"));
+    const me = { ...emptyMetadata(), title: "Big Booty Bouncing", artist: "Q", iswc: "", isrc: "",
+      writers: [{ name: "", legalName: "Qui-Ona Peterson", role: "Author/Composer" as const, pro: "BMI", ipi: "", percentage: "100" }], composers: [] };
+    const r = compareList([w!], [{ id: "a", title: me.title, artist: "Q", updatedAt: "", metadata: me }]);
+    expect(r.differences).toHaveLength(0);
+    expect(r.matched).toHaveLength(1);
   });
 });

@@ -4,6 +4,11 @@ import { CLAUSE, DATE, FEE, PAY_WHEN, SONG, STATE, doc, field, need, type Bluepr
 const CREDIT = (fallback: string, placeholder: string) => field("credit", "Credit line", "Exactly how they're credited on releases and in embedded metadata. Leave blank for the usual credit.", { fallback, placeholder });
 const PUBLISHING = (value: string, who = "producer") => field("publishingShare", `${who[0]!.toUpperCase()}${who.slice(1)}'s share of the song`, `The ${who}'s writer share of the composition (lyrics and music). Put the same split on your split sheet.`, { value });
 const BEAT = need("beatTitle", "Beat title", "The producer's name for the beat.", { placeholder: "Beat Title" });
+/**
+ * A beat licence's composition term (founder, 2026-11-09): the producer wrote the beat, so the composition is theirs —
+ * 100% by default, and editable because a second producer or an artist's topline means more than one writer.
+ */
+const COMPOSITION = field("publishingShare", "Producer's share of the composition", "The producer wrote the beat, so the composition is theirs: 100% by default. Lower it when someone else wrote part of the song — a second producer, or the artist's lyrics and melody — and put the same split on the split sheet.", { value: "100%" });
 
 export const MUSIC_PRODUCTION: Blueprint[] = [
   {
@@ -45,7 +50,7 @@ export const MUSIC_PRODUCTION: Blueprint[] = [
     keyTerms: [
       "Exclusive: the producer stops licensing the beat to anyone new. Earlier leases may still exist, so they're listed.",
       "No caps: unlimited streams and sales, worldwide.",
-      "Writer share: the producer usually keeps a share of the song.",
+      "Composition: the producer wrote the beat, so they own 100% of the composition unless another writer is added and the shares are split on the sheet.",
       "Ownership: the producer still owns the beat itself; the artist owns their new song and recording.",
     ],
     roles: ["Producer", "Artist"],
@@ -54,7 +59,7 @@ export const MUSIC_PRODUCTION: Blueprint[] = [
       FEE("Exclusive fee", "$1,500", "What the artist pays for exclusive rights."),
       field("points", "Producer royalty (points)", "The producer's percentage of master income, if any.", { value: "0%" }),
       field("priorLicenses", "Earlier leases of this beat", "Any non-exclusive leases sold before this deal. Those artists may keep their versions.", { value: "none" }),
-      PUBLISHING("50%"), CREDIT("\"Produced by\" with Producer's name", "Produced by Jane Doe"), STATE,
+      COMPOSITION, CREDIT("\"Produced by\" with Producer's name", "Produced by Jane Doe"), STATE,
     ],
     body: doc("Exclusive Beat License", ["Producer", "Artist"], [
       ["GRANT", "Producer grants Artist the exclusive right to use the instrumental \"{{beatTitle}}\" (the \"Beat\") in {{songTitle}} (the \"Song\"), worldwide and with no time limit. From signing, Producer will not license or sell the Beat to anyone else."],
@@ -62,7 +67,7 @@ export const MUSIC_PRODUCTION: Blueprint[] = [
       ["EARLIER LEASES", "Producer has sold these earlier non-exclusive leases of the Beat: {{priorLicenses}}. Those licenses may continue on their own terms, but won't be renewed."],
       ["USES", "Artist may release, stream, sell, perform, use in videos and license the Song for film, TV, ads and games, with no stream or sales limits. Artist may register the Song with YouTube Content ID."],
       ["ROYALTIES", "Producer receives {{points}} of Artist's net master income from the Song."],
-      ["WRITER SHARE", "Producer owns {{publishingShare}} of the Song's composition. Each party registers their own share."],
+      ["COMPOSITION AND WRITER CREDIT", "Producer is the writer and composer of the Beat and owns {{publishingShare}} of the Song's composition, including its writer's share and its publisher's share. While that share is 100%, Producer is the Song's only writer. If the Artist or another producer contributes writing, the parties add that writer to a split sheet, reduce Producer's share to match, and register the same split. Producer registers their share under their legal name with their performing rights organization and can check it there, and in The MLC's public search, by legal name, song title, ISWC or ISRC."],
       ["CREDIT", "Artist will credit Producer as {{credit}} wherever credits appear."],
       ["OWNERSHIP", "Producer keeps ownership of the Beat. Artist owns their lyrics, melody, vocals and the Song's master recording."],
       CLAUSE.samples,
@@ -78,6 +83,7 @@ export const MUSIC_PRODUCTION: Blueprint[] = [
       "Non-exclusive: the producer can lease the same beat to other artists.",
       "Caps: stream and sales limits. Going over means upgrading the license.",
       "Term: how long the lease lasts.",
+      "Composition: the producer wrote the beat, so they own 100% of the composition unless another writer is added and the shares are split on the sheet.",
       "No Content ID: you can't claim the beat on YouTube Content ID, because others use it too.",
     ],
     roles: ["Producer", "Artist"],
@@ -107,7 +113,7 @@ export const MUSIC_PRODUCTION: Blueprint[] = [
     whenToUse: "Use it when you want to own the beat itself, not just license it, for example to sign it to a label later.",
     keyTerms: [
       "Buyout: ownership of the beat's recording moves to the artist for good.",
-      "Writer share: here the producer keeps a share of the song unless you change it.",
+      "Composition: the producer is the beat's writer, so they keep 100% of the composition unless another writer is added to the split sheet.",
       "Earlier leases end or stay as stated, so nobody else releases the same beat later.",
     ],
     roles: ["Producer", "Artist"],
@@ -120,7 +126,7 @@ export const MUSIC_PRODUCTION: Blueprint[] = [
     ],
     body: doc("Beat Buyout and Rights Assignment", ["Producer", "Artist"], [
       ["ASSIGNMENT", "For {{fee}}, paid on signing, Producer transfers to Artist all ownership of the sound recording of the instrumental \"{{beatTitle}}\" (the \"Beat\"), including its copyright, worldwide and forever."],
-      ["WRITER SHARE", "Producer keeps {{publishingShare}} of the composition of any song made with the Beat and registers it with their performing rights organization. Everything else in the composition belongs to its other writers."],
+      ["COMPOSITION AND WRITER CREDIT", "For any song made with the Beat, Producer is its writer and composer and keeps {{publishingShare}} of the composition, including its writer's share and its publisher's share. While that share is 100%, Producer is its only writer; a second writer or producer is added to a split sheet and the shares are reduced to match. Producer registers that share under their legal name with their performing rights organization and can check it there, and in The MLC's public search, by legal name, song title, ISWC or ISRC."],
       ["EARLIER LEASES", "Earlier leases of the Beat: {{priorLicenses}}. They continue until they expire and won't be renewed. Producer will not license or sell the Beat again."],
       ["DELIVERY", "Producer will deliver the Beat as WAV files, the stems and the project files within {{deliveryDays}} of payment."],
       ["CREDIT", "Artist will credit Producer as {{credit}} wherever credits appear."],

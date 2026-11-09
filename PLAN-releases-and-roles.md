@@ -32,6 +32,8 @@ Builds on: PLAN-pre-distribution (built 2026-10-25), PLAN-catalog-organization, 
 | 16 | A **sold beat stays in Unreleased** until its linked master has a released recording; then the beat is sold *and* out, and leaves the section. §4.5. |
 | 17 | Release credits are **checked against the official public repertoires**, with the links and copy-paste fields provided; a catalog prefill and a typed entry remain available but are never shown as verified. §11.6. |
 | 18 | Say **"someone else performs it"**, not "someone else's recording", wherever the outside-song case is explained. §10. |
+| 19 | Every **beat licence** gives the producer **100% of the composition** — the writer's share and the publisher's share — editable when a second producer or an artist's writing is added. §13, §17. |
+| 20 | A list printed on BMI's **200% scale** is read on the **100% scale**, and a writer's middle name, title or word order never makes them a stranger. §11.6, §17. |
 
 Still to confirm: §9 questions 2 and 3, and §16.
 
@@ -492,11 +494,13 @@ list.
 | 3 | **SoundExchange ISRC Search** (`isrc.soundexchange.com`) | which recording carries which ISRC, so the writer can see the artist's recording actually exists | paste the ISRC the release shows |
 | 4 | **The release's own credit line** (the artist's distributor page, YouTube description, DSP credits) | who the public sees credited, spelling and all | typed or prefilled from the catalog, marked *from the release, unchecked* |
 
-**What this deliberately does not cover: producer credits.** No public repertoire lists a producer. Songview, BMI, ASCAP
-and The MLC keep compositions, not studio roles. A producer who *wrote* the music appears as a writer and is checked like
-one; a producer credit that is not a writing credit exists only on the release and in the beat contract. The check says
-that in one line rather than implying a registry it does not have, and points the producer at the master checkup (§12)
-and the amendment (§13).
+**Producer credits, and what the repertoires can and cannot see.** No public repertoire lists a producer as a producer:
+Songview, BMI, ASCAP and The MLC keep compositions, not studio roles. But a producer who wrote the beat *is* the
+composer, and that is now the term of every beat licence (decision 19): **100% of the composition, writer's share and
+publisher's share**, reduced on the split sheet when a second producer or the artist's lyrics and melody join it. So the
+producer is checked exactly like a writer, under their **legal name**, by song title, **ISWC** or **ISRC** — the same
+four sources in §11.5 — and the one line the check adds is that a *non-writing* producer credit exists only on the
+release and in the beat contract, where the master checkup (§12) and the amendment (§13) live.
 
 ### 11.6 How it stays accurate
 
@@ -688,3 +692,21 @@ Still open:
    (§11.6 rule 10)?
 5. **The correction note**: a short note the app prepares for the member to send themselves (recommended), or just a
    copyable paragraph?
+
+## 17. Shipped since this plan (2026-11-09)
+
+Two of §11's fixes went in ahead of the check itself, because the founder hit both on a real BMI upload:
+
+1. **The beat licences carry the composition term** (`src/lib/blueprints/music-production.ts`): Exclusive, Non-Exclusive
+   and Buyout now default the producer to **100% of the composition**, the field is editable per song, and the clause
+   says the producer registers it under their legal name and can check it in their PRO's repertoire and The MLC's public
+   search by legal name, title, ISWC or ISRC. The Music Producer Agreement keeps its 50% co-write default, because there
+   the artist is a writer too.
+2. **BMI's 200% meets our 100%** (`src/lib/agency-lists.ts`, `src/lib/agency-fill.ts`): one scaler (`scaledShares`)
+   brings any list to the composition's own scale, so the comparison column, the dialog and the saved catalog agree; and
+   `sameWriter` treats "PETERSON QUI ONA LASHAY" and "Qui-Ona Peterson" as one person, ignoring "MR"/"JR" and word order.
+   A work at 200% with a matching writer now shows **no difference at all**, and the dialog explains the scale in one line
+   instead of leaving 200% looking wrong.
+
+Still open from §15: the false ISRC gap on PRO lists, `bmiPdfRows` dropping publisher lines, and the writer-only save
+blocker — none of them touched by these two.

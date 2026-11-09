@@ -1,4 +1,4 @@
-import { matchWork, workIssues, type ListMatch, type ListResult, type ListWork, type ListWriter } from "@/lib/agency-lists";
+import { matchWork, scaledShares, workIssues, type ListMatch, type ListResult, type ListWork, type ListWriter } from "@/lib/agency-lists";
 import type { CatalogTrack } from "@/lib/catalog";
 import { creditName, emptyContributor, emptyMetadata, type Contributor, type Metadata } from "@/lib/metadata";
 
@@ -14,16 +14,11 @@ export type FieldChange = { field: string; catalog: string; agency: string };
 export type AgencyDuplicate = { track: CatalogTrack; work: ListWork; agency: Metadata; issues: string[]; changes: FieldChange[] };
 export type FillPlan = { creates: AgencyFill[]; duplicates: AgencyDuplicate[] };
 
-/** Shares as the list states them, brought to a 100% total (agencies use 100, 200 or writer-half scales). */
-export function writerShares(writers: ListWriter[]): number[] {
-  const total = writers.reduce((n, w) => n + (w.share ?? 0), 0);
-  const out = writers.map((w) => (w.share === undefined || total <= 0 ? 0 : Math.round((w.share / total) * 10000) / 100));
-  // Rounding three 33.33% shares gives 99.99; the last writer with a share carries the difference so the total is 100.
-  const sum = out.reduce((n, x) => n + x, 0);
-  const last = out.map((v, i) => [v, i] as const).filter(([v]) => v > 0).pop();
-  if (last && Math.abs(sum - 100) >= 0.01) out[last[1]] = Math.round((out[last[1]]! + (100 - sum)) * 100) / 100;
-  return out;
-}
+/**
+ * Shares as the list states them, brought to a 100% total. The rule lives in agency-lists.ts (`scaledShares`), so the
+ * comparison, this dialog and the saved catalog can never disagree about a BMI 200% row.
+ */
+export const writerShares = scaledShares;
 
 /** The entry a list's work starts: everything the agency sent, and blanks for what only the member knows. */
 export function agencyMetadata(work: ListWork, artist: string): Metadata {
@@ -64,8 +59,14 @@ export function agencyVersion(existing: Metadata, work: ListWork, artist: string
 /** The catalog's writers as one line: "Qui-Ona Peterson 100% · Bo Ray 50%". */
 const catalogWriters = (m: Metadata) => [...m.writers, ...m.composers].filter((w) => creditName(w))
   .map((w) => `${creditName(w)}${w.percentage ? ` ${Number(w.percentage)}%` : ""}`).join(" · ");
-/** The list's writers the same way, so the two columns read alike. */
-const listWriters = (writers: ListWriter[]) => writers.map((w) => `${w.name}${w.share !== undefined ? ` ${Math.round(w.share)}%` : ""}`).join(" · ");
+/**
+ * The list's writers the same way, so the two columns read alike — on the composition's 100% scale, because BMI prints
+ * the writer's half and the publisher's half together (200% there is 100% of the composition).
+ */
+const listWriters = (writers: ListWriter[]) => {
+  const shares = scaledShares(writers);
+  return writers.map((w, i) => `${w.name}${shares[i] ? ` ${Math.round(shares[i]!)}%` : ""}`).join(" · ");
+};
 
 /** The fields that actually differ, so the dialog only shows what the member has to decide about. */
 export function fieldChanges(existing: Metadata, work: ListWork): FieldChange[] {
