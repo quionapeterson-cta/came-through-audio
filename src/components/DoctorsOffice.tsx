@@ -88,7 +88,7 @@ export function PatientCheckIn({ userId, defaultName, hasCatalog, onVisit }: { u
   return (
     <div className="mx-auto max-w-2xl space-y-5">
       <div className="rounded-xl border border-border p-4">
-        <div className="mb-3 flex items-center justify-between"><b>{saved && !editing ? "Your patient file" : "First visit? Start your patient file"}</b>
+        <div className="mb-3 flex items-center justify-between"><b>{saved && !editing ? "Your artist file" : "First visit? Start your artist file"}</b>
           {!editing && <Button size="sm" variant="ghost" onClick={() => setEditing(true)}>Edit</Button>}</div>
         {editing ? (
           <div className="grid gap-3 sm:grid-cols-2">
@@ -106,7 +106,7 @@ export function PatientCheckIn({ userId, defaultName, hasCatalog, onVisit }: { u
                 <option value="bmi">I'm a BMI writer with no publishing company</option>
               </select></label>
             {f.publishing === "publisher" && <label className="space-y-1 text-sm sm:col-span-2">Publisher name<Input value={f.publisher} onChange={(e) => set("publisher", e.target.value)} /></label>}
-            <div className="sm:col-span-2"><Button disabled={!ready} onClick={keep}>Save my patient file</Button>
+            <div className="sm:col-span-2"><Button disabled={!ready} onClick={keep}>Save my artist file</Button>
               <span className="ml-2 text-xs text-muted-foreground">Saved on this device, so you won't retype it.</span></div>
           </div>
         ) : (

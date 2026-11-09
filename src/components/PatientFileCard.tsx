@@ -87,7 +87,7 @@ export function PatientFileCard({ userId, defaultName, patient, onSaved }: {
     <div className="rounded-2xl border border-border bg-muted/40 p-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
-          <p className="text-xs font-semibold uppercase tracking-[2px] text-primary">Patient file</p>
+          <p className="text-xs font-semibold uppercase tracking-[2px] text-primary">Artist file</p>
           <h4 className="mt-0.5 font-bold">{saved && !editing ? "Your details at the desk" : "First visit? Leave your details"}</h4>
         </div>
         {editing
