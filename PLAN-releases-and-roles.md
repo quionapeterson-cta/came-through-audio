@@ -34,10 +34,13 @@ Builds on: PLAN-pre-distribution (built 2026-10-25), PLAN-catalog-organization, 
 | 18 | Say **"someone else performs it"**, not "someone else's recording", wherever the outside-song case is explained. §10. |
 | 19 | Every **beat licence** gives the producer **100% of the composition** — the writer's share and the publisher's share — editable when a second producer or an artist's writing is added. §13, §17. |
 | 20 | A list printed on BMI's **200% scale** is read on the **100% scale**; word order and titles are ignored, but **a different set of name parts is reported with both spellings**, so the catalog can be brought up to the registration. §11.6, §17. |
+| 21 | A producer's share names the arrangement — **50%** when artist and producer write together, **25%** when the producer supplied the beat, **100%** only for a sole writer — and every producer deal carries the producer's legal name, PRO affiliation and IPI number. A PRO fill leaves each writer's author/composer role blank. §17. |
 
 Still to confirm: §9 questions 2 and 3, and §16.
 
 ---
+
+- **Producer terms carry the whole registration** (founder, 2026-11-09, `src/lib/blueprints/music-production.ts`): all three beat licences share one composition clause that names the three usual splits instead of asserting 100%, says the producer is registered as the song's composer under their legal name, and requires their PRO affiliation and IPI name number in the deal. Those two are real fields, prefilled from the member's catalog defaults in every blueprint that asks for them (`ownProIpi`, `src/components/Contracts.tsx`). A fill from a PRO list now leaves each writer's author/composer role blank (`agency-fill.ts`), because a registration doesn't say which, and lists it in what the entry still needs.
 
 ## 1. What is already true (keep it, don't rebuild it)
 

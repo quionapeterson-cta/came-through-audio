@@ -19,6 +19,7 @@ import { StarSky } from "@/components/StarSky";
 import { listTracks, type CatalogTrack } from "@/lib/catalog";
 import { getLaunchStatus } from "@/lib/gate.functions";
 import { BLUEPRINTS, CATEGORIES, COMPANY_BLUEPRINTS, dropPrelaunch, COMPANY_LEGAL_NAME, COMPANY_SIGNER_NAME, CONTRACT_DISCLAIMER, SIGNATURE_FONT, blueprintById, fillBlanks, georgiaLaw, initialFields, missingFields, renderContract, type Blueprint, type BlueprintField } from "@/lib/contract-blueprints";
+import { ownProIpi } from "@/lib/artist-profile";
 import { downloadContractPdf } from "@/lib/contract-pdf";
 import { myBrand } from "@/lib/brand-load";
 import { loadWebFont } from "@/lib/web-fonts";
@@ -103,8 +104,16 @@ export function Contracts({ userId, unlocked, onUpgrade, company = false, onOpen
   /** A new contract from a blueprint; a Contract Generator draft adds the details and names it filled in. */
   const start = (bp: Blueprint, draft?: GeneratedDraft) => {
     if (!unlocked) { onUpgrade(); return; }
+    // A deal that asks for a PRO affiliation or IPI number starts from the member's own catalog defaults (founder,
+    // 2026-11-09). Whoever is the producer confirms or replaces them; an artist can see what's still the producer's to give.
+    const fields = { ...initialFields(bp), ...remembered(bp), ...draft?.fields };
+    const own = ownProIpi(userId);
+    for (const f of bp.fields) {
+      if (fields[f.key]?.trim() || (f.key !== "pro" && f.key !== "ipi")) continue;
+      fields[f.key] = f.key === "pro" ? own.pro : own.ipi;
+    }
     setEditing({
-      blueprint: bp.id, title: bp.name, catalogId: null, fields: { ...initialFields(bp), ...remembered(bp), ...draft?.fields }, body: "", status: "draft", bodyHash: "",
+      blueprint: bp.id, title: bp.name, catalogId: null, fields, body: "", status: "draft", bodyHash: "",
       sentAt: null, completedAt: null, updatedAt: new Date().toISOString(),
       // Company agreements: the founder's printed name is pre-filled for the Company block (3.9).
       parties: bp.roles.map((role, i) => ({ ...emptyParty(role, i === 0), legalName: draft?.parties[role] ?? (company && i === 0 ? COMPANY_SIGNER_NAME : "") })),

@@ -34,7 +34,7 @@ describe("starting an entry from a list work", () => {
     expect(m.artist).toBe("Karma Came");
     expect(m.isrc).toBe("USCTA2600111");
     expect(m.iswc).toBe("T1234567890");
-    expect(m.writers[0]).toMatchObject({ legalName: "Qui-Ona Peterson", role: "Author/Composer", ipi: "123456789", pro: "BMI", percentage: "100" });
+    expect(m.writers[0]).toMatchObject({ legalName: "Qui-Ona Peterson", role: "", ipi: "123456789", pro: "BMI", percentage: "100" });
     expect(m.album).toBe("");
     expect(m.releaseType).toBe("");
   });
@@ -44,7 +44,7 @@ describe("starting an entry from a list work", () => {
   });
 
   it("names what the member still has to add", () => {
-    expect(finishItems(agencyMetadata(work(), "Karma Came"))).toEqual(["album or single title", "release type", "duration", "genre", "release date", "writer names"]);
+    expect(finishItems(agencyMetadata(work(), "Karma Came"))).toEqual(["album or single title", "release type", "duration", "genre", "release date", "writer names", "each writer's role, author or composer — the list doesn't say which"]);
   });
 });
 

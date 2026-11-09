@@ -27,8 +27,9 @@ export function agencyMetadata(work: ListWork, artist: string): Metadata {
     ...emptyContributor(),
     name: w.name,
     legalName: w.name,
-    // The list doesn't say which half a writer wrote, so they start covering both; the member can change it.
-    role: "Author/Composer",
+    // A registration doesn't say who wrote the words and who wrote the music (founder, 2026-11-09), so it stays blank
+    // and `finishItems` asks for it rather than claiming both halves for every writer.
+    role: "",
     pro: w.pro ?? "",
     ipi: w.ipi ?? "",
     percentage: shares[i] ? String(shares[i]) : "",
@@ -124,5 +125,6 @@ export function finishItems(m: Metadata): string[] {
     m.primaryGenre.trim() ? "" : "genre",
     m.releaseDate.trim() || m.unreleased ? "" : "release date",
     m.writers.some((w) => (w.legalName ?? w.name).trim()) ? "" : "writer names",
+    m.writers.every((w) => !(w.role ?? "").trim()) ? "each writer's role, author or composer — the list doesn't say which" : "",
   ].filter((x): x is string => !!x);
 }

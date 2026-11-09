@@ -87,6 +87,12 @@ export function patientFileFromDefaults(ob: Pick<Onboarding, "legalName"> | null
   };
 }
 
+/** The member's own PRO and IPI, as their catalog defaults hold them, for contract fields that ask for them. */
+export function ownProIpi(userId?: string): { pro: string; ipi: string } {
+  const { pro, ipi } = patientFileFromDefaults(loadOnboarding(userId), loadProfile(userId));
+  return { pro, ipi };
+}
+
 /** Every default filled in: the catalog (and stage name) is 100% complete. */
 export const profileFilled = (ob: Onboarding, p: ArtistProfile) => profileChecks(ob, p).every(Boolean);
 
