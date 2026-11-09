@@ -736,7 +736,7 @@ export function MetadataUploader({ onShareInfo, userId, mode = "embed", readOnly
           {userId && !result && <p className="text-xs text-muted-foreground"><span className="font-semibold">{OFFICIAL_MASTER_ACTION}</span> writes your details into the audio file and downloads it. <span className="font-semibold">{editingId ? "Update in My Catalog" : "Save to My Catalog"}</span> embeds it the same way and keeps the tagged master in My Catalog, without downloading.</p>}
           {result && !full && <NextSong queue={queue} carry={carry} onCarry={setCarry} onNext={startNext} compact />}
           <div className="flex flex-wrap items-center gap-3">
-            <Button type="submit" size="lg" disabled={busy}><FileAudio />{busy ? "Embedding…" : OFFICIAL_MASTER_ACTION}</Button>
+            <Button type="submit" size="lg" disabled={busy} className="h-auto min-h-10 max-w-full whitespace-normal py-2"><FileAudio />{busy ? "Embedding…" : OFFICIAL_MASTER_ACTION}</Button>
             {userId && <Button type="button" size="lg" variant={result ? "default" : "outline"} disabled={saving} onClick={save}><Save />{saving ? "Saving…" : editingId ? "Update in My Catalog" : "Save to My Catalog"}</Button>}
             {full && (editingId || adding) && <Button type="button" size="lg" variant="ghost" onClick={closeSong}>Close</Button>}
             {!full && <span className="hidden text-xs text-muted-foreground sm:inline"><kbd className="rounded border border-border px-1.5 py-0.5">Ctrl</kbd> + <kbd className="rounded border border-border px-1.5 py-0.5">Enter</kbd> (<kbd className="rounded border border-border px-1.5 py-0.5">⌘</kbd> + <kbd className="rounded border border-border px-1.5 py-0.5">Enter</kbd> on Mac) to embed</span>}
@@ -940,9 +940,9 @@ export function MetadataUploader({ onShareInfo, userId, mode = "embed", readOnly
                     </details>
                   : <div className="grid gap-4">{groupProjects(items).map((p) => (
                     <details key={p.key} open={p.tracks.some((x) => x.id === editingId) || (!!newest && p.tracks.some((x) => x.id === newest.id))} className="rounded-2xl border border-border p-4 open:border-primary">
-                      <summary className="flex cursor-pointer list-none items-center gap-4">
+                      <summary className="flex cursor-pointer list-none flex-wrap items-center gap-4">
                         {p.cover ? <img src={p.cover} alt={`${p.title} artwork`} className="h-14 w-14 rounded-lg object-cover shadow" /> : <div className="flex h-14 w-14 items-center justify-center rounded-lg bg-primary text-primary-foreground"><Disc3 className="h-7 w-7" /></div>}
-                        <div className="min-w-0 flex-1">
+                        <div className="min-w-[10rem] flex-1">
                           <div className="truncate text-xl font-bold">{p.title}</div>
                           <div className="text-sm text-muted-foreground">{p.artist} · {p.tracks.length} {p.tracks.length === 1 ? "track" : "tracks"}</div>
                         </div>

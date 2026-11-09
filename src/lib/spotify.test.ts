@@ -71,6 +71,8 @@ function makeFetcher(extra?: (url: string) => Response | undefined) {
           { id: "T3", name: "Old Song", external_ids: { isrc: "USAT21900001" } },
         ],
       });
+    const one = url.match(/\/tracks\/(T\d)\?/)?.[1];
+    if (one) return json({ id: one, name: `Track ${one}`, external_ids: { isrc: `ISRC-${one}` } });
     return json({ error: { status: 404 } }, 404);
   };
   return { fetcher, calls };
@@ -122,6 +124,26 @@ describe("spotifyDiscography", () => {
     );
     expect(d.trackCount).toBe(1);
     expect(d.truncated).toBe(true);
+  });
+
+  it("reads tracks one at a time when Spotify refuses the batch, as it does for Development Mode apps", async () => {
+    for (const status of [400, 403]) {
+      const { fetcher, calls } = makeFetcher((url) =>
+        url.includes("/tracks?ids=") ? json({ error: { status } }, status) : undefined,
+      );
+      const d = await spotifyDiscography({ kind: "artist", id: "A1" }, { token: "t", fetcher });
+      expect(d.trackCount).toBe(3);
+      expect(d.withIsrc).toBe(3);
+      expect(d.releases[0]!.tracks[0]).toMatchObject({ title: "Track T1", isrc: "ISRC-T1" });
+      // Refused once, then never asked again for the second album.
+      expect(calls.filter((u) => u.includes("/tracks?ids="))).toHaveLength(1);
+    }
+  });
+
+  it("lists albums ten to a page, which every app mode accepts", async () => {
+    const { fetcher, calls } = makeFetcher();
+    await spotifyDiscography({ kind: "artist", id: "A1" }, { token: "t", fetcher });
+    expect(calls.find((u) => u.includes("/artists/A1/albums"))).toContain("limit=10");
   });
 
   it("turns a rejected key into a sentence about the key, not about the artist", async () => {

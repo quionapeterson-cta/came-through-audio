@@ -101,7 +101,7 @@ Create each price in the **sandbox first**, test it, then in **live**. Until the
 - [ ] Create the partnerships@camethroughaudio.com mailbox (outreach emails send from it and replies go to it).
 - [ ] Create the billing@camethroughaudio.com mailbox (billing emails send from it; refund requests go to it).
 - [ ] Supabase → Authentication → set the minimum password length to 12, to match the sign-up form.
-- [ ] Demo account: in the Codespace terminal run `DEMO_PASSWORD=your-demo-password npx vitest run scripts/demo/seed.test.ts --environment node`.
+- [ ] Demo account: in the Codespace terminal run `DEMO_PASSWORD=your-demo-password npx vitest run --config scripts/demo/vitest.config.ts`.
 - [ ] Check Admin → Homepage shows your new testimonial (it needs name, quote, service, photo, release signed date and Published ticked).
 
 ## 6. Publish and test

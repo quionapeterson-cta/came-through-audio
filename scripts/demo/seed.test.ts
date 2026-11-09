@@ -1,6 +1,6 @@
 /**
  * Seeds the demo account (demo@camethroughaudio.com) with sample data for the demo video and homepage photos.
- * Run: DEMO_PASSWORD=… npx vitest run scripts/demo/seed.test.ts --environment node
+ * Run: DEMO_PASSWORD=… npx vitest run --config scripts/demo/vitest.config.ts
  * Karma Came's own songs (BAM, Therapy Deluxe Edition, two singles), from the MP3s in this folder; ISRCs and UPCs are stand-ins. Safe to re-run: it replaces the demo account's songs.
  */
 import { it } from "vitest";
@@ -46,7 +46,8 @@ it("seeds the demo account", async () => {
   const onboarding = { done: true, welcomed: true, avatar: "/icons/playful/crowns/king_crown.png", stageName: "Karma Came", legalName: QUI, healthCountry: "US" };
   const profile = { artist: "Karma Came", label: "Came Through Audio", language: "English", primaryGenre: "Hip-Hop/Rap", copyright: `© 2026 ${QUI}`,
     recordedIn: "United States", writers: solo, producers: [{ ...emptyContributor(), name: "Karma Came" }], selfPublished: true };
-  const p = await sb.from("profiles").update({ onboarding, artist_defaults: profile } as never).eq("id", uid);
+  // The header reads stage_name, not onboarding, so the sign-up name ("Demo Artist") showed until this set it.
+  const p = await sb.from("profiles").update({ stage_name: "Karma Came", legal_name: QUI, onboarding, artist_defaults: profile } as never).eq("id", uid);
   if (p.error) throw p.error;
   await sb.from("catalogs").delete().eq("user_id", uid);
   for (const m of songs) {

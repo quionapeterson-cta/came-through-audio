@@ -16,8 +16,10 @@ import {
  *   SPOTIFY_CLIENT_SECRET
  *
  * Spotify answers artists with albums but gives ISRCs only per track, so tracks are read in batches of 50 — the Web API
- * maximum — rather than one request each. Everything returned here matches the Deezer shape, so matching, the MLC check
- * and the UI need no branch of their own.
+ * maximum — rather than one request each. Development Mode apps lost the batch endpoint in Spotify's February 2026
+ * changes, so when Spotify refuses a batch the rest are read one track at a time, a few in parallel. Albums are listed
+ * ten to a page, a page size every mode accepts. Everything returned here matches the Deezer shape, so matching, the MLC
+ * check and the UI need no branch of their own.
  */
 type Fetcher = (url: string, init?: RequestInit) => Promise<Response>;
 
@@ -25,6 +27,16 @@ export const SPOTIFY_API = "https://api.spotify.com/v1";
 const TOKEN_URL = "https://accounts.spotify.com/api/token";
 /** A client-credentials token lasts an hour; refresh a minute early so a request never races the expiry. */
 const TOKEN_TTL_MS = 55 * 60 * 1000;
+
+/** Spotify refused a request outright (400/403/404): the link is wrong, or the endpoint isn't open to this app. */
+class SpotifyRefused extends FastTrackError {
+  constructor(
+    message: string,
+    readonly status: number,
+  ) {
+    super(message);
+  }
+}
 
 /** No credentials on this server: the caller should fall back to a Deezer name search instead of failing the page. */
 export class SpotifyNotConfigured extends Error {}
@@ -164,7 +176,12 @@ export async function spotifyDiscography(
           "Spotify rejected the app's key. Check the client ID and client secret.",
         );
       if (res.status === 403 || res.status === 404)
-        throw new FastTrackError("Spotify didn't recognise that link or artist.");
+        throw new SpotifyRefused("Spotify didn't recognise that link or artist.", res.status);
+      if (res.status === 400)
+        throw new SpotifyRefused(
+          "Spotify didn't accept that request. Check the link and try again.",
+          400,
+        );
       if (!res.ok)
         throw new FastTrackError(`Spotify answered ${res.status}. Try again in a moment.`);
       try {
@@ -180,8 +197,8 @@ export async function spotifyDiscography(
     const found: SpAlbum[] = [];
     let total: number | undefined;
     let url: string | undefined =
-      `${SPOTIFY_API}/artists/${artistId}/albums?include_groups=album,single&limit=50&market=US`;
-    for (let page = 0; url && page < 4 && found.length < maxReleases; page++) {
+      `${SPOTIFY_API}/artists/${artistId}/albums?include_groups=album,single&limit=10&market=US`;
+    for (let page = 0; url && page < 20 && found.length < maxReleases; page++) {
       const body: AlbumsPage = await call<AlbumsPage>(url);
       total = body.total ?? total;
       for (const album of body.items ?? [])
@@ -189,6 +206,30 @@ export async function spotifyDiscography(
       url = body.next;
     }
     return { albums: found.sort(newestFirst).slice(0, maxReleases), total };
+  };
+
+  /** Cleared the first time Spotify refuses a batch; every later album goes one track at a time. */
+  let batch = true;
+  const trackDetails = async (ids: string[]): Promise<SpTrack[]> => {
+    if (batch) {
+      try {
+        const body = await call<{ tracks?: (SpTrack | null)[] }>(
+          `${SPOTIFY_API}/tracks?ids=${ids.join(",")}&market=US`,
+        );
+        return (body.tracks ?? []).filter((t): t is SpTrack => !!t);
+      } catch (e) {
+        if (!(e instanceof SpotifyRefused)) throw e;
+        batch = false;
+      }
+    }
+    const out: SpTrack[] = [];
+    for (let i = 0; i < ids.length; i += 5)
+      out.push(
+        ...(await Promise.all(
+          ids.slice(i, i + 5).map((id) => call<SpTrack>(`${SPOTIFY_API}/tracks/${id}?market=US`)),
+        )),
+      );
+    return out;
   };
 
   let artist: SpArtist;
@@ -255,12 +296,8 @@ export async function spotifyDiscography(
 
     const ids = refs.map((r) => r.id).filter((id): id is string => !!id);
     const details = new Map<string, SpTrack>();
-    for (let i = 0; i < ids.length; i += 50) {
-      const body = await call<{ tracks?: (SpTrack | null)[] }>(
-        `${SPOTIFY_API}/tracks?ids=${ids.slice(i, i + 50).join(",")}&market=US`,
-      );
-      for (const t of body.tracks ?? []) if (t?.id) details.set(t.id, t);
-    }
+    for (let i = 0; i < ids.length; i += 50)
+      for (const t of await trackDetails(ids.slice(i, i + 50))) if (t.id) details.set(t.id, t);
 
     const tracks: PulledTrack[] = [];
     for (const r of refs) {
