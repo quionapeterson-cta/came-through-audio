@@ -66,7 +66,7 @@ export const contributorSchema = z.object({
   pubShare: z.string().trim().default("").refine((value) => value === "" || (Number.isFinite(Number(value)) && Number(value) >= 0 && Number(value) <= 100), "Enter a percentage between 0 and 100.").optional(),
 });
 
-export const metadataSchema = z.object({
+const metadataObject = z.object({
   title: z.string().trim().min(1, "Track title is required."),
   trackNumber: z.string().trim().default("").refine((v) => !v || /^\d{1,3}$/.test(v), "Track number must be a whole number."),
   /** Total tracks on the release: track 1 of 12 is trackNumber "1", trackTotal "12" (ID3 TRCK "1/12"). */
@@ -126,7 +126,9 @@ export const metadataSchema = z.object({
   masterBasis: z.enum(MASTER_BASES).default("Copyright Owner"),
   rightsStart: z.string().default(""),
   rightsEnd: z.string().default(""),
-}).superRefine((data, ctx) => {
+});
+/** The share rules both schemas keep: a share, PRO or IPI needs a name, and a group can't total more than 100%. */
+const shareRules = (data: z.infer<typeof metadataObject>, ctx: z.RefinementCtx) => {
   for (const group of ["writers", "composers", "publishers"] as const) {
     data[group].forEach((row, index) => {
       if ((row.pro || row.percentage || row.ipi) && !creditName(row)) ctx.addIssue({ code: "custom", path: [group, index, "name"], message: "Enter a name for this contributor." });
@@ -134,7 +136,14 @@ export const metadataSchema = z.object({
     const total = data[group].reduce((sum, row) => sum + Number(row.percentage || 0), 0);
     if (total > 100) ctx.addIssue({ code: "custom", path: [group], message: "Total percentages cannot exceed 100%." });
   }
-});
+};
+export const metadataSchema = metadataObject.superRefine(shareRules);
+/**
+ * Saving a song never requires an artist (founder, 2026-11-09): a songwriter whose work someone else performs has no
+ * artist of their own, and the catalog is where that work is recorded. Tagging a file still requires one, because a
+ * master's artist tag is the artist — `metadataSchema` stays the embed contract.
+ */
+export const savedSchema = metadataObject.extend({ artist: z.string().trim() }).superRefine(shareRules);
 
 export type Metadata = z.infer<typeof metadataSchema>;
 export type Contributor = z.infer<typeof contributorSchema>;

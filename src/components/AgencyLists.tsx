@@ -201,7 +201,7 @@ export function AgencyLists({ userId, societies, songsFor, summaries, onApply, o
   const gaps = shownResult
     ? [...shownResult.matched, ...shownResult.differences].map((m) => m.work).concat(shownResult.extra)
       .filter((w): w is ListWork => !!w)
-      .map((w) => ({ work: w, gaps: listGaps(w, shown?.id === "soundexchange") }))
+      .map((w) => ({ work: w, gaps: listGaps(w, shown?.id === "soundexchange", shown?.id) }))
       .filter((x) => x.gaps.length)
     : [];
 

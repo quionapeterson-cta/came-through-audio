@@ -204,11 +204,14 @@ export function matchWork(
  * What the agency's own record leaves out: the codes and writer details its portals match a work by. Read from the
  * uploaded file itself, so a member with nothing catalogued yet still gets a real check out of their list.
  */
-export function listGaps(w: ListWork, recording = false): string[] {
+export function listGaps(w: ListWork, recording = false, society = ""): string[] {
   // SoundExchange registers the recording, not the composition: only the ISRC is what it matches by.
   if (recording) return w.isrc ? [] : ["No ISRC — SoundExchange matches a recording by it"];
   const gaps: string[] = [];
-  if (!w.isrc) gaps.push("No ISRC — The MLC and SoundExchange match a recording by it");
+  // A PRO registers the composition, not the recording (founder, 2026-11-05), so a BMI, ASCAP, SESAC or GMR list is never
+  // missing an ISRC and must not say it is. Only The MLC and SoundExchange match a recording by one.
+  const proOnly = ["bmi", "ascap", "sesac", "gmr"].includes(society);
+  if (!w.isrc && !proOnly) gaps.push("No ISRC — The MLC and SoundExchange match a recording by it");
   if (!w.iswc) gaps.push("No ISWC — your PRO registers the composition by it");
   if (!w.writers.length) gaps.push("No writers on the list");
   else {

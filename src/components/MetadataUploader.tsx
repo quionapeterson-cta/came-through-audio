@@ -15,7 +15,7 @@ import { claimFirstBurst } from "@/lib/celebrate";
 import { EXPORT_REQUIRED, GLOSSARY, type GlossaryKey } from "@/lib/glossary";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { OFFICIAL_MASTER_ACTION, PRE_DIST_NOTE, PRO_TIP, SOVEREIGN_BACKUP } from "@/lib/copy";
-import { readMetadata, CREDIT_CHOICES, OTHER_INSTRUMENT, creditChoice, fromCreditChoice, isPerformer, performers, emptyContributor, emptyMetadata, embedMetadata, creditName, metadataSchema, GENRES, GENRE_GROUPS, MASTER_BASES, PRODUCTION_TYPES, RELEASE_TYPES, WRITER_ROLES, writerRole, hfaLooksOff, percentInput, formatDuration, type Contributor, type Metadata } from "@/lib/metadata";
+import { readMetadata, CREDIT_CHOICES, OTHER_INSTRUMENT, creditChoice, fromCreditChoice, isPerformer, performers, emptyContributor, emptyMetadata, embedMetadata, creditName, metadataSchema, savedSchema, GENRES, GENRE_GROUPS, MASTER_BASES, PRODUCTION_TYPES, RELEASE_TYPES, WRITER_ROLES, writerRole, hfaLooksOff, percentInput, formatDuration, type Contributor, type Metadata } from "@/lib/metadata";
 import { COUNTRIES, countryByCode, guessCountry } from "@/lib/repertoires";
 import { catalogHealth, releaseKind } from "@/lib/health-checklist";
 import { listChecks } from "@/lib/repertoire-checks";
@@ -278,7 +278,9 @@ export function MetadataUploader({ onShareInfo, userId, mode = "embed", readOnly
 
   async function save() {
     if (!userId) return;
-    const parsed = metadataSchema.safeParse(metadata);
+    // A songwriter whose work someone else performs has no artist of their own, so saving never requires one (founder,
+    // 2026-11-09). Embedding a master still does: `submit` keeps the strict schema.
+    const parsed = savedSchema.safeParse(metadata);
     if (!parsed.success) { fail(parsed.error.issues[0]?.message ?? "Check your metadata."); return; }
     setError("");
     setSaving(true);

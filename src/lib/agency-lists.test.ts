@@ -125,3 +125,22 @@ describe("BMI's 200% column and its spelling of a name", () => {
     expect(spelledDifferently("STEPHENS CALVIN ANDRE JR (MR)", "Calvin Andre Stephens Jr")).toBe(false);
   });
 });
+
+import { describe as societyDescribe, expect as societyExpect, it as societyIt } from "vitest";
+import { listGaps as gapsFor } from "@/lib/agency-lists";
+
+societyDescribe("what a society's own list leaves out", () => {
+  const work = { title: "Bloom", iswc: "T1234567890", isrc: "", workId: "1", writers: [{ name: "Ann Lee", share: 100, ipi: "123456789" }] };
+  societyIt("never calls a BMI or ASCAP work missing an ISRC, because a PRO registers the composition", () => {
+    societyExpect(gapsFor(work, false, "bmi")).toEqual([]);
+    societyExpect(gapsFor(work, false, "ascap")).toEqual([]);
+    societyExpect(gapsFor(work, false, "sesac")).toEqual([]);
+    societyExpect(gapsFor(work, false, "gmr")).toEqual([]);
+  });
+  societyIt("still names it for The MLC, which matches recordings by ISRC", () => {
+    societyExpect(gapsFor(work, false, "mlc")).toEqual(["No ISRC — The MLC and SoundExchange match a recording by it"]);
+  });
+  societyIt("keeps the old wording when the society isn't known", () => {
+    societyExpect(gapsFor(work)).toEqual(["No ISRC — The MLC and SoundExchange match a recording by it"]);
+  });
+});

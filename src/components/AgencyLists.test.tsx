@@ -33,7 +33,9 @@ describe("AgencyLists", () => {
     const file = new File(["Work Title,Writer Name,IPI,Share\nGold Teeth,LEE ANN,,100\n"], "ascap.csv", { type: "text/csv" });
     fireEvent.change(screen.getByLabelText("Upload your ASCAP list"), { target: { files: [file] } });
     expect(await screen.findByText("What the list itself shows")).toBeTruthy();
-    expect(screen.getAllByText(/No ISRC/).length).toBeGreaterThan(0);
+    // ASCAP registers the composition, so its list is never told a recording code is missing (founder, 2026-11-05).
+    expect(screen.queryAllByText(/No ISRC/)).toHaveLength(0);
+    expect(screen.getAllByText(/no IPI number/).length).toBeGreaterThan(0);
     fireEvent.click(screen.getByRole("button", { name: /Save to my catalog/ }));
     expect(onUpgrade).toHaveBeenCalled();
   });
@@ -75,6 +77,21 @@ describe("AgencyLists", () => {
     fireEvent.click(screen.getByRole("button", { name: /Update songs/ }));
     await waitFor(() => expect(vi.mocked(saveTrack)).toHaveBeenCalledTimes(1));
     expect(vi.mocked(saveTrack).mock.calls[0]![2]).toBe("a");
+  });
+
+  it("asks for each writer's role while filling, and writes it into the songs", async () => {
+    vi.mocked(saveTrack).mockClear();
+    render(<AgencyLists userId="u1" societies={[ascap]} songsFor={() => []} summaries={{}} onApply={vi.fn().mockResolvedValue(undefined)} />);
+    const file = new File(["Work Title,Writer Name,Share\nGold Teeth,RAY BO,100\n"], "ascap.csv", { type: "text/csv" });
+    fireEvent.change(screen.getByLabelText("Upload your ASCAP list"), { target: { files: [file] } });
+    fireEvent.click(await screen.findByRole("button", { name: /Fill my catalog/ }));
+    expect(await screen.findByText("Who wrote what?")).toBeTruthy();
+    // Nothing is preselected: the list never said, so the member answers.
+    expect(screen.getByRole("button", { name: "Author" }).getAttribute("aria-pressed")).toBe("false");
+    fireEvent.click(screen.getByRole("button", { name: "Composer" }));
+    fireEvent.click(screen.getByRole("button", { name: /Add 1 song/ }));
+    await waitFor(() => expect(vi.mocked(saveTrack)).toHaveBeenCalledTimes(1));
+    expect(vi.mocked(saveTrack).mock.calls[0]![0].writers[0]!.role).toBe("Composer");
   });
 
   it("files the new songs into the release the member picks", async () => {

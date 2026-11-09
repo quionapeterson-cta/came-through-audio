@@ -713,8 +713,8 @@ Two of §11's fixes went in ahead of the check itself, because the founder hit b
    spelling so both records match." So the share is not complained about, nobody is called a stranger, and there is a real
    to-do: adopt the agency's spelling, which "Use the agency's version" does in one click.
 
-Still open from §15: the false ISRC gap on PRO lists, `bmiPdfRows` dropping publisher lines, and the writer-only save
-blocker — none of them touched by these two.
+Still open from §15: `bmiPdfRows` dropping publisher lines. The false ISRC gap on PRO lists and the writer-only save
+blocker are fixed in §17.
 
 - **Choosing writer roles while filling from an agency list** (founder, 2026-11-09, `src/lib/agency-fill.ts` +
   `src/components/AgencyLists.tsx`): the fill dialog names every person the chosen songs name, once each (`listPeople`),
@@ -722,6 +722,13 @@ blocker — none of them touched by these two.
   artist is one of them, because the artist is often both, and every row shows how many songs they're on. A person spelled
   two ways on one list is one row offering both spellings, and the member picks the one the catalog should hold. A role
   left blank stays blank, nothing blocks a save, and the song lists it in what the entry still needs.
+
+- **A PRO list is never missing an ISRC** (fixed 2026-11-09, `listGaps` in `src/lib/agency-lists.ts`): BMI, ASCAP, SESAC and
+  GMR register the composition, so their lists no longer carry the ISRC gap; The MLC and SoundExchange still do, and an
+  unknown society keeps the old wording.
+- **A songwriter with no artist can save** (fixed 2026-11-09, `savedSchema` in `src/lib/metadata.ts`): saving a song no
+  longer requires an artist name, while embedding a master still does, because a master's artist tag is the artist. The
+  share rules run on both schemas.
 
 ## §18 Planned, not built
 
