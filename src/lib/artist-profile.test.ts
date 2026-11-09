@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { withOwnWriter, withProfileFilled } from "@/lib/artist-profile";
+import { patientFileFromDefaults, withOwnWriter, withProfileFilled } from "@/lib/artist-profile";
 import { emptyContributor, emptyMetadata } from "@/lib/metadata";
 
 describe("withOwnWriter", () => {
@@ -64,5 +64,29 @@ describe("registration defaults from the profile", () => {
     const { withProfile } = await import("@/lib/artist-profile");
     expect(withProfile({ masterShare: "" }).masterShare).toBe("100");
     expect(withProfile({ masterShare: "50" }).masterShare).toBe("50");
+  });
+});
+
+describe("patientFileFromDefaults", () => {
+  const w = (legalName: string, pro: string, ipi: string) => ({ ...emptyContributor(), name: legalName, legalName, pro, ipi, role: "Author/Composer" });
+
+  it("reads the member's own writer row, matched by legal name, and the publishing answer", () => {
+    const f = patientFileFromDefaults({ legalName: "Ann Lee" }, { writers: [w("Cal Ray", "BMI", "111111111"), w("ann lee", "ASCAP", "00123456789")], selfPublished: true });
+    expect(f).toEqual({ legalName: "Ann Lee", pro: "ASCAP", ipi: "00123456789", publishing: "self", publisher: "" });
+  });
+
+  it("names the publisher when Catalog Defaults list one, and the BMI no-publisher answer when that's the choice", () => {
+    expect(patientFileFromDefaults({ legalName: "Ann Lee" }, { publishers: [{ ...emptyContributor(), name: "Lee Songs" }], selfPublished: true }))
+      .toMatchObject({ publishing: "publisher", publisher: "Lee Songs" });
+    expect(patientFileFromDefaults({ legalName: "Ann Lee" }, { bmiWriterPublishing: true })).toMatchObject({ publishing: "bmi" });
+  });
+
+  it("takes a lone unnamed row as the member's own, and never borrows a co-writer's numbers", () => {
+    expect(patientFileFromDefaults({ legalName: "Ann Lee" }, { writers: [{ ...emptyContributor(), pro: "BMI", ipi: "999999999" }] })).toMatchObject({ pro: "BMI", ipi: "999999999" });
+    expect(patientFileFromDefaults({ legalName: "Ann Lee" }, { writers: [w("Cal Ray", "BMI", "1"), w("Bo Day", "BMI", "2")] })).toMatchObject({ pro: "", ipi: "" });
+  });
+
+  it("is blank, not broken, with no defaults at all", () => {
+    expect(patientFileFromDefaults(null, null)).toEqual({ legalName: "", pro: "", ipi: "", publishing: "", publisher: "" });
   });
 });

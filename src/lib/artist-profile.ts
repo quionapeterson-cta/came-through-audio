@@ -63,6 +63,30 @@ export function profileChecks(ob: Onboarding, p: ArtistProfile): boolean[] {
   ];
 }
 
+type PatientFileShape = NonNullable<Onboarding["patientFile"]>;
+
+/**
+ * The Front Desk's patient file as the profile defaults already answer it: the member's own writer row (matched by legal
+ * name, else the first named writer) for PRO and IPI, and the publishing answer from Catalog Defaults. A first visit
+ * starts from this instead of a blank form; nothing is saved until the member submits it.
+ */
+export function patientFileFromDefaults(ob: Pick<Onboarding, "legalName"> | null, p: ArtistProfile | null): PatientFileShape {
+  const legal = (ob?.legalName ?? "").trim();
+  const rows = p?.writers ?? [];
+  const named = rows.filter((r) => creditName(r).trim());
+  // A lone row is the member's own, named or not: setup often stored their PRO/IPI before the name (see withOwnWriter).
+  const own = named.find((r) => creditName(r).trim().toLowerCase() === legal.toLowerCase()) ?? (rows.length === 1 ? rows[0] : legal ? undefined : named[0]);
+  const publisher = hasName(p?.publishers)[0];
+  const publishing: PatientFileShape["publishing"] = publisher ? "publisher" : p?.bmiWriterPublishing ? "bmi" : p?.selfPublished ? "self" : "";
+  return {
+    legalName: legal || (own ? creditName(own).trim() : ""),
+    pro: own?.pro?.trim() ?? "",
+    ipi: own?.ipi?.trim() ?? "",
+    publishing,
+    publisher: publisher ? creditName(publisher).trim() : "",
+  };
+}
+
 /** Every default filled in: the catalog (and stage name) is 100% complete. */
 export const profileFilled = (ob: Onboarding, p: ArtistProfile) => profileChecks(ob, p).every(Boolean);
 

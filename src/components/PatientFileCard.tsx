@@ -5,11 +5,16 @@ import { Input } from "@/components/ui/input";
 import { InfoTip } from "@/components/InfoTip";
 import { ProSelect } from "@/components/ProSelect";
 import { loadPatientFile, loadPatientFileFromAccount, savePatientFile, type PatientFile } from "@/components/DoctorsOffice";
+import { loadOnboarding, loadProfile, patientFileFromDefaults, type ArtistProfile, type Onboarding } from "@/lib/artist-profile";
+import { supabase } from "@/integrations/supabase/client";
 
 /**
  * The patient file (PLAN-royalty-health-hub-v2 §2 Step 1), handed over at the Front Desk the way you give your details
  * to a receptionist before an appointment. Saved on this device per user, so a Free account never retypes it, and the
  * Doctor reads the same file for the intake form's writer defaults. Nothing here writes to the catalog.
+ *
+ * A first visit starts from what Embed Defaults and Catalog Defaults already say (`patientFileFromDefaults`), so a member
+ * with finished defaults only confirms the file instead of typing it again.
  */
 export type { PatientFile };
 const blank: PatientFile = { legalName: "", pro: "", ipi: "", publishing: "", publisher: "" };
@@ -38,9 +43,15 @@ export function PatientFileCard({ userId, defaultName, patient, onSaved }: {
 }) {
   const [local, setLocal] = useState<PatientFile | null>(() => loadPatientFile(userId));
   const saved = patient ?? local;
-  const [file, setFile] = useState<PatientFile>(() => saved ?? { ...blank, legalName: defaultName });
+  const fromDefaults = (ob: Pick<Onboarding, "legalName"> | null, p: ArtistProfile | null): PatientFile => {
+    const f = patientFileFromDefaults(ob, p);
+    return { ...blank, ...f, legalName: f.legalName || defaultName };
+  };
+  const [file, setFile] = useState<PatientFile>(() => saved ?? fromDefaults(loadOnboarding(userId), loadProfile(userId)));
   const [editing, setEditing] = useState(() => !saved);
-  const set = (k: keyof PatientFile, v: string) => setFile((x) => ({ ...x, [k]: v }));
+  /** Once the member types, a late answer from the account never replaces what they wrote. */
+  const [touched, setTouched] = useState(false);
+  const set = (k: keyof PatientFile, v: string) => { setTouched(true); setFile((x) => ({ ...x, [k]: v })); };
   const ready = patientFileReady(file);
 
   // A file that arrives from the account, or from the hub, replaces the empty form.
@@ -50,13 +61,20 @@ export function PatientFileCard({ userId, defaultName, patient, onSaved }: {
     setEditing(false);
   }, [saved]);
 
-  // Nothing on this device: ask the account before asking the patient to type it all again.
+  // Nothing on this device: ask the account before asking the patient to type it all again. No file there either: the
+  // account's own defaults, which a fresh browser may not have synced yet.
   useEffect(() => {
     if (saved) return;
     let alive = true;
-    loadPatientFileFromAccount(userId).then((f) => { if (alive && f) setLocal(f); }).catch(() => {});
+    loadPatientFileFromAccount(userId).then(async (f) => {
+      if (!alive) return;
+      if (f) { setLocal(f); return; }
+      const { data } = await supabase.from("profiles").select("artist_defaults, onboarding").eq("id", userId).maybeSingle();
+      const row = data as { artist_defaults?: ArtistProfile | null; onboarding?: Onboarding | null } | null;
+      if (alive && row && !touched) setFile(fromDefaults(row.onboarding ?? null, row.artist_defaults ?? null));
+    }).catch(() => {});
     return () => { alive = false; };
-  }, [userId, saved]);
+  }, [userId, saved]); // eslint-disable-line react-hooks/exhaustive-deps
 
   function keep() {
     savePatientFile(userId, file);

@@ -27,6 +27,20 @@ describe("PatientFileCard", () => {
     expect(screen.getByRole("button", { name: /Save my details/ })).toBeTruthy();
   });
 
+  it("starts a first visit from the Embed and Catalog Defaults instead of a blank form", () => {
+    const map = new Map<string, string>();
+    vi.stubGlobal("localStorage", { getItem: (k: string) => map.get(k) ?? null, setItem: (k: string, v: string) => { map.set(k, v); }, removeItem: (k: string) => { map.delete(k); } });
+    localStorage.setItem("cta-onboarding:u3", JSON.stringify({ done: true, welcomed: true, avatar: "", stageName: "Karma Came", legalName: "Ann Lee" }));
+    localStorage.setItem("cta-artist-profile:u3", JSON.stringify({ writers: [{ name: "Ann Lee", legalName: "Ann Lee", role: "Author/Composer", pro: "ASCAP", ipi: "00123456789", percentage: "100" }], selfPublished: true }));
+    render(<PatientFileCard userId="u3" defaultName="" />);
+    expect((screen.getByRole("textbox", { name: "Legal name" }) as HTMLInputElement).value).toBe("Ann Lee");
+    expect((screen.getByRole("textbox", { name: "IPI number" }) as HTMLInputElement).value).toBe("00123456789");
+    expect((screen.getByRole("combobox", { name: "Publisher status" }) as HTMLSelectElement).value).toBe("self");
+    // Prefilled is not submitted: the member still hands it over.
+    expect(screen.getByRole("button", { name: /Submit to Front Desk/ })).toBeTruthy();
+    vi.unstubAllGlobals();
+  });
+
   it("shows the file the account kept instead of asking for it again", () => {
     render(<PatientFileCard userId="u2" defaultName="Ann Lee" patient={{ legalName: "Ann Lee", pro: "BMI", ipi: "123456789", publishing: "self", publisher: "" }} />);
     expect(screen.getByText("Your details at the desk")).toBeTruthy();

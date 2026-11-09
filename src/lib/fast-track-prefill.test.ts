@@ -4,7 +4,10 @@ import {
   prefillPlan,
   releaseTypeOf,
   songFromRelease,
+  titleKey,
+  withStreamingDetails,
 } from "@/lib/fast-track-prefill";
+import { emptyContributor } from "@/lib/metadata";
 import type { CompositionMatch } from "@/lib/composition";
 import type { Discography, PulledRelease } from "@/lib/discography";
 
@@ -103,28 +106,148 @@ describe("fast-track prefill", () => {
     expect(song.label).toBe("Karma Came");
   });
 
-  it("keeps what the catalog already has", () => {
+  it("leaves the same ISRC alone and asks about a same-titled song with another code", () => {
     const plan = prefillPlan({
       discography,
       matches: [unverified(release.tracks[0]!.title), unverified(release.tracks[1]!.title)],
-      existing: [{ title: "Big Booty Bouncing", artist: "Karma Came" }],
+      existing: [
+        {
+          id: "a",
+          title: "Big Booty Bouncing",
+          artist: "Karma Came",
+          isrc: "US-CTA-16-00002",
+          album: "BAM",
+        },
+        { id: "b", title: "Karma Season", artist: "Karma Came", isrc: "gx8kd2640649" },
+      ],
       profile: null,
     });
-    expect(plan.songs.map((s) => s.title)).toEqual(["Karma Season"]);
+    expect(plan.songs).toHaveLength(0);
     expect(plan.existingCount).toBe(1);
+    // "(feat. OG PI)" is a credit, not a version: it is the same song, so the member decides.
+    expect(plan.conflicts).toHaveLength(1);
+    expect(plan.conflicts[0]!.existing.id).toBe("a");
+    expect(plan.conflicts[0]!.song.isrc).toBe("GX8KD2640648");
   });
 
-  it("matches on ISRC before names, so a retitled song is still left alone", () => {
+  it("treats a version as its own recording, never as the song it is a version of", () => {
+    const qpwm: PulledRelease = {
+      id: "q",
+      title: "Quit Playing With Me Deluxe",
+      recordType: "single",
+      tracks: [
+        { title: "Quit Playing With Me", artist: "Karma Came", isrc: "QT6HW2687935" },
+        {
+          title: "Quit Playing With Me - Dirty Version",
+          artist: "Karma Came",
+          isrc: "QT6HW2687937",
+        },
+        {
+          title: "Quit Playing With Me - Official Acapella",
+          artist: "Karma Came",
+          isrc: "QT6HW2687938",
+        },
+      ],
+    };
+    const plan = prefillPlan({
+      discography: { ...discography, releases: [qpwm], trackCount: 3 },
+      matches: [],
+      existing: [
+        { id: "q1", title: "Quit Playing With Me", artist: "Karma Came", isrc: "US-CTA-26-00121" },
+      ],
+      profile: null,
+    });
+    expect(plan.conflicts.map((c) => c.song.title)).toEqual(["Quit Playing With Me"]);
+    expect(plan.songs.map((s) => s.title)).toEqual([
+      "Quit Playing With Me - Dirty Version",
+      "Quit Playing With Me - Official Acapella",
+    ]);
+  });
+
+  it("saves a recording on two releases once, on the album the catalog already names, else the album", () => {
+    const single: PulledRelease = {
+      id: "s",
+      title: "Bossed Out",
+      recordType: "single",
+      tracks: [{ title: "Bossed Out", artist: "Karma Came", isrc: "GBSMU3483169" }],
+    };
+    const album: PulledRelease = {
+      id: "al",
+      title: "BAM",
+      recordType: "album",
+      tracks: [
+        { title: "Bossed Out", artist: "Karma Came", isrc: "GBSMU3483169", position: 3 },
+        { title: "24/7 Love", artist: "Karma Came", isrc: "GBSMU3060595", position: 4 },
+      ],
+    };
+    const d = { ...discography, releases: [single, album], trackCount: 3 };
+    const mine = prefillPlan({
+      discography: d,
+      matches: [],
+      profile: null,
+      existing: [{ id: "x", title: "Bossed Out", artist: "Karma Came", album: "BAM" }],
+    });
+    expect(mine.repeatCount).toBe(1);
+    expect(mine.conflicts.map((c) => c.song.album)).toEqual(["BAM"]);
+    const fresh = prefillPlan({ discography: d, matches: [], profile: null, existing: [] });
+    expect(fresh.songs.map((s) => `${s.title} · ${s.album}`)).toEqual([
+      "Bossed Out · BAM",
+      "24/7 Love · BAM",
+    ]);
+  });
+
+  it("pairs each catalog entry once, on the matching album first", () => {
+    const album: PulledRelease = {
+      id: "al",
+      title: "BAM",
+      recordType: "album",
+      tracks: [{ title: "Bloodline", artist: "Karma Came", isrc: "GBSMU2963386" }],
+    };
+    const plan = prefillPlan({
+      discography: { ...discography, releases: [album], trackCount: 1 },
+      matches: [],
+      profile: null,
+      existing: [
+        { id: "single", title: "Bloodline", artist: "Karma Came", album: "Bloodline" },
+        { id: "bam", title: "Bloodline", artist: "Karma Came", album: "BAM" },
+      ],
+    });
+    expect(plan.conflicts.map((c) => c.existing.id)).toEqual(["bam"]);
+  });
+
+  it("takes only streaming's recording details onto an entry, keeping the member's own work", () => {
+    const mine = {
+      ...songFromRelease(release, release.tracks[1]!, undefined, null),
+      isrc: "US-CTA-16-00009",
+      label: "Came Through Audio",
+      lyrics: "words",
+      writers: [{ ...emptyContributor(), legalName: "Qui-Ona Peterson", role: "Author/Composer" }],
+    };
+    const pulled = { ...songFromRelease(release, release.tracks[1]!, undefined, null), label: "" };
+    const out = withStreamingDetails(mine, pulled);
+    expect(out.isrc).toBe("GX8KD2640649");
+    expect(out.upc).toBe("123456789012");
+    expect(out.lyrics).toBe("words");
+    expect(out.writers[0]!.legalName).toBe("Qui-Ona Peterson");
+    // Spotify no longer sends a label: a blank never wipes the entry's own.
+    expect(out.label).toBe("Came Through Audio");
+  });
+
+  it("matches on ISRC only for 'already here'", () => {
     expect(
-      alreadyInCatalog({ title: "Some Remix", artist: "Karma Came", isrc: "gx8kd2640648" }, [
+      alreadyInCatalog({ isrc: "gx8kd2640648" }, [
         { title: "Big Booty Bouncing", artist: "Karma Came", isrc: "GX8KD2640648" },
       ]),
     ).toBe(true);
-    expect(
-      alreadyInCatalog({ title: "Karma Season", artist: "Someone Else", isrc: "" }, [
-        { title: "Karma Season", artist: "Karma Came" },
-      ]),
-    ).toBe(false);
+    expect(alreadyInCatalog({ isrc: "" }, [{ title: "Karma Season", artist: "Karma Came" }])).toBe(
+      false,
+    );
+  });
+
+  it("ignores feat. credits, case and punctuation in titles, never a version tag", () => {
+    expect(titleKey("Be There In A Minute")).toBe(titleKey("Be There in a Minute"));
+    expect(titleKey("Beauty King (feat. Digga)")).toBe(titleKey("Beauty King"));
+    expect(titleKey("Therapy - Official Clean Version")).not.toBe(titleKey("Therapy"));
   });
 
   it("reads release types and leaves an unknown one unanswered", () => {
