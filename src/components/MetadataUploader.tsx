@@ -74,7 +74,7 @@ export function MetadataUploader({ onShareInfo, userId, mode = "embed", readOnly
   /** What the last save did, shown as a checklist so it's clear whether the master was embedded, downloaded and stored. */
   const [savedInfo, setSavedInfo] = useState<SavedInfo>();
   const errorRef = useRef<HTMLParagraphElement>(null);
-  /** An error the person must see: below the buttons, scrolled into view, and as a pop-up (Ctrl+Enter can be pressed anywhere). */
+  /** An error the person must see: below the buttons, scrolled into view, and as a pop-up (Ctrl+Enter embeds and downloads from anywhere). */
   const fail = (message: string) => {
     setError(message);
     toast.error(message);
@@ -124,7 +124,7 @@ export function MetadataUploader({ onShareInfo, userId, mode = "embed", readOnly
     keepSession(userId, sessionDone, waiting, audio, queue);
   }, [full, sessionReady, userId, sessionDone, waiting, audio, queue]);
   const formRef = useRef<HTMLFormElement>(null);
-  // Ctrl+Enter (⌘+Enter on Mac) embeds from anywhere on the tab, not only inside the form. Hidden tabs and open
+  // Ctrl+Enter (⌘+Enter on Mac) embeds and downloads from anywhere on the tab, not only inside the form. Hidden tabs and open
   // pop-ups are skipped, so the Embed and My Catalog forms never both fire.
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -775,12 +775,12 @@ export function MetadataUploader({ onShareInfo, userId, mode = "embed", readOnly
           )}
           {result && aiProtect && <p className="-mt-1 text-sm font-semibold text-primary">Next: click Save to My Catalog, then pay ${PACKAGES[0]!.price} at checkout. You'll record your proof in the AI Protection Hub.</p>}
           {userId && !result && <p className="text-xs text-muted-foreground"><span className="font-semibold">{OFFICIAL_MASTER_ACTION}</span> writes your details into the audio file and downloads it. <span className="font-semibold">{editingId ? "Update in My Catalog" : "Save to My Catalog"}</span> embeds it the same way and keeps the tagged master in My Catalog, without downloading.</p>}
+          {!full && <p className="text-xs text-muted-foreground"><kbd className="rounded border border-border px-1.5 py-0.5">Ctrl</kbd> + <kbd className="rounded border border-border px-1.5 py-0.5 sm:inline">Enter</kbd> (<kbd className="rounded border border-border px-1.5 py-0.5">⌘</kbd> + <kbd className="rounded border border-border px-1.5 py-0.5">Enter</kbd> on Mac) embeds your details and downloads the master — the same as the button.</p>}
           {result && !full && <NextSong queue={queue} carry={carry} onCarry={setCarry} onNext={startNext} compact />}
           <div className="flex flex-wrap items-center gap-3">
             <Button type="submit" size="lg" disabled={busy} className="h-auto min-h-10 max-w-full whitespace-normal py-2"><FileAudio />{busy ? "Embedding…" : OFFICIAL_MASTER_ACTION}</Button>
             {userId && <Button type="button" size="lg" variant={result ? "default" : "outline"} disabled={saving} onClick={save}><Save />{saving ? "Saving…" : editingId ? "Update in My Catalog" : "Save to My Catalog"}</Button>}
             {full && (editingId || adding) && <Button type="button" size="lg" variant="ghost" onClick={closeSong}>Close</Button>}
-            {!full && <span className="hidden text-xs text-muted-foreground sm:inline"><kbd className="rounded border border-border px-1.5 py-0.5">Ctrl</kbd> + <kbd className="rounded border border-border px-1.5 py-0.5">Enter</kbd> (<kbd className="rounded border border-border px-1.5 py-0.5">⌘</kbd> + <kbd className="rounded border border-border px-1.5 py-0.5">Enter</kbd> on Mac) to embed</span>}
           </div>
           <p className="text-xs text-muted-foreground">{SOVEREIGN_BACKUP}</p>
         </div>
