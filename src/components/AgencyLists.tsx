@@ -4,8 +4,8 @@ import { toast } from "sonner";
 import { confirmAction } from "@/components/ConfirmHost";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { fillPlan, type FillPlan } from "@/lib/agency-fill";
-import { RELEASE_TYPES } from "@/lib/metadata";
+import { fillPlan, listPeople, withPeople, type FillPlan, type Person, type PersonChoice } from "@/lib/agency-fill";
+import { RELEASE_TYPES, WRITER_ROLES } from "@/lib/metadata";
 import { loadOnboarding, loadProfile } from "@/lib/artist-profile";
 import { saveTrack } from "@/lib/catalog";
 import { clearIntake, readIntake, writeIntake } from "@/lib/intake-session";
@@ -55,6 +55,10 @@ export function AgencyLists({ userId, societies, songsFor, summaries, onApply, o
   const [picked, setPicked] = useState<Record<string, boolean>>({});
   /** Where the ticked new songs go: each its own single, or one EP/album they all belong to. */
   const [release, setRelease] = useState<{ one: boolean; type: string; title: string }>({ one: false, type: "", title: "" });
+  /** Everyone the songs being added name as a writer, with the one answer the member gives per person. */
+  const [people, setPeople] = useState<Person[]>([]);
+  const [roles, setRoles] = useState<Record<string, string>>({});
+  const [names, setNames] = useState<Record<string, string>>({});
   const inputs = useRef<Record<string, HTMLInputElement | null>>({});
 
   // Leaving the check-in (or opening the workspace in another window) used to empty this panel. The comparison is the
@@ -124,6 +128,9 @@ export function AgencyLists({ userId, societies, songsFor, summaries, onApply, o
     const plan = fillPlan(result, songsFor(society.id), artist);
     setPicked(Object.fromEntries(plan.creates.map((c) => [workKey(c.work), true])));
     setRelease({ one: false, type: "", title: "" });
+    setPeople(listPeople(plan.creates.map((c) => c.work)));
+    setRoles({});
+    setNames({});
     setFill({ society, plan });
   }
   /**
@@ -137,8 +144,16 @@ export function AgencyLists({ userId, societies, songsFor, summaries, onApply, o
       const adding = fill.plan.creates.filter((c) => picked[workKey(c.work)] !== false);
       // The release the member picked is written with each song, so My Catalog files them together straight away.
       const placing = release.one && !!release.type;
+      // The answers given per person are written into every song that person is on; a person left unanswered stays blank.
+      const chosen: Record<string, PersonChoice> = {};
+      for (const p of people) {
+        const role = (roles[p.key] ?? "").trim();
+        const name = names[p.key]?.trim();
+        if (role || name) chosen[p.key] = { ...(role ? { role } : {}), ...(name ? { name } : {}) };
+      }
       for (const c of adding) {
-        const m = placing ? { ...c.metadata, releaseType: release.type, album: release.title.trim() || c.metadata.album } : c.metadata;
+        const withRoles = withPeople(c.metadata, people, chosen);
+        const m = placing ? { ...withRoles, releaseType: release.type, album: release.title.trim() || withRoles.album } : withRoles;
         await saveTrack(m, userId);
       }
       let replaced = 0;
@@ -274,7 +289,7 @@ export function AgencyLists({ userId, societies, songsFor, summaries, onApply, o
           {fill && <>
             <p className="text-sm text-muted-foreground">
               {fill.plan.creates.length
-                ? `${fill.plan.creates.length} work${fill.plan.creates.length === 1 ? " is" : "s are"} on the agency's list and not in your catalog yet. Tick the ones you want; each entry starts with the title, codes, writers, IPI numbers and shares the list carries.`
+                ? `${fill.plan.creates.length} work${fill.plan.creates.length === 1 ? " is" : "s are"} on the agency's list and not in your catalog yet. Tick the ones you want; each entry starts with the title, codes, writers, IPI numbers and shares the list carries, and the roles you choose below.`
                 : "Every work on this list is already in your catalog."}
               {" "}You finish the rest — album, release date, genre, duration — in My Catalog.
             </p>
@@ -299,6 +314,39 @@ export function AgencyLists({ userId, societies, songsFor, summaries, onApply, o
                 })}
               </ul>
             </div>}
+            {fill.plan.creates.length > 0 && people.length > 0 && <fieldset className="space-y-2 rounded-xl border border-border p-3">
+              <legend className="px-1 text-sm font-bold">Who wrote what?</legend>
+              <p className="text-xs text-muted-foreground">
+                The list names every writer but never says who wrote the words and who wrote the music. Choose once per person and it
+                applies to every song they&apos;re on. Someone can be both, and the artist often is. Anything left blank stays blank, and the
+                song says it still needs it.
+              </p>
+              <ul className="space-y-2">
+                {people.map((p) => {
+                  const role = roles[p.key] ?? "";
+                  const shown = names[p.key] ?? p.names[0];
+                  return <li key={p.key} className="rounded-lg border border-border/70 p-2">
+                    <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
+                      <span className="text-sm font-semibold">{shown}</span>
+                      <span className="text-xs text-muted-foreground">
+                        {p.works} song{p.works === 1 ? "" : "s"}{p.ipi ? ` · IPI ${p.ipi}` : ""}{p.pro ? ` · ${p.pro}` : ""}
+                      </span>
+                    </div>
+                    {p.names.length > 1 && <div className="mt-1 flex flex-wrap items-center gap-1">
+                      <span className="text-xs text-muted-foreground">Same writer, spelled:</span>
+                      {p.names.map((n) => <button key={n} type="button" aria-pressed={shown === n} onClick={() => setNames((x) => ({ ...x, [p.key]: n }))}
+                        className={`rounded-full border px-2 py-0.5 text-xs ${shown === n ? "border-primary bg-accent/40 font-semibold text-primary" : "border-border text-muted-foreground"}`}>{n}</button>)}
+                    </div>}
+                    <div className="mt-1 flex flex-wrap gap-1">
+                      {WRITER_ROLES.map((r) => <button key={r} type="button" aria-pressed={role === r} onClick={() => setRoles((x) => ({ ...x, [p.key]: role === r ? "" : r }))}
+                        className={`rounded-full border px-2.5 py-0.5 text-xs ${role === r ? "border-primary bg-primary font-semibold text-primary-foreground" : "border-border"}`}>
+                        {r === "Author/Composer" ? "Both" : r}
+                      </button>)}
+                    </div>
+                  </li>;
+                })}
+              </ul>
+            </fieldset>}
             {fill.plan.creates.length > 0 && <fieldset className="space-y-2 rounded-xl border border-border p-3">
               <legend className="px-1 text-sm font-bold">Where do these songs belong?</legend>
               <label className="flex items-start gap-2 text-sm">

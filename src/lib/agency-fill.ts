@@ -1,6 +1,6 @@
 import { matchWork, sameWriter, scaledShares, workIssues, type ListMatch, type ListResult, type ListWork, type ListWriter } from "@/lib/agency-lists";
 import type { CatalogTrack } from "@/lib/catalog";
-import { creditName, emptyContributor, emptyMetadata, type Contributor, type Metadata } from "@/lib/metadata";
+import { creditName, emptyContributor, emptyMetadata, WRITER_ROLES, type Contributor, type Metadata } from "@/lib/metadata";
 
 /**
  * Filling a catalog from an agency list. The list is the agency's own record of the work, so it can start an entry
@@ -19,6 +19,59 @@ export type FillPlan = { creates: AgencyFill[]; duplicates: AgencyDuplicate[] };
  * comparison, this dialog and the saved catalog can never disagree about a BMI 200% row.
  */
 export const writerShares = scaledShares;
+
+/**
+ * The people a set of works names as writers, one row each (founder, 2026-11-09). A registration never says who wrote
+ * the words and who wrote the music, and the same co-writers repeat across a whole catalog, so the member answers once
+ * per person rather than once per song. `sameWriter` merges the spellings an agency prints for one person; both are kept
+ * so the member can choose which the catalog should hold.
+ */
+export type Person = { key: string; names: string[]; ipi: string; pro: string; works: number };
+/** What the member chose for one person: the role, one of `WRITER_ROLES`, and optionally the spelling to keep. */
+export type PersonChoice = { role?: string; name?: string };
+
+export function listPeople(works: ListWork[]): Person[] {
+  const found: (Person & { seen: ListWork[] })[] = [];
+  for (const work of works) {
+    for (const writer of work.writers) {
+      const name = writer.name.trim();
+      if (!name) continue;
+      let person = found.find((p) => p.names.some((n) => sameWriter(n, name)));
+      if (!person) {
+        person = { key: name.toLowerCase(), names: [name], ipi: "", pro: "", works: 0, seen: [] };
+        found.push(person);
+      }
+      if (!person.names.some((n) => n.toLowerCase() === name.toLowerCase())) person.names.push(name);
+      if (!person.ipi && writer.ipi?.trim()) person.ipi = writer.ipi.trim();
+      if (!person.pro && writer.pro?.trim()) person.pro = writer.pro.trim();
+      if (!person.seen.includes(work)) { person.seen.push(work); person.works += 1; }
+    }
+  }
+  // The people on the most songs come first: they are the ones worth answering before the one-off session writer.
+  return found.map(({ seen, ...person }) => person).sort((a, b) => b.works - a.works || a.names[0]!.localeCompare(b.names[0]!));
+}
+
+/**
+ * The entry with the member's answers written in (founder, 2026-11-09): each writer gets the role chosen for their
+ * person and, where they chose a spelling, that name. A person left unanswered keeps the blank role the list gives them,
+ * so nothing is claimed about a writer the member hasn't answered for.
+ */
+export function withPeople(m: Metadata, people: Person[], choices: Record<string, PersonChoice>): Metadata {
+  if (!people.length || !Object.keys(choices).length) return m;
+  const personFor = (name: string) => people.find((p) => p.names.includes(name)) ?? people.find((p) => p.names.some((n) => sameWriter(n, name)));
+  return {
+    ...m,
+    writers: m.writers.map((w) => {
+      const person = personFor(w.name);
+      const choice = person ? choices[person.key] : undefined;
+      if (!choice) return w;
+      const role = (WRITER_ROLES as readonly string[]).includes(choice.role ?? "") ? choice.role! : w.role;
+      const name = choice.name?.trim() || w.name;
+      // The chosen spelling only replaces the list's when the member actually picked a different one.
+      return name === w.name ? { ...w, role } : { ...w, role, name, legalName: name };
+    }),
+  };
+}
 
 /** The entry a list's work starts: everything the agency sent, and blanks for what only the member knows. */
 export function agencyMetadata(work: ListWork, artist: string): Metadata {
@@ -129,6 +182,6 @@ export function finishItems(m: Metadata): string[] {
     m.primaryGenre.trim() ? "" : "genre",
     m.releaseDate.trim() || m.unreleased ? "" : "release date",
     m.writers.some((w) => (w.legalName ?? w.name).trim()) ? "" : "writer names",
-    m.writers.every((w) => !(w.role ?? "").trim()) ? "each writer's role, author or composer — the list doesn't say which" : "",
+    m.writers.some((w) => !(w.role ?? "").trim()) ? "each writer's role, author or composer — the list doesn't say which" : "",
   ].filter((x): x is string => !!x);
 }

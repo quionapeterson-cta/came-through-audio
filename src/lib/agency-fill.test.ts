@@ -129,3 +129,41 @@ rolesDescribe("adopting the agency's version", () => {
     rolesExpect(versionKeepingRoles(existing, work, "Qui-Ona").writers[0]?.role).toBe("Composer");
   });
 });
+
+import { describe as peopleDescribe, expect as peopleExpect, it as peopleIt } from "vitest";
+import { agencyMetadata as metadataFromList, listPeople as peopleOnList, withPeople as applyPeople } from "@/lib/agency-fill";
+
+const listWorks = [
+  { title: "Big Booty Bouncing", iswc: "", isrc: "", workId: "1", writers: [{ name: "Qui-Ona Peterson", share: 50 }, { name: "Calvin Stephens", share: 50 }] },
+  { title: "Bloodline", iswc: "", isrc: "", workId: "2", writers: [{ name: "Qui-Ona Peterson", share: 50 }, { name: "STEPHENS CALVIN ANDRE JR (MR)", share: 50, ipi: "00123456789" }] },
+];
+
+peopleDescribe("the people a list names", () => {
+  peopleIt("lists each writer once, however the agency spells them, and counts their songs", () => {
+    const people = peopleOnList(listWorks);
+    peopleExpect(people).toHaveLength(2);
+    const calvin = people.find((p) => p.names.some((n) => /stephens/i.test(n)))!;
+    peopleExpect(calvin.names).toHaveLength(2);
+    peopleExpect(calvin.works).toBe(2);
+    peopleExpect(calvin.ipi).toBe("00123456789");
+  });
+  peopleIt("writes the chosen role and spelling into every song that person is on", () => {
+    const people = peopleOnList(listWorks);
+    const calvin = people.find((p) => p.names.some((n) => /stephens/i.test(n)))!;
+    const entry = metadataFromList(listWorks[1]!, "Qui-Ona");
+    const filled = applyPeople(entry, people, { [calvin.key]: { role: "Composer", name: "Calvin Stephens" } });
+    const written = filled.writers.find((w) => /stephens|calvin/i.test(w.name))!;
+    peopleExpect(written.role).toBe("Composer");
+    peopleExpect(written.name).toBe("Calvin Stephens");
+    peopleExpect(written.legalName).toBe("Calvin Stephens");
+    // The person nobody answered for is left exactly as the list gave them.
+    const unanswered = filled.writers.find((w) => /qui-ona/i.test(w.name))!;
+    peopleExpect(unanswered.role).toBe("");
+  });
+  peopleIt("keeps the list's own role text out of the three real roles", () => {
+    const people = peopleOnList(listWorks);
+    const entry = metadataFromList(listWorks[0]!, "Qui-Ona");
+    const untouched = applyPeople(entry, people, { nonsense: { role: "Lyricist" } });
+    peopleExpect(untouched.writers.every((w) => w.role === "")).toBe(true);
+  });
+});

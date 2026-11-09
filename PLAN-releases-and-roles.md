@@ -716,6 +716,13 @@ Two of §11's fixes went in ahead of the check itself, because the founder hit b
 Still open from §15: the false ISRC gap on PRO lists, `bmiPdfRows` dropping publisher lines, and the writer-only save
 blocker — none of them touched by these two.
 
+- **Choosing writer roles while filling from an agency list** (founder, 2026-11-09, `src/lib/agency-fill.ts` +
+  `src/components/AgencyLists.tsx`): the fill dialog names every person the chosen songs name, once each (`listPeople`),
+  with `Author`, `Composer` and `Both` set per person and written into every song that person is on (`withPeople`). The
+  artist is one of them, because the artist is often both, and every row shows how many songs they're on. A person spelled
+  two ways on one list is one row offering both spellings, and the member picks the one the catalog should hold. A role
+  left blank stays blank, nothing blocks a save, and the song lists it in what the entry still needs.
+
 ## §18 Planned, not built
 
 - **Registration assistance** (founder, 2026-11-09): not offered yet. The producer deals now carry the producer's legal name,
@@ -723,9 +730,3 @@ blocker — none of them touched by these two.
   again — and the same two fields already ride on every writer row. `registrationCheck` (PLAN-registration-intake §5) stays
   the strict per-agency gate; nothing here changes it. Price, turnaround and what an agent may do on the member's behalf
   are all undecided: no figure or promise goes into copy until the founder sets it.
-- **Choosing a writer's role while filling from an agency list** (founder, 2026-11-09, proposed, not built): the list gives
-  the writers but never says who wrote the words. The proposal is one choice per **person**, not per song, because the
-  same co-writers appear across a whole catalog: `Author`, `Composer` and `Author/Composer` boxes set once per writer found
-  in the uploaded list, applied to every work they appear on, with a per-song override only where it differs. The value is
-  written into the writer rows `agencyMetadata` already creates; blank stays blank until the member chooses, and saving,
-  embedding and the member's own exports are never blocked by it.
