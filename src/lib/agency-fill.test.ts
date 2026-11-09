@@ -9,7 +9,7 @@ const track = (id: string, title: string, metadata: Partial<ReturnType<typeof em
   id, title, artist: "Karma Came", updatedAt: "2026-11-01",
   metadata: { ...emptyMetadata(), title, artist: "Karma Came", ...metadata },
 });
-const result = (o: Partial<ListResult> = {}): ListResult => ({ matched: [], differences: [], notListed: [], extra: [], works: 0, ...o });
+const result = (o: Partial<ListResult> = {}): ListResult => ({ matched: [], differences: [], clashes: [], notListed: [], extra: [], works: 0, ...o });
 
 describe("writer shares on a list", () => {
   it("brings a 200% scale back to 100%", () => {

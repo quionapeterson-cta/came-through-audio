@@ -734,8 +734,13 @@ blocker are fixed in §17.
   `src/lib/embed-session.ts`): the catalog rows hold a 160px tile, which the preview showed blown up as blur and which never
   went into a file, so a session resumed after a reload embedded a master with no artwork at all. A copy up to 1400px is
   kept beside the draft, restored as the artwork itself, and cleared when the cover is removed or a new song starts.
-- **A shared title with no writer in common is no longer a match** (fixed 2026-11-09, `matchWork`): the comparison reports
-  the song as not on the list instead of pinning the first same-titled work — and its registration — to the member's song.
+- **A shared title with no writer in common is now a diagnosis, not a shrug** (fixed 2026-11-09, `clashIssues` /
+  `compareList`): the song is never pinned to the first same-titled work, but it is also no longer just "not on the list".
+  It lands in its own **Same title, different writers** section that names the work, names the writer the agency has, names
+  the member's own, and gives the treatment for each cause — add that writer in My Catalog (or fix the spelling) and upload
+  again if the work is theirs; leave the catalog alone if it is another writer's song. The agency's writers are never
+  offered for copying over the member's, and the list's works are marked accounted for so the fill dialog can't add them
+  as duplicates.
 - **Registration waits for the writer's role** (fixed 2026-11-09, `registrationCheck`): a blank role is never registered as
   author and composer by default; the strict per-agency gate asks what each writer wrote. Saving, embedding and the
   member's own exports are untouched.

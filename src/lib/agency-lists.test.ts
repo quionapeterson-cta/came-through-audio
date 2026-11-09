@@ -179,3 +179,34 @@ halfDescribe("a shared title", () => {
     halfExpect(match(works, song("Cal Ray"))).toBeUndefined();
   });
 });
+
+import { describe as clashDescribe, expect as clashExpect, it as clashIt } from "vitest";
+import { clashIssues as diagnosis, compareList as compare } from "@/lib/agency-lists";
+
+clashDescribe("a title clash", () => {
+  const list = [
+    { title: "Bloom", iswc: "", isrc: "", workId: "1", writers: [{ name: "Ann Lee", share: 100 }] },
+    { title: "Bloom", iswc: "", isrc: "", workId: "2", writers: [{ name: "Bo Ray", share: 100 }] },
+  ];
+  const track = { id: "t1", title: "Bloom", artist: "Q", updatedAt: "", metadata: { ...emptyMetadata(), iswc: "", isrc: "", writers: [{ ...writerRow(), name: "Cal Ray", legalName: "Cal Ray", role: "Author/Composer" }] } };
+
+  clashIt("is diagnosed instead of being called not on the list", () => {
+    const result = compare(list, [track as never], false, "ASCAP");
+    clashExpect(result.notListed).toEqual([]);
+    clashExpect(result.clashes).toHaveLength(1);
+    // The list's own works are accounted for, so the fill dialog never offers to add them as new songs.
+    clashExpect(result.extra).toEqual([]);
+  });
+  clashIt("says what is wrong and what each cause needs", () => {
+    const issues = diagnosis(list[0]!, track.metadata, "ASCAP");
+    clashExpect(issues[0]).toContain("none of its writers are on your song");
+    clashExpect(issues[0]).toContain("Ann Lee");
+    clashExpect(issues.join(" ")).toContain("My Catalog");
+    clashExpect(issues.join(" ")).toContain("another writer's song");
+  });
+  clashIt("still reports a title the list does not have at all", () => {
+    const result = compare(list, [{ ...track, id: "t2", title: "Amber" } as never], false, "ASCAP");
+    clashExpect(result.clashes).toEqual([]);
+    clashExpect(result.notListed.map((n) => n.trackId)).toEqual(["t2"]);
+  });
+});

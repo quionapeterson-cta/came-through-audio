@@ -9,7 +9,9 @@ import { creditName, type Contributor, type Metadata } from "@/lib/metadata";
 export type ListWriter = { name: string; share?: number | undefined; ipi?: string | undefined; pro?: string | undefined };
 export type ListWork = { title: string; iswc: string; isrc: string; workId: string; writers: ListWriter[]; /** BMI prints the publisher half as its own P rows; kept so a published work is not read as writers only. */ publishers?: ListWriter[] };
 export type ListMatch = { trackId: string; title: string; work?: ListWork; issues: string[] };
-export type ListResult = { matched: ListMatch[]; differences: ListMatch[]; notListed: { trackId: string; title: string }[]; extra: ListWork[]; works: number };
+/** A work the list has under the song's title, with no writer in common: not the song, and not simply missing either. */
+export type ListClash = { trackId: string; title: string; work: ListWork; issues: string[] };
+export type ListResult = { matched: ListMatch[]; differences: ListMatch[]; clashes: ListClash[]; notListed: { trackId: string; title: string }[]; extra: ListWork[]; works: number };
 
 const norm = (s: string) => s.toLowerCase().normalize("NFKD").replace(/[̀-ͯ]/g, "")
   .replace(/\s*[([](feat|ft|featuring)\.?[^)\]]*[)\]]/g, "").replace(/\b(feat|ft|featuring)\.?\s.*$/, "").replace(/[^a-z0-9]/g, "");
@@ -180,6 +182,27 @@ export function readWorks(rows: string[][]): ListWork[] {
 
 export const loose = (s: string) => norm(s.replace(/\(.*?\)|\[.*?\]/g, "").replace(/\b(feat|ft)\.?\b.*$/i, ""));
 
+/** Every work on the list with this title, exactly first, then loosely (a remix or a feature in brackets still counts). */
+export function titledWorks(works: ListWork[], title: string): ListWork[] {
+  const exact = works.filter((w) => w.title && norm(w.title) === norm(title));
+  return exact.length ? exact : works.filter((w) => w.title && loose(w.title) === loose(title));
+}
+
+/**
+ * A title clash, in the member's own words (founder, 2026-11-09): the list has this title but not one writer matches, so
+ * calling the song "not on the list" was true and useless. The diagnosis says what the two records disagree about, and the
+ * treatment says what each possible cause needs — the member's to fix when it is their song, the agency's when it isn't.
+ */
+export function clashIssues(work: ListWork, metadata: Metadata, agency = "the agency"): string[] {
+  const named = work.writers.map((w) => w.name).filter(Boolean);
+  const who = named.length ? named.slice(0, 3).join(", ") + (named.length > 3 ? ` and ${named.length - 3} more` : "") : "nobody";
+  const mine = [...(metadata.writers ?? []), ...(metadata.composers ?? [])].map((w) => creditName(w)).filter(Boolean);
+  const issues = [`${agency} has a work called "${work.title}", but none of its writers are on your song — it lists ${who}${mine.length ? `, and your catalog has ${mine.slice(0, 3).join(", ")}` : ""}.`];
+  issues.push(`If it's your work: put ${named[0] ?? "that writer"} on the song's writers in My Catalog, or correct the legal name there if it's only a spelling, then upload the list again.`);
+  issues.push(`If it's another writer's song: your catalog needs nothing here — the work at ${agency} is theirs to settle.`);
+  return issues;
+}
+
 /**
  * The work on an agency list that is this song: the ISRC first, because that is the code the agencies match recordings
  * by, then the ISWC, which names the composition exactly, and the title last, because two recordings can share a name.
@@ -195,8 +218,7 @@ export function matchWork(
   const byIswc = iswc ? works.find((w) => w.iswc && w.iswc === code(iswc)) : undefined;
   if (byIswc) return byIswc;
   // A shared title is real (a re-record, a live version, two artists' songs): the writers say which work it is.
-  const exact = works.filter((w) => w.title && norm(w.title) === norm(t.title));
-  const titled = exact.length ? exact : works.filter((w) => w.title && loose(w.title) === loose(t.title));
+  const titled = titledWorks(works, t.title);
   if (titled.length <= 1) return titled[0];
   const mine = new Set([...(t.metadata.writers ?? []), ...(t.metadata.composers ?? [])].map((w) => nameKey(creditName(w))).filter(Boolean));
   let best = titled[0], bestHits = 0;
@@ -294,18 +316,29 @@ export function workIssues(work: ListWork, metadata: Metadata, recordings = fals
  * (the writers break a shared title).
  * `recordings` lists (SoundExchange) carry no writers, so only presence is compared.
  */
-export function compareList(works: ListWork[], tracks: CatalogTrack[], recordings = false): ListResult {
+export function compareList(works: ListWork[], tracks: CatalogTrack[], recordings = false, agency = "the agency"): ListResult {
   const used = new Set<ListWork>();
-  const matched: ListMatch[] = [], differences: ListMatch[] = [], notListed: ListResult["notListed"] = [];
+  const matched: ListMatch[] = [], differences: ListMatch[] = [], clashes: ListClash[] = [], notListed: ListResult["notListed"] = [];
   for (const t of tracks) {
     const m = t.metadata;
     const work = matchWork(works, t);
-    if (!work) { notListed.push({ trackId: t.id, title: t.title }); continue; }
+    if (!work) {
+      // The list does have this title, but not one writer agrees: a clash to diagnose, never a silent "not on the list" —
+      // and never a match, which would pin another writer's registration to this song.
+      const titled = titledWorks(works, t.title);
+      if (titled.length) {
+        for (const w of titled) used.add(w);
+        clashes.push({ trackId: t.id, title: t.title, work: titled[0]!, issues: clashIssues(titled[0]!, m, agency) });
+        continue;
+      }
+      notListed.push({ trackId: t.id, title: t.title });
+      continue;
+    }
     used.add(work);
     const issues = workIssues(work, m, recordings);
     (issues.length ? differences : matched).push({ trackId: t.id, title: t.title, work, issues });
   }
-  return { matched, differences, notListed, extra: works.filter((w) => !used.has(w)), works: works.length };
+  return { matched, differences, clashes, notListed, extra: works.filter((w) => !used.has(w)), works: works.length };
 }
 
 /**

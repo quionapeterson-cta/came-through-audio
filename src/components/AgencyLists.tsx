@@ -81,11 +81,11 @@ export function AgencyLists({ userId, societies, songsFor, summaries, onApply, o
     setBusy(society.id);
     try {
       const works = readWorks(await readTable(file));
-      const result = compareList(works, songsFor(society.id), society.id === "soundexchange");
+      const result = compareList(works, songsFor(society.id), society.id === "soundexchange", society.name);
       await onApply(society, result, file.name);
       setStored((s) => ({ ...s, byId: { ...s.byId, [society.id]: { file: file.name, result } } }));
       setShownId(society.id);
-      toast.success(`${society.name}: ${result.matched.length} matched, ${result.differences.length} different, ${result.notListed.length} not on the list.`);
+      toast.success(`${society.name}: ${result.matched.length} matched, ${result.differences.length} different${result.clashes.length ? `, ${result.clashes.length} same title but different writers` : ""}, ${result.notListed.length} not on the list.`);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Couldn't read that file.");
     } finally {
@@ -261,6 +261,21 @@ export function AgencyLists({ userId, societies, songsFor, summaries, onApply, o
             <div><div className="text-sm font-semibold">Not on the list · {shownResult.notListed.length}</div>
               <ul className="mt-1 text-sm text-muted-foreground">{shownResult.notListed.slice(0, 12).map((m) => <li key={m.trackId}>{m.title}</li>)}</ul></div>
           </div>
+          {shownResult.clashes.length > 0 && <div className="mt-4 rounded-lg border border-primary/40 bg-accent/30 p-3">
+            <h5 className="text-sm font-semibold">⚠️ Same title, different writers · {shownResult.clashes.length}</h5>
+            <p className="mt-1 text-xs text-muted-foreground">
+              {shown.name} has {shownResult.clashes.length === 1 ? "a work" : "works"} under these titles, but not one writer matches your song.
+              {" "}They aren&apos;t counted as not on the list, and the agency&apos;s writers are never copied over yours: here is what each one is and what to do.
+            </p>
+            <ul className="mt-2 space-y-3 text-sm">
+              {shownResult.clashes.map((c) => <li key={c.trackId}>
+                <b>{c.title}</b>
+                <ul className="mt-1 space-y-1 text-xs text-muted-foreground">
+                  {c.issues.map((issue) => <li key={issue}>{issue}</li>)}
+                </ul>
+              </li>)}
+            </ul>
+          </div>}
           {shownResult.extra.length > 0 && <p className="mt-3 text-xs text-muted-foreground">
             {shownResult.extra.length} work{shownResult.extra.length === 1 ? " is" : "s are"} on your {shown.name} list but not in your catalog ({shownResult.extra.slice(0, 5).map((w) => w.title).join(", ")}{shownResult.extra.length > 5 ? ", …" : ""}). Add them in My Catalog so they're in your report.
           </p>}
