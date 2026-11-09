@@ -163,6 +163,7 @@ export function receiptCopy(i: {
         paragraphs: [
           money_line,
           "The songs you picked are covered by the package, and the certificates are issued from the AI Protection Hub in your workspace.",
+          "Before you record, save an exact copy of each proof video somewhere of your own and keep it unchanged. Your certificate's fingerprint matches that exact file, so trimming or re-exporting it makes a different file that no longer matches.",
         ],
         cta: "Open AI Protection",
       };

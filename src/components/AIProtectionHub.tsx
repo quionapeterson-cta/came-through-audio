@@ -450,6 +450,13 @@ export function AIProtectionHub({ userId, purchases, justPaid, track }: { userId
                   <Music2 className="mt-0.5 h-5 w-5 shrink-0 text-primary" />
                   <p><b>Start with your melody.</b> Copyright protects melody and lyrics, not drum patterns or chord progressions, so your melody is the most important thing to prove. Solo your lead vocal or melody line first, then solo as many other tracks as you can, then play the full mix.</p>
                 </div>
+                <div className="flex gap-3 rounded-xl border-l-4 border-foreground/25 bg-muted/50 p-4 text-sm">
+                  <ShieldCheck className="mt-0.5 h-5 w-5 shrink-0 text-primary" />
+                  <div className="space-y-1">
+                    <p><b>Keep an exact copy of both videos somewhere of your own, and never edit it.</b> Save them to your computer or a second drive exactly as recorded, before you upload, and keep that copy with your project files and stems.</p>
+                    <p className="text-muted-foreground">Your certificate's fingerprint matches that exact file. Trimming, cutting, re-exporting, re-encoding or re-recording makes a different file, and the fingerprint on the certificate no longer matches it.</p>
+                  </div>
+                </div>
                 <div className="grid gap-4 md:grid-cols-2">
                   <ProofBox title="DAW Session" proof={daw} status={status.daw} on={(file) => proof(file, "daw", (p) => setDaw(p))}
                     tip="Screen-record your open project (FL Studio, Logic, Ableton, Pro Tools, BandLab…). Melody first, then each track solo, then the full mix. This shows you have the real working session, not just the final song.">
@@ -618,6 +625,7 @@ function ProofBox({ title, tip, proof, status, on, children }: { title: string; 
       <div className="flex items-center gap-2 font-semibold"><Video className="h-5 w-5 text-primary" />{title}</div>
       <p className="text-sm">{tip}</p>
       <p className="text-xs text-muted-foreground">{MIN_PROOF_SECONDS}–{MAX_PROOF_SECONDS} second video (MP4, MOV or WebM), any size. Stored privately; only its fingerprint is anchored to Bitcoin.</p>
+      <p className="text-xs font-semibold">Keep an exact copy of this file somewhere else before you upload it, and don't edit it: any trim or re-export makes a different file with a different fingerprint.</p>
       <Input type="file" accept={[...PROOF_VIDEO_TYPES, ".mov", ".mp4", ".m4v", ".webm"].join(",")} disabled={!!status.busy} onChange={(e) => { on(e.target.files?.[0]); e.target.value = ""; }} />
       {status.busy && (
         <div className="space-y-2 text-xs"><p className="flex items-center gap-2 font-semibold"><Loader2 className="h-3.5 w-3.5 animate-spin text-primary" />{status.busy}</p>{status.progress !== undefined && <Progress value={status.progress} />}</div>
@@ -656,13 +664,13 @@ function ProofVideos({ cert }: { cert: Certificate }) {
           <div key={label} className="flex flex-wrap items-center justify-between gap-2">
             <span>
               <span className="font-semibold">{label}</span>{" "}
-              <span className="text-xs text-muted-foreground">{!saved ? "· No backup saved. Keep your original file." : path.includes("_720p") ? "· 720p copy. Its own fingerprint is in your manifest too, so this copy and your original both verify." : ""}</span>
+              <span className="text-xs text-muted-foreground">{!saved ? "· No copy is stored here. Keep your original file; its fingerprint is on your certificate." : path.includes("_720p") ? "· 720p copy. Its own fingerprint is in your manifest too, so this copy and your original both verify." : ""}</span>
             </span>
             {saved && <Button size="sm" variant="ghost" disabled={busy === path} onClick={() => void get(label, path)}>{busy === path ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}Download</Button>}
           </div>
         );
       })}
-      <p className="text-xs text-muted-foreground">Backups are private to your account. Your manifest stamps the fingerprint of your original files and of these stored copies.</p>
+      <p className="text-xs text-muted-foreground">Backups are private to your account, and your manifest stamps the fingerprint of your original files and of these stored copies. A copy stored here is storage, not a record: on a Free account it is deleted with the files after two years without a sign-in, and the certificate and its fingerprints stay.</p>
     </div>
   );
 }

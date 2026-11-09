@@ -81,6 +81,18 @@ async function removeBucketFiles(client: Admin, bucketName: string, userId: stri
 /** The masters, artwork and anything else stored for the account's catalog. */
 const removeUserFiles = (client: Admin, userId: string) => removeBucketFiles(client, BUCKET, userId);
 
+/**
+ * Clears a certificate's pointer to a proof video as well as the video itself (founder, 2026-11-09): once the copy is
+ * gone, the column goes back to its empty default, so My certificates offers no download that cannot work. The
+ * certificate, its fingerprints and its manifest stay exactly as they were issued.
+ */
+async function clearProofVideoLinks(client: Admin, userId: string) {
+  const { error } = await client.from("ai_protection_certificates" as never)
+    .update({ session_video_url: "", notes_proof_url: "" } as never)
+    .eq("user_id", userId);
+  if (error) throw new Error(error.message);
+}
+
 /** The catalog itself: the songs and their health ticks, so no entry survives the files it pointed at. */
 async function removeCatalogEntries(client: Admin, userId: string) {
   const { data: songs, error } = await client.from("catalogs").select("id").eq("user_id", userId);
@@ -161,8 +173,9 @@ export async function runInactiveAccounts(now = new Date()) {
       if (inactivityOutcome(signedIn) === "catalog") {
         try {
           // The proof videos are the biggest files an account stores, so they go with the masters even though the
-          // certificates that point at them stay on the account.
+          // certificates that point at them stay on the account. The pointers go too, so nothing dead is left to click.
           await removeBucketFiles(client, PROOF_BUCKET, row.user_id);
+          await clearProofVideoLinks(client, row.user_id);
           await removeCatalogEntries(client, row.user_id);
         } catch (e) {
           console.error(`Inactivity: couldn't clear the catalog for ${row.user_id}`, String(e));
