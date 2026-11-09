@@ -39,6 +39,7 @@ import { PACKAGES } from "@/lib/proof";
 import { openCheckout } from "@/lib/checkout";
 import { loadOnboarding, loadProfile, restoreRows, withProfile, withProfileFilled } from "@/lib/artist-profile";
 import { clearEmbedDraft, loadEmbedDraft, orderAudioFiles, saveEmbedDraft } from "@/lib/embed-session";
+import { clearIntake, readIntake, writeIntake } from "@/lib/intake-session";
 import { fillFromSaved, findSaved, libraryRowsOf, savedPeople } from "@/lib/saved-people";
 import { catalogMatch, missingFor, orderAgencies } from "@/lib/registration";
 import { linkRegistrationSong } from "@/lib/registration.functions";
@@ -97,7 +98,20 @@ export function MetadataUploader({ onShareInfo, userId, mode = "embed", readOnly
   // Embed session: songs waiting their turn, songs finished this sitting, and what carries over to the next song.
   const [queue, setQueue] = useState<File[]>([]);
   const [sessionDone, setSessionDone] = useState<string[]>([]);
+  const [waiting, setWaiting] = useState<string[]>([]);
+  const [sessionReady, setSessionReady] = useState(false);
   const [carry, setCarry] = useState<Record<CarryKey, boolean>>({ artist: true, release: true, people: true, genre: true });
+  useEffect(() => {
+    if (full) { setSessionReady(true); return; }
+    const saved = readIntake<{ done?: string[]; waiting?: string[] }>(userId, "embed-session");
+    if (saved?.done?.length) setSessionDone(saved.done);
+    if (saved?.waiting?.length) setWaiting(saved.waiting);
+    setSessionReady(true);
+  }, [userId, full]);
+  useEffect(() => {
+    if (full || !sessionReady || !userId) return;
+    keepSession(userId, sessionDone, waiting, audio, queue);
+  }, [full, sessionReady, userId, sessionDone, waiting, audio, queue]);
   const formRef = useRef<HTMLFormElement>(null);
   // Ctrl+Enter (⌘+Enter on Mac) embeds from anywhere on the tab, not only inside the form. Hidden tabs and open
   // pop-ups are skipped, so the Embed and My Catalog forms never both fire.
@@ -377,6 +391,7 @@ export function MetadataUploader({ onShareInfo, userId, mode = "embed", readOnly
     if (!picked.length) { setError("Choose MP3 or WAV audio files. FLAC embedding isn't available yet."); return; }
     // An album dropped in at once lines up first song first: tag track number, then file-name number, then name.
     const files = await orderAudioFiles(picked);
+    setWaiting((w) => w.filter((name) => !files.some((f) => f.name === name)));
     const [first, ...rest] = files;
     if (!audio && !full) { selectAudio(first); setQueue((q) => [...q, ...rest]); }
     else if (full) selectAudio(first);
@@ -402,7 +417,8 @@ export function MetadataUploader({ onShareInfo, userId, mode = "embed", readOnly
   /** Clear session: empty the queue and the finished list, start a fresh song (e.g. switching to another album). */
   async function clearSession() {
     if (!(await confirmAction({ title: "Clear this session?", text: "Songs waiting in the queue and the embedded list are cleared, and the form starts fresh. Files you already downloaded aren't affected.", action: "Clear session" }))) return;
-    setQueue([]); setSessionDone([]); setAudio(undefined); startNew(); setError("");
+    setQueue([]); setSessionDone([]); setWaiting([]); setAudio(undefined); startNew(); setError("");
+    clearIntake(userId, "embed-session");
   }
   /** The artist name is set in the profile; explain and offer to go there. */
   async function explainArtistName() {
@@ -762,7 +778,7 @@ export function MetadataUploader({ onShareInfo, userId, mode = "embed", readOnly
         : <span className="text-sm text-muted-foreground">{full ? "Saved songs, identifiers and splits" : "MP3 or WAV · ID3v2.3"}</span>}
       </div>
       {!full && <div className="lg:grid lg:grid-cols-[13rem_minmax(0,1fr)_17rem] lg:items-start lg:gap-6">
-      <SessionRail audio={audio} queue={queue} done={sessionDone} onAdd={() => audioInput.current?.click()} onRemove={(i) => setQueue((q) => q.filter((_, j) => j !== i))} onClear={() => void clearSession()} />
+      <SessionRail audio={audio} queue={queue} done={sessionDone} waiting={waiting} onAdd={() => audioInput.current?.click()} onRemove={(i) => setQueue((q) => q.filter((_, j) => j !== i))} onClear={() => void clearSession()} />
       <div className="min-w-0">
       {formBlock}
       </div>
@@ -1150,6 +1166,12 @@ function SaveChecklist({ info, onProtect }: { info: SavedInfo; onProtect: () => 
   );
 }
 
+/** Saves the embed sitting for this account: what is finished, and every song still waiting for its audio. */
+function keepSession(userId: string, done: string[], waiting: string[], audio: File | undefined, queue: File[]) {
+  const names = queue.map((f) => f.name);
+  writeIntake(userId, "embed-session", { done, waiting: [...waiting, ...(audio ? [audio.name] : []), ...names] });
+}
+
 function NextSong({ queue, carry, onCarry, onNext, compact }: { queue: File[]; carry: Record<CarryKey, boolean>; onCarry: (c: Record<CarryKey, boolean>) => void; onNext: () => void; compact?: boolean }) {
   return (
     <div className={compact ? "rounded-xl border border-border p-4" : "mt-5"}>
@@ -1170,8 +1192,8 @@ function NextSong({ queue, carry, onCarry, onNext, compact }: { queue: File[]; c
 }
 
 /** Left rail: what's done this sitting, what's on now, and what's waiting. */
-function SessionRail({ audio, queue, done, onAdd, onRemove, onClear }: { audio: File | undefined; queue: File[]; done: string[]; onAdd: () => void; onRemove: (i: number) => void; onClear: () => void }) {
-  if (!audio && !queue.length && !done.length) return (
+function SessionRail({ audio, queue, done, waiting, onAdd, onRemove, onClear }: { audio: File | undefined; queue: File[]; done: string[]; waiting: string[]; onAdd: () => void; onRemove: (i: number) => void; onClear: () => void }) {
+  if (!audio && !queue.length && !done.length && !waiting.length) return (
     <aside aria-label="Embed session" className="hidden rounded-2xl border border-dashed border-border p-4 lg:sticky lg:top-6 lg:block">
       <h2 className="text-xs font-bold uppercase tracking-[2px] text-primary">Session</h2>
       <p className="mt-2 text-sm text-muted-foreground">Add a few songs at once and work through them one after another. Shared details carry over.</p>
@@ -1194,8 +1216,9 @@ function SessionRail({ audio, queue, done, onAdd, onRemove, onClear }: { audio: 
             <button type="button" aria-label={`Remove ${f.name} from the queue`} onClick={() => onRemove(i)} className="text-muted-foreground opacity-0 transition hover:text-destructive group-hover:opacity-100 focus:opacity-100"><Trash2 className="h-3.5 w-3.5" /></button>
           </li>
         ))}
+        {waiting.map((name, i) => <li key={`w${i}${name}`} className="flex items-center gap-2 px-2 text-muted-foreground"><span className="w-4 shrink-0 text-center text-xs">–</span><span className="min-w-0 flex-1 truncate">{name.replace(AUDIO_FILE, "")}<span className="block text-[11px]">add the file again to finish it</span></span></li>)}
       </ol>
-      <Button type="button" variant="outline" size="sm" className="mt-3 w-full" onClick={onAdd}><Plus />Add songs</Button>
+      <Button type="button" variant="outline" size="sm" className="mt-3 w-full" onClick={onAdd}><Plus />{waiting.length ? "Re-add the waiting songs" : "Add songs"}</Button>
       <Button type="button" variant="ghost" size="sm" className="mt-1 w-full" onClick={onClear}><Trash2 />Clear session</Button>
     </aside>
   );

@@ -38,6 +38,7 @@ import { ClinicalScan, loadPatientFile, loadPatientFileFromAccount, OfficeSteps 
 import { PatientFileCard, patientFileReady, patientSummary } from "@/components/PatientFileCard";
 import { UpgradeCards } from "@/components/UpgradeCards";
 import { StreamingFastTrack } from "@/components/StreamingFastTrack";
+import { clearIntake, readIntake, writeIntake } from "@/lib/intake-session";
 
 // Automatic lookups (MusicBrainz rows saved before its removal stay out of the score and can't be undone by hand).
 const AUTO = [INTERNATIONAL.deezer.id, "musicbrainz"];
@@ -59,6 +60,8 @@ export type HealthStart = { trackId?: string | undefined; release?: boolean | un
  * which is saved to My reports.
  */
 type View = { kind: "hub" } | { kind: "checkin"; scope: ReportScope; from?: string | undefined } | { kind: "scan"; scope: ReportScope; baseline: SavedReport | null } | { kind: "report"; scope: ReportScope; baseline: SavedReport | null };
+/** A check-in left mid-visit: the songs it covers, the song it started from, and the intake that was open. */
+type SavedVisit = { kind: "checkin"; scope: ReportScope; from?: string | undefined; intake?: IntakeKind | undefined };
 
 export function RoyaltyHealthCheck({ userId, canCatalog, canExport, onUpgrade, onFixField, onEmbed, onExpert, onSplitSheet, start }: { userId: string; canCatalog: boolean; canExport: boolean; onUpgrade: (priceId?: string) => void; onFix?: () => void; onFixField: (trackId: string, field: string) => void; onEmbed: () => void; onExpert?: () => void; onSplitSheet?: ((trackId: string) => void) | undefined; start?: HealthStart | undefined }) {
   const [tracks, setTracks] = useState<CatalogTrack[]>();
@@ -78,6 +81,25 @@ export function RoyaltyHealthCheck({ userId, canCatalog, canExport, onUpgrade, o
   const [desk, setDesk] = useState<"reports" | "checklist" | undefined>();
   /** Which intake the visit opened on: Streaming Profile, the agency examination, or the Patient Intake Form. */
   const [intakeWanted, setIntakeWanted] = useState<IntakeKind | undefined>();
+  // A check-in is a sitting (streaming pull, an agency list, answers half done): leave the tab, reload or open a
+  // second window and it is still here, instead of making the member bring everything in again.
+  const [visitReady, setVisitReady] = useState(false);
+  const visitRestored = useRef(false);
+  useEffect(() => {
+    if (visitRestored.current) return;
+    visitRestored.current = true;
+    const saved = readIntake<SavedVisit>(userId, "visit");
+    if (saved?.kind === "checkin") {
+      setIntakeWanted(saved.intake);
+      setView({ kind: "checkin", scope: saved.scope, from: saved.from });
+    }
+    setVisitReady(true);
+  }, [userId]);
+  useEffect(() => {
+    if (!visitReady) return;
+    if (view.kind === "checkin") writeIntake<SavedVisit>(userId, "visit", { kind: "checkin", scope: view.scope, from: view.from, intake: intakeWanted });
+    else clearIntake(userId, "visit");
+  }, [visitReady, view, intakeWanted, userId]);
   /** The patient file handed over at the Front Desk. The Doctor reads it for the intake form's writer defaults. */
   const [patient, setPatient] = useState(() => loadPatientFile(userId));
   const patientReady = patientFileReady(patient);
@@ -207,6 +229,12 @@ export function RoyaltyHealthCheck({ userId, canCatalog, canExport, onUpgrade, o
     void runAll((tracks ?? []).filter((t) => ids.has(t.id)), false);
     top();
   }
+  // A visit opened with nothing catalogued starts on the first song. Once an intake brings songs in, the check must
+  // cover them instead of staying on an empty scope (which left "Run my Royalty Health Check" disabled).
+  useEffect(() => {
+    if (view.kind !== "checkin" || view.scope.kind !== "outside" || !tracks?.length) return;
+    setView({ kind: "checkin", scope: catalogScope(tracks) });
+  }, [view, tracks]);
   // Opened from My Catalog: straight to that song's (or release's, or the catalog's) check-in.
   useEffect(() => {
     if (!start || !loaded || !tracks) return;
@@ -299,6 +327,33 @@ export function RoyaltyHealthCheck({ userId, canCatalog, canExport, onUpgrade, o
     const account = statusOf(ACCOUNT_REF);
     const summary: SavedListSummary = { at, file, works: result.works, matched: result.matched.length, differences: result.differences.length, notListed: result.notListed.length };
     await updateStatus({ ...account, steps: { ...account.steps, [key]: JSON.stringify(summary) } });
+  }
+
+  /**
+   * "Start this list over" for one society: removes what an uploaded list added — its per-song notes and the
+   * confirmations it made — so the right file can replace the wrong one. The catalog and the member's own marks on
+   * other societies are untouched.
+   */
+  async function removeList(society: Society) {
+    const key = listKey(society.id);
+    const account = statusOf(ACCOUNT_REF);
+    const accountSteps = { ...account.steps };
+    delete accountSteps[key];
+    await updateStatus({ ...account, steps: accountSteps });
+    for (const { r } of checkupRows) {
+      const cur = statusOf(r.track.id), steps = { ...cur.steps };
+      const had = steps[key] !== undefined || (isInspectorSong(r.track.id) && steps[`found:${society.id}`] !== undefined);
+      delete steps[key];
+      if (isInspectorSong(r.track.id)) delete steps[`found:${society.id}`];
+      if (had) await updateStatus({ ...cur, steps });
+    }
+    // The list's own "found" confirmations live in the repertoire checks; they go with the file that made them.
+    for (const c of checks.filter((x) => x.society === society.id && x.status === "found")) {
+      try {
+        await clearCheck(c.trackId, society.id);
+        setChecks((all) => all.filter((x) => !(x.trackId === c.trackId && x.society === society.id)));
+      } catch { /* leave it: the next visit can still clear it */ }
+    }
   }
 
   const catalogTracks = useMemo(() => (tracks ?? []).filter((t) => !isInspectorSong(t.id)), [tracks]);
@@ -468,7 +523,7 @@ export function RoyaltyHealthCheck({ userId, canCatalog, canExport, onUpgrade, o
           streaming: <StreamingFastTrack userId={userId} canCatalog={canCatalog} onUpgrade={onUpgrade}
             onUploadAudio={(id) => { if (id) onFixField(id, "audio"); }}
             onSaved={() => { void listTracks().then(setTracks).catch(() => {}); }} />,
-          agencies: <AgencyLists societies={listSocieties} songsFor={songsFor} summaries={listSummaries} onApply={applyList} />,
+          agencies: <AgencyLists userId={userId} societies={listSocieties} songsFor={songsFor} summaries={listSummaries} onApply={applyList} onRemove={removeList} />,
           single: inspector,
         }} />
     );

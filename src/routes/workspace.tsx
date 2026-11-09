@@ -180,6 +180,10 @@ function Workspace() {
   const [onboardSynced, setOnboardSynced] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
   const [embedKey, setEmbedKey] = useState(0);
+  // The Health visit stays mounted once it is opened, so a check-in in progress survives a tab switch. Until it is
+  // opened it stays unmounted, so its live agency lookups don't run for someone who never visits it.
+  const [healthMounted, setHealthMounted] = useState(tab === "health");
+  useEffect(() => { if (tab === "health") setHealthMounted(true); }, [tab]);
   const [viewAvatar, setViewAvatar] = useState(false);
   // The Catalog Management status eagle opens full size, with its own share card, like the profile badge above.
   const [viewEagle, setViewEagle] = useState(false);
@@ -188,14 +192,18 @@ function Workspace() {
   const share = tabShare[tab] ?? { ctx: "profile" as const };
   useEffect(() => {
     if (!user) return;
-    setOnboard(loadOnboarding(user.id));
+    const local = loadOnboarding(user.id);
+    setOnboard(local);
     let live = true;
     syncFromCloud(user.id).then((o) => {
       if (!live) return;
-      setOnboard(o); setEmbedKey((k) => k + 1); setOnboardSynced(true);
+      // Only the default actually changing remounts the two working tabs. An auth event (a token refresh, another
+      // window signing in) used to look like a profile change and wipe an embed session or a visit in progress.
+      if (JSON.stringify(o ?? null) !== JSON.stringify(local ?? null)) setEmbedKey((k) => k + 1);
+      setOnboard(o); setOnboardSynced(true);
     });
     return () => { live = false; };
-  }, [user]);
+  }, [user?.id]); // eslint-disable-line react-hooks/exhaustive-deps
   // The setup walkthrough (embed defaults, catalog profile) is for plans that can embed. Free accounts skip it and
   // land on the Royalty Health Hub; it opens the first time they upgrade.
   useEffect(() => {
@@ -436,7 +444,9 @@ function Workspace() {
           </TabsContent>
           <TabsContent value="protect"><AIProtectionHub userId={user.id} purchases={purchases} justPaid={search.checkout === "success" && search.tab === "protect"} track={protectTrack} /></TabsContent>
           <TabsContent value="splits"><SplitSheets userId={user.id} canSplit={canSplit} canCollect={canCollect} prefillTrackId={splitTrackId} onUpgrade={upgrade} /></TabsContent>
-          <TabsContent value="health"><Health startView={openExpert || search.view === "expert" || (search.tab === "health" && search.checkout === "success") ? "expert" : "check"} justPaid={search.tab === "health" && search.checkout === "success"} canCatalog={canCatalog} onFix={() => setTab("catalog")} onFixField={(trackId, field) => { setCatalogFix({ trackId, field }); setTab("catalog"); }} onAddSong={(newTitle, artist) => { setCatalogFix({ newTitle, artist, nonce: Date.now() }); setTab("catalog"); }} onEmbed={() => setTab("embed")} userId={user.id} purchases={purchases} canUtility={canCollect} onUpgrade={upgrade} onSplitSheet={(id) => { setSplitTrackId(id); setTab("splits"); }} start={healthStart} /></TabsContent>
+          {/* forceMount: a visit has state in it (the streaming pull, an agency list, the check-in answers), so
+              switching to My Catalog or another tab must not throw the appointment away. */}
+          <TabsContent value="health" {...(healthMounted ? { forceMount: true as const } : {})} className="data-[state=inactive]:hidden"><Health startView={openExpert || search.view === "expert" || (search.tab === "health" && search.checkout === "success") ? "expert" : "check"} justPaid={search.tab === "health" && search.checkout === "success"} canCatalog={canCatalog} onFix={() => setTab("catalog")} onFixField={(trackId, field) => { setCatalogFix({ trackId, field }); setTab("catalog"); }} onAddSong={(newTitle, artist) => { setCatalogFix({ newTitle, artist, nonce: Date.now() }); setTab("catalog"); }} onEmbed={() => setTab("embed")} userId={user.id} purchases={purchases} canUtility={canCollect} onUpgrade={upgrade} onSplitSheet={(id) => { setSplitTrackId(id); setTab("splits"); }} start={healthStart} /></TabsContent>
           <TabsContent value="learn"><Learn userId={user.id} unlocked={hasTier(tier, "management")} onUpgrade={upgrade}
             onOpen={(link) => {
               if (link.where === "profile") setProfileOpen(true);

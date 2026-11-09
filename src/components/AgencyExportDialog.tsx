@@ -1,11 +1,13 @@
 import { useEffect, useMemo, useState } from "react";
+import { toast } from "sonner";
+import { confirmAction } from "@/components/ConfirmHost";
 import { Disclaimer } from "@/components/Disclaimer";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { InfoTip } from "@/components/InfoTip";
 import { AGENCY_UPLOAD_STEPS, EXPORT_REQUIRED, MLC_EXPORT_NOTES } from "@/lib/glossary";
 import { releaseKind } from "@/lib/health-checklist";
-import { AGENCY_LABEL, exportGate, listExports, mlcPlaceholderSongs, type Agency } from "@/lib/agency-export";
+import { AGENCY_LABEL, deleteExports, exportGate, listExports, mlcPlaceholderSongs, type Agency } from "@/lib/agency-export";
 import type { CatalogTrack } from "@/lib/catalog";
 
 type Release = { key: string; title: string; tracks: CatalogTrack[] };
@@ -28,6 +30,7 @@ export function AgencyExportDialog({ open, onOpenChange, tracks, releases, run }
   const [picked, setPicked] = useState<Set<string>>(new Set());
   const [onlyNew, setOnlyNew] = useState(false);
   const [exported, setExported] = useState<Map<string, string>>(new Map());
+  const [resetting, setResetting] = useState(false);
 
   useEffect(() => { if (open) void listExports().then(setExported).catch(() => setExported(new Map())); }, [open]);
   useEffect(() => { if (!release && releases[0]) setRelease(releases[0].key); }, [releases, release]);
@@ -42,6 +45,31 @@ export function AgencyExportDialog({ open, onOpenChange, tracks, releases, run }
   const name = scope === "release" ? releases.find((r) => r.key === release)?.title ?? "Release" : scope === "all" ? "Full Catalog" : `${chosen.length} Songs`;
   const groups = (["Single", "EP", "Album"] as const).map((g) => [g, [...tracks].filter((t) => releaseKind(t.metadata) === g).sort((a, b) => a.title.localeCompare(b.title))] as const).filter(([, l]) => l.length);
   const toggle = (id: string) => setPicked((s) => { const n = new Set(s); if (n.has(id)) n.delete(id); else n.add(id); return n; });
+  /** Songs already bookmarked for this agency: the number "only songs not exported yet" hides. */
+  const exportedFor = [...exported.keys()].filter((k) => k.endsWith(`:${agency}`)).length;
+
+  /**
+   * Start this agency over: forget which songs were downloaded for it, so the right scope can be exported again. The
+   * files already downloaded are untouched. This is the way back when the wrong file went out and the agency's own
+   * portal is down.
+   */
+  async function startOver(a: Agency) {
+    if (!(await confirmAction({
+      title: `Start ${short(a)} over?`,
+      text: `Every song stops being marked as exported to ${short(a)}, so the next export includes all of them again. Files you already downloaded are not changed.`,
+      action: "Start over",
+    }))) return;
+    setResetting(true);
+    try {
+      await deleteExports(a);
+      setExported((m) => new Map([...m].filter(([k]) => !k.endsWith(`:${a}`))));
+      toast.success(`${short(a)}: export history cleared. Export any songs again.`);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Couldn't clear that history. Try again.");
+    } finally {
+      setResetting(false);
+    }
+  }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -89,6 +117,14 @@ export function AgencyExportDialog({ open, onOpenChange, tracks, releases, run }
             </div>
           )}
           <label className="flex items-center gap-2 text-sm"><input type="checkbox" className="h-4 w-4 accent-[var(--primary)]" checked={onlyNew} onChange={(e) => setOnlyNew(e.target.checked)} />Only songs not exported to {short(agency)} yet</label>
+          {exportedFor > 0 && (
+            <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+              <span>{exportedFor} song{exportedFor === 1 ? " is" : "s are"} already marked exported to {short(agency)}.</span>
+              <Button type="button" size="sm" variant="ghost" disabled={resetting} onClick={() => void startOver(agency)}>
+                {resetting ? "Clearing…" : `Start ${short(agency)} over`}
+              </Button>
+            </div>
+          )}
         </fieldset>
 
         <section className="space-y-2 rounded-xl bg-muted p-4 text-sm">

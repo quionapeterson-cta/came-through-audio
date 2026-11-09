@@ -271,6 +271,17 @@ export async function listExports(): Promise<Map<string, string>> {
   return new Map(((data ?? []) as { track_id: string; agency: string; exported_at: string }[]).map((r) => [`${r.track_id}:${r.agency}`, r.exported_at]));
 }
 
+/**
+ * Forgets that these songs were exported to one agency, so the next export can include them again. A member who
+ * downloaded the wrong scope (or the wrong file) starts that agency over instead of waiting for a portal to come back.
+ * The files already downloaded are untouched; this only clears the bookmark.
+ */
+export async function deleteExports(agency: Agency) {
+  const { supabase } = await import("@/integrations/supabase/client");
+  const { error } = await supabase.from("agency_exports" as never).delete().eq("agency", agency);
+  if (error) throw error;
+}
+
 /** Records an export of these songs (best effort: a failure never blocks the download). */
 export async function recordExports(agency: Agency, trackIds: string[]) {
   if (!trackIds.length) return;

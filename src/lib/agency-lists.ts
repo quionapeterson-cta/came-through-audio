@@ -188,6 +188,51 @@ export function compareList(works: ListWork[], tracks: CatalogTrack[], recording
   return { matched, differences, notListed, extra: works.filter((w) => !used.has(w)), works: works.length };
 }
 
+/**
+ * How to find and download your own catalog at each agency, shown under its card. Agencies move their menus, so these
+ * name the area ("Works Catalog", "Catalog Export Tool") rather than pretending to know every click of today's site.
+ * The MLC's Catalog Export Tool is also the honest way round its search API being unavailable.
+ */
+export const LIST_DOWNLOAD_STEPS: Record<string, string[]> = {
+  bmi: [
+    "Sign in to BMI Online Services (bmi.com/login) and open Works Catalog.",
+    "Open the catalog view for all your works, not a single work, and use its print or export option.",
+    "Save it as a PDF or as a CSV/Excel file. BMI's Catalog Detail PDF is read directly here.",
+  ],
+  ascap: [
+    "Sign in to ASCAP Member Access and open Works → My Catalog.",
+    "Open your works list and print it to PDF, or copy its title, writer, IPI and share columns into a spreadsheet.",
+    "Upload that file here. One row per writer is what we match against.",
+  ],
+  sesac: [
+    "Sign in to your SESAC member account and open your registered works.",
+    "Print the list to PDF, or copy its title, writer and share columns into a spreadsheet.",
+    "Upload that file here.",
+  ],
+  gmr: [
+    "Sign in to your GMR member account and open your registered works.",
+    "Print the list to PDF, or copy its title, writer and share columns into a spreadsheet.",
+    "Upload that file here.",
+  ],
+  mlc: [
+    "Sign in to The MLC Portal (portal.themlc.com) and open the Member Hub or the Songwriter Hub.",
+    "Open the Catalog Export Tool, choose all your works and download the Excel-compatible file (.xlsx).",
+    "Upload that file here. Reading it here never sends anything to The MLC.",
+  ],
+  soundexchange: [
+    "Sign in to SoundExchange Direct (sxdirect.soundexchange.com).",
+    "Open My Catalog → Submit Recordings → Upload History and download the .csv of everything you've submitted.",
+    "Upload that file here. Recordings are matched by ISRC.",
+  ],
+};
+
+/** Directions for a society we have no named path for: the same honest route, without inventing a menu. */
+export const downloadSteps = (societyId: string): string[] => LIST_DOWNLOAD_STEPS[societyId] ?? [
+  "Sign in to your account at this society and open your registered works or recordings.",
+  "Download or print that list as a PDF or a spreadsheet.",
+  "Upload that file here.",
+];
+
 /** What's kept in a song's checklist state after an upload: the step key and its saved value. */
 export const listKey = (societyId: string) => `list:${societyId}`;
 export type SavedListNote = { at: string; issues: string[] } | { at: string; missing: true };

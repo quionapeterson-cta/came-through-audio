@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { CloudDownload, Copy, ShieldCheck, ShieldQuestion, ShieldX, Loader2, Upload } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -11,6 +11,7 @@ import { listTracks, saveTrack, type CatalogTrack } from "@/lib/catalog";
 import { loadProfile } from "@/lib/artist-profile";
 import { prefillPlan, withStreamingDetails, type PrefillPlan } from "@/lib/fast-track-prefill";
 import { SOVEREIGN_BACKUP } from "@/lib/copy";
+import { clearIntake, readIntake, writeIntake } from "@/lib/intake-session";
 
 /**
  * Streaming Profile — the Streaming Fast-Track intake (hub plan §4). The recording side is live on Deezer with no
@@ -24,6 +25,19 @@ type Ok = Extract<FastTrackResult, { ok: true; kind: "discography" }>;
 
 /** What to do with a pulled song that matches one already in My Catalog. */
 type Choice = "keep" | "streaming" | "both";
+
+/** What the prefill did: songs added, songs left alone, and the first one, to open for audio. */
+type SavedPull = { added: number; updated: number; kept: number; existing: number; matched: number; first?: string | undefined };
+/** The sitting's pull, kept for the account so leaving the check-in doesn't throw it away. */
+type StreamSession = {
+  link: string;
+  name: string;
+  result?: Ok | undefined;
+  candidates?: ArtistCandidate[] | undefined;
+  saved?: SavedPull | undefined;
+  later?: boolean | undefined;
+  dismissed?: boolean | undefined;
+};
 
 /** Each recording once, however many releases list it: what the "Add" button can honestly promise. */
 const uniqueRecordings = (r: Ok) => {
@@ -56,12 +70,33 @@ export function StreamingFastTrack({ userId, canCatalog = false, onUpgrade, onUp
   const [result, setResult] = useState<Ok | undefined>();
   const [candidates, setCandidates] = useState<ArtistCandidate[] | undefined>();
   const [saving, setSaving] = useState(false);
-  /** What the prefill did: songs added, songs left alone, and the first one, to open for audio. */
-  const [saved, setSaved] = useState<{ added: number; updated: number; kept: number; existing: number; matched: number; first?: string | undefined }>();
+  const [saved, setSaved] = useState<SavedPull>();
   /** Songs that look like ones already in My Catalog, waiting on the member's choice before anything is written. */
   const [review, setReview] = useState<{ plan: PrefillPlan; tracks: CatalogTrack[]; choices: Choice[] }>();
   const [later, setLater] = useState(false);
   const [dismissed, setDismissed] = useState(false);
+
+  // A pull is a sitting, not a page: switching intake, leaving the Hub or opening a second window used to empty it.
+  // The result is public streaming data, so it stays on this device against the account until it is started over.
+  const [restored, setRestored] = useState(false);
+  useEffect(() => {
+    const s = readIntake<StreamSession>(userId, "streaming");
+    if (s) {
+      setLink(s.link ?? "");
+      setName(s.name ?? "");
+      if (s.candidates?.length) setCandidates(s.candidates);
+      else if (s.result) setResult(s.result);
+      setSaved(s.saved);
+      setLater(!!s.later);
+      setDismissed(!!s.dismissed);
+    }
+    setRestored(true);
+  }, [userId]);
+  useEffect(() => {
+    if (!restored || !userId) return;
+    if (!link && !name && !result && !candidates) { clearIntake(userId, "streaming"); return; }
+    writeIntake<StreamSession>(userId, "streaming", { link, name, result, candidates, saved, later, dismissed });
+  }, [restored, userId, link, name, result, candidates, saved, later, dismissed]);
 
   function forget() {
     setResult(undefined);
