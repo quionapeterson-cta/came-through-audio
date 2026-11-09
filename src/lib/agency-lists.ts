@@ -22,9 +22,9 @@ const NAME_NOISE = new Set(["mr", "mrs", "ms", "miss", "dr", "esq", "phd", "md"]
 /** Agencies often list writers "LAST FIRST" or "LAST, FIRST": compare the name's words in any order. */
 const nameKey = (s: string) => s.toLowerCase().normalize("NFKD").replace(/[̀-ͯ]/g, "").replace(/[^a-z\s]/g, " ").split(/\s+/).filter(Boolean).filter((w) => !NAME_NOISE.has(w)).sort().join(" ");
 /**
- * Two spellings of one writer (founder, 2026-11-09). BMI prints "PETERSON QUI ONA LASHAY" where the catalog holds
- * "Qui-Ona Peterson", and both are the same person: one key's words contain the other's. Only a name long enough to be a
- * person may match that way, so a single word never swallows a full name.
+ * The same *person*, whatever the spelling (founder, 2026-11-09): BMI prints "STEPHENS CALVIN ANDRE JR (MR)" where the
+ * catalog holds "Calvin Stephens", so one key's words containing the other's means one writer, never a stranger. Only a
+ * name long enough to be a person may match that way, so a single word never swallows a full name.
  */
 export function sameWriter(a: string, b: string): boolean {
   const x = nameKey(a), y = nameKey(b);
@@ -34,6 +34,15 @@ export function sameWriter(a: string, b: string): boolean {
   if (Math.min(xs.length, ys.length) < 2) return false;
   const [small, large] = xs.length <= ys.length ? [xs, ys] : [ys, xs];
   return small.every((w) => large.includes(w));
+}
+/**
+ * Whether the two spellings carry different name parts, which the member should fix (founder, 2026-11-09): the catalog
+ * holds "Calvin Stephens", BMI registers "Calvin Andre Stephens Jr." — the same writer, and a catalog worth correcting so
+ * the two records read alike. Word order and titles are not a difference; a missing middle name or suffix is.
+ */
+export function spelledDifferently(a: string, b: string): boolean {
+  const x = nameKey(a).split(" ").filter(Boolean), y = nameKey(b).split(" ").filter(Boolean);
+  return x.length !== y.length || x.some((w) => !y.includes(w));
 }
 const digits = (s: string) => s.replace(/\D/g, "").replace(/^0+/, "");
 const code = (s: string) => s.replace(/[^A-Za-z0-9]/g, "").toUpperCase();
@@ -255,6 +264,7 @@ export function workIssues(work: ListWork, metadata: Metadata, recordings = fals
   for (const x of theirs) if (!mine.some((w) => same(w, x))) issues.push(`The agency lists ${x.name}, who isn't in your catalog`);
   for (const w of mine) {
     const x = theirs.find((y) => same(w, y));
+    if (x && spelledDifferently(w.name, x.name)) issues.push(`The agency has ${x.name} where your catalog has ${w.name} — same writer, fix the spelling so both records match`);
     if (x?.ipi && w.ipi && x.ipi !== w.ipi) issues.push(`${w.name}'s IPI is ${x.ipi} there, ${w.ipi} here`);
   }
   const a = parts(mine), b = parts(theirs);

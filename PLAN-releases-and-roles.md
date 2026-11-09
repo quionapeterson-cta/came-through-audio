@@ -33,7 +33,7 @@ Builds on: PLAN-pre-distribution (built 2026-10-25), PLAN-catalog-organization, 
 | 17 | Release credits are **checked against the official public repertoires**, with the links and copy-paste fields provided; a catalog prefill and a typed entry remain available but are never shown as verified. §11.6. |
 | 18 | Say **"someone else performs it"**, not "someone else's recording", wherever the outside-song case is explained. §10. |
 | 19 | Every **beat licence** gives the producer **100% of the composition** — the writer's share and the publisher's share — editable when a second producer or an artist's writing is added. §13, §17. |
-| 20 | A list printed on BMI's **200% scale** is read on the **100% scale**, and a writer's middle name, title or word order never makes them a stranger. §11.6, §17. |
+| 20 | A list printed on BMI's **200% scale** is read on the **100% scale**; word order and titles are ignored, but **a different set of name parts is reported with both spellings**, so the catalog can be brought up to the registration. §11.6, §17. |
 
 Still to confirm: §9 questions 2 and 3, and §16.
 
@@ -702,11 +702,13 @@ Two of §11's fixes went in ahead of the check itself, because the founder hit b
    says the producer registers it under their legal name and can check it in their PRO's repertoire and The MLC's public
    search by legal name, title, ISWC or ISRC. The Music Producer Agreement keeps its 50% co-write default, because there
    the artist is a writer too.
-2. **BMI's 200% meets our 100%** (`src/lib/agency-lists.ts`, `src/lib/agency-fill.ts`): one scaler (`scaledShares`)
-   brings any list to the composition's own scale, so the comparison column, the dialog and the saved catalog agree; and
-   `sameWriter` treats "PETERSON QUI ONA LASHAY" and "Qui-Ona Peterson" as one person, ignoring "MR"/"JR" and word order.
-   A work at 200% with a matching writer now shows **no difference at all**, and the dialog explains the scale in one line
-   instead of leaving 200% looking wrong.
+2. **BMI's 200% meets our 100%, and a spelling difference stays a difference** (`src/lib/agency-lists.ts`,
+   `src/lib/agency-fill.ts`): one scaler (`scaledShares`) brings any list to the composition's own scale, so the comparison
+   column, the dialog and the saved catalog agree. `sameWriter` knows "PETERSON QUI ONA LASHAY" and "Qui-Ona Peterson" are
+   one person — word order and titles are ignored — while `spelledDifferently` reports that the name parts differ, naming
+   both: "The agency has STEPHENS CALVIN ANDRE JR (MR) where your catalog has Calvin Stephens — same writer, fix the
+   spelling so both records match." So the share is not complained about, nobody is called a stranger, and there is a real
+   to-do: adopt the agency's spelling, which "Use the agency's version" does in one click.
 
 Still open from §15: the false ISRC gap on PRO lists, `bmiPdfRows` dropping publisher lines, and the writer-only save
 blocker — none of them touched by these two.

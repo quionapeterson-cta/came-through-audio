@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { emptyMetadata } from "@/lib/metadata";
-import { compareList, listGaps, parseDelimited, readWorks, sameWriter, scaledShares } from "@/lib/agency-lists";
+import { compareList, listGaps, parseDelimited, readWorks, sameWriter, scaledShares, spelledDifferently } from "@/lib/agency-lists";
 
 const track = (id: string, title: string, extra = {}) => ({ id, title, artist: "Q", updatedAt: "", metadata: { ...emptyMetadata(), title, artist: "Q", composers: [],
   writers: [{ name: "", legalName: "Ann Lee", role: "Author/Composer", pro: "ASCAP", ipi: "00123456789", percentage: "50" }, { name: "", legalName: "Bo Ray", role: "Composer", pro: "BMI", ipi: "", percentage: "50" }],
@@ -105,12 +105,23 @@ describe("BMI's 200% column and its spelling of a name", () => {
     expect(sameWriter("Lee", "Ann Lee")).toBe(false);
   });
 
-  it("says nothing is different when 200% there is the 100% here", () => {
+  it("says the share is right and the spelling is the only thing to fix when BMI prints 200%", () => {
     const [w] = readWorks(parseDelimited("Title,Writer,Share\nBig Booty Bouncing feat. OG PI,PETERSON QUI ONA LASHAY,200"));
     const me = { ...emptyMetadata(), title: "Big Booty Bouncing", artist: "Q", iswc: "", isrc: "",
       writers: [{ name: "", legalName: "Qui-Ona Peterson", role: "Author/Composer" as const, pro: "BMI", ipi: "", percentage: "100" }], composers: [] };
     const r = compareList([w!], [{ id: "a", title: me.title, artist: "Q", updatedAt: "", metadata: me }]);
-    expect(r.differences).toHaveLength(0);
-    expect(r.matched).toHaveLength(1);
+    expect(r.differences).toHaveLength(1);
+    // The person and the share both match; only the spelling needs bringing up to the agency's.
+    expect(r.differences[0]!.issues).toEqual(["The agency has PETERSON QUI ONA LASHAY where your catalog has Qui-Ona Peterson — same writer, fix the spelling so both records match"]);
+  });
+
+  it("flags a real spelling difference, so the catalog can be brought up to the registration", () => {
+    const [w] = readWorks(parseDelimited("Title,Writer,Share\nBloodline,STEPHENS CALVIN ANDRE JR (MR),100"));
+    const me = { ...emptyMetadata(), title: "Bloodline", artist: "Q", iswc: "", isrc: "",
+      writers: [{ name: "", legalName: "Calvin Stephens", role: "Author/Composer" as const, pro: "BMI", ipi: "", percentage: "100" }], composers: [] };
+    const r = compareList([w!], [{ id: "a", title: "Bloodline", artist: "Q", updatedAt: "", metadata: me }]);
+    expect(r.differences[0]!.issues).toEqual(["The agency has STEPHENS CALVIN ANDRE JR (MR) where your catalog has Calvin Stephens — same writer, fix the spelling so both records match"]);
+    // Word order and the "MR" title on their own are not a difference; a missing middle name and suffix are.
+    expect(spelledDifferently("STEPHENS CALVIN ANDRE JR (MR)", "Calvin Andre Stephens Jr")).toBe(false);
   });
 });
