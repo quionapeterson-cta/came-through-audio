@@ -2,6 +2,7 @@ import { creditName, emptyContributor, emptyMetadata, withLegalName, type Contri
 import { supabase } from "@/integrations/supabase/client";
 import { requestBadgeCheck } from "@/lib/badge-events";
 import { currentBadge, DEFAULT_BADGE_PREFS, type BadgePrefs } from "@/lib/badges";
+import type { AccountRole, Situation } from "@/lib/roles";
 
 /** Recurring details a user can opt to prefill on every embed. Stored only in this browser. */
 export const PROFILE_KEYS = [
@@ -23,6 +24,13 @@ export interface Onboarding {
   healthCountry?: string;
   /** What badges show (celebrations, hints, hidden collections, sharing). Badges are always earned regardless. */
   badgePrefs?: BadgePrefs;
+  /**
+   * The six roles confirmed on 2026-11-09 and where the member is with releases. Blank answers behave exactly as the app
+   * did before the question existed; answers only choose what a NEW entry starts from (src/lib/roles.ts).
+   */
+  situations?: Situation[];
+  roles?: AccountRole[];
+  sellBeats?: boolean;
   /** The patient file handed over at the Royalty Health Hub's Front Desk, kept with the account, not just this browser. */
   patientFile?: { legalName: string; pro: string; ipi: string; publishing: "" | "publisher" | "self" | "bmi"; publisher: string };
 }

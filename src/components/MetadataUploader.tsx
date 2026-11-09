@@ -38,6 +38,7 @@ import { ARTIST_SEAT_PRICES } from "@/lib/plans";
 import { PACKAGES } from "@/lib/proof";
 import { openCheckout } from "@/lib/checkout";
 import { loadOnboarding, loadProfile, restoreRows, withProfile, withProfileFilled } from "@/lib/artist-profile";
+import { isExternal, withRoleDefaults } from "@/lib/roles";
 import { clearEmbedDraft, clearEmbedCover, coverForDraft, loadEmbedCover, saveEmbedCover, loadEmbedDraft, orderAudioFiles, saveEmbedDraft } from "@/lib/embed-session";
 import { clearIntake, readIntake, writeIntake } from "@/lib/intake-session";
 import { fillFromSaved, findSaved, libraryRowsOf, savedPeople } from "@/lib/saved-people";
@@ -219,7 +220,7 @@ export function MetadataUploader({ onShareInfo, userId, mode = "embed", readOnly
       return;
     }
     const p = loadProfile(userId);
-    if (p) setMetadata((m) => (m.title || m.artist ? m : withProfile(p)));
+    if (p) setMetadata((m) => (m.title || m.artist ? m : withRoleDefaults(withProfile(p), loadOnboarding(userId) ?? {})));
   }, [userId, full]);
   useEffect(() => {
     if (full) return;
@@ -375,7 +376,7 @@ export function MetadataUploader({ onShareInfo, userId, mode = "embed", readOnly
   }
   function startNew() {
     setRestored(false);
-    setMetadata(withProfile(loadProfile(userId)));
+    setMetadata(withRoleDefaults(withProfile(loadProfile(userId)), loadOnboarding(userId) ?? {}));
     setEditingId(undefined);
     setAudio(undefined);
     putArtwork(undefined);
@@ -386,7 +387,7 @@ export function MetadataUploader({ onShareInfo, userId, mode = "embed", readOnly
   }
   /** Next song in the session: keeps the chosen details from this one, then loads the next queued MP3 if any. */
   function startNext() {
-    const next = withProfile(loadProfile(userId));
+    const next = withRoleDefaults(withProfile(loadProfile(userId)), loadOnboarding(userId) ?? {});
     const m = metadata;
     if (carry.artist) Object.assign(next, { artist: m.artist, featured: m.featured });
     if (carry.release) {
@@ -605,17 +606,25 @@ export function MetadataUploader({ onShareInfo, userId, mode = "embed", readOnly
                 <Field label="Track title" id="title" value={metadata.title} required onChange={(value) => update("title", value)} />
                 <div>
                   {/* The artist name comes from the profile (founder, 2026-10-25): clicking it explains where to change it. */}
-                  <div className="min-w-0 space-y-2"><Label htmlFor="artist" className="leading-5">Artist name *</Label>
+                  <div className="min-w-0 space-y-2"><Label htmlFor="artist" className="leading-5">{isExternal(metadata) ? "Recording artist (who released it)" : "Artist name *"}</Label>
                     <div className="relative">{registeredArtist
-                      ? <><Input id="artist" value={metadata.artist} required readOnly className="cursor-pointer pr-9" onClick={() => void explainArtistName()} onKeyDown={(e) => { if (e.key.length === 1 || e.key === "Backspace") { e.preventDefault(); void explainArtistName(); } }} />
+                      ? <><Input id="artist" value={metadata.artist} required={!isExternal(metadata)} readOnly className="cursor-pointer pr-9" onClick={() => void explainArtistName()} onKeyDown={(e) => { if (e.key.length === 1 || e.key === "Backspace") { e.preventDefault(); void explainArtistName(); } }} />
                           <Lock className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" /></>
                       // No profile name yet: typing stays open so nobody is stuck.
-                      : <Input id="artist" value={metadata.artist} required onChange={(e) => update("artist", e.target.value)} />}</div></div>
+                      : <Input id="artist" value={metadata.artist} required={!isExternal(metadata)} onChange={(e) => update("artist", e.target.value)} />}</div></div>
                   {registeredArtist && metadata.artist.trim() && normArtist(metadata.artist) !== normArtist(registeredArtist) && (
                     <p role="note" className="mt-2 rounded-md border border-primary/50 bg-accent/30 p-2 text-xs">
                       This account is registered to <span className="font-semibold">{registeredArtist}</span>. Releasing as a different artist? Each artist gets their own catalog with an add-on artist account (from {ARTIST_SEAT_PRICES[0]!.price}/yr, with any paid plan). Add one from Profile → Add another artist. Featuring someone? Add them under Featured artist instead.
                     </p>
                   )}
+                </div>
+                {/* Someone else performs it (founder, 2026-11-09): the composition is the member's, the recording is not. */}
+                <div className="space-y-2 sm:col-span-2">
+                  <label className="flex items-start gap-2 text-sm">
+                    <input id="recordingSide" type="checkbox" className="mt-0.5 h-4 w-4 accent-[var(--primary)]" checked={isExternal(metadata)} onChange={(e) => update("recordingSide", e.target.checked ? "external" : "")} />
+                    <span><span className="font-semibold">Someone else performs this song</span><InfoTip text="A song you wrote that another artist records. The ISRC, artwork, UPC and SoundExchange step belong to their release, so this entry is read on the composition only." /></span>
+                  </label>
+                  {isExternal(metadata) && <p className="text-xs text-muted-foreground">Add the artist who released it under Artist, so their release is easy to find.</p>}
                 </div>
                 {full && <ListField label="Alternate title" id="alternateTitles" tip={TIPS.alternateTitles} values={metadata.alternateTitles?.length ? metadata.alternateTitles : [""]} onChange={(v) => update("alternateTitles", v)} />}
                 <div className="space-y-2">

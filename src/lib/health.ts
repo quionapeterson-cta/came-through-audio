@@ -6,6 +6,7 @@ import { hasDuration, matchChecks, matchScore, weightedScore, type MatchCheck } 
 import { registrationCheck, type RegistrationAgency } from "@/lib/readiness";
 import { isInspectorSong } from "@/lib/health-songs";
 import { isUnreleased } from "@/lib/release-checklist";
+import { isExternal } from "@/lib/roles";
 
 /** A saved repertoire check (public.repertoire_checks). */
 export type RepertoireCheck = { trackId: string; society: string; status: "found" | "not_listed"; source: "self" | "auto"; workId?: string | null; details?: unknown; checkedAt: string };
@@ -81,8 +82,10 @@ function requiredIssues(t: CatalogTrack, pillars: { pillar: Pillar; society?: So
 export function trackReport(t: CatalogTrack, country: Country, checks: RepertoireCheck[]): TrackReport {
   const mine = checks.filter((c) => c.trackId === t.id);
   const audited = auditTrack(t);
-  const issues = [...audited, ...requiredIssues(t, PILLAR_ORDER.flatMap((pillar) => { const list = societiesFor(t, country, pillar); return list.length ? [{ pillar, society: list[0] }] : []; }), audited)];
-  const pillars = PILLAR_ORDER.flatMap((pillar): PillarRow[] => {
+  // Someone else performs it: SoundExchange registers their recording, so this entry has no digital pillar (§4.6).
+  const pillarsInScope = isExternal(t.metadata) ? PILLAR_ORDER.filter((pillar) => pillar !== "digital") : PILLAR_ORDER;
+  const issues = [...audited, ...requiredIssues(t, pillarsInScope.flatMap((pillar) => { const list = societiesFor(t, country, pillar); return list.length ? [{ pillar, society: list[0] }] : []; }), audited)];
+  const pillars = pillarsInScope.flatMap((pillar): PillarRow[] => {
     const list = societiesFor(t, country, pillar);
     if (!list.length) return [];
     const societies = list.map((society) => ({ society, check: mine.find((c) => c.society === society.id) }));
@@ -148,18 +151,25 @@ export const songHealthy = (r: TrackReport) =>
  * pillar cells confirmed in a society. The headline score weighs both equally, so a perfectly filled-in but
  * unregistered catalog is 50%.
  */
-export function healthReport(tracks: CatalogTrack[], country: Country, checks: RepertoireCheck[]) {
+export function healthReport(tracks: CatalogTrack[], country: Country, checks: RepertoireCheck[], today = new Date().toISOString().slice(0, 10)) {
   const rows = tracks.map((t) => trackReport(t, country, checks));
-  const cells = rows.flatMap((r) => r.pillars);
+  // A song that isn't out is read on its own and never in the score's numerator or denominator (founder, 2026-11-09):
+  // its release checklist carries it until release day, and the meter says how many are getting ready.
+  const prerelease = rows.filter((r) => isUnreleased(r.track.metadata, today));
+  const scored = rows.filter((r) => !isUnreleased(r.track.metadata, today));
+  const cells = scored.flatMap((r) => r.pillars);
   const dataOk = cells.filter((c) => !c.dataIssues.length).length;
   // Each song's details are scored per agency, then averaged (agencyScores); SoundExchange waits for the release.
-  const songData = rows.map(songDataScore);
-  const dataScore = rows.length ? Math.round((songData.reduce((a, b) => a + b, 0) / rows.length) * 100) : 0;
+  const songData = scored.map(songDataScore);
+  const dataScore = scored.length ? Math.round((songData.reduce((a, b) => a + b, 0) / scored.length) * 100) : 0;
   const confirmed = cells.filter((c) => c.state === "confirmed").length;
   const pct = (n: number) => (cells.length ? Math.round((n / cells.length) * 100) : 0);
-  const warnings = rows.reduce((n, r) => n + r.findings.filter((f) => f.level === "warn").length, 0);
+  const warnings = scored.reduce((n, r) => n + r.findings.filter((f) => f.level === "warn").length, 0);
   return {
     rows,
+    /** Songs waiting for their release day: listed and readable, never scored. */
+    prerelease,
+    scoredSongs: scored.length,
     cells: cells.length,
     dataScore,
     dataCells: dataOk,
@@ -168,7 +178,7 @@ export function healthReport(tracks: CatalogTrack[], country: Country, checks: R
     confirmed,
     missing: cells.filter((c) => c.state === "missing").length,
     unchecked: cells.filter((c) => c.state === "unchecked").length,
-    needsAction: rows.filter((r) => r.issues.length || r.findings.some((f) => f.level === "warn") || r.pillars.some((p) => p.state === "missing")).length,
+    needsAction: scored.filter((r) => r.issues.length || r.findings.some((f) => f.level === "warn") || r.pillars.some((p) => p.state === "missing")).length,
     warnings,
     byPillar: PILLAR_ORDER.map((pillar) => {
       const list = cells.filter((c) => c.pillar === pillar);

@@ -1,4 +1,5 @@
 import type { CatalogTrack } from "@/lib/catalog";
+import { isExternal } from "@/lib/roles";
 import { creditName, type Contributor } from "@/lib/metadata";
 import { isBmi } from "@/lib/publishing";
 import { pieMessage, publisherPie, publishingGaps } from "@/lib/readiness";
@@ -53,9 +54,10 @@ export function auditTrack(t: CatalogTrack): Issue[] {
   // Recording details (duration, release date) reach The MLC and SoundExchange from the streaming services, so only the
   // PRO side asks for duration, and lightly (founder's call with The MLC, 2026-10-27).
   if (!(m.duration ?? "").trim()) out.push({ pillar: "performance", text: "Add the duration (mm:ss). BMI asks for it when you register. The MLC and SoundExchange get it from the streaming services.", field: "duration", low: true });
-  if (!m.isrc) out.push({ pillar: "digital", text: "Missing ISRC", field: "isrc" });
-  else if (!isIsrc(m.isrc)) out.push({ pillar: "digital", text: "ISRC is not 12 characters (CC-XXX-YY-NNNNN)", field: "isrc" });
-  if (!t.artist.trim()) out.push({ pillar: "digital", text: "No featured artist name", field: "artist" });
+  // Someone else performs it: the ISRC and the artist tag belong to their release, not this catalog entry (§4.6).
+  if (!isExternal(m) && !m.isrc) out.push({ pillar: "digital", text: "Missing ISRC", field: "isrc" });
+  if (m.isrc && !isIsrc(m.isrc)) out.push({ pillar: "digital", text: "ISRC is not 12 characters (CC-XXX-YY-NNNNN)", field: "isrc" });
+  if (!isExternal(m) && !t.artist.trim()) out.push({ pillar: "digital", text: "No featured artist name", field: "artist" });
   const pubs = m.publishers.filter((p) => p.name.trim());
   if (pubs.length && m.bmiWriterPublishing) out.push({ pillar: "mechanical", text: "You said there's no publishing company but also listed a publisher. Keep one.", field: "bmiWriterPublishing" });
   for (const g of publishingGaps(m)) out.push({ pillar: "mechanical", text: g.message, field: g.field });

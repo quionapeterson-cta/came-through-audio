@@ -1,5 +1,6 @@
 import type { Metadata } from "@/lib/metadata";
 import { registrationReadiness } from "@/lib/readiness";
+import { isExternal } from "@/lib/roles";
 
 /**
  * Pre-distribution health (PLAN-pre-distribution, approved 2026-10-25): a song that isn't out yet is read against what
@@ -45,7 +46,7 @@ export function releaseItems(m: Metadata, ticks: Record<string, string | undefin
   const splitGaps = core.warnings;
   const list = (items: { message: string; field: string }[]) => items.map((i) => ({ text: i.message, field: i.field }));
   const has = (v: string) => !!v.trim();
-  return [
+  const items: ReleaseItem[] = [
     { id: "writers", title: "Writers and roles", auto: true, done: !people.length, items: list(people), field: people[0]?.field,
       why: "Registrations and split sheets need every writer's legal name and role." },
     { id: "splits", title: "Splits settled", auto: true, done: !splitGaps.length, items: list(splitGaps), field: splitGaps[0]?.field,
@@ -65,6 +66,8 @@ export function releaseItems(m: Metadata, ticks: Record<string, string | undefin
     { id: "ai", title: "AI Protection certificate (optional)", auto: false, optional: true, tick: RELEASE_TICK.ai, done: !!ticks[RELEASE_TICK.ai],
       why: "Proof of creation dated before the song is public." },
   ];
+  // Someone else performs it: the ISRC, UPC, master and artwork come with their release (§10).
+  return isExternal(m) ? items.filter((i) => !["isrc", "upc", "master", "art"].includes(i.id)) : items;
 }
 
 /** Share of required release items done (0–100), counting any extra required steps passed in (the PRO/MLC registrations). */

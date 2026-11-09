@@ -13,6 +13,7 @@ import { isBadgeImage } from "@/lib/badges";
 import { isBmi } from "@/lib/audit";
 import { PUBLISHING_LABEL } from "@/lib/readiness";
 import { loadOnboarding, loadProfile, profileChecks, profileFilled, saveOnboarding, saveProfile, saveSeatArtistDefaults, withOwnWriter, type ArtistProfile, type Onboarding } from "@/lib/artist-profile";
+import { ACCOUNT_ROLES, SITUATION_LABEL, SITUATIONS } from "@/lib/roles";
 import { StarSky } from "@/components/StarSky";
 import { listTracks, saveTrack } from "@/lib/catalog";
 import { propagated, propagationPlan, type Propagation } from "@/lib/profile-propagation";
@@ -32,7 +33,7 @@ const AVATAR_BADGES = [
   { src: "/icons/playful/bedazzled_band.png", label: "Live musician" },
   { src: "/icons/playful/bedazzled_cta.png", label: "CTA Badge" },
 ];
-const STEPS = ["Welcome", "Profile Image", "Embed Defaults", "Catalog Defaults"];
+const STEPS = ["Welcome", "Your Role", "Profile Image", "Embed Defaults", "Catalog Defaults"];
 const year = new Date().getFullYear();
 
 function resizeImage(file: File): Promise<string> {
@@ -257,6 +258,43 @@ export function ArtistOnboarding({ userId, open, onOpenChange, onSaved, firstRun
 
         {step === 1 && (
           <div className="space-y-5">
+            <DialogHeader><DialogTitle className="text-2xl">What do you do?</DialogTitle>
+              <DialogDescription>Pick all that apply. This only sets what a new song starts from — nothing you've already saved changes, and you can edit it anytime in Profile → Edit profile.</DialogDescription></DialogHeader>
+            <div className="space-y-2">
+              <p className="text-xs font-bold uppercase tracking-[1.5px] text-muted-foreground">Where you are</p>
+              <div className="flex flex-wrap gap-2">
+                {SITUATIONS.map((s) => {
+                  const on = ob.situations?.includes(s) ?? false;
+                  return <button key={s} type="button" aria-pressed={on} onClick={() => setOb((o) => ({ ...o, situations: on ? (o.situations ?? []).filter((x) => x !== s) : [...(o.situations ?? []), s] }))}
+                    className={`rounded-full border px-3 py-1.5 text-left text-xs font-semibold transition ${on ? "border-primary bg-primary text-primary-foreground" : "border-border hover:border-primary"}`}>{SITUATION_LABEL[s]}</button>;
+                })}
+              </div>
+            </div>
+            <div className="space-y-2">
+              <p className="text-xs font-bold uppercase tracking-[1.5px] text-muted-foreground">What you do</p>
+              <div className="flex flex-wrap gap-2">
+                {ACCOUNT_ROLES.map((r) => {
+                  const on = ob.roles?.includes(r) ?? false;
+                  return <button key={r} type="button" aria-pressed={on} onClick={() => setOb((o) => ({ ...o, roles: on ? (o.roles ?? []).filter((x) => x !== r) : [...(o.roles ?? []), r] }))}
+                    className={`rounded-full border px-3 py-1.5 text-xs font-semibold transition ${on ? "border-primary bg-primary text-primary-foreground" : "border-border hover:border-primary"}`}>{r}</button>;
+                })}
+              </div>
+            </div>
+            {ob.roles?.includes("Producer") && (
+              <div className="space-y-2 rounded-xl border border-border p-3">
+                <p className="text-sm font-semibold">Do you sell beats?</p>
+                <div className="flex flex-wrap gap-2">
+                  {[true, false].map((v) => <button key={String(v)} type="button" aria-pressed={ob.sellBeats === v} onClick={() => setOb((o) => ({ ...o, sellBeats: v }))}
+                    className={`rounded-full border px-3 py-1.5 text-xs font-semibold transition ${ob.sellBeats === v ? "border-primary bg-primary text-primary-foreground" : "border-border hover:border-primary"}`}>{v ? "I sell beats, or plan to" : "I don't sell beats"}</button>)}
+                </div>
+              </div>
+            )}
+            <Nav onBack={firstRun ? () => setStep(0) : undefined} onNext={() => setStep(2)} nextLabel="Continue" onSkip={() => setStep(2)} />
+          </div>
+        )}
+
+        {step === 2 && (
+          <div className="space-y-5">
             <DialogHeader><DialogTitle className="text-2xl">Choose your profile image</DialogTitle>
               <DialogDescription>Upload a photo, pick a badge, or skip — you can change it anytime from Profile.</DialogDescription></DialogHeader>
             <div className="flex justify-center"><ArtistAvatar src={ob.avatar} className="h-24 w-24" /></div>
@@ -275,11 +313,11 @@ export function ArtistOnboarding({ userId, open, onOpenChange, onSaved, firstRun
                 </button>
               ))}
             </div>
-            <Nav onBack={firstRun ? () => setStep(0) : undefined} onNext={() => setStep(2)} nextLabel={!firstRun ? "Change and Continue" : ob.avatar ? "Continue" : "Skip for now"} onSave={firstRun ? undefined : finish} />
+            <Nav onBack={() => setStep(1)} onNext={() => setStep(3)} nextLabel={!firstRun ? "Change and Continue" : ob.avatar ? "Continue" : "Skip for now"} onSave={firstRun ? undefined : finish} />
           </div>
         )}
 
-        {step === 2 && (
+        {step === 3 && (
           <div className="space-y-5">
             <DialogHeader><DialogTitle className="text-2xl">Set Your Embed Defaults</DialogTitle>
               <DialogDescription><span className="font-semibold text-foreground">Fill in as much as you can here. It's the biggest time-saver in Came Through Audio.</span> Everything you enter carries over to every embed, every catalog entry and your health checks, so each new song starts closer to 100%. Don't have something yet? Skip it and add it anytime in Profile → Edit profile.</DialogDescription></DialogHeader>
@@ -317,11 +355,11 @@ export function ArtistOnboarding({ userId, open, onOpenChange, onSaved, firstRun
               <p className="text-xs text-muted-foreground sm:col-span-2">Type the year, then the owner's name (you, your publishing company or your label), e.g. "{year} Came Through Audio".</p>
             </Group>
             <PrivacyNote />
-            <Nav onBack={() => setStep(1)} onNext={() => setStep(3)} nextLabel={firstRun ? "Continue" : "Change and Continue"} onSave={firstRun ? undefined : finish} />
+            <Nav onBack={() => setStep(2)} onNext={() => setStep(4)} nextLabel={firstRun ? "Continue" : "Change and Continue"} onSave={firstRun ? undefined : finish} />
           </div>
         )}
 
-        {step === 3 && (
+        {step === 4 && (
           <div className="space-y-5">
             <DialogHeader><DialogTitle className="text-2xl">Build Your Catalog Defaults</DialogTitle>
               <DialogDescription><span className="font-semibold text-foreground">The more you fill in now, the less you type later.</span> Your writer, publisher and registration details carry over to every catalog entry, split sheet, agency export and Royalty Health Check. Missing a PRO, IPI or publisher? Leave it blank and add it after you register.</DialogDescription></DialogHeader>
@@ -337,7 +375,7 @@ export function ArtistOnboarding({ userId, open, onOpenChange, onSaved, firstRun
             {p.selfPublished && hasPublisher && <p className="text-sm">⚠️ You checked Self-published but also listed a publisher. Uncheck Self-published, or remove the publisher.</p>}
             <p className="flex items-start gap-2 rounded-lg bg-muted p-3 text-xs text-muted-foreground"><Lock className="mt-0.5 h-4 w-4 shrink-0 text-primary" />Private: PRO affiliations, IPI name numbers and shares stay in your catalog and are never embedded in your music files.</p>
             <IpiNote />
-            <Nav onBack={() => setStep(2)} onNext={finish} nextLabel={firstRun ? "Save & start embedding" : "Save & exit"} />
+            <Nav onBack={() => setStep(3)} onNext={finish} nextLabel={firstRun ? "Save & start embedding" : "Save & exit"} />
           </div>
         )}
       </DialogContent>
@@ -389,11 +427,12 @@ function NameChangeDialog({ open, onOpenChange, from, to, status, seats, onSeats
   );
 }
 
-function Nav({ onBack, onNext, onSave, nextLabel = "Continue" }: { onBack?: (() => void) | undefined; onNext: () => void; onSave?: (() => void) | undefined; nextLabel?: string }) {
+function Nav({ onBack, onNext, onSave, onSkip, nextLabel = "Continue" }: { onBack?: (() => void) | undefined; onNext: () => void; onSave?: (() => void) | undefined; onSkip?: (() => void) | undefined; nextLabel?: string }) {
   return (
     <div className="flex flex-wrap justify-between gap-3 border-t border-border pt-4">
       {onBack ? <Button variant="ghost" onClick={onBack}><ArrowLeft />Back</Button> : <span />}
       <div className="flex flex-wrap gap-3">
+        {onSkip && <Button variant="ghost" onClick={onSkip}>Skip for now</Button>}
         {onSave && <Button variant="outline" onClick={onSave}><Save />Save &amp; exit</Button>}
         <Button onClick={onNext}>{nextLabel}{nextLabel !== "Save & exit" && <ArrowRight />}</Button>
       </div>

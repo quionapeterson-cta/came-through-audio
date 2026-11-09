@@ -71,7 +71,9 @@ const metadataObject = z.object({
   trackNumber: z.string().trim().default("").refine((v) => !v || /^\d{1,3}$/.test(v), "Track number must be a whole number."),
   /** Total tracks on the release: track 1 of 12 is trackNumber "1", trackTotal "12" (ID3 TRCK "1/12"). */
   trackTotal: z.string().trim().default("").refine((v) => !v || /^\d{1,3}$/.test(v), "Total tracks must be a whole number."),
-  artist: z.string().trim().min(1, "Artist name is required."),
+  artist: z.string().trim(),
+  /** "": the member records it (every row saved before this reads as today); "external": someone else performs it. */
+  recordingSide: z.enum(["", "own", "external"]).default(""),
   featured: z.array(z.string().trim()).default([]),
   album: z.string().trim(),
   // Saved as mm:ss with two-digit minutes ("3:45" becomes "03:45"), as agency forms ask.
@@ -143,7 +145,11 @@ const shareRules = (data: z.infer<typeof metadataObject>, ctx: z.RefinementCtx) 
     if (total > 100) ctx.addIssue({ code: "custom", path: [group], message: "Total percentages cannot exceed 100%." });
   }
 };
-export const metadataSchema = metadataObject.superRefine(shareRules);
+/** Embedding a master still needs its artist tag, unless the work is someone else's recording (the writer path). */
+export const metadataSchema = metadataObject.superRefine((data, ctx) => {
+  shareRules(data, ctx);
+  if (!data.artist.trim() && data.recordingSide !== "external") ctx.addIssue({ code: "custom", path: ["artist"], message: "Artist name is required." });
+});
 /**
  * Saving a song never requires an artist (founder, 2026-11-09): a songwriter whose work someone else performs has no
  * artist of their own, and the catalog is where that work is recorded. Tagging a file still requires one, because a
@@ -157,7 +163,7 @@ export type Contributor = z.infer<typeof contributorSchema>;
 export const hfaLooksOff = (v: string | undefined) => !!v?.trim() && !/^[A-Z0-9]{6}$/i.test(v.trim());
 export const emptyContributor = (): Contributor => ({ name: "", pro: "", ipi: "", percentage: "" });
 export const emptyMetadata = (): Metadata => ({
-  title: "", trackNumber: "", trackTotal: "", artist: "", featured: [""], album: "", duration: "", releaseType: "", releaseDate: "", unreleased: false, wasUnreleased: false, label: "", contactEmail: "", copyright: "", phonographic: "", language: "",
+  title: "", trackNumber: "", trackTotal: "", artist: "", featured: [""], album: "", duration: "", releaseType: "", releaseDate: "", unreleased: false, wasUnreleased: false, recordingSide: "", label: "", contactEmail: "", copyright: "", phonographic: "", language: "",
   isrc: "", upc: "", iswc: "", explicit: false, instrumental: false, primaryGenre: "", secondaryGenre: "",
   writers: [emptyContributor()], composers: [emptyContributor()], producers: [emptyContributor()], publishers: [emptyContributor()],
   lyrics: "", coverThumb: "", audioPath: "", artPath: "", artWidth: 0, artHeight: 0, aiProtection: false, credits: [], recordedIn: "", recordedYear: "",

@@ -71,9 +71,13 @@ describe("health report", () => {
   });
   it("leaves SoundExchange out until the song is released", () => {
     const later = track({ ...ready.metadata, upc: "", releaseDate: "2099-01-01" });
-    const a = agencyScores(healthReport([later], US, []).rows[0]!).find((x) => x.society.id === "soundexchange")!;
+    const report = healthReport([later], US, []);
+    const a = agencyScores(report.rows[0]!).find((x) => x.society.id === "soundexchange")!;
     expect(a.waiting).toBeTruthy();
-    expect(healthReport([later], US, []).dataScore).toBe(100);
+    // It is listed and readable, but not scored; a released song beside it keeps the score at 100.
+    expect(report.prerelease.map((r) => r.track.id)).toEqual(["t1"]);
+    expect(report.dataScore).toBe(0);
+    expect(healthReport([later, track({ ...ready.metadata }, "t2")], US, []).dataScore).toBe(100);
   });
   it("reads the isn't-released-yet box, and never asks to register or confirm an unreleased song", () => {
     const boxed = track({ ...ready.metadata, releaseDate: "", unreleased: true });

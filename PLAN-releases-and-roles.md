@@ -758,3 +758,16 @@ blocker are fixed in §17.
   again — and the same two fields already ride on every writer row. `registrationCheck` (PLAN-registration-intake §5) stays
   the strict per-agency gate; nothing here changes it. Price, turnaround and what an agent may do on the member's behalf
   are all undecided: no figure or promise goes into copy until the founder sets it.
+
+
+## 19. Built 2026-11-09 (this change)
+
+| What | Where | Behaviour |
+| --- | --- | --- |
+| **The six roles and the three situations** | `src/lib/roles.ts`, `Onboarding` (`artist-profile.ts`), step 2 of setup ("What do you do?") | Songwriter · Recording artist · Producer · Label · Artist manager · Session musician, multi-select, skippable, editable in Profile → Edit profile. Stored in `profiles.onboarding` with the rest of the answers. No answers = today's behaviour exactly. |
+| **What the answers change** | `roleDefaults` / `withRoleDefaults` | A songwriter who does not perform starts new entries as *someone else performs it*; a planner's new entries start unreleased. Applied to blanks only, on a fresh entry — never to a saved song. Picking **Recording artist** alongside anything else keeps the artist's path whole (§4.7 decision 8). |
+| **The beat question** | same step | Asked of a Producer only, and only stored; the unsold/sold beat answers and their panel (§4.5) are still to build. |
+| **The writer path on a song** | `recordingSide` in `metadata.ts`, the *Someone else performs this song* switch in Song info | The artist field reads *Recording artist (who released it)* and may be blank; embedding still needs an artist for an own recording. The ISRC and artist-tag issues, the release checklist's ISRC/UPC/master/artwork items, and the SoundExchange pillar are all skipped for that entry (`audit.ts`, `release-checklist.ts`, `health.ts`). |
+| **Unreleased music leaves the score** | `healthReport` in `health.ts` | Rows still list every song, and `prerelease` names the ones waiting; data, registered, headline, missing, unchecked and needsAction are computed from released songs only, which is what `HealthMeter` already promised ("Not counted above until release day"). `agencyScores` also reads the *isn't released yet* box rather than a date alone. |
+
+Still to build from this plan: the Unreleased section and its chip (§4.2), the Release panel (§4.1), the sold beat, its linked master and the four deal fields (§4.5), the credit check (§11–12), and the two blueprints and the amendment (§13).

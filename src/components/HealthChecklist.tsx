@@ -15,6 +15,7 @@ import { notShowingReasons } from "@/lib/health-reasons";
 import { emptyStatus, isInspectorSong, type SongStatus } from "@/lib/health-songs";
 import { performers } from "@/lib/metadata";
 import { agencyScores, type TrackReport } from "@/lib/health";
+import { isExternal } from "@/lib/roles";
 import type { Country } from "@/lib/repertoires";
 
 type Group = SongChecklist["group"];
@@ -55,7 +56,11 @@ export function HealthChecklist({ rows, country, statuses, onStatus, actions, ru
   const setIntl = (on: boolean) => { const steps = { ...account.steps }; if (on) steps[INTL_KEY] = new Date().toISOString(); else delete steps[INTL_KEY]; onStatus({ ...account, steps }); };
   const lists = useMemo(() => rows.map((r) => ({ r, c: songChecklist(r, country, statusOf(r.track.id), account) })), [rows, country, statuses]); // eslint-disable-line react-hooks/exhaustive-deps
   const [group, setGroup] = useState<Group>("attention");
-  const inGroup = lists.filter((x) => x.c.group === group);
+  /** My releases · Written for others (founder, 2026-11-09): a view over one song field, so nothing moves by default. */
+  const [side, setSide] = useState<"all" | "own" | "others">("all");
+  const anyOthers = lists.some((x) => isExternal(x.r.track.metadata));
+  const inGroup = lists.filter((x) => x.c.group === group && (side === "all"
+    || (side === "others" ? isExternal(x.r.track.metadata) : !isExternal(x.r.track.metadata))));
   const [query, setQuery] = useState("");
   const [sort, setSort] = useState<SongSort>("least");
   const releases = useMemo(() => releaseGroups(inGroup, sort, query), [lists, group, sort, query]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -118,6 +123,13 @@ export function HealthChecklist({ rows, country, statuses, onStatus, actions, ru
                 <option value="recent">Recently updated</option>
               </select>
             </div>
+            {/* Only shown once a song someone else performs exists, so every other catalog looks exactly as before. */}
+            {anyOthers && <div className="flex flex-wrap gap-2" role="group" aria-label="Whose songs">
+              {([["all", "Everything"], ["own", "My releases"], ["others", "Written for others"]] as const).map(([id, label]) => (
+                <button key={id} type="button" aria-pressed={side === id} onClick={() => setSide(id)}
+                  className={`rounded-full px-3 py-1 text-xs font-semibold ${side === id ? "bg-primary text-primary-foreground" : "border border-border text-muted-foreground hover:text-foreground"}`}>{label}</button>
+              ))}
+            </div>}
             {!releases.length && <p className="p-4 text-center text-sm text-muted-foreground">No songs match "{query}".</p>}
             {releases.map((g) => {
               const open = isOpen(g.key);
