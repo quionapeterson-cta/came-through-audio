@@ -527,7 +527,7 @@ export function RoyaltyHealthCheck({ userId, canCatalog, canExport, onUpgrade, o
             onUploadAudio={(id) => { if (id) onFixField(id, "audio"); }}
             onSaved={() => { void listTracks().then(setTracks).catch(() => {}); }} />,
           agencies: <AgencyLists userId={userId} societies={listSocieties} songsFor={songsFor} summaries={listSummaries} onApply={applyList} onRemove={removeList} canCatalog={canCatalog}
-            onUpgrade={() => onUpgrade()} onFilled={() => { void listTracks().then(setTracks).catch(() => {}); }} />,
+            onUpgrade={() => onUpgrade()} onExpert={onExpert} onFilled={() => { void listTracks().then(setTracks).catch(() => {}); }} />,
           single: inspector,
         }} />
     );

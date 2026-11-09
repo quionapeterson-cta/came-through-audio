@@ -55,21 +55,39 @@ describe("planning a fill", () => {
     const plan = fillPlan(result({
       extra: [work({ title: "All Your Life", workId: "9" })],
       matched: [{ trackId: "t1", title: "Bloodline", work: work({ writers: [{ name: "Qui-Ona Peterson", share: 100 }] }), issues: [] }],
-      differences: [{ trackId: "t2", title: "Good Girls", work: work({ title: "Good Girls", workId: "7" }), issues: ["share"] }],
+      differences: [{ trackId: "t2", title: "Good Girls", work: work({ title: "Good Girls", workId: "7", writers: [{ name: "Qui-Ona Peterson", share: 100 }] }), issues: ["share"] }],
     }), [existing, other], "Karma Came");
     expect(plan.creates.map((c) => c.metadata.title)).toEqual(["All Your Life"]);
     expect(plan.duplicates.map((d) => d.track.id)).toEqual(["t1", "t2"]);
   });
 
   it("treats a work catalogued after the upload as a duplicate, not a second copy", () => {
-    const plan = fillPlan(result({ extra: [work({ title: "Bloodline", workId: "9" })] }), [track("t1", "Bloodline")], "Karma Came");
+    const plan = fillPlan(result({ extra: [work({ title: "Bloodline", workId: "9", writers: [{ name: "Qui-Ona Peterson", share: 100 }] })] }), [track("t1", "Bloodline")], "Karma Came");
     expect(plan.creates).toHaveLength(0);
     expect(plan.duplicates.map((d) => d.track.id)).toEqual(["t1"]);
   });
 
+  it("leaves a song the list already matches exactly out of the dialog", () => {
+    const plan = fillPlan(result({ extra: [work({ title: "Bloodline", workId: "9" })] }), [track("t1", "Bloodline")], "Karma Came");
+    expect(plan.creates).toHaveLength(0);
+    expect(plan.duplicates).toHaveLength(0);
+  });
+
+  it("shows the agency's codes, and what differs, before the member chooses", () => {
+    const plan = fillPlan(result({ extra: [work({ title: "Bloodline", isrc: "USCTA1600001", iswc: "T1234567890" })] }), [track("t1", "Bloodline")], "Karma Came");
+    expect(plan.duplicates[0]!.issues).toEqual([
+      "The agency has ISRC USCTA1600001, your catalog has none",
+      "The agency has ISWC T1234567890, your catalog has none",
+    ]);
+    expect(plan.duplicates[0]!.changes).toEqual([
+      { field: "ISRC", catalog: "none", agency: "USCTA1600001" },
+      { field: "ISWC", catalog: "none", agency: "T1234567890" },
+    ]);
+  });
+
   it("doesn't call a same-title work a duplicate of a song the writers say it isn't", () => {
     const plan = fillPlan(result({
-      matched: [{ trackId: "t1", title: "Midnight", work: work({ title: "Midnight", workId: "1", writers: [{ name: "Ann Lee", share: 100 }] }), issues: [] }],
+      matched: [{ trackId: "t1", title: "Midnight", work: work({ title: "Midnight", workId: "1", writers: [{ name: "Ann Lee", share: 50 }] }), issues: [] }],
       extra: [work({ title: "Midnight", workId: "2", writers: [{ name: "Someone Else", share: 100 }] })],
     }), [track("t1", "Midnight", { writers: [{ name: "", legalName: "Ann Lee", role: "Author/Composer", pro: "", ipi: "", percentage: "100" }] })], "Karma Came");
     expect(plan.creates.map((c) => c.work.workId)).toEqual(["2"]);

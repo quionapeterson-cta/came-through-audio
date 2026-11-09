@@ -4,6 +4,9 @@ import { AgencyLists } from "@/components/AgencyLists";
 // jsdom's File has no text(); browsers do.
 if (!File.prototype.text) File.prototype.text = function (this: File) { return new Promise<string>((res) => { const r = new FileReader(); r.onload = () => res(String(r.result)); r.readAsText(this); }); };
 import { emptyMetadata } from "@/lib/metadata";
+import { saveTrack } from "@/lib/catalog";
+
+vi.mock("@/lib/catalog", () => ({ saveTrack: vi.fn().mockResolvedValue(undefined) }));
 import { countryByCode } from "@/lib/repertoires";
 
 const ascap = countryByCode("US")!.societies.performance![0]!;
@@ -33,5 +36,26 @@ describe("AgencyLists", () => {
     expect(screen.getAllByText(/No ISRC/).length).toBeGreaterThan(0);
     fireEvent.click(screen.getByRole("button", { name: /Save to my catalog/ }));
     expect(onUpgrade).toHaveBeenCalled();
+  });
+
+  it("shows the differences beside both versions, and fixes the catalog from the agency's", async () => {
+    const onExpert = vi.fn();
+    render(<AgencyLists userId="u1" onExpert={onExpert} societies={[ascap]} songsFor={() => [track("a", "Midnight")]} summaries={{}} onApply={vi.fn().mockResolvedValue(undefined)} />);
+    const file = new File(["Work Title,Writer Name,Share\nMidnight,RAY BO,100\n"], "ascap.csv", { type: "text/csv" });
+    fireEvent.change(screen.getByLabelText("Upload your ASCAP list"), { target: { files: [file] } });
+    fireEvent.click(await screen.findByRole("button", { name: /Fill my catalog/ }));
+    expect(await screen.findByText("Your catalog")).toBeTruthy();
+    expect(screen.getByText("The agency (ASCAP)")).toBeTruthy();
+    expect(screen.getAllByText(/isn't on the agency's registration/).length).toBeGreaterThan(0);
+    // Keeping the catalog version is the default, and it offers the expert route instead of leaving the difference silent.
+    fireEvent.click(screen.getByRole("button", { name: /Get expert help/ }));
+    expect(onExpert).toHaveBeenCalled();
+    fireEvent.click(screen.getByRole("radio", { name: /Use the agency's version/ }));
+    fireEvent.click(screen.getByRole("button", { name: /Update songs/ }));
+    await waitFor(() => expect(vi.mocked(saveTrack)).toHaveBeenCalled());
+    const [meta, uid, id] = vi.mocked(saveTrack).mock.calls[0]!;
+    expect((meta as { writers: { legalName: string }[] }).writers[0]!.legalName).toBe("RAY BO");
+    expect(uid).toBe("u1");
+    expect(id).toBe("a");
   });
 });

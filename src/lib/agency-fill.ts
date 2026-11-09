@@ -1,6 +1,6 @@
-import { matchWork, type ListMatch, type ListResult, type ListWork, type ListWriter } from "@/lib/agency-lists";
+import { matchWork, workIssues, type ListMatch, type ListResult, type ListWork, type ListWriter } from "@/lib/agency-lists";
 import type { CatalogTrack } from "@/lib/catalog";
-import { emptyContributor, emptyMetadata, type Contributor, type Metadata } from "@/lib/metadata";
+import { creditName, emptyContributor, emptyMetadata, type Contributor, type Metadata } from "@/lib/metadata";
 
 /**
  * Filling a catalog from an agency list. The list is the agency's own record of the work, so it can start an entry
@@ -9,7 +9,9 @@ import { emptyContributor, emptyMetadata, type Contributor, type Metadata } from
  * rewritten without the member choosing the agency's version over their own.
  */
 export type AgencyFill = { work: ListWork; metadata: Metadata };
-export type AgencyDuplicate = { track: CatalogTrack; work: ListWork; agency: Metadata };
+/** One row of the side-by-side the member sees before choosing: the catalog's value, and the agency's. */
+export type FieldChange = { field: string; catalog: string; agency: string };
+export type AgencyDuplicate = { track: CatalogTrack; work: ListWork; agency: Metadata; issues: string[]; changes: FieldChange[] };
 export type FillPlan = { creates: AgencyFill[]; duplicates: AgencyDuplicate[] };
 
 /** Shares as the list states them, brought to a 100% total (agencies use 100, 200 or writer-half scales). */
@@ -59,7 +61,30 @@ export function agencyVersion(existing: Metadata, work: ListWork, artist: string
   };
 }
 
-/** What filling this list would do: new songs to add, and the ones already catalogued (kept unless chosen). */
+/** The catalog's writers as one line: "Qui-Ona Peterson 100% · Bo Ray 50%". */
+const catalogWriters = (m: Metadata) => [...m.writers, ...m.composers].filter((w) => creditName(w))
+  .map((w) => `${creditName(w)}${w.percentage ? ` ${Number(w.percentage)}%` : ""}`).join(" · ");
+/** The list's writers the same way, so the two columns read alike. */
+const listWriters = (writers: ListWriter[]) => writers.map((w) => `${w.name}${w.share !== undefined ? ` ${Math.round(w.share)}%` : ""}`).join(" · ");
+
+/** The fields that actually differ, so the dialog only shows what the member has to decide about. */
+export function fieldChanges(existing: Metadata, work: ListWork): FieldChange[] {
+  const rows: FieldChange[] = [];
+  // A field the list doesn't carry is never offered: adopting the agency's version would leave the catalog's value in place.
+  if (work.isrc) rows.push({ field: "ISRC", catalog: existing.isrc.trim() || "none", agency: work.isrc });
+  if (work.iswc) rows.push({ field: "ISWC", catalog: existing.iswc.trim() || "none", agency: work.iswc });
+  if (work.writers.length) rows.push({ field: "Writers", catalog: catalogWriters(existing) || "none", agency: listWriters(work.writers) });
+  return rows.filter((r) => r.catalog.toUpperCase() !== r.agency.toUpperCase());
+}
+
+/** One duplicate, ready for the dialog: what differs, in words and field by field. */
+const duplicateOf = (track: CatalogTrack, work: ListWork, artist: string): AgencyDuplicate => ({
+  track, work, agency: agencyVersion(track.metadata, work, artist),
+  issues: workIssues(work, track.metadata),
+  changes: fieldChanges(track.metadata, work),
+});
+
+/** What filling this list would do: new songs to add, and the differing songs already catalogued. */
 export function fillPlan(result: ListResult, tracks: CatalogTrack[], artist: string): FillPlan {
   const creates: AgencyFill[] = [];
   const duplicates: AgencyDuplicate[] = [];
@@ -70,14 +95,21 @@ export function fillPlan(result: ListResult, tracks: CatalogTrack[], artist: str
     .filter((w): w is ListWork => !!w);
   for (const work of result.extra) {
     const track = tracks.find((t) => matchWork(listed, t) === work);
-    if (track) duplicates.push({ track, work, agency: agencyVersion(track.metadata, work, artist) });
-    else creates.push({ work, metadata: agencyMetadata(work, artist) });
+    if (!track) { creates.push({ work, metadata: agencyMetadata(work, artist) }); continue; }
+    // Only a song that actually differs needs a decision; one already identical to the list is left alone.
+    const duplicate = duplicateOf(track, work, artist);
+    if (duplicate.issues.length || duplicate.changes.length) duplicates.push(duplicate);
   }
   const seen = new Set(duplicates.map((d) => d.track.id));
+  // Read again from the catalog as it is now, not from the upload: a song fixed since then has nothing left to decide.
   for (const m of [...result.matched, ...result.differences] as ListMatch[]) {
     if (!m.work) continue;
     const track = tracks.find((t) => t.id === m.trackId);
-    if (track && !seen.has(track.id)) { seen.add(track.id); duplicates.push({ track, work: m.work, agency: agencyVersion(track.metadata, m.work, artist) }); }
+    if (!track || seen.has(track.id)) continue;
+    const duplicate = duplicateOf(track, m.work, artist);
+    if (!duplicate.issues.length && !duplicate.changes.length) continue;
+    seen.add(track.id);
+    duplicates.push(duplicate);
   }
   return { creates, duplicates };
 }

@@ -1,5 +1,5 @@
 import type { CatalogTrack } from "@/lib/catalog";
-import { creditName, type Contributor } from "@/lib/metadata";
+import { creditName, type Contributor, type Metadata } from "@/lib/metadata";
 
 /**
  * "Confirm with your agency lists" (PLAN-royalty-health-report §3A): the user downloads their own list of registered
@@ -198,6 +198,35 @@ const parts = (list: { key: string; share?: number | undefined }[]) => {
 };
 
 /**
+ * What the agency's registration and the catalog disagree about, in the member's own words. The same rule runs in the
+ * comparison and in the fill dialog, so a difference the report names is the difference the member is asked to settle.
+ * `recordings` lists (SoundExchange) carry no writers, so only the codes are compared.
+ */
+export function workIssues(work: ListWork, metadata: Metadata, recordings = false): string[] {
+  const issues: string[] = [];
+  const isrc = code(metadata.isrc ?? ""), iswc = code(metadata.iswc ?? "");
+  if (work.isrc && work.isrc !== isrc) issues.push(isrc ? `The agency has ISRC ${work.isrc}, your catalog has ${metadata.isrc.trim()}` : `The agency has ISRC ${work.isrc}, your catalog has none`);
+  if (work.iswc && work.iswc !== iswc) issues.push(iswc ? `The agency has ISWC ${work.iswc}, your catalog has ${metadata.iswc.trim()}` : `The agency has ISWC ${work.iswc}, your catalog has none`);
+  if (recordings || !work.writers.length) return issues;
+  const mine = [...metadata.writers, ...metadata.composers].filter((w) => creditName(w)).map((w) => ({ key: nameKey(creditName(w)), name: creditName(w), ipi: digits(w.ipi ?? ""), share: Number(w.percentage) || undefined }));
+  const theirs = work.writers.map((w) => ({ ...w, key: nameKey(w.name) }));
+  const same = (a: { key: string; ipi?: string | undefined }, b: { key: string; ipi?: string | undefined }) => a.key === b.key || (!!a.ipi && a.ipi === b.ipi);
+  for (const w of mine) if (!theirs.some((x) => same(w, x))) issues.push(`${w.name} isn't on the agency's registration`);
+  for (const x of theirs) if (!mine.some((w) => same(w, x))) issues.push(`The agency lists ${x.name}, who isn't in your catalog`);
+  for (const w of mine) {
+    const x = theirs.find((y) => same(w, y));
+    if (x?.ipi && w.ipi && x.ipi !== w.ipi) issues.push(`${w.name}'s IPI is ${x.ipi} there, ${w.ipi} here`);
+  }
+  const a = parts(mine), b = parts(theirs);
+  for (const w of mine) {
+    const x = theirs.find((y) => same(w, y));
+    const here = a.get(w.key), there = x && b.get(x.key);
+    if (here !== undefined && there !== undefined && Math.abs(here - there) > 1) issues.push(`${w.name}'s share is ${Math.round(there)}% there, ${Math.round(here)}% here`);
+  }
+  return issues;
+}
+
+/**
  * Compares one agency's list with the songs that should be registered there. Matches by ISRC, then ISWC, then title
  * (the writers break a shared title).
  * `recordings` lists (SoundExchange) carry no writers, so only presence is compared.
@@ -210,24 +239,7 @@ export function compareList(works: ListWork[], tracks: CatalogTrack[], recording
     const work = matchWork(works, t);
     if (!work) { notListed.push({ trackId: t.id, title: t.title }); continue; }
     used.add(work);
-    const issues: string[] = [];
-    if (!recordings && work.writers.length) {
-      const mine = [...m.writers, ...m.composers].filter((w) => creditName(w)).map((w) => ({ key: nameKey(creditName(w)), name: creditName(w), ipi: digits(w.ipi ?? ""), share: Number(w.percentage) || undefined }));
-      const theirs = work.writers.map((w) => ({ ...w, key: nameKey(w.name) }));
-      const same = (a: { key: string; ipi?: string | undefined }, b: { key: string; ipi?: string | undefined }) => a.key === b.key || (!!a.ipi && a.ipi === b.ipi);
-      for (const w of mine) if (!theirs.some((x) => same(w, x))) issues.push(`${w.name} isn't on the agency's registration`);
-      for (const x of theirs) if (!mine.some((w) => same(w, x))) issues.push(`The agency lists ${x.name}, who isn't in your catalog`);
-      for (const w of mine) {
-        const x = theirs.find((y) => same(w, y));
-        if (x?.ipi && w.ipi && x.ipi !== w.ipi) issues.push(`${w.name}'s IPI is ${x.ipi} there, ${w.ipi} here`);
-      }
-      const a = parts(mine), b = parts(theirs);
-      for (const w of mine) {
-        const x = theirs.find((y) => same(w, y));
-        const here = a.get(w.key), there = x && b.get(x.key);
-        if (here !== undefined && there !== undefined && Math.abs(here - there) > 1) issues.push(`${w.name}'s share is ${Math.round(there)}% there, ${Math.round(here)}% here`);
-      }
-    }
+    const issues = workIssues(work, m, recordings);
     (issues.length ? differences : matched).push({ trackId: t.id, title: t.title, work, issues });
   }
   return { matched, differences, notListed, extra: works.filter((w) => !used.has(w)), works: works.length };

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { FileUp, ListPlus, Loader2, Trash2 } from "lucide-react";
+import { FileUp, LifeBuoy, ListPlus, Loader2, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { confirmAction } from "@/components/ConfirmHost";
 import { Button } from "@/components/ui/button";
@@ -28,6 +28,8 @@ type Props = {
   canCatalog?: boolean | undefined;
   /** The plans, opened from the offer shown when the member can't save songs to their catalog yet. */
   onUpgrade?: (() => void) | undefined;
+  /** Expert registration help, offered when the member keeps a version the agency still has to match. */
+  onExpert?: (() => void) | undefined;
 };
 
 /** One society's last comparison in this browser: what was shown, and which file it came from. */
@@ -36,7 +38,7 @@ type StoredLists = { byId: Record<string, { file: string; result: ListResult }>;
 const STORE = "agency-lists";
 
 /** "Confirm with your agency lists": upload what each agency has on file, and see what matches. */
-export function AgencyLists({ userId, societies, songsFor, summaries, onApply, onRemove, onFilled, canCatalog = true, onUpgrade }: Props) {
+export function AgencyLists({ userId, societies, songsFor, summaries, onApply, onRemove, onFilled, canCatalog = true, onUpgrade, onExpert }: Props) {
   const [busy, setBusy] = useState<string>();
   const [stored, setStored] = useState<StoredLists>({ byId: {} });
   const [shownId, setShownId] = useState<string>();
@@ -125,17 +127,28 @@ export function AgencyLists({ userId, societies, songsFor, summaries, onApply, o
       let replaced = 0;
       for (const d of fill.plan.duplicates) if (choices[d.track.id] === "agency") { await saveTrack(d.agency, userId, d.track.id); replaced += 1; }
       const added = fill.plan.creates.length;
+      const kept = fill.plan.duplicates.filter((d) => choices[d.track.id] !== "agency").length;
       toast.success(
         `${added ? `${added} song${added === 1 ? "" : "s"} added to My Catalog` : "No new songs added"}${replaced ? `, ${replaced} replaced with the agency's version` : ""}. ` +
+        (kept ? `${kept} kept as yours, so ${fill.society.name} still needs updating to match. ` : "") +
         "Finish each new entry in My Catalog: the list doesn't carry the album, release date, genre or duration.",
         { duration: 12000 },
       );
-      // The works just added are no longer "on the list but not in the catalog", so the offer can't run twice.
+      // The works just added are no longer "on the list but not in the catalog", so the offer can't run twice; a song
+      // replaced with the agency's version is no longer different either, so the report stops naming it.
       const justAdded = new Set(fill.plan.creates.map((c) => c.work));
+      const settled = new Set(fill.plan.duplicates.filter((d) => choices[d.track.id] === "agency").map((d) => d.track.id));
       setStored((state) => {
         const entry = state.byId[fill.society.id];
         if (!entry) return state;
-        return { ...state, byId: { ...state.byId, [fill.society.id]: { ...entry, result: { ...entry.result, extra: entry.result.extra.filter((w) => !justAdded.has(w)) } } } };
+        const result = entry.result;
+        const fixed = result.differences.filter((m) => settled.has(m.trackId)).map((m) => ({ ...m, issues: [] }));
+        return { ...state, byId: { ...state.byId, [fill.society.id]: { ...entry, result: {
+          ...result,
+          extra: result.extra.filter((w) => !justAdded.has(w)),
+          matched: [...result.matched, ...fixed],
+          differences: result.differences.filter((m) => !settled.has(m.trackId)),
+        } } } };
       });
       setFill(undefined);
       onFilled?.();
@@ -251,15 +264,47 @@ export function AgencyLists({ userId, societies, songsFor, summaries, onApply, o
               </li>)}
             </ul>}
             {fill.plan.duplicates.length > 0 && <div className="space-y-2">
-              <h4 className="text-sm font-bold">Already in your catalog: which version do you want?</h4>
-              {fill.plan.duplicates.map((d) => <div key={d.track.id} className="rounded-lg border border-border p-3 text-sm">
-                <p className="font-semibold">{d.track.title}</p>
-                <p className="text-xs text-muted-foreground">The list has {d.work.writers.length || "no"} writer{d.work.writers.length === 1 ? "" : "s"}{d.work.isrc ? ` · ${d.work.isrc}` : ""}.</p>
-                <div className="mt-2 flex flex-wrap gap-4">
-                  <label className="flex items-center gap-2"><input type="radio" name={`fill-${d.track.id}`} checked={(choices[d.track.id] ?? "keep") === "keep"} onChange={() => setChoices((c) => ({ ...c, [d.track.id]: "keep" }))} />Keep my catalog version</label>
-                  <label className="flex items-center gap-2"><input type="radio" name={`fill-${d.track.id}`} checked={choices[d.track.id] === "agency"} onChange={() => setChoices((c) => ({ ...c, [d.track.id]: "agency" }))} />Use the agency's version</label>
-                </div>
-              </div>)}
+              <h4 className="text-sm font-bold">Already in your catalog: which version is official?</h4>
+              <p className="text-xs text-muted-foreground">
+                These songs match the list by name or code, but the details don't. The agency's copy is usually the right one, because it is
+                what {fill.society.name} pays on: using it fixes your catalog in one click. Keeping yours means the registration at {fill.society.name} has to be updated instead.
+              </p>
+              {fill.plan.duplicates.map((d) => {
+                const choice = choices[d.track.id] ?? "keep";
+                return <div key={d.track.id} className="rounded-lg border border-border p-3 text-sm">
+                  <p className="font-semibold">{d.track.title}</p>
+                  {d.changes.length > 0 && <div className="mt-2 grid grid-cols-[4.5rem_1fr_1fr] gap-x-2 gap-y-1 text-xs">
+                    <span />
+                    <span className="font-semibold">Your catalog</span>
+                    <span className="font-semibold">The agency ({fill.society.name})</span>
+                    {d.changes.map((ch) => <div key={ch.field} className="contents">
+                      <span className="text-muted-foreground">{ch.field}</span>
+                      <span>{ch.catalog}</span>
+                      <span>{ch.agency}</span>
+                    </div>)}
+                  </div>}
+                  {d.issues.length > 0 && <ul className="mt-2 space-y-0.5 text-xs text-muted-foreground">
+                    {d.issues.map((i) => <li key={i}>⚠️ {i}</li>)}
+                  </ul>}
+                  <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                    <label className={`flex cursor-pointer items-start gap-2 rounded-lg border p-2 ${choice === "agency" ? "border-primary bg-accent/40" : "border-border"}`}>
+                      <input type="radio" className="mt-0.5" name={`fill-${d.track.id}`} checked={choice === "agency"} onChange={() => setChoices((c) => ({ ...c, [d.track.id]: "agency" }))} />
+                      <span><b>Use the agency's version</b><span className="block text-xs text-muted-foreground">Usually correct: your catalog then matches what {fill.society.name} has registered.</span></span>
+                    </label>
+                    <label className={`flex cursor-pointer items-start gap-2 rounded-lg border p-2 ${choice === "keep" ? "border-primary bg-accent/40" : "border-border"}`}>
+                      <input type="radio" className="mt-0.5" name={`fill-${d.track.id}`} checked={choice === "keep"} onChange={() => setChoices((c) => ({ ...c, [d.track.id]: "keep" }))} />
+                      <span><b>Keep my catalog version</b><span className="block text-xs text-muted-foreground">Nothing changes here, so update your registration at {fill.society.name} to match it.</span></span>
+                    </label>
+                  </div>
+                  {choice === "keep" && <p className="mt-2 text-xs text-muted-foreground">
+                    Keeping this one leaves the difference in place at {fill.society.name}.
+                  </p>}
+                </div>;
+              })}
+            </div>}
+            {onExpert && fill.plan.duplicates.some((d) => (choices[d.track.id] ?? "keep") !== "agency") && <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-primary/40 bg-accent/30 p-3 text-sm">
+              <span>We can update those registrations for you, so the agency matches the version you kept.</span>
+              <Button type="button" size="sm" variant="outline" disabled={filling} onClick={onExpert}><LifeBuoy />Get expert help</Button>
             </div>}
             <div className="flex justify-end gap-2">
               <Button type="button" variant="ghost" disabled={filling} onClick={() => setFill(undefined)}>Cancel</Button>
