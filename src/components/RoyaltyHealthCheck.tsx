@@ -79,7 +79,7 @@ export function RoyaltyHealthCheck({ userId, canCatalog, canExport, onUpgrade, o
   const [pendingSave, setPendingSave] = useState(false);
   /** The Front Desk panel that is open: the reports already filed, or the checklist to pick back up. */
   const [desk, setDesk] = useState<"reports" | "checklist" | undefined>();
-  /** Which intake the visit opened on: Streaming Profile, the agency examination, or the Patient Intake Form. */
+  /** Which intake the visit opened on: Streaming Profile, the agency examination, or the Artist Intake Form. */
   const [intakeWanted, setIntakeWanted] = useState<IntakeKind | undefined>();
   // A check-in is a sitting (streaming pull, an agency list, answers half done): leave the tab, reload or open a
   // second window and it is still here, instead of making the member bring everything in again.
@@ -485,7 +485,7 @@ export function RoyaltyHealthCheck({ userId, canCatalog, canExport, onUpgrade, o
           <span className="min-w-0 flex-1 truncate font-semibold">{t.title || "Untitled"}<span className="font-normal text-muted-foreground">{t.artist ? ` · ${t.artist}` : ""}</span></span>
           <Button size="sm" variant="ghost" onClick={() => setEditing(t)}>Edit</Button>
           <Button size="sm" variant="outline" onClick={() => checkSong(t.id)}><Stethoscope />Check</Button>
-          <Button size="icon" variant="ghost" aria-label={`Remove ${t.title}`} onClick={() => void confirmAction({ title: `Remove "${t.title || "Untitled"}"?`, text: "It's removed from the Patient Intake Form and your Song Health Checklist. Saved reports stay in Past Royalty Health Reports.", action: "Remove" }).then((ok) => { if (ok) void removeInspector(t.id); })}><Trash2 /></Button>
+          <Button size="icon" variant="ghost" aria-label={`Remove ${t.title}`} onClick={() => void confirmAction({ title: `Remove "${t.title || "Untitled"}"?`, text: "It's removed from the Artist Intake Form and your Song Health Checklist. Saved reports stay in Past Royalty Health Reports.", action: "Remove" }).then((ok) => { if (ok) void removeInspector(t.id); })}><Trash2 /></Button>
         </li>
       ))}</ul>
     </div>}
@@ -681,7 +681,7 @@ export function RoyaltyHealthCheck({ userId, canCatalog, canExport, onUpgrade, o
       {running && <p className="text-sm text-muted-foreground">Looking up song {running.done + 1} of {running.total} on streaming…</p>}
       {editing && (
         <section id="patient-intake-form" className="scroll-mt-4 rounded-2xl border border-border bg-card p-5">
-          <p className="text-xs font-semibold uppercase tracking-[2px] text-primary">Patient Intake Form</p>
+          <p className="text-xs font-semibold uppercase tracking-[2px] text-primary">Artist Intake Form</p>
           <h3 className="mt-1 text-xl font-bold">Edit this song</h3>
           <p className="mt-1 text-sm text-muted-foreground">Saved songs join the Song Health Checklist at the Front Desk.</p>
           <div className="mt-3">{inspector}</div>

@@ -9,7 +9,7 @@ import { loadOnboarding, saveOnboarding } from "@/lib/artist-profile";
 
 /**
  * The Doctor's Office: the Royalty Health Hub's one guided consultation, in order:
- * Patient Check-in → Patient Intake Form or agency records → clinical scan → diagnosis.
+ * Artist Check-in → Artist Intake Form or agency records → clinical scan → diagnosis.
  */
 export type PatientFile = { legalName: string; pro: string; ipi: string; publishing: "" | "publisher" | "self" | "bmi"; publisher: string };
 const blankFile: PatientFile = { legalName: "", pro: "", ipi: "", publishing: "", publisher: "" };
@@ -47,7 +47,7 @@ export async function loadPatientFileFromAccount(userId: string): Promise<Patien
   return { ...blankFile, ...f };
 }
 
-export const OFFICE_STEPS = ["Patient Check-in", "Intake & records", "Clinical scan", "Diagnosis"] as const;
+export const OFFICE_STEPS = ["Artist Check-in", "Intake & records", "Clinical scan", "Diagnosis"] as const;
 
 export function OfficeSteps({ at }: { at: number }) {
   return (

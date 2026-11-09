@@ -79,7 +79,7 @@ export function RoyaltyInspector({ onEmbed, onExpert, onSave, onRunCheck, editin
 
   return (
     <div className="rounded-2xl border border-border bg-card p-6">
-      <div className="flex items-center gap-2"><Search className="h-6 w-6 text-primary" /><h3 className="text-xl font-bold">{editing ? `Edit "${editing.title}"` : "Patient Intake Form"}</h3></div>
+      <div className="flex items-center gap-2"><Search className="h-6 w-6 text-primary" /><h3 className="text-xl font-bold">{editing ? `Edit "${editing.title}"` : "Artist Intake Form"}</h3></div>
       <p className="mt-1 text-sm text-muted-foreground">If previously registered, enter exactly as filed with your agency; otherwise, fill in as much as known for an accurate diagnosis.</p>
       <div className="mt-4 grid gap-3 md:grid-cols-3 lg:grid-cols-5">
         {field("title", "Song title")}{field("artist", "Artist")}{field("duration", "Duration", "3:25")}

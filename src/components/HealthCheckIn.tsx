@@ -23,7 +23,7 @@ export type IntakeKind = "streaming" | "agencies" | "single";
 const INTAKE: { id: IntakeKind; title: string; text: string; icon: typeof Globe2 }[] = [
   { id: "streaming", title: "Streaming Profile", text: "Paste your Spotify or Deezer link. We pull every released track with its ISRC.", icon: Globe2 },
   { id: "agencies", title: "Confirm with your agency", text: "Upload official exports from BMI, ASCAP, SESAC, The MLC or SoundExchange.", icon: FileUp },
-  { id: "single", title: "Single Track Checkup", text: "Fill in one song's Patient Intake Form for a quick diagnosis.", icon: ClipboardList },
+  { id: "single", title: "Single Track Checkup", text: "Fill in one song's Artist Intake Form for a quick diagnosis.", icon: ClipboardList },
 ];
 
 /** "bmi" only answers the publisher question: a BMI writer with no publishing company. */
