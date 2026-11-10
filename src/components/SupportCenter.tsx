@@ -66,7 +66,11 @@ export function SupportCenter({ userId, openTicketId }: { userId: string; openTi
           <h2 className="text-2xl font-bold">Support</h2>
           <p className="mt-1 text-sm text-muted-foreground">Your tickets, the replies, and one place to answer them.</p>
         </div>
-        <Button asChild variant="outline"><Link to="/contact" search={{ type: "support" }}>Open a new ticket</Link></Button>
+        <div className="flex flex-wrap items-center gap-2">
+          {/* A general question is not a ticket: it has its own half of /contact, and the link says so. */}
+          <Button asChild variant="ghost"><Link to="/contact" search={{ type: "contact" }}>General inquiry</Link></Button>
+          <Button asChild variant="outline"><Link to="/contact" search={{ type: "support" }}>Open a new ticket</Link></Button>
+        </div>
       </div>
 
       {!tickets.length ? (

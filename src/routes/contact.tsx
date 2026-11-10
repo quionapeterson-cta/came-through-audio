@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { submitSupportTicket, submitTicket, ticketSchema } from "@/lib/support.functions";
-import { categoryFor, TICKET_TOPICS } from "@/lib/support-topics";
+import { categoryFor, GENERAL_AREA, GENERAL_INQUIRIES, generalInquiryCategory, generalInquirySubject, TICKET_TOPICS } from "@/lib/support-topics";
 import { SUPPORT_FAQ_HEADING, SUPPORT_FAQ_INTRO, SUPPORT_FAQS } from "@/lib/support-faq";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { useAuth } from "@/hooks/useAuth";
@@ -43,6 +43,13 @@ function ContactPage() {
   const [form, setForm] = useState<{ name: string; email: string; area: string; issue: string; subject: string; message: string; website: string }>({
     name: "", email: "", area: TICKET_TOPICS[0].area, issue: TICKET_TOPICS[0].issues[0], subject: "", message: "", website: "",
   });
+  // The two halves ask different things: a ticket says where in the app the trouble is, a general inquiry says what the
+  // question is about. Swapping the pickers with the tab keeps a contact topic out of a support area and back again.
+  useEffect(() => {
+    setForm((f) => (kind === "contact"
+      ? { ...f, area: GENERAL_AREA, issue: GENERAL_INQUIRIES[0] }
+      : { ...f, area: TICKET_TOPICS[0].area, issue: TICKET_TOPICS[0].issues[0] }));
+  }, [kind]);
   const issues = TICKET_TOPICS.find((t) => t.area === form.area)?.issues ?? [];
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState(false);
@@ -58,7 +65,16 @@ function ContactPage() {
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     setFailure("");
-    const parsed = ticketSchema.safeParse({ ...form, category: categoryFor(form.area, form.issue), kind, email: kind === "support" ? user?.email ?? "" : form.email });
+    // A general inquiry carries its topic as the category's issue and names it in the subject, so the admin queue reads
+    // "General inquiry · …" rather than an app area the person never picked.
+    const category = kind === "contact" ? generalInquiryCategory(form.issue) : categoryFor(form.area, form.issue);
+    const parsed = ticketSchema.safeParse({
+      ...form,
+      category,
+      kind,
+      subject: kind === "contact" ? generalInquirySubject(form.issue) : form.subject,
+      email: kind === "support" ? user?.email ?? "" : form.email,
+    });
     if (!parsed.success) {
       setErrors(Object.fromEntries(parsed.error.issues.map((i) => [String(i.path[0]), i.message])));
       return;
@@ -93,6 +109,14 @@ function ContactPage() {
       <main className="mx-auto max-w-2xl px-6 py-14">
         <h1 className="text-4xl font-bold">{kind === "support" ? "Open a Support Ticket" : "Contact Us"}</h1>
         <p className="mt-3 text-muted-foreground">We usually reply by email. You can also write to <a className="text-primary underline" href={`mailto:${SUPPORT_EMAIL}`}>{SUPPORT_EMAIL}</a>.</p>
+        {kind === "contact" && (
+          <p className="mt-3 text-sm text-muted-foreground">
+            General inquiries: a question before you sign up, press, partnerships or licensing, feedback, or anything that
+            isn't a problem inside your catalog. These still reach the support team — they sit in the same queue in Admin,
+            marked as a contact. If something in your catalog isn't working, open a Support Ticket instead so we can see
+            your account.
+          </p>
+        )}
 
         {done ? (
           <div className="mt-10 rounded-2xl border-2 border-primary p-8 text-center">
@@ -118,17 +142,25 @@ function ContactPage() {
                   ? <>We'll reply to your account email, <span className="font-semibold text-foreground">{user.email}</span>.</>
                   : "We'll reply to the email on your account."}</p>
               : <Field label="Email" error={errors["email"]}><Input type="email" value={form.email} onChange={set("email")} maxLength={255} /></Field>}
-            <Field label="Where is it?" error={errors["category"]}>
-              <select value={form.area} onChange={pickArea} className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm">
-                {TICKET_TOPICS.map((t) => <option key={t.area}>{t.area}</option>)}
-              </select>
-            </Field>
-            <Field label="What's happening?" error={errors["issue"]}>
-              <select value={form.issue} onChange={set("issue")} className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm">
-                {issues.map((i) => <option key={i}>{i}</option>)}
-              </select>
-            </Field>
-            <Field label="Subject" error={errors["subject"]}><Input value={form.subject} onChange={set("subject")} maxLength={150} /></Field>
+            {kind === "support" ? (<>
+              <Field label="Where is it?" error={errors["category"]}>
+                <select value={form.area} onChange={pickArea} className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm">
+                  {TICKET_TOPICS.map((t) => <option key={t.area}>{t.area}</option>)}
+                </select>
+              </Field>
+              <Field label="What's happening?" error={errors["issue"]}>
+                <select value={form.issue} onChange={set("issue")} className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm">
+                  {issues.map((i) => <option key={i}>{i}</option>)}
+                </select>
+              </Field>
+              <Field label="Subject" error={errors["subject"]}><Input value={form.subject} onChange={set("subject")} maxLength={150} /></Field>
+            </>) : (
+              <Field label="What's this about?" error={errors["issue"]}>
+                <select value={form.issue} onChange={set("issue")} className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm">
+                  {GENERAL_INQUIRIES.map((g) => <option key={g}>{g}</option>)}
+                </select>
+              </Field>
+            )}
             <Field label="Message" error={errors["message"]}><Textarea rows={6} value={form.message} onChange={set("message")} maxLength={3000} /></Field>
             <input type="text" tabIndex={-1} autoComplete="off" aria-hidden="true" className="hidden" value={form.website} onChange={set("website")} />
             {failure && <p className="text-sm text-destructive">{failure}</p>}

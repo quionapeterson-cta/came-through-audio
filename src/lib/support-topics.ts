@@ -44,8 +44,20 @@ export const TICKET_TOPICS = [
 ] as const;
 
 export type TicketArea = (typeof TICKET_TOPICS)[number]["area"];
+/**
+ * The catch-all area. A general inquiry from Contact Us has no app area to point at — nothing is going wrong in a tab —
+ * so its topic is stored as one of this area's issues, which keeps the contact in the same admin queue as a ticket.
+ */
+export const GENERAL_AREA = "Something else" as const;
+/** Contact Us offers these instead of an area + issue pair: the question itself is the topic. */
+export const GENERAL_INQUIRIES = TICKET_TOPICS.find((t) => t.area === GENERAL_AREA)!.issues;
+export type GeneralInquiry = (typeof GENERAL_INQUIRIES)[number];
 /** Billing questions go to the billing inbox; the check reads this prefix. */
 export const BILLING_AREA: TicketArea = "Account & billing";
 /** Every area + issue pair, as it is stored in `category`. */
 export const categoryFor = (area: string, issue: string) => `${area} · ${issue}`;
 export const TICKET_CATEGORIES = TICKET_TOPICS.flatMap((t) => t.issues.map((i) => categoryFor(t.area, i))) as [string, ...string[]];
+/** The category a general inquiry is stored under, so it reads in the admin queue like any other row. */
+export const generalInquiryCategory = (topic: string) => categoryFor(GENERAL_AREA, topic);
+/** Its subject, so a contact's row says what it is instead of borrowing a ticket's subject line. */
+export const generalInquirySubject = (topic: string) => `General inquiry · ${topic}`.slice(0, 150);

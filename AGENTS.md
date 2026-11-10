@@ -182,6 +182,12 @@
 - **`waiting` is a status of its own** (founder, 2026-11-08): parked on the member without pretending to be open or
   resolved. The three that shipped stay; labels live in `src/lib/support-replies.ts`, and the member sees `waiting` as
   "Waiting on you".
+- **Contact Us is a general inquiry, not a ticket** (founder, 2026-11-10): the Contact half of `/contact` asks name,
+  email, one topic from `GENERAL_INQUIRIES` and the message. It does not ask the ticket's "Where is it?" and "What's
+  happening?" pair or a subject of its own, because nothing is going wrong in a tab. It is still stored as
+  `kind: "contact"` under `GENERAL_AREA`, so it lands in the same Admin → Support Tickets queue and is labelled Contact
+  there, with the subject reading "General inquiry · <topic>". The workspace Support tab links to it as "General
+  inquiry" beside "Open a new ticket".
 
 ## Account Help & Holiday Cover (always follow)
 
