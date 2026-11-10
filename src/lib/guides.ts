@@ -482,6 +482,36 @@ export const BLUEPRINT_GUIDES: Guide[] = [
     ],
     checklist: ["Prepared", "On time", "Room respected", "Split sheet signed", "Files received", "Paid and credited"],
   },
+  {
+    id: "songwriter-placements", kind: "Blueprint", title: "Songwriter Credits and Placements",
+    summary: "Land outside cuts and get paid for them: the work catalogued, registered and credited the same way everywhere.",
+    steps: [
+      s("Catalogue the work without a recording", "A song you wrote for someone else needs no master or ISRC. Add the title, your writers with roles, the splits and publishing, then leave the recording fields blank."),
+      s("Settle the splits and sign the sheet", "Agree every writer's share before the artist records. Generate the split sheet from My Catalog, sign it, and send it for the other signatures."),
+      s("Register with the PRO and save the ISWC", "Register the work with your PRO under your legal name. The PRO assigns the ISWC; save it on the song so every later lookup can match by code instead of by title."),
+      s("Register with The MLC", "The MLC pays the mechanical royalties for streams. Register the work there and keep the confirmation with the song."),
+      s("When the artist releases, collect the release credits", "Ask for the credit line the distributor shows, or read it on the release. Type it on the song: the release is the third copy of the same facts."),
+      s("Run the credit check and fix what differs", "Open the credit check in the Royalty Health Hub. It compares your catalog, the registration and the release, and opens on the differences. Fix the copy you control first."),
+      s("Keep the proof with the song", "Keep the split sheet, the registration confirmations and the release credit line with the song, so a query years later starts from the paperwork rather than a memory."),
+    ],
+    checklist: ["Work catalogued without a master", "Splits settled and sheet signed", "PRO registration and ISWC saved", "MLC registration", "Release credits added", "Credit check run", "Differences fixed", "Proof kept"],
+    stepOf: [0, 1, 2, 3, 4, 5, 5, 6],
+  },
+  {
+    id: "beat-renegotiation", kind: "Blueprint", title: "Beat License Checkups and Renegotiation",
+    summary: "Know what your beat licence allows, watch the streams against its cap, and amend it when the point is reached.",
+    steps: [
+      s("Know what the license allows", "Read the lease or exclusive you signed: the term, the territory, the stream cap, the fee and what happens when the cap is reached. If you don't have it, generate and sign one before the next sale."),
+      s("Record the deal on the beat", "Mark the beat sold, link the song made from it, and record the deal type, date, the stream count where it changes and the contract itself. Those four answers are what every later check reads."),
+      s("Read the master's numbers on a date", "Take the streams from the distributor's report and enter them with the date. The app never polls a distributor and never estimates a count."),
+      s("Compare against the cap", "The check says where the recording stands in one line, in your own numbers. Below the cap there is nothing to do yet; at or past it, the license point has been reached."),
+      s("Decide the ask", "Decide what you want: a new cap, a new fee, a new share, or a buyout. The amendment starts from the deal on file and leaves the new terms for you both to agree."),
+      s("Sign the amendment", "Generate the Beat License Renegotiation & Amendment from Contracts, attached to the master, prefilled with the original terms. Send it for signature."),
+      s("File it and set the next check", "When it's signed, it sits on the master's card with the old terms still readable. Set the next check date on the Working On item; the reminder waits for the new cap."),
+    ],
+    checklist: ["License terms read", "Deal recorded", "First reading entered", "Position checked", "Ask decided", "Amendment signed", "New terms filed", "Next check dated"],
+    stepOf: [0, 1, 2, 3, 4, 5, 6, 6],
+  },
 ];
 
 const SETUP: GuideStep[] = [
@@ -527,6 +557,23 @@ export const GUIDES: Guide[] = [...BLUEPRINT_GUIDES, ...CHEAT_SHEETS];
  * wording and its link can't drift apart, and checked by a test.
  */
 export const GUIDE_LINKS: Record<string, Record<string, GuideLink>> = {
+  "songwriter-placements": {
+    "Work catalogued without a master": { label: "Open My Catalog", where: "catalog" },
+    "Splits settled and sheet signed": { label: "Open Split Sheets", where: "splits" },
+    "PRO registration and ISWC saved": { label: "Open your writer details", where: "profile" },
+    "MLC registration": { label: "Open My Catalog for the MLC export", where: "catalog" },
+    "Release credits added": { label: "Open My Catalog", where: "catalog" },
+    "Credit check run": { label: "Open the Royalty Health Hub", where: "health" },
+    "Differences fixed": { label: "Open the Royalty Health Hub", where: "health" },
+    "Proof kept": { label: "Open My Catalog", where: "catalog" },
+  },
+  "beat-renegotiation": {
+    "Deal recorded": { label: "Open My Catalog", where: "catalog" },
+    "First reading entered": { label: "Open My Catalog", where: "catalog" },
+    "Position checked": { label: "Open the Royalty Health Hub", where: "health" },
+    "New terms filed": { label: "Open My Catalog", where: "catalog" },
+    "Next check dated": { label: "Open the Royalty Health Hub", where: "health" },
+  },
   "royalty-registration": {
     "PRO writer account": { label: "Open your writer details", where: "profile" },
     "IPI saved in My Catalog": { label: "Open your writer details", where: "profile" },

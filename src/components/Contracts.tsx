@@ -4,6 +4,7 @@ import { ArrowUpRight, Sparkles, AlertTriangle, BookOpen, FolderOpen, Pin, PinOf
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { amendmentPrefill } from "@/lib/beat-amendment";
 import { Button } from "@/components/ui/button";
 import { UpgradeLock } from "@/components/UpgradeLock";
 import { Badge } from "@/components/ui/badge";
@@ -894,7 +895,11 @@ function ContractEditor({ userId, initial, tracks, blueprint, onClose }: { userI
     const splits = t && bp.fields.some((f) => f.key === "splits")
       ? t.metadata.writers.filter((w) => w.legalName?.trim()).map((w) => `${w.legalName!.trim()}${w.role ? ` (${w.role})` : ""}: ${w.percentage || "?"}%`).join("\n")
       : "";
-    setC((x) => ({ ...x, catalogId: id || null, ...(t && { fields: { ...x.fields, songTitle: t.title, ...(splits && { splits }) }, title: `${bp.name} – ${t.title}` }) }));
+    // The amendment reads the deal recorded on the master (§13); every other contract fills only what it always did.
+    const prefill = t && bp.id === "beat-license-amendment"
+      ? amendmentPrefill(t.metadata, t.metadata.beatMasterId ? tracks.find((x) => x.id === t.metadata.beatMasterId)?.title ?? "" : "")
+      : {};
+    setC((x) => ({ ...x, catalogId: id || null, ...(t && { fields: { ...x.fields, songTitle: t.title, ...(splits && { splits }), ...prefill }, title: `${bp.name} – ${t.title}` }) }));
   };
 
   const save = async (quiet = false) => {

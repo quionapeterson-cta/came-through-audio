@@ -796,4 +796,18 @@ The Hub needed no change: it already reads the same fields (`isUnreleased`) and 
 | **One master per beat** | Beat box, `linkMaster` / `createMaster` | Once a beat has a master the panel shows it and offers no second create or link, and a song already linked to another beat is refused in a plain sentence instead of stealing the link. |
 | **The sold checklist** | `releaseItems`, `beatLinked` in `healthReport` | Signed split sheet, signed beat contract and a linked master. The Hub reads the link by scanning the catalog, so the linked-master item is never ticked by hand. |
 
-Still to build from this plan: the credit check (§11–12), and the two blueprints and the amendment (§13).
+Built in §22: the credit check and master checkup engine, decision 16, the two blueprints and the amendment.
+
+## 22. Built 2026-11-09 (credit check, checkup, blueprints, §11–13)
+
+| What | Where | Behaviour |
+| --- | --- | --- |
+| **The credit check** | `creditCheck` in `src/lib/process-check.ts` | Compares the catalog, the agency registration and the release credit line fact by fact: title, ISWC, ISRC, each writer's legal name, IPI and share. Differences and unknowns come back as findings; matches stay as ticks. The copy the member controls is named first. |
+| **It can't invent a missing writer** | three outcomes, `found` / `empty` / `unknown` | A lookup that never answered produces an *unknown* finding, never "not registered". A writer is only called absent from a registration that was actually read and found. |
+| **Names are compared, never corrected** | `nameKey`, `sameName`, `sameWork` | Case, punctuation, accents, suffixes and word order are ignored to *find* a match; codes settle a work before titles do, and a title alone never establishes one. |
+| **The master checkup** | `masterCheck`, `renegotiationDue`, `masterLine` | Compares a stream reading with the cap the member recorded, in their own numbers: below the cap, exactly at it, or past it. No reading is "no reading yet", never zero streams, and no threshold between "inside" and "at the cap" is invented. |
+| **Decision 16** | `beatIsOut` (`beats.ts`), My Catalog's Unreleased partition | A sold beat leaves Unreleased only when the song made from it is out. Selling a beat does not release it, and an unlinked beat keeps waiting. |
+| **Two blueprints** | `songwriter-placements`, `beat-renegotiation` (`guides.ts`) | Every numbered step is claimed by a checklist item, and the items that finish inside the app link to the screen that does it. |
+| **The amendment** | `beat-license-amendment` (`blueprints/music-production.ts`), `amendmentPrefill` | A full contract blueprint: recitals naming the original licence, what changes, prospective-only, credit and ownership, no waiver, general terms. Its beat, original date and original cap prefill from the deal on the master, and stay blank when the deal is blank. |
+
+Still to build: the Hub screen that renders `creditCheck`, the reading entry that feeds `masterCheck`, and the amendment card on the master ("Amended … · cap 50,000 → 250,000").

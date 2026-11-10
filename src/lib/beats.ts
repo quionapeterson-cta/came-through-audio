@@ -1,5 +1,6 @@
 import type { CatalogTrack } from "@/lib/catalog";
 import { emptyMetadata, type Metadata } from "@/lib/metadata";
+import { isUnreleased } from "@/lib/release-checklist";
 
 /**
  * The producer's beat path (PLAN-releases-and-roles §4.5).
@@ -48,4 +49,14 @@ export function masterFromBeat(beat: Metadata, beatId: string): Metadata {
     instrumental: false,
     beatMasterId: beatId,
   };
+}
+
+/**
+ * Decision 16: a sold beat waits in Unreleased until the song made from it is out. Then it is sold *and* out, and leaves
+ * the section. With no master linked, or a master still waiting, it keeps waiting: selling a beat does not release it.
+ */
+export function beatIsOut(beat: CatalogTrack, tracks: CatalogTrack[], on?: string): boolean {
+  if (!isSoldBeat(beat.metadata)) return false;
+  const master = masterOfBeat(beat.id, tracks);
+  return !!master && !isUnreleased(master.metadata, on);
 }

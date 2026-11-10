@@ -18,7 +18,8 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { OFFICIAL_MASTER_ACTION, PRE_DIST_NOTE, PRO_TIP, SOVEREIGN_BACKUP } from "@/lib/copy";
 import { readMetadata, CREDIT_CHOICES, OTHER_INSTRUMENT, creditChoice, fromCreditChoice, isPerformer, performers, emptyContributor, emptyMetadata, embedMetadata, creditName, metadataSchema, savedSchema, GENRES, GENRE_GROUPS, MASTER_BASES, PRODUCTION_TYPES, RELEASE_TYPES, WRITER_ROLES, writerRole, hfaLooksOff, percentInput, formatDuration, type Contributor, type Metadata } from "@/lib/metadata";
 import { releaseStatus, writeRelease, type ReleasePatch } from "@/lib/release-panel";
-import { beatMasterLine, isSoldBeat, masterBeatLine, masterFromBeat, masterOfBeat } from "@/lib/beats";
+import { beatIsOut, beatMasterLine, isSoldBeat, masterBeatLine, masterFromBeat, masterOfBeat } from "@/lib/beats";
+import { amendmentPrefill } from "@/lib/beat-amendment";
 import { BeatBox, DealBox } from "@/components/BeatBox";
 import { COUNTRIES, countryByCode, guessCountry } from "@/lib/repertoires";
 import { catalogHealth, releaseKind } from "@/lib/health-checklist";
@@ -1048,7 +1049,7 @@ export function MetadataUploader({ onShareInfo, userId, mode = "embed", readOnly
               );
               // The Unreleased section (§4.2) sits above the released groups and holds every song that isn't out.
               // Nothing here is read-only: each entry opens the same song and the same Release checklist as before.
-              const pre = tracks.filter((t) => releaseStatus(t.metadata) !== "released" && (filter === "All" || releaseGroup(t) === filter));
+              const pre = tracks.filter((t) => releaseStatus(t.metadata) !== "released" && !beatIsOut(t, tracks) && (filter === "All" || releaseGroup(t) === filter));
               const prePct = pre.length ? Math.round(pre.reduce((n, t) => n + pctOf(t.id), 0) / pre.length) : 0;
               const byPct = (a: CatalogTrack, b: CatalogTrack) => pctOf(a.id) - pctOf(b.id);
               // A release can be part out and part not yet: its panel still counts and writes every song on it.
