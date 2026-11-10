@@ -391,6 +391,16 @@ export function MetadataUploader({ onShareInfo, userId, mode = "embed", readOnly
   /** Link a song already in the catalog as this beat's master, and mark the beat sold. */
   async function linkMaster(master: CatalogTrack) {
     if (!userId || !editingId) return;
+    const existing = masterOfBeat(editingId, tracks);
+    if (existing && existing.id !== master.id) {
+      toast.error(`This beat is already linked to "${existing.title || "Untitled"}". Unlink it before linking another song.`);
+      return;
+    }
+    const taken = master.metadata.beatMasterId.trim();
+    if (taken && taken !== editingId) {
+      toast.error(`"${master.title || "That song"}" is already linked to another beat. Open that beat to unlink it first.`);
+      return;
+    }
     const beat = tracks.find((x) => x.id === editingId);
     try {
       await saveTrack({ ...master.metadata, beatMasterId: editingId }, userId, master.id);
@@ -404,6 +414,8 @@ export function MetadataUploader({ onShareInfo, userId, mode = "embed", readOnly
   /** Open a new entry for the song made from this beat, with the beat's writers carried across. */
   function createMaster() {
     if (!editingId) { toast.info("Save the beat first, then create the master."); return; }
+    const linked = masterOfBeat(editingId, tracks);
+    if (linked) { toast.info(`This beat is already linked to "${linked.title || "Untitled"}".`); return; }
     const beat = metadata;
     const beatId = editingId;
     startNew();

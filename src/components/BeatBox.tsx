@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -5,6 +6,7 @@ import { InfoTip } from "@/components/InfoTip";
 import { beatMasterLine, DEAL_TYPES, isBeat, isSoldBeat, masterOfBeat } from "@/lib/beats";
 import type { CatalogTrack } from "@/lib/catalog";
 import type { Metadata } from "@/lib/metadata";
+import { listContracts, type Contract } from "@/lib/contracts";
 
 const selectClass = "flex h-9 w-full rounded-md border border-input bg-background px-3 text-sm shadow-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring";
 
@@ -46,15 +48,16 @@ export function BeatBox({ metadata, update, tracks, beatId, disabled, onLink, on
     </div> : <div className="mt-3 space-y-3">
       <p className="text-sm"><b>This beat is sold.</b> The song made from it is a separate entry in your catalog, and it usually has a different title.</p>
       <p className="text-sm font-semibold text-primary">{beatMasterLine(master)}</p>
-      <div className="flex flex-wrap items-center gap-2">
+      {master && <p className="text-xs text-muted-foreground">The deal is edited on the master's card.</p>}
+      {!master && <div className="flex flex-wrap items-center gap-2">
         <Button type="button" size="sm" disabled={disabled || !beatId} onClick={onCreateMaster}>Create the master recording</Button>
         <select aria-label="Link a song already in my catalog as the master" disabled={disabled || !beatId || !candidates.length} className={`${selectClass} sm:w-64`} value=""
           onChange={(e) => { const t = tracks.find((x) => x.id === e.target.value); if (t) void onLink(t); }}>
           <option value="">{candidates.length ? "It's already in my catalog…" : "No other songs yet"}</option>
           {candidates.map((t) => <option key={t.id} value={t.id}>{t.title || "Untitled"}</option>)}
         </select>
-      </div>
-      {!beatId && <p className="text-xs text-muted-foreground">Save the beat first, then link or create the master.</p>}
+      </div>}
+      {!master && !beatId && <p className="text-xs text-muted-foreground">Save the beat first, then link or create the master.</p>}
     </div>}
   </div>;
 }
@@ -66,6 +69,15 @@ export function DealBox({ metadata, update, beatTitle, disabled }: {
   beatTitle: string;
   disabled?: boolean;
 }) {
+  const [contracts, setContracts] = useState<Contract[] | null>(null);
+  useEffect(() => {
+    let live = true;
+    // The licence itself: the fee, points, territory and credit line live in the document, never copied into fields.
+    void listContracts().then((rows) => { if (live) setContracts(rows); }).catch(() => { if (live) setContracts([]); });
+    return () => { live = false; };
+  }, []);
+  const loaded = contracts ?? [];
+  const chosen = metadata.dealContract && !loaded.some((c) => c.id === metadata.dealContract);
   return <div className="rounded-xl border border-border p-4">
     <div className="flex flex-wrap items-center gap-2">
       <span className="text-sm font-extrabold uppercase tracking-[2px] text-primary">From {beatTitle || "a beat"}</span>
@@ -86,6 +98,16 @@ export function DealBox({ metadata, update, beatTitle, disabled }: {
       <div className="min-w-0 space-y-2">
         <Label htmlFor="dealStreams">Streams at which it changes<InfoTip text="A lease often ends at a stream count. Leave it blank if the deal doesn't change with streams." /></Label>
         <Input id="dealStreams" inputMode="numeric" value={metadata.dealStreams} disabled={disabled} placeholder="50000" onChange={(e) => update("dealStreams", e.target.value.replace(/\D/g, "").slice(0, 12))} />
+      </div>
+      <div className="min-w-0 space-y-2 sm:col-span-3">
+        <Label htmlFor="dealContract">Contract<InfoTip text="The agreement you signed for this deal. The fee, points, territory and credit line live inside it, so they are never copied into fields here." /></Label>
+        <select id="dealContract" className={selectClass} value={metadata.dealContract} disabled={disabled || contracts === null}
+          onChange={(e) => update("dealContract", e.target.value)}>
+          <option value="">{contracts === null ? "Loading your contracts…" : "No contract linked yet"}</option>
+          {chosen && <option value={metadata.dealContract}>The linked contract</option>}
+          {loaded.map((c) => <option key={c.id} value={c.id!}>{c.title || "Untitled contract"} · {c.status}</option>)}
+        </select>
+        {contracts !== null && !loaded.length && <p className="text-xs text-muted-foreground">You have no contracts yet. Generate the lease or exclusive in <b className="text-foreground">Contracts &amp; Blueprints</b>, then link it here.</p>}
       </div>
     </div>
   </div>;

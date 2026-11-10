@@ -104,7 +104,7 @@ export function songChecklist(r: TrackReport, country: Country, status?: SongSta
   // Not out yet: what to have ready before distributing comes first, and recordings wait for the release date.
   const prerelease = isUnreleased(m);
   if (prerelease) {
-    for (const i of releaseItems(m, ticked)) steps.push({ id: `release:${i.id}`, stage: "release", auto: i.auto, done: i.done, title: i.title, field: i.field, items: i.items, tick: i.tick, optional: i.optional, why: i.why });
+    for (const i of releaseItems(m, ticked, !!r.beatLinked)) steps.push({ id: `release:${i.id}`, stage: "release", auto: i.auto, done: i.done, title: i.title, field: i.field, items: i.items, tick: i.tick, optional: i.optional, why: i.why });
   }
 
   // Ready to register: one step per agency, ticked by the catalog itself. These alone make up the song's %.

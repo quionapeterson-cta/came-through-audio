@@ -82,6 +82,8 @@ const metadataObject = z.object({
   dealType: z.enum(["", "Exclusive", "Non-exclusive", "Lease", "Other"]).default(""),
   dealDate: z.string().default(""),
   dealStreams: z.string().trim().default("").refine((v) => !v || /^\d{1,12}$/.test(v), "Enter the stream count as a number."),
+  /** The agreement the deal is measured against: a Contracts & Blueprints document id, or blank. */
+  dealContract: z.string().trim().default(""),
   featured: z.array(z.string().trim()).default([]),
   album: z.string().trim(),
   // Saved as mm:ss with two-digit minutes ("3:45" becomes "03:45"), as agency forms ask.
@@ -171,7 +173,7 @@ export type Contributor = z.infer<typeof contributorSchema>;
 export const hfaLooksOff = (v: string | undefined) => !!v?.trim() && !/^[A-Z0-9]{6}$/i.test(v.trim());
 export const emptyContributor = (): Contributor => ({ name: "", pro: "", ipi: "", percentage: "" });
 export const emptyMetadata = (): Metadata => ({
-  title: "", trackNumber: "", trackTotal: "", artist: "", featured: [""], album: "", duration: "", releaseType: "", releaseDate: "", unreleased: false, wasUnreleased: false, recordingSide: "", beatState: "", beatMasterId: "", dealType: "", dealDate: "", dealStreams: "", label: "", contactEmail: "", copyright: "", phonographic: "", language: "",
+  title: "", trackNumber: "", trackTotal: "", artist: "", featured: [""], album: "", duration: "", releaseType: "", releaseDate: "", unreleased: false, wasUnreleased: false, recordingSide: "", beatState: "", beatMasterId: "", dealType: "", dealDate: "", dealStreams: "", dealContract: "", label: "", contactEmail: "", copyright: "", phonographic: "", language: "",
   isrc: "", upc: "", iswc: "", explicit: false, instrumental: false, primaryGenre: "", secondaryGenre: "",
   writers: [emptyContributor()], composers: [emptyContributor()], producers: [emptyContributor()], publishers: [emptyContributor()],
   lyrics: "", coverThumb: "", audioPath: "", artPath: "", artWidth: 0, artHeight: 0, aiProtection: false, credits: [], recordedIn: "", recordedYear: "",

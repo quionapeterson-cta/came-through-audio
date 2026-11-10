@@ -38,13 +38,22 @@ export type ReleaseItem = {
  * Items 1–8 and the optional AI Protection certificate. Items 9–10 (registered with the PRO and the mechanical
  * society) are the song's existing Register steps, counted alongside these (songChecklist).
  */
-export function releaseItems(m: Metadata, ticks: Record<string, string | undefined>): ReleaseItem[] {
+export function releaseItems(m: Metadata, ticks: Record<string, string | undefined>, linkedMaster = false): ReleaseItem[] {
   // A beat (§4.5) is read on what a producer can honestly have. The recording's ISRC, UPC, master, artwork and
   // SoundExchange step belong to the artist's release of the song made from it, not to the beat itself.
   if (m.beatState) {
     const beatCore = registrationReadiness(m);
     const gapList = (items: { message: string; field: string }[]) => items.map((i) => ({ text: i.message, field: i.field }));
     const people = beatCore.missing.filter((i) => i.code !== "pro");
+    // Sold: the song made from it now exists somewhere, and these three are what the producer still owes the sale.
+    if (m.beatState === "sold") return [
+      { id: "splitSheet", title: "Split sheet signed", auto: false, tick: RELEASE_TICK.split, done: !!ticks[RELEASE_TICK.split] || ticks["checkin:split"] === "yes",
+        why: "A signed split sheet settles who owns what after the sale." },
+      { id: "beatContract", title: "Beat contract signed", auto: false, tick: RELEASE_TICK.beatContract, done: !!ticks[RELEASE_TICK.beatContract],
+        why: "It records what the artist may do with the beat, and what you're owed." },
+      { id: "linkedMaster", title: "Linked to the master recording", auto: true, done: linkedMaster,
+        why: "The song made from the beat is its own entry, so the deal, the credit and the money can be followed." },
+    ];
     return [
       { id: "writers", title: "Composer and writer credits", auto: true, done: !people.length, items: gapList(people), field: people[0]?.field,
         why: "The artist's registration lists you under your legal name, so your PRO and The MLC can pay you." },

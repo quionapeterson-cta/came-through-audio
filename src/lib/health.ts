@@ -34,6 +34,8 @@ export type PillarState = "confirmed" | "missing" | "unchecked";
 export type PillarRow = { pillar: Pillar; societies: { society: Society; check?: RepertoireCheck | undefined }[]; state: PillarState; dataIssues: Issue[] };
 export type TrackReport = {
   track: CatalogTrack;
+  /** A beat whose song is in the catalog (the link is on the master and read back by scanning). */
+  beatLinked?: boolean;
   issues: Issue[];
   pillars: PillarRow[];
   streaming?: { hit: StreamingHit | null; checkedAt: string } | undefined;
@@ -152,7 +154,8 @@ export const songHealthy = (r: TrackReport) =>
  * unregistered catalog is 50%.
  */
 export function healthReport(tracks: CatalogTrack[], country: Country, checks: RepertoireCheck[], today = new Date().toISOString().slice(0, 10)) {
-  const rows = tracks.map((t) => trackReport(t, country, checks));
+  const linkedBeats = new Set(tracks.map((t) => t.metadata.beatMasterId.trim()).filter(Boolean));
+  const rows = tracks.map((t) => ({ ...trackReport(t, country, checks), beatLinked: linkedBeats.has(t.id) }));
   // A song that isn't out is read on its own and never in the score's numerator or denominator (founder, 2026-11-09):
   // its release checklist carries it until release day, and the meter says how many are getting ready.
   const prerelease = rows.filter((r) => isUnreleased(r.track.metadata, today));

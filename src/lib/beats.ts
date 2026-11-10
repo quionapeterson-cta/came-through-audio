@@ -19,14 +19,21 @@ export function masterOfBeat(beatId: string, tracks: CatalogTrack[]): CatalogTra
   return tracks.find((t) => t.metadata.beatMasterId.trim() === beatId);
 }
 
-/** The beat's card: `Sold · master: Gold Teeth`. */
-export function beatMasterLine(master?: CatalogTrack): string {
-  return master ? `Sold · master: ${master.title || "Untitled"}` : "Sold · no master linked yet";
+/** The deal, as a card shows it: `Exclusive · 2026-11-09 · 50000 streams · contract`. */
+function dealLine(deal: Pick<Metadata, "dealType" | "dealDate" | "dealStreams" | "dealContract">): string[] {
+  return [deal.dealType, deal.dealDate, deal.dealStreams && `${deal.dealStreams} streams`, deal.dealContract && "contract"].filter((v): v is string => !!v);
 }
 
-/** The master's card: `From Beat 12 · Exclusive · 2026-11-09 · 50,000 streams`. */
-export function masterBeatLine(beatTitle: string, deal: Pick<Metadata, "dealType" | "dealDate" | "dealStreams">): string {
-  return [`From ${beatTitle || "a beat"}`, deal.dealType, deal.dealDate, deal.dealStreams && `${deal.dealStreams} streams`].filter(Boolean).join(" · ");
+/** The beat's card: `Sold · master: Gold Teeth · Exclusive · contract`. */
+export function beatMasterLine(master?: CatalogTrack): string {
+  return master
+    ? ["Sold", `master: ${master.title || "Untitled"}`, ...dealLine(master.metadata)].join(" · ")
+    : "Sold · no master linked yet";
+}
+
+/** The master's card: `From Beat 12 · Exclusive · 2026-11-09 · 50000 streams · contract`. */
+export function masterBeatLine(beatTitle: string, deal: Pick<Metadata, "dealType" | "dealDate" | "dealStreams" | "dealContract">): string {
+  return [`From ${beatTitle || "a beat"}`, ...dealLine(deal)].join(" · ");
 }
 
 /**
