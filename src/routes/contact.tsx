@@ -110,7 +110,9 @@ function ContactPage() {
             {tabs}
             <Field label="Name" error={errors["name"]}><Input value={form.name} onChange={set("name")} maxLength={100} /></Field>
             {kind === "support"
-              ? <p className="text-sm text-muted-foreground">We'll reply to your account email, <span className="font-semibold text-foreground">{user?.email}</span>.</p>
+              ? <p className="text-sm text-muted-foreground">{user?.email
+                  ? <>We'll reply to your account email, <span className="font-semibold text-foreground">{user.email}</span>.</>
+                  : "We'll reply to the email on your account."}</p>
               : <Field label="Email" error={errors["email"]}><Input type="email" value={form.email} onChange={set("email")} maxLength={255} /></Field>}
             <Field label="Where is it?" error={errors["category"]}>
               <select value={form.area} onChange={pickArea} className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm">
