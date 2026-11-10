@@ -212,8 +212,8 @@
   invites, which are already ours. Any new auth mail follows that pattern.
 - **The email header is smaller than it was** (founder, 2026-11-05): `EMAIL_LOGO_WIDTH`, `WORDMARK_FONT_PX` and
   `WORDMARK_MARK_PX` in `src/lib/email-layout.ts` are the only sizes; change them there, never inline in a template.
-  The CTA script logo draws at twice that width again (founder, 2026-11-10) — the size it held before it was halved —
-  while the name and its own mark keep the smaller sizes. The signature sits above the name, the name under it and the
+  The CTA script logo is width-matched to the word "Through" (founder, 2026-11-10), so the centred signature covers
+  that word alone, while the name and its own mark keep their sizes. The signature sits above the name, the name under it and the
   tagline under that, all centred (founder, 2026-11-10).
 - **The staff plan is Catalog Management, free** (founder, 2026-11-05): `public.user_tier` returns `management` for any
   account with a staff role (`public.is_staff`) and for any account holding a live `staff_plan_grants` row. Do not gate

@@ -35,10 +35,10 @@ export const TAGLINE = "YOUR FIRST STOP BEFORE DISTRIBUTION";
  * name under it and the tagline under that, all on the same centre line, so the block reads as one centred lockup
  * rather than a left-aligned list.
  *
- * It is also back at twice the width it was halved to (founder, 2026-11-10): the signature is the brand's own mark, so
- * it draws at its full size above the name.
+ * The signature is sized to the word "Through" in the name (founder, 2026-11-10): 73px is what that word draws at
+ * 18px bold, so a centred signature covers that word alone and sits inside the width of the banner under it.
  */
-export const EMAIL_LOGO_WIDTH = 96;
+export const EMAIL_LOGO_WIDTH = 73;
 export const WORDMARK_MARK_PX = 14;
 export const WORDMARK_FONT_PX = 18;
 
