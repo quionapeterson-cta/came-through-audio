@@ -32,10 +32,13 @@ export const TAGLINE = "YOUR FIRST STOP BEFORE DISTRIBUTION";
  * came down a notch (founder, 2026-11-05): the logo and the wordmark were running wider than the copy under them.
  *
  * The header now reads like the homepage's (founder, 2026-11-10): the name leads, left-aligned, and the CTA script logo
- * sits underneath it at half its old width, with the tagline under that. Centring the block is what put the logo above
- * the name and made the header read as two logos stacked.
+ * sits underneath it, with the tagline under that. Centring the block is what put the logo above the name and made the
+ * header read as two logos stacked.
+ *
+ * The script logo is back at twice the width it was halved to (founder, 2026-11-10): the signature is the brand's own
+ * mark, so it draws at its full size under the name and the block stays left-aligned, the way it sat before the halving.
  */
-export const EMAIL_LOGO_WIDTH = 48;
+export const EMAIL_LOGO_WIDTH = 96;
 export const WORDMARK_MARK_PX = 14;
 export const WORDMARK_FONT_PX = 18;
 
