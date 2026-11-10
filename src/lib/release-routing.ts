@@ -43,7 +43,9 @@ export function routedKinds<T>(
     const only = list.length === 1 ? list[0] : undefined;
     // A lone song whose album title is its own title is the single it is, not an album of one.
     const named = only ? albumKey(fields(only).album) !== albumKey(fields(only).title) : true;
-    const kind: RoutedKind = eps > lps ? "EP" : lps > 0 ? "Album" : list.length > 1 || named ? "Album" : "Single";
+    // A release of one counts only when the song doesn't call itself a Single: a blank type with a release title of its
+    // own is a release of one, while an explicit Single stays a single whatever its album field says.
+    const kind: RoutedKind = eps > lps ? "EP" : lps > 0 ? "Album" : list.length > 1 ? "Album" : named && !fields(only!).releaseType.trim() ? "Album" : "Single";
     if (kind === "Single") continue;
     for (const song of list) kinds.set(id(song), kind);
   }

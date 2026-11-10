@@ -32,6 +32,11 @@ describe("release routing", () => {
     expect(out).toEqual({ a: "Single", b: "Single", c: "Single" });
   });
 
+  it("keeps a lone song that calls itself a Single on a single release", () => {
+    expect(kinds([song("a", "BloodLine", "Bloodline (Single)", "Single")])).toEqual({ a: "Single" });
+    expect(kinds([song("b", "Bloom", "Bloom", "")])).toEqual({ b: "Single" });
+  });
+
   it("still takes a declared release of one", () => {
     const out = kinds([song("a", "Bloom", "Bloom", "EP"), song("b", "Solo", "Solo", "Album")]);
     expect(out).toEqual({ a: "EP", b: "Album" });
