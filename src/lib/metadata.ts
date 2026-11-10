@@ -74,6 +74,14 @@ const metadataObject = z.object({
   artist: z.string().trim(),
   /** "": the member records it (every row saved before this reads as today); "external": someone else performs it. */
   recordingSide: z.enum(["", "own", "external"]).default(""),
+  /** The producer's beat path (§4.5): "" = not a beat, exactly as every song before this. */
+  beatState: z.enum(["", "unsold", "sold"]).default(""),
+  /** On the MASTER recording: the beat it was made from. Written here only; read back by scanning the catalog. */
+  beatMasterId: z.string().trim().default(""),
+  /** The beat deal lives on the master, so it travels with the song that earns. */
+  dealType: z.enum(["", "Exclusive", "Non-exclusive", "Lease", "Other"]).default(""),
+  dealDate: z.string().default(""),
+  dealStreams: z.string().trim().default("").refine((v) => !v || /^\d{1,12}$/.test(v), "Enter the stream count as a number."),
   featured: z.array(z.string().trim()).default([]),
   album: z.string().trim(),
   // Saved as mm:ss with two-digit minutes ("3:45" becomes "03:45"), as agency forms ask.
@@ -163,7 +171,7 @@ export type Contributor = z.infer<typeof contributorSchema>;
 export const hfaLooksOff = (v: string | undefined) => !!v?.trim() && !/^[A-Z0-9]{6}$/i.test(v.trim());
 export const emptyContributor = (): Contributor => ({ name: "", pro: "", ipi: "", percentage: "" });
 export const emptyMetadata = (): Metadata => ({
-  title: "", trackNumber: "", trackTotal: "", artist: "", featured: [""], album: "", duration: "", releaseType: "", releaseDate: "", unreleased: false, wasUnreleased: false, recordingSide: "", label: "", contactEmail: "", copyright: "", phonographic: "", language: "",
+  title: "", trackNumber: "", trackTotal: "", artist: "", featured: [""], album: "", duration: "", releaseType: "", releaseDate: "", unreleased: false, wasUnreleased: false, recordingSide: "", beatState: "", beatMasterId: "", dealType: "", dealDate: "", dealStreams: "", label: "", contactEmail: "", copyright: "", phonographic: "", language: "",
   isrc: "", upc: "", iswc: "", explicit: false, instrumental: false, primaryGenre: "", secondaryGenre: "",
   writers: [emptyContributor()], composers: [emptyContributor()], producers: [emptyContributor()], publishers: [emptyContributor()],
   lyrics: "", coverThumb: "", audioPath: "", artPath: "", artWidth: 0, artHeight: 0, aiProtection: false, credits: [], recordedIn: "", recordedYear: "",

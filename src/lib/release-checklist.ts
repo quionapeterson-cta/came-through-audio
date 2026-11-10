@@ -17,7 +17,7 @@ export function isUnreleased(m: Pick<Metadata, "releaseDate" | "unreleased">, on
 }
 
 /** Saved checklist ticks for the release items people tick themselves. */
-export const RELEASE_TICK = { split: "release:split", upc: "release:upc", ai: "release:ai" } as const;
+export const RELEASE_TICK = { split: "release:split", upc: "release:upc", ai: "release:ai", beatContract: "release:beatContract" } as const;
 
 export type ReleaseItem = {
   id: string;
@@ -39,6 +39,23 @@ export type ReleaseItem = {
  * society) are the song's existing Register steps, counted alongside these (songChecklist).
  */
 export function releaseItems(m: Metadata, ticks: Record<string, string | undefined>): ReleaseItem[] {
+  // A beat (§4.5) is read on what a producer can honestly have. The recording's ISRC, UPC, master, artwork and
+  // SoundExchange step belong to the artist's release of the song made from it, not to the beat itself.
+  if (m.beatState) {
+    const beatCore = registrationReadiness(m);
+    const gapList = (items: { message: string; field: string }[]) => items.map((i) => ({ text: i.message, field: i.field }));
+    const people = beatCore.missing.filter((i) => i.code !== "pro");
+    return [
+      { id: "writers", title: "Composer and writer credits", auto: true, done: !people.length, items: gapList(people), field: people[0]?.field,
+        why: "The artist's registration lists you under your legal name, so your PRO and The MLC can pay you." },
+      { id: "splits", title: "Splits settled", auto: true, done: !beatCore.warnings.length, items: gapList(beatCore.warnings), field: beatCore.warnings[0]?.field,
+        why: "Everyone's share must add up to exactly 100% before the beat brings money in." },
+      { id: "splitSheet", title: "Split sheet signed", auto: false, tick: RELEASE_TICK.split, done: !!ticks[RELEASE_TICK.split] || ticks["checkin:split"] === "yes",
+        why: "A signed split sheet settles who owns what after the sale." },
+      { id: "beatContract", title: "Beat contract signed", auto: false, tick: RELEASE_TICK.beatContract, done: !!ticks[RELEASE_TICK.beatContract],
+        why: "It records what the artist may do with the beat, and what you're owed." },
+    ];
+  }
   const core = registrationReadiness(m);
   const pro = registrationReadiness(m, "pro");
   const people = core.missing.filter((i) => i.code !== "pro");

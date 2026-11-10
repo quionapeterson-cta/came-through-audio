@@ -766,7 +766,7 @@ blocker are fixed in §17.
 | --- | --- | --- |
 | **The six roles and the three situations** | `src/lib/roles.ts`, `Onboarding` (`artist-profile.ts`), step 2 of setup ("What do you do?") | Songwriter · Recording artist · Producer · Label · Artist manager · Session musician, multi-select, skippable, editable in Profile → Edit profile. Stored in `profiles.onboarding` with the rest of the answers. No answers = today's behaviour exactly. |
 | **What the answers change** | `roleDefaults` / `withRoleDefaults` | A songwriter who does not perform starts new entries as *someone else performs it*; a planner's new entries start unreleased. Applied to blanks only, on a fresh entry — never to a saved song. Picking **Recording artist** alongside anything else keeps the artist's path whole (§4.7 decision 8). |
-| **The beat question** | same step | Asked of a Producer only, and only stored; the unsold/sold beat answers and their panel (§4.5) are still to build. |
+| **The beat question** | same step | Asked of a Producer only, and only stored; the unsold/sold answers and their panel are built in §21. |
 | **The writer path on a song** | `recordingSide` in `metadata.ts`, the *Someone else performs this song* switch in Song info | The artist field reads *Recording artist (who released it)* and may be blank; embedding still needs an artist for an own recording. The ISRC and artist-tag issues, the release checklist's ISRC/UPC/master/artwork items, and the SoundExchange pillar are all skipped for that entry (`audit.ts`, `release-checklist.ts`, `health.ts`). |
 | **Unreleased music leaves the score** | `healthReport` in `health.ts` | Rows still list every song, and `prerelease` names the ones waiting; data, registered, headline, missing, unchecked and needsAction are computed from released songs only, which is what `HealthMeter` already promised ("Not counted above until release day"). `agencyScores` also reads the *isn't released yet* box rather than a date alone. |
 
@@ -782,3 +782,15 @@ Still to build from this plan: the sold beat, its linked master and the four dea
 | **The status can't contradict the fields** | `releasePatch` in `release-panel.ts` | Choosing a status sets the date and the *isn't released yet* box together: Scheduled needs a future date, Released refuses one, Not released yet clears the date and ticks the box. A refusal is a plain sentence in the dialog. |
 
 The Hub needed no change: it already reads the same fields (`isUnreleased`) and its meter already says "N getting ready … Not counted above until release day", so the two screens agree by construction.
+
+## 21. Built 2026-11-09 (beat path, §4.5)
+
+| What | Where | Behaviour |
+| --- | --- | --- |
+| **A beat is marked, not assumed** | `beatState` and `isBeat` (`src/lib/beats.ts`, `metadata.ts`) | `""` means not a beat and every song saved before this behaves exactly as it did. On an instrumental, the beat box offers **This beat is unsold** / **This beat is sold**; nothing appears on any other song unless the producer's setup asked about beats. |
+| **Unsold: what a beat can honestly be asked for** | `releaseItems` in `release-checklist.ts` | A beat's checklist is composer credit, settled splits, a signed split sheet and a signed beat contract (`release:beatContract`). ISRC, UPC, master, artwork and SoundExchange belong to the artist's release of the song, so they are not asked of the beat and never read as late. |
+| **The link lives on the master, one way** | `beatMasterId` on the master, `masterOfBeat` | The song carries the beat's id; the beat's card reads `Sold · master: <title>` by scanning for it, so nothing can dangle and a rename never breaks the pair. |
+| **Sold: the song that came of it** | Beat box, `masterFromBeat` | **Create the master recording** opens a separate entry with the beat's writer credits carried across and the release fields, ISRC and artwork left for the artist. **It's already in my catalog…** links an existing song instead. Either way the beat is marked sold on save. |
+| **The deal travels with the song** | Deal box on the master, `dealType` / `dealDate` / `dealStreams` | Four answers on the master — the beat it came from, the deal type, the date and the stream count at which it changes — and the master's card reads `From Beat 12 · Exclusive · 2026-11-09 · 50000 streams`. No prices, splits or promises are inferred from them. |
+
+Still to build from this plan: the credit check (§11–12), and the two blueprints and the amendment (§13).

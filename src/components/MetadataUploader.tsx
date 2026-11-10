@@ -18,6 +18,8 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { OFFICIAL_MASTER_ACTION, PRE_DIST_NOTE, PRO_TIP, SOVEREIGN_BACKUP } from "@/lib/copy";
 import { readMetadata, CREDIT_CHOICES, OTHER_INSTRUMENT, creditChoice, fromCreditChoice, isPerformer, performers, emptyContributor, emptyMetadata, embedMetadata, creditName, metadataSchema, savedSchema, GENRES, GENRE_GROUPS, MASTER_BASES, PRODUCTION_TYPES, RELEASE_TYPES, WRITER_ROLES, writerRole, hfaLooksOff, percentInput, formatDuration, type Contributor, type Metadata } from "@/lib/metadata";
 import { releaseStatus, writeRelease, type ReleasePatch } from "@/lib/release-panel";
+import { beatMasterLine, isSoldBeat, masterBeatLine, masterFromBeat, masterOfBeat } from "@/lib/beats";
+import { BeatBox, DealBox } from "@/components/BeatBox";
 import { COUNTRIES, countryByCode, guessCountry } from "@/lib/repertoires";
 import { catalogHealth, releaseKind } from "@/lib/health-checklist";
 import { listChecks } from "@/lib/repertoire-checks";
@@ -326,6 +328,11 @@ export function MetadataUploader({ onShareInfo, userId, mode = "embed", readOnly
       // Platinum Press reads this later: a song saved while unreleased keeps that fact even after it's scheduled.
       const data = { ...parsed.data, aiProtection: parsed.data.aiProtection || aiProtect, wasUnreleased: parsed.data.wasUnreleased || parsed.data.unreleased };
       const id = await saveTrack(data, userId, editingId);
+      // The song made from a beat now exists, so the beat is sold (§4.5). The link lives on the master only.
+      if (data.beatMasterId) {
+        const source = tracks.find((x) => x.id === data.beatMasterId);
+        if (source && source.metadata.beatState !== "sold") await saveTrack({ ...source.metadata, beatState: "sold" }, userId, source.id);
+      }
       // Always store the fully tagged master (never the raw upload) and artwork in the private vault.
       let master: Blob | undefined;
       let embedded = false;
@@ -381,6 +388,29 @@ export function MetadataUploader({ onShareInfo, userId, mode = "embed", readOnly
   }
   /** Close the open song (or the new one) and go back to the list. */
   function closeSong() { startNew(); setAdding(false); }
+  /** Link a song already in the catalog as this beat's master, and mark the beat sold. */
+  async function linkMaster(master: CatalogTrack) {
+    if (!userId || !editingId) return;
+    const beat = tracks.find((x) => x.id === editingId);
+    try {
+      await saveTrack({ ...master.metadata, beatMasterId: editingId }, userId, master.id);
+      if (beat) await saveTrack({ ...beat.metadata, beatState: "sold" }, userId, beat.id);
+      setTracks((list) => list.map((x) => x.id === master.id ? { ...x, metadata: { ...x.metadata, beatMasterId: editingId } }
+        : beat && x.id === editingId ? { ...x, metadata: { ...x.metadata, beatState: "sold" } } : x));
+      setMetadata((m) => ({ ...m, beatState: "sold" }));
+      toast.success(`Linked to "${master.title || "Untitled"}". The beat is marked sold.`);
+    } catch (e) { toast.error(e instanceof Error ? e.message : "Could not link the master."); }
+  }
+  /** Open a new entry for the song made from this beat, with the beat's writers carried across. */
+  function createMaster() {
+    if (!editingId) { toast.info("Save the beat first, then create the master."); return; }
+    const beat = metadata;
+    const beatId = editingId;
+    startNew();
+    setMetadata(masterFromBeat(beat, beatId));
+    setAdding(true);
+    setTimeout(() => document.getElementById("song-new")?.scrollIntoView({ behavior: "smooth", block: "start" }), 50);
+  }
   /** Open a catalog song and jump to the field a ⚠️ readiness item points at. */
   function fix(t: CatalogTrack, field: string) {
     if (readOnly) { open(t); return; }
@@ -679,6 +709,12 @@ export function MetadataUploader({ onShareInfo, userId, mode = "embed", readOnly
                     {/* Pre-distribution: no date picked yet, but not out. A future date counts on its own. */}
                     {!metadata.releaseDate && <label className="flex items-center gap-2 text-sm"><input id="unreleased" type="checkbox" className="h-4 w-4 accent-[var(--primary)]" checked={metadata.unreleased} onChange={(e) => update("unreleased", e.target.checked)} />This song isn't released yet<InfoTip text="Unreleased songs get a Release checklist in the Royalty Health Hub: what to have ready before you distribute. On release day they switch to the normal health reading." /></label>}
                   </div>}
+                {full && metadata.instrumental && (metadata.beatState !== "" || loadOnboarding(userId)?.sellBeats) && <div className="sm:col-span-2">
+                  <BeatBox metadata={metadata} update={update} tracks={tracks} beatId={editingId} disabled={busy} onLink={linkMaster} onCreateMaster={createMaster} />
+                </div>}
+                {full && !!metadata.beatMasterId && <div className="sm:col-span-2">
+                  <DealBox metadata={metadata} update={update} beatTitle={tracks.find((x) => x.id === metadata.beatMasterId)?.title ?? ""} disabled={busy} />
+                </div>}
                 <Field label="Record label" term="label" id="label" value={metadata.label} onChange={(value) => update("label", value)} />
                 <div className="min-w-0 space-y-2"><Label htmlFor="copyright" className="leading-5">Composition copyright (©)<InfoTip term="cLine" /></Label><CopyrightInput symbol="©" id="copyright" value={metadata.copyright} onChange={(value) => update("copyright", value)} /></div>
                 {/* ℗ and language are catalog details; they aren't embedded in the MP3. */}
@@ -939,6 +975,8 @@ export function MetadataUploader({ onShareInfo, userId, mode = "embed", readOnly
                   <div className="min-w-[10rem] flex-1">
                     <div className="truncate text-lg font-bold">{t.title}</div>
                     <div className="truncate text-sm text-muted-foreground">{t.artist}{t.metadata.album ? ` · ${t.metadata.album}` : ""}</div>
+                    {isSoldBeat(t.metadata) && <div className="truncate text-xs font-semibold text-primary">{beatMasterLine(masterOfBeat(t.id, tracks))}</div>}
+                    {!!t.metadata.beatMasterId && <div className="truncate text-xs font-semibold text-primary">{masterBeatLine(tracks.find((b) => b.id === t.metadata.beatMasterId)?.title ?? "", t.metadata)}</div>}
                     {/* A single is a release of one, so its own header carries the panel (§4.1). */}
                     {releaseGroup(t) === "Single" && <ReleaseRow name={t.title || "Untitled"} type="Single" tracks={[t]} readOnly={readOnly} onSave={saveRelease} compact />}
                   </div>
@@ -1484,7 +1522,7 @@ function groupProjects(items: CatalogTrack[]) {
 
 function regBadges(t: CatalogTrack): string[] {
   const m = t.metadata;
-  return [m.releaseType || "Single", m.primaryGenre, m.duration, m.releaseDate && `Released ${m.releaseDate}`, m.label && `Label ${m.label}`,
+  return [m.beatState === "sold" ? "Sold beat" : m.beatState ? "Beat" : "", m.releaseType || "Single", m.primaryGenre, m.duration, m.releaseDate && `Released ${m.releaseDate}`, m.label && `Label ${m.label}`,
     m.isrc && `ISRC ${m.isrc}`, m.upc && `UPC ${m.upc}`, m.iswc && `ISWC ${m.iswc}`].filter((b): b is string => !!b);
 }
 
