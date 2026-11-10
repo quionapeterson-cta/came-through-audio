@@ -996,6 +996,8 @@ export function MetadataUploader({ onShareInfo, userId, mode = "embed", readOnly
               const pre = tracks.filter((t) => releaseStatus(t.metadata) !== "released" && (filter === "All" || releaseGroup(t) === filter));
               const prePct = pre.length ? Math.round(pre.reduce((n, t) => n + pctOf(t.id), 0) / pre.length) : 0;
               const byPct = (a: CatalogTrack, b: CatalogTrack) => pctOf(a.id) - pctOf(b.id);
+              // A release can be part out and part not yet: its panel still counts and writes every song on it.
+              const albumKey = (x: CatalogTrack) => (x.metadata.album || "Untitled").trim().toLowerCase().replace(/\s+/g, " ");
               return <>
               {!!pre.length && (
                 <div id="unreleased" className="mb-8 scroll-mt-4 rounded-2xl border-2 border-dashed border-primary/60 bg-primary/5 p-4">
@@ -1021,7 +1023,7 @@ export function MetadataUploader({ onShareInfo, userId, mode = "embed", readOnly
                           : <div className="grid gap-3">{groupProjects(list).map((p) => (
                               <div key={p.key} className="rounded-xl border border-border bg-card p-3">
                                 <div className="flex flex-wrap items-center gap-x-3 text-xs text-muted-foreground"><span className="font-semibold text-foreground">{p.title} · {releaseGroup(p.tracks[0]!)}</span><span>{p.tracks.length} {p.tracks.length === 1 ? "song" : "songs"}</span></div>
-                                <ReleaseRow name={p.title} type={releaseGroup(p.tracks[0]!)} tracks={p.tracks} readOnly={readOnly} onSave={saveRelease} />
+                                <ReleaseRow name={p.title} type={releaseGroup(p.tracks[0]!)} tracks={tracks.filter((x) => releaseGroup(x) !== "Single" && albumKey(x) === p.key)} readOnly={readOnly} onSave={saveRelease} />
                                 <ul className="mt-3 grid gap-3">{[...p.tracks].sort(byPct).map(row)}</ul>
                               </div>
                             ))}</div>}
@@ -1052,7 +1054,7 @@ export function MetadataUploader({ onShareInfo, userId, mode = "embed", readOnly
                         <div className="min-w-[10rem] flex-1">
                           <div className="truncate text-xl font-bold">{p.title}</div>
                           <div className="text-sm text-muted-foreground">{p.artist} · {p.tracks.length} {p.tracks.length === 1 ? "track" : "tracks"}</div>
-                          <ReleaseRow name={p.title} type={releaseGroup(p.tracks[0]!)} tracks={p.tracks} readOnly={readOnly} onSave={saveRelease} />
+                          <ReleaseRow name={p.title} type={releaseGroup(p.tracks[0]!)} tracks={tracks.filter((x) => releaseGroup(x) !== "Single" && albumKey(x) === p.key)} readOnly={readOnly} onSave={saveRelease} />
                         </div>
                         {onHealthCheck && <Button type="button" variant="outline" size="sm" onClick={(e) => { e.preventDefault(); onHealthCheck(p.tracks[0]!.id, true); }}><Stethoscope />Health check</Button>}
                         {exportMenu("Export Release", p.tracks, p.title)}
