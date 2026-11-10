@@ -8,6 +8,12 @@ export const PROS = [
 ] as const;
 export const RELEASE_TYPES = ["Single", "EP", "Album", "Compilation"] as const;
 /**
+ * The versions of one recording a member can mark a song as (founder, 2026-11-10): the radio edit, the clean cut, the
+ * instrumental, the acapella, a sped-up mix, a chopped and screwed mix. Written into the file as its subtitle (ID3 TIT3)
+ * and kept in the catalog, so a song and its versions never look like the same recording.
+ */
+export const TRACK_VERSIONS = ["Radio edit", "Clean", "Instrumental", "Acapella", "Sped up", "Chopped and Screwed"] as const;
+/**
  * Main genres with their subgenres (founder, 2026-10-27: a much longer list). The main genres are the original list,
  * so saved songs and genre badges keep working; a subgenre counts as its main genre for badges, hashtags and agency
  * exports (parentGenre).
@@ -89,6 +95,8 @@ const metadataObject = z.object({
   // Saved as mm:ss with two-digit minutes ("3:45" becomes "03:45"), as agency forms ask.
   duration: z.string().trim().default("").refine((v) => !v || /^\d{1,3}:[0-5]\d$/.test(v), "Enter duration as mm:ss.").transform((v) => (/^\d:[0-5]\d$/.test(v) ? `0${v}` : v)),
   releaseType: z.string().default(""),
+  /** Which version of the recording this is ("" for the main one). Embedded as TIT3, never as part of the title. */
+  version: z.string().trim().default(""),
   releaseDate: z.string(),
   /** "This song isn't released yet" (pre-distribution, 2026-10-25): for songs with no release date picked. */
   unreleased: z.boolean().default(false),
@@ -173,7 +181,7 @@ export type Contributor = z.infer<typeof contributorSchema>;
 export const hfaLooksOff = (v: string | undefined) => !!v?.trim() && !/^[A-Z0-9]{6}$/i.test(v.trim());
 export const emptyContributor = (): Contributor => ({ name: "", pro: "", ipi: "", percentage: "" });
 export const emptyMetadata = (): Metadata => ({
-  title: "", trackNumber: "", trackTotal: "", artist: "", featured: [""], album: "", duration: "", releaseType: "", releaseDate: "", unreleased: false, wasUnreleased: false, recordingSide: "", beatState: "", beatMasterId: "", dealType: "", dealDate: "", dealStreams: "", dealContract: "", label: "", contactEmail: "", copyright: "", phonographic: "", language: "",
+  title: "", trackNumber: "", trackTotal: "", artist: "", featured: [""], album: "", duration: "", releaseType: "", version: "", releaseDate: "", unreleased: false, wasUnreleased: false, recordingSide: "", beatState: "", beatMasterId: "", dealType: "", dealDate: "", dealStreams: "", dealContract: "", label: "", contactEmail: "", copyright: "", phonographic: "", language: "",
   isrc: "", upc: "", iswc: "", explicit: false, instrumental: false, primaryGenre: "", secondaryGenre: "",
   writers: [emptyContributor()], composers: [emptyContributor()], producers: [emptyContributor()], publishers: [emptyContributor()],
   lyrics: "", coverThumb: "", audioPath: "", artPath: "", artWidth: 0, artHeight: 0, aiProtection: false, credits: [], recordedIn: "", recordedYear: "",
@@ -322,6 +330,8 @@ export async function embedMetadata(audio: ArrayBuffer, metadata: Metadata, artw
   // No spare padding inside a WAV chunk (the library adds 4 KB for MP3s, for later in-place edits).
   if (wav) (writer as unknown as { padding: number }).padding = 0;
   writer.setFrame("TIT2", data.title).setFrame("TPE1", [data.artist, ...data.featured.filter(Boolean)]);
+  // The version is the file's subtitle, so a clean cut and its main mix keep the same title and still read apart.
+  if (data.version) writer.setFrame("TIT3", data.version);
   if (data.trackNumber) writer.setFrame("TRCK", data.trackTotal ? `${data.trackNumber}/${data.trackTotal}` : data.trackNumber);
   if (data.album) writer.setFrame("TALB", data.album);
   if (data.isrc) writer.setFrame("TSRC", data.isrc.replace(/-/g, "").toUpperCase());
@@ -396,6 +406,7 @@ export function readMetadata(buf: ArrayBuffer): Partial<Metadata> & { picture?: 
   const out: Partial<Metadata> & { picture?: Blob } = {};
   if (picture && picture.size > 0) out.picture = picture;
   if (frames["TIT2"]) out.title = frames["TIT2"];
+  if (frames["TIT3"]) out.version = frames["TIT3"];
   if (frames["TPE1"]) { const [a, ...f] = frames["TPE1"].split("/"); out.artist = a ?? ""; out.featured = f.length ? f : [""]; }
   if (frames["TALB"]) out.album = frames["TALB"];
   if (frames["TRCK"]) Object.assign(out, splitTrack(frames["TRCK"]));

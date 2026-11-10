@@ -6,12 +6,23 @@ const song = (id: string, title: string, album: string, releaseType = ""): Song 
 const kinds = (songs: Song[]) => Object.fromEntries(routedKinds(songs, (s) => s, (s) => s.id));
 
 describe("release routing", () => {
-  it("files a song saved as a Single under the album it names", () => {
+  it("files songs saved as Singles under the release they name, and counts its size", () => {
     expect(kinds([
-      song("a", "Bloodline", "BAM", "Single"),
-      song("b", "Bossed Out", "BAM"),
-      song("c", "Beauty King", "BAM", "Single"),
-    ])).toEqual({ a: "Album", b: "Album", c: "Album" });
+      song("a", "Bloodline", "Summer Tape", "Single"),
+      song("b", "Bossed Out", "Summer Tape"),
+      song("c", "Beauty King", "Summer Tape", "Single"),
+    ])).toEqual({ a: "EP", b: "EP", c: "EP" });
+    const album = kinds(Array.from({ length: 8 }, (_, i) => song(`s${i}`, `Song ${i}`, "BAM", "Single")));
+    expect(new Set(Object.values(album))).toEqual(new Set(["Album"]));
+  });
+
+  it("reads four singles on one release title as the EP they make", () => {
+    expect(kinds([
+      song("1", "Therapy", "Therapy Deluxe Edition", "Single"),
+      song("2", "Therapy (Clean)", "Therapy Deluxe Edition", "Single"),
+      song("3", "Therapy (Instrumental)", "Therapy Deluxe Edition", "Single"),
+      song("4", "Therapy (Acapella)", "Therapy Deluxe Edition", "Single"),
+    ])).toEqual({ "1": "EP", "2": "EP", "3": "EP", "4": "EP" });
   });
 
   it("keeps an EP together when its songs disagree, however the title is typed", () => {

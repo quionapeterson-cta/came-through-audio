@@ -24,6 +24,18 @@ describe("MP3 metadata", () => {
     expect(text.replace(/\0/g, "")).toContain("USABC2600001");
   });
 
+  it("writes the version as the file's subtitle and never the unreleased answer", async () => {
+    const data = { ...emptyMetadata(), title: "Therapy", artist: "Karma Came", version: "Clean", unreleased: true };
+    const blob = await embedMetadata(new Uint8Array([255, 251, 144, 0]).buffer, data);
+    const buf = await new Promise<ArrayBuffer>((res) => { const r = new FileReader(); r.onload = () => res(r.result as ArrayBuffer); r.readAsArrayBuffer(blob); });
+    const out = readMetadata(buf);
+    expect(out.title).toBe("Therapy");
+    expect(out.version).toBe("Clean");
+    const text = new TextDecoder("latin1").decode(buf);
+    expect(text).toContain("TIT3");
+    expect(text.toLowerCase()).not.toContain("unreleased");
+  });
+
   it("requires title and artist", () => {
     expect(metadataSchema.safeParse(emptyMetadata()).success).toBe(false);
     expect(metadataSchema.safeParse({ ...emptyMetadata(), title: "Track", artist: "Artist" }).success).toBe(true);

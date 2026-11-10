@@ -16,7 +16,7 @@ import { claimFirstBurst } from "@/lib/celebrate";
 import { EXPORT_REQUIRED, GLOSSARY, type GlossaryKey } from "@/lib/glossary";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { OFFICIAL_MASTER_ACTION, PRE_DIST_NOTE, PRO_TIP, SOVEREIGN_BACKUP } from "@/lib/copy";
-import { readMetadata, CREDIT_CHOICES, OTHER_INSTRUMENT, creditChoice, fromCreditChoice, isPerformer, performers, emptyContributor, emptyMetadata, embedMetadata, creditName, metadataSchema, savedSchema, GENRES, GENRE_GROUPS, MASTER_BASES, PRODUCTION_TYPES, RELEASE_TYPES, WRITER_ROLES, writerRole, hfaLooksOff, percentInput, formatDuration, type Contributor, type Metadata } from "@/lib/metadata";
+import { readMetadata, CREDIT_CHOICES, OTHER_INSTRUMENT, creditChoice, fromCreditChoice, isPerformer, performers, emptyContributor, emptyMetadata, embedMetadata, creditName, metadataSchema, savedSchema, GENRES, GENRE_GROUPS, MASTER_BASES, PRODUCTION_TYPES, RELEASE_TYPES, TRACK_VERSIONS, WRITER_ROLES, writerRole, hfaLooksOff, percentInput, formatDuration, type Contributor, type Metadata } from "@/lib/metadata";
 import { releaseStatus, writeRelease, type ReleasePatch } from "@/lib/release-panel";
 import { beatIsOut, beatMasterLine, isSoldBeat, masterBeatLine, masterFromBeat, masterOfBeat } from "@/lib/beats";
 import { amendmentPrefill } from "@/lib/beat-amendment";
@@ -671,6 +671,14 @@ export function MetadataUploader({ onShareInfo, userId, mode = "embed", readOnly
           const publishersWarn = warnIn("publishers-", "bmiWriterPublishing");
           // With no publisher, BMI pays the publisher share to its writers, so say so where it matters.
           const bmiNoPublisher = full && !count(metadata.publishers) && [...metadata.writers, ...metadata.composers].some((w) => creditName(w) && isBmi(w));
+          // The unreleased answer stays in the catalog: it is never written into the file, it only files the song under
+          // the Unreleased list and its pre-release checklist.
+          const unreleasedBox = (
+            <label className="flex items-start gap-2 text-sm">
+              <input id="unreleased" type="checkbox" className="mt-0.5 h-4 w-4 accent-[var(--primary)]" checked={metadata.unreleased} onChange={(e) => update("unreleased", e.target.checked)} />
+              <span><span className="font-semibold">This song isn't released yet</span><InfoTip text="Unreleased songs get a Release checklist in the Royalty Health Hub: what to have ready before you distribute. On release day they switch to the normal health reading. This answer stays in your catalog; it isn't written into the MP3." /></span>
+            </label>
+          );
           return <div className="space-y-3">
             <FormSection title="Song info" open={!full || !metadata.title} disabled={busy} summary={filled([[metadata.title, metadata.title], [metadata.artist, metadata.artist]]) || "Title and artist"}>
               <div className="grid gap-5 sm:grid-cols-2">
@@ -721,6 +729,8 @@ export function MetadataUploader({ onShareInfo, userId, mode = "embed", readOnly
             <FormSection title="Release" open={!full} disabled={busy} summary={filled([[metadata.releaseType, metadata.releaseType], [metadata.album, metadata.album], [metadata.releaseDate, metadata.releaseDate], [metadata.label, metadata.label]]) || (full ? "Release type, album, date, label" : "Release type, label, ©")}>
               <div className="grid gap-5 sm:grid-cols-2">
                 <SelectField label="Release type" term="releaseType" id="releaseType" value={metadata.releaseType} options={RELEASE_TYPES} onChange={(value) => update("releaseType", value)} />
+                {/* Which version of the recording this is. A plain select, so it adds no clutter: "Select…" is the main mix. */}
+                <SelectField label="Version" id="version" value={metadata.version ?? ""} options={TRACK_VERSIONS} onChange={(value) => update("version", value)} />
                 <div className="min-w-0 space-y-2">
                   <Label htmlFor="trackNumber">Track number</Label>
                   <div className="flex items-center gap-3">
@@ -734,8 +744,10 @@ export function MetadataUploader({ onShareInfo, userId, mode = "embed", readOnly
                 {full && <div className="min-w-0 space-y-2">
                     <Field label="Release date" id="releaseDate" type="date" value={metadata.releaseDate} onChange={(value) => update("releaseDate", value)} />
                     {/* Pre-distribution: no date picked yet, but not out. A future date counts on its own. */}
-                    {!metadata.releaseDate && <label className="flex items-center gap-2 text-sm"><input id="unreleased" type="checkbox" className="h-4 w-4 accent-[var(--primary)]" checked={metadata.unreleased} onChange={(e) => update("unreleased", e.target.checked)} />This song isn't released yet<InfoTip text="Unreleased songs get a Release checklist in the Royalty Health Hub: what to have ready before you distribute. On release day they switch to the normal health reading." /></label>}
+                    {!metadata.releaseDate && unreleasedBox}
                   </div>}
+                {/* Embed asks it too (founder, 2026-11-10), so a master can be filed for the unreleased path as it's embedded. */}
+                {!full && <div className="sm:col-span-2">{unreleasedBox}</div>}
                 {full && metadata.instrumental && (metadata.beatState !== "" || loadOnboarding(userId)?.sellBeats) && <div className="sm:col-span-2">
                   <BeatBox metadata={metadata} update={update} tracks={tracks} beatId={editingId} disabled={busy} onLink={linkMaster} onCreateMaster={createMaster} />
                 </div>}
@@ -1558,7 +1570,7 @@ function groupProjects(items: CatalogTrack[]) {
 
 function regBadges(t: CatalogTrack): string[] {
   const m = t.metadata;
-  return [m.beatState === "sold" ? "Sold beat" : m.beatState ? "Beat" : "", m.releaseType || "Single", m.primaryGenre, m.duration, m.releaseDate && `Released ${m.releaseDate}`, m.label && `Label ${m.label}`,
+  return [m.beatState === "sold" ? "Sold beat" : m.beatState ? "Beat" : "", m.releaseType || "Single", m.version, m.primaryGenre, m.duration, m.releaseDate && `Released ${m.releaseDate}`, m.label && `Label ${m.label}`,
     m.isrc && `ISRC ${m.isrc}`, m.upc && `UPC ${m.upc}`, m.iswc && `ISWC ${m.iswc}`].filter((b): b is string => !!b);
 }
 
@@ -1569,8 +1581,8 @@ function creditGroups(t: CatalogTrack) {
     .filter((g) => g.rows.length > 0);
 }
 
-/** The versions a member usually needs from one recording (founder, 2026-11-10). */
-const VERSIONS = ["Radio edit", "Clean", "Instrumental", "Acapella", "Sped up", "Copy"] as const;
+/** The Duplicate menu: the versions above, plus a plain copy. */
+const VERSIONS = [...TRACK_VERSIONS, "Copy"] as const;
 
 async function makeThumb(file: File): Promise<string> {
   const img = await createImageBitmap(file);

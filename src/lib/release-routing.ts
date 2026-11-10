@@ -14,6 +14,9 @@ import type { Metadata } from "./metadata";
  */
 export type RoutedKind = "Single" | "EP" | "Album";
 
+/** The EP ceiling the app already sells (an EP package holds up to six songs). */
+const EP_MAX = 6;
+
 export type ReleaseFields = Pick<Metadata, "album" | "releaseType" | "title">;
 
 /** One spelling of an album title: trimmed, lower case, runs of spaces collapsed ("Therapy  Deluxe " ≡ "therapy deluxe"). */
@@ -45,7 +48,9 @@ export function routedKinds<T>(
     const named = only ? albumKey(fields(only).album) !== albumKey(fields(only).title) : true;
     // A release of one counts only when the song doesn't call itself a Single: a blank type with a release title of its
     // own is a release of one, while an explicit Single stays a single whatever its album field says.
-    const kind: RoutedKind = eps > lps ? "EP" : lps > 0 ? "Album" : list.length > 1 ? "Album" : named && !fields(only!).releaseType.trim() ? "Album" : "Single";
+    // With no release type declared anywhere, the release's own size decides: the app already treats up to six songs as
+    // an EP (the EP package's ceiling), and a longer run of songs on one title is an album.
+    const kind: RoutedKind = eps > lps ? "EP" : lps > 0 ? "Album" : list.length > 1 ? (list.length <= EP_MAX ? "EP" : "Album") : named && !fields(only!).releaseType.trim() ? "Album" : "Single";
     if (kind === "Single") continue;
     for (const song of list) kinds.set(id(song), kind);
   }
