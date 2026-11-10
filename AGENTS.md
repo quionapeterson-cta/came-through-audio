@@ -425,7 +425,7 @@
   rule for which release a song is on. A song that names an album belongs to that album whatever its own release type says
   — a track filled in or imported as a "Single" on BAM is a BAM track, not a loose single — and the title is matched
   trimmed, case-folded and with runs of spaces collapsed. A song with no album, or a lone song whose album title is just
-  its own title, is a single. My Catalog, the Health Hub (`releaseGroups`), release ZIPs (`groupReleases`) and a release
+  its own title, is a single. My Catalog, Royalties and Registrations (`releaseGroups`), release ZIPs (`groupReleases`) and a release
   health check (`releaseScope`) all read it, so one release can never appear as an album plus a pile of singles. Never
   re-key any of them on each song's own `releaseType` again.
 - **A catalog entry can be duplicated into another version** (founder, 2026-11-10): `duplicateTrack` in `src/lib/catalog.ts`

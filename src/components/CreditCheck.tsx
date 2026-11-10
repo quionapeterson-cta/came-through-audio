@@ -12,7 +12,7 @@ const field = "flex h-9 w-full rounded-md border border-input bg-background px-3
 const STATE_WORDS = { agree: "The three copies agree", difference: "Differences to fix", unknown: "Couldn't check everything" } as const;
 
 /**
- * The credit check (§11) inside the Royalty Health Hub: the catalog, the registration and the release, side by side.
+ * The credit check (§11) inside the Royalties and Registrations: the catalog, the registration and the release, side by side.
  * It opens on the differences, never claims a lookup it didn't run, and stores its inputs with the song's Hub state.
  */
 export function CreditCheck({ track, status, onStatus, onFix }: {

@@ -8,7 +8,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { loadOnboarding, saveOnboarding } from "@/lib/artist-profile";
 
 /**
- * The Doctor's Office: the Royalty Health Hub's one guided consultation, in order:
+ * The Doctor's Office: the Royalties and Registrations's one guided consultation, in order:
  * Artist Check-in → Artist Intake Form or agency records → clinical scan → diagnosis.
  */
 export type PatientFile = { legalName: string; pro: string; ipi: string; publishing: "" | "publisher" | "self" | "bmi"; publisher: string };

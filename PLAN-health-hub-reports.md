@@ -2,7 +2,7 @@
 
 Status: **approved and BUILT 2026-10-23.** Founder applies migration 20261024160000 (reports save without their scope until then). BMI writers with no publisher are covered in every report (founder, 2026-10-23).
 
-**Naming (founder, 2026-10-23):** the tab is the **Royalty Health Hub** (the place). Running one is a
+**Naming (founder, 2026-10-23, renamed 2026-11-10):** the tab is **Royalties and Registrations** (the place; it was the Royalty Health Hub). Running one is a
 **Royalty Health Check** (the action: buttons say *Run a Royalty Health Check*). What it produces is the
 **Royalty Health Report** (the result, kept in the Hub under *My reports*).
 Source: founder notes, 2026-10-23. Follows PLAN-royalty-health-report.md (built 2026-10-23).

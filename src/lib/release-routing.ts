@@ -9,7 +9,7 @@ import type { Metadata } from "./metadata";
  * single. A release whose songs disagree about the type reads as an EP only when EP is the majority; anything else that
  * is a release is an album.
  *
- * My Catalog, the Health Hub, release downloads and a release's health check all read this, so they can't disagree
+ * My Catalog, Royalties and Registrations, release downloads and a release's health check all read this, so they can't disagree
  * about what is on a release.
  */
 export type RoutedKind = "Single" | "EP" | "Album";

@@ -32,7 +32,7 @@ export const AGENCY_UPLOAD_STEPS = {
     "BMI and ASCAP register songs one at a time for writers, so this file is a cheat sheet, not an upload.",
     "Sign in to BMI Online Services or ASCAP Member Access and start a new work registration.",
     "Copy each field from the cheat sheet (title, writers, roles, IPIs, splits, publisher) into the form, one song per registration.",
-    "Save the confirmation for each song, then tick Registered for it in the Royalty Health Hub.",
+    "Save the confirmation for each song, then tick Registered for it in the Royalties and Registrations.",
   ],
 } as const;
 

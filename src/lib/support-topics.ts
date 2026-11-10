@@ -14,7 +14,7 @@ export const TICKET_TOPICS = [
     issues: ["A song won't save or upload", "Downloading a master, cover art or lyrics", "Searching, filtering or editing my songs", "A song is missing or duplicated in my catalog"],
   },
   {
-    area: "Royalty Health Hub",
+    area: "Royalties and Registrations",
     issues: ["A song is flagged missing that I know is registered", "The check or report won't run", "Uploading an agency report", "Reading my score and next steps"],
   },
   {

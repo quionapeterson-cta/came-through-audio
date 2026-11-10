@@ -6,7 +6,7 @@ import { ARTIST_SEAT_PRICES, TIER_LABEL } from "@/lib/plans";
  * search (PLAN-master-notes 2.2). Facts here must match the Refund Policy, plans.ts and the agency export notes.
  */
 export type Faq = { q: string; a: string; category: FaqCategory; home?: boolean };
-export const FAQ_CATEGORIES = ["Getting started", "Plans & billing", "Embedding", "My Catalog", "Agency exports & registration", "Royalty Health Hub", "Split sheets & contracts", "PDF Fill & Sign", "AI Protection Hub", "Personal branding", "Account & security"] as const;
+export const FAQ_CATEGORIES = ["Getting started", "Plans & billing", "Embedding", "My Catalog", "Agency exports & registration", "Royalties and Registrations", "Split sheets & contracts", "PDF Fill & Sign", "AI Protection Hub", "Personal branding", "Account & security"] as const;
 export type FaqCategory = (typeof FAQ_CATEGORIES)[number];
 
 /** How Royalty Health scores work: the info card in the Hub and the report, and the FAQ answer, say the same thing. */
@@ -59,12 +59,12 @@ export const FAQS: Faq[] = [
   { category: "Agency exports & registration", q: "I don't have a publisher IPI. Can I use The MLC's bulk upload?", a: "Yes. The file uses the placeholder IPI 123456789 so The MLC accepts it; after the upload, remove it in The MLC Portal. The export tells you which songs used it." },
   { category: "Agency exports & registration", q: "Can you register my songs for me?", a: "Yes, with Expert Registration Assistance: our agents register your songs with your PRO, The MLC and SoundExchange. After you buy, you complete a short checklist and add Came Through Audio as your representative (your agent sends you the email to use)." },
 
-  // Royalty Health Hub
-  { category: "Royalty Health Hub", q: "What is a Royalty Health Check?", a: "A check of each song against what every agency needs to find and pay it, with a score, what's missing and how to fix it. Free and unlimited." },
-  { category: "Royalty Health Hub", q: "How is my Royalty Health score worked out?", a: SCORE_STEPS.join(" ") },
-  { category: "Royalty Health Hub", q: "What is the Royalty Inspector?", a: "Check a song that isn't in your catalog: enter its details and get the same health check and report." },
-  { category: "Royalty Health Hub", q: "Are the royalty calculators exact?", a: "No. They're estimates to help you understand and register your splits. Agencies decide the final numbers." },
-  { category: "Royalty Health Hub", q: "What is the credit check?", a: "It checks what the agencies have on file for a song and shows what to fix. Anything you save is kept as entered, which the Hub labels plainly: a saved detail is your word until a lookup confirms it at the agency, and the row says which one it is." },
+  // Royalties and Registrations
+  { category: "Royalties and Registrations", q: "What is a Royalty Health Check?", a: "A check of each song against what every agency needs to find and pay it, with a score, what's missing and how to fix it. Free and unlimited." },
+  { category: "Royalties and Registrations", q: "How is my Royalty Health score worked out?", a: SCORE_STEPS.join(" ") },
+  { category: "Royalties and Registrations", q: "What is the Royalty Inspector?", a: "Check a song that isn't in your catalog: enter its details and get the same health check and report." },
+  { category: "Royalties and Registrations", q: "Are the royalty calculators exact?", a: "No. They're estimates to help you understand and register your splits. Agencies decide the final numbers." },
+  { category: "Royalties and Registrations", q: "What is the credit check?", a: "It checks what the agencies have on file for a song and shows what to fix. Anything you save is kept as entered, which Royalties and Registrations labels plainly: a saved detail is your word until a lookup confirms it at the agency, and the row says which one it is." },
 
   // Split sheets & contracts
   { category: "Split sheets & contracts", q: "How do split sheets work?", a: "Generate a split sheet from a catalog song (Catalog Plus), sign as the owner, and with Catalog & Collaborate email collaborators a secure link to e-sign. Signing is free for them." },

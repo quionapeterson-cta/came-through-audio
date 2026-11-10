@@ -131,7 +131,7 @@ export const BLUEPRINT_GUIDES: Guide[] = [
       s("Register each song with your PRO", "In My Catalog, a song marked Ready to register has every writer, role and split it needs. Register it with your PRO using those details."),
       s("Register with The MLC", "The MLC collects US streaming mechanical royalties. Register as a self-administered publisher or through your administrator."),
       s("Register the recording with SoundExchange", "SoundExchange pays the recording owner and artists when recordings play on digital radio. Register each recording with its ISRC."),
-      s("Check statements every quarter", "Compare what you're paid with what you released. Use the Royalty Health Hub to spot songs that aren't fully registered."),
+      s("Check statements every quarter", "Compare what you're paid with what you released. Use the Royalties and Registrations to spot songs that aren't fully registered."),
     ],
     checklist: ["PRO writer account", "IPI saved in My Catalog", "Publishing set up", "Songs registered with PRO", "The MLC", "SoundExchange", "Quarterly check"],
     pamphlet: [
@@ -491,7 +491,7 @@ export const BLUEPRINT_GUIDES: Guide[] = [
       s("Register with the PRO and save the ISWC", "Register the work with your PRO under your legal name. The PRO assigns the ISWC; save it on the song so every later lookup can match by code instead of by title."),
       s("Register with The MLC", "The MLC pays the mechanical royalties for streams. Register the work there and keep the confirmation with the song."),
       s("When the artist releases, collect the release credits", "Ask for the credit line the distributor shows, or read it on the release. Type it on the song: the release is the third copy of the same facts."),
-      s("Run the credit check and fix what differs", "Open the credit check in the Royalty Health Hub. It compares your catalog, the registration and the release, and opens on the differences. Fix the copy you control first."),
+      s("Run the credit check and fix what differs", "Open the credit check in the Royalties and Registrations. It compares your catalog, the registration and the release, and opens on the differences. Fix the copy you control first."),
       s("Keep the proof with the song", "Keep the split sheet, the registration confirmations and the release credit line with the song, so a query years later starts from the paperwork rather than a memory."),
     ],
     checklist: ["Work catalogued without a master", "Splits settled and sheet signed", "PRO registration and ISWC saved", "MLC registration", "Release credits added", "Credit check run", "Differences fixed", "Proof kept"],
@@ -563,16 +563,16 @@ export const GUIDE_LINKS: Record<string, Record<string, GuideLink>> = {
     "PRO registration and ISWC saved": { label: "Open your writer details", where: "profile" },
     "MLC registration": { label: "Open My Catalog for the MLC export", where: "catalog" },
     "Release credits added": { label: "Open My Catalog", where: "catalog" },
-    "Credit check run": { label: "Open the Royalty Health Hub", where: "health" },
-    "Differences fixed": { label: "Open the Royalty Health Hub", where: "health" },
+    "Credit check run": { label: "Open the Royalties and Registrations", where: "health" },
+    "Differences fixed": { label: "Open the Royalties and Registrations", where: "health" },
     "Proof kept": { label: "Open My Catalog", where: "catalog" },
   },
   "beat-renegotiation": {
     "Deal recorded": { label: "Open My Catalog", where: "catalog" },
     "First reading entered": { label: "Open My Catalog", where: "catalog" },
-    "Position checked": { label: "Open the Royalty Health Hub", where: "health" },
+    "Position checked": { label: "Open the Royalties and Registrations", where: "health" },
     "New terms filed": { label: "Open My Catalog", where: "catalog" },
-    "Next check dated": { label: "Open the Royalty Health Hub", where: "health" },
+    "Next check dated": { label: "Open the Royalties and Registrations", where: "health" },
   },
   "royalty-registration": {
     "PRO writer account": { label: "Open your writer details", where: "profile" },
@@ -581,7 +581,7 @@ export const GUIDE_LINKS: Record<string, Record<string, GuideLink>> = {
     "Songs registered with PRO": { label: "Open My Catalog", where: "catalog" },
     "The MLC": { label: "Open My Catalog for the MLC export", where: "catalog" },
     SoundExchange: { label: "Open My Catalog for the recordings", where: "catalog" },
-    "Quarterly check": { label: "Open the Royalty Health Hub", where: "health" },
+    "Quarterly check": { label: "Open the Royalties and Registrations", where: "health" },
   },
 };
 

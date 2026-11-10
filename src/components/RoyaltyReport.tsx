@@ -68,7 +68,7 @@ export function RoyaltyReport({ checkup, since, date, country, countryPicker, ru
   return (
     <div className="rr space-y-8">
       <ArtDefs />
-      {onBack && <Button variant="ghost" className="-mb-4" onClick={onBack}><ChevronLeft />Back to the Hub</Button>}
+      {onBack && <Button variant="ghost" className="-mb-4" onClick={onBack}><ChevronLeft />Back to Royalties and Registrations</Button>}
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <div className="rr-eyebrow text-primary">Checkup · {date} · {scope ? `${scope}${scope.startsWith("Whole") || scope.includes("(") ? ` · ${checkup.songs} song${checkup.songs === 1 ? "" : "s"}` : ""}` : `${checkup.songs} song${checkup.songs === 1 ? "" : "s"}`} · {country}</div>

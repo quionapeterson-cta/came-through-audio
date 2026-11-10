@@ -265,7 +265,7 @@ export function MetadataUploader({ onShareInfo, userId, mode = "embed", readOnly
   useEffect(() => {
     onShareInfo?.(full ? { ctx: "catalog", count: tracks.length, genre: shareGenre } : { ctx: "embed", artist: metadata.artist.trim(), title: metadata.title, genre: shareGenre });
   }, [full, tracks.length, metadata.artist, metadata.title, shareGenre]); // eslint-disable-line react-hooks/exhaustive-deps
-  // The health meter reads the same saved checks and checklist ticks as the Royalty Health Hub.
+  // The health meter reads the same saved checks and checklist ticks as the Royalties and Registrations.
   const [checks, setChecks] = useState<RepertoireCheck[]>([]);
   const [statuses, setStatuses] = useState<SongStatus[]>([]);
   useEffect(() => {
@@ -676,7 +676,7 @@ export function MetadataUploader({ onShareInfo, userId, mode = "embed", readOnly
           const unreleasedBox = (
             <label className="flex items-start gap-2 text-sm">
               <input id="unreleased" type="checkbox" className="mt-0.5 h-4 w-4 accent-[var(--primary)]" checked={metadata.unreleased} onChange={(e) => update("unreleased", e.target.checked)} />
-              <span><span className="font-semibold">This song isn't released yet</span><InfoTip text="Unreleased songs get a Release checklist in the Royalty Health Hub: what to have ready before you distribute. On release day they switch to the normal health reading. This answer stays in your catalog; it isn't written into the MP3." /></span>
+              <span><span className="font-semibold">This song isn't released yet</span><InfoTip text="Unreleased songs get a Release checklist in the Royalties and Registrations: what to have ready before you distribute. On release day they switch to the normal health reading. This answer stays in your catalog; it isn't written into the MP3." /></span>
             </label>
           );
           return <div className="space-y-3">
@@ -1000,7 +1000,7 @@ export function MetadataUploader({ onShareInfo, userId, mode = "embed", readOnly
               {tracks.length > 0 && <Button type="button" variant="outline" size="sm" onClick={() => { const list = filter === "All" ? tracks : tracks.filter((t) => releaseGroup(t) === filter); void myBrand("catalog", kitId ?? null).then((brand) => downloadCatalogPdf(list, filter === "All" ? "Catalog" : `Catalog - ${filter}s`, brand)).catch((e) => toast.error(e instanceof Error ? `Could not create the catalog PDF: ${e.message}` : "Could not create the catalog PDF.")); }}><FileText />{filter === "All" ? "Catalog PDF" : `${filter}s PDF`}</Button>}
             </div>
           </div>
-          {tracks.length === 0 ? <p className="text-sm text-muted-foreground">No songs yet. Use Add song to save a song you already embedded, or embed a new one in Embed Metadata. Every song you save is checked automatically in the Royalty Health Hub.</p> : (
+          {tracks.length === 0 ? <p className="text-sm text-muted-foreground">No songs yet. Use Add song to save a song you already embedded, or embed a new one in Embed Metadata. Every song you save is checked automatically in the Royalties and Registrations.</p> : (
             <>
             {(() => {
               const row = (t: CatalogTrack) => (

@@ -176,7 +176,7 @@ export function receiptCopy(i: {
         paragraphs: [
           money_line,
           "Our team is checking every song you sent against what each agency asks for before anything is filed.",
-          "Expert Help in the Royalty Health Hub shows what is still outstanding, and we email you if we need a detail from you.",
+          "Expert Help in the Royalties and Registrations shows what is still outstanding, and we email you if we need a detail from you.",
         ],
         cta: "Open Expert Help",
       };

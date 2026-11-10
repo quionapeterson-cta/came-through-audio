@@ -20,7 +20,7 @@ export interface Onboarding {
   avatar: string; // badge path, uploaded photo (data URL), or "" for none
   stageName: string;
   legalName: string;
-  /** Country whose collection societies the Royalty Health Hub uses (src/lib/repertoires.ts code). */
+  /** Country whose collection societies the Royalties and Registrations uses (src/lib/repertoires.ts code). */
   healthCountry?: string;
   /** What badges show (celebrations, hints, hidden collections, sharing). Badges are always earned regardless. */
   badgePrefs?: BadgePrefs;
@@ -31,7 +31,7 @@ export interface Onboarding {
   situations?: Situation[];
   roles?: AccountRole[];
   sellBeats?: boolean;
-  /** The patient file handed over at the Royalty Health Hub's Front Desk, kept with the account, not just this browser. */
+  /** The patient file handed over at the Royalties and Registrations's Front Desk, kept with the account, not just this browser. */
   patientFile?: { legalName: string; pro: string; ipi: string; publishing: "" | "publisher" | "self" | "bmi"; publisher: string };
 }
 

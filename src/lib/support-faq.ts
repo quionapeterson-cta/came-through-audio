@@ -52,7 +52,7 @@ export const SUPPORT_FAQS: SupportFaq[] = [
     a: "Signing is free for them: they create an account with the address you sent it to, then sign. Ask them to check their spam folder, and to open the newest email if you sent it more than once, because each send mails a fresh link.",
   },
   {
-    area: "Royalty Health Hub",
+    area: "Royalties and Registrations",
     q: "A song is flagged that I know is registered",
     a: "The score counts what the agency needs to find and pay the song: the codes, the exact title, and every writer with their IPI — not just that something is registered. Open the song's report to see the exact items, then check each one at the agency. If they're all correct and it's still flagged, open a ticket with the song title and the agency.",
   },

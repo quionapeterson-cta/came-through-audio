@@ -24,7 +24,7 @@ export async function sendReleaseDayEmails(today = new Date().toISOString().slic
 <h1 style="font-size:24px;margin:8px 0 16px">"${esc(title)}" is out today</h1>
 <p style="font-size:15px;line-height:1.6">Came Through Audio came through for ${esc(title)}. Two things to do now that it's released:</p>
 <ol style="font-size:15px;line-height:1.6;padding-left:20px"><li>Register the recording with SoundExchange (it waits for release day).</li><li>Check that your PRO and The MLC found the song.</li></ol>
-<a href="${SITE_URL}/workspace?tab=health" style="display:inline-block;background:#004AAD;color:#ffffff;text-decoration:none;font-weight:700;padding:14px 28px;border-radius:8px">Open my Royalty Health Hub</a>`;
+<a href="${SITE_URL}/workspace?tab=health" style="display:inline-block;background:#004AAD;color:#ffffff;text-decoration:none;font-weight:700;padding:14px 28px;border-radius:8px">Open my Royalties and Registrations</a>`;
     const res = await fetch("https://api.resend.com/emails", {
       method: "POST",
       // One per song: the key stops a second run on the same day from sending it again.

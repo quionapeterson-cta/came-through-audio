@@ -1,5 +1,5 @@
 /**
- * Live lookup for the Royalty Health Hub: Deezer, to see whether the ISRC is live on streaming and how it's credited.
+ * Live lookup for the Royalties and Registrations: Deezer, to see whether the ISRC is live on streaming and how it's credited.
  * MusicBrainz was removed from the checks and the score (most independent releases aren't listed there).
  * This runs on the server; `fetcher` is injectable so tests don't touch the network.
  */

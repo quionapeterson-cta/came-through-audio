@@ -64,9 +64,9 @@ export const DOCS: Doc[] = [
     description: "Find out if your songs are registered where royalties are collected, and fix what's missing.",
     intro: "Unregistered songs mean missed payouts. The Royalty Health Suite shows where each song stands and what to do next.",
     sections: [
-      { heading: "Royalty Health Hub (free)", bullets: [
-        "The Royalty Health Hub is home base for your songs' royalty health: your catalog at a glance, your Song Health Checklist and every report you've run.",
-        "Run a Royalty Health Check on one song, a release or your whole catalog, from the Hub or from My Catalog. A quick check-in asks what you've already registered, then your Royalty Health Report shows what's blocking your money and how to fix it. Every report is kept in My reports, so you can run it again and see what healed.",
+      { heading: "Royalties and Registrations (free)", bullets: [
+        "The Royalties and Registrations is home base for your songs' royalty health: your catalog at a glance, your Song Health Checklist and every report you've run.",
+        "Run a Royalty Health Check on one song, a release or your whole catalog, from Royalties and Registrations or from My Catalog. A quick check-in asks what you've already registered, then your Royalty Health Report shows what's blocking your money and how to fix it. Every report is kept in My reports, so you can run it again and see what healed.",
         "Checking a song that isn't in your catalog, or on a free account? Type it into the Royalty Inspector and run its Royalty Health Check, free and unlimited.",
         "BMI writers with no publisher still get their writer share, and BMI pays them the publisher share too. Writers at other PROs need a publisher, or Self-published.",
         "Every song gets a simple step-by-step checklist: fix the song details, register it, then confirm it shows up. Tick steps at your own pace until it's 100% healthy.",
@@ -111,7 +111,7 @@ export const DOCS: Doc[] = [
     group: "Learn",
     title: "Getting Started",
     description: "What each workspace tab does, the steps to work it, and the plan it comes with.",
-    intro: "Your workspace holds eight tabs, numbered left to right in the order most people work them. This page walks each tab in that order: what it is for, the steps to work it, and the plan it comes with. Free covers the Royalty Health Hub, the Royalty Inspector and signing split sheets you are invited to; the other tools begin with a paid plan.",
+    intro: "Your workspace holds eight tabs, numbered left to right in the order most people work them. This page walks each tab in that order: what it is for, the steps to work it, and the plan it comes with. Free covers the Royalties and Registrations, the Royalty Inspector and signing split sheets you are invited to; the other tools begin with a paid plan.",
     sections: [
       { heading: "Before your first song", bullets: [
         "Sign up free. Your profile badge, stage name and legal name are what credits and PDFs use.",
@@ -135,7 +135,7 @@ export const DOCS: Doc[] = [
         "Already embedded a song somewhere else? Use Add song to upload the MP3 (we read its tags) or add a song without audio.",
         "Writers need a legal name and a role (Author, Composer or Author/Composer) before registration, and splits, plus publisher shares if you list a publisher, must add up to exactly 100%. You can still embed and save without any of that. Mark a song Instrumental if it has no lyrics and it no longer needs an author.",
       ] },
-      { heading: "3. Royalty Health Hub — free, on every plan", bullets: [
+      { heading: "3. Royalties and Registrations — free, on every plan", bullets: [
         "Run a Royalty Health Check on one song, a release or the whole catalog. A short check-in asks what you have already registered.",
         "The report names what is blocking the money and links each fix to the field that needs it.",
         "Check a song that is not in your catalog yet with the Royalty Inspector, free and unlimited.",

@@ -43,7 +43,7 @@ export function HealthMeter({ pct, ready, registered, total, next, onNext, prere
         <span className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
           <span><b className="text-foreground">{ready} of {total}</b> {total === 1 ? "released song" : "released songs"} ready to register</span>
           {registered.total > 0 && <span>Registered <b className="text-foreground">{registered.done} of {registered.total}</b></span>}
-          {next ? <span className="font-semibold text-primary group-hover:underline">Fix next: {next} →</span> : total > 0 && <span className="font-semibold text-primary">{registered.done < registered.total ? "Every song is ready. Register them in the Royalty Health Hub." : "Every song is ready and registered."}</span>}
+          {next ? <span className="font-semibold text-primary group-hover:underline">Fix next: {next} →</span> : total > 0 && <span className="font-semibold text-primary">{registered.done < registered.total ? "Every song is ready. Register them in the Royalties and Registrations." : "Every song is ready and registered."}</span>}
         </span>
         {!!prerelease?.count && (
           <span className="flex flex-wrap items-center gap-2 rounded-lg border-2 border-dashed border-primary/60 bg-primary/5 px-3 py-1.5 text-xs">

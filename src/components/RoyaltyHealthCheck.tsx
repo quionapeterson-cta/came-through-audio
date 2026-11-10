@@ -55,7 +55,7 @@ function distributorMessage(t: CatalogTrack, differences: string[]) {
 export type HealthStart = { trackId?: string | undefined; release?: boolean | undefined; nonce: number };
 
 /**
- * The Royalty Health Hub (PLAN-health-hub-reports): home base for catalog health, the checklist and every report.
+ * The Royalties and Registrations (PLAN-health-hub-reports): home base for catalog health, the checklist and every report.
  * A Royalty Health Check runs from here, My Catalog or the Royalty Inspector: check-in first, then the report,
  * which is saved to My reports.
  */
@@ -672,7 +672,7 @@ export function RoyaltyHealthCheck({ userId, canCatalog, canExport, onUpgrade, o
 
   return (
     <div className="space-y-6">
-      {/* The Royalty Health Hub box, score ring and all, opens the screen (founder, 2026-11-03). */}
+      {/* The Royalties and Registrations box, score ring and all, opens the screen (founder, 2026-11-03). */}
       {hub}
       {doctor}
       {askDialog}

@@ -129,7 +129,7 @@ export function HealthReport({ report, country, running, canCatalog, onEmbed, ac
       <section className="overflow-hidden rounded-3xl bg-ink p-6 text-ink-foreground md:p-8">
         <div className="flex flex-col gap-6 md:flex-row md:items-start md:justify-between">
           <div>
-            <h2 className="text-3xl font-extrabold tracking-tight md:text-4xl">Royalty Health Hub</h2>
+            <h2 className="text-3xl font-extrabold tracking-tight md:text-4xl">Royalties and Registrations</h2>
             <p className="mt-2 max-w-xl text-ink-muted">{canCatalog || report.rows.length
               ? "Make sure every song is registered and matched, so every royalty it earns can reach you."
               : "Enter a song's details below to see if it's registered and matched, so every royalty it earns can reach you."}</p>

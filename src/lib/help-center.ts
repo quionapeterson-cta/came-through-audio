@@ -52,8 +52,8 @@ export const HELP_CATEGORIES: HelpCategory[] = [
     title: "Royalties & Payouts",
     blurb: "What each agency needs to find and pay a song, registering it, protecting it, and the splits behind the money.",
     icon: "royalties",
-    faq: ["Royalty Health Hub", "Split sheets & contracts", "AI Protection Hub"],
-    areas: ["Royalty Health Hub", "Split Sheets", "AI Protection Hub"],
+    faq: ["Royalties and Registrations", "Split sheets & contracts", "AI Protection Hub"],
+    areas: ["Royalties and Registrations", "Split Sheets", "AI Protection Hub"],
   },
 ];
 

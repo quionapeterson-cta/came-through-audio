@@ -10,7 +10,7 @@ import {
   TICKET_TOPICS,
 } from "./support-topics";
 
-const WORKSPACE_TABS = ["Embed Metadata", "My Catalog", "Royalty Health Hub", "AI Protection Hub", "Split Sheets", "Contracts & Blueprints", "PDF Fill & Sign"];
+const WORKSPACE_TABS = ["Embed Metadata", "My Catalog", "Royalties and Registrations", "AI Protection Hub", "Split Sheets", "Contracts & Blueprints", "PDF Fill & Sign"];
 
 describe("support topics", () => {
   it("offers every workspace tab as a first choice, plus the account side and a catch-all", () => {

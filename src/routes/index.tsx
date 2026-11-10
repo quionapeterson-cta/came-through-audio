@@ -55,7 +55,7 @@ const steps = [
 
 type FooterLink = { label: string; to?: "/terms-of-service" | "/refund-policy" | "/privacy-policy" | "/contact" | "/contact-us" | "/faq"; search?: { type: "support" | "contact" }; doc?: string };
 const footerCols: { title: string; links: FooterLink[] }[] = [
-  { title: "Product", links: [{ label: "MP3 Embedding", doc: "metadata-embedding" }, { label: "Centralized Master Catalog", doc: "master-catalog" }, { label: "Royalty Health Hub", doc: "royalty-health-suite" }, { label: "System Security Metrics", doc: "security" }] },
+  { title: "Product", links: [{ label: "MP3 Embedding", doc: "metadata-embedding" }, { label: "Centralized Master Catalog", doc: "master-catalog" }, { label: "Royalties and Registrations", doc: "royalty-health-suite" }, { label: "System Security Metrics", doc: "security" }] },
   { title: "Learn", links: [{ label: "FAQ", to: "/faq" }, { label: "Getting Started", doc: "help-center" }, { label: "Industry Insights", doc: "industry-insights" }, { label: "The Studio-to-Catalog Guide", doc: "studio-to-catalog-guide" }, { label: "Add Us as Your Representative", doc: "add-representative" }] },
   { title: "Legal", links: [{ label: "Terms of Service", to: "/terms-of-service" }, { label: "Refund Policy", to: "/refund-policy" }, { label: "Privacy Policy", to: "/privacy-policy" }] },
   { title: "Access", links: [{ label: "Help Center & Support", to: "/contact" }, { label: "Contact Us", to: "/contact-us" }] },

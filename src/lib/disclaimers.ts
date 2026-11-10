@@ -11,7 +11,7 @@ export const DISCLAIMERS = {
   embed: "You're responsible for the accuracy of the details you embed and for having the rights to the audio, artwork and lyrics you upload. Stores, streaming services and other platforms may remove or change embedded metadata, and embedding doesn't register a song or guarantee royalties.",
   /** Agency exports. */
   exports: "Exports follow each agency's template as we know it. Agencies can change their requirements and decide on their own what they accept and pay. Check every file before you upload it; you're responsible for what you submit.",
-  /** Royalty Health Hub, Royalty Health Report, Royalty Utility Suite. */
+  /** Royalties and Registrations, Royalty Health Report, Royalty Utility Suite. */
   health: "Health scores, findings, converters and earnings estimates are based on the details you enter and on public searches that can be incomplete or out of date. They don't guarantee registration, matching or payment and aren't legal, financial or tax advice; each agency decides the final result.",
   /** "Registration Ready" badges and readiness lists. */
   readiness: "\"Registration Ready\" means the required details are filled in. It doesn't confirm they're correct or that you own the rights.",

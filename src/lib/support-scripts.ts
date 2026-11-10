@@ -386,7 +386,7 @@ export function fillScript(body: string, values: Partial<Record<string, string>>
 const SUGGESTED_BY_AREA: Record<string, string[]> = {
   "Embed Metadata": ["support-received", "support-need-detail"],
   "My Catalog": ["support-received", "software-bug-received"],
-  "Royalty Health Hub": ["support-need-detail", "support-received"],
+  "Royalties and Registrations": ["support-need-detail", "support-received"],
   "AI Protection Hub": ["support-received", "support-need-detail"],
   "Split Sheets": ["support-need-detail", "support-received"],
   "Contracts & Blueprints": ["support-need-detail", "support-received"],

@@ -74,7 +74,7 @@ const tabs = [
   // Order (founder, 2026-10-25): the Hub sits right after My Catalog (they work together), Split Sheets right before Contracts.
   { id: "embed", label: "Embed Metadata", icon: FileAudio },
   { id: "catalog", label: "My Catalog", icon: Disc3 },
-  { id: "health", label: "Royalty Health Hub", icon: Activity },
+  { id: "health", label: "Royalties and Registrations", icon: Activity },
   { id: "protect", label: "AI Protection Hub", icon: ShieldCheck },
   { id: "splits", label: "Split Sheets", icon: FileSignature },
   { id: "learn", label: "Contracts & Blueprints", icon: GraduationCap },
@@ -206,7 +206,7 @@ function Workspace() {
     return () => { live = false; };
   }, [user?.id]); // eslint-disable-line react-hooks/exhaustive-deps
   // The setup walkthrough (embed defaults, catalog profile) is for plans that can embed. Free accounts skip it and
-  // land on the Royalty Health Hub; it opens the first time they upgrade.
+  // land on the Royalties and Registrations; it opens the first time they upgrade.
   useEffect(() => {
     if (billingLoaded && onboardSynced && !onboard?.done && hasTier(tier, "plus")) setProfileOpen(true);
   }, [billingLoaded, onboardSynced, onboard?.done, tier]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -214,7 +214,7 @@ function Workspace() {
   const openQuickCheck = () => { setTab("health"); setTimeout(() => document.getElementById("quick-check")?.scrollIntoView({ behavior: "smooth" }), 50); };
   const studio = useStudioMode();
   const app = useInstallApp();
-  // Free accounts open on the Royalty Health Hub (Royalty Inspector) instead of the locked Embed tab.
+  // Free accounts open on the Royalties and Registrations (Royalty Inspector) instead of the locked Embed tab.
   // A checkout return is never redirected: the webhook can still be in flight, so a brand-new Plus member would be
   // read as Free and moved off the tab they just bought (founder, 2026-11-08).
   useEffect(() => { if (billingLoaded && !search.tab && !search.checkout && !hasTier(realTier, "plus")) setTab((t) => (t === "embed" ? "health" : t)); }, [billingLoaded]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -566,7 +566,7 @@ function Health({ startView, justPaid, canCatalog, onFix, onFixField, onAddSong,
   // Three tools, one at a time, switched like Contracts & Blueprints.
   const [view, setView] = useState<"check" | "expert" | "utility">(startView);
   useEffect(() => { if (start) setView("check"); }, [start?.nonce]); // eslint-disable-line react-hooks/exhaustive-deps
-  const views = [["check", "Health Hub", Activity], ["expert", "Expert Help", Users], ["utility", "Utility Suite", Calculator]] as const;
+  const views = [["check", "Royalties and Registrations", Activity], ["expert", "Expert Help", Users], ["utility", "Utility Suite", Calculator]] as const;
   return (
     <div className="mt-6 space-y-6">
       <div className="flex flex-wrap items-center justify-center gap-3">
