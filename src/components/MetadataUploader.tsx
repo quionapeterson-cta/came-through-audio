@@ -17,7 +17,7 @@ import { EXPORT_REQUIRED, GLOSSARY, type GlossaryKey } from "@/lib/glossary";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { OFFICIAL_MASTER_ACTION, PRE_DIST_NOTE, PRO_TIP, SOVEREIGN_BACKUP } from "@/lib/copy";
 import { readMetadata, CREDIT_CHOICES, OTHER_INSTRUMENT, creditChoice, fromCreditChoice, isPerformer, performers, emptyContributor, emptyMetadata, embedMetadata, creditName, metadataSchema, savedSchema, GENRES, GENRE_GROUPS, MASTER_BASES, PRODUCTION_TYPES, RELEASE_TYPES, WRITER_ROLES, writerRole, hfaLooksOff, percentInput, formatDuration, type Contributor, type Metadata } from "@/lib/metadata";
-import { releaseStatus, type ReleasePatch } from "@/lib/release-panel";
+import { releaseStatus, writeRelease, type ReleasePatch } from "@/lib/release-panel";
 import { COUNTRIES, countryByCode, guessCountry } from "@/lib/repertoires";
 import { catalogHealth, releaseKind } from "@/lib/health-checklist";
 import { listChecks } from "@/lib/repertoire-checks";
@@ -274,11 +274,16 @@ export function MetadataUploader({ onShareInfo, userId, mode = "embed", readOnly
     const code = loadOnboarding(userId)?.healthCountry ?? guessCountry(tracks.flatMap((t) => [...t.metadata.writers, ...t.metadata.composers].map((w) => w.pro)));
     return catalogHealth(tracks, countryByCode(code) ?? countryByCode("US")!, checks, statuses);
   }, [full, userId, tracks, checks, statuses]);
-  /** Writes the Release panel's answer to every song in the release (§4.1), through the same save as a single song. */
+  /**
+   * Writes the Release panel's answer to every song in the release (§4.1), through the same save as a single song.
+   * Each song is an update by its own id, so a retry is safe; a failure throws with how far it got, and the songs
+   * that did save show straight away instead of the dialog closing on a half-written release.
+   */
   const saveRelease = async (patch: ReleasePatch, list: CatalogTrack[]) => {
-    if (!userId) return;
-    for (const song of list) await saveTrack({ ...song.metadata, ...patch }, userId, song.id);
-    setTracks((prev) => prev.map((song) => list.some((x) => x.id === song.id) ? { ...song, metadata: { ...song.metadata, ...patch } } : song));
+    if (!userId) throw new Error("Sign in again to save this release.");
+    const { saved, error } = await writeRelease(list, (song) => saveTrack({ ...song.metadata, ...patch }, userId, song.id));
+    if (saved.length) setTracks((prev) => prev.map((song) => saved.some((x) => x.id === song.id) ? { ...song, metadata: { ...song.metadata, ...patch } } : song));
+    if (error) throw new Error(error);
     toast.success(`${list.length === 1 ? (list[0]!.title || "The song") : (list[0]!.metadata.album || "The release")} updated on ${list.length} song${list.length === 1 ? "" : "s"}.`);
   };
   const pctOf = (id: string) => health?.songs.find((x) => x.track.id === id)?.pct ?? 0;

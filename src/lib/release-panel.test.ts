@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { groupReleaseStatus, releaseDraft, releasePatch, releaseStatus, statusWords, type ReleaseDraft, type SongRelease } from "@/lib/release-panel";
+import { groupReleaseStatus, releaseDraft, releasePatch, releaseStatus, statusWords, writeRelease, type ReleaseDraft, type SongRelease } from "@/lib/release-panel";
 
 const ON = "2026-11-09";
 const song = (patch: Partial<SongRelease> = {}): SongRelease => ({ releaseType: "Single", album: "", releaseDate: "", unreleased: false, ...patch });
@@ -48,5 +48,27 @@ describe("the Release panel's answer", () => {
     expect(refused({ releaseType: "Single", album: "", releaseDate: "2026-11-09", status: "scheduled" })).toBeTruthy();
     expect(refused({ releaseType: "Single", album: "", releaseDate: "2027-01-01", status: "released" })).toBeTruthy();
     expect(refused({ releaseType: "EP", album: "", releaseDate: "", status: "unreleased" })).toBe("An EP needs a release title.");
+  });
+});
+
+describe("writing a release", () => {
+  const songs = [{ id: "a", title: "A" }, { id: "b", title: "B" }, { id: "c", title: "C" }];
+
+  it("writes every song when nothing fails", async () => {
+    const written: string[] = [];
+    await expect(writeRelease(songs, async (s) => { written.push(s.id); })).resolves.toEqual({ saved: songs });
+    expect(written).toEqual(["a", "b", "c"]);
+  });
+  it("stops at the song that failed and says exactly how far it got", async () => {
+    const written: string[] = [];
+    const result = await writeRelease(songs, async (s) => { if (s.id === "b") throw new Error("network down"); written.push(s.id); });
+    expect(written).toEqual(["a"]);
+    expect(result.saved.map((s) => s.id)).toEqual(["a"]);
+    expect(result.error).toBe("Saved 1 of 3 songs. B didn't save: network down. Press Save again to finish.");
+  });
+  it("names the song when the very first write fails", async () => {
+    const result = await writeRelease(songs, async () => { throw new Error("permission denied."); });
+    expect(result.saved).toEqual([]);
+    expect(result.error).toBe("A didn't save: permission denied.");
   });
 });

@@ -63,6 +63,27 @@ export function groupReleaseStatus(songs: SongRelease[], on = isoDay()): { out: 
 }
 
 /**
+ * Writes the panel's answer to every song, one at a time. Each write is an update by the song's own id, so pressing
+ * Save again after a failure is safe. A failure stops at the song that failed and says exactly how far it got, instead
+ * of reporting the whole release as saved.
+ */
+export async function writeRelease<T extends { id: string; title: string }>(songs: T[], save: (song: T) => Promise<unknown>): Promise<{ saved: T[]; error?: string }> {
+  const saved: T[] = [];
+  for (const song of songs) {
+    try {
+      await save(song);
+    } catch (e) {
+      const message = (e instanceof Error && e.message ? e.message : "The save failed.").replace(/\.$/, "");
+      const done = saved.length ? `Saved ${saved.length} of ${songs.length} songs. ` : "";
+      const again = saved.length ? " Press Save again to finish." : "";
+      return { saved, error: `${done}${song.title || "One song"} didn't save: ${message}.${again}` };
+    }
+    saved.push(song);
+  }
+  return { saved };
+}
+
+/**
  * What the dialog writes to every song in the group. The Status answer is the plain-language one: it sets the date and
  * the box together, so a chosen status can never contradict the fields.
  */
