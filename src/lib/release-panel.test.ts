@@ -21,6 +21,13 @@ describe("release status", () => {
     expect(groupReleaseStatus([song({ releaseDate: "2026-11-01" })]).label).toBe("Released");
     expect(groupReleaseStatus([song({ unreleased: true })]).label).toBe("Not released yet");
   });
+  it("won't guess a status for a release that is part out", () => {
+    const draft = releaseDraft([song({ releaseDate: "2026-11-01" }), song({ unreleased: true })]);
+    expect(draft.status).toBe("");
+    // The one real date is shown, never a blank that would erase it on Save.
+    expect(draft.releaseDate).toBe("2026-11-01");
+    expect(refused({ ...draft, releaseType: "Single", album: "" })).toBe("Choose the release's status.");
+  });
   it("opens the dialog on the group's own fields", () => {
     expect(releaseDraft([song({ releaseType: "EP", album: "Bloom", releaseDate: "2027-03-01" })]))
       .toEqual({ releaseType: "EP", album: "Bloom", releaseDate: "2027-03-01", status: "scheduled" });

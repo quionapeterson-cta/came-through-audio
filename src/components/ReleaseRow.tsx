@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { Pencil } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -100,10 +99,11 @@ export function ReleaseRow({ name, type, tracks, readOnly, onSave }: {
                 </div>
               </fieldset>
             </div>
+            {!draft.status && <p className="rounded-md bg-muted p-2 text-xs">This release is partly out. Choose the status it should read for every song before saving.</p>}
             {error && <p role="alert" className="rounded-md border border-destructive/50 bg-destructive/10 p-2 text-sm">{error}</p>}
             <div className="flex justify-end gap-2">
               <Button type="button" variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
-              <Button type="button" disabled={busy} onClick={() => void save()}>{busy ? "Saving…" : `Save to ${tracks.length} song${tracks.length === 1 ? "" : "s"}`}</Button>
+              <Button type="button" disabled={busy || !draft.status} onClick={() => void save()}>{busy ? "Saving…" : `Save to ${tracks.length} song${tracks.length === 1 ? "" : "s"}`}</Button>
             </div>
           </div>
         </DialogContent>
@@ -118,7 +118,7 @@ export function UnreleasedChip({ count }: { count: number }) {
   return (
     <a href="#unreleased" className="ml-2 inline-flex items-center gap-1 rounded-full border border-border px-2 py-0.5 text-xs font-semibold text-primary"
       onClick={(e) => { e.stopPropagation(); const el = document.getElementById("unreleased"); if (el) { e.preventDefault(); el.scrollIntoView({ behavior: "smooth", block: "start" }); } }}>
-      {count} unreleased <Pencil className="hidden" aria-hidden />→
+      {count} unreleased →
     </a>
   );
 }

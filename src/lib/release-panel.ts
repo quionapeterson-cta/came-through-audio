@@ -11,7 +11,7 @@ const isoDay = () => new Date().toISOString().slice(0, 10);
 
 export type ReleaseStatus = "unreleased" | "scheduled" | "released";
 export type SongRelease = Pick<Metadata, "releaseType" | "album" | "releaseDate" | "unreleased">;
-export type ReleaseDraft = { releaseType: string; album: string; releaseDate: string; status: ReleaseStatus };
+export type ReleaseDraft = { releaseType: string; album: string; releaseDate: string; status: ReleaseStatus | "" };
 export type ReleasePatch = Pick<Metadata, "releaseType" | "album" | "releaseDate" | "unreleased">;
 
 /** Out, dated in the future, or not out yet. A blank date with the box unticked has always meant released. */
@@ -26,14 +26,25 @@ export function statusWords(m: SongRelease, on = isoDay()): string {
   return s === "scheduled" ? `Scheduled for ${m.releaseDate}` : s === "released" ? "Released" : "Not released yet";
 }
 
-/** What the Edit dialog opens with: the group's own fields. */
-export function releaseDraft(songs: SongRelease[]): ReleaseDraft {
+/**
+ * What the Edit dialog opens with: the group's own fields. A release that is part out has no single status, so the
+ * dialog opens with none chosen: guessing from the first song would let one Save release or un-release the rest.
+ */
+export function releaseDraft(songs: SongRelease[], on = isoDay()): ReleaseDraft {
   const first = songs[0];
+  const out = songs.filter((m) => releaseStatus(m, on) === "released").length;
+  const dates = [...new Set(songs.map((m) => m.releaseDate.trim()))];
+  const status: ReleaseStatus | "" = !songs.length ? "unreleased"
+    : out === songs.length ? "released"
+    : out > 0 ? ""
+    : songs.every((m) => releaseStatus(m, on) === "scheduled") ? "scheduled" : "unreleased";
   return {
     releaseType: first?.releaseType.trim() || "Single",
     album: first?.album.trim() ?? "",
-    releaseDate: first?.releaseDate.trim() ?? "",
-    status: first ? releaseStatus(first) : "unreleased",
+    // Songs are meant to share one release date. If they differ, the first real one is shown rather than a blank that
+    // Save would write over every song and quietly erase them all.
+    releaseDate: (dates.find((d) => d) ?? "").trim(),
+    status,
   };
 }
 
@@ -61,6 +72,7 @@ export function releasePatch(d: ReleaseDraft, on = isoDay()): { patch: ReleasePa
   const album = d.album.trim();
   if (releaseType !== "Single" && !album) return { error: `An ${releaseType === "EP" ? "EP" : "album"} needs a release title.` };
   const releaseDate = d.releaseDate.trim();
+  if (!d.status) return { error: "Choose the release's status." };
   if (d.status === "scheduled") {
     if (!releaseDate) return { error: "Pick the release date, or choose Not released yet." };
     if (releaseDate <= on) return { error: "That date isn't in the future. Choose Released, or pick a later date." };

@@ -17,7 +17,7 @@ import { EXPORT_REQUIRED, GLOSSARY, type GlossaryKey } from "@/lib/glossary";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { OFFICIAL_MASTER_ACTION, PRE_DIST_NOTE, PRO_TIP, SOVEREIGN_BACKUP } from "@/lib/copy";
 import { readMetadata, CREDIT_CHOICES, OTHER_INSTRUMENT, creditChoice, fromCreditChoice, isPerformer, performers, emptyContributor, emptyMetadata, embedMetadata, creditName, metadataSchema, savedSchema, GENRES, GENRE_GROUPS, MASTER_BASES, PRODUCTION_TYPES, RELEASE_TYPES, WRITER_ROLES, writerRole, hfaLooksOff, percentInput, formatDuration, type Contributor, type Metadata } from "@/lib/metadata";
-import { releaseStatus, statusWords, type ReleasePatch } from "@/lib/release-panel";
+import { releaseStatus, type ReleasePatch } from "@/lib/release-panel";
 import { COUNTRIES, countryByCode, guessCountry } from "@/lib/repertoires";
 import { catalogHealth, releaseKind } from "@/lib/health-checklist";
 import { listChecks } from "@/lib/repertoire-checks";
@@ -1014,19 +1014,21 @@ export function MetadataUploader({ onShareInfo, userId, mode = "embed", readOnly
                               <div key={t.id} className="rounded-xl border border-border bg-card p-3">
                                 <div className="mb-2 flex flex-wrap items-center gap-x-3 text-xs text-muted-foreground">
                                   <span className="font-semibold text-foreground">{t.title || "Untitled"} · Single</span>
-                                  <span>{pctOf(t.id)}%</span>
-                                  <span>{statusWords(t.metadata)}</span>
+                                  <span>{pctOf(t.id)}% ready</span>
                                 </div>
                                 <ul>{row(t)}</ul>
                               </div>
                             ))}</div>
-                          : <div className="grid gap-3">{groupProjects(list).map((p) => (
+                          : <div className="grid gap-3">{groupProjects(list).map((p) => {
+                              const all = tracks.filter((x) => releaseGroup(x) !== "Single" && albumKey(x) === p.key);
+                              return (
                               <div key={p.key} className="rounded-xl border border-border bg-card p-3">
-                                <div className="flex flex-wrap items-center gap-x-3 text-xs text-muted-foreground"><span className="font-semibold text-foreground">{p.title} · {releaseGroup(p.tracks[0]!)}</span><span>{p.tracks.length} {p.tracks.length === 1 ? "song" : "songs"}</span></div>
-                                <ReleaseRow name={p.title} type={releaseGroup(p.tracks[0]!)} tracks={tracks.filter((x) => releaseGroup(x) !== "Single" && albumKey(x) === p.key)} readOnly={readOnly} onSave={saveRelease} />
+                                <div className="flex flex-wrap items-center gap-x-3 text-xs text-muted-foreground"><span className="font-semibold text-foreground">{p.title} · {releaseGroup(p.tracks[0]!)}</span><span>{p.tracks.length} of {all.length} waiting</span></div>
+                                <ReleaseRow name={p.title} type={p.tracks[0]!.metadata.releaseType || releaseGroup(p.tracks[0]!)} tracks={all} readOnly={readOnly} onSave={saveRelease} />
                                 <ul className="mt-3 grid gap-3">{[...p.tracks].sort(byPct).map(row)}</ul>
                               </div>
-                            ))}</div>}
+                              );
+                            })}</div>}
                       </div>;
                     })}
                   </div>
@@ -1047,21 +1049,24 @@ export function MetadataUploader({ onShareInfo, userId, mode = "embed", readOnly
                       </summary>
                       <ul className="mt-4 grid gap-3">{[...items].sort((a, b) => a.title.localeCompare(b.title)).map(row)}</ul>
                     </details>
-                  : <div className="grid gap-4">{groupProjects(items).map((p) => (
+                  : <div className="grid gap-4">{groupProjects(items).map((p) => {
+                    const all = tracks.filter((x) => releaseGroup(x) !== "Single" && albumKey(x) === p.key);
+                    return (
                     <details key={p.key} open={p.tracks.some((x) => x.id === editingId) || (!!newest && p.tracks.some((x) => x.id === newest.id))} className="rounded-2xl border border-border p-4 open:border-primary">
                       <summary className="flex cursor-pointer list-none flex-wrap items-center gap-4">
                         {p.cover ? <img src={p.cover} alt={`${p.title} artwork`} className="h-14 w-14 rounded-lg object-cover shadow" /> : <div className="flex h-14 w-14 items-center justify-center rounded-lg bg-primary text-primary-foreground"><Disc3 className="h-7 w-7" /></div>}
                         <div className="min-w-[10rem] flex-1">
                           <div className="truncate text-xl font-bold">{p.title}</div>
-                          <div className="text-sm text-muted-foreground">{p.artist} · {p.tracks.length} {p.tracks.length === 1 ? "track" : "tracks"}</div>
-                          <ReleaseRow name={p.title} type={releaseGroup(p.tracks[0]!)} tracks={tracks.filter((x) => releaseGroup(x) !== "Single" && albumKey(x) === p.key)} readOnly={readOnly} onSave={saveRelease} />
+                          <div className="text-sm text-muted-foreground">{p.artist} · {all.length} {all.length === 1 ? "track" : "tracks"}{all.length !== p.tracks.length ? ` · ${p.tracks.length} out` : ""}</div>
+                          <ReleaseRow name={p.title} type={p.tracks[0]!.metadata.releaseType || releaseGroup(p.tracks[0]!)} tracks={all} readOnly={readOnly} onSave={saveRelease} />
                         </div>
                         {onHealthCheck && <Button type="button" variant="outline" size="sm" onClick={(e) => { e.preventDefault(); onHealthCheck(p.tracks[0]!.id, true); }}><Stethoscope />Health check</Button>}
                         {exportMenu("Export Release", p.tracks, p.title)}
                       </summary>
                       <ul className="mt-4 grid gap-3">{p.tracks.map(row)}</ul>
                     </details>
-                  ))}</div>}
+                    );
+                  })}</div>}
               </div>;
             })}
             </>;
