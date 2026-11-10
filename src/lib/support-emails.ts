@@ -11,6 +11,58 @@ import { inboxFor, replyParagraphs, replySubject, ticketLink, type TicketRecord 
 
 export type ReplyEmailResult = { emailed: boolean; reason?: string };
 
+/**
+ * The member's own copy of "we have it" (founder, 2026-11-10): nothing used to reach them until a staff reply arrived,
+ * so a ticket opened on a Friday looked lost. It repeats the typical wait, never a promise, and — for a support ticket —
+ * links straight to the thread so answering is a click. A Contact Us message gets the same courtesy without a thread.
+ * One idempotency key per ticket, so a retried submit cannot send it twice.
+ */
+export async function sendTicketReceivedEmail(input: {
+  id: string; kind: string; name: string; email: string; category: string; subject: string;
+}): Promise<ReplyEmailResult> {
+  const key = resendKey();
+  if (!key) return { emailed: false, reason: "no-key" };
+  const support = input.kind === "support";
+  const inbox = support ? inboxFor(input.category) : INFO_EMAIL;
+  const first = input.name.trim().split(/\s+/)[0] || "there";
+  const html = emailLayout(
+    `<p style="font-size:12px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:#004AAD;margin:0">${support ? "Support ticket received" : "Message received"}</p>
+<h1 style="font-size:22px;margin:8px 0 16px">${support ? `We've got your ticket, ${escapeHtml(first)}` : `Thanks for writing, ${escapeHtml(first)}`}</h1>
+<p style="font-size:15px;line-height:1.6"><b>${escapeHtml(input.subject)}</b><br/><span style="color:#666">${escapeHtml(input.category)}</span></p>
+<p style="font-size:15px;line-height:1.6">It's in the queue and Support will take it from here. Most replies go out in about 48 hours; a high-volume week or a holiday break can take longer, and we'll always come back to you.</p>
+${support
+    ? `<p style="margin:24px 0"><a href="${ticketLink(SITE_URL, input.id)}" style="background:#004AAD;color:#ffffff;text-decoration:none;font-weight:700;padding:12px 22px;border-radius:8px;display:inline-block">Open your ticket</a></p>
+<p style="font-size:13px;line-height:1.6;color:#666">You can read the thread and answer any time in the Support tab of your workspace. Replying to this email lands on the same ticket, so nothing gets lost.</p>`
+    : `<p style="font-size:13px;line-height:1.6;color:#666">We'll reply to this address. If you have an account, a ticket from the Support tab keeps everything in one thread.</p>`}`,
+    { reason: support ? "You're receiving this because you opened a support ticket with Came Through Audio." : "You're receiving this because you sent Came Through Audio a message from our Contact page." },
+  );
+  try {
+    const res = await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${key}`,
+        "Content-Type": "application/json",
+        "Idempotency-Key": `ticket-received-${input.id}`,
+      },
+      body: JSON.stringify({
+        from: support ? `Came Through Audio ${inbox === BILLING_EMAIL ? "Billing" : "Support"} <${inbox}>` : `Came Through Audio <${INFO_EMAIL}>`,
+        to: [input.email],
+        reply_to: inbox,
+        subject: `${support ? "We've got your ticket" : "We've got your message"}: ${input.subject}`.slice(0, 200),
+        html,
+      }),
+    });
+    if (!res.ok) {
+      console.error(`Ticket receipt failed [${res.status}]`);
+      return { emailed: false, reason: `status-${res.status}` };
+    }
+    return { emailed: true };
+  } catch (e) {
+    console.error("Ticket receipt failed", e);
+    return { emailed: false, reason: "network" };
+  }
+}
+
 /** Sends one staff reply to the member. Never throws at the caller: a failed email is reported, not turned into a loss. */
 export async function sendTicketReplyEmail(
   ticket: TicketRecord,
@@ -63,6 +115,7 @@ ${replyParagraphs(body, escapeHtml)}
 export async function sendMemberReplyNotice(
   ticket: TicketRecord,
   body: string,
+  messageId: string,
 ): Promise<ReplyEmailResult> {
   const key = resendKey();
   if (!key) return { emailed: false, reason: "no-key" };
@@ -78,7 +131,8 @@ ${replyParagraphs(body, escapeHtml)}
   try {
     const res = await fetch("https://api.resend.com/emails", {
       method: "POST",
-      headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
+      // One id per stored message: a retried notice can't email the team about the same reply twice.
+      headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json", "Idempotency-Key": `member-reply-${messageId}` },
       body: JSON.stringify({
         from: `Came Through Audio <${INFO_EMAIL}>`,
         to: [to],

@@ -8,6 +8,8 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { submitSupportTicket, submitTicket, ticketSchema } from "@/lib/support.functions";
 import { categoryFor, TICKET_TOPICS } from "@/lib/support-topics";
+import { SUPPORT_FAQ_HEADING, SUPPORT_FAQ_INTRO, SUPPORT_FAQS } from "@/lib/support-faq";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { useAuth } from "@/hooks/useAuth";
 import { SignupCard } from "@/components/SignupCard";
 import { BUSINESS_ADDRESS, SUPPORT_EMAIL } from "@/lib/email-layout";
@@ -102,12 +104,14 @@ function ContactPage() {
         ) : needsLogin ? (
           <div className="mt-8 space-y-5">
             {tabs}
+            <SupportFaqs />
             <p className="text-sm text-muted-foreground">Log in or create a free account to open a support ticket, so we can look at your account and reply to the right email. Questions before signing up? Use Contact Us.</p>
             <SignupCard returnPath="/contact?type=support" />
           </div>
         ) : (
           <form onSubmit={onSubmit} className="mt-8 space-y-5" noValidate>
             {tabs}
+            {kind === "support" && <SupportFaqs />}
             <Field label="Name" error={errors["name"]}><Input value={form.name} onChange={set("name")} maxLength={100} /></Field>
             {kind === "support"
               ? <p className="text-sm text-muted-foreground">{user?.email
@@ -144,5 +148,29 @@ function Field({ label, error, children }: { label: string; error?: string | und
       {children}
       {error && <span className="block text-sm text-destructive">{error}</span>}
     </label>
+  );
+}
+
+/**
+ * The quick answers before the form (founder, 2026-11-10): collapsed by default so the form stays the first thing under
+ * the tabs, and one click opens the list. The words live in src/lib/support-faq.ts, beside the ticket topics they follow.
+ */
+function SupportFaqs() {
+  return (
+    <details className="rounded-xl border border-border bg-muted/40 px-4 py-3">
+      <summary className="cursor-pointer text-sm font-semibold">{SUPPORT_FAQ_HEADING}</summary>
+      <p className="mt-1.5 text-xs leading-relaxed text-muted-foreground">{SUPPORT_FAQ_INTRO}</p>
+      <Accordion type="multiple" className="mt-2">
+        {SUPPORT_FAQS.map((f) => (
+          <AccordionItem key={f.q} value={f.q}>
+            <AccordionTrigger className="py-2.5 text-left text-sm font-semibold hover:no-underline">{f.q}</AccordionTrigger>
+            <AccordionContent className="text-sm leading-relaxed text-muted-foreground">{f.a}</AccordionContent>
+          </AccordionItem>
+        ))}
+      </Accordion>
+      <p className="mt-1 text-xs text-muted-foreground">
+        Looking for something broader? The <Link to="/faq" className="text-primary underline">full FAQ</Link> covers plans, exports, registration and branding.
+      </p>
+    </details>
   );
 }

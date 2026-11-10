@@ -6,7 +6,7 @@ import { ARTIST_SEAT_PRICES, TIER_LABEL } from "@/lib/plans";
  * search (PLAN-master-notes 2.2). Facts here must match the Refund Policy, plans.ts and the agency export notes.
  */
 export type Faq = { q: string; a: string; category: FaqCategory; home?: boolean };
-export const FAQ_CATEGORIES = ["Getting started", "Plans & billing", "Embedding", "My Catalog", "Agency exports & registration", "Royalty Health Hub", "Split sheets & contracts", "AI Protection Hub", "Account & security"] as const;
+export const FAQ_CATEGORIES = ["Getting started", "Plans & billing", "Embedding", "My Catalog", "Agency exports & registration", "Royalty Health Hub", "Split sheets & contracts", "PDF Fill & Sign", "AI Protection Hub", "Personal branding", "Account & security"] as const;
 export type FaqCategory = (typeof FAQ_CATEGORIES)[number];
 
 /** How Royalty Health scores work: the info card in the Hub and the report, and the FAQ answer, say the same thing. */
@@ -24,6 +24,7 @@ export const FAQS: Faq[] = [
   { category: "Getting started", q: "Who is Came Through Audio for?", a: "Independent artists, songwriters, producers, composers and session musicians who want their credits, splits and registrations right before (and after) they distribute. YOUR FIRST STOP BEFORE DISTRIBUTION." },
   { category: "Getting started", q: "What can I do for free?", a: "Run unlimited Royalty Health Checks, use the Royalty Inspector on songs that aren't in a catalog yet, and sign split sheets collaborators send you. If a paid plan ends, the account moves to Free automatically and the catalog you already built stays read-only: view and download, no adding or editing, until you start a paid plan again. Embedding, a new catalog and the other tools start with Catalog Plus." },
   { category: "Getting started", q: "Do I need a distributor first?", a: "No. Come here first: embed your credits, set your splits and get your codes in order, then deliver to your distributor with everything already correct." },
+  { category: "Getting started", q: "Can I use it on my phone?", a: "Yes. On your first visit we offer to add Came Through Audio to your home screen; it then opens full screen like an app and uses the same account and catalog as the browser. You can add it later from the workspace, or keep working in the browser." },
 
   // Plans & billing
   { category: "Plans & billing", home: true, q: "How do the plans and refunds work?", a: "Plans are yearly: Catalog Plus ($24.99), Catalog & Collaborate ($44.99) and Catalog Management ($89.99). You can ask for a full refund within 30 days of your order. Upgrading later charges only the prorated difference." },
@@ -46,7 +47,10 @@ export const FAQS: Faq[] = [
   // My Catalog
   { category: "My Catalog", home: true, q: "Can I download my songs and artwork later?", a: "Yes! Every song you submit is saved in your private catalog vault. Download your embedded master MP3, cover art and lyrics anytime from My Catalog — no re-embedding needed. Nothing is emptied when a plan ends: the catalog stays read-only on Free, so your downloads are still there. Only an account left unused for two years without an upgrade loses its stored files and catalog entries; its paperwork stays with the account." },
   { category: "My Catalog", q: "Can I add songs I already released?", a: "Yes. Use Add song in My Catalog: upload an MP3 you already embedded (we read its tags) or type the details in without audio." },
-  { category: "My Catalog", q: "Can I download my whole catalog?", a: "Yes: a ZIP with every master, its artwork and lyrics, plus a branded catalog PDF." },
+  { category: "My Catalog", q: "Can I download my whole catalog?", a: "Yes: a ZIP with every master, its artwork and lyrics, plus a branded catalog PDF. Downloads come one click each for the whole catalog and for an album or EP, in MP3 & WAV, Artwork and Lyrics folders." },
+  { category: "My Catalog", q: "Can I play a song before I download it?", a: "Yes. The play button in My Catalog is a quick check of that version: it confirms the right file is saved and the whole thing is there, not cut off. It isn't a music player — no queue, playlists or sharing." },
+  { category: "My Catalog", q: "Why is my catalog read-only?", a: "A read-only catalog means the account is on the Free plan, usually after a paid year ended. Nothing is removed: you can still view and download everything, and adding or editing starts again with any paid plan. Your ZIP downloads and lyrics keep working while it's read-only." },
+  { category: "My Catalog", q: "I can't find a song I added", a: "If your account holds artist seats, the workspace switcher decides whose catalog the page shows, and each seat keeps its own. Switch to the artist the song belongs to." },
 
   // Agency exports & registration
   { category: "Agency exports & registration", home: true, q: "What are 1-click agency exports?", a: "With Catalog & Collaborate, export your whole catalog, one release or chosen songs into The MLC's and SoundExchange's own bulk templates, plus a BMI/ASCAP cheat sheet. Upload one file instead of typing every song. Step-by-step upload instructions come with each file." },
@@ -60,20 +64,34 @@ export const FAQS: Faq[] = [
   { category: "Royalty Health Hub", q: "How is my Royalty Health score worked out?", a: SCORE_STEPS.join(" ") },
   { category: "Royalty Health Hub", q: "What is the Royalty Inspector?", a: "Check a song that isn't in your catalog: enter its details and get the same health check and report." },
   { category: "Royalty Health Hub", q: "Are the royalty calculators exact?", a: "No. They're estimates to help you understand and register your splits. Agencies decide the final numbers." },
+  { category: "Royalty Health Hub", q: "What is the credit check?", a: "It checks what the agencies have on file for a song and shows what to fix. Anything you save is kept as entered, which the Hub labels plainly: a saved detail is your word until a lookup confirms it at the agency, and the row says which one it is." },
 
   // Split sheets & contracts
   { category: "Split sheets & contracts", q: "How do split sheets work?", a: "Generate a split sheet from a catalog song (Catalog Plus), sign as the owner, and with Catalog & Collaborate email collaborators a secure link to e-sign. Signing is free for them." },
   { category: "Split sheets & contracts", q: "Are e-signatures legally binding?", a: "Each signature is time-stamped and the document is locked with a fingerprint, the same kind of record e-signature services keep. Have a lawyer review important agreements." },
+  { category: "Split sheets & contracts", q: "What do splits need before I can send a sheet?", a: "Writer shares adding up to exactly 100%, and if a publisher is listed, publisher shares adding up to 100% of the publisher half. Signing itself is free for your collaborators." },
   { category: "Split sheets & contracts", q: "What are Blueprints?", a: "With Catalog Management: 75+ ready-to-fill contracts with plain-language guides, step-by-step business blueprints and home recording cheat sheets, each downloadable as a PDF." },
+  { category: "Split sheets & contracts", q: "What is Working On?", a: "The last tab in Contracts & Blueprints: every blueprint or checklist you saved, as its own folder, with notes, due dates and a next step. Ticking a list keeps its progress; it joins Working On when you press Save, so you can work through a blueprint without filing it. A finished run moves to Finished and can be started again as a new run." },
+
+  // PDF Fill & Sign
+  { category: "PDF Fill & Sign", q: "What is PDF Fill & Sign?", a: "Upload a PDF you were sent, type into it, add your signature, and download it ready to send back. The text and the signature are real text and a sharp image in the PDF, not a picture of a page, and a document you don't change comes back exactly as it went in." },
+  { category: "PDF Fill & Sign", q: "Is my signed PDF legally binding?", a: "A signed PDF records that you signed it, with the signature you drew or typed. For important agreements, have a lawyer check what the other side accepts, and keep your copy." },
 
   // AI Protection Hub
   { category: "AI Protection Hub", home: true, q: "How does the AI Protection Hub document human origin?", a: "The hub issues a Certificate of Human Origin. Short screen recordings of your DAW session and draft history are fingerprinted (SHA-256), paired with a sworn human-authorship attestation, and timestamped on the Bitcoin blockchain. Together they're strong, independently verifiable evidence that your session and drafts existed by that date. For the strongest protection, also register important songs with the U.S. Copyright Office." },
   { category: "AI Protection Hub", q: "Is a certificate proof that I own my song?", a: "It's evidence, not a court ruling: it shows your files existed in that exact form by that date, and anyone can check the Bitcoin timestamp. Courts decide how much weight evidence gets. Keep your original files." },
 
+  // Personal branding
+  { category: "Personal branding", q: "What is the brand kit?", a: "A kit replaces the Came Through Audio header on the documents you hand out — contracts, split sheets, lyrics and catalog downloads — with your own logo, name, tagline and colours. It never touches email, which always comes from Came Through Audio. One kit is included with Catalog Management; further kits are $13.99 a year for the kit, on any plan." },
+  { category: "Personal branding", q: "Which documents show my branding?", a: "Contracts, split sheets, lyric sheets and catalog downloads, every time one is built or downloaded. Split sheets always show your artist name, never a business name, because a split sheet records who owns the song. Company agreements always keep the Came Through Audio header." },
+
   // Account & security
   { category: "Account & security", q: "Who can see my catalog?", a: "Your catalog is private to your account, with one exception: while you're on an artist seat another account pays for, that account can see your catalog, split sheets and contracts and can fill in your embed and catalog defaults, because it's paying for your plan. Only you can send a contract under your name. Private details like PRO, IPI numbers and splits stay in your catalog and never go into your audio files." },
   { category: "Account & security", q: "Will my account be deleted if I stop using it?", a: "After two years with no sign-in we email you four times, then remove what the account has not kept. Signing in during that notice keeps the account on Free; upgrading keeps the stored files and catalog too. Without an upgrade the files stored for the account (masters, artwork and anything else in storage) and the catalog entries are deleted on the date. Your split sheets, contracts, certificates, blueprints and Working On stay with the account on Free, and go only if the account itself is deleted. An account that never signs in is deleted with its files. A plan ending never does this: it just leaves the catalog read-only on Free." },
-  { category: "Account & security", q: "How do I get help?", a: "Open a support ticket from the Contact page, or email support@camethroughaudio.com." },
+  { category: "Account & security", q: "How do I get help?", a: "Open a support ticket from the Contact page, or email support@camethroughaudio.com. Tickets need a free account so we can look at the right one and reply to the right address; questions before you sign up can go through Contact Us instead." },
+  { category: "Account & security", q: "Where do I see my tickets and the replies?", a: "In the Support tab of your workspace: every ticket you opened, what we replied, and a box to answer on the same thread. Replying to the email lands on the same ticket, so you never have to repeat yourself. Most replies go out in about 48 hours; a high-volume week or a holiday break can take longer." },
+  { category: "Account & security", q: "What should I include in a support ticket?", a: "Which part of the app it is, what you clicked, what you expected and what happened instead, plus your browser and a screenshot if you have one. It usually saves a round trip. The Support form also lists the answers to the most common questions before you submit." },
+  { category: "Account & security", q: "How do I change the card on file?", a: "Profile → Manage billing opens Stripe's own page, where the card is changed. Our team never types a card number and never asks for one; if a card update needs a hand, Billing sends you a card-update link from Admin → Accounts." },
 ];
 
 export const HOME_FAQS = FAQS.filter((f) => f.home);

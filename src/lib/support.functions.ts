@@ -2,7 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { BILLING_EMAIL, emailLayout, escapeHtml, INFO_EMAIL, SUPPORT_EMAIL } from "./email-layout";
-import { sendMemberReplyNotice, sendTicketReplyEmail } from "./support-emails";
+import { sendMemberReplyNotice, sendTicketReceivedEmail, sendTicketReplyEmail } from "./support-emails";
 import { BILLING_AREA, TICKET_CATEGORIES } from "./support-topics";
 import {
   TICKET_STATUSES,
@@ -79,6 +79,10 @@ async function storeTicket(data: TicketInput & { userId?: string }) {
       body: JSON.stringify({ from: "Came Through Audio <collaborate@camethroughaudio.com>", to: [inbox], reply_to: data.email, subject: `[${label}] ${data.subject}`, html }),
     }).catch((e) => console.error("Ticket notify failed", e));
   }
+  // The member's own copy of "we have it": a ticket used to sit silent until a staff reply arrived. Never fails the
+  // submit — the row is already saved, and the queue still shows it.
+  await sendTicketReceivedEmail({ id: row.id, kind: data.kind, name: data.name, email: data.email, category: data.category, subject: data.subject })
+    .catch((e) => console.error("Ticket receipt failed", e));
   return { ok: true };
 }
 
@@ -267,16 +271,16 @@ export const replyAsMember = createServerFn({ method: "POST" })
       .select("id", { count: "exact", head: true })
       .eq("ticket_id", ticket.id).eq("author_kind", "member").gte("created_at", since);
     if ((count ?? 0) >= 10) throw new Error("That's a lot of messages in a row — give us a moment to reply.");
-    const { error } = await supabaseAdmin.from("support_ticket_messages").insert({
+    const { data: saved, error } = await supabaseAdmin.from("support_ticket_messages").insert({
       ticket_id: ticket.id,
       author_kind: "member",
       author_id: context.userId,
       author_name: ticket.name,
       body: data.body.trim(),
-    });
-    if (error) throw new Error("Couldn't send your message. Please try again.");
+    }).select("id").single();
+    if (error || !saved) throw new Error("Couldn't send your message. Please try again.");
     await supabaseAdmin.from("support_tickets").update({ status: "open" }).eq("id", ticket.id);
-    await sendMemberReplyNotice(ticket, data.body.trim());
+    await sendMemberReplyNotice(ticket, data.body.trim(), (saved as { id: string }).id);
     return { ok: true as const };
   });
 
