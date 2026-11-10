@@ -16,6 +16,7 @@ import { emptyStatus, isInspectorSong, type SongStatus } from "@/lib/health-song
 import { performers } from "@/lib/metadata";
 import { agencyScores, type TrackReport } from "@/lib/health";
 import { isExternal } from "@/lib/roles";
+import { CreditCheck } from "@/components/CreditCheck";
 import type { Country } from "@/lib/repertoires";
 
 type Group = SongChecklist["group"];
@@ -287,6 +288,8 @@ function SongDetail({ r, c, country, status, onStatus, actions, running, onEditI
           );
         })}
       </div>
+
+      <div className="mt-6"><CreditCheck track={r.track} status={status} onStatus={onStatus} onFix={(f) => fix(f)} /></div>
 
       {!inspector && <div className="mt-6"><LiveRecords r={r} running={running} onRun={() => actions.onRunOne(id)} /></div>}
 

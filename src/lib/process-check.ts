@@ -47,7 +47,7 @@ export type CheckFinding = {
   values?: { catalog: string; agency: string; release: string };
 };
 
-export type ProcessCheck = { state: CheckState; findings: CheckFinding[]; facts: Fact[]; next: string; checkedAt: string };
+export type ProcessCheck = { state: CheckState; findings: CheckFinding[]; facts: Fact[]; next: string; checkedAt: string; waitingFor?: "registration" | "release" };
 
 const SUFFIXES = new Set(["jr", "sr", "ii", "iii", "iv", "v"]);
 const clean = (v?: string) => (v ?? "").trim();
@@ -106,6 +106,7 @@ export function creditCheck(song: Metadata, agency: WorkCopy | null | undefined,
       findings: [],
       facts,
       checkedAt,
+      waitingFor: noRelease ? "release" : "registration",
       next: noRelease
         ? "The check runs when the artist's release exists. Add its credit line when it does."
         : "Register the work with the PRO and The MLC first, then read the registration back here.",
@@ -142,7 +143,9 @@ export function creditCheck(song: Metadata, agency: WorkCopy | null | undefined,
     const key = `writer:${nameKey(name) || clean(w.ipi)}`;
     const a = agency!.writers.find((x) => (clean(w.ipi) && clean(x.ipi) && clean(w.ipi) === clean(x.ipi)) || sameName(x.legalName, w.legalName));
     const r = release!.writers.find((x) => sameName(x.legalName, w.legalName));
-    add(`${key}:name`, `Writer · ${name}`, w.legalName ?? "", a?.legalName ?? "", r?.legalName ?? "", eq, "writers");
+    // A writer is matched above by name key, so the same key is what the copies are compared on: "Ann Lee" and
+    // "Lee Ann" are one writer, and a difference that only reorderes the name is not one anybody can fix.
+    add(`${key}:name`, `Writer · ${name}`, w.legalName ?? "", a?.legalName ?? "", r?.legalName ?? "", (x, y) => sameName(x, y), "writers");
     if (clean(w.ipi) || clean(a?.ipi)) add(`${key}:ipi`, `IPI · ${name}`, w.ipi ?? "", a?.ipi ?? "", "", eq, "writers");
     if (clean(w.percentage) || clean(a?.share)) add(`${key}:share`, `Split · ${name}`, w.percentage ?? "", a?.share ?? "", "", eq, "writers");
     // Found and absent is a real difference; a failed lookup can never say a writer is missing.
@@ -216,7 +219,7 @@ export function masterCheck(deal: DealTerms, reading?: StreamReading | null): Pr
     state, findings, facts: [], checkedAt, next: due === "waiting"
       ? "Enter the master's streams from your distributor report, then check again."
       : due === "not yet"
-        ? "The recording is inside its licence. Check again on the date you set."
-        : "The cap is reached. Decide the ask, then amend the licence and file it back.",
+        ? "The recording is inside its license. Check again on the date you set."
+        : "The cap is reached. Decide the ask, then amend the license and file it back.",
   };
 }

@@ -74,3 +74,21 @@ describe("the master checkup", () => {
     expect(c.state).toBe("difference");
   });
 });
+
+describe("creditCheck waiting", () => {
+  it("names the copy it is actually waiting for", () => {
+    const noAgency = creditCheck(song(), null, release());
+    expect(noAgency.state).toBe("waiting");
+    expect(noAgency.waitingFor).toBe("registration");
+    expect(creditCheck(song(), agency(), null).waitingFor).toBe("release");
+    expect(creditCheck(song(), null, null).waitingFor).toBe("release");
+  });
+});
+
+describe("creditCheck writer names", () => {
+  it("treats a reordered name as the same writer instead of a difference nobody can fix", () => {
+    const out = creditCheck(song(), agency(), release({ writers: [{ legalName: "Lee Ann" }] }));
+    expect(out.findings.filter((f) => f.id.startsWith("writer:"))).toHaveLength(0);
+    expect(out.state).toBe("agree");
+  });
+});

@@ -810,4 +810,15 @@ Built in §22: the credit check and master checkup engine, decision 16, the two 
 | **Two blueprints** | `songwriter-placements`, `beat-renegotiation` (`guides.ts`) | Every numbered step is claimed by a checklist item, and the items that finish inside the app link to the screen that does it. |
 | **The amendment** | `beat-license-amendment` (`blueprints/music-production.ts`), `amendmentPrefill` | A full contract blueprint: recitals naming the original licence, what changes, prospective-only, credit and ownership, no waiver, general terms. Its beat, original date and original cap prefill from the deal on the master, and stay blank when the deal is blank. |
 
-Still to build: the Hub screen that renders `creditCheck`, the reading entry that feeds `masterCheck`, and the amendment card on the master ("Amended … · cap 50,000 → 250,000").
+## 23. Built 2026-11-10 (the credit check inside the Hub)
+
+| What | Where | Behaviour |
+| --- | --- | --- |
+| **The card** | `CreditCheck` in `src/components/CreditCheck.tsx`, rendered by `SongDetail` in `HealthChecklist.tsx` before `LiveRecords` | The registration and the release credit line sit beside the catalog with the differences open first, each naming the copy the member controls. The master checkup only appears once a deal is recorded on the song. |
+| **The inputs persist** | `credit-copies.ts`, `health_song_status.steps` under `credit:agency`, `credit:release`, `credit:reading` | The three copies and the reading save with the song's Hub state, so they follow the member to any device. No new table and no migration; a blank step is absent, never an empty answer. |
+| **It compares only what was entered** | `run` in `CreditCheck` | Fields start empty with the catalog's own values as placeholders. A copy is stored and compared only when the member types in it, so an untouched card records nothing and the artist's release is never filled in from the catalog. |
+| **Waiting names the right copy** | `waitingFor` on `ProcessCheck` | With only the release entered the card says "Waiting on the registration", not the other way round. |
+| **A reordered name is one writer** | writer rows compare on `sameName` | A writer is matched by name key, so "Ann Lee" and "Lee Ann" are compared as the same person instead of being reported as a difference nobody could fix. |
+| **Entered is labelled as entered** | `verified: false`, "entered, not verified by a lookup" | A typed copy is a claim, never a lookup, and the card says so on every save. |
+
+Still to build: the amendment card on the master ("Amended … · cap 50,000 → 250,000").
