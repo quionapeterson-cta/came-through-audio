@@ -53,12 +53,12 @@ const steps = [
 
 
 
-type FooterLink = { label: string; to?: "/terms-of-service" | "/refund-policy" | "/privacy-policy" | "/contact" | "/faq"; search?: { type: "support" | "contact" }; doc?: string };
+type FooterLink = { label: string; to?: "/terms-of-service" | "/refund-policy" | "/privacy-policy" | "/contact" | "/contact-us" | "/faq"; search?: { type: "support" | "contact" }; doc?: string };
 const footerCols: { title: string; links: FooterLink[] }[] = [
   { title: "Product", links: [{ label: "MP3 Embedding", doc: "metadata-embedding" }, { label: "Centralized Master Catalog", doc: "master-catalog" }, { label: "Royalty Health Hub", doc: "royalty-health-suite" }, { label: "System Security Metrics", doc: "security" }] },
   { title: "Learn", links: [{ label: "FAQ", to: "/faq" }, { label: "Help Center", doc: "help-center" }, { label: "Industry Insights", doc: "industry-insights" }, { label: "The Studio-to-Catalog Guide", doc: "studio-to-catalog-guide" }, { label: "Add Us as Your Representative", doc: "add-representative" }] },
   { title: "Legal", links: [{ label: "Terms of Service", to: "/terms-of-service" }, { label: "Refund Policy", to: "/refund-policy" }, { label: "Privacy Policy", to: "/privacy-policy" }] },
-  { title: "Access", links: [{ label: "Support Tickets", to: "/contact", search: { type: "support" } }, { label: "Contact Us", to: "/contact", search: { type: "contact" } }] },
+  { title: "Access", links: [{ label: "Help Center & Support", to: "/contact" }, { label: "Contact Us", to: "/contact-us" }] },
 ];
 
 /** Who It's For photos: free Unsplash License photos, toned toward Cobalt (public/home/). Focus keeps each face in the crop. */
@@ -672,7 +672,7 @@ function LaunchingSoon() {
       <h2 className="mt-2 text-2xl font-bold">Accounts open at launch</h2>
       <p className="mt-2 text-sm text-muted-foreground">Came Through Audio is in private testing. Plans and pricing are below; questions are welcome any time.</p>
       <div className="mt-5 flex flex-wrap justify-center gap-3">
-        <Link to="/contact" className="inline-flex h-10 items-center rounded-md bg-primary px-4 text-sm font-semibold text-primary-foreground hover:bg-primary/90">Contact us</Link>
+        <Link to="/contact-us" className="inline-flex h-10 items-center rounded-md bg-primary px-4 text-sm font-semibold text-primary-foreground hover:bg-primary/90">Contact us</Link>
       </div>
     </div>
   );

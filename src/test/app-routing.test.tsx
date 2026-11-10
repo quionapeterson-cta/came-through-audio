@@ -34,7 +34,7 @@ describe("App routing", () => {
 
   it("opens only the pages a payment provider reviews, with signup still locked", async () => {
     const beforeLoad = RootRoute.options.beforeLoad as unknown as (ctx: unknown) => Promise<unknown>;
-    for (const path of ["/", "/plans", "/contact", "/terms-of-service", "/privacy-policy", "/refund-policy"]) {
+    for (const path of ["/", "/plans", "/contact", "/contact-us", "/terms-of-service", "/privacy-policy", "/refund-policy"]) {
       await expect(beforeLoad({ location: { pathname: path, href: path } })).resolves.toEqual({ siteLocked: true });
     }
   });

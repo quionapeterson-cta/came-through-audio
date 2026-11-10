@@ -84,7 +84,7 @@ ${bodyHtml}
 <p style="margin:8px 0 0">${escapeHtml(opts.reason)}</p>
 ${optOut}
 ${invites}
-<p style="margin:8px 0 0"><a href="${SITE_URL}/privacy-policy" style="color:#004AAD">Privacy Policy</a> · <a href="${SITE_URL}/terms-of-service" style="color:#004AAD">Terms of Service</a> · <a href="${SITE_URL}/contact" style="color:#004AAD">Contact Us</a></p>
+<p style="margin:8px 0 0"><a href="${SITE_URL}/privacy-policy" style="color:#004AAD">Privacy Policy</a> · <a href="${SITE_URL}/terms-of-service" style="color:#004AAD">Terms of Service</a> · <a href="${SITE_URL}/contact-us" style="color:#004AAD">Contact Us</a></p>
 <p style="margin:8px 0 0">© ${year} ${BUSINESS_NAME}. All rights reserved.</p>
 </div>
 </div></body></html>`;

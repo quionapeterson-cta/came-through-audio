@@ -182,12 +182,18 @@
 - **`waiting` is a status of its own** (founder, 2026-11-08): parked on the member without pretending to be open or
   resolved. The three that shipped stay; labels live in `src/lib/support-replies.ts`, and the member sees `waiting` as
   "Waiting on you".
-- **Contact Us is a general inquiry, not a ticket** (founder, 2026-11-10): the Contact half of `/contact` asks name,
-  email, one topic from `GENERAL_INQUIRIES` and the message. It does not ask the ticket's "Where is it?" and "What's
-  happening?" pair or a subject of its own, because nothing is going wrong in a tab. It is still stored as
-  `kind: "contact"` under `GENERAL_AREA`, so it lands in the same Admin → Support Tickets queue and is labelled Contact
-  there, with the subject reading "General inquiry · <topic>". The workspace Support tab links to it as "General
-  inquiry" beside "Open a new ticket".
+- **Contact Us has its own page, and Support is tickets only** (founder, 2026-11-10): `/contact` is the Help Center and
+  the ticket form; the general inquiry lives at `/contact-us` and is reached from the homepage's Contact us link (and the
+  email footer's Contact Us) alone. It asks name, email, one topic from `GENERAL_INQUIRIES` and the message — never the
+  ticket's "Where is it?" and "What's happening?" pair or a subject of its own, because nothing is going wrong in a tab.
+  It is still stored as `kind: "contact"` under `GENERAL_AREA`, so it lands in the same Admin → Support Tickets queue and
+  is labelled Contact there, with the subject reading "General inquiry · <topic>". Old `/contact?type=contact` links
+  redirect to it, and the workspace Support tab offers tickets only.
+- **The Help Center answers before it asks** (founder, 2026-11-10): hero search over `searchHelp`, then the four
+  `HELP_CATEGORIES` cards — Audio & Mastered Files, Metadata & Distribution, Account & Billing, Royalties & Payouts —
+  whose answers come from `src/lib/faq.ts` and `src/lib/support-faq.ts`, never a second body of copy with its own facts.
+  The ticket form sits below the answers, and once "Where is it?" is picked, up to three `deflectionFor` answers appear
+  above the Subject line. A signed-out visitor still gets every answer, then the sign-in card instead of the form.
 
 ## Account Help & Holiday Cover (always follow)
 

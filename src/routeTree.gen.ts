@@ -13,6 +13,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as AdminRouteImport } from './routes/admin'
 import { Route as BetaRouteImport } from './routes/beta'
 import { Route as ContactRouteImport } from './routes/contact'
+import { Route as ContactUsRouteImport } from './routes/contact-us'
 import { Route as FaqRouteImport } from './routes/faq'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as PlansRouteImport } from './routes/plans'
@@ -60,6 +61,11 @@ const BetaRoute = BetaRouteImport.update({
 const ContactRoute = ContactRouteImport.update({
   id: '/contact',
   path: '/contact',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ContactUsRoute = ContactUsRouteImport.update({
+  id: '/contact-us',
+  path: '/contact-us',
   getParentRoute: () => rootRouteImport,
 } as any)
 const FaqRoute = FaqRouteImport.update({
@@ -213,6 +219,7 @@ export interface FileRoutesByFullPath {
   '/admin': typeof AdminRoute
   '/beta': typeof BetaRoute
   '/contact': typeof ContactRoute
+  '/contact-us': typeof ContactUsRoute
   '/faq': typeof FaqRoute
   '/login': typeof LoginRoute
   '/plans': typeof PlansRoute
@@ -247,6 +254,7 @@ export interface FileRoutesByTo {
   '/admin': typeof AdminRoute
   '/beta': typeof BetaRoute
   '/contact': typeof ContactRoute
+  '/contact-us': typeof ContactUsRoute
   '/faq': typeof FaqRoute
   '/login': typeof LoginRoute
   '/plans': typeof PlansRoute
@@ -282,6 +290,7 @@ export interface FileRoutesById {
   '/admin': typeof AdminRoute
   '/beta': typeof BetaRoute
   '/contact': typeof ContactRoute
+  '/contact-us': typeof ContactUsRoute
   '/faq': typeof FaqRoute
   '/login': typeof LoginRoute
   '/plans': typeof PlansRoute
@@ -318,6 +327,7 @@ export interface FileRouteTypes {
     | '/admin'
     | '/beta'
     | '/contact'
+    | '/contact-us'
     | '/faq'
     | '/login'
     | '/plans'
@@ -352,6 +362,7 @@ export interface FileRouteTypes {
     | '/admin'
     | '/beta'
     | '/contact'
+    | '/contact-us'
     | '/faq'
     | '/login'
     | '/plans'
@@ -386,6 +397,7 @@ export interface FileRouteTypes {
     | '/admin'
     | '/beta'
     | '/contact'
+    | '/contact-us'
     | '/faq'
     | '/login'
     | '/plans'
@@ -421,6 +433,7 @@ export interface RootRouteChildren {
   AdminRoute: typeof AdminRoute
   BetaRoute: typeof BetaRoute
   ContactRoute: typeof ContactRoute
+  ContactUsRoute: typeof ContactUsRoute
   FaqRoute: typeof FaqRoute
   LoginRoute: typeof LoginRoute
   PlansRoute: typeof PlansRoute
@@ -479,6 +492,13 @@ declare module '@tanstack/react-router' {
       path: '/contact'
       fullPath: '/contact'
       preLoaderRoute: typeof ContactRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/contact-us': {
+      id: '/contact-us'
+      path: '/contact-us'
+      fullPath: '/contact-us'
+      preLoaderRoute: typeof ContactUsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/faq': {
@@ -685,6 +705,7 @@ const rootRouteChildren: RootRouteChildren = {
   AdminRoute: AdminRoute,
   BetaRoute: BetaRoute,
   ContactRoute: ContactRoute,
+  ContactUsRoute: ContactUsRoute,
   FaqRoute: FaqRoute,
   LoginRoute: LoginRoute,
   PlansRoute: PlansRoute,

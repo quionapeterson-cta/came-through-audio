@@ -1,79 +1,101 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useMemo, useState } from "react";
+import { createFileRoute, Link, redirect } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
-import { CheckCircle2 } from "lucide-react";
+import { AudioLines, ArrowRight, CheckCircle2, Coins, CreditCard, LifeBuoy, Search, Tags } from "lucide-react";
 import { BrandLogo } from "@/components/BrandLogo";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { submitSupportTicket, submitTicket, ticketSchema } from "@/lib/support.functions";
-import { categoryFor, GENERAL_AREA, GENERAL_INQUIRIES, generalInquiryCategory, generalInquirySubject, TICKET_TOPICS } from "@/lib/support-topics";
-import { SUPPORT_FAQ_HEADING, SUPPORT_FAQ_INTRO, SUPPORT_FAQS } from "@/lib/support-faq";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-import { useAuth } from "@/hooks/useAuth";
 import { SignupCard } from "@/components/SignupCard";
+import { submitSupportTicket, ticketSchema } from "@/lib/support.functions";
+import { categoryFor, TICKET_TOPICS } from "@/lib/support-topics";
+import { deflectionFor, FORM_TIPS, HELP_CATEGORIES, helpArticles, type HelpCategory, type HelpIcon } from "@/lib/help-center";
+import { searchHelp } from "@/lib/help-search";
 import { BUSINESS_ADDRESS, SUPPORT_EMAIL } from "@/lib/email-layout";
+import { useAuth } from "@/hooks/useAuth";
 
-type Search = { type?: "contact" | "support" | undefined };
+/**
+ * The Help Center (founder, 2026-11-10): answers first, ticket second. Search over everything we publish, four topic
+ * cards whose answers come from the FAQ and the support quick answers, and the ticket form below them — never on top of
+ * them. A general inquiry is not a ticket and lives at `/contact-us`; old `?type=contact` links land there.
+ */
+type Search = { type?: "support" | "contact" | undefined };
 
 export const Route = createFileRoute("/contact")({
-  validateSearch: (s: Record<string, unknown>): Search => ({ type: s["type"] === "support" ? "support" : s["type"] === "contact" ? "contact" : undefined }),
+  validateSearch: (s: Record<string, unknown>): Search => ({
+    type: s["type"] === "support" ? "support" : s["type"] === "contact" ? "contact" : undefined,
+  }),
+  beforeLoad: ({ search }) => {
+    if (search.type === "contact") throw redirect({ to: "/contact-us" });
+  },
   head: () => ({
     meta: [
-      { title: "Contact Us & Support — Came Through Audio" },
-      { name: "description", content: "Send a message or open a support ticket with the Came Through Audio team." },
-      { property: "og:title", content: "Contact Us & Support — Came Through Audio" },
-      { property: "og:description", content: "Questions about your catalog, splits, royalties or billing? Reach the Came Through Audio team." },
+      { title: "Help Center & Support — Came Through Audio" },
+      { name: "description", content: "Search the answers first: files, metadata, billing, royalties and registration. If it isn't here, open a support ticket and our team replies by email." },
+      { property: "og:title", content: "Help Center & Support — Came Through Audio" },
+      { property: "og:description", content: "Answers for your masters, metadata, billing and royalties — then a support ticket if you still need one." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
     ],
   }),
-  component: ContactPage,
+  component: HelpCenterPage,
 });
 
-function ContactPage() {
-  const { type } = Route.useSearch();
-  const send = useServerFn(submitTicket);
-  const sendSupport = useServerFn(submitSupportTicket);
+const ICONS: Record<HelpIcon, typeof AudioLines> = {
+  audio: AudioLines,
+  metadata: Tags,
+  billing: CreditCard,
+  royalties: Coins,
+};
+
+const POPULAR = ["royalties", "metadata", "file uploads", "refund", "split sheet", "registration"];
+const PLACEHOLDER = "Search for answers... (e.g., royalties, metadata, file uploads)";
+
+function HelpCenterPage() {
+  const send = useServerFn(submitSupportTicket);
   const { user, loading } = useAuth();
-  const [kind, setKind] = useState<"contact" | "support">(type ?? "contact");
-  useEffect(() => { if (type) setKind(type); }, [type]);
-  // Support tickets need an account (founder, 2026-10-27); Contact Us stays open to everyone.
-  const needsLogin = kind === "support" && !loading && !user;
-  const [form, setForm] = useState<{ name: string; email: string; area: string; issue: string; subject: string; message: string; website: string }>({
-    name: "", email: "", area: TICKET_TOPICS[0].area, issue: TICKET_TOPICS[0].issues[0], subject: "", message: "", website: "",
+  const [query, setQuery] = useState("");
+  const [chosen, setChosen] = useState<HelpCategory["id"] | undefined>(undefined);
+  const [form, setForm] = useState<{ name: string; area: string; issue: string; subject: string; message: string; website: string }>({
+    name: "",
+    area: TICKET_TOPICS[0].area,
+    issue: TICKET_TOPICS[0].issues[0],
+    subject: "",
+    message: "",
+    website: "",
   });
-  // The two halves ask different things: a ticket says where in the app the trouble is, a general inquiry says what the
-  // question is about. Swapping the pickers with the tab keeps a contact topic out of a support area and back again.
-  useEffect(() => {
-    setForm((f) => (kind === "contact"
-      ? { ...f, area: GENERAL_AREA, issue: GENERAL_INQUIRIES[0] }
-      : { ...f, area: TICKET_TOPICS[0].area, issue: TICKET_TOPICS[0].issues[0] }));
-  }, [kind]);
-  const issues = TICKET_TOPICS.find((t) => t.area === form.area)?.issues ?? [];
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState(false);
   const [done, setDone] = useState(false);
   const [failure, setFailure] = useState("");
-  const set = (k: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => setForm({ ...form, [k]: e.target.value });
-  // The issue list follows the area, and a new area starts on its first issue so the pair is always valid.
-  const pickArea = (e: React.ChangeEvent<HTMLSelectElement>) => {
+
+  const term = query.trim();
+  const results = useMemo(() => (term.length >= 2 ? searchHelp(term, 6) : []), [term]);
+  const issues = TICKET_TOPICS.find((t) => t.area === form.area)?.issues ?? [];
+  const deflections = deflectionFor(form.area);
+  const needsLogin = !loading && !user;
+  const selected = HELP_CATEGORIES.find((c) => c.id === chosen);
+
+  function reveal(id: HelpCategory["id"] | undefined) {
+    setChosen(id);
+    // The answers sit under the cards, so picking a card takes you to them instead of leaving you to scroll.
+    window.setTimeout(() => document.getElementById("answers")?.scrollIntoView({ behavior: "smooth", block: "start" }), 0);
+  }
+
+  function pickArea(e: React.ChangeEvent<HTMLSelectElement>) {
     const area = e.target.value;
     setForm({ ...form, area, issue: TICKET_TOPICS.find((t) => t.area === area)?.issues[0] ?? "" });
-  };
+  }
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     setFailure("");
-    // A general inquiry carries its topic as the category's issue and names it in the subject, so the admin queue reads
-    // "General inquiry · …" rather than an app area the person never picked.
-    const category = kind === "contact" ? generalInquiryCategory(form.issue) : categoryFor(form.area, form.issue);
     const parsed = ticketSchema.safeParse({
       ...form,
-      category,
-      kind,
-      subject: kind === "contact" ? generalInquirySubject(form.issue) : form.subject,
-      email: kind === "support" ? user?.email ?? "" : form.email,
+      category: categoryFor(form.area, form.issue),
+      kind: "support",
+      email: user?.email ?? "",
     });
     if (!parsed.success) {
       setErrors(Object.fromEntries(parsed.error.issues.map((i) => [String(i.path[0]), i.message])));
@@ -82,93 +104,298 @@ function ContactPage() {
     setErrors({});
     setBusy(true);
     try {
-      if (kind === "support") { const { email: _e, ...rest } = parsed.data; await sendSupport({ data: rest }); }
-      else await send({ data: parsed.data });
+      const { email: _email, ...rest } = parsed.data;
+      await send({ data: rest });
       setDone(true);
+    } catch (err) {
+      setFailure(err instanceof Error ? err.message : "Something went wrong.");
+    } finally {
+      setBusy(false);
     }
-    catch (err) { setFailure(err instanceof Error ? err.message : "Something went wrong."); }
-    finally { setBusy(false); }
   }
-
-  const tabs = (
-    <div className="flex gap-2 rounded-lg bg-muted p-1">
-      {(["contact", "support"] as const).map((k) => (
-        <button type="button" key={k} onClick={() => setKind(k)}
-          className={`flex-1 rounded-md py-2 text-sm font-semibold ${kind === k ? "bg-primary text-primary-foreground" : "text-muted-foreground"}`}>
-          {k === "contact" ? "Contact Us" : "Support Ticket"}
-        </button>
-      ))}
-    </div>
-  );
 
   return (
     <div className="min-h-screen bg-background text-foreground">
       <header className="bg-ink text-ink-foreground">
-        <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-5"><BrandLogo /><Link to="/" className="text-sm font-semibold text-ink-muted hover:text-primary">Home</Link></div>
+        <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-5">
+          <BrandLogo />
+          <div className="flex items-center gap-5 text-sm font-semibold">
+            <Link to="/faq" className="text-ink-muted hover:text-primary">Full FAQ</Link>
+            <Link to="/" className="text-ink-muted hover:text-primary">Home</Link>
+          </div>
+        </div>
       </header>
-      <main className="mx-auto max-w-2xl px-6 py-14">
-        <h1 className="text-4xl font-bold">{kind === "support" ? "Open a Support Ticket" : "Contact Us"}</h1>
-        <p className="mt-3 text-muted-foreground">We usually reply by email. You can also write to <a className="text-primary underline" href={`mailto:${SUPPORT_EMAIL}`}>{SUPPORT_EMAIL}</a>.</p>
-        {kind === "contact" && (
-          <p className="mt-3 text-sm text-muted-foreground">
-            General inquiries: a question before you sign up, press, partnerships or licensing, feedback, or anything that
-            isn't a problem inside your catalog. These still reach the support team — they sit in the same queue in Admin,
-            marked as a contact. If something in your catalog isn't working, open a Support Ticket instead so we can see
-            your account.
-          </p>
-        )}
 
-        {done ? (
-          <div className="mt-10 rounded-2xl border-2 border-primary p-8 text-center">
-            <CheckCircle2 className="mx-auto h-10 w-10 text-primary" />
-            <p className="mt-3 text-xl font-bold">Message received</p>
-            <p className="mt-2 text-muted-foreground">Thanks, {form.name.split(" ")[0]}. Our team will reply to {kind === "support" ? user?.email : form.email}.</p>
-            <Button asChild className="mt-6"><Link to="/">Back to home</Link></Button>
-          </div>
-        ) : needsLogin ? (
-          <div className="mt-8 space-y-5">
-            {tabs}
-            <SupportFaqs />
-            <p className="text-sm text-muted-foreground">Log in or create a free account to open a support ticket, so we can look at your account and reply to the right email. Questions before signing up? Use Contact Us.</p>
-            <SignupCard returnPath="/contact?type=support" />
-          </div>
-        ) : (
-          <form onSubmit={onSubmit} className="mt-8 space-y-5" noValidate>
-            {tabs}
-            {kind === "support" && <SupportFaqs />}
-            <Field label="Name" error={errors["name"]}><Input value={form.name} onChange={set("name")} maxLength={100} /></Field>
-            {kind === "support"
-              ? <p className="text-sm text-muted-foreground">{user?.email
-                  ? <>We'll reply to your account email, <span className="font-semibold text-foreground">{user.email}</span>.</>
-                  : "We'll reply to the email on your account."}</p>
-              : <Field label="Email" error={errors["email"]}><Input type="email" value={form.email} onChange={set("email")} maxLength={255} /></Field>}
-            {kind === "support" ? (<>
-              <Field label="Where is it?" error={errors["category"]}>
-                <select value={form.area} onChange={pickArea} className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm">
-                  {TICKET_TOPICS.map((t) => <option key={t.area}>{t.area}</option>)}
-                </select>
-              </Field>
-              <Field label="What's happening?" error={errors["issue"]}>
-                <select value={form.issue} onChange={set("issue")} className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm">
-                  {issues.map((i) => <option key={i}>{i}</option>)}
-                </select>
-              </Field>
-              <Field label="Subject" error={errors["subject"]}><Input value={form.subject} onChange={set("subject")} maxLength={150} /></Field>
-            </>) : (
-              <Field label="What's this about?" error={errors["issue"]}>
-                <select value={form.issue} onChange={set("issue")} className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm">
-                  {GENERAL_INQUIRIES.map((g) => <option key={g}>{g}</option>)}
-                </select>
-              </Field>
-            )}
-            <Field label="Message" error={errors["message"]}><Textarea rows={6} value={form.message} onChange={set("message")} maxLength={3000} /></Field>
-            <input type="text" tabIndex={-1} autoComplete="off" aria-hidden="true" className="hidden" value={form.website} onChange={set("website")} />
-            {failure && <p className="text-sm text-destructive">{failure}</p>}
-            <Button type="submit" disabled={busy} className="w-full">{busy ? "Sending…" : kind === "support" ? "Submit Ticket" : "Send Message"}</Button>
+      {/* Hero: one question, one search box. Everything else stays below it. */}
+      <section className="relative overflow-hidden bg-ink text-ink-foreground">
+        <div className="pointer-events-none absolute -top-32 left-1/2 h-72 w-[46rem] -translate-x-1/2 rounded-full bg-primary/25 blur-3xl" aria-hidden="true" />
+        <div className="relative mx-auto max-w-3xl px-6 pb-16 pt-14 text-center sm:pb-20 sm:pt-20">
+          <p className="text-xs font-bold uppercase tracking-[3px] text-primary">Help Center</p>
+          <h1 className="mt-3 text-4xl font-bold leading-tight sm:text-5xl">How can we help?</h1>
+          <p className="mx-auto mt-4 max-w-xl text-ink-muted">
+            Most questions are answered right here. Search, or start with a topic — and only open a ticket if the answer
+            isn't in front of you.
+          </p>
+          <form
+            role="search"
+            onSubmit={(e) => e.preventDefault()}
+            className="mx-auto mt-8 max-w-2xl"
+          >
+            <label htmlFor="help-search" className="sr-only">Search for answers</label>
+            <div className="relative">
+              <Search className="pointer-events-none absolute left-5 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground" />
+              <input
+                id="help-search"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder={PLACEHOLDER}
+                maxLength={120}
+                className="h-14 w-full rounded-full border border-ink-border bg-card pl-12 pr-4 text-sm text-card-foreground shadow-2xl outline-none placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring sm:pl-14 sm:pr-5 sm:text-base"
+              />
+            </div>
           </form>
-        )}
-        <p className="mt-12 text-center text-xs text-muted-foreground">Came Through Audio, LLC · {BUSINESS_ADDRESS}</p>
-      </main>
+          <div className="mt-4 flex flex-wrap items-center justify-center gap-2 text-xs">
+            <span className="text-ink-muted">Popular:</span>
+            {POPULAR.map((p) => (
+              <button key={p} type="button" onClick={() => setQuery(p)}
+                className="rounded-full border border-ink-border px-3 py-1 font-semibold text-ink-muted transition hover:border-primary hover:text-primary">
+                {p}
+              </button>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* What the search found, before the cards: the answer is the point, not the ticket. */}
+      {term.length >= 2 && (
+        <section className="border-b border-border bg-background">
+          <div className="mx-auto max-w-3xl px-6 py-10">
+            <h2 className="text-lg font-bold">
+              {results.length ? `Answers for “${term}”` : `Nothing matched “${term}” yet`}
+            </h2>
+            {results.length ? (
+              <div className="mt-4 space-y-3">
+                {results.map((r) => (
+                  <article key={r.id} className="rounded-2xl border border-border bg-card p-5">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{r.source}</p>
+                    <h3 className="mt-1 font-bold">{r.title}</h3>
+                    <p className="mt-1 line-clamp-3 text-sm leading-relaxed text-muted-foreground">{r.text}</p>
+                    {r.link && <a href={r.link.to} className="mt-2 inline-block text-sm font-semibold text-primary underline">{r.link.label}</a>}
+                  </article>
+                ))}
+              </div>
+            ) : (
+              <p className="mt-2 text-sm text-muted-foreground">
+                Try fewer words, or pick a topic below. If it still isn't here, the ticket form is at the bottom of this
+                page and a person will answer by email.
+              </p>
+            )}
+            <button type="button" onClick={() => setQuery("")} className="mt-4 text-sm font-semibold text-primary underline">
+              Clear the search
+            </button>
+          </div>
+        </section>
+      )}
+
+      {/* The four cards. Each one is a filter for the answers below, and the count says what is waiting inside. */}
+      <section className="mx-auto max-w-6xl px-6 py-14 sm:py-16">
+        <div className="mx-auto max-w-2xl text-center">
+          <h2 className="text-2xl font-bold sm:text-3xl">Browse by topic</h2>
+          <p className="mt-2 text-muted-foreground">Pick the part of the product your question is about. The answers open in place, no page change.</p>
+        </div>
+        <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          {HELP_CATEGORIES.map((c) => {
+            const Icon = ICONS[c.icon];
+            const count = helpArticles(c).length;
+            const active = chosen === c.id;
+            return (
+              <button
+                key={c.id}
+                type="button"
+                onClick={() => reveal(active ? undefined : c.id)}
+                aria-pressed={active}
+                className={`group flex h-full flex-col items-start rounded-2xl border p-6 text-left transition ${
+                  active ? "border-primary bg-primary/5 shadow-lg" : "border-border bg-card hover:-translate-y-0.5 hover:border-primary/60 hover:shadow-lg"
+                }`}
+              >
+                <span className={`flex h-12 w-12 items-center justify-center rounded-xl ${active ? "bg-primary text-primary-foreground" : "bg-primary/10 text-primary"}`}>
+                  <Icon className="h-6 w-6" />
+                </span>
+                <span className="mt-4 text-lg font-bold leading-snug">{c.title}</span>
+                <span className="mt-1.5 text-sm leading-relaxed text-muted-foreground">{c.blurb}</span>
+                <span className="mt-4 inline-flex items-center gap-1 text-sm font-semibold text-primary">
+                  {count} answers <ArrowRight className="h-4 w-4 transition group-hover:translate-x-0.5" />
+                </span>
+              </button>
+            );
+          })}
+        </div>
+
+        <div id="answers" className="mt-12 scroll-mt-6">
+          <div className="flex flex-wrap items-center gap-2">
+            <button type="button" onClick={() => setChosen(undefined)}
+              className={`rounded-full px-4 py-1.5 text-sm font-semibold transition ${chosen ? "text-muted-foreground hover:text-foreground" : "bg-primary text-primary-foreground"}`}>
+              All topics
+            </button>
+            {HELP_CATEGORIES.map((c) => (
+              <button key={c.id} type="button" onClick={() => setChosen(c.id)}
+                className={`rounded-full px-4 py-1.5 text-sm font-semibold transition ${chosen === c.id ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}>
+                {c.title}
+              </button>
+            ))}
+          </div>
+          <AnswerGroups selected={selected} />
+          <p className="mt-6 text-sm text-muted-foreground">
+            Looking for something broader? The <Link to="/faq" className="font-semibold text-primary underline">full FAQ</Link>{" "}
+            covers plans, exports, registration and branding.
+          </p>
+        </div>
+      </section>
+
+      {/* Still need help: the form, quiet and below the answers. */}
+      <section id="ticket" className="scroll-mt-6 border-t border-border bg-muted/30">
+        <div className="mx-auto grid max-w-6xl gap-8 px-6 py-14 sm:py-16 lg:grid-cols-5">
+          <div className="lg:col-span-2">
+            <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-primary/10 text-primary"><LifeBuoy className="h-5 w-5" /></span>
+            <h2 className="mt-4 text-3xl font-bold">Still need help?</h2>
+            <p className="mt-3 text-muted-foreground">
+              Open a support ticket and a person answers by email. Most replies go out in about 48 hours; a high-volume
+              week or a holiday break can take longer.
+            </p>
+            <ul className="mt-5 space-y-2 text-sm text-muted-foreground">
+              <li>• Tell us the song, the step and what happened instead.</li>
+              <li>• Your browser and a screenshot save a round trip.</li>
+              <li>• The whole conversation lands in your workspace Support tab.</li>
+              <li>• Billing questions go straight to Billing with Account &amp; billing.</li>
+            </ul>
+            {FORM_TIPS.length > 0 && (
+              <details className="mt-5 rounded-xl border border-border bg-card px-4 py-3">
+                <summary className="cursor-pointer text-sm font-semibold">Writing a ticket we can answer in one go</summary>
+                <div className="mt-2 space-y-2">
+                  {FORM_TIPS.map((f) => (
+                    <p key={f.q} className="text-sm leading-relaxed text-muted-foreground">{f.a}</p>
+                  ))}
+                </div>
+              </details>
+            )}
+            <p className="mt-2 text-sm text-muted-foreground">
+              You can also write to <a className="font-semibold text-primary underline" href={`mailto:${SUPPORT_EMAIL}`}>{SUPPORT_EMAIL}</a>.
+            </p>
+          </div>
+
+          <div className="lg:col-span-3">
+            {done ? (
+              <div className="rounded-2xl border-2 border-primary bg-card p-8 text-center">
+                <CheckCircle2 className="mx-auto h-10 w-10 text-primary" />
+                <p className="mt-3 text-xl font-bold">Message received</p>
+                <p className="mt-2 text-muted-foreground">
+                  Thanks, {form.name.split(" ")[0] || "there"}. Our team will reply to {user?.email}. Follow it in your
+                  workspace Support tab — the reply lands on the same ticket.
+                </p>
+                <div className="mt-6 flex flex-wrap justify-center gap-2">
+                  <Button asChild><Link to="/workspace" search={{ tab: "support" }}>Open my Support tab</Link></Button>
+                  <Button asChild variant="outline"><Link to="/">Back to home</Link></Button>
+                </div>
+              </div>
+            ) : needsLogin ? (
+              <div className="rounded-2xl border border-border bg-card p-6 sm:p-8">
+                <h3 className="text-xl font-bold">Log in to open a ticket</h3>
+                <p className="mt-2 text-sm text-muted-foreground">
+                  A ticket needs an account so we can look at the right one and reply to the right email.
+                </p>
+                <SignupCard returnPath="/contact?type=support" />
+              </div>
+            ) : (
+              <form onSubmit={onSubmit} className="space-y-5 rounded-2xl border border-border bg-card p-6 shadow-sm sm:p-8" noValidate>
+                <Field label="Name" error={errors["name"]}>
+                  <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} maxLength={100} autoComplete="name" />
+                </Field>
+                <div className="rounded-lg border border-border bg-muted/40 px-3 py-2.5 text-sm text-muted-foreground">
+                  We'll reply to your account email, <span className="font-semibold text-foreground">{user?.email}</span>.
+                </div>
+                <Field label="Where is it?" error={errors["category"]}>
+                  <select value={form.area} onChange={pickArea} className="h-11 w-full rounded-lg border border-input bg-background px-3 text-sm">
+                    {TICKET_TOPICS.map((t) => <option key={t.area}>{t.area}</option>)}
+                  </select>
+                </Field>
+                <Field label="What's happening?" error={errors["issue"]}>
+                  <select value={form.issue} onChange={(e) => setForm({ ...form, issue: e.target.value })}
+                    className="h-11 w-full rounded-lg border border-input bg-background px-3 text-sm">
+                    {issues.map((i) => <option key={i}>{i}</option>)}
+                  </select>
+                </Field>
+
+                {/* Deflection: the same area's quick answers, offered once the person has told us where the trouble is. */}
+                {deflections.length > 0 && (
+                  <div className="rounded-xl border border-primary/30 bg-primary/5 p-4">
+                    <p className="text-sm font-semibold">Did these articles help answer your question?</p>
+                    <div className="mt-2 space-y-2">
+                      {deflections.map((f) => (
+                        <details key={f.q} className="rounded-lg bg-card/70 px-3 py-2">
+                          <summary className="cursor-pointer text-sm font-semibold text-primary">{f.q}</summary>
+                          <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground">{f.a}</p>
+                        </details>
+                      ))}
+                    </div>
+                    <p className="mt-2 text-xs text-muted-foreground">Answered? No ticket needed. If not, we're right here.</p>
+                  </div>
+                )}
+
+                <Field label="Subject" error={errors["subject"]}>
+                  <Input value={form.subject} onChange={(e) => setForm({ ...form, subject: e.target.value })} maxLength={150}
+                    placeholder="One line: what should we look at?" />
+                </Field>
+                <Field label="Message" error={errors["message"]}>
+                  <Textarea rows={6} value={form.message} onChange={(e) => setForm({ ...form, message: e.target.value })} maxLength={3000}
+                    placeholder="What you clicked, what you expected and what happened instead." />
+                </Field>
+                <input type="text" tabIndex={-1} autoComplete="off" aria-hidden="true" className="hidden"
+                  value={form.website} onChange={(e) => setForm({ ...form, website: e.target.value })} />
+                {failure && <p className="text-sm text-destructive">{failure}</p>}
+                <Button type="submit" disabled={busy} className="w-full rounded-full">{busy ? "Sending…" : "Submit Ticket"}</Button>
+                <p className="text-center text-xs text-muted-foreground">
+                  We never ask for a card number. The card on file is changed on Stripe's own page.
+                </p>
+              </form>
+            )}
+          </div>
+        </div>
+      </section>
+
+      <footer className="bg-ink text-ink-muted">
+        <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-2 px-6 py-8 text-xs sm:flex-row">
+          <p>Came Through Audio, LLC · {BUSINESS_ADDRESS}</p>
+          <Link to="/" className="font-semibold text-ink-foreground hover:text-primary">Back to the site</Link>
+        </div>
+      </footer>
+    </div>
+  );
+}
+
+/** The answers under the cards: one group when a card is chosen, all four when it isn't. */
+function AnswerGroups({ selected }: { selected?: HelpCategory | undefined }) {
+  const groups = selected ? [selected] : HELP_CATEGORIES;
+  return (
+    <div className="mt-6 space-y-8">
+      {groups.map((c) => {
+        const articles = helpArticles(c);
+        return (
+          <div key={c.id}>
+            <div className="flex flex-wrap items-baseline justify-between gap-2">
+              <h3 className="text-xl font-bold">{c.title}</h3>
+              <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{articles.length} answers</span>
+            </div>
+            <Accordion type="multiple" className="mt-3 rounded-2xl border border-border bg-card px-5">
+              {articles.map((a) => (
+                <AccordionItem key={a.id} value={a.id}>
+                  <AccordionTrigger className="py-4 text-left text-base font-semibold hover:no-underline">{a.q}</AccordionTrigger>
+                  <AccordionContent className="pb-4 text-sm leading-relaxed text-muted-foreground">{a.a}</AccordionContent>
+                </AccordionItem>
+              ))}
+            </Accordion>
+          </div>
+        );
+      })}
     </div>
   );
 }
@@ -180,29 +407,5 @@ function Field({ label, error, children }: { label: string; error?: string | und
       {children}
       {error && <span className="block text-sm text-destructive">{error}</span>}
     </label>
-  );
-}
-
-/**
- * The quick answers before the form (founder, 2026-11-10): collapsed by default so the form stays the first thing under
- * the tabs, and one click opens the list. The words live in src/lib/support-faq.ts, beside the ticket topics they follow.
- */
-function SupportFaqs() {
-  return (
-    <details className="rounded-xl border border-border bg-muted/40 px-4 py-3">
-      <summary className="cursor-pointer text-sm font-semibold">{SUPPORT_FAQ_HEADING}</summary>
-      <p className="mt-1.5 text-xs leading-relaxed text-muted-foreground">{SUPPORT_FAQ_INTRO}</p>
-      <Accordion type="multiple" className="mt-2">
-        {SUPPORT_FAQS.map((f) => (
-          <AccordionItem key={f.q} value={f.q}>
-            <AccordionTrigger className="py-2.5 text-left text-sm font-semibold hover:no-underline">{f.q}</AccordionTrigger>
-            <AccordionContent className="text-sm leading-relaxed text-muted-foreground">{f.a}</AccordionContent>
-          </AccordionItem>
-        ))}
-      </Accordion>
-      <p className="mt-1 text-xs text-muted-foreground">
-        Looking for something broader? The <Link to="/faq" className="text-primary underline">full FAQ</Link> covers plans, exports, registration and branding.
-      </p>
-    </details>
   );
 }
