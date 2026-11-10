@@ -37,6 +37,7 @@ import { readWorkingAs, rememberWorkingAs, scopedTier, workingProfiles, type Wor
 import { BadgeWatcher } from "@/components/Badges";
 import { Confetti } from "@/components/Confetti";
 import { celebrateReturn } from "@/lib/celebrate";
+import { rememberReturn } from "@/lib/password";
 import { BadgeViewer } from "@/components/BadgeViewer";
 import type { ShareInfo } from "@/components/BadgeCelebration";
 import { isBadgeImage, badgeForArt, type CollectionId } from "@/lib/badges";
@@ -259,8 +260,14 @@ function Workspace() {
 
   // Signed out: the dedicated log-in page, not the homepage. A returning member lands on their own form with their
   // email already filled in (founder, 2026-11-05), instead of being bounced back to the sign-up box.
+  // Where they were going is saved first (founder, 2026-11-10): a ticket email opens `?tab=support&ticket=…`, and without
+  // this the login round trip dropped it, so "Open your ticket" landed on Embed Metadata instead of their own thread.
+  // Any workspace URL with a query is kept whole, so a tab, a ticket and a checkout return all survive signing in.
   useEffect(() => {
-    if (!loading && !user) navigate({ to: "/login", replace: true });
+    if (loading || user) return;
+    const here = `${window.location.pathname}${window.location.search}${window.location.hash}`;
+    if (window.location.search) rememberReturn(here);
+    navigate({ to: "/login", replace: true });
   }, [loading, user, navigate]);
 
   useEffect(() => {
