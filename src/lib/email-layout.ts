@@ -55,6 +55,12 @@ export interface EmailLayoutOptions {
   unsubscribeUrl?: string;
   /** Transactional invites: a link that stops further invites to this address. */
   optOutUrl?: string;
+  /**
+   * Support and Help Center mail names the company, not its street address (founder, 2026-11-10). A ticket receipt or a
+   * reply is a transactional message answering something the member started, which the postal-address rule marketing
+   * mail has to carry doesn't cover; marketing and every other kind of mail keep the address.
+   */
+  hideAddress?: boolean;
 }
 
 export function emailLayout(bodyHtml: string, opts: EmailLayoutOptions): string {
@@ -80,7 +86,7 @@ export function emailLayout(bodyHtml: string, opts: EmailLayoutOptions): string 
 </div>
 ${bodyHtml}
 <div style="margin-top:32px;padding-top:16px;border-top:1px solid #e5e5e5;font-size:12px;line-height:1.6;color:#666">
-<p style="margin:0"><b>${BUSINESS_NAME}</b> · ${BUSINESS_ADDRESS}</p>
+<p style="margin:0"><b>${BUSINESS_NAME}</b>${opts.hideAddress ? "" : ` · ${BUSINESS_ADDRESS}`}</p>
 <p style="margin:8px 0 0">${escapeHtml(opts.reason)}</p>
 ${optOut}
 ${invites}

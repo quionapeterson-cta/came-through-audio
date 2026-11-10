@@ -12,7 +12,7 @@ import { submitSupportTicket, ticketSchema } from "@/lib/support.functions";
 import { categoryFor, TICKET_TOPICS } from "@/lib/support-topics";
 import { deflectionFor, FORM_TIPS, HELP_CATEGORIES, helpArticles, type HelpCategory, type HelpIcon } from "@/lib/help-center";
 import { searchHelp } from "@/lib/help-search";
-import { BUSINESS_ADDRESS, SUPPORT_EMAIL } from "@/lib/email-layout";
+import { SUPPORT_EMAIL } from "@/lib/email-layout";
 import { useAuth } from "@/hooks/useAuth";
 
 /**
@@ -364,7 +364,7 @@ function HelpCenterPage() {
 
       <footer className="bg-ink text-ink-muted">
         <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-2 px-6 py-8 text-xs sm:flex-row">
-          <p>Came Through Audio, LLC · {BUSINESS_ADDRESS}</p>
+          <p>Came Through Audio, LLC</p>
           <Link to="/" className="font-semibold text-ink-foreground hover:text-primary">Back to the site</Link>
         </div>
       </footer>

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent, type ReactNode } from "react";
 import { confirmAction } from "@/components/ConfirmHost";
-import { ChevronDown, Disc3, Lock, ShieldCheck, CheckCircle2, Download, FileAudio, FileText, ImagePlus, Pencil, Plus, Save, Stethoscope, Trash2, Upload } from "lucide-react";
+import { ChevronDown, Copy, Disc3, Lock, ShieldCheck, CheckCircle2, Download, FileAudio, FileText, ImagePlus, Pencil, Plus, Save, Stethoscope, Trash2, Upload } from "lucide-react";
 import { capShare, splitStatus, splitSummary } from "@/lib/splits-total";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -28,7 +28,8 @@ import { listStatuses, type SongStatus } from "@/lib/health-songs";
 import type { RepertoireCheck } from "@/lib/health";
 import { HealthLiquid, HealthMeter } from "@/components/HealthMeter";
 import { DownloadCatalogButton } from "@/components/CatalogLapseBanner";
-import { deleteTrack, downloadCatalogFile, downloadRelease, downloadWholeCatalog, groupReleases, listTracks, safeName, saveTrack, uploadCatalogFile, type CatalogTrack, type DownloadGap, type ZipResult } from "@/lib/catalog";
+import { deleteTrack, downloadCatalogFile, downloadRelease, downloadWholeCatalog, duplicateTrack, groupReleases, listTracks, safeName, saveTrack, uploadCatalogFile, versionTitle, type CatalogTrack, type DownloadGap, type ZipResult } from "@/lib/catalog";
+import { albumKey, routedKinds } from "@/lib/release-routing";
 import { AGENCY_LABEL, downloadAgencyExport, downloadNeighbouringPack, mlcPlaceholderSongs, recordExports, type Agency, type Held } from "@/lib/agency-export";
 import { AgencyExportDialog } from "@/components/AgencyExportDialog";
 import { AGENCY_UPLOAD_STEPS, MLC_EXPORT_NOTES } from "@/lib/glossary";
@@ -290,6 +291,10 @@ export function MetadataUploader({ onShareInfo, userId, mode = "embed", readOnly
     toast.success(`${list.length === 1 ? (list[0]!.title || "The song") : (list[0]!.metadata.album || "The release")} updated on ${list.length} song${list.length === 1 ? "" : "s"}.`);
   };
   const pctOf = (id: string) => health?.songs.find((x) => x.track.id === id)?.pct ?? 0;
+  // The album title routes a song into its release (founder, 2026-11-10), so a track saved as a Single on an album still
+  // lists under that album instead of splitting the release in two.
+  const routedKind = useMemo(() => routedKinds(tracks, (t) => t.metadata, (t) => t.id), [tracks]);
+  const releaseGroup = (t: CatalogTrack) => routedKind.get(t.id) ?? releaseKind(t.metadata);
   // Fully completed catalog: the night sky spells the most recent song, once per completed set of songs.
   const [starsFor, setStarsFor] = useState<string>();
   useEffect(() => {
@@ -489,6 +494,15 @@ export function MetadataUploader({ onShareInfo, userId, mode = "embed", readOnly
       if (id === editingId) startNew();
       refresh();
     } catch (e) { toast.error(e instanceof Error ? e.message : "Could not delete track."); }
+  }
+  /** Another version of the same recording as its own entry — radio edit, clean, instrumental (founder, 2026-11-10). */
+  async function duplicate(t: CatalogTrack, version: string) {
+    if (!userId) return;
+    try {
+      const made = await duplicateTrack(t, userId, version);
+      refresh();
+      toast.success(`"${versionTitle(t.title, version)}" saved to My Catalog${made.files ? " with its master and artwork" : ". Add its audio or artwork when you're ready"}.`);
+    } catch (e) { toast.error(e instanceof Error ? e.message : "Could not duplicate the song."); }
   }
 
   useEffect(() => {
@@ -1001,6 +1015,15 @@ export function MetadataUploader({ onShareInfo, userId, mode = "embed", readOnly
                     {readOnly ? null : t.id === editingId
                       ? <Button type="button" size="sm" onClick={closeSong}>Close</Button>
                       : <Button type="button" variant="outline" size="sm" onClick={() => open(t)}><Pencil />Edit</Button>}
+                    {!readOnly && <DropdownMenu>
+                      <DropdownMenuTrigger asChild><Button type="button" variant="outline" size="sm"><Copy />Duplicate</Button></DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        {VERSIONS.map((v) => <DropdownMenuItem key={v} onClick={() => void duplicate(t, v)} className="flex-col items-start gap-0.5">
+                          <span className="font-semibold">{v}</span>
+                          <span className="text-xs text-muted-foreground">{versionTitle(t.title, v)}</span>
+                        </DropdownMenuItem>)}
+                      </DropdownMenuContent>
+                    </DropdownMenu>}
                     {(t.metadata.audioPath || t.metadata.artPath || t.metadata.lyrics) && (
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild><Button type="button" variant="outline" size="sm"><Download />Downloads</Button></DropdownMenuTrigger>
@@ -1053,7 +1076,7 @@ export function MetadataUploader({ onShareInfo, userId, mode = "embed", readOnly
               const prePct = pre.length ? Math.round(pre.reduce((n, t) => n + pctOf(t.id), 0) / pre.length) : 0;
               const byPct = (a: CatalogTrack, b: CatalogTrack) => pctOf(a.id) - pctOf(b.id);
               // A release can be part out and part not yet: its panel still counts and writes every song on it.
-              const albumKey = (x: CatalogTrack) => (x.metadata.album || "Untitled").trim().toLowerCase().replace(/\s+/g, " ");
+              const albumKeyOf = (x: CatalogTrack) => albumKey(x.metadata.album) || "untitled";
               return <>
               {!!pre.length && (
                 <div id="unreleased" className="mb-8 scroll-mt-4 rounded-2xl border-2 border-dashed border-primary/60 bg-primary/5 p-4">
@@ -1072,10 +1095,10 @@ export function MetadataUploader({ onShareInfo, userId, mode = "embed", readOnly
                               </div>
                             ))}</div>
                           : <div className="grid gap-3">{groupProjects(list).map((p) => {
-                              const all = tracks.filter((x) => releaseGroup(x) !== "Single" && albumKey(x) === p.key);
+                              const all = tracks.filter((x) => releaseGroup(x) !== "Single" && albumKeyOf(x) === p.key);
                               return (
                               <div key={p.key} className="rounded-xl border border-border bg-card p-3">
-                                <ReleaseRow name={p.title} type={p.tracks[0]!.metadata.releaseType || releaseGroup(p.tracks[0]!)} tracks={all} readOnly={readOnly} onSave={saveRelease} />
+                                <ReleaseRow name={p.title} type={releaseGroup(p.tracks[0]!)} tracks={all} readOnly={readOnly} onSave={saveRelease} />
                                 <ul className="mt-3 grid gap-3">{[...p.tracks].sort(byPct).map(row)}</ul>
                               </div>
                               );
@@ -1101,14 +1124,14 @@ export function MetadataUploader({ onShareInfo, userId, mode = "embed", readOnly
                       <ul className="mt-4 grid gap-3">{[...items].sort((a, b) => a.title.localeCompare(b.title)).map(row)}</ul>
                     </details>
                   : <div className="grid gap-4">{groupProjects(items).map((p) => {
-                    const all = tracks.filter((x) => releaseGroup(x) !== "Single" && albumKey(x) === p.key);
+                    const all = tracks.filter((x) => releaseGroup(x) !== "Single" && albumKeyOf(x) === p.key);
                     return (
                     <details key={p.key} open={p.tracks.some((x) => x.id === editingId) || (!!newest && p.tracks.some((x) => x.id === newest.id))} className="rounded-2xl border border-border p-4 open:border-primary">
                       <summary className="flex cursor-pointer list-none flex-wrap items-center gap-4">
                         {p.cover ? <img src={p.cover} alt={`${p.title} artwork`} className="h-14 w-14 rounded-lg object-cover shadow" /> : <div className="flex h-14 w-14 items-center justify-center rounded-lg bg-primary text-primary-foreground"><Disc3 className="h-7 w-7" /></div>}
                         <div className="min-w-[10rem] flex-1">
                           <div className="truncate text-sm text-muted-foreground">{p.artist}</div>
-                          <ReleaseRow name={p.title} type={p.tracks[0]!.metadata.releaseType || releaseGroup(p.tracks[0]!)} tracks={all} readOnly={readOnly} onSave={saveRelease} />
+                          <ReleaseRow name={p.title} type={releaseGroup(p.tracks[0]!)} tracks={all} readOnly={readOnly} onSave={saveRelease} />
                         </div>
                         {onHealthCheck && <Button type="button" variant="outline" size="sm" onClick={(e) => { e.preventDefault(); onHealthCheck(p.tracks[0]!.id, true); }}><Stethoscope />Health check</Button>}
                         {exportMenu("Export Release", p.tracks, p.title)}
@@ -1137,7 +1160,7 @@ export function MetadataUploader({ onShareInfo, userId, mode = "embed", readOnly
       ); })()}
       {starsFor && <StarsAligned title={starsFor} onDone={() => setStarsFor(undefined)} />}
       {full && <AgencyExportDialog open={exportOpen} onOpenChange={setExportOpen} tracks={tracks}
-        releases={groupProjects(tracks.filter((t) => releaseKind(t.metadata) !== "Single"))} run={runExport} />}
+        releases={groupProjects(tracks.filter((t) => releaseGroup(t) !== "Single"))} run={runExport} />}
       <Dialog open={!!nextSteps} onOpenChange={(o) => !o && setNextSteps(undefined)}>
         <DialogContent className="bg-card text-card-foreground">
           <DialogHeader><DialogTitle className="text-xl font-bold">Downloaded. Now upload it at {nextSteps && AGENCY_LABEL[nextSteps.agency].split(" (")[0]}</DialogTitle></DialogHeader>
@@ -1524,7 +1547,7 @@ function Contributors({ title, singular, group, rows, onChange, disabled, publis
 function groupProjects(items: CatalogTrack[]) {
   const map = new Map<string, CatalogTrack[]>();
   for (const t of items) {
-    const key = (t.metadata.album || "Untitled").trim().toLowerCase().replace(/\s+/g, " ");
+    const key = albumKey(t.metadata.album) || "untitled";
     map.set(key, [...(map.get(key) ?? []), t]);
   }
   return [...map.entries()].map(([key, list]) => {
@@ -1546,13 +1569,8 @@ function creditGroups(t: CatalogTrack) {
     .filter((g) => g.rows.length > 0);
 }
 
-// A song with an album title but no release type picked is a track on that album, not a single: the album is what
-// Files it, which is the grouping every download already uses.
-const releaseGroup = (t: CatalogTrack) => {
-  const album = t.metadata.album.trim().toLowerCase();
-  if (album && !t.metadata.releaseType.trim() && album !== t.title.trim().toLowerCase()) return "Album" as const;
-  return releaseKind(t.metadata);
-};
+/** The versions a member usually needs from one recording (founder, 2026-11-10). */
+const VERSIONS = ["Radio edit", "Clean", "Instrumental", "Acapella", "Sped up", "Copy"] as const;
 
 async function makeThumb(file: File): Promise<string> {
   const img = await createImageBitmap(file);

@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { submitTicket, ticketSchema } from "@/lib/support.functions";
 import { GENERAL_AREA, GENERAL_INQUIRIES, generalInquiryCategory, generalInquirySubject } from "@/lib/support-topics";
-import { BUSINESS_ADDRESS, SUPPORT_EMAIL } from "@/lib/email-layout";
+import { SUPPORT_EMAIL } from "@/lib/email-layout";
 
 /**
  * General inquiries, on their own page (founder, 2026-11-10). The ticket form used to share `/contact` with this, so a
@@ -148,7 +148,7 @@ function ContactUsPage() {
           </>
         )}
 
-        <p className="mt-12 text-center text-xs text-muted-foreground">Came Through Audio, LLC · {BUSINESS_ADDRESS}</p>
+        <p className="mt-12 text-center text-xs text-muted-foreground">Came Through Audio, LLC</p>
       </main>
     </div>
   );

@@ -1,6 +1,6 @@
 import { supabase } from "@/integrations/supabase/client";
 import type { CatalogTrack } from "@/lib/catalog";
-import { releaseKind } from "@/lib/health-checklist";
+import { albumKey, routedKinds } from "@/lib/release-routing";
 import { isInspectorSong } from "@/lib/health-songs";
 import type { CheckupSummary } from "@/lib/royalty-checkup";
 
@@ -15,9 +15,9 @@ export const songScope = (t: Pick<CatalogTrack, "id" | "title">): ReportScope =>
 export const catalogScope = (tracks: CatalogTrack[]): ReportScope => ({ kind: "catalog", refs: tracks.filter((t) => !isInspectorSong(t.id)).map((t) => t.id), label: "" });
 /** The album or EP a song is on (the same grouping as the song list); singles have none. */
 export function releaseScope(t: CatalogTrack, all: CatalogTrack[]): ReportScope | undefined {
-  const kind = releaseKind(t.metadata), album = t.metadata.album.trim().toLowerCase();
+  const kind = routedKinds(all, (x) => ({ ...x.metadata, title: x.title }), (x) => x.id).get(t.id) ?? "Single", album = albumKey(t.metadata.album);
   if (isInspectorSong(t.id) || kind === "Single") return undefined;
-  const songs = all.filter((x) => !isInspectorSong(x.id) && releaseKind(x.metadata) === kind && x.metadata.album.trim().toLowerCase() === album);
+  const songs = all.filter((x) => !isInspectorSong(x.id) && albumKey(x.metadata.album) === album);
   return { kind: "release", refs: songs.map((x) => x.id), label: `${t.metadata.album.trim() || `Untitled ${kind}`} (${kind})` };
 }
 

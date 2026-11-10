@@ -2,6 +2,7 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { requestBadgeCheck } from "@/lib/badge-events";
 import { creditName, emptyContributor, emptyMetadata, splitTrack, withLegalName, type Metadata } from "@/lib/metadata";
+import { albumKey, routedKinds } from "@/lib/release-routing";
 
 export type CatalogTrack = { id: string; title: string; artist: string; updatedAt: string; metadata: Metadata };
 
@@ -96,6 +97,35 @@ export async function deleteTrack(id: string, ownerId?: string) {
 
 const BUCKET = "catalog-files";
 
+/** "Therapy" + "Clean" → "Therapy (Clean)"; an untitled song still gets a name. */
+export const versionTitle = (title: string, version: string) => `${title.trim() || "Untitled"} (${version})`;
+
+export type DuplicateResult = { id: string; files: boolean };
+
+/**
+ * A second catalog entry made from a song, for another version of the same recording — radio edit, clean, instrumental,
+ * sped up (founder, 2026-11-10). The details, cover tile and release fields come across, so the copy sits in the same
+ * album; the ISRC is cleared, because each version is its own recording and needs its own code. The master and artwork
+ * are copied into the new entry's own folder, so deleting or replacing either song never touches the other's files.
+ * Returns the new id, and whether the files came across (they can fail on their own without losing the entry).
+ */
+export async function duplicateTrack(track: CatalogTrack, userId: string, version = "Copy"): Promise<DuplicateResult> {
+  const base: Metadata = { ...track.metadata, title: versionTitle(track.title, version), isrc: "", audioPath: "", artPath: "" };
+  const id = await saveTrack(base, userId);
+  const copied: { audioPath?: string; artPath?: string } = {};
+  for (const [kind, path] of [["master", track.metadata.audioPath], ["artwork", track.metadata.artPath]] as const) {
+    if (!path) continue;
+    const ext = path.split(".").pop() || (kind === "master" ? "mp3" : "jpg");
+    const to = `${userId}/${id}/${kind}.${ext}`;
+    const { error } = await supabase.storage.from(BUCKET).copy(path, to);
+    if (error) { console.error("Song duplicated, but its file wasn't copied", error.message); continue; }
+    if (kind === "master") copied.audioPath = to;
+    else copied.artPath = to;
+  }
+  if (Object.keys(copied).length) await saveTrack({ ...base, ...copied }, userId, id);
+  return { id, files: Object.keys(copied).length > 0 };
+}
+
 /** Store a master or artwork file privately under the owner's folder; returns its storage path. */
 export async function uploadCatalogFile(userId: string, trackId: string, kind: "master" | "artwork", file: Blob, ext: string) {
   const path = `${userId}/${trackId}/${kind}.${ext}`;
@@ -168,18 +198,19 @@ export type Release = { key: string; album: string; type: "Album" | "EP"; tracks
  * one at a time from their own row, so they are not a release here.
  */
 export function groupReleases(tracks: CatalogTrack[]): Release[] {
+  const kinds = routedKinds(tracks, (t) => t.metadata, (t) => t.id);
   const groups = new Map<string, CatalogTrack[]>();
   for (const t of tracks) {
-    const album = (t.metadata.album ?? "").trim();
-    if (!album) continue;
-    const key = album.toLowerCase();
+    const kind = kinds.get(t.id);
+    if (kind !== "Album" && kind !== "EP") continue;
+    const key = albumKey(t.metadata.album);
     groups.set(key, [...(groups.get(key) ?? []), t]);
   }
   const trackNo = (t: CatalogTrack) => Number(t.metadata.trackNumber) || 999;
   return [...groups.entries()]
     .map(([key, list]) => {
       const ordered = [...list].sort((a, b) => trackNo(a) - trackNo(b) || a.title.localeCompare(b.title));
-      return { key, album: (ordered[0]!.metadata.album ?? "").trim(), type: /^ep$/i.test(ordered[0]!.metadata.releaseType ?? "") ? "EP" as const : "Album" as const, tracks: ordered };
+      return { key, album: (ordered[0]!.metadata.album ?? "").trim(), type: kinds.get(ordered[0]!.id) === "EP" ? "EP" as const : "Album" as const, tracks: ordered };
     })
     .sort((a, b) => a.album.localeCompare(b.album));
 }

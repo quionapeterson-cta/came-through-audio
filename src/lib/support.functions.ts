@@ -70,7 +70,7 @@ async function storeTicket(data: TicketInput & { userId?: string }) {
 <h1 style="font-size:22px;margin:8px 0 16px">${escapeHtml(data.subject)}</h1>
 <p style="font-size:14px;margin:0"><b>From:</b> ${escapeHtml(data.name)} (${escapeHtml(data.email)})<br/><b>Category:</b> ${escapeHtml(data.category)}</p>
 <p style="font-size:15px;line-height:1.6;white-space:pre-wrap">${escapeHtml(data.message)}</p>`,
-      { reason: "You're receiving this staff notice because a new message was submitted on the Came Through Audio website." });
+      { hideAddress: true, reason: "You're receiving this staff notice because a new message was submitted on the Came Through Audio website." });
     // Billing questions go to billing@, support tickets to support@, Contact Us messages to info@.
     const inbox = data.category.startsWith(BILLING_AREA) ? BILLING_EMAIL : data.kind === "support" ? SUPPORT_EMAIL : INFO_EMAIL;
     await fetch("https://api.resend.com/emails", {

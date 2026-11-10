@@ -3,6 +3,7 @@ import { isUnreleased, releaseItems, releasePct } from "@/lib/release-checklist"
 import { pillarLabel, trackReport, type RepertoireCheck, type TrackReport } from "@/lib/health";
 import type { CatalogTrack } from "@/lib/catalog";
 import { isInspectorSong, type SongStatus } from "@/lib/health-songs";
+import { albumKey, routedKinds } from "@/lib/release-routing";
 import { creditName, type Metadata } from "@/lib/metadata";
 import { registrationCheck, registrationReadiness, type RegistrationAgency } from "@/lib/readiness";
 import type { Country, Society } from "@/lib/repertoires";
@@ -208,14 +209,17 @@ export const SINGLES_KEY = "~singles";
 export function releaseGroups<T extends Listed>(songs: T[], sort: SongSort, query = ""): ReleaseGroup<T>[] {
   const q = query.trim().toLowerCase();
   const hit = ({ r }: T) => !q || [r.track.title, r.track.artist, r.track.metadata.album].some((v) => v?.toLowerCase().includes(q));
+  // The album title routes the songs, not each song's own release type (founder, 2026-11-10), so a track saved as a
+  // Single inside an album still groups with that album here and in My Catalog.
+  const kinds = routedKinds(songs, (x) => ({ ...x.r.track.metadata, title: x.r.track.title }), (x) => x.r.track.id);
   const groups = new Map<string, ReleaseGroup<T>>();
   for (const x of songs.filter(hit)) {
     const m = x.r.track.metadata;
     const inspector = isInspectorSong(x.r.track.id);
     const album = m.album.trim();
-    const kind = releaseKind(m);
+    const kind = kinds.get(x.r.track.id) ?? "Single";
     const project = !inspector && kind !== "Single";
-    const key = inspector ? "~inspector" : project ? `${kind}:${(album || "Untitled " + kind).toLowerCase()}` : SINGLES_KEY;
+    const key = inspector ? "~inspector" : project ? `${kind}:${albumKey(album)}` : SINGLES_KEY;
     const g = groups.get(key) ?? { key, name: inspector ? "Royalty Inspector songs" : project ? album || `Untitled ${kind}` : "Singles", type: project ? kind : "", songs: [], pct: 0, updatedAt: "" };
     g.songs.push(x);
     if (x.r.track.updatedAt > g.updatedAt) g.updatedAt = x.r.track.updatedAt;

@@ -34,7 +34,7 @@ ${support
     ? `<p style="margin:24px 0"><a href="${ticketLink(SITE_URL, input.id)}" style="background:#004AAD;color:#ffffff;text-decoration:none;font-weight:700;padding:12px 22px;border-radius:8px;display:inline-block">Open your ticket</a></p>
 <p style="font-size:13px;line-height:1.6;color:#666">You can read the thread and answer any time in the Support tab of your workspace. Replying to this email lands on the same ticket, so nothing gets lost.</p>`
     : `<p style="font-size:13px;line-height:1.6;color:#666">We'll reply to this address. If you have an account, a ticket from the Support tab keeps everything in one thread.</p>`}`,
-    { reason: support ? "You're receiving this because you opened a support ticket with Came Through Audio." : "You're receiving this because you sent Came Through Audio a message from our Contact page." },
+    { hideAddress: true, reason: support ? "You're receiving this because you opened a support ticket with Came Through Audio." : "You're receiving this because you sent Came Through Audio a message from our Contact page." },
   );
   try {
     const res = await fetch("https://api.resend.com/emails", {
@@ -78,7 +78,7 @@ export async function sendTicketReplyEmail(
 ${replyParagraphs(body, escapeHtml)}
 <p style="margin:24px 0"><a href="${ticketLink(SITE_URL, ticket.id)}" style="background:#004AAD;color:#ffffff;text-decoration:none;font-weight:700;padding:12px 22px;border-radius:8px;display:inline-block">Open your ticket and reply</a></p>
 <p style="font-size:13px;line-height:1.6;color:#666">Replying to this email also lands on the same ticket. The button opens it in your workspace with the message box ready, so you never have to look for it.</p>`,
-    { reason: "You're receiving this because you opened a support ticket with Came Through Audio." },
+    { hideAddress: true, reason: "You're receiving this because you opened a support ticket with Came Through Audio." },
   );
   try {
     const res = await fetch("https://api.resend.com/emails", {
@@ -126,7 +126,7 @@ export async function sendMemberReplyNotice(
 <p style="font-size:14px;margin:0 0 14px"><b>From:</b> ${escapeHtml(ticket.name)} (${escapeHtml(ticket.email)})<br/><b>Category:</b> ${escapeHtml(ticket.category)}</p>
 ${replyParagraphs(body, escapeHtml)}
 <p style="font-size:13px;line-height:1.6;color:#666">Answer in Admin → Support Tickets. The reply is already on the ticket.</p>`,
-    { reason: "You're receiving this staff notice because a member answered a support ticket." },
+    { hideAddress: true, reason: "You're receiving this staff notice because a member answered a support ticket." },
   );
   try {
     const res = await fetch("https://api.resend.com/emails", {

@@ -40,7 +40,7 @@
   those two fields move (`profile-propagation.ts`). Never turn that into a silent rewrite on profile save.
 - **Paying never waits for the email confirmation** (founder, 2026-11-05, replacing the 2026-11-03 rule): someone who picks a plan signs up and reaches Stripe in the same sitting. Supabase sends no session while "Confirm email" is on, so `SignupCard` signs the brand-new account straight in (the project allows unverified sign-ins) and the confirmation email travels alongside it; `EmailConfirmBanner` then reminds them in the workspace, with a resend and an "I've confirmed" re-check, until the address is confirmed. Never put a confirmation check back in front of checkout, and never describe an unconfirmed account as unable to pay.
 - Staff roles live in public.user_roles (checked via is_staff/has_role); profile role/tier are trigger-protected from self-edits, so admin access cannot be self-granted. Admin reads go through staff-verified server functions.
-- All outgoing email HTML must be wrapped with emailLayout() from src/lib/email-layout.ts — keeps branding and legal-footer compliance in one place.
+- All outgoing email HTML must be wrapped with emailLayout() from src/lib/email-layout.ts — keeps branding and legal-footer compliance in one place. **Support and Help Center mail names the company, not the street address** (founder, 2026-11-10): a ticket receipt, a staff reply, a member-reply notice and the ticket pages carry `hideAddress: true`, because those are transactional messages answering something the member started, which the postal-address rule for marketing mail does not cover. Marketing mail (and every other kind) keeps the address, so nothing else changes.
 - Badge artwork is served from the Cloudflare R2 bucket (founder, 2026-11-04): the 512px web-ready copies mirror public/icons/<serious|playful>/<set>/ and public/art/clinic/ at the bucket root, and the original 4K masters stay in the bucket's separate 4k/ folder, which the app never requests. Paths stay literal in the data (badges.ts, eagle-status.ts, ClinicArt.tsx); they become a URL in exactly one place, `artUrl()` in src/lib/art-url.ts, which adds `VITE_ART_BASE` and swaps .png/.jpg for the .webp copy. Never hard-code the bucket address anywhere else and never render a raw art path, so the art can move again without a sweep. With `VITE_ART_BASE` unset (local dev, tests) the same paths load from public/, which is the fallback copy. The 4K masters under `art/badges-4k/` are NOT tracked in git (founder, 2026-11-04): they live only in the bucket's `4k/icons/` folder, because they are print archives that the site never loads and they bloat every clone and deploy. Re-rendering them writes to the local folder, which stays ignored. A build with `VITE_ART_BASE` set also drops `public/icons` from `.output` (`scripts/prune-served-art.mjs`, run by `npm run build`), because a deploy that reads the bucket should not ship 179 MB of unused copies; without the variable the folder ships as the fallback.
 
 ## Badge Art Protocol (always follow)
@@ -194,6 +194,9 @@
   whose answers come from `src/lib/faq.ts` and `src/lib/support-faq.ts`, never a second body of copy with its own facts.
   The ticket form sits below the answers, and once "Where is it?" is picked, up to three `deflectionFor` answers appear
   above the Subject line. A signed-out visitor still gets every answer, then the sign-in card instead of the form.
+- **Neither Help Center page prints the street address** (founder, 2026-11-10): `/contact` and `/contact-us` close with the
+  company name only. Import `BUSINESS_ADDRESS` for mail and legal documents, never for these two pages, so a move doesn't
+  mean editing the site as well as the mailbox.
 
 ## Account Help & Holiday Cover (always follow)
 
@@ -417,6 +420,19 @@
   sky. (`StarsAligned` is the canvas title ceremony and is its own, approved thing; do not merge the two.)
 
 ## Catalog Playback & WAV Storage (always follow)
+
+- **The album title decides the release** (founder, 2026-11-10): `routedKinds` in `src/lib/release-routing.ts` is the only
+  rule for which release a song is on. A song that names an album belongs to that album whatever its own release type says
+  — a track filled in or imported as a "Single" on BAM is a BAM track, not a loose single — and the title is matched
+  trimmed, case-folded and with runs of spaces collapsed. A song with no album, or a lone song whose album title is just
+  its own title, is a single. My Catalog, the Health Hub (`releaseGroups`), release ZIPs (`groupReleases`) and a release
+  health check (`releaseScope`) all read it, so one release can never appear as an album plus a pile of singles. Never
+  re-key any of them on each song's own `releaseType` again.
+- **A catalog entry can be duplicated into another version** (founder, 2026-11-10): `duplicateTrack` in `src/lib/catalog.ts`
+  copies the details, cover tile and release fields into a new entry named `<title> (<version>)` for radio edits, cleans,
+  instrumentals and the like — the release fields are the point, so a version lands in the same album. The ISRC is cleared
+  (each version is its own recording and needs its own code) and the master and artwork are copied into the new entry's
+  folder, so deleting either song never takes the other's files. A failed file copy keeps the entry and says so.
 
 - The catalog play button is a **check-the-version preview, not a listening player** (founder, 2026-11-05): one button
   per song in My Catalog, so a member can hear that it is the right version and that the file is whole — not cut off,
