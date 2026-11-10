@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { ReleaseRow, UnreleasedChip } from "@/components/ReleaseRow";
 import { InfoTip } from "@/components/InfoTip";
 import { CopyrightInput } from "@/components/CopyrightInput";
 import { StarsAligned } from "@/components/StarsAligned";
@@ -16,6 +17,7 @@ import { EXPORT_REQUIRED, GLOSSARY, type GlossaryKey } from "@/lib/glossary";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { OFFICIAL_MASTER_ACTION, PRE_DIST_NOTE, PRO_TIP, SOVEREIGN_BACKUP } from "@/lib/copy";
 import { readMetadata, CREDIT_CHOICES, OTHER_INSTRUMENT, creditChoice, fromCreditChoice, isPerformer, performers, emptyContributor, emptyMetadata, embedMetadata, creditName, metadataSchema, savedSchema, GENRES, GENRE_GROUPS, MASTER_BASES, PRODUCTION_TYPES, RELEASE_TYPES, WRITER_ROLES, writerRole, hfaLooksOff, percentInput, formatDuration, type Contributor, type Metadata } from "@/lib/metadata";
+import { releaseStatus, statusWords, type ReleasePatch } from "@/lib/release-panel";
 import { COUNTRIES, countryByCode, guessCountry } from "@/lib/repertoires";
 import { catalogHealth, releaseKind } from "@/lib/health-checklist";
 import { listChecks } from "@/lib/repertoire-checks";
@@ -272,6 +274,13 @@ export function MetadataUploader({ onShareInfo, userId, mode = "embed", readOnly
     const code = loadOnboarding(userId)?.healthCountry ?? guessCountry(tracks.flatMap((t) => [...t.metadata.writers, ...t.metadata.composers].map((w) => w.pro)));
     return catalogHealth(tracks, countryByCode(code) ?? countryByCode("US")!, checks, statuses);
   }, [full, userId, tracks, checks, statuses]);
+  /** Writes the Release panel's answer to every song in the release (§4.1), through the same save as a single song. */
+  const saveRelease = async (patch: ReleasePatch, list: CatalogTrack[]) => {
+    if (!userId) return;
+    for (const song of list) await saveTrack({ ...song.metadata, ...patch }, userId, song.id);
+    setTracks((prev) => prev.map((song) => list.some((x) => x.id === song.id) ? { ...song, metadata: { ...song.metadata, ...patch } } : song));
+    toast.success(`${list.length === 1 ? (list[0]!.title || "The song") : (list[0]!.metadata.album || "The release")} updated on ${list.length} song${list.length === 1 ? "" : "s"}.`);
+  };
   const pctOf = (id: string) => health?.songs.find((x) => x.track.id === id)?.pct ?? 0;
   // Fully completed catalog: the night sky spells the most recent song, once per completed set of songs.
   const [starsFor, setStarsFor] = useState<string>();
@@ -913,20 +922,20 @@ export function MetadataUploader({ onShareInfo, userId, mode = "embed", readOnly
           </div>
           {tracks.length === 0 ? <p className="text-sm text-muted-foreground">No songs yet. Use Add song to save a song you already embedded, or embed a new one in Embed Metadata. Every song you save is checked automatically in the Royalty Health Hub.</p> : (
             <>
-            {(["Album", "EP", "Single"] as const).filter((g) => filter === "All" || filter === g).map((g) => {
-              const items = tracks.filter((t) => releaseGroup(t) === g);
-              if (!items.length) return null;
+            {(() => {
               const row = (t: CatalogTrack) => (
                 <li key={t.id} id={`song-${t.id}`} className={`group scroll-mt-4 rounded-xl border p-3 transition hover:border-primary hover:shadow-md ${t.id === editingId || picked.has(t.id) ? "border-primary bg-accent/30" : "border-border"}`}>
                   <div className="flex flex-wrap items-center gap-4">
                   <input type="checkbox" aria-label={`Select ${t.title} for bulk export`} checked={picked.has(t.id)} onChange={() => togglePick(t.id)} className="h-4 w-4 accent-primary" />
-                  {g !== "Single" && <span className="w-6 text-center text-sm font-bold text-primary">{t.metadata.trackNumber || "–"}</span>}
+                  {releaseGroup(t) !== "Single" && <span className="w-6 text-center text-sm font-bold text-primary">{t.metadata.trackNumber || "–"}</span>}
                   {t.metadata.coverThumb
                     ? <img src={t.metadata.coverThumb} alt={`${t.title} artwork`} className="h-16 w-16 shrink-0 rounded-lg object-cover shadow" />
                     : <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground shadow"><Disc3 className="h-8 w-8 transition group-hover:rotate-180" /></div>}
                   <div className="min-w-[10rem] flex-1">
                     <div className="truncate text-lg font-bold">{t.title}</div>
                     <div className="truncate text-sm text-muted-foreground">{t.artist}{t.metadata.album ? ` · ${t.metadata.album}` : ""}</div>
+                    {/* A single is a release of one, so its own header carries the panel (§4.1). */}
+                    {releaseGroup(t) === "Single" && <ReleaseRow name={t.title || "Untitled"} type="Single" tracks={[t]} readOnly={readOnly} onSave={saveRelease} />}
                   </div>
                   {health && <div className="w-20 shrink-0" title="Royalty health">
                     <HealthLiquid pct={pctOf(t.id)} className="h-1.5" />
@@ -982,8 +991,52 @@ export function MetadataUploader({ onShareInfo, userId, mode = "embed", readOnly
                   </div>}
                 </li>
               );
+              // The Unreleased section (§4.2) sits above the released groups and holds every song that isn't out.
+              // Nothing here is read-only: each entry opens the same song and the same Release checklist as before.
+              const pre = tracks.filter((t) => releaseStatus(t.metadata) !== "released" && (filter === "All" || releaseGroup(t) === filter));
+              const prePct = pre.length ? Math.round(pre.reduce((n, t) => n + pctOf(t.id), 0) / pre.length) : 0;
+              const byPct = (a: CatalogTrack, b: CatalogTrack) => pctOf(a.id) - pctOf(b.id);
+              return <>
+              {!!pre.length && (
+                <div id="unreleased" className="mb-8 scroll-mt-4 rounded-2xl border-2 border-dashed border-primary/60 bg-primary/5 p-4">
+                  <h3 className="text-sm font-bold uppercase tracking-widest text-primary">Unreleased · {pre.length} {pre.length === 1 ? "song" : "songs"} · {prePct}% ready to distribute</h3>
+                  <p className="mt-1 text-xs text-muted-foreground">Not out yet. These are read against what to have ready before release, and they never count against your catalog's score.</p>
+                  <div className="mt-4 space-y-5">
+                    {(["Album", "EP", "Single"] as const).map((g) => {
+                      const list = pre.filter((t) => releaseGroup(t) === g);
+                      if (!list.length) return null;
+                      return <div key={g}>
+                        <h4 className="mb-2 text-xs font-bold uppercase tracking-widest text-muted-foreground">{g}s</h4>
+                        {g === "Single"
+                          ? <div className="grid gap-3">{[...list].sort(byPct).map((t) => (
+                              <div key={t.id} className="rounded-xl border border-border bg-card p-3">
+                                <div className="mb-2 flex flex-wrap items-center gap-x-3 text-xs text-muted-foreground">
+                                  <span className="font-semibold text-foreground">{t.title || "Untitled"} · Single</span>
+                                  <span>{pctOf(t.id)}%</span>
+                                  <span>{statusWords(t.metadata)}</span>
+                                </div>
+                                <ul>{row(t)}</ul>
+                              </div>
+                            ))}</div>
+                          : <div className="grid gap-3">{groupProjects(list).map((p) => (
+                              <div key={p.key} className="rounded-xl border border-border bg-card p-3">
+                                <div className="flex flex-wrap items-center gap-x-3 text-xs text-muted-foreground"><span className="font-semibold text-foreground">{p.title} · {releaseGroup(p.tracks[0]!)}</span><span>{p.tracks.length} {p.tracks.length === 1 ? "song" : "songs"}</span></div>
+                                <ReleaseRow name={p.title} type={releaseGroup(p.tracks[0]!)} tracks={p.tracks} readOnly={readOnly} onSave={saveRelease} />
+                                <ul className="mt-3 grid gap-3">{[...p.tracks].sort(byPct).map(row)}</ul>
+                              </div>
+                            ))}</div>}
+                      </div>;
+                    })}
+                  </div>
+                </div>
+              )}
+              {(["Album", "EP", "Single"] as const).filter((g) => filter === "All" || filter === g).map((g) => {
+              // Released groups list released music only; the chip says where the rest went.
+              const items = tracks.filter((t) => releaseGroup(t) === g && releaseStatus(t.metadata) === "released");
+              if (!items.length) return null;
+              const preCount = tracks.filter((t) => releaseGroup(t) === g && releaseStatus(t.metadata) !== "released").length;
               return <div key={g} className="mb-8">
-                <h3 className="mb-3 text-sm font-bold uppercase tracking-widest text-primary">{g}s</h3>
+                <h3 className="mb-3 text-sm font-bold uppercase tracking-widest text-primary">{g}s<UnreleasedChip count={preCount} /></h3>
                 {g === "Single"
                   ? <details open={items.some((x) => x.id === editingId) || (newest ? releaseGroup(newest) === "Single" : false)} className="rounded-2xl border border-border p-4 open:border-primary">
                       <summary className="flex cursor-pointer list-none items-center gap-4">
@@ -999,6 +1052,7 @@ export function MetadataUploader({ onShareInfo, userId, mode = "embed", readOnly
                         <div className="min-w-[10rem] flex-1">
                           <div className="truncate text-xl font-bold">{p.title}</div>
                           <div className="text-sm text-muted-foreground">{p.artist} · {p.tracks.length} {p.tracks.length === 1 ? "track" : "tracks"}</div>
+                          <ReleaseRow name={p.title} type={releaseGroup(p.tracks[0]!)} tracks={p.tracks} readOnly={readOnly} onSave={saveRelease} />
                         </div>
                         {onHealthCheck && <Button type="button" variant="outline" size="sm" onClick={(e) => { e.preventDefault(); onHealthCheck(p.tracks[0]!.id, true); }}><Stethoscope />Health check</Button>}
                         {exportMenu("Export Release", p.tracks, p.title)}
@@ -1008,6 +1062,8 @@ export function MetadataUploader({ onShareInfo, userId, mode = "embed", readOnly
                   ))}</div>}
               </div>;
             })}
+            </>;
+            })()}
             {picked.size > 0 && (() => { const sel = tracks.filter((t) => picked.has(t.id)); return sel.length > 0 && (
               <div role="region" aria-label="Selected tracks" className="sticky bottom-4 z-20 mx-auto flex max-w-2xl flex-wrap items-center justify-between gap-3 rounded-2xl border border-primary bg-card p-3 shadow-lg">
                 <span className="font-semibold">{sel.length} {sel.length === 1 ? "track" : "tracks"} selected</span>

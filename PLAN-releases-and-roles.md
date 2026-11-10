@@ -770,4 +770,15 @@ blocker are fixed in §17.
 | **The writer path on a song** | `recordingSide` in `metadata.ts`, the *Someone else performs this song* switch in Song info | The artist field reads *Recording artist (who released it)* and may be blank; embedding still needs an artist for an own recording. The ISRC and artist-tag issues, the release checklist's ISRC/UPC/master/artwork items, and the SoundExchange pillar are all skipped for that entry (`audit.ts`, `release-checklist.ts`, `health.ts`). |
 | **Unreleased music leaves the score** | `healthReport` in `health.ts` | Rows still list every song, and `prerelease` names the ones waiting; data, registered, headline, missing, unchecked and needsAction are computed from released songs only, which is what `HealthMeter` already promised ("Not counted above until release day"). `agencyScores` also reads the *isn't released yet* box rather than a date alone. |
 
-Still to build from this plan: the Unreleased section and its chip (§4.2), the Release panel (§4.1), the sold beat, its linked master and the four deal fields (§4.5), the credit check (§11–12), and the two blueprints and the amendment (§13).
+Still to build from this plan: the sold beat, its linked master and the four deal fields (§4.5), the credit check (§11–12), and the two blueprints and the amendment (§13).
+
+## 20. Built 2026-11-09 (second change)
+
+| What | Where | Behaviour |
+| --- | --- | --- |
+| **The Unreleased section** | My Catalog, above the type groups (`MetadataUploader`), `src/lib/release-panel.ts` | Every song that isn't out sits in one dashed section: `Unreleased · N songs · X% ready to distribute`, grouped the same way (Singles / EPs / Albums) and sorted by readiness. Each entry is the same song row as before, so it opens the same song and the same Release checklist; nothing is read-only. The released groups now list released music only. |
+| **The chip** | Each released group's heading | `Singles  2 unreleased →` counts the songs filed under that type that are in Unreleased and jumps to them. It only appears when the count is above zero, so a catalog with nothing unreleased looks exactly as it did. |
+| **The Release panel** | Each EP and album header, and each single's own row (a single is a release of one) | The group's status in words (`Not released yet` / `Scheduled for 2027-03-01` / `Released` / `2 of 5 out`), its release date, type and title, and **Edit**. Edit opens one dialog — release type, release title, release date and Status — that writes those four fields to every song through the existing per-song save. No new table and no migration. |
+| **The status can't contradict the fields** | `releasePatch` in `release-panel.ts` | Choosing a status sets the date and the *isn't released yet* box together: Scheduled needs a future date, Released refuses one, Not released yet clears the date and ticks the box. A refusal is a plain sentence in the dialog. |
+
+The Hub needed no change: it already reads the same fields (`isUnreleased`) and its meter already says "N getting ready … Not counted above until release day", so the two screens agree by construction.
