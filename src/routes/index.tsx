@@ -277,28 +277,16 @@ function Landing() {
       <AppOrBrowserGate />
       {/* A white header sets the black hero apart as its own block instead of one long stretch of black. */}
       <header className="border-b border-border bg-background text-foreground">
-        <div className="mx-auto max-w-7xl px-6 pb-2.5 pt-3">
-          {/* The black signature sits centered above the name (founder, 2026-11-10), so the header reads as the logo over
-              the banner rather than a logo beside it. The three columns keep that logo on the page's true center while
-              the nav keeps its own corner, and the name lands centered underneath, at the foot of the white band. */}
-          <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-3">
-            <img src="/cta-logo-dark.png" alt="Came Through Audio" className="col-start-2 h-4 w-auto justify-self-center object-contain" />
-            <nav className="col-start-3 flex items-center justify-self-end gap-4 whitespace-nowrap sm:gap-6"><Link to="/plans" className="text-sm font-semibold text-muted-foreground hover:text-primary">Plans</Link><Link to="/login" className="text-sm font-semibold text-muted-foreground hover:text-primary">Log in</Link></nav>
-          </div>
-          <div className="mt-1.5 flex justify-center">
-            <BrandLogo tone="light" showMark={false} />
-          </div>
+        <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-5">
+          {/* The signature first, then the name beside it (founder, 2026-11-10): the logo leads the header on the same
+              line as the banner, back to the way the header read before the signature moved out of it. */}
+          <BrandLogo tone="light" />
+          <nav className="flex items-center gap-4 whitespace-nowrap sm:gap-6"><Link to="/plans" className="text-sm font-semibold text-muted-foreground hover:text-primary">Plans</Link><Link to="/login" className="text-sm font-semibold text-muted-foreground hover:text-primary">Log in</Link></nav>
         </div>
       </header>
 
       <section className="bg-ink text-ink-foreground">
-        {/* The CTA signature came down out of the white header (founder, 2026-11-10): the name leads the header and the
-            script logo sits underneath it, left-aligned on the same page edge as the name, in the black hero at half
-            its old height. It is the white copy because this corner of the page is Primary Black. */}
-        <div className="mx-auto max-w-7xl px-6 pt-2.5">
-          <img src="/cta-logo-white.png" alt="Came Through Audio" className="h-4 w-auto object-contain" />
-        </div>
-        <div className="mx-auto grid max-w-7xl gap-12 px-6 pb-16 pt-5 md:grid-cols-[1.15fr_1fr] md:items-center">
+        <div className="mx-auto grid max-w-7xl gap-12 px-6 py-16 md:grid-cols-[1.15fr_1fr] md:items-center">
           <div className="min-w-0">
             {/* The tagline: always uppercase with 2px letter spacing (BRANDING.md §1). The first line's negative margin
                 trims the space above the capitals, so the headline block centers optically against the sign-up box. */}
