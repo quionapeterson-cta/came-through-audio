@@ -31,12 +31,11 @@ export const TAGLINE = "YOUR FIRST STOP BEFORE DISTRIBUTION";
  * The C in "Came" is the mark image, so its ink has to sit at the cap height of the wordmark, not above it. The header
  * came down a notch (founder, 2026-11-05): the logo and the wordmark were running wider than the copy under them.
  *
- * The header now reads like the homepage's (founder, 2026-11-10): the name leads, left-aligned, and the CTA script logo
- * sits underneath it, with the tagline under that. Centring the block is what put the logo above the name and made the
- * header read as two logos stacked.
+ * The CTA script logo leads the email header (founder, 2026-11-10): it draws above the name, left-aligned, with the
+ * name under it and the tagline under that, so the signature reads as the signature and the banner as the banner.
  *
- * The script logo is back at twice the width it was halved to (founder, 2026-11-10): the signature is the brand's own
- * mark, so it draws at its full size under the name and the block stays left-aligned, the way it sat before the halving.
+ * It is also back at twice the width it was halved to (founder, 2026-11-10): the signature is the brand's own mark, so
+ * it draws at its full size above the name and the block stays left-aligned, the way it sat before the halving.
  */
 export const EMAIL_LOGO_WIDTH = 96;
 export const WORDMARK_MARK_PX = 14;
@@ -73,8 +72,8 @@ export function emailLayout(bodyHtml: string, opts: EmailLayoutOptions): string 
 <div style="max-width:560px;margin:0 auto;padding:32px 24px;background:#ffffff" bgcolor="#ffffff">
 <div style="padding-bottom:20px;border-bottom:2px solid #004AAD;margin-bottom:24px">
 <a href="${SITE_URL}/" style="text-decoration:none;color:#0b0b0b;display:block">
+<img src="${SITE_URL}/email-logo-dark.png" alt="Came Through Audio logo" width="${EMAIL_LOGO_WIDTH}" style="display:block;margin:0 0 10px;height:auto;border:0" />
 <div style="font-size:${WORDMARK_FONT_PX}px;font-weight:700;color:#0b0b0b"><img src="${SITE_URL}/cta-mark-dark.png" alt="" width="${WORDMARK_MARK_PX}" height="${WORDMARK_MARK_PX}" style="display:inline-block;vertical-align:-1px;border:0;margin-right:-1px" />ame Through <span style="color:#004AAD">Audio</span></div>
-<img src="${SITE_URL}/email-logo-dark.png" alt="Came Through Audio logo" width="${EMAIL_LOGO_WIDTH}" style="display:block;margin:10px 0 0;height:auto;border:0" />
 <div style="font-size:11px;font-weight:700;letter-spacing:2px;color:#004AAD;margin-top:8px">${TAGLINE}</div>
 </a>
 </div>
