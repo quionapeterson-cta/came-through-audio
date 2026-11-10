@@ -214,7 +214,7 @@
   `WORDMARK_MARK_PX` in `src/lib/email-layout.ts` are the only sizes; change them there, never inline in a template.
   The CTA script logo draws at twice that width again (founder, 2026-11-10) — the size it held before it was halved —
   while the name and its own mark keep the smaller sizes. The signature sits above the name, the name under it and the
-  tagline under that, left-aligned throughout (founder, 2026-11-10).
+  tagline under that, all centred (founder, 2026-11-10).
 - **The staff plan is Catalog Management, free** (founder, 2026-11-05): `public.user_tier` returns `management` for any
   account with a staff role (`public.is_staff`) and for any account holding a live `staff_plan_grants` row. Do not gate
   staff access with a second, separate check: brand kit and contract generator follow the tier, so they come with it.
