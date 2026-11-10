@@ -277,12 +277,17 @@ function Landing() {
       <AppOrBrowserGate />
       {/* A white header sets the black hero apart as its own block instead of one long stretch of black. */}
       <header className="border-b border-border bg-background text-foreground">
-        <div className="mx-auto flex max-w-7xl items-end justify-between px-6 pb-2.5 pt-5">
-          {/* The name sits at the foot of the white band (founder, 2026-11-10), right above the black hero, so it and
-              the signature under it read as one stack across the seam instead of floating in the middle of the header.
-              The nav comes down with it, so the header is one line on the seam rather than two heights. */}
-          <BrandLogo tone="light" showMark={false} />
-          <nav className="flex items-center gap-4 whitespace-nowrap sm:gap-6"><Link to="/plans" className="text-sm font-semibold text-muted-foreground hover:text-primary">Plans</Link><Link to="/login" className="text-sm font-semibold text-muted-foreground hover:text-primary">Log in</Link></nav>
+        <div className="mx-auto max-w-7xl px-6 pb-2.5 pt-3">
+          {/* The black signature sits centered above the name (founder, 2026-11-10), so the header reads as the logo over
+              the banner rather than a logo beside it. The three columns keep that logo on the page's true center while
+              the nav keeps its own corner, and the name lands centered underneath, at the foot of the white band. */}
+          <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-3">
+            <img src="/cta-logo-dark.png" alt="Came Through Audio" className="col-start-2 h-4 w-auto justify-self-center object-contain" />
+            <nav className="col-start-3 flex items-center justify-self-end gap-4 whitespace-nowrap sm:gap-6"><Link to="/plans" className="text-sm font-semibold text-muted-foreground hover:text-primary">Plans</Link><Link to="/login" className="text-sm font-semibold text-muted-foreground hover:text-primary">Log in</Link></nav>
+          </div>
+          <div className="mt-1.5 flex justify-center">
+            <BrandLogo tone="light" showMark={false} />
+          </div>
         </div>
       </header>
 
