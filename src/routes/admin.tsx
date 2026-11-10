@@ -1,4 +1,4 @@
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { MyQueue } from "@/components/MyQueue";
 import { AdminNavMobile, AdminSidebar } from "@/components/AdminSidebar";
 import { TeamBoard } from "@/components/TeamBoard";
@@ -82,8 +82,6 @@ const fmt = (d?: string | null) => (d ? new Date(d).toLocaleDateString() : "—"
 
 function AdminPage() {
   const { user, loading } = useAuth();
-  const navigate = useNavigate();
-  useEffect(() => { if (!loading && !user) navigate({ to: "/" }); }, [loading, user, navigate]);
 
   const role = useQuery({ queryKey: ["staff-role", user?.id], queryFn: () => getStaffRole(), enabled: !!user });
   const access = role.data;
@@ -92,7 +90,22 @@ function AdminPage() {
   const [activeTab, setActiveTab] = useState<string>();
   useEffect(() => setActiveTab(undefined), [view]);
 
-  if (loading || !user || role.isLoading) return <Center>Loading…</Center>;
+  if (loading || role.isLoading) return <Center>Loading…</Center>;
+  // Signed out used to bounce straight to the homepage with no explanation, so a bookmarked /admin looked broken. It now
+  // says what Admin needs and offers the way in; a member account without a role still lands on the staff gate below.
+  if (!user) {
+    return (
+      <Center>
+        <Lock className="h-8 w-8 text-primary" />
+        <p className="font-semibold">Staff sign-in needed</p>
+        <p className="max-w-sm text-center text-sm text-muted-foreground">
+          Admin is separate from a member account. Log in with the work email your invite was sent to.
+        </p>
+        <Button asChild><Link to="/login">Log in</Link></Button>
+        <Link to="/" className="text-sm font-semibold text-primary">Back to the site</Link>
+      </Center>
+    );
+  }
   if (!access) {
     return (
       <Center>
@@ -104,11 +117,16 @@ function AdminPage() {
   }
 
   const d = overview.data;
-  const pendingSigs = d?.splits.filter((s) => !s.is_owner && !s.signed_at).length ?? 0;
+  // Undefined while the overview is loading or has failed, so the tile reads "—" like the others instead of a wrong 0
+  // for a backlog that does exist (the database held 1 unsigned split while this showed 0).
+  const pendingSigs = d ? d.splits.filter((s) => !s.is_owner && !s.signed_at).length : undefined;
   const tabs = visibleTabs(access, view);
   const show = (value: string) => tabs.some((t) => t.value === value);
   const isSuper = access.role === "super_admin";
   const current = activeTab && show(activeTab) ? activeTab : (tabs[0]?.value ?? "");
+  // Only the tabs whose numbers come from the overview carry its tiles and its error. A failed overview used to sit above
+  // unrelated work — Handbook, Email, My Queue — and made the whole dashboard read as broken.
+  const usesOverview = ["ai", "reg", "splits", "purchases"].includes(current);
 
   return (
     <div className="min-h-screen bg-background">
@@ -166,18 +184,18 @@ function AdminPage() {
               : access.departments.length ? "No dashboard tools for this department yet." : "You haven't been assigned a department yet. Ask HR or an admin."}
           </div>
         ) : (<>
-        <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
+        {usesOverview && <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
           {show("ai") && <Stat icon={<ShieldCheck />} label="AI certificates" value={d?.certificates.length} />}
           {show("reg") && <Stat icon={<Building2 />} label="Registrations pending" value={d?.registrations.filter((r) => r.status === "pending_review").length} />}
           {show("splits") && <Stat icon={<FileSignature />} label="Signatures pending" value={pendingSigs} />}
           {show("purchases") && <Stat icon={<Receipt />} label="Purchases" value={d?.purchases.length} />}
-        </div>
+        </div>}
 
-        {overview.isError && <p className="mt-6 text-destructive">Couldn't load dashboard data.</p>}
+        {usesOverview && overview.isError && <p className="mt-6 text-destructive">Couldn't load dashboard data.</p>}
 
         <Tabs key={view} value={current} onValueChange={setActiveTab} className="mt-6">
           <TabsContent value="ai">
-            <Table head={["Track", "Artist", "Package", "Blockchain", "Verified", "Issued"]}
+            <Table head={["Track", "Artist", "Package", "Blockchain", "Verified", "Issued"]} failed={overview.isError}
               rows={d?.certificates.map((c) => [c.track_title ?? "—", c.artist_name ?? "—", c.format_type, c.blockchain_status, c.is_verified ? "Yes" : "No", fmt(c.issued_at)])} />
           </TabsContent>
           <TabsContent value="reg">
@@ -189,12 +207,12 @@ function AdminPage() {
             </>}
           </TabsContent>
           <TabsContent value="splits">
-            <Table head={["Email", "Role", "Share", "Type", "Status"]}
+            <Table head={["Email", "Role", "Share", "Type", "Status"]} failed={overview.isError}
               rows={d?.splits.map((s) => [s.collaborator_email, s.role, `${s.assigned_percentage}%`, s.is_owner ? "Owner" : "Collaborator", s.signed_at ? `Signed ${fmt(s.signed_at)}` : "Pending"])} />
           </TabsContent>
           <TabsContent value="purchases">
             <FoundingSeats />
-            <Table head={["Type", "Mode", "Status", "Date"]} rows={d?.purchases.map((p) => [p.type, p.environment, p.status, fmt(p.created_at)])} />
+            <Table head={["Type", "Mode", "Status", "Date"]} failed={overview.isError} rows={d?.purchases.map((p) => [p.type, p.environment, p.status, fmt(p.created_at)])} />
           </TabsContent>
           {show("billing") && <TabsContent value="billing"><BillingConsolePanel isSuper={isSuper} /></TabsContent>}
           {show("support") && <TabsContent value="support"><SupportTicketsPanel scope={access.departments.includes("support") ? "all" : "billing"} /></TabsContent>}
@@ -238,7 +256,10 @@ function Stat({ icon, label, value }: { icon: ReactNode; label: string; value: n
   );
 }
 
-function Table({ head, rows }: { head: string[]; rows: string[][] | undefined }) {
+function Table({ head, rows, failed }: { head: string[]; rows: string[][] | undefined; failed?: boolean }) {
+  // A failed overview used to sit on "Loading…" forever, so the tab read as broken rather than as a section that
+  // couldn't load. The failure now says so, and only a real fetch in flight shows "Loading…".
+  if (failed && !rows) return <p className="mt-6 text-destructive">Couldn't load this section.</p>;
   if (!rows) return <p className="mt-6 text-muted-foreground">Loading…</p>;
   if (!rows.length) return <p className="mt-6 text-muted-foreground">Nothing here yet.</p>;
   return (

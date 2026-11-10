@@ -278,6 +278,14 @@
 - **Team Board is cross-department** (founder, 2026-11-05): per-department in-progress counts plus the `team_notices`
   micro-chat. Leads, super admins and Project Managers post (`canPostNotice`); everyone reads, so a dependency is written
   down where the other team already looks.
+- **A failed overview stays where its numbers are** (founder, 2026-11-10): the four stat tiles and the "Couldn't load
+  dashboard data." line render only on AI Protection, Registrations, Split Sheets and Purchases, because those are the
+  tabs the numbers belong to. On Handbook, Email or My Queue a failed overview never sits above unrelated work. A table
+  whose fetch failed says "Couldn't load this section." — never "Loading…", which read as a permanent hang — and a count
+  with no data shows "—", never 0, so a real backlog is never reported as empty (a database holding one unsigned split
+  sheet was being shown as 0 while the overview was down).
+- **Admin explains a signed-out visit** (founder, 2026-11-10): `/admin` says "Staff sign-in needed" with Log in and Back
+  to the site, instead of redirecting to the homepage with no explanation and looking like a broken bookmark.
 
 ## Blueprint Checklists & Working On (always follow)
 
