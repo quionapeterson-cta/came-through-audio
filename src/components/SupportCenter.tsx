@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { listMyTickets, listTicketThread, markTicketRead, replyAsMember } from "@/lib/support.functions";
-import { canSendReply, isClosed, memberUnread, ticketCode, type ThreadMessage, type TicketRecord } from "@/lib/support-replies";
+import { canSendReply, isClosed, memberUnread, memberVisible, ticketCode, type ThreadMessage, type TicketRecord } from "@/lib/support-replies";
 
 type MyTicket = TicketRecord & { last_staff_at: string | null };
 
@@ -52,7 +52,12 @@ export function SupportCenter({ userId, openTicketId }: { userId: string; openTi
   }
 
   if (q.isLoading) return <p className="mt-6 text-muted-foreground">Loading your tickets…</p>;
-  if (q.isError) return <p className="mt-6 text-destructive">Couldn't load your tickets.</p>;
+  if (q.isError) return (
+    <div className="mt-6 space-y-2">
+      <p className="text-destructive">Couldn't load your tickets.</p>
+      <Button size="sm" variant="outline" onClick={() => void q.refetch()}>Try again</Button>
+    </div>
+  );
 
   return (
     <div className="mt-4 space-y-4">
@@ -83,7 +88,8 @@ export function SupportCenter({ userId, openTicketId }: { userId: string; openTi
                     {t.subject}
                   </span>
                   <span className="block text-sm text-muted-foreground">
-                    {unread ? "Support replied · " : ""}{new Date(t.created_at).toLocaleDateString()} · Ticket #{ticketCode(t.id)}
+                    {unread && t.last_staff_at ? `Support replied ${new Date(t.last_staff_at).toLocaleDateString()} · ` : `Opened ${new Date(t.created_at).toLocaleDateString()} · `}
+                    Ticket #{ticketCode(t.id)}
                   </span>
                 </span>
                 <Badge className={isClosed(t) ? "" : "bg-primary text-primary-foreground"} variant={isClosed(t) ? "outline" : "default"}>
@@ -109,7 +115,9 @@ function MemberThread({ ticket, focus, onBack, onChanged }: {
   const send = useServerFn(replyAsMember);
   const qc = useQueryClient();
   const q = useQuery({ queryKey: ["my-ticket-thread", ticket.id], queryFn: () => fetchThread({ data: { ticketId: ticket.id } }) });
-  const messages = q.data?.messages ?? [];
+  // The server filters internal notes out of a member's copy; this is the second lock, so a staff note never renders
+  // in the member's thread even if a future query forgets.
+  const messages = memberVisible(q.data?.messages ?? []);
   const [body, setBody] = useState("");
   const [busy, setBusy] = useState(false);
   const box = useRef<HTMLTextAreaElement>(null);
@@ -117,7 +125,7 @@ function MemberThread({ ticket, focus, onBack, onChanged }: {
 
   useEffect(() => {
     if (!q.isSuccess) return;
-    void markRead({ data: { ticketId: ticket.id } }).catch(() => {});
+    void markRead({ data: { ticketId: ticket.id } }).then(() => onChanged()).catch(() => {});
   }, [q.isSuccess, messages.length, ticket.id]);
 
   // Arriving from the reply email: the thread opens on the message box, ready to type in.
@@ -165,13 +173,21 @@ function MemberThread({ ticket, focus, onBack, onChanged }: {
           <p className="mt-2 whitespace-pre-wrap break-words text-sm">{ticket.message}</p>
         </div>
         {q.isLoading ? <p className="text-sm text-muted-foreground">Loading the conversation…</p> : null}
-        {q.isError ? <p className="text-sm text-destructive">Couldn't load the conversation.</p> : null}
-        {messages.map((m: ThreadMessage) => (
-          <div key={m.id} className="rounded-xl border border-primary/40 bg-primary/5 p-3">
-            <p className="text-xs text-muted-foreground"><span className="font-semibold text-foreground">{m.author_name}</span> · {when(m.created_at)}</p>
-            <p className="mt-2 whitespace-pre-wrap break-words text-sm">{m.body}</p>
+        {q.isError ? (
+          <div className="space-y-2">
+            <p className="text-sm text-destructive">Couldn't load the conversation.</p>
+            <Button size="sm" variant="outline" onClick={() => void q.refetch()}>Try again</Button>
           </div>
-        ))}
+        ) : null}
+        {messages.map((m: ThreadMessage) => {
+          const mine = m.author_kind === "member";
+          return (
+            <div key={m.id} className={mine ? "rounded-xl border border-border bg-muted/40 p-3" : "rounded-xl border border-primary/40 bg-primary/5 p-3"}>
+              <p className="text-xs text-muted-foreground"><span className="font-semibold text-foreground">{mine ? "You" : m.author_name}</span> · {when(m.created_at)}</p>
+              <p className="mt-2 whitespace-pre-wrap break-words text-sm">{m.body}</p>
+            </div>
+          );
+        })}
       </div>
 
       {closed ? (
