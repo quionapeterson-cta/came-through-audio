@@ -2,6 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { emailLayout, escapeHtml, SITE_URL } from "./email-layout";
+import { mailKey } from "./mailer";
 import { cleanInviteText, trustedOrigin } from "./invite-limits";
 import { ARTIST_SEAT_PRICES, TIER_LABEL } from "./plans";
 
@@ -88,7 +89,7 @@ export const inviteSeatArtist = createServerFn({ method: "POST" })
 
     const res = await fetch("https://api.resend.com/emails", {
       method: "POST",
-      headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
+      headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json", "Idempotency-Key": mailKey("seat-invite", s.id) },
       body: JSON.stringify({ from: FROM, to: [email], subject: `Your artist seat for ${name}`, html }),
     });
     if (!res.ok) {

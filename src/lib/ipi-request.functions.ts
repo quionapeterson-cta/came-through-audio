@@ -2,9 +2,9 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { emailLayout, escapeHtml, SITE_URL } from "./email-layout";
+import { mailKey, sendMail } from "./mailer";
 import { cleanInviteText, inviteBlockReason, trustedOrigin } from "./invite-limits";
 
-const FROM = "Came Through Audio <collaborate@camethroughaudio.com>";
 const esc = escapeHtml;
 
 /**
@@ -15,8 +15,6 @@ export const sendIpiRequest = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d) => z.object({ id: z.string().uuid(), origin: z.string().url() }).parse(d))
   .handler(async ({ data, context }) => {
-    const key = process.env["RESEND_API_KEY"] || process.env["CameThroughAudio"];
-    if (!key) throw new Error("Email sending is not configured yet.");
     const { data: canSend, error: tierErr } = await context.supabase.rpc("has_tier" as never, { _uid: context.userId, _needed: "plus" } as never);
     if (tierErr) {
       console.error("has_tier failed:", tierErr);
@@ -73,16 +71,18 @@ export const sendIpiRequest = createServerFn({ method: "POST" })
 <p style="font-size:13px;line-height:1.6;color:#555">Only ${esc(artist)} sees what you enter. It's used to register these songs and is never published or added to the music files.</p>`,
       { reason: `You're receiving this because ${artist} listed you as a co-writer and asked for your PRO and IPI details.`, optOutUrl });
 
-    const res = await fetch("https://api.resend.com/emails", {
-      method: "POST",
-      headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
-      body: JSON.stringify({ from: FROM, to: [recipient], subject: `${artist} needs your PRO and IPI for ${titles.length === 1 ? `"${titles[0]}"` : `${titles.length} songs`}`, html }),
+    const res = await sendMail({
+      from: "collaborate",
+      to: [recipient],
+      subject: `${artist} needs your PRO and IPI for ${titles.length === 1 ? `"${titles[0]}"` : `${titles.length} songs`}`,
+      html,
+      key: mailKey("ipi-request", row.id, Math.floor(Date.now() / 60_000)),
     });
     if (!res.ok) {
-      const body = await res.text();
-      console.error(`Resend failed [${res.status}]: ${body}`);
-      if (res.status === 403 && /domain/i.test(body)) throw new Error("Email could not be sent: the sending domain isn't verified in Resend yet. Copy the link and send it yourself for now.");
-      throw new Error(`Email could not be sent (${res.status}). Copy the link and send it yourself for now.`);
+      console.error(`Resend failed [${res.status ?? res.detail}]: ${res.detail ?? ""}`);
+      if (res.detail === "no-key") throw new Error("Email sending is not configured yet.");
+      if (res.status === 403 && /domain/i.test(res.detail ?? "")) throw new Error("Email could not be sent: the sending domain isn't verified in Resend yet. Copy the link and send it yourself for now.");
+      throw new Error(`Email could not be sent (${res.status ?? "network"}). Copy the link and send it yourself for now.`);
     }
     await sends().insert({ sender_id: context.userId, ipi_request_id: row.id, recipient_email: recipient } as never);
     await supabaseAdmin.from("ipi_requests" as never).update({ sent_at: new Date().toISOString() } as never).eq("id", row.id);

@@ -2,6 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { emailLayout, escapeHtml, SITE_URL } from "./email-layout";
+import { mailKey, sendMail } from "./mailer";
 import { COMPANY_LEGAL_NAME } from "./contract-blueprints";
 import { getPaymentsEnvironment } from "./payments-env";
 
@@ -79,8 +80,6 @@ export const grantLaunchGift = createServerFn({ method: "POST" })
     });
     if (error) throw new Error("Couldn't grant the gift. Try again.");
 
-    const key = process.env["RESEND_API_KEY"];
-    if (key) {
       const until = end.toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" });
       const html = emailLayout(`<p style="font-size:12px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:#004AAD;margin:0">Your launch gift</p>
 <h1 style="font-size:24px;margin:8px 0 16px">Came Through Audio Came Through for you</h1>
@@ -88,11 +87,6 @@ export const grantLaunchGift = createServerFn({ method: "POST" })
 <a href="${SITE_URL}/workspace" style="display:inline-block;background:#004AAD;color:#ffffff;text-decoration:none;font-weight:700;padding:14px 28px;border-radius:8px">Open your workspace</a>
 <p style="font-size:13px;line-height:1.6;color:#555">It ends on its own; you won't be charged.</p>
 `, { reason: `You're receiving this because you signed a testimonial release with ${COMPANY_LEGAL_NAME}, which includes this launch gift.` });
-      await fetch("https://api.resend.com/emails", {
-        method: "POST",
-        headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
-        body: JSON.stringify({ from: "Came Through Audio <collaborate@camethroughaudio.com>", to: [p.email.trim()], subject: "Your free Catalog Plus is active", html }),
-      }).catch((e) => console.error("Launch gift email failed:", e));
-    }
+      await sendMail({ from: "collaborate", to: [p.email.trim()], subject: "Your free Catalog Plus is active", html, key: mailKey("launch-gift", p.id) });
     return { endsAt: end.toISOString() };
   });

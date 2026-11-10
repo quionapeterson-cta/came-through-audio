@@ -2,6 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { emailLayout, escapeHtml, SITE_URL } from "./email-layout";
+import { mailKey } from "./mailer";
 import { cleanInviteText, inviteBlockReason, trustedOrigin } from "./invite-limits";
 
 const FROM = "Came Through Audio <collaborate@camethroughaudio.com>";
@@ -76,7 +77,7 @@ export const sendSplitInvite = createServerFn({ method: "POST" })
 
     const res = await fetch("https://api.resend.com/emails", {
       method: "POST",
-      headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
+      headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json", "Idempotency-Key": mailKey("split-invite", row.id, Math.floor(Date.now() / 60_000)) },
       body: JSON.stringify({ from: FROM, to: [email], subject: `Please sign the split sheet for "${title}"`, html }),
     });
     if (!res.ok) {

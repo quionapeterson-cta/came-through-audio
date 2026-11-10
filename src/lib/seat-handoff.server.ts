@@ -6,9 +6,9 @@
  * Never throws to the webhook: the handoff is already recorded when this runs, and the notes are a courtesy.
  */
 import { emailLayout, escapeHtml } from "./email-layout";
+import { mailKey, sendMail } from "./mailer";
 import { TIER_LABEL } from "./plans";
 
-const FROM = "Came Through Audio <collaborate@camethroughaudio.com>";
 const esc = escapeHtml;
 
 const longDay = (iso: string | null) => (iso
@@ -22,29 +22,21 @@ export async function sendSeatHandoffEmails(i: {
   tier: string;
   periodEnd: string | null;
 }) {
-  const key = process.env["RESEND_API_KEY"] || process.env["CameThroughAudio"];
-  if (!key) return console.warn("Seat handoff emails skipped: email sending is not configured");
+  if (!process.env["RESEND_API_KEY"] && !process.env["CameThroughAudio"]) return console.warn("Seat handoff emails skipped: email sending is not configured");
   const tier = TIER_LABEL[i.tier as keyof typeof TIER_LABEL] ?? i.tier;
   const name = i.artistName || "Your artist";
   const day = longDay(i.periodEnd);
 
-  const send = async (to: string, subject: string, html: string) => {
-    try {
-      const res = await fetch("https://api.resend.com/emails", {
-        method: "POST",
-        headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
-        body: JSON.stringify({ from: FROM, to: [to], subject, html }),
-      });
-      if (!res.ok) console.error(`Seat handoff email to ${to} failed [${res.status}]: ${await res.text()}`);
-    } catch (e) {
-      console.error(`Seat handoff email to ${to} failed:`, e);
-    }
+  const send = async (to: string, subject: string, html: string, key: string) => {
+    const res = await sendMail({ from: "collaborate", to: [to], subject, html, key });
+    if (!res.ok) console.error(`Seat handoff email to ${to} failed [${res.status ?? res.detail}]: ${res.detail ?? ""}`);
   };
 
   if (i.artistEmail) {
     await send(
       i.artistEmail,
       `Your ${tier} plan is yours from ${day ?? "your seat's renewal"}`,
+      mailKey("seat-handoff-artist", i.artistEmail ?? "", i.periodEnd ?? ""),
       emailLayout(`<p style="font-size:12px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:#004AAD;margin:0">Seat handed over</p>
 <h1 style="font-size:24px;margin:8px 0 16px">This plan is yours now</h1>
 <p style="font-size:15px;line-height:1.6">Your <b>${esc(tier)}</b> plan now belongs to your account instead of an add-on artist seat. Everything you work in stays where it is: your catalog, your splits, your badges.</p>
@@ -62,6 +54,7 @@ ${day ? `<p style="margin:6px 0 0;font-size:13px;color:#555">The plan you were o
     await send(
       i.ownerEmail,
       `${name} is paying for their own plan now`,
+      mailKey("seat-handoff-owner", i.ownerEmail ?? "", i.periodEnd ?? ""),
       emailLayout(`<p style="font-size:12px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:#004AAD;margin:0">Artist seat handed over</p>
 <h1 style="font-size:24px;margin:8px 0 16px">${esc(name)} took the plan over</h1>
 <p style="font-size:15px;line-height:1.6">${esc(name)} is now paying for their own <b>${esc(tier)}</b> plan. The artist seat you were paying for has been handed over.</p>

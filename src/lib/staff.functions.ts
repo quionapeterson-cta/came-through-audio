@@ -4,6 +4,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/integrations/supabase/types";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { ADMIN_EMAIL, emailLayout, escapeHtml, SITE_URL } from "./email-layout";
+import { mailKey } from "./mailer";
 import { ACCEPT_STEPS, inviteBlocker } from "./staff-invites";
 import {
   ASSIGNABLE_DEPARTMENTS, DEPARTMENTS, DEPARTMENT_LABEL, MANAGED_ROLES, ROLE_LABEL, normalizeDepartments, resolveAccess, staffChangeError,
@@ -154,7 +155,7 @@ async function sendStaffEmail(to: string, role: ManagedRole, departments: Depart
     { reason: "You're receiving this because a Came Through Audio admin gave this email staff access." });
   const res = await fetch("https://api.resend.com/emails", {
     method: "POST",
-    headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
+    headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json", "Idempotency-Key": mailKey("staff-invite", to) },
     body: JSON.stringify({ from: `Came Through Audio <${ADMIN_EMAIL}>`, to: [to], subject: "Your Came Through Audio team access", html }),
   }).catch((e) => { console.error("Staff invite email failed", e); return null; });
   return !!res?.ok;

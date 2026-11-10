@@ -1,7 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
-import { ADMIN_EMAIL, emailLayout, SITE_URL } from "./email-layout";
-import { resendKey } from "./collab-trial.server";
+import { emailLayout, SITE_URL } from "./email-layout";
+import { mailKey, sendMail } from "./mailer";
 
 /**
  * Branded account emails (founder, 2026-11-05). A reset mail used to come straight from the auth provider: default
@@ -30,8 +30,6 @@ export const sendPasswordResetEmail = createServerFn({ method: "POST" })
       console.warn("Password reset link not generated:", link.error?.message ?? "no link");
       return { ok: true, emailed: false };
     }
-    const key = resendKey();
-    if (!key) return { ok: true, emailed: false };
     const html = emailLayout(`<p style="font-size:12px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:#004AAD;margin:0">Password reset</p>
 <h1 style="font-size:24px;margin:8px 0 16px">Choose a new password</h1>
 <p style="font-size:15px;line-height:1.6">Use the button below to set a new password for your Came Through Audio account. The link works once and expires in one hour.</p>
@@ -39,11 +37,14 @@ export const sendPasswordResetEmail = createServerFn({ method: "POST" })
 <p style="margin:24px 0"><a href="${url}" style="background:#004AAD;color:#ffffff;text-decoration:none;font-weight:700;padding:12px 22px;border-radius:8px;display:inline-block">Choose a new password</a></p>
 <p style="font-size:13px;line-height:1.6;color:#666">If the button doesn't work, paste this address into your browser:<br/><span style="word-break:break-all">${url}</span></p>`,
       { reason: "You're receiving this because someone asked to reset the password for this Came Through Audio account." });
-    const res = await fetch("https://api.resend.com/emails", {
-      method: "POST",
-      headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
-      body: JSON.stringify({ from: `Came Through Audio <${ADMIN_EMAIL}>`, to: [data.email], subject: "Choose a new Came Through Audio password", html }),
-    }).catch((e) => { console.error("Password reset email failed", e); return null; });
-    if (!res?.ok) console.error(`Password reset email failed [${res?.status ?? "network"}]`);
-    return { ok: true, emailed: !!res?.ok };
+    // One link per hour per address: a double click sends one email, and a genuine retry later still arrives.
+    const res = await sendMail({
+      from: "admin",
+      to: [data.email],
+      subject: "Choose a new Came Through Audio password",
+      html,
+      key: mailKey("password-reset", data.email, Math.floor(Date.now() / 3_600_000)),
+    });
+    if (!res.ok) console.error(`Password reset email failed [${res.status ?? res.detail ?? "network"}]`);
+    return { ok: true, emailed: res.ok };
   });

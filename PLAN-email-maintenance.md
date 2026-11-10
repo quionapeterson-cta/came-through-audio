@@ -60,7 +60,7 @@ cannot be undone, so this plan never starts there.
 
 | Gmail search | Found | Verdict |
 |---|---|---|
-| `from:notifications@wix-forms.com OR from:notifications@wixevents.com` | 5 | **Delete** once Wix notifications are switched off; the app owns the contact form now |
+| `from:notifications@wix-forms.com OR from:notifications@wixevents.com` | 5 | **Delete** — historic only: the Wix form is not connected any more (founder, 2026-11-10), so nothing needs switching off. Only the current build takes messages, at `/contact-us` |
 | `(subject:TEST OR subject:test OR subject:Testing OR subject:yahoo OR subject:"Collab test" OR subject:Inquiry) (to:camethroughaudio.com OR from:camethroughaudio.com)` | 12 | **Delete** — our own smoke tests and header checks |
 | `in:spam` | 469 | **Delete** after a glance; then keep spam on a 30-day auto-delete |
 | `category:promotions older_than:6m` | 50+ | **Delete**, and set promotions to skip the inbox |
@@ -73,8 +73,8 @@ nothing.
 
 ## 4. Stop it at the source (before deleting anything)
 
-- **Wix**: turn off the form and event notifications on the old site. Those five mails exist because a form still
-  emails the founder, while `/contact-us` is the live path.
+- **Wix**: nothing to turn off. The Wix form is no longer connected (founder, 2026-11-10); those five mails are
+  historic, and only the current build takes messages, at `/contact-us`.
 - **Supabase Auth**: the mailbox shows three different wordings of "Confirm your email" (workspace, studio, welcome).
   That is template history rather than three mails per signup, but confirm in Auth → Email Templates that only one
   confirmation is live before assuming it.
@@ -96,11 +96,18 @@ nothing.
 
 ## 6. Code changes that keep the flow clean (ordered, each small)
 
-1. **One typed mailbox list.** Add `AUTH_EMAIL`, `COLLABORATE_EMAIL`, `REGISTRATIONS_EMAIL` and `PARTNERSHIPS_EMAIL` to
-   `email-layout.ts`, replace the hand-typed strings, and add a test that every `from:` in `src/lib` resolves to a known
-   mailbox. No behaviour change; kills the wrong-sender class of bug.
-2. **A `sendMail()` helper that requires an idempotency key** (and the layout), then give the fourteen files keys built
-   from their own row id and purpose. This is the biggest win for a clean flow: no double invites, codes or receipts.
+**Shipped 2026-11-10:** steps 1 and 2, in `src/lib/mailer.ts` with `mailer.test.ts`.
+
+1. **One typed mailbox list — done.** `AUTH_EMAIL`, `COLLABORATE_EMAIL`, `REGISTRATIONS_EMAIL`, `PARTNERSHIPS_EMAIL` and
+   `SECURITY_EMAIL` now live in `email-layout.ts`, `MAILBOXES` names all ten once in `mailer.ts`, and every sender that
+   typed an address by hand (`collaborate@`, `registrations@`, `partnerships@`, the PDF mailbox list, the outreach
+   header) goes through `mailFrom()`. The test checks that every mailbox is on our domain and unique.
+2. **A `sendMail()` that requires an idempotency key — done for the fourteen.** Password reset, staff invite, seat
+   invite, seat handoff, split-sheet request, contract request and signing code, IPI request, PDF email, company letter,
+   outreach, offboarding, beta and launch gift now send with a key from `mailKey(...)`, built from the row's own id (and
+   a minute bucket where asking again later is legitimate). A send with no key throws; a missing provider key reports
+   "not configured" instead of pretending. The nine senders that already carried a key still post to Resend directly —
+   folding them into the helper is the follow-up, and they keep their keys in the meantime.
 3. **Bounce and complaint suppression.** We have none. A Resend webhook for `bounced` and `complained` writes to a
    suppression table that `sendMail()` checks, so a dead address stops being mailed. Without it, hard bounces keep going
    out, which is what damages the domain's reputation and puts our mail in members' spam.
@@ -131,7 +138,7 @@ nothing.
 
 ## 9. Next actions, in order
 
-1. Approve §3 and §4, then apply the delete lists and turn off the Wix notifications.
-2. Ship §6.1 (typed mailboxes + test) — no behaviour change.
-3. Ship §6.2 (`sendMail` with idempotency keys) across the fourteen senders.
-4. Ship §6.3 (bounce/complaint suppression), which needs a webhook and one table.
+1. Approve §3, then apply the delete lists (nothing needs switching off at Wix).
+2. ~~Ship §6.1 (typed mailboxes + test)~~ and ~~§6.2 (`sendMail` with idempotency keys)~~ — shipped 2026-11-10.
+3. Ship §6.3 (bounce/complaint suppression), which needs a webhook and one table.
+4. Fold the nine already-keyed senders into `sendMail()` so there is one send path.

@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 import { hasTier, isActiveSub, tierFromPrice } from "@/lib/plans";
 import { emailLayout } from "./email-layout";
+import { mailFrom } from "./mailer";
 
 const REMINDED = "collab_trial_reminded";
 const REMINDER_WINDOW_DAYS = 5;
@@ -26,7 +27,7 @@ async function sendReminderEmail(key: string, idempotencyKey: string, email: str
     method: "POST",
     headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json", "Idempotency-Key": idempotencyKey },
     body: JSON.stringify({
-      from: "Came Through Audio <collaborate@camethroughaudio.com>",
+      from: mailFrom("collaborate"),
       to: [email],
       subject: `Your ${plan} Trial ends in ${daysLeft} day${daysLeft === 1 ? "" : "s"}`,
       html: reminderHtml(daysLeft, when, plansUrl, plan),

@@ -2,10 +2,10 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { emailLayout, escapeHtml, SITE_URL } from "./email-layout";
+import { mailKey, sendMail } from "./mailer";
 import { trustedOrigin } from "./invite-limits";
 import { COMPANY_LEGAL_NAME } from "./contract-blueprints";
 
-const FROM = "Came Through Audio <collaborate@camethroughaudio.com>";
 const esc = escapeHtml;
 
 /** Invite emails one account may send per 24 hours, so nobody can blast invites to farm free trial accounts. */
@@ -16,8 +16,7 @@ export const sendContractInvite = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d) => z.object({ partyId: z.string().uuid(), origin: z.string().url() }).parse(d))
   .handler(async ({ data, context }) => {
-    const key = process.env["RESEND_API_KEY"] || process.env["CameThroughAudio"];
-    if (!key) throw new Error("Email sending is not configured yet.");
+
     const { data: canSend, error: tierErr } = await context.supabase.rpc("has_tier" as never, { _uid: context.userId, _needed: "management" } as never);
     // A failed plan check is reported as such, not as "upgrade", so a database problem can't pass for a plan block.
     if (tierErr) {
@@ -62,15 +61,17 @@ export const sendContractInvite = createServerFn({ method: "POST" })
 <p style="font-size:13px;line-height:1.6;color:#555;margin-top:24px">${howToSign}</p>
 `, { reason: k.is_company ? `You're receiving this because ${from} asked you to review and sign an agreement with us.` : `You're receiving this because ${from} listed you as a party on a contract in Came Through Audio.` });
 
-    const res = await fetch("https://api.resend.com/emails", {
-      method: "POST",
-      headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
-      body: JSON.stringify({ from: FROM, to: [email], subject: `Please review and sign "${k.title}"`, html }),
+    // A minute bucket: pressing Send twice sends one email, asking again later sends a fresh one.
+    const res = await sendMail({
+      from: "collaborate",
+      to: [email],
+      subject: `Please review and sign "${k.title}"`,
+      html,
+      key: mailKey("contract-invite", p.id, Math.floor(Date.now() / 60_000)),
     });
     if (!res.ok) {
-      const body = await res.text();
-      console.error(`Resend failed [${res.status}]: ${body}`);
-      throw new Error(`Email could not be sent (${res.status}).`);
+      console.error(`Resend failed [${res.status ?? res.detail}]: ${res.detail ?? ""}`);
+      throw new Error(res.detail === "no-key" ? "Email sending is not configured yet." : `Email could not be sent (${res.status ?? "network"}).`);
     }
     await context.supabase.from("contract_parties" as never).update({ invited_at: new Date().toISOString() } as never).eq("id", p.id);
     return { ok: true };

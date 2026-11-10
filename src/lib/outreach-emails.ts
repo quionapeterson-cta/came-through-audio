@@ -1,9 +1,10 @@
+import { mailFrom } from "./mailer";
 /**
  * Company outreach emails (PLAN-phase4-order item 5, approved 2026-10-25): cold, follow-up and demo-invite messages to
  * labels, music-tech and music-creation companies, sent from partnerships@ in Admin → Company Contracts. Each template
  * only pre-fills the subject and message; the super admin edits both before sending.
  */
-export const OUTREACH_FROM = "Came Through Audio <partnerships@camethroughaudio.com>";
+export const OUTREACH_FROM = mailFrom("partnerships");
 export const OUTREACH_DAILY_LIMIT = 50;
 
 export type OutreachKind = "cold" | "followup" | "demo";

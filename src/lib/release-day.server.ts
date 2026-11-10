@@ -1,11 +1,12 @@
 import { emailLayout, escapeHtml as esc, SITE_URL } from "./email-layout";
+import { mailFrom } from "./mailer";
 import { resendKey } from "./collab-trial.server";
 
 /**
  * Release-day email (PLAN-pre-distribution §5, approved 2026-10-25): the morning a catalog song's release date arrives,
  * its owner gets one note for that song with the after-release steps. Run by the daily registration-reminders job.
  */
-const FROM = "Came Through Audio <registrations@camethroughaudio.com>";
+const FROM = mailFrom("registrations");
 
 export async function sendReleaseDayEmails(today = new Date().toISOString().slice(0, 10)): Promise<{ released: number; sent: number }> {
   const db = (await import("@/integrations/supabase/client.server")).supabaseAdmin;

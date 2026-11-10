@@ -26,6 +26,12 @@ export const LEGAL_EMAIL = "legal@camethroughaudio.com";
 export const ADMIN_EMAIL = "admin@camethroughaudio.com";
 /** Billing and payments mail (renewals, failed payments, refunds) goes out from and comes back to this address. */
 export const BILLING_EMAIL = "billing@camethroughaudio.com";
+/** The rest of the company's mailboxes (founder, 2026-11-10): every address we send from is named once, in this file. */
+export const COLLABORATE_EMAIL = "collaborate@camethroughaudio.com";
+export const REGISTRATIONS_EMAIL = "registrations@camethroughaudio.com";
+export const PARTNERSHIPS_EMAIL = "partnerships@camethroughaudio.com";
+export const AUTH_EMAIL = "auth@camethroughaudio.com";
+export const SECURITY_EMAIL = "security@camethroughaudio.com";
 export const TAGLINE = "YOUR FIRST STOP BEFORE DISTRIBUTION";
 /**
  * The C in "Came" is the mark image, so its ink has to sit at the cap height of the wordmark, not above it. The header

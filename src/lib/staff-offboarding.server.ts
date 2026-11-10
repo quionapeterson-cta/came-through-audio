@@ -1,4 +1,5 @@
 import { ADMIN_EMAIL, emailLayout, escapeHtml, SITE_URL } from "@/lib/email-layout";
+import { mailKey } from "@/lib/mailer";
 import { addDays } from "@/lib/retention";
 import { ASSET_DAYS, dueDepartureReminder, keepsAccountOnPayment, leftWithinProbation, SECURE_COPY } from "@/lib/offboarding";
 
@@ -51,7 +52,7 @@ ${kind === "ended"
     { reason: "You're receiving this because this email is on a Came Through Audio account." });
   const res = await fetch("https://api.resend.com/emails", {
     method: "POST",
-    headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
+    headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json", "Idempotency-Key": mailKey("offboarding", to, kind) },
     body: JSON.stringify({
       from: `Came Through Audio <${ADMIN_EMAIL}>`, to: [to],
       subject: kind === "ended" ? "Your Came Through Audio access has ended" : `Your account is deleted on ${on}`, html,

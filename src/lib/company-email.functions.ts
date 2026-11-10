@@ -5,6 +5,7 @@ import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { resolveAccess } from "./departments";
 import { emailLayout } from "./email-layout";
+import { mailKey, sendMail } from "./mailer";
 import {
   COMPANY_MAILBOXES,
   COMPANY_MAIL_DAILY_LIMIT,
@@ -82,8 +83,6 @@ export const sendCompanyEmail = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }) => {
     const db = await staffDb(context);
-    const key = process.env["RESEND_API_KEY"] || process.env["CameThroughAudio"];
-    if (!key) throw new Error("Email sending is not configured yet.");
     const from = companyFrom(data.mailbox);
     if (!from) throw new Error("That isn't one of the company mailboxes.");
 
@@ -99,26 +98,25 @@ export const sendCompanyEmail = createServerFn({ method: "POST" })
       );
 
     const cc = data.cc?.trim();
-    const res = await fetch("https://api.resend.com/emails", {
-      method: "POST",
-      headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
-      body: JSON.stringify({
-        from,
-        to: [data.to],
-        ...(cc ? { cc: [cc] } : {}),
-        reply_to: companyReplyTo(data.mailbox),
-        subject: data.subject,
-        html: emailLayout(mailBodyHtml(data.body), {
-          reason: "You're receiving this because Came Through Audio wrote to you directly.",
-        }),
+    const res = await sendMail({
+      from: data.mailbox,
+      to: [data.to],
+      ...(cc ? { cc: [cc] } : {}),
+      replyTo: companyReplyTo(data.mailbox),
+      subject: data.subject,
+      html: emailLayout(mailBodyHtml(data.body), {
+        reason: "You're receiving this because Came Through Audio wrote to you directly.",
       }),
+      key: mailKey("company-letter", data.mailbox, data.to, data.subject, Math.floor(Date.now() / 60_000)),
     });
     if (!res.ok) {
-      console.error(`Company email failed [${res.status}]: ${await res.text()}`);
+      console.error(`Company email failed [${res.status ?? res.detail}]: ${res.detail ?? ""}`);
       throw new Error(
-        res.status === 403
-          ? "The email couldn't be sent: the camethroughaudio.com sending domain isn't verified in Resend yet."
-          : `The email couldn't be sent (${res.status}).`,
+        res.detail === "no-key"
+          ? "Email sending is not configured yet."
+          : res.status === 403
+            ? "The email couldn't be sent: the camethroughaudio.com sending domain isn't verified in Resend yet."
+            : `The email couldn't be sent (${res.status ?? "network"}).`,
       );
     }
 

@@ -2,6 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { emailLayout, escapeHtml, SITE_URL } from "./email-layout";
+import { mailKey, sendMail } from "./mailer";
 import { trustedOrigin } from "./invite-limits";
 import { COMPANY_LEGAL_NAME } from "./contract-blueprints";
 import type { ContractInvite } from "./contracts";
@@ -12,7 +13,6 @@ import type { ContractInvite } from "./contracts";
  * sheets still sign through a logged-in account.
  */
 
-const FROM = "Came Through Audio <collaborate@camethroughaudio.com>";
 const CODE_MINUTES = 10;
 const CODE_TRIES = 5;
 const esc = escapeHtml;
@@ -42,17 +42,11 @@ async function openByLink(partyId: string, token: string) {
   return { db, p, k };
 }
 
-async function sendEmail(to: string, subject: string, html: string) {
-  const key = process.env["RESEND_API_KEY"] || process.env["CameThroughAudio"];
-  if (!key) throw new Error("Email sending is not configured yet.");
-  const res = await fetch("https://api.resend.com/emails", {
-    method: "POST",
-    headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
-    body: JSON.stringify({ from: FROM, to: [to], subject, html }),
-  });
+async function sendEmail(to: string, subject: string, html: string, key: string) {
+  const res = await sendMail({ from: "collaborate", to: [to], subject, html, key });
   if (!res.ok) {
-    console.error(`Resend failed [${res.status}]: ${await res.text()}`);
-    throw new Error(`Email could not be sent (${res.status}).`);
+    console.error(`Resend failed [${res.status ?? res.detail}]: ${res.detail ?? ""}`);
+    throw new Error(res.detail === "no-key" ? "Email sending is not configured yet." : `Email could not be sent (${res.status ?? "network"}).`);
   }
 }
 
@@ -101,7 +95,7 @@ export const sendSignCode = createServerFn({ method: "POST" })
 <p style="font-size:15px;line-height:1.6">Enter this code to sign "${esc(k.title)}" with ${esc(COMPANY_LEGAL_NAME)}. It works for ${CODE_MINUTES} minutes.</p>
 <p style="font-size:13px;line-height:1.6;color:#555">Didn't ask for it? You can ignore this email; nothing is signed without the code.</p>
 `, { reason: `You're receiving this because a code was requested to sign an agreement sent to this address.` });
-    await sendEmail(p.email.trim(), `Your signing code: ${code}`, html);
+    await sendEmail(p.email.trim(), `Your signing code: ${code}`, html, mailKey("sign-code", p.id, code));
     return { ok: true };
   });
 
@@ -147,7 +141,7 @@ export const signByLink = createServerFn({ method: "POST" })
 <p style="font-size:15px;line-height:1.6">Hi ${esc(x.legal_name || "there")}, every party has signed. Download the signed copy for your records.</p>
 <a href="${link}" style="display:inline-block;background:#004AAD;color:#ffffff;text-decoration:none;font-weight:700;padding:14px 28px;border-radius:8px">Get the signed copy</a>
 `, { reason: `You're receiving this because you're a party to an agreement with ${COMPANY_LEGAL_NAME}.` });
-        await sendEmail(x.email.trim(), `Signed: "${k.title}"`, html).catch((e) => console.error("Signed-copy email failed:", e));
+        await sendEmail(x.email.trim(), `Signed: "${k.title}"`, html, mailKey("contract-signed", k.id, x.id)).catch((e) => console.error("Signed-copy email failed:", e));
       }
     }
     return { ok: true };

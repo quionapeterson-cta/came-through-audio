@@ -2,6 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { emailLayout, escapeHtml, SITE_URL } from "./email-layout";
+import { mailKey, sendMail } from "./mailer";
 import { COMPANY_LEGAL_NAME } from "./contract-blueprints";
 import { getPaymentsEnvironment } from "./payments-env";
 import { BETA_AGREEMENT } from "./beta";
@@ -79,19 +80,18 @@ export const grantLifetimeAccess = createServerFn({ method: "POST" })
       environment: getPaymentsEnvironment(),
     });
     if (error) throw new Error("Couldn't grant lifetime access. Try again.");
-    const key = process.env["RESEND_API_KEY"];
-    if (key) {
       const html = emailLayout(`<p style="font-size:12px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:#004AAD;margin:0">Thank you, beta tester</p>
 <h1 style="font-size:24px;margin:8px 0 16px">Came Through Audio Came Through for you</h1>
 <p style="font-size:15px;line-height:1.6">Hi ${escapeHtml(p.legal_name || "there")}, thank you for testing Came Through Audio before launch. Your lifetime ${TIER_LABEL[tier]} access is active now, at no charge.</p>
 <a href="${SITE_URL}/workspace" style="display:inline-block;background:#004AAD;color:#ffffff;text-decoration:none;font-weight:700;padding:14px 28px;border-radius:8px">Open your workspace</a>`,
         { reason: `You're receiving this because you signed a Beta Tester Agreement with ${COMPANY_LEGAL_NAME}, which includes lifetime access.` });
-      await fetch("https://api.resend.com/emails", {
-        method: "POST",
-        headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
-        body: JSON.stringify({ from: "Came Through Audio <collaborate@camethroughaudio.com>", to: [p.email.trim()], subject: `Your lifetime ${TIER_LABEL[tier]} is active`, html }),
-      }).catch((e) => console.error("Lifetime access email failed:", e));
-    }
+      await sendMail({
+        from: "collaborate",
+        to: [p.email.trim()],
+        subject: `Your lifetime ${TIER_LABEL[tier]} is active`,
+        html,
+        key: mailKey("beta-lifetime", p.id),
+      });
     return { tier: TIER_LABEL[tier] };
   });
 
