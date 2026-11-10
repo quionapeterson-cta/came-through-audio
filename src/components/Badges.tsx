@@ -1,7 +1,7 @@
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "@tanstack/react-router";
-import { ChevronLeft, ChevronRight, Lock, Settings2, Share2 } from "lucide-react";
+import { ChevronLeft, ChevronRight, Lock, Settings2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -139,7 +139,6 @@ function UnlockPopup({ state, artist, more, onNext, share, eagle }: { state: Bad
   const open = badge.choices ? log.findIndex((e) => e.pick === null) : -1;
   const [picked, setPicked] = useState<string>();
   const [saving, setSaving] = useState(false);
-  const [sharing, setSharing] = useState(false);
   const choosing = open >= 0 && !picked;
   const src = artFor(badge, picked ?? log[log.length - 1]?.pick, earned?.times ?? 1, state.art);
   const line = earningPopup(badge, earned?.times ?? 1);
@@ -161,8 +160,8 @@ function UnlockPopup({ state, artist, more, onNext, share, eagle }: { state: Bad
       {/* The share screen's layout, applied to every badge celebration (founder, 2026-11-09): a safe-centred grid starts at
           the top when the badge and its message are taller than the screen, instead of centring the overflow past the top
           edge where the badge was cut off and nothing could scroll to it. */}
-      <div className="mx-auto grid min-h-full w-full max-w-[min(94vw,40rem)] justify-items-center gap-6 px-2 py-12 text-center text-white [align-content:safe_center]">
-        {choosing ? <section className="w-full space-y-6">
+      <div className="mx-auto grid min-h-full w-full max-w-[min(94vw,64rem)] justify-items-center gap-6 px-2 py-12 text-center text-white [align-content:safe_center]">
+        {choosing ? <section className="w-full max-w-[40rem] space-y-6">
           <p className="text-xs font-bold uppercase tracking-[2px] text-[#4d8cff]">{badge.title}</p>
           <h2 className="text-2xl font-bold sm:text-3xl">{withArtist(line, artist)}</h2>
           <ul className="grid grid-cols-3 gap-3 sm:gap-6">
@@ -173,27 +172,31 @@ function UnlockPopup({ state, artist, more, onNext, share, eagle }: { state: Bad
               </button>
             </li>)}
           </ul>
-        </section> : <>
-          <CelebrationStage src={src} name={badge.title} float />
-          <section className="w-full space-y-3">
-            <p className="text-xs font-bold uppercase tracking-[2px] text-[#4d8cff]">
-              {TIER_LABEL[badge.tier] || "New badge"}{(earned?.times ?? 0) > 1 ? ` · ×${earned!.times}` : ""}
-            </p>
-            <p className="text-2xl font-bold sm:text-3xl">{withArtist(line, artist)}</p>
-            <p className="text-white/75">{badge.description}</p>
-            {/* Keep going sits straight under the description (founder, 2026-11-09), so the way on is the first thing after
-                the words rather than below the milestone and the shelf link. */}
-            <div className="flex flex-wrap justify-center gap-3 pt-3">
-              {share && <Button size="lg" onClick={() => setSharing((v) => !v)} aria-expanded={sharing}><Share2 />Share</Button>}
-              <Button size="lg" variant="outline" className="border-white/60 bg-transparent text-white hover:bg-white/10 hover:text-white" onClick={onNext}>
-                {more > 0 ? <>Next badge ({more} more)<ChevronRight /></> : "Keep going"}
-              </Button>
+        </section> : <div className={`grid w-full gap-6 md:items-center md:gap-8 ${share ? "md:grid-cols-2" : ""}`}>
+          <div className="space-y-4">
+            <CelebrationStage src={src} name={badge.title} float />
+            {/* The badge, then its message, then the way on (founder, 2026-11-10): the award celebration is the same
+                celebration a badge opens from the profile, so the card sits to the right of the badge and Keep going
+                stays straight under the description. */}
+            <div className="mx-auto max-w-md space-y-3">
+              <p className="text-xs font-bold uppercase tracking-[2px] text-[#4d8cff]">
+                {TIER_LABEL[badge.tier] || "New badge"}{(earned?.times ?? 0) > 1 ? ` · ×${earned!.times}` : ""}
+              </p>
+              <p className="text-2xl font-bold sm:text-3xl">{withArtist(line, artist)}</p>
+              <p className="text-white/75">{badge.description}</p>
+              {/* Keep going sits straight under the description (founder, 2026-11-09), so the way on is the first thing after
+                  the words rather than below the milestone and the shelf link. */}
+              <div className="flex flex-wrap justify-center gap-3 pt-3">
+                <Button size="lg" variant="outline" className="border-white/60 bg-transparent text-white hover:bg-white/10 hover:text-white" onClick={onNext}>
+                  {more > 0 ? <>Next badge ({more} more)<ChevronRight /></> : "Keep going"}
+                </Button>
+              </div>
+              <p className="text-sm text-white/60"><span className="font-semibold">Milestone: </span>{badge.milestone}</p>
+              <Link to="/profile" hash="badges" onClick={onNext} className="inline-block pt-1 text-sm text-white/70 underline-offset-4 hover:text-white hover:underline">See all my badges</Link>
             </div>
-            <p className="text-sm text-white/60"><span className="font-semibold">Milestone: </span>{badge.milestone}</p>
-            <Link to="/profile" hash="badges" onClick={onNext} className="inline-block pt-1 text-sm text-white/70 underline-offset-4 hover:text-white hover:underline">See all my badges</Link>
-          </section>
-          {sharing && <SharePanel avatar={src} share={{ ctx: "profile", artist: artist ?? "", eagle }} />}
-        </>}
+          </div>
+          {share && <SharePanel avatar={src} share={{ ctx: "profile", artist: artist ?? "", eagle }} />}
+        </div>}
       </div>
     </DialogContent>
   );
@@ -396,7 +399,7 @@ export function BadgeSettings({ userId, open, onOpenChange, onSaved }: { userId:
             <Switch checked={prefs.hints} onCheckedChange={(v) => save({ ...prefs, hints: v })} />
           </label>
           <label className="flex items-start justify-between gap-4">
-            <span><span className="block text-sm font-semibold">Badge sharing</span><span className="text-xs text-muted-foreground">Shows the Share button on your earned badges.</span></span>
+            <span><span className="block text-sm font-semibold">Badge sharing</span><span className="text-xs text-muted-foreground">Shows the share card with your earned badges.</span></span>
             <Switch checked={prefs.share} onCheckedChange={(v) => save({ ...prefs, share: v })} />
           </label>
           <fieldset className="space-y-2">

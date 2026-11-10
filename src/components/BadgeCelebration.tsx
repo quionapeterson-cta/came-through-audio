@@ -22,13 +22,16 @@ const reducedMotion = () => typeof window !== "undefined" && !!window.matchMedia
  */
 export function CelebrationStage({ src, name, round, float }: { src: string; name?: string | undefined; round?: boolean | undefined; float?: boolean | undefined }) {
   const [run, setRun] = useState(0);
-  const [done, setDone] = useState(false);
+  // This only decides when the replay button can be clicked: the button pops in on its own animation (below), so its
+  // appearance never waits on a re-render or a pointer being over it (founder, 2026-11-10: the label stayed invisible
+  // until the pointer moved over it).
+  const [ready, setReady] = useState(false);
   const [still] = useState(reducedMotion);
   const badge = useRef<HTMLImageElement>(null);
   useEffect(() => {
-    setDone(false);
     if (!still) navigator.vibrate?.([30, 40, 60]);
-    const t = setTimeout(() => setDone(true), 5000);
+    setReady(false);
+    const t = setTimeout(() => setReady(true), 5000);
     return () => clearTimeout(t);
   }, [run, still]);
   const shape = round ? "rounded-full object-cover" : "object-contain";
@@ -45,8 +48,9 @@ export function CelebrationStage({ src, name, round, float }: { src: string; nam
             animation: "badge-shine 1.1s ease-in-out 0.35s both" }} />
       </div>
       {name && <figcaption className="text-2xl font-bold tracking-tight text-white">{name}</figcaption>}
-      {!still && <Button type="button" variant="outline" onClick={() => setRun((r) => r + 1)}
-        className={`transition-opacity duration-500 ${done ? "opacity-100" : "pointer-events-none opacity-0"}`} tabIndex={done ? 0 : -1}>🎉 Make it rain again</Button>}
+      {!still && <Button key={`again-${run}`} type="button" variant="outline" onClick={() => setRun((r) => r + 1)}
+        aria-hidden={!ready} tabIndex={ready ? 0 : -1} style={{ animation: "badge-pop 0.45s ease-out 5s both" }}
+        className={ready ? "" : "pointer-events-none"}>🎉 Make it rain again</Button>}
     </figure>
   );
 }
