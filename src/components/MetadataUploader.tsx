@@ -940,7 +940,7 @@ export function MetadataUploader({ onShareInfo, userId, mode = "embed", readOnly
                     <div className="truncate text-lg font-bold">{t.title}</div>
                     <div className="truncate text-sm text-muted-foreground">{t.artist}{t.metadata.album ? ` · ${t.metadata.album}` : ""}</div>
                     {/* A single is a release of one, so its own header carries the panel (§4.1). */}
-                    {releaseGroup(t) === "Single" && <ReleaseRow name={t.title || "Untitled"} type="Single" tracks={[t]} readOnly={readOnly} onSave={saveRelease} />}
+                    {releaseGroup(t) === "Single" && <ReleaseRow name={t.title || "Untitled"} type="Single" tracks={[t]} readOnly={readOnly} onSave={saveRelease} compact />}
                   </div>
                   {health && <div className="w-20 shrink-0" title="Royalty health">
                     <HealthLiquid pct={pctOf(t.id)} className="h-1.5" />
@@ -1017,10 +1017,6 @@ export function MetadataUploader({ onShareInfo, userId, mode = "embed", readOnly
                         {g === "Single"
                           ? <div className="grid gap-3">{[...list].sort(byPct).map((t) => (
                               <div key={t.id} className="rounded-xl border border-border bg-card p-3">
-                                <div className="mb-2 flex flex-wrap items-center gap-x-3 text-xs text-muted-foreground">
-                                  <span className="font-semibold text-foreground">{t.title || "Untitled"} · Single</span>
-                                  <span>{pctOf(t.id)}% ready</span>
-                                </div>
                                 <ul>{row(t)}</ul>
                               </div>
                             ))}</div>
@@ -1028,7 +1024,6 @@ export function MetadataUploader({ onShareInfo, userId, mode = "embed", readOnly
                               const all = tracks.filter((x) => releaseGroup(x) !== "Single" && albumKey(x) === p.key);
                               return (
                               <div key={p.key} className="rounded-xl border border-border bg-card p-3">
-                                <div className="flex flex-wrap items-center gap-x-3 text-xs text-muted-foreground"><span className="font-semibold text-foreground">{p.title} · {releaseGroup(p.tracks[0]!)}</span><span>{p.tracks.length} of {all.length} waiting</span></div>
                                 <ReleaseRow name={p.title} type={p.tracks[0]!.metadata.releaseType || releaseGroup(p.tracks[0]!)} tracks={all} readOnly={readOnly} onSave={saveRelease} />
                                 <ul className="mt-3 grid gap-3">{[...p.tracks].sort(byPct).map(row)}</ul>
                               </div>
@@ -1061,8 +1056,7 @@ export function MetadataUploader({ onShareInfo, userId, mode = "embed", readOnly
                       <summary className="flex cursor-pointer list-none flex-wrap items-center gap-4">
                         {p.cover ? <img src={p.cover} alt={`${p.title} artwork`} className="h-14 w-14 rounded-lg object-cover shadow" /> : <div className="flex h-14 w-14 items-center justify-center rounded-lg bg-primary text-primary-foreground"><Disc3 className="h-7 w-7" /></div>}
                         <div className="min-w-[10rem] flex-1">
-                          <div className="truncate text-xl font-bold">{p.title}</div>
-                          <div className="text-sm text-muted-foreground">{p.artist} · {all.length} {all.length === 1 ? "track" : "tracks"}{all.length !== p.tracks.length ? ` · ${p.tracks.length} out` : ""}</div>
+                          <div className="truncate text-sm text-muted-foreground">{p.artist}</div>
                           <ReleaseRow name={p.title} type={p.tracks[0]!.metadata.releaseType || releaseGroup(p.tracks[0]!)} tracks={all} readOnly={readOnly} onSave={saveRelease} />
                         </div>
                         {onHealthCheck && <Button type="button" variant="outline" size="sm" onClick={(e) => { e.preventDefault(); onHealthCheck(p.tracks[0]!.id, true); }}><Stethoscope />Health check</Button>}

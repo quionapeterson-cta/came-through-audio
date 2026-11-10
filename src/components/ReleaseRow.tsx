@@ -12,12 +12,14 @@ import { groupReleaseStatus, releaseDraft, releasePatch, type ReleaseDraft, type
  * Edit dialog that writes them to every song in the group through the catalog's own save. No new table and no
  * migration: the group is the release type and title the songs already hold.
  */
-export function ReleaseRow({ name, type, tracks, readOnly, onSave }: {
+export function ReleaseRow({ name, type, tracks, readOnly, onSave, compact }: {
   name: string;
   type: string;
   tracks: CatalogTrack[];
   readOnly?: boolean | undefined;
   onSave: (patch: ReleasePatch, tracks: CatalogTrack[]) => Promise<void>;
+  /** Inside a single's own row, where the title and count are already above: the panel keeps only the status. */
+  compact?: boolean;
 }) {
   const fields = tracks.map((t) => t.metadata);
   const status = groupReleaseStatus(fields);
@@ -26,6 +28,8 @@ export function ReleaseRow({ name, type, tracks, readOnly, onSave }: {
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   const first = fields[0];
+  const dates = [...new Set(fields.map((m) => m.releaseDate.trim()))];
+  const dateLine = dates.length === 1 ? (dates[0] ? `Release date ${dates[0]}` : "") : "Release dates vary";
 
   const save = async () => {
     const next = releasePatch(draft);
@@ -44,8 +48,8 @@ export function ReleaseRow({ name, type, tracks, readOnly, onSave }: {
   return (
     <div className="mt-1.5 space-y-1">
       <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs">
-        <span className="font-semibold text-foreground">{name}{type ? ` · ${type}` : ""}</span>
-        <span className="text-muted-foreground">{tracks.length} song{tracks.length === 1 ? "" : "s"}</span>
+        {!compact && <span className="font-semibold text-foreground">{name}{type ? ` · ${type}` : ""}</span>}
+        {!compact && <span className="text-muted-foreground">{tracks.length} song{tracks.length === 1 ? "" : "s"}</span>}
         <span className={status.status === "released" ? "text-muted-foreground" : "font-semibold text-primary"}>{status.label}</span>
         {!readOnly && (
           <button type="button" className="font-semibold text-primary underline" aria-label={`Edit ${name}`}
@@ -54,10 +58,9 @@ export function ReleaseRow({ name, type, tracks, readOnly, onSave }: {
           </button>
         )}
       </div>
-      <p className="text-xs text-muted-foreground">
-        {first?.releaseDate ? `Release date ${first.releaseDate} · ` : ""}Release type {first?.releaseType || "Single"}
-        {first?.album ? ` · Title ${first.album}` : ""}
-      </p>
+      {(!compact || dateLine) && <p className="text-xs text-muted-foreground">
+        {compact ? dateLine : [dateLine, `Release type ${first?.releaseType || "Single"}`, first?.album ? `Title ${first.album}` : ""].filter(Boolean).join(" · ")}
+      </p>}
 
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="bg-card text-card-foreground">
@@ -116,7 +119,7 @@ export function ReleaseRow({ name, type, tracks, readOnly, onSave }: {
 export function UnreleasedChip({ count }: { count: number }) {
   if (!count) return null;
   return (
-    <a href="#unreleased" className="ml-2 inline-flex items-center gap-1 rounded-full border border-border px-2 py-0.5 text-xs font-semibold text-primary"
+    <a href="#unreleased" className="ml-2 inline-flex items-center gap-1 rounded-full border border-border px-2 py-0.5 text-xs font-semibold normal-case tracking-normal text-primary"
       onClick={(e) => { e.stopPropagation(); const el = document.getElementById("unreleased"); if (el) { e.preventDefault(); el.scrollIntoView({ behavior: "smooth", block: "start" }); } }}>
       {count} unreleased →
     </a>
