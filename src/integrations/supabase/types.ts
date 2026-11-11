@@ -14,6 +14,54 @@ export type Database = {
   }
   public: {
     Tables: {
+      account_deletions: {
+        Row: {
+          deleted_at: string
+          email: string
+          user_id: string
+        }
+        Insert: {
+          deleted_at?: string
+          email: string
+          user_id: string
+        }
+        Update: {
+          deleted_at?: string
+          email?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      account_inactivity: {
+        Row: {
+          created_at: string
+          delete_on: string
+          deleted_at: string | null
+          last_active_at: string
+          reminders: string[]
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          delete_on: string
+          deleted_at?: string | null
+          last_active_at: string
+          reminders?: string[]
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          delete_on?: string
+          deleted_at?: string | null
+          last_active_at?: string
+          reminders?: string[]
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       account_pauses: {
         Row: {
           created_at: string
@@ -299,6 +347,8 @@ export type Database = {
           created_at: string
           current_period_end: string | null
           environment: string
+          handed_off_at: string | null
+          handoff_offered_at: string | null
           id: string
           invite_email: string | null
           invited_at: string | null
@@ -316,6 +366,8 @@ export type Database = {
           created_at?: string
           current_period_end?: string | null
           environment: string
+          handed_off_at?: string | null
+          handoff_offered_at?: string | null
           id?: string
           invite_email?: string | null
           invited_at?: string | null
@@ -333,6 +385,8 @@ export type Database = {
           created_at?: string
           current_period_end?: string | null
           environment?: string
+          handed_off_at?: string | null
+          handoff_offered_at?: string | null
           id?: string
           invite_email?: string | null
           invited_at?: string | null
@@ -731,6 +785,7 @@ export type Database = {
           created_at: string
           emptied_at: string | null
           empty_after: string
+          kept_free_at: string | null
           plan_ended_at: string
           reminders: string[]
           songs_emptied: number | null
@@ -741,6 +796,7 @@ export type Database = {
           created_at?: string
           emptied_at?: string | null
           empty_after: string
+          kept_free_at?: string | null
           plan_ended_at: string
           reminders?: string[]
           songs_emptied?: number | null
@@ -751,6 +807,7 @@ export type Database = {
           created_at?: string
           emptied_at?: string | null
           empty_after?: string
+          kept_free_at?: string | null
           plan_ended_at?: string
           reminders?: string[]
           songs_emptied?: number | null
@@ -1876,6 +1933,41 @@ export type Database = {
           },
         ]
       }
+      royalty_health_report_snapshots: {
+        Row: {
+          artist: string
+          checkup: Json
+          country: string
+          created_at: string
+          report_id: string
+          user_id: string
+        }
+        Insert: {
+          artist?: string
+          checkup: Json
+          country?: string
+          created_at?: string
+          report_id: string
+          user_id?: string
+        }
+        Update: {
+          artist?: string
+          checkup?: Json
+          country?: string
+          created_at?: string
+          report_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "royalty_health_report_snapshots_report_id_fkey"
+            columns: ["report_id"]
+            isOneToOne: true
+            referencedRelation: "royalty_health_reports"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       royalty_health_reports: {
         Row: {
           created_at: string
@@ -2377,14 +2469,22 @@ export type Database = {
           request_id?: string | null
           ticket_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "support_ticket_messages_ticket_id_fkey"
+            columns: ["ticket_id"]
+            isOneToOne: false
+            referencedRelation: "support_tickets"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       support_tickets: {
         Row: {
           category: string
           created_at: string
-          first_reply_at: string | null
           email: string
+          first_reply_at: string | null
           id: string
           kind: string
           member_read_at: string | null
@@ -2398,8 +2498,8 @@ export type Database = {
         Insert: {
           category?: string
           created_at?: string
-          first_reply_at?: string | null
           email: string
+          first_reply_at?: string | null
           id?: string
           kind?: string
           member_read_at?: string | null
@@ -2413,8 +2513,8 @@ export type Database = {
         Update: {
           category?: string
           created_at?: string
-          first_reply_at?: string | null
           email?: string
+          first_reply_at?: string | null
           id?: string
           kind?: string
           member_read_at?: string | null
@@ -2805,6 +2905,13 @@ export type Database = {
         Args: { _dept: string; _user_id: string }
         Returns: boolean
       }
+      inactivity_candidates: {
+        Args: never
+        Returns: {
+          last_active_at: string
+          user_id: string
+        }[]
+      }
       is_department_lead: { Args: { _user_id: string }; Returns: boolean }
       is_founder: { Args: { _user_id: string }; Returns: boolean }
       is_paused: { Args: { _uid: string }; Returns: boolean }
@@ -2832,6 +2939,10 @@ export type Database = {
       norm_artist_name: { Args: { v: string }; Returns: string }
       paid_tier: { Args: { _env?: string; _uid: string }; Returns: string }
       reopen_contract: { Args: { _contract_id: string }; Returns: undefined }
+      seat_is_live: {
+        Args: { _member: string; _owner: string }
+        Returns: boolean
+      }
       sees_all_teams: { Args: { _user_id: string }; Returns: boolean }
       send_contract: { Args: { _contract_id: string }; Returns: string }
       set_seat_artist_defaults: {
