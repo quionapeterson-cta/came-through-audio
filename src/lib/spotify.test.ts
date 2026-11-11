@@ -3,6 +3,7 @@ import { FastTrackError } from "./discography";
 import {
   SpotifyNotConfigured,
   clearSpotifyToken,
+  spotifyArtistName,
   spotifyConfigured,
   spotifyDiscography,
   spotifyToken,
@@ -140,6 +141,27 @@ describe("spotifyDiscography", () => {
     }
   });
 
+  it("reads tracks one at a time when the batch endpoint is busy, not just when it is refused", async () => {
+    const { fetcher } = makeFetcher((url) =>
+      url.includes("/tracks?ids=") ? json({ error: { status: 429 } }, 429) : undefined,
+    );
+    const d = await spotifyDiscography(
+      { kind: "artist", id: "A1" },
+      { token: "t", fetcher, retries: 0 },
+    );
+    expect(d.trackCount).toBe(3);
+    expect(d.withIsrc).toBe(3);
+  });
+
+  it("still stops on a rejected key when it is the batch that is rejected", async () => {
+    const { fetcher } = makeFetcher((url) =>
+      url.includes("/tracks?ids=") ? json({ error: { status: 401 } }, 401) : undefined,
+    );
+    await expect(
+      spotifyDiscography({ kind: "artist", id: "A1" }, { token: "t", fetcher }),
+    ).rejects.toThrow(/client ID and client secret/i);
+  });
+
   it("lists albums ten to a page, which every app mode accepts", async () => {
     const { fetcher, calls } = makeFetcher();
     await spotifyDiscography({ kind: "artist", id: "A1" }, { token: "t", fetcher });
@@ -156,6 +178,39 @@ describe("spotifyDiscography", () => {
     await expect(
       spotifyDiscography({ kind: "artist", id: "A1" }, { token: "t", fetcher }),
     ).rejects.toBeInstanceOf(FastTrackError);
+  });
+});
+
+describe("spotifyArtistName", () => {
+  const named = (title: string) =>
+    new Response(JSON.stringify({ title }), {
+      status: 200,
+      headers: { "content-type": "application/json" },
+    });
+
+  it("reads the artist's name from a link with no credentials at all", async () => {
+    let seen = "";
+    const name = await spotifyArtistName(
+      "https://open.spotify.com/artist/2f8LjB4H36k7JqeyXKuyVR?si=2EQRMk7RT9eQHuEUbvHheQ",
+      async (url) => {
+        seen = url;
+        return named("Karma Came");
+      },
+    );
+    expect(name).toBe("Karma Came");
+    expect(seen.startsWith("https://open.spotify.com/oembed?url=")).toBe(true);
+    // The whole link goes in the query, escaped, so Spotify sees the artist page rather than a bare id.
+    expect(seen).toContain(encodeURIComponent("https://open.spotify.com/artist/2f8LjB4H36k7JqeyXKuyVR?si=2EQRMk7RT9eQHuEUbvHheQ"));
+  });
+
+  it("answers undefined rather than throwing when the embed service can't help", async () => {
+    const notFound = async () => new Response("", { status: 404 });
+    const offline = async () => {
+      throw new Error("offline");
+    };
+    expect(await spotifyArtistName("https://open.spotify.com/artist/X", notFound)).toBeUndefined();
+    expect(await spotifyArtistName("https://open.spotify.com/artist/X", offline)).toBeUndefined();
+    expect(await spotifyArtistName("https://open.spotify.com/artist/X", async () => named("  "))).toBeUndefined();
   });
 });
 

@@ -28,6 +28,9 @@ const TOKEN_URL = "https://accounts.spotify.com/api/token";
 /** A client-credentials token lasts an hour; refresh a minute early so a request never races the expiry. */
 const TOKEN_TTL_MS = 55 * 60 * 1000;
 
+/** The app's key itself was refused (401): every later request fails the same way, so the pull stops here. */
+class SpotifyKeyRejected extends FastTrackError {}
+
 /** Spotify refused a request outright (400/403/404): the link is wrong, or the endpoint isn't open to this app. */
 class SpotifyRefused extends FastTrackError {
   constructor(
@@ -43,6 +46,27 @@ export class SpotifyNotConfigured extends Error {}
 
 export function spotifyConfigured(): boolean {
   return !!(process.env["SPOTIFY_CLIENT_ID"] && process.env["SPOTIFY_CLIENT_SECRET"]);
+}
+
+/**
+ * The artist's name behind a Spotify link, read from Spotify's public embed service, which needs no credentials and no
+ * account. Used only when this server has no Spotify key: a link still says who the artist is, so the Deezer search can
+ * take over rather than asking the artist to type the name their link already contains. Never throws — this is a
+ * fallback, so a silent embed service simply means "no name", and the page explains itself as before.
+ */
+export async function spotifyArtistName(
+  url: string,
+  fetcher: Fetcher = fetch,
+): Promise<string | undefined> {
+  try {
+    const res = await fetcher(`https://open.spotify.com/oembed?url=${encodeURIComponent(url)}`);
+    if (!res.ok) return undefined;
+    const body = (await res.json().catch(() => undefined)) as { title?: unknown } | undefined;
+    const title = typeof body?.title === "string" ? body.title.trim() : "";
+    return title || undefined;
+  } catch {
+    return undefined;
+  }
 }
 
 let cached: { token: string; at: number } | undefined;
@@ -172,7 +196,7 @@ export async function spotifyDiscography(
         continue;
       }
       if (res.status === 401)
-        throw new FastTrackError(
+        throw new SpotifyKeyRejected(
           "Spotify rejected the app's key. Check the client ID and client secret.",
         );
       if (res.status === 403 || res.status === 404)
@@ -218,7 +242,10 @@ export async function spotifyDiscography(
         );
         return (body.tracks ?? []).filter((t): t is SpTrack => !!t);
       } catch (e) {
-        if (!(e instanceof SpotifyRefused)) throw e;
+        // Only a rejected key poisons every later request. A refused batch (400/403/404 — the endpoint is gone for apps
+        // created after Spotify's 2026 change) or a busy one (429/5xx) says nothing about the single-track endpoint, so
+        // the pull carries on one track at a time instead of failing the artist's whole catalog.
+        if (e instanceof SpotifyKeyRejected) throw e;
         batch = false;
       }
     }

@@ -20,6 +20,9 @@ const ART = {
   brain: "/art/clinic/pamphlet-brain.svg",
   spine: "/art/clinic/pamphlet-spine.svg",
   isrc: "/art/clinic/pamphlet-isrc.svg",
+  // The two money leaflets (founder, 2026-11-11): the distributor's part of the money, and the black box.
+  distributor: "/art/clinic/pamphlet-distributor.svg",
+  unclaimed: "/art/clinic/pamphlet-unclaimed.svg",
 } as const;
 
 export type ClinicArtName = keyof typeof ART;

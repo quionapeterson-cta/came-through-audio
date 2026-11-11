@@ -8,8 +8,16 @@ import type { OrganId } from "@/lib/royalty-checkup";
  * The MLC, SoundExchange and the US ISRC Agency on 2026-11-11. Kept out of the component so the
  * file only exports a component (react-refresh).
  */
-/** The five organs, plus the ISRC leaflet, which is about a code rather than an organ (founder, 2026-11-05). */
-export type PamphletOrgan = Extract<OrganId, "heart" | "lungs" | "kidneys" | "brain" | "spine"> | "isrc";
+/**
+ * The five organs, plus the leaflets that are not about an organ: the ISRC code (founder, 2026-11-05) and the two money
+ * leaflets printed from the hub's own warnings (founder, 2026-11-11) — what a distributor does not collect, and where
+ * unclaimed royalties end up.
+ */
+export type PamphletOrgan =
+  | Extract<OrganId, "heart" | "lungs" | "kidneys" | "brain" | "spine">
+  | "isrc"
+  | "distributor"
+  | "unclaimed";
 
 export type Pamphlet = {
   organ: PamphletOrgan;
@@ -103,5 +111,31 @@ export const PAMPHLETS: Pamphlet[] = [
     healthy: "The work registered at your PRO, with or without an ISRC",
     unhealthy: "Registration put off because the recording has no code yet",
     meaning: "Performance royalties go uncollected while the song waits",
+  },
+  {
+    organ: "distributor",
+    subject: "What your distributor collects (and what it doesn't)",
+    lede: "Your distributor pays your master streams. It cannot collect your writer, publishing or recording-performance money.",
+    body: [
+      "A distributor — TuneCore, CD Baby, Symphonic and the others — delivers your recording to the streaming services and pays you the master side: the share that belongs to the recording itself. That is the part it handles, and it is a part, not the whole.",
+      "The rest is collected elsewhere, each by its own registry: writer and publisher performance royalties by your PRO, mechanical royalties for streams and downloads by The MLC in the US, and recording performance royalties from non-interactive radio by SoundExchange. Registering a release with a distributor registers nothing with any of them.",
+      "That is how a song can be live on every service and still earn only some of what it should. What the Music Royalty Doctor looks for: a distributor release, a PRO registration, an MLC work and a SoundExchange recording — four separate places, four separate registrations.",
+    ],
+    healthy: "Released by a distributor, and registered with your PRO, The MLC and SoundExchange",
+    unhealthy: "Only the distributor side is set up",
+    meaning: "Writer, publishing and recording-performance royalties uncollected",
+  },
+  {
+    organ: "unclaimed",
+    subject: "Unclaimed royalties and the black box",
+    lede: "Money a society can't match to an owner is held, not paid — and it doesn't wait for you forever.",
+    body: [
+      "When a play can't be matched to a registered work or recording — a missing ISRC, a writer entered two ways, a song never registered at all — the society holds the money instead of paying it. The pool it sits in is what the industry calls the black box.",
+      "Held is not the same as lost, but it is not automatically yours either. At The MLC, unmatched royalties are held for at least three years; after a holding period, what is still unmatched can be paid out by market share to the rights holders the society can find, which usually means the biggest publishers and labels.",
+      "What fixes it is identification rather than a claim form: the work registered with its writers, IPIs and splits, one ISRC per recording and one spelling per writer, then a search of the society's own catalogue to see what it still can't match. What the Music Royalty Doctor looks for: registrations that match your catalogue exactly, so nothing of yours is left in the box.",
+    ],
+    healthy: "Every song matched to a registered work and recording",
+    unhealthy: "Unmatched plays, or a song never registered",
+    meaning: "Royalties held, and eventually paid to someone else",
   },
 ];

@@ -12,6 +12,7 @@ import { matchCompositions, type CompositionMatch } from "@/lib/composition";
 import { mlcLookup } from "@/lib/composition.server";
 import {
   SpotifyNotConfigured,
+  spotifyArtistName,
   spotifyConfigured,
   spotifyDiscography,
   spotifyToken,
@@ -64,9 +65,16 @@ export const runStreamingFastTrack = createServerFn({ method: "POST" })
       }
 
       if (!discography) {
+        // No Spotify key on this server: the link still names the artist, and Spotify's public embed service says who
+        // that is without credentials, so the Deezer search takes over instead of asking the artist to retype a name
+        // their own link already contains.
+        const named =
+          !data.name && ref?.platform === "spotify" && ref.kind === "artist" && data.link
+            ? await spotifyArtistName(data.link)
+            : undefined;
         const result = await pullDiscography({
           link: data.link,
-          name: data.name,
+          name: data.name ?? named,
           artistId: data.artistId,
         });
         if (result.kind === "choose")
