@@ -37,6 +37,9 @@ dist-ssr
 # The project uses Bun (bun.lock); npm lockfiles from local installs stay out
 package-lock.json
 
+# Local preview screenshots, downloaded PDFs and dev-server PIDs (never committed)
+artifacts/
+
 # Demo video media (founder uploads; never committed)
 scripts/demo/*.mp3
 scripts/demo/*.wav

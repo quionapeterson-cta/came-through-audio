@@ -4,8 +4,9 @@ import { Button } from "@/components/ui/button";
 import { InfoTip } from "@/components/InfoTip";
 import { ClinicArt } from "@/components/ClinicArt";
 import { OfficeSteps } from "@/components/DoctorsOffice";
+import { VitalsScan } from "@/components/VitalsScan";
 import { isBmi, type Pillar } from "@/lib/audit";
-import type { TrackReport } from "@/lib/health";
+import { readings, type TrackReport } from "@/lib/health";
 import { printKey, registrationPrint, type SongChecklist } from "@/lib/health-checklist";
 import { scopeName, type ReportScope } from "@/lib/health-reports";
 import type { SongStatus } from "@/lib/health-songs";
@@ -130,6 +131,7 @@ type Props = {
 
 export function HealthCheckIn({ scope, options, onScope, rows, countryPicker, signedSheets, initialIntake, intake, patient, onAnswer, onSelfPublished, onBmiWriter, onFixField, onRun, onBack }: Props) {
   const many = rows.length > 1;
+  const vitals = readings(rows.map((x) => x.r));
   const [chosen, setChosen] = useState<IntakeKind | undefined>(initialIntake);
   const list = questions(signedSheets);
   // Missing writer details are shown so they can be fixed, but never hold the check back (Writer Credits rules).
@@ -165,13 +167,17 @@ export function HealthCheckIn({ scope, options, onScope, rows, countryPicker, si
           </div>
         )}
 
-        {/* Where you get paid picks the societies the Doctor examines against, so check-in asks it first. */}
+        {/* The nurse takes vitals on the way in (founder, 2026-11-11): the songs in this visit, read from the same numbers the
+            hub banner used to show. Display only; the Clinical Scan and its lookups run exactly as before. */}
+        <div className="mt-4"><VitalsScan readings={vitals} /></div>
+
+        {/* Where you get paid picks the societies the Music Royalty Doctor examines against, so check-in asks it first. */}
         <div className="mt-6 rounded-2xl border-2 border-primary/40 bg-primary/5 p-4">
           <div className="flex flex-wrap items-end justify-between gap-x-6 gap-y-3">
             <div className="min-w-0 flex-1">
               <p className="text-xs font-bold uppercase tracking-[2px] text-primary">Checking in from?</p>
               <p className="mt-1 max-w-[56ch] text-sm text-muted-foreground">
-                Your country decides which societies the Doctor examines you against. Your PRO, The MLC and SoundExchange
+                Your country decides which societies the Music Royalty Doctor examines you against. Your PRO, The MLC and SoundExchange
                 all collect by country, so this one answer shapes the whole diagnosis.
               </p>
             </div>
@@ -194,7 +200,7 @@ export function HealthCheckIn({ scope, options, onScope, rows, countryPicker, si
 
         {/* PLAN-royalty-health-hub-v2 §2: the locked recommendation, above the intake options. */}
         <div className="mt-6 rounded-2xl border border-primary/40 bg-primary/5 p-4 text-sm">
-          <p className="font-bold">Doctor's Recommendation</p>
+          <p className="font-bold">Music Royalty Doctor's Recommendation</p>
           <p className="mt-1 text-muted-foreground"><em>For our strongest diagnosis, provide both your streaming profile and your official agency exports. Streaming verifies what is actively released and generating plays, while agency records verify what your collection societies actually have on file—cross-referencing both catches every uncollected dollar.</em></p>
         </div>
 

@@ -1,26 +1,19 @@
-import { useState } from "react";
-import { ChevronLeft } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Barcode, ChevronLeft, FileDown, X } from "lucide-react";
+import { toast } from "sonner";
+import { downloadPamphletPdf } from "@/lib/pamphlet-pdf";
 import { Button } from "@/components/ui/button";
 import { ORGAN_NAME } from "@/lib/royalty-checkup";
-import { PAMPHLETS, type Pamphlet, type PamphletOrgan } from "@/lib/waiting-area";
-import { ClinicArt } from "@/components/ClinicArt";
+import { PAMPHLETS, type PamphletOrgan } from "@/lib/waiting-area";
+import { ClinicArt, OrganGlyph } from "@/components/ClinicArt";
 
 /**
- * The Waiting Area (PLAN-royalty-health-hub-v2 section 1): the room you sit in before the appointment. The rack picture
- * is the rack itself: each pamphlet's title is printed on the leaflet it belongs to, and tapping a title takes that
- * pamphlet out to read. Copy lives in lib/waiting-area.ts.
+ * The Waiting Area (PLAN-royalty-health-hub-v2 section 1): the rack you read from before the appointment.
+ * Redesigned 2026-11-11 into a 3x2 grid of micro-cards with single-colour line icons, and the pamphlet itself opens in a
+ * side drawer so the Hub stays in view. Each pamphlet keeps its own picture and its own copy: the titles are still the
+ * way into them. Copy lives in lib/waiting-area.ts.
  */
 type Organ = PamphletOrgan;
-
-/** Where each title sits on the rack drawing, as a percentage of the 480x320 picture. */
-const ON_RACK: Record<Organ, { x: number; y: number }> = {
-  heart: { x: 36.25, y: 32.8 }, // top-left leaflet, under its heart
-  lungs: { x: 50, y: 29.4 }, // top-middle
-  kidneys: { x: 63.75, y: 29.4 }, // top-right
-  brain: { x: 51.5, y: 51.7 }, // middle shelf, centre
-  spine: { x: 55.8, y: 73.9 }, // front shelf, right
-  isrc: { x: 38.3, y: 73.9 }, // front shelf, left: the coding leaflet, beside the splits one
-};
 
 /** The name printed on each leaflet. Five organs, plus the code leaflet, which is not an organ. */
 const LEAFLET: Record<Organ, string> = {
@@ -32,78 +25,98 @@ export function WaitingArea() {
   const [open, setOpen] = useState<Organ>();
   const leaf = PAMPHLETS.find((p) => p.organ === open);
   const number = (o: Organ) => PAMPHLETS.findIndex((p) => p.organ === o) + 1;
+  const close = () => setOpen(undefined);
+
+  // Escape closes the drawer, the way every other panel in the app does.
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") setOpen(undefined); };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [open]);
 
   return (
-    <section aria-labelledby="waiting-area" className="overflow-hidden rounded-2xl border border-border bg-card">
-      <div className="border-b border-border p-5">
-        <p className="text-xs font-semibold uppercase tracking-[2px] text-primary">Waiting Area</p>
-        <h3 id="waiting-area" className="mt-1 text-xl font-bold">What the Doctor examines</h3>
-        <p className="mt-1 max-w-[62ch] text-sm text-muted-foreground">
-          Take a pamphlet while you wait: one per organ, plus the codes behind them, and what each one means for your money.
+    <section aria-labelledby="waiting-area" className="overflow-hidden rounded-xl border border-border bg-card">
+      <div className="flex flex-wrap items-end justify-between gap-x-4 gap-y-1 border-b border-border px-4 py-3">
+        <div className="min-w-0">
+          <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-primary">Waiting Area</p>
+          <h3 id="waiting-area" className="mt-0.5 text-base font-bold">What the Music Royalty Doctor examines</h3>
+        </div>
+        <p className="max-w-[54ch] text-xs text-muted-foreground">
+          Take a pamphlet while you're here: one per organ, plus the codes behind them, and what each one means for your money.
         </p>
       </div>
 
-      <div className="bg-muted/60 p-4 sm:p-5">
-        {leaf ? (
-          /* The pamphlet itself: picture first, then the reading. */
-          <article id="pamphlet" aria-labelledby="pamphlet-title" className="overflow-hidden rounded-xl border border-border bg-card shadow-sm">
-            <ClinicArt name={leaf.organ} className="w-full rounded-none border-0" />
-            <div className="p-5">
-              <p className="text-xs font-semibold uppercase tracking-[2px] text-primary">
+      {/* The rack, as micro-cards: one line icon and one title each. The title is the way into that pamphlet. */}
+      <ul aria-label="Pamphlet rack" className="grid grid-cols-2 gap-2 p-3 sm:grid-cols-3">
+        {PAMPHLETS.map((p) => (
+          <li key={p.organ}>
+            <button
+              type="button"
+              onClick={() => setOpen(p.organ)}
+              aria-label={`Open the ${LEAFLET[p.organ]} pamphlet`}
+              className="group flex h-full w-full items-start gap-2 rounded-lg border border-border bg-card px-2.5 py-2 text-left transition hover:border-primary/60 hover:bg-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            >
+              <span className="mt-px flex h-6 w-6 shrink-0 items-center justify-center rounded-md border border-border text-primary group-hover:border-primary/50">
+                {p.organ === "isrc" ? <Barcode className="h-3.5 w-3.5" aria-hidden /> : <OrganGlyph organ={p.organ} className="h-3.5 w-3.5" />}
+              </span>
+              <span className="min-w-0">
+                <span className="block truncate text-[10px] font-bold uppercase tracking-[0.14em] text-muted-foreground">
+                  <span className="text-primary">{number(p.organ)}.</span> {LEAFLET[p.organ]}
+                </span>
+                <span className="mt-0.5 block text-xs font-semibold leading-snug">{p.subject}</span>
+              </span>
+            </button>
+          </li>
+        ))}
+      </ul>
+
+      {leaf && (
+        /* The pamphlet itself in a side drawer: picture first, then the reading, with the Hub still in view behind it. */
+        <div className="fixed inset-0 z-50" role="dialog" aria-modal="true" aria-labelledby="pamphlet-title">
+          <button type="button" aria-label="Close the pamphlet" onClick={close} className="absolute inset-0 h-full w-full cursor-default bg-ink/40" />
+          <article id="pamphlet" className="absolute inset-y-0 right-0 flex w-full max-w-md flex-col overflow-y-auto border-l border-border bg-card shadow-2xl">
+            <div className="relative shrink-0">
+              <ClinicArt name={leaf.organ} className="h-32 w-full rounded-none border-0 object-cover" />
+              <button type="button" aria-label="Close the pamphlet" onClick={close}
+                className="absolute right-2 top-2 flex h-7 w-7 items-center justify-center rounded-full border border-border bg-card text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+                <X className="h-3.5 w-3.5" aria-hidden />
+              </button>
+            </div>
+            <div className="p-4">
+              <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-primary">
                 Pamphlet No. {number(leaf.organ)} &middot; {LEAFLET[leaf.organ]}
               </p>
-              <h4 id="pamphlet-title" className="mt-1 text-2xl font-extrabold tracking-tight">{leaf.subject}</h4>
-              <p className="mt-1 font-semibold">{leaf.lede}</p>
-              <div className="mt-3 max-w-[68ch] space-y-3 text-sm text-muted-foreground">
+              <h4 id="pamphlet-title" className="mt-1 text-lg font-extrabold leading-snug tracking-tight">{leaf.subject}</h4>
+              <p className="mt-1 text-sm font-semibold">{leaf.lede}</p>
+              <div className="mt-3 space-y-2 text-xs text-muted-foreground">
                 {leaf.body.map((para) => <p key={para.slice(0, 32)}>{para}</p>)}
               </div>
-              <dl className="mt-5 grid gap-3 border-t border-dashed border-border pt-4 text-sm sm:grid-cols-3">
+              <dl className="mt-4 grid gap-2 border-t border-dashed border-border pt-3 text-xs sm:grid-cols-3">
                 <div>
-                  <dt className="font-semibold text-primary">Healthy reading</dt>
+                  <dt className="text-[10px] font-bold uppercase tracking-[0.12em] text-primary">Healthy reading</dt>
                   <dd className="mt-0.5 text-muted-foreground">{leaf.healthy}.</dd>
                 </div>
                 <div>
-                  <dt className="font-semibold">Bad reading</dt>
+                  <dt className="text-[10px] font-bold uppercase tracking-[0.12em]">Bad reading</dt>
                   <dd className="mt-0.5 text-muted-foreground">{leaf.unhealthy}.</dd>
                 </div>
                 <div>
-                  <dt className="font-semibold">In your report</dt>
+                  <dt className="text-[10px] font-bold uppercase tracking-[0.12em]">In your report</dt>
                   <dd className="mt-0.5 text-muted-foreground">{leaf.meaning}.</dd>
                 </div>
               </dl>
-              <Button className="mt-5" variant="outline" onClick={() => setOpen(undefined)}><ChevronLeft />Back to the rack</Button>
+              <div className="mt-4 flex flex-wrap gap-2">
+                <Button size="sm" variant="outline" onClick={close} autoFocus><ChevronLeft />Back to the rack</Button>
+                {/* Take the pamphlet home (founder, 2026-11-11): the same words, as a PDF with our header and footer. */}
+                <Button size="sm" variant="outline" onClick={() => void downloadPamphletPdf(leaf, LEAFLET[leaf.organ]).catch(() => toast.error("Couldn't create the pamphlet PDF. Try again."))}>
+                  <FileDown />Download PDF
+                </Button>
+              </div>
             </div>
           </article>
-        ) : (
-          <>
-            {/* The rack, with every title printed on its own leaflet: each title is the way into that pamphlet. */}
-            <div className="relative aspect-[3/2] overflow-hidden rounded-xl border-2 border-border bg-card">
-              <ClinicArt name="rack" className="absolute inset-0 h-full w-full rounded-none border-0" />
-              <ul aria-label="Pamphlet rack" className="absolute inset-0">
-                {PAMPHLETS.map((p) => (
-                  <li
-                    key={p.organ}
-                    className="absolute"
-                    style={{ left: `${ON_RACK[p.organ].x}%`, top: `${ON_RACK[p.organ].y}%`, transform: "translate(-50%, -50%)" }}
-                  >
-                    <button
-                      type="button"
-                      onClick={() => setOpen(p.organ)}
-                      aria-label={`Open the ${LEAFLET[p.organ]} pamphlet`}
-                      className="inline-flex items-center whitespace-nowrap rounded-full border border-ink-border bg-ink px-1.5 py-[3px] text-[9px] font-extrabold uppercase leading-none tracking-[0.5px] text-ink-foreground shadow-sm transition hover:bg-primary hover:text-primary-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring sm:px-2 sm:text-[10px]"
-                    >
-                      {LEAFLET[p.organ]}
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            </div>
-            <p className="mt-3 text-sm text-muted-foreground">
-              {PAMPHLETS.length} leaflets on the rack. Tap a title to take that pamphlet and read it.
-            </p>
-          </>
-        )}
-      </div>
+        </div>
+      )}
     </section>
   );
 }

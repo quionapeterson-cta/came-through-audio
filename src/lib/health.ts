@@ -213,3 +213,16 @@ export function todoList(report: { rows: TrackReport[] }): TodoItem[] {
   }
   return [...fix, ...register, ...confirm];
 }
+
+/**
+ * The hub's at-a-glance numbers, once for every surface that shows them (the black banner, and the nurse's vitals since
+ * 2026-11-11): songs fully set up to get paid, the fix / register / confirm counts and how many songs streaming has
+ * reached. A performance "confirm" is skipped for a song whose writers still need a PRO, because that song's fix covers it.
+ */
+export function readings(rows: TrackReport[]) {
+  const needsPro = (r: TrackReport) => r.issues.some((i) => i.field?.endsWith("-pro"));
+  const todos = todoList({ rows }).filter((t) => !(t.kind === "confirm" && t.pillar === "performance" && needsPro(rows.find((r) => r.track.id === t.track.id)!)));
+  const needsWork = (r: TrackReport) => !(r.pillars.length && r.pillars.every((p) => p.state === "confirmed") && !r.issues.length && !r.findings.some((f) => f.level === "warn"));
+  const count = (k: TodoItem["kind"]) => todos.filter((t) => t.kind === k).length;
+  return { todos, ready: rows.filter((r) => !needsWork(r)).length, total: rows.length, fix: count("fix"), register: count("register"), confirm: count("confirm"), looked: rows.filter((r) => r.streaming).length };
+}

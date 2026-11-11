@@ -2,7 +2,7 @@ import { supabase } from "@/integrations/supabase/client";
 import type { CatalogTrack } from "@/lib/catalog";
 import { albumKey, routedKinds } from "@/lib/release-routing";
 import { isInspectorSong } from "@/lib/health-songs";
-import type { CheckupSummary } from "@/lib/royalty-checkup";
+import type { Checkup, CheckupSummary } from "@/lib/royalty-checkup";
 
 /**
  * What a Royalty Health Check covers: one song, a release, the whole catalog, or a song outside it (Royalty Inspector).
@@ -56,3 +56,29 @@ export async function deleteReport(id: string) {
 
 /** Same organs, states and findings: nothing worth a new entry in My reports. */
 export const sameSummary = (a: CheckupSummary, b: CheckupSummary) => a.score === b.score && JSON.stringify(a.organs) === JSON.stringify(b.organs);
+
+/**
+ * The whole report behind a saved summary (public.royalty_health_report_snapshots, founder 2026-11-11), so Past Royalty
+ * Health Reports at the Front Desk can open and download it again. Saved best-effort beside the summary: until the
+ * 20261111120000 migration is applied, or for reports saved before it, there is simply no snapshot.
+ */
+export type ReportSnapshot = { checkup: Checkup; artist: string; country: string };
+
+export async function saveSnapshot(reportId: string, snap: ReportSnapshot): Promise<boolean> {
+  const { error } = await supabase.from("royalty_health_report_snapshots" as never)
+    .insert({ report_id: reportId, checkup: snap.checkup, artist: snap.artist.slice(0, 300), country: snap.country.slice(0, 120) } as never);
+  return !error;
+}
+
+/** Which of these reports have a snapshot, so the desk only offers View and Download where there is one to give. */
+export async function listSnapshotIds(): Promise<Set<string>> {
+  const { data, error } = await supabase.from("royalty_health_report_snapshots" as never).select("report_id");
+  if (error) return new Set();
+  return new Set(((data ?? []) as unknown as { report_id: string }[]).map((r) => r.report_id));
+}
+
+export async function loadSnapshot(reportId: string): Promise<ReportSnapshot | null> {
+  const { data, error } = await supabase.from("royalty_health_report_snapshots" as never).select("checkup, artist, country").eq("report_id", reportId).maybeSingle();
+  if (error || !data) return null;
+  return data as unknown as ReportSnapshot;
+}

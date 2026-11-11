@@ -18,14 +18,14 @@ describe("WaitingArea", () => {
     // A pamphlet is more than its headline: it has its own paragraphs and its own picture.
     expect(screen.getByText(/ASCAP, BMI, SESAC and GMR/)).toBeTruthy();
     expect(screen.getByText(/The money has two halves/)).toBeTruthy();
-    expect(screen.getByText(/What the Doctor looks for/)).toBeTruthy();
+    expect(screen.getByText(/What the Music Royalty Doctor looks for/)).toBeTruthy();
     expect(document.querySelector('img[src="/art/clinic/pamphlet-heart.svg"]')).toBeTruthy();
 
     // The ISRC leaflet says a recording code is never a precondition for registering the song.
     fireEvent.click(screen.getByRole("button", { name: /Back to the rack/ }));
     fireEvent.click(screen.getByRole("button", { name: /Open the ISRC pamphlet/ }));
     expect(screen.getByRole("heading", { name: "Registering with your PRO, with or without an ISRC" })).toBeTruthy();
-    expect(screen.getByText(/BMI does not ask for it at all/)).toBeTruthy();
+    expect(screen.getByText(/BMI doesn't require it/)).toBeTruthy();
     expect(document.querySelector('img[src="/art/clinic/pamphlet-isrc.svg"]')).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: /Back to the rack/ }));
     expect(screen.queryByRole("heading", { name: "Performance royalties (your PRO)" })).toBeNull();
@@ -37,7 +37,7 @@ describe("WaitingArea", () => {
     for (const title of TITLES) {
       fireEvent.click(screen.getByRole("button", { name: new RegExp(`Open the ${title} pamphlet`) }));
       expect(screen.getByText(/In your report/)).toBeTruthy();
-      expect(screen.getByText(/What the Doctor looks for/)).toBeTruthy();
+      expect(screen.getByText(/What the Music Royalty Doctor looks for/)).toBeTruthy();
       fireEvent.click(screen.getByRole("button", { name: /Back to the rack/ }));
     }
   });

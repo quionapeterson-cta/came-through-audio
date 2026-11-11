@@ -2,6 +2,7 @@ import { ScoreInfo } from "@/components/ScoreInfo";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { ChevronLeft, ChevronRight, FileDown, Lock, PlayCircle, Stethoscope } from "lucide-react";
 import { Explainer } from "@/components/Explainer";
+import { DiagnosisAlert } from "@/components/DiagnosisAlert";
 import { Button } from "@/components/ui/button";
 import { ArtDefs, BodyDiagram, MiniRhythm, MONITOR, OrganIcon, RHYTHM, Scan, Tool } from "@/components/royalty-art";
 import { CLEAR_DX, CLEAR_WHAT, STATE_LABEL, diagnosisLine, type Checkup, type Finding, type Organ, type OrganId, type OrganState, type StepAction, type TreatmentStep, sinceLast } from "@/lib/royalty-checkup";
@@ -73,7 +74,7 @@ export function RoyaltyReport({ checkup, since, date, country, countryPicker, ru
         <div>
           <div className="rr-eyebrow text-primary">Checkup · {date} · {scope ? `${scope}${scope.startsWith("Whole") || scope.includes("(") ? ` · ${checkup.songs} song${checkup.songs === 1 ? "" : "s"}` : ""}` : `${checkup.songs} song${checkup.songs === 1 ? "" : "s"}`} · {country}</div>
           <h2 className="mt-1 text-3xl font-extrabold tracking-tight md:text-4xl">Royalty Health Report</h2>
-          <p className="mt-1 text-muted-foreground">A checkup on every way your music gets paid, and exactly how to fix what's blocking it.</p>
+          <p className="mt-1 text-muted-foreground">A checkup on your songs' registrations, splits and metadata, and how to fix what could be holding up your royalties.</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           {countryPicker}
@@ -172,6 +173,8 @@ export function RoyaltyReport({ checkup, since, date, country, countryPicker, ru
           <OrganReport key={organ.id} organ={organ} organs={organs} canExport={canExport} onAction={onAction} onOpen={(id) => open(id, false)} onExpert={onExpert} onReminder={onReminder} onExplain={setExplain} onAskCowriter={onAskCowriter} />
         </div>
       </div>
+      {/* 60% or lower: the specialist call-out, at the very bottom after the report, which stays as it was (founder, 2026-11-11). */}
+      <DiagnosisAlert score={checkup.score} onExpert={onExpert} />
       <Explainer finding={explain} organ={explain ? organs.find((o) => o.id === explain.organ) : undefined} onClose={() => setExplain(null)} />
     </div>
   );

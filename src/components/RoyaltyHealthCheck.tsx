@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { AlertTriangle, FileText, Hourglass, ListChecks, Search, Stethoscope, Trash2 } from "lucide-react";
+import { AlertTriangle, Eye, FileDown, FileText, Hourglass, ListChecks, Search, Stethoscope, Trash2, X } from "lucide-react";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { confirmAction } from "@/components/ConfirmHost";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
@@ -11,7 +12,7 @@ import { CountryPicker, HealthReport } from "@/components/HealthReport";
 import { RoyaltyReport } from "@/components/RoyaltyReport";
 import { ACCOUNT_REF, songChecklist } from "@/lib/health-checklist";
 import { CONFIRM_AFTER_DAYS, ORGAN_NAME, royaltyCheckup, sinceLast, STATE_LABEL, summarize, type StepAction } from "@/lib/royalty-checkup";
-import { catalogScope, deleteReport, listReports, releaseScope, sameScope, saveReport, scopeName, songScope, type ReportScope, type SavedReport } from "@/lib/health-reports";
+import { catalogScope, deleteReport, listReports, listSnapshotIds, loadSnapshot, releaseScope, sameScope, saveReport, saveSnapshot, scopeName, songScope, type ReportScope, type ReportSnapshot, type SavedReport } from "@/lib/health-reports";
 import { HealthCheckIn, type IntakeKind } from "@/components/HealthCheckIn";
 import { creditName } from "@/lib/metadata";
 import { downloadCheckupPdf } from "@/lib/checkup-pdf";
@@ -33,7 +34,7 @@ import { runSongLookups } from "@/lib/lookups.functions";
 import { INTERNATIONAL, countryByCode, guessCountry } from "@/lib/repertoires";
 import { loadOnboarding, saveOnboarding } from "@/lib/artist-profile";
 import { WaitingArea } from "@/components/WaitingArea";
-import { ClinicArt } from "@/components/ClinicArt";
+import { ClinicArt, DoctorCoat } from "@/components/ClinicArt";
 import { ClinicalScan, loadPatientFile, loadPatientFileFromAccount, OfficeSteps } from "@/components/DoctorsOffice";
 import { PatientFileCard, patientFileReady, patientSummary } from "@/components/PatientFileCard";
 import { UpgradeCards } from "@/components/UpgradeCards";
@@ -74,6 +75,12 @@ export function RoyaltyHealthCheck({ userId, canCatalog, canExport, onUpgrade, o
   const [editing, setEditing] = useState<CatalogTrack>();
   const autoRan = useRef(false);
   const [reports, setReports] = useState<SavedReport[]>();
+  /** Reports whose whole report was kept, so the Front Desk can open and download them again. */
+  const [snapshots, setSnapshots] = useState<Set<string>>(() => new Set());
+  /** The past report open from the Front Desk, the only place a past report is opened (founder, 2026-11-11). */
+  const [pastOpen, setPastOpen] = useState<{ report: SavedReport; snap: ReportSnapshot }>();
+  /** Walking up to the Front Desk: it opens on a click, the way you'd step up to a counter (founder, 2026-11-11). */
+  const [deskOpen, setDeskOpen] = useState(false);
   const [view, setView] = useState<View>({ kind: "hub" });
   // Set when a check runs; the report is saved once its live lookups finish.
   const [pendingSave, setPendingSave] = useState(false);
@@ -100,7 +107,7 @@ export function RoyaltyHealthCheck({ userId, canCatalog, canExport, onUpgrade, o
     if (view.kind === "checkin") writeIntake<SavedVisit>(userId, "visit", { kind: "checkin", scope: view.scope, from: view.from, intake: intakeWanted });
     else clearIntake(userId, "visit");
   }, [visitReady, view, intakeWanted, userId]);
-  /** The patient file handed over at the Front Desk. The Doctor reads it for the intake form's writer defaults. */
+  /** The patient file handed over at the Front Desk. The Music Royalty Doctor reads it for the intake form's writer defaults. */
   const [patient, setPatient] = useState(() => loadPatientFile(userId));
   const patientReady = patientFileReady(patient);
   // A new browser has no local copy: the file on the account is the desk's other copy.
@@ -120,6 +127,7 @@ export function RoyaltyHealthCheck({ userId, canCatalog, canExport, onUpgrade, o
       listStatuses().then(setStatuses).catch(() => {}),
       // Report history arrives with the 20261024130000 migration; until then there's simply no history.
       listReports().then(setReports).catch(() => setReports([])),
+      listSnapshotIds().then(setSnapshots).catch(() => {}),
     ]).then(() => setLoaded(true));
   }, []);
 
@@ -198,8 +206,13 @@ export function RoyaltyHealthCheck({ userId, canCatalog, canExport, onUpgrade, o
   useEffect(() => {
     if (!pendingSave || running || view.kind !== "report" || !reportRows.length) return;
     setPendingSave(false);
-    saveReport(summary, view.scope).then((r) => setReports((all) => [r, ...(all ?? [])])).catch(() => {});
-  }, [pendingSave, running, view, summary, reportRows.length]);
+    // The whole report goes beside its summary, so the Front Desk can open and download it again (founder, 2026-11-11).
+    const snap: ReportSnapshot = { checkup, artist: mostCommon(reportRows.map(({ r }) => r.track.artist)), country: country.name };
+    saveReport(summary, view.scope).then((r) => {
+      setReports((all) => [r, ...(all ?? [])]);
+      void saveSnapshot(r.id, snap).then((ok) => { if (ok) setSnapshots((ids) => new Set(ids).add(r.id)); });
+    }).catch(() => {});
+  }, [pendingSave, running, view, summary, reportRows.length]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const top = () => setTimeout(() => window.scrollTo({ top: 0, behavior: "smooth" }), 30);
   /** Check-in: the song it was opened from can widen to its release or the whole catalog. */
@@ -274,6 +287,7 @@ export function RoyaltyHealthCheck({ userId, canCatalog, canExport, onUpgrade, o
   /** Opens one song's checklist in the Hub. */
   function showSong(id?: string) {
     setView({ kind: "hub" });
+    setDeskOpen(true);
     setDesk("checklist");
     if (id) setFocusRequest({ id, nonce: Date.now() });
     else setTimeout(() => document.getElementById("song-by-song")?.scrollIntoView({ behavior: "smooth", block: "start" }), 30);
@@ -548,6 +562,18 @@ export function RoyaltyHealthCheck({ userId, canCatalog, canExport, onUpgrade, o
         <ClinicArt name="stethoscope" className="hidden h-20 w-36 shrink-0 object-cover sm:block" />
         <div className="min-w-0 flex-1"><OfficeSteps at={3} /></div>
       </div>
+      {/* The Music Royalty Doctor is introduced with the report it has ready, and says how to take it home (founder, 2026-11-11). */}
+      <div className="flex items-center gap-4 rounded-2xl border border-border bg-card px-4 py-3">
+        <DoctorCoat className="h-20 w-20 shrink-0" />
+        <div className="min-w-0">
+          <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-primary">Music Royalty Doctor</p>
+          <p className="text-lg font-bold">The Music Royalty Doctor has your report ready.</p>
+          <p className="mt-0.5 text-xs text-muted-foreground">
+            See it below. To take it with you, use <b className="text-foreground">Download PDF</b> at the top of the report. It's also filed at the
+            Front Desk under <b className="text-foreground">Past Royalty Health Reports</b>, where you can view or download it again.
+          </p>
+        </div>
+      </div>
       <RoyaltyReport checkup={checkup} since={since} prerelease={reportRows.filter(({ c }) => c.prerelease).map(({ r, c }) => ({ id: r.track.id, title: r.track.title || "Untitled", pct: c.pct,
         items: c.steps.filter((s) => s.stage === "release" || (s.stage === "register" && s.id !== "intl")).map((s) => ({ title: s.title, done: s.done, optional: s.optional })) }))} scope={scopeName(view.scope)} onBack={() => setView({ kind: "hub" })} date={new Date().toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })} country={country.name}
         countryPicker={countryPicker} running={!!running} canExport={canExport} onRunCheckup={() => runCheck(view.scope)}
@@ -581,31 +607,38 @@ export function RoyaltyHealthCheck({ userId, canCatalog, canExport, onUpgrade, o
   }
 
   const runButton = (
-    <Button size="lg" variant="secondary" onClick={() => beginVisit()}>
+    <Button size="lg" variant="secondary" onClick={() => beginVisit()} disabled={!patientReady}>
       <Stethoscope />Run a Royalty Health Check
     </Button>
   );
   // Where you get paid is one of the check-in questions, so the Hub no longer offers it (founder, 2026-11-03).
-  const hub = <HealthReport {...actions} report={report} country={country} running={running} canCatalog={canCatalog} onEmbed={onEmbed} pickCountry={false} action={report.rows.length ? runButton : undefined} />;
+  // The banner carries its title only (founder, 2026-11-11): its numbers read out in the nurse's vitals, and checking in
+  // happens at the Front Desk, so it no longer offers a run button that would walk past the desk.
+  const hub = <HealthReport {...actions} report={report} country={country} running={running} canCatalog={canCatalog} onEmbed={onEmbed} pickCountry={false} showScore={false} />;
 
-  // The Hub is the Doctor, the Front Desk and the Waiting Area (plan §1). Everything else happens inside the visit.
-  const doctor = (
-    <section aria-labelledby="doctor-in" className="mx-auto max-w-3xl overflow-hidden rounded-3xl border-2 border-primary/40 bg-card shadow-sm">
-      <div className="p-6 text-center">
-        <p className="text-xs font-semibold uppercase tracking-[2px] text-primary">Royalty Health Doctor</p>
-        <h2 id="doctor-in" className="mt-1 text-2xl font-bold">
-          {report.rows.length ? "The Royalty Health Doctor is in." : "See the Royalty Health Doctor to file your first diagnostic report."}
-        </h2>
-        <p className="mx-auto mt-2 max-w-xl text-sm text-muted-foreground">
-          {report.rows.length
-            ? "Check in and get your catalog diagnosed for missing royalties, mismatched writers and unregistered songs."
-            : "Check in, bring your streaming profile or your agency records, and the Doctor examines every song you have."}
-        </p>
-        <p className="mt-3 text-sm font-semibold text-primary">Check in at the Front Desk below.</p>
-      </div>
-      {/* The Doctor's picture sits under the name and above the Front Desk, where you check in. */}
-      <div className="border-t border-border"><ClinicArt name="exam" className="w-full rounded-none border-0" /></div>
-    </section>
+  async function openPast(r: SavedReport) {
+    const snap = await loadSnapshot(r.id).catch(() => null);
+    if (snap) setPastOpen({ report: r, snap });
+    else toast.error("Couldn't open that report. Try again.");
+  }
+  async function downloadPast(r: SavedReport, snap?: ReportSnapshot) {
+    const s = snap ?? await loadSnapshot(r.id).catch(() => null);
+    if (!s) return void toast.error("Couldn't load that report. Try again.");
+    // Its own date, so a report downloaded later still says the day it ran (founder, 2026-11-11).
+    await downloadCheckupPdf(s.checkup, s.artist, s.country, r.createdAt).catch(() => toast.error("Couldn't create the PDF. Try again."));
+  }
+  /** A past report, opened from the Front Desk: the same report as the day it ran, with its own Download PDF. */
+  const pastDialog = (
+    <Dialog open={!!pastOpen} onOpenChange={(o) => { if (!o) setPastOpen(undefined); }}>
+      <DialogContent className="max-h-[90vh] max-w-5xl overflow-y-auto">
+        <DialogTitle className="sr-only">Past Royalty Health Report</DialogTitle>
+        {pastOpen && <RoyaltyReport checkup={pastOpen.snap.checkup} since={null} date={shortDate(pastOpen.report.createdAt)} country={pastOpen.snap.country}
+          scope={scopeName(pastOpen.report.scope)} canExport={canExport}
+          onRunCheckup={() => { const scope = pastOpen.report.scope; setPastOpen(undefined); startCheck(scope); }}
+          onPdf={() => void downloadPast(pastOpen.report, pastOpen.snap)}
+          onAction={(a) => { setPastOpen(undefined); void act(a); }} onExpert={() => { setPastOpen(undefined); book(); }} onReminder={reminder} />}
+      </DialogContent>
+    </Dialog>
   );
 
   // Front Desk: the reports already on file, and the checklist to pick back up. Both open in place, not in a dropdown.
@@ -622,6 +655,11 @@ export function RoyaltyHealthCheck({ userId, canCatalog, canExport, onUpgrade, o
             <span className="min-w-0 flex-1"><b className="block">{scopeName(r.scope)}</b><span className="text-muted-foreground">{r.summary.lead ?? "Clean bill of health. Strong pulse."}</span></span>
             <span className="flex gap-1" aria-label="Organ states">{Object.entries(r.summary.organs).map(([id, o]) => <span key={id} title={`${ORGAN_NAME[id as keyof typeof ORGAN_NAME]}: ${STATE_LABEL[o!.state]}`} className={`rr-pill rr-pill-${o!.state} px-2 py-0.5`}>{ORGAN_NAME[id as keyof typeof ORGAN_NAME][0]}</span>)}</span>
             <span className="w-24 text-right"><b>{r.score}%</b>{now !== undefined && now !== r.score && <span className="block text-xs text-muted-foreground">now {now}%</span>}</span>
+            {/* View and Download live here and nowhere else (founder, 2026-11-11). Older reports kept only their summary. */}
+            {snapshots.has(r.id) ? <>
+              <Button size="sm" variant="outline" onClick={() => void openPast(r)}><Eye />View</Button>
+              <Button size="sm" variant="outline" onClick={() => void downloadPast(r)}><FileDown />Download PDF</Button>
+            </> : <span className="text-xs text-muted-foreground" title="Reports saved before full reports were kept show their summary only.">Summary only</span>}
             <Button size="sm" variant="outline" disabled={now === undefined} onClick={() => startCheck(r.scope)}>Run it again</Button>
             <Button size="icon" variant="ghost" aria-label={`Delete the ${shortDate(r.createdAt)} report`} onClick={() => void removeReport(r)}><Trash2 /></Button>
           </li>
@@ -629,52 +667,71 @@ export function RoyaltyHealthCheck({ userId, canCatalog, canExport, onUpgrade, o
       })}</ul>
     </div>
   ) : (
-    <div className="space-y-3 text-sm text-muted-foreground"><p>No reports yet. Check in with the Doctor and every diagnosis is kept here.</p>{runButton}</div>
+    <div className="space-y-3 text-sm text-muted-foreground"><p>No reports yet. Check in with the Music Royalty Doctor and every diagnosis is kept here.</p>{runButton}</div>
   );
 
-  const frontDesk = (
-    <section aria-labelledby="front-desk" className="overflow-hidden rounded-2xl border border-border bg-card">
-      <div className="flex flex-col gap-4 border-b border-border p-5 sm:flex-row">
-        <ClinicArt name="frontDesk" className="h-28 w-full shrink-0 object-cover sm:h-32 sm:w-48" />
+  /**
+   * The Front Desk (founder, 2026-11-11): a picture of the desk until the member walks up to it. Clicking it opens the
+   * counter, where everything lives: the Artist File (first-visit intake form, or Edit artist file), Check In, Past Royalty
+   * Health Reports and Continue Song Checklist. Check In still waits for the Artist File.
+   */
+  const deskLink = (on: boolean, onClick: () => void, icon: React.ReactNode, label: string, count: number) => (
+    <button type="button" aria-expanded={on} onClick={onClick}
+      className={`group inline-flex items-center gap-1.5 text-xs font-semibold hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${on ? "text-primary" : ""}`}>
+      <span className="text-muted-foreground group-hover:text-primary">{icon}</span>
+      <span className="underline decoration-border underline-offset-4 group-hover:decoration-primary">{label}</span>
+      <span className="rounded-full border border-border bg-card px-1.5 py-px text-[10px] font-bold tabular-nums text-muted-foreground">{count}</span>
+    </button>
+  );
+  // Spans, never div/p: a button may only hold phrasing content, and the whole picture is the thing you click.
+  const frontDesk = !deskOpen ? (
+    <button type="button" onClick={() => setDeskOpen(true)} aria-expanded={false} aria-controls="front-desk-panel" aria-label="Walk up to the Front Desk"
+      className="group block w-full overflow-hidden rounded-2xl border border-border bg-card text-left shadow-sm transition hover:border-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+      <span className="block bg-[#F4F5F7]"><ClinicArt name="frontDesk" className="mx-auto h-56 w-auto rounded-none border-0 sm:h-72" /></span>
+      <span className="flex flex-wrap items-center justify-between gap-3 border-t border-border px-4 py-3">
+        <span className="block">
+          <span className="block text-[10px] font-bold uppercase tracking-[0.18em] text-primary">Front Desk</span>
+          <span className="block text-sm font-bold">{patientReady ? "Walk up to the Front Desk" : "First visit? Walk up to the Front Desk"}</span>
+          <span className="block text-xs text-muted-foreground">Check In, your Artist File, past reports and your song checklist are all at the desk.</span>
+        </span>
+        <span className="inline-flex items-center gap-1.5 rounded-full bg-primary px-4 py-1.5 text-xs font-semibold text-primary-foreground group-hover:opacity-90">Go to the desk →</span>
+      </span>
+    </button>
+  ) : (
+    <section id="front-desk-panel" aria-labelledby="front-desk" className="overflow-hidden rounded-2xl border border-primary/40 bg-card shadow-sm">
+      <div className="flex items-center gap-3 border-b border-border px-4 py-3">
+        <ClinicArt name="frontDesk" className="hidden h-14 w-20 shrink-0 object-cover sm:block" />
         <div className="min-w-0 flex-1">
-          <p className="text-xs font-semibold uppercase tracking-[2px] text-primary">Front Desk</p>
-          <h3 id="front-desk" className="mt-1 text-xl font-bold">Check in here</h3>
-          <p className="mt-1 text-sm text-muted-foreground">Sign in the way you would at any front desk: your details, then the Doctor sees you.</p>
-          <div className="mt-3 flex flex-wrap items-center gap-2">
-            <Button size="lg" onClick={() => beginVisit()} disabled={!patientReady}>
-              <Stethoscope />Check In
-            </Button>
-            {!patientReady && <span className="text-xs text-muted-foreground">Leave your legal name and publisher status below to check in.</span>}
-          </div>
-          <div className="mt-3 flex flex-wrap gap-2">
-            <Button variant={desk === "reports" ? "default" : "outline"} aria-expanded={desk === "reports"} onClick={() => setDesk(desk === "reports" ? undefined : "reports")}>
-              <FileText />Past Royalty Health Reports{reports?.length ? ` · ${reports.length}` : ""}
-            </Button>
-            <Button variant={desk === "checklist" ? "default" : "outline"} aria-expanded={desk === "checklist"} onClick={() => setDesk(desk === "checklist" ? undefined : "checklist")}>
-              <ListChecks />Continue Song Checklist
-            </Button>
-          </div>
+          <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-primary">Front Desk</p>
+          <h3 id="front-desk" className="text-base font-bold">Welcome in. Check in here.</h3>
+        </div>
+        <Button size="icon" variant="ghost" aria-label="Step away from the desk" onClick={() => setDeskOpen(false)}><X /></Button>
+      </div>
+      <div className="space-y-3 p-4">
+        {/* Step 1 of the visit, at the desk where you would hand it over. */}
+        <PatientFileCard userId={userId} defaultName={loadOnboarding(userId)?.legalName ?? ""} patient={patient} onSaved={setPatient} />
+        <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
+          <Button className="rounded-full" onClick={() => beginVisit()} disabled={!patientReady}><Stethoscope />Check In</Button>
+          {!patientReady && <span className="text-xs text-muted-foreground">Submit your Artist File to check in.</span>}
+          {deskLink(desk === "reports", () => setDesk(desk === "reports" ? undefined : "reports"), <FileText className="h-3.5 w-3.5" />, "Past Royalty Health Reports", reports?.length ?? 0)}
+          {deskLink(desk === "checklist", () => setDesk(desk === "checklist" ? undefined : "checklist"), <ListChecks className="h-3.5 w-3.5" />, "Continue Song Checklist", report.rows.length)}
         </div>
       </div>
-      {/* Step 1 of the visit, at the desk where you would hand it over. */}
-      <div className="border-b border-border p-5">
-        <PatientFileCard userId={userId} defaultName={loadOnboarding(userId)?.legalName ?? ""} patient={patient} onSaved={setPatient} />
-      </div>
-      {desk === "reports" && <div id="past-reports" className="scroll-mt-4 border-b border-border p-5">{reportsPanel}</div>}
-      {desk === "checklist" && <div id="song-by-song" className="scroll-mt-4 p-5">
-        <p className="mb-3 text-sm text-muted-foreground">{songsLabel(report.rows.length)} · every step, agency by agency · checked against {country.name}.</p>
+      {desk === "reports" && <div id="past-reports" className="scroll-mt-4 border-t border-border p-4">{reportsPanel}</div>}
+      {desk === "checklist" && <div id="song-by-song" className="scroll-mt-4 border-t border-border p-4">
+        <p className="mb-3 text-xs text-muted-foreground">{songsLabel(report.rows.length)} · every step, agency by agency · checked against {country.name}.</p>
         {checklist}
       </div>}
+      {pastDialog}
     </section>
   );
 
   const waitingRoom = <div className="space-y-4"><WaitingArea />{why}</div>;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
       {/* The Royalties and Registrations box, score ring and all, opens the screen (founder, 2026-11-03). */}
       {hub}
-      {doctor}
       {askDialog}
       {frontDesk}
       {waitingRoom}

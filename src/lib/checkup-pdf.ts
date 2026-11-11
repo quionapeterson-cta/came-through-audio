@@ -66,10 +66,12 @@ function finding(pdf: JsPDF, y: number, f: Finding) {
   return y + 4;
 }
 
-export async function buildCheckupPdf(c: Checkup, artist: string, country: string) {
+export async function buildCheckupPdf(c: Checkup, artist: string, country: string, ranOn?: string) {
   const pdf = await newBrandedPdf();
-  // Today's date sits at the top; the footer never carries one (founder, 2026-11-06).
-  let y = brandHeader(pdf, "Royalty Health Report", artist || undefined, `${c.songs} ${c.songs === 1 ? "song" : "songs"}  ·  ${country}  ·  ${headerDate()}`);
+  // The date sits at the top; the footer never carries one (founder, 2026-11-06). A past report opened from the Front Desk
+  // passes the day it ran, so a download taken later still says that day (founder, 2026-11-11).
+  const date = ranOn ? new Date(ranOn).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" }) : headerDate();
+  let y = brandHeader(pdf, "Royalty Health Report", artist || undefined, `${c.songs} ${c.songs === 1 ? "song" : "songs"}  ·  ${country}  ·  ${date}`);
 
   // Main finding, in a panel.
   const lead = c.lead;
@@ -116,6 +118,7 @@ export async function buildCheckupPdf(c: Checkup, artist: string, country: strin
   return pdf;
 }
 
-export async function downloadCheckupPdf(c: Checkup, artist: string, country: string) {
-  (await buildCheckupPdf(c, artist, country)).save(`Royalty Health Report ${new Date().toISOString().slice(0, 10)}.pdf`);
+export async function downloadCheckupPdf(c: Checkup, artist: string, country: string, ranOn?: string) {
+  const day = (ranOn ? new Date(ranOn) : new Date()).toISOString().slice(0, 10);
+  (await buildCheckupPdf(c, artist, country, ranOn)).save(`Royalty Health Report ${day}.pdf`);
 }

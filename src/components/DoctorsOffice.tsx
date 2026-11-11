@@ -8,7 +8,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { loadOnboarding, saveOnboarding } from "@/lib/artist-profile";
 
 /**
- * The Doctor's Office: the Royalties and Registrations's one guided consultation, in order:
+ * The Music Royalty Doctor's Office: the Royalties and Registrations's one guided consultation, in order:
  * Artist Check-in → Artist Intake Form or agency records → clinical scan → diagnosis.
  */
 export type PatientFile = { legalName: string; pro: string; ipi: string; publishing: "" | "publisher" | "self" | "bmi"; publisher: string };
@@ -51,7 +51,7 @@ export const OFFICE_STEPS = ["Artist Check-in", "Intake & records", "Clinical sc
 
 export function OfficeSteps({ at }: { at: number }) {
   return (
-    <ol className="mx-auto flex max-w-3xl flex-wrap justify-center gap-2 text-xs font-semibold" aria-label="Doctor's Office steps">
+    <ol className="mx-auto flex max-w-3xl flex-wrap justify-center gap-2 text-xs font-semibold" aria-label="Music Royalty Doctor's Office steps">
       {OFFICE_STEPS.map((s, i) => (
         <li key={s} aria-current={i === at ? "step" : undefined}
           className={`rounded-full border px-3 py-1 ${i === at ? "border-primary bg-primary text-primary-foreground" : i < at ? "border-primary text-primary" : "border-border text-muted-foreground"}`}>
@@ -67,7 +67,7 @@ export function OfficeShell({ step, title, onBack, children }: { step: number; t
     <section className="space-y-5 rounded-2xl border-2 border-primary/40 bg-card p-6" aria-label={title}>
       <div className="flex items-center justify-between gap-2">
         <Button variant="ghost" size="sm" onClick={onBack}>← Back</Button>
-        <p className="text-xs font-semibold uppercase tracking-[2px] text-primary">Doctor's Office</p>
+        <p className="text-xs font-semibold uppercase tracking-[2px] text-primary">Music Royalty Doctor's Office</p>
         <span className="w-16" />
       </div>
       <OfficeSteps at={step} />

@@ -410,3 +410,24 @@ body { font-family: var(--font-sans); -webkit-font-smoothing: antialiased; -moz-
    small gap underneath, and long labels wrap cleanly on phones. */
 label:has(> [data-infotip]) { line-height: 1.25rem; padding-bottom: 2px; overflow-wrap: anywhere; }
 [data-radix-popper-content-wrapper] > * { text-rendering: optimizeLegibility; }
+
+/*
+ * Nurse vitals (Royalty Health Hub redesign, 2026-11-11): the EKG trace and the registry ticker of `VitalsScan`, on the
+ * Intake & records step. Line art on Primary Black, so the scan reads as an instrument, not a loader.
+ * Both stop for reduced motion; the phase lines beside them carry the same information in words.
+ */
+@keyframes vitals-trace { from { transform: translateX(0); } to { transform: translateX(-100%); } }
+/* The trace is two copies of one 400-unit beat side by side, so the loop has to travel exactly one beat: -100% of the
+   view-box (400 units), never a pixel amount, because the drawing is stretched to the panel's width. transform-box:
+   view-box says so out loud instead of leaving the percentage to the browser's default. */
+.vitals-trace { animation: vitals-trace 3.6s linear infinite; transform-box: view-box; }
+@keyframes vitals-ticker { from { transform: translateY(0); } to { transform: translateY(-50%); } }
+.vitals-ticker { overflow: hidden; mask-image: linear-gradient(180deg, transparent, #000 22%, #000 78%, transparent); }
+.vitals-ticker-list { animation: vitals-ticker 16s linear infinite; }
+.vitals-ticker li {
+  font-size: 10px; line-height: 1.5; letter-spacing: 0.06em; text-transform: uppercase;
+  white-space: nowrap; color: var(--ink-muted); opacity: 0.45;
+}
+@media (prefers-reduced-motion: reduce) {
+  .vitals-trace, .vitals-ticker-list { animation: none; }
+}

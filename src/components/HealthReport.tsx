@@ -4,7 +4,7 @@ import { Check, Disc3, ExternalLink, Radar } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import type { Pillar } from "@/lib/audit";
-import { todoList, type healthReport, type RepertoireCheck, type TrackReport } from "@/lib/health";
+import { readings, type healthReport, type RepertoireCheck, type TrackReport } from "@/lib/health";
 import { registerGuide } from "@/lib/register-guides";
 import { COUNTRIES, INTERNATIONAL, OTHER_COUNTRY, REGIONS, inCountry, type Country, type Society } from "@/lib/repertoires";
 import { InfoTip } from "@/components/InfoTip";
@@ -22,20 +22,22 @@ export type HealthActions = {
 type Running = { done: number; total: number; trackId?: string | undefined };
 /** `action`: the Hub's "Run a Royalty Health Check" button, under the country picker. */
 type Props = HealthActions & { report: Report; country: Country; running?: Running | undefined; canCatalog: boolean; onEmbed: () => void; action?: ReactNode;
+  /** The score, counts and streaming line. The hub turns them off: they read out in the nurse's vitals (founder, 2026-11-11). */
+  showScore?: boolean;
   /** Where you get paid is asked at check-in now, so the Hub hides the control (PLAN-royalty-health-hub-v2 section 2). */
   pickCountry?: boolean };
 
 function ScoreRing({ value }: { value: number }) {
   const r = 52, c = 2 * Math.PI * r;
   return (
-    <div className="relative h-36 w-36 shrink-0">
+    <div className="relative h-24 w-24 shrink-0">
       <svg viewBox="0 0 120 120" className="h-full w-full -rotate-90" aria-hidden>
-        <circle cx="60" cy="60" r={r} fill="none" stroke="var(--ink-border)" strokeWidth="10" />
-        <circle cx="60" cy="60" r={r} fill="none" stroke="var(--primary)" strokeWidth="10" strokeLinecap="round" strokeDasharray={c} strokeDashoffset={c * (1 - value / 100)} className="transition-[stroke-dashoffset] duration-700" />
+        <circle cx="60" cy="60" r={r} fill="none" stroke="var(--ink-border)" strokeWidth="11" />
+        <circle cx="60" cy="60" r={r} fill="none" stroke="var(--primary)" strokeWidth="11" strokeLinecap="round" strokeDasharray={c} strokeDashoffset={c * (1 - value / 100)} className="transition-[stroke-dashoffset] duration-700" />
       </svg>
       <div className="absolute inset-0 flex flex-col items-center justify-center">
-        <span className="text-4xl font-extrabold leading-none">{value}<span className="text-xl">%</span></span>
-        <span className="mt-1 text-[11px] font-semibold uppercase tracking-[2px] text-ink-muted">Set up</span>
+        <span className="text-2xl font-extrabold leading-none tabular-nums">{value}<span className="text-base">%</span></span>
+        <span className="mt-0.5 text-[9px] font-bold uppercase tracking-[0.18em] text-ink-muted">Set up</span>
       </div>
     </div>
   );
@@ -114,40 +116,36 @@ export function LiveRecords({ r, onRun, running }: { r: TrackReport; onRun: () =
 
 const STEP = { fix: "Fix song info", register: "Register", confirm: "Confirm" } as const;
 
-export function HealthReport({ report, country, running, canCatalog, onEmbed, action, pickCountry = true, ...actions }: Props) {
-  const needsPro = (r: TrackReport) => r.issues.some((i) => i.field?.endsWith("-pro"));
-  const rowOf = (id: string) => report.rows.find((r) => r.track.id === id)!;
-  const todos = todoList(report).filter((t) => !(t.kind === "confirm" && t.pillar === "performance" && needsPro(rowOf(t.track.id))));
-  const needsWork = (r: TrackReport) => !(r.pillars.length && r.pillars.every((p) => p.state === "confirmed") && !r.issues.length && !r.findings.some((f) => f.level === "warn"));
-  const ready = report.rows.filter((r) => !needsWork(r)).length;
-  const looked = report.rows.filter((r) => r.streaming).length;
+export function HealthReport({ report, country, running, canCatalog, onEmbed, action, pickCountry = true, showScore = true, ...actions }: Props) {
+  const { todos, ready, looked } = readings(report.rows);
   const counts = (["fix", "register", "confirm"] as const).map((k) => [k, todos.filter((t) => t.kind === k).length] as const);
   const where = inCountry(country);
 
   return (
     <div className="space-y-6">
-      <section className="overflow-hidden rounded-3xl bg-ink p-6 text-ink-foreground md:p-8">
-        <div className="flex flex-col gap-6 md:flex-row md:items-start md:justify-between">
+      {/* The header is a slim navigation bar now, not a masthead: the Hub's work sits under it (redesign 2026-11-11). */}
+      <section className="overflow-hidden rounded-xl bg-ink px-5 py-4 text-ink-foreground md:px-6">
+        <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
           <div>
-            <h2 className="text-3xl font-extrabold tracking-tight md:text-4xl">Royalties and Registrations</h2>
-            <p className="mt-2 max-w-xl text-ink-muted">{canCatalog || report.rows.length
+            <h2 className="text-xl font-extrabold tracking-tight md:text-2xl">Royalty Health Hub</h2>
+            <p className="mt-1 max-w-xl text-sm text-ink-muted">{canCatalog || report.rows.length
               ? "Make sure every song is registered and matched, so every royalty it earns can reach you."
               : "Enter a song's details below to see if it's registered and matched, so every royalty it earns can reach you."}</p>
           </div>
           <div className="flex flex-col items-start gap-3 md:items-end">{pickCountry && <CountryPicker country={country} onCountry={actions.onCountry} />}{action}</div>
         </div>
-        {report.rows.length > 0 && (
-          <div className="mt-8 flex flex-col gap-6 lg:flex-row lg:items-center">
+        {showScore && report.rows.length > 0 && (
+          <div className="mt-4 flex flex-col gap-4 lg:flex-row lg:items-center">
             <ScoreRing value={report.score} />
-            <div className="flex-1 space-y-4">
-              <p className="text-2xl font-bold leading-snug md:text-3xl">{ready} of {report.rows.length} song{report.rows.length === 1 ? " is" : "s are"} fully set up to get paid{where}.</p>
-              <div className="flex flex-wrap gap-2">
-                {counts.map(([k, n], i) => <span key={k} className={`inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-sm font-semibold ${n ? "border-ink-border" : "border-primary/50 text-ink-muted"}`}>
-                  <span className={`flex h-5 w-5 items-center justify-center rounded-full text-[11px] ${n ? "bg-primary text-primary-foreground" : "bg-ink-border"}`}>{n ? i + 1 : <Check className="h-3 w-3" />}</span>
+            <div className="flex-1 space-y-2.5">
+              <p className="text-base font-bold leading-snug md:text-lg">{ready} of {report.rows.length} song{report.rows.length === 1 ? " is" : "s are"} fully set up to get paid{where}.</p>
+              <div className="flex flex-wrap gap-1.5">
+                {counts.map(([k, n], i) => <span key={k} className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-semibold ${n ? "border-ink-border" : "border-primary/50 text-ink-muted"}`}>
+                  <span className={`flex h-4 w-4 items-center justify-center rounded-full text-[9px] ${n ? "bg-primary text-primary-foreground" : "bg-ink-border"}`}>{n ? i + 1 : <Check className="h-2.5 w-2.5" />}</span>
                   {STEP[k]}{n ? ` · ${n}` : ""}
                 </span>)}
               </div>
-              <div className="flex flex-wrap items-center gap-3 text-sm text-ink-muted">
+              <div className="flex flex-wrap items-center gap-2 text-xs text-ink-muted">
                 <Radar className={`h-4 w-4 ${running ? "animate-spin text-primary" : ""}`} />
                 {running ? `Looking up song ${running.done + 1} of ${running.total} on streaming…` : `Live lookups ran for ${looked} of ${report.rows.length} songs.`}
                 {!running && <button type="button" onClick={actions.onRunAll} className="font-semibold text-ink-foreground underline hover:text-primary">Check streaming for all</button>}
@@ -156,16 +154,16 @@ export function HealthReport({ report, country, running, canCatalog, onEmbed, ac
             </div>
           </div>
         )}
-        {country.note && <p className="mt-6 rounded-xl border border-ink-border px-4 py-2 text-sm text-ink-muted">{country.note}</p>}
+        {country.note && <p className="mt-3 rounded-lg border border-ink-border px-3 py-1.5 text-xs text-ink-muted">{country.note}</p>}
       </section>
 
       {report.rows.length === 0 ? (
         // Paid plans: shown only until the first song is saved. Free plans use the Royalty Inspector below instead.
         canCatalog ? (
-          <div className="rounded-2xl border border-border p-8 text-center">
-            <p className="text-lg font-semibold">Your songs are checked automatically.</p>
-            <p className="mx-auto mt-1 max-w-xl text-muted-foreground">Every song you embed and save to My Catalog is checked on its own. Embed your first song, then run a Royalty Health Check to get its report.</p>
-            <Button className="mt-4" onClick={onEmbed}>Embed a song</Button>
+          <div className="rounded-xl border border-border p-6 text-center">
+            <p className="text-base font-semibold">Your songs are checked automatically.</p>
+            <p className="mx-auto mt-1 max-w-xl text-sm text-muted-foreground">Every song you embed and save to My Catalog is checked on its own. Embed your first song, then run a Royalty Health Check to get its report.</p>
+            <Button className="mt-3" size="sm" onClick={onEmbed}>Embed a song</Button>
           </div>
         ) : null
       ) : null}

@@ -15,6 +15,9 @@ import { supabase } from "@/integrations/supabase/client";
  *
  * A first visit starts from what Embed Defaults and Catalog Defaults already say (`patientFileFromDefaults`), so a member
  * with finished defaults only confirms the file instead of typing it again.
+ *
+ * Redesigned 2026-11-11 as the compact chart: one tight card, the file on a single line, and a pencil in the corner
+ * instead of an Edit button. The file stays at the desk because Check In waits for it.
  */
 export type { PatientFile };
 const blank: PatientFile = { legalName: "", pro: "", ipi: "", publishing: "", publisher: "" };
@@ -84,34 +87,37 @@ export function PatientFileCard({ userId, defaultName, patient, onSaved }: {
   }
 
   return (
-    <div className="rounded-2xl border border-border bg-muted/40 p-4">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <div>
-          <p className="text-xs font-semibold uppercase tracking-[2px] text-primary">Artist file</p>
-          <h4 className="mt-0.5 font-bold">{saved && !editing ? "Your details at the desk" : "First visit? Leave your details"}</h4>
+    <div className="rounded-lg border border-border bg-muted/30 px-3 py-2.5">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-primary">Artist file</p>
+          <h4 className="mt-0.5 text-sm font-bold leading-snug">{saved && !editing ? "Your details at the desk" : "First visit? Leave your details"}</h4>
         </div>
         {editing
-          ? <span className="text-xs text-muted-foreground">Kept on this device, so you never retype it.</span>
-          : <Button size="sm" variant="outline" onClick={() => { setFile(saved ?? file); setEditing(true); }}><Pencil />Edit</Button>}
+          ? <span className="shrink-0 pt-0.5 text-[11px] text-muted-foreground">Kept on this device, so you never retype it.</span>
+          : <Button size="sm" variant="ghost" title="Edit the artist file"
+              className="h-7 shrink-0 gap-1 px-2 text-xs text-muted-foreground hover:text-primary" onClick={() => { setFile(saved ?? file); setEditing(true); }}>
+              <Pencil className="h-3.5 w-3.5" />Edit artist file
+            </Button>}
       </div>
 
       {editing ? (
-        <div className="mt-3 grid gap-3 sm:grid-cols-2">
-          <label className="space-y-1 text-sm sm:col-span-2">
-            <span className="inline-flex items-center">Legal name<InfoTip text="Your full legal name, the way your PRO has it on file. Agencies match writers by legal name." /></span>
-            <Input aria-label="Legal name" value={file.legalName} onChange={(e) => set("legalName", e.target.value)} />
+        <div className="mt-2.5 grid gap-2 sm:grid-cols-2">
+          <label className="space-y-1 text-xs sm:col-span-2">
+            <span className="inline-flex items-center font-semibold">Legal name<InfoTip text="Your full legal name, the way your PRO has it on file. Agencies match writers by legal name." /></span>
+            <Input aria-label="Legal name" className="h-8" value={file.legalName} onChange={(e) => set("legalName", e.target.value)} />
           </label>
-          <label className="space-y-1 text-sm">
-            <span className="inline-flex items-center">PRO<InfoTip text="The performing rights organization you joined as a writer, like BMI or ASCAP." /></span>
+          <label className="space-y-1 text-xs">
+            <span className="inline-flex items-center font-semibold">PRO<InfoTip text="The performing rights organization you joined as a writer, like BMI or ASCAP." /></span>
             <ProSelect value={file.pro} onChange={(v) => set("pro", v)} />
           </label>
-          <label className="space-y-1 text-sm">
-            <span className="inline-flex items-center">IPI number<InfoTip text="Your 9-11 digit writer number. Your PRO gives it to you when you register, so it can wait." /></span>
-            <Input aria-label="IPI number" inputMode="numeric" value={file.ipi} onChange={(e) => set("ipi", e.target.value.replace(/[^0-9]/g, ""))} />
+          <label className="space-y-1 text-xs">
+            <span className="inline-flex items-center font-semibold">IPI number<InfoTip text="Your 9-11 digit writer number. Your PRO gives it to you when you register, so it can wait." /></span>
+            <Input aria-label="IPI number" className="h-8" inputMode="numeric" value={file.ipi} onChange={(e) => set("ipi", e.target.value.replace(/[^0-9]/g, ""))} />
           </label>
-          <label className="space-y-1 text-sm sm:col-span-2">
-            <span className="inline-flex items-center">Publisher status<InfoTip text="Who collects the publisher half of your songwriter money. If you don't have a publisher, you're self-published." /></span>
-            <select aria-label="Publisher status" className="w-full rounded-md border border-input bg-background px-3 py-2" value={file.publishing} onChange={(e) => set("publishing", e.target.value)}>
+          <label className="space-y-1 text-xs sm:col-span-2">
+            <span className="inline-flex items-center font-semibold">Publisher status<InfoTip text="Who collects the publisher half of your songwriter money. If you don't have a publisher, you're self-published." /></span>
+            <select aria-label="Publisher status" className="h-8 w-full rounded-md border border-input bg-background px-2 text-xs" value={file.publishing} onChange={(e) => set("publishing", e.target.value)}>
               <option value="">Choose one...</option>
               <option value="publisher">I have a publisher</option>
               <option value="self">I&apos;m self-published</option>
@@ -119,18 +125,19 @@ export function PatientFileCard({ userId, defaultName, patient, onSaved }: {
             </select>
           </label>
           {file.publishing === "publisher" && (
-            <label className="space-y-1 text-sm sm:col-span-2">Publisher name<Input aria-label="Publisher name" value={file.publisher} onChange={(e) => set("publisher", e.target.value)} /></label>
+            <label className="space-y-1 text-xs sm:col-span-2">Publisher name<Input aria-label="Publisher name" className="h-8" value={file.publisher} onChange={(e) => set("publisher", e.target.value)} /></label>
           )}
           <div className="flex flex-wrap items-center gap-2 sm:col-span-2">
             <Button size="sm" disabled={!ready} onClick={keep}><CheckCircle2 />{saved ? "Save my details" : "Submit to Front Desk"}</Button>
-            {!ready && <span className="text-xs text-muted-foreground">A legal name and your publisher status are all the desk needs.</span>}
+            {!ready && <span className="text-[11px] text-muted-foreground">A legal name and your publisher status are all the desk needs.</span>}
           </div>
         </div>
       ) : (
         saved && (
-          <p className="mt-2 text-sm text-muted-foreground">
-            <b className="text-foreground">{saved.legalName}</b>
-            {patientSummary(saved) ? ` · ${patientSummary(saved)}` : ""}
+          /* The chart itself: the whole file on one tight line, the way a desk reads it back to you. */
+          <p className="mt-1 text-xs leading-relaxed">
+            <b className="text-sm text-foreground">{saved.legalName}</b>
+            {patientSummary(saved) ? <span className="text-muted-foreground">{` · ${patientSummary(saved)}`}</span> : ""}
           </p>
         )
       )}
