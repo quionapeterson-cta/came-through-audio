@@ -180,6 +180,20 @@ export type Contributor = z.infer<typeof contributorSchema>;
 /** HFA P#s are 6 letters or numbers (P12345). Anything else gets a gentle warning, never a block. */
 export const hfaLooksOff = (v: string | undefined) => !!v?.trim() && !/^[A-Z0-9]{6}$/i.test(v.trim());
 export const emptyContributor = (): Contributor => ({ name: "", pro: "", ipi: "", percentage: "" });
+/**
+ * A Postgres date column won't take a partial date. Spotify publishes "2019" or "2019-05" when the day isn't known, and
+ * this database refuses both (invalid input syntax for type date), which is what made a Spotify import fail at the save
+ * while a Deezer one, always a full date, went straight through. A year becomes 1 January and a year-month the first of
+ * that month; a full date passes through untouched and a blank stays blank. Honest about what is known: the day is only
+ * filled in because the column cannot hold less, and the catalog keeps the date as the platform published it.
+ */
+export function isoDate(value: string | undefined): string {
+  const v = (value ?? "").trim();
+  if (/^\d{4}$/.test(v)) return `${v}-01-01`;
+  if (/^\d{4}-\d{2}$/.test(v)) return `${v}-01`;
+  return v;
+}
+
 export const emptyMetadata = (): Metadata => ({
   title: "", trackNumber: "", trackTotal: "", artist: "", featured: [""], album: "", duration: "", releaseType: "", version: "", releaseDate: "", unreleased: false, wasUnreleased: false, recordingSide: "", beatState: "", beatMasterId: "", dealType: "", dealDate: "", dealStreams: "", dealContract: "", label: "", contactEmail: "", copyright: "", phonographic: "", language: "",
   isrc: "", upc: "", iswc: "", explicit: false, instrumental: false, primaryGenre: "", secondaryGenre: "",

@@ -1,7 +1,7 @@
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { requestBadgeCheck } from "@/lib/badge-events";
-import { creditName, emptyContributor, emptyMetadata, splitTrack, withLegalName, type Metadata } from "@/lib/metadata";
+import { creditName, emptyContributor, emptyMetadata, isoDate, splitTrack, withLegalName, type Metadata } from "@/lib/metadata";
 import { albumKey, routedKinds } from "@/lib/release-routing";
 
 export type CatalogTrack = { id: string; title: string; artist: string; updatedAt: string; metadata: Metadata };
@@ -21,7 +21,8 @@ export function toCatalogRow(m: Metadata, userId: string) {
     isrc: m.isrc || null,
     upc: m.upc || null,
     iswc: m.iswc || null,
-    release_date: m.releaseDate || null,
+    // The column is a date, so a year-only or year-month release date from Spotify has to be completed first.
+    release_date: isoDate(m.releaseDate) || null,
     writer_names: writers.map((r) => r.name),
     writer_pro_affiliations: writers.map((r) => r.pro),
     writer_percentages: writers.map((r) => Number(r.percentage || 0)),
@@ -63,7 +64,9 @@ export async function listTracks(ownerId?: string): Promise<CatalogTrack[]> {
   let query = supabase.from("catalogs").select("*").order("created_at", { ascending: false });
   if (userId) query = query.eq("user_id", userId);
   const { data, error } = await query;
-  if (error) throw error;
+  // Supabase hands back a plain object, not an Error, so throwing it raw left every caller's `e instanceof Error` check
+  // false and the real reason (a bad date, a refused insert) was replaced by "try again".
+  if (error) throw new Error(error.message);
   return (data ?? []).map((r) => fromCatalogRow(r as Record<string, unknown>));
 }
 
@@ -73,7 +76,8 @@ export async function saveTrack(m: Metadata, userId: string, id?: string): Promi
     ? supabase.from("catalogs").update(row).eq("id", id).select("id").single()
     : supabase.from("catalogs").insert(row).select("id").single();
   const { data, error } = await query;
-  if (error) throw error;
+  // A real Error, so the caller can show what the database actually refused instead of a generic "try again".
+  if (error) throw new Error(error.message);
   requestBadgeCheck();
   return (data as { id: string }).id;
 }
