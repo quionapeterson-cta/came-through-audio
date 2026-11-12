@@ -84,8 +84,16 @@ export async function saveTrack(m: Metadata, userId: string, id?: string): Promi
 
 /** Deletes a song and its stored master and artwork (everything in its private folder). */
 export async function deleteTrack(id: string, ownerId?: string) {
-  const { error } = await supabase.from("catalogs").delete().eq("id", id);
+  // Ask for the removed row back. Removing songs is gated by a restrictive policy (it needs Catalog Plus), and a
+  // refused delete is not an error in the API — it is simply zero rows — so without this the button looked like it had
+  // worked and the song was still there on the next load (founder, 2026-11-12).
+  const { data: removed, error } = await supabase.from("catalogs").delete().eq("id", id).select("id");
   if (error) throw error;
+  if (!removed?.length) {
+    throw new Error(
+      "This song is still in your catalog: this account can't remove songs right now. Deleting needs Catalog Plus, so check the plan on this account and try again.",
+    );
+  }
   // Files go after the row, so a failed delete never leaves a song without its master. The folder belongs to the song's
   // own account, which is the artist's when an owner is working in a seat.
   const { data: auth } = await supabase.auth.getUser();
