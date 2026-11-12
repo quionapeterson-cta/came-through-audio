@@ -299,12 +299,15 @@ export function MetadataUploader({ onShareInfo, userId, mode = "embed", readOnly
     if (!userId) { toast.error("Sign in again to save the cover."); return; }
     try {
       const thumb = await makeThumb(file).catch(() => "");
-      const { songs, covers } = await setReleaseArtwork(list, userId, file, thumb);
+      const { songs, covers, failed } = await setReleaseArtwork(list, userId, file, thumb);
       setTracks((prev) => prev.map((song) => {
         const written = covers.find((c) => c.id === song.id);
         return written ? { ...song, metadata: { ...song.metadata, artPath: written.artPath, ...(thumb ? { coverThumb: thumb } : {}) } } : song;
       }));
-      toast.success(`Album cover set on ${songs} song${songs === 1 ? "" : "s"}.`);
+      // Part of a release taking the cover is said out loud, with the songs that missed it, so nobody has to guess which.
+      if (failed.length)
+        toast.error(`Album cover set on ${songs} of ${list.length} songs. These didn't take it: ${failed.join("; ")}. Try again.`);
+      else toast.success(`Album cover set on ${songs} song${songs === 1 ? "" : "s"}.`);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "That cover didn't save. Try again.");
     }

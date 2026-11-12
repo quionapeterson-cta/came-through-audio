@@ -148,8 +148,9 @@ export const COVER_IMAGE_TYPES = ["image/jpeg", "image/png"] as const;
  * bucket, so the member uploads once and the bytes travel server-side.
  *
  * Every row is saved before this resolves. A song that already had a cover is replaced, because the member is choosing
- * the release's cover rather than filling a gap, and the failure names the song it stopped on instead of saying "try
- * again".
+ * the release's cover rather than filling a gap. Each song is written as its own file lands (founder, 2026-11-11), so a
+ * song that fails leaves the ones around it saved instead of throwing the whole release away after it has already
+ * overwritten half the folders with a cover no row mentions; the songs that didn't take it come back by name.
  *
  * `thumb` is the small tile the catalog shows beside a song and on the release's own header. It comes from the caller
  * because it is made in the browser, and it is written alongside the cover so the group shows its artwork at once.
@@ -159,7 +160,7 @@ export async function setReleaseArtwork(
   userId: string,
   file: File,
   thumb = "",
-): Promise<{ songs: number; covers: { id: string; artPath: string }[] }> {
+): Promise<{ songs: number; covers: { id: string; artPath: string }[]; failed: string[] }> {
   if (!(COVER_IMAGE_TYPES as readonly string[]).includes(file.type))
     throw new Error("Choose JPEG or PNG artwork.");
   const [first, ...rest] = tracks;
@@ -175,22 +176,36 @@ export async function setReleaseArtwork(
     );
   }
 
-  const writes: { track: CatalogTrack; path: string }[] = [{ track: first, path: source }];
+  const covers: { id: string; artPath: string }[] = [];
+  const failed: string[] = [];
+  // A row is saved right after its own file, so what the catalog reads always matches the folder it lives in.
+  const write = async (track: CatalogTrack, path: string) => {
+    try {
+      await saveTrack(
+        { ...track.metadata, artPath: path, ...(thumb ? { coverThumb: thumb } : {}) },
+        userId,
+        track.id,
+      );
+      covers.push({ id: track.id, artPath: path });
+    } catch (e) {
+      failed.push(`${track.title || "the untitled song"} (${e instanceof Error ? e.message : "the save was refused"})`);
+    }
+  };
+
+  await write(first, source);
   for (const t of rest) {
     const to = `${userId}/${t.id}/artwork.${ext}`;
     const { error } = await supabase.storage.from(BUCKET).copy(source, to);
-    if (error)
-      throw new Error(`The cover reached ${first.title || "the first song"}, but not ${t.title || "one of the others"}: ${error.message}`);
-    writes.push({ track: t, path: to });
+    if (error) {
+      failed.push(`${t.title || "the untitled song"} (${error.message})`);
+      continue;
+    }
+    await write(t, to);
   }
 
-  for (const { track, path } of writes)
-    await saveTrack(
-      { ...track.metadata, artPath: path, ...(thumb ? { coverThumb: thumb } : {}) },
-      userId,
-      track.id,
-    );
-  return { songs: writes.length, covers: writes.map(({ track, path }) => ({ id: track.id, artPath: path })) };
+  // Nothing saved at all is the one case that is still a plain failure, so an untouched release never reads as done.
+  if (!covers.length) throw new Error(`The cover didn't reach any song: ${failed.join("; ")}`);
+  return { songs: covers.length, covers, failed };
 }
 
 export async function downloadCatalogFile(path: string, filename: string) {

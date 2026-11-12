@@ -10,6 +10,9 @@ const calls = vi.hoisted(() => ({
   uploads: [] as string[],
   copies: [] as [string, string][],
   updates: [] as { id: string; artPath: string; coverThumb: string }[],
+  // Two ways a song can refuse the cover, so a partly-covered release can be played through.
+  failCopyFor: new Set<string>(),
+  refuseSaveFor: new Set<string>(),
 }));
 
 vi.mock("@/integrations/supabase/client", () => ({
@@ -22,7 +25,9 @@ vi.mock("@/integrations/supabase/client", () => ({
         },
         copy: async (from: string, to: string) => {
           calls.copies.push([from, to]);
-          return { error: null };
+          // `to` is <user>/<track id>/artwork.<ext>, so a test refuses one song's copy by its id.
+          const id = to.split("/")[1] ?? "";
+          return { error: calls.failCopyFor.has(id) ? { message: "the copy was refused" } : null };
         },
       }),
     },
@@ -31,6 +36,7 @@ vi.mock("@/integrations/supabase/client", () => ({
         eq: (_column: string, id: string) => ({
           select: () => ({
             single: async () => {
+              if (calls.refuseSaveFor.has(id)) return { data: null, error: { message: "the database refused it" } };
               // The artwork lives in the song's own details, which is where the catalog stores every metadata field.
               calls.updates.push({ id, artPath: String(row.details?.artPath ?? ""), coverThumb: String(row.details?.coverThumb ?? "") });
               return { data: { id }, error: null };
@@ -59,6 +65,8 @@ describe("setReleaseArtwork", () => {
     calls.uploads.length = 0;
     calls.copies.length = 0;
     calls.updates.length = 0;
+    calls.failCopyFor.clear();
+    calls.refuseSaveFor.clear();
   });
 
   it("uploads the cover once and copies it into every other song's folder", async () => {
@@ -100,5 +108,31 @@ describe("setReleaseArtwork", () => {
 
   it("says there is nothing to cover when the release is empty", async () => {
     await expect(setReleaseArtwork([], "user-1", cover())).rejects.toThrow(/no songs/);
+  });
+
+  it("keeps the songs whose cover landed when one copy is refused, and names the one it missed", async () => {
+    calls.failCopyFor.add("b");
+    const { songs, covers, failed } = await setReleaseArtwork([song("a"), song("b"), song("c")], "user-1", cover());
+
+    // b's folder was never written, so its row is left alone instead of pointing at a cover it doesn't have.
+    expect(songs).toBe(2);
+    expect(covers.map((c) => c.id)).toEqual(["a", "c"]);
+    expect(calls.updates.map((u) => u.id)).toEqual(["a", "c"]);
+    expect(failed).toEqual(["b (the copy was refused)"]);
+  });
+
+  it("reports a refused row instead of losing the rest of the release", async () => {
+    calls.refuseSaveFor.add("a");
+    const { songs, failed } = await setReleaseArtwork([song("a"), song("b")], "user-1", cover());
+
+    expect(songs).toBe(1);
+    expect(failed).toEqual(["a (the database refused it)"]);
+    expect(calls.updates.map((u) => u.id)).toEqual(["b"]);
+  });
+
+  it("still fails outright when no song takes the cover", async () => {
+    calls.refuseSaveFor.add("a");
+    calls.failCopyFor.add("b");
+    await expect(setReleaseArtwork([song("a"), song("b")], "user-1", cover())).rejects.toThrow(/didn't reach any song/);
   });
 });
