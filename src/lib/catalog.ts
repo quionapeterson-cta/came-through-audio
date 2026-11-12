@@ -187,6 +187,11 @@ export async function setReleaseArtwork(
         track.id,
       );
       covers.push({ id: track.id, artPath: path });
+      // Only one artwork file per song is ever read, and a cover in the other format would otherwise sit in the folder
+      // for good after a JPEG replaces a PNG (or the other way round). Failing to clear it is harmless, so it is quiet.
+      try {
+        await supabase.storage.from(BUCKET).remove([`${userId}/${track.id}/artwork.${path.endsWith(".png") ? "jpg" : "png"}`]);
+      } catch { /* a stray copy nobody points at */ }
     } catch (e) {
       failed.push(`${track.title || "the untitled song"} (${e instanceof Error ? e.message : "the save was refused"})`);
     }

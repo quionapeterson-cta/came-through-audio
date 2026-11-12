@@ -10,6 +10,7 @@ const calls = vi.hoisted(() => ({
   uploads: [] as string[],
   copies: [] as [string, string][],
   updates: [] as { id: string; artPath: string; coverThumb: string }[],
+  removes: [] as string[],
   // Two ways a song can refuse the cover, so a partly-covered release can be played through.
   failCopyFor: new Set<string>(),
   refuseSaveFor: new Set<string>(),
@@ -28,6 +29,10 @@ vi.mock("@/integrations/supabase/client", () => ({
           // `to` is <user>/<track id>/artwork.<ext>, so a test refuses one song's copy by its id.
           const id = to.split("/")[1] ?? "";
           return { error: calls.failCopyFor.has(id) ? { message: "the copy was refused" } : null };
+        },
+        remove: async (paths: string[]) => {
+          calls.removes.push(...paths);
+          return { error: null };
         },
       }),
     },
@@ -67,6 +72,7 @@ describe("setReleaseArtwork", () => {
     calls.updates.length = 0;
     calls.failCopyFor.clear();
     calls.refuseSaveFor.clear();
+    calls.removes.length = 0;
   });
 
   it("uploads the cover once and copies it into every other song's folder", async () => {
@@ -128,6 +134,11 @@ describe("setReleaseArtwork", () => {
     expect(songs).toBe(1);
     expect(failed).toEqual(["a (the database refused it)"]);
     expect(calls.updates.map((u) => u.id)).toEqual(["b"]);
+  });
+
+  it("clears the other format's copy so a replaced cover leaves nothing behind", async () => {
+    await setReleaseArtwork([song("a"), song("b")], "user-1", cover());
+    expect(calls.removes).toEqual(["user-1/a/artwork.png", "user-1/b/artwork.png"]);
   });
 
   it("still fails outright when no song takes the cover", async () => {
