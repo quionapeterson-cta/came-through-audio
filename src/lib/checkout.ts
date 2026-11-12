@@ -1,5 +1,6 @@
 import { showCheckout } from "@/components/CheckoutHost";
 import { createCheckoutSession, openBillingPortal } from "@/lib/payments.functions";
+import { prelaunchCheckoutBlocked } from "@/lib/prelaunch";
 import type { CheckoutInput } from "@/lib/stripe-mapping";
 
 export { getPaymentsEnvironment } from "@/lib/payments-env";
@@ -20,6 +21,9 @@ function goToPortal(url: string, tab?: Window | null) {
 
 /** Opens Stripe's payment form on the page. Someone who already has a plan goes to the billing portal to switch plans. */
 export async function openCheckout(input: CheckoutInput) {
+  // Before launch the door is shut for anyone who isn't a tester or signed in (founder, 2026-11-12).
+  const closed = await prelaunchCheckoutBlocked();
+  if (closed) throw new Error(closed);
   const result = await createCheckoutSession({ data: input });
   if ("portalUrl" in result) return goToPortal(result.portalUrl);
   if (!showCheckout(result.clientSecret)) throw new Error("Checkout could not open. Refresh the page and try again.");

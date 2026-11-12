@@ -10,6 +10,7 @@ import { rememberLoginEmail } from "@/lib/login-memory";
 import { PasswordField } from "@/components/PasswordField";
 import { PLAN_INTENT_EVENT, PLAN_TIERS, PRICE_TIER, TIER_LABEL, peekPlanIntent, planIntentFromSearch, planSignupNext, rememberPlanIntent, takePlanIntent } from "@/lib/plans";
 import { openCheckout } from "@/lib/checkout";
+import { usePrelaunchGuard } from "@/hooks/usePrelaunchGuard";
 
 export function SignupCard({ returnPath, onAuthed, inviteMode }: { returnPath?: string; onAuthed?: () => void; inviteMode?: boolean } = {}) {
   const navigate = useNavigate();
@@ -22,6 +23,10 @@ export function SignupCard({ returnPath, onAuthed, inviteMode }: { returnPath?: 
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
   const [sent, setSent] = useState(false);
+  // Pre-launch: sign-up waits for launch unless this browser is a tester (link, passkey or a signed-in session).
+  const guard = usePrelaunchGuard();
+  const [passkeyOpen, setPasskeyOpen] = useState(false);
+  const [passkey, setPasskey] = useState("");
   // A paid tier picked on the plan cards: this is that tier's sign-up, and its checkout opens right after.
   const [intent, setIntent] = useState<string | null>(null);
   useEffect(() => {
@@ -107,6 +112,61 @@ export function SignupCard({ returnPath, onAuthed, inviteMode }: { returnPath?: 
     } finally {
       setBusy(false);
     }
+  }
+
+  /**
+   * Sign-up is shut before launch (founder, 2026-11-12). Signing in stays open at all times, because locking a returning
+   * member out of their own account would be a bug rather than a launch guard. A tester follows a ?preview=true link or
+   * types the passkey here, and the normal form appears the moment that works.
+   */
+  // An invite link is its own key: a co-writer opening a split sheet, a seat holder or a contract signer was invited by
+  // us or by another member, and that private token is not a public sign-up. Locking it would stall real paperwork.
+  if (guard.locked && mode === "signup" && !inviteMode) {
+    return (
+      <div className="rounded-2xl bg-background p-8 text-foreground shadow-2xl">
+        <p className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.09em] text-[#92400E] dark:text-[#F59E0B]">
+          <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-current" aria-hidden />
+          Pre-launch build
+        </p>
+        <h2 className="mt-2 text-2xl font-bold leading-tight">Sign-ups open at launch</h2>
+        <p className="mt-2 text-muted-foreground">
+          Came Through Audio isn&apos;t finished yet, so we&apos;re not taking new accounts. There&apos;s nothing you need to do
+          today — check back for our official launch.
+        </p>
+        <div className="mt-4 rounded-xl border border-[#D97706] bg-[#FEF3C7] p-4 text-sm text-[#92400E] dark:border-[#F59E0B]/60 dark:bg-[#F59E0B]/10 dark:text-[#F59E0B]">
+          <p className="font-semibold">Please don&apos;t register or pay yet.</p>
+          <p className="mt-1">An account made now, or a payment sent now, would land on a build that is still changing.</p>
+        </div>
+        <Button type="button" className="mt-4 h-11 w-full" onClick={() => setMode("login")}>
+          I already have an account — log in
+        </Button>
+        {passkeyOpen ? (
+          <form
+            className="mt-4 space-y-2"
+            onSubmit={(e) => {
+              e.preventDefault();
+              if (guard.tryPasskey(passkey)) {
+                setPasskey("");
+                setPasskeyOpen(false);
+                toast.success("Tester mode unlocked.");
+              } else toast.error("That passkey doesn't match.");
+            }}
+          >
+            <Label htmlFor="tester-passkey">Tester passkey</Label>
+            <Input id="tester-passkey" value={passkey} onChange={(e) => setPasskey(e.target.value)} autoComplete="off" />
+            <Button type="submit" className="w-full">Unlock sign-ups</Button>
+          </form>
+        ) : (
+          <button
+            type="button"
+            onClick={() => setPasskeyOpen(true)}
+            className="mx-auto mt-5 block text-xs text-muted-foreground underline hover:text-foreground"
+          >
+            Tester Access
+          </button>
+        )}
+      </div>
+    );
   }
 
   return (

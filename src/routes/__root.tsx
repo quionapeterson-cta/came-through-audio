@@ -1,5 +1,6 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { HelpChat } from "@/components/HelpChat";
+import { LaunchBanner } from "@/components/LaunchBanner";
 import { ConfirmHost } from "@/components/ConfirmHost";
 import { CheckoutHost } from "@/components/CheckoutHost";
 import {
@@ -188,6 +189,8 @@ function RootComponent() {
 
   return (
     <QueryClientProvider client={queryClient}>
+      {/* Pre-launch notice above every page; renders nothing once IS_PRELAUNCH is false (founder, 2026-11-12). */}
+      <LaunchBanner />
       {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
       <Outlet />
       <Toaster />
