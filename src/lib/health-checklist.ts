@@ -149,7 +149,10 @@ export function songChecklist(r: TrackReport, country: Country, status?: SongSta
   const findings = r.findings.filter((f) => f.level === "warn").map((f) => ({ text: f.text, field: f.field === "writers" ? "writers-0-legalName" : f.field }));
   if (findings.length) steps.push({ id: "details", stage: "confirm", auto: true, done: false, title: "Match what the live records show", items: findings, field: findings[0]?.field });
   if (r.pillars.some((p) => p.pillar === "performance" || p.pillar === "mechanical"))
-    steps.push({ id: "iswc", stage: "confirm", auto: true, done: !!m.iswc.trim(), title: "Add the ISWC once it's assigned", field: "iswc" });
+    // An ISWC the member has applied for waits on the PRO, so it stops being a step they owe: the date they chose is
+    // when to look, and ticking the box off is their answer (founder, 2026-11-12).
+    steps.push({ id: "iswc", stage: "confirm", auto: true, done: !!m.iswc.trim(), optional: m.iswcPending,
+      title: m.iswcPending ? `ISWC awaiting PRO approval${m.iswcCheckOn ? ` · check ${m.iswcCheckOn}` : ""}` : "Add the ISWC once it's assigned", field: "iswc" });
 
   const counted = steps.filter((s) => !s.optional);
   const ready = steps.filter((s) => s.stage === "details");

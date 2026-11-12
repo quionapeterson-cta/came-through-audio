@@ -112,6 +112,11 @@ const metadataObject = z.object({
   isrc: z.string().trim().refine((value) => !value || /^[A-Z]{2}[A-Z0-9]{3}\d{7}$/i.test(value.replace(/-/g, "")), "Enter a valid 12-character ISRC."),
   upc: z.string().trim().refine((value) => !value || /^\d{12,13}$/.test(value), "Enter a 12- or 13-digit UPC/EAN."),
   iswc: z.string().trim().refine((value) => !value || /^T\d{10}$/i.test(value.replace(/[.\s-]/g, "")), "Enter a valid ISWC (T followed by 10 digits)."),
+  /** Applied for, waiting on the PRO (founder, 2026-11-12). The member's own answer, so the checklist stops asking for
+   *  a code nobody has yet; the day they picked is when to look in their PRO account. Catalog only, never embedded. */
+  iswcPending: z.boolean().default(false),
+  /** The day to check the PRO account for the ISWC (YYYY-MM-DD); blank = no day picked. */
+  iswcCheckOn: z.string().default(""),
   explicit: z.boolean().default(false),
   /** Instrumental songs need no author to be registration-ready. */
   instrumental: z.boolean().default(false),
@@ -196,7 +201,7 @@ export function isoDate(value: string | undefined): string {
 
 export const emptyMetadata = (): Metadata => ({
   title: "", trackNumber: "", trackTotal: "", artist: "", featured: [""], album: "", duration: "", releaseType: "", version: "", releaseDate: "", unreleased: false, wasUnreleased: false, recordingSide: "", beatState: "", beatMasterId: "", dealType: "", dealDate: "", dealStreams: "", dealContract: "", label: "", contactEmail: "", copyright: "", phonographic: "", language: "",
-  isrc: "", upc: "", iswc: "", explicit: false, instrumental: false, primaryGenre: "", secondaryGenre: "",
+  isrc: "", upc: "", iswc: "", iswcPending: false, iswcCheckOn: "", explicit: false, instrumental: false, primaryGenre: "", secondaryGenre: "",
   writers: [emptyContributor()], composers: [emptyContributor()], producers: [emptyContributor()], publishers: [emptyContributor()],
   lyrics: "", coverThumb: "", audioPath: "", artPath: "", artWidth: 0, artHeight: 0, aiProtection: false, credits: [], recordedIn: "", recordedYear: "",
   alternateTitles: [""], selfPublished: false, bmiWriterPublishing: false, samples: "", sampleTitle: "", sampleWriters: "", sampleSource: "", writtenFor: "", productionTitle: "",

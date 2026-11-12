@@ -28,6 +28,7 @@ import { listStatuses, type SongStatus } from "@/lib/health-songs";
 import type { RepertoireCheck } from "@/lib/health";
 import { HealthLiquid, HealthMeter } from "@/components/HealthMeter";
 import { DownloadCatalogButton } from "@/components/CatalogLapseBanner";
+import { iswcReminder } from "@/lib/iswc-reminder";
 import { deleteTrack, downloadCatalogFile, downloadRelease, downloadWholeCatalog, duplicateTrack, groupReleases, listTracks, safeName, saveTrack, setReleaseArtwork, uploadCatalogFile, versionTitle, type CatalogTrack, type DownloadGap, type ZipResult } from "@/lib/catalog";
 import { albumKey, routedKinds } from "@/lib/release-routing";
 import { AGENCY_LABEL, downloadAgencyExport, downloadNeighbouringPack, mlcPlaceholderSongs, recordExports, type Agency, type Held } from "@/lib/agency-export";
@@ -882,7 +883,46 @@ export function MetadataUploader({ onShareInfo, userId, mode = "embed", readOnly
               <div className="grid gap-5 sm:grid-cols-3">
                 <Field label="ISRC" term="isrc" id="isrc" value={metadata.isrc} placeholder="USABC2600001" onChange={(value) => update("isrc", value)} />
                 <Field label="UPC / EAN" term="upc" id="upc" value={metadata.upc} placeholder="12 or 13 digits" onChange={(value) => update("upc", value)} />
-                <Field label="ISWC (optional)" term="iswc" id="iswc" value={metadata.iswc} placeholder="T-123.456.789-0" onChange={(value) => update("iswc", value)} />
+                <div className="space-y-2">
+                  {/* Applied for and waiting on the PRO (founder, 2026-11-12): the member's own answer, so the checklist
+                      stops asking for a code nobody has yet. */}
+                  <label className="flex items-start gap-2 text-xs font-semibold leading-snug">
+                    <input type="checkbox" className="mt-0.5 h-4 w-4" aria-label="Awaiting PRO approval for the ISWC"
+                      checked={metadata.iswcPending} disabled={busy}
+                      onChange={(e) => update("iswcPending", e.target.checked)} />
+                    <span>Awaiting PRO approval for the ISWC</span>
+                  </label>
+                  <Field label="ISWC (optional)" term="iswc" id="iswc" value={metadata.iswc} placeholder="T-123.456.789-0" onChange={(value) => update("iswc", value)} />
+                  {metadata.iswcPending && (() => {
+                    const reminder = iswcReminder(metadata.iswcCheckOn, metadata.title, typeof window === "undefined" ? "" : window.location.origin);
+                    return (
+                      <div className="rounded-lg border border-border bg-muted/40 p-2 text-xs">
+                        <label className="flex flex-wrap items-center gap-2">
+                          <span className="font-semibold">Remind me to check on</span>
+                          <input type="date" aria-label="Remind me to check the ISWC on" disabled={busy}
+                            className="rounded-md border border-input bg-background px-2 py-1"
+                            value={metadata.iswcCheckOn} onChange={(e) => update("iswcCheckOn", e.target.value)} />
+                        </label>
+                        {reminder ? (
+                          <div className="mt-2 flex flex-wrap gap-3">
+                            <a className="font-semibold text-primary underline" href={reminder.google} target="_blank" rel="noopener noreferrer">Add to Google Calendar</a>
+                            <button type="button" className="font-semibold text-primary underline"
+                              onClick={() => {
+                                const url = URL.createObjectURL(new Blob([reminder.ics], { type: "text/calendar" }));
+                                const link = Object.assign(document.createElement("a"), { href: url, download: "ISWC reminder.ics" });
+                                link.click();
+                                setTimeout(() => URL.revokeObjectURL(url), 1000);
+                              }}>
+                              Download calendar file
+                            </button>
+                          </div>
+                        ) : (
+                          <p className="mt-1 text-muted-foreground">Pick the day you&apos;ll look in your PRO account.</p>
+                        )}
+                      </div>
+                    );
+                  })()}
+                </div>
               </div>
               <InfoTip title="Pre-Distribution Note" text={`${PRE_DIST_NOTE} ⭐ Pro Tip: ${PRO_TIP}`} className="inline-flex items-center rounded-full border border-primary px-3 py-1 text-sm font-semibold text-primary">💡 Pre-Distribution Note</InfoTip>
             </FormSection>

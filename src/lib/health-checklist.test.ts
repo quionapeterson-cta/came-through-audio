@@ -69,6 +69,15 @@ describe("song health checklist", () => {
     expect(c.steps.filter((s) => !s.done).map((s) => s.title)).toEqual([]);
     expect(c.group).toBe("healthy");
   });
+  it("stops owing an ISWC that is waiting on the PRO, and says when to check", () => {
+    const pending = songChecklist(trackReport(track({ iswcPending: true, iswcCheckOn: "2027-01-15" }), us, []), us);
+    const step = pending.steps.find((s) => s.id === "iswc")!;
+    expect(step).toMatchObject({ optional: true, done: false });
+    expect(step.title).toContain("2027-01-15");
+    // It is no longer a step the member owes, so it drops out of the count.
+    expect(pending.total).toBe(songChecklist(trackReport(track(), us, []), us).total - 1);
+  });
+
   it("reads inspector marks back as checks", () => {
     expect(inspectorChecks([{ ...emptyStatus("h:1"), steps: { "found:bmi": "x", "registered:mlc": "y" } }])).toEqual([{ trackId: "h:1", society: "bmi", status: "found", source: "self", checkedAt: "x" }]);
   });

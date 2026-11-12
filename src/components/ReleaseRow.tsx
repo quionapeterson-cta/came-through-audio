@@ -68,9 +68,9 @@ export function ReleaseRow({ name, type, tracks, readOnly, onSave, onCover, comp
               <>
                 {/* The cover is the release's, not one song's: one upload fills every song on it. */}
                 <button type="button" className="font-semibold text-primary underline disabled:opacity-60"
-                  aria-label={`Upload the album cover for ${name}`} disabled={coverBusy}
+                  aria-label={`Edit the album cover for ${name}`} disabled={coverBusy}
                   onClick={(e) => { e.preventDefault(); e.stopPropagation(); coverInput.current?.click(); }}>
-                  {coverBusy ? "Saving cover…" : "Album cover"}
+                  {coverBusy ? "Saving cover…" : "Edit Album Cover"}
                 </button>
                 <input ref={coverInput} type="file" accept="image/jpeg,image/png" className="sr-only"
                   aria-label={`Album cover file for ${name}`} disabled={coverBusy}
