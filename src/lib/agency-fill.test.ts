@@ -1,10 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { agencyMetadata, agencyVersion, fillPlan, finishItems, writerShares } from "@/lib/agency-fill";
+import { agencyMetadata, agencyVersion, fieldChanges, fillPlan, finishItems, writerShares } from "@/lib/agency-fill";
 import type { ListResult, ListWork } from "@/lib/agency-lists";
 import type { CatalogTrack } from "@/lib/catalog";
 import { emptyMetadata } from "@/lib/metadata";
 
 const work = (o: Partial<ListWork> = {}): ListWork => ({ title: "Bloodline", iswc: "", isrc: "", workId: "1", writers: [], ...o });
+
 const track = (id: string, title: string, metadata: Partial<ReturnType<typeof emptyMetadata>> = {}): CatalogTrack => ({
   id, title, artist: "Karma Came", updatedAt: "2026-11-01",
   metadata: { ...emptyMetadata(), title, artist: "Karma Came", ...metadata },
@@ -93,6 +94,24 @@ describe("planning a fill", () => {
     expect(plan.creates.map((c) => c.work.workId)).toEqual(["2"]);
     expect(plan.duplicates.map((d) => d.track.id)).toEqual(["t1"]);
     expect(plan.duplicates[0]!.work.workId).toBe("1");
+  });
+
+  it("offers the agency's name when the two read differently, and adopts it with its version", () => {
+    const existing = track("t1", "Quit Playing With Me", { version: "Radio edit", isrc: "QT6HW2687935" });
+    const listed = work({ title: "Quit Playing With Me (Clean Version)", isrc: "QT6HW2687935" });
+    // One choice, shown where the member decides, instead of an issue they cannot settle.
+    expect(fieldChanges(existing.metadata, listed)).toEqual([
+      { field: "Title", catalog: "Quit Playing With Me (Radio edit)", agency: "Quit Playing With Me (Clean Version)" },
+    ]);
+    const adopted = agencyVersion(existing.metadata, listed, "Karma Came");
+    expect(adopted.title).toBe("Quit Playing With Me (Clean Version)");
+    // The agency's name already carries the version, so the catalog's own one isn't kept twice.
+    expect(adopted.version).toBe("");
+  });
+
+  it("offers no name change when only a feature credit or a capital letter differs", () => {
+    const existing = track("t1", "Big Booty Bouncing feat. OG PI");
+    expect(fieldChanges(existing.metadata, work({ title: "Big Booty Bouncing (Feat. Og Pi)" }))).toEqual([]);
   });
 
   it("keeps only codes the catalog can validate, so the next save isn't blocked", () => {

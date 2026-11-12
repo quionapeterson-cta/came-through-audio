@@ -1,4 +1,4 @@
-import { matchWork, sameWriter, scaledShares, workIssues, type ListMatch, type ListResult, type ListWork, type ListWriter } from "@/lib/agency-lists";
+import { matchWork, printedTitle, sameWriter, scaledShares, titleCarriesVersion, titleReadsDifferently, workIssues, type ListMatch, type ListResult, type ListWork, type ListWriter } from "@/lib/agency-lists";
 import type { CatalogTrack } from "@/lib/catalog";
 import { creditName, emptyContributor, emptyMetadata, WRITER_ROLES, type Contributor, type Metadata } from "@/lib/metadata";
 
@@ -105,8 +105,13 @@ export function agencyVersion(existing: Metadata, work: ListWork, artist: string
   // than wiped by adopting the agency's writers, which would throw away the member's own answer.
   const known = [...existing.writers, ...existing.composers].filter((w) => (w.role ?? "").trim());
   const keptRole = (name: string) => (known.find((k) => sameWriter(creditName(k) || k.name, name))?.role ?? "");
+  // Adopting the agency's name brings its version with it, so a title that already carries one doesn't also keep the
+  // catalog's version field ("Quit Playing With Me (Clean Version)" rather than that plus "(Radio edit)").
+  const adoptName = titleReadsDifferently(printedTitle(existing), work.title);
   return {
     ...existing,
+    title: adoptName ? work.title : existing.title,
+    version: adoptName && titleCarriesVersion(work.title) ? "" : existing.version,
     artist: existing.artist || agency.artist,
     isrc: agency.isrc || existing.isrc,
     iswc: agency.iswc || existing.iswc,
@@ -130,6 +135,8 @@ const listWriters = (writers: ListWriter[]) => {
 export function fieldChanges(existing: Metadata, work: ListWork): FieldChange[] {
   const rows: FieldChange[] = [];
   // A field the list doesn't carry is never offered: adopting the agency's version would leave the catalog's value in place.
+  const named = printedTitle(existing);
+  if (titleReadsDifferently(named, work.title)) rows.push({ field: "Title", catalog: named, agency: work.title });
   if (work.isrc) rows.push({ field: "ISRC", catalog: existing.isrc.trim() || "none", agency: work.isrc });
   if (work.iswc) rows.push({ field: "ISWC", catalog: existing.iswc.trim() || "none", agency: work.iswc });
   if (work.writers.length) rows.push({ field: "Writers", catalog: catalogWriters(existing) || "none", agency: listWriters(work.writers) });

@@ -211,6 +211,23 @@ export function titleCore(title: string): string {
   return norm(core);
 }
 
+/** Does this title name a version of the recording ("Clean Version", "Official Instrumental")? */
+export const titleCarriesVersion = (title: string) => VERSION_WORDS.test(title);
+
+/** The catalog's song as it reads: the title plus its own version field, the way the app shows it. */
+export const printedTitle = (m: { title: string; version?: string | undefined }) =>
+  m.version?.trim() ? `${m.title.trim()} (${m.version.trim()})` : m.title.trim();
+
+/**
+ * The same recording under two names (founder, 2026-11-12): SoundExchange calls one code "Quit Playing With Me (Clean
+ * Version)" while the catalog holds it as "Quit Playing With Me" with the version "Radio edit". Neither record is wrong,
+ * and the member should still see that the two names disagree.
+ */
+export function titleReadsDifferently(catalogTitle: string, agencyTitle: string): boolean {
+  if (!catalogTitle.trim() || !agencyTitle.trim()) return false;
+  return norm(catalogTitle) !== norm(agencyTitle) && titleCore(catalogTitle) === titleCore(agencyTitle);
+}
+
 /**
  * Every work on the list with this title: exactly first, then loosely (a feature or remix in brackets), then without a
  * version tail — the version the catalog names and the agency never registers.
@@ -325,6 +342,9 @@ export function workIssues(work: ListWork, metadata: Metadata, recordings = fals
   const isrc = code(metadata.isrc ?? ""), iswc = code(metadata.iswc ?? "");
   if (work.isrc && work.isrc !== isrc) issues.push(isrc ? `The agency has ISRC ${work.isrc}, your catalog has ${metadata.isrc.trim()}` : `The agency has ISRC ${work.isrc}, your catalog has none`);
   if (work.iswc && work.iswc !== iswc) issues.push(iswc ? `The agency has ISWC ${work.iswc}, your catalog has ${metadata.iswc.trim()}` : `The agency has ISWC ${work.iswc}, your catalog has none`);
+  // The name, before the early return: a recordings list has no writers but still names the recording.
+  const named = printedTitle(metadata);
+  if (titleReadsDifferently(named, work.title)) issues.push(`The agency calls it "${work.title}", your catalog has "${named}" — same recording, different name`);
   if (recordings || !work.writers.length) return issues;
   const mine = [...metadata.writers, ...metadata.composers].filter((w) => creditName(w)).map((w) => ({ key: nameKey(creditName(w)), name: creditName(w), ipi: digits(w.ipi ?? ""), share: Number(w.percentage) || undefined }));
   const theirs = work.writers.map((w) => ({ ...w, key: nameKey(w.name) }));
