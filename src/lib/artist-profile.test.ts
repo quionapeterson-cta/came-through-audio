@@ -2,6 +2,23 @@ import { describe, expect, it } from "vitest";
 import { patientFileFromDefaults, withOwnWriter, withProfileFilled } from "@/lib/artist-profile";
 import { emptyContributor, emptyMetadata } from "@/lib/metadata";
 
+/** The two SoundExchange rights boxes carry over from the catalog defaults, like the country answers beside them. */
+describe("collection rights defaults", () => {
+  it("fills the inception and perpetuity boxes into a new song", () => {
+    const out = withProfileFilled(emptyMetadata(), { rightsStartInception: true, rightsEndPerpetuity: true });
+    expect(out.rightsStartInception).toBe(true);
+    expect(out.rightsEndPerpetuity).toBe(true);
+    expect(out.rightsStart).toBe("");
+    expect(out.rightsEnd).toBe("");
+  });
+
+  it("fills the rights dates when a member saves real ones instead", () => {
+    const out = withProfileFilled(emptyMetadata(), { rightsStart: "2026-01-02", rightsEnd: "2030-01-01" });
+    expect(out.rightsStart).toBe("2026-01-02");
+    expect(out.rightsEnd).toBe("2030-01-01");
+  });
+});
+
 describe("withOwnWriter", () => {
   it("names a lone unnamed row so its IPI and PRO reach new embeds", () => {
     const rows = withOwnWriter([{ ...emptyContributor(), ipi: "00123456789", pro: "BMI" }], "Jordan Lee");

@@ -964,8 +964,8 @@ export function MetadataUploader({ onShareInfo, userId, mode = "embed", readOnly
                   <Label>Your claim<Tip text={TIPS.masterBasis} title="Your claim" /></Label>
                   <Choice id="masterBasis" label="Your claim" value={metadata.masterBasis} options={MASTER_BASES} labels={{ "Copyright Owner": "I own it", "Collections Designee": "Authorized designee" }} onChange={(v) => update("masterBasis", v as Metadata["masterBasis"])} />
                 </div>
-                <RightsDate label="Rights start" id="rightsStart" check="Inception" tip={TIPS.inception} value={metadata.rightsStart} disabled={busy} onChange={(v) => update("rightsStart", v)} />
-                <RightsDate label="Rights end" id="rightsEnd" check="Perpetuity" tip={TIPS.perpetuity} value={metadata.rightsEnd} disabled={busy} onChange={(v) => update("rightsEnd", v)} />
+                <RightsDate label="Rights start" id="rightsStart" check="Inception" tip={TIPS.inception} value={metadata.rightsStart} disabled={busy} onChange={(v) => update("rightsStart", v)} onCheck={(v) => update("rightsStartInception", v)} />
+                <RightsDate label="Rights end" id="rightsEnd" check="Perpetuity" tip={TIPS.perpetuity} value={metadata.rightsEnd} disabled={busy} onChange={(v) => update("rightsEnd", v)} onCheck={(v) => update("rightsEndPerpetuity", v)} />
               </div>
             </FormSection>}
 
@@ -1731,13 +1731,13 @@ function Field({ label, id, value, onChange, required, type = "text", placeholde
  * A SoundExchange-style rights date: checked means from inception / in perpetuity (saved blank, as SoundExchange
  * expects); unchecking it shows a date picker. A song that already has a date opens unchecked.
  */
-function RightsDate({ label, id, check, tip, value, disabled, onChange }: { label: string; id: string; check: string; tip: string; value: string; disabled?: boolean; onChange: (value: string) => void }) {
+function RightsDate({ label, id, check, tip, value, disabled, onChange, onCheck }: { label: string; id: string; check: string; tip: string; value: string; disabled?: boolean; onChange: (value: string) => void; onCheck: (checked: boolean) => void }) {
   const [dated, setDated] = useState(!!value);
   return <div className="min-w-0 space-y-2">
     <Label>{label}</Label>
     <label className="flex items-center gap-2 text-sm"><input id={`${id}-open`} type="checkbox" className="h-4 w-4 accent-[var(--primary)]" disabled={disabled} checked={!dated}
-      onChange={(e) => { setDated(!e.target.checked); if (e.target.checked) onChange(""); }} />{check}<Tip text={tip} title={check} /></label>
-    {dated ? <Input id={id} type="date" aria-label={`${label} date`} value={value} disabled={disabled} className={value ? undefined : "text-muted-foreground/50"} onChange={(e) => onChange(e.target.value)} />
+      onChange={(e) => { setDated(!e.target.checked); onCheck(e.target.checked); if (e.target.checked) onChange(""); }} />{check}<Tip text={tip} title={check} /></label>
+    {dated ? <Input id={id} type="date" aria-label={`${label} date`} value={value} disabled={disabled} className={value ? undefined : "text-muted-foreground/50"} onChange={(e) => { onCheck(false); onChange(e.target.value); }} />
       : <p className="text-xs text-muted-foreground">Uncheck to choose a date.</p>}
   </div>;
 }

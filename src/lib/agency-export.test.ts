@@ -69,6 +69,13 @@ describe("agency exports", () => {
     expect(row[15]).toEqual(new Date(Date.UTC(2026, 2, 14)));
     expect(row[28]).toBe("Q"); // no label: self-released uses the artist
   });
+  it("SoundExchange says Inception and Perpetuity when the catalog's boxes are ticked, and a real date wins", () => {
+    const row = soundExchangeRows([track({ rightsStartInception: true, rightsEndPerpetuity: true })])[0]!;
+    expect(row[5]).toBe("Inception");
+    expect(row[6]).toBe("Perpetuity");
+    const dated = soundExchangeRows([track({ rightsStart: "2026-01-02", rightsStartInception: true })])[0]!;
+    expect(dated[5]).toEqual(new Date(Date.UTC(2026, 0, 2)));
+  });
   it("SoundExchange claims the song's master ownership", () => {
     const row = soundExchangeRows([track({ masterShare: "50", masterBasis: "Collections Designee", rightsStart: "2026-01-02" })])[0]!;
     expect(row[3]).toBe("Collections Designee");

@@ -382,6 +382,14 @@ export function ArtistOnboarding({ userId, open, onOpenChange, onSaved, firstRun
               <Field label="Copyright owner's country"><Pick value={p.ownerNationality ?? ""} options={countryOptions(p.ownerNationality ?? "")} empty="Not set" onChange={(v) => set("ownerNationality", v)} /></Field>
               <Field label="Country of first release"><Pick value={p.firstReleaseCountry ?? ""} options={countryOptions(p.firstReleaseCountry ?? "")} empty="Not set" onChange={(v) => set("firstReleaseCountry", v)} /></Field>
               <Field label="Country of release"><Pick value={p.releaseCountry ?? ""} options={countryOptions(p.releaseCountry ?? "")} empty="Not set" onChange={(v) => set("releaseCountry", v)} /></Field>
+              {/* The collection rights dates rarely change, so they are saved here and arrive ticked on every new song
+                  (founder, 2026-11-14). Ticked means no date is stored: the export says "Inception" / "Perpetuity". */}
+              <Field label="Collection rights start">
+                <RightsDefault id="rightsStart" check="From inception (no date)" value={p.rightsStart ?? ""} checked={!!p.rightsStartInception} onChange={(v) => set("rightsStart", v)} onCheck={(v) => set("rightsStartInception", v)} />
+              </Field>
+              <Field label="Collection rights end">
+                <RightsDefault id="rightsEnd" check="In perpetuity (no end date)" value={p.rightsEnd ?? ""} checked={!!p.rightsEndPerpetuity} onChange={(v) => set("rightsEnd", v)} onCheck={(v) => set("rightsEndPerpetuity", v)} />
+              </Field>
               <Field label="Territories of collection rights">
                 <TerritoriesField id="collectionTerritories" value={p.collectionTerritories ?? ""} onChange={(v) => set("collectionTerritories", v)} />
               </Field>
@@ -492,6 +500,20 @@ function Group({ title, children }: { title: string; children: React.ReactNode }
 
 function Field({ label, term, children }: { label: string; term?: GlossaryKey; children: React.ReactNode }) {
   return <div className="space-y-1.5"><Label className="text-xs">{label}{term && <InfoTip term={term} />}</Label>{children}</div>;
+}
+
+/**
+ * A default collection rights date: ticking the box means from inception / in perpetuity, which SoundExchange takes as no
+ * date at all; untick it to save a real date instead.
+ */
+function RightsDefault({ id, check, value, checked, onChange, onCheck }: { id: string; check: string; value: string; checked: boolean; onChange: (v: string) => void; onCheck: (v: boolean) => void }) {
+  return (
+    <div className="space-y-1.5">
+      <label className="flex items-center gap-2 text-sm"><input id={`${id}-open`} type="checkbox" className="h-4 w-4 accent-[var(--primary)]" checked={checked}
+        onChange={(e) => { onCheck(e.target.checked); if (e.target.checked) onChange(""); }} />{check}</label>
+      {!checked && <Input type="date" aria-label={`${id} date`} value={value} onChange={(e) => onChange(e.target.value)} />}
+    </div>
+  );
 }
 
 /** `empty={null}` leaves out the blank choice, for a field that always has an answer (each option is listed once). */

@@ -189,6 +189,10 @@ const metadataObject = z.object({
   masterBasis: z.enum(MASTER_BASES).default("Copyright Owner"),
   rightsStart: z.string().default(""),
   rightsEnd: z.string().default(""),
+  /** Checked means "from inception" / "in perpetuity" (founder, 2026-11-14): no date is stored, and an agency export says
+   *  the words SoundExchange's own claim form asks the member to choose, instead of leaving the cell silently blank. */
+  rightsStartInception: z.boolean().default(false),
+  rightsEndPerpetuity: z.boolean().default(false),
 });
 /** The share rules both schemas keep: a share, PRO or IPI needs a name, and a group can't total more than 100%. */
 const shareRules = (data: z.infer<typeof metadataObject>, ctx: z.RefinementCtx) => {
@@ -237,7 +241,7 @@ export const emptyMetadata = (): Metadata => ({
   writers: [emptyContributor()], composers: [emptyContributor()], producers: [emptyContributor()], publishers: [emptyContributor()],
   lyrics: "", coverThumb: "", audioPath: "", artPath: "", artWidth: 0, artHeight: 0, aiProtection: false, credits: [], recordedIn: "", recordedYear: "", recordingDate: "", masteredIn: "", ownerNationality: "", firstReleaseCountry: "", releaseCountry: "", collectionTerritories: "",
   alternateTitles: [""], selfPublished: false, bmiWriterPublishing: false, samples: "", sampleTitle: "", sampleWriters: "", sampleSource: "", writtenFor: "", productionTitle: "",
-  masterShare: "100", masterBasis: "Copyright Owner", rightsStart: "", rightsEnd: "",
+  masterShare: "100", masterBasis: "Copyright Owner", rightsStart: "", rightsEnd: "", rightsStartInception: false, rightsEndPerpetuity: false,
 });
 
 /** The name shown for a contributor: a writer's legal name, otherwise the plain name (producers, publishers, older entries). */

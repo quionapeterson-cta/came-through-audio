@@ -13,6 +13,9 @@ export const PROFILE_KEYS = [
   // The country and territory answers SoundExchange asks for (founder, 2026-11-12): the same on nearly every song, so
   // they are typed once here and filled into a song's blanks. They never join the meter's twelve checks.
   "masteredIn", "ownerNationality", "firstReleaseCountry", "releaseCountry", "collectionTerritories",
+  // The collection rights dates rarely change from song to song (founder, 2026-11-14): from inception and in perpetuity are
+  // the usual answers, so they are saved once here and every new song arrives with the boxes ticked.
+  "rightsStart", "rightsEnd", "rightsStartInception", "rightsEndPerpetuity",
 ] as const;
 export type ArtistProfile = Partial<Pick<Metadata, (typeof PROFILE_KEYS)[number]>>;
 
@@ -206,7 +209,10 @@ export function fillMissing(detected: Partial<Metadata>, p: ArtistProfile | null
     // A self-published song has its answer: the profile's publisher never fills in (it would contradict it).
     if (k === "publishers" && (out.selfPublished || out.bmiWriterPublishing)) continue;
     const cur = out[k] as unknown;
-    const empty = cur === undefined || cur === "" || (Array.isArray(cur) && hasName(cur as Contributor[]).length === 0);
+    // A ticked rights box is an answer, so an unticked one is still a blank to fill: without this the two rights boxes could
+    // never arrive from the defaults (founder, 2026-11-14). Only these two: selfPublished is a real answer the song keeps.
+    const unticked = cur === false && (k === "rightsStartInception" || k === "rightsEndPerpetuity");
+    const empty = cur === undefined || cur === "" || unticked || (Array.isArray(cur) && hasName(cur as Contributor[]).length === 0);
     if (empty && p[k] !== undefined) (out as Record<string, unknown>)[k] = p[k];
   }
   return out;

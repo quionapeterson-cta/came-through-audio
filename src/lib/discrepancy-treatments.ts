@@ -123,11 +123,114 @@ export const TREATMENTS = {
     secondary: "Open Catalog Entry",
     action: "review",
   } as Treatment,
+  // One treatment per kind of detail, so a recording with five differences lists five fixed things to do, not one summary
+  // and four silent ones (founder, 2026-11-14).
+  iswc: {
+    headline: "Check which ISWC is right",
+    detail: "The ISWC belongs to the composition, not the recording, so the two sides should always agree on it. Confirm it in the public repertoire, then correct the side that is wrong.",
+    primary: "Copy ISRC & Check Repertoire ↗",
+    secondary: "Edit in My Catalog",
+    action: "check-distributor",
+  } as Treatment,
+  writerAtAgency: {
+    headline: "Register {name} at the agency",
+    detail: "Your catalog names {name}, and the agency's registration does not. Until they are added there, their share of this song cannot be matched or paid.",
+    primary: "Copy ISRC & Check Repertoire ↗",
+    secondary: "Edit in My Catalog",
+    action: "check-distributor",
+  } as Treatment,
+  writerInAgency: {
+    headline: "Decide whether {name} belongs on this song",
+    detail: "The agency's registration names {name}, who is not in your catalog. Add them here if they wrote on it; if they did not, ask the agency to remove them so the splits match your split sheet.",
+    primary: "Copy ISRC & Check Repertoire ↗",
+    secondary: "Edit in My Catalog",
+    action: "check-distributor",
+  } as Treatment,
+  spelling: {
+    headline: "Fix the spelling on one side",
+    detail: "Same writer, two spellings. Agencies match on the exact name, so make the misspelled side match the legal name on file.",
+    primary: "Copy ISRC & Check Repertoire ↗",
+    secondary: "Edit in My Catalog",
+    action: "check-distributor",
+  } as Treatment,
+  ipi: {
+    headline: "Check which IPI is right",
+    detail: "A writer's IPI is their permanent ID, and the two records hold different numbers. Confirm it in the public repertoire, then correct the side that is wrong.",
+    primary: "Copy ISRC & Check Repertoire ↗",
+    secondary: "Edit in My Catalog",
+    action: "check-distributor",
+  } as Treatment,
+  share: {
+    headline: "Settle the split",
+    detail: "The two records give this writer different shares. Match the agency's percentage to your split sheet, or fix the split sheet if that is the side that is wrong.",
+    primary: "Copy ISRC & Check Repertoire ↗",
+    secondary: "Edit in My Catalog",
+    action: "check-distributor",
+  } as Treatment,
 };
 
-/** Fills `{isrc}` in a treatment's instruction with the code the row is about. */
-export function treatmentText(t: Treatment, isrc: string): string {
-  return t.detail.replace("{isrc}", isrc || "this recording");
+/** Fills `{isrc}` and `{name}` in one of a treatment's sentences with the code and the writer the row is about. */
+const fill = (sentence: string, isrc: string, name = "") =>
+  sentence.replace("{isrc}", isrc || "this recording").replace("{name}", name || "that writer");
+
+/** The treatment's instruction, written for this row. */
+export const treatmentText = (t: Treatment, isrc: string, name = "") => fill(t.detail, isrc, name);
+
+/** The treatment's headline, written for this row, so no `{name}` ever reaches the screen. */
+export const treatmentHeadline = (t: Treatment, isrc: string, name = "") => fill(t.headline, isrc, name);
+
+/**
+ * The writer a writer-specific issue is about, read from the issue sentence the comparison wrote (the name leads it), so a
+ * treatment can say who to fix rather than "a writer".
+ */
+export function nameFromIssue(issue: string): string {
+  const patterns = [
+    /^(.*?)'s (?:share|IPI) is /i,
+    /^(.*?) isn't on the agency's registration$/i,
+    /^The agency lists (.*?), who isn't in your catalog$/i,
+    /^The agency has (.*?) where your catalog has (.*?) — /i,
+  ];
+  for (const re of patterns) {
+    const m = issue.match(re);
+    if (m?.[1]) return m[1];
+  }
+  return "";
+}
+
+/**
+ * The rule for one issue on its own, whatever the row's headline difference is: every difference the comparison found gets
+ * the fix it actually needs (founder, 2026-11-14).
+ */
+export function treatmentForIssue(issue: string, ctx: { catalogIsrc: string; agencyIsrc: string }): Treatment {
+  const text = issue.toLowerCase();
+  if (/^not on the /.test(text)) return TREATMENTS.submit;
+  if (/iswc/.test(text)) return TREATMENTS.iswc;
+  if (/^the agency calls it/.test(text)) return TREATMENTS.checkDistributor;
+  if (/\.? isn't on the agency's registration$/.test(text)) return TREATMENTS.writerAtAgency;
+  if (/who isn't in your catalog$/.test(text)) return TREATMENTS.writerInAgency;
+  if (/spelling/.test(text)) return TREATMENTS.spelling;
+  if (/'s ipi is /.test(text)) return TREATMENTS.ipi;
+  if (/'s share is /.test(text)) return TREATMENTS.share;
+  if (/retire|used to carry|earlier/.test(text)) return TREATMENTS.keepBoth;
+  if (/isrc|code/.test(text)) {
+    if (!ctx.catalogIsrc && ctx.agencyIsrc) return TREATMENTS.adoptAgency;
+    if (ctx.catalogIsrc && ctx.agencyIsrc && ctx.catalogIsrc.toUpperCase() !== ctx.agencyIsrc.toUpperCase()) return TREATMENTS.checkDistributor;
+    return TREATMENTS.submit;
+  }
+  return TREATMENTS.review;
+}
+
+/** One listed difference, with the rule that fixes it and the sentence written out for this row. */
+export type RowFix = { issue: string; treatment: Treatment; code: string; headline: string; text: string };
+
+/** Every issue on a row, in the order the comparison found them, each with its own treatment. */
+export function fixesFor(issues: string[], ctx: { catalogIsrc: string; agencyIsrc: string }): RowFix[] {
+  const code = ctx.agencyIsrc || ctx.catalogIsrc;
+  return [...new Set(issues)].map((issue) => {
+    const treatment = treatmentForIssue(issue, ctx);
+    const name = nameFromIssue(issue);
+    return { issue, treatment, code, headline: treatmentHeadline(treatment, code, name), text: treatmentText(treatment, code, name) };
+  });
 }
 
 /**
@@ -181,6 +284,8 @@ export type DifferenceRow = {
   kind: DisagreementKind;
   issues: string[];
   treatment: Treatment;
+  /** Every issue on this recording, each with the treatment that fixes it, so none of them goes unlisted. */
+  fixes: RowFix[];
   status: TriageStatus;
   /** Catalog-vs-agency rows compare one society; agency-vs-agency rows compare two or more. */
   side: "catalog" | "agencies";
@@ -344,6 +449,7 @@ export function buildDifferenceRows({ stored, tracks, societies = [] }: BuildInp
           : kindOf([...new Set(g.issues)], catalogIsrc, agencyIsrc, retired);
       const claim: AgencyClaim = { society: societyId, name: nameOf(societyId), isrc: agencyIsrc, title: g.titles[0] ?? track.title, url: urlOf(societyId) };
       const treatment = treatmentFor({ kind, catalogIsrc, retiredIscrs: retired, releaseState: state });
+      const issues = [...new Set(g.issues)];
       if (agencyIsrc) claimsByTrack.set(trackId, [...(claimsByTrack.get(trackId) ?? []).filter((c) => c.society !== societyId), claim]);
       rows.push({
         key: `${societyId}:${trackId}`,
@@ -356,8 +462,9 @@ export function buildDifferenceRows({ stored, tracks, societies = [] }: BuildInp
         retiredIscrs: retired,
         release: releaseOf(track, state),
         kind,
-        issues: [...new Set(g.issues)],
+        issues,
         treatment,
+        fixes: fixesFor(issues, { catalogIsrc, agencyIsrc }),
         status: treatment.action === "waiting" ? "waiting" : retired.length ? "both-registered" : "needs-triage",
         side: "catalog",
       });
@@ -387,6 +494,7 @@ export function buildDifferenceRows({ stored, tracks, societies = [] }: BuildInp
       kind: "cross-agency-split",
       issues: claims.map((c) => `${c.name}: ${c.isrc}`),
       treatment,
+      fixes: fixesFor(claims.map((c) => `${c.name}: ${c.isrc}`), { catalogIsrc: m.isrc.trim(), agencyIsrc: claims[0]?.isrc ?? "" }),
       status: treatment.action === "waiting" ? "waiting" : retired.length ? "both-registered" : "needs-triage",
       side: "agencies",
     });
@@ -414,6 +522,7 @@ export function buildDifferenceRows({ stored, tracks, societies = [] }: BuildInp
         kind: "missing-from-list",
         issues: [`Not on the ${nameOf(societyId)} list`],
         treatment,
+        fixes: fixesFor([`Not on the ${nameOf(societyId)} list`], { catalogIsrc: m.isrc.trim(), agencyIsrc: "" }),
         status: treatment.action === "waiting" ? "waiting" : retired.length ? "both-registered" : "needs-triage",
         side: "catalog",
       });
