@@ -97,7 +97,7 @@ export function DiagnosticHighlight({ active, label, children }: { active: boole
   return (
     <div className="relative">
       {active && (
-        <span className="mb-1 inline-flex items-center gap-1 rounded-full border border-amber-500/60 bg-amber-50 px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.14em] text-amber-700 dark:border-cyan-300/50 dark:bg-cyan-400/10 dark:text-cyan-200">
+        <span className="mb-1 inline-flex items-center gap-1 rounded-full border border-[#4D8CFF]/40 bg-[#004AAD]/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.14em] text-[#004AAD] dark:border-[#4D8CFF]/45 dark:bg-[#4D8CFF]/20 dark:text-[#4D8CFF]">
           🩺 Diagnostic target: fix {label}
         </span>
       )}

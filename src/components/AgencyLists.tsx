@@ -315,14 +315,14 @@ export function AgencyLists({ userId, societies, songsFor, summaries, allTracks,
         const href = `/workspace?tab=health&panel=differences${society ? `&society=${encodeURIComponent(society)}` : ""}#differences-panel`;
         const agencies = rows.filter((r) => r.side === "agencies").length;
         return (
-          <div className="rounded-2xl border border-teal-600/30 bg-teal-50/60 p-3 dark:border-cyan-400/30 dark:bg-cyan-400/5">
+          <div className="rounded-2xl border border-[#004AAD]/25 bg-[#004AAD]/[0.04] p-3 dark:border-[#4D8CFF]/30 dark:bg-[#4D8CFF]/[0.08]">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div className="flex min-w-0 items-center gap-2.5">
-                <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg border border-teal-600/30 bg-white text-teal-700 dark:border-cyan-400/30 dark:bg-slate-900 dark:text-cyan-300">
+                <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg border border-[#4D8CFF]/40 bg-white text-[#004AAD] dark:border-[#4D8CFF]/45 dark:bg-[#141414] dark:text-[#4D8CFF]">
                   <Activity className="h-4 w-4" aria-hidden />
                 </span>
                 <div className="min-w-0">
-                  <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-teal-700 dark:text-cyan-300">Music Royalty Doctors · Diagnostic handoff</p>
+                  <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#004AAD] dark:text-[#4D8CFF]">Music Royalty Doctors · Diagnostic handoff</p>
                   <p className="text-sm font-semibold">
                     {open} difference{open === 1 ? "" : "s"} ready for review
                     {agencies > 0 && <span className="font-normal text-muted-foreground"> · {agencies} where two agencies disagree</span>}
