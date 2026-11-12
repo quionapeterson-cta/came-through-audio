@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { emptyMetadata } from "@/lib/metadata";
-import { compareList, listGaps, parseDelimited, readWorks, sameWriter, scaledShares, spelledDifferently } from "@/lib/agency-lists";
+import { compareList, listGaps, matchWork, parseDelimited, readWorks, sameWriter, scaledShares, spelledDifferently, titleCore } from "@/lib/agency-lists";
 
 const track = (id: string, title: string, extra = {}) => ({ id, title, artist: "Q", updatedAt: "", metadata: { ...emptyMetadata(), title, artist: "Q", composers: [],
   writers: [{ name: "", legalName: "Ann Lee", role: "Author/Composer", pro: "ASCAP", ipi: "00123456789", percentage: "50" }, { name: "", legalName: "Bo Ray", role: "Composer", pro: "BMI", ipi: "", percentage: "50" }],
@@ -50,6 +50,29 @@ describe("agency lists", () => {
     const found = [...r.matched, ...r.differences];
     expect(found).toHaveLength(1);
     expect(found[0]!.work?.iswc).toBe("T2222222222");
+  });
+
+  it("ignores a version the catalog names and the agency never registers", () => {
+    // The founder's own titles, against a BMI list that registers the plain work (2026-11-12).
+    const works = readWorks(parseDelimited("Title,Writer,Share\nQuit Playing With Me,Lee Ann,100\nBloodline,Lee Ann,100"));
+    const r = compareList(works, [
+      track("dirty", "Quit Playing With Me - Dirty Version"),
+      track("inst", "Quit Playing With Me - Official Instrumental"),
+      track("clean", "Bloodline (Clean Version)"),
+    ]);
+    // Every version is the same work on their list, so it is a difference to settle — never a new song to add.
+    expect(r.notListed).toEqual([]);
+    expect(r.extra).toEqual([]);
+    expect([...r.matched, ...r.differences].map((m) => m.trackId).sort()).toEqual(["clean", "dirty", "inst"]);
+  });
+
+  it("only drops a short version tail, never part of the title itself", () => {
+    // A bracket that doesn't name a version is kept, so the looser pass can't swallow a real title.
+    expect(titleCore("Song (Part 2)")).not.toBe(titleCore("Song"));
+    expect(titleCore("Live and Learn")).toBe(titleCore("Live and Learn"));
+    expect(titleCore("Song: Radio Edit")).toBe(titleCore("Song"));
+    expect(titleCore("Song - Sped Up")).toBe(titleCore("Song"));
+    expect(titleCore("Live and Learn")).toBe(titleCore("Live and Learn"));
   });
 
   it("reads the list's own gaps without needing a catalog", () => {

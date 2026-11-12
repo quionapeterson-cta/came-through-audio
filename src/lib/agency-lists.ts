@@ -182,10 +182,37 @@ export function readWorks(rows: string[][]): ListWork[] {
 
 export const loose = (s: string) => norm(s.replace(/\(.*?\)|\[.*?\]/g, "").replace(/\b(feat|ft)\.?\b.*$/i, ""));
 
-/** Every work on the list with this title, exactly first, then loosely (a remix or a feature in brackets still counts). */
+/**
+ * Words that name a version of a recording rather than another work: "Dirty", "Official Instrumental", "Radio Edit".
+ * A registration names the composition and never carries them.
+ */
+const VERSION_WORDS = /\b(clean|dirty|explicit|censored|acapella|a cappella|instrumental|inst|radio|edit|remix|mix|live|acoustic|sped|slowed|chopped|screwed|extended|deluxe|demo|version|official|master|mono|stereo)\b/i;
+
+/**
+ * The title with any version tail dropped (founder, 2026-11-12): the catalog holds "Quit Playing With Me - Dirty
+ * Version" while BMI registers "Quit Playing With Me", and comparing them word for word made one song look like a work
+ * nobody had catalogued — which is how a fill added a second entry for a song already there. Only a tail the title
+ * separates, and only when it reads like a version, is dropped: "Song (Part 2)" is another work, not another version.
+ */
+export function titleCore(title: string): string {
+  // A trailing bracket counts only when it names a version; anything else stays part of the title.
+  let core = title.replace(/\s*[([{]([^)\]}]*)[)\]}]\s*$/, (whole: string, inner: string) => (VERSION_WORDS.test(inner) ? " " : whole));
+  // "Song: Radio Edit" has no space before its colon, "Part 2: The Return" has one — the version words decide, not the spacing.
+  const parts = core.split(/\s*[-–—:]\s+/);
+  if (parts.length > 1 && VERSION_WORDS.test(parts.slice(1).join(" "))) core = parts[0]!;
+  return norm(core);
+}
+
+/**
+ * Every work on the list with this title: exactly first, then loosely (a feature or remix in brackets), then without a
+ * version tail — the version the catalog names and the agency never registers.
+ */
 export function titledWorks(works: ListWork[], title: string): ListWork[] {
   const exact = works.filter((w) => w.title && norm(w.title) === norm(title));
-  return exact.length ? exact : works.filter((w) => w.title && loose(w.title) === loose(title));
+  if (exact.length) return exact;
+  const looseHits = works.filter((w) => w.title && loose(w.title) === loose(title));
+  if (looseHits.length) return looseHits;
+  return works.filter((w) => w.title && titleCore(w.title) === titleCore(title));
 }
 
 /**
