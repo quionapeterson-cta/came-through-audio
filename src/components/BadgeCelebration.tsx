@@ -20,7 +20,7 @@ const reducedMotion = () => typeof window !== "undefined" && !!window.matchMedia
  * then about 45 badges rain down for ~5 seconds with depth, sway and gold sparkles, and a replay button appears.
  * Reduced motion: no rain or burst, just one gentle shine.
  */
-export function CelebrationStage({ src, name, round, float }: { src: string; name?: string | undefined; round?: boolean | undefined; float?: boolean | undefined }) {
+export function CelebrationStage({ src, name, round, float, replay = true }: { src: string; name?: string | undefined; round?: boolean | undefined; float?: boolean | undefined; replay?: boolean | undefined }) {
   const [run, setRun] = useState(0);
   // This only decides when the replay button can be clicked: the button pops in on its own animation (below), so its
   // appearance never waits on a re-render or a pointer being over it (founder, 2026-11-10: the label stayed invisible
@@ -48,7 +48,7 @@ export function CelebrationStage({ src, name, round, float }: { src: string; nam
             animation: "badge-shine 1.1s ease-in-out 0.35s both" }} />
       </div>
       {name && <figcaption className="text-2xl font-bold tracking-tight text-white">{name}</figcaption>}
-      {!still && <Button key={`again-${run}`} type="button" variant="outline" onClick={() => setRun((r) => r + 1)}
+      {!still && replay && <Button key={`again-${run}`} type="button" variant="outline" onClick={() => setRun((r) => r + 1)}
         aria-hidden={!ready} tabIndex={ready ? 0 : -1} style={{ animation: "badge-pop 0.45s ease-out 5s both" }}
         className={ready ? "" : "pointer-events-none"}>🎉 Make it rain again</Button>}
     </figure>

@@ -176,7 +176,9 @@ function UnlockPopup({ state, artist, more, onNext, share, eagle }: { state: Bad
           </ul>
         </section> : <div className={`grid w-full gap-6 md:items-start md:gap-8 ${share ? "md:grid-cols-2" : ""}`}>
           <div className="space-y-4">
-            <CelebrationStage src={src} name={badge.title} float />
+            {/* The award celebration keeps the rain without its "Make it rain again" button (founder, 2026-11-11): the
+                replay label sat under the badge and read as an instruction; a badge opened from the profile still has it. */}
+            <CelebrationStage src={src} name={badge.title} float replay={false} />
             {/* The badge, then its message, then the way on (founder, 2026-11-10): the award celebration is the same
                 celebration a badge opens from the profile, so the card sits to the right of the badge and Keep going
                 stays straight under the description. */}
