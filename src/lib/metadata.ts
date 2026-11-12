@@ -8,11 +8,16 @@ export const PROS = [
 ] as const;
 export const RELEASE_TYPES = ["Single", "EP", "Album", "Compilation"] as const;
 /**
- * The versions of one recording a member can mark a song as (founder, 2026-11-10): the radio edit, the clean cut, the
- * instrumental, the acapella, a sped-up mix, a chopped and screwed mix. Written into the file as its subtitle (ID3 TIT3)
- * and kept in the catalog, so a song and its versions never look like the same recording.
+ * The versions of one recording a member can mark a song as (founder, 2026-11-10, widened 2026-11-13): the radio edit,
+ * the clean cut, the instrumental, the acapella, a sped-up mix, a chopped and screwed mix, and the rest of the usual
+ * release versions — remastered, remix, extended, live, acoustic, demo, deluxe, club and dub mixes, slowed,
+ * re-recorded, unplugged, cover, reprise. Written into the file as its subtitle (ID3 TIT3) and kept in the catalog, so
+ * a song and its versions never look like the same recording. These are the suggestions: the field takes anything a
+ * release is called in the wild, because no list is complete.
  */
-export const TRACK_VERSIONS = ["Radio edit", "Clean", "Dirty", "Instrumental", "Acapella", "Sped up", "Chopped and Screwed"] as const;
+export const TRACK_VERSIONS = ["Radio edit", "Clean", "Dirty", "Instrumental", "Acapella", "Sped up", "Chopped and Screwed",
+  "Remastered", "Remix", "Extended mix", "Live", "Acoustic", "Unplugged", "Demo", "Deluxe", "Club mix", "Dub mix",
+  "Slowed", "Re-recorded", "Cover", "Reprise"] as const;
 /**
  * Main genres with their subgenres (founder, 2026-10-27: a much longer list). The main genres are the original list,
  * so saved songs and genre badges keep working; a subgenre counts as its main genre for badges, hashtags and agency

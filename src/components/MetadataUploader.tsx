@@ -798,8 +798,13 @@ export function MetadataUploader({ onShareInfo, userId, mode = "embed", readOnly
             <FormSection title="Release" open={!full} disabled={busy} summary={filled([[metadata.releaseType, metadata.releaseType], [metadata.album, metadata.album], [metadata.releaseDate, metadata.releaseDate], [metadata.label, metadata.label]]) || (full ? "Release type, album, date, label" : "Release type, label, ©")}>
               <div className="grid gap-5 sm:grid-cols-2">
                 <SelectField label="Release type" term="releaseType" id="releaseType" value={metadata.releaseType} options={RELEASE_TYPES} onChange={(value) => update("releaseType", value)} />
-                {/* Which version of the recording this is. A plain select, so it adds no clutter: "Select…" is the main mix. */}
-                <SelectField label="Version" id="version" value={metadata.version ?? ""} options={TRACK_VERSIONS} onChange={(value) => update("version", value)} />
+                {/* Which version of the recording this is: the usual ones are suggested, and a release called something
+                    else can be typed, so no list has to be complete. A blank field is the main mix. */}
+                <div className="min-w-0 space-y-1.5">
+                  <Label htmlFor="version">Version</Label>
+                  <Input id="version" list="track-versions" autoComplete="off" value={metadata.version ?? ""} placeholder="Leave blank for the main mix" onChange={(e) => update("version", e.target.value)} />
+                  <datalist id="track-versions">{TRACK_VERSIONS.map((v) => <option key={v} value={v} />)}</datalist>
+                </div>
                 <div className="min-w-0 space-y-2">
                   <Label htmlFor="trackNumber">Track number</Label>
                   <div className="flex items-center gap-3">
@@ -827,7 +832,7 @@ export function MetadataUploader({ onShareInfo, userId, mode = "embed", readOnly
                 {/* The release's own version and catalog number: SoundExchange's release columns, and the Release panel writes
                     them to every song on the release. Catalog-only, never embedded. */}
                 {full && <>
-                  <Field label="Release version" id="releaseVersion" value={metadata.releaseVersion} placeholder="Deluxe, Remastered" onChange={(value) => update("releaseVersion", value)} />
+                  <Field label="Release version" id="releaseVersion" list="track-versions" value={metadata.releaseVersion} placeholder="Deluxe, Remastered" onChange={(value) => update("releaseVersion", value)} />
                   <Field label="Catalog #" id="catalogNumber" value={metadata.catalogNumber} placeholder="Your label's number" onChange={(value) => update("catalogNumber", value)} />
                 </>}
                 <div className="min-w-0 space-y-2"><Label htmlFor="copyright" className="leading-5">Composition copyright (©)<InfoTip term="cLine" /></Label><CopyrightInput symbol="©" id="copyright" value={metadata.copyright} onChange={(value) => update("copyright", value)} /></div>
