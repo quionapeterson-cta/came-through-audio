@@ -146,6 +146,17 @@ const metadataObject = z.object({
   /** Where and when the recording was made, for neighbouring rights (international airplay). Kept in the catalog, never embedded. */
   recordedIn: z.string().trim().default(""),
   recordedYear: z.string().trim().default("").refine((v) => !v || /^\d{4}$/.test(v), "Enter a 4-digit year."),
+  /**
+   * The country and territory answers SoundExchange asks for that the song itself doesn't carry (founder, 2026-11-12).
+   * Catalog-only and never embedded: they exist so an agency filing is complete. Each one is also an Embed/Catalog
+   * default, because for almost every artist the answer is the same on every song — see PROFILE_KEYS.
+   */
+  masteredIn: z.string().trim().default(""),
+  ownerNationality: z.string().trim().default(""),
+  firstReleaseCountry: z.string().trim().default(""),
+  releaseCountry: z.string().trim().default(""),
+  /** SoundExchange's "Non-US Territories of Collection Rights"; blank means the US only, which is its default. */
+  collectionTerritories: z.string().trim().default(""),
   /** Registration details (PRO, MLC, SoundExchange forms). Kept in the catalog, never embedded. */
   alternateTitles: z.array(z.string().trim()).default([""]),
   selfPublished: z.boolean().default(false),
@@ -210,7 +221,7 @@ export const emptyMetadata = (): Metadata => ({
   title: "", trackNumber: "", trackTotal: "", artist: "", featured: [""], album: "", duration: "", releaseType: "", version: "", releaseDate: "", unreleased: false, wasUnreleased: false, recordingSide: "", beatState: "", beatMasterId: "", dealType: "", dealDate: "", dealStreams: "", dealContract: "", label: "", contactEmail: "", copyright: "", phonographic: "", language: "",
   isrc: "", retiredIscrs: [], upc: "", iswc: "", iswcPending: false, iswcCheckOn: "", explicit: false, instrumental: false, primaryGenre: "", secondaryGenre: "",
   writers: [emptyContributor()], composers: [emptyContributor()], producers: [emptyContributor()], publishers: [emptyContributor()],
-  lyrics: "", coverThumb: "", audioPath: "", artPath: "", artWidth: 0, artHeight: 0, aiProtection: false, credits: [], recordedIn: "", recordedYear: "",
+  lyrics: "", coverThumb: "", audioPath: "", artPath: "", artWidth: 0, artHeight: 0, aiProtection: false, credits: [], recordedIn: "", recordedYear: "", masteredIn: "", ownerNationality: "", firstReleaseCountry: "", releaseCountry: "", collectionTerritories: "",
   alternateTitles: [""], selfPublished: false, bmiWriterPublishing: false, samples: "", sampleTitle: "", sampleWriters: "", sampleSource: "", writtenFor: "", productionTitle: "",
   masterShare: "100", masterBasis: "Copyright Owner", rightsStart: "", rightsEnd: "",
 });

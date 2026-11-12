@@ -105,3 +105,15 @@ describe("nothing the catalog knows is left behind", () => {
     expect(writer[14]).toBe("No");
   });
 });
+
+describe("the country and territory answers", () => {
+  it("SoundExchange receives all five, in their own columns", () => {
+    const row = soundExchangeRows([track({ masteredIn: "United States", ownerNationality: "United States", firstReleaseCountry: "Worldwide", releaseCountry: "Worldwide", collectionTerritories: "Canada; Mexico" })])[0]!;
+    expect(row[7]).toBe("Canada; Mexico"); // Non-US Territories of Collection Rights
+    expect(row[13]).toBe("United States"); // Country of Mastering
+    expect(row[14]).toBe("United States"); // Copyright Owner Country of Nationality
+    expect(row[16]).toBe("Worldwide"); // Country/Countries of First Release
+    expect(row[27]).toBe("Worldwide"); // Country of Release
+    expect(row[12]).toBe(""); // country of recording is its own answer, untouched
+  });
+});

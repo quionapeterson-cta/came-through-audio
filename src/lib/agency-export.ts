@@ -106,15 +106,15 @@ export function soundExchangeRows(tracks: CatalogTrack[]): (string | number | Da
     const label = m.label || m.artist;
     return [
       artistCredit(m.artist, m.featured), m.title, m.isrc.replace(/-/g, "").toUpperCase(), m.masterBasis || "Copyright Owner",
-      Number(m.masterShare || 100) / 100, sheetDate(m.rightsStart ?? ""), sheetDate(m.rightsEnd ?? ""), "",
+      Number(m.masterShare || 100) / 100, sheetDate(m.rightsStart ?? ""), sheetDate(m.rightsEnd ?? ""), m.collectionTerritories,
       // "Recording Version, if applicable" (live, remix, sped up): the catalog keeps it apart from the title.
       m.version,
       // Duration, then SoundExchange's main genre ("Trap" goes as Hip-Hop/Rap); the recording date stays blank because
       // the catalog only knows a year, and MM/DD/YYYY can't be made from one honestly.
-      hms(m.duration), m.primaryGenre ? parentGenre(m.primaryGenre) : "", "", m.recordedIn, "", "", formDate(m.releaseDate), "",
+      hms(m.duration), m.primaryGenre ? parentGenre(m.primaryGenre) : "", "", m.recordedIn, m.masteredIn, m.ownerNationality, formDate(m.releaseDate), m.firstReleaseCountry,
       pLine(m.phonographic) || (year && label ? `${year} ${label}` : ""), m.iswc.replace(/[.\s-]/g, "").toUpperCase(),
       registrationWriters(m).map((c) => c.name).join("; "), named(m.publishers).map((p) => p.name).join("; "),
-      m.artist, m.album || m.title, "", m.upc, "", formDate(m.releaseDate), "", label,
+      m.artist, m.album || m.title, "", m.upc, "", formDate(m.releaseDate), m.releaseCountry, label,
     ];
   });
 }

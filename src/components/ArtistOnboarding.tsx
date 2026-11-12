@@ -338,6 +338,13 @@ export function ArtistOnboarding({ userId, open, onOpenChange, onSaved, firstRun
               <Field label="Secondary Genre (optional)"><Pick value={p.secondaryGenre ?? ""} options={GENRES} groups={GENRE_GROUPS} onChange={(v) => set("secondaryGenre", v)} /></Field>
               <Field label="Default Language"><Input value={p.language ?? ""} onChange={(e) => set("language", e.target.value)} /></Field>
               <Field label="Usually recorded in" term="neighbouringRights"><Input value={p.recordedIn ?? ""} placeholder="United States" onChange={(e) => set("recordedIn", e.target.value)} /></Field>
+              {/* The answers SoundExchange asks for that the song doesn't carry (founder, 2026-11-12): the same on nearly
+                  every song, so they are typed once and filled into each song's blanks. Never embedded. */}
+              <Field label="Mastered in (country)"><Input value={p.masteredIn ?? ""} placeholder="United States" onChange={(e) => set("masteredIn", e.target.value)} /></Field>
+              <Field label="Copyright owner's country"><Input value={p.ownerNationality ?? ""} placeholder="United States" onChange={(e) => set("ownerNationality", e.target.value)} /></Field>
+              <Field label="Country of first release"><Input value={p.firstReleaseCountry ?? ""} placeholder="Worldwide" onChange={(e) => set("firstReleaseCountry", e.target.value)} /></Field>
+              <Field label="Country of release"><Input value={p.releaseCountry ?? ""} placeholder="Worldwide" onChange={(e) => set("releaseCountry", e.target.value)} /></Field>
+              <Field label="Non-US collection territories"><Input value={p.collectionTerritories ?? ""} placeholder="Blank means the US only" onChange={(e) => set("collectionTerritories", e.target.value)} /></Field>
               <Field label="Default Release Type" term="releaseType"><Pick value={p.releaseType ?? ""} options={RELEASE_TYPES} empty="Ask each time" onChange={(v) => set("releaseType", v)} /></Field>
               <label className="flex items-center gap-2 text-sm sm:col-span-2"><input type="checkbox" className="h-4 w-4 accent-[var(--primary)]" checked={!!p.explicit} onChange={(e) => set("explicit", e.target.checked)} />My songs are usually Explicit (you can change this per song)<InfoTip term="explicit" /></label>
             </Group>

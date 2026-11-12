@@ -20,6 +20,11 @@ export type Propagation = {
 };
 
 const ROW_GROUPS = ["writers", "composers", "producers", "publishers"] as const;
+/**
+ * The five agency answers a profile holds (founder, 2026-11-12). A song that is blank takes the profile's answer; a song
+ * that already names a different country keeps it, because that is the song's own record and not a mistake to correct.
+ */
+export const COUNTRY_DEFAULTS = ["masteredIn", "ownerNationality", "firstReleaseCountry", "releaseCountry", "collectionTerritories"] as const;
 const CODES = ["pro", "ipi"] as const;
 
 const nameOf = (r: Contributor) => creditName(r).trim().toLowerCase();
@@ -52,6 +57,9 @@ export function propagationPlan(profile: ArtistProfile | null, songs: SongLike[]
         }
       }
     }
+    for (const key of COUNTRY_DEFAULTS) {
+      if (!(song.metadata[key] ?? "").trim() && (profile[key] ?? "").trim()) fills = true;
+    }
     if (fills) fill.push({ id: song.id, title: song.metadata.title || "Untitled" });
     if (corrections.length) change.push({ id: song.id, title: song.metadata.title || "Untitled", what: corrections.join("; ") });
   }
@@ -74,6 +82,10 @@ export function propagated(m: Metadata, profile: ArtistProfile): Metadata {
       if (!pro && !ipi) return row;
       return { ...row, pro: pro || row.pro, ipi: ipi || row.ipi };
     });
+  }
+  for (const key of COUNTRY_DEFAULTS) {
+    const want = (profile[key] ?? "").trim();
+    if (want && !(out[key] ?? "").trim()) out[key] = want;
   }
   return out;
 }

@@ -953,6 +953,24 @@ export function MetadataUploader({ onShareInfo, userId, mode = "embed", readOnly
               <InfoTip title="Pre-Distribution Note" text={`${PRE_DIST_NOTE} ⭐ Pro Tip: ${PRO_TIP}`} className="inline-flex items-center rounded-full border border-primary px-3 py-1 text-sm font-semibold text-primary">💡 Pre-Distribution Note</InfoTip>
             </FormSection>
 
+            {/* The agency answers the song itself doesn't carry (founder, 2026-11-12). Catalog-only, never embedded:
+                they exist so a SoundExchange filing is complete, and they arrive filled from the catalog defaults. */}
+            {full && (
+              <FormSection title="Agency answers" disabled={busy}
+                summary={filled([["countries", metadata.releaseCountry || metadata.firstReleaseCountry], ["territories", metadata.collectionTerritories]]) || "Not set yet"}>
+                <div className="grid gap-5 sm:grid-cols-2">
+                  <Field label="Mastered in (country)" id="masteredIn" value={metadata.masteredIn} placeholder="United States" onChange={(v) => update("masteredIn", v)} />
+                  <Field label="Copyright owner's country" id="ownerNationality" value={metadata.ownerNationality} placeholder="United States" onChange={(v) => update("ownerNationality", v)} />
+                  <Field label="Country of first release" id="firstReleaseCountry" value={metadata.firstReleaseCountry} placeholder="Worldwide" onChange={(v) => update("firstReleaseCountry", v)} />
+                  <Field label="Country of release" id="releaseCountry" value={metadata.releaseCountry} placeholder="Worldwide" onChange={(v) => update("releaseCountry", v)} />
+                  <Field label="Non-US collection territories" id="collectionTerritories" value={metadata.collectionTerritories} placeholder="Blank means the US only" onChange={(v) => update("collectionTerritories", v)} />
+                </div>
+                <p className="mt-3 text-xs text-muted-foreground">
+                  SoundExchange asks for these on its ISRC ingest. They are never embedded in a master — set them once in Embed Defaults → Catalog Profile and each new song arrives with them.
+                </p>
+              </FormSection>
+            )}
+
             <FormSection title="Lyrics" open={!full} disabled={busy} summary={metadata.lyrics.trim() ? "Added" : "None yet"}>
               <textarea id="lyrics" aria-label="Lyrics" rows={6} value={metadata.lyrics} onChange={(e) => update("lyrics", e.target.value)} placeholder="Paste your lyrics" className="w-full rounded-md border border-input bg-background p-3 text-sm" />
             </FormSection>

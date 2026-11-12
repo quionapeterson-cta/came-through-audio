@@ -10,6 +10,9 @@ export const PROFILE_KEYS = [
   "writers", "composers", "producers", "publishers", "selfPublished", "bmiWriterPublishing", "recordedIn",
   // Usual answers that aren't song-specific (founder, 2026-10-25): they fill blanks only, never what a song already has.
   "samples", "writtenFor", "masterShare", "masterBasis", "credits",
+  // The country and territory answers SoundExchange asks for (founder, 2026-11-12): the same on nearly every song, so
+  // they are typed once here and filled into a song's blanks. They never join the meter's twelve checks.
+  "masteredIn", "ownerNationality", "firstReleaseCountry", "releaseCountry", "collectionTerritories",
 ] as const;
 export type ArtistProfile = Partial<Pick<Metadata, (typeof PROFILE_KEYS)[number]>>;
 

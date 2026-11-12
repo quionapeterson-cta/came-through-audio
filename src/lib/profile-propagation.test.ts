@@ -52,3 +52,27 @@ describe("carrying a profile correction through the catalog", () => {
     expect(out.writers[0]!.legalName).toBe("Someone Else");
   });
 });
+
+describe("the five agency answers", () => {
+  const defaults: ArtistProfile = { masteredIn: "United States", ownerNationality: "United States", firstReleaseCountry: "Worldwide", releaseCountry: "Worldwide", collectionTerritories: "Canada; Mexico" };
+
+  it("counts a song that is blank as one to fill", () => {
+    const plan = propagationPlan(defaults, [song("Blank", {})]);
+    expect(plan.fill.map((s) => s.title)).toEqual(["Blank"]);
+  });
+
+  it("fills only blanks, so a song's own country stays its own", () => {
+    const own = song("Jamaica take", { masteredIn: "Jamaica", releaseCountry: "Jamaica", ownerNationality: "Jamaica", firstReleaseCountry: "Jamaica", collectionTerritories: "US only" });
+    expect(propagationPlan(defaults, [own]).total).toBe(0);
+    const kept = propagated(own.metadata, defaults);
+    expect(kept.releaseCountry).toBe("Jamaica");
+    expect(kept.collectionTerritories).toBe("US only");
+  });
+
+  it("carries the profile's answer into a blank song and nothing else", () => {
+    const filled = propagated(song("Blank", {}).metadata, defaults);
+    expect(filled.masteredIn).toBe("United States");
+    expect(filled.releaseCountry).toBe("Worldwide");
+    expect(filled.collectionTerritories).toBe("Canada; Mexico");
+  });
+});
