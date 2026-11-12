@@ -200,7 +200,14 @@ export async function setReleaseArtwork(
   await write(first, source);
   for (const t of rest) {
     const to = `${userId}/${t.id}/artwork.${ext}`;
-    const { error } = await supabase.storage.from(BUCKET).copy(source, to);
+    let { error } = await supabase.storage.from(BUCKET).copy(source, to);
+    // `copy` has no upsert and refuses a destination that already exists, which is every song that had this cover
+    // before or caught a leftover from an interrupted run — the exact case a member hits when a release's art looks
+    // "already set" but the songs show none. The stale object goes and the copy is made once more (founder, 2026-11-12).
+    if (error) {
+      await supabase.storage.from(BUCKET).remove([to]);
+      ({ error } = await supabase.storage.from(BUCKET).copy(source, to));
+    }
     if (error) {
       failed.push(`${t.title || "the untitled song"} (${error.message})`);
       continue;

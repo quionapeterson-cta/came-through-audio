@@ -14,6 +14,8 @@ const calls = vi.hoisted(() => ({
   // Two ways a song can refuse the cover, so a partly-covered release can be played through.
   failCopyFor: new Set<string>(),
   refuseSaveFor: new Set<string>(),
+  // Paths that already hold an object, the way a cover set before (or an interrupted run) leaves one behind.
+  existing: new Set<string>(),
 }));
 
 vi.mock("@/integrations/supabase/client", () => ({
@@ -28,10 +30,14 @@ vi.mock("@/integrations/supabase/client", () => ({
           calls.copies.push([from, to]);
           // `to` is <user>/<track id>/artwork.<ext>, so a test refuses one song's copy by its id.
           const id = to.split("/")[1] ?? "";
-          return { error: calls.failCopyFor.has(id) ? { message: "the copy was refused" } : null };
+          if (calls.failCopyFor.has(id)) return { error: { message: "the copy was refused" } };
+          // Like the real API: a destination that is already there is refused, not overwritten.
+          if (calls.existing.has(to)) return { error: { message: "The resource already exists" } };
+          return { error: null };
         },
         remove: async (paths: string[]) => {
           calls.removes.push(...paths);
+          paths.forEach((p) => calls.existing.delete(p));
           return { error: null };
         },
       }),
@@ -72,6 +78,7 @@ describe("setReleaseArtwork", () => {
     calls.updates.length = 0;
     calls.failCopyFor.clear();
     calls.refuseSaveFor.clear();
+    calls.existing.clear();
     calls.removes.length = 0;
   });
 
@@ -134,6 +141,20 @@ describe("setReleaseArtwork", () => {
     expect(songs).toBe(1);
     expect(failed).toEqual(["a (the database refused it)"]);
     expect(calls.updates.map((u) => u.id)).toEqual(["b"]);
+  });
+
+  it("replaces a song whose folder already holds this cover instead of refusing it", async () => {
+    // The reported bug: a cover set before leaves artwork.jpg in the folder, and copy() refuses to overwrite it, so
+    // every song but the first failed with "The resource already exists" while the release looked half-covered.
+    calls.existing.add("user-1/b/artwork.jpg");
+    const { songs, covers, failed } = await setReleaseArtwork([song("a"), song("b")], "user-1", cover());
+
+    expect(failed).toEqual([]);
+    expect(songs).toBe(2);
+    expect(covers.map((c) => c.id)).toEqual(["a", "b"]);
+    // The stale object was cleared first, then the copy was tried again and went through.
+    expect(calls.removes).toContain("user-1/b/artwork.jpg");
+    expect(calls.copies.filter(([, to]) => to === "user-1/b/artwork.jpg")).toHaveLength(2);
   });
 
   it("clears the other format's copy so a replaced cover leaves nothing behind", async () => {
