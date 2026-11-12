@@ -180,22 +180,40 @@ export function MetadataUploader({ onShareInfo, userId, mode = "embed", readOnly
       toast.error(e instanceof Error ? e.message : "Could not build the download. Try again in a moment.");
     } finally { setZipping(null); }
   };
-  const runExport = (a: Agency, list: CatalogTrack[], name: string) => {
+  /**
+   * The same songs, with the values the catalog holds right now (founder, 2026-11-12). The tab loads its list once, so a
+   * writer removed, a default applied or a country typed a moment ago used to be missing from the file that was built
+   * next. A song deleted since is left out rather than exported from the old copy; a failed read keeps the copy on
+   * screen, because losing the export is worse than exporting what the member is looking at.
+   */
+  const freshCatalog = async (list: CatalogTrack[]): Promise<CatalogTrack[]> => {
+    if (!userId) return list;
+    try {
+      const db = await listTracks(userId);
+      const byId = new Map(db.map((t) => [t.id, t]));
+      return list.map((t) => byId.get(t.id)).filter((t): t is CatalogTrack => !!t);
+    } catch {
+      return list;
+    }
+  };
+  const runExport = async (a: Agency, list: CatalogTrack[], name: string) => {
     if (!canExport) { setUpsell("export"); return; }
-    downloadAgencyExport(a, list, safeName(name))
-      .then((songs) => {
-        const sent = list.filter((t) => !songs.some((h) => h.track.id === t.id));
-        if (sent.length) { logBadgeEvent("agency_export"); void recordExports(a, sent.map((t) => t.id)).catch(() => {}); }
-        // The MLC: say which songs carry the placeholder publisher IPI, and what the file can't hold.
-        // Songs held back open their own "what to fix" box first; the upload steps show when nothing was held.
-        if (sent.length && !songs.length) setNextSteps({ agency: a, placeholders: a === "mlc" ? mlcPlaceholderSongs(sent) : [] });
-        if (songs.length) setHeld({ agency: a, songs, exported: list.length - songs.length });
-        // Splits that don't add up to 100% are exported anyway, with a heads-up: agencies reject them.
-        const off = list.filter((t) => !songs.some((h) => h.track.id === t.id) && registrationReadiness(t.metadata, a).warnings.length);
-        if (off.length) toast.warning(`${off.length === 1 ? `"${off[0]!.title}" has splits` : `${off.length} songs have splits`} that don't add up to exactly 100%. Agencies reject splits under or over 100%, so fix ${off.length === 1 ? "it" : "them"} before you submit.`, { duration: 10000 });
-      })
+    try {
+      const current = await freshCatalog(list);
+      const songs = await downloadAgencyExport(a, current, safeName(name));
+      const sent = current.filter((t) => !songs.some((h) => h.track.id === t.id));
+      if (sent.length) { logBadgeEvent("agency_export"); void recordExports(a, sent.map((t) => t.id)).catch(() => {}); }
+      // The MLC: say which songs carry the placeholder publisher IPI, and what the file can't hold.
+      // Songs held back open their own "what to fix" box first; the upload steps show when nothing was held.
+      if (sent.length && !songs.length) setNextSteps({ agency: a, placeholders: a === "mlc" ? mlcPlaceholderSongs(sent) : [] });
+      if (songs.length) setHeld({ agency: a, songs, exported: current.length - songs.length });
+      // Splits that don't add up to 100% are exported anyway, with a heads-up: agencies reject them.
+      const off = current.filter((t) => !songs.some((h) => h.track.id === t.id) && registrationReadiness(t.metadata, a).warnings.length);
+      if (off.length) toast.warning(`${off.length === 1 ? `"${off[0]!.title}" has splits` : `${off.length} songs have splits`} that don't add up to exactly 100%. Agencies reject splits under or over 100%, so fix ${off.length === 1 ? "it" : "them"} before you submit.`, { duration: 10000 });
+    } catch (e) {
       // Say what actually went wrong: a generic "could not build" hid every real failure from the person clicking.
-      .catch((e) => toast.error(e instanceof Error ? `Could not build the export: ${e.message}` : "Could not build the export."));
+      toast.error(e instanceof Error ? `Could not build the export: ${e.message}` : "Could not build the export.");
+    }
   };
   /** Performers on each recording for PPL / SoundExchange International. Songs need an ISRC to be matched. */
   const runPack = async (list: CatalogTrack[], name: string) => {
@@ -968,6 +986,15 @@ export function MetadataUploader({ onShareInfo, userId, mode = "embed", readOnly
                 <p className="mt-3 text-xs text-muted-foreground">
                   SoundExchange asks for these on its ISRC ingest. They are never embedded in a master — set them once in Embed Defaults → Catalog Profile and each new song arrives with them.
                 </p>
+                {(() => {
+                  // A hint, never a score (founder, 2026-11-12): blank answers don't hold back saving, exporting or the health meter.
+                  const blank = [
+                    ["mastered in country", metadata.masteredIn], ["copyright owner's country", metadata.ownerNationality],
+                    ["country of first release", metadata.firstReleaseCountry], ["country of release", metadata.releaseCountry],
+                    ["non-US territories", metadata.collectionTerritories],
+                  ].filter(([, v]) => !String(v).trim()).map(([label]) => label);
+                  return blank.length ? <p className="mt-1 text-xs text-muted-foreground">Still blank, and optional: {blank.join(", ")}.</p> : null;
+                })()}
               </FormSection>
             )}
 

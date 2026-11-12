@@ -311,7 +311,15 @@ export function RoyaltyHealthCheck({ userId, canCatalog, canExport, onUpgrade, o
     }
     if (!canExport) return onUpgrade();
     const catalogOnly = (tracks ?? []).filter((t) => !isInspectorSong(t.id));
-    const held = await downloadAgencyExport(a.agency, catalogOnly, a.agency === "pro" ? "PRO cheat sheet" : a.agency === "mlc" ? "MLC registration" : "SoundExchange registration");
+    // Read the catalog again as the file is built (founder, 2026-11-12): a default applied or a writer removed a moment
+    // ago belongs in the export, not in the copy this page loaded.
+    let current = catalogOnly;
+    try {
+      const byId = new Map((await listTracks()).map((t) => [t.id, t]));
+      const fresh = catalogOnly.map((t) => byId.get(t.id)).filter((t): t is CatalogTrack => !!t);
+      if (fresh.length) current = fresh;
+    } catch { /* the copy on screen */ }
+    const held = await downloadAgencyExport(a.agency, current, a.agency === "pro" ? "PRO cheat sheet" : a.agency === "mlc" ? "MLC registration" : "SoundExchange registration");
     if (held.length) toast.warning(`${held.length} song${held.length === 1 ? " was" : "s were"} left out until ${held.length === 1 ? "its" : "their"} writer details are complete.`);
   }
 
