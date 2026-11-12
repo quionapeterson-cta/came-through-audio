@@ -95,7 +95,8 @@ export function mlcRows(tracks: CatalogTrack[]): (string | number)[][] {
  * Rows for the official SoundExchange Direct ISRC Ingest "Form" sheet (29 columns), one row per recording.
  * Following its instructions: the claim comes from the song's Master ownership (100% is written as 1, the column is a
  * percent), begin/end dates stay blank for rights from inception in perpetuity, a self-released song uses the artist as
- * label, and anything we don't know (countries, recording date) stays blank rather than guessed.
+ * label, and anything we don't know (a country, the recording's full date, a catalog number) stays blank rather than
+ * guessed.
  *
  * Every column the catalog answers is filled (founder, 2026-11-12): the recording version and the country of recording
  * were there all along and were being dropped, which is what made a member's own ingest file look half-empty.
@@ -109,12 +110,12 @@ export function soundExchangeRows(tracks: CatalogTrack[]): (string | number | Da
       Number(m.masterShare || 100) / 100, sheetDate(m.rightsStart ?? ""), sheetDate(m.rightsEnd ?? ""), m.collectionTerritories,
       // "Recording Version, if applicable" (live, remix, sped up): the catalog keeps it apart from the title.
       m.version,
-      // Duration, then SoundExchange's main genre ("Trap" goes as Hip-Hop/Rap); the recording date stays blank because
-      // the catalog only knows a year, and MM/DD/YYYY can't be made from one honestly.
-      hms(m.duration), m.primaryGenre ? parentGenre(m.primaryGenre) : "", "", m.recordedIn, m.masteredIn, m.ownerNationality, formDate(m.releaseDate), m.firstReleaseCountry,
+      // Duration, then SoundExchange's main genre ("Trap" goes as Hip-Hop/Rap), then the recording date: blank unless a
+      // full day was entered, because a year alone can't be made into an honest MM/DD/YYYY.
+      hms(m.duration), m.primaryGenre ? parentGenre(m.primaryGenre) : "", formDate(m.recordingDate), m.recordedIn, m.masteredIn, m.ownerNationality, formDate(m.releaseDate), m.firstReleaseCountry,
       pLine(m.phonographic) || (year && label ? `${year} ${label}` : ""), m.iswc.replace(/[.\s-]/g, "").toUpperCase(),
       registrationWriters(m).map((c) => c.name).join("; "), named(m.publishers).map((p) => p.name).join("; "),
-      m.artist, m.album || m.title, "", m.upc, "", formDate(m.releaseDate), m.releaseCountry, label,
+      m.artist, m.album || m.title, m.releaseVersion, m.upc, m.catalogNumber, formDate(m.releaseDate), m.releaseCountry, label,
     ];
   });
 }

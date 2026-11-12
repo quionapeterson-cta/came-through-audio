@@ -130,6 +130,19 @@ export function ReleaseRow({ name, type, tracks, readOnly, onSave, onCover, comp
                 </div>
               </fieldset>
             </div>
+            {/* SoundExchange's own release columns (founder, 2026-11-12): the release's version and the label's catalog number. */}
+            <div className="grid gap-4 sm:grid-cols-2">
+              <label className="space-y-1.5 text-sm">
+                <span className="font-medium">Release version (optional)</span>
+                <Input value={draft.releaseVersion} aria-label="Release version" placeholder="Deluxe, Remastered"
+                  onChange={(e) => setDraft({ ...draft, releaseVersion: e.target.value })} />
+              </label>
+              <label className="space-y-1.5 text-sm">
+                <span className="font-medium">Catalog # (optional)</span>
+                <Input value={draft.catalogNumber} aria-label="Catalog number" placeholder="Your label's number"
+                  onChange={(e) => setDraft({ ...draft, catalogNumber: e.target.value })} />
+              </label>
+            </div>
             {!draft.status && <p className="rounded-md bg-muted p-2 text-xs">This release is partly out. Choose the status it should read for every song before saving.</p>}
             {error && <p role="alert" className="rounded-md border border-destructive/50 bg-destructive/10 p-2 text-sm">{error}</p>}
             <div className="flex justify-end gap-2">

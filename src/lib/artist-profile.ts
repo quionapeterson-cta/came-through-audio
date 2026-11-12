@@ -7,6 +7,9 @@ import type { AccountRole, Situation } from "@/lib/roles";
 /** Recurring details a user can opt to prefill on every embed. Stored only in this browser. */
 export const PROFILE_KEYS = [
   "artist", "label", "contactEmail", "primaryGenre", "secondaryGenre", "releaseType", "explicit", "copyright", "phonographic", "language",
+  // The release's own version and the label's catalog number (founder, 2026-11-12): typed once, filled into a new song's
+  // blanks, and still changed per release in the Release panel.
+  "releaseVersion", "catalogNumber",
   "writers", "composers", "producers", "publishers", "selfPublished", "bmiWriterPublishing", "recordedIn",
   // Usual answers that aren't song-specific (founder, 2026-10-25): they fill blanks only, never what a song already has.
   "samples", "writtenFor", "masterShare", "masterBasis", "credits",

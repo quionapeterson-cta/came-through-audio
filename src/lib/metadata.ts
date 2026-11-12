@@ -104,6 +104,10 @@ const metadataObject = z.object({
    *  release once sat unreleased before it was scheduled; a saved song keeps the flag whatever it says later. Catalog-only. */
   wasUnreleased: z.boolean().default(false),
   label: z.string().trim().default(""),
+  /** SoundExchange's "Release Version" (Deluxe, Remastered…): a release-level answer, like the album title. Catalog-only. */
+  releaseVersion: z.string().trim().default(""),
+  /** The label's own catalog number for the release (SoundExchange's "Catalog #"). Catalog-only. */
+  catalogNumber: z.string().trim().default(""),
   /** Optional contact email from Embed Defaults (founder, 2026-10-25), so whoever finds the file can reach the artist. Blank = not embedded. */
   contactEmail: z.string().trim().default("").refine((v) => !v || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v), "Enter a valid email address."),
   copyright: z.string().trim().default(""),
@@ -146,6 +150,11 @@ const metadataObject = z.object({
   /** Where and when the recording was made, for neighbouring rights (international airplay). Kept in the catalog, never embedded. */
   recordedIn: z.string().trim().default(""),
   recordedYear: z.string().trim().default("").refine((v) => !v || /^\d{4}$/.test(v), "Enter a 4-digit year."),
+  /**
+   * The day the recording was made (YYYY-MM-DD). SoundExchange's ingest asks for the full date, which a year alone can't
+   * answer honestly; recordedYear stays for the sheets that only want a year. Catalog-only, never embedded.
+   */
+  recordingDate: z.string().default(""),
   /**
    * The country and territory answers SoundExchange asks for that the song itself doesn't carry (founder, 2026-11-12).
    * Catalog-only and never embedded: they exist so an agency filing is complete. Each one is also an Embed/Catalog
@@ -218,10 +227,10 @@ export function isoDate(value: string | undefined): string {
 }
 
 export const emptyMetadata = (): Metadata => ({
-  title: "", trackNumber: "", trackTotal: "", artist: "", featured: [""], album: "", duration: "", releaseType: "", version: "", releaseDate: "", unreleased: false, wasUnreleased: false, recordingSide: "", beatState: "", beatMasterId: "", dealType: "", dealDate: "", dealStreams: "", dealContract: "", label: "", contactEmail: "", copyright: "", phonographic: "", language: "",
+  title: "", trackNumber: "", trackTotal: "", artist: "", featured: [""], album: "", duration: "", releaseType: "", version: "", releaseDate: "", unreleased: false, wasUnreleased: false, recordingSide: "", beatState: "", beatMasterId: "", dealType: "", dealDate: "", dealStreams: "", dealContract: "", label: "", releaseVersion: "", catalogNumber: "", contactEmail: "", copyright: "", phonographic: "", language: "",
   isrc: "", retiredIscrs: [], upc: "", iswc: "", iswcPending: false, iswcCheckOn: "", explicit: false, instrumental: false, primaryGenre: "", secondaryGenre: "",
   writers: [emptyContributor()], composers: [emptyContributor()], producers: [emptyContributor()], publishers: [emptyContributor()],
-  lyrics: "", coverThumb: "", audioPath: "", artPath: "", artWidth: 0, artHeight: 0, aiProtection: false, credits: [], recordedIn: "", recordedYear: "", masteredIn: "", ownerNationality: "", firstReleaseCountry: "", releaseCountry: "", collectionTerritories: "",
+  lyrics: "", coverThumb: "", audioPath: "", artPath: "", artWidth: 0, artHeight: 0, aiProtection: false, credits: [], recordedIn: "", recordedYear: "", recordingDate: "", masteredIn: "", ownerNationality: "", firstReleaseCountry: "", releaseCountry: "", collectionTerritories: "",
   alternateTitles: [""], selfPublished: false, bmiWriterPublishing: false, samples: "", sampleTitle: "", sampleWriters: "", sampleSource: "", writtenFor: "", productionTitle: "",
   masterShare: "100", masterBasis: "Copyright Owner", rightsStart: "", rightsEnd: "",
 });

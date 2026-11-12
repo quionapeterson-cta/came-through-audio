@@ -56,13 +56,13 @@ export const BLUEPRINT_GUIDES: Guide[] = [
     summary: "Fill your details in once, so every master you embed starts with your credits already in place. PRO affiliations, IPI numbers, splits and registration details stay in your catalog: they are never written into your music files.",
     steps: [
       s("Artist, label and contact", "Open Profile → Edit profile. These are the same three steps setup asks for the first time you sign in, and you can change any of them whenever your details do. Your primary artist or stage name is what every embed credits. Add your label name if you release under one, the contact email you want inside the file, and who usually produces, if that's always the same person."),
-      s("Release details", "Pick your primary genre (and a secondary one if you use one), the language you usually record in, the country it's usually recorded in, your usual release type, and whether your songs are usually Explicit. Each song can still change these."),
+      s("Release details", "Pick your primary genre (and a secondary one if you use one), the language you usually record in, the country it's usually recorded in, your usual release type, and whether your songs are usually Explicit. Add a release version (Deluxe, Remastered) and your label's catalog number if you use them: SoundExchange's ingest asks for both, and the Release panel can still change them for one release at a time. Each song can change these too."),
       s("Registration answers", "Say whether your songs usually use a sample and whether they're usually written for film, TV, stage or an ad. Those are the two questions BMI asks, so answering them once saves the same answer on every song."),
       s("Master and copyright lines", "Set the share of the master you usually own and how you hold it, then your © (composition) and ℗ (sound recording) lines: the year, then the owner's name."),
       s("Add your regulars", "List the session players, backup vocalists and engineers who are on most of your songs, so neighbouring-rights registration has them ready."),
     ],
-    checklist: ["Artist name and label", "Contact email to embed", "Genre, language and recorded-in", "Usual release type and Explicit", "Samples and written-for answered", "Master share and basis", "© and ℗ lines", "Regular performers and crew"],
-    stepOf: [0, 0, 1, 1, 2, 3, 3, 4],
+    checklist: ["Artist name and label", "Contact email to embed", "Genre, language and recorded-in", "Usual release type and Explicit", "Release version and catalog #", "Samples and written-for answered", "Master share and basis", "© and ℗ lines", "Regular performers and crew"],
+    stepOf: [0, 0, 1, 1, 1, 2, 3, 3, 4],
   },
   {
     id: "catalog-defaults", kind: "Blueprint", title: "Build Your Catalog Defaults",

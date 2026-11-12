@@ -117,3 +117,16 @@ describe("the country and territory answers", () => {
     expect(row[12]).toBe(""); // country of recording is its own answer, untouched
   });
 });
+
+describe("the recording and release answers", () => {
+  it("SoundExchange receives the recording date, the release version and the catalog number", () => {
+    const row = soundExchangeRows([track({ recordingDate: "2024-03-09", releaseVersion: "Deluxe", catalogNumber: "CTA-004" })])[0]!;
+    expect(row[11]).toEqual(new Date(Date.UTC(2024, 2, 9))); // Recording Date
+    expect(row[23]).toBe("Deluxe"); // Release Version
+    expect(row[25]).toBe("CTA-004"); // Catalog #
+  });
+  it("a year alone never becomes a recording date", () => {
+    const row = soundExchangeRows([track({ recordedYear: "2016" })])[0]!;
+    expect(row[11]).toBe(""); // Recording Date stays blank rather than guessed from the year
+  });
+});

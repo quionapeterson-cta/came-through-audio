@@ -30,18 +30,27 @@ describe("release status", () => {
   });
   it("opens the dialog on the group's own fields", () => {
     expect(releaseDraft([song({ releaseType: "EP", album: "Bloom", releaseDate: "2027-03-01" })]))
-      .toEqual({ releaseType: "EP", album: "Bloom", releaseDate: "2027-03-01", status: "scheduled" });
+      .toEqual({ releaseType: "EP", album: "Bloom", releaseDate: "2027-03-01", releaseVersion: "", catalogNumber: "", status: "scheduled" });
   });
 });
 
 describe("the Release panel's answer", () => {
   it("sets the date and the box together, so the status can't contradict the fields", () => {
     expect(patched({ releaseType: "EP", album: "Bloom", releaseDate: "2027-03-01", status: "scheduled" }))
-      .toEqual({ releaseType: "EP", album: "Bloom", releaseDate: "2027-03-01", unreleased: false });
+      .toEqual({ releaseType: "EP", album: "Bloom", releaseDate: "2027-03-01", unreleased: false, releaseVersion: "", catalogNumber: "" });
     expect(patched({ releaseType: "Single", album: "", releaseDate: "", status: "unreleased" }))
-      .toEqual({ releaseType: "Single", album: "", releaseDate: "", unreleased: true });
+      .toEqual({ releaseType: "Single", album: "", releaseDate: "", unreleased: true, releaseVersion: "", catalogNumber: "" });
     expect(patched({ releaseType: "Single", album: "", releaseDate: "2026-10-01", status: "released" }))
-      .toEqual({ releaseType: "Single", album: "", releaseDate: "2026-10-01", unreleased: false });
+      .toEqual({ releaseType: "Single", album: "", releaseDate: "2026-10-01", unreleased: false, releaseVersion: "", catalogNumber: "" });
+  });
+  it("carries the release's own version and catalog number to every song", () => {
+    const draft = releaseDraft([song({ releaseVersion: "Deluxe", catalogNumber: "CTA-004" })]);
+    expect(draft.releaseVersion).toBe("Deluxe");
+    const patch = patched({ ...draft, status: "released" });
+    expect(patch.releaseVersion).toBe("Deluxe");
+    expect(patch.catalogNumber).toBe("CTA-004");
+    // The dialog opens on the group's own values, so Save can never blank them by accident.
+    expect(releaseDraft([song()])).toMatchObject({ releaseVersion: "", catalogNumber: "" });
   });
   it("refuses an answer the fields would contradict, in plain words", () => {
     expect(refused({ releaseType: "Single", album: "", releaseDate: "", status: "scheduled" })).toBe("Pick the release date, or choose Not released yet.");

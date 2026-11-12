@@ -816,6 +816,12 @@ export function MetadataUploader({ onShareInfo, userId, mode = "embed", readOnly
                   <DealBox metadata={metadata} update={update} beatTitle={tracks.find((x) => x.id === metadata.beatMasterId)?.title ?? ""} disabled={busy} />
                 </div>}
                 <Field label="Record label" term="label" id="label" value={metadata.label} onChange={(value) => update("label", value)} />
+                {/* The release's own version and catalog number: SoundExchange's release columns, and the Release panel writes
+                    them to every song on the release. Catalog-only, never embedded. */}
+                {full && <>
+                  <Field label="Release version" id="releaseVersion" value={metadata.releaseVersion} placeholder="Deluxe, Remastered" onChange={(value) => update("releaseVersion", value)} />
+                  <Field label="Catalog #" id="catalogNumber" value={metadata.catalogNumber} placeholder="Your label's number" onChange={(value) => update("catalogNumber", value)} />
+                </>}
                 <div className="min-w-0 space-y-2"><Label htmlFor="copyright" className="leading-5">Composition copyright (©)<InfoTip term="cLine" /></Label><CopyrightInput symbol="©" id="copyright" value={metadata.copyright} onChange={(value) => update("copyright", value)} /></div>
                 {/* ℗ and language are catalog details; they aren't embedded in the MP3. */}
                 {full && <>
@@ -1494,6 +1500,8 @@ function Performers({ metadata: m, disabled, update, bare }: { bare?: boolean; m
           <datalist id="recorded-in-countries">{COUNTRIES.filter((c) => c.code !== "XX").map((c) => <option key={c.code} value={c.name} />)}</datalist>
         </div>
         <Field label="Year recorded" id="recordedYear" value={m.recordedYear} placeholder={releaseYear || "2026"} onChange={(v) => update("recordedYear", v.replace(/\D/g, "").slice(0, 4))} />
+        {/* The full day, which SoundExchange's ingest asks for; a year alone can't answer it honestly. */}
+        <Field label="Recording date" id="recordingDate" type="date" value={m.recordingDate} onChange={(v) => update("recordingDate", v)} />
       </div>
     </fieldset>
   );

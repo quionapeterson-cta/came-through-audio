@@ -10,9 +10,9 @@ import { RELEASE_TYPES, type Metadata } from "@/lib/metadata";
 const isoDay = () => new Date().toISOString().slice(0, 10);
 
 export type ReleaseStatus = "unreleased" | "scheduled" | "released";
-export type SongRelease = Pick<Metadata, "releaseType" | "album" | "releaseDate" | "unreleased">;
-export type ReleaseDraft = { releaseType: string; album: string; releaseDate: string; status: ReleaseStatus | "" };
-export type ReleasePatch = Pick<Metadata, "releaseType" | "album" | "releaseDate" | "unreleased">;
+export type SongRelease = Pick<Metadata, "releaseType" | "album" | "releaseDate" | "unreleased"> & Partial<Pick<Metadata, "releaseVersion" | "catalogNumber">>;
+export type ReleaseDraft = { releaseType: string; album: string; releaseDate: string; status: ReleaseStatus | ""; releaseVersion?: string; catalogNumber?: string };
+export type ReleasePatch = Pick<Metadata, "releaseType" | "album" | "releaseDate" | "unreleased"> & Partial<Pick<Metadata, "releaseVersion" | "catalogNumber">>;
 
 /** Out, dated in the future, or not out yet. A blank date with the box unticked has always meant released. */
 export function releaseStatus(m: SongRelease, on = isoDay()): ReleaseStatus {
@@ -44,6 +44,9 @@ export function releaseDraft(songs: SongRelease[], on = isoDay()): ReleaseDraft 
     // Songs are meant to share one release date. If they differ, the first real one is shown rather than a blank that
     // Save would write over every song and quietly erase them all.
     releaseDate: (dates.find((d) => d) ?? "").trim(),
+    // The release's own version and catalog number: the first song answers for the group, like the album title does.
+    releaseVersion: first?.releaseVersion?.trim() ?? "",
+    catalogNumber: first?.catalogNumber?.trim() ?? "",
     status,
   };
 }
@@ -93,16 +96,18 @@ export function releasePatch(d: ReleaseDraft, on = isoDay()): { patch: ReleasePa
   const album = d.album.trim();
   if (releaseType !== "Single" && !album) return { error: `An ${releaseType === "EP" ? "EP" : "album"} needs a release title.` };
   const releaseDate = d.releaseDate.trim();
+  const releaseVersion = (d.releaseVersion ?? "").trim();
+  const catalogNumber = (d.catalogNumber ?? "").trim();
   if (!d.status) return { error: "Choose the release's status." };
   if (d.status === "scheduled") {
     if (!releaseDate) return { error: "Pick the release date, or choose Not released yet." };
     if (releaseDate <= on) return { error: "That date isn't in the future. Choose Released, or pick a later date." };
-    return { patch: { releaseType, album, releaseDate, unreleased: false } };
+    return { patch: { releaseType, album, releaseDate, unreleased: false, releaseVersion, catalogNumber } };
   }
   if (d.status === "released") {
     if (releaseDate && releaseDate > on) return { error: "That date is still in the future, so the release would stay unreleased. Pick a date up to today, or choose Scheduled." };
-    return { patch: { releaseType, album, releaseDate, unreleased: false } };
+    return { patch: { releaseType, album, releaseDate, unreleased: false, releaseVersion, catalogNumber } };
   }
   // "Not released yet" is the plain answer: no date to read, and the box ticked, which is how it has always been said.
-  return { patch: { releaseType, album, releaseDate: "", unreleased: true } };
+  return { patch: { releaseType, album, releaseDate: "", unreleased: true, releaseVersion, catalogNumber } };
 }
