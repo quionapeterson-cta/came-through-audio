@@ -1231,17 +1231,23 @@ export function MetadataUploader({ onShareInfo, userId, mode = "embed", readOnly
                     <div className="flex flex-wrap gap-1.5 text-xs">
                       {regBadges(t).map((b) => <span key={b} className="rounded-full border border-primary px-2 py-0.5 text-primary">{b}</span>)}
                     </div>
-                    {(() => { const r = registrationReadiness(t.metadata); return r.ready
-                      ? r.warnings.length
-                        ? <details className="text-sm">
-                            <summary className="cursor-pointer font-semibold">⚠️ Settle splits before registering</summary>
-                            <div className="mt-2 pl-1"><MissingList items={r.warnings} onJump={(field) => fix(t, field)} /></div>
-                          </details>
-                        : <span className="inline-flex items-center gap-1 rounded-full bg-primary px-2 py-0.5 text-xs font-semibold text-primary-foreground"><CheckCircle2 className="h-3 w-3" />Ready to register</span>
-                      : <details className="text-sm">
-                          <summary className="cursor-pointer font-semibold">⚠️ {r.missing.length} to fix before registering</summary>
-                          <div className="mt-2 pl-1"><MissingList items={r.missing} onJump={(field) => fix(t, field)} /></div>
-                        </details>; })()}
+                    {(() => {
+                      const r = registrationReadiness(t.metadata);
+                      // A PRO affiliation and each writer's IPI are what a PRO and The MLC register by (founder, 2026-11-13):
+                      // a song missing them is not shown as "Ready to register" in My Catalog, the same way the embed rail
+                      // and the readiness panel already say so.
+                      const gaps = r.ready ? proAccountGaps(t.metadata) : [];
+                      if (r.ready && !r.warnings.length && !gaps.length) return <span className="inline-flex items-center gap-1 rounded-full bg-primary px-2 py-0.5 text-xs font-semibold text-primary-foreground"><CheckCircle2 className="h-3 w-3" />Ready to register</span>;
+                      if (r.ready && !gaps.length) return <details className="text-sm">
+                        <summary className="cursor-pointer font-semibold">⚠️ Settle splits before registering</summary>
+                        <div className="mt-2 pl-1"><MissingList items={r.warnings} onJump={(field) => fix(t, field)} /></div>
+                      </details>;
+                      const items = [...r.missing, ...r.warnings, ...gaps];
+                      return <details className="text-sm">
+                        <summary className="cursor-pointer font-semibold">⚠️ {items.length} to fix before registering</summary>
+                        <div className="mt-2 pl-1"><MissingList items={items} onJump={(field) => fix(t, field)} /></div>
+                      </details>;
+                    })()}
                     {creditGroups(t).length > 0 && <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
                       {creditGroups(t).map((cg) => <div key={cg.label} className="min-w-0">
                         <div className="mb-1 text-xs font-bold uppercase tracking-widest text-primary">{cg.label}</div>
