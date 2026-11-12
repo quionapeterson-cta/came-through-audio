@@ -1,3 +1,4 @@
+import { portalFor } from "@/lib/agency-portals";
 import { hasPro, isBmi, isIpi } from "@/lib/audit";
 import { songDataScore, type TrackReport } from "@/lib/health";
 import type { SongChecklist } from "@/lib/health-checklist";
@@ -62,13 +63,12 @@ export const ORGAN_NAME: Record<OrganId, string> = { heart: "Heart", lungs: "Lun
 export const STATE_LABEL: Record<OrganState, string> = { healthy: "Healthy", watch: "Watch", treat: "Needs treatment", noflow: "No flow" };
 
 /** Agency portals for the "Register at …" step. Other societies use their own site. */
-const PORTAL: Record<string, { name: string; url: string }> = {
-  ascap: { name: "ASCAP Member Access", url: "https://www.ascap.com/" },
-  bmi: { name: "BMI Online Services", url: "https://www.bmi.com/" },
-  mlc: { name: "The MLC Portal", url: "https://portal.themlc.com/" },
-  soundexchange: { name: "SoundExchange Direct", url: "https://www.soundexchange.com/" },
+// One map of agency sign-in pages, shared with the Differences chart (founder, 2026-11-14): a "Register at …" step used
+// to open the agency's marketing homepage instead of the page a member actually signs in on.
+const portal = (s: Society) => {
+  const p = portalFor(s.id, s.url);
+  return { name: p.name, url: p.signIn || s.url };
 };
-const portal = (s: Society) => PORTAL[s.id] ?? { name: `your ${s.name} account`, url: s.url };
 
 /** Most serious first; ties in the lead go to the finding touching the most songs, then this order. */
 const PRIORITY: ConditionId[] = ["noheart", "broken", "artery-left", "artery-right", "spine-align", "pulse-missing", "brain-agency", "brain-double", "lungs-hold", "kidney-none",

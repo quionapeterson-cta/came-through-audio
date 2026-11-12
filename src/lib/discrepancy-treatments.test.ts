@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
-import { TREATMENTS, buildDifferenceRows, fixesFor, nameFromIssue, treatmentForIssue, type StoredLists } from "@/lib/discrepancy-treatments";
+import { TREATMENTS, actionFor, buildDifferenceRows, fieldFor, fixesFor, nameFromIssue, signInFor, treatmentForIssue, type StoredLists } from "@/lib/discrepancy-treatments";
+import { catalogHref } from "@/lib/catalog-links";
 import { emptyMetadata, type Metadata } from "@/lib/metadata";
 
 /** Every difference the comparison found is listed with the rule that fixes it, never only the headline one. */
@@ -90,5 +91,75 @@ describe("difference rows", () => {
         issues: ['The agency calls it "AM PM", your catalog has "AM PM" — same recording, different name'] }]),
     });
     expect(rows).toHaveLength(0);
+  });
+
+  it("tells the member a title with two catalogued codes is two recordings, and offers Add Version", () => {
+    // AM PM: both codes are in the catalog and both are on the list, so nothing disagrees — and the pair used to vanish.
+    const storedPair = {
+      byId: { soundexchange: { file: "sx.csv", result: { differences: [], clashes: [], notListed: [], extra: [], works: 2, matched: [
+        { trackId: "a", title: "AM PM", work: work({ title: "AM PM", isrc: "QT6HX2656773" }), issues: [] },
+        { trackId: "b", title: "AM PM", work: work({ title: "AM PM", isrc: "QT6HX2656774" }), issues: [] },
+      ] } } },
+    } as unknown as StoredLists;
+    const rows = buildDifferenceRows({
+      tracks: [catTrack("a", "AM PM", { isrc: "QT6HX2656773", releaseDate: "2026-01-01" }), catTrack("b", "AM PM", { isrc: "QT6HX2656774", releaseDate: "2026-01-01" })],
+      stored: storedPair,
+    });
+    const pair = rows.find((r) => r.kind === "version-pair")!;
+    expect(pair).toBeTruthy();
+    expect(pair.treatment.headline).toBe("Name each version of this title");
+    expect(pair.treatment.action).toBe("add-version");
+    expect(pair.agencyCodes.map((c) => c.isrc)).toEqual(["QT6HX2656773", "QT6HX2656774"]);
+    expect(pair.catalogCodes).toHaveLength(2);
+    expect(pair.title).toBe("AM PM");
+  });
+
+  it("names the two agencies' versions as an audio question, not a metadata mismatch", () => {
+    const twoLists = {
+      byId: {
+        soundexchange: { file: "sx.csv", result: { differences: [], clashes: [], notListed: [], extra: [], works: 1, matched: [
+          { trackId: "a", title: "Big Swag", work: work({ title: "Big Swag", version: "Album version", isrc: "QZNMY2291720" }), issues: [] },
+        ] } },
+        ascap: { file: "ascap.csv", result: { differences: [], clashes: [], notListed: [], extra: [], works: 1, matched: [
+          { trackId: "a", title: "Big Swag", work: work({ title: "Big Swag", version: "Instrumental", isrc: "QZNMY2291720" }), issues: [] },
+        ] } },
+      },
+    } as unknown as StoredLists;
+    const rows = buildDifferenceRows({ tracks: [catTrack("a", "Big Swag", { isrc: "QZNMY2291720", releaseDate: "2026-01-01" })], stored: twoLists });
+    const row = rows.find((r) => r.kind === "agency-version-conflict")!;
+    expect(row).toBeTruthy();
+    expect(row.treatment.headline).toContain("distributor");
+    expect(row.claims.map((c) => c.version)).toEqual(["Album version", "Instrumental"]);
+    expect(row.issues.join(" ")).toContain("Instrumental");
+  });
+
+  it("sends every fix to the field that actually disagrees, in one place", () => {
+    const base = { builds: 0 } as const;
+    void base;
+    const version = buildDifferenceRows({
+      tracks: [catTrack("a", "Quit Playing With Me", { isrc: "QT6HW2687935", version: "Radio edit", releaseDate: "2026-01-01" })],
+      stored: stored([{ trackId: "a", title: "Quit Playing With Me",
+        work: work({ title: "Quit Playing With Me", version: "Clean Version", isrc: "QT6HW2687935" }),
+        issues: ['The agency has version "Clean Version", your catalog has "Radio edit" — same title, two versions of the recording'] }]),
+    })[0]!;
+    expect(fieldFor(version)).toBe("version");
+    expect(actionFor(version)).toBe("add-version");
+    expect(catalogHref({ trackId: "a", field: fieldFor(version), action: actionFor(version), agencyVersion: "Clean Version" }))
+      .toBe("/workspace?tab=catalog&songId=a&focusField=version&agencyVersion=Clean+Version&action=add-version#song-a");
+    const retired = buildDifferenceRows({
+      tracks: [catTrack("a", "Bloodline", { isrc: "GBSMU2963390", releaseDate: "2026-01-01", retiredIscrs: ["GBSMU2963386"] })],
+      stored: stored([{ trackId: "a", title: "Bloodline", work: work({ title: "Bloodline", isrc: "GBSMU2963386" }), issues: ["The agency still holds the code of an earlier release"] }]),
+    })[0]!;
+    expect(fieldFor(retired)).toBe("retired");
+    expect(actionFor(retired)).toBe("dual_isrc");
+  });
+
+  it("gives a registering card the agency's own sign-in page, never its homepage", () => {
+    expect(signInFor("soundexchange")).toEqual({ name: "SoundExchange Direct", signIn: "https://sxdirect.soundexchange.com/login/" });
+    expect(signInFor("ascap").signIn).toBe("https://www.ascap.com/member-access#login");
+    expect(signInFor("bmi").signIn).toBe("https://ols.bmi.com/");
+    expect(signInFor("mlc").signIn).toBe("https://portal.themlc.com/login");
+    // An agency with no checked page falls back to its own site rather than inventing one.
+    expect(signInFor("sesac", "https://www.sesac.com").signIn).toBe("https://www.sesac.com");
   });
 });

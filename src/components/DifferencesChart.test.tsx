@@ -80,4 +80,25 @@ describe("DifferencesChart", () => {
     expect(text()).toContain("QZNMY2291720");
     expect(screen.queryByText(/The details differ/)).toBeNull();
   });
+
+  it("shows a title holding two codes as two versions, with Add Version and the agency's sign-in page", () => {
+    const pairStored = {
+      byId: { soundexchange: { file: "sx.csv", result: { differences: [], clashes: [], notListed: [], extra: [], works: 2, matched: [
+        { trackId: "a", title: "AM PM", work: { title: "AM PM", iswc: "", isrc: "QT6HX2656773", workId: "", writers: [] }, issues: [] },
+        { trackId: "b", title: "AM PM", work: { title: "AM PM", iswc: "", isrc: "QT6HX2656774", workId: "", writers: [] }, issues: [] },
+      ] } } },
+    } as never;
+    const rows = buildDifferenceRows({
+      tracks: [catTrack("AM PM", { isrc: "QT6HX2656773", releaseDate: "2026-01-01" }), { ...catTrack("AM PM", { isrc: "QT6HX2656774", releaseDate: "2026-01-01" }), id: "b" }],
+      stored: pairStored,
+    });
+    const row = rows.find((r) => r.kind === "version-pair")!;
+    renderRow(row);
+    const text = document.body.textContent ?? "";
+    expect(text).toContain("Two versions of this title");
+    expect(text).toContain("Name each version of this title");
+    expect(text).toContain("+ Add Version to Catalog");
+    expect(text).toContain("Sign in to SoundExchange Direct");
+    expect(text).toContain("QT6HX2656774");
+  });
 });

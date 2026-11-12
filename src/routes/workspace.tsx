@@ -71,7 +71,7 @@ export const Route = createFileRoute("/workspace")({
   validateSearch: (s: Record<string, unknown>): {
     tab?: string | undefined; checkout?: "success" | undefined; view?: "expert" | undefined;
     plan?: string | undefined; ticket?: string | undefined; panel?: string | undefined; society?: string | undefined;
-    songId?: string | undefined; focusField?: string | undefined; agencyIsrc?: string | undefined; action?: string | undefined;
+    songId?: string | undefined; focusField?: string | undefined; agencyIsrc?: string | undefined; agencyVersion?: string | undefined; action?: string | undefined;
   } => {
     const str = (key: string) => (typeof s[key] === "string" ? (s[key] as string) : undefined);
     return {
@@ -82,7 +82,7 @@ export const Route = createFileRoute("/workspace")({
       ticket: str("ticket"),
       // The Differences panel's own entry point, and the catalog handoff that follows a row.
       panel: str("panel"), society: str("society"),
-      songId: str("songId"), focusField: str("focusField"), agencyIsrc: str("agencyIsrc"), action: str("action"),
+      songId: str("songId"), focusField: str("focusField"), agencyIsrc: str("agencyIsrc"), agencyVersion: str("agencyVersion"), action: str("action"),
     };
   },
   component: Workspace,
@@ -126,8 +126,9 @@ function Workspace() {
     if (search.tab !== "catalog" || !search.songId || !search.focusField) return;
     setTab("catalog");
     setCatalogFix({ trackId: search.songId, field: search.focusField,
-      ...(search.agencyIsrc ? { agencyIsrc: search.agencyIsrc } : {}), ...(search.action ? { action: search.action } : {}) });
-  }, [search.tab, search.songId, search.focusField, search.agencyIsrc, search.action]);
+      ...(search.agencyIsrc ? { agencyIsrc: search.agencyIsrc } : {}), ...(search.agencyVersion ? { agencyVersion: search.agencyVersion } : {}),
+      ...(search.action ? { action: search.action } : {}) });
+  }, [search.tab, search.songId, search.focusField, search.agencyIsrc, search.agencyVersion, search.action]);
   // A Royalty Health Check started from My Catalog: opens the Hub on that song's (or release's, or the catalog's) check-in.
   const [healthStart, setHealthStart] = useState<HealthStart>();
   /** My Catalog's "Continue Expert Registration" opens Royalty Health → Expert Help. */

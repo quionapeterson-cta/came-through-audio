@@ -27,8 +27,8 @@ export const domIdForField = (field: string) => FIELD_DOM_ID[field] ?? field;
 
 export const HIGHLIGHT_CLASS = "cta-diagnostic-target";
 
-const URL_KEYS = ["songId", "focusField", "agencyIsrc", "action"] as const;
-export type FocusLink = { songId?: string | undefined; field?: string | undefined; agencyIsrc?: string | undefined; action?: string | undefined };
+const URL_KEYS = ["songId", "focusField", "agencyIsrc", "agencyVersion", "action"] as const;
+export type FocusLink = { songId?: string | undefined; field?: string | undefined; agencyIsrc?: string | undefined; agencyVersion?: string | undefined; action?: string | undefined };
 
 /** The deep-link parameters, read from the URL when the caller has none of its own. */
 export function readFocusLink(): FocusLink {
@@ -38,6 +38,7 @@ export function readFocusLink(): FocusLink {
     songId: p.get("songId") ?? undefined,
     field: p.get("focusField") ?? undefined,
     agencyIsrc: p.get("agencyIsrc") ?? undefined,
+    agencyVersion: p.get("agencyVersion") ?? undefined,
     action: p.get("action") ?? undefined,
   };
 }

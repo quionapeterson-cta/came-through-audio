@@ -1,7 +1,7 @@
 import { AudioWaveform, ExternalLink, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import {
-  KIND_LABEL, RELEASE_STATE_LABEL, STATUS_LABEL, diffSegments, diffWords, repertoireUrl,
+  KIND_LABEL, RELEASE_STATE_LABEL, STATUS_LABEL, diffSegments, diffWords, fieldFor, repertoireUrl, signInFor,
   summaryFor, treatmentText, type DifferenceRow, type RowFix,
 } from "@/lib/discrepancy-treatments";
 
@@ -110,6 +110,12 @@ export function DifferencesChart({ rows, busyKey, onFixCatalog, onAdopt, onKeepB
         const artistsDisagreeFor = (agencyArtist: string) => !!agencyArtist.trim() && !!row.artists.catalog.trim() && canon(agencyArtist) !== canon(row.artists.catalog);
         const code = agencyIsrc || row.catalogIsrc;
         const url = repertoireUrl(row.claims[0]?.society ?? "");
+        // The member's own account at the agency: looking a code up and registering it are different pages.
+        const portal = signInFor(row.claims[0]?.society ?? "", row.claims[0]?.url ?? "");
+        // A version the agency names and the catalog doesn't, or two recordings under one title: Add Version is offered
+        // on top of whatever else the card says (founder, 2026-11-14).
+        const canAddVersion = row.treatment.action !== "add-version"
+          && (row.agencyCodes.length > 1 || (!!row.versions.agency.trim() && !!row.versions.catalog.trim() && canon(row.versions.agency) !== canon(row.versions.catalog)));
         const canAdopt = !row.catalogIsrc && !!agencyIsrc && row.kind !== "missing-from-list";
         const canKeepBoth = codesDiffer && row.treatment.action !== "keep-both";
         const waiting = row.treatment.action === "waiting";
@@ -218,9 +224,20 @@ export function DifferencesChart({ rows, busyKey, onFixCatalog, onAdopt, onKeepB
                     ? <a href={url} target="_blank" rel="noreferrer" className={SECONDARY}>
                         <ExternalLink className="h-3.5 w-3.5" aria-hidden />{row.treatment.secondary}
                       </a>
-                    : <button type="button" className={SECONDARY} onClick={() => onFixCatalog(row)} disabled={busy}>
+                    : <button type="button" className={SECONDARY} onClick={() => onFixCatalog(row, fieldFor(row))} disabled={busy}>
                         {row.treatment.secondary}
                       </button>}
+                  {!waiting && portal.signIn && (
+                    <a href={portal.signIn} target="_blank" rel="noreferrer" className={SECONDARY}>
+                      <ExternalLink className="h-3.5 w-3.5" aria-hidden />Sign in to {portal.name}
+                    </a>
+                  )}
+                  {canAddVersion && (
+                    <button type="button" onClick={() => onFixCatalog(row, "version")} disabled={busy}
+                      className="w-full text-center text-[11px] font-semibold text-[#004AAD] underline decoration-[#4D8CFF]/50 underline-offset-4 hover:text-[#4D8CFF] dark:text-[#4D8CFF]">
+                      + Add Version to Catalog
+                    </button>
+                  )}
                   {canAdopt && (
                     <button type="button" onClick={() => onAdopt(row)} disabled={busy}
                       className="w-full text-center text-[11px] font-semibold text-[#004AAD] underline decoration-[#4D8CFF]/50 underline-offset-4 hover:text-[#4D8CFF] dark:text-[#4D8CFF]">

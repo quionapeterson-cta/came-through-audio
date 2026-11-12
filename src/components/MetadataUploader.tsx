@@ -80,7 +80,7 @@ type OpenRegSong = { id: string; purchase_id: string; track_id: string | null; p
  * the fix already in view (founder, 2026-11-13).
  */
 export type CatalogFocus =
-  | { trackId: string; field: string; agencyIsrc?: string | undefined; action?: string | undefined }
+  | { trackId: string; field: string; agencyIsrc?: string | undefined; agencyVersion?: string | undefined; action?: string | undefined }
   | { newTitle: string; artist?: string | undefined; nonce: number };
 
 export function MetadataUploader({ onShareInfo, userId, mode = "embed", readOnly, onSubmitted, onSplitSheet, onProtect, canSplit, canExport, canWav, focus, onFocused, onFixAcknowledged, onHealthCheck, onExpert }: { onExpert?: () => void; canWav?: boolean; onHealthCheck?: (trackId?: string, release?: boolean) => void; readOnly?: boolean; onShareInfo?: (s: Partial<ShareInfo> & Pick<ShareInfo, "ctx">) => void; onFocused?: () => void; /** A difference's quick-fix bar was finished or dismissed: the page can drop the target. */ onFixAcknowledged?: () => void; userId?: string; mode?: "embed" | "catalog"; focus?: CatalogFocus | undefined; onSubmitted?: () => void; onSplitSheet?: (t: CatalogTrack) => void; onProtect?: (t: CatalogTrack) => void; canSplit?: boolean; canExport?: boolean }) {
@@ -679,7 +679,7 @@ export function MetadataUploader({ onShareInfo, userId, mode = "embed", readOnly
   const { highlighted } = useFocusHighlight({ field: deepLink?.field });
   const acknowledgeFix = () => { clearFocusParams(); onFixAcknowledged?.(); };
   // The field names arrive as ids; the bar says them the way a member reads them.
-  const FIELD_LABEL: Record<string, string> = { isrc: "ISRC", version: "Version", release: "Release", releaseDate: "Release date", status: "retired status", retired: "retired status" };
+  const FIELD_LABEL: Record<string, string> = { isrc: "ISRC", title: "title", artist: "artist", version: "Version", release: "Release", releaseDate: "Release date", status: "retired status", retired: "retired status" };
   const fixBar = deepLink && (deepLink.agencyIsrc || deepLink.action) ? (
     <div className="rounded-xl border border-[#004AAD]/25 bg-[#004AAD]/[0.04] p-3 text-sm dark:border-[#4D8CFF]/30 dark:bg-[#4D8CFF]/[0.08]">
       <div className="flex flex-wrap items-center justify-between gap-2">
@@ -711,6 +711,29 @@ export function MetadataUploader({ onShareInfo, userId, mode = "embed", readOnly
           </div>
         </div>
       )}
+      {deepLink.action === "add-version" && (() => {
+        // Two recordings under one title, or a version the agency names and the catalog doesn't. The agency's own wording is
+        // offered as it was read from its file, never appended to the title (founder, 2026-11-14).
+        const version = (deepLink.agencyVersion ?? "").trim();
+        const track = tracks.find((x) => x.id === editingId);
+        return (
+          <div className="mt-2 space-y-2">
+            <p className="text-xs text-muted-foreground">
+              {version ? <>The agency names this recording <b className="text-foreground">{version}</b>.</> : "Give this recording the version name the agency uses, so the two records pair up."}
+            </p>
+            <div className="flex flex-wrap gap-2">
+              {version && (
+                <Button type="button" size="sm" onClick={() => { update("version", version); acknowledgeFix(); }}>Use this version name</Button>
+              )}
+              {version && track && (
+                <Button type="button" size="sm" variant="outline" onClick={() => { void duplicate(track, version); acknowledgeFix(); }}>
+                  Add as a separate version
+                </Button>
+              )}
+            </div>
+          </div>
+        );
+      })()}
       <a href="/workspace?tab=health&panel=differences#differences-panel" className="mt-2 inline-block text-xs font-semibold text-primary underline underline-offset-4">← Back to Differences Panel</a>
     </div>
   ) : null;

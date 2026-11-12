@@ -6,8 +6,9 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { DifferencesChart } from "@/components/DifferencesChart";
 import { saveTrack, type CatalogTrack } from "@/lib/catalog";
 import type { SavedListSummary } from "@/lib/agency-lists";
+import { catalogHref } from "@/lib/catalog-links";
 import {
-  buildDifferenceRows, openDifferenceCount, readStoredLists, societyName,
+  actionFor, buildDifferenceRows, fieldFor, openDifferenceCount, readStoredLists, societyName,
   type DifferenceRow, type StoredLists,
 } from "@/lib/discrepancy-treatments";
 
@@ -109,12 +110,18 @@ export function DifferencesPanel({ userId, tracks, societies, summaries, default
   }
 
   /** Opens the song in My Catalog at the field the treatment is about, with the agency's code to hand. */
-  function fixInCatalog(row: DifferenceRow, field = "isrc") {
+  /**
+   * A fix opens My Catalog on that song at the exact field that disagrees — version, title, retired code, release — with the
+   * agency's own value to hand (founder, 2026-11-14). Which field and which action come from one rule in the treatment
+   * module, so no card can point at the wrong box.
+   */
+  function fixInCatalog(row: DifferenceRow, field: string = fieldFor(row)) {
     const agency = row.claims.find((c) => c.isrc)?.isrc ?? "";
-    const action = row.treatment.action === "add-version" ? "add-version" : row.treatment.action === "keep-both" ? "dual_isrc" : row.catalogIsrc ? "review" : "adopt";
-    const p = new URLSearchParams({ tab: "catalog", songId: row.songId, focusField: field, action });
-    if (agency) p.set("agencyIsrc", agency);
-    window.location.assign(`/workspace?${p.toString()}#song-${row.songId}`);
+    const version = row.agencyCodes.find((c) => c.version)?.version ?? row.versions.agency;
+    window.location.assign(catalogHref({
+      trackId: row.songId, field, action: actionFor(row),
+      ...(agency ? { agencyIsrc: agency } : {}), ...(version ? { agencyVersion: version } : {}),
+    }));
   }
 
   return (
