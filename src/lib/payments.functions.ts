@@ -1,7 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { createStripeClient, getStripeErrorMessage } from "@/lib/stripe.server";
-import { checkoutEnvironmentError, getPaymentsEnvironment } from "@/lib/payments-env";
+import { CHECKOUT_UNAVAILABLE, checkoutEnvironmentError, getPaymentsEnvironment } from "@/lib/payments-env";
 import { checkoutInput, planCheckout } from "@/lib/stripe-mapping";
 import { isActiveSub, PRICE_TIER } from "@/lib/plans";
 import { purchaseLanding } from "@/lib/purchase-receipt";
@@ -159,7 +159,8 @@ async function renewCheckout(stripe: Stripe, env: "sandbox" | "live", userId: st
 
 /**
  * The environment the database counts (site_settings `payments`), or `null` when the row isn't set. `read: false`
- * means the read itself failed, and checkout is never blocked for that: a database hiccup must not close the shop.
+ * means the read itself failed; checkout then refuses rather than charge for a plan nothing may count, because the
+ * published link must never take real money by accident (founder, 2026-11-12).
  */
 async function countedPaymentsEnvironment(): Promise<{ read: false } | { read: true; env: "sandbox" | "live" | null }> {
   try {
@@ -187,10 +188,8 @@ export const createCheckoutSession = createServerFn({ method: "POST" })
     // A checkout in one mode while the database counts the other takes money for a plan that never shows, or hands
     // out a paid plan for free (founder, 2026-11-12). Refused before Stripe is called, so nothing is charged.
     const counted = await countedPaymentsEnvironment();
-    if (counted.read) {
-      const refusal = checkoutEnvironmentError(env, counted.env);
-      if (refusal) throw new Error(refusal);
-    }
+    const refusal = counted.read ? checkoutEnvironmentError(env, counted.env) : CHECKOUT_UNAVAILABLE;
+    if (refusal) throw new Error(refusal);
     const stripe = stripeClient(env);
     const origin = await appOrigin();
     // No confirmation check here any more (founder, 2026-11-05): paying comes first and the confirmation link is a
