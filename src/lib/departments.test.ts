@@ -34,11 +34,13 @@ const withDeptTabs = (tabs: string[]) => [...ALWAYS, ...tabs, ...ALWAYS_AFTER];
 describe("visibleTabs", () => {
   it("shows employees only their department tabs", () => {
     const branding = resolveAccess([{ role: "employee", departments: ["registration", "royalty_accounts", "branding"] }])!;
-    expect(visibleTabs(branding).map((t) => t.value)).toEqual(withDeptTabs(["reg", "splits", "badges", "homepage"]));
+    // Registration and Royalty Accounts also work the retired-ISRC queue (founder, 2026-11-12).
+    expect(visibleTabs(branding).map((t) => t.value)).toEqual(withDeptTabs(["reg", "splits", "retired", "badges", "homepage"]));
     // Finance keeps the billing console, Support gets tickets and badges, Sales just its Task Bank.
     const billing = resolveAccess([{ role: "employee", departments: ["finance", "support", "marketing_sales"] }])!;
     // Billing also gets Account help, where it sends the card-update link (founder, 2026-11-05).
-    expect(visibleTabs(billing).map((t) => t.value)).toEqual(withDeptTabs(["purchases", "billing", "support", "accounts", "badges"]));
+    // Support works the retired-ISRC queue too, alongside the ticket queue it already owns.
+    expect(visibleTabs(billing).map((t) => t.value)).toEqual(withDeptTabs(["retired", "purchases", "billing", "support", "accounts", "badges"]));
   });
 
   it("gives the AI department the AI Protection tab; Security also gets Legal", () => {
@@ -62,7 +64,7 @@ describe("visibleTabs", () => {
     expect(visibleTabs(sa).map((t) => t.value).slice(-8)).toEqual(["scripts", "prices", "pdf", "email", "recognition", "holiday", "company", "plans"]);
     expect(visibleTabs(sa)[0]?.value).toBe("queue");
     expect(visibleTabs(sa, "finance").map((t) => t.value)).toEqual(withDeptTabs(["purchases", "billing"]));
-    expect(visibleTabs(sa, "support").map((t) => t.value)).toEqual(withDeptTabs(["support", "accounts", "badges"]));
+    expect(visibleTabs(sa, "support").map((t) => t.value)).toEqual(withDeptTabs(["retired", "support", "accounts", "badges"]));
   });
 
   it("gives Billing the ticket queue and every staff member the scripts", () => {

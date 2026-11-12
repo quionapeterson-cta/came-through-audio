@@ -27,6 +27,7 @@ import { SupportScriptsPanel } from "@/components/SupportScriptsPanel";
 import { BadgeSwitchboard } from "@/components/BadgeSwitchboard";
 import { BadgeProtocolPanel } from "@/components/BadgeProtocolPanel";
 import { StaffSubmissionsPanel } from "@/components/StaffSubmissionsPanel";
+import { RetiredIscrsPanel } from "@/components/RetiredIscrsPanel";
 import { BillingConsolePanel } from "@/components/BillingConsolePanel";
 import { PlansPanel } from "@/components/PlansPanel";
 import { TestimonialFilterPanel } from "@/components/TestimonialFilterPanel";
@@ -210,6 +211,7 @@ function AdminPage() {
             <Table head={["Email", "Role", "Share", "Type", "Status"]} failed={overview.isError}
               rows={d?.splits.map((s) => [s.collaborator_email, s.role, `${s.assigned_percentage}%`, s.is_owner ? "Owner" : "Collaborator", s.signed_at ? `Signed ${fmt(s.signed_at)}` : "Pending"])} />
           </TabsContent>
+          {show("retired") && <TabsContent value="retired"><RetiredIscrsPanel /></TabsContent>}
           <TabsContent value="purchases">
             <FoundingSeats />
             <Table head={["Type", "Mode", "Status", "Date"]} failed={overview.isError} rows={d?.purchases.map((p) => [p.type, p.environment, p.status, fmt(p.created_at)])} />

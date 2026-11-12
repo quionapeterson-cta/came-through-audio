@@ -101,10 +101,18 @@ export const BILLING_DEPARTMENTS = ["billing", "finance"] as const satisfies rea
  */
 export const TICKET_DEPARTMENTS = ["support", "billing"] as const satisfies readonly Department[];
 
+/**
+ * Who works a retired ISRC through (founder, 2026-11-12): Registration and Royalty Accounts chase the change with the
+ * agencies, Support sees the queue because a member often raises it in a ticket first.
+ */
+export const RETIRED_ISRC_DEPARTMENTS = ["registration", "royalty_accounts", "support"] as const satisfies readonly Department[];
+
 export const ADMIN_TABS = [
   { value: "ai", label: "AI Protection", departments: ["ai"] },
   { value: "reg", label: "Registrations", departments: ["registration"] },
   { value: "splits", label: "Split Sheets", departments: ["royalty_accounts"] },
+  // The queue of songs carrying an old code, so the team can work the agency update (founder, 2026-11-12).
+  { value: "retired", label: "Retired ISRCs", departments: RETIRED_ISRC_DEPARTMENTS },
   { value: "purchases", label: "Purchases", departments: ["finance"] },
   // Refunds and plan cancellations without a Stripe login (founder, 2026-11-05).
   { value: "billing", label: "Billing", departments: BILLING_DEPARTMENTS },
