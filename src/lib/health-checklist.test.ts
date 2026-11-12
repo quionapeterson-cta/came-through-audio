@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { emptyMetadata } from "@/lib/metadata";
 import { trackReport } from "@/lib/health";
-import { ACCOUNT_REF, catalogHealth, INTL_KEY, printKey, registrationPrint, releaseGroups, searchKey, songChecklist } from "@/lib/health-checklist";
+import { ACCOUNT_REF, catalogHealth, encouragement, INTL_KEY, printKey, registrationPrint, releaseGroups, searchKey, songChecklist } from "@/lib/health-checklist";
 import { inspectorChecks, emptyStatus } from "@/lib/health-songs";
 import { countryByCode } from "@/lib/repertoires";
 
@@ -24,8 +24,23 @@ describe("song health checklist", () => {
     const c = songChecklist(trackReport(track({ upc: "", writers: [{ name: "", legalName: "", role: "Composer", pro: "", ipi: "", percentage: "" }] }), us, []), us);
     expect(c.steps.find((s) => s.id === "ready:performance")?.done).toBe(false);
     expect(c.steps.find((s) => s.id === "ready:digital")?.items?.map((i) => i.field)).toEqual(["upc"]);
-    expect(c.pct).toBe(0);
+    // Every detail an agency asks about is its own share of 100%, so a song with a blank work still reads what it has.
+    expect(c.pct).toBe(58);
   });
+  it("reads a writer's missing role as one share, not a whole third of the song", () => {
+    // The founder's song on 2026-11-12: everything filled in except the writer's Role and the ISWC that BMI hasn't
+    // assigned yet. It read 33% because two of three agencies were blocked; the ISWC is a tip, and the one field is 1 of 21.
+    const c = songChecklist(trackReport(track({
+      iswc: "",
+      bmiWriterPublishing: true,
+      publishers: [{ name: "", pro: "", ipi: "", percentage: "" }],
+      writers: [{ name: "", legalName: "Qui-Ona Peterson", role: "", pro: "BMI", ipi: "658645500", percentage: "100", publishing: "bmi" }],
+    }), us, []), us);
+    expect(c.steps.filter((s) => s.stage === "details" && s.done).map((s) => s.id)).toEqual(["ready:digital"]);
+    expect(c.pct).toBe(91);
+    expect(encouragement(c)).toContain("91% ready to register");
+  });
+
   it("counts a BMI song with no publisher as ready with BMI, without Self-published (BMI pays its writers the publisher share)", () => {
     const m = { publishers: [{ name: "", pro: "", ipi: "", percentage: "" }] };
     const steps = songChecklist(trackReport(track(m), us, []), us).steps;
@@ -36,7 +51,8 @@ describe("song health checklist", () => {
   });
   it("averages readiness across the catalog and counts ticked registrations", () => {
     const h = catalogHealth([track(), { ...track({ upc: "" }), id: "t2" }], us, [], [{ ...emptyStatus("t1"), steps: { "registered:bmi": "x" } }]);
-    expect(h.pct).toBe(84);
+    // A complete song and one missing only its UPC: 98% between them (founder, 2026-11-12).
+    expect(h.pct).toBe(98);
     expect(h.ready).toBe(1);
     expect(h.registered).toEqual({ done: 1, total: 8 });
     expect(h.next).toMatchObject({ field: "upc" });

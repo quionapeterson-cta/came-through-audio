@@ -27,6 +27,8 @@ export type ChecklistStep = {
   field?: string | undefined;
   /** Flagged details to fix, listed under the step. */
   items?: { text: string; field?: string | undefined }[] | undefined;
+  /** How many details this step's agency asks about, met or not: each is one share of the song's %. */
+  required?: number | undefined;
   /** Registered (or found) before the song's details changed: the registration needs updating to match. */
   update?: boolean;
   /** Release checklist: a tick the person sets, saved under this checklist key. */
@@ -37,8 +39,9 @@ export type ChecklistStep = {
   why?: string | undefined;
 };
 /**
- * `pct` is registration readiness: the share of agencies the catalog has everything for. Registering and confirming
- * are still steps the user ticks (`registered`, `done`), but they don't move the %; "healthy" means every step is done.
+ * `pct` is registration readiness: the share of the details the song's agencies ask for that it already has, so filling
+ * one field moves it. Registering and confirming are still steps the user ticks (`registered`, `done`), but they don't
+ * move the %; "healthy" means every step is done.
  */
 export type SongChecklist = { steps: ChecklistStep[]; done: number; total: number; pct: number; registered: { done: number; total: number }; group: "attention" | "later" | "healthy";
   /** Not released yet: `pct` is how ready it is to distribute (Release checklist + PRO/MLC registration), not registration readiness. */
@@ -89,12 +92,15 @@ const AGENCIES: RegistrationAgency[] = ["bmi", "ascap", "mlc", "soundexchange"];
  * Is the song ready to register with this society? Uses the shared registrationCheck (never re-implemented here),
  * so the items listed are exactly what our team would ask for before registering.
  */
-function readyFor(m: Metadata, society: Society, pillar: Pillar): { text: string; field?: string }[] {
+function readyFor(m: Metadata, society: Society, pillar: Pillar): { items: { text: string; field?: string }[]; required: number } {
   const agency = AGENCIES.find((a) => a === society.id);
-  if (agency) return registrationCheck(m, agency).missing.map((x) => ({ text: x.message, field: x.field }));
-  if (pillar === "digital") return m.isrc.trim() ? [] : [{ text: "Add the recording's ISRC.", field: "isrc" }];
+  if (agency) {
+    const check = registrationCheck(m, agency);
+    return { items: check.missing.map((x) => ({ text: x.message, field: x.field })), required: check.total };
+  }
+  if (pillar === "digital") return { items: m.isrc.trim() ? [] : [{ text: "Add the recording's ISRC.", field: "isrc" }], required: 1 };
   const core = registrationReadiness(m, pillar === "mechanical" ? "mlc" : "pro");
-  return [...core.missing, ...core.warnings].map((x) => ({ text: x.message, field: x.field }));
+  return { items: [...core.missing, ...core.warnings].map((x) => ({ text: x.message, field: x.field })), required: core.checked };
 }
 
 export function songChecklist(r: TrackReport, country: Country, status?: SongStatus, account?: SongStatus): SongChecklist {
@@ -112,10 +118,10 @@ export function songChecklist(r: TrackReport, country: Country, status?: SongSta
   for (const p of r.pillars) {
     const society = societyOf(p);
     if (!society) continue;
-    const items = readyFor(m, society, p.pillar);
+    const ready = readyFor(m, society, p.pillar);
     const name = p.pillar === "performance" && needsPro ? "your PRO" : society.name;
-    steps.push({ id: `ready:${p.pillar}`, stage: "details", auto: true, pillar: p.pillar, society, done: !items.length,
-      title: `Ready to register with ${name}`, items, field: items[0]?.field });
+    steps.push({ id: `ready:${p.pillar}`, stage: "details", auto: true, pillar: p.pillar, society, done: !ready.items.length,
+      title: `Ready to register with ${name}`, items: ready.items, required: ready.required, field: ready.items[0]?.field });
   }
 
   for (const p of r.pillars) {
@@ -149,9 +155,14 @@ export function songChecklist(r: TrackReport, country: Country, status?: SongSta
   const ready = steps.filter((s) => s.stage === "details");
   const reg = counted.filter((s) => s.stage === "register");
   const done = counted.filter((s) => s.done).length;
+  // Ready to register reads the details themselves: every requirement an agency asks about is one share of 100%, so a
+  // song missing one of fifteen reads 93%, not 33% (founder, 2026-11-12). A whole agency must still be complete for its
+  // step to tick, and only a song with nothing missing reads 100%.
+  const required = ready.reduce((n, s) => n + (s.required ?? 0), 0);
+  const met = ready.reduce((n, s) => n + Math.max(0, (s.required ?? 0) - (s.items?.length ?? 0)), 0);
   // Unreleased: ready to distribute = the release items plus registering with the PRO and mechanical society.
   const pct = prerelease ? releasePct([...steps.filter((s) => s.stage === "release"), ...reg.filter((s) => s.id !== "intl")])
-    : ready.length ? Math.round((ready.filter((s) => s.done).length / ready.length) * 100) : 0;
+    : required ? Math.round((met / required) * 100) : 0;
   const group = done === counted.length ? "healthy" : status?.list === "later" ? "later" : "attention";
   return { steps, done, total: counted.length, pct, registered: { done: reg.filter((s) => s.done).length, total: reg.length }, group, prerelease };
 }
