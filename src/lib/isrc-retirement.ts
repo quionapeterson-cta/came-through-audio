@@ -28,8 +28,8 @@ export const RETIRE_STEPS: RetireStep[] = [
     body: "Expert Registration Assistance is our team registering with your PRO, The MLC and SoundExchange on your behalf. Choose it in the workspace, or open a Support ticket from the Help Center and say it's an ISRC change with both codes — the old one stays on the recording either way.",
   },
   {
-    title: "3. Send the proof with it",
-    body: "Attach the distributor's confirmation of the new code (a release report or the ISRC sheet) so the change can't sit waiting on evidence.",
+    title: "3. Proof only when an agency asks",
+    body: "Most changes need nothing attached: you're adding a code to a recording that's already yours, in an account you hold. Keep the distributor's confirmation of the new code (a release report or the ISRC sheet) to hand for the cases that do want it — a disputed match, a new claim on an old code, or a foreign collection.",
   },
   {
     title: "4. Leave the old code open",
