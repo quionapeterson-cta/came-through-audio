@@ -49,7 +49,9 @@ export function DifferencesPanel({ userId, tracks, societies, summaries, default
   const [stored, setStored] = useState<StoredLists | undefined>(() => readStoredLists(userId));
   const [side, setSide] = useState<Side>("all");
   const [society, setSociety] = useState<string>(defaultSociety ?? "");
-  const [open, setOpen] = useState(true);
+  // Closed on arrival (founder, 2026-11-14): the panel is a detail view, and it only opens by itself when a link
+  // from Intake asks for it. The header keeps the count of what is waiting behind one click.
+  const [open, setOpen] = useState(false);
   const [busyKey, setBusyKey] = useState<string>();
   const [treated, setTreated] = useState<Set<string>>(() => new Set());
   const [pick, setPick] = useState<{ row: DifferenceRow; current: string }>();
@@ -133,6 +135,11 @@ export function DifferencesPanel({ userId, tracks, societies, summaries, default
             </div>
           </div>
           <div className="flex items-center gap-2">
+            {!open && counts.open > 0 && (
+              <span className="rounded-full border border-[#004AAD]/30 bg-[#004AAD]/10 px-2 py-0.5 font-mono text-[11px] font-bold tabular-nums text-[#004AAD] dark:border-[#4D8CFF]/40 dark:bg-[#4D8CFF]/15 dark:text-[#4D8CFF]">
+                {counts.open} to review
+              </span>
+            )}
             <div className="hidden items-center gap-2 sm:flex" aria-hidden>
               <svg viewBox="0 0 60 24" className="h-6 w-16 text-[#004AAD] dark:text-[#4D8CFF]">
                 <path d={EKG} fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
