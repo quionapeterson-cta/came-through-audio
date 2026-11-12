@@ -89,6 +89,9 @@ export const COUNTRIES: Country[] = [
  */
 export const TERRITORY_OPTIONS: readonly string[] = ["Worldwide", "United States", ...COUNTRY_NAMES.filter((n) => n !== "United States")];
 
+/** What a member can add on top of the United States, which SoundExchange always includes (founder, 2026-11-12). */
+export const TERRITORY_EXTRA_OPTIONS: readonly string[] = TERRITORY_OPTIONS.filter((n) => n !== "United States");
+
 /** "My country isn't listed": only the international checks apply. */
 export const OTHER_COUNTRY: Country = { code: "XX", name: "Other country", region: "Europe", societies: {}, note: "We don't list your local societies yet. Your streaming check still runs, and you can still track your own PRO." };
 

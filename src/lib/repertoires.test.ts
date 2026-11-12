@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { COUNTRIES, TERRITORY_OPTIONS } from "@/lib/repertoires";
+import { COUNTRIES, TERRITORY_EXTRA_OPTIONS, TERRITORY_OPTIONS } from "@/lib/repertoires";
 import { COUNTRY_NAMES, countryOptions } from "@/lib/country-names";
 
 describe("territories of collection rights", () => {
@@ -15,6 +15,11 @@ describe("territories of collection rights", () => {
     const rest = [...TERRITORY_OPTIONS.slice(2)];
     const folded = (v: string) => v.toLowerCase();
     expect(rest).toEqual([...rest].sort((a, b) => (folded(a) < folded(b) ? -1 : folded(a) > folded(b) ? 1 : 0)));
+  });
+  it("offers Worldwide first among the territories a member can add, and never the United States", () => {
+    expect(TERRITORY_EXTRA_OPTIONS[0]).toBe("Worldwide");
+    expect(TERRITORY_EXTRA_OPTIONS).not.toContain("United States");
+    expect(TERRITORY_EXTRA_OPTIONS).toHaveLength(TERRITORY_OPTIONS.length - 1);
   });
 });
 

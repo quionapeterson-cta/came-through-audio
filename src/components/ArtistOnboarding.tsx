@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { CopyrightInput } from "@/components/CopyrightInput";
+import { TerritoriesField } from "@/components/TerritoriesField";
 import { ArrowLeft, ArrowRight, Camera, Lock, Plus, Save, Trash2, UserRound } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -18,7 +19,6 @@ import { StarSky } from "@/components/StarSky";
 import { listTracks, saveTrack } from "@/lib/catalog";
 import { propagated, propagationPlan, type Propagation } from "@/lib/profile-propagation";
 import { claimDefaultsSky } from "@/lib/celebrate";
-import { TERRITORY_OPTIONS } from "@/lib/repertoires";
 import { countryOptions } from "@/lib/country-names";
 import { capShare, splitTotal } from "@/lib/splits-total";
 import { TIER_LABEL } from "@/lib/plans";
@@ -387,9 +387,9 @@ export function ArtistOnboarding({ userId, open, onOpenChange, onSaved, firstRun
               <Field label="Country of first release"><Pick value={p.firstReleaseCountry ?? ""} options={countryOptions(p.firstReleaseCountry ?? "")} empty="Not set" onChange={(v) => set("firstReleaseCountry", v)} /></Field>
               <Field label="Country of release"><Pick value={p.releaseCountry ?? ""} options={countryOptions(p.releaseCountry ?? "")} empty="Not set" onChange={(v) => set("releaseCountry", v)} /></Field>
               <Field label="Territories of collection rights">
-                <Pick value={p.collectionTerritories ?? ""} options={TERRITORY_OPTIONS} empty="US only (the default)" onChange={(v) => set("collectionTerritories", v)} />
+                <TerritoriesField id="collectionTerritories" value={p.collectionTerritories ?? ""} onChange={(v) => set("collectionTerritories", v)} />
               </Field>
-              <p className="text-xs text-muted-foreground sm:col-span-2">The US is already included in a collection claim. If your songs go out worldwide on streaming, choose Worldwide — it fills into every new song. None of these is ever written into a master's tags.</p>
+              <p className="text-xs text-muted-foreground sm:col-span-2">The United States is always included, so this only adds where else your songs earn. If they go out worldwide on streaming, choose Worldwide — it fills into every new song. None of these is ever written into a master's tags.</p>
             </Group>
             <p className="flex items-start gap-2 rounded-lg bg-muted p-3 text-xs text-muted-foreground"><Lock className="mt-0.5 h-4 w-4 shrink-0 text-primary" />Private: PRO affiliations, IPI name numbers and shares stay in your catalog and are never embedded in your music files.</p>
             <IpiNote />

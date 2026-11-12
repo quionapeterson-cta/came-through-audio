@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent, type ReactNode } from "react";
 import { confirmAction } from "@/components/ConfirmHost";
+import { TerritoriesField } from "@/components/TerritoriesField";
 import { ChevronDown, Copy, Disc3, Lock, ShieldCheck, CheckCircle2, Download, FileAudio, FileText, ImagePlus, Pencil, Plus, Save, Stethoscope, Trash2, Upload } from "lucide-react";
 import { capShare, splitStatus, splitSummary } from "@/lib/splits-total";
 import { toast } from "sonner";
@@ -22,7 +23,7 @@ import { RETIRE_STEPS } from "@/lib/isrc-retirement";
 import { beatIsOut, beatMasterLine, isSoldBeat, masterBeatLine, masterFromBeat, masterOfBeat } from "@/lib/beats";
 import { amendmentPrefill } from "@/lib/beat-amendment";
 import { BeatBox, DealBox } from "@/components/BeatBox";
-import { COUNTRIES, TERRITORY_OPTIONS, countryByCode, guessCountry } from "@/lib/repertoires";
+import { COUNTRIES, countryByCode, guessCountry } from "@/lib/repertoires";
 import { countryOptions } from "@/lib/country-names";
 import { catalogHealth, releaseKind } from "@/lib/health-checklist";
 import { listChecks } from "@/lib/repertoire-checks";
@@ -990,14 +991,9 @@ export function MetadataUploader({ onShareInfo, userId, mode = "embed", readOnly
                   <CountrySelect id="releaseCountry" label="Country of release" value={metadata.releaseCountry} placeholder="Not set" onChange={(v) => update("releaseCountry", v)} />
                   <div className="min-w-0 space-y-2">
                     <Label htmlFor="collectionTerritories">Territories of collection rights
-                      <Tip text="SoundExchange already includes the US on a claim, so this is where else the recording earns. If the song is out worldwide on streaming, choose Worldwide." title="Territories of collection rights" />
+                      <Tip text="The United States is already on a SoundExchange claim, so this is where else the recording earns. If the song is out worldwide on streaming, choose Worldwide." title="Territories of collection rights" />
                     </Label>
-                    <select id="collectionTerritories" value={metadata.collectionTerritories}
-                      onChange={(e) => update("collectionTerritories", e.target.value)}
-                      className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm">
-                      <option value="">US only (the default)</option>
-                      {TERRITORY_OPTIONS.map((name) => <option key={name} value={name}>{name}</option>)}
-                    </select>
+                    <TerritoriesField id="collectionTerritories" value={metadata.collectionTerritories} onChange={(v) => update("collectionTerritories", v)} />
                     <p className="text-xs text-muted-foreground">Released worldwide on streaming? Choose Worldwide.</p>
                   </div>
                 </div>
