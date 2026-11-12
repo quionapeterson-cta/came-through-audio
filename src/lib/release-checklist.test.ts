@@ -38,6 +38,15 @@ describe("pre-distribution (release checklist)", () => {
     expect(ticked.pct).toBe(100);
   });
 
+  it("waits for the IPI a writer needs once they have a PRO", () => {
+    const soon = (writers: unknown) => songChecklist(trackReport(track("Soon", { releaseDate: "2099-01-01", writers }), us, []), us);
+    const noIpi = soon([{ name: "", legalName: "Ann Lee", role: "Author/Composer", pro: "BMI", ipi: "", percentage: "100" }]);
+    expect(noIpi.steps.find((s) => s.id === "release:pro")).toMatchObject({ done: false });
+    expect(noIpi.steps.find((s) => s.id === "release:pro")?.items?.[0]?.text).toContain("IPI");
+    const noPro = soon([{ name: "", legalName: "Ann Lee", role: "Author/Composer", pro: "", ipi: "", percentage: "100" }]);
+    expect(noPro.steps.find((s) => s.id === "release:pro")).toMatchObject({ done: false });
+  });
+
   it("keeps unreleased songs out of the catalog score, on their own line", () => {
     const h = catalogHealth([track("Out"), track("Soon", { releaseDate: "2099-01-01" })], us, [], []);
     expect(h.released).toBe(1);

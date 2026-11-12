@@ -1,5 +1,5 @@
 import type { Metadata } from "@/lib/metadata";
-import { registrationReadiness } from "@/lib/readiness";
+import { proAccountGaps, registrationReadiness } from "@/lib/readiness";
 import { isExternal } from "@/lib/roles";
 
 /**
@@ -66,9 +66,10 @@ export function releaseItems(m: Metadata, ticks: Record<string, string | undefin
     ];
   }
   const core = registrationReadiness(m);
-  const pro = registrationReadiness(m, "pro");
   const people = core.missing.filter((i) => i.code !== "pro");
-  const proGaps = pro.missing.filter((i) => i.code === "pro");
+  // The item is titled "PRO and IPI for each writer", so it waits for both (founder, 2026-11-13): it used to tick
+  // once each writer named a PRO, while the IPI it also asks for could still be blank.
+  const proGaps = proAccountGaps(m);
   const splitGaps = core.warnings;
   const list = (items: { message: string; field: string }[]) => items.map((i) => ({ text: i.message, field: i.field }));
   const has = (v: string) => !!v.trim();

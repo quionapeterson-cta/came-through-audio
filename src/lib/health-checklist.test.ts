@@ -20,6 +20,15 @@ describe("song health checklist", () => {
     expect(c.registered).toEqual({ done: 0, total: 4 });
     expect(c.group).toBe("attention");
   });
+  it("never calls a song ready while a writer's PRO or IPI is missing", () => {
+    // The founder's 2026-11-13 report: My Catalog said Ready to register while a writer had no PRO and no IPI. The
+    // meter and its "ready" count read the same agency checks, so they stay under 100% until both are in.
+    const noPro = track({ writers: [{ name: "", legalName: "Ann Lee", role: "Author/Composer", pro: "", ipi: "", percentage: "100" }] });
+    const noIpi = track({ writers: [{ name: "", legalName: "Ann Lee", role: "Author/Composer", pro: "BMI", ipi: "", percentage: "100" }] });
+    const h = catalogHealth([noPro, noIpi], us, [], []);
+    expect(h.songs.every((s) => s.pct < 100)).toBe(true);
+    expect(h.ready).toBe(0);
+  });
   it("scores readiness by agency with the shared registration check", () => {
     const c = songChecklist(trackReport(track({ upc: "", writers: [{ name: "", legalName: "", role: "Composer", pro: "", ipi: "", percentage: "" }] }), us, []), us);
     expect(c.steps.find((s) => s.id === "ready:performance")?.done).toBe(false);

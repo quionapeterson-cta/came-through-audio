@@ -11,7 +11,7 @@ import { printKey, registrationPrint, type SongChecklist } from "@/lib/health-ch
 import { scopeName, type ReportScope } from "@/lib/health-reports";
 import type { SongStatus } from "@/lib/health-songs";
 import { creditName } from "@/lib/metadata";
-import { registrationReadiness } from "@/lib/readiness";
+import { proAccountGaps, registrationReadiness } from "@/lib/readiness";
 
 /**
  * Check-in, the step before a Royalty Health Check (PLAN-health-hub-reports §3): which songs, where you get paid, and
@@ -135,7 +135,12 @@ export function HealthCheckIn({ scope, options, onScope, rows, countryPicker, si
   const [chosen, setChosen] = useState<IntakeKind | undefined>(initialIntake);
   const list = questions(signedSheets);
   // Missing writer details are shown so they can be fixed, but never hold the check back (Writer Credits rules).
-  const warnings = rows.flatMap((x) => registrationReadiness(x.r.track.metadata).missing.slice(0, 2).map((w) => ({ x, w }))).slice(0, 6);
+  // Writer details still to fill in, including the IPI a writer needs once they have a PRO, so the check-in names the
+  // same gaps My Catalog does (founder, 2026-11-13). Nothing here holds the check back.
+  const warnings = rows.flatMap((x) => [
+    ...registrationReadiness(x.r.track.metadata).missing.slice(0, 2),
+    ...proAccountGaps(x.r.track.metadata).filter((w) => w.code === "ipi").slice(0, 1),
+  ].map((w) => ({ x, w }))).slice(0, 6);
   const noPro = rows.filter((x) => x.r.issues.some((i) => i.field?.endsWith("-pro")));
 
   function answerAll(q: Question, targets: CheckInRow[], a: Answer) {
