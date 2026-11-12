@@ -59,6 +59,28 @@ function Title({ value, against, emphasise }: { value: string; against: string; 
   );
 }
 
+/** Comparability for one field: case and runs of spaces never make two readings different. */
+const canon = (s: string) => (s ?? "").toLowerCase().replace(/\s+/g, " ").trim();
+
+/** One compared field: its name, and its value marked in cobalt when the two sides disagree. */
+function Field({ label, differs, children }: { label: string; differs: boolean; children: React.ReactNode }) {
+  return (
+    <div className={differs
+      ? "rounded border-l-2 border-[#004AAD] bg-[#004AAD]/[0.06] px-1.5 py-1 dark:border-[#4D8CFF] dark:bg-[#4D8CFF]/10"
+      : "px-1.5 py-1"}>
+      <span className={`block text-[9px] font-bold uppercase tracking-wider ${differs ? "text-[#004AAD] dark:text-[#4D8CFF]" : "text-[#0b0b0b]/50 dark:text-[#E5E4E2]/50"}`}>{label}</span>
+      {children}
+    </div>
+  );
+}
+
+/** A plain field value, or the honest reason there isn't one. */
+function Value({ text, empty }: { text: string; empty: string }) {
+  return text.trim()
+    ? <span className="block break-words text-xs text-[#0b0b0b]/85 dark:text-[#E5E4E2]/85">{text}</span>
+    : <span className="block text-[11px] italic text-[#0b0b0b]/45 dark:text-[#E5E4E2]/45">{empty}</span>;
+}
+
 export function DifferencesChart({ rows, busyKey, onFixCatalog, onAdopt, onKeepBoth }: {
   rows: DifferenceRow[];
   busyKey?: string | undefined;
@@ -81,8 +103,11 @@ export function DifferencesChart({ rows, busyKey, onFixCatalog, onAdopt, onKeepB
         const busy = busyKey === row.key;
         const agencyIsrc = row.claims.find((c) => c.isrc)?.isrc ?? "";
         const agencyTitle = row.claims[0]?.title ?? "";
-        const titlesDisagree = !!agencyTitle && agencyTitle.toLowerCase().replace(/\s+/g, " ").trim() !== row.title.toLowerCase().replace(/\s+/g, " ").trim();
+        const titlesDisagree = !!agencyTitle && canon(agencyTitle) !== canon(row.title);
         const codesDiffer = !!row.catalogIsrc && !!agencyIsrc && row.catalogIsrc.toUpperCase() !== agencyIsrc.toUpperCase();
+        // A version or an artist the list doesn't name is not a difference: only two values that are both there can disagree.
+        const versionsDisagreeFor = (agencyVersion: string) => !!agencyVersion.trim() && !!row.versions.catalog.trim() && canon(agencyVersion) !== canon(row.versions.catalog);
+        const artistsDisagreeFor = (agencyArtist: string) => !!agencyArtist.trim() && !!row.artists.catalog.trim() && canon(agencyArtist) !== canon(row.artists.catalog);
         const code = agencyIsrc || row.catalogIsrc;
         const url = repertoireUrl(row.claims[0]?.society ?? "");
         const canAdopt = !row.catalogIsrc && !!agencyIsrc && row.kind !== "missing-from-list";
@@ -127,39 +152,46 @@ export function DifferencesChart({ rows, busyKey, onFixCatalog, onAdopt, onKeepB
               <p className="mt-2 text-xs leading-relaxed text-[#0b0b0b]/70 dark:text-[#E5E4E2]/70">{summaryFor(row)}</p>
             </div>
 
-            {/* Zone 2 — the two values side by side. */}
+            {/* Zone 2 — the fields side by side, with the one that disagrees marked (founder, 2026-11-14). */}
             <div className="min-w-0 lg:col-span-4">
               <div className="rounded-lg border border-[#E5E4E2] bg-[#E5E4E2]/30 dark:border-[#E5E4E2]/15 dark:bg-[#0b0b0b]">
                 <div className="grid grid-cols-2 gap-3 p-3">
-                  <div className="min-w-0">
+                  <div className="min-w-0 space-y-1.5">
                     <span className="block text-[10px] font-bold uppercase tracking-wider text-[#0b0b0b]/55 dark:text-[#E5E4E2]/55">Your catalog</span>
-                    <div className="mt-1"><Title value={row.title} against={agencyTitle} emphasise={titlesDisagree} /></div>
-                    <div className="mt-1">
+                    <Field label="Title" differs={titlesDisagree}><Title value={row.title} against={agencyTitle} emphasise={titlesDisagree} /></Field>
+                    <Field label="Version" differs={versionsDisagreeFor(row.versions.catalog)}><Value text={row.versions.catalog} empty="Not named" /></Field>
+                    <Field label="Artist" differs={false}><Value text={row.artist} empty="No artist listed" /></Field>
+                    <Field label="ISRC" differs={codesDiffer}>
                       {row.catalogIsrc
                         ? <Isrc value={row.catalogIsrc} against={agencyIsrc} />
-                        : <>
-                          <span className="block text-xs font-semibold text-[#0b0b0b] dark:text-[#FFFFFF]">NOT IN CATALOG</span>
-                          <span className="mt-1 block text-xs opacity-60">No ISRC found in your catalog</span>
-                        </>}
+                        : <Value text="" empty="No ISRC in your catalog" />}
                       {row.retiredIscrs.length > 0 && (
                         <span className="mt-1 block font-mono text-[11px] tabular-nums text-[#0b0b0b]/45 line-through dark:text-[#E5E4E2]/45">{row.retiredIscrs.join(" · ")}</span>
                       )}
-                    </div>
+                    </Field>
                   </div>
-                  <div className="min-w-0 border-l border-[#E5E4E2] pl-3 dark:border-[#E5E4E2]/15">
+                  <div className="min-w-0 space-y-1.5 border-l border-[#E5E4E2] pl-3 dark:border-[#E5E4E2]/15">
                     <span className="block text-[10px] font-bold uppercase tracking-wider text-[#0b0b0b]/55 dark:text-[#E5E4E2]/55">The agency</span>
                     {row.claims.map((c) => (
-                      <div key={c.society + c.isrc + c.title} className="mt-1">
+                      <div key={c.society + c.isrc + c.title} className="space-y-1.5">
                         <span className="block text-[10px] font-semibold uppercase tracking-wide text-[#004AAD] dark:text-[#4D8CFF]">{c.name}</span>
-                        <Title value={c.title || row.title} against={row.title} emphasise={titlesDisagree} />
-                        <div className="mt-1">
+                        <Field label="Title" differs={titlesDisagree}><Title value={c.title || row.title} against={row.title} emphasise={titlesDisagree} /></Field>
+                        <Field label="Version" differs={versionsDisagreeFor(c.version ?? "")}><Value text={c.version ?? ""} empty="Not named" /></Field>
+                        <Field label="Artist" differs={artistsDisagreeFor(c.artist ?? "")}><Value text={c.artist ?? ""} empty="Not on the list" /></Field>
+                        <Field label="ISRC" differs={codesDiffer}>
                           {c.isrc
                             ? <Isrc value={c.isrc} against={row.catalogIsrc} />
-                            : <>
-                              <span className="block text-xs font-semibold text-[#0b0b0b] dark:text-[#FFFFFF]">NOT IN AGENCY</span>
-                              <span className="mt-1 block text-xs opacity-60">No ISRC found on list</span>
-                            </>}
-                        </div>
+                            : <Value text="" empty="No ISRC on the list" />}
+                          {/* Two codes under one title are two recordings: the second is shown, never hidden behind the first. */}
+                          {row.agencyCodes.filter((x) => x.isrc && x.isrc.toUpperCase() !== (c.isrc || "").toUpperCase()).map((x) => (
+                            <span key={x.isrc} className="mt-1 block">
+                              <Isrc value={x.isrc} against={row.catalogIsrc} />
+                              <span className="mt-0.5 block text-[10px] text-[#0b0b0b]/55 dark:text-[#E5E4E2]/55">
+                                {x.version ? `Second code · ${x.version}` : "Second code on the list"}
+                              </span>
+                            </span>
+                          ))}
+                        </Field>
                       </div>
                     ))}
                   </div>

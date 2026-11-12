@@ -72,29 +72,43 @@ describe("the founder's real SoundExchange export", () => {
     expect(works.filter((w) => w.title.startsWith("Beauty King")).map((w) => w.isrc).sort()).toEqual(["GX8KD2635482", "QZ85M1938225"]);
   });
 
-  it("finds the catalogued songs through their versions and reports the real gaps", () => {
-    expect(r.matched).toHaveLength(23);
+  it("accounts for every catalogued song, and leaves only the real gaps over", () => {
+    // Every song is matched, a difference, or missing from the list — never dropped on the way through. A song can be
+    // both matched on its own code and a difference for a second code on the list.
+    const covered = new Set([...r.matched, ...r.differences, ...r.notListed, ...r.clashes].map((m) => m.trackId));
+    expect(covered.size).toBe(catalog.length);
     expect(r.notListed.map((n) => n.title)).toEqual(["24/7 Love", "SBOC"]);
-    // Recordings on the list that the catalog has never held.
+    // A second code under one title belongs to its song, never to "recordings nobody catalogued" (founder, 2026-11-14).
     expect(r.extra.map((w) => `${w.title} [${w.isrc}]`).sort()).toEqual([
-      "Beauty King [QZ85M1938225]",
-      "Big Swag [QZNMY2291727]",
       "Don'T Even Show It Freestyle [QZNMY2291724]",
       "Luh Baby [QZNMY2291721]",
-      "Off With His Head [QZNMY2291726]",
       "Sea Vibes Freestyle [QZNMY2291718]",
     ]);
+    // Both AM PM versions are catalogued with the codes the list holds: nothing to report, and no name invented.
+    expect(r.differences.filter((d) => d.title.toUpperCase() === "AM PM")).toHaveLength(0);
   });
 
-  it("names the recordings whose titles read differently, and the one code that disagrees", () => {
-    expect(r.differences.map((d) => d.issues[0]!.split(" — ")[0]!).sort()).toEqual([
-      'The agency calls it "Am Pm (Clean Version)", your catalog has "AM PM"',
-      'The agency calls it "Am Pm (Dirty Version)", your catalog has "AM PM"',
-      'The agency calls it "Bloodline", your catalog has "Bloodline (Clean Version)"',
-      'The agency calls it "Quit Playing With Me (Clean Version)", your catalog has "Quit Playing With Me (Radio edit)"',
-    ].concat(["The agency has ISRC QZNMY2291725, your catalog has GXESV2623521"]).sort());
-    // Sounds alike under another spelling stay quiet: a feature credit or a capital letter is not a difference.
+  it("reads each version as a version, never as part of the name", () => {
+    // The list's own title, its title without the version, and the version it names — read, not guessed.
+    expect(works.find((w) => w.isrc === "QT6HW2687935")).toMatchObject({
+      title: "Quit Playing With Me (Clean Version)", coreTitle: "Quit Playing With Me", version: "Clean Version", artist: "Karma Came",
+    });
+    // "Bloodline" on SoundExchange is Bloodline: no version is invented on it.
+    expect(works.find((w) => w.title === "Bloodline")).toMatchObject({ isrc: "GBSMU2963386" });
+    expect(works.find((w) => w.title === "Bloodline")!.version).toBeUndefined();
+
+    const issues = r.differences.map((d) => d.issues[0]!.split(" — ")[0]!).sort();
+    // The one real version disagreement, in the list's own words.
+    expect(issues).toContain('The agency has version "Clean Version", your catalog has "Radio edit"');
+    // Never the fabricated "Bloodline (Clean Version)" on a recording the list calls Bloodline.
+    expect(issues.some((i) => /your catalog has "Bloodline \(Clean Version\)"/.test(i))).toBe(false);
+    // A clean version that is not out yet waits for release instead of reading as a mismatch.
+    expect(issues).toContain('Your catalog\'s "Clean Version" is not released yet, and the agency lists this recording without a version');
+    // The three titles the list holds under two codes are each reported as one song with two recordings.
+    for (const title of ["Beauty King", "Big Swag", "Off With His Head"]) {
+      expect(issues.some((i) => i.startsWith(`The agency holds a second ISRC for "${title}"`))).toBe(true);
+    }
+    // A capital letter is never a difference.
     expect(r.differences.some((d) => d.title.startsWith("Big Booty"))).toBe(false);
-    expect(r.differences.some((d) => d.title.startsWith("Beauty King"))).toBe(false);
   });
 });

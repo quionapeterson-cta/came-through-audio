@@ -8,7 +8,21 @@ import { retireAdvice } from "@/lib/isrc-retirement";
  * the comparison is saved. Every agency formats its export differently, so columns are found by their headings.
  */
 export type ListWriter = { name: string; share?: number | undefined; ipi?: string | undefined; pro?: string | undefined };
-export type ListWork = { title: string; iswc: string; isrc: string; workId: string; writers: ListWriter[]; /** BMI prints the publisher half as its own P rows; kept so a published work is not read as writers only. */ publishers?: ListWriter[] };
+export type ListWork = {
+  title: string;
+  /** The version the list names, from its own Version column or from the title's own tail ("Clean Version"). Read, never guessed. */
+  version?: string | undefined;
+  /** The title with its own version tail taken off ("Quit Playing With Me"), so a version is compared as a version. */
+  coreTitle?: string | undefined;
+  /** The recording artist the list prints, shown beside the catalog's so a credit can be compared (founder, 2026-11-14). */
+  artist?: string | undefined;
+  iswc: string;
+  isrc: string;
+  workId: string;
+  writers: ListWriter[];
+  /** BMI prints the publisher half as its own P rows; kept so a published work is not read as writers only. */
+  publishers?: ListWriter[];
+};
 export type ListMatch = { trackId: string; title: string; work?: ListWork; issues: string[] };
 /** A work the list has under the song's title, with no writer in common: not the song, and not simply missing either. */
 export type ListClash = { trackId: string; title: string; work: ListWork; issues: string[] };
@@ -130,11 +144,13 @@ function cellText(v: unknown): string {
   return String(v).trim();
 }
 
-type Columns = Partial<Record<"title" | "iswc" | "isrc" | "workId" | "writer" | "share" | "ipi" | "party" | "pro", number>>;
+type Columns = Partial<Record<"title" | "iswc" | "isrc" | "workId" | "writer" | "share" | "ipi" | "party" | "pro" | "version" | "artist", number>>;
 const HEADINGS: [keyof Columns, RegExp][] = [
   ["iswc", /iswc/i], ["isrc", /isrc/i], ["ipi", /(\b(ipi|cae)|ip\s*name\s*n(umber|o))/i],
   ["workId", /(title\s*(number|no|#|code|id)|work\s*(id|#|number|no)|song\s*(code|id|#|number)|mlc\s*song|work\s*code|registration\s*(id|#)|^bmi\s*#|^ascap\s*#)/i],
   ["share", /(share|%|percent|ownership|split)/i], ["pro", /(affil|afflia|^society$|^pro$)/i], ["party", /(indicator|party\s*type|participant\s*(type|role)|designation|capacity|role|^type$)/i],
+  ["version", /(^\s*version\b|recording\s*version|title\s*version|version\s*(name|label|title)|^\s*alternate\s*version\b)/i],
+  ["artist", /(artist|performer|recording\s*artist|credited\s*to|^act$)/i],
   ["writer", /(writer|composer|author|songwriter|interested\s*part|party\s*name|participant|^name$)/i],
   ["title", /(title|work\s*name|song\s*name|track\s*name|^song$|^work$)/i],
 ];
@@ -142,6 +158,9 @@ function columns(header: string[]): Columns {
   const out: Columns = {};
   header.forEach((h, i) => {
     if (/alternate|alt\.|other\s*title|publisher/i.test(h) && !/writer/i.test(h)) return;
+    // The release's edition ("Release Version", "Album Version") is not the recording's version: it names the album a
+    // track sits on, so it is never read as one (founder, 2026-11-14).
+    if (/release\s*version|album\s*version|label\s*version/i.test(h)) return;
     const hit = HEADINGS.find(([k, re]) => out[k] === undefined && re.test(h));
     if (hit) out[hit[0]] = i;
   });
@@ -158,6 +177,9 @@ export function readWorks(rows: string[][]): ListWork[] {
   let last: ListWork | undefined;
   for (const r of rows.slice(at + 1)) {
     const title = get(r, "title"), iswc = code(get(r, "iswc")), isrc = code(get(r, "isrc")), workId = get(r, "workId");
+    // The list's own version, else the one its title names — read exactly as the agency wrote it, never appended to a title.
+    const version = get(r, "version") || versionTail(title), artist = get(r, "artist");
+    const coreTitle = stripVersion(title);
     // One row per writer: rows without a title continue the work above.
     const key = workId || iswc || (title ? norm(title) : "") || isrc;
     const fresh = (): ListWork => ({ title, iswc, isrc, workId, writers: [] });
@@ -173,6 +195,9 @@ export function readWorks(rows: string[][]): ListWork[] {
     if (!work) continue;
     if (!work.iswc && iswc) work.iswc = iswc;
     if (!work.isrc && isrc) work.isrc = isrc;
+    if (!work.version && version) work.version = version;
+    if (!work.artist && artist) work.artist = artist;
+    if (!work.coreTitle && coreTitle.trim() && coreTitle.trim() !== work.title.trim()) work.coreTitle = coreTitle;
     const party = get(r, "party");
     const name = get(r, "writer");
     const isPublisherRow = /publisher|^p$/i.test(party);
@@ -210,6 +235,32 @@ export function titleCore(title: string): string {
   const parts = core.split(/\s*[-–—:]\s+/);
   if (parts.length > 1 && VERSION_WORDS.test(parts.slice(1).join(" "))) core = parts[0]!;
   return norm(core);
+}
+
+/**
+ * The version a title names itself: "Bloodline (Clean Version)" → "Clean Version", "Song: Radio Edit" → "Radio Edit".
+ * Only a tail that reads like a version counts, so "Midnight, Pt. 2" names no version at all. The label is read as the
+ * agency wrote it — never shortened, never appended to a title (founder, 2026-11-14).
+ */
+export function versionTail(title: string): string {
+  const bracket = title.match(/[([{]\s*([^)\]}]+?)\s*[)\]}]\s*$/);
+  if (bracket?.[1] && VERSION_WORDS.test(bracket[1])) return bracket[1].trim();
+  const parts = title.split(/\s*[-–—:]\s+/);
+  if (parts.length > 1) {
+    const tail = parts.slice(1).join(" - ").trim();
+    if (VERSION_WORDS.test(tail)) return tail;
+  }
+  return "";
+}
+
+/**
+ * The title without its own version tail: "Bloodline (Clean Version)" → "Bloodline", "Song - Sped Up" → "Song". Only a
+ * tail that reads like a version is taken off, so "Midnight, Pt. 2" keeps every word.
+ */
+export function stripVersion(title: string): string {
+  if (!versionTail(title)) return title.trim();
+  const cut = title.trim().replace(/[([{]\s*[^)\]}]+?\s*[)\]}]\s*$/, "").replace(/\s*[-–—:]\s*[^-–—:]*$/, "").trim();
+  return cut || title.trim();
 }
 
 /** Does this title name a version of the recording ("Clean Version", "Official Instrumental")? */
@@ -366,8 +417,30 @@ export function workIssues(work: ListWork, metadata: Metadata, recordings = fals
   }
   if (work.iswc && work.iswc !== iswc) issues.push(iswc ? `The agency has ISWC ${work.iswc}, your catalog has ${metadata.iswc.trim()}` : `The agency has ISWC ${work.iswc}, your catalog has none`);
   // The name, before the early return: a recordings list has no writers but still names the recording.
-  const named = printedTitle(metadata);
-  if (titleReadsDifferently(named, work.title)) issues.push(`The agency calls it "${work.title}", your catalog has "${named}" — same recording, different name`);
+  // The catalog's title exactly, never with its version field appended: "Bloodline" is Bloodline on SoundExchange, and
+  // "Bloodline (Deluxe)" invented a name difference on every song (founder, 2026-11-14). A version baked into the title
+  // ("Bloodline (Clean Version)") is still a name difference, because that is how the catalog actually spells it.
+  const named = metadata.title.trim();
+  // The version tail of each title is compared as a version, never as part of the name: "Quit Playing With Me (Clean
+  // Version)" and "Quit Playing With Me" are one title with two versions (founder, 2026-11-14).
+  const agencyTitle = (work.coreTitle ?? stripVersion(work.title)).trim();
+  const catalogTitle = stripVersion(named);
+  if (titleReadsDifferently(catalogTitle, agencyTitle)) issues.push(`The agency calls it "${work.title}", your catalog has "${named}" — same recording, different name`);
+  // A version is compared as a version, and only when the list names one: agencies register the recording or the work
+  // without version wording all the time, and that is not a difference.
+  const agencyVersion = (work.version ?? versionTail(work.title)).trim();
+  const catalogVersion = (metadata.version ?? "").trim() || versionTail(named);
+  if (agencyVersion && catalogVersion && norm(agencyVersion) !== norm(catalogVersion)) {
+    issues.push(`The agency has version "${agencyVersion}", your catalog has "${catalogVersion}" — same title, two versions of the recording`);
+  }
+  // A version named in the catalog's own title that the agency lists without one, and that is not out yet: that is a
+  // release that has not happened, never a mismatch (founder, 2026-11-14).
+  const ownTail = versionTail(named);
+  if (ownTail && !agencyVersion) {
+    const today = new Date().toISOString().slice(0, 10);
+    const released = !!metadata.releaseDate && !metadata.unreleased && metadata.releaseDate <= today;
+    if (!released) issues.push(`Your catalog's "${ownTail}" is not released yet, and the agency lists this recording without a version — nothing to fix before release day`);
+  }
   if (recordings || !work.writers.length) return issues;
   const mine = [...metadata.writers, ...metadata.composers].filter((w) => creditName(w)).map((w) => ({ key: nameKey(creditName(w)), name: creditName(w), ipi: digits(w.ipi ?? ""), share: Number(w.percentage) || undefined }));
   const theirs = work.writers.map((w) => ({ ...w, key: nameKey(w.name) }));
@@ -420,6 +493,34 @@ export function compareList(works: ListWork[], tracks: CatalogTrack[], recording
     used.add(work);
     const issues = workIssues(work, m, recordings);
     (issues.length ? differences : matched).push({ trackId: t.id, title: t.title, work, issues });
+  }
+  // A title the list holds under two or more codes is one song with more than one recording: another version, or the
+  // retired code beside the current one. It was landing in "extra" — a recording nobody catalogued — so the second code
+  // was invisible exactly when it mattered (founder, 2026-11-14). A code the catalog already retired is skipped: the
+  // agency is meant to keep that entry open.
+  const codesByTitle = new Map<string, Set<string>>();
+  for (const w of works) {
+    if (!w.isrc || !w.title) continue;
+    const core = titleCore(w.title);
+    codesByTitle.set(core, (codesByTitle.get(core) ?? new Set<string>()).add(w.isrc));
+  }
+  for (const w of works) {
+    if (used.has(w) || !w.isrc || !w.title) continue;
+    const core = titleCore(w.title);
+    if ((codesByTitle.get(core)?.size ?? 0) < 2) continue;
+    const hits = tracks.filter((t) => titleCore(t.title) === core);
+    if (hits.length !== 1) continue;
+    const t = hits[0]!;
+    const active = code(t.metadata.isrc ?? "");
+    if (retiredCodes(t.metadata).includes(w.isrc)) { used.add(w); continue; }
+    used.add(w);
+    const version = w.version ? ` (${w.version})` : "";
+    differences.push({
+      trackId: t.id,
+      title: t.title,
+      work: w,
+      issues: [`The agency holds a second ISRC for "${w.title}"${version}: ${w.isrc}, beside ${active || "no code in your catalog"} — one title, ${codesByTitle.get(core)!.size} codes`],
+    });
   }
   for (const w of works) if (!used.has(w) && retiredFor(w)) used.add(w);
   return { matched, differences, clashes, notListed, extra: works.filter((w) => !used.has(w)), works: works.length };

@@ -123,6 +123,58 @@ describe("agency lists", () => {
     expect(r.matched).toHaveLength(1);
   });
 
+  it("reads a Version column and a version inside a title, and keeps the title as the list prints it", () => {
+    const works = readWorks(parseDelimited(
+      "Title,Version,ISRC,Artist\nBloodline,,GBSMU2963386,Karma Came\nQuit Playing With Me (Clean Version),,QT6HW2687935,Karma Came\nAM PM,Radio Edit,QT6HX2656773,Karma Came"));
+    expect(works[0]).toMatchObject({ title: "Bloodline", artist: "Karma Came" });
+    expect(works[0]!.version).toBeUndefined();
+    expect(works[1]).toMatchObject({ title: "Quit Playing With Me (Clean Version)", coreTitle: "Quit Playing With Me", version: "Clean Version" });
+    expect(works[2]).toMatchObject({ title: "AM PM", version: "Radio Edit" });
+    expect(works[2]!.coreTitle).toBeUndefined();
+  });
+
+  it("never invents a version on a recording the list calls plainly", () => {
+    const works = readWorks(parseDelimited("Title,ISRC,Artist\nBloodline,GBSMU2963386,Karma Came"));
+    // The catalog's own version field is not part of its title, so it can't make a name difference on a plain Bloodline.
+    const r = compareList(works, [track("a", "Bloodline", { isrc: "GBSMU2963386", version: "Deluxe" })], true);
+    expect(r.matched).toHaveLength(1);
+    expect(r.differences).toHaveLength(0);
+  });
+
+  it("treats a second code under one title as another recording of it, never an isolated mismatch", () => {
+    const works = readWorks(parseDelimited("Title,ISRC\nBig Swag,QZNMY2291720\nBig Swag,QZNMY2291727"));
+    const r = compareList(works, [track("a", "Big Swag", { isrc: "QZNMY2291720" })], true);
+    expect(r.matched).toHaveLength(1);
+    expect(r.extra).toEqual([]);
+    expect(r.differences).toHaveLength(1);
+    expect(r.differences[0]!.issues[0]).toContain('The agency holds a second ISRC for "Big Swag": QZNMY2291727');
+  });
+
+  it("reports nothing when the agency keeps both the current and the retired code", () => {
+    const works = readWorks(parseDelimited("Title,ISRC\nDo you Mind That,QZNMY2291725\nDo you Mind That,GXESV2623521"));
+    const t = track("a", "Do you Mind That?", { isrc: "GXESV2623521", retiredIscrs: ["QZNMY2291725"] });
+    const r = compareList(works, [t], true);
+    expect(r.differences).toHaveLength(0);
+    expect(r.extra).toHaveLength(0);
+  });
+
+  it("compares a version as a version, and waits while the catalog's own version is unreleased", () => {
+    const works = readWorks(parseDelimited("Title,ISRC\nQuit Playing With Me (Clean Version),QT6HW2687935"));
+    const r = compareList(works, [track("a", "Quit Playing With Me", { isrc: "QT6HW2687935", version: "Radio edit" })], true);
+    expect(r.differences[0]!.issues).toEqual([expect.stringContaining('The agency has version "Clean Version", your catalog has "Radio edit"')]);
+    // A clean version the catalog holds but has not released waits for release day instead of reading as a mismatch.
+    const waiting = compareList(readWorks(parseDelimited("Title,ISRC\nBloodline,GBSMU2963386")),
+      [track("b", "Bloodline (Clean Version)", { isrc: "GBSMU2963386" })], true);
+    expect(waiting.differences[0]!.issues[0]).toContain("is not released yet");
+  });
+
+  it("never makes a capital letter, or a version the list doesn't name, a difference", () => {
+    const works = readWorks(parseDelimited("Title,ISRC,Artist\nAM PM,QT6HX2656773,KARMA CAME"));
+    const r = compareList(works, [track("a", "AM PM", { isrc: "QT6HX2656773", artist: "Karma Came" })], true);
+    expect(r.matched).toHaveLength(1);
+    expect(r.differences).toHaveLength(0);
+  });
+
   it("explains when it can't find the columns", () => {
     expect(() => readWorks([["a", "b"], ["1", "2"]])).toThrow(/title or ISRC column/);
   });
