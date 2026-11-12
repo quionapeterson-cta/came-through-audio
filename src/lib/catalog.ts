@@ -228,6 +228,21 @@ export async function setReleaseArtwork(
   return { songs: covers.length, covers, failed };
 }
 
+/**
+ * The artwork already saved on a catalog song, back as a file (founder, 2026-11-13): a cover that arrived with a
+ * streaming pull, or one picked in an earlier sitting, lives in the member's folder and nowhere else. Embedding used to
+ * read only the file the member attached this time, so a song whose cover was already in the catalog went out with no
+ * front cover at all. A missing or unreadable picture returns nothing, and the embed carries on as it did.
+ */
+export async function catalogArtwork(path: string, name = "cover"): Promise<File | undefined> {
+  if (!path) return undefined;
+  const { data, error } = await supabase.storage.from(BUCKET).download(path);
+  if (error || !data || !data.size) return undefined;
+  const type = data.type === "image/png" ? "image/png" : "image/jpeg";
+  const safe = name.replace(/[\\/:*?"<>|]/g, "-").trim() || "cover";
+  return new File([data], `${safe}.${type === "image/png" ? "png" : "jpg"}`, { type });
+}
+
 export async function downloadCatalogFile(path: string, filename: string) {
   const { data, error } = await supabase.storage.from(BUCKET).download(path);
   if (error) throw error;

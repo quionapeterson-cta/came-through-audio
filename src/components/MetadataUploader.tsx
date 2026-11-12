@@ -32,7 +32,7 @@ import type { RepertoireCheck } from "@/lib/health";
 import { HealthLiquid, HealthMeter } from "@/components/HealthMeter";
 import { DownloadCatalogButton } from "@/components/CatalogLapseBanner";
 import { iswcReminder } from "@/lib/iswc-reminder";
-import { deleteTrack, downloadCatalogFile, downloadRelease, downloadWholeCatalog, duplicateTrack, groupReleases, listTracks, safeName, saveTrack, setReleaseArtwork, uploadCatalogFile, versionTitle, type CatalogTrack, type DownloadGap, type ZipResult } from "@/lib/catalog";
+import { catalogArtwork, deleteTrack, downloadCatalogFile, downloadRelease, downloadWholeCatalog, duplicateTrack, groupReleases, listTracks, safeName, saveTrack, setReleaseArtwork, uploadCatalogFile, versionTitle, type CatalogTrack, type DownloadGap, type ZipResult } from "@/lib/catalog";
 import { albumKey, routedKinds } from "@/lib/release-routing";
 import { AGENCY_LABEL, downloadAgencyExport, downloadNeighbouringPack, mlcPlaceholderSongs, recordExports, type Agency, type Held } from "@/lib/agency-export";
 import { AgencyExportDialog } from "@/components/AgencyExportDialog";
@@ -395,12 +395,15 @@ export function MetadataUploader({ onShareInfo, userId, mode = "embed", readOnly
         const source = tracks.find((x) => x.id === data.beatMasterId);
         if (source && source.metadata.beatState !== "sold") await saveTrack({ ...source.metadata, beatState: "sold" }, userId, source.id);
       }
+      // The cover the song already has (a pull's release art, or one chosen earlier) is embedded too, not just one
+      // attached in this sitting: the catalog's own artwork is what most songs have (founder, 2026-11-13).
+      const cover = artwork ?? (audio && data.artPath ? await catalogArtwork(data.artPath, safeName(data.title)) : undefined);
       // Always store the fully tagged master (never the raw upload) and artwork in the private vault.
       let master: Blob | undefined;
       let embedded = false;
       if (result) { master = await (await fetch(result.url)).blob(); embedded = true; }
       else if (audio) {
-        try { master = await embedMetadata(await audio.arrayBuffer(), data, artwork ? await artwork.arrayBuffer() : undefined); embedded = true; }
+        try { master = await embedMetadata(await audio.arrayBuffer(), data, cover ? await cover.arrayBuffer() : undefined); embedded = true; }
         catch { master = audio; }
       }
       let filesChanged = false, stored = false, artStored = false;
@@ -645,7 +648,8 @@ export function MetadataUploader({ onShareInfo, userId, mode = "embed", readOnly
     setBusy(true);
     setSavedInfo(undefined);
     try {
-      const blob = await embedMetadata(await audio.arrayBuffer(), parsed.data, artwork ? await artwork.arrayBuffer() : undefined);
+      const cover = artwork ?? (await catalogArtwork(parsed.data.artPath, safeName(parsed.data.title)));
+      const blob = await embedMetadata(await audio.arrayBuffer(), parsed.data, cover ? await cover.arrayBuffer() : undefined);
       const file = { url: URL.createObjectURL(blob), name: `${safeName(parsed.data.title)}.${extOf(audio.name)}` };
       const a = document.createElement("a");
       a.href = file.url; a.download = file.name;
