@@ -159,9 +159,17 @@ export function readWorks(rows: string[][]): ListWork[] {
     const title = get(r, "title"), iswc = code(get(r, "iswc")), isrc = code(get(r, "isrc")), workId = get(r, "workId");
     // One row per writer: rows without a title continue the work above.
     const key = workId || iswc || (title ? norm(title) : "") || isrc;
-    const work = key ? works.get(key) ?? { title, iswc, isrc, workId, writers: [] } : last;
+    const fresh = (): ListWork => ({ title, iswc, isrc, workId, writers: [] });
+    let work: ListWork | undefined = key ? works.get(key) ?? fresh() : last;
+    // A recordings list (SoundExchange, The MLC) has one row per recording, so two rows can share a title and carry
+    // different ISRCs — "Big Swag" and "Off With His Head" do on the founder's own export. Grouping by title kept only
+    // the first code and lost the second (founder, 2026-11-12), so a second code starts its own work.
+    if (key && work?.isrc && isrc && work.isrc !== isrc) {
+      const splitKey = `${key}#${isrc}`;
+      work = works.get(splitKey) ?? fresh();
+      works.set(splitKey, work);
+    } else if (key && work && !works.has(key)) works.set(key, work);
     if (!work) continue;
-    if (key && !works.has(key)) works.set(key, work);
     if (!work.iswc && iswc) work.iswc = iswc;
     if (!work.isrc && isrc) work.isrc = isrc;
     const party = get(r, "party");
