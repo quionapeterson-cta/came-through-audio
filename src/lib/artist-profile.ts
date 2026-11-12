@@ -113,7 +113,11 @@ export function withOwnWriter(rows: Contributor[] | undefined, legalName?: strin
   const name = legalName?.trim();
   if (!name) return rows;
   if (!rows?.length) return [{ ...emptyContributor(), legalName: name, role: "Author/Composer" }];
-  return rows.length === 1 && !creditName(rows[0]!) ? [{ ...rows[0]!, legalName: name }] : rows;
+  // A lone row that only ever held their PRO and IPI takes the name — and a role, if it has none. Without one, every
+  // song filled from these defaults waits on the same answer, and the health meter sits at 33% until the member picks
+  // it on each song separately (founder, 2026-11-12). An answer already given is never replaced.
+  if (rows.length !== 1 || creditName(rows[0]!)) return rows;
+  return [{ ...rows[0]!, legalName: name, role: rows[0]!.role?.trim() || "Author/Composer" }];
 }
 
 // The account (profiles row) is the source of truth; localStorage is a fast local cache.

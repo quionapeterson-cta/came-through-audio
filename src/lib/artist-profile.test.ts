@@ -5,7 +5,14 @@ import { emptyContributor, emptyMetadata } from "@/lib/metadata";
 describe("withOwnWriter", () => {
   it("names a lone unnamed row so its IPI and PRO reach new embeds", () => {
     const rows = withOwnWriter([{ ...emptyContributor(), ipi: "00123456789", pro: "BMI" }], "Jordan Lee");
-    expect(rows).toEqual([{ ...emptyContributor(), ipi: "00123456789", pro: "BMI", legalName: "Jordan Lee" }]);
+    // The role comes too: a row without one holds every song it fills at 33%, because the PRO and The MLC both wait on it.
+    expect(rows).toEqual([
+      { ...emptyContributor(), ipi: "00123456789", pro: "BMI", legalName: "Jordan Lee", role: "Author/Composer" },
+    ]);
+  });
+  it("keeps a role the member already chose", () => {
+    const rows = withOwnWriter([{ ...emptyContributor(), ipi: "00123456789", role: "Author" }], "Jordan Lee");
+    expect(rows?.[0]).toMatchObject({ legalName: "Jordan Lee", role: "Author" });
   });
   it("adds the user as writer when none was saved", () => {
     expect(withOwnWriter(undefined, "Jordan Lee")?.[0]).toMatchObject({ legalName: "Jordan Lee", role: "Author/Composer" });
