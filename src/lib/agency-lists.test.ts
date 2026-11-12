@@ -78,7 +78,7 @@ describe("agency lists", () => {
     // The live code is added next to the old one — never swapped in — because money filed under the old one can still
     // surface, and the member gets it done in their own account or through CTA, never by asking an agency politely
     // (founder, 2026-11-12).
-    expect(issues[0]).toContain("Get GXESV2623521 added to the same recording and leave the old code open");
+    expect(issues[0]).toContain("Register GXESV2623521 as its own registration and leave the old one open");
     expect(issues[0]).toContain("CTA's Expert Registration Assistance");
     expect(issues[0]).not.toContain("ask them");
     // Paired, and settled: it is not an uncatalogued recording as well.
