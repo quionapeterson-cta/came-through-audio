@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { COUNTRIES, TERRITORY_OPTIONS } from "@/lib/repertoires";
+import { COUNTRY_NAMES, countryOptions } from "@/lib/country-names";
 
 describe("territories of collection rights", () => {
   it("offers Worldwide first, then the whole world, once each", () => {
@@ -13,5 +14,20 @@ describe("territories of collection rights", () => {
     const rest = [...TERRITORY_OPTIONS.slice(1)];
     const folded = (v: string) => v.toLowerCase();
     expect(rest).toEqual([...rest].sort((a, b) => (folded(a) < folded(b) ? -1 : folded(a) > folded(b) ? 1 : 0)));
+  });
+});
+
+describe("a country picker with a saved answer", () => {
+  it("lists every country, and keeps an older free-text answer selectable", () => {
+    const plain = countryOptions("");
+    expect(plain).toHaveLength(COUNTRY_NAMES.length);
+    const saved = countryOptions("USA");
+    expect(saved[0]).toBe("USA");
+    expect(saved).toHaveLength(COUNTRY_NAMES.length + 1);
+  });
+
+  it("doesn't duplicate a value we already list", () => {
+    expect(countryOptions("United States")).toHaveLength(COUNTRY_NAMES.length);
+    expect(countryOptions("  ")).toHaveLength(COUNTRY_NAMES.length);
   });
 });

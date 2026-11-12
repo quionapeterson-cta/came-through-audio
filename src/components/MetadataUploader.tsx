@@ -23,6 +23,7 @@ import { beatIsOut, beatMasterLine, isSoldBeat, masterBeatLine, masterFromBeat, 
 import { amendmentPrefill } from "@/lib/beat-amendment";
 import { BeatBox, DealBox } from "@/components/BeatBox";
 import { COUNTRIES, TERRITORY_OPTIONS, countryByCode, guessCountry } from "@/lib/repertoires";
+import { countryOptions } from "@/lib/country-names";
 import { catalogHealth, releaseKind } from "@/lib/health-checklist";
 import { listChecks } from "@/lib/repertoire-checks";
 import { listStatuses, type SongStatus } from "@/lib/health-songs";
@@ -977,8 +978,8 @@ export function MetadataUploader({ onShareInfo, userId, mode = "embed", readOnly
               <FormSection title="Agency answers" disabled={busy}
                 summary={filled([["countries", metadata.releaseCountry || metadata.firstReleaseCountry], ["territories", metadata.collectionTerritories]]) || "Not set yet"}>
                 <div className="grid gap-5 sm:grid-cols-2">
-                  <Field label="Mastered in (country)" id="masteredIn" value={metadata.masteredIn} placeholder="United States" onChange={(v) => update("masteredIn", v)} />
-                  <Field label="Copyright owner's country" id="ownerNationality" value={metadata.ownerNationality} placeholder="United States" onChange={(v) => update("ownerNationality", v)} />
+                  <CountrySelect id="masteredIn" label="Mastered in (country)" value={metadata.masteredIn} placeholder="Not set" onChange={(v) => update("masteredIn", v)} />
+                  <CountrySelect id="ownerNationality" label="Copyright owner's country" value={metadata.ownerNationality} placeholder="Not set" onChange={(v) => update("ownerNationality", v)} />
                   <Field label="Country of first release" id="firstReleaseCountry" value={metadata.firstReleaseCountry} placeholder="Worldwide" onChange={(v) => update("firstReleaseCountry", v)} />
                   <Field label="Country of release" id="releaseCountry" value={metadata.releaseCountry} placeholder="Worldwide" onChange={(v) => update("releaseCountry", v)} />
                   <div className="min-w-0 space-y-2">
@@ -1443,6 +1444,23 @@ function Tip({ text, title }: { text: string; title?: string }) {
  * the main and featured artists come from their own fields (no retyping); session players and backup vocalists add
  * an instrument. Optional, like PRO and IPI. Recorded in / year stay in the catalog and are never embedded.
  */
+/**
+ * A country field as a real list (founder, 2026-11-12): agencies reject "USA" where they expect a country name, and a
+ * free-text box invites it. A value saved before this was a dropdown stays selectable, so opening the form can't drop it.
+ */
+function CountrySelect({ id, label, value, placeholder, onChange }: { id: string; label: string; value: string; placeholder: string; onChange: (v: string) => void }) {
+  return (
+    <div className="min-w-0 space-y-2">
+      <Label htmlFor={id}>{label}</Label>
+      <select id={id} value={value} onChange={(e) => onChange(e.target.value)}
+        className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm">
+        <option value="">{placeholder}</option>
+        {countryOptions(value).map((name) => <option key={name} value={name}>{name}</option>)}
+      </select>
+    </div>
+  );
+}
+
 function Performers({ metadata: m, disabled, update, bare }: { bare?: boolean; metadata: Metadata; disabled: boolean; update: <K extends keyof Metadata>(key: K, value: Metadata[K]) => void }) {
   const credits = m.credits;
   const set = (i: number, patch: Partial<Metadata["credits"][number]>) => update("credits", credits.map((x, j) => (j === i ? { ...x, ...patch } : x)));

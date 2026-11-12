@@ -19,6 +19,7 @@ import { listTracks, saveTrack } from "@/lib/catalog";
 import { propagated, propagationPlan, type Propagation } from "@/lib/profile-propagation";
 import { claimDefaultsSky } from "@/lib/celebrate";
 import { TERRITORY_OPTIONS } from "@/lib/repertoires";
+import { countryOptions } from "@/lib/country-names";
 import { capShare, splitTotal } from "@/lib/splits-total";
 import { TIER_LABEL } from "@/lib/plans";
 import { ArtistSeats } from "@/components/ArtistSeats";
@@ -341,8 +342,8 @@ export function ArtistOnboarding({ userId, open, onOpenChange, onSaved, firstRun
               <Field label="Usually recorded in" term="neighbouringRights"><Input value={p.recordedIn ?? ""} placeholder="United States" onChange={(e) => set("recordedIn", e.target.value)} /></Field>
               {/* The answers SoundExchange asks for that the song doesn't carry (founder, 2026-11-12): the same on nearly
                   every song, so they are typed once and filled into each song's blanks. Never embedded. */}
-              <Field label="Mastered in (country)"><Input value={p.masteredIn ?? ""} placeholder="United States" onChange={(e) => set("masteredIn", e.target.value)} /></Field>
-              <Field label="Copyright owner's country"><Input value={p.ownerNationality ?? ""} placeholder="United States" onChange={(e) => set("ownerNationality", e.target.value)} /></Field>
+              <Field label="Mastered in (country)"><Pick value={p.masteredIn ?? ""} options={countryOptions(p.masteredIn ?? "")} empty="Not set" onChange={(v) => set("masteredIn", v)} /></Field>
+              <Field label="Copyright owner's country"><Pick value={p.ownerNationality ?? ""} options={countryOptions(p.ownerNationality ?? "")} empty="Not set" onChange={(v) => set("ownerNationality", v)} /></Field>
               <Field label="Country of first release"><Input value={p.firstReleaseCountry ?? ""} placeholder="Worldwide" onChange={(e) => set("firstReleaseCountry", e.target.value)} /></Field>
               <Field label="Country of release"><Input value={p.releaseCountry ?? ""} placeholder="Worldwide" onChange={(e) => set("releaseCountry", e.target.value)} /></Field>
               <Field label="Territories of collection rights">

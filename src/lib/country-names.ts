@@ -261,3 +261,13 @@ export const COUNTRY_NAMES: readonly string[] = [
   "Zimbabwe",
   "Åland Islands",
 ];
+
+/**
+ * The options for a country picker that already has an answer (founder, 2026-11-12): a song saved before the field was a
+ * dropdown may hold "USA" or "U.S.A.", and a select that doesn't list it would show blank and quietly drop it on the
+ * next edit. The saved value stays first and stays selectable until the member picks a listed country.
+ */
+export function countryOptions(saved: string): string[] {
+  const value = (saved ?? "").trim();
+  return value && !COUNTRY_NAMES.includes(value) ? [value, ...COUNTRY_NAMES] : [...COUNTRY_NAMES];
+}
