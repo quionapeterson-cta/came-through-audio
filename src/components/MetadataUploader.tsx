@@ -46,6 +46,7 @@ import { openCheckout } from "@/lib/checkout";
 import { loadOnboarding, loadProfile, restoreRows, withProfile, withProfileFilled } from "@/lib/artist-profile";
 import { isExternal, withRoleDefaults } from "@/lib/roles";
 import { clearEmbedDraft, clearEmbedCover, coverForDraft, loadEmbedCover, saveEmbedCover, loadEmbedDraft, orderAudioFiles, saveEmbedDraft } from "@/lib/embed-session";
+import { artworkChoice, coverFile, FILE_ART_IGNORED } from "@/lib/embed-artwork";
 import { clearIntake, readIntake, writeIntake } from "@/lib/intake-session";
 import { fillFromSaved, findSaved, libraryRowsOf, savedPeople } from "@/lib/saved-people";
 import { catalogMatch, missingFor, orderAgencies } from "@/lib/registration";
@@ -98,6 +99,10 @@ export function MetadataUploader({ onShareInfo, userId, mode = "embed", readOnly
    */
   const putArtwork = (next?: File) => {
     setArtwork(next);
+    setCoverRestored(false);
+    // A removed cover leaves nothing behind (founder, 2026-11-12): the preview and the saved song both stop showing it,
+    // instead of the old tile reappearing the moment the file itself is gone.
+    if (!next) setMetadata((m) => ({ ...m, coverThumb: "" }));
     if (!userId) return;
     if (!next) { clearEmbedCover(userId); return; }
     void coverForDraft(next).then((url) => saveEmbedCover(userId, url)).catch(() => {});
@@ -106,6 +111,8 @@ export function MetadataUploader({ onShareInfo, userId, mode = "embed", readOnly
     void createImageBitmap(next).then((b) => setMetadata((m) => ({ ...m, artWidth: b.width, artHeight: b.height }))).catch(() => {});
   };
   const [cover, setCover] = useState("");
+  /** The cover shown came back from the last sitting, not from this one: labelled so it is never mistaken for the file's. */
+  const [coverRestored, setCoverRestored] = useState(false);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   const [result, setResult] = useState<{ url: string; name: string }>();
@@ -214,13 +221,18 @@ export function MetadataUploader({ onShareInfo, userId, mode = "embed", readOnly
   useEffect(() => {
     if (full) return;
     const draft = loadEmbedDraft(userId);
+    // The cover comes back as the artwork itself, not as the catalog's 160px tile (founder, 2026-11-09): the preview
+    // showed that tile blown up, and a file embedded from a restored session went out with no artwork at all. It is
+    // restored whether or not details were typed (founder, 2026-11-12), because a member who picked a cover and only
+    // then left the tab was handed the picture inside the next audio file instead of the cover they chose.
+    const savedCover = loadEmbedCover(userId);
+    if (savedCover) {
+      const remembered = coverFile(savedCover);
+      if (remembered) { setArtwork(remembered); setCoverRestored(true); }
+    }
     // Profile changes made since the draft fill its blanks (and saved writers' details), never what was typed.
     if (draft) {
       setMetadata(withProfileFilled(draft, loadProfile(userId)));
-      // The cover comes back as the artwork itself, not as the catalog's 160px tile (founder, 2026-11-09): the preview
-      // showed that tile blown up, and a file embedded from a restored session went out with no artwork at all.
-      const savedCover = loadEmbedCover(userId);
-      if (savedCover) void fetch(savedCover).then((r) => r.blob()).then((blob) => setArtwork(new File([blob], "cover.jpg", { type: blob.type || "image/jpeg" }))).catch(() => {});
       setRestored(true);
       toast.info(`Embed Metadata: your unsaved details${savedCover ? " and cover art are" : " are"} back. Add the audio file again to embed.`);
       return;
@@ -581,10 +593,15 @@ export function MetadataUploader({ onShareInfo, userId, mode = "embed", readOnly
     probe.src = probeUrl;
     file.arrayBuffer().then((buf) => {
       const { picture, ...found } = readMetadata(buf);
-      if (picture && !artwork) {
+      // The member's cover beats the picture baked into the audio (founder, 2026-11-12): re-embedding a master that was
+      // embedded before used to bring its old artwork back and replace the cover just chosen. The remembered cover counts
+      // as chosen, so a restored sitting is never overruled by the file before the artwork reaches state.
+      if (picture && artworkChoice(!!artwork || !!loadEmbedCover(userId), true) === "use-file") {
         const art = new File([picture], picture.type === "image/png" ? "cover.png" : "cover.jpg", { type: picture.type });
         putArtwork(art);
         makeThumb(art).then((t) => setMetadata((m) => ({ ...m, coverThumb: t }))).catch(() => {});
+      } else if (picture && artwork) {
+        toast.info(FILE_ART_IGNORED);
       }
       const filled = Object.fromEntries(Object.entries(found).filter(([, v]) => Array.isArray(v) ? v.some((x) => (typeof x === "string" ? x : x?.name)) : v !== "" && v != null));
       // Private PRO/IPI/splits never live in files — restore them from the saved profile for matching names.
@@ -666,6 +683,7 @@ export function MetadataUploader({ onShareInfo, userId, mode = "embed", readOnly
           <div className="flex min-h-44 flex-col items-center justify-center gap-3 rounded-lg border border-dashed border-border p-4">
             {cover ? <img src={cover} alt="Selected cover artwork" className="h-20 w-20 rounded object-cover" /> : <ImagePlus className="h-8 w-8 text-primary" />}
             <Button type="button" variant="ghost" onClick={() => artInput.current?.click()}>{artwork ? "Replace artwork" : "Add cover art"}</Button>
+            {coverRestored && <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[11px] font-semibold text-primary">Your last cover</span>}
             <p className="text-center text-xs text-muted-foreground">3000x3000px recommended (streaming standard). JPEG or PNG; any standard album size works.</p>
             {artwork && <Button type="button" size="icon" variant="ghost" aria-label="Remove cover artwork" onClick={() => { putArtwork(undefined); setResult(undefined); }}><Trash2 /></Button>}
             <input id="artwork" ref={artInput} type="file" accept="image/jpeg,image/png" aria-label="Cover artwork" className="sr-only" onChange={(event) => {
