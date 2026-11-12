@@ -76,3 +76,32 @@ describe("agency exports", () => {
     expect(soundExchangeRows([track({ phonographic: "P 2026 Came Through Audio" })])[0]![17]).toBe("2026 Came Through Audio");
   });
 });
+
+describe("nothing the catalog knows is left behind", () => {
+  it("SoundExchange carries the recording version and where it was recorded", () => {
+    const row = soundExchangeRows([track({ version: "sped up", recordedIn: "United States", duration: "5:01" })])[0]!;
+    // 8 Recording Version, 9 Duration, 10 Genre, 12 Country of Recording/Fixation.
+    expect(row[8]).toBe("sped up");
+    expect(row[9]).toBe("00:05:01");
+    expect(row[12]).toBe("United States");
+    expect(row).toHaveLength(29);
+  });
+
+  it("SoundExchange keeps a year-only release date instead of dropping it", () => {
+    const row = soundExchangeRows([track({ releaseDate: "2019" })])[0]!;
+    expect(row[15]).toEqual(new Date(Date.UTC(2019, 0, 1)));
+    expect(row[26]).toEqual(new Date(Date.UTC(2019, 0, 1)));
+    const monthOnly = soundExchangeRows([track({ releaseDate: "2019-05" })])[0]!;
+    expect(monthOnly[26]).toEqual(new Date(Date.UTC(2019, 4, 1)));
+  });
+
+  it("the PRO cheat sheet carries alternate titles and the BMI work answers", () => {
+    const rows = proCheatSheet([track({ alternateTitles: ["Mind That", " That "], samples: "Yes", sampleTitle: "Ooh La", sampleWriters: "Ann Lee", writtenFor: "Film/TV/Stage/Ad", productionTitle: "Blue Hour", instrumental: false })]);
+    expect(rows[0]).toHaveLength(15);
+    const writer = rows.find((r) => r[5] === "Writer")!;
+    expect(writer[11]).toBe("Mind That; That");
+    expect(writer[12]).toBe("Yes: Ooh La (Ann Lee)");
+    expect(writer[13]).toBe("Yes: Film/TV/Stage/Ad — Blue Hour");
+    expect(writer[14]).toBe("No");
+  });
+});

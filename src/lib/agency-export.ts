@@ -1,5 +1,5 @@
 import { saveBlob, type CatalogTrack } from "@/lib/catalog";
-import { MLC_ROLE, parentGenre, performers, writerRole, type Contributor } from "@/lib/metadata";
+import { isoDate, MLC_ROLE, parentGenre, performers, writerRole, type Contributor } from "@/lib/metadata";
 import { isBmi } from "@/lib/audit";
 import { registrationReadiness, registrationWriters, type MissingItem } from "@/lib/readiness";
 
@@ -23,6 +23,13 @@ const sheetDate = (iso: string): Date | "" => {
   const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(iso ?? "");
   return m ? new Date(Date.UTC(Number(m[1]), Number(m[2]) - 1, Number(m[3]))) : "";
 };
+/**
+ * A date for an agency form that insists on MM/DD/YYYY (founder, 2026-11-12): Spotify and a hand-typed year publish
+ * "2019" or "2019-05", and `sheetDate` alone turned either into a blank cell — the release date disappeared from the
+ * export although the catalog had it. `isoDate` completes the day exactly the way the database already does, so what the
+ * agency receives matches what the catalog itself holds. A full date passes through untouched.
+ */
+const formDate = (iso: string) => sheetDate(isoDate(iso));
 /** The (P) line without its symbol, as SoundExchange writes it ("2007 XYZ Records"). */
 // A bare "P" counts as the symbol only before a space or the year, so "Prince Records" keeps its P.
 const pLine = (v: string) => (v ?? "").replace(/^\s*(℗|\(P\)|P(?=[\s\d]))\s*/i, "").trim();
@@ -89,6 +96,9 @@ export function mlcRows(tracks: CatalogTrack[]): (string | number)[][] {
  * Following its instructions: the claim comes from the song's Master ownership (100% is written as 1, the column is a
  * percent), begin/end dates stay blank for rights from inception in perpetuity, a self-released song uses the artist as
  * label, and anything we don't know (countries, recording date) stays blank rather than guessed.
+ *
+ * Every column the catalog answers is filled (founder, 2026-11-12): the recording version and the country of recording
+ * were there all along and were being dropped, which is what made a member's own ingest file look half-empty.
  */
 export function soundExchangeRows(tracks: CatalogTrack[]): (string | number | Date)[][] {
   return tracks.map(({ metadata: m }) => {
@@ -96,12 +106,15 @@ export function soundExchangeRows(tracks: CatalogTrack[]): (string | number | Da
     const label = m.label || m.artist;
     return [
       artistCredit(m.artist, m.featured), m.title, m.isrc.replace(/-/g, "").toUpperCase(), m.masterBasis || "Copyright Owner",
-      Number(m.masterShare || 100) / 100, sheetDate(m.rightsStart ?? ""), sheetDate(m.rightsEnd ?? ""), "", "",
-      // SoundExchange gets the main genre ("Trap" goes as Hip-Hop/Rap).
-      hms(m.duration), m.primaryGenre ? parentGenre(m.primaryGenre) : "", "", "", "", "", sheetDate(m.releaseDate), "",
+      Number(m.masterShare || 100) / 100, sheetDate(m.rightsStart ?? ""), sheetDate(m.rightsEnd ?? ""), "",
+      // "Recording Version, if applicable" (live, remix, sped up): the catalog keeps it apart from the title.
+      m.version,
+      // Duration, then SoundExchange's main genre ("Trap" goes as Hip-Hop/Rap); the recording date stays blank because
+      // the catalog only knows a year, and MM/DD/YYYY can't be made from one honestly.
+      hms(m.duration), m.primaryGenre ? parentGenre(m.primaryGenre) : "", "", m.recordedIn, "", "", formDate(m.releaseDate), "",
       pLine(m.phonographic) || (year && label ? `${year} ${label}` : ""), m.iswc.replace(/[.\s-]/g, "").toUpperCase(),
       registrationWriters(m).map((c) => c.name).join("; "), named(m.publishers).map((p) => p.name).join("; "),
-      m.artist, m.album || m.title, "", m.upc, "", sheetDate(m.releaseDate), "", label,
+      m.artist, m.album || m.title, "", m.upc, "", formDate(m.releaseDate), "", label,
     ];
   });
 }
@@ -130,14 +143,22 @@ const text = (v: unknown) => (v === undefined || v === null ? "" : String(v));
 
 /** Field-by-field sheet for typing into ASCAP Member Access / BMI Online Services work registration. */
 export function proCheatSheet(tracks: CatalogTrack[]): string[][] {
-  const rows: unknown[][] = [["Work Title", "ISWC", "ISRC", "Performing Artist", "Duration (mm:ss)", "Party Type", "Name", "Role", "Share %", "PRO", "IPI #"]];
+  // The work-level answers ASCAP and BMI ask for sit on every party row (founder, 2026-11-12): the catalog has them and
+  // the sheet was leaving them behind, so a member had to look them up again while filling the form.
+  const rows: unknown[][] = [["Work Title", "ISWC", "ISRC", "Performing Artist", "Duration (mm:ss)", "Party Type", "Name", "Role", "Share %", "PRO", "IPI #", "Alternate Titles", "Samples", "Written For", "Instrumental"]];
   for (const { metadata: m } of tracks) {
     // BMI asks for the duration; a text cell keeps 03:45 from turning into a time of day.
+    const work = [
+      (m.alternateTitles ?? []).map((t) => t.trim()).filter(Boolean).join("; "),
+      m.samples === "Yes" ? `Yes${m.sampleTitle ? `: ${m.sampleTitle}` : ""}${m.sampleWriters ? ` (${m.sampleWriters})` : ""}` : m.samples,
+      m.writtenFor === "" ? "" : m.writtenFor === "No" ? "No" : `Yes: ${m.writtenFor}${m.productionTitle ? ` — ${m.productionTitle}` : ""}`,
+      m.instrumental ? "Yes" : "No",
+    ];
     const base = [m.title, m.iswc, m.isrc, m.artist, mmss(m.duration)];
-    for (const w of registrationWriters(m)) rows.push([...base, "Writer", w.name, w.role, w.percentage, w.pro, w.ipi]);
-    for (const p of named(m.publishers)) rows.push([...base, "Publisher", p.name, "Original Publisher", p.percentage, p.pro, p.ipi]);
+    for (const w of registrationWriters(m)) rows.push([...base, "Writer", w.name, w.role, w.percentage, w.pro, w.ipi, ...work]);
+    for (const p of named(m.publishers)) rows.push([...base, "Publisher", p.name, "Original Publisher", p.percentage, p.pro, p.ipi, ...work]);
     // No publisher: BMI pays its writers the publisher share, so the sheet says so instead of leaving it blank.
-    if (!named(m.publishers).length && registrationWriters(m).some(isBmi)) rows.push([...base, "Publisher", "None: BMI pays the publisher share to its writers", "", "", "BMI", ""]);
+    if (!named(m.publishers).length && registrationWriters(m).some(isBmi)) rows.push([...base, "Publisher", "None: BMI pays the publisher share to its writers", "", "", "BMI", "", ...work]);
   }
   return rows.map((r) => r.map(text));
 }
