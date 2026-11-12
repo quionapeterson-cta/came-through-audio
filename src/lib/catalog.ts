@@ -138,6 +138,61 @@ export async function uploadCatalogFile(userId: string, trackId: string, kind: "
   return path;
 }
 
+/** The image types a catalog cover accepts. The song form and a release's own cover read the same list. */
+export const COVER_IMAGE_TYPES = ["image/jpeg", "image/png"] as const;
+
+/**
+ * One cover for a whole release (founder, 2026-11-11): an EP or an album takes a single upload and the same picture is
+ * written to every song on it, because a release has one cover and filling the same upload into ten songs is the part
+ * nobody gets round to. The first song's folder takes the file and every other folder is copied from it inside the
+ * bucket, so the member uploads once and the bytes travel server-side.
+ *
+ * Every row is saved before this resolves. A song that already had a cover is replaced, because the member is choosing
+ * the release's cover rather than filling a gap, and the failure names the song it stopped on instead of saying "try
+ * again".
+ *
+ * `thumb` is the small tile the catalog shows beside a song and on the release's own header. It comes from the caller
+ * because it is made in the browser, and it is written alongside the cover so the group shows its artwork at once.
+ */
+export async function setReleaseArtwork(
+  tracks: CatalogTrack[],
+  userId: string,
+  file: File,
+  thumb = "",
+): Promise<{ songs: number; covers: { id: string; artPath: string }[] }> {
+  if (!(COVER_IMAGE_TYPES as readonly string[]).includes(file.type))
+    throw new Error("Choose JPEG or PNG artwork.");
+  const [first, ...rest] = tracks;
+  if (!first) throw new Error("This release has no songs to put a cover on.");
+  const ext = file.type === "image/png" ? "png" : "jpg";
+
+  let source: string;
+  try {
+    source = await uploadCatalogFile(userId, first.id, "artwork", file, ext);
+  } catch (e) {
+    throw new Error(
+      `Your cover couldn't be stored: ${e instanceof Error ? e.message : "try again in a moment."}`,
+    );
+  }
+
+  const writes: { track: CatalogTrack; path: string }[] = [{ track: first, path: source }];
+  for (const t of rest) {
+    const to = `${userId}/${t.id}/artwork.${ext}`;
+    const { error } = await supabase.storage.from(BUCKET).copy(source, to);
+    if (error)
+      throw new Error(`The cover reached ${first.title || "the first song"}, but not ${t.title || "one of the others"}: ${error.message}`);
+    writes.push({ track: t, path: to });
+  }
+
+  for (const { track, path } of writes)
+    await saveTrack(
+      { ...track.metadata, artPath: path, ...(thumb ? { coverThumb: thumb } : {}) },
+      userId,
+      track.id,
+    );
+  return { songs: writes.length, covers: writes.map(({ track, path }) => ({ id: track.id, artPath: path })) };
+}
+
 export async function downloadCatalogFile(path: string, filename: string) {
   const { data, error } = await supabase.storage.from(BUCKET).download(path);
   if (error) throw error;

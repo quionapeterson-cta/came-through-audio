@@ -28,7 +28,7 @@ import { listStatuses, type SongStatus } from "@/lib/health-songs";
 import type { RepertoireCheck } from "@/lib/health";
 import { HealthLiquid, HealthMeter } from "@/components/HealthMeter";
 import { DownloadCatalogButton } from "@/components/CatalogLapseBanner";
-import { deleteTrack, downloadCatalogFile, downloadRelease, downloadWholeCatalog, duplicateTrack, groupReleases, listTracks, safeName, saveTrack, uploadCatalogFile, versionTitle, type CatalogTrack, type DownloadGap, type ZipResult } from "@/lib/catalog";
+import { deleteTrack, downloadCatalogFile, downloadRelease, downloadWholeCatalog, duplicateTrack, groupReleases, listTracks, safeName, saveTrack, setReleaseArtwork, uploadCatalogFile, versionTitle, type CatalogTrack, type DownloadGap, type ZipResult } from "@/lib/catalog";
 import { albumKey, routedKinds } from "@/lib/release-routing";
 import { AGENCY_LABEL, downloadAgencyExport, downloadNeighbouringPack, mlcPlaceholderSongs, recordExports, type Agency, type Held } from "@/lib/agency-export";
 import { AgencyExportDialog } from "@/components/AgencyExportDialog";
@@ -289,6 +289,25 @@ export function MetadataUploader({ onShareInfo, userId, mode = "embed", readOnly
     if (saved.length) setTracks((prev) => prev.map((song) => saved.some((x) => x.id === song.id) ? { ...song, metadata: { ...song.metadata, ...patch } } : song));
     if (error) throw new Error(error);
     toast.success(`${list.length === 1 ? (list[0]!.title || "The song") : (list[0]!.metadata.album || "The release")} updated on ${list.length} song${list.length === 1 ? "" : "s"}.`);
+  };
+  /**
+   * One cover for a whole release (founder, 2026-11-11): an EP or album filled in from an agency list or a Spotify link
+   * takes its artwork in one upload, and the release's own header shows it straight away because the same file makes the
+   * small tile the group reads.
+   */
+  const saveReleaseCover = async (list: CatalogTrack[], file: File) => {
+    if (!userId) { toast.error("Sign in again to save the cover."); return; }
+    try {
+      const thumb = await makeThumb(file).catch(() => "");
+      const { songs, covers } = await setReleaseArtwork(list, userId, file, thumb);
+      setTracks((prev) => prev.map((song) => {
+        const written = covers.find((c) => c.id === song.id);
+        return written ? { ...song, metadata: { ...song.metadata, artPath: written.artPath, ...(thumb ? { coverThumb: thumb } : {}) } } : song;
+      }));
+      toast.success(`Album cover set on ${songs} song${songs === 1 ? "" : "s"}.`);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "That cover didn't save. Try again.");
+    }
   };
   const pctOf = (id: string) => health?.songs.find((x) => x.track.id === id)?.pct ?? 0;
   // The album title routes a song into its release (founder, 2026-11-10), so a track saved as a Single on an album still
@@ -1110,7 +1129,7 @@ export function MetadataUploader({ onShareInfo, userId, mode = "embed", readOnly
                               const all = tracks.filter((x) => releaseGroup(x) !== "Single" && albumKeyOf(x) === p.key);
                               return (
                               <div key={p.key} className="rounded-xl border border-border bg-card p-3">
-                                <ReleaseRow name={p.title} type={releaseGroup(p.tracks[0]!)} tracks={all} readOnly={readOnly} onSave={saveRelease} />
+                                <ReleaseRow name={p.title} type={releaseGroup(p.tracks[0]!)} tracks={all} readOnly={readOnly} onSave={saveRelease} onCover={(file) => saveReleaseCover(all, file)} />
                                 <ul className="mt-3 grid gap-3">{[...p.tracks].sort(byPct).map(row)}</ul>
                               </div>
                               );
@@ -1143,7 +1162,7 @@ export function MetadataUploader({ onShareInfo, userId, mode = "embed", readOnly
                         {p.cover ? <img src={p.cover} alt={`${p.title} artwork`} className="h-14 w-14 rounded-lg object-cover shadow" /> : <div className="flex h-14 w-14 items-center justify-center rounded-lg bg-primary text-primary-foreground"><Disc3 className="h-7 w-7" /></div>}
                         <div className="min-w-[10rem] flex-1">
                           <div className="truncate text-sm text-muted-foreground">{p.artist}</div>
-                          <ReleaseRow name={p.title} type={releaseGroup(p.tracks[0]!)} tracks={all} readOnly={readOnly} onSave={saveRelease} />
+                          <ReleaseRow name={p.title} type={releaseGroup(p.tracks[0]!)} tracks={all} readOnly={readOnly} onSave={saveRelease} onCover={(file) => saveReleaseCover(all, file)} />
                         </div>
                         {onHealthCheck && <Button type="button" variant="outline" size="sm" onClick={(e) => { e.preventDefault(); onHealthCheck(p.tracks[0]!.id, true); }}><Stethoscope />Health check</Button>}
                         {exportMenu("Export Release", p.tracks, p.title)}

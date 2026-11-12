@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -12,12 +12,17 @@ import { groupReleaseStatus, releaseDraft, releasePatch, type ReleaseDraft, type
  * Edit dialog that writes them to every song in the group through the catalog's own save. No new table and no
  * migration: the group is the release type and title the songs already hold.
  */
-export function ReleaseRow({ name, type, tracks, readOnly, onSave, compact }: {
+export function ReleaseRow({ name, type, tracks, readOnly, onSave, onCover, compact }: {
   name: string;
   type: string;
   tracks: CatalogTrack[];
   readOnly?: boolean | undefined;
   onSave: (patch: ReleasePatch, tracks: CatalogTrack[]) => Promise<void>;
+  /**
+   * One cover for the whole release (founder, 2026-11-11): uploaded once here and written to every song on the release,
+   * so an EP or an album that was filled in from an agency list or a Spotify link takes its artwork in one go.
+   */
+  onCover?: ((file: File) => Promise<void>) | undefined;
   /** Inside a single's own row, where the title and count are already above: the panel keeps only the status. */
   compact?: boolean;
 }) {
@@ -27,6 +32,8 @@ export function ReleaseRow({ name, type, tracks, readOnly, onSave, compact }: {
   const [draft, setDraft] = useState<ReleaseDraft>(() => releaseDraft(fields));
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+  const [coverBusy, setCoverBusy] = useState(false);
+  const coverInput = useRef<HTMLInputElement>(null);
   const first = fields[0];
   const dates = [...new Set(fields.map((m) => m.releaseDate.trim()))];
   const dateLine = dates.length === 1 ? (dates[0] ? `Release date ${dates[0]}` : "") : "Release dates vary";
@@ -52,10 +59,31 @@ export function ReleaseRow({ name, type, tracks, readOnly, onSave, compact }: {
         {!compact && <span className="text-muted-foreground">{tracks.length} song{tracks.length === 1 ? "" : "s"}</span>}
         <span className={status.status === "released" ? "text-muted-foreground" : "font-semibold text-primary"}>{status.label}</span>
         {!readOnly && (
-          <button type="button" className="font-semibold text-primary underline" aria-label={`Edit ${name}`}
-            onClick={(e) => { e.preventDefault(); e.stopPropagation(); setDraft(releaseDraft(fields)); setError(""); setOpen(true); }}>
-            Edit
-          </button>
+          <>
+            <button type="button" className="font-semibold text-primary underline" aria-label={`Edit ${name}`}
+              onClick={(e) => { e.preventDefault(); e.stopPropagation(); setDraft(releaseDraft(fields)); setError(""); setOpen(true); }}>
+              Edit
+            </button>
+            {onCover && (
+              <>
+                {/* The cover is the release's, not one song's: one upload fills every song on it. */}
+                <button type="button" className="font-semibold text-primary underline disabled:opacity-60"
+                  aria-label={`Upload the album cover for ${name}`} disabled={coverBusy}
+                  onClick={(e) => { e.preventDefault(); e.stopPropagation(); coverInput.current?.click(); }}>
+                  {coverBusy ? "Saving cover…" : "Album cover"}
+                </button>
+                <input ref={coverInput} type="file" accept="image/jpeg,image/png" className="sr-only"
+                  aria-label={`Album cover file for ${name}`} disabled={coverBusy}
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    e.target.value = "";
+                    if (!file || !onCover) return;
+                    setCoverBusy(true);
+                    void onCover(file).finally(() => setCoverBusy(false));
+                  }} />
+              </>
+            )}
+          </>
         )}
       </div>
       {(!compact || dateLine) && <p className="text-xs text-muted-foreground">
