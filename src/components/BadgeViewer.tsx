@@ -17,7 +17,9 @@ export function BadgeViewer({ src, name, round, share, about, actions, onClose }
         <div onClick={(e) => { if (share && e.target === e.currentTarget) onClose(); }}
           // "safe" centering: when the badge and share panel are taller than the screen they start at the top and scroll,
           // instead of being centered past the top edge where nothing can scroll to (founder, 2026-10-27: badge cut off at the top).
-          className={share ? "mx-auto grid min-h-full w-full max-w-[min(94vw,64rem)] gap-5 px-2 py-12 [align-content:safe_center] [align-items:safe_center] md:grid-cols-2 md:gap-8" : ""}>
+          // Level tops and even sides (founder, 2026-11-11): both columns start on the same line, so the share card sits
+          // level with the top of the badge, and the padding is the same on each side of the pair.
+          className={share ? "mx-auto grid min-h-full w-full max-w-[min(94vw,64rem)] gap-5 px-4 py-12 [align-content:safe_center] md:grid-cols-2 md:gap-8 md:px-6" : ""}>
           {src && share ? <div className="space-y-4">
             <CelebrationStage src={src} name={name} round={round} />
             {about && <div className="mx-auto max-w-md space-y-3 text-center">

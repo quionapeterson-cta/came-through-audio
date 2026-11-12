@@ -160,7 +160,9 @@ function UnlockPopup({ state, artist, more, onNext, share, eagle }: { state: Bad
       {/* The share screen's layout, applied to every badge celebration (founder, 2026-11-09): a safe-centred grid starts at
           the top when the badge and its message are taller than the screen, instead of centring the overflow past the top
           edge where the badge was cut off and nothing could scroll to it. */}
-      <div className="mx-auto grid min-h-full w-full max-w-[min(94vw,64rem)] justify-items-center gap-6 px-2 py-12 text-center text-white [align-content:safe_center]">
+      {/* Even sides and level tops (founder, 2026-11-11): the same padding both sides of the pair, and the share card starts
+          on the same line as the badge instead of being centred against a taller column. */}
+      <div className="mx-auto grid min-h-full w-full max-w-[min(94vw,64rem)] justify-items-center gap-6 px-4 py-12 text-center text-white [align-content:safe_center] md:px-6">
         {choosing ? <section className="w-full max-w-[40rem] space-y-6">
           <p className="text-xs font-bold uppercase tracking-[2px] text-[#4d8cff]">{badge.title}</p>
           <h2 className="text-2xl font-bold sm:text-3xl">{withArtist(line, artist)}</h2>
@@ -172,7 +174,7 @@ function UnlockPopup({ state, artist, more, onNext, share, eagle }: { state: Bad
               </button>
             </li>)}
           </ul>
-        </section> : <div className={`grid w-full gap-6 md:items-center md:gap-8 ${share ? "md:grid-cols-2" : ""}`}>
+        </section> : <div className={`grid w-full gap-6 md:items-start md:gap-8 ${share ? "md:grid-cols-2" : ""}`}>
           <div className="space-y-4">
             <CelebrationStage src={src} name={badge.title} float />
             {/* The badge, then its message, then the way on (founder, 2026-11-10): the award celebration is the same
