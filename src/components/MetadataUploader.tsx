@@ -83,7 +83,7 @@ export type CatalogFocus =
   | { trackId: string; field: string; agencyIsrc?: string | undefined; action?: string | undefined }
   | { newTitle: string; artist?: string | undefined; nonce: number };
 
-export function MetadataUploader({ onShareInfo, userId, mode = "embed", readOnly, onSubmitted, onSplitSheet, onProtect, canSplit, canExport, canWav, focus, onFocused, onHealthCheck, onExpert }: { onExpert?: () => void; canWav?: boolean; onHealthCheck?: (trackId?: string, release?: boolean) => void; readOnly?: boolean; onShareInfo?: (s: Partial<ShareInfo> & Pick<ShareInfo, "ctx">) => void; onFocused?: () => void; userId?: string; mode?: "embed" | "catalog"; focus?: CatalogFocus | undefined; onSubmitted?: () => void; onSplitSheet?: (t: CatalogTrack) => void; onProtect?: (t: CatalogTrack) => void; canSplit?: boolean; canExport?: boolean }) {
+export function MetadataUploader({ onShareInfo, userId, mode = "embed", readOnly, onSubmitted, onSplitSheet, onProtect, canSplit, canExport, canWav, focus, onFocused, onFixAcknowledged, onHealthCheck, onExpert }: { onExpert?: () => void; canWav?: boolean; onHealthCheck?: (trackId?: string, release?: boolean) => void; readOnly?: boolean; onShareInfo?: (s: Partial<ShareInfo> & Pick<ShareInfo, "ctx">) => void; onFocused?: () => void; /** A difference's quick-fix bar was finished or dismissed: the page can drop the target. */ onFixAcknowledged?: () => void; userId?: string; mode?: "embed" | "catalog"; focus?: CatalogFocus | undefined; onSubmitted?: () => void; onSplitSheet?: (t: CatalogTrack) => void; onProtect?: (t: CatalogTrack) => void; canSplit?: boolean; canExport?: boolean }) {
   const full = mode === "catalog";
   // One artist per account: the artist name from setup. A different name gets a gentle add-an-artist note.
   const registeredArtist = loadOnboarding(userId)?.stageName?.trim() ?? "";
@@ -382,7 +382,9 @@ export function MetadataUploader({ onShareInfo, userId, mode = "embed", readOnly
     const t = focus && tracks.find((x) => x.id === focus.trackId);
     if (!t) return;
     fix(t, focus.field);
-    onFocused?.();
+    // A difference's deep link keeps its target so the quick-fix bar can stay beside the field; every other focus
+    // clears itself straight away, as it always has.
+    if (!focus.agencyIsrc && !focus.action) onFocused?.();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [focus, tracks]);
 
@@ -675,13 +677,15 @@ export function MetadataUploader({ onShareInfo, userId, mode = "embed", readOnly
   // The difference spotlight: the field the link names is scrolled to and lit for a few seconds, in either theme.
   const deepLink = focus && !("newTitle" in focus) ? focus : undefined;
   const { highlighted } = useFocusHighlight({ field: deepLink?.field });
-  const acknowledgeFix = () => { clearFocusParams(); onFocused?.(); };
+  const acknowledgeFix = () => { clearFocusParams(); onFixAcknowledged?.(); };
+  // The field names arrive as ids; the bar says them the way a member reads them.
+  const FIELD_LABEL: Record<string, string> = { isrc: "ISRC", version: "Version", release: "Release", releaseDate: "Release date", status: "retired status", retired: "retired status" };
   const fixBar = deepLink && (deepLink.agencyIsrc || deepLink.action) ? (
-    <div className="rounded-xl border border-amber-400/60 bg-amber-50/70 p-3 text-sm dark:border-cyan-400/40 dark:bg-cyan-400/5">
+    <div className="rounded-xl border border-[#004AAD]/25 bg-[#004AAD]/[0.04] p-3 text-sm dark:border-[#4D8CFF]/30 dark:bg-[#4D8CFF]/[0.08]">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <p className="font-semibold">
-          🩺 Diagnostic target: fix {deepLink.field || "this song"}
-          {highlighted && <span className="ml-2 rounded-full border border-amber-500/50 px-1.5 py-px font-mono text-[10px] uppercase tracking-wide text-amber-800 dark:border-cyan-300/40 dark:text-cyan-200">live</span>}
+          🩺 Diagnostic target: fix {FIELD_LABEL[deepLink.field] ?? (deepLink.field || "this song")}
+          {highlighted && <span className="ml-2 rounded-full border border-[#4D8CFF]/40 bg-[#4D8CFF]/15 px-1.5 py-px font-mono text-[10px] uppercase tracking-wide text-[#004AAD] dark:border-[#4D8CFF]/45 dark:bg-[#4D8CFF]/20 dark:text-[#4D8CFF]">live</span>}
         </p>
         <button type="button" className="text-xs font-semibold text-muted-foreground underline underline-offset-4 hover:text-primary" onClick={acknowledgeFix}>Done</button>
       </div>

@@ -31,6 +31,7 @@ export type DisagreementKind =
   | "missing-catalog-isrc"
   | "cross-agency-split"
   | "same-title-different-isrc"
+  | "title-mismatch"
   | "missing-release"
   | "missing-from-list"
   | "other";
@@ -41,6 +42,7 @@ export const KIND_LABEL: Record<DisagreementKind, string> = {
   "missing-catalog-isrc": "Missing catalog ISRC",
   "cross-agency-split": "Cross-agency ISRC split",
   "same-title-different-isrc": "Same title / different ISRC",
+  "title-mismatch": "Title mismatch",
   "missing-release": "Missing release",
   "missing-from-list": "Not on the list",
   other: "Different details",
@@ -49,54 +51,99 @@ export const KIND_LABEL: Record<DisagreementKind, string> = {
 /** What kind of fix the difference takes. The chart decides which buttons to offer from this. */
 export type TreatmentAction = "check-distributor" | "add-version" | "keep-both" | "adopt" | "waiting" | "review";
 
-export type Treatment = { headline: string; detail: string; action: TreatmentAction };
+export type Treatment = {
+  headline: string;
+  /** One sentence, with `{isrc}` where the row's own code belongs. */
+  detail: string;
+  /** The button the member presses first. */
+  primary: string;
+  /** The quieter link beside it. */
+  secondary: string;
+  action: TreatmentAction;
+};
 
 /**
- * The treatment rules, written once (founder, 2026-11-13). Everything that shows a difference reads these strings:
- *
- * - conflicting metadata on the same recording → check the distributor for which copy is right
- * - two agencies holding different codes → the same question, asked twice
- * - same title, different ISRC → add the version
- * - an earlier release of the same recording → register both ISRCs and mark the old release Retired
- * - nothing there yet → waiting for the release
+ * The treatment rules, written once (founder, 2026-11-13). Everything that shows a difference reads these strings, so a
+ * rule can never say one thing on the card and another in the link beside it.
  */
 export const TREATMENTS = {
   checkDistributor: {
     headline: "Check your distributor for which copy is right",
-    detail: "Your catalog and the agency disagree about the same recording. The copy your distributor delivered is the one stores report on, so settle that first, then update the other side.",
+    detail: "Your catalog and the agency list different titles for ISRC {isrc}. Check the public repertoire listing and your distributor dashboard, then update the mismatched side.",
+    primary: "Copy ISRC & Check Repertoire ↗",
+    secondary: "Edit in My Catalog",
     action: "check-distributor",
   } as Treatment,
   crossAgency: {
     headline: "Check your distributor for which copy is right",
-    detail: "Two agencies hold different codes for this song. Decide which copy your distributor delivered, then bring the other agency onto it.",
+    detail: "Two agencies disagree about ISRC {isrc} for this same recording. Check the public repertoire listing and your distributor dashboard, then bring the other agency onto the copy your distributor delivered.",
+    primary: "Copy ISRC & Check Repertoire ↗",
+    secondary: "Edit in My Catalog",
     action: "check-distributor",
   } as Treatment,
   addVersion: {
     headline: "Add the version",
-    detail: "The same title with a different ISRC is a different recording. Give this one its version (radio edit, remix, live…) so the two are never read as one song.",
+    detail: "Two distinct ISRCs share this song title. Verify both recordings in the public repertoire search, then add the missing version to your catalog.",
+    primary: "+ Add Version to Catalog",
+    secondary: "Check Repertoire ↗",
     action: "add-version",
   } as Treatment,
   keepBoth: {
     headline: "Register both ISRCs and mark the old release Retired",
-    detail: "Both codes are real recordings of the same work. Keep the current one on the song and the retired one on record, because money filed under the old code can still surface.",
+    detail: "Keep the newer ISRC active for current royalties, verify the older ISRC in repertoire search, and set the old release status to Retired in your catalog.",
+    primary: "Manage Versions in Catalog",
+    secondary: "Check Repertoire ↗",
     action: "keep-both",
   } as Treatment,
+  submit: {
+    headline: "Submit recording to agency",
+    detail: "ISRC {isrc} is in your catalog but missing from the public repertoire database. Double-check via ISRC Search, then submit it through your distributor or agency portal.",
+    primary: "Copy ISRC & Check Repertoire ↗",
+    secondary: "Open Catalog Entry",
+    action: "review",
+  } as Treatment,
   adoptAgency: {
-    headline: "Adopt the agency's ISRC",
-    detail: "Your catalog has no code for this song and the agency does. Take theirs, so the two records match and the recording is never left unmatched.",
+    headline: "Add this ISRC from the agency",
+    detail: "The agency holds ISRC {isrc} for this recording and your catalog has none. Take theirs, so the two records match and the recording is never left unmatched.",
+    primary: "Copy Agency ISRC & Check Repertoire ↗",
+    secondary: "Open Catalog Entry",
     action: "adopt",
   } as Treatment,
   waiting: {
     headline: "Waiting for the release",
-    detail: "The agency has nothing to match yet because the release is not out. Nothing is wrong; come back after release day.",
+    detail: "The agency has nothing to match yet because this release is not out. Nothing is wrong here; check the public repertoire again after release day.",
+    primary: "Check Repertoire ↗",
+    secondary: "Open Catalog Entry",
     action: "waiting",
   } as Treatment,
   review: {
     headline: "Review the difference",
     detail: "The details differ but neither side is clearly wrong. Open the song, compare the values, and fix the copy you control.",
+    primary: "Copy ISRC & Check Repertoire ↗",
+    secondary: "Open Catalog Entry",
     action: "review",
   } as Treatment,
 };
+
+/** Fills `{isrc}` in a treatment's instruction with the code the row is about. */
+export function treatmentText(t: Treatment, isrc: string): string {
+  return t.detail.replace("{isrc}", isrc || "this recording");
+}
+
+/**
+ * The public repertoire searches, never a login page (founder, 2026-11-13): a member checking a code should land on the
+ * search they can read, not on a portal asking them to sign in.
+ */
+export const PUBLIC_REPERTOIRE: Record<string, string> = {
+  soundexchange: "https://soundexchange.com",
+  bmi: "https://bmi.com",
+  mlc: "https://themlc.com",
+  ascap: "https://www.ascap.com",
+  sesac: "https://www.sesac.com",
+};
+
+/** The public search for a society's id, falling back to the ISRC search every recording can be looked up in. */
+export const repertoireUrl = (society: string) => PUBLIC_REPERTOIRE[society] ?? "https://isrc.soundexchange.com/";
 
 /** One agency's claim about a song: the society, and the code (and title) it has on file. */
 export type AgencyClaim = { society: string; name: string; isrc: string; title: string; url: string };
@@ -113,7 +160,7 @@ export const RELEASE_STATE_LABEL: Record<ReleaseState, string> = {
 export type TriageStatus = "needs-triage" | "in-treatment" | "both-registered" | "waiting";
 
 export const STATUS_LABEL: Record<TriageStatus, string> = {
-  "needs-triage": "Needs triage",
+  "needs-triage": "Needs review",
   "in-treatment": "In treatment",
   "both-registered": "Both registered · 1 retired",
   waiting: "Waiting",
@@ -161,14 +208,42 @@ export function releaseState(m: { releaseDate: string; unreleased?: boolean; ret
  * no code of its own; then two real codes; then a different recording under the same title.
  */
 export function treatmentFor(input: { kind: DisagreementKind; catalogIsrc: string; retiredIscrs: string[]; releaseState: ReleaseState }): Treatment {
-  const { kind, catalogIsrc, retiredIscrs, releaseState: state } = input;
-  if (kind === "missing-from-list") return TREATMENTS.review;
-  if (state === "waiting") return TREATMENTS.waiting;
-  if (kind === "missing-catalog-isrc") return TREATMENTS.adoptAgency;
+  const { kind, retiredIscrs, releaseState: state } = input;
+  // A difference that is visible is never excused as waiting: a catalog with no release date filled in still holds the
+  // wrong code, and "Waiting for the release" is only for a song whose values are genuinely absent (founder, 2026-11-13).
+  if (kind === "missing-from-list") return TREATMENTS.submit;
   if (kind === "earlier-isrc" || retiredIscrs.length > 0) return TREATMENTS.keepBoth;
   if (kind === "same-title-different-isrc") return TREATMENTS.addVersion;
   if (kind === "cross-agency-split") return TREATMENTS.crossAgency;
+  if (kind === "missing-catalog-isrc") return TREATMENTS.adoptAgency;
+  if (kind === "isrc-mismatch" || kind === "title-mismatch") return TREATMENTS.checkDistributor;
+  if (state === "waiting") return TREATMENTS.waiting;
   return TREATMENTS.checkDistributor;
+}
+
+/** The plain-English line the card leads with, so nobody has to decode the issue tag. */
+export function summaryFor(row: DifferenceRow): string {
+  const agency = row.claims.map((c) => c.name).join(" and ") || "The agency";
+  switch (row.kind) {
+    case "same-title-different-isrc":
+      return `${agency} holds an ISRC for this title that your catalog does not, which is how one song ends up split across two recordings.`;
+    case "title-mismatch":
+      return `${agency} files this recording under a different title than your catalog. The code matches, the name does not.`;
+    case "isrc-mismatch":
+      return `Both sides hold a code for this recording, and the two codes are not the same.`;
+    case "missing-catalog-isrc":
+      return `${agency} has a code for this song and your catalog has none, so the recording cannot be matched on its own.`;
+    case "earlier-isrc":
+      return `${agency} still holds the code of an earlier release of this recording.`;
+    case "missing-from-list":
+      return `This song is in your catalog but does not appear on the ${agency} list.`;
+    case "cross-agency-split":
+      return `Two agencies hold different codes for this same song, so one of the two records is wrong.`;
+    case "missing-release":
+      return `The release details differ between your catalog and ${agency}.`;
+    default:
+      return `The details differ between your catalog and ${agency}.`;
+  }
 }
 
 /** True for anything that looks like an ISRC, so a title or a share is never compared as one. */
@@ -191,6 +266,16 @@ export function diffSegments(a: string, b: string): { value: string; changed: bo
     else out.push({ value: ch, changed });
   }
   return out;
+}
+
+/**
+ * Word-level comparison for titles, so the words that actually differ are marked. A word the other side also holds stays
+ * plain, which is what makes a one-word change in a long title visible.
+ */
+export function diffWords(a: string, b: string): { value: string; changed: boolean }[] {
+  const words = (a ?? "").split(/(\s+)/).filter(Boolean);
+  const other = new Set((b ?? "").toLowerCase().split(/\s+/).filter(Boolean));
+  return words.map((w) => ({ value: w, changed: /[a-z0-9]/i.test(w) && !other.has(w.toLowerCase()) }));
 }
 
 /** Reads the issues a society reported into the one kind the chart shows. */
@@ -219,7 +304,7 @@ export function buildDifferenceRows({ stored, tracks, societies = [] }: BuildInp
   if (!stored) return [];
   const byId = new Map(tracks.map((t) => [t.id, t]));
   const nameOf = (id: string) => societyName(id, societies);
-  const urlOf = (id: string) => societies.find((s) => s.id === id)?.url ?? "";
+  const urlOf = (id: string) => repertoireUrl(id);
   const rows: DifferenceRow[] = [];
   /** Every code an agency holds for a song, so a disagreement between agencies can be found. */
   const claimsByTrack = new Map<string, AgencyClaim[]>();
@@ -249,10 +334,16 @@ export function buildDifferenceRows({ stored, tracks, societies = [] }: BuildInp
       const retired = (m.retiredIscrs ?? []).filter(Boolean);
       const state = releaseState(m, agencyIsrc);
       const titleDiffers = g.titles.some((x) => norm(x) !== norm(track.title));
-      const kind: DisagreementKind = titleDiffers && catalogIsrc && agencyIsrc && catalogIsrc !== agencyIsrc
-        ? "same-title-different-isrc"
-        : kindOf([...new Set(g.issues)], catalogIsrc, agencyIsrc, retired);
+      const bothCodes = !!catalogIsrc && !!agencyIsrc;
+      const codeDiffers = bothCodes && catalogIsrc.toUpperCase() !== agencyIsrc.toUpperCase();
+      // The four cases the treatment table names, decided by what actually disagrees: the title, the code, or both.
+      const kind: DisagreementKind = titleDiffers && bothCodes
+        ? (codeDiffers ? "isrc-mismatch" : "title-mismatch")
+        : !titleDiffers && codeDiffers
+          ? "same-title-different-isrc"
+          : kindOf([...new Set(g.issues)], catalogIsrc, agencyIsrc, retired);
       const claim: AgencyClaim = { society: societyId, name: nameOf(societyId), isrc: agencyIsrc, title: g.titles[0] ?? track.title, url: urlOf(societyId) };
+      const treatment = treatmentFor({ kind, catalogIsrc, retiredIscrs: retired, releaseState: state });
       if (agencyIsrc) claimsByTrack.set(trackId, [...(claimsByTrack.get(trackId) ?? []).filter((c) => c.society !== societyId), claim]);
       rows.push({
         key: `${societyId}:${trackId}`,
@@ -266,8 +357,8 @@ export function buildDifferenceRows({ stored, tracks, societies = [] }: BuildInp
         release: releaseOf(track, state),
         kind,
         issues: [...new Set(g.issues)],
-        treatment: treatmentFor({ kind, catalogIsrc, retiredIscrs: retired, releaseState: state }),
-        status: state === "waiting" ? "waiting" : retired.length ? "both-registered" : "needs-triage",
+        treatment,
+        status: treatment.action === "waiting" ? "waiting" : retired.length ? "both-registered" : "needs-triage",
         side: "catalog",
       });
     }
@@ -282,6 +373,7 @@ export function buildDifferenceRows({ stored, tracks, societies = [] }: BuildInp
     const m = track.metadata;
     const retired = (m.retiredIscrs ?? []).filter(Boolean);
     const state = releaseState(m);
+    const treatment = treatmentFor({ kind: "cross-agency-split", catalogIsrc: m.isrc.trim(), retiredIscrs: retired, releaseState: state });
     rows.push({
       key: `agencies:${trackId}`,
       songId: trackId,
@@ -294,8 +386,8 @@ export function buildDifferenceRows({ stored, tracks, societies = [] }: BuildInp
       release: releaseOf(track, state),
       kind: "cross-agency-split",
       issues: claims.map((c) => `${c.name}: ${c.isrc}`),
-      treatment: treatmentFor({ kind: "cross-agency-split", catalogIsrc: m.isrc.trim(), retiredIscrs: retired, releaseState: state }),
-      status: state === "waiting" ? "waiting" : retired.length ? "both-registered" : "needs-triage",
+      treatment,
+      status: treatment.action === "waiting" ? "waiting" : retired.length ? "both-registered" : "needs-triage",
       side: "agencies",
     });
   }
@@ -308,6 +400,7 @@ export function buildDifferenceRows({ stored, tracks, societies = [] }: BuildInp
       const m = track.metadata;
       const retired = (m.retiredIscrs ?? []).filter(Boolean);
       const state = releaseState(m);
+      const treatment = TREATMENTS.submit;
       rows.push({
         key: `${societyId}:missing:${miss.trackId}`,
         songId: miss.trackId,
@@ -320,8 +413,8 @@ export function buildDifferenceRows({ stored, tracks, societies = [] }: BuildInp
         release: releaseOf(track, state),
         kind: "missing-from-list",
         issues: [`Not on the ${nameOf(societyId)} list`],
-        treatment: TREATMENTS.review,
-        status: state === "waiting" ? "waiting" : "needs-triage",
+        treatment,
+        status: treatment.action === "waiting" ? "waiting" : retired.length ? "both-registered" : "needs-triage",
         side: "catalog",
       });
     }

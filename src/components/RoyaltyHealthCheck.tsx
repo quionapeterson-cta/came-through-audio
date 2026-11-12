@@ -203,6 +203,16 @@ export function RoyaltyHealthCheck({ userId, canCatalog, canExport, onUpgrade, o
   const summary = useMemo(() => summarize(checkup), [checkup]);
   const since = sinceLast(summary, view.kind === "report" ? view.baseline?.summary : null);
 
+  // A Differences link from Intake opens the Front Desk, where the panel lives (founder, 2026-11-13).
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const p = new URLSearchParams(window.location.search);
+    if (p.get("panel") !== "differences" && window.location.hash !== "#differences-panel") return;
+    setDeskOpen(true);
+    const t = setTimeout(() => document.getElementById("differences-panel")?.scrollIntoView({ behavior: "smooth", block: "start" }), 250);
+    return () => clearTimeout(t);
+  }, []);
+
   // Every check that runs is saved to My reports, once its live lookups have finished.
   useEffect(() => {
     if (!pendingSave || running || view.kind !== "report" || !reportRows.length) return;
@@ -719,6 +729,10 @@ export function RoyaltyHealthCheck({ userId, canCatalog, canExport, onUpgrade, o
         <p className="mb-3 text-xs text-muted-foreground">{songsLabel(report.rows.length)} · every step, agency by agency · checked against {country.name}.</p>
         {checklist}
       </div>}
+      {/* Music Royalty Doctors: the Differences panel lives at the Front Desk, with the rest of the visit (founder, 2026-11-13). */}
+      <div className="scroll-mt-4 border-t border-border p-4">
+        <DifferencesPanel userId={userId} tracks={tracks} societies={listSocieties.map((s) => ({ id: s.id, name: s.name, url: s.url }))} summaries={listSummaries} />
+      </div>
       {pastDialog}
     </section>
   );
@@ -731,8 +745,6 @@ export function RoyaltyHealthCheck({ userId, canCatalog, canExport, onUpgrade, o
       {hub}
       {askDialog}
       {frontDesk}
-      {/* Music Royalty Doctors: the differences panel lives with the report, open by default (founder, 2026-11-13). */}
-      <DifferencesPanel userId={userId} tracks={tracks} societies={listSocieties.map((s) => ({ id: s.id, name: s.name, url: s.url }))} summaries={listSummaries} />
       {waitingRoom}
       {running && <p className="text-sm text-muted-foreground">Looking up song {running.done + 1} of {running.total} on streaming…</p>}
       {editing && (

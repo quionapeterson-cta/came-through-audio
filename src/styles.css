@@ -433,27 +433,24 @@ label:has(> [data-infotip]) { line-height: 1.25rem; padding-bottom: 2px; overflo
 }
 
 /*
- * Music Royalty Doctors: the diagnostic spotlight (founder, 2026-11-13).
- *
- * One class marks the exact field a difference deep link points at, so the ring is styled once for both themes: surgical
- * teal with a warm amber pulse in light mode, electric cyan with champagne gold in the studio's dark mode. It clears
- * itself after a few seconds (useFocusHighlight), and it stops moving for anyone who asked for reduced motion.
+ * The diagnostic spotlight in the brand's own cobalt (founder, 2026-11-13): surgical cobalt with an electric bloom in
+ * light mode, electric cobalt on obsidian in dark mode, and no motion for anyone who asked for reduced motion.
  */
 @keyframes cta-diagnostic-pulse {
-  0%, 100% { box-shadow: 0 0 0 2px rgba(217, 119, 6, 0.55), 0 0 16px rgba(217, 119, 6, 0.22); }
-  50% { box-shadow: 0 0 0 3px rgba(13, 148, 136, 0.65), 0 0 26px rgba(13, 148, 136, 0.32); }
+  0%, 100% { box-shadow: 0 0 0 2px rgba(0, 74, 173, 0.45), 0 0 16px rgba(0, 74, 173, 0.18); }
+  50% { box-shadow: 0 0 0 3px rgba(77, 140, 255, 0.7), 0 0 26px rgba(77, 140, 255, 0.35); }
 }
 @keyframes cta-diagnostic-pulse-dark {
-  0%, 100% { box-shadow: 0 0 0 2px rgba(0, 240, 255, 0.55), 0 0 20px rgba(0, 240, 255, 0.25); }
-  50% { box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.6), 0 0 28px rgba(245, 158, 11, 0.3); }
+  0%, 100% { box-shadow: 0 0 0 2px rgba(77, 140, 255, 0.55), 0 0 20px rgba(77, 140, 255, 0.25); }
+  50% { box-shadow: 0 0 0 3px rgba(77, 140, 255, 0.9), 0 0 28px rgba(77, 140, 255, 0.45); }
 }
 .cta-diagnostic-target {
   border-radius: 0.5rem;
-  background: color-mix(in oklab, var(--primary) 7%, transparent);
+  background: rgba(0, 74, 173, 0.05);
   animation: cta-diagnostic-pulse 1.8s ease-in-out infinite;
 }
-.dark .cta-diagnostic-target { animation-name: cta-diagnostic-pulse-dark; }
+.dark .cta-diagnostic-target { animation-name: cta-diagnostic-pulse-dark; background: rgba(77, 140, 255, 0.08); }
 @media (prefers-reduced-motion: reduce) {
-  .cta-diagnostic-target { animation: none; box-shadow: 0 0 0 3px rgba(13, 148, 136, 0.65); }
-  .dark .cta-diagnostic-target { box-shadow: 0 0 0 3px rgba(0, 240, 255, 0.6); }
+  .cta-diagnostic-target { animation: none; box-shadow: 0 0 0 3px rgba(0, 74, 173, 0.55); }
+  .dark .cta-diagnostic-target { box-shadow: 0 0 0 3px rgba(77, 140, 255, 0.6); }
 }

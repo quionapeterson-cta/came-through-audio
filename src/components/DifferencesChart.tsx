@@ -1,45 +1,44 @@
-import { Activity, ArrowUpRight, ExternalLink, GitBranch, Radio } from "lucide-react";
-import { KIND_LABEL, RELEASE_STATE_LABEL, STATUS_LABEL, diffSegments, type DifferenceRow } from "@/lib/discrepancy-treatments";
+import { AudioWaveform, ExternalLink, Loader2 } from "lucide-react";
+import { toast } from "sonner";
+import {
+  KIND_LABEL, RELEASE_STATE_LABEL, STATUS_LABEL, diffSegments, diffWords, repertoireUrl,
+  summaryFor, treatmentText, type DifferenceRow,
+} from "@/lib/discrepancy-treatments";
 
 /**
- * The comparison chart inside `DifferencesPanel` (founder, 2026-11-13).
+ * The Differences card list (founder, 2026-11-13).
  *
- * Seven columns, always in the same order, so the same question is answered in the same place on every row: the song, what
- * disagrees, your catalog's value, the agency's value, the release, the exact treatment, and what to do next. Values are
- * printed in a monospace readout and the characters that actually differ are marked, which is the whole point for an ISRC.
+ * Every difference is one card of three zones, so nothing sits off the right edge of a desktop screen and nothing needs a
+ * horizontal scroll: the song and what is wrong, the two values side by side, and the exact treatment with the one click
+ * that checks it in the public repertoire. Light and dark are the brand's own cobalt on white and electric cobalt on
+ * obsidian; the classes below are the whole palette.
  */
 
-const chip = "inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-semibold";
+const CARD = "grid grid-cols-1 gap-6 rounded-xl border p-5 transition-all duration-200 lg:grid-cols-12 bg-[#FFFFFF] border-[#E5E4E2] hover:border-[#4D8CFF]/60 hover:shadow-[0_4px_24px_rgba(0,74,173,0.10)] dark:bg-[#141414] dark:border-[#E5E4E2]/15 dark:hover:border-[#4D8CFF]/70 dark:hover:shadow-[0_0_28px_rgba(77,140,255,0.18)]";
 
-const kindTone = (kind: DifferenceRow["kind"]) =>
-  kind === "missing-catalog-isrc" || kind === "missing-from-list" || kind === "missing-release"
-    ? `${chip} border-slate-300 bg-slate-50 text-slate-700 dark:border-slate-700 dark:bg-slate-800/60 dark:text-slate-300`
-    : `${chip} border-amber-300 bg-amber-50 text-amber-800 dark:border-amber-400/40 dark:bg-amber-400/10 dark:text-amber-300`;
+const PILL = "inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] font-semibold";
 
-const statusTone = (status: DifferenceRow["status"]) => {
-  if (status === "both-registered") return `${chip} border-teal-300 bg-teal-50 text-teal-800 dark:border-cyan-400/40 dark:bg-cyan-400/10 dark:text-cyan-200`;
-  if (status === "in-treatment") return `${chip} border-cyan-300 bg-cyan-50 text-cyan-800 dark:border-cyan-400/40 dark:bg-cyan-400/10 dark:text-cyan-200`;
-  if (status === "waiting") return `${chip} border-slate-300 bg-white text-slate-600 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-400`;
-  return `${chip} border-amber-400 bg-amber-50 text-amber-900 dark:border-amber-400/50 dark:bg-amber-400/10 dark:text-amber-300`;
-};
+const TAG = `${PILL} border-[#4D8CFF]/40 bg-[#004AAD]/10 text-[#004AAD] dark:border-[#4D8CFF]/35 dark:bg-[#4D8CFF]/15 dark:text-[#4D8CFF]`;
 
-const stateTone = (state: DifferenceRow["release"]["state"]) => {
-  if (state === "current") return "text-teal-700 dark:text-cyan-300";
-  if (state === "waiting") return "text-slate-500 dark:text-slate-400";
-  return "text-amber-700 dark:text-amber-300";
-};
+const PLATINUM = `${PILL} border-[#E5E4E2] bg-[#E5E4E2]/60 text-[#0b0b0b] dark:border-[#E5E4E2]/20 dark:bg-[#E5E4E2]/15 dark:text-[#E5E4E2]`;
 
-/** One value, monospaced, with the characters that differ against the other side marked. */
-function CodeValue({ value, against, muted = false }: { value: string; against?: string; muted?: boolean }) {
-  if (!value) {
-    return <span className="text-[11px] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">None in catalog</span>;
-  }
+const statusPill = (status: DifferenceRow["status"]) =>
+  status === "waiting" || status === "both-registered"
+    ? PLATINUM
+    : `${PILL} border-[#4D8CFF]/40 bg-[#4D8CFF]/15 text-[#004AAD] shadow-[0_0_12px_rgba(77,140,255,0.2)] dark:border-[#4D8CFF]/45 dark:bg-[#4D8CFF]/20 dark:text-[#4D8CFF] dark:shadow-[0_0_14px_rgba(77,140,255,0.25)]`;
+
+const PRIMARY = "inline-flex w-full items-center justify-center gap-1.5 rounded-lg px-3 py-2 text-xs font-semibold transition bg-[#004AAD] text-[#FFFFFF] shadow-[0_0_14px_rgba(0,74,173,0.25)] hover:bg-[#4D8CFF] hover:shadow-[0_0_20px_rgba(77,140,255,0.55)] disabled:opacity-60 dark:bg-[#4D8CFF] dark:text-[#0b0b0b] dark:font-semibold dark:shadow-[0_0_18px_rgba(77,140,255,0.45)] dark:hover:bg-[#4D8CFF]/90 dark:hover:shadow-[0_0_26px_rgba(77,140,255,0.75)]";
+
+const SECONDARY = "inline-flex w-full items-center justify-center gap-1 rounded-lg border px-3 py-1.5 text-xs font-semibold transition border-[#004AAD]/30 text-[#004AAD] hover:border-[#4D8CFF]/60 hover:bg-[#004AAD]/[0.06] dark:border-[#4D8CFF]/35 dark:text-[#4D8CFF] dark:hover:bg-[#4D8CFF]/10";
+
+/** One value in the brand's monospace, with the characters that differ against the other side marked. */
+function Isrc({ value, against }: { value: string; against?: string | undefined }) {
   const segments = against && against !== value ? diffSegments(value, against) : [{ value, changed: false }];
   return (
-    <span className={`font-mono text-[12px] tabular-nums tracking-tight ${muted ? "text-slate-600 dark:text-slate-300" : "text-slate-900 dark:text-slate-100"}`}>
+    <span className="block break-all font-mono text-xs text-[#0b0b0b] dark:text-[#FFFFFF]">
       {segments.map((s, i) =>
         s.changed ? (
-          <mark key={i} className="rounded bg-amber-200/80 px-0.5 text-amber-900 dark:bg-amber-400/30 dark:text-amber-200">{s.value}</mark>
+          <mark key={i} className="rounded bg-[#004AAD]/10 px-1.5 py-0.5 font-medium text-[#004AAD] dark:bg-[#4D8CFF]/20 dark:text-[#4D8CFF]">{s.value}</mark>
         ) : (
           <span key={i}>{s.value}</span>
         ),
@@ -48,126 +47,158 @@ function CodeValue({ value, against, muted = false }: { value: string; against?:
   );
 }
 
+/** A title, with the words the other side does not hold marked, so a renamed copy jumps out. */
+function Title({ value, against, emphasise }: { value: string; against: string; emphasise: boolean }) {
+  if (!emphasise) return <span className="block text-xs text-[#0b0b0b]/80 dark:text-[#E5E4E2]/80">{value}</span>;
+  return (
+    <span className="block text-xs text-[#0b0b0b]/80 dark:text-[#E5E4E2]/80">
+      {diffWords(value, against).map((w, i) => w.changed && w.value.trim()
+        ? <mark key={i} className="rounded bg-[#004AAD]/10 px-1.5 py-0.5 font-medium text-[#004AAD] dark:bg-[#4D8CFF]/20 dark:text-[#4D8CFF]">{w.value}</mark>
+        : <span key={i}>{w.value}</span>)}
+    </span>
+  );
+}
+
 export function DifferencesChart({ rows, busyKey, onFixCatalog, onAdopt, onKeepBoth }: {
   rows: DifferenceRow[];
   busyKey?: string | undefined;
-  onFixCatalog: (row: DifferenceRow) => void;
+  onFixCatalog: (row: DifferenceRow, field?: string) => void;
   onAdopt: (row: DifferenceRow) => void;
   onKeepBoth: (row: DifferenceRow) => void;
 }) {
+  /** The one click that checks a code: the code is copied and the public search opens in a new tab. */
+  function copyAndOpen(value: string, url: string, what: string) {
+    window.open(url, "_blank", "noopener,noreferrer");
+    const copy = navigator.clipboard?.writeText(value);
+    if (!copy) { toast.error(`Couldn't copy ${what} automatically: ${value}`); return; }
+    copy.then(() => toast.success(`Copied ${what} ${value}. The public repertoire search is open in a new tab.`))
+      .catch(() => toast.error(`Couldn't copy ${what} automatically: ${value}`));
+  }
+
   return (
-    <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-[#111620]">
-      <table className="w-full min-w-[1180px] border-collapse text-left align-top text-sm">
-        <caption className="sr-only">Your catalog compared with each agency, and agencies compared with each other</caption>
-        <thead>
-          <tr className="border-b border-slate-200 text-[10px] font-bold uppercase tracking-[0.16em] text-slate-500 dark:border-slate-800 dark:text-slate-400">
-            <th scope="col" className="px-3 py-2.5">Song</th>
-            <th scope="col" className="px-3 py-2.5">What disagrees</th>
-            <th scope="col" className="px-3 py-2.5">Your catalog</th>
-            <th scope="col" className="px-3 py-2.5">The agency</th>
-            <th scope="col" className="px-3 py-2.5">The release</th>
-            <th scope="col" className="px-3 py-2.5">Exact treatment</th>
-            <th scope="col" className="px-3 py-2.5">Status &amp; fix</th>
-          </tr>
-        </thead>
-        <tbody className="divide-y divide-slate-100 dark:divide-slate-800/70">
-          {rows.map((row) => {
-            const against = row.claims[0]?.isrc ?? "";
-            const busy = busyKey === row.key;
-            const canAdopt = !row.catalogIsrc && !!against && row.kind !== "missing-from-list";
-            const canKeepBoth = !!row.catalogIsrc && !!against && row.catalogIsrc.toUpperCase() !== against.toUpperCase();
-            return (
-              <tr key={row.key} className="group align-top transition-colors hover:bg-slate-50/80 dark:hover:bg-white/[0.03]">
-                <td className="px-3 py-3">
-                  <div className="flex items-start gap-2">
-                    <Radio className="mt-0.5 h-3.5 w-3.5 shrink-0 text-teal-600 dark:text-cyan-300" aria-hidden />
-                    <div className="min-w-0">
-                      <span className="block truncate font-semibold text-slate-900 dark:text-slate-100">{row.title}</span>
-                      <span className="block truncate text-xs text-slate-500 dark:text-slate-400">{row.artist || "—"}</span>
-                      {row.occurrences > 1 && (
-                        <span className="mt-1 inline-flex items-center rounded-full bg-slate-900 px-1.5 py-0.5 font-mono text-[10px] font-bold tabular-nums text-white dark:bg-cyan-400 dark:text-slate-900">
-                          {row.occurrences}× in list
-                        </span>
+    <ul className="space-y-3">
+      {rows.map((row) => {
+        const busy = busyKey === row.key;
+        const agencyIsrc = row.claims.find((c) => c.isrc)?.isrc ?? "";
+        const agencyTitle = row.claims[0]?.title ?? "";
+        const titlesDisagree = !!agencyTitle && agencyTitle.toLowerCase().replace(/\s+/g, " ").trim() !== row.title.toLowerCase().replace(/\s+/g, " ").trim();
+        const codesDiffer = !!row.catalogIsrc && !!agencyIsrc && row.catalogIsrc.toUpperCase() !== agencyIsrc.toUpperCase();
+        const code = agencyIsrc || row.catalogIsrc;
+        const url = repertoireUrl(row.claims[0]?.society ?? "");
+        const canAdopt = !row.catalogIsrc && !!agencyIsrc && row.kind !== "missing-from-list";
+        const canKeepBoth = codesDiffer && row.treatment.action !== "keep-both";
+        const waiting = row.treatment.action === "waiting";
+
+        const primary = () => {
+          if (waiting) return;
+          if (row.treatment.action === "keep-both") return onKeepBoth(row);
+          if (row.treatment.action === "add-version") return onFixCatalog(row, "version");
+          copyAndOpen(code || row.title, url, code ? "ISRC" : "title");
+        };
+
+        return (
+          <li key={row.key} className={CARD}>
+            {/* Zone 1 — the song and what disagrees, in plain English. */}
+            <div className="min-w-0 lg:col-span-4">
+              <div className="flex flex-wrap items-center gap-1.5">
+                <span className={statusPill(row.status)}>{STATUS_LABEL[row.status]}</span>
+                <span className={TAG}>{KIND_LABEL[row.kind]}</span>
+                {row.occurrences > 1 && <span className={PLATINUM}>{row.occurrences}× in list</span>}
+              </div>
+              <h3 className="mt-2 flex items-start gap-1.5 text-sm font-semibold leading-snug text-[#0b0b0b] dark:text-[#FFFFFF]">
+                <AudioWaveform className="mt-0.5 h-4 w-4 shrink-0 text-[#004AAD] dark:text-[#4D8CFF]" aria-hidden />
+                <span className="min-w-0 break-words">{row.title}</span>
+              </h3>
+              <p className="mt-0.5 text-xs text-[#0b0b0b]/65 dark:text-[#E5E4E2]/65">{row.artist || "No artist listed"}</p>
+              <p className="mt-1 flex flex-wrap items-center gap-x-1.5 gap-y-1 text-[11px] text-[#0b0b0b]/65 dark:text-[#E5E4E2]/65">
+                <span className="font-mono tabular-nums">{row.release.date || "No release date"}</span>
+                <span aria-hidden>·</span>
+                <span className={row.release.state === "current" ? "font-semibold text-[#004AAD] dark:text-[#4D8CFF]" : "font-semibold"}>{RELEASE_STATE_LABEL[row.release.state]}</span>
+                {row.release.version && <span className="rounded border border-[#E5E4E2] px-1.5 py-px dark:border-[#E5E4E2]/15">{row.release.version}</span>}
+              </p>
+              <p className="mt-2 text-xs leading-relaxed text-[#0b0b0b]/70 dark:text-[#E5E4E2]/70">{summaryFor(row)}</p>
+            </div>
+
+            {/* Zone 2 — the two values side by side. */}
+            <div className="min-w-0 lg:col-span-4">
+              <div className="rounded-lg border border-[#E5E4E2] bg-[#E5E4E2]/30 dark:border-[#E5E4E2]/15 dark:bg-[#0b0b0b]">
+                <div className="grid grid-cols-2 gap-3 p-3">
+                  <div className="min-w-0">
+                    <span className="block text-[10px] font-bold uppercase tracking-wider text-[#0b0b0b]/55 dark:text-[#E5E4E2]/55">Your catalog</span>
+                    <div className="mt-1"><Title value={row.title} against={agencyTitle} emphasise={titlesDisagree} /></div>
+                    <div className="mt-1">
+                      {row.catalogIsrc
+                        ? <Isrc value={row.catalogIsrc} against={agencyIsrc} />
+                        : <>
+                          <span className="block text-xs font-semibold text-[#0b0b0b] dark:text-[#FFFFFF]">NOT IN CATALOG</span>
+                          <span className="mt-1 block text-xs opacity-60">No ISRC found in your catalog</span>
+                        </>}
+                      {row.retiredIscrs.length > 0 && (
+                        <span className="mt-1 block font-mono text-[11px] tabular-nums text-[#0b0b0b]/45 line-through dark:text-[#E5E4E2]/45">{row.retiredIscrs.join(" · ")}</span>
                       )}
                     </div>
                   </div>
-                </td>
-                <td className="px-3 py-3">
-                  <span className={kindTone(row.kind)}>{KIND_LABEL[row.kind]}</span>
-                  {row.issues.length > 0 && (
-                    <ul className="mt-1.5 space-y-0.5 text-[11px] leading-snug text-slate-500 dark:text-slate-400">
-                      {row.issues.slice(0, 2).map((i) => <li key={i}>{i}</li>)}
-                    </ul>
-                  )}
-                </td>
-                <td className="px-3 py-3">
-                  <CodeValue value={row.catalogIsrc} against={against} />
-                  {row.retiredIscrs.length > 0 && (
-                    <div className="mt-1">
-                      <span className="text-[10px] font-bold uppercase tracking-wide text-slate-400 dark:text-slate-500">Retired</span>
-                      <div className="font-mono text-[11px] tabular-nums text-slate-500 line-through decoration-amber-500/70 dark:text-slate-400">
-                        {row.retiredIscrs.join(" · ")}
-                      </div>
-                    </div>
-                  )}
-                </td>
-                <td className="px-3 py-3">
-                  <ul className="space-y-1.5">
+                  <div className="min-w-0 border-l border-[#E5E4E2] pl-3 dark:border-[#E5E4E2]/15">
+                    <span className="block text-[10px] font-bold uppercase tracking-wider text-[#0b0b0b]/55 dark:text-[#E5E4E2]/55">The agency</span>
                     {row.claims.map((c) => (
-                      <li key={c.society + c.isrc}>
-                        <span className="text-[10px] font-bold uppercase tracking-wide text-slate-500 dark:text-slate-400">{c.name}</span>
-                        <div className="mt-0.5">
-                          <CodeValue value={c.isrc} against={row.catalogIsrc} muted />
-                          {!c.isrc && <span className="text-[11px] text-slate-500 dark:text-slate-400">No code on the list</span>}
+                      <div key={c.society + c.isrc + c.title} className="mt-1">
+                        <span className="block text-[10px] font-semibold uppercase tracking-wide text-[#004AAD] dark:text-[#4D8CFF]">{c.name}</span>
+                        <Title value={c.title || row.title} against={row.title} emphasise={titlesDisagree} />
+                        <div className="mt-1">
+                          {c.isrc
+                            ? <Isrc value={c.isrc} against={row.catalogIsrc} />
+                            : <>
+                              <span className="block text-xs font-semibold text-[#0b0b0b] dark:text-[#FFFFFF]">NOT IN AGENCY</span>
+                              <span className="mt-1 block text-xs opacity-60">No ISRC found on list</span>
+                            </>}
                         </div>
-                      </li>
+                      </div>
                     ))}
-                  </ul>
-                </td>
-                <td className="px-3 py-3">
-                  <span className="block truncate text-[13px] font-semibold text-slate-900 dark:text-slate-100">{row.release.title || "No release"}</span>
-                  <span className="block font-mono text-[11px] tabular-nums text-slate-500 dark:text-slate-400">{row.release.date || "No date"}</span>
-                  {row.release.version && (
-                    <span className="mt-1 inline-block rounded border border-slate-200 px-1.5 py-px text-[10px] font-semibold text-slate-600 dark:border-slate-700 dark:text-slate-300">{row.release.version}</span>
-                  )}
-                  <span className={`mt-1 block text-[11px] font-semibold ${stateTone(row.release.state)}`}>{RELEASE_STATE_LABEL[row.release.state]}</span>
-                </td>
-                <td className="px-3 py-3">
-                  <span className="block text-[13px] font-semibold text-slate-900 dark:text-slate-100">{row.treatment.headline}</span>
-                  <span className="mt-0.5 block max-w-[34ch] text-[11px] leading-snug text-slate-500 dark:text-slate-400">{row.treatment.detail}</span>
-                </td>
-                <td className="px-3 py-3">
-                  <span className={statusTone(row.status)}>{STATUS_LABEL[row.status]}</span>
-                  <div className="mt-2 flex flex-wrap gap-1.5">
-                    <button type="button" onClick={() => onFixCatalog(row)} disabled={busy}
-                      className="inline-flex items-center gap-1 rounded-md border border-teal-600/40 bg-teal-50 px-2 py-1 text-[11px] font-semibold text-teal-800 transition hover:bg-teal-100 disabled:opacity-50 dark:border-cyan-400/40 dark:bg-cyan-400/10 dark:text-cyan-200 dark:hover:bg-cyan-400/20">
-                      <GitBranch className="h-3 w-3" aria-hidden />Fix in Catalog
-                    </button>
-                    {row.claims[0]?.url && (
-                      <a href={row.claims[0].url} target="_blank" rel="noreferrer"
-                        className="inline-flex items-center gap-1 rounded-md border border-slate-300 bg-white px-2 py-1 text-[11px] font-semibold text-slate-700 transition hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800">
-                        <ExternalLink className="h-3 w-3" aria-hidden />Fix at Agency
-                      </a>
-                    )}
-                    {canAdopt && (
-                      <button type="button" onClick={() => onAdopt(row)} disabled={busy}
-                        className="inline-flex items-center gap-1 rounded-md bg-slate-900 px-2 py-1 text-[11px] font-semibold text-white transition hover:bg-slate-800 disabled:opacity-50 dark:bg-cyan-400 dark:text-slate-900 dark:hover:bg-cyan-300">
-                        <ArrowUpRight className="h-3 w-3" aria-hidden />Adopt Agency ISRC
-                      </button>
-                    )}
-                    {canKeepBoth && (
-                      <button type="button" onClick={() => onKeepBoth(row)} disabled={busy}
-                        className="inline-flex items-center gap-1 rounded-md border border-amber-400/60 bg-amber-50 px-2 py-1 text-[11px] font-semibold text-amber-900 transition hover:bg-amber-100 disabled:opacity-50 dark:border-amber-400/40 dark:bg-amber-400/10 dark:text-amber-200 dark:hover:bg-amber-400/20">
-                        <Activity className="h-3 w-3" aria-hidden />Keep Both &amp; Retire Old
-                      </button>
-                    )}
                   </div>
-                </td>
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
-    </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Zone 3 — the exact treatment and the one click that checks it. */}
+            <div className="flex min-w-0 flex-col lg:col-span-4">
+              <div className="flex h-full flex-col justify-between rounded-lg border p-4 transition-all border-[#004AAD]/25 bg-[#004AAD]/[0.04] shadow-[inset_0_0_20px_rgba(77,140,255,0.06)] dark:border-[#4D8CFF]/30 dark:bg-[#4D8CFF]/[0.08] dark:shadow-[inset_0_0_24px_rgba(77,140,255,0.10)]">
+                <div>
+                  <p className="text-[11px] font-bold uppercase tracking-wider text-[#004AAD] dark:text-[#4D8CFF]">Exact treatment</p>
+                  <p className="mt-1 text-sm font-semibold text-[#0b0b0b] dark:text-[#FFFFFF]">{row.treatment.headline}</p>
+                  <p className="mt-1 text-xs leading-relaxed text-[#0b0b0b]/70 dark:text-[#E5E4E2]/70">{treatmentText(row.treatment, code)}</p>
+                </div>
+                <div className="mt-3 space-y-2">
+                  {waiting
+                    ? <span className={PLATINUM}>Waiting for the release</span>
+                    : <button type="button" className={PRIMARY} onClick={primary} disabled={busy}>
+                        {busy && <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden />}
+                        {row.treatment.primary}
+                      </button>}
+                  {row.treatment.secondary.includes("Repertoire")
+                    ? <a href={url} target="_blank" rel="noreferrer" className={SECONDARY}>
+                        <ExternalLink className="h-3.5 w-3.5" aria-hidden />{row.treatment.secondary}
+                      </a>
+                    : <button type="button" className={SECONDARY} onClick={() => onFixCatalog(row)} disabled={busy}>
+                        {row.treatment.secondary}
+                      </button>}
+                  {canAdopt && (
+                    <button type="button" onClick={() => onAdopt(row)} disabled={busy}
+                      className="w-full text-center text-[11px] font-semibold text-[#004AAD] underline decoration-[#4D8CFF]/50 underline-offset-4 hover:text-[#4D8CFF] dark:text-[#4D8CFF]">
+                      Use the agency&apos;s ISRC in my catalog
+                    </button>
+                  )}
+                  {canKeepBoth && (
+                    <button type="button" onClick={() => onKeepBoth(row)} disabled={busy}
+                      className="w-full text-center text-[11px] font-semibold text-[#004AAD] underline decoration-[#4D8CFF]/50 underline-offset-4 hover:text-[#4D8CFF] dark:text-[#4D8CFF]">
+                      Keep both ISRCs &amp; retire the old one
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+          </li>
+        );
+      })}
+    </ul>
   );
 }

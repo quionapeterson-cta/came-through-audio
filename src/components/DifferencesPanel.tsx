@@ -14,11 +14,12 @@ import {
 /**
  * The "Music Royalty Doctors" Differences panel (founder, 2026-11-13).
  *
- * It is the one place a member triages what the agencies have on file against their own catalog. The comparisons come from
+ * It is the one place a member reviews what the agencies have on file against their own catalog. The comparisons come from
  * the agency intake that already saved them on this device for twelve hours (`readIntake`), so this panel reads — it never
  * writes a comparison of its own — and the only thing it saves is the fix the member confirms, through `saveTrack`.
  *
  * No new table, no new store: the catalog is the record, and the handoff from Intake is a link with the society in it.
+ * The palette is the brand's own: cobalt on white in light mode, electric cobalt on obsidian in dark mode, nothing gold.
  */
 
 const EKG = "M0,12 L18,12 L24,4 L30,20 L36,12 L60,12";
@@ -30,6 +31,10 @@ const FILTERS = [
 ] as const;
 
 type Side = (typeof FILTERS)[number]["id"];
+
+const PILL = "inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-semibold transition";
+const PILL_OFF = `${PILL} border-[#E5E4E2] bg-transparent text-[#0b0b0b]/65 hover:border-[#4D8CFF]/60 hover:text-[#004AAD] dark:border-[#E5E4E2]/15 dark:text-[#E5E4E2]/65 dark:hover:border-[#4D8CFF]/70 dark:hover:text-[#4D8CFF]`;
+const PILL_ON = `${PILL} border-transparent bg-[#004AAD] text-[#FFFFFF] shadow-[0_0_15px_rgba(0,74,173,0.3)] dark:bg-[#4D8CFF] dark:text-[#0b0b0b] dark:font-semibold dark:shadow-[0_0_18px_rgba(77,140,255,0.45)]`;
 
 export function DifferencesPanel({ userId, tracks, societies, summaries, defaultSociety, onSaved, className = "" }: {
   userId?: string | undefined;
@@ -101,39 +106,41 @@ export function DifferencesPanel({ userId, tracks, societies, summaries, default
     }
   }
 
-  function fixInCatalog(row: DifferenceRow) {
-    const agency = row.claims[0]?.isrc ?? "";
-    const p = new URLSearchParams({ tab: "catalog", songId: row.songId, focusField: "isrc", action: row.status === "needs-triage" ? (agency ? "adopt" : "review") : "review" });
+  /** Opens the song in My Catalog at the field the treatment is about, with the agency's code to hand. */
+  function fixInCatalog(row: DifferenceRow, field = "isrc") {
+    const agency = row.claims.find((c) => c.isrc)?.isrc ?? "";
+    const action = row.treatment.action === "add-version" ? "add-version" : row.treatment.action === "keep-both" ? "dual_isrc" : row.catalogIsrc ? "review" : "adopt";
+    const p = new URLSearchParams({ tab: "catalog", songId: row.songId, focusField: field, action });
     if (agency) p.set("agencyIsrc", agency);
     window.location.assign(`/workspace?${p.toString()}#song-${row.songId}`);
   }
 
   return (
     <section id="differences-panel" aria-labelledby="differences-title"
-      className={`scroll-mt-6 overflow-hidden rounded-2xl border border-slate-200 bg-white text-slate-900 shadow-sm dark:border-slate-800 dark:bg-[#111620] dark:text-slate-100 ${className}`}>
-      <header className="border-b border-slate-200 dark:border-slate-800">
+      className={`scroll-mt-6 overflow-hidden rounded-2xl border bg-[#FFFFFF] text-[#0b0b0b] border-[#E5E4E2] dark:border-[#E5E4E2]/15 dark:bg-[#0b0b0b] dark:text-[#FFFFFF] ${className}`}>
+      <header className="border-b border-[#E5E4E2] dark:border-[#E5E4E2]/15">
         <div className="flex flex-wrap items-start justify-between gap-3 px-4 py-3.5">
           <div className="flex min-w-0 items-start gap-3">
-            <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl border border-teal-600/30 bg-teal-50 text-teal-700 dark:border-cyan-400/30 dark:bg-cyan-400/10 dark:text-cyan-300">
+            <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl border border-[#4D8CFF]/40 bg-[#004AAD]/10 text-[#004AAD] shadow-[0_0_12px_rgba(77,140,255,0.2)] dark:border-[#4D8CFF]/45 dark:bg-[#4D8CFF]/20 dark:text-[#4D8CFF] dark:shadow-[0_0_14px_rgba(77,140,255,0.25)]">
               <Stethoscope className="h-4.5 w-4.5" aria-hidden />
             </span>
             <div className="min-w-0">
-              <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-teal-700 dark:text-cyan-300">Music Royalty Doctors · Diagnostics</p>
+              <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#004AAD] dark:text-[#4D8CFF]">Music Royalty Doctors · Diagnostics</p>
               <h2 id="differences-title" className="text-lg font-extrabold leading-tight">Differences</h2>
-              <p className="mt-0.5 max-w-[70ch] text-xs text-slate-500 dark:text-slate-400">
-                Your catalog against each agency, and the agencies against each other. Every row says what disagrees and the exact treatment.
+              <p className="mt-0.5 max-w-[70ch] text-xs text-[#0b0b0b]/65 dark:text-[#E5E4E2]/65">
+                Your catalog against each agency, and the agencies against each other. Every card names what disagrees and the exact treatment.
               </p>
             </div>
           </div>
           <div className="flex items-center gap-2">
             <div className="hidden items-center gap-2 sm:flex" aria-hidden>
-              <svg viewBox="0 0 60 24" className="h-6 w-16 text-teal-600 dark:text-cyan-300">
+              <svg viewBox="0 0 60 24" className="h-6 w-16 text-[#004AAD] dark:text-[#4D8CFF]">
                 <path d={EKG} fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
               </svg>
-              <span className="font-mono text-[10px] uppercase tracking-widest text-slate-400 dark:text-slate-500">12h device read</span>
+              <span className="font-mono text-[10px] uppercase tracking-widest text-[#0b0b0b]/45 dark:text-[#E5E4E2]/45">12h device read</span>
             </div>
             <button type="button" onClick={() => setOpen((v) => !v)} aria-expanded={open} aria-controls="differences-body"
-              className="inline-flex items-center gap-1 rounded-md border border-slate-300 px-2 py-1 text-xs font-semibold text-slate-600 transition hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800">
+              className="inline-flex items-center gap-1 rounded-md border border-[#E5E4E2] px-2 py-1 text-xs font-semibold text-[#0b0b0b]/65 transition hover:border-[#4D8CFF]/60 hover:text-[#004AAD] dark:border-[#E5E4E2]/15 dark:text-[#E5E4E2]/65 dark:hover:border-[#4D8CFF]/70 dark:hover:text-[#4D8CFF]">
               {open ? <ChevronDown className="h-3.5 w-3.5" aria-hidden /> : <ChevronRight className="h-3.5 w-3.5" aria-hidden />}
               {open ? "Hide" : "Open"}
             </button>
@@ -142,14 +149,14 @@ export function DifferencesPanel({ userId, tracks, societies, summaries, default
         {open && (
           <div className="grid grid-cols-2 gap-2 px-4 pb-3 sm:grid-cols-4">
             {[
-              { label: "Needs triage", value: counts.open, tone: "text-amber-700 dark:text-amber-300" },
-              { label: "Catalog vs. agency", value: counts.catalog, tone: "text-slate-900 dark:text-slate-100" },
-              { label: "Agency vs. agency", value: counts.agencies, tone: "text-slate-900 dark:text-slate-100" },
-              { label: "Waiting on release", value: counts.waiting, tone: "text-slate-500 dark:text-slate-400" },
+              { label: "Needs review", value: counts.open },
+              { label: "Catalog vs. agency", value: counts.catalog },
+              { label: "Agency vs. agency", value: counts.agencies },
+              { label: "Waiting on release", value: counts.waiting },
             ].map((m) => (
-              <div key={m.label} className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 dark:border-slate-800 dark:bg-slate-900/50">
-                <div className={`font-mono text-xl font-bold tabular-nums leading-none ${m.tone}`}>{m.value}</div>
-                <div className="mt-1 text-[10px] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">{m.label}</div>
+              <div key={m.label} className="rounded-lg border border-[#E5E4E2] bg-[#E5E4E2]/20 px-3 py-2 dark:border-[#E5E4E2]/15 dark:bg-[#141414]">
+                <div className="font-mono text-xl font-bold tabular-nums leading-none text-[#0b0b0b] dark:text-[#FFFFFF]">{m.value}</div>
+                <div className="mt-1 text-[10px] font-semibold uppercase tracking-wide text-[#0b0b0b]/60 dark:text-[#E5E4E2]/60">{m.label}</div>
               </div>
             ))}
           </div>
@@ -158,33 +165,24 @@ export function DifferencesPanel({ userId, tracks, societies, summaries, default
 
       {open && (
         <div id="differences-body">
-          <div className="flex flex-wrap items-center gap-1.5 border-b border-slate-200 px-4 py-2.5 dark:border-slate-800" role="group" aria-label="Difference filters">
+          <div className="flex flex-wrap items-center gap-1.5 border-b border-[#E5E4E2] px-4 py-2.5 dark:border-[#E5E4E2]/15" role="group" aria-label="Difference filters">
             {FILTERS.map((f) => {
               const active = side === f.id;
               const n = f.id === "all" ? rows.length : f.id === "catalog" ? counts.catalog : counts.agencies;
               return (
-                <button key={f.id} type="button" aria-pressed={active} onClick={() => setSide(f.id)}
-                  className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-semibold transition ${active
-                    ? "border-slate-900 bg-slate-900 text-white dark:border-cyan-400 dark:bg-cyan-400 dark:text-slate-900"
-                    : "border-slate-300 bg-white text-slate-600 hover:bg-slate-50 dark:border-slate-700 dark:bg-transparent dark:text-slate-300 dark:hover:bg-slate-800"}`}>
+                <button key={f.id} type="button" aria-pressed={active} onClick={() => setSide(f.id)} className={active ? PILL_ON : PILL_OFF}>
                   {f.label}<span className="font-mono tabular-nums opacity-70">{n}</span>
                 </button>
               );
             })}
-            <span className="mx-1 hidden h-4 w-px bg-slate-200 dark:bg-slate-700 sm:block" aria-hidden />
+            <span className="mx-1 hidden h-4 w-px bg-[#E5E4E2] dark:bg-[#E5E4E2]/15 sm:block" aria-hidden />
             {society && (
-              <button type="button" onClick={() => setSociety("")}
-                className="inline-flex items-center gap-1 rounded-full border border-slate-300 px-2.5 py-1 text-[11px] font-semibold text-slate-500 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-400 dark:hover:bg-slate-800">
-                All societies ✕
-              </button>
+              <button type="button" onClick={() => setSociety("")} className={PILL_OFF}>All societies ✕</button>
             )}
             {societyList.map((s) => {
               const active = society === s.id;
               return (
-                <button key={s.id} type="button" aria-pressed={active} onClick={() => setSociety(active ? "" : s.id)}
-                  className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-semibold transition ${active
-                    ? "border-teal-600 bg-teal-50 text-teal-800 dark:border-cyan-400 dark:bg-cyan-400/15 dark:text-cyan-200"
-                    : "border-slate-300 bg-white text-slate-600 hover:bg-slate-50 dark:border-slate-700 dark:bg-transparent dark:text-slate-300 dark:hover:bg-slate-800"}`}>
+                <button key={s.id} type="button" aria-pressed={active} onClick={() => setSociety(active ? "" : s.id)} className={active ? PILL_ON : PILL_OFF}>
                   {s.name}<span className="font-mono tabular-nums opacity-70">{counts.bySociety.get(s.id) ?? 0}</span>
                 </button>
               );
@@ -193,18 +191,19 @@ export function DifferencesPanel({ userId, tracks, societies, summaries, default
 
           {expired ? (
             <div className="flex flex-col items-start gap-3 px-4 py-8">
-              <span className="grid h-10 w-10 place-items-center rounded-xl border border-amber-300 bg-amber-50 text-amber-700 dark:border-amber-400/40 dark:bg-amber-400/10 dark:text-amber-300">
+              <span className="grid h-10 w-10 place-items-center rounded-xl border border-[#4D8CFF]/40 bg-[#004AAD]/10 text-[#004AAD] dark:border-[#4D8CFF]/45 dark:bg-[#4D8CFF]/20 dark:text-[#4D8CFF]">
                 <FileSearch className="h-5 w-5" aria-hidden />
               </span>
-              <p className="max-w-[70ch] text-sm text-slate-600 dark:text-slate-300">
+              <p className="max-w-[70ch] text-sm text-[#0b0b0b]/70 dark:text-[#E5E4E2]/70">
                 Detailed row comparisons expire after 12 hours per device. Re-upload your{society ? ` ${societyName(society, societyList)}` : ""} list in Intake to view exact field differences.
               </p>
-              <Button size="sm" onClick={() => window.location.assign("/workspace?tab=health")}>
+              <Button size="sm" onClick={() => window.location.assign("/workspace?tab=health")}
+                className="bg-[#004AAD] text-[#FFFFFF] shadow-[0_0_14px_rgba(0,74,173,0.25)] hover:bg-[#4D8CFF] hover:shadow-[0_0_20px_rgba(77,140,255,0.55)] dark:bg-[#4D8CFF] dark:text-[#0b0b0b] dark:font-semibold dark:shadow-[0_0_18px_rgba(77,140,255,0.45)]">
                 <RefreshCw className="mr-1 h-3.5 w-3.5" aria-hidden />Re-run Intake Scan →
               </Button>
             </div>
           ) : shown.length === 0 ? (
-            <div className="px-4 py-8 text-sm text-slate-500 dark:text-slate-400">
+            <div className="px-4 py-8 text-sm text-[#0b0b0b]/65 dark:text-[#E5E4E2]/65">
               {rows.length === 0
                 ? "No differences yet. Upload an agency list in Intake and every row it disagrees on shows here."
                 : "Nothing in this filter. Try all societies, or the other comparison."}
@@ -213,7 +212,7 @@ export function DifferencesPanel({ userId, tracks, societies, summaries, default
             <div className="p-3 sm:p-4">
               <DifferencesChart rows={shown} busyKey={busyKey} onFixCatalog={fixInCatalog}
                 onAdopt={(row) => {
-                  const agency = row.claims[0]?.isrc ?? "";
+                  const agency = row.claims.find((c) => c.isrc)?.isrc ?? "";
                   if (agency) void resolve(row, { isrc: agency }, `Adopted ${agency}. The catalog now matches ${row.claims[0]!.name}.`);
                 }}
                 onKeepBoth={(row) => {
@@ -222,7 +221,7 @@ export function DifferencesPanel({ userId, tracks, societies, summaries, default
                 }} />
             </div>
           )}
-          <p className="border-t border-slate-200 px-4 py-2 text-[11px] text-slate-500 dark:border-slate-800 dark:text-slate-400">
+          <p className="border-t border-[#E5E4E2] px-4 py-2 text-[11px] text-[#0b0b0b]/55 dark:border-[#E5E4E2]/15 dark:text-[#E5E4E2]/55">
             A saved detail is kept as you enter it until a lookup confirms it. Both ISRCs stay on the work for record-keeping; only the current one is embedded.
           </p>
         </div>
@@ -246,12 +245,14 @@ export function DifferencesPanel({ userId, tracks, societies, summaries, default
                     const claim = pick.row.claims.find((c) => c.isrc === code);
                     return (
                       <button key={code} type="button" aria-pressed={active} onClick={() => setPick({ ...pick, current: code })}
-                        className={`rounded-xl border p-3 text-left transition ${active ? "border-primary bg-accent/40" : "border-border hover:bg-muted/40"}`}>
-                        <span className="block text-[10px] font-bold uppercase tracking-wide text-muted-foreground">
+                        className={`rounded-xl border p-3 text-left transition ${active
+                          ? "border-[#004AAD] bg-[#004AAD]/[0.06] shadow-[0_0_15px_rgba(0,74,173,0.2)] dark:border-[#4D8CFF] dark:bg-[#4D8CFF]/10 dark:shadow-[0_0_18px_rgba(77,140,255,0.3)]"
+                          : "border-[#E5E4E2] hover:border-[#4D8CFF]/60 dark:border-[#E5E4E2]/15 dark:hover:border-[#4D8CFF]/70"}`}>
+                        <span className="block text-[10px] font-bold uppercase tracking-wide text-[#0b0b0b]/55 dark:text-[#E5E4E2]/55">
                           {claim ? claim.name : pick.row.retiredIscrs.includes(code) ? "Retired today" : "Your catalog"}
                         </span>
-                        <span className="mt-1 block font-mono text-sm font-semibold tabular-nums">{code}</span>
-                        {pick.row.release.date && <span className="mt-1 block text-[11px] text-muted-foreground">Release {pick.row.release.date}</span>}
+                        <span className="mt-1 block font-mono text-sm font-semibold tabular-nums text-[#0b0b0b] dark:text-[#FFFFFF]">{code}</span>
+                        {pick.row.release.date && <span className="mt-1 block text-[11px] text-[#0b0b0b]/55 dark:text-[#E5E4E2]/55">Release {pick.row.release.date}</span>}
                       </button>
                     );
                   })}
@@ -260,6 +261,7 @@ export function DifferencesPanel({ userId, tracks, societies, summaries, default
                 <div className="flex justify-end gap-2">
                   <Button variant="ghost" onClick={() => setPick(undefined)}>Cancel</Button>
                   <Button disabled={!pick.current || busyKey === pick.row.key}
+                    className="bg-[#004AAD] text-[#FFFFFF] shadow-[0_0_14px_rgba(0,74,173,0.25)] hover:bg-[#4D8CFF] dark:bg-[#4D8CFF] dark:text-[#0b0b0b] dark:font-semibold dark:shadow-[0_0_18px_rgba(77,140,255,0.45)]"
                     onClick={() => {
                       const row = pick.row;
                       setPick(undefined);

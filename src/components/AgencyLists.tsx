@@ -324,7 +324,7 @@ export function AgencyLists({ userId, societies, songsFor, summaries, allTracks,
                 <div className="min-w-0">
                   <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-teal-700 dark:text-cyan-300">Music Royalty Doctors · Diagnostic handoff</p>
                   <p className="text-sm font-semibold">
-                    {open} difference{open === 1 ? "" : "s"} ready for triage
+                    {open} difference{open === 1 ? "" : "s"} ready for review
                     {agencies > 0 && <span className="font-normal text-muted-foreground"> · {agencies} where two agencies disagree</span>}
                   </p>
                 </div>
