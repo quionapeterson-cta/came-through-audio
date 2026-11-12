@@ -110,6 +110,12 @@ const metadataObject = z.object({
   phonographic: z.string().trim().default(""),
   language: z.string().trim().default(""),
   isrc: z.string().trim().refine((value) => !value || /^[A-Z]{2}[A-Z0-9]{3}\d{7}$/i.test(value.replace(/-/g, "")), "Enter a valid 12-character ISRC."),
+  /**
+   * Codes this recording used to carry (founder, 2026-11-12): a replaced code, a taken-down release, a distributor
+   * change. They are never embedded or exported — a retired code on a new registration is an error with the agencies —
+   * but keeping them is what lets a still-reporting agency be recognised as the same record instead of a mismatch.
+   */
+  retiredIscrs: z.array(z.string().trim()).default([]),
   upc: z.string().trim().refine((value) => !value || /^\d{12,13}$/.test(value), "Enter a 12- or 13-digit UPC/EAN."),
   iswc: z.string().trim().refine((value) => !value || /^T\d{10}$/i.test(value.replace(/[.\s-]/g, "")), "Enter a valid ISWC (T followed by 10 digits)."),
   /** Applied for, waiting on the PRO (founder, 2026-11-12). The member's own answer, so the checklist stops asking for
@@ -201,7 +207,7 @@ export function isoDate(value: string | undefined): string {
 
 export const emptyMetadata = (): Metadata => ({
   title: "", trackNumber: "", trackTotal: "", artist: "", featured: [""], album: "", duration: "", releaseType: "", version: "", releaseDate: "", unreleased: false, wasUnreleased: false, recordingSide: "", beatState: "", beatMasterId: "", dealType: "", dealDate: "", dealStreams: "", dealContract: "", label: "", contactEmail: "", copyright: "", phonographic: "", language: "",
-  isrc: "", upc: "", iswc: "", iswcPending: false, iswcCheckOn: "", explicit: false, instrumental: false, primaryGenre: "", secondaryGenre: "",
+  isrc: "", retiredIscrs: [], upc: "", iswc: "", iswcPending: false, iswcCheckOn: "", explicit: false, instrumental: false, primaryGenre: "", secondaryGenre: "",
   writers: [emptyContributor()], composers: [emptyContributor()], producers: [emptyContributor()], publishers: [emptyContributor()],
   lyrics: "", coverThumb: "", audioPath: "", artPath: "", artWidth: 0, artHeight: 0, aiProtection: false, credits: [], recordedIn: "", recordedYear: "",
   alternateTitles: [""], selfPublished: false, bmiWriterPublishing: false, samples: "", sampleTitle: "", sampleWriters: "", sampleSource: "", writtenFor: "", productionTitle: "",

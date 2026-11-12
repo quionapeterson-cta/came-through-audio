@@ -7,7 +7,9 @@ import { UpgradeLock } from "@/components/UpgradeLock";
 import { runStreamingFastTrack, type FastTrackResult } from "@/lib/fast-track.functions";
 import type { ArtistCandidate } from "@/lib/discography";
 import { MLC_SEARCH_URL, UNREGISTERED_DIAGNOSIS, compositionCounts } from "@/lib/composition";
-import { listTracks, saveTrack, type CatalogTrack } from "@/lib/catalog";
+import { listTracks, saveTrack, uploadCatalogFile, type CatalogTrack } from "@/lib/catalog";
+import { coverExtension, coverFileFrom, coverThumb } from "@/lib/pull-cover";
+import type { Metadata } from "@/lib/metadata";
 import { loadProfile } from "@/lib/artist-profile";
 import { prefillPlan, withStreamingDetails, type PrefillPlan } from "@/lib/fast-track-prefill";
 import { SOVEREIGN_BACKUP } from "@/lib/copy";
@@ -134,6 +136,28 @@ export function StreamingFastTrack({ userId, canCatalog = false, onUpgrade, onUp
     }
   }
 
+  /**
+   * The release's own cover, saved onto the song it just created (founder, 2026-11-12). The pull has always carried the
+   * artwork and never kept it, so a pulled song arrived with no cover and embedding wrote the master's own picture
+   * instead of the release art. A CDN that refuses the read leaves the song as it was: the cover is a bonus, never a
+   * reason to lose an entry.
+   */
+  async function attachCover(id: string, song: Metadata) {
+    const album = song.album.trim().toLowerCase();
+    const url = album ? result?.discography.releases.find((r) => r.title.trim().toLowerCase() === album)?.cover : undefined;
+    if (!url) return;
+    const file = await coverFileFrom(url, song.title || "cover");
+    if (!file) return;
+    try {
+      const path = await uploadCatalogFile(userId!, id, "artwork", file, coverExtension(file.type));
+      const thumb = await coverThumb(file).catch(() => "");
+      await saveTrack({ ...song, artPath: path, ...(thumb ? { coverThumb: thumb } : {}) }, userId!, id);
+    } catch (e) {
+      // Quiet: the song is saved and usable, and the member can add the cover by hand.
+      console.warn("The pulled cover wasn't saved:", e instanceof Error ? e.message : e);
+    }
+  }
+
   async function commit(plan: PrefillPlan, tracks: CatalogTrack[], choices: Choice[]) {
     let first: string | undefined;
     let updated = 0;
@@ -141,6 +165,7 @@ export function StreamingFastTrack({ userId, canCatalog = false, onUpgrade, onUp
     for (const song of plan.songs) {
       const id = await saveTrack(song, userId!);
       first ??= id;
+      await attachCover(id, song);
     }
     for (const [i, c] of plan.conflicts.entries()) {
       const choice = choices[i] ?? "keep";
@@ -148,6 +173,7 @@ export function StreamingFastTrack({ userId, canCatalog = false, onUpgrade, onUp
       if (choice === "both") {
         const id = await saveTrack(c.song, userId!);
         first ??= id;
+        await attachCover(id, c.song);
         both += 1;
         continue;
       }

@@ -66,6 +66,18 @@ describe("agency lists", () => {
     expect([...r.matched, ...r.differences].map((m) => m.trackId).sort()).toEqual(["clean", "dirty", "inst"]);
   });
 
+  it("recognises an agency still reporting under a retired code, and says what to send them", () => {
+    const works = readWorks(parseDelimited("Title,ISRC,Writer,Share\nDo You Mind That,QZNMY2291725,Ann Lee,100"));
+    // The founder's real case: the catalog holds the live code, SoundExchange still states the retired one.
+    const t = track("a", "Do you Mind That?", { isrc: "GXESV2623521", retiredIscrs: ["QZNMY2291725"] });
+    expect(matchWork(works, t)).toBe(works[0]);
+    const r = compareList(works, [t], true, "SoundExchange");
+    expect(r.matched).toHaveLength(0);
+    expect(r.differences[0]!.issues[0]).toContain("The agency still has the retired ISRC QZNMY2291725; ask them to move it to GXESV2623521");
+    // Paired, and settled: it is not an uncatalogued recording as well.
+    expect(r.extra).toHaveLength(0);
+  });
+
   it("only drops a short version tail, never part of the title itself", () => {
     // A bracket that doesn't name a version is kept, so the looser pass can't swallow a real title.
     expect(titleCore("Song (Part 2)")).not.toBe(titleCore("Song"));

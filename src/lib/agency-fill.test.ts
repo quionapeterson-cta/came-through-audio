@@ -109,6 +109,14 @@ describe("planning a fill", () => {
     expect(adopted.version).toBe("");
   });
 
+  it("never writes a retired code back over the current one", () => {
+    const existing = track("t1", "Do you Mind That?", { isrc: "GXESV2623521", retiredIscrs: ["QZNMY2291725"] });
+    const listed = work({ title: "Do you Mind That", isrc: "QZNMY2291725" });
+    // Nothing to choose: the catalog is right and the agency is the one that needs updating.
+    expect(fieldChanges(existing.metadata, listed)).toEqual([]);
+    expect(agencyVersion(existing.metadata, listed, "Karma Came").isrc).toBe("GXESV2623521");
+  });
+
   it("offers no name change when only a feature credit or a capital letter differs", () => {
     const existing = track("t1", "Big Booty Bouncing feat. OG PI");
     expect(fieldChanges(existing.metadata, work({ title: "Big Booty Bouncing (Feat. Og Pi)" }))).toEqual([]);

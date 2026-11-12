@@ -1,5 +1,6 @@
 import type { CatalogTrack } from "@/lib/catalog";
 import { creditName, type Contributor, type Metadata } from "@/lib/metadata";
+import { retireAdvice } from "@/lib/isrc-retirement";
 
 /**
  * "Confirm with your agency lists" (PLAN-royalty-health-report §3A): the user downloads their own list of registered
@@ -255,6 +256,9 @@ export function clashIssues(work: ListWork, metadata: Metadata, agency = "the ag
   return issues;
 }
 
+/** Every retired code on a song, in the same shape the comparison uses. */
+export const retiredCodes = (m: { retiredIscrs?: string[] | undefined }) => (m.retiredIscrs ?? []).map(code).filter(Boolean);
+
 /**
  * The work on an agency list that is this song: the ISRC first, because that is the code the agencies match recordings
  * by, then the ISWC, which names the composition exactly, and the title last, because two recordings can share a name.
@@ -262,11 +266,25 @@ export function clashIssues(work: ListWork, metadata: Metadata, agency = "the ag
  */
 export function matchWork(
   works: ListWork[],
-  t: { title: string; metadata: { iswc?: string | undefined; isrc?: string | undefined; writers?: Contributor[] | undefined; composers?: Contributor[] | undefined } },
+  t: {
+    title: string;
+    metadata: {
+      iswc?: string | undefined;
+      isrc?: string | undefined;
+      retiredIscrs?: string[] | undefined;
+      writers?: Contributor[] | undefined;
+      composers?: Contributor[] | undefined;
+    };
+  },
 ): ListWork | undefined {
   const iswc = t.metadata.iswc ?? "", isrc = t.metadata.isrc ?? "";
   const byIsrc = isrc ? works.find((w) => w.isrc && w.isrc === code(isrc)) : undefined;
   if (byIsrc) return byIsrc;
+  // A code the recording used to carry still names it (founder, 2026-11-12): an agency can keep reporting under the
+  // retired code for months after the change, and pairing it with the song is what lets the report ask them to update it.
+  const retired = (t.metadata.retiredIscrs ?? []).map(code).filter(Boolean);
+  const byRetired = retired.length ? works.find((w) => w.isrc && retired.includes(w.isrc)) : undefined;
+  if (byRetired) return byRetired;
   const byIswc = iswc ? works.find((w) => w.iswc && w.iswc === code(iswc)) : undefined;
   if (byIswc) return byIswc;
   // A shared title is real (a re-record, a live version, two artists' songs): the writers say which work it is.
@@ -340,7 +358,12 @@ const parts = (list: { key: string; share?: number | undefined }[]) => {
 export function workIssues(work: ListWork, metadata: Metadata, recordings = false): string[] {
   const issues: string[] = [];
   const isrc = code(metadata.isrc ?? ""), iswc = code(metadata.iswc ?? "");
-  if (work.isrc && work.isrc !== isrc) issues.push(isrc ? `The agency has ISRC ${work.isrc}, your catalog has ${metadata.isrc.trim()}` : `The agency has ISRC ${work.isrc}, your catalog has none`);
+  if (work.isrc && work.isrc !== isrc) {
+    // The agency is on a code this song has retired: the catalog is right, so the answer is what to say to them, not
+    // "your catalog is wrong" (founder, 2026-11-12).
+    if (retiredCodes(metadata).includes(work.isrc)) issues.push(retireAdvice(work.isrc, metadata.isrc ?? ""));
+    else issues.push(isrc ? `The agency has ISRC ${work.isrc}, your catalog has ${metadata.isrc.trim()}` : `The agency has ISRC ${work.isrc}, your catalog has none`);
+  }
   if (work.iswc && work.iswc !== iswc) issues.push(iswc ? `The agency has ISWC ${work.iswc}, your catalog has ${metadata.iswc.trim()}` : `The agency has ISWC ${work.iswc}, your catalog has none`);
   // The name, before the early return: a recordings list has no writers but still names the recording.
   const named = printedTitle(metadata);

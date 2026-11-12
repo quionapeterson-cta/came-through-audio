@@ -924,6 +924,18 @@ export function MetadataUploader({ onShareInfo, userId, mode = "embed", readOnly
                   })()}
                 </div>
               </div>
+              {full && (
+                <div className="mt-4 space-y-2 rounded-xl border border-border p-3">
+                  {/* A code the recording used to carry (founder, 2026-11-12). Never embedded or exported: it exists so an
+                      agency still reporting under the old code is recognised as this recording, not as a mismatch. */}
+                  <ListField label="Retired ISRC" id="retiredIscrs" tip={TIPS.retiredIscrs}
+                    values={metadata.retiredIscrs?.length ? metadata.retiredIscrs : [""]}
+                    onChange={(v) => update("retiredIscrs", v)} />
+                  <p className="text-xs text-muted-foreground">
+                    A code this recording used to carry (replaced, taken down, moved distributor). Never embedded or exported — it lets an agency still reporting under the old code read as this song, with what to send them to change it.
+                  </p>
+                </div>
+              )}
               <InfoTip title="Pre-Distribution Note" text={`${PRE_DIST_NOTE} ⭐ Pro Tip: ${PRO_TIP}`} className="inline-flex items-center rounded-full border border-primary px-3 py-1 text-sm font-semibold text-primary">💡 Pre-Distribution Note</InfoTip>
             </FormSection>
 
@@ -1303,6 +1315,7 @@ export function MetadataUploader({ onShareInfo, userId, mode = "embed", readOnly
 
 const TIPS = {
   instrumental: "Check this if the song has no lyrics. Instrumental songs don't need an Author to be registered.",
+  retiredIscrs: "A code this recording used to carry. Put the current code above first, then the old one here. Ask the agency to change it: give them the title, artist, release date, the retired code and the new one, and attach the distributor's confirmation. SoundExchange takes it as a change request on the recording; The MLC and the PROs take it by email or a support ticket. Keep the old code here afterwards — their statements can still arrive under it.",
   alternateTitles: "Other names the song goes by, like a short title or a translation. Agencies use them to match plays to your song.",
   samples: "Answer Yes if the song uses a sample, borrows from another song, or is based on an older song (public-domain songs too). PROs ask for the original song's details when you register.",
   writtenFor: "Was the song made for a movie, TV show, stage show or commercial? BMI asks this when you register.",
