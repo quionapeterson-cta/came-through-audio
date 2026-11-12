@@ -976,7 +976,7 @@ export function MetadataUploader({ onShareInfo, userId, mode = "embed", readOnly
                 they exist so a SoundExchange filing is complete, and they arrive filled from the catalog defaults. */}
             {full && (
               <FormSection title="Agency answers" disabled={busy}
-                summary={filled([["countries", metadata.releaseCountry || metadata.firstReleaseCountry], ["territories", metadata.collectionTerritories]]) || "Not set yet"}>
+                summary={filled([["mastered in", metadata.masteredIn], ["owner country", metadata.ownerNationality], ["release country", metadata.releaseCountry || metadata.firstReleaseCountry], ["territories", metadata.collectionTerritories]]) || "Not set yet"}>
                 <div className="grid gap-5 sm:grid-cols-2">
                   <CountrySelect id="masteredIn" label="Mastered in (country)" value={metadata.masteredIn} placeholder="Not set" onChange={(v) => update("masteredIn", v)} />
                   <CountrySelect id="ownerNationality" label="Copyright owner's country" value={metadata.ownerNationality} placeholder="Not set" onChange={(v) => update("ownerNationality", v)} />
@@ -996,7 +996,7 @@ export function MetadataUploader({ onShareInfo, userId, mode = "embed", readOnly
                   </div>
                 </div>
                 <p className="mt-3 text-xs text-muted-foreground">
-                  SoundExchange asks for these on its ISRC ingest. They are never embedded in a master — set them once in Embed Defaults → Catalog Profile and each new song arrives with them.
+                  SoundExchange asks for these on its ISRC ingest. They are never embedded in a master — set them once in Embed Defaults → Release Metadata and each new song arrives with them.
                 </p>
                 {(() => {
                   // A hint, never a score (founder, 2026-11-12): blank answers don't hold back saving, exporting or the health meter.
