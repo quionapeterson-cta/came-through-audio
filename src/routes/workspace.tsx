@@ -66,7 +66,25 @@ export const Route = createFileRoute("/workspace")({
   }),
   // `plan` names a plan picked before the account existed: the workspace opens its checkout, so the purchase survives the
   // email round trip (and a link opened on another device, where the browser never held the pick).
-  validateSearch: (s: Record<string, unknown>) => ({ tab: typeof s["tab"] === "string" ? (s["tab"] as string) : undefined, checkout: s["checkout"] === "success" ? "success" : undefined, view: s["view"] === "expert" ? "expert" : undefined, plan: planIntentFromSearch(s["plan"]) ?? undefined, ticket: typeof s["ticket"] === "string" ? (s["ticket"] as string) : undefined } as { tab?: string | undefined; checkout?: "success" | undefined; view?: "expert" | undefined; plan?: string | undefined; ticket?: string | undefined }),
+  // A Differences deep link (`?tab=catalog&songId=…&focusField=isrc&agencyIsrc=…&action=adopt`) is kept whole here, so the
+  // song, the field and the suggested code all survive the router.
+  validateSearch: (s: Record<string, unknown>): {
+    tab?: string | undefined; checkout?: "success" | undefined; view?: "expert" | undefined;
+    plan?: string | undefined; ticket?: string | undefined; panel?: string | undefined; society?: string | undefined;
+    songId?: string | undefined; focusField?: string | undefined; agencyIsrc?: string | undefined; action?: string | undefined;
+  } => {
+    const str = (key: string) => (typeof s[key] === "string" ? (s[key] as string) : undefined);
+    return {
+      tab: str("tab"),
+      checkout: s["checkout"] === "success" ? "success" : undefined,
+      view: s["view"] === "expert" ? "expert" : undefined,
+      plan: planIntentFromSearch(s["plan"]) ?? undefined,
+      ticket: str("ticket"),
+      // The Differences panel's own entry point, and the catalog handoff that follows a row.
+      panel: str("panel"), society: str("society"),
+      songId: str("songId"), focusField: str("focusField"), agencyIsrc: str("agencyIsrc"), action: str("action"),
+    };
+  },
   component: Workspace,
 });
 
@@ -103,6 +121,13 @@ function Workspace() {
   const [catalogKey, setCatalogKey] = useState(0);
   const [protectTrack, setProtectTrack] = useState<CatalogTrack>();
   const [catalogFix, setCatalogFix] = useState<CatalogFocus>();
+  // A difference's "Fix in Catalog" link: open My Catalog on that song, at that field, with the agency's code to hand.
+  useEffect(() => {
+    if (search.tab !== "catalog" || !search.songId || !search.focusField) return;
+    setTab("catalog");
+    setCatalogFix({ trackId: search.songId, field: search.focusField,
+      ...(search.agencyIsrc ? { agencyIsrc: search.agencyIsrc } : {}), ...(search.action ? { action: search.action } : {}) });
+  }, [search.tab, search.songId, search.focusField, search.agencyIsrc, search.action]);
   // A Royalty Health Check started from My Catalog: opens the Hub on that song's (or release's, or the catalog's) check-in.
   const [healthStart, setHealthStart] = useState<HealthStart>();
   /** My Catalog's "Continue Expert Registration" opens Royalty Health → Expert Help. */
@@ -447,7 +472,7 @@ function Workspace() {
           </TabsContent>
           <TabsContent value="catalog" forceMount className="data-[state=inactive]:hidden">
             {!canCatalog && !catalogReadOnly ? <PlusLock title="My Catalog starts with Catalog Plus" onQuickCheck={openQuickCheck} onUpgrade={upgrade} /> : <>
-            <MetadataUploader key={`catalog-${catalogOwner}-${catalogKey}`} userId={catalogOwner} mode="catalog" canWav={hasTier(workTier, "management")} readOnly={catalogReadOnly} onShareInfo={(i) => setTabShare((m) => ({ ...m, catalog: i }))} canSplit={canSplit} canExport={canCollect} focus={catalogFix} onFocused={() => setCatalogFix(undefined)} onSplitSheet={(t) => { setSplitTrackId(t.id); setTab("splits"); }} onProtect={(t) => { setProtectTrack(t); setTab("protect"); }} onHealthCheck={(trackId, release) => { setHealthStart({ trackId, release, nonce: Date.now() }); setTab("health"); }} onExpert={() => { setOpenExpert(true); setTab("health"); }} /></>}
+            <MetadataUploader key={`catalog-${catalogOwner}-${catalogKey}`} userId={catalogOwner} mode="catalog" canWav={hasTier(workTier, "management")} readOnly={catalogReadOnly} onShareInfo={(i) => setTabShare((m) => ({ ...m, catalog: i }))} canSplit={canSplit} canExport={canCollect} focus={catalogFix} onFocused={() => setCatalogFix((f) => (f && !("newTitle" in f) && (f.agencyIsrc || f.action) ? f : undefined))} onSplitSheet={(t) => { setSplitTrackId(t.id); setTab("splits"); }} onProtect={(t) => { setProtectTrack(t); setTab("protect"); }} onHealthCheck={(trackId, release) => { setHealthStart({ trackId, release, nonce: Date.now() }); setTab("health"); }} onExpert={() => { setOpenExpert(true); setTab("health"); }} /></>}
           </TabsContent>
           <TabsContent value="protect"><AIProtectionHub userId={user.id} purchases={purchases} justPaid={search.checkout === "success" && search.tab === "protect"} track={protectTrack} /></TabsContent>
           <TabsContent value="splits"><SplitSheets userId={user.id} canSplit={canSplit} canCollect={canCollect} prefillTrackId={splitTrackId} onUpgrade={upgrade} /></TabsContent>

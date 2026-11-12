@@ -17,6 +17,8 @@ import { claimFirstBurst } from "@/lib/celebrate";
 import { EXPORT_REQUIRED, GLOSSARY, type GlossaryKey } from "@/lib/glossary";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { OFFICIAL_MASTER_ACTION, PRE_DIST_NOTE, PRO_TIP, SOVEREIGN_BACKUP } from "@/lib/copy";
+import { useFocusHighlight } from "@/hooks/useFocusHighlight";
+import { clearFocusParams } from "@/hooks/useFocusHighlight";
 import { readMetadata, CREDIT_CHOICES, OTHER_INSTRUMENT, creditChoice, fromCreditChoice, isPerformer, performers, emptyContributor, emptyMetadata, embedMetadata, creditName, metadataSchema, savedSchema, GENRES, GENRE_GROUPS, MASTER_BASES, PRODUCTION_TYPES, RELEASE_TYPES, TRACK_VERSIONS, WRITER_ROLES, writerRole, hfaLooksOff, percentInput, formatDuration, type Contributor, type Metadata } from "@/lib/metadata";
 import { releaseStatus, writeRelease, type ReleasePatch } from "@/lib/release-panel";
 import { RETIRE_STEPS } from "@/lib/isrc-retirement";
@@ -73,7 +75,13 @@ const extOf = (name?: string) => (/\.wav$/i.test(name ?? "") ? "wav" : "mp3");
 type OpenRegSong = { id: string; purchase_id: string; track_id: string | null; pending_title: string | null; agencies: string[] };
 
 /** What another tab asks My Catalog to open: a field on a saved song, or a new song with its title typed in. */
-export type CatalogFocus = { trackId: string; field: string } | { newTitle: string; artist?: string | undefined; nonce: number };
+/**
+ * Where another screen asked My Catalog to land. A difference sends `agencyIsrc` and `action` too, so the song opens with
+ * the fix already in view (founder, 2026-11-13).
+ */
+export type CatalogFocus =
+  | { trackId: string; field: string; agencyIsrc?: string | undefined; action?: string | undefined }
+  | { newTitle: string; artist?: string | undefined; nonce: number };
 
 export function MetadataUploader({ onShareInfo, userId, mode = "embed", readOnly, onSubmitted, onSplitSheet, onProtect, canSplit, canExport, canWav, focus, onFocused, onHealthCheck, onExpert }: { onExpert?: () => void; canWav?: boolean; onHealthCheck?: (trackId?: string, release?: boolean) => void; readOnly?: boolean; onShareInfo?: (s: Partial<ShareInfo> & Pick<ShareInfo, "ctx">) => void; onFocused?: () => void; userId?: string; mode?: "embed" | "catalog"; focus?: CatalogFocus | undefined; onSubmitted?: () => void; onSplitSheet?: (t: CatalogTrack) => void; onProtect?: (t: CatalogTrack) => void; canSplit?: boolean; canExport?: boolean }) {
   const full = mode === "catalog";
@@ -664,7 +672,46 @@ export function MetadataUploader({ onShareInfo, userId, mode = "embed", readOnly
 
   const showForm = !full || !!editingId || adding;
   // My Catalog shows this form inside the open song's card (or the new-song card); Embed Metadata shows it in the page.
+  // The difference spotlight: the field the link names is scrolled to and lit for a few seconds, in either theme.
+  const deepLink = focus && !("newTitle" in focus) ? focus : undefined;
+  const { highlighted } = useFocusHighlight({ field: deepLink?.field });
+  const acknowledgeFix = () => { clearFocusParams(); onFocused?.(); };
+  const fixBar = deepLink && (deepLink.agencyIsrc || deepLink.action) ? (
+    <div className="rounded-xl border border-amber-400/60 bg-amber-50/70 p-3 text-sm dark:border-cyan-400/40 dark:bg-cyan-400/5">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <p className="font-semibold">
+          🩺 Diagnostic target: fix {deepLink.field || "this song"}
+          {highlighted && <span className="ml-2 rounded-full border border-amber-500/50 px-1.5 py-px font-mono text-[10px] uppercase tracking-wide text-amber-800 dark:border-cyan-300/40 dark:text-cyan-200">live</span>}
+        </p>
+        <button type="button" className="text-xs font-semibold text-muted-foreground underline underline-offset-4 hover:text-primary" onClick={acknowledgeFix}>Done</button>
+      </div>
+      {deepLink.action === "adopt" && deepLink.agencyIsrc && (
+        <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
+          <span className="text-xs text-muted-foreground">Agency ISRC found: <b className="font-mono tabular-nums text-foreground">{deepLink.agencyIsrc}</b></span>
+          <Button type="button" size="sm" onClick={() => { update("isrc", deepLink.agencyIsrc!); acknowledgeFix(); }}>Apply to Catalog</Button>
+        </div>
+      )}
+      {deepLink.action === "dual_isrc" && deepLink.agencyIsrc && (
+        <div className="mt-2 space-y-2">
+          <p className="text-xs text-muted-foreground">Both codes are real. Choose the current one; the other is kept as the retired code.</p>
+          <div className="flex flex-wrap gap-2">
+            {[metadata.isrc.trim(), deepLink.agencyIsrc].filter(Boolean).filter((c, i, a) => a.indexOf(c) === i).map((code) => (
+              <Button key={code} type="button" size="sm" variant="outline" className="font-mono text-xs tabular-nums"
+                onClick={() => {
+                  const other = [metadata.isrc.trim(), deepLink.agencyIsrc].filter(Boolean).find((c) => c !== code) ?? "";
+                  update("isrc", code);
+                  if (other) update("retiredIscrs", [...new Set([...(metadata.retiredIscrs ?? []), other])]);
+                  acknowledgeFix();
+                }}>Keep {code}</Button>
+            ))}
+          </div>
+        </div>
+      )}
+      <a href="/workspace?tab=health&panel=differences#differences-panel" className="mt-2 inline-block text-xs font-semibold text-primary underline underline-offset-4">← Back to Differences Panel</a>
+    </div>
+  ) : null;
   const formBlock = (<>
+      {fixBar}
       {showForm && submitted && !full ? (
         <div className="rounded-2xl border border-primary p-8">
           <CheckCircle2 className="mx-auto h-10 w-10 text-primary" />

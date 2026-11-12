@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { FileUp, LifeBuoy, ListPlus, Loader2, Trash2 } from "lucide-react";
+import { Activity, ArrowRight, FileUp, LifeBuoy, ListPlus, Loader2, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { confirmAction } from "@/components/ConfirmHost";
 import { Button } from "@/components/ui/button";
@@ -9,6 +9,8 @@ import { RELEASE_TYPES, WRITER_ROLES } from "@/lib/metadata";
 import { loadOnboarding, loadProfile } from "@/lib/artist-profile";
 import { saveTrack } from "@/lib/catalog";
 import { clearIntake, readIntake, writeIntake } from "@/lib/intake-session";
+import { buildDifferenceRows, openDifferenceCount, STORED_LISTS_KEY } from "@/lib/discrepancy-treatments";
+import { DifferencesPanel } from "@/components/DifferencesPanel";
 import { combinedHalves, compareList, downloadSteps, listGaps, listShareTotal, readTable, readWorks, type ListResult, type ListWork, type SavedListSummary } from "@/lib/agency-lists";
 import type { CatalogTrack } from "@/lib/catalog";
 import type { Society } from "@/lib/repertoires";
@@ -20,6 +22,8 @@ type Props = {
   /** The songs that should be on each society's list. */
   songsFor: (societyId: string) => CatalogTrack[];
   summaries: Record<string, SavedListSummary | undefined>;
+  /** Every song in the account, so the Differences panel can compare agencies as well as the catalog. */
+  allTracks?: CatalogTrack[] | undefined;
   onApply: (society: Society, result: ListResult, file: string) => Promise<void>;
   /** "Start this list over": removes what the uploaded list added, so the right file can be brought in. */
   onRemove?: ((society: Society) => Promise<void>) | undefined;
@@ -36,13 +40,14 @@ type Props = {
 /** One society's last comparison in this browser: what was shown, and which file it came from. */
 type StoredLists = { byId: Record<string, { file: string; result: ListResult }>; shownId?: string | undefined };
 
-const STORE = "agency-lists";
+/** The stored comparison, shared with the Differences panel so both read one key. */
+const STORE = STORED_LISTS_KEY;
 
 /** One work's own key: the same one the panel lists it under, so a pick survives a re-render. */
 const workKey = (w: ListWork) => w.workId || w.iswc || w.isrc || w.title;
 
 /** "Confirm with your agency lists": upload what each agency has on file, and see what matches. */
-export function AgencyLists({ userId, societies, songsFor, summaries, onApply, onRemove, onFilled, canCatalog = true, onUpgrade, onExpert }: Props) {
+export function AgencyLists({ userId, societies, songsFor, summaries, allTracks, onApply, onRemove, onFilled, canCatalog = true, onUpgrade, onExpert }: Props) {
   const [busy, setBusy] = useState<string>();
   const [stored, setStored] = useState<StoredLists>({ byId: {} });
   const [shownId, setShownId] = useState<string>();
@@ -51,6 +56,8 @@ export function AgencyLists({ userId, societies, songsFor, summaries, onApply, o
   const [fill, setFill] = useState<{ society: Society; plan: FillPlan }>();
   const [choices, setChoices] = useState<Record<string, "keep" | "agency">>({});
   const [filling, setFilling] = useState(false);
+  /** The Differences panel opened in place, for a member who wants to fix a conflict without leaving Intake. */
+  const [preview, setPreview] = useState(false);
   /** Which of the new works to add: every one is ticked until the member unticks it. */
   const [picked, setPicked] = useState<Record<string, boolean>>({});
   /** Where the ticked new songs go: each its own single, or one EP/album they all belong to. */
@@ -294,9 +301,53 @@ export function AgencyLists({ userId, societies, songsFor, summaries, onApply, o
             <p className="mt-1 text-muted-foreground">Catalog Plus saves the list's songs into My Catalog, where you finish them, embed the files and download them, and the check stays with the songs.</p>
             <Button size="sm" className="mt-2" onClick={onUpgrade}><ListPlus />See the plans</Button>
           </div>}
-          <p className="mt-3 text-xs text-muted-foreground">Differences and missing songs now show in your Royalty Health Report with the steps to fix them.</p>
         </div>
       )}
+
+      {/* Music Royalty Doctors handoff (founder, 2026-11-13): the callout that used to be a sentence is now the way in. */}
+      {(() => {
+        const ids = Object.keys(stored.byId);
+        if (!ids.length) return null;
+        const tracks = allTracks ?? [...new Map(societies.flatMap((s) => songsFor(s.id)).map((t) => [t.id, t])).values()];
+        const rows = buildDifferenceRows({ stored, tracks, societies });
+        const open = openDifferenceCount(rows);
+        const society = shownId ?? ids[0];
+        const href = `/workspace?tab=health&panel=differences${society ? `&society=${encodeURIComponent(society)}` : ""}#differences-panel`;
+        const agencies = rows.filter((r) => r.side === "agencies").length;
+        return (
+          <div className="rounded-2xl border border-teal-600/30 bg-teal-50/60 p-3 dark:border-cyan-400/30 dark:bg-cyan-400/5">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div className="flex min-w-0 items-center gap-2.5">
+                <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg border border-teal-600/30 bg-white text-teal-700 dark:border-cyan-400/30 dark:bg-slate-900 dark:text-cyan-300">
+                  <Activity className="h-4 w-4" aria-hidden />
+                </span>
+                <div className="min-w-0">
+                  <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-teal-700 dark:text-cyan-300">Music Royalty Doctors · Diagnostic handoff</p>
+                  <p className="text-sm font-semibold">
+                    {open} difference{open === 1 ? "" : "s"} ready for triage
+                    {agencies > 0 && <span className="font-normal text-muted-foreground"> · {agencies} where two agencies disagree</span>}
+                  </p>
+                </div>
+              </div>
+              <div className="flex flex-wrap items-center gap-2">
+                <button type="button" aria-pressed={preview} onClick={() => setPreview((v) => !v)}
+                  className="text-xs font-semibold text-muted-foreground underline decoration-border underline-offset-4 hover:text-primary">
+                  {preview ? "Hide preview" : "Preview differences here"}
+                </button>
+                <a href={href}
+                  className="inline-flex items-center gap-1.5 rounded-full bg-primary px-3.5 py-1.5 text-xs font-semibold text-primary-foreground hover:opacity-90">
+                  Open in Differences Panel <ArrowRight className="h-3.5 w-3.5" aria-hidden />
+                </a>
+              </div>
+            </div>
+            <p className="mt-2 text-xs text-muted-foreground">
+              Every row says what disagrees, your value, the agency&apos;s value and the exact treatment. Comparisons stay on this device for 12 hours.
+            </p>
+          </div>
+        );
+      })()}
+      {preview && <DifferencesPanel userId={userId} tracks={allTracks ?? [...new Map(societies.flatMap((s) => songsFor(s.id)).map((t) => [t.id, t])).values()]}
+        societies={societies.map((s) => ({ id: s.id, name: s.name, url: s.url }))} summaries={summaries} defaultSociety={shownId} className="mt-3" />}
 
       <Dialog open={!!fill} onOpenChange={(o) => { if (!o && !filling) setFill(undefined); }}>
         <DialogContent className="max-h-[90vh] overflow-y-auto bg-card text-card-foreground sm:max-w-2xl">

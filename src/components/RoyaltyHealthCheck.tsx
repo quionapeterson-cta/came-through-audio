@@ -19,6 +19,7 @@ import { downloadCheckupPdf } from "@/lib/checkup-pdf";
 import { burstConfetti } from "@/components/Confetti";
 import { claimFirstBurst } from "@/lib/celebrate";
 import { AgencyLists } from "@/components/AgencyLists";
+import { DifferencesPanel } from "@/components/DifferencesPanel";
 import { listKey, type ListResult, type SavedListSummary } from "@/lib/agency-lists";
 import type { Society } from "@/lib/repertoires";
 import { downloadAgencyExport } from "@/lib/agency-export";
@@ -536,7 +537,7 @@ export function RoyaltyHealthCheck({ userId, canCatalog, canExport, onUpgrade, o
           streaming: <StreamingFastTrack userId={userId} canCatalog={canCatalog} onUpgrade={onUpgrade}
             onUploadAudio={(id) => { if (id) onFixField(id, "audio"); }}
             onSaved={() => { void listTracks().then(setTracks).catch(() => {}); }} />,
-          agencies: <AgencyLists userId={userId} societies={listSocieties} songsFor={songsFor} summaries={listSummaries} onApply={applyList} onRemove={removeList} canCatalog={canCatalog}
+          agencies: <AgencyLists allTracks={tracks} userId={userId} societies={listSocieties} songsFor={songsFor} summaries={listSummaries} onApply={applyList} onRemove={removeList} canCatalog={canCatalog}
             onUpgrade={() => onUpgrade()} onExpert={onExpert} onFilled={() => { void listTracks().then(setTracks).catch(() => {}); }} />,
           single: inspector,
         }} />
@@ -730,6 +731,8 @@ export function RoyaltyHealthCheck({ userId, canCatalog, canExport, onUpgrade, o
       {hub}
       {askDialog}
       {frontDesk}
+      {/* Music Royalty Doctors: the differences panel lives with the report, open by default (founder, 2026-11-13). */}
+      <DifferencesPanel userId={userId} tracks={tracks} societies={listSocieties.map((s) => ({ id: s.id, name: s.name, url: s.url }))} summaries={listSummaries} />
       {waitingRoom}
       {running && <p className="text-sm text-muted-foreground">Looking up song {running.done + 1} of {running.total} on streaming…</p>}
       {editing && (
