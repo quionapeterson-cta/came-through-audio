@@ -59,7 +59,10 @@ const mmss = (d: string) => {
 export const MLC_PLACEHOLDER_IPI = "123456789";
 const mlcNeedsPlaceholder = (m: CatalogTrack["metadata"]) => {
   const pubs = named(m.publishers);
-  return !pubs.length || pubs.some((p) => !ipi(p.ipi));
+  if (!pubs.length || pubs.some((p) => !ipi(p.ipi))) return true;
+  // More writers than publishers: the leftover rows have no publisher to pair with, so they carry the placeholder too
+  // (the notes have to name those songs, or the member never learns to remove it in The MLC Portal).
+  return pubs.length > 1 && registrationWriters(m).length > pubs.length;
 };
 /** Titles whose MLC rows carry the placeholder publisher IPI, so the export can say which songs to tidy up. */
 export const mlcPlaceholderSongs = (tracks: CatalogTrack[]) => tracks.filter((t) => mlcNeedsPlaceholder(t.metadata)).map((t) => t.title || "Untitled");
@@ -84,7 +87,9 @@ export function mlcRows(tracks: CatalogTrack[]): (string | number)[][] {
         i === 0 ? m.title : "", "", "", i === 0 ? m.iswc.replace(/[.\s-]/g, "").toUpperCase() : "", akas[i]?.toUpperCase() ?? "", akas[i] ? "AT" : "",
         last.toUpperCase(), first.toUpperCase(), ipi(c.ipi), role, pub?.hfa?.trim().toUpperCase() ?? "",
         (pub?.name ?? c.name).toUpperCase(), (pub && ipi(pub.ipi)) || MLC_PLACEHOLDER_IPI, "", "", "",
-        num(c.percentage), i === 0 ? m.title : "", i === 0 ? m.artist : "", i === 0 ? m.isrc.replace(/-/g, "").toUpperCase() : "", i === 0 ? m.label : "",
+        num(c.percentage), i === 0 ? m.title : "", i === 0 ? m.artist : "", i === 0 ? m.isrc.replace(/-/g, "").toUpperCase() : "",
+        // A self-released song goes out under the artist as its label, the same rule the SoundExchange row uses.
+        i === 0 ? m.label || m.artist : "",
       ]);
     });
   }

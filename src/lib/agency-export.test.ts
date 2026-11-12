@@ -26,6 +26,33 @@ describe("agency exports", () => {
     expect(mlcRows([noPub])[0]!.slice(11, 13)).toEqual(["ANN LEE", MLC_PLACEHOLDER_IPI]);
     expect(mlcPlaceholderSongs([track(), hfaOnly, noPub])).toEqual(["Song", "Song"]);
   });
+  it("names the songs whose unpaired writers carry the placeholder publisher IPI", () => {
+    const twoPubs = track({
+      writers: [
+        { name: "", legalName: "Ann Lee", role: "Author/Composer", pro: "BMI", ipi: "00123456789", percentage: "40" },
+        { name: "", legalName: "Kim Roe", role: "Composer", pro: "BMI", ipi: "00123456780", percentage: "30" },
+        { name: "", legalName: "Sam Poe", role: "Composer", pro: "BMI", ipi: "00123456781", percentage: "30" },
+      ],
+      publishers: [
+        { name: "Lee Songs", pro: "BMI", ipi: "00987654321", percentage: "50" },
+        { name: "Roe Music", pro: "BMI", ipi: "00987654322", percentage: "50" },
+      ],
+    });
+    expect(mlcRows([twoPubs])[2]!.slice(11, 13)).toEqual(["SAM POE", MLC_PLACEHOLDER_IPI]);
+    expect(mlcRows([twoPubs])[1]!.slice(11, 13)).toEqual(["ROE MUSIC", "00987654322"]);
+    expect(mlcPlaceholderSongs([twoPubs])).toEqual(["Song"]);
+    const paired = track({
+      writers: [
+        { name: "", legalName: "Ann Lee", role: "Author/Composer", pro: "BMI", ipi: "00123456789", percentage: "50" },
+        { name: "", legalName: "Kim Roe", role: "Composer", pro: "BMI", ipi: "00123456780", percentage: "50" },
+      ],
+      publishers: [
+        { name: "Lee Songs", pro: "BMI", ipi: "00987654321", percentage: "50" },
+        { name: "Roe Music", pro: "BMI", ipi: "00987654322", percentage: "50" },
+      ],
+    });
+    expect(mlcPlaceholderSongs([paired])).toEqual([]);
+  });
   it("splits big MLC exports into files of at most 300 rows without splitting a song", () => {
     const two = (i: number) => ({ ...track({ writers: [
       { name: "", legalName: "Ann Lee", role: "Author", pro: "BMI", ipi: "00123456789", percentage: "50" },
