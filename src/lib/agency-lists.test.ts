@@ -75,10 +75,12 @@ describe("agency lists", () => {
     expect(r.matched).toHaveLength(0);
     const issues = r.differences[0]!.issues;
     expect(issues[0]).toContain("The agency only has the retired ISRC QZNMY2291725");
-    // The ask is to add the live code next to the old one — never to swap the old one out, because money filed under it
-    // can still surface (founder, 2026-11-12).
-    expect(issues[0]).toContain("add GXESV2623521 to the same recording and keep the old code open");
-    expect(issues[0]).not.toContain("move it");
+    // The live code is added next to the old one — never swapped in — because money filed under the old one can still
+    // surface, and the member gets it done in their own account or through CTA, never by asking an agency politely
+    // (founder, 2026-11-12).
+    expect(issues[0]).toContain("Get GXESV2623521 added to the same recording and leave the old code open");
+    expect(issues[0]).toContain("CTA's Expert Registration Assistance");
+    expect(issues[0]).not.toContain("ask them");
     // Paired, and settled: it is not an uncatalogued recording as well.
     expect(r.extra).toHaveLength(0);
   });

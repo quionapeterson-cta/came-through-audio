@@ -18,6 +18,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { OFFICIAL_MASTER_ACTION, PRE_DIST_NOTE, PRO_TIP, SOVEREIGN_BACKUP } from "@/lib/copy";
 import { readMetadata, CREDIT_CHOICES, OTHER_INSTRUMENT, creditChoice, fromCreditChoice, isPerformer, performers, emptyContributor, emptyMetadata, embedMetadata, creditName, metadataSchema, savedSchema, GENRES, GENRE_GROUPS, MASTER_BASES, PRODUCTION_TYPES, RELEASE_TYPES, TRACK_VERSIONS, WRITER_ROLES, writerRole, hfaLooksOff, percentInput, formatDuration, type Contributor, type Metadata } from "@/lib/metadata";
 import { releaseStatus, writeRelease, type ReleasePatch } from "@/lib/release-panel";
+import { RETIRE_STEPS } from "@/lib/isrc-retirement";
 import { beatIsOut, beatMasterLine, isSoldBeat, masterBeatLine, masterFromBeat, masterOfBeat } from "@/lib/beats";
 import { amendmentPrefill } from "@/lib/beat-amendment";
 import { BeatBox, DealBox } from "@/components/BeatBox";
@@ -932,8 +933,21 @@ export function MetadataUploader({ onShareInfo, userId, mode = "embed", readOnly
                     values={metadata.retiredIscrs?.length ? metadata.retiredIscrs : [""]}
                     onChange={(v) => update("retiredIscrs", v)} />
                   <p className="text-xs text-muted-foreground">
-                    A code this recording used to carry (replaced, taken down, moved distributor). Never embedded or exported — it lets an agency still reporting under the old code read as this song. The agency keeps both codes: an old one can still carry uncollected royalties years later, so it is added to, never swapped out.
+                    A code this recording used to carry (replaced, taken down, moved distributor). Never embedded or exported — it lets an agency still reporting under the old code read as this song. The agency keeps both codes: an old one can still carry uncollected royalties years later, so it is added to, never swapped out. Add the new code yourself in your agency account, or have CTA's Expert Registration Assistance do it.
                   </p>
+                  {/* The process, in the member's own hands (founder, 2026-11-12): their agency account, or our team doing
+                      it. Closed until asked for, so it never crowds the form. */}
+                  <details className="text-xs">
+                    <summary className="cursor-pointer font-semibold text-primary">How the old code gets updated</summary>
+                    <ol className="mt-2 space-y-1.5">
+                      {RETIRE_STEPS.map((step) => (
+                        <li key={step.title}>
+                          <span className="font-semibold">{step.title}</span>{" "}
+                          <span className="text-muted-foreground">{step.body}</span>
+                        </li>
+                      ))}
+                    </ol>
+                  </details>
                 </div>
               )}
               <InfoTip title="Pre-Distribution Note" text={`${PRE_DIST_NOTE} ⭐ Pro Tip: ${PRO_TIP}`} className="inline-flex items-center rounded-full border border-primary px-3 py-1 text-sm font-semibold text-primary">💡 Pre-Distribution Note</InfoTip>
@@ -1315,7 +1329,7 @@ export function MetadataUploader({ onShareInfo, userId, mode = "embed", readOnly
 
 const TIPS = {
   instrumental: "Check this if the song has no lyrics. Instrumental songs don't need an Author to be registered.",
-  retiredIscrs: "A code this recording used to carry. Put the current code above first, then the old one here. Ask the agency to add the new code to the same recording and keep the old one on it: give them the title, artist, release date and both codes, and attach the distributor's confirmation. SoundExchange takes a change request on a recording; The MLC and the PROs take it by email or a support ticket. Never ask them to remove or close the old code — money filed under it can still be found and paid later.",
+  retiredIscrs: "A code this recording used to carry. Put the current code above first, then the old one here. Put the new code on the recording with the old one still on it: do it yourself in SoundExchange Direct, The MLC Portal or your PRO, or choose Expert Registration Assistance in the workspace and our team does it — a Support ticket saying it's an ISRC change works too. Give the title, artist, release date and both codes, and attach the distributor's confirmation. Never remove or close the old code: money filed under it can still be found and paid later.",
   alternateTitles: "Other names the song goes by, like a short title or a translation. Agencies use them to match plays to your song.",
   samples: "Answer Yes if the song uses a sample, borrows from another song, or is based on an older song (public-domain songs too). PROs ask for the original song's details when you register.",
   writtenFor: "Was the song made for a movie, TV show, stage show or commercial? BMI asks this when you register.",
