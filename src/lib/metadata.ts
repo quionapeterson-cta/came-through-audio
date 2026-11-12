@@ -112,8 +112,9 @@ const metadataObject = z.object({
   isrc: z.string().trim().refine((value) => !value || /^[A-Z]{2}[A-Z0-9]{3}\d{7}$/i.test(value.replace(/-/g, "")), "Enter a valid 12-character ISRC."),
   /**
    * Codes this recording used to carry (founder, 2026-11-12): a replaced code, a taken-down release, a distributor
-   * change. They are never embedded or exported — a retired code on a new registration is an error with the agencies —
-   * but keeping them is what lets a still-reporting agency be recognised as the same record instead of a mismatch.
+   * change. They are never embedded or exported — a retired code on a new delivery is an error — but they are not dead:
+   * the agency keeps both, because money filed under the old one can still surface years later. Keeping it here is what
+   * lets that old row be recognised as this recording instead of a mismatch (founder, 2026-11-12).
    */
   retiredIscrs: z.array(z.string().trim()).default([]),
   upc: z.string().trim().refine((value) => !value || /^\d{12,13}$/.test(value), "Enter a 12- or 13-digit UPC/EAN."),

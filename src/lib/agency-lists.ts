@@ -397,6 +397,11 @@ export function workIssues(work: ListWork, metadata: Metadata, recordings = fals
 export function compareList(works: ListWork[], tracks: CatalogTrack[], recordings = false, agency = "the agency"): ListResult {
   const used = new Set<ListWork>();
   const matched: ListMatch[] = [], differences: ListMatch[] = [], clashes: ListClash[] = [], notListed: ListResult["notListed"] = [];
+  // A code a song has retired names the same recording, and the agency is meant to keep it (founder, 2026-11-12): an old
+  // code can still carry uncollected royalties years later. So a second row under the old code is expected, not an
+  // uncatalogued record, and it is folded into the song rather than reported as extra. Only a list that has the old code
+  // and nothing else is a difference — that is the case worth telling the member about.
+  const retiredFor = (w: ListWork) => tracks.find((t) => w.isrc && retiredCodes(t.metadata).includes(w.isrc));
   for (const t of tracks) {
     const m = t.metadata;
     const work = matchWork(works, t);
@@ -416,6 +421,7 @@ export function compareList(works: ListWork[], tracks: CatalogTrack[], recording
     const issues = workIssues(work, m, recordings);
     (issues.length ? differences : matched).push({ trackId: t.id, title: t.title, work, issues });
   }
+  for (const w of works) if (!used.has(w) && retiredFor(w)) used.add(w);
   return { matched, differences, clashes, notListed, extra: works.filter((w) => !used.has(w)), works: works.length };
 }
 

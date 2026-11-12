@@ -73,8 +73,23 @@ describe("agency lists", () => {
     expect(matchWork(works, t)).toBe(works[0]);
     const r = compareList(works, [t], true, "SoundExchange");
     expect(r.matched).toHaveLength(0);
-    expect(r.differences[0]!.issues[0]).toContain("The agency still has the retired ISRC QZNMY2291725; ask them to move it to GXESV2623521");
+    const issues = r.differences[0]!.issues;
+    expect(issues[0]).toContain("The agency only has the retired ISRC QZNMY2291725");
+    // The ask is to add the live code next to the old one — never to swap the old one out, because money filed under it
+    // can still surface (founder, 2026-11-12).
+    expect(issues[0]).toContain("add GXESV2623521 to the same recording and keep the old code open");
+    expect(issues[0]).not.toContain("move it");
     // Paired, and settled: it is not an uncatalogued recording as well.
+    expect(r.extra).toHaveLength(0);
+  });
+
+  it("is content when the agency keeps both codes, which is the state to aim for", () => {
+    const both = readWorks(parseDelimited("Title,ISRC,Writer,Share\nDo you Mind That,QZNMY2291725,Ann Lee,100\nDo you Mind That,GXESV2623521,Ann Lee,100"));
+    const t = track("a", "Do you Mind That?", { isrc: "GXESV2623521", retiredIscrs: ["QZNMY2291725"] });
+    const r = compareList(both, [t], true, "SoundExchange");
+    expect(r.matched).toHaveLength(1);
+    expect(r.differences).toHaveLength(0);
+    // The old code's row belongs to the same recording: nothing to chase, nothing "not in your catalog".
     expect(r.extra).toHaveLength(0);
   });
 
