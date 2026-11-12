@@ -26,12 +26,12 @@ describe("the retired ISRC queue", () => {
     expect(isrcKey("gx-esv-2623521")).toBe("GXESV2623521");
   });
 
-  it("writes the request as a new registration, with the old code left open", () => {
+  it("writes the request as an entry of its own, with the old code left open", () => {
     const r = retiredRow(row({ retiredIscrs: ["QZNMY2291725"] }))!;
     const text = agencyRequestText(r);
     expect(text).toContain("- Current ISRC: GXESV2623521");
     expect(text).toContain("- Retired ISRC: QZNMY2291725");
-    expect(text).toContain("register GXESV2623521 as a separate registration");
+    expect(text).toContain("register the recording under GXESV2623521 as an entry of its own");
     expect(text).toContain("leave the retired ISRC open");
     expect(text).not.toContain("remove");
   });
@@ -39,6 +39,6 @@ describe("the retired ISRC queue", () => {
   it("says a missing current code out loud instead of leaving a gap", () => {
     const r = retiredRow(row({ retiredIscrs: ["QZNMY2291725"] }, ""))!;
     expect(agencyRequestText(r)).toContain("(not entered yet)");
-    expect(agencyRequestText(r)).toContain("register the current ISRC as a separate registration");
+    expect(agencyRequestText(r)).toContain("register the recording under the current ISRC as an entry of its own");
   });
 });

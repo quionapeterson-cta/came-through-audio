@@ -69,9 +69,9 @@ export function retiredRow(row: CatalogRow): RetiredIsrcRow | null {
 }
 
 /**
- * What staff send the agency (or use themselves in the portal). A recording carries one ISRC, so the new code can't be
- * added to the old entry: the message asks for a registration of its own and leaves the old one open. It carries no
- * price, deadline or promise on the agency's side.
+ * What staff send the agency (or use themselves in the portal). SoundExchange and the ISRC standard give a recording
+ * one code, so the new code can't be added to the old entry: the message asks for the recording under its new ISRC as
+ * an entry of its own and leaves the old one open. It carries no price, deadline or promise on the agency's side.
  */
 export function agencyRequestText(row: RetiredIsrcRow) {
   const codes = row.retired.map((code) => `- Retired ISRC: ${code}`).join("\n");
@@ -82,6 +82,6 @@ export function agencyRequestText(row: RetiredIsrcRow) {
     `- Current ISRC: ${row.current || "(not entered yet)"}`,
     codes,
     "",
-    `Please register ${row.current || "the current ISRC"} as a separate registration with the same title and release details, and leave ${row.retired.length > 1 ? "the retired ISRCs" : "the retired ISRC"} open, so royalties filed under the old ${row.retired.length > 1 ? "codes" : "code"} can still be found and paid.`,
+    `Please register the recording under ${row.current || "the current ISRC"} as an entry of its own, with the same title and release details, and leave ${row.retired.length > 1 ? "the retired ISRCs" : "the retired ISRC"} open, so royalties filed under the old ${row.retired.length > 1 ? "codes" : "code"} can still be found and paid.`,
   ].join("\n");
 }

@@ -49,7 +49,7 @@ export function RetiredIscrsPanel() {
         <h2 className="text-lg font-bold">Retired ISRCs</h2>
         <p className="mt-1 max-w-3xl text-sm text-muted-foreground">
           Every song that carries a code it used to have. A recording carries one ISRC, so the current code is registered
-          as its own registration and the old one is left open — a retired code can still carry uncollected royalties
+          as an entry of its own and the old one is left open — a retired code can still carry uncollected royalties
           later, so it is never removed or closed.
         </p>
       </div>
