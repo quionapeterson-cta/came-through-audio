@@ -12,7 +12,7 @@ export const RELEASE_TYPES = ["Single", "EP", "Album", "Compilation"] as const;
  * instrumental, the acapella, a sped-up mix, a chopped and screwed mix. Written into the file as its subtitle (ID3 TIT3)
  * and kept in the catalog, so a song and its versions never look like the same recording.
  */
-export const TRACK_VERSIONS = ["Radio edit", "Clean", "Instrumental", "Acapella", "Sped up", "Chopped and Screwed"] as const;
+export const TRACK_VERSIONS = ["Radio edit", "Clean", "Dirty", "Instrumental", "Acapella", "Sped up", "Chopped and Screwed"] as const;
 /**
  * Main genres with their subgenres (founder, 2026-10-27: a much longer list). The main genres are the original list,
  * so saved songs and genre badges keep working; a subgenre counts as its main genre for badges, hashtags and agency

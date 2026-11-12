@@ -341,10 +341,6 @@ export function ArtistOnboarding({ userId, open, onOpenChange, onSaved, firstRun
               <Field label="Default Language"><Input value={p.language ?? ""} onChange={(e) => set("language", e.target.value)} /></Field>
               <Field label="Usually recorded in" term="neighbouringRights"><Input value={p.recordedIn ?? ""} placeholder="United States" onChange={(e) => set("recordedIn", e.target.value)} /></Field>
               <Field label="Default Release Type" term="releaseType"><Pick value={p.releaseType ?? ""} options={RELEASE_TYPES} empty="Ask each time" onChange={(v) => set("releaseType", v)} /></Field>
-              {/* The release's own version and the label's catalog number (founder, 2026-11-12): SoundExchange asks for both,
-                  so they fill a new song's blanks and the Release panel still changes them for a whole release at once. */}
-              <Field label="Release version (optional)"><Input value={p.releaseVersion ?? ""} placeholder="Deluxe, Remastered" onChange={(e) => set("releaseVersion", e.target.value)} /></Field>
-              <Field label="Catalog # (optional)"><Input value={p.catalogNumber ?? ""} placeholder="Your label's release number" onChange={(e) => set("catalogNumber", e.target.value)} /></Field>
               <label className="flex items-center gap-2 text-sm sm:col-span-2"><input type="checkbox" className="h-4 w-4 accent-[var(--primary)]" checked={!!p.explicit} onChange={(e) => set("explicit", e.target.checked)} />My songs are usually Explicit (you can change this per song)<InfoTip term="explicit" /></label>
             </Group>
             {/* Usual answers that aren't song-specific, so songs start closer to 100% health; each song can change them. */}
