@@ -233,6 +233,68 @@ describe("fast-track prefill", () => {
     expect(out.label).toBe("Came Through Audio");
   });
 
+  it("recognises a song pulled again with no ISRC, so a re-pull adds no second copy", () => {
+    // The platform sent no ISRC and the artist credit changed between the two pulls, which is exactly how the same five
+    // songs were saved three times on 2026-11-11: the title is the only thing left to recognise them by.
+    const pulled: PulledRelease = {
+      id: "w",
+      title: "Wav vs War",
+      recordType: "album",
+      tracks: [
+        { title: "Party", artist: "Karma Came", position: 1 },
+        { title: "Big Swag", artist: "Karma Came, OG PI", position: 2 },
+      ],
+    };
+    const plan = prefillPlan({
+      discography: { ...discography, releases: [pulled], trackCount: 2, withIsrc: 0 },
+      matches: [],
+      profile: null,
+      existing: [
+        { id: "p", title: "Party", artist: "Karma Came", album: "Wav vs War" },
+        { id: "b", title: "Big Swag", artist: "Karma Came", album: "Wav vs War" },
+      ],
+    });
+    expect(plan.songs).toHaveLength(0);
+    expect(plan.conflicts.map((c) => c.existing.id)).toEqual(["p", "b"]);
+  });
+
+  it("adds the songs back after a delete, so the catalog can be refilled from streaming", () => {
+    const gone = prefillPlan({ discography, matches: [], profile: null, existing: [] });
+    expect(gone.songs.map((s) => s.title)).toEqual([
+      "Big Booty Bouncing (feat. OG PI)",
+      "Karma Season",
+    ]);
+    expect(gone.conflicts).toHaveLength(0);
+  });
+
+  it("keeps a version apart from its song even when neither carries an ISRC", () => {
+    const pulled: PulledRelease = {
+      id: "t",
+      title: "Therapy",
+      recordType: "single",
+      tracks: [
+        { title: "Therapy", artist: "Karma Came" },
+        { title: "Therapy (Clean)", artist: "Karma Came" },
+      ],
+    };
+    const plan = prefillPlan({
+      discography: { ...discography, releases: [pulled], trackCount: 2, withIsrc: 0 },
+      matches: [],
+      profile: null,
+      existing: [{ id: "t1", title: "Therapy", artist: "Karma Came" }],
+    });
+    expect(plan.conflicts.map((c) => c.song.title)).toEqual(["Therapy"]);
+    expect(plan.songs.map((s) => s.title)).toEqual(["Therapy (Clean)"]);
+  });
+
+  it("recognises the same ISRC however it is spaced or hyphenated", () => {
+    expect(
+      alreadyInCatalog({ isrc: "us cta 1600002" }, [
+        { title: "Big Booty Bouncing", artist: "Karma Came", isrc: "US-CTA-16-00002" },
+      ]),
+    ).toBe(true);
+  });
+
   it("matches on ISRC only for 'already here'", () => {
     expect(
       alreadyInCatalog({ isrc: "gx8kd2640648" }, [

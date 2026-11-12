@@ -368,9 +368,10 @@ export function StreamingFastTrack({ userId, canCatalog = false, onUpgrade, onUp
                   {review.plan.conflicts.length} song{review.plan.conflicts.length === 1 ? " looks" : "s look"} like {review.plan.conflicts.length === 1 ? "one" : "ones"} already in My Catalog
                 </p>
                 <p className="mt-1 max-w-[68ch] text-muted-foreground">
-                  Same title, different ISRC. Choose which entry you want for each. <b>Use {sourceName}&apos;s</b> puts the
-                  released ISRC, UPC, release and track number on your entry and keeps your writers, lyrics and master.
-                  Nothing is saved until you confirm.
+                  Same title, so this may be the entry you already have — with a different or missing ISRC, or a different
+                  artist credit. Choose which entry you want for each. <b>Use {sourceName}&apos;s</b> puts the released
+                  ISRC, UPC, release and track number on your entry and keeps your writers, lyrics and master. Nothing is
+                  saved until you confirm.
                 </p>
                 <div className="mt-3 flex flex-wrap gap-2">
                   <Button size="sm" variant="outline" onClick={() => setReview({ ...review, choices: review.choices.map(() => "streaming") })}>Use {sourceName}&apos;s for all</Button>

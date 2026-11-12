@@ -20,9 +20,13 @@ import type { Discography, PulledRelease, PulledTrack } from "@/lib/discography"
  * - the track title is saved exactly as the platform has it, with no "(Master)" or casing changes, because that title
  *   is what gets embedded (TIT2) and what agencies match on;
  * - nothing already in the catalog is touched without the member's say. A song with the same ISRC is the same
- *   recording and is skipped. A song with the same title and artist but a different or missing ISRC (an entry made
- *   before the release, or with a placeholder code) is put to the member: keep theirs, take streaming's recording
- *   details onto it, or keep both. So a re-pull can never silently overwrite an entry the artist has filled in.
+ *   recording and is skipped. A song whose **title** matches but whose ISRC is different or missing — an entry made
+ *   before the release, a placeholder code, or the same song pulled a second time when the platform gave no ISRC — is
+ *   put to the member: keep theirs, take streaming's recording details onto it, or keep both. The title decides on its
+ *   own because the artist credit is exactly what differs between two pulls of one song (a featured artist is listed on
+ *   one and not the other), and a pull without an ISRC has nothing else to recognise. The version tag stays part of the
+ *   title, so a clean or an acapella is never paired with the song it is a version of. Nothing is added behind the
+ *   member's back: the starting choice is to keep their entry.
  */
 /** Deezer/Spotify record types as the catalog's release types; anything unexpected stays unanswered. */
 export const releaseTypeOf = (recordType?: string | undefined): string => {
@@ -150,7 +154,9 @@ export const titleKey = (v: string) =>
     .replace(/\s(?:feat\.?|ft\.?|featuring)\s.*$/g, "")
     .replace(/[^\p{L}\p{N}]+/gu, "");
 
-const isrcKey = (v?: string | undefined) => (v ?? "").trim().toUpperCase();
+/** An ISRC arrives spaced, hyphenated or plain ("US-CTA-16-00002", "us cta 1600002"), so only its letters and digits
+ * count: the same code typed two ways is still the same recording. */
+const isrcKey = (v?: string | undefined) => (v ?? "").toUpperCase().replace(/[^A-Z0-9]/g, "");
 
 /** A song already here under the same ISRC: the very same recording, so it is left exactly as it is. */
 export function alreadyInCatalog(
@@ -192,11 +198,10 @@ export function prefillPlan({
       groups.set(key, [...(groups.get(key) ?? []), item]);
     }
 
-  const sameSong = (e: ExistingSong, title: string, artist: string) =>
-    titleKey(e.title) === titleKey(title) && titleKey(e.artist) === titleKey(artist);
+  const sameSong = (e: ExistingSong, title: string) => titleKey(e.title) === titleKey(title);
   const pick = (list: Pulled[]): Pulled => {
     const albums = existing
-      .filter((e) => sameSong(e, list[0]!.track.title, list[0]!.track.artist))
+      .filter((e) => sameSong(e, list[0]!.track.title))
       .map((e) => titleKey(e.album ?? ""));
     return (
       list.find((p) => albums.includes(titleKey(p.release.title))) ??
@@ -227,11 +232,11 @@ export function prefillPlan({
       existingCount += 1;
       continue;
     }
-    const candidates = existing.filter(
-      (e) => !claimed.has(e) && sameSong(e, song.title, song.artist),
-    );
+    const candidates = existing.filter((e) => !claimed.has(e) && sameSong(e, song.title));
     const twin =
-      candidates.find((e) => titleKey(e.album ?? "") === titleKey(song.album)) ?? candidates[0];
+      candidates.find((e) => titleKey(e.album ?? "") === titleKey(song.album)) ??
+      candidates.find((e) => titleKey(e.artist) === titleKey(song.artist)) ??
+      candidates[0];
     if (twin) {
       claimed.add(twin);
       conflicts.push({ song, existing: twin });
