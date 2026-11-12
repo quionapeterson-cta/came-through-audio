@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { AlertTriangle, Eye, FileDown, FileText, Hourglass, ListChecks, Search, Stethoscope, Trash2, X } from "lucide-react";
+import { Eye, FileDown, FileText, ListChecks, Search, Stethoscope, Trash2, X } from "lucide-react";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { confirmAction } from "@/components/ConfirmHost";
 import { Button } from "@/components/ui/button";
@@ -516,18 +516,6 @@ export function RoyaltyHealthCheck({ userId, canCatalog, canExport, onUpgrade, o
   </div>;
   const why = (
     <div className="space-y-4">
-      <div className="grid gap-4 md:grid-cols-2">
-        <div className="rounded-2xl border border-border bg-card p-5">
-          <AlertTriangle className="h-6 w-6 text-primary" />
-          <h4 className="mt-2 text-lg font-bold">Your distributor only collects part of your money.</h4>
-          <p className="mt-1 text-sm text-muted-foreground">TuneCore, CD Baby, Symphonic and other distributors pay your master streams. They do <span className="font-semibold text-foreground">not</span> collect your songwriter performance royalties, recording performance royalties or mechanicals. If those aren't registered with your societies, that money goes unclaimed.</p>
-        </div>
-        <div className="rounded-2xl border border-border bg-card p-5">
-          <Hourglass className="h-6 w-6 text-primary" />
-          <h4 className="mt-2 text-lg font-bold">Unclaimed royalties don't wait forever.</h4>
-          <p className="mt-1 text-sm text-muted-foreground">Songs that can't be matched land in the "black box." After a holding period, unclaimed money can be paid out to other rights holders by market share — usually the biggest labels and publishers.</p>
-        </div>
-      </div>
       {tracks.length > 0 && <MismatchTips />}
     </div>
   );
