@@ -728,6 +728,9 @@ export function MetadataUploader({ onShareInfo, userId, mode = "embed", readOnly
           const count = (rows: Contributor[] | undefined) => (rows ?? []).filter(creditName).length;
           const filled = (pairs: [string, string][]) => pairs.filter(([, v]) => v.trim()).map(([k]) => k).join(" · ");
           const writersWarn = warnIn("writers-", "composers-");
+          // PRO and IPI are asked by a PRO and The MLC, not by the core rule (readiness.ts), so this section says what
+          // is still needed instead of calling the writers ready (founder, 2026-11-13).
+          const accountGaps = proAccountGaps(metadata);
           // The publisher half as one pie (readiness.ts): listed publishers plus Self-published / BMI-paid writers.
           const pie = publisherPie(metadata);
           // A usual answer from the Catalog Profile that this song still uses, so it's easy to spot and change.
@@ -849,7 +852,7 @@ export function MetadataUploader({ onShareInfo, userId, mode = "embed", readOnly
               </div>
             </FormSection>}
 
-            <FormSection title={`Writers · ${count(metadata.writers)}`} open={!full || writersWarn} warn={writersWarn} ok={!writersWarn && count(metadata.writers) > 0} summary={writersWarn ? "Needs info to register" : count(metadata.writers) ? "Ready to register" : "Who wrote the song"}>
+            <FormSection title={`Writers · ${count(metadata.writers)}`} open={!full || writersWarn} warn={writersWarn} ok={!writersWarn && count(metadata.writers) > 0 && accountGaps.length === 0} summary={writersWarn ? "Needs info to register" : count(metadata.writers) ? (accountGaps.length ? "PRO or IPI still needed" : "Ready to register") : "Who wrote the song"}>
               <Contributors bare title="Writers" singular="writer" group="writers" writer rows={metadata.writers} saved={people.writers} disabled={busy} onChange={(rows) => update("writers", rows)}
                 songPublishing={full ? (metadata.selfPublished ? "Self-published (the song's answer)" : metadata.bmiWriterPublishing ? "The song's answer (BMI pays BMI writers)" : "") : undefined}
                 collectsPublishing={full ? (row) => pie.parts.some((p) => p.field.startsWith("writers-") && metadata.writers[Number(p.field.split("-")[1])] === row) : undefined} tip={full ? "Choose Author (lyrics/melody), Composer (music/beat) or Author/Composer for each writer. Writer splits must total 100%." : undefined} simple={!full}
