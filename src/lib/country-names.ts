@@ -267,7 +267,13 @@ export const COUNTRY_NAMES: readonly string[] = [
  * dropdown may hold "USA" or "U.S.A.", and a select that doesn't list it would show blank and quietly drop it on the
  * next edit. The saved value stays first and stays selectable until the member picks a listed country.
  */
+/** Most members are in the US, so every country picker opens on it instead of 200 rows down (founder, 2026-11-12). */
+export const HOME_COUNTRY = "United States";
+
 export function countryOptions(saved: string): string[] {
   const value = (saved ?? "").trim();
-  return value && !COUNTRY_NAMES.includes(value) ? [value, ...COUNTRY_NAMES] : [...COUNTRY_NAMES];
+  const rest = COUNTRY_NAMES.filter((n) => n !== HOME_COUNTRY);
+  // A saved answer we don't list stays selectable, right under the home country, until the member picks a listed one.
+  const keep = value && value !== HOME_COUNTRY && !COUNTRY_NAMES.includes(value) ? [value] : [];
+  return [HOME_COUNTRY, ...keep, ...rest];
 }

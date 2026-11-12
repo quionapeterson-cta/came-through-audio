@@ -159,6 +159,17 @@ export function registrationReadiness(m: Pick<Metadata, "writers" | "composers" 
   return { ready: missing.length === 0, missing, warnings, checked };
 }
 
+/**
+ * The two writer answers The MLC and a PRO register by, which the core readiness rule leaves out (founder, 2026-11-12): a
+ * PRO affiliation, and the IPI name number of a writer who has one. SoundExchange registers the recording, so it asks
+ * for neither — which is why a song the core rule calls ready is not "ready to register" everywhere.
+ */
+export function proAccountGaps(m: Metadata): MissingItem[] {
+  const pro = registrationReadiness(m, "pro").missing.filter((i) => i.code === "pro");
+  const ipi = registrationCheck(m, "mlc").missing.filter((i) => i.code === "ipi");
+  return [...pro, ...ipi];
+}
+
 /** Writers for registration and exports, always under their legal name. Only call on ready songs. */
 export function registrationWriters(m: Pick<Metadata, "writers" | "composers">) {
   return listed(m).map(({ row, author, composer }) => ({

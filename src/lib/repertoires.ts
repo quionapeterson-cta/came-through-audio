@@ -87,7 +87,7 @@ export const COUNTRIES: Country[] = [
  * almost every streaming release, then the same country list the rest of the app uses. A blank answer means the US only,
  * which is the form's own default.
  */
-export const TERRITORY_OPTIONS: readonly string[] = ["Worldwide", ...COUNTRY_NAMES];
+export const TERRITORY_OPTIONS: readonly string[] = ["Worldwide", "United States", ...COUNTRY_NAMES.filter((n) => n !== "United States")];
 
 /** "My country isn't listed": only the international checks apply. */
 export const OTHER_COUNTRY: Country = { code: "XX", name: "Other country", region: "Europe", societies: {}, note: "We don't list your local societies yet. Your streaming check still runs, and you can still track your own PRO." };

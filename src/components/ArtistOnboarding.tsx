@@ -340,17 +340,6 @@ export function ArtistOnboarding({ userId, open, onOpenChange, onSaved, firstRun
               <Field label="Secondary Genre (optional)"><Pick value={p.secondaryGenre ?? ""} options={GENRES} groups={GENRE_GROUPS} onChange={(v) => set("secondaryGenre", v)} /></Field>
               <Field label="Default Language"><Input value={p.language ?? ""} onChange={(e) => set("language", e.target.value)} /></Field>
               <Field label="Usually recorded in" term="neighbouringRights"><Input value={p.recordedIn ?? ""} placeholder="United States" onChange={(e) => set("recordedIn", e.target.value)} /></Field>
-              {/* The answers SoundExchange asks for that the song doesn't carry (founder, 2026-11-12): the same on nearly
-                  every song, so they are typed once and filled into each song's blanks. Never embedded. */}
-              <Field label="Mastered in (country)"><Pick value={p.masteredIn ?? ""} options={countryOptions(p.masteredIn ?? "")} empty="Not set" onChange={(v) => set("masteredIn", v)} /></Field>
-              <Field label="Copyright owner's country"><Pick value={p.ownerNationality ?? ""} options={countryOptions(p.ownerNationality ?? "")} empty="Not set" onChange={(v) => set("ownerNationality", v)} /></Field>
-              <Field label="Country of first release"><Input value={p.firstReleaseCountry ?? ""} placeholder="Worldwide" onChange={(e) => set("firstReleaseCountry", e.target.value)} /></Field>
-              <Field label="Country of release"><Input value={p.releaseCountry ?? ""} placeholder="Worldwide" onChange={(e) => set("releaseCountry", e.target.value)} /></Field>
-              <Field label="Territories of collection rights">
-                <Pick value={p.collectionTerritories ?? ""} options={TERRITORY_OPTIONS} empty="US only (the default)" onChange={(v) => set("collectionTerritories", v)} />
-              </Field>
-              {/* The answer SoundExchange expects from a streaming release (founder, 2026-11-12). */}
-              <p className="text-xs text-muted-foreground sm:col-span-2">The US is already included in a collection claim. If your songs go out worldwide on streaming, choose Worldwide — it fills into every new song.</p>
               <Field label="Default Release Type" term="releaseType"><Pick value={p.releaseType ?? ""} options={RELEASE_TYPES} empty="Ask each time" onChange={(v) => set("releaseType", v)} /></Field>
               {/* The release's own version and the label's catalog number (founder, 2026-11-12): SoundExchange asks for both,
                   so they fill a new song's blanks and the Release panel still changes them for a whole release at once. */}
@@ -390,6 +379,18 @@ export function ArtistOnboarding({ userId, open, onOpenChange, onSaved, firstRun
             {(!p.selfPublished || hasPublisher) && (!p.bmiWriterPublishing || hasPublisher) && <Rows title="Publisher" rows={p.publishers} onChange={(r) => set("publishers", r)} />}
             {p.bmiWriterPublishing && hasPublisher && <p className="text-sm">⚠️ You said there's no publishing company but also listed a publisher. Uncheck the BMI box, or remove the publisher.</p>}
             {p.selfPublished && hasPublisher && <p className="text-sm">⚠️ You checked Self-published but also listed a publisher. Uncheck Self-published, or remove the publisher.</p>}
+            {/* The answers SoundExchange asks for that the song doesn't carry (founder, 2026-11-12): catalog details rather
+                than embed defaults, so they sit with the registration answers and fill each new song's blanks. */}
+            <Group title="SoundExchange answers">
+              <Field label="Mastered in (country)"><Pick value={p.masteredIn ?? ""} options={countryOptions(p.masteredIn ?? "")} empty="Not set" onChange={(v) => set("masteredIn", v)} /></Field>
+              <Field label="Copyright owner's country"><Pick value={p.ownerNationality ?? ""} options={countryOptions(p.ownerNationality ?? "")} empty="Not set" onChange={(v) => set("ownerNationality", v)} /></Field>
+              <Field label="Country of first release"><Pick value={p.firstReleaseCountry ?? ""} options={countryOptions(p.firstReleaseCountry ?? "")} empty="Not set" onChange={(v) => set("firstReleaseCountry", v)} /></Field>
+              <Field label="Country of release"><Pick value={p.releaseCountry ?? ""} options={countryOptions(p.releaseCountry ?? "")} empty="Not set" onChange={(v) => set("releaseCountry", v)} /></Field>
+              <Field label="Territories of collection rights">
+                <Pick value={p.collectionTerritories ?? ""} options={TERRITORY_OPTIONS} empty="US only (the default)" onChange={(v) => set("collectionTerritories", v)} />
+              </Field>
+              <p className="text-xs text-muted-foreground sm:col-span-2">The US is already included in a collection claim. If your songs go out worldwide on streaming, choose Worldwide — it fills into every new song. None of these is ever written into a master's tags.</p>
+            </Group>
             <p className="flex items-start gap-2 rounded-lg bg-muted p-3 text-xs text-muted-foreground"><Lock className="mt-0.5 h-4 w-4 shrink-0 text-primary" />Private: PRO affiliations, IPI name numbers and shares stay in your catalog and are never embedded in your music files.</p>
             <IpiNote />
             <Nav onBack={() => setStep(3)} onNext={finish} nextLabel={firstRun ? "Save & start embedding" : "Save & exit"} />

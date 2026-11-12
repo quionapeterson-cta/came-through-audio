@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { emptyMetadata, splitTrack, withLegalName, type Contributor, type Metadata } from "@/lib/metadata";
-import { registrationAgency, registrationCheck, registrationReadiness, registrationWriters, type RegistrationAgency } from "@/lib/readiness";
+import { proAccountGaps, registrationAgency, registrationCheck, registrationReadiness, registrationWriters, type RegistrationAgency } from "@/lib/readiness";
 import { exportGate, mlcRows, proCheatSheet } from "@/lib/agency-export";
 import type { CatalogTrack } from "@/lib/catalog";
 
@@ -18,6 +18,18 @@ const song = (patch: Partial<Metadata>, splits = true): Metadata => {
   return { ...m, writers: all.slice(0, m.writers.length), composers: all.slice(m.writers.length) };
 };
 const codes = (m: Metadata, target?: "pro") => { const r = registrationReadiness(m, target); return [...r.missing, ...r.warnings].map((i) => i.code); };
+
+describe("the PRO and IPI answers", () => {
+  it("names what The MLC and a PRO still need, which the core rule and SoundExchange don't", () => {
+    const noPro = song({ writers: [w("Q", "Author/Composer", "Quiona P")], selfPublished: true });
+    expect(registrationReadiness(noPro).ready).toBe(true);
+    expect(proAccountGaps(noPro).map((i) => i.code)).toEqual(["pro"]);
+    const proNoIpi = song({ writers: [{ ...w("Q", "Author/Composer", "Quiona P", "BMI"), percentage: "100" }], selfPublished: true });
+    expect(proAccountGaps(proNoIpi).map((i) => i.code)).toEqual(["ipi"]);
+    const done = song({ writers: [{ ...w("Q", "Author/Composer", "Quiona P", "BMI"), ipi: "00123456789", percentage: "100" }], selfPublished: true });
+    expect(proAccountGaps(done)).toEqual([]);
+  });
+});
 
 describe("registration readiness", () => {
   it("is ready with an author and a composer who both have legal names", () => {

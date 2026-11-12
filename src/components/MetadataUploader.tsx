@@ -36,7 +36,7 @@ import { albumKey, routedKinds } from "@/lib/release-routing";
 import { AGENCY_LABEL, downloadAgencyExport, downloadNeighbouringPack, mlcPlaceholderSongs, recordExports, type Agency, type Held } from "@/lib/agency-export";
 import { AgencyExportDialog } from "@/components/AgencyExportDialog";
 import { AGENCY_UPLOAD_STEPS, MLC_EXPORT_NOTES } from "@/lib/glossary";
-import { PUBLISHING_LABEL, publisherPie, registrationReadiness, type MissingItem } from "@/lib/readiness";
+import { PUBLISHING_LABEL, proAccountGaps, publisherPie, registrationReadiness, type MissingItem } from "@/lib/readiness";
 import { isBmi, notBmiWriters } from "@/lib/audit";
 import { downloadLyricsPdf } from "@/lib/lyrics-pdf";
 import { myBrand } from "@/lib/brand-load";
@@ -986,8 +986,8 @@ export function MetadataUploader({ onShareInfo, userId, mode = "embed", readOnly
                 <div className="grid gap-5 sm:grid-cols-2">
                   <CountrySelect id="masteredIn" label="Mastered in (country)" value={metadata.masteredIn} placeholder="Not set" onChange={(v) => update("masteredIn", v)} />
                   <CountrySelect id="ownerNationality" label="Copyright owner's country" value={metadata.ownerNationality} placeholder="Not set" onChange={(v) => update("ownerNationality", v)} />
-                  <Field label="Country of first release" id="firstReleaseCountry" value={metadata.firstReleaseCountry} placeholder="Worldwide" onChange={(v) => update("firstReleaseCountry", v)} />
-                  <Field label="Country of release" id="releaseCountry" value={metadata.releaseCountry} placeholder="Worldwide" onChange={(v) => update("releaseCountry", v)} />
+                  <CountrySelect id="firstReleaseCountry" label="Country of first release" value={metadata.firstReleaseCountry} placeholder="Not set" onChange={(v) => update("firstReleaseCountry", v)} />
+                  <CountrySelect id="releaseCountry" label="Country of release" value={metadata.releaseCountry} placeholder="Not set" onChange={(v) => update("releaseCountry", v)} />
                   <div className="min-w-0 space-y-2">
                     <Label htmlFor="collectionTerritories">Territories of collection rights
                       <Tip text="SoundExchange already includes the US on a claim, so this is where else the recording earns. If the song is out worldwide on streaming, choose Worldwide." title="Territories of collection rights" />
@@ -1002,7 +1002,7 @@ export function MetadataUploader({ onShareInfo, userId, mode = "embed", readOnly
                   </div>
                 </div>
                 <p className="mt-3 text-xs text-muted-foreground">
-                  SoundExchange asks for these on its ISRC ingest. They are never embedded in a master — set them once in Embed Defaults → Release Metadata and each new song arrives with them.
+                  SoundExchange asks for these on its ISRC ingest. They are never embedded in a master — set them once in Profile → Edit profile → Catalog Defaults and each new song arrives with them.
                 </p>
                 {(() => {
                   // A hint, never a score (founder, 2026-11-12): blank answers don't hold back saving, exporting or the health meter.
@@ -1605,6 +1605,8 @@ function NowEmbedding({ metadata: m, cover }: { metadata: Metadata; cover: strin
   const feat = m.featured.filter(Boolean);
   const people = (["writers", "composers", "producers"] as const).reduce((n, g) => n + (m[g] ?? []).filter(creditName).length, 0);
   const r = registrationReadiness(m);
+  // A PRO affiliation and an IPI are what The MLC and a PRO register by; SoundExchange asks for neither (founder, 2026-11-12).
+  const gaps = proAccountGaps(m);
   const rows: [string, string][] = [
     ["Album", m.album], ["Track", m.trackNumber ? `${m.trackNumber}${m.trackTotal ? ` of ${m.trackTotal}` : ""}` : ""],
     ["Genre", m.primaryGenre], ["ISRC", m.isrc], ["UPC", m.upc], ["Credits", people ? `${people} ${people === 1 ? "person" : "people"}` : ""],
@@ -1621,8 +1623,8 @@ function NowEmbedding({ metadata: m, cover }: { metadata: Metadata; cover: strin
       <dl className="mt-3 space-y-1 text-xs">
         {rows.map(([k, v]) => <div key={k} className="flex justify-between gap-3"><dt className="text-muted-foreground">{k}</dt><dd className={`truncate font-semibold ${v ? "" : "text-muted-foreground/50"}`}>{v || "—"}</dd></div>)}
       </dl>
-      <p className={`mt-3 rounded-lg px-2 py-1.5 text-xs font-semibold ${r.ready ? "bg-primary/10 text-primary" : "bg-muted"}`}>
-        {!r.ready ? `⚠️ ${r.missing.length} to fix before registering` : "Writer info ready"}
+      <p className={`mt-3 rounded-lg px-2 py-1.5 text-xs font-semibold ${r.ready && !gaps.length ? "bg-primary/10 text-primary" : "bg-muted"}`}>
+        {!r.ready ? `⚠️ ${r.missing.length} to fix before registering` : gaps.length ? "PRO or IPI still needed to register" : "Writer info ready"}
       </p>
       <p className="mt-2 text-[11px] leading-snug text-muted-foreground">PRO, IPI and split percentages stay private and are never written into the file. Splits are set in My Catalog.</p>
     </aside>
@@ -1639,8 +1641,15 @@ function MissingList({ items, onJump }: { items: Pick<MissingItem, "field" | "me
 function ReadinessPanel({ metadata, embed }: { metadata: Metadata; embed?: boolean }) {
   const all = registrationReadiness(metadata);
   const r = embed ? { ...all, warnings: [] } : all;
+  // Ready for the catalog is not ready for every society: The MLC and a PRO also register by PRO and IPI (founder, 2026-11-12).
+  const gaps = r.ready ? proAccountGaps(metadata) : [];
   return <div role="status" className="rounded-lg border border-primary/40 bg-accent/30 p-3 text-sm">
-    {r.ready && !r.warnings.length && <p className="flex items-center gap-2 font-semibold"><CheckCircle2 className="h-4 w-4 text-primary" />Writer info is ready to register.</p>}
+    {r.ready && !r.warnings.length && gaps.length === 0 && <p className="flex items-center gap-2 font-semibold"><CheckCircle2 className="h-4 w-4 text-primary" />Writer info is ready to register.</p>}
+    {r.ready && gaps.length > 0 && <div className="space-y-1">
+      <p className="flex items-center gap-2 font-semibold"><CheckCircle2 className="h-4 w-4 text-primary" />Saved and ready to export.</p>
+      <p className="text-muted-foreground">The MLC and your PRO still need these before they can register the song. SoundExchange registers the recording, so it doesn't ask for them:</p>
+      <MissingList items={gaps} onJump={jumpTo} />
+    </div>}
     {embed && all.warnings.length > 0 && <p className="mt-1 text-muted-foreground">Splits are set in My Catalog after you save. They stay private and are never put in the file.</p>}
     {r.ready
       ? null
