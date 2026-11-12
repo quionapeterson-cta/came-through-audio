@@ -18,6 +18,7 @@ import { StarSky } from "@/components/StarSky";
 import { listTracks, saveTrack } from "@/lib/catalog";
 import { propagated, propagationPlan, type Propagation } from "@/lib/profile-propagation";
 import { claimDefaultsSky } from "@/lib/celebrate";
+import { TERRITORY_OPTIONS } from "@/lib/repertoires";
 import { capShare, splitTotal } from "@/lib/splits-total";
 import { TIER_LABEL } from "@/lib/plans";
 import { ArtistSeats } from "@/components/ArtistSeats";
@@ -344,7 +345,11 @@ export function ArtistOnboarding({ userId, open, onOpenChange, onSaved, firstRun
               <Field label="Copyright owner's country"><Input value={p.ownerNationality ?? ""} placeholder="United States" onChange={(e) => set("ownerNationality", e.target.value)} /></Field>
               <Field label="Country of first release"><Input value={p.firstReleaseCountry ?? ""} placeholder="Worldwide" onChange={(e) => set("firstReleaseCountry", e.target.value)} /></Field>
               <Field label="Country of release"><Input value={p.releaseCountry ?? ""} placeholder="Worldwide" onChange={(e) => set("releaseCountry", e.target.value)} /></Field>
-              <Field label="Non-US collection territories"><Input value={p.collectionTerritories ?? ""} placeholder="Blank means the US only" onChange={(e) => set("collectionTerritories", e.target.value)} /></Field>
+              <Field label="Territories of collection rights">
+                <Pick value={p.collectionTerritories ?? ""} options={TERRITORY_OPTIONS} empty="US only (the default)" onChange={(v) => set("collectionTerritories", v)} />
+              </Field>
+              {/* The answer SoundExchange expects from a streaming release (founder, 2026-11-12). */}
+              <p className="text-xs text-muted-foreground sm:col-span-2">The US is already included in a collection claim. If your songs go out worldwide on streaming, choose Worldwide — it fills into every new song.</p>
               <Field label="Default Release Type" term="releaseType"><Pick value={p.releaseType ?? ""} options={RELEASE_TYPES} empty="Ask each time" onChange={(v) => set("releaseType", v)} /></Field>
               <label className="flex items-center gap-2 text-sm sm:col-span-2"><input type="checkbox" className="h-4 w-4 accent-[var(--primary)]" checked={!!p.explicit} onChange={(e) => set("explicit", e.target.checked)} />My songs are usually Explicit (you can change this per song)<InfoTip term="explicit" /></label>
             </Group>

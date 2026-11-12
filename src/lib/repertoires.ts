@@ -50,6 +50,8 @@ export const INTERNATIONAL = {
   iswc: s("cisac-iswc", "CISAC ISWC Network", "https://iswcnet.cisac.org/"),
 };
 
+import { COUNTRY_NAMES } from "@/lib/country-names";
+
 export const COUNTRIES: Country[] = [
   { code: "US", name: "United States", region: "North America", societies: { performance: [ASCAP, BMI, SESAC, GMR], digital: [SOUNDEXCHANGE], mechanical: [MLC] } },
   { code: "CA", name: "Canada", region: "North America", societies: { performance: [s("socan", "SOCAN", "https://www.socan.com/")], digital: [s("resound", "Re:Sound", "https://www.resound.ca/", "member")], mechanical: [s("cmrra", "CMRRA", "https://www.cmrra.ca/", "member")] } },
@@ -78,6 +80,14 @@ export const COUNTRIES: Country[] = [
   { code: "NG", name: "Nigeria", region: "Africa", societies: { performance: [s("coson", "COSON", "https://cosonng.com/", "member")] } },
   { code: "KE", name: "Kenya", region: "Africa", societies: { performance: [s("mcsk", "MCSK", "https://mcsk.or.ke/", "member")] } },
 ];
+
+/**
+ * SoundExchange's "Non-US Territories of Collection Rights" (founder, 2026-11-12): the US is already included in a
+ * collection claim, so this asks where *else* the recording earns. Worldwide comes first because that is the answer for
+ * almost every streaming release, then the same country list the rest of the app uses. A blank answer means the US only,
+ * which is the form's own default.
+ */
+export const TERRITORY_OPTIONS: readonly string[] = ["Worldwide", ...COUNTRY_NAMES];
 
 /** "My country isn't listed": only the international checks apply. */
 export const OTHER_COUNTRY: Country = { code: "XX", name: "Other country", region: "Europe", societies: {}, note: "We don't list your local societies yet. Your streaming check still runs, and you can still track your own PRO." };

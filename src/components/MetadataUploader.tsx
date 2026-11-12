@@ -22,7 +22,7 @@ import { RETIRE_STEPS } from "@/lib/isrc-retirement";
 import { beatIsOut, beatMasterLine, isSoldBeat, masterBeatLine, masterFromBeat, masterOfBeat } from "@/lib/beats";
 import { amendmentPrefill } from "@/lib/beat-amendment";
 import { BeatBox, DealBox } from "@/components/BeatBox";
-import { COUNTRIES, countryByCode, guessCountry } from "@/lib/repertoires";
+import { COUNTRIES, TERRITORY_OPTIONS, countryByCode, guessCountry } from "@/lib/repertoires";
 import { catalogHealth, releaseKind } from "@/lib/health-checklist";
 import { listChecks } from "@/lib/repertoire-checks";
 import { listStatuses, type SongStatus } from "@/lib/health-songs";
@@ -981,7 +981,18 @@ export function MetadataUploader({ onShareInfo, userId, mode = "embed", readOnly
                   <Field label="Copyright owner's country" id="ownerNationality" value={metadata.ownerNationality} placeholder="United States" onChange={(v) => update("ownerNationality", v)} />
                   <Field label="Country of first release" id="firstReleaseCountry" value={metadata.firstReleaseCountry} placeholder="Worldwide" onChange={(v) => update("firstReleaseCountry", v)} />
                   <Field label="Country of release" id="releaseCountry" value={metadata.releaseCountry} placeholder="Worldwide" onChange={(v) => update("releaseCountry", v)} />
-                  <Field label="Non-US collection territories" id="collectionTerritories" value={metadata.collectionTerritories} placeholder="Blank means the US only" onChange={(v) => update("collectionTerritories", v)} />
+                  <div className="min-w-0 space-y-2">
+                    <Label htmlFor="collectionTerritories">Territories of collection rights
+                      <Tip text="SoundExchange already includes the US on a claim, so this is where else the recording earns. If the song is out worldwide on streaming, choose Worldwide." title="Territories of collection rights" />
+                    </Label>
+                    <select id="collectionTerritories" value={metadata.collectionTerritories}
+                      onChange={(e) => update("collectionTerritories", e.target.value)}
+                      className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm">
+                      <option value="">US only (the default)</option>
+                      {TERRITORY_OPTIONS.map((name) => <option key={name} value={name}>{name}</option>)}
+                    </select>
+                    <p className="text-xs text-muted-foreground">Released worldwide on streaming? Choose Worldwide.</p>
+                  </div>
                 </div>
                 <p className="mt-3 text-xs text-muted-foreground">
                   SoundExchange asks for these on its ISRC ingest. They are never embedded in a master — set them once in Embed Defaults → Catalog Profile and each new song arrives with them.
