@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from "vitest";
-import { readFillReleases, rememberFillRelease, withoutCatalog, type FillRelease } from "./fill-releases";
+import { cacheReleases, mergeRelease, readCachedReleases, releaseKey, withoutCatalog, type FillRelease } from "./fill-releases";
 
 class Memory implements Storage {
   private map = new Map<string, string>();
@@ -15,31 +15,40 @@ describe("releases typed by hand in the fill dialog", () => {
   let store: Memory;
   beforeEach(() => { store = new Memory(); });
 
-  it("remembers a release for the next song, newest first", () => {
-    rememberFillRelease("u1", { type: "EP", name: "Afterglow" }, store);
-    rememberFillRelease("u1", { type: "Album", name: "BAM" }, store);
-    expect(readFillReleases("u1", store)).toEqual([
+  it("puts a new release first and keeps one entry per kind and title", () => {
+    let list: FillRelease[] = [];
+    list = mergeRelease(list, { type: "EP", name: "Afterglow" });
+    list = mergeRelease(list, { type: "Album", name: "BAM" });
+    expect(list).toEqual([
       { type: "Album", name: "BAM" },
       { type: "EP", name: "Afterglow" },
     ]);
+    // The same release typed again replaces its entry, whatever the spelling, and keeps its place at the front.
+    list = mergeRelease(list, { id: "r1", type: "EP", name: "  afterglow " });
+    expect(list).toEqual([
+      { id: "r1", type: "EP", name: "afterglow" },
+      { type: "Album", name: "BAM" },
+    ]);
+    expect(releaseKey({ type: "EP", name: " AFterglow " })).toBe(releaseKey({ type: "EP", name: "afterglow" }));
   });
 
-  it("keeps one entry per release, however the title is typed the second time", () => {
-    rememberFillRelease("u1", { type: "EP", name: "Afterglow" }, store);
-    rememberFillRelease("u1", { type: "EP", name: "  afterglow " }, store);
-    expect(readFillReleases("u1", store)).toEqual([{ type: "EP", name: "afterglow" }]);
+  it("keeps a different kind of the same title apart, and never keeps an unnamed release", () => {
+    let list = mergeRelease([], { type: "EP", name: "Afterglow" });
+    list = mergeRelease(list, { type: "Album", name: "Afterglow" });
+    expect(list).toHaveLength(2);
+    expect(mergeRelease(list, { type: "EP", name: "   " })).toBe(list);
   });
 
-  it("keeps each account's own list, and drops what the catalog already offers", () => {
-    rememberFillRelease("u1", { type: "EP", name: "Afterglow" }, store);
-    rememberFillRelease("u2", { type: "Album", name: "Theirs" }, store);
-    expect(readFillReleases("u1", store).map((r) => r.name)).toEqual(["Afterglow"]);
-    expect(readFillReleases("u2", store).map((r) => r.name)).toEqual(["Theirs"]);
-    const kept = withoutCatalog([{ type: "EP", name: "Afterglow" }], [{ album: "afterglow", kind: "EP" }]);
-    expect(kept).toEqual([]);
+  it("drops a remembered title the catalog now offers", () => {
+    expect(withoutCatalog([{ type: "EP", name: "Afterglow" }], [{ album: "afterglow", kind: "EP" }])).toEqual([]);
+    expect(withoutCatalog([{ type: "EP", name: "Afterglow" }], [{ album: "Afterglow", kind: "Album" }])).toHaveLength(1);
   });
 
-  it("survives a browser that blocks storage", () => {
+  it("keeps a browser copy per account, and survives a browser that blocks storage", () => {
+    cacheReleases("u1", [{ type: "EP", name: "Afterglow" }], store);
+    cacheReleases("u2", [{ type: "Album", name: "Theirs" }], store);
+    expect(readCachedReleases("u1", store)).toEqual([{ type: "EP", name: "Afterglow" }]);
+    expect(readCachedReleases("u2", store)).toEqual([{ type: "Album", name: "Theirs" }]);
     const broken: Storage = {
       length: 0,
       clear: () => undefined,
@@ -48,8 +57,7 @@ describe("releases typed by hand in the fill dialog", () => {
       removeItem: () => undefined,
       setItem: () => { throw new Error("blocked"); },
     };
-    const typed: FillRelease = { type: "Single", name: "One Off" };
-    expect(() => rememberFillRelease("u1", typed, broken)).not.toThrow();
-    expect(readFillReleases("u1", broken)).toEqual([]);
+    expect(() => cacheReleases("u1", [{ type: "EP", name: "Afterglow" }], broken)).not.toThrow();
+    expect(readCachedReleases("u1", broken)).toEqual([]);
   });
 });
