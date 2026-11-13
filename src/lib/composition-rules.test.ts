@@ -31,6 +31,17 @@ describe("composition rules", () => {
     expect(r.differences).toHaveLength(0);
   });
 
+  it("drops the alternate-title card once that name is saved on the song", () => {
+    // The saved comparison still says the two names differ; the catalog now carries the agency's name as an alternate
+    // title, which is what the card asked for, so the card is done (founder, 2026-11-15).
+    const issue = 'The agency registers this work as "TWENTY FOUR SEVEN", your catalog says "24/7 Love" — a work is found by its registered title, so the two names have to match or yours has to be saved as an alternate title';
+    const listed = [{ trackId: "a", title: "24/7 Love", work: work({ title: "TWENTY FOUR SEVEN" }), issues: [issue] }];
+    const before = buildDifferenceRows({ tracks: [track("a", "24/7 Love")], societies: BMI, stored: stored("bmi", listed) });
+    expect(before[0]!.kind).toBe("alternate-title");
+    const after = buildDifferenceRows({ tracks: [track("a", "24/7 Love", { alternateTitles: ["TWENTY FOUR SEVEN"] })], societies: BMI, stored: stored("bmi", listed) });
+    expect(after).toHaveLength(0);
+  });
+
   it("draws a BMI card with the work's own fields and the public work-title search", () => {
     const rows = buildDifferenceRows({
       tracks: [track("a", "Bloodline")],

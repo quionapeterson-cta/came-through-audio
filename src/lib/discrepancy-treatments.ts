@@ -32,8 +32,10 @@ export type StoredLists = {
  * The reading a saved comparison was made with (founder, 2026-11-14). A save from before the versions and artists were read
  * was being shown exactly as it was written then — every version "Not named", one song counted four times — because the
  * panel trusted a verdict from an older reader. Any save without this number is read again from the works it kept.
+ *
+ * 4 (2026-11-15): a composition's title is compared at all, and an alternate title counts as this song's own name.
  */
-export const STORED_READER = 3;
+export const STORED_READER = 4;
 
 /** "Clean Version", "clean", "Clean" — the same version name to a member's eye. */
 const bareVersion = (v: string) => norm(v).replace(/\bversion\b/g, "").replace(/\s+/g, " ").trim();
@@ -398,7 +400,7 @@ export const issueCase = (issue: string) =>
 export function fieldFor(row: DifferenceRow): CatalogField {
   // A composition (a PRO, The MLC) is fixed on the words it registers: the work title, the ISWC, or the writers — never on
   // a recording's ISRC (founder, 2026-11-14).
-  if (row.kind === "alternate-title") return row.composition ? "title" : "title";
+  if (row.kind === "alternate-title") return "title";
   if (!registersRecording(row.claims[0]?.society ?? "")) {
     const said = row.issues.join(" ");
     if (/IPI|share|spelling|isn't on the agency's registration|isn't in your catalog/i.test(said)) return "writers";
@@ -783,7 +785,11 @@ export function buildDifferenceRows({ stored, tracks: allTracks, societies = [] 
       const catalogTitleCore = stripVersion(track.title);
       // A composition's title is compared the way both sides mean it: case, "&", and numbers printed as words
       // ("24/7 Love" is "TWENTY FOUR SEVEN LOVE" on a BMI list — founder, 2026-11-14).
-      const titleDiffers = g.titles.some((x) => titleKey(x) !== titleKey(catalogTitleCore));
+      // A name the song already carries as an alternate title is settled: saving it is what the card asked for, so the
+      // card has to go once it is saved, without waiting for the list to be uploaded again (founder, 2026-11-15).
+      const alternateKeys = (m.alternateTitles ?? []).map((t) => t.trim()).filter(Boolean).map(titleKey);
+      const titleKnown = g.titles.some((x) => titleKey(x) !== titleKey(catalogTitleCore) && alternateKeys.includes(titleKey(x)));
+      const titleDiffers = g.titles.some((x) => titleKey(x) !== titleKey(catalogTitleCore) && !alternateKeys.includes(titleKey(x)));
       const bothCodes = !!catalogIsrc && !!agencyIsrc;
       const codeDiffers = bothCodes && catalogIsrc.toUpperCase() !== agencyIsrc.toUpperCase();
       // A composition has no version and no recording artist: those are the recording's, and comparing them to a PRO's
@@ -846,7 +852,10 @@ export function buildDifferenceRows({ stored, tracks: allTracks, societies = [] 
               action: "alternate-title",
             }
           : { ...base, ...check.treatment };
-      const issues = [...new Set(g.issues)];
+      // The saved comparison still carries the title issue until the list is read again; when the name is now an
+      // alternate title, that issue is settled and is not repeated (founder, 2026-11-15).
+      const issues = [...new Set(g.issues)].filter((i) =>
+        !(titleKnown && /^The agency registers this work as|^The agency calls it /.test(i)));
       const versionsDiffer = !!versions.agency && !!versions.catalog && norm(versions.agency) !== norm(versions.catalog);
       const artistsDiffer = !!artists.agency && norm(artists.agency) !== norm(artists.catalog);
       // Nothing to decide when both sides read the same recording: a stored comparison made before the name rule was
