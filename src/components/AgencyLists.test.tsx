@@ -165,7 +165,8 @@ describe("AgencyLists", () => {
     fireEvent.change(screen.getByLabelText("Release type for Gold Teeth"), { target: { value: "EP" } });
     fireEvent.change(screen.getByLabelText("Release name for Gold Teeth"), { target: { value: "Afterglow" } });
     const amber = screen.getByLabelText("Release for Amber") as HTMLSelectElement;
-    expect([...amber.options].map((o) => o.textContent)).toContain("Afterglow · EP");
+    // The name is remembered once typing stops, so the other song offers it a moment later.
+    await waitFor(() => expect([...amber.options].map((o) => o.textContent)).toContain("Afterglow · EP"), { timeout: 2500 });
     // The other song takes it in one pick instead of typing it again.
     fireEvent.change(amber, { target: { value: [...amber.options].find((o) => o.textContent === "Afterglow · EP")!.value } });
     fireEvent.click(screen.getByRole("button", { name: /Add 2 songs/ }));
@@ -174,6 +175,23 @@ describe("AgencyLists", () => {
       expect(call[0].album).toBe("Afterglow");
       expect(call[0].releaseType).toBe("EP");
     }
+  });
+
+  it("remembers a release typed by hand once, not on every keystroke", async () => {
+    vi.mocked(saveTrack).mockClear();
+    render(<AgencyLists userId="u1" societies={[ascap]} songsFor={() => []} summaries={{}} onApply={vi.fn().mockResolvedValue(undefined)} />);
+    const file = new File(["Work Title,Writer Name,Share\nGold Teeth,RAY BO,100\nAmber,RAY BO,100\n"], "ascap.csv", { type: "text/csv" });
+    fireEvent.change(screen.getByLabelText("Upload your ASCAP list"), { target: { files: [file] } });
+    fireEvent.click(await screen.findByRole("button", { name: /Fill my catalog/ }));
+    fireEvent.change(screen.getByLabelText("Release for Gold Teeth"), { target: { value: "new" } });
+    const field = screen.getByLabelText("Release name for Gold Teeth");
+    for (const typed of ["N", "No", "Not", "Not A", "Not Ag", "Not Again"]) fireEvent.change(field, { target: { value: typed } });
+    const amber = screen.getByLabelText("Release for Amber") as HTMLSelectElement;
+    const titled = () => [...amber.options].map((o) => o.textContent ?? "").filter((t) => t.endsWith("· Single"));
+    // Nothing is remembered while the name is still being typed.
+    expect(titled()).not.toContain("N · Single");
+    // Once typing stops, the settled name is offered once, on the other song.
+    await waitFor(() => expect(titled()).toEqual(["Not Again · Single"]), { timeout: 2500 });
   });
 
   it("returns a song to Unreleased from the dropdown, and asks each song's release once even in two writer boxes", async () => {

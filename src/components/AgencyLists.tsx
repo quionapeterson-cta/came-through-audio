@@ -7,7 +7,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { fillPlan, listPeople, personFor, withPeople, type FillPlan, type Person, type PersonChoice } from "@/lib/agency-fill";
 import { WRITER_ROLES, type Metadata } from "@/lib/metadata";
 import { albumKey, catalogReleases } from "@/lib/release-routing";
-import { FILL_RELEASE_TYPES, cacheReleases, mergeRelease, readCachedReleases, releaseKey, withoutCatalog, type FillRelease } from "@/lib/fill-releases";
+import { FILL_RELEASE_TYPES, cacheReleases, mergeRelease, readCachedReleases, releaseKey, withoutCatalog, withoutKeystrokes, type FillRelease } from "@/lib/fill-releases";
 import { listFillReleases, rememberFillRelease as saveFillRelease } from "@/lib/fill-releases.functions";
 import { loadOnboarding, loadProfile } from "@/lib/artist-profile";
 import { saveTrack } from "@/lib/catalog";
@@ -101,7 +101,7 @@ export function AgencyLists({ userId, societies, songsFor, summaries, allTracks,
     if (!userId) return;
     let live = true;
     void listFillReleases()
-      .then((list) => { if (!live) return; setRemembered(list); cacheReleases(userId, list); })
+      .then((list) => { if (!live) return; const clean = withoutKeystrokes(list); setRemembered(clean); cacheReleases(userId, clean); })
       .catch(() => undefined);
     return () => { live = false; };
   }, [userId]);
@@ -179,7 +179,11 @@ export function AgencyLists({ userId, societies, songsFor, summaries, allTracks,
     setPlacements({});
     setVersionReleases({});
     setDrafts({});
-    setRemembered(userId ? readCachedReleases(userId) : []);
+    // The browser's copy is read through `withoutKeystrokes`, so a list poisoned by half-typed names is cleaned as it is read,
+    // and the cleaned copy is written back rather than left in storage (founder, 2026-11-16).
+    const cachedReleases = userId ? readCachedReleases(userId) : [];
+    setRemembered(cachedReleases);
+    if (userId && cachedReleases.length) cacheReleases(userId, cachedReleases);
     // Every song in the dialog is asked about, catalogued ones included, so their writers get the same boxes.
     setPeople(listPeople([...plan.creates.map((c) => c.work), ...plan.duplicates.map((d) => d.work)]));
     setRoles({});
@@ -231,8 +235,8 @@ export function AgencyLists({ userId, societies, songsFor, summaries, allTracks,
   }
 
   /**
-   * Types a release by hand. The song can use it straight away; it is saved to the account once typing stops, so "A", "Af",
-   * "Aft" never become remembered releases of their own (founder, 2026-11-16).
+   * Types a release by hand. The song can use it straight away through its draft; the name is remembered, here and on the
+   * account, only once typing stops — otherwise "A", "Af", "Aft" each become a release of their own (founder, 2026-11-16).
    */
   function editDraft(key: string, patch: Partial<FillRelease>) {
     const next: FillRelease = { ...(drafts[key] ?? { type: "Single", name: "" }), ...patch };
@@ -240,8 +244,9 @@ export function AgencyLists({ userId, societies, songsFor, summaries, allTracks,
     if (remembering.current) clearTimeout(remembering.current);
     if (!next.name.trim() || !userId) return;
     const finished = { type: next.type, name: next.name.trim() } as FillRelease;
-    setRemembered((list) => { const merged = mergeRelease(list, finished); cacheReleases(userId, merged); return merged; });
     remembering.current = setTimeout(() => {
+      // Nothing is remembered until the name settles: the half-typed titles never reach the list or the account.
+      setRemembered((list) => { const merged = mergeRelease(list, finished); cacheReleases(userId, merged); return merged; });
       void saveFillRelease({ data: { type: finished.type, name: finished.name } })
         .then((saved) => setRemembered((list) => { const merged = mergeRelease(list, saved); cacheReleases(userId, merged); return merged; }))
         .catch(() => undefined);

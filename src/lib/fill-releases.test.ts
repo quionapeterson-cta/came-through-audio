@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from "vitest";
-import { cacheReleases, mergeRelease, readCachedReleases, releaseKey, withoutCatalog, type FillRelease } from "./fill-releases";
+import { cacheReleases, mergeRelease, readCachedReleases, releaseKey, withoutCatalog, withoutKeystrokes, type FillRelease } from "./fill-releases";
 
 class Memory implements Storage {
   private map = new Map<string, string>();
@@ -37,6 +37,15 @@ describe("releases typed by hand in the fill dialog", () => {
     list = mergeRelease(list, { type: "Album", name: "Afterglow" });
     expect(list).toHaveLength(2);
     expect(mergeRelease(list, { type: "EP", name: "   " })).toBe(list);
+  });
+
+  it("drops the half-typed titles one name leaves behind, and keeps a real shorter one", () => {
+    const typed = ["N", "No", "Not", "Not A", "Not Ag", "Not Aga", "Not Agai", "Not Again"].map((name) => ({ type: "Single" as const, name }));
+    expect(withoutKeystrokes(typed)).toEqual([{ type: "Single", name: "Not Again" }]);
+    // One shorter title beside a longer one may be a release of its own, so it stays.
+    expect(withoutKeystrokes([{ type: "Single", name: "Love" }, { type: "Single", name: "Love Again" }])).toHaveLength(2);
+    // The same title under another kind is a different release and is untouched.
+    expect(withoutKeystrokes([{ type: "Single", name: "Not" }, { type: "EP", name: "Not Again" }])).toHaveLength(2);
   });
 
   it("drops a remembered title the catalog now offers", () => {

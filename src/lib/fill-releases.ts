@@ -27,6 +27,21 @@ export function mergeRelease(list: FillRelease[], entry: FillRelease, max = MAX_
   return [clean, ...rest].slice(0, max);
 }
 
+/**
+ * Drops the half-typed titles one name can leave behind. Typing "Not Again" used to remember "N", "No", "Not", "Not A" and
+ * so on, and each became a release of its own. A single shorter title can be a real release beside a longer one ("Love" and
+ * "Love Again"), so one is kept; two or more prefixes of the same title are one name being typed, and they go.
+ */
+export function withoutKeystrokes(releases: FillRelease[]): FillRelease[] {
+  const title = (r: FillRelease) => albumKey(r.name);
+  const drop = new Set<FillRelease>();
+  for (const longer of releases) {
+    const prefixes = releases.filter((r) => r !== longer && r.type === longer.type && title(r) && title(longer).startsWith(title(r)) && title(r) !== title(longer));
+    if (prefixes.length >= 2) prefixes.forEach((r) => drop.add(r));
+  }
+  return releases.filter((r) => !drop.has(r));
+}
+
 /** The releases the member's own catalog already offers, so a remembered title that has since been released isn't offered twice. */
 export function withoutCatalog(releases: FillRelease[], catalog: { album: string; kind: string }[]): FillRelease[] {
   return releases.filter((r) => !catalog.some((c) => c.kind === r.type && albumKey(c.album) === albumKey(r.name)));
@@ -40,7 +55,7 @@ export function readCachedReleases(userId: string, store: Storage | undefined = 
     if (!raw) return [];
     const parsed: unknown = JSON.parse(raw);
     if (!Array.isArray(parsed)) return [];
-    return parsed.filter(isFillRelease).slice(0, MAX_FILL_RELEASES);
+    return withoutKeystrokes(parsed.filter(isFillRelease)).slice(0, MAX_FILL_RELEASES);
   } catch {
     return [];
   }
@@ -49,7 +64,7 @@ export function readCachedReleases(userId: string, store: Storage | undefined = 
 export function cacheReleases(userId: string, list: FillRelease[], store: Storage | undefined = safeStorage()): void {
   if (!userId || !store) return;
   try {
-    store.setItem(key(userId), JSON.stringify(list.slice(0, MAX_FILL_RELEASES)));
+    store.setItem(key(userId), JSON.stringify(withoutKeystrokes(list).slice(0, MAX_FILL_RELEASES)));
   } catch {
     // A full or blocked storage never blocks the dialog; the account still has them.
   }
