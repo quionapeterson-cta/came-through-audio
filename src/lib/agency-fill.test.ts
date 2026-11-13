@@ -206,6 +206,12 @@ describe("the Title row in the fill dialog", () => {
     expect(rows).toContainEqual({ field: "Title", catalog: "24/7 Love", agency: "TWENTY FOUR SEVEN" });
   });
 
+  it("reads a version in the catalog's title as the version, not as a different work name", () => {
+    // "Am Pm (Clean Version)" is one recording of the work "AM PM": nothing about the title is wrong.
+    const rows = fieldChanges({ ...emptyMetadata(), title: "Am Pm (Clean Version)", iswc: "T3335070554" }, { ...work, title: "AM PM", iswc: "T3335070554" }, "composition");
+    expect(rows.some((r) => r.field === "Title")).toBe(false);
+  });
+
   it("leaves the title alone when it is already saved as an alternate title", () => {
     const rows = fieldChanges({ ...emptyMetadata(), title: "24/7 Love", iswc: "T9187370996", alternateTitles: ["TWENTY FOUR SEVEN"] }, work, "composition");
     expect(rows.some((r) => r.field === "Title")).toBe(false);

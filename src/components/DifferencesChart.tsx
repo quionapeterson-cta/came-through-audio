@@ -212,6 +212,9 @@ export function DifferencesChart({ rows, busyKey, onFixCatalog, onAdopt, onKeepB
         const offered = new Set<string>([
           `${row.treatment.primary}|${copied?.value ?? (agencyIsrc || row.catalogIsrc || row.title)}`,
           ...(row.copy?.secondary ? [`${row.copy.secondary.label}|${row.copy.secondary.value}`] : []),
+          // The card's one check counts as offered even when another action is its first button ("Save as Alternate
+          // Title"), so the differences under it can never offer the same agency check a second time.
+          ...(row.check ? [`${row.check.label}|${row.check.value}`] : []),
           ...(row.treatment.secondary ? [`${row.treatment.secondary}|${url}`] : []),
         ]);
         /** True when this check is not already one of the card's own buttons. */

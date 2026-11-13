@@ -1,4 +1,4 @@
-import { matchWork, printedTitle, retiredCodes, sameWriter, scaledShares, titleCarriesVersion, titleReadsDifferently, titleKey, workIssues, type ListMatch, type ListResult, type ListWork, type ListWriter } from "@/lib/agency-lists";
+import { matchWork, printedTitle, retiredCodes, sameWriter, scaledShares, titleCarriesVersion, titleReadsDifferently, titleKey, stripVersion, workIssues, type ListMatch, type ListResult, type ListWork, type ListWriter } from "@/lib/agency-lists";
 import type { CatalogTrack } from "@/lib/catalog";
 import type { AgencyKind } from "@/lib/agency-kind";
 import { isCatalogId } from "@/lib/ids";
@@ -152,8 +152,13 @@ export function fieldChanges(existing: Metadata, work: ListWork, kind: AgencyKin
   const composition = kind === "composition";
   // A field the list doesn't carry is never offered: adopting the agency's version would leave the catalog's value in place.
   const named = composition ? existing.title.trim() : printedTitle(existing);
-  const knownTitle = (existing.alternateTitles ?? []).some((alt) => alt.trim() && titleKey(alt) === titleKey(work.title));
-  const titleDiffers = composition ? titleKey(named) !== titleKey(work.title) : titleReadsDifferently(named, work.title);
+  // A version tail is the recording's, not the work's: "Am Pm (Clean Version)" is the work "AM PM", so the two sides agree
+  // and the dialog says nothing — the same rule the panel uses (founder, 2026-11-15).
+  const workTitle = (work.coreTitle ?? stripVersion(work.title)).trim();
+  const knownTitle = (existing.alternateTitles ?? []).some((alt) => alt.trim() && titleKey(alt) === titleKey(workTitle));
+  const titleDiffers = composition
+    ? titleKey(stripVersion(named)) !== titleKey(workTitle)
+    : titleReadsDifferently(named, work.title);
   if (!knownTitle && titleDiffers) rows.push({ field: "Title", catalog: named || "none", agency: work.title });
   // A code this song has retired is never offered: the agency is the one that needs updating, not the catalog.
   if (!composition && work.isrc && !retiredCodes(existing).includes(work.isrc)) rows.push({ field: "ISRC", catalog: existing.isrc.trim() || "none", agency: work.isrc });

@@ -180,6 +180,24 @@ describe("DifferencesChart", () => {
     expect(text.split("Copy Writer Name & Check BMI").length - 1).toBe(1);
   });
 
+  it("never lists the agency's check under the differences as well as on the card", () => {
+    // Two differences on the alternate-title card: the title, and an ISWC that disagrees. The check is one button,
+    // whichever of them is listed first (founder, 2026-11-15).
+    const rows = buildDifferenceRows({
+      tracks: [catTrack("24/7 Love", { iswc: "T9187370996" })],
+      societies: [{ id: "bmi", name: "BMI" }],
+      stored: ({
+        byId: { bmi: { file: "bmi.csv", result: { matched: [], clashes: [], notListed: [], extra: [], works: 1, differences: [
+          { trackId: "a", title: "24/7 Love", work: work({ title: "TWENTY FOUR SEVEN", iswc: "T1234567890" }), issues: ['The agency registers this work as "TWENTY FOUR SEVEN", your catalog says "24/7 Love" — a work is found by its registered title, so the two names have to match or yours has to be saved as an alternate title', "The agency has ISWC T1234567890, your catalog has T9187370996"] },
+        ] } } },
+      }) as never,
+    });
+    renderRow(rows[0]!);
+    const text = document.body.textContent ?? "";
+    expect(text).toContain("Save as Alternate Title");
+    expect(text.split("Copy Writer Name & Check BMI").length - 1).toBe(1);
+  });
+
   it("folds a song away to its title, and opens it again", () => {
     renderRow(versionRow()[0]!);
     expect(screen.getAllByText("ISRC")).toHaveLength(2);
