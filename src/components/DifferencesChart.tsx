@@ -256,7 +256,8 @@ export function DifferencesChart({ rows, busyKey, onFixCatalog, onAdopt, onKeepB
                 <span className={row.release.state === "current" ? "font-semibold text-[#004AAD] dark:text-[#4D8CFF]" : "font-semibold"}>{RELEASE_STATE_LABEL[row.release.state]}</span>
                 {row.release.version && <span className="rounded border border-[#E5E4E2] px-1.5 py-px dark:border-[#E5E4E2]/15">{row.release.version}</span>}
               </p>
-              <p className="mt-2 text-xs leading-relaxed text-[#0b0b0b]/70 dark:text-[#E5E4E2]/70">{summaryFor(row)}</p>
+              {/* Folded, the song keeps its title, artist and date only, so a long list really does consolidate. */}
+              {!hidden.has(row.key) && <p className="mt-2 text-xs leading-relaxed text-[#0b0b0b]/70 dark:text-[#E5E4E2]/70">{summaryFor(row)}</p>}
             </div>
 
             {/* Zone 2 — the two records field by field, each pair on the same row (founder, 2026-11-14): Title beside

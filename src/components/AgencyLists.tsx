@@ -10,7 +10,7 @@ import { loadOnboarding, loadProfile } from "@/lib/artist-profile";
 import { saveTrack } from "@/lib/catalog";
 import { updateTarget } from "@/lib/ids";
 import { clearIntake, readIntake, writeIntake } from "@/lib/intake-session";
-import { buildDifferenceRows, openDifferenceCount, STORED_LISTS_KEY, STORED_READER } from "@/lib/discrepancy-treatments";
+import { buildDifferenceRows, issueCase, openDifferenceCount, STORED_LISTS_KEY, STORED_READER } from "@/lib/discrepancy-treatments";
 import { agencyKind } from "@/lib/agency-kind";
 import { DifferencesPanel } from "@/components/DifferencesPanel";
 import { combinedHalves, compareList, downloadSteps, listGaps, listShareTotal, readTable, readWorks, type ListResult, type ListWork, type SavedListSummary } from "@/lib/agency-lists";
@@ -266,7 +266,7 @@ export function AgencyLists({ userId, societies, songsFor, summaries, allTracks,
             <div><div className="text-sm font-semibold text-primary">✓ Confirmed · {shownResult.matched.length}</div>
               <ul className="mt-1 text-sm text-muted-foreground">{shownResult.matched.slice(0, 12).map((m) => <li key={m.trackId}>{m.title}</li>)}</ul></div>
             <div><div className="text-sm font-semibold">⚠️ Different · {shownResult.differences.length}</div>
-              <ul className="mt-1 space-y-1 text-sm">{shownResult.differences.map((m) => <li key={m.trackId}><b>{m.title}</b><span className="block text-xs text-muted-foreground">{m.issues.join(" · ")}</span></li>)}</ul></div>
+              <ul className="mt-1 space-y-1 text-sm">{shownResult.differences.map((m) => <li key={m.trackId}><b>{m.title}</b><span className="block text-xs text-muted-foreground">{m.issues.map(issueCase).join(" · ")}</span></li>)}</ul></div>
             <div><div className="text-sm font-semibold">Not on the list · {shownResult.notListed.length}</div>
               <ul className="mt-1 text-sm text-muted-foreground">{shownResult.notListed.slice(0, 12).map((m) => <li key={m.trackId}>{m.title}</li>)}</ul></div>
           </div>
@@ -280,7 +280,7 @@ export function AgencyLists({ userId, societies, songsFor, summaries, allTracks,
               {shownResult.clashes.map((c) => <li key={c.trackId}>
                 <b>{c.title}</b>
                 <ul className="mt-1 space-y-1 text-xs text-muted-foreground">
-                  {c.issues.map((issue) => <li key={issue}>{issue}</li>)}
+                  {[...new Set(c.issues.map(issueCase))].map((issue) => <li key={issue}>{issue}</li>)}
                 </ul>
               </li>)}
             </ul>

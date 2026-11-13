@@ -573,6 +573,7 @@ export function summaryFor(row: DifferenceRow): string {
   const agency = row.claims.map((c) => c.name).join(" and ") || "The agency";
   // A composition list registers the work, not the recording: no ISRC, no artist, no version to disagree about.
   if (row.composition) {
+    if (row.kind === "missing-from-list") return `${agency} does not list this work. Its title, ISWC and writers are what a registration is filed under, so check the work there before filing it again.`;
     return row.kind === "title-mismatch"
       ? `${agency} registers this work under a different title than your catalog. The composition is the same; the name is not, and both lists should read the same.`
       : `${agency} registers the composition, not the recording: the work title, its ISWC and its writers are what the two lists have to agree on.`;
@@ -1005,12 +1006,53 @@ export function buildDifferenceRows({ stored, tracks: allTracks, societies = [] 
 
   // Songs the society does not list at all, so a missing registration is not invisible on this chart.
   for (const [societyId, entry] of Object.entries(stored.byId)) {
+    const composition = !registersRecording(societyId);
     for (const miss of entry.result.notListed) {
       const track = byId.get(miss.trackId);
       if (!track) continue;
       const m = track.metadata;
       const retired = (m.retiredIscrs ?? []).filter(Boolean);
       const state = releaseState(m);
+      // A list that registers works registers compositions (founder, 2026-11-14): a song missing from BMI is a work to
+      // submit, with no recording's version, artist or ISRC on the card and no ISRC to copy.
+      if (composition) {
+        const writers = [...m.writers, ...m.composers].map((w) => creditName(w)).filter(Boolean);
+        const iswc = (m.iswc ?? "").trim();
+        const check = workCheck(societyId, nameOf(societyId), { title: m.title, iswc, writer: writers[0] ?? "", hasIswc: !!iswc });
+        const treatment: Treatment = {
+          ...check.treatment,
+          headline: `Register this work with ${nameOf(societyId)}`,
+          detail: `${nameOf(societyId)} registers the composition, not the recording, and this work is not on its list. Copy the work title (and the ISWC, if you have one), search ${nameOf(societyId)}'s public catalogue to be sure, then submit the work with its writers and splits.`,
+        };
+        rows.push({
+          key: `${societyId}:missing:${miss.trackId}`,
+          songId: miss.trackId,
+          title: track.title || "Untitled",
+          artist: track.artist,
+          occurrences: 1,
+          claims: [{ society: societyId, name: nameOf(societyId), isrc: "", title: m.title, url: urlOf(societyId), artist: "", version: "", iswc, writers }],
+          catalogIsrc: "",
+          retiredIscrs: retired,
+          release: releaseOf(track, state),
+          versions: { catalog: "", agency: "" },
+          artists: { catalog: "", agency: "" },
+          agencyCodes: [],
+          catalogCodes: [],
+          secondCode: false,
+          kind: "missing-from-list",
+          issues: [`Not on the ${nameOf(societyId)} list`],
+          treatment,
+          fixes: fixesFor([`Not on the ${nameOf(societyId)} list`], { catalogIsrc: "", agencyIsrc: "" }).map((f) => ({
+            ...f,
+            treatment: { ...f.treatment, primary: treatment.primary, secondary: treatment.secondary, action: "review" as const },
+          })),
+          status: treatment.action === "waiting" ? "waiting" : "needs-triage",
+          side: "catalog",
+          copy: check.copy,
+          composition: { catalog: { iswc, writers: writers.join(" · ") }, agency: { iswc: "", writers: "" } },
+        });
+        continue;
+      }
       const treatment = TREATMENTS.submit;
       rows.push({
         key: `${societyId}:missing:${miss.trackId}`,
