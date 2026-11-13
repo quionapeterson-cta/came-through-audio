@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { STORED_READER, TREATMENTS, actionFor, buildDifferenceRows, fieldFor, fixesFor, nameFromIssue, rereadStored, signInFor, treatmentForIssue, worksFromResult, type StoredLists } from "@/lib/discrepancy-treatments";
+import { STORED_READER, TREATMENTS, actionFor, groupFixes, issueCase, buildDifferenceRows, fieldFor, fixesFor, nameFromIssue, rereadStored, signInFor, treatmentForIssue, worksFromResult, type StoredLists } from "@/lib/discrepancy-treatments";
 import { compareList, parseDelimited, readWorks } from "@/lib/agency-lists";
 import { catalogHref } from "@/lib/catalog-links";
 import { emptyMetadata, type Metadata } from "@/lib/metadata";
@@ -260,5 +260,29 @@ Karma Came,Quit Playing With Me (Official Instrumental),QT6HW2687936,SX217QGYZW,
     expect(catalogHref({ trackId: "a", field: "version", action: "add-version", agencyVersion: "Clean Version",
       agencyVersions: ["Clean Version", "Dirty Version", "Official Acapella", "Official Instrumental"] }))
       .toBe("/workspace?tab=catalog&songId=a&focusField=version&agencyVersion=Clean+Version&agencyVersions=Clean+Version%7CDirty+Version%7COfficial+Acapella%7COfficial+Instrumental&action=add-version#song-a");
+  });
+});
+
+/** Two writers, two spellings: one rule, written once, with both cases named under it (founder, 2026-11-14). */
+describe("grouped treatments", () => {
+  const writerIssue = (agency: string, catalog: string) =>
+    `The agency has ${agency} where your catalog has ${catalog} — same writer, fix the spelling so both records match`;
+
+  it("writes one rule once, and lists every case it settles", () => {
+    const fixes = fixesFor([writerIssue("PETERSON QUI ONA LASHAY", "Qui-Ona Peterson"), writerIssue("STEPHENS CALVIN ANDRE JR (MR)", "Calvin Stephens")], { catalogIsrc: "", agencyIsrc: "" });
+    const groups = groupFixes(fixes);
+    expect(groups).toHaveLength(1);
+    expect(groups[0]!.issues).toHaveLength(2);
+    expect(groups[0]!.headline).toBe("Fix the spelling on one side");
+  });
+
+  it("keeps two different rules apart", () => {
+    const fixes = fixesFor([writerIssue("LEE ANN", "Ann Lee"), "The agency has ISWC T1234567890, your catalog has none"], { catalogIsrc: "", agencyIsrc: "" });
+    expect(groupFixes(fixes)).toHaveLength(2);
+  });
+
+  it("names the case without repeating the advice under it", () => {
+    expect(issueCase(writerIssue("LEE ANN", "Ann Lee"))).toBe("The agency has LEE ANN where your catalog has Ann Lee");
+    expect(issueCase("The agency has ISWC T1234567890, your catalog has none")).toBe("The agency has ISWC T1234567890, your catalog has none");
   });
 });

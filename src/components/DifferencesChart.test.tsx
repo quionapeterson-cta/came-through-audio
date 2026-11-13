@@ -142,8 +142,14 @@ describe("DifferencesChart", () => {
     expect(text()).toContain("Copy Work Title & Check BMI");
     expect(text()).toContain("Ann Lee");
     expect(text()).not.toContain("+ Add Version to Catalog");
-    // One copy of each exact treatment and one sign-in, never the same link twice (founder, 2026-11-14).
     const count = (label: string) => text().split(label).length - 1;
+    // The society sits on the agency header, not above the values, so the two sides line up row for row.
+    expect(screen.getByText("BMI")).toBeTruthy();
+    // Two writers with two spellings are one rule, written once, with both cases named under it.
+    expect(count("Fix the spelling on one side")).toBe(1);
+    expect(text()).toContain("The agency has LEE ANN where your catalog has Ann Lee");
+    expect(text()).toContain("The agency has STEPHENS CALVIN where your catalog has Calvin Stephens");
+    // One copy of each exact treatment and one sign-in, never the same link twice (founder, 2026-11-14).
     expect(count("Copy Work Title & Check BMI")).toBe(1);
     expect(count("Copy ISWC & Check BMI")).toBe(1);
     expect(count("Sign in to BMI")).toBe(1);

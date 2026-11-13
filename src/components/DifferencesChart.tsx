@@ -1,9 +1,9 @@
-import { useState } from "react";
+import { Fragment, useState } from "react";
 import { AudioWaveform, ChevronDown, ChevronUp, ExternalLink, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import {
-  KIND_LABEL, RELEASE_STATE_LABEL, STATUS_LABEL, diffSegments, diffWords, fieldFor, repertoireUrl, signInFor,
-  summaryFor, treatmentText, type DifferenceRow, type RowFix,
+  KIND_LABEL, RELEASE_STATE_LABEL, STATUS_LABEL, diffSegments, diffWords, fieldFor, groupFixes, issueCase,
+  repertoireUrl, signInFor, summaryFor, treatmentText, type AgencyClaim, type DifferenceRow, type FixGroup, type RowFix,
 } from "@/lib/discrepancy-treatments";
 
 /**
@@ -129,6 +129,73 @@ export function DifferencesChart({ rows, busyKey, onFixCatalog, onAdopt, onKeepB
         const canKeepBoth = codesDiffer && row.treatment.action !== "keep-both";
         const waiting = row.treatment.action === "waiting";
 
+        /**
+         * One row per field, both sides filled in the same order (founder, 2026-11-14): the catalog's Title sits on the
+         * same grid row as the agency's, and a value one side lacks leaves the row where it is instead of shifting the
+         * fields under it. A composition has a work's fields; a recording has the recording's.
+         */
+        const compareRows = (c: AgencyClaim): { label: string; differs: boolean; left: React.ReactNode; right: React.ReactNode }[] => {
+          const rows = [{
+            label: "Title",
+            differs: titlesDisagree,
+            left: <Title value={row.title} against={agencyTitle} emphasise={titlesDisagree} />,
+            right: <Title value={c.title || row.title} against={row.title} emphasise={titlesDisagree} />,
+          }];
+          if (row.composition) {
+            const work = row.composition;
+            return [...rows,
+              {
+                label: "ISWC",
+                differs: !!c.iswc && !!work.catalog.iswc && canon(c.iswc) !== canon(work.catalog.iswc),
+                left: <Value text={work.catalog.iswc} empty="No ISWC in your catalog" />,
+                right: <Value text={c.iswc ?? ""} empty="No ISWC on the list" />,
+              },
+              {
+                label: "Writers",
+                differs: !!work.agency.writers && !!work.catalog.writers && canon(work.agency.writers) !== canon(work.catalog.writers),
+                left: <Value text={work.catalog.writers} empty="No writers in your catalog" />,
+                right: <Value text={(c.writers ?? []).join(" · ")} empty="No writers on the list" />,
+              },
+            ];
+          }
+          return [...rows,
+            {
+              label: "Version",
+              differs: versionsDisagreeFor(c.version ?? ""),
+              left: <Value text={row.versions.catalog} empty="Not named" />,
+              right: <Value text={c.version ?? ""} empty="Not named" />,
+            },
+            {
+              label: "Artist",
+              differs: artistsDisagreeFor(c.artist ?? ""),
+              left: <Value text={row.artist} empty="No artist listed" />,
+              right: <Value text={c.artist ?? ""} empty="Not on the list" />,
+            },
+            {
+              label: "ISRC",
+              differs: codesDiffer,
+              left: <>
+                {row.catalogIsrc ? <Isrc value={row.catalogIsrc} against={agencyIsrc} /> : <Value text="" empty="No ISRC in your catalog" />}
+                {row.retiredIscrs.length > 0 && (
+                  <span className="mt-1 block font-mono text-[11px] tabular-nums text-[#0b0b0b]/45 line-through dark:text-[#E5E4E2]/45">{row.retiredIscrs.join(" · ")}</span>
+                )}
+              </>,
+              right: <>
+                {c.isrc ? <Isrc value={c.isrc} against={row.catalogIsrc} /> : <Value text="" empty="No ISRC on the list" />}
+                {/* Two codes under one title are two recordings: the second is shown, never hidden behind the first. */}
+                {row.claims.length === 1 && row.agencyCodes.filter((x) => x.isrc && x.isrc.toUpperCase() !== (c.isrc || "").toUpperCase()).map((x) => (
+                  <span key={x.isrc} className="mt-1 block">
+                    <Isrc value={x.isrc} against={row.catalogIsrc} />
+                    <span className="mt-0.5 block text-[10px] text-[#0b0b0b]/55 dark:text-[#E5E4E2]/55">
+                      {x.version ? `Second code · ${x.version}` : "Second code on the list"}
+                    </span>
+                  </span>
+                ))}
+              </>,
+            },
+          ];
+        };
+
         /** The row's own copy value: never an ISRC on a composition card, whatever a fix's own words say. */
         const copied = row.copy?.primary;
         // A check is offered once, whatever it is called: the same agency and the same value is the same click
@@ -147,7 +214,7 @@ export function DifferencesChart({ rows, busyKey, onFixCatalog, onAdopt, onKeepB
         };
 
         /** The one click each difference takes, from the rule that difference was given. */
-        const runFix = (fix: RowFix) => {
+        const runFix = (fix: RowFix | FixGroup) => {
           if (fix.treatment.action === "waiting") return;
           if (copied) return copyAndOpen(copied.value, url, copied.what);
           if (fix.treatment.action === "keep-both") return onKeepBoth(row);
@@ -192,67 +259,28 @@ export function DifferencesChart({ rows, busyKey, onFixCatalog, onAdopt, onKeepB
               <p className="mt-2 text-xs leading-relaxed text-[#0b0b0b]/70 dark:text-[#E5E4E2]/70">{summaryFor(row)}</p>
             </div>
 
-            {/* Zone 2 — the fields side by side, with the one that disagrees marked (founder, 2026-11-14). */}
+            {/* Zone 2 — the two records field by field, each pair on the same row (founder, 2026-11-14): Title beside
+                Title, ISWC beside ISWC, Writers beside Writers, and the society's name up on the header so it never
+                pushes the agency's values out of line with the catalog's. */}
             {!hidden.has(row.key) && <div className="min-w-0 lg:col-span-8">
-              <div className="rounded-lg border border-[#E5E4E2] bg-[#E5E4E2]/30 dark:border-[#E5E4E2]/15 dark:bg-[#0b0b0b]">
-                <div className="grid grid-cols-2 gap-3 p-3">
-                  <div className="min-w-0 space-y-1.5">
-                    <span className="block text-[10px] font-bold uppercase tracking-wider text-[#0b0b0b]/55 dark:text-[#E5E4E2]/55">Your catalog</span>
-                    <Field label="Title" differs={titlesDisagree}><Title value={row.title} against={agencyTitle} emphasise={titlesDisagree} /></Field>
-                    {row.composition && (
-                      <>
-                        <Field label="ISWC" differs={!!row.composition.agency.iswc && !!row.composition.catalog.iswc && canon(row.composition.agency.iswc) !== canon(row.composition.catalog.iswc)}><Value text={row.composition.catalog.iswc} empty="No ISWC in your catalog" /></Field>
-                        <Field label="Writers" differs={!!row.composition.agency.writers && !!row.composition.catalog.writers && canon(row.composition.agency.writers) !== canon(row.composition.catalog.writers)}><Value text={row.composition.catalog.writers} empty="No writers in your catalog" /></Field>
-                      </>
-                    )}
-                    {!row.composition && <>
-                    <Field label="Version" differs={versionsDisagreeFor(row.versions.catalog)}><Value text={row.versions.catalog} empty="Not named" /></Field>
-                    <Field label="Artist" differs={false}><Value text={row.artist} empty="No artist listed" /></Field>
-                    <Field label="ISRC" differs={codesDiffer}>
-                      {row.catalogIsrc
-                        ? <Isrc value={row.catalogIsrc} against={agencyIsrc} />
-                        : <Value text="" empty="No ISRC in your catalog" />}
-                      {row.retiredIscrs.length > 0 && (
-                        <span className="mt-1 block font-mono text-[11px] tabular-nums text-[#0b0b0b]/45 line-through dark:text-[#E5E4E2]/45">{row.retiredIscrs.join(" · ")}</span>
-                      )}
-                    </Field>
-                    </>}
+              <div className="overflow-hidden rounded-lg border border-[#E5E4E2] bg-[#E5E4E2]/30 dark:border-[#E5E4E2]/15 dark:bg-[#0b0b0b]">
+                {row.claims.map((c) => (
+                  <div key={c.society + c.isrc + c.title} className="border-b border-[#E5E4E2] p-3 last:border-b-0 dark:border-[#E5E4E2]/15">
+                    <div className="grid grid-cols-2 gap-x-3">
+                      <span className="pb-1.5 text-[10px] font-bold uppercase tracking-wider text-[#0b0b0b]/55 dark:text-[#E5E4E2]/55">Your catalog</span>
+                      <span className="flex flex-wrap items-center gap-1.5 pb-1.5 text-[10px] font-bold uppercase tracking-wider text-[#0b0b0b]/55 dark:text-[#E5E4E2]/55">
+                        The agency
+                        <span className="rounded-full border border-[#004AAD]/30 bg-[#004AAD]/10 px-1.5 py-px text-[10px] font-semibold normal-case tracking-normal text-[#004AAD] dark:border-[#4D8CFF]/40 dark:bg-[#4D8CFF]/15 dark:text-[#4D8CFF]">{c.name}</span>
+                      </span>
+                      {compareRows(c).map((f) => (
+                        <Fragment key={f.label}>
+                          <Field label={f.label} differs={f.differs}>{f.left}</Field>
+                          <Field label={f.label} differs={f.differs}>{f.right}</Field>
+                        </Fragment>
+                      ))}
+                    </div>
                   </div>
-                  <div className="min-w-0 space-y-1.5 border-l border-[#E5E4E2] pl-3 dark:border-[#E5E4E2]/15">
-                    <span className="block text-[10px] font-bold uppercase tracking-wider text-[#0b0b0b]/55 dark:text-[#E5E4E2]/55">The agency</span>
-                    {row.claims.map((c) => (
-                      <div key={c.society + c.isrc + c.title} className="space-y-1.5">
-                        <span className="block text-[10px] font-semibold uppercase tracking-wide text-[#004AAD] dark:text-[#4D8CFF]">{c.name}</span>
-                        <Field label="Title" differs={titlesDisagree}><Title value={c.title || row.title} against={row.title} emphasise={titlesDisagree} /></Field>
-                        {row.composition && (
-                          <>
-                            <Field label="ISWC" differs={!!c.iswc && !!row.composition.catalog.iswc && canon(c.iswc) !== canon(row.composition.catalog.iswc)}><Value text={c.iswc ?? ""} empty="No ISWC on the list" /></Field>
-                            <Field label="Writers" differs={false}><Value text={(c.writers ?? []).join(" · ")} empty="No writers on the list" /></Field>
-                          </>
-                        )}
-                        {!row.composition && <>
-                        <Field label="Version" differs={versionsDisagreeFor(c.version ?? "")}><Value text={c.version ?? ""} empty="Not named" /></Field>
-                        <Field label="Artist" differs={artistsDisagreeFor(c.artist ?? "")}><Value text={c.artist ?? ""} empty="Not on the list" /></Field>
-                        <Field label="ISRC" differs={codesDiffer}>
-                          {c.isrc
-                            ? <Isrc value={c.isrc} against={row.catalogIsrc} />
-                            : <Value text="" empty="No ISRC on the list" />}
-                          {/* Two codes under one title are two recordings: the second is shown, never hidden behind the first. Each
-                              code now has its own claim, so this only draws for a row that still holds them all under one. */}
-                          {row.claims.length === 1 && row.agencyCodes.filter((x) => x.isrc && x.isrc.toUpperCase() !== (c.isrc || "").toUpperCase()).map((x) => (
-                            <span key={x.isrc} className="mt-1 block">
-                              <Isrc value={x.isrc} against={row.catalogIsrc} />
-                              <span className="mt-0.5 block text-[10px] text-[#0b0b0b]/55 dark:text-[#E5E4E2]/55">
-                                {x.version ? `Second code · ${x.version}` : "Second code on the list"}
-                              </span>
-                            </span>
-                          ))}
-                        </Field>
-                        </>}
-                      </div>
-                    ))}
-                  </div>
-                </div>
+                ))}
               </div>
             </div>}
 
@@ -311,29 +339,33 @@ export function DifferencesChart({ rows, busyKey, onFixCatalog, onAdopt, onKeepB
                   )}
                 </div>
                 </div>
-                {/* Every difference on the recording, never just the first: each one is listed with its own treatment and
-                    its own fix, so a song with a wrong ISWC and a missing writer is not fixed only halfway. A fix that is
-                    already the card's own button is not drawn a second time (founder, 2026-11-14): "Copy ISRC & Check
-                    Repertoire" appears once per card, however many differences list it. */}
+                {/* Every difference is covered, but one rule is written once (founder, 2026-11-14): the headline and
+                    the advice appear a single time, and each case the rule settles is named under it. */}
                 {row.fixes.length > 1 && (() => {
+                  const groups = groupFixes(row.fixes);
                   return (
                   <div className="mt-3 border-t border-[#004AAD]/20 pt-3 dark:border-[#4D8CFF]/25">
                     <p className="text-[11px] font-bold uppercase tracking-wider text-[#004AAD] dark:text-[#4D8CFF]">
                       All {row.fixes.length} differences on {row.composition ? "this work" : "this recording"}
+                      {groups.length < row.fixes.length && <span className="normal-case tracking-normal text-[#0b0b0b]/55 dark:text-[#E5E4E2]/55"> · {groups.length} {groups.length === 1 ? "treatment" : "treatments"}</span>}
                     </p>
                     <ol className="mt-2 space-y-3">
-                      {row.fixes.map((fix, i) => {
+                      {groups.map((g, i) => {
                         // A check the card already offers is not offered again: same agency, same value, one click.
-                        const repeat = !takeLink(fix.treatment.primary, copied?.value ?? (fix.code || row.title));
+                        const repeat = !takeLink(g.treatment.primary, copied?.value ?? (g.code || row.title));
                         return (
-                        <li key={fix.issue}>
-                          <p className="text-[11px] leading-snug text-[#0b0b0b]/65 dark:text-[#E5E4E2]/65">{i + 1}. {fix.issue}</p>
-                          <p className="mt-0.5 text-xs font-semibold text-[#0b0b0b] dark:text-[#FFFFFF]">{fix.headline}</p>
-                          <p className="mt-0.5 text-[11px] leading-relaxed text-[#0b0b0b]/70 dark:text-[#E5E4E2]/70">{fix.text}</p>
+                        <li key={g.key}>
+                          <p className="text-xs font-semibold text-[#0b0b0b] dark:text-[#FFFFFF]">{i + 1}. {g.headline}</p>
+                          <p className="mt-0.5 text-[11px] leading-relaxed text-[#0b0b0b]/70 dark:text-[#E5E4E2]/70">{g.text}</p>
+                          <ul className="mt-1 space-y-0.5">
+                            {g.issues.map((issue) => (
+                              <li key={issue} className="text-[11px] leading-snug text-[#0b0b0b]/65 dark:text-[#E5E4E2]/65">• {issueCase(issue)}</li>
+                            ))}
+                          </ul>
                           {!repeat && (
-                            <button type="button" onClick={() => runFix(fix)} disabled={busy}
+                            <button type="button" onClick={() => runFix(g)} disabled={busy}
                               className="mt-1 text-[11px] font-semibold text-[#004AAD] underline decoration-[#4D8CFF]/50 underline-offset-4 hover:text-[#4D8CFF] disabled:opacity-60 dark:text-[#4D8CFF]">
-                              {fix.treatment.primary}
+                              {g.treatment.primary}
                             </button>
                           )}
                         </li>

@@ -353,6 +353,29 @@ export function fixesFor(issues: string[], ctx: { catalogIsrc: string; agencyIsr
 }
 
 /**
+ * Differences that one rule settles are one treatment, not the same paragraph repeated (founder, 2026-11-14): two writers
+ * with two spellings each are two cases of "fix the spelling on one side", so the rule is written once and both writers
+ * are named under it.
+ */
+export type FixGroup = { key: string; headline: string; text: string; issues: string[]; code: string; treatment: Treatment };
+
+export function groupFixes(fixes: RowFix[]): FixGroup[] {
+  const groups = new Map<string, FixGroup>();
+  for (const f of fixes) {
+    // The rule, its own words and the code it checks: the same rule over two different codes is two separate checks.
+    const key = `${f.treatment.primary}|${f.headline}|${f.text}|${f.code}`;
+    const seen = groups.get(key);
+    if (seen) { seen.issues.push(f.issue); continue; }
+    groups.set(key, { key, headline: f.headline, text: f.text, issues: [f.issue], code: f.code, treatment: f.treatment });
+  }
+  return [...groups.values()];
+}
+
+/** The case itself, without the advice the rule already gives, so a grouped list stays one line per case. */
+export const issueCase = (issue: string) =>
+  issue.replace(/\s+[—–]\s+same (writer|recording|title|work)[\s\S]*$/i, "").replace(/\s+[—–]\s+one title[\s\S]*$/i, "").trim();
+
+/**
  * The exact field a card's fix link opens in My Catalog (founder, 2026-11-14). Every "Edit in My Catalog" and every fix
  * used to land on the ISRC, whatever had actually gone wrong; this is the one place that decides otherwise.
  */
