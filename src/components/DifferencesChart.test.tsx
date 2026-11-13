@@ -101,4 +101,20 @@ describe("DifferencesChart", () => {
     expect(text).toContain("Sign in to SoundExchange Direct");
     expect(text).toContain("QT6HX2656774");
   });
+
+  it("draws Copy ISRC & Check Repertoire once, however many differences list it", () => {
+    // Two differences on one recording, both settled by the same check: the card's own button is the only one.
+    const rows = buildDifferenceRows({
+      tracks: [catTrack("Bloodline", { isrc: "US-CTA-26-00111", releaseDate: "2026-01-01" })],
+      stored: stored([
+        { trackId: "a", title: "Bloodline", work: work({ title: "Bloodline", isrc: "GBSMU2963386" }), issues: ["The agency has ISRC GBSMU2963386, your catalog has US-CTA-26-00111"] },
+        { trackId: "a", title: "Bloodline", work: work({ title: "Bloodline", isrc: "GBSMU2963386" }), issues: ["The agency lists a second ISRC for \"Bloodline\": QZ85M1938225"] },
+      ]),
+    });
+    const row = rows[0]!;
+    expect(row.fixes.length).toBeGreaterThan(1);
+    renderRow(row);
+    const text = () => document.body.textContent ?? "";
+    expect(text().split("Copy ISRC & Check Repertoire").length - 1).toBe(1);
+  });
 });

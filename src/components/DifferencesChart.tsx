@@ -253,27 +253,38 @@ export function DifferencesChart({ rows, busyKey, onFixCatalog, onAdopt, onKeepB
                   )}
                 </div>
                 {/* Every difference on the recording, never just the first: each one is listed with its own treatment and
-                    its own fix, so a song with a wrong ISWC and a missing writer is not fixed only halfway. */}
-                {row.fixes.length > 1 && (
+                    its own fix, so a song with a wrong ISWC and a missing writer is not fixed only halfway. A fix that is
+                    already the card's own button is not drawn a second time (founder, 2026-11-14): "Copy ISRC & Check
+                    Repertoire" appears once per card, however many differences list it. */}
+                {row.fixes.length > 1 && (() => {
+                  const already = new Set<string>(waiting ? [] : [row.treatment.primary]);
+                  return (
                   <div className="mt-3 border-t border-[#004AAD]/20 pt-3 dark:border-[#4D8CFF]/25">
                     <p className="text-[11px] font-bold uppercase tracking-wider text-[#004AAD] dark:text-[#4D8CFF]">
                       All {row.fixes.length} differences on this recording
                     </p>
                     <ol className="mt-2 space-y-3">
-                      {row.fixes.map((fix, i) => (
+                      {row.fixes.map((fix, i) => {
+                        const repeat = already.has(fix.treatment.primary);
+                        if (!repeat) already.add(fix.treatment.primary);
+                        return (
                         <li key={fix.issue}>
                           <p className="text-[11px] leading-snug text-[#0b0b0b]/65 dark:text-[#E5E4E2]/65">{i + 1}. {fix.issue}</p>
                           <p className="mt-0.5 text-xs font-semibold text-[#0b0b0b] dark:text-[#FFFFFF]">{fix.headline}</p>
                           <p className="mt-0.5 text-[11px] leading-relaxed text-[#0b0b0b]/70 dark:text-[#E5E4E2]/70">{fix.text}</p>
-                          <button type="button" onClick={() => runFix(fix)} disabled={busy}
-                            className="mt-1 text-[11px] font-semibold text-[#004AAD] underline decoration-[#4D8CFF]/50 underline-offset-4 hover:text-[#4D8CFF] disabled:opacity-60 dark:text-[#4D8CFF]">
-                            {fix.treatment.primary}
-                          </button>
+                          {!repeat && (
+                            <button type="button" onClick={() => runFix(fix)} disabled={busy}
+                              className="mt-1 text-[11px] font-semibold text-[#004AAD] underline decoration-[#4D8CFF]/50 underline-offset-4 hover:text-[#4D8CFF] disabled:opacity-60 dark:text-[#4D8CFF]">
+                              {fix.treatment.primary}
+                            </button>
+                          )}
                         </li>
-                      ))}
+                        );
+                      })}
                     </ol>
                   </div>
-                )}
+                  );
+                })()}
               </div>
             </div>
           </li>
