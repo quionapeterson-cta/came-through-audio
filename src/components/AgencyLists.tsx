@@ -9,7 +9,7 @@ import { RELEASE_TYPES, WRITER_ROLES } from "@/lib/metadata";
 import { loadOnboarding, loadProfile } from "@/lib/artist-profile";
 import { saveTrack } from "@/lib/catalog";
 import { clearIntake, readIntake, writeIntake } from "@/lib/intake-session";
-import { buildDifferenceRows, openDifferenceCount, STORED_LISTS_KEY } from "@/lib/discrepancy-treatments";
+import { buildDifferenceRows, openDifferenceCount, STORED_LISTS_KEY, STORED_READER } from "@/lib/discrepancy-treatments";
 import { DifferencesPanel } from "@/components/DifferencesPanel";
 import { combinedHalves, compareList, downloadSteps, listGaps, listShareTotal, readTable, readWorks, type ListResult, type ListWork, type SavedListSummary } from "@/lib/agency-lists";
 import type { CatalogTrack } from "@/lib/catalog";
@@ -38,7 +38,7 @@ type Props = {
 };
 
 /** One society's last comparison in this browser: what was shown, and which file it came from. */
-type StoredLists = { byId: Record<string, { file: string; result: ListResult }>; shownId?: string | undefined };
+type StoredLists = { byId: Record<string, { file: string; result: ListResult; reader?: number | undefined }>; shownId?: string | undefined };
 
 /** The stored comparison, shared with the Differences panel so both read one key. */
 const STORE = STORED_LISTS_KEY;
@@ -90,7 +90,7 @@ export function AgencyLists({ userId, societies, songsFor, summaries, allTracks,
       const works = readWorks(await readTable(file));
       const result = compareList(works, songsFor(society.id), society.id === "soundexchange", society.name);
       await onApply(society, result, file.name);
-      setStored((s) => ({ ...s, byId: { ...s.byId, [society.id]: { file: file.name, result } } }));
+      setStored((s) => ({ ...s, byId: { ...s.byId, [society.id]: { file: file.name, result, reader: STORED_READER } } }));
       setShownId(society.id);
       toast.success(`${society.name}: ${result.matched.length} matched, ${result.differences.length} different${result.clashes.length ? `, ${result.clashes.length} same title but different writers` : ""}, ${result.notListed.length} not on the list.`);
     } catch (e) {

@@ -1,5 +1,5 @@
 import { readIntake } from "@/lib/intake-session";
-import { stripVersion, versionTail, type ListResult, type ListWork } from "@/lib/agency-lists";
+import { compareList, stripVersion, versionTail, type ListResult, type ListWork } from "@/lib/agency-lists";
 import type { CatalogTrack } from "@/lib/catalog";
 import { portalFor } from "@/lib/agency-portals";
 import type { CatalogAction, CatalogField } from "@/lib/catalog-links";
@@ -18,7 +18,87 @@ import type { CatalogAction, CatalogField } from "@/lib/catalog-links";
 /** The store name the agency intake has always used (`AgencyLists.tsx`). Kept here so both sides read the same key. */
 export const STORED_LISTS_KEY = "agency-lists";
 
-export type StoredLists = { byId: Record<string, { file: string; result: ListResult }>; shownId?: string | undefined };
+export type StoredLists = {
+  byId: Record<string, { file: string; result: ListResult; /** Which reading of the file produced this result. */ reader?: number | undefined }>;
+  shownId?: string | undefined;
+};
+
+/**
+ * The reading a saved comparison was made with (founder, 2026-11-14). A save from before the versions and artists were read
+ * was being shown exactly as it was written then — every version "Not named", one song counted four times — because the
+ * panel trusted a verdict from an older reader. Any save without this number is read again from the works it kept.
+ */
+export const STORED_READER = 2;
+
+/** "Clean Version", "clean", "Clean" — the same version name to a member's eye. */
+const bareVersion = (v: string) => norm(v).replace(/\bversion\b/g, "").replace(/\s+/g, " ").trim();
+const sameVersion = (a: string, b: string) => bareVersion(a) === bareVersion(b);
+
+/**
+ * One title, more than one recording. A list is matched to the catalog by title, so both entries under a title were handed
+ * the first work on the list and a pair read "Clean Version" twice (founder, 2026-11-14). Each entry takes the work whose
+ * version it names, and an entry that names none takes one no other entry has claimed — the list's own order, never a guess
+ * about which recording is which.
+ */
+function spreadWorks(group: CatalogTrack[], candidates: ListWork[], set: (t: CatalogTrack, w: ListWork) => void) {
+  const versionOf = (t: CatalogTrack) => (t.metadata.version ?? "").trim() || versionTail(t.title);
+  const claimed = new Set<ListWork>();
+  for (const t of group) {
+    const named = versionOf(t);
+    if (!named) continue;
+    const pick = candidates.find((w) => !claimed.has(w) && !!w.version && sameVersion(w.version, named));
+    if (!pick) continue;
+    claimed.add(pick);
+    set(t, pick);
+  }
+  for (const t of group) {
+    if (versionOf(t)) continue;
+    const pick = candidates.find((w) => !claimed.has(w));
+    if (!pick) break;
+    claimed.add(pick);
+    set(t, pick);
+  }
+}
+
+/** Every work a saved comparison still holds, so it can be compared again without asking for the file a second time. */
+export function worksFromResult(result: ListResult): ListWork[] {
+  const out: ListWork[] = [];
+  const seen = new Set<string>();
+  // A save from the older reader kept the agency's title and code but not the version it read off that title ("Am Pm (Clean
+  // Version)" lost its "Clean Version"), so the version and the bare title are read from the title again — never invented.
+  const add = (w: ListWork) => {
+    const key = `${w.isrc}|${w.title}|${w.iswc}|${w.workId}`;
+    if (seen.has(key)) return;
+    seen.add(key);
+    out.push({
+      ...w,
+      version: w.version || versionTail(w.title) || undefined,
+      coreTitle: w.coreTitle || stripVersion(w.title) || undefined,
+    });
+  };
+  for (const m of [...result.matched, ...result.differences]) if (m.work) add(m.work);
+  for (const c of result.clashes) add(c.work);
+  for (const w of result.extra) add(w);
+  return out;
+}
+
+/** The saved comparisons read again by today's rules, or the same object when they were already read by them. */
+export function rereadStored(stored: StoredLists | undefined, tracks: CatalogTrack[], societies: { id: string; name: string }[] = []): StoredLists | undefined {
+  if (!stored) return stored;
+  let changed = false;
+  const byId: StoredLists["byId"] = {};
+  for (const [societyId, entry] of Object.entries(stored.byId)) {
+    const works = worksFromResult(entry.result);
+    if (entry.reader === STORED_READER || !works.length) { byId[societyId] = entry; continue; }
+    changed = true;
+    byId[societyId] = {
+      ...entry,
+      reader: STORED_READER,
+      result: compareList(works, tracks, societyId === "soundexchange", societyName(societyId, societies)),
+    };
+  }
+  return changed ? { ...stored, byId } : stored;
+}
 
 /** The saved comparisons for this account on this device, or nothing once the 12-hour sitting has expired. */
 export function readStoredLists(userId: string | undefined): StoredLists | undefined {
@@ -85,6 +165,15 @@ export const TREATMENTS = {
   crossAgency: {
     headline: "Check your distributor for which copy is right",
     detail: "Two agencies disagree about ISRC {isrc} for this same recording. Check the public repertoire listing and your distributor dashboard, then bring the other agency onto the copy your distributor delivered.",
+    primary: "Copy ISRC & Check Repertoire ↗",
+    secondary: "Edit in My Catalog",
+    action: "check-distributor",
+  } as Treatment,
+  // A code that differs says nothing about the title: the words name the code, or the member reads "different titles" on a
+  // card where the titles agree.
+  isrcMismatch: {
+    headline: "Check your distributor for which copy is right",
+    detail: "Your catalog and the agency list different ISRCs for this recording. Check the public repertoire listing and your distributor dashboard, then correct the side that holds the wrong code.",
     primary: "Copy ISRC & Check Repertoire ↗",
     secondary: "Edit in My Catalog",
     action: "check-distributor",
@@ -394,7 +483,8 @@ export function treatmentFor(input: { kind: DisagreementKind; catalogIsrc: strin
   if (kind === "same-title-different-isrc") return TREATMENTS.addVersion;
   if (kind === "cross-agency-split") return TREATMENTS.crossAgency;
   if (kind === "missing-catalog-isrc") return TREATMENTS.adoptAgency;
-  if (kind === "isrc-mismatch" || kind === "title-mismatch") return TREATMENTS.checkDistributor;
+  if (kind === "isrc-mismatch") return TREATMENTS.isrcMismatch;
+  if (kind === "title-mismatch") return TREATMENTS.checkDistributor;
   if (state === "waiting") return TREATMENTS.waiting;
   return TREATMENTS.checkDistributor;
 }
@@ -509,11 +599,26 @@ export function buildDifferenceRows({ stored, tracks, societies = [] }: BuildInp
     state,
   });
 
+  // Catalog entries that share a title, so a list holding more than one version of it can be spread across them.
+  const byTitle = new Map<string, CatalogTrack[]>();
+  for (const t of tracks) {
+    const core = norm(stripVersion(t.title));
+    if (core) byTitle.set(core, [...(byTitle.get(core) ?? []), t]);
+  }
+
   for (const [societyId, entry] of Object.entries(stored.byId)) {
     // `d.title` is the catalog's title; the agency's own title, version and artist come from the work on its list, so a
     // name difference is read from the file rather than compared with itself (founder, 2026-11-14).
     for (const m of [...entry.result.matched, ...entry.result.differences]) if (m.work) listWorks.set(`${societyId}:${m.trackId}`, m.work);
     for (const c of entry.result.clashes) listWorks.set(`${societyId}:${c.trackId}`, c.work);
+    // Two catalog entries under one title take the two works the list holds under it, each by the version it names.
+    for (const group of byTitle.values()) {
+      if (group.length < 2) continue;
+      const core = norm(stripVersion(group[0]!.title));
+      const candidates = worksFromResult(entry.result).filter((w) => norm(w.coreTitle ?? stripVersion(w.title)) === core);
+      if (candidates.length < 2) continue;
+      spreadWorks(group, candidates, (t, w) => listWorks.set(`${societyId}:${t.id}`, w));
+    }
     const grouped = new Map<string, { titles: string[]; isrcs: string[]; issues: string[]; versions: string[]; artists: string[] }>();
     for (const d of entry.result.differences) {
       const g = grouped.get(d.trackId) ?? { titles: [], isrcs: [], issues: [], versions: [], artists: [] };
@@ -636,7 +741,12 @@ export function buildDifferenceRows({ stored, tracks, societies = [] }: BuildInp
         catalogIsrc: distinct[0] ?? "",
         retiredIscrs: [],
         release: releaseOf(first, state),
-        versions: { catalog: catalogCodes[0]?.version ?? "", agency: claims.find((c) => c.version)?.version ?? "" },
+        // Both codes, both versions: the first claim's version alone read "Clean Version" for a song the list names Clean
+        // and Dirty (founder, 2026-11-14).
+        versions: {
+          catalog: [...new Set(catalogCodes.map((c) => c.version).filter(Boolean))].join(" · "),
+          agency: [...new Set(claims.map((c) => c.version ?? "").filter(Boolean))].join(" · "),
+        },
         artists: { catalog: first.artist ?? "", agency: claims.find((c) => c.artist)?.artist ?? "" },
         agencyCodes: claims.map((c) => ({ isrc: c.isrc, version: c.version ?? "" })),
         catalogCodes,

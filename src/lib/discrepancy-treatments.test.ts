@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
-import { TREATMENTS, actionFor, buildDifferenceRows, fieldFor, fixesFor, nameFromIssue, signInFor, treatmentForIssue, type StoredLists } from "@/lib/discrepancy-treatments";
+import { TREATMENTS, actionFor, buildDifferenceRows, fieldFor, fixesFor, nameFromIssue, rereadStored, signInFor, treatmentForIssue, worksFromResult, type StoredLists } from "@/lib/discrepancy-treatments";
+import { compareList, parseDelimited, readWorks } from "@/lib/agency-lists";
 import { catalogHref } from "@/lib/catalog-links";
 import { emptyMetadata, type Metadata } from "@/lib/metadata";
 
@@ -161,5 +162,79 @@ describe("difference rows", () => {
     expect(signInFor("mlc").signIn).toBe("https://portal.themlc.com/login");
     // An agency with no checked page falls back to its own site rather than inventing one.
     expect(signInFor("sesac", "https://www.sesac.com").signIn).toBe("https://www.sesac.com");
+  });
+
+  it("reads a comparison saved by an older reader again, instead of trusting its verdict", () => {
+    // Saved on 2026-11-12: no version field, and the same recording listed once per version in the catalog's own title.
+    const old = {
+      byId: { soundexchange: { file: "sx.csv", result: { matched: [], clashes: [], notListed: [], extra: [], works: 30, differences: [
+        { trackId: "a", title: "Therapy (Acapella)", work: { title: "Therapy", iswc: "", isrc: "QT6HM2622200", workId: "", writers: [], artist: "Karma Came" }, issues: ['The agency calls it "Therapy", your catalog has "Therapy (Acapella)" — same recording, different name'] },
+      ] } } },
+    } as unknown as StoredLists;
+    const tracks = [catTrack("a", "Therapy (Acapella)", { isrc: "QT6HM2622200", releaseDate: "2026-01-01" })];
+    const fresh = rereadStored(old, tracks)!;
+    // Same recording, a version the catalog names and the list does not: nothing to report.
+    expect(fresh).not.toBe(old);
+    expect(buildDifferenceRows({ tracks, stored: fresh })).toHaveLength(0);
+    // A save already made by the current reader is left exactly as it is.
+    const marked = { byId: { soundexchange: { ...old.byId["soundexchange"]!, reader: 2 } } } as unknown as StoredLists;
+    expect(rereadStored(marked, tracks)).toBe(marked);
+  });
+
+  it("keeps the versions a SoundExchange list names when it reads an older save again", () => {
+    // The founder's own file: two codes for "Am Pm", one named Clean and one named Dirty, against two catalog entries that
+    // name no version at all. An old save dropped the versions, so the pair card read "Not named" on both sides.
+    const csv = `Artist,Track Title,ISRC,SXID,Effective %,Hold,Registrant,Payee ID#,Association Type
+Karma Came,Am Pm (Clean Version),QT6HX2656773,SX217QGZ03,100.0,No,Came Through Audio LLC,1000117426,Rights Owner
+Karma Came,Am Pm (Dirty Version),QT6HX2656774,SX217QGZ04,100.0,No,Came Through Audio LLC,1000117426,Rights Owner
+`;
+    const tracks = [
+      catTrack("a", "AM PM", { isrc: "QT6HX2656773", releaseDate: "2026-01-01" }),
+      catTrack("b", "AM PM", { isrc: "QT6HX2656774", releaseDate: "2026-01-01" }),
+    ];
+    const works = readWorks(parseDelimited(csv));
+    const today = compareList(works, tracks, true, "SoundExchange");
+    // What the old reader saved: the works it kept carry no version and no core title.
+    const bare = (w: { title: string; iswc: string; isrc: string; workId: string; writers: unknown[] }) =>
+      ({ title: w.title, iswc: w.iswc, isrc: w.isrc, workId: w.workId, writers: w.writers });
+    const old = {
+      byId: { soundexchange: { file: "sx.csv", result: {
+        ...today,
+        matched: today.matched.map((m) => ({ ...m, work: bare(m.work!) })),
+        differences: today.differences.map((d) => ({ ...d, work: bare(d.work!) })),
+        clashes: today.clashes.map((c) => ({ ...c, work: bare(c.work!) })),
+        extra: today.extra.map((w) => bare(w)),
+      } } },
+    } as unknown as StoredLists;
+    // The save itself holds no version at all, and the versions come back from the agency's own titles.
+    const saved = old.byId["soundexchange"]!.result;
+    expect([...saved.matched, ...saved.differences, ...saved.clashes].every((m) => !!m.work && !("version" in m.work))).toBe(true);
+    expect(worksFromResult(saved).map((w) => w.version)).toEqual(["Clean Version", "Dirty Version"]);
+    const rows = buildDifferenceRows({ tracks, stored: rereadStored(old, tracks)! });
+    const pair = rows.find((r) => r.key === "pair:am-pm" || /am pm/i.test(r.title ?? ""));
+    expect(pair?.versions?.agency ?? "").toMatch(/Clean Version/);
+    expect(pair?.versions?.agency ?? "").toMatch(/Dirty Version/);
+  });
+
+  it("pairs two catalog entries when the list names each version and neither code is in the catalog yet", () => {
+    // The live shape: the catalog holds "AM PM" twice under distributor codes, the list holds "Am Pm (Clean Version)" and
+    // "Am Pm (Dirty Version)" under its own codes, and an older save kept both works unmatched.
+    const csv = `Artist,Track Title,ISRC,SXID,Effective %,Hold,Registrant,Payee ID#,Association Type
+Karma Came,Am Pm (Clean Version),QT6HX2656773,SX217QGZ03,100.0,No,Came Through Audio LLC,1000117426,Rights Owner
+Karma Came,Am Pm (Dirty Version),QT6HX2656774,SX217QGZ04,100.0,No,Came Through Audio LLC,1000117426,Rights Owner
+`;
+    const tracks = [
+      catTrack("a", "AM PM", { isrc: "US-CTA-26-00001", releaseDate: "2026-01-01" }),
+      catTrack("b", "AM PM", { isrc: "US-CTA-26-00002", releaseDate: "2026-01-01" }),
+    ];
+    const works = readWorks(parseDelimited(csv));
+    const old = { byId: { soundexchange: { file: "sx.csv", result: {
+      matched: [], differences: [], clashes: [], notListed: [], works: works.length,
+      extra: works.map((w) => ({ title: w.title, iswc: w.iswc, isrc: w.isrc, workId: w.workId, writers: w.writers })),
+    } } } } as unknown as StoredLists;
+    const rows = buildDifferenceRows({ tracks, stored: rereadStored(old, tracks)! });
+    const pair = rows.find((r) => r.kind === "version-pair");
+    expect(pair?.versions?.agency).toBe("Clean Version · Dirty Version");
+    expect(pair?.claims.map((c) => c.isrc)).toEqual(["QT6HX2656773", "QT6HX2656774"]);
   });
 });

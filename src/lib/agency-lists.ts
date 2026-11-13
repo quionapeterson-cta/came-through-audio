@@ -475,16 +475,34 @@ export function compareList(works: ListWork[], tracks: CatalogTrack[], recording
   // uncatalogued record, and it is folded into the song rather than reported as extra. Only a list that has the old code
   // and nothing else is a difference — that is the case worth telling the member about.
   const retiredFor = (w: ListWork) => tracks.find((t) => w.isrc && retiredCodes(t.metadata).includes(w.isrc));
+  // One title, more than one recording. Two catalog entries under a title were both handed the list's first work, so the
+  // second version of a song was read as the first — "Am Pm (Clean Version)" twice and no Dirty at all (founder,
+  // 2026-11-14). An entry takes the work its own version names, and a work no other entry has taken.
+  const versionOf = (t: CatalogTrack) => (t.metadata.version ?? "").trim() || versionTail(t.title);
+  const pickWork = (list: ListWork[], t: CatalogTrack): ListWork | undefined => {
+    const free = list.filter((w) => !used.has(w));
+    if (!free.length) return list[0];
+    const own = versionOf(t);
+    const bare = (v: string) => norm(v).replace(/\bversion\b/g, "").replace(/\s+/g, " ").trim();
+    return (own ? free.find((w) => w.version && bare(w.version) === bare(own)) : undefined) ?? free[0];
+  };
   for (const t of tracks) {
     const m = t.metadata;
-    const work = matchWork(works, t);
+    let work = matchWork(works, t);
+    // The list named this title twice and this entry names the other recording: take the work still going spare.
+    if (work && used.has(work)) work = pickWork(titledWorks(works, t.title), t) ?? work;
     if (!work) {
       // The list does have this title, but not one writer agrees: a clash to diagnose, never a silent "not on the list" —
       // and never a match, which would pin another writer's registration to this song.
       const titled = titledWorks(works, t.title);
-      if (titled.length) {
-        for (const w of titled) used.add(w);
-        clashes.push({ trackId: t.id, title: t.title, work: titled[0]!, issues: clashIssues(titled[0]!, m, agency) });
+      const own = pickWork(titled, t);
+      if (own) {
+        // The list's works under one title are all accounted for by this one song, unless another catalog entry names the
+        // same title: then the works left over are that entry's other recording.
+        const shared = tracks.some((o) => o.id !== t.id && titleCore(o.title) === titleCore(t.title));
+        if (shared) used.add(own);
+        else for (const w of titled) used.add(w);
+        clashes.push({ trackId: t.id, title: t.title, work: own, issues: clashIssues(own, m, agency) });
         continue;
       }
       notListed.push({ trackId: t.id, title: t.title });

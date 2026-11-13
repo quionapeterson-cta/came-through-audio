@@ -8,7 +8,7 @@ import { saveTrack, type CatalogTrack } from "@/lib/catalog";
 import type { SavedListSummary } from "@/lib/agency-lists";
 import { catalogHref } from "@/lib/catalog-links";
 import {
-  actionFor, buildDifferenceRows, fieldFor, openDifferenceCount, readStoredLists, societyName,
+  actionFor, buildDifferenceRows, fieldFor, openDifferenceCount, readStoredLists, rereadStored, societyName,
   type DifferenceRow, type StoredLists,
 } from "@/lib/discrepancy-treatments";
 
@@ -73,7 +73,11 @@ export function DifferencesPanel({ userId, tracks, societies, summaries, default
     }
   }, []);
 
-  const rows = useMemo(() => buildDifferenceRows({ stored, tracks, societies }), [stored, tracks, societies]);
+  // A comparison saved before versions and artists were read is compared again, from the works it kept, rather than shown
+  // with a verdict from an older reader (founder, 2026-11-14).
+  const reread = useMemo(() => rereadStored(stored, tracks, societies), [stored, tracks, societies]);
+  const refreshed = reread !== stored;
+  const rows = useMemo(() => buildDifferenceRows({ stored: reread, tracks, societies }), [reread, tracks, societies]);
   const shown = useMemo(() => rows
     .map((r) => treated.has(r.key) ? { ...r, status: "both-registered" as const } : r)
     .filter((r) => side === "all" || r.side === side)
@@ -139,6 +143,11 @@ export function DifferencesPanel({ userId, tracks, societies, summaries, default
               <p className="mt-0.5 max-w-[70ch] text-xs text-[#0b0b0b]/65 dark:text-[#E5E4E2]/65">
                 Your catalog against each agency, and the agencies against each other. Every card names what disagrees and the exact treatment.
               </p>
+              {refreshed && (
+                <p className="mt-1 text-xs text-[#0b0b0b]/60 dark:text-[#E5E4E2]/60">
+                  Read again just now: this comparison was saved before versions and artists were compared. Upload the list again to keep the newer reading.
+                </p>
+              )}
             </div>
           </div>
           <div className="flex items-center gap-2">
