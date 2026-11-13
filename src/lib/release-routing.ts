@@ -61,9 +61,9 @@ export function routedKinds<T>(
 export type CatalogRelease = { album: string; kind: RoutedKind };
 
 /**
- * The releases already in the member's catalog, so a song added from an agency list can join one of them instead of
- * starting as a lone single (founder, 2026-11-15). Albums and EPs only: a single is one song under its own name, which is
- * what an unplaced song already is. Read through `routedKinds`, so this list can never disagree with My Catalog.
+ * The releases already in the member's catalog, so a song added from an agency list can be placed on one of them
+ * (founder, 2026-11-16). Every kind is listed: a single is a release too, and a single's release title is the song's own
+ * title because a loose song carries no album. Read through `routedKinds`, so this list can never disagree with My Catalog.
  */
 export function catalogReleases<T>(
   songs: readonly T[],
@@ -73,9 +73,11 @@ export function catalogReleases<T>(
   const kinds = routedKinds(songs, fields, id);
   const out = new Map<string, CatalogRelease>();
   for (const song of songs) {
-    const album = fields(song).album.trim();
+    const f = fields(song);
     const kind = kinds.get(id(song));
-    if (!album || !kind || kind === "Single") continue;
+    // A single is named by its song when the album field is empty; that is the title My Catalog shows it under.
+    const album = (f.album.trim() || f.title.trim());
+    if (!album || !kind) continue;
     const key = albumKey(album);
     if (!out.has(key)) out.set(key, { album, kind });
   }

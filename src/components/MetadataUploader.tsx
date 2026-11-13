@@ -1359,7 +1359,9 @@ export function MetadataUploader({ onShareInfo, userId, mode = "embed", readOnly
               );
               // The Unreleased section (§4.2) sits above the released groups and holds every song that isn't out.
               // Nothing here is read-only: each entry opens the same song and the same Release checklist as before.
-              const pre = tracks.filter((t) => releaseStatus(t.metadata) !== "released" && !beatIsOut(t, tracks) && (filter === "All" || releaseGroup(t) === filter));
+              // Instrumentals keep their own folder (founder, 2026-11-16), so they are taken out of Unreleased and every
+              // released group below; the box at the end of the catalog is where they live.
+              const pre = tracks.filter((t) => !t.metadata.instrumental && releaseStatus(t.metadata) !== "released" && !beatIsOut(t, tracks) && (filter === "All" || releaseGroup(t) === filter));
               const prePct = pre.length ? Math.round(pre.reduce((n, t) => n + pctOf(t.id), 0) / pre.length) : 0;
               const byPct = (a: CatalogTrack, b: CatalogTrack) => pctOf(a.id) - pctOf(b.id);
               // A release can be part out and part not yet: its panel still counts and writes every song on it.
@@ -1397,9 +1399,9 @@ export function MetadataUploader({ onShareInfo, userId, mode = "embed", readOnly
               )}
               {(["Album", "EP", "Single"] as const).filter((g) => filter === "All" || filter === g).map((g) => {
               // Released groups list released music only; the chip says where the rest went.
-              const items = tracks.filter((t) => releaseGroup(t) === g && releaseStatus(t.metadata) === "released");
+              const items = tracks.filter((t) => !t.metadata.instrumental && releaseGroup(t) === g && releaseStatus(t.metadata) === "released");
               if (!items.length) return null;
-              const preCount = tracks.filter((t) => releaseGroup(t) === g && releaseStatus(t.metadata) !== "released").length;
+              const preCount = tracks.filter((t) => !t.metadata.instrumental && releaseGroup(t) === g && releaseStatus(t.metadata) !== "released").length;
               return <div key={g} className="mb-8">
                 <h3 className="mb-3 text-sm font-bold uppercase tracking-widest text-primary">{g}s<UnreleasedChip count={preCount} /></h3>
                 {g === "Single"
@@ -1429,6 +1431,26 @@ export function MetadataUploader({ onShareInfo, userId, mode = "embed", readOnly
                   })}</div>}
               </div>;
             })}
+            {(() => {
+              // Instrumentals have their own folder (founder, 2026-11-16): no album says an instrumental version belongs with
+              // the songs on that album, so the versions sit together here instead.
+              const instrumentals = tracks.filter((t) => t.metadata.instrumental && (filter === "All" || releaseGroup(t) === filter));
+              if (!instrumentals.length) return null;
+              const ready = Math.round(instrumentals.reduce((n, t) => n + pctOf(t.id), 0) / instrumentals.length);
+              return <div id="instrumentals" className="mb-8 scroll-mt-4">
+                <h3 className="mb-3 text-sm font-bold uppercase tracking-widest text-primary">Instrumentals</h3>
+                <details open={instrumentals.some((t) => t.id === editingId) || !instrumentals.some((t) => releaseStatus(t.metadata) === "released")} className="rounded-2xl border border-border p-4 open:border-primary">
+                  <summary className="flex cursor-pointer list-none items-center gap-4">
+                    <div className="flex h-14 w-14 items-center justify-center rounded-lg bg-primary text-primary-foreground"><Disc3 className="h-7 w-7" /></div>
+                    <div className="min-w-0 flex-1">
+                      <div className="truncate text-xl font-bold">Instrumentals</div>
+                      <div className="text-sm text-muted-foreground">{instrumentals.length} {instrumentals.length === 1 ? "instrumental" : "instrumentals"} · {ready}% ready to register</div>
+                    </div>
+                  </summary>
+                  <ul className="mt-4 grid gap-3">{[...instrumentals].sort((a, b) => a.title.localeCompare(b.title)).map(row)}</ul>
+                </details>
+              </div>;
+            })()}
             </>;
             })()}
             {picked.size > 0 && (() => { const sel = tracks.filter((t) => picked.has(t.id)); return sel.length > 0 && (

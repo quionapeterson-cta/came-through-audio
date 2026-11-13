@@ -113,46 +113,30 @@ describe("AgencyLists", () => {
     expect(roles).toEqual(["Author", "Composer"]);
   });
 
-  it("files the new songs into the release the member picks", async () => {
-    vi.mocked(saveTrack).mockClear();
-    render(<AgencyLists userId="u1" societies={[ascap]} songsFor={() => []} summaries={{}} onApply={vi.fn().mockResolvedValue(undefined)} />);
-    const file = new File(["Work Title,Writer Name,Share\nGold Teeth,RAY BO,100\nAmber,RAY BO,100\n"], "ascap.csv", { type: "text/csv" });
-    fireEvent.change(screen.getByLabelText("Upload your ASCAP list"), { target: { files: [file] } });
-    fireEvent.click(await screen.findByRole("button", { name: /Fill my catalog/ }));
-    expect(await screen.findByText("2 of 2 selected")).toBeTruthy();
-    fireEvent.click(screen.getByRole("radio", { name: /They all belong to one release/ }));
-    fireEvent.change(screen.getByLabelText("Release type"), { target: { value: "EP" } });
-    fireEvent.change(screen.getByLabelText("Release title"), { target: { value: "Bloom" } });
-    fireEvent.click(screen.getByRole("button", { name: /Add 2 songs/ }));
-    await waitFor(() => expect(vi.mocked(saveTrack)).toHaveBeenCalledTimes(2));
-    for (const call of vi.mocked(saveTrack).mock.calls) {
-      expect(call[0].releaseType).toBe("EP");
-      expect(call[0].album).toBe("Bloom");
-    }
-  });
-
-  it("offers the releases already in the catalog, and files each song wherever the member puts it", async () => {
+  it("files each new song where its own dropdown puts it, Unreleased by default", async () => {
     vi.mocked(saveTrack).mockClear();
     const album = track("album1", "One", { album: "BAM", releaseType: "Album" });
     const ep = track("ep1", "Two", { album: "Tape", releaseType: "EP" });
-    render(<AgencyLists userId="u1" societies={[ascap]} songsFor={() => []} allTracks={[album, ep]} summaries={{}} onApply={vi.fn().mockResolvedValue(undefined)} />);
+    const single = track("single1", "Loose", {});
+    render(<AgencyLists userId="u1" societies={[ascap]} songsFor={() => []} allTracks={[album, ep, single]} summaries={{}} onApply={vi.fn().mockResolvedValue(undefined)} />);
     const file = new File(["Work Title,Writer Name,Share\nGold Teeth,RAY BO,100\nAmber,RAY BO,100\n"], "ascap.csv", { type: "text/csv" });
     fireEvent.change(screen.getByLabelText("Upload your ASCAP list"), { target: { files: [file] } });
     fireEvent.click(await screen.findByRole("button", { name: /Fill my catalog/ }));
     expect(await screen.findByText("2 of 2 selected")).toBeTruthy();
-    fireEvent.click(screen.getByRole("radio", { name: /A release for each song/ }));
-    // The dropdown is the member's own catalog, not a blank field: the album and the EP are both there by name.
+    // The dropdown holds the catalog's own releases — singles, EPs and albums — then Unreleased and Instrumental.
     const gold = screen.getByLabelText("Release for Gold Teeth") as HTMLSelectElement;
-    expect([...gold.options].map((o) => o.textContent)).toEqual(expect.arrayContaining(["BAM · Album", "Tape · EP", "Its own single"]));
+    expect(gold.value).toBe("unreleased");
+    expect([...gold.options].map((o) => o.textContent)).toEqual(["Loose", "Tape", "BAM", "Unreleased", "Instrumental"]);
+    expect([...gold.querySelectorAll("optgroup")].map((g) => g.label)).toEqual(["Singles", "EPs", "Albums", "Not out yet"]);
+    // One song to an album, one marked instrumental: each keeps its own answer.
     fireEvent.change(gold, { target: { value: "rel:BAM" } });
-    fireEvent.change(screen.getByLabelText("Release for Amber"), { target: { value: "new:EP" } });
-    // A brand-new EP can't be filed without a title, so adding waits for it.
-    expect((screen.getByRole("button", { name: /Add 2 songs/ }) as HTMLButtonElement).disabled).toBe(true);
-    fireEvent.change(screen.getByLabelText("New release title for Amber"), { target: { value: "Afterglow" } });
+    fireEvent.change(screen.getByLabelText("Release for Amber"), { target: { value: "instrumental" } });
     fireEvent.click(screen.getByRole("button", { name: /Add 2 songs/ }));
     await waitFor(() => expect(vi.mocked(saveTrack)).toHaveBeenCalledTimes(2));
-    const placed = vi.mocked(saveTrack).mock.calls.map((c) => `${c[0].album}:${c[0].releaseType}`).sort();
-    expect(placed).toEqual(["Afterglow:EP", "BAM:Album"]);
+    const saved = vi.mocked(saveTrack).mock.calls.map((c) => c[0]);
+    expect(saved.find((m) => m.title === "Gold Teeth")).toMatchObject({ album: "BAM", releaseType: "Album" });
+    expect(saved.find((m) => m.title === "Amber")).toMatchObject({ instrumental: true });
+    expect(saved.find((m) => m.title === "Amber")!.album).toBe("");
   });
 
   it("gives a writer on two songs their own open box, and shows every writer of each song in it", async () => {

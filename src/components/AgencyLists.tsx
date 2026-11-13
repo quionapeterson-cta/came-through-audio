@@ -5,7 +5,7 @@ import { confirmAction } from "@/components/ConfirmHost";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { fillPlan, listPeople, personFor, withPeople, type FillPlan, type Person, type PersonChoice } from "@/lib/agency-fill";
-import { RELEASE_TYPES, WRITER_ROLES } from "@/lib/metadata";
+import { WRITER_ROLES } from "@/lib/metadata";
 import { catalogReleases } from "@/lib/release-routing";
 import { loadOnboarding, loadProfile } from "@/lib/artist-profile";
 import { saveTrack } from "@/lib/catalog";
@@ -46,6 +46,12 @@ type StoredLists = { byId: Record<string, { file: string; result: ListResult; re
 /** The stored comparison, shared with the Differences panel so both read one key. */
 const STORE = STORED_LISTS_KEY;
 
+/** The answers that aren't a catalog release: a work nobody has released yet, and an instrumental (founder, 2026-11-16). */
+const UNRELEASED = "unreleased";
+const INSTRUMENTAL = "instrumental";
+/** The release kinds the dropdown groups by, in the order My Catalog lists them. */
+const RELEASE_KINDS = ["Single", "EP", "Album"] as const;
+
 /** One work's own key: the same one the panel lists it under, so a pick survives a re-render. */
 const workKey = (w: ListWork) => w.workId || w.iswc || w.isrc || w.title;
 
@@ -64,13 +70,10 @@ export function AgencyLists({ userId, societies, songsFor, summaries, allTracks,
   /** Which of the new works to add: every one is ticked until the member unticks it. */
   const [picked, setPicked] = useState<Record<string, boolean>>({});
   /**
-   * Where the ticked new songs go: each its own single, one EP/album they all belong to, or a release picked for each of
-   * them from the catalog the member already has (founder, 2026-11-15).
+   * Where each ticked song goes (founder, 2026-11-16): a release already in the catalog, Unreleased, or Instrumental.
+   * Unanswered is Unreleased, which is where a work that isn't out yet belongs.
    */
-  const [release, setRelease] = useState<{ one: boolean; perSong: boolean; type: string; title: string }>({ one: false, perSong: true, type: "", title: "" });
-  /** One song's own placement: its own single, an existing release, or a new one it starts. */
   const [placements, setPlacements] = useState<Record<string, string>>({});
-  const [newRelease, setNewRelease] = useState<Record<string, string>>({});
   /** Everyone the songs being added name as a writer. The spelling is theirs everywhere; the role is asked per song. */
   const [people, setPeople] = useState<Person[]>([]);
   /** Roles by song, then by person: a co-writer can be the author of one song and the composer of another. */
@@ -148,9 +151,7 @@ export function AgencyLists({ userId, societies, songsFor, summaries, allTracks,
     setChoices({});
     const plan = fillPlan(result, songsFor(society.id), artist, agencyKind(society.id));
     setPicked(Object.fromEntries(plan.creates.map((c) => [workKey(c.work), true])));
-    setRelease({ one: false, perSong: true, type: "", title: "" });
     setPlacements({});
-    setNewRelease({});
     setPeople(listPeople(plan.creates.map((c) => c.work)));
     setRoles({});
     setNames({});
@@ -166,18 +167,13 @@ export function AgencyLists({ userId, societies, songsFor, summaries, allTracks,
     });
   }
 
-  /** Where one new song goes, from its own dropdown: its own single, an existing release, or a new one it starts. */
-  function placementFor(key: string): { album: string; releaseType: string } | undefined {
-    const value = placements[key] ?? "single";
-    if (value.startsWith("rel:")) {
-      const rel = catalogReleaseList.find((r) => r.album === value.slice(4));
-      return rel ? { album: rel.album, releaseType: rel.kind } : undefined;
-    }
-    if (value.startsWith("new:")) {
-      const title = (newRelease[key] ?? "").trim();
-      return title ? { album: title, releaseType: value.slice(4) } : undefined;
-    }
-    return undefined;
+  /** Where one new song goes, from its own dropdown: one of the catalog's releases, Unreleased, or Instrumental. */
+  function placementFor(key: string): { album?: string; releaseType?: string; instrumental?: boolean } | undefined {
+    const value = placements[key] ?? UNRELEASED;
+    if (value === UNRELEASED) return undefined;
+    if (value === INSTRUMENTAL) return { instrumental: true };
+    const rel = catalogReleaseList.find((r) => `rel:${r.album}` === value);
+    return rel ? { album: rel.album, releaseType: rel.kind } : undefined;
   }
 
   /**
@@ -189,8 +185,6 @@ export function AgencyLists({ userId, societies, songsFor, summaries, allTracks,
     setFilling(true);
     try {
       const adding = fill.plan.creates.filter((c) => picked[workKey(c.work)] !== false);
-      // The release the member picked is written with each song, so My Catalog files them together straight away.
-      const placing = release.one && !!release.type;
       for (const c of adding) {
         const key = workKey(c.work);
         // The role answers are this song's own, so one person can be the author here and the composer there. The spelling
@@ -202,19 +196,20 @@ export function AgencyLists({ userId, societies, songsFor, summaries, allTracks,
           if (role || name) chosen[p.key] = { ...(role ? { role } : {}), ...(name ? { name } : {}) };
         }
         const withRoles = withPeople(c.metadata, people, chosen);
-        const placed = placing ? { releaseType: release.type, album: release.title.trim() || withRoles.album } : placementFor(key) ?? {};
-        await saveTrack({ ...withRoles, ...placed }, userId);
+        // The release each song was given is written with it, so My Catalog files it where the member put it.
+        await saveTrack({ ...withRoles, ...(placementFor(key) ?? {}) }, userId);
       }
       let replaced = 0;
       for (const d of fill.plan.duplicates) if (choices[d.track.id] === "agency") { await saveTrack(d.agency, userId, updateTarget(d.track.id)); replaced += 1; }
       const added = adding.length;
+      const placedAny = adding.some((c) => workKey(c.work) in placements);
       const kept = fill.plan.duplicates.filter((d) => choices[d.track.id] !== "agency").length;
       toast.success(
         `${added ? `${added} song${added === 1 ? "" : "s"} added to My Catalog` : "No new songs added"}${replaced ? `, ${replaced} replaced with the agency's version` : ""}. ` +
         (kept ? `${kept} kept as yours, so ${fill.society.name} still needs updating to match. ` : "") +
-        placing
-          ? `File them under ${release.title.trim() || release.type}${release.title.trim() ? ` (${release.type})` : ""}; the list still leaves the release date, genre and duration for you in My Catalog.`
-          : "Each new entry starts as a single. Change its release type in My Catalog if it belongs to an EP or album.",
+        (placedAny
+          ? "Each song was filed where you put it; the list still leaves the release date, genre and duration for you in My Catalog."
+          : "Each new entry is Unreleased. Give it a release in My Catalog when it is out."),
         { duration: 12000 },
       );
       // The works just added are no longer "on the list but not in the catalog", so the offer can't run twice; a song
@@ -366,11 +361,7 @@ export function AgencyLists({ userId, societies, songsFor, summaries, allTracks,
     </li>;
   })();
 
-  /** A song put on a brand-new release without a title can't be filed, so the add button waits for it. */
-  const newReleaseUntitled = chosenCreates.some((c) => {
-    const key = workKey(c.work);
-    return (placements[key] ?? "").startsWith("new:") && !(newRelease[key] ?? "").trim();
-  });
+
   const gaps = shownResult
     ? [...shownResult.matched, ...shownResult.differences].map((m) => m.work).concat(shownResult.extra)
       .filter((w): w is ListWork => !!w)
@@ -560,49 +551,33 @@ export function AgencyLists({ userId, societies, songsFor, summaries, allTracks,
             </fieldset>}
             {fill.plan.creates.length > 0 && <fieldset className="space-y-2 rounded-xl border border-border p-3">
               <legend className="px-1 text-sm font-bold">Where do these songs belong?</legend>
-              <label className="flex items-start gap-2 text-sm">
-                <input type="radio" name="fill-release" className="mt-1 h-4 w-4 accent-[var(--primary)]" checked={!release.one} onChange={() => setRelease((r) => ({ ...r, one: false }))} />
-                <span><span className="font-semibold">Each one is its own single</span><span className="block text-xs text-muted-foreground">They show under Singles in My Catalog. An agency list names works, not the release they came out on, so this is the safe default.</span></span>
-              </label>
-              <label className="flex items-start gap-2 text-sm">
-                <input type="radio" name="fill-release" className="mt-1 h-4 w-4 accent-[var(--primary)]" checked={release.one} onChange={() => setRelease((r) => ({ ...r, one: true, perSong: false }))} />
-                <span><span className="font-semibold">They all belong to one release</span><span className="block text-xs text-muted-foreground">Choose the type and title now, so My Catalog files every ticked song under that EP or album.</span></span>
-              </label>
-              <label className="flex items-start gap-2 text-sm">
-                <input type="radio" name="fill-release" className="mt-1 h-4 w-4 accent-[var(--primary)]" checked={release.perSong} onChange={() => setRelease((r) => ({ ...r, one: false, perSong: true }))} />
-                <span><span className="font-semibold">A release for each song</span><span className="block text-xs text-muted-foreground">Pick from the singles, EPs and albums already in your catalog for every song — or start a new one for it.</span></span>
-              </label>
-              {release.perSong && <ul className="space-y-2 pl-1">
+              <p className="text-xs text-muted-foreground">
+                Each song gets its own answer, and it is written as the song is added: a release already in your catalog, Unreleased
+                while it isn't out, or Instrumental, which keeps it in the Instrumentals section of My Catalog.
+              </p>
+              <ul className="space-y-2">
                 {fill.plan.creates.filter((c) => picked[workKey(c.work)] !== false).map((c) => {
                   const key = workKey(c.work);
-                  const value = placements[key] ?? "single";
-                  return <li key={key} className="space-y-1 rounded-md border border-border/60 p-2">
-                    <div className="flex flex-wrap items-center justify-between gap-2">
-                      <span className="min-w-0 truncate text-sm">{c.metadata.title}</span>
-                      <select aria-label={`Release for ${c.metadata.title}`} value={value} onChange={(e) => setPlacements((p) => ({ ...p, [key]: e.target.value }))}
-                        className="h-8 max-w-[16rem] rounded-md border border-input bg-background px-2 text-xs">
-                        <option value="single">Its own single</option>
-                        {catalogReleaseList.map((r) => <option key={r.album} value={`rel:${r.album}`}>{r.album} · {r.kind}</option>)}
-                        <option value="new:Single">New single…</option>
-                        <option value="new:EP">New EP…</option>
-                        <option value="new:Album">New album…</option>
-                      </select>
-                    </div>
-                    {value.startsWith("new:") && <input aria-label={`New release title for ${c.metadata.title}`} value={newRelease[key] ?? ""}
-                      onChange={(e) => setNewRelease((p) => ({ ...p, [key]: e.target.value }))}
-                      placeholder={`${value === "new:EP" ? "EP" : value === "new:Album" ? "Album" : "Single"} title`}
-                      className="h-8 w-full rounded-md border border-input bg-background px-2 text-xs" />}
+                  const value = placements[key] ?? UNRELEASED;
+                  return <li key={key} className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-border/60 p-2">
+                    <span className="min-w-0 truncate text-sm">{c.metadata.title}</span>
+                    <select aria-label={`Release for ${c.metadata.title}`} value={value} onChange={(e) => setPlacements((p) => ({ ...p, [key]: e.target.value }))}
+                      className="h-8 max-w-[18rem] rounded-md border border-input bg-background px-2 text-xs">
+                      {RELEASE_KINDS.map((k) => {
+                        const list = catalogReleaseList.filter((r) => r.kind === k);
+                        if (!list.length) return null;
+                        return <optgroup key={k} label={`${k}s`}>
+                          {list.map((r) => <option key={r.album} value={`rel:${r.album}`}>{r.album}</option>)}
+                        </optgroup>;
+                      })}
+                      <optgroup label="Not out yet">
+                        <option value={UNRELEASED}>Unreleased</option>
+                        <option value={INSTRUMENTAL}>Instrumental</option>
+                      </optgroup>
+                    </select>
                   </li>;
                 })}
-              </ul>}
-              {release.one && <div className="grid gap-2 pl-6 sm:grid-cols-[11rem 1fr]">
-                <select aria-label="Release type" value={release.type} onChange={(e) => setRelease((r) => ({ ...r, type: e.target.value }))} className="h-9 rounded-md border border-input bg-background px-2 text-sm">
-                  <option value="">Release type…</option>
-                  {RELEASE_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
-                </select>
-                <input aria-label="Release title" value={release.title} onChange={(e) => setRelease((r) => ({ ...r, title: e.target.value }))} placeholder="Album or EP title" className="h-9 rounded-md border border-input bg-background px-3 text-sm" />
-                <p className="text-xs text-muted-foreground sm:col-span-2">One release per fill. Songs from another EP or album: fill again from that list, or change the one that's left out in My Catalog.</p>
-              </div>}
+              </ul>
             </fieldset>}
             {fill.plan.duplicates.length > 0 && <div className="space-y-2">
               <div className="flex flex-wrap items-center justify-between gap-2">
@@ -671,7 +646,7 @@ export function AgencyLists({ userId, societies, songsFor, summaries, allTracks,
             </div>}
             <div className="flex justify-end gap-2">
               <Button type="button" variant="ghost" disabled={filling} onClick={() => setFill(undefined)}>Cancel</Button>
-              <Button type="button" disabled={filling || (release.one && !release.type) || newReleaseUntitled || (!chosenCreates.length && !fill.plan.duplicates.some((d) => choices[d.track.id] === "agency"))} onClick={() => void runFill()}>
+              <Button type="button" disabled={filling || (!chosenCreates.length && !fill.plan.duplicates.some((d) => choices[d.track.id] === "agency"))} onClick={() => void runFill()}>
                 {filling ? <Loader2 className="animate-spin" /> : <ListPlus />}
                 {chosenCreates.length ? `Add ${chosenCreates.length} song${chosenCreates.length === 1 ? "" : "s"}` : "Update songs"}
               </Button>

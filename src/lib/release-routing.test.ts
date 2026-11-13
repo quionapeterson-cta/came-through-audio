@@ -68,15 +68,18 @@ describe("release routing", () => {
 describe("the releases already in the catalog", () => {
   const song = (id: string, title: string, album: string, releaseType = "") => ({ id, metadata: { title, album, releaseType } });
 
-  it("lists the albums and EPs, never the singles", () => {
+  it("lists every release the catalog has, singles included (founder, 2026-11-16)", () => {
     const songs = [
       song("a", "One", "BAM", "Album"),
       song("b", "Two", "BAM", "Album"),
       song("c", "Three", "Tape", "EP"),
       song("d", "Loose", "", ""),
+      song("e", "Called It", "Called It", "Single"),
     ];
     expect(catalogReleases(songs, (s) => s.metadata, (s) => s.id)).toEqual([
       { album: "BAM", kind: "Album" },
+      { album: "Called It", kind: "Single" },
+      { album: "Loose", kind: "Single" },
       { album: "Tape", kind: "EP" },
     ]);
   });
