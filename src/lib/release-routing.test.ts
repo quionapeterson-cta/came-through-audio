@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { albumKey, routedKinds } from "./release-routing";
+import { albumKey, catalogReleases, routedKinds } from "./release-routing";
 
 type Song = { id: string; title: string; album: string; releaseType: string };
 const song = (id: string, title: string, album: string, releaseType = ""): Song => ({ id, title, album, releaseType });
@@ -62,5 +62,27 @@ describe("release routing", () => {
   it("normalises an album title for grouping", () => {
     expect(albumKey("  Therapy   Deluxe Edition  ")).toBe("therapy deluxe edition");
     expect(albumKey("")).toBe("");
+  });
+});
+
+describe("the releases already in the catalog", () => {
+  const song = (id: string, title: string, album: string, releaseType = "") => ({ id, metadata: { title, album, releaseType } });
+
+  it("lists the albums and EPs, never the singles", () => {
+    const songs = [
+      song("a", "One", "BAM", "Album"),
+      song("b", "Two", "BAM", "Album"),
+      song("c", "Three", "Tape", "EP"),
+      song("d", "Loose", "", ""),
+    ];
+    expect(catalogReleases(songs, (s) => s.metadata, (s) => s.id)).toEqual([
+      { album: "BAM", kind: "Album" },
+      { album: "Tape", kind: "EP" },
+    ]);
+  });
+
+  it("names a release once, however many songs are on it", () => {
+    const songs = [song("a", "One", "BAM"), song("b", "Two", "bam ")];
+    expect(catalogReleases(songs, (s) => s.metadata, (s) => s.id)).toHaveLength(1);
   });
 });

@@ -56,3 +56,28 @@ export function routedKinds<T>(
   }
   return kinds;
 }
+
+/** One release the member already has, as the fill dialog offers it in a dropdown. */
+export type CatalogRelease = { album: string; kind: RoutedKind };
+
+/**
+ * The releases already in the member's catalog, so a song added from an agency list can join one of them instead of
+ * starting as a lone single (founder, 2026-11-15). Albums and EPs only: a single is one song under its own name, which is
+ * what an unplaced song already is. Read through `routedKinds`, so this list can never disagree with My Catalog.
+ */
+export function catalogReleases<T>(
+  songs: readonly T[],
+  fields: (song: T) => ReleaseFields,
+  id: (song: T) => string,
+): CatalogRelease[] {
+  const kinds = routedKinds(songs, fields, id);
+  const out = new Map<string, CatalogRelease>();
+  for (const song of songs) {
+    const album = fields(song).album.trim();
+    const kind = kinds.get(id(song));
+    if (!album || !kind || kind === "Single") continue;
+    const key = albumKey(album);
+    if (!out.has(key)) out.set(key, { album, kind });
+  }
+  return [...out.values()].sort((a, b) => a.album.localeCompare(b.album));
+}

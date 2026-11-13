@@ -88,12 +88,29 @@ describe("AgencyLists", () => {
     fireEvent.change(screen.getByLabelText("Upload your ASCAP list"), { target: { files: [file] } });
     fireEvent.click(await screen.findByRole("button", { name: /Fill my catalog/ }));
     expect(await screen.findByText("Who wrote what?")).toBeTruthy();
-    // Nothing is preselected: the list never said, so the member answers.
-    expect(screen.getByRole("button", { name: "Author" }).getAttribute("aria-pressed")).toBe("false");
-    fireEvent.click(screen.getByRole("button", { name: "Composer" }));
+    // Nothing is preselected: the list never said, so the member answers — and the answer names the song it is about,
+    // because the same person can be the author of one song and the composer of another (founder, 2026-11-15).
+    expect(screen.getByRole("button", { name: "RAY BO on Gold Teeth: Author" }).getAttribute("aria-pressed")).toBe("false");
+    fireEvent.click(screen.getByRole("button", { name: "RAY BO on Gold Teeth: Composer" }));
     fireEvent.click(screen.getByRole("button", { name: /Add 1 song/ }));
     await waitFor(() => expect(vi.mocked(saveTrack)).toHaveBeenCalledTimes(1));
     expect(vi.mocked(saveTrack).mock.calls[0]![0].writers[0]!.role).toBe("Composer");
+  });
+
+  it("asks the role song by song, so one writer can be the author of one and the composer of another", async () => {
+    vi.mocked(saveTrack).mockClear();
+    render(<AgencyLists userId="u1" societies={[ascap]} songsFor={() => []} summaries={{}} onApply={vi.fn().mockResolvedValue(undefined)} />);
+    const file = new File(["Work Title,Writer Name,Share\nGold Teeth,RAY BO,100\nSilver Teeth,RAY BO,100\n"], "ascap.csv", { type: "text/csv" });
+    fireEvent.change(screen.getByLabelText("Upload your ASCAP list"), { target: { files: [file] } });
+    fireEvent.click(await screen.findByRole("button", { name: /Fill my catalog/ }));
+    expect(await screen.findByText("Who wrote what?")).toBeTruthy();
+    // Both songs are open to begin with, and each gets its own answer.
+    fireEvent.click(screen.getByRole("button", { name: "RAY BO on Gold Teeth: Composer" }));
+    fireEvent.click(screen.getByRole("button", { name: "RAY BO on Silver Teeth: Author" }));
+    fireEvent.click(screen.getByRole("button", { name: /Add 2 songs/ }));
+    await waitFor(() => expect(vi.mocked(saveTrack)).toHaveBeenCalledTimes(2));
+    const roles = vi.mocked(saveTrack).mock.calls.map((c) => c[0].writers[0]!.role).sort();
+    expect(roles).toEqual(["Author", "Composer"]);
   });
 
   it("files the new songs into the release the member picks", async () => {
@@ -112,5 +129,42 @@ describe("AgencyLists", () => {
       expect(call[0].releaseType).toBe("EP");
       expect(call[0].album).toBe("Bloom");
     }
+  });
+
+  it("offers the releases already in the catalog, and files each song wherever the member puts it", async () => {
+    vi.mocked(saveTrack).mockClear();
+    const album = track("album1", "One", { album: "BAM", releaseType: "Album" });
+    const ep = track("ep1", "Two", { album: "Tape", releaseType: "EP" });
+    render(<AgencyLists userId="u1" societies={[ascap]} songsFor={() => []} allTracks={[album, ep]} summaries={{}} onApply={vi.fn().mockResolvedValue(undefined)} />);
+    const file = new File(["Work Title,Writer Name,Share\nGold Teeth,RAY BO,100\nAmber,RAY BO,100\n"], "ascap.csv", { type: "text/csv" });
+    fireEvent.change(screen.getByLabelText("Upload your ASCAP list"), { target: { files: [file] } });
+    fireEvent.click(await screen.findByRole("button", { name: /Fill my catalog/ }));
+    expect(await screen.findByText("2 of 2 selected")).toBeTruthy();
+    fireEvent.click(screen.getByRole("radio", { name: /A release for each song/ }));
+    // The dropdown is the member's own catalog, not a blank field: the album and the EP are both there by name.
+    const gold = screen.getByLabelText("Release for Gold Teeth") as HTMLSelectElement;
+    expect([...gold.options].map((o) => o.textContent)).toEqual(expect.arrayContaining(["BAM · Album", "Tape · EP", "Its own single"]));
+    fireEvent.change(gold, { target: { value: "rel:BAM" } });
+    fireEvent.change(screen.getByLabelText("Release for Amber"), { target: { value: "new:EP" } });
+    // A brand-new EP can't be filed without a title, so adding waits for it.
+    expect((screen.getByRole("button", { name: /Add 2 songs/ }) as HTMLButtonElement).disabled).toBe(true);
+    fireEvent.change(screen.getByLabelText("New release title for Amber"), { target: { value: "Afterglow" } });
+    fireEvent.click(screen.getByRole("button", { name: /Add 2 songs/ }));
+    await waitFor(() => expect(vi.mocked(saveTrack)).toHaveBeenCalledTimes(2));
+    const placed = vi.mocked(saveTrack).mock.calls.map((c) => `${c[0].album}:${c[0].releaseType}`).sort();
+    expect(placed).toEqual(["Afterglow:EP", "BAM:Album"]);
+  });
+
+  it("answers every duplicate at once when the member takes the agency's version for all", async () => {
+    vi.mocked(saveTrack).mockClear();
+    render(<AgencyLists userId="u1" societies={[ascap]} songsFor={() => [track("a", "Midnight"), track("b", "Gold Teeth")]} summaries={{}} onApply={vi.fn().mockResolvedValue(undefined)} />);
+    const file = new File(["Work Title,Writer Name,Share\nMidnight,RAY BO,100\nGold Teeth,RAY BO,100\n"], "ascap.csv", { type: "text/csv" });
+    fireEvent.change(screen.getByLabelText("Upload your ASCAP list"), { target: { files: [file] } });
+    fireEvent.click(await screen.findByRole("button", { name: /Fill my catalog/ }));
+    fireEvent.click(await screen.findByRole("button", { name: /Use the agency's version for all 2/ }));
+    expect((screen.getAllByRole("radio", { name: /Use the agency's version/ })[0] as HTMLInputElement).checked).toBe(true);
+    expect((screen.getAllByRole("radio", { name: /Use the agency's version/ })[1] as HTMLInputElement).checked).toBe(true);
+    fireEvent.click(screen.getByRole("button", { name: /Update songs/ }));
+    await waitFor(() => expect(vi.mocked(saveTrack)).toHaveBeenCalledTimes(2));
   });
 });

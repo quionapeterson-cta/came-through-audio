@@ -32,6 +32,10 @@ export type Person = { key: string; names: string[]; ipi: string; pro: string; w
 /** What the member chose for one person: the role, one of `WRITER_ROLES`, and optionally the spelling to keep. */
 export type PersonChoice = { role?: string; name?: string };
 
+/** The person a writer name belongs to, whichever spelling the list used. */
+export const personFor = (people: Person[], name: string): Person | undefined =>
+  people.find((p) => p.names.includes(name)) ?? people.find((p) => p.names.some((n) => sameWriter(n, name)));
+
 export function listPeople(works: ListWork[]): Person[] {
   const found: (Person & { seen: ListWork[] })[] = [];
   for (const work of works) {

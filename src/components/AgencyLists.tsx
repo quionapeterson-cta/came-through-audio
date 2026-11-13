@@ -1,11 +1,12 @@
-import { useEffect, useRef, useState } from "react";
-import { Activity, ArrowRight, FileUp, LifeBuoy, ListPlus, Loader2, Trash2 } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { Activity, ArrowRight, ChevronDown, ChevronUp, FileUp, LifeBuoy, ListPlus, Loader2, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { confirmAction } from "@/components/ConfirmHost";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { fillPlan, listPeople, withPeople, type FillPlan, type Person, type PersonChoice } from "@/lib/agency-fill";
+import { fillPlan, listPeople, personFor, withPeople, type FillPlan, type Person, type PersonChoice } from "@/lib/agency-fill";
 import { RELEASE_TYPES, WRITER_ROLES } from "@/lib/metadata";
+import { catalogReleases } from "@/lib/release-routing";
 import { loadOnboarding, loadProfile } from "@/lib/artist-profile";
 import { saveTrack } from "@/lib/catalog";
 import { updateTarget } from "@/lib/ids";
@@ -62,13 +63,24 @@ export function AgencyLists({ userId, societies, songsFor, summaries, allTracks,
   const [preview, setPreview] = useState(false);
   /** Which of the new works to add: every one is ticked until the member unticks it. */
   const [picked, setPicked] = useState<Record<string, boolean>>({});
-  /** Where the ticked new songs go: each its own single, or one EP/album they all belong to. */
-  const [release, setRelease] = useState<{ one: boolean; type: string; title: string }>({ one: false, type: "", title: "" });
-  /** Everyone the songs being added name as a writer, with the one answer the member gives per person. */
+  /**
+   * Where the ticked new songs go: each its own single, one EP/album they all belong to, or a release picked for each of
+   * them from the catalog the member already has (founder, 2026-11-15).
+   */
+  const [release, setRelease] = useState<{ one: boolean; perSong: boolean; type: string; title: string }>({ one: false, perSong: false, type: "", title: "" });
+  /** One song's own placement: its own single, an existing release, or a new one it starts. */
+  const [placements, setPlacements] = useState<Record<string, string>>({});
+  const [newRelease, setNewRelease] = useState<Record<string, string>>({});
+  /** Everyone the songs being added name as a writer. The spelling is theirs everywhere; the role is asked per song. */
   const [people, setPeople] = useState<Person[]>([]);
-  const [roles, setRoles] = useState<Record<string, string>>({});
+  /** Roles by song, then by person: a co-writer can be the author of one song and the composer of another. */
+  const [roles, setRoles] = useState<Record<string, Record<string, string>>>({});
   const [names, setNames] = useState<Record<string, string>>({});
+  /** Songs folded away in the "who wrote what" list. It opens with every song showing. */
+  const [folded, setFolded] = useState<ReadonlySet<string>>(new Set());
   const inputs = useRef<Record<string, HTMLInputElement | null>>({});
+  /** The albums and EPs already in this account, offered in the dropdown under each new song. */
+  const catalogReleaseList = useMemo(() => catalogReleases(allTracks ?? [], (t) => t.metadata, (t) => t.id), [allTracks]);
 
   // Leaving the check-in (or opening the workspace in another window) used to empty this panel. The comparison is the
   // member's own reading of their file, so it stays with the account on this device.
@@ -136,12 +148,29 @@ export function AgencyLists({ userId, societies, songsFor, summaries, allTracks,
     setChoices({});
     const plan = fillPlan(result, songsFor(society.id), artist, agencyKind(society.id));
     setPicked(Object.fromEntries(plan.creates.map((c) => [workKey(c.work), true])));
-    setRelease({ one: false, type: "", title: "" });
+    setRelease({ one: false, perSong: false, type: "", title: "" });
+    setPlacements({});
+    setNewRelease({});
     setPeople(listPeople(plan.creates.map((c) => c.work)));
     setRoles({});
     setNames({});
+    setFolded(new Set());
     setFill({ society, plan });
   }
+  /** Where one new song goes, from its own dropdown: its own single, an existing release, or a new one it starts. */
+  function placementFor(key: string): { album: string; releaseType: string } | undefined {
+    const value = placements[key] ?? "single";
+    if (value.startsWith("rel:")) {
+      const rel = catalogReleaseList.find((r) => r.album === value.slice(4));
+      return rel ? { album: rel.album, releaseType: rel.kind } : undefined;
+    }
+    if (value.startsWith("new:")) {
+      const title = (newRelease[key] ?? "").trim();
+      return title ? { album: title, releaseType: value.slice(4) } : undefined;
+    }
+    return undefined;
+  }
+
   /**
    * Adds the new works and, only for the duplicates the member picked, writes the agency's version over the catalog's.
    * Nothing else is touched: a song left on "keep mine" is not saved at all.
@@ -153,17 +182,19 @@ export function AgencyLists({ userId, societies, songsFor, summaries, allTracks,
       const adding = fill.plan.creates.filter((c) => picked[workKey(c.work)] !== false);
       // The release the member picked is written with each song, so My Catalog files them together straight away.
       const placing = release.one && !!release.type;
-      // The answers given per person are written into every song that person is on; a person left unanswered stays blank.
-      const chosen: Record<string, PersonChoice> = {};
-      for (const p of people) {
-        const role = (roles[p.key] ?? "").trim();
-        const name = names[p.key]?.trim();
-        if (role || name) chosen[p.key] = { ...(role ? { role } : {}), ...(name ? { name } : {}) };
-      }
       for (const c of adding) {
+        const key = workKey(c.work);
+        // The role answers are this song's own, so one person can be the author here and the composer there. The spelling
+        // a member picked for a person is theirs on every song.
+        const chosen: Record<string, PersonChoice> = {};
+        for (const p of people) {
+          const role = ((roles[key] ?? {})[p.key] ?? "").trim();
+          const name = names[p.key]?.trim();
+          if (role || name) chosen[p.key] = { ...(role ? { role } : {}), ...(name ? { name } : {}) };
+        }
         const withRoles = withPeople(c.metadata, people, chosen);
-        const m = placing ? { ...withRoles, releaseType: release.type, album: release.title.trim() || withRoles.album } : withRoles;
-        await saveTrack(m, userId);
+        const placed = placing ? { releaseType: release.type, album: release.title.trim() || withRoles.album } : placementFor(key) ?? {};
+        await saveTrack({ ...withRoles, ...placed }, userId);
       }
       let replaced = 0;
       for (const d of fill.plan.duplicates) if (choices[d.track.id] === "agency") { await saveTrack(d.agency, userId, updateTarget(d.track.id)); replaced += 1; }
@@ -207,6 +238,11 @@ export function AgencyLists({ userId, societies, songsFor, summaries, allTracks,
   const shownResult = shownId ? stored.byId[shownId]?.result : undefined;
   // The list read on its own, without needing a catalog: what each work's agency record is missing.
   const chosenCreates = fill ? fill.plan.creates.filter((c) => picked[workKey(c.work)] !== false) : [];
+  /** A song put on a brand-new release without a title can't be filed, so the add button waits for it. */
+  const newReleaseUntitled = chosenCreates.some((c) => {
+    const key = workKey(c.work);
+    return (placements[key] ?? "").startsWith("new:") && !(newRelease[key] ?? "").trim();
+  });
   const gaps = shownResult
     ? [...shownResult.matched, ...shownResult.differences].map((m) => m.work).concat(shownResult.extra)
       .filter((w): w is ListWork => !!w)
@@ -385,32 +421,63 @@ export function AgencyLists({ userId, societies, songsFor, summaries, allTracks,
             {fill.plan.creates.length > 0 && people.length > 0 && <fieldset className="space-y-2 rounded-xl border border-border p-3">
               <legend className="px-1 text-sm font-bold">Who wrote what?</legend>
               <p className="text-xs text-muted-foreground">
-                The list names every writer but never says who wrote the words and who wrote the music. Choose once per person and it
-                applies to every song they&apos;re on. Someone can be both, and the artist often is. Anything left blank stays blank, and the
-                song says it still needs it.
+                The list names every writer but never says who wrote the words and who wrote the music. It is asked song by song,
+                because a writer credited on more than one song can be the author of one and the composer of another. Anything left
+                blank stays blank, and the song says it still needs it.
               </p>
               <ul className="space-y-2">
-                {people.map((p) => {
-                  const role = roles[p.key] ?? "";
-                  const shown = names[p.key] ?? p.names[0];
-                  return <li key={p.key} className="rounded-lg border border-border/70 p-2">
-                    <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
-                      <span className="text-sm font-semibold">{shown}</span>
-                      <span className="text-xs text-muted-foreground">
-                        {p.works} song{p.works === 1 ? "" : "s"}{p.ipi ? ` · IPI ${p.ipi}` : ""}{p.pro ? ` · ${p.pro}` : ""}
+                {fill.plan.creates.map((c) => {
+                  const key = workKey(c.work);
+                  const open = !folded.has(key);
+                  const answers = roles[key] ?? {};
+                  const named = c.work.writers.filter((w) => w.name.trim());
+                  const done = named.filter((w) => (answers[personFor(people, w.name)?.key ?? w.name] ?? "").trim()).length;
+                  return <li key={key} className="rounded-lg border border-border/70">
+                    <button type="button" aria-expanded={open} aria-label={`${open ? "Hide" : "Show"} who wrote ${c.metadata.title}`}
+                      onClick={() => setFolded((f) => {
+                        const next = new Set(f);
+                        if (next.has(key)) next.delete(key); else next.add(key);
+                        return next;
+                      })}
+                      className="flex w-full items-center justify-between gap-2 px-2 py-1.5 text-left">
+                      <span className="min-w-0 truncate text-sm font-semibold">{c.metadata.title}</span>
+                      <span className="flex shrink-0 items-center gap-1.5 text-[11px] text-muted-foreground">
+                        {done}/{named.length} answered
+                        {open ? <ChevronUp className="h-3.5 w-3.5" aria-hidden /> : <ChevronDown className="h-3.5 w-3.5" aria-hidden />}
                       </span>
-                    </div>
-                    {p.names.length > 1 && <div className="mt-1 flex flex-wrap items-center gap-1">
-                      <span className="text-xs text-muted-foreground">Same writer, spelled:</span>
-                      {p.names.map((n) => <button key={n} type="button" aria-pressed={shown === n} onClick={() => setNames((x) => ({ ...x, [p.key]: n }))}
-                        className={`rounded-full border px-2 py-0.5 text-xs ${shown === n ? "border-primary bg-accent/40 font-semibold text-primary" : "border-border text-muted-foreground"}`}>{n}</button>)}
-                    </div>}
-                    <div className="mt-1 flex flex-wrap gap-1">
-                      {WRITER_ROLES.map((r) => <button key={r} type="button" aria-pressed={role === r} onClick={() => setRoles((x) => ({ ...x, [p.key]: role === r ? "" : r }))}
-                        className={`rounded-full border px-2.5 py-0.5 text-xs ${role === r ? "border-primary bg-primary font-semibold text-primary-foreground" : "border-border"}`}>
-                        {r === "Author/Composer" ? "Both" : r}
-                      </button>)}
-                    </div>
+                    </button>
+                    {open && <ul className="space-y-2 px-2 pb-2">
+                      {named.map((w) => {
+                        const person = personFor(people, w.name);
+                        const pkey = person?.key ?? w.name;
+                        const role = answers[pkey] ?? "";
+                        const shown = names[pkey] ?? w.name;
+                        return <li key={w.name} className="rounded-md border border-border/60 p-2">
+                          <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
+                            <span className="text-sm font-semibold">{shown}</span>
+                            <span className="text-[11px] text-muted-foreground">
+                              {person ? `${person.works} song${person.works === 1 ? "" : "s"}` : ""}
+                              {w.share !== undefined ? `${person ? " · " : ""}${w.share}%` : ""}
+                              {w.ipi ? `${person || w.share !== undefined ? " · " : ""}IPI ${w.ipi}` : ""}
+                              {w.pro ? ` · ${w.pro}` : ""}
+                            </span>
+                          </div>
+                          {person && person.names.length > 1 && <div className="mt-1 flex flex-wrap items-center gap-1">
+                            <span className="text-[11px] text-muted-foreground">Same writer, spelled:</span>
+                            {person.names.map((n) => <button key={n} type="button" aria-pressed={shown === n} onClick={() => setNames((x) => ({ ...x, [pkey]: n }))}
+                              className={`rounded-full border px-2 py-0.5 text-[11px] ${shown === n ? "border-primary bg-accent/40 font-semibold text-primary" : "border-border text-muted-foreground"}`}>{n}</button>)}
+                          </div>}
+                          <div className="mt-1 flex flex-wrap gap-1">
+                            {WRITER_ROLES.map((r) => <button key={r} type="button" aria-pressed={role === r}
+                              aria-label={`${shown} on ${c.metadata.title}: ${r === "Author/Composer" ? "Both" : r}`}
+                              onClick={() => setRoles((x) => ({ ...x, [key]: { ...(x[key] ?? {}), [pkey]: role === r ? "" : r } }))}
+                              className={`rounded-full border px-2.5 py-0.5 text-xs ${role === r ? "border-primary bg-primary font-semibold text-primary-foreground" : "border-border"}`}>
+                              {r === "Author/Composer" ? "Both" : r}
+                            </button>)}
+                          </div>
+                        </li>;
+                      })}
+                    </ul>}
                   </li>;
                 })}
               </ul>
@@ -422,10 +489,37 @@ export function AgencyLists({ userId, societies, songsFor, summaries, allTracks,
                 <span><span className="font-semibold">Each one is its own single</span><span className="block text-xs text-muted-foreground">They show under Singles in My Catalog. An agency list names works, not the release they came out on, so this is the safe default.</span></span>
               </label>
               <label className="flex items-start gap-2 text-sm">
-                <input type="radio" name="fill-release" className="mt-1 h-4 w-4 accent-[var(--primary)]" checked={release.one} onChange={() => setRelease((r) => ({ ...r, one: true }))} />
+                <input type="radio" name="fill-release" className="mt-1 h-4 w-4 accent-[var(--primary)]" checked={release.one} onChange={() => setRelease((r) => ({ ...r, one: true, perSong: false }))} />
                 <span><span className="font-semibold">They all belong to one release</span><span className="block text-xs text-muted-foreground">Choose the type and title now, so My Catalog files every ticked song under that EP or album.</span></span>
               </label>
-              {release.one && <div className="grid gap-2 pl-6 sm:grid-cols-[11rem_1fr]">
+              <label className="flex items-start gap-2 text-sm">
+                <input type="radio" name="fill-release" className="mt-1 h-4 w-4 accent-[var(--primary)]" checked={release.perSong} onChange={() => setRelease((r) => ({ ...r, one: false, perSong: true }))} />
+                <span><span className="font-semibold">A release for each song</span><span className="block text-xs text-muted-foreground">Pick from the singles, EPs and albums already in your catalog for every song — or start a new one for it.</span></span>
+              </label>
+              {release.perSong && <ul className="space-y-2 pl-1">
+                {fill.plan.creates.filter((c) => picked[workKey(c.work)] !== false).map((c) => {
+                  const key = workKey(c.work);
+                  const value = placements[key] ?? "single";
+                  return <li key={key} className="space-y-1 rounded-md border border-border/60 p-2">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <span className="min-w-0 truncate text-sm">{c.metadata.title}</span>
+                      <select aria-label={`Release for ${c.metadata.title}`} value={value} onChange={(e) => setPlacements((p) => ({ ...p, [key]: e.target.value }))}
+                        className="h-8 max-w-[16rem] rounded-md border border-input bg-background px-2 text-xs">
+                        <option value="single">Its own single</option>
+                        {catalogReleaseList.map((r) => <option key={r.album} value={`rel:${r.album}`}>{r.album} · {r.kind}</option>)}
+                        <option value="new:Single">New single…</option>
+                        <option value="new:EP">New EP…</option>
+                        <option value="new:Album">New album…</option>
+                      </select>
+                    </div>
+                    {value.startsWith("new:") && <input aria-label={`New release title for ${c.metadata.title}`} value={newRelease[key] ?? ""}
+                      onChange={(e) => setNewRelease((p) => ({ ...p, [key]: e.target.value }))}
+                      placeholder={`${value === "new:EP" ? "EP" : value === "new:Album" ? "Album" : "Single"} title`}
+                      className="h-8 w-full rounded-md border border-input bg-background px-2 text-xs" />}
+                  </li>;
+                })}
+              </ul>}
+              {release.one && <div className="grid gap-2 pl-6 sm:grid-cols-[11rem 1fr]">
                 <select aria-label="Release type" value={release.type} onChange={(e) => setRelease((r) => ({ ...r, type: e.target.value }))} className="h-9 rounded-md border border-input bg-background px-2 text-sm">
                   <option value="">Release type…</option>
                   {RELEASE_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
@@ -435,7 +529,15 @@ export function AgencyLists({ userId, societies, songsFor, summaries, allTracks,
               </div>}
             </fieldset>}
             {fill.plan.duplicates.length > 0 && <div className="space-y-2">
-              <h4 className="text-sm font-bold">Already in your catalog: which version is official?</h4>
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <h4 className="text-sm font-bold">Already in your catalog: which version is official?</h4>
+                {/* One click for the whole list, instead of the same answer on every card (founder, 2026-11-15). */}
+                <button type="button"
+                  onClick={() => setChoices(Object.fromEntries(fill.plan.duplicates.map((d) => [d.track.id, "agency" as const])))}
+                  className="rounded-full border border-primary/40 bg-accent/40 px-3 py-1 text-[11px] font-semibold text-primary">
+                  Use the agency's version for all {fill.plan.duplicates.length}
+                </button>
+              </div>
               <p className="text-xs text-muted-foreground">
                 These songs match the list by name or code, but the details don't. The agency's copy is what {fill.society.name} pays on, so check
                 that it is the correct version: using it copies their codes and writers into your catalog in one click, while keeping yours means updating the registration at {fill.society.name} instead.
@@ -493,7 +595,7 @@ export function AgencyLists({ userId, societies, songsFor, summaries, allTracks,
             </div>}
             <div className="flex justify-end gap-2">
               <Button type="button" variant="ghost" disabled={filling} onClick={() => setFill(undefined)}>Cancel</Button>
-              <Button type="button" disabled={filling || (release.one && !release.type) || (!chosenCreates.length && !fill.plan.duplicates.some((d) => choices[d.track.id] === "agency"))} onClick={() => void runFill()}>
+              <Button type="button" disabled={filling || (release.one && !release.type) || newReleaseUntitled || (!chosenCreates.length && !fill.plan.duplicates.some((d) => choices[d.track.id] === "agency"))} onClick={() => void runFill()}>
                 {filling ? <Loader2 className="animate-spin" /> : <ListPlus />}
                 {chosenCreates.length ? `Add ${chosenCreates.length} song${chosenCreates.length === 1 ? "" : "s"}` : "Update songs"}
               </Button>
