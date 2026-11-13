@@ -242,12 +242,13 @@ export function DifferencesChart({ rows, busyKey, onFixCatalog, onAdopt, onKeepB
                         {busy && <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden />}
                         {row.treatment.primary}
                       </button>}
-                  {row.copy?.secondary && (
-                    <button type="button" className={SECONDARY} onClick={() => copyAndOpen(row.copy!.secondary!.value, url, row.copy!.secondary!.what)} disabled={busy}>
-                      {row.copy.secondary.label}
-                    </button>
-                  )}
-                  {!row.copy?.secondary && row.treatment.secondary.includes("Repertoire")
+                  {/* One second link, never two (founder, 2026-11-14): a composition's copy-and-check, a recording's
+                      repertoire search, or the catalog field — whichever this card has, drawn once. */}
+                  {row.copy?.secondary
+                    ? <button type="button" className={SECONDARY} onClick={() => copyAndOpen(row.copy!.secondary!.value, url, row.copy!.secondary!.what)} disabled={busy}>
+                        {row.copy.secondary.label}
+                      </button>
+                    : row.treatment.secondary.includes("Repertoire")
                     ? <a href={url} target="_blank" rel="noreferrer" className={SECONDARY}>
                         <ExternalLink className="h-3.5 w-3.5" aria-hidden />{row.treatment.secondary}
                       </a>
@@ -283,7 +284,10 @@ export function DifferencesChart({ rows, busyKey, onFixCatalog, onAdopt, onKeepB
                     already the card's own button is not drawn a second time (founder, 2026-11-14): "Copy ISRC & Check
                     Repertoire" appears once per card, however many differences list it. */}
                 {row.fixes.length > 1 && (() => {
-                  const already = new Set<string>(waiting ? [] : [row.treatment.primary]);
+                  // Every link this card already draws, whatever its wording: the same check is never offered twice.
+                  const already = new Set<string>(waiting
+                    ? []
+                    : [row.treatment.primary, row.treatment.secondary, ...(row.copy?.secondary ? [row.copy.secondary.label] : [])]);
                   return (
                   <div className="mt-3 border-t border-[#004AAD]/20 pt-3 dark:border-[#4D8CFF]/25">
                     <p className="text-[11px] font-bold uppercase tracking-wider text-[#004AAD] dark:text-[#4D8CFF]">

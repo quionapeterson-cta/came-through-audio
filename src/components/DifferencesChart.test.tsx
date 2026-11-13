@@ -126,6 +126,7 @@ describe("DifferencesChart", () => {
       stored: ({
         byId: { bmi: { file: "bmi.csv", result: { matched: [], clashes: [], notListed: [], extra: [], works: 1, differences: [
           { trackId: "a", title: "Bloodline", work: work({ title: "Bloodline", iswc: "T1234567890", writers: [{ name: "Ann Lee", share: 100 }] }), issues: ["The agency has ISWC T1234567890, your catalog has T1111111111"] },
+          { trackId: "a", title: "Bloodline", work: work({ title: "Bloodline", iswc: "T1234567890", writers: [{ name: "LEE ANN", share: 100 }] }), issues: ["The agency has LEE ANN where your catalog has Ann Lee — same writer, fix the spelling so both records match"] },
         ] } } },
       }) as never,
     });
@@ -140,5 +141,10 @@ describe("DifferencesChart", () => {
     expect(text()).toContain("Copy Work Title & Check BMI");
     expect(text()).toContain("Ann Lee");
     expect(text()).not.toContain("+ Add Version to Catalog");
+    // One copy of each exact treatment and one sign-in, never the same link twice (founder, 2026-11-14).
+    const count = (label: string) => text().split(label).length - 1;
+    expect(count("Copy Work Title & Check BMI")).toBe(1);
+    expect(count("Copy ISWC & Check BMI")).toBe(1);
+    expect(count("Sign in to BMI")).toBe(1);
   });
 });
