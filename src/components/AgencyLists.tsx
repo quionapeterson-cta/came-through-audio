@@ -211,10 +211,12 @@ export function AgencyLists({ userId, societies, songsFor, summaries, allTracks,
   const customValue = (entry: FillRelease) => (entry.id ? `custom:${entry.id}` : `custom:${releaseKey(entry)}`);
 
   /** Where one new song goes, from its own dropdown: a catalog release, a typed one, Unreleased, or Instrumental. */
-  function placementFor(key: string): { album?: string; releaseType?: string; instrumental?: boolean } | undefined {
+  function placementFor(key: string): { album?: string; releaseType?: string; instrumental?: boolean; unreleased?: boolean; releaseDate?: string } | undefined {
     const value = placements[key] ?? UNRELEASED;
     if (value === UNRELEASED) return undefined;
-    if (value === INSTRUMENTAL || value === UNRELEASED_INSTRUMENTAL) return { instrumental: true };
+    // An instrumental is out; an unreleased instrumental has not come out yet, so it carries the flag and claims no date.
+    if (value === INSTRUMENTAL) return { instrumental: true, unreleased: false };
+    if (value === UNRELEASED_INSTRUMENTAL) return { instrumental: true, unreleased: true, releaseDate: "" };
     if (value === NEW) {
       const draft = drafts[key];
       return draft && draft.name.trim() ? releaseMeta(draft) : undefined;
@@ -272,7 +274,9 @@ export function AgencyLists({ userId, societies, songsFor, summaries, allTracks,
     const value = versionReleases[d.track.id] ?? CURRENT;
     if (value === CURRENT) return {};
     // An instrumental leaves the release fields empty, as a new instrumental does: it isn't on the album it was cut from.
-    if (value === INSTRUMENTAL) return { instrumental: true, album: "", releaseType: "" };
+    if (value === INSTRUMENTAL) return { instrumental: true, unreleased: false, album: "", releaseType: "" };
+    // The unreleased pair clears the date too: a flagged song with a past date still reads as released everywhere else.
+    if (value === UNRELEASED_INSTRUMENTAL) return { instrumental: true, unreleased: true, album: "", releaseType: "", releaseDate: "" };
     const rel = catalogReleaseList.find((r) => `rel:${r.album}` === value);
     return rel ? { album: rel.album, releaseType: rel.kind } : {};
   }
@@ -604,7 +608,10 @@ export function AgencyLists({ userId, societies, songsFor, summaries, allTracks,
           if (!list.length) return null;
           return <optgroup key={k} label={`${k}s`}>{list.map((r) => <option key={r.album} value={`rel:${r.album}`}>{r.album}</option>)}</optgroup>;
         })}
-        <option value={INSTRUMENTAL}>Instrumental</option>
+        <optgroup label="Not in my catalog">
+          <option value={INSTRUMENTAL}>Instrumental</option>
+          <option value={UNRELEASED_INSTRUMENTAL}>Unreleased Instrumental</option>
+        </optgroup>
       </select>
     </div>;
   };

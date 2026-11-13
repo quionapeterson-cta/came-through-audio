@@ -236,6 +236,36 @@ describe("AgencyLists", () => {
     await waitFor(() => expect(vi.mocked(saveTrack)).toHaveBeenCalledTimes(2));
   });
 
+  it("files a new song as an unreleased instrumental when that is the release chosen", async () => {
+    vi.mocked(saveTrack).mockClear();
+    render(<AgencyLists userId="u1" societies={[ascap]} songsFor={() => []} summaries={{}} onApply={vi.fn().mockResolvedValue(undefined)} />);
+    const file = new File(["Work Title,Writer Name,Share\nGold Teeth,RAY BO,100\n"], "ascap.csv", { type: "text/csv" });
+    fireEvent.change(screen.getByLabelText("Upload your ASCAP list"), { target: { files: [file] } });
+    fireEvent.click(await screen.findByRole("button", { name: /Fill my catalog/ }));
+    // Both instrumental answers are offered, and the unreleased one is not the same answer as the plain one.
+    expect(screen.getByRole("option", { name: "Instrumental" })).toBeTruthy();
+    fireEvent.change(screen.getByLabelText("Release for Gold Teeth"), { target: { value: "unreleased-instrumental" } });
+    fireEvent.click(screen.getByRole("button", { name: /Add 1 song/ }));
+    await waitFor(() => expect(vi.mocked(saveTrack)).toHaveBeenCalledTimes(1));
+    expect(vi.mocked(saveTrack).mock.calls[0]![0]).toMatchObject({ instrumental: true, unreleased: true, album: "" });
+  });
+
+  it("lets a catalogued song take the agency's version as an unreleased instrumental", async () => {
+    vi.mocked(saveTrack).mockClear();
+    const bam = track("a", "Midnight", { album: "BAM", releaseType: "Album", releaseDate: "2025-05-01" });
+    render(<AgencyLists userId="u1" societies={[ascap]} songsFor={() => [bam]} summaries={{}} onApply={vi.fn().mockResolvedValue(undefined)} />);
+    const file = new File(["Work Title,Writer Name,Share\nMidnight,RAY BO,100\n"], "ascap.csv", { type: "text/csv" });
+    fireEvent.change(screen.getByLabelText("Upload your ASCAP list"), { target: { files: [file] } });
+    fireEvent.click(await screen.findByRole("button", { name: /Fill my catalog/ }));
+    fireEvent.click(screen.getByRole("radio", { name: "Use the agency's version" }));
+    expect(screen.getByRole("option", { name: "Unreleased Instrumental" })).toBeTruthy();
+    fireEvent.change(screen.getByLabelText("Release for Midnight"), { target: { value: "unreleased-instrumental" } });
+    fireEvent.click(screen.getByRole("button", { name: /Update 1 song/ }));
+    await waitFor(() => expect(vi.mocked(saveTrack)).toHaveBeenCalledTimes(1));
+    // The flag goes on and the old date goes, or the song still reads as released everywhere else.
+    expect(vi.mocked(saveTrack).mock.calls[0]![0]).toMatchObject({ instrumental: true, unreleased: true, album: "", releaseType: "", releaseDate: "" });
+  });
+
   it("writes the role verified for the agency's version, and a release the member moves", async () => {
     vi.mocked(saveTrack).mockClear();
     const tape = track("al", "One", { album: "Tape", releaseType: "EP" });
