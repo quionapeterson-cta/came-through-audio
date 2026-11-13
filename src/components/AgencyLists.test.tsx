@@ -133,11 +133,12 @@ describe("AgencyLists", () => {
     fireEvent.change(screen.getByLabelText("Upload your ASCAP list"), { target: { files: [file] } });
     fireEvent.click(await screen.findByRole("button", { name: /Fill my catalog/ }));
     expect(await screen.findByText("2 of 2 selected")).toBeTruthy();
-    // The dropdown holds the catalog's own releases — singles, EPs and albums — then Unreleased and Instrumental.
+    // The instruction line stays while nothing is picked, then Unreleased, the instrumentals and Add a release come
+    // before the catalog's own releases.
     const gold = screen.getByLabelText("Release for Gold Teeth") as HTMLSelectElement;
-    expect(gold.value).toBe("unreleased");
-    expect([...gold.options].map((o) => o.textContent)).toEqual(["Choose a release…", "Loose", "Tape", "BAM", "Instrumental", "Unreleased Instrumental", "Add a release…"]);
-    expect([...gold.querySelectorAll("optgroup")].map((g) => g.label)).toEqual(["Singles", "EPs", "Albums", "Not in my catalog"]);
+    expect(gold.value).toBe("");
+    expect([...gold.options].map((o) => o.textContent)).toEqual(["Choose a release…", "Unreleased", "Instrumental", "Unreleased Instrumental", "Add a release…", "Loose", "Tape", "BAM"]);
+    expect([...gold.querySelectorAll("optgroup")].map((g) => g.label)).toEqual(["Not in my catalog", "Singles", "EPs", "Albums"]);
     // One song to an album, one marked instrumental: each keeps its own answer.
     fireEvent.change(gold, { target: { value: "rel:BAM" } });
     fireEvent.change(screen.getByLabelText("Release for Amber"), { target: { value: "instrumental" } });
@@ -175,7 +176,7 @@ describe("AgencyLists", () => {
     }
   });
 
-  it("marks a song Unreleased with one button, and asks each song's release once even in two writer boxes", async () => {
+  it("returns a song to Unreleased from the dropdown, and asks each song's release once even in two writer boxes", async () => {
     vi.mocked(saveTrack).mockClear();
     render(<AgencyLists userId="u1" societies={[ascap]} songsFor={() => []} summaries={{}} onApply={vi.fn().mockResolvedValue(undefined)} />);
     const file = new File(["Work Title,Writer Name,Share\nGold Teeth,RAY BO,50\nGold Teeth,KAY LEE,50\nSilver Teeth,RAY BO,50\nSilver Teeth,KAY LEE,50\n"], "ascap.csv", { type: "text/csv" });
@@ -183,13 +184,16 @@ describe("AgencyLists", () => {
     fireEvent.click(await screen.findByRole("button", { name: /Fill my catalog/ }));
     // Two writers on two songs: both songs sit in both boxes, but each release is asked once.
     expect(screen.getAllByLabelText("Release for Gold Teeth")).toHaveLength(1);
-    expect(screen.getByLabelText("Unreleased for Gold Teeth").getAttribute("aria-pressed")).toBe("true");
+    const goldSelect = screen.getByLabelText("Release for Gold Teeth") as HTMLSelectElement;
+    // Untouched, it keeps the instruction line rather than claiming a release.
+    expect(goldSelect.value).toBe("");
     // The other copy still says what the release is and where it was set.
     expect(screen.getAllByText(/set in/).length).toBeGreaterThan(0);
-    // One click marks it Unreleased again after a release was picked.
-    fireEvent.change(screen.getByLabelText("Release for Gold Teeth"), { target: { value: "instrumental" } });
-    expect(screen.getByLabelText("Unreleased for Gold Teeth").getAttribute("aria-pressed")).toBe("false");
-    fireEvent.click(screen.getByLabelText("Unreleased for Gold Teeth"));
+    // Unreleased is one pick in the same dropdown, so a song can come back after a release was chosen.
+    fireEvent.change(goldSelect, { target: { value: "instrumental" } });
+    expect(goldSelect.value).toBe("instrumental");
+    fireEvent.change(goldSelect, { target: { value: "unreleased" } });
+    expect(goldSelect.value).toBe("unreleased");
     fireEvent.click(screen.getByRole("button", { name: /Add 2 songs/ }));
     await waitFor(() => expect(vi.mocked(saveTrack)).toHaveBeenCalledTimes(2));
     const gold = vi.mocked(saveTrack).mock.calls.map((c) => c[0]).find((m) => m.title === "Gold Teeth")!;

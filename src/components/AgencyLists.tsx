@@ -423,8 +423,9 @@ export function AgencyLists({ userId, societies, songsFor, summaries, allTracks,
   };
 
   /**
-   * A song's release, asked in the same card as its writers (founder, 2026-11-16). Unreleased is a button of its own, so the one
-   * answer that needs no choosing is a click; the dropdown is for a release.
+   * A song's release, asked in the same card as its writers (founder, 2026-11-16). One dropdown holds every answer: the
+   * instruction line while nothing is picked, then Unreleased, the instrumentals and Add a release, then the catalog's own
+   * releases (founder, 2026-11-16).
    */
   const releaseControl = (c: FillSong, show = true, owner?: string) => {
     const key = c.key;
@@ -443,37 +444,31 @@ export function AgencyLists({ userId, societies, songsFor, summaries, allTracks,
     return <div className="mt-1 space-y-1 border-t border-border/60 px-1 pt-1.5">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <span className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">Release</span>
-        <span className="flex flex-wrap items-center gap-1.5">
-          <button type="button" aria-pressed={value === UNRELEASED} aria-label={`Unreleased for ${c.metadata.title}`}
-            onClick={() => setPlacements((p) => ({ ...p, [key]: UNRELEASED }))}
-            className={`rounded-full border px-3 py-1 text-xs ${value === UNRELEASED ? "border-primary bg-primary font-semibold text-primary-foreground" : "border-border text-muted-foreground"}`}>
-            Unreleased
-          </button>
-          <select aria-label={`Release for ${c.metadata.title}`} value={value}
-            onChange={(e) => {
-              const next = e.target.value;
-              setPlacements((p) => ({ ...p, [key]: next }));
-              if (next === NEW) setDrafts((d) => ({ ...d, [key]: d[key] ?? { type: "Single", name: "" } }));
-            }}
-            className="h-8 max-w-[16rem] rounded-md border border-input bg-background px-2 text-xs">
-            <option value={UNRELEASED}>Choose a release…</option>
-            {RELEASE_KINDS.map((k) => {
-              const list = catalogReleaseList.filter((r) => r.kind === k);
-              if (!list.length) return null;
-              return <optgroup key={k} label={`${k}s`}>
-                {list.map((r) => <option key={r.album} value={`rel:${r.album}`}>{r.album}</option>)}
-              </optgroup>;
-            })}
-            {typed.length > 0 && <optgroup label="You added">
-              {typed.map((r) => <option key={customValue(r)} value={customValue(r)}>{r.name} · {r.type}</option>)}
-            </optgroup>}
-            <optgroup label="Not in my catalog">
-              <option value={INSTRUMENTAL}>Instrumental</option>
-              <option value={UNRELEASED_INSTRUMENTAL}>Unreleased Instrumental</option>
-            </optgroup>
-            <option value={NEW}>Add a release…</option>
-          </select>
-        </span>
+        <select aria-label={`Release for ${c.metadata.title}`} value={placements[key] ?? ""}
+          onChange={(e) => {
+            const next = e.target.value;
+            setPlacements((p) => ({ ...p, [key]: next }));
+            if (next === NEW) setDrafts((d) => ({ ...d, [key]: d[key] ?? { type: "Single", name: "" } }));
+          }}
+          className="h-8 max-w-[16rem] rounded-md border border-input bg-background px-2 text-xs">
+          <option value="">Choose a release…</option>
+          <option value={UNRELEASED}>Unreleased</option>
+          <optgroup label="Not in my catalog">
+            <option value={INSTRUMENTAL}>Instrumental</option>
+            <option value={UNRELEASED_INSTRUMENTAL}>Unreleased Instrumental</option>
+          </optgroup>
+          <option value={NEW}>Add a release…</option>
+          {RELEASE_KINDS.map((k) => {
+            const list = catalogReleaseList.filter((r) => r.kind === k);
+            if (!list.length) return null;
+            return <optgroup key={k} label={`${k}s`}>
+              {list.map((r) => <option key={r.album} value={`rel:${r.album}`}>{r.album}</option>)}
+            </optgroup>;
+          })}
+          {typed.length > 0 && <optgroup label="You added">
+            {typed.map((r) => <option key={customValue(r)} value={customValue(r)}>{r.name} · {r.type}</option>)}
+          </optgroup>}
+        </select>
       </div>
       {single && <p className="text-[11px] text-muted-foreground">
         A single holds one song: adding this to {single.album} makes it a two-song release, which My Catalog reads as an EP.
