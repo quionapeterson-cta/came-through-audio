@@ -28,7 +28,7 @@ const versionRow = () => buildDifferenceRows({
 
 describe("DifferencesChart", () => {
   const renderRow = (row: DifferenceRow) => render(
-    <DifferencesChart rows={[row]} onFixCatalog={vi.fn()} onAdopt={vi.fn()} onKeepBoth={vi.fn()} />,
+    <DifferencesChart rows={[row]} onFixCatalog={vi.fn()} onAdopt={vi.fn()} onKeepBoth={vi.fn()} onSaveAlternate={() => {}} />,
   );
 
   it("shows the version that disagrees, beside the title, artist and ISRC each side holds", () => {
@@ -98,7 +98,8 @@ describe("DifferencesChart", () => {
     expect(text).toContain("Two versions of this title");
     expect(text).toContain("Name each version of this title");
     expect(text).toContain("+ Add Version to Catalog");
-    expect(text).toContain("Sign in to SoundExchange Direct");
+    // The sign-in names what the member goes there to do (founder, 2026-11-15).
+    expect(text).toContain("Sign in and submit recording");
     expect(text).toContain("QT6HX2656774");
   });
 
@@ -118,7 +119,7 @@ describe("DifferencesChart", () => {
     expect(text().split("Copy ISRC & Check Repertoire").length - 1).toBe(1);
   });
 
-  it("draws a BMI card with the work's fields, the work-title search and no code at all", () => {
+  it("draws a BMI card with the work's fields, one writer-name search and no code at all", () => {
     // A PRO registers the composition (founder, 2026-11-14): Title, ISWC and Writers, and no ISRC row to fill in.
     const rows = buildDifferenceRows({
       tracks: [catTrack("Bloodline", { iswc: "T1111111111" })],
@@ -139,20 +140,44 @@ describe("DifferencesChart", () => {
     expect(screen.queryByText("ISRC")).toBeNull();
     expect(screen.queryByText("Version")).toBeNull();
     expect(text()).not.toContain("Copy ISRC");
-    expect(text()).toContain("Copy Work Title & Check BMI");
+    // A PRO's repertoire finds the work by the writer's name, and only one check is offered (founder, 2026-11-15).
+    expect(text()).toContain("Copy Writer Name & Check BMI");
     expect(text()).toContain("Ann Lee");
     expect(text()).not.toContain("+ Add Version to Catalog");
     const count = (label: string) => text().split(label).length - 1;
     // The society sits on the agency header, not above the values, so the two sides line up row for row.
     expect(screen.getByText("BMI")).toBeTruthy();
-    // Two writers with two spellings are one rule, written once, with both cases named under it.
-    expect(count("Fix the spelling on one side")).toBe(1);
+    // Two writers whose names differ from the registration are one rule, written once, with both cases named under it.
+    expect(count("Match the writer's full registered name")).toBe(1);
     expect(text()).toContain("The agency has LEE ANN where your catalog has Ann Lee");
     expect(text()).toContain("The agency has STEPHENS CALVIN where your catalog has Calvin Stephens");
-    // One copy of each exact treatment and one sign-in, never the same link twice (founder, 2026-11-14).
-    expect(count("Copy Work Title & Check BMI")).toBe(1);
-    expect(count("Copy ISWC & Check BMI")).toBe(1);
-    expect(count("Sign in to BMI")).toBe(1);
+    // One check for the agency, however many differences the card lists, and one sign-in (founder, 2026-11-15): a title
+    // check and an ISWC check were two BMI searches on one card.
+    expect(count("Copy Writer Name & Check BMI")).toBe(1);
+    expect(text()).not.toContain("Copy ISWC");
+    expect(count("Sign in and register the work")).toBe(1);
+    // The one thing members get wrong: the name has to match the registration exactly.
+    expect(count("Repertoire search matches the writer's name exactly as it was registered")).toBe(1);
+  });
+
+  it("offers to keep the agency's own name as an alternate title, beside the one check", () => {
+    const rows = buildDifferenceRows({
+      tracks: [{ ...catTrack("24/7 Love", { iswc: "T9187370996" }), metadata: { ...catTrack("24/7 Love", {}).metadata, title: "24/7 Love", iswc: "T9187370996" } }],
+      societies: [{ id: "bmi", name: "BMI" }],
+      stored: ({
+        byId: { bmi: { file: "bmi.csv", result: { matched: [], clashes: [], notListed: [], extra: [], works: 1, differences: [
+          { trackId: "a", title: "24/7 Love", work: work({ title: "TWENTY FOUR SEVEN" }), issues: ['The agency registers this work as "TWENTY FOUR SEVEN", your catalog says "24/7 Love" — a work is found by its registered title, so the two names have to match or yours has to be saved as an alternate title'] },
+        ] } } },
+      }) as never,
+    });
+    const row = rows[0]!;
+    expect(row.kind).toBe("alternate-title");
+    expect(row.alternateTitle).toBe("TWENTY FOUR SEVEN");
+    renderRow(row);
+    const text = document.body.textContent ?? "";
+    expect(text).toContain("Alternate Title? Fix in Catalog");
+    expect(text).toContain("Save as Alternate Title");
+    expect(text.split("Copy Writer Name & Check BMI").length - 1).toBe(1);
   });
 
   it("folds a song away to its title, and opens it again", () => {

@@ -1,6 +1,7 @@
 import type { CatalogTrack } from "@/lib/catalog";
 import type { AgencyKind } from "@/lib/agency-kind";
 import { creditName, type Contributor, type Metadata } from "@/lib/metadata";
+import { registeredName } from "@/lib/writer-names";
 import { retireAdvice } from "@/lib/isrc-retirement";
 
 /**
@@ -351,10 +352,14 @@ export function matchWork(
       retiredIscrs?: string[] | undefined;
       writers?: Contributor[] | undefined;
       composers?: Contributor[] | undefined;
+      alternateTitles?: string[] | undefined;
     };
   },
 ): ListWork | undefined {
   const iswc = t.metadata.iswc ?? "", isrc = t.metadata.isrc ?? "";
+  // A work registered under another name the member already knows (founder, 2026-11-15): an alternate title in the
+  // catalog is this song's own name, so a list that files it that way has found the song, not a missing registration.
+  const alternates = t.metadata.alternateTitles ?? [];
   const byIsrc = isrc ? works.find((w) => w.isrc && w.isrc === code(isrc)) : undefined;
   if (byIsrc) return byIsrc;
   // A code the recording used to carry still names it (founder, 2026-11-12): an agency can keep reporting under the
@@ -365,7 +370,8 @@ export function matchWork(
   const byIswc = iswc ? works.find((w) => w.iswc && w.iswc === code(iswc)) : undefined;
   if (byIswc) return byIswc;
   // A shared title is real (a re-record, a live version, two artists' songs): the writers say which work it is.
-  const titled = titledWorks(works, t.title);
+  const named = titledWorks(works, t.title);
+  const titled = named.length ? named : alternates.flatMap((alt: string) => (alt.trim() ? titledWorks(works, alt) : []));
   if (titled.length <= 1) return titled[0];
   const mine = new Set([...(t.metadata.writers ?? []), ...(t.metadata.composers ?? [])].map((w) => nameKey(creditName(w))).filter(Boolean));
   let best = titled[0], bestHits = 0;
@@ -458,7 +464,15 @@ export function workIssues(work: ListWork, metadata: Metadata, kind: AgencyKind 
   // Version)" and "Quit Playing With Me" are one title with two versions (founder, 2026-11-14).
   const agencyTitle = (work.coreTitle ?? stripVersion(work.title)).trim();
   const catalogTitle = stripVersion(named);
-  if (titleReadsDifferently(catalogTitle, agencyTitle)) issues.push(`The agency calls it "${work.title}", your catalog has "${named}" — same recording, different name`);
+  // An alternate title in the catalog is the same song under its other name: nothing to fix.
+  const known = (metadata.alternateTitles ?? []).some((alt: string) => alt.trim() && titleKey(alt) === titleKey(agencyTitle));
+  if (!known && titleReadsDifferently(catalogTitle, agencyTitle)) issues.push(`The agency calls it "${work.title}", your catalog has "${named}" — same recording, different name`);
+  // A work is found by its registered title, and a composition list carries no version tail, so a title that reads
+  // differently there is its own difference (founder, 2026-11-15): the two names have to match, or one is saved as an
+  // alternate title. Without this a BMI work filed under another name was never reported at all.
+  if (composition && !known && titleKey(catalogTitle) !== titleKey(agencyTitle)) {
+    issues.push(`The agency registers this work as "${agencyTitle}", your catalog says "${named}" — a work is found by its registered title, so the two names have to match or yours has to be saved as an alternate title`);
+  }
   // A version is compared as a version, and only when the list names one: agencies register the recording or the work
   // without version wording all the time, and that is not a difference.
   // A version belongs to the recording: "Am Pm (Clean Version)" and "Am Pm (Dirty Version)" are one composition at BMI,
@@ -487,7 +501,7 @@ export function workIssues(work: ListWork, metadata: Metadata, kind: AgencyKind 
   for (const x of theirs) if (!mine.some((w) => same(w, x))) issues.push(`The agency lists ${x.name}, who isn't in your catalog`);
   for (const w of mine) {
     const x = theirs.find((y) => same(w, y));
-    if (x && spelledDifferently(w.name, x.name)) issues.push(`The agency has ${x.name} where your catalog has ${w.name} — same writer, fix the spelling so both records match`);
+    if (x && spelledDifferently(w.name, x.name)) issues.push(`The agency has ${x.name} where your catalog has ${w.name} — repertoire search matches the registered name exactly, so the legal name here has to read "${registeredName(w.name, x.name)}"`);
     if (x?.ipi && w.ipi && x.ipi !== w.ipi) issues.push(`${w.name}'s IPI is ${x.ipi} there, ${w.ipi} here`);
   }
   const a = parts(mine), b = parts(theirs);

@@ -14,16 +14,22 @@ export type AgencyPortal = {
   name: string;
   /** The sign-in page itself. */
   signIn: string;
+  /**
+   * What they go there to do (founder, 2026-11-15): "Sign in to SoundExchange Direct" said nothing about the recording
+   * that has to be submitted once they are in. SoundExchange takes a recording, a PRO takes a work.
+   */
+  cta: string;
 };
 
 export const AGENCY_PORTALS: Record<string, AgencyPortal> = {
   soundexchange: {
     name: "SoundExchange Direct",
     signIn: "https://sxdirect.soundexchange.com/login/",
+    cta: "Sign in and submit recording",
   },
-  ascap: { name: "ASCAP Member Access", signIn: "https://www.ascap.com/member-access#login" },
-  bmi: { name: "BMI Online Services", signIn: "https://ols.bmi.com/" },
-  mlc: { name: "The MLC Portal", signIn: "https://portal.themlc.com/login" },
+  ascap: { name: "ASCAP Member Access", signIn: "https://www.ascap.com/member-access#login", cta: "Sign in and register the work" },
+  bmi: { name: "BMI Online Services", signIn: "https://ols.bmi.com/", cta: "Sign in and register the work" },
+  mlc: { name: "The MLC Portal", signIn: "https://portal.themlc.com/login", cta: "Sign in and register the work" },
 };
 
 /**
@@ -31,5 +37,5 @@ export const AGENCY_PORTALS: Record<string, AgencyPortal> = {
  * never left without a way in, and never given a link we have not checked.
  */
 export function portalFor(society: string, fallbackUrl = ""): AgencyPortal {
-  return AGENCY_PORTALS[society] ?? { name: "the agency account", signIn: fallbackUrl };
+  return AGENCY_PORTALS[society] ?? { name: "the agency account", signIn: fallbackUrl, cta: "Sign in to the agency account" };
 }

@@ -6,6 +6,7 @@ import { titleKey } from "@/lib/agency-lists";
 import type { CatalogTrack } from "@/lib/catalog";
 import { creditName } from "@/lib/metadata";
 import { portalFor } from "@/lib/agency-portals";
+import { checkLabel, checkWhat } from "@/lib/agency-lookup";
 import type { CatalogAction, CatalogField } from "@/lib/catalog-links";
 
 /**
@@ -118,6 +119,7 @@ export type DisagreementKind =
   | "cross-agency-split"
   | "same-title-different-isrc"
   | "title-mismatch"
+  | "alternate-title"
   | "version-difference"
   | "missing-release"
   | "missing-from-list"
@@ -132,6 +134,7 @@ export const KIND_LABEL: Record<DisagreementKind, string> = {
   "cross-agency-split": "Cross-agency ISRC split",
   "same-title-different-isrc": "Same title / different ISRC",
   "title-mismatch": "Title mismatch",
+  "alternate-title": "Alternate title",
   "version-difference": "Version difference",
   "missing-release": "Missing release",
   "missing-from-list": "Not on the list",
@@ -141,7 +144,7 @@ export const KIND_LABEL: Record<DisagreementKind, string> = {
 };
 
 /** What kind of fix the difference takes. The chart decides which buttons to offer from this. */
-export type TreatmentAction = "check-distributor" | "add-version" | "keep-both" | "adopt" | "waiting" | "review";
+export type TreatmentAction = "check-distributor" | "add-version" | "keep-both" | "adopt" | "alternate-title" | "waiting" | "review";
 
 export type Treatment = {
   headline: string;
@@ -264,12 +267,24 @@ export const TREATMENTS = {
     secondary: "Edit in My Catalog",
     action: "check-distributor",
   } as Treatment,
+  // A repertoire search matches the name **as registered** (founder, 2026-11-15): "Qui-Ona Peterson" found nothing at
+  // BMI, "Qui-Ona LaShay Peterson" found her works. This is not a spelling preference, it is the one thing that decides
+  // whether the work comes back at all, so the rule says so and the copy hands over the full name to use.
   spelling: {
-    headline: "Fix the spelling on one side",
-    detail: "Same writer, two spellings. Agencies match on the exact name, so make the misspelled side match the legal name on file.",
-    primary: "Copy ISRC & Check Repertoire ↗",
-    secondary: "Edit in My Catalog",
+    headline: "Match the writer's full registered name",
+    detail: "Repertoire search finds a writer only when the name matches the registration exactly — a missing middle name finds nothing, and neither does a different spelling. Put the full registered name in My Catalog and search that at the agency.",
+    primary: "Copy Writer Name & Check Repertoire ↗",
+    secondary: "Fix the Writers in My Catalog",
     action: "check-distributor",
+  } as Treatment,
+  // Two names for one work (founder, 2026-11-15): either the agency's name belongs on the song as an alternate title, or
+  // the catalog's title is wrong. The member knows which, so the card offers both and decides nothing for them.
+  alternateTitle: {
+    headline: "Alternate Title? Fix in Catalog",
+    detail: "The agency files this work under a different name than your catalog. If that name is another title this song goes by, save it as an alternate title and both records agree; if your title is the wrong one, correct it in My Catalog.",
+    primary: "Save as Alternate Title",
+    secondary: "Fix the Title in My Catalog",
+    action: "alternate-title",
   } as Treatment,
   ipi: {
     headline: "Check which IPI is right",
@@ -324,7 +339,8 @@ export function treatmentForIssue(issue: string, ctx: { catalogIsrc: string; age
   if (/^not on the /.test(text)) return TREATMENTS.submit;
   if (/iswc/.test(text)) return TREATMENTS.iswc;
   if (/^the agency has version /.test(text) || /second isrc for /.test(text)) return TREATMENTS.addVersion;
-  if (/^the agency calls it/.test(text)) return TREATMENTS.checkDistributor;
+  // An agency name that differs is an alternate title before it is anything else (founder, 2026-11-15).
+  if (/^the agency calls it/.test(text) || /^the agency registers this work as/.test(text)) return TREATMENTS.alternateTitle;
   if (/\.? isn't on the agency's registration$/.test(text)) return TREATMENTS.writerAtAgency;
   if (/who isn't in your catalog$/.test(text)) return TREATMENTS.writerInAgency;
   if (/spelling/.test(text)) return TREATMENTS.spelling;
@@ -382,6 +398,7 @@ export const issueCase = (issue: string) =>
 export function fieldFor(row: DifferenceRow): CatalogField {
   // A composition (a PRO, The MLC) is fixed on the words it registers: the work title, the ISWC, or the writers — never on
   // a recording's ISRC (founder, 2026-11-14).
+  if (row.kind === "alternate-title") return row.composition ? "title" : "title";
   if (!registersRecording(row.claims[0]?.society ?? "")) {
     const said = row.issues.join(" ");
     if (/IPI|share|spelling|isn't on the agency's registration|isn't in your catalog/i.test(said)) return "writers";
@@ -499,6 +516,12 @@ export type DifferenceRow = {
    * disagree — and a composition card never says "Copy ISRC".
    */
   copy?: { primary: CopyTarget; secondary?: CopyTarget | undefined } | undefined;
+  /** Every other name this song is saved under, so the card shows why an agency name matched (founder, 2026-11-15). */
+  alternateTitles?: string[] | undefined;
+  /** The one repertoire check this card offers, whatever its first button does (founder, 2026-11-15). */
+  check?: CopyTarget | undefined;
+  /** The agency's own name for the work, when that name is what the member may want to keep as an alternate title. */
+  alternateTitle?: string | undefined;
   /** A composition's own fields, on both sides: what a PRO or The MLC registers instead of a code and an artist. */
   composition?: { catalog: { iswc: string; writers: string }; agency: { iswc: string; writers: string } } | undefined;
 };
@@ -506,24 +529,23 @@ export type DifferenceRow = {
 /** A value to copy, with the words on the button and the words for what was copied. */
 export type CopyTarget = { label: string; value: string; what: string };
 
-/** The button that looks a work up at its own agency: the title at a PRO, the writer at The MLC. */
+/**
+ * The **one** check a work gets at its own agency (founder, 2026-11-15): the writer's name, as registered.
+ *
+ * A composition card used to offer a title check *and* an ISWC check, so "Check BMI" appeared twice with two different
+ * things copied. A PRO's public repertoire finds a work by its writer, not by its title or its ISWC — the founder's own
+ * BMI search for "Qui-Ona Peterson" returned nothing until the full registered name went in — so the card offers one
+ * check and one value, and the ISWC is what the search shows once it finds the work.
+ */
 function workCheck(society: string, name: string, row: { title: string; iswc: string; writer: string; hasIswc: boolean }): { treatment: Treatment; copy: DifferenceRow["copy"] } {
-  const writerFirst = society === "mlc";
-  const primary: CopyTarget = writerFirst
-    ? { label: `Copy Writer Name & Check ${name} ↗`, value: row.writer || row.title, what: "writer name" }
-    : { label: `Copy Work Title & Check ${name} ↗`, value: row.title, what: "work title" };
-  const secondary: CopyTarget | undefined = row.hasIswc && row.iswc
-    ? { label: `Copy ISWC & Check ${name} ↗`, value: row.iswc, what: "ISWC" }
-    : undefined;
+  const primary: CopyTarget = { label: checkLabel(society, name), value: row.writer || row.title, what: checkWhat(society) };
   return {
-    copy: { primary, secondary },
+    copy: { primary },
     treatment: {
-      headline: writerFirst ? `Look the writer up in ${name}` : `Look the work up in ${name}`,
-      detail: writerFirst
-        ? `${name} registers the composition, and its public search finds a work by the writer's name. Copy the name the list has on file and search it there; the title, ISWC and shares follow from that.`
-        : `${name} registers the composition: its work title, ISWC and writers. Copy the title the list has on file and search ${name}'s public catalogue, then correct whichever side is wrong.`,
+      headline: `Look the writer up in ${name}`,
+      detail: `${name} registers the composition, and its public search finds a work by the writer's name exactly as it is registered — a missing middle name or a different spelling finds nothing. Copy the name and search it there; the work, its ISWC and shares follow from that.`,
       primary: primary.label,
-      secondary: secondary?.label ?? "Edit in My Catalog",
+      secondary: "Fix in My Catalog",
       action: "review",
     },
   };
@@ -563,7 +585,7 @@ export function treatmentFor(input: { kind: DisagreementKind; catalogIsrc: strin
   if (kind === "cross-agency-split") return TREATMENTS.crossAgency;
   if (kind === "missing-catalog-isrc") return TREATMENTS.adoptAgency;
   if (kind === "isrc-mismatch") return TREATMENTS.isrcMismatch;
-  if (kind === "title-mismatch") return TREATMENTS.checkDistributor;
+  if (kind === "title-mismatch" || kind === "alternate-title") return TREATMENTS.alternateTitle;
   if (state === "waiting") return TREATMENTS.waiting;
   return TREATMENTS.checkDistributor;
 }
@@ -580,6 +602,7 @@ export function summaryFor(row: DifferenceRow): string {
   }
   // Two codes under one title, in the member's own terms: another version, or the old code beside the new one.
   if (row.secondCode) return `${agency} holds ${row.agencyCodes.length} ISRCs under this one title. Two codes under one title mean another version of the recording, or the retired code beside the current one.`;
+  if (row.kind === "alternate-title") return `${agency} files this ${row.composition ? "work" : "recording"} under a different name than your catalog. If that is another title this song goes by, save it as an alternate title; if not, correct the title.`;
   switch (row.kind) {
     case "same-title-different-isrc":
       return `${agency} holds an ISRC for this title that your catalog does not, which is how one song ends up split across two recordings.`;
@@ -775,16 +798,18 @@ export function buildDifferenceRows({ stored, tracks: allTracks, societies = [] 
       // The saved comparison says "second ISRC for this title" when the list holds two codes; that is the same rule as
       // two codes on this row, and both are another version rather than one code standing in for another.
       const secondCodeReported = secondCode || g.issues.some((i) => /second ISRC for/i.test(i));
+      // A title that reads differently is another name for the same work before it is anything else (founder, 2026-11-15):
+      // "Alternate Title? Fix in Catalog" is the question, never "your title is wrong".
       const kind: DisagreementKind = composition
         ? titleDiffers
-          ? "title-mismatch"
+          ? "alternate-title"
           : kindOf([...new Set(g.issues)], catalogIsrc, agencyIsrc, retired)
         : retiredCodeOnList
         ? "earlier-isrc"
         : secondCodeReported
         ? "same-title-different-isrc"
         : titleDiffers && bothCodes
-          ? (codeDiffers ? "isrc-mismatch" : "title-mismatch")
+          ? (codeDiffers ? "isrc-mismatch" : "alternate-title")
           : !titleDiffers && codeDiffers
             // One code on the list and a different one in the catalog: the two records name different recordings, so
             // the member checks which copy the distributor delivered. "Two codes under one title" is the case above.
@@ -807,9 +832,20 @@ export function buildDifferenceRows({ stored, tracks: allTracks, societies = [] 
             hasIswc: !!g.iswc,
           })
         : undefined;
-      const treatment: Treatment = check
-        ? { ...treatmentFor({ kind, catalogIsrc, retiredIscrs: retired, releaseState: "current" }), ...check.treatment }
-        : treatmentFor({ kind, catalogIsrc, retiredIscrs: retired, releaseState: state });
+      const base = treatmentFor({ kind, catalogIsrc, retiredIscrs: retired, releaseState: composition ? "current" : state });
+      // A name that differs is answered first — "Alternate Title? Fix in Catalog" — and the one check sits beside it, so a
+      // work card still offers exactly one repertoire check (founder, 2026-11-15).
+      const treatment: Treatment = !check
+        ? base
+        : kind === "alternate-title"
+          ? {
+              headline: TREATMENTS.alternateTitle.headline,
+              detail: `${claim.name} files this work under a different name than your catalog. If "${claim.title}" is another title this song goes by, save it as an alternate title; if not, correct your title. Its search finds the work by the writer's name exactly as it is registered.`,
+              primary: TREATMENTS.alternateTitle.primary,
+              secondary: check.treatment.primary,
+              action: "alternate-title",
+            }
+          : { ...base, ...check.treatment };
       const issues = [...new Set(g.issues)];
       const versionsDiffer = !!versions.agency && !!versions.catalog && norm(versions.agency) !== norm(versions.catalog);
       const artistsDiffer = !!artists.agency && norm(artists.agency) !== norm(artists.catalog);
@@ -846,7 +882,11 @@ export function buildDifferenceRows({ stored, tracks: allTracks, societies = [] 
           : f)),
         status: treatment.action === "waiting" ? "waiting" : retired.length ? "both-registered" : "needs-triage",
         side: "catalog",
-        ...(check ? { copy: check.copy } : {}),
+        ...(check ? { copy: check.copy, check: check.copy?.primary } : {}),
+        ...((m.alternateTitles ?? []).some((t) => t.trim())
+          ? { alternateTitles: (m.alternateTitles ?? []).map((t) => t.trim()).filter(Boolean) }
+          : {}),
+        ...(kind === "alternate-title" ? { alternateTitle: claim.title } : {}),
         ...(check
           ? {
               composition: {

@@ -444,14 +444,19 @@ export function AgencyLists({ userId, societies, songsFor, summaries, allTracks,
                 const choice = choices[d.track.id] ?? "keep";
                 return <div key={d.track.id} className="rounded-lg border border-border p-3 text-sm">
                   <p className="font-semibold">{d.track.title}</p>
-                  {d.changes.length > 0 && <div className="mt-2 grid grid-cols-[4.5rem_1fr_1fr] gap-x-2 gap-y-1 text-xs">
+                  {/* Field by field, both sides on the same row (founder, 2026-11-15): Title, codes, writers, with the
+                      agency's name on its own header so the two value columns never drift apart. */}
+                  {d.changes.length > 0 && <div className="mt-2 grid grid-cols-[4.5rem_1fr_1fr] items-start gap-x-2 gap-y-1.5 text-xs">
                     <span />
-                    <span className="font-semibold">Your catalog</span>
-                    <span className="font-semibold">The agency ({fill.society.name})</span>
+                    <span className="font-semibold leading-snug">Your catalog</span>
+                    <span className="flex flex-wrap items-center gap-1.5 font-semibold leading-snug">
+                      The agency
+                      <span className="rounded-full border border-primary/30 bg-accent/50 px-1.5 py-px text-[10px] font-semibold">{fill.society.name}</span>
+                    </span>
                     {d.changes.map((ch) => <div key={ch.field} className="contents">
                       <span className="text-muted-foreground">{ch.field}</span>
-                      <span>{ch.catalog}</span>
-                      <span>{ch.agency}</span>
+                      <span className="break-words leading-snug">{ch.catalog}</span>
+                      <span className="break-words leading-snug">{ch.agency}</span>
                     </div>)}
                   </div>}
                   {combinedHalves(d.work) && <p className="mt-2 text-xs text-muted-foreground">
@@ -460,14 +465,17 @@ export function AgencyLists({ userId, societies, songsFor, summaries, allTracks,
                   {d.issues.length > 0 && <ul className="mt-2 space-y-0.5 text-xs text-muted-foreground">
                     {d.issues.map((i) => <li key={i}>⚠️ {i}</li>)}
                   </ul>}
-                  <div className="mt-3 grid gap-2 sm:grid-cols-2">
-                    <label className={`flex cursor-pointer items-start gap-2 rounded-lg border p-2 ${choice === "agency" ? "border-primary bg-accent/40" : "border-border"}`}>
-                      <input type="radio" className="mt-0.5" name={`fill-${d.track.id}`} checked={choice === "agency"} onChange={() => setChoices((c) => ({ ...c, [d.track.id]: "agency" }))} />
-                      <span><b>Use the agency's version</b><span className="block text-xs text-muted-foreground">Check that it's correct: your catalog then matches what {fill.society.name} has registered.</span></span>
-                    </label>
+                  {/* Each choice sits under the side it keeps (founder, 2026-11-15): the catalog's under the catalog's
+                      column and the agency's under the agency's, instead of the agency's answer on the left. */}
+                  <div className="mt-3 grid grid-cols-1 items-start gap-2 sm:grid-cols-[4.5rem_1fr_1fr] sm:gap-x-2">
+                    <span className="hidden sm:block" />
                     <label className={`flex cursor-pointer items-start gap-2 rounded-lg border p-2 ${choice === "keep" ? "border-primary bg-accent/40" : "border-border"}`}>
                       <input type="radio" className="mt-0.5" name={`fill-${d.track.id}`} checked={choice === "keep"} onChange={() => setChoices((c) => ({ ...c, [d.track.id]: "keep" }))} />
                       <span><b>Keep my catalog version</b><span className="block text-xs text-muted-foreground">Nothing changes here, so update your registration at {fill.society.name} to match it.</span></span>
+                    </label>
+                    <label className={`flex cursor-pointer items-start gap-2 rounded-lg border p-2 ${choice === "agency" ? "border-primary bg-accent/40" : "border-border"}`}>
+                      <input type="radio" className="mt-0.5" name={`fill-${d.track.id}`} checked={choice === "agency"} onChange={() => setChoices((c) => ({ ...c, [d.track.id]: "agency" }))} />
+                      <span><b>Use the agency's version</b><span className="block text-xs text-muted-foreground">Check that it's correct: your catalog then matches what {fill.society.name} has registered.</span></span>
                     </label>
                   </div>
                   {choice === "keep" && <p className="mt-2 text-xs text-muted-foreground">

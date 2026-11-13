@@ -1,6 +1,7 @@
 import { Fragment, useState } from "react";
 import { AudioWaveform, ChevronDown, ChevronUp, ExternalLink, Loader2 } from "lucide-react";
 import { toast } from "sonner";
+import { WRITER_NAME_HINT, writerLookup } from "@/lib/agency-lookup";
 import {
   KIND_LABEL, RELEASE_STATE_LABEL, STATUS_LABEL, diffSegments, diffWords, fieldFor, groupFixes, issueCase,
   repertoireUrl, signInFor, summaryFor, treatmentText, type AgencyClaim, type DifferenceRow, type FixGroup, type RowFix,
@@ -82,12 +83,14 @@ function Value({ text, empty }: { text: string; empty: string }) {
     : <span className="block text-[11px] italic text-[#0b0b0b]/45 dark:text-[#E5E4E2]/45">{empty}</span>;
 }
 
-export function DifferencesChart({ rows, busyKey, onFixCatalog, onAdopt, onKeepBoth }: {
+export function DifferencesChart({ rows, busyKey, onFixCatalog, onAdopt, onKeepBoth, onSaveAlternate }: {
   rows: DifferenceRow[];
   busyKey?: string | undefined;
   onFixCatalog: (row: DifferenceRow, field?: string) => void;
   onAdopt: (row: DifferenceRow) => void;
   onKeepBoth: (row: DifferenceRow) => void;
+  /** Keeps the agency's own name for the work as another title this song goes by (founder, 2026-11-15). */
+  onSaveAlternate: (row: DifferenceRow) => void;
 }) {
   // Each song can be folded away (founder, 2026-11-14): a long list consolidates to its titles, and the card being worked
   // on stays open. Nothing is remembered across visits, so the list always opens readably.
@@ -144,6 +147,12 @@ export function DifferencesChart({ rows, busyKey, onFixCatalog, onAdopt, onKeepB
           if (row.composition) {
             const work = row.composition;
             return [...rows,
+              ...(row.alternateTitles?.length ? [{
+                label: "Alternate title",
+                differs: false,
+                left: <Value text={row.alternateTitles.join(" · ")} empty="No alternate title" />,
+                right: <Value text={row.alternateTitles.some((t) => canon(t) === canon(c.title)) ? "Matched by this name" : ""} empty="" />,
+              }] : []),
               {
                 label: "ISWC",
                 differs: !!c.iswc && !!work.catalog.iswc && canon(c.iswc) !== canon(work.catalog.iswc),
@@ -216,6 +225,7 @@ export function DifferencesChart({ rows, busyKey, onFixCatalog, onAdopt, onKeepB
         /** The one click each difference takes, from the rule that difference was given. */
         const runFix = (fix: RowFix | FixGroup) => {
           if (fix.treatment.action === "waiting") return;
+          if (row.treatment.action === "alternate-title" && fix.treatment.headline === row.treatment.headline) return onSaveAlternate(row);
           if (copied) return copyAndOpen(copied.value, url, copied.what);
           if (fix.treatment.action === "keep-both") return onKeepBoth(row);
           if (fix.treatment.action === "add-version") return onFixCatalog(row, "version");
@@ -224,6 +234,7 @@ export function DifferencesChart({ rows, busyKey, onFixCatalog, onAdopt, onKeepB
 
         const primary = () => {
           if (waiting) return;
+          if (row.treatment.action === "alternate-title") return onSaveAlternate(row);
           if (copied) return copyAndOpen(copied.value, url, copied.what);
           if (row.treatment.action === "keep-both") return onKeepBoth(row);
           if (row.treatment.action === "add-version") return onFixCatalog(row, "version");
@@ -294,6 +305,10 @@ export function DifferencesChart({ rows, busyKey, onFixCatalog, onAdopt, onKeepB
                   <p className="text-[11px] font-bold uppercase tracking-wider text-[#004AAD] dark:text-[#4D8CFF]">Exact treatment</p>
                   <p className="mt-1 text-sm font-semibold text-[#0b0b0b] dark:text-[#FFFFFF]">{row.treatment.headline}</p>
                   <p className="mt-1 text-xs leading-relaxed text-[#0b0b0b]/70 dark:text-[#E5E4E2]/70">{treatmentText(row.treatment, code)}</p>
+                  {/* Said once, where it is acted on: a repertoire search only finds the name as registered (founder, 2026-11-15). */}
+                  {writerLookup(row.claims[0]?.society ?? "") && (
+                    <p className="mt-1.5 rounded border-l-2 border-[#4D8CFF]/60 pl-2 text-[11px] leading-relaxed text-[#0b0b0b]/65 dark:text-[#E5E4E2]/65">{WRITER_NAME_HINT}</p>
+                  )}
                 </div>
                 <div className="mt-3 space-y-2 lg:mt-0 lg:w-80 lg:shrink-0">
                   {waiting
@@ -308,6 +323,10 @@ export function DifferencesChart({ rows, busyKey, onFixCatalog, onAdopt, onKeepB
                     ? <button type="button" className={SECONDARY} onClick={() => copyAndOpen(row.copy!.secondary!.value, url, row.copy!.secondary!.what)} disabled={busy}>
                         {row.copy.secondary.label}
                       </button>
+                    : row.check && row.check.label !== row.treatment.primary
+                    ? <button type="button" className={SECONDARY} onClick={() => copyAndOpen(row.check!.value, url, row.check!.what)} disabled={busy}>
+                        {row.check.label}
+                      </button>
                     : row.treatment.secondary.includes("Repertoire")
                     ? <a href={url} target="_blank" rel="noreferrer" className={SECONDARY}>
                         <ExternalLink className="h-3.5 w-3.5" aria-hidden />{row.treatment.secondary}
@@ -315,9 +334,10 @@ export function DifferencesChart({ rows, busyKey, onFixCatalog, onAdopt, onKeepB
                     : <button type="button" className={SECONDARY} onClick={() => onFixCatalog(row, fieldFor(row))} disabled={busy}>
                         {row.treatment.secondary}
                       </button>}
+                  {/* The sign-in says what the member goes there to do, and there is only ever one of them. */}
                   {!waiting && portal.signIn && (
                     <a href={portal.signIn} target="_blank" rel="noreferrer" className={SECONDARY}>
-                      <ExternalLink className="h-3.5 w-3.5" aria-hidden />Sign in to {portal.name}
+                      <ExternalLink className="h-3.5 w-3.5" aria-hidden />{portal.cta}
                     </a>
                   )}
                   {canAddVersion && (

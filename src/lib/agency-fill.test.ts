@@ -195,3 +195,19 @@ peopleDescribe("the people a list names", () => {
     peopleExpect(untouched.writers.every((w) => w.role === "")).toBe(true);
   });
 });
+
+describe("the Title row in the fill dialog", () => {
+  // A composition list names the work, and the title was the one field the dialog never compared (founder, 2026-11-15):
+  // BMI filing "24/7 Love" as "TWENTY FOUR SEVEN" has to be visible before the member picks a version to keep.
+  const work = { title: "TWENTY FOUR SEVEN", iswc: "T9187370996", isrc: "", workId: "1", writers: [{ name: "PETERSON QUI ONA LASHAY", share: 100, ipi: "" }] };
+
+  it("compares a composition's title with the agency's own", () => {
+    const rows = fieldChanges({ ...emptyMetadata(), title: "24/7 Love", iswc: "T9187370996" }, work, "composition");
+    expect(rows).toContainEqual({ field: "Title", catalog: "24/7 Love", agency: "TWENTY FOUR SEVEN" });
+  });
+
+  it("leaves the title alone when it is already saved as an alternate title", () => {
+    const rows = fieldChanges({ ...emptyMetadata(), title: "24/7 Love", iswc: "T9187370996", alternateTitles: ["TWENTY FOUR SEVEN"] }, work, "composition");
+    expect(rows.some((r) => r.field === "Title")).toBe(false);
+  });
+});

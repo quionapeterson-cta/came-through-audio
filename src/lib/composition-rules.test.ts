@@ -43,7 +43,8 @@ describe("composition rules", () => {
     expect(row.agencyCodes).toEqual([]);
     expect(row.versions).toEqual({ catalog: "", agency: "" });
     expect(row.artists).toEqual({ catalog: "", agency: "" });
-    expect(row.copy!.primary).toEqual({ label: "Copy Work Title & Check BMI ↗", value: "Bloodline", what: "work title" });
+    // One check, by the writer's name, because that is what a PRO's repertoire searches (founder, 2026-11-15).
+    expect(row.copy!.primary).toEqual({ label: "Copy Writer Name & Check BMI ↗", value: "Bloodline", what: "writer name" });
     expect(row.treatment.action).toBe("review");
     expect(actionFor(row)).toBe("review");
     expect(row.treatment.primary).not.toMatch(/ISRC|distributor/i);
@@ -51,7 +52,9 @@ describe("composition rules", () => {
     expect(repertoireUrl("bmi")).toBe("https://repertoire.bmi.com/");
     // The ISWC is what disagrees, so the fix opens that field.
     expect(fieldFor(row)).toBe("iswc");
-    expect(row.treatment.secondary).toBe("Copy ISWC & Check BMI ↗");
+    expect(row.treatment.secondary).toBe("Fix in My Catalog");
+    // Two checks on one work — a title search and an ISWC search — were the duplicate the founder kept seeing.
+    expect(row.copy!.secondary).toBeUndefined();
   });
 
   it("copies the writer's name for The MLC, whose public search is by writer", () => {

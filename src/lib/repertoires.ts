@@ -30,8 +30,10 @@ const s = (id: string, name: string, url: string, access: Society["access"] = "p
   ({ id, name, url, access, ...(aliases && { aliases }), ...(searchBy && { searchBy }) });
 
 const ASCAP = s("ascap", "ASCAP", "https://www.ascap.com/repertory", "public", undefined, "writer");
-// BMI finds a song most reliably by its title plus the performer (artist), not the writer (founder, 2026-10-25).
-const BMI = s("bmi", "BMI", "https://repertoire.bmi.com/", "public", undefined, "title-performer");
+// BMI's public repertoire finds a work by the writer's name as it is registered (founder, 2026-11-15): "Qui-Ona Peterson"
+// returned nothing, "Qui-Ona LaShay Peterson" returned her works. It replaced the title-plus-performer reading of
+// 2026-10-25, which never found a work filed under a full legal name.
+const BMI = s("bmi", "BMI", "https://repertoire.bmi.com/", "public", undefined, "writer");
 const SESAC = s("sesac", "SESAC", "https://www.sesac.com/repertory/", "public", undefined, "writer");
 const GMR = s("gmr", "GMR", "https://globalmusicrights.com/", "member");
 // SoundExchange's public ISRC search (with IFPI): anyone can search by ISRC or artist and title.

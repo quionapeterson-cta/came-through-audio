@@ -47,7 +47,9 @@ describe("AgencyLists", () => {
     fireEvent.change(screen.getByLabelText("Upload your ASCAP list"), { target: { files: [file] } });
     fireEvent.click(await screen.findByRole("button", { name: /Fill my catalog/ }));
     expect(await screen.findByText("Your catalog")).toBeTruthy();
-    expect(screen.getByText("The agency (ASCAP)")).toBeTruthy();
+    // The agency's name is a tag on its own header, so the two value columns line up (founder, 2026-11-15).
+    expect(screen.getByText("The agency")).toBeTruthy();
+    expect(screen.getAllByText("ASCAP").length).toBeGreaterThan(0);
     expect(screen.getAllByText(/isn't on the agency's registration/).length).toBeGreaterThan(0);
     expect(screen.getByText(/Check that it's correct/)).toBeTruthy();
     // Keeping the catalog version is the default, and it offers the expert route instead of leaving the difference silent.

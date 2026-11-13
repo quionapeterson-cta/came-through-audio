@@ -854,6 +854,9 @@ export function MetadataUploader({ onShareInfo, userId, mode = "embed", readOnly
                     </p>
                   )}
                 </div>
+                {/* A second name the song is registered under, right under the title it belongs to (founder, 2026-11-15):
+                    an agency that files the work under that name then matches this song instead of reporting it missing. */}
+                {full && <ListField label="Alternate title" id="alternateTitles" tip={TIPS.alternateTitles} values={metadata.alternateTitles?.length ? metadata.alternateTitles : [""]} onChange={(v) => update("alternateTitles", v)} />}
                 {/* Someone else performs it (founder, 2026-11-09): the composition is the member's, the recording is not. */}
                 <div className="space-y-2 sm:col-span-2">
                   <label className="flex items-start gap-2 text-sm">
@@ -862,7 +865,6 @@ export function MetadataUploader({ onShareInfo, userId, mode = "embed", readOnly
                   </label>
                   {isExternal(metadata) && <p className="text-xs text-muted-foreground">Add the artist who released it under Artist, so their release is easy to find.</p>}
                 </div>
-                {full && <ListField label="Alternate title" id="alternateTitles" tip={TIPS.alternateTitles} values={metadata.alternateTitles?.length ? metadata.alternateTitles : [""]} onChange={(v) => update("alternateTitles", v)} />}
                 <div className="space-y-2">
                   {metadata.featured.map((name, index) => (
                     <div key={index} className="flex items-end gap-2">
@@ -1497,7 +1499,7 @@ export function MetadataUploader({ onShareInfo, userId, mode = "embed", readOnly
 const TIPS = {
   instrumental: "Check this if the song has no lyrics. Instrumental songs don't need an Author to be registered.",
   retiredIscrs: "A code this recording used to carry. Put the current code above first, then the old one here. A recording carries one ISRC, so the new code can't be added to the old entry: it is registered as an entry of its own — do it yourself in SoundExchange Direct, The MLC Portal or your PRO, or choose Expert Registration Assistance in the workspace and our team does it. A Support ticket saying it's an ISRC change works too. Give the title, artist, release date and both codes, and the distributor's confirmation if an agency asks for it. Never remove or close the old code: money filed under it can still be found and paid later.",
-  alternateTitles: "Other names the song goes by, like a short title or a translation. Agencies use them to match plays to your song.",
+  alternateTitles: "Other names the song is registered or released under — a short title, a translation, or the name an agency files it by. Repertoire search matches a name exactly, so save each one as that agency prints it: a work filed under this name then matches your song instead of reading as unregistered.",
   samples: "Answer Yes if the song uses a sample, borrows from another song, or is based on an older song (public-domain songs too). PROs ask for the original song's details when you register.",
   writtenFor: "Was the song made for a movie, TV show, stage show or commercial? BMI asks this when you register.",
   pubShare: "This writer's part of the publisher half, because they're self-published or BMI pays them. It starts at their writer split. Every publisher share on the song (listed publishers plus these) has to add up to exactly 100%.",

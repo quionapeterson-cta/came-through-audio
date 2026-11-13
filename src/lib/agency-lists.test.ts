@@ -209,24 +209,52 @@ describe("BMI's 200% column and its spelling of a name", () => {
     expect(sameWriter("Lee", "Ann Lee")).toBe(false);
   });
 
-  it("says the share is right and the spelling is the only thing to fix when BMI prints 200%", () => {
+  it("says the share is right and the full registered name is the only thing to fix when BMI prints 200%", () => {
     const [w] = readWorks(parseDelimited("Title,Writer,Share\nBig Booty Bouncing feat. OG PI,PETERSON QUI ONA LASHAY,200"));
     const me = { ...emptyMetadata(), title: "Big Booty Bouncing", artist: "Q", iswc: "", isrc: "",
       writers: [{ name: "", legalName: "Qui-Ona Peterson", role: "Author/Composer" as const, pro: "BMI", ipi: "", percentage: "100" }], composers: [] };
     const r = compareList([w!], [{ id: "a", title: me.title, artist: "Q", updatedAt: "", metadata: me }]);
     expect(r.differences).toHaveLength(1);
-    // The person and the share both match; only the spelling needs bringing up to the agency's.
-    expect(r.differences[0]!.issues).toEqual(["The agency has PETERSON QUI ONA LASHAY where your catalog has Qui-Ona Peterson — same writer, fix the spelling so both records match"]);
+    // The person and the share both match; only the name needs bringing up to the registration, and the sentence says
+    // exactly which name to put there — the founder's own case: "Qui-Ona Peterson" finds nothing at BMI.
+    expect(r.differences[0]!.issues).toEqual(['The agency has PETERSON QUI ONA LASHAY where your catalog has Qui-Ona Peterson — repertoire search matches the registered name exactly, so the legal name here has to read "Qui-Ona Lashay Peterson"']);
   });
 
-  it("flags a real spelling difference, so the catalog can be brought up to the registration", () => {
+  it("flags a real name difference, so the catalog can be brought up to the registration", () => {
     const [w] = readWorks(parseDelimited("Title,Writer,Share\nBloodline,STEPHENS CALVIN ANDRE JR (MR),100"));
     const me = { ...emptyMetadata(), title: "Bloodline", artist: "Q", iswc: "", isrc: "",
       writers: [{ name: "", legalName: "Calvin Stephens", role: "Author/Composer" as const, pro: "BMI", ipi: "", percentage: "100" }], composers: [] };
     const r = compareList([w!], [{ id: "a", title: "Bloodline", artist: "Q", updatedAt: "", metadata: me }]);
-    expect(r.differences[0]!.issues).toEqual(["The agency has STEPHENS CALVIN ANDRE JR (MR) where your catalog has Calvin Stephens — same writer, fix the spelling so both records match"]);
+    expect(r.differences[0]!.issues).toEqual(['The agency has STEPHENS CALVIN ANDRE JR (MR) where your catalog has Calvin Stephens — repertoire search matches the registered name exactly, so the legal name here has to read "Calvin Andre Stephens"']);
     // Word order and the "MR" title on their own are not a difference; a missing middle name and suffix are.
     expect(spelledDifferently("STEPHENS CALVIN ANDRE JR (MR)", "Calvin Andre Stephens Jr")).toBe(false);
+  });
+});
+
+describe("a work filed under another name", () => {
+  const work = (title: string) => ({ title, iswc: "T9187370996", isrc: "", workId: "1", writers: [{ name: "PETERSON QUI ONA LASHAY", share: 100, ipi: "" }] });
+  const song = (title: string, alternateTitles: string[] = []) => ({
+    id: "a", title, artist: "Karma Came", updatedAt: "",
+    metadata: { ...emptyMetadata(), title, artist: "Karma Came", iswc: "T9187370996", alternateTitles,
+      writers: [{ name: "", legalName: "Qui-Ona Lashay Peterson", role: "Author/Composer" as const, pro: "BMI", ipi: "", percentage: "100" }], composers: [] },
+  });
+
+  it("matches a work the member has already saved as an alternate title", () => {
+    const r = compareList([work("TWENTY FOUR SEVEN")], [song("24/7 Love", ["TWENTY FOUR SEVEN"])], "composition", "BMI");
+    expect(r.notListed).toHaveLength(0);
+    expect(r.matched).toHaveLength(1);
+    expect(r.differences).toHaveLength(0);
+  });
+
+  it("reports the two titles when neither side lists the other, because a work is found by its registered title", () => {
+    const r = compareList([work("TWENTY FOUR SEVEN")], [song("24/7 Love")], "composition", "BMI");
+    expect(r.differences[0]!.issues).toContain('The agency registers this work as "TWENTY FOUR SEVEN", your catalog says "24/7 Love" — a work is found by its registered title, so the two names have to match or yours has to be saved as an alternate title');
+  });
+
+  it("reads numbers as words as one title, so 24/7 Love is TWENTY FOUR SEVEN LOVE", () => {
+    const r = compareList([work("TWENTY FOUR SEVEN LOVE")], [song("24/7 Love")], "composition", "BMI");
+    expect(r.differences).toHaveLength(0);
+    expect(r.matched).toHaveLength(1);
   });
 });
 

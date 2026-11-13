@@ -1,4 +1,4 @@
-import { matchWork, printedTitle, retiredCodes, sameWriter, scaledShares, titleCarriesVersion, titleReadsDifferently, workIssues, type ListMatch, type ListResult, type ListWork, type ListWriter } from "@/lib/agency-lists";
+import { matchWork, printedTitle, retiredCodes, sameWriter, scaledShares, titleCarriesVersion, titleReadsDifferently, titleKey, workIssues, type ListMatch, type ListResult, type ListWork, type ListWriter } from "@/lib/agency-lists";
 import type { CatalogTrack } from "@/lib/catalog";
 import type { AgencyKind } from "@/lib/agency-kind";
 import { isCatalogId } from "@/lib/ids";
@@ -140,16 +140,21 @@ const listWriters = (writers: ListWriter[]) => {
 };
 
 /**
- * The fields that actually differ, so the dialog only shows what the member has to decide about. A composition list
- * offers its ISWC and writers only: its title names the work, not this recording of it, and it carries no ISRC
- * (founder, 2026-11-14).
+ * The fields that actually differ, so the dialog only shows what the member has to decide about.
+ *
+ * **Title is a row on both kinds** (founder, 2026-11-15). A composition list names the work, and BMI filing "24/7 Love" as
+ * "TWENTY FOUR SEVEN LOVE" is exactly what the member has to see before choosing a version — it used to be skipped for
+ * every PRO, so the title was the one field the dialog never compared. A title already saved as an alternate title is
+ * the same song under its other name, so it is not offered as a change.
  */
 export function fieldChanges(existing: Metadata, work: ListWork, kind: AgencyKind = "composition"): FieldChange[] {
   const rows: FieldChange[] = [];
   const composition = kind === "composition";
   // A field the list doesn't carry is never offered: adopting the agency's version would leave the catalog's value in place.
-  const named = printedTitle(existing);
-  if (!composition && titleReadsDifferently(named, work.title)) rows.push({ field: "Title", catalog: named, agency: work.title });
+  const named = composition ? existing.title.trim() : printedTitle(existing);
+  const knownTitle = (existing.alternateTitles ?? []).some((alt) => alt.trim() && titleKey(alt) === titleKey(work.title));
+  const titleDiffers = composition ? titleKey(named) !== titleKey(work.title) : titleReadsDifferently(named, work.title);
+  if (!knownTitle && titleDiffers) rows.push({ field: "Title", catalog: named || "none", agency: work.title });
   // A code this song has retired is never offered: the agency is the one that needs updating, not the catalog.
   if (!composition && work.isrc && !retiredCodes(existing).includes(work.isrc)) rows.push({ field: "ISRC", catalog: existing.isrc.trim() || "none", agency: work.isrc });
   if (work.iswc) rows.push({ field: "ISWC", catalog: existing.iswc.trim() || "none", agency: work.iswc });

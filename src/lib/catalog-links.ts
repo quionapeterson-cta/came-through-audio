@@ -12,6 +12,7 @@ export type CatalogField =
   | "iswc"
   | "writers"
   | "title"
+  | "alternateTitles"
   | "artist"
   | "version"
   | "retired"
@@ -26,6 +27,7 @@ export const CATALOG_FIELD_LABEL: Record<string, string> = {
   iswc: "ISWC",
   writers: "writers",
   title: "title",
+  alternateTitles: "alternate title",
   artist: "artist",
   version: "version",
   retired: "retired ISRC",
@@ -36,7 +38,7 @@ export const CATALOG_FIELD_LABEL: Record<string, string> = {
 };
 
 /** What the link is asking the member to do once the field is in front of them. */
-export type CatalogAction = "adopt" | "dual_isrc" | "add-version" | "review";
+export type CatalogAction = "adopt" | "dual_isrc" | "add-version" | "alternate-title" | "review";
 
 export type CatalogLink = {
   trackId: string;

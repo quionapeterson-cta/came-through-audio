@@ -242,6 +242,17 @@ export function DifferencesPanel({ userId, tracks, societies, summaries, default
                   const agency = row.claims.find((c) => c.isrc)?.isrc ?? "";
                   if (agency) void resolve(row, { isrc: agency }, `Adopted ${agency}. The catalog now matches ${row.claims[0]!.name}.`);
                 }}
+                onSaveAlternate={(row) => {
+                  const track = tracks.find((t) => t.id === row.songId);
+                  const name = (row.alternateTitle ?? row.claims[0]?.title ?? "").trim();
+                  if (!track || !name) return;
+                  const saved = (track.metadata.alternateTitles ?? []).map((t) => t.trim()).filter(Boolean);
+                  if (saved.some((t) => t.toLowerCase() === name.toLowerCase())) {
+                    toast.success(`"${name}" is already an alternate title of this song.`);
+                    return;
+                  }
+                  void resolve(row, { alternateTitles: [...saved, name] }, `Saved "${name}" as an alternate title of ${track.title}.`);
+                }}
                 onKeepBoth={(row) => {
                   const agency = row.claims.map((c) => c.isrc).find((c) => c && c.toUpperCase() !== row.catalogIsrc.toUpperCase()) ?? "";
                   setPick({ row, current: row.catalogIsrc || agency });

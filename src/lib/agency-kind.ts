@@ -12,6 +12,11 @@ const RECORDING_AGENCIES = new Set(["soundexchange", "resound"]);
 export const agencyKind = (society: string): AgencyKind => (RECORDING_AGENCIES.has(society) ? "recording" : "composition");
 export const registersRecording = (society: string) => agencyKind(society) === "recording";
 
-/** What the member copies to look the song up at that agency: a work is found by its title, a recording by its ISRC. */
-export const searchesBy = (society: string): "isrc" | "work-title" | "writer" =>
-  agencyKind(society) === "recording" ? "isrc" : society === "mlc" ? "writer" : "work-title";
+/**
+ * What the member copies to look the song up at that agency. A recording is found by its ISRC; a composition is found by
+ * the **writer's name**, at a PRO and at The MLC alike — the founder's own BMI search for "Qui-Ona Peterson" found
+ * nothing, and the full registered name found her works (founder, 2026-11-15). The rule lives in `agency-lookup.ts` so the
+ * button's label and the value it copies always agree.
+ */
+export const searchesBy = (society: string): "isrc" | "writer" =>
+  agencyKind(society) === "recording" ? "isrc" : "writer";

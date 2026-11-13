@@ -156,7 +156,9 @@ describe("difference rows", () => {
   });
 
   it("gives a registering card the agency's own sign-in page, never its homepage", () => {
-    expect(signInFor("soundexchange")).toEqual({ name: "SoundExchange Direct", signIn: "https://sxdirect.soundexchange.com/login/" });
+    expect(signInFor("soundexchange")).toEqual({ name: "SoundExchange Direct", signIn: "https://sxdirect.soundexchange.com/login/", cta: "Sign in and submit recording" });
+    // A PRO takes a work, not a recording, and the button says which (founder, 2026-11-15).
+    expect(signInFor("bmi").cta).toBe("Sign in and register the work");
     expect(signInFor("ascap").signIn).toBe("https://www.ascap.com/member-access#login");
     expect(signInFor("bmi").signIn).toBe("https://ols.bmi.com/");
     expect(signInFor("mlc").signIn).toBe("https://portal.themlc.com/login");
@@ -273,7 +275,7 @@ describe("grouped treatments", () => {
     const groups = groupFixes(fixes);
     expect(groups).toHaveLength(1);
     expect(groups[0]!.issues).toHaveLength(2);
-    expect(groups[0]!.headline).toBe("Fix the spelling on one side");
+    expect(groups[0]!.headline).toBe("Match the writer's full registered name");
   });
 
   it("keeps two different rules apart", () => {
