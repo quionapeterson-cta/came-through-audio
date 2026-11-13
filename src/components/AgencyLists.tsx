@@ -331,9 +331,9 @@ export function AgencyLists({ userId, societies, songsFor, summaries, allTracks,
         className="flex w-full items-center justify-between gap-2 px-2 py-1.5 text-left">
         <span className="min-w-0">
           <span className="truncate text-sm font-semibold">{names[p.key] ?? p.names[0]}</span>
-          <span className="ml-1.5 text-[11px] text-muted-foreground">{songs.length} songs</span>
+          <span className="ml-1.5 whitespace-nowrap text-[11px] text-muted-foreground">{songs.length} songs</span>
         </span>
-        <span className="flex shrink-0 items-center gap-2 text-[11px] text-muted-foreground">
+        <span className="flex shrink-0 items-center gap-2 whitespace-nowrap text-[11px] text-muted-foreground">
           {answeredIn(songs)}/{writersIn(songs)} answered
           {open ? <ChevronUp className="h-3.5 w-3.5" aria-hidden /> : <ChevronDown className="h-3.5 w-3.5" aria-hidden />}
         </span>
@@ -355,9 +355,9 @@ export function AgencyLists({ userId, societies, songsFor, summaries, allTracks,
         className="flex w-full items-center justify-between gap-2 px-2 py-1.5 text-left">
         <span className="min-w-0">
           <span className="truncate text-sm font-semibold">Songs with no shared writer</span>
-          <span className="ml-1.5 text-[11px] text-muted-foreground">{loneSongs.length} songs</span>
+          <span className="ml-1.5 whitespace-nowrap text-[11px] text-muted-foreground">{loneSongs.length} songs</span>
         </span>
-        <span className="flex shrink-0 items-center gap-2 text-[11px] text-muted-foreground">
+        <span className="flex shrink-0 items-center gap-2 whitespace-nowrap text-[11px] text-muted-foreground">
           {answeredIn(loneSongs)}/{writersIn(loneSongs)} answered
           {open ? <ChevronUp className="h-3.5 w-3.5" aria-hidden /> : <ChevronDown className="h-3.5 w-3.5" aria-hidden />}
         </span>
