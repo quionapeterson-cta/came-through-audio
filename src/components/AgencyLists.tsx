@@ -5,7 +5,7 @@ import { confirmAction } from "@/components/ConfirmHost";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { fillPlan, listPeople, personFor, withPeople, type FillPlan, type Person, type PersonChoice } from "@/lib/agency-fill";
-import { WRITER_ROLES } from "@/lib/metadata";
+import { WRITER_ROLES, type Metadata } from "@/lib/metadata";
 import { albumKey, catalogReleases } from "@/lib/release-routing";
 import { FILL_RELEASE_TYPES, cacheReleases, mergeRelease, readCachedReleases, releaseKey, withoutCatalog, type FillRelease } from "@/lib/fill-releases";
 import { listFillReleases, rememberFillRelease as saveFillRelease } from "@/lib/fill-releases.functions";
@@ -56,6 +56,8 @@ const UNRELEASED_INSTRUMENTAL = "unreleased-instrumental";
 const RELEASE_KINDS = ["Single", "EP", "Album"] as const;
 /** The answer that opens the type-and-name fields, for a release that isn't in the catalog yet. */
 const NEW = "new";
+/** A catalogued song's own release: the option that leaves it where it is. */
+const CURRENT = "current";
 
 /** One work's own key: the same one the panel lists it under, so a pick survives a re-render. */
 const workKey = (w: ListWork) => w.workId || w.iswc || w.isrc || w.title;
@@ -79,6 +81,8 @@ export function AgencyLists({ userId, societies, songsFor, summaries, allTracks,
    * Unanswered is Unreleased, which is where a work that isn't out yet belongs.
    */
   const [placements, setPlacements] = useState<Record<string, string>>({});
+  /** The release a catalogued song keeps or moves to when the agency's version is taken (founder, 2026-11-16). */
+  const [versionReleases, setVersionReleases] = useState<Record<string, string>>({});
   /** A release typed by hand for one song, before it exists anywhere else. */
   const [drafts, setDrafts] = useState<Record<string, FillRelease>>({});
   /** Releases typed before, kept with the account (founder, 2026-11-16) and copied here for the moments it can't be read. */
@@ -173,9 +177,11 @@ export function AgencyLists({ userId, societies, songsFor, summaries, allTracks,
     const plan = fillPlan(result, songsFor(society.id), artist, agencyKind(society.id));
     setPicked(Object.fromEntries(plan.creates.map((c) => [workKey(c.work), true])));
     setPlacements({});
+    setVersionReleases({});
     setDrafts({});
     setRemembered(userId ? readCachedReleases(userId) : []);
-    setPeople(listPeople(plan.creates.map((c) => c.work)));
+    // Every song in the dialog is asked about, catalogued ones included, so their writers get the same boxes.
+    setPeople(listPeople([...plan.creates.map((c) => c.work), ...plan.duplicates.map((d) => d.work)]));
     setRoles({});
     setNames({});
     setFolded(new Set());
@@ -241,6 +247,37 @@ export function AgencyLists({ userId, societies, songsFor, summaries, allTracks,
   }
 
   /**
+   * The member's answer for one catalogued song. Nothing is preselected (founder, 2026-11-16): a box with no answer is
+   * never written, and the dialog refuses to submit until every catalogued song has one.
+   */
+  const answerFor = (d: FillPlan["duplicates"][number]) => choices[d.track.id];
+  /** The catalogued songs this click writes the agency's version over. */
+  const chosenDuplicates = fill ? fill.plan.duplicates.filter((d) => answerFor(d) === "agency") : [];
+  /** Catalogued songs still waiting for "keep mine" or "the agency's". */
+  const unanswered = fill ? fill.plan.duplicates.filter((d) => !answerFor(d)).length : 0;
+
+  /** The role and spelling answers given for one song, in the shape `withPeople` wants. */
+  const chosenFor = (songKey: string): Record<string, PersonChoice> => {
+    const chosen: Record<string, PersonChoice> = {};
+    for (const p of people) {
+      const role = ((roles[songKey] ?? {})[p.key] ?? "").trim();
+      const name = names[p.key]?.trim();
+      if (role || name) chosen[p.key] = { ...(role ? { role } : {}), ...(name ? { name } : {}) };
+    }
+    return chosen;
+  };
+
+  /** What the agency's version writes for a catalogued song's release: nothing unless the member moved it. */
+  function releaseWriteFor(d: FillPlan["duplicates"][number]): Partial<Metadata> {
+    const value = versionReleases[d.track.id] ?? CURRENT;
+    if (value === CURRENT) return {};
+    // An instrumental leaves the release fields empty, as a new instrumental does: it isn't on the album it was cut from.
+    if (value === INSTRUMENTAL) return { instrumental: true, album: "", releaseType: "" };
+    const rel = catalogReleaseList.find((r) => `rel:${r.album}` === value);
+    return rel ? { album: rel.album, releaseType: rel.kind } : {};
+  }
+
+  /**
    * Adds the new works and, only for the duplicates the member picked, writes the agency's version over the catalog's.
    * Nothing else is touched: a song left on "keep mine" is not saved at all.
    */
@@ -253,21 +290,21 @@ export function AgencyLists({ userId, societies, songsFor, summaries, allTracks,
         const key = workKey(c.work);
         // The role answers are this song's own, so one person can be the author here and the composer there. The spelling
         // a member picked for a person is theirs on every song.
-        const chosen: Record<string, PersonChoice> = {};
-        for (const p of people) {
-          const role = ((roles[key] ?? {})[p.key] ?? "").trim();
-          const name = names[p.key]?.trim();
-          if (role || name) chosen[p.key] = { ...(role ? { role } : {}), ...(name ? { name } : {}) };
-        }
-        const withRoles = withPeople(c.metadata, people, chosen);
+        const withRoles = withPeople(c.metadata, people, chosenFor(key));
         // The release each song was given is written with it, so My Catalog files it where the member put it.
         await saveTrack({ ...withRoles, ...(placementFor(key) ?? {}) }, userId);
       }
       let replaced = 0;
-      for (const d of fill.plan.duplicates) if (choices[d.track.id] === "agency") { await saveTrack(d.agency, userId, updateTarget(d.track.id)); replaced += 1; }
+      // Only a catalogued song the member answered with the agency's version is written, and the roles they verified
+      // and the release they chose travel with it (founder, 2026-11-16).
+      for (const d of fill.plan.duplicates) {
+        if (answerFor(d) !== "agency") continue;
+        await saveTrack({ ...withPeople(d.agency, people, chosenFor(d.track.id)), ...releaseWriteFor(d) }, userId, updateTarget(d.track.id));
+        replaced += 1;
+      }
       const added = adding.length;
       const placedAny = adding.some((c) => workKey(c.work) in placements);
-      const kept = fill.plan.duplicates.filter((d) => choices[d.track.id] !== "agency").length;
+      const kept = fill.plan.duplicates.filter((d) => answerFor(d) === "keep").length;
       toast.success(
         `${added ? `${added} song${added === 1 ? "" : "s"} added to My Catalog` : "No new songs added"}${replaced ? `, ${replaced} replaced with the agency's version` : ""}. ` +
         (kept ? `${kept} kept as yours, so ${fill.society.name} still needs updating to match. ` : "") +
@@ -279,7 +316,7 @@ export function AgencyLists({ userId, societies, songsFor, summaries, allTracks,
       // The works just added are no longer "on the list but not in the catalog", so the offer can't run twice; a song
       // replaced with the agency's version is no longer different either, so the report stops naming it.
       const justAdded = new Set(adding.map((c) => c.work));
-      const settled = new Set(fill.plan.duplicates.filter((d) => choices[d.track.id] === "agency").map((d) => d.track.id));
+      const settled = new Set(fill.plan.duplicates.filter((d) => answerFor(d) === "agency").map((d) => d.track.id));
       setStored((state) => {
         const entry = state.byId[fill.society.id];
         if (!entry) return state;
@@ -311,14 +348,21 @@ export function AgencyLists({ userId, societies, songsFor, summaries, allTracks,
     const key = workKey(c.work);
     return (placements[key] ?? UNRELEASED) === NEW && !(drafts[key]?.name ?? "").trim();
   });
-  /** Every song the dialog is filling, and who the list credits on it. */
-  const creates = fill ? fill.plan.creates : [];
-  const listWriters = (c: (typeof creates)[number]) => c.work.writers.filter((w) => w.name.trim());
+  /**
+   * Every song the dialog is filling, in one list (founder, 2026-11-16): the works the catalog doesn't have yet, and
+   * the catalogued songs a difference puts in front of the member. Each one carries every question it asks.
+   */
+  type FillSong = { key: string; work: ListWork; metadata: Metadata; duplicate?: FillPlan["duplicates"][number] };
+  const songs: FillSong[] = fill ? [
+    ...fill.plan.creates.map((c) => ({ key: workKey(c.work), work: c.work, metadata: c.metadata })),
+    ...fill.plan.duplicates.map((d) => ({ key: d.track.id, work: d.work, metadata: d.track.metadata, duplicate: d })),
+  ] : [];
+  const listWriters = (c: FillSong) => c.work.writers.filter((w) => w.name.trim());
   /** The answer key for a writer name: the person, whichever spelling the list used, or the name itself. */
   const keyOfName = (name: string) => personFor(people, name)?.key ?? name;
   /** How many of these songs each writer is on, counted once per song however the list repeats them. */
   const songCount = new Map<string, number>();
-  for (const c of creates) {
+  for (const c of songs) {
     const seen = new Set<string>();
     for (const w of listWriters(c)) {
       const key = keyOfName(w.name);
@@ -329,30 +373,31 @@ export function AgencyLists({ userId, societies, songsFor, summaries, allTracks,
   }
   /** A writer credited on two or more songs gets a box of their own, holding every song they are on. */
   const coWriters = people.filter((p) => (songCount.get(p.key) ?? 0) >= 2);
-  const sharesAWriter = (c: (typeof creates)[number]) => listWriters(c).some((w) => (songCount.get(keyOfName(w.name)) ?? 0) >= 2);
-  /** Which box asks the release for each song: the first writer box that lists it, so a song never shows two dropdowns. */
+  const sharesAWriter = (c: FillSong) => listWriters(c).some((w) => (songCount.get(keyOfName(w.name)) ?? 0) >= 2);
+  /** Which box asks the release for each new song: the first writer box that lists it, so a song never shows two dropdowns. */
   const releaseHome = new Map<string, string>();
   for (const p of coWriters) {
-    for (const c of creates) {
-      const key = workKey(c.work);
-      if (releaseHome.has(key)) continue;
-      if (listWriters(c).some((w) => keyOfName(w.name) === p.key)) releaseHome.set(key, p.key);
+    for (const c of songs) {
+      if (releaseHome.has(c.key)) continue;
+      if (listWriters(c).some((w) => keyOfName(w.name) === p.key)) releaseHome.set(c.key, p.key);
     }
   }
-  /** Songs with no repeat writer still need every role answered, so they are listed by song instead. */
-  const loneSongs = creates.filter((c) => !sharesAWriter(c));
-  const answeredIn = (songs: typeof creates) => songs.reduce((n, c) => {
-    const answers = roles[workKey(c.work)] ?? {};
+  /** Songs with no repeat writer still show every role, so they are listed by song instead. */
+  const loneSongs = songs.filter((c) => !sharesAWriter(c));
+  /** A catalogued song asks its writer and release questions only once the member takes the agency's version. */
+  const questionsOpen = (c: FillSong) => !c.duplicate || answerFor(c.duplicate) === "agency";
+  const answeredIn = (list: FillSong[]) => list.filter(questionsOpen).reduce((n, c) => {
+    const answers = roles[c.key] ?? {};
     return n + listWriters(c).filter((w) => (answers[keyOfName(w.name)] ?? "").trim()).length;
   }, 0);
-  const writersIn = (songs: typeof creates) => songs.reduce((n, c) => n + listWriters(c).length, 0);
+  const writersIn = (list: FillSong[]) => list.filter(questionsOpen).reduce((n, c) => n + listWriters(c).length, 0);
 
   /**
    * One writer's answer on one song. Every song shows all of its writers, so the member answering a co-writer can see who
    * else is on that song and give each of them a role without leaving it (founder, 2026-11-16).
    */
-  const roleRow = (c: (typeof creates)[number], name: string, ipi = "", pro = "", share?: number, owner = false) => {
-    const songKey = workKey(c.work);
+  const roleRow = (c: FillSong, name: string, ipi = "", pro = "", share?: number, owner = false) => {
+    const songKey = c.key;
     const who = keyOfName(name);
     const role = (roles[songKey] ?? {})[who] ?? "";
     const shown = names[who] ?? name;
@@ -377,8 +422,8 @@ export function AgencyLists({ userId, societies, songsFor, summaries, allTracks,
    * A song's release, asked in the same card as its writers (founder, 2026-11-16). Unreleased is a button of its own, so the one
    * answer that needs no choosing is a click; the dropdown is for a release.
    */
-  const releaseControl = (c: (typeof creates)[number], show = true, owner?: string) => {
-    const key = workKey(c.work);
+  const releaseControl = (c: FillSong, show = true, owner?: string) => {
+    const key = c.key;
     const value = placements[key] ?? UNRELEASED;
     const draft = drafts[key] ?? { type: "Single" as const, name: "" };
     // A release the catalog already lists is offered from the catalog, so a remembered title can't appear twice.
@@ -454,19 +499,114 @@ export function AgencyLists({ userId, societies, songsFor, summaries, allTracks,
     return custom ? `${custom.name} · ${custom.type}` : "Unreleased";
   }
 
-  /** One song, with all of its writers and the roles still to answer. */
-  const songBlock = (c: (typeof creates)[number], owner?: string, askRelease = true) => {
-    const answers = roles[workKey(c.work)] ?? {};
+  /**
+   * One song, in one box (founder, 2026-11-16). A new work shows its writers and release. A catalogued song shows the whole
+   * comparison and the two answers first; only the agency's version opens the writers and the release for verification.
+   */
+  const songBlock = (c: FillSong, owner?: string, askRelease = true) => {
+    const d = c.duplicate;
+    const answer = d ? answerFor(d) : undefined;
+    const answers = roles[c.key] ?? {};
     const writers = listWriters(c);
     const done = writers.filter((w) => (answers[keyOfName(w.name)] ?? "").trim()).length;
-    return <li key={workKey(c.work)} className="rounded-md border border-border/60 p-1.5">
-      <div className="flex items-baseline justify-between gap-2 px-1">
-        <span className="min-w-0 truncate text-sm font-semibold">{c.metadata.title}</span>
-        <span className="shrink-0 text-[11px] text-muted-foreground">{done}/{writers.length} answered</span>
+    return <li key={c.key} className="rounded-md border border-border/60 p-1.5">
+      <div className="flex flex-wrap items-baseline justify-between gap-2 px-1">
+        <span className="min-w-0 truncate text-sm font-semibold">{d ? d.track.title : c.metadata.title}</span>
+        <span className="shrink-0 text-[11px] text-muted-foreground">
+          {d ? "Already in your catalog" : `${done}/${writers.length} answered`}
+        </span>
       </div>
-      <ul className="mt-1 space-y-0.5">{writers.map((w) => roleRow(c, w.name, w.ipi, w.pro, w.share, keyOfName(w.name) === owner))}</ul>
-      {releaseControl(c, askRelease, owner)}
+      {d && <>
+        {/* The whole comparison, never trimmed: the answer is made from the record itself. */}
+        <div className="mt-1 border-t border-border/60 px-1 pt-1.5 text-xs">
+          {/* Side by side from sm up; on a phone each field stacks, and both values say which side they are. */}
+          <div className="hidden grid-cols-[4.5rem_minmax(0,1fr)_minmax(0,1fr)] items-start gap-x-2 sm:grid">
+            <span />
+            <span className="font-semibold leading-snug">Your catalog</span>
+            <span className="flex flex-wrap items-center gap-1.5 font-semibold leading-snug">The agency
+              <span className="rounded-full border border-primary/30 bg-accent/50 px-1.5 py-px text-[10px] font-semibold">{fill?.society.name}</span>
+            </span>
+          </div>
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-[4.5rem_minmax(0,1fr)_minmax(0,1fr)] sm:items-start sm:gap-x-2 sm:gap-y-1.5">
+            {d.changes.map((ch) => <div key={ch.field} className="flex flex-col gap-0.5 sm:contents">
+              <span className="text-muted-foreground">{ch.field}</span>
+              <span className="flex flex-wrap gap-x-1 leading-snug">
+                <span className="text-muted-foreground sm:hidden">Your catalog:</span>
+                <span className="min-w-0 break-words">{ch.catalog}</span>
+              </span>
+              <span className="flex flex-wrap gap-x-1 leading-snug">
+                <span className="text-muted-foreground sm:hidden">The agency:</span>
+                <span className="min-w-0 break-words">{ch.agency}</span>
+              </span>
+            </div>)}
+          </div>
+          {combinedHalves(d.work) && <p className="mt-2 text-xs text-muted-foreground">
+            {fill?.society.name} prints the writer's half and the publisher's half together, so {listShareTotal(d.work)}% there is 100% of the composition. The share above is shown on the 100% scale.
+          </p>}
+          {d.issues.length > 0 && <ul className="mt-2 space-y-0.5 text-xs text-muted-foreground">
+            {d.issues.map((i) => <li key={i}>⚠️ {i}</li>)}
+          </ul>}
+        </div>
+        {/* The answer, with nothing preselected: keep yours, or take the agency's. */}
+        <div className="mt-1 space-y-1.5 border-t border-border/60 px-1 pt-1.5">
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+            <label className={`flex cursor-pointer items-start gap-2 rounded-lg border p-2 text-xs ${answer === "keep" ? "border-primary bg-accent/40" : "border-border"}`}>
+              <input type="radio" className="mt-0.5" name={`fill-${d.track.id}`} aria-label="Keep my catalog version"
+                checked={answer === "keep"} onChange={() => setChoices((x) => ({ ...x, [d.track.id]: "keep" }))} />
+              <span>
+                <b>Keep my catalog version</b>
+                <span className="block text-muted-foreground">Nothing changes here, so update your registration at {fill?.society.name} to match it.</span>
+              </span>
+            </label>
+            <label className={`flex cursor-pointer items-start gap-2 rounded-lg border p-2 text-xs ${answer === "agency" ? "border-primary bg-accent/40" : "border-border"}`}>
+              <input type="radio" className="mt-0.5" name={`fill-${d.track.id}`} aria-label="Use the agency's version"
+                checked={answer === "agency"} onChange={() => setChoices((x) => ({ ...x, [d.track.id]: "agency" }))} />
+              <span>
+                <b>Use the agency's version</b>
+                <span className="block text-muted-foreground">Check that it's correct: your catalog then matches what {fill?.society.name} has registered.</span>
+              </span>
+            </label>
+          </div>
+          {answer === "keep" && <p className="text-xs text-muted-foreground">
+            Keeping this one leaves the difference in place at {fill?.society.name}.
+          </p>}
+          {!answer && <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
+            <span aria-hidden>🔒</span> Who wrote what and the release open once you choose the agency's version.
+          </p>}
+        </div>
+      </>}
+      {(!d || answer === "agency") && <>
+        <div className="mt-1 border-t border-border/60 px-1 pt-1.5">
+          <span className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">Who wrote what</span>
+        </div>
+        <ul className="mt-0.5 space-y-0.5">{writers.map((w) => roleRow(c, w.name, w.ipi, w.pro, w.share, keyOfName(w.name) === owner))}</ul>
+        {d ? versionReleaseControl(d) : releaseControl(c, askRelease, owner)}
+        {d && !!(d.track.metadata.audioPath || d.track.metadata.artPath || d.track.metadata.coverThumb) && <p className="mt-1 px-1 text-[11px] text-muted-foreground">
+          Your master and artwork stay attached. Re-embed this song in My Catalog afterwards, so the file itself carries the corrected credits, ISRC and ISWC.
+        </p>}
+      </>}
     </li>;
+  };
+
+  /** A catalogued song's release, shown once the agency's version is chosen: it stays where it is unless moved. */
+  const versionReleaseControl = (d: FillPlan["duplicates"][number]) => {
+    const value = versionReleases[d.track.id] ?? CURRENT;
+    const album = d.track.metadata.album.trim();
+    const kind = d.track.metadata.releaseType.trim();
+    return <div className="mt-1 flex flex-wrap items-center justify-between gap-2 border-t border-border/60 px-1 pt-1.5">
+      <span className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">Release</span>
+      <select aria-label={`Release for ${d.track.title}`} value={value}
+        onChange={(e) => setVersionReleases((r) => ({ ...r, [d.track.id]: e.target.value }))}
+        className="h-8 max-w-[16rem] rounded-md border border-input bg-background px-2 text-xs">
+        <option value={CURRENT}>{album ? `${album}${kind ? ` · ${kind}` : ""}` : "Unreleased"} · stays as it is</option>
+        {RELEASE_KINDS.map((k) => {
+          const list = catalogReleaseList.filter((r) => r.kind === k);
+          if (!list.length) return null;
+          return <optgroup key={k} label={`${k}s`}>{list.map((r) => <option key={r.album} value={`rel:${r.album}`}>{r.album}</option>)}</optgroup>;
+        })}
+        <option value={INSTRUMENTAL}>Instrumental</option>
+      </select>
+    </div>;
   };
 
   /** The registered spellings of a writer who appears under two names; one choice covers every song they are on. */
@@ -478,24 +618,25 @@ export function AgencyLists({ userId, societies, songsFor, summaries, allTracks,
 
   /** A box per writer credited on two or more songs, open by default, holding each of those songs. */
   const writerBox = (p: Person) => {
-    const songs = creates.filter((c) => listWriters(c).some((w) => keyOfName(w.name) === p.key));
+    const held = songs.filter((c) => listWriters(c).some((w) => keyOfName(w.name) === p.key));
     const id = `w:${p.key}`;
     const open = !folded.has(id);
+    const openWriters = writersIn(held);
     return <li key={id} className="rounded-lg border border-border/70">
       <button type="button" aria-expanded={open} aria-label={`${open ? "Hide" : "Show"} the songs ${p.names[0]} is on`} onClick={() => toggleFolded(id)}
-        className="flex w-full items-center justify-between gap-2 px-2 py-1.5 text-left">
+        className="flex w-full flex-wrap items-center justify-between gap-x-2 gap-y-0.5 px-2 py-1.5 text-left">
         <span className="min-w-0">
           <span className="truncate text-sm font-semibold">{names[p.key] ?? p.names[0]}</span>
-          <span className="ml-1.5 whitespace-nowrap text-[11px] text-muted-foreground">{songs.length} songs</span>
+          <span className="ml-1.5 whitespace-nowrap text-[11px] text-muted-foreground">{held.length} songs</span>
         </span>
         <span className="flex shrink-0 items-center gap-2 whitespace-nowrap text-[11px] text-muted-foreground">
-          {answeredIn(songs)}/{writersIn(songs)} answered
+          {openWriters > 0 && `${answeredIn(held)}/${openWriters} answered`}
           {open ? <ChevronUp className="h-3.5 w-3.5" aria-hidden /> : <ChevronDown className="h-3.5 w-3.5" aria-hidden />}
         </span>
       </button>
       {open && <div className="px-2 pb-2">
         {spellingRow(p)}
-        <ul className="space-y-1.5">{songs.map((c) => songBlock(c, p.key, releaseHome.get(workKey(c.work)) === p.key))}</ul>
+        <ul className="space-y-1.5">{held.map((c) => songBlock(c, p.key, releaseHome.get(c.key) === p.key))}</ul>
       </div>}
     </li>;
   };
@@ -507,13 +648,13 @@ export function AgencyLists({ userId, societies, songsFor, summaries, allTracks,
     const open = !folded.has(id);
     return <li key={id} className="rounded-lg border border-border/70">
       <button type="button" aria-expanded={open} aria-label={`${open ? "Hide" : "Show"} the songs with no shared writer`} onClick={() => toggleFolded(id)}
-        className="flex w-full items-center justify-between gap-2 px-2 py-1.5 text-left">
+        className="flex w-full flex-wrap items-center justify-between gap-x-2 gap-y-0.5 px-2 py-1.5 text-left">
         <span className="min-w-0">
           <span className="truncate text-sm font-semibold">{people.length > 0 ? "Songs with no shared writer" : "Recordings on this list"}</span>
           <span className="ml-1.5 whitespace-nowrap text-[11px] text-muted-foreground">{loneSongs.length} songs</span>
         </span>
         <span className="flex shrink-0 items-center gap-2 whitespace-nowrap text-[11px] text-muted-foreground">
-          {answeredIn(loneSongs)}/{writersIn(loneSongs)} answered
+          {writersIn(loneSongs) > 0 && `${answeredIn(loneSongs)}/${writersIn(loneSongs)} answered`}
           {open ? <ChevronUp className="h-3.5 w-3.5" aria-hidden /> : <ChevronDown className="h-3.5 w-3.5" aria-hidden />}
         </span>
       </button>
@@ -674,6 +815,7 @@ export function AgencyLists({ userId, societies, songsFor, summaries, allTracks,
               {fill.plan.creates.length
                 ? `${fill.plan.creates.length} work${fill.plan.creates.length === 1 ? " is" : "s are"} on the agency's list and not in your catalog yet. Tick the ones you want; each entry starts with the title, codes, writers, IPI numbers and shares the list carries, and the roles you choose below.`
                 : "Every work on this list is already in your catalog."}
+              {fill.plan.duplicates.length > 0 && ` ${fill.plan.duplicates.length} catalogued song${fill.plan.duplicates.length === 1 ? " matches" : "s match"} the list with different details; each box asks which version is official.`}
               {" "}You finish the rest — release date, genre, duration — in My Catalog.
             </p>
             {fill.plan.creates.length > 0 && <div className="rounded-lg border border-border">
@@ -697,96 +839,56 @@ export function AgencyLists({ userId, societies, songsFor, summaries, allTracks,
                 })}
               </ul>
             </div>}
-            {/* Every agency's list fills the same way (founder, 2026-11-16): a recording list names no writers, so it asks about
-                the release only, in the same box, rather than losing the box altogether. */}
-            {fill.plan.creates.length > 0 && <fieldset className="space-y-2 rounded-xl border border-border p-3">
-              <legend className="px-1 text-sm font-bold">{people.length > 0 ? "Who wrote what, and where does each song belong?" : "Where does each recording belong?"}</legend>
+            {/* Every agency's list fills the same way (founder, 2026-11-16): one box per song, holding every question that
+                song asks — the writers' roles, its release, and, for a song already catalogued, which version is official. */}
+            {songs.length > 0 && <fieldset className="space-y-2 rounded-xl border border-border p-3">
+              <legend className="px-1 text-sm font-bold">Who wrote what, where each song belongs, and which version is official</legend>
               <p className="text-xs text-muted-foreground">
                 The list names every writer but never says who wrote the words and who wrote the music, or which release each work
-                came out on. A writer credited on two or more songs has a box of their own, open with every song they are on — and
-                each song shows all of its writers and its own release, so both answers are given in one place. A release that isn't
-                in your catalog yet can be typed under it: name it once and the next song offers it back. Anything left blank stays
-                blank, and the song says it still needs it.
+                came out on. A writer credited on two or more songs has a box of their own, open with every song they are on, and every
+                question about a song sits in that song's box. A song already in your catalog shows the whole comparison first: answer
+                keep yours or take the agency's, and only the agency's version opens the writers and the release for checking. A
+                release that isn't in your catalog yet can be typed under a new song: name it once and the next song offers it back.
+                Anything left blank stays blank, and the song says it still needs it.
               </p>
               {!people.length && <p className="text-xs text-muted-foreground">
                 This agency registers the recording, so its list names no writers. Each one still gets the same release answer as a
                 list that does.
               </p>}
+              {fill.plan.duplicates.length > 0 && <div className="flex flex-wrap items-center gap-2 rounded-lg border border-primary/40 bg-accent/30 p-2">
+                <span className="mr-auto text-[11px] text-muted-foreground">Every catalogued song needs an answer — or give them all the same one:</span>
+                <button type="button" onClick={() => setChoices(Object.fromEntries(fill.plan.duplicates.map((d) => [d.track.id, "keep" as const])))}
+                  className="rounded-full border border-border bg-background px-3 py-1 text-[11px] font-semibold">
+                  Keep my version for all {fill.plan.duplicates.length}
+                </button>
+                <button type="button" onClick={() => setChoices(Object.fromEntries(fill.plan.duplicates.map((d) => [d.track.id, "agency" as const])))}
+                  className="rounded-full border border-primary/40 bg-accent/40 px-3 py-1 text-[11px] font-semibold text-primary">
+                  Use the agency's version for all {fill.plan.duplicates.length}
+                </button>
+              </div>}
               <ul className="space-y-2">
                 {coWriters.map(writerBox)}
                 {loneBox}
               </ul>
             </fieldset>}
-            {fill.plan.duplicates.length > 0 && <div className="space-y-2">
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <h4 className="text-sm font-bold">Already in your catalog: which version is official?</h4>
-                {/* One click for the whole list, instead of the same answer on every card (founder, 2026-11-15). */}
-                <button type="button"
-                  onClick={() => setChoices(Object.fromEntries(fill.plan.duplicates.map((d) => [d.track.id, "agency" as const])))}
-                  className="rounded-full border border-primary/40 bg-accent/40 px-3 py-1 text-[11px] font-semibold text-primary">
-                  Use the agency's version for all {fill.plan.duplicates.length}
-                </button>
-              </div>
-              <p className="text-xs text-muted-foreground">
-                These songs match the list by name or code, but the details don't. The agency's copy is what {fill.society.name} pays on, so check
-                that it is the correct version: using it copies their codes and writers into your catalog in one click, while keeping yours means updating the registration at {fill.society.name} instead.
-              </p>
-              {fill.plan.duplicates.map((d) => {
-                const choice = choices[d.track.id] ?? "keep";
-                return <div key={d.track.id} className="rounded-lg border border-border p-3 text-sm">
-                  <p className="font-semibold">{d.track.title}</p>
-                  {/* Field by field, both sides on the same row (founder, 2026-11-15): Title, codes, writers, with the
-                      agency's name on its own header so the two value columns never drift apart. */}
-                  {d.changes.length > 0 && <div className="mt-2 grid grid-cols-[4.5rem_1fr_1fr] items-start gap-x-2 gap-y-1.5 text-xs">
-                    <span />
-                    <span className="font-semibold leading-snug">Your catalog</span>
-                    <span className="flex flex-wrap items-center gap-1.5 font-semibold leading-snug">
-                      The agency
-                      <span className="rounded-full border border-primary/30 bg-accent/50 px-1.5 py-px text-[10px] font-semibold">{fill.society.name}</span>
-                    </span>
-                    {d.changes.map((ch) => <div key={ch.field} className="contents">
-                      <span className="text-muted-foreground">{ch.field}</span>
-                      <span className="break-words leading-snug">{ch.catalog}</span>
-                      <span className="break-words leading-snug">{ch.agency}</span>
-                    </div>)}
-                  </div>}
-                  {combinedHalves(d.work) && <p className="mt-2 text-xs text-muted-foreground">
-                    {fill.society.name} prints the writer's half and the publisher's half together, so {listShareTotal(d.work)}% there is 100% of the composition. The share above is shown on the 100% scale.
-                  </p>}
-                  {d.issues.length > 0 && <ul className="mt-2 space-y-0.5 text-xs text-muted-foreground">
-                    {d.issues.map((i) => <li key={i}>⚠️ {i}</li>)}
-                  </ul>}
-                  {/* Each choice sits under the side it keeps (founder, 2026-11-15): the catalog's under the catalog's
-                      column and the agency's under the agency's, instead of the agency's answer on the left. */}
-                  <div className="mt-3 grid grid-cols-1 items-start gap-2 sm:grid-cols-[4.5rem_1fr_1fr] sm:gap-x-2">
-                    <span className="hidden sm:block" />
-                    <label className={`flex cursor-pointer items-start gap-2 rounded-lg border p-2 ${choice === "keep" ? "border-primary bg-accent/40" : "border-border"}`}>
-                      <input type="radio" className="mt-0.5" name={`fill-${d.track.id}`} checked={choice === "keep"} onChange={() => setChoices((c) => ({ ...c, [d.track.id]: "keep" }))} />
-                      <span><b>Keep my catalog version</b><span className="block text-xs text-muted-foreground">Nothing changes here, so update your registration at {fill.society.name} to match it.</span></span>
-                    </label>
-                    <label className={`flex cursor-pointer items-start gap-2 rounded-lg border p-2 ${choice === "agency" ? "border-primary bg-accent/40" : "border-border"}`}>
-                      <input type="radio" className="mt-0.5" name={`fill-${d.track.id}`} checked={choice === "agency"} onChange={() => setChoices((c) => ({ ...c, [d.track.id]: "agency" }))} />
-                      <span><b>Use the agency's version</b><span className="block text-xs text-muted-foreground">Check that it's correct: your catalog then matches what {fill.society.name} has registered.</span></span>
-                    </label>
-                  </div>
-                  {choice === "keep" && <p className="mt-2 text-xs text-muted-foreground">
-                    Keeping this one leaves the difference in place at {fill.society.name}.
-                  </p>}
-                  {choice === "agency" && !!(d.track.metadata.audioPath || d.track.metadata.artPath || d.track.metadata.coverThumb) && <p className="mt-2 text-xs text-muted-foreground">
-                    Your master and artwork stay attached. Re-embed this song in My Catalog afterwards, so the file itself carries the corrected credits, ISRC and ISWC.
-                  </p>}
-                </div>;
-              })}
-            </div>}
-            {onExpert && fill.plan.duplicates.some((d) => (choices[d.track.id] ?? "keep") !== "agency") && <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-primary/40 bg-accent/30 p-3 text-sm">
+            {onExpert && fill.plan.duplicates.some((d) => answerFor(d) === "keep") && <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-primary/40 bg-accent/30 p-3 text-sm">
               <span>We can update those registrations for you, so the agency matches the version you kept.</span>
               <Button type="button" size="sm" variant="outline" disabled={filling} onClick={onExpert}><LifeBuoy />Get expert help</Button>
             </div>}
-            <div className="flex justify-end gap-2">
+            <div className="flex flex-wrap items-center justify-end gap-2">
+              {unanswered > 0 && <p className="mr-auto text-xs text-muted-foreground">
+                {unanswered} catalogued song{unanswered === 1 ? " still needs" : "s still need"} an answer: keep yours or take the agency&apos;s.
+              </p>}
               <Button type="button" variant="ghost" disabled={filling} onClick={() => setFill(undefined)}>Cancel</Button>
-              <Button type="button" disabled={filling || newReleaseUntitled || (!chosenCreates.length && !fill.plan.duplicates.some((d) => choices[d.track.id] === "agency"))} onClick={() => void runFill()}>
+              {/* One button does both, and names both (founder, 2026-11-16): the same click adds the new songs and
+                  writes the agency's version over the catalogued ones. It waits for every catalogued song's answer. */}
+              <Button type="button" disabled={filling || newReleaseUntitled || unanswered > 0 || (!chosenCreates.length && !chosenDuplicates.length)} onClick={() => void runFill()}>
                 {filling ? <Loader2 className="animate-spin" /> : <ListPlus />}
-                {chosenCreates.length ? `Add ${chosenCreates.length} song${chosenCreates.length === 1 ? "" : "s"}` : "Update songs"}
+                {chosenCreates.length && chosenDuplicates.length
+                  ? `Add ${chosenCreates.length} and update ${chosenDuplicates.length}`
+                  : chosenCreates.length ? `Add ${chosenCreates.length} song${chosenCreates.length === 1 ? "" : "s"}`
+                    : chosenDuplicates.length ? `Update ${chosenDuplicates.length} song${chosenDuplicates.length === 1 ? "" : "s"}`
+                      : "Add or update songs"}
               </Button>
             </div>
           </>}
