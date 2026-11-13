@@ -1,4 +1,5 @@
-import { AudioWaveform, ExternalLink, Loader2 } from "lucide-react";
+import { useState } from "react";
+import { AudioWaveform, ChevronDown, ChevronUp, ExternalLink, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import {
   KIND_LABEL, RELEASE_STATE_LABEL, STATUS_LABEL, diffSegments, diffWords, fieldFor, repertoireUrl, signInFor,
@@ -88,6 +89,14 @@ export function DifferencesChart({ rows, busyKey, onFixCatalog, onAdopt, onKeepB
   onAdopt: (row: DifferenceRow) => void;
   onKeepBoth: (row: DifferenceRow) => void;
 }) {
+  // Each song can be folded away (founder, 2026-11-14): a long list consolidates to its titles, and the card being worked
+  // on stays open. Nothing is remembered across visits, so the list always opens readably.
+  const [hidden, setHidden] = useState<ReadonlySet<string>>(new Set());
+  const toggle = (key: string) => setHidden((set) => {
+    const next = new Set(set);
+    if (next.has(key)) next.delete(key); else next.add(key);
+    return next;
+  });
   /** The one click that checks a code: the code is copied and the public search opens in a new tab. */
   function copyAndOpen(value: string, url: string, what: string) {
     window.open(url, "_blank", "noopener,noreferrer");
@@ -122,6 +131,20 @@ export function DifferencesChart({ rows, busyKey, onFixCatalog, onAdopt, onKeepB
 
         /** The row's own copy value: never an ISRC on a composition card, whatever a fix's own words say. */
         const copied = row.copy?.primary;
+        // A check is offered once, whatever it is called: the same agency and the same value is the same click
+        // (founder, 2026-11-14). This is the set the per-difference buttons are checked against.
+        const offered = new Set<string>([
+          `${row.treatment.primary}|${copied?.value ?? (agencyIsrc || row.catalogIsrc || row.title)}`,
+          ...(row.copy?.secondary ? [`${row.copy.secondary.label}|${row.copy.secondary.value}`] : []),
+          ...(row.treatment.secondary ? [`${row.treatment.secondary}|${url}`] : []),
+        ]);
+        /** True when this check is not already one of the card's own buttons. */
+        const takeLink = (label: string, value: string) => {
+          const key = `${label}|${value}`;
+          if (offered.has(key)) return false;
+          offered.add(key);
+          return true;
+        };
 
         /** The one click each difference takes, from the rule that difference was given. */
         const runFix = (fix: RowFix) => {
@@ -143,11 +166,17 @@ export function DifferencesChart({ rows, busyKey, onFixCatalog, onAdopt, onKeepB
         return (
           <li key={row.key} className={CARD}>
             {/* Zone 1 — the song and what disagrees, in plain English. */}
-            <div className="min-w-0 lg:col-span-4">
+            <div className={`min-w-0 ${hidden.has(row.key) ? "lg:col-span-12" : "lg:col-span-4"}`}>
               <div className="flex flex-wrap items-center gap-1.5">
                 <span className={statusPill(row.status)}>{STATUS_LABEL[row.status]}</span>
                 <span className={TAG}>{KIND_LABEL[row.kind]}</span>
                 {row.occurrences > 1 && <span className={PLATINUM}>{row.occurrences}× in list</span>}
+                <button type="button" onClick={() => toggle(row.key)} aria-expanded={!hidden.has(row.key)}
+                  aria-label={`${hidden.has(row.key) ? "Show" : "Hide"} ${row.title}`}
+                  className="ml-auto inline-flex items-center gap-1 rounded-full border border-[#E5E4E2] px-2 py-0.5 text-[11px] font-semibold text-[#0b0b0b]/70 transition hover:border-[#4D8CFF]/60 hover:text-[#004AAD] dark:border-[#E5E4E2]/20 dark:text-[#E5E4E2]/70 dark:hover:text-[#4D8CFF]">
+                  {hidden.has(row.key) ? <ChevronDown className="h-3 w-3" aria-hidden /> : <ChevronUp className="h-3 w-3" aria-hidden />}
+                  {hidden.has(row.key) ? "Show" : "Hide"}
+                </button>
               </div>
               <h3 className="mt-2 flex items-start gap-1.5 text-sm font-semibold leading-snug text-[#0b0b0b] dark:text-[#FFFFFF]">
                 <AudioWaveform className="mt-0.5 h-4 w-4 shrink-0 text-[#004AAD] dark:text-[#4D8CFF]" aria-hidden />
@@ -164,7 +193,7 @@ export function DifferencesChart({ rows, busyKey, onFixCatalog, onAdopt, onKeepB
             </div>
 
             {/* Zone 2 — the fields side by side, with the one that disagrees marked (founder, 2026-11-14). */}
-            <div className="min-w-0 lg:col-span-4">
+            {!hidden.has(row.key) && <div className="min-w-0 lg:col-span-8">
               <div className="rounded-lg border border-[#E5E4E2] bg-[#E5E4E2]/30 dark:border-[#E5E4E2]/15 dark:bg-[#0b0b0b]">
                 <div className="grid grid-cols-2 gap-3 p-3">
                   <div className="min-w-0 space-y-1.5">
@@ -225,17 +254,19 @@ export function DifferencesChart({ rows, busyKey, onFixCatalog, onAdopt, onKeepB
                   </div>
                 </div>
               </div>
-            </div>
+            </div>}
 
-            {/* Zone 3 — the exact treatment and the one click that checks it. */}
-            <div className="flex min-w-0 flex-col lg:col-span-4">
+            {/* Zone 3 — the exact treatment and the one click that checks it, the full width of the card beneath both
+                sides (founder, 2026-11-14), so it can be read instead of squeezed into a third column. */}
+            {!hidden.has(row.key) && <div className="flex min-w-0 flex-col lg:col-span-12">
               <div className="flex h-full flex-col justify-between rounded-lg border p-4 transition-all border-[#004AAD]/25 bg-[#004AAD]/[0.04] shadow-[inset_0_0_20px_rgba(77,140,255,0.06)] dark:border-[#4D8CFF]/30 dark:bg-[#4D8CFF]/[0.08] dark:shadow-[inset_0_0_24px_rgba(77,140,255,0.10)]">
-                <div>
+                <div className="lg:flex lg:items-start lg:gap-8">
+                <div className="min-w-0 lg:flex-1">
                   <p className="text-[11px] font-bold uppercase tracking-wider text-[#004AAD] dark:text-[#4D8CFF]">Exact treatment</p>
                   <p className="mt-1 text-sm font-semibold text-[#0b0b0b] dark:text-[#FFFFFF]">{row.treatment.headline}</p>
                   <p className="mt-1 text-xs leading-relaxed text-[#0b0b0b]/70 dark:text-[#E5E4E2]/70">{treatmentText(row.treatment, code)}</p>
                 </div>
-                <div className="mt-3 space-y-2">
+                <div className="mt-3 space-y-2 lg:mt-0 lg:w-80 lg:shrink-0">
                   {waiting
                     ? <span className={PLATINUM}>Waiting for the release</span>
                     : <button type="button" className={PRIMARY} onClick={primary} disabled={busy}>
@@ -279,24 +310,21 @@ export function DifferencesChart({ rows, busyKey, onFixCatalog, onAdopt, onKeepB
                     </button>
                   )}
                 </div>
+                </div>
                 {/* Every difference on the recording, never just the first: each one is listed with its own treatment and
                     its own fix, so a song with a wrong ISWC and a missing writer is not fixed only halfway. A fix that is
                     already the card's own button is not drawn a second time (founder, 2026-11-14): "Copy ISRC & Check
                     Repertoire" appears once per card, however many differences list it. */}
                 {row.fixes.length > 1 && (() => {
-                  // Every link this card already draws, whatever its wording: the same check is never offered twice.
-                  const already = new Set<string>(waiting
-                    ? []
-                    : [row.treatment.primary, row.treatment.secondary, ...(row.copy?.secondary ? [row.copy.secondary.label] : [])]);
                   return (
                   <div className="mt-3 border-t border-[#004AAD]/20 pt-3 dark:border-[#4D8CFF]/25">
                     <p className="text-[11px] font-bold uppercase tracking-wider text-[#004AAD] dark:text-[#4D8CFF]">
-                      All {row.fixes.length} differences on this recording
+                      All {row.fixes.length} differences on {row.composition ? "this work" : "this recording"}
                     </p>
                     <ol className="mt-2 space-y-3">
                       {row.fixes.map((fix, i) => {
-                        const repeat = already.has(fix.treatment.primary);
-                        if (!repeat) already.add(fix.treatment.primary);
+                        // A check the card already offers is not offered again: same agency, same value, one click.
+                        const repeat = !takeLink(fix.treatment.primary, copied?.value ?? (fix.code || row.title));
                         return (
                         <li key={fix.issue}>
                           <p className="text-[11px] leading-snug text-[#0b0b0b]/65 dark:text-[#E5E4E2]/65">{i + 1}. {fix.issue}</p>
@@ -316,7 +344,7 @@ export function DifferencesChart({ rows, busyKey, onFixCatalog, onAdopt, onKeepB
                   );
                 })()}
               </div>
-            </div>
+            </div>}
           </li>
         );
       })}

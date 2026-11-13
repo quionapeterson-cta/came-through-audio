@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { DifferencesChart } from "@/components/DifferencesChart";
 import { buildDifferenceRows, type DifferenceRow } from "@/lib/discrepancy-treatments";
 import { emptyMetadata, type Metadata } from "@/lib/metadata";
@@ -127,6 +127,7 @@ describe("DifferencesChart", () => {
         byId: { bmi: { file: "bmi.csv", result: { matched: [], clashes: [], notListed: [], extra: [], works: 1, differences: [
           { trackId: "a", title: "Bloodline", work: work({ title: "Bloodline", iswc: "T1234567890", writers: [{ name: "Ann Lee", share: 100 }] }), issues: ["The agency has ISWC T1234567890, your catalog has T1111111111"] },
           { trackId: "a", title: "Bloodline", work: work({ title: "Bloodline", iswc: "T1234567890", writers: [{ name: "LEE ANN", share: 100 }] }), issues: ["The agency has LEE ANN where your catalog has Ann Lee — same writer, fix the spelling so both records match"] },
+          { trackId: "a", title: "Bloodline", work: work({ title: "Bloodline", iswc: "T1234567890", writers: [{ name: "STEPHENS CALVIN", share: 100 }] }), issues: ["The agency has STEPHENS CALVIN where your catalog has Calvin Stephens — same writer, fix the spelling so both records match"] },
         ] } } },
       }) as never,
     });
@@ -146,5 +147,17 @@ describe("DifferencesChart", () => {
     expect(count("Copy Work Title & Check BMI")).toBe(1);
     expect(count("Copy ISWC & Check BMI")).toBe(1);
     expect(count("Sign in to BMI")).toBe(1);
+  });
+
+  it("folds a song away to its title, and opens it again", () => {
+    renderRow(versionRow()[0]!);
+    expect(screen.getAllByText("ISRC")).toHaveLength(2);
+    fireEvent.click(screen.getByRole("button", { name: /^Hide Bloodline$/ }));
+    // Folded: the title and its pills stay, everything that was being compared is put away.
+    expect(screen.queryByText("ISRC")).toBeNull();
+    expect(screen.getByText("Bloodline")).toBeTruthy();
+    expect(screen.getByRole("button", { name: /^Show Bloodline$/ })).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: /^Show Bloodline$/ }));
+    expect(screen.getAllByText("ISRC")).toHaveLength(2);
   });
 });
