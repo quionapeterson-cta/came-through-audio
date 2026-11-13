@@ -122,9 +122,11 @@ export function DifferencesPanel({ userId, tracks, societies, summaries, default
   function fixInCatalog(row: DifferenceRow, field: string = fieldFor(row)) {
     const agency = row.claims.find((c) => c.isrc)?.isrc ?? "";
     const version = row.agencyCodes.find((c) => c.version)?.version ?? row.versions.agency;
+    const versions = [...new Set([...row.claims.map((c) => c.version ?? ""), ...row.agencyCodes.map((c) => c.version)].map((v) => v.trim()).filter(Boolean))];
     window.location.assign(catalogHref({
       trackId: row.songId, field, action: actionFor(row),
       ...(agency ? { agencyIsrc: agency } : {}), ...(version ? { agencyVersion: version } : {}),
+      ...(versions.length ? { agencyVersions: versions } : {}),
     }));
   }
 

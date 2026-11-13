@@ -237,4 +237,28 @@ Karma Came,Am Pm (Dirty Version),QT6HX2656774,SX217QGZ04,100.0,No,Came Through A
     expect(pair?.versions?.agency).toBe("Clean Version · Dirty Version");
     expect(pair?.claims.map((c) => c.isrc)).toEqual(["QT6HX2656773", "QT6HX2656774"]);
   });
+
+  it("names every version a list holds under one title, and hands all of them to Add Version", () => {
+    // The founder's own file: four SoundExchange rows under "Quit Playing With Me", each naming its version.
+    const csv = `Artist,Track Title,ISRC,SXID,Effective %,Hold,Registrant,Payee ID#,Association Type
+Karma Came,Quit Playing With Me (Clean Version),QT6HW2687935,SX217QGYZU,100.0,No,Came Through Audio LLC,1000117426,Rights Owner
+Karma Came,Quit Playing With Me (Dirty Version),QT6HW2687937,SX217QGYZX,100.0,No,Came Through Audio LLC,1000117426,Rights Owner
+Karma Came,Quit Playing With Me (Official Acapella),QT6HW2687938,SX217QGYZV,100.0,No,Came Through Audio LLC,1000117426,Rights Owner
+Karma Came,Quit Playing With Me (Official Instrumental),QT6HW2687936,SX217QGYZW,100.0,No,Came Through Audio LLC,1000117426,Rights Owner
+`;
+    const tracks = [catTrack("a", "Quit Playing With Me", { isrc: "QT6HW2687935", releaseDate: "2026-01-01" })];
+    const stored = { byId: { soundexchange: { file: "sx.csv", result: compareList(readWorks(parseDelimited(csv)), tracks, true, "SoundExchange") } } } as unknown as StoredLists;
+    const rows = buildDifferenceRows({ tracks, stored });
+    const row = rows.find((r) => r.songId === "a")!;
+    // Every code is its own row on the agency side, with the version that row names.
+    expect(row.claims.map((c) => c.version).sort()).toEqual(["Clean Version", "Dirty Version", "Official Acapella", "Official Instrumental"]);
+    expect(row.versions.agency).toBe("Clean Version · Dirty Version · Official Acapella · Official Instrumental");
+    expect(row.agencyCodes.map((c) => c.version).sort()).toEqual(["Clean Version", "Dirty Version", "Official Acapella", "Official Instrumental"]);
+  });
+
+  it("sends every version a list names to the form, not only the first", () => {
+    expect(catalogHref({ trackId: "a", field: "version", action: "add-version", agencyVersion: "Clean Version",
+      agencyVersions: ["Clean Version", "Dirty Version", "Official Acapella", "Official Instrumental"] }))
+      .toBe("/workspace?tab=catalog&songId=a&focusField=version&agencyVersion=Clean+Version&agencyVersions=Clean+Version%7CDirty+Version%7COfficial+Acapella%7COfficial+Instrumental&action=add-version#song-a");
+  });
 });

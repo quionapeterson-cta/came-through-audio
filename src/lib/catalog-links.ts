@@ -41,6 +41,8 @@ export type CatalogLink = {
   agencyIsrc?: string | undefined;
   /** The agency's own version name, so an Add Version link can offer it instead of making the member retype it. */
   agencyVersion?: string | undefined;
+  /** Every version the list names under one title, so four listed versions are four choices, never just the first. */
+  agencyVersions?: string[] | undefined;
   action?: CatalogAction | string | undefined;
 };
 
@@ -50,11 +52,13 @@ export function catalogHref({
   field,
   agencyIsrc,
   agencyVersion,
+  agencyVersions,
   action,
 }: CatalogLink): string {
   const p = new URLSearchParams({ tab: "catalog", songId: trackId, focusField: field });
   if (agencyIsrc) p.set("agencyIsrc", agencyIsrc);
   if (agencyVersion) p.set("agencyVersion", agencyVersion);
+  if (agencyVersions?.length) p.set("agencyVersions", agencyVersions.join("|"));
   if (action) p.set("action", action);
   return `/workspace?${p.toString()}#song-${trackId}`;
 }

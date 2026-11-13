@@ -188,8 +188,9 @@ export function DifferencesChart({ rows, busyKey, onFixCatalog, onAdopt, onKeepB
                           {c.isrc
                             ? <Isrc value={c.isrc} against={row.catalogIsrc} />
                             : <Value text="" empty="No ISRC on the list" />}
-                          {/* Two codes under one title are two recordings: the second is shown, never hidden behind the first. */}
-                          {row.agencyCodes.filter((x) => x.isrc && x.isrc.toUpperCase() !== (c.isrc || "").toUpperCase()).map((x) => (
+                          {/* Two codes under one title are two recordings: the second is shown, never hidden behind the first. Each
+                              code now has its own claim, so this only draws for a row that still holds them all under one. */}
+                          {row.claims.length === 1 && row.agencyCodes.filter((x) => x.isrc && x.isrc.toUpperCase() !== (c.isrc || "").toUpperCase()).map((x) => (
                             <span key={x.isrc} className="mt-1 block">
                               <Isrc value={x.isrc} against={row.catalogIsrc} />
                               <span className="mt-0.5 block text-[10px] text-[#0b0b0b]/55 dark:text-[#E5E4E2]/55">

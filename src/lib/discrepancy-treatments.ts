@@ -589,6 +589,8 @@ export function buildDifferenceRows({ stored, tracks, societies = [] }: BuildInp
   const claimsByTrack = new Map<string, AgencyClaim[]>();
   /** Every work a song matched on each list, keyed `${society}:${trackId}` — even when nothing disagreed. */
   const listWorks = new Map<string, ListWork>();
+  /** Every code each list holds under a song's title, read once, so a card can show the one that matched too. */
+  const allCodes = new Map<string, { isrc: string; title: string; version: string; artist: string }[]>();
 
   const releaseOf = (track: CatalogTrack, state: ReleaseState) => ({
     title: track.metadata.album.trim(),
@@ -611,6 +613,20 @@ export function buildDifferenceRows({ stored, tracks, societies = [] }: BuildInp
     // name difference is read from the file rather than compared with itself (founder, 2026-11-14).
     for (const m of [...entry.result.matched, ...entry.result.differences]) if (m.work) listWorks.set(`${societyId}:${m.trackId}`, m.work);
     for (const c of entry.result.clashes) listWorks.set(`${societyId}:${c.trackId}`, c.work);
+    // Every code the list holds under a title, whether or not that row disagreed: the catalog's own version is usually the
+    // one that matched cleanly, and a card that left it out listed three of the four versions (founder, 2026-11-14).
+    for (const m of [...entry.result.matched, ...entry.result.differences]) {
+      const w = m.work;
+      if (!w?.isrc) continue;
+      const raw = w.title.trim();
+      const key = `${societyId}:${m.trackId}`;
+      allCodes.set(key, [...(allCodes.get(key) ?? []), {
+        isrc: w.isrc.trim(),
+        title: (w.coreTitle ?? stripVersion(raw)).trim(),
+        version: (w.version ?? versionTail(raw)).trim(),
+        artist: (w.artist ?? "").trim(),
+      }]);
+    }
     // Two catalog entries under one title take the two works the list holds under it, each by the version it names.
     for (const group of byTitle.values()) {
       if (group.length < 2) continue;
@@ -619,16 +635,17 @@ export function buildDifferenceRows({ stored, tracks, societies = [] }: BuildInp
       if (candidates.length < 2) continue;
       spreadWorks(group, candidates, (t, w) => listWorks.set(`${societyId}:${t.id}`, w));
     }
-    const grouped = new Map<string, { titles: string[]; isrcs: string[]; issues: string[]; versions: string[]; artists: string[] }>();
+    const grouped = new Map<string, { titles: string[]; codes: { isrc: string; title: string; version: string; artist: string }[]; issues: string[] }>();
     for (const d of entry.result.differences) {
-      const g = grouped.get(d.trackId) ?? { titles: [], isrcs: [], issues: [], versions: [], artists: [] };
-      // The agency's title without its version tail: the version is shown and compared in its own field.
-      const agencyTitle = (d.work?.coreTitle ?? stripVersion(d.work?.title ?? d.title)).trim();
+      const g = grouped.get(d.trackId) ?? { titles: [], codes: [], issues: [] };
+      // The agency's own title, read as the file wrote it: "Quit Playing With Me (Dirty Version)" names the version "Dirty
+      // Version". Reading the version off the stripped title found nothing, so every code showed "Not named" while the
+      // file listed all four (founder, 2026-11-14).
+      const raw = (d.work?.title ?? d.title).trim();
+      const agencyTitle = (d.work?.coreTitle ?? stripVersion(raw)).trim();
+      const version = (d.work?.version ?? versionTail(raw)).trim();
       g.titles.push(agencyTitle);
-      if (d.work?.isrc) g.isrcs.push(d.work.isrc.trim());
-      const version = (d.work?.version ?? versionTail(agencyTitle)).trim();
-      if (version) g.versions.push(version);
-      if (d.work?.artist) g.artists.push(d.work.artist);
+      if (d.work?.isrc) g.codes.push({ isrc: d.work.isrc.trim(), title: agencyTitle, version, artist: (d.work.artist ?? "").trim() });
       g.issues.push(...d.issues);
       grouped.set(d.trackId, g);
     }
@@ -637,18 +654,23 @@ export function buildDifferenceRows({ stored, tracks, societies = [] }: BuildInp
       if (!track) continue;
       const m = track.metadata;
       const catalogIsrc = m.isrc.trim();
-      const agencyIsrc = g.isrcs.find(Boolean) ?? "";
+      // One row per code the list holds under this title, each with the version and artist that row names.
+      const codes = (allCodes.get(`${societyId}:${trackId}`) ?? g.codes)
+        .filter((c, i, all) => c.isrc && all.findIndex((x) => x.isrc.toUpperCase() === c.isrc.toUpperCase()) === i);
+      const agencyCodes = codes.map((c) => c.isrc.toUpperCase()).filter(Boolean);
+      const agencyVersions = [...new Set(codes.map((c) => c.version).filter(Boolean))];
+      const agencyArtists = [...new Set(codes.map((c) => c.artist).filter(Boolean))];
+      const agencyIsrc = codes[0]?.isrc ?? "";
       const retired = (m.retiredIscrs ?? []).filter(Boolean);
       const state = releaseState(m, agencyIsrc);
       const catalogTitleCore = stripVersion(track.title);
       const titleDiffers = g.titles.some((x) => norm(x) !== norm(catalogTitleCore));
       const bothCodes = !!catalogIsrc && !!agencyIsrc;
       const codeDiffers = bothCodes && catalogIsrc.toUpperCase() !== agencyIsrc.toUpperCase();
-      const versions = { catalog: (m.version ?? "").trim() || versionTail(track.title), agency: g.versions[0] ?? "" };
-      const artists = { catalog: track.artist ?? "", agency: g.artists[0] ?? "" };
+      const versions = { catalog: (m.version ?? "").trim() || versionTail(track.title), agency: agencyVersions.join(" · ") };
+      const artists = { catalog: track.artist ?? "", agency: agencyArtists[0] ?? "" };
       // Two or more codes under one title is one recording with more than one version — or the retired code beside the
       // current one — never an isolated metadata mismatch (founder, 2026-11-14).
-      const agencyCodes = [...new Set(g.isrcs.map((c) => c.toUpperCase()).filter(Boolean))];
       const secondCode = agencyCodes.length > 1 && !!catalogIsrc && agencyCodes.includes(catalogIsrc.toUpperCase());
       // The four cases the treatment table names, decided by what actually disagrees: the title, the code, or both.
       const retiredCodeOnList = !!agencyIsrc && retired.map((c) => c.toUpperCase()).includes(agencyIsrc.toUpperCase());
@@ -666,7 +688,11 @@ export function buildDifferenceRows({ stored, tracks, societies = [] }: BuildInp
             // the member checks which copy the distributor delivered. "Two codes under one title" is the case above.
             ? "isrc-mismatch"
             : kindOf([...new Set(g.issues)], catalogIsrc, agencyIsrc, retired);
-      const claim: AgencyClaim = { society: societyId, name: nameOf(societyId), isrc: agencyIsrc, title: g.titles[0] ?? track.title, url: urlOf(societyId), artist: g.artists[0] ?? "", version: g.versions[0] ?? "" };
+      // The agency side lists every code the list holds under the title, so four versions read as four rows with their own
+      // codes instead of one blank row and three bare codes (founder, 2026-11-14).
+      const claims: AgencyClaim[] = (codes.length ? codes : [{ isrc: agencyIsrc, title: g.titles[0] ?? track.title, version: "", artist: "" }])
+        .map((c) => ({ society: societyId, name: nameOf(societyId), isrc: c.isrc, title: c.title || track.title, url: urlOf(societyId), artist: c.artist, version: c.version }));
+      const claim: AgencyClaim = claims[0]!;
       const treatment = treatmentFor({ kind, catalogIsrc, retiredIscrs: retired, releaseState: state });
       const issues = [...new Set(g.issues)];
       const versionsDiffer = !!versions.agency && !!versions.catalog && norm(versions.agency) !== norm(versions.catalog);
@@ -685,13 +711,13 @@ export function buildDifferenceRows({ stored, tracks, societies = [] }: BuildInp
         title: track.title || "Untitled",
         artist: track.artist,
         occurrences: g.titles.length,
-        claims: [claim],
+        claims,
         catalogIsrc,
         retiredIscrs: retired,
         release: releaseOf(track, state),
         versions,
         artists,
-        agencyCodes: g.isrcs.map((isrc, i) => ({ isrc: isrc.trim(), version: g.versions[i] ?? g.versions[0] ?? "" })).filter((c, i, all) => c.isrc && all.findIndex((x) => x.isrc.toUpperCase() === c.isrc.toUpperCase()) === i),
+        agencyCodes: codes.map((c) => ({ isrc: c.isrc, version: c.version })),
         catalogCodes: [{ isrc: catalogIsrc, version: versions.catalog }].filter((c) => c.isrc),
         secondCode,
         kind,
@@ -719,13 +745,16 @@ export function buildDifferenceRows({ stored, tracks, societies = [] }: BuildInp
     const distinct = [...new Set(catalogCodes.map((c) => c.isrc.toUpperCase()).filter(Boolean))];
     if (distinct.length < 2) continue;
     for (const societyId of Object.keys(stored.byId)) {
-      const claims: AgencyClaim[] = [];
+      const all: AgencyClaim[] = [];
       for (const t of group) {
         const w = listWorks.get(`${societyId}:${t.id}`);
         if (!w?.isrc) continue;
-        claims.push({ society: societyId, name: nameOf(societyId), isrc: w.isrc.trim(), title: (w.coreTitle ?? stripVersion(w.title)).trim(), url: urlOf(societyId), artist: w.artist ?? "", version: w.version ?? "" });
+        all.push({ society: societyId, name: nameOf(societyId), isrc: w.isrc.trim(), title: (w.coreTitle ?? stripVersion(w.title)).trim(), url: urlOf(societyId), artist: w.artist ?? "", version: w.version ?? versionTail(w.title) });
       }
-      // The list must hold both recordings: one entry there is a missing code, which its own card already reports.
+      // The list must hold more than one recording: one entry there is a missing code, which its own card already reports.
+      // Claims are one per distinct code, so four catalog entries the list knows under a single code are never shown as a
+      // pair of recordings (founder, 2026-11-14).
+      const claims = all.filter((c, i, every) => every.findIndex((x) => x.isrc.toUpperCase() === c.isrc.toUpperCase()) === i);
       if (claims.length < 2) continue;
       const first = group[0]!;
       const m = first.metadata;

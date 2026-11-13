@@ -80,7 +80,7 @@ type OpenRegSong = { id: string; purchase_id: string; track_id: string | null; p
  * the fix already in view (founder, 2026-11-13).
  */
 export type CatalogFocus =
-  | { trackId: string; field: string; agencyIsrc?: string | undefined; agencyVersion?: string | undefined; action?: string | undefined }
+  | { trackId: string; field: string; agencyIsrc?: string | undefined; agencyVersion?: string | undefined; agencyVersions?: string[] | undefined; action?: string | undefined }
   | { newTitle: string; artist?: string | undefined; nonce: number };
 
 export function MetadataUploader({ onShareInfo, userId, mode = "embed", readOnly, onSubmitted, onSplitSheet, onProtect, canSplit, canExport, canWav, focus, onFocused, onFixAcknowledged, onHealthCheck, onExpert }: { onExpert?: () => void; canWav?: boolean; onHealthCheck?: (trackId?: string, release?: boolean) => void; readOnly?: boolean; onShareInfo?: (s: Partial<ShareInfo> & Pick<ShareInfo, "ctx">) => void; onFocused?: () => void; /** A difference's quick-fix bar was finished or dismissed: the page can drop the target. */ onFixAcknowledged?: () => void; userId?: string; mode?: "embed" | "catalog"; focus?: CatalogFocus | undefined; onSubmitted?: () => void; onSplitSheet?: (t: CatalogTrack) => void; onProtect?: (t: CatalogTrack) => void; canSplit?: boolean; canExport?: boolean }) {
@@ -713,24 +713,38 @@ export function MetadataUploader({ onShareInfo, userId, mode = "embed", readOnly
       )}
       {deepLink.action === "add-version" && (() => {
         // Two recordings under one title, or a version the agency names and the catalog doesn't. The agency's own wording is
-        // offered as it was read from its file, never appended to the title (founder, 2026-11-14).
-        const version = (deepLink.agencyVersion ?? "").trim();
+        // offered as it was read from its file, never appended to the title (founder, 2026-11-14). A title the list holds
+        // under four codes names four versions, so every one is offered, not just the first (founder, 2026-11-14).
+        const first = (deepLink.agencyVersion ?? "").trim();
+        const versions = [...new Set([...(deepLink.agencyVersions ?? []), first].map((v) => (v ?? "").trim()).filter(Boolean))];
         const track = tracks.find((x) => x.id === editingId);
         return (
           <div className="mt-2 space-y-2">
             <p className="text-xs text-muted-foreground">
-              {version ? <>The agency names this recording <b className="text-foreground">{version}</b>.</> : "Give this recording the version name the agency uses, so the two records pair up."}
+              {versions.length === 1
+                ? <>The agency names this recording <b className="text-foreground">{versions[0]}</b>.</>
+                : versions.length > 1
+                  ? <>The agency lists {versions.length} versions of this title: <b className="text-foreground">{versions.join(", ")}</b>.</>
+                  : "Give this recording the version name the agency uses, so the two records pair up."}
             </p>
-            <div className="flex flex-wrap gap-2">
-              {version && (
-                <Button type="button" size="sm" onClick={() => { update("version", version); acknowledgeFix(); }}>Use this version name</Button>
-              )}
-              {version && track && (
-                <Button type="button" size="sm" variant="outline" onClick={() => { void duplicate(track, version); acknowledgeFix(); }}>
-                  Add as a separate version
-                </Button>
-              )}
-            </div>
+            {versions.length > 0 && (
+              <div className="flex flex-wrap gap-2">
+                {versions.map((v) => (
+                  <Button key={`use-${v}`} type="button" size="sm" onClick={() => { update("version", v); acknowledgeFix(); }}>
+                    {versions.length === 1 ? "Use this version name" : `Use ${v}`}
+                  </Button>
+                ))}
+              </div>
+            )}
+            {track && versions.length > 0 && (
+              <div className="flex flex-wrap gap-2">
+                {versions.map((v) => (
+                  <Button key={`add-${v}`} type="button" size="sm" variant="outline" onClick={() => { void duplicate(track, v); acknowledgeFix(); }}>
+                    {versions.length === 1 ? "Add as a separate version" : `Add ${v} as a version`}
+                  </Button>
+                ))}
+              </div>
+            )}
           </div>
         );
       })()}
