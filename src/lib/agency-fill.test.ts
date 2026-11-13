@@ -206,6 +206,15 @@ describe("the Title row in the fill dialog", () => {
     expect(rows).toContainEqual({ field: "Title", catalog: "24/7 Love", agency: "TWENTY FOUR SEVEN" });
   });
 
+  it("keeps a composition's own name as an alternate title when the agency's version is used", () => {
+    // The agency choice cannot rewrite a recording's title, and it should not: the work's name becomes an alternate
+    // title, so the song is found under the name the agency registered (founder, 2026-11-15).
+    const existing = { ...emptyMetadata(), title: "24/7 Love", iswc: "T9187370996" };
+    const adopted = agencyVersion(existing, { ...work, iswc: "" }, "Karma Came", "composition");
+    expect(adopted.title).toBe("24/7 Love");
+    expect(adopted.alternateTitles).toEqual(["TWENTY FOUR SEVEN"]);
+  });
+
   it("reads a version in the catalog's title as the version, not as a different work name", () => {
     // "Am Pm (Clean Version)" is one recording of the work "AM PM": nothing about the title is wrong.
     const rows = fieldChanges({ ...emptyMetadata(), title: "Am Pm (Clean Version)", iswc: "T3335070554" }, { ...work, title: "AM PM", iswc: "T3335070554" }, "composition");

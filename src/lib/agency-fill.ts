@@ -101,6 +101,14 @@ export function agencyMetadata(work: ListWork, artist: string): Metadata {
 }
 
 /**
+ * The name the list holds the work under, when it reads differently from the catalog's own — the version tail ignored, so
+ * "Am Pm (Clean Version)" and "AM PM" are one name. The one rule behind the Title row and the alternate title the
+ * agency's version adds (founder, 2026-11-15).
+ */
+const workNameDiffers = (existing: Metadata, work: ListWork) =>
+  titleKey(stripVersion(existing.title)) !== titleKey((work.coreTitle ?? stripVersion(work.title)).trim());
+
+/**
  * The agency's version of a song already in the catalog: its codes and writers replace the catalog's, the rest stays.
  * A composition list names a work, never a recording, so it never names a version (founder, 2026-11-14).
  */
@@ -114,8 +122,15 @@ export function agencyVersion(existing: Metadata, work: ListWork, artist: string
   // catalog's version field ("Quit Playing With Me (Clean Version)" rather than that plus "(Radio edit)").
   const adoptName = titleReadsDifferently(printedTitle(existing), work.title);
   const composition = kind === "composition";
+  // A composition's own name is kept as an alternate title instead of rewriting the recording's title, so choosing the
+  // agency's version really does leave the song findable under the name the agency registered (founder, 2026-11-15).
+  const workName = (work.coreTitle ?? stripVersion(work.title)).trim();
+  const alternateTitles = composition && workNameDiffers(existing, work)
+    ? [...new Set([...(existing.alternateTitles ?? []).map((t) => t.trim()).filter(Boolean), workName])]
+    : existing.alternateTitles;
   return {
     ...existing,
+    alternateTitles,
     // A PRO registers the composition, so its title never overwrites a recording's title: "Am Pm (Dirty Version)" stays
     // the Dirty Version of "AM PM" (founder, 2026-11-14).
     title: adoptName && !composition ? work.title : existing.title,
@@ -156,9 +171,7 @@ export function fieldChanges(existing: Metadata, work: ListWork, kind: AgencyKin
   // and the dialog says nothing — the same rule the panel uses (founder, 2026-11-15).
   const workTitle = (work.coreTitle ?? stripVersion(work.title)).trim();
   const knownTitle = (existing.alternateTitles ?? []).some((alt) => alt.trim() && titleKey(alt) === titleKey(workTitle));
-  const titleDiffers = composition
-    ? titleKey(stripVersion(named)) !== titleKey(workTitle)
-    : titleReadsDifferently(named, work.title);
+  const titleDiffers = composition ? workNameDiffers(existing, work) : titleReadsDifferently(named, work.title);
   if (!knownTitle && titleDiffers) rows.push({ field: "Title", catalog: named || "none", agency: work.title });
   // A code this song has retired is never offered: the agency is the one that needs updating, not the catalog.
   if (!composition && work.isrc && !retiredCodes(existing).includes(work.isrc)) rows.push({ field: "ISRC", catalog: existing.isrc.trim() || "none", agency: work.isrc });
