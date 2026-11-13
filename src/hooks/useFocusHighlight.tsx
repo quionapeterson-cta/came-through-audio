@@ -16,6 +16,8 @@ export type FocusFieldKey = "isrc" | "version" | "release" | "status" | "retired
 /** Which input a field name lands on. The form's own ids are the contract, and `jumpTo` already uses them. */
 export const FIELD_DOM_ID: Record<string, string> = {
   isrc: "isrc",
+  iswc: "iswc",
+  writers: "writers",
   version: "version",
   release: "album",
   releaseDate: "releaseDate",

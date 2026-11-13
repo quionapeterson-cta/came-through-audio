@@ -9,6 +9,8 @@
  */
 export type CatalogField =
   | "isrc"
+  | "iswc"
+  | "writers"
   | "title"
   | "artist"
   | "version"
@@ -21,6 +23,8 @@ export type CatalogField =
 /** How the fix bar names the field it is pointing at. */
 export const CATALOG_FIELD_LABEL: Record<string, string> = {
   isrc: "ISRC",
+  iswc: "ISWC",
+  writers: "writers",
   title: "title",
   artist: "artist",
   version: "version",

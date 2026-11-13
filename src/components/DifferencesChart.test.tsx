@@ -117,4 +117,28 @@ describe("DifferencesChart", () => {
     const text = () => document.body.textContent ?? "";
     expect(text().split("Copy ISRC & Check Repertoire").length - 1).toBe(1);
   });
+
+  it("draws a BMI card with the work's fields, the work-title search and no code at all", () => {
+    // A PRO registers the composition (founder, 2026-11-14): Title, ISWC and Writers, and no ISRC row to fill in.
+    const rows = buildDifferenceRows({
+      tracks: [catTrack("Bloodline", { iswc: "T1111111111" })],
+      societies: [{ id: "bmi", name: "BMI" }],
+      stored: ({
+        byId: { bmi: { file: "bmi.csv", result: { matched: [], clashes: [], notListed: [], extra: [], works: 1, differences: [
+          { trackId: "a", title: "Bloodline", work: work({ title: "Bloodline", iswc: "T1234567890", writers: [{ name: "Ann Lee", share: 100 }] }), issues: ["The agency has ISWC T1234567890, your catalog has T1111111111"] },
+        ] } } },
+      }) as never,
+    });
+    renderRow(rows[0]!);
+    const text = () => document.body.textContent ?? "";
+    expect(screen.getAllByText("Title")).toHaveLength(2);
+    expect(screen.getAllByText("ISWC")).toHaveLength(2);
+    expect(screen.getAllByText("Writers")).toHaveLength(2);
+    expect(screen.queryByText("ISRC")).toBeNull();
+    expect(screen.queryByText("Version")).toBeNull();
+    expect(text()).not.toContain("Copy ISRC");
+    expect(text()).toContain("Copy Work Title & Check BMI");
+    expect(text()).toContain("Ann Lee");
+    expect(text()).not.toContain("+ Add Version to Catalog");
+  });
 });

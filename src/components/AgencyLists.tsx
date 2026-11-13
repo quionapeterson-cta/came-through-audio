@@ -8,8 +8,10 @@ import { fillPlan, listPeople, withPeople, type FillPlan, type Person, type Pers
 import { RELEASE_TYPES, WRITER_ROLES } from "@/lib/metadata";
 import { loadOnboarding, loadProfile } from "@/lib/artist-profile";
 import { saveTrack } from "@/lib/catalog";
+import { updateTarget } from "@/lib/ids";
 import { clearIntake, readIntake, writeIntake } from "@/lib/intake-session";
 import { buildDifferenceRows, openDifferenceCount, STORED_LISTS_KEY, STORED_READER } from "@/lib/discrepancy-treatments";
+import { agencyKind } from "@/lib/agency-kind";
 import { DifferencesPanel } from "@/components/DifferencesPanel";
 import { combinedHalves, compareList, downloadSteps, listGaps, listShareTotal, readTable, readWorks, type ListResult, type ListWork, type SavedListSummary } from "@/lib/agency-lists";
 import type { CatalogTrack } from "@/lib/catalog";
@@ -88,7 +90,7 @@ export function AgencyLists({ userId, societies, songsFor, summaries, allTracks,
     setBusy(society.id);
     try {
       const works = readWorks(await readTable(file));
-      const result = compareList(works, songsFor(society.id), society.id === "soundexchange", society.name);
+      const result = compareList(works, songsFor(society.id), agencyKind(society.id), society.name);
       await onApply(society, result, file.name);
       setStored((s) => ({ ...s, byId: { ...s.byId, [society.id]: { file: file.name, result, reader: STORED_READER } } }));
       setShownId(society.id);
@@ -132,7 +134,7 @@ export function AgencyLists({ userId, societies, songsFor, summaries, allTracks,
     if (!result || !userId) return;
     const artist = loadOnboarding(userId)?.stageName?.trim() || loadProfile(userId)?.artist?.trim() || "";
     setChoices({});
-    const plan = fillPlan(result, songsFor(society.id), artist);
+    const plan = fillPlan(result, songsFor(society.id), artist, agencyKind(society.id));
     setPicked(Object.fromEntries(plan.creates.map((c) => [workKey(c.work), true])));
     setRelease({ one: false, type: "", title: "" });
     setPeople(listPeople(plan.creates.map((c) => c.work)));
@@ -164,7 +166,7 @@ export function AgencyLists({ userId, societies, songsFor, summaries, allTracks,
         await saveTrack(m, userId);
       }
       let replaced = 0;
-      for (const d of fill.plan.duplicates) if (choices[d.track.id] === "agency") { await saveTrack(d.agency, userId, d.track.id); replaced += 1; }
+      for (const d of fill.plan.duplicates) if (choices[d.track.id] === "agency") { await saveTrack(d.agency, userId, updateTarget(d.track.id)); replaced += 1; }
       const added = adding.length;
       const kept = fill.plan.duplicates.filter((d) => choices[d.track.id] !== "agency").length;
       toast.success(

@@ -945,6 +945,7 @@ export function MetadataUploader({ onShareInfo, userId, mode = "embed", readOnly
               </div>
             </FormSection>}
 
+            <div id="writers" className="scroll-mt-24">
             <FormSection title={`Writers · ${count(metadata.writers)}`} open={!full || writersWarn} warn={writersWarn} ok={!writersWarn && count(metadata.writers) > 0 && accountGaps.length === 0} summary={writersWarn ? "Needs info to register" : count(metadata.writers) ? (accountGaps.length ? "PRO or IPI still needed" : "Ready to register") : "Who wrote the song"}>
               <Contributors bare title="Writers" singular="writer" group="writers" writer rows={metadata.writers} saved={people.writers} disabled={busy} onChange={(rows) => update("writers", rows)}
                 songPublishing={full ? (metadata.selfPublished ? "Self-published (the song's answer)" : metadata.bmiWriterPublishing ? "The song's answer (BMI pays BMI writers)" : "") : undefined}
@@ -955,6 +956,7 @@ export function MetadataUploader({ onShareInfo, userId, mode = "embed", readOnly
               <ReadinessPanel metadata={metadata} embed={!full} />
               {full && <p className="rounded-lg border border-primary/40 bg-accent/30 p-3 text-sm text-muted-foreground"><span className="font-semibold text-foreground">No PRO or IPI number yet?</span> Leave them blank. Add them anytime after you register with a PRO and receive your IPI name number.</p>}
             </FormSection>
+            </div>
             {full && metadata.composers.some(creditName) && <FormSection title={`Composers (earlier entries) · ${count(metadata.composers)}`} open={writersWarn} warn={warnIn("composers-")} summary="Move these into Writers">
               <Contributors bare title="Composers (earlier entries)" singular="composer" group="composers" rows={metadata.composers} saved={people.writers} disabled={busy} onChange={(rows) => update("composers", rows)} tip="Saved before Writer roles existed. Move these into Writer with the Composer role when you can." />
             </FormSection>}

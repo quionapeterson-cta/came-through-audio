@@ -1,4 +1,5 @@
 import type { CatalogTrack } from "@/lib/catalog";
+import type { AgencyKind } from "@/lib/agency-kind";
 import { creditName, type Contributor, type Metadata } from "@/lib/metadata";
 import { retireAdvice } from "@/lib/isrc-retirement";
 
@@ -214,7 +215,32 @@ export function readWorks(rows: string[][]): ListWork[] {
   return [...works.values()].filter((w) => w.title || w.isrc);
 }
 
-export const loose = (s: string) => norm(s.replace(/\(.*?\)|\[.*?\]/g, "").replace(/\b(feat|ft)\.?\b.*$/i, ""));
+/**
+ * Numbers written as words, the way a PRO prints an uppercase title (founder, 2026-11-14): BMI registers "TWENTY FOUR
+ * SEVEN LOVE" where the catalog holds "24/7 Love", and comparing the letters made one song look like a title mismatch.
+ */
+const NUMBER_WORDS: Record<number, string> = {
+  0: "zero", 1: "one", 2: "two", 3: "three", 4: "four", 5: "five", 6: "six", 7: "seven", 8: "eight", 9: "nine",
+  10: "ten", 11: "eleven", 12: "twelve", 13: "thirteen", 14: "fourteen", 15: "fifteen", 16: "sixteen",
+  17: "seventeen", 18: "eighteen", 19: "nineteen", 20: "twenty", 30: "thirty", 40: "forty", 50: "fifty",
+  60: "sixty", 70: "seventy", 80: "eighty", 90: "ninety",
+};
+const numberWord = (n: number): string => {
+  if (NUMBER_WORDS[n]) return NUMBER_WORDS[n]!;
+  if (n > 20 && n < 100) return `${NUMBER_WORDS[Math.floor(n / 10) * 10]} ${NUMBER_WORDS[n % 10]}`;
+  if (n === 100) return "one hundred";
+  return String(n);
+};
+const spoken = (s: string) => s.replace(/\d+/g, (d) => numberWord(Number(d)));
+
+/**
+ * A title as both sides mean it: case, "&" for "and", digits for the words an agency prints, and the punctuation and
+ * feature credits that never belong to the name (founder, 2026-11-14). "24/7 Love" and "TWENTY FOUR SEVEN LOVE" are one
+ * title; "24/7" and "TWENTY FOUR SEVEN" are one title with no extra word between them.
+ */
+export const titleKey = (s: string) => norm(spoken(s.toLowerCase().replace(/&/g, " and ")));
+
+export const loose = (s: string) => titleKey(s.replace(/\(.*?\)|\[.*?\]/g, "").replace(/\b(feat|ft)\.?\b.*$/i, ""));
 
 /**
  * Words that name a version of a recording rather than another work: "Dirty", "Official Instrumental", "Radio Edit".
@@ -234,7 +260,7 @@ export function titleCore(title: string): string {
   // "Song: Radio Edit" has no space before its colon, "Part 2: The Return" has one — the version words decide, not the spacing.
   const parts = core.split(/\s*[-–—:]\s+/);
   if (parts.length > 1 && VERSION_WORDS.test(parts.slice(1).join(" "))) core = parts[0]!;
-  return norm(core);
+  return titleKey(core);
 }
 
 /**
@@ -277,7 +303,7 @@ export const printedTitle = (m: { title: string; version?: string | undefined })
  */
 export function titleReadsDifferently(catalogTitle: string, agencyTitle: string): boolean {
   if (!catalogTitle.trim() || !agencyTitle.trim()) return false;
-  return norm(catalogTitle) !== norm(agencyTitle) && titleCore(catalogTitle) === titleCore(agencyTitle);
+  return titleKey(catalogTitle) !== titleKey(agencyTitle) && titleCore(catalogTitle) === titleCore(agencyTitle);
 }
 
 /**
@@ -285,7 +311,7 @@ export function titleReadsDifferently(catalogTitle: string, agencyTitle: string)
  * version tail — the version the catalog names and the agency never registers.
  */
 export function titledWorks(works: ListWork[], title: string): ListWork[] {
-  const exact = works.filter((w) => w.title && norm(w.title) === norm(title));
+  const exact = works.filter((w) => w.title && titleKey(w.title) === titleKey(title));
   if (exact.length) return exact;
   const looseHits = works.filter((w) => w.title && loose(w.title) === loose(title));
   if (looseHits.length) return looseHits;
@@ -404,12 +430,19 @@ const parts = (list: { key: string; share?: number | undefined }[]) => {
 /**
  * What the agency's registration and the catalog disagree about, in the member's own words. The same rule runs in the
  * comparison and in the fill dialog, so a difference the report names is the difference the member is asked to settle.
- * `recordings` lists (SoundExchange) carry no writers, so only the codes are compared.
+ *
+ * The agency's **kind** decides what can be compared at all (founder, 2026-11-14). A composition list (a PRO, The MLC)
+ * names a work: its title, ISWC and writers. It carries no recording artist and no ISRC, so neither is ever a difference
+ * here; a BMI row is not missing an ISRC any more than a SoundExchange row is missing a writer. A recording list
+ * (SoundExchange) names a recording: its ISRC, title, version and artist, and no writers.
  */
-export function workIssues(work: ListWork, metadata: Metadata, recordings = false): string[] {
+export function workIssues(work: ListWork, metadata: Metadata, kind: AgencyKind = "composition"): string[] {
   const issues: string[] = [];
+  const composition = kind === "composition";
   const isrc = code(metadata.isrc ?? ""), iswc = code(metadata.iswc ?? "");
-  if (work.isrc && work.isrc !== isrc) {
+  // A code is a property of the recording. BMI and The MLC never register one, and a distributor does not deliver a
+  // composition, so an ISRC on either side is not a difference to raise (founder, 2026-11-14).
+  if (!composition && work.isrc && work.isrc !== isrc) {
     // The agency is on a code this song has retired: the catalog is right, so the answer is what to say to them, not
     // "your catalog is wrong" (founder, 2026-11-12).
     if (retiredCodes(metadata).includes(work.isrc)) issues.push(retireAdvice(work.isrc, metadata.isrc ?? ""));
@@ -428,20 +461,24 @@ export function workIssues(work: ListWork, metadata: Metadata, recordings = fals
   if (titleReadsDifferently(catalogTitle, agencyTitle)) issues.push(`The agency calls it "${work.title}", your catalog has "${named}" — same recording, different name`);
   // A version is compared as a version, and only when the list names one: agencies register the recording or the work
   // without version wording all the time, and that is not a difference.
-  const agencyVersion = (work.version ?? versionTail(work.title)).trim();
-  const catalogVersion = (metadata.version ?? "").trim() || versionTail(named);
+  // A version belongs to the recording: "Am Pm (Clean Version)" and "Am Pm (Dirty Version)" are one composition at BMI,
+  // and neither is a version difference against it (founder, 2026-11-14).
+  const agencyVersion = composition ? "" : (work.version ?? versionTail(work.title)).trim();
+  const catalogVersion = composition ? "" : (metadata.version ?? "").trim() || versionTail(named);
   if (agencyVersion && catalogVersion && norm(agencyVersion) !== norm(catalogVersion)) {
     issues.push(`The agency has version "${agencyVersion}", your catalog has "${catalogVersion}" — same title, two versions of the recording`);
   }
   // A version named in the catalog's own title that the agency lists without one, and that is not out yet: that is a
   // release that has not happened, never a mismatch (founder, 2026-11-14).
-  const ownTail = versionTail(named);
+  const ownTail = composition ? "" : versionTail(named);
   if (ownTail && !agencyVersion) {
     const today = new Date().toISOString().slice(0, 10);
     const released = !!metadata.releaseDate && !metadata.unreleased && metadata.releaseDate <= today;
     if (!released) issues.push(`Your catalog's "${ownTail}" is not released yet, and the agency lists this recording without a version — nothing to fix before release day`);
   }
-  if (recordings || !work.writers.length) return issues;
+  // An unrecorded-version note is about the release, and a composition has none; writers are only compared for a
+  // composition list, which is the one that registers them.
+  if (!composition || !work.writers.length) return issues;
   const mine = [...metadata.writers, ...metadata.composers].filter((w) => creditName(w)).map((w) => ({ key: nameKey(creditName(w)), name: creditName(w), ipi: digits(w.ipi ?? ""), share: Number(w.percentage) || undefined }));
   const theirs = work.writers.map((w) => ({ ...w, key: nameKey(w.name) }));
   const same = (a: { key: string; name?: string; ipi?: string | undefined }, b: { key: string; name?: string; ipi?: string | undefined }) =>
@@ -465,9 +502,10 @@ export function workIssues(work: ListWork, metadata: Metadata, recordings = fals
 /**
  * Compares one agency's list with the songs that should be registered there. Matches by ISRC, then ISWC, then title
  * (the writers break a shared title).
- * `recordings` lists (SoundExchange) carry no writers, so only presence is compared.
+ * A **kind** decides what is compared (founder, 2026-11-14): a recording list (SoundExchange) is compared on its codes,
+ * title, version and artist, and a composition list (a PRO, The MLC) on its title, ISWC and writers.
  */
-export function compareList(works: ListWork[], tracks: CatalogTrack[], recordings = false, agency = "the agency"): ListResult {
+export function compareList(works: ListWork[], tracks: CatalogTrack[], kind: AgencyKind = "composition", agency = "the agency"): ListResult {
   const used = new Set<ListWork>();
   const matched: ListMatch[] = [], differences: ListMatch[] = [], clashes: ListClash[] = [], notListed: ListResult["notListed"] = [];
   // A code a song has retired names the same recording, and the agency is meant to keep it (founder, 2026-11-12): an old
@@ -509,7 +547,7 @@ export function compareList(works: ListWork[], tracks: CatalogTrack[], recording
       continue;
     }
     used.add(work);
-    const issues = workIssues(work, m, recordings);
+    const issues = workIssues(work, m, kind);
     (issues.length ? differences : matched).push({ trackId: t.id, title: t.title, work, issues });
   }
   // A title the list holds under two or more codes is one song with more than one recording: another version, or the
@@ -517,7 +555,7 @@ export function compareList(works: ListWork[], tracks: CatalogTrack[], recording
   // was invisible exactly when it mattered (founder, 2026-11-14). A code the catalog already retired is skipped: the
   // agency is meant to keep that entry open.
   const codesByTitle = new Map<string, Set<string>>();
-  for (const w of works) {
+  if (kind === "recording") for (const w of works) {
     if (!w.isrc || !w.title) continue;
     const core = titleCore(w.title);
     codesByTitle.set(core, (codesByTitle.get(core) ?? new Set<string>()).add(w.isrc));

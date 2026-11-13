@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { DifferencesChart } from "@/components/DifferencesChart";
 import { saveTrack, type CatalogTrack } from "@/lib/catalog";
+import { updateTarget } from "@/lib/ids";
 import type { SavedListSummary } from "@/lib/agency-lists";
 import { catalogHref } from "@/lib/catalog-links";
 import {
@@ -102,7 +103,8 @@ export function DifferencesPanel({ userId, tracks, societies, summaries, default
     if (!userId || !track) return;
     setBusyKey(row.key);
     try {
-      await saveTrack({ ...track.metadata, ...patch }, userId, track.id);
+      // Only a song My Catalog holds is written by its id; anything else is created, never sent to Postgres as an id.
+      await saveTrack({ ...track.metadata, ...patch }, userId, updateTarget(track.id));
       setTreated((set) => new Set(set).add(row.key));
       toast.success(note);
       onSaved?.();

@@ -1,5 +1,7 @@
 import { matchWork, printedTitle, retiredCodes, sameWriter, scaledShares, titleCarriesVersion, titleReadsDifferently, workIssues, type ListMatch, type ListResult, type ListWork, type ListWriter } from "@/lib/agency-lists";
 import type { CatalogTrack } from "@/lib/catalog";
+import type { AgencyKind } from "@/lib/agency-kind";
+import { isCatalogId } from "@/lib/ids";
 import { creditName, emptyContributor, emptyMetadata, WRITER_ROLES, type Contributor, type Metadata } from "@/lib/metadata";
 
 /**
@@ -98,8 +100,11 @@ export function agencyMetadata(work: ListWork, artist: string): Metadata {
   };
 }
 
-/** The agency's version of a song already in the catalog: its codes and writers replace the catalog's, the rest stays. */
-export function agencyVersion(existing: Metadata, work: ListWork, artist: string): Metadata {
+/**
+ * The agency's version of a song already in the catalog: its codes and writers replace the catalog's, the rest stays.
+ * A composition list names a work, never a recording, so it never names a version (founder, 2026-11-14).
+ */
+export function agencyVersion(existing: Metadata, work: ListWork, artist: string, kind: AgencyKind = "composition"): Metadata {
   const agency = agencyMetadata(work, artist || existing.artist);
   // The list never says author or composer, so it leaves the role blank; a role the catalog already knows is kept rather
   // than wiped by adopting the agency's writers, which would throw away the member's own answer.
@@ -108,10 +113,13 @@ export function agencyVersion(existing: Metadata, work: ListWork, artist: string
   // Adopting the agency's name brings its version with it, so a title that already carries one doesn't also keep the
   // catalog's version field ("Quit Playing With Me (Clean Version)" rather than that plus "(Radio edit)").
   const adoptName = titleReadsDifferently(printedTitle(existing), work.title);
+  const composition = kind === "composition";
   return {
     ...existing,
-    title: adoptName ? work.title : existing.title,
-    version: adoptName && titleCarriesVersion(work.title) ? "" : existing.version,
+    // A PRO registers the composition, so its title never overwrites a recording's title: "Am Pm (Dirty Version)" stays
+    // the Dirty Version of "AM PM" (founder, 2026-11-14).
+    title: adoptName && !composition ? work.title : existing.title,
+    version: !composition && adoptName && titleCarriesVersion(work.title) ? "" : existing.version,
     artist: existing.artist || agency.artist,
     isrc: agency.isrc && !retiredCodes(existing).includes(agency.isrc) ? agency.isrc : existing.isrc,
     iswc: agency.iswc || existing.iswc,
@@ -131,28 +139,37 @@ const listWriters = (writers: ListWriter[]) => {
   return writers.map((w, i) => `${w.name}${shares[i] ? ` ${Math.round(shares[i]!)}%` : ""}`).join(" · ");
 };
 
-/** The fields that actually differ, so the dialog only shows what the member has to decide about. */
-export function fieldChanges(existing: Metadata, work: ListWork): FieldChange[] {
+/**
+ * The fields that actually differ, so the dialog only shows what the member has to decide about. A composition list
+ * offers its ISWC and writers only: its title names the work, not this recording of it, and it carries no ISRC
+ * (founder, 2026-11-14).
+ */
+export function fieldChanges(existing: Metadata, work: ListWork, kind: AgencyKind = "composition"): FieldChange[] {
   const rows: FieldChange[] = [];
+  const composition = kind === "composition";
   // A field the list doesn't carry is never offered: adopting the agency's version would leave the catalog's value in place.
   const named = printedTitle(existing);
-  if (titleReadsDifferently(named, work.title)) rows.push({ field: "Title", catalog: named, agency: work.title });
+  if (!composition && titleReadsDifferently(named, work.title)) rows.push({ field: "Title", catalog: named, agency: work.title });
   // A code this song has retired is never offered: the agency is the one that needs updating, not the catalog.
-  if (work.isrc && !retiredCodes(existing).includes(work.isrc)) rows.push({ field: "ISRC", catalog: existing.isrc.trim() || "none", agency: work.isrc });
+  if (!composition && work.isrc && !retiredCodes(existing).includes(work.isrc)) rows.push({ field: "ISRC", catalog: existing.isrc.trim() || "none", agency: work.isrc });
   if (work.iswc) rows.push({ field: "ISWC", catalog: existing.iswc.trim() || "none", agency: work.iswc });
   if (work.writers.length) rows.push({ field: "Writers", catalog: catalogWriters(existing) || "none", agency: listWriters(work.writers) });
   return rows.filter((r) => r.catalog.toUpperCase() !== r.agency.toUpperCase());
 }
 
 /** One duplicate, ready for the dialog: what differs, in words and field by field. */
-const duplicateOf = (track: CatalogTrack, work: ListWork, artist: string): AgencyDuplicate => ({
-  track, work, agency: agencyVersion(track.metadata, work, artist),
-  issues: workIssues(work, track.metadata),
-  changes: fieldChanges(track.metadata, work),
+const duplicateOf = (track: CatalogTrack, work: ListWork, artist: string, kind: AgencyKind): AgencyDuplicate => ({
+  track, work, agency: agencyVersion(track.metadata, work, artist, kind),
+  issues: workIssues(work, track.metadata, kind),
+  changes: fieldChanges(track.metadata, work, kind),
 });
 
 /** What filling this list would do: new songs to add, and the differing songs already catalogued. */
-export function fillPlan(result: ListResult, tracks: CatalogTrack[], artist: string): FillPlan {
+export function fillPlan(result: ListResult, tracks: CatalogTrack[], artist: string, kind: AgencyKind = "composition"): FillPlan {
+  // A Royalty Inspector song is not in My Catalog (its id is not a catalog uuid), so it is neither a duplicate to write
+  // over nor a row to update: writing one back was the "invalid input syntax for type uuid" crash (founder, 2026-11-14).
+  const catalogued = tracks.filter((t) => isCatalogId(t.id));
+  tracks = catalogued;
   const creates: AgencyFill[] = [];
   const duplicates: AgencyDuplicate[] = [];
   // Matched against the whole list, never one work at a time: two works can share a title, and the writers decide
@@ -164,7 +181,7 @@ export function fillPlan(result: ListResult, tracks: CatalogTrack[], artist: str
     const track = tracks.find((t) => matchWork(listed, t) === work);
     if (!track) { creates.push({ work, metadata: agencyMetadata(work, artist) }); continue; }
     // Only a song that actually differs needs a decision; one already identical to the list is left alone.
-    const duplicate = duplicateOf(track, work, artist);
+    const duplicate = duplicateOf(track, work, artist, kind);
     if (duplicate.issues.length || duplicate.changes.length) duplicates.push(duplicate);
   }
   const seen = new Set(duplicates.map((d) => d.track.id));
@@ -173,7 +190,7 @@ export function fillPlan(result: ListResult, tracks: CatalogTrack[], artist: str
     if (!m.work) continue;
     const track = tracks.find((t) => t.id === m.trackId);
     if (!track || seen.has(track.id)) continue;
-    const duplicate = duplicateOf(track, m.work, artist);
+    const duplicate = duplicateOf(track, m.work, artist, kind);
     if (!duplicate.issues.length && !duplicate.changes.length) continue;
     seen.add(track.id);
     duplicates.push(duplicate);

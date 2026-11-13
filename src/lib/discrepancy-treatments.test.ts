@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { TREATMENTS, actionFor, buildDifferenceRows, fieldFor, fixesFor, nameFromIssue, rereadStored, signInFor, treatmentForIssue, worksFromResult, type StoredLists } from "@/lib/discrepancy-treatments";
+import { STORED_READER, TREATMENTS, actionFor, buildDifferenceRows, fieldFor, fixesFor, nameFromIssue, rereadStored, signInFor, treatmentForIssue, worksFromResult, type StoredLists } from "@/lib/discrepancy-treatments";
 import { compareList, parseDelimited, readWorks } from "@/lib/agency-lists";
 import { catalogHref } from "@/lib/catalog-links";
 import { emptyMetadata, type Metadata } from "@/lib/metadata";
@@ -177,7 +177,7 @@ describe("difference rows", () => {
     expect(fresh).not.toBe(old);
     expect(buildDifferenceRows({ tracks, stored: fresh })).toHaveLength(0);
     // A save already made by the current reader is left exactly as it is.
-    const marked = { byId: { soundexchange: { ...old.byId["soundexchange"]!, reader: 2 } } } as unknown as StoredLists;
+    const marked = { byId: { soundexchange: { ...old.byId["soundexchange"]!, reader: STORED_READER } } } as unknown as StoredLists;
     expect(rereadStored(marked, tracks)).toBe(marked);
   });
 
@@ -193,7 +193,7 @@ Karma Came,Am Pm (Dirty Version),QT6HX2656774,SX217QGZ04,100.0,No,Came Through A
       catTrack("b", "AM PM", { isrc: "QT6HX2656774", releaseDate: "2026-01-01" }),
     ];
     const works = readWorks(parseDelimited(csv));
-    const today = compareList(works, tracks, true, "SoundExchange");
+    const today = compareList(works, tracks, "recording", "SoundExchange");
     // What the old reader saved: the works it kept carry no version and no core title.
     const bare = (w: { title: string; iswc: string; isrc: string; workId: string; writers: unknown[] }) =>
       ({ title: w.title, iswc: w.iswc, isrc: w.isrc, workId: w.workId, writers: w.writers });
@@ -247,7 +247,7 @@ Karma Came,Quit Playing With Me (Official Acapella),QT6HW2687938,SX217QGYZV,100.
 Karma Came,Quit Playing With Me (Official Instrumental),QT6HW2687936,SX217QGYZW,100.0,No,Came Through Audio LLC,1000117426,Rights Owner
 `;
     const tracks = [catTrack("a", "Quit Playing With Me", { isrc: "QT6HW2687935", releaseDate: "2026-01-01" })];
-    const stored = { byId: { soundexchange: { file: "sx.csv", result: compareList(readWorks(parseDelimited(csv)), tracks, true, "SoundExchange") } } } as unknown as StoredLists;
+    const stored = { byId: { soundexchange: { file: "sx.csv", result: compareList(readWorks(parseDelimited(csv)), tracks, "recording", "SoundExchange") } } } as unknown as StoredLists;
     const rows = buildDifferenceRows({ tracks, stored });
     const row = rows.find((r) => r.songId === "a")!;
     // Every code is its own row on the agency side, with the version that row names.

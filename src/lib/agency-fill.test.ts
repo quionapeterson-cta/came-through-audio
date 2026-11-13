@@ -75,7 +75,8 @@ describe("planning a fill", () => {
   });
 
   it("shows the agency's codes, and what differs, before the member chooses", () => {
-    const plan = fillPlan(result({ extra: [work({ title: "Bloodline", isrc: "USCTA1600001", iswc: "T1234567890" })] }), [track("t1", "Bloodline")], "Karma Came");
+    // A recording list (SoundExchange) compares the code; a composition list never does.
+    const plan = fillPlan(result({ extra: [work({ title: "Bloodline", isrc: "USCTA1600001", iswc: "T1234567890" })] }), [track("t1", "Bloodline")], "Karma Came", "recording");
     expect(plan.duplicates[0]!.issues).toEqual([
       "The agency has ISRC USCTA1600001, your catalog has none",
       "The agency has ISWC T1234567890, your catalog has none",
@@ -100,10 +101,10 @@ describe("planning a fill", () => {
     const existing = track("t1", "Quit Playing With Me", { version: "Radio edit", isrc: "QT6HW2687935" });
     const listed = work({ title: "Quit Playing With Me (Clean Version)", isrc: "QT6HW2687935" });
     // One choice, shown where the member decides, instead of an issue they cannot settle.
-    expect(fieldChanges(existing.metadata, listed)).toEqual([
+    expect(fieldChanges(existing.metadata, listed, "recording")).toEqual([
       { field: "Title", catalog: "Quit Playing With Me (Radio edit)", agency: "Quit Playing With Me (Clean Version)" },
     ]);
-    const adopted = agencyVersion(existing.metadata, listed, "Karma Came");
+    const adopted = agencyVersion(existing.metadata, listed, "Karma Came", "recording");
     expect(adopted.title).toBe("Quit Playing With Me (Clean Version)");
     // The agency's name already carries the version, so the catalog's own one isn't kept twice.
     expect(adopted.version).toBe("");

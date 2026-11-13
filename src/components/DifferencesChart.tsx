@@ -120,9 +120,13 @@ export function DifferencesChart({ rows, busyKey, onFixCatalog, onAdopt, onKeepB
         const canKeepBoth = codesDiffer && row.treatment.action !== "keep-both";
         const waiting = row.treatment.action === "waiting";
 
+        /** The row's own copy value: never an ISRC on a composition card, whatever a fix's own words say. */
+        const copied = row.copy?.primary;
+
         /** The one click each difference takes, from the rule that difference was given. */
         const runFix = (fix: RowFix) => {
           if (fix.treatment.action === "waiting") return;
+          if (copied) return copyAndOpen(copied.value, url, copied.what);
           if (fix.treatment.action === "keep-both") return onKeepBoth(row);
           if (fix.treatment.action === "add-version") return onFixCatalog(row, "version");
           copyAndOpen(fix.code || row.title, url, fix.code ? "ISRC" : "title");
@@ -130,6 +134,7 @@ export function DifferencesChart({ rows, busyKey, onFixCatalog, onAdopt, onKeepB
 
         const primary = () => {
           if (waiting) return;
+          if (copied) return copyAndOpen(copied.value, url, copied.what);
           if (row.treatment.action === "keep-both") return onKeepBoth(row);
           if (row.treatment.action === "add-version") return onFixCatalog(row, "version");
           copyAndOpen(code || row.title, url, code ? "ISRC" : "title");
@@ -165,6 +170,13 @@ export function DifferencesChart({ rows, busyKey, onFixCatalog, onAdopt, onKeepB
                   <div className="min-w-0 space-y-1.5">
                     <span className="block text-[10px] font-bold uppercase tracking-wider text-[#0b0b0b]/55 dark:text-[#E5E4E2]/55">Your catalog</span>
                     <Field label="Title" differs={titlesDisagree}><Title value={row.title} against={agencyTitle} emphasise={titlesDisagree} /></Field>
+                    {row.composition && (
+                      <>
+                        <Field label="ISWC" differs={!!row.composition.agency.iswc && !!row.composition.catalog.iswc && canon(row.composition.agency.iswc) !== canon(row.composition.catalog.iswc)}><Value text={row.composition.catalog.iswc} empty="No ISWC in your catalog" /></Field>
+                        <Field label="Writers" differs={!!row.composition.agency.writers && !!row.composition.catalog.writers && canon(row.composition.agency.writers) !== canon(row.composition.catalog.writers)}><Value text={row.composition.catalog.writers} empty="No writers in your catalog" /></Field>
+                      </>
+                    )}
+                    {!row.composition && <>
                     <Field label="Version" differs={versionsDisagreeFor(row.versions.catalog)}><Value text={row.versions.catalog} empty="Not named" /></Field>
                     <Field label="Artist" differs={false}><Value text={row.artist} empty="No artist listed" /></Field>
                     <Field label="ISRC" differs={codesDiffer}>
@@ -175,6 +187,7 @@ export function DifferencesChart({ rows, busyKey, onFixCatalog, onAdopt, onKeepB
                         <span className="mt-1 block font-mono text-[11px] tabular-nums text-[#0b0b0b]/45 line-through dark:text-[#E5E4E2]/45">{row.retiredIscrs.join(" · ")}</span>
                       )}
                     </Field>
+                    </>}
                   </div>
                   <div className="min-w-0 space-y-1.5 border-l border-[#E5E4E2] pl-3 dark:border-[#E5E4E2]/15">
                     <span className="block text-[10px] font-bold uppercase tracking-wider text-[#0b0b0b]/55 dark:text-[#E5E4E2]/55">The agency</span>
@@ -182,6 +195,13 @@ export function DifferencesChart({ rows, busyKey, onFixCatalog, onAdopt, onKeepB
                       <div key={c.society + c.isrc + c.title} className="space-y-1.5">
                         <span className="block text-[10px] font-semibold uppercase tracking-wide text-[#004AAD] dark:text-[#4D8CFF]">{c.name}</span>
                         <Field label="Title" differs={titlesDisagree}><Title value={c.title || row.title} against={row.title} emphasise={titlesDisagree} /></Field>
+                        {row.composition && (
+                          <>
+                            <Field label="ISWC" differs={!!c.iswc && !!row.composition.catalog.iswc && canon(c.iswc) !== canon(row.composition.catalog.iswc)}><Value text={c.iswc ?? ""} empty="No ISWC on the list" /></Field>
+                            <Field label="Writers" differs={false}><Value text={(c.writers ?? []).join(" · ")} empty="No writers on the list" /></Field>
+                          </>
+                        )}
+                        {!row.composition && <>
                         <Field label="Version" differs={versionsDisagreeFor(c.version ?? "")}><Value text={c.version ?? ""} empty="Not named" /></Field>
                         <Field label="Artist" differs={artistsDisagreeFor(c.artist ?? "")}><Value text={c.artist ?? ""} empty="Not on the list" /></Field>
                         <Field label="ISRC" differs={codesDiffer}>
@@ -199,6 +219,7 @@ export function DifferencesChart({ rows, busyKey, onFixCatalog, onAdopt, onKeepB
                             </span>
                           ))}
                         </Field>
+                        </>}
                       </div>
                     ))}
                   </div>
@@ -221,7 +242,12 @@ export function DifferencesChart({ rows, busyKey, onFixCatalog, onAdopt, onKeepB
                         {busy && <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden />}
                         {row.treatment.primary}
                       </button>}
-                  {row.treatment.secondary.includes("Repertoire")
+                  {row.copy?.secondary && (
+                    <button type="button" className={SECONDARY} onClick={() => copyAndOpen(row.copy!.secondary!.value, url, row.copy!.secondary!.what)} disabled={busy}>
+                      {row.copy.secondary.label}
+                    </button>
+                  )}
+                  {!row.copy?.secondary && row.treatment.secondary.includes("Repertoire")
                     ? <a href={url} target="_blank" rel="noreferrer" className={SECONDARY}>
                         <ExternalLink className="h-3.5 w-3.5" aria-hidden />{row.treatment.secondary}
                       </a>

@@ -63,7 +63,7 @@ const track = (id: string, [title, isrc, version]: [string, string, string]) => 
  */
 describe("the founder's real SoundExchange export", () => {
   const works = readWorks(parseDelimited(csv));
-  const r = compareList(works, catalog.map((c, i) => track(`t${i}`, c)), true, "SoundExchange");
+  const r = compareList(works, catalog.map((c, i) => track(`t${i}`, c)), "recording", "SoundExchange");
 
   it("keeps two recordings apart when they share a title", () => {
     expect(works).toHaveLength(30);

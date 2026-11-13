@@ -71,7 +71,7 @@ describe("agency lists", () => {
     // The founder's real case: the catalog holds the live code, SoundExchange still states the retired one.
     const t = track("a", "Do you Mind That?", { isrc: "GXESV2623521", retiredIscrs: ["QZNMY2291725"] });
     expect(matchWork(works, t)).toBe(works[0]);
-    const r = compareList(works, [t], true, "SoundExchange");
+    const r = compareList(works, [t], "recording", "SoundExchange");
     expect(r.matched).toHaveLength(0);
     const issues = r.differences[0]!.issues;
     expect(issues[0]).toContain("The agency only has the retired ISRC QZNMY2291725");
@@ -88,7 +88,7 @@ describe("agency lists", () => {
   it("is content when the agency keeps both codes, which is the state to aim for", () => {
     const both = readWorks(parseDelimited("Title,ISRC,Writer,Share\nDo you Mind That,QZNMY2291725,Ann Lee,100\nDo you Mind That,GXESV2623521,Ann Lee,100"));
     const t = track("a", "Do you Mind That?", { isrc: "GXESV2623521", retiredIscrs: ["QZNMY2291725"] });
-    const r = compareList(both, [t], true, "SoundExchange");
+    const r = compareList(both, [t], "recording", "SoundExchange");
     expect(r.matched).toHaveLength(1);
     expect(r.differences).toHaveLength(0);
     // The old code's row belongs to the same recording: nothing to chase, nothing "not in your catalog".
@@ -119,7 +119,7 @@ describe("agency lists", () => {
 
   it("compares recording lists by presence only", () => {
     const works = readWorks(parseDelimited("ISRC,Track Title,Artist\nUSCTA2600001,Midnight,Q"));
-    const r = compareList(works, [track("a", "Midnight", { isrc: "US-CTA-26-00001" })], true);
+    const r = compareList(works, [track("a", "Midnight", { isrc: "US-CTA-26-00001" })], "recording");
     expect(r.matched).toHaveLength(1);
   });
 
@@ -136,14 +136,14 @@ describe("agency lists", () => {
   it("never invents a version on a recording the list calls plainly", () => {
     const works = readWorks(parseDelimited("Title,ISRC,Artist\nBloodline,GBSMU2963386,Karma Came"));
     // The catalog's own version field is not part of its title, so it can't make a name difference on a plain Bloodline.
-    const r = compareList(works, [track("a", "Bloodline", { isrc: "GBSMU2963386", version: "Deluxe" })], true);
+    const r = compareList(works, [track("a", "Bloodline", { isrc: "GBSMU2963386", version: "Deluxe" })], "recording");
     expect(r.matched).toHaveLength(1);
     expect(r.differences).toHaveLength(0);
   });
 
   it("treats a second code under one title as another recording of it, never an isolated mismatch", () => {
     const works = readWorks(parseDelimited("Title,ISRC\nBig Swag,QZNMY2291720\nBig Swag,QZNMY2291727"));
-    const r = compareList(works, [track("a", "Big Swag", { isrc: "QZNMY2291720" })], true);
+    const r = compareList(works, [track("a", "Big Swag", { isrc: "QZNMY2291720" })], "recording");
     expect(r.matched).toHaveLength(1);
     expect(r.extra).toEqual([]);
     expect(r.differences).toHaveLength(1);
@@ -153,24 +153,24 @@ describe("agency lists", () => {
   it("reports nothing when the agency keeps both the current and the retired code", () => {
     const works = readWorks(parseDelimited("Title,ISRC\nDo you Mind That,QZNMY2291725\nDo you Mind That,GXESV2623521"));
     const t = track("a", "Do you Mind That?", { isrc: "GXESV2623521", retiredIscrs: ["QZNMY2291725"] });
-    const r = compareList(works, [t], true);
+    const r = compareList(works, [t], "recording");
     expect(r.differences).toHaveLength(0);
     expect(r.extra).toHaveLength(0);
   });
 
   it("compares a version as a version, and waits while the catalog's own version is unreleased", () => {
     const works = readWorks(parseDelimited("Title,ISRC\nQuit Playing With Me (Clean Version),QT6HW2687935"));
-    const r = compareList(works, [track("a", "Quit Playing With Me", { isrc: "QT6HW2687935", version: "Radio edit" })], true);
+    const r = compareList(works, [track("a", "Quit Playing With Me", { isrc: "QT6HW2687935", version: "Radio edit" })], "recording");
     expect(r.differences[0]!.issues).toEqual([expect.stringContaining('The agency has version "Clean Version", your catalog has "Radio edit"')]);
     // A clean version the catalog holds but has not released waits for release day instead of reading as a mismatch.
     const waiting = compareList(readWorks(parseDelimited("Title,ISRC\nBloodline,GBSMU2963386")),
-      [track("b", "Bloodline (Clean Version)", { isrc: "GBSMU2963386" })], true);
+      [track("b", "Bloodline (Clean Version)", { isrc: "GBSMU2963386" })], "recording");
     expect(waiting.differences[0]!.issues[0]).toContain("is not released yet");
   });
 
   it("never makes a capital letter, or a version the list doesn't name, a difference", () => {
     const works = readWorks(parseDelimited("Title,ISRC,Artist\nAM PM,QT6HX2656773,KARMA CAME"));
-    const r = compareList(works, [track("a", "AM PM", { isrc: "QT6HX2656773", artist: "Karma Came" })], true);
+    const r = compareList(works, [track("a", "AM PM", { isrc: "QT6HX2656773", artist: "Karma Came" })], "recording");
     expect(r.matched).toHaveLength(1);
     expect(r.differences).toHaveLength(0);
   });
@@ -295,7 +295,7 @@ clashDescribe("a title clash", () => {
   const track = { id: "t1", title: "Bloom", artist: "Q", updatedAt: "", metadata: { ...emptyMetadata(), iswc: "", isrc: "", writers: [{ ...writerRow(), name: "Cal Ray", legalName: "Cal Ray", role: "Author/Composer" }] } };
 
   clashIt("is diagnosed instead of being called not on the list", () => {
-    const result = compare(list, [track as never], false, "ASCAP");
+    const result = compare(list, [track as never], "composition", "ASCAP");
     clashExpect(result.notListed).toEqual([]);
     clashExpect(result.clashes).toHaveLength(1);
     // The list's own works are accounted for, so the fill dialog never offers to add them as new songs.
@@ -309,7 +309,7 @@ clashDescribe("a title clash", () => {
     clashExpect(issues.join(" ")).toContain("another writer's song");
   });
   clashIt("still reports a title the list does not have at all", () => {
-    const result = compare(list, [{ ...track, id: "t2", title: "Amber" } as never], false, "ASCAP");
+    const result = compare(list, [{ ...track, id: "t2", title: "Amber" } as never], "composition", "ASCAP");
     clashExpect(result.clashes).toEqual([]);
     clashExpect(result.notListed.map((n) => n.trackId)).toEqual(["t2"]);
   });

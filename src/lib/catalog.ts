@@ -1,5 +1,6 @@
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { updateTarget } from "@/lib/ids";
 import { requestBadgeCheck } from "@/lib/badge-events";
 import { creditName, emptyContributor, emptyMetadata, isoDate, splitTrack, withLegalName, type Metadata } from "@/lib/metadata";
 import { albumKey, routedKinds } from "@/lib/release-routing";
@@ -72,8 +73,12 @@ export async function listTracks(ownerId?: string): Promise<CatalogTrack[]> {
 
 export async function saveTrack(m: Metadata, userId: string, id?: string): Promise<string> {
   const row = toCatalogRow(m, userId) as never;
-  const query = id
-    ? supabase.from("catalogs").update(row).eq("id", id).select("id").single()
+  // Only a catalog uuid can be updated. A Royalty Inspector song carries `h:<uuid>`, and sending that was the
+  // "invalid input syntax for type uuid" crash on "Add 1 song" (founder, 2026-11-14): a song that is not in the catalog
+  // yet is inserted, and Postgres gives it its own id.
+  const target = updateTarget(id);
+  const query = target
+    ? supabase.from("catalogs").update(row).eq("id", target).select("id").single()
     : supabase.from("catalogs").insert(row).select("id").single();
   const { data, error } = await query;
   // A real Error, so the caller can show what the database actually refused instead of a generic "try again".
