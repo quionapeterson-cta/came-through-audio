@@ -155,6 +155,32 @@ describe("AgencyLists", () => {
     expect(placed).toEqual(["Afterglow:EP", "BAM:Album"]);
   });
 
+  it("gives a writer on two songs their own open box, and shows every writer of each song in it", async () => {
+    vi.mocked(saveTrack).mockClear();
+    render(<AgencyLists userId="u1" societies={[ascap]} songsFor={() => []} summaries={{}} onApply={vi.fn().mockResolvedValue(undefined)} />);
+    const file = new File(["Work Title,Writer Name,Share\nGold Teeth,RAY BO,50\nGold Teeth,KAY LEE,50\nSilver Teeth,RAY BO,50\nSilver Teeth,ANN MAY,50\n"], "ascap.csv", { type: "text/csv" });
+    fireEvent.change(screen.getByLabelText("Upload your ASCAP list"), { target: { files: [file] } });
+    fireEvent.click(await screen.findByRole("button", { name: /Fill my catalog/ }));
+    // The repeat writer is a box of their own, open with both of their songs in it.
+    const box = await screen.findByRole("button", { name: "Hide the songs RAY BO is on" });
+    expect(box.getAttribute("aria-expanded")).toBe("true");
+    expect(screen.getAllByText("Gold Teeth").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Silver Teeth").length).toBeGreaterThan(0);
+    // The other writer on each song is there too, even one who is on nothing else in the list.
+    expect(screen.getByRole("button", { name: "ANN MAY on Silver Teeth: Author" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "RAY BO on Silver Teeth: Author" })).toBeTruthy();
+    // Each song shows all of its writers, so a co-writer is answered without leaving the song.
+    fireEvent.click(screen.getByRole("button", { name: "KAY LEE on Gold Teeth: Composer" }));
+    // And every song answers where it belongs, from its own dropdown, before anything is chosen.
+    expect(screen.getByLabelText("Release for Gold Teeth")).toBeTruthy();
+    expect(screen.getByLabelText("Release for Silver Teeth")).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: /Add 2 songs/ }));
+    await waitFor(() => expect(vi.mocked(saveTrack)).toHaveBeenCalledTimes(2));
+    const gold = vi.mocked(saveTrack).mock.calls.map((c) => c[0]).find((m) => m.title === "Gold Teeth")!;
+    expect(gold.writers.find((w) => w.legalName === "KAY LEE")?.role).toBe("Composer");
+    expect(gold.writers.find((w) => w.legalName === "RAY BO")?.role).toBe("");
+  });
+
   it("answers every duplicate at once when the member takes the agency's version for all", async () => {
     vi.mocked(saveTrack).mockClear();
     render(<AgencyLists userId="u1" societies={[ascap]} songsFor={() => [track("a", "Midnight"), track("b", "Gold Teeth")]} summaries={{}} onApply={vi.fn().mockResolvedValue(undefined)} />);

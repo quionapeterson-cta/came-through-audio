@@ -67,7 +67,7 @@ export function AgencyLists({ userId, societies, songsFor, summaries, allTracks,
    * Where the ticked new songs go: each its own single, one EP/album they all belong to, or a release picked for each of
    * them from the catalog the member already has (founder, 2026-11-15).
    */
-  const [release, setRelease] = useState<{ one: boolean; perSong: boolean; type: string; title: string }>({ one: false, perSong: false, type: "", title: "" });
+  const [release, setRelease] = useState<{ one: boolean; perSong: boolean; type: string; title: string }>({ one: false, perSong: true, type: "", title: "" });
   /** One song's own placement: its own single, an existing release, or a new one it starts. */
   const [placements, setPlacements] = useState<Record<string, string>>({});
   const [newRelease, setNewRelease] = useState<Record<string, string>>({});
@@ -148,7 +148,7 @@ export function AgencyLists({ userId, societies, songsFor, summaries, allTracks,
     setChoices({});
     const plan = fillPlan(result, songsFor(society.id), artist, agencyKind(society.id));
     setPicked(Object.fromEntries(plan.creates.map((c) => [workKey(c.work), true])));
-    setRelease({ one: false, perSong: false, type: "", title: "" });
+    setRelease({ one: false, perSong: true, type: "", title: "" });
     setPlacements({});
     setNewRelease({});
     setPeople(listPeople(plan.creates.map((c) => c.work)));
@@ -157,6 +157,15 @@ export function AgencyLists({ userId, societies, songsFor, summaries, allTracks,
     setFolded(new Set());
     setFill({ society, plan });
   }
+  /** Opens or closes one box in the "who wrote what" list; every box starts open. */
+  function toggleFolded(id: string) {
+    setFolded((f) => {
+      const next = new Set(f);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  }
+
   /** Where one new song goes, from its own dropdown: its own single, an existing release, or a new one it starts. */
   function placementFor(key: string): { album: string; releaseType: string } | undefined {
     const value = placements[key] ?? "single";
@@ -238,6 +247,125 @@ export function AgencyLists({ userId, societies, songsFor, summaries, allTracks,
   const shownResult = shownId ? stored.byId[shownId]?.result : undefined;
   // The list read on its own, without needing a catalog: what each work's agency record is missing.
   const chosenCreates = fill ? fill.plan.creates.filter((c) => picked[workKey(c.work)] !== false) : [];
+  /** Every song the dialog is filling, and who the list credits on it. */
+  const creates = fill ? fill.plan.creates : [];
+  const listWriters = (c: (typeof creates)[number]) => c.work.writers.filter((w) => w.name.trim());
+  /** The answer key for a writer name: the person, whichever spelling the list used, or the name itself. */
+  const keyOfName = (name: string) => personFor(people, name)?.key ?? name;
+  /** How many of these songs each writer is on, counted once per song however the list repeats them. */
+  const songCount = new Map<string, number>();
+  for (const c of creates) {
+    const seen = new Set<string>();
+    for (const w of listWriters(c)) {
+      const key = keyOfName(w.name);
+      if (seen.has(key)) continue;
+      seen.add(key);
+      songCount.set(key, (songCount.get(key) ?? 0) + 1);
+    }
+  }
+  /** A writer credited on two or more songs gets a box of their own, holding every song they are on. */
+  const coWriters = people.filter((p) => (songCount.get(p.key) ?? 0) >= 2);
+  const sharesAWriter = (c: (typeof creates)[number]) => listWriters(c).some((w) => (songCount.get(keyOfName(w.name)) ?? 0) >= 2);
+  /** Songs with no repeat writer still need every role answered, so they are listed by song instead. */
+  const loneSongs = creates.filter((c) => !sharesAWriter(c));
+  const answeredIn = (songs: typeof creates) => songs.reduce((n, c) => {
+    const answers = roles[workKey(c.work)] ?? {};
+    return n + listWriters(c).filter((w) => (answers[keyOfName(w.name)] ?? "").trim()).length;
+  }, 0);
+  const writersIn = (songs: typeof creates) => songs.reduce((n, c) => n + listWriters(c).length, 0);
+
+  /**
+   * One writer's answer on one song. Every song shows all of its writers, so the member answering a co-writer can see who
+   * else is on that song and give each of them a role without leaving it (founder, 2026-11-16).
+   */
+  const roleRow = (c: (typeof creates)[number], name: string, ipi = "", pro = "", share?: number, owner = false) => {
+    const songKey = workKey(c.work);
+    const who = keyOfName(name);
+    const role = (roles[songKey] ?? {})[who] ?? "";
+    const shown = names[who] ?? name;
+    const facts = [share !== undefined ? `${share}%` : "", ipi ? `IPI ${ipi}` : "", pro].filter(Boolean).join(" · ");
+    return <li key={`${songKey}:${name}`} className={`flex flex-wrap items-center justify-between gap-x-3 gap-y-1 rounded-md px-2 py-1 ${owner ? "bg-accent/30" : ""}`}>
+      <span className="min-w-0">
+        <span className="text-sm">{shown}</span>
+        {facts && <span className="ml-2 text-[11px] text-muted-foreground">{facts}</span>}
+      </span>
+      <span className="flex shrink-0 flex-wrap gap-1">
+        {WRITER_ROLES.map((r) => <button key={r} type="button" aria-pressed={role === r}
+          aria-label={`${shown} on ${c.metadata.title}: ${r === "Author/Composer" ? "Both" : r}`}
+          onClick={() => setRoles((x) => ({ ...x, [songKey]: { ...(x[songKey] ?? {}), [who]: role === r ? "" : r } }))}
+          className={`rounded-full border px-2.5 py-0.5 text-xs ${role === r ? "border-primary bg-primary font-semibold text-primary-foreground" : "border-border"}`}>
+          {r === "Author/Composer" ? "Both" : r}
+        </button>)}
+      </span>
+    </li>;
+  };
+
+  /** One song, with all of its writers and the roles still to answer. */
+  const songBlock = (c: (typeof creates)[number], owner?: string) => {
+    const answers = roles[workKey(c.work)] ?? {};
+    const writers = listWriters(c);
+    const done = writers.filter((w) => (answers[keyOfName(w.name)] ?? "").trim()).length;
+    return <li key={workKey(c.work)} className="rounded-md border border-border/60 p-1.5">
+      <div className="flex items-baseline justify-between gap-2 px-1">
+        <span className="min-w-0 truncate text-sm font-semibold">{c.metadata.title}</span>
+        <span className="shrink-0 text-[11px] text-muted-foreground">{done}/{writers.length} answered</span>
+      </div>
+      <ul className="mt-1 space-y-0.5">{writers.map((w) => roleRow(c, w.name, w.ipi, w.pro, w.share, keyOfName(w.name) === owner))}</ul>
+    </li>;
+  };
+
+  /** The registered spellings of a writer who appears under two names; one choice covers every song they are on. */
+  const spellingRow = (p: Person) => p.names.length < 2 ? null : <div className="mb-1 flex flex-wrap items-center gap-1">
+    <span className="text-[11px] text-muted-foreground">Same writer, spelled:</span>
+    {p.names.map((n) => <button key={n} type="button" aria-pressed={(names[p.key] ?? p.names[0]) === n} onClick={() => setNames((x) => ({ ...x, [p.key]: n }))}
+      className={`rounded-full border px-2 py-0.5 text-[11px] ${(names[p.key] ?? p.names[0]) === n ? "border-primary bg-accent/40 font-semibold text-primary" : "border-border text-muted-foreground"}`}>{n}</button>)}
+  </div>;
+
+  /** A box per writer credited on two or more songs, open by default, holding each of those songs. */
+  const writerBox = (p: Person) => {
+    const songs = creates.filter((c) => listWriters(c).some((w) => keyOfName(w.name) === p.key));
+    const id = `w:${p.key}`;
+    const open = !folded.has(id);
+    return <li key={id} className="rounded-lg border border-border/70">
+      <button type="button" aria-expanded={open} aria-label={`${open ? "Hide" : "Show"} the songs ${p.names[0]} is on`} onClick={() => toggleFolded(id)}
+        className="flex w-full items-center justify-between gap-2 px-2 py-1.5 text-left">
+        <span className="min-w-0">
+          <span className="truncate text-sm font-semibold">{names[p.key] ?? p.names[0]}</span>
+          <span className="ml-1.5 text-[11px] text-muted-foreground">{songs.length} songs</span>
+        </span>
+        <span className="flex shrink-0 items-center gap-2 text-[11px] text-muted-foreground">
+          {answeredIn(songs)}/{writersIn(songs)} answered
+          {open ? <ChevronUp className="h-3.5 w-3.5" aria-hidden /> : <ChevronDown className="h-3.5 w-3.5" aria-hidden />}
+        </span>
+      </button>
+      {open && <div className="px-2 pb-2">
+        {spellingRow(p)}
+        <ul className="space-y-1.5">{songs.map((c) => songBlock(c, p.key))}</ul>
+      </div>}
+    </li>;
+  };
+
+  /** Everyone credited on a single song, still answered song by song with all of that song's writers showing. */
+  const loneBox = (() => {
+    if (!loneSongs.length) return null;
+    const id = "w:lone";
+    const open = !folded.has(id);
+    return <li key={id} className="rounded-lg border border-border/70">
+      <button type="button" aria-expanded={open} aria-label={`${open ? "Hide" : "Show"} the songs with no shared writer`} onClick={() => toggleFolded(id)}
+        className="flex w-full items-center justify-between gap-2 px-2 py-1.5 text-left">
+        <span className="min-w-0">
+          <span className="truncate text-sm font-semibold">Songs with no shared writer</span>
+          <span className="ml-1.5 text-[11px] text-muted-foreground">{loneSongs.length} songs</span>
+        </span>
+        <span className="flex shrink-0 items-center gap-2 text-[11px] text-muted-foreground">
+          {answeredIn(loneSongs)}/{writersIn(loneSongs)} answered
+          {open ? <ChevronUp className="h-3.5 w-3.5" aria-hidden /> : <ChevronDown className="h-3.5 w-3.5" aria-hidden />}
+        </span>
+      </button>
+      {open && <ul className="space-y-1.5 px-2 pb-2">{loneSongs.map((c) => songBlock(c))}</ul>}
+    </li>;
+  })();
+
   /** A song put on a brand-new release without a title can't be filed, so the add button waits for it. */
   const newReleaseUntitled = chosenCreates.some((c) => {
     const key = workKey(c.work);
@@ -421,65 +549,13 @@ export function AgencyLists({ userId, societies, songsFor, summaries, allTracks,
             {fill.plan.creates.length > 0 && people.length > 0 && <fieldset className="space-y-2 rounded-xl border border-border p-3">
               <legend className="px-1 text-sm font-bold">Who wrote what?</legend>
               <p className="text-xs text-muted-foreground">
-                The list names every writer but never says who wrote the words and who wrote the music. It is asked song by song,
-                because a writer credited on more than one song can be the author of one and the composer of another. Anything left
-                blank stays blank, and the song says it still needs it.
+                The list names every writer but never says who wrote the words and who wrote the music. A writer credited on two or
+                more songs has a box of their own, open with every song they are on — and each song shows all of its writers, so every
+                role on it is answered in the same place. Anything left blank stays blank, and the song says it still needs it.
               </p>
               <ul className="space-y-2">
-                {fill.plan.creates.map((c) => {
-                  const key = workKey(c.work);
-                  const open = !folded.has(key);
-                  const answers = roles[key] ?? {};
-                  const named = c.work.writers.filter((w) => w.name.trim());
-                  const done = named.filter((w) => (answers[personFor(people, w.name)?.key ?? w.name] ?? "").trim()).length;
-                  return <li key={key} className="rounded-lg border border-border/70">
-                    <button type="button" aria-expanded={open} aria-label={`${open ? "Hide" : "Show"} who wrote ${c.metadata.title}`}
-                      onClick={() => setFolded((f) => {
-                        const next = new Set(f);
-                        if (next.has(key)) next.delete(key); else next.add(key);
-                        return next;
-                      })}
-                      className="flex w-full items-center justify-between gap-2 px-2 py-1.5 text-left">
-                      <span className="min-w-0 truncate text-sm font-semibold">{c.metadata.title}</span>
-                      <span className="flex shrink-0 items-center gap-1.5 text-[11px] text-muted-foreground">
-                        {done}/{named.length} answered
-                        {open ? <ChevronUp className="h-3.5 w-3.5" aria-hidden /> : <ChevronDown className="h-3.5 w-3.5" aria-hidden />}
-                      </span>
-                    </button>
-                    {open && <ul className="space-y-2 px-2 pb-2">
-                      {named.map((w) => {
-                        const person = personFor(people, w.name);
-                        const pkey = person?.key ?? w.name;
-                        const role = answers[pkey] ?? "";
-                        const shown = names[pkey] ?? w.name;
-                        return <li key={w.name} className="rounded-md border border-border/60 p-2">
-                          <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
-                            <span className="text-sm font-semibold">{shown}</span>
-                            <span className="text-[11px] text-muted-foreground">
-                              {person ? `${person.works} song${person.works === 1 ? "" : "s"}` : ""}
-                              {w.share !== undefined ? `${person ? " · " : ""}${w.share}%` : ""}
-                              {w.ipi ? `${person || w.share !== undefined ? " · " : ""}IPI ${w.ipi}` : ""}
-                              {w.pro ? ` · ${w.pro}` : ""}
-                            </span>
-                          </div>
-                          {person && person.names.length > 1 && <div className="mt-1 flex flex-wrap items-center gap-1">
-                            <span className="text-[11px] text-muted-foreground">Same writer, spelled:</span>
-                            {person.names.map((n) => <button key={n} type="button" aria-pressed={shown === n} onClick={() => setNames((x) => ({ ...x, [pkey]: n }))}
-                              className={`rounded-full border px-2 py-0.5 text-[11px] ${shown === n ? "border-primary bg-accent/40 font-semibold text-primary" : "border-border text-muted-foreground"}`}>{n}</button>)}
-                          </div>}
-                          <div className="mt-1 flex flex-wrap gap-1">
-                            {WRITER_ROLES.map((r) => <button key={r} type="button" aria-pressed={role === r}
-                              aria-label={`${shown} on ${c.metadata.title}: ${r === "Author/Composer" ? "Both" : r}`}
-                              onClick={() => setRoles((x) => ({ ...x, [key]: { ...(x[key] ?? {}), [pkey]: role === r ? "" : r } }))}
-                              className={`rounded-full border px-2.5 py-0.5 text-xs ${role === r ? "border-primary bg-primary font-semibold text-primary-foreground" : "border-border"}`}>
-                              {r === "Author/Composer" ? "Both" : r}
-                            </button>)}
-                          </div>
-                        </li>;
-                      })}
-                    </ul>}
-                  </li>;
-                })}
+                {coWriters.map(writerBox)}
+                {loneBox}
               </ul>
             </fieldset>}
             {fill.plan.creates.length > 0 && <fieldset className="space-y-2 rounded-xl border border-border p-3">
