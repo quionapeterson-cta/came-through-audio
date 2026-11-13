@@ -503,7 +503,9 @@ export function buildDifferenceRows({ stored, tracks, societies = [] }: BuildInp
   const releaseOf = (track: CatalogTrack, state: ReleaseState) => ({
     title: track.metadata.album.trim(),
     date: track.metadata.releaseDate,
-    version: [(track.metadata.version ?? "").trim(), track.metadata.releaseVersion.trim()].filter(Boolean).join(" · "),
+    // The recording's own version, never the release's edition: "Deluxe" is which edition the album is, not which mix the
+    // recording is (founder, 2026-11-14), and it read as a version beside the release date.
+    version: (track.metadata.version ?? "").trim(),
     state,
   });
 

@@ -903,10 +903,10 @@ export function MetadataUploader({ onShareInfo, userId, mode = "embed", readOnly
                   <DealBox metadata={metadata} update={update} beatTitle={tracks.find((x) => x.id === metadata.beatMasterId)?.title ?? ""} disabled={busy} />
                 </div>}
                 <Field label="Record label" term="label" id="label" value={metadata.label} onChange={(value) => update("label", value)} />
-                {/* The release's own version and catalog number: SoundExchange's release columns, and the Release panel writes
-                    them to every song on the release. Catalog-only, never embedded. */}
+                {/* The release's catalog number. "Release version" is gone from the catalog (founder, 2026-11-14): an edition
+                    ("Deluxe", "Remastered") is not the recording's version, and it was being read as one beside Release date. What
+                    a song already holds is kept, never rewritten. */}
                 {full && <>
-                  <Field label="Release version" id="releaseVersion" list="track-versions" value={metadata.releaseVersion} placeholder="Deluxe, Remastered" onChange={(value) => update("releaseVersion", value)} />
                   <Field label="Catalog #" id="catalogNumber" value={metadata.catalogNumber} placeholder="Your label's number" onChange={(value) => update("catalogNumber", value)} />
                 </>}
                 <div className="min-w-0 space-y-2"><Label htmlFor="copyright" className="leading-5">Composition copyright (©)<InfoTip term="cLine" /></Label><CopyrightInput symbol="©" id="copyright" value={metadata.copyright} onChange={(value) => update("copyright", value)} /></div>

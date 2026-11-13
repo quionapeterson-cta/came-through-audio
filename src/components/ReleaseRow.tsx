@@ -130,13 +130,9 @@ export function ReleaseRow({ name, type, tracks, readOnly, onSave, onCover, comp
                 </div>
               </fieldset>
             </div>
-            {/* SoundExchange's own release columns (founder, 2026-11-12): the release's version and the label's catalog number. */}
+            {/* The label's catalog number. The release version is no longer asked for (founder, 2026-11-14): an edition is not
+                the recording's version, and it was showing up as one beside the release date. */}
             <div className="grid gap-4 sm:grid-cols-2">
-              <label className="space-y-1.5 text-sm">
-                <span className="font-medium">Release version (optional)</span>
-                <Input value={draft.releaseVersion} aria-label="Release version" placeholder="Deluxe, Remastered"
-                  onChange={(e) => setDraft({ ...draft, releaseVersion: e.target.value })} />
-              </label>
               <label className="space-y-1.5 text-sm">
                 <span className="font-medium">Catalog # (optional)</span>
                 <Input value={draft.catalogNumber} aria-label="Catalog number" placeholder="Your label's number"
