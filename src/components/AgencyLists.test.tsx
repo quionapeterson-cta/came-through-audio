@@ -87,7 +87,7 @@ describe("AgencyLists", () => {
     const file = new File(["Work Title,Writer Name,Share\nGold Teeth,RAY BO,100\n"], "ascap.csv", { type: "text/csv" });
     fireEvent.change(screen.getByLabelText("Upload your ASCAP list"), { target: { files: [file] } });
     fireEvent.click(await screen.findByRole("button", { name: /Fill my catalog/ }));
-    expect(await screen.findByText("Who wrote what?")).toBeTruthy();
+    expect(await screen.findByText("Who wrote what, and where does each song belong?")).toBeTruthy();
     // Nothing is preselected: the list never said, so the member answers — and the answer names the song it is about,
     // because the same person can be the author of one song and the composer of another (founder, 2026-11-15).
     expect(screen.getByRole("button", { name: "RAY BO on Gold Teeth: Author" }).getAttribute("aria-pressed")).toBe("false");
@@ -103,7 +103,7 @@ describe("AgencyLists", () => {
     const file = new File(["Work Title,Writer Name,Share\nGold Teeth,RAY BO,100\nSilver Teeth,RAY BO,100\n"], "ascap.csv", { type: "text/csv" });
     fireEvent.change(screen.getByLabelText("Upload your ASCAP list"), { target: { files: [file] } });
     fireEvent.click(await screen.findByRole("button", { name: /Fill my catalog/ }));
-    expect(await screen.findByText("Who wrote what?")).toBeTruthy();
+    expect(await screen.findByText("Who wrote what, and where does each song belong?")).toBeTruthy();
     // Both songs are open to begin with, and each gets its own answer.
     fireEvent.click(screen.getByRole("button", { name: "RAY BO on Gold Teeth: Composer" }));
     fireEvent.click(screen.getByRole("button", { name: "RAY BO on Silver Teeth: Author" }));
@@ -126,8 +126,8 @@ describe("AgencyLists", () => {
     // The dropdown holds the catalog's own releases — singles, EPs and albums — then Unreleased and Instrumental.
     const gold = screen.getByLabelText("Release for Gold Teeth") as HTMLSelectElement;
     expect(gold.value).toBe("unreleased");
-    expect([...gold.options].map((o) => o.textContent)).toEqual(["Loose", "Tape", "BAM", "Unreleased", "Instrumental"]);
-    expect([...gold.querySelectorAll("optgroup")].map((g) => g.label)).toEqual(["Singles", "EPs", "Albums", "Not out yet"]);
+    expect([...gold.options].map((o) => o.textContent)).toEqual(["Loose", "Tape", "BAM", "Unreleased", "Instrumental", "Add a release…"]);
+    expect([...gold.querySelectorAll("optgroup")].map((g) => g.label)).toEqual(["Singles", "EPs", "Albums", "Not in my catalog"]);
     // One song to an album, one marked instrumental: each keeps its own answer.
     fireEvent.change(gold, { target: { value: "rel:BAM" } });
     fireEvent.change(screen.getByLabelText("Release for Amber"), { target: { value: "instrumental" } });
@@ -137,6 +137,32 @@ describe("AgencyLists", () => {
     expect(saved.find((m) => m.title === "Gold Teeth")).toMatchObject({ album: "BAM", releaseType: "Album" });
     expect(saved.find((m) => m.title === "Amber")).toMatchObject({ instrumental: true });
     expect(saved.find((m) => m.title === "Amber")!.album).toBe("");
+  });
+
+  it("asks the release in the same card as the writers, and remembers a release typed by hand for the next song", async () => {
+    vi.mocked(saveTrack).mockClear();
+    render(<AgencyLists userId="u1" societies={[ascap]} songsFor={() => []} summaries={{}} onApply={vi.fn().mockResolvedValue(undefined)} />);
+    const file = new File(["Work Title,Writer Name,Share\nGold Teeth,RAY BO,100\nAmber,RAY BO,100\n"], "ascap.csv", { type: "text/csv" });
+    fireEvent.change(screen.getByLabelText("Upload your ASCAP list"), { target: { files: [file] } });
+    fireEvent.click(await screen.findByRole("button", { name: /Fill my catalog/ }));
+    expect(await screen.findByText("Who wrote what, and where does each song belong?")).toBeTruthy();
+    // The release sits in the same card as the song's writers, so one card answers both questions.
+    const card = screen.getByLabelText("Release for Gold Teeth").closest("li")!;
+    expect(card.textContent).toContain("RAY BO");
+    // A release that isn't in the catalog yet: pick it, name it, and it is remembered for the next song.
+    fireEvent.change(screen.getByLabelText("Release for Gold Teeth"), { target: { value: "new" } });
+    fireEvent.change(screen.getByLabelText("Release type for Gold Teeth"), { target: { value: "EP" } });
+    fireEvent.change(screen.getByLabelText("Release name for Gold Teeth"), { target: { value: "Afterglow" } });
+    const amber = screen.getByLabelText("Release for Amber") as HTMLSelectElement;
+    expect([...amber.options].map((o) => o.textContent)).toContain("Afterglow · EP");
+    // The other song takes it in one pick instead of typing it again.
+    fireEvent.change(amber, { target: { value: [...amber.options].find((o) => o.textContent === "Afterglow · EP")!.value } });
+    fireEvent.click(screen.getByRole("button", { name: /Add 2 songs/ }));
+    await waitFor(() => expect(vi.mocked(saveTrack)).toHaveBeenCalledTimes(2));
+    for (const call of vi.mocked(saveTrack).mock.calls) {
+      expect(call[0].album).toBe("Afterglow");
+      expect(call[0].releaseType).toBe("EP");
+    }
   });
 
   it("gives a writer on two songs their own open box, and shows every writer of each song in it", async () => {
