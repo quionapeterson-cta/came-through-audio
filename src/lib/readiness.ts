@@ -216,6 +216,10 @@ export function registrationCheck(m: Metadata, agency: RegistrationAgency, today
     const share = Number(m.masterShare || 0);
     need(share > 0 && share <= 100, "master", "Add the share of the master you own (most independent artists own 100%).", "masterShare");
     need(!!m.upc.trim(), "upc", "Add the release's UPC (or EAN). SoundExchange needs at least one release for each recording.", "upc");
+    // The collection rights dates come from the catalog's own calendars; blank means inception and perpetuity, which is a
+    // real answer, so they are a tip and never a block (founder, 2026-11-14).
+    if (!m.rightsStart.trim() && !m.rightsStartInception) tip("master", "Add the Rights start date, or tick Inception if the claim runs from the beginning.", "rightsStart");
+    if (!m.rightsEnd.trim() && !m.rightsEndPerpetuity) tip("master", "Add the Rights end date, or tick Perpetuity if the claim never ends.", "rightsEnd");
     if (!m.releaseDate) tip("release", "Add the release date.", "releaseDate");
     if (!m.recordedIn.trim()) tip("release", "Add the country it was recorded in (helps collect royalties outside the US).", "recordedIn");
     return { agency, ready: !missing.length, missing, tips, total };

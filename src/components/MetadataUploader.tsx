@@ -1754,14 +1754,21 @@ function Field({ label, id, value, onChange, required, type = "text", placeholde
  * A SoundExchange-style rights date: checked means from inception / in perpetuity (saved blank, as SoundExchange
  * expects); unchecking it shows a date picker. A song that already has a date opens unchecked.
  */
+/**
+ * Rights start / Rights end (founder, 2026-11-14): the calendar is always there, because these two dates are what
+ * SoundExchange's Collection Rights Begin and End columns are filled from. Blank is a real answer — the form reads an empty
+ * date as inception and perpetuity — so the checkbox says so rather than hiding the calendar.
+ */
 function RightsDate({ label, id, check, tip, value, disabled, onChange, onCheck }: { label: string; id: string; check: string; tip: string; value: string; disabled?: boolean; onChange: (value: string) => void; onCheck: (checked: boolean) => void }) {
   const [dated, setDated] = useState(!!value);
   return <div className="min-w-0 space-y-2">
-    <Label>{label}</Label>
+    <Label htmlFor={id}>{label}</Label>
+    <Input id={id} type="date" aria-label={`${label} date`} value={value} disabled={disabled || !dated}
+      className={value ? undefined : "text-muted-foreground/50"}
+      onChange={(e) => { setDated(true); onCheck(false); onChange(e.target.value); }} />
     <label className="flex items-center gap-2 text-sm"><input id={`${id}-open`} type="checkbox" className="h-4 w-4 accent-[var(--primary)]" disabled={disabled} checked={!dated}
       onChange={(e) => { setDated(!e.target.checked); onCheck(e.target.checked); if (e.target.checked) onChange(""); }} />{check}<Tip text={tip} title={check} /></label>
-    {dated ? <Input id={id} type="date" aria-label={`${label} date`} value={value} disabled={disabled} className={value ? undefined : "text-muted-foreground/50"} onChange={(e) => { onCheck(false); onChange(e.target.value); }} />
-      : <p className="text-xs text-muted-foreground">Uncheck to choose a date.</p>}
+    <p className="text-xs text-muted-foreground">{dated ? `Pick the date, or tick ${check} to leave it blank.` : `Blank goes to the agency as it is: it reads an empty date as ${check.toLowerCase()}.`}</p>
   </div>;
 }
 

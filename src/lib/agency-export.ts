@@ -31,11 +31,11 @@ const sheetDate = (iso: string): Date | "" => {
  */
 const formDate = (iso: string) => sheetDate(isoDate(iso));
 /**
- * A SoundExchange collection rights cell: the date when the song has one, otherwise the word the claim form asks the member
- * to choose. A ticked Inception or Perpetuity used to leave the cell empty, which read as "not answered" on the sheet even
- * though it was answered in the catalog (founder, 2026-11-14).
+ * A SoundExchange collection rights cell: the date when the song has one, otherwise blank — because a blank Collection
+ * Rights Begin/End date is exactly how SoundExchange reads inception and perpetuity (founder, 2026-11-14). A date column
+ * holding the words "Inception" or "Perpetuity" is a date the form cannot parse.
  */
-const rightsCell = (date: string, chosen: boolean, word: string): Date | string => sheetDate(date) || (chosen ? word : "");
+const rightsCell = (date: string): Date | string => sheetDate(date) || "";
 /** The (P) line without its symbol, as SoundExchange writes it ("2007 XYZ Records"). */
 // A bare "P" counts as the symbol only before a space or the year, so "Prince Records" keeps its P.
 const pLine = (v: string) => (v ?? "").replace(/^\s*(℗|\(P\)|P(?=[\s\d]))\s*/i, "").trim();
@@ -105,8 +105,8 @@ export function mlcRows(tracks: CatalogTrack[]): (string | number)[][] {
 /**
  * Rows for the official SoundExchange Direct ISRC Ingest "Form" sheet (29 columns), one row per recording.
  * Following its instructions: the claim comes from the song's Master ownership (100% is written as 1, the column is a
- * percent), rights from inception or in perpetuity are written as those words (the same choice the claim form offers) rather
- * than a blank cell, a self-released song uses the artist as label, and anything we don't know (a country, the recording's full date, a catalog number) stays blank rather than
+ * percent), a collection right that starts at inception or runs in perpetuity is left blank because that is how the form
+ * reads an empty date, a self-released song uses the artist as label, and anything we don't know (a country, the recording's full date, a catalog number) stays blank rather than
  * guessed.
  *
  * Every column the catalog answers is filled (founder, 2026-11-12): the recording version and the country of recording
@@ -118,7 +118,9 @@ export function soundExchangeRows(tracks: CatalogTrack[]): (string | number | Da
     const label = m.label || m.artist;
     return [
       artistCredit(m.artist, m.featured), m.title, m.isrc.replace(/-/g, "").toUpperCase(), m.masterBasis || "Copyright Owner",
-      Number(m.masterShare || 100) / 100, rightsCell(m.rightsStart, m.rightsStartInception, "Inception"), rightsCell(m.rightsEnd, m.rightsEndPerpetuity, "Perpetuity"), m.collectionTerritories,
+      // The claim is the catalog's Master ownership section: who claims it, how much, and from when (blank = inception /
+      // perpetuity, which is what the form reads an empty date as).
+      Number(m.masterShare || 100) / 100, rightsCell(m.rightsStart), rightsCell(m.rightsEnd), m.collectionTerritories,
       // "Recording Version, if applicable" (live, remix, sped up): the catalog keeps it apart from the title.
       m.version,
       // Duration, then SoundExchange's main genre ("Trap" goes as Hip-Hop/Rap), then the recording date: blank unless a

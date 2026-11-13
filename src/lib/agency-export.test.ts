@@ -69,12 +69,18 @@ describe("agency exports", () => {
     expect(row[15]).toEqual(new Date(Date.UTC(2026, 2, 14)));
     expect(row[28]).toBe("Q"); // no label: self-released uses the artist
   });
-  it("SoundExchange says Inception and Perpetuity when the catalog's boxes are ticked, and a real date wins", () => {
-    const row = soundExchangeRows([track({ rightsStartInception: true, rightsEndPerpetuity: true })])[0]!;
-    expect(row[5]).toBe("Inception");
-    expect(row[6]).toBe("Perpetuity");
-    const dated = soundExchangeRows([track({ rightsStart: "2026-01-02", rightsStartInception: true })])[0]!;
+  it("SoundExchange takes both collection rights dates from the catalog's calendars", () => {
+    const dated = soundExchangeRows([track({ rightsStart: "2026-01-02", rightsEnd: "2031-06-30" })])[0]!;
     expect(dated[5]).toEqual(new Date(Date.UTC(2026, 0, 2)));
+    expect(dated[6]).toEqual(new Date(Date.UTC(2031, 5, 30)));
+    // A calendar date wins even while the inception box is still ticked.
+    const both = soundExchangeRows([track({ rightsStart: "2026-01-02", rightsStartInception: true })])[0]!;
+    expect(both[5]).toEqual(new Date(Date.UTC(2026, 0, 2)));
+  });
+  it("leaves a collection right blank for inception and perpetuity, which is how the form reads an empty date", () => {
+    const row = soundExchangeRows([track({ rightsStartInception: true, rightsEndPerpetuity: true })])[0]!;
+    expect(row[5]).toBe("");
+    expect(row[6]).toBe("");
   });
   it("SoundExchange claims the song's master ownership", () => {
     const row = soundExchangeRows([track({ masterShare: "50", masterBasis: "Collections Designee", rightsStart: "2026-01-02" })])[0]!;

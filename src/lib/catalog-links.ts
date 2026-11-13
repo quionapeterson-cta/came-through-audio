@@ -8,7 +8,15 @@
  * this helper only builds them, in one place, so a new card can never invent its own spelling.
  */
 export type CatalogField =
-  "isrc" | "title" | "artist" | "version" | "retired" | "release" | "releaseDate";
+  | "isrc"
+  | "title"
+  | "artist"
+  | "version"
+  | "retired"
+  | "release"
+  | "releaseDate"
+  | "rightsStart"
+  | "rightsEnd";
 
 /** How the fix bar names the field it is pointing at. */
 export const CATALOG_FIELD_LABEL: Record<string, string> = {
@@ -19,6 +27,8 @@ export const CATALOG_FIELD_LABEL: Record<string, string> = {
   retired: "retired ISRC",
   release: "release",
   releaseDate: "release date",
+  rightsStart: "rights start",
+  rightsEnd: "rights end",
 };
 
 /** What the link is asking the member to do once the field is in front of them. */
