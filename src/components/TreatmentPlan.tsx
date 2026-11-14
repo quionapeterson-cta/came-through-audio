@@ -23,14 +23,18 @@ export const EXPERTS_HREF = "/workspace?tab=health&view=expert";
 export const CATALOG_HREF = "/workspace?tab=catalog";
 
 /**
- * "Fix in Catalog" opens the entry the treatment is about, with the field lit — through `catalogHref`, so the address
- * spells its parameters exactly the way the workspace and the catalog form already read them.
+ * "Fix in Catalog" always opens the **first song listed under "Songs in this finding"**, with the field the treatment
+ * names lit — through `catalogHref`, so the address spells its parameters exactly the way the workspace and the catalog
+ * form already read them. A card with no song at all opens My Catalog itself.
  */
 function catalogFixHref(card: PlanCard): string {
-  const action = card.steps.map((s) => s.action).find((a) => a?.kind === "field");
-  if (action && action.kind === "field") return catalogHref({ trackId: action.trackId, field: action.field });
-  const song = card.songs.find((s) => s.field) ?? card.songs[0];
-  return song?.field ? catalogHref({ trackId: song.id, field: song.field }) : CATALOG_HREF;
+  const first = card.songs[0];
+  if (!first) return CATALOG_HREF;
+  const action = card.steps.map((s) => s.action).find((a) => a?.kind === "field" && a.trackId === first.id);
+  const field = first.field ?? (action && action.kind === "field" ? action.field : undefined);
+  return field
+    ? catalogHref({ trackId: first.id, field })
+    : `/workspace?tab=catalog&songId=${first.id}#song-${first.id}`;
 }
 
 /**

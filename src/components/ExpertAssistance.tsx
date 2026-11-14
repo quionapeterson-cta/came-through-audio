@@ -281,7 +281,6 @@ function Checklist({ purchase, tracks, justPaid, onFix, onCatalog, onAddSong }: 
       <Step n={5} title="Add Came Through Audio as your representative" state={step > 5 ? "done" : step === 5 ? "active" : "locked"}
         summary={`${order.agencies.filter((a) => order.access_confirmed[a]).length} of ${order.agencies.length} done`}>
         <p className="text-sm text-muted-foreground">In each account, add us as a user with these details. Never share your password; you can remove our access any time.</p>
-        <Representative />
         <div className="grid gap-3 md:grid-cols-2">
           {order.agencies.map((a) => {
             const info = ACCESS_STEPS[a];
@@ -301,6 +300,7 @@ function Checklist({ purchase, tracks, justPaid, onFix, onCatalog, onAddSong }: 
             );
           })}
         </div>
+        <Representative />
       </Step>
 
       <Step n={6} title="Status" state={step === 6 ? "active" : "locked"} summary={step === 6 ? "Pending: we register songs in the order they're submitted" : "Starts once the steps above are done"}>
