@@ -866,16 +866,18 @@ export function AgencyLists({ userId, societies, songsFor, summaries, allTracks,
               </p>}
               {/* The two bulk answers sit at the head of the song list, right above it, sized to be the obvious first choice
                   (founder, 2026-11-16). */}
-              {fill.plan.duplicates.length > 0 && <div className="sticky top-0 z-10 flex flex-wrap items-center gap-2 rounded-lg border border-primary/40 bg-card p-2 shadow-sm">
-                <span className="mr-auto text-xs text-muted-foreground">Every catalogued song needs an answer — or give them all the same one:</span>
-                <button type="button" onClick={() => setChoices(Object.fromEntries(fill.plan.duplicates.map((d) => [d.track.id, "keep" as const])))}
-                  className="rounded-full border border-border bg-background px-4 py-2 text-sm font-semibold">
-                  Keep my version for all {fill.plan.duplicates.length}
-                </button>
-                <button type="button" onClick={() => setChoices(Object.fromEntries(fill.plan.duplicates.map((d) => [d.track.id, "agency" as const])))}
-                  className="rounded-full border border-primary/40 bg-accent/40 px-4 py-2 text-sm font-semibold text-primary">
-                  Use the agency's version for all {fill.plan.duplicates.length}
-                </button>
+              {fill.plan.duplicates.length > 0 && <div className="sticky top-0 z-10 space-y-2 rounded-lg border border-primary/40 bg-card p-2 shadow-sm">
+                <p className="text-sm font-bold">Every catalogued song needs an answer — or give them all the same one:</p>
+                <div className="flex flex-wrap gap-2">
+                  <button type="button" onClick={() => setChoices(Object.fromEntries(fill.plan.duplicates.map((d) => [d.track.id, "keep" as const])))}
+                    className="rounded-full border border-border bg-background px-4 py-2 text-sm font-semibold">
+                    Keep my version for all {fill.plan.duplicates.length}
+                  </button>
+                  <button type="button" onClick={() => setChoices(Object.fromEntries(fill.plan.duplicates.map((d) => [d.track.id, "agency" as const])))}
+                    className="rounded-full border border-primary/40 bg-accent/40 px-4 py-2 text-sm font-semibold text-primary">
+                    Use the agency's version for all {fill.plan.duplicates.length}
+                  </button>
+                </div>
               </div>}
               <ul className="space-y-2">
                 {coWriters.map(writerBox)}
