@@ -75,7 +75,7 @@ export type PlanCard = {
   timing: string;
   steps: TreatmentStep[];
   checks: string[];
-  songs: { id: string; title: string; why: string }[];
+  songs: { id: string; title: string; why: string; field?: string | undefined }[];
   note?: string | undefined;
   /** No finding: the organ passed, and this card is its maintenance list. */
   maintenance: boolean;
@@ -117,7 +117,7 @@ function cardOf(organ: Organ, finding: Finding, priority: PlanPriority): PlanCar
     timing: PRIORITY_PHASE[priority],
     steps: finding.steps,
     checks: [],
-    songs: finding.songs.map((s) => ({ id: s.id, title: s.title, why: s.why })),
+    songs: finding.songs.map((s) => ({ id: s.id, title: s.title, why: s.why, field: s.field })),
     note: finding.note,
     maintenance: false,
   };

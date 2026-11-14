@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { ArrowLeft, ChevronDown, ShieldCheck } from "lucide-react";
 import { ArtDefs, OrganIcon } from "@/components/royalty-art";
+import { catalogHref } from "@/lib/catalog-links";
 import { STATE_LABEL, type OrganId } from "@/lib/royalty-checkup";
 import {
   PLAN_PHASES,
@@ -17,6 +18,20 @@ import {
 
 /** The existing Expert Help tab (Royalties and Registrations → Expert Help): the one place every done-for-you CTA leads. */
 export const EXPERTS_HREF = "/workspace?tab=health&view=expert";
+
+/** My Catalog itself, for a treatment with no single song to point at. */
+export const CATALOG_HREF = "/workspace?tab=catalog";
+
+/**
+ * "Fix in Catalog" opens the entry the treatment is about, with the field lit — through `catalogHref`, so the address
+ * spells its parameters exactly the way the workspace and the catalog form already read them.
+ */
+function catalogFixHref(card: PlanCard): string {
+  const action = card.steps.map((s) => s.action).find((a) => a?.kind === "field");
+  if (action && action.kind === "field") return catalogHref({ trackId: action.trackId, field: action.field });
+  const song = card.songs.find((s) => s.field) ?? card.songs[0];
+  return song?.field ? catalogHref({ trackId: song.id, field: song.field }) : CATALOG_HREF;
+}
 
 /**
  * The Interactive Treatment Plan: the Royalty Health Report's own organs and treatment steps, regrouped by organ system
@@ -323,13 +338,16 @@ function TreatmentCard({ card, open, onToggle }: { card: PlanCard; open: boolean
 
             {card.note && <p className="tp-muted text-sm italic">{card.note}</p>}
 
-            {card.priority === "priority" ? (
-              <a href={EXPERTS_HREF} className="tp-cta" data-tone="priority">Let Us Do It For You</a>
-            ) : card.priority === "support" ? (
-              <a href={EXPERTS_HREF} className="tp-cta">Have Our Team Handle This</a>
-            ) : (
-              <a href={EXPERTS_HREF} className="tp-cta">Keep It Optimal — Get Expert Help</a>
-            )}
+            <div className="tp-actions">
+              {card.priority === "priority" ? (
+                <a href={EXPERTS_HREF} className="tp-cta" data-tone="priority">Let Us Do It For You</a>
+              ) : card.priority === "support" ? (
+                <a href={EXPERTS_HREF} className="tp-cta">Have Our Team Handle This</a>
+              ) : (
+                <a href={EXPERTS_HREF} className="tp-cta">Keep It Optimal — Get Expert Help</a>
+              )}
+              <a href={catalogFixHref(card)} className="tp-fix">Fix in Catalog</a>
+            </div>
           </div>
         </div>
       </div>
