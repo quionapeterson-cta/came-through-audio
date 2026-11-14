@@ -6,6 +6,7 @@ import { DiagnosisAlert } from "@/components/DiagnosisAlert";
 import { Button } from "@/components/ui/button";
 import { ArtDefs, BodyDiagram, MiniRhythm, MONITOR, OrganIcon, RHYTHM, Scan, Tool } from "@/components/royalty-art";
 import { CLEAR_DX, CLEAR_WHAT, STATE_LABEL, diagnosisLine, type Checkup, type Finding, type Organ, type OrganId, type OrganState, type StepAction, type TreatmentStep, sinceLast } from "@/lib/royalty-checkup";
+import { savePlanHandoff } from "@/lib/treatment-plan";
 
 type Props = {
   checkup: Checkup;
@@ -77,6 +78,10 @@ export function RoyaltyReport({ checkup, since, date, country, countryPicker, ru
           <p className="mt-1 text-muted-foreground">A checkup on your songs' registrations, splits and metadata, and how to fix what could be holding up your royalties.</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
+          {/* The suite: the same report's treatments as a standalone plan (additive; the report above is untouched). */}
+          <a href="/treatment-plan" className="tp-plan-link" onClick={() => savePlanHandoff(checkup, date, country, scope ?? "Catalog Examination")}>
+            View My Interactive Treatment Plan →
+          </a>
           {countryPicker}
           {onPdf && <Button variant="outline" onClick={onPdf}><FileDown />Download PDF</Button>}
           <Button onClick={onRunCheckup} disabled={running}><Stethoscope />{running ? "Checking…" : "Run it again"}</Button>

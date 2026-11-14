@@ -1,0 +1,383 @@
+/*
+ * Interactive Treatment Plan (standalone page, /treatment-plan).
+ * Reads the treatment recommendations the Royalty Health Report already produced — nothing here recomputes or changes
+ * the report. Brand: Cobalt #004AAD carries actions, Electric Cobalt #4D8CFF hover/active, with additive crimson
+ * #E63946 / pinkish-red #FF4D6D / rose #FF8FA3 glows for organ vitality and Gold #FFD700 / Platinum #E5E4E2 for
+ * optimal organs and milestones. Surfaces are deep Black #0b0b0b with translucent glass overlays.
+ */
+.tp {
+  --tp-cobalt: #004aad;
+  --tp-electric: #4d8cff;
+  --tp-crimson: #e63946;
+  --tp-pinkred: #ff4d6d;
+  --tp-rose: #ff8fa3;
+  --tp-gold: #ffd700;
+  --tp-platinum: #e5e4e2;
+  --tp-ink: #0b0b0b;
+  --tp-glass: rgba(255, 255, 255, 0.08);
+  --tp-glass-strong: rgba(255, 255, 255, 0.14);
+  --tp-hairline: rgba(229, 228, 226, 0.22);
+  --tp-muted: rgba(255, 255, 255, 0.68);
+  color-scheme: dark;
+  min-height: 100vh;
+  color: #fff;
+  background:
+    radial-gradient(1100px 620px at 82% -12%, rgba(0, 74, 173, 0.38), transparent 62%),
+    radial-gradient(880px 520px at -10% 22%, rgba(230, 57, 70, 0.16), transparent 60%),
+    radial-gradient(700px 480px at 50% 108%, rgba(255, 77, 109, 0.12), transparent 65%),
+    var(--tp-ink);
+}
+
+.tp-glass {
+  background: linear-gradient(158deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.03));
+  border: 1px solid var(--tp-hairline);
+  -webkit-backdrop-filter: blur(18px) saturate(130%);
+  backdrop-filter: blur(18px) saturate(130%);
+}
+.tp-muted { color: var(--tp-muted); }
+.tp-eyebrow {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 2.4px;
+  text-transform: uppercase;
+  color: var(--tp-electric);
+}
+
+/* The one high-contrast jump button on the existing report page (Cobalt, white text). */
+.tp-plan-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  border-radius: 0.5rem;
+  padding: 0.6rem 1.15rem;
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: #ffffff;
+  background: #004aad;
+  border: 1px solid rgba(77, 140, 255, 0.7);
+  box-shadow: 0 0 0 1px rgba(0, 74, 173, 0.35), 0 0 22px rgba(0, 74, 173, 0.45);
+  transition: background 0.18s ease, box-shadow 0.18s ease, color 0.18s ease, transform 0.18s ease;
+}
+.tp-plan-link:hover,
+.tp-plan-link:focus-visible {
+  color: #0b0b0b;
+  background: #4d8cff;
+  box-shadow: 0 0 0 1px rgba(77, 140, 255, 0.6), 0 0 30px rgba(77, 140, 255, 0.6);
+  transform: translateY(-1px);
+  outline: none;
+}
+
+/* ── Organ constellation ─────────────────────────────────────────────────── */
+.tp-orb {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  border-radius: 9999px;
+  padding: 0.55rem;
+  color: #fff;
+  border: 1px solid var(--tp-hairline);
+  background: linear-gradient(165deg, rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0.03));
+  -webkit-backdrop-filter: blur(14px);
+  backdrop-filter: blur(14px);
+  transition: border-color 0.25s ease, box-shadow 0.25s ease, transform 0.25s ease;
+}
+.tp-orb-disc {
+  display: grid;
+  place-items: center;
+  width: 5.5rem;
+  height: 5.5rem;
+  border-radius: 9999px;
+  border: 1px solid rgba(229, 228, 226, 0.3);
+  background: radial-gradient(circle at 50% 35%, rgba(255, 255, 255, 0.14), rgba(11, 11, 11, 0.55));
+  animation: tp-breathe 5.4s ease-in-out infinite;
+  transition: box-shadow 0.3s ease, border-color 0.3s ease;
+}
+.tp-orb[data-priority="priority"] .tp-orb-disc {
+  border-color: rgba(255, 77, 109, 0.6);
+  box-shadow: 0 0 22px rgba(255, 77, 109, 0.38), inset 0 0 24px rgba(230, 57, 70, 0.28);
+}
+.tp-orb[data-priority="priority"] .tp-orb-glow {
+  background: radial-gradient(closest-side, rgba(255, 77, 109, 0.45), transparent 72%);
+}
+.tp-orb[data-priority="support"] .tp-orb-disc {
+  border-color: rgba(77, 140, 255, 0.6);
+  box-shadow: 0 0 22px rgba(77, 140, 255, 0.35), inset 0 0 24px rgba(255, 143, 163, 0.24);
+}
+.tp-orb[data-priority="support"] .tp-orb-glow {
+  background: radial-gradient(closest-side, rgba(77, 140, 255, 0.4), transparent 72%);
+}
+.tp-orb[data-priority="optimal"] .tp-orb-disc {
+  border-color: rgba(229, 228, 226, 0.75);
+  box-shadow: 0 0 22px rgba(255, 215, 0, 0.3), inset 0 0 22px rgba(229, 228, 226, 0.22);
+  animation: tp-shimmer 7s ease-in-out infinite;
+}
+.tp-orb[data-priority="optimal"] .tp-orb-glow {
+  background: radial-gradient(closest-side, rgba(255, 215, 0, 0.32), transparent 72%);
+}
+.tp-orb-glow {
+  position: absolute;
+  inset: -0.35rem;
+  border-radius: 9999px;
+  filter: blur(16px);
+  opacity: 0.85;
+  pointer-events: none;
+  z-index: 0;
+}
+.tp-orb > * { position: relative; z-index: 1; }
+.tp-orb:hover { transform: translateY(-3px); border-color: rgba(77, 140, 255, 0.65); }
+.tp-orb[aria-pressed="true"] {
+  border-color: var(--tp-electric);
+  box-shadow: 0 0 0 2px rgba(77, 140, 255, 0.75), 0 0 34px rgba(77, 140, 255, 0.45);
+  transform: translateY(-2px) scale(1.02);
+}
+.tp-orb:focus-visible { outline: none; box-shadow: 0 0 0 3px rgba(77, 140, 255, 0.85); }
+
+.tp-reset {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  border-radius: 9999px;
+  border: 1px solid var(--tp-hairline);
+  padding: 0.4rem 0.9rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #fff;
+  background: rgba(255, 255, 255, 0.06);
+  transition: border-color 0.2s ease, background 0.2s ease;
+}
+.tp-reset[aria-pressed="true"] {
+  border-color: var(--tp-electric);
+  background: rgba(77, 140, 255, 0.18);
+  box-shadow: 0 0 18px rgba(77, 140, 255, 0.35);
+}
+
+/* ── Simulator switch ───────────────────────────────────────────────────── */
+.tp-phase {
+  display: inline-flex;
+  gap: 0.25rem;
+  padding: 0.3rem;
+  border-radius: 9999px;
+  border: 1px solid var(--tp-hairline);
+  background: rgba(255, 255, 255, 0.05);
+}
+.tp-phase button {
+  border-radius: 9999px;
+  padding: 0.45rem 0.95rem;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--tp-muted);
+  transition: color 0.2s ease, background 0.2s ease, box-shadow 0.2s ease;
+}
+.tp-phase button[aria-pressed="true"] {
+  color: #fff;
+  background: var(--tp-cobalt);
+  box-shadow: 0 0 18px rgba(77, 140, 255, 0.45);
+}
+
+/* ── Priority badges ────────────────────────────────────────────────────── */
+.tp-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  border-radius: 9999px;
+  padding: 0.18rem 0.6rem;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.tp-badge[data-priority="priority"] {
+  color: #fff;
+  background: linear-gradient(120deg, rgba(230, 57, 70, 0.9), rgba(255, 77, 109, 0.75));
+  box-shadow: 0 0 16px rgba(255, 77, 109, 0.4);
+}
+.tp-badge[data-priority="support"] {
+  color: #fff;
+  background: linear-gradient(120deg, rgba(0, 74, 173, 0.95), rgba(77, 140, 255, 0.7));
+  box-shadow: 0 0 16px rgba(77, 140, 255, 0.35);
+}
+.tp-badge[data-priority="optimal"] {
+  color: #0b0b0b;
+  background: linear-gradient(120deg, #ffd700, #e5e4e2);
+  box-shadow: 0 0 16px rgba(255, 215, 0, 0.32);
+}
+
+/* ── Treatment cards ────────────────────────────────────────────────────── */
+.tp-card {
+  position: relative;
+  overflow: hidden;
+  border-radius: 1.25rem;
+  border: 1px solid var(--tp-hairline);
+  background: linear-gradient(158deg, rgba(255, 255, 255, 0.09), rgba(255, 255, 255, 0.025));
+  -webkit-backdrop-filter: blur(18px) saturate(130%);
+  backdrop-filter: blur(18px) saturate(130%);
+  transition: border-color 0.25s ease, box-shadow 0.25s ease, transform 0.25s ease;
+}
+.tp-card::before {
+  content: "";
+  position: absolute;
+  inset: -40% -20% auto auto;
+  width: 320px;
+  height: 320px;
+  border-radius: 9999px;
+  pointer-events: none;
+  background: radial-gradient(closest-side, rgba(77, 140, 255, 0.22), transparent 70%);
+}
+.tp-card[data-priority="priority"]::before { background: radial-gradient(closest-side, rgba(255, 77, 109, 0.26), transparent 70%); }
+.tp-card[data-priority="optimal"]::before { background: radial-gradient(closest-side, rgba(255, 215, 0, 0.18), transparent 70%); }
+.tp-card:hover { border-color: rgba(77, 140, 255, 0.55); transform: translateY(-2px); }
+.tp-card[data-open="true"] { border-color: rgba(77, 140, 255, 0.7); box-shadow: 0 0 32px rgba(0, 74, 173, 0.35); }
+.tp-card > * { position: relative; }
+
+.tp-card-toggle {
+  display: flex;
+  width: 100%;
+  align-items: flex-start;
+  gap: 0.85rem;
+  padding: 1rem 1.15rem;
+  text-align: left;
+}
+.tp-card-toggle:focus-visible { outline: 2px solid var(--tp-electric); outline-offset: -2px; }
+
+.tp-reveal {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows 0.35s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.tp-reveal[data-open="true"] { grid-template-rows: 1fr; }
+.tp-reveal > div { overflow: hidden; }
+
+.tp-step {
+  display: flex;
+  gap: 0.7rem;
+  border-radius: 0.85rem;
+  border: 1px solid rgba(229, 228, 226, 0.14);
+  background: rgba(255, 255, 255, 0.04);
+  padding: 0.65rem 0.8rem;
+}
+.tp-step-num {
+  display: grid;
+  place-items: center;
+  width: 1.65rem;
+  flex: 0 0 1.65rem;
+  height: 1.65rem;
+  border-radius: 9999px;
+  font-size: 0.72rem;
+  font-weight: 800;
+  color: #0b0b0b;
+  background: linear-gradient(135deg, #ffd700, #e5e4e2);
+}
+
+/* ── CTA buttons ────────────────────────────────────────────────────────── */
+.tp-cta {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  border-radius: 0.7rem;
+  padding: 0.7rem 1.1rem;
+  font-size: 0.85rem;
+  font-weight: 800;
+  color: #fff;
+  background: linear-gradient(120deg, #004aad, #0a5bc4);
+  border: 1px solid rgba(77, 140, 255, 0.7);
+  box-shadow: 0 0 0 1px rgba(0, 74, 173, 0.35), 0 8px 26px -12px rgba(0, 74, 173, 0.9);
+  transition: transform 0.18s ease, box-shadow 0.18s ease, background 0.18s ease;
+}
+.tp-cta:hover,
+.tp-cta:focus-visible {
+  transform: translateY(-1px);
+  background: linear-gradient(120deg, #4d8cff, #7aa9ff);
+  color: #0b0b0b;
+  box-shadow: 0 0 26px rgba(77, 140, 255, 0.55);
+  outline: none;
+}
+.tp-cta[data-tone="priority"] {
+  background: linear-gradient(120deg, #e63946, #ff4d6d);
+  border-color: rgba(255, 143, 163, 0.7);
+  box-shadow: 0 0 22px rgba(255, 77, 109, 0.4), 0 8px 26px -14px rgba(230, 57, 70, 0.9);
+}
+.tp-cta[data-tone="priority"]:hover,
+.tp-cta[data-tone="priority"]:focus-visible {
+  background: linear-gradient(120deg, #ff4d6d, #ff8fa3);
+  color: #25060b;
+}
+
+/* ── Vitality timeline ──────────────────────────────────────────────────── */
+.tp-rail { position: absolute; inset: 0 auto 0 0; width: 30px; pointer-events: none; }
+.tp-rail svg { display: block; width: 100%; height: 100%; overflow: visible; }
+.tp-track { fill: none; stroke: rgba(229, 228, 226, 0.16); stroke-width: 2; }
+.tp-progress {
+  fill: none;
+  stroke: url(#tp-line);
+  stroke-width: 3;
+  stroke-linecap: round;
+  stroke-dasharray: 1;
+  filter: drop-shadow(0 0 6px rgba(255, 77, 109, 0.45)) drop-shadow(0 0 12px rgba(0, 74, 173, 0.55));
+  transition: stroke-dashoffset 0.18s linear;
+}
+
+/* ── Sticky action bar ──────────────────────────────────────────────────── */
+.tp-sticky {
+  position: fixed;
+  left: 50%;
+  bottom: 0.9rem;
+  transform: translateX(-50%);
+  z-index: 40;
+  width: min(64rem, calc(100vw - 1.5rem));
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  border-radius: 1rem;
+  padding: 0.7rem 0.85rem 0.7rem 1.1rem;
+  border: 1px solid rgba(0, 74, 173, 0.55);
+  background: rgba(11, 11, 11, 0.72);
+  -webkit-backdrop-filter: blur(20px) saturate(140%);
+  backdrop-filter: blur(20px) saturate(140%);
+  box-shadow: 0 -6px 34px -18px rgba(0, 74, 173, 0.9), 0 0 0 1px rgba(77, 140, 255, 0.14) inset;
+}
+.tp-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 9999px;
+  background: var(--tp-pinkred);
+  box-shadow: 0 0 0 0 rgba(255, 77, 109, 0.7);
+  animation: tp-pulse 2.4s ease-out infinite;
+}
+
+@keyframes tp-breathe {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.035); }
+}
+@keyframes tp-shimmer {
+  0%, 100% { box-shadow: 0 0 18px rgba(255, 215, 0, 0.24), inset 0 0 18px rgba(229, 228, 226, 0.18); }
+  50% { box-shadow: 0 0 30px rgba(255, 215, 0, 0.42), inset 0 0 26px rgba(229, 228, 226, 0.3); }
+}
+@keyframes tp-pulse {
+  0% { box-shadow: 0 0 0 0 rgba(255, 77, 109, 0.7); }
+  70% { box-shadow: 0 0 0 9px rgba(255, 77, 109, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(255, 77, 109, 0); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .tp-orb-disc,
+  .tp-dot { animation: none !important; }
+  .tp-progress { transition: none; }
+  .tp-card,
+  .tp-orb,
+  .tp-cta,
+  .tp-plan-link { transition: none; }
+  .tp-reveal { transition: none; }
+}
+
+@media (max-width: 640px) {
+  .tp-orb-disc { width: 4.4rem; height: 4.4rem; }
+  .tp-rail { display: none; }
+  .tp-sticky { bottom: 0.5rem; }
+}

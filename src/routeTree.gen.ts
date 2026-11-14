@@ -24,6 +24,7 @@ import { Route as RefundPolicyRouteImport } from './routes/refund-policy'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as TermsAndConditionsRouteImport } from './routes/terms-and-conditions'
 import { Route as TermsOfServiceRouteImport } from './routes/terms-of-service'
+import { Route as TreatmentPlanRouteImport } from './routes/treatment-plan'
 import { Route as UnlockRouteImport } from './routes/unlock'
 import { Route as VerifiedRouteImport } from './routes/verified'
 import { Route as WorkspaceRouteImport } from './routes/workspace'
@@ -116,6 +117,11 @@ const TermsAndConditionsRoute = TermsAndConditionsRouteImport.update({
 const TermsOfServiceRoute = TermsOfServiceRouteImport.update({
   id: '/terms-of-service',
   path: '/terms-of-service',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TreatmentPlanRoute = TreatmentPlanRouteImport.update({
+  id: '/treatment-plan',
+  path: '/treatment-plan',
   getParentRoute: () => rootRouteImport,
 } as any)
 const UnlockRoute = UnlockRouteImport.update({
@@ -230,6 +236,7 @@ export interface FileRoutesByFullPath {
   '/reset-password': typeof ResetPasswordRoute
   '/terms-and-conditions': typeof TermsAndConditionsRoute
   '/terms-of-service': typeof TermsOfServiceRoute
+  '/treatment-plan': typeof TreatmentPlanRoute
   '/unlock': typeof UnlockRoute
   '/verified': typeof VerifiedRoute
   '/workspace': typeof WorkspaceRoute
@@ -265,6 +272,7 @@ export interface FileRoutesByTo {
   '/reset-password': typeof ResetPasswordRoute
   '/terms-and-conditions': typeof TermsAndConditionsRoute
   '/terms-of-service': typeof TermsOfServiceRoute
+  '/treatment-plan': typeof TreatmentPlanRoute
   '/unlock': typeof UnlockRoute
   '/verified': typeof VerifiedRoute
   '/workspace': typeof WorkspaceRoute
@@ -301,6 +309,7 @@ export interface FileRoutesById {
   '/reset-password': typeof ResetPasswordRoute
   '/terms-and-conditions': typeof TermsAndConditionsRoute
   '/terms-of-service': typeof TermsOfServiceRoute
+  '/treatment-plan': typeof TreatmentPlanRoute
   '/unlock': typeof UnlockRoute
   '/verified': typeof VerifiedRoute
   '/workspace': typeof WorkspaceRoute
@@ -338,6 +347,7 @@ export interface FileRouteTypes {
     | '/reset-password'
     | '/terms-and-conditions'
     | '/terms-of-service'
+    | '/treatment-plan'
     | '/unlock'
     | '/verified'
     | '/workspace'
@@ -373,6 +383,7 @@ export interface FileRouteTypes {
     | '/reset-password'
     | '/terms-and-conditions'
     | '/terms-of-service'
+    | '/treatment-plan'
     | '/unlock'
     | '/verified'
     | '/workspace'
@@ -408,6 +419,7 @@ export interface FileRouteTypes {
     | '/reset-password'
     | '/terms-and-conditions'
     | '/terms-of-service'
+    | '/treatment-plan'
     | '/unlock'
     | '/verified'
     | '/workspace'
@@ -444,6 +456,7 @@ export interface RootRouteChildren {
   ResetPasswordRoute: typeof ResetPasswordRoute
   TermsAndConditionsRoute: typeof TermsAndConditionsRoute
   TermsOfServiceRoute: typeof TermsOfServiceRoute
+  TreatmentPlanRoute: typeof TreatmentPlanRoute
   UnlockRoute: typeof UnlockRoute
   VerifiedRoute: typeof VerifiedRoute
   WorkspaceRoute: typeof WorkspaceRoute
@@ -569,6 +582,13 @@ declare module '@tanstack/react-router' {
       path: '/terms-of-service'
       fullPath: '/terms-of-service'
       preLoaderRoute: typeof TermsOfServiceRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/treatment-plan': {
+      id: '/treatment-plan'
+      path: '/treatment-plan'
+      fullPath: '/treatment-plan'
+      preLoaderRoute: typeof TreatmentPlanRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/unlock': {
@@ -716,6 +736,7 @@ const rootRouteChildren: RootRouteChildren = {
   ResetPasswordRoute: ResetPasswordRoute,
   TermsAndConditionsRoute: TermsAndConditionsRoute,
   TermsOfServiceRoute: TermsOfServiceRoute,
+  TreatmentPlanRoute: TreatmentPlanRoute,
   UnlockRoute: UnlockRoute,
   VerifiedRoute: VerifiedRoute,
   WorkspaceRoute: WorkspaceRoute,

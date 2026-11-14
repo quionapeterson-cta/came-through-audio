@@ -3,6 +3,7 @@
 @import "tw-animate-css";
 @import "./came-icons.css";
 @import "./royalty-report.css";
+@import "./treatment-plan.css";
 
 @custom-variant dark (&:is(.dark *));
 
