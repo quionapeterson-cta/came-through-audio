@@ -23,6 +23,9 @@ import { badgePrefs, loadOnboarding, loadSeatArtistDefaults, syncFromCloud, type
 import { RoyaltyUtilitySuite } from "@/components/RoyaltyUtilitySuite";
 import { ExpertAssistance } from "@/components/ExpertAssistance";
 import { RoyaltyHealthCheck, type HealthStart } from "@/components/RoyaltyHealthCheck";
+import { AuditBar, type AuditBackLink } from "@/components/AuditBar";
+import { AUDIT_EVENT, blankAudit, endAudit, readAudit, recordStop, saveAudit, type AuditSong, type AuditTrail } from "@/lib/audit-mode";
+import { catalogHref } from "@/lib/catalog-links";
 import { NextBadgeHint } from "@/components/Badges";
 import { PaymentTestModeBanner } from "@/components/PaymentTestModeBanner";
 import { toast } from "sonner";
@@ -72,6 +75,7 @@ export const Route = createFileRoute("/workspace")({
     tab?: string | undefined; checkout?: "success" | undefined; view?: "expert" | undefined;
     plan?: string | undefined; ticket?: string | undefined; panel?: string | undefined; society?: string | undefined;
     songId?: string | undefined; focusField?: string | undefined; agencyIsrc?: string | undefined; agencyVersion?: string | undefined; agencyVersions?: string | undefined; action?: string | undefined;
+    trail?: string | undefined; song?: string | undefined; report?: string | undefined;
   } => {
     const str = (key: string) => (typeof s[key] === "string" ? (s[key] as string) : undefined);
     return {
@@ -83,6 +87,8 @@ export const Route = createFileRoute("/workspace")({
       // The Differences panel's own entry point, and the catalog handoff that follows a row.
       panel: str("panel"), society: str("society"),
       songId: str("songId"), focusField: str("focusField"), agencyIsrc: str("agencyIsrc"), agencyVersion: str("agencyVersion"), agencyVersions: str("agencyVersions"), action: str("action"),
+      // Audit Mode: the hop that carries a fix, the song a return lands on, and the report a return reopens.
+      trail: str("trail"), song: str("song"), report: str("report"),
     };
   },
   component: Workspace,
@@ -130,6 +136,78 @@ function Workspace() {
       ...(search.agencyVersions ? { agencyVersions: search.agencyVersions.split("|").map((v) => v.trim()).filter(Boolean) } : {}),
       ...(search.action ? { action: search.action } : {}) });
   }, [search.tab, search.songId, search.focusField, search.agencyIsrc, search.agencyVersion, search.agencyVersions, search.action]);
+  // Audit Mode (founder, 2026-11-14): one finding worked across the report, a song's checklist and My Catalog.
+  const [audit, setAudit] = useState<AuditTrail | null>(() => readAudit());
+  useEffect(() => {
+    const sync = () => setAudit(readAudit());
+    window.addEventListener(AUDIT_EVENT, sync);
+    return () => window.removeEventListener(AUDIT_EVENT, sync);
+  }, []);
+  // A return from a fix opens the song the trail was on, in the Hub's checklist, so the list is where they left it.
+  // Landing on a song also moves the trail's pointer, so "Next song" advances instead of offering the same one again.
+  useEffect(() => {
+    if (!search.song) return;
+    setTab("health");
+    const base = readAudit();
+    if (base) saveAudit(recordStop(base, "checklist", `/workspace?tab=health&song=${search.song}&trail=yes`, search.song));
+  }, [search.song]);
+  // The fix link that carries an audit keeps the trail across the reload it makes.
+  useEffect(() => {
+    if (search.trail !== "yes" || !search.songId) return;
+    const base = readAudit() ?? blankAudit();
+    saveAudit(recordStop(base, "catalog", `${window.location.pathname}${window.location.search}${window.location.hash}`, search.songId));
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  /** A report or checklist hop records the stop it leaves, so the audit bar can bring the member back to it. */
+  function auditFrom(from: "report" | "checklist", trackId: string, queue?: AuditSong[]) {
+    const base = readAudit() ?? blankAudit();
+    const href = from === "report" ? "/workspace?tab=health&report=yes&trail=yes" : `/workspace?tab=health&song=${trackId}&trail=yes`;
+    let trail = recordStop(base, from, href, trackId);
+    if (queue?.length) trail = { ...trail, queue };
+    saveAudit(trail);
+    setAudit(trail);
+    // The address follows the hop, so a reload lands on the same stop instead of the tab the visit started on.
+    window.history.replaceState(window.history.state, "", href);
+  }
+  /** A fix: My Catalog opens on that song and field, and the trail remembers the hop that got here. */
+  function fixInCatalog(trackId: string, field: string) {
+    setCatalogFix({ trackId, field });
+    setTab("catalog");
+    // Only a hop an audit already owns joins the trail; an ordinary fix from My Catalog or Expert Help starts nothing.
+    const base = readAudit();
+    if (!base) return;
+    const href = catalogHref({ trackId, field, audit: true });
+    saveAudit(recordStop(base, "catalog", href, trackId));
+    window.history.replaceState(window.history.state, "", href.replace(/#.*$/, ""));
+  }
+  /** Ends the audit: the bar goes, the trail is dropped, and the address keeps only the tab. */
+  function closeAudit() {
+    endAudit();
+    setAudit(null);
+    const url = new URL(window.location.href);
+    for (const key of ["trail", "song", "songId", "focusField", "agencyIsrc", "agencyVersion", "agencyVersions", "action", "report"]) url.searchParams.delete(key);
+    window.history.replaceState(window.history.state, "", `${url.pathname}${url.search}${url.hash}`);
+  }
+  // Esc ends an audit from anywhere in the workspace, unless a dialog or a field is using the key.
+  useEffect(() => {
+    if (!audit) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== "Escape") return;
+      const el = e.target as HTMLElement | null;
+      if (el && /^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName)) return;
+      if (document.querySelector('[role="dialog"]')) return;
+      closeAudit();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [audit]); // eslint-disable-line react-hooks/exhaustive-deps
+  /** The bar's second row: the list the fix came from, shown only while My Catalog is open in the audit. */
+  const auditBack: AuditBackLink | undefined = audit && tab === "catalog"
+    ? audit.hrefs.checklist
+      ? { href: audit.hrefs.checklist, label: "Back to the song checklist", detail: "Continue where you left off" }
+      : audit.hrefs.report
+        ? { href: audit.hrefs.report, label: "Back to the report", detail: "The finding you're working" }
+        : undefined
+    : undefined;
   // A Royalty Health Check started from My Catalog: opens the Hub on that song's (or release's, or the catalog's) check-in.
   const [healthStart, setHealthStart] = useState<HealthStart>();
   /** My Catalog's "Continue Expert Registration" opens Royalty Health → Expert Help. */
@@ -422,6 +500,10 @@ function Workspace() {
       )}
       <BadgeWatcher userId={user.id} artist={names.artist} eagle={tier === "management"} />
       <main className="mx-auto max-w-7xl px-6 py-8">
+        {audit && (tab === "catalog" || tab === "health") && (
+          <AuditBar trail={audit} onEnd={closeAudit} back={auditBack}
+            active={tab === "catalog" ? "catalog" : search.report === "yes" ? "report" : "checklist"} />
+        )}
         {pendingPlan && <PlanPendingBanner priceId={pendingPlan} />}
         {!user.email_confirmed_at && <EmailConfirmBanner email={user.email} />}
         <CatalogLapseBanner sub={sub} lapse={lapse} pauses={pauses} onRenew={upgrade} onChanged={() => void reloadBilling()} />
@@ -480,7 +562,7 @@ function Workspace() {
           <TabsContent value="splits"><SplitSheets userId={user.id} canSplit={canSplit} canCollect={canCollect} prefillTrackId={splitTrackId} onUpgrade={upgrade} /></TabsContent>
           {/* forceMount: a visit has state in it (the streaming pull, an agency list, the check-in answers), so
               switching to My Catalog or another tab must not throw the appointment away. */}
-          <TabsContent value="health" {...(healthMounted ? { forceMount: true as const } : {})} className="data-[state=inactive]:hidden"><Health startView={openExpert || search.view === "expert" || (search.tab === "health" && search.checkout === "success") ? "expert" : "check"} justPaid={search.tab === "health" && search.checkout === "success"} canCatalog={canCatalog} onFix={() => setTab("catalog")} onFixField={(trackId, field) => { setCatalogFix({ trackId, field }); setTab("catalog"); }} onAddSong={(newTitle, artist) => { setCatalogFix({ newTitle, artist, nonce: Date.now() }); setTab("catalog"); }} onEmbed={() => setTab("embed")} userId={user.id} purchases={purchases} canUtility={canCollect} onUpgrade={upgrade} onSplitSheet={(id) => { setSplitTrackId(id); setTab("splits"); }} start={healthStart} /></TabsContent>
+          <TabsContent value="health" {...(healthMounted ? { forceMount: true as const } : {})} className="data-[state=inactive]:hidden"><Health startView={openExpert || search.view === "expert" || (search.tab === "health" && search.checkout === "success") ? "expert" : "check"} justPaid={search.tab === "health" && search.checkout === "success"} canCatalog={canCatalog} onFix={() => setTab("catalog")} onFixField={fixInCatalog} onAuditFrom={auditFrom} focusSong={search.song} openReport={search.report === "yes"} onAddSong={(newTitle, artist) => { setCatalogFix({ newTitle, artist, nonce: Date.now() }); setTab("catalog"); }} onEmbed={() => setTab("embed")} userId={user.id} purchases={purchases} canUtility={canCollect} onUpgrade={upgrade} onSplitSheet={(id) => { setSplitTrackId(id); setTab("splits"); }} start={healthStart} /></TabsContent>
           <TabsContent value="learn"><Learn userId={user.id} unlocked={hasTier(tier, "management")} onUpgrade={upgrade}
             onOpen={(link) => {
               if (link.where === "profile") setProfileOpen(true);
@@ -589,7 +671,7 @@ function Coaching({ userId }: { userId: string }) {
   );
 }
 
-function Health({ startView, justPaid, canCatalog, onFix, onFixField, onAddSong, onEmbed, userId, purchases, canUtility, onUpgrade, onSplitSheet, start }: { startView: "check" | "expert"; justPaid: boolean; canCatalog: boolean; userId: string; purchases: Purchase[]; canUtility: boolean; onUpgrade: () => void; onFix: () => void; onFixField: (trackId: string, field: string) => void; onAddSong: (title: string, artist?: string) => void; onEmbed: () => void; onSplitSheet: (trackId: string) => void; start?: HealthStart | undefined }) {
+function Health({ startView, justPaid, canCatalog, onFix, onFixField, onAuditFrom, focusSong, openReport, onAddSong, onEmbed, userId, purchases, canUtility, onUpgrade, onSplitSheet, start }: { startView: "check" | "expert"; justPaid: boolean; canCatalog: boolean; userId: string; purchases: Purchase[]; canUtility: boolean; onUpgrade: () => void; onFix: () => void; onFixField: (trackId: string, field: string) => void; onAuditFrom: (from: "report" | "checklist", trackId: string, queue?: AuditSong[]) => void; focusSong?: string | undefined; openReport: boolean; onAddSong: (title: string, artist?: string) => void; onEmbed: () => void; onSplitSheet: (trackId: string) => void; start?: HealthStart | undefined }) {
   // Three tools, one at a time, switched like Contracts & Blueprints.
   const [view, setView] = useState<"check" | "expert" | "utility">(startView);
   useEffect(() => { if (start) setView("check"); }, [start?.nonce]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -601,7 +683,7 @@ function Health({ startView, justPaid, canCatalog, onFix, onFixField, onAddSong,
           {views.map(([id, label, Icon]) => <Button key={id} size="sm" variant={view === id ? "default" : "ghost"} onClick={() => setView(id)}><Icon className="h-4 w-4" />{label}</Button>)}
         </div>
       </div>
-      {view === "check" && <RoyaltyHealthCheck userId={userId} canCatalog={canCatalog} canExport={canUtility} onUpgrade={onUpgrade} onFixField={onFixField} onEmbed={onEmbed} onSplitSheet={canCatalog ? onSplitSheet : undefined}
+      {view === "check" && <RoyaltyHealthCheck userId={userId} canCatalog={canCatalog} canExport={canUtility} onUpgrade={onUpgrade} onFixField={onFixField} onAuditFrom={onAuditFrom} focusSong={focusSong} openReport={openReport} onEmbed={onEmbed} onSplitSheet={canCatalog ? onSplitSheet : undefined}
         onExpert={() => { setView("expert"); window.scrollTo({ top: 0, behavior: "smooth" }); }} start={start} />}
       {view === "expert" && <div id="expert-assistance"><ExpertAssistance userId={userId} purchases={purchases} justPaid={justPaid} onFix={onFixField} onCatalog={onFix} onAddSong={onAddSong} /></div>}
       {view === "utility" && <RoyaltyUtilitySuite unlocked={canUtility} onUpgrade={onUpgrade} userId={userId} />}

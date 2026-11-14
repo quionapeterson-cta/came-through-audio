@@ -50,6 +50,8 @@ export type CatalogLink = {
   /** Every version the list names under one title, so four listed versions are four choices, never just the first. */
   agencyVersions?: string[] | undefined;
   action?: CatalogAction | string | undefined;
+  /** The hop belongs to an open audit, so the workspace keeps the trail across the reload this link makes. */
+  audit?: boolean | undefined;
 };
 
 /** `/workspace?tab=catalog&songId=…#song-<id>` — the address My Catalog opens a song's form from. */
@@ -60,11 +62,13 @@ export function catalogHref({
   agencyVersion,
   agencyVersions,
   action,
+  audit,
 }: CatalogLink): string {
   const p = new URLSearchParams({ tab: "catalog", songId: trackId, focusField: field });
   if (agencyIsrc) p.set("agencyIsrc", agencyIsrc);
   if (agencyVersion) p.set("agencyVersion", agencyVersion);
   if (agencyVersions?.length) p.set("agencyVersions", agencyVersions.join("|"));
   if (action) p.set("action", action);
+  if (audit) p.set("trail", "yes");
   return `/workspace?${p.toString()}#song-${trackId}`;
 }

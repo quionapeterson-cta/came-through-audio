@@ -19,6 +19,8 @@ type Props = {
   onRunCheckup: () => void;
   onPdf?: (() => void) | undefined;
   onAction: (a: StepAction) => void;
+  /** Audit Mode: the finding's own songs, handed over just before a song link acts, so "Next song" walks that list. */
+  onQueue?: ((songs: { id: string; field?: string | undefined }[]) => void) | undefined;
   onExpert: () => void;
   onReminder: (calendar: "google" | "ics") => void;
   /** Shown when a co-writer is missing their PRO or IPI. */
@@ -55,7 +57,7 @@ function stepButton(a: StepAction, canExport: boolean): { label: string; locked?
 }
 
 /** The Royalty Health Report: the clickable body, the main finding with its ℞ treatment, and a full report per organ. */
-export function RoyaltyReport({ checkup, since, date, country, countryPicker, running, canExport, onRunCheckup, onPdf, onAction, onExpert, onReminder, onAskCowriter, scope, onBack, prerelease }: Props) {
+export function RoyaltyReport({ checkup, since, date, country, countryPicker, running, canExport, onRunCheckup, onPdf, onAction, onQueue, onExpert, onReminder, onAskCowriter, scope, onBack, prerelease }: Props) {
   const { organs, lead } = checkup;
   const first = lead?.organ ?? organs.find((o) => o.state !== "healthy")?.id ?? organs[0]!.id;
   const [selected, setSelected] = useState<OrganId>(first);
@@ -175,7 +177,7 @@ export function RoyaltyReport({ checkup, since, date, country, countryPicker, ru
           ))}
         </div>
         <div ref={reportRef} className="scroll-mt-4">
-          <OrganReport key={organ.id} organ={organ} organs={organs} canExport={canExport} onAction={onAction} onOpen={(id) => open(id, false)} onExpert={onExpert} onReminder={onReminder} onExplain={setExplain} onAskCowriter={onAskCowriter} />
+          <OrganReport key={organ.id} organ={organ} organs={organs} canExport={canExport} onAction={onAction} onQueue={onQueue} onOpen={(id) => open(id, false)} onExpert={onExpert} onReminder={onReminder} onExplain={setExplain} onAskCowriter={onAskCowriter} />
         </div>
       </div>
       {/* 60% or lower: the specialist call-out, at the very bottom after the report, which stays as it was (founder, 2026-11-11). */}
@@ -185,7 +187,7 @@ export function RoyaltyReport({ checkup, since, date, country, countryPicker, ru
   );
 }
 
-function OrganReport({ organ, organs, canExport, onAction, onOpen, onExpert, onReminder, onExplain, onAskCowriter }: { organ: Organ; organs: Organ[]; canExport: boolean; onAction: (a: StepAction) => void; onOpen: (id: OrganId) => void; onExpert: () => void; onReminder: (calendar: "google" | "ics") => void; onExplain: (f: Finding) => void; onAskCowriter?: (() => void) | undefined }) {
+function OrganReport({ organ, organs, canExport, onAction, onQueue, onOpen, onExpert, onReminder, onExplain, onAskCowriter }: { organ: Organ; organs: Organ[]; canExport: boolean; onAction: (a: StepAction) => void; onQueue?: ((songs: { id: string; field?: string | undefined }[]) => void) | undefined; onOpen: (id: OrganId) => void; onExpert: () => void; onReminder: (calendar: "google" | "ics") => void; onExplain: (f: Finding) => void; onAskCowriter?: (() => void) | undefined }) {
   const i = organs.findIndex((o) => o.id === organ.id);
   const prev = organs[(i + organs.length - 1) % organs.length]!, next = organs[(i + 1) % organs.length]!;
   const main = organ.findings[0];
@@ -215,7 +217,7 @@ function OrganReport({ organ, organs, canExport, onAction, onOpen, onExpert, onR
               </a>)}
             </div>
           </div>
-          {organ.findings.map((f, n) => <FindingBlock key={f.id} f={f} n={organ.findings.length > 1 ? n + 1 : 0} canExport={canExport} onAction={onAction} onExplain={() => onExplain(f)} />)}
+          {organ.findings.map((f, n) => <FindingBlock key={f.id} f={f} n={organ.findings.length > 1 ? n + 1 : 0} canExport={canExport} onAction={onAction} onQueue={onQueue} onExplain={() => onExplain(f)} />)}
           <div>
             <div className="rr-eyebrow mb-3">More ways to fix it</div>
             <div className="flex flex-wrap gap-2">
@@ -241,8 +243,10 @@ function OrganReport({ organ, organs, canExport, onAction, onOpen, onExpert, onR
   );
 }
 
-function FindingBlock({ f, n, canExport, onAction, onExplain }: { f: Finding; n: number; canExport: boolean; onAction: (a: StepAction) => void; onExplain: () => void }) {
+function FindingBlock({ f, n, canExport, onAction, onQueue, onExplain }: { f: Finding; n: number; canExport: boolean; onAction: (a: StepAction) => void; onQueue?: ((songs: { id: string; field?: string | undefined }[]) => void) | undefined; onExplain: () => void }) {
   const locked = f.steps.some((s) => s.action?.kind === "download") && !canExport;
+  // Audit Mode: the list the report is showing travels with the click, so a saved report's songs are the queue too.
+  const queue = () => onQueue?.(f.songs.map((s) => ({ id: s.id, ...(s.field ? { field: s.field } : {}) })));
   return (
     <section id={`finding-${f.id}`} className="scroll-mt-4 space-y-5">
       <div className="rr-divider flex flex-wrap items-center justify-between gap-2 pb-3">
@@ -254,8 +258,8 @@ function FindingBlock({ f, n, canExport, onAction, onExplain }: { f: Finding; n:
         <div className="rr-fact rounded-2xl p-4"><div className="rr-eyebrow" style={{ color: "var(--rr-cobalt-text)" }}>Cause</div><p className="mt-2 text-sm">{f.cause}</p></div>
         <div className="rr-fact rounded-2xl p-4"><div className="rr-eyebrow" style={{ color: "var(--rr-cobalt-text)" }}>Songs affected</div>
           <ul className="mt-1 text-sm">{f.songs.slice(0, 8).map((s) => <li key={s.id + s.why} className="flex justify-between gap-2 border-t border-border py-1.5 first:border-t-0">
-            {s.field ? <button type="button" className="truncate text-left font-medium text-primary underline-offset-2 hover:underline" onClick={() => onAction({ kind: "field", trackId: s.id, field: s.field! })}>⚠️ {s.title}</button>
-              : <button type="button" className="truncate text-left font-medium text-primary underline-offset-2 hover:underline" onClick={() => onAction({ kind: "changes", trackId: s.id })}>{s.title}</button>}
+            {s.field ? <button type="button" className="truncate text-left font-medium text-primary underline-offset-2 hover:underline" onClick={() => { queue(); onAction({ kind: "field", trackId: s.id, field: s.field! }); }}>⚠️ {s.title}</button>
+              : <button type="button" className="truncate text-left font-medium text-primary underline-offset-2 hover:underline" onClick={() => { queue(); onAction({ kind: "changes", trackId: s.id }); }}>{s.title}</button>}
             <small className="shrink-0 text-right text-xs text-muted-foreground">{s.why}</small></li>)}
             {f.songs.length > 8 && <li className="pt-1 text-xs text-muted-foreground">and {f.songs.length - 8} more</li>}</ul></div>
       </div>

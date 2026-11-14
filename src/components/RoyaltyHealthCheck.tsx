@@ -28,6 +28,7 @@ import { AskCowriterDialog, IpiRequestList, type Cowriter } from "@/components/I
 import { cowritersMissing, fillWriter, listIpiRequests, nameKey, setIpiRequestStatus, type IpiRequest } from "@/lib/ipi-requests";
 import { sendIpiRequest } from "@/lib/ipi-request.functions";
 import { saveTrack } from "@/lib/catalog";
+import type { AuditSong } from "@/lib/audit-mode";
 import { useServerFn } from "@tanstack/react-start";
 import { healthReport, type RepertoireCheck } from "@/lib/health";
 import { clearCheck, listChecks, markCheck } from "@/lib/repertoire-checks";
@@ -65,7 +66,7 @@ type View = { kind: "hub" } | { kind: "checkin"; scope: ReportScope; from?: stri
 /** A check-in left mid-visit: the songs it covers, the song it started from, and the intake that was open. */
 type SavedVisit = { kind: "checkin"; scope: ReportScope; from?: string | undefined; intake?: IntakeKind | undefined };
 
-export function RoyaltyHealthCheck({ userId, canCatalog, canExport, onUpgrade, onFixField, onEmbed, onExpert, onSplitSheet, start }: { userId: string; canCatalog: boolean; canExport: boolean; onUpgrade: (priceId?: string) => void; onFix?: () => void; onFixField: (trackId: string, field: string) => void; onEmbed: () => void; onExpert?: () => void; onSplitSheet?: ((trackId: string) => void) | undefined; start?: HealthStart | undefined }) {
+export function RoyaltyHealthCheck({ userId, canCatalog, canExport, onUpgrade, onFixField, onAuditFrom, focusSong, openReport, onEmbed, onExpert, onSplitSheet, start }: { userId: string; canCatalog: boolean; canExport: boolean; onUpgrade: (priceId?: string) => void; onFix?: () => void; onFixField: (trackId: string, field: string) => void; /** Audit Mode: records the report or checklist stop a hop leaves. */ onAuditFrom?: ((from: "report" | "checklist", trackId: string, queue?: AuditSong[]) => void) | undefined; /** Audit Mode: the song a return lands on, opened in the Hub's checklist. */ focusSong?: string | undefined; /** Audit Mode: reopen the newest report, so "Back to the report" is the report and not the Front Desk. */ openReport?: boolean | undefined; onEmbed: () => void; onExpert?: () => void; onSplitSheet?: ((trackId: string) => void) | undefined; start?: HealthStart | undefined }) {
   const [tracks, setTracks] = useState<CatalogTrack[]>();
   const [checks, setChecks] = useState<RepertoireCheck[]>([]);
   const [code, setCode] = useState(() => loadOnboarding(userId)?.healthCountry);
@@ -265,6 +266,25 @@ export function RoyaltyHealthCheck({ userId, canCatalog, canExport, onUpgrade, o
     if (start.trackId) checkSong(start.trackId, start.release);
     else if (tracks.length) startCheck(catalogScope(tracks));
   }, [start?.nonce, loaded]); // eslint-disable-line react-hooks/exhaustive-deps
+  // Audit Mode (founder, 2026-11-14): a return lands on that song's checklist, and "Back to the report" reopens the
+  // latest report as it was filed, so both directions of the audit end on the thing the member was reading.
+  const auditOpened = useRef(false);
+  /** The finding the last song click came from: its songs are the audit's queue, saved report or live. */
+  const auditQueue = useRef<AuditSong[]>([]);
+  useEffect(() => {
+    if (!focusSong || !loaded) return;
+    showSong(focusSong);
+  }, [focusSong, loaded]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    if (!openReport || !loaded || auditOpened.current) return;
+    auditOpened.current = true;
+    // The Front Desk, with Past Royalty Health Reports already open: the report the audit came from is one click away,
+    // and this never depends on a snapshot loading first.
+    setView({ kind: "hub" });
+    setDeskOpen(true);
+    setDesk("reports");
+    setTimeout(() => document.getElementById("front-desk")?.scrollIntoView({ behavior: "smooth", block: "start" }), 80);
+  }, [openReport, loaded]); // eslint-disable-line react-hooks/exhaustive-deps
 
   /** Check-in answers are checklist steps; null removes one. */
   function answer(changes: { id: string; steps: Record<string, string | null> }[]) {
@@ -304,9 +324,21 @@ export function RoyaltyHealthCheck({ userId, canCatalog, canExport, onUpgrade, o
     else setTimeout(() => document.getElementById("song-by-song")?.scrollIntoView({ behavior: "smooth", block: "start" }), 30);
   }
 
+  /** The finding a song belongs to, in the order the report lists it — the audit's "Next song" walk. */
+  const auditQueueFor = (trackId: string): AuditSong[] => {
+    const f = checkup.organs.flatMap((o) => o.findings).find((x) => x.songs.some((s) => s.id === trackId));
+    return f ? f.songs.map((s) => ({ id: s.id, ...(s.field ? { field: s.field } : {}) })) : [];
+  };
   /** A treatment step's button: every step ends at the agency, so most of these leave Came Through Audio on purpose. */
   async function act(a: StepAction) {
-    if (a.kind === "field") return fixField(a.trackId, a.field);
+    const queue = (id: string) => (auditQueue.current.length ? auditQueue.current : auditQueueFor(id));
+    if (a.kind === "field") { onAuditFrom?.("report", a.trackId, queue(a.trackId)); auditQueue.current = []; return fixField(a.trackId, a.field); }
+    if (a.kind === "changes") {
+      // The song opens its checklist, so the trail records both stops: the finding it came from and the list it lands on.
+      onAuditFrom?.("report", a.trackId, queue(a.trackId));
+      onAuditFrom?.("checklist", a.trackId);
+      auditQueue.current = [];
+    }
     if (a.kind === "tick" || a.kind === "changes") return showSong(a.kind === "changes" ? a.trackId : checkup.lead?.songs[0]?.id);
     if (a.kind === "portal") return void window.open(a.url, "_blank", "noopener,noreferrer");
     if (a.kind === "split") return onSplitSheet ? onSplitSheet(a.trackId) : onUpgrade();
@@ -503,7 +535,9 @@ export function RoyaltyHealthCheck({ userId, canCatalog, canExport, onUpgrade, o
   const book = () => onExpert ? onExpert() : document.getElementById("expert-assistance")?.scrollIntoView({ behavior: "smooth" });
   const actions = {
     onCountry: chooseCountry, onRunAll: () => void runAll(), onExpert: book, onRunOne: (id: string) => void runOne(id),
-    onMark: (...a: Parameters<typeof mark>) => void mark(...a), onClear: (...a: Parameters<typeof clear>) => void clear(...a), onFixField: fixField,
+    onMark: (...a: Parameters<typeof mark>) => void mark(...a), onClear: (...a: Parameters<typeof clear>) => void clear(...a),
+    // Audit Mode: a checklist fix records that stop before My Catalog opens, so the way back is the checklist itself.
+    onFixField: (id: string, field: string) => { onAuditFrom?.("checklist", id); fixField(id, field); },
   };
   if (!tracks) return <div className="rounded-3xl bg-ink p-8 text-ink-muted">Scanning your catalog…</div>;
 
@@ -584,7 +618,7 @@ export function RoyaltyHealthCheck({ userId, canCatalog, canExport, onUpgrade, o
       <RoyaltyReport checkup={checkup} since={since} prerelease={reportRows.filter(({ c }) => c.prerelease).map(({ r, c }) => ({ id: r.track.id, title: r.track.title || "Untitled", pct: c.pct,
         items: c.steps.filter((s) => s.stage === "release" || (s.stage === "register" && s.id !== "intl")).map((s) => ({ title: s.title, done: s.done, optional: s.optional })) }))} scope={scopeName(view.scope)} onBack={() => setView({ kind: "hub" })} date={new Date().toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })} country={country.name}
         countryPicker={countryPicker} running={!!running} canExport={canExport} onRunCheckup={() => runCheck(view.scope)}
-        onPdf={() => { const first = claimFirstBurst("health_report"); void downloadCheckupPdf(checkup, mostCommon(reportRows.map(({ r }) => r.track.artist)), country.name).then(() => { if (first) burstConfetti(); }).catch(() => toast.error("Couldn't create the PDF. Try again.")); }} onAction={(a) => void act(a)} onExpert={book} onReminder={reminder}
+        onPdf={() => { const first = claimFirstBurst("health_report"); void downloadCheckupPdf(checkup, mostCommon(reportRows.map(({ r }) => r.track.artist)), country.name).then(() => { if (first) burstConfetti(); }).catch(() => toast.error("Couldn't create the PDF. Try again.")); }} onAction={(a) => void act(a)} onQueue={(songs) => { auditQueue.current = songs; }} onExpert={book} onReminder={reminder}
         onAskCowriter={canCatalog && cowriters.length ? askCowriter : undefined} />
       {/* Step 4: treatment. Registrations need every writer's PRO and IPI, so the requests live with the prescriptions. */}
       {(ipiRequests.length > 0 || cowriters.length > 0) && canCatalog && (
@@ -643,7 +677,8 @@ export function RoyaltyHealthCheck({ userId, canCatalog, canExport, onUpgrade, o
           scope={scopeName(pastOpen.report.scope)} canExport={canExport}
           onRunCheckup={() => { const scope = pastOpen.report.scope; setPastOpen(undefined); startCheck(scope); }}
           onPdf={() => void downloadPast(pastOpen.report, pastOpen.snap)}
-          onAction={(a) => { setPastOpen(undefined); void act(a); }} onExpert={() => { setPastOpen(undefined); book(); }} onReminder={reminder} />}
+          onAction={(a) => { setPastOpen(undefined); void act(a); }} onQueue={(songs) => { auditQueue.current = songs; }}
+          onExpert={() => { setPastOpen(undefined); book(); }} onReminder={reminder} />}
       </DialogContent>
     </Dialog>
   );
