@@ -58,3 +58,7 @@ scripts/demo/*.webp
 
 # Demo account password for scripts/demo (never committed)
 .demo-password.local
+
+# Print-size 4K badge masters live in the R2 bucket (4k/), never in public/ or git.
+# Local archived copies live in art/badges-4k/ (ignored above).
+/public/icons/**/*4K*
