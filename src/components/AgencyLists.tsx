@@ -514,11 +514,11 @@ export function AgencyLists({ userId, societies, songsFor, summaries, allTracks,
     const writers = listWriters(c);
     const done = writers.filter((w) => (answers[keyOfName(w.name)] ?? "").trim()).length;
     return <li key={c.key} className="rounded-md border border-border/60 p-1.5">
+      {/* A catalogued song says so as a header over its title, not as a footnote beside it (founder, 2026-11-16). */}
+      {d && <div className="px-1 pb-0.5 text-xs font-bold uppercase tracking-widest text-primary">Already in your catalog</div>}
       <div className="flex flex-wrap items-baseline justify-between gap-2 px-1">
         <span className="min-w-0 truncate text-sm font-semibold">{d ? d.track.title : c.metadata.title}</span>
-        <span className="shrink-0 text-[11px] text-muted-foreground">
-          {d ? "Already in your catalog" : `${done}/${writers.length} answered`}
-        </span>
+        {!d && <span className="shrink-0 text-[11px] text-muted-foreground">{done}/{writers.length} answered</span>}
       </div>
       {d && <>
         {/* The whole comparison, never trimmed: the answer is made from the record itself. */}
@@ -555,7 +555,9 @@ export function AgencyLists({ userId, societies, songsFor, summaries, allTracks,
         <div className="mt-1 space-y-1.5 border-t border-border/60 px-1 pt-1.5">
           <div className="grid grid-cols-1 gap-2 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
             <label className={`flex cursor-pointer items-start gap-2 rounded-lg border p-2 text-xs ${answer === "keep" ? "border-primary bg-accent/40" : "border-border"}`}>
-              <input type="radio" className="mt-0.5" name={`fill-${d.track.id}`} aria-label="Keep my catalog version"
+              {/* One radio group per rendered card: a song can sit in two writers' boxes, and a shared name lets the browser
+                  untick the copy React isn't re-rendering (founder, 2026-11-16). The answer itself is one state for the song. */}
+              <input type="radio" className="mt-0.5" name={`fill-${d.track.id}-${owner ?? "own"}`} aria-label="Keep my catalog version"
                 checked={answer === "keep"} onChange={() => setChoices((x) => ({ ...x, [d.track.id]: "keep" }))} />
               <span>
                 <b>Keep my catalog version</b>
@@ -563,7 +565,7 @@ export function AgencyLists({ userId, societies, songsFor, summaries, allTracks,
               </span>
             </label>
             <label className={`flex cursor-pointer items-start gap-2 rounded-lg border p-2 text-xs ${answer === "agency" ? "border-primary bg-accent/40" : "border-border"}`}>
-              <input type="radio" className="mt-0.5" name={`fill-${d.track.id}`} aria-label="Use the agency's version"
+              <input type="radio" className="mt-0.5" name={`fill-${d.track.id}-${owner ?? "own"}`} aria-label="Use the agency's version"
                 checked={answer === "agency"} onChange={() => setChoices((x) => ({ ...x, [d.track.id]: "agency" }))} />
               <span>
                 <b>Use the agency's version</b>
@@ -862,14 +864,16 @@ export function AgencyLists({ userId, societies, songsFor, summaries, allTracks,
                 This agency registers the recording, so its list names no writers. Each one still gets the same release answer as a
                 list that does.
               </p>}
-              {fill.plan.duplicates.length > 0 && <div className="flex flex-wrap items-center gap-2 rounded-lg border border-primary/40 bg-accent/30 p-2">
-                <span className="mr-auto text-[11px] text-muted-foreground">Every catalogued song needs an answer — or give them all the same one:</span>
+              {/* The two bulk answers sit at the head of the song list, right above it, sized to be the obvious first choice
+                  (founder, 2026-11-16). */}
+              {fill.plan.duplicates.length > 0 && <div className="sticky top-0 z-10 flex flex-wrap items-center gap-2 rounded-lg border border-primary/40 bg-card p-2 shadow-sm">
+                <span className="mr-auto text-xs text-muted-foreground">Every catalogued song needs an answer — or give them all the same one:</span>
                 <button type="button" onClick={() => setChoices(Object.fromEntries(fill.plan.duplicates.map((d) => [d.track.id, "keep" as const])))}
-                  className="rounded-full border border-border bg-background px-3 py-1 text-[11px] font-semibold">
+                  className="rounded-full border border-border bg-background px-4 py-2 text-sm font-semibold">
                   Keep my version for all {fill.plan.duplicates.length}
                 </button>
                 <button type="button" onClick={() => setChoices(Object.fromEntries(fill.plan.duplicates.map((d) => [d.track.id, "agency" as const])))}
-                  className="rounded-full border border-primary/40 bg-accent/40 px-3 py-1 text-[11px] font-semibold text-primary">
+                  className="rounded-full border border-primary/40 bg-accent/40 px-4 py-2 text-sm font-semibold text-primary">
                   Use the agency's version for all {fill.plan.duplicates.length}
                 </button>
               </div>}

@@ -177,6 +177,26 @@ describe("AgencyLists", () => {
     }
   });
 
+  it("keeps both copies of a song's answer ticked when the song sits in two writer boxes", async () => {
+    const both = [{ name: "", legalName: "ANN LEE", role: "Author/Composer", pro: "ASCAP", ipi: "00123456789", percentage: "50" },
+      { name: "", legalName: "KAY LEE", role: "Author/Composer", pro: "BMI", ipi: "00777123456", percentage: "50" }];
+    const midnight = track("a", "Midnight", { writers: both, album: "BAM", releaseType: "Album" });
+    render(<AgencyLists userId="u1" societies={[ascap]} songsFor={() => [midnight]} summaries={{}} onApply={vi.fn().mockResolvedValue(undefined)} />);
+    // The list's ISWC is not in the catalog, so Midnight is a catalogued song with something to answer.
+    const file = new File(["Work Title,Writer Name,ISWC,Share\nMidnight,ANN LEE,T3335070554,50\nMidnight,KAY LEE,T3335070554,50\nSunrise,ANN LEE,,50\nSunrise,KAY LEE,,50\nGold,ANN LEE,,50\nGold,KAY LEE,,50\n"], "ascap.csv", { type: "text/csv" });
+    fireEvent.change(screen.getByLabelText("Upload your ASCAP list"), { target: { files: [file] } });
+    fireEvent.click(await screen.findByRole("button", { name: /Fill my catalog/ }));
+    // Both writers are on every song, so each gets a box and Midnight is rendered in both of them.
+    const copies = () => screen.getAllByRole("radio", { name: "Use the agency's version" }).filter((r) => r.closest("li")!.textContent!.includes("Midnight"));
+    expect(copies()).toHaveLength(2);
+    fireEvent.click(copies()[0]!);
+    // The second copy must not be knocked out of its tick by the browser's own radio grouping.
+    expect(copies().every((r) => (r as HTMLInputElement).checked)).toBe(true);
+    // Choosing the other answer in either copy sets the same answer for the song.
+    fireEvent.click(screen.getAllByRole("radio", { name: "Keep my catalog version" }).filter((r) => r.closest("li")!.textContent!.includes("Midnight"))[1]!);
+    expect(copies().every((r) => !(r as HTMLInputElement).checked)).toBe(true);
+  });
+
   it("remembers a release typed by hand once, not on every keystroke", async () => {
     vi.mocked(saveTrack).mockClear();
     render(<AgencyLists userId="u1" societies={[ascap]} songsFor={() => []} summaries={{}} onApply={vi.fn().mockResolvedValue(undefined)} />);
