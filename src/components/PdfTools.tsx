@@ -38,6 +38,7 @@ import { burstConfetti } from "@/components/Confetti";
 import { claimFirstBurst } from "@/lib/celebrate";
 import { PdfShelfPanel, SavePdfDialog } from "@/components/PdfShelf";
 import { PdfEmailLog } from "@/components/PdfEmailLog";
+import { PdfTemplateStudio } from "@/components/PdfTemplateStudio";
 
 /** A fill-in box from the PDF's own form, in on-screen pixels. */
 type FieldBox = {
@@ -492,6 +493,7 @@ export function PdfTools({
           }}
         />
       )}
+      {canEmail && <PdfTemplateStudio />}
       {canEmail && <PdfEmailLog refreshKey={emailVersion} />}
       {canSave && <PdfShelfPanel refreshKey={shelfVersion} focusFolderId={savedFolderId} />}
     </div>

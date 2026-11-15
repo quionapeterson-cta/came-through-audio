@@ -1,0 +1,1112 @@
+import { useEffect, useState } from "react";
+import {
+  ArrowDown,
+  ArrowUp,
+  Copy,
+  Download,
+  FileDown,
+  FileJson,
+  FileText,
+  Loader2,
+  Plus,
+  Save,
+  Sparkles,
+  Trash2,
+  X,
+} from "lucide-react";
+import { toast } from "sonner";
+import { useServerFn } from "@tanstack/react-start";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Textarea } from "@/components/ui/textarea";
+import { confirmAction } from "@/components/ConfirmHost";
+import { saveBlob } from "@/lib/catalog";
+import { PdfTemplateConverter } from "@/components/PdfTemplateConverter";
+import {
+  BRAND,
+  TIER_LABELS,
+  TIER_METAL,
+  TEMPLATE_TIERS,
+  TAGLINE,
+  TOKENS,
+  canSaveTemplate,
+  fillTokens,
+  headerInk,
+  newId,
+  preflight,
+  starterPresets,
+  templateToHtml,
+  type PdfTemplate,
+  type TemplateBlock,
+  type TemplateTier,
+} from "@/lib/pdf-templates";
+import {
+  deletePdfTemplate,
+  duplicatePdfTemplate,
+  listPdfTemplates,
+  savePdfTemplate,
+  type SavedTemplate,
+} from "@/lib/pdf-templates.functions";
+import { templateToPdfBytes } from "@/lib/pdf-template-pdf";
+
+const blank = (): PdfTemplate => ({
+  name: "Untitled template",
+  tier: "standard",
+  blocks: [
+    { id: newId(), kind: "header", background: "light", showTagline: true },
+    {
+      id: newId(),
+      kind: "clause",
+      heading: "Agreement",
+      body: "Write the document's wording here. Insert {{ARTIST_NAME}} and the other variables from the right.",
+      help: "",
+    },
+    {
+      id: newId(),
+      kind: "signatures",
+      heading: "Signatures",
+      parties: [{ id: newId(), label: "{{ARTIST_NAME}} · artist" }],
+    },
+  ],
+});
+
+const BLOCK_LABELS: Record<TemplateBlock["kind"], string> = {
+  header: "Brand header",
+  meta: "Metadata grid",
+  clause: "Clause",
+  signatures: "Signature lines",
+  seal: "Certification seal",
+};
+
+const when = (iso: string) =>
+  new Date(iso).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
+
+/** A token in the page, highlighted in cobalt so a placeholder can never read as real copy. */
+function Rich({ text, sample }: { text: string; sample: boolean }) {
+  const parts = text.split(/(\{\{\s*[A-Z0-9_]+\s*\}\})/g);
+  return (
+    <>
+      {parts.map((part, index) => {
+        const token = /^\{\{\s*([A-Z0-9_]+)\s*\}\}$/.exec(part);
+        if (!token) return <span key={index}>{part}</span>;
+        if (sample) return <span key={index}>{fillTokens(part)}</span>;
+        return (
+          <span
+            key={index}
+            className="mx-0.5 rounded px-1 font-mono text-[0.85em]"
+            style={{ background: `${BRAND.cobalt}14`, color: BRAND.cobalt }}
+          >
+            {`{{${token[1]}}}`}
+          </span>
+        );
+      })}
+    </>
+  );
+}
+
+/** The page itself, in the document's own colours, never the app's dark surface. */
+function Paper({
+  template,
+  sample,
+  activeId,
+  onSelect,
+}: {
+  template: PdfTemplate;
+  sample: boolean;
+  activeId: string | null;
+  onSelect: (id: string) => void;
+}) {
+  return (
+    <div className="mx-auto w-full max-w-[720px] overflow-hidden rounded-sm bg-white shadow-lg ring-1 ring-black/10">
+      {template.blocks.map((block) => {
+        const selected = block.id === activeId;
+        return (
+          <div
+            key={block.id}
+            onClick={() => onSelect(block.id)}
+            className={`relative cursor-pointer ${selected ? "ring-2 ring-inset" : "hover:ring-1 hover:ring-inset"}`}
+            style={{
+              borderColor: BRAND.electric,
+              ["--tw-ring-color" as string]: selected ? BRAND.electric : `${BRAND.cobalt}33`,
+            }}
+          >
+            {block.kind === "header" &&
+              (() => {
+                const ink = headerInk(block.background);
+                return (
+                  <div
+                    style={{
+                      background: ink.surface,
+                      padding: "36px 44px",
+                      borderBottom: `3px solid ${BRAND.cobalt}`,
+                    }}
+                  >
+                    <div
+                      style={{
+                        fontSize: 24,
+                        fontWeight: 800,
+                        letterSpacing: "-0.5px",
+                        color: ink.name,
+                      }}
+                    >
+                      Came Through <span style={{ color: ink.audio }}>Audio</span>
+                    </div>
+                    {block.showTagline ? (
+                      <div
+                        style={{
+                          marginTop: 6,
+                          fontSize: 9,
+                          letterSpacing: "3px",
+                          color: ink.audio,
+                        }}
+                      >
+                        {TAGLINE}
+                      </div>
+                    ) : null}
+                  </div>
+                );
+              })()}
+            {block.kind === "meta" && (
+              <div style={{ padding: "24px 44px 0" }}>
+                <div
+                  style={{
+                    fontSize: 11,
+                    letterSpacing: "2px",
+                    textTransform: "uppercase",
+                    color: BRAND.cobalt,
+                    marginBottom: 10,
+                  }}
+                >
+                  <Rich text={block.heading} sample={sample} />
+                </div>
+                <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
+                  <tbody>
+                    {block.rows.map((row) => (
+                      <tr key={row.id}>
+                        <th
+                          style={{
+                            textAlign: "left",
+                            width: "38%",
+                            padding: "7px 0",
+                            borderBottom: `1px solid ${BRAND.platinum}`,
+                            color: BRAND.black,
+                            fontWeight: 600,
+                          }}
+                        >
+                          {row.label}
+                        </th>
+                        <td
+                          style={{
+                            padding: "7px 0",
+                            borderBottom: `1px solid ${BRAND.platinum}`,
+                            color: "#333",
+                          }}
+                        >
+                          <Rich text={row.value} sample={sample} />
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+            {block.kind === "clause" && (
+              <div style={{ padding: "22px 44px 0" }}>
+                <div style={{ fontSize: 14, fontWeight: 700, color: BRAND.black, marginBottom: 6 }}>
+                  <Rich text={block.heading} sample={sample} />
+                </div>
+                <p
+                  style={{
+                    fontSize: 12.5,
+                    lineHeight: 1.7,
+                    color: "#333",
+                    margin: 0,
+                    whiteSpace: "pre-wrap",
+                  }}
+                >
+                  <Rich text={block.body} sample={sample} />
+                </p>
+                {block.help ? (
+                  <p
+                    style={{
+                      fontSize: 11,
+                      lineHeight: 1.6,
+                      color: "#666",
+                      margin: "8px 0 0",
+                      borderLeft: `2px solid ${BRAND.platinum}`,
+                      paddingLeft: 10,
+                    }}
+                  >
+                    {block.help}
+                  </p>
+                ) : null}
+              </div>
+            )}
+            {block.kind === "signatures" && (
+              <div style={{ padding: "28px 44px 0" }}>
+                <div
+                  style={{
+                    fontSize: 11,
+                    letterSpacing: "2px",
+                    textTransform: "uppercase",
+                    color: BRAND.cobalt,
+                    marginBottom: 14,
+                  }}
+                >
+                  {block.heading}
+                </div>
+                {block.parties.map((party) => (
+                  <div key={party.id} style={{ marginBottom: 18 }}>
+                    <div style={{ borderBottom: `1px solid ${BRAND.black}`, height: 26 }} />
+                    <div style={{ fontSize: 11, color: "#555", marginTop: 5 }}>
+                      <Rich text={party.label} sample={sample} />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+            {block.kind === "seal" && (
+              <div style={{ padding: "24px 44px 0" }}>
+                <div
+                  style={{
+                    display: "inline-block",
+                    width: 92,
+                    height: 92,
+                    lineHeight: "88px",
+                    textAlign: "center",
+                    borderRadius: "50%",
+                    border: `2px solid ${block.tier === "gold" ? BRAND.gold : BRAND.platinum}`,
+                    fontSize: 10,
+                    fontWeight: 700,
+                    letterSpacing: "1px",
+                    color: BRAND.black,
+                  }}
+                >
+                  <Rich text={block.label} sample={sample} />
+                </div>
+                <div style={{ fontSize: 9, letterSpacing: "2px", color: "#666", marginTop: 6 }}>
+                  CTA CERTIFICATION · {block.tier.toUpperCase()}
+                </div>
+              </div>
+            )}
+          </div>
+        );
+      })}
+      <div
+        style={{
+          margin: "32px 44px 0",
+          paddingTop: 10,
+          borderTop: `1px solid ${BRAND.platinum}`,
+          fontSize: 8,
+          letterSpacing: "2px",
+          color: "#666",
+        }}
+      >
+        CAME THROUGH AUDIO · {TAGLINE}
+      </div>
+      <div style={{ height: 28 }} />
+    </div>
+  );
+}
+
+/**
+ * Admin → PDF Tools → Template Studio (founder, 2026-11-15): build a document from blocks or bring an existing PDF in,
+ * fill it with typed variables, check it before it prints, and keep it in a shared library with Standard, Gold or
+ * Platinum standing. Additive: the fill-and-sign tools above are untouched.
+ */
+export function PdfTemplateStudio() {
+  const [tab, setTab] = useState<"build" | "convert">("build");
+  const [template, setTemplate] = useState<PdfTemplate>(blank);
+  const [activeId, setActiveId] = useState<string | null>(null);
+  const [sample, setSample] = useState(false);
+  const [library, setLibrary] = useState<SavedTemplate[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+
+  const list = useServerFn(listPdfTemplates);
+  const save = useServerFn(savePdfTemplate);
+  const duplicate = useServerFn(duplicatePdfTemplate);
+  const remove = useServerFn(deletePdfTemplate);
+
+  const active = template.blocks.find((b) => b.id === activeId) ?? null;
+  const checks = preflight(template);
+  const ready = canSaveTemplate(template);
+
+  function loadLibrary() {
+    setLoading(true);
+    void list()
+      .then(setLibrary)
+      .catch((e: unknown) =>
+        toast.error(e instanceof Error ? e.message : "Couldn't load the template library."),
+      )
+      .finally(() => setLoading(false));
+  }
+  useEffect(loadLibrary, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const patch = (id: string, updates: Partial<TemplateBlock>) =>
+    setTemplate((t) => ({
+      ...t,
+      blocks: t.blocks.map((b) => (b.id === id ? ({ ...b, ...updates } as TemplateBlock) : b)),
+    }));
+
+  function addBlock(kind: TemplateBlock["kind"]) {
+    const block: TemplateBlock =
+      kind === "header"
+        ? { id: newId(), kind, background: "light", showTagline: true }
+        : kind === "meta"
+          ? {
+              id: newId(),
+              kind,
+              heading: "Release details",
+              rows: [{ id: newId(), label: "Artist", value: "{{ARTIST_NAME}}" }],
+            }
+          : kind === "clause"
+            ? { id: newId(), kind, heading: "Clause", body: "Write the clause here.", help: "" }
+            : kind === "signatures"
+              ? {
+                  id: newId(),
+                  kind,
+                  heading: "Signatures",
+                  parties: [{ id: newId(), label: "{{ARTIST_NAME}} · artist" }],
+                }
+              : { id: newId(), kind, tier: "gold", label: "CTA" };
+    setTemplate((t) => ({ ...t, blocks: [...t.blocks, block] }));
+    setActiveId(block.id);
+  }
+
+  function move(id: string, direction: -1 | 1) {
+    setTemplate((t) => {
+      const index = t.blocks.findIndex((b) => b.id === id);
+      const next = index + direction;
+      if (index < 0 || next < 0 || next >= t.blocks.length) return t;
+      const blocks = [...t.blocks];
+      [blocks[index], blocks[next]] = [blocks[next]!, blocks[index]!];
+      return { ...t, blocks };
+    });
+  }
+
+  function removeBlock(id: string) {
+    setTemplate((t) => ({ ...t, blocks: t.blocks.filter((b) => b.id !== id) }));
+    setActiveId((current) => (current === id ? null : current));
+  }
+
+  /** A token goes into the block being edited, where a value belongs — never into the header. */
+  function insertToken(key: string) {
+    if (!active) {
+      toast.message("Choose a block first.");
+      return;
+    }
+    const token = `{{${key}}}`;
+    if (active.kind === "clause")
+      patch(active.id, { body: `${active.body}${active.body.endsWith(" ") ? "" : " "}${token}` });
+    else if (active.kind === "meta") {
+      const rows = [...active.rows];
+      const last = rows[rows.length - 1];
+      if (!last) {
+        toast.message("Add a row first.");
+        return;
+      }
+      rows[rows.length - 1] = { ...last, value: `${last.value}${token}` };
+      patch(active.id, { rows });
+    } else if (active.kind === "signatures") {
+      const parties = [...active.parties];
+      const last = parties[parties.length - 1];
+      if (!last) {
+        toast.message("Add a signature line first.");
+        return;
+      }
+      parties[parties.length - 1] = { ...last, label: `${last.label}${token}` };
+      patch(active.id, { parties });
+    } else if (active.kind === "seal") patch(active.id, { label: `${active.label}${token}` });
+    else toast.message("The brand header carries no variables.");
+  }
+
+  async function saveTemplate() {
+    if (!ready) {
+      toast.error("Name the template and keep its brand header first.");
+      return;
+    }
+    setSaving(true);
+    try {
+      const saved = await save({
+        data: {
+          ...(template.id ? { id: template.id } : {}),
+          name: template.name,
+          tier: template.tier,
+          blocks: template.blocks,
+          source: template.source ?? "built",
+        },
+      });
+      setTemplate((t) => ({ ...t, id: saved.id }));
+      toast.success(`Saved “${saved.name}” to the library.`);
+      loadLibrary();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Couldn't save the template.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function duplicateTemplate(saved: SavedTemplate) {
+    try {
+      await duplicate({ data: { id: saved.id } });
+      toast.success(`Copied “${saved.name}”.`);
+      loadLibrary();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Couldn't duplicate the template.");
+    }
+  }
+
+  async function deleteTemplate(saved: SavedTemplate) {
+    if (
+      !(await confirmAction({
+        title: "Delete this template?",
+        text: `“${saved.name}” will leave the library for everyone. Documents already sent with it are untouched.`,
+        action: "Delete",
+      }))
+    )
+      return;
+    try {
+      await remove({ data: { id: saved.id } });
+      if (template.id === saved.id) setTemplate(blank());
+      toast.success("Template deleted.");
+      loadLibrary();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Couldn't delete the template.");
+    }
+  }
+
+  async function exportPdf() {
+    try {
+      const bytes = await templateToPdfBytes(template);
+      saveBlob(
+        new Blob([bytes as BlobPart], { type: "application/pdf" }),
+        `${template.name.replace(/[^\w -]+/g, "") || "template"}.pdf`,
+      );
+    } catch (e) {
+      console.error(e);
+      toast.error("Couldn't build the PDF.");
+    }
+  }
+  function exportHtml() {
+    saveBlob(
+      new Blob([templateToHtml(template)], { type: "text/html" }),
+      `${template.name.replace(/[^\w -]+/g, "") || "template"}.html`,
+    );
+  }
+  function exportJson() {
+    saveBlob(
+      new Blob(
+        [
+          JSON.stringify(
+            { name: template.name, tier: template.tier, blocks: template.blocks },
+            null,
+            2,
+          ),
+        ],
+        { type: "application/json" },
+      ),
+      `${template.name.replace(/[^\w -]+/g, "") || "template"}.json`,
+    );
+  }
+
+  const openSaved = (saved: SavedTemplate) => {
+    setTemplate({
+      id: saved.id,
+      name: saved.name,
+      tier: saved.tier,
+      blocks: saved.blocks,
+      source: saved.source,
+    });
+    setActiveId(saved.blocks[0]?.id ?? null);
+    setTab("build");
+    toast.success(`Opened “${saved.name}”.`);
+  };
+
+  return (
+    <div className="rounded-2xl border border-border bg-card p-5">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h2 className="text-xl font-bold">Template Studio</h2>
+          <p className="text-sm text-muted-foreground">
+            Build a document from CTA-branded blocks, fill it with live variables, or bring an
+            existing PDF in and map its lines to tokens.
+          </p>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => {
+              setTemplate(blank());
+              setActiveId(null);
+            }}
+          >
+            <Plus className="h-4 w-4" />
+            New
+          </Button>
+          <Button variant="outline" size="sm" onClick={exportPdf}>
+            <FileDown className="h-4 w-4" />
+            Export PDF
+          </Button>
+          <Button variant="outline" size="sm" onClick={exportHtml}>
+            <FileText className="h-4 w-4" />
+            Export HTML
+          </Button>
+          <Button variant="outline" size="sm" onClick={exportJson}>
+            <FileJson className="h-4 w-4" />
+            Export JSON
+          </Button>
+          <Button size="sm" onClick={saveTemplate} disabled={saving || !ready}>
+            {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+            {template.id ? "Save" : "Save to library"}
+          </Button>
+        </div>
+      </div>
+
+      <Tabs value={tab} onValueChange={(v) => setTab(v as "build" | "convert")} className="mt-4">
+        <TabsList className="grid w-full max-w-md grid-cols-2">
+          <TabsTrigger value="build">Create template</TabsTrigger>
+          <TabsTrigger value="convert">Convert a PDF</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="build" className="mt-4">
+          {/* Wrapping flex, not viewport breakpoints: the card sits inside the admin's own width, so the rail and the
+              inspector drop below the page when they don't fit instead of pushing the studio off screen. */}
+          <div className="flex flex-wrap items-start gap-4">
+            {/* Blocks rail */}
+            <div className="w-full shrink-0 space-y-3 sm:w-[210px]">
+              <div className="rounded-xl border border-border p-3">
+                <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                  Blocks
+                </p>
+                <ul className="mt-2 space-y-1.5">
+                  {template.blocks.map((block, index) => (
+                    <li key={block.id}>
+                      <div
+                        role="button"
+                        tabIndex={0}
+                        onClick={() => setActiveId(block.id)}
+                        onKeyDown={(e) => e.key === "Enter" && setActiveId(block.id)}
+                        className={`flex cursor-pointer items-center gap-2 rounded-md border px-2 py-1.5 text-sm ${block.id === activeId ? "border-primary bg-primary/10" : "border-border hover:border-primary/40"}`}
+                        title={BLOCK_LABELS[block.kind]}
+                      >
+                        <FileText className="h-3.5 w-3.5 shrink-0 text-primary" />
+                        <span className="min-w-0 flex-1 truncate">{BLOCK_LABELS[block.kind]}</span>
+                        <button
+                          type="button"
+                          aria-label="Move up"
+                          disabled={index === 0}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            move(block.id, -1);
+                          }}
+                          className="rounded p-0.5 text-muted-foreground disabled:opacity-30"
+                        >
+                          <ArrowUp className="h-3 w-3" />
+                        </button>
+                        <button
+                          type="button"
+                          aria-label="Move down"
+                          disabled={index === template.blocks.length - 1}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            move(block.id, 1);
+                          }}
+                          className="rounded p-0.5 text-muted-foreground disabled:opacity-30"
+                        >
+                          <ArrowDown className="h-3 w-3" />
+                        </button>
+                        <button
+                          type="button"
+                          aria-label="Remove block"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            removeBlock(block.id);
+                          }}
+                          className="rounded p-0.5 text-muted-foreground"
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+                <div className="mt-2 grid grid-cols-2 gap-1">
+                  {(["header", "meta", "clause", "signatures", "seal"] as const).map((kind) => (
+                    <button
+                      key={kind}
+                      type="button"
+                      onClick={() => addBlock(kind)}
+                      className="rounded border border-dashed border-border px-1.5 py-1 text-[11px] text-muted-foreground hover:border-primary hover:text-foreground"
+                    >
+                      + {BLOCK_LABELS[kind]}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="rounded-xl border border-border p-3">
+                <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                  Starter presets
+                </p>
+                <div className="mt-2 space-y-1.5">
+                  {starterPresets().map((preset) => (
+                    <button
+                      key={preset.name}
+                      type="button"
+                      onClick={() => {
+                        setTemplate({
+                          ...preset,
+                          blocks: preset.blocks.map((b) => ({ ...b, id: newId() })),
+                        });
+                        setActiveId(null);
+                      }}
+                      className="w-full rounded-md border border-border px-2 py-1.5 text-left text-xs hover:border-primary"
+                    >
+                      <span className="block font-semibold">{preset.name}</span>
+                      <span className="flex items-center gap-1 text-[11px] text-muted-foreground">
+                        {TIER_METAL[preset.tier] ? (
+                          <span
+                            className="inline-block h-2 w-2 rounded-full"
+                            style={{ background: TIER_METAL[preset.tier]! }}
+                          />
+                        ) : null}
+                        {TIER_LABELS[preset.tier]} · {preset.blocks.length} blocks
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* Canvas */}
+            <div className="min-w-0 flex-1 basis-[360px]">
+              <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+                <div className="inline-flex rounded-full border border-border p-0.5 text-xs">
+                  <button
+                    type="button"
+                    onClick={() => setSample(false)}
+                    className={`rounded-full px-3 py-1 ${!sample ? "bg-primary text-primary-foreground" : "text-muted-foreground"}`}
+                  >
+                    Edit structure
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setSample(true)}
+                    className={`rounded-full px-3 py-1 ${sample ? "bg-primary text-primary-foreground" : "text-muted-foreground"}`}
+                  >
+                    Live sample preview
+                  </button>
+                </div>
+                <span className="text-xs text-muted-foreground">Letter · 816 px wide</span>
+              </div>
+              <div className="overflow-x-auto rounded-xl bg-muted/40 p-3">
+                <Paper
+                  template={template}
+                  sample={sample}
+                  activeId={activeId}
+                  onSelect={setActiveId}
+                />
+              </div>
+
+              {/* Preflight */}
+              <div className="mt-3 rounded-xl border border-border p-3">
+                <p className="flex items-center gap-1 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                  <Sparkles className="h-3.5 w-3.5" />
+                  Preflight
+                </p>
+                <ul className="mt-2 flex flex-wrap gap-2">
+                  {checks.map((check) => (
+                    <li
+                      key={check.id}
+                      className={`flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] ${check.ok ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400" : "bg-destructive/10 text-destructive"}`}
+                    >
+                      <span
+                        className={`inline-block h-1.5 w-1.5 rounded-full ${check.ok ? "bg-emerald-500" : "bg-destructive"}`}
+                      />
+                      <span className="font-semibold">{check.label}</span>
+                      <span className="opacity-80">{check.detail}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+
+            {/* Inspector */}
+            <div className="w-full shrink-0 space-y-3 sm:w-[300px]">
+              <div className="rounded-xl border border-border p-3">
+                <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                  Template
+                </p>
+                <Input
+                  className="mt-2"
+                  value={template.name}
+                  onChange={(e) => setTemplate((t) => ({ ...t, name: e.target.value }))}
+                  maxLength={120}
+                  aria-label="Template name"
+                />
+                <div className="mt-2 flex gap-2">
+                  <Select
+                    value={template.tier}
+                    onValueChange={(v) => setTemplate((t) => ({ ...t, tier: v as TemplateTier }))}
+                  >
+                    <SelectTrigger className="w-full">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {TEMPLATE_TIERS.map((tier) => (
+                        <SelectItem key={tier} value={tier}>
+                          {TIER_LABELS[tier]}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <span className="flex items-center gap-1 rounded-full border border-border px-2 text-[11px] text-muted-foreground">
+                    {TIER_METAL[template.tier] ? (
+                      <span
+                        className="inline-block h-2 w-2 rounded-full"
+                        style={{ background: TIER_METAL[template.tier]! }}
+                      />
+                    ) : null}
+                    {TIER_LABELS[template.tier]}
+                  </span>
+                </div>
+              </div>
+
+              <div className="rounded-xl border border-border p-3">
+                <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                  {active ? BLOCK_LABELS[active.kind] : "Select a block"}
+                </p>
+                {!active ? (
+                  <p className="mt-2 text-xs text-muted-foreground">
+                    Click a block on the page or in the rail to edit it.
+                  </p>
+                ) : (
+                  <div className="mt-2 space-y-2">
+                    {active.kind === "header" && (
+                      <>
+                        <label className="text-xs text-muted-foreground">Header surface</label>
+                        <div className="grid grid-cols-2 gap-1">
+                          {(["light", "dark"] as const).map((theme) => (
+                            <button
+                              key={theme}
+                              type="button"
+                              onClick={() => patch(active.id, { background: theme })}
+                              className={`rounded-md border px-2 py-1.5 text-xs ${active.background === theme ? "border-primary" : "border-border"}`}
+                            >
+                              <span
+                                className="mb-1 block h-4 rounded-sm"
+                                style={{
+                                  background: theme === "light" ? BRAND.white : BRAND.black,
+                                  border: `1px solid ${BRAND.platinum}`,
+                                }}
+                              />
+                              {theme === "light" ? "Light" : "Dark"}
+                            </button>
+                          ))}
+                        </div>
+                        <label className="flex items-center gap-2 text-xs text-muted-foreground">
+                          <input
+                            type="checkbox"
+                            checked={active.showTagline}
+                            onChange={(e) => patch(active.id, { showTagline: e.target.checked })}
+                          />
+                          Show the tagline
+                        </label>
+                        <p className="text-[11px] text-muted-foreground">
+                          The wordmark follows the contrast rule: black + cobalt on light, white +
+                          electric on dark.
+                        </p>
+                      </>
+                    )}
+
+                    {active.kind === "meta" && (
+                      <>
+                        <Input
+                          value={active.heading}
+                          onChange={(e) => patch(active.id, { heading: e.target.value })}
+                          placeholder="Heading"
+                          aria-label="Grid heading"
+                        />
+                        {active.rows.map((row) => (
+                          <div key={row.id} className="grid grid-cols-[1fr_1fr_auto] gap-1">
+                            <Input
+                              value={row.label}
+                              onChange={(e) =>
+                                patch(active.id, {
+                                  rows: active.rows.map((r) =>
+                                    r.id === row.id ? { ...r, label: e.target.value } : r,
+                                  ),
+                                })
+                              }
+                              placeholder="Label"
+                              aria-label="Row label"
+                            />
+                            <Input
+                              value={row.value}
+                              onChange={(e) =>
+                                patch(active.id, {
+                                  rows: active.rows.map((r) =>
+                                    r.id === row.id ? { ...r, value: e.target.value } : r,
+                                  ),
+                                })
+                              }
+                              placeholder="Value"
+                              aria-label="Row value"
+                            />
+                            <button
+                              type="button"
+                              aria-label="Remove row"
+                              onClick={() =>
+                                patch(active.id, {
+                                  rows: active.rows.filter((r) => r.id !== row.id),
+                                })
+                              }
+                              className="rounded p-1 text-muted-foreground"
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </button>
+                          </div>
+                        ))}
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() =>
+                            patch(active.id, {
+                              rows: [
+                                ...active.rows,
+                                { id: newId(), label: "Label", value: "{{ARTIST_NAME}}" },
+                              ],
+                            })
+                          }
+                        >
+                          <Plus className="h-3.5 w-3.5" />
+                          Row
+                        </Button>
+                      </>
+                    )}
+
+                    {active.kind === "clause" && (
+                      <>
+                        <Input
+                          value={active.heading}
+                          onChange={(e) => patch(active.id, { heading: e.target.value })}
+                          placeholder="Clause heading"
+                          aria-label="Clause heading"
+                        />
+                        <Textarea
+                          value={active.body}
+                          onChange={(e) => patch(active.id, { body: e.target.value })}
+                          rows={6}
+                          placeholder="The clause itself"
+                          aria-label="Clause body"
+                        />
+                        <Textarea
+                          value={active.help}
+                          onChange={(e) => patch(active.id, { help: e.target.value })}
+                          rows={2}
+                          placeholder="Teaching note (optional): what this means in plain language"
+                          aria-label="Clause help"
+                        />
+                      </>
+                    )}
+
+                    {active.kind === "signatures" && (
+                      <>
+                        <Input
+                          value={active.heading}
+                          onChange={(e) => patch(active.id, { heading: e.target.value })}
+                          aria-label="Signature heading"
+                        />
+                        {active.parties.map((party) => (
+                          <div key={party.id} className="grid grid-cols-[1fr_auto] gap-1">
+                            <Input
+                              value={party.label}
+                              onChange={(e) =>
+                                patch(active.id, {
+                                  parties: active.parties.map((p) =>
+                                    p.id === party.id ? { ...p, label: e.target.value } : p,
+                                  ),
+                                })
+                              }
+                              aria-label="Signature line"
+                            />
+                            <button
+                              type="button"
+                              aria-label="Remove signature"
+                              onClick={() =>
+                                patch(active.id, {
+                                  parties: active.parties.filter((p) => p.id !== party.id),
+                                })
+                              }
+                              className="rounded p-1 text-muted-foreground"
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </button>
+                          </div>
+                        ))}
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() =>
+                            patch(active.id, {
+                              parties: [...active.parties, { id: newId(), label: "Name · role" }],
+                            })
+                          }
+                        >
+                          <Plus className="h-3.5 w-3.5" />
+                          Signature line
+                        </Button>
+                      </>
+                    )}
+
+                    {active.kind === "seal" && (
+                      <>
+                        <div className="grid grid-cols-2 gap-1">
+                          {(["gold", "platinum"] as const).map((metal) => (
+                            <button
+                              key={metal}
+                              type="button"
+                              onClick={() => patch(active.id, { tier: metal })}
+                              className={`rounded-md border px-2 py-1.5 text-xs capitalize ${active.tier === metal ? "border-primary" : "border-border"}`}
+                            >
+                              <span
+                                className="mb-1 block h-2 rounded-full"
+                                style={{
+                                  background: metal === "gold" ? BRAND.gold : BRAND.platinum,
+                                }}
+                              />
+                              {metal}
+                            </button>
+                          ))}
+                        </div>
+                        <Input
+                          value={active.label}
+                          onChange={(e) => patch(active.id, { label: e.target.value })}
+                          aria-label="Seal label"
+                          maxLength={24}
+                        />
+                        <p className="text-[11px] text-muted-foreground">
+                          A seal marks an official CTA certification; use it with the tier the
+                          document earns.
+                        </p>
+                      </>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              <div className="rounded-xl border border-border p-3">
+                <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                  Variables
+                </p>
+                <p className="mt-1 text-[11px] text-muted-foreground">
+                  Click a token to insert it into the selected block.
+                </p>
+                <div className="mt-2 flex flex-wrap gap-1.5">
+                  {TOKENS.map((token) => (
+                    <button
+                      key={token.key}
+                      type="button"
+                      onClick={() => insertToken(token.key)}
+                      title={token.label}
+                      className="rounded-full px-2 py-1 font-mono text-[10.5px]"
+                      style={{
+                        background: `${BRAND.cobalt}12`,
+                        color: BRAND.cobalt,
+                        border: `1px solid ${BRAND.cobalt}33`,
+                      }}
+                    >
+                      {`{{${token.key}}}`}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        </TabsContent>
+
+        <TabsContent value="convert" className="mt-4">
+          <PdfTemplateConverter
+            onCreate={(converted) => {
+              setTemplate(converted);
+              setActiveId(converted.blocks[1]?.id ?? null);
+              setSample(false);
+              setTab("build");
+            }}
+          />
+        </TabsContent>
+      </Tabs>
+
+      {/* Library */}
+      <div className="mt-5 rounded-xl border border-border p-4">
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="font-semibold">Template library</p>
+            <p className="text-xs text-muted-foreground">
+              Saved documents every staff member can open.
+            </p>
+          </div>
+          {loading ? <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" /> : null}
+        </div>
+        {!loading && !library.length ? (
+          <p className="mt-3 rounded-lg border border-dashed border-border p-4 text-center text-sm text-muted-foreground">
+            Nothing saved yet. Build a template or start from a preset, then Save to library.
+          </p>
+        ) : null}
+        <ul className="mt-2 divide-y divide-border">
+          {library.map((saved) => (
+            <li key={saved.id} className="flex flex-wrap items-center gap-2 py-2.5">
+              <span
+                className="inline-block h-2.5 w-2.5 rounded-full"
+                style={{
+                  background: TIER_METAL[saved.tier] ?? "transparent",
+                  border: TIER_METAL[saved.tier] ? "none" : `1px solid ${BRAND.platinum}`,
+                }}
+              />
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-sm font-semibold">{saved.name}</p>
+                <p className="text-xs text-muted-foreground">
+                  {TIER_LABELS[saved.tier]} · {saved.blocks.length} blocks · updated{" "}
+                  {when(saved.updatedAt)}
+                </p>
+              </div>
+              <Button variant="outline" size="sm" onClick={() => openSaved(saved)}>
+                Open
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                aria-label={`Duplicate ${saved.name}`}
+                onClick={() => duplicateTemplate(saved)}
+              >
+                <Copy className="h-4 w-4" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                aria-label={`Delete ${saved.name}`}
+                onClick={() => deleteTemplate(saved)}
+              >
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            </li>
+          ))}
+        </ul>
+        <p className="mt-2 flex items-center gap-1 text-[11px] text-muted-foreground">
+          <Download className="h-3 w-3" />
+          Exports use the sample release, so a file can be reviewed before a real song is chosen.
+        </p>
+      </div>
+    </div>
+  );
+}
