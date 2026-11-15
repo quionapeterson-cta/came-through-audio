@@ -92,6 +92,14 @@ const BLOCK_LABELS: Record<TemplateBlock["kind"], string> = {
   signature: "Signature block",
 };
 
+/** The words a block prints with, so a 100-block packet reads as its forms instead of a column of "Clause". */
+function blockName(block: TemplateBlock): string {
+  if (block.kind === "header") return BLOCK_LABELS.header;
+  if (block.kind === "section") return block.title.trim() || BLOCK_LABELS.section;
+  if (block.kind === "seal") return block.label.trim() || BLOCK_LABELS.seal;
+  return block.heading.trim() || BLOCK_LABELS[block.kind];
+}
+
 const when = (iso: string) =>
   new Date(iso).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
 
@@ -524,6 +532,7 @@ export function PdfTemplateStudio() {
   const remove = useServerFn(deletePdfTemplate);
 
   const active = template.blocks.find((b) => b.id === activeId) ?? null;
+  const railRef = useRef<HTMLUListElement>(null);
   const checks = preflight(template);
   const ready = canSaveTemplate(template);
 
@@ -537,6 +546,19 @@ export function PdfTemplateStudio() {
       .finally(() => setLoading(false));
   }
   useEffect(loadLibrary, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  /** Keep the selected block's row in the rail's own scroll, wherever it was selected from. */
+  useEffect(() => {
+    const list = railRef.current;
+    if (!list || !activeId) return;
+    const row = list.querySelector<HTMLElement>(`[data-row="${activeId}"]`);
+    if (!row) return;
+    const top = row.offsetTop;
+    const bottom = top + row.offsetHeight;
+    if (top < list.scrollTop) list.scrollTop = Math.max(0, top - 4);
+    else if (bottom > list.scrollTop + list.clientHeight)
+      list.scrollTop = bottom - list.clientHeight + 4;
+  }, [activeId]);
 
   const patch = (id: string, updates: Partial<TemplateBlock>) =>
     setTemplate((t) => ({
@@ -852,15 +874,24 @@ export function PdfTemplateStudio() {
               inspector drop below the page when they don't fit instead of pushing the studio off screen. */}
           <div className="flex flex-wrap items-start gap-4">
             {/* Blocks rail */}
-            <div className="w-full shrink-0 space-y-3 sm:w-[264px]">
+            <div className="w-full shrink-0 space-y-3 sm:w-[300px]">
               <div className="rounded-xl border border-border p-3">
-                <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                <p className="flex items-baseline justify-between gap-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                   Blocks
+                  <span className="text-[10px] font-medium normal-case tracking-normal">
+                    {template.blocks.length} in this document
+                  </span>
                 </p>
-                <ul className="mt-2 space-y-1.5">
+                {/* The list has its own scroll: a 100-block packet would otherwise push the page and every other
+                    panel thousands of pixels down, leaving the builder feeling like one endless column. */}
+                <ul
+                  ref={railRef}
+                  className="mt-2 max-h-[min(52vh,460px)] space-y-1.5 overflow-y-auto overscroll-contain pr-1"
+                >
                   {template.blocks.map((block, index) => (
                     <li
                       key={block.id}
+                      data-row={block.id}
                       draggable
                       onDragStart={() => setDragId(block.id)}
                       onDragEnd={() => setDragId(null)}
@@ -885,8 +916,8 @@ export function PdfTemplateStudio() {
                           className="flex min-w-0 flex-1 items-center gap-2 py-0.5 text-left"
                         >
                           <FileText className="h-3.5 w-3.5 shrink-0 text-primary" />
-                          <span className="min-w-0 flex-1 truncate">
-                            {BLOCK_LABELS[block.kind]}
+                          <span className="min-w-0 flex-1 truncate" title={blockName(block)}>
+                            {blockName(block)}
                           </span>
                         </button>
                         <div className="flex shrink-0 items-center">
