@@ -4,6 +4,7 @@ import {
   fillTokens,
   headerInk,
   SAMPLE_DATA,
+  SEAL_ART,
   TAGLINE,
   type PdfTemplate,
   type TemplateBlock,
@@ -72,6 +73,11 @@ export type PacketRenderOptions = {
   values?: PacketValues;
   signatures?: { recipient?: SignatureRecord | null; admin?: SignatureRecord | null };
   audit?: PacketAudit;
+  /**
+   * Where the seal artwork is fetched from: the site's own origin, since the pictures are public assets beside the app.
+   * Without it a seal prints the drawn ring, so a document always renders.
+   */
+  artBase?: string;
 };
 
 export async function templateToPdfBytes(
@@ -484,25 +490,42 @@ export async function templateToPdfBytes(
 
     ensure(110);
     const metal = block.tier === "gold" ? BRAND.gold : BRAND.platinum;
-    page.drawCircle({
-      x: MARGIN + 46,
-      y: y - 46,
-      size: 46,
-      borderColor: ink(metal),
-      borderWidth: 2,
-    });
-    // Centred on the ring's own axis: measured width for the word, and its cap height used for the baseline, so a
-    // longer label sits level instead of riding high or low inside the circle.
-    const label = text(block.label).slice(0, 18);
-    let labelSize = 9;
-    while (labelSize > 6 && bold.widthOfTextAtSize(label, labelSize) > 62) labelSize -= 0.5;
-    page.drawText(label, {
-      x: MARGIN + 46 - bold.widthOfTextAtSize(label, labelSize) / 2,
-      y: y - 46 - labelSize * 0.36,
-      size: labelSize,
-      font: bold,
-      color: ink(BRAND.black),
-    });
+    // A seal can print one of the founder's badge pictures instead of the drawn ring. The picture is fetched from the
+    // site itself; if it can't be read the ring is drawn, because a missing picture must never stop a document.
+    let stamped = false;
+    if (block.art && options.artBase) {
+      try {
+        const response = await fetch(`${options.artBase}${SEAL_ART[block.art]}`);
+        if (response.ok) {
+          const picture = await doc.embedPng(new Uint8Array(await response.arrayBuffer()));
+          page.drawImage(picture, { x: MARGIN, y: y - 96, width: 96, height: 96 });
+          stamped = true;
+        }
+      } catch {
+        stamped = false;
+      }
+    }
+    if (!stamped) {
+      page.drawCircle({
+        x: MARGIN + 46,
+        y: y - 46,
+        size: 46,
+        borderColor: ink(metal),
+        borderWidth: 2,
+      });
+      // Centred on the ring's own axis: measured width for the word, and its cap height used for the baseline, so a
+      // longer label sits level instead of riding high or low inside the circle.
+      const label = text(block.label).slice(0, 18);
+      let labelSize = 9;
+      while (labelSize > 6 && bold.widthOfTextAtSize(label, labelSize) > 62) labelSize -= 0.5;
+      page.drawText(label, {
+        x: MARGIN + 46 - bold.widthOfTextAtSize(label, labelSize) / 2,
+        y: y - 46 - labelSize * 0.36,
+        size: labelSize,
+        font: bold,
+        color: ink(BRAND.black),
+      });
+    }
     page.drawText(`CTA CERTIFICATION · ${block.tier.toUpperCase()}`, {
       x: MARGIN,
       y: y - 106,

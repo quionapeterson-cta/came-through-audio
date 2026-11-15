@@ -34,6 +34,8 @@ import { saveBlob } from "@/lib/catalog";
 import { PdfTemplateConverter } from "@/components/PdfTemplateConverter";
 import {
   BRAND,
+  SEAL_ART,
+  SEAL_ART_LABELS,
   TIER_LABELS,
   TIER_METAL,
   TEMPLATE_TIERS,
@@ -419,26 +421,36 @@ function Paper({
             )}
             {block.kind === "seal" && (
               <div style={{ padding: "24px 44px 0" }}>
-                <div
-                  style={{
-                    display: "inline-flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    boxSizing: "border-box",
-                    width: 92,
-                    height: 92,
-                    padding: 10,
-                    textAlign: "center",
-                    borderRadius: "50%",
-                    border: `2px solid ${block.tier === "gold" ? BRAND.gold : BRAND.platinum}`,
-                    fontSize: 10,
-                    fontWeight: 700,
-                    letterSpacing: "1px",
-                    color: BRAND.black,
-                  }}
-                >
-                  <Rich text={block.label} sample={sample} />
-                </div>
+                {block.art ? (
+                  <img
+                    src={SEAL_ART[block.art]}
+                    alt=""
+                    width={92}
+                    height={92}
+                    style={{ display: "block", width: 92, height: 92, objectFit: "contain" }}
+                  />
+                ) : (
+                  <div
+                    style={{
+                      display: "inline-flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      boxSizing: "border-box",
+                      width: 92,
+                      height: 92,
+                      padding: 10,
+                      textAlign: "center",
+                      borderRadius: "50%",
+                      border: `2px solid ${block.tier === "gold" ? BRAND.gold : BRAND.platinum}`,
+                      fontSize: 10,
+                      fontWeight: 700,
+                      letterSpacing: "1px",
+                      color: BRAND.black,
+                    }}
+                  >
+                    <Rich text={block.label} sample={sample} />
+                  </div>
+                )}
                 <div
                   style={{
                     fontSize: 9,
@@ -780,7 +792,9 @@ export function PdfTemplateStudio() {
 
   async function exportPdf() {
     try {
-      const bytes = await templateToPdfBytes(template);
+      const bytes = await templateToPdfBytes(template, undefined, {
+        artBase: window.location.origin,
+      });
       saveBlob(
         new Blob([bytes as BlobPart], { type: "application/pdf" }),
         `${template.name.replace(/[^\w -]+/g, "") || "template"}.pdf`,
@@ -1651,6 +1665,42 @@ export function PdfTemplateStudio() {
                             aria-label="Seal label"
                             maxLength={24}
                           />
+                          <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                            Seal artwork
+                          </p>
+                          <div className="grid grid-cols-4 gap-1">
+                            <button
+                              type="button"
+                              onClick={() => patch(active.id, { art: undefined })}
+                              className={`flex flex-col items-center gap-1 rounded-md border px-1 py-1.5 text-[10px] ${!active.art ? "border-primary" : "border-border"}`}
+                            >
+                              <span
+                                className="block h-9 w-9 rounded-full"
+                                style={{
+                                  border: `2px solid ${active.tier === "gold" ? BRAND.gold : BRAND.platinum}`,
+                                }}
+                              />
+                              Drawn ring
+                            </button>
+                            {(Object.keys(SEAL_ART) as (keyof typeof SEAL_ART)[]).map((art) => (
+                              <button
+                                key={art}
+                                type="button"
+                                onClick={() => patch(active.id, { art })}
+                                className={`flex flex-col items-center gap-1 rounded-md border px-1 py-1.5 text-[10px] ${active.art === art ? "border-primary" : "border-border"}`}
+                                title={SEAL_ART_LABELS[art]}
+                              >
+                                <img
+                                  src={SEAL_ART[art]}
+                                  alt=""
+                                  width={36}
+                                  height={36}
+                                  className="h-9 w-9 object-contain"
+                                />
+                                {SEAL_ART_LABELS[art].replace(" badge", "")}
+                              </button>
+                            ))}
+                          </div>
                           <p className="text-[11px] text-muted-foreground">
                             A seal marks an official CTA certification; use it with the tier the
                             document earns.

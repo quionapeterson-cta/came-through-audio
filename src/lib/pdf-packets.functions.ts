@@ -146,6 +146,8 @@ async function buildPacketPdf(row: {
     {},
     {
       blocks: visibleBlocks(template, row.enabled_forms),
+      // Seal artwork is a public asset of the live site, so the same address the signing link uses serves it.
+      artBase: publicOrigin(),
       values: { ...row.admin_values, ...row.values },
       signatures: { recipient: row.recipient_signature, admin: row.admin_signature },
       audit: {

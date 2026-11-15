@@ -50,6 +50,22 @@ export type FillableField = {
 
 export type CheckOption = { id: string; label: string };
 
+/**
+ * Badge artwork a seal can print instead of the drawn gold ring (founder, 2026-11-15). The bucket mirrors these paths; the
+ * repo keeps the founder's .webp originals and the .png the PDF embeds, because pdf-lib cannot decode webp.
+ */
+export const SEAL_ART = {
+  flagship: "/icons/serious/flagship/cta_flagship_512.png",
+  appIcon: "/icons/serious/flagship/cta_app_icon_512.png",
+  cleanAppIcon: "/icons/serious/flagship/cta_clean_app_icon_512.png",
+} as const;
+export type SealArtName = keyof typeof SEAL_ART;
+export const SEAL_ART_LABELS: Record<SealArtName, string> = {
+  flagship: "Flagship badge",
+  appIcon: "App icon",
+  cleanAppIcon: "Clean app icon",
+};
+
 export type TemplateBlock =
   | { id: string; kind: "header"; background: HeaderBackground; showTagline: boolean }
   | {
@@ -60,7 +76,14 @@ export type TemplateBlock =
     }
   | { id: string; kind: "clause"; heading: string; body: string; help: string }
   | { id: string; kind: "signatures"; heading: string; parties: { id: string; label: string }[] }
-  | { id: string; kind: "seal"; tier: "gold" | "platinum"; label: string }
+  | {
+      id: string;
+      kind: "seal";
+      tier: "gold" | "platinum";
+      label: string;
+      /** One of the founder's badge pictures instead of the drawn ring; absent keeps the ring every document printed before. */
+      art?: SealArtName | undefined;
+    }
   /** A packet form (Form 1, Form 2…) with its own page break, listed in the Quick Index and toggled per recipient. */
   | {
       id: string;
@@ -344,8 +367,11 @@ function blockHtml(block: TemplateBlock): string {
 </section>`;
   }
   const metal = block.tier === "gold" ? BRAND.gold : BRAND.platinum;
+  const mark = block.art
+    ? `<img src="${SEAL_ART[block.art]}" alt="${esc(fillTokens(block.label))}" width="96" height="96" style="display:block;width:96px;height:96px;object-fit:contain" />`
+    : `<div style="display:inline-flex;align-items:center;justify-content:center;box-sizing:border-box;border:2px solid ${metal};border-radius:50%;width:96px;height:96px;padding:12px;text-align:center;font-size:11px;font-weight:700;letter-spacing:1px;color:${BRAND.black}">${esc(fillTokens(block.label))}</div>`;
   return `<section style="padding:28px 48px 0">
-  <div style="display:inline-flex;align-items:center;justify-content:center;box-sizing:border-box;border:2px solid ${metal};border-radius:50%;width:96px;height:96px;padding:12px;text-align:center;font-size:11px;font-weight:700;letter-spacing:1px;color:${BRAND.black}">${esc(fillTokens(block.label))}</div>
+  ${mark}
   <div style="font-size:10px;letter-spacing:2px;color:${BRAND.black};opacity:0.65;margin-top:8px">CTA CERTIFICATION · ${block.tier.toUpperCase()}</div>
 </section>`;
 }
