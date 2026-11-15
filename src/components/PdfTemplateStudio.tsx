@@ -86,6 +86,10 @@ const BLOCK_LABELS: Record<TemplateBlock["kind"], string> = {
   clause: "Clause",
   signatures: "Signature lines",
   seal: "Certification seal",
+  section: "Packet form",
+  fields: "Fillable fields",
+  checkboxes: "Checkboxes",
+  signature: "Signature block",
 };
 
 const when = (iso: string) =>
@@ -276,6 +280,135 @@ function Paper({
                 ))}
               </div>
             )}
+            {block.kind === "section" && (
+              <div style={{ padding: "26px 44px 0" }}>
+                <div
+                  style={{
+                    fontSize: 17,
+                    fontWeight: 700,
+                    color: BRAND.black,
+                    paddingBottom: 8,
+                    borderBottom: `2px solid ${BRAND.platinum}`,
+                  }}
+                >
+                  {block.title}
+                </div>
+                {block.subtitle ? (
+                  <div
+                    style={{
+                      fontSize: 8.5,
+                      letterSpacing: "1.5px",
+                      textTransform: "uppercase",
+                      color: BRAND.cobalt,
+                      marginTop: 7,
+                    }}
+                  >
+                    {block.subtitle}
+                  </div>
+                ) : null}
+                {block.formKey ? (
+                  <div style={{ fontSize: 8, color: BRAND.black, opacity: 0.55, marginTop: 5 }}>
+                    {block.optional === false ? "Always included" : `Form key · ${block.formKey}`}
+                  </div>
+                ) : null}
+              </div>
+            )}
+            {block.kind === "fields" && (
+              <div style={{ padding: "22px 44px 0" }}>
+                <div
+                  style={{
+                    fontSize: 9,
+                    letterSpacing: "2px",
+                    textTransform: "uppercase",
+                    color: BRAND.cobalt,
+                    marginBottom: 10,
+                  }}
+                >
+                  {block.heading} · {block.role === "recipient" ? "recipient fills" : "admin fills"}
+                </div>
+                {block.fields.map((f) => (
+                  <div key={f.id} style={{ marginBottom: 11 }}>
+                    <div style={{ fontSize: 10, fontWeight: 600, color: BRAND.black }}>
+                      {f.label}
+                      {f.required ? " *" : ""}
+                    </div>
+                    <div
+                      style={{
+                        borderBottom: `1px solid ${BRAND.platinum}`,
+                        height: f.type === "textarea" ? 30 : 16,
+                      }}
+                    />
+                  </div>
+                ))}
+              </div>
+            )}
+            {block.kind === "checkboxes" && (
+              <div style={{ padding: "22px 44px 0" }}>
+                <div
+                  style={{
+                    fontSize: 9,
+                    letterSpacing: "2px",
+                    textTransform: "uppercase",
+                    color: BRAND.cobalt,
+                    marginBottom: 8,
+                  }}
+                >
+                  {block.heading}
+                  {block.required ? " *" : ""}
+                </div>
+                {block.options.map((o) => (
+                  <div
+                    key={o.id}
+                    style={{ display: "flex", alignItems: "center", gap: 8, margin: "5px 0" }}
+                  >
+                    <span
+                      style={{
+                        display: "inline-block",
+                        width: 10,
+                        height: 10,
+                        border: `1px solid ${BRAND.black}`,
+                      }}
+                    />
+                    <span style={{ fontSize: 10.5, color: BRAND.black }}>{o.label}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+            {block.kind === "signature" && (
+              <div style={{ padding: "26px 44px 0" }}>
+                <div
+                  style={{
+                    fontSize: 9,
+                    letterSpacing: "2px",
+                    textTransform: "uppercase",
+                    color: BRAND.cobalt,
+                    marginBottom: 16,
+                  }}
+                >
+                  {block.heading}
+                </div>
+                <div style={{ display: "flex", gap: 26 }}>
+                  <div style={{ flex: 2 }}>
+                    <div style={{ borderBottom: `1px solid ${BRAND.black}`, height: 26 }} />
+                    <div style={{ fontSize: 8.5, color: BRAND.black, opacity: 0.7, marginTop: 4 }}>
+                      {block.role === "recipient"
+                        ? "Recipient signature"
+                        : "Company representative"}
+                    </div>
+                  </div>
+                  {block.showDate ? (
+                    <div style={{ flex: 1 }}>
+                      <div style={{ borderBottom: `1px solid ${BRAND.black}`, height: 26 }} />
+                      <div
+                        style={{ fontSize: 8.5, color: BRAND.black, opacity: 0.7, marginTop: 4 }}
+                      >
+                        Date
+                      </div>
+                    </div>
+                  ) : null}
+                </div>
+              </div>
+            )}
             {block.kind === "seal" && (
               <div style={{ padding: "24px 44px 0" }}>
                 <div
@@ -431,7 +564,49 @@ export function PdfTemplateStudio() {
                   heading: "Signatures",
                   parties: [{ id: newId(), label: "{{ARTIST_NAME}} · artist" }],
                 }
-              : { id: newId(), kind, tier: "gold", label: "CTA" };
+              : kind === "seal"
+                ? { id: newId(), kind, tier: "gold", label: "CTA" }
+                : kind === "section"
+                  ? {
+                      id: newId(),
+                      kind,
+                      title: "New form",
+                      subtitle: "Packet section",
+                      formKey: `form${template.blocks.length + 1}`,
+                      optional: true,
+                    }
+                  : kind === "fields"
+                    ? {
+                        id: newId(),
+                        kind,
+                        heading: "Details",
+                        role: "recipient",
+                        fields: [
+                          {
+                            id: newId(),
+                            label: "Full name",
+                            type: "text",
+                            role: "recipient",
+                            required: true,
+                          },
+                        ],
+                      }
+                    : kind === "checkboxes"
+                      ? {
+                          id: newId(),
+                          kind,
+                          heading: "I agree",
+                          role: "recipient",
+                          mode: "multi",
+                          options: [{ id: newId(), label: "I agree to these terms" }],
+                        }
+                      : {
+                          id: newId(),
+                          kind,
+                          heading: "Signature",
+                          role: "recipient",
+                          showDate: true,
+                        };
     setTemplate((t) => ({ ...t, blocks: [...t.blocks, block] }));
     setActiveId(block.id);
   }
@@ -516,6 +691,10 @@ export function PdfTemplateStudio() {
       parties[parties.length - 1] = { ...last, label: append(last.label) };
       patch(active.id, { parties });
     } else if (active.kind === "seal") patch(active.id, { label: append(active.label) });
+    else if (active.kind === "section") patch(active.id, { title: append(active.title) });
+    else if (active.kind === "fields") patch(active.id, { heading: append(active.heading) });
+    else if (active.kind === "checkboxes") patch(active.id, { heading: append(active.heading) });
+    else if (active.kind === "signature") patch(active.id, { heading: append(active.heading) });
     else toast.message("The brand header carries no variables.");
   }
 
@@ -752,7 +931,19 @@ export function PdfTemplateStudio() {
                   ))}
                 </ul>
                 <div className="mt-2 grid grid-cols-2 gap-1">
-                  {(["header", "meta", "clause", "signatures", "seal"] as const).map((kind) => (
+                  {(
+                    [
+                      "header",
+                      "meta",
+                      "clause",
+                      "signatures",
+                      "seal",
+                      "section",
+                      "fields",
+                      "checkboxes",
+                      "signature",
+                    ] as const
+                  ).map((kind) => (
                     <button
                       key={kind}
                       type="button"
@@ -1151,6 +1342,252 @@ export function PdfTemplateStudio() {
                             <Plus className="h-3.5 w-3.5" />
                             Signature line
                           </Button>
+                        </>
+                      )}
+
+                      {active.kind === "section" && (
+                        <>
+                          <Input
+                            value={active.title}
+                            onChange={(e) => patch(active.id, { title: e.target.value })}
+                            placeholder="Form title"
+                            aria-label="Form title"
+                          />
+                          <Input
+                            value={active.subtitle}
+                            onChange={(e) => patch(active.id, { subtitle: e.target.value })}
+                            placeholder="Subtitle"
+                            aria-label="Form subtitle"
+                          />
+                          <Input
+                            value={active.formKey ?? ""}
+                            onChange={(e) =>
+                              patch(active.id, { formKey: e.target.value.trim() })
+                            }
+                            placeholder="Form key (blank = always included)"
+                            aria-label="Form key"
+                          />
+                          <label className="flex items-center gap-2 text-xs text-muted-foreground">
+                            <input
+                              type="checkbox"
+                              checked={active.optional !== false}
+                              onChange={(e) => patch(active.id, { optional: e.target.checked })}
+                            />
+                            Can be switched off for a recipient
+                          </label>
+                        </>
+                      )}
+
+                      {active.kind === "fields" && (
+                        <>
+                          <Input
+                            value={active.heading}
+                            onChange={(e) => patch(active.id, { heading: e.target.value })}
+                            aria-label="Fields heading"
+                          />
+                          <div className="grid grid-cols-2 gap-1">
+                            {(["recipient", "admin"] as const).map((role) => (
+                              <button
+                                key={role}
+                                type="button"
+                                onClick={() =>
+                                  patch(active.id, {
+                                    role,
+                                    fields: active.fields.map((f) => ({ ...f, role })),
+                                  })
+                                }
+                                className={`rounded-md border px-2 py-1 text-xs capitalize ${active.role === role ? "border-primary" : "border-border"}`}
+                              >
+                                {role === "recipient" ? "Recipient fills" : "Admin fills"}
+                              </button>
+                            ))}
+                          </div>
+                          {active.fields.map((f) => (
+                            <div
+                              key={f.id}
+                              className="space-y-1 rounded-md border border-border p-2"
+                            >
+                              <Input
+                                value={f.label}
+                                onChange={(e) =>
+                                  patch(active.id, {
+                                    fields: active.fields.map((x) =>
+                                      x.id === f.id ? { ...x, label: e.target.value } : x,
+                                    ),
+                                  })
+                                }
+                                placeholder="Field label"
+                                aria-label="Field label"
+                              />
+                              <div className="flex items-center gap-2 text-xs">
+                                <select
+                                  value={f.type}
+                                  aria-label="Field type"
+                                  onChange={(e) =>
+                                    patch(active.id, {
+                                      fields: active.fields.map((x) =>
+                                        x.id === f.id
+                                          ? { ...x, type: e.target.value as typeof f.type }
+                                          : x,
+                                      ),
+                                    })
+                                  }
+                                  className="h-7 rounded border border-border bg-background px-1"
+                                >
+                                  <option value="text">One line</option>
+                                  <option value="textarea">Multi-line</option>
+                                  <option value="date">Date</option>
+                                </select>
+                                <label className="flex items-center gap-1">
+                                  <input
+                                    type="checkbox"
+                                    checked={!!f.required}
+                                    onChange={(e) =>
+                                      patch(active.id, {
+                                        fields: active.fields.map((x) =>
+                                          x.id === f.id ? { ...x, required: e.target.checked } : x,
+                                        ),
+                                      })
+                                    }
+                                  />
+                                  Required
+                                </label>
+                                <button
+                                  type="button"
+                                  aria-label="Remove field"
+                                  onClick={() =>
+                                    patch(active.id, {
+                                      fields: active.fields.filter((x) => x.id !== f.id),
+                                    })
+                                  }
+                                  className="ml-auto text-muted-foreground"
+                                >
+                                  <Trash2 className="h-3.5 w-3.5" />
+                                </button>
+                              </div>
+                            </div>
+                          ))}
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() =>
+                              patch(active.id, {
+                                fields: [
+                                  ...active.fields,
+                                  {
+                                    id: newId(),
+                                    label: "New field",
+                                    type: "text",
+                                    role: active.role,
+                                    required: false,
+                                  },
+                                ],
+                              })
+                            }
+                          >
+                            <Plus className="h-3.5 w-3.5" /> Field
+                          </Button>
+                        </>
+                      )}
+
+                      {active.kind === "checkboxes" && (
+                        <>
+                          <Input
+                            value={active.heading}
+                            onChange={(e) => patch(active.id, { heading: e.target.value })}
+                            aria-label="Checkbox heading"
+                          />
+                          <div className="flex items-center gap-2 text-xs">
+                            <select
+                              value={active.mode}
+                              aria-label="Choice mode"
+                              onChange={(e) =>
+                                patch(active.id, {
+                                  mode: e.target.value as typeof active.mode,
+                                })
+                              }
+                              className="h-7 rounded border border-border bg-background px-1"
+                            >
+                              <option value="multi">Tick any</option>
+                              <option value="single">Pick one</option>
+                            </select>
+                            <label className="flex items-center gap-1">
+                              <input
+                                type="checkbox"
+                                checked={!!active.required}
+                                onChange={(e) => patch(active.id, { required: e.target.checked })}
+                              />
+                              Required
+                            </label>
+                          </div>
+                          {active.options.map((o) => (
+                            <div key={o.id} className="grid grid-cols-[1fr_auto] gap-1">
+                              <Input
+                                value={o.label}
+                                onChange={(e) =>
+                                  patch(active.id, {
+                                    options: active.options.map((x) =>
+                                      x.id === o.id ? { ...x, label: e.target.value } : x,
+                                    ),
+                                  })
+                                }
+                                aria-label="Checkbox label"
+                              />
+                              <button
+                                type="button"
+                                aria-label="Remove option"
+                                onClick={() =>
+                                  patch(active.id, {
+                                    options: active.options.filter((x) => x.id !== o.id),
+                                  })
+                                }
+                                className="rounded p-1 text-muted-foreground"
+                              >
+                                <Trash2 className="h-3.5 w-3.5" />
+                              </button>
+                            </div>
+                          ))}
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() =>
+                              patch(active.id, {
+                                options: [...active.options, { id: newId(), label: "New option" }],
+                              })
+                            }
+                          >
+                            <Plus className="h-3.5 w-3.5" /> Option
+                          </Button>
+                        </>
+                      )}
+
+                      {active.kind === "signature" && (
+                        <>
+                          <Input
+                            value={active.heading}
+                            onChange={(e) => patch(active.id, { heading: e.target.value })}
+                            aria-label="Signature heading"
+                          />
+                          <div className="grid grid-cols-2 gap-1">
+                            {(["recipient", "admin"] as const).map((role) => (
+                              <button
+                                key={role}
+                                type="button"
+                                onClick={() => patch(active.id, { role })}
+                                className={`rounded-md border px-2 py-1 text-xs ${active.role === role ? "border-primary" : "border-border"}`}
+                              >
+                                {role === "recipient" ? "Recipient signs" : "Company signs"}
+                              </button>
+                            ))}
+                          </div>
+                          <label className="flex items-center gap-2 text-xs text-muted-foreground">
+                            <input
+                              type="checkbox"
+                              checked={active.showDate}
+                              onChange={(e) => patch(active.id, { showDate: e.target.checked })}
+                            />
+                            Include a date line
+                          </label>
                         </>
                       )}
 

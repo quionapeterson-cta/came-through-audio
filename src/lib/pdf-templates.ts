@@ -37,6 +37,19 @@ export const TIER_METAL: Record<TemplateTier, string | null> = {
 
 export type HeaderBackground = "light" | "dark";
 
+/** Who fills a field: the person signing, or the admin preparing the packet. */
+export type FieldRole = "recipient" | "admin";
+
+export type FillableField = {
+  id: string;
+  label: string;
+  type: "text" | "textarea" | "date";
+  role: FieldRole;
+  required?: boolean;
+};
+
+export type CheckOption = { id: string; label: string };
+
 export type TemplateBlock =
   | { id: string; kind: "header"; background: HeaderBackground; showTagline: boolean }
   | {
@@ -47,7 +60,31 @@ export type TemplateBlock =
     }
   | { id: string; kind: "clause"; heading: string; body: string; help: string }
   | { id: string; kind: "signatures"; heading: string; parties: { id: string; label: string }[] }
-  | { id: string; kind: "seal"; tier: "gold" | "platinum"; label: string };
+  | { id: string; kind: "seal"; tier: "gold" | "platinum"; label: string }
+  /** A packet form (Form 1, Form 2…) with its own page break, listed in the Quick Index and toggled per recipient. */
+  | {
+      id: string;
+      kind: "section";
+      title: string;
+      subtitle: string;
+      /** Matching `formKey` on a section makes the form switchable; the cover has none and always prints. */
+      formKey?: string;
+      optional?: boolean;
+    }
+  /** Text lines the recipient (or the admin) fills on the signing page and in the final PDF. */
+  | { id: string; kind: "fields"; heading: string; role: FieldRole; fields: FillableField[] }
+  /** Clickable boxes, one choice or several, ticked by whoever fills the form. */
+  | {
+      id: string;
+      kind: "checkboxes";
+      heading: string;
+      role: FieldRole;
+      mode: "single" | "multi";
+      required?: boolean;
+      options: CheckOption[];
+    }
+  /** A drawn or typed signature with its date, from the recipient or the company representative. */
+  | { id: string; kind: "signature"; heading: string; role: FieldRole; showDate: boolean };
 
 export type TemplateBlockKind = TemplateBlock["kind"];
 
@@ -111,7 +148,15 @@ export function unknownTokens(template: PdfTemplate): string[] {
             ? `${block.heading} ${block.parties.map((p) => p.label).join(" ")}`
             : block.kind === "seal"
               ? block.label
-              : "";
+              : block.kind === "section"
+                ? `${block.title} ${block.subtitle}`
+                : block.kind === "fields"
+                  ? `${block.heading} ${block.fields.map((f) => f.label).join(" ")}`
+                  : block.kind === "checkboxes"
+                    ? `${block.heading} ${block.options.map((o) => o.label).join(" ")}`
+                    : block.kind === "signature"
+                      ? block.heading
+                      : "";
     for (const token of tokensIn(text)) if (!isTokenKey(token)) found.add(token);
   }
   return [...found];
@@ -169,6 +214,9 @@ export function preflight(template: PdfTemplate): PreflightCheck[] {
     if (block.kind === "signatures")
       return block.parties.length > 0 && block.parties.every((p) => p.label.trim());
     if (block.kind === "seal") return block.label.trim().length > 0;
+    if (block.kind === "fields") return block.fields.every((f) => f.label.trim());
+    if (block.kind === "checkboxes") return block.options.every((o) => o.label.trim());
+    if (block.kind === "section") return block.title.trim().length > 0;
     return true;
   });
   const unknown = unknownTokens(template);
@@ -252,6 +300,39 @@ function blockHtml(block: TemplateBlock): string {
     return `<section style="padding:32px 48px 0">
   <h2 style="font-size:12px;letter-spacing:2px;text-transform:uppercase;color:${BRAND.cobalt};margin:0 0 18px">${esc(block.heading)}</h2>
   ${block.parties.map((p) => `<div style="margin-bottom:22px"><div style="border-bottom:1px solid ${BRAND.black};height:28px"></div><div style="font-size:11px;color:${BRAND.black};opacity:0.7;margin-top:6px">${esc(fillTokens(p.label))}</div></div>`).join("\n  ")}
+</section>`;
+  }
+  if (block.kind === "section") {
+    return `<section style="page-break-before:always;padding:34px 48px 0">
+  <h2 style="font-size:18px;color:${BRAND.black};margin:0;padding-bottom:10px;border-bottom:2px solid ${BRAND.platinum}">${esc(block.title)}</h2>
+  ${block.subtitle ? `<p style="font-size:11px;letter-spacing:1.5px;text-transform:uppercase;color:${BRAND.cobalt};margin:8px 0 0">${esc(block.subtitle)}</p>` : ""}
+</section>`;
+  }
+  if (block.kind === "fields") {
+    return `<section style="padding:24px 48px 0">
+  <h2 style="font-size:12px;letter-spacing:2px;text-transform:uppercase;color:${BRAND.cobalt};margin:0 0 12px">${esc(fillTokens(block.heading))}</h2>
+  ${block.fields
+    .map(
+      (f) =>
+        `<div style="margin-bottom:14px"><div style="font-size:11px;font-weight:600;color:${BRAND.black}">${esc(f.label)}${f.required ? " *" : ""}</div><div style="border-bottom:1px solid ${BRAND.platinum};height:${f.type === "textarea" ? 44 : 24}px"></div></div>`,
+    )
+    .join("\n  ")}
+</section>`;
+  }
+  if (block.kind === "checkboxes") {
+    return `<section style="padding:24px 48px 0">
+  <h2 style="font-size:12px;letter-spacing:2px;text-transform:uppercase;color:${BRAND.cobalt};margin:0 0 10px">${esc(fillTokens(block.heading))}</h2>
+  ${block.options.map((o) => `<div style="font-size:12px;color:${BRAND.black};margin:6px 0">☐&nbsp;&nbsp;${esc(o.label)}</div>`).join("\n  ")}
+</section>`;
+  }
+  if (block.kind === "signature") {
+    const who = block.role === "recipient" ? "Recipient" : "Company representative";
+    return `<section style="padding:30px 48px 0">
+  <h2 style="font-size:12px;letter-spacing:2px;text-transform:uppercase;color:${BRAND.cobalt};margin:0 0 10px">${esc(fillTokens(block.heading))}</h2>
+  <div style="display:flex;gap:24px">
+    <div style="flex:2"><div style="border-bottom:1px solid ${BRAND.black};height:34px"></div><div style="font-size:10px;color:${BRAND.black};opacity:0.7;margin-top:5px">${who} signature</div></div>
+    ${block.showDate ? `<div style="flex:1"><div style="border-bottom:1px solid ${BRAND.black};height:34px"></div><div style="font-size:10px;color:${BRAND.black};opacity:0.7;margin-top:5px">Date</div></div>` : ""}
+  </div>
 </section>`;
   }
   const metal = block.tier === "gold" ? BRAND.gold : BRAND.platinum;

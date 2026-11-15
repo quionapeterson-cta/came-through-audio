@@ -14,7 +14,17 @@ type Ctx = {
   userId: string;
 };
 
-const BLOCK_KINDS = ["header", "meta", "clause", "signatures", "seal"] as const;
+const BLOCK_KINDS = [
+  "header",
+  "meta",
+  "clause",
+  "signatures",
+  "seal",
+  "section",
+  "fields",
+  "checkboxes",
+  "signature",
+] as const;
 
 const blockSchema = z
   .object({ id: z.string().min(1).max(40), kind: z.enum(BLOCK_KINDS) })

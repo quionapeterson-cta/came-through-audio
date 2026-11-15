@@ -38,6 +38,7 @@ import { Route as SeatSeatIdRouteImport } from './routes/seat.$seatId'
 import { Route as SignRowIdRouteImport } from './routes/sign.$rowId'
 import { Route as VerifyIdRouteImport } from './routes/verify.$id'
 import { Route as ShareOwnerCardRouteImport } from './routes/share.$owner.$card'
+import { Route as SignPacketPacketIdRouteImport } from './routes/sign.packet.$packetId'
 import { Route as ApiPublicCronCatalogLapsesRouteImport } from './routes/api/public/cron/catalog-lapses'
 import { Route as ApiPublicCronRegistrationRemindersRouteImport } from './routes/api/public/cron/registration-reminders'
 import { Route as ApiPublicCronTaskRemindersRouteImport } from './routes/api/public/cron/task-reminders'
@@ -190,6 +191,11 @@ const ShareOwnerCardRoute = ShareOwnerCardRouteImport.update({
   path: '/share/$owner/$card',
   getParentRoute: () => rootRouteImport,
 } as any)
+const SignPacketPacketIdRoute = SignPacketPacketIdRouteImport.update({
+  id: '/sign/packet/$packetId',
+  path: '/sign/packet/$packetId',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPublicCronCatalogLapsesRoute =
   ApiPublicCronCatalogLapsesRouteImport.update({
     id: '/api/public/cron/catalog-lapses',
@@ -257,6 +263,7 @@ export interface FileRoutesByFullPath {
   '/sign/$rowId': typeof SignRowIdRoute
   '/verify/$id': typeof VerifyIdRoute
   '/share/$owner/$card': typeof ShareOwnerCardRoute
+  '/sign/packet/$packetId': typeof SignPacketPacketIdRoute
   '/api/public/cron/catalog-lapses': typeof ApiPublicCronCatalogLapsesRoute
   '/api/public/cron/registration-reminders': typeof ApiPublicCronRegistrationRemindersRoute
   '/api/public/cron/task-reminders': typeof ApiPublicCronTaskRemindersRoute
@@ -294,6 +301,7 @@ export interface FileRoutesByTo {
   '/sign/$rowId': typeof SignRowIdRoute
   '/verify/$id': typeof VerifyIdRoute
   '/share/$owner/$card': typeof ShareOwnerCardRoute
+  '/sign/packet/$packetId': typeof SignPacketPacketIdRoute
   '/api/public/cron/catalog-lapses': typeof ApiPublicCronCatalogLapsesRoute
   '/api/public/cron/registration-reminders': typeof ApiPublicCronRegistrationRemindersRoute
   '/api/public/cron/task-reminders': typeof ApiPublicCronTaskRemindersRoute
@@ -332,6 +340,7 @@ export interface FileRoutesById {
   '/sign/$rowId': typeof SignRowIdRoute
   '/verify/$id': typeof VerifyIdRoute
   '/share/$owner/$card': typeof ShareOwnerCardRoute
+  '/sign/packet/$packetId': typeof SignPacketPacketIdRoute
   '/api/public/cron/catalog-lapses': typeof ApiPublicCronCatalogLapsesRoute
   '/api/public/cron/registration-reminders': typeof ApiPublicCronRegistrationRemindersRoute
   '/api/public/cron/task-reminders': typeof ApiPublicCronTaskRemindersRoute
@@ -371,6 +380,7 @@ export interface FileRouteTypes {
     | '/sign/$rowId'
     | '/verify/$id'
     | '/share/$owner/$card'
+    | '/sign/packet/$packetId'
     | '/api/public/cron/catalog-lapses'
     | '/api/public/cron/registration-reminders'
     | '/api/public/cron/task-reminders'
@@ -408,6 +418,7 @@ export interface FileRouteTypes {
     | '/sign/$rowId'
     | '/verify/$id'
     | '/share/$owner/$card'
+    | '/sign/packet/$packetId'
     | '/api/public/cron/catalog-lapses'
     | '/api/public/cron/registration-reminders'
     | '/api/public/cron/task-reminders'
@@ -445,6 +456,7 @@ export interface FileRouteTypes {
     | '/sign/$rowId'
     | '/verify/$id'
     | '/share/$owner/$card'
+    | '/sign/packet/$packetId'
     | '/api/public/cron/catalog-lapses'
     | '/api/public/cron/registration-reminders'
     | '/api/public/cron/task-reminders'
@@ -483,6 +495,7 @@ export interface RootRouteChildren {
   SignRowIdRoute: typeof SignRowIdRoute
   VerifyIdRoute: typeof VerifyIdRoute
   ShareOwnerCardRoute: typeof ShareOwnerCardRoute
+  SignPacketPacketIdRoute: typeof SignPacketPacketIdRoute
   ApiPublicCronCatalogLapsesRoute: typeof ApiPublicCronCatalogLapsesRoute
   ApiPublicCronRegistrationRemindersRoute: typeof ApiPublicCronRegistrationRemindersRoute
   ApiPublicCronTaskRemindersRoute: typeof ApiPublicCronTaskRemindersRoute
@@ -696,6 +709,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ShareOwnerCardRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/sign/packet/$packetId': {
+      id: '/sign/packet/$packetId'
+      path: '/sign/packet/$packetId'
+      fullPath: '/sign/packet/$packetId'
+      preLoaderRoute: typeof SignPacketPacketIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/cron/catalog-lapses': {
       id: '/api/public/cron/catalog-lapses'
       path: '/api/public/cron/catalog-lapses'
@@ -771,6 +791,7 @@ const rootRouteChildren: RootRouteChildren = {
   SignRowIdRoute: SignRowIdRoute,
   VerifyIdRoute: VerifyIdRoute,
   ShareOwnerCardRoute: ShareOwnerCardRoute,
+  SignPacketPacketIdRoute: SignPacketPacketIdRoute,
   ApiPublicCronCatalogLapsesRoute: ApiPublicCronCatalogLapsesRoute,
   ApiPublicCronRegistrationRemindersRoute:
     ApiPublicCronRegistrationRemindersRoute,
