@@ -330,6 +330,8 @@ export function PdfTemplateStudio() {
   const [library, setLibrary] = useState<SavedTemplate[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  /** The block being dragged in the rail, so a drag lands where it is dropped. */
+  const [dragId, setDragId] = useState<string | null>(null);
 
   const list = useServerFn(listPdfTemplates);
   const save = useServerFn(savePdfTemplate);
@@ -389,6 +391,20 @@ export function PdfTemplateStudio() {
       if (index < 0 || next < 0 || next >= t.blocks.length) return t;
       const blocks = [...t.blocks];
       [blocks[index], blocks[next]] = [blocks[next]!, blocks[index]!];
+      return { ...t, blocks };
+    });
+  }
+
+  /** Drag a block onto another to put it there; a drop on itself changes nothing. */
+  function reorder(fromId: string, toId: string) {
+    if (fromId === toId) return;
+    setTemplate((t) => {
+      const from = t.blocks.findIndex((b) => b.id === fromId);
+      const to = t.blocks.findIndex((b) => b.id === toId);
+      if (from < 0 || to < 0) return t;
+      const blocks = [...t.blocks];
+      const [moved] = blocks.splice(from, 1);
+      blocks.splice(to, 0, moved!);
       return { ...t, blocks };
     });
   }
@@ -590,7 +606,19 @@ export function PdfTemplateStudio() {
                 </p>
                 <ul className="mt-2 space-y-1.5">
                   {template.blocks.map((block, index) => (
-                    <li key={block.id}>
+                    <li
+                      key={block.id}
+                      draggable
+                      onDragStart={() => setDragId(block.id)}
+                      onDragEnd={() => setDragId(null)}
+                      onDragOver={(e) => e.preventDefault()}
+                      onDrop={(e) => {
+                        e.preventDefault();
+                        if (dragId) reorder(dragId, block.id);
+                        setDragId(null);
+                      }}
+                      className={dragId === block.id ? "opacity-50" : undefined}
+                    >
                       <div
                         role="button"
                         tabIndex={0}
