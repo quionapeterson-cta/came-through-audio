@@ -59,12 +59,16 @@ describe("sendMail", () => {
 
   it("sends the mailbox address, the key and the reply address to Resend", async () => {
     vi.stubEnv("RESEND_API_KEY", "test_key");
-    const fetchMock = vi.fn().mockResolvedValue({ ok: true, status: 200 });
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({ id: "msg_1" }),
+    });
     vi.stubGlobal("fetch", fetchMock);
 
     const result = await sendMail({ ...mail, to: ["  a@b.com "], replyTo: "support@camethroughaudio.com" });
 
-    expect(result).toEqual({ ok: true, status: 200 });
+    expect(result).toEqual({ ok: true, status: 200, id: "msg_1" });
     const [url, init] = fetchMock.mock.calls[0] as [string, { headers: Record<string, string>; body: string }];
     expect(url).toBe("https://api.resend.com/emails");
     expect(init.headers["Idempotency-Key"]).toBe("key-1");

@@ -5,7 +5,9 @@ import { getRequest } from "@tanstack/react-start/server";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { emailLayout, escapeHtml, ADMIN_EMAIL, SITE_URL } from "@/lib/email-layout";
 import { trustedOrigin } from "@/lib/invite-limits";
-import { mailKey, mailboxAddress, sendMail } from "@/lib/mailer";
+import { mailKey, mailboxAddress, resendKey, sendMail } from "@/lib/mailer";
+import { packetEmailHtml, packetEmailSubject } from "@/lib/packet-email";
+import { DELIVERY_STATUSES, type DeliveryStatus } from "@/lib/resend-events";
 import { templateToPdfBytes } from "@/lib/pdf-template-pdf";
 import {
   internshipPacketTemplate,
@@ -63,7 +65,15 @@ export type PacketSummary = Pick<
   | "recipient_signed_at"
   | "admin_signed_at"
   | "completed_at"
-> & { formCount: number; createdBy: string };
+> & {
+  formCount: number;
+  createdBy: string;
+  /**
+   * The signing email's latest delivery result, or null when nothing went out through the mailer. "accepted" means Resend
+   * took it; the webhook moves it to delivered, bounced or failed minutes later.
+   */
+  email: { status: DeliveryStatus; at: string; note: string | null } | null;
+};
 
 const emailSchema = z.string().trim().email().max(200);
 const signatureSchema = z.object({
@@ -180,6 +190,41 @@ async function sendMailSafely(input: Parameters<typeof sendMail>[0]) {
   }
 }
 
+/** The one sentence staff read when a signing email doesn't go out. */
+function emailErrorText(result: Awaited<ReturnType<typeof sendMail>>) {
+  if (result.ok) return null;
+  if (result.detail === "no-key")
+    return "Email sending isn't switched on yet. The link is ready to copy instead.";
+  if (result.status === 401 || result.status === 403)
+    return "The sending key was refused, or camethroughaudio.com isn't verified with the email service. Copy the link instead.";
+  if (result.status === 429)
+    return "The email service's rate limit was hit. Wait a minute and try again, or copy the link.";
+  return `The email could not be sent (${result.status ?? result.detail ?? "network"}). Copy the link instead.`;
+}
+
+/**
+ * Writes the signing email into the same delivery log as every other PDF email, linked to its packet, so Resend's webhook
+ * can mark it delivered or bounced and the sent list can show what happened. Logging never blocks a send.
+ */
+async function recordPacketEmail(
+  context: Ctx,
+  packet: { id: string; title: string; recipient_email: string },
+  result: Awaited<ReturnType<typeof sendMail>>,
+) {
+  const { error } = await context.supabase.from("pdf_email_sends" as never).insert({
+    packet_id: packet.id,
+    resend_id: result.id ?? null,
+    sent_by: context.userId,
+    mailbox: "admin",
+    recipients: [packet.recipient_email],
+    subject: packetEmailSubject(packet.title),
+    file_name: "Signing link",
+    status: result.ok ? "accepted" : "failed",
+    bounce_message: result.ok ? null : (result.detail ?? "send-failed").slice(0, 500),
+  } as never);
+  if (error) console.error("[packets] couldn't record the email result", error.message);
+}
+
 /* ------------------------------------------------------------------------------------------------------------------ */
 /* Starter packet                                                                                                     */
 /* ------------------------------------------------------------------------------------------------------------------ */
@@ -237,7 +282,7 @@ export const ensureInternshipPacket = createServerFn({ method: "POST" })
 
 export const getPacketInbox = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .handler(async ({ context }): Promise<{ email: string }> => {
+  .handler(async ({ context }): Promise<{ email: string; configured: boolean }> => {
     await requireStaff(context);
     const { data } = await context.supabase
       .from("site_settings" as never)
@@ -245,7 +290,11 @@ export const getPacketInbox = createServerFn({ method: "GET" })
       .eq("id", SETTINGS_ID)
       .maybeSingle();
     const email = (data as { content?: { email?: string } } | null)?.content?.email;
-    return { email: typeof email === "string" && email.includes("@") ? email : ADMIN_EMAIL };
+    return {
+      email: typeof email === "string" && email.includes("@") ? email : ADMIN_EMAIL,
+      // Whether a sending key exists at all — never the key itself. The panel warns before a send, not after.
+      configured: Boolean(resendKey()),
+    };
   });
 
 export const setPacketInbox = createServerFn({ method: "POST" })
@@ -362,29 +411,59 @@ export const sendPacket = createServerFn({ method: "POST" })
       from: "admin",
       replyTo: mailboxAddress("admin"),
       to: [data.recipientEmail],
-      subject: `Signature needed: ${snapshot.name}`,
-      html: emailLayout(
-        `<p style="font-size:12px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:#004AAD;margin:0">Came Through Audio</p>
-<h1 style="font-size:22px;margin:8px 0 16px">${escapeHtml(snapshot.name)}</h1>
-<p style="font-size:15px;line-height:1.6">Hi ${escapeHtml(data.recipientName.split(" ")[0] || data.recipientName)},</p>
-<p style="font-size:15px;line-height:1.6">Your signature is needed on this packet. Open your own signing page, fill in what applies to you and sign — it takes a few minutes, nothing to install.</p>
-<p style="margin:24px 0"><a href="${link}" style="background:#004AAD;color:#FFFFFF;padding:12px 22px;border-radius:6px;font-weight:700;text-decoration:none">Review &amp; sign</a></p>
-<p style="font-size:13px;line-height:1.6;color:#555">If the button doesn't open, paste this link into your browser:<br><span style="word-break:break-all">${link}</span></p>`,
-        { reason: "You're receiving this because Came Through Audio sent you a document to sign." },
-      ),
+      subject: packetEmailSubject(snapshot.name),
+      html: packetEmailHtml({
+        title: snapshot.name,
+        recipientName: data.recipientName,
+        link,
+      }),
       key: mailKey("pdf", "packet", packet.id, data.recipientEmail),
     });
+    await recordPacketEmail(context, packet, res);
 
     return {
       id: packet.id,
       link,
       emailed: res.ok,
-      emailError: res.ok
-        ? null
-        : res.detail === "no-key"
-          ? "Email sending isn't switched on yet. The link is ready to copy instead."
-          : `The email could not be sent (${res.status ?? res.detail ?? "network"}). Copy the link instead.`,
+      emailError: emailErrorText(res),
     };
+  });
+
+/**
+ * Sends the signing link again (founder, 2026-11-15). A first send that bounced, or an inbox that lost it, is the same
+ * click: a fresh mail run with its own idempotency key, so it is never swallowed as a duplicate of the first.
+ */
+export const emailPacketLink = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => z.object({ id: z.string().uuid() }).parse(d))
+  .handler(async ({ data, context }) => {
+    await requireStaff(context);
+    const { data: row, error } = await context.supabase
+      .from("pdf_packets" as never)
+      .select("*")
+      .eq("id", data.id)
+      .maybeSingle();
+    if (error || !row) throw new Error("That packet no longer exists.");
+    const packet = row as PacketRow;
+    if (packet.status === "void") throw new Error("This packet was withdrawn.");
+    if (packet.recipient_signed_at)
+      throw new Error("They've already signed, so there's no signing link left to send.");
+
+    const link = await packetEmailLink(packet.id);
+    const res = await sendMailSafely({
+      from: "admin",
+      replyTo: mailboxAddress("admin"),
+      to: [packet.recipient_email],
+      subject: packetEmailSubject(packet.title),
+      html: packetEmailHtml({
+        title: packet.title,
+        recipientName: packet.recipient_name,
+        link,
+      }),
+      key: mailKey("pdf", "packet", packet.id, packet.recipient_email, "again", crypto.randomUUID()),
+    });
+    await recordPacketEmail(context, packet, res);
+    return { emailed: res.ok, emailError: emailErrorText(res), link };
   });
 
 /* ------------------------------------------------------------------------------------------------------------------ */
@@ -401,7 +480,35 @@ export const listPackets = createServerFn({ method: "GET" })
       .order("sent_at", { ascending: false })
       .limit(200);
     if (error) throw new Error("Couldn't load sent packets. Run migration 20261115230000 first.");
-    return ((data ?? []) as unknown as PacketRow[]).map((row) => ({
+    const rows = (data ?? []) as unknown as PacketRow[];
+    // The newest delivery result per packet, so the row can say Delivered, Bounced or Failed instead of guessing. A
+    // database without migration 20261116120000 simply shows no delivery state.
+    const latest = new Map<string, { status: DeliveryStatus; at: string; note: string | null }>();
+    if (rows.length) {
+      const { data: sends } = await context.supabase
+        .from("pdf_email_sends" as never)
+        .select("packet_id, status, bounce_message, created_at")
+        .in(
+          "packet_id",
+          rows.map((row) => row.id),
+        )
+        .order("created_at", { ascending: false });
+      for (const send of (sends ?? []) as unknown as {
+        packet_id: string | null;
+        status: string;
+        bounce_message: string | null;
+        created_at: string;
+      }[]) {
+        if (!send.packet_id || latest.has(send.packet_id)) continue;
+        if (!(DELIVERY_STATUSES as readonly string[]).includes(send.status)) continue;
+        latest.set(send.packet_id, {
+          status: send.status as DeliveryStatus,
+          at: send.created_at,
+          note: send.bounce_message,
+        });
+      }
+    }
+    return rows.map((row) => ({
       id: row.id,
       title: row.title,
       recipient_name: row.recipient_name,
@@ -413,6 +520,7 @@ export const listPackets = createServerFn({ method: "GET" })
       completed_at: row.completed_at,
       formCount: packetForms(row.snapshot).filter((f) => row.enabled_forms.includes(f.key)).length,
       createdBy: row.created_by,
+      email: latest.get(row.id) ?? null,
     }));
   });
 

@@ -32,6 +32,7 @@ import type { SavedTemplate } from "@/lib/pdf-templates.functions";
 import { listPdfTemplates } from "@/lib/pdf-templates.functions";
 import {
   counterSignPacket,
+  emailPacketLink,
   ensureInternshipPacket,
   getPacket,
   getPacketInbox,
@@ -41,6 +42,7 @@ import {
   setPacketInbox,
   type PacketSummary,
 } from "@/lib/pdf-packets.functions";
+import { DELIVERY_LABELS, type DeliveryStatus } from "@/lib/resend-events";
 import { PdfSignaturePad, type SignatureValue } from "@/components/PdfSignaturePad";
 
 /** The live signing address, so a link copied from an editor preview still opens for the recipient. */
@@ -57,6 +59,14 @@ const when = (iso: string | null) =>
         minute: "2-digit",
       })
     : "—";
+
+/** A bounced or failed signing email is worth noticing, so it is not painted as a quiet success. */
+const deliveryTone = (status: DeliveryStatus) =>
+  status === "bounced" || status === "failed" || status === "complained"
+    ? "text-destructive"
+    : status === "delayed"
+      ? "text-amber-600"
+      : "text-muted-foreground";
 
 const statusStyle = (status: PacketStatus) =>
   status === "completed"
@@ -76,6 +86,7 @@ export function PdfPacketCenter() {
   const [busy, setBusy] = useState(false);
   const [inbox, setInbox] = useState("");
   const [inboxSaved, setInboxSaved] = useState(false);
+  const [configured, setConfigured] = useState(true);
   const [sendOpen, setSendOpen] = useState(false);
   const [review, setReview] = useState<{
     id: string;
@@ -114,6 +125,7 @@ export function PdfPacketCenter() {
       setTemplates(saved);
       setPackets(sent);
       setInbox(mail.email);
+      setConfigured("configured" in mail ? Boolean(mail.configured) : true);
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Couldn't load sent packets.");
     } finally {
@@ -176,6 +188,21 @@ export function PdfPacketCenter() {
       );
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Couldn't send the packet.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  /** Sends the signing link again, for a first email that bounced or one the recipient never found. */
+  async function emailLink(id: string) {
+    setBusy(true);
+    try {
+      const result = await emailPacketLink({ data: { id } });
+      if (result.emailed) toast.success("Signing link emailed.");
+      else toast.error(result.emailError ?? "The email didn't go out. Copy the link instead.");
+      await load();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Couldn't email the signing link.");
     } finally {
       setBusy(false);
     }
@@ -320,6 +347,14 @@ export function PdfPacketCenter() {
                   {packet.recipient_name} · {packet.recipient_email} · sent {when(packet.sent_at)} ·{" "}
                   {packet.formCount} form{packet.formCount === 1 ? "" : "s"}
                 </p>
+                {packet.email ? (
+                  <p className={`text-xs ${deliveryTone(packet.email.status)}`}>
+                    <Mail className="mr-1 inline h-3 w-3" />
+                    Email {DELIVERY_LABELS[packet.email.status].toLowerCase()} ·{" "}
+                    {when(packet.email.at)}
+                    {packet.email.note ? ` · ${packet.email.note}` : ""}
+                  </p>
+                ) : null}
               </div>
               <span
                 className="rounded-full px-2 py-0.5 text-[11px] font-semibold"
@@ -332,6 +367,16 @@ export function PdfPacketCenter() {
               <Button size="sm" variant="outline" onClick={() => void copy(signingLink(packet.id))}>
                 <Copy /> Copy link
               </Button>
+              {!packet.recipient_signed_at ? (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  disabled={busy}
+                  onClick={() => void emailLink(packet.id)}
+                >
+                  <Mail /> {packet.email ? "Email link again" : "Email link"}
+                </Button>
+              ) : null}
               <Button
                 size="sm"
                 variant="outline"
@@ -567,6 +612,13 @@ export function PdfPacketCenter() {
                     </div>
                   ) : null}
                 </div>
+
+                {!configured ? (
+                  <p className="rounded-lg border border-border bg-muted/40 p-3 text-xs text-muted-foreground">
+                    Email sending isn't connected yet, so nothing will land in an inbox. The packet is
+                    still created and its signing link is shown here to copy.
+                  </p>
+                ) : null}
 
                 <Button className="w-full" onClick={() => void send()} disabled={busy}>
                   {busy ? <Loader2 className="animate-spin" /> : <Send />} Send for signature
