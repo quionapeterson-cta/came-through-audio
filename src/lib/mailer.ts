@@ -70,7 +70,12 @@ export type Mail = {
   display?: string | undefined;
 };
 
-export type MailResult = { ok: boolean; status?: number; detail?: string };
+export type MailResult = {
+  ok: boolean;
+  status?: number;
+  detail?: string;
+  /** Resend's id for the message, which its delivery webhook later names. */ id?: string;
+};
 
 /**
  * One stable, readable idempotency key from the parts that identify the send: `mailKey("seat-invite", seat.id)`.
@@ -79,7 +84,12 @@ export type MailResult = { ok: boolean; status?: number; detail?: string };
  */
 export function mailKey(...parts: (string | number)[]): string {
   return parts
-    .map((part) => String(part).trim().toLowerCase().replace(/[^a-z0-9]+/g, "-"))
+    .map((part) =>
+      String(part)
+        .trim()
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, "-"),
+    )
     .filter(Boolean)
     .join("-")
     .replace(/-+/g, "-")
@@ -94,7 +104,8 @@ export function mailKey(...parts: (string | number)[]): string {
  */
 export async function sendMail(mail: Mail): Promise<MailResult> {
   // A missing key or recipient is our mistake, so it throws whatever the provider is configured to do.
-  if (!mail.key?.trim()) throw new Error("Every email needs an idempotency key: pass key: mailKey(...).");
+  if (!mail.key?.trim())
+    throw new Error("Every email needs an idempotency key: pass key: mailKey(...).");
   const to = mail.to.map((address) => address.trim()).filter(Boolean);
   if (!to.length) throw new Error("Every email needs at least one recipient.");
   const key = resendKey();
@@ -111,7 +122,9 @@ export async function sendMail(mail: Mail): Promise<MailResult> {
       body: JSON.stringify({
         from: mailFrom(mail.from, mail.display),
         to,
-        ...(mail.cc?.length ? { cc: mail.cc.map((address) => address.trim()).filter(Boolean) } : {}),
+        ...(mail.cc?.length
+          ? { cc: mail.cc.map((address) => address.trim()).filter(Boolean) }
+          : {}),
         ...(mail.replyTo ? { reply_to: mail.replyTo } : {}),
         ...(mail.attachments?.length ? { attachments: mail.attachments } : {}),
         subject: mail.subject,
@@ -119,7 +132,12 @@ export async function sendMail(mail: Mail): Promise<MailResult> {
       }),
     });
     if (!res.ok) return { ok: false, status: res.status, detail: await res.text().catch(() => "") };
-    return { ok: true, status: res.status };
+    const body = (await res.json().catch(() => null)) as { id?: unknown } | null;
+    return {
+      ok: true,
+      status: res.status,
+      ...(typeof body?.id === "string" ? { id: body.id } : {}),
+    };
   } catch (e) {
     console.error(`Email to ${to.join(", ")} failed:`, e);
     return { ok: false, detail: "network" };

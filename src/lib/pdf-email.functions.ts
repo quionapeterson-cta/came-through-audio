@@ -79,5 +79,16 @@ ${message}
               : "";
       throw new Error(`Email could not be sent (${res.status ?? "network"}).${hint}`);
     }
+    // Resend accepted it; the delivery result arrives on the webhook. The log is a courtesy — a failed insert must
+    // never turn a sent document into an error the sender sees.
+    const { error: logError } = await context.supabase.from("pdf_email_sends" as never).insert({
+      resend_id: res.id ?? null,
+      sent_by: context.userId,
+      mailbox: data.from,
+      recipients: data.to,
+      subject: data.subject,
+      file_name: fileName,
+    } as never);
+    if (logError) console.warn("Couldn't record the PDF email:", logError.message);
     return { ok: true };
   });

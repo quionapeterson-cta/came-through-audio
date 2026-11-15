@@ -37,6 +37,7 @@ import {
 import { burstConfetti } from "@/components/Confetti";
 import { claimFirstBurst } from "@/lib/celebrate";
 import { PdfShelfPanel, SavePdfDialog } from "@/components/PdfShelf";
+import { PdfEmailLog } from "@/components/PdfEmailLog";
 
 /** A fill-in box from the PDF's own form, in on-screen pixels. */
 type FieldBox = {
@@ -127,6 +128,8 @@ export function PdfTools({
   /** Bumped after a save so the shelf below reloads, and points at the folder the file landed in. */
   const [shelfVersion, setShelfVersion] = useState(0);
   const [savedFolderId, setSavedFolderId] = useState<string | null>(null);
+  /** Bumped after an email is accepted, so the delivery panel picks it up. */
+  const [emailVersion, setEmailVersion] = useState(0);
   const [busy, setBusy] = useState(false);
   const wrapRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -474,6 +477,7 @@ export function PdfTools({
           onOpenChange={setEmailOpen}
           fileName={signedFileName(file.name)}
           build={finished}
+          onSent={() => setEmailVersion((v) => v + 1)}
         />
       )}
       {file && canSave && (
@@ -488,6 +492,7 @@ export function PdfTools({
           }}
         />
       )}
+      {canEmail && <PdfEmailLog refreshKey={emailVersion} />}
       {canSave && <PdfShelfPanel refreshKey={shelfVersion} focusFolderId={savedFolderId} />}
     </div>
   );
@@ -857,11 +862,13 @@ function EmailDialog({
   onOpenChange,
   fileName,
   build,
+  onSent,
 }: {
   open: boolean;
   onOpenChange: (o: boolean) => void;
   fileName: string;
   build: () => Promise<Uint8Array>;
+  onSent?: () => void;
 }) {
   const send = useServerFn(sendPdfEmail);
   const [to, setTo] = useState("");
@@ -900,7 +907,10 @@ function EmailDialog({
           pdf: toBase64(bytes),
         },
       });
-      toast.success(`Sent to ${recipients.join(", ")}.`);
+      toast.success(
+        `Sent to ${recipients.join(", ")}. The delivery result appears under Recent PDF emails.`,
+      );
+      onSent?.();
       onOpenChange(false);
       setTo("");
       setMessage("");

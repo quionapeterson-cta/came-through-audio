@@ -42,6 +42,7 @@ import { Route as ApiPublicCronCatalogLapsesRouteImport } from './routes/api/pub
 import { Route as ApiPublicCronRegistrationRemindersRouteImport } from './routes/api/public/cron/registration-reminders'
 import { Route as ApiPublicCronTaskRemindersRouteImport } from './routes/api/public/cron/task-reminders'
 import { Route as ApiPublicCronTrialRemindersRouteImport } from './routes/api/public/cron/trial-reminders'
+import { Route as ApiPublicEmailResendWebhookRouteImport } from './routes/api/public/email/resend-webhook'
 import { Route as ApiPublicPaymentsWebhookRouteImport } from './routes/api/public/payments/webhook'
 
 const IndexRoute = IndexRouteImport.update({
@@ -213,6 +214,12 @@ const ApiPublicCronTrialRemindersRoute =
     path: '/api/public/cron/trial-reminders',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiPublicEmailResendWebhookRoute =
+  ApiPublicEmailResendWebhookRouteImport.update({
+    id: '/api/public/email/resend-webhook',
+    path: '/api/public/email/resend-webhook',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicPaymentsWebhookRoute =
   ApiPublicPaymentsWebhookRouteImport.update({
     id: '/api/public/payments/webhook',
@@ -254,6 +261,7 @@ export interface FileRoutesByFullPath {
   '/api/public/cron/registration-reminders': typeof ApiPublicCronRegistrationRemindersRoute
   '/api/public/cron/task-reminders': typeof ApiPublicCronTaskRemindersRoute
   '/api/public/cron/trial-reminders': typeof ApiPublicCronTrialRemindersRoute
+  '/api/public/email/resend-webhook': typeof ApiPublicEmailResendWebhookRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
 }
 export interface FileRoutesByTo {
@@ -290,6 +298,7 @@ export interface FileRoutesByTo {
   '/api/public/cron/registration-reminders': typeof ApiPublicCronRegistrationRemindersRoute
   '/api/public/cron/task-reminders': typeof ApiPublicCronTaskRemindersRoute
   '/api/public/cron/trial-reminders': typeof ApiPublicCronTrialRemindersRoute
+  '/api/public/email/resend-webhook': typeof ApiPublicEmailResendWebhookRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
 }
 export interface FileRoutesById {
@@ -327,6 +336,7 @@ export interface FileRoutesById {
   '/api/public/cron/registration-reminders': typeof ApiPublicCronRegistrationRemindersRoute
   '/api/public/cron/task-reminders': typeof ApiPublicCronTaskRemindersRoute
   '/api/public/cron/trial-reminders': typeof ApiPublicCronTrialRemindersRoute
+  '/api/public/email/resend-webhook': typeof ApiPublicEmailResendWebhookRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
 }
 export interface FileRouteTypes {
@@ -365,6 +375,7 @@ export interface FileRouteTypes {
     | '/api/public/cron/registration-reminders'
     | '/api/public/cron/task-reminders'
     | '/api/public/cron/trial-reminders'
+    | '/api/public/email/resend-webhook'
     | '/api/public/payments/webhook'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -401,6 +412,7 @@ export interface FileRouteTypes {
     | '/api/public/cron/registration-reminders'
     | '/api/public/cron/task-reminders'
     | '/api/public/cron/trial-reminders'
+    | '/api/public/email/resend-webhook'
     | '/api/public/payments/webhook'
   id:
     | '__root__'
@@ -437,6 +449,7 @@ export interface FileRouteTypes {
     | '/api/public/cron/registration-reminders'
     | '/api/public/cron/task-reminders'
     | '/api/public/cron/trial-reminders'
+    | '/api/public/email/resend-webhook'
     | '/api/public/payments/webhook'
   fileRoutesById: FileRoutesById
 }
@@ -474,6 +487,7 @@ export interface RootRouteChildren {
   ApiPublicCronRegistrationRemindersRoute: typeof ApiPublicCronRegistrationRemindersRoute
   ApiPublicCronTaskRemindersRoute: typeof ApiPublicCronTaskRemindersRoute
   ApiPublicCronTrialRemindersRoute: typeof ApiPublicCronTrialRemindersRoute
+  ApiPublicEmailResendWebhookRoute: typeof ApiPublicEmailResendWebhookRoute
   ApiPublicPaymentsWebhookRoute: typeof ApiPublicPaymentsWebhookRoute
 }
 
@@ -710,6 +724,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicCronTrialRemindersRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/email/resend-webhook': {
+      id: '/api/public/email/resend-webhook'
+      path: '/api/public/email/resend-webhook'
+      fullPath: '/api/public/email/resend-webhook'
+      preLoaderRoute: typeof ApiPublicEmailResendWebhookRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/payments/webhook': {
       id: '/api/public/payments/webhook'
       path: '/api/public/payments/webhook'
@@ -755,6 +776,7 @@ const rootRouteChildren: RootRouteChildren = {
     ApiPublicCronRegistrationRemindersRoute,
   ApiPublicCronTaskRemindersRoute: ApiPublicCronTaskRemindersRoute,
   ApiPublicCronTrialRemindersRoute: ApiPublicCronTrialRemindersRoute,
+  ApiPublicEmailResendWebhookRoute: ApiPublicEmailResendWebhookRoute,
   ApiPublicPaymentsWebhookRoute: ApiPublicPaymentsWebhookRoute,
 }
 export const routeTree = rootRouteImport
