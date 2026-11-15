@@ -73,7 +73,7 @@ function RefundBox({ maxCents, defaultCents, needsNote, busy, onCancel, onConfir
       ) : null}
       <p className="mt-2 text-xs text-muted-foreground">
         Most you can refund here: <b>{formatUsd(maxCents)}</b> — the payment is the ceiling, there is no fixed cap.
-        {needsNote ? " This one is past 30 days, so the note is required: a refund is cheaper than a dispute." : " The card is refunded in Stripe; nothing else is typed there."}
+        {needsNote ? " This one is past 30 days, so the note is required: a refund is cheaper than a dispute." : " The card is refunded here; nothing else is typed there."}
         {needsDuplicate && !duplicateReady ? " Tick all four checks first." : ""}
       </p>
       <div className="mt-3 flex flex-wrap gap-2">
@@ -215,11 +215,11 @@ function DuplicateWatch({ userId }: { userId: string }) {
     <div className="mt-5">
       <h4 className="text-sm font-bold">Possible duplicate payments</h4>
       <p className="mt-1 text-xs text-muted-foreground">
-        Checked against Stripe, not the bank app. A hold looks exactly like a charge and clears by itself; two settled
+        Checked against the live payment record, not the bank app. A hold looks exactly like a charge and clears by itself; two settled
         payments for the same thing are the only real duplicate.
       </p>
-      {q.isLoading ? <p className="mt-2 text-sm text-muted-foreground">Checking Stripe…</p> : null}
-      {q.isError ? <p className="mt-2 text-sm text-destructive">Couldn&apos;t read the payments from Stripe. Don&apos;t refund a duplicate until you can.</p> : null}
+      {q.isLoading ? <p className="mt-2 text-sm text-muted-foreground">Checking the payments…</p> : null}
+      {q.isError ? <p className="mt-2 text-sm text-destructive">Couldn&apos;t read the payments. Don&apos;t refund a duplicate until you can.</p> : null}
       {!q.isLoading && !q.isError && !groups.length ? (
         <p className="mt-2 text-sm text-muted-foreground">
           No two payments of the same amount within 72 hours. If the member still sees two lines, it is a hold, a refund,
@@ -298,10 +298,10 @@ export function BillingConsolePanel({ isSuper }: { isSuper: boolean }) {
   return (
     <div className="space-y-5">
       <section className="rounded-2xl border border-border bg-card p-5">
-        <h3 className="text-lg font-bold">Billing without Stripe</h3>
+        <h3 className="text-lg font-bold">Refunds and plan changes</h3>
         <p className="mt-1 max-w-3xl text-sm text-muted-foreground">
           Look a member up by the email they paid with, then refund a charge or stop a plan from renewing. The card is
-          refunded through our Stripe key; nobody needs a dashboard login, and every action below is logged. Refund up to
+          refunded right here; nobody needs a dashboard login, and every action below is logged. Refund up to
           what they paid, with no fixed ceiling. Past 30 days it still goes through but needs a note, because a dispute
           costs more than the refund.
           {isSuper ? " As founder, every refund is yours to approve." : ""}

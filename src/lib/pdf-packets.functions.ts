@@ -371,7 +371,7 @@ export const sendPacket = createServerFn({ method: "POST" })
       emailError: res.ok
         ? null
         : res.detail === "no-key"
-          ? "Email isn't connected yet (RESEND_API_KEY). The link is ready to copy instead."
+          ? "Email sending isn't switched on yet. The link is ready to copy instead."
           : `The email could not be sent (${res.status ?? res.detail ?? "network"}). Copy the link instead.`,
     };
   });

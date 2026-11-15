@@ -83,7 +83,7 @@ export function readCharge(c: ChargeFacts): ChargeReading {
       held: true,
       refunded,
       clearsBy,
-      line: `Only an authorization so far — no money has left their account. It should disappear by ${dayLabel(clearsBy)}; some banks take up to ${HOLD_RELEASE_DAYS_LONG} days. Never refund it: Stripe has nothing to give back.`,
+      line: `Only an authorization so far — no money has left their account. It should disappear by ${dayLabel(clearsBy)}; some banks take up to ${HOLD_RELEASE_DAYS_LONG} days. Never refund it: there is nothing to give back.`,
     };
   }
   if (c.state === "processing") {
@@ -181,7 +181,7 @@ export function groupPossibleDuplicates(charges: readonly ChargeFacts[]): Duplic
  * the member kept.
  */
 export const DUPLICATE_CHECKS = [
-  { id: "settled", label: "Both payments show as paid in Stripe — not an authorization, not 'processing'." },
+  { id: "settled", label: "Both payments show as paid — not an authorization, not 'processing'." },
   { id: "same_item", label: "They paid twice for the same thing, not two seats, two certificates, or a purchase plus a renewal." },
   { id: "nothing_back", label: "No refund has already gone back on either payment." },
   { id: "not_a_hold", label: "What they are looking at is the charge, not a hold sitting beside the real charge." },
@@ -199,7 +199,7 @@ export function duplicateChecksDone(checks: readonly string[]): boolean {
  */
 export function duplicateRefundBlock(o: { checks: readonly string[]; settled: boolean; held: boolean; refunded: boolean }): string | null {
   if (o.held) return "That payment hasn't settled yet, so there is nothing to refund: it is an authorization that clears by itself. Tell them when it should be gone, and check again after that.";
-  if (!o.settled) return "No money moved on that payment, so a duplicate refund would refund nothing. Check the Stripe status with them before doing anything else.";
+  if (!o.settled) return "No money moved on that payment, so a duplicate refund would refund nothing. Check the payment status with them before doing anything else.";
   if (o.refunded) return "That payment is already refunded in full. Refunding it again is refused, not just unwise.";
   if (!duplicateChecksDone(o.checks)) return `A duplicate refund needs all ${DUPLICATE_CHECKS.length} checks ticked. If any is not true, it isn't a duplicate: answer the member instead of refunding.`;
   return null;

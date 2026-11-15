@@ -66,16 +66,16 @@ ${message}
       console.error(`Resend failed [${res.status ?? res.detail}]: ${res.detail ?? ""}`);
       if (res.detail === "no-key") {
         throw new Error(
-          "Email isn't connected yet: add RESEND_API_KEY in Lovable → Project settings → Secrets, then try again.",
+          "Email sending isn't switched on yet. Ask a super admin to enable it, then try again.",
         );
       }
       const hint =
         res.status === 401 || res.status === 403
-          ? " Resend refused the sending key, or the camethroughaudio.com domain isn't verified there."
+          ? " The sending key was refused, or the camethroughaudio.com domain isn't verified."
           : res.status === 429
-            ? " Resend's rate limit was hit; wait a minute and try again."
+            ? " The email service's rate limit was hit; wait a minute and try again."
             : res.status === 422
-              ? " Resend refused the message — check the addresses and the attachment size."
+              ? " The email service refused the message — check the addresses and the attachment size."
               : "";
       throw new Error(`Email could not be sent (${res.status ?? "network"}).${hint}`);
     }

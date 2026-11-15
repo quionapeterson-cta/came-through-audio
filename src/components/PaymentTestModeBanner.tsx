@@ -9,8 +9,7 @@ export function PaymentTestModeBanner({ previewTier, onPreviewTier }: Props) {
   return (
     <div className="flex w-full flex-wrap items-center justify-center gap-3 border-b border-caution bg-caution/20 px-4 py-2 text-center text-sm text-foreground">
       <span>
-        All payments made in the preview are in test mode.{" "}
-        <a href="https://docs.lovable.dev/features/payments#test-and-live-environments" target="_blank" rel="noopener noreferrer" className="font-medium underline">Read more</a>
+        All payments made in the preview are in test mode. No real card is charged.
       </span>
       {onPreviewTier && (
         <label className="flex items-center gap-2 font-semibold">

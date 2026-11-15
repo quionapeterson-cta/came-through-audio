@@ -24,15 +24,15 @@ class AiUnavailable extends Error {
 /** What went wrong, in plain words, for super admins only (founder, 2026-10-27: drafting fell back with no reason). */
 function staffNote(e: AiUnavailable) {
   const why = e.code === "not configured"
-    ? "CLOUDFLARE_ACCOUNT_ID or CLOUDFLARE_AI_TOKEN isn't set where the site runs. In Lovable: Cloud → Secrets, use those exact names (all capitals, underscores), then Publish again so the live site picks them up."
+    ? "Document drafting isn't switched on where the site runs. Ask the software team to enable it, then Publish again."
     : e.code === "401" || e.code === "403"
-      ? "Cloudflare rejected the token. Create a new Workers AI API token (Workers AI → Use REST API → Create a Workers AI API Token), paste it into CLOUDFLARE_AI_TOKEN, then Publish again."
+      ? "The drafting key was rejected. Ask the software team to replace it, then Publish again."
       : e.code === "400" || e.code === "404"
-        ? "Cloudflare couldn't find that account or model. Check CLOUDFLARE_ACCOUNT_ID is the Account ID from Workers AI → Use REST API (32 letters and numbers), then Publish again."
+        ? "The drafting account or model couldn't be found. Ask the software team to check the setup, then Publish again."
         : e.code === "429"
-          ? "Today's free Workers AI allowance is used up. It resets at midnight UTC."
-          : `Cloudflare answered with "${e.code}".`;
-  return ` Staff note: ${why}${e.detail ? ` Cloudflare said: ${e.detail}` : ""}`;
+          ? "Today's free drafting allowance is used up. It resets at midnight UTC."
+          : `The drafting service answered with "${e.code}".`;
+  return ` Staff note: ${why}${e.detail ? ` The drafting service said: ${e.detail}` : ""}`;
 }
 
 /** One Workers AI call in JSON mode. */

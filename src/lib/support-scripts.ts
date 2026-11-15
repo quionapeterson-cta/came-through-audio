@@ -187,7 +187,7 @@ export const SUPPORT_SCRIPTS: readonly SupportScript[] = [
     department: "finance",
     title: "Receipt or invoice request",
     when: "Someone needs a receipt or an invoice for a payment.",
-    body: "Hi {{first_name}},\n\nYour receipt for {{amount}} on {{date}} is attached. It's the same document Stripe emails at the time of payment, so it's the one to give your accountant.\n\nIf you need it in a company name or with a tax number on it, reply with those details and we'll issue a fresh one.\n\nCame Through Audio Finance",
+    body: "Hi {{first_name}},\n\nYour receipt for {{amount}} on {{date}} is attached. It's the same receipt the payment processor emails at the time of payment, so it's the one to give your accountant.\n\nIf you need it in a company name or with a tax number on it, reply with those details and we'll issue a fresh one.\n\nCame Through Audio Finance",
   },
   {
     id: "finance-charge-question",

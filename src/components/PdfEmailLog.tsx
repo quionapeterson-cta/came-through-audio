@@ -56,8 +56,8 @@ export function PdfEmailLog({ refreshKey = 0 }: { refreshKey?: number }) {
     <div className="rounded-2xl border border-border bg-card p-5">
       <h2 className="text-xl font-bold">Recent PDF emails</h2>
       <p className="text-sm text-muted-foreground">
-        Whether the recipient&apos;s mail server took each document. “Sent” means Resend accepted
-        it; the result below is what came back.
+        Whether the recipient&apos;s mail server took each document. “Sent” means our email service
+        accepted it; the result below is what came back.
       </p>
 
       {error ? <p className="mt-3 text-sm text-destructive">{error}</p> : null}

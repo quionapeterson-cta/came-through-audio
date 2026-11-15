@@ -19,8 +19,9 @@ export function PriceList() {
       <div className="rounded-2xl border border-border bg-card p-5">
         <h3 className="text-lg font-bold">What a charge reads as on a card statement</h3>
         <p className="mt-1 max-w-3xl text-sm text-muted-foreground">
-          A member who doesn't recognise the charge is the most common reason a payment comes back as a dispute. Stripe
-          shows the full descriptor where it can, and keeps only the first ten characters for most card statements:
+          A member who doesn't recognise the charge is the most common reason a payment comes back as a dispute. The
+          payment processor shows the full descriptor where it can, and keeps only the first ten characters for most
+          card statements:
         </p>
         <p className="mt-3 flex flex-wrap items-center gap-2 text-sm">
           <span className="text-muted-foreground">Full descriptor</span>
@@ -29,9 +30,9 @@ export function PriceList() {
           <code className="rounded bg-muted px-2 py-1 font-bold tracking-wide">{CARD_STATEMENT.prefix}</code>
         </p>
         <p className="mt-2 max-w-3xl text-xs text-muted-foreground">
-          The prefix is set on purpose: leave it blank and Stripe cuts the name to <code>CAME THROU</code>. Both are
-          exact pieces of the business name, so neither creates a second DBA. Product names and descriptions for Stripe
-          are listed in <code>STRIPE-PRODUCTS.md</code>.
+          The prefix is set on purpose: leave it blank and the processor cuts the name to <code>CAME THROU</code>. Both
+          are exact pieces of the business name, so neither creates a second DBA. Product names and descriptions for the
+          billing system are listed in the billing product sheet.
         </p>
       </div>
 
@@ -46,7 +47,7 @@ export function PriceList() {
                   <th className="px-3 py-2 font-semibold">Item</th>
                   <th className="px-3 py-2 font-semibold">Price</th>
                   <th className="px-3 py-2 font-semibold">What it covers</th>
-                  <th className="px-3 py-2 font-semibold">Stripe lookup key</th>
+                  <th className="px-3 py-2 font-semibold">Billing lookup key</th>
                 </tr>
               </thead>
               <tbody>
@@ -72,7 +73,7 @@ export function PriceList() {
         Plan and seat prices live in <code>src/lib/plans.ts</code>; each add-on price sits with its own feature. Never
         quote a price that isn't on this page: if a number here looks wrong, it is wrong on the site too, so tell Software
         rather than adjusting it in a message. Seats are sold inside the app from Profile → Add another artist, and checkout buys by the lookup key
-        shown, so a price changed in Stripe must keep its key.
+        shown, so a price changed in the billing system must keep its key.
       </p>
     </div>
   );

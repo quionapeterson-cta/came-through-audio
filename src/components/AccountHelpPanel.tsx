@@ -70,7 +70,7 @@ export function AccountHelpPanel({ access }: { access: StaffAccess }) {
         <p className="mt-1 max-w-3xl text-sm text-muted-foreground">
           Look a member up by the email they signed up with. {scope.label} can{" "}
           {scope.editProfile && scope.editPayment ? "correct their details and send the card-update link" : scope.editProfile ? "correct their names" : "send the card-update link"}.
-          Plans still come from Stripe and staff access still comes from Admin → Staff.
+          Plans are still billed by our payment provider and staff access still comes from Admin → Staff.
         </p>
         <form onSubmit={find} className="mt-4 flex flex-wrap items-end gap-2">
           <div className="min-w-64 flex-1 space-y-2">
@@ -115,7 +115,7 @@ export function AccountHelpPanel({ access }: { access: StaffAccess }) {
             <div className="mt-5 border-t border-border pt-4">
               <h4 className="font-semibold">Card on file</h4>
               <p className="mt-1 text-sm text-muted-foreground">
-                Send the member this link. It opens Stripe's own page for their account, so staff never see or type a card number.
+                Send the member this link. It opens the secure billing page for their account, so staff never see or type a card number.
               </p>
               <div className="mt-3 flex flex-wrap gap-2">
                 <Button variant="outline" onClick={() => void cardLink()} disabled={busy}>Send card-update link</Button>

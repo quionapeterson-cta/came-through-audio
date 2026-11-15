@@ -22,7 +22,7 @@ export const HANDBOOK: HandbookSection[] = [
   ] },
   { id: "privacy", title: "Customer privacy and security", body: [
     "Never share a customer's PRO, IPI numbers, splits, contracts or files with anyone but them. Never put customer data on a personal device or in a personal account.",
-    "Nobody on staff can give a customer paid access or change their plan by hand; payments come from Stripe. Staff access is granted only in Admin → Staff.",
+    "Nobody on staff can give a customer paid access or change their plan by hand; payments come from our payment provider. Staff access is granted only in Admin → Staff.",
     "Use a password manager and two-step sign-in. Report anything suspicious to the founder right away.",
     "Being a member and working here is allowed, and it isn't a conflict by itself. Acting on your own account is: never work your own ticket, refund, split sheet, badge or registration. Hand it to another admin, and anything about your own money goes to the founder.",
   ] },
