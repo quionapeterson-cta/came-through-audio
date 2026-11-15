@@ -874,7 +874,7 @@ export function PdfTemplateStudio() {
               inspector drop below the page when they don't fit instead of pushing the studio off screen. */}
           <div className="flex flex-wrap items-start gap-4">
             {/* Blocks rail */}
-            <div className="w-full shrink-0 space-y-3 sm:w-[300px]">
+            <div className="w-full shrink-0 space-y-3 sm:w-[232px]">
               <div className="rounded-xl border border-border p-3">
                 <p className="flex items-baseline justify-between gap-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                   Blocks
