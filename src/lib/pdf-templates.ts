@@ -345,7 +345,7 @@ function blockHtml(block: TemplateBlock): string {
   }
   const metal = block.tier === "gold" ? BRAND.gold : BRAND.platinum;
   return `<section style="padding:28px 48px 0">
-  <div style="display:inline-block;border:2px solid ${metal};border-radius:50%;width:96px;height:96px;text-align:center;line-height:92px;font-size:11px;font-weight:700;letter-spacing:1px;color:${BRAND.black}">${esc(fillTokens(block.label))}</div>
+  <div style="display:inline-flex;align-items:center;justify-content:center;box-sizing:border-box;border:2px solid ${metal};border-radius:50%;width:96px;height:96px;padding:12px;text-align:center;font-size:11px;font-weight:700;letter-spacing:1px;color:${BRAND.black}">${esc(fillTokens(block.label))}</div>
   <div style="font-size:10px;letter-spacing:2px;color:${BRAND.black};opacity:0.65;margin-top:8px">CTA CERTIFICATION · ${block.tier.toUpperCase()}</div>
 </section>`;
 }

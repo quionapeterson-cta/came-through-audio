@@ -27,9 +27,11 @@ export type PacketValues = Record<string, string | string[]>;
 
 export type SignatureRecord = {
   kind: "draw" | "type";
-  /** A PNG data URL when drawn, or the typed name. */
+  /** A PNG data URL — drawn, or the typed name set in cursive — or, on older packets, the typed name itself. */
   data: string;
   name: string;
+  /** How large the signer wants it on the line, for names that need the room. */
+  size?: "sm" | "md" | "lg" | undefined;
   signedAt: string;
   device?: string;
   ip?: string;

@@ -1,13 +1,67 @@
 import { useEffect, useRef, useState } from "react";
 import { Eraser, PenLine, Type } from "lucide-react";
 import { BRAND } from "@/lib/pdf-templates";
+import { loadWebFont } from "@/lib/web-fonts";
 
-export type SignatureValue = { kind: "draw" | "type"; data: string; name: string };
+/** The same legible cursive the contract signatures use (public/fonts, Script & hand-drawn). */
+const SIGNATURE_FAMILY = "Dancing Script";
+
+export type SignatureSize = "sm" | "md" | "lg";
+
+export type SignatureValue = {
+  kind: "draw" | "type";
+  /** A PNG data URL: strokes for a drawn signature, the name set in cursive for a typed one. */
+  data: string;
+  name: string;
+  /** How large it prints on the line, for a name that needs the room. */
+  size?: SignatureSize;
+};
+
+const SIZE_LABELS: { value: SignatureSize; label: string; hint: string }[] = [
+  { value: "sm", label: "S", hint: "Small" },
+  { value: "md", label: "M", hint: "Medium" },
+  { value: "lg", label: "L", hint: "Large" },
+];
+
+/**
+ * Draws a typed name in cursive and returns it as a PNG. Long names shrink until they fit the same canvas, so a name
+ * like "Alexandria-Catherine Whitfield" still ends at the signature line instead of running past it.
+ */
+function typedSignaturePng(name: string): string | null {
+  try {
+    const canvas = document.createElement("canvas");
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return null;
+    const base = 160;
+    const maxWidth = 1400;
+    const font = (size: number) => `700 ${size}px "${SIGNATURE_FAMILY}", "Segoe Script", cursive`;
+    ctx.font = font(base);
+    const measured = ctx.measureText(name).width || 1;
+    const fontSize =
+      measured > maxWidth ? Math.max(56, Math.floor((base * maxWidth) / measured)) : base;
+    ctx.font = font(fontSize);
+    const metrics = ctx.measureText(name);
+    const ascent = metrics.actualBoundingBoxAscent || fontSize * 0.8;
+    const descent = metrics.actualBoundingBoxDescent || fontSize * 0.3;
+    const pad = Math.round(fontSize * 0.14);
+    canvas.width = Math.ceil(metrics.width + pad * 2);
+    canvas.height = Math.ceil(ascent + descent + pad * 2);
+    const paint = canvas.getContext("2d");
+    if (!paint) return null;
+    paint.font = font(fontSize);
+    paint.fillStyle = BRAND.black;
+    paint.textBaseline = "alphabetic";
+    paint.fillText(name, pad, pad + ascent);
+    return canvas.toDataURL("image/png");
+  } catch {
+    return null;
+  }
+}
 
 /**
  * A signature pad that works with a finger, a stylus or a mouse, with typing as the alternative for anyone who cannot
- * draw (founder, 2026-11-15). The drawn signature is a PNG data URL; a typed one is the name itself, and the PDF sets it
- * in an italic face. Gold marks a signature already captured, so a signer can see at a glance what is done.
+ * draw (founder, 2026-11-15). Both paths end as a PNG, so the page and the PDF show the same signature; typed names are
+ * set in a legible cursive rather than an italic sans. Gold marks a signature already captured.
  */
 export function PdfSignaturePad({
   value,
@@ -23,8 +77,19 @@ export function PdfSignaturePad({
 }) {
   const [mode, setMode] = useState<"draw" | "type">(value?.kind === "type" ? "type" : "draw");
   const [typed, setTyped] = useState(value?.kind === "type" ? value.name : (name ?? ""));
+  const [size, setSize] = useState<SignatureSize>(value?.size ?? "md");
+  const [cursiveReady, setCursiveReady] = useState(false);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const drawing = useRef(false);
+
+  useEffect(() => {
+    loadWebFont(SIGNATURE_FAMILY);
+    let alive = true;
+    void document.fonts?.ready.then(() => alive && setCursiveReady(true)).catch(() => undefined);
+    return () => {
+      alive = false;
+    };
+  }, []);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -40,6 +105,35 @@ export function PdfSignaturePad({
     ctx.lineJoin = "round";
     ctx.strokeStyle = BRAND.black;
   }, [mode]);
+
+  /** A typed name becomes the same kind of PNG a drawn one is, set in cursive. */
+  useEffect(() => {
+    if (mode !== "type") return;
+    const clean = typed.trim();
+    if (!clean) {
+      onChange(null);
+      return;
+    }
+    let cancelled = false;
+    void (async () => {
+      try {
+        await document.fonts?.load(`700 160px "${SIGNATURE_FAMILY}"`);
+      } catch {
+        // The system's own script face is the fallback the canvas already names.
+      }
+      if (cancelled) return;
+      const png = typedSignaturePng(clean);
+      if (!cancelled) onChange({ kind: "type", data: png ?? clean, name: clean, size });
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [typed, mode, size, cursiveReady]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  /** The size also moves a signature that was already captured. */
+  useEffect(() => {
+    if (value && value.size !== size) onChange({ ...value, size });
+  }, [size]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const point = (event: React.PointerEvent<HTMLCanvasElement>) => {
     const rect = event.currentTarget.getBoundingClientRect();
@@ -74,7 +168,7 @@ export function PdfSignaturePad({
     const canvas = canvasRef.current;
     if (!canvas) return;
     try {
-      onChange({ kind: "draw", data: canvas.toDataURL("image/png"), name: name ?? typed });
+      onChange({ kind: "draw", data: canvas.toDataURL("image/png"), name: name ?? typed, size });
     } catch {
       // A canvas that cannot be read still leaves the typed path available.
     }
@@ -88,6 +182,8 @@ export function PdfSignaturePad({
   }
 
   const captured = !!value;
+  const typedPreview =
+    value?.kind === "type" && value.data.startsWith("data:image/png") ? value.data : null;
 
   return (
     <div className="space-y-2">
@@ -95,21 +191,39 @@ export function PdfSignaturePad({
         <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
           {label}
         </p>
-        <div className="inline-flex rounded-full border border-border p-0.5 text-xs">
-          <button
-            type="button"
-            onClick={() => setMode("draw")}
-            className={`flex items-center gap-1 rounded-full px-2.5 py-1 ${mode === "draw" ? "bg-primary text-primary-foreground" : "text-muted-foreground"}`}
-          >
-            <PenLine className="h-3 w-3" /> Draw
-          </button>
-          <button
-            type="button"
-            onClick={() => setMode("type")}
-            className={`flex items-center gap-1 rounded-full px-2.5 py-1 ${mode === "type" ? "bg-primary text-primary-foreground" : "text-muted-foreground"}`}
-          >
-            <Type className="h-3 w-3" /> Type
-          </button>
+        <div className="flex items-center gap-2">
+          <div className="inline-flex items-center rounded-full border border-border p-0.5 text-[11px]">
+            <span className="px-1.5 text-muted-foreground">Size</span>
+            {SIZE_LABELS.map((option) => (
+              <button
+                key={option.value}
+                type="button"
+                title={option.hint}
+                aria-label={`${label} size: ${option.hint}`}
+                aria-pressed={size === option.value}
+                onClick={() => setSize(option.value)}
+                className={`rounded-full px-2 py-1 font-semibold ${size === option.value ? "bg-primary text-primary-foreground" : "text-muted-foreground"}`}
+              >
+                {option.label}
+              </button>
+            ))}
+          </div>
+          <div className="inline-flex rounded-full border border-border p-0.5 text-xs">
+            <button
+              type="button"
+              onClick={() => setMode("draw")}
+              className={`flex items-center gap-1 rounded-full px-2.5 py-1 ${mode === "draw" ? "bg-primary text-primary-foreground" : "text-muted-foreground"}`}
+            >
+              <PenLine className="h-3 w-3" /> Draw
+            </button>
+            <button
+              type="button"
+              onClick={() => setMode("type")}
+              className={`flex items-center gap-1 rounded-full px-2.5 py-1 ${mode === "type" ? "bg-primary text-primary-foreground" : "text-muted-foreground"}`}
+            >
+              <Type className="h-3 w-3" /> Type
+            </button>
+          </div>
         </div>
       </div>
 
@@ -140,20 +254,31 @@ export function PdfSignaturePad({
           </button>
         </div>
       ) : (
-        <input
-          value={typed}
-          onChange={(e) => {
-            setTyped(e.target.value);
-            onChange(
-              e.target.value.trim()
-                ? { kind: "type", data: e.target.value, name: e.target.value }
-                : null,
-            );
-          }}
-          placeholder="Type your full name"
-          aria-label="Typed signature"
-          className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
-        />
+        <div className="space-y-2">
+          <input
+            value={typed}
+            onChange={(e) => setTyped(e.target.value)}
+            placeholder="Type your full name"
+            aria-label="Typed signature"
+            className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+          />
+          <div
+            className="flex min-h-[76px] items-center justify-center overflow-hidden rounded-lg border px-3"
+            style={{ borderColor: captured ? BRAND.gold : BRAND.platinum, background: BRAND.white }}
+          >
+            {typedPreview ? (
+              <img
+                src={typedPreview}
+                alt={`Typed signature: ${value?.name ?? typed}`}
+                className="max-h-16 max-w-full"
+              />
+            ) : (
+              <span className="text-xs text-muted-foreground">
+                Your name in cursive, as it will print.
+              </span>
+            )}
+          </div>
+        </div>
       )}
 
       <p className="text-[11px]" style={{ color: captured ? BRAND.cobalt : undefined }}>

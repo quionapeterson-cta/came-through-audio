@@ -421,10 +421,13 @@ function Paper({
               <div style={{ padding: "24px 44px 0" }}>
                 <div
                   style={{
-                    display: "inline-block",
+                    display: "inline-flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    boxSizing: "border-box",
                     width: 92,
                     height: 92,
-                    lineHeight: "88px",
+                    padding: 10,
                     textAlign: "center",
                     borderRadius: "50%",
                     border: `2px solid ${block.tier === "gold" ? BRAND.gold : BRAND.platinum}`,

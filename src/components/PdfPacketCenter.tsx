@@ -25,6 +25,8 @@ import {
   PACKET_STATUS_LABELS,
   type PacketStatus,
 } from "@/lib/pdf-packets";
+import { SITE_URL } from "@/lib/email-layout";
+import { trustedOrigin } from "@/lib/invite-limits";
 import type { PdfTemplate } from "@/lib/pdf-templates";
 import type { SavedTemplate } from "@/lib/pdf-templates.functions";
 import { listPdfTemplates } from "@/lib/pdf-templates.functions";
@@ -40,6 +42,10 @@ import {
   type PacketSummary,
 } from "@/lib/pdf-packets.functions";
 import { PdfSignaturePad, type SignatureValue } from "@/components/PdfSignaturePad";
+
+/** The live signing address, so a link copied from an editor preview still opens for the recipient. */
+const signingLink = (id: string) =>
+  `${typeof window === "undefined" ? SITE_URL : trustedOrigin(window.location.origin, SITE_URL)}/sign/packet/${id}`;
 
 const when = (iso: string | null) =>
   iso
@@ -323,17 +329,13 @@ export function PdfPacketCenter() {
               </span>
             </div>
             <div className="mt-2 flex flex-wrap items-center gap-2">
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => void copy(`${window.location.origin}/sign/packet/${packet.id}`)}
-              >
+              <Button size="sm" variant="outline" onClick={() => void copy(signingLink(packet.id))}>
                 <Copy /> Copy link
               </Button>
               <Button
                 size="sm"
                 variant="outline"
-                onClick={() => window.open(`/sign/packet/${packet.id}`, "_blank", "noopener")}
+                onClick={() => window.open(signingLink(packet.id), "_blank", "noopener")}
               >
                 <ArrowUpRight /> Open signing page
               </Button>

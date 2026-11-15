@@ -392,7 +392,13 @@ export async function templateToPdfBytes(
     }
 
     if (block.kind === "signature") {
-      ensure(64);
+      // A signed packet carries the real signature on the line, drawn or typed, with the day it was given. Its space is
+      // reserved before the line is drawn, so the signature sits between the heading and the rule instead of running
+      // through the heading when the signer picks a larger size.
+      const signed = block.noStamp ? null : (options.signatures?.[block.role] ?? null);
+      const scale = signed?.size === "lg" ? 1.4 : signed?.size === "sm" ? 0.8 : 1;
+      const sigHeight = 28 * scale;
+      ensure(52 + sigHeight);
       page.drawText(text(block.heading).toUpperCase(), {
         x: MARGIN,
         y,
@@ -400,10 +406,10 @@ export async function templateToPdfBytes(
         font: bold,
         color: ink(BRAND.cobalt),
       });
-      y -= 30;
+      y -= 8 + sigHeight;
       page.drawLine({
         start: { x: MARGIN, y },
-        end: { x: MARGIN + contentWidth * 0.58, y },
+        end: { x: MARGIN + contentWidth * 0.62, y },
         thickness: 0.8,
         color: ink(BRAND.black),
       });
@@ -433,14 +439,13 @@ export async function templateToPdfBytes(
           opacity: 0.7,
         });
       }
-      // A signed packet carries the real signature on the line, drawn or typed, with the day it was given.
-      const signed = block.noStamp ? null : (options.signatures?.[block.role] ?? null);
-      if (signed?.kind === "draw" && signed.data.startsWith("data:image/png")) {
+      // Drawn and typed signatures are both a PNG now, so the page shows exactly what the signer saw. The width cap
+      // keeps a long name on its own line.
+      if (signed && signed.data.startsWith("data:image/png")) {
         try {
           const png = await doc.embedPng(signed.data);
-          const height = 30;
-          const width = Math.min(contentWidth * 0.55, (png.width / png.height) * height);
-          page.drawImage(png, { x: MARGIN + 4, y: y + 2, width, height });
+          const width = Math.min(contentWidth * 0.62, (png.width / png.height) * sigHeight);
+          page.drawImage(png, { x: MARGIN + 4, y: y + 2, width, height: sigHeight });
         } catch {
           page.drawText(clean(signed.name), {
             x: MARGIN + 4,
@@ -473,7 +478,7 @@ export async function templateToPdfBytes(
           color: ink(BRAND.black),
         });
       }
-      y -= 40;
+      y -= 30;
       continue;
     }
 
@@ -486,11 +491,15 @@ export async function templateToPdfBytes(
       borderColor: ink(metal),
       borderWidth: 2,
     });
+    // Centred on the ring's own axis: measured width for the word, and its cap height used for the baseline, so a
+    // longer label sits level instead of riding high or low inside the circle.
     const label = text(block.label).slice(0, 18);
+    let labelSize = 9;
+    while (labelSize > 6 && bold.widthOfTextAtSize(label, labelSize) > 62) labelSize -= 0.5;
     page.drawText(label, {
-      x: MARGIN + 46 - bold.widthOfTextAtSize(label, 9) / 2,
-      y: y - 50,
-      size: 9,
+      x: MARGIN + 46 - bold.widthOfTextAtSize(label, labelSize) / 2,
+      y: y - 46 - labelSize * 0.36,
+      size: labelSize,
       font: bold,
       color: ink(BRAND.black),
     });
@@ -594,33 +603,39 @@ export async function templateToPdfBytes(
         color: ink(BRAND.platinum),
       });
     }
-    // The verified seal, in the brand's gold, over the platinum ring.
+    // The verified seal, in the brand's gold, over the platinum ring. Both words are measured and centred on the ring
+    // instead of nudged by hand, and their baselines balance around the centre so the seal reads level.
+    const sealX = PAGE.width - MARGIN - 52;
     const sealY = Math.max(BOTTOM + 60, y - 40);
     page.drawCircle({
-      x: PAGE.width - MARGIN - 52,
+      x: sealX,
       y: sealY,
       size: 44,
       borderColor: ink(BRAND.gold),
       borderWidth: 2.5,
     });
     page.drawCircle({
-      x: PAGE.width - MARGIN - 52,
+      x: sealX,
       y: sealY,
-      size: 37,
+      size: 37.5,
       borderColor: ink(BRAND.platinum),
       borderWidth: 0.7,
     });
-    page.drawText("CTA", {
-      x: PAGE.width - MARGIN - 62,
-      y: sealY + 6,
-      size: 9,
+    const sealTop = "CTA";
+    const sealBottom = "VERIFIED";
+    const topSize = 10;
+    const bottomSize = 7.5;
+    page.drawText(sealTop, {
+      x: sealX - bold.widthOfTextAtSize(sealTop, topSize) / 2,
+      y: sealY + 2,
+      size: topSize,
       font: bold,
       color: ink(BRAND.black),
     });
-    page.drawText("VERIFIED", {
-      x: PAGE.width - MARGIN - 73,
-      y: sealY - 6,
-      size: 7,
+    page.drawText(sealBottom, {
+      x: sealX - bold.widthOfTextAtSize(sealBottom, bottomSize) / 2,
+      y: sealY - 9,
+      size: bottomSize,
       font: bold,
       color: ink(BRAND.black),
     });

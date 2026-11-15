@@ -3,7 +3,8 @@ import { z } from "zod";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { getRequest } from "@tanstack/react-start/server";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-import { emailLayout, escapeHtml, ADMIN_EMAIL } from "@/lib/email-layout";
+import { emailLayout, escapeHtml, ADMIN_EMAIL, SITE_URL } from "@/lib/email-layout";
+import { trustedOrigin } from "@/lib/invite-limits";
 import { mailKey, mailboxAddress, sendMail } from "@/lib/mailer";
 import { templateToPdfBytes } from "@/lib/pdf-template-pdf";
 import {
@@ -69,6 +70,7 @@ const signatureSchema = z.object({
   kind: z.enum(["draw", "type"]),
   data: z.string().min(1).max(900_000),
   name: z.string().trim().min(1).max(120),
+  size: z.enum(["sm", "md", "lg"]).optional(),
 });
 
 async function requireStaff(context: Ctx): Promise<void> {
@@ -158,8 +160,14 @@ async function buildPacketPdf(row: {
 const packetFileName = (title: string) =>
   `${title.replace(/[^\w -]+/g, "").trim() || "packet"}.pdf`;
 
+/**
+ * The address a signing link is safe to use from: our live site, never an editor preview. A preview host asks the
+ * recipient to sign in to Lovable and then shows them a permission page, which is not a signature page.
+ */
+const publicOrigin = () => trustedOrigin(origin(), SITE_URL);
+
 async function packetEmailLink(id: string) {
-  return `${origin()}/sign/packet/${id}`;
+  return `${publicOrigin()}/sign/packet/${id}`;
 }
 
 async function sendMailSafely(input: Parameters<typeof sendMail>[0]) {
@@ -269,6 +277,7 @@ const sendInput = z.object({
       kind: z.enum(["draw", "type"]),
       data: z.string().min(1).max(900_000),
       name: z.string().trim().min(1).max(120),
+      size: z.enum(["sm", "md", "lg"]).optional(),
     })
     .nullable()
     .default(null),
@@ -334,8 +343,10 @@ export const sendPacket = createServerFn({ method: "POST" })
         enabled_forms: finalForms,
         admin_values: data.adminValues,
         admin_signature: signature,
-        status: signature ? "completed" : "sent",
-        completed_at: signature ? now : null,
+        // A pre-signature is the company's half only: the packet is still waiting on the recipient, and it completes when
+        // their signature lands (the submit RPC sees the admin signature and closes it then).
+        status: "sent",
+        completed_at: null,
         admin_signed_at: signature ? now : null,
         created_by: context.userId,
         audit,
@@ -661,7 +672,7 @@ export const submitSigningPacket = createServerFn({ method: "POST" })
           completed_at: result.adminSignedAt,
           audit: { sentAt: result.sentAt },
         };
-        const link = `${origin()}/sign/packet/${result.id}`;
+        const link = `${publicOrigin()}/sign/packet/${result.id}`;
         emailed = (await deliverCompleted(row, link)).emailed;
       } catch (error) {
         console.error("[packets] completed delivery failed", error);
