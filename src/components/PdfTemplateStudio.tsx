@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   ArrowDown,
   ArrowUp,
@@ -8,6 +8,8 @@ import {
   FileJson,
   FileText,
   Loader2,
+  Maximize2,
+  Minimize2,
   Plus,
   Save,
   Sparkles,
@@ -342,6 +344,46 @@ export function PdfTemplateStudio() {
   const [saving, setSaving] = useState(false);
   /** The block being dragged in the rail, so a drag lands where it is dropped. */
   const [dragId, setDragId] = useState<string | null>(null);
+  /** The page and the editor share one row; the divider between them moves the split, like chat and preview here. */
+  const paneRef = useRef<HTMLDivElement>(null);
+  const [editorWidth, setEditorWidth] = useState(300);
+  const [sideBySide, setSideBySide] = useState(false);
+  /** The editor can take the whole row, hiding the page, when a clause needs the room to be read. */
+  const [editorExpanded, setEditorExpanded] = useState(false);
+  const editorWidthRef = useRef(editorWidth);
+  editorWidthRef.current = editorWidth;
+  const paneWidth = paneRef.current?.clientWidth ?? 900;
+  const maxEditorWidth = Math.max(300, paneWidth - 360 - 40);
+
+  useEffect(() => {
+    const pane = paneRef.current;
+    if (!pane) return;
+    // The split only exists when the page and the editor really sit beside each other; below that they stack.
+    const measure = () => setSideBySide(pane.clientWidth >= 360 + editorWidthRef.current + 40);
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(pane);
+    return () => observer.disconnect();
+  }, []);
+
+  function startResize(startX: number) {
+    const startWidth = editorWidthRef.current;
+    const move = (event: PointerEvent) => {
+      setEditorWidth(
+        Math.min(maxEditorWidth, Math.max(300, startWidth - (event.clientX - startX))),
+      );
+    };
+    const stop = () => {
+      window.removeEventListener("pointermove", move);
+      window.removeEventListener("pointerup", stop);
+      document.body.style.userSelect = "";
+      document.body.style.cursor = "";
+    };
+    document.body.style.userSelect = "none";
+    document.body.style.cursor = "col-resize";
+    window.addEventListener("pointermove", move);
+    window.addEventListener("pointerup", stop);
+  }
 
   const list = useServerFn(listPdfTemplates);
   const save = useServerFn(savePdfTemplate);
@@ -757,353 +799,422 @@ export function PdfTemplateStudio() {
               </div>
             </div>
 
-            {/* Canvas */}
-            <div className="min-w-0 flex-1 basis-[360px]">
-              <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
-                <div className="inline-flex rounded-full border border-border p-0.5 text-xs">
-                  <button
-                    type="button"
-                    onClick={() => setSample(false)}
-                    className={`rounded-full px-3 py-1 ${!sample ? "bg-primary text-primary-foreground" : "text-muted-foreground"}`}
-                  >
-                    Edit structure
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setSample(true)}
-                    className={`rounded-full px-3 py-1 ${sample ? "bg-primary text-primary-foreground" : "text-muted-foreground"}`}
-                  >
-                    Live sample preview
-                  </button>
-                </div>
-                <span className="text-xs text-muted-foreground">Letter · 816 px wide</span>
-              </div>
-              <div className="overflow-x-auto rounded-xl bg-muted/40 p-3">
-                <Paper
-                  template={template}
-                  sample={sample}
-                  activeId={activeId}
-                  onSelect={setActiveId}
-                />
-              </div>
-
-              {/* Preflight */}
-              <div className="mt-3 rounded-xl border border-border p-3">
-                <p className="flex items-center gap-1 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                  <Sparkles className="h-3.5 w-3.5" />
-                  Preflight
-                </p>
-                <ul className="mt-2 flex flex-wrap gap-2">
-                  {checks.map((check) => (
-                    <li
-                      key={check.id}
-                      className="flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px]"
-                      style={
-                        check.ok
-                          ? { background: `${BRAND.cobalt}14`, color: BRAND.cobalt }
-                          : { background: `${BRAND.gold}2e`, color: BRAND.black }
-                      }
-                    >
-                      <span
-                        className="inline-block h-1.5 w-1.5 rounded-full"
-                        style={{ background: check.ok ? BRAND.cobalt : BRAND.gold }}
-                      />
-                      <span className="font-semibold">{check.label}</span>
-                      <span className="opacity-80">{check.detail}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            </div>
-
-            {/* Inspector */}
-            <div className="w-full shrink-0 space-y-3 sm:w-[300px]">
-              <div className="rounded-xl border border-border p-3">
-                <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                  Template
-                </p>
-                <Input
-                  className="mt-2"
-                  value={template.name}
-                  onChange={(e) => setTemplate((t) => ({ ...t, name: e.target.value }))}
-                  maxLength={120}
-                  aria-label="Template name"
-                />
-                <div className="mt-2 flex gap-2">
-                  <Select
-                    value={template.tier}
-                    onValueChange={(v) => setTemplate((t) => ({ ...t, tier: v as TemplateTier }))}
-                  >
-                    <SelectTrigger className="w-full">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {TEMPLATE_TIERS.map((tier) => (
-                        <SelectItem key={tier} value={tier}>
-                          {TIER_LABELS[tier]}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <span className="flex items-center gap-1 rounded-full border border-border px-2 text-[11px] text-muted-foreground">
-                    {TIER_METAL[template.tier] ? (
-                      <span
-                        className="inline-block h-2 w-2 rounded-full"
-                        style={{ background: TIER_METAL[template.tier]! }}
-                      />
-                    ) : null}
-                    {TIER_LABELS[template.tier]}
-                  </span>
-                </div>
-              </div>
-
-              <div className="rounded-xl border border-border p-3">
-                <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                  {active ? BLOCK_LABELS[active.kind] : "Select a block"}
-                </p>
-                {!active ? (
-                  <p className="mt-2 text-xs text-muted-foreground">
-                    Click a block on the page or in the rail to edit it.
-                  </p>
-                ) : (
-                  <div className="mt-2 space-y-2">
-                    {active.kind === "header" && (
-                      <>
-                        <label className="text-xs text-muted-foreground">Header surface</label>
-                        <div className="grid grid-cols-2 gap-1">
-                          {(["light", "dark"] as const).map((theme) => (
-                            <button
-                              key={theme}
-                              type="button"
-                              onClick={() => patch(active.id, { background: theme })}
-                              className={`rounded-md border px-2 py-1.5 text-xs ${active.background === theme ? "border-primary" : "border-border"}`}
-                            >
-                              <span
-                                className="mb-1 block h-4 rounded-sm"
-                                style={{
-                                  background: theme === "light" ? BRAND.white : BRAND.black,
-                                  border: `1px solid ${BRAND.platinum}`,
-                                }}
-                              />
-                              {theme === "light" ? "Light" : "Dark"}
-                            </button>
-                          ))}
-                        </div>
-                        <label className="flex items-center gap-2 text-xs text-muted-foreground">
-                          <input
-                            type="checkbox"
-                            checked={active.showTagline}
-                            onChange={(e) => patch(active.id, { showTagline: e.target.checked })}
-                          />
-                          Show the tagline
-                        </label>
-                        <p className="text-[11px] text-muted-foreground">
-                          The wordmark follows the contrast rule: black + cobalt on light, white +
-                          electric on dark.
-                        </p>
-                      </>
-                    )}
-
-                    {active.kind === "meta" && (
-                      <>
-                        <Input
-                          value={active.heading}
-                          onChange={(e) => patch(active.id, { heading: e.target.value })}
-                          placeholder="Heading"
-                          aria-label="Grid heading"
-                        />
-                        {active.rows.map((row) => (
-                          <div key={row.id} className="grid grid-cols-[1fr_1fr_auto] gap-1">
-                            <Input
-                              value={row.label}
-                              onChange={(e) =>
-                                patch(active.id, {
-                                  rows: active.rows.map((r) =>
-                                    r.id === row.id ? { ...r, label: e.target.value } : r,
-                                  ),
-                                })
-                              }
-                              placeholder="Label"
-                              aria-label="Row label"
-                            />
-                            <Input
-                              value={row.value}
-                              onChange={(e) =>
-                                patch(active.id, {
-                                  rows: active.rows.map((r) =>
-                                    r.id === row.id ? { ...r, value: e.target.value } : r,
-                                  ),
-                                })
-                              }
-                              placeholder="Value"
-                              aria-label="Row value"
-                            />
-                            <button
-                              type="button"
-                              aria-label="Remove row"
-                              onClick={() =>
-                                patch(active.id, {
-                                  rows: active.rows.filter((r) => r.id !== row.id),
-                                })
-                              }
-                              className="rounded p-1 text-muted-foreground"
-                            >
-                              <Trash2 className="h-3.5 w-3.5" />
-                            </button>
-                          </div>
-                        ))}
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() =>
-                            patch(active.id, {
-                              rows: [
-                                ...active.rows,
-                                { id: newId(), label: "Label", value: "{{ARTIST_NAME}}" },
-                              ],
-                            })
-                          }
-                        >
-                          <Plus className="h-3.5 w-3.5" />
-                          Row
-                        </Button>
-                      </>
-                    )}
-
-                    {active.kind === "clause" && (
-                      <>
-                        <Input
-                          value={active.heading}
-                          onChange={(e) => patch(active.id, { heading: e.target.value })}
-                          placeholder="Clause heading"
-                          aria-label="Clause heading"
-                        />
-                        <Textarea
-                          value={active.body}
-                          onChange={(e) => patch(active.id, { body: e.target.value })}
-                          rows={6}
-                          placeholder="The clause itself"
-                          aria-label="Clause body"
-                        />
-                        <Textarea
-                          value={active.help}
-                          onChange={(e) => patch(active.id, { help: e.target.value })}
-                          rows={2}
-                          placeholder="Teaching note (optional): what this means in plain language"
-                          aria-label="Clause help"
-                        />
-                      </>
-                    )}
-
-                    {active.kind === "signatures" && (
-                      <>
-                        <Input
-                          value={active.heading}
-                          onChange={(e) => patch(active.id, { heading: e.target.value })}
-                          aria-label="Signature heading"
-                        />
-                        {active.parties.map((party) => (
-                          <div key={party.id} className="grid grid-cols-[1fr_auto] gap-1">
-                            <Input
-                              value={party.label}
-                              onChange={(e) =>
-                                patch(active.id, {
-                                  parties: active.parties.map((p) =>
-                                    p.id === party.id ? { ...p, label: e.target.value } : p,
-                                  ),
-                                })
-                              }
-                              aria-label="Signature line"
-                            />
-                            <button
-                              type="button"
-                              aria-label="Remove signature"
-                              onClick={() =>
-                                patch(active.id, {
-                                  parties: active.parties.filter((p) => p.id !== party.id),
-                                })
-                              }
-                              className="rounded p-1 text-muted-foreground"
-                            >
-                              <Trash2 className="h-3.5 w-3.5" />
-                            </button>
-                          </div>
-                        ))}
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() =>
-                            patch(active.id, {
-                              parties: [...active.parties, { id: newId(), label: "Name · role" }],
-                            })
-                          }
-                        >
-                          <Plus className="h-3.5 w-3.5" />
-                          Signature line
-                        </Button>
-                      </>
-                    )}
-
-                    {active.kind === "seal" && (
-                      <>
-                        <div className="grid grid-cols-2 gap-1">
-                          {(["gold", "platinum"] as const).map((metal) => (
-                            <button
-                              key={metal}
-                              type="button"
-                              onClick={() => patch(active.id, { tier: metal })}
-                              className={`rounded-md border px-2 py-1.5 text-xs capitalize ${active.tier === metal ? "border-primary" : "border-border"}`}
-                            >
-                              <span
-                                className="mb-1 block h-2 rounded-full"
-                                style={{
-                                  background: metal === "gold" ? BRAND.gold : BRAND.platinum,
-                                }}
-                              />
-                              {metal}
-                            </button>
-                          ))}
-                        </div>
-                        <Input
-                          value={active.label}
-                          onChange={(e) => patch(active.id, { label: e.target.value })}
-                          aria-label="Seal label"
-                          maxLength={24}
-                        />
-                        <p className="text-[11px] text-muted-foreground">
-                          A seal marks an official CTA certification; use it with the tier the
-                          document earns.
-                        </p>
-                      </>
-                    )}
-                  </div>
-                )}
-              </div>
-
-              <div className="rounded-xl border border-border p-3">
-                <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                  Variables
-                </p>
-                <p className="mt-1 text-[11px] text-muted-foreground">
-                  Click a token to insert it into the selected block.
-                </p>
-                <div className="mt-2 flex flex-wrap gap-1.5">
-                  {TOKENS.map((token) => (
+            {/* Canvas and editor share a row, with a divider that can be dragged to widen the clause editor. */}
+            {/* The pane asks for 520px before sharing a row with the rail, so a narrow card puts the page and editor on
+                their own full-width row instead of squeezing the editor into a sliver beside the blocks. */}
+            <div
+              ref={paneRef}
+              className="flex min-w-0 grow basis-[520px] flex-wrap items-start gap-4"
+            >
+              {/* Canvas */}
+              <div className={`min-w-0 flex-1 basis-[360px]${editorExpanded ? " hidden" : ""}`}>
+                <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+                  <div className="inline-flex rounded-full border border-border p-0.5 text-xs">
                     <button
-                      key={token.key}
                       type="button"
-                      onClick={() => insertToken(token.key)}
-                      title={token.label}
-                      className="rounded-full px-2 py-1 font-mono text-[10.5px]"
-                      style={{
-                        background: `${BRAND.cobalt}12`,
-                        color: BRAND.cobalt,
-                        border: `1px solid ${BRAND.cobalt}33`,
-                      }}
+                      onClick={() => setSample(false)}
+                      className={`rounded-full px-3 py-1 ${!sample ? "bg-primary text-primary-foreground" : "text-muted-foreground"}`}
                     >
-                      {`{{${token.key}}}`}
+                      Edit structure
                     </button>
-                  ))}
+                    <button
+                      type="button"
+                      onClick={() => setSample(true)}
+                      className={`rounded-full px-3 py-1 ${sample ? "bg-primary text-primary-foreground" : "text-muted-foreground"}`}
+                    >
+                      Live sample preview
+                    </button>
+                  </div>
+                  <span className="text-xs text-muted-foreground">Letter · 816 px wide</span>
+                </div>
+                <div className="overflow-x-auto rounded-xl bg-muted/40 p-3">
+                  <Paper
+                    template={template}
+                    sample={sample}
+                    activeId={activeId}
+                    onSelect={setActiveId}
+                  />
+                </div>
+
+                {/* Preflight */}
+                <div className="mt-3 rounded-xl border border-border p-3">
+                  <p className="flex items-center gap-1 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                    <Sparkles className="h-3.5 w-3.5" />
+                    Preflight
+                  </p>
+                  <ul className="mt-2 flex flex-wrap gap-2">
+                    {checks.map((check) => (
+                      <li
+                        key={check.id}
+                        className="flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px]"
+                        style={
+                          check.ok
+                            ? { background: `${BRAND.cobalt}14`, color: BRAND.cobalt }
+                            : { background: `${BRAND.gold}2e`, color: BRAND.black }
+                        }
+                      >
+                        <span
+                          className="inline-block h-1.5 w-1.5 rounded-full"
+                          style={{ background: check.ok ? BRAND.cobalt : BRAND.gold }}
+                        />
+                        <span className="font-semibold">{check.label}</span>
+                        <span className="opacity-80">{check.detail}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              </div>
+
+              {/* Inspector */}
+              {sideBySide && !editorExpanded && (
+                <div
+                  role="separator"
+                  aria-orientation="vertical"
+                  aria-label="Resize the clause editor"
+                  aria-valuenow={Math.round(editorWidth)}
+                  aria-valuemin={300}
+                  aria-valuemax={Math.round(maxEditorWidth)}
+                  aria-valuetext={`${Math.round(editorWidth)} pixels wide`}
+                  tabIndex={0}
+                  title="Drag to widen the clause editor, or double-click to reset"
+                  onPointerDown={(e) => {
+                    e.preventDefault();
+                    startResize(e.clientX);
+                  }}
+                  onDoubleClick={() => setEditorWidth(300)}
+                  onKeyDown={(e) => {
+                    const step = e.shiftKey ? 48 : 16;
+                    if (e.key === "ArrowLeft") {
+                      e.preventDefault();
+                      setEditorWidth((w) => Math.min(maxEditorWidth, w + step));
+                    }
+                    if (e.key === "ArrowRight") {
+                      e.preventDefault();
+                      setEditorWidth((w) => Math.max(300, w - step));
+                    }
+                  }}
+                  className="flex w-2 shrink-0 cursor-col-resize touch-none items-center justify-center self-stretch rounded-full outline-none hover:bg-primary/15 focus-visible:bg-primary/15"
+                >
+                  <span className="h-12 w-[3px] rounded-full bg-border" />
+                </div>
+              )}
+              <div
+                className="w-full shrink-0 space-y-3"
+                style={
+                  editorExpanded
+                    ? { width: "100%" }
+                    : sideBySide
+                      ? { width: editorWidth }
+                      : undefined
+                }
+              >
+                <div className="rounded-xl border border-border p-3">
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                      Template
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => setEditorExpanded((v) => !v)}
+                      aria-pressed={editorExpanded}
+                      aria-label={editorExpanded ? "Show the document page" : "Expand the editor"}
+                      title={
+                        editorExpanded
+                          ? "Bring the document page back"
+                          : "Give the editor the whole width"
+                      }
+                      className="rounded p-1 text-muted-foreground hover:bg-muted hover:text-foreground"
+                    >
+                      {editorExpanded ? (
+                        <Minimize2 className="h-3.5 w-3.5" />
+                      ) : (
+                        <Maximize2 className="h-3.5 w-3.5" />
+                      )}
+                    </button>
+                  </div>
+                  <Input
+                    className="mt-2"
+                    value={template.name}
+                    onChange={(e) => setTemplate((t) => ({ ...t, name: e.target.value }))}
+                    maxLength={120}
+                    aria-label="Template name"
+                  />
+                  <div className="mt-2 flex gap-2">
+                    <Select
+                      value={template.tier}
+                      onValueChange={(v) => setTemplate((t) => ({ ...t, tier: v as TemplateTier }))}
+                    >
+                      <SelectTrigger className="w-full">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {TEMPLATE_TIERS.map((tier) => (
+                          <SelectItem key={tier} value={tier}>
+                            {TIER_LABELS[tier]}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <span className="flex items-center gap-1 rounded-full border border-border px-2 text-[11px] text-muted-foreground">
+                      {TIER_METAL[template.tier] ? (
+                        <span
+                          className="inline-block h-2 w-2 rounded-full"
+                          style={{ background: TIER_METAL[template.tier]! }}
+                        />
+                      ) : null}
+                      {TIER_LABELS[template.tier]}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="rounded-xl border border-border p-3">
+                  <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                    {active ? BLOCK_LABELS[active.kind] : "Select a block"}
+                  </p>
+                  {!active ? (
+                    <p className="mt-2 text-xs text-muted-foreground">
+                      Click a block on the page or in the rail to edit it.
+                    </p>
+                  ) : (
+                    <div className="mt-2 space-y-2">
+                      {active.kind === "header" && (
+                        <>
+                          <label className="text-xs text-muted-foreground">Header surface</label>
+                          <div className="grid grid-cols-2 gap-1">
+                            {(["light", "dark"] as const).map((theme) => (
+                              <button
+                                key={theme}
+                                type="button"
+                                onClick={() => patch(active.id, { background: theme })}
+                                className={`rounded-md border px-2 py-1.5 text-xs ${active.background === theme ? "border-primary" : "border-border"}`}
+                              >
+                                <span
+                                  className="mb-1 block h-4 rounded-sm"
+                                  style={{
+                                    background: theme === "light" ? BRAND.white : BRAND.black,
+                                    border: `1px solid ${BRAND.platinum}`,
+                                  }}
+                                />
+                                {theme === "light" ? "Light" : "Dark"}
+                              </button>
+                            ))}
+                          </div>
+                          <label className="flex items-center gap-2 text-xs text-muted-foreground">
+                            <input
+                              type="checkbox"
+                              checked={active.showTagline}
+                              onChange={(e) => patch(active.id, { showTagline: e.target.checked })}
+                            />
+                            Show the tagline
+                          </label>
+                          <p className="text-[11px] text-muted-foreground">
+                            The wordmark follows the contrast rule: black + cobalt on light, white +
+                            electric on dark.
+                          </p>
+                        </>
+                      )}
+
+                      {active.kind === "meta" && (
+                        <>
+                          <Input
+                            value={active.heading}
+                            onChange={(e) => patch(active.id, { heading: e.target.value })}
+                            placeholder="Heading"
+                            aria-label="Grid heading"
+                          />
+                          {active.rows.map((row) => (
+                            <div key={row.id} className="grid grid-cols-[1fr_1fr_auto] gap-1">
+                              <Input
+                                value={row.label}
+                                onChange={(e) =>
+                                  patch(active.id, {
+                                    rows: active.rows.map((r) =>
+                                      r.id === row.id ? { ...r, label: e.target.value } : r,
+                                    ),
+                                  })
+                                }
+                                placeholder="Label"
+                                aria-label="Row label"
+                              />
+                              <Input
+                                value={row.value}
+                                onChange={(e) =>
+                                  patch(active.id, {
+                                    rows: active.rows.map((r) =>
+                                      r.id === row.id ? { ...r, value: e.target.value } : r,
+                                    ),
+                                  })
+                                }
+                                placeholder="Value"
+                                aria-label="Row value"
+                              />
+                              <button
+                                type="button"
+                                aria-label="Remove row"
+                                onClick={() =>
+                                  patch(active.id, {
+                                    rows: active.rows.filter((r) => r.id !== row.id),
+                                  })
+                                }
+                                className="rounded p-1 text-muted-foreground"
+                              >
+                                <Trash2 className="h-3.5 w-3.5" />
+                              </button>
+                            </div>
+                          ))}
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() =>
+                              patch(active.id, {
+                                rows: [
+                                  ...active.rows,
+                                  { id: newId(), label: "Label", value: "{{ARTIST_NAME}}" },
+                                ],
+                              })
+                            }
+                          >
+                            <Plus className="h-3.5 w-3.5" />
+                            Row
+                          </Button>
+                        </>
+                      )}
+
+                      {active.kind === "clause" && (
+                        <>
+                          <Input
+                            value={active.heading}
+                            onChange={(e) => patch(active.id, { heading: e.target.value })}
+                            placeholder="Clause heading"
+                            aria-label="Clause heading"
+                          />
+                          <Textarea
+                            value={active.body}
+                            onChange={(e) => patch(active.id, { body: e.target.value })}
+                            rows={8}
+                            placeholder="The clause itself"
+                            aria-label="Clause body"
+                          />
+                          <Textarea
+                            value={active.help}
+                            onChange={(e) => patch(active.id, { help: e.target.value })}
+                            rows={2}
+                            placeholder="Teaching note (optional): what this means in plain language"
+                            aria-label="Clause help"
+                          />
+                        </>
+                      )}
+
+                      {active.kind === "signatures" && (
+                        <>
+                          <Input
+                            value={active.heading}
+                            onChange={(e) => patch(active.id, { heading: e.target.value })}
+                            aria-label="Signature heading"
+                          />
+                          {active.parties.map((party) => (
+                            <div key={party.id} className="grid grid-cols-[1fr_auto] gap-1">
+                              <Input
+                                value={party.label}
+                                onChange={(e) =>
+                                  patch(active.id, {
+                                    parties: active.parties.map((p) =>
+                                      p.id === party.id ? { ...p, label: e.target.value } : p,
+                                    ),
+                                  })
+                                }
+                                aria-label="Signature line"
+                              />
+                              <button
+                                type="button"
+                                aria-label="Remove signature"
+                                onClick={() =>
+                                  patch(active.id, {
+                                    parties: active.parties.filter((p) => p.id !== party.id),
+                                  })
+                                }
+                                className="rounded p-1 text-muted-foreground"
+                              >
+                                <Trash2 className="h-3.5 w-3.5" />
+                              </button>
+                            </div>
+                          ))}
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() =>
+                              patch(active.id, {
+                                parties: [...active.parties, { id: newId(), label: "Name · role" }],
+                              })
+                            }
+                          >
+                            <Plus className="h-3.5 w-3.5" />
+                            Signature line
+                          </Button>
+                        </>
+                      )}
+
+                      {active.kind === "seal" && (
+                        <>
+                          <div className="grid grid-cols-2 gap-1">
+                            {(["gold", "platinum"] as const).map((metal) => (
+                              <button
+                                key={metal}
+                                type="button"
+                                onClick={() => patch(active.id, { tier: metal })}
+                                className={`rounded-md border px-2 py-1.5 text-xs capitalize ${active.tier === metal ? "border-primary" : "border-border"}`}
+                              >
+                                <span
+                                  className="mb-1 block h-2 rounded-full"
+                                  style={{
+                                    background: metal === "gold" ? BRAND.gold : BRAND.platinum,
+                                  }}
+                                />
+                                {metal}
+                              </button>
+                            ))}
+                          </div>
+                          <Input
+                            value={active.label}
+                            onChange={(e) => patch(active.id, { label: e.target.value })}
+                            aria-label="Seal label"
+                            maxLength={24}
+                          />
+                          <p className="text-[11px] text-muted-foreground">
+                            A seal marks an official CTA certification; use it with the tier the
+                            document earns.
+                          </p>
+                        </>
+                      )}
+                    </div>
+                  )}
+                </div>
+
+                <div className="rounded-xl border border-border p-3">
+                  <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                    Variables
+                  </p>
+                  <p className="mt-1 text-[11px] text-muted-foreground">
+                    Click a token to insert it into the selected block.
+                  </p>
+                  <div className="mt-2 flex flex-wrap gap-1.5">
+                    {TOKENS.map((token) => (
+                      <button
+                        key={token.key}
+                        type="button"
+                        onClick={() => insertToken(token.key)}
+                        title={token.label}
+                        className="rounded-full px-2 py-1 font-mono text-[10.5px]"
+                        style={{
+                          background: `${BRAND.cobalt}12`,
+                          color: BRAND.cobalt,
+                          border: `1px solid ${BRAND.cobalt}33`,
+                        }}
+                      >
+                        {`{{${token.key}}}`}
+                      </button>
+                    ))}
+                  </div>
                 </div>
               </div>
             </div>
