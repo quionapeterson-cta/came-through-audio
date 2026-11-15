@@ -102,8 +102,13 @@ const origin = () => {
 const requestMeta = () => {
   try {
     const headers = getRequest().headers;
+    // Behind a proxy the client's address can arrive in any of these; a signed certificate must not print "—" just
+    // because the edge used a different name than the one we asked for first.
+    const ip = ["x-forwarded-for", "cf-connecting-ip", "x-real-ip", "true-client-ip"]
+      .map((name) => (headers.get(name) ?? "").split(",")[0]!.trim())
+      .find(Boolean);
     return {
-      ip: (headers.get("x-forwarded-for") ?? "").split(",")[0]!.trim() || undefined,
+      ip,
       device: (headers.get("user-agent") ?? "").slice(0, 240) || undefined,
     };
   } catch {
@@ -212,15 +217,20 @@ async function recordPacketEmail(
   context: Ctx,
   packet: { id: string; title: string; recipient_email: string },
   result: Awaited<ReturnType<typeof sendMail>>,
+  message: { subject: string; fileName: string; to: string } = {
+    subject: packetEmailSubject(packet.title),
+    fileName: "Signing link",
+    to: packet.recipient_email,
+  },
 ) {
   const { error } = await context.supabase.from("pdf_email_sends" as never).insert({
     packet_id: packet.id,
     resend_id: result.id ?? null,
     sent_by: context.userId,
     mailbox: "admin",
-    recipients: [packet.recipient_email],
-    subject: packetEmailSubject(packet.title),
-    file_name: "Signing link",
+    recipients: [message.to],
+    subject: message.subject,
+    file_name: message.fileName,
     status: result.ok ? "accepted" : "failed",
     bounce_message: result.ok ? null : (result.detail ?? "send-failed").slice(0, 500),
   } as never);
@@ -562,6 +572,7 @@ async function deliverCompleted(packet: PacketRow, link: string, to: string = AD
   });
   return {
     emailed: res.ok,
+    resendId: res.id,
     emailError: res.ok ? null : (res.detail ?? "send-failed"),
     pdfBase64: toBase64(pdf),
   };
@@ -630,6 +641,19 @@ export const counterSignPacket = createServerFn({ method: "POST" })
       throw new Error("That packet isn't ready to counter-sign yet.");
     const link = await packetEmailLink(packet.id);
     const delivery = await deliverCompleted(packet, link, inboxEmail);
+    // The executed PDF is as much an email as the signing link, so it gets the same delivery row and bounce report.
+    await recordPacketEmail(
+      context,
+      packet,
+      delivery.emailed
+        ? { ok: true, ...(delivery.resendId ? { id: delivery.resendId } : {}) }
+        : { ok: false, detail: delivery.emailError ?? "send-failed" },
+      {
+        subject: `Signed: ${packet.title} — ${packet.recipient_name}`,
+        fileName: packetFileName(packet.title),
+        to: inboxEmail,
+      },
+    );
     return { ok: true, link, emailed: delivery.emailed, emailError: delivery.emailError };
   });
 
