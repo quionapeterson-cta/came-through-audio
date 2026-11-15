@@ -137,6 +137,37 @@ export function PdfPacketCenter() {
     void load();
   }, []);
 
+  // Resend's webhook lands a second or two after the send, so the list watches for it itself instead of making the
+  // founder press Refresh to see "Sent" turn into "Delivered". It stops once every send has settled, or after five
+  // minutes if a mail server never answers, so a quiet tab is not left polling forever.
+  const unsettled = packets.some(
+    (packet) => packet.email?.status === "accepted" || packet.email?.status === "delayed",
+  );
+  useEffect(() => {
+    if (!unsettled) return;
+    let ticks = 0;
+    const refresh = () => {
+      if (document.hidden) return;
+      void listPackets()
+        .then(setPackets)
+        .catch(() => undefined);
+    };
+    const timer = window.setInterval(() => {
+      if (++ticks > 40) {
+        window.clearInterval(timer);
+        return;
+      }
+      refresh();
+    }, 8000);
+    document.addEventListener("visibilitychange", refresh);
+    window.addEventListener("focus", refresh);
+    return () => {
+      window.clearInterval(timer);
+      document.removeEventListener("visibilitychange", refresh);
+      window.removeEventListener("focus", refresh);
+    };
+  }, [unsettled]);
+
   useEffect(() => {
     if (!template) return;
     setEnabledForms(
@@ -615,8 +646,8 @@ export function PdfPacketCenter() {
 
                 {!configured ? (
                   <p className="rounded-lg border border-border bg-muted/40 p-3 text-xs text-muted-foreground">
-                    Email sending isn't connected yet, so nothing will land in an inbox. The packet is
-                    still created and its signing link is shown here to copy.
+                    Email sending isn't connected yet, so nothing will land in an inbox. The packet
+                    is still created and its signing link is shown here to copy.
                   </p>
                 ) : null}
 
