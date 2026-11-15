@@ -26,7 +26,7 @@ export function PdfTemplateConverter({ onCreate }: { onCreate: (template: PdfTem
   const [busy, setBusy] = useState(false);
   const [pageName, setPageName] = useState("");
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const wrapRef = useRef<HTMLDivElement>(null);
+  const columnRef = useRef<HTMLDivElement>(null);
   /** The open pdf.js document, closed when another file is scanned. */
   const loading = useRef<{ destroy: () => Promise<void> } | null>(null);
 
@@ -60,10 +60,10 @@ export function PdfTemplateConverter({ onCreate }: { onCreate: (template: PdfTem
       setZones(found);
       setFileName(file.name);
       setPageName(file.name.replace(/\.pdf$/i, ""));
-      setFileName(file.name);
 
       // Draw page one, so the boxes sit over the real page rather than over a guess.
-      const room = (wrapRef.current?.clientWidth ?? 720) - 2;
+      // Measure the column, not the polished frame: the frame's padding and header are added after this render.
+      const room = (columnRef.current?.clientWidth ?? 720) - (polish ? 34 : 4);
       const scale = Math.min(1.6, room / viewport.width);
       const shown = page.getViewport({ scale });
       const canvas = canvasRef.current;
@@ -140,10 +140,13 @@ export function PdfTemplateConverter({ onCreate }: { onCreate: (template: PdfTem
 
   return (
     <div className="flex flex-wrap items-start gap-4">
-      <div className="min-w-0 flex-1 basis-[420px] space-y-3">
+      <div ref={columnRef} className="min-w-0 flex-1 basis-[420px] space-y-3">
         <div
           className="rounded-2xl border-2 border-dashed p-6 text-center"
-          style={{ background: BRAND.black, borderColor: zones.length ? BRAND.platinum : "#333" }}
+          style={{
+            background: BRAND.black,
+            borderColor: zones.length ? BRAND.platinum : `${BRAND.platinum}55`,
+          }}
           onDragOver={(e) => e.preventDefault()}
           onDrop={(e) => {
             e.preventDefault();
@@ -176,8 +179,7 @@ export function PdfTemplateConverter({ onCreate }: { onCreate: (template: PdfTem
         </div>
 
         <div
-          ref={wrapRef}
-          className="relative mx-auto w-fit"
+          className="mx-auto w-fit"
           style={
             polish && zones.length
               ? { padding: 14, background: BRAND.black, border: `1px solid ${BRAND.platinum}` }
@@ -194,32 +196,35 @@ export function PdfTemplateConverter({ onCreate }: { onCreate: (template: PdfTem
               </span>
             </div>
           ) : null}
-          <canvas ref={canvasRef} className="block bg-white" />
-          {zones.map((zone) => {
-            const token = mapped[zone.id];
-            return (
-              <button
-                key={zone.id}
-                type="button"
-                title={zone.text}
-                onClick={() =>
-                  document
-                    .getElementById(`zone-pick-${zone.id}`)
-                    ?.scrollIntoView({ block: "center", behavior: "smooth" })
-                }
-                className="absolute cursor-pointer rounded-sm transition-colors"
-                style={{
-                  left: `${zone.left * 100}%`,
-                  top: `${zone.top * 100}%`,
-                  width: `${zone.width * 100}%`,
-                  height: `${zone.height * 100}%`,
-                  border: `1.5px solid ${token ? BRAND.gold : BRAND.electric}`,
-                  background: token ? `${BRAND.gold}33` : `${BRAND.electric}1a`,
-                  boxShadow: token ? `0 0 0 2px ${BRAND.gold}44` : undefined,
-                }}
-              />
-            );
-          })}
+          {/* The page and its boxes share one positioned box, so a padded frame around the page can never shift them. */}
+          <div className="relative w-fit">
+            <canvas ref={canvasRef} className="block bg-white" />
+            {zones.map((zone) => {
+              const token = mapped[zone.id];
+              return (
+                <button
+                  key={zone.id}
+                  type="button"
+                  title={zone.text}
+                  onClick={() =>
+                    document
+                      .getElementById(`zone-pick-${zone.id}`)
+                      ?.scrollIntoView({ block: "center", behavior: "smooth" })
+                  }
+                  className="absolute cursor-pointer rounded-sm transition-colors"
+                  style={{
+                    left: `${zone.left * 100}%`,
+                    top: `${zone.top * 100}%`,
+                    width: `${zone.width * 100}%`,
+                    height: `${zone.height * 100}%`,
+                    border: `1.5px solid ${token ? BRAND.gold : BRAND.electric}`,
+                    background: token ? `${BRAND.gold}33` : `${BRAND.electric}1a`,
+                    boxShadow: token ? `0 0 0 2px ${BRAND.gold}44` : undefined,
+                  }}
+                />
+              );
+            })}
+          </div>
         </div>
       </div>
 

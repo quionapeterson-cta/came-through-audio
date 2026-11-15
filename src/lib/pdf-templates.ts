@@ -213,10 +213,13 @@ export function preflight(template: PdfTemplate): PreflightCheck[] {
   ];
 }
 
-/** Save is allowed unless the two things a document can't do without are missing. */
+/**
+ * Save needs what a document can't do without — a name, a header — and no unknown token, because a saved template
+ * with `{{NOPE}}` in it would export raw braces to a client.
+ */
 export function canSaveTemplate(template: PdfTemplate): boolean {
   const checks = preflight(template);
-  return checks.find((c) => c.id === "name")!.ok && checks.find((c) => c.id === "header")!.ok;
+  return (["name", "header", "tokens"] as const).every((id) => checks.find((c) => c.id === id)!.ok);
 }
 
 const esc = (value: string) =>
@@ -234,27 +237,27 @@ function blockHtml(block: TemplateBlock): string {
     return `<section style="padding:28px 48px 0">
   <h2 style="font-size:12px;letter-spacing:2px;text-transform:uppercase;color:${BRAND.cobalt};margin:0 0 12px">${esc(fillTokens(block.heading))}</h2>
   <table style="width:100%;border-collapse:collapse;font-size:13px">
-    ${block.rows.map((r) => `<tr><th style="text-align:left;width:38%;padding:8px 0;border-bottom:1px solid ${BRAND.platinum};font-weight:600;color:${BRAND.black}">${esc(r.label)}</th><td style="padding:8px 0;border-bottom:1px solid ${BRAND.platinum};color:#333">${esc(fillTokens(r.value))}</td></tr>`).join("\n    ")}
+    ${block.rows.map((r) => `<tr><th style="text-align:left;width:38%;padding:8px 0;border-bottom:1px solid ${BRAND.platinum};font-weight:600;color:${BRAND.black}">${esc(r.label)}</th><td style="padding:8px 0;border-bottom:1px solid ${BRAND.platinum};color:${BRAND.black}">${esc(fillTokens(r.value))}</td></tr>`).join("\n    ")}
   </table>
 </section>`;
   }
   if (block.kind === "clause") {
     return `<section style="padding:24px 48px 0">
   <h2 style="font-size:15px;color:${BRAND.black};margin:0 0 8px">${esc(fillTokens(block.heading))}</h2>
-  <p style="font-size:13px;line-height:1.7;color:#333;margin:0">${esc(fillTokens(block.body)).replace(/\n/g, "<br>")}</p>
-  ${block.help ? `<p style="font-size:11px;line-height:1.6;color:#666;margin:8px 0 0;border-left:2px solid ${BRAND.platinum};padding-left:10px">${esc(block.help)}</p>` : ""}
+  <p style="font-size:13px;line-height:1.7;color:${BRAND.black};margin:0">${esc(fillTokens(block.body)).replace(/\n/g, "<br>")}</p>
+  ${block.help ? `<p style="font-size:11px;line-height:1.6;color:${BRAND.black};opacity:0.7;margin:8px 0 0;border-left:2px solid ${BRAND.platinum};padding-left:10px">${esc(block.help)}</p>` : ""}
 </section>`;
   }
   if (block.kind === "signatures") {
     return `<section style="padding:32px 48px 0">
   <h2 style="font-size:12px;letter-spacing:2px;text-transform:uppercase;color:${BRAND.cobalt};margin:0 0 18px">${esc(block.heading)}</h2>
-  ${block.parties.map((p) => `<div style="margin-bottom:22px"><div style="border-bottom:1px solid ${BRAND.black};height:28px"></div><div style="font-size:11px;color:#555;margin-top:6px">${esc(fillTokens(p.label))}</div></div>`).join("\n  ")}
+  ${block.parties.map((p) => `<div style="margin-bottom:22px"><div style="border-bottom:1px solid ${BRAND.black};height:28px"></div><div style="font-size:11px;color:${BRAND.black};opacity:0.7;margin-top:6px">${esc(fillTokens(p.label))}</div></div>`).join("\n  ")}
 </section>`;
   }
   const metal = block.tier === "gold" ? BRAND.gold : BRAND.platinum;
   return `<section style="padding:28px 48px 0">
   <div style="display:inline-block;border:2px solid ${metal};border-radius:50%;width:96px;height:96px;text-align:center;line-height:92px;font-size:11px;font-weight:700;letter-spacing:1px;color:${BRAND.black}">${esc(fillTokens(block.label))}</div>
-  <div style="font-size:10px;letter-spacing:2px;color:#666;margin-top:8px">CTA CERTIFICATION · ${block.tier.toUpperCase()}</div>
+  <div style="font-size:10px;letter-spacing:2px;color:${BRAND.black};opacity:0.65;margin-top:8px">CTA CERTIFICATION · ${block.tier.toUpperCase()}</div>
 </section>`;
 }
 
@@ -383,6 +386,6 @@ export function templateToHtml(template: PdfTemplate): string {
 <style>@page{size:Letter;margin:0}body{margin:0;background:${BRAND.platinum};font-family:Helvetica,Arial,sans-serif}main{background:${BRAND.white};max-width:816px;margin:24px auto;padding-bottom:48px}</style>
 </head><body><main>
 ${template.blocks.map(blockHtml).join("\n")}
-<footer style="margin:40px 48px 0;border-top:1px solid ${BRAND.platinum};padding-top:12px;font-size:9px;letter-spacing:2px;color:#666">CAME THROUGH AUDIO · ${TAGLINE}</footer>
+<footer style="margin:40px 48px 0;border-top:1px solid ${BRAND.platinum};padding-top:12px;font-size:9px;letter-spacing:2px;color:${BRAND.black};opacity:0.65">CAME THROUGH AUDIO · ${TAGLINE}</footer>
 </main></body></html>`;
 }

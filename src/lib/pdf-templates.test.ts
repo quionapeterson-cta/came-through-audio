@@ -117,6 +117,7 @@ describe("preflight", () => {
     const tokens = preflight(template).find((c) => c.id === "tokens");
     expect(tokens?.ok).toBe(false);
     expect(tokens?.detail).toContain("{{WHOOPS}}");
+    expect(canSaveTemplate(template)).toBe(false);
   });
 });
 
@@ -127,5 +128,16 @@ describe("HTML export", () => {
     expect(html).toContain("YOUR FIRST STOP BEFORE DISTRIBUTION");
     expect(html).toContain("Karma Came");
     expect(html).not.toContain("{{ARTIST_NAME}}");
+  });
+
+  it("uses only the six approved hex codes, never a stray grey", () => {
+    const approved = new Set(Object.values(BRAND).map((c) => c.toUpperCase()));
+    const used = new Set(
+      (templateToHtml(starterPresets()[0]!).match(/#[0-9a-f]{3,6}/gi) ?? []).map((c) =>
+        c.toUpperCase(),
+      ),
+    );
+    expect([...used].filter((c) => !approved.has(c))).toEqual([]);
+    expect(used.size).toBeGreaterThan(2);
   });
 });

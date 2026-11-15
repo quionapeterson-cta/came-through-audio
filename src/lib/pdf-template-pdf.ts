@@ -144,7 +144,7 @@ export async function templateToPdfBytes(
           y,
           size: 10,
           font: regular,
-          color: ink("#333333"),
+          color: ink(BRAND.black),
         });
         page.drawLine({
           start: { x: MARGIN, y: y - 5 },
@@ -169,7 +169,7 @@ export async function templateToPdfBytes(
       }
       for (const line of body) {
         ensure(14);
-        page.drawText(line, { x: MARGIN, y, size: 10, font: regular, color: ink("#333333") });
+        page.drawText(line, { x: MARGIN, y, size: 10, font: regular, color: ink(BRAND.black) });
         y -= 14;
       }
       if (help.length) {
@@ -181,7 +181,8 @@ export async function templateToPdfBytes(
             y,
             size: 8.5,
             font: regular,
-            color: ink("#666666"),
+            color: ink(BRAND.black),
+            opacity: 0.7,
           });
           y -= 12;
         }
@@ -213,7 +214,8 @@ export async function templateToPdfBytes(
           y: y - 12,
           size: 8.5,
           font: regular,
-          color: ink("#555555"),
+          color: ink(BRAND.black),
+          opacity: 0.7,
         });
         y -= 40;
       }
@@ -243,24 +245,29 @@ export async function templateToPdfBytes(
       y: y - 106,
       size: 7,
       font: bold,
-      color: ink("#666666"),
+      color: ink(BRAND.black),
+      opacity: 0.65,
     });
     y -= 126;
   }
 
-  page.drawLine({
-    start: { x: MARGIN, y: BOTTOM - 18 },
-    end: { x: PAGE.width - MARGIN, y: BOTTOM - 18 },
-    thickness: 0.5,
-    color: ink(BRAND.platinum),
-  });
-  page.drawText(`CAME THROUGH AUDIO · ${TAGLINE}`, {
-    x: MARGIN,
-    y: BOTTOM - 30,
-    size: 6.5,
-    font: regular,
-    color: ink("#666666"),
-  });
+  // The footer belongs on every page, not only the one a block happened to end on.
+  for (const sheet of doc.getPages()) {
+    sheet.drawLine({
+      start: { x: MARGIN, y: BOTTOM - 18 },
+      end: { x: PAGE.width - MARGIN, y: BOTTOM - 18 },
+      thickness: 0.5,
+      color: ink(BRAND.platinum),
+    });
+    sheet.drawText(`CAME THROUGH AUDIO · ${TAGLINE}`, {
+      x: MARGIN,
+      y: BOTTOM - 30,
+      size: 6.5,
+      font: regular,
+      color: ink(BRAND.black),
+      opacity: 0.65,
+    });
+  }
 
   return doc.save();
 }

@@ -207,7 +207,7 @@ function Paper({
                           style={{
                             padding: "7px 0",
                             borderBottom: `1px solid ${BRAND.platinum}`,
-                            color: "#333",
+                            color: BRAND.black,
                           }}
                         >
                           <Rich text={row.value} sample={sample} />
@@ -227,7 +227,7 @@ function Paper({
                   style={{
                     fontSize: 12.5,
                     lineHeight: 1.7,
-                    color: "#333",
+                    color: BRAND.black,
                     margin: 0,
                     whiteSpace: "pre-wrap",
                   }}
@@ -239,7 +239,8 @@ function Paper({
                     style={{
                       fontSize: 11,
                       lineHeight: 1.6,
-                      color: "#666",
+                      color: BRAND.black,
+                      opacity: 0.7,
                       margin: "8px 0 0",
                       borderLeft: `2px solid ${BRAND.platinum}`,
                       paddingLeft: 10,
@@ -266,7 +267,7 @@ function Paper({
                 {block.parties.map((party) => (
                   <div key={party.id} style={{ marginBottom: 18 }}>
                     <div style={{ borderBottom: `1px solid ${BRAND.black}`, height: 26 }} />
-                    <div style={{ fontSize: 11, color: "#555", marginTop: 5 }}>
+                    <div style={{ fontSize: 11, color: BRAND.black, opacity: 0.7, marginTop: 5 }}>
                       <Rich text={party.label} sample={sample} />
                     </div>
                   </div>
@@ -292,7 +293,15 @@ function Paper({
                 >
                   <Rich text={block.label} sample={sample} />
                 </div>
-                <div style={{ fontSize: 9, letterSpacing: "2px", color: "#666", marginTop: 6 }}>
+                <div
+                  style={{
+                    fontSize: 9,
+                    letterSpacing: "2px",
+                    color: BRAND.black,
+                    opacity: 0.65,
+                    marginTop: 6,
+                  }}
+                >
                   CTA CERTIFICATION · {block.tier.toUpperCase()}
                 </div>
               </div>
@@ -307,7 +316,8 @@ function Paper({
           borderTop: `1px solid ${BRAND.platinum}`,
           fontSize: 8,
           letterSpacing: "2px",
-          color: "#666",
+          color: BRAND.black,
+          opacity: 0.65,
         }}
       >
         CAME THROUGH AUDIO · {TAGLINE}
@@ -409,6 +419,27 @@ export function PdfTemplateStudio() {
     });
   }
 
+  /** A block and its own rows/lines, copied with fresh ids so editing the copy never edits the original. */
+  function cloneBlock(block: TemplateBlock): TemplateBlock {
+    const copy = { ...block, id: newId() } as TemplateBlock;
+    if (copy.kind === "meta")
+      return { ...copy, rows: copy.rows.map((r) => ({ ...r, id: newId() })) };
+    if (copy.kind === "signatures")
+      return { ...copy, parties: copy.parties.map((p) => ({ ...p, id: newId() })) };
+    return copy;
+  }
+
+  function duplicateBlock(id: string) {
+    const index = template.blocks.findIndex((b) => b.id === id);
+    if (index < 0) return;
+    const copy = cloneBlock(template.blocks[index]!);
+    setTemplate((t) => ({
+      ...t,
+      blocks: [...t.blocks.slice(0, index + 1), copy, ...t.blocks.slice(index + 1)],
+    }));
+    setActiveId(copy.id);
+  }
+
   function removeBlock(id: string) {
     setTemplate((t) => ({ ...t, blocks: t.blocks.filter((b) => b.id !== id) }));
     setActiveId((current) => (current === id ? null : current));
@@ -421,8 +452,9 @@ export function PdfTemplateStudio() {
       return;
     }
     const token = `{{${key}}}`;
-    if (active.kind === "clause")
-      patch(active.id, { body: `${active.body}${active.body.endsWith(" ") ? "" : " "}${token}` });
+    // Never glue a token to the word before it: "artist{{ARTIST_NAME}}" reads as one broken field.
+    const append = (value: string) => `${value}${!value || /\s$/.test(value) ? "" : " "}${token}`;
+    if (active.kind === "clause") patch(active.id, { body: append(active.body) });
     else if (active.kind === "meta") {
       const rows = [...active.rows];
       const last = rows[rows.length - 1];
@@ -430,7 +462,7 @@ export function PdfTemplateStudio() {
         toast.message("Add a row first.");
         return;
       }
-      rows[rows.length - 1] = { ...last, value: `${last.value}${token}` };
+      rows[rows.length - 1] = { ...last, value: append(last.value) };
       patch(active.id, { rows });
     } else if (active.kind === "signatures") {
       const parties = [...active.parties];
@@ -439,9 +471,9 @@ export function PdfTemplateStudio() {
         toast.message("Add a signature line first.");
         return;
       }
-      parties[parties.length - 1] = { ...last, label: `${last.label}${token}` };
+      parties[parties.length - 1] = { ...last, label: append(last.label) };
       patch(active.id, { parties });
-    } else if (active.kind === "seal") patch(active.id, { label: `${active.label}${token}` });
+    } else if (active.kind === "seal") patch(active.id, { label: append(active.label) });
     else toast.message("The brand header carries no variables.");
   }
 
@@ -599,7 +631,7 @@ export function PdfTemplateStudio() {
               inspector drop below the page when they don't fit instead of pushing the studio off screen. */}
           <div className="flex flex-wrap items-start gap-4">
             {/* Blocks rail */}
-            <div className="w-full shrink-0 space-y-3 sm:w-[210px]">
+            <div className="w-full shrink-0 space-y-3 sm:w-[264px]">
               <div className="rounded-xl border border-border p-3">
                 <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                   Blocks
@@ -619,51 +651,60 @@ export function PdfTemplateStudio() {
                       }}
                       className={dragId === block.id ? "opacity-50" : undefined}
                     >
+                      {/* Select and act are separate buttons: an icon sitting inside the row's own click target made
+                          a click on the row's middle duplicate the block instead of selecting it. */}
                       <div
-                        role="button"
-                        tabIndex={0}
-                        onClick={() => setActiveId(block.id)}
-                        onKeyDown={(e) => e.key === "Enter" && setActiveId(block.id)}
-                        className={`flex cursor-pointer items-center gap-2 rounded-md border px-2 py-1.5 text-sm ${block.id === activeId ? "border-primary bg-primary/10" : "border-border hover:border-primary/40"}`}
-                        title={BLOCK_LABELS[block.kind]}
+                        className={`flex items-center gap-1 rounded-md border px-1.5 py-1 text-sm ${block.id === activeId ? "border-primary bg-primary/10" : "border-border hover:border-primary/40"}`}
                       >
-                        <FileText className="h-3.5 w-3.5 shrink-0 text-primary" />
-                        <span className="min-w-0 flex-1 truncate">{BLOCK_LABELS[block.kind]}</span>
                         <button
                           type="button"
-                          aria-label="Move up"
-                          disabled={index === 0}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            move(block.id, -1);
-                          }}
-                          className="rounded p-0.5 text-muted-foreground disabled:opacity-30"
+                          onClick={() => setActiveId(block.id)}
+                          title={BLOCK_LABELS[block.kind]}
+                          aria-pressed={block.id === activeId}
+                          className="flex min-w-0 flex-1 items-center gap-2 py-0.5 text-left"
                         >
-                          <ArrowUp className="h-3 w-3" />
+                          <FileText className="h-3.5 w-3.5 shrink-0 text-primary" />
+                          <span className="min-w-0 flex-1 truncate">
+                            {BLOCK_LABELS[block.kind]}
+                          </span>
                         </button>
-                        <button
-                          type="button"
-                          aria-label="Move down"
-                          disabled={index === template.blocks.length - 1}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            move(block.id, 1);
-                          }}
-                          className="rounded p-0.5 text-muted-foreground disabled:opacity-30"
-                        >
-                          <ArrowDown className="h-3 w-3" />
-                        </button>
-                        <button
-                          type="button"
-                          aria-label="Remove block"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            removeBlock(block.id);
-                          }}
-                          className="rounded p-0.5 text-muted-foreground"
-                        >
-                          <X className="h-3 w-3" />
-                        </button>
+                        <div className="flex shrink-0 items-center">
+                          <button
+                            type="button"
+                            aria-label={`Duplicate ${BLOCK_LABELS[block.kind]}`}
+                            title="Duplicate this block"
+                            onClick={() => duplicateBlock(block.id)}
+                            className="rounded p-0.5 text-muted-foreground hover:text-foreground"
+                          >
+                            <Copy className="h-3 w-3" />
+                          </button>
+                          <button
+                            type="button"
+                            aria-label="Move up"
+                            disabled={index === 0}
+                            onClick={() => move(block.id, -1)}
+                            className="rounded p-0.5 text-muted-foreground disabled:opacity-30"
+                          >
+                            <ArrowUp className="h-3 w-3" />
+                          </button>
+                          <button
+                            type="button"
+                            aria-label="Move down"
+                            disabled={index === template.blocks.length - 1}
+                            onClick={() => move(block.id, 1)}
+                            className="rounded p-0.5 text-muted-foreground disabled:opacity-30"
+                          >
+                            <ArrowDown className="h-3 w-3" />
+                          </button>
+                          <button
+                            type="button"
+                            aria-label="Remove block"
+                            onClick={() => removeBlock(block.id)}
+                            className="rounded p-0.5 text-muted-foreground"
+                          >
+                            <X className="h-3 w-3" />
+                          </button>
+                        </div>
                       </div>
                     </li>
                   ))}
@@ -756,10 +797,16 @@ export function PdfTemplateStudio() {
                   {checks.map((check) => (
                     <li
                       key={check.id}
-                      className={`flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] ${check.ok ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400" : "bg-destructive/10 text-destructive"}`}
+                      className="flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px]"
+                      style={
+                        check.ok
+                          ? { background: `${BRAND.cobalt}14`, color: BRAND.cobalt }
+                          : { background: `${BRAND.gold}2e`, color: BRAND.black }
+                      }
                     >
                       <span
-                        className={`inline-block h-1.5 w-1.5 rounded-full ${check.ok ? "bg-emerald-500" : "bg-destructive"}`}
+                        className="inline-block h-1.5 w-1.5 rounded-full"
+                        style={{ background: check.ok ? BRAND.cobalt : BRAND.gold }}
                       />
                       <span className="font-semibold">{check.label}</span>
                       <span className="opacity-80">{check.detail}</span>
