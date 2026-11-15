@@ -22,6 +22,23 @@ export const TAGLINE = "YOUR FIRST STOP BEFORE DISTRIBUTION";
 export const TEMPLATE_TIERS = ["standard", "gold", "platinum"] as const;
 export type TemplateTier = (typeof TEMPLATE_TIERS)[number];
 
+/**
+ * Who keeps the template library (founder, 2026-11-15): the super admins, HR admins, project managers and department
+ * leads build, copy and delete templates. Everyone else on staff still reads the library, because sending a packet
+ * needs it, but nothing they type can change a document the team sends out. The server checks this too; a screen that
+ * hides the studio is not the rule.
+ */
+export const PDF_TEMPLATE_EDITOR_ROLES = [
+  "super_admin",
+  "hr_admin",
+  "project_manager",
+  "department_lead",
+] as const;
+
+export function canManagePdfTemplates(access: { role: string } | null | undefined): boolean {
+  return !!access && (PDF_TEMPLATE_EDITOR_ROLES as readonly string[]).includes(access.role);
+}
+
 export const TIER_LABELS: Record<TemplateTier, string> = {
   standard: "Standard",
   gold: "Gold",

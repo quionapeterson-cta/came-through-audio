@@ -113,8 +113,9 @@ function trimmedSignature(canvas: HTMLCanvasElement): Signature | null {
 export function PdfTools({
   canEmail = true,
   canSave = true,
+  canStudio = true,
   title = "PDF Tools",
-}: { canEmail?: boolean; canSave?: boolean; title?: string } = {}) {
+}: { canEmail?: boolean; canSave?: boolean; canStudio?: boolean; title?: string } = {}) {
   const [file, setFile] = useState<{ name: string; bytes: Uint8Array } | null>(null);
   const [doc, setDoc] = useState<PDFDocumentProxy | null>(null);
   const [pages, setPages] = useState<PageView[]>([]);
@@ -494,7 +495,13 @@ export function PdfTools({
           }}
         />
       )}
-      {canEmail && <PdfTemplateStudio />}
+      {canEmail && canStudio && <PdfTemplateStudio />}
+      {canEmail && !canStudio && (
+        <p className="rounded-2xl border border-dashed border-border p-4 text-sm text-muted-foreground">
+          The template library is kept by super admins, HR admins, project managers and department
+          leads. Sending a packet is still open to every staff member.
+        </p>
+      )}
       {canEmail && <PdfPacketCenter />}
       {canEmail && <PdfEmailLog refreshKey={emailVersion} />}
       {canSave && <PdfShelfPanel refreshKey={shelfVersion} focusFolderId={savedFolderId} />}

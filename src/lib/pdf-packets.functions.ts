@@ -246,7 +246,10 @@ export const ensureInternshipPacket = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }): Promise<{ id: string; created: boolean }> => {
     await requireStaff(context);
-    const { data: existing } = await context.supabase
+    // The starter is the built-in document, never anything the browser sends, so it seeds on the service client: every
+    // staff member needs it in the library to send a packet, while changing the library itself stays with the leads.
+    const db = (await import("@/integrations/supabase/client.server")).supabaseAdmin;
+    const { data: existing } = await db
       .from("pdf_templates" as never)
       .select("*")
       .eq("name", STARTER_NAME)
@@ -263,7 +266,7 @@ export const ensureInternshipPacket = createServerFn({ method: "POST" })
       // admin has saved their own version, `updated_at` moves and their copy is never overwritten.
       const untouched = row.created_at === row.updated_at;
       if (untouched && JSON.stringify(row.blocks) !== JSON.stringify(template.blocks)) {
-        const { error: refreshError } = await context.supabase
+        const { error: refreshError } = await db
           .from("pdf_templates" as never)
           .update({ blocks: template.blocks, updated_by: context.userId } as never)
           .eq("id", row.id);
@@ -272,7 +275,7 @@ export const ensureInternshipPacket = createServerFn({ method: "POST" })
       }
       return { id: row.id, created: false };
     }
-    const { data, error } = await context.supabase
+    const { data, error } = await db
       .from("pdf_templates" as never)
       .insert({
         name: template.name,

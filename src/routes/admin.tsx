@@ -22,6 +22,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsContent } from "@/components/ui/tabs";
 import { getAdminOverview, getStaffRole } from "@/lib/admin.functions";
 import { ASSIGNABLE_DEPARTMENTS, DEPARTMENTS, DEPARTMENT_LABEL, ROLE_LABEL, viewDepartments, visibleTabs, type Department } from "@/lib/departments";
+import { canManagePdfTemplates } from "@/lib/pdf-templates";
 import { SupportTicketsPanel } from "@/components/SupportTicketsPanel";
 import { SupportScriptsPanel } from "@/components/SupportScriptsPanel";
 import { BadgeSwitchboard } from "@/components/BadgeSwitchboard";
@@ -234,7 +235,7 @@ function AdminPage() {
           {show("staff-plan") && <TabsContent value="staff-plan"><StaffPlanPanel access={access} /></TabsContent>}
           {show("scripts") && <TabsContent value="scripts"><SupportScriptsPanel /></TabsContent>}
           {show("prices") && <TabsContent value="prices"><PriceList /></TabsContent>}
-          {show("pdf") && <TabsContent value="pdf"><PdfTools /></TabsContent>}
+          {show("pdf") && <TabsContent value="pdf"><PdfTools canStudio={canManagePdfTemplates(access)} /></TabsContent>}
           {show("email") && <TabsContent value="email"><CompanyMail /></TabsContent>}
           {show("legal") && <TabsContent value="legal"><LegalEditor /></TabsContent>}
         </Tabs>

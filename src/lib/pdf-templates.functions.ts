@@ -1,7 +1,12 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-import { TEMPLATE_TIERS, type PdfTemplate, type TemplateBlock } from "./pdf-templates";
+import {
+  PDF_TEMPLATE_EDITOR_ROLES,
+  TEMPLATE_TIERS,
+  type PdfTemplate,
+  type TemplateBlock,
+} from "./pdf-templates";
 
 /**
  * The Template Studio library (founder, 2026-11-15). Staff build or convert a document, save it, and the whole team can
@@ -63,6 +68,24 @@ async function requireStaff(context: Ctx): Promise<void> {
   if (!data) throw new Error("Only staff can use Template Studio.");
 }
 
+/**
+ * Changing the library is narrower than reading it (founder, 2026-11-15): a super admin, HR admin, project manager or
+ * department lead writes; every other staff member reads, because the send dialog picks from the same library.
+ */
+async function requireTemplateAuthor(context: Ctx): Promise<void> {
+  await requireStaff(context);
+  const checks = await Promise.all(
+    PDF_TEMPLATE_EDITOR_ROLES.map((role) =>
+      context.supabase.rpc("has_role" as never, { _user_id: context.userId, _role: role } as never),
+    ),
+  );
+  if (!checks.some((result) => Boolean(result.data))) {
+    throw new Error(
+      "Only a super admin, HR admin, project manager or department lead can change the template library.",
+    );
+  }
+}
+
 const toTemplate = (row: Row): SavedTemplate => ({
   id: row.id,
   name: row.name,
@@ -95,7 +118,7 @@ export const savePdfTemplate = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => templateInput.parse(d))
   .handler(async ({ data, context }): Promise<SavedTemplate> => {
-    await requireStaff(context);
+    await requireTemplateAuthor(context);
     const row = {
       name: data.name,
       tier: data.tier,
@@ -122,7 +145,7 @@ export const duplicatePdfTemplate = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => z.object({ id: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }): Promise<SavedTemplate> => {
-    await requireStaff(context);
+    await requireTemplateAuthor(context);
     const { data: row, error } = await context.supabase
       .from("pdf_templates" as never)
       .select("*")
@@ -150,7 +173,7 @@ export const deletePdfTemplate = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => z.object({ id: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
-    await requireStaff(context);
+    await requireTemplateAuthor(context);
     const { error } = await context.supabase
       .from("pdf_templates" as never)
       .delete()
