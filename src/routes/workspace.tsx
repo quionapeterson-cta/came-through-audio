@@ -149,7 +149,11 @@ function Workspace() {
     if (!search.song) return;
     setTab("health");
     const base = readAudit();
-    if (base) saveAudit(recordStop(base, "checklist", `/workspace?tab=health&song=${search.song}&trail=yes`, search.song));
+    if (base) {
+      const moved = recordStop(base, "checklist", `/workspace?tab=health&song=${search.song}&trail=yes`, search.song);
+      // A different song (Next song) drops the old song's step line rather than naming the wrong one.
+      saveAudit(base.songId && base.songId !== search.song ? { ...moved, detail: undefined } : moved);
+    }
   }, [search.song]);
   // The fix link that carries an audit keeps the trail across the reload it makes.
   useEffect(() => {
@@ -158,11 +162,12 @@ function Workspace() {
     saveAudit(recordStop(base, "catalog", `${window.location.pathname}${window.location.search}${window.location.hash}`, search.songId));
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
   /** A report or checklist hop records the stop it leaves, so the audit bar can bring the member back to it. */
-  function auditFrom(from: "report" | "checklist", trackId: string, queue?: AuditSong[]) {
+  function auditFrom(from: "report" | "checklist", trackId: string, queue?: AuditSong[], detail?: string) {
     const base = readAudit() ?? blankAudit();
     const href = from === "report" ? "/workspace?tab=health&report=yes&trail=yes" : `/workspace?tab=health&song=${trackId}&trail=yes`;
     let trail = recordStop(base, from, href, trackId);
     if (queue?.length) trail = { ...trail, queue };
+    if (detail) trail = { ...trail, detail };
     saveAudit(trail);
     setAudit(trail);
     // The address follows the hop, so a reload lands on the same stop instead of the tab the visit started on.
@@ -203,7 +208,7 @@ function Workspace() {
   /** The bar's second row: the list the fix came from, shown only while My Catalog is open in the audit. */
   const auditBack: AuditBackLink | undefined = audit && tab === "catalog"
     ? audit.hrefs.checklist
-      ? { href: audit.hrefs.checklist, label: "Back to the song checklist", detail: "Continue where you left off" }
+      ? { href: audit.hrefs.checklist, label: "Back to the song checklist", detail: audit.detail ?? "Continue where you left off" }
       : audit.hrefs.report
         ? { href: audit.hrefs.report, label: "Back to the report", detail: "The finding you're working" }
         : undefined
@@ -671,7 +676,7 @@ function Coaching({ userId }: { userId: string }) {
   );
 }
 
-function Health({ startView, justPaid, canCatalog, onFix, onFixField, onAuditFrom, focusSong, openReport, onAddSong, onEmbed, userId, purchases, canUtility, onUpgrade, onSplitSheet, start }: { startView: "check" | "expert"; justPaid: boolean; canCatalog: boolean; userId: string; purchases: Purchase[]; canUtility: boolean; onUpgrade: () => void; onFix: () => void; onFixField: (trackId: string, field: string) => void; onAuditFrom: (from: "report" | "checklist", trackId: string, queue?: AuditSong[]) => void; focusSong?: string | undefined; openReport: boolean; onAddSong: (title: string, artist?: string) => void; onEmbed: () => void; onSplitSheet: (trackId: string) => void; start?: HealthStart | undefined }) {
+function Health({ startView, justPaid, canCatalog, onFix, onFixField, onAuditFrom, focusSong, openReport, onAddSong, onEmbed, userId, purchases, canUtility, onUpgrade, onSplitSheet, start }: { startView: "check" | "expert"; justPaid: boolean; canCatalog: boolean; userId: string; purchases: Purchase[]; canUtility: boolean; onUpgrade: () => void; onFix: () => void; onFixField: (trackId: string, field: string) => void; onAuditFrom: (from: "report" | "checklist", trackId: string, queue?: AuditSong[], detail?: string) => void; focusSong?: string | undefined; openReport: boolean; onAddSong: (title: string, artist?: string) => void; onEmbed: () => void; onSplitSheet: (trackId: string) => void; start?: HealthStart | undefined }) {
   // Three tools, one at a time, switched like Contracts & Blueprints.
   const [view, setView] = useState<"check" | "expert" | "utility">(startView);
   useEffect(() => { if (start) setView("check"); }, [start?.nonce]); // eslint-disable-line react-hooks/exhaustive-deps

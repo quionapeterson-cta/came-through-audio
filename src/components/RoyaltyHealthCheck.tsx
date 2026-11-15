@@ -66,7 +66,7 @@ type View = { kind: "hub" } | { kind: "checkin"; scope: ReportScope; from?: stri
 /** A check-in left mid-visit: the songs it covers, the song it started from, and the intake that was open. */
 type SavedVisit = { kind: "checkin"; scope: ReportScope; from?: string | undefined; intake?: IntakeKind | undefined };
 
-export function RoyaltyHealthCheck({ userId, canCatalog, canExport, onUpgrade, onFixField, onAuditFrom, focusSong, openReport, onEmbed, onExpert, onSplitSheet, start }: { userId: string; canCatalog: boolean; canExport: boolean; onUpgrade: (priceId?: string) => void; onFix?: () => void; onFixField: (trackId: string, field: string) => void; /** Audit Mode: records the report or checklist stop a hop leaves. */ onAuditFrom?: ((from: "report" | "checklist", trackId: string, queue?: AuditSong[]) => void) | undefined; /** Audit Mode: the song a return lands on, opened in the Hub's checklist. */ focusSong?: string | undefined; /** Audit Mode: reopen the newest report, so "Back to the report" is the report and not the Front Desk. */ openReport?: boolean | undefined; onEmbed: () => void; onExpert?: () => void; onSplitSheet?: ((trackId: string) => void) | undefined; start?: HealthStart | undefined }) {
+export function RoyaltyHealthCheck({ userId, canCatalog, canExport, onUpgrade, onFixField, onAuditFrom, focusSong, openReport, onEmbed, onExpert, onSplitSheet, start }: { userId: string; canCatalog: boolean; canExport: boolean; onUpgrade: (priceId?: string) => void; onFix?: () => void; onFixField: (trackId: string, field: string) => void; /** Audit Mode: records the report or checklist stop a hop leaves, with the song's next step. */ onAuditFrom?: ((from: "report" | "checklist", trackId: string, queue?: AuditSong[], detail?: string) => void) | undefined; /** Audit Mode: the song a return lands on, opened in the Hub's checklist. */ focusSong?: string | undefined; /** Audit Mode: reopen the newest report, so "Back to the report" is the report and not the Front Desk. */ openReport?: boolean | undefined; onEmbed: () => void; onExpert?: () => void; onSplitSheet?: ((trackId: string) => void) | undefined; start?: HealthStart | undefined }) {
   const [tracks, setTracks] = useState<CatalogTrack[]>();
   const [checks, setChecks] = useState<RepertoireCheck[]>([]);
   const [code, setCode] = useState(() => loadOnboarding(userId)?.healthCountry);
@@ -148,6 +148,14 @@ export function RoyaltyHealthCheck({ userId, canCatalog, canExport, onUpgrade, o
   const allChecks = useMemo(() => [...checks, ...inspectorChecks(statuses)], [checks, statuses]);
   const report = useMemo(() => healthReport(allTracks, country, allChecks), [allTracks, country, allChecks]);
   const statusOf = (id: string) => statuses.find((x) => x.songRef === id) ?? emptyStatus(id);
+  /** The song and the registration step it is on ("Roll Out · Ready to register with BMI") — Audit Mode's second row. */
+  const songDetailFor = (trackId: string) => {
+    const title = allTracks.find((t) => t.id === trackId)?.title ?? "";
+    const row = report.rows.find((r) => r.track.id === trackId);
+    const list = row ? songChecklist(row, country, statusOf(trackId), statusOf(ACCOUNT_REF)) : undefined;
+    const next = list?.steps.find((s) => !s.done && !s.optional) ?? list?.steps.find((s) => !s.done);
+    return [title, next?.title].filter(Boolean).join(" · ");
+  };
 
   async function updateStatus(next: SongStatus) {
     const prev = statuses;
@@ -332,11 +340,11 @@ export function RoyaltyHealthCheck({ userId, canCatalog, canExport, onUpgrade, o
   /** A treatment step's button: every step ends at the agency, so most of these leave Came Through Audio on purpose. */
   async function act(a: StepAction) {
     const queue = (id: string) => (auditQueue.current.length ? auditQueue.current : auditQueueFor(id));
-    if (a.kind === "field") { onAuditFrom?.("report", a.trackId, queue(a.trackId)); auditQueue.current = []; return fixField(a.trackId, a.field); }
+    if (a.kind === "field") { onAuditFrom?.("report", a.trackId, queue(a.trackId), songDetailFor(a.trackId)); auditQueue.current = []; return fixField(a.trackId, a.field); }
     if (a.kind === "changes") {
       // The song opens its checklist, so the trail records both stops: the finding it came from and the list it lands on.
-      onAuditFrom?.("report", a.trackId, queue(a.trackId));
-      onAuditFrom?.("checklist", a.trackId);
+      onAuditFrom?.("report", a.trackId, queue(a.trackId), songDetailFor(a.trackId));
+      onAuditFrom?.("checklist", a.trackId, undefined, songDetailFor(a.trackId));
       auditQueue.current = [];
     }
     if (a.kind === "tick" || a.kind === "changes") return showSong(a.kind === "changes" ? a.trackId : checkup.lead?.songs[0]?.id);
@@ -537,7 +545,7 @@ export function RoyaltyHealthCheck({ userId, canCatalog, canExport, onUpgrade, o
     onCountry: chooseCountry, onRunAll: () => void runAll(), onExpert: book, onRunOne: (id: string) => void runOne(id),
     onMark: (...a: Parameters<typeof mark>) => void mark(...a), onClear: (...a: Parameters<typeof clear>) => void clear(...a),
     // Audit Mode: a checklist fix records that stop before My Catalog opens, so the way back is the checklist itself.
-    onFixField: (id: string, field: string) => { onAuditFrom?.("checklist", id); fixField(id, field); },
+    onFixField: (id: string, field: string) => { onAuditFrom?.("checklist", id, undefined, songDetailFor(id)); fixField(id, field); },
   };
   if (!tracks) return <div className="rounded-3xl bg-ink p-8 text-ink-muted">Scanning your catalog…</div>;
 

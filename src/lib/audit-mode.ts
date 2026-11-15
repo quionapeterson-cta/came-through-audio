@@ -26,6 +26,8 @@ export type AuditTrail = {
   songId?: string | undefined;
   /** Where the audit started, shown so the member knows which finding they are working. */
   title?: string | undefined;
+  /** The song and the step it is on ("Roll Out · Ready to register with BMI"), shown beside the way back. */
+  detail?: string | undefined;
 };
 
 export const AUDIT_EVENT = "cta:audit";
@@ -95,6 +97,7 @@ export function readAudit(): AuditTrail | null {
       order, hrefs, queue,
       ...(typeof t.songId === "string" ? { songId: t.songId } : {}),
       ...(typeof t.title === "string" ? { title: t.title } : {}),
+      ...(typeof t.detail === "string" ? { detail: t.detail } : {}),
     };
   } catch { return null; }
 }
