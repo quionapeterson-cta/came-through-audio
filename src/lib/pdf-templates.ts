@@ -84,7 +84,15 @@ export type TemplateBlock =
       options: CheckOption[];
     }
   /** A drawn or typed signature with its date, from the recipient or the company representative. */
-  | { id: string; kind: "signature"; heading: string; role: FieldRole; showDate: boolean };
+  | {
+      id: string;
+      kind: "signature";
+      heading: string;
+      role: FieldRole;
+      showDate: boolean;
+      /** A line someone signs in person, so the intern's signature is never stamped on it. */
+      noStamp?: boolean;
+    };
 
 export type TemplateBlockKind = TemplateBlock["kind"];
 

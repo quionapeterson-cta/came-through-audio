@@ -186,8 +186,27 @@ export const ensureInternshipPacket = createServerFn({ method: "POST" })
       .select("*")
       .eq("name", STARTER_NAME)
       .maybeSingle();
-    if (existing) return { id: (existing as { id: string }).id, created: false };
     const template = internshipPacketTemplate();
+    if (existing) {
+      const row = existing as {
+        id: string;
+        blocks: unknown[];
+        created_at: string;
+        updated_at: string;
+      };
+      // A copy nobody has saved yet follows the built-in document (the first seed was a short summary of it). Once an
+      // admin has saved their own version, `updated_at` moves and their copy is never overwritten.
+      const untouched = row.created_at === row.updated_at;
+      if (untouched && JSON.stringify(row.blocks) !== JSON.stringify(template.blocks)) {
+        const { error: refreshError } = await context.supabase
+          .from("pdf_templates" as never)
+          .update({ blocks: template.blocks, updated_by: context.userId } as never)
+          .eq("id", row.id);
+        if (refreshError) throw new Error("Couldn't update the internship packet.");
+        return { id: row.id, created: false };
+      }
+      return { id: row.id, created: false };
+    }
     const { data, error } = await context.supabase
       .from("pdf_templates" as never)
       .insert({

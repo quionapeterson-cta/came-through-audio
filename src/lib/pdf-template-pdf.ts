@@ -10,6 +10,25 @@ import {
 } from "./pdf-templates";
 import type { PacketAudit, PacketValues, SignatureRecord } from "./pdf-packets";
 
+// pdf-lib's built-in faces encode Windows-1252, which has no arrows, ticks or ballot boxes. Map the handful a document
+// might use instead of letting one glyph fail the whole download.
+const GLYPHS: Record<string, string> = {
+  "→": "->",
+  "←": "<-",
+  "↔": "<->",
+  "✓": "v",
+  "✔": "v",
+  "☐": "[ ]",
+  "☑": "[x]",
+  "☒": "[x]",
+  "★": "*",
+  "≥": ">=",
+  "≤": "<=",
+  "≈": "~",
+};
+const clean = (value: string) =>
+  value.replace(/[→←↔✓✔☐☑☒★≥≤≈]/g, (glyph) => GLYPHS[glyph] ?? glyph);
+
 /**
  * A template as a real PDF (founder, 2026-11-15). The HTML export is for the web; this is the file an admin prints or
  * sends, built from the same blocks with the sample release filled in, so a document can be reviewed before a song is
@@ -64,7 +83,7 @@ export async function templateToPdfBytes(
   const regular = await doc.embedFont(StandardFonts.Helvetica);
   const bold = await doc.embedFont(StandardFonts.HelveticaBold);
   const signatureFont = await doc.embedFont(StandardFonts.HelveticaOblique);
-  const text = (value: string) => fillTokens(value, data);
+  const text = (value: string) => fillTokens(clean(value), data);
   const blocks = options.blocks ?? template.blocks;
 
   let page: PDFPage = doc.addPage([PAGE.width, PAGE.height]);
@@ -415,7 +434,7 @@ export async function templateToPdfBytes(
         });
       }
       // A signed packet carries the real signature on the line, drawn or typed, with the day it was given.
-      const signed = options.signatures?.[block.role] ?? null;
+      const signed = block.noStamp ? null : (options.signatures?.[block.role] ?? null);
       if (signed?.kind === "draw" && signed.data.startsWith("data:image/png")) {
         try {
           const png = await doc.embedPng(signed.data);
@@ -423,7 +442,7 @@ export async function templateToPdfBytes(
           const width = Math.min(contentWidth * 0.55, (png.width / png.height) * height);
           page.drawImage(png, { x: MARGIN + 4, y: y + 2, width, height });
         } catch {
-          page.drawText(signed.name, {
+          page.drawText(clean(signed.name), {
             x: MARGIN + 4,
             y: y + 8,
             size: 14,
@@ -432,7 +451,7 @@ export async function templateToPdfBytes(
           });
         }
       } else if (signed) {
-        page.drawText(signed.name, {
+        page.drawText(clean(signed.name), {
           x: MARGIN + 4,
           y: y + 8,
           size: 16,

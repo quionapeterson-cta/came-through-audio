@@ -372,6 +372,25 @@ function PacketSigningPage() {
                 );
               }
               if (block.kind === "signature") {
+                if (block.noStamp) {
+                  return (
+                    <section
+                      key={block.id}
+                      className="rounded-xl border p-3"
+                      style={{ borderColor: BRAND.platinum }}
+                    >
+                      <p
+                        className="text-[10px] font-bold uppercase tracking-[2px]"
+                        style={{ color: BRAND.cobalt }}
+                      >
+                        {block.heading}
+                      </p>
+                      <p className="mt-1 text-sm text-muted-foreground">
+                        Signed separately on the printed copy, if a parent or guardian is required.
+                      </p>
+                    </section>
+                  );
+                }
                 if (block.role === "admin") {
                   const signed = packet.adminSignature;
                   return (
@@ -411,7 +430,8 @@ function PacketSigningPage() {
                 Your signature
               </p>
               <p className="mb-2 mt-1 text-xs text-muted-foreground">
-                One signature covers every recipient signature line in this packet.
+                One signature covers every recipient signature line. A parent/guardian line is
+                signed separately on the printed copy.
               </p>
               <PdfSignaturePad
                 value={signature}

@@ -98,6 +98,8 @@ export function PdfPacketCenter() {
 
   async function load() {
     try {
+      // The starter packet joins the library once, and an untouched early copy is brought up to the full document.
+      await ensureInternshipPacket().catch(() => null);
       const [saved, sent, mail] = await Promise.all([
         listPdfTemplates(),
         listPackets(),
@@ -106,11 +108,6 @@ export function PdfPacketCenter() {
       setTemplates(saved);
       setPackets(sent);
       setInbox(mail.email);
-      if (!saved.some((t) => t.name.startsWith("CTA Internship Onboarding Packet"))) {
-        // The starter packet joins the library once, the first time this panel is opened.
-        await ensureInternshipPacket().catch(() => null);
-        setTemplates(await listPdfTemplates());
-      }
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Couldn't load sent packets.");
     } finally {
