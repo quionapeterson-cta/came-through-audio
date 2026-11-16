@@ -29,6 +29,7 @@ const BLOCK_KINDS = [
   "fields",
   "checkboxes",
   "signature",
+  "date",
 ] as const;
 
 const blockSchema = z

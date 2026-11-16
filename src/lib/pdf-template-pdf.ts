@@ -2,6 +2,7 @@ import { PDFDocument, StandardFonts, rgb, type PDFFont, type PDFPage } from "pdf
 import {
   BRAND,
   fillTokens,
+  formatBlockDate,
   headerInk,
   SAMPLE_DATA,
   SEAL_ART,
@@ -485,6 +486,30 @@ export async function templateToPdfBytes(
         });
       }
       y -= 30;
+      continue;
+    }
+
+    if (block.kind === "date") {
+      // The stored day, not the printing day: a copy printed later reads exactly as the signer's did.
+      ensure(46);
+      if (block.label.trim()) {
+        page.drawText(text(block.label).toUpperCase(), {
+          x: MARGIN,
+          y,
+          size: 8,
+          font: bold,
+          color: ink(BRAND.cobalt),
+        });
+        y -= 16;
+      }
+      page.drawText(formatBlockDate(block) || "—", {
+        x: MARGIN,
+        y,
+        size: 15,
+        font: bold,
+        color: ink(BRAND.black),
+      });
+      y -= 26;
       continue;
     }
 

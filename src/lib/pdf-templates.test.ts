@@ -4,6 +4,7 @@ import {
   canSaveTemplate,
   contrastRatio,
   fillTokens,
+  formatBlockDate,
   headerInk,
   newId,
   preflight,
@@ -13,6 +14,32 @@ import {
   unknownTokens,
   type PdfTemplate,
 } from "./pdf-templates";
+
+describe("date block", () => {
+  it("prints the day stored on the block, not the day it is read", () => {
+    expect(formatBlockDate({ value: "2026-11-16", format: "long" })).toBe("16 November 2026");
+    expect(formatBlockDate({ value: "2026-11-16", format: "short" })).toBe("16 Nov 2026");
+  });
+
+  it("prints nothing rather than inventing a date", () => {
+    expect(formatBlockDate({ value: "", format: "long" })).toBe("");
+    expect(formatBlockDate({ value: "16/11/2026", format: "long" })).toBe("");
+  });
+
+  it("fails the block check while the date is blank, and passes once it is set", () => {
+    const template = (value: string): PdfTemplate => ({
+      name: "Dated",
+      tier: "standard",
+      blocks: [
+        { id: newId(), kind: "header", background: "light", showTagline: true },
+        { id: newId(), kind: "date", label: "Effective date", value, format: "long" },
+      ],
+    });
+    expect(preflight(template("")).find((c) => c.id === "blocks")?.ok).toBe(false);
+    expect(preflight(template("2026-11-16")).find((c) => c.id === "blocks")?.ok).toBe(true);
+    expect(templateToHtml(template("2026-11-16"))).toContain("Effective date");
+  });
+});
 
 describe("tokens", () => {
   it("fills known tokens with sample release data", () => {

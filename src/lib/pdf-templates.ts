@@ -132,9 +132,47 @@ export type TemplateBlock =
       showDate: boolean;
       /** A line someone signs in person, so the intern's signature is never stamped on it. */
       noStamp?: boolean;
+    }
+  /**
+   * A dated line for an agreement's opening page (founder, 2026-11-16). The day is stored on the block, never read from
+   * the clock when the page prints: a copy downloaded a month later must show the same date the signer saw.
+   */
+  | {
+      id: string;
+      kind: "date";
+      /** Caption above the date, e.g. "Effective date". Blank prints the date on its own. */
+      label: string;
+      /** yyyy-mm-dd, stamped when the block is added or with the Today button. */
+      value: string;
+      format: "long" | "short";
     };
 
 export type TemplateBlockKind = TemplateBlock["kind"];
+
+/**
+ * The date a Date block prints, in the document's own English. Blank or malformed values print an em dash rather than
+ * today, so a missing date is visible instead of quietly invented.
+ */
+export function formatBlockDate(block: { value: string; format: "long" | "short" }): string {
+  const iso = block.value.trim();
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(iso)) return "";
+  const day = new Date(`${iso}T00:00:00Z`);
+  if (Number.isNaN(day.getTime())) return "";
+  return day.toLocaleDateString("en-GB", {
+    day: "numeric",
+    month: block.format === "short" ? "short" : "long",
+    year: "numeric",
+    timeZone: "UTC",
+  });
+}
+
+/** Today as yyyy-mm-dd in the browser's own day, for the block's Today button. */
+export function todayIso(): string {
+  const now = new Date();
+  const month = `${now.getMonth() + 1}`.padStart(2, "0");
+  const day = `${now.getDate()}`.padStart(2, "0");
+  return `${now.getFullYear()}-${month}-${day}`;
+}
 
 export type PdfTemplate = {
   id?: string;
@@ -204,7 +242,9 @@ export function unknownTokens(template: PdfTemplate): string[] {
                     ? `${block.heading} ${block.options.map((o) => o.label).join(" ")}`
                     : block.kind === "signature"
                       ? block.heading
-                      : "";
+                      : block.kind === "date"
+                        ? block.label
+                        : "";
     for (const token of tokensIn(text)) if (!isTokenKey(token)) found.add(token);
   }
   return [...found];
@@ -278,6 +318,7 @@ export function preflight(template: PdfTemplate): PreflightCheck[] {
     if (block.kind === "fields") return block.fields.every((f) => f.label.trim());
     if (block.kind === "checkboxes") return block.options.every((o) => o.label.trim());
     if (block.kind === "section") return block.title.trim().length > 0;
+    if (block.kind === "date") return formatBlockDate(block).length > 0;
     return true;
   });
   const unknown = unknownTokens(template);
@@ -384,6 +425,12 @@ function blockHtml(block: TemplateBlock): string {
     return `<section style="padding:24px 48px 0">
   <h2 style="font-size:12px;letter-spacing:2px;text-transform:uppercase;color:${BRAND.cobalt};margin:0 0 10px">${esc(fillTokens(block.heading))}</h2>
   ${block.options.map((o) => `<div style="font-size:12px;color:${BRAND.black};margin:6px 0">☐&nbsp;&nbsp;${esc(o.label)}</div>`).join("\n  ")}
+</section>`;
+  }
+  if (block.kind === "date") {
+    return `<section style="padding:26px 48px 0">
+  ${block.label.trim() ? `<div style="font-size:10px;letter-spacing:2px;text-transform:uppercase;color:${BRAND.cobalt};margin-bottom:6px">${esc(block.label)}</div>` : ""}
+  <div style="font-size:19px;font-weight:700;color:${BRAND.black}">${esc(formatBlockDate(block) || "—")}</div>
 </section>`;
   }
   if (block.kind === "signature") {

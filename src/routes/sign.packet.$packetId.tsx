@@ -14,7 +14,7 @@ import {
   type PacketStatus,
   type PacketValues,
 } from "@/lib/pdf-packets";
-import { BRAND, TAGLINE } from "@/lib/pdf-templates";
+import { BRAND, formatBlockDate, TAGLINE } from "@/lib/pdf-templates";
 
 export const Route = createFileRoute("/sign/packet/$packetId")({
   head: () => ({
@@ -414,6 +414,23 @@ function PacketSigningPage() {
                   );
                 }
                 return null;
+              }
+              if (block.kind === "date") {
+                return (
+                  <section key={block.id}>
+                    {block.label.trim() ? (
+                      <p
+                        className="text-[10px] font-bold uppercase tracking-[2px]"
+                        style={{ color: BRAND.cobalt }}
+                      >
+                        {block.label}
+                      </p>
+                    ) : null}
+                    <p className="mt-1 text-sm font-semibold">
+                      {formatBlockDate(block) || "\u2014"}
+                    </p>
+                  </section>
+                );
               }
               if (block.kind === "seal") return null;
               return null;

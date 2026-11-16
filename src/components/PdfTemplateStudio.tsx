@@ -44,8 +44,10 @@ import {
   canSaveTemplate,
   contractCardSummary,
   fillTokens,
+  formatBlockDate,
   headerInk,
   newId,
+  todayIso,
   preflight,
   starterPresets,
   templateToHtml,
@@ -94,6 +96,7 @@ const BLOCK_LABELS: Record<TemplateBlock["kind"], string> = {
   fields: "Fillable fields",
   checkboxes: "Checkboxes",
   signature: "Signature block",
+  date: "Date",
 };
 
 /** The words a block prints with, so a 100-block packet reads as its forms instead of a column of "Clause". */
@@ -101,6 +104,7 @@ function blockName(block: TemplateBlock): string {
   if (block.kind === "header") return BLOCK_LABELS.header;
   if (block.kind === "section") return block.title.trim() || BLOCK_LABELS.section;
   if (block.kind === "seal") return block.label.trim() || BLOCK_LABELS.seal;
+  if (block.kind === "date") return block.label.trim() || BLOCK_LABELS.date;
   return block.heading.trim() || BLOCK_LABELS[block.kind];
 }
 
@@ -421,6 +425,26 @@ function Paper({
                 </div>
               </div>
             )}
+            {block.kind === "date" && (
+              <div style={{ padding: "24px 44px 0" }}>
+                {block.label.trim() ? (
+                  <div
+                    style={{
+                      fontSize: 9,
+                      letterSpacing: "2px",
+                      textTransform: "uppercase",
+                      color: BRAND.cobalt,
+                      marginBottom: 6,
+                    }}
+                  >
+                    <Rich text={block.label} sample={sample} />
+                  </div>
+                ) : null}
+                <div style={{ fontSize: 18, fontWeight: 700, color: BRAND.black }}>
+                  {formatBlockDate(block) || "—"}
+                </div>
+              </div>
+            )}
             {block.kind === "seal" && (
               <div style={{ padding: "24px 44px 0" }}>
                 {block.art ? (
@@ -606,6 +630,8 @@ export function PdfTemplateStudio() {
                   heading: "Signatures",
                   parties: [{ id: newId(), label: "{{ARTIST_NAME}} · artist" }],
                 }
+              : kind === "date"
+                ? { id: newId(), kind, label: "Effective date", value: todayIso(), format: "long" }
               : kind === "seal"
                 ? { id: newId(), kind, tier: "gold", label: "CTA" }
                 : kind === "section"
@@ -733,6 +759,7 @@ export function PdfTemplateStudio() {
       parties[parties.length - 1] = { ...last, label: append(last.label) };
       patch(active.id, { parties });
     } else if (active.kind === "seal") patch(active.id, { label: append(active.label) });
+    else if (active.kind === "date") patch(active.id, { label: append(active.label) });
     else if (active.kind === "section") patch(active.id, { title: append(active.title) });
     else if (active.kind === "fields") patch(active.id, { heading: append(active.heading) });
     else if (active.kind === "checkboxes") patch(active.id, { heading: append(active.heading) });
@@ -1035,6 +1062,7 @@ export function PdfTemplateStudio() {
                       "fields",
                       "checkboxes",
                       "signature",
+                      "date",
                     ] as const
                   ).map((kind) => (
                     <button
@@ -1679,6 +1707,49 @@ export function PdfTemplateStudio() {
                             />
                             Include a date line
                           </label>
+                        </>
+                      )}
+
+                      {active.kind === "date" && (
+                        <>
+                          <Input
+                            value={active.label}
+                            onChange={(e) => patch(active.id, { label: e.target.value })}
+                            aria-label="Date caption"
+                            placeholder="Effective date"
+                          />
+                          <div className="flex gap-1">
+                            <Input
+                              type="date"
+                              value={active.value}
+                              onChange={(e) => patch(active.id, { value: e.target.value })}
+                              aria-label="Date printed"
+                            />
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              onClick={() => patch(active.id, { value: todayIso() })}
+                            >
+                              Today
+                            </Button>
+                          </div>
+                          <div className="grid grid-cols-2 gap-1">
+                            {(["long", "short"] as const).map((format) => (
+                              <button
+                                key={format}
+                                type="button"
+                                onClick={() => patch(active.id, { format })}
+                                className={`rounded-md border px-2 py-1 text-xs ${active.format === format ? "border-primary" : "border-border"}`}
+                              >
+                                {format === "long" ? "15 November 2026" : "15 Nov 2026"}
+                              </button>
+                            ))}
+                          </div>
+                          <p className="text-xs text-muted-foreground">
+                            The day is fixed on the block, so a signed copy printed later still reads the
+                            same date.
+                          </p>
                         </>
                       )}
 
