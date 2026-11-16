@@ -213,7 +213,10 @@ export function blocksToText(blocks: TemplateBlock[], title = ""): string {
     lines.push("", block.heading.trim());
     for (const party of block.parties) lines.push(`____________________  ${party.label.trim()}`);
   }
-  return lines.join("\n").replace(/\n{3,}/g, "\n\n").trim();
+  return lines
+    .join("\n")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
 }
 
 /** Today as yyyy-mm-dd in the browser's own day, for the block's Today button. */
@@ -425,7 +428,21 @@ export function canSaveTemplate(template: PdfTemplate): boolean {
 const esc = (value: string) =>
   value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 
-function blockHtml(block: TemplateBlock, data: Record<string, string> = SAMPLE_DATA): string {
+/** What a signer (or an admin) typed into a form: text for a field, the ticked option ids for a group. */
+export type BlockValues = Record<string, string | string[]>;
+
+const answerFor = (values: BlockValues | undefined, id: string) =>
+  typeof values?.[id] === "string" ? (values[id] as string) : "";
+const tickedIn = (values: BlockValues | undefined, id: string) => {
+  const ticked = values?.[id];
+  return new Set(Array.isArray(ticked) ? ticked : []);
+};
+
+function blockHtml(
+  block: TemplateBlock,
+  data: Record<string, string> = SAMPLE_DATA,
+  values?: BlockValues,
+): string {
   if (block.kind === "header") {
     const ink = headerInk(block.background);
     return `<header style="background:${ink.surface};padding:40px 48px;border-bottom:3px solid ${BRAND.cobalt}">
@@ -464,17 +481,17 @@ function blockHtml(block: TemplateBlock, data: Record<string, string> = SAMPLE_D
     return `<section style="padding:24px 48px 0">
   <h2 style="font-size:12px;letter-spacing:2px;text-transform:uppercase;color:${BRAND.cobalt};margin:0 0 12px">${esc(fillTokens(block.heading))}</h2>
   ${block.fields
-    .map(
-      (f) =>
-        `<div style="margin-bottom:14px"><div style="font-size:11px;font-weight:600;color:${BRAND.black}">${esc(f.label)}${f.required ? " *" : ""}</div><div style="border-bottom:1px solid ${BRAND.platinum};height:${f.type === "textarea" ? 44 : 24}px"></div></div>`,
-    )
+    .map((f) => {
+      const answer = answerFor(values, f.id);
+      return `<div style="margin-bottom:14px"><div style="font-size:11px;font-weight:600;color:${BRAND.black}">${esc(f.label)}${f.required ? " *" : ""}</div><div style="border-bottom:1px solid ${BRAND.platinum};min-height:${f.type === "textarea" ? 44 : 24}px;font-size:12px;color:${BRAND.black};padding-top:4px">${esc(answer)}</div></div>`;
+    })
     .join("\n  ")}
 </section>`;
   }
   if (block.kind === "checkboxes") {
     return `<section style="padding:24px 48px 0">
   <h2 style="font-size:12px;letter-spacing:2px;text-transform:uppercase;color:${BRAND.cobalt};margin:0 0 10px">${esc(fillTokens(block.heading))}</h2>
-  ${block.options.map((o) => `<div style="font-size:12px;color:${BRAND.black};margin:6px 0">☐&nbsp;&nbsp;${esc(o.label)}</div>`).join("\n  ")}
+  ${block.options.map((o) => `<div style="font-size:12px;color:${BRAND.black};margin:6px 0">${tickedIn(values, block.id).has(o.id) ? "☑" : "☐"}&nbsp;&nbsp;${esc(o.label)}</div>`).join("\n  ")}
 </section>`;
   }
   if (block.kind === "date") {
@@ -626,12 +643,16 @@ export function starterPresets(): PdfTemplate[] {
  * passes the contract's own values (an empty map keeps its `{{TOKEN}}`s visible, so a placeholder is never filled with
  * somebody else's song).
  */
-export function templateToHtml(template: PdfTemplate, data: Record<string, string> = SAMPLE_DATA): string {
+export function templateToHtml(
+  template: PdfTemplate,
+  data: Record<string, string> = SAMPLE_DATA,
+  values?: BlockValues,
+): string {
   return `<!doctype html>
 <html lang="en"><head><meta charset="utf-8"><title>${esc(template.name)}</title>
 <style>@page{size:Letter;margin:0}body{margin:0;background:${BRAND.platinum};font-family:Helvetica,Arial,sans-serif}main{background:${BRAND.white};max-width:816px;margin:24px auto;padding-bottom:48px}</style>
 </head><body><main>
-${template.blocks.map((block) => blockHtml(block, data)).join("\n")}
+${template.blocks.map((block) => blockHtml(block, data, values)).join("\n")}
 <footer style="margin:40px 48px 0;border-top:1px solid ${BRAND.platinum};padding-top:12px;font-size:9px;letter-spacing:2px;color:${BRAND.black};opacity:0.65">CAME THROUGH AUDIO · ${TAGLINE}</footer>
 </main></body></html>`;
 }

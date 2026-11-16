@@ -1116,6 +1116,7 @@ function ContractEditor({ userId, initial, tracks, blueprint, canApprove = false
         { name: c.title, tier: c.isCompany ? "platinum" : "standard", blocks },
         {},
         {
+          values: c.blockValues ?? {},
           signatures: { recipient: record(c.parties.find((p) => !p.isOwner && p.signedAt), "recipient"), admin: record(c.parties.find((p) => p.isOwner), "admin") },
           // The template's own signature lines, in party order: Company first, then the people who sign.
           lineSignatures: c.parties.map((p) => (p.signedAt && p.signatureName ? { name: p.signatureName, signedAt: p.signedAt } : null)),
@@ -1206,7 +1207,7 @@ function ContractEditor({ userId, initial, tracks, blueprint, canApprove = false
                 {/\{\{[A-Z0-9_]+\}\}/.test(body) && (
                   <p className="flex items-start gap-2 rounded-lg border border-amber-500 bg-amber-500/5 p-3 text-xs text-amber-700 dark:text-amber-400"><AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" />This template still has a {"{{…}}"} placeholder in it. Fill it in Template Studio before sending; placeholders are printed exactly as they are, never with another song's details.</p>
                 )}
-                <iframe title="Contract preview" sandbox="" srcDoc={templateToHtml({ name: c.title, tier: c.isCompany ? "platinum" : "standard", blocks }, {})} className="h-[30rem] w-full rounded-xl border border-border bg-white" />
+                <iframe title="Contract preview" sandbox="" srcDoc={templateToHtml({ name: c.title, tier: c.isCompany ? "platinum" : "standard", blocks }, {}, c.blockValues)} className="h-[30rem] w-full rounded-xl border border-border bg-white" />
               </div>
             : draft && customized
               ? <textarea aria-label="Contract text" rows={22} value={body} onChange={(e) => setC({ ...c, body: e.target.value })} className="w-full rounded-xl border border-input bg-background p-4 font-mono text-sm leading-relaxed" />

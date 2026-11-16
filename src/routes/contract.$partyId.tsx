@@ -12,7 +12,7 @@ import { requestBadgeCheck } from "@/lib/badge-events";
 import { Button } from "@/components/ui/button";
 import { COMPANY_LEGAL_NAME, CONTRACT_DISCLAIMER } from "@/lib/contract-blueprints";
 import { downloadContractPdf } from "@/lib/contract-pdf";
-import { templateToHtml } from "@/lib/pdf-templates";
+import { templateToHtml, type BlockValues, type TemplateBlock } from "@/lib/pdf-templates";
 import { templateToPdfBytes } from "@/lib/pdf-template-pdf";
 import { saveBlob } from "@/lib/catalog";
 import { contractBrand } from "@/lib/brand-load";
@@ -67,6 +67,7 @@ const pdf = async (i: ContractInvite) => {
       { name: i.title, tier: "platinum", blocks: i.blocks },
       {},
       {
+        values: i.block_values ?? {},
         signatures: { recipient: record(i.parties.find((p) => p.signed_at && p.role !== "Company"), "recipient"), admin: record(i.parties.find((p) => p.role === "Company"), "admin") },
         lineSignatures: i.parties.map((p) => (p.signed_at && p.signature_name ? { name: p.signature_name, signedAt: p.signed_at } : null)),
       },
@@ -79,7 +80,7 @@ const pdf = async (i: ContractInvite) => {
 };
 
 /** The agreement, who has signed, and the locked text, shared by both ways of signing. */
-function ContractView({ invite, from }: { invite: ContractInvite; from?: string }) {
+function ContractView({ invite, from, values }: { invite: ContractInvite; from?: string; /** Signed-out answers, shown in the document once signing starts. */ values?: BlockValues }) {
   return (
     <>
       <div className="flex flex-wrap items-end justify-between gap-3">
@@ -101,7 +102,7 @@ function ContractView({ invite, from }: { invite: ContractInvite; from?: string 
       </div>
 
       {invite.blocks?.length
-        ? <iframe title="Agreement" sandbox="" srcDoc={templateToHtml({ name: invite.title, tier: "platinum", blocks: invite.blocks }, {})} className="h-[36rem] w-full rounded-2xl border border-border bg-white" />
+        ? <iframe title="Agreement" sandbox="" srcDoc={templateToHtml({ name: invite.title, tier: "platinum", blocks: invite.blocks }, {}, invite.signed_at ? (invite.block_values ?? {}) : values)} className="h-[36rem] w-full rounded-2xl border border-border bg-white" />
         : <div className="max-h-[36rem] overflow-y-auto whitespace-pre-wrap rounded-2xl border border-border bg-muted/30 p-6 text-sm leading-relaxed">{invite.body}</div>}
       <p className="flex items-start gap-2 text-xs text-muted-foreground"><AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-primary" />{CONTRACT_DISCLAIMER} Contract fingerprint (SHA-256): <span className="break-all">{invite.body_hash}</span></p>
     </>
@@ -131,10 +132,14 @@ function LinkSigning({ token }: { token: string }) {
   const [consent, setConsent] = useState(false);
   const [typed, setTyped] = useState("");
   const [busy, setBusy] = useState(false);
+  /** What the signer typed into the template's fields and ticked in its choice groups (founder, 2026-11-16). */
+  const [values, setValues] = useState<BlockValues>({});
   /** The last signature landed: "It's a done deal!" in the stars (founder, 2026-11-06). */
   const [sky, setSky] = useState(false);
 
-  const load = () => open({ data: { partyId, token } }).then(setInvite).catch((e) => setError(e instanceof Error ? e.message : "Could not open this agreement."));
+  const load = () => open({ data: { partyId, token } })
+    .then((i) => { setInvite(i); setValues({ ...(i.block_values ?? {}) }); })
+    .catch((e) => setError(e instanceof Error ? e.message : "Could not open this agreement."));
   useEffect(() => { void load(); }, [partyId, token]);
 
   async function requestCode() {
@@ -144,17 +149,25 @@ function LinkSigning({ token }: { token: string }) {
     finally { setBusy(false); }
   }
 
+  /** The fields and choice groups this signer fills, taken from the agreement's own blocks. */
+  const questions = (invite?.blocks ?? []).flatMap((b) => (b.kind === "fields" && b.role === "recipient" ? b.fields : []));
+  const groups = (invite?.blocks ?? []).filter((b): b is Extract<TemplateBlock, { kind: "checkboxes" }> => b.kind === "checkboxes" && b.role === "recipient");
+  const missing = questions.filter((f) => f.required && !String(values[f.id] ?? "").trim()).length +
+    groups.filter((g) => g.required && !(Array.isArray(values[g.id]) ? (values[g.id] as string[]).length : 0)).length;
+
   async function sign() {
     if (!invite) return;
+    if (missing > 0) { toast.error("Answer the questions marked * first."); return; }
     if (typed.trim().toLowerCase() !== invite.legal_name.trim().toLowerCase()) { toast.error("Type your legal name exactly as listed."); return; }
     setBusy(true);
     try {
-      await signFn({ data: { partyId, token, code: code.replace(/\D/g, ""), signatureName: typed, consent: true, origin: window.location.origin } });
+      await signFn({ data: { partyId, token, code: code.replace(/\D/g, ""), signatureName: typed, consent: true, origin: window.location.origin, values } });
       const next = await open({ data: { partyId, token } });
       setInvite(next);
       toast.success("Signed! Thank you.");
       // Only the signature that finishes the agreement gets the sky; a partial signature stays a plain confirmation.
       if (next.status === "signed") setSky(true);
+      setValues({ ...(next.block_values ?? {}) });
     } catch (e) { toast.error(e instanceof Error ? e.message : "Could not sign."); }
     finally { setBusy(false); }
   }
@@ -168,7 +181,46 @@ function LinkSigning({ token }: { token: string }) {
         <Loader2 className="mx-auto h-6 w-6 animate-spin text-primary" />
       ) : (
         <div className="space-y-8">
-          <ContractView invite={invite} from={COMPANY_LEGAL_NAME} />
+          <ContractView invite={invite} from={COMPANY_LEGAL_NAME} values={values} />
+          {!invite.signed_at && invite.can_sign && (questions.length > 0 || groups.length > 0) && (
+            <div className="space-y-4 rounded-2xl border border-border p-6">
+              <div>
+                <h2 className="text-lg font-bold">Fill these in</h2>
+                <p className="text-sm text-muted-foreground">Your answers go on the signed copy beside the signature. Lines marked * are needed before you can sign.</p>
+              </div>
+              {questions.map((f) => (
+                <label key={f.id} className="block space-y-1 text-sm">
+                  <span className="font-medium">{f.label}{f.required ? " *" : ""}</span>
+                  {f.type === "textarea"
+                    ? <textarea rows={3} value={String(values[f.id] ?? "")} onChange={(e) => setValues((v) => ({ ...v, [f.id]: e.target.value }))} className="w-full rounded-md border border-input bg-background px-3 py-2" />
+                    : <input value={String(values[f.id] ?? "")} onChange={(e) => setValues((v) => ({ ...v, [f.id]: e.target.value }))} className="w-full rounded-md border border-input bg-background px-3 py-2" />}
+                </label>
+              ))}
+              {groups.map((g) => (
+                <fieldset key={g.id} className="space-y-1">
+                  <legend className="text-sm font-medium">{g.heading}{g.required ? " *" : ""}</legend>
+                  {g.options.map((o) => {
+                    const ticked = Array.isArray(values[g.id]) ? (values[g.id] as string[]) : [];
+                    return (
+                      <label key={o.id} className="flex items-start gap-2 text-sm">
+                        <input
+                          type={g.mode === "single" ? "radio" : "checkbox"}
+                          name={`g-${g.id}`}
+                          checked={ticked.includes(o.id)}
+                          onChange={() => setValues((v) => ({
+                            ...v,
+                            [g.id]: g.mode === "single" ? [o.id] : ticked.includes(o.id) ? ticked.filter((x) => x !== o.id) : [...ticked, o.id],
+                          }))}
+                          className="mt-0.5 h-4 w-4 accent-[var(--primary)]"
+                        />
+                        {o.label}
+                      </label>
+                    );
+                  })}
+                </fieldset>
+              ))}
+            </div>
+          )}
           {invite.signed_at ? <SignedNote invite={invite} /> : invite.can_sign ? (
             <div className="space-y-4 rounded-2xl border-2 border-primary p-6">
               <h2 className="text-xl font-bold">Sign as {invite.role}</h2>
@@ -182,7 +234,7 @@ function LinkSigning({ token }: { token: string }) {
               <label className="block space-y-1 text-sm"><span className="font-medium">Type your legal name to sign: <span className="font-bold">{invite.legal_name}</span></span>
                 <input value={typed} onChange={(e) => setTyped(e.target.value)} placeholder={invite.legal_name} className="w-full rounded-md border border-input bg-background px-3 py-3 font-serif text-2xl italic" /></label>
               <p className="text-xs text-muted-foreground">Your signature is time-stamped and secured with a SHA-256 hash tied to this exact agreement text, along with the time you agreed and a private record of the device you signed from.</p>
-              <Button size="lg" onClick={() => void sign()} disabled={busy || !consent || !codeSent || code.replace(/\D/g, "").length !== 6}>{busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileSignature className="h-4 w-4" />} Sign agreement</Button>
+              <Button size="lg" onClick={() => void sign()} disabled={busy || !consent || !codeSent || code.replace(/\D/g, "").length !== 6 || missing > 0}>{busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileSignature className="h-4 w-4" />} Sign agreement</Button>
             </div>
           ) : null}
         </div>

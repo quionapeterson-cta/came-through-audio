@@ -6,7 +6,7 @@ import { mailKey, sendMail } from "./mailer";
 import { trustedOrigin } from "./invite-limits";
 import { COMPANY_LEGAL_NAME } from "./contract-blueprints";
 import type { ContractInvite } from "./contracts";
-import type { TemplateBlock } from "./pdf-templates";
+import type { BlockValues, TemplateBlock } from "./pdf-templates";
 
 /**
  * Company agreements signed without an account (PLAN-admin-contracts §3): the private link proves the signer got
@@ -21,7 +21,7 @@ const esc = escapeHtml;
 const linkInput = z.object({ partyId: z.string().uuid(), token: z.string().min(16).max(64) });
 
 type Party = { id: string; contract_id: string; legal_name: string; email: string; role: string; is_owner: boolean; position: number; signed_at: string | null; signature_name: string | null; signature_hash: string | null; created_at: string };
-type CompanyContract = { id: string; title: string; blueprint: string; fields: Record<string, string> | null; body: string; body_hash: string | null; status: "draft" | "pending_approval" | "changes_requested" | "sent" | "signed"; sent_at: string | null; completed_at: string | null; is_company: boolean; blocks?: TemplateBlock[] | null };
+type CompanyContract = { id: string; title: string; blueprint: string; fields: Record<string, string> | null; body: string; body_hash: string | null; status: "draft" | "pending_approval" | "changes_requested" | "sent" | "signed"; sent_at: string | null; completed_at: string | null; is_company: boolean; blocks?: TemplateBlock[] | null; block_values?: BlockValues | null };
 
 async function admin() {
   return (await import("@/integrations/supabase/client.server")).supabaseAdmin;
@@ -36,7 +36,7 @@ async function openByLink(partyId: string, token: string) {
   const { data: party } = await db.from("contract_parties" as never).select("*").eq("id", partyId).maybeSingle();
   const p = party as Party | null;
   if (!p) throw fail;
-  const { data: contract } = await db.from("contracts" as never).select("id, title, blueprint, fields, body, body_hash, blocks, status, sent_at, completed_at, is_company").eq("id", p.contract_id).maybeSingle();
+  const { data: contract } = await db.from("contracts" as never).select("id, title, blueprint, fields, body, body_hash, blocks, block_values, status, sent_at, completed_at, is_company").eq("id", p.contract_id).maybeSingle();
   const k = contract as CompanyContract | null;
   if (!k?.is_company) throw fail;
   // Only an approved agreement is readable: this path runs as the service role, so the database's refusal in
@@ -65,7 +65,7 @@ export const openSignLink = createServerFn({ method: "POST" })
     const invite: ContractInvite & { email_hint: string } = {
       party_id: p.id, contract_id: k.id, title: k.title, blueprint: k.blueprint, body: k.body, body_hash: k.body_hash ?? "",
       status: k.status, sent_at: k.sent_at, completed_at: k.completed_at, legal_name: p.legal_name, role: p.role, signed_at: p.signed_at,
-      blocks: k.blocks ?? null,
+      blocks: k.blocks ?? null, block_values: k.block_values ?? {},
       can_sign: k.status === "sent" && !p.signed_at,
       parties: parties.map((x) => ({ name: x.legal_name, role: x.role, signed_at: x.signed_at, signature_name: x.signature_name, signature_hash: x.signature_hash })),
       email_hint: maskEmail(p.email),
@@ -111,6 +111,8 @@ export const signByLink = createServerFn({ method: "POST" })
     signatureName: z.string().min(1).max(200),
     consent: z.literal(true, { message: "Agree to sign electronically first." }),
     origin: z.string().url(),
+    // The answers to the template's fields and checkboxes, handed over with the signature so nothing lands afterwards.
+    values: z.record(z.string(), z.union([z.string().max(4000), z.array(z.string().max(120)).max(60)])).optional(),
   }).parse(d))
   .handler(async ({ data }) => {
     const { hashSignCode, signLink } = await import("./contract-sign.server");
@@ -132,6 +134,7 @@ export const signByLink = createServerFn({ method: "POST" })
     const ip = getRequestHeader("cf-connecting-ip") ?? getRequestIP({ xForwardedFor: true }) ?? "";
     const { data: result, error } = await db.rpc("sign_contract_by_link" as never, {
       _party_id: p.id, _signature_name: data.signatureName, _ip_hash: ip ? hashIp(ip) : null, _user_agent: getRequestHeader("user-agent") ?? "",
+      _values: data.values ?? null,
     } as never);
     if (error) throw new Error(error.message);
     await codes().delete().eq("party_id", p.id);

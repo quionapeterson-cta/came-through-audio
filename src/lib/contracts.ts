@@ -2,7 +2,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { SITE_URL } from "@/lib/email-layout";
 import { trustedOrigin } from "@/lib/invite-limits";
 import { requestBadgeCheck } from "@/lib/badge-events";
-import type { TemplateBlock } from "@/lib/pdf-templates";
+import type { BlockValues, TemplateBlock } from "@/lib/pdf-templates";
 
 /**
  * Every state a contract can be in. A company agreement written by a lead travels draft → pending_approval → sent, or
@@ -56,6 +56,8 @@ export type Contract = {
   blocks?: TemplateBlock[] | null;
   /** Which library template it came from, for the record only. */
   templateId?: string | null;
+  /** What the signer answered in the template's fields and checkbox groups, written at signing. */
+  blockValues?: BlockValues;
 };
 
 export const emptyParty = (role: string, isOwner = false): ContractParty => ({
@@ -63,7 +65,7 @@ export const emptyParty = (role: string, isOwner = false): ContractParty => ({
 });
 
 type PartyRow = { id: string; role: string; legal_name: string; email: string; is_owner: boolean; position: number; invited_at: string | null; signature_name: string | null; signature_hash: string | null; signed_at: string | null };
-type ContractRow = { id: string; blueprint: string; title: string; catalog_id: string | null; fields: Record<string, string> | null; body: string; status: ContractStatus; body_hash: string | null; sent_at: string | null; completed_at: string | null; updated_at: string; is_company?: boolean; paid_purchase_id?: string | null; brand_kit_id?: string | null; submitted_at?: string | null; submitted_by?: string | null; approved_at?: string | null; approved_by?: string | null; reviewer_note?: string | null; blocks?: TemplateBlock[] | null; template_id?: string | null; contract_parties: PartyRow[] | null };
+type ContractRow = { id: string; blueprint: string; title: string; catalog_id: string | null; fields: Record<string, string> | null; body: string; status: ContractStatus; body_hash: string | null; sent_at: string | null; completed_at: string | null; updated_at: string; is_company?: boolean; paid_purchase_id?: string | null; brand_kit_id?: string | null; submitted_at?: string | null; submitted_by?: string | null; approved_at?: string | null; approved_by?: string | null; reviewer_note?: string | null; blocks?: TemplateBlock[] | null; template_id?: string | null; block_values?: BlockValues | null; contract_parties: PartyRow[] | null };
 
 function fromRow(r: ContractRow): Contract {
   return {
@@ -71,7 +73,7 @@ function fromRow(r: ContractRow): Contract {
     bodyHash: r.body_hash ?? "", sentAt: r.sent_at, completedAt: r.completed_at, updatedAt: r.updated_at, isCompany: !!r.is_company, paid: !!r.paid_purchase_id, brandKitId: r.brand_kit_id ?? null,
     submittedAt: r.submitted_at ?? null, submittedBy: r.submitted_by ?? null,
     approvedAt: r.approved_at ?? null, approvedBy: r.approved_by ?? null, reviewerNote: r.reviewer_note ?? null,
-    blocks: Array.isArray(r.blocks) && r.blocks.length ? r.blocks : null, templateId: r.template_id ?? null,
+    blocks: Array.isArray(r.blocks) && r.blocks.length ? r.blocks : null, templateId: r.template_id ?? null, blockValues: r.block_values ?? {},
     parties: [...(r.contract_parties ?? [])].sort((a, b) => a.position - b.position).map((p) => ({
       id: p.id, role: p.role, legalName: p.legal_name, email: p.email, isOwner: p.is_owner, invitedAt: p.invited_at,
       signatureName: p.signature_name ?? "", signatureHash: p.signature_hash ?? "", signedAt: p.signed_at,
@@ -185,6 +187,8 @@ export type ContractInvite = {
   parties: { name: string; role: string; signed_at: string | null; signature_name: string | null; signature_hash: string | null }[];
   /** A block-built agreement: the page is rendered from these, not from `body`, which stays the hashed plain text. */
   blocks?: TemplateBlock[] | null;
+  /** What has been answered in the template's fields and checkbox groups so far. */
+  block_values?: BlockValues | null;
 };
 
 export async function getContractInvite(partyId: string): Promise<ContractInvite | null> {
