@@ -318,6 +318,29 @@ export function contractCardSummary(
 
 export const newId = () => Math.random().toString(36).slice(2, 10);
 
+/**
+ * Whether a saved copy and a freshly built copy hold the same document (founder, 2026-11-16). Two things made a plain
+ * JSON compare call identical documents different: every id is generated fresh each time a built template is made, and
+ * jsonb hands its keys back in its own order. Both are ignored here, so comparing only says whether the wording, the
+ * fields and the blocks themselves changed.
+ */
+export function sameTemplateBlocks(saved: unknown, built: unknown): boolean {
+  const canonical = (value: unknown): unknown => {
+    if (Array.isArray(value)) return value.map(canonical);
+    if (value && typeof value === "object") {
+      const record = value as Record<string, unknown>;
+      return Object.fromEntries(
+        Object.keys(record)
+          .filter((key) => key !== "id")
+          .sort()
+          .map((key) => [key, canonical(record[key])]),
+      );
+    }
+    return value;
+  };
+  return JSON.stringify(canonical(saved)) === JSON.stringify(canonical(built));
+}
+
 /** WCAG relative luminance, so the contrast check is the real formula rather than a guess. */
 function luminance(hex: string): number {
   const value = hex.replace("#", "");

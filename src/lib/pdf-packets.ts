@@ -67,6 +67,22 @@ export function packetForms(
 }
 
 /**
+ * The forms a packet actually sends with (founder, 2026-11-16). A template can be a single letter or agreement with no
+ * switchable forms at all, and that document still goes out whole: the empty list is only a mistake when the template
+ * offered forms and none were kept. A key the snapshot doesn't have is dropped, so a library tab left open while the
+ * template changed underneath it can't switch on a form that no longer exists.
+ */
+export function packetSendForms(
+  template: PdfTemplate,
+  requested: string[],
+): { forms: string[]; error: string | null } {
+  const keys = packetForms(template).map((form) => form.key);
+  if (!keys.length) return { forms: [], error: null };
+  const forms = requested.filter((key) => keys.includes(key));
+  return { forms, error: forms.length ? null : "Keep at least one form in the packet." };
+}
+
+/**
  * The blocks that print for one recipient. A switched-off form takes its section, its fields and everything after it
  * with it, up to the next section — so a form is never half-sent.
  */

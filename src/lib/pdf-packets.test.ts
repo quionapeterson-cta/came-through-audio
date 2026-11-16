@@ -4,12 +4,14 @@ import {
   internshipPacketTemplate,
   packetForms,
   packetProblems,
+  packetSendForms,
   packetProgress,
   recipientCheckboxes,
   recipientFields,
   recipientNeedsSignature,
   visibleBlocks,
 } from "./pdf-packets";
+import type { PdfTemplate } from "./pdf-templates";
 
 const template = internshipPacketTemplate();
 const forms = packetForms(template);
@@ -50,6 +52,40 @@ describe("internship packet", () => {
         (b) => b.kind === "signature" && b.role === "recipient",
       ).length,
     );
+  });
+});
+
+describe("which forms a send keeps", () => {
+  it("keeps the forms the sender left switched on", () => {
+    const result = packetSendForms(
+      template,
+      forms.slice(0, 2).map((f) => f.key),
+    );
+    expect(result.error).toBeNull();
+    expect(result.forms).toEqual(forms.slice(0, 2).map((f) => f.key));
+  });
+
+  it("refuses a send with every form switched off", () => {
+    expect(packetSendForms(template, []).error).toBe("Keep at least one form in the packet.");
+  });
+
+  it("drops a form key the template no longer has", () => {
+    expect(packetSendForms(template, [...allForms.slice(0, 1), "gone"]).forms).toEqual([
+      allForms[0],
+    ]);
+  });
+
+  it("sends a template with no switchable forms as a whole document", () => {
+    // The volunteer letter in the library is a clause, a seal, fields and signature lines: no sections, no form keys.
+    const letter: PdfTemplate = {
+      name: "Volunteer Verification Letter",
+      tier: "standard",
+      blocks: template.blocks.filter(
+        (b) => b.kind !== "section" && b.kind !== "signature" && b.kind !== "checkboxes",
+      ),
+    };
+    expect(packetForms(letter)).toHaveLength(0);
+    expect(packetSendForms(letter, [])).toEqual({ forms: [], error: null });
   });
 });
 

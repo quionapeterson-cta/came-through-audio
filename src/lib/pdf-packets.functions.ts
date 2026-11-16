@@ -13,13 +13,14 @@ import {
   internshipPacketTemplate,
   packetProblems,
   packetForms,
+  packetSendForms,
   visibleBlocks,
   type PacketAudit,
   type PacketStatus,
   type PacketValues,
   type SignatureRecord,
 } from "@/lib/pdf-packets";
-import type { PdfTemplate } from "@/lib/pdf-templates";
+import { sameTemplateBlocks, type PdfTemplate } from "@/lib/pdf-templates";
 
 /**
  * Sent & Inbox (founder, 2026-11-15): sending a packet, the public signing page, the counter-signature and the delivery
@@ -263,9 +264,11 @@ export const ensureInternshipPacket = createServerFn({ method: "POST" })
         updated_at: string;
       };
       // A copy nobody has saved yet follows the built-in document (the first seed was a short summary of it). Once an
-      // admin has saved their own version, `updated_at` moves and their copy is never overwritten.
+      // admin has saved their own version, `updated_at` moves and their copy is never overwritten. The comparison ignores
+      // the ids a built template makes fresh each time and jsonb's own key order, so an unchanged starter is left alone
+      // instead of being rewritten (with new field ids) on every visit.
       const untouched = row.created_at === row.updated_at;
-      if (untouched && JSON.stringify(row.blocks) !== JSON.stringify(template.blocks)) {
+      if (untouched && !sameTemplateBlocks(row.blocks, template.blocks)) {
         const { error: refreshError } = await db
           .from("pdf_templates" as never)
           .update({ blocks: template.blocks, updated_by: context.userId } as never)
@@ -366,9 +369,10 @@ export const sendPacket = createServerFn({ method: "POST" })
       blocks: template.blocks,
       source: "built",
     };
-    const forms = packetForms(snapshot).map((f) => f.key);
-    const finalForms = data.enabledForms.filter((key) => forms.includes(key));
-    if (!finalForms.length) throw new Error("Keep at least one form in the packet.");
+    // A template built as one letter or agreement has no switchable forms and is sent whole, so an empty list is only a
+    // mistake when the template offered forms and none were kept.
+    const { forms: finalForms, error: formError } = packetSendForms(snapshot, data.enabledForms);
+    if (formError) throw new Error(formError);
 
     const meta = requestMeta();
     const signature: SignatureRecord | null = data.preSign

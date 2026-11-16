@@ -9,6 +9,7 @@ import {
   headerInk,
   newId,
   preflight,
+  sameTemplateBlocks,
   starterPresets,
   templateToHtml,
   tokensIn,
@@ -39,6 +40,36 @@ describe("date block", () => {
     expect(preflight(template("")).find((c) => c.id === "blocks")?.ok).toBe(false);
     expect(preflight(template("2026-11-16")).find((c) => c.id === "blocks")?.ok).toBe(true);
     expect(templateToHtml(template("2026-11-16"))).toContain("Effective date");
+  });
+});
+
+describe("comparing a saved template with a built one", () => {
+  it("ignores the ids each build makes fresh", () => {
+    const saved = [
+      { id: "aaaa1111", kind: "clause", heading: "Term", body: "One year.", help: "" },
+    ];
+    const built = [
+      { id: "zzzz9999", kind: "clause", heading: "Term", body: "One year.", help: "" },
+    ];
+    expect(sameTemplateBlocks(saved, built)).toBe(true);
+  });
+
+  it("ignores the key order jsonb hands back", () => {
+    expect(
+      sameTemplateBlocks(
+        [{ kind: "clause", heading: "Term", body: "One year.", help: "" }],
+        [{ body: "One year.", help: "", heading: "Term", kind: "clause" }],
+      ),
+    ).toBe(true);
+  });
+
+  it("still sees changed wording", () => {
+    expect(
+      sameTemplateBlocks(
+        [{ id: "a", kind: "clause", heading: "Term", body: "One year.", help: "" }],
+        [{ id: "b", kind: "clause", heading: "Term", body: "Two years.", help: "" }],
+      ),
+    ).toBe(false);
   });
 });
 
