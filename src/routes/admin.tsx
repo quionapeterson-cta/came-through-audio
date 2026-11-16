@@ -88,6 +88,18 @@ function AdminPage() {
   const role = useQuery({ queryKey: ["staff-role", user?.id], queryFn: () => getStaffRole(), enabled: !!user });
   const access = role.data;
   const overview = useQuery({ queryKey: ["admin-overview", user?.id], queryFn: () => getAdminOverview(), enabled: !!access && access.role !== "hr_admin" });
+  // A lead's company agreement cannot reach a signer until it is approved (founder, 2026-11-16), so the count sits on the
+  // tab and in a banner above the tools. Only a super admin may read company contracts, which is why this is their query.
+  const approvals = useQuery({
+    queryKey: ["contract-approvals", user?.id],
+    queryFn: async () => {
+      const { count } = await supabase.from("contracts").select("id", { count: "exact", head: true }).eq("is_company", true).eq("status", "pending_approval");
+      return count ?? 0;
+    },
+    enabled: !!access && access.role === "super_admin",
+    refetchInterval: 60000,
+  });
+  const pendingApprovals = access?.role === "super_admin" ? (approvals.data ?? 0) : 0;
   const [view, setView] = useState<Department | "all">("all");
   const [activeTab, setActiveTab] = useState<string>();
   useEffect(() => setActiveTab(undefined), [view]);
@@ -122,7 +134,7 @@ function AdminPage() {
   // Undefined while the overview is loading or has failed, so the tile reads "—" like the others instead of a wrong 0
   // for a backlog that does exist (the database held 1 unsigned split while this showed 0).
   const pendingSigs = d ? d.splits.filter((s) => !s.is_owner && !s.signed_at).length : undefined;
-  const tabs = visibleTabs(access, view);
+  const tabs = visibleTabs(access, view).map((t) => (t.value === "company" && pendingApprovals > 0 ? { ...t, label: `Company Contracts (${pendingApprovals})` } : t));
   const show = (value: string) => tabs.some((t) => t.value === value);
   const isSuper = access.role === "super_admin";
   const current = activeTab && show(activeTab) ? activeTab : (tabs[0]?.value ?? "");
@@ -179,6 +191,13 @@ function AdminPage() {
           </div>
         )}
 
+        {isSuper && pendingApprovals > 0 && current !== "company" && (
+          <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-amber-500 bg-amber-500/5 p-4 text-sm">
+            <p><span className="font-semibold">{pendingApprovals} company {pendingApprovals === 1 ? "agreement is" : "agreements are"} waiting for approval.</span> Nothing reaches a signer until you approve it.</p>
+            <Button size="sm" onClick={() => setActiveTab("company")}><ShieldCheck className="h-4 w-4" />Review</Button>
+          </div>
+        )}
+
         {!tabs.length ? (
           <div className="rounded-2xl border border-border bg-card p-8 text-center text-muted-foreground">
             {access.canManageStaff && view === "all"
@@ -222,7 +241,7 @@ function AdminPage() {
           {show("badges") && <TabsContent value="badges"><BadgeSwitchboard /><BadgeProtocolPanel isSuper={isSuper} /></TabsContent>}
           {show("homepage") && <TabsContent value="homepage"><TestimonialsEditor /><TestimonialFilterPanel /><SocialPanel /></TabsContent>}
           {show("tasks") && <TabsContent value="tasks"><TaskBankPanel departments={access.allTeams && access.role !== "super_admin" ? [...ASSIGNABLE_DEPARTMENTS] : viewDepartments(access, view)} editable={viewDepartments(access, view)} /></TabsContent>}
-          {show("company") && <TabsContent value="company"><Contracts userId={user.id} unlocked company onUpgrade={() => {}} /></TabsContent>}
+          {show("company") && <TabsContent value="company"><Contracts userId={user.id} unlocked company canApprove={isSuper} onUpgrade={() => {}} /></TabsContent>}
           {show("submissions") && <TabsContent value="submissions"><StaffSubmissionsPanel isSuper={isSuper} /></TabsContent>}
           {show("plans") && <TabsContent value="plans"><PlansPanel /></TabsContent>}
           {show("accounts") && <TabsContent value="accounts"><AccountHelpPanel access={access} /></TabsContent>}

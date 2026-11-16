@@ -145,6 +145,10 @@ export function visibleTabs(access: StaffAccess, view: Department | "all" = "all
   // Holiday Cover is the rota and the pay plan: super admins and department leads only (founder, 2026-11-05).
   // It is cross-department, so a super admin sees it in the all-departments view rather than inside a narrowed one.
   const holiday = access.role === "department_lead" || (access.role === "super_admin" && view === "all") ? [{ value: "holiday", label: "Holiday Cover" }] : [];
-  // Company contracts and plans are for super admins only, in the all-departments view.
-  return access.role === "super_admin" && view === "all" ? [...withTasks, ...holiday, { value: "company", label: "Company Contracts" }, { value: "plans", label: "Plans" }] : [...withTasks, ...holiday];
+  // Company Contracts opens to the four lead roles (founder, 2026-11-16): a lead drafts, a super admin approves. Plans stay
+  // super-admin only, and both sit in the all-departments view.
+  const leads: string[] = ["super_admin", "hr_admin", "project_manager", "department_lead"];
+  const company = leads.includes(access.role) && view === "all" ? [{ value: "company", label: "Company Contracts" }] : [];
+  const plans = access.role === "super_admin" && view === "all" ? [{ value: "plans", label: "Plans" }] : [];
+  return [...withTasks, ...holiday, ...company, ...plans];
 }

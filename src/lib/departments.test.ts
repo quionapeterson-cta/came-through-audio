@@ -49,7 +49,8 @@ describe("visibleTabs", () => {
   });
 
   it("never shows finance to HR admins", () => {
-    expect(visibleTabs(resolveAccess([{ role: "hr_admin" }])!).map((t) => t.value)).toEqual(withDeptTabs([]));
+    // HR admins lead hires and their agreements, so they get Company Contracts too — no department tabs beyond that.
+    expect(visibleTabs(resolveAccess([{ role: "hr_admin" }])!).map((t) => t.value)).toEqual([...withDeptTabs([]), "company"]);
   });
 
   it("gives marketing the Badges and Homepage tabs and its Task Bank; sales gets its Task Bank", () => {

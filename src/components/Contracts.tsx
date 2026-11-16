@@ -43,7 +43,7 @@ import { useWorkbench, type Workbench } from "@/hooks/useWorkbench";
 import { checklistProgress, customItems, defaultsFinished, dueLabel, guideIdOf, isOverdue, metaFor, nextRunId, runOf, runTitle, toggleChecked, workingOnCount, type WorkbenchEntry } from "@/lib/workbench";
 import { claimDefaultsSky } from "@/lib/celebrate";
 import {
-  contractLink, deleteContract, emptyParty, getContract, isValidEmail, listContracts, listReceivedContracts, loadCompanyTemplates, reopenContract, saveCompanyTemplate, saveContract, sendContract, signContract,
+  approveContract, contractLink, deleteContract, emptyParty, getContract, isValidEmail, listContracts, listReceivedContracts, loadCompanyTemplates, reopenContract, requestContractChanges, resumeChangedContract, saveCompanyTemplate, saveContract, sendContract, signContract, submitForApproval,
   type Contract, type ContractParty, type ReceivedContract,
 } from "@/lib/contracts";
 
@@ -63,7 +63,7 @@ const STATUS: Record<Contract["status"], { label: string; className: string }> =
  * request signatures, and keep fully signed contracts in the vault. Creating requires Catalog Management;
  * contracts other people send you are always visible, since signing is free.
  */
-export function Contracts({ userId, unlocked, onUpgrade, company = false, onOpen }: { userId: string; unlocked: boolean; onUpgrade: () => void; /** Admin → Company Contracts: the LLC's own agreements and templates. */ company?: boolean; /** Opens the screen a checklist item is done on (founder, 2026-11-06); absent in Admin, where there is no workspace. */ onOpen?: (link: GuideLink) => void }) {
+export function Contracts({ userId, unlocked, onUpgrade, company = false, canApprove = false, onOpen }: { userId: string; unlocked: boolean; onUpgrade: () => void; /** Admin → Company Contracts: the LLC's own agreements and templates. */ company?: boolean; /** Super Admin: approves a lead's agreement, and the only one who may send a company agreement. */ canApprove?: boolean; /** Opens the screen a checklist item is done on (founder, 2026-11-06); absent in Admin, where there is no workspace. */ onOpen?: (link: GuideLink) => void }) {
   const [view, setView] = useState<View>("blueprints");
   const [contracts, setContracts] = useState<Contract[]>([]);
   const [received, setReceived] = useState<ReceivedContract[]>([]);
@@ -129,11 +129,15 @@ export function Contracts({ userId, unlocked, onUpgrade, company = false, onOpen
   };
 
   if (editing) {
-    return <ContractEditor userId={userId} initial={editing} tracks={tracks} blueprint={blueprintFor(editing.blueprint)} onClose={() => { setEditing(null); void load(); }} />;
+    return <ContractEditor userId={userId} initial={editing} tracks={tracks} canApprove={canApprove} blueprint={blueprintFor(editing.blueprint)} onClose={() => { setEditing(null); void load(); }} />;
   }
 
   const open = contracts.filter((c) => c.status !== "signed");
   const signed = contracts.filter((c) => c.status === "signed");
+  // Launch gifts, beta testers and outreach stay super-admin tools; the four lead roles reach the agreements only.
+  const companyViews = canApprove
+    ? [["blueprints", "Templates", ScrollText], ["contracts", "Drafts & out for signature", FileSignature], ["vault", "Signed", Vault], ["gifts", "Launch gifts", Gift], ["beta", "Beta testers", FlaskConical], ["outreach", "Outreach", Mail]] as const
+    : [["blueprints", "Templates", ScrollText], ["contracts", "Drafts & out for signature", FileSignature], ["vault", "Signed", Vault]] as const;
   const workingCount = company ? 0 : workingOnCount(workbench.entries, contracts);
 
   return (
@@ -142,7 +146,7 @@ export function Contracts({ userId, unlocked, onUpgrade, company = false, onOpen
         <div className="flex flex-wrap items-center justify-center gap-3">
           <div className="inline-flex flex-wrap justify-center gap-1 rounded-lg bg-muted p-1" role="tablist" aria-label="Contracts">
             {(company
-              ? [["blueprints", "Templates", ScrollText], ["contracts", "Drafts & out for signature", FileSignature], ["vault", "Signed", Vault], ["gifts", "Launch gifts", Gift], ["beta", "Beta testers", FlaskConical], ["outreach", "Outreach", Mail]] as const
+              ? companyViews
               // The Contract Generator has its own tab, right before the contracts (founder, 2026-10-27).
               // Working On closes the row, after the library and the vault (founder, 2026-11-06).
               : [["generator", "Contract Generator", Sparkles], ["blueprints", "Contracts", ScrollText], ["guides", "Blueprints", BookOpen], ["contracts", "My Contracts", FileSignature], ["vault", "Signed Vault", Vault], ["working", "Working On", FolderOpen]] as const).map(([id, label, Icon]) => (
@@ -159,8 +163,12 @@ export function Contracts({ userId, unlocked, onUpgrade, company = false, onOpen
 
         {(company ? view === "blueprints" : view === "generator") && <ContractGenerator blueprints={company ? companyBlueprints : BLUEPRINTS} unlocked={unlocked} company={company} onDraft={start} onUse={(bp) => start(bp)} />}
 
+        {company && canApprove && view === "contracts" && (
+          <ApprovalQueue contracts={contracts} onOpen={setEditing} onDone={() => void load()} />
+        )}
+
         {view === "blueprints" && (company
-          ? <CompanyTemplates blueprints={companyBlueprints} edited={templates} onUse={start} onSaved={() => void loadCompanyTemplates().then(setTemplates)} />
+          ? <CompanyTemplates blueprints={companyBlueprints} edited={templates} canEdit={canApprove} onUse={start} onSaved={() => void loadCompanyTemplates().then(setTemplates)} />
           : <Blueprints unlocked={unlocked} onUse={start} />)}
 
         {view === "gifts" && company && <LaunchGifts />}
@@ -707,7 +715,60 @@ function LaunchGifts() {
 }
 
 /** Admin: company templates. Each can be used as is, or its wording changed for every agreement sent from it later. */
-function CompanyTemplates({ blueprints, edited, onUse, onSaved }: { blueprints: Blueprint[]; edited: Record<string, string>; onUse: (bp: Blueprint) => void; onSaved: () => void }) {
+/**
+ * The approval queue (founder, 2026-11-16): a lead's company agreement waits here until a Super Admin approves it, edits
+ * the wording first, or sends it back with a reason. Approval is what locks the text and opens signing, so this is the
+ * only place a company agreement can leave the building.
+ */
+function ApprovalQueue({ contracts, onOpen, onDone }: { contracts: Contract[]; onOpen: (c: Contract) => void; onDone: () => void }) {
+  const pending = contracts.filter((c) => c.status === "pending_approval");
+  const [notes, setNotes] = useState<Record<string, string>>({});
+  const [busy, setBusy] = useState<string>();
+  if (!pending.length) return null;
+  const run = async (c: Contract, kind: "approve" | "changes") => {
+    setBusy(c.id);
+    try {
+      if (kind === "approve") {
+        await approveContract(c.id!, notes[c.id!] ?? "");
+        toast.success("Approved. Signing is open and the signers can be emailed.");
+      } else {
+        await requestContractChanges(c.id!, notes[c.id!] ?? "");
+        toast.success("Sent back with your note.");
+      }
+      onDone();
+    } catch (e) { toast.error(e instanceof Error ? e.message : "Couldn't update the contract."); }
+    finally { setBusy(undefined); }
+  };
+  return (
+    <section className="rounded-2xl border border-amber-500 bg-amber-500/5 p-5">
+      <h2 className="flex items-center gap-2 font-semibold"><ShieldCheck className="h-4 w-4 text-amber-600" />Waiting for your approval <span className="opacity-70">{pending.length}</span></h2>
+      <p className="mt-1 text-sm text-muted-foreground">Nothing here has reached a signer. Approving locks the wording exactly as it stands and opens the signing links; sending it back reopens the draft for whoever wrote it.</p>
+      <ul className="mt-4 space-y-3">
+        {pending.map((c) => (
+          <li key={c.id} className="rounded-xl border border-border bg-background p-4">
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <button className="text-left font-semibold hover:underline" onClick={() => onOpen(c)}>{c.title || "Untitled agreement"}</button>
+                <p className="text-xs text-muted-foreground">Submitted {c.submittedAt ? new Date(c.submittedAt).toLocaleString() : "just now"} · {c.parties.length} parties</p>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <Button size="sm" variant="outline" onClick={() => onOpen(c)}><PenLine className="h-4 w-4" />Read &amp; edit</Button>
+                <Button size="sm" disabled={busy === c.id} onClick={() => void run(c, "approve")}>{busy === c.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}Approve</Button>
+                <Button size="sm" variant="outline" disabled={busy === c.id || !(notes[c.id!] ?? "").trim()} onClick={() => void run(c, "changes")}>Send back</Button>
+              </div>
+            </div>
+            <label className="mt-3 block space-y-1 text-xs text-muted-foreground">
+              <span>Note to the author (required to send it back, never printed on the agreement)</span>
+              <textarea className="min-h-16 w-full rounded-lg border border-border bg-background p-2 text-sm text-foreground" value={notes[c.id!] ?? ""} maxLength={2000} onChange={(e) => setNotes((n) => ({ ...n, [c.id!]: e.target.value }))} placeholder="Change the termination notice to 30 days." />
+            </label>
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}
+
+function CompanyTemplates({ blueprints, edited, canEdit, onUse, onSaved }: { blueprints: Blueprint[]; edited: Record<string, string>; /** Only a super admin may rewrite the company's own master wording (the server refuses anyone else). */ canEdit: boolean; onUse: (bp: Blueprint) => void; onSaved: () => void }) {
   const [editingId, setEditingId] = useState<string>();
   const [text, setText] = useState("");
   const [busy, setBusy] = useState(false);
@@ -743,7 +804,7 @@ function CompanyTemplates({ blueprints, edited, onUse, onSaved }: { blueprints: 
               </div>
             ) : (
               <div className="mt-auto flex flex-wrap gap-2 pt-4">
-                <Button size="sm" variant="ghost" onClick={() => { setText(bp.body); setEditingId(bp.id); }}><PenLine className="h-4 w-4" />Edit terms</Button>
+                {canEdit && <Button size="sm" variant="ghost" onClick={() => { setText(bp.body); setEditingId(bp.id); }}><PenLine className="h-4 w-4" />Edit terms</Button>}
                 <Button size="sm" variant="outline" onClick={() => void downloadContractPdf({ title: bp.name, body: renderContract(bp, { ...initialFields(bp), effectiveDate: "" }, []), parties: bp.roles.map((role) => ({ name: "", role, signedAt: null })), status: "draft" })}><Download className="h-4 w-4" />Blank PDF</Button>
                 <Button size="sm" onClick={() => onUse(bp)}><FileSignature className="h-4 w-4" />Use this template</Button>
               </div>
@@ -822,7 +883,7 @@ function ContractRow({ contract: c, onOpen, workbench }: { contract: Contract; o
   );
 }
 
-function ContractEditor({ userId, initial, tracks, blueprint, onClose }: { userId: string; initial: Contract; tracks: CatalogTrack[]; blueprint?: Blueprint | undefined; onClose: () => void }) {
+function ContractEditor({ userId, initial, tracks, blueprint, canApprove = false, onClose }: { userId: string; initial: Contract; tracks: CatalogTrack[]; blueprint?: Blueprint | undefined; canApprove?: boolean; onClose: () => void }) {
   const bp = blueprint ?? blueprintById(initial.blueprint) ?? BLUEPRINTS[0]!;
   useEffect(() => { loadWebFont(SIGNATURE_FONT); }, []);
   const [c, setC] = useState<Contract>(initial);
@@ -931,6 +992,26 @@ function ContractEditor({ userId, initial, tracks, blueprint, onClose }: { userI
     if (!saved?.id) return;
     setBusy(true);
     try {
+      // The approver's own click: the wording as it stands is what gets hashed and sent (founder, 2026-11-16).
+      if (saved.status === "pending_approval" && canApprove) {
+        await approveContract(saved.id, "");
+        remember(c.fields);
+        setTyped("");
+        const fresh = await getContract(saved.id);
+        if (fresh) setC(fresh);
+        toast.success("Approved. Signing is open and the signers can be emailed.");
+        return;
+      }
+      // A lead's company agreement stops at the approver: locking and signing happen there, not here (founder, 2026-11-16).
+      if (saved.isCompany && !canApprove) {
+        await submitForApproval(saved.id);
+        remember(c.fields);
+        setTyped("");
+        const fresh = await getContract(saved.id);
+        if (fresh) setC(fresh);
+        toast.success("Submitted for Super Admin approval. Signing unlocks once it is approved.");
+        return;
+      }
       await sendContract(saved.id);
       const me = signsHere ? saved.parties.find((p) => p.isOwner) : undefined;
       if (me?.id) await signContract(me.id, typed);
@@ -1012,6 +1093,25 @@ function ContractEditor({ userId, initial, tracks, blueprint, onClose }: { userI
             </div>
           )}
         </div>
+
+        {c.status === "changes_requested" && (
+          <div className="rounded-xl border border-destructive bg-destructive/5 p-4 text-sm">
+            <p className="font-semibold text-destructive">Changes requested</p>
+            {c.reviewerNote ? <p className="mt-1 whitespace-pre-wrap">{c.reviewerNote}</p> : <p className="mt-1 text-muted-foreground">The Super Admin sent this back without a note.</p>}
+            <div className="mt-3 flex flex-wrap gap-2">
+              <Button size="sm" disabled={busy} onClick={() => void resumeChangedContract(c.id!).then(() => { toast.success("Reopened. Make the changes, then submit it again."); refresh(); }).catch((e: Error) => toast.error(e.message))}>
+                <PenLine className="h-4 w-4" />Resume &amp; edit
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {c.status === "pending_approval" && (
+          <div className="rounded-xl border border-amber-500 bg-amber-500/5 p-4 text-sm">
+            <p className="font-semibold text-amber-700 dark:text-amber-400">Waiting for Super Admin approval</p>
+            <p className="mt-1 text-muted-foreground">Submitted {c.submittedAt ? new Date(c.submittedAt).toLocaleString() : "just now"}. Signing links unlock once it is approved, and nothing has been emailed to the signers.</p>
+          </div>
+        )}
 
         {draft && (
           <ol aria-label="How it works" className="grid gap-2 rounded-xl bg-muted p-4 text-sm sm:grid-cols-5">
@@ -1107,11 +1207,11 @@ function ContractEditor({ userId, initial, tracks, blueprint, onClose }: { userI
                   <Input value={typed} onChange={(e) => setTyped(e.target.value)} placeholder={owner.legalName || "Your legal name"} className="max-w-md text-2xl" style={{ fontFamily: `"${SIGNATURE_FONT}", cursive` }} /></label>)
               ) : <p className="text-sm text-muted-foreground">You're not signing this one. Lock it, then send it to everyone who signs.</p>}
               <div className="mt-4 flex flex-wrap gap-3">
-                <Button disabled={busy} onClick={() => void signAndLock()}>{busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileSignature className="h-4 w-4" />}{signsHere ? "Sign" : "Lock"}</Button>
-                <Button variant="outline" disabled={busy} onClick={() => void save()}><Check className="h-4 w-4" />Save draft</Button>
+                <Button disabled={busy} onClick={() => void signAndLock()}>{busy ? <Loader2 className="h-4 w-4 animate-spin" /> : (c.isCompany && !canApprove) || (c.status === "pending_approval" && canApprove) ? <ShieldCheck className="h-4 w-4" /> : <FileSignature className="h-4 w-4" />}{c.status === "pending_approval" && canApprove ? "Approve & send" : c.isCompany && !canApprove ? "Submit for approval" : signsHere ? "Sign" : "Lock"}</Button>
+                {(draft || (c.status === "pending_approval" && canApprove)) && <Button variant="outline" disabled={busy} onClick={() => void save()}><Check className="h-4 w-4" />Save draft</Button>}
                 {c.id && <Button variant="ghost" className="ml-auto" disabled={busy} onClick={async () => { if (await confirmAction({ title: "Delete this draft?" })) void deleteContract(c.id!).then(onClose); }}><Trash2 className="h-4 w-4" />Delete</Button>}
               </div>
-              <p className="mt-2 text-xs text-muted-foreground">Signing locks the wording and records its fingerprint, so nobody can change it after you sign. You'll send it to the others next.</p>
+              <p className="mt-2 text-xs text-muted-foreground">{c.isCompany && !canApprove ? "A Super Admin approves this before anyone is asked to sign. Nothing is emailed to the signers until then; approving is what locks the wording and records its fingerprint." : "Signing locks the wording and records its fingerprint, so nobody can change it after you sign. You'll send it to the others next."}</p>
             </Step>
           </>
         )}
@@ -1119,12 +1219,20 @@ function ContractEditor({ userId, initial, tracks, blueprint, onClose }: { userI
 
         {!draft && (
           <Step title="Signatures">
-            {unsent.length > 0 && (
+            {unsent.length > 0 && c.status === "draft" && (c.isCompany && !canApprove ? (
+              // A lead's company agreement waits for the approver instead of mailing anybody (founder, 2026-11-16).
+              <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-amber-500 bg-amber-500/5 p-4">
+                <p className="text-sm"><span className="font-semibold">Ready for approval.</span> {unsent.map((p) => p.legalName).join(", ")} {unsent.length === 1 ? "is" : "are"} next, but only after a Super Admin checks this. No email goes out yet.</p>
+                <Button disabled={!!sending} onClick={() => void submitForApproval(c.id!).then(() => { toast.success("Submitted for Super Admin approval. Signing links unlock once it is approved."); onClose(); }).catch((e: Error) => toast.error(e.message))}>
+                  {sending === "all" ? <Loader2 className="h-4 w-4 animate-spin" /> : <ShieldCheck className="h-4 w-4" />}Submit for approval
+                </Button>
+              </div>
+            ) : (
               <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-primary bg-primary/5 p-4">
                 <p className="text-sm"><span className="font-semibold">Ready to send.</span> {unsent.map((p) => p.legalName).join(", ")} {unsent.length === 1 ? "gets" : "get"} an email to review and sign.</p>
                 <Button disabled={!!sending} onClick={() => void sendAll()}>{sending === "all" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Mail className="h-4 w-4" />}Send{unsent.length > 1 ? ` to all ${unsent.length}` : ""}</Button>
               </div>
-            )}
+            ))}
             <ul className="space-y-3">
               {c.parties.map((p) => (
                 <li key={p.id} className="rounded-xl border border-border p-4">
@@ -1133,7 +1241,7 @@ function ContractEditor({ userId, initial, tracks, blueprint, onClose }: { userI
                       <div className="font-semibold">{p.legalName} <span className="text-sm font-normal text-muted-foreground">· {p.role}{p.isOwner ? " · you" : ""}</span></div>
                       <div className="text-xs text-muted-foreground">{p.signedAt ? `Signed ${new Date(p.signedAt).toLocaleString()}` : p.invitedAt ? `Request sent ${new Date(p.invitedAt).toLocaleDateString()}` : p.email}</div>
                     </div>
-                    {p.signedAt ? <span className="flex items-center gap-1 text-sm font-semibold text-primary"><ShieldCheck className="h-4 w-4" />Signed</span> : (!p.isOwner || !signsHere) && (
+                    {p.signedAt ? <span className="flex items-center gap-1 text-sm font-semibold text-primary"><ShieldCheck className="h-4 w-4" />Signed</span> : (!p.isOwner || !signsHere) && c.status === "sent" && (
                       <div className="flex gap-2">
                         <Button size="sm" variant="outline" onClick={() => void copyLink(p)}><Copy className="h-4 w-4" />Copy link</Button>
                         <Button size="sm" disabled={sending === p.id} onClick={() => void email(p)}>{sending === p.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Mail className="h-4 w-4" />}{p.invitedAt ? "Resend" : "Email request"}</Button>
