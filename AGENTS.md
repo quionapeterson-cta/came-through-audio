@@ -9,6 +9,22 @@
 > the editor, so keep the branch in a working state.
 <!-- LOVABLE:END -->
 
+## Every Signature Is One Cursive (always follow)
+
+- **Every signature is set in Dancing Script** (founder, 2026-11-16): the legible cursive approved for the company
+  block on 2026-10-25 is the signature font everywhere it appears — a typed name in an input, the name shown after it
+  is given, the company block, a member's contract, a split sheet, a block agreement built from a template, and a form
+  signed in PDF Fill & Sign. Never Times italic, never a serif, never a second script, in a PDF or on screen.
+- **One constant names it** (`src/lib/signature-font.ts`): `SIGNATURE_FONT` for a PDF that sets a family (`"Dancing
+  Script"`), `SIGNATURE_CSS` for the screen, `SIGNATURE_FILE` for the `.ttf` a PDF embeds. `contract-blueprints.ts`
+  re-exports `SIGNATURE_FONT` for the code that already imported it there. Use the constant; never type the family name
+  into a component, a template or a PDF helper.
+- **Fallbacks keep working, they never stand in** (founder, 2026-11-16): if the font file cannot be loaded, a PDF finishes
+  in Times italic rather than failing the download, and a document with no signature is unchanged. That fallback is an
+  accident, not a choice: a surface that prints Times italic while the file is present is a bug.
+- **The signature has to stay readable**: it signs a legal document, so the approved hand is the legible script, not a
+  decorative one. Don't swap it for Great Vibes, Allura, Sacramento or a drawn PNG style without the founder asking.
+
 ## Nothing Is Official Until It's Approved (always follow)
 
 - Never write a number, allowance, limit, price, date or promise into the product, the plan chart, a Stripe product

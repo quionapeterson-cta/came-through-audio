@@ -28,8 +28,8 @@ export const BLUEPRINTS: Blueprint[] = [...MUSIC_PRODUCTION, ...MANAGEMENT, ...R
 export const COMPANY_LEGAL_NAME = "Came Through Audio, LLC";
 /** Who signs company agreements by default (founder, 2026-10-25): pre-filled, still editable for another admin. */
 export const COMPANY_SIGNER_NAME = "Qui-Ona Peterson";
-/** Legible cursive for typed signatures (public/fonts, Script & hand-drawn group). */
-export const SIGNATURE_FONT = "Dancing Script";
+/** Legible cursive for typed signatures — one family for every signature, named in `src/lib/signature-font.ts`. */
+export { SIGNATURE_FONT } from "@/lib/signature-font";
 
 /** Company agreements name the LLC as the party; the founder signs as its authorized representative. */
 const SIGNER: BlueprintField = { key: "signerTitle", label: "Your title", value: "Founder & CEO", tip: "Your title at Came Through Audio, LLC. You sign with your own legal name on the company's behalf. We remember your last one." };

@@ -23,6 +23,7 @@ import { listContractTemplates, type SavedTemplate } from "@/lib/pdf-templates.f
 import { templateToPdfBytes } from "@/lib/pdf-template-pdf";
 import { getLaunchStatus } from "@/lib/gate.functions";
 import { BLUEPRINTS, CATEGORIES, COMPANY_BLUEPRINTS, dropPrelaunch, COMPANY_LEGAL_NAME, COMPANY_SIGNER_NAME, CONTRACT_DISCLAIMER, SIGNATURE_FONT, blueprintById, fillBlanks, georgiaLaw, initialFields, missingFields, renderContract, type Blueprint, type BlueprintField } from "@/lib/contract-blueprints";
+import { SIGNATURE_CSS } from "@/lib/signature-font";
 import { ownProIpi } from "@/lib/artist-profile";
 import { draftingRole, takesOwnRegistration } from "@/lib/contract-blueprints";
 import { downloadContractPdf } from "@/lib/contract-pdf";
@@ -1326,7 +1327,7 @@ function ContractEditor({ userId, initial, tracks, blueprint, canApprove = false
                   {p.isOwner && signsHere && !p.signedAt && c.status === "sent" && (
                     <div className="mt-3 flex flex-wrap items-end gap-3 border-t border-border pt-3">
                       <label className="min-w-60 flex-1 space-y-1 text-sm"><span className="font-medium">Type your legal name to sign: <span className="font-bold">{p.legalName}</span></span>
-                        <Input value={typed} onChange={(e) => setTyped(e.target.value)} placeholder={p.legalName} className="font-serif text-lg italic" /></label>
+                        <Input value={typed} onChange={(e) => setTyped(e.target.value)} placeholder={p.legalName} className="text-lg" style={{ fontFamily: SIGNATURE_CSS }} /></label>
                       <Button disabled={busy} onClick={() => void signAsOwner(p)}><FileSignature className="h-4 w-4" />Sign</Button>
                     </div>
                   )}

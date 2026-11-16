@@ -2,9 +2,10 @@ import { useEffect, useRef, useState } from "react";
 import { Eraser, PenLine, Type } from "lucide-react";
 import { BRAND } from "@/lib/pdf-templates";
 import { loadWebFont } from "@/lib/web-fonts";
+import { SIGNATURE_FONT } from "@/lib/signature-font";
 
-/** The same legible cursive the contract signatures use (public/fonts, Script & hand-drawn). */
-const SIGNATURE_FAMILY = "Dancing Script";
+/** The same legible cursive every signature uses, named in one place (public/fonts, Script & hand-drawn group). */
+const SIGNATURE_FAMILY = SIGNATURE_FONT;
 
 export type SignatureSize = "sm" | "md" | "lg";
 

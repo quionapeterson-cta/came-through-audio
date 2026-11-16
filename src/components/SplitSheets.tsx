@@ -6,6 +6,7 @@ import { ContributorLibrary } from "@/components/ContributorLibrary";
 import { BrandKitChoice } from "@/components/BrandKitChoice";
 import { useBrandKits } from "@/hooks/useBrandKits";
 import { ProSelect } from "@/components/ProSelect";
+import { SIGNATURE_CSS, SIGNATURE_FONT } from "@/lib/signature-font";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { UpgradeLock } from "@/components/UpgradeLock";
@@ -469,14 +470,15 @@ function SplitEditor({ userId, track, initial, canCollect, onUpgrade, onClose, o
                 {c.signedAt ? (
                   <p className="flex items-center gap-2 text-sm">
                     <Check className="h-4 w-4 text-primary" />
-                    <span className="font-serif text-lg italic text-foreground">{c.signatureName}</span>
+                    <span className="text-lg text-foreground" style={{ fontFamily: SIGNATURE_CSS }}>{c.signatureName}</span>
                     <span className="text-muted-foreground">signed {new Date(c.signedAt).toLocaleDateString()}</span>
                   </p>
                 ) : c.isOwner ? (
                   signingIndex === i ? (
                     <div className="flex flex-1 flex-wrap items-center gap-2 rounded-lg bg-muted p-3">
                       <input value={typedName} onChange={(e) => setTypedName(e.target.value)} placeholder={`Type "${c.name}" to sign`}
-                        className="min-w-56 flex-1 rounded-md border border-input bg-background px-3 py-2 font-serif text-lg italic text-foreground" />
+                        className="min-w-56 flex-1 rounded-md border border-input bg-background px-3 py-2 text-lg text-foreground"
+                        style={{ fontFamily: SIGNATURE_CSS }} />
                       <Button size="sm" onClick={() => void sign(i)}>Sign</Button>
                       <Button size="sm" variant="ghost" onClick={() => { setSigningIndex(null); setTypedName(""); }}>Cancel</Button>
                     </div>
@@ -559,11 +561,13 @@ async function buildSplitPdf(track: CatalogTrack, rawCollaborators: SplitCollabo
   const t = (v: unknown) => (v === null || v === undefined ? "" : String(v));
   const collaborators = rawCollaborators.map((c) => ({ ...c, name: t(c.name), role: t(c.role) as SplitCollaborator["role"], pro: t(c.pro), ipi: t(c.ipi), performerName: t(c.performerName), publisherName: t(c.publisherName), publisherPro: t(c.publisherPro), publisherIpi: t(c.publisherIpi), signatureName: t(c.signatureName) || t(c.name), signatureHash: t(c.signatureHash), percentage: Number(c.percentage) || 0 }));
   track = { ...track, title: t(track.title) || "Untitled", artist: t(track.artist), metadata: { ...track.metadata, isrc: t(track.metadata?.isrc), iswc: t(track.metadata?.iswc) } };
-  const [{ newBrandedPdf, brandHeader, brandFooter, infoGrid, sectionTitle, ensureSpace, accentOf, onAccent, headerDate, INK, MUTED, RULE }, { myBrand }] = await Promise.all([import("@/lib/brand-pdf"), import("@/lib/brand-load")]);
+  const [{ newBrandedPdf, brandHeader, brandFooter, infoGrid, sectionTitle, ensureSpace, accentOf, onAccent, headerDate, addSignatureFont, INK, MUTED, RULE }, { myBrand }] = await Promise.all([import("@/lib/brand-pdf"), import("@/lib/brand-load")]);
   // Personal Branding (Catalog Management, or the split sheet add-on) swaps in their header; otherwise ours.
   // Which of their kits brands this sheet, if they picked one (the server still decides whether it may be used).
   const brand = await myBrand("splits", kitId ?? null);
   const pdf = await newBrandedPdf(brand);
+  // A signed name is the same cursive here as on every other document (founder, 2026-11-16).
+  const cursive = await addSignatureFont(pdf, SIGNATURE_FONT);
   const w = pdf.internal.pageSize.getWidth();
   const rows = collaborators.filter((c) => c.name);
   const status = splitStatus(collaborators);
@@ -637,7 +641,9 @@ async function buildSplitPdf(track: CatalogTrack, rawCollaborators: SplitCollabo
     if (i % 2 === 0) y = ensureSpace(pdf, y, 36);
     pdf.setDrawColor(...RULE).setLineWidth(0.3).roundedRect(x, y, boxW, 32, 2, 2, "S");
     if (c.signedAt) {
-      pdf.setFont("times", "italic").setFontSize(18).setTextColor(...INK).text(c.signatureName, x + 5, y + 12);
+      const setSignature = () =>
+        cursive ? pdf.setFont(SIGNATURE_FONT, "bold").setFontSize(18) : pdf.setFont("times", "italic").setFontSize(18);
+      setSignature().setTextColor(...INK).text(c.signatureName, x + 5, y + 12);
     } else {
       pdf.setFont("helvetica", "italic").setFontSize(10).setTextColor(...MUTED).text(c.invitedAt ? "Awaiting signature" : "Not yet requested", x + 5, y + 12);
     }

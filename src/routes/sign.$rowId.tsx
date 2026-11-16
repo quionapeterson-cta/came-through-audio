@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { BrandLogo } from "@/components/BrandLogo";
+import { SIGNATURE_CSS } from "@/lib/signature-font";
 import { SignupCard } from "@/components/SignupCard";
 import { Button } from "@/components/ui/button";
 import { ALL_PROS, getSplitInvite, signSplitInvite, type SplitInvite } from "@/lib/splits";
@@ -146,7 +147,7 @@ function SignPage() {
                   </div>
                 )}
                 <label className="block space-y-1 text-sm"><span className="font-medium">Type your legal name to sign: <span className="font-bold">{invite.legal_name}</span></span>
-                  <input value={typed} onChange={(e) => setTyped(e.target.value)} placeholder={invite.legal_name} className="w-full rounded-md border border-input bg-background px-3 py-3 font-serif text-2xl italic" /></label>
+                  <input value={typed} onChange={(e) => setTyped(e.target.value)} placeholder={invite.legal_name} className="w-full rounded-md border border-input bg-background px-3 py-3 text-2xl" style={{ fontFamily: SIGNATURE_CSS }} /></label>
                 <p className="text-xs text-muted-foreground">By signing, you agree the ownership percentages above are accurate. Your signature is time-stamped and secured with a SHA-256 hash. If this artist is on an artist seat, the account that pays for it can read this split sheet and who signed it.</p>
                 <Button size="lg" onClick={() => void sign()} disabled={busy}>{busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileSignature className="h-4 w-4" />} Sign split sheet</Button>
               </div>

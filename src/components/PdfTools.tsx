@@ -4,6 +4,7 @@ import { toast } from "sonner";
 import { useServerFn } from "@tanstack/react-start";
 import type { PDFDocumentProxy, PageViewport } from "pdfjs-dist";
 import { Button } from "@/components/ui/button";
+import { SIGNATURE_CSS } from "@/lib/signature-font";
 import {
   Dialog,
   DialogContent,
@@ -65,7 +66,7 @@ type Tool = "text" | "date" | "sign";
 /** Text placed on a page is written at 11 pt, the usual size for forms. */
 const TEXT_PT = 11;
 const SIGN_WIDTH = 180;
-const SIGN_FONT = "'Dancing Script', cursive";
+const SIGN_FONT = SIGNATURE_CSS;
 const MAX_SCALE = 1.5;
 
 const today = () => new Date().toLocaleDateString("en-US");

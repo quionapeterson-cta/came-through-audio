@@ -18,6 +18,7 @@ import { BrandLogo } from "@/components/BrandLogo";
 import { SignupCard } from "@/components/SignupCard";
 import { StarSky } from "@/components/StarSky";
 import { BadgeWatcher } from "@/components/Badges";
+import { SIGNATURE_CSS } from "@/lib/signature-font";
 import { requestBadgeCheck } from "@/lib/badge-events";
 import { Button } from "@/components/ui/button";
 import { COMPANY_LEGAL_NAME, CONTRACT_DISCLAIMER } from "@/lib/contract-blueprints";
@@ -451,7 +452,8 @@ function LinkSigning({ token }: { token: string }) {
                   value={typed}
                   onChange={(e) => setTyped(e.target.value)}
                   placeholder={invite.legal_name}
-                  className="w-full rounded-md border border-input bg-background px-3 py-3 font-serif text-2xl italic"
+                  className="w-full rounded-md border border-input bg-background px-3 py-3 text-2xl"
+                  style={{ fontFamily: SIGNATURE_CSS }}
                 />
               </label>
               <p className="text-xs text-muted-foreground">
@@ -634,7 +636,8 @@ function AccountSigning() {
                   value={typed}
                   onChange={(e) => setTyped(e.target.value)}
                   placeholder={invite.legal_name}
-                  className="w-full rounded-md border border-input bg-background px-3 py-3 font-serif text-2xl italic"
+                  className="w-full rounded-md border border-input bg-background px-3 py-3 text-2xl"
+                  style={{ fontFamily: SIGNATURE_CSS }}
                 />
               </label>
               <p className="text-xs text-muted-foreground">

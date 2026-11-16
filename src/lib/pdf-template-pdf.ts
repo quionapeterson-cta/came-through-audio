@@ -11,6 +11,25 @@ import {
   type TemplateBlock,
 } from "./pdf-templates";
 import type { PacketAudit, PacketValues, SignatureRecord } from "./pdf-packets";
+import fontkit from "@pdf-lib/fontkit";
+import { SIGNATURE_FILE } from "./signature-font";
+
+/**
+ * The approved cursive for every signed name (founder, 2026-11-16). pdf-lib needs the file itself, the way the rest of
+ * the app sets the family with jsPDF or on screen; when it can't be read the line keeps Helvetica oblique so a download
+ * still finishes, because a signature in the wrong hand beats no contract at all.
+ */
+async function embedSignatureFont(doc: PDFDocument, fallback: PDFFont): Promise<PDFFont> {
+  if (typeof window === "undefined") return fallback;
+  try {
+    const res = await fetch(`/fonts/${SIGNATURE_FILE}`);
+    if (!res.ok) return fallback;
+    doc.registerFontkit(fontkit);
+    return await doc.embedFont(await res.arrayBuffer(), { subset: true });
+  } catch {
+    return fallback;
+  }
+}
 
 // pdf-lib's built-in faces encode Windows-1252, which has no arrows, ticks or ballot boxes. Map the handful a document
 // might use instead of letting one glyph fail the whole download.
@@ -94,7 +113,7 @@ export async function templateToPdfBytes(
   const doc = await PDFDocument.create();
   const regular = await doc.embedFont(StandardFonts.Helvetica);
   const bold = await doc.embedFont(StandardFonts.HelveticaBold);
-  const signatureFont = await doc.embedFont(StandardFonts.HelveticaOblique);
+  const signatureFont = await embedSignatureFont(doc, await doc.embedFont(StandardFonts.HelveticaOblique));
   const text = (value: string) => fillTokens(clean(value), data);
   const blocks = options.blocks ?? template.blocks;
 
