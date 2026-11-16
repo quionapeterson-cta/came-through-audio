@@ -3,7 +3,11 @@ import { SITE_URL } from "@/lib/email-layout";
 import { trustedOrigin } from "@/lib/invite-limits";
 import { requestBadgeCheck } from "@/lib/badge-events";
 
-export type ContractStatus = "draft" | "sent" | "signed";
+/**
+ * Every state a contract can be in. A company agreement written by a lead travels draft → pending_approval → sent, or
+ * comes back as changes_requested; a super admin's own agreement goes straight from draft to sent.
+ */
+export type ContractStatus = "draft" | "pending_approval" | "changes_requested" | "sent" | "signed";
 
 export type ContractParty = {
   id?: string;
@@ -36,6 +40,14 @@ export type Contract = {
   paid?: boolean;
   /** Which Branding Kit the contract uses; blank = the first kit. */
   brandKitId?: string | null;
+  /** When a lead handed it to the approver, and who did. */
+  submittedAt?: string | null;
+  submittedBy?: string | null;
+  /** The approval itself: who signed off, and when. */
+  approvedAt?: string | null;
+  approvedBy?: string | null;
+  /** The approver's internal note — why it came back, or a line for the record. Never printed on the PDF. */
+  reviewerNote?: string | null;
 };
 
 export const emptyParty = (role: string, isOwner = false): ContractParty => ({
@@ -43,12 +55,14 @@ export const emptyParty = (role: string, isOwner = false): ContractParty => ({
 });
 
 type PartyRow = { id: string; role: string; legal_name: string; email: string; is_owner: boolean; position: number; invited_at: string | null; signature_name: string | null; signature_hash: string | null; signed_at: string | null };
-type ContractRow = { id: string; blueprint: string; title: string; catalog_id: string | null; fields: Record<string, string> | null; body: string; status: ContractStatus; body_hash: string | null; sent_at: string | null; completed_at: string | null; updated_at: string; is_company?: boolean; paid_purchase_id?: string | null; brand_kit_id?: string | null; contract_parties: PartyRow[] | null };
+type ContractRow = { id: string; blueprint: string; title: string; catalog_id: string | null; fields: Record<string, string> | null; body: string; status: ContractStatus; body_hash: string | null; sent_at: string | null; completed_at: string | null; updated_at: string; is_company?: boolean; paid_purchase_id?: string | null; brand_kit_id?: string | null; submitted_at?: string | null; submitted_by?: string | null; approved_at?: string | null; approved_by?: string | null; reviewer_note?: string | null; contract_parties: PartyRow[] | null };
 
 function fromRow(r: ContractRow): Contract {
   return {
     id: r.id, blueprint: r.blueprint, title: r.title, catalogId: r.catalog_id, fields: r.fields ?? {}, body: r.body, status: r.status,
     bodyHash: r.body_hash ?? "", sentAt: r.sent_at, completedAt: r.completed_at, updatedAt: r.updated_at, isCompany: !!r.is_company, paid: !!r.paid_purchase_id, brandKitId: r.brand_kit_id ?? null,
+    submittedAt: r.submitted_at ?? null, submittedBy: r.submitted_by ?? null,
+    approvedAt: r.approved_at ?? null, approvedBy: r.approved_by ?? null, reviewerNote: r.reviewer_note ?? null,
     parties: [...(r.contract_parties ?? [])].sort((a, b) => a.position - b.position).map((p) => ({
       id: p.id, role: p.role, legalName: p.legal_name, email: p.email, isOwner: p.is_owner, invitedAt: p.invited_at,
       signatureName: p.signature_name ?? "", signatureHash: p.signature_hash ?? "", signedAt: p.signed_at,
@@ -109,6 +123,34 @@ export async function sendContract(id: string) {
   const { error } = await supabase.rpc("send_contract" as never, { _contract_id: id } as never);
   if (error) throw error;
   requestBadgeCheck();
+}
+
+/**
+ * A lead's company agreement goes to the approver instead of to the signers (founder, 2026-11-16). Nothing is hashed
+ * yet, so no signing link can open until a super admin approves it.
+ */
+export async function submitForApproval(id: string) {
+  const { error } = await supabase.rpc("submit_contract_for_approval" as never, { _contract_id: id } as never);
+  if (error) throw error;
+}
+
+/** The approver signs off: the text is locked and signing opens. The note stays internal. */
+export async function approveContract(id: string, note?: string) {
+  const { error } = await supabase.rpc("approve_contract" as never, { _contract_id: id, _note: note ?? null } as never);
+  if (error) throw error;
+  requestBadgeCheck();
+}
+
+/** Sent back with a reason the lead reads on their own screen. */
+export async function requestContractChanges(id: string, note: string) {
+  const { error } = await supabase.rpc("request_contract_changes" as never, { _contract_id: id, _note: note } as never);
+  if (error) throw error;
+}
+
+/** The lead picks the returned draft back up; it becomes editable again. */
+export async function resumeChangedContract(id: string) {
+  const { error } = await supabase.rpc("resume_changed_contract" as never, { _contract_id: id } as never);
+  if (error) throw error;
 }
 
 export async function reopenContract(id: string) {

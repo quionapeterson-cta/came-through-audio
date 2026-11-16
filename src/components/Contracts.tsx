@@ -51,6 +51,9 @@ type View = "working" | "generator" | "blueprints" | "guides" | "contracts" | "v
 
 const STATUS: Record<Contract["status"], { label: string; className: string }> = {
   draft: { label: "Draft", className: "border-border text-muted-foreground" },
+  // With the approver, or sent back with a note: neither can reach a signer yet (founder, 2026-11-16).
+  pending_approval: { label: "Pending approval", className: "border-amber-500 text-amber-600" },
+  changes_requested: { label: "Changes requested", className: "border-destructive text-destructive" },
   sent: { label: "Out for signature", className: "border-primary text-primary" },
   signed: { label: "Fully signed", className: "border-primary bg-primary text-primary-foreground" },
 };

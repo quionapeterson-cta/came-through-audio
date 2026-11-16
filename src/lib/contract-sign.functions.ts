@@ -20,7 +20,7 @@ const esc = escapeHtml;
 const linkInput = z.object({ partyId: z.string().uuid(), token: z.string().min(16).max(64) });
 
 type Party = { id: string; contract_id: string; legal_name: string; email: string; role: string; is_owner: boolean; position: number; signed_at: string | null; signature_name: string | null; signature_hash: string | null; created_at: string };
-type CompanyContract = { id: string; title: string; blueprint: string; fields: Record<string, string> | null; body: string; body_hash: string | null; status: "draft" | "sent" | "signed"; sent_at: string | null; completed_at: string | null; is_company: boolean };
+type CompanyContract = { id: string; title: string; blueprint: string; fields: Record<string, string> | null; body: string; body_hash: string | null; status: "draft" | "pending_approval" | "changes_requested" | "sent" | "signed"; sent_at: string | null; completed_at: string | null; is_company: boolean };
 
 async function admin() {
   return (await import("@/integrations/supabase/client.server")).supabaseAdmin;

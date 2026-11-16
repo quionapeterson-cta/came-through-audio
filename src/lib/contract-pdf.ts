@@ -18,7 +18,16 @@ export async function downloadContractPdf(o: {
   const cursive = await addSignatureFont(pdf, SIGNATURE_FONT);
   const signature = (text: string, x: number, y: number) => (cursive ? pdf.setFont(SIGNATURE_FONT, "bold").setFontSize(20) : pdf.setFont("times", "italic").setFontSize(18)).setTextColor(...INK).text(text, x, y);
   const w = pdf.internal.pageSize.getWidth();
-  const label = o.status === "signed" ? "Fully signed" : o.status === "sent" ? "Out for signature" : "Draft";
+  const label =
+    o.status === "signed"
+      ? "Fully signed"
+      : o.status === "sent"
+        ? "Out for signature"
+        : o.status === "pending_approval"
+          ? "Awaiting approval"
+          : o.status === "changes_requested"
+            ? "Changes requested"
+            : "Draft";
   // Branding Kit extras (founder, 2026-10-28): an optional cover page, then a faint logo watermark behind page 1.
   if (o.brand?.options.cover) kitCover(pdf, o.brand, o.title, label);
   if (o.brand?.options.watermark) kitWatermark(pdf, o.brand);
