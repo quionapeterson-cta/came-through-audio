@@ -1199,7 +1199,10 @@ function ContractEditor({ userId, initial, tracks, blueprint, canApprove = false
           {blocksMode
             ? <div className="space-y-2">
                 <p className="text-xs text-muted-foreground">Built from a template in Template Studio. Its blocks and their wording are fixed; the parties below are named on the signature lines.</p>
-                <iframe title="Contract preview" sandbox="" srcDoc={templateToHtml({ name: c.title, tier: c.isCompany ? "platinum" : "standard", blocks })} className="h-[30rem] w-full rounded-xl border border-border bg-white" />
+                {/\{\{[A-Z0-9_]+\}\}/.test(body) && (
+                  <p className="flex items-start gap-2 rounded-lg border border-amber-500 bg-amber-500/5 p-3 text-xs text-amber-700 dark:text-amber-400"><AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" />This template still has a {"{{…}}"} placeholder in it. Fill it in Template Studio before sending; placeholders are printed exactly as they are, never with another song's details.</p>
+                )}
+                <iframe title="Contract preview" sandbox="" srcDoc={templateToHtml({ name: c.title, tier: c.isCompany ? "platinum" : "standard", blocks }, {})} className="h-[30rem] w-full rounded-xl border border-border bg-white" />
               </div>
             : draft && customized
               ? <textarea aria-label="Contract text" rows={22} value={body} onChange={(e) => setC({ ...c, body: e.target.value })} className="w-full rounded-xl border border-input bg-background p-4 font-mono text-sm leading-relaxed" />

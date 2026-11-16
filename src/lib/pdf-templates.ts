@@ -425,7 +425,7 @@ export function canSaveTemplate(template: PdfTemplate): boolean {
 const esc = (value: string) =>
   value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 
-function blockHtml(block: TemplateBlock): string {
+function blockHtml(block: TemplateBlock, data: Record<string, string> = SAMPLE_DATA): string {
   if (block.kind === "header") {
     const ink = headerInk(block.background);
     return `<header style="background:${ink.surface};padding:40px 48px;border-bottom:3px solid ${BRAND.cobalt}">
@@ -621,13 +621,17 @@ export function starterPresets(): PdfTemplate[] {
   ];
 }
 
-/** A standalone branded document, with the sample release filled in — what the preview shows, as a file. */
-export function templateToHtml(template: PdfTemplate): string {
+/**
+ * A standalone branded document, with the sample release filled in — what the preview shows, as a file. A real agreement
+ * passes the contract's own values (an empty map keeps its `{{TOKEN}}`s visible, so a placeholder is never filled with
+ * somebody else's song).
+ */
+export function templateToHtml(template: PdfTemplate, data: Record<string, string> = SAMPLE_DATA): string {
   return `<!doctype html>
 <html lang="en"><head><meta charset="utf-8"><title>${esc(template.name)}</title>
 <style>@page{size:Letter;margin:0}body{margin:0;background:${BRAND.platinum};font-family:Helvetica,Arial,sans-serif}main{background:${BRAND.white};max-width:816px;margin:24px auto;padding-bottom:48px}</style>
 </head><body><main>
-${template.blocks.map(blockHtml).join("\n")}
+${template.blocks.map((block) => blockHtml(block, data)).join("\n")}
 <footer style="margin:40px 48px 0;border-top:1px solid ${BRAND.platinum};padding-top:12px;font-size:9px;letter-spacing:2px;color:${BRAND.black};opacity:0.65">CAME THROUGH AUDIO · ${TAGLINE}</footer>
 </main></body></html>`;
 }

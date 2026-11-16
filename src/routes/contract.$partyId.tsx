@@ -12,6 +12,9 @@ import { requestBadgeCheck } from "@/lib/badge-events";
 import { Button } from "@/components/ui/button";
 import { COMPANY_LEGAL_NAME, CONTRACT_DISCLAIMER } from "@/lib/contract-blueprints";
 import { downloadContractPdf } from "@/lib/contract-pdf";
+import { templateToHtml } from "@/lib/pdf-templates";
+import { templateToPdfBytes } from "@/lib/pdf-template-pdf";
+import { saveBlob } from "@/lib/catalog";
 import { contractBrand } from "@/lib/brand-load";
 import { getContractInvite, signContract, type ContractInvite } from "@/lib/contracts";
 import { clearReturn, rememberReturn } from "@/lib/password";
@@ -55,8 +58,22 @@ function Shell({ children, right }: { children: React.ReactNode; right?: React.R
 }
 
 // The sender's brand kit when they have Personal Branding (company agreements and signed-out links keep ours).
-const pdf = async (i: ContractInvite) => downloadContractPdf({ title: i.title, body: i.body, bodyHash: i.body_hash, status: i.status, brand: i.contract_id ? await contractBrand(i.contract_id) : null, company: i.company_title ? { signerTitle: i.company_title } : undefined,
-  parties: i.parties.map((p) => ({ name: p.name, role: p.role, signedAt: p.signed_at, signatureName: p.signature_name, signatureHash: p.signature_hash })) });
+const pdf = async (i: ContractInvite) => {
+  // A block-built agreement prints as its blocks, with each party's typed signature on its line (founder, 2026-11-16).
+  if (i.blocks?.length) {
+    const record = (p: ContractInvite["parties"][number] | undefined, role: "recipient" | "admin") =>
+      p?.signed_at && p.signature_name ? { kind: "type" as const, data: p.signature_name, name: p.signature_name, signedAt: p.signed_at, role } : null;
+    const bytes = await templateToPdfBytes(
+      { name: i.title, tier: "platinum", blocks: i.blocks },
+      {},
+      { signatures: { recipient: record(i.parties.find((p) => p.signed_at && p.role !== "Company"), "recipient"), admin: record(i.parties.find((p) => p.role === "Company"), "admin") } },
+    );
+    saveBlob(new Blob([bytes as unknown as BlobPart], { type: "application/pdf" }), `${(i.title.trim() || "contract").replace(/[^\w\- ]+/g, "").trim() || "contract"}${i.status === "signed" ? " - Signed" : ""}.pdf`);
+    return;
+  }
+  await downloadContractPdf({ title: i.title, body: i.body, bodyHash: i.body_hash, status: i.status, brand: i.contract_id ? await contractBrand(i.contract_id) : null, company: i.company_title ? { signerTitle: i.company_title } : undefined,
+    parties: i.parties.map((p) => ({ name: p.name, role: p.role, signedAt: p.signed_at, signatureName: p.signature_name, signatureHash: p.signature_hash })) });
+};
 
 /** The agreement, who has signed, and the locked text, shared by both ways of signing. */
 function ContractView({ invite, from }: { invite: ContractInvite; from?: string }) {
@@ -80,7 +97,9 @@ function ContractView({ invite, from }: { invite: ContractInvite; from?: string 
         ))}
       </div>
 
-      <div className="max-h-[36rem] overflow-y-auto whitespace-pre-wrap rounded-2xl border border-border bg-muted/30 p-6 text-sm leading-relaxed">{invite.body}</div>
+      {invite.blocks?.length
+        ? <iframe title="Agreement" sandbox="" srcDoc={templateToHtml({ name: invite.title, tier: "platinum", blocks: invite.blocks }, {})} className="h-[36rem] w-full rounded-2xl border border-border bg-white" />
+        : <div className="max-h-[36rem] overflow-y-auto whitespace-pre-wrap rounded-2xl border border-border bg-muted/30 p-6 text-sm leading-relaxed">{invite.body}</div>}
       <p className="flex items-start gap-2 text-xs text-muted-foreground"><AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-primary" />{CONTRACT_DISCLAIMER} Contract fingerprint (SHA-256): <span className="break-all">{invite.body_hash}</span></p>
     </>
   );

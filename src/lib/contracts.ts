@@ -183,6 +183,8 @@ export type ContractInvite = {
   /** Company agreements opened by private link: the signer's title for the Company signature block. */
   company_title?: string;
   parties: { name: string; role: string; signed_at: string | null; signature_name: string | null; signature_hash: string | null }[];
+  /** A block-built agreement: the page is rendered from these, not from `body`, which stays the hashed plain text. */
+  blocks?: TemplateBlock[] | null;
 };
 
 export async function getContractInvite(partyId: string): Promise<ContractInvite | null> {
