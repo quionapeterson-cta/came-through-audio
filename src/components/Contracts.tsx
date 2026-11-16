@@ -17,7 +17,10 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { InfoTip } from "@/components/InfoTip";
 import { Confetti } from "@/components/Confetti";
 import { StarSky } from "@/components/StarSky";
-import { listTracks, type CatalogTrack } from "@/lib/catalog";
+import { listTracks, saveBlob, type CatalogTrack } from "@/lib/catalog";
+import { blocksToText, contractCardSummary, templateToHtml } from "@/lib/pdf-templates";
+import { listContractTemplates, type SavedTemplate } from "@/lib/pdf-templates.functions";
+import { templateToPdfBytes } from "@/lib/pdf-template-pdf";
 import { getLaunchStatus } from "@/lib/gate.functions";
 import { BLUEPRINTS, CATEGORIES, COMPANY_BLUEPRINTS, dropPrelaunch, COMPANY_LEGAL_NAME, COMPANY_SIGNER_NAME, CONTRACT_DISCLAIMER, SIGNATURE_FONT, blueprintById, fillBlanks, georgiaLaw, initialFields, missingFields, renderContract, type Blueprint, type BlueprintField } from "@/lib/contract-blueprints";
 import { ownProIpi } from "@/lib/artist-profile";
@@ -128,6 +131,21 @@ export function Contracts({ userId, unlocked, onUpgrade, company = false, canApp
     });
   };
 
+  /**
+   * A company agreement built from a library template (founder, 2026-11-16): the template's blocks are copied onto the
+   * contract now, so editing the template later never rewrites an agreement that was already sent.
+   */
+  const startTemplate = (t: SavedTemplate) => {
+    if (!unlocked) { onUpgrade(); return; }
+    setEditing({
+      blueprint: "custom", title: t.name, catalogId: null, fields: {}, body: blocksToText(t.blocks, t.name), status: "draft", bodyHash: "",
+      sentAt: null, completedAt: null, updatedAt: new Date().toISOString(),
+      parties: [{ ...emptyParty("Company", true), legalName: company ? COMPANY_SIGNER_NAME : "" }, emptyParty("Recipient")],
+      ...(company && { isCompany: true }),
+      blocks: t.blocks, templateId: t.id,
+    });
+  };
+
   if (editing) {
     return <ContractEditor userId={userId} initial={editing} tracks={tracks} canApprove={canApprove} blueprint={blueprintFor(editing.blueprint)} onClose={() => { setEditing(null); void load(); }} />;
   }
@@ -168,7 +186,7 @@ export function Contracts({ userId, unlocked, onUpgrade, company = false, canApp
         )}
 
         {view === "blueprints" && (company
-          ? <CompanyTemplates blueprints={companyBlueprints} edited={templates} canEdit={canApprove} onUse={start} onSaved={() => void loadCompanyTemplates().then(setTemplates)} />
+          ? <CompanyTemplates blueprints={companyBlueprints} edited={templates} canEdit={canApprove} onUse={start} onUseTemplate={startTemplate} onSaved={() => void loadCompanyTemplates().then(setTemplates)} />
           : <Blueprints unlocked={unlocked} onUse={start} />)}
 
         {view === "gifts" && company && <LaunchGifts />}
@@ -768,9 +786,12 @@ function ApprovalQueue({ contracts, onOpen, onDone }: { contracts: Contract[]; o
   );
 }
 
-function CompanyTemplates({ blueprints, edited, canEdit, onUse, onSaved }: { blueprints: Blueprint[]; edited: Record<string, string>; /** Only a super admin may rewrite the company's own master wording (the server refuses anyone else). */ canEdit: boolean; onUse: (bp: Blueprint) => void; onSaved: () => void }) {
+function CompanyTemplates({ blueprints, edited, canEdit, onUse, onUseTemplate, onSaved }: { blueprints: Blueprint[]; edited: Record<string, string>; /** Only a super admin may rewrite the company's own master wording (the server refuses anyone else). */ canEdit: boolean; onUse: (bp: Blueprint) => void; /** A saved Template Studio template, toggled into contracts by a lead. */ onUseTemplate: (t: SavedTemplate) => void; onSaved: () => void }) {
   const [editingId, setEditingId] = useState<string>();
   const [text, setText] = useState("");
+  const [custom, setCustom] = useState<SavedTemplate[]>([]);
+  const listCustom = useServerFn(listContractTemplates);
+  useEffect(() => { void listCustom().then(setCustom).catch(() => setCustom([])); }, [listCustom]);
   const [busy, setBusy] = useState(false);
   const original = (id: string) => COMPANY_BLUEPRINTS.find((b) => b.id === id)!.body;
   const save = async (id: string, body: string) => {
@@ -786,6 +807,23 @@ function CompanyTemplates({ blueprints, edited, canEdit, onUse, onSaved }: { blu
   return (
     <section className="space-y-4">
       <p className="flex items-start gap-2 rounded-xl border border-border bg-muted/50 p-3 text-sm text-muted-foreground"><AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-primary" />{CONTRACT_DISCLAIMER}</p>
+      {custom.length > 0 && (
+        <div className="space-y-2">
+          <h3 className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Your templates <span className="opacity-70">{custom.length}</span></h3>
+          <div className="grid gap-4 md:grid-cols-2">
+            {custom.map((t) => (
+              <article key={t.id} className="flex flex-col rounded-2xl border border-border p-5">
+                <p className="text-xs font-bold uppercase tracking-widest text-primary">From Template Studio</p>
+                <h3 className="mt-1 text-lg font-bold">{t.name}</h3>
+                <p className="mt-1 text-sm text-muted-foreground">{contractCardSummary(t.contractDescription, t.blocks.length)}</p>
+                <div className="mt-auto pt-4">
+                  <Button size="sm" onClick={() => onUseTemplate(t)}><FileSignature className="h-4 w-4" />Use this template</Button>
+                </div>
+              </article>
+            ))}
+          </div>
+        </div>
+      )}
       <div className="grid gap-4 md:grid-cols-2">
         {blueprints.map((bp) => (
           <article key={bp.id} className={`flex flex-col rounded-2xl border p-5 ${editingId === bp.id ? "border-primary md:col-span-2" : "border-border"}`}>
@@ -884,7 +922,11 @@ function ContractRow({ contract: c, onOpen, workbench }: { contract: Contract; o
 }
 
 function ContractEditor({ userId, initial, tracks, blueprint, canApprove = false, onClose }: { userId: string; initial: Contract; tracks: CatalogTrack[]; blueprint?: Blueprint | undefined; canApprove?: boolean; onClose: () => void }) {
-  const bp = blueprint ?? blueprintById(initial.blueprint) ?? BLUEPRINTS[0]!;
+  // A block template's agreement has no blueprint of its own: its blocks are the whole document (founder, 2026-11-16).
+  const fromBlocks = !!initial.blocks?.length;
+  const bp: Blueprint = blueprint ?? (fromBlocks
+    ? { id: "custom", name: initial.title || "Custom agreement", category: COMPANY_BLUEPRINTS[0]!.category, summary: "", whenToUse: "", keyTerms: [], roles: ["Company", "Recipient"], fields: [], body: "" }
+    : blueprintById(initial.blueprint) ?? BLUEPRINTS[0]!);
   useEffect(() => { loadWebFont(SIGNATURE_FONT); }, []);
   const [c, setC] = useState<Contract>(initial);
   // Their Branding Kits, for picking which one this contract uses (founder, 2026-10-27).
@@ -895,6 +937,8 @@ function ContractEditor({ userId, initial, tracks, blueprint, canApprove = false
       .then(({ data }) => setKits(((data ?? []) as { id: string; name: string }[]).filter((k) => k.id)));
   }, [userId, initial.isCompany]);
   const [customized, setCustomized] = useState(!!initial.body && initial.body !== renderContract(bp, initial.fields, initial.parties));
+  const blocks = c.blocks ?? [];
+  const blocksMode = blocks.length > 0;
   const [busy, setBusy] = useState(false);
   const [account, setAccount] = useState({ email: "", legalName: "" });
   const [typed, setTyped] = useState("");
@@ -921,7 +965,9 @@ function ContractEditor({ userId, initial, tracks, blueprint, canApprove = false
   }, [userId]);
 
   const rendered = useMemo(() => renderContract(bp, c.fields, c.parties), [bp, c.fields, c.parties]);
-  const body = customized ? fillBlanks(bp, c.body, c.fields, c.parties) : rendered;
+  // A block document's words come from its blocks, in one stable reading order, so the fingerprint covers exactly what
+  // the page shows and the signing page has plain text to print.
+  const body = blocksMode ? blocksToText(blocks, c.title) : customized ? fillBlanks(bp, c.body, c.fields, c.parties) : rendered;
   const owner = c.parties.find((p) => p.isOwner);
   /**
    * You sign in the app with your login email. On a company agreement sent from another (department) address, the
@@ -931,7 +977,7 @@ function ContractEditor({ userId, initial, tracks, blueprint, canApprove = false
   const others = c.parties.filter((p) => !p.isOwner || !signsHere);
   /** What still holds back signing: required details, and each party's legal name and email. Shown only when signing. */
   const missing: Missing[] = draft ? [
-    ...missingFields(bp, c.fields).filter((f) => !customized || body.includes(`[${f.label}]`)).map((f) => ({ label: f.label, target: `cf-${f.key}`, section: "details" as const })),
+    ...(blocksMode ? [] : missingFields(bp, c.fields).filter((f) => !customized || body.includes(`[${f.label}]`)).map((f) => ({ label: f.label, target: `cf-${f.key}`, section: "details" as const }))),
     ...(c.parties.length < 2 ? [{ label: "A second person to sign", target: "cp-add", section: "parties" as const }] : []),
     ...c.parties.flatMap((p, i): Missing[] => [
       ...(!p.legalName.trim() ? [{ label: `${p.isOwner ? "Your" : `${p.role || `Party ${i + 1}`}'s`} legal name`, target: `cp-${i}-name`, section: "parties" as const }] : []),
@@ -1060,9 +1106,25 @@ function ContractEditor({ userId, initial, tracks, blueprint, canApprove = false
   };
 
   // Company agreements keep the Came Through Audio header; the user's own contracts carry their brand kit (Catalog Management).
-  const pdf = async () => downloadContractPdf({ title: c.title, body, bodyHash: c.bodyHash, status: c.status, brand: c.isCompany ? null : await myBrand("contracts", c.brandKitId),
-    company: c.isCompany ? { signerTitle: c.fields["signerTitle"] || "Founder & CEO" } : undefined,
-    parties: c.parties.map((p) => ({ name: p.legalName, role: p.role, signedAt: p.signedAt, signatureName: p.signatureName, signatureHash: p.signatureHash })) });
+  const pdf = async () => {
+    // A block-built agreement prints as the blocks it was made from rather than flattened to text (founder, 2026-11-16),
+    // with each party's typed signature on its own line.
+    if (blocksMode) {
+      const record = (p: ContractParty | undefined, role: "recipient" | "admin") =>
+        p?.signedAt && p.signatureName ? { kind: "type" as const, data: p.signatureName, name: p.signatureName, signedAt: p.signedAt, role } : null;
+      const bytes = await templateToPdfBytes(
+        { name: c.title, tier: c.isCompany ? "platinum" : "standard", blocks },
+        {},
+        { signatures: { recipient: record(c.parties.find((p) => !p.isOwner && p.signedAt), "recipient"), admin: record(c.parties.find((p) => p.isOwner), "admin") } },
+      );
+      const name = (c.title.trim() || "contract").replace(/[^\w\- ]+/g, "").trim() || "contract";
+      saveBlob(new Blob([bytes as unknown as BlobPart], { type: "application/pdf" }), `${name}${c.status === "signed" ? " - Signed" : ""}.pdf`);
+      return;
+    }
+    await downloadContractPdf({ title: c.title, body, bodyHash: c.bodyHash, status: c.status, brand: c.isCompany ? null : await myBrand("contracts", c.brandKitId),
+      company: c.isCompany ? { signerTitle: c.fields["signerTitle"] || "Founder & CEO" } : undefined,
+      parties: c.parties.map((p) => ({ name: p.legalName, role: p.role, signedAt: p.signedAt, signatureName: p.signatureName, signatureHash: p.signatureHash })) });
+  };
 
   return (
     <TooltipProvider delayDuration={100}>
@@ -1113,7 +1175,7 @@ function ContractEditor({ userId, initial, tracks, blueprint, canApprove = false
           </div>
         )}
 
-        {draft && (
+        {draft && !blocksMode && (
           <ol aria-label="How it works" className="grid gap-2 rounded-xl bg-muted p-4 text-sm sm:grid-cols-5">
             {[["Read it", "Look over the contract below."], ["Fill in your details", "They fill into the contract as you type."], ["Adjust the wording", "Only if you need to; common terms are in."], ["Sign", "Sign at the bottom with your legal name."], ["Send", "Email each party a link to sign."]].map(([t, d], i) => (
               <li key={t} className="flex gap-2 sm:flex-col sm:gap-1">
@@ -1127,16 +1189,21 @@ function ContractEditor({ userId, initial, tracks, blueprint, canApprove = false
         {/* Step 1 is Read (founder, 2026-10-27): the contract shows first, then the details to fill in. */}
         <Step n={draft ? 1 : undefined} title={draft ? "Read the contract" : "Contract text"} open={sections.text} onToggle={() => setSections((x) => ({ ...x, text: !x.text }))}
           summary="Fills in as you type" hint={draft ? "Read it first. It fills in as you complete steps 2 and 3, and you sign at the bottom." : c.bodyHash ? `Locked · SHA-256 ${c.bodyHash.slice(0, 16)}…` : undefined}>
-          {draft && (
+          {draft && !blocksMode && (
             <div className="mb-3 flex flex-wrap gap-2">
               {!customized
                 ? <Button variant="outline" size="sm" onClick={() => { setC({ ...c, body: rendered }); setCustomized(true); }}><PenLine className="h-4 w-4" />Customize wording</Button>
                 : <Button variant="ghost" size="sm" onClick={() => setCustomized(false)}><RotateCcw className="h-4 w-4" />Reset to blueprint</Button>}
             </div>
           )}
-          {draft && customized
-            ? <textarea aria-label="Contract text" rows={22} value={body} onChange={(e) => setC({ ...c, body: e.target.value })} className="w-full rounded-xl border border-input bg-background p-4 font-mono text-sm leading-relaxed" />
-            : <div className="max-h-[32rem] overflow-y-auto whitespace-pre-wrap rounded-xl border border-border bg-muted/30 p-5 text-sm leading-relaxed">{body}</div>}
+          {blocksMode
+            ? <div className="space-y-2">
+                <p className="text-xs text-muted-foreground">Built from a template in Template Studio. Its blocks and their wording are fixed; the parties below are named on the signature lines.</p>
+                <iframe title="Contract preview" sandbox="" srcDoc={templateToHtml({ name: c.title, tier: c.isCompany ? "platinum" : "standard", blocks })} className="h-[30rem] w-full rounded-xl border border-border bg-white" />
+              </div>
+            : draft && customized
+              ? <textarea aria-label="Contract text" rows={22} value={body} onChange={(e) => setC({ ...c, body: e.target.value })} className="w-full rounded-xl border border-input bg-background p-4 font-mono text-sm leading-relaxed" />
+              : <div className="max-h-[32rem] overflow-y-auto whitespace-pre-wrap rounded-xl border border-border bg-muted/30 p-5 text-sm leading-relaxed">{body}</div>}
         </Step>
         {draft && (
           <>

@@ -166,6 +166,56 @@ export function formatBlockDate(block: { value: string; format: "long" | "short"
   });
 }
 
+/**
+ * The plain words a block document is made of (founder, 2026-11-16). A contract's fingerprint and its signing page are
+ * text, so a block-built agreement still needs one stable reading order to hash and to show. Headers and seals are
+ * decoration, so they're left out; a date prints its stored day, never today.
+ */
+export function blocksToText(blocks: TemplateBlock[], title = ""): string {
+  const lines: string[] = [];
+  if (title.trim()) lines.push(title.trim().toUpperCase());
+  for (const block of blocks) {
+    if (block.kind === "header" || block.kind === "seal") continue;
+    if (block.kind === "section") {
+      if (block.title.trim()) lines.push("", block.title.trim().toUpperCase());
+      if (block.subtitle.trim()) lines.push(block.subtitle.trim());
+      continue;
+    }
+    if (block.kind === "meta") {
+      if (block.heading.trim()) lines.push("", block.heading.trim().toUpperCase());
+      for (const row of block.rows) lines.push(`${row.label.trim()}: ${row.value.trim()}`);
+      continue;
+    }
+    if (block.kind === "clause") {
+      lines.push("", block.heading.trim());
+      if (block.body.trim()) lines.push(block.body.trim());
+      continue;
+    }
+    if (block.kind === "fields") {
+      if (block.heading.trim()) lines.push("", block.heading.trim().toUpperCase());
+      for (const field of block.fields) lines.push(`${field.label.trim()}: ____________________`);
+      continue;
+    }
+    if (block.kind === "checkboxes") {
+      if (block.heading.trim()) lines.push("", block.heading.trim().toUpperCase());
+      for (const option of block.options) lines.push(`[   ] ${option.label.trim()}`);
+      continue;
+    }
+    if (block.kind === "date") {
+      const printed = formatBlockDate(block);
+      lines.push(`${block.label.trim() ? `${block.label.trim()}: ` : ""}${printed || "—"}`);
+      continue;
+    }
+    if (block.kind === "signature") {
+      lines.push("", block.heading.trim(), "____________________");
+      continue;
+    }
+    lines.push("", block.heading.trim());
+    for (const party of block.parties) lines.push(`____________________  ${party.label.trim()}`);
+  }
+  return lines.join("\n").replace(/\n{3,}/g, "\n\n").trim();
+}
+
 /** Today as yyyy-mm-dd in the browser's own day, for the block's Today button. */
 export function todayIso(): string {
   const now = new Date();

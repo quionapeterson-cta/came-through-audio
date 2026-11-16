@@ -2,6 +2,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { SITE_URL } from "@/lib/email-layout";
 import { trustedOrigin } from "@/lib/invite-limits";
 import { requestBadgeCheck } from "@/lib/badge-events";
+import type { TemplateBlock } from "@/lib/pdf-templates";
 
 /**
  * Every state a contract can be in. A company agreement written by a lead travels draft → pending_approval → sent, or
@@ -48,6 +49,13 @@ export type Contract = {
   approvedBy?: string | null;
   /** The approver's internal note — why it came back, or a line for the record. Never printed on the PDF. */
   reviewerNote?: string | null;
+  /**
+   * A company agreement built from a block template carries the blocks it was made from (founder, 2026-11-16), copied at
+   * creation so a later edit to the template never rewrites an agreement that was already sent.
+   */
+  blocks?: TemplateBlock[] | null;
+  /** Which library template it came from, for the record only. */
+  templateId?: string | null;
 };
 
 export const emptyParty = (role: string, isOwner = false): ContractParty => ({
@@ -55,7 +63,7 @@ export const emptyParty = (role: string, isOwner = false): ContractParty => ({
 });
 
 type PartyRow = { id: string; role: string; legal_name: string; email: string; is_owner: boolean; position: number; invited_at: string | null; signature_name: string | null; signature_hash: string | null; signed_at: string | null };
-type ContractRow = { id: string; blueprint: string; title: string; catalog_id: string | null; fields: Record<string, string> | null; body: string; status: ContractStatus; body_hash: string | null; sent_at: string | null; completed_at: string | null; updated_at: string; is_company?: boolean; paid_purchase_id?: string | null; brand_kit_id?: string | null; submitted_at?: string | null; submitted_by?: string | null; approved_at?: string | null; approved_by?: string | null; reviewer_note?: string | null; contract_parties: PartyRow[] | null };
+type ContractRow = { id: string; blueprint: string; title: string; catalog_id: string | null; fields: Record<string, string> | null; body: string; status: ContractStatus; body_hash: string | null; sent_at: string | null; completed_at: string | null; updated_at: string; is_company?: boolean; paid_purchase_id?: string | null; brand_kit_id?: string | null; submitted_at?: string | null; submitted_by?: string | null; approved_at?: string | null; approved_by?: string | null; reviewer_note?: string | null; blocks?: TemplateBlock[] | null; template_id?: string | null; contract_parties: PartyRow[] | null };
 
 function fromRow(r: ContractRow): Contract {
   return {
@@ -63,6 +71,7 @@ function fromRow(r: ContractRow): Contract {
     bodyHash: r.body_hash ?? "", sentAt: r.sent_at, completedAt: r.completed_at, updatedAt: r.updated_at, isCompany: !!r.is_company, paid: !!r.paid_purchase_id, brandKitId: r.brand_kit_id ?? null,
     submittedAt: r.submitted_at ?? null, submittedBy: r.submitted_by ?? null,
     approvedAt: r.approved_at ?? null, approvedBy: r.approved_by ?? null, reviewerNote: r.reviewer_note ?? null,
+    blocks: Array.isArray(r.blocks) && r.blocks.length ? r.blocks : null, templateId: r.template_id ?? null,
     parties: [...(r.contract_parties ?? [])].sort((a, b) => a.position - b.position).map((p) => ({
       id: p.id, role: p.role, legalName: p.legal_name, email: p.email, isOwner: p.is_owner, invitedAt: p.invited_at,
       signatureName: p.signature_name ?? "", signatureHash: p.signature_hash ?? "", signedAt: p.signed_at,
@@ -87,7 +96,7 @@ export async function getContract(id: string): Promise<Contract | null> {
 /** Saves a draft and its parties. Sent and signed contracts are frozen by the database, so only drafts come here. */
 export async function saveContract(c: Contract): Promise<Contract> {
   // brand_kit_id only when a kit was picked, so saving works before migration 20261027210000 runs.
-  const row = { blueprint: c.blueprint, title: c.title.trim() || "Untitled contract", catalog_id: c.catalogId, fields: c.fields, body: c.body, ...(c.brandKitId ? { brand_kit_id: c.brandKitId } : {}) };
+  const row = { blueprint: c.blueprint, title: c.title.trim() || "Untitled contract", catalog_id: c.catalogId, fields: c.fields, body: c.body, ...(c.brandKitId ? { brand_kit_id: c.brandKitId } : {}), ...(c.blocks?.length ? { blocks: c.blocks, template_id: c.templateId ?? null } : {}) };
   let id = c.id;
   if (id) {
     const { error } = await supabase.from("contracts" as never).update({ ...row, updated_at: new Date().toISOString() } as never).eq("id", id);

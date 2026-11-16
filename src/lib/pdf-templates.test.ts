@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   BRAND,
+  blocksToText,
   canSaveTemplate,
   contrastRatio,
   fillTokens,
@@ -38,6 +39,33 @@ describe("date block", () => {
     expect(preflight(template("")).find((c) => c.id === "blocks")?.ok).toBe(false);
     expect(preflight(template("2026-11-16")).find((c) => c.id === "blocks")?.ok).toBe(true);
     expect(templateToHtml(template("2026-11-16"))).toContain("Effective date");
+  });
+});
+
+describe("blocks as text", () => {
+  it("reads in page order, keeps the stored date, and leaves decoration out", () => {
+    const text = blocksToText(
+      [
+        { id: newId(), kind: "header", background: "light", showTagline: true },
+        { id: newId(), kind: "date", label: "Effective date", value: "2026-11-16", format: "long" },
+        { id: newId(), kind: "clause", heading: "Term", body: "One year, renewing.", help: "" },
+        { id: newId(), kind: "seal", tier: "gold", label: "CTA" },
+        { id: newId(), kind: "signatures", heading: "Signed by", parties: [{ id: newId(), label: "Company" }] },
+      ],
+      "Services Agreement",
+    );
+    expect(text).toBe(
+      [
+        "SERVICES AGREEMENT",
+        "Effective date: 16 November 2026",
+        "",
+        "Term",
+        "One year, renewing.",
+        "",
+        "Signed by",
+        "____________________  Company",
+      ].join("\n"),
+    );
   });
 });
 
