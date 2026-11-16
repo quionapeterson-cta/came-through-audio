@@ -38,7 +38,10 @@ async function openByLink(partyId: string, token: string) {
   const { data: contract } = await db.from("contracts" as never).select("id, title, blueprint, fields, body, body_hash, status, sent_at, completed_at, is_company").eq("id", p.contract_id).maybeSingle();
   const k = contract as CompanyContract | null;
   if (!k?.is_company) throw fail;
-  if (k.status === "draft") throw new Error("This agreement is being edited. Try your link again later.");
+  // Only an approved agreement is readable: this path runs as the service role, so the database's refusal in
+  // get_contract_invite never happens here (founder, 2026-11-16 — a lead's draft or a contract in review must not reach a
+  // signer, even to read).
+  if (k.status !== "sent" && k.status !== "signed") throw new Error(k.status === "pending_approval" || k.status === "changes_requested" ? "This agreement is still being reviewed. Your link will work once it is approved and sent." : "This agreement is being edited. Try your link again later.");
   return { db, p, k };
 }
 
