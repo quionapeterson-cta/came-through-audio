@@ -442,6 +442,8 @@ function blockHtml(
   block: TemplateBlock,
   data: Record<string, string> = SAMPLE_DATA,
   values?: BlockValues,
+  /** A signing page fills its fields in place, inside the document, instead of printing the answers only. */
+  editable = false,
 ): string {
   if (block.kind === "header") {
     const ink = headerInk(block.background);
@@ -483,7 +485,13 @@ function blockHtml(
   ${block.fields
     .map((f) => {
       const answer = answerFor(values, f.id);
-      return `<div style="margin-bottom:14px"><div style="font-size:11px;font-weight:600;color:${BRAND.black}">${esc(f.label)}${f.required ? " *" : ""}</div><div style="border-bottom:1px solid ${BRAND.platinum};min-height:${f.type === "textarea" ? 44 : 24}px;font-size:12px;color:${BRAND.black};padding-top:4px">${esc(answer)}</div></div>`;
+      const line = `border:0;border-bottom:1px solid ${BRAND.platinum};background:transparent;width:100%;font-family:inherit;font-size:12px;color:${BRAND.black};padding:4px 0`;
+      const field = editable
+        ? f.type === "textarea"
+          ? `<textarea data-bv="${esc(f.id)}" rows="2" style="${line};resize:vertical">${esc(answer)}</textarea>`
+          : `<input data-bv="${esc(f.id)}" value="${esc(answer)}" aria-label="${esc(f.label)}" style="${line}" />`
+        : `<div style="border-bottom:1px solid ${BRAND.platinum};min-height:${f.type === "textarea" ? 44 : 24}px;font-size:12px;color:${BRAND.black};padding-top:4px">${esc(answer)}</div>`;
+      return `<div style="margin-bottom:14px"><div style="font-size:11px;font-weight:600;color:${BRAND.black}">${esc(f.label)}${f.required ? " *" : ""}</div>${field}</div>`;
     })
     .join("\n  ")}
 </section>`;
@@ -491,7 +499,13 @@ function blockHtml(
   if (block.kind === "checkboxes") {
     return `<section style="padding:24px 48px 0">
   <h2 style="font-size:12px;letter-spacing:2px;text-transform:uppercase;color:${BRAND.cobalt};margin:0 0 10px">${esc(fillTokens(block.heading))}</h2>
-  ${block.options.map((o) => `<div style="font-size:12px;color:${BRAND.black};margin:6px 0">${tickedIn(values, block.id).has(o.id) ? "☑" : "☐"}&nbsp;&nbsp;${esc(o.label)}</div>`).join("\n  ")}
+  ${block.options
+    .map((o) =>
+      editable
+        ? `<label style="display:flex;gap:8px;align-items:center;font-size:12px;color:${BRAND.black};margin:6px 0"><input type="${block.mode === "single" ? "radio" : "checkbox"}" name="g-${esc(block.id)}" data-bg="${esc(block.id)}" value="${esc(o.id)}"${tickedIn(values, block.id).has(o.id) ? " checked" : ""} />${esc(o.label)}</label>`
+        : `<div style="font-size:12px;color:${BRAND.black};margin:6px 0">${tickedIn(values, block.id).has(o.id) ? "☑" : "☐"}&nbsp;&nbsp;${esc(o.label)}</div>`,
+    )
+    .join("\n  ")}
 </section>`;
   }
   if (block.kind === "date") {
@@ -647,12 +661,29 @@ export function templateToHtml(
   template: PdfTemplate,
   data: Record<string, string> = SAMPLE_DATA,
   values?: BlockValues,
+  editable = false,
 ): string {
   return `<!doctype html>
 <html lang="en"><head><meta charset="utf-8"><title>${esc(template.name)}</title>
 <style>@page{size:Letter;margin:0}body{margin:0;background:${BRAND.platinum};font-family:Helvetica,Arial,sans-serif}main{background:${BRAND.white};max-width:816px;margin:24px auto;padding-bottom:48px}</style>
 </head><body><main>
-${template.blocks.map((block) => blockHtml(block, data, values)).join("\n")}
+${template.blocks.map((block) => blockHtml(block, data, values, editable)).join("\n")}
 <footer style="margin:40px 48px 0;border-top:1px solid ${BRAND.platinum};padding-top:12px;font-size:9px;letter-spacing:2px;color:${BRAND.black};opacity:0.65">CAME THROUGH AUDIO · ${TAGLINE}</footer>
-</main></body></html>`;
+  </main></body></html>`;
+}
+
+/**
+ * The same document, filling in as it is read (founder, 2026-11-16): the fields and choice groups become real inputs, and a
+ * small script inside the frame reports every change to the page around it. It runs in a sandbox with no access to the
+ * app — it can only post a message — so a template's own markup can never reach the signed-in page.
+ */
+export function templateToSigningHtml(
+  template: PdfTemplate,
+  data: Record<string, string> = SAMPLE_DATA,
+  values?: BlockValues,
+): string {
+  const html = templateToHtml(template, data, values, true);
+  const script =
+    '<script>(function(){function collect(){var out={};document.querySelectorAll("[data-bv]").forEach(function(el){out[el.getAttribute("data-bv")]=el.value;});document.querySelectorAll("[data-bg]").forEach(function(el){var k=el.getAttribute("data-bg");if(!out[k])out[k]=[];if(el.checked)out[k].push(el.value);});parent.postMessage({type:"cta-block-values",values:out},"*");}document.addEventListener("input",collect);document.addEventListener("change",collect);collect();})();</script>';
+  return html.replace("</body>", `${script}</body>`);
 }
