@@ -1115,7 +1115,11 @@ function ContractEditor({ userId, initial, tracks, blueprint, canApprove = false
       const bytes = await templateToPdfBytes(
         { name: c.title, tier: c.isCompany ? "platinum" : "standard", blocks },
         {},
-        { signatures: { recipient: record(c.parties.find((p) => !p.isOwner && p.signedAt), "recipient"), admin: record(c.parties.find((p) => p.isOwner), "admin") } },
+        {
+          signatures: { recipient: record(c.parties.find((p) => !p.isOwner && p.signedAt), "recipient"), admin: record(c.parties.find((p) => p.isOwner), "admin") },
+          // The template's own signature lines, in party order: Company first, then the people who sign.
+          lineSignatures: c.parties.map((p) => (p.signedAt && p.signatureName ? { name: p.signatureName, signedAt: p.signedAt } : null)),
+        },
       );
       const name = (c.title.trim() || "contract").replace(/[^\w\- ]+/g, "").trim() || "contract";
       saveBlob(new Blob([bytes as unknown as BlobPart], { type: "application/pdf" }), `${name}${c.status === "signed" ? " - Signed" : ""}.pdf`);

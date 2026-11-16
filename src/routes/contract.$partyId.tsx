@@ -66,7 +66,10 @@ const pdf = async (i: ContractInvite) => {
     const bytes = await templateToPdfBytes(
       { name: i.title, tier: "platinum", blocks: i.blocks },
       {},
-      { signatures: { recipient: record(i.parties.find((p) => p.signed_at && p.role !== "Company"), "recipient"), admin: record(i.parties.find((p) => p.role === "Company"), "admin") } },
+      {
+        signatures: { recipient: record(i.parties.find((p) => p.signed_at && p.role !== "Company"), "recipient"), admin: record(i.parties.find((p) => p.role === "Company"), "admin") },
+        lineSignatures: i.parties.map((p) => (p.signed_at && p.signature_name ? { name: p.signature_name, signedAt: p.signed_at } : null)),
+      },
     );
     saveBlob(new Blob([bytes as unknown as BlobPart], { type: "application/pdf" }), `${(i.title.trim() || "contract").replace(/[^\w\- ]+/g, "").trim() || "contract"}${i.status === "signed" ? " - Signed" : ""}.pdf`);
     return;

@@ -73,6 +73,11 @@ export type PacketRenderOptions = {
   blocks?: TemplateBlock[];
   values?: PacketValues;
   signatures?: { recipient?: SignatureRecord | null; admin?: SignatureRecord | null };
+  /**
+   * Signatures for a plain "Signature lines" block, in the block's own party order. That block names its signers in the
+   * template (Company, then the recipient), so a contract built from blocks maps its parties onto these lines by order.
+   */
+  lineSignatures?: ({ name: string; signedAt: string } | null)[] | undefined;
   audit?: PacketAudit;
   /**
    * Where the seal artwork is fetched from: the site's own origin, since the pictures are public assets beside the app.
@@ -240,7 +245,7 @@ export async function templateToPdfBytes(
         color: ink(BRAND.cobalt),
       });
       y -= 22;
-      for (const party of block.parties) {
+      for (const [index, party] of block.parties.entries()) {
         ensure(44);
         page.drawLine({
           start: { x: MARGIN, y },
@@ -248,6 +253,21 @@ export async function templateToPdfBytes(
           thickness: 0.8,
           color: ink(BRAND.black),
         });
+        // A signed line carries the typed name over the rule and the day it was given, the way a paper signature sits.
+        const line = options.lineSignatures?.[index] ?? null;
+        if (line) {
+          page.drawText(clean(line.name).slice(0, 60), {
+            x: MARGIN + 4,
+            y: y + 6,
+            size: 13,
+            font: signatureFont,
+            color: ink(BRAND.black),
+          });
+          page.drawText(
+            new Date(line.signedAt).toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" }),
+            { x: MARGIN + contentWidth * 0.58, y: y - 12, size: 8, font: regular, color: ink(BRAND.black) },
+          );
+        }
         page.drawText(text(party.label), {
           x: MARGIN,
           y: y - 12,
