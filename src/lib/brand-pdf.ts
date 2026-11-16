@@ -3,6 +3,7 @@ import { LOGO_PATH, LOGO_RATIO, LOGO_VIEWBOX } from "@/lib/brand-logo";
 import { SITE_URL } from "@/lib/email-layout";
 import { fontFile, hexRgb, logoTop, type BrandFont, type PdfBrand } from "@/lib/brand-kit";
 import { SYSTEM_FONTS } from "@/lib/brand-fonts";
+import { logoFor, printSizedLogo } from "@/lib/brand-logo-print";
 
 export const COBALT: [number, number, number] = [0, 74, 173];
 export const INK: [number, number, number] = [11, 11, 11];
@@ -54,7 +55,11 @@ const withBrandFont = new WeakSet<JsPDF>();
 export async function newBrandedPdf(brand?: PdfBrand | null) {
   const { jsPDF } = await import("jspdf");
   const pdf = new jsPDF({ unit: "mm", format: "letter" });
-  const [fonts, extra] = await Promise.all([loadPoppins(), brand && brand.font !== "Poppins" && !SYSTEM_FONTS.has(brand.font) ? loadBrandFont(brand.font) : null]);
+  const [fonts, extra] = await Promise.all([
+    loadPoppins(),
+    brand && brand.font !== "Poppins" && !SYSTEM_FONTS.has(brand.font) ? loadBrandFont(brand.font) : null,
+    brand?.logo?.dataUrl ? printSizedLogo(pdf, brand.logo.dataUrl) : null,
+  ]);
   if (fonts) {
     for (const [w, data] of Object.entries(fonts) as [Weight, string][]) {
       pdf.addFileToVFS(`${WEIGHT_FILES[w]}.ttf`, data);
@@ -180,14 +185,15 @@ function kitHeader(pdf: JsPDF, brand: PdfBrand) {
   let lw = 0, right = false;
   if (brand.logo) {
     try {
-      const p = pdf.getImageProperties(brand.logo.dataUrl);
+      const src = logoFor(pdf, brand);
+      const p = pdf.getImageProperties(src);
       const s = Math.min(34 / p.width, 16 / p.height);
       lw = p.width * s;
       const lh = p.height * s;
       right = brand.options.logoAlign === "right";
       // Its own line and fine movement, so a picture with empty space above its ink can be lined up by eye.
       const y = logoTop({ snap: brand.options.logoSnap, nudge: brand.options.logoNudge, height: lh, hasTagline: !!brand.tagline });
-      pdf.addImage(brand.logo.dataUrl, p.fileType, right ? w - MARGIN - lw : MARGIN, y, lw, lh);
+      pdf.addImage(src, p.fileType, right ? w - MARGIN - lw : MARGIN, y, lw, lh);
     } catch { /* an unreadable logo leaves the name on its own */ lw = 0; right = false; }
   }
   const x = right ? w - MARGIN - lw - 5 : MARGIN + (lw ? lw + 5 : 0);
@@ -205,11 +211,12 @@ function kitHeader(pdf: JsPDF, brand: PdfBrand) {
 function fitLogo(pdf: JsPDF, brand: PdfBrand, box: { x: number; y: number; w: number; h: number }, align: "left" | "right" | "centre" = "left") {
   if (!brand.logo) return 0;
   try {
-    const p = pdf.getImageProperties(brand.logo.dataUrl);
+    const src = logoFor(pdf, brand);
+    const p = pdf.getImageProperties(src);
     const s = Math.min(box.w / p.width, box.h / p.height);
     const lw = p.width * s, lh = p.height * s;
     const x = align === "right" ? box.x - lw : align === "centre" ? box.x + (box.w - lw) / 2 : box.x;
-    pdf.addImage(brand.logo.dataUrl, p.fileType, x, box.y, lw, lh);
+    pdf.addImage(src, p.fileType, x, box.y, lw, lh);
     return lw;
   } catch { return 0; }
 }
@@ -291,9 +298,10 @@ export function kitCover(pdf: JsPDF, brand: PdfBrand, title: string, subtitle: s
   let y = h * 0.3;
   if (brand.logo) {
     try {
-      const p = pdf.getImageProperties(brand.logo.dataUrl);
+      const src = logoFor(pdf, brand);
+      const p = pdf.getImageProperties(src);
       const sc = Math.min(80 / p.width, 50 / p.height);
-      pdf.addImage(brand.logo.dataUrl, p.fileType, (w - p.width * sc) / 2, y - p.height * sc, p.width * sc, p.height * sc);
+      pdf.addImage(src, p.fileType, (w - p.width * sc) / 2, y - p.height * sc, p.width * sc, p.height * sc);
       y += 14;
     } catch { /* an unreadable logo leaves the name on its own */ }
   }
@@ -314,12 +322,13 @@ export function kitWatermark(pdf: JsPDF, brand: PdfBrand) {
   if (!brand.logo) return;
   const w = pdf.internal.pageSize.getWidth(), h = pdf.internal.pageSize.getHeight();
   try {
-    const p = pdf.getImageProperties(brand.logo.dataUrl);
+    const src = logoFor(pdf, brand);
+    const p = pdf.getImageProperties(src);
     const sc = Math.min(120 / p.width, 120 / p.height);
     const G = (pdf as unknown as { GState: new (o: { opacity: number }) => unknown }).GState;
     pdf.saveGraphicsState();
     (pdf as unknown as { setGState: (g: unknown) => void }).setGState(new G({ opacity: 0.07 }));
-    pdf.addImage(brand.logo.dataUrl, p.fileType, (w - p.width * sc) / 2, (h - p.height * sc) / 2, p.width * sc, p.height * sc);
+    pdf.addImage(src, p.fileType, (w - p.width * sc) / 2, (h - p.height * sc) / 2, p.width * sc, p.height * sc);
     pdf.restoreGraphicsState();
   } catch { /* no watermark if the logo can't be drawn */ }
 }
@@ -379,9 +388,10 @@ export function brandFooter(pdf: JsPDF, brand?: PdfBrand | null) {
     // Minimal kits: their logo small at the bottom right, above the rule.
     if (brand?.style === "minimal" && brand.logo) {
       try {
-        const p = pdf.getImageProperties(brand.logo.dataUrl);
+        const src = logoFor(pdf, brand);
+        const p = pdf.getImageProperties(src);
         const sc = Math.min(18 / p.width, 8 / p.height);
-        pdf.addImage(brand.logo.dataUrl, p.fileType, w - MARGIN - p.width * sc, h - 27 - p.height * sc, p.width * sc, p.height * sc);
+        pdf.addImage(src, p.fileType, w - MARGIN - p.width * sc, h - 27 - p.height * sc, p.width * sc, p.height * sc);
       } catch { /* an unreadable logo is left out */ }
     }
     pdf.setDrawColor(...(brand?.options.accent ? hexRgb(brand.options.accent) : RULE)).setLineWidth(0.3).line(MARGIN, h - 17, w - MARGIN, h - 17);
