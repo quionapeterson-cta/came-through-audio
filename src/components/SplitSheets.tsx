@@ -644,9 +644,9 @@ async function buildSplitPdf(track: CatalogTrack, rawCollaborators: SplitCollabo
       const setSignature = () =>
         cursive ? pdf.setFont(SIGNATURE_FONT, "bold").setFontSize(18) : pdf.setFont("times", "italic").setFontSize(18);
       setSignature().setTextColor(...INK).text(c.signatureName, x + 5, y + 12);
-    } else {
-      pdf.setFont("helvetica", "italic").setFontSize(10).setTextColor(...MUTED).text(c.invitedAt ? "Awaiting signature" : "Not yet requested", x + 5, y + 12);
     }
+    // An unsigned box is left blank on purpose (founder, 2026-11-16): the download is often printed and signed in
+    // person, so no status line may sit where the pen goes. The screen still says who has not signed yet.
     pdf.setDrawColor(...INK).line(x + 5, y + 15, x + boxW - 5, y + 15);
     pdf.setFont("helvetica", "bold").setFontSize(9).setTextColor(...INK).text(`${c.name}${c.isOwner ? "  (Account owner)" : ""}`, x + 5, y + 20);
     pdf.setFont("helvetica", "normal").setFontSize(7.5).setTextColor(...MUTED);
