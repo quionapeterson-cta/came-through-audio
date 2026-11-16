@@ -42,6 +42,7 @@ import {
   TAGLINE,
   TOKENS,
   canSaveTemplate,
+  contractCardSummary,
   fillTokens,
   headerInk,
   newId,
@@ -57,6 +58,7 @@ import {
   duplicatePdfTemplate,
   listPdfTemplates,
   savePdfTemplate,
+  setTemplateInContracts,
   type SavedTemplate,
 } from "@/lib/pdf-templates.functions";
 import { templateToPdfBytes } from "@/lib/pdf-template-pdf";
@@ -498,6 +500,8 @@ export function PdfTemplateStudio() {
   const [library, setLibrary] = useState<SavedTemplate[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  /** The library row whose Company Contracts switch is mid-save, so a second click can't race the first. */
+  const [contractBusy, setContractBusy] = useState<string | null>(null);
   /** The block being dragged in the rail, so a drag lands where it is dropped. */
   const [dragId, setDragId] = useState<string | null>(null);
   /** The page and the editor share one row; the divider between them moves the split, like chat and preview here. */
@@ -545,6 +549,7 @@ export function PdfTemplateStudio() {
   const save = useServerFn(savePdfTemplate);
   const duplicate = useServerFn(duplicatePdfTemplate);
   const remove = useServerFn(deletePdfTemplate);
+  const setInContracts = useServerFn(setTemplateInContracts);
 
   const active = template.blocks.find((b) => b.id === activeId) ?? null;
   const railRef = useRef<HTMLUListElement>(null);
@@ -787,6 +792,46 @@ export function PdfTemplateStudio() {
       loadLibrary();
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Couldn't delete the template.");
+    }
+  }
+
+  /** Show in Contracts: a switch on the row, never a copy of the document. Off leaves the template in the library. */
+  async function toggleContracts(saved: SavedTemplate, showInContracts: boolean) {
+    setContractBusy(saved.id);
+    try {
+      const updated = await setInContracts({ data: { id: saved.id, showInContracts } });
+      setLibrary((rows) => rows.map((row) => (row.id === saved.id ? updated : row)));
+      toast.success(
+        showInContracts
+          ? `“${saved.name}” now appears in Company Contracts.`
+          : `“${saved.name}” is hidden from Company Contracts.`,
+      );
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Couldn't change where this template appears.");
+    } finally {
+      setContractBusy(null);
+    }
+  }
+
+  /** The card's own line. Typing nothing puts the summary back to what the template is made of. */
+  async function saveCardDescription(saved: SavedTemplate, text: string) {
+    const next = text.trim();
+    if (next === (saved.contractDescription ?? "")) return;
+    setContractBusy(saved.id);
+    try {
+      const updated = await setInContracts({
+        data: {
+          id: saved.id,
+          showInContracts: saved.showInContracts,
+          contractDescription: next,
+        },
+      });
+      setLibrary((rows) => rows.map((row) => (row.id === saved.id ? updated : row)));
+      toast.success("Card description saved.");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Couldn't save the card description.");
+    } finally {
+      setContractBusy(null);
     }
   }
 
@@ -1409,9 +1454,7 @@ export function PdfTemplateStudio() {
                           />
                           <Input
                             value={active.formKey ?? ""}
-                            onChange={(e) =>
-                              patch(active.id, { formKey: e.target.value.trim() })
-                            }
+                            onChange={(e) => patch(active.id, { formKey: e.target.value.trim() })}
                             placeholder="Form key (blank = always included)"
                             aria-label="Form key"
                           />
@@ -1786,6 +1829,18 @@ export function PdfTemplateStudio() {
                   {TIER_LABELS[saved.tier]} · {saved.blocks.length} blocks · updated{" "}
                   {when(saved.updatedAt)}
                 </p>
+                {saved.showInContracts ? (
+                  <Input
+                    key={`${saved.id}-card`}
+                    defaultValue={saved.contractDescription ?? ""}
+                    aria-label={`Company Contracts description for ${saved.name}`}
+                    placeholder={contractCardSummary(null, saved.blocks.length)}
+                    maxLength={200}
+                    disabled={contractBusy === saved.id}
+                    onBlur={(event) => void saveCardDescription(saved, event.target.value)}
+                    className="mt-1.5 h-8 text-xs"
+                  />
+                ) : null}
               </div>
               <Button variant="outline" size="sm" onClick={() => openSaved(saved)}>
                 Open
@@ -1806,6 +1861,17 @@ export function PdfTemplateStudio() {
               >
                 <Trash2 className="h-4 w-4" />
               </Button>
+              <label className="flex cursor-pointer items-center gap-1.5 text-xs text-muted-foreground">
+                <input
+                  type="checkbox"
+                  className="h-3.5 w-3.5 accent-[var(--primary)]"
+                  checked={saved.showInContracts}
+                  disabled={contractBusy === saved.id}
+                  onChange={(event) => void toggleContracts(saved, event.target.checked)}
+                  aria-label={`Show ${saved.name} in Company Contracts`}
+                />
+                Show in Contracts
+              </label>
             </li>
           ))}
         </ul>

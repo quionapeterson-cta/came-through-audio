@@ -62,3 +62,7 @@ scripts/demo/*.webp
 # Print-size 4K badge masters live in the R2 bucket (4k/), never in public/ or git.
 # Local archived copies live in art/badges-4k/ (ignored above).
 /public/icons/**/*4K*
+
+# Review-only previews kept out of the app build (mock page and its screenshot)
+/preview-mock/
+/artifacts/

@@ -210,6 +210,19 @@ export function unknownTokens(template: PdfTemplate): string[] {
   return [...found];
 }
 
+/**
+ * The line a Company Contracts card prints under its title. A saved description wins; otherwise the card says what the
+ * document is made of, so a template toggled on is never a blank card with no explanation.
+ */
+export function contractCardSummary(
+  description: string | null | undefined,
+  blockCount: number,
+): string {
+  const written = (description ?? "").trim();
+  if (written) return written;
+  return `Custom template · ${blockCount} block${blockCount === 1 ? "" : "s"}`;
+}
+
 export const newId = () => Math.random().toString(36).slice(2, 10);
 
 /** WCAG relative luminance, so the contrast check is the real formula rather than a guess. */

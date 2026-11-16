@@ -41,12 +41,18 @@ const templateInput = z.object({
   tier: z.enum(TEMPLATE_TIERS),
   blocks: z.array(blockSchema).min(1).max(60),
   source: z.enum(["built", "converted"]).default("built"),
+  /** The Company Contracts card's one line. Absent leaves a saved description alone. */
+  contractDescription: z.string().trim().max(200).nullable().optional(),
 });
 
 export type SavedTemplate = Required<Pick<PdfTemplate, "id" | "name" | "tier" | "blocks">> & {
   source: "built" | "converted";
   updatedAt: string;
   createdBy: string;
+  /** Off by default: a template shows in Company Contracts only when a lead turns it on. */
+  showInContracts: boolean;
+  /** The card's own description; blank falls back to "Custom template · N blocks". */
+  contractDescription: string | null;
 };
 
 type Row = {
@@ -58,6 +64,9 @@ type Row = {
   created_at: string;
   updated_at: string;
   created_by: string;
+  /** Absent until migration 20261116140000 runs, so an older database reads as "not in contracts". */
+  show_in_contracts?: boolean | null;
+  contract_description?: string | null;
 };
 
 async function requireStaff(context: Ctx): Promise<void> {
@@ -96,6 +105,8 @@ const toTemplate = (row: Row): SavedTemplate => ({
   source: row.source === "converted" ? "converted" : "built",
   updatedAt: row.updated_at,
   createdBy: row.created_by,
+  showInContracts: !!row.show_in_contracts,
+  contractDescription: row.contract_description?.trim() ? row.contract_description.trim() : null,
 });
 
 /** Every saved template, newest first. */
@@ -126,6 +137,10 @@ export const savePdfTemplate = createServerFn({ method: "POST" })
       source: data.source,
       updated_by: context.userId,
       updated_at: new Date().toISOString(),
+      // Only when the editor actually sent one, so saving a template never quietly clears its card description.
+      ...(data.contractDescription !== undefined
+        ? { contract_description: data.contractDescription || null }
+        : {}),
     };
     const query = data.id
       ? context.supabase
@@ -180,4 +195,60 @@ export const deletePdfTemplate = createServerFn({ method: "POST" })
       .eq("id", data.id);
     if (error) throw new Error("Couldn't delete the template.");
     return { ok: true };
+  });
+
+/**
+ * The Company Contracts switch (founder, 2026-11-16). Turning it off never deletes anything: the template stays in the
+ * library, it just stops appearing as a contract card. Same author rule as every other template write.
+ */
+export const setTemplateInContracts = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) =>
+    z
+      .object({
+        id: z.string().uuid(),
+        showInContracts: z.boolean(),
+        contractDescription: z.string().trim().max(200).nullable().optional(),
+      })
+      .parse(d),
+  )
+  .handler(async ({ data, context }): Promise<SavedTemplate> => {
+    await requireTemplateAuthor(context);
+    const patch: Record<string, unknown> = {
+      show_in_contracts: data.showInContracts,
+      updated_by: context.userId,
+      updated_at: new Date().toISOString(),
+    };
+    if (data.contractDescription !== undefined) {
+      patch["contract_description"] = data.contractDescription || null;
+    }
+    const { data: saved, error } = await context.supabase
+      .from("pdf_templates" as never)
+      .update(patch as never)
+      .eq("id", data.id)
+      .select("*")
+      .single();
+    if (error)
+      throw new Error(
+        "Couldn't change where this template appears. Run migration 20261116140000 first.",
+      );
+    return toTemplate(saved as unknown as Row);
+  });
+
+/**
+ * The custom cards for Admin → Company Contracts. Only the toggled templates come back, and only to a lead, because an
+ * employee must not see company agreements they cannot use.
+ */
+export const listContractTemplates = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }): Promise<SavedTemplate[]> => {
+    await requireTemplateAuthor(context);
+    const { data, error } = await context.supabase
+      .from("pdf_templates" as never)
+      .select("*")
+      .eq("show_in_contracts" as never, true as never)
+      .order("updated_at", { ascending: false })
+      .limit(60);
+    if (error) return [];
+    return ((data ?? []) as unknown as Row[]).map(toTemplate);
   });
