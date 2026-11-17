@@ -1,7 +1,7 @@
 import { PDFDocument, StandardFonts } from "pdf-lib";
 import { describe, expect, it } from "vitest";
 import { starterPresets } from "./pdf-templates";
-import { templateToPdfBytes, wrapText } from "./pdf-template-pdf";
+import { fieldAnswer, templateToPdfBytes, wrapText } from "./pdf-template-pdf";
 
 describe("templateToPdfBytes", () => {
   it("renders every preset as a real PDF", async () => {
@@ -20,6 +20,23 @@ describe("templateToPdfBytes", () => {
     const bytes = await templateToPdfBytes(long);
     const reopened = await PDFDocument.load(bytes);
     expect(reopened.getPageCount()).toBeGreaterThan(1);
+  });
+});
+
+describe("fieldAnswer", () => {
+  it("prints a date field's stored day in words", () => {
+    expect(fieldAnswer({ type: "date" }, "2026-11-16")).toBe("16 November 2026");
+    expect(fieldAnswer({ type: "date" }, "2027-03-16")).toBe("16 March 2027");
+  });
+
+  it("leaves other answers as they were typed", () => {
+    expect(fieldAnswer({ type: "text" }, "  Qui-Ona Peterson ")).toBe("Qui-Ona Peterson");
+    expect(fieldAnswer({ type: "textarea" }, undefined)).toBe("");
+  });
+
+  it("prints a day it cannot read instead of hiding it", () => {
+    expect(fieldAnswer({ type: "date" }, "Nov 16")).toBe("Nov 16");
+    expect(fieldAnswer({ type: "date" }, undefined)).toBe("");
   });
 });
 

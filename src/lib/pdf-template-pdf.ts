@@ -7,6 +7,7 @@ import {
   SAMPLE_DATA,
   SEAL_ART,
   TAGLINE,
+  type FillableField,
   type PdfTemplate,
   type TemplateBlock,
 } from "./pdf-templates";
@@ -86,6 +87,17 @@ export function wrapText(text: string, font: PDFFont, size: number, width: numbe
     lines.push(line);
   }
   return lines;
+}
+
+/**
+ * What a filled field prints (founder, 2026-11-17). A date field keeps yyyy-mm-dd in the record and prints as the
+ * document's own words, so an internship's placement reads "16 November 2026" the way the signature dates do. A value
+ * that is not a real yyyy-mm-dd day prints as it was typed rather than disappearing.
+ */
+export function fieldAnswer(field: { type: FillableField["type"] }, value: unknown): string {
+  const filled = String(value ?? "").trim();
+  if (field.type !== "date") return filled;
+  return formatBlockDate({ value: filled, format: "long" }) || filled;
 }
 
 /** What a sent packet adds to a template: the filled values, both signatures, and the audit certificate. */
@@ -356,7 +368,7 @@ export async function templateToPdfBytes(
         const lines = field.type === "textarea" ? 2 : 1;
         const label =
           wrapText(`${field.label}${field.required ? " *" : ""}`, bold, 8.5, contentWidth)[0] ?? "";
-        const answer = String(options.values?.[field.id] ?? "").trim();
+        const answer = fieldAnswer(field, options.values?.[field.id]);
         ensure(20 + lines * 16);
         page.drawText(label, { x: MARGIN, y, size: 8.5, font: bold, color: ink(BRAND.black) });
         y -= 12;
