@@ -461,4 +461,33 @@ describe("AgencyLists", () => {
     expect(screen.getByRole("option", { name: "Late Bloom · EP" })).toBeTruthy();
     delete globals.localStorage;
   });
+
+  it("offers the account a browser-only release again, so it doesn't stay stranded here", async () => {
+    // Typed while signed out, so the account's list has never heard of it. This environment has no localStorage, so the
+    // browser's copy is stood in for here.
+    const map = new Map<string, string>();
+    const shim: Storage = {
+      get length() { return map.size; },
+      clear: () => map.clear(),
+      getItem: (k) => map.get(k) ?? null,
+      key: (i) => [...map.keys()][i] ?? null,
+      removeItem: (k) => { map.delete(k); },
+      setItem: (k, v) => { map.set(k, String(v)); },
+    };
+    const globals = globalThis as unknown as { localStorage?: Storage };
+    globals.localStorage = shim;
+    map.set("cta.fill-releases.v2.u1", JSON.stringify([{ type: "EP", name: "Late Bloom" }]));
+    vi.mocked(listFillReleases).mockResolvedValueOnce([]);
+    vi.mocked(rememberFillRelease).mockClear();
+    vi.mocked(rememberFillRelease).mockResolvedValueOnce({ id: "acct-9", type: "EP", name: "Late Bloom" });
+    render(<AgencyLists userId="u1" societies={[ascap]} songsFor={() => []} summaries={{}} onApply={vi.fn().mockResolvedValue(undefined)} />);
+    // The account answers with an empty list, and the release it doesn't know is sent to it without anyone clicking.
+    await waitFor(() => expect(vi.mocked(rememberFillRelease)).toHaveBeenCalledWith({ data: { type: "EP", name: "Late Bloom" } }));
+    const file = new File(["Work Title,Writer Name,Share\nGold Teeth,RAY BO,100\n"], "ascap.csv", { type: "text/csv" });
+    fireEvent.change(screen.getByLabelText("Upload your ASCAP list"), { target: { files: [file] } });
+    fireEvent.click(await screen.findByRole("button", { name: /Fill my catalog/ }));
+    // The offer then carries the account's own row, so the retry reached the account rather than the browser alone.
+    await waitFor(() => expect((screen.getByRole("option", { name: "Late Bloom · EP" }) as HTMLOptionElement).value).toBe("custom:acct-9"));
+    delete globals.localStorage;
+  });
 });

@@ -107,7 +107,22 @@ export function AgencyLists({ userId, societies, songsFor, summaries, allTracks,
     void listFillReleases()
       // The account's answer is the real list, but it cannot know a release typed while signed out or offline, so the
       // browser's copy is merged in rather than replaced (founder, 2026-11-17): reading the account used to erase it.
-      .then((list) => { if (!live) return; const merged = mergeRemembered(withoutKeystrokes(list), readCachedReleases(userId)); setRemembered(merged); cacheReleases(userId, merged); })
+      .then((list) => {
+        if (!live) return;
+        const account = withoutKeystrokes(list);
+        const local = readCachedReleases(userId);
+        const merged = mergeRemembered(account, local);
+        setRemembered(merged);
+        cacheReleases(userId, merged);
+        // A release the account's list doesn't have never reached it, so this browser is the only place it lives. It is
+        // offered to the account again as the account answers (founder, 2026-11-17), so the next device reads it too; a
+        // refusal leaves it where the merge already put it, in the browser's own copy.
+        for (const entry of local.filter((r) => !account.some((a) => releaseKey(a) === releaseKey(r)))) {
+          void saveFillRelease({ data: { type: entry.type, name: entry.name.trim() } })
+            .then((saved) => { if (!live) return; setRemembered((list) => { const next = mergeRelease(list, saved); cacheReleases(userId, next); return next; }); })
+            .catch(() => undefined);
+        }
+      })
       .catch(() => undefined);
     return () => { live = false; };
   }, [userId]);
