@@ -12,6 +12,7 @@ import {
 } from "./pdf-templates";
 import type { PacketAudit, PacketValues, SignatureRecord } from "./pdf-packets";
 import fontkit from "@pdf-lib/fontkit";
+import { easternDay, easternMoment } from "./eastern-time";
 import { SIGNATURE_FILE } from "./signature-font";
 
 /**
@@ -113,7 +114,10 @@ export async function templateToPdfBytes(
   const doc = await PDFDocument.create();
   const regular = await doc.embedFont(StandardFonts.Helvetica);
   const bold = await doc.embedFont(StandardFonts.HelveticaBold);
-  const signatureFont = await embedSignatureFont(doc, await doc.embedFont(StandardFonts.HelveticaOblique));
+  const signatureFont = await embedSignatureFont(
+    doc,
+    await doc.embedFont(StandardFonts.HelveticaOblique),
+  );
   const text = (value: string) => fillTokens(clean(value), data);
   const blocks = options.blocks ?? template.blocks;
 
@@ -282,10 +286,15 @@ export async function templateToPdfBytes(
             font: signatureFont,
             color: ink(BRAND.black),
           });
-          page.drawText(
-            new Date(line.signedAt).toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" }),
-            { x: MARGIN + contentWidth * 0.58, y: y - 12, size: 8, font: regular, color: ink(BRAND.black) },
-          );
+          // The Eastern day (founder, 2026-11-17): a signature given in the evening keeps its own date instead of
+          // printing UTC's tomorrow.
+          page.drawText(easternDay(line.signedAt), {
+            x: MARGIN + contentWidth * 0.58,
+            y: y - 12,
+            size: 8,
+            font: regular,
+            color: ink(BRAND.black),
+          });
         }
         page.drawText(text(party.label), {
           x: MARGIN,
@@ -511,11 +520,8 @@ export async function templateToPdfBytes(
         });
       }
       if (signed && block.showDate) {
-        const day = new Date(signed.signedAt).toLocaleDateString("en-GB", {
-          day: "numeric",
-          month: "long",
-          year: "numeric",
-        });
+        // The Eastern day (founder, 2026-11-17), so an evening signature on the 16th never prints as the 17th.
+        const day = easternDay(signed.signedAt);
         page.drawText(day, {
           x: MARGIN + contentWidth * 0.66 + 2,
           y: y + 8,
@@ -631,18 +637,9 @@ export async function templateToPdfBytes(
     y -= 26;
     const clip = (value?: string) =>
       !value ? "—" : value.length > 52 ? `${value.slice(0, 52)}…` : value;
-    const when = (iso?: string) =>
-      iso
-        ? new Date(iso).toLocaleString("en-GB", {
-            day: "numeric",
-            month: "long",
-            year: "numeric",
-            hour: "2-digit",
-            minute: "2-digit",
-            timeZone: "UTC",
-            timeZoneName: "short",
-          })
-        : "—";
+    // Eastern time, named on the line (founder, 2026-11-17): the certificate said "GMT+0", which moved an evening
+    // signature in New York onto the next day.
+    const when = (iso?: string) => (iso ? easternMoment(iso) : "—");
     const rows: [string, string][] = [
       [
         "Recipient",
