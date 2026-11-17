@@ -87,6 +87,8 @@ export function AgencyLists({ userId, societies, songsFor, summaries, allTracks,
   const [drafts, setDrafts] = useState<Record<string, FillRelease>>({});
   /** Releases typed before, kept with the account (founder, 2026-11-16) and copied here for the moments it can't be read. */
   const [remembered, setRemembered] = useState<FillRelease[]>(() => (userId ? readCachedReleases(userId) : []));
+  /** A release the account refused to save: named in the dialog, so the browser's copy is never taken for the account's list. */
+  const [saveFailed, setSaveFailed] = useState<{ name: string; type: FillRelease["type"] }>();
   /** Everyone the songs being added name as a writer. The spelling is theirs everywhere; the role is asked per song. */
   const [people, setPeople] = useState<Person[]>([]);
   /** Roles by song, then by person: a co-writer can be the author of one song and the composer of another. */
@@ -179,6 +181,7 @@ export function AgencyLists({ userId, societies, songsFor, summaries, allTracks,
     setPlacements({});
     setVersionReleases({});
     setDrafts({});
+    setSaveFailed(undefined);
     // The browser's copy is read through `withoutKeystrokes`, so a list poisoned by half-typed names is cleaned as it is read,
     // and the cleaned copy is written back rather than left in storage (founder, 2026-11-16).
     const cachedReleases = userId ? readCachedReleases(userId) : [];
@@ -247,9 +250,16 @@ export function AgencyLists({ userId, societies, songsFor, summaries, allTracks,
     remembering.current = setTimeout(() => {
       // Nothing is remembered until the name settles: the half-typed titles never reach the list or the account.
       setRemembered((list) => { const merged = mergeRelease(list, finished); cacheReleases(userId, merged); return merged; });
+      setSaveFailed(undefined);
       void saveFillRelease({ data: { type: finished.type, name: finished.name } })
         .then((saved) => setRemembered((list) => { const merged = mergeRelease(list, saved); cacheReleases(userId, merged); return merged; }))
-        .catch(() => undefined);
+        // The browser copy above is not the list the next device sees, so a refused save is said out loud rather than swallowed.
+        // The dialog may already be closed by the time the account answers, so the refusal is said in a toast as well as
+        // beside the field (founder, 2026-11-17): a silent fallback to the browser is the bug this replaces.
+        .catch(() => {
+          setSaveFailed({ name: finished.name, type: finished.type });
+          toast.error(`Couldn't save “${finished.name}” (${finished.type}) to your account, so it is offered only in this browser for now.`);
+        });
     }, 900);
   }
 
@@ -814,6 +824,9 @@ export function AgencyLists({ userId, societies, songsFor, summaries, allTracks,
         <DialogContent className="max-h-[90vh] overflow-y-auto bg-card text-card-foreground sm:max-w-2xl">
           <DialogHeader><DialogTitle>Fill your catalog with your {fill?.society.name} list songs?</DialogTitle></DialogHeader>
           {fill && <>
+            {saveFailed && <p role="alert" className="rounded-md border border-destructive/40 bg-destructive/10 px-2 py-1.5 text-xs text-destructive">
+              Couldn't save “{saveFailed.name}” ({saveFailed.type}) to your account, so it is offered only in this browser for now.
+            </p>}
             <p className="text-sm text-muted-foreground">
               {fill.plan.creates.length
                 ? `${fill.plan.creates.length} work${fill.plan.creates.length === 1 ? " is" : "s are"} on the agency's list and not in your catalog yet. Tick the ones you want; each entry starts with the title, codes, writers, IPI numbers and shares the list carries, and the roles you choose below.`

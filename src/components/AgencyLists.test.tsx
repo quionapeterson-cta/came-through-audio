@@ -7,7 +7,15 @@ import { emptyMetadata } from "@/lib/metadata";
 import { saveTrack } from "@/lib/catalog";
 
 vi.mock("@/lib/catalog", () => ({ saveTrack: vi.fn().mockResolvedValue(undefined) }));
+vi.mock("sonner", () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
+// The account's own copy of a hand-typed release: by default the row comes back, as it does in the app.
+vi.mock("@/lib/fill-releases.functions", () => ({
+  listFillReleases: vi.fn().mockResolvedValue([]),
+  rememberFillRelease: vi.fn(({ data }: { data: { type: string; name: string } }) => Promise.resolve({ id: "acct-1", ...data })),
+}));
 import { countryByCode } from "@/lib/repertoires";
+import { rememberFillRelease } from "@/lib/fill-releases.functions";
+import { toast } from "sonner";
 
 const ascap = countryByCode("US")!.societies.performance![0]!;
 const track = (id: string, title: string, extra: Record<string, unknown> = {}) => ({ id, title, artist: "Q", updatedAt: "", metadata: { ...emptyMetadata(), title, artist: "Q", composers: [],
@@ -369,5 +377,24 @@ describe("AgencyLists", () => {
     expect(saved.find((m) => m.title === "Amber")).toMatchObject({ instrumental: true, album: "" });
     // The single warning is gone: the version answer is the conflict resolution, so nothing competes with it.
     expect(screen.queryByText(/two-song release/)).toBeNull();
+  });
+
+  it("says a refused save beside the field and in a toast, so a closed dialog can't hide it", async () => {
+    // The account refuses the write: the release only ever reaches this browser.
+    vi.mocked(rememberFillRelease).mockRejectedValueOnce(new Error("the account refused it"));
+    vi.mocked(toast.error).mockClear();
+    render(<AgencyLists userId="u1" societies={[ascap]} songsFor={() => []} summaries={{}} onApply={vi.fn().mockResolvedValue(undefined)} />);
+    const file = new File(["Work Title,Writer Name,Share\nGold Teeth,RAY BO,100\n"], "ascap.csv", { type: "text/csv" });
+    fireEvent.change(screen.getByLabelText("Upload your ASCAP list"), { target: { files: [file] } });
+    fireEvent.click(await screen.findByRole("button", { name: /Fill my catalog/ }));
+    fireEvent.change(screen.getByLabelText("Release for Gold Teeth"), { target: { value: "new" } });
+    fireEvent.change(screen.getByLabelText("Release name for Gold Teeth"), { target: { value: "Afterglow" } });
+    // The name is saved once typing stops, so the refusal arrives a moment after the last keystroke.
+    const alert = await screen.findByRole("alert", undefined, { timeout: 3000 });
+    expect(alert.textContent).toContain("Afterglow");
+    expect(alert.textContent).toContain("only in this browser");
+    // The same words go out as a toast, which stays after the dialog is closed.
+    expect(vi.mocked(toast.error)).toHaveBeenCalledWith(expect.stringContaining("Afterglow"));
+    expect(vi.mocked(toast.error)).toHaveBeenCalledWith(expect.stringContaining("only in this browser"));
   });
 });
