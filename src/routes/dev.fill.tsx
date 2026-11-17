@@ -1,25 +1,21 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect } from "react";
 import { AgencyLists } from "@/components/AgencyLists";
-import { countryByCode } from "@/lib/repertoires";
+import { societyForPro } from "@/lib/repertoires";
 import { emptyContributor, emptyMetadata } from "@/lib/metadata";
+import type { Contributor } from "@/lib/metadata";
 import type { CatalogTrack } from "@/lib/catalog";
-import type { ListResult } from "@/lib/agency-lists";
 
 /**
- * Local look at the catalog-fill dialog, not part of the product (founder, 2026-11-17): open /dev/fill on the dev server and
- * the sample list loads itself and opens the dialog, so a remembered release can be exercised without an agency file of your
- * own. The lab renders the real <AgencyLists> against a small catalog, so what is typed here is what the product does.
+ * Local look at the catalog-fill dialog, not part of the product (founder, 2026-11-17): /dev/fill loads a sample BMI list
+ * and opens the dialog by itself, so a remembered release is exercised without an agency file of your own. The real
+ * <AgencyLists> renders here against a small catalog, so what is typed here is what the product does — and a release typed
+ * by hand is saved with the signed-in account (signed out, the server refuses it and the dialog says so).
  *
- * The release a member types is saved with the account through the server function, so a signed-in session in this browser
- * really writes the row (and a second device or a reloaded lab reads it back); signed out, the server refuses it and the
- * dialog shows the refused-save notice — also worth seeing.
- *
- * Dev-only: `import.meta.env.DEV` is replaced at build time, so the production bundle keeps the URL but never the lab.
+ * Dev-only: `import.meta.env.DEV` is settled at build time, so a production build keeps the URL and renders "Not found".
  */
 export const Route = createFileRoute("/dev/fill")({ component: import.meta.env.DEV ? FillLab : NotInThisBuild });
 
-/** The page a production build renders at /dev/fill: the lab is development only. */
 function NotInThisBuild() {
   return (
     <div className="min-h-screen bg-background p-8 text-foreground">
@@ -29,12 +25,12 @@ function NotInThisBuild() {
   );
 }
 
-const track = (id: string, title: string, album: string, releaseType: string, instrumental = false, extra: Record<string, unknown> = {}): CatalogTrack => ({
+const track = (id: string, title: string, album: string, releaseType: string, instrumental = false, writers: Contributor[] = []): CatalogTrack => ({
   id,
   title,
   artist: "Karma Came",
   updatedAt: "",
-  metadata: { ...emptyMetadata(), title, artist: "Karma Came", album, releaseType, instrumental, writers: [], publishers: [], composers: [], ...extra },
+  metadata: { ...emptyMetadata(), title, artist: "Karma Came", album, releaseType, instrumental, writers, publishers: [], composers: [] },
 });
 
 /** A writer the catalog already holds under a different spelling or share, so the sample list differs. */
@@ -48,11 +44,11 @@ const catalog = [
   track("f", "Loose", "", "", false),
   track("g", "Second Wind (Instrumental)", "BAM", "Album", true),
   // Already in the catalog under the agency's own names, so each shows as a duplicate with a version to choose.
-  track("h", "AM PM", "BAM", "Album", false, { writers: [writer("QUI-ONA PETERSON", "100")] }),
-  track("i", "NIGHT BUS", "", "", false, { writers: [writer("S. C. ANDRE JR", "100")] }),
+  track("h", "AM PM", "BAM", "Album", false, [writer("QUI-ONA PETERSON", "100")]),
+  track("i", "NIGHT BUS", "", "", false, [writer("S. C. ANDRE JR", "100")]),
 ];
 
-const bmi = countryByCode("US")!.societies.performance!.find((s) => s.name === "BMI") ?? countryByCode("US")!.societies.performance![0]!;
+const bmi = societyForPro("BMI")!;
 
 const SAMPLE = [
   "Work Title,ISWC,Writer Name,IPI,Share %",
@@ -88,7 +84,7 @@ function FillLab() {
     <div className="min-h-screen bg-background p-8 text-foreground">
       <h1 className="text-2xl font-bold">Catalog fill lab</h1>
       <p className="mt-1 max-w-2xl text-sm text-muted-foreground">
-        Development only. The real <code>AgencyLists</code> with an eight-song catalog and a sample BMI list that loads itself,
+        Development only. The real <code>AgencyLists</code> with a small catalog and a sample BMI list that loads itself,
         so the dialog opens on its own — no agency download needed. A release typed by hand is saved with the signed-in
         account; with no session the server refuses it and the dialog says so.
       </p>
@@ -99,7 +95,7 @@ function FillLab() {
           songsFor={() => catalog}
           allTracks={catalog}
           summaries={{}}
-          onApply={async (_society: unknown, _result: ListResult) => undefined}
+          onApply={async () => undefined}
         />
       </div>
     </div>
