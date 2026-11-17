@@ -1,12 +1,14 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-import { FILL_RELEASE_TYPES, type FillRelease } from "./fill-releases";
+import { FILL_RELEASE_TYPES } from "./fill-releases";
+import { forgetRelease, rememberRelease, toRelease } from "./fill-releases-account";
 
 /**
  * The releases a member typed by hand in the fill dialog (founder, 2026-11-16): kept with the account, so a title named on one
  * device is offered on the next. The table only ever answers for the caller — the row's user_id defaults to auth.uid() and RLS
- * refuses anyone else's (20261116120000_fill-releases.sql).
+ * refuses anyone else's (20261117133708_fill-releases.sql). The writes themselves live in fill-releases-account.ts, where their
+ * update, insert and duplicate-race paths are tested.
  */
 
 const entry = z.object({
@@ -26,37 +28,17 @@ export const listFillReleases = createServerFn({ method: "GET" })
       .order("created_at", { ascending: false })
       .limit(24);
     if (error) throw new Error(error.message);
-    return (data ?? []).map((row) => ({ id: String(row.id), type: row.kind as FillRelease["type"], name: String(row.name) }));
+    return (data ?? []).map(toRelease);
   });
 
-/**
- * Remembers one release and hands back the account's list. A title typed the same way twice comes back as the same row: the case-
- * and space-insensitive unique index makes the second write a no-op update, so "afterglow " can't sit beside "Afterglow".
- */
+/** Remembers one release with the account, and hands back the row it lives in. */
 export const rememberFillRelease = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((data) => entry.parse(data))
-  .handler(async ({ data, context }) => {
-    const { data: saved, error } = await context.supabase
-      .from("fill_releases")
-      .upsert({ user_id: context.userId, kind: data.type, name: data.name }, { onConflict: "user_id,kind,name", ignoreDuplicates: false })
-      .select("id, kind, name")
-      .single();
-    if (error) throw new Error(error.message);
-    return { id: String(saved.id), type: saved.kind as FillRelease["type"], name: String(saved.name) };
-  });
+  .handler(async ({ data, context }) => rememberRelease(context.supabase, context.userId, data));
 
-/** Forgets an entry the member no longer wants offered. */
+/** Forgets one release, matched with the dialog's own spelling rule. */
 export const forgetFillRelease = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((data: z.infer<typeof entry>) => entry.parse(data))
-  .handler(async ({ data, context }) => {
-    const { error } = await context.supabase
-      .from("fill_releases")
-      .delete()
-      .eq("user_id", context.userId)
-      .eq("kind", data.type)
-      .ilike("name", data.name);
-    if (error) throw new Error(error.message);
-    return true;
-  });
+  .inputValidator((data) => entry.parse(data))
+  .handler(async ({ data, context }) => forgetRelease(context.supabase, context.userId, data));

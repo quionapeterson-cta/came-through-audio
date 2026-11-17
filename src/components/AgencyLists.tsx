@@ -7,7 +7,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { fillPlan, listPeople, personFor, withPeople, type FillPlan, type Person, type PersonChoice } from "@/lib/agency-fill";
 import { WRITER_ROLES, type Metadata } from "@/lib/metadata";
 import { albumKey, catalogReleases } from "@/lib/release-routing";
-import { FILL_RELEASE_TYPES, cacheReleases, mergeRelease, readCachedReleases, releaseKey, withoutCatalog, withoutKeystrokes, type FillRelease } from "@/lib/fill-releases";
+import { FILL_RELEASE_TYPES, cacheReleases, mergeRelease, mergeRemembered, readCachedReleases, releaseKey, withoutCatalog, withoutKeystrokes, type FillRelease } from "@/lib/fill-releases";
 import { listFillReleases, rememberFillRelease as saveFillRelease } from "@/lib/fill-releases.functions";
 import { loadOnboarding, loadProfile } from "@/lib/artist-profile";
 import { saveTrack } from "@/lib/catalog";
@@ -87,6 +87,8 @@ export function AgencyLists({ userId, societies, songsFor, summaries, allTracks,
   const [drafts, setDrafts] = useState<Record<string, FillRelease>>({});
   /** Releases typed before, kept with the account (founder, 2026-11-16) and copied here for the moments it can't be read. */
   const [remembered, setRemembered] = useState<FillRelease[]>(() => (userId ? readCachedReleases(userId) : []));
+  /** A release the account refused to save: named in the dialog, so the browser's copy is never taken for the account's list. */
+  const [saveFailed, setSaveFailed] = useState<{ name: string; type: FillRelease["type"] }>();
   /** Everyone the songs being added name as a writer. The spelling is theirs everywhere; the role is asked per song. */
   const [people, setPeople] = useState<Person[]>([]);
   /** Roles by song, then by person: a co-writer can be the author of one song and the composer of another. */
@@ -97,11 +99,30 @@ export function AgencyLists({ userId, societies, songsFor, summaries, allTracks,
   const inputs = useRef<Record<string, HTMLInputElement | null>>({});
   /** The pending write of a hand-typed release, so a title is saved once it is finished rather than on every keystroke. */
   const remembering = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  /** The release that pause is holding, so applying or closing the dialog can save it straight away. */
+  const pendingRelease = useRef<FillRelease | undefined>(undefined);
   useEffect(() => {
     if (!userId) return;
     let live = true;
     void listFillReleases()
-      .then((list) => { if (!live) return; const clean = withoutKeystrokes(list); setRemembered(clean); cacheReleases(userId, clean); })
+      // The account's answer is the real list, but it cannot know a release typed while signed out or offline, so the
+      // browser's copy is merged in rather than replaced (founder, 2026-11-17): reading the account used to erase it.
+      .then((list) => {
+        if (!live) return;
+        const account = withoutKeystrokes(list);
+        const local = readCachedReleases(userId);
+        const merged = mergeRemembered(account, local);
+        setRemembered(merged);
+        cacheReleases(userId, merged);
+        // A release the account's list doesn't have never reached it, so this browser is the only place it lives. It is
+        // offered to the account again as the account answers (founder, 2026-11-17), so the next device reads it too; a
+        // refusal leaves it where the merge already put it, in the browser's own copy.
+        for (const entry of local.filter((r) => !account.some((a) => releaseKey(a) === releaseKey(r)))) {
+          void saveFillRelease({ data: { type: entry.type, name: entry.name.trim() } })
+            .then((saved) => { if (!live) return; setRemembered((list) => { const next = mergeRelease(list, saved); cacheReleases(userId, next); return next; }); })
+            .catch(() => undefined);
+        }
+      })
       .catch(() => undefined);
     return () => { live = false; };
   }, [userId]);
@@ -179,6 +200,7 @@ export function AgencyLists({ userId, societies, songsFor, summaries, allTracks,
     setPlacements({});
     setVersionReleases({});
     setDrafts({});
+    setSaveFailed(undefined);
     // The browser's copy is read through `withoutKeystrokes`, so a list poisoned by half-typed names is cleaned as it is read,
     // and the cleaned copy is written back rather than left in storage (founder, 2026-11-16).
     const cachedReleases = userId ? readCachedReleases(userId) : [];
@@ -234,6 +256,37 @@ export function AgencyLists({ userId, societies, songsFor, summaries, allTracks,
     return rel ? { album: rel.album, releaseType: rel.kind } : undefined;
   }
 
+  /** Saves a finished release here and with the account, and says so if the account refuses it. */
+  function saveTypedRelease(entry: FillRelease) {
+    const finished = { type: entry.type, name: entry.name.trim() } as FillRelease;
+    if (!finished.name || !userId) return;
+    setRemembered((list) => { const merged = mergeRelease(list, finished); cacheReleases(userId, merged); return merged; });
+    setSaveFailed(undefined);
+    void saveFillRelease({ data: { type: finished.type, name: finished.name } })
+      .then((saved) => setRemembered((list) => { const merged = mergeRelease(list, saved); cacheReleases(userId, merged); return merged; }))
+      // The browser copy above is not the list the next device sees, so a refused save is said out loud rather than swallowed.
+      // The dialog may already be closed by the time the account answers, so the refusal is said in a toast as well as
+      // beside the field (founder, 2026-11-17): a silent fallback to the browser is the bug this replaces.
+      .catch(() => {
+        setSaveFailed({ name: finished.name, type: finished.type });
+        toast.error(`Couldn't save “${finished.name}” (${finished.type}) to your account, so it is offered only in this browser for now.`);
+      });
+  }
+
+  /**
+   * Saves the name the typing pause is holding, right now (founder, 2026-11-17). Applying or closing the dialog used to
+   * leave the last name typed to a 900 ms timer, and a close inside that window dropped it from the account and from the
+   * browser's own copy alike.
+   */
+  function flushTyping() {
+    if (!remembering.current) return;
+    clearTimeout(remembering.current);
+    remembering.current = undefined;
+    const waiting = pendingRelease.current;
+    pendingRelease.current = undefined;
+    if (waiting) saveTypedRelease(waiting);
+  }
+
   /**
    * Types a release by hand. The song can use it straight away through its draft; the name is remembered, here and on the
    * account, only once typing stops — otherwise "A", "Af", "Aft" each become a release of their own (founder, 2026-11-16).
@@ -241,15 +294,15 @@ export function AgencyLists({ userId, societies, songsFor, summaries, allTracks,
   function editDraft(key: string, patch: Partial<FillRelease>) {
     const next: FillRelease = { ...(drafts[key] ?? { type: "Single", name: "" }), ...patch };
     setDrafts((all) => ({ ...all, [key]: next }));
-    if (remembering.current) clearTimeout(remembering.current);
-    if (!next.name.trim() || !userId) return;
+    if (remembering.current) { clearTimeout(remembering.current); remembering.current = undefined; }
+    if (!next.name.trim() || !userId) { pendingRelease.current = undefined; return; }
     const finished = { type: next.type, name: next.name.trim() } as FillRelease;
+    pendingRelease.current = finished;
     remembering.current = setTimeout(() => {
       // Nothing is remembered until the name settles: the half-typed titles never reach the list or the account.
-      setRemembered((list) => { const merged = mergeRelease(list, finished); cacheReleases(userId, merged); return merged; });
-      void saveFillRelease({ data: { type: finished.type, name: finished.name } })
-        .then((saved) => setRemembered((list) => { const merged = mergeRelease(list, saved); cacheReleases(userId, merged); return merged; }))
-        .catch(() => undefined);
+      remembering.current = undefined;
+      pendingRelease.current = undefined;
+      saveTypedRelease(finished);
     }, 900);
   }
 
@@ -293,6 +346,8 @@ export function AgencyLists({ userId, societies, songsFor, summaries, allTracks,
    */
   async function runFill() {
     if (!fill || !userId) return;
+    // A release typed a moment before the click is saved with the songs, rather than left to a timer the closing dialog drops.
+    flushTyping();
     setFilling(true);
     try {
       const adding = fill.plan.creates.filter((c) => picked[workKey(c.work)] !== false);
@@ -810,10 +865,13 @@ export function AgencyLists({ userId, societies, songsFor, summaries, allTracks,
       {preview && <DifferencesPanel userId={userId} tracks={allTracks ?? [...new Map(societies.flatMap((s) => songsFor(s.id)).map((t) => [t.id, t])).values()]}
         societies={societies.map((s) => ({ id: s.id, name: s.name, url: s.url }))} summaries={summaries} defaultSociety={shownId} className="mt-3" />}
 
-      <Dialog open={!!fill} onOpenChange={(o) => { if (!o && !filling) setFill(undefined); }}>
+      <Dialog open={!!fill} onOpenChange={(o) => { if (!o && !filling) { flushTyping(); setFill(undefined); } }}>
         <DialogContent className="max-h-[90vh] overflow-y-auto bg-card text-card-foreground sm:max-w-2xl">
           <DialogHeader><DialogTitle>Fill your catalog with your {fill?.society.name} list songs?</DialogTitle></DialogHeader>
           {fill && <>
+            {saveFailed && <p role="alert" className="rounded-md border border-destructive/40 bg-destructive/10 px-2 py-1.5 text-xs text-destructive">
+              Couldn't save “{saveFailed.name}” ({saveFailed.type}) to your account, so it is offered only in this browser for now.
+            </p>}
             <p className="text-sm text-muted-foreground">
               {fill.plan.creates.length
                 ? `${fill.plan.creates.length} work${fill.plan.creates.length === 1 ? " is" : "s are"} on the agency's list and not in your catalog yet. Tick the ones you want; each entry starts with the title, codes, writers, IPI numbers and shares the list carries, and the roles you choose below.`

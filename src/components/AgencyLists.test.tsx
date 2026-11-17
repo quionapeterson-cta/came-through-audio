@@ -7,7 +7,15 @@ import { emptyMetadata } from "@/lib/metadata";
 import { saveTrack } from "@/lib/catalog";
 
 vi.mock("@/lib/catalog", () => ({ saveTrack: vi.fn().mockResolvedValue(undefined) }));
+vi.mock("sonner", () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
+// The account's own copy of a hand-typed release: by default the row comes back, as it does in the app.
+vi.mock("@/lib/fill-releases.functions", () => ({
+  listFillReleases: vi.fn().mockResolvedValue([]),
+  rememberFillRelease: vi.fn(({ data }: { data: { type: string; name: string } }) => Promise.resolve({ id: "acct-1", ...data })),
+}));
 import { countryByCode } from "@/lib/repertoires";
+import { listFillReleases, rememberFillRelease } from "@/lib/fill-releases.functions";
+import { toast } from "sonner";
 
 const ascap = countryByCode("US")!.societies.performance![0]!;
 const track = (id: string, title: string, extra: Record<string, unknown> = {}) => ({ id, title, artist: "Q", updatedAt: "", metadata: { ...emptyMetadata(), title, artist: "Q", composers: [],
@@ -369,5 +377,117 @@ describe("AgencyLists", () => {
     expect(saved.find((m) => m.title === "Amber")).toMatchObject({ instrumental: true, album: "" });
     // The single warning is gone: the version answer is the conflict resolution, so nothing competes with it.
     expect(screen.queryByText(/two-song release/)).toBeNull();
+  });
+
+  it("says a refused save beside the field and in a toast, so a closed dialog can't hide it", async () => {
+    // The account refuses the write: the release only ever reaches this browser.
+    vi.mocked(rememberFillRelease).mockRejectedValueOnce(new Error("the account refused it"));
+    vi.mocked(toast.error).mockClear();
+    render(<AgencyLists userId="u1" societies={[ascap]} songsFor={() => []} summaries={{}} onApply={vi.fn().mockResolvedValue(undefined)} />);
+    const file = new File(["Work Title,Writer Name,Share\nGold Teeth,RAY BO,100\n"], "ascap.csv", { type: "text/csv" });
+    fireEvent.change(screen.getByLabelText("Upload your ASCAP list"), { target: { files: [file] } });
+    fireEvent.click(await screen.findByRole("button", { name: /Fill my catalog/ }));
+    fireEvent.change(screen.getByLabelText("Release for Gold Teeth"), { target: { value: "new" } });
+    fireEvent.change(screen.getByLabelText("Release name for Gold Teeth"), { target: { value: "Afterglow" } });
+    // The name is saved once typing stops, so the refusal arrives a moment after the last keystroke.
+    const alert = await screen.findByRole("alert", undefined, { timeout: 3000 });
+    expect(alert.textContent).toContain("Afterglow");
+    expect(alert.textContent).toContain("only in this browser");
+    // The same words go out as a toast, which stays after the dialog is closed.
+    expect(vi.mocked(toast.error)).toHaveBeenCalledWith(expect.stringContaining("Afterglow"));
+    expect(vi.mocked(toast.error)).toHaveBeenCalledWith(expect.stringContaining("only in this browser"));
+  });
+
+  it("offers the release the account accepted, with the row it handed back, and files a song with it", async () => {
+    // The accepted save: the account's own row is what the dialog offers from then on, and picking it writes the release.
+    vi.mocked(rememberFillRelease).mockClear();
+    vi.mocked(saveTrack).mockClear();
+    vi.mocked(rememberFillRelease).mockResolvedValueOnce({ id: "acct-7", type: "Single", name: "Afterglow" });
+    vi.mocked(toast.error).mockClear();
+    render(<AgencyLists userId="u1" societies={[ascap]} songsFor={() => []} summaries={{}} onApply={vi.fn().mockResolvedValue(undefined)} />);
+    const file = new File(["Work Title,Writer Name,Share\nGold Teeth,RAY BO,100\n"], "ascap.csv", { type: "text/csv" });
+    fireEvent.change(screen.getByLabelText("Upload your ASCAP list"), { target: { files: [file] } });
+    fireEvent.click(await screen.findByRole("button", { name: /Fill my catalog/ }));
+    fireEvent.change(screen.getByLabelText("Release for Gold Teeth"), { target: { value: "new" } });
+    fireEvent.change(screen.getByLabelText("Release name for Gold Teeth"), { target: { value: "Afterglow" } });
+    // Typing stops, the account answers with its row, and the offer carries that row's id rather than the browser's copy.
+    const option = (await screen.findByRole("option", { name: "Afterglow · Single" }, { timeout: 3000 })) as HTMLOptionElement;
+    await waitFor(() => expect(option.value).toBe("custom:acct-7"));
+    expect(vi.mocked(rememberFillRelease)).toHaveBeenCalledWith({ data: { type: "Single", name: "Afterglow" } });
+    expect(vi.mocked(toast.error)).not.toHaveBeenCalled();
+    // Picked from the dropdown, it writes the title and its kind into the song.
+    const select = screen.getByLabelText("Release for Gold Teeth") as HTMLSelectElement;
+    fireEvent.change(select, { target: { value: "custom:acct-7" } });
+    fireEvent.click(screen.getByRole("button", { name: /Add 1 song/ }));
+    await waitFor(() => expect(vi.mocked(saveTrack)).toHaveBeenCalledTimes(1));
+    expect(vi.mocked(saveTrack).mock.calls[0]![0]).toMatchObject({ album: "Afterglow", releaseType: "Single" });
+  });
+
+  it("saves a release typed a moment before the dialog closes, instead of waiting for the typing pause", async () => {
+    vi.mocked(rememberFillRelease).mockClear();
+    render(<AgencyLists userId="u1" societies={[ascap]} songsFor={() => []} summaries={{}} onApply={vi.fn().mockResolvedValue(undefined)} />);
+    const file = new File(["Work Title,Writer Name,Share\nGold Teeth,RAY BO,100\n"], "ascap.csv", { type: "text/csv" });
+    fireEvent.change(screen.getByLabelText("Upload your ASCAP list"), { target: { files: [file] } });
+    fireEvent.click(await screen.findByRole("button", { name: /Fill my catalog/ }));
+    fireEvent.change(screen.getByLabelText("Release for Gold Teeth"), { target: { value: "new" } });
+    fireEvent.change(screen.getByLabelText("Release name for Gold Teeth"), { target: { value: "Afterglow" } });
+    // Closing inside those 900 ms saves the name there and then: the click is what saves it, not the timer.
+    fireEvent.click(screen.getByRole("button", { name: "Close" }));
+    expect(vi.mocked(rememberFillRelease)).toHaveBeenCalledWith({ data: { type: "Single", name: "Afterglow" } });
+  });
+
+  it("keeps a release the account list does not know yet, instead of replacing it with the account's answer", async () => {
+    // Typed while signed out, so it only ever reached this browser; the account's list arrives without it. This test
+    // environment has no localStorage, so the browser's copy is stood in for here.
+    const map = new Map<string, string>();
+    const shim: Storage = {
+      get length() { return map.size; },
+      clear: () => map.clear(),
+      getItem: (k) => map.get(k) ?? null,
+      key: (i) => [...map.keys()][i] ?? null,
+      removeItem: (k) => { map.delete(k); },
+      setItem: (k, v) => { map.set(k, String(v)); },
+    };
+    const globals = globalThis as unknown as { localStorage?: Storage };
+    globals.localStorage = shim;
+    map.set("cta.fill-releases.v2.u1", JSON.stringify([{ type: "EP", name: "Late Bloom" }]));
+    vi.mocked(listFillReleases).mockResolvedValueOnce([{ id: "acct-1", type: "Single", name: "Afterglow" }]);
+    render(<AgencyLists userId="u1" societies={[ascap]} songsFor={() => []} summaries={{}} onApply={vi.fn().mockResolvedValue(undefined)} />);
+    const file = new File(["Work Title,Writer Name,Share\nGold Teeth,RAY BO,100\n"], "ascap.csv", { type: "text/csv" });
+    fireEvent.change(screen.getByLabelText("Upload your ASCAP list"), { target: { files: [file] } });
+    fireEvent.click(await screen.findByRole("button", { name: /Fill my catalog/ }));
+    // Both are offered: the account's release and the one only this browser knows.
+    expect(await screen.findByRole("option", { name: "Afterglow · Single" })).toBeTruthy();
+    expect(screen.getByRole("option", { name: "Late Bloom · EP" })).toBeTruthy();
+    delete globals.localStorage;
+  });
+
+  it("offers the account a browser-only release again, so it doesn't stay stranded here", async () => {
+    // Typed while signed out, so the account's list has never heard of it. This environment has no localStorage, so the
+    // browser's copy is stood in for here.
+    const map = new Map<string, string>();
+    const shim: Storage = {
+      get length() { return map.size; },
+      clear: () => map.clear(),
+      getItem: (k) => map.get(k) ?? null,
+      key: (i) => [...map.keys()][i] ?? null,
+      removeItem: (k) => { map.delete(k); },
+      setItem: (k, v) => { map.set(k, String(v)); },
+    };
+    const globals = globalThis as unknown as { localStorage?: Storage };
+    globals.localStorage = shim;
+    map.set("cta.fill-releases.v2.u1", JSON.stringify([{ type: "EP", name: "Late Bloom" }]));
+    vi.mocked(listFillReleases).mockResolvedValueOnce([]);
+    vi.mocked(rememberFillRelease).mockClear();
+    vi.mocked(rememberFillRelease).mockResolvedValueOnce({ id: "acct-9", type: "EP", name: "Late Bloom" });
+    render(<AgencyLists userId="u1" societies={[ascap]} songsFor={() => []} summaries={{}} onApply={vi.fn().mockResolvedValue(undefined)} />);
+    // The account answers with an empty list, and the release it doesn't know is sent to it without anyone clicking.
+    await waitFor(() => expect(vi.mocked(rememberFillRelease)).toHaveBeenCalledWith({ data: { type: "EP", name: "Late Bloom" } }));
+    const file = new File(["Work Title,Writer Name,Share\nGold Teeth,RAY BO,100\n"], "ascap.csv", { type: "text/csv" });
+    fireEvent.change(screen.getByLabelText("Upload your ASCAP list"), { target: { files: [file] } });
+    fireEvent.click(await screen.findByRole("button", { name: /Fill my catalog/ }));
+    // The offer then carries the account's own row, so the retry reached the account rather than the browser alone.
+    await waitFor(() => expect((screen.getByRole("option", { name: "Late Bloom · EP" }) as HTMLOptionElement).value).toBe("custom:acct-9"));
+    delete globals.localStorage;
   });
 });
