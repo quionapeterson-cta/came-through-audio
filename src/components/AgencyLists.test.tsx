@@ -52,10 +52,11 @@ describe("AgencyLists", () => {
     expect(screen.getAllByText("ASCAP").length).toBeGreaterThan(0);
     expect(screen.getAllByText(/isn't on the agency's registration/).length).toBeGreaterThan(0);
     expect(screen.getByText("Writers")).toBeTruthy();
-    // Nothing is preselected, so the dialog refuses to submit until the member answers the song.
-    expect((screen.getByRole("radio", { name: "Use the agency's version" }) as HTMLInputElement).checked).toBe(false);
-    expect((screen.getByRole("button", { name: /Add or update songs/ }) as HTMLButtonElement).disabled).toBe(true);
-    expect(screen.getByText(/still needs an answer/)).toBeTruthy();
+    // The agency's version is the answer already given, so the writers and the release are open to check straight away.
+    expect((screen.getByRole("radio", { name: "Use the agency's version" }) as HTMLInputElement).checked).toBe(true);
+    expect(screen.getByRole("button", { name: "RAY BO on Midnight: Author" })).toBeTruthy();
+    expect(screen.getByLabelText("Release for Midnight")).toBeTruthy();
+    expect((screen.getByRole("button", { name: /Update 1 song/ }) as HTMLButtonElement).disabled).toBe(false);
     // Keeping theirs leaves the comparison on screen, folds the questions, and offers the expert route.
     fireEvent.click(screen.getByRole("radio", { name: "Keep my catalog version" }));
     expect(screen.getByText("Writers")).toBeTruthy();
@@ -330,29 +331,43 @@ describe("AgencyLists", () => {
     expect(id).toBe("a");
   });
 
-  it("waits for every catalogued song's answer, and both bulk answers satisfy it in one click", async () => {
+  it("starts every catalogued song on the agency's version, and both bulk answers flip them in one click", async () => {
     vi.mocked(saveTrack).mockClear();
     render(<AgencyLists userId="u1" societies={[ascap]} songsFor={() => [track("a", "Midnight"), track("b", "Silver Lining")]} summaries={{}} onApply={vi.fn().mockResolvedValue(undefined)} />);
     const file = new File(["Work Title,Writer Name,Share\nMidnight,RAY BO,100\nSilver Lining,KAY LEE,100\nGold Teeth,RAY BO,100\n"], "ascap.csv", { type: "text/csv" });
     fireEvent.change(screen.getByLabelText("Upload your ASCAP list"), { target: { files: [file] } });
     fireEvent.click(await screen.findByRole("button", { name: /Fill my catalog/ }));
     const submit = () => screen.getByRole("button", { name: /^(Add|Update) \d/ }) as HTMLButtonElement;
-    // Neither version is chosen, so the one button names only what is answered so far, and stays disabled.
-    expect(submit().disabled).toBe(true);
-    expect(submit().textContent).toContain("Add 1 song");
-    // Answering one song leaves the other outstanding, so the button still waits.
-    fireEvent.click(screen.getAllByRole("radio", { name: "Use the agency's version" })[0]!);
-    expect(submit().disabled).toBe(true);
-    expect(submit().textContent).toContain("Add 1 and update 1");
-    expect(screen.getByText(/1 catalogued song still needs an answer/)).toBeTruthy();
-    // The bulk answer clears every catalogued song at once.
-    fireEvent.click(screen.getByRole("button", { name: /Use the agency's version for all 2/ }));
+    // Both catalogued songs already say "the agency's version", so the one button names all of it and is ready.
     expect(submit().disabled).toBe(false);
     expect(submit().textContent).toContain("Add 1 and update 2");
-    // Keeping every version writes nothing for the catalogued songs, so only the new one is added.
+    expect((screen.getAllByRole("radio", { name: "Use the agency's version" })[0] as HTMLInputElement).checked).toBe(true);
+    // The bulk answer keeps the member's own version on every one of them at once, which writes nothing for them.
     fireEvent.click(screen.getByRole("button", { name: /Keep my version for all 2/ }));
+    expect((screen.getAllByRole("radio", { name: "Keep my catalog version" })[0] as HTMLInputElement).checked).toBe(true);
     expect(submit().textContent).toContain("Add 1 song");
     fireEvent.click(submit());
     await waitFor(() => expect(vi.mocked(saveTrack)).toHaveBeenCalledTimes(1));
+  });
+
+  it("keeps the release a typed instrumental belongs to, and names none for an unreleased one", async () => {
+    vi.mocked(saveTrack).mockClear();
+    render(<AgencyLists userId="u1" societies={[ascap]} songsFor={() => []} summaries={{}} onApply={vi.fn().mockResolvedValue(undefined)} />);
+    const file = new File(["Work Title,Writer Name,Share\nGold Teeth,RAY BO,100\nAmber,RAY BO,100\n"], "ascap.csv", { type: "text/csv" });
+    fireEvent.change(screen.getByLabelText("Upload your ASCAP list"), { target: { files: [file] } });
+    fireEvent.click(await screen.findByRole("button", { name: /Fill my catalog/ }));
+    // An instrumental cut from a release keeps that release's name, because that is where the member looks for it.
+    fireEvent.change(screen.getByLabelText("Release for Gold Teeth"), { target: { value: "new" } });
+    fireEvent.change(screen.getByLabelText("Release type for Gold Teeth"), { target: { value: "Instrumental" } });
+    fireEvent.change(screen.getByLabelText("Release name for Gold Teeth"), { target: { value: "Afterglow" } });
+    // One that isn't out yet may not belong to anything, so it names no album at all.
+    fireEvent.change(screen.getByLabelText("Release for Amber"), { target: { value: "unreleased-instrumental" } });
+    fireEvent.click(screen.getByRole("button", { name: /Add 2 songs/ }));
+    await waitFor(() => expect(vi.mocked(saveTrack)).toHaveBeenCalledTimes(2));
+    const saved = vi.mocked(saveTrack).mock.calls.map((c) => c[0]);
+    expect(saved.find((m) => m.title === "Gold Teeth")).toMatchObject({ instrumental: true, album: "Afterglow" });
+    expect(saved.find((m) => m.title === "Amber")).toMatchObject({ instrumental: true, album: "" });
+    // The single warning is gone: the version answer is the conflict resolution, so nothing competes with it.
+    expect(screen.queryByText(/two-song release/)).toBeNull();
   });
 });
