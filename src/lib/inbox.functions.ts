@@ -2,10 +2,15 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { ADMIN_EMAIL, emailLayout, escapeHtml } from "./email-layout";
+import { INBOX_BUCKET } from "./inbox-attachments";
 import { mailKey, sendMail } from "./mailer";
 
 /**
  * Admin Inbox, part 3 (founder, 2026-11-17): reading the stored mail and answering it from Admin.
+ *
+ * Files stay with the message (founder, 2026-11-17): each attachment the mail carried is kept in the private
+ * admin-inbox bucket up to 10 MB, and a super admin opens it through a short-lived signed link that is only issued for a
+ * key the message already holds.
  *
  * Unread is never a stored number. It is counted from the messages themselves — inbound rows with no `read_at` — so two
  * deliveries landing together can never leave a badge reading low for good. Opening a thread is what marks it read.
@@ -16,7 +21,16 @@ import { mailKey, sendMail } from "./mailer";
 
 export type InboxMailbox = "admin" | "contracts";
 
-export type InboxAttachment = { filename: string; mimeType?: string; size?: number };
+export type InboxAttachment = {
+  filename: string;
+  mimeType?: string;
+  size?: number;
+  /** The key the file itself was stored under in the private admin-inbox bucket. Absent when it wasn't kept. */
+  storagePath?: string;
+  /** False when the file was too big to keep: the name is the record, and `reason` says why. */
+  kept?: boolean;
+  reason?: string;
+};
 
 export type InboxThreadSummary = {
   id: string;
@@ -97,6 +111,11 @@ function attachmentsOf(value: unknown): InboxAttachment[] {
       filename: one.filename as string,
       ...(one.mimeType ? { mimeType: one.mimeType } : {}),
       ...(typeof one.size === "number" ? { size: one.size } : {}),
+      ...(typeof one.storagePath === "string" && one.storagePath
+        ? { storagePath: one.storagePath }
+        : {}),
+      ...(typeof one.kept === "boolean" ? { kept: one.kept } : {}),
+      ...(typeof one.reason === "string" && one.reason ? { reason: one.reason } : {}),
     }));
 }
 
@@ -220,6 +239,40 @@ export const openInboxThread = createServerFn({ method: "POST" })
         m.direction === "inbound" ? { ...m, readAt: m.readAt ?? readAt } : m,
       ),
     };
+  });
+
+/**
+ * A short-lived link to one attachment's file (founder, 2026-11-17). The bytes never travel through a server function:
+ * the bucket is private and stays private, and the browser streams from the signed address it is given.
+ *
+ * The key comes from the message's own row, not from the browser: the path asked for has to be one the message already
+ * holds, so a super admin can't be handed a key to a file that isn't on the thread they're reading.
+ */
+export const inboxAttachmentUrl = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) =>
+    z
+      .object({ messageId: z.string().uuid(), storagePath: z.string().trim().min(3).max(400) })
+      .parse(d),
+  )
+  .handler(async ({ data, context }): Promise<{ url: string; filename: string }> => {
+    const db = await inboxDb(context);
+    const { data: message } = await db
+      .from("admin_inbox_messages" as never)
+      .select("attachments")
+      .eq("id", data.messageId)
+      .maybeSingle();
+    const files = attachmentsOf((message as { attachments: unknown } | null)?.attachments);
+    const file = files.find((one) => one.storagePath === data.storagePath);
+    if (!file?.storagePath) throw new Error("That file isn't on this message.");
+    const { data: signed, error } = await db.storage
+      .from(INBOX_BUCKET)
+      .createSignedUrl(file.storagePath, 600);
+    if (error || !signed) {
+      console.error("Admin inbox: couldn't sign an attachment:", error?.message ?? "no url");
+      throw new Error("Couldn't prepare that file. Run migration 20261117140000 first.");
+    }
+    return { url: signed.signedUrl, filename: file.filename };
   });
 
 /**

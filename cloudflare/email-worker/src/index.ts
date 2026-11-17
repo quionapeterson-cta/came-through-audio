@@ -10,9 +10,10 @@ import PostalMime from "postal-mime";
  * temporary failure and it retries, so a bad deploy or a restart delays a message instead of losing it. A retried
  * delivery ends up as one row, because the receiver dedupes on Message-ID.
  *
- * The body is JSON rather than the raw mail so the receiver's schema validates what it stores. Attachment bytes stay
- * here — the inbox is a record of the conversation, not a file store — but each attachment's name, type and size
- * travel with the message, so a thread never reads like a plain email when something arrived with it.
+ * The files stay with the message (founder, 2026-11-17). Each attachment the sender actually attached is posted to the
+ * app's /api/public/email/attachment first, which writes it into the private admin-inbox bucket and answers with the key;
+ * the message then names that key beside the file. A mail's attachments share Cloudflare's 25 MiB limit, so a file over
+ * the founder's 10 MB cap is recorded by name with the reason rather than quietly dropped.
  */
 
 interface Env {
@@ -31,7 +32,23 @@ interface Env {
 const MAX_TEXT = 200_000;
 const MAX_HTML = 400_000;
 
+/** The founder's per-file cap (2026-11-17), the same number the app enforces. */
+const MAX_KEPT_BYTES = 10 * 1024 * 1024;
+
+/** How many files one message may hand over. A 25 MiB mail cannot carry many, so this only bounds a broken one. */
+const MAX_UPLOADS = 12;
+
 type ParsedEmail = Awaited<ReturnType<typeof PostalMime.parse>>;
+
+type KeptFile = {
+  filename: string;
+  mimeType?: string;
+  size?: number;
+  /** Where the app stored it. Absent when the file could not be kept, and `reason` says why. */
+  storagePath?: string;
+  kept: boolean;
+  reason?: string;
+};
 
 /** Which mailbox the route delivered to. Anything else means the Cloudflare route is wrong. */
 function mailboxOf(recipient: string): "admin" | "contracts" {
@@ -65,26 +82,58 @@ function addressesOf(list: ParsedEmail["to"] | undefined): string[] {
 }
 
 /** postal-mime hands attachment content back as text or bytes, depending on how the mail encoded it. */
-function sizeOf(content: unknown): number | undefined {
-  if (typeof content === "string") return new TextEncoder().encode(content).byteLength;
-  if (content instanceof Uint8Array || content instanceof ArrayBuffer) return content.byteLength;
+function bytesOf(content: unknown): Uint8Array | undefined {
+  if (typeof content === "string") return new TextEncoder().encode(content);
+  if (content instanceof Uint8Array) return content;
+  if (content instanceof ArrayBuffer) return new Uint8Array(content);
   return undefined;
 }
 
 /**
- * What arrived attached, by name only. A picture a signature draws inline is part of the message, not something the
- * sender attached, so those are left out and the list means what staff would see in their own mail client.
+ * Where the app keeps a mail's files: the receiver's URL with its last step changed. Kept in step with the app's own
+ * route, so a deployment needs no second setting, and a URL that doesn't look like the receiver keeps only the names.
  */
-function attachmentsOf(list: ParsedEmail["attachments"] | undefined) {
+function attachmentUrl(inboxUrl: string): string | null {
+  return /\/inbound\/?$/i.test(inboxUrl) ? inboxUrl.replace(/\/inbound\/?$/i, "/attachment") : null;
+}
+
+/** A stable folder for this mail: its Message-ID, or the seam that identifies it when the header is missing. */
+function messageKeyOf(message: ForwardableEmailMessage, subject: string, at: string): string {
+  return header(message.headers, "message-id") ?? `${message.from}-${at}-${subject}`;
+}
+
+/**
+ * What arrived attached, with each file kept where it can be. A picture a signature draws inline is part of the message,
+ * not something the sender attached, so those are left out and the list means what staff would see in their own client.
+ */
+async function attachmentsOf(
+  list: ParsedEmail["attachments"] | undefined,
+  keep: (file: {
+    index: number;
+    filename: string;
+    mimeType?: string;
+    bytes: Uint8Array;
+  }) => Promise<KeptFile>,
+): Promise<KeptFile[]> {
   if (!list) return [];
-  return list
-    .filter((one) => one.disposition !== "inline")
-    .slice(0, 50)
-    .map((one) => ({
-      filename: (one.filename ?? "").trim() || "Attachment",
-      mimeType: one.mimeType || undefined,
-      size: sizeOf(one.content),
-    }));
+  const files = list.filter((one) => one.disposition !== "inline").slice(0, 50);
+  const out: KeptFile[] = [];
+  for (const [index, one] of files.entries()) {
+    const filename = (one.filename ?? "").trim() || "Attachment";
+    const mimeType = one.mimeType || undefined;
+    const bytes = bytesOf(one.content);
+    const size = bytes?.byteLength;
+    if (!bytes || !size) {
+      out.push({ filename, mimeType, kept: false, reason: "the file didn't come through intact" });
+      continue;
+    }
+    if (size > MAX_KEPT_BYTES) {
+      out.push({ filename, mimeType, size, kept: false, reason: "over 10 MB" });
+      continue;
+    }
+    out.push(await keep({ index, filename, mimeType, bytes }));
+  }
+  return out;
 }
 
 export default {
@@ -113,6 +162,91 @@ export default {
       ...new Set([message.to, ...addressesOf(parsed?.to)].map((one) => one.trim().toLowerCase())),
     ].filter((one) => one.includes("@"));
 
+    const subject = parsed?.subject?.trim() || header(message.headers, "subject") || "";
+    const at = receivedAt(message.headers);
+    const messageKey = messageKeyOf(message, subject, at);
+    const filesUrl = attachmentUrl(url);
+    if (!filesUrl && parsed?.attachments?.length) {
+      console.error(
+        "Admin inbox: INBOX_URL does not end in /inbound, so files can only be listed.",
+      );
+    }
+
+    let attempted = 0;
+    const attachments = await attachmentsOf(parsed?.attachments, async (file) => {
+      const base = {
+        filename: file.filename,
+        ...(file.mimeType ? { mimeType: file.mimeType } : {}),
+      };
+      if (!filesUrl) {
+        return {
+          ...base,
+          size: file.bytes.byteLength,
+          kept: false,
+          reason: "file storage is not configured",
+        };
+      }
+      if (attempted >= MAX_UPLOADS) {
+        return {
+          ...base,
+          size: file.bytes.byteLength,
+          kept: false,
+          reason: "too many files in one message",
+        };
+      }
+      attempted += 1;
+      try {
+        const response = await fetch(filesUrl, {
+          method: "POST",
+          headers: {
+            "content-type": file.mimeType ?? "application/octet-stream",
+            "x-worker-secret": env.INBOUND_EMAIL_SECRET,
+            "x-mailbox": mailbox,
+            "x-message-key": encodeURIComponent(messageKey),
+            "x-index": String(file.index),
+            "x-filename": encodeURIComponent(file.filename),
+          },
+          body: file.bytes,
+        });
+        if (!response.ok) {
+          const detail = await response.text().catch(() => "");
+          console.error(
+            `Admin inbox: ${file.filename} was not kept (${response.status}): ${detail.slice(0, 300)}`,
+          );
+          return {
+            ...base,
+            size: file.bytes.byteLength,
+            kept: false,
+            reason: "it could not be stored",
+          };
+        }
+        const answer = (await response.json().catch(() => null)) as { path?: unknown } | null;
+        if (typeof answer?.path !== "string" || !answer.path) {
+          return {
+            ...base,
+            size: file.bytes.byteLength,
+            kept: false,
+            reason: "it could not be stored",
+          };
+        }
+        return {
+          ...base,
+          size: file.bytes.byteLength,
+          kept: true,
+          storagePath: answer.path,
+        };
+      } catch (error) {
+        // The message itself must still arrive: a file that failed is named with the reason, not lost silently.
+        console.error(`Admin inbox: ${file.filename} could not be uploaded.`, error);
+        return {
+          ...base,
+          size: file.bytes.byteLength,
+          kept: false,
+          reason: "it could not be stored",
+        };
+      }
+    });
+
     const response = await fetch(url, {
       method: "POST",
       headers: { "content-type": "application/json", "x-worker-secret": env.INBOUND_EMAIL_SECRET },
@@ -121,15 +255,15 @@ export default {
         from: message.from,
         fromName: parsed?.from?.name?.trim() || undefined,
         to: recipients,
-        subject: parsed?.subject?.trim() || header(message.headers, "subject") || "",
+        subject,
         text: clipped(parsed?.text, MAX_TEXT),
         html: clipped(parsed?.html ?? undefined, MAX_HTML),
-        attachments: attachmentsOf(parsed?.attachments),
+        attachments,
         // A reply is matched to its thread on these three, so they travel exactly as the mail carries them.
         messageId: header(message.headers, "message-id"),
         inReplyTo: header(message.headers, "in-reply-to"),
         references: header(message.headers, "references"),
-        receivedAt: receivedAt(message.headers),
+        receivedAt: at,
       }),
     });
     if (!response.ok) {

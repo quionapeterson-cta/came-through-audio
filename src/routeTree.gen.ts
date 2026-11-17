@@ -22,6 +22,7 @@ import { Route as PrivacyPolicyRouteImport } from './routes/privacy-policy'
 import { Route as ProfileRouteImport } from './routes/profile'
 import { Route as RefundPolicyRouteImport } from './routes/refund-policy'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
+import { Route as SendUsAFileRouteImport } from './routes/send-us-a-file'
 import { Route as TermsAndConditionsRouteImport } from './routes/terms-and-conditions'
 import { Route as TermsOfServiceRouteImport } from './routes/terms-of-service'
 import { Route as TreatmentPlanRouteImport } from './routes/treatment-plan'
@@ -37,12 +38,14 @@ import { Route as IpiIdRouteImport } from './routes/ipi.$id'
 import { Route as SeatSeatIdRouteImport } from './routes/seat.$seatId'
 import { Route as SignRowIdRouteImport } from './routes/sign.$rowId'
 import { Route as VerifyIdRouteImport } from './routes/verify.$id'
+import { Route as ApiInboxFileRouteImport } from './routes/api/inbox/file'
 import { Route as ShareOwnerCardRouteImport } from './routes/share.$owner.$card'
 import { Route as SignPacketPacketIdRouteImport } from './routes/sign.packet.$packetId'
 import { Route as ApiPublicCronCatalogLapsesRouteImport } from './routes/api/public/cron/catalog-lapses'
 import { Route as ApiPublicCronRegistrationRemindersRouteImport } from './routes/api/public/cron/registration-reminders'
 import { Route as ApiPublicCronTaskRemindersRouteImport } from './routes/api/public/cron/task-reminders'
 import { Route as ApiPublicCronTrialRemindersRouteImport } from './routes/api/public/cron/trial-reminders'
+import { Route as ApiPublicEmailAttachmentRouteImport } from './routes/api/public/email/attachment'
 import { Route as ApiPublicEmailInboundRouteImport } from './routes/api/public/email/inbound'
 import { Route as ApiPublicEmailResendWebhookRouteImport } from './routes/api/public/email/resend-webhook'
 import { Route as ApiPublicPaymentsWebhookRouteImport } from './routes/api/public/payments/webhook'
@@ -110,6 +113,11 @@ const RefundPolicyRoute = RefundPolicyRouteImport.update({
 const ResetPasswordRoute = ResetPasswordRouteImport.update({
   id: '/reset-password',
   path: '/reset-password',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SendUsAFileRoute = SendUsAFileRouteImport.update({
+  id: '/send-us-a-file',
+  path: '/send-us-a-file',
   getParentRoute: () => rootRouteImport,
 } as any)
 const TermsAndConditionsRoute = TermsAndConditionsRouteImport.update({
@@ -187,6 +195,11 @@ const VerifyIdRoute = VerifyIdRouteImport.update({
   path: '/verify/$id',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiInboxFileRoute = ApiInboxFileRouteImport.update({
+  id: '/api/inbox/file',
+  path: '/api/inbox/file',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ShareOwnerCardRoute = ShareOwnerCardRouteImport.update({
   id: '/share/$owner/$card',
   path: '/share/$owner/$card',
@@ -221,6 +234,12 @@ const ApiPublicCronTrialRemindersRoute =
     path: '/api/public/cron/trial-reminders',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiPublicEmailAttachmentRoute =
+  ApiPublicEmailAttachmentRouteImport.update({
+    id: '/api/public/email/attachment',
+    path: '/api/public/email/attachment',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicEmailInboundRoute = ApiPublicEmailInboundRouteImport.update({
   id: '/api/public/email/inbound',
   path: '/api/public/email/inbound',
@@ -253,6 +272,7 @@ export interface FileRoutesByFullPath {
   '/profile': typeof ProfileRoute
   '/refund-policy': typeof RefundPolicyRoute
   '/reset-password': typeof ResetPasswordRoute
+  '/send-us-a-file': typeof SendUsAFileRoute
   '/terms-and-conditions': typeof TermsAndConditionsRoute
   '/terms-of-service': typeof TermsOfServiceRoute
   '/treatment-plan': typeof TreatmentPlanRoute
@@ -268,12 +288,14 @@ export interface FileRoutesByFullPath {
   '/seat/$seatId': typeof SeatSeatIdRoute
   '/sign/$rowId': typeof SignRowIdRoute
   '/verify/$id': typeof VerifyIdRoute
+  '/api/inbox/file': typeof ApiInboxFileRoute
   '/share/$owner/$card': typeof ShareOwnerCardRoute
   '/sign/packet/$packetId': typeof SignPacketPacketIdRoute
   '/api/public/cron/catalog-lapses': typeof ApiPublicCronCatalogLapsesRoute
   '/api/public/cron/registration-reminders': typeof ApiPublicCronRegistrationRemindersRoute
   '/api/public/cron/task-reminders': typeof ApiPublicCronTaskRemindersRoute
   '/api/public/cron/trial-reminders': typeof ApiPublicCronTrialRemindersRoute
+  '/api/public/email/attachment': typeof ApiPublicEmailAttachmentRoute
   '/api/public/email/inbound': typeof ApiPublicEmailInboundRoute
   '/api/public/email/resend-webhook': typeof ApiPublicEmailResendWebhookRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
@@ -292,6 +314,7 @@ export interface FileRoutesByTo {
   '/profile': typeof ProfileRoute
   '/refund-policy': typeof RefundPolicyRoute
   '/reset-password': typeof ResetPasswordRoute
+  '/send-us-a-file': typeof SendUsAFileRoute
   '/terms-and-conditions': typeof TermsAndConditionsRoute
   '/terms-of-service': typeof TermsOfServiceRoute
   '/treatment-plan': typeof TreatmentPlanRoute
@@ -307,12 +330,14 @@ export interface FileRoutesByTo {
   '/seat/$seatId': typeof SeatSeatIdRoute
   '/sign/$rowId': typeof SignRowIdRoute
   '/verify/$id': typeof VerifyIdRoute
+  '/api/inbox/file': typeof ApiInboxFileRoute
   '/share/$owner/$card': typeof ShareOwnerCardRoute
   '/sign/packet/$packetId': typeof SignPacketPacketIdRoute
   '/api/public/cron/catalog-lapses': typeof ApiPublicCronCatalogLapsesRoute
   '/api/public/cron/registration-reminders': typeof ApiPublicCronRegistrationRemindersRoute
   '/api/public/cron/task-reminders': typeof ApiPublicCronTaskRemindersRoute
   '/api/public/cron/trial-reminders': typeof ApiPublicCronTrialRemindersRoute
+  '/api/public/email/attachment': typeof ApiPublicEmailAttachmentRoute
   '/api/public/email/inbound': typeof ApiPublicEmailInboundRoute
   '/api/public/email/resend-webhook': typeof ApiPublicEmailResendWebhookRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
@@ -332,6 +357,7 @@ export interface FileRoutesById {
   '/profile': typeof ProfileRoute
   '/refund-policy': typeof RefundPolicyRoute
   '/reset-password': typeof ResetPasswordRoute
+  '/send-us-a-file': typeof SendUsAFileRoute
   '/terms-and-conditions': typeof TermsAndConditionsRoute
   '/terms-of-service': typeof TermsOfServiceRoute
   '/treatment-plan': typeof TreatmentPlanRoute
@@ -347,12 +373,14 @@ export interface FileRoutesById {
   '/seat/$seatId': typeof SeatSeatIdRoute
   '/sign/$rowId': typeof SignRowIdRoute
   '/verify/$id': typeof VerifyIdRoute
+  '/api/inbox/file': typeof ApiInboxFileRoute
   '/share/$owner/$card': typeof ShareOwnerCardRoute
   '/sign/packet/$packetId': typeof SignPacketPacketIdRoute
   '/api/public/cron/catalog-lapses': typeof ApiPublicCronCatalogLapsesRoute
   '/api/public/cron/registration-reminders': typeof ApiPublicCronRegistrationRemindersRoute
   '/api/public/cron/task-reminders': typeof ApiPublicCronTaskRemindersRoute
   '/api/public/cron/trial-reminders': typeof ApiPublicCronTrialRemindersRoute
+  '/api/public/email/attachment': typeof ApiPublicEmailAttachmentRoute
   '/api/public/email/inbound': typeof ApiPublicEmailInboundRoute
   '/api/public/email/resend-webhook': typeof ApiPublicEmailResendWebhookRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
@@ -373,6 +401,7 @@ export interface FileRouteTypes {
     | '/profile'
     | '/refund-policy'
     | '/reset-password'
+    | '/send-us-a-file'
     | '/terms-and-conditions'
     | '/terms-of-service'
     | '/treatment-plan'
@@ -388,12 +417,14 @@ export interface FileRouteTypes {
     | '/seat/$seatId'
     | '/sign/$rowId'
     | '/verify/$id'
+    | '/api/inbox/file'
     | '/share/$owner/$card'
     | '/sign/packet/$packetId'
     | '/api/public/cron/catalog-lapses'
     | '/api/public/cron/registration-reminders'
     | '/api/public/cron/task-reminders'
     | '/api/public/cron/trial-reminders'
+    | '/api/public/email/attachment'
     | '/api/public/email/inbound'
     | '/api/public/email/resend-webhook'
     | '/api/public/payments/webhook'
@@ -412,6 +443,7 @@ export interface FileRouteTypes {
     | '/profile'
     | '/refund-policy'
     | '/reset-password'
+    | '/send-us-a-file'
     | '/terms-and-conditions'
     | '/terms-of-service'
     | '/treatment-plan'
@@ -427,12 +459,14 @@ export interface FileRouteTypes {
     | '/seat/$seatId'
     | '/sign/$rowId'
     | '/verify/$id'
+    | '/api/inbox/file'
     | '/share/$owner/$card'
     | '/sign/packet/$packetId'
     | '/api/public/cron/catalog-lapses'
     | '/api/public/cron/registration-reminders'
     | '/api/public/cron/task-reminders'
     | '/api/public/cron/trial-reminders'
+    | '/api/public/email/attachment'
     | '/api/public/email/inbound'
     | '/api/public/email/resend-webhook'
     | '/api/public/payments/webhook'
@@ -451,6 +485,7 @@ export interface FileRouteTypes {
     | '/profile'
     | '/refund-policy'
     | '/reset-password'
+    | '/send-us-a-file'
     | '/terms-and-conditions'
     | '/terms-of-service'
     | '/treatment-plan'
@@ -466,12 +501,14 @@ export interface FileRouteTypes {
     | '/seat/$seatId'
     | '/sign/$rowId'
     | '/verify/$id'
+    | '/api/inbox/file'
     | '/share/$owner/$card'
     | '/sign/packet/$packetId'
     | '/api/public/cron/catalog-lapses'
     | '/api/public/cron/registration-reminders'
     | '/api/public/cron/task-reminders'
     | '/api/public/cron/trial-reminders'
+    | '/api/public/email/attachment'
     | '/api/public/email/inbound'
     | '/api/public/email/resend-webhook'
     | '/api/public/payments/webhook'
@@ -491,6 +528,7 @@ export interface RootRouteChildren {
   ProfileRoute: typeof ProfileRoute
   RefundPolicyRoute: typeof RefundPolicyRoute
   ResetPasswordRoute: typeof ResetPasswordRoute
+  SendUsAFileRoute: typeof SendUsAFileRoute
   TermsAndConditionsRoute: typeof TermsAndConditionsRoute
   TermsOfServiceRoute: typeof TermsOfServiceRoute
   TreatmentPlanRoute: typeof TreatmentPlanRoute
@@ -506,12 +544,14 @@ export interface RootRouteChildren {
   SeatSeatIdRoute: typeof SeatSeatIdRoute
   SignRowIdRoute: typeof SignRowIdRoute
   VerifyIdRoute: typeof VerifyIdRoute
+  ApiInboxFileRoute: typeof ApiInboxFileRoute
   ShareOwnerCardRoute: typeof ShareOwnerCardRoute
   SignPacketPacketIdRoute: typeof SignPacketPacketIdRoute
   ApiPublicCronCatalogLapsesRoute: typeof ApiPublicCronCatalogLapsesRoute
   ApiPublicCronRegistrationRemindersRoute: typeof ApiPublicCronRegistrationRemindersRoute
   ApiPublicCronTaskRemindersRoute: typeof ApiPublicCronTaskRemindersRoute
   ApiPublicCronTrialRemindersRoute: typeof ApiPublicCronTrialRemindersRoute
+  ApiPublicEmailAttachmentRoute: typeof ApiPublicEmailAttachmentRoute
   ApiPublicEmailInboundRoute: typeof ApiPublicEmailInboundRoute
   ApiPublicEmailResendWebhookRoute: typeof ApiPublicEmailResendWebhookRoute
   ApiPublicPaymentsWebhookRoute: typeof ApiPublicPaymentsWebhookRoute
@@ -608,6 +648,13 @@ declare module '@tanstack/react-router' {
       path: '/reset-password'
       fullPath: '/reset-password'
       preLoaderRoute: typeof ResetPasswordRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/send-us-a-file': {
+      id: '/send-us-a-file'
+      path: '/send-us-a-file'
+      fullPath: '/send-us-a-file'
+      preLoaderRoute: typeof SendUsAFileRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/terms-and-conditions': {
@@ -715,6 +762,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof VerifyIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/inbox/file': {
+      id: '/api/inbox/file'
+      path: '/api/inbox/file'
+      fullPath: '/api/inbox/file'
+      preLoaderRoute: typeof ApiInboxFileRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/share/$owner/$card': {
       id: '/share/$owner/$card'
       path: '/share/$owner/$card'
@@ -757,6 +811,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicCronTrialRemindersRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/email/attachment': {
+      id: '/api/public/email/attachment'
+      path: '/api/public/email/attachment'
+      fullPath: '/api/public/email/attachment'
+      preLoaderRoute: typeof ApiPublicEmailAttachmentRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/email/inbound': {
       id: '/api/public/email/inbound'
       path: '/api/public/email/inbound'
@@ -795,6 +856,7 @@ const rootRouteChildren: RootRouteChildren = {
   ProfileRoute: ProfileRoute,
   RefundPolicyRoute: RefundPolicyRoute,
   ResetPasswordRoute: ResetPasswordRoute,
+  SendUsAFileRoute: SendUsAFileRoute,
   TermsAndConditionsRoute: TermsAndConditionsRoute,
   TermsOfServiceRoute: TermsOfServiceRoute,
   TreatmentPlanRoute: TreatmentPlanRoute,
@@ -810,6 +872,7 @@ const rootRouteChildren: RootRouteChildren = {
   SeatSeatIdRoute: SeatSeatIdRoute,
   SignRowIdRoute: SignRowIdRoute,
   VerifyIdRoute: VerifyIdRoute,
+  ApiInboxFileRoute: ApiInboxFileRoute,
   ShareOwnerCardRoute: ShareOwnerCardRoute,
   SignPacketPacketIdRoute: SignPacketPacketIdRoute,
   ApiPublicCronCatalogLapsesRoute: ApiPublicCronCatalogLapsesRoute,
@@ -817,6 +880,7 @@ const rootRouteChildren: RootRouteChildren = {
     ApiPublicCronRegistrationRemindersRoute,
   ApiPublicCronTaskRemindersRoute: ApiPublicCronTaskRemindersRoute,
   ApiPublicCronTrialRemindersRoute: ApiPublicCronTrialRemindersRoute,
+  ApiPublicEmailAttachmentRoute: ApiPublicEmailAttachmentRoute,
   ApiPublicEmailInboundRoute: ApiPublicEmailInboundRoute,
   ApiPublicEmailResendWebhookRoute: ApiPublicEmailResendWebhookRoute,
   ApiPublicPaymentsWebhookRoute: ApiPublicPaymentsWebhookRoute,

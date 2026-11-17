@@ -1,15 +1,17 @@
 import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { ArrowLeft, CornerUpLeft, Paperclip, Search, Send } from "lucide-react";
+import { ArrowLeft, CornerUpLeft, Download, Paperclip, Search, Send } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import {
+  inboxAttachmentUrl,
   listInboxThreads,
   openInboxThread,
   replyToInboxThread,
+  type InboxAttachment,
   type InboxMailbox,
   type InboxMessage,
   type InboxThreadSummary,
@@ -21,6 +23,9 @@ import {
  * The unread count is never stored: it is counted from the messages, so a badge can't drift low. Opening a thread marks
  * its inbound messages read on the server. A reply leaves from admin@ and is stored on the thread like the mail it
  * answers, so the next person to open it sees both halves.
+ *
+ * The files stay with the message (founder, 2026-11-17): each one downloads through a link the server signs for a key the
+ * message already holds, so the bucket is never made public and a short-lived address is the only way in.
  */
 
 const when = (iso: string) =>
@@ -41,6 +46,62 @@ function sizeOf(bytes?: number): string {
 
 const MAILBOX_LABEL: Record<InboxMailbox, string> = { admin: "admin@", contracts: "contracts@" };
 
+/** One file on a message: the name, then the way to open it when we kept it. */
+function AttachmentRow({ messageId, file }: { messageId: string; file: InboxAttachment }) {
+  const sign = useServerFn(inboxAttachmentUrl);
+  const [link, setLink] = useState<string | null>(null);
+  const grab = useMutation({
+    mutationFn: () => sign({ data: { messageId, storagePath: file.storagePath ?? "" } }),
+    onSuccess: (answer) => {
+      setLink(answer.url);
+      // Signed addresses are short-lived, so the file opens now; the link stays as a fallback if a pop-up is blocked.
+      window.open(answer.url, "_blank", "noopener,noreferrer");
+    },
+  });
+
+  return (
+    <li className="flex flex-wrap items-baseline gap-2 text-sm">
+      <span className="font-medium">{file.filename}</span>
+      {file.mimeType ? (
+        <span className="text-xs text-muted-foreground">{file.mimeType}</span>
+      ) : null}
+      {sizeOf(file.size) ? (
+        <span className="text-xs text-muted-foreground">{sizeOf(file.size)}</span>
+      ) : null}
+      {file.storagePath ? (
+        <span className="ml-auto flex items-center gap-2">
+          <Button
+            size="sm"
+            variant="outline"
+            disabled={grab.isPending}
+            onClick={() => grab.mutate()}
+          >
+            <Download className="h-3.5 w-3.5" />
+            {grab.isPending ? "Preparing…" : "Download"}
+          </Button>
+          {link ? (
+            <a
+              className="text-xs font-semibold text-primary underline"
+              href={link}
+              target="_blank"
+              rel="noreferrer"
+            >
+              Open
+            </a>
+          ) : null}
+          {grab.isError ? (
+            <span className="text-xs text-destructive">{(grab.error as Error).message}</span>
+          ) : null}
+        </span>
+      ) : (
+        <span className="text-xs text-muted-foreground">
+          not kept{file.reason ? ` · ${file.reason}` : ""}
+        </span>
+      )}
+    </li>
+  );
+}
+
 function Attachments({ message }: { message: InboxMessage }) {
   if (!message.attachments.length) return null;
   return (
@@ -53,21 +114,15 @@ function Attachments({ message }: { message: InboxMessage }) {
       </p>
       <ul className="mt-1.5 space-y-1">
         {message.attachments.map((file, i) => (
-          <li key={`${file.filename}-${i}`} className="flex flex-wrap items-baseline gap-2 text-sm">
-            <span className="font-medium">{file.filename}</span>
-            {file.mimeType ? (
-              <span className="text-xs text-muted-foreground">{file.mimeType}</span>
-            ) : null}
-            {sizeOf(file.size) ? (
-              <span className="text-xs text-muted-foreground">{sizeOf(file.size)}</span>
-            ) : null}
-          </li>
+          <AttachmentRow key={`${file.filename}-${i}`} messageId={message.id} file={file} />
         ))}
       </ul>
-      <p className="mt-1.5 text-xs text-muted-foreground">
-        The names travel with the message. The files themselves stay with the mail, so ask the
-        sender if you need one.
-      </p>
+      {message.attachments.some((file) => !file.storagePath) ? (
+        <p className="mt-1.5 text-xs text-muted-foreground">
+          A file listed as not kept arrived over the 10 MB cap, so only its name is here. Ask the
+          sender for a download link, or file it yourself on Send us a file.
+        </p>
+      ) : null}
     </div>
   );
 }

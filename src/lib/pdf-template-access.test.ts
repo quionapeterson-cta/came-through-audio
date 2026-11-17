@@ -6,20 +6,18 @@ import {
 } from "./pdf-templates";
 
 describe("who keeps the template library", () => {
-  it("lets the four lead roles write", () => {
+  it("lets a super admin alone write", () => {
     for (const role of PDF_TEMPLATE_EDITOR_ROLES) {
       expect(canManagePdfTemplates({ role })).toBe(true);
     }
-    expect(PDF_TEMPLATE_EDITOR_ROLES).toEqual([
-      "super_admin",
-      "hr_admin",
-      "project_manager",
-      "department_lead",
-    ]);
+    expect(PDF_TEMPLATE_EDITOR_ROLES).toEqual(["super_admin"]);
   });
 
-  it("keeps an employee reading, never writing", () => {
-    expect(canManagePdfTemplates({ role: "employee" })).toBe(false);
+  it("keeps every other staff role reading, never writing", () => {
+    // The library narrowed to a super admin (founder, 2026-11-17); these roles used to write it.
+    for (const role of ["employee", "hr_admin", "project_manager", "department_lead"]) {
+      expect(canManagePdfTemplates({ role })).toBe(false);
+    }
   });
 
   it("refuses a signed-out or unknown role", () => {

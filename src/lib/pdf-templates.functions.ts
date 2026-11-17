@@ -79,8 +79,8 @@ async function requireStaff(context: Ctx): Promise<void> {
 }
 
 /**
- * Changing the library is narrower than reading it (founder, 2026-11-15): a super admin, HR admin, project manager or
- * department lead writes; every other staff member reads, because the send dialog picks from the same library.
+ * Changing the library is narrower than reading it (founder, 2026-11-17, narrowing 2026-11-15): only a super admin
+ * writes; every other staff member reads, because the send dialog picks from the same library.
  */
 async function requireTemplateAuthor(context: Ctx): Promise<void> {
   await requireStaff(context);
@@ -90,9 +90,7 @@ async function requireTemplateAuthor(context: Ctx): Promise<void> {
     ),
   );
   if (!checks.some((result) => Boolean(result.data))) {
-    throw new Error(
-      "Only a super admin, HR admin, project manager or department lead can change the template library.",
-    );
+    throw new Error("Only a super admin can change the template library.");
   }
 }
 
@@ -237,8 +235,8 @@ export const setTemplateInContracts = createServerFn({ method: "POST" })
   });
 
 /**
- * The custom cards for Admin → Company Contracts. Only the toggled templates come back, and only to a lead, because an
- * employee must not see company agreements they cannot use.
+ * The custom cards for Admin → Company Contracts. Only the toggled templates come back, and only to a super admin,
+ * because nobody else may put a company agreement in front of a signer.
  */
 export const listContractTemplates = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])

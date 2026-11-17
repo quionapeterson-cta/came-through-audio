@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { createClient } from "@supabase/supabase-js";
 import { z } from "zod";
+import { threadSubjectKey } from "@/lib/inbox-attachments";
 
 /**
  * The Admin Inbox receiver (founder, 2026-11-17): a Cloudflare Email Worker on the admin@ and contracts@ routes posts
@@ -35,8 +36,9 @@ const payloadSchema = z.object({
   inReplyTo: z.string().trim().max(500).optional(),
   references: z.union([z.string().max(4000), z.array(z.string().max(500)).max(50)]).optional(),
   /**
-   * What came attached: the names alone. The files themselves are not part of the inbox, so a thread says something
-   * arrived with the mail instead of reading like a plain email.
+   * What came attached. The files themselves are kept in the private admin-inbox bucket by the worker, which posts each
+   * one to /api/public/email/attachment first and names the key it got back here; a file too big to keep travels by
+   * name with `kept: false` and the reason, so a thread says what arrived and what to ask for.
    */
   attachments: z
     .array(
@@ -44,6 +46,9 @@ const payloadSchema = z.object({
         filename: z.string().trim().min(1).max(300),
         mimeType: z.string().trim().max(200).optional(),
         size: z.number().int().nonnegative().max(1_000_000_000).optional(),
+        storagePath: z.string().trim().min(3).max(400).optional(),
+        kept: z.boolean().optional(),
+        reason: z.string().trim().max(200).optional(),
       }),
     )
     .max(50)
@@ -100,16 +105,34 @@ function cleanId(value: string | undefined): string | null {
 }
 
 /**
- * The subject a thread is matched on: Re:/Fwd: stripped (however many are stacked), spaces collapsed, case folded.
- * A reply keeps the subject, so this is what joins it to its conversation when References are missing.
+ * Only keys this app wrote for this mailbox are kept: a storagePath is a key into a private bucket, and the receiver
+ * must never file one that points somewhere else, even on a request that carries the shared secret.
  */
-function threadSubjectKey(subject: string): string {
-  return subject
-    .replace(/^\s*((re|fw|fwd)\s*:\s*)+/gi, "")
-    .replace(/\s+/g, " ")
-    .trim()
-    .toLowerCase()
-    .slice(0, 200);
+function keptAttachments(
+  list:
+    | {
+        filename: string;
+        mimeType?: string | undefined;
+        size?: number | undefined;
+        storagePath?: string | undefined;
+        kept?: boolean | undefined;
+        reason?: string | undefined;
+      }[]
+    | undefined,
+  mailbox: InboxMailbox,
+) {
+  return (list ?? []).map((one) => {
+    const path = one.storagePath?.trim();
+    const valid = !!path && path.startsWith(`inbound/${mailbox}/`) && !path.includes("..");
+    return {
+      filename: one.filename,
+      ...(one.mimeType ? { mimeType: one.mimeType } : {}),
+      ...(typeof one.size === "number" ? { size: one.size } : {}),
+      ...(valid ? { storagePath: path, kept: true } : { kept: false }),
+      ...(!valid && one.kept !== false && one.reason ? { reason: one.reason } : {}),
+      ...(!valid && !one.reason && one.storagePath ? { reason: "it could not be stored" } : {}),
+    };
+  });
 }
 
 function isoOrNow(value: string | undefined): string {
@@ -260,7 +283,7 @@ export const Route = createFileRoute("/api/public/email/inbound")({
             subject,
             body_text: input.text ?? null,
             body_html: input.html ?? null,
-            attachments: input.attachments ?? [],
+            attachments: keptAttachments(input.attachments, mailbox),
             received_at: receivedAt,
           } as never)
           .select("id")
