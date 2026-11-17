@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from "vitest";
-import { cacheReleases, mergeRelease, readCachedReleases, releaseKey, withoutCatalog, withoutKeystrokes, type FillRelease } from "./fill-releases";
+import { cacheReleases, mergeRelease, mergeRemembered, readCachedReleases, releaseKey, withoutCatalog, withoutKeystrokes, type FillRelease } from "./fill-releases";
 
 class Memory implements Storage {
   private map = new Map<string, string>();
@@ -51,6 +51,26 @@ describe("releases typed by hand in the fill dialog", () => {
   it("drops a remembered title the catalog now offers", () => {
     expect(withoutCatalog([{ type: "EP", name: "Afterglow" }], [{ album: "afterglow", kind: "EP" }])).toEqual([]);
     expect(withoutCatalog([{ type: "EP", name: "Afterglow" }], [{ album: "Afterglow", kind: "Album" }])).toHaveLength(1);
+  });
+
+  it("keeps the browser's own entries when the account's list arrives", () => {
+    const account: FillRelease[] = [
+      { id: "acct-1", type: "Single", name: "Afterglow" },
+      { id: "acct-2", type: "Album", name: "BAM" },
+    ];
+    const local: FillRelease[] = [
+      { type: "EP", name: "Late Bloom" },
+      { type: "Single", name: " AFTERGLOW " },
+    ];
+    // The account's row wins the release both know, and the one only this browser has is kept rather than erased.
+    expect(mergeRemembered(account, local)).toEqual([
+      { type: "EP", name: "Late Bloom" },
+      { id: "acct-1", type: "Single", name: "Afterglow" },
+      { id: "acct-2", type: "Album", name: "BAM" },
+    ]);
+    // An unnamed entry is never one, and neither list can grow past the handful the dialog offers.
+    expect(mergeRemembered(account, [{ type: "Single", name: "   " }])).toHaveLength(2);
+    expect(mergeRemembered(Array.from({ length: 30 }, (_, i) => ({ type: "EP" as const, name: `R${i}` })), [])).toHaveLength(24);
   });
 
   it("keeps a browser copy per account, and survives a browser that blocks storage", () => {

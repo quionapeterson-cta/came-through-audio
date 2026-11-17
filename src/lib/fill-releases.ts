@@ -47,6 +47,28 @@ export function withoutCatalog(releases: FillRelease[], catalog: { album: string
   return releases.filter((r) => !catalog.some((c) => c.kind === r.type && albumKey(c.album) === albumKey(r.name)));
 }
 
+/**
+ * The account's list with this browser's own entries kept (founder, 2026-11-17): a release typed while signed out or
+ * offline lives only here, and the account's answer never mentions it, so reading the account must not erase it. The
+ * account wins where both have the same release, because it is the real list and its row's id is the one to send back;
+ * the entries it doesn't know yet go first, since those are the ones just typed.
+ */
+export function mergeRemembered(account: FillRelease[], local: FillRelease[], max = MAX_FILL_RELEASES): FillRelease[] {
+  const known = new Map(account.map((r) => [releaseKey(r), r]));
+  const merged: FillRelease[] = [];
+  const seen = new Set<string>();
+  for (const entry of [...local, ...account]) {
+    const name = entry.name.trim();
+    if (!name) continue;
+    const key = releaseKey({ type: entry.type, name });
+    if (seen.has(key)) continue;
+    seen.add(key);
+    const saved = known.get(key);
+    merged.push(saved ?? { ...(entry.id ? { id: entry.id } : {}), type: entry.type, name });
+  }
+  return merged.slice(0, max);
+}
+
 /** The copy this browser keeps, for the moments the account list can't be read. */
 export function readCachedReleases(userId: string, store: Storage | undefined = safeStorage()): FillRelease[] {
   if (!userId || !store) return [];
