@@ -31,6 +31,7 @@ import { Route as VerifiedRouteImport } from './routes/verified'
 import { Route as WorkspaceRouteImport } from './routes/workspace'
 import { Route as AdminStaffRouteImport } from './routes/admin_.staff'
 import { Route as ContractPartyIdRouteImport } from './routes/contract.$partyId'
+import { Route as DevFillRouteImport } from './routes/dev.fill'
 import { Route as DevSkyRouteImport } from './routes/dev.sky'
 import { Route as DocsSlugRouteImport } from './routes/docs.$slug'
 import { Route as InvitesStopRouteImport } from './routes/invites.stop'
@@ -160,6 +161,11 @@ const ContractPartyIdRoute = ContractPartyIdRouteImport.update({
   path: '/contract/$partyId',
   getParentRoute: () => rootRouteImport,
 } as any)
+const DevFillRoute = DevFillRouteImport.update({
+  id: '/dev/fill',
+  path: '/dev/fill',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const DevSkyRoute = DevSkyRouteImport.update({
   id: '/dev/sky',
   path: '/dev/sky',
@@ -281,6 +287,7 @@ export interface FileRoutesByFullPath {
   '/workspace': typeof WorkspaceRoute
   '/admin/staff': typeof AdminStaffRoute
   '/contract/$partyId': typeof ContractPartyIdRoute
+  '/dev/fill': typeof DevFillRoute
   '/dev/sky': typeof DevSkyRoute
   '/docs/$slug': typeof DocsSlugRoute
   '/invites/stop': typeof InvitesStopRoute
@@ -323,6 +330,7 @@ export interface FileRoutesByTo {
   '/workspace': typeof WorkspaceRoute
   '/admin/staff': typeof AdminStaffRoute
   '/contract/$partyId': typeof ContractPartyIdRoute
+  '/dev/fill': typeof DevFillRoute
   '/dev/sky': typeof DevSkyRoute
   '/docs/$slug': typeof DocsSlugRoute
   '/invites/stop': typeof InvitesStopRoute
@@ -366,6 +374,7 @@ export interface FileRoutesById {
   '/workspace': typeof WorkspaceRoute
   '/admin_/staff': typeof AdminStaffRoute
   '/contract/$partyId': typeof ContractPartyIdRoute
+  '/dev/fill': typeof DevFillRoute
   '/dev/sky': typeof DevSkyRoute
   '/docs/$slug': typeof DocsSlugRoute
   '/invites/stop': typeof InvitesStopRoute
@@ -410,6 +419,7 @@ export interface FileRouteTypes {
     | '/workspace'
     | '/admin/staff'
     | '/contract/$partyId'
+    | '/dev/fill'
     | '/dev/sky'
     | '/docs/$slug'
     | '/invites/stop'
@@ -452,6 +462,7 @@ export interface FileRouteTypes {
     | '/workspace'
     | '/admin/staff'
     | '/contract/$partyId'
+    | '/dev/fill'
     | '/dev/sky'
     | '/docs/$slug'
     | '/invites/stop'
@@ -494,6 +505,7 @@ export interface FileRouteTypes {
     | '/workspace'
     | '/admin_/staff'
     | '/contract/$partyId'
+    | '/dev/fill'
     | '/dev/sky'
     | '/docs/$slug'
     | '/invites/stop'
@@ -537,6 +549,7 @@ export interface RootRouteChildren {
   WorkspaceRoute: typeof WorkspaceRoute
   AdminStaffRoute: typeof AdminStaffRoute
   ContractPartyIdRoute: typeof ContractPartyIdRoute
+  DevFillRoute: typeof DevFillRoute
   DevSkyRoute: typeof DevSkyRoute
   DocsSlugRoute: typeof DocsSlugRoute
   InvitesStopRoute: typeof InvitesStopRoute
@@ -713,6 +726,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ContractPartyIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/dev/fill': {
+      id: '/dev/fill'
+      path: '/dev/fill'
+      fullPath: '/dev/fill'
+      preLoaderRoute: typeof DevFillRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/dev/sky': {
       id: '/dev/sky'
       path: '/dev/sky'
@@ -865,6 +885,7 @@ const rootRouteChildren: RootRouteChildren = {
   WorkspaceRoute: WorkspaceRoute,
   AdminStaffRoute: AdminStaffRoute,
   ContractPartyIdRoute: ContractPartyIdRoute,
+  DevFillRoute: DevFillRoute,
   DevSkyRoute: DevSkyRoute,
   DocsSlugRoute: DocsSlugRoute,
   InvitesStopRoute: InvitesStopRoute,
