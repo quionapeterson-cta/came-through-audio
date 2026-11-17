@@ -29,6 +29,9 @@ async function printed(run: () => Promise<void>): Promise<string> {
   } finally {
     spy.mockRestore();
   }
+  // A capture that never filled would make every "does not contain" assertion below pass for the wrong reason, so an
+  // empty one fails here instead: nothing was checked is not the same as nothing was found.
+  if (!bytes.length) throw new Error("the PDF never reached save, so there was nothing to read");
   return new TextDecoder("latin1").decode(bytes);
 }
 
@@ -46,6 +49,7 @@ const contract = (status: string) => () =>
 describe("a contract PDF", () => {
   it("carries no status line while it is out for signature", async () => {
     const text = await printed(contract("sent"));
+    expect(text.startsWith("%PDF")).toBe(true);
     expect(text).not.toContain("Out for signature");
     expect(text).toContain("Producer Agreement");
   });
