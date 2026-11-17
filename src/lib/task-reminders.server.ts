@@ -4,6 +4,41 @@ type Due = { id: string; title: string; department: string; due_at: string; owne
 const HOUR = 3600_000;
 
 /**
+ * Posts one reminder and reports whether Resend accepted it. A refused send is a *resolved* fetch, so `!res.ok` has to
+ * be checked: the caller records the reminder only when this returns true. That is what makes the next hourly run try
+ * again instead of the task being marked as reminded when nothing went out.
+ */
+async function postReminder(
+  key: string,
+  input: { id: string; mark: string; subject: string; html: string; to: string[] },
+): Promise<boolean> {
+  try {
+    const res = await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${key}`,
+        "Content-Type": "application/json",
+        "Idempotency-Key": `task-${input.id}-${input.mark}`,
+      },
+      body: JSON.stringify({
+        from: `Came Through Audio <${ADMIN_EMAIL}>`,
+        to: input.to,
+        subject: input.subject,
+        html: input.html,
+      }),
+    });
+    if (!res.ok) {
+      console.error(`Task reminder for ${input.id} not sent [${res.status}]: ${await res.text()}`);
+      return false;
+    }
+    return true;
+  } catch (e) {
+    console.error("Task reminder failed", e);
+    return false;
+  }
+}
+
+/**
  * Hourly: emails the owner of each open Top priority task 24 hours and 1 hour before its deadline (each once). A task
  * with no owner goes to everyone in its department. Returns counts only.
  */
@@ -27,14 +62,19 @@ export async function sendDueTaskReminders(now = new Date()) {
 <p style="font-size:15px;line-height:1.6">Deadline: <b>${escapeHtml(when)} (Eastern)</b></p>
 <p><a href="${SITE_URL}/admin" style="display:inline-block;background:#004AAD;color:#ffffff;text-decoration:none;font-weight:700;padding:14px 28px;border-radius:8px">Open the task</a></p>`,
         { reason: "You're receiving this because a Top priority task in your Came Through Audio department is due soon." });
-      await fetch("https://api.resend.com/emails", {
-        method: "POST",
-        headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json", "Idempotency-Key": `task-${t.id}-${mark}` },
-        body: JSON.stringify({ from: `Came Through Audio <${ADMIN_EMAIL}>`, to: emails, subject: `Top priority due ${mark === "1h" ? "within the hour" : "in 24 hours"}: ${t.title}`, html }),
-      }).catch((e) => console.error("Task reminder failed", e));
-      sent++;
+      const ok = await postReminder(key, {
+        id: t.id,
+        mark,
+        html,
+        to: emails,
+        subject: `Top priority due ${mark === "1h" ? "within the hour" : "in 24 hours"}: ${t.title}`,
+      });
+      // Only a send Resend accepted is recorded: a failed one stays unmarked, so the next hourly run tries again.
+      if (ok) {
+        sent++;
+        await db.from("department_tasks" as never).update({ reminders_sent: [...t.reminders_sent, mark] } as never).eq("id", t.id);
+      }
     }
-    await db.from("department_tasks" as never).update({ reminders_sent: [...t.reminders_sent, mark] } as never).eq("id", t.id);
   }
   sent += await sendWeeklyTaskReminders(db, key, now);
   return { checked: (data ?? []).length, sent };
@@ -72,14 +112,18 @@ ${when ? `<p style="font-size:15px;line-height:1.6">Deadline: <b>${escapeHtml(wh
 <p><a href="${SITE_URL}/admin" style="display:inline-block;background:#004AAD;color:#ffffff;text-decoration:none;font-weight:700;padding:14px 28px;border-radius:8px">Open the task</a></p>
 <p style="font-size:13px;color:#555">Mark the task done in Admin and these reminders stop.</p>`,
         { reason: "You're receiving this because you set a weekly reminder on a Came Through Audio task." });
-      await fetch("https://api.resend.com/emails", {
-        method: "POST",
-        headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json", "Idempotency-Key": `task-${t.id}-${mark}` },
-        body: JSON.stringify({ from: `Came Through Audio <${ADMIN_EMAIL}>`, to: emails, subject: `Reminder: ${t.title}`, html }),
-      }).catch((e) => console.error("Weekly reminder failed", e));
-      sent++;
+      const ok = await postReminder(key, {
+        id: t.id,
+        mark,
+        html,
+        to: emails,
+        subject: `Reminder: ${t.title}`,
+      });
+      if (ok) {
+        sent++;
+        await db.from("department_tasks" as never).update({ reminders_sent: [...t.reminders_sent, mark] } as never).eq("id", t.id);
+      }
     }
-    await db.from("department_tasks" as never).update({ reminders_sent: [...t.reminders_sent, mark] } as never).eq("id", t.id);
   }
   return sent;
 }
