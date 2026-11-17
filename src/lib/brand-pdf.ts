@@ -289,7 +289,7 @@ function editorialHeader(pdf: JsPDF, brand: PdfBrand, colors: [number, number, n
  * A Branding Kit's cover page (options.cover): their logo large, their name and tagline, the document title and date,
  * framed in their accent color (rounded or square corners). The document starts on the next page.
  */
-export function kitCover(pdf: JsPDF, brand: PdfBrand, title: string, subtitle: string) {
+export function kitCover(pdf: JsPDF, brand: PdfBrand, title: string, subtitle?: string) {
   const w = pdf.internal.pageSize.getWidth(), h = pdf.internal.pageSize.getHeight();
   const accent = kitAccent(brand);
   pdf.setDrawColor(...accent).setLineWidth(1.2);
@@ -313,7 +313,9 @@ export function kitCover(pdf: JsPDF, brand: PdfBrand, title: string, subtitle: s
   font(pdf, "bold", 24).setTextColor(...titleInk(brand));
   const lines = (pdf.splitTextToSize(title, w - MARGIN * 4) as string[]).slice(0, 3);
   lines.forEach((l, i) => pdf.text(l, w / 2, y + 22 + i * 10, { align: "center" }));
-  font(pdf, "regular", 11).setTextColor(...MUTED).text(subtitle, w / 2, y + 30 + lines.length * 10, { align: "center" });
+  // The subtitle is optional: a cover that carries a status (a contract's "Out for signature") leaves it out, since a
+  // printed agreement describes the agreement and nothing about where it sits in our process (founder, 2026-11-17).
+  if (subtitle) font(pdf, "regular", 11).setTextColor(...MUTED).text(subtitle, w / 2, y + 30 + lines.length * 10, { align: "center" });
   pdf.addPage();
 }
 

@@ -18,20 +18,14 @@ export async function downloadContractPdf(o: {
   const cursive = await addSignatureFont(pdf, SIGNATURE_FONT);
   const signature = (text: string, x: number, y: number) => (cursive ? pdf.setFont(SIGNATURE_FONT, "bold").setFontSize(20) : pdf.setFont("times", "italic").setFontSize(18)).setTextColor(...INK).text(text, x, y);
   const w = pdf.internal.pageSize.getWidth();
-  const label =
-    o.status === "signed"
-      ? "Fully signed"
-      : o.status === "sent"
-        ? "Out for signature"
-        : o.status === "pending_approval"
-          ? "Awaiting approval"
-          : o.status === "changes_requested"
-            ? "Changes requested"
-            : "Draft";
+  // The agreement carries no status line (founder, 2026-11-17): contracts are the outgoing and incoming business
+  // agreement itself, so the printed copy is the same document whether it was printed before or after signing, and
+  // nothing on the page describes our side of the flow. "Out for signature", "Draft" and the rest stay on screen — the
+  // Contracts badge and the signing page — the way the split sheet's downloaded copy already carries none.
   // Branding Kit extras (founder, 2026-10-28): an optional cover page, then a faint logo watermark behind page 1.
-  if (o.brand?.options.cover) kitCover(pdf, o.brand, o.title, label);
+  if (o.brand?.options.cover) kitCover(pdf, o.brand, o.title);
   if (o.brand?.options.watermark) kitWatermark(pdf, o.brand);
-  let y = brandHeader(pdf, o.title, label, undefined, o.brand);
+  let y = brandHeader(pdf, o.title, undefined, undefined, o.brand);
   const accent = o.brand ? kitAccent(o.brand) : COBALT;
   // A line is its own choice (founder, 2026-11-07): a straight rule with square ends, so corners only ever belong to a box.
   const boxed = o.brand?.options.signature === "box", rounded = boxed && o.brand?.options.corners !== "square";
