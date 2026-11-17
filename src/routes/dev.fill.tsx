@@ -63,21 +63,29 @@ const SAMPLE = [
 function FillLab() {
   // Loads the sample list and opens the dialog, so the lab is a look at the dialog itself.
   useEffect(() => {
+    let stopped = false;
     const timers: ReturnType<typeof setTimeout>[] = [];
     const wait = (ms: number) => new Promise((r) => timers.push(setTimeout(r, ms)));
+    const fillButton = () => [...document.querySelectorAll("button")].find((b) => /Fill my catalog/i.test(b.textContent ?? ""));
+    const dialogOpen = () => !!document.querySelector('[role="dialog"]');
     void (async () => {
-      await wait(300);
-      const input = document.querySelector<HTMLInputElement>('input[type="file"]');
-      if (!input) return;
-      const dt = new DataTransfer();
-      dt.items.add(new File([SAMPLE], "bmi-sample.csv", { type: "text/csv" }));
-      input.files = dt.files;
-      input.dispatchEvent(new Event("change", { bubbles: true }));
-      await wait(900);
-      const button = [...document.querySelectorAll("button")].find((b) => /Fill my catalog/i.test(b.textContent ?? ""));
-      button?.click();
+      // The page hydrates a moment after it paints (this route's own chunk arrives last), and a change event sent before
+      // then is lost, so the sample is offered again until the panel has read it — which is when the fill button appears.
+      // That button is disabled for a moment while the file settles, so the click is offered until the dialog is open.
+      for (let attempt = 0; attempt < 12 && !stopped && !dialogOpen(); attempt++) {
+        await wait(attempt ? 500 : 400);
+        if (stopped) return;
+        const fill = fillButton();
+        if (fill) { fill.click(); continue; }
+        const input = document.querySelector<HTMLInputElement>('input[type="file"]');
+        if (!input) continue;
+        const dt = new DataTransfer();
+        dt.items.add(new File([SAMPLE], "bmi-sample.csv", { type: "text/csv" }));
+        input.files = dt.files;
+        input.dispatchEvent(new Event("change", { bubbles: true }));
+      }
     })();
-    return () => timers.forEach(clearTimeout);
+    return () => { stopped = true; timers.forEach(clearTimeout); };
   }, []);
 
   return (
