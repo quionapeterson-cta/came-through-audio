@@ -62,10 +62,14 @@ describe("visibleTabs", () => {
 
   it("narrows the super admin view with the switcher", () => {
     const sa = resolveAccess([{ role: "super_admin" }])!;
-    expect(visibleTabs(sa).map((t) => t.value).slice(-8)).toEqual(["scripts", "prices", "pdf", "email", "recognition", "holiday", "company", "plans"]);
+    // The company inbox sits with the super-admin tabs (founder, 2026-11-17): admin@ and contracts@ mail is the company's.
+    expect(visibleTabs(sa).map((t) => t.value).slice(-8)).toEqual(["prices", "pdf", "email", "recognition", "inbox", "holiday", "company", "plans"]);
+    // A staff member never gets it, whatever department they hold.
+    expect(visibleTabs(resolveAccess([{ role: "employee", departments: ["support"] }])!).map((t) => t.value)).not.toContain("inbox");
     expect(visibleTabs(sa)[0]?.value).toBe("queue");
-    expect(visibleTabs(sa, "finance").map((t) => t.value)).toEqual(withDeptTabs(["purchases", "billing"]));
-    expect(visibleTabs(sa, "support").map((t) => t.value)).toEqual(withDeptTabs(["retired", "support", "accounts", "badges"]));
+    // The inbox follows a super admin into a narrowed view too, since it belongs to no department.
+    expect(visibleTabs(sa, "finance").map((t) => t.value)).toEqual([...withDeptTabs(["purchases", "billing"]), "inbox"]);
+    expect(visibleTabs(sa, "support").map((t) => t.value)).toEqual([...withDeptTabs(["retired", "support", "accounts", "badges"]), "inbox"]);
   });
 
   it("gives Billing the ticket queue and every staff member the scripts", () => {

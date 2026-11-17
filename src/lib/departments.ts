@@ -150,5 +150,8 @@ export function visibleTabs(access: StaffAccess, view: Department | "all" = "all
   const leads: string[] = ["super_admin", "hr_admin", "project_manager", "department_lead"];
   const company = leads.includes(access.role) && view === "all" ? [{ value: "company", label: "Company Contracts" }] : [];
   const plans = access.role === "super_admin" && view === "all" ? [{ value: "plans", label: "Plans" }] : [];
-  return [...withTasks, ...holiday, ...company, ...plans];
+  // The company inbox (founder, 2026-11-17): admin@ and contracts@ mail is the company's, so only a super admin reads it,
+  // in every view rather than only the all-departments one.
+  const inbox = access.role === "super_admin" ? [{ value: "inbox", label: "Inbox" }] : [];
+  return [...withTasks, ...inbox, ...holiday, ...company, ...plans];
 }

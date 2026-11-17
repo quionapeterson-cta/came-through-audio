@@ -24,6 +24,8 @@ import { getAdminOverview, getStaffRole } from "@/lib/admin.functions";
 import { ASSIGNABLE_DEPARTMENTS, DEPARTMENTS, DEPARTMENT_LABEL, ROLE_LABEL, viewDepartments, visibleTabs, type Department } from "@/lib/departments";
 import { canManagePdfTemplates } from "@/lib/pdf-templates";
 import { SupportTicketsPanel } from "@/components/SupportTicketsPanel";
+import { AdminInboxPanel } from "@/components/AdminInboxPanel";
+import { inboxUnreadCount } from "@/lib/inbox.functions";
 import { SupportScriptsPanel } from "@/components/SupportScriptsPanel";
 import { BadgeSwitchboard } from "@/components/BadgeSwitchboard";
 import { BadgeProtocolPanel } from "@/components/BadgeProtocolPanel";
@@ -100,6 +102,16 @@ function AdminPage() {
     refetchInterval: 60000,
   });
   const pendingApprovals = access?.role === "super_admin" ? (approvals.data ?? 0) : 0;
+  // The inbox badge, counted from the unread messages themselves rather than a stored counter.
+  const inbox = useQuery({
+    queryKey: ["inbox-unread", user?.id],
+    queryFn: () => inboxUnreadCount(),
+    enabled: !!access && access.role === "super_admin",
+    refetchInterval: 60000,
+  });
+  // Undefined while it is loading and after a failure, so the tab shows a dash rather than a zero: a count with no data
+  // is never reported as an empty inbox (founder, 2026-11-17).
+  const inboxUnread = access?.role === "super_admin" && inbox.isSuccess ? (inbox.data ?? 0) : undefined;
   const [view, setView] = useState<Department | "all">("all");
   const [activeTab, setActiveTab] = useState<string>();
   useEffect(() => setActiveTab(undefined), [view]);
@@ -134,7 +146,12 @@ function AdminPage() {
   // Undefined while the overview is loading or has failed, so the tile reads "—" like the others instead of a wrong 0
   // for a backlog that does exist (the database held 1 unsigned split while this showed 0).
   const pendingSigs = d ? d.splits.filter((s) => !s.is_owner && !s.signed_at).length : undefined;
-  const tabs = visibleTabs(access, view).map((t) => (t.value === "company" && pendingApprovals > 0 ? { ...t, label: `Company Contracts (${pendingApprovals})` } : t));
+  const tabs = visibleTabs(access, view).map((t) => {
+    if (t.value === "company" && pendingApprovals > 0) return { ...t, label: `Company Contracts (${pendingApprovals})` };
+    if (t.value === "inbox" && inboxUnread !== undefined && inboxUnread > 0) return { ...t, label: `Inbox (${inboxUnread})` };
+    if (t.value === "inbox" && inboxUnread === undefined && inbox.isError) return { ...t, label: "Inbox (—)" };
+    return t;
+  });
   const show = (value: string) => tabs.some((t) => t.value === value);
   const isSuper = access.role === "super_admin";
   const current = activeTab && show(activeTab) ? activeTab : (tabs[0]?.value ?? "");
@@ -237,6 +254,7 @@ function AdminPage() {
             <Table head={["Type", "Mode", "Status", "Date"]} failed={overview.isError} rows={d?.purchases.map((p) => [p.type, p.environment, p.status, fmt(p.created_at)])} />
           </TabsContent>
           {show("billing") && <TabsContent value="billing"><BillingConsolePanel isSuper={isSuper} /></TabsContent>}
+          {show("inbox") && <TabsContent value="inbox"><AdminInboxPanel /></TabsContent>}
           {show("support") && <TabsContent value="support"><SupportTicketsPanel scope={access.departments.includes("support") ? "all" : "billing"} /></TabsContent>}
           {show("badges") && <TabsContent value="badges"><BadgeSwitchboard /><BadgeProtocolPanel isSuper={isSuper} /></TabsContent>}
           {show("homepage") && <TabsContent value="homepage"><TestimonialsEditor /><TestimonialFilterPanel /><SocialPanel /></TabsContent>}
