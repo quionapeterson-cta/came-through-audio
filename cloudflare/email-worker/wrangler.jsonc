@@ -1,0 +1,18 @@
+{
+  // Cloudflare Email Worker for the Admin Inbox (founder, 2026-11-17).
+  //
+  // Deploy from the repo root:  npx wrangler deploy -c cloudflare/email-worker/wrangler.jsonc
+  // Then in the dashboard: Email → Email Routing → Email Workers, route admin@ and contracts@ to this Worker. No MX
+  // record changes and every other address keeps the rule it already has.
+  //
+  // Two settings are deliberately not here, because each environment has its own value:
+  //   INBOX_URL            var     the deployed receiver, e.g. https://<origin>/api/public/email/inbound
+  //   INBOUND_EMAIL_SECRET secret  the same value the app holds, set with
+  //                                npx wrangler secret put INBOUND_EMAIL_SECRET -c cloudflare/email-worker/wrangler.jsonc
+  // Add both under Workers → came-through-audio-inbox → Settings. Until INBOX_URL is set the Worker refuses every
+  // message, so a half-configured deploy delays mail instead of sending it somewhere wrong.
+  "name": "came-through-audio-inbox",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-11-03",
+  "observability": { "enabled": true }
+}

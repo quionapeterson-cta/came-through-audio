@@ -1,0 +1,14 @@
+{
+  "name": "came-through-audio-inbox",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "typecheck": "../../node_modules/.bin/tsc -p tsconfig.json"
+  },
+  "dependencies": {
+    "postal-mime": "^4.2.1"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20260702.1"
+  }
+}
