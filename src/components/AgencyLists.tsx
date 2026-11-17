@@ -203,9 +203,9 @@ export function AgencyLists({ userId, societies, songsFor, summaries, allTracks,
   /** The metadata a remembered or hand-typed release writes into the song. */
   function releaseMeta(entry: FillRelease): { album?: string; releaseType?: string; instrumental?: boolean } {
     const name = entry.name.trim();
-    // An instrumental leaves the album empty: it isn't on the album it was cut from, and filling it in would have the routing
-    // treat a version as a release of its own (founder, 2026-11-16).
-    if (entry.type === "Instrumental") return { instrumental: true };
+    // A typed instrumental keeps the release it belongs to (founder, 2026-11-17): it may be cut from that release, and the name
+    // is how the member finds it again. The plain Instrumental answer carries no name, so it names no album of its own.
+    if (entry.type === "Instrumental") return { instrumental: true, album: name, releaseType: "" };
     // A named unreleased release keeps its title and claims no release type, so My Catalog still shows it as not out.
     if (entry.type === "Unreleased") return { album: name, releaseType: "" };
     return { album: name, releaseType: entry.type };
@@ -254,10 +254,11 @@ export function AgencyLists({ userId, societies, songsFor, summaries, allTracks,
   }
 
   /**
-   * The member's answer for one catalogued song. Nothing is preselected (founder, 2026-11-16): a box with no answer is
-   * never written, and the dialog refuses to submit until every catalogued song has one.
+   * The member's answer for one catalogued song. The agency's version is the answer already given (founder, 2026-11-17):
+   * it is the copy the agency pays on, so an untouched card writes that; keeping the member's own is one click, and it
+   * asks nothing further because nothing changes.
    */
-  const answerFor = (d: FillPlan["duplicates"][number]) => choices[d.track.id];
+  const answerFor = (d: FillPlan["duplicates"][number]) => choices[d.track.id] ?? "agency";
   /** The catalogued songs this click writes the agency's version over. */
   const chosenDuplicates = fill ? fill.plan.duplicates.filter((d) => answerFor(d) === "agency") : [];
   /** Catalogued songs still waiting for "keep mine" or "the agency's". */
@@ -438,12 +439,11 @@ export function AgencyLists({ userId, societies, songsFor, summaries, allTracks,
     const draft = drafts[key] ?? { type: "Single" as const, name: "" };
     // A release the catalog already lists is offered from the catalog, so a remembered title can't appear twice.
     const typed = withoutCatalog(remembered, catalogReleaseList);
-    const single = value.startsWith("rel:") ? catalogReleaseList.find((r) => `rel:${r.album}` === value && r.kind === "Single") : undefined;
     if (!show) {
       // The same song in a second writer's box: the answer stays visible, but the question is asked once.
       const home = (owner && (names[owner] ?? people.find((p) => p.key === owner)?.names[0])) || "the first box";
       return <p className="mt-1 border-t border-border/60 px-1 pt-1.5 text-[11px] text-muted-foreground">
-        Release: <span className="font-semibold">{releaseLabel(value, draft, single)}</span> · set in {home}'s box
+        Release: <span className="font-semibold">{releaseLabel(value, draft)}</span> · set in {home}'s box
       </p>;
     }
     return <div className="mt-1 space-y-1 border-t border-border/60 px-1 pt-1.5">
@@ -475,9 +475,6 @@ export function AgencyLists({ userId, societies, songsFor, summaries, allTracks,
           </optgroup>}
         </select>
       </div>
-      {single && <p className="text-[11px] text-muted-foreground">
-        A single holds one song: adding this to {single.album} makes it a two-song release, which My Catalog reads as an EP.
-      </p>}
       {value === NEW && <div className="grid gap-1 sm:grid-cols-[8.5rem_1fr]">
         <select aria-label={`Release type for ${c.metadata.title}`} value={draft.type} onChange={(e) => editDraft(key, { type: e.target.value as FillRelease["type"] })}
           className="h-8 rounded-md border border-input bg-background px-2 text-xs">
@@ -491,12 +488,11 @@ export function AgencyLists({ userId, societies, songsFor, summaries, allTracks,
   };
 
   /** How a song's release reads in the box that doesn't ask the question. */
-  function releaseLabel(value: string, draft: FillRelease, single: { album: string } | undefined): string {
+  function releaseLabel(value: string, draft: FillRelease): string {
     if (value === UNRELEASED) return "Unreleased";
     if (value === INSTRUMENTAL) return "Instrumental";
     if (value === UNRELEASED_INSTRUMENTAL) return "Unreleased Instrumental";
     if (value === NEW) return draft.name.trim() ? `${draft.name.trim()} · ${draft.type}` : "no release named yet";
-    if (single) return single.album;
     const rel = catalogReleaseList.find((r) => `rel:${r.album}` === value);
     if (rel) return `${rel.album} · ${rel.kind}`;
     const custom = remembered.find((r) => customValue(r) === value);
@@ -551,7 +547,8 @@ export function AgencyLists({ userId, societies, songsFor, summaries, allTracks,
             {d.issues.map((i) => <li key={i}>⚠️ {i}</li>)}
           </ul>}
         </div>
-        {/* The answer, with nothing preselected: keep yours, or take the agency's. */}
+        {/* The answer: the agency's version is already given, so keeping the member's own is one click and folds the
+            writers and the release away. */}
         <div className="mt-1 space-y-1.5 border-t border-border/60 px-1 pt-1.5">
           <div className="grid grid-cols-1 gap-2 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
             <label className={`flex cursor-pointer items-start gap-2 rounded-lg border p-2 text-xs ${answer === "keep" ? "border-primary bg-accent/40" : "border-border"}`}>
@@ -575,9 +572,6 @@ export function AgencyLists({ userId, societies, songsFor, summaries, allTracks,
           </div>
           {answer === "keep" && <p className="text-xs text-muted-foreground">
             Keeping this one leaves the difference in place at {fill?.society.name}.
-          </p>}
-          {!answer && <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
-            <span aria-hidden>🔒</span> Who wrote what and the release open once you choose the agency's version.
           </p>}
         </div>
       </>}
@@ -855,8 +849,9 @@ export function AgencyLists({ userId, societies, songsFor, summaries, allTracks,
               <p className="text-xs text-muted-foreground">
                 The list names every writer but never says who wrote the words and who wrote the music, or which release each work
                 came out on. A writer credited on two or more songs has a box of their own, open with every song they are on, and every
-                question about a song sits in that song's box. A song already in your catalog shows the whole comparison first: answer
-                keep yours or take the agency's, and only the agency's version opens the writers and the release for checking. A
+                question about a song sits in that song's box. A song already in your catalog shows the whole comparison first and
+                starts on the agency's version, so its writers and release are open to check; keeping yours is one click and folds
+                them away, because nothing changes. A
                 release that isn't in your catalog yet can be typed under a new song: name it once and the next song offers it back.
                 Anything left blank stays blank, and the song says it still needs it.
               </p>
@@ -867,7 +862,7 @@ export function AgencyLists({ userId, societies, songsFor, summaries, allTracks,
               {/* The two bulk answers sit at the head of the song list, right above it, sized to be the obvious first choice
                   (founder, 2026-11-16). */}
               {fill.plan.duplicates.length > 0 && <div className="sticky top-0 z-10 space-y-2 rounded-lg border border-primary/40 bg-card p-2 shadow-sm">
-                <p className="text-sm font-bold">Every catalogued song needs an answer — or give them all the same one:</p>
+                <p className="text-sm font-bold">Every catalogued song starts on the agency&apos;s version — or keep yours on all of them:</p>
                 <div className="flex flex-wrap gap-2">
                   <button type="button" onClick={() => setChoices(Object.fromEntries(fill.plan.duplicates.map((d) => [d.track.id, "keep" as const])))}
                     className="rounded-full border border-border bg-background px-4 py-2 text-sm font-semibold">
