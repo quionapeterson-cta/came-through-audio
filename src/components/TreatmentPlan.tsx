@@ -122,6 +122,10 @@ export function TreatmentPlan({ data }: { data: TreatmentPlanData }) {
               <button key={p.id} type="button" aria-pressed={phase === p.id} onClick={() => setPhase(p.id)}>{p.label}</button>
             ))}
           </div>
+          {/* The projection is conditional, so the page says so before the switch is touched (founder, 2026-11-16). */}
+          <p className="tp-muted w-full text-xs">
+            The 30-day and 90-day views assume the treatment plan below is followed.
+          </p>
         </section>
 
         {/* Organ constellation */}
