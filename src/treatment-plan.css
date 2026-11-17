@@ -69,20 +69,24 @@
 }
 
 /* ── Organ constellation ─────────────────────────────────────────────────── */
+/*
+ * The orb is the disc, and the words sit under it (founder, 2026-11-16). The button used to be a pill: with the organ
+ * and its two-line caption inside one 9999px radius, the circle's own edge ran through the name and the caption, so the
+ * words read as breaking out of their bounds. The ring, its priority colour and the glow stay on the disc; the label
+ * column below it is never clipped by a curve.
+ */
 .tp-orb {
   position: relative;
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 0.5rem;
-  border-radius: 9999px;
-  padding: 0.55rem;
+  border: 0;
+  border-radius: 0.9rem;
+  padding: 0.4rem 0.2rem;
   color: #fff;
-  border: 1px solid var(--tp-hairline);
-  background: linear-gradient(165deg, rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0.03));
-  -webkit-backdrop-filter: blur(14px);
-  backdrop-filter: blur(14px);
-  transition: border-color 0.25s ease, box-shadow 0.25s ease, transform 0.25s ease;
+  background: transparent;
+  transition: box-shadow 0.25s ease, transform 0.25s ease;
 }
 .tp-orb-disc {
   display: grid;
@@ -127,11 +131,13 @@
   z-index: 0;
 }
 .tp-orb > * { position: relative; z-index: 1; }
-.tp-orb:hover { transform: translateY(-3px); border-color: rgba(77, 140, 255, 0.65); }
-.tp-orb[aria-pressed="true"] {
+.tp-orb:hover { transform: translateY(-3px); }
+.tp-orb:hover .tp-orb-disc { border-color: rgba(77, 140, 255, 0.65); }
+.tp-orb[aria-pressed="true"] { transform: translateY(-2px) scale(1.02); }
+/* The hover and selected rings belong on the circle, so the words under it are never crossed by a border. */
+.tp-orb[aria-pressed="true"] .tp-orb-disc {
   border-color: var(--tp-electric);
   box-shadow: 0 0 0 2px rgba(77, 140, 255, 0.75), 0 0 34px rgba(77, 140, 255, 0.45);
-  transform: translateY(-2px) scale(1.02);
 }
 .tp-orb:focus-visible { outline: none; box-shadow: 0 0 0 3px rgba(77, 140, 255, 0.85); }
 
