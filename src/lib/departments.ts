@@ -145,10 +145,9 @@ export function visibleTabs(access: StaffAccess, view: Department | "all" = "all
   // Holiday Cover is the rota and the pay plan: super admins and department leads only (founder, 2026-11-05).
   // It is cross-department, so a super admin sees it in the all-departments view rather than inside a narrowed one.
   const holiday = access.role === "department_lead" || (access.role === "super_admin" && view === "all") ? [{ value: "holiday", label: "Holiday Cover" }] : [];
-  // Company Contracts opens to the four lead roles (founder, 2026-11-16): a lead drafts, a super admin approves. Plans stay
-  // super-admin only, and both sit in the all-departments view.
-  const leads: string[] = ["super_admin", "hr_admin", "project_manager", "department_lead"];
-  const company = leads.includes(access.role) && view === "all" ? [{ value: "company", label: "Company Contracts" }] : [];
+  // Company Contracts is the super admin's own (founder, 2026-11-17, narrowing 2026-11-16): the LLC's agreements, its
+  // contract templates and the launch tools. Like Plans it sits in the all-departments view.
+  const company = access.role === "super_admin" && view === "all" ? [{ value: "company", label: "Company Contracts" }] : [];
   const plans = access.role === "super_admin" && view === "all" ? [{ value: "plans", label: "Plans" }] : [];
   // The company inbox (founder, 2026-11-17): admin@ and contracts@ mail is the company's, so only a super admin reads it,
   // in every view rather than only the all-departments one.

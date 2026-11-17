@@ -49,8 +49,17 @@ describe("visibleTabs", () => {
   });
 
   it("never shows finance to HR admins", () => {
-    // HR admins lead hires and their agreements, so they get Company Contracts too — no department tabs beyond that.
-    expect(visibleTabs(resolveAccess([{ role: "hr_admin" }])!).map((t) => t.value)).toEqual([...withDeptTabs([]), "company"]);
+    // Company Contracts is the super admin's alone again (founder, 2026-11-17), so HR keeps no tab beyond its own work.
+    expect(visibleTabs(resolveAccess([{ role: "hr_admin" }])!).map((t) => t.value)).toEqual(withDeptTabs([]));
+  });
+
+  it("keeps Company Contracts to super admins alone", () => {
+    const tabs = (role: "super_admin" | "hr_admin" | "project_manager" | "department_lead") =>
+      visibleTabs(resolveAccess([{ role, departments: ["finance"] }])!).map((t) => t.value);
+    expect(tabs("super_admin")).toContain("company");
+    expect(tabs("hr_admin")).not.toContain("company");
+    expect(tabs("project_manager")).not.toContain("company");
+    expect(tabs("department_lead")).not.toContain("company");
   });
 
   it("gives marketing the Badges and Homepage tabs and its Task Bank; sales gets its Task Bank", () => {

@@ -153,7 +153,8 @@ export function Contracts({ userId, unlocked, onUpgrade, company = false, canApp
 
   const open = contracts.filter((c) => c.status !== "signed");
   const signed = contracts.filter((c) => c.status === "signed");
-  // Launch gifts, beta testers and outreach stay super-admin tools; the four lead roles reach the agreements only.
+  // Company Contracts is the super admin's own (founder, 2026-11-17): the agreements, their templates, launch gifts,
+  // beta testers and outreach are theirs alone.
   const companyViews = canApprove
     ? [["blueprints", "Templates", ScrollText], ["contracts", "Drafts & out for signature", FileSignature], ["vault", "Signed", Vault], ["gifts", "Launch gifts", Gift], ["beta", "Beta testers", FlaskConical], ["outreach", "Outreach", Mail]] as const
     : [["blueprints", "Templates", ScrollText], ["contracts", "Drafts & out for signature", FileSignature], ["vault", "Signed", Vault]] as const;

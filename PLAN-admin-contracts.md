@@ -2,6 +2,7 @@
 
 Status: **§1 v1 built 2026-10-21 (6d1d62e): Company Contracts tab, testimonial release + blank, editable templates. Rest of the plan still pending.**
 **2026-10-22: company agreements sign WITHOUT an account (approved):** private link (HMAC of the party id, never stored) + 6-digit code emailed to the invited address (10 min, 5 tries), consent checkbox, hashed IP + device recorded, everyone emailed a link to the signed copy when the last party signs. No trial for company signers. Testimonial release gains §11 Launch gift: free 3-month Catalog Plus starting on launch day. "Grant launch gift" BUILT 2026-10-23: Admin → Company Contracts → Launch gifts; a server-written plan row `launch_gift_<party id>` (Catalog Plus, 3 months from the grant, ends on its own, records who granted it), only for fully signed releases and an account with the signer's email; emails the participant. Customer contracts and split sheets still sign by logging in.
+**2026-11-17: back to super admins only (founder):** the 2026-11-16 pass, where the four lead roles drafted a company agreement for a super admin to approve, is closed. Company Contracts — its agreements, its templates and its launch tools — is the super admin's alone again, on the tab and in the database (`20261117200000_company-contracts-super-admin.sql`).
 Source: founder request, 2026-10-19.
 
 ---
