@@ -10,8 +10,9 @@ import PostalMime from "postal-mime";
  * temporary failure and it retries, so a bad deploy or a restart delays a message instead of losing it. A retried
  * delivery ends up as one row, because the receiver dedupes on Message-ID.
  *
- * The body is JSON rather than the raw mail so the receiver's schema validates what it stores, and a message with
- * attachments stays small: attachments are not part of the inbox, so their bytes never leave this Worker.
+ * The body is JSON rather than the raw mail so the receiver's schema validates what it stores. Attachment bytes stay
+ * here — the inbox is a record of the conversation, not a file store — but each attachment's name, type and size
+ * travel with the message, so a thread never reads like a plain email when something arrived with it.
  */
 
 interface Env {
@@ -63,6 +64,29 @@ function addressesOf(list: ParsedEmail["to"] | undefined): string[] {
     .filter((entry) => entry.includes("@"));
 }
 
+/** postal-mime hands attachment content back as text or bytes, depending on how the mail encoded it. */
+function sizeOf(content: unknown): number | undefined {
+  if (typeof content === "string") return new TextEncoder().encode(content).byteLength;
+  if (content instanceof Uint8Array || content instanceof ArrayBuffer) return content.byteLength;
+  return undefined;
+}
+
+/**
+ * What arrived attached, by name only. A picture a signature draws inline is part of the message, not something the
+ * sender attached, so those are left out and the list means what staff would see in their own mail client.
+ */
+function attachmentsOf(list: ParsedEmail["attachments"] | undefined) {
+  if (!list) return [];
+  return list
+    .filter((one) => one.disposition !== "inline")
+    .slice(0, 50)
+    .map((one) => ({
+      filename: (one.filename ?? "").trim() || "Attachment",
+      mimeType: one.mimeType || undefined,
+      size: sizeOf(one.content),
+    }));
+}
+
 export default {
   async email(message: ForwardableEmailMessage, env: Env): Promise<void> {
     if (!env.INBOUND_EMAIL_SECRET) {
@@ -100,6 +124,7 @@ export default {
         subject: parsed?.subject?.trim() || header(message.headers, "subject") || "",
         text: clipped(parsed?.text, MAX_TEXT),
         html: clipped(parsed?.html ?? undefined, MAX_HTML),
+        attachments: attachmentsOf(parsed?.attachments),
         // A reply is matched to its thread on these three, so they travel exactly as the mail carries them.
         messageId: header(message.headers, "message-id"),
         inReplyTo: header(message.headers, "in-reply-to"),

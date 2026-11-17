@@ -34,6 +34,20 @@ const payloadSchema = z.object({
   messageId: z.string().trim().max(500).optional(),
   inReplyTo: z.string().trim().max(500).optional(),
   references: z.union([z.string().max(4000), z.array(z.string().max(500)).max(50)]).optional(),
+  /**
+   * What came attached: the names alone. The files themselves are not part of the inbox, so a thread says something
+   * arrived with the mail instead of reading like a plain email.
+   */
+  attachments: z
+    .array(
+      z.object({
+        filename: z.string().trim().min(1).max(300),
+        mimeType: z.string().trim().max(200).optional(),
+        size: z.number().int().nonnegative().max(1_000_000_000).optional(),
+      }),
+    )
+    .max(50)
+    .optional(),
   /** ISO time the message arrived, as the worker saw it; a missing or unreadable value means now. */
   receivedAt: z.string().trim().max(40).optional(),
 });
@@ -246,6 +260,7 @@ export const Route = createFileRoute("/api/public/email/inbound")({
             subject,
             body_text: input.text ?? null,
             body_html: input.html ?? null,
+            attachments: input.attachments ?? [],
             received_at: receivedAt,
           } as never)
           .select("id")
