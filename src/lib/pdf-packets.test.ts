@@ -6,6 +6,7 @@ import {
   packetProblems,
   packetSendForms,
   packetProgress,
+  placedAnswers,
   recipientCheckboxes,
   recipientFields,
   recipientNeedsSignature,
@@ -52,6 +53,26 @@ describe("internship packet", () => {
         (b) => b.kind === "signature" && b.role === "recipient",
       ).length,
     );
+  });
+});
+
+describe("the answers a send carries", () => {
+  const placement = adminFields(template);
+  const start = placement.find((f) => f.label === "Internship start date")!;
+  const end = placement.find((f) => f.label === "End date")!;
+
+  it("carries a date placed in the field, which a React copy of it once lost", () => {
+    const values = placedAnswers(placement, (id) =>
+      id === start.id ? "2026-11-16" : id === end.id ? "2027-03-16" : "",
+    );
+    expect(values[start.id]).toBe("2026-11-16");
+    expect(values[end.id]).toBe("2027-03-16");
+  });
+
+  it("leaves out fields nobody filled in, and trims what was typed", () => {
+    const values = placedAnswers(placement, (id) => (id === start.id ? "  Qui-Ona  " : null));
+    expect(values).toEqual({ [start.id]: "Qui-Ona" });
+    expect(Object.keys(values)).toHaveLength(1);
   });
 });
 

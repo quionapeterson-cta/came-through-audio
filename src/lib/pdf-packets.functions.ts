@@ -557,8 +557,17 @@ export const getPacket = createServerFn({ method: "GET" })
     return row as unknown as PacketRow;
   });
 
-/** Sends the final PDF to the configured admin inbox and returns whether the mail went out. */
-async function deliverCompleted(packet: PacketRow, link: string, to: string = ADMIN_EMAIL) {
+/**
+ * Sends the final PDF to the configured admin inbox and returns whether the mail went out. `repeat` marks a copy sent
+ * again after the packet was already delivered: it goes into its own idempotency key, so the provider sends it instead
+ * of swallowing it as a duplicate of the first email.
+ */
+async function deliverCompleted(
+  packet: PacketRow,
+  link: string,
+  to: string = ADMIN_EMAIL,
+  repeat?: string,
+) {
   const pdf = await buildPacketPdf(packet);
   const filename = packetFileName(packet.title);
   const res = await sendMailSafely({
@@ -575,7 +584,7 @@ async function deliverCompleted(packet: PacketRow, link: string, to: string = AD
       { reason: "You're receiving this because a packet was completed in Came Through Audio." },
     ),
     attachments: [{ filename, content: toBase64(pdf) }],
-    key: mailKey("pdf", "packet-complete", packet.id),
+    key: mailKey("pdf", "packet-complete", packet.id, ...(repeat ? [repeat] : [])),
   });
   return {
     emailed: res.ok,
@@ -662,6 +671,45 @@ export const counterSignPacket = createServerFn({ method: "POST" })
       },
     );
     return { ok: true, link, emailed: delivery.emailed, emailError: delivery.emailError };
+  });
+
+/**
+ * Sends a finished packet's locked PDF again (founder, 2026-11-17). Once a packet is fully executed a copy often has to
+ * reach someone a second time — the recipient, or a third party they name — so a staff member can send it to any
+ * address from Sent & Inbox. Only a completed packet qualifies: an unsigned one still belongs on its signing page.
+ */
+export const emailPacketCopy = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) =>
+    z.object({ id: z.string().uuid(), email: emailSchema }).parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    await requireStaff(context);
+    const { data: row, error } = await context.supabase
+      .from("pdf_packets" as never)
+      .select("*")
+      .eq("id", data.id)
+      .maybeSingle();
+    if (error || !row) throw new Error("That packet no longer exists.");
+    const packet = row as unknown as PacketRow;
+    if (packet.status !== "completed")
+      throw new Error("Only a fully executed packet can be sent as a PDF.");
+    const link = await packetEmailLink(packet.id);
+    const delivery = await deliverCompleted(packet, link, data.email, crypto.randomUUID());
+    // Every send is a real email, so it gets its own delivery row and bounce report like the completion email.
+    await recordPacketEmail(
+      context,
+      packet,
+      delivery.emailed
+        ? { ok: true, ...(delivery.resendId ? { id: delivery.resendId } : {}) }
+        : { ok: false, detail: delivery.emailError ?? "send-failed" },
+      {
+        subject: `Signed: ${packet.title} — ${packet.recipient_name}`,
+        fileName: packetFileName(packet.title),
+        to: data.email,
+      },
+    );
+    return { emailed: delivery.emailed, emailError: delivery.emailError };
   });
 
 export const packetPdf = createServerFn({ method: "GET" })

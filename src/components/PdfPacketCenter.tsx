@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   ArrowUpRight,
   Check,
@@ -23,6 +23,7 @@ import {
   adminFields,
   packetForms,
   PACKET_STATUS_LABELS,
+  placedAnswers,
   type PacketStatus,
 } from "@/lib/pdf-packets";
 import { SITE_URL } from "@/lib/email-layout";
@@ -32,6 +33,7 @@ import type { SavedTemplate } from "@/lib/pdf-templates.functions";
 import { listPdfTemplates } from "@/lib/pdf-templates.functions";
 import {
   counterSignPacket,
+  emailPacketCopy,
   emailPacketLink,
   ensureInternshipPacket,
   getPacket,
@@ -102,7 +104,13 @@ export function PdfPacketCenter() {
   const [recipientName, setRecipientName] = useState("");
   const [recipientEmail, setRecipientEmail] = useState("");
   const [enabledForms, setEnabledForms] = useState<string[]>([]);
-  const [adminValues, setAdminValues] = useState<Record<string, string>>({});
+  /**
+   * The send form's fields, read when the packet goes out (founder, 2026-11-17) instead of being kept in React state: a
+   * native date control owns its own segments, and one the browser never reports must still travel with the packet.
+   */
+  const prefillForm = useRef<HTMLDivElement | null>(null);
+  /** The completed packet whose PDF is being emailed again, and where to. */
+  const [sending, setSending] = useState<{ id: string; email: string } | null>(null);
   const [preSign, setPreSign] = useState<SignatureValue | null>(null);
   const [reviewSignature, setReviewSignature] = useState<SignatureValue | null>(null);
 
@@ -175,7 +183,6 @@ export function PdfPacketCenter() {
         .filter((f) => f.optional)
         .map((f) => f.key),
     );
-    setAdminValues({});
   }, [template]);
 
   function openSend() {
@@ -187,6 +194,16 @@ export function PdfPacketCenter() {
     setPreSign(null);
     setSentLink(null);
     setSendOpen(true);
+  }
+
+  /** The admin answers as they stand in the form right now, read from the fields themselves. */
+  function answersFromForm() {
+    return placedAnswers(
+      admin,
+      (id) =>
+        prefillForm.current?.querySelector<HTMLInputElement>(`input[name="prefill-${id}"]`)
+          ?.value,
+    );
   }
 
   async function send() {
@@ -206,7 +223,7 @@ export function PdfPacketCenter() {
           recipientName: recipientName.trim(),
           recipientEmail: recipientEmail.trim(),
           enabledForms,
-          adminValues,
+          adminValues: answersFromForm(),
           preSign: preSign ? { ...preSign, name: preSign.name || recipientName } : null,
         },
       });
@@ -219,6 +236,27 @@ export function PdfPacketCenter() {
       );
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Couldn't send the packet.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  /**
+   * Sends a finished packet's locked PDF again (founder, 2026-11-17), to the recipient or to anyone else who needs a
+   * copy now that it is fully executed.
+   */
+  async function sendCopy(id: string) {
+    const to = sending?.email.trim() ?? "";
+    if (!to.includes("@")) return;
+    setBusy(true);
+    try {
+      const result = await emailPacketCopy({ data: { id, email: to } });
+      if (result.emailed) toast.success(`Signed PDF emailed to ${to}.`);
+      else toast.error(result.emailError ?? "The email didn't go out. Download the PDF instead.");
+      setSending(null);
+      await load();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Couldn't email the PDF.");
     } finally {
       setBusy(false);
     }
@@ -456,10 +494,54 @@ export function PdfPacketCenter() {
                   >
                     <Check className="mr-1 inline h-3 w-3" /> Fully executed
                   </span>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    disabled={busy}
+                    onClick={() =>
+                      setSending((current) =>
+                        current?.id === packet.id
+                          ? null
+                          : { id: packet.id, email: packet.recipient_email },
+                      )
+                    }
+                  >
+                    <Send /> Send
+                  </Button>
                   <Button size="sm" variant="ghost" onClick={() => void download(packet.id)}>
                     <Download /> PDF
                   </Button>
                 </span>
+                {sending?.id === packet.id ? (
+                  <div className="mt-1 flex w-full flex-wrap items-end gap-2 rounded-lg border border-border bg-card p-2">
+                    <div className="min-w-[220px] flex-1">
+                      <Label htmlFor={`send-to-${packet.id}`}>Email the signed PDF to</Label>
+                      <Input
+                        id={`send-to-${packet.id}`}
+                        type="email"
+                        value={sending.email}
+                        onChange={(e) =>
+                          setSending({ id: packet.id, email: e.target.value })
+                        }
+                        className="mt-1"
+                      />
+                    </div>
+                    <Button
+                      size="sm"
+                      disabled={busy || !sending.email.includes("@")}
+                      onClick={() => void sendCopy(packet.id)}
+                    >
+                      {busy ? <Loader2 className="animate-spin" /> : <Mail />} Send PDF
+                    </Button>
+                    <Button size="sm" variant="ghost" onClick={() => setSending(null)}>
+                      <X /> Cancel
+                    </Button>
+                    <p className="w-full text-xs text-muted-foreground">
+                      The locked PDF goes out with its execution audit certificate, and the send is
+                      recorded with its delivery result.
+                    </p>
+                  </div>
+                ) : null}
               </li>
             ))}
           </ul>
@@ -587,20 +669,15 @@ export function PdfPacketCenter() {
                     <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                       Pre-fill the admin fields
                     </p>
-                    <div className="mt-2 grid gap-2 sm:grid-cols-2">
+                    <div ref={prefillForm} className="mt-2 grid gap-2 sm:grid-cols-2">
                       {admin.map((field) => (
                         <div key={field.id}>
                           <Label htmlFor={`prefill-${field.id}`}>{field.label}</Label>
+                          {/* Uncontrolled on purpose (founder, 2026-11-17): the field, not a copy of it, is what is sent. */}
                           <Input
                             id={`prefill-${field.id}`}
+                            name={`prefill-${field.id}`}
                             type={field.type === "date" ? "date" : "text"}
-                            value={adminValues[field.id] ?? ""}
-                            onChange={(e) =>
-                              setAdminValues((current) => ({
-                                ...current,
-                                [field.id]: e.target.value,
-                              }))
-                            }
                             className="mt-1"
                           />
                         </div>

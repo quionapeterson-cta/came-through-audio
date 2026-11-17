@@ -114,6 +114,25 @@ export function adminFields(template: PdfTemplate): FillableField[] {
   );
 }
 
+/**
+ * The answers placed in the send form, read from the fields themselves (founder, 2026-11-17). A page held in React
+ * state alone loses a date the browser never reported: a native date control owns its own segments, and on some of them
+ * a filled-in day never reaches a change handler, which is how a placement sent with dates printed as blank lines. What
+ * the admin sees in the field is what goes with the packet, so the value is read from the control at the moment of
+ * sending. Blank answers are left out, never sent as empty strings.
+ */
+export function placedAnswers(
+  fields: { id: string }[],
+  read: (id: string) => string | null | undefined,
+): Record<string, string> {
+  const out: Record<string, string> = {};
+  for (const field of fields) {
+    const value = String(read(field.id) ?? "").trim();
+    if (value) out[field.id] = value;
+  }
+  return out;
+}
+
 /** Checkbox groups the recipient ticks, on the forms that are switched on. */
 export function recipientCheckboxes(
   template: PdfTemplate,
