@@ -193,7 +193,7 @@ function ContractView({
       </div>
 
       {invite.blocks?.length ? (
-        <iframe
+        <iframe data-signing-frame
           title="Agreement"
           sandbox={doc ? "allow-scripts" : ""}
           srcDoc={
@@ -318,6 +318,10 @@ function LinkSigning({ token }: { token: string }) {
   );
   useEffect(() => {
     const onMessage = (e: MessageEvent) => {
+      // Only the signing frame on this page may send answers: its sandbox gives it an opaque ("null") origin.
+      const frame = document.querySelector<HTMLIFrameElement>("iframe[data-signing-frame]") ?? document.querySelector("iframe");
+      if (!frame || e.source !== frame.contentWindow) return;
+      if (e.origin !== "null" && e.origin !== window.location.origin) return;
       const data = e.data as { type?: string; values?: BlockValues } | null;
       // The frame is a sandbox with no access to the app; a message is all it can send.
       if (!data || data.type !== "cta-block-values" || !data.values) return;

@@ -264,8 +264,11 @@ export const teamPulse = createServerFn({ method: "GET" })
     const access = await accessOf(context as unknown as Ctx);
     const { client, supabaseAdmin } = await tables();
     try {
+      // Launch work is super-admin only (public.in_department never admits anyone else to it).
+      let taskQuery = supabaseAdmin.from("department_tasks").select("id, title, department, status, owner_id, due_at, completed_at");
+      if (access.role !== "super_admin") taskQuery = taskQuery.neq("department", "launch");
       const [tasks, notices] = await Promise.all([
-        supabaseAdmin.from("department_tasks").select("id, title, department, status, owner_id, due_at, completed_at").order("updated_at", { ascending: false }).limit(400),
+        taskQuery.order("updated_at", { ascending: false }).limit(400),
         client.from("team_notices").select("id, author_name, department, body, created_at").order("created_at", { ascending: false }),
       ]);
       const rows = (tasks.data ?? []) as { id: string; title: string; department: string; status: string; owner_id: string | null; due_at: string | null; completed_at: string | null }[];

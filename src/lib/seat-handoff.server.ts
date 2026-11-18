@@ -29,7 +29,7 @@ export async function sendSeatHandoffEmails(i: {
 
   const send = async (to: string, subject: string, html: string, key: string) => {
     const res = await sendMail({ from: "collaborate", to: [to], subject, html, key });
-    if (!res.ok) console.error(`Seat handoff email to ${to} failed [${res.status ?? res.detail}]: ${res.detail ?? ""}`);
+    if (!res.ok) console.error(`Seat handoff email failed [${res.status ?? res.detail}]: ${res.detail ?? ""}`);
   };
 
   if (i.artistEmail) {

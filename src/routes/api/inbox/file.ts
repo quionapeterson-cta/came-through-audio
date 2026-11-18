@@ -53,6 +53,10 @@ const payload = z.object({
   note: z.string().trim().max(4000).default(""),
 });
 
+/** Documents, images, audio, video and archives only; never executables, scripts or web pages. */
+const ALLOWED_DROP_TYPE =
+  /\.(pdf|docx?|xlsx?|csv|txt|rtf|pptx?|odt|ods|pages|numbers|key|png|jpe?g|gif|webp|heic|tiff?|mp3|wav|aiff?|flac|m4a|aac|ogg|mp4|mov|m4v|webm|zip)$/i;
+
 const fail = (message: string, status = 400) =>
   Response.json({ ok: false, error: message }, { status });
 
@@ -149,6 +153,8 @@ export const Route = createFileRoute("/api/inbox/file")({
           .filter((one): one is File => typeof one !== "string" && one.size > 0);
         const problem = dropFilesProblem(files.map((f) => ({ name: f.name, size: f.size })));
         if (problem) return fail(problem);
+        const badType = files.find((f) => !ALLOWED_DROP_TYPE.test(f.name));
+        if (badType) return fail(`${badType.name} isn't a file type we accept. Send documents, images, audio, video or a ZIP.`);
 
         const submissionId = crypto.randomUUID();
         const stored: { filename: string; mimeType?: string; size: number; storagePath: string }[] =

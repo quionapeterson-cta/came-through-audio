@@ -100,7 +100,7 @@ export const updateMemberProfile = createServerFn({ method: "POST" })
     const d = await db();
     const { error } = await d.from("profiles").update(patch as never).eq("id", data.userId);
     if (error) throw new Error("Couldn't save those details.");
-    console.info("Member details corrected", { by: context.claims?.email ?? context.userId, userId: data.userId, fields: Object.keys(patch) });
+    console.info("Member details corrected", { by: context.userId, userId: data.userId, fields: Object.keys(patch) });
     return { ok: true as const, ...patch };
   });
 
