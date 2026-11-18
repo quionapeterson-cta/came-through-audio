@@ -579,7 +579,7 @@ async function deliverCompleted(
       `<p style="font-size:12px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:#004AAD;margin:0">Completed packet</p>
 <h1 style="font-size:22px;margin:8px 0 12px">${escapeHtml(packet.title)}</h1>
 <p style="font-size:15px;line-height:1.6"><b>${escapeHtml(packet.recipient_name)}</b> (${escapeHtml(packet.recipient_email)}) signed, and the company counter-signature is on the document.</p>
-<p style="font-size:15px;line-height:1.6">The locked PDF is attached, with its execution audit certificate. A copy is kept in Admin → PDF Tools → Sent &amp; Inbox → Completed.</p>
+<p style="font-size:15px;line-height:1.6">The locked PDF is attached, with its execution audit certificate.</p>
 <p style="margin:20px 0"><a href="${link}" style="background:#004AAD;color:#FFFFFF;padding:11px 20px;border-radius:6px;font-weight:700;text-decoration:none">Open the packet</a></p>`,
       { reason: "You're receiving this because a packet was completed in Came Through Audio." },
     ),

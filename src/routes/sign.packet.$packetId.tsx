@@ -164,8 +164,8 @@ function PacketSigningPage() {
             <h1 className="mt-3 text-2xl font-bold">Signed and submitted.</h1>
             <p className="mt-2 text-sm text-muted-foreground">
               {done.completed
-                ? "Came Through Audio has counter-signed this packet. The final PDF has gone to the admin inbox."
-                : "Came Through Audio will counter-sign next, then send you and the admin the final PDF."}
+                ? "Came Through Audio has counter-signed this packet. The final PDF has been sent by email."
+                : "Came Through Audio will counter-sign next, then send the final PDF by email."}
             </p>
             <p className="mt-4 text-xs text-muted-foreground">
               {packet.title} · {packet.recipientName}

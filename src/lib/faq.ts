@@ -91,7 +91,7 @@ export const FAQS: Faq[] = [
   { category: "Account & security", q: "How do I get help?", a: "Open a support ticket from the Contact page, or email support@camethroughaudio.com. Tickets need a free account so we can look at the right one and reply to the right address; questions before you sign up can go through Contact Us instead." },
   { category: "Account & security", q: "Where do I see my tickets and the replies?", a: "In the Support tab of your workspace: every ticket you opened, what we replied, and a box to answer on the same thread. Replying to the email lands on the same ticket, so you never have to repeat yourself. Most replies go out in about 48 hours; a high-volume week or a holiday break can take longer." },
   { category: "Account & security", q: "What should I include in a support ticket?", a: "Which part of the app it is, what you clicked, what you expected and what happened instead, plus your browser and a screenshot if you have one. It usually saves a round trip. The Support form also lists the answers to the most common questions before you submit." },
-  { category: "Account & security", q: "How do I change the card on file?", a: "Profile → Manage billing opens Stripe's own page, where the card is changed. Our team never types a card number and never asks for one; if a card update needs a hand, Billing sends you a card-update link from Admin → Accounts." },
+  { category: "Account & security", q: "How do I change the card on file?", a: "Profile → Manage billing opens Stripe's own page, where the card is changed. Our team never types a card number and never asks for one; if a card update needs a hand, our Billing team sends you a card-update link." },
 ];
 
 export const HOME_FAQS = FAQS.filter((f) => f.home);

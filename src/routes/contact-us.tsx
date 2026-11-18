@@ -87,8 +87,8 @@ function ContactUsPage() {
         <h1 className="mt-3 text-4xl font-bold sm:text-5xl">Contact Us</h1>
         <p className="mt-4 max-w-2xl text-muted-foreground">
           A question before you sign up, press, partnerships or licensing, feedback, or anything that isn't a problem
-          inside your catalog. This reaches the support team too — it sits in the same queue in Admin as a ticket,
-          marked as a contact — and we reply by email.
+          inside your catalog. This reaches the support team too — it's filed with your tickets, marked as a contact —
+          and we reply by email.
         </p>
         <p className="mt-2 text-sm text-muted-foreground">
           Something in your catalog isn't working?{" "}
