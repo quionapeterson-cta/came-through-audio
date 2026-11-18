@@ -112,6 +112,113 @@ export type Database = {
           },
         ]
       }
+      admin_inbox_messages: {
+        Row: {
+          attachments: Json
+          body_html: string | null
+          body_text: string | null
+          created_at: string
+          created_by: string | null
+          direction: string
+          from_email: string
+          from_name: string | null
+          id: string
+          in_reply_to: string | null
+          mailbox: string
+          message_id: string | null
+          read_at: string | null
+          received_at: string
+          resend_id: string | null
+          send_status: string | null
+          subject: string
+          thread_id: string
+          to_emails: string[]
+        }
+        Insert: {
+          attachments?: Json
+          body_html?: string | null
+          body_text?: string | null
+          created_at?: string
+          created_by?: string | null
+          direction: string
+          from_email: string
+          from_name?: string | null
+          id?: string
+          in_reply_to?: string | null
+          mailbox: string
+          message_id?: string | null
+          read_at?: string | null
+          received_at?: string
+          resend_id?: string | null
+          send_status?: string | null
+          subject?: string
+          thread_id: string
+          to_emails?: string[]
+        }
+        Update: {
+          attachments?: Json
+          body_html?: string | null
+          body_text?: string | null
+          created_at?: string
+          created_by?: string | null
+          direction?: string
+          from_email?: string
+          from_name?: string | null
+          id?: string
+          in_reply_to?: string | null
+          mailbox?: string
+          message_id?: string | null
+          read_at?: string | null
+          received_at?: string
+          resend_id?: string | null
+          send_status?: string | null
+          subject?: string
+          thread_id?: string
+          to_emails?: string[]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "admin_inbox_messages_thread_id_fkey"
+            columns: ["thread_id"]
+            isOneToOne: false
+            referencedRelation: "admin_inbox_threads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      admin_inbox_threads: {
+        Row: {
+          counterpart_email: string
+          counterpart_name: string | null
+          created_at: string
+          id: string
+          last_message_at: string
+          mailbox: string
+          subject: string
+          subject_key: string
+        }
+        Insert: {
+          counterpart_email: string
+          counterpart_name?: string | null
+          created_at?: string
+          id?: string
+          last_message_at?: string
+          mailbox: string
+          subject?: string
+          subject_key?: string
+        }
+        Update: {
+          counterpart_email?: string
+          counterpart_name?: string | null
+          created_at?: string
+          id?: string
+          last_message_at?: string
+          mailbox?: string
+          subject?: string
+          subject_key?: string
+        }
+        Relationships: []
+      }
       admin_whitelist: {
         Row: {
           assigned_role: Database["public"]["Enums"]["user_role"] | null
@@ -1055,6 +1162,10 @@ export type Database = {
       }
       contracts: {
         Row: {
+          approved_at: string | null
+          approved_by: string | null
+          block_values: Json
+          blocks: Json | null
           blueprint: string
           body: string
           body_hash: string | null
@@ -1066,13 +1177,21 @@ export type Database = {
           id: string
           is_company: boolean
           paid_purchase_id: string | null
+          reviewer_note: string | null
           sent_at: string | null
           status: string
+          submitted_at: string | null
+          submitted_by: string | null
+          template_id: string | null
           title: string
           updated_at: string
           user_id: string
         }
         Insert: {
+          approved_at?: string | null
+          approved_by?: string | null
+          block_values?: Json
+          blocks?: Json | null
           blueprint: string
           body?: string
           body_hash?: string | null
@@ -1084,13 +1203,21 @@ export type Database = {
           id?: string
           is_company?: boolean
           paid_purchase_id?: string | null
+          reviewer_note?: string | null
           sent_at?: string | null
           status?: string
+          submitted_at?: string | null
+          submitted_by?: string | null
+          template_id?: string | null
           title: string
           updated_at?: string
           user_id?: string
         }
         Update: {
+          approved_at?: string | null
+          approved_by?: string | null
+          block_values?: Json
+          blocks?: Json | null
           blueprint?: string
           body?: string
           body_hash?: string | null
@@ -1102,8 +1229,12 @@ export type Database = {
           id?: string
           is_company?: boolean
           paid_purchase_id?: string | null
+          reviewer_note?: string | null
           sent_at?: string | null
           status?: string
+          submitted_at?: string | null
+          submitted_by?: string | null
+          template_id?: string | null
           title?: string
           updated_at?: string
           user_id?: string
@@ -1121,6 +1252,13 @@ export type Database = {
             columns: ["catalog_id"]
             isOneToOne: false
             referencedRelation: "catalogs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contracts_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "pdf_templates"
             referencedColumns: ["id"]
           },
         ]
@@ -1330,21 +1468,6 @@ export type Database = {
         }
         Relationships: []
       }
-      founder_access: {
-        Row: {
-          claimed_at: string
-          user_id: string
-        }
-        Insert: {
-          claimed_at?: string
-          user_id: string
-        }
-        Update: {
-          claimed_at?: string
-          user_id?: string
-        }
-        Relationships: []
-      }
       fill_releases: {
         Row: {
           created_at: string
@@ -1367,15 +1490,22 @@ export type Database = {
           name?: string
           user_id?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "fill_releases_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
+      }
+      founder_access: {
+        Row: {
+          claimed_at: string
+          user_id: string
+        }
+        Insert: {
+          claimed_at?: string
+          user_id: string
+        }
+        Update: {
+          claimed_at?: string
+          user_id?: string
+        }
+        Relationships: []
       }
       founding_upgrades: {
         Row: {
@@ -1653,6 +1783,208 @@ export type Database = {
           subject?: string
           to_email?: string
           to_name?: string
+        }
+        Relationships: []
+      }
+      pdf_email_sends: {
+        Row: {
+          bounce_message: string | null
+          bounce_type: string | null
+          created_at: string
+          file_name: string
+          id: string
+          mailbox: string
+          packet_id: string | null
+          recipients: string[]
+          resend_id: string | null
+          sent_by: string
+          status: string
+          subject: string
+          updated_at: string
+        }
+        Insert: {
+          bounce_message?: string | null
+          bounce_type?: string | null
+          created_at?: string
+          file_name: string
+          id?: string
+          mailbox: string
+          packet_id?: string | null
+          recipients: string[]
+          resend_id?: string | null
+          sent_by: string
+          status?: string
+          subject: string
+          updated_at?: string
+        }
+        Update: {
+          bounce_message?: string | null
+          bounce_type?: string | null
+          created_at?: string
+          file_name?: string
+          id?: string
+          mailbox?: string
+          packet_id?: string | null
+          recipients?: string[]
+          resend_id?: string | null
+          sent_by?: string
+          status?: string
+          subject?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pdf_email_sends_packet_id_fkey"
+            columns: ["packet_id"]
+            isOneToOne: false
+            referencedRelation: "pdf_packets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      pdf_folders: {
+        Row: {
+          created_at: string
+          created_by: string
+          id: string
+          name: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string
+          id?: string
+          name: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          id?: string
+          name?: string
+        }
+        Relationships: []
+      }
+      pdf_packets: {
+        Row: {
+          admin_ip: string | null
+          admin_signature: Json | null
+          admin_signed_at: string | null
+          admin_user_agent: string | null
+          admin_values: Json
+          audit: Json
+          completed_at: string | null
+          created_by: string
+          enabled_forms: string[]
+          id: string
+          recipient_email: string
+          recipient_ip: string | null
+          recipient_name: string
+          recipient_signature: Json | null
+          recipient_signed_at: string | null
+          recipient_user_agent: string | null
+          sent_at: string
+          snapshot: Json
+          status: string
+          template_id: string | null
+          title: string
+          values: Json
+        }
+        Insert: {
+          admin_ip?: string | null
+          admin_signature?: Json | null
+          admin_signed_at?: string | null
+          admin_user_agent?: string | null
+          admin_values?: Json
+          audit?: Json
+          completed_at?: string | null
+          created_by: string
+          enabled_forms?: string[]
+          id?: string
+          recipient_email: string
+          recipient_ip?: string | null
+          recipient_name: string
+          recipient_signature?: Json | null
+          recipient_signed_at?: string | null
+          recipient_user_agent?: string | null
+          sent_at?: string
+          snapshot: Json
+          status?: string
+          template_id?: string | null
+          title: string
+          values?: Json
+        }
+        Update: {
+          admin_ip?: string | null
+          admin_signature?: Json | null
+          admin_signed_at?: string | null
+          admin_user_agent?: string | null
+          admin_values?: Json
+          audit?: Json
+          completed_at?: string | null
+          created_by?: string
+          enabled_forms?: string[]
+          id?: string
+          recipient_email?: string
+          recipient_ip?: string | null
+          recipient_name?: string
+          recipient_signature?: Json | null
+          recipient_signed_at?: string | null
+          recipient_user_agent?: string | null
+          sent_at?: string
+          snapshot?: Json
+          status?: string
+          template_id?: string | null
+          title?: string
+          values?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pdf_packets_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "pdf_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      pdf_templates: {
+        Row: {
+          blocks: Json
+          contract_description: string | null
+          created_at: string
+          created_by: string
+          id: string
+          name: string
+          show_in_contracts: boolean
+          source: string
+          tier: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          blocks?: Json
+          contract_description?: string | null
+          created_at?: string
+          created_by?: string
+          id?: string
+          name: string
+          show_in_contracts?: boolean
+          source?: string
+          tier?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          blocks?: Json
+          contract_description?: string | null
+          created_at?: string
+          created_by?: string
+          id?: string
+          name?: string
+          show_in_contracts?: boolean
+          source?: string
+          tier?: string
+          updated_at?: string
+          updated_by?: string | null
         }
         Relationships: []
       }
@@ -2032,6 +2364,44 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      saved_pdfs: {
+        Row: {
+          created_at: string
+          folder_id: string
+          id: string
+          name: string
+          saved_by: string
+          size_bytes: number
+          storage_path: string
+        }
+        Insert: {
+          created_at?: string
+          folder_id: string
+          id?: string
+          name: string
+          saved_by?: string
+          size_bytes: number
+          storage_path: string
+        }
+        Update: {
+          created_at?: string
+          folder_id?: string
+          id?: string
+          name?: string
+          saved_by?: string
+          size_bytes?: number
+          storage_path?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "saved_pdfs_folder_id_fkey"
+            columns: ["folder_id"]
+            isOneToOne: false
+            referencedRelation: "pdf_folders"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       scheduled_events: {
         Row: {
@@ -2888,6 +3258,10 @@ export type Database = {
         }
         Returns: undefined
       }
+      approve_contract: {
+        Args: { _contract_id: string; _note?: string }
+        Returns: string
+      }
       artist_name_status: { Args: { uid?: string }; Returns: Json }
       badge_earned_counts: {
         Args: never
@@ -2970,7 +3344,26 @@ export type Database = {
       }
       norm_artist_name: { Args: { v: string }; Returns: string }
       paid_tier: { Args: { _env?: string; _uid: string }; Returns: string }
+      pdf_packet_signing: { Args: { _id: string }; Returns: Json }
+      pdf_packet_submit: {
+        Args: {
+          _id: string
+          _ip?: string
+          _signature: Json
+          _user_agent?: string
+          _values: Json
+        }
+        Returns: Json
+      }
       reopen_contract: { Args: { _contract_id: string }; Returns: undefined }
+      request_contract_changes: {
+        Args: { _contract_id: string; _note: string }
+        Returns: undefined
+      }
+      resume_changed_contract: {
+        Args: { _contract_id: string }
+        Returns: undefined
+      }
       seat_is_live: {
         Args: { _member: string; _owner: string }
         Returns: boolean
@@ -2991,6 +3384,7 @@ export type Database = {
           _party_id: string
           _signature_name: string
           _user_agent: string
+          _values?: Json
         }
         Returns: Json
       }
@@ -3006,6 +3400,10 @@ export type Database = {
       }
       staff_offboarded: { Args: { _uid: string }; Returns: boolean }
       staff_plan_active: { Args: { _uid: string }; Returns: boolean }
+      submit_contract_for_approval: {
+        Args: { _contract_id: string }
+        Returns: undefined
+      }
       user_id_by_email: { Args: { _email: string }; Returns: string }
       user_tier: { Args: { _uid: string }; Returns: string }
     }
