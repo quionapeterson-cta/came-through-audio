@@ -81,7 +81,7 @@ export const sendIpiRequest = createServerFn({ method: "POST" })
     if (!res.ok) {
       console.error(`Resend failed [${res.status ?? res.detail}]: ${res.detail ?? ""}`);
       if (res.detail === "no-key") throw new Error("Email sending is not configured yet.");
-      if (res.status === 403 && /domain/i.test(res.detail ?? "")) throw new Error("Email could not be sent: the sending domain isn't verified in Resend yet. Copy the link and send it yourself for now.");
+      if (res.status === 403 && /domain/i.test(res.detail ?? "")) throw new Error("Email delivery error: the sending domain isn't verified for sending yet. Copy the link and send it yourself for now.");
       throw new Error(`Email could not be sent (${res.status ?? "network"}). Copy the link and send it yourself for now.`);
     }
     await sends().insert({ sender_id: context.userId, ipi_request_id: row.id, recipient_email: recipient } as never);

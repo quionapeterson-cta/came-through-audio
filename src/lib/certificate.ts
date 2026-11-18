@@ -26,8 +26,8 @@ export async function saveCertificatePdf(c: Certificate) {
     ...[STORED_COPY.daw, STORED_COPY.drafts].flatMap((k) => { const v = manifestLine(c.manifest, k); return v ? [`${k.replace(" SHA-256", "")}: ${v}`] : []; }),
     `Proof manifest SHA-256: ${c.proof_digest ?? "—"}`,
     "Keep your original proof videos unchanged, and keep an exact copy of each one somewhere you control: the fingerprints above match those exact files (and our stored copies, listed in your manifest). Trimming or re-exporting a video makes a different file.",
-    c.ots_receipt ? `Bitcoin timestamp: submitted via OpenTimestamps (${c.ots_calendar}); anchors within a few hours.` : "Bitcoin timestamp: not available",
-    c.ots_receipt ? "To verify on the Bitcoin blockchain: open opentimestamps.org, drop in the .ots file from your Bitcoin proof ZIP, then the proof-manifest.txt (not this PDF). It shows as pending for the first few hours." : "",
+    c.ots_receipt ? `Bitcoin timestamp: submitted via a public Bitcoin timestamp service (${c.ots_calendar}); anchors within a few hours.` : "Bitcoin timestamp: not available",
+    c.ots_receipt ? "To verify on the Bitcoin blockchain: open the public verifier named in HOW TO VERIFY, drop in the .ots file from your Bitcoin proof ZIP, then the proof-manifest.txt (not this PDF). It shows as pending for the first few hours." : "",
     `Scan the QR code or visit ${verifyUrl(c.id)} to check this certificate.`,
     DISCLAIMERS.aiProtection];
   let y = 36;

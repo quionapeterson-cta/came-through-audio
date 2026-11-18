@@ -30,5 +30,5 @@ export const stampDigest = createServerFn({ method: "POST" })
         /* try next calendar */
       }
     }
-    throw new Error("OpenTimestamps calendars are unreachable right now. Please try again.");
+    throw new Error("The Bitcoin timestamp service is unreachable right now. Please try again.");
   });

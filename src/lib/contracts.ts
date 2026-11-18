@@ -105,7 +105,7 @@ export async function saveContract(c: Contract): Promise<Contract> {
     if (error) throw error;
   } else {
     const { data, error } = await supabase.from("contracts" as never).insert((c.isCompany ? { ...row, is_company: true } : row) as never).select("id").single();
-    if (error) throw new Error(c.isCompany && /is_company/.test(error.message) ? "Company contracts need the latest database update. Run migration 20261022170000 in the Supabase SQL editor." : error.message);
+    if (error) throw new Error(c.isCompany && /is_company/.test(error.message) ? "Company contracts need the latest database update. Ask an engineer to run migration 20261022170000." : error.message);
     id = (data as { id: string }).id;
   }
   const keep = new Set(c.parties.map((p) => p.id).filter(Boolean));

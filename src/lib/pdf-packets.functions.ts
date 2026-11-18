@@ -589,7 +589,8 @@ async function deliverCompleted(
   return {
     emailed: res.ok,
     resendId: res.id,
-    emailError: res.ok ? null : (res.detail ?? "send-failed"),
+    // A staff member reads this, so it is our own sentence and never the provider's raw reply.
+    emailError: res.ok ? null : (emailErrorText(res) ?? "The email could not be sent. Copy the link instead."),
     pdfBase64: toBase64(pdf),
   };
 }

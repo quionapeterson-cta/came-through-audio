@@ -95,7 +95,7 @@ export const inviteSeatArtist = createServerFn({ method: "POST" })
     if (!res.ok) {
       const body = await res.text();
       console.error(`Resend failed [${res.status}]: ${body}`);
-      if (res.status === 403 && /domain/i.test(body)) throw new Error("Email could not be sent: the camethroughaudio.com sending domain isn't verified in Resend yet. Copy the invite link and send it yourself for now.");
+      if (res.status === 403 && /domain/i.test(body)) throw new Error("Email delivery error: the camethroughaudio.com sending domain isn't verified for sending yet. Copy the invite link and send it yourself for now.");
       throw new Error(`Email could not be sent (${res.status}). Copy the invite link and send it yourself for now.`);
     }
 
