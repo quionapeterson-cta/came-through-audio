@@ -139,7 +139,7 @@ export async function sendMail(mail: Mail): Promise<MailResult> {
       ...(typeof body?.id === "string" ? { id: body.id } : {}),
     };
   } catch (e) {
-    console.error(`Email to ${to.join(", ")} failed:`, e);
+    console.error(`Email to ${to.length} recipient(s) failed:`, e);
     return { ok: false, detail: "network" };
   }
 }
