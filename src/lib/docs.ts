@@ -98,7 +98,7 @@ export const DOCS: Doc[] = [
         "Contracts are locked before anyone signs, and the fingerprint of the exact text is stored with every signature.",
         "Signers must log in with the email the request was sent to.",
       ] },
-      { heading: "Proof of creation", paragraphs: ["The AI Protection Hub fingerprints your session recordings with SHA-256 and timestamps them on the Bitcoin blockchain through OpenTimestamps. That proves a file existed at a point in time. It doesn't prove ownership by itself, which is why it's paired with your sworn human-authorship attestation."] },
+      { heading: "Proof of creation", paragraphs: ["The AI Protection Hub fingerprints your session recordings with SHA-256 and stamps them as a Bitcoin Timestamp on the public blockchain. That proves a file existed at a point in time. It doesn't prove ownership by itself, which is why it's paired with your sworn human-authorship attestation."] },
       { heading: "Payments and staff access", bullets: [
         "Checkout is handled by Stripe, so your card details never touch our servers.",
         "Paid access comes only from verified payment records. It can't be granted from inside the app.",
@@ -144,7 +144,7 @@ export const DOCS: Doc[] = [
         "Expert Help, where our team registers the songs for you, starts here and is paid per order.",
       ] },
       { heading: "4. AI Protection Hub — every plan, bought per certificate", bullets: [
-        "Choose the song you are protecting and add your session recordings. The hub fingerprints them with SHA-256 and timestamps them on the Bitcoin blockchain through OpenTimestamps.",
+        "Choose the song you are protecting and add your session recordings. The hub fingerprints them with SHA-256 and stamps them as a Bitcoin Timestamp on the public blockchain.",
         "Complete the sworn human-authorship attestation, then download your Certificate of Human Origin.",
         "A certificate proves a file existed at a point in time. It does not prove ownership by itself, which is why the attestation travels with it.",
       ] },

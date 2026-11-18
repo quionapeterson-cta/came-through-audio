@@ -8,8 +8,8 @@ const EXPLAINERS = [
     plain: "When you upload a short screen recording of your DAW session (Logic, FL Studio, Ableton, Pro Tools) or lyric drafts, we create a unique 64-character fingerprint of that file.",
     why: "Change even one detail and the fingerprint changes completely — showing your session and arrangement existed, exactly as recorded, by that date." },
   { icon: Link2, title: "Bitcoin Blockchain Anchored", tag: "Permanent, public proof of when",
-    plain: "Your song's fingerprint is recorded on the public Bitcoin blockchain through OpenTimestamps. Your actual music is never uploaded there.",
-    why: "No company, platform or label can alter, backdate or delete it. Anyone — a lawyer, distributor or judge — can verify the date at opentimestamps.org." },
+    plain: "Your song's fingerprint is stamped as a Bitcoin Timestamp on the public blockchain. Your actual music is never uploaded there.",
+    why: "No company, platform or label can alter, backdate or delete it. Anyone — a lawyer, distributor or judge — can verify the date from the Bitcoin Timestamp proof." },
   { icon: Gavel, title: "17 U.S.C. §504 Attestation", tag: "Your sworn human-creation record",
     plain: "A formal statement, made under penalty of law, that you and your listed contributors created this work as humans.",
     why: "U.S. copyright law allows statutory damages of up to $150,000 per work for willful infringement of registered works. A sworn, time-stamped record supports takedowns, PRO disputes and AI claims." },
@@ -523,7 +523,7 @@ export function AIProtectionHub({ userId, purchases, justPaid, track }: { userId
             <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground"><Check className="h-5 w-5" /></span>
             <div className="space-y-1 text-sm">
               <div className="font-bold">{EXPLAINERS.length + 1}. Anyone can check it</div>
-              <p>Scan the QR code on your certificate, or open My certificates → Bitcoin proof. The ZIP has your manifest (.txt), the timestamp receipt (.ots) and how to verify it at opentimestamps.org.</p>
+              <p>Scan the QR code on your certificate, or open My certificates → Bitcoin proof. The ZIP has your manifest (.txt), the timestamp receipt (.ots) and how to check the Bitcoin Timestamp.</p>
             </div>
           </li>
           <li className="flex gap-4">
