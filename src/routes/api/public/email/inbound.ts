@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { createClient } from "@supabase/supabase-js";
 import { z } from "zod";
+import { isInviteAgency, readAgencyEmail } from "@/lib/agency-invites";
 import { threadSubjectKey } from "@/lib/inbox-attachments";
 
 /**
@@ -19,12 +20,12 @@ function db() {
   return _sb;
 }
 
-const INBOX_MAILBOXES = ["admin", "contracts"] as const;
+const INBOX_MAILBOXES = ["admin", "contracts", "registrations"] as const;
 type InboxMailbox = (typeof INBOX_MAILBOXES)[number];
 
 const payloadSchema = z.object({
   /** Optional: when it is left out the mailbox is read from the recipient address. */
-  mailbox: z.enum(["admin", "contracts"]).optional(),
+  mailbox: z.enum(["admin", "contracts", "registrations"]).optional(),
   from: z.string().trim().min(3).max(320),
   fromName: z.string().trim().max(200).optional(),
   to: z.union([z.string(), z.array(z.string())]).optional(),
@@ -55,6 +56,20 @@ const payloadSchema = z.object({
     .optional(),
   /** ISO time the message arrived, as the worker saw it; a missing or unreadable value means now. */
   receivedAt: z.string().trim().max(40).optional(),
+  /**
+   * The worker's own tag for an agency invitation (founder, 2026-11-18): which agency, and the address, account name and
+   * link it could see. A hint only — the mail is classified again below with the app's rules, and only the app's agency
+   * list decides what is filed, so a Worker change can never file something the app would refuse.
+   */
+  agencyInvite: z
+    .object({
+      agency: z.string().trim().max(40),
+      kind: z.string().trim().max(20).optional(),
+      userEmail: z.string().trim().max(320).optional(),
+      accountName: z.string().trim().max(200).optional(),
+      verifyUrl: z.string().trim().max(400).optional(),
+    })
+    .optional(),
 });
 
 /** Compares the worker's header with the secret without leaking where the first difference is. */
@@ -93,6 +108,7 @@ function mailboxFor(given: InboxMailbox | undefined, recipients: string[]): Inbo
   for (const address of recipients) {
     const local = address.split("@")[0] ?? "";
     if (local === "contracts") return "contracts";
+    if (local === "registrations") return "registrations";
     if (local === "admin") return "admin";
   }
   return "admin";
@@ -304,6 +320,50 @@ export const Route = createFileRoute("/api/public/email/inbound")({
           .from("admin_inbox_threads")
           .update({ last_message_at: receivedAt } as never)
           .eq("id", threadId);
+
+        // An agency invitation is filed beside the mail that carried it, so Admin → Registrations can show it without
+        // anyone reading every thread. The app's own rules decide the agency; the worker's tag only fills in a detail the
+        // app could not read. A failure here never fails the delivery: the message is already stored.
+        const detected = readAgencyEmail({ from: from.email, subject, text: input.text, html: input.html });
+        const tag = input.agencyInvite;
+        const taggedAgency = tag && isInviteAgency(tag.agency) ? tag.agency : null;
+        if (detected && taggedAgency && taggedAgency !== detected.agency) {
+          console.warn(
+            `Admin inbox: the worker tagged ${taggedAgency} but the app read ${detected.agency} for "${subject}".`,
+          );
+        }
+        const agency = detected?.agency ?? taggedAgency;
+        const kind = detected?.kind ?? (tag?.kind === "verification" ? "verification" : "invite");
+        if (agency && kind !== "notice") {
+          const duplicate = messageId
+            ? await supabase
+                .from("agency_invites")
+                .select("id")
+                .eq("agency", agency)
+                .eq("message_id", messageId)
+                .maybeSingle()
+            : { data: null };
+          if (!(duplicate as { data: { id: string } | null }).data) {
+            const { error: inviteError } = await supabase.from("agency_invites").insert({
+              agency,
+              kind,
+              mailbox,
+              inbox_message_id: (stored as { id: string }).id,
+              message_id: messageId,
+              sender_email: from.email,
+              sender_domain: from.email.split("@")[1] ?? "",
+              subject,
+              account_name: detected?.accountName ?? tag?.accountName ?? null,
+              user_email: detected?.userEmail ?? tag?.userEmail?.toLowerCase() ?? null,
+              verify_url: detected?.verifyUrl ?? tag?.verifyUrl ?? null,
+              received_at: receivedAt,
+            } as never);
+            // A redelivery that raced this insert is the same invitation, not an error worth failing on.
+            if (inviteError && inviteError.code !== "23505") {
+              console.error("Admin inbox: couldn't file the agency invitation:", inviteError.message);
+            }
+          }
+        }
 
         return Response.json({
           ok: true,

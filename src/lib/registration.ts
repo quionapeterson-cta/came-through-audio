@@ -11,8 +11,12 @@ export type NewSong = { title: string; artist: string };
 /** Who users add as their representative/user at each agency (founder, 2026-10-22). */
 export const REPRESENTATIVE = { email: "registrations@camethroughaudio.com", firstName: "Came", lastName: "Through Audio" } as const;
 
-export type SongStatus = "pending" | "in_progress" | "registered";
-export const SONG_STATUS_LABEL: Record<SongStatus, string> = { pending: "Pending", in_progress: "In progress", registered: "Registered" };
+/**
+ * On Hold is a status of its own (founder, 2026-11-18): a song that cannot be filed until something is fixed. It is not
+ * "still pending" and not "in progress", because the difference is exactly what a staff member has to see.
+ */
+export type SongStatus = "pending" | "in_progress" | "on_hold" | "registered";
+export const SONG_STATUS_LABEL: Record<SongStatus, string> = { pending: "Pending", in_progress: "In Progress", on_hold: "On Hold", registered: "Registered" };
 
 export type RegistrationOrder = {
   purchase_id: string;
@@ -23,6 +27,9 @@ export type RegistrationOrder = {
   agreement_name: string | null;
   agreement_signed_at: string | null;
   access_confirmed: Record<string, string>;
+  /** When staff finished the whole customer in one click, and who did it (founder, 2026-11-18). */
+  batch_registered_at?: string | null;
+  batch_registered_by?: string | null;
   created_at: string;
 };
 export type RegistrationSong = {

@@ -1,5 +1,7 @@
 import { fromCatalogRow } from "@/lib/catalog";
+import { resolveAccess } from "./departments";
 import { emailLayout, escapeHtml as esc, SITE_URL } from "./email-layout";
+import { mailKey, sendMail } from "./mailer";
 import { resendKey } from "./collab-trial.server";
 import { missingFor, orderAgencies, orderSongsOf, type RegistrationOrder, type RegistrationSong } from "./registration";
 import type { Metadata } from "./metadata";
@@ -132,4 +134,65 @@ export async function sendFiledEmail(db: Admin, purchaseId: string, agency: stri
     body: JSON.stringify({ from: FROM, to: [email], subject: `Your songs are filed with ${agency}`, html: emailLayout(body, { reason: "You're receiving this because you bought Expert Registration Assistance from Came Through Audio." }) }),
   });
   if (!res.ok) console.error(`Filed email failed [${res.status}]: ${await res.text()}`);
+}
+
+/**
+ * The registration desk's gate, shared by the queue and the message board (founder, 2026-11-18): the registration
+ * department, or a super admin (who holds every department). Written once here so an issue can never be filed by — or a
+ * customer's registrations finished by — somebody the department check would refuse.
+ */
+export async function requireRegistrationStaff(context: { supabase: unknown; userId: string }) {
+  const client = context.supabase as { // eslint-disable-line @typescript-eslint/no-explicit-any
+    from: (table: string) => { select: (columns: string) => { eq: (column: string, value: string) => PromiseLike<{ data: unknown }> } };
+  };
+  const { data } = await client.from("user_roles").select("role, departments").eq("user_id", context.userId);
+  const access = resolveAccess((data ?? []) as { role: string; departments?: string[] | null }[]);
+  if (!access || !access.departments.includes("registration")) throw new Error("Forbidden");
+}
+
+/** The name a board thread or an issue shows as its author, from the staff member's own profile. */
+export async function staffName(db: Admin, userId: string): Promise<string> {
+  const { data } = await db.from("profiles").select("stage_name, legal_name").eq("id", userId).maybeSingle();
+  const profile = data as { stage_name: string | null; legal_name: string | null } | null;
+  if (profile?.legal_name || profile?.stage_name) return profile.legal_name || profile.stage_name!;
+  const { data: user } = await db.auth.admin.getUserById(userId);
+  return user.user?.email ?? "A teammate";
+}
+
+/**
+ * The one celebratory email (founder, 2026-11-18): sent when a staff member finishes every song for a customer with
+ * "All Songs Registered". It names the exact titles, because that list is the receipt, and states plainly what the
+ * customer should do next instead of promising an agency's timing.
+ *
+ * Idempotent by purchase: the key is fixed, so a double click or a retried request cannot send it twice.
+ */
+export async function sendCustomerRegisteredEmail(
+  db: Admin,
+  input: { userId: string; titles: string[]; agencies: string[]; key: string },
+): Promise<boolean> {
+  const email = await emailOf(db, input.userId);
+  if (!email || !input.titles.length) return false;
+
+  const titles = input.titles;
+  const agencies = input.agencies;
+  const list = titles.map((title) => `<li style="margin:0 0 6px">${esc(title)}</li>`).join("");
+  const body = `<p style="font-size:12px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:#004AAD;margin:0">Expert Registration Assistance</p>
+<h1 style="font-size:26px;margin:8px 0 16px;color:#0b0b0b">Your catalog is officially registered</h1>
+<p style="font-size:15px;line-height:1.6">Came Through Audio came through: every song below has been registered for you with ${esc(agencies.join(", "))}.</p>
+<ul style="font-size:15px;line-height:1.6;padding-left:18px;margin:16px 0">${list}</ul>
+<p style="font-size:15px;line-height:1.6">Keep your Came Through Audio access in place until you have seen the registrations appear in your own agency accounts. Each agency reviews submissions on its own schedule, so a new registration can take a while to show.</p>
+<p style="font-size:15px;line-height:1.6">Once everything is visible and correct, you can remove our access at any agency from your own account settings. Your catalog, splits and paperwork stay exactly where they are.</p>
+<a href="${SITE_URL}/workspace?tab=health&view=expert" style="display:inline-block;background:#004AAD;color:#ffffff;text-decoration:none;font-weight:700;padding:14px 28px;border-radius:8px">See my registrations</a>`;
+
+  const result = await sendMail({
+    from: "registrations",
+    to: [email],
+    subject: "Your catalog is officially registered",
+    html: emailLayout(body, {
+      reason: "You're receiving this because you bought Expert Registration Assistance from Came Through Audio.",
+    }),
+    key: mailKey("registration-complete", input.key),
+  });
+  if (!result.ok) console.error(`Registered email failed: ${result.detail ?? result.status ?? "unknown"}`);
+  return result.ok;
 }

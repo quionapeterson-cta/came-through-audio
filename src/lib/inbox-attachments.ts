@@ -76,7 +76,7 @@ export function storageFolderFor(seed: string): string {
 
 /** Where one attachment of a received mail lives. Deterministic: the same message and file always name the same key. */
 export function inboundStoragePath(input: {
-  mailbox: "admin" | "contracts";
+  mailbox: "admin" | "contracts" | "registrations";
   messageKey: string;
   index: number;
   filename: string;

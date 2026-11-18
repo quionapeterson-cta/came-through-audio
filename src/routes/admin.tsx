@@ -25,6 +25,8 @@ import { ASSIGNABLE_DEPARTMENTS, DEPARTMENTS, DEPARTMENT_LABEL, ROLE_LABEL, view
 import { canManagePdfTemplates } from "@/lib/pdf-templates";
 import { SupportTicketsPanel } from "@/components/SupportTicketsPanel";
 import { AdminInboxPanel } from "@/components/AdminInboxPanel";
+import { AdminMessageBoard } from "@/components/AdminMessageBoard";
+import { boardUnreadCount } from "@/lib/board.functions";
 import { inboxUnreadCount } from "@/lib/inbox.functions";
 import { SupportScriptsPanel } from "@/components/SupportScriptsPanel";
 import { BadgeSwitchboard } from "@/components/BadgeSwitchboard";
@@ -106,14 +108,24 @@ function AdminPage() {
   const inbox = useQuery({
     queryKey: ["inbox-unread", user?.id],
     queryFn: () => inboxUnreadCount(),
-    enabled: !!access && access.role === "super_admin",
+    enabled: !!access && (access.role === "super_admin" || access.departments.includes("registration")),
     refetchInterval: 60000,
   });
   // Undefined while it is loading and after a failure, so the tab shows a dash rather than a zero: a count with no data
   // is never reported as an empty inbox (founder, 2026-11-17).
-  const inboxUnread = access?.role === "super_admin" && inbox.isSuccess ? (inbox.data ?? 0) : undefined;
+  const inboxUnread = inbox.isSuccess ? (inbox.data ?? 0) : undefined;
+  // The board's badge, counted from unread replies the same way the inbox's is (founder, 2026-11-18).
+  const board = useQuery({
+    queryKey: ["board-unread", user?.id],
+    queryFn: () => boardUnreadCount(),
+    enabled: !!access && (access.role === "super_admin" || access.departments.includes("registration")),
+    refetchInterval: 60000,
+  });
+  const boardUnread = board.isSuccess ? (board.data ?? 0) : undefined;
   const [view, setView] = useState<Department | "all">("all");
   const [activeTab, setActiveTab] = useState<string>();
+  // Opening a case from the Message Board lands on Registrations with that customer's card already open.
+  const [regFocus, setRegFocus] = useState<string | null>(null);
   useEffect(() => setActiveTab(undefined), [view]);
 
   if (loading || role.isLoading) return <Center>Loading…</Center>;
@@ -150,6 +162,7 @@ function AdminPage() {
     if (t.value === "company" && pendingApprovals > 0) return { ...t, label: `Company Contracts (${pendingApprovals})` };
     if (t.value === "inbox" && inboxUnread !== undefined && inboxUnread > 0) return { ...t, label: `Inbox (${inboxUnread})` };
     if (t.value === "inbox" && inboxUnread === undefined && inbox.isError) return { ...t, label: "Inbox (—)" };
+    if (t.value === "board" && boardUnread !== undefined && boardUnread > 0) return { ...t, label: `Message Board (${boardUnread})` };
     return t;
   });
   const show = (value: string) => tabs.some((t) => t.value === value);
@@ -163,8 +176,8 @@ function AdminPage() {
     <div className="min-h-screen bg-background">
       {show("tasks") && <AdminWelcome me={user.id} onOpenTasks={() => setActiveTab("tasks")} />}
       <header className="bg-ink text-ink-foreground">
-        <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-6 py-4">
-          <div className="flex items-center gap-3">
+        <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-6 py-4 max-md:flex-wrap max-md:gap-2 max-md:px-4">
+          <div className="flex min-w-0 items-center gap-3 max-md:gap-2">
             <BrandLogo showName={false} />
             <AdminNavMobile tabs={tabs} active={current} onSelect={setActiveTab} access={access} />
             <div>
@@ -172,13 +185,13 @@ function AdminPage() {
               <div className="text-xl font-bold">Admin Dashboard</div>
             </div>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 max-md:w-full max-md:flex-wrap max-md:justify-end max-md:gap-2">
             {show("tasks") && <WelcomeSwitch />}
             <WinFeed me={user.id} />
             {show("tasks") && <TaskBell me={user.id} onOpenTasks={() => setActiveTab("tasks")} />}
             {isSuper && (
               <Select value={view} onValueChange={(v) => setView(v as Department | "all")}>
-                <SelectTrigger aria-label="Department" className="w-48 border-ink-border bg-transparent text-ink-foreground"><SelectValue /></SelectTrigger>
+                <SelectTrigger aria-label="Department" className="w-48 border-ink-border bg-transparent text-ink-foreground max-md:w-36"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   {DEPARTMENTS.map((dep) => <SelectItem key={dep} value={dep}>{DEPARTMENT_LABEL[dep]}</SelectItem>)}
                   <SelectItem value="all">All departments</SelectItem>
@@ -237,7 +250,7 @@ function AdminPage() {
               rows={d?.certificates.map((c) => [c.track_title ?? "—", c.artist_name ?? "—", c.format_type, c.blockchain_status, c.is_verified ? "Yes" : "No", fmt(c.issued_at)])} />
           </TabsContent>
           <TabsContent value="reg">
-            {show("reg") && <RegistrationQueuePanel />}
+            {show("reg") && <RegistrationQueuePanel focusPurchaseId={regFocus} />}
             {!!d?.registrations.length && <>
               <h3 className="mt-8 font-semibold">Earlier requests</h3>
               <Table head={["Agency", "Status", "Authorization signed", "Created"]}
@@ -255,6 +268,17 @@ function AdminPage() {
           </TabsContent>
           {show("billing") && <TabsContent value="billing"><BillingConsolePanel isSuper={isSuper} /></TabsContent>}
           {show("inbox") && <TabsContent value="inbox"><AdminInboxPanel /></TabsContent>}
+          {show("board") && (
+            <TabsContent value="board">
+              <AdminMessageBoard
+                isSuper={isSuper}
+                onOpenCase={(purchaseId) => {
+                  setRegFocus(purchaseId);
+                  setActiveTab("reg");
+                }}
+              />
+            </TabsContent>
+          )}
           {show("support") && <TabsContent value="support"><SupportTicketsPanel scope={access.departments.includes("support") ? "all" : "billing"} /></TabsContent>}
           {show("badges") && <TabsContent value="badges"><BadgeSwitchboard /><BadgeProtocolPanel isSuper={isSuper} /></TabsContent>}
           {show("homepage") && <TabsContent value="homepage"><TestimonialsEditor /><TestimonialFilterPanel /><SocialPanel /></TabsContent>}

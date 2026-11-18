@@ -1,4 +1,5 @@
 import PostalMime from "postal-mime";
+import { tagAgencyEmail } from "./agency-invites";
 
 /**
  * The Admin Inbox receiver's other half (founder, 2026-11-17). Cloudflare Email Routing sends admin@ and contracts@
@@ -51,9 +52,9 @@ type KeptFile = {
 };
 
 /** Which mailbox the route delivered to. Anything else means the Cloudflare route is wrong. */
-function mailboxOf(recipient: string): "admin" | "contracts" {
+function mailboxOf(recipient: string): "admin" | "contracts" | "registrations" {
   const local = (recipient.split("@")[0] ?? "").trim().toLowerCase();
-  if (local === "admin" || local === "contracts") return local;
+  if (local === "admin" || local === "contracts" || local === "registrations") return local;
   // Thrown rather than filed under admin, where it would be answered from the wrong address and nobody would notice.
   throw new Error(`Routed to ${recipient}, which is not an Admin Inbox mailbox`);
 }
@@ -163,6 +164,17 @@ export default {
     ].filter((one) => one.includes("@"));
 
     const subject = parsed?.subject?.trim() || header(message.headers, "subject") || "";
+
+    // An agency invitation (SoundExchange, The MLC, ASCAP) is tagged while the mail is still here, so Admin →
+    // Registrations can show it without anyone reading every thread. The app classifies it again when it stores it, so
+    // this tag is a hint and a source of details, never the decision.
+    const agencyInvite = tagAgencyEmail({
+      from: message.from,
+      subject,
+      ...(parsed?.text ? { text: parsed.text } : {}),
+      ...(parsed?.html ? { html: parsed.html } : {}),
+    });
+
     const at = receivedAt(message.headers);
     const messageKey = messageKeyOf(message, subject, at);
     const filesUrl = attachmentUrl(url);
@@ -259,6 +271,7 @@ export default {
         text: clipped(parsed?.text, MAX_TEXT),
         html: clipped(parsed?.html ?? undefined, MAX_HTML),
         attachments,
+        ...(agencyInvite ? { agencyInvite } : {}),
         // A reply is matched to its thread on these three, so they travel exactly as the mail carries them.
         messageId: header(message.headers, "message-id"),
         inReplyTo: header(message.headers, "in-reply-to"),

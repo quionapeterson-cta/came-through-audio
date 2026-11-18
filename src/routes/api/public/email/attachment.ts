@@ -70,7 +70,7 @@ export const Route = createFileRoute("/api/public/email/attachment")({
         }
 
         const mailbox = request.headers.get("x-mailbox");
-        if (mailbox !== "admin" && mailbox !== "contracts") {
+        if (mailbox !== "admin" && mailbox !== "contracts" && mailbox !== "registrations") {
           return new Response("Unknown mailbox", { status: 400 });
         }
         const messageKey = (request.headers.get("x-message-key") ?? "").trim();

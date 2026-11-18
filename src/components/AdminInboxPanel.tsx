@@ -44,7 +44,11 @@ function sizeOf(bytes?: number): string {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
-const MAILBOX_LABEL: Record<InboxMailbox, string> = { admin: "admin@", contracts: "contracts@" };
+const MAILBOX_LABEL: Record<InboxMailbox, string> = {
+  admin: "admin@",
+  contracts: "contracts@",
+  registrations: "registrations@",
+};
 
 /** One file on a message: the name, then the way to open it when we kept it. */
 function AttachmentRow({ messageId, file }: { messageId: string; file: InboxAttachment }) {
@@ -263,13 +267,14 @@ export function AdminInboxPanel() {
   return (
     <div className="mt-4 space-y-3">
       <p className="text-sm text-muted-foreground">
-        Mail sent to admin@ and contracts@. Unread is counted from the messages themselves, so the
-        badge and this list can't disagree. Opening a conversation marks it read; a reply leaves
-        from admin@ and is saved on the thread.
+        Mail sent to admin@, contracts@ and registrations@. Unread is counted from the messages themselves,
+        so the badge and this list can't disagree. Opening a conversation marks it read; a reply is saved
+        on the thread and leaves from the mailbox it arrived at. The registration desk sees registrations@
+        only; a super admin sees all three.
       </p>
 
       <div className="flex flex-wrap items-center gap-2">
-        {(["all", "unread", "admin", "contracts"] as const).map((f) => (
+        {(["all", "unread", "admin", "contracts", "registrations"] as const).map((f) => (
           <button
             key={f}
             onClick={() => setFilter(f)}
@@ -295,7 +300,7 @@ export function AdminInboxPanel() {
         <div className="rounded-2xl border border-border bg-card p-8 text-center text-muted-foreground">
           {all.length
             ? "Nothing matches this view."
-            : "No mail yet. Messages sent to admin@ and contracts@ appear here once Email Routing points them at the inbox."}
+            : "No mail yet. Messages sent to admin@, contracts@ and registrations@ appear here once Email Routing points them at the inbox."}
         </div>
       ) : (
         <ul className="divide-y divide-border overflow-hidden rounded-2xl border border-border bg-card">

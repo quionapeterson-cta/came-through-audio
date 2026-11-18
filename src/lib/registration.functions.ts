@@ -2,7 +2,13 @@ import { createServerFn } from "@tanstack/react-start";
 import { createHash } from "node:crypto";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-import { resolveAccess } from "./departments";
+import {
+  isAgencyInviteStatus,
+  isInviteAgency,
+  type AgencyEmailKind,
+  type AgencyInviteStatus,
+  type InviteAgency,
+} from "./agency-invites";
 import { registrationAuthorization } from "./contract-blueprints";
 import { assistanceTotal } from "./plans";
 import type { RegistrationOrder, RegistrationSong, SongStatus } from "./registration";
@@ -141,18 +147,24 @@ export const confirmRegistrationAccess = createServerFn({ method: "POST" })
 
 // ── Staff: Admin → Registrations ─────────────────────────────────────────────
 
-async function requireRegistrationStaff(context: { supabase: any; userId: string }) { // eslint-disable-line @typescript-eslint/no-explicit-any
-  const { data } = await context.supabase.from("user_roles").select("role, departments").eq("user_id", context.userId);
-  const access = resolveAccess(data ?? []);
-  if (!access || !access.departments.includes("registration")) throw new Error("Forbidden");
+/** The gate itself lives in registration.server.ts, so the queue and the message board cannot drift apart. */
+async function requireRegistrationStaff(context: { supabase: unknown; userId: string }) {
+  const { requireRegistrationStaff: check } = await import("./registration.server");
+  await check(context);
 }
 
-export type QueueSong = { id: string; title: string; submitted: boolean; status: Record<string, SongStatus>; snapshot: RegistrationSong["snapshot"]; trackId: string | null; ready: boolean };
+export type QueueSong = {
+  id: string; title: string; submitted: boolean; status: Record<string, SongStatus>; snapshot: RegistrationSong["snapshot"]; trackId: string | null; ready: boolean;
+  /** The submitted copy's own ISRC and artist, so a report or an export never re-reads a catalog that may have changed. */
+  isrc: string; artist: string;
+};
 export type QueueOrder = {
   purchaseId: string; customer: string; email: string | null; agencies: string[]; createdAt: string; signedAt: string | null;
   /** The legal name typed on the Registration Authorization: agency invites come from accounts in this name. */
   signedName: string | null;
-  access: Record<string, string>; songs: QueueSong[]; state: "Waiting on customer" | "Ready to register" | "In progress" | "Registered"; stale: boolean;
+  access: Record<string, string>; songs: QueueSong[]; state: "Waiting on customer" | "Ready to register" | "In progress" | "On hold" | "Registered"; stale: boolean;
+  /** When this order's whole customer finish was recorded, so a finished card is never shown as work left. */
+  batchRegisteredAt: string | null;
   /** The agent who started (or paused) this order in My Queue, so two agents never work one customer at once. */
   agent: { name: string; state: "working" | "paused"; me: boolean } | null;
 };
@@ -185,14 +197,17 @@ export const listRegistrationQueue = createServerFn({ method: "GET" })
         id: c.song.id, title: c.title, submitted: !!c.song.submitted_at, status: c.song.status, snapshot: c.song.snapshot, trackId: c.song.track_id,
         // Re-checked on the server against the submitted copy, never trusted from the browser.
         ready: !!c.song.submitted_at && !!c.song.snapshot && !c.missing.length,
+        isrc: c.song.snapshot?.isrc ?? "", artist: c.song.snapshot?.artist ?? "",
       }));
       const allIn = songs.length > 0 && songs.every((s) => s.submitted) && !!o.agreement_signed_at && o.agencies.every((a) => o.access_confirmed[a]);
       const statuses = songs.flatMap((s) => o.agencies.map((a) => s.status[a]));
-      const state = !allIn ? "Waiting on customer" : statuses.every((s) => s === "registered") ? "Registered" : statuses.some((s) => s === "in_progress" || s === "registered") ? "In progress" : "Ready to register";
+      // On Hold is reported before "In progress": a held song needs a person, and calling it progress hid that.
+      const state = !allIn ? "Waiting on customer" : statuses.every((s) => s === "registered") ? "Registered" : statuses.some((s) => s === "on_hold") ? "On hold" : statuses.some((s) => s === "in_progress" || s === "registered") ? "In progress" : "Ready to register";
       const submittedAt = loaded.checks.map((c) => c.song.submitted_at).filter(Boolean).sort()[0];
       out.push({
         purchaseId: o.purchase_id, customer: prof?.stage_name || prof?.legal_name || "—", email: u.user?.email ?? null, agencies: o.agencies, createdAt: o.created_at,
         signedAt: o.agreement_signed_at, signedName: o.agreement_name, access: o.access_confirmed, songs, state,
+        batchRegisteredAt: o.batch_registered_at ?? null,
         // Internal target only, never shown to users (§3 step 6).
         stale: state !== "Registered" && !!submittedAt && Date.parse(submittedAt) < Date.now() - 30 * 86400000,
         agent: (() => {
@@ -207,15 +222,35 @@ export const listRegistrationQueue = createServerFn({ method: "GET" })
 /** Moves one song at one agency along Pending → In progress → Registered; emails the user once an agency is all filed. */
 export const setRegistrationStatus = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d) => z.object({ songId: z.string().uuid(), agency: z.string().max(60), status: z.enum(["pending", "in_progress", "registered"]) }).parse(d))
+  .inputValidator((d) =>
+    z.object({
+      songId: z.string().uuid(),
+      agency: z.string().max(60),
+      status: z.enum(["pending", "in_progress", "on_hold", "registered"]),
+      /** Required for `registered`: the verification checklist's mandatory tick, checked here and not only in the form. */
+      confirmed: z.boolean().optional(),
+    }).parse(d),
+  )
   .handler(async ({ data, context }) => {
     await requireRegistrationStaff(context);
+    if (data.status === "registered" && data.confirmed !== true) {
+      throw new Error("Complete the verification checklist before marking a song Registered.");
+    }
     const { admin, sendFiledEmail } = await import("./registration.server");
     const db = await admin();
     const { data: row } = await db.from("registration_songs" as never).select("purchase_id, status, submitted_at").eq("id", data.songId).maybeSingle();
     const song = row as { purchase_id: string; status: Record<string, SongStatus>; submitted_at: string | null } | null;
     if (!song?.submitted_at) throw new Error("This song hasn't been submitted.");
-    const { error } = await db.from("registration_songs" as never).update({ status: { ...song.status, [data.agency]: data.status }, updated_at: new Date().toISOString() } as never).eq("id", data.songId);
+    // The agency has to be one this order was bought for: the browser names it, so the server checks it before writing a
+    // key nothing reads. It is also why a made-up agency can no longer sit in the status map.
+    const { data: orderRow } = await db
+      .from("registration_orders" as never)
+      .select("agencies")
+      .eq("purchase_id", song.purchase_id)
+      .maybeSingle();
+    const agencies = ((orderRow as { agencies: string[] | null } | null)?.agencies ?? []).filter(Boolean);
+    if (!agencies.includes(data.agency)) throw new Error("That agency isn't in this order.");
+    const { error } = await db.from("registration_songs" as never).update({ status: { ...(song.status ?? {}), [data.agency]: data.status }, updated_at: new Date().toISOString() } as never).eq("id", data.songId);
     if (error) throw new Error(error.message);
     if (data.status === "registered") await sendFiledEmail(db, song.purchase_id, data.agency);
     return { ok: true };
@@ -229,6 +264,151 @@ export const unlockRegistrationSong = createServerFn({ method: "POST" })
     await requireRegistrationStaff(context);
     const { admin } = await import("./registration.server");
     const { error } = await (await admin()).from("registration_songs" as never).update({ snapshot: null, submitted_at: null, status: {}, updated_at: new Date().toISOString() } as never).eq("id", data.songId);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
+/**
+ * "All Songs Registered" (founder, 2026-11-18): every submitted song in the order is marked Registered at every agency
+ * the order bought, the batch finish is recorded, and the customer gets one celebratory email naming the titles.
+ *
+ * The server refuses without the confirmation tick, and the email's key is fixed per purchase, so a double click cannot
+ * send it twice. A song that was never submitted is a refusal: nothing is marked for a customer we never received.
+ */
+export const markAllSongsRegistered = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d) => purchaseInput.extend({ confirmed: z.boolean() }).parse(d))
+  .handler(async ({ data, context }) => {
+    await requireRegistrationStaff(context);
+    if (!data.confirmed) throw new Error("Confirm the batch check before finishing this customer.");
+    const { admin, loadOrder, sendCustomerRegisteredEmail } = await import("./registration.server");
+    const db = await admin();
+    const loaded = await loadOrder(db, data.purchaseId);
+    if (!loaded) throw new Error("Registration order not found.");
+    const userId = loaded.order.user_id;
+
+    // "All Songs Registered" is the customer's whole catalog, not one receipt: someone who bought a single and then an
+    // album is a single card, so every order for this account is checked before anything is written.
+    const { data: siblingRows } = await db
+      .from("registration_orders" as never)
+      .select("purchase_id")
+      .eq("user_id", userId);
+    const siblingIds = ((siblingRows ?? []) as unknown as { purchase_id: string }[]).map((row) => row.purchase_id);
+    const orders: NonNullable<Awaited<ReturnType<typeof loadOrder>>>[] = [];
+    for (const purchaseId of siblingIds.length ? siblingIds : [data.purchaseId]) {
+      const order = await loadOrder(db, purchaseId);
+      if (!order || !order.checks.length) continue;
+      if (order.checks.some((check) => !check.song.submitted_at)) {
+        throw new Error("Every song must be submitted before this customer can be finished.");
+      }
+      orders.push(order);
+    }
+    if (!orders.length) throw new Error("This customer has no songs to finish.");
+
+    const now = new Date().toISOString();
+    const titles = new Set<string>();
+    const agencies = new Set<string>();
+    for (const order of orders) {
+      const status = Object.fromEntries(order.order.agencies.map((agency) => [agency, "registered"]));
+      for (const check of order.checks) {
+        // Merged, not replaced: the batch finish only ever moves the agencies it covers, so nothing else in the map is
+        // dropped by a finish.
+        const { error } = await db
+          .from("registration_songs" as never)
+          .update({ status: { ...(check.song.status ?? {}), ...status }, updated_at: now } as never)
+          .eq("id", check.song.id);
+        if (error) throw new Error(error.message);
+        titles.add(check.title);
+      }
+      for (const agency of order.order.agencies) agencies.add(agency);
+      const { error: orderError } = await db.from("registration_orders" as never).update({
+        batch_registered_at: now, batch_registered_by: context.userId, updated_at: now,
+      } as never).eq("purchase_id", order.order.purchase_id);
+      if (orderError) throw new Error(orderError.message);
+    }
+
+    const emailed = await sendCustomerRegisteredEmail(db, {
+      userId,
+      titles: [...titles],
+      agencies: [...agencies],
+      // The click's own purchase is the idempotency seam: a retry sends nothing new, a later purchase may.
+      key: data.purchaseId,
+    });
+    return { ok: true, emailed, songs: [...titles] };
+  });
+
+/** One detected agency invitation, as Admin → Registrations reads it. */
+export type AgencyInviteRow = {
+  id: string;
+  agency: InviteAgency;
+  kind: AgencyEmailKind;
+  status: AgencyInviteStatus;
+  subject: string;
+  accountName: string | null;
+  userEmail: string | null;
+  verifyUrl: string | null;
+  receivedAt: string;
+  inboxMessageId: string | null;
+};
+
+type StoredInvite = {
+  id: string;
+  agency: string;
+  kind: string;
+  status: string;
+  subject: string | null;
+  account_name: string | null;
+  user_email: string | null;
+  verify_url: string | null;
+  received_at: string;
+  inbox_message_id: string | null;
+};
+
+/** Every invitation the worker has filed, newest first. Rows naming an agency we no longer track are skipped, not shown. */
+export const listAgencyInvites = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }): Promise<AgencyInviteRow[]> => {
+    await requireRegistrationStaff(context);
+    const { admin } = await import("./registration.server");
+    const db = await admin();
+    const { data, error } = await db
+      .from("agency_invites" as never)
+      .select("id, agency, kind, status, subject, account_name, user_email, verify_url, received_at, inbox_message_id")
+      .order("received_at", { ascending: false })
+      .limit(200);
+    if (error) throw new Error("Couldn't load agency invites. Run migration 20261118160000 first.");
+    return ((data ?? []) as unknown as StoredInvite[]).flatMap((row) => {
+      if (!isInviteAgency(row.agency) || !isAgencyInviteStatus(row.status)) return [];
+      const kind: AgencyEmailKind = row.kind === "verification" || row.kind === "notice" ? row.kind : "invite";
+      return [{
+        id: row.id,
+        agency: row.agency,
+        kind,
+        status: row.status,
+        subject: row.subject ?? "",
+        accountName: row.account_name,
+        userEmail: row.user_email,
+        verifyUrl: row.verify_url,
+        receivedAt: row.received_at,
+        inboxMessageId: row.inbox_message_id,
+      }];
+    });
+  });
+
+/** Moves one invitation along Invite Received → Representative Accepted / Action Needed. */
+export const setAgencyInviteStatus = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d) => z.object({ inviteId: z.string().uuid(), status: z.string().max(40) }).parse(d))
+  .handler(async ({ data, context }) => {
+    await requireRegistrationStaff(context);
+    if (!isAgencyInviteStatus(data.status)) throw new Error("That isn't an invite status.");
+    const { admin } = await import("./registration.server");
+    const { error } = await (await admin()).from("agency_invites" as never).update({
+      status: data.status,
+      handled_at: new Date().toISOString(),
+      handled_by: context.userId,
+      updated_at: new Date().toISOString(),
+    } as never).eq("id", data.inviteId);
     if (error) throw new Error(error.message);
     return { ok: true };
   });

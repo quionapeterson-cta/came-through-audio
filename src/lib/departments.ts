@@ -120,6 +120,9 @@ export const RETIRED_ISRC_DEPARTMENTS = ["registration", "royalty_accounts", "su
 export const ADMIN_TABS = [
   { value: "ai", label: "AI Protection", departments: ["ai"] },
   { value: "reg", label: "Registrations", departments: ["registration"] },
+  // The super admin message board (founder, 2026-11-18): reported registration issues and the escalations that follow
+  // them. Super admins hold every department, so they see it in every view.
+  { value: "board", label: "Message Board", departments: ["registration"] },
   { value: "splits", label: "Split Sheets", departments: ["royalty_accounts"] },
   // The queue of songs carrying an old code, so the team can work the agency update (founder, 2026-11-12).
   { value: "retired", label: "Retired ISRCs", departments: RETIRED_ISRC_DEPARTMENTS },
@@ -161,6 +164,11 @@ export function visibleTabs(access: StaffAccess, view: Department | "all" = "all
   const plans = access.role === "super_admin" && view === "all" ? [{ value: "plans", label: "Plans" }] : [];
   // The company inbox (founder, 2026-11-17): admin@ and contracts@ mail is the company's, so only a super admin reads it,
   // in every view rather than only the all-departments one.
-  const inbox = access.role === "super_admin" ? [{ value: "inbox", label: "Inbox" }] : [];
+  // The registration desk answers registrations@ from the same tab (founder, 2026-11-18); the server shows it that
+  // mailbox only, and a super admin keeps all three.
+  const inbox =
+    access.role === "super_admin" || access.departments.includes("registration")
+      ? [{ value: "inbox", label: "Inbox" }]
+      : [];
   return [...withTasks, ...inbox, ...holiday, ...company, ...plans];
 }

@@ -43,7 +43,15 @@ describe("visibleTabs", () => {
   it("shows employees only their department tabs", () => {
     const branding = resolveAccess([{ role: "employee", departments: ["registration", "royalty_accounts", "branding"] }])!;
     // Registration and Royalty Accounts also work the retired-ISRC queue (founder, 2026-11-12).
-    expect(visibleTabs(branding).map((t) => t.value)).toEqual(withDeptTabs(["reg", "splits", "retired", "badges", "homepage"]));
+    // The Message Board sits beside Registrations, and the registration desk reads the company inbox's registrations@
+    // mailbox from the same tab (founder, 2026-11-18), so both follow that department and nobody else.
+    expect(visibleTabs(branding).map((t) => t.value)).toEqual([
+      ...withDeptTabs(["reg", "board", "splits", "retired", "badges", "homepage"]),
+      "inbox",
+    ]);
+    const support = visibleTabs(resolveAccess([{ role: "employee", departments: ["support"] }])!).map((t) => t.value);
+    expect(support).not.toContain("board");
+    expect(support).not.toContain("inbox");
     // Finance keeps the billing console, Support gets tickets and badges, Sales just its Task Bank.
     const billing = resolveAccess([{ role: "employee", departments: ["finance", "support", "marketing_sales"] }])!;
     // Billing also gets Account help, where it sends the card-update link (founder, 2026-11-05).

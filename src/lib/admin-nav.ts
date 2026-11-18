@@ -1,5 +1,5 @@
 import type { LucideIcon } from "lucide-react";
-import { Award, BookOpen, Building, Building2, CalendarDays, CreditCard, Dot, FileSignature, FileText, Home, Inbox, Layers, LayoutList, LifeBuoy, Lightbulb, ListChecks, Mail, MessagesSquare, Receipt, Scale, ShieldCheck, Repeat2, Sparkles, Sun, Tags, Trophy, UserCog, Users2 } from "lucide-react";
+import { Award, BookOpen, Building, Building2, CalendarDays, CreditCard, Dot, FileSignature, FileText, Home, Inbox, Layers, LayoutList, LifeBuoy, Lightbulb, ListChecks, Mail, MessageSquarePlus, MessagesSquare, Receipt, Scale, ShieldCheck, Repeat2, Sparkles, Sun, Tags, Trophy, UserCog, Users2 } from "lucide-react";
 
 /**
  * The Admin dashboard's navigation (founder, 2026-11-05): the flat list of tabs became four groups a person can scan.
@@ -11,7 +11,7 @@ export type NavTab = { value: string; label: string };
 export type NavGroup = { key: string; label: string; hint: string; tabs: NavTab[] };
 
 const GROUPS: { key: string; label: string; hint: string; values: string[] }[] = [
-  { key: "operations", label: "Operations", hint: "Today's work, and who is on it", values: ["queue", "inbox", "team", "tasks", "calendar", "support", "scripts", "accounts", "retired"] },
+  { key: "operations", label: "Operations", hint: "Today's work, and who is on it", values: ["queue", "inbox", "board", "team", "tasks", "calendar", "support", "scripts", "accounts", "retired"] },
   { key: "roster", label: "Roster & Revenue", hint: "Members, money and artwork", values: ["reg", "splits", "purchases", "billing", "badges"] },
   { key: "legal", label: "Legal & Intellectual Property", hint: "Contracts, rights and paperwork", values: ["legal", "company", "ai", "pdf"] },
   { key: "hr", label: "HR & Internal Knowledge", hint: "The team, the plans and the handbook", values: ["staff-plan", "handbook", "prices", "recognition", "holiday", "plans", "email", "homepage", "submissions"] },
@@ -40,7 +40,7 @@ export function tabLabel(tabs: NavTab[], value: string): string {
 }
 
 const ICONS: Record<string, LucideIcon> = {
-  queue: ListChecks, inbox: Inbox, team: Users2, tasks: LayoutList, calendar: CalendarDays, support: LifeBuoy, scripts: MessagesSquare, accounts: UserCog,
+  queue: ListChecks, inbox: Inbox, board: MessageSquarePlus, team: Users2, tasks: LayoutList, calendar: CalendarDays, support: LifeBuoy, scripts: MessagesSquare, accounts: UserCog,
   reg: Building2, splits: FileSignature, purchases: Receipt, billing: CreditCard, badges: Award,
   legal: Scale, company: Building, ai: ShieldCheck, pdf: FileText,
   retired: Repeat2, "staff-plan": Sparkles, handbook: BookOpen, prices: Tags, recognition: Trophy, holiday: Sun, plans: Layers, email: Mail, homepage: Home, submissions: Lightbulb,
