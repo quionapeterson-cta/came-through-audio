@@ -12,6 +12,7 @@
     "preview": "vite preview",
     "lint": "eslint .",
     "format": "prettier --write .",
+    "check:copy": "node scripts/check-vendor-copy.mjs",
     "test": "vitest run",
     "test:watch": "vitest"
   },
