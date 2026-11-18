@@ -10,6 +10,15 @@ export type Department = (typeof DEPARTMENTS)[number];
  */
 export const ASSIGNABLE_DEPARTMENTS = DEPARTMENTS.filter((d): d is Exclude<Department, "launch"> => d !== "launch");
 
+/**
+ * Departments only a super admin holds (founder, 2026-11-18): the launch milestones name hosting, secrets and vendors,
+ * so the department and its tasks are super-admin only. It is never assignable, a stored value grants nobody else
+ * anything here, and public.in_department refuses it too (migration 20261118120000).
+ */
+export const SUPER_ADMIN_DEPARTMENTS = ["launch"] as const satisfies readonly Department[];
+
+const isSuperAdminOnly = (d: string) => (SUPER_ADMIN_DEPARTMENTS as readonly string[]).includes(d);
+
 export const DEPARTMENT_LABEL: Record<Department, string> = {
   registration: "Registration",
   royalty_accounts: "Royalty Accounts",
@@ -58,7 +67,7 @@ export function resolveAccess(rows: { role: string; departments?: string[] | nul
   const set = new Set<Department>();
   for (const row of rows) {
     if (row.role === "employee" || row.role === "department_lead") {
-      for (const d of row.departments ?? []) if ((DEPARTMENTS as readonly string[]).includes(d)) set.add(d as Department);
+      for (const d of row.departments ?? []) if ((DEPARTMENTS as readonly string[]).includes(d) && !isSuperAdminOnly(d)) set.add(d as Department);
     }
     if (row.role === "hr_admin") set.add("hr");
   }
@@ -71,7 +80,8 @@ export function normalizeDepartments(role: ManagedRole, departments: readonly st
   if (role === "hr_admin") return ["hr"];
   // Project Managers see every team without being placed in one.
   if (role === "project_manager") return [];
-  return DEPARTMENTS.filter((d) => departments.includes(d));
+  // Never launch: it is the super admin's own department, whatever a form posts.
+  return ASSIGNABLE_DEPARTMENTS.filter((d) => departments.includes(d));
 }
 
 /**

@@ -24,6 +24,14 @@ describe("resolveAccess", () => {
   it("ignores unknown department values", () => {
     expect(resolveAccess([{ role: "department_lead", departments: ["finance", "nope"] }])!.departments).toEqual(["finance"]);
   });
+
+  it("keeps the launch department to super admins", () => {
+    // A stored "launch" on a staff row grants nothing: the milestones name hosting, secrets and vendors.
+    expect(resolveAccess([{ role: "department_lead", departments: ["launch", "support"] }])!.departments).toEqual(["support"]);
+    expect(resolveAccess([{ role: "employee", departments: ["launch"] }])!.departments).toEqual([]);
+    expect(resolveAccess([{ role: "project_manager", departments: ["launch"] }])!.departments).toEqual([]);
+    expect(resolveAccess([{ role: "super_admin" }])!.departments).toContain("launch");
+  });
 });
 
 /** Every staff member gets My Queue, the Idea Box, their own tabs, Task Bank, Calendar, Handbook, Support Scripts, the Price List, PDF Tools, Email and Recognition. */
@@ -103,6 +111,11 @@ describe("normalizeDepartments", () => {
   it("forces HR admins to HR and drops unknown values", () => {
     expect(normalizeDepartments("hr_admin", ["finance"])).toEqual(["hr"]);
     expect(normalizeDepartments("employee", ["support", "bogus", "finance"])).toEqual(["finance", "support"]);
+  });
+
+  it("never writes the super admin's launch department onto a staff row", () => {
+    expect(normalizeDepartments("employee", ["launch", "support"])).toEqual(["support"]);
+    expect(normalizeDepartments("department_lead", ["launch"])).toEqual([]);
   });
 });
 
