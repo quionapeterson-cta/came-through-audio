@@ -28,7 +28,7 @@ export const SCORECARD: Record<Exclude<Department, "launch">, { goals: PlanGoal[
   support: { goals: [g("Tickets solved", 300, "tickets"), g("Reopened tickets", 5, "%", true), g("First reply within 48 hours", 90, "%")],
     milestones: ["Top 10 questions added to the FAQ and help chat", "Saved replies refresh", "Satisfaction survey review"] },
   ai: { goals: [g("AI Protection certificates processed", 100, "certificates"), g("Timestamp errors", 0, "errors", true), g("Hours from upload to certificate", 1, "hours", true)],
-    milestones: ["Verify a sample of certificates with the public verifier", "AI protection research notes", "Hub copy and FAQ review"] },
+    milestones: ["Verify a sample of certificates at opentimestamps.org", "AI protection research notes", "Hub copy and FAQ review"] },
   software: { goals: [g("Releases shipped", 12, "releases"), g("Bugs that reached users per release", 0.5, "bugs", true), g("Uptime", 99.9, "%")],
     milestones: ["Test coverage for the main flows", "Performance pass on the slowest pages", "Dependency and security updates"] },
   security: { goals: [g("Findings closed within target time", 100, "%"), g("Critical findings open over 7 days", 0, "findings", true), g("Quarterly access review done", 1, "review")],

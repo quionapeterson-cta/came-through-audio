@@ -83,7 +83,7 @@ function VerifyPage() {
           <dt className="font-semibold">Certificate ID</dt><dd className="break-all">{c.id}</dd>
           <dt className="font-semibold">Fingerprint (SHA-256)</dt><dd className="break-all font-mono text-xs">{c.proof_digest ?? "—"}</dd>
           <dt className="font-semibold">Bitcoin timestamp</dt>
-          <dd>{c.ots_receipt ? "Submitted to the Bitcoin blockchain through an independent timestamping service. It's confirmed within a few hours of the issue time." : "This certificate was issued without a Bitcoin timestamp."}</dd>
+          <dd>{c.ots_receipt ? "Submitted to the Bitcoin blockchain through OpenTimestamps. It's confirmed within a few hours of the issue time." : "This certificate was issued without a Bitcoin timestamp."}</dd>
         </dl>
 
         <section className="space-y-3 rounded-2xl border border-border p-5">
@@ -100,12 +100,12 @@ function VerifyPage() {
             <h2 className="text-lg font-bold">Verify on the Bitcoin blockchain</h2>
             <ol className="list-decimal space-y-1 pl-5 text-sm">
               <li>Download the timestamp receipt below (the .ots file).</li>
-              <li>Open the public Bitcoin timestamp verifier below and drop in the .ots file.</li>
+              <li>Open opentimestamps.org and drop in the .ots file.</li>
               <li>When it asks for the original file, drop in the <b>proof-manifest.txt</b>, not the PDF.</li>
             </ol>
             <div className="flex flex-wrap gap-2">
               <Button variant="outline" onClick={() => download(`${base}-proof-manifest.txt.ots`, buildOtsFile(c.proof_digest!, c.ots_receipt!), "application/octet-stream")}><Download className="h-4 w-4" />Timestamp receipt (.ots)</Button>
-              <Button asChild variant="outline"><a href="https://opentimestamps.org" target="_blank" rel="noreferrer">Open the verifier<ExternalLink className="h-4 w-4" /></a></Button>
+              <Button asChild variant="outline"><a href="https://opentimestamps.org" target="_blank" rel="noreferrer">opentimestamps.org<ExternalLink className="h-4 w-4" /></a></Button>
             </div>
             <p className="text-xs text-muted-foreground">In the first few hours it shows as pending while Bitcoin confirms. That's normal.</p>
           </section>
