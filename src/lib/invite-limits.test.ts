@@ -23,12 +23,19 @@ describe("inviteBlockReason", () => {
   it("allows a first send", () => expect(inviteBlockReason(ok)).toBeNull());
   it("refuses blocked recipients", () => expect(inviteBlockReason({ ...ok, blocked: true })).toMatch(/turned off/));
   it("caps the sender at 25 a day", () => expect(inviteBlockReason({ ...ok, senderToday: 25 })).toMatch(/limit of 25/));
-  it("waits 24 hours between resends of one row", () => {
-    expect(inviteBlockReason({ ...ok, rowSends: [hoursAgo(5)] })).toMatch(/Resend available tomorrow/);
-    expect(inviteBlockReason({ ...ok, rowSends: [hoursAgo(25)] })).toBeNull();
+  it("allows every resend straight away, up to 3 sends of one row", () => {
+    expect(inviteBlockReason({ ...ok, rowSends: [hoursAgo(5)] })).toBeNull();
+    expect(inviteBlockReason({ ...ok, rowSends: [hoursAgo(5), hoursAgo(0.2)] })).toBeNull();
   });
-  it("stops after 3 sends of one row", () => expect(inviteBlockReason({ ...ok, rowSends: [hoursAgo(90), hoursAgo(60), hoursAgo(30)] })).toMatch(/3 times/));
-  it("caps a recipient at 3 a day from everyone", () => expect(inviteBlockReason({ ...ok, recipientToday: 3 })).toMatch(/several invites/));
+  it("stops after 3 sends of one row, and points at a new split sheet", () => {
+    expect(inviteBlockReason({ ...ok, rowSends: [hoursAgo(5), hoursAgo(2), hoursAgo(0.1)] })).toBe(
+      "This invite was already sent 3 times. Start a new split sheet if it needs to go again.",
+    );
+  });
+  it("caps a recipient at 6 a day from everyone", () => {
+    expect(inviteBlockReason({ ...ok, recipientToday: 5 })).toBeNull();
+    expect(inviteBlockReason({ ...ok, recipientToday: 6 })).toMatch(/several invites/);
+  });
 });
 
 describe("trustedOrigin", () => {

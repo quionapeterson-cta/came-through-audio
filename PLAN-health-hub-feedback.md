@@ -13,8 +13,9 @@ Source: founder testing notes, 2026-10-19.
 
 ### Fix
 1. **Log every send** in a new `invite_sends` table (sender, row, recipient, time), written by the server. The daily cap counts real sends.
-2. **Per row: at most 3 sends, 24 h apart** ("Resend available tomorrow").
-3. **Per recipient: at most 3 invites a day from all senders combined.**
+2. **Per row: at most 3 sends, with no wait between them** (founder, 2026-11-19: the 24-hour gap is gone; once the
+   three are spent the sender is told to start a new split sheet).
+3. **Per recipient: at most 6 invites a day from all senders combined** (founder, 2026-11-19: raised from 3).
 4. **Recipient opt-out:** a "Don't send me invites" link in the footer adds the email to `invite_blocklist`; later sends to it are refused with a clear message to the sender.
 5. **No links or web addresses in sender-typed text:** title, artist and name are shortened (80 characters) and anything that looks like a web address is removed before it goes in the email.
 6. Lower the daily cap from 50 to **25** (an album's worth of co-writers). Support can raise it.

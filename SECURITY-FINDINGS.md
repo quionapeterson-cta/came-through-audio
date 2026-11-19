@@ -38,13 +38,16 @@ table (never from the browser).
 | Rule | Value | Constant |
 | --- | --- | --- |
 | Invites one account may send in 24 hours | 25 | `DAILY_INVITE_LIMIT` |
-| Emails per invite (a split row, or a co-writer request), ever | 3 | `ROW_SEND_LIMIT` |
-| Wait between two sends of the same row | 24 hours | `ROW_RESEND_GAP_MS` |
-| Invites one address may get in 24 hours, from all senders combined | 3 | `RECIPIENT_DAILY_LIMIT` |
+| Emails per invite (a split row, or a co-writer request), in total | 3 | `ROW_SEND_LIMIT` |
+| Invites one address may get in 24 hours, from all senders combined | 6 | `RECIPIENT_DAILY_LIMIT` |
 | Longest sender-typed text in an invite | 80 characters | `INVITE_TEXT_MAX` |
 | Links in an invite | Our own site address; a preview origin falls back to the published site | `trustedOrigin` |
 | A recipient who switched invites off | Never emailed | `invite_blocklist` |
 | Signing invitations one account may send in 24 hours | 50 | `CONTRACT_INVITE_DAILY_LIMIT` |
+
+A resend goes out straight away (founder, 2026-11-19): the three sends of a row may all be used inside one day, and once
+they are spent the screen says to start a new split sheet. The per-address cap is what stops that freedom landing as a
+pile in one inbox.
 
 Sender-typed text is also stripped of web addresses and email addresses (`cleanInviteText`), so an invite cannot be
 turned into a carrier for someone else's link. Contract-signing invitations are a separate path: their cap is the last

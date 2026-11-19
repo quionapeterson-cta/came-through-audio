@@ -46,7 +46,12 @@ export const sendIpiRequest = createServerFn({ method: "POST" })
       recipientToday: recipientToday.count ?? 0,
       blocked: !!blocked.data,
     });
-    if (reason) throw new Error(reason.replace("split-sheet invite emails. Contact them directly to sign.", "invite emails. Copy the link and send it to them yourself."));
+    if (reason)
+      throw new Error(
+        reason
+          .replace("split-sheet invite emails. Contact them directly to sign.", "invite emails. Copy the link and send it to them yourself.")
+          .replace("Start a new split sheet", "Start a new co-writer request"),
+      );
 
     // Sender-typed text goes into the email, so web addresses are stripped and it's kept short.
     const name = cleanInviteText(row.writer_name) || "there";

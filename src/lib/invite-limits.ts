@@ -4,11 +4,13 @@
 export const DAILY_INVITE_LIMIT = 25;
 /** Signing invitations one account may send in 24 hours, so nobody can blast them to farm free trial accounts. */
 export const CONTRACT_INVITE_DAILY_LIMIT = 50;
-/** Emails per split row, ever, and the wait between them. */
+/** Emails per split row, in total. A resend can go straight away; the three spent means a new split sheet. */
 export const ROW_SEND_LIMIT = 3;
-export const ROW_RESEND_GAP_MS = 86_400_000;
-/** Invites one email address may receive in 24 hours from all senders combined. */
-export const RECIPIENT_DAILY_LIMIT = 3;
+/**
+ * Invites one email address may receive in 24 hours from all senders combined (founder, 2026-11-19: raised from 3, so
+ * a co-writer on several projects is not cut off).
+ */
+export const RECIPIENT_DAILY_LIMIT = 6;
 /** Longest title, artist or name that goes into an email. */
 export const INVITE_TEXT_MAX = 80;
 
@@ -31,12 +33,11 @@ export interface InviteCounts {
 }
 
 /** Why this invite can't go out right now, in words for the sender, or null when it can. */
-export function inviteBlockReason(c: InviteCounts, now = Date.now()): string | null {
+export function inviteBlockReason(c: InviteCounts): string | null {
   if (c.blocked) return "This collaborator has turned off split-sheet invite emails. Contact them directly to sign.";
   if (c.senderToday >= DAILY_INVITE_LIMIT) return `You've reached today's limit of ${DAILY_INVITE_LIMIT} invites. Try again tomorrow, or contact support if you need more.`;
-  if (c.rowSends.length >= ROW_SEND_LIMIT) return `This invite was already sent ${ROW_SEND_LIMIT} times. Contact them directly to sign.`;
-  const last = Math.max(0, ...c.rowSends.map((t) => Date.parse(t) || 0));
-  if (now - last < ROW_RESEND_GAP_MS) return "This invite was sent in the last 24 hours. Resend available tomorrow.";
+  if (c.rowSends.length >= ROW_SEND_LIMIT)
+    return `This invite was already sent ${ROW_SEND_LIMIT} times. Start a new split sheet if it needs to go again.`;
   if (c.recipientToday >= RECIPIENT_DAILY_LIMIT) return "This email address has received several invites today. Try again tomorrow.";
   return null;
 }
