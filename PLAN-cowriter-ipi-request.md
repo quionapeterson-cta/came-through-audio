@@ -10,7 +10,7 @@ Preview: https://claude.ai/artifact/QWgd4ibVseNHYZfVo2sgok
 4. **You approve.** Their answer waits in the report as "Jordan Lee sent their details". **Add to N songs** fills only blank PRO/IPI fields on the writer rows matched by legal name; nothing already entered is overwritten (AGENTS.md: never overwrite writer data). "Not right" discards it. The report updates and its next step is the real fix: download the agency file and update each registration.
 
 ## Safeguards
-- Same limits as split-sheet invites (`invite-limits.ts`): 6 a day per account, 6 a day per recipient, 3 sends per request with no wait between them (founder, 2026-11-19: the 24-hour gap is gone, the per-recipient cap went from 3 to 6, and the per-account cap came down from 25 to 6), blocklist and opt-out link.
+- Same limits as split-sheet invites (`invite-limits.ts`): 25 a day per account, 6 a day per recipient, 3 sends per request with no wait between them (founder, 2026-11-19: the 24-hour gap is gone, the per-recipient cap went from 3 to 6, and the per-account cap stays at 25 for catalog reconciliations), blocklist and opt-out link.
 - PRO and IPI stay catalog-only: never embedded in MP3s (AGENTS.md).
 - The public page shows only what's in the email; the token is random and single-use. Answers are readable only by the requester.
 - Sender-typed text is cleaned (`cleanInviteText`) before it goes into an email.

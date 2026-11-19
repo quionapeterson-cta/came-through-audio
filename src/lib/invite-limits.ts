@@ -1,10 +1,10 @@
 /** Invite email limits and text cleanup. Pure, so the rules are tested; the server functions apply them. */
 
 /**
- * Invite emails one account may send in 24 hours (founder, 2026-11-19: lowered from 25 — a day's co-writers for one
- * album is a handful, not a mailing list). Support can raise it.
+ * Invite emails one account may send in 24 hours (founder, 2026-11-19: stays at 25 — bringing a whole catalog in can
+ * need a lot of co-writers invited in one day). Support can raise it.
  */
-export const DAILY_INVITE_LIMIT = 6;
+export const DAILY_INVITE_LIMIT = 25;
 /** Signing invitations one account may send in 24 hours, so nobody can blast them to farm free trial accounts. */
 export const CONTRACT_INVITE_DAILY_LIMIT = 50;
 /** Emails per split row, in total. A resend can go straight away; the three spent means a new split sheet. */
@@ -40,7 +40,7 @@ export function inviteBlockReason(c: InviteCounts): string | null {
   if (c.blocked) return "This collaborator has turned off split-sheet invite emails. Contact them directly to sign.";
   if (c.senderToday >= DAILY_INVITE_LIMIT) return `You've reached today's limit of ${DAILY_INVITE_LIMIT} invites. Try again tomorrow, or contact support if you need more.`;
   if (c.rowSends.length >= ROW_SEND_LIMIT)
-    return `This invite was already sent ${ROW_SEND_LIMIT} times. Start a new split sheet if it needs to go again.`;
+    return `This invite was already sent ${ROW_SEND_LIMIT} times. Check the email is right before you send it again. Start a new split sheet if it needs to go again.`;
   if (c.recipientToday >= RECIPIENT_DAILY_LIMIT) return "This email address has received several invites today. Try again tomorrow.";
   return null;
 }

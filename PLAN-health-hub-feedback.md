@@ -12,9 +12,9 @@ Source: founder testing notes, 2026-10-19.
 - The song title, artist and collaborator name are typed by the sender and go into the subject and body. A spammer could put "Claim your prize at…" in the title and send it to a stranger, using our domain.
 
 ### Fix
-1. **Log every send** in a new `invite_sends` table (sender, row, recipient, time), written by the server. The daily cap counts real sends — 6 a day per account (founder, 2026-11-19: lowered from 25).
+1. **Log every send** in a new `invite_sends` table (sender, row, recipient, time), written by the server. The daily cap counts real sends — 25 a day per account (founder, 2026-11-19: kept at 25, since a catalog reconciliation can need many invites in one day).
 2. **Per row: at most 3 sends, with no wait between them** (founder, 2026-11-19: the 24-hour gap is gone; once the
-   three are spent the sender is told to start a new split sheet).
+   three are spent the sender is told to check the collaborator's email is right and start a new split sheet).
 3. **Per recipient: at most 6 invites a day from all senders combined** (founder, 2026-11-19: raised from 3).
 4. **Recipient opt-out:** a "Don't send me invites" link in the footer adds the email to `invite_blocklist`; later sends to it are refused with a clear message to the sender.
 5. **No links or web addresses in sender-typed text:** title, artist and name are shortened (80 characters) and anything that looks like a web address is removed before it goes in the email.

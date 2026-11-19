@@ -37,7 +37,7 @@ table (never from the browser).
 
 | Rule | Value | Constant |
 | --- | --- | --- |
-| Invites one account may send in 24 hours | 6 | `DAILY_INVITE_LIMIT` |
+| Invites one account may send in 24 hours | 25 | `DAILY_INVITE_LIMIT` |
 | Emails per invite (a split row, or a co-writer request), in total | 3 | `ROW_SEND_LIMIT` |
 | Invites one address may get in 24 hours, from all senders combined | 6 | `RECIPIENT_DAILY_LIMIT` |
 | Longest sender-typed text in an invite | 80 characters | `INVITE_TEXT_MAX` |
@@ -46,8 +46,9 @@ table (never from the browser).
 | Signing invitations one account may send in 24 hours | 50 | `CONTRACT_INVITE_DAILY_LIMIT` |
 
 A resend goes out straight away (founder, 2026-11-19): the three sends of a row may all be used inside one day, and once
-they are spent the screen says to start a new split sheet. The per-address cap is what stops that freedom landing as a
-pile in one inbox.
+they are spent the screen says to check the collaborator's email is right and start a new split sheet — the usual cause
+of a fourth send is a wrong address. The per-address cap is what stops that freedom landing as a pile in one inbox. The
+account allowance stays at 25 because reconciling a whole catalog can need that many co-writers invited in a day.
 
 Sender-typed text is also stripped of web addresses and email addresses (`cleanInviteText`), so an invite cannot be
 turned into a carrier for someone else's link. Contract-signing invitations are a separate path: their cap is the last

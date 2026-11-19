@@ -22,17 +22,17 @@ describe("cleanInviteText", () => {
 describe("inviteBlockReason", () => {
   it("allows a first send", () => expect(inviteBlockReason(ok)).toBeNull());
   it("refuses blocked recipients", () => expect(inviteBlockReason({ ...ok, blocked: true })).toMatch(/turned off/));
-  it("caps the sender at 6 a day", () => {
-    expect(inviteBlockReason({ ...ok, senderToday: 5 })).toBeNull();
-    expect(inviteBlockReason({ ...ok, senderToday: 6 })).toMatch(/limit of 6/);
+  it("caps the sender at 25 a day", () => {
+    expect(inviteBlockReason({ ...ok, senderToday: 24 })).toBeNull();
+    expect(inviteBlockReason({ ...ok, senderToday: 25 })).toMatch(/limit of 25/);
   });
   it("allows every resend straight away, up to 3 sends of one row", () => {
     expect(inviteBlockReason({ ...ok, rowSends: [hoursAgo(5)] })).toBeNull();
     expect(inviteBlockReason({ ...ok, rowSends: [hoursAgo(5), hoursAgo(0.2)] })).toBeNull();
   });
-  it("stops after 3 sends of one row, and points at a new split sheet", () => {
+  it("stops after 3 sends of one row, checking the email before a new split sheet", () => {
     expect(inviteBlockReason({ ...ok, rowSends: [hoursAgo(5), hoursAgo(2), hoursAgo(0.1)] })).toBe(
-      "This invite was already sent 3 times. Start a new split sheet if it needs to go again.",
+      "This invite was already sent 3 times. Check the email is right before you send it again. Start a new split sheet if it needs to go again.",
     );
   });
   it("caps a recipient at 6 a day from everyone", () => {
