@@ -135,7 +135,9 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
          dark one. Both PNGs are transparent, so the artwork sits straight on the tab with no plate behind it. */
       { rel: "icon", href: "/favicon-light.png", type: "image/png", sizes: "64x64", media: "(prefers-color-scheme: light)" },
       { rel: "icon", href: "/favicon.png", type: "image/png", sizes: "64x64", media: "(prefers-color-scheme: dark)" },
-      { rel: "manifest", href: "/manifest.webmanifest" },
+      /* Credentials matter: a protected preview host rejects the manifest's default credential-less fetch, and the
+         console fills with 403s even though the page itself is signed in. */
+      { rel: "manifest", href: "/manifest.webmanifest", crossOrigin: "use-credentials" },
       { rel: "apple-touch-icon", href: "/apple-touch-icon.png" },
     ],
   }),

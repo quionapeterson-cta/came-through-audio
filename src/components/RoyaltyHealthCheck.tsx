@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Eye, FileDown, FileText, ListChecks, Search, Stethoscope, Trash2, X } from "lucide-react";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { confirmAction } from "@/components/ConfirmHost";
+import { FollowUpReminderButton } from "@/components/FollowUpReminderButton";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { listTracks, type CatalogTrack } from "@/lib/catalog";
@@ -622,6 +623,9 @@ export function RoyaltyHealthCheck({ userId, canCatalog, canExport, onUpgrade, o
             Front Desk under <b className="text-foreground">Past Royalty Health Reports</b>, where you can view or download it again.
           </p>
         </div>
+      </div>
+      <div className="flex justify-end">
+        <FollowUpReminderButton contextType="health_check" contextId={focusSong ?? scopeName(view.scope)} songId={focusSong} subject={scopeName(view.scope)} />
       </div>
       <RoyaltyReport checkup={checkup} since={since} prerelease={reportRows.filter(({ c }) => c.prerelease).map(({ r, c }) => ({ id: r.track.id, title: r.track.title || "Untitled", pct: c.pct,
         items: c.steps.filter((s) => s.stage === "release" || (s.stage === "register" && s.id !== "intl")).map((s) => ({ title: s.title, done: s.done, optional: s.optional })) }))} scope={scopeName(view.scope)} onBack={() => setView({ kind: "hub" })} date={new Date().toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })} country={country.name}

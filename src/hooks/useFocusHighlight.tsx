@@ -110,6 +110,42 @@ export function DiagnosticHighlight({ active, label, children }: { active: boole
   );
 }
 
+/**
+ * A workspace reminder's Open link can name a split sheet, a contract or a blueprint instead of a catalog field. Those
+ * cards carry `split-sheet-…`, `contract-…` and `guide-…` ids, so this retries until the tab has rendered, then scrolls
+ * the card in and lights it with the same spotlight the diagnostic links use.
+ */
+export function useReminderSpotlight(active = true) {
+  useEffect(() => {
+    if (!active || typeof window === "undefined") return;
+    const p = new URLSearchParams(window.location.search);
+    const sheet = p.get("sheetId");
+    const contract = p.get("contractId");
+    const blueprint = p.get("blueprintId");
+    const id = sheet ? `split-sheet-${sheet}` : contract ? `contract-${contract}` : blueprint ? `guide-${blueprint}` : null;
+    if (!id) return;
+    let cancelled = false;
+    const timers: ReturnType<typeof setTimeout>[] = [];
+    const light = (node: HTMLElement) => {
+      node.scrollIntoView({ behavior: "smooth", block: "center" });
+      node.classList.add(HIGHLIGHT_CLASS);
+      timers.push(setTimeout(() => node.classList.remove(HIGHLIGHT_CLASS), 5000));
+    };
+    const find = (attempt: number) => {
+      if (cancelled) return;
+      const node = document.getElementById(id);
+      if (node) return light(node);
+      if (attempt < 30) timers.push(setTimeout(() => find(attempt + 1), 150));
+    };
+    timers.push(setTimeout(() => find(0), 200));
+    return () => {
+      cancelled = true;
+      for (const t of timers) clearTimeout(t);
+      document.getElementById(id)?.classList.remove(HIGHLIGHT_CLASS);
+    };
+  }, [active]);
+}
+
 /** A stable callback for the "Back to Differences Panel" link, so every surface returns to the same place. */
 export function useDifferencesHref() {
   return useCallback((society?: string) => {

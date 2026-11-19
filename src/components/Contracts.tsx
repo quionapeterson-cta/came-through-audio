@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { confirmAction } from "@/components/ConfirmHost";
+import { FollowUpReminderButton } from "@/components/FollowUpReminderButton";
 import { ArrowUpRight, Sparkles, AlertTriangle, BookOpen, FolderOpen, Pin, PinOff, CalendarDays, Gift, Check, ChevronDown, ChevronLeft, Copy, Download, FileSignature, FlaskConical, Loader2, Lock, Mail, PenLine, Plus, RotateCcw, ScrollText, ShieldCheck, StickyNote, Trash2, Unlock, Vault } from "lucide-react";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
@@ -68,7 +69,11 @@ const STATUS: Record<Contract["status"], { label: string; className: string }> =
  * contracts other people send you are always visible, since signing is free.
  */
 export function Contracts({ userId, unlocked, onUpgrade, company = false, canApprove = false, onOpen }: { userId: string; unlocked: boolean; onUpgrade: () => void; /** Admin → Company Contracts: the LLC's own agreements and templates. */ company?: boolean; /** Super Admin: approves a lead's agreement, and the only one who may send a company agreement. */ canApprove?: boolean; /** Opens the screen a checklist item is done on (founder, 2026-11-06); absent in Admin, where there is no workspace. */ onOpen?: (link: GuideLink) => void }) {
-  const [view, setView] = useState<View>("blueprints");
+  // A reminder's Open link can name a contract or a blueprint: land on the screen that shows it.
+  const [view, setView] = useState<View>(() => {
+    if (typeof window === "undefined") return "blueprints";
+    return new URLSearchParams(window.location.search).get("contractId") ? "contracts" : "blueprints";
+  });
   const [contracts, setContracts] = useState<Contract[]>([]);
   const [received, setReceived] = useState<ReceivedContract[]>([]);
   const [tracks, setTracks] = useState<CatalogTrack[]>([]);
@@ -85,7 +90,10 @@ export function Contracts({ userId, unlocked, onUpgrade, company = false, canApp
   }), [templates, prelaunch]);
   const workbench = useWorkbench(userId, !company);
   /** A blueprint opened from Working On: the Blueprints tab opens with it expanded. */
-  const [focusGuide, setFocusGuide] = useState<string>();
+  const [focusGuide, setFocusGuide] = useState<string | undefined>(() => {
+    if (typeof window === "undefined") return undefined;
+    return new URLSearchParams(window.location.search).get("blueprintId") ?? undefined;
+  });
   const blueprintFor = (id: string) => (company ? companyBlueprints.find((b) => b.id === id) : undefined) ?? blueprintById(id);
 
   const load = async () => {
@@ -546,6 +554,10 @@ function Guides({ workbench, focusId, onOpen }: { workbench: Workbench; /** Open
                         {g.kind === "Blueprint" && !!g.checklist?.length && progress.finished && (
                           <Button size="sm" variant="outline" title="Work through the same blueprint again, keeping this run" onClick={() => startRun(g)}><RotateCcw />Start again</Button>
                         )}
+                        {g.checklist?.some((k) => !entry.checked.includes(k)) && (
+                          <FollowUpReminderButton contextType="blueprint" contextId={g.id} blueprintId={g.id}
+                            stepTitle={g.checklist.find((k) => !entry.checked.includes(k))} subject={g.title} />
+                        )}
                         <Button size="sm" variant="ghost" aria-pressed={entry.pinned} title={entry.pinned ? "Remove from Working On" : "Save to Working On"} aria-label={entry.pinned ? `Remove ${runTitle(g.title, runOf(entryId))} from Working On` : `Save ${runTitle(g.title, runOf(entryId))} to Working On`} onClick={() => pin(g, entryId, !entry.pinned)}>{entry.pinned ? <><PinOff />Remove</> : <><Pin />Save</>}</Button>
                       </div>
                     </article>
@@ -904,13 +916,14 @@ function ContractRow({ contract: c, onOpen, workbench }: { contract: Contract; o
   const done = c.parties.filter((p) => p.signedAt).length;
   const pinned = !!c.id && !!workbench?.get("contract", c.id).pinned;
   return (
-    <li className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border p-4 transition hover:border-primary">
+    <li id={`contract-${c.id}`} className="scroll-mt-24 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border p-4 transition hover:border-primary">
       <div className="min-w-0">
         <div className="truncate font-bold">{c.title}</div>
         <div className="text-xs text-muted-foreground">{blueprintById(c.blueprint)?.name ?? "Custom"} · {c.parties.map((p) => p.legalName || p.role).join(", ")} · {new Date(c.completedAt ?? c.updatedAt).toLocaleDateString()}</div>
       </div>
-      <div className="flex items-center gap-2">
+      <div className="flex flex-wrap items-center gap-2">
         {c.status !== "draft" && <span className="text-xs text-muted-foreground">{done}/{c.parties.length} signed</span>}
+        <FollowUpReminderButton contextType="contract" contextId={c.id ?? c.title} contractId={c.id} subject={c.title} />
         <Badge variant="outline" className={STATUS[c.status].className}>{STATUS[c.status].label}</Badge>
         {workbench && c.id && (
           <Button size="sm" variant="ghost" aria-pressed={pinned} title={pinned ? "Remove from Working On" : "Save to Working On"} aria-label={pinned ? `Remove ${c.title} from Working On` : `Save ${c.title} to Working On`} onClick={() => workbench.setPinned("contract", c.id!, !pinned)}>

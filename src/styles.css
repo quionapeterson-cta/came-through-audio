@@ -581,3 +581,326 @@ label:has(> [data-infotip]) { line-height: 1.25rem; padding-bottom: 2px; overflo
     }
   }
 }
+
+/*
+ * Workspace reminders (founder spec, 2026-11-19). Cobalt #004AAD never sits directly on obsidian #0B0B0B: in dark mode a
+ * cobalt control is either a white container with cobalt lettering (the quick-add pill and its count, the Open button) or
+ * white lettering inside a glowing cobalt outline (the quiet follow-up pill and My Reminders). Light mode keeps cobalt on
+ * white. The due strip is white in light mode and glass over obsidian in dark mode, with an urgent red or prestige gold
+ * edge that carries the priority.
+ */
+.cta-reminder-sparkle {
+  filter: drop-shadow(0 0 8px rgba(77, 140, 255, 0.55));
+}
+
+/* The one primary action inside a reminder surface: cobalt on white in light mode, a white container with cobalt
+   lettering in dark mode, never cobalt directly on obsidian. */
+.cta-reminder-primary {
+  background: #004AAD;
+  color: #FFFFFF;
+  border-color: #004AAD;
+}
+.cta-reminder-primary:hover {
+  background: #003a88;
+  color: #FFFFFF;
+}
+.dark .cta-reminder-primary {
+  background: #FFFFFF;
+  color: #004AAD;
+  border-color: #FFFFFF;
+  box-shadow: 0 0 12px rgba(77, 140, 255, 0.35);
+}
+.dark .cta-reminder-primary:hover {
+  background: #E5E4E2;
+  color: #004AAD;
+}
+
+.cta-followup {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  border-radius: 9999px;
+  border: 1px solid #E5E4E2;
+  background: #FFFFFF;
+  color: #004AAD;
+  padding: 0.25rem 0.6rem;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.2;
+  white-space: nowrap;
+  transition: border-color 0.18s ease, box-shadow 0.18s ease, transform 0.18s ease;
+}
+.cta-followup:hover {
+  border-color: #004AAD;
+  box-shadow: 0 0 12px rgba(0, 74, 173, 0.18);
+  transform: translateY(-1px);
+}
+.dark .cta-followup {
+  background: transparent;
+  color: #FFFFFF;
+  border: 1.5px solid #004AAD;
+  box-shadow: 0 0 12px rgba(77, 140, 255, 0.35);
+}
+.dark .cta-followup:hover {
+  border-color: #4D8CFF;
+  box-shadow: 0 0 16px rgba(77, 140, 255, 0.55);
+}
+.cta-followup[data-scheduled="true"] {
+  border-color: #004AAD;
+  background: #FFFFFF;
+  color: #004AAD;
+  box-shadow: 0 0 12px rgba(0, 74, 173, 0.2);
+}
+.dark .cta-followup[data-scheduled="true"] {
+  border-color: #4D8CFF;
+  background: #11151b;
+  color: #FFFFFF;
+  box-shadow: 0 0 16px rgba(77, 140, 255, 0.55);
+}
+
+.cta-reminder-quick {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  border-radius: 9999px;
+  border: 1.5px solid #004AAD;
+  background: #004AAD;
+  color: #FFFFFF;
+  padding: 0.35rem 0.75rem;
+  font-size: 12px;
+  font-weight: 800;
+  white-space: nowrap;
+  box-shadow: 0 0 0 2px #FFFFFF, 0 0 14px rgba(77, 140, 255, 0.35);
+  transition: transform 0.18s ease, box-shadow 0.18s ease;
+}
+.cta-reminder-quick:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 0 0 2px #FFFFFF, 0 0 20px rgba(77, 140, 255, 0.55);
+}
+.dark .cta-reminder-quick {
+  background: #FFFFFF;
+  color: #004AAD;
+  border-color: #FFFFFF;
+  box-shadow: 0 0 0 2px #0B0B0B, 0 0 16px rgba(77, 140, 255, 0.5);
+}
+.dark .cta-reminder-quick:hover {
+  box-shadow: 0 0 0 2px #0B0B0B, 0 0 24px rgba(77, 140, 255, 0.7);
+}
+
+.cta-reminder-mine {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  border-radius: 9999px;
+  border: 1px solid #E5E4E2;
+  background: #FFFFFF;
+  color: #004AAD;
+  padding: 0.3rem 0.65rem;
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.cta-reminder-mine:hover {
+  border-color: #004AAD;
+}
+.dark .cta-reminder-mine {
+  background: transparent;
+  color: #FFFFFF;
+  border: 1.5px solid #4D8CFF;
+  box-shadow: 0 0 12px rgba(77, 140, 255, 0.35);
+}
+
+.cta-reminder-count {
+  display: inline-grid;
+  place-items: center;
+  min-width: 1.15rem;
+  height: 1.15rem;
+  padding: 0 0.3rem;
+  border-radius: 9999px;
+  background: #004AAD;
+  color: #FFFFFF;
+  font-size: 10px;
+  font-weight: 800;
+}
+.dark .cta-reminder-count {
+  background: #FFFFFF;
+  color: #004AAD;
+}
+
+.cta-reminder-strip {
+  --cta-reminder-accent: #E5E4E2;
+  background: #FFFFFF;
+  color: #0B0B0B;
+  border-color: var(--cta-reminder-accent);
+  box-shadow: 0 10px 30px rgba(11, 11, 11, 0.07);
+}
+.cta-reminder-strip[data-priority="urgent"] {
+  --cta-reminder-accent: #FF2E4C;
+}
+.cta-reminder-strip[data-priority="gold"] {
+  --cta-reminder-accent: #FFD700;
+}
+.dark .cta-reminder-strip {
+  background: linear-gradient(135deg, rgba(11, 11, 11, 0.97), rgba(18, 23, 30, 0.96));
+  color: #FFFFFF;
+  box-shadow: 0 14px 40px rgba(0, 0, 0, 0.55), 0 0 24px color-mix(in srgb, var(--cta-reminder-accent) 22%, transparent);
+  -webkit-backdrop-filter: blur(14px);
+  backdrop-filter: blur(14px);
+}
+.dark .cta-reminder-strip[data-priority="urgent"] {
+  box-shadow: 0 0 26px rgba(255, 46, 76, 0.3), inset 0 0 0 1px rgba(255, 46, 76, 0.35);
+}
+.dark .cta-reminder-strip[data-priority="gold"] {
+  box-shadow: 0 0 26px rgba(255, 215, 0, 0.2), inset 0 0 0 1px rgba(255, 215, 0, 0.28);
+}
+
+.cta-reminder-chip {
+  border-radius: 9999px;
+  padding: 0.1rem 0.45rem;
+  background: #E5E4E2;
+  color: #0B0B0B;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.cta-reminder-strip[data-priority="urgent"] .cta-reminder-chip {
+  background: #FF2E4C;
+  color: #FFFFFF;
+}
+.cta-reminder-strip[data-priority="gold"] .cta-reminder-chip {
+  background: #FFD700;
+  color: #0B0B0B;
+}
+.dark .cta-reminder-strip .cta-reminder-chip {
+  background: #FFFFFF;
+  color: #004AAD;
+}
+.dark .cta-reminder-strip[data-priority="urgent"] .cta-reminder-chip {
+  background: #FF2E4C;
+  color: #FFFFFF;
+}
+.dark .cta-reminder-strip[data-priority="gold"] .cta-reminder-chip {
+  background: #FFD700;
+  color: #0B0B0B;
+}
+
+.cta-reminder-eyebrow {
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: #004AAD;
+}
+.dark .cta-reminder-eyebrow {
+  color: #4D8CFF;
+}
+
+.cta-reminder-due {
+  font-size: 11px;
+  font-weight: 700;
+  color: #B3122A;
+}
+.dark .cta-reminder-due {
+  color: #FF8FA0;
+}
+
+.cta-reminder-open {
+  border-radius: 9999px;
+  background: #004AAD;
+  color: #FFFFFF;
+  padding: 0.4rem 0.8rem;
+  font-size: 12px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+.cta-reminder-open:hover {
+  background: #003a88;
+}
+.dark .cta-reminder-open {
+  background: #FFFFFF;
+  color: #004AAD;
+  box-shadow: 0 0 14px rgba(77, 140, 255, 0.35);
+}
+.dark .cta-reminder-open:hover {
+  background: #E5E4E2;
+}
+
+.cta-reminder-ghost {
+  border-radius: 9999px;
+  border: 1px solid #E5E4E2;
+  background: #FFFFFF;
+  color: #0B0B0B;
+  padding: 0.4rem 0.7rem;
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.cta-reminder-ghost:hover {
+  border-color: #004AAD;
+  color: #004AAD;
+}
+.dark .cta-reminder-ghost {
+  background: transparent;
+  border-color: rgba(255, 255, 255, 0.25);
+  color: #FFFFFF;
+}
+.dark .cta-reminder-ghost:hover {
+  border-color: #4D8CFF;
+  color: #FFFFFF;
+}
+
+.cta-reminder-pager {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+  border-radius: 9999px;
+  border: 1px solid #E5E4E2;
+  padding: 0.15rem 0.35rem;
+  font-size: 11px;
+  font-weight: 700;
+}
+.cta-reminder-pager button {
+  display: inline-grid;
+  place-items: center;
+  border-radius: 9999px;
+  padding: 0.1rem;
+}
+.cta-reminder-pager button:hover {
+  background: rgba(0, 74, 173, 0.08);
+}
+.dark .cta-reminder-pager {
+  border-color: rgba(255, 255, 255, 0.25);
+}
+.dark .cta-reminder-pager button:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.cta-reminder-quick,
+.cta-reminder-mine,
+.cta-reminder-open,
+.cta-reminder-ghost,
+.cta-followup {
+  cursor: pointer;
+}
+.cta-reminder-quick:focus-visible,
+.cta-reminder-mine:focus-visible,
+.cta-reminder-open:focus-visible,
+.cta-reminder-ghost:focus-visible,
+.cta-followup:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px #FFFFFF, 0 0 0 4px #4D8CFF;
+}
+.dark .cta-reminder-quick:focus-visible,
+.dark .cta-reminder-mine:focus-visible,
+.dark .cta-reminder-open:focus-visible,
+.dark .cta-reminder-ghost:focus-visible,
+.dark .cta-followup:focus-visible {
+  box-shadow: 0 0 0 2px #0B0B0B, 0 0 0 4px #4D8CFF;
+}
+@media (prefers-reduced-motion: reduce) {
+  .cta-reminder-quick,
+  .cta-followup {
+    transition: none;
+  }
+}

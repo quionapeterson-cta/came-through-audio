@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent, type ReactNode } from "react";
 import { confirmAction } from "@/components/ConfirmHost";
+import { FollowUpReminderButton } from "@/components/FollowUpReminderButton";
 import { TerritoriesField } from "@/components/TerritoriesField";
 import { ChevronDown, Copy, Disc3, Lock, ShieldCheck, CheckCircle2, Download, FileAudio, FileText, ImagePlus, Pencil, Plus, Save, Stethoscope, Trash2, Upload } from "lucide-react";
 import { capShare, splitStatus, splitSummary } from "@/lib/splits-total";
@@ -1296,6 +1297,7 @@ export function MetadataUploader({ onShareInfo, userId, mode = "embed", readOnly
                     {readOnly ? null : t.id === editingId
                       ? <Button type="button" size="sm" onClick={closeSong}>Close</Button>
                       : <Button type="button" variant="outline" size="sm" onClick={() => open(t)}><Pencil />Edit</Button>}
+                    <FollowUpReminderButton contextType="catalog" contextId={t.id} songId={t.id} subject={t.title} />
                     {!readOnly && <DropdownMenu>
                       <DropdownMenuTrigger asChild><Button type="button" variant="outline" size="sm"><Copy />Duplicate</Button></DropdownMenuTrigger>
                       <DropdownMenuContent align="end">

@@ -41,6 +41,8 @@ import { PlansPanel } from "@/components/PlansPanel";
 import { TestimonialFilterPanel } from "@/components/TestimonialFilterPanel";
 import { TestimonialsEditor } from "@/components/TestimonialsEditor";
 import { AdminWelcome, TaskBell, WelcomeSwitch } from "@/components/AdminWelcome";
+import { GlobalReminderBanner } from "@/components/GlobalReminderBanner";
+import { WorkspaceRemindersProvider } from "@/hooks/useWorkspaceReminders";
 import { AccountHelpPanel } from "@/components/AccountHelpPanel";
 import { HolidayPlan } from "@/components/HolidayPlan";
 import { StaffPlanPanel } from "@/components/StaffPlanPanel";
@@ -180,6 +182,7 @@ function AdminPage() {
   const usesOverview = ["ai", "reg", "splits", "purchases"].includes(current);
 
   return (
+    <WorkspaceRemindersProvider userId={user.id} cloud={user.user_metadata?.["workspace_reminders"]}>
     <div className="min-h-screen bg-background">
       {show("tasks") && <AdminWelcome me={user.id} onOpenTasks={() => setActiveTab("tasks")} />}
       <header className="bg-ink text-ink-foreground">
@@ -217,6 +220,9 @@ function AdminPage() {
           </div>
         </div>
       </header>
+
+      {/* Above the tab content, never inside it, so a due reminder follows the staff member across Admin tabs. */}
+      <GlobalReminderBanner />
 
       <div className="mx-auto flex max-w-[100rem] gap-8 px-4 py-6 sm:px-6">
         <AdminSidebar tabs={tabs} active={current} onSelect={setActiveTab} access={access} />
@@ -348,6 +354,7 @@ function AdminPage() {
         </main>
       </div>
     </div>
+    </WorkspaceRemindersProvider>
   );
 }
 

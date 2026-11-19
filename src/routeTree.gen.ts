@@ -39,6 +39,7 @@ import { Route as IpiIdRouteImport } from './routes/ipi.$id'
 import { Route as SeatSeatIdRouteImport } from './routes/seat.$seatId'
 import { Route as SignRowIdRouteImport } from './routes/sign.$rowId'
 import { Route as VerifyIdRouteImport } from './routes/verify.$id'
+import { Route as ApiCalendarFeedRouteImport } from './routes/api/calendar/feed'
 import { Route as ApiInboxFileRouteImport } from './routes/api/inbox/file'
 import { Route as ShareOwnerCardRouteImport } from './routes/share.$owner.$card'
 import { Route as SignPacketPacketIdRouteImport } from './routes/sign.packet.$packetId'
@@ -201,6 +202,11 @@ const VerifyIdRoute = VerifyIdRouteImport.update({
   path: '/verify/$id',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiCalendarFeedRoute = ApiCalendarFeedRouteImport.update({
+  id: '/api/calendar/feed',
+  path: '/api/calendar/feed',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiInboxFileRoute = ApiInboxFileRouteImport.update({
   id: '/api/inbox/file',
   path: '/api/inbox/file',
@@ -295,6 +301,7 @@ export interface FileRoutesByFullPath {
   '/seat/$seatId': typeof SeatSeatIdRoute
   '/sign/$rowId': typeof SignRowIdRoute
   '/verify/$id': typeof VerifyIdRoute
+  '/api/calendar/feed': typeof ApiCalendarFeedRoute
   '/api/inbox/file': typeof ApiInboxFileRoute
   '/share/$owner/$card': typeof ShareOwnerCardRoute
   '/sign/packet/$packetId': typeof SignPacketPacketIdRoute
@@ -338,6 +345,7 @@ export interface FileRoutesByTo {
   '/seat/$seatId': typeof SeatSeatIdRoute
   '/sign/$rowId': typeof SignRowIdRoute
   '/verify/$id': typeof VerifyIdRoute
+  '/api/calendar/feed': typeof ApiCalendarFeedRoute
   '/api/inbox/file': typeof ApiInboxFileRoute
   '/share/$owner/$card': typeof ShareOwnerCardRoute
   '/sign/packet/$packetId': typeof SignPacketPacketIdRoute
@@ -382,6 +390,7 @@ export interface FileRoutesById {
   '/seat/$seatId': typeof SeatSeatIdRoute
   '/sign/$rowId': typeof SignRowIdRoute
   '/verify/$id': typeof VerifyIdRoute
+  '/api/calendar/feed': typeof ApiCalendarFeedRoute
   '/api/inbox/file': typeof ApiInboxFileRoute
   '/share/$owner/$card': typeof ShareOwnerCardRoute
   '/sign/packet/$packetId': typeof SignPacketPacketIdRoute
@@ -427,6 +436,7 @@ export interface FileRouteTypes {
     | '/seat/$seatId'
     | '/sign/$rowId'
     | '/verify/$id'
+    | '/api/calendar/feed'
     | '/api/inbox/file'
     | '/share/$owner/$card'
     | '/sign/packet/$packetId'
@@ -470,6 +480,7 @@ export interface FileRouteTypes {
     | '/seat/$seatId'
     | '/sign/$rowId'
     | '/verify/$id'
+    | '/api/calendar/feed'
     | '/api/inbox/file'
     | '/share/$owner/$card'
     | '/sign/packet/$packetId'
@@ -513,6 +524,7 @@ export interface FileRouteTypes {
     | '/seat/$seatId'
     | '/sign/$rowId'
     | '/verify/$id'
+    | '/api/calendar/feed'
     | '/api/inbox/file'
     | '/share/$owner/$card'
     | '/sign/packet/$packetId'
@@ -557,6 +569,7 @@ export interface RootRouteChildren {
   SeatSeatIdRoute: typeof SeatSeatIdRoute
   SignRowIdRoute: typeof SignRowIdRoute
   VerifyIdRoute: typeof VerifyIdRoute
+  ApiCalendarFeedRoute: typeof ApiCalendarFeedRoute
   ApiInboxFileRoute: typeof ApiInboxFileRoute
   ShareOwnerCardRoute: typeof ShareOwnerCardRoute
   SignPacketPacketIdRoute: typeof SignPacketPacketIdRoute
@@ -782,6 +795,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof VerifyIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/calendar/feed': {
+      id: '/api/calendar/feed'
+      path: '/api/calendar/feed'
+      fullPath: '/api/calendar/feed'
+      preLoaderRoute: typeof ApiCalendarFeedRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/inbox/file': {
       id: '/api/inbox/file'
       path: '/api/inbox/file'
@@ -893,6 +913,7 @@ const rootRouteChildren: RootRouteChildren = {
   SeatSeatIdRoute: SeatSeatIdRoute,
   SignRowIdRoute: SignRowIdRoute,
   VerifyIdRoute: VerifyIdRoute,
+  ApiCalendarFeedRoute: ApiCalendarFeedRoute,
   ApiInboxFileRoute: ApiInboxFileRoute,
   ShareOwnerCardRoute: ShareOwnerCardRoute,
   SignPacketPacketIdRoute: SignPacketPacketIdRoute,

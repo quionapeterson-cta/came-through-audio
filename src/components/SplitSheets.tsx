@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { confirmAction } from "@/components/ConfirmHost";
+import { FollowUpReminderButton } from "@/components/FollowUpReminderButton";
 import { FileSignature, Plus, Trash2, Download, Lock, PenLine, Check, ChevronLeft, Loader2, Mail, Copy } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { ContributorLibrary } from "@/components/ContributorLibrary";
@@ -195,7 +196,7 @@ export function SplitSheets({ userId, canSplit, canCollect, prefillTrackId, onUp
             const collaborators = sheets.get(track.id)!;
             const badge = statusBadge[splitStatus(collaborators)];
             return (
-              <div key={track.id} className="rounded-2xl border border-border p-5">
+              <div key={track.id} id={`split-sheet-${track.id}`} className="scroll-mt-24 rounded-2xl border border-border p-5">
                 <div className="flex items-start justify-between gap-3">
                   <div>
                     <div className="font-bold">{track.title}</div>
@@ -219,7 +220,8 @@ export function SplitSheets({ userId, canSplit, canCollect, prefillTrackId, onUp
                       <span>Total</span><span className={splitTotal(collaborators) === 100 ? "text-primary" : "text-destructive"}>{splitTotal(collaborators)}%</span>
                     </div>
                   </div>
-                <div className="mt-4 flex gap-2">
+                <div className="mt-4 flex flex-wrap items-center gap-2">
+                  <FollowUpReminderButton contextType="split_sheet" contextId={track.id} sheetId={track.id} songId={track.id} subject={track.title} />
                   {readOnly ? <Button size="sm" variant="outline" className="flex-1" onClick={() => void downloadSplitPdf(track, collaborators)}><Download className="h-4 w-4" /> Download PDF</Button> : <>
                   <Button size="sm" className="flex-1" onClick={() => setEditing(track)}>
                     <PenLine className="h-4 w-4" /> {signedGroup ? "View split sheet" : "Edit split sheet"}

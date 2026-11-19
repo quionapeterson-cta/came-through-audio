@@ -8,6 +8,10 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel,
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useArtistName } from "@/hooks/useArtistName";
+import { WorkspaceRemindersProvider } from "@/hooks/useWorkspaceReminders";
+import { WorkspaceReminderHeaderActions } from "@/components/WorkspaceReminderHeaderActions";
+import { WorkspaceReminderStrip } from "@/components/WorkspaceReminderStrip";
+import { useReminderSpotlight } from "@/hooks/useFocusHighlight";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -328,6 +332,9 @@ function Workspace() {
   const openQuickCheck = () => { setTab("health"); setTimeout(() => document.getElementById("quick-check")?.scrollIntoView({ behavior: "smooth" }), 50); };
   const studio = useStudioMode();
   const app = useInstallApp();
+  // A reminder's Open deep link lands on this card and lights it, the same spotlight a diagnostic fix uses. Wait for
+  // the account and the tab to exist, so the retry window starts when the card can actually render.
+  useReminderSpotlight(!!user && !loading && (tab === "splits" || tab === "learn"));
   // Free accounts open on the Royalties and Registrations (Royalty Inspector) instead of the locked Embed tab.
   // A checkout return is never redirected: the webhook can still be in flight, so a brand-new Plus member would be
   // read as Free and moved off the tab they just bought (founder, 2026-11-08).
@@ -401,6 +408,7 @@ function Workspace() {
   const eagle = eagleStatus({ onManagement: tier === "management", startedAt: sub?.current_period_start ?? null });
 
   return (
+    <WorkspaceRemindersProvider userId={user.id} cloud={user.user_metadata?.["workspace_reminders"]}>
     <div className="min-h-screen bg-background">
       {welcomeBurst && <div className="pointer-events-none fixed inset-0 z-[85]"><Confetti /></div>}
       <PaymentTestModeBanner previewTier={previewTier} onPreviewTier={canPreview ? setPreviewTier : undefined} />
@@ -542,15 +550,21 @@ function Workspace() {
               back to the card, not the round medal). Fixed side columns and height keep it in the same spot on every tab. */}
           <div className="mt-8 grid items-center gap-4 sm:min-h-24 sm:grid-cols-[14rem_minmax(0,1fr)_14rem]">
             <div className="hidden sm:block" />
-            <h1 className="flex items-center justify-center gap-[0.3em] text-center text-4xl font-extrabold leading-none tracking-tight md:text-5xl">
-              <span className="min-w-0 break-words">{name}</span>
-              {/* Avatar matches the name's height so badges can be enjoyed up close; click for full size. */}
-              {onboard?.avatar && <button type="button" aria-label="View your profile badge" onClick={() => setViewAvatar(true)} className="shrink-0 rounded-full transition hover:ring-2 hover:ring-primary/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
-                <ArtistAvatar src={onboard.avatar} className="h-[1.15em] w-[1.15em]" />
-              </button>}
-            </h1>
+            <div className="min-w-0">
+              <h1 className="flex items-center justify-center gap-[0.3em] text-center text-4xl font-extrabold leading-none tracking-tight md:text-5xl">
+                <span className="min-w-0 break-words">{name}</span>
+                {/* Avatar matches the name's height so badges can be enjoyed up close; click for full size. */}
+                {onboard?.avatar && <button type="button" aria-label="View your profile badge" onClick={() => setViewAvatar(true)} className="shrink-0 rounded-full transition hover:ring-2 hover:ring-primary/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+                  <ArtistAvatar src={onboard.avatar} className="h-[1.15em] w-[1.15em]" />
+                </button>}
+              </h1>
+              {/* Beside the artist's name: the custom reminder and the drawer with every scheduled one (founder, 2026-11-19). */}
+              <div className="mt-2"><WorkspaceReminderHeaderActions /></div>
+            </div>
             <NextBadgeHint userId={user.id} collections={TAB_BADGES[tab] ?? ["core"]} />
           </div>
+          {/* Full-width, directly under the artist-name header; it stays until opened, snoozed or completed. */}
+          <WorkspaceReminderStrip />
           <BadgeViewer src={viewAvatar ? onboard?.avatar : undefined} round={!isBadgeImage(onboard?.avatar)} onClose={() => setViewAvatar(false)}
             about={(() => { const b = badgeForArt(onboard?.avatar); return b ? { description: b.description, times: 1 } : undefined; })()}
             share={{ ...share, artist: share.artist || names.artist || name }} />
@@ -588,6 +602,7 @@ function Workspace() {
         </Tabs>
       </main>
     </div>
+    </WorkspaceRemindersProvider>
   );
 }
 
