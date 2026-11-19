@@ -80,7 +80,8 @@ describe("visibleTabs", () => {
 
   it("gives marketing the Badges and Homepage tabs and its Task Bank; sales gets its Task Bank", () => {
     const marketing = resolveAccess([{ role: "employee", departments: ["marketing"] }])!;
-    expect(visibleTabs(marketing).map((t) => t.value)).toEqual(withDeptTabs(["badges", "homepage"]));
+    // Marketing also answers marketing@, partners@, info@ and collaborate@ from the Inbox tab (founder, 2026-11-19).
+    expect(visibleTabs(marketing).map((t) => t.value)).toEqual([...withDeptTabs(["badges", "homepage"]), "inbox"]);
     expect(visibleTabs(resolveAccess([{ role: "employee", departments: ["marketing_sales"] }])!).map((t) => t.value)).toEqual(withDeptTabs([]));
     expect(visibleTabs(resolveAccess([{ role: "employee", departments: [] }])!)).toEqual([]);
   });

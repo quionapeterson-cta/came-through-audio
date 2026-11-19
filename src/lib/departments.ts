@@ -166,8 +166,12 @@ export function visibleTabs(access: StaffAccess, view: Department | "all" = "all
   // in every view rather than only the all-departments one.
   // The registration desk answers registrations@ from the same tab (founder, 2026-11-18); the server shows it that
   // mailbox only, and a super admin keeps all three.
+  // The marketing team answers marketing@, partners@, info@ and collaborate@ from the same tab (founder, 2026-11-19):
+  // the server shows it those four only, the registration desk its one, and a super admin all seven.
   const inbox =
-    access.role === "super_admin" || access.departments.includes("registration")
+    access.role === "super_admin" ||
+    access.departments.includes("registration") ||
+    access.departments.includes("marketing")
       ? [{ value: "inbox", label: "Inbox" }]
       : [];
   return [...withTasks, ...inbox, ...holiday, ...company, ...plans];

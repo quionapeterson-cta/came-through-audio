@@ -30,6 +30,10 @@ export const BILLING_EMAIL = "billing@camethroughaudio.com";
 export const COLLABORATE_EMAIL = "collaborate@camethroughaudio.com";
 export const REGISTRATIONS_EMAIL = "registrations@camethroughaudio.com";
 export const PARTNERSHIPS_EMAIL = "partnerships@camethroughaudio.com";
+/** The marketing team's own addresses (founder, 2026-11-19). partners@ is not partnerships@: the team answers both. */
+export const MARKETING_EMAIL = "marketing@camethroughaudio.com";
+export const PARTNERS_EMAIL = "partners@camethroughaudio.com";
+export const CONTRACTS_EMAIL = "contracts@camethroughaudio.com";
 export const AUTH_EMAIL = "auth@camethroughaudio.com";
 export const SECURITY_EMAIL = "security@camethroughaudio.com";
 export const TAGLINE = "YOUR FIRST STOP BEFORE DISTRIBUTION";

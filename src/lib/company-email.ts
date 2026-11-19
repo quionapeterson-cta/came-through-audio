@@ -1,8 +1,14 @@
+import type { StaffAccess } from "./departments";
 import {
   ADMIN_EMAIL,
   BILLING_EMAIL,
+  COLLABORATE_EMAIL,
+  CONTRACTS_EMAIL,
   INFO_EMAIL,
   LEGAL_EMAIL,
+  MARKETING_EMAIL,
+  PARTNERS_EMAIL,
+  PARTNERSHIPS_EMAIL,
   SUPPORT_EMAIL,
   escapeHtml,
 } from "./email-layout";
@@ -16,14 +22,33 @@ export const COMPANY_SENDER_NAME = "Came Through Audio";
 
 export const COMPANY_MAILBOXES = {
   admin: ADMIN_EMAIL,
+  contracts: CONTRACTS_EMAIL,
+  marketing: MARKETING_EMAIL,
+  partners: PARTNERS_EMAIL,
   info: INFO_EMAIL,
+  collaborate: COLLABORATE_EMAIL,
   support: SUPPORT_EMAIL,
   legal: LEGAL_EMAIL,
   billing: BILLING_EMAIL,
-  partnerships: "partnerships@camethroughaudio.com",
+  partnerships: PARTNERSHIPS_EMAIL,
 } as const;
 
 export type CompanyMailbox = keyof typeof COMPANY_MAILBOXES;
+
+/**
+ * Which addresses this person may write a new letter from (founder, 2026-11-19).
+ *
+ * A super admin picks from every mailbox we own. The marketing team sends as the four addresses it answers as
+ * (marketing@, partners@, info@, collaborate@) and no others, which is what keeps the company's own admin@ and
+ * contracts@ correspondence with a super admin. Everyone else keeps the boxes their work already answers: support@,
+ * legal@, billing@ and partnerships@. The server checks this same list before it sends, so the picker is not the rule.
+ */
+export function companyMailboxesFor(access: StaffAccess | null | undefined): CompanyMailbox[] {
+  if (!access) return [];
+  if (access.role === "super_admin") return Object.keys(COMPANY_MAILBOXES) as CompanyMailbox[];
+  if (access.departments.includes("marketing")) return ["marketing", "partners", "info", "collaborate"];
+  return ["support", "legal", "billing", "partnerships"];
+}
 
 /** A handful of real letters a day, not a mailing list. */
 export const COMPANY_MAIL_DAILY_LIMIT = 25;

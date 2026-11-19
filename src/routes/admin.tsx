@@ -267,7 +267,7 @@ function AdminPage() {
             <Table head={["Type", "Mode", "Status", "Date"]} failed={overview.isError} rows={d?.purchases.map((p) => [p.type, p.environment, p.status, fmt(p.created_at)])} />
           </TabsContent>
           {show("billing") && <TabsContent value="billing"><BillingConsolePanel isSuper={isSuper} /></TabsContent>}
-          {show("inbox") && <TabsContent value="inbox"><AdminInboxPanel /></TabsContent>}
+          {show("inbox") && <TabsContent value="inbox"><AdminInboxPanel access={access} /></TabsContent>}
           {show("board") && (
             <TabsContent value="board">
               <AdminMessageBoard
@@ -297,7 +297,7 @@ function AdminPage() {
           {show("scripts") && <TabsContent value="scripts"><SupportScriptsPanel /></TabsContent>}
           {show("prices") && <TabsContent value="prices"><PriceList /></TabsContent>}
           {show("pdf") && <TabsContent value="pdf"><PdfTools canStudio={canManagePdfTemplates(access)} /></TabsContent>}
-          {show("email") && <TabsContent value="email"><CompanyMail /></TabsContent>}
+          {show("email") && <TabsContent value="email"><CompanyMail access={access} /></TabsContent>}
           {show("legal") && <TabsContent value="legal"><LegalEditor /></TabsContent>}
         </Tabs>
         </>)}

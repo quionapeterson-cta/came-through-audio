@@ -10,6 +10,7 @@ import {
   COMPANY_MAILBOXES,
   COMPANY_MAIL_DAILY_LIMIT,
   companyFrom,
+  companyMailboxesFor,
   companyReplyTo,
   mailBodyHtml,
   type CompanyMailbox,
@@ -30,8 +31,9 @@ async function staffDb(context: { supabase: SupabaseClient<Database>; userId: st
     .from("user_roles")
     .select("role, departments")
     .eq("user_id", context.userId);
-  if (!resolveAccess(roles ?? [])) throw new Error("Staff access only.");
-  return (await import("@/integrations/supabase/client.server")).supabaseAdmin;
+  const access = resolveAccess(roles ?? []);
+  if (!access) throw new Error("Staff access only.");
+  return { db: (await import("@/integrations/supabase/client.server")).supabaseAdmin, access };
 }
 
 export type CompanyEmailRow = {
@@ -45,7 +47,7 @@ export type CompanyEmailRow = {
 export const listCompanyEmail = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }): Promise<CompanyEmailRow[]> => {
-    const db = await staffDb(context);
+    const { db } = await staffDb(context);
     const { data, error } = await db
       .from("outreach_emails" as never)
       .select("to_email, subject, from_email, sent_at")
@@ -82,7 +84,11 @@ export const sendCompanyEmail = createServerFn({ method: "POST" })
       .parse(d),
   )
   .handler(async ({ data, context }) => {
-    const db = await staffDb(context);
+    const { db, access } = await staffDb(context);
+    // The picker is already narrowed, and this is the rule: marketing sends as its four, a super admin as any, the rest
+    // keep the boxes they answer. A marketing employee cannot reach admin@ or contracts@ by posting a different key.
+    if (!companyMailboxesFor(access).includes(data.mailbox))
+      throw new Error("You can't send from that mailbox. Pick one of yours.");
     const from = companyFrom(data.mailbox);
     if (!from) throw new Error("That isn't one of the company mailboxes.");
 

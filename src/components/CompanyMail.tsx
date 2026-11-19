@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Loader2, Mail, Send } from "lucide-react";
 import { toast } from "sonner";
 import { useServerFn } from "@tanstack/react-start";
@@ -14,18 +14,26 @@ import {
 import {
   COMPANY_MAILBOXES,
   COMPANY_MAIL_DAILY_LIMIT,
+  companyMailboxesFor,
   type CompanyMailbox,
 } from "@/lib/company-email";
+import type { StaffAccess } from "@/lib/departments";
 
 /**
  * Admin → Email: correspondence from a company mailbox — admin@ for the company's own letters, support@ for a customer,
  * and so on. Open to every member of staff (the server checks the role), replies go back to the same box, and the footer
  * is transactional. Commercial mail to people who never asked is Outreach, which stays with super admins.
  */
-export function CompanyMail() {
+/**
+ * The "Send from" picker is the addresses this person may write as (founder, 2026-11-19): every mailbox for a super admin,
+ * the marketing four for the marketing team, and their own boxes for everyone else. The server checks the same list.
+ */
+export function CompanyMail({ access }: { access: StaffAccess }) {
   const send = useServerFn(sendCompanyEmail);
   const history = useServerFn(listCompanyEmail);
-  const [mailbox, setMailbox] = useState<CompanyMailbox>("admin");
+  const boxes = useMemo(() => companyMailboxesFor(access), [access]);
+  const [picked, setPicked] = useState<CompanyMailbox | null>(null);
+  const mailbox: CompanyMailbox = (picked && boxes.includes(picked) ? picked : boxes[0]) ?? "admin";
   const [to, setTo] = useState("");
   const [cc, setCc] = useState("");
   const [subject, setSubject] = useState("");
@@ -89,10 +97,10 @@ export function CompanyMail() {
           <span className="font-semibold">Send from</span>
           <select
             value={mailbox}
-            onChange={(e) => setMailbox(e.target.value as CompanyMailbox)}
+            onChange={(e) => setPicked(e.target.value as CompanyMailbox)}
             className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
           >
-            {(Object.keys(COMPANY_MAILBOXES) as CompanyMailbox[]).map((k) => (
+            {boxes.map((k) => (
               <option key={k} value={k}>
                 {COMPANY_MAILBOXES[k]}
               </option>

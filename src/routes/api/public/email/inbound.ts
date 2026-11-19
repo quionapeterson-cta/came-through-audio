@@ -3,6 +3,7 @@ import { createClient } from "@supabase/supabase-js";
 import { z } from "zod";
 import { isInviteAgency, readAgencyEmail } from "@/lib/agency-invites";
 import { threadSubjectKey } from "@/lib/inbox-attachments";
+import { INBOX_MAILBOXES, type InboxMailbox } from "@/lib/inbox-mailboxes";
 
 /**
  * The Admin Inbox receiver (founder, 2026-11-17): a Cloudflare Email Worker on the admin@ and contracts@ routes posts
@@ -20,12 +21,9 @@ function db() {
   return _sb;
 }
 
-const INBOX_MAILBOXES = ["admin", "contracts", "registrations"] as const;
-type InboxMailbox = (typeof INBOX_MAILBOXES)[number];
-
 const payloadSchema = z.object({
   /** Optional: when it is left out the mailbox is read from the recipient address. */
-  mailbox: z.enum(["admin", "contracts", "registrations"]).optional(),
+  mailbox: z.enum([...INBOX_MAILBOXES] as [InboxMailbox, ...InboxMailbox[]]).optional(),
   from: z.string().trim().min(3).max(320),
   fromName: z.string().trim().max(200).optional(),
   to: z.union([z.string(), z.array(z.string())]).optional(),
@@ -107,9 +105,8 @@ function mailboxFor(given: InboxMailbox | undefined, recipients: string[]): Inbo
   if (given) return given;
   for (const address of recipients) {
     const local = address.split("@")[0] ?? "";
-    if (local === "contracts") return "contracts";
-    if (local === "registrations") return "registrations";
-    if (local === "admin") return "admin";
+    const match = INBOX_MAILBOXES.find((mailbox) => mailbox === local);
+    if (match) return match;
   }
   return "admin";
 }

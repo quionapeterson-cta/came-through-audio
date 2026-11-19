@@ -11,6 +11,17 @@
   //                                npx wrangler secret put INBOUND_EMAIL_SECRET -c cloudflare/email-worker/wrangler.jsonc
   // Add both under Workers → came-through-audio-inbox → Settings. Until INBOX_URL is set the Worker refuses every
   // message, so a half-configured deploy delays mail instead of sending it somewhere wrong.
+  //
+  // The Gmail copy each department reads is a setting too, because the departments read different mailboxes:
+  //   FORWARD_TO_REGISTRATIONS  var  regs.camethroughaudio.com@gmail.com
+  //   FORWARD_TO_ADMIN          var  camethroughaudio.com@gmail.com
+  //   FORWARD_TO_CONTRACTS      var  camethroughaudio.com@gmail.com
+  //   FORWARD_TO_MARKETING      var  info.camethroughaudio.com@gmail.com
+  //   FORWARD_TO_PARTNERS       var  info.camethroughaudio.com@gmail.com
+  //   FORWARD_TO_INFO           var  info.camethroughaudio.com@gmail.com
+  //   FORWARD_TO_COLLABORATE    var  info.camethroughaudio.com@gmail.com
+  //   FORWARD_TO                var  the copy for any mailbox without its own value
+  // A forward only reaches an address Cloudflare has verified under Email Routing → Destination addresses.
   "name": "came-through-audio-inbox",
   "main": "src/index.ts",
   "compatibility_date": "2026-11-03",

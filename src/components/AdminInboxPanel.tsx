@@ -12,10 +12,11 @@ import {
   openInboxThread,
   replyToInboxThread,
   type InboxAttachment,
-  type InboxMailbox,
   type InboxMessage,
   type InboxThreadSummary,
 } from "@/lib/inbox.functions";
+import { INBOX_ADDRESS, INBOX_LABEL, mailboxesFor, type InboxMailbox } from "@/lib/inbox-mailboxes";
+import type { StaffAccess } from "@/lib/departments";
 
 /**
  * Admin → Inbox (founder, 2026-11-17): mail sent to admin@ and contracts@, as conversations we answer from here.
@@ -44,11 +45,8 @@ function sizeOf(bytes?: number): string {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
-const MAILBOX_LABEL: Record<InboxMailbox, string> = {
-  admin: "admin@",
-  contracts: "contracts@",
-  registrations: "registrations@",
-};
+/** A chip or a badge names a mailbox with the shared label, so the panel never invents an address. */
+const MAILBOX_LABEL = INBOX_LABEL;
 
 /** One file on a message: the name, then the way to open it when we kept it. */
 function AttachmentRow({ messageId, file }: { messageId: string; file: InboxAttachment }) {
@@ -206,7 +204,7 @@ function ThreadView({ id, onClose }: { id: string; onClose: () => void }) {
       <div className="rounded-xl border border-border bg-card p-4">
         <label htmlFor="inbox-reply" className="flex items-center gap-1.5 text-sm font-semibold">
           <CornerUpLeft className="h-4 w-4" />
-          Reply as admin@camethroughaudio.com
+          Reply as {INBOX_ADDRESS[t.mailbox]}
         </label>
         <Textarea
           id="inbox-reply"
@@ -234,8 +232,15 @@ function ThreadView({ id, onClose }: { id: string; onClose: () => void }) {
   );
 }
 
-export function AdminInboxPanel() {
+export function AdminInboxPanel({ access }: { access: StaffAccess }) {
   const list = useServerFn(listInboxThreads);
+  // The chips are exactly the mailboxes this person may read; the server narrows its query to the same list, so a chip
+  // being hidden is never what protects a mailbox.
+  const mailboxes = useMemo(() => mailboxesFor(access), [access]);
+  const filters = useMemo<("all" | "unread" | InboxMailbox)[]>(
+    () => ["all", "unread", ...mailboxes],
+    [mailboxes],
+  );
   const [filter, setFilter] = useState<"all" | "unread" | InboxMailbox>("all");
   const [query, setQuery] = useState("");
   const [openId, setOpenId] = useState<string | null>(null);
@@ -267,14 +272,13 @@ export function AdminInboxPanel() {
   return (
     <div className="mt-4 space-y-3">
       <p className="text-sm text-muted-foreground">
-        Mail sent to admin@, contracts@ and registrations@. Unread is counted from the messages themselves,
-        so the badge and this list can't disagree. Opening a conversation marks it read; a reply is saved
-        on the thread and leaves from the mailbox it arrived at. The registration desk sees registrations@
-        only; a super admin sees all three.
+        Mail sent to {mailboxes.map((one) => INBOX_ADDRESS[one]).join(", ")}. Unread is counted from the
+        messages themselves, so the badge and this list can't disagree. Opening a conversation marks it
+        read; a reply is saved on the thread and leaves from the mailbox it arrived at.
       </p>
 
       <div className="flex flex-wrap items-center gap-2">
-        {(["all", "unread", "admin", "contracts", "registrations"] as const).map((f) => (
+        {filters.map((f) => (
           <button
             key={f}
             onClick={() => setFilter(f)}
@@ -300,7 +304,7 @@ export function AdminInboxPanel() {
         <div className="rounded-2xl border border-border bg-card p-8 text-center text-muted-foreground">
           {all.length
             ? "Nothing matches this view."
-            : "No mail yet. Messages sent to admin@, contracts@ and registrations@ appear here once Email Routing points them at the inbox."}
+            : "No mail yet. Messages sent to the mailboxes above appear here once Email Routing points them at the inbox."}
         </div>
       ) : (
         <ul className="divide-y divide-border overflow-hidden rounded-2xl border border-border bg-card">

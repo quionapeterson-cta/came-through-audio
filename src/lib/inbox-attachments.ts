@@ -1,3 +1,5 @@
+import type { InboxMailbox } from "./inbox-mailboxes";
+
 /**
  * Files that stay with an inbox message (founder, 2026-11-17): 10 MB per file, kept as long as the message is, in the
  * private `admin-inbox` bucket.
@@ -76,7 +78,7 @@ export function storageFolderFor(seed: string): string {
 
 /** Where one attachment of a received mail lives. Deterministic: the same message and file always name the same key. */
 export function inboundStoragePath(input: {
-  mailbox: "admin" | "contracts" | "registrations";
+  mailbox: InboxMailbox;
   messageKey: string;
   index: number;
   filename: string;

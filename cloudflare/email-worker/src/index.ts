@@ -27,6 +27,18 @@ interface Env {
    * address here replaces its forward, so leaving this unset would silently end the copies someone reads today.
    */
   FORWARD_TO?: string;
+  /**
+   * Optional, one per mailbox (founder, 2026-11-19): each department reads its own Gmail, so a single shared copy would
+   * send registrations@ mail to the admin inbox's address. A mailbox with no override falls back to FORWARD_TO.
+   */
+  FORWARD_TO_ADMIN?: string;
+  FORWARD_TO_CONTRACTS?: string;
+  FORWARD_TO_REGISTRATIONS?: string;
+  /** The marketing team's four (founder, 2026-11-19): each keeps the Gmail copy someone reads today. */
+  FORWARD_TO_MARKETING?: string;
+  FORWARD_TO_PARTNERS?: string;
+  FORWARD_TO_INFO?: string;
+  FORWARD_TO_COLLABORATE?: string;
 }
 
 /** The receiver's own limits, so an oversized mail is trimmed rather than refused as a 400 and retried forever. */
@@ -51,12 +63,38 @@ type KeptFile = {
   reason?: string;
 };
 
+/**
+ * Every mailbox Cloudflare sends here (founder, 2026-11-19): the company's own, the registration desk's, and the four the
+ * marketing team answers as. The app's receiver accepts exactly this list, so the two must move together.
+ */
+const MAILBOXES = ["admin", "contracts", "registrations", "marketing", "partners", "info", "collaborate"] as const;
+type Mailbox = (typeof MAILBOXES)[number];
+
 /** Which mailbox the route delivered to. Anything else means the Cloudflare route is wrong. */
-function mailboxOf(recipient: string): "admin" | "contracts" | "registrations" {
+function mailboxOf(recipient: string): Mailbox {
   const local = (recipient.split("@")[0] ?? "").trim().toLowerCase();
-  if (local === "admin" || local === "contracts" || local === "registrations") return local;
+  const match = MAILBOXES.find((mailbox) => mailbox === local);
+  if (match) return match;
   // Thrown rather than filed under admin, where it would be answered from the wrong address and nobody would notice.
   throw new Error(`Routed to ${recipient}, which is not an Admin Inbox mailbox`);
+}
+
+/**
+ * Where this mailbox's copy goes: its own address when one is set, otherwise the shared one. Unset means no copy, which
+ * is the safe answer — a wrong address sends another department's mail to someone who shouldn't read it.
+ */
+function forwardOf(env: Env, mailbox: Mailbox): string | undefined {
+  const own = {
+    admin: env.FORWARD_TO_ADMIN,
+    contracts: env.FORWARD_TO_CONTRACTS,
+    registrations: env.FORWARD_TO_REGISTRATIONS,
+    marketing: env.FORWARD_TO_MARKETING,
+    partners: env.FORWARD_TO_PARTNERS,
+    info: env.FORWARD_TO_INFO,
+    collaborate: env.FORWARD_TO_COLLABORATE,
+  }[mailbox];
+  const target = own?.trim() || env.FORWARD_TO?.trim();
+  return target ? target : undefined;
 }
 
 function header(headers: Headers, name: string): string | undefined {
@@ -150,6 +188,7 @@ export default {
     }
 
     const mailbox = mailboxOf(message.to);
+    const forwardTo = forwardOf(env, mailbox);
 
     // A message too broken to parse is still worth seeing, so it goes on with its headers and no body.
     let parsed: ParsedEmail | null = null;
@@ -288,11 +327,11 @@ export default {
     }
 
     // Storing came first and is what must succeed; a mailbox having a bad day must not undo it.
-    if (env.FORWARD_TO) {
+    if (forwardTo) {
       try {
-        await message.forward(env.FORWARD_TO);
+        await message.forward(forwardTo);
       } catch (error) {
-        console.error(`Admin inbox: stored, but the copy to ${env.FORWARD_TO} failed.`, error);
+        console.error(`Admin inbox: stored, but the copy to ${forwardTo} failed.`, error);
       }
     }
   },

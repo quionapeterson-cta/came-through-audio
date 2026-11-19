@@ -2,9 +2,10 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { resolveAccess } from "./departments";
-import { ADMIN_EMAIL, REGISTRATIONS_EMAIL, emailLayout, escapeHtml } from "./email-layout";
+import { emailLayout, escapeHtml } from "./email-layout";
 import { INBOX_BUCKET } from "./inbox-attachments";
 import { mailKey, sendMail } from "./mailer";
+import { INBOX_ADDRESS, mailboxesFor, type InboxMailbox } from "./inbox-mailboxes";
 
 /**
  * Admin Inbox, part 3 (founder, 2026-11-17): reading the stored mail and answering it from Admin.
@@ -16,15 +17,16 @@ import { mailKey, sendMail } from "./mailer";
  * Unread is never a stored number. It is counted from the messages themselves — inbound rows with no `read_at` — so two
  * deliveries landing together can never leave a badge reading low for good. Opening a thread is what marks it read.
  *
- * Only a super admin reads the company inbox, and the check is here as well as in RLS: the reads go through the
- * service role because the panel asks for several tables at once, so the gate has to exist before that client is used.
+ * The reads go through the service role because the panel asks for several tables at once, so the gate has to exist before
+ * that client is used: `mailboxesFor` decides who reads which mailbox (a super admin all seven, the registration desk
+ * registrations@, the marketing team its four), and every query and every reply is narrowed to that list here.
  */
 
 /**
- * The company mailboxes this inbox stores. registrations@ is the registration desk's own (founder, 2026-11-18): a super
- * admin sees all three, and the registration department sees that one only.
+ * The company mailboxes this inbox stores (founder, 2026-11-19): a super admin sees all seven, the registration desk sees
+ * registrations@, and the marketing team sees the four addresses it answers as. `mailboxesFor` is that one rule.
  */
-export type InboxMailbox = "admin" | "contracts" | "registrations";
+export type { InboxMailbox } from "./inbox-mailboxes";
 
 export type InboxAttachment = {
   filename: string;
@@ -66,32 +68,23 @@ export type InboxThread = InboxThreadSummary & { messages: InboxMessage[] };
 type Db = Awaited<typeof import("@/integrations/supabase/client.server")>["supabaseAdmin"];
 
 /**
- * Who may read the inbox, and how much of it: a super admin sees every mailbox, the registration department sees
- * registrations@ alone. The service role is used below, so this gate is the rule rather than a convenience.
+ * Who may read the inbox, and how much of it. The service role is used below, so this gate is the rule rather than a
+ * convenience: it returns the mailboxes this person may open, and every query is narrowed to exactly that list.
  */
-async function inboxDb(context: { supabase: unknown; userId: string }): Promise<{ db: Db; isSuper: boolean }> {
+async function inboxDb(context: { supabase: unknown; userId: string }): Promise<{ db: Db; mailboxes: InboxMailbox[] }> {
   const client = context.supabase as { // eslint-disable-line @typescript-eslint/no-explicit-any
-    rpc: (
-      fn: "has_role",
-      args: { _user_id: string; _role: "super_admin" },
-    ) => PromiseLike<{ data: unknown }>;
     from: (table: string) => {
       select: (columns: string) => { eq: (column: string, value: string) => PromiseLike<{ data: unknown }> };
     };
   };
-  const { data: isSuper } = await client.rpc("has_role", {
-    _user_id: context.userId,
-    _role: "super_admin",
-  });
-  if (!isSuper) {
-    const { data: roles } = await client.from("user_roles").select("role, departments").eq("user_id", context.userId);
-    const access = resolveAccess((roles ?? []) as { role: string; departments?: string[] | null }[]);
-    if (!access?.departments.includes("registration")) {
-      throw new Error("Only a super admin or the registration desk can read the company inbox.");
-    }
+  const { data: roles } = await client.from("user_roles").select("role, departments").eq("user_id", context.userId);
+  const access = resolveAccess((roles ?? []) as { role: string; departments?: string[] | null }[]);
+  const mailboxes = mailboxesFor(access);
+  if (!mailboxes.length) {
+    throw new Error("Only a super admin, the registration desk or the marketing team can read the company inbox.");
   }
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-  return { db: supabaseAdmin, isSuper: !!isSuper };
+  return { db: supabaseAdmin, mailboxes };
 }
 
 type ThreadRow = {
@@ -156,14 +149,15 @@ function toMessage(row: MessageRow): InboxMessage {
 export const listInboxThreads = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }): Promise<InboxThreadSummary[]> => {
-    const { db, isSuper } = await inboxDb(context);
-    // The registration desk answers registrations@ and nothing else; a super admin keeps the whole inbox.
-    let query = db
+    const { db, mailboxes } = await inboxDb(context);
+    // Only the mailboxes this person may read are ever queried: the desk sees registrations@, marketing its four, a
+    // super admin all seven.
+    const query = db
       .from("admin_inbox_threads" as never)
       .select("id, mailbox, subject, counterpart_email, counterpart_name, last_message_at")
+      .in("mailbox", mailboxes)
       .order("last_message_at", { ascending: false })
       .limit(200);
-    if (!isSuper) query = query.eq("mailbox", "registrations");
     const { data, error } = await query;
     if (error) throw new Error("Couldn't load the inbox. Run migration 20261117120000 first.");
     const rows = (data ?? []) as unknown as ThreadRow[];
@@ -200,13 +194,13 @@ export const listInboxThreads = createServerFn({ method: "GET" })
 export const inboxUnreadCount = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }): Promise<number> => {
-    const { db, isSuper } = await inboxDb(context);
-    let query = db
+    const { db, mailboxes } = await inboxDb(context);
+    const query = db
       .from("admin_inbox_messages" as never)
       .select("id", { count: "exact", head: true })
       .eq("direction", "inbound")
-      .is("read_at", null);
-    if (!isSuper) query = query.eq("mailbox", "registrations");
+      .is("read_at", null)
+      .in("mailbox", mailboxes);
     const { count, error } = await query;
     if (error) {
       // A silent 0 is the exact undercount the derived count exists to prevent (founder, 2026-11-17): a failed count
@@ -222,7 +216,7 @@ export const openInboxThread = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d) => z.object({ threadId: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }): Promise<InboxThread> => {
-    const { db, isSuper } = await inboxDb(context);
+    const { db, mailboxes } = await inboxDb(context);
     const { data: thread } = await db
       .from("admin_inbox_threads" as never)
       .select("id, mailbox, subject, counterpart_email, counterpart_name, last_message_at")
@@ -230,7 +224,7 @@ export const openInboxThread = createServerFn({ method: "POST" })
       .maybeSingle();
     const row = thread as unknown as ThreadRow | null;
     if (!row) throw new Error("That conversation is no longer here.");
-    if (!isSuper && row.mailbox !== "registrations") throw new Error("That conversation belongs to a super admin.");
+    if (!mailboxes.includes(row.mailbox)) throw new Error("That conversation belongs to another mailbox.");
 
     const { data: messages, error } = await db
       .from("admin_inbox_messages" as never)
@@ -280,23 +274,22 @@ export const inboxAttachmentUrl = createServerFn({ method: "POST" })
       .parse(d),
   )
   .handler(async ({ data, context }): Promise<{ url: string; filename: string }> => {
-    const { db, isSuper } = await inboxDb(context);
+    const { db, mailboxes } = await inboxDb(context);
     const { data: message } = await db
       .from("admin_inbox_messages" as never)
       .select("attachments, thread_id")
       .eq("id", data.messageId)
       .maybeSingle();
-    // The registration desk may sign a file only when it sits on a registrations@ thread.
-    if (!isSuper) {
-      const threadId = (message as { thread_id?: string } | null)?.thread_id ?? "";
-      const { data: thread } = await db
-        .from("admin_inbox_threads" as never)
-        .select("mailbox")
-        .eq("id", threadId)
-        .maybeSingle();
-      if ((thread as { mailbox: string } | null)?.mailbox !== "registrations") {
-        throw new Error("That file is on a conversation for a super admin.");
-      }
+    // A file is signed only for a thread whose mailbox this person may read, whoever they are.
+    const threadId = (message as { thread_id?: string } | null)?.thread_id ?? "";
+    const { data: thread } = await db
+      .from("admin_inbox_threads" as never)
+      .select("mailbox")
+      .eq("id", threadId)
+      .maybeSingle();
+    const owner = (thread as { mailbox?: InboxMailbox } | null)?.mailbox;
+    if (!owner || !mailboxes.includes(owner)) {
+      throw new Error("That file is on a conversation for another mailbox.");
     }
     const files = attachmentsOf((message as { attachments: unknown } | null)?.attachments);
     const file = files.find((one) => one.storagePath === data.storagePath);
@@ -326,7 +319,7 @@ export const replyToInboxThread = createServerFn({ method: "POST" })
       .parse(d),
   )
   .handler(async ({ data, context }): Promise<{ ok: true; messageId: string }> => {
-    const { db, isSuper } = await inboxDb(context);
+    const { db, mailboxes } = await inboxDb(context);
     const { data: thread } = await db
       .from("admin_inbox_threads" as never)
       .select("id, mailbox, subject, counterpart_email")
@@ -337,11 +330,12 @@ export const replyToInboxThread = createServerFn({ method: "POST" })
       "id" | "mailbox" | "subject" | "counterpart_email"
     > | null;
     if (!row) throw new Error("That conversation is no longer here.");
-    if (!isSuper && row.mailbox !== "registrations") throw new Error("That conversation belongs to a super admin.");
+    if (!mailboxes.includes(row.mailbox)) throw new Error("That conversation belongs to another mailbox.");
 
-    // The reply leaves from the mailbox the mail arrived at, so the answer comes back to the desk that owns it.
-    const replyMailbox: "admin" | "registrations" = row.mailbox === "registrations" ? "registrations" : "admin";
-    const replyAddress = replyMailbox === "registrations" ? REGISTRATIONS_EMAIL : ADMIN_EMAIL;
+    // The reply leaves from the mailbox the mail arrived at, so the answer comes back to the desk that owns it. The
+    // mailbox is already one this person may read, and reading it is what grants answering it.
+    const replyMailbox = row.mailbox;
+    const replyAddress = INBOX_ADDRESS[row.mailbox];
 
     const base = row.subject.trim() || "(no subject)";
     const subject = /^(re|fwd?)\s*:/i.test(base) ? base : `Re: ${base}`;
