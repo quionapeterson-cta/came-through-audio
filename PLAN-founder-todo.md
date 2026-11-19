@@ -165,6 +165,12 @@ Publish in Lovable first, then test on the published site in the sandbox (card 4
 
 ## 9. Before launch
 The Cloudflare move is planned for the week of Dec 7, after beta ends on Dec 3, and must be done before Lovable Pro lapses on Dec 11. Step by step: [PLAN-cloudflare-hosting.md](https://github.com/quionapeterson-cta/came-through-audio/blob/main/PLAN-cloudflare-hosting.md).
+
+**Payment switches — flip both in the same sitting**
+- [ ] `.env.production`: replace the `pk_test_…` key with the `pk_live_…` publishable key, commit it, and let the site rebuild.
+- [ ] Supabase → SQL Editor: `insert into public.site_settings (id, content) values ('payments', '{"environment":"live"}') on conflict (id) do update set content = excluded.content;`
+- [ ] Check they agree before telling anyone you're live: if only one moved, checkout refuses before Stripe and names the mismatch. To return to tester mode, move both back (test key, `sandbox`).
+
 - [ ] Extend Lovable Pro one month (new lapse date Dec 11) so the beta can run on the current host.
 - [ ] Move hosting to Cloudflare: secrets (now including the 2 Cloudflare AI ones), Stripe webhook URLs, the 4 cron job URLs.
 - [ ] Point camethroughaudio.com at the site, then tell me so I switch every email and certificate link to it.
