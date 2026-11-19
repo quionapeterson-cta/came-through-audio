@@ -29,10 +29,11 @@ company mail is a super admin's or the owning department lead's), and its status
   That is the line that keeps them out of the bulk-mail category, and it is also what makes them worth approving rather
   than restricting further.
 
-## Split-sheet invite mail: the limits that apply
+## Invite mail: the limits that apply
 
-`src/lib/invite-limits.ts` holds the numbers; `src/lib/splits-email.functions.ts` and `src/lib/ipi-request.functions.ts`
-apply them before a send, counting from the server-side `invite_sends` table (never from the browser).
+`src/lib/invite-limits.ts` holds every number below; `src/lib/splits-email.functions.ts` and
+`src/lib/ipi-request.functions.ts` apply the split-sheet ones before a send, counting from the server-side `invite_sends`
+table (never from the browser).
 
 | Rule | Value | Constant |
 | --- | --- | --- |
@@ -43,11 +44,11 @@ apply them before a send, counting from the server-side `invite_sends` table (ne
 | Longest sender-typed text in an invite | 80 characters | `INVITE_TEXT_MAX` |
 | Links in an invite | Our own site address; a preview origin falls back to the published site | `trustedOrigin` |
 | A recipient who switched invites off | Never emailed | `invite_blocklist` |
+| Signing invitations one account may send in 24 hours | 50 | `CONTRACT_INVITE_DAILY_LIMIT` |
 
 Sender-typed text is also stripped of web addresses and email addresses (`cleanInviteText`), so an invite cannot be
-turned into a carrier for someone else's link. Contract-signing invitations are a separate path with their own
-50-a-day cap, and its number lives in the same file as the rest — `CONTRACT_INVITE_DAILY_LIMIT` in
-`src/lib/invite-limits.ts`, applied by `src/lib/contracts-email.functions.ts`.
+turned into a carrier for someone else's link. Contract-signing invitations are a separate path: their cap is the last
+row above, applied by `src/lib/contracts-email.functions.ts`.
 
 ## Signature / packet mail: the limits that apply
 
