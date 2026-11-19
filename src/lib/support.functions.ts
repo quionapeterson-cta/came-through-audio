@@ -4,6 +4,7 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { BILLING_EMAIL, emailLayout, escapeHtml, INFO_EMAIL, SUPPORT_EMAIL } from "./email-layout";
 import { sendMemberReplyNotice, sendTicketReceivedEmail, sendTicketReplyEmail } from "./support-emails";
 import { BILLING_AREA, TICKET_CATEGORIES } from "./support-topics";
+import { formatStaffDisplayName } from "./staff-display";
 import {
   TICKET_STATUSES,
   afterSendStatus,
@@ -192,7 +193,17 @@ export const replyToTicket = createServerFn({ method: "POST" })
     if (!check.ok) throw new Error(check.error);
 
     const claims = (context.claims ?? {}) as { name?: string; email?: string };
-    const authorName = (claims.name || claims.email || "Support").slice(0, 100);
+    // The founder signs as herself in the thread (founder, 2026-11-19), and no personal address is written down: the
+    // queue records who answered, while the member only ever sees the mailbox the reply came from.
+    const { data: roleRows } = await context.supabase
+      .from("user_roles")
+      .select("role")
+      .eq("user_id", context.userId);
+    const senderIsFounder = ((roleRows ?? []) as { role: string }[]).some((r) => r.role === "super_admin");
+    const authorName = formatStaffDisplayName(senderIsFounder ? "super_admin" : "employee", {
+      name: claims.name,
+      email: claims.email,
+    });
     const { data: inserted, error: insertError } = await context.supabase
       .from("support_ticket_messages").insert({
         ticket_id: ticket.id,

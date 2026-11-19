@@ -22,6 +22,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsContent } from "@/components/ui/tabs";
 import { getAdminOverview, getStaffRole } from "@/lib/admin.functions";
 import { ASSIGNABLE_DEPARTMENTS, DEPARTMENTS, DEPARTMENT_LABEL, ROLE_LABEL, viewDepartments, visibleTabs, type Department } from "@/lib/departments";
+import { formatStaffRoleLabel } from "@/lib/staff-display";
 import { canManagePdfTemplates } from "@/lib/pdf-templates";
 import { SupportTicketsPanel } from "@/components/SupportTicketsPanel";
 import { AdminInboxPanel } from "@/components/AdminInboxPanel";
@@ -198,7 +199,7 @@ function AdminPage() {
                 </SelectContent>
               </Select>
             )}
-            <Badge variant="outline" className="border-ink-border text-ink-foreground">{ROLE_LABEL[access.role]}</Badge>
+            <Badge variant="outline" className="border-ink-border text-ink-foreground">{formatStaffRoleLabel(access.role)}</Badge>
             {access.canManageStaff && (
               <Button asChild variant="ghost" className="text-ink-muted hover:bg-ink-border hover:text-ink-foreground">
                 <Link to="/admin/staff"><Users className="h-4 w-4" />Staff</Link>

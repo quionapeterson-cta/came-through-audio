@@ -21,6 +21,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { getStaffRole } from "@/lib/admin.functions";
 import { inviteStaff, listStaff, removeStaff, updateStaff, type StaffMember } from "@/lib/staff.functions";
 import { DEPARTMENTS, DEPARTMENT_LABEL, MANAGED_ROLES, ROLE_LABEL, type Department, type ManagedRole, ASSIGNABLE_DEPARTMENTS } from "@/lib/departments";
+import { formatStaffDisplayName, formatStaffRoleLabel } from "@/lib/staff-display";
 
 // Staff management. Sits under the root /unlock gate like every route; access is super_admin or hr_admin.
 export const Route = createFileRoute("/admin_/staff")({
@@ -87,7 +88,7 @@ function StaffPage() {
             </div>
           </div>
           <div className="flex items-center gap-3">
-            <Badge variant="outline" className="border-ink-border text-ink-foreground">{ROLE_LABEL[role.data.role]}</Badge>
+            <Badge variant="outline" className="border-ink-border text-ink-foreground">{formatStaffRoleLabel(role.data.role)}</Badge>
             <Button asChild variant="ghost" className="text-ink-muted hover:bg-ink-border hover:text-ink-foreground">
               <Link to="/admin"><ArrowLeft className="h-4 w-4" />Dashboard</Link>
             </Button>
@@ -115,8 +116,9 @@ function StaffPage() {
                 {data.members.map((m) => (
                   <tr key={m.userId} className="border-t border-border align-top">
                     <td className="px-4 py-3 font-medium">{m.email}{m.userId === data.me && <span className="text-muted-foreground"> (you)</span>}</td>
-                    <td className="px-4 py-3">{m.name ?? "—"}</td>
-                    <td className="px-4 py-3"><Badge variant="outline" className="border-primary text-primary">{ROLE_LABEL[m.role]}</Badge></td>
+                    {/* The founder reads as herself here too: her role says The Founder and her name reads Mrs. Peterson. */}
+                    <td className="px-4 py-3">{formatStaffDisplayName(m.role, { name: m.name, email: m.email })}</td>
+                    <td className="px-4 py-3"><Badge variant="outline" className="border-primary text-primary">{formatStaffRoleLabel(m.role)}</Badge></td>
                     <td className="px-4 py-3">
                       {m.role === "super_admin" ? <span className="text-muted-foreground">All departments</span> : (
                         <div className="flex flex-wrap gap-1">{m.departments.map((d) => <Badge key={d} variant="secondary">{DEPARTMENT_LABEL[d]}</Badge>)}</div>

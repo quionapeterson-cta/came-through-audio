@@ -171,7 +171,8 @@ export function visibleTabs(access: StaffAccess, view: Department | "all" = "all
   const inbox =
     access.role === "super_admin" ||
     access.departments.includes("registration") ||
-    access.departments.includes("marketing")
+    access.departments.includes("marketing") ||
+    access.departments.includes("billing")
       ? [{ value: "inbox", label: "Inbox" }]
       : [];
   return [...withTasks, ...inbox, ...holiday, ...company, ...plans];

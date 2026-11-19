@@ -5,7 +5,7 @@
  * Everything here is pure, so the wording rules and the status flow are testable without a database or a component.
  * The words staff send still live in `support-scripts.ts`; the policy behind them still lives in BILLING-POLICY.md.
  */
-import { BILLING_EMAIL, SUPPORT_EMAIL } from "./email-layout";
+import { BILLING_EMAIL, INFO_EMAIL, SUPPORT_EMAIL } from "./email-layout";
 
 /** `waiting` is new (founder, 2026-11-08): parked on the member, without pretending to be open or resolved. */
 export const TICKET_STATUSES = ["open", "in_progress", "waiting", "resolved"] as const;
@@ -56,6 +56,48 @@ export function inboxFor(category: string): string {
   return category.trim().toLowerCase().startsWith("account & billing") ? BILLING_EMAIL : SUPPORT_EMAIL;
 }
 
+/**
+ * The two channels one queue now serves (founder, 2026-11-19): a ticket opened through the site is `support`, and a
+ * message that arrived at info@ is `info`. The channel decides which address answers it, so it is never guessed from the
+ * category at send time.
+ */
+export const TICKET_CHANNELS = ["support", "info"] as const;
+export type TicketChannel = (typeof TICKET_CHANNELS)[number];
+
+/** The filter pills in the queue, in the order Support works them. */
+export const CHANNEL_FILTERS = [
+  { id: "support", label: "Support (support@)" },
+  { id: "info", label: "Public Info (info@)" },
+] as const;
+
+/** The short pill on a row or a header: INFO vs SUPPORT. */
+export const CHANNEL_BADGE: Record<TicketChannel, string> = { support: "SUPPORT", info: "INFO" };
+
+/** What a ticket's channel is, with every row written before the column existed reading as `support`. */
+export function channelOf(ticket: { channel?: string | null }): TicketChannel {
+  return ticket.channel === "info" ? "info" : "support";
+}
+
+/**
+ * The address a reply leaves from (founder, 2026-11-19): the thread's own channel. An info@ message is answered as
+ * info@, so the member's reply comes back to the public inquiry channel; a ticket keeps the Support/Billing box it had.
+ */
+export function outboundFor(ticket: { channel?: string | null; category: string }): {
+  address: string;
+  display: string;
+  replyTo: string;
+} {
+  if (channelOf(ticket) === "info") {
+    return { address: INFO_EMAIL, display: "Came Through Audio", replyTo: INFO_EMAIL };
+  }
+  const address = inboxFor(ticket.category);
+  return {
+    address,
+    display: `Came Through Audio ${address === BILLING_EMAIL ? "Billing" : "Support"}`,
+    replyTo: address,
+  };
+}
+
 export type TicketRecord = {
   id: string;
   user_id: string | null;
@@ -70,6 +112,12 @@ export type TicketRecord = {
   updated_at: string;
   first_reply_at?: string | null;
   member_read_at?: string | null;
+  /** `support` for a ticket opened on the site, `info` for a message that arrived at info@ (founder, 2026-11-19). */
+  channel?: string | null;
+  /** Set when Support handed the thread to a team: the queue filters and the escalation panel read these. */
+  escalated_marketing?: boolean | null;
+  escalated_founder?: boolean | null;
+  source_message_id?: string | null;
 };
 
 export type ThreadMessage = {

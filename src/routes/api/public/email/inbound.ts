@@ -3,7 +3,8 @@ import { createClient } from "@supabase/supabase-js";
 import { z } from "zod";
 import { isInviteAgency, readAgencyEmail } from "@/lib/agency-invites";
 import { threadSubjectKey } from "@/lib/inbox-attachments";
-import { INBOX_MAILBOXES, type InboxMailbox } from "@/lib/inbox-mailboxes";
+import { INBOUND_MAILBOXES, type InboundMailbox, type InboxMailbox } from "@/lib/inbox-mailboxes";
+import { storeInfoEmail } from "@/lib/support-intake";
 
 /**
  * The Admin Inbox receiver (founder, 2026-11-17): a Cloudflare Email Worker on the admin@ and contracts@ routes posts
@@ -23,7 +24,7 @@ function db() {
 
 const payloadSchema = z.object({
   /** Optional: when it is left out the mailbox is read from the recipient address. */
-  mailbox: z.enum([...INBOX_MAILBOXES] as [InboxMailbox, ...InboxMailbox[]]).optional(),
+  mailbox: z.enum([...INBOUND_MAILBOXES] as [InboundMailbox, ...InboundMailbox[]]).optional(),
   from: z.string().trim().min(3).max(320),
   fromName: z.string().trim().max(200).optional(),
   to: z.union([z.string(), z.array(z.string())]).optional(),
@@ -101,11 +102,11 @@ function addressList(value: string | string[] | undefined): string[] {
     .slice(0, 50);
 }
 
-function mailboxFor(given: InboxMailbox | undefined, recipients: string[]): InboxMailbox {
+function mailboxFor(given: InboundMailbox | undefined, recipients: string[]): InboundMailbox {
   if (given) return given;
   for (const address of recipients) {
     const local = address.split("@")[0] ?? "";
-    const match = INBOX_MAILBOXES.find((mailbox) => mailbox === local);
+    const match = INBOUND_MAILBOXES.find((mailbox) => mailbox === local);
     if (match) return match;
   }
   return "admin";
@@ -190,7 +191,7 @@ export const Route = createFileRoute("/api/public/email/inbound")({
         if (!from.email.includes("@")) return new Response("Invalid sender", { status: 400 });
 
         const recipients = addressList(input.to);
-        const mailbox = mailboxFor(input.mailbox, recipients);
+        const channel = mailboxFor(input.mailbox, recipients);
         const subject = input.subject.trim();
         const subjectKey = threadSubjectKey(subject);
         const receivedAt = isoOrNow(input.receivedAt);
@@ -205,6 +206,22 @@ export const Route = createFileRoute("/api/public/email/inbound")({
           .slice(0, 20);
         const fromName = input.fromName?.trim() || from.name;
         const supabase = db();
+
+        // info@ is the public general-inquiry channel (founder, 2026-11-19): it opens a Support ticket instead of an
+        // inbox thread, so Support answers it from the queue it already works and the support@ path is untouched.
+        if (channel === "info") {
+          const stored = await storeInfoEmail(supabase, {
+            from: from.email,
+            fromName: fromName ?? undefined,
+            subject,
+            text: input.text,
+            html: input.html,
+            messageId,
+            receivedAt,
+          });
+          return Response.json(stored);
+        }
+        const mailbox: InboxMailbox = channel;
 
         // The same mail twice (a worker retry) is one row, and answers with the thread it already opened.
         if (messageId) {

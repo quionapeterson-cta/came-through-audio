@@ -7,7 +7,15 @@
  */
 import { resendKey } from "./collab-trial.server";
 import { BILLING_EMAIL, emailLayout, escapeHtml, INFO_EMAIL, SITE_URL, SUPPORT_EMAIL } from "./email-layout";
-import { inboxFor, replyParagraphs, replySubject, ticketLink, type TicketRecord } from "./support-replies";
+import {
+  channelOf,
+  inboxFor,
+  outboundFor,
+  replyParagraphs,
+  replySubject,
+  ticketLink,
+  type TicketRecord,
+} from "./support-replies";
 
 export type ReplyEmailResult = { emailed: boolean; reason?: string };
 
@@ -71,14 +79,22 @@ export async function sendTicketReplyEmail(
 ): Promise<ReplyEmailResult> {
   const key = resendKey();
   if (!key) return { emailed: false, reason: "no-key" };
-  const inbox = inboxFor(ticket.category);
+  // The thread's own channel owns the address (founder, 2026-11-19): an info@ message is answered as info@, so the
+  // member's next email comes back to the public inquiry channel rather than to support@.
+  const outbound = outboundFor(ticket);
   const html = emailLayout(
-    `<p style="font-size:12px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:#004AAD;margin:0">Your support ticket</p>
+    `<p style="font-size:12px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:#004AAD;margin:0">${channelOf(ticket) === "info" ? "Your message to Came Through Audio" : "Your support ticket"}</p>
 <h1 style="font-size:22px;margin:8px 0 16px">${escapeHtml(ticket.subject)}</h1>
 ${replyParagraphs(body, escapeHtml)}
 <p style="margin:24px 0"><a href="${ticketLink(SITE_URL, ticket.id)}" style="background:#004AAD;color:#ffffff;text-decoration:none;font-weight:700;padding:12px 22px;border-radius:8px;display:inline-block">Open your ticket and reply</a></p>
 <p style="font-size:13px;line-height:1.6;color:#666">Replying to this email also lands on the same ticket. The button opens it in your workspace with the message box ready, so you never have to look for it.</p>`,
-    { hideAddress: true, reason: "You're receiving this because you opened a support ticket with Came Through Audio." },
+    {
+      hideAddress: true,
+      reason:
+        channelOf(ticket) === "info"
+          ? "You're receiving this because you wrote to Came Through Audio's general inquiry address."
+          : "You're receiving this because you opened a support ticket with Came Through Audio.",
+    },
   );
   try {
     const res = await fetch("https://api.resend.com/emails", {
@@ -90,9 +106,9 @@ ${replyParagraphs(body, escapeHtml)}
         "Idempotency-Key": `ticket-reply-${messageId}`,
       },
       body: JSON.stringify({
-        from: `Came Through Audio ${inbox === BILLING_EMAIL ? "Billing" : "Support"} <${inbox}>`,
+        from: `${outbound.display} <${outbound.address}>`,
         to: [ticket.email],
-        reply_to: inbox,
+        reply_to: outbound.replyTo,
         subject: replySubject(ticket),
         html,
       }),

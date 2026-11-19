@@ -5,13 +5,17 @@
  * one list the Worker's receiver, the panel's filters and the server's checks all agree on.
  *
  * Who reads what:
- *   - a super admin reads every mailbox, including admin@ and contracts@;
+ *   - a super admin ("The Founder") reads every mailbox;
  *   - the registration desk reads registrations@ only;
- *   - the marketing team reads marketing@, partners@, info@ and collaborate@, the four addresses it answers as.
+ *   - the marketing team reads marketing@, partners@ and collaborate@;
+ *   - the billing team reads billing@, and a super admin beside them.
  *
- * The marketing four are granted to the department, not to one person's row, which is how every other department tab in
- * this dashboard decides (departments.ts). Nobody else is granted anything here, and the server re-checks before it reads
- * a row, so hiding a filter in the browser is never the rule.
+ * info@ is not an inbox mailbox: it is the public general-inquiry channel and lands in the Support queue instead (see
+ * `support-intake.ts`), so it is named in `INBOUND_MAILBOXES` for the Worker and the receiver but never here.
+ *
+ * The teams are granted to the department, not to one person's row, which is how every other department tab in this
+ * dashboard decides (departments.ts). Nobody else is granted anything, and the server re-checks before it reads a row, so
+ * hiding a filter in the browser is never the rule.
  *
  * Client-safe: no server-only import may be added to this module, because the panel imports it too.
  */
@@ -20,42 +24,54 @@ import type { StaffAccess } from "./departments";
 export const INBOX_MAILBOXES = [
   "admin",
   "contracts",
+  "security",
+  "legal",
+  "billing",
   "registrations",
   "marketing",
   "partners",
-  "info",
   "collaborate",
 ] as const;
 
 export type InboxMailbox = (typeof INBOX_MAILBOXES)[number];
 
+/** What Cloudflare may deliver: the inbox mailboxes plus info@, which becomes a Support ticket. */
+export const INBOUND_MAILBOXES = [...INBOX_MAILBOXES, "info"] as const;
+export type InboundMailbox = (typeof INBOUND_MAILBOXES)[number];
+
 /** The address behind a mailbox name. The panel says it and the reply is sent from it, so it is written once. */
-export const INBOX_ADDRESS: Record<InboxMailbox, string> = {
+export const INBOX_ADDRESS: Record<InboundMailbox, string> = {
   admin: "admin@camethroughaudio.com",
   contracts: "contracts@camethroughaudio.com",
+  security: "security@camethroughaudio.com",
+  legal: "legal@camethroughaudio.com",
+  billing: "billing@camethroughaudio.com",
   registrations: "registrations@camethroughaudio.com",
   marketing: "marketing@camethroughaudio.com",
   partners: "partners@camethroughaudio.com",
-  info: "info@camethroughaudio.com",
   collaborate: "collaborate@camethroughaudio.com",
+  info: "info@camethroughaudio.com",
 };
 
 /** How a mailbox reads on a chip or a badge: the address with the domain trimmed. */
-export const INBOX_LABEL: Record<InboxMailbox, string> = {
+export const INBOX_LABEL: Record<InboundMailbox, string> = {
   admin: "admin@",
   contracts: "contracts@",
+  security: "security@",
+  legal: "legal@",
+  billing: "billing@",
   registrations: "registrations@",
   marketing: "marketing@",
   partners: "partners@",
-  info: "info@",
   collaborate: "collaborate@",
+  info: "info@",
 };
 
-/**
- * The four addresses the marketing team sends and receives as (founder, 2026-11-19). A super admin may use them too, and
- * nobody else may use any of them.
- */
-export const MARKETING_MAILBOXES = ["marketing", "partners", "info", "collaborate"] as const satisfies readonly InboxMailbox[];
+/** The three addresses the marketing team sends and receives as (founder, 2026-11-19). info@ went to Support. */
+export const MARKETING_MAILBOXES = ["marketing", "partners", "collaborate"] as const satisfies readonly InboxMailbox[];
+
+/** The billing team's mailbox: billing@ and a super admin read and answer it. */
+export const BILLING_MAILBOXES = ["billing"] as const satisfies readonly InboxMailbox[];
 
 /** The mailboxes this staff member may read and answer, in the order the inbox lists them. Empty means no inbox at all. */
 export function mailboxesFor(access: StaffAccess | null | undefined): InboxMailbox[] {
@@ -65,6 +81,9 @@ export function mailboxesFor(access: StaffAccess | null | undefined): InboxMailb
   if (access.departments.includes("registration")) granted.add("registrations");
   if (access.departments.includes("marketing")) {
     for (const mailbox of MARKETING_MAILBOXES) granted.add(mailbox);
+  }
+  if (access.departments.includes("billing")) {
+    for (const mailbox of BILLING_MAILBOXES) granted.add(mailbox);
   }
   return INBOX_MAILBOXES.filter((mailbox) => granted.has(mailbox));
 }

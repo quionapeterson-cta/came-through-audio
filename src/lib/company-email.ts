@@ -38,16 +38,17 @@ export type CompanyMailbox = keyof typeof COMPANY_MAILBOXES;
 /**
  * Which addresses this person may write a new letter from (founder, 2026-11-19).
  *
- * A super admin picks from every mailbox we own. The marketing team sends as the four addresses it answers as
- * (marketing@, partners@, info@, collaborate@) and no others, which is what keeps the company's own admin@ and
- * contracts@ correspondence with a super admin. Everyone else keeps the boxes their work already answers: support@,
- * legal@, billing@ and partnerships@. The server checks this same list before it sends, so the picker is not the rule.
+ * A super admin picks from every mailbox we own. The marketing team sends as the three addresses it answers as
+ * (marketing@, partners@, collaborate@) and no others; Support writes as support@ and, for a public inquiry it is
+ * handling, info@ (founder, 2026-11-19). Everyone else keeps the boxes their work already answers: legal@, billing@ and
+ * partnerships@. The server checks this same list before it sends, so the picker is not the rule.
  */
 export function companyMailboxesFor(access: StaffAccess | null | undefined): CompanyMailbox[] {
   if (!access) return [];
   if (access.role === "super_admin") return Object.keys(COMPANY_MAILBOXES) as CompanyMailbox[];
-  if (access.departments.includes("marketing")) return ["marketing", "partners", "info", "collaborate"];
-  return ["support", "legal", "billing", "partnerships"];
+  if (access.departments.includes("support")) return ["support", "info"];
+  if (access.departments.includes("marketing")) return ["marketing", "partners", "collaborate"];
+  return ["legal", "billing", "partnerships"];
 }
 
 /** A handful of real letters a day, not a mailing list. */

@@ -39,6 +39,10 @@ interface Env {
   FORWARD_TO_PARTNERS?: string;
   FORWARD_TO_INFO?: string;
   FORWARD_TO_COLLABORATE?: string;
+  /** The super admin's own boxes (founder, 2026-11-19): security@ and legal@ keep their Gmail copies too. */
+  FORWARD_TO_SECURITY?: string;
+  FORWARD_TO_LEGAL?: string;
+  FORWARD_TO_BILLING?: string;
 }
 
 /** The receiver's own limits, so an oversized mail is trimmed rather than refused as a 400 and retried forever. */
@@ -67,7 +71,18 @@ type KeptFile = {
  * Every mailbox Cloudflare sends here (founder, 2026-11-19): the company's own, the registration desk's, and the four the
  * marketing team answers as. The app's receiver accepts exactly this list, so the two must move together.
  */
-const MAILBOXES = ["admin", "contracts", "registrations", "marketing", "partners", "info", "collaborate"] as const;
+const MAILBOXES = [
+  "admin",
+  "contracts",
+  "security",
+  "legal",
+  "billing",
+  "registrations",
+  "marketing",
+  "partners",
+  "collaborate",
+  "info",
+] as const;
 type Mailbox = (typeof MAILBOXES)[number];
 
 /** Which mailbox the route delivered to. Anything else means the Cloudflare route is wrong. */
@@ -92,6 +107,9 @@ function forwardOf(env: Env, mailbox: Mailbox): string | undefined {
     partners: env.FORWARD_TO_PARTNERS,
     info: env.FORWARD_TO_INFO,
     collaborate: env.FORWARD_TO_COLLABORATE,
+    security: env.FORWARD_TO_SECURITY,
+    legal: env.FORWARD_TO_LEGAL,
+    billing: env.FORWARD_TO_BILLING,
   }[mailbox];
   const target = own?.trim() || env.FORWARD_TO?.trim();
   return target ? target : undefined;

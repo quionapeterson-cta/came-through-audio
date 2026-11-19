@@ -11,11 +11,21 @@ import { BADGES, COLLECTIONS } from "@/lib/badges";
 import { grantBadgeForTicket } from "@/lib/badges.functions";
 import { listTicketThread, replyToTicket, updateTicketStatus, TICKET_STATUSES } from "@/lib/support.functions";
 import {
+  escalateTicket,
+  listTicketEscalations,
+  listTicketViewers,
+  markTicketViewing,
+} from "@/lib/support-escalation.functions";
+import { INFO_QUICK_REPLIES, fillQuickReply } from "@/lib/support-quick-replies";
+import {
   AFTER_SEND,
+  CHANNEL_BADGE,
   TICKET_STATUS_LABEL,
   canSendReply,
+  channelOf,
   draftGaps,
   isClosed,
+  outboundFor,
   type AfterSend,
   type ThreadMessage,
   type TicketRecord,
@@ -196,7 +206,16 @@ function ReplyBox({ ticket, onSent, insertion }: {
   return (
     <div className={`rounded-xl border p-3 ${internal ? "border-destructive/50 bg-destructive/5" : "border-border bg-card"}`}>
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <p className="text-sm font-semibold">{internal ? "Internal note" : `Reply to ${ticket.name.split(/\s+/)[0] || "the member"}`}</p>
+        <p className="text-sm font-semibold">
+          {internal
+            ? "Internal note"
+            : `Reply to ${ticket.name.split(/\s+/)[0] || "the member"}`}
+          {!internal ? (
+            <span className="ml-2 text-xs font-normal text-muted-foreground">
+              from {outboundFor(ticket).address}
+            </span>
+          ) : null}
+        </p>
         <label className="flex cursor-pointer items-center gap-2 text-xs font-semibold text-muted-foreground">
           <input type="checkbox" checked={internal} onChange={(e) => setInternal(e.target.checked)} className="h-4 w-4" />
           Internal note (never sent)
@@ -214,6 +233,29 @@ function ReplyBox({ ticket, onSent, insertion }: {
             ))}
             <Button size="sm" variant="outline" onClick={() => { setBody((b) => fillScript(b, fills)); setFills({}); }}>Fill in</Button>
           </div>
+        </div>
+      ) : null}
+      {channelOf(ticket) === "info" && !internal ? (
+        <div className="mt-2 flex flex-wrap items-center gap-2">
+          <label htmlFor={`quick-${ticket.id}`} className="text-xs font-semibold text-muted-foreground">
+            Quick reply
+          </label>
+          <select
+            id={`quick-${ticket.id}`}
+            value=""
+            onChange={(e) => {
+              const found = INFO_QUICK_REPLIES.find((q) => q.id === e.target.value);
+              if (!found) return;
+              setBody(fillQuickReply(found.body, ticket.name.split(/\s+/)[0] || ""));
+            }}
+            className="h-9 rounded-md border border-input bg-background px-2 text-sm"
+          >
+            <option value="">Choose a starter…</option>
+            {INFO_QUICK_REPLIES.map((q) => (
+              <option key={q.id} value={q.id}>{q.label}</option>
+            ))}
+          </select>
+          <span className="text-xs text-muted-foreground">A starter, not a script — edit it for them.</span>
         </div>
       ) : null}
       <label htmlFor={`reply-${ticket.id}`} className="sr-only">Your reply</label>
@@ -243,6 +285,111 @@ function ReplyBox({ ticket, onSent, insertion }: {
 }
 
 /**
+ * Escalate & tag (founder, 2026-11-19): a public inquiry Support can't answer is handed to Marketing, The Founder, or
+ * both, with one internal note. The note is a whisper on the thread; the tags are what the queue filters read.
+ */
+function EscalatePanel({ ticket, onDone }: { ticket: TicketRecord; onDone: () => void }) {
+  const escalate = useServerFn(escalateTicket);
+  const list = useServerFn(listTicketEscalations);
+  const qc = useQueryClient();
+  const [marketing, setMarketing] = useState(!!ticket.escalated_marketing);
+  const [founder, setFounder] = useState(!!ticket.escalated_founder);
+  const [note, setNote] = useState("");
+  const [busy, setBusy] = useState(false);
+  const history = useQuery({
+    queryKey: ["ticket-escalations", ticket.id],
+    queryFn: () => list({ data: { ticketId: ticket.id } }),
+  });
+
+  async function hand() {
+    setBusy(true);
+    try {
+      const r = await escalate({ data: { ticketId: ticket.id, marketing, founder, note } });
+      toast.success(
+        `Handed to ${r.tags.map((tag) => (tag === "marketing" ? "Marketing" : "The Founder")).join(" & ")}. It's in their view now.`,
+      );
+      setNote("");
+      await Promise.all([
+        qc.invalidateQueries({ queryKey: ["ticket-escalations", ticket.id] }),
+        qc.invalidateQueries({ queryKey: ["support-tickets"] }),
+      ]);
+      onDone();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Couldn't escalate the thread.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="rounded-xl border border-border bg-card p-3">
+      <p className="text-sm font-semibold">Escalate &amp; tag</p>
+      <p className="mt-1 text-xs text-muted-foreground">
+        For a public inquiry you can't answer. The note stays internal — the member never sees it.
+      </p>
+      <div className="mt-2 space-y-1">
+        <label className="flex items-start gap-2 text-sm">
+          <input
+            type="checkbox"
+            checked={marketing}
+            onChange={(e) => setMarketing(e.target.checked)}
+            className="mt-0.5 h-4 w-4"
+          />
+          <span>
+            <span className="font-semibold">Marketing</span>
+            <span className="block text-xs text-muted-foreground">Press, partnerships, collaborations, brand</span>
+          </span>
+        </label>
+        <label className="flex items-start gap-2 text-sm">
+          <input
+            type="checkbox"
+            checked={founder}
+            onChange={(e) => setFounder(e.target.checked)}
+            className="mt-0.5 h-4 w-4"
+          />
+          <span>
+            <span className="font-semibold">The Founder</span>
+            <span className="block text-xs text-muted-foreground">Executive decisions, VIP or high-level deals</span>
+          </span>
+        </label>
+      </div>
+      <label htmlFor={`escalate-note-${ticket.id}`} className="mt-2 block text-xs font-semibold text-muted-foreground">
+        Internal handoff note
+      </label>
+      <Textarea
+        id={`escalate-note-${ticket.id}`}
+        rows={3}
+        value={note}
+        onChange={(e) => setNote(e.target.value)}
+        maxLength={2000}
+        placeholder="What they need to know to answer this."
+        className="mt-1"
+      />
+      <Button
+        size="sm"
+        className="mt-2 w-full"
+        disabled={busy || (!marketing && !founder) || note.trim().length < 5}
+        onClick={() => void hand()}
+      >
+        {busy ? "Handing over…" : "Escalate"}
+      </Button>
+      {history.data?.length ? (
+        <ul className="mt-3 space-y-1 border-t border-border pt-2">
+          {history.data.map((h) => (
+            <li key={h.id} className="text-xs text-muted-foreground">
+              <span className="font-semibold text-foreground">
+                {h.tag === "marketing" ? "Marketing" : "The Founder"}
+              </span>{" "}
+              · {h.byName} · {when(h.createdAt)}
+            </li>
+          ))}
+        </ul>
+      ) : null}
+    </div>
+  );
+}
+
+/**
  * One ticket, opened: the conversation, the message box, and the scripts rail to its right (founder, 2026-11-08).
  * Everything the ticket needs is on this screen; the badge unlock and the address sit under Actions so they stop
  * stacking above the reply.
@@ -253,6 +400,24 @@ export function SupportTicketDetail({ ticket, onClose }: { ticket: TicketRecord;
   const qc = useQueryClient();
   const q = useQuery({ queryKey: ["ticket-thread", ticket.id], queryFn: () => fetchThread({ data: { ticketId: ticket.id } }) });
   const messages = q.data?.messages ?? [];
+
+  // "Viewing: Mrs. Peterson" (founder, 2026-11-19): this window claims the thread while it is open, and shows whoever
+  // else is in it. The claim expires on its own, so a closed tab never leaves a name behind.
+  const markViewing = useServerFn(markTicketViewing);
+  const fetchViewers = useServerFn(listTicketViewers);
+  useEffect(() => {
+    const ping = () => {
+      void markViewing({ data: { ticketId: ticket.id } }).catch(() => {});
+    };
+    ping();
+    const id = window.setInterval(ping, 45000);
+    return () => window.clearInterval(id);
+  }, [ticket.id]);
+  const viewing = useQuery({
+    queryKey: ["ticket-viewers", ticket.id],
+    queryFn: () => fetchViewers({ data: { ticketId: ticket.id } }),
+    refetchInterval: 20000,
+  });
   const refresh = () => {
     void qc.invalidateQueries({ queryKey: ["ticket-thread", ticket.id] });
     void qc.invalidateQueries({ queryKey: ["support-tickets"] });
@@ -268,8 +433,13 @@ export function SupportTicketDetail({ ticket, onClose }: { ticket: TicketRecord;
     <div className="space-y-3">
       <div className="flex flex-wrap items-center gap-2">
         <Button size="sm" variant="ghost" onClick={onClose}><ArrowLeft className="h-4 w-4" />All tickets</Button>
-        <div className="ml-auto flex flex-wrap items-center gap-2">
-          <label htmlFor={`status-${ticket.id}`} className="text-xs font-semibold text-muted-foreground">Status</label>
+                  <div className="ml-auto flex flex-wrap items-center gap-2">
+            {viewing.data?.length ? (
+              <Badge variant="outline" title="Another staff member has this thread open">
+                Viewing: {viewing.data.map((v) => v.name).join(", ")}
+              </Badge>
+            ) : null}
+            <label htmlFor={`status-${ticket.id}`} className="text-xs font-semibold text-muted-foreground">Status</label>
           <select id={`status-${ticket.id}`} value={ticket.status} className="h-9 rounded-md border border-input bg-background px-2 text-sm"
             onChange={async (e) => {
               try {
@@ -303,6 +473,15 @@ export function SupportTicketDetail({ ticket, onClose }: { ticket: TicketRecord;
                 </p>
               </div>
               <div className="flex flex-wrap gap-2">
+                <Badge
+                  variant="outline"
+                  className={channelOf(ticket) === "info" ? "border-primary text-primary" : ""}
+                  title={`Came in on ${outboundFor(ticket).address}`}
+                >
+                  {CHANNEL_BADGE[channelOf(ticket)]}
+                </Badge>
+                {ticket.escalated_marketing ? <Badge variant="outline">Marketing</Badge> : null}
+                {ticket.escalated_founder ? <Badge variant="outline">The Founder</Badge> : null}
                 <Badge variant="outline">{ticket.kind === "support" ? "Support" : "Contact"}</Badge>
                 <Badge className={isClosed(ticket) ? "" : "bg-primary text-primary-foreground"}>{TICKET_STATUS_LABEL[ticket.status as keyof typeof TICKET_STATUS_LABEL] ?? ticket.status}</Badge>
               </div>
@@ -322,6 +501,7 @@ export function SupportTicketDetail({ ticket, onClose }: { ticket: TicketRecord;
         </div>
 
         <div className="space-y-3">
+          {channelOf(ticket) === "info" ? <EscalatePanel ticket={ticket} onDone={refresh} /> : null}
           <ScriptRail ticket={ticket} onInsert={insert} />
           <details className="rounded-xl border border-border bg-card p-3">
             <summary className="cursor-pointer text-sm font-semibold">Unlock a badge</summary>

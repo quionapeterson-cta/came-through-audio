@@ -6,7 +6,34 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { SupportTicketDetail } from "@/components/SupportTicketDetail";
 import { listTickets } from "@/lib/support.functions";
-import { TICKET_STATUSES, TICKET_STATUS_LABEL, type TicketRecord } from "@/lib/support-replies";
+import {
+  CHANNEL_BADGE,
+  CHANNEL_FILTERS,
+  TICKET_STATUSES,
+  TICKET_STATUS_LABEL,
+  channelOf,
+  type TicketRecord,
+} from "@/lib/support-replies";
+
+/**
+ * The channel filters (founder, 2026-11-19): one queue now takes both the site's tickets and the public info@ mail, and
+ * the two escalations get their own view so Marketing and the founder can work what was handed to them.
+ */
+type ChannelFilter = "all" | "support" | "info" | "marketing" | "founder";
+const CHANNEL_PILLS: { id: ChannelFilter; label: string }[] = [
+  { id: "all", label: "All Support" },
+  ...CHANNEL_FILTERS.map((c) => ({ id: c.id as ChannelFilter, label: c.label })),
+  { id: "marketing", label: "Escalated: Marketing" },
+  { id: "founder", label: "Escalated: The Founder" },
+];
+
+/** A row matches one channel pill: its channel, or the team it was handed to. */
+function matchesChannel(ticket: TicketRecord, filter: ChannelFilter): boolean {
+  if (filter === "all") return true;
+  if (filter === "marketing") return !!ticket.escalated_marketing;
+  if (filter === "founder") return !!ticket.escalated_founder;
+  return channelOf(ticket) === filter;
+}
 
 /**
  * Admin → Support Tickets (founder, 2026-11-05; native replies 2026-11-08): the queue, and the ticket opened as a
@@ -15,6 +42,7 @@ import { TICKET_STATUSES, TICKET_STATUS_LABEL, type TicketRecord } from "@/lib/s
 export function SupportTicketsPanel({ scope = "all" }: { scope?: "all" | "billing" }) {
   const fetchTickets = useServerFn(listTickets);
   const [filter, setFilter] = useState<string>("all");
+  const [channelFilter, setChannelFilter] = useState<ChannelFilter>("all");
   const [query, setQuery] = useState("");
   const [openId, setOpenId] = useState<string | null>(null);
   const q = useQuery({ queryKey: ["support-tickets"], queryFn: () => fetchTickets() });
@@ -24,10 +52,11 @@ export function SupportTicketsPanel({ scope = "all" }: { scope?: "all" | "billin
     const term = query.trim().toLowerCase();
     return all.filter((t) => {
       if (filter !== "all" && t.status !== filter) return false;
+      if (!matchesChannel(t, channelFilter)) return false;
       if (!term) return true;
       return `${t.subject} ${t.name} ${t.email} ${t.category}`.toLowerCase().includes(term);
     });
-  }, [all, filter, query]);
+  }, [all, filter, channelFilter, query]);
 
   const open = all.find((t) => t.id === openId) ?? null;
 
@@ -61,6 +90,14 @@ export function SupportTicketsPanel({ scope = "all" }: { scope?: "all" | "billin
           : "Every ticket from the site. Billing answers the Account & billing ones in its own tab; answer the rest from here."}
       </p>
       <div className="flex flex-wrap items-center gap-2">
+        {CHANNEL_PILLS.map((c) => (
+          <button key={c.id} onClick={() => setChannelFilter(c.id)}
+            className={`rounded-full border px-3 py-1 text-sm font-semibold ${channelFilter === c.id ? "border-primary bg-primary text-primary-foreground" : "border-border"}`}>
+            {c.label} ({all.filter((t) => matchesChannel(t, c.id)).length})
+          </button>
+        ))}
+      </div>
+      <div className="flex flex-wrap items-center gap-2">
         {(["all", ...TICKET_STATUSES] as const).map((s) => (
           <button key={s} onClick={() => setFilter(s)}
             className={`rounded-full border px-3 py-1 text-sm font-semibold ${filter === s ? "border-primary bg-primary text-primary-foreground" : "border-border"}`}>
@@ -81,6 +118,15 @@ export function SupportTicketsPanel({ scope = "all" }: { scope?: "all" | "billin
               <span className="block text-sm text-muted-foreground">{t.name} · {t.email} · {new Date(t.created_at).toLocaleString()}</span>
             </span>
             <span className="flex flex-wrap items-center gap-2">
+              {/* The channel a row came in on, before anything else about it (founder, 2026-11-19). */}
+              <Badge
+                variant="outline"
+                className={channelOf(t) === "info" ? "border-primary text-primary" : ""}
+              >
+                {CHANNEL_BADGE[channelOf(t)]}
+              </Badge>
+              {t.escalated_marketing ? <Badge variant="outline">Marketing</Badge> : null}
+              {t.escalated_founder ? <Badge variant="outline">The Founder</Badge> : null}
               <Badge variant="outline">{t.kind === "support" ? "Support" : "Contact"}</Badge>
               <Badge variant="outline">{t.category}</Badge>
               <Badge className={t.status === "resolved" ? "" : "bg-primary text-primary-foreground"}>
