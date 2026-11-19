@@ -69,11 +69,20 @@ cannot slip through:
 If a daily cap for packet mail is ever wanted, it belongs in `sendPacket` beside the other caps, and its number needs
 founder approval before it is written — no cap is invented to satisfy a scanner.
 
-## Related limits, recorded elsewhere
+## Neighbouring caps, under the same rule
 
-Company correspondence has its own pair of caps — 25 a day company-wide and 25 a day per sending account — in
-`src/lib/company-email.ts` and `AGENTS.md` ("Company Mail: Who Sends, Who Reads"). Outreach mail is capped separately at
-50 a day in `src/lib/outreach-emails.ts`.
+Company correspondence and outreach have their own caps. They are listed here because a raise in one of them is a change
+to what this sign-off rests on, and a constant that leaves this table fails `src/lib/security-findings.test.ts`.
+
+| Rule | Value | Constant | Where |
+| --- | --- | --- | --- |
+| Company letters, company-wide, 24 hours | 25 | `COMPANY_MAIL_DAILY_LIMIT` | `src/lib/company-email.ts` |
+| Company letters from one account, 24 hours | 25 — deliberately the same figure | `COMPANY_MAIL_SENDER_DAILY_LIMIT` | `src/lib/company-email.ts` |
+| Outreach letters, 24 hours | 50 | `OUTREACH_DAILY_LIMIT` | `src/lib/outreach-emails.ts` |
+
+The company pair is counted over `outreach_emails` where `kind = 'company'`, company-wide and then per sender, both
+before the send; the outreach cap counts the table's sends in the last 24 hours. Who may write either kind, and the
+mailbox each letter records, live in `AGENTS.md` ("Company Mail: Who Sends, Who Reads").
 
 ## What would void this sign-off
 
