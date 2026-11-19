@@ -12,7 +12,7 @@ Source: founder testing notes, 2026-10-19.
 - The song title, artist and collaborator name are typed by the sender and go into the subject and body. A spammer could put "Claim your prize at…" in the title and send it to a stranger, using our domain.
 
 ### Fix
-1. **Log every send** in a new `invite_sends` table (sender, row, recipient, time), written by the server. The daily cap counts real sends.
+1. **Log every send** in a new `invite_sends` table (sender, row, recipient, time), written by the server. The daily cap counts real sends — 6 a day per account (founder, 2026-11-19: lowered from 25).
 2. **Per row: at most 3 sends, with no wait between them** (founder, 2026-11-19: the 24-hour gap is gone; once the
    three are spent the sender is told to start a new split sheet).
 3. **Per recipient: at most 6 invites a day from all senders combined** (founder, 2026-11-19: raised from 3).

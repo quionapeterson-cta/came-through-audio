@@ -1,7 +1,10 @@
 /** Invite email limits and text cleanup. Pure, so the rules are tested; the server functions apply them. */
 
-/** Invite emails one account may send in 24 hours (an album's worth of co-writers). Support can raise it. */
-export const DAILY_INVITE_LIMIT = 25;
+/**
+ * Invite emails one account may send in 24 hours (founder, 2026-11-19: lowered from 25 — a day's co-writers for one
+ * album is a handful, not a mailing list). Support can raise it.
+ */
+export const DAILY_INVITE_LIMIT = 6;
 /** Signing invitations one account may send in 24 hours, so nobody can blast them to farm free trial accounts. */
 export const CONTRACT_INVITE_DAILY_LIMIT = 50;
 /** Emails per split row, in total. A resend can go straight away; the three spent means a new split sheet. */

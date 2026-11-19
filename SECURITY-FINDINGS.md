@@ -37,7 +37,7 @@ table (never from the browser).
 
 | Rule | Value | Constant |
 | --- | --- | --- |
-| Invites one account may send in 24 hours | 25 | `DAILY_INVITE_LIMIT` |
+| Invites one account may send in 24 hours | 6 | `DAILY_INVITE_LIMIT` |
 | Emails per invite (a split row, or a co-writer request), in total | 3 | `ROW_SEND_LIMIT` |
 | Invites one address may get in 24 hours, from all senders combined | 6 | `RECIPIENT_DAILY_LIMIT` |
 | Longest sender-typed text in an invite | 80 characters | `INVITE_TEXT_MAX` |

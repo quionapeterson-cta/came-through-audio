@@ -22,7 +22,10 @@ describe("cleanInviteText", () => {
 describe("inviteBlockReason", () => {
   it("allows a first send", () => expect(inviteBlockReason(ok)).toBeNull());
   it("refuses blocked recipients", () => expect(inviteBlockReason({ ...ok, blocked: true })).toMatch(/turned off/));
-  it("caps the sender at 25 a day", () => expect(inviteBlockReason({ ...ok, senderToday: 25 })).toMatch(/limit of 25/));
+  it("caps the sender at 6 a day", () => {
+    expect(inviteBlockReason({ ...ok, senderToday: 5 })).toBeNull();
+    expect(inviteBlockReason({ ...ok, senderToday: 6 })).toMatch(/limit of 6/);
+  });
   it("allows every resend straight away, up to 3 sends of one row", () => {
     expect(inviteBlockReason({ ...ok, rowSends: [hoursAgo(5)] })).toBeNull();
     expect(inviteBlockReason({ ...ok, rowSends: [hoursAgo(5), hoursAgo(0.2)] })).toBeNull();
