@@ -1,3 +1,5 @@
+import { ESCALATION_DEPARTMENTS } from "./escalation-departments";
+
 /**
  * Staff roles and departments. Mirrors public.in_department / public.can_manage_staff so the
  * dashboard shows exactly the tabs the database will let each person read.
@@ -129,7 +131,8 @@ export const ADMIN_TABS = [
   { value: "purchases", label: "Purchases", departments: ["finance"] },
   // Refunds and plan cancellations without a Stripe login (founder, 2026-11-05).
   { value: "billing", label: "Billing", departments: BILLING_DEPARTMENTS },
-  // Support owns the queue; Billing answers its own billing tickets.
+  // Support owns the queue; Billing answers its own billing tickets. An escalated department's lead gets the tab from
+  // visibleTabs, since its employees never read an escalated thread.
   { value: "support", label: "Support Tickets", departments: TICKET_DEPARTMENTS },
   // Account help (founder, 2026-11-05): Support corrects a member's names, Billing sends the card-update link.
   { value: "accounts", label: "Accounts", departments: TICKET_DEPARTMENTS },
@@ -146,7 +149,19 @@ export function viewDepartments(access: StaffAccess, view: Department | "all" = 
 
 /** Tabs for the caller, optionally narrowed to one department. Every department gets the Task Bank; super admins also get Company Contracts and Plans. */
 export function visibleTabs(access: StaffAccess, view: Department | "all" = "all"): { value: string; label: string }[] {
-  const tabs = ADMIN_TABS.filter((t) => t.departments.some((d: Department) => access.departments.includes(d) && (view === "all" || d === view)));
+  // A thread escalated to a department is its lead's, so the Support Tickets tab is the lead's too — the department's
+  // employees never get it, because only the lead and a super admin read an escalated thread (founder, 2026-11-19).
+  const escalatedLead =
+    access.role === "department_lead" &&
+    access.departments.some(
+      (d) =>
+        (ESCALATION_DEPARTMENTS as readonly Department[]).includes(d) && (view === "all" || d === view),
+    );
+  const tabs = ADMIN_TABS.filter(
+    (t) =>
+      t.departments.some((d: Department) => access.departments.includes(d) && (view === "all" || d === view)) ||
+      (t.value === "support" && escalatedLead),
+  );
   const base = viewDepartments(access, view).length || (access.allTeams && view === "all") ? [...tabs, { value: "tasks", label: "Task Bank" }] : tabs;
   // Everyone on the team gets the Calendar (Phase 4 item 8) and their own staff badges (item 6); nobody with no access
   // at all gets a tab.

@@ -285,7 +285,14 @@ function AdminPage() {
           {show("support") && (
             <TabsContent value="support">
               <SupportTicketsPanel
-                scope={access.departments.includes("support") ? "all" : "billing"}
+                scope={
+                  access.departments.includes("support")
+                    ? "all"
+                    : access.departments.includes("billing")
+                      ? "billing"
+                      : // An escalated department's lead opens the tab for the flagged threads, never the queue (2026-11-19).
+                        "escalated"
+                }
                 focusTicketId={supportFocus}
                 onFocusHandled={() => setSupportFocus(null)}
               />

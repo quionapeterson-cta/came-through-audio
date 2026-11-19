@@ -81,6 +81,7 @@ describe("visibleTabs", () => {
   it("gives marketing the Badges and Homepage tabs and its Task Bank; sales gets its Task Bank", () => {
     const marketing = resolveAccess([{ role: "employee", departments: ["marketing"] }])!;
     // Marketing also answers marketing@, partners@, info@ and collaborate@ from the Inbox tab (founder, 2026-11-19).
+    // It gets no Support Tickets tab: an escalated thread is the department lead's, never the team's.
     expect(visibleTabs(marketing).map((t) => t.value)).toEqual([...withDeptTabs(["badges", "homepage"]), "inbox"]);
     expect(visibleTabs(resolveAccess([{ role: "employee", departments: ["marketing_sales"] }])!).map((t) => t.value)).toEqual(withDeptTabs([]));
     expect(visibleTabs(resolveAccess([{ role: "employee", departments: [] }])!)).toEqual([]);
@@ -104,6 +105,15 @@ describe("visibleTabs", () => {
     expect(visibleTabs(billing).map((t) => t.value)).toContain("scripts");
     expect(visibleTabs(resolveAccess([{ role: "employee", departments: ["ai"] }])!).map((t) => t.value)).toContain("scripts");
     expect(visibleTabs(resolveAccess([{ role: "hr_admin" }])!).map((t) => t.value)).toContain("scripts");
+  });
+
+  it("gives an escalated department's lead the ticket queue, and its employees nothing", () => {
+    const lead = visibleTabs(resolveAccess([{ role: "department_lead", departments: ["marketing"] }])!).map((t) => t.value);
+    const employee = visibleTabs(resolveAccess([{ role: "employee", departments: ["marketing"] }])!).map((t) => t.value);
+    expect(lead).toContain("support");
+    expect(employee).not.toContain("support");
+    // A lead of a department no escalation reaches keeps the queue out of their tabs.
+    expect(visibleTabs(resolveAccess([{ role: "department_lead", departments: ["finance"] }])!).map((t) => t.value)).not.toContain("support");
   });
 
   it("keeps Holiday Cover to super admins and department leads", () => {

@@ -17,7 +17,7 @@ import {
 
 /**
  * The channel filters (founder, 2026-11-19): one queue now takes both the site's tickets and the public info@ mail, and
- * the two escalations get their own view so Marketing and the founder can work what was handed to them.
+ * the two escalations get their own view so the receiving department's lead and the founder can work what was handed over.
  */
 type ChannelFilter = "all" | "support" | "info" | "marketing" | "founder";
 const CHANNEL_PILLS: { id: ChannelFilter; label: string }[] = [
@@ -40,7 +40,8 @@ function matchesChannel(ticket: TicketRecord, filter: ChannelFilter): boolean {
  * conversation you answer in place. Support sees every ticket; Billing sees its own.
  */
 export function SupportTicketsPanel({ scope = "all", focusTicketId, onFocusHandled }: {
-  scope?: "all" | "billing";
+  /** `escalated` is Marketing's seat: the threads handed to it, read-only, never the queue (founder, 2026-11-19). */
+  scope?: "all" | "billing" | "escalated";
   /** A thread to open on arrival, e.g. from a founder escalation notice in My Queue. */
   focusTicketId?: string | null;
   onFocusHandled?: () => void;
@@ -93,14 +94,16 @@ export function SupportTicketsPanel({ scope = "all", focusTicketId, onFocusHandl
   if (q.isLoading) return <p className="mt-6 text-muted-foreground">Loading…</p>;
   if (q.isError) return <p className="mt-6 text-destructive">Couldn't load tickets.</p>;
 
-  if (open) return <SupportTicketDetail ticket={open} onClose={() => setOpenId(null)} />;
+  if (open) return <SupportTicketDetail ticket={open} onClose={() => setOpenId(null)} readOnly={scope === "escalated"} />;
 
   return (
     <div className="mt-4 space-y-3">
       <p className="text-sm text-muted-foreground">
         {scope === "billing"
           ? "Billing's own tickets: charges, invoices, refunds, plan changes, seats and branding kits. Everything else belongs to Support."
-          : "Every ticket from the site. Billing answers the Account & billing ones in its own tab; answer the rest from here."}
+          : scope === "escalated"
+            ? "The threads Support handed to this department's lead — only the lead and a super admin read them. Read the note and the conversation, then take the decision back to Support; the member's reply is Support's to send."
+            : "Every ticket from the site. Billing answers the Account & billing ones in its own tab; answer the rest from here."}
       </p>
       <div className="flex flex-wrap items-center gap-2">
         {CHANNEL_PILLS.map((c) => (

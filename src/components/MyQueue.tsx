@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Confetti } from "@/components/Confetti";
 import { FounderEscalations } from "@/components/FounderEscalations";
+import { LeadEscalations } from "@/components/LeadEscalations";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -269,6 +270,8 @@ export function MyQueue({ me, access, onOpen, onOpenTicket }: {
       )}
 
       {access.role === "super_admin" && <FounderEscalations onOpenTicket={onOpenTicket} />}
+      {/* A handoff to a department also reaches its lead (founder, 2026-11-19), beside the founder's own list. */}
+      {access.role === "department_lead" && <LeadEscalations onOpenTicket={onOpenTicket} />}
 
       <section className="rounded-2xl border border-border bg-card/70 p-4">
         <div className="flex flex-wrap items-end justify-between gap-2">

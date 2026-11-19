@@ -2,6 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { BILLING_EMAIL, emailLayout, escapeHtml, INFO_EMAIL, SUPPORT_EMAIL } from "./email-layout";
+import { ESCALATION_DEPARTMENTS } from "./escalation-departments";
 import { sendMemberReplyNotice, sendTicketReceivedEmail, sendTicketReplyEmail } from "./support-emails";
 import { BILLING_AREA, TICKET_CATEGORIES } from "./support-topics";
 import { formatStaffDisplayName } from "./staff-display";
@@ -110,22 +111,52 @@ async function staffScope(context: ScopeContext): Promise<"all" | "billing" | nu
   return null;
 }
 
+/**
+ * The lead of a department a thread can be escalated to reads what was handed over (founder, 2026-11-19), never the
+ * department's employees. The departments come from the one mapping, and the database policies say the same in SQL.
+ */
+async function escalationLead(context: ScopeContext): Promise<boolean> {
+  const lead = await context.supabase.rpc("is_department_lead", { _user_id: context.userId });
+  if (lead.data !== true) return false;
+  const checks = await Promise.all(
+    ESCALATION_DEPARTMENTS.map((department) =>
+      context.supabase.rpc("in_department", { _user_id: context.userId, _dept: department }),
+    ),
+  );
+  return checks.some((check) => check.data === true);
+}
+
+/** Reading the queue: Support every ticket, Billing its own, an escalated department's lead only the flagged threads. */
+type ReadScope = "all" | "billing" | "escalated";
+
+async function readScope(context: ScopeContext): Promise<ReadScope> {
+  const scope = await staffScope(context);
+  if (scope) return scope;
+  if (await escalationLead(context)) return "escalated";
+  throw new Error("Tickets are for Support, Billing, and the lead of a department a thread was escalated to.");
+}
+
 async function ticketScope(context: ScopeContext): Promise<"all" | "billing"> {
   const scope = await staffScope(context);
   if (!scope) throw new Error("Tickets are for the Support and Billing teams.");
   return scope;
 }
 
-/** Support department, and Billing for billing tickets: list tickets. */
+/**
+ * Support sees every ticket, Billing its own, and Marketing only the threads handed to it (founder, 2026-11-19). The
+ * escalated scope asks the database for the flagged rows alone, which is exactly what its policies allow.
+ */
 export const listTickets = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
-    const scope = await ticketScope(context as unknown as ScopeContext);
+    const scope = await readScope(context as unknown as ScopeContext);
     const base = context.supabase.from("support_tickets").select("*");
     const scoped = scope === "billing" ? base.like("category", `${BILLING_AREA}%`) : base;
     const { data, error } = await scoped.order("created_at", { ascending: false }).limit(200);
     if (error) throw new Error("Couldn't load tickets.");
-    return data ?? [];
+    const rows = (data ?? []) as TicketRecord[];
+    // The policies already hand that lead only the flagged rows; the flag is the second lock, never a wider query.
+    return scope === "escalated" ? rows.filter((t) => t.escalated_marketing) : rows;
   });
 
 /** Support, or Billing on a billing ticket: change ticket status. */
@@ -155,13 +186,16 @@ export const listTicketThread = createServerFn({ method: "GET" })
     if (error) throw new Error("Couldn't load that ticket.");
     if (!ticket) throw new Error("That ticket isn't available to you.");
     const scope = await staffScope(context as unknown as ScopeContext);
+    // The lead a thread was handed to reads it (founder, 2026-11-19), and only while it is escalated to them.
+    const escalated = !scope && (await escalationLead(context as unknown as ScopeContext));
     const owns = (ticket as TicketRecord).user_id === context.userId;
-    if (!scope && !owns) throw new Error("That ticket isn't available to you.");
+    if (!scope && !escalated && !owns) throw new Error("That ticket isn't available to you.");
+    if (escalated && !(ticket as TicketRecord).escalated_marketing) throw new Error("That ticket isn't available to you.");
     const { data: messages, error: threadError } = await context.supabase
       .from("support_ticket_messages").select("*").eq("ticket_id", data.ticketId).order("created_at");
     if (threadError) throw new Error("Couldn't load the conversation.");
-    const rows = ((messages ?? []) as ThreadMessage[]).filter((m) => scope || !m.internal);
-    return { ticket: ticket as TicketRecord, messages: rows, staff: !!scope };
+    const rows = ((messages ?? []) as ThreadMessage[]).filter((m) => scope || escalated || !m.internal);
+    return { ticket: ticket as TicketRecord, messages: rows, staff: !!(scope || escalated) };
   });
 
 const replyInput = z.object({

@@ -306,7 +306,9 @@ function EscalatePanel({ ticket, onDone }: { ticket: TicketRecord; onDone: () =>
     try {
       const r = await escalate({ data: { ticketId: ticket.id, marketing, founder, note } });
       toast.success(
-        `Handed to ${r.tags.map((tag) => (tag === "marketing" ? "Marketing" : "The Founder")).join(" & ")}. It's in their view now.`,
+        `Handed to ${r.tags.map((tag) => (tag === "marketing" ? "Marketing" : "The Founder")).join(" & ")}. It's in their view now${
+          r.leadDepartments.length ? ", and with their department lead" : ""
+        }.`,
       );
       setNote("");
       await Promise.all([
@@ -325,7 +327,8 @@ function EscalatePanel({ ticket, onDone }: { ticket: TicketRecord; onDone: () =>
     <div className="rounded-xl border border-border bg-card p-3">
       <p className="text-sm font-semibold">Escalate &amp; tag</p>
       <p className="mt-1 text-xs text-muted-foreground">
-        For a public inquiry you can't answer. The note stays internal — the member never sees it.
+        For a public inquiry you can't answer. The note stays internal — the member never sees it. The receiving team's
+        department lead is told too.
       </p>
       <div className="mt-2 space-y-1">
         <label className="flex items-start gap-2 text-sm">
@@ -394,7 +397,12 @@ function EscalatePanel({ ticket, onDone }: { ticket: TicketRecord; onDone: () =>
  * Everything the ticket needs is on this screen; the badge unlock and the address sit under Actions so they stop
  * stacking above the reply.
  */
-export function SupportTicketDetail({ ticket, onClose }: { ticket: TicketRecord; onClose: () => void }) {
+export function SupportTicketDetail({ ticket, onClose, readOnly = false }: {
+  ticket: TicketRecord;
+  onClose: () => void;
+  /** A thread handed to another team is read, not answered: the escalation exists so Support keeps the member's reply. */
+  readOnly?: boolean;
+}) {
   const fetchThread = useServerFn(listTicketThread);
   const setStatus = useServerFn(updateTicketStatus);
   const qc = useQueryClient();
@@ -439,6 +447,7 @@ export function SupportTicketDetail({ ticket, onClose }: { ticket: TicketRecord;
                 Viewing: {viewing.data.map((v) => v.name).join(", ")}
               </Badge>
             ) : null}
+            {!readOnly && <>
             <label htmlFor={`status-${ticket.id}`} className="text-xs font-semibold text-muted-foreground">Status</label>
           <select id={`status-${ticket.id}`} value={ticket.status} className="h-9 rounded-md border border-input bg-background px-2 text-sm"
             onChange={async (e) => {
@@ -450,6 +459,7 @@ export function SupportTicketDetail({ ticket, onClose }: { ticket: TicketRecord;
             }}>
             {TICKET_STATUSES.map((s) => <option key={s} value={s}>{TICKET_STATUS_LABEL[s]}</option>)}
           </select>
+            </>}
           <details className="relative">
             <summary className="cursor-pointer list-none rounded-md border border-border px-3 py-2 text-sm font-semibold">Actions</summary>
             <div className="absolute right-0 z-20 mt-2 w-72 rounded-xl border border-border bg-card p-3 shadow-lg">
@@ -497,16 +507,24 @@ export function SupportTicketDetail({ ticket, onClose }: { ticket: TicketRecord;
             ))}
           </div>
 
-          <ReplyBox ticket={ticket} onSent={refresh} insertion={insertion} />
+          {readOnly ? (
+            <p className="rounded-xl border border-border bg-card p-3 text-xs text-muted-foreground">
+              Read-only: Support answers the member on this thread. Take your decision back to Support and they send it.
+            </p>
+          ) : (
+            <ReplyBox ticket={ticket} onSent={refresh} insertion={insertion} />
+          )}
         </div>
 
         <div className="space-y-3">
-          {channelOf(ticket) === "info" ? <EscalatePanel ticket={ticket} onDone={refresh} /> : null}
-          <ScriptRail ticket={ticket} onInsert={insert} />
-          <details className="rounded-xl border border-border bg-card p-3">
-            <summary className="cursor-pointer text-sm font-semibold">Unlock a badge</summary>
-            <div className="mt-2"><UnlockBadge ticketId={ticket.id} subject={ticket.subject} /></div>
-          </details>
+          {!readOnly && channelOf(ticket) === "info" ? <EscalatePanel ticket={ticket} onDone={refresh} /> : null}
+          {!readOnly ? <ScriptRail ticket={ticket} onInsert={insert} /> : null}
+          {!readOnly ? (
+            <details className="rounded-xl border border-border bg-card p-3">
+              <summary className="cursor-pointer text-sm font-semibold">Unlock a badge</summary>
+              <div className="mt-2"><UnlockBadge ticketId={ticket.id} subject={ticket.subject} /></div>
+            </details>
+          ) : null}
         </div>
       </div>
     </div>

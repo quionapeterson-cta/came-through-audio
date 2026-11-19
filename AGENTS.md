@@ -213,6 +213,15 @@
 - **Neither Help Center page prints the street address** (founder, 2026-11-10): `/contact` and `/contact-us` close with the
   company name only. Import `BUSINESS_ADDRESS` for mail and legal documents, never for these two pages, so a move doesn't
   mean editing the site as well as the mailbox.
+- **An escalated thread is the receiving department lead's, and a super admin's, alone** (founder, 2026-11-19): a thread
+  handed to Marketing is read by that department's lead, never by its employees. `ESCALATION_DEPARTMENT`,
+  `escalationDepartments` and `leadTagsFor` in `src/lib/support-escalation-routing.ts` decide who; the escalation row
+  itself is the lead's notice in My Queue (`LeadEscalations`), and opening the thread marks it read. The lead's queue and
+  the founder's (`FounderEscalations`) read the same rows through different tags, so one handoff is never two copies.
+  `ESCALATED_TICKET_DEPARTMENTS` gives that lead the Support Tickets tab — its employees never get it — the server's
+  `escalated` scope and `escalationLead` narrow it to the flagged threads, and `20261119180000_escalations-lead-only.sql`
+  enforces the same split in the database. Never widen it to the department or the queue, and the member's reply stays
+  Support's. The founder leads no department, so her own tag routes to no lead.
 
 ## Account Help & Holiday Cover (always follow)
 

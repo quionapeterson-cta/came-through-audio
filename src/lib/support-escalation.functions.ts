@@ -3,6 +3,14 @@ import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { resolveAccess } from "./departments";
 import { formatStaffDisplayName } from "./staff-display";
+import {
+  ESCALATION_TAGS,
+  TAG_LABEL,
+  escalationDepartments,
+  escalationLeadLabels,
+  leadTagsFor,
+  type EscalationTag,
+} from "./support-escalation-routing";
 
 /**
  * Escalate & tag (founder, 2026-11-19). A public inquiry either Support answers, or Support hands to the team that owns
@@ -12,13 +20,9 @@ import { formatStaffDisplayName } from "./staff-display";
  * system line in the timeline naming who handed it over, and one escalation row per destination. That row is also the
  * in-app notification the receiving team sees, and the flags on the ticket are what the queue filters read.
  */
-const TAGS = ["marketing", "founder"] as const;
-type EscalationTag = (typeof TAGS)[number];
-
-export const TAG_LABEL: Record<EscalationTag, string> = {
-  marketing: "Marketing",
-  founder: "The Founder",
-};
+/** The destinations and the lead routing behind them live in support-escalation-routing.ts. */
+const TAGS = ESCALATION_TAGS;
+export { TAG_LABEL };
 
 type Ctx = {
   supabase: {
@@ -43,13 +47,16 @@ async function accessOf(context: Ctx) {
   return { access, role, name };
 }
 
-/** Whoever may work a ticket may hand it on: the Support department, Marketing, or the founder. */
+/**
+ * Whoever may work a ticket may hand it on: the Support department, the receiving department's lead, or the founder. The
+ * whole department never reads an escalated thread, so its employees are not on this list (founder, 2026-11-19).
+ */
 function mayEscalate(access: ReturnType<typeof resolveAccess>): boolean {
   if (!access) return false;
   return (
     access.role === "super_admin" ||
     access.departments.includes("support") ||
-    access.departments.includes("marketing")
+    leadTagsFor(access).length > 0
   );
 }
 
@@ -76,7 +83,7 @@ export const escalateTicket = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }) => {
     const { access, name } = await accessOf(context as unknown as Ctx);
-    if (!mayEscalate(access)) throw new Error("Only the Support or Marketing team can escalate a thread.");
+    if (!mayEscalate(access)) throw new Error("Only Support, the receiving department's lead, or the founder can escalate a thread.");
     const tags: EscalationTag[] = [
       ...(data.marketing ? (["marketing"] as const) : []),
       ...(data.founder ? (["founder"] as const) : []),
@@ -106,15 +113,17 @@ export const escalateTicket = createServerFn({ method: "POST" })
     } as never);
     if (noteError) throw new Error("Couldn't save the handoff note, so nothing was escalated.");
 
-    // 2. The timeline line: who handed it to whom.
+    // 2. The timeline line: who handed it to whom, and whose lead was told with them.
     const labels = tags.map((tag) => TAG_LABEL[tag]);
     const joined = labels.length > 1 ? `${labels[0]} & ${labels[1]}` : labels[0];
+    const leadLabels = escalationLeadLabels(tags);
+    const leadLine = leadLabels.length ? ` Routed to the ${leadLabels.join(", ")}.` : "";
     await supabaseAdmin.from("support_ticket_messages").insert({
       ticket_id: data.ticketId,
       author_kind: "system",
       author_id: context.userId,
       author_name: name,
-      body: `Tagged for ${joined} by ${name}.`,
+      body: `Tagged for ${joined} by ${name}.${leadLine}`,
       internal: true,
     } as never);
 
@@ -141,7 +150,7 @@ export const escalateTicket = createServerFn({ method: "POST" })
       } as never)
       .eq("id", data.ticketId);
 
-    return { ok: true as const, tags };
+    return { ok: true as const, tags, leadDepartments: escalationDepartments(tags) };
   });
 
 /** The handoffs already on a thread, newest first, for the panel's own history. */
@@ -176,13 +185,12 @@ export const listTicketEscalations = createServerFn({ method: "GET" })
   });
 
 /**
- * Her priority queue (founder, 2026-11-19): the handoffs waiting on the founder, newest first with the unread ones on
- * top. Each notice is one row of `support_ticket_escalations` tagged `founder` — the same row the queue's filter reads
- * and the one `read_at` marks — paired with the thread it belongs to so a link can open it by id.
- *
- * Only the founder reads this list. It is her own tab, not a view a department can widen.
+ * One handoff waiting on someone, newest first with the unread ones on top (founder, 2026-11-19). Each notice is one
+ * row of `support_ticket_escalations` — the same row the queue's filter reads and the one `read_at` marks — paired with
+ * the thread it belongs to so a link can open it by id. The founder's list and a department lead's read the same rows
+ * through different tags, so a lead and their team never hold two copies of one escalation.
  */
-export type FounderEscalationNotice = {
+export type EscalationNotice = {
   id: string;
   ticketId: string;
   subject: string;
@@ -196,61 +204,98 @@ export type FounderEscalationNotice = {
   readAt: string | null;
 };
 
+async function noticesForTags(tags: readonly EscalationTag[]): Promise<EscalationNotice[]> {
+  if (!tags.length) return [];
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  const { data: rows, error } = await supabaseAdmin
+    .from("support_ticket_escalations" as never)
+    .select("id, ticket_id, note, by_name, created_at, read_at")
+    .in("tag", [...tags])
+    .order("created_at", { ascending: false })
+    .limit(40);
+  if (error) throw new Error("Couldn't load your escalations.");
+  const notices = (rows ?? []) as unknown as {
+    id: string;
+    ticket_id: string;
+    note: string;
+    by_name: string;
+    created_at: string;
+    read_at: string | null;
+  }[];
+  if (!notices.length) return [];
+
+  const ids = [...new Set(notices.map((n) => n.ticket_id))];
+  const { data: ticketRows } = await supabaseAdmin.from("support_tickets").select("*").in("id", ids);
+  const tickets = new Map(
+    ((ticketRows ?? []) as unknown as {
+      id: string;
+      subject: string;
+      name: string;
+      email: string;
+      status: string;
+      channel: string | null;
+    }[]).map((t) => [t.id, t]),
+  );
+
+  return notices
+    .filter((n) => tickets.has(n.ticket_id))
+    .map((n) => {
+      const t = tickets.get(n.ticket_id)!;
+      return {
+        id: n.id,
+        ticketId: n.ticket_id,
+        subject: t.subject,
+        memberName: t.name,
+        memberEmail: t.email,
+        status: t.status,
+        channel: t.channel ?? "support",
+        note: n.note,
+        byName: n.by_name,
+        createdAt: n.created_at,
+        readAt: n.read_at,
+      };
+    })
+    .sort((a, b) => Number(!!a.readAt) - Number(!!b.readAt) || b.createdAt.localeCompare(a.createdAt));
+}
+
+/** Only the founder reads this list. It is her own tab, not a view a department can widen. */
 export const listFounderEscalations = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .handler(async ({ context }): Promise<FounderEscalationNotice[]> => {
+  .handler(async ({ context }): Promise<EscalationNotice[]> => {
     const { role } = await accessOf(context as unknown as Ctx);
     if (role !== "super_admin") return [];
+    return noticesForTags(["founder"]);
+  });
+
+/**
+ * The lead's queue (founder, 2026-11-19): every handoff routed to a department the caller leads. An employee gets
+ * nothing here — they work the team's view — and a super admin keeps the founder's list alone, so nobody reads one
+ * escalation twice.
+ */
+export const listLeadEscalations = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }): Promise<EscalationNotice[]> => {
+    const { access } = await accessOf(context as unknown as Ctx);
+    return noticesForTags(leadTagsFor(access));
+  });
+
+/** Opening the thread settles a lead's notice: every escalation on it routed to their department is marked read, once. */
+export const markLeadEscalationsRead = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d) => z.object({ ticketId: z.string().uuid() }).parse(d))
+  .handler(async ({ data, context }) => {
+    const { access } = await accessOf(context as unknown as Ctx);
+    const tags = leadTagsFor(access);
+    if (!tags.length) return { ok: false as const };
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { data: rows, error } = await supabaseAdmin
+    const { error } = await supabaseAdmin
       .from("support_ticket_escalations" as never)
-      .select("id, ticket_id, note, by_name, created_at, read_at")
-      .eq("tag", "founder")
-      .order("created_at", { ascending: false })
-      .limit(40);
-    if (error) throw new Error("Couldn't load your escalations.");
-    const notices = (rows ?? []) as unknown as {
-      id: string;
-      ticket_id: string;
-      note: string;
-      by_name: string;
-      created_at: string;
-      read_at: string | null;
-    }[];
-    if (!notices.length) return [];
-
-    const ids = [...new Set(notices.map((n) => n.ticket_id))];
-    const { data: ticketRows } = await supabaseAdmin.from("support_tickets").select("*").in("id", ids);
-    const tickets = new Map(
-      ((ticketRows ?? []) as unknown as {
-        id: string;
-        subject: string;
-        name: string;
-        email: string;
-        status: string;
-        channel: string | null;
-      }[]).map((t) => [t.id, t]),
-    );
-
-    return notices
-      .filter((n) => tickets.has(n.ticket_id))
-      .map((n) => {
-        const t = tickets.get(n.ticket_id)!;
-        return {
-          id: n.id,
-          ticketId: n.ticket_id,
-          subject: t.subject,
-          memberName: t.name,
-          memberEmail: t.email,
-          status: t.status,
-          channel: t.channel ?? "support",
-          note: n.note,
-          byName: n.by_name,
-          createdAt: n.created_at,
-          readAt: n.read_at,
-        };
-      })
-      .sort((a, b) => Number(!!a.readAt) - Number(!!b.readAt) || b.createdAt.localeCompare(a.createdAt));
+      .update({ read_at: new Date().toISOString(), read_by: context.userId } as never)
+      .eq("ticket_id", data.ticketId)
+      .in("tag", [...tags])
+      .is("read_at", null);
+    if (error) console.error("Escalation read mark failed:", error.message);
+    return { ok: !error } as { ok: boolean };
   });
 
 /** Opening the thread settles its notice: every founder escalation on that ticket is marked read, once. */
