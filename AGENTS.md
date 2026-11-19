@@ -245,6 +245,14 @@
   `emailPacketCopy`. Reading, building, setting the inbox and counter-signing stay on `requireStaff`, because they are not
   sending. Admin → PDF Tools hides Sent & Inbox for anyone else, which is the second lock, never the rule.
 
+## Signature & Invite Mail: Approved, With Limits (always follow)
+
+The security scanner raised signature mail and split-sheet invite mail as risky. Both were reviewed on 2026-11-19 and
+**approved as business-essential**, with the limits in `SECURITY-FINDINGS.md` as the condition of that approval. Never
+raise, remove or route around one of those limits to move a release along: changing a limit means changing that file in
+the same commit, and any new number needs founder approval first. Neither kind of mail may be reused for a list, an
+announcement or anything a named recipient did not ask for.
+
 ## Account Help & Holiday Cover (always follow)
 
 - **Who may touch a member's account** (founder, 2026-11-05): Support and super admins correct the person (stage name and
