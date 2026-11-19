@@ -1,7 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-import { activeKitKeys, brandAccess, brandingPeriod, kitAllowance, kitFromRow, kitReady, usableKits, type BrandKit, type BrandUse, type PdfBrand } from "./brand-kit";
+import { activeKitKeys, autoBindKit, brandAccess, brandingPeriod, kitAllowance, kitFromRow, kitReady, usableKits, type BrandKit, type BrandUse, type PdfBrand } from "./brand-kit";
 import { hasTier, serverTier } from "./plans";
 import { getPaymentsEnvironment } from "./payments-env";
 
@@ -41,7 +41,14 @@ async function brandFor(db: Db, userId: string, use: BrandUse, kitId?: string | 
   // lower plan a saved kit still prints it, whatever the kit row says.
   const mayDropFooter = hasTier(tier, "collaborate");
   const { data } = await db.from("brand_kits" as never).select("*").eq("user_id", userId).order("created_at" as never, { ascending: true });
-  const saved = ((data ?? []) as Record<string, unknown>[]).map((r) => kitFromRow(r as never)).filter((k): k is BrandKit => !!k);
+  let saved = ((data ?? []) as Record<string, unknown>[]).map((r) => kitFromRow(r as never)).filter((k): k is BrandKit => !!k);
+  // One kit and a running year that names no kit: link it here too, so a download works even if the page never opened.
+  const link = autoBindKit(saved, paid);
+  if (link) {
+    const { error } = await db.from("brand_kits" as never).update({ paid_key: link.key } as never).eq("id", link.kitId).eq("user_id", userId);
+    if (error) console.warn(`Kit ${link.kitId} could not be linked to ${link.key}`, error);
+    else saved = saved.map((k) => (k.id === link.kitId ? { ...k, paidKey: link.key } : k));
+  }
   const usable = usableKits(saved, Math.max(1, allowance), hasTier(tier, "management"), paid);
   const kit = usable.find((k) => k.id && k.id === kitId) ?? usable[0] ?? null;
   if (!kit || !kitReady(kit)) return null;
@@ -75,9 +82,16 @@ export const getBrandAccess = createServerFn({ method: "POST" })
     const db = await admin();
     const { access, until, renews, allowance, paid, tier } = await accessFor(db, context.userId);
     const { data } = await db.from("brand_kits" as never).select("id, paid_key").eq("user_id", context.userId).order("created_at" as never, { ascending: true });
-    const kits = (data ?? []) as { id: string; paid_key: string | null }[];
+    let kits = (data ?? []) as { id: string; paid_key: string | null }[];
+    // Their only kit with an unlinked running year: link it now, so the locked screen unlocks by itself after paying.
+    const link = autoBindKit(kits.map((k) => ({ id: k.id, paidKey: k.paid_key })), paid);
+    if (link) {
+      const { error } = await db.from("brand_kits" as never).update({ paid_key: link.key } as never).eq("id", link.kitId).eq("user_id", context.userId);
+      if (error) console.warn(`Kit ${link.kitId} could not be linked to ${link.key}`, error);
+      else kits = kits.map((k) => (k.id === link.kitId ? { ...k, paid_key: link.key } : k));
+    }
     // Which saved kits can print right now, so the page can offer to renew a kit that is outside the allowance.
-    const usableIds = usableKits(kits, Math.max(1, allowance), hasTier(tier, "management"), paid).map((k) => k.id);
+    const usableIds = usableKits(kits.map((k) => ({ id: k.id, paidKey: k.paid_key })), Math.max(1, allowance), hasTier(tier, "management"), paid).map((k) => k.id);
     return { ...access, addOnUntil: until?.toISOString() ?? null, addOnRenews: renews, allowance, usableIds };
   });
 

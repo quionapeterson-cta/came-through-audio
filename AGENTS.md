@@ -596,8 +596,10 @@ rules keep it consistent as features are added.
   the default, and gives an unlinked year to the newest unlinked kit. A lapsed link only takes a slot when a running
   year has no unlinked kit to name — the member who renewed from the locked screen, where no kit could be named — so
   paying there always prints something. The page also offers **Renew this kit** for a kit outside the allowance, and the
-  locked screen's Add Personal Branding names the member's first saved kit. The migration is `20261119210000`; a member's browser cannot write
-  `paid_key` (trigger guard).
+  locked screen's Add Personal Branding names the member's first saved kit. A member with exactly one kit and a running
+  year that names no kit is linked automatically (`autoBindKit`, on the page read and on a PDF read), because there is
+  nothing to choose. The migration is `20261119210000`; a member's browser cannot write `paid_key` (trigger guard),
+  while the service role can.
 - **A paid year ends when Stripe says it does** (founder, 2026-11-19): entitlement reads `details.period_end` from the
   kit's purchase row, and only falls back to `created_at` + `BRANDING_DAYS` for a row written before that date was
   stored. Never count a fixed 365 days when Stripe has told us the period end.

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { activeKitKeys, brandAccess, brandingUntil, hexRgb, kitAllowance, kitFromRow, kitReady, usableKits } from "./brand-kit";
+import { activeKitKeys, autoBindKit, brandAccess, brandingUntil, hexRgb, kitAllowance, kitFromRow, kitReady, usableKits } from "./brand-kit";
 import { checkoutInput, planCheckout } from "./stripe-mapping";
 
 const buy = (created_at: string, refunded = false) => ({ kind: "branding", created_at, details: refunded ? { refunded_at: created_at } : {} });
@@ -106,6 +106,22 @@ describe("several Branding Kits", () => {
     expect(usableKits([{ id: "k1", paidKey: "sub:a" }, { id: "k2", paidKey: "sub:b" }], 1, false, new Set(["sub:new"])).map((k) => k.id)).toEqual(["k2"]);
     // With the included kit it is still the default, and the year fills the paid slot.
     expect(usableKits([{ id: "k1", paidKey: "sub:old" }], 2, true, new Set(["sub:new"])).map((k) => k.id)).toEqual(["k1"]);
+  });
+
+  it("binds a member's only kit to their running paid year", () => {
+    const paid = new Set(["sub:new"]);
+    // Bought before the kit existed, or before the link did: it can only belong to the one kit they have.
+    expect(autoBindKit([{ id: "k1", paidKey: null }], paid)).toEqual({ kitId: "k1", key: "sub:new" });
+    // Their own year lapsed and they renewed: the link moves to the running year.
+    expect(autoBindKit([{ id: "k1", paidKey: "sub:old" }], paid)).toEqual({ kitId: "k1", key: "sub:new" });
+    // Already tied to a running year: nothing to write.
+    expect(autoBindKit([{ id: "k1", paidKey: "sub:new" }], paid)).toBeNull();
+    // Once linked, the kit is usable with no fallback involved.
+    expect(usableKits([{ id: "k1", paidKey: "sub:new" }], 1, false, paid).map((k) => k.id)).toEqual(["k1"]);
+    // More than one kit is a choice, not a guess, and a year that isn't running binds nothing.
+    expect(autoBindKit([{ id: "k1" }, { id: "k2" }], paid)).toBeNull();
+    expect(autoBindKit([{ id: "k1" }], new Set())).toBeNull();
+    expect(autoBindKit([{ id: null }], paid)).toBeNull();
   });
 
   it("reads a kit's style and section title color, with safe defaults", () => {

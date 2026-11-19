@@ -242,6 +242,22 @@ export function activeKitKeys(purchases: BrandingPurchase[], now = new Date()): 
 export type KitLinkLike = { id?: string | null; paidKey?: string | null };
 
 /**
+ * The link to make for a member who has exactly one kit and a running paid year that names no kit (founder,
+ * 2026-11-19). Their year was bought before the kit existed, or before this link did, so it can only belong to the one
+ * kit they have: there is nothing to choose, and leaving it unlinked would charge them for a kit that can't print.
+ * More than one kit is a choice, so this returns null and the member picks (or the purchase names the kit).
+ */
+export function autoBindKit(kits: KitLinkLike[], paid: Set<string>): { kitId: string; key: string } | null {
+  if (kits.length !== 1) return null;
+  const kit = kits[0]!;
+  if (!kit.id) return null;
+  // Already tied to a year that is still running: nothing to do.
+  if (kit.paidKey && paid.has(kit.paidKey)) return null;
+  const key = [...paid].find((k) => k !== kit.paidKey);
+  return key ? { kitId: kit.id, key } : null;
+}
+
+/**
  * Which kits this account may use right now, in the order documents pick them (founder, 2026-11-19).
  *
  * A paid year unlocks the kit it was actually bought for: the kit row carries that subscription's key (`paidKey`, set
