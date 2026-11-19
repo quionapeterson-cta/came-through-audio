@@ -137,6 +137,7 @@ export function receiptCopy(i: {
         paragraphs: [
           money_line,
           "It is on your account for the year, on any plan, and it prints on the contracts, split sheets, lyric downloads and catalog downloads you hand out.",
+          "It renews at $13.99 a year on its own. Cancel any time from Profile → Manage billing and it keeps working until the year you paid for ends.",
           "Set up the logo, colours and name in Profile → Brand kit.",
         ],
         cta: "Set up your kit",

@@ -241,12 +241,12 @@ contract) · 3 Adjust the wording if you need to · 4 Sign · 5 Send for signatu
   and per network each month; I'll add the per-email yearly rule, which also stops a deleted-and-recreated account). After the trial: can view and download what they entered and still sign what they're sent, but can't add songs
   to split sheets or send new requests.
 
-### 3.6 Personal branding add-on (contracts and split sheets) · ✅ BUILT 2026-10-25 (Profile → Brand kit: logo, name, tagline, unlimited colors (founder), 124 fonts in 5 groups (founder: as many as possible; src/lib/brand-fonts.ts), footer switch; one-time $14.99 for 12 months, purchases stack (founder chose option 1); server checks the plan before a PDF gets the kit; migration 20261025140000; founder: create Stripe price `branding_yearly` in sandbox + live)
+### 3.6 Personal branding add-on (contracts and split sheets) · ✅ BUILT 2026-10-25 (Profile → Brand kit: logo, name, tagline, unlimited colors (founder), 124 fonts in 5 groups (founder: as many as possible; src/lib/brand-fonts.ts), footer switch; $13.99 a year as its own subscription (founder, 2026-10-27; was $14.99; a yearly subscription since 2026-11-19); server checks the plan before a PDF gets the kit; migration 20261025140000; founder: create Stripe price `branding_yearly` in sandbox + live)
 - Catalog Management: brand kit in Profile (logo, two colors, tagline, font from a short list); their header replaces CTA's on
   contracts they send.
 - Footer: "Generated on camethroughaudio.com · YOUR FIRST STOP BEFORE DISTRIBUTION" (link). Management users and add-on buyers can
   turn it off in settings.
-- Catalog & Collaborate add-on: **Personal Branding on split sheets, $14.99/year** (new Stripe price `branding_yearly`).
+- Catalog & Collaborate add-on: **Personal Branding on split sheets, $13.99/year** (new Stripe price `branding_yearly`).
 
 ### 3.7 Badges
 - Lyrics: every lyric earns First Lyric Entry ✅; the description counts: "Your 1st lyric", "your 2nd", … "your 100th".
@@ -323,7 +323,7 @@ says "You Came Through: your 12th signed split sheet", Badge Reference PDF lists
   a "Profile N of 12 filled" progress line. Founder welcome message unchanged.
 
 ## After Phase 3 (founder, 2026-10-25) · ✅ BUILT
-- Personal Branding add-on on every plan ($14.99/year): split sheets and the contracts they make; Catalog Management still includes it.
+- Personal Branding add-on on every plan ($13.99/year): split sheets and the contracts they make; Catalog Management still includes it.
 - Embed clarity: errors pop up and scroll into view (Ctrl+Enter always answers); checklists say exactly what happened (embedded, downloaded, stored in My Catalog); "Save to My Catalog"; ticking AI Protection opens its $2.99 checkout after saving.
 - Disclaimers: one file (src/lib/disclaimers.ts) shown in every footer, under each workspace tab, beside exports, the Contract Generator, brand kit, split sheet signing, AI certificates (page, PDF, verify page) and badges; Terms of Service §7–15 added (no advice, no affiliation, contracts and generator, metadata/registrations/exports, AI certificates, branding materials, third parties, disputes between users, indemnification) and §16 liability excludes lost royalties. **Lawyer to review before launch.**
 - Founder to-do list: PLAN-founder-todo.md (GitHub + Admin → Plans), since the Claude Doc shows "browser not supported" for the founder.

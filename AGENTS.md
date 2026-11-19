@@ -577,17 +577,21 @@ rules keep it consistent as features are added.
   add-on purchases. The browser may only ask for a kit ID it already owns; it never passes an "on" flag, and a saved
   kit never switches itself on.
 - Branding is never global. It applies on exactly two grounds and no others: the account is on Catalog Management
-  (which includes one kit), or it has paid $13.99 for a kit for the year (`BRANDING_PRICE`, one purchase per kit, on any
-  plan including Free). A lower plan, a seat, a trial or an invitation never turns a kit on.
-- One paid kit covers every `BrandUse` at once for its own year. A refund ends that kit immediately for new documents
-  and never alters documents already sent.
+  (which includes one kit), or it has a live $13.99-a-year kit subscription (`BRANDING_PRICE`, one subscription per kit,
+  on any plan including Free). A lower plan, a seat, a trial or an invitation never turns a kit on.
+- **A kit is its own yearly subscription** (founder, 2026-11-19, replacing the one-time twelve-month purchase): $13.99 a
+  year per kit, renewing by itself until the member cancels. One paid year covers every `BrandUse` at once. A refund
+  ends that kit immediately and cancels its renewal for new documents, and never alters documents already sent.
+  Cancelling leaves the kit working until the end of the year already paid for.
 - A paid kit runs its own twelve months, independent of the plan (founder's decision, 2026-11-04). Cancelling or
-  refunding a plan, inside the 30-day window or after it, never ends a paid kit or shortens its year. Only a refund of
-  the kit itself ends it. The kit included with Catalog Management is not a separate purchase, so it follows the plan.
+  refunding a plan, inside the 30-day window or after it, never ends a paid kit or shortens its year, and the kit's
+  subscription is never a plan (it never grants a tier). Only a refund of the kit itself ends it early. The kit
+  included with Catalog Management is not a separate subscription, so it follows the plan.
 - Several kits are allowed (one per business or project): the oldest is the default, and a document that picks a kit
   gets that one only if it is within the member's allowance.
 - **Catalog Management includes one kit; every further kit is bought** (founder, 2026-11-06): a member with several
-  businesses buys each extra kit for `BRANDING_PRICE` a year like anyone else (`kitAllowance` counts both). Checkout
+  businesses buys each extra kit as its own `BRANDING_PRICE`-a-year subscription like anyone else (`kitAllowance` counts
+  both). Checkout
   never refuses a kit purchase (founder, 2026-11-07): anyone buys as many kits as they like, whether or not the kit their
   plan includes is set up yet. The old guard counted saved kits, so buying a second kit waited on filling in the first —
   exactly what the founder hit while testing.

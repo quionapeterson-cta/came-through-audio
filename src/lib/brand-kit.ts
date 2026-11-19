@@ -3,12 +3,13 @@ import { hasTier, type Tier } from "@/lib/plans";
 
 /**
  * Personal Branding (PLAN-master-notes 3.6). A user's brand kit replaces the Came Through Audio header on documents
- * they send. Catalog Management includes it; anyone else can add it for $13.99 a year per kit (founder, 2026-10-27; was $14.99), on their
- * split sheets and the contracts they make (a $3.99 generated contract on any plan).
+ * they send. Catalog Management includes it; anyone else can add it as its own $13.99-a-year subscription per kit (founder,
+ * 2026-10-27; was $14.99, and a yearly subscription since 2026-11-19), on their split sheets and the contracts they make
+ * (a $3.99 generated contract on any plan).
  */
 export const BRANDING_LOOKUP_KEY = "branding_yearly";
 export const BRANDING_PRICE = "$13.99";
-/** One add-on purchase covers this many days; buying again early adds a year after the current one ends. */
+/** A kit's subscription pays for this many days at a time; each renewal starts another year. */
 export const BRANDING_DAYS = 365;
 
 export const BRAND_FONTS: string[] = FONT_GROUPS.flatMap((g) => g.fonts);
@@ -177,7 +178,7 @@ export function kitFromRow(r: { id?: string | null; name?: string | null; taglin
 
 type BrandingPurchase = { kind: string; created_at: string; details: Record<string, string> };
 
-/** Each Branding Kit purchase is one kit for one year (founder, 2026-10-27: $13.99 per kit per year). */
+/** Each paid year of a kit's subscription is one kit for one year (founder, 2026-10-27: $13.99 per kit per year). */
 const activeBuys = (purchases: BrandingPurchase[], now: Date) =>
   purchases.filter((p) => p.kind === "branding" && !p.details["refunded_at"]).map((p) => Date.parse(p.created_at))
     .filter((t) => Number.isFinite(t) && t + BRANDING_DAYS * 86400000 > now.getTime());

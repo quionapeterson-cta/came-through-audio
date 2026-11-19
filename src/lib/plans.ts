@@ -91,9 +91,9 @@ export type PlanTier = { tier: Tier; price: string; monthly: string; priceId?: s
 const perMonth = (yearly: number) => `About $${(yearly / 12).toFixed(2)} / month`;
 
 /**
- * Add-on artist seats, per added artist per year (PLAN-pricing-badges.md §E). Prices set 2026-11-04:
- * $18.99 Catalog Plus, $34.99 Catalog & Collaborate, $69.99 Catalog Management. Still not on sale yet, so nothing
- * here has a Stripe price or lookup key behind it.
+ * Add-on artist seats, per added artist per year (PLAN-pricing-badges.md §E). Prices set 2026-11-04 and confirmed as
+ * the official add-on list (founder, 2026-11-19): $18.99 Catalog Plus, $34.99 Catalog & Collaborate, $69.99 Catalog
+ * Management. Each one's Stripe price carries the lookup key below, at exactly this amount.
  */
 export const ARTIST_SEAT_PRICES: { tier: Exclude<Tier, "free">; amount: number; price: string; monthly: string; lookupKey: string }[] = [
   { tier: "plus", amount: 18.99, price: "$18.99", monthly: perMonth(18.99), lookupKey: "artist_seat_plus_yearly" },

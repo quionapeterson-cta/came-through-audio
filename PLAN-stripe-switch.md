@@ -58,7 +58,7 @@ real customer has paid through Paddle, so nothing needs migrating except test da
    | `expert_setup_single` | Expert Assistance setup · Single | $14.99 | One-time |
    | `expert_setup_album` | Expert Assistance setup · Album | $29.99 | One-time |
    | `expert_per_song_agency` | Expert Assistance · per song per agency | $4.99 | One-time (quantity) |
-   | `artist_seat_plus_yearly`, `_collaborate_`, `_management_` | Add-on artist seats | $19.99 / $36.99 / $69.99 per year | Later |
+   | `artist_seat_plus_yearly`, `_collaborate_`, `_management_` | Add-on artist seats | $18.99 / $34.99 / $69.99 per year | Later |
    | `live_time_15`, `_30`, `_60` | Live "How It Works" time | $15 / $25 / $45 | Later (PLAN-live-registration) |
 
 2. **Customer portal** (Settings → Billing → Customer portal): allow cancel at period end, update payment method,

@@ -19,7 +19,7 @@ import { FONT_GROUPS } from "@/lib/brand-fonts";
 import { loadWebFont } from "@/lib/web-fonts";
 import { Disclaimer } from "@/components/Disclaimer";
 import { getBrandAccess } from "@/lib/brand-kit.functions";
-import { openCheckout } from "@/lib/checkout";
+import { openBilling, openCheckout } from "@/lib/checkout";
 import { hasTier, TIER_LABEL, type Tier } from "@/lib/plans";
 
 const BUCKET = "brand-logos";
@@ -329,7 +329,6 @@ export function BrandKit({ userId, tier, artistName }: { userId: string; tier: T
   const where = "Your contracts, split sheets, lyric downloads and catalog downloads";
   // Before the multi-kit update the server doesn't send a count: one kit.
   const allowance = Math.max(1, access.allowance ?? 1);
-  const ending = access.addOnUntil && tier !== "management" ? Date.parse(access.addOnUntil) - Date.now() < 30 * 86400000 : false;
   const nameColor = kit.colors[0] && isHex(kit.colors[0]) ? kit.colors[0] : undefined;
   const taglineColor = kit.colors[1] && isHex(kit.colors[1]) ? kit.colors[1] : undefined;
   /**
@@ -367,9 +366,11 @@ export function BrandKit({ userId, tier, artistName }: { userId: string; tier: T
       )}
       <p className="text-sm text-muted-foreground">
         {where} carry this header in place of ours.
-        {tier === "management" ? ` Included with ${TIER_LABEL.management}.` : access.addOnUntil ? ` Personal Branding runs until ${longDate(access.addOnUntil)}, even if your plan changes before then.` : ""}
+        {tier === "management" ? ` Included with ${TIER_LABEL.management}.` : access.addOnUntil ? ` Personal Branding is its own yearly subscription: it renews on ${longDate(access.addOnUntil)} until you cancel, and a plan change never ends it or shortens it.` : ""}
       </p>
-      {ending && <Button variant="outline" onClick={() => void buy()}>Add another year · {BRANDING_PRICE}</Button>}
+      {tier !== "management" && access.addOnUntil && (
+        <Button variant="outline" onClick={() => void openBilling()}>Manage billing · renews {longDate(access.addOnUntil)}</Button>
+      )}
 
       {/* Several kits, one per business or project; each contract picks its kit. */}
       <div className="flex flex-wrap items-center gap-2">

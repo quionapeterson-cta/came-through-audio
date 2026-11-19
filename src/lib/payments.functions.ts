@@ -4,6 +4,7 @@ import { createStripeClient, getStripeErrorMessage } from "@/lib/stripe.server";
 import { CHECKOUT_UNAVAILABLE, checkoutEnvironmentError, getPaymentsEnvironment } from "@/lib/payments-env";
 import { checkoutInput, planCheckout } from "@/lib/stripe-mapping";
 import { isActiveSub, PRICE_TIER } from "@/lib/plans";
+import { PRICE_MISMATCH_NOTE, amountProblem } from "@/lib/price-check";
 import { purchaseLanding } from "@/lib/purchase-receipt";
 
 /**
@@ -47,6 +48,18 @@ async function resolveOrCreateCustomer(
 type Stripe = ReturnType<typeof createStripeClient>;
 
 /**
+ * Refuses a checkout whose Stripe price doesn't charge the amount the site publishes (founder, 2026-11-19). Without
+ * this, a price object created at the wrong amount was only discovered on the member's card statement: the page said
+ * $3.99 and Stripe took $14.99. The refusal names the lookup key and both amounts, and nothing is charged.
+ */
+function refuseMispriced(env: "sandbox" | "live", lookupKey: string | null | undefined, amount: number | null | undefined) {
+  const problem = amountProblem(lookupKey ?? "", amount);
+  if (!problem) return;
+  console.error(`Stripe price mismatch (${env}): ${problem} ${PRICE_MISMATCH_NOTE}`);
+  throw new Error(`${problem} ${PRICE_MISMATCH_NOTE}`);
+}
+
+/**
  * Stripe keys only exist where payments are switched on (Lovable's environment, or a deployment with its own secret
  * keys). A preview without them used to answer with the bare env-var name, which reads as a broken button; this says
  * what is actually going on and where the purchase does work.
@@ -68,7 +81,7 @@ function stripeClient(env: "sandbox" | "live"): Stripe {
  * amount and takes the payment. Needs no plan switching set up in the portal settings: if Stripe asks for it, an
  * app-owned portal configuration that allows it is used instead. Picking the plan they already have opens the portal.
  */
-async function planSwitchUrl(stripe: Stripe, customer: string, subscriptionId: string, lookupKey: string, returnUrl: string) {
+async function planSwitchUrl(stripe: Stripe, env: "sandbox" | "live", customer: string, subscriptionId: string, lookupKey: string, returnUrl: string) {
   const [sub, prices] = await Promise.all([
     stripe.subscriptions.retrieve(subscriptionId),
     stripe.prices.list({ lookup_keys: [lookupKey], active: true, limit: 1 }),
@@ -76,6 +89,7 @@ async function planSwitchUrl(stripe: Stripe, customer: string, subscriptionId: s
   const item = sub.items.data[0];
   const price = prices.data[0];
   if (!price) throw new Error("This item isn't available to buy yet. Contact support and we'll help right away.");
+  refuseMispriced(env, lookupKey, price.unit_amount);
   if (!item || item.price.id === price.id) return (await stripe.billingPortal.sessions.create({ customer, return_url: returnUrl })).url;
   const flow = {
     customer,
@@ -222,6 +236,7 @@ export const createCheckoutSession = createServerFn({ method: "POST" })
         const prices = await stripe.prices.list({ lookup_keys: [lookupKey], active: true, expand: ["data.product"], limit: 1 });
         const price = prices.data[0];
         if (!price) throw new Error("This seat's plan isn't available right now. Contact support and we'll help.");
+        refuseMispriced(env, lookupKey, price.unit_amount);
         // Stripe's earliest trial_end is 48 hours out; a handoff in the last two days of the period therefore starts its
         // first charge just after the renewal rather than before it. Nothing is ever charged at handoff.
         const trialEnd = Math.max(
@@ -267,15 +282,16 @@ export const createCheckoutSession = createServerFn({ method: "POST" })
 
     try {
       // A seat is a second subscription on the same customer, so it never goes through "switch plan". Buying the same
-      // tier again is allowed: that is how an owner adds a second or third artist (founder, 2026-11-04).
-      if (plan.mode === "subscription" && data.kind !== "seat") {
+      // tier again is allowed: that is how an owner adds a second or third artist (founder, 2026-11-04). A branding kit
+      // is its own yearly subscription too (founder, 2026-11-19): it never replaces or switches the member's plan.
+      if (plan.mode === "subscription" && data.kind !== "seat" && data.kind !== "branding") {
         const { data: subs } = await context.supabase.from("subscriptions")
           .select("stripe_subscription_id, stripe_customer_id, status, current_period_end")
           .eq("user_id", context.userId).eq("environment", env).not("stripe_subscription_id", "is", null)
           .order("created_at", { ascending: false });
         const current = subs?.find((s) => s.status !== "canceled" && isActiveSub(s));
         if (current?.stripe_customer_id && current.stripe_subscription_id) {
-          return { portalUrl: await planSwitchUrl(stripe, current.stripe_customer_id, current.stripe_subscription_id, plan.items[0]!.lookupKey, `${origin}/workspace`) };
+          return { portalUrl: await planSwitchUrl(stripe, env, current.stripe_customer_id, current.stripe_subscription_id, plan.items[0]!.lookupKey, `${origin}/workspace`) };
         }
       }
 
@@ -287,6 +303,8 @@ export const createCheckoutSession = createServerFn({ method: "POST" })
         console.error(`Stripe price with lookup key ${missing.lookupKey} not found (${env})`);
         throw new Error("This item isn't available to buy yet. Contact support and we'll help right away.");
       }
+      // The card must be charged what the page quotes, every item in the order (founder, 2026-11-19).
+      for (const item of plan.items) refuseMispriced(env, item.lookupKey, byKey.get(item.lookupKey)!.unit_amount);
       const productNames = plan.items.map((i) => {
         const product = byKey.get(i.lookupKey)!.product;
         return typeof product === "object" && "name" in product ? product.name : i.lookupKey;
@@ -318,7 +336,9 @@ export const createCheckoutSession = createServerFn({ method: "POST" })
     } catch (e) {
       const reason = getStripeErrorMessage(e);
       console.error(`Stripe checkout failed (${data.kind}):`, reason, e);
-      if (e instanceof Error && e.message.startsWith("This item")) throw e;
+      // A refusal that already explains itself (no such item, or a Stripe price that doesn't match the published one)
+      // is passed through, so the person reads the lookup key instead of a generic failure.
+      if (e instanceof Error && (e.message.startsWith("This item") || e.message.includes("published price"))) throw e;
       // Name the reason so a failing checkout can be fixed instead of guessed at (PLAN-registration-intake §0).
       throw new Error(`Checkout could not open (${reason.slice(0, 200)}). Try again, or contact support and we'll help right away.`);
     }
@@ -336,8 +356,18 @@ export const openBillingPortal = createServerFn({ method: "POST" })
       .eq("user_id", context.userId).eq("environment", env)
       .not("stripe_customer_id", "is", null)
       .order("created_at", { ascending: false }).limit(1);
-    const customer = subs?.[0]?.stripe_customer_id;
-    if (!customer) throw new Error("No plan to manage yet. Pick a plan first.");
+    let customer = subs?.[0]?.stripe_customer_id ?? null;
+    // A branding kit is a subscription of its own, so a member with no plan still has billing to manage (founder,
+    // 2026-11-19). The customer is found by the userId on it, never by anything the browser sends.
+    if (!customer) {
+      try {
+        const found = await stripeClient(env).customers.search({ query: `metadata['userId']:'${context.userId}'`, limit: 1 });
+        customer = found.data[0]?.id ?? null;
+      } catch (e) {
+        console.error("Billing customer lookup failed:", getStripeErrorMessage(e));
+      }
+    }
+    if (!customer) throw new Error("No billing on this account yet. Add a plan or a branding kit first.");
     try {
       const portal = await stripeClient(env).billingPortal.sessions.create({ customer, return_url: `${await appOrigin()}/workspace` });
       return { url: portal.url };

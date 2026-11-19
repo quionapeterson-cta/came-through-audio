@@ -5,11 +5,11 @@ import { checkoutInput, planCheckout } from "./stripe-mapping";
 const buy = (created_at: string, refunded = false) => ({ kind: "branding", created_at, details: refunded ? { refunded_at: created_at } : {} });
 
 describe("Personal Branding", () => {
-  it("lasts a year per purchase (each purchase is one kit for one year)", () => {
+  it("lasts a year per paid subscription year (each kit is its own yearly subscription)", () => {
     const now = new Date("2026-11-01T00:00:00Z");
     expect(brandingUntil([], now)).toBeNull();
     expect(brandingUntil([buy("2026-10-01T00:00:00Z")], now)?.toISOString()).toBe("2027-10-01T00:00:00.000Z");
-    // Two purchases are two kits, each for its own year: access runs until the later one ends.
+    // Two kits are two subscriptions, each with its own year: access runs until the later one ends.
     expect(brandingUntil([buy("2026-10-01T00:00:00Z"), buy("2026-10-20T00:00:00Z")], now)?.toISOString()).toBe("2027-10-20T00:00:00.000Z");
     expect(brandingUntil([buy("2025-01-01T00:00:00Z")], now)).toBeNull();
     expect(brandingUntil([buy("2026-10-01T00:00:00Z", true)], now)).toBeNull();
@@ -32,9 +32,9 @@ describe("Personal Branding", () => {
     expect(hexRgb("#004AAD")).toEqual([0, 74, 173]);
   });
 
-  it("checks out as a one-time branding_yearly purchase that returns to Profile", () => {
+  it("checks out as a yearly branding_yearly subscription that returns to Profile", () => {
     expect(planCheckout(checkoutInput.parse({ kind: "branding" }), "u1")).toMatchObject({
-      mode: "payment", items: [{ lookupKey: "branding_yearly", quantity: 1 }], metadata: { userId: "u1", kind: "branding" }, returnTab: "profile", managed: true,
+      mode: "subscription", items: [{ lookupKey: "branding_yearly", quantity: 1 }], metadata: { userId: "u1", kind: "branding" }, returnTab: "profile", managed: true,
     });
   });
 });

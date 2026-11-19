@@ -114,6 +114,23 @@ async function refundedOn(stripe: ReturnType<typeof createBillingStripeClient>, 
   return list.data.filter((r) => r.status !== "failed" && r.status !== "canceled").reduce((sum, r) => sum + r.amount, 0);
 }
 
+/**
+ * What a purchase was paid with. A one-time buy is found through its checkout session; a branding kit's year is a
+ * subscription now, so the payment intent its row records is used instead (founder, 2026-11-19).
+ */
+async function paymentFor(stripe: ReturnType<typeof createBillingStripeClient>, p: PurchaseRow) {
+  const stored = p.details?.["payment_intent"];
+  if (stored) {
+    const intent = await stripe.paymentIntents.retrieve(stored);
+    return { pi: stored, paidCents: intent.amount_received || intent.amount, currency: intent.currency };
+  }
+  if (!p.stripe_session_id || p.stripe_session_id.startsWith("sub:")) return { pi: null, paidCents: 0, currency: "usd" };
+  const session = await stripe.checkout.sessions.retrieve(p.stripe_session_id);
+  const value = session.payment_intent;
+  const pi = typeof value === "string" ? value : value?.id ?? null;
+  return { pi, paidCents: session.amount_total ?? 0, currency: session.currency ?? "usd" };
+}
+
 async function record(entry: {
   actorId: string;
   actorEmail: string;
@@ -221,12 +238,11 @@ export const purchasePaymentInfo = createServerFn({ method: "POST" })
     if (!p.stripe_session_id) throw new Error("This purchase has no Stripe payment behind it to refund.");
     try {
       const stripe = createBillingStripeClient(env);
-      const session = await stripe.checkout.sessions.retrieve(p.stripe_session_id);
-      const pi = typeof session.payment_intent === "string" ? session.payment_intent : session.payment_intent?.id ?? null;
+      const { pi, paidCents, currency } = await paymentFor(stripe, p);
       return {
-        paidCents: session.amount_total ?? 0,
+        paidCents,
         refundedCents: pi ? await refundedOn(stripe, pi) : 0,
-        currency: (session.currency ?? "usd").toUpperCase(),
+        currency: currency.toUpperCase(),
         windowDaysLeft: refundDaysLeft(p.created_at),
         paymentIntent: pi,
       };
@@ -264,10 +280,10 @@ export const refundPurchase = createServerFn({ method: "POST" })
     let paidCents = 0;
     let refundedCents = 0;
     try {
-      const session = await stripe.checkout.sessions.retrieve(p.stripe_session_id);
-      pi = typeof session.payment_intent === "string" ? session.payment_intent : session.payment_intent?.id ?? null;
-      paidCents = session.amount_total ?? 0;
-      refundedCents = pi ? await refundedOn(stripe, pi) : 0;
+      const payment = await paymentFor(stripe, p);
+      pi = payment.pi;
+      paidCents = payment.paidCents;
+      refundedCents = payment.pi ? await refundedOn(stripe, payment.pi) : 0;
     } catch (e) {
       throw new Error(`Stripe couldn't read that payment: ${getStripeErrorMessage(e)}`);
     }

@@ -51,12 +51,12 @@ mean looks different, send a screenshot to the drop box and I'll point to the ex
 | Expert Registration · Setup (Single/EP) | `expert_setup_single` | $14.99 | One-time | General - Services `txcd_20030000` | Our team sets up your registration order for a single or EP. |
 | Expert Registration · Setup (Album) | `expert_setup_album` | $29.99 | One-time | General - Services `txcd_20030000` | Our team sets up your registration order for an album. |
 | Expert Registration · Per song, per agency | `expert_per_song_agency` | $4.99 | One-time (quantity) | General - Services `txcd_20030000` | We register one song with one organization (ASCAP or BMI, The MLC, SoundExchange). |
-| Personal Branding Kit | `branding_yearly` | **$13.99** | One-time, covers one year | SaaS - business use `txcd_10103001` | Your logo, colors and font on the contracts and split sheets you send, for one year. |
+| Personal Branding Kit | `branding_yearly` | **$13.99** | Yearly subscription (recurring), one per kit | SaaS - business use `txcd_10103001` | Your logo, colors and font on the contracts and split sheets you send, for one year. |
 | Generated Contract | `contract_generator` | $3.99 | One-time | SaaS - business use `txcd_10103001` | One contract drafted from your deal details, ready to sign. |
 | Catalog Vault (extra month) | `vault_month` | $1.99 | One-time (quantity = months) | SaaS - business use `txcd_10103001` | Keeps your catalog open one more month after a plan ends. |
 
 Later (not needed for launch): artist seats `artist_seat_plus_yearly` / `_collaborate_` / `_management_`
-($19.99 / $36.99 / $69.99 a year) and live time `live_time_15` / `_30` / `_60` ($15 / $25 / $45).
+($18.99 / $34.99 / $69.99 a year) and live time `live_time_15` / `_30` / `_60` ($15 / $25 / $45).
 
 Branding Kit price changed to **$13.99** (your decision, 2026-10-27); the site now says $13.99 everywhere, so create
 the Stripe price at $13.99.

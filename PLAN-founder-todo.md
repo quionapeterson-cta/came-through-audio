@@ -55,11 +55,17 @@ Create each price in the **sandbox first**, test it, then in **live**. Until the
 
 | Product name | Price | Type | Lookup key (exact) |
 | --- | --- | --- | --- |
-| Personal Branding (any plan) | $14.99 | One-time | `branding_yearly` |
+| Personal Branding (any plan) | $13.99 | Yearly subscription (recurring) | `branding_yearly` |
 | Contract Generator contract | $3.99 | One-time | `contract_generator` |
 
-- [ ] Sandbox: Product catalog → Add product → name, price, One-off → More options → Lookup key → save. Repeat.
+The Branding kit is **$13.99 a year as its own subscription** (founder, 2026-11-19): one per kit, renewing until the
+member cancels, and a plan change never ends it. The generated contract is **$3.99, one-time, per contract** (founder,
+2026-10-27). A Stripe price can't be edited once it exists, so if one was created at another amount or the wrong type,
+create a new price at the right amount and type with the same lookup key and archive the old one.
+
+- [ ] Sandbox: contract at **$3.99 one-off**; kit at **$13.99 recurring yearly**. Set each lookup key in More options.
 - [ ] Live: the same two, once the sandbox tests pass.
+- [ ] A Stripe price whose amount differs from the site's is now refused at checkout, naming the lookup key (nothing is charged), so a wrong price is caught before a member's card is.
 - [ ] Check the existing lookup keys are on both accounts: `catalog_plus_yearly`, `catalog_collaborate_yearly`, `catalog_management_yearly`, `ai_protection_single`, `ai_protection_ep`, `ai_protection_album`, `ai_protection_plus`, `vault_month`, `expert_setup_single`, `expert_setup_album`, `expert_per_song_agency`.
 - [ ] Customer emails: support and receipts email = billing@camethroughaudio.com (after the mailbox exists).
 - [ ] Turn off Stripe's own renewal reminder emails (ours send instead).
@@ -112,7 +118,7 @@ Publish in Lovable first, then test on the published site in the sandbox (card 4
 - [ ] Embed: tick AI Protection, Save to My Catalog: the $2.99 checkout should open.
 - [ ] Homepage: "What does embed mean?" story and the smaller badges on the Who It's For photos (phone and computer).
 - [ ] Embed Defaults: add a contact email, embed a song, check it shows in the file's comments.
-- [ ] Personal Branding: on a Free or Plus account buy the $14.99 add-on, set up Profile → Brand kit, download a split sheet PDF and a generated contract PDF.
+- [ ] Personal Branding: on a Free or Plus account subscribe to the $13.99 kit, set up Profile → Brand kit, download a split sheet PDF and a generated contract PDF, then cancel in Manage billing and check the kit still works until the year ends.
 - [ ] Personal Branding on Catalog Management (included): contract PDF and the PDF a signer downloads.
 - [ ] Contract Generator: describe a deal, check the match, pay $3.99, open it from My Contracts, send it for signature.
 - [ ] Contract Generator for company: Admin → Company Contracts → describe an agreement → Open my draft (free).
@@ -149,7 +155,7 @@ Publish in Lovable first, then test on the published site in the sandbox (card 4
 - [ ] Founding Member badge art (not made yet).
 
 ## 8. Decisions waiting on you
-- [x] Refunds for the new buys: decided 2026-10-25, same 30-day full refund for the $14.99 Personal Branding and the $3.99 contracts. Refund Policy updated.
+- [x] Refunds for the new buys: decided 2026-10-25, same 30-day full refund for the $13.99 Personal Branding and the $3.99 contracts. Refund Policy updated.
 - [ ] Cursive signatures: typed signatures on every contract PDF now use the same legible cursive as the company block. Keep, or company only?
 - [ ] Proof videos: certificates record both fingerprints (original and our stored copy). Okay, or also keep full originals up to 1 GB (storage cost)?
 - [ ] Help chat: start with the free search-based answer bot, or wait?

@@ -42,12 +42,16 @@ written for the customer, not for us.
 | `expert_setup_album` | Expert Registration · Album setup | $29.99 | Setup for our team to register up to 20 songs; each further block of 20 is another setup. |
 | `expert_per_song_agency` | Expert Registration · per song, per agency | $4.99 | One song registered with one agency: ASCAP or BMI, The MLC, or SoundExchange. |
 
-## 5. Add-ons (one-time, except branding)
+## 5. Add-ons (one is a yearly subscription, two are one-time)
+
+The branding kit is a **yearly recurring** price: $13.99 a year, its own subscription, one per kit, renewing until the
+member cancels it. The generated contract and the pause fee are **one-time** prices. Getting the type wrong breaks the
+checkout, so set the kit to recurring and the other two to one-off.
 
 | Lookup key | Product name | Price | Description |
 |---|---|---|---|
-| `branding_yearly` | Personal Branding kit | $13.99 / year | One branding kit for a year: your logo, colors, business name and tagline on split sheets, lyric sheets, contracts and catalog downloads. |
-| `contract_generator` | Generated contract | $3.99 | One generated contract from a blueprint, yours to fill in, sign and download. |
+| `branding_yearly` | Personal Branding kit | $13.99 / year (recurring) | One branding kit, billed yearly: your logo, colors, business name and tagline on split sheets, lyric sheets, contracts and catalog downloads. Cancels any time and runs to the end of the paid year. |
+| `contract_generator` | Generated contract | $3.99 (one-time) | One generated contract from a blueprint, yours to fill in, sign and download. |
 | `vault_month` | Pause · Vault fee | $1.99 / month | Keeps the catalog and Vault files in place while a plan is paused. One to three months, paid up front. |
 
 **Renew now** has no product of its own: it charges the member's existing plan price, one year early.

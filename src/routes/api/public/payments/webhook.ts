@@ -4,6 +4,7 @@ import type Stripe from "stripe";
 import { createStripeClient, verifyWebhook, type StripeEnv } from "@/lib/stripe.server";
 import { purchaseRow, subscriptionRow, type StripeSubscriptionLike } from "@/lib/stripe-mapping";
 import { SEAT_MAX, SEAT_TIER } from "@/lib/plans";
+import { BRANDING_LOOKUP_KEY } from "@/lib/brand-kit";
 import { purchaseKind } from "@/lib/purchase-receipt";
 import { earlyRenewalTarget } from "@/lib/retention";
 import { sendPurchaseReceipt } from "@/lib/purchase-emails.server";
@@ -186,7 +187,78 @@ async function completeSeatHandoff(env: StripeEnv, sub: StripeSubscriptionLike, 
   }
 }
 
+/** The payment intent behind an invoice, in whichever shape this Stripe API version reports it. */
+function invoicePaymentIntent(invoice: unknown): string | null {
+  const i = invoice as {
+    payment_intent?: string | { id: string } | null;
+    payments?: { data?: { payment?: { payment_intent?: string | { id: string } | null } | null }[] } | null;
+  } | null;
+  const value = i?.payment_intent ?? i?.payments?.data?.[0]?.payment?.payment_intent;
+  return typeof value === "string" ? value : value?.id ?? null;
+}
+
+/**
+ * A Personal Branding kit is its own yearly subscription (founder, 2026-11-19, replacing the one-time twelve-month
+ * purchase). It is still filed on `purchases`, one paid year at a time, so everything already built keeps working: the
+ * kit is on for the year that was paid for, a refund ends it, and a plan change can neither end nor extend it. The row
+ * is keyed to the subscription (`sub:<id>`) rather than a checkout session, and carries the invoice's payment intent so
+ * the Billing Console can refund the year.
+ */
+async function saveBrandingSubscription(sub: StripeSubscriptionLike, env: StripeEnv, deleted: boolean) {
+  const item = sub.items.data.find((i) => i.price.lookup_key === BRANDING_LOOKUP_KEY);
+  if (!item) return false;
+  const userId = sub.metadata?.["userId"] ?? null;
+  const start = item.current_period_start ?? sub.current_period_start;
+  const end = item.current_period_end ?? sub.current_period_end;
+  let paymentIntent: string | null = null;
+  let invoiceId: string | null = null;
+  try {
+    const invoices = await createStripeClient(env).invoices.list({ subscription: sub.id, status: "paid", limit: 1 });
+    const invoice = invoices.data[0] ?? null;
+    invoiceId = invoice?.id ?? null;
+    paymentIntent = invoicePaymentIntent(invoice);
+  } catch (e) {
+    console.warn(`Branding subscription ${sub.id}: its paid invoice could not be read`, e);
+  }
+  const key = `sub:${sub.id}`;
+  const { data: existing, error: readErr } = await db().from("purchases").select("id, details").eq("stripe_session_id", key).maybeSingle();
+  if (readErr) throw readErr;
+  const kept = (existing as { details?: Record<string, string> } | null)?.details ?? {};
+  // A refunded year stays refunded: a later Stripe event may refresh the row, it may never un-refund it.
+  const details = {
+    ...kept,
+    subscription: sub.id,
+    ...(invoiceId ? { invoice: invoiceId } : {}),
+    ...(paymentIntent ? { payment_intent: paymentIntent } : {}),
+    ...(end ? { period_end: new Date(end * 1000).toISOString() } : {}),
+    ...(deleted ? { canceled_at: new Date().toISOString() } : {}),
+  };
+  if (!userId) {
+    // Created outside our checkout (e.g. in the Stripe dashboard): only update a row we already know.
+    if (existing) {
+      const { error } = await db().from("purchases").update({ details } as never).eq("stripe_session_id", key);
+      if (error) throw error;
+    }
+    return true;
+  }
+  const row = {
+    user_id: userId,
+    stripe_session_id: key,
+    kind: "branding",
+    price_ids: [BRANDING_LOOKUP_KEY],
+    details,
+    environment: env,
+    // The paid year starts at the period's start, so the kit's twelve months count from the money, not the event.
+    ...(start ? { created_at: new Date(start * 1000).toISOString() } : {}),
+  };
+  const { error } = await db().from("purchases").upsert(row as never, { onConflict: "stripe_session_id" });
+  if (error) throw error;
+  return true;
+}
+
 async function saveSubscription(sub: StripeSubscriptionLike, env: StripeEnv, deleted = false) {
+  // A kit subscription is neither a plan nor a seat: it unlocks one branding kit for the year it pays for.
+  if (await saveBrandingSubscription(sub, env, deleted)) return;
   // Any seat line makes this a seat subscription, whatever else was bought alongside it.
   const seatKey = sub.items.data.find((i) => SEAT_TIER[i.price.lookup_key ?? ""])?.price.lookup_key;
   if (seatKey && SEAT_TIER[seatKey]) return saveSeatSubscription(sub, env, deleted);
@@ -246,6 +318,42 @@ async function checkoutCompleted(session: Stripe.Checkout.Session, env: StripeEn
 /** Marks the one-time purchase paid by this charge as refunded (kept for history, no longer unlocks anything). */
 async function markRefunded(env: StripeEnv, charge: Stripe.Charge) {
   const pi = typeof charge.payment_intent === "string" ? charge.payment_intent : charge.payment_intent?.id;
+  const stripe = createStripeClient(env);
+  // Newer Stripe API versions put the invoice on the payment intent rather than the charge, so read both shapes.
+  const invoiceOf = (value: unknown) => {
+    const v = (value as { invoice?: string | { id: string } | null } | null)?.invoice;
+    return typeof v === "string" ? v : v?.id ?? null;
+  };
+  let invoiceId: string | null = null;
+  if (pi) {
+    try {
+      invoiceId = invoiceOf(await stripe.paymentIntents.retrieve(pi));
+    } catch (e) {
+      console.warn(`Charge ${charge.id}: its payment intent could not be read`, e);
+    }
+  }
+  invoiceId ??= invoiceOf(charge);
+  // A branding kit is a subscription, so its year is found through the refunded invoice rather than a checkout session.
+  if (invoiceId) {
+    const invoice = await stripe.invoices.retrieve(invoiceId);
+    const subId = invoiceSubscriptionId(invoice);
+    if (subId) {
+      const { data } = await db().from("purchases").select("id, details").eq("stripe_session_id", `sub:${subId}`).maybeSingle();
+      const purchase = data as { id: string; details: Record<string, string> } | null;
+      if (purchase) {
+        const { error } = await db().from("purchases")
+          .update({ details: { ...purchase.details, refunded_at: new Date().toISOString() } } as never).eq("id", purchase.id);
+        if (error) throw error;
+        // A refund ends that kit right away, so the year it paid for must not renew (founder, 2026-11-19).
+        try {
+          await stripe.subscriptions.cancel(subId);
+        } catch (e) {
+          console.error(`Branding subscription ${subId}: could not be cancelled after its refund`, e);
+        }
+      }
+      return;
+    }
+  }
   if (!pi) return;
   const sessions = await createStripeClient(env).checkout.sessions.list({ payment_intent: pi, limit: 1 });
   const sessionId = sessions.data[0]?.id;
@@ -268,6 +376,8 @@ async function markRefunded(env: StripeEnv, charge: Stripe.Charge) {
 
 /** A subscription just set to cancel (it wasn't before this event) gets the "your plan ends on DATE" email once. */
 async function cancelNotice(env: StripeEnv, sub: StripeSubscriptionLike, previous: Record<string, unknown> | undefined) {
+  // A kit's own subscription is not the plan, so its cancellation never sends the "your plan ends" email.
+  if (sub.items.data.some((i) => i.price.lookup_key === BRANDING_LOOKUP_KEY)) return;
   const now = !!sub.cancel_at_period_end || !!sub.cancel_at;
   const was = previous && (("cancel_at_period_end" in previous && previous["cancel_at_period_end"] === false) || ("cancel_at" in previous && previous["cancel_at"] === null));
   if (!now || !was) return;

@@ -82,7 +82,7 @@ export const FAQS: Faq[] = [
   { category: "AI Protection Hub", q: "Is a certificate proof that I own my song?", a: "It's evidence, not a court ruling: it shows your files existed in that exact form by that date, and anyone can check the Bitcoin timestamp. Courts decide how much weight evidence gets. Keep your original files." },
 
   // Personal branding
-  { category: "Personal branding", q: "What is the brand kit?", a: "A kit replaces the Came Through Audio header on the documents you hand out — contracts, split sheets, lyrics and catalog downloads — with your own logo, name, tagline and colours. It never touches email, which always comes from Came Through Audio. One kit is included with Catalog Management; further kits are $13.99 a year for the kit, on any plan." },
+  { category: "Personal branding", q: "What is the brand kit?", a: "A kit replaces the Came Through Audio header on the documents you hand out — contracts, split sheets, lyrics and catalog downloads — with your own logo, name, tagline and colours. It never touches email, which always comes from Came Through Audio. One kit is included with Catalog Management; further kits are $13.99 a year, each its own yearly subscription that renews until you cancel, on any plan." },
   { category: "Personal branding", q: "Which documents show my branding?", a: "Contracts, split sheets, lyric sheets and catalog downloads, every time one is built or downloaded. Split sheets always show your artist name, never a business name, because a split sheet records who owns the song. Company agreements always keep the Came Through Audio header." },
 
   // Account & security
