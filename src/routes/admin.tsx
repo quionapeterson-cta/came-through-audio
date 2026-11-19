@@ -329,7 +329,7 @@ function AdminPage() {
           {show("handbook") && <TabsContent value="handbook"><Handbook /></TabsContent>}
           {show("staff-plan") && <TabsContent value="staff-plan"><StaffPlanPanel access={access} /></TabsContent>}
           {show("scripts") && <TabsContent value="scripts"><SupportScriptsPanel /></TabsContent>}
-          {show("prices") && <TabsContent value="prices"><PriceList /></TabsContent>}
+          {show("prices") && <TabsContent value="prices"><PriceList isSuper={isSuper} /></TabsContent>}
           {show("pdf") && (
             <TabsContent value="pdf">
               <PdfTools

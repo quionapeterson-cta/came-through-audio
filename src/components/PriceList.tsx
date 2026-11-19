@@ -1,10 +1,30 @@
-import { CARD_STATEMENT, PRICE_LIST, PRICE_LIST_EFFECTIVE } from "@/lib/price-list";
+import { useState } from "react";
+import { Check, Copy, KeyRound } from "lucide-react";
+import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
+import { CARD_STATEMENT, PRICE_LIST, PRICE_LIST_EFFECTIVE, stripeLookupKeyText } from "@/lib/price-list";
 
 /**
  * Admin → Price List: the official prices for staff to quote from. Reads src/lib/price-list.ts, which in turn reads the
  * same constants the site and checkout use, so nothing here can be out of date with what a customer is charged.
+ *
+ * The lookup keys block is a super admin's (founder, 2026-11-19): it is the list to copy beside the billing dashboard,
+ * and it names each price's type because Stripe must hold them exactly that way or checkout refuses the charge.
  */
-export function PriceList() {
+export function PriceList({ isSuper }: { isSuper: boolean }) {
+  const keys = isSuper ? stripeLookupKeyText() : "";
+  const [copied, setCopied] = useState(false);
+
+  async function copy() {
+    try {
+      await navigator.clipboard.writeText(keys);
+      setCopied(true);
+      toast.success("Lookup keys copied. Paste them beside the billing dashboard.");
+    } catch {
+      toast.error("Couldn't copy. Select the text below and copy it instead.");
+    }
+  }
+
   return (
     <div className="mt-6 space-y-4">
       <div className="rounded-2xl border border-border bg-card p-5">
@@ -15,6 +35,21 @@ export function PriceList() {
         </p>
         <p className="mt-3 text-xs font-bold uppercase tracking-[2px] text-primary">Effective {PRICE_LIST_EFFECTIVE} · USD · Billed yearly unless marked one-time</p>
       </div>
+
+      {isSuper && (
+        <section className="rounded-2xl border border-border bg-card p-5">
+          <h3 className="flex items-center gap-2 text-lg font-bold"><KeyRound className="h-4 w-4" />Lookup keys to copy into Stripe</h3>
+          <p className="mt-1 max-w-3xl text-sm text-muted-foreground">
+            Super admins only. One product per line: the lookup key exactly as Stripe must hold it, the amount the site
+            quotes, and whether it is a <strong>yearly subscription</strong> (recurring) or a <strong>one-time</strong>{" "}
+            charge. A price with the wrong amount or type is refused at checkout, naming the key, so nothing is charged.
+          </p>
+          <Button className="mt-3" variant="outline" onClick={() => void copy()}>
+            {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}{copied ? "Copied" : "Copy all lookup keys"}
+          </Button>
+          <pre className="mt-3 max-h-96 overflow-auto rounded-xl border border-border bg-muted p-3 font-mono text-xs leading-relaxed">{keys}</pre>
+        </section>
+      )}
 
       <div className="rounded-2xl border border-border bg-card p-5">
         <h3 className="text-lg font-bold">What a charge reads as on a card statement</h3>

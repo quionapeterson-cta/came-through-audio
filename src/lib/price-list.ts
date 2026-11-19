@@ -10,6 +10,9 @@ import { VAULT_LOOKUP_KEY, VAULT_PRICE } from "@/lib/retention";
  * change a price in code and this page changes with it. Nothing here is typed twice.
  */
 
+/** How Stripe must hold the price: a yearly subscription, or a single charge. */
+export type BillingType = "recurring" | "one-time";
+
 export type PriceRow = {
   item: string;
   /** What the customer pays, e.g. "$24.99/yr". */
@@ -18,6 +21,8 @@ export type PriceRow = {
   detail?: string;
   /** The Stripe lookup key the server buys by; absent when nothing is sold yet. */
   lookupKey?: string;
+  /** Present only for a row that is a Stripe price: the type it must be created with. */
+  billing?: BillingType;
 };
 
 export type PriceGroup = { title: string; note: string; rows: PriceRow[] };
@@ -43,7 +48,7 @@ export const PRICE_LIST: PriceGroup[] = [
       item: TIER_LABEL[p.tier],
       price: p.priceId ? `${p.price}/yr` : p.price,
       detail: p.priceId ? `${p.monthly} · billed annually` : "Sign-up only, no card",
-      ...(p.priceId && { lookupKey: p.priceId }),
+      ...(p.priceId && { lookupKey: p.priceId, billing: "recurring" as const }),
     })),
   },
   {
@@ -54,6 +59,7 @@ export const PRICE_LIST: PriceGroup[] = [
       price: `${s.price}/yr`,
       detail: `${s.monthly} · per added artist`,
       lookupKey: s.lookupKey,
+      billing: "recurring" as const,
     })),
   },
   {
@@ -65,18 +71,21 @@ export const PRICE_LIST: PriceGroup[] = [
         price: CONTRACT_PRICE,
         detail: "One generated contract, any plan. Catalog Management can generate them from its blueprints without paying per contract.",
         lookupKey: CONTRACT_LOOKUP_KEY,
+        billing: "one-time",
       },
       {
         item: "Personal Branding kit",
         price: BRANDING_PRICE,
-        detail: "Per kit, per year: your logo, colors, business name and tagline on split sheets and contracts. Included with Catalog Management.",
+        detail: "Per kit, per year: your logo, colors, business name and tagline on split sheets and contracts. Included with Catalog Management. Its own yearly subscription, renewing until cancelled.",
         lookupKey: BRANDING_LOOKUP_KEY,
+        billing: "recurring",
       },
       {
         item: "Pause (Vault fee)",
         price: `${usd(VAULT_PRICE)} per month paused`,
         detail: "Paid up front when an account pauses, up to 3 months. Keeps the catalog and Vault files in place while the plan is on hold.",
         lookupKey: VAULT_LOOKUP_KEY,
+        billing: "one-time",
       },
     ],
   },
@@ -84,8 +93,8 @@ export const PRICE_LIST: PriceGroup[] = [
     title: "Expert Assistance",
     note: "Our team registers songs for the customer. Sold by Came Through Audio, LLC directly, so it is not part of Stripe's managed payments.",
     rows: [
-      { item: "Setup: single or EP", price: singleSetup, detail: "Up to 6 songs", lookupKey: "expert_setup_single" },
-      { item: "Setup: album", price: albumSetup, detail: "Up to 20 songs", lookupKey: "expert_setup_album" },
+      { item: "Setup: single or EP", price: singleSetup, detail: "Up to 6 songs", lookupKey: "expert_setup_single", billing: "one-time" },
+      { item: "Setup: album", price: albumSetup, detail: "Up to 20 songs", lookupKey: "expert_setup_album", billing: "one-time" },
       { item: "Each further block of album tracks", price: albumSetup, detail: "Every full block of 20 tracks beyond the first 20" },
       { item: "A short final block of album tracks", price: singleSetup, detail: "1–6 extra tracks (7–19 is charged as another full block)" },
       {
@@ -93,6 +102,7 @@ export const PRICE_LIST: PriceGroup[] = [
         price: usd(ASSISTANCE_PER_SONG_AGENCY),
         detail: "Added for every song in the request, times the number of agencies chosen. ASCAP or BMI, never both.",
         lookupKey: "expert_per_song_agency",
+        billing: "one-time",
       },
     ],
   },
@@ -104,6 +114,37 @@ export const PRICE_LIST: PriceGroup[] = [
       price: p.id === "Single" ? `${usd(p.price)} per song` : usd(p.price),
       detail: p.id === "Single" ? "Up to 3 songs, priced one at a time" : `Up to ${p.songs} songs`,
       lookupKey: `ai_protection_${p.id.toLowerCase()}`,
+      billing: "one-time" as const,
     })),
   },
 ];
+
+export type SoldPrice = { item: string; price: string; detail?: string; lookupKey: string; billing: BillingType };
+
+/** Every row that is actually a Stripe price, in the order the page lists it. */
+export function soldPrices(): SoldPrice[] {
+  return PRICE_LIST.flatMap((group) =>
+    group.rows.flatMap((row) => (row.lookupKey && row.billing
+      ? [{ item: row.item, price: row.price, lookupKey: row.lookupKey, billing: row.billing, ...(row.detail ? { detail: row.detail } : {}) }]
+      : [])),
+  );
+}
+
+/**
+ * The lookup keys as plain text, for copying beside the billing dashboard (founder, 2026-11-19; super admins only):
+ * one product per line with the exact key, the amount the site quotes and whether Stripe must hold it as a yearly
+ * subscription or a single charge — a price created with the wrong type or amount is refused at checkout. Built from
+ * the same rows this page shows, so it can never quote a price the site doesn't.
+ */
+export function stripeLookupKeyText(): string {
+  const rows = soldPrices();
+  const keyWidth = Math.max(...rows.map((r) => r.lookupKey.length));
+  const priceWidth = Math.max(...rows.map((r) => r.price.length));
+  return [
+    `Came Through Audio · Stripe lookup keys · effective ${PRICE_LIST_EFFECTIVE} · USD`,
+    "Create each price on its own product and set the lookup key exactly as written.",
+    "yearly subscription = a recurring price, billed once a year; one-time = a single charge.",
+    "",
+    ...rows.map((r) => `${r.lookupKey.padEnd(keyWidth)}  ${r.price.padEnd(priceWidth)}  ${r.billing === "recurring" ? "yearly subscription" : "one-time"}  ${r.item}`),
+  ].join("\n");
+}

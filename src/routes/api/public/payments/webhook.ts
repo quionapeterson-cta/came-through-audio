@@ -5,6 +5,7 @@ import { createStripeClient, verifyWebhook, type StripeEnv } from "@/lib/stripe.
 import { purchaseRow, subscriptionRow, type StripeSubscriptionLike } from "@/lib/stripe-mapping";
 import { SEAT_MAX, SEAT_TIER } from "@/lib/plans";
 import { BRANDING_LOOKUP_KEY } from "@/lib/brand-kit";
+import { isBrandingSubscription, kitYearRow } from "@/lib/branding-subscription";
 import { purchaseKind } from "@/lib/purchase-receipt";
 import { earlyRenewalTarget } from "@/lib/retention";
 import { sendPurchaseReceipt } from "@/lib/purchase-emails.server";
@@ -203,56 +204,120 @@ function invoicePaymentIntent(invoice: unknown): string | null {
  * kit is on for the year that was paid for, a refund ends it, and a plan change can neither end nor extend it. The row
  * is keyed to the subscription (`sub:<id>`) rather than a checkout session, and carries the invoice's payment intent so
  * the Billing Console can refund the year.
+ *
+ * What the row may say is `kitYearRow` in `branding-subscription.ts` with its test: an unpaid period never unlocks a
+ * kit, and a refunded year can't be reopened by a late renewal or cancellation.
  */
 async function saveBrandingSubscription(sub: StripeSubscriptionLike, env: StripeEnv, deleted: boolean) {
-  const item = sub.items.data.find((i) => i.price.lookup_key === BRANDING_LOOKUP_KEY);
-  if (!item) return false;
+  if (!isBrandingSubscription(sub, BRANDING_LOOKUP_KEY)) return false;
+  const item = sub.items.data.find((i) => i.price.lookup_key === BRANDING_LOOKUP_KEY) ?? sub.items.data[0];
   const userId = sub.metadata?.["userId"] ?? null;
-  const start = item.current_period_start ?? sub.current_period_start;
-  const end = item.current_period_end ?? sub.current_period_end;
+  const start = item?.current_period_start ?? sub.current_period_start ?? null;
+  const end = item?.current_period_end ?? sub.current_period_end ?? null;
   let paymentIntent: string | null = null;
   let invoiceId: string | null = null;
+  let paid = false;
   try {
     const invoices = await createStripeClient(env).invoices.list({ subscription: sub.id, status: "paid", limit: 1 });
     const invoice = invoices.data[0] ?? null;
     invoiceId = invoice?.id ?? null;
     paymentIntent = invoicePaymentIntent(invoice);
+    // Paid, and for this period rather than an older year: nothing unlocks on an invoice that hasn't cleared.
+    paid = !!invoice && (invoice.amount_paid ?? 0) > 0 && (!start || (invoice.period_start ?? 0) >= start);
   } catch (e) {
     console.warn(`Branding subscription ${sub.id}: its paid invoice could not be read`, e);
   }
   const key = `sub:${sub.id}`;
   const { data: existing, error: readErr } = await db().from("purchases").select("id, details").eq("stripe_session_id", key).maybeSingle();
   if (readErr) throw readErr;
-  const kept = (existing as { details?: Record<string, string> } | null)?.details ?? {};
-  // A refunded year stays refunded: a later Stripe event may refresh the row, it may never un-refund it.
-  const details = {
-    ...kept,
-    subscription: sub.id,
-    ...(invoiceId ? { invoice: invoiceId } : {}),
-    ...(paymentIntent ? { payment_intent: paymentIntent } : {}),
-    ...(end ? { period_end: new Date(end * 1000).toISOString() } : {}),
-    ...(deleted ? { canceled_at: new Date().toISOString() } : {}),
-  };
+  const row = kitYearRow(
+    { subscriptionId: sub.id, periodStart: start, periodEnd: end, invoiceId, paymentIntent, paid, canceledAt: deleted ? new Date().toISOString() : null },
+    existing as { details?: Record<string, string> | null } | null,
+  );
+  // Nothing paid yet and nothing filed: a checkout whose payment failed never unlocks a kit.
+  if (!row) return true;
   if (!userId) {
     // Created outside our checkout (e.g. in the Stripe dashboard): only update a row we already know.
     if (existing) {
-      const { error } = await db().from("purchases").update({ details } as never).eq("stripe_session_id", key);
+      const { error } = await db().from("purchases").update({ details: row.details } as never).eq("stripe_session_id", key);
       if (error) throw error;
     }
     return true;
   }
-  const row = {
+  const saved = {
     user_id: userId,
-    stripe_session_id: key,
+    stripe_session_id: row.key,
     kind: "branding",
     price_ids: [BRANDING_LOOKUP_KEY],
-    details,
+    details: row.details,
     environment: env,
     // The paid year starts at the period's start, so the kit's twelve months count from the money, not the event.
-    ...(start ? { created_at: new Date(start * 1000).toISOString() } : {}),
+    ...(row.created_at ? { created_at: row.created_at } : {}),
   };
-  const { error } = await db().from("purchases").upsert(row as never, { onConflict: "stripe_session_id" });
+  const { error } = await db().from("purchases").upsert(saved as never, { onConflict: "stripe_session_id" });
   if (error) throw error;
+  return true;
+}
+
+/** The kit's own subscription, or null when this id belongs to a plan or a seat. */
+async function brandingSub(env: StripeEnv, subscriptionId: string): Promise<StripeSubscriptionLike | null> {
+  const sub = (await createStripeClient(env).subscriptions.retrieve(subscriptionId)) as unknown as StripeSubscriptionLike;
+  return isBrandingSubscription(sub, BRANDING_LOOKUP_KEY) ? sub : null;
+}
+
+/** A renewal charge for a kit's year: one email per invoice. Never fails the event. */
+async function sendKitRenewal(env: StripeEnv, invoice: Stripe.Invoice, subscriptionId: string) {
+  // The first year has its purchase receipt; this is about the years after it.
+  if (invoice.billing_reason !== "subscription_cycle") return;
+  const { data } = await db().from("purchases").select("user_id, details").eq("stripe_session_id", `sub:${subscriptionId}`).maybeSingle();
+  const row = data as { user_id: string; details: Record<string, string> } | null;
+  // A refunded year is closed, and a plan's invoice has no kit row at all.
+  if (!row || row.details["refunded_at"]) return;
+  const email = (invoice as unknown as { customer_email?: string | null }).customer_email || (await userEmail(row.user_id));
+  if (!email) return console.warn(`Kit renewal ${invoice.id}: there is no email to send to`);
+  const { sendKitRenewalEmail } = await import("@/lib/branding-emails.server");
+  const res = await sendKitRenewalEmail({
+    subscriptionId,
+    invoiceId: invoice.id ?? subscriptionId,
+    email,
+    amount: invoice.amount_paid ?? null,
+    currency: invoice.currency ?? null,
+    renewsOn: row.details["period_end"] ?? null,
+  });
+  if (!res.sent) console.warn(`Kit renewal email for ${subscriptionId} not sent: ${res.reason}`);
+}
+
+/**
+ * A kit's charge that didn't go through, first year or renewal. Returns true when the subscription is a kit's, so the
+ * plan's own failed-payment email never fires for it.
+ */
+async function sendKitPaymentFailed(env: StripeEnv, invoice: Stripe.Invoice, subscriptionId: string): Promise<boolean> {
+  const sub = await brandingSub(env, subscriptionId);
+  if (!sub) return false;
+  const { data } = await db().from("purchases").select("details").eq("stripe_session_id", `sub:${subscriptionId}`).maybeSingle();
+  const details = (data as { details?: Record<string, string> } | null)?.details ?? null;
+  // A refunded year is closed: no payment notice goes out for it.
+  if (details?.["refunded_at"]) return true;
+  let email = (invoice as unknown as { customer_email?: string | null }).customer_email ?? null;
+  if (!email) {
+    // A failed first payment never wrote a row, so the subscription's own metadata names the buyer.
+    const userId = sub.metadata?.["userId"] ?? null;
+    if (userId) email = await userEmail(userId);
+  }
+  if (!email) {
+    console.warn(`Kit payment failure ${invoice.id}: there is no email to send to`);
+    return true;
+  }
+  const { sendKitPaymentFailedEmail } = await import("@/lib/branding-emails.server");
+  const res = await sendKitPaymentFailedEmail({
+    subscriptionId,
+    invoiceId: invoice.id ?? subscriptionId,
+    email,
+    attempt: invoice.attempt_count ?? 1,
+    amount: invoice.amount_due ?? null,
+    currency: invoice.currency ?? null,
+  });
+  if (!res.sent) console.warn(`Kit failed-payment email for ${subscriptionId} not sent: ${res.reason}`);
   return true;
 }
 
@@ -435,22 +500,36 @@ export const Route = createFileRoute("/api/public/payments/webhook")({
               break;
             case "invoice.paid": {
               const id = invoiceSubscriptionId(event.data.object);
-              if (id) await syncSubscription(env, id);
+              if (id) {
+                await syncSubscription(env, id);
+                // A kit's year renewed: one email per invoice, never failing the event.
+                try { await sendKitRenewal(env, event.data.object as Stripe.Invoice, id); }
+                catch (e) { console.error("Kit renewal email failed:", e); }
+              }
               break;
             }
             case "invoice.payment_failed": {
-              // A yearly renewal that didn't go through: tell them, with Update card, Need more time and Pause.
+              // A yearly charge that didn't go through: tell them how to fix the card before anything is cut off.
               const invoice = event.data.object as Stripe.Invoice;
               const id = invoiceSubscriptionId(invoice);
-              if (id && invoice.billing_reason === "subscription_cycle") {
-                await syncSubscription(env, id);
-                const { data } = await db().from("subscriptions").select("user_id, price_id").eq("stripe_subscription_id", id).maybeSingle();
-                const sub = data as { user_id: string; price_id: string } | null;
-                if (sub) {
-                  try {
-                    const { sendPaymentFailedEmail } = await import("@/lib/retention.server");
-                    await sendPaymentFailedEmail(sub.user_id, sub.price_id, invoice.id ?? id, invoice.attempt_count ?? 1);
-                  } catch (e) { console.error("Payment failed email failed:", e); }
+              const firstOrRenewal = invoice.billing_reason === "subscription_cycle" || invoice.billing_reason === "subscription_create";
+              if (id && firstOrRenewal) {
+                // A kit's own subscription has its own notice; the plan email and plan row are never used for it.
+                try {
+                  if (await sendKitPaymentFailed(env, invoice, id)) break;
+                } catch (e) {
+                  console.error("Kit failed-payment email failed:", e);
+                }
+                if (invoice.billing_reason === "subscription_cycle") {
+                  await syncSubscription(env, id);
+                  const { data } = await db().from("subscriptions").select("user_id, price_id").eq("stripe_subscription_id", id).maybeSingle();
+                  const sub = data as { user_id: string; price_id: string } | null;
+                  if (sub) {
+                    try {
+                      const { sendPaymentFailedEmail } = await import("@/lib/retention.server");
+                      await sendPaymentFailedEmail(sub.user_id, sub.price_id, invoice.id ?? id, invoice.attempt_count ?? 1);
+                    } catch (e) { console.error("Payment failed email failed:", e); }
+                  }
                 }
               }
               break;

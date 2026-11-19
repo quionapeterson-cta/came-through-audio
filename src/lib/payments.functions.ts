@@ -327,7 +327,8 @@ export const createCheckoutSession = createServerFn({ method: "POST" })
         // shows it instead of "Unknown product". Subscriptions resolve names server-side.
         ...(plan.mode === "payment" && { payment_intent_data: { description: productNames.join(" + ") } }),
         metadata: plan.managed ? { ...metadata, managed_payments: "true" } : metadata,
-        ...(plan.mode === "subscription" && { subscription_data: { metadata: { userId: context.userId } } }),
+        // The kind travels with the subscription so the webhook can tell a kit, a seat and a plan apart without guessing.
+        ...(plan.mode === "subscription" && { subscription_data: { metadata: { userId: context.userId, kind: data.kind } } }),
         // Managed: Stripe handles tax, fraud protection, disputes and transaction support end-to-end.
         ...(plan.managed ? { managed_payments: { enabled: true } } : STRIPE_TAX ? { automatic_tax: { enabled: true } } : {}),
       } as Parameters<typeof stripe.checkout.sessions.create>[0]);
