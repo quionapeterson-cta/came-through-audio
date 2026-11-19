@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { activeKitKeys, autoBindKit, brandAccess, brandingUntil, hexRgb, kitAllowance, kitFromRow, kitReady, usableKits } from "./brand-kit";
+import { activeKitKeys, autoBindKit, brandAccess, brandingUntil, hexRgb, kitAllowance, kitFromRow, kitReady, kitYearKey, usableKits } from "./brand-kit";
 import { checkoutInput, planCheckout } from "./stripe-mapping";
 
 const buy = (created_at: string, refunded = false) => ({ kind: "branding", created_at, details: refunded ? { refunded_at: created_at } : {} });
@@ -106,6 +106,23 @@ describe("several Branding Kits", () => {
     expect(usableKits([{ id: "k1", paidKey: "sub:a" }, { id: "k2", paidKey: "sub:b" }], 1, false, new Set(["sub:new"])).map((k) => k.id)).toEqual(["k2"]);
     // With the included kit it is still the default, and the year fills the paid slot.
     expect(usableKits([{ id: "k1", paidKey: "sub:old" }], 2, true, new Set(["sub:new"])).map((k) => k.id)).toEqual(["k1"]);
+  });
+
+  it("keys a year bought before the subscription was stored by its own purchase row", () => {
+    const bought = new Date(Date.now() - 5 * 86400000).toISOString();
+    // The sandbox branding rows of 2026-11-07 carry only kind and userId, but they still count as a paid year.
+    const legacy = { id: "p1", kind: "branding", created_at: bought, details: { kind: "branding" } };
+    expect(kitYearKey(legacy)).toBe("row:p1");
+    expect([...activeKitKeys([legacy])]).toEqual(["row:p1"]);
+    // A row with no id and no subscription can name nothing, rather than inventing a key.
+    expect(kitYearKey({ kind: "branding", created_at: bought, details: {} })).toBeNull();
+    // A real subscription still wins, so its exact link never changes shape.
+    expect(kitYearKey({ id: "p2", kind: "branding", created_at: bought, details: { subscription: "sub_123" } })).toBe("sub:sub_123");
+    // A legacy year can unlock the kit linked to it, just like a subscription year.
+    const paid = activeKitKeys([legacy]);
+    expect(usableKits([{ id: "k1", paidKey: "row:p1" }], 1, false, paid).map((k) => k.id)).toEqual(["k1"]);
+    // A refunded legacy year is not running and names no kit.
+    expect([...activeKitKeys([{ ...legacy, details: { refunded_at: new Date().toISOString() } }])]).toEqual([]);
   });
 
   it("binds a member's only kit to their running paid year", () => {

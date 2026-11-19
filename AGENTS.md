@@ -593,7 +593,9 @@ rules keep it consistent as features are added.
   row's `sub:<subscription_id>` key, written only by the server — the webhook when checkout named the kit
   (`metadata.kitId`), or `bindKitYear` when a new kit is created after a year was bought. `usableKits` in
   `src/lib/brand-kit.ts` unlocks exactly the linked kits whose year is still running, keeps the included kit (oldest) as
-  the default, and gives an unlinked year to the newest unlinked kit. A lapsed link only takes a slot when a running
+  the default, and gives an unlinked year to the newest unlinked kit. A year written before `subscription` was stored
+  (the sandbox rows of 2026-11-07) is keyed `row:<purchase id>` by `kitYearKey`, so a counted year can still name its
+  kit; never invent a key for a row with no id and no subscription. A lapsed link only takes a slot when a running
   year has no unlinked kit to name — the member who renewed from the locked screen, where no kit could be named — so
   paying there always prints something. The page also offers **Renew this kit** for a kit outside the allowance, and the
   locked screen's Add Personal Branding names the member's first saved kit. A member with exactly one kit and a running

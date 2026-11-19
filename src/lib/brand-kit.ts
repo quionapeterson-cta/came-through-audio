@@ -182,7 +182,7 @@ export function kitFromRow(r: { id?: string | null; name?: string | null; taglin
   };
 }
 
-type BrandingPurchase = { kind: string; created_at: string; details: Record<string, string> };
+type BrandingPurchase = { id?: string; kind: string; created_at: string; details: Record<string, string> };
 
 /**
  * When one paid kit year ends, in milliseconds. Stripe's own `period_end` is what the money bought, so it wins; the
@@ -228,12 +228,22 @@ export function kitAllowance(tier: Tier, purchases: BrandingPurchase[], now = ne
   return (hasTier(tier, "management") ? 1 : 0) + activeBuys(purchases, now).length;
 }
 
-/** The `sub:<subscription_id>` key of every kit year that is running now: exactly what a kit row is linked by. */
+/**
+ * The key a kit row is linked by: the purchase row's own `sub:<subscription_id>`, or — for a year bought before the
+ * subscription was stored (the sandbox rows of 2026-11-07 carry only `kind` and `userId`) — `row:<purchase id>`, so a
+ * year that is still counted by `kitAllowance` can also name the kit it paid for (founder, 2026-11-19).
+ */
+export function kitYearKey(p: BrandingPurchase): string | null {
+  if (p.details["subscription"]) return `sub:${p.details["subscription"]}`;
+  return p.id ? `row:${p.id}` : null;
+}
+
+/** The key of every kit year that is running now: exactly what a kit row is linked by. */
 export function activeKitKeys(purchases: BrandingPurchase[], now = new Date()): Set<string> {
   const keys = purchases
     .filter((p) => p.kind === "branding" && !p.details["refunded_at"])
     .filter((p) => { const end = yearEnd(p); return Number.isFinite(end) && end > now.getTime(); })
-    .map((p) => (p.details["subscription"] ? `sub:${p.details["subscription"]}` : ""))
+    .map((p) => kitYearKey(p) ?? "")
     .filter(Boolean);
   return new Set(keys);
 }

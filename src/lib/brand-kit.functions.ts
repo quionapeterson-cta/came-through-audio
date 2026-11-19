@@ -19,9 +19,10 @@ type Db = Awaited<ReturnType<typeof admin>>;
 async function accessFor(db: Db, userId: string) {
   const [{ data: tier }, { data: buys }] = await Promise.all([
     db.rpc("user_tier" as never, { _uid: userId } as never),
-    db.from("purchases").select("kind, created_at, details").eq("user_id", userId).eq("kind", "branding").eq("environment", getPaymentsEnvironment()),
+    // `id` is what a year bought before the subscription was stored is keyed by (`row:<id>`).
+    db.from("purchases").select("id, kind, created_at, details").eq("user_id", userId).eq("kind", "branding").eq("environment", getPaymentsEnvironment()),
   ]);
-  const list = (buys ?? []) as { kind: string; created_at: string; details: Record<string, string> }[];
+  const list = (buys ?? []) as { id?: string; kind: string; created_at: string; details: Record<string, string> }[];
   const t = serverTier(tier);
   const period = brandingPeriod(list);
   const until = period?.until ?? null;
