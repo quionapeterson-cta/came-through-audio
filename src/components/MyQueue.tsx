@@ -62,6 +62,8 @@ export function MyQueue({ me, access, onOpen, onOpenTicket }: {
 
   const [items, setItems] = useState<Item[]>([]);
   const [rows, setRows] = useState<Row[]>([]);
+  /** The first load runs after mount; until it lands the columns are empty, which must not read as "nothing waiting". */
+  const [loading, setLoading] = useState(true);
   const [pausing, setPausing] = useState<string>();
   const [note, setNote] = useState("");
   const [openSteps, setOpenSteps] = useState<Record<string, boolean>>({});
@@ -70,6 +72,7 @@ export function MyQueue({ me, access, onOpen, onOpenTicket }: {
   const [burst, setBurst] = useState<{ name: string; title: string } | null>(null);
 
   const load = async () => {
+    setLoading(true);
     const out: Item[] = [];
     const [r, t, k, q] = await Promise.all([
       access.departments.includes("registration") ? regs().catch(() => []) : Promise.resolve([]),
@@ -83,6 +86,7 @@ export function MyQueue({ me, access, onOpen, onOpenTicket }: {
     if (q.error) toast.error("Couldn't load your queue. Run migration 20261025230000 first.");
     setItems(out);
     setRows((q.data ?? []) as Row[]);
+    setLoading(false);
   };
   useEffect(() => { void load(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => { if (!burst) return; const t = setTimeout(() => setBurst(null), 2600); return () => clearTimeout(t); }, [burst]);
@@ -278,7 +282,7 @@ export function MyQueue({ me, access, onOpen, onOpenTicket }: {
           <div>
             <h2 className="text-lg font-bold">Your day</h2>
             <p className="text-xs text-muted-foreground">
-              {progress.done} of {progress.total} {progress.unit} done{progress.pct === 100 && progress.total ? " — that's all of it" : ""}
+              {loading ? "Loading your queue…" : <>{progress.done} of {progress.total} {progress.unit} done{progress.pct === 100 && progress.total ? " — that's all of it" : ""}</>}
             </p>
           </div>
           <span className="text-2xl font-black text-primary">{progress.pct}%</span>
@@ -316,7 +320,7 @@ export function MyQueue({ me, access, onOpen, onOpenTicket }: {
               </div>
               <p className="mb-2 px-1 text-[11px] text-muted-foreground">{col.hint}</p>
               {list.length === 0
-                ? <p className="px-1 text-sm text-muted-foreground">{col.key === "working" ? "Start something from Waiting." : col.key === "waiting" ? "Nothing waiting. Rare." : "Nothing finished yet today."}</p>
+                ? <p className="px-1 text-sm text-muted-foreground">{loading ? "Loading…" : col.key === "working" ? "Start something from Waiting." : col.key === "waiting" ? "Nothing waiting. Rare." : "Nothing finished yet today."}</p>
                 : <ul className="space-y-2">{list.map(card)}</ul>}
             </section>
           );

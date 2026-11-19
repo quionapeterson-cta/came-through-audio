@@ -511,8 +511,8 @@ export function PdfTools({
       {canEmail && canStudio && <PdfTemplateStudio />}
       {canEmail && !canStudio && (
         <p className="rounded-2xl border border-dashed border-border p-4 text-sm text-muted-foreground">
-          The template library is kept by a super admin. Sending a packet is still open to every
-          staff member.
+          The template library is kept by a super admin. Sending a packet is a super admin's or HR's
+          job.
         </p>
       )}
       {canEmail && packets && <PdfPacketCenter />}
