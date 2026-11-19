@@ -455,3 +455,129 @@ label:has(> [data-infotip]) { line-height: 1.25rem; padding-bottom: 2px; overflo
   .cta-diagnostic-target { animation: none; box-shadow: 0 0 0 3px rgba(0, 74, 173, 0.55); }
   .dark .cta-diagnostic-target { box-shadow: 0 0 0 3px rgba(77, 140, 255, 0.6); }
 }
+
+/*
+ * ── Global mobile configuration (phones, below 768px) ──────────────────────────────────────────────────────────────
+ * The one place every phone rule lives, so a new screen inherits it instead of repeating it. Everything here is inside
+ * the breakpoint: at 768px and above nothing in this block applies, so desktop layouts, grids, type scales and spacing
+ * are exactly what they were. Rules that should yield to a component's own Tailwind class sit in @layer base (utilities
+ * win over base); the few that must win on a phone (the 16px field floor, tap targets, the overflow lock) are unlayered
+ * on purpose, and each one says why.
+ */
+:root {
+  --safe-area-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-area-top: env(safe-area-inset-top, 0px);
+}
+
+/* A fixed bottom bar (the help bubble, an action bar, a bottom sheet) keeps its controls clear of the home indicator. */
+.safe-bottom { padding-bottom: calc(var(--safe-area-bottom, env(safe-area-inset-bottom, 0px)) + 0.75rem); }
+.safe-top { padding-top: calc(var(--safe-area-top, env(safe-area-inset-top, 0px)) + 0.75rem); }
+
+@media (max-width: 767px) {
+  /*
+   * 1. No unintended horizontal scrolling. `clip` where it is supported, because it stops the sideways scroll without
+   * turning the root into a scroll container (which would break the sticky pre-launch banner); `hidden` is the fallback.
+   */
+  html,
+  body {
+    max-width: 100%;
+    overflow-x: hidden;
+  }
+  @supports (overflow-x: clip) {
+    html,
+    body {
+      overflow-x: clip;
+    }
+  }
+
+  /* A long unbroken string (a URL, an email, an ISRC run) wraps instead of pushing the page sideways. */
+  body {
+    overflow-wrap: break-word;
+  }
+
+  /*
+   * 2. The 16px floor on form fields. Anything smaller makes iOS Safari zoom the page when the field is focused, which
+   * leaves the whole layout scrolled sideways until the reader pinches out. Unlayered so it wins over a component's
+   * `text-sm` on a phone; the desktop size of every field is untouched.
+   */
+  input,
+  select,
+  textarea {
+    font-size: 16px;
+  }
+  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]):not([type="file"]),
+  select,
+  textarea {
+    min-height: 44px;
+  }
+
+  /*
+   * 3. Touch targets: 44 × 44 with room around them. Buttons, tabs, menus and links in navigation are the ones a thumb
+   * has to hit; checkboxes and radios keep their drawn size so a form does not grow a row of 44px boxes.
+   */
+  button,
+  [role="button"],
+  [role="tab"],
+  [role="menuitem"],
+  [role="option"],
+  summary {
+    min-height: 44px;
+  }
+  /* Icon-only controls need the width as well as the height, or a 16px glyph stays a 24px target. */
+  button:has(> svg:only-child),
+  [role="button"]:has(> svg:only-child),
+  a:has(> svg:only-child) {
+    min-width: 44px;
+  }
+  /* Header links too: the brand mark is a link, and on a 320px phone it was only 24px tall. Inline links inside a
+     sentence are left alone — they wrap with the text and are exempt from the target-size rule. */
+  header a[href],
+  nav a[href],
+  footer a[href],
+  [role="navigation"] a[href] {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+  }
+
+  /* 4. Modals, sheets and checkout dialogs are sized by their own component (ui/dialog, ui/alert-dialog,
+        ui/sheet, ui/drawer): 95vw wide at most, inside 90dvh, scrolling their content and keeping the close
+        button reachable. Nothing global forces a full-height drawer shorter than it should be. */
+}
+
+@layer base {
+  @media (max-width: 767px) {
+    /* Fluid headings: a heading with no size class of its own scales with the screen instead of overflowing it. Any
+       Tailwind text size on the element is a utility and still wins, so this changes no designed heading. */
+    h1 {
+      font-size: clamp(1.75rem, 8vw, 2.5rem);
+      line-height: 1.1;
+      overflow-wrap: break-word;
+    }
+    h2 {
+      font-size: clamp(1.5rem, 6.5vw, 2rem);
+      overflow-wrap: break-word;
+    }
+    h3,
+    h4 {
+      overflow-wrap: break-word;
+    }
+
+    /* Media never outgrows its column; an element's own height utility (an avatar, a logo) still wins. */
+    img,
+    video,
+    iframe {
+      max-width: 100%;
+      height: auto;
+    }
+    svg,
+    canvas {
+      max-width: 100%;
+    }
+
+    /* A wide table keeps its columns and scrolls inside its own container rather than clipping off-screen. */
+    table {
+      font-size: 0.875rem;
+    }
+  }
+}

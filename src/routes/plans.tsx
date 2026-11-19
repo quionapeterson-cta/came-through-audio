@@ -74,7 +74,7 @@ function PlansPage() {
   return (
     <div className="min-h-screen bg-ink text-ink-foreground">
       <header className="bg-ink text-ink-foreground">
-        <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-5">
+        <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-5 max-md:gap-3 max-md:px-4">
           <BrandLogo />
           {/* Log in is small, so it gets the Electric Cobalt with a soft glow to find it at a glance on ink. Signed out,
               it goes to the dedicated log-in page, which already has their email filled in (founder, 2026-11-05). */}

@@ -721,3 +721,26 @@ rules keep it consistent as features are added.
 - **Only Catalog & Collaborate and Catalog Management may cut the footer off** (founder, 2026-11-06): `brandFor` in
   `src/lib/brand-kit.functions.ts` forces `showFooter: true` on any lower plan, whatever the saved kit says. Never move
   that check into a component. In Profile → Brand kit the switch is a small one-line control, shown only on those plans.
+
+## Mobile Layout (always follow)
+
+- **The phone rules live in one place** (founder, 2026-11-18): the `@media (max-width: 767px)` block at the foot of
+  `src/styles.css` is the global mobile configuration — the horizontal-scroll lock, the 16px floor on every `<input>`,
+  `<select>` and `<textarea>` (anything smaller makes iOS Safari zoom on focus), the 44 × 44 touch targets, and the
+  safe-area variables. A screen inherits all of it; don't repeat those rules in a component.
+- **Desktop is never rewritten** (founder, 2026-11-18): every mobile adjustment goes inside a breakpoint (`max-md:`,
+  `sm:`, `md:` or that media block). Rules that must yield to a component's own Tailwind class go in `@layer base`
+  (media sizing, fluid headings); only the rules that must win on a phone (the 16px field floor, tap targets, the
+  overflow lock) are unlayered, and each says why in a comment. A change that would alter a desktop grid, desktop type
+  scale or desktop spacing is a different decision and needs the founder.
+- **Wide navigation becomes a phone control**: the interior dashboard's eight tabs scroll sideways with
+  `overflow-x-auto whitespace-nowrap` (snap points, scrollbar hidden), and the `/admin` workspace uses the grouped
+  sheet in `AdminSidebar` (`AdminNavMobile`). A new tab strip follows the same shape rather than wrapping into a wall
+  of buttons.
+- **Wide tables scroll, they never clip**: `ui/table.tsx` wraps every table in its own `overflow-x-auto` container, and
+  a bespoke table gets the same wrapper.
+- **Modals stay on the screen**: `DialogContent` caps itself at 95vw and 90dvh on a phone with internal scrolling, and
+  its close button is a full tap target. A new overlay follows those classes instead of a fixed pixel width.
+- **Fixed bottom controls keep clear of the home indicator**: `--safe-area-bottom` / `.safe-bottom` come from
+  `env(safe-area-inset-bottom)` and are applied to the help bubble and every bottom sheet. `viewport-fit=cover` in the
+  root viewport meta is what makes those insets resolve.

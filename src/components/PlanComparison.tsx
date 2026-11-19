@@ -116,7 +116,9 @@ export function PlanComparison({ currentTier, action, note, tone = "light" }: { 
               <ul className="mt-5 space-y-2.5">
                 {PLAN_FEATURES.map((f) => (
                   <li key={f.title} className={`flex items-start gap-2 text-sm ${f.highlight ? "-mx-2 rounded-lg bg-primary/[0.07] px-2 py-1" : ""} ${hasTier(p.tier, f.from) ? "" : `${t.muted} opacity-60`}`}>
-                    <span className="mt-0.5"><Mark feature={f} tier={p.tier} t={t} /></span><FeatureName feature={f} t={t} />
+                    {/* The mark keeps its size and the name takes what is left: without `min-w-0` the tip button's own
+                        min-content width held the row (and the whole dialog) wider than the phone. */}
+                    <span className="mt-0.5 shrink-0"><Mark feature={f} tier={p.tier} t={t} /></span><span className="min-w-0 flex-1"><FeatureName feature={f} t={t} /></span>
                   </li>
                 ))}
               </ul>
@@ -164,8 +166,10 @@ function FeatureName({ feature, t }: { feature: Feature; t: Palette }) {
     <InfoTip title={feature.title} text={feature.tip} className="text-left">
         <span className={`cursor-help text-sm font-semibold underline underline-offset-4 ${t.rule}`}>
           {feature.title}
-          {feature.badge && <span className={`ml-2 whitespace-nowrap rounded px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider no-underline ${t.chip}`}>{feature.badge}</span>}
-          {feature.soon && <span className={`ml-2 whitespace-nowrap rounded px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider no-underline ${t.chip}`}>Coming soon</span>}
+          {/* The chips stay on one line at desktop sizes; on a phone a long one ("Registers in minutes") is what used to
+              hold the plan card, and with it the whole dialog, wider than the screen. */}
+          {feature.badge && <span className={`ml-2 whitespace-nowrap max-md:whitespace-normal rounded px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider no-underline ${t.chip}`}>{feature.badge}</span>}
+          {feature.soon && <span className={`ml-2 whitespace-nowrap max-md:whitespace-normal rounded px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider no-underline ${t.chip}`}>Coming soon</span>}
         </span>
     </InfoTip>
   );

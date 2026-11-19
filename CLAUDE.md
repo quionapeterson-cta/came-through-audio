@@ -28,3 +28,6 @@ Contrast rules:
 Gold `#FFD700` and Platinum `#E5E4E2` are only for badges and awards, never general site design. Exception: the My Catalog health meter is liquid Gold in light mode and liquid Platinum in dark mode, and the homepage hero tagline ("YOUR" and "DISTRIBUTION") is darker Platinum `#B4B2AD` in a same-colour outline with a thin black gap, for contrast on Primary Black. The Royalty Health Report may also use reds/pinks for organs and Gold/Platinum as a small accent. See BRANDING.md.
 
 In code, use the semantic theme tokens (`foreground`, `background`, `primary`, `ink`, …) rather than raw hex values, so every control follows the global theme.
+
+## Mobile
+- Phone rules live in one `@media (max-width: 767px)` block at the foot of `src/styles.css`: no horizontal page scroll, a 16px minimum on every field, 44 × 44 tap targets, safe-area insets. Desktop above 768px is untouched, so every mobile change goes behind `max-md:`/`sm:`/`md:` or that media block. See "Mobile Layout" in AGENTS.md.

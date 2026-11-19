@@ -277,7 +277,7 @@ function Landing() {
       <AppOrBrowserGate />
       {/* A white header sets the black hero apart as its own block instead of one long stretch of black. */}
       <header className="border-b border-border bg-background text-foreground">
-        <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-5">
+        <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-5 max-md:gap-3 max-md:px-4">
           {/* The signature first, then the name beside it (founder, 2026-11-10): the logo leads the header on the same
               line as the banner, back to the way the header read before the signature moved out of it. */}
           <BrandLogo tone="light" />
@@ -286,7 +286,9 @@ function Landing() {
       </header>
 
       <section className="bg-ink text-ink-foreground">
-        <div className="mx-auto grid max-w-7xl gap-12 px-6 py-16 md:grid-cols-[1.15fr_1fr] md:items-center">
+        {/* `grid-cols-1` (minmax(0,1fr)) on a phone: an auto track took its width from the headline's un-fitted
+            nowrap lines, so at 320px the tagline stayed 364px wide and was clipped. */}
+        <div className="mx-auto grid max-w-7xl grid-cols-1 gap-12 px-6 py-16 md:grid-cols-[1.15fr_1fr] md:items-center">
           <div className="min-w-0">
             {/* The tagline: always uppercase with 2px letter spacing (BRANDING.md §1). The first line's negative margin
                 trims the space above the capitals, so the headline block centers optically against the sign-up box. */}

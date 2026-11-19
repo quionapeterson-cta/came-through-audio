@@ -13,7 +13,7 @@ export function LegalPage({ title, updated, intro, sections, overrides = {} }: L
   return (
     <div className="min-h-screen bg-background text-foreground">
       <header className="bg-ink text-ink-foreground">
-        <div className="mx-auto flex max-w-4xl items-center justify-between px-6 py-5">
+        <div className="mx-auto flex max-w-4xl items-center justify-between px-6 py-5 max-md:flex-wrap max-md:gap-2 max-md:px-4">
           <BrandLogo />
           <nav className="flex gap-4 text-sm text-ink-muted">
             <Link to="/terms-of-service" className="hover:text-ink-foreground">Terms</Link>
@@ -22,7 +22,7 @@ export function LegalPage({ title, updated, intro, sections, overrides = {} }: L
           </nav>
         </div>
       </header>
-      <main className="mx-auto max-w-4xl px-6 py-14">
+      <main className="mx-auto max-w-4xl px-6 py-14 max-md:px-4 max-md:py-10">
         <h1 className="text-4xl font-bold">{title}</h1>
         <p className="mt-2 text-sm text-muted-foreground">Last updated: {lastUpdated(updated, overrides)}</p>
         {introBody && <div className="mt-8 space-y-4 leading-relaxed">{introBody}</div>}

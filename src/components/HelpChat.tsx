@@ -40,13 +40,13 @@ export function HelpChat() {
   if (!open) return (
     // A small round chat button at the bottom right (founder, 2026-10-27).
     <button type="button" onClick={() => setOpen(true)} aria-label="Open help chat" title="Help"
-      className="fixed bottom-4 right-4 z-40 flex h-[52px] w-[52px] items-center justify-center rounded-full bg-primary text-primary-foreground shadow-lg transition hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+      className="fixed bottom-4 right-4 z-40 flex h-[52px] w-[52px] items-center justify-center rounded-full bg-primary text-primary-foreground shadow-lg transition hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring max-md:bottom-[calc(1rem+env(safe-area-inset-bottom,0px))] max-md:right-[calc(1rem+env(safe-area-inset-right,0px))]">
       <MessageCircleQuestion className="h-6 w-6" />
     </button>
   );
 
   return (
-    <section role="dialog" aria-label="Help chat" className="fixed bottom-4 right-4 z-40 flex max-h-[min(36rem,calc(100vh-2rem))] w-[min(24rem,calc(100vw-2rem))] flex-col overflow-hidden rounded-2xl border border-border bg-card text-card-foreground shadow-2xl">
+    <section role="dialog" aria-label="Help chat" className="fixed bottom-4 right-4 z-40 flex max-h-[min(36rem,calc(100vh-2rem))] w-[min(24rem,calc(100vw-2rem))] flex-col overflow-hidden rounded-2xl border border-border bg-card text-card-foreground shadow-2xl max-md:bottom-[calc(1rem+env(safe-area-inset-bottom,0px))] max-md:max-h-[min(36rem,calc(90dvh-env(safe-area-inset-bottom,0px)))] max-md:w-[min(24rem,calc(100vw-2rem))]">
       <header className="flex items-center justify-between bg-ink px-4 py-3 text-ink-foreground">
         <span className="flex items-center gap-2 font-bold"><LifeBuoy className="h-5 w-5" />Help</span>
         <button type="button" onClick={() => setOpen(false)} aria-label="Close help chat" className="rounded p-1 hover:bg-ink-border"><X className="h-5 w-5" /></button>

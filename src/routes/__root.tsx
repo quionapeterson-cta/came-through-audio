@@ -107,7 +107,9 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
   head: () => ({
     meta: [
       { charSet: "utf-8" },
-      { name: "viewport", content: "width=device-width, initial-scale=1" },
+      // `maximum-scale=5` still lets a reader pinch in; `viewport-fit=cover` is what makes the safe-area insets in
+      // styles.css resolve on a phone with a notch or a home indicator.
+      { name: "viewport", content: "width=device-width, initial-scale=1, maximum-scale=5, viewport-fit=cover" },
       // Development-stage shield: remove before public launch.
       { name: "robots", content: "noindex, nofollow" },
       { title: "Came Through Audio" },

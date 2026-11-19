@@ -401,8 +401,8 @@ function Workspace() {
       {welcomeBurst && <div className="pointer-events-none fixed inset-0 z-[85]"><Confetti /></div>}
       <PaymentTestModeBanner previewTier={previewTier} onPreviewTier={canPreview ? setPreviewTier : undefined} />
       <header className="border-b border-ink-border bg-ink text-ink-foreground">
-        <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-6 py-4">
-          <div className="flex min-w-0 items-center gap-3">
+        <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-6 py-4 max-md:gap-2 max-md:px-4">
+          <div className="flex min-w-0 items-center gap-3 max-md:gap-2">
             <BrandLogo showName={false} />
             <div className="min-w-0">
               <div className="text-xs uppercase tracking-widest text-ink-muted">Came Through Audio</div>
@@ -504,7 +504,7 @@ function Workspace() {
           onSaved={() => { setSeatDefaultsFor(null); setEmbedKey((k) => k + 1); setCatalogKey((k) => k + 1); }} />
       )}
       <BadgeWatcher userId={user.id} artist={names.artist} eagle={tier === "management"} />
-      <main className="mx-auto max-w-7xl px-6 py-8">
+      <main className="mx-auto max-w-7xl px-6 py-8 max-md:px-4 max-md:py-6">
         {audit && (tab === "catalog" || tab === "health") && (
           <AuditBar trail={audit} onEnd={closeAudit} back={auditBack}
             active={tab === "catalog" ? "catalog" : search.report === "yes" ? "report" : "checklist"} />
@@ -526,9 +526,9 @@ function Workspace() {
         <Tabs value={tab} onValueChange={setTab}>
           {/* One row, left to right, scrolled on narrow screens: all six belong on the same line (founder, 2026-11-04;
               centering is for the sub-tab strip under the artist name, not this row). */}
-          <TabsList className="h-auto w-full flex-nowrap justify-start gap-1 overflow-x-auto bg-muted p-1">
+          <TabsList className="h-auto w-full flex-nowrap justify-start gap-1 overflow-x-auto bg-muted p-1 max-md:snap-x max-md:snap-mandatory max-md:scroll-px-1 max-md:[scrollbar-width:none] max-md:[&::-webkit-scrollbar]:hidden">
             {tabs.map(({ id, label, icon: Icon }, i) => (
-              <TabsTrigger key={id} value={id} className="shrink-0 gap-2 px-3 py-2.5 font-semibold data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+              <TabsTrigger key={id} value={id} className="shrink-0 gap-2 px-3 py-2.5 font-semibold data-[state=active]:bg-primary data-[state=active]:text-primary-foreground max-md:snap-start">
                 <span className="text-xs opacity-70">{i + 1}.</span><Icon className="h-4 w-4" /> {label}
               </TabsTrigger>
             ))}

@@ -254,7 +254,9 @@ function HelpCenterPage() {
 
       {/* Still need help: the form, quiet and below the answers. */}
       <section id="ticket" className="scroll-mt-6 border-t border-border bg-muted/30">
-        <div className="mx-auto grid max-w-6xl gap-8 px-6 py-14 sm:py-16 lg:grid-cols-5">
+        {/* `[&>*]:min-w-0`: without it the grid's single mobile column is sized by the form's min-content width, which
+            ran 86px past a 320px phone and clipped the copy beside it. */}
+        <div className="mx-auto grid max-w-6xl gap-8 px-6 py-14 [&>*]:min-w-0 sm:py-16 lg:grid-cols-5">
           <div className="lg:col-span-2">
             <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-primary/10 text-primary"><LifeBuoy className="h-5 w-5" /></span>
             <h2 className="mt-4 text-3xl font-bold">Still need help?</h2>

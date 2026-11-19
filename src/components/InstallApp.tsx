@@ -139,13 +139,15 @@ export function AppOrBrowserGate() {
         <p className="text-sm font-bold uppercase tracking-[2px] text-ink-foreground/70">Welcome to Came Through Audio</p>
         <h1 className="text-4xl font-extrabold tracking-tight md:text-5xl">How do you want to come through?</h1>
         <p className="max-w-xl text-lg text-ink-foreground/80">Put Came Through Audio on your home screen and it opens full screen like any app, or keep going right here in your browser. Same account, same catalog, either way.</p>
-        <div className="mt-2 grid w-full gap-3 sm:grid-cols-2">
-          <Button size="lg" className="h-auto flex-col items-start gap-1 px-5 py-4 text-left" onClick={addToPhone}>
-            <span className="flex items-center gap-2 text-base font-bold"><Download className="h-5 w-5" aria-hidden />Add to home screen</span>
+        {/* `whitespace-normal` overrides the Button's nowrap on a phone: the sentence inside each button could not wrap,
+            so its min-content width propped the whole gate wider than a 320px screen and clipped the question. */}
+        <div className="mt-2 grid w-full gap-3 [&>*]:min-w-0 sm:grid-cols-2">
+          <Button size="lg" className="h-auto flex-col items-start gap-1 whitespace-normal px-5 py-4 text-left" onClick={addToPhone}>
+            <span className="flex items-center gap-2 text-base font-bold"><Download className="h-5 w-5 shrink-0" aria-hidden />Add to home screen</span>
             <span className="text-xs font-medium opacity-80">Opens full screen, one tap away, and it's free.</span>
           </Button>
-          <Button size="lg" variant="outline" className="h-auto flex-col items-start gap-1 border-ink-foreground/30 bg-transparent px-5 py-4 text-left text-ink-foreground hover:bg-ink-foreground/10 hover:text-ink-foreground" onClick={() => choose("browser")}>
-            <span className="flex items-center gap-2 text-base font-bold"><Globe className="h-5 w-5" aria-hidden />Continue in browser</span>
+          <Button size="lg" variant="outline" className="h-auto flex-col items-start gap-1 whitespace-normal border-ink-foreground/30 bg-transparent px-5 py-4 text-left text-ink-foreground hover:bg-ink-foreground/10 hover:text-ink-foreground" onClick={() => choose("browser")}>
+            <span className="flex items-center gap-2 text-base font-bold"><Globe className="h-5 w-5 shrink-0" aria-hidden />Continue in browser</span>
             <span className="text-xs font-medium opacity-80">Nothing to install, nothing to accept.</span>
           </Button>
         </div>

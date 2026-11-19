@@ -35,6 +35,8 @@ const AlertDialogContent = React.forwardRef<
       ref={ref}
       className={cn(
         "fixed inset-0 z-50 m-auto grid h-fit w-fit min-w-64 max-w-[min(24rem,calc(100%-2rem))] gap-3 border bg-background p-5 shadow-lg duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 sm:rounded-lg",
+        // Phones: a confirmation stays inside 90dvh and scrolls rather than running past the screen.
+        "max-md:max-h-[90dvh] max-md:max-w-[95vw] max-md:overflow-y-auto max-md:overscroll-contain",
         className,
       )}
       {...props}
