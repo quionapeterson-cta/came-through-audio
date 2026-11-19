@@ -29,6 +29,11 @@ export type KitYearInput = {
   paymentIntent: string | null;
   /** True only when Stripe says this period's invoice is paid. Nothing unlocks on an unpaid one. */
   paid: boolean;
+  /**
+   * Whether Stripe will bill this subscription again when the paid year ends. A subscription cancelled from the
+   * billing portal keeps the year it paid for but is never described as renewing (founder, 2026-11-19).
+   */
+  renews: boolean;
   /** Set when the subscription has ended; the kit still runs to the end of the year already paid for. */
   canceledAt?: string | null;
 };
@@ -64,6 +69,8 @@ export function kitYearRow(
     ...(year.paymentIntent ? { payment_intent: year.paymentIntent } : {}),
     ...(year.periodEnd ? { period_end: new Date(year.periodEnd * 1000).toISOString() } : {}),
     ...(year.canceledAt ? { canceled_at: year.canceledAt } : {}),
+    // Written every paid period, so resuming a cancelled subscription puts the renewal back on the page.
+    renews: year.renews ? "yes" : "no",
   };
   return {
     key,

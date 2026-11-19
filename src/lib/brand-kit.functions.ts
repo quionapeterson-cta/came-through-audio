@@ -1,7 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-import { brandAccess, brandingUntil, kitAllowance, kitFromRow, kitReady, type BrandUse, type PdfBrand } from "./brand-kit";
+import { brandAccess, brandingPeriod, kitAllowance, kitFromRow, kitReady, type BrandUse, type PdfBrand } from "./brand-kit";
 import { hasTier, serverTier } from "./plans";
 import { getPaymentsEnvironment } from "./payments-env";
 
@@ -23,8 +23,9 @@ async function accessFor(db: Db, userId: string) {
   ]);
   const list = (buys ?? []) as { kind: string; created_at: string; details: Record<string, string> }[];
   const t = serverTier(tier);
-  const until = brandingUntil(list);
-  return { access: brandAccess(t, until), until, allowance: kitAllowance(t, list), tier: t };
+  const period = brandingPeriod(list);
+  const until = period?.until ?? null;
+  return { access: brandAccess(t, until), until, renews: period?.renews ?? false, allowance: kitAllowance(t, list), tier: t };
 }
 
 /**
@@ -68,8 +69,8 @@ async function brandFor(db: Db, userId: string, use: BrandUse, kitId?: string | 
 export const getBrandAccess = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
-    const { access, until, allowance } = await accessFor(await admin(), context.userId);
-    return { ...access, addOnUntil: until?.toISOString() ?? null, allowance };
+    const { access, until, renews, allowance } = await accessFor(await admin(), context.userId);
+    return { ...access, addOnUntil: until?.toISOString() ?? null, addOnRenews: renews, allowance };
   });
 
 /** The signed-in user's own kit for a split sheet, contract or catalog download. */

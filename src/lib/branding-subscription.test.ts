@@ -8,6 +8,7 @@ const year = (over: Partial<KitYearInput> = {}): KitYearInput => ({
   invoiceId: "in_1",
   paymentIntent: "pi_1",
   paid: true,
+  renews: true,
   ...over,
 });
 
@@ -47,6 +48,13 @@ describe("a kit's paid year", () => {
     const first = kitYearRow(year())!;
     const row = kitYearRow(year({ paid: false, invoiceId: null, paymentIntent: null, periodStart: 1_824_536_000 }), first)!;
     expect(row).toEqual({ key: "sub:sub_123", details: first.details });
+  });
+
+  it("remembers a cancellation, and puts the renewal back if it is resumed", () => {
+    const cancelled = kitYearRow(year({ renews: false }))!;
+    expect(cancelled.details["renews"]).toBe("no");
+    const resumed = kitYearRow(year({ renews: true }), cancelled)!;
+    expect(resumed.details["renews"]).toBe("yes");
   });
 
   it("marks an ended subscription without shortening the paid year", () => {

@@ -183,10 +183,27 @@ const activeBuys = (purchases: BrandingPurchase[], now: Date) =>
   purchases.filter((p) => p.kind === "branding" && !p.details["refunded_at"]).map((p) => Date.parse(p.created_at))
     .filter((t) => Number.isFinite(t) && t + BRANDING_DAYS * 86400000 > now.getTime());
 
+/** The year a kit is in right now: when it ends, and whether another one follows it. */
+export type BrandPeriod = { until: Date; renews: boolean };
+
+/**
+ * The kit's current year, or null when none is active now. `renews` is false once the subscription has been cancelled,
+ * so the page can say the kit ends instead of promising a renewal (founder, 2026-11-19).
+ */
+export function brandingPeriod(purchases: BrandingPurchase[], now = new Date()): BrandPeriod | null {
+  const years = purchases
+    .filter((p) => p.kind === "branding" && !p.details["refunded_at"])
+    .map((p) => ({ at: Date.parse(p.created_at), renews: p.details["renews"] !== "no" && !p.details["canceled_at"] }))
+    .filter((y) => Number.isFinite(y.at) && y.at + BRANDING_DAYS * 86400000 > now.getTime());
+  if (!years.length) return null;
+  // The newest paid year is the one that decides when it runs out, and whether it renews.
+  const last = years.reduce((a, b) => (b.at > a.at ? b : a));
+  return { until: new Date(last.at + BRANDING_DAYS * 86400000), renews: last.renews };
+}
+
 /** When the last active kit purchase runs out, or null if none is active now. */
 export function brandingUntil(purchases: BrandingPurchase[], now = new Date()): Date | null {
-  const buys = activeBuys(purchases, now);
-  return buys.length ? new Date(Math.max(...buys) + BRANDING_DAYS * 86400000) : null;
+  return brandingPeriod(purchases, now)?.until ?? null;
 }
 
 /** How many kits can be used now: one with Catalog Management, plus one per active kit purchase. */

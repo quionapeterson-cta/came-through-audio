@@ -22,22 +22,26 @@ export function purchaseKind(raw: string | null | undefined): PurchaseKind | nul
  * returned to before the email existed; keeping them here means the confirmation button lands where the buyer does.
  */
 export function purchaseLanding(kind: PurchaseKind): string {
+  // `bought` names the product that sent them back, so a landing page only opens that product's flow: no page can
+  // mistake a certificate return for a seat purchase and open another product's upsell (founder, 2026-11-19).
   switch (kind) {
     case "ai":
-      return "/workspace?tab=protect&checkout=success";
+      return "/workspace?tab=protect&checkout=success&bought=ai";
     case "expert":
-      return "/workspace?tab=health&checkout=success";
+      return "/workspace?tab=health&checkout=success&bought=expert";
     case "contract":
-      return "/workspace?tab=learn&checkout=success";
+      return "/workspace?tab=learn&checkout=success&bought=contract";
     case "branding":
-      return "/profile?checkout=success#brand-kit";
+      return "/profile?checkout=success&bought=branding#brand-kit";
     case "renew":
-      return "/profile?checkout=success";
-    // A plan, its seats and a pause all live in the workspace, which opens the seat invite on the way back.
+      return "/profile?checkout=success&bought=renew";
+    // A plan, its seats and a pause all live in the workspace. Only a seat purchase opens the seat invite.
     case "plan":
+      return "/workspace?checkout=success&bought=plan";
     case "seat":
+      return "/workspace?checkout=success&bought=seat";
     case "vault":
-      return "/workspace?checkout=success";
+      return "/workspace?checkout=success&bought=vault";
   }
 }
 

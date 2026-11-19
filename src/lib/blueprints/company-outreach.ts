@@ -3,7 +3,7 @@ import { CLAUSE, DATE, doc, field, need, type Blueprint, type BlueprintField } f
 /**
  * Company outreach kit (PLAN-phase4-order item 5, approved 2026-10-25): Came Through Audio, LLC's agreements with
  * labels, music-tech and music-creation companies. Sent from Admin → Company Contracts and signed with the company
- * block (3.9); contract-blueprints.ts makes the LLC the party and fixes Georgia law. Lawyer review before first use.
+ * block (3.9); contract-blueprints.ts makes the LLC the party and fixes Georgia law.
  */
 const R: [string, string] = ["Company", "Partner"];
 const PARTNER_CO = need("partnerCompany", "Partner's company name", "The partner's legal business name, as it should read in the agreement.", { placeholder: "Example Records, LLC" });

@@ -48,8 +48,8 @@ export const sendContractInvite = createServerFn({ method: "POST" })
     const origin = trustedOrigin(data.origin, SITE_URL);
     const link = k.is_company ? (await import("./contract-sign.server")).signLink(origin, p.id) : `${origin}/contract/${p.id}`;
     const howToSign = k.is_company
-      ? `<b>No account needed.</b> Open the agreement, read it, and sign with a 6-digit code we email to this address (<b>${esc(email)}</b>). Your signature is time-stamped and secured with a verification hash, and you'll get the signed copy when everyone has signed. Take your time, and talk to an attorney if you have questions before signing.`
-      : `<b>Signing is always free.</b> Log in or create a free account with this email (<b>${esc(email)}</b>) to read the full contract and sign. Your signature is time-stamped and secured with a verification hash, and you can download the signed copy when everyone has signed. Take your time, and talk to an attorney if you have questions before signing.`;
+      ? `<b>No account needed.</b> Open the agreement, read it, and sign with a 6-digit code we email to this address (<b>${esc(email)}</b>). Your signature is time-stamped and secured with a verification hash, and you'll get the signed copy when everyone has signed. Take your time before you sign.`
+      : `<b>Signing is always free.</b> Log in or create a free account with this email (<b>${esc(email)}</b>) to read the full contract and sign. Your signature is time-stamped and secured with a verification hash, and you can download the signed copy when everyone has signed. Take your time before you sign.`;
 
     const html = emailLayout(`<p style="font-size:12px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:#004AAD;margin:0">Contract Signature Request</p>
 <h1 style="font-size:24px;margin:8px 0 16px">Hi ${esc(p.legal_name || "there")}, please review and sign "${esc(k.title)}"</h1>

@@ -5,18 +5,26 @@ const KINDS: PurchaseKind[] = ["plan", "seat", "vault", "branding", "contract", 
 
 describe("purchaseLanding", () => {
   it("sends every purchase back to the page it unlocked, marked as a checkout return", () => {
-    expect(purchaseLanding("plan")).toBe("/workspace?checkout=success");
-    expect(purchaseLanding("seat")).toBe("/workspace?checkout=success");
-    expect(purchaseLanding("vault")).toBe("/workspace?checkout=success");
-    expect(purchaseLanding("ai")).toBe("/workspace?tab=protect&checkout=success");
-    expect(purchaseLanding("expert")).toBe("/workspace?tab=health&checkout=success");
-    expect(purchaseLanding("contract")).toBe("/workspace?tab=learn&checkout=success");
-    expect(purchaseLanding("branding")).toBe("/profile?checkout=success#brand-kit");
-    expect(purchaseLanding("renew")).toBe("/profile?checkout=success");
+    expect(purchaseLanding("plan")).toBe("/workspace?checkout=success&bought=plan");
+    expect(purchaseLanding("seat")).toBe("/workspace?checkout=success&bought=seat");
+    expect(purchaseLanding("vault")).toBe("/workspace?checkout=success&bought=vault");
+    expect(purchaseLanding("ai")).toBe("/workspace?tab=protect&checkout=success&bought=ai");
+    expect(purchaseLanding("expert")).toBe("/workspace?tab=health&checkout=success&bought=expert");
+    expect(purchaseLanding("contract")).toBe("/workspace?tab=learn&checkout=success&bought=contract");
+    expect(purchaseLanding("branding")).toBe("/profile?checkout=success&bought=branding#brand-kit");
+    expect(purchaseLanding("renew")).toBe("/profile?checkout=success&bought=renew");
   });
 
   it("always marks the return, so the landing page knows it is a checkout", () => {
     for (const kind of KINDS) expect(purchaseLanding(kind)).toContain("checkout=success");
+  });
+
+  it("names the product on the way back, so no page opens another product's flow", () => {
+    for (const kind of KINDS) expect(purchaseLanding(kind)).toContain(`bought=${kind}`);
+  });
+
+  it("keeps the branding kit's anchor last", () => {
+    expect(purchaseLanding("branding").endsWith("#brand-kit")).toBe(true);
   });
 
   it("returns a site path, never an absolute or empty one", () => {
@@ -25,6 +33,7 @@ describe("purchaseLanding", () => {
       expect(path.startsWith("/")).toBe(true);
       expect(path.startsWith("//")).toBe(false);
       expect(path.length).toBeGreaterThan(10);
+      expect(path).not.toContain("//");
     }
   });
 });

@@ -124,16 +124,16 @@ export function AIProtectionHub({ userId, purchases, justPaid, track }: { userId
 
   // ---- After paying: confirm, then lead straight into the steps ---------------------------------------------------
   const [timedOut, setTimedOut] = useState(false);
-  const [welcomed, setWelcomed] = useState(false);
+  /**
+   * Paid, confirmed, and not started yet: the page shows the purchase confirmation with its steps and one button, and
+   * the wizard opens only when that button is clicked (founder, 2026-11-19). Nothing jumps the buyer into a form or
+   * into another product's flow on the way back from Stripe.
+   */
+  const [paidStarted, setPaidStarted] = useState(false);
   const steps = useRef<HTMLDivElement>(null);
   const confirming = justPaid && !!certs && left === 0 && !timedOut;
+  const paidNow = justPaid && left > 0 && !paidStarted;
   useEffect(() => { if (!justPaid) return; const t = setTimeout(() => setTimedOut(true), 90_000); return () => clearTimeout(t); }, [justPaid]);
-  useEffect(() => {
-    if (!justPaid || welcomed || left === 0) return;
-    setWelcomed(true);
-    setPanel("create");
-    setTimeout(() => steps.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 150);
-  }, [justPaid, left, welcomed]);
   // Paid songs waiting for proof open on Create; otherwise My certificates.
   useEffect(() => { if (active && waiting.length) setPanel("create"); }, [active, waiting.length]);
 
@@ -316,10 +316,30 @@ export function AIProtectionHub({ userId, purchases, justPaid, track }: { userId
       {justPaid && timedOut && left === 0 && (
         <div className="flex items-center gap-3 rounded-2xl border border-border bg-card p-5 text-sm"><AlertTriangle className="h-5 w-5 text-primary" />We haven't received your payment confirmation yet. Refresh in a minute; if it still doesn't show, contact billing@camethroughaudio.com.</div>
       )}
+      {paidNow && (
+        <div className="rounded-2xl border-2 border-primary bg-primary/5 p-5 sm:p-6">
+          <p className="text-xs font-bold uppercase tracking-[2px] text-primary">Purchase successful</p>
+          <h2 className="mt-1 text-xl font-bold">Your AI Protection package is active</h2>
+          <p className="mt-2 text-sm">
+            {paidSongs} song{paidSongs === 1 ? "" : "s"} paid for · {left} certificate{left === 1 ? "" : "s"} ready to create.
+            Every certificate comes from these steps, and nothing else needs buying.
+          </p>
+          <ol className="mt-4 space-y-2 text-sm">
+            <li><b>1. Check the song details.</b> Pick the song you paid for: its title, artist and writers fill in from My Catalog, so you only correct what is wrong.</li>
+            <li><b>2. Record two proof videos.</b> Your DAW session and your draft history, {MIN_PROOF_SECONDS}–{MAX_PROOF_SECONDS} seconds each, kept unedited.</li>
+            <li><b>3. Attest and generate.</b> Tick the sworn statement, then generate: your PDF certificate and Bitcoin proof download straight away.</li>
+            <li><b>4. Keep your originals.</b> Save the certificate and proof ZIP with your project files; the fingerprint matches those exact videos.</li>
+          </ol>
+          <div className="mt-4 flex flex-wrap gap-2">
+            <Button onClick={() => { setPaidStarted(true); setPanel("create"); setTimeout(() => steps.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 80); }}>Create my certificate</Button>
+            <Button variant="outline" onClick={() => setPanel("mine")}>See my certificates</Button>
+          </div>
+        </div>
+      )}
 
 
       {/* 2 · Buy */}
-      {!confirming && (
+      {!confirming && !paidNow && (
         <div className="rounded-2xl border border-border bg-card">
           <button type="button" aria-expanded={buyShown} onClick={() => setBuyOpen(!buyShown)} className="flex w-full items-start justify-between gap-3 rounded-2xl p-5 text-left hover:bg-primary/5 sm:px-6">
             <span className="space-y-1">
@@ -415,7 +435,7 @@ export function AIProtectionHub({ userId, purchases, justPaid, track }: { userId
       {/* 3 · Create the certificate */}
       {panel === "create" && active && (
         <div ref={steps} className="scroll-mt-24">
-          <Card title="Create your certificates" subtitle={justPaid && welcomed ? "Payment received. Follow the five steps below; each song takes a few minutes." : "Five steps, a few minutes per song."}>
+          <Card title="Create your certificates" subtitle="Four steps, a few minutes per song.">
             <ol className="space-y-8">
               <Step n={1} title="Song details" done={!detailsMissing.length}>
                 <div className="space-y-1">

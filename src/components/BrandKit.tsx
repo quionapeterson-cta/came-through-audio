@@ -25,7 +25,7 @@ import { hasTier, TIER_LABEL, type Tier } from "@/lib/plans";
 const BUCKET = "brand-logos";
 const MAX_LOGO = 2 * 1024 * 1024;
 /** `allowance`: how many kits can be used on documents now (missing before the multi-kit update). */
-type Access = { splits: boolean; contracts: boolean; addOnUntil: string | null; allowance?: number };
+type Access = { splits: boolean; contracts: boolean; addOnUntil: string | null; addOnRenews: boolean; allowance?: number };
 const longDate = (iso: string) => new Date(iso).toLocaleDateString(undefined, { month: "long", day: "numeric", year: "numeric" });
 
 /**
@@ -70,7 +70,7 @@ export function BrandKit({ userId, tier, artistName }: { userId: string; tier: T
 
   useEffect(() => {
     let live = true;
-    void accessFn().then((a) => live && setAccess(a)).catch(() => live && setAccess({ splits: false, contracts: false, addOnUntil: null }));
+    void accessFn().then((a) => live && setAccess(a)).catch(() => live && setAccess({ splits: false, contracts: false, addOnUntil: null, addOnRenews: false }));
     void (async () => {
       // Oldest kit first: it's the one used when a document doesn't pick a kit.
       let res = await supabase.from("brand_kits" as never).select("*").eq("user_id", userId).order("created_at" as never, { ascending: true });
@@ -366,10 +366,12 @@ export function BrandKit({ userId, tier, artistName }: { userId: string; tier: T
       )}
       <p className="text-sm text-muted-foreground">
         {where} carry this header in place of ours.
-        {tier === "management" ? ` Included with ${TIER_LABEL.management}.` : access.addOnUntil ? ` Personal Branding is its own yearly subscription: it renews on ${longDate(access.addOnUntil)} until you cancel, and a plan change never ends it or shortens it.` : ""}
+        {tier === "management" ? ` Included with ${TIER_LABEL.management}.` : access.addOnUntil ? (access.addOnRenews
+          ? ` Personal Branding is its own yearly subscription: it renews on ${longDate(access.addOnUntil)} until you cancel, and a plan change never ends it or shortens it.`
+          : ` Personal Branding is paid through ${longDate(access.addOnUntil)} and won't renew. It stays on until that date, and you can add it again whenever you like.`) : ""}
       </p>
       {tier !== "management" && access.addOnUntil && (
-        <Button variant="outline" onClick={() => void openBilling()}>Manage billing · renews {longDate(access.addOnUntil)}</Button>
+        <Button variant="outline" onClick={() => void openBilling()}>Manage billing · {access.addOnRenews ? "renews" : "ends"} {longDate(access.addOnUntil)}</Button>
       )}
 
       {/* Several kits, one per business or project; each contract picks its kit. */}

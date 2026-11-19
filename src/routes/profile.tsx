@@ -74,9 +74,8 @@ function ProfilePage() {
   // The artists this account pays a seat for, so Edit profile can switch to one of theirs.
   /**
    * Back from paying for a seat the invite form opens by itself, since that is where the artist's email is entered —
-   * once per visit (founder, 2026-11-07). It used to open again on every re-render, so closing it brought it straight
-   * back, and any checkout return (a branding kit included) could trigger it. The panel is still one click away, and an
-   * unclaimed seat opens its own invite row when it is opened.
+   * once per visit (founder, 2026-11-07). It only answers a seat purchase: a branding kit, renewal, certificate or
+   * contract return names itself as `bought`, so none of them can open another product's add-on popup (2026-11-19).
    */
   const seatPrompted = useRef(false);
   useEffect(() => {
@@ -85,7 +84,7 @@ function ProfilePage() {
       setSeatArtists(seatArtistsFor(s.seats, user.id));
       if (seatPrompted.current) return;
       const uninvited = s.seats.some((seat) => seat.owner_id === user.id && seat.status === "unclaimed");
-      if (!uninvited || new URLSearchParams(window.location.search).get("checkout") !== "success") return;
+      if (!uninvited || new URLSearchParams(window.location.search).get("bought") !== "seat") return;
       seatPrompted.current = true;
       setSeatsOpen(true);
     }).catch(() => setSeatArtists([]));
@@ -231,9 +230,9 @@ function ProfilePage() {
         canAddArtist={!editTarget && tier !== "free"}
         open={editing || !!editTarget} onOpenChange={(o) => { if (!o) { setEditing(false); setEditTarget(null); } }} firstRun={false}
         onSaved={(o) => { if (editTarget) { setEditTarget(null); return; } setOb(o); setProfile(loadProfile(user.id)); setEditing(false); }} />
-      <AddArtistDialog open={seatsOpen} onOpenChange={setSeatsOpen} canAddArtist={tier !== "free"} />
       <PasswordDialog email={user.email ?? ""} open={passwordOpen} onOpenChange={setPasswordOpen} />
       <EmailDialog email={user.email ?? ""} open={emailOpen} onOpenChange={setEmailOpen} />
+      <AddArtistDialog open={seatsOpen} onOpenChange={setSeatsOpen} canAddArtist={tier !== "free"} />
     </div>
   );
 }

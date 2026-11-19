@@ -313,7 +313,7 @@ export function internshipPacketTemplate(): PdfTemplate {
       section("Form 1 — Internship Agreement & Learning Plan", "Learning first", "form1"),
       clause(
         "Purpose",
-        "This agreement documents the educational internship relationship between Came Through Audio (“Company”) and the Intern. It is intended to establish expectations, learning objectives, supervision, confidentiality, access, and professional conduct. It does not replace applicable federal, state, or local law. If the internship is unpaid, the Company should have the arrangement reviewed by qualified employment counsel before use.",
+        "This agreement documents the educational internship relationship between Came Through Audio (“Company”) and the Intern. It is intended to establish expectations, learning objectives, supervision, confidentiality, access, and professional conduct. It does not replace applicable federal, state, or local law.",
       ),
       fields("Intern information", [
         field("Intern full legal name", { required: true }),
@@ -481,7 +481,7 @@ export function internshipPacketTemplate(): PdfTemplate {
       section("Form 4 — Intellectual Property & Work Product Agreement", "Who owns what", "form4"),
       clause(
         "Purpose",
-        "This form addresses ownership and permitted use of materials created, modified, or contributed to during the internship. Specific ownership can depend on the nature of the work and applicable law, so the Company should have this form reviewed by counsel for the internship structure being used.",
+        "This form addresses ownership and permitted use of materials created, modified, or contributed to during the internship. Specific ownership can depend on the nature of the work and applicable law.",
       ),
       boxes("Work product examples", [
         check("Social media graphics and marketing assets"),

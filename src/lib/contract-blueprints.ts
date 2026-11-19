@@ -20,7 +20,7 @@ import { RELEASE_TERMS, VISUAL } from "./blueprints/visual";
 export { CATEGORIES, type Blueprint, type BlueprintField, type Category } from "./blueprints/common";
 
 export const CONTRACT_DISCLAIMER =
-  "Contract drafts are general templates to help you organize a deal. They are not legal advice. Have a qualified music attorney review any contract before you sign it.";
+  "Contract drafts are general templates to help you organize a deal. They are not legal advice.";
 
 /** The customer blueprint library, in category order. */
 export const BLUEPRINTS: Blueprint[] = [...MUSIC_PRODUCTION, ...MANAGEMENT, ...RIGHTS, ...VISUAL, ...FASHION, ...INFLUENCERS, ...PODCASTING, ...LIVE, ...BUSINESS, ...EVENTS];
@@ -77,7 +77,7 @@ export const COMPANY_BLUEPRINTS: Blueprint[] = [
     body: asCompany(`${RELEASE_TERMS}${LAUNCH_GIFT(11)}${PRELAUNCH(12)}${general(13)}`),
   },
   {
-    // Phase 4 item 3 (founder, 2026-10-25): beta testers, paid in lifetime access. Lawyer review before sending.
+    // Phase 4 item 3 (founder, 2026-10-25): beta testers, paid in lifetime access.
     id: "company-beta-agreement",
     name: "Beta Tester Agreement",
     category: "Company",
@@ -146,7 +146,7 @@ export type AuthorizationSchedule = { songs: { title: string; isrc: string }[]; 
 /**
  * The Registration Authorization a customer signs at intake step 4 (PLAN-registration-intake §6). Came Through Audio,
  * LLC is the party; Schedule A is filled from the order. Built on the server when signing, so the text and its hash
- * can't be changed by the browser. Have a lawyer review before launch.
+ * can't be changed by the browser.
  */
 export function registrationAuthorization(o: { effectiveDate: string; client: string; prelaunch: boolean } & AuthorizationSchedule): string {
   const agencies = o.agencies.join(", ");

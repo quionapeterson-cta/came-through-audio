@@ -231,7 +231,12 @@ async function saveBrandingSubscription(sub: StripeSubscriptionLike, env: Stripe
   const { data: existing, error: readErr } = await db().from("purchases").select("id, details").eq("stripe_session_id", key).maybeSingle();
   if (readErr) throw readErr;
   const row = kitYearRow(
-    { subscriptionId: sub.id, periodStart: start, periodEnd: end, invoiceId, paymentIntent, paid, canceledAt: deleted ? new Date().toISOString() : null },
+    {
+      subscriptionId: sub.id, periodStart: start, periodEnd: end, invoiceId, paymentIntent, paid,
+      // A cancellation keeps the paid year; it only stops the page promising another one (founder, 2026-11-19).
+      renews: !deleted && !sub.cancel_at_period_end && sub.status !== "canceled" && sub.status !== "incomplete_expired",
+      canceledAt: deleted ? new Date().toISOString() : null,
+    },
     existing as { details?: Record<string, string> | null } | null,
   );
   // Nothing paid yet and nothing filed: a checkout whose payment failed never unlocks a kit.

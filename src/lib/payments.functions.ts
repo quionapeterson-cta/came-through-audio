@@ -97,7 +97,8 @@ async function planSwitchUrl(stripe: Stripe, env: "sandbox" | "live", customer: 
     flow_data: {
       type: "subscription_update_confirm" as const,
       subscription_update_confirm: { subscription: subscriptionId, items: [{ id: item.id, price: price.id, quantity: 1 }] },
-      after_completion: { type: "redirect" as const, redirect: { return_url: `${returnUrl}?checkout=success` } },
+      // The product is named on the way back too, so the workspace opens a plan return and nothing else.
+      after_completion: { type: "redirect" as const, redirect: { return_url: `${returnUrl}?checkout=success&bought=plan` } },
     },
   };
   try {

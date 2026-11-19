@@ -72,7 +72,7 @@ export const Route = createFileRoute("/workspace")({
   // A Differences deep link (`?tab=catalog&songId=…&focusField=isrc&agencyIsrc=…&action=adopt`) is kept whole here, so the
   // song, the field and the suggested code all survive the router.
   validateSearch: (s: Record<string, unknown>): {
-    tab?: string | undefined; checkout?: "success" | undefined; view?: "expert" | undefined;
+    tab?: string | undefined; checkout?: "success" | undefined; bought?: string | undefined; view?: "expert" | undefined;
     plan?: string | undefined; ticket?: string | undefined; panel?: string | undefined; society?: string | undefined;
     songId?: string | undefined; focusField?: string | undefined; agencyIsrc?: string | undefined; agencyVersion?: string | undefined; agencyVersions?: string | undefined; action?: string | undefined;
     trail?: string | undefined; song?: string | undefined; report?: string | undefined;
@@ -81,6 +81,8 @@ export const Route = createFileRoute("/workspace")({
     return {
       tab: str("tab"),
       checkout: s["checkout"] === "success" ? "success" : undefined,
+      // Which product sent them back; only that product's own flow may open on arrival.
+      bought: str("bought"),
       view: s["view"] === "expert" ? "expert" : undefined,
       plan: planIntentFromSearch(s["plan"]) ?? undefined,
       ticket: str("ticket"),
@@ -229,7 +231,9 @@ function Workspace() {
   const [actingId, setActingId] = useState<string | null>(null);
   const seatPrompted = useRef(false);
   useEffect(() => {
-    if (!user || seatPrompted.current || new URLSearchParams(window.location.search).get("checkout") !== "success") return;
+    // Only a seat purchase opens the seat invite. A certificate, contract or branding return must never land here in
+    // another product's add-on popup (founder, 2026-11-19).
+    if (!user || seatPrompted.current || new URLSearchParams(window.location.search).get("bought") !== "seat") return;
     seatPrompted.current = true;
     listSeatState()
       .then((s) => { if (s.seats.some((seat) => seat.owner_id === user.id && seat.status === "unclaimed")) setSeatsOpen(true); })
@@ -563,11 +567,11 @@ function Workspace() {
             {!canCatalog && !catalogReadOnly ? <PlusLock title="My Catalog starts with Catalog Plus" onQuickCheck={openQuickCheck} onUpgrade={upgrade} /> : <>
             <MetadataUploader key={`catalog-${catalogOwner}-${catalogKey}`} userId={catalogOwner} mode="catalog" canWav={hasTier(workTier, "management")} readOnly={catalogReadOnly} onShareInfo={(i) => setTabShare((m) => ({ ...m, catalog: i }))} canSplit={canSplit} canExport={canCollect} focus={catalogFix} onFocused={() => setCatalogFix(undefined)} onFixAcknowledged={() => setCatalogFix(undefined)} onSplitSheet={(t) => { setSplitTrackId(t.id); setTab("splits"); }} onProtect={(t) => { setProtectTrack(t); setTab("protect"); }} onHealthCheck={(trackId, release) => { setHealthStart({ trackId, release, nonce: Date.now() }); setTab("health"); }} onExpert={() => { setOpenExpert(true); setTab("health"); }} /></>}
           </TabsContent>
-          <TabsContent value="protect"><AIProtectionHub userId={user.id} purchases={purchases} justPaid={search.checkout === "success" && search.tab === "protect"} track={protectTrack} /></TabsContent>
+          <TabsContent value="protect"><AIProtectionHub userId={user.id} purchases={purchases} justPaid={search.checkout === "success" && search.bought === "ai"} track={protectTrack} /></TabsContent>
           <TabsContent value="splits"><SplitSheets userId={user.id} canSplit={canSplit} canCollect={canCollect} prefillTrackId={splitTrackId} onUpgrade={upgrade} /></TabsContent>
           {/* forceMount: a visit has state in it (the streaming pull, an agency list, the check-in answers), so
               switching to My Catalog or another tab must not throw the appointment away. */}
-          <TabsContent value="health" {...(healthMounted ? { forceMount: true as const } : {})} className="data-[state=inactive]:hidden"><Health startView={openExpert || search.view === "expert" || (search.tab === "health" && search.checkout === "success") ? "expert" : "check"} justPaid={search.tab === "health" && search.checkout === "success"} canCatalog={canCatalog} onFix={() => setTab("catalog")} onFixField={fixInCatalog} onAuditFrom={auditFrom} focusSong={search.song} openReport={search.report === "yes"} onAddSong={(newTitle, artist) => { setCatalogFix({ newTitle, artist, nonce: Date.now() }); setTab("catalog"); }} onEmbed={() => setTab("embed")} userId={user.id} purchases={purchases} canUtility={canCollect} onUpgrade={upgrade} onSplitSheet={(id) => { setSplitTrackId(id); setTab("splits"); }} start={healthStart} /></TabsContent>
+          <TabsContent value="health" {...(healthMounted ? { forceMount: true as const } : {})} className="data-[state=inactive]:hidden"><Health startView={openExpert || search.view === "expert" || search.bought === "expert" ? "expert" : "check"} justPaid={search.bought === "expert"} canCatalog={canCatalog} onFix={() => setTab("catalog")} onFixField={fixInCatalog} onAuditFrom={auditFrom} focusSong={search.song} openReport={search.report === "yes"} onAddSong={(newTitle, artist) => { setCatalogFix({ newTitle, artist, nonce: Date.now() }); setTab("catalog"); }} onEmbed={() => setTab("embed")} userId={user.id} purchases={purchases} canUtility={canCollect} onUpgrade={upgrade} onSplitSheet={(id) => { setSplitTrackId(id); setTab("splits"); }} start={healthStart} /></TabsContent>
           <TabsContent value="learn"><Learn userId={user.id} unlocked={hasTier(tier, "management")} onUpgrade={upgrade}
             onOpen={(link) => {
               if (link.where === "profile") setProfileOpen(true);
