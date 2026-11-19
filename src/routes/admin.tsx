@@ -127,6 +127,8 @@ function AdminPage() {
   const [activeTab, setActiveTab] = useState<string>();
   // Opening a case from the Message Board lands on Registrations with that customer's card already open.
   const [regFocus, setRegFocus] = useState<string | null>(null);
+  // A founder escalation opens its own ticket thread from My Queue, so the founder lands on the conversation.
+  const [supportFocus, setSupportFocus] = useState<string | null>(null);
   useEffect(() => setActiveTab(undefined), [view]);
 
   if (loading || role.isLoading) return <Center>Loading…</Center>;
@@ -280,7 +282,15 @@ function AdminPage() {
               />
             </TabsContent>
           )}
-          {show("support") && <TabsContent value="support"><SupportTicketsPanel scope={access.departments.includes("support") ? "all" : "billing"} /></TabsContent>}
+          {show("support") && (
+            <TabsContent value="support">
+              <SupportTicketsPanel
+                scope={access.departments.includes("support") ? "all" : "billing"}
+                focusTicketId={supportFocus}
+                onFocusHandled={() => setSupportFocus(null)}
+              />
+            </TabsContent>
+          )}
           {show("badges") && <TabsContent value="badges"><BadgeSwitchboard /><BadgeProtocolPanel isSuper={isSuper} /></TabsContent>}
           {show("homepage") && <TabsContent value="homepage"><TestimonialsEditor /><TestimonialFilterPanel /><SocialPanel /></TabsContent>}
           {show("tasks") && <TabsContent value="tasks"><TaskBankPanel departments={access.allTeams && access.role !== "super_admin" ? [...ASSIGNABLE_DEPARTMENTS] : viewDepartments(access, view)} editable={viewDepartments(access, view)} /></TabsContent>}
@@ -291,7 +301,19 @@ function AdminPage() {
           {show("holiday") && <TabsContent value="holiday"><HolidayPlan /></TabsContent>}
           {show("calendar") && <TabsContent value="calendar"><AdminCalendar me={user.id} access={access} /></TabsContent>}
           {show("recognition") && <TabsContent value="recognition"><MyRecognition /></TabsContent>}
-          {show("queue") && <TabsContent value="queue"><MyQueue me={user.id} access={access} onOpen={setActiveTab} /></TabsContent>}
+          {show("queue") && (
+            <TabsContent value="queue">
+              <MyQueue
+                me={user.id}
+                access={access}
+                onOpen={setActiveTab}
+                onOpenTicket={(ticketId) => {
+                  setSupportFocus(ticketId);
+                  setActiveTab("support");
+                }}
+              />
+            </TabsContent>
+          )}
           {show("team") && <TabsContent value="team"><TeamBoard /></TabsContent>}
           {show("handbook") && <TabsContent value="handbook"><Handbook /></TabsContent>}
           {show("staff-plan") && <TabsContent value="staff-plan"><StaffPlanPanel access={access} /></TabsContent>}

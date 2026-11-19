@@ -5,6 +5,7 @@ import { Check, ChevronDown, Clock3, Lock, LockOpen, Pause, Pencil, Play, Plus, 
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Confetti } from "@/components/Confetti";
+import { FounderEscalations } from "@/components/FounderEscalations";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -32,7 +33,13 @@ const COLUMN = [
  * fills as you tick steps. Steps are yours to write; a lead can lock one, and then a change becomes a request they decide.
  * Finishing something posts a win the whole team sees.
  */
-export function MyQueue({ me, access, onOpen }: { me: string; access: StaffAccess; onOpen: (tab: string) => void }) {
+export function MyQueue({ me, access, onOpen, onOpenTicket }: {
+  me: string;
+  access: StaffAccess;
+  onOpen: (tab: string) => void;
+  /** A founder escalation opens its own thread in Support Tickets, not just that tab. */
+  onOpenTicket: (ticketId: string) => void;
+}) {
   const regs = useServerFn(listRegistrationQueue);
   const tickets = useServerFn(listTickets);
   const fetchSteps = useServerFn(listMySteps);
@@ -260,6 +267,8 @@ export function MyQueue({ me, access, onOpen }: { me: string; access: StaffAcces
           </div>
         </div>
       )}
+
+      {access.role === "super_admin" && <FounderEscalations onOpenTicket={onOpenTicket} />}
 
       <section className="rounded-2xl border border-border bg-card/70 p-4">
         <div className="flex flex-wrap items-end justify-between gap-2">

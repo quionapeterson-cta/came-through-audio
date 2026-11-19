@@ -176,6 +176,102 @@ export const listTicketEscalations = createServerFn({ method: "GET" })
   });
 
 /**
+ * Her priority queue (founder, 2026-11-19): the handoffs waiting on the founder, newest first with the unread ones on
+ * top. Each notice is one row of `support_ticket_escalations` tagged `founder` — the same row the queue's filter reads
+ * and the one `read_at` marks — paired with the thread it belongs to so a link can open it by id.
+ *
+ * Only the founder reads this list. It is her own tab, not a view a department can widen.
+ */
+export type FounderEscalationNotice = {
+  id: string;
+  ticketId: string;
+  subject: string;
+  memberName: string;
+  memberEmail: string;
+  status: string;
+  channel: string;
+  note: string;
+  byName: string;
+  createdAt: string;
+  readAt: string | null;
+};
+
+export const listFounderEscalations = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }): Promise<FounderEscalationNotice[]> => {
+    const { role } = await accessOf(context as unknown as Ctx);
+    if (role !== "super_admin") return [];
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: rows, error } = await supabaseAdmin
+      .from("support_ticket_escalations" as never)
+      .select("id, ticket_id, note, by_name, created_at, read_at")
+      .eq("tag", "founder")
+      .order("created_at", { ascending: false })
+      .limit(40);
+    if (error) throw new Error("Couldn't load your escalations.");
+    const notices = (rows ?? []) as unknown as {
+      id: string;
+      ticket_id: string;
+      note: string;
+      by_name: string;
+      created_at: string;
+      read_at: string | null;
+    }[];
+    if (!notices.length) return [];
+
+    const ids = [...new Set(notices.map((n) => n.ticket_id))];
+    const { data: ticketRows } = await supabaseAdmin.from("support_tickets").select("*").in("id", ids);
+    const tickets = new Map(
+      ((ticketRows ?? []) as unknown as {
+        id: string;
+        subject: string;
+        name: string;
+        email: string;
+        status: string;
+        channel: string | null;
+      }[]).map((t) => [t.id, t]),
+    );
+
+    return notices
+      .filter((n) => tickets.has(n.ticket_id))
+      .map((n) => {
+        const t = tickets.get(n.ticket_id)!;
+        return {
+          id: n.id,
+          ticketId: n.ticket_id,
+          subject: t.subject,
+          memberName: t.name,
+          memberEmail: t.email,
+          status: t.status,
+          channel: t.channel ?? "support",
+          note: n.note,
+          byName: n.by_name,
+          createdAt: n.created_at,
+          readAt: n.read_at,
+        };
+      })
+      .sort((a, b) => Number(!!a.readAt) - Number(!!b.readAt) || b.createdAt.localeCompare(a.createdAt));
+  });
+
+/** Opening the thread settles its notice: every founder escalation on that ticket is marked read, once. */
+export const markFounderEscalationsRead = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d) => z.object({ ticketId: z.string().uuid() }).parse(d))
+  .handler(async ({ data, context }) => {
+    const { role } = await accessOf(context as unknown as Ctx);
+    if (role !== "super_admin") return { ok: false as const };
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { error } = await supabaseAdmin
+      .from("support_ticket_escalations" as never)
+      .update({ read_at: new Date().toISOString(), read_by: context.userId } as never)
+      .eq("ticket_id", data.ticketId)
+      .eq("tag", "founder")
+      .is("read_at", null);
+    if (error) console.error("Escalation read mark failed:", error.message);
+    return { ok: !error } as { ok: boolean };
+  });
+
+/**
  * "Viewing: Mrs. Peterson" (founder, 2026-11-19): the person with the thread open says so, and the panel shows whoever
  * else is in it. Two minutes is the whole life of the claim, so a closed tab never leaves a name behind.
  */

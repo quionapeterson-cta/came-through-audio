@@ -39,7 +39,12 @@ function matchesChannel(ticket: TicketRecord, filter: ChannelFilter): boolean {
  * Admin → Support Tickets (founder, 2026-11-05; native replies 2026-11-08): the queue, and the ticket opened as a
  * conversation you answer in place. Support sees every ticket; Billing sees its own.
  */
-export function SupportTicketsPanel({ scope = "all" }: { scope?: "all" | "billing" }) {
+export function SupportTicketsPanel({ scope = "all", focusTicketId, onFocusHandled }: {
+  scope?: "all" | "billing";
+  /** A thread to open on arrival, e.g. from a founder escalation notice in My Queue. */
+  focusTicketId?: string | null;
+  onFocusHandled?: () => void;
+}) {
   const fetchTickets = useServerFn(listTickets);
   const [filter, setFilter] = useState<string>("all");
   const [channelFilter, setChannelFilter] = useState<ChannelFilter>("all");
@@ -59,6 +64,14 @@ export function SupportTicketsPanel({ scope = "all" }: { scope?: "all" | "billin
   }, [all, filter, channelFilter, query]);
 
   const open = all.find((t) => t.id === openId) ?? null;
+
+  // Straight to the thread that was handed over, whatever filter the queue was left on; then the request is cleared so
+  // coming back to this tab later is an ordinary visit.
+  useEffect(() => {
+    if (!focusTicketId) return;
+    setOpenId(focusTicketId);
+    onFocusHandled?.();
+  }, [focusTicketId, onFocusHandled]);
 
   // J / K move between tickets in the queue while one is open; Escape goes back to the list.
   useEffect(() => {
