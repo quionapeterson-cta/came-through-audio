@@ -21,12 +21,13 @@ import type { StaffAccess } from "@/lib/departments";
 
 /**
  * Admin → Email: correspondence from a company mailbox — admin@ for the company's own letters, support@ for a customer,
- * and so on. Open to every member of staff (the server checks the role), replies go back to the same box, and the footer
- * is transactional. Commercial mail to people who never asked is Outreach, which stays with super admins.
+ * and so on. Unchanged: replies go back to the same box and the footer is transactional. Commercial mail to people who
+ * never asked is Outreach, which stays with super admins.
  */
 /**
- * The "Send from" picker is the addresses this person may write as (founder, 2026-11-19): every mailbox for a super admin,
- * the marketing four for the marketing team, and their own boxes for everyone else. The server checks the same list.
+ * Who writes these letters (founder, 2026-11-19): a super admin, or the lead of the department that owns the box. General
+ * staff send none, so they get the explanation instead of a form. The picker lists `companyMailboxesFor`, which both
+ * servers check before anything leaves.
  */
 export function CompanyMail({ access }: { access: StaffAccess }) {
   const send = useServerFn(sendCompanyEmail);
@@ -83,6 +84,20 @@ export function CompanyMail({ access }: { access: StaffAccess }) {
 
   const shortDate = (d: string) =>
     new Date(d).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+
+  // No mailbox of their own means no outbound company mail: a form that would be refused is worse than the rule said
+  // plainly, with the tool they should use instead.
+  if (!boxes.length) {
+    return (
+      <section className="space-y-3">
+        <p className="max-w-[70ch] text-sm text-muted-foreground">
+          A letter from a company address is sent by a super admin or the lead of the mailbox's department. Take anything
+          that needs a company reply to your department lead — and answer a member about their own account inside their
+          ticket, in Admin → Support Tickets.
+        </p>
+      </section>
+    );
+  }
 
   return (
     <section className="space-y-6">

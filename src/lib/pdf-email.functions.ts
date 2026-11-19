@@ -4,11 +4,18 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { resolveAccess } from "./departments";
 import { emailLayout, escapeHtml } from "./email-layout";
 import { mailKey, mailboxAddress, sendMail } from "./mailer";
+import { companyMailboxesFor } from "./company-email";
 import { PDF_EMAIL_MAX_BYTES, PDF_MAILBOXES } from "./pdf-tools";
 
 const emailList = z.array(z.string().trim().email()).min(1).max(5);
 
-/** Emails a PDF from Admin → PDF Tools as an attachment. Staff only; the PDF is sent straight through and never stored. */
+/**
+ * Emails a PDF from Admin → PDF Tools as an attachment. The PDF is sent straight through and never stored.
+ *
+ * A document leaving a company address is outbound correspondence, so it follows the same rule as Admin → Email
+ * (founder, 2026-11-19): a super admin may send from any mailbox, a department lead from the ones their department owns,
+ * and general staff from none — they download or save the file and hand it over another way.
+ */
 export const sendPdfEmail = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d) =>
@@ -31,7 +38,12 @@ export const sendPdfEmail = createServerFn({ method: "POST" })
       .from("user_roles")
       .select("role, departments")
       .eq("user_id", context.userId);
-    if (!resolveAccess(roles ?? [])) throw new Error("Staff access only.");
+    const access = resolveAccess((roles ?? []) as { role: string; departments?: string[] | null }[]);
+    if (!access) throw new Error("Staff access only.");
+    if (!companyMailboxesFor(access).includes(data.from))
+      throw new Error(
+        "Only a super admin, or the lead of the mailbox's department, can send a document from that mailbox.",
+      );
     const address = mailboxAddress(data.from);
     const fileName = data.fileName.toLowerCase().endsWith(".pdf")
       ? data.fileName

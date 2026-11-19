@@ -1,4 +1,4 @@
-import type { StaffAccess } from "./departments";
+import type { Department, StaffAccess } from "./departments";
 import {
   ADMIN_EMAIL,
   BILLING_EMAIL,
@@ -9,14 +9,16 @@ import {
   MARKETING_EMAIL,
   PARTNERS_EMAIL,
   PARTNERSHIPS_EMAIL,
+  REGISTRATIONS_EMAIL,
   SUPPORT_EMAIL,
   escapeHtml,
 } from "./email-layout";
 
 /**
- * Company email: a letter a super admin writes by hand and sends from a named company mailbox (admin@, info@ and so on).
- * Kept apart from outreach — that is commercial mail from partnerships@ carrying an opt-out line, because it goes to
- * people who never asked for it. This is correspondence, so it carries the transactional footer instead.
+ * Company email: a letter a super admin or a department lead writes by hand and sends from a named company mailbox
+ * (admin@, info@ and so on). Kept apart from outreach — that is commercial mail from partnerships@ carrying an opt-out
+ * line, because it goes to people who never asked for it. This is correspondence, so it carries the transactional
+ * footer instead.
  */
 export const COMPANY_SENDER_NAME = "Came Through Audio";
 
@@ -31,28 +33,76 @@ export const COMPANY_MAILBOXES = {
   legal: LEGAL_EMAIL,
   billing: BILLING_EMAIL,
   partnerships: PARTNERSHIPS_EMAIL,
+  registrations: REGISTRATIONS_EMAIL,
 } as const;
 
 export type CompanyMailbox = keyof typeof COMPANY_MAILBOXES;
 
 /**
- * Which addresses this person may write a new letter from (founder, 2026-11-19).
+ * The department that owns each company mailbox (founder, 2026-11-19). One mapping: the picker, the server's send check,
+ * the sent-letter log and the PDF email guard all read it, so a mailbox can't be owned in one place and open in another.
  *
- * A super admin picks from every mailbox we own. The marketing team sends as the three addresses it answers as
- * (marketing@, partners@, collaborate@) and no others; Support writes as support@ and, for a public inquiry it is
- * handling, info@ (founder, 2026-11-19). Everyone else keeps the boxes their work already answers: legal@, billing@ and
- * partnerships@. The server checks this same list before it sends, so the picker is not the rule.
+ * An empty list means the mailbox belongs to the company itself, so only a super admin writes from it (admin@,
+ * contracts@). partnerships@ sits with Marketing because that is the team that runs partnerships; info@ is shared, since
+ * Support answers a public inquiry on it and Marketing runs the public inbox.
+ */
+export const COMPANY_MAILBOX_OWNERS: Record<CompanyMailbox, readonly Department[]> = {
+  admin: [],
+  contracts: [],
+  legal: ["security"],
+  billing: ["billing", "finance"],
+  support: ["support"],
+  info: ["support", "marketing"],
+  registrations: ["registration"],
+  marketing: ["marketing"],
+  partners: ["marketing"],
+  collaborate: ["marketing"],
+  partnerships: ["marketing"],
+};
+
+/**
+ * Who may write a new letter from a company mailbox (founder, 2026-11-19).
+ *
+ * A super admin picks from every mailbox we own. A department lead sends as the boxes their department owns — the Head of
+ * Support as support@ and info@, the Head of Finance as billing@, the marketing lead as marketing@, partners@,
+ * collaborate@ and partnerships@. Everyone else sends no company mail at all: general staff answer inside the tools they
+ * work in (a member's own support ticket, a split invite), so a letter from the company's address is a lead's decision.
+ *
+ * The server checks this same list before it sends, and the sent-letter log is read through the same rule, so the picker
+ * is never the permission.
  */
 export function companyMailboxesFor(access: StaffAccess | null | undefined): CompanyMailbox[] {
   if (!access) return [];
-  if (access.role === "super_admin") return Object.keys(COMPANY_MAILBOXES) as CompanyMailbox[];
-  if (access.departments.includes("support")) return ["support", "info"];
-  if (access.departments.includes("marketing")) return ["marketing", "partners", "collaborate"];
-  return ["legal", "billing", "partnerships"];
+  const all = Object.keys(COMPANY_MAILBOXES) as CompanyMailbox[];
+  if (access.role === "super_admin") return all;
+  if (access.role !== "department_lead") return [];
+  return all.filter((mailbox) =>
+    COMPANY_MAILBOX_OWNERS[mailbox].some((department) => access.departments.includes(department)),
+  );
 }
 
-/** A handful of real letters a day, not a mailing list. */
+/**
+ * What a person may read of the sent-letter log (founder, 2026-11-19): a super admin every mailbox company-wide, a
+ * department lead the boxes their department owns — never Legal's or Finance's — and everyone else only their own sends.
+ * No one reads across departments, and the server narrows the query to exactly this.
+ */
+export function companyMailReadScope(
+  access: StaffAccess | null | undefined,
+): CompanyMailbox[] | "all" | "own" {
+  if (!access) return "own";
+  if (access.role === "super_admin") return "all";
+  const mine = companyMailboxesFor(access);
+  return mine.length ? mine : "own";
+}
+
+/** A handful of real letters a day company-wide, not a mailing list. */
 export const COMPANY_MAIL_DAILY_LIMIT = 25;
+
+/**
+ * One account's share of that cap: today the same figure, so the daily limit is enforced both for the company and for
+ * each sender. No single account can spend the whole allowance, whatever the company-wide number becomes.
+ */
+export const COMPANY_MAIL_SENDER_DAILY_LIMIT = COMPANY_MAIL_DAILY_LIMIT;
 
 /** The Resend `from` header: our name, then the mailbox, so a reply lands in the inbox it came from. */
 export function companyFrom(mailbox: CompanyMailbox): string | undefined {

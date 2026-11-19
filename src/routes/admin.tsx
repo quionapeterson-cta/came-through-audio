@@ -15,6 +15,8 @@ import { ShieldCheck, Building2, FileSignature, Receipt, Users, ArrowLeft, Lock 
 import { useAuth } from "@/hooks/useAuth";
 import { Contracts } from "@/components/Contracts";
 import { CompanyMail } from "@/components/CompanyMail";
+import { companyMailboxesFor } from "@/lib/company-email";
+import { PDF_MAILBOXES, type PdfMailbox } from "@/lib/pdf-tools";
 import { BrandLogo } from "@/components/BrandLogo";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -170,6 +172,8 @@ function AdminPage() {
   });
   const show = (value: string) => tabs.some((t) => t.value === value);
   const isSuper = access.role === "super_admin";
+  // A packet is sent by a super admin or HR, so Sent & Inbox is theirs alone (founder, 2026-11-19).
+  const canSendPackets = isSuper || access.departments.includes("hr");
   const current = activeTab && show(activeTab) ? activeTab : (tabs[0]?.value ?? "");
   // Only the tabs whose numbers come from the overview carry its tiles and its error. A failed overview used to sit above
   // unrelated work — Handbook, Email, My Queue — and made the whole dashboard read as broken.
@@ -326,7 +330,17 @@ function AdminPage() {
           {show("staff-plan") && <TabsContent value="staff-plan"><StaffPlanPanel access={access} /></TabsContent>}
           {show("scripts") && <TabsContent value="scripts"><SupportScriptsPanel /></TabsContent>}
           {show("prices") && <TabsContent value="prices"><PriceList /></TabsContent>}
-          {show("pdf") && <TabsContent value="pdf"><PdfTools canStudio={canManagePdfTemplates(access)} /></TabsContent>}
+          {show("pdf") && (
+            <TabsContent value="pdf">
+              <PdfTools
+                canStudio={canManagePdfTemplates(access)}
+                packets={canSendPackets}
+                mailboxes={companyMailboxesFor(access).filter((m): m is PdfMailbox =>
+                  (PDF_MAILBOXES as readonly string[]).includes(m),
+                )}
+              />
+            </TabsContent>
+          )}
           {show("email") && <TabsContent value="email"><CompanyMail access={access} /></TabsContent>}
           {show("legal") && <TabsContent value="legal"><LegalEditor /></TabsContent>}
         </Tabs>

@@ -223,6 +223,28 @@
   enforces the same split in the database. Never widen it to the department or the queue, and the member's reply stays
   Support's. The founder leads no department, so her own tag routes to no lead.
 
+## Company Mail: Who Sends, Who Reads (always follow)
+
+- **A company letter is a super admin's or a department lead's** (founder, 2026-11-19): `companyMailboxesFor` in
+  `src/lib/company-email.ts` is the one rule — a super admin writes as any mailbox, a department lead as the boxes their
+  department owns (`COMPANY_MAILBOX_OWNERS`), and general staff send no outbound company mail at all. They answer inside
+  the tool they already work in, a member's own support ticket above all. Admin → Email, Admin → PDF Tools and both
+  servers read that list; never add a second permission check.
+- **No cross-department reading** (founder, 2026-11-19): `companyMailReadScope` narrows the sent-letter log and the PDF
+  email log — a super admin sees every mailbox, a lead only their department's boxes, everyone else only their own sends.
+  The company inbox already works this way per department, so a Support lead sees Support mail and never Legal's or
+  Finance's. A lead's own mailbox never widens to another department's.
+- **Every letter records its mailbox** (founder, 2026-11-19): `outreach_emails.mailbox` sits beside `sent_by`, `sent_at`
+  and `to_email` (migration 20261119200000), and `pdf_email_sends` already carries all four. The row is the audit trail:
+  a failed insert is logged loudly, never a reason to say the letter wasn't sent.
+- **Both caps stay on, before the send** (founder, 2026-11-19): `COMPANY_MAIL_DAILY_LIMIT` company-wide and
+  `COMPANY_MAIL_SENDER_DAILY_LIMIT` per account are checked in `sendCompanyEmail` before `sendMail` runs. They are the
+  domain's protection, so never move a cap after the send or into a component.
+- **A signature packet is sent by a super admin or HR** (founder, 2026-11-19): `requirePacketSender` in
+  `src/lib/pdf-packets.functions.ts` gates the three sending calls — `sendPacket`, `emailPacketLink` and
+  `emailPacketCopy`. Reading, building, setting the inbox and counter-signing stay on `requireStaff`, because they are not
+  sending. Admin → PDF Tools hides Sent & Inbox for anyone else, which is the second lock, never the rule.
+
 ## Account Help & Holiday Cover (always follow)
 
 - **Who may touch a member's account** (founder, 2026-11-05): Support and super admins correct the person (stage name and

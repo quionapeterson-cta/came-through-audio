@@ -116,7 +116,18 @@ export function PdfTools({
   canSave = true,
   canStudio = true,
   title = "PDF Tools",
-}: { canEmail?: boolean; canSave?: boolean; canStudio?: boolean; title?: string } = {}) {
+  mailboxes = PDF_MAILBOXES,
+  packets = true,
+}: {
+  canEmail?: boolean;
+  canSave?: boolean;
+  canStudio?: boolean;
+  title?: string;
+  /** The mailboxes this person may send from; Admin passes the lead's own boxes (founder, 2026-11-19). */
+  mailboxes?: readonly PdfMailbox[];
+  /** Sent & Inbox is a super admin's or HR's (founder, 2026-11-19); the sending calls refuse anyone else too. */
+  packets?: boolean;
+} = {}) {
   const [file, setFile] = useState<{ name: string; bytes: Uint8Array } | null>(null);
   const [doc, setDoc] = useState<PDFDocumentProxy | null>(null);
   const [pages, setPages] = useState<PageView[]>([]);
@@ -411,7 +422,7 @@ export function PdfTools({
                   Save
                 </Button>
               )}
-              {canEmail && (
+              {canEmail && mailboxes.length > 0 && (
                 <Button onClick={() => setEmailOpen(true)} disabled={busy}>
                   <Mail className="h-4 w-4" />
                   Email
@@ -475,12 +486,13 @@ export function PdfTools({
           setSignOpen(false);
         }}
       />
-      {file && canEmail && (
+      {file && canEmail && mailboxes.length > 0 && (
         <EmailDialog
           open={emailOpen}
           onOpenChange={setEmailOpen}
           fileName={signedFileName(file.name)}
           build={finished}
+          mailboxes={mailboxes}
           onSent={() => setEmailVersion((v) => v + 1)}
         />
       )}
@@ -503,7 +515,7 @@ export function PdfTools({
           staff member.
         </p>
       )}
-      {canEmail && <PdfPacketCenter />}
+      {canEmail && packets && <PdfPacketCenter />}
       {canEmail && <PdfEmailLog refreshKey={emailVersion} />}
       {canSave && <PdfShelfPanel refreshKey={shelfVersion} focusFolderId={savedFolderId} />}
     </div>
@@ -874,17 +886,19 @@ function EmailDialog({
   onOpenChange,
   fileName,
   build,
+  mailboxes,
   onSent,
 }: {
   open: boolean;
   onOpenChange: (o: boolean) => void;
   fileName: string;
   build: () => Promise<Uint8Array>;
+  mailboxes: readonly PdfMailbox[];
   onSent?: () => void;
 }) {
   const send = useServerFn(sendPdfEmail);
   const [to, setTo] = useState("");
-  const [from, setFrom] = useState<PdfMailbox>("admin");
+  const [from, setFrom] = useState<PdfMailbox>(mailboxes[0] ?? "admin");
   const [subject, setSubject] = useState(fileName.replace(/\.pdf$/i, ""));
   const [message, setMessage] = useState("");
   const [sending, setSending] = useState(false);
@@ -959,7 +973,7 @@ function EmailDialog({
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {PDF_MAILBOXES.map((m) => (
+                {mailboxes.map((m) => (
                   <SelectItem key={m} value={m}>
                     {m}@camethroughaudio.com
                   </SelectItem>

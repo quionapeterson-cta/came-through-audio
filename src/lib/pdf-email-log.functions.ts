@@ -1,5 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { companyMailReadScope } from "./company-email";
+import { resolveAccess } from "./departments";
 import { DELIVERY_STATUSES, type DeliveryStatus } from "./resend-events";
 
 /**
@@ -41,20 +43,30 @@ type Row = {
 const isStatus = (value: string): value is DeliveryStatus =>
   (DELIVERY_STATUSES as readonly string[]).includes(value);
 
-/** The last 20 sends every staff member can see, newest first. */
+/**
+ * The last 20 sends this person may read, newest first (founder, 2026-11-19): a super admin every mailbox, a department
+ * lead the boxes their department owns, everyone else only their own sends. The rule is `companyMailReadScope`, the same
+ * one the sent-letter log uses, so neither list can leak another department's correspondence.
+ */
 export const listPdfEmails = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }): Promise<PdfEmailSend[]> => {
-    const { data: staff } = await context.supabase.rpc(
-      "is_staff" as never,
-      { _user_id: context.userId } as never,
-    );
-    if (!staff) throw new Error("Only staff can see PDF emails.");
-    const { data, error } = await context.supabase
+    const { data: roles } = await context.supabase
+      .from("user_roles")
+      .select("role, departments")
+      .eq("user_id", context.userId);
+    const access = resolveAccess((roles ?? []) as { role: string; departments?: string[] | null }[]);
+    if (!access) throw new Error("Only staff can see PDF emails.");
+    const scope = companyMailReadScope(access);
+    if (Array.isArray(scope) && !scope.length) return [];
+    const base = context.supabase
       .from("pdf_email_sends" as never)
       .select("*")
       .order("created_at", { ascending: false })
       .limit(20);
+    const scoped =
+      scope === "all" ? base : scope === "own" ? base.eq("sent_by", context.userId) : base.in("mailbox", scope);
+    const { data, error } = await scoped;
     if (error)
       throw new Error("Couldn't load delivery results. Run migration 20261115180000 first.");
     const rows = (data ?? []) as unknown as Row[];

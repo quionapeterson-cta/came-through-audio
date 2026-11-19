@@ -3,6 +3,7 @@ import { z } from "zod";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { getRequest } from "@tanstack/react-start/server";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { resolveAccess } from "@/lib/departments";
 import { emailLayout, escapeHtml, ADMIN_EMAIL, SITE_URL } from "@/lib/email-layout";
 import { trustedOrigin } from "@/lib/invite-limits";
 import { mailKey, mailboxAddress, resendKey, sendMail } from "@/lib/mailer";
@@ -90,6 +91,21 @@ async function requireStaff(context: Ctx): Promise<void> {
     { _user_id: context.userId } as never,
   );
   if (!data) throw new Error("Only staff can send signature packets.");
+}
+
+/**
+ * Who may send a packet (founder, 2026-11-19): a super admin, or HR. A packet leaves from admin@ and carries an agreement,
+ * so the sender is one of those two seats — the HR desk that builds them, or the company's own signer. Everyone else still
+ * reads, prepares and works the Sent & Inbox exactly as before; they just can't be the one who sends it.
+ */
+async function requirePacketSender(context: Ctx): Promise<void> {
+  const { data: roles } = await context.supabase
+    .from("user_roles")
+    .select("role, departments")
+    .eq("user_id", context.userId);
+  const access = resolveAccess((roles ?? []) as { role: string; departments?: string[] | null }[]);
+  if (access?.role !== "super_admin" && !access?.departments.includes("hr"))
+    throw new Error("Only a super admin or HR can send a packet.");
 }
 
 const origin = () => {
@@ -355,7 +371,7 @@ export const sendPacket = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => sendInput.parse(d))
   .handler(async ({ data, context }) => {
-    await requireStaff(context);
+    await requirePacketSender(context);
     const { data: row, error } = await context.supabase
       .from("pdf_templates" as never)
       .select("*")
@@ -456,7 +472,7 @@ export const emailPacketLink = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => z.object({ id: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
-    await requireStaff(context);
+    await requirePacketSender(context);
     const { data: row, error } = await context.supabase
       .from("pdf_packets" as never)
       .select("*")
@@ -685,7 +701,7 @@ export const emailPacketCopy = createServerFn({ method: "POST" })
     z.object({ id: z.string().uuid(), email: emailSchema }).parse(d),
   )
   .handler(async ({ data, context }) => {
-    await requireStaff(context);
+    await requirePacketSender(context);
     const { data: row, error } = await context.supabase
       .from("pdf_packets" as never)
       .select("*")
