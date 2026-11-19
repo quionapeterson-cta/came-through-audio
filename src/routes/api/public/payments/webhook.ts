@@ -261,6 +261,13 @@ async function saveBrandingSubscription(sub: StripeSubscriptionLike, env: Stripe
   };
   const { error } = await db().from("purchases").upsert(saved as never, { onConflict: "stripe_session_id" });
   if (error) throw error;
+  // The kit the year was bought for, named at checkout (founder, 2026-11-19): the link is exact, so the paid year
+  // unlocks that kit and no other. A year bought without a kit waits for the next kit the member creates.
+  const kitId = sub.metadata?.["kitId"];
+  if (kitId && paid) {
+    const { error: linkErr } = await db().from("brand_kits").update({ paid_key: row.key } as never).eq("id", kitId).eq("user_id", userId);
+    if (linkErr) console.warn(`Branding kit ${kitId} could not be linked to ${row.key}`, linkErr);
+  }
   return true;
 }
 

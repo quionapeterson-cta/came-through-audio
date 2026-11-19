@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { brandAccess, brandingUntil, hexRgb, kitAllowance, kitFromRow, kitReady } from "./brand-kit";
+import { activeKitKeys, brandAccess, brandingUntil, hexRgb, kitAllowance, kitFromRow, kitReady, usableKits } from "./brand-kit";
 import { checkoutInput, planCheckout } from "./stripe-mapping";
 
 const buy = (created_at: string, refunded = false) => ({ kind: "branding", created_at, details: refunded ? { refunded_at: created_at } : {} });
@@ -14,6 +14,19 @@ describe("Personal Branding", () => {
     expect(brandingUntil([buy("2025-01-01T00:00:00Z")], now)).toBeNull();
     expect(brandingUntil([buy("2026-10-01T00:00:00Z", true)], now)).toBeNull();
     expect(brandingUntil([{ kind: "vault", created_at: "2026-10-01T00:00:00Z", details: {} }], now)).toBeNull();
+  });
+
+  it("counts each paid year to Stripe's period end, not a fixed 365 days", () => {
+    const now = new Date("2026-11-01T00:00:00Z");
+    const stated = { kind: "branding", created_at: "2026-10-01T00:00:00Z", details: { period_end: "2027-03-01T00:00:00Z" } };
+    // The paid-through date Stripe gave is what counts, even when it is longer or shorter than a year.
+    expect(brandingUntil([stated], now)?.toISOString()).toBe("2027-03-01T00:00:00.000Z");
+    const short = { kind: "branding", created_at: "2026-10-01T00:00:00Z", details: { period_end: "2026-10-20T00:00:00Z" } };
+    expect(brandingUntil([short], now)).toBeNull();
+    expect(kitAllowance("plus", [short], now)).toBe(0);
+    expect(kitAllowance("plus", [stated], now)).toBe(1);
+    // A row with no period end still falls back to the year, so older purchases keep working.
+    expect(brandingUntil([buy("2026-10-01T00:00:00Z")], now)?.toISOString()).toBe("2027-10-01T00:00:00.000Z");
   });
 
   it("Catalog Management includes it; the add-on turns it on for any plan", () => {
@@ -47,6 +60,54 @@ describe("several Branding Kits", () => {
     expect(kitAllowance("plus", [buy("2026-10-01T00:00:00Z"), buy("2026-10-20T00:00:00Z")], now)).toBe(2);
     expect(kitAllowance("management", [buy("2026-10-01T00:00:00Z"), buy("2025-01-01T00:00:00Z"), buy("2026-10-02T00:00:00Z", true)], now)).toBe(2);
   });
+  it("names the purchase key of every running kit year", () => {
+    const keys = activeKitKeys([
+      { kind: "branding", created_at: "2026-10-01T00:00:00Z", details: { subscription: "sub_a", period_end: "2027-10-01T00:00:00Z" } },
+      { kind: "branding", created_at: "2025-10-01T00:00:00Z", details: { subscription: "sub_old", period_end: "2026-10-01T00:00:00Z" } },
+      { kind: "branding", created_at: "2026-10-02T00:00:00Z", details: { subscription: "sub_refunded", refunded_at: "2026-11-01T00:00:00Z" } },
+      { kind: "vault", created_at: "2026-10-03T00:00:00Z", details: { subscription: "sub_vault" } },
+    ], now);
+    expect([...keys]).toEqual(["sub:sub_a"]);
+  });
+
+  it("unlocks exactly the kit its subscription paid for", () => {
+    const kits = [{ id: "k1", paidKey: "sub:a" }, { id: "k2", paidKey: "sub:b" }, { id: "k3", paidKey: null }];
+    expect(usableKits(kits, 1, false, new Set(["sub:b"])).map((k) => k.id)).toEqual(["k2"]);
+    expect(usableKits(kits, 2, false, new Set(["sub:a", "sub:b"])).map((k) => k.id)).toEqual(["k1", "k2"]);
+    // The year that lapsed is not in the set, so its kit is not usable even though it is the oldest.
+    expect(usableKits(kits, 1, false, new Set(["sub:b"])).map((k) => k.id)).not.toContain("k1");
+  });
+
+  it("keeps the included kit as the default and adds the linked paid ones", () => {
+    const kits = [{ id: "k1" }, { id: "k2", paidKey: "sub:b" }, { id: "k3" }];
+    expect(usableKits(kits, 1, true, new Set()).map((k) => k.id)).toEqual(["k1"]);
+    expect(usableKits(kits, 2, true, new Set(["sub:b"])).map((k) => k.id)).toEqual(["k1", "k2"]);
+    expect(usableKits(kits, 9, true, new Set(["sub:b"])).map((k) => k.id)).toEqual(["k1", "k2", "k3"]);
+  });
+
+  it("gives a year with no kit yet to the newest unlinked kit first", () => {
+    const kits = [{ id: "k1", paidKey: "sub:old" }, { id: "k2" }];
+    expect(usableKits(kits, 1, false, new Set(["sub:new"])).map((k) => k.id)).toEqual(["k2"]);
+    // A spare slot (an allowance the member has but a year that names no kit) can only fall to the lapsed kit.
+    expect(usableKits(kits, 2, false, new Set(["sub:new"])).map((k) => k.id)).toEqual(["k2", "k1"]);
+    expect(usableKits([], 1, false, new Set(["sub:new"]))).toEqual([]);
+    expect(usableKits([{ id: "k1" }], 0, false, new Set())).toEqual([]);
+  });
+
+  it("lights up a lapsed-linked kit when a running year has no kit to name", () => {
+    // The locked screen's Add Personal Branding buys without naming a kit: their one kit must print, not stay locked.
+    expect(usableKits([{ id: "k1", paidKey: "sub:old" }], 1, false, new Set(["sub:new"])).map((k) => k.id)).toEqual(["k1"]);
+    // A brand-new unlinked kit still wins the free slot when there is one.
+    expect(usableKits([{ id: "k1", paidKey: "sub:old" }, { id: "k2" }], 1, false, new Set(["sub:new"])).map((k) => k.id)).toEqual(["k2"]);
+    // Once the year is linked to the kit it was bought for, the exact link decides, not the fallback.
+    const linked = [{ id: "k1", paidKey: "sub:old" }, { id: "k2", paidKey: "sub:new" }];
+    expect(usableKits(linked, 1, false, new Set(["sub:new"])).map((k) => k.id)).toEqual(["k2"]);
+    // Two lapsed kits and one running year: the newest comes back, and only one of them.
+    expect(usableKits([{ id: "k1", paidKey: "sub:a" }, { id: "k2", paidKey: "sub:b" }], 1, false, new Set(["sub:new"])).map((k) => k.id)).toEqual(["k2"]);
+    // With the included kit it is still the default, and the year fills the paid slot.
+    expect(usableKits([{ id: "k1", paidKey: "sub:old" }], 2, true, new Set(["sub:new"])).map((k) => k.id)).toEqual(["k1"]);
+  });
+
   it("reads a kit's style and section title color, with safe defaults", () => {
     expect(kitFromRow({ id: "k1", name: "Biz", style: "banner", header_color: "#7a1f1f" })).toMatchObject({ id: "k1", style: "banner", headerColor: "#7A1F1F" });
     expect(kitFromRow({ name: "Biz", style: "weird", header_color: "red" })).toMatchObject({ style: "classic", headerColor: null });

@@ -1,7 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-import { brandAccess, brandingPeriod, kitAllowance, kitFromRow, kitReady, type BrandUse, type PdfBrand } from "./brand-kit";
+import { activeKitKeys, brandAccess, brandingPeriod, kitAllowance, kitFromRow, kitReady, usableKits, type BrandKit, type BrandUse, type PdfBrand } from "./brand-kit";
 import { hasTier, serverTier } from "./plans";
 import { getPaymentsEnvironment } from "./payments-env";
 
@@ -25,22 +25,25 @@ async function accessFor(db: Db, userId: string) {
   const t = serverTier(tier);
   const period = brandingPeriod(list);
   const until = period?.until ?? null;
-  return { access: brandAccess(t, until), until, renews: period?.renews ?? false, allowance: kitAllowance(t, list), tier: t };
+  // The keys of the kit years running now: what a kit row must be linked to in order to be usable.
+  return { access: brandAccess(t, until), until, renews: period?.renews ?? false, allowance: kitAllowance(t, list), tier: t, paid: activeKitKeys(list) };
 }
 
 /**
  * The owner's kit ready to draw (logo inlined), or null when it isn't allowed for this use or isn't set up yet.
- * With several kits, the one asked for if it's among the kits they can use now (their oldest first), else the first.
+ * With several kits, the one asked for if it's among the kits they can use now, else the first of those (see
+ * `usableKits`: the included kit, then the newest paid ones).
  */
 async function brandFor(db: Db, userId: string, use: BrandUse, kitId?: string | null): Promise<PdfBrand | null> {
-  const { access, allowance, tier } = await accessFor(db, userId);
+  const { access, allowance, tier, paid } = await accessFor(db, userId);
   if (!access[use]) return null;
   // Only Catalog & Collaborate and Catalog Management may cut our footer off a download (founder, 2026-11-06); on any
   // lower plan a saved kit still prints it, whatever the kit row says.
   const mayDropFooter = hasTier(tier, "collaborate");
   const { data } = await db.from("brand_kits" as never).select("*").eq("user_id", userId).order("created_at" as never, { ascending: true });
-  const usable = ((data ?? []) as Record<string, unknown>[]).slice(0, Math.max(1, allowance)).map((r) => kitFromRow(r as never));
-  const kit = usable.find((k) => k?.id && k.id === kitId) ?? usable[0] ?? null;
+  const saved = ((data ?? []) as Record<string, unknown>[]).map((r) => kitFromRow(r as never)).filter((k): k is BrandKit => !!k);
+  const usable = usableKits(saved, Math.max(1, allowance), hasTier(tier, "management"), paid);
+  const kit = usable.find((k) => k.id && k.id === kitId) ?? usable[0] ?? null;
   if (!kit || !kitReady(kit)) return null;
   let logo: PdfBrand["logo"] = null;
   if (kit.logoPath) {
@@ -69,8 +72,40 @@ async function brandFor(db: Db, userId: string, use: BrandUse, kitId?: string | 
 export const getBrandAccess = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
-    const { access, until, renews, allowance } = await accessFor(await admin(), context.userId);
-    return { ...access, addOnUntil: until?.toISOString() ?? null, addOnRenews: renews, allowance };
+    const db = await admin();
+    const { access, until, renews, allowance, paid, tier } = await accessFor(db, context.userId);
+    const { data } = await db.from("brand_kits" as never).select("id, paid_key").eq("user_id", context.userId).order("created_at" as never, { ascending: true });
+    const kits = (data ?? []) as { id: string; paid_key: string | null }[];
+    // Which saved kits can print right now, so the page can offer to renew a kit that is outside the allowance.
+    const usableIds = usableKits(kits, Math.max(1, allowance), hasTier(tier, "management"), paid).map((k) => k.id);
+    return { ...access, addOnUntil: until?.toISOString() ?? null, addOnRenews: renews, allowance, usableIds };
+  });
+
+/**
+ * Links a running paid year to the kit it was bought for (founder, 2026-11-19). Called after a new kit is created, so a
+ * year bought with no kit named fills that kit's slot; and after a kit's year is renewed for that kit, so the link moves
+ * from the old subscription to the new one. The browser names a kit it owns and nothing else, and the server refuses a
+ * kit that already has a running year of its own.
+ */
+export const bindKitYear = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d) => z.object({ kitId: z.string().uuid() }).parse(d))
+  .handler(async ({ data, context }) => {
+    const db = await admin();
+    const { data: row } = await db.from("brand_kits" as never).select("id, paid_key").eq("id", data.kitId).eq("user_id", context.userId).maybeSingle();
+    const kit = row as { id: string; paid_key: string | null } | null;
+    if (!kit) return { bound: false };
+    const { data: buys } = await db.from("purchases").select("kind, created_at, details").eq("user_id", context.userId).eq("kind", "branding").eq("environment", getPaymentsEnvironment());
+    const active = activeKitKeys((buys ?? []) as { kind: string; created_at: string; details: Record<string, string> }[]);
+    // Already linked to a year that is still running: nothing to move.
+    if (kit.paid_key && active.has(kit.paid_key)) return { bound: false };
+    const { data: all } = await db.from("brand_kits" as never).select("paid_key").eq("user_id", context.userId);
+    const taken = new Set(((all ?? []) as { paid_key: string | null }[]).map((r) => r.paid_key).filter((k): k is string => !!k));
+    const free = [...active].find((key) => !taken.has(key));
+    if (!free) return { bound: false };
+    const { error } = await db.from("brand_kits" as never).update({ paid_key: free } as never).eq("id", kit.id).eq("user_id", context.userId);
+    if (error) throw error;
+    return { bound: true };
   });
 
 /** The signed-in user's own kit for a split sheet, contract or catalog download. */

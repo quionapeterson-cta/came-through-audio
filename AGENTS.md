@@ -589,6 +589,18 @@ rules keep it consistent as features are added.
   included with Catalog Management is not a separate subscription, so it follows the plan.
 - Several kits are allowed (one per business or project): the oldest is the default, and a document that picks a kit
   gets that one only if it is within the member's allowance.
+- **A paid year unlocks the kit it was bought for** (founder, 2026-11-19): `brand_kits.paid_key` holds the purchase
+  row's `sub:<subscription_id>` key, written only by the server — the webhook when checkout named the kit
+  (`metadata.kitId`), or `bindKitYear` when a new kit is created after a year was bought. `usableKits` in
+  `src/lib/brand-kit.ts` unlocks exactly the linked kits whose year is still running, keeps the included kit (oldest) as
+  the default, and gives an unlinked year to the newest unlinked kit. A lapsed link only takes a slot when a running
+  year has no unlinked kit to name — the member who renewed from the locked screen, where no kit could be named — so
+  paying there always prints something. The page also offers **Renew this kit** for a kit outside the allowance, and the
+  locked screen's Add Personal Branding names the member's first saved kit. The migration is `20261119210000`; a member's browser cannot write
+  `paid_key` (trigger guard).
+- **A paid year ends when Stripe says it does** (founder, 2026-11-19): entitlement reads `details.period_end` from the
+  kit's purchase row, and only falls back to `created_at` + `BRANDING_DAYS` for a row written before that date was
+  stored. Never count a fixed 365 days when Stripe has told us the period end.
 - **Catalog Management includes one kit; every further kit is bought** (founder, 2026-11-06): a member with several
   businesses buys each extra kit as its own `BRANDING_PRICE`-a-year subscription like anyone else (`kitAllowance` counts
   both). Checkout

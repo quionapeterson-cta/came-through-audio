@@ -18,14 +18,14 @@ import { downloadSamplePdf, type SampleKind } from "@/lib/sample-pdf";
 import { FONT_GROUPS } from "@/lib/brand-fonts";
 import { loadWebFont } from "@/lib/web-fonts";
 import { Disclaimer } from "@/components/Disclaimer";
-import { getBrandAccess } from "@/lib/brand-kit.functions";
+import { bindKitYear, getBrandAccess } from "@/lib/brand-kit.functions";
 import { openBilling, openCheckout } from "@/lib/checkout";
 import { hasTier, TIER_LABEL, type Tier } from "@/lib/plans";
 
 const BUCKET = "brand-logos";
 const MAX_LOGO = 2 * 1024 * 1024;
 /** `allowance`: how many kits can be used on documents now (missing before the multi-kit update). */
-type Access = { splits: boolean; contracts: boolean; addOnUntil: string | null; addOnRenews: boolean; allowance?: number };
+type Access = { splits: boolean; contracts: boolean; addOnUntil: string | null; addOnRenews: boolean; allowance?: number; usableIds?: string[] };
 const longDate = (iso: string) => new Date(iso).toLocaleDateString(undefined, { month: "long", day: "numeric", year: "numeric" });
 
 /**
@@ -36,6 +36,7 @@ const longDate = (iso: string) => new Date(iso).toLocaleDateString(undefined, { 
  */
 export function BrandKit({ userId, tier, artistName }: { userId: string; tier: Tier; artistName: string }) {
   const accessFn = useServerFn(getBrandAccess);
+  const bind = useServerFn(bindKitYear);
   const [access, setAccess] = useState<Access | null>(null);
   const [kits, setKits] = useState<Kit[]>(() => [emptyKit(artistName)]);
   const [current, setCurrent] = useState(0);
@@ -281,7 +282,13 @@ export function BrandKit({ userId, tier, artistName }: { userId: string; tier: T
           if (kits.length > 1) throw new Error("More than one Branding Kit needs the latest database update. Ask support to run migration 20261027210000.");
           const { error: legacy } = await supabase.from("brand_kits" as never).upsert(base as never, { onConflict: "user_id" });
           if (legacy) throw legacy;
-        } else { const id = (data as { id: string }).id; newId = id; setKit((k) => ({ ...k, id })); }
+        } else {
+          const id = (data as { id: string }).id;
+          newId = id;
+          setKit((k) => ({ ...k, id }));
+          // A paid year bought before this kit existed now belongs to it, so the allowance is exact.
+          void bind({ data: { kitId: id } }).then(() => accessFn().then(setAccess)).catch(() => {});
+        }
       }
       // What Revert goes back to, carrying the id a first save has just gained (founder, 2026-11-07).
       origin.current[current] = { ...kit, name: kit.name.trim(), tagline: kit.tagline.trim(), colors: kit.colors.map((c) => c.toUpperCase()), ...(newId ? { id: newId } : {}) };
@@ -309,8 +316,10 @@ export function BrandKit({ userId, tier, artistName }: { userId: string; tier: T
     finally { setBusy(false); }
   }
 
-  async function buy() {
-    try { await openCheckout({ kind: "branding" }); }
+  // With a kit id, the year is bought for that kit and the link is exact (founder, 2026-11-19); without one, it is for
+  // the next kit the member creates.
+  async function buy(kitId?: string) {
+    try { await openCheckout(kitId ? { kind: "branding", kitId } : { kind: "branding" }); }
     catch (e) { toast.error(e instanceof Error ? e.message : "Checkout could not open. Contact support and we'll help right away."); }
   }
 
@@ -321,7 +330,9 @@ export function BrandKit({ userId, tier, artistName }: { userId: string; tier: T
       <div className="space-y-4">
         <p className="text-sm text-muted-foreground">Put your own logo, name, tagline, colors and font at the top of the documents you send, in place of ours.</p>
         <p className="text-sm">On your split sheets, the contracts you make, and your lyric and catalog downloads. Included with {TIER_LABEL.management}, or add it to any plan for {BRANDING_PRICE}/year.</p>
-        <Button onClick={() => void buy()}><Lock className="h-4 w-4" />Add Personal Branding · {BRANDING_PRICE}/year</Button>
+        {/* Name the kit they already have, so the new year is linked to it and prints when the payment lands. A
+            member with no saved kit yet buys without one, and the kit they create next takes it (founder, 2026-11-19). */}
+        <Button onClick={() => void buy(kits.find((k) => k.id)?.id)}><Lock className="h-4 w-4" />Add Personal Branding · {BRANDING_PRICE}/year</Button>
       </div>
     );
   }
@@ -373,6 +384,15 @@ export function BrandKit({ userId, tier, artistName }: { userId: string; tier: T
       {tier !== "management" && access.addOnUntil && (
         <Button variant="outline" onClick={() => void openBilling()}>Manage billing · {access.addOnRenews ? "renews" : "ends"} {longDate(access.addOnUntil)}</Button>
       )}
+      {/* A kit whose own year has lapsed: its slot is free for the kits that are paid for, and this buys its year back
+          against this kit, so the link is exact (founder, 2026-11-19). */}
+      {kit.id && !!access.usableIds?.length && !access.usableIds.includes(kit.id) && (
+        <div className="rounded-xl border border-primary/40 bg-primary/5 p-4 text-sm">
+          <p className="font-semibold">This kit isn't covered by an active year.</p>
+          <p className="mt-1 text-muted-foreground">Documents use the kit included with your plan and the kits you've paid for. Renew this one to print with it again; your other kits and your plan are untouched.</p>
+          <Button className="mt-3" onClick={() => void buy(kit.id)}><Lock className="h-4 w-4" />Renew this kit · {BRANDING_PRICE}/year</Button>
+        </div>
+      )}
 
       {/* Several kits, one per business or project; each contract picks its kit. */}
       <div className="flex flex-wrap items-center gap-2">
@@ -386,7 +406,7 @@ export function BrandKit({ userId, tier, artistName }: { userId: string; tier: T
           : <Button size="sm" variant="ghost" onClick={() => void buy()}><Plus className="h-4 w-4" />Add another kit · {BRANDING_PRICE}/year</Button>}
         {kits.length > 1 && kit.id && <Button size="sm" variant="ghost" className="ml-auto" disabled={busy} onClick={() => void removeKit()}><Trash2 className="h-4 w-4" />Delete this kit</Button>}
       </div>
-      {kits.length > allowance && <p className="text-sm">⚠️ You have {kits.length} kits and {allowance} {allowance === 1 ? "is" : "are"} active. Documents use your first {allowance === 1 ? "kit" : `${allowance} kits`}; add another kit for {BRANDING_PRICE}/year to use the rest.</p>}
+      {kits.length > allowance && <p className="text-sm">⚠️ You have {kits.length} kits and {allowance} {allowance === 1 ? "is" : "are"} active. Documents use {hasTier(tier, "management") ? "the kit included with your plan and the newest paid ones" : "the newest kits you've paid for"}; add another kit for {BRANDING_PRICE}/year to use the rest.</p>}
 
       {/* Editor on the left, the live preview on the right and pinned while scrolling (founder, 2026-11-06): every change
           shows as it's made. On a phone the preview follows the editor. */}

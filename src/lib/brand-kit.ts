@@ -35,6 +35,11 @@ const isStyle = (v: unknown): v is KitStyle => KIT_STYLES.some((s) => s.id === v
 export type BrandKit = {
   /** Set once saved. A person can have several kits (one per business or project). */
   id?: string;
+  /**
+   * The paid year that keeps this kit on: the `sub:<subscription_id>` key of the purchase row that paid for it
+   * (founder, 2026-11-19). Null on the kit included with Catalog Management, and on a kit no paid year is linked to.
+   */
+  paidKey?: string | null;
   name: string;
   tagline: string;
   /** #RRGGBB, as many as they like. The first colors the name, the second the tagline; all of them make the header stripe. */
@@ -144,7 +149,7 @@ export type BrandUse = "splits" | "contracts" | "lyrics" | "catalog";
 
 /** New kits start in Arial, a neutral font that fits any brand (founder, 2026-10-27); Poppins is ours. */
 export const DEFAULT_KIT_FONT = "Arial";
-export const emptyKit = (name = ""): BrandKit => ({ name, tagline: "", colors: [], colorSets: [], font: DEFAULT_KIT_FONT, logoPath: null, logoPaths: [], showFooter: true, style: "classic", headerColor: null, options: { ...DEFAULT_KIT_OPTIONS } });
+export const emptyKit = (name = ""): BrandKit => ({ name, tagline: "", colors: [], colorSets: [], font: DEFAULT_KIT_FONT, logoPath: null, logoPaths: [], showFooter: true, style: "classic", headerColor: null, paidKey: null, options: { ...DEFAULT_KIT_OPTIONS } });
 
 export const isHex = (v: string) => /^#[0-9a-f]{6}$/i.test(v);
 
@@ -155,13 +160,14 @@ export function hexRgb(v: string): [number, number, number] {
 }
 
 /** A kit row from the database, cleaned: bad colors and unknown fonts are dropped instead of breaking a PDF. */
-export function kitFromRow(r: { id?: string | null; name?: string | null; tagline?: string | null; colors?: string[] | null; font?: string | null; logo_path?: string | null; logo_paths?: string[] | null; show_footer?: boolean | null; style?: string | null; header_color?: string | null; options?: unknown; color_sets?: unknown } | null): BrandKit | null {
+export function kitFromRow(r: { id?: string | null; name?: string | null; tagline?: string | null; colors?: string[] | null; font?: string | null; logo_path?: string | null; logo_paths?: string[] | null; show_footer?: boolean | null; style?: string | null; header_color?: string | null; options?: unknown; color_sets?: unknown; paid_key?: string | null } | null): BrandKit | null {
   if (!r) return null;
   // A kit saved before logo versions existed keeps its single logo as the first version.
   const saved = (Array.isArray(r.logo_paths) ? r.logo_paths : []).filter((p): p is string => typeof p === "string" && !!p);
   const active = r.logo_path || null;
   return {
     ...(r.id && { id: r.id }),
+    paidKey: r.paid_key ?? null,
     name: (r.name ?? "").trim(),
     tagline: (r.tagline ?? "").trim(),
     colors: (r.colors ?? []).filter(isHex).map((c) => c.toUpperCase()),
@@ -178,10 +184,21 @@ export function kitFromRow(r: { id?: string | null; name?: string | null; taglin
 
 type BrandingPurchase = { kind: string; created_at: string; details: Record<string, string> };
 
+/**
+ * When one paid kit year ends, in milliseconds. Stripe's own `period_end` is what the money bought, so it wins; the
+ * fixed year is only a fallback for a row written before it was stored (founder, 2026-11-19).
+ */
+const yearEnd = (p: BrandingPurchase): number => {
+  const stated = p.details["period_end"] ? Date.parse(p.details["period_end"]) : NaN;
+  if (Number.isFinite(stated)) return stated;
+  const start = Date.parse(p.created_at);
+  return Number.isFinite(start) ? start + BRANDING_DAYS * 86400000 : NaN;
+};
+
 /** Each paid year of a kit's subscription is one kit for one year (founder, 2026-10-27: $13.99 per kit per year). */
 const activeBuys = (purchases: BrandingPurchase[], now: Date) =>
-  purchases.filter((p) => p.kind === "branding" && !p.details["refunded_at"]).map((p) => Date.parse(p.created_at))
-    .filter((t) => Number.isFinite(t) && t + BRANDING_DAYS * 86400000 > now.getTime());
+  purchases.filter((p) => p.kind === "branding" && !p.details["refunded_at"]).map(yearEnd)
+    .filter((t) => Number.isFinite(t) && t > now.getTime());
 
 /** The year a kit is in right now: when it ends, and whether another one follows it. */
 export type BrandPeriod = { until: Date; renews: boolean };
@@ -193,12 +210,12 @@ export type BrandPeriod = { until: Date; renews: boolean };
 export function brandingPeriod(purchases: BrandingPurchase[], now = new Date()): BrandPeriod | null {
   const years = purchases
     .filter((p) => p.kind === "branding" && !p.details["refunded_at"])
-    .map((p) => ({ at: Date.parse(p.created_at), renews: p.details["renews"] !== "no" && !p.details["canceled_at"] }))
-    .filter((y) => Number.isFinite(y.at) && y.at + BRANDING_DAYS * 86400000 > now.getTime());
+    .map((p) => ({ until: yearEnd(p), renews: p.details["renews"] !== "no" && !p.details["canceled_at"] }))
+    .filter((y) => Number.isFinite(y.until) && y.until > now.getTime());
   if (!years.length) return null;
-  // The newest paid year is the one that decides when it runs out, and whether it renews.
-  const last = years.reduce((a, b) => (b.at > a.at ? b : a));
-  return { until: new Date(last.at + BRANDING_DAYS * 86400000), renews: last.renews };
+  // The year that runs latest decides when access ends, and whether another one follows it.
+  const latest = years.reduce((a, b) => (b.until > a.until ? b : a));
+  return { until: new Date(latest.until), renews: latest.renews };
 }
 
 /** When the last active kit purchase runs out, or null if none is active now. */
@@ -209,6 +226,60 @@ export function brandingUntil(purchases: BrandingPurchase[], now = new Date()): 
 /** How many kits can be used now: one with Catalog Management, plus one per active kit purchase. */
 export function kitAllowance(tier: Tier, purchases: BrandingPurchase[], now = new Date()): number {
   return (hasTier(tier, "management") ? 1 : 0) + activeBuys(purchases, now).length;
+}
+
+/** The `sub:<subscription_id>` key of every kit year that is running now: exactly what a kit row is linked by. */
+export function activeKitKeys(purchases: BrandingPurchase[], now = new Date()): Set<string> {
+  const keys = purchases
+    .filter((p) => p.kind === "branding" && !p.details["refunded_at"])
+    .filter((p) => { const end = yearEnd(p); return Number.isFinite(end) && end > now.getTime(); })
+    .map((p) => (p.details["subscription"] ? `sub:${p.details["subscription"]}` : ""))
+    .filter(Boolean);
+  return new Set(keys);
+}
+
+/** What `usableKits` needs from a kit row: its id, and the paid year linked to it. */
+export type KitLinkLike = { id?: string | null; paidKey?: string | null };
+
+/**
+ * Which kits this account may use right now, in the order documents pick them (founder, 2026-11-19).
+ *
+ * A paid year unlocks the kit it was actually bought for: the kit row carries that subscription's key (`paidKey`, set
+ * by the server), and the key has to be in `paid` (the years still running). Nothing is guessed from a kit's age.
+ * The kit included with Catalog Management is the oldest kit, so the default never moves under a member.
+ *
+ * An unlinked paid year (bought before its kit existed, or written before this link did) fills the next free slot
+ * with the newest unlinked kit, because an extra kit is bought and then created. A kit whose own year has lapsed is
+ * only picked when a running year has no unlinked kit to name: that is the member who renewed from the locked screen,
+ * where no kit could be named, and leaving their own kit locked after paying would be the worse answer.
+ */
+export function usableKits<T extends KitLinkLike>(kits: T[], allowance: number, included: boolean, paid: Set<string>): T[] {
+  const slots = Math.max(0, allowance);
+  if (!slots) return [];
+  const chosen: T[] = [];
+  const take = (k: T | undefined) => { if (k && chosen.length < slots && !chosen.includes(k)) chosen.push(k); };
+  const isPaid = (k: T) => !!k.paidKey && paid.has(k.paidKey);
+  const linked = kits.filter(isPaid).length;
+  // The included kit is the oldest one, linked or not: the kit a document falls back to stays the same.
+  if (included) take(kits[0]);
+  // Exactly the kits their running paid years were bought for.
+  for (const k of kits) if (isPaid(k)) take(k);
+  // A year still waiting for its kit goes to the newest unlinked kit.
+  for (let i = kits.length - 1; i >= 0; i--) {
+    const k = kits[i]!;
+    if (k.paidKey && !paid.has(k.paidKey)) continue;
+    take(k);
+  }
+  // A running year with no unlinked kit left takes the newest kit whose own year lapsed, so a member who renewed from
+  // the locked screen (which cannot name a kit) prints with the kit they already have instead of nothing at all.
+  if (linked < paid.size) {
+    for (let i = kits.length - 1; i >= 0; i--) {
+      const k = kits[i]!;
+      if (!k.paidKey || paid.has(k.paidKey)) continue;
+      take(k);
+    }
+  }
+  return chosen;
 }
 
 /** Where their brand kit shows: everywhere with Catalog Management or the add-on (any plan). */

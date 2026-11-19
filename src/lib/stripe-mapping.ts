@@ -21,7 +21,8 @@ export const checkoutInput = z.discriminatedUnion("kind", [
   z.object({ kind: z.literal("vault"), months: z.number().int().min(1).max(3) }),
   // Personal Branding: its own yearly subscription, one per kit (founder, 2026-11-19, replacing the one-time
   // twelve-month purchase). It renews until the member cancels, so the kit never lapses for someone who wants it.
-  z.object({ kind: z.literal("branding") }),
+  // `kitId` names the kit this year is for, so the link is exact rather than guessed (founder, 2026-11-19).
+  z.object({ kind: z.literal("branding"), kitId: z.string().uuid().optional() }),
   // One generated contract, $3.99 on any plan: the server checks the draft is the buyer's own and not yet paid.
   z.object({ kind: z.literal("contract"), generationId: z.string().uuid() }),
   // Renew now: next year's plan paid early. The server reads the plan and price from the user's own subscription.
@@ -92,7 +93,10 @@ export function planCheckout(input: CheckoutInput, userId: string): CheckoutPlan
     // A yearly subscription per kit (founder, 2026-11-19): the price is $13.99 a year and it renews by itself, so the
     // kit it pays for never quietly lapses. The subscription is filed on `purchases` one paid year at a time, so a
     // refund still ends the kit and a plan change still can't touch it.
-    return { mode: "subscription", items: [{ lookupKey: BRANDING_LOOKUP_KEY, quantity: 1 }], metadata: { userId, kind: "branding" }, returnTab: "profile", managed: true };
+    return {
+      mode: "subscription", items: [{ lookupKey: BRANDING_LOOKUP_KEY, quantity: 1 }],
+      metadata: { userId, kind: "branding", ...(input.kitId ? { kitId: input.kitId } : {}) }, returnTab: "profile", managed: true,
+    };
   }
   if (input.kind === "ai") {
     // Singles are bought per song (1–3); the other packages are one price for up to their song count.

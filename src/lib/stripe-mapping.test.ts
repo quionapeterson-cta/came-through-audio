@@ -24,6 +24,16 @@ describe("checkout input", () => {
     expect(() => checkoutInput.parse({ kind: "expert", trackIds: [uuid(1)], agencies: ["ASCAP", "BMI"] })).toThrow();
   });
 
+  it("carries the kit a branding year is bought for, and refuses a made-up id", () => {
+    const kitId = "3f1c2b8e-1d2a-4c3b-9e8f-000000000001";
+    expect(planCheckout(checkoutInput.parse({ kind: "branding", kitId }), "u1")).toMatchObject({
+      metadata: { userId: "u1", kind: "branding", kitId },
+    });
+    // Buying a year with no kit named is allowed: the next kit the member creates takes it.
+    expect(planCheckout(checkoutInput.parse({ kind: "branding" }), "u1").metadata).not.toHaveProperty("kitId");
+    expect(() => checkoutInput.parse({ kind: "branding", kitId: "not-a-uuid" })).toThrow();
+  });
+
   it("ignores a user ID or price sent from the browser", () => {
     const parsed = checkoutInput.parse({ kind: "plan", priceId: "catalog_plus_yearly", userId: "someone-else", items: [{ priceId: "x" }] });
     expect(planCheckout(parsed, "me")).toEqual({ mode: "subscription", items: [{ lookupKey: "catalog_plus_yearly", quantity: 1 }], metadata: { userId: "me" }, managed: true });
