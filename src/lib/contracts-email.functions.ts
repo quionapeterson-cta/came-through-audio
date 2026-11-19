@@ -3,13 +3,10 @@ import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { emailLayout, escapeHtml, SITE_URL } from "./email-layout";
 import { mailKey, sendMail } from "./mailer";
-import { trustedOrigin } from "./invite-limits";
+import { CONTRACT_INVITE_DAILY_LIMIT, trustedOrigin } from "./invite-limits";
 import { COMPANY_LEGAL_NAME } from "./contract-blueprints";
 
 const esc = escapeHtml;
-
-/** Invite emails one account may send per 24 hours, so nobody can blast invites to farm free trial accounts. */
-const DAILY_INVITE_LIMIT = 50;
 
 /** Emails a contract party their signing link. Both rows must be readable by the caller (RLS = contract owner only). */
 export const sendContractInvite = createServerFn({ method: "POST" })
@@ -26,7 +23,7 @@ export const sendContractInvite = createServerFn({ method: "POST" })
 
     const since = new Date(Date.now() - 86400000).toISOString();
     const { count: sentToday } = await context.supabase.from("contract_parties" as never).select("id", { count: "exact", head: true }).gte("invited_at", since);
-    if ((sentToday ?? 0) >= DAILY_INVITE_LIMIT) throw new Error("You've reached today's limit of " + DAILY_INVITE_LIMIT + " invites. Try again tomorrow, or contact support if you need more.");
+    if ((sentToday ?? 0) >= CONTRACT_INVITE_DAILY_LIMIT) throw new Error("You've reached today's limit of " + CONTRACT_INVITE_DAILY_LIMIT + " invites. Try again tomorrow, or contact support if you need more.");
     const { data: party, error } = await context.supabase
       .from("contract_parties" as never)
       .select("id, contract_id, legal_name, email, role, signed_at")

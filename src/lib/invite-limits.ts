@@ -1,7 +1,9 @@
-/** Split-invite email limits and text cleanup. Pure, so the rules are tested; the server function applies them. */
+/** Invite email limits and text cleanup. Pure, so the rules are tested; the server functions apply them. */
 
 /** Invite emails one account may send in 24 hours (an album's worth of co-writers). Support can raise it. */
 export const DAILY_INVITE_LIMIT = 25;
+/** Signing invitations one account may send in 24 hours, so nobody can blast them to farm free trial accounts. */
+export const CONTRACT_INVITE_DAILY_LIMIT = 50;
 /** Emails per split row, ever, and the wait between them. */
 export const ROW_SEND_LIMIT = 3;
 export const ROW_RESEND_GAP_MS = 86_400_000;

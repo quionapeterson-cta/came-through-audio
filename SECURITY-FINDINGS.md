@@ -15,7 +15,8 @@ below changes, this file changes in the same commit.
 
 The prefixes are as they were recorded when the findings were raised; the scanner holds the full identifiers, and the
 full IDs should be written in beside them the next time the scanner is open. The fourth finding from the same review,
-`lov_finding_41bec9cdc2a1c81a`, asked for a fix rather than an approval and was closed in the scanner.
+`lov_finding_41bec9cdc2a1c81a`, asked for a fix rather than an approval: the fix is in the code described below (outbound
+company mail is a super admin's or the owning department lead's), and its status is kept in the scanner.
 
 ## Why these are essential, not marketing
 
@@ -36,16 +37,17 @@ apply them before a send, counting from the server-side `invite_sends` table (ne
 | Rule | Value | Constant |
 | --- | --- | --- |
 | Invites one account may send in 24 hours | 25 | `DAILY_INVITE_LIMIT` |
-| Emails per split row, ever | 3 | `ROW_SEND_LIMIT` |
+| Emails per invite (a split row, or a co-writer request), ever | 3 | `ROW_SEND_LIMIT` |
 | Wait between two sends of the same row | 24 hours | `ROW_RESEND_GAP_MS` |
 | Invites one address may get in 24 hours, from all senders combined | 3 | `RECIPIENT_DAILY_LIMIT` |
 | Longest sender-typed text in an invite | 80 characters | `INVITE_TEXT_MAX` |
-| Links in an invite | Our live domain only | `trustedOrigin` |
+| Links in an invite | Our own site address; a preview origin falls back to the published site | `trustedOrigin` |
 | A recipient who switched invites off | Never emailed | `invite_blocklist` |
 
 Sender-typed text is also stripped of web addresses and email addresses (`cleanInviteText`), so an invite cannot be
-turned into a carrier for someone else's link. Contract-signing invitations are a separate path and keep their own
-50-a-day cap in `src/lib/contracts-email.functions.ts`.
+turned into a carrier for someone else's link. Contract-signing invitations are a separate path with their own
+50-a-day cap, and its number lives in the same file as the rest — `CONTRACT_INVITE_DAILY_LIMIT` in
+`src/lib/invite-limits.ts`, applied by `src/lib/contracts-email.functions.ts`.
 
 ## Signature / packet mail: the limits that apply
 
