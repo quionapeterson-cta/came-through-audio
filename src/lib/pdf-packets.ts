@@ -361,7 +361,7 @@ export function internshipPacketTemplate(): PdfTemplate {
       ]),
       clause(
         "Acknowledgment",
-        "I understand that this internship is an educational opportunity and that the actual legal classification of an internship depends on applicable law and the facts of the relationship, not solely on the title of this document.\n\nI have received an explanation of my learning objectives, supervision, schedule, and expectations. I agree to follow the Company’s written policies and procedures provided to me.",
+        "I have received an explanation of my learning objectives, supervision, schedule, and expectations. I agree to follow the Company’s written policies and procedures provided to me.",
       ),
       boxes(
         "Form 1 acknowledgment",
