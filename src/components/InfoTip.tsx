@@ -19,8 +19,10 @@ export function InfoTip({ term, text, title, children, className = "" }: { term?
         <button type="button" aria-label={children ? undefined : heading ? `What is ${heading}?` : "More info"} onMouseEnter={hover(true)} onMouseLeave={hover(false)}
           // A click right after hovering keeps the tip open instead of toggling it shut.
           onClick={(e) => { e.stopPropagation(); if (open && window.matchMedia?.("(hover: hover)").matches) e.preventDefault(); }}
-          data-infotip=""
-          className={children ? className : `relative -top-px ml-1.5 inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-full border border-primary align-middle text-[10px] font-semibold leading-none normal-case tracking-normal text-primary hover:bg-primary hover:text-primary-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${className}`}>
+          data-infotip={children ? "wide" : "circle"}
+          // One crisp 16px circle in every layout: fixed width and height (a phone's 44px tap-target rule is exempted
+          // for this button in styles.css), white `i` with an electric cobalt ring on black, CTA cobalt on white.
+          className={children ? className : `relative -top-px ml-1.5 inline-flex items-center justify-center w-4 h-4 min-w-[16px] min-h-[16px] max-w-[16px] max-h-[16px] shrink-0 rounded-full border border-[#004AAD] bg-white p-0 text-[10px] font-semibold leading-none text-[#004AAD] select-none align-middle normal-case tracking-normal hover:bg-[#004AAD] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring dark:border-[#4D8CFF]/80 dark:bg-transparent dark:text-white dark:shadow-[0_0_8px_rgba(77,140,255,0.45)] dark:hover:bg-[#4D8CFF]/15 dark:hover:text-white ${className}`}>
           {children ?? "i"}
         </button>
       </PopoverTrigger>
