@@ -22,6 +22,22 @@ describe("allowedOrigin", () => {
     expect(allowedOrigin("https://came-through-audio.lovable.app")).toBe(true);
   });
 
+  it("accepts the Vercel hosts our build is served from, and only this project's", () => {
+    expect(allowedOrigin("https://came-through-audio.vercel.app")).toBe(true);
+    expect(allowedOrigin("https://came-through-audio-camethroughfam.vercel.app")).toBe(true);
+    expect(allowedOrigin("https://came-through-audio-git-main-camethroughfam.vercel.app")).toBe(
+      true,
+    );
+    expect(allowedOrigin("https://came-through-audio-3p4tks6ji-camethroughfam.vercel.app")).toBe(
+      true,
+    );
+    expect(allowedOrigin("https://someone-else.vercel.app")).toBe(false);
+    expect(allowedOrigin("https://came-through-audio.evil.vercel.app")).toBe(false);
+    expect(allowedOrigin("https://came-through-audio-camethroughfam.vercel.app.evil.com")).toBe(
+      false,
+    );
+  });
+
   it("accepts a loopback dev server on any port", () => {
     expect(allowedOrigin("http://localhost:3000")).toBe(true);
     expect(allowedOrigin("http://127.0.0.1:5173")).toBe(true);

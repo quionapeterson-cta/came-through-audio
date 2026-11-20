@@ -24,8 +24,17 @@ export const HISTORY_TURNS = 6;
  * The sites allowed to call the worker (founder, 2026-11-20): the live domain and its subdomains, the preview hosts our
  * builds run on, and a loopback dev server. Anything else is refused before Workers AI is invoked.
  */
-const EXACT_ORIGINS = ["https://camethroughaudio.com", "https://www.camethroughaudio.com"];
+const EXACT_ORIGINS = [
+  "https://camethroughaudio.com",
+  "https://www.camethroughaudio.com",
+  "https://came-through-audio.vercel.app",
+];
 const PREVIEW_SUFFIXES = [".style.dev", ".lovable.app", ".camethroughaudio.com"];
+/**
+ * Vercel's own hostnames for this project only: the branch alias and every deployment URL end in our team's slug, which
+ * only an account on this project can be given, so `someone-else.vercel.app` still falls through to the refusal.
+ */
+const VERCEL_PROJECT_HOST = /^came-through-audio(-[a-z0-9-]+)?-camethroughfam\.vercel\.app$/;
 
 /** The origin of an Origin/Referer header, or `null` when it is missing or unreadable. */
 function originOf(value: string | null | undefined): string | null {
@@ -58,6 +67,7 @@ export function allowedOrigin(origin: string | null | undefined, referer?: strin
     host === "localhost" || host === "127.0.0.1" || host === "[::1]" || host === "::1";
   if (loopback) return url.protocol === "http:" || url.protocol === "https:";
   if (EXACT_ORIGINS.includes(candidate)) return true;
+  if (VERCEL_PROJECT_HOST.test(host)) return true;
   return PREVIEW_SUFFIXES.some((suffix) => host.endsWith(suffix) && host.length > suffix.length);
 }
 
