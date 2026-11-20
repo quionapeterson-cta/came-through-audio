@@ -86,8 +86,13 @@ export const livePriceAudit = createServerFn({ method: "GET" })
     try {
       const stripe = createStripeClient("live");
       const keys = soldPrices().map((row) => row.lookupKey);
-      // One page holds every key the site sells (Stripe allows 100 lookup keys and one page is 100 prices).
-      const { data } = await stripe.prices.list({ lookup_keys: keys, limit: 100 });
+      // Stripe allows at most 10 lookup keys per request, so fetch in batches of 10.
+      const data: unknown[] = [];
+      for (let i = 0; i < keys.length; i += 10) {
+        const batch = keys.slice(i, i + 10);
+        const page = await stripe.prices.list({ lookup_keys: batch, limit: 100 });
+        data.push(...page.data);
+      }
       const audit = auditLivePrices(data as StripePriceLike[]);
       return {
         app,
