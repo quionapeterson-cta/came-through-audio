@@ -260,6 +260,15 @@ under Lovable's own versions, and 86 local files had no row at all. Every local 
 spot-checked against live objects first), so `supabase db push` sees no pending migration. The pre-existing
 Lovable-named rows are left as they are — they are history, not a second copy of the repo.
 
+**The drift check (2026-11-20).** `npm run db:drift` compares the versions in `supabase/migrations` with the remote
+ledger and prints **PENDING** (a file with no row — what a push would run again) and **STRAY** (a row with no file;
+Lovable's own timestamps live there and are expected, so they never fail it). It exits 0 clean, 1 on a pending
+migration and 2 when it could not read the remote ledger, so a check that cannot see the database never passes
+quietly. The remote side comes from `supabase migration list --linked`, the Management API with
+`SUPABASE_ACCESS_TOKEN` and the project ref in `supabase/config.toml`, or a list saved earlier with `--remote-file`.
+The rules live in `src/lib/migration-ledger.ts` with their test; object existence is deliberately not part of it,
+because that needs a live SQL query and the object check above was read by hand.
+
 ## 9. Decisions (settled 2026-11-20)
 
 1. **Refunding a month already charged** — a refund of the newest Vault month also cancels the Vault subscription, so no

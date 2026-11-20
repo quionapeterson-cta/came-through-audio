@@ -13,6 +13,7 @@
     "lint": "eslint .",
     "format": "prettier --write .",
     "check:copy": "node scripts/check-vendor-copy.mjs",
+    "db:drift": "node scripts/check-migration-ledger.mjs",
     "test": "vitest run",
     "test:watch": "vitest"
   },
