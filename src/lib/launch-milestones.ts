@@ -33,6 +33,7 @@ export const LAUNCH_MILESTONES: Milestone[] = [
   { title: "Send the new app icon", importance: "normal", due: null, body: "Claude makes every size (home screen, browser tab)." },
   { title: "Replace the placeholder badge art", importance: "normal", due: null, body: "19 customer and 33 staff badges, file names in PLAN-badge-art-placeholders.md." },
   { title: "Turn on STRIPE_TAX once Stripe Tax is active", importance: "low", due: null, body: "" },
+  { title: "Help Desk: read its answers before it ships with the launch", importance: "normal", due: null, body: "The corner Help Desk is built and its own Worker is live (cta-help-desk.quionapeterson.workers.dev); nothing about it touches the domain. Ask it a few real questions — an ISWC, splits, a refund — and read the replies before members do. Leaving it off is a decision too: say which." },
   { title: "Launch day: grant launch gifts", importance: "normal", due: null, body: "Admin → Company Contracts → Launch gifts, for every signed testimonial release." },
   { title: "Launch day: remove the passcode gate and let search engines in", importance: "top", due: null, body: "Tell Claude on launch day." },
 ];

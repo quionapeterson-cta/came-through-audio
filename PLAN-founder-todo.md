@@ -129,6 +129,7 @@ Publish in Lovable first, then test on the published site in the sandbox (card 4
 - [ ] Badges: Sound Sealed after your first Bitcoin-stamped certificate.
 - [ ] Royalty Utility Suite: converter with a song picked, and the earnings calculator.
 - [ ] Task Bank: a Top priority task shows the alert at Admin sign-in; the bell lists due tasks.
+- [ ] Help Desk: open the corner badge on a phone and on a computer, ask one question about ISWCs and one about splits, minimize it, close it, and check a "Let us do it for you" pill opens the right tab.
 
 **Still waiting from 10/23**
 - [ ] Stripe sandbox: Renew now, Need more time, Pause → Resume, cancel offers, Expert Assistance checkout.
@@ -180,4 +181,5 @@ The Cloudflare move is planned for the week of Dec 7, after beta ends on Dec 3, 
 - [ ] Representative logins for SoundExchange Direct and The MLC Portal.
 - [ ] ISRC registrant ($95): confirm the ISRC Manager terms.
 - [ ] Run Lovable's security scan once more.
+- [ ] Help Desk: read its answers to a few real questions (an ISWC, splits, a refund) and say whether it ships with the launch or stays off until you have tried it with the team. It is built and its own Worker is live; it is only waiting on the site deploy.
 - [ ] Launch day: tell me to remove the passcode gate and let search engines in.
