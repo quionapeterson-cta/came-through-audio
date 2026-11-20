@@ -31,7 +31,8 @@ export type RetentionEmail =
   | { kind: "renewal"; plan: string; price: string; renewsOn: string; daysLeft: number }
   | { kind: "payment-failed"; plan: string; reminder: boolean }
   | { kind: "renewed"; renewsOn: string }
-  | { kind: "kept-free" };
+  | { kind: "kept-free" }
+  | { kind: "vault-failed" };
 
 function render(e: RetentionEmail): { subject: string; html: string } {
   switch (e.kind) {
@@ -83,11 +84,17 @@ function render(e: RetentionEmail): { subject: string; html: string } {
     case "paused": {
       const s = escapeHtml(longDate(e.startsOn)), end = escapeHtml(longDate(e.endsOn));
       return { subject: `Your plan is paused until ${end}`, html: page("Pause", `Paused from ${s} to ${end}`, [
-        "Your catalog is kept safe and read-only while you're paused: view and download, no adding or editing. Nothing is emptied.",
+        "Your catalog is kept safe and read-only while you're paused: view and download, no adding or editing. Nothing is emptied, and your masters, artwork and PDFs stay downloadable.",
         e.plan ? `Your plan resumes and renews on ${end}. Want it back sooner? Use Resume now in Profile.` : `After ${end}, renew to keep your catalog.`,
-        "The Vault fee isn't refundable once the pause starts. Pause can be used once every 12 months.",
+        `The Vault fee is $1.99 a month while you're paused, charged monthly and stopped automatically on ${end}; nothing is charged after that. It isn't refundable once the month starts, and pausing is never cancelling. Pause can be used once every 12 months.`,
       ], [profile, "Open Profile"]) };
     }
+    case "vault-failed":
+      return { subject: "Your pause has ended: the Vault fee couldn't be charged", html: page("Pause ended", "Your pause has ended", [
+        "Stripe tried the monthly Vault fee several times and the card didn't go through, so the pause has ended and the account is now on the Free plan. Nothing else was charged.",
+        "Your catalog is kept and nothing is emptied. Start a paid plan whenever you're ready, with a card that works, and pick up exactly where you left off.",
+        KEPT,
+      ], [`${SITE_URL}/plans`, "See plans"]) };
   }
 }
 

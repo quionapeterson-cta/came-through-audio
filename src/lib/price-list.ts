@@ -10,8 +10,17 @@ import { VAULT_LOOKUP_KEY, VAULT_PRICE } from "@/lib/retention";
  * change a price in code and this page changes with it. Nothing here is typed twice.
  */
 
-/** How Stripe must hold the price: a yearly subscription, or a single charge. */
-export type BillingType = "recurring" | "one-time";
+/**
+ * How Stripe must hold the price: a yearly subscription, a monthly one, or a single charge. The Vault fee is monthly
+ * (founder, 2026-11-20): $1.99 billed once per month of a pause, cancelled by Stripe at the pause end.
+ */
+export type BillingType = "recurring-yearly" | "recurring-monthly" | "one-time";
+
+const BILLING_TEXT: Record<BillingType, string> = {
+  "recurring-yearly": "yearly subscription",
+  "recurring-monthly": "monthly subscription",
+  "one-time": "one-time",
+};
 
 export type PriceRow = {
   item: string;
@@ -48,7 +57,7 @@ export const PRICE_LIST: PriceGroup[] = [
       item: TIER_LABEL[p.tier],
       price: p.priceId ? `${p.price}/yr` : p.price,
       detail: p.priceId ? `${p.monthly} · billed annually` : "Sign-up only, no card",
-      ...(p.priceId && { lookupKey: p.priceId, billing: "recurring" as const }),
+      ...(p.priceId && { lookupKey: p.priceId, billing: "recurring-yearly" as const }),
     })),
   },
   {
@@ -59,12 +68,12 @@ export const PRICE_LIST: PriceGroup[] = [
       price: `${s.price}/yr`,
       detail: `${s.monthly} · per added artist`,
       lookupKey: s.lookupKey,
-      billing: "recurring" as const,
+      billing: "recurring-yearly" as const,
     })),
   },
   {
-    title: "One-time add-ons",
-    note: "Bought alongside any plan. Each is a single charge, not a subscription, except Personal Branding, which covers twelve months.",
+    title: "Add-ons",
+    note: "Bought alongside any plan. Personal Branding is its own yearly subscription and the Vault fee its own monthly one; the generated contract is a single charge.",
     rows: [
       {
         item: "Generated contract",
@@ -78,14 +87,14 @@ export const PRICE_LIST: PriceGroup[] = [
         price: BRANDING_PRICE,
         detail: "Per kit, per year: your logo, colors, business name and tagline on split sheets and contracts. Included with Catalog Management. Its own yearly subscription, renewing until cancelled.",
         lookupKey: BRANDING_LOOKUP_KEY,
-        billing: "recurring",
+        billing: "recurring-yearly",
       },
       {
         item: "Pause (Vault fee)",
-        price: `${usd(VAULT_PRICE)} per month paused`,
-        detail: "Paid up front when an account pauses, up to 3 months. Keeps the catalog and Vault files in place while the plan is on hold.",
+        price: `${usd(VAULT_PRICE)} / month`,
+        detail: "While a plan is paused, up to 3 months. Its own monthly subscription: billed once a month and stopped by Stripe when the pause ends, on Resume, or when the card cannot be charged. Keeps the catalog and Vault files in place, and downloads stay available.",
         lookupKey: VAULT_LOOKUP_KEY,
-        billing: "one-time",
+        billing: "recurring-monthly",
       },
     ],
   },
@@ -143,8 +152,8 @@ export function stripeLookupKeyText(): string {
   return [
     `Came Through Audio · Stripe lookup keys · effective ${PRICE_LIST_EFFECTIVE} · USD`,
     "Create each price on its own product and set the lookup key exactly as written.",
-    "yearly subscription = a recurring price, billed once a year; one-time = a single charge.",
+    "yearly subscription = a recurring price billed once a year; monthly subscription = a recurring price billed once a month; one-time = a single charge.",
     "",
-    ...rows.map((r) => `${r.lookupKey.padEnd(keyWidth)}  ${r.price.padEnd(priceWidth)}  ${r.billing === "recurring" ? "yearly subscription" : "one-time"}  ${r.item}`),
+    ...rows.map((r) => `${r.lookupKey.padEnd(keyWidth)}  ${r.price.padEnd(priceWidth)}  ${BILLING_TEXT[r.billing]}  ${r.item}`),
   ].join("\n");
 }

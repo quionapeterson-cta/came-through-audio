@@ -11,8 +11,8 @@ function healthy(): StripePriceLike[] {
     unit_amount: PUBLISHED_AMOUNTS[row.lookupKey],
     currency: "usd",
     active: true,
-    type: row.billing === "recurring" ? "recurring" : "one_time",
-    recurring: row.billing === "recurring" ? { interval: "year" } : null,
+    type: row.billing === "one-time" ? "one_time" : "recurring",
+    recurring: row.billing === "one-time" ? null : { interval: row.billing === "recurring-monthly" ? "month" : "year" },
   }));
 }
 
@@ -54,6 +54,23 @@ describe("the live price check", () => {
     plan.type = "one_time";
     plan.recurring = null;
     expect(auditLivePrices(rows).problems.join(" ")).toContain("must be a yearly subscription");
+  });
+
+  it("catches a monthly price held as a yearly one, which would bill the pause once a year", () => {
+    const rows = healthy();
+    const vault = byKey(rows, "vault_month");
+    vault.recurring = { interval: "year" };
+    const problem = auditLivePrices(rows).problems.join(" ");
+    expect(problem).toContain("must be a monthly subscription");
+    expect(problem).toContain("yearly");
+  });
+
+  it("catches a monthly price held as a one-time charge, the old shape of the pause fee", () => {
+    const rows = healthy();
+    const vault = byKey(rows, "vault_month");
+    vault.type = "one_time";
+    vault.recurring = null;
+    expect(auditLivePrices(rows).problems.join(" ")).toContain("must be a monthly subscription");
   });
 
   it("catches a one-time add-on held as a subscription", () => {

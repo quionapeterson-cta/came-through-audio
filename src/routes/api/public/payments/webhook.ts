@@ -7,7 +7,8 @@ import { SEAT_MAX, SEAT_TIER } from "@/lib/plans";
 import { BRANDING_LOOKUP_KEY } from "@/lib/brand-kit";
 import { isBrandingSubscription, kitYearRow } from "@/lib/branding-subscription";
 import { purchaseKind } from "@/lib/purchase-receipt";
-import { earlyRenewalTarget } from "@/lib/retention";
+import { earlyRenewalTarget, VAULT_LOOKUP_KEY } from "@/lib/retention";
+import { isVaultSubscription, vaultCollectionGaveUp, vaultMonthKey, vaultMonthRow } from "@/lib/vault-subscription";
 import { sendPurchaseReceipt } from "@/lib/purchase-emails.server";
 import { sendSeatHandoffEmails } from "@/lib/seat-handoff.server";
 
@@ -48,6 +49,9 @@ async function sendReceipt(session: Stripe.Checkout.Session, env: StripeEnv) {
       // Renew now: the session carries the renewal it paid for, so the confirmation names the date the plan now
       // renews on rather than leaving the member to guess (founder, 2026-11-08).
       renewsOn: kind === "renew" && md["renews"] ? earlyRenewalTarget(md["renews"]).toISOString() : null,
+      // A pause's confirmation carries the monthly schedule, so it never claims a lump sum was taken.
+      pauseStarts: kind === "vault" ? (md["pauseStarts"] ?? null) : null,
+      pauseEnds: kind === "vault" ? (md["pauseEnds"] ?? null) : null,
     });
     if (!res.sent) console.warn(`Purchase confirmation for ${session.id} (${env}) not sent: ${res.reason}`);
   } catch (e) {
@@ -199,6 +203,90 @@ function invoicePaymentIntent(invoice: unknown): string | null {
 }
 
 /**
+ * The pause's monthly Vault subscription (founder, 2026-11-20, replacing the one-time charge). It is never a plan: it
+ * writes no `subscriptions` row and sends no plan email, it only starts the pause it was bought for and makes sure Stripe
+ * will cancel it at the pause end.
+ */
+async function saveVaultSubscription(sub: StripeSubscriptionLike, env: StripeEnv, deleted: boolean): Promise<boolean> {
+  if (!isVaultSubscription(sub, VAULT_LOOKUP_KEY)) return false;
+  const { subscriptionId, starts, ends, userId, months } = {
+    subscriptionId: sub.id,
+    starts: sub.metadata?.["pauseStarts"],
+    ends: sub.metadata?.["pauseEnds"],
+    userId: sub.metadata?.["userId"],
+    months: Number(sub.metadata?.["months"]) || 1,
+  };
+  const { admin, closeVaultPause, startVaultPause } = await import("@/lib/retention.server");
+  const db = await admin();
+  // Stripe cancelled it at the pause end: the pause is closed, and the never-ending cron pass agrees.
+  if (deleted) {
+    await closeVaultPause(db, subscriptionId, new Date().toISOString());
+    return true;
+  }
+  if (!userId || !starts || !ends) {
+    console.warn(`Vault subscription ${subscriptionId} has no pause dates on it, so no pause was started.`);
+    return true;
+  }
+  const cancelAt = Math.floor(new Date(ends).getTime() / 1000);
+  if (Number.isFinite(cancelAt) && sub.cancel_at !== cancelAt) {
+    // Stripe enforces the end of the pause itself, even if our worker is down. A failure returns 500 so Stripe retries.
+    await createStripeClient(env).subscriptions.update(subscriptionId, { cancel_at: cancelAt });
+  }
+  await startVaultPause(db, { user_id: userId, subscriptionId, months, starts, ends }, env);
+  return true;
+}
+
+/** The pause's subscription, or null when this id belongs to a plan, a seat or a kit. */
+async function vaultSub(env: StripeEnv, subscriptionId: string): Promise<StripeSubscriptionLike | null> {
+  const sub = (await createStripeClient(env).subscriptions.retrieve(subscriptionId)) as unknown as StripeSubscriptionLike;
+  return isVaultSubscription(sub, VAULT_LOOKUP_KEY) ? sub : null;
+}
+
+/** The end of the month an invoice paid for: the line's period in newer API versions, the invoice's own otherwise. */
+function invoicePeriodEnd(invoice: Stripe.Invoice): number | null {
+  const i = invoice as unknown as { period_end?: number | null; lines?: { data?: { period?: { end?: number | null } | null }[] } | null };
+  return i.lines?.data?.[0]?.period?.end ?? i.period_end ?? null;
+}
+
+/**
+ * One paid month of a pause is one `purchases` row, keyed to its invoice: the Billing Console can then refund a single
+ * month, and a $0 trial invoice writes nothing. Returns true when the invoice belongs to a pause.
+ */
+async function saveVaultMonth(env: StripeEnv, invoice: Stripe.Invoice, subscriptionId: string): Promise<boolean> {
+  const sub = await vaultSub(env, subscriptionId);
+  if (!sub) return false;
+  const userId = sub.metadata?.["userId"] ?? null;
+  if (!userId || !invoice.id) {
+    console.warn(`Vault invoice ${invoice.id ?? "(no id)"}: nothing to file for ${subscriptionId}`);
+    return true;
+  }
+  const key = vaultMonthKey(invoice.id);
+  const { data } = await db().from("purchases").select("details").eq("stripe_session_id", key).maybeSingle();
+  const row = vaultMonthRow(
+    {
+      subscriptionId,
+      invoiceId: invoice.id,
+      amountPaid: invoice.amount_paid ?? null,
+      currency: invoice.currency ?? null,
+      paymentIntent: invoicePaymentIntent(invoice),
+      periodEnd: invoicePeriodEnd(invoice),
+    },
+    data as { details?: Record<string, string> | null } | null,
+  );
+  if (!row) return true;
+  const { error } = await db().from("purchases").upsert({
+    user_id: userId,
+    stripe_session_id: row.key,
+    kind: "vault",
+    price_ids: [VAULT_LOOKUP_KEY],
+    details: row.details,
+    environment: env,
+  } as never, { onConflict: "stripe_session_id" });
+  if (error) throw error;
+  return true;
+}
+
+/**
  * A Personal Branding kit is its own yearly subscription (founder, 2026-11-19, replacing the one-time twelve-month
  * purchase). It is still filed on `purchases`, one paid year at a time, so everything already built keeps working: the
  * kit is on for the year that was paid for, a refund ends it, and a plan change can neither end nor extend it. The row
@@ -334,6 +422,9 @@ async function sendKitPaymentFailed(env: StripeEnv, invoice: Stripe.Invoice, sub
 }
 
 async function saveSubscription(sub: StripeSubscriptionLike, env: StripeEnv, deleted = false) {
+  // A pause's Vault subscription is neither a plan nor a seat: it starts and closes the pause it was bought for, and
+  // must never write a plan row or send the "your plan ends" email when Stripe cancels it at the pause end.
+  if (await saveVaultSubscription(sub, env, deleted)) return;
   // A kit subscription is neither a plan nor a seat: it unlocks one branding kit for the year it pays for.
   if (await saveBrandingSubscription(sub, env, deleted)) return;
   // Any seat line makes this a seat subscription, whatever else was bought alongside it.
@@ -370,7 +461,8 @@ async function checkoutCompleted(session: Stripe.Checkout.Session, env: StripeEn
     await applyEarlyRenewal(await admin(), purchase, env);
     return;
   }
-  // Vault fee paid: start the pause it bought. A failure returns 500 so Stripe retries (it's paid for).
+  // Legacy: a pause bought before 2026-11-20 was one one-time payment, and its session may still complete. New pauses
+  // are monthly subscriptions and start through saveVaultSubscription. A failure returns 500 so Stripe retries.
   if (row.kind === "vault" && purchase) {
     const { admin, startPause } = await import("@/lib/retention.server");
     await startPause(await admin(), purchase, env);
@@ -414,6 +506,21 @@ async function markRefunded(env: StripeEnv, charge: Stripe.Charge) {
   if (invoiceId) {
     const invoice = await stripe.invoices.retrieve(invoiceId);
     const subId = invoiceSubscriptionId(invoice);
+    // A pause's month is its own purchase row (`vault:<invoice id>`): refunding it also cancels the Vault subscription,
+    // so no later month is charged, while the pause itself keeps running to its end (founder, 2026-11-20).
+    const { data: monthRow } = await db().from("purchases").select("id, details").eq("stripe_session_id", vaultMonthKey(invoiceId)).maybeSingle();
+    const vaultMonth = monthRow as { id: string; details: Record<string, string> } | null;
+    if (vaultMonth) {
+      const { error } = await db().from("purchases")
+        .update({ details: { ...vaultMonth.details, refunded_at: new Date().toISOString() } } as never).eq("id", vaultMonth.id);
+      if (error) throw error;
+      const vaultSubId = vaultMonth.details["subscription"];
+      if (vaultSubId) {
+        try { await stripe.subscriptions.cancel(vaultSubId); }
+        catch (e) { console.error(`Vault subscription ${vaultSubId}: could not be cancelled after its month was refunded`, e); }
+      }
+      return;
+    }
     if (subId) {
       const { data } = await db().from("purchases").select("id, details").eq("stripe_session_id", `sub:${subId}`).maybeSingle();
       const purchase = data as { id: string; details: Record<string, string> } | null;
@@ -453,8 +560,10 @@ async function markRefunded(env: StripeEnv, charge: Stripe.Charge) {
 
 /** A subscription just set to cancel (it wasn't before this event) gets the "your plan ends on DATE" email once. */
 async function cancelNotice(env: StripeEnv, sub: StripeSubscriptionLike, previous: Record<string, unknown> | undefined) {
-  // A kit's own subscription is not the plan, so its cancellation never sends the "your plan ends" email.
+  // A kit's own subscription is not the plan, so its cancellation never sends the "your plan ends" email, and neither
+  // does a pause's Vault subscription, which Stripe cancels at every pause end.
   if (sub.items.data.some((i) => i.price.lookup_key === BRANDING_LOOKUP_KEY)) return;
+  if (isVaultSubscription(sub, VAULT_LOOKUP_KEY)) return;
   const now = !!sub.cancel_at_period_end || !!sub.cancel_at;
   const was = previous && (("cancel_at_period_end" in previous && previous["cancel_at_period_end"] === false) || ("cancel_at" in previous && previous["cancel_at"] === null));
   if (!now || !was) return;
@@ -513,10 +622,14 @@ export const Route = createFileRoute("/api/public/payments/webhook")({
             case "invoice.paid": {
               const id = invoiceSubscriptionId(event.data.object);
               if (id) {
+                // A pause's month is one row per paid invoice; a $0 trial invoice writes nothing.
+                const vaultMonth = await saveVaultMonth(env, event.data.object as Stripe.Invoice, id);
                 await syncSubscription(env, id);
-                // A kit's year renewed: one email per invoice, never failing the event.
-                try { await sendKitRenewal(env, event.data.object as Stripe.Invoice, id); }
-                catch (e) { console.error("Kit renewal email failed:", e); }
+                if (!vaultMonth) {
+                  // A kit's year renewed: one email per invoice, never failing the event.
+                  try { await sendKitRenewal(env, event.data.object as Stripe.Invoice, id); }
+                  catch (e) { console.error("Kit renewal email failed:", e); }
+                }
               }
               break;
             }
@@ -526,6 +639,17 @@ export const Route = createFileRoute("/api/public/payments/webhook")({
               const id = invoiceSubscriptionId(invoice);
               const firstOrRenewal = invoice.billing_reason === "subscription_cycle" || invoice.billing_reason === "subscription_create";
               if (id && firstOrRenewal) {
+                // A pause whose monthly Vault fee can no longer be collected ends, and the account moves to the Free plan:
+                // Stripe retries first, and only the attempt with no retry left acts, so a bank hiccup never cuts a pause
+                // short (founder, 2026-11-20).
+                const vault = await vaultSub(env, id);
+                if (vault) {
+                  if (vaultCollectionGaveUp({ nextPaymentAttempt: invoice.next_payment_attempt ?? null, status: vault.status })) {
+                    const { admin, failVaultPause } = await import("@/lib/retention.server");
+                    await failVaultPause(await admin(), id, env);
+                  }
+                  break;
+                }
                 // A kit's own subscription has its own notice; the plan email and plan row are never used for it.
                 try {
                   if (await sendKitPaymentFailed(env, invoice, id)) break;

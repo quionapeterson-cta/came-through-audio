@@ -28,6 +28,9 @@ export type ReceiptInput = {
   managed: boolean;
   /** For Renew now: the date the plan next renews (never a Stripe trial end). */
   renewsOn?: string | null;
+  /** For a pause: the dates its monthly Vault fee runs between (founder, 2026-11-20). */
+  pauseStarts?: string | null;
+  pauseEnds?: string | null;
 };
 
 export type ReceiptResult = { sent: boolean; reason?: string };
@@ -38,7 +41,15 @@ export async function sendPurchaseReceipt(i: ReceiptInput): Promise<ReceiptResul
   const key = resendKey();
   if (!key) return { sent: false, reason: "no-key" };
 
-  const copy = receiptCopy({ kind, plan: purchasedPlan(i.priceIds), paid: money(i.amount, i.currency), managed: i.managed, renewsOn: i.renewsOn ?? null });
+  const copy = receiptCopy({
+    kind,
+    plan: purchasedPlan(i.priceIds),
+    paid: money(i.amount, i.currency),
+    managed: i.managed,
+    renewsOn: i.renewsOn ?? null,
+    pauseStarts: i.pauseStarts ?? null,
+    pauseEnds: i.pauseEnds ?? null,
+  });
   const html = emailLayout(
     `<p style="font-size:12px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:#004AAD;margin:0">${escapeHtml(copy.eyebrow)}</p>
 <h1 style="font-size:24px;margin:8px 0 16px">${escapeHtml(copy.heading)}</h1>

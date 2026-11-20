@@ -97,9 +97,11 @@ describe("renew now", () => {
 });
 
 describe("vault checkout", () => {
-  it("charges the Vault fee once per month paused", () => {
+  it("opens the pause's own monthly subscription, one month at a time", () => {
     const plan = planCheckout(checkoutInput.parse({ kind: "vault", months: 3 }), "u1");
-    expect(plan).toMatchObject({ mode: "payment", items: [{ lookupKey: "vault_month", quantity: 3 }], metadata: { userId: "u1", kind: "vault", months: "3" }, managed: true });
+    // The months pick the length of the pause; they are never a quantity on a one-time charge (founder, 2026-11-20).
+    expect(plan).toMatchObject({ mode: "subscription", items: [{ lookupKey: "vault_month", quantity: 1 }], metadata: { userId: "u1", kind: "vault", months: "3" }, managed: true });
+    expect(planCheckout(checkoutInput.parse({ kind: "vault", months: 1 }), "u1").items[0]?.quantity).toBe(1);
     expect(() => checkoutInput.parse({ kind: "vault", months: 4 })).toThrow();
   });
 });

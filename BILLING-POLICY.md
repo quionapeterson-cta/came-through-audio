@@ -28,7 +28,7 @@ paid, cannot send money anywhere but the original card, and cannot touch bank de
 | Artist seat (Plus / Collaborate / Management) | $18.99 / $34.99 / $69.99 per artist per year | Up to **10 seats** in one purchase |
 | Personal branding kit | $13.99 / year | One kit, its own yearly subscription; renews until cancelled |
 | Generated contract | $3.99 each | Included with Catalog Management |
-| Vault (pause) fee | $1.99 per month | Up to 3 months, so $5.97 |
+| Vault (pause) fee | $1.99 per month | Its own monthly subscription: 1–3 months, billed monthly, stops by itself (at most $5.97 over a three-month pause) |
 | Expert Registration setup | $14.99 (single/EP, up to 6 songs) · $29.99 (album, up to 20 songs) | |
 | Expert Registration, per song | $4.99 per song, per agency | Agencies: ASCAP **or** BMI, The MLC, SoundExchange |
 | AI Protection | $2.99/song (up to 3) · EP $9.99 · Album $16.99 · Album+ $24.99 | One-time, per release |
@@ -80,15 +80,22 @@ A seat or a kit does run its own year, so a partial refund is often the fair ans
 
 ### 3.2 Pausing is not cancelling
 
-A pause stops the plan charge for one to three months (the Vault fee, $1.99 a month, paid up front) and then the plan
-**renews by itself**. It does not cancel anything.
+A pause stops the plan charge for one to three months and then the plan **renews by itself**. It does not cancel anything.
+
+The Vault fee is **$1.99 a month, billed monthly while the pause runs**, and it stops by itself at the pause end, on
+Resume, or when the card cannot be charged — no later month is ever taken. The month in progress isn't refunded when a
+member resumes early.
 
 - The pause screen says so before anyone pays, Resume now says "this ends your pause, not your plan", and the renewal
   reminder email repeats it.
 - **If a member says they thought pausing cancelled**, they get the **prorated refund** of the plan (§3.1) even though
   they were past 30 days. Note: "thought pause cancelled". Do not argue about it; a dispute costs more.
-- If the pause never started, refund the Vault fee as well. If it has started, the fee stays (they used the pause) unless
-  the Head of Finance says otherwise.
+- If the pause never started, refund the Vault fee as well (nothing was charged yet in that case). If it has started, the
+  month in progress stays (they used it) unless the Head of Finance says otherwise. Refunding the newest month also
+  cancels the Vault subscription, so no later month is charged, and the pause itself keeps running to its end.
+- **If the Vault fee can't be collected**, Stripe retries first. When it gives up, the pause ends and the account moves to
+  the **Free plan** — never a free pause. Tell the member why, that nothing else was charged, and that their catalog is
+  kept and a paid plan can start whenever they're ready.
 
 ### 3.3 A forgotten renewal
 

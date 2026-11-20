@@ -144,6 +144,13 @@
 - Pausing is never presented as cancelling (founder, 2026-11-05): the pause dialog says the plan renews by itself, Resume
   now says it ends the pause rather than the plan, and a member who thought a pause cancelled gets the prorated refund.
   The renewal reminder email always carries the Cancel-or-change link and that same warning.
+- **The pause fee is a monthly subscription** (founder, 2026-11-20, replacing the one-time charge of 2026-10-21): $1.99 a
+  month while the pause runs, billed once per month chosen (1–3), with Stripe's `cancel_at` set to the pause end so no
+  month after it is ever charged. Resume and a refund of the newest month cancel it too. The rules live in
+  `src/lib/vault-subscription.ts` with their test — one `purchases` row per paid month, keyed `vault:<invoice id>` — and
+  a Vault subscription is never a plan (no `subscriptions` row, no "your plan ends" email). A month Stripe cannot
+  collect after its retries ends the pause and moves the account to the Free plan, never a free pause. While paused the
+  catalog is read-only and downloads still work.
 - Money must be idempotent: the panel sends a fresh `requestId` per confirmed action and the server uses it as Stripe's
   idempotency key, so a double click or a retry never refunds twice. Keep that when adding an action.
 - Every attempt writes a `billing_actions` row — refusals and Stripe errors included — with the actor's email. Never

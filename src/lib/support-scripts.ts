@@ -74,7 +74,7 @@ export const SUPPORT_SCRIPTS: readonly SupportScript[] = [
     department: "billing",
     title: "Pausing is not cancelling",
     when: "Someone paused believing it cancelled the plan, or is asking whether a pause stops the renewal.",
-    body: "Hi {{first_name}},\n\nJust so there are no surprises: pausing stops the billing for the length of the pause, then your plan renews by itself on {{date}}. It isn't a cancellation.\n\nIf you meant to cancel, reply to this email and we'll do it for you — and if the renewal has already charged you after a pause you thought was a cancellation, we'll refund the unused time.\n\nCame Through Audio",
+    body: "Hi {{first_name}},\n\nJust so there are no surprises: pausing stops the plan billing for the length of the pause, then your plan renews by itself on {{date}}. It isn't a cancellation.\n\nThe Vault fee is $1.99 a month while you're paused, charged monthly and stopped automatically when the pause ends, so nothing is taken after that. Your masters, artwork and PDFs stay downloadable while you're paused, and the month in progress isn't refunded if you resume early.\n\nIf you meant to cancel, reply to this email and we'll do it for you — and if the renewal has already charged you after a pause you thought was a cancellation, we'll refund the unused time.\n\nCame Through Audio",
   },
   {
     id: "billing-cancelled-what-happens",

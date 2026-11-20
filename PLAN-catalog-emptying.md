@@ -94,8 +94,12 @@ states."* It changes only with your approval.
 - **Who:** same window as §9 (around renewal, or while a renewal payment has failed). **Once every 12 months.**
 - **What:** no plan charge for **1, 2 or 3 months**. The catalog is **read-only and kept safe** (view and download,
   no adding or editing). The emptying countdown never starts during a pause.
-- **Vault fee:** **$1.99 per month of pause, paid up front** at checkout (1 month $1.99, 2 months $3.98, 3 months $5.97).
-  Not refundable once the pause starts. New Stripe price, lookup key `vault_month`.
+- **Vault fee:** **$1.99 per month of pause, billed monthly** (1 month $1.99, 2 months $3.98, 3 months $5.97 at most).
+  It is its own monthly subscription, cancelled by Stripe at the pause end, on Resume, or when the card cannot be charged;
+  the month in progress isn't refunded. Lookup key `vault_month`.
+  **Amended 2026-11-20:** the "paid up front / one-time price" rule here and in §17.5 is superseded by
+  `PLAN-vault-monthly-subscription.md`. A month that can't be collected ends the pause and moves the account to Free,
+  and downloads stay available while paused.
 - **When it ends:** the plan resumes and the renewal is charged automatically. **Resume now** in Profile ends it early
   (renewal charged that day). If that renewal fails, the normal failed-payment steps (§11) apply.
 - **How:** new table `account_pauses` (who, kind, start, end, Vault payment). Stripe pushes the renewal back by the
@@ -117,7 +121,8 @@ states."* It changes only with your approval.
 
 ## 13. Policy pages (preview before publishing)
 Terms and Refund Policy add: Need more time (30 days, once a year), Pause (1–3 months, once a year, Vault fee $1.99/month
-up front, non-refundable once started, catalog read-only), and the 30-day emptying rule.
+billed monthly and stopped at the pause end — amended 2026-11-20, see `PLAN-vault-monthly-subscription.md` — the month in
+progress non-refundable, catalog read-only with downloads working), and the 30-day emptying rule.
 
 ## Questions (v1 answered: 30 days · keep those records · trial follows the rule · AGENTS.md exception approved)
 1. 30 days of grace? (Recommended. Long enough to download, short enough that storage isn't held indefinitely.)
@@ -126,7 +131,9 @@ up front, non-refundable once started, catalog read-only), and the 30-day emptyi
 4. Approve the AGENTS.md exception wording (§8)?
 
 v2:
-5. Vault fee $1.99 per month, paid up front, non-refundable once the pause starts? **Yes (2026-10-21).**
+5. Vault fee $1.99 per month? **Yes (2026-10-21).** **Amended 2026-11-20:** billed monthly as its own subscription that
+   stops at the pause end, not paid up front; a month that can't be collected ends the pause and moves the account to Free.
+   The month in progress is still non-refundable.
 6. Window for Need more time and Pause: from 30 days before renewal until a failed renewal is fixed? **Answered 2026-10-21: from 30 days before renewal, through a failed renewal, and through the 30-day countdown to emptying (until the catalog is emptied).**
 7. OK to turn off cancelling inside the Stripe portal so every cancel goes through the offers screen? **Yes (2026-10-21).**
 

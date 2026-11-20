@@ -50,6 +50,14 @@ function describeType(price: StripePriceLike): string {
   return price.type ? `a ${price.type} price` : "a price with no type";
 }
 
+/** The recurring interval each sold billing type must hold in Stripe; null for a single charge. */
+const REQUIRED_INTERVAL: Record<SoldPrice["billing"], "year" | "month" | null> = {
+  "recurring-yearly": "year",
+  // The Vault fee is billed once per month of the pause (founder, 2026-11-20).
+  "recurring-monthly": "month",
+  "one-time": null,
+};
+
 /**
  * Everything wrong with one sold key: absent, archived, priced in another currency, held as the wrong billing type, or
  * charging the wrong amount. A key the price list sells but nothing publishes an amount for is a problem too, because
@@ -76,10 +84,11 @@ function problemsFor(
       `${label} is priced in ${(price.currency ?? "no currency").toUpperCase()}, but the site charges USD.`,
     );
   }
-  if (sold.billing === "recurring") {
-    if (price.type !== "recurring" || price.recurring?.interval !== "year") {
+  const interval = REQUIRED_INTERVAL[sold.billing];
+  if (interval) {
+    if (price.type !== "recurring" || price.recurring?.interval !== interval) {
       out.push(
-        `${label} must be a yearly subscription in Stripe, but Stripe holds ${describeType(price)}.`,
+        `${label} must be a ${interval === "month" ? "monthly" : "yearly"} subscription in Stripe, but Stripe holds ${describeType(price)}.`,
       );
     }
   } else if (price.type !== "one_time") {

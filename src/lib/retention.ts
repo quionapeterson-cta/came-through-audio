@@ -18,6 +18,12 @@ export const RENEWAL_REMINDER_DAYS = [90, 60, 30, 7, 1] as const;
 export const PAUSE_MONTHS = [1, 2, 3] as const;
 export const VAULT_PRICE = 1.99;
 export const VAULT_LOOKUP_KEY = "vault_month";
+/**
+ * The Vault fee is a monthly subscription (founder, 2026-11-20, replacing the one-time charge of 2026-10-21): $1.99
+ * billed once per month of the pause, cancelled by Stripe at the pause end, on Resume, or when its card cannot be
+ * charged. The interval lives here so no surface repeats the string.
+ */
+export const VAULT_INTERVAL = "month";
 
 /** The plan's Stripe subscription, as the subscriptions table stores it. */
 export type PlanSub = {
@@ -27,7 +33,7 @@ export type PlanSub = {
   current_period_end: string | null;
   cancel_at_period_end: boolean | null;
 };
-export type Pause = { id: string; kind: "extend" | "pause"; months: number | null; starts_at: string; ends_at: string; ended_at: string | null; created_at: string };
+export type Pause = { id: string; kind: "extend" | "pause"; months: number | null; starts_at: string; ends_at: string; ended_at: string | null; created_at: string; /** The pause's own monthly Vault subscription (null on rows written before 2026-11-20). */ vault_subscription_id?: string | null };
 export type Lapse = { plan_ended_at: string; empty_after: string; emptied_at: string | null; kept_free_at?: string | null };
 
 export const addDays = (iso: string | Date, days: number) => new Date(new Date(iso).getTime() + days * DAY);

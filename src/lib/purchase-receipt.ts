@@ -7,6 +7,7 @@
  * carries is the amount Stripe charged on that session, and the plan names come from TIER_LABEL.
  */
 import { PRICE_TIER, TIER_LABEL, type Tier } from "./plans";
+import { VAULT_PRICE } from "./retention";
 
 export type PurchaseKind = "plan" | "seat" | "vault" | "branding" | "contract" | "ai" | "expert" | "renew";
 
@@ -85,6 +86,9 @@ export function receiptCopy(i: {
    * Stripe trial: the confirmation says "renews", because that is what the member is being told (founder, 2026-11-08).
    */
   renewsOn?: string | null;
+  /** For a pause: when it starts and ends, so the confirmation carries the monthly schedule (founder, 2026-11-20). */
+  pauseStarts?: string | null;
+  pauseEnds?: string | null;
 }): ReceiptCopy {
   const paid = i.paid ?? null;
   const money_line = paid ? `We charged ${paid}.` : "Your payment went through.";
@@ -120,19 +124,30 @@ export function receiptCopy(i: {
         cta: "Invite your artists",
       };
       break;
-    case "vault":
+    case "vault": {
+      // The pause fee is $1.99 a month while it runs (founder, 2026-11-20): the confirmation carries the schedule, not
+      // one lump sum. A pause that waits for a renewal date charges nothing today, so it never says "We charged $0.00".
+      const starts = renewalDate(i.pauseStarts);
+      const ends = renewalDate(i.pauseEnds);
+      const fee = `$${VAULT_PRICE.toFixed(2)}`;
+      const first = paid && paid !== "$0.00"
+        ? money_line
+        : starts
+          ? `Nothing is charged today. Your pause starts on ${starts}, and the first ${fee} is charged then.`
+          : "Your pause is in place.";
       copy = {
         ...base,
-        subject: "Your pause is in place",
+        subject: starts && ends ? `Your pause runs from ${starts} to ${ends}` : "Your pause is in place",
         heading: "Your pause is in place",
         paragraphs: [
-          money_line,
-          "A pause stops the plan charge and then renews by itself afterwards. It is not a cancellation.",
-          "Resume any time from Profile, which ends the pause rather than the plan.",
+          first,
+          `We charge ${fee} a month while the pause runs, and it stops on its own${ends ? ` on ${ends}` : " when the pause ends"} — nothing is charged after that. It is not a cancellation: your plan renews by itself when the pause ends.`,
+          "Your catalog is read-only while you're paused, and you can still download your masters, artwork and PDFs. Resume any time from Profile: that ends the pause, not the plan, and stops the next month's charge.",
         ],
         cta: "Open your workspace",
       };
       break;
+    }
     case "branding":
       copy = {
         ...base,

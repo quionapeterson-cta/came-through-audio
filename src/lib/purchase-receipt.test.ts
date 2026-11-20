@@ -114,6 +114,33 @@ describe("receiptCopy", () => {
     expect(receiptCopy({ kind: "vault" }).paragraphs.join(" ")).toContain("not a cancellation");
   });
 
+  it("carries a pause's monthly schedule instead of a lump sum", () => {
+    const trial = receiptCopy({
+      kind: "vault",
+      // Stripe reports $0.00 on a session that only starts a trial: the confirmation must not claim a charge.
+      paid: "$0.00",
+      pauseStarts: "2026-11-10T12:00:00.000Z",
+      pauseEnds: "2027-02-10T12:00:00.000Z",
+    });
+    const text = trial.paragraphs.join(" ");
+    expect(text).toContain("Nothing is charged today");
+    expect(text).toContain("November 10, 2026");
+    expect(text).toContain("$1.99 a month");
+    expect(text).toContain("February 10, 2027");
+    expect(text).not.toContain("We charged");
+    expect(text).not.toContain("$0.00");
+    expect(text).toContain("download your masters, artwork and PDFs");
+
+    const charged = receiptCopy({
+      kind: "vault",
+      paid: "$1.99",
+      pauseStarts: "2026-11-20T12:00:00.000Z",
+      pauseEnds: "2027-02-20T12:00:00.000Z",
+    });
+    expect(charged.paragraphs[0]).toBe("We charged $1.99.");
+    expect(charged.subject).toContain("November 20, 2026");
+  });
+
   it("mentions Link's own receipt only when Link sold it", () => {
     expect(receiptCopy({ kind: "ai", managed: true }).paragraphs.join(" ")).toContain("Link");
     expect(receiptCopy({ kind: "expert", managed: false }).paragraphs.join(" ")).not.toContain("Link");

@@ -19,6 +19,8 @@ describe("the copy-paste lookup key list", () => {
     expect(text).toMatch(/contract_generator\s+\$3\.99\s+one-time/);
     expect(text).toMatch(/catalog_management_yearly\s+\$89\.99\/yr\s+yearly subscription/);
     expect(text).toMatch(/artist_seat_management_yearly\s+\$69\.99\/yr\s+yearly subscription/);
+    // The pause fee is the one monthly subscription on the list (founder, 2026-11-20).
+    expect(text).toMatch(/vault_month\s+\$1\.99 \/ month\s+monthly subscription/);
   });
 
   it("puts each key on exactly one line", () => {

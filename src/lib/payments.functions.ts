@@ -7,6 +7,7 @@ import { checkoutInput, planCheckout } from "@/lib/stripe-mapping";
 import { isActiveSub, PRICE_TIER } from "@/lib/plans";
 import { PRICE_MISMATCH_NOTE, amountProblem } from "@/lib/price-check";
 import { purchaseLanding } from "@/lib/purchase-receipt";
+import { vaultTrialEnd } from "@/lib/vault-subscription";
 
 /**
  * Sales tax on sales Came Through Audio, LLC makes directly (Expert Assistance). Stays off until Stripe Tax is
@@ -253,22 +254,47 @@ export const createCheckoutSession = createServerFn({ method: "POST" })
       if (!g || g.company || !g.draft) throw new Error("That draft wasn't found. Draft it again and try once more.");
       if (g.contract_id) throw new Error("You already have this contract. Open it in My Contracts.");
     }
+    // The pause's own monthly Vault subscription: where it starts and ends, and whether the first month waits for the
+    // renewal date or is charged today (founder, 2026-11-20).
+    let vault: { starts: string; ends: string; trialEnd: number | null; idempotencyKey: string } | null = null;
+    if (data.kind === "vault") {
+      // Pause is only sold when it can start: around renewal, after a failed renewal or during the grace period.
+      const [{ admin, loadState, liveVaultPause, liveVaultSubscription }, { offers, pauseSpan }, { pauseCheckoutRefusal }] = await Promise.all([
+        import("@/lib/retention.server"), import("@/lib/retention"), import("@/lib/vault-subscription"),
+      ]);
+      const db = await admin();
+      const s = await loadState(db, context.userId, env);
+      const o = offers(s.sub, s.lapse, s.pauses);
+      if (!o.canPause) throw new Error(o.pauseAgain ? "Pause can be used once every 12 months." : "Pause isn't available on this account right now.");
+      // A double click or a second tab must not open a second pause subscription: one live pause per account, whether
+      // its row is already written or its checkout has only just been paid for (founder, 2026-11-20).
+      const [pause, subscription] = await Promise.all([
+        liveVaultPause(db, context.userId, env),
+        liveVaultSubscription(env, context.userId),
+      ]);
+      const refusal = pauseCheckoutRefusal({ livePause: !!pause, liveSubscription: !!subscription });
+      if (refusal) throw new Error(refusal);
+      const span = pauseSpan(s.sub, data.months);
+      // Ten-minute bucket: a double click and an immediate retry share one Stripe session, while a genuinely later
+      // attempt (after the dialog was closed) gets a fresh one instead of replaying a session that may have expired.
+      const bucket = Math.floor(Date.now() / (10 * 60 * 1000));
+      vault = {
+        starts: span.starts.toISOString(),
+        ends: span.ends.toISOString(),
+        trialEnd: vaultTrialEnd(span.starts),
+        idempotencyKey: `vault-${context.userId}-${env}-${data.months}-${span.starts.toISOString()}-${bucket}`,
+      };
+    }
+
     // Kits are never refused at checkout (founder, 2026-11-07): anyone can buy as many as they like, whether or not the
     // kit their plan includes is set up yet. The old guard counted saved kits, so buying a second kit waited on filling in
     // the first, which is exactly what the founder hit while testing.
-    if (data.kind === "vault") {
-      // Pause is only sold when it can start: around renewal, after a failed renewal or during the grace period.
-      const [{ admin, loadState }, { offers }] = await Promise.all([import("@/lib/retention.server"), import("@/lib/retention")]);
-      const s = await loadState(await admin(), context.userId, env);
-      const o = offers(s.sub, s.lapse, s.pauses);
-      if (!o.canPause) throw new Error(o.pauseAgain ? "Pause can be used once every 12 months." : "Pause isn't available on this account right now.");
-    }
-
     try {
       // A seat is a second subscription on the same customer, so it never goes through "switch plan". Buying the same
       // tier again is allowed: that is how an owner adds a second or third artist (founder, 2026-11-04). A branding kit
-      // is its own yearly subscription too (founder, 2026-11-19): it never replaces or switches the member's plan.
-      if (plan.mode === "subscription" && data.kind !== "seat" && data.kind !== "branding") {
+      // is its own yearly subscription too (founder, 2026-11-19), and so is the pause's monthly Vault fee (founder,
+      // 2026-11-20): neither ever replaces or switches the member's plan.
+      if (plan.mode === "subscription" && data.kind !== "seat" && data.kind !== "branding" && data.kind !== "vault") {
         const { data: subs } = await context.supabase.from("subscriptions")
           .select("stripe_subscription_id, stripe_customer_id, status, current_period_end")
           .eq("user_id", context.userId).eq("environment", env).not("stripe_subscription_id", "is", null)
@@ -298,7 +324,11 @@ export const createCheckoutSession = createServerFn({ method: "POST" })
       const customer = await resolveOrCreateCustomer(stripe, { email, userId: context.userId });
       // The page the purchase landed on is the same one the confirmation email's button opens (purchase-receipt.ts).
       const back = `${origin}${purchaseLanding(data.kind)}`;
-      const metadata = { ...plan.metadata, priceIds: plan.items.map((i) => i.lookupKey).join(",") };
+      const metadata = {
+        ...plan.metadata,
+        priceIds: plan.items.map((i) => i.lookupKey).join(","),
+        ...(vault ? { pauseStarts: vault.starts, pauseEnds: vault.ends } : {}),
+      };
 
       const session = await stripe.checkout.sessions.create({
         line_items: plan.items.map((i) => ({ price: byKey.get(i.lookupKey)!.id, quantity: i.quantity })),
@@ -311,11 +341,15 @@ export const createCheckoutSession = createServerFn({ method: "POST" })
         // shows it instead of "Unknown product". Subscriptions resolve names server-side.
         ...(plan.mode === "payment" && { payment_intent_data: { description: productNames.join(" + ") } }),
         metadata: plan.managed ? { ...metadata, managed_payments: "true" } : metadata,
-        // The kind travels with the subscription so the webhook can tell a kit, a seat and a plan apart without guessing.
-        ...(plan.mode === "subscription" && { subscription_data: { metadata: { userId: context.userId, kind: data.kind } } }),
+        // The kind travels with the subscription so the webhook can tell a kit, a seat, a pause and a plan apart without
+        // guessing. A pause carries its own dates, and waits for the renewal date when Stripe can hold that as a trial
+        // (it will not defer one by less than 48 hours, so a pause starting now is charged today).
+        ...(plan.mode === "subscription" && {
+          subscription_data: { metadata, ...(vault?.trialEnd ? { trial_end: vault.trialEnd } : {}) },
+        }),
         // Managed: Stripe handles tax, fraud protection, disputes and transaction support end-to-end.
         ...(plan.managed ? { managed_payments: { enabled: true } } : STRIPE_TAX ? { automatic_tax: { enabled: true } } : {}),
-      } as Parameters<typeof stripe.checkout.sessions.create>[0]);
+      } as Parameters<typeof stripe.checkout.sessions.create>[0], vault ? { idempotencyKey: vault.idempotencyKey } : undefined);
       if (!session.client_secret) throw new Error("Stripe did not return a client secret");
       return { clientSecret: session.client_secret };
     } catch (e) {
