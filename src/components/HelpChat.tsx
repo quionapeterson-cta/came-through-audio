@@ -94,7 +94,8 @@ export function HelpChat() {
       <header className="flex shrink-0 items-center justify-between gap-2 bg-ink px-3 py-1.5 text-ink-foreground">
         <span className="flex min-w-0 items-center gap-2">
           <LifeBuoy className="h-4 w-4 shrink-0" />
-          <span className="text-[11px] font-bold leading-tight">{HELP_DESK_NAME}</span>
+          {/* Balanced so a narrow phone gets "Came Through Audio / Help Desk" rather than a lone "Desk" on line two. */}
+          <span className="text-balance text-[11px] font-bold leading-tight">{HELP_DESK_NAME}</span>
         </span>
         <span className="flex shrink-0 items-center">
           <button
