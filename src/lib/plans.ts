@@ -92,11 +92,12 @@ const perMonth = (yearly: number) => `About $${(yearly / 12).toFixed(2)} / month
 
 /**
  * Add-on artist seats, per added artist per year (PLAN-pricing-badges.md §E). Prices set 2026-11-04 and confirmed as
- * the official add-on list (founder, 2026-11-19): $18.99 Catalog Plus, $34.99 Catalog & Collaborate, $69.99 Catalog
- * Management. Each one's Stripe price carries the lookup key below, at exactly this amount.
+ * the official add-on list (founder, 2026-11-19): $16.99 Catalog Plus, $34.99 Catalog & Collaborate, $69.99 Catalog
+ * Management. The Catalog Plus seat came down from $18.99 to $16.99 on the founder's word (2026-11-20), the same day
+ * the Stripe price was changed. Each one's Stripe price carries the lookup key below, at exactly this amount.
  */
 export const ARTIST_SEAT_PRICES: { tier: Exclude<Tier, "free">; amount: number; price: string; monthly: string; lookupKey: string }[] = [
-  { tier: "plus", amount: 18.99, price: "$18.99", monthly: perMonth(18.99), lookupKey: "artist_seat_plus_yearly" },
+  { tier: "plus", amount: 16.99, price: "$16.99", monthly: perMonth(16.99), lookupKey: "artist_seat_plus_yearly" },
   { tier: "collaborate", amount: 34.99, price: "$34.99", monthly: perMonth(34.99), lookupKey: "artist_seat_collaborate_yearly" },
   { tier: "management", amount: 69.99, price: "$69.99", monthly: perMonth(69.99), lookupKey: "artist_seat_management_yearly" },
 ];

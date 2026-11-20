@@ -25,7 +25,7 @@ paid, cannot send money anywhere but the original card, and cannot touch bank de
 | Catalog Plus | $24.99 / year | Unlimited catalog |
 | Catalog & Collaborate | $44.99 / year | |
 | Catalog Management | $89.99 / year | Includes one branding kit |
-| Artist seat (Plus / Collaborate / Management) | $18.99 / $34.99 / $69.99 per artist per year | Up to **10 seats** in one purchase |
+| Artist seat (Plus / Collaborate / Management) | $16.99 / $34.99 / $69.99 per artist per year | Up to **10 seats** in one purchase |
 | Personal branding kit | $13.99 / year | One kit, its own yearly subscription; renews until cancelled |
 | Generated contract | $3.99 each | Included with Catalog Management |
 | Vault (pause) fee | $1.99 per month | Its own monthly subscription: 1–3 months, billed monthly, stops by itself (at most $5.97 over a three-month pause) |

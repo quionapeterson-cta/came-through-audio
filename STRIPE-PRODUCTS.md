@@ -21,7 +21,7 @@ written for the customer, not for us.
 
 | Lookup key | Product name | Price | Description |
 |---|---|---|---|
-| `artist_seat_plus_yearly` | Artist seat · Catalog Plus | $18.99 / year | One added artist on the owner's account for a year at Catalog Plus, with their own login and catalog. |
+| `artist_seat_plus_yearly` | Artist seat · Catalog Plus | $16.99 / year | One added artist on the owner's account for a year at Catalog Plus, with their own login and catalog. |
 | `artist_seat_collaborate_yearly` | Artist seat · Catalog & Collaborate | $34.99 / year | One added artist on the owner's account for a year at Catalog & Collaborate, with their own login and catalog. |
 | `artist_seat_management_yearly` | Artist seat · Catalog Management | $69.99 / year | One added artist on the owner's account for a year at Catalog Management, with their own login and catalog. |
 

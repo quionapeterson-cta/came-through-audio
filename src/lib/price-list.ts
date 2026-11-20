@@ -37,7 +37,7 @@ export type PriceRow = {
 export type PriceGroup = { title: string; note: string; rows: PriceRow[] };
 
 /** The day this list was last reconciled with the founder's pricing. */
-export const PRICE_LIST_EFFECTIVE = "November 4, 2026";
+export const PRICE_LIST_EFFECTIVE = "November 20, 2026";
 
 /**
  * What a charge reads as on a card statement (founder, 2026-11-05). The full name fits Stripe's 22 characters; the card

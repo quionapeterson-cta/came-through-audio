@@ -56,7 +56,7 @@ mean looks different, send a screenshot to the drop box and I'll point to the ex
 | Pause · Vault fee | `vault_month` | **$1.99 / month** | Monthly subscription (recurring), quantity 1 | SaaS - business use `txcd_10103001` | Keeps the catalog, Vault files and downloads in place while a plan is paused (1–3 months), billed monthly and cancelled at the pause end. |
 
 Later (not needed for launch): artist seats `artist_seat_plus_yearly` / `_collaborate_` / `_management_`
-($18.99 / $34.99 / $69.99 a year) and live time `live_time_15` / `_30` / `_60` ($15 / $25 / $45).
+($16.99 / $34.99 / $69.99 a year) and live time `live_time_15` / `_30` / `_60` ($15 / $25 / $45).
 
 Branding Kit price changed to **$13.99** (your decision, 2026-10-27); the site now says $13.99 everywhere, so create
 the Stripe price at $13.99.

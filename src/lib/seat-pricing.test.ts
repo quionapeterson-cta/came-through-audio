@@ -6,10 +6,10 @@ import { checkoutInput, planCheckout } from "./stripe-mapping";
 describe("artist seats", () => {
   it("prices the three seats at the founder's 2026-11-04 rates", () => {
     expect(ARTIST_SEAT_PRICES.map((s) => [s.tier, s.price])).toEqual([
-      ["plus", "$18.99"], ["collaborate", "$34.99"], ["management", "$69.99"],
+      ["plus", "$16.99"], ["collaborate", "$34.99"], ["management", "$69.99"],
     ]);
     expect(ARTIST_SEAT_PRICES.map((s) => s.monthly)).toEqual([
-      "About $1.58 / month", "About $2.92 / month", "About $5.83 / month",
+      "About $1.42 / month", "About $2.92 / month", "About $5.83 / month",
     ]);
   });
 
