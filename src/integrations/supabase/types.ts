@@ -112,6 +112,132 @@ export type Database = {
           },
         ]
       }
+      admin_board_reads: {
+        Row: {
+          read_at: string
+          thread_id: string
+          user_id: string
+        }
+        Insert: {
+          read_at?: string
+          thread_id: string
+          user_id: string
+        }
+        Update: {
+          read_at?: string
+          thread_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "admin_board_reads_thread_id_fkey"
+            columns: ["thread_id"]
+            isOneToOne: false
+            referencedRelation: "admin_board_threads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      admin_board_replies: {
+        Row: {
+          author_id: string | null
+          author_name: string | null
+          body: string
+          created_at: string
+          id: string
+          mentions: string[]
+          thread_id: string
+        }
+        Insert: {
+          author_id?: string | null
+          author_name?: string | null
+          body: string
+          created_at?: string
+          id?: string
+          mentions?: string[]
+          thread_id: string
+        }
+        Update: {
+          author_id?: string | null
+          author_name?: string | null
+          body?: string
+          created_at?: string
+          id?: string
+          mentions?: string[]
+          thread_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "admin_board_replies_thread_id_fkey"
+            columns: ["thread_id"]
+            isOneToOne: false
+            referencedRelation: "admin_board_threads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      admin_board_threads: {
+        Row: {
+          category: string
+          created_at: string
+          created_by: string | null
+          created_name: string | null
+          id: string
+          issue_id: string | null
+          last_reply_at: string
+          priority: string
+          purchase_id: string | null
+          song_id: string | null
+          status: string
+          title: string
+          updated_at: string
+          user_email: string | null
+          user_name: string | null
+        }
+        Insert: {
+          category: string
+          created_at?: string
+          created_by?: string | null
+          created_name?: string | null
+          id?: string
+          issue_id?: string | null
+          last_reply_at?: string
+          priority?: string
+          purchase_id?: string | null
+          song_id?: string | null
+          status?: string
+          title: string
+          updated_at?: string
+          user_email?: string | null
+          user_name?: string | null
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          created_by?: string | null
+          created_name?: string | null
+          id?: string
+          issue_id?: string | null
+          last_reply_at?: string
+          priority?: string
+          purchase_id?: string | null
+          song_id?: string | null
+          status?: string
+          title?: string
+          updated_at?: string
+          user_email?: string | null
+          user_name?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "admin_board_threads_issue_fk"
+            columns: ["issue_id"]
+            isOneToOne: false
+            referencedRelation: "registration_issues"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       admin_inbox_messages: {
         Row: {
           attachments: Json
@@ -265,6 +391,80 @@ export type Database = {
             columns: ["track_id"]
             isOneToOne: false
             referencedRelation: "catalogs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      agency_invites: {
+        Row: {
+          account_name: string | null
+          agency: string
+          created_at: string
+          handled_at: string | null
+          handled_by: string | null
+          id: string
+          inbox_message_id: string | null
+          kind: string
+          mailbox: string
+          message_id: string | null
+          note: string | null
+          received_at: string
+          sender_domain: string
+          sender_email: string
+          status: string
+          subject: string
+          updated_at: string
+          user_email: string | null
+          verify_url: string | null
+        }
+        Insert: {
+          account_name?: string | null
+          agency: string
+          created_at?: string
+          handled_at?: string | null
+          handled_by?: string | null
+          id?: string
+          inbox_message_id?: string | null
+          kind?: string
+          mailbox?: string
+          message_id?: string | null
+          note?: string | null
+          received_at?: string
+          sender_domain?: string
+          sender_email: string
+          status?: string
+          subject?: string
+          updated_at?: string
+          user_email?: string | null
+          verify_url?: string | null
+        }
+        Update: {
+          account_name?: string | null
+          agency?: string
+          created_at?: string
+          handled_at?: string | null
+          handled_by?: string | null
+          id?: string
+          inbox_message_id?: string | null
+          kind?: string
+          mailbox?: string
+          message_id?: string | null
+          note?: string | null
+          received_at?: string
+          sender_domain?: string
+          sender_email?: string
+          status?: string
+          subject?: string
+          updated_at?: string
+          user_email?: string | null
+          verify_url?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "agency_invites_inbox_message_id_fkey"
+            columns: ["inbox_message_id"]
+            isOneToOne: false
+            referencedRelation: "admin_inbox_messages"
             referencedColumns: ["id"]
           },
         ]
@@ -806,6 +1006,7 @@ export type Database = {
           logo_paths: string[]
           name: string
           options: Json
+          paid_key: string | null
           show_footer: boolean
           style: string
           tagline: string
@@ -823,6 +1024,7 @@ export type Database = {
           logo_paths?: string[]
           name?: string
           options?: Json
+          paid_key?: string | null
           show_footer?: boolean
           style?: string
           tagline?: string
@@ -840,6 +1042,7 @@ export type Database = {
           logo_paths?: string[]
           name?: string
           options?: Json
+          paid_key?: string | null
           show_footer?: boolean
           style?: string
           tagline?: string
@@ -887,6 +1090,27 @@ export type Database = {
           starts_at?: string
           title?: string
           updated_at?: string
+        }
+        Relationships: []
+      }
+      calendar_feed_tokens: {
+        Row: {
+          created_at: string
+          last_read_at: string | null
+          token: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          last_read_at?: string | null
+          token: string
+          user_id?: string
+        }
+        Update: {
+          created_at?: string
+          last_read_at?: string | null
+          token?: string
+          user_id?: string
         }
         Relationships: []
       }
@@ -1759,6 +1983,7 @@ export type Database = {
           from_email: string
           id: string
           kind: string
+          mailbox: string
           sent_at: string
           sent_by: string | null
           subject: string
@@ -1770,6 +1995,7 @@ export type Database = {
           from_email?: string
           id?: string
           kind: string
+          mailbox?: string
           sent_at?: string
           sent_by?: string | null
           subject: string
@@ -1781,6 +2007,7 @@ export type Database = {
           from_email?: string
           id?: string
           kind?: string
+          mailbox?: string
           sent_at?: string
           sent_by?: string | null
           subject?: string
@@ -2060,6 +2287,79 @@ export type Database = {
         }
         Relationships: []
       }
+      registration_issues: {
+        Row: {
+          agency: string
+          created_at: string
+          detail: string
+          id: string
+          purchase_id: string
+          reported_by: string | null
+          reported_name: string | null
+          resolved_at: string | null
+          resolved_by: string | null
+          song_id: string
+          status: string
+          thread_id: string | null
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          agency: string
+          created_at?: string
+          detail: string
+          id?: string
+          purchase_id: string
+          reported_by?: string | null
+          reported_name?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          song_id: string
+          status?: string
+          thread_id?: string | null
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          agency?: string
+          created_at?: string
+          detail?: string
+          id?: string
+          purchase_id?: string
+          reported_by?: string | null
+          reported_name?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          song_id?: string
+          status?: string
+          thread_id?: string | null
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "registration_issues_purchase_id_fkey"
+            columns: ["purchase_id"]
+            isOneToOne: false
+            referencedRelation: "registration_orders"
+            referencedColumns: ["purchase_id"]
+          },
+          {
+            foreignKeyName: "registration_issues_song_id_fkey"
+            columns: ["song_id"]
+            isOneToOne: false
+            referencedRelation: "registration_songs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "registration_issues_thread_id_fkey"
+            columns: ["thread_id"]
+            isOneToOne: false
+            referencedRelation: "admin_board_threads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       registration_orders: {
         Row: {
           access_confirmed: Json
@@ -2069,6 +2369,8 @@ export type Database = {
           agreement_name: string | null
           agreement_signed_at: string | null
           alerted_at: string | null
+          batch_registered_at: string | null
+          batch_registered_by: string | null
           created_at: string
           purchase_id: string
           reminded_at: string | null
@@ -2083,6 +2385,8 @@ export type Database = {
           agreement_name?: string | null
           agreement_signed_at?: string | null
           alerted_at?: string | null
+          batch_registered_at?: string | null
+          batch_registered_by?: string | null
           created_at?: string
           purchase_id: string
           reminded_at?: string | null
@@ -2097,6 +2401,8 @@ export type Database = {
           agreement_name?: string | null
           agreement_signed_at?: string | null
           alerted_at?: string | null
+          batch_registered_at?: string | null
+          batch_registered_by?: string | null
           created_at?: string
           purchase_id?: string
           reminded_at?: string | null
@@ -2837,6 +3143,50 @@ export type Database = {
         }
         Relationships: []
       }
+      support_ticket_escalations: {
+        Row: {
+          by_id: string | null
+          by_name: string
+          created_at: string
+          id: string
+          note: string
+          read_at: string | null
+          read_by: string | null
+          tag: string
+          ticket_id: string
+        }
+        Insert: {
+          by_id?: string | null
+          by_name?: string
+          created_at?: string
+          id?: string
+          note?: string
+          read_at?: string | null
+          read_by?: string | null
+          tag: string
+          ticket_id: string
+        }
+        Update: {
+          by_id?: string | null
+          by_name?: string
+          created_at?: string
+          id?: string
+          note?: string
+          read_at?: string | null
+          read_by?: string | null
+          tag?: string
+          ticket_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "support_ticket_escalations_ticket_id_fkey"
+            columns: ["ticket_id"]
+            isOneToOne: false
+            referencedRelation: "support_tickets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       support_ticket_messages: {
         Row: {
           author_id: string | null
@@ -2884,17 +3234,50 @@ export type Database = {
           },
         ]
       }
+      support_ticket_viewers: {
+        Row: {
+          name: string
+          seen_at: string
+          ticket_id: string
+          user_id: string
+        }
+        Insert: {
+          name?: string
+          seen_at?: string
+          ticket_id: string
+          user_id: string
+        }
+        Update: {
+          name?: string
+          seen_at?: string
+          ticket_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "support_ticket_viewers_ticket_id_fkey"
+            columns: ["ticket_id"]
+            isOneToOne: false
+            referencedRelation: "support_tickets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       support_tickets: {
         Row: {
           category: string
+          channel: string
           created_at: string
           email: string
+          escalated_founder: boolean
+          escalated_marketing: boolean
           first_reply_at: string | null
           id: string
           kind: string
           member_read_at: string | null
           message: string
           name: string
+          source_message_id: string | null
           status: string
           subject: string
           updated_at: string
@@ -2902,14 +3285,18 @@ export type Database = {
         }
         Insert: {
           category?: string
+          channel?: string
           created_at?: string
           email: string
+          escalated_founder?: boolean
+          escalated_marketing?: boolean
           first_reply_at?: string | null
           id?: string
           kind?: string
           member_read_at?: string | null
           message: string
           name: string
+          source_message_id?: string | null
           status?: string
           subject: string
           updated_at?: string
@@ -2917,14 +3304,18 @@ export type Database = {
         }
         Update: {
           category?: string
+          channel?: string
           created_at?: string
           email?: string
+          escalated_founder?: boolean
+          escalated_marketing?: boolean
           first_reply_at?: string | null
           id?: string
           kind?: string
           member_read_at?: string | null
           message?: string
           name?: string
+          source_message_id?: string | null
           status?: string
           subject?: string
           updated_at?: string
