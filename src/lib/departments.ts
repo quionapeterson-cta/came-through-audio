@@ -152,8 +152,9 @@ export const ADMIN_TABS = [
   { value: "accounts", label: "Accounts", departments: TICKET_DEPARTMENTS },
   { value: "badges", label: "Badges", departments: BADGE_DEPARTMENTS },
   { value: "homepage", label: "Homepage", departments: ["marketing", "branding"] },
-  // Terms, Privacy and Refund wording (founder, 2026-10-27); super admins see it with every department.
-  { value: "legal", label: "Legal", departments: ["security"] },
+  // Terms, Privacy and Refund wording (founder, 2026-10-27, narrowed 2026-11-20): the super admin's alone. It holds no
+  // department, so visibleTabs adds it by role; `can_edit_legal` in the database carries the same rule.
+  { value: "legal", label: "Legal", departments: [] },
 ] as const satisfies readonly { value: string; label: string; departments: readonly Department[] }[];
 
 /** Departments in view: all of the caller's, or the one the super admin switcher picked. */
@@ -174,7 +175,10 @@ export function visibleTabs(access: StaffAccess, view: Department | "all" = "all
   const tabs = ADMIN_TABS.filter(
     (t) =>
       t.departments.some((d: Department) => access.departments.includes(d) && (view === "all" || d === view)) ||
-      (t.value === "support" && escalatedLead),
+      (t.value === "support" && escalatedLead) ||
+      // Legal is a role, not a department (founder, 2026-11-20), so no department can hand it to its staff. Like
+      // Company Contracts and Plans it sits in the all-departments view rather than following the switcher.
+      (t.value === "legal" && access.role === "super_admin" && view === "all"),
   );
   const base = viewDepartments(access, view).length || (access.allTeams && view === "all") ? [...tabs, { value: "tasks", label: "Task Bank" }] : tabs;
   // Everyone on the team gets the Calendar (Phase 4 item 8) and their own staff badges (item 6); nobody with no access

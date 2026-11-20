@@ -59,9 +59,11 @@ describe("visibleTabs", () => {
     expect(visibleTabs(billing).map((t) => t.value)).toEqual(withDeptTabs(["retired", "purchases", "billing", "support", "accounts", "badges"]));
   });
 
-  it("gives the AI department the AI Protection tab; Security also gets Legal", () => {
+  it("gives the AI department the AI Protection tab; Legal is the super admin's alone", () => {
     expect(visibleTabs(resolveAccess([{ role: "employee", departments: ["ai"] }])!).map((t) => t.value)).toEqual(withDeptTabs(["ai"]));
-    expect(visibleTabs(resolveAccess([{ role: "employee", departments: ["software", "security"] }])!).map((t) => t.value)).toEqual(withDeptTabs(["legal"]));
+    // Legal is a role now (founder, 2026-11-20): no department, Security included, hands it to its staff.
+    expect(visibleTabs(resolveAccess([{ role: "employee", departments: ["software", "security"] }])!).map((t) => t.value)).toEqual(withDeptTabs([]));
+    expect(visibleTabs(resolveAccess([{ role: "super_admin", departments: [] }])!).map((t) => t.value)).toContain("legal");
   });
 
   it("never shows finance to HR admins", () => {

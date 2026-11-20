@@ -2,7 +2,7 @@ import type { LegalDoc } from "@/components/LegalPage";
 
 /**
  * The built-in text of the three legal pages (Terms, Privacy, Refunds), shared by the public pages and Admin → Legal.
- * Super admins and Security can replace any section from Admin (legal_overrides); the page shows their wording and this
+ * Super admins replace any section from Admin (legal_overrides); the page shows their wording and this
  * text is the fallback. Edit here for changes that should ship with the code.
  */
 
