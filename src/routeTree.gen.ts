@@ -30,6 +30,7 @@ import { Route as UnlockRouteImport } from './routes/unlock'
 import { Route as VerifiedRouteImport } from './routes/verified'
 import { Route as WorkspaceRouteImport } from './routes/workspace'
 import { Route as AdminStaffRouteImport } from './routes/admin_.staff'
+import { Route as AuthCallbackRouteImport } from './routes/auth.callback'
 import { Route as ContractPartyIdRouteImport } from './routes/contract.$partyId'
 import { Route as DevFillRouteImport } from './routes/dev.fill'
 import { Route as DevSkyRouteImport } from './routes/dev.sky'
@@ -155,6 +156,11 @@ const WorkspaceRoute = WorkspaceRouteImport.update({
 const AdminStaffRoute = AdminStaffRouteImport.update({
   id: '/admin_/staff',
   path: '/admin/staff',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuthCallbackRoute = AuthCallbackRouteImport.update({
+  id: '/auth/callback',
+  path: '/auth/callback',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ContractPartyIdRoute = ContractPartyIdRouteImport.update({
@@ -292,6 +298,7 @@ export interface FileRoutesByFullPath {
   '/verified': typeof VerifiedRoute
   '/workspace': typeof WorkspaceRoute
   '/admin/staff': typeof AdminStaffRoute
+  '/auth/callback': typeof AuthCallbackRoute
   '/contract/$partyId': typeof ContractPartyIdRoute
   '/dev/fill': typeof DevFillRoute
   '/dev/sky': typeof DevSkyRoute
@@ -336,6 +343,7 @@ export interface FileRoutesByTo {
   '/verified': typeof VerifiedRoute
   '/workspace': typeof WorkspaceRoute
   '/admin/staff': typeof AdminStaffRoute
+  '/auth/callback': typeof AuthCallbackRoute
   '/contract/$partyId': typeof ContractPartyIdRoute
   '/dev/fill': typeof DevFillRoute
   '/dev/sky': typeof DevSkyRoute
@@ -381,6 +389,7 @@ export interface FileRoutesById {
   '/verified': typeof VerifiedRoute
   '/workspace': typeof WorkspaceRoute
   '/admin_/staff': typeof AdminStaffRoute
+  '/auth/callback': typeof AuthCallbackRoute
   '/contract/$partyId': typeof ContractPartyIdRoute
   '/dev/fill': typeof DevFillRoute
   '/dev/sky': typeof DevSkyRoute
@@ -427,6 +436,7 @@ export interface FileRouteTypes {
     | '/verified'
     | '/workspace'
     | '/admin/staff'
+    | '/auth/callback'
     | '/contract/$partyId'
     | '/dev/fill'
     | '/dev/sky'
@@ -471,6 +481,7 @@ export interface FileRouteTypes {
     | '/verified'
     | '/workspace'
     | '/admin/staff'
+    | '/auth/callback'
     | '/contract/$partyId'
     | '/dev/fill'
     | '/dev/sky'
@@ -515,6 +526,7 @@ export interface FileRouteTypes {
     | '/verified'
     | '/workspace'
     | '/admin_/staff'
+    | '/auth/callback'
     | '/contract/$partyId'
     | '/dev/fill'
     | '/dev/sky'
@@ -560,6 +572,7 @@ export interface RootRouteChildren {
   VerifiedRoute: typeof VerifiedRoute
   WorkspaceRoute: typeof WorkspaceRoute
   AdminStaffRoute: typeof AdminStaffRoute
+  AuthCallbackRoute: typeof AuthCallbackRoute
   ContractPartyIdRoute: typeof ContractPartyIdRoute
   DevFillRoute: typeof DevFillRoute
   DevSkyRoute: typeof DevSkyRoute
@@ -730,6 +743,13 @@ declare module '@tanstack/react-router' {
       path: '/admin/staff'
       fullPath: '/admin/staff'
       preLoaderRoute: typeof AdminStaffRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/auth/callback': {
+      id: '/auth/callback'
+      path: '/auth/callback'
+      fullPath: '/auth/callback'
+      preLoaderRoute: typeof AuthCallbackRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/contract/$partyId': {
@@ -904,6 +924,7 @@ const rootRouteChildren: RootRouteChildren = {
   VerifiedRoute: VerifiedRoute,
   WorkspaceRoute: WorkspaceRoute,
   AdminStaffRoute: AdminStaffRoute,
+  AuthCallbackRoute: AuthCallbackRoute,
   ContractPartyIdRoute: ContractPartyIdRoute,
   DevFillRoute: DevFillRoute,
   DevSkyRoute: DevSkyRoute,

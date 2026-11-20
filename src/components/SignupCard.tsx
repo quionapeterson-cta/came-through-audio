@@ -11,6 +11,7 @@ import { PasswordField } from "@/components/PasswordField";
 import { PLAN_INTENT_EVENT, PLAN_TIERS, PRICE_TIER, TIER_LABEL, peekPlanIntent, planIntentFromSearch, planSignupNext, rememberPlanIntent, takePlanIntent } from "@/lib/plans";
 import { openCheckout } from "@/lib/checkout";
 import { usePrelaunchGuard } from "@/hooks/usePrelaunchGuard";
+import { GoogleButton } from "@/components/GoogleButton";
 
 export function SignupCard({ returnPath, onAuthed, inviteMode }: { returnPath?: string; onAuthed?: () => void; inviteMode?: boolean } = {}) {
   const navigate = useNavigate();
@@ -209,6 +210,21 @@ export function SignupCard({ returnPath, onAuthed, inviteMode }: { returnPath?: 
             )}
           </h2>
           <form onSubmit={submit} className="mt-6 space-y-4">
+            {mode !== "forgot" && (
+              <>
+                {/* The same second door as /login (founder, 2026-11-20). The pre-launch panel above already stands in
+                    front of this form while sign-ups are shut, so Google waits there with it. */}
+                <GoogleButton
+                  label={mode === "signup" ? "Sign up with Google" : "Continue with Google"}
+                  onBeforeRedirect={() => { if (returnPath) rememberReturn(returnPath); }}
+                />
+                <div className="flex items-center gap-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground" aria-hidden>
+                  <span className="h-px flex-1 bg-border" />
+                  or
+                  <span className="h-px flex-1 bg-border" />
+                </div>
+              </>
+            )}
             {mode === "signup" && (
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1.5">

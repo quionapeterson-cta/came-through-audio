@@ -10,6 +10,8 @@ import { Label } from "@/components/ui/label";
 import { useAuth } from "@/hooks/useAuth";
 import { forgetLoginEmail, lastLoginEmail, rememberLoginEmail } from "@/lib/login-memory";
 import { sendPasswordResetEmail } from "@/lib/auth-emails.functions";
+import { GoogleButton } from "@/components/GoogleButton";
+import { usePrelaunchGuard } from "@/hooks/usePrelaunchGuard";
 
 export const Route = createFileRoute("/login")({
   // Signing in is a browser session, so there is nothing to render on the server.
@@ -39,6 +41,8 @@ function Login() {
   const [busy, setBusy] = useState(false);
   const [resetSent, setResetSent] = useState(false);
   const passwordRef = useRef<HTMLInputElement>(null);
+  // Google opens an account on the first visit, so it waits with the sign-up form until launch (founder, 2026-11-20).
+  const guard = usePrelaunchGuard();
 
   useEffect(() => {
     const saved = lastLoginEmail();
@@ -117,6 +121,17 @@ function Login() {
                   {remembered ? "You signed in on this browser before. Your email is already in place — just enter your password." : "Log in to your catalog, splits and contracts."}
                 </p>
               </div>
+              {!guard.locked && (
+                <>
+                  {/* A second door, not a replacement: the email and password fields below are untouched. */}
+                  <GoogleButton />
+                  <div className="flex items-center gap-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground" aria-hidden>
+                    <span className="h-px flex-1 bg-border" />
+                    or
+                    <span className="h-px flex-1 bg-border" />
+                  </div>
+                </>
+              )}
               <div className="space-y-1.5">
                 <Label htmlFor="login-email">Email</Label>
                 <Input
