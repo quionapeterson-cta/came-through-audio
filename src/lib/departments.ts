@@ -107,6 +107,20 @@ export const BADGE_DEPARTMENTS = ["branding", "marketing", "support"] as const s
 export const BILLING_DEPARTMENTS = ["billing", "finance"] as const satisfies readonly Department[];
 
 /**
+ * Who may see the live-price check and the payment-mode banner (founder, 2026-11-20): the teams that answer a purchase
+ * that failed. Billing owns the console, Support hears from the member, and Software owns the build and its keys.
+ * Finance keeps the console but not this check, which is why it lists software rather than reusing BILLING_DEPARTMENTS.
+ */
+export const PAYMENTS_AUDIT_DEPARTMENTS = ["billing", "support", "software"] as const satisfies readonly Department[];
+
+/** super admins and the departments above; a member (no access) never sees it. The server enforces the same rule. */
+export function canAuditPayments(access: StaffAccess | null | undefined): boolean {
+  if (!access) return false;
+  if (access.role === "super_admin") return true;
+  return PAYMENTS_AUDIT_DEPARTMENTS.some((d) => access.departments.includes(d));
+}
+
+/**
  * Who answers tickets (founder, 2026-11-05). Support is its own department and owns the queue for everything else;
  * Billing answers its own billing tickets and never the rest. The database enforces the same split, and the inbox
  * routing already sends "Account & billing" to billing@.

@@ -2,6 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { createStripeClient, getStripeErrorMessage } from "@/lib/stripe.server";
 import { CHECKOUT_UNAVAILABLE, checkoutEnvironmentError, getPaymentsEnvironment } from "@/lib/payments-env";
+import { readCountedPaymentsEnvironment } from "@/lib/payments-env.server";
 import { checkoutInput, planCheckout } from "@/lib/stripe-mapping";
 import { isActiveSub, PRICE_TIER } from "@/lib/plans";
 import { PRICE_MISMATCH_NOTE, amountProblem } from "@/lib/price-check";
@@ -173,24 +174,6 @@ async function renewCheckout(stripe: Stripe, env: "sandbox" | "live", userId: st
 }
 
 /**
- * The environment the database counts (site_settings `payments`), or `null` when the row isn't set. `read: false`
- * means the read itself failed; checkout then refuses rather than charge for a plan nothing may count, because the
- * published link must never take real money by accident (founder, 2026-11-12).
- */
-async function countedPaymentsEnvironment(): Promise<{ read: false } | { read: true; env: "sandbox" | "live" | null }> {
-  try {
-    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { data, error } = await supabaseAdmin.from("site_settings").select("content").eq("id", "payments").maybeSingle();
-    if (error) throw new Error(error.message);
-    const value = (data?.content as { environment?: string } | null)?.environment;
-    return { read: true, env: value === "live" || value === "sandbox" ? value : null };
-  } catch (e) {
-    console.error("Could not read the payments environment; letting checkout through:", e);
-    return { read: false };
-  }
-}
-
-/**
  * Starts a checkout for the signed-in user. The buyer, prices and quantities are set here from what they chose,
  * never taken from the browser. Returns an embedded-checkout client secret, or, for someone who already has a
  * plan, a billing-portal link to switch plans (prorated) so nobody pays for two plans.
@@ -202,7 +185,7 @@ export const createCheckoutSession = createServerFn({ method: "POST" })
     const env = getPaymentsEnvironment();
     // A checkout in one mode while the database counts the other takes money for a plan that never shows, or hands
     // out a paid plan for free (founder, 2026-11-12). Refused before Stripe is called, so nothing is charged.
-    const counted = await countedPaymentsEnvironment();
+    const counted = await readCountedPaymentsEnvironment();
     const refusal = counted.read ? checkoutEnvironmentError(env, counted.env) : CHECKOUT_UNAVAILABLE;
     if (refusal) throw new Error(refusal);
     const stripe = stripeClient(env);

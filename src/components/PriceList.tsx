@@ -3,6 +3,7 @@ import { Check, Copy, KeyRound } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { CARD_STATEMENT, PRICE_LIST, PRICE_LIST_EFFECTIVE, stripeLookupKeyText } from "@/lib/price-list";
+import { LivePriceAudit } from "@/components/LivePriceAudit";
 
 /**
  * Admin → Price List: the official prices for staff to quote from. Reads src/lib/price-list.ts, which in turn reads the
@@ -10,8 +11,11 @@ import { CARD_STATEMENT, PRICE_LIST, PRICE_LIST_EFFECTIVE, stripeLookupKeyText }
  *
  * The lookup keys block is a super admin's (founder, 2026-11-19): it is the list to copy beside the billing dashboard,
  * and it names each price's type because Stripe must hold them exactly that way or checkout refuses the charge.
+ *
+ * The live check (founder, 2026-11-20) is for Billing, Support, Software and super admins: it reads every key back from
+ * the live Stripe account, so a missing or mispriced price is named here instead of at Buy.
  */
-export function PriceList({ isSuper }: { isSuper: boolean }) {
+export function PriceList({ isSuper, canAuditPrices = false }: { isSuper: boolean; canAuditPrices?: boolean }) {
   const keys = isSuper ? stripeLookupKeyText() : "";
   const [copied, setCopied] = useState(false);
 
@@ -27,6 +31,8 @@ export function PriceList({ isSuper }: { isSuper: boolean }) {
 
   return (
     <div className="mt-6 space-y-4">
+      {canAuditPrices && <LivePriceAudit />}
+
       <div className="rounded-2xl border border-border bg-card p-5">
         <h2 className="text-xl font-bold">Official price list</h2>
         <p className="mt-2 max-w-3xl text-sm text-muted-foreground">

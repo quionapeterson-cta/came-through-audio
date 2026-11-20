@@ -23,7 +23,9 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent } from "@/components/ui/tabs";
 import { getAdminOverview, getStaffRole } from "@/lib/admin.functions";
-import { ASSIGNABLE_DEPARTMENTS, DEPARTMENTS, DEPARTMENT_LABEL, ROLE_LABEL, viewDepartments, visibleTabs, type Department } from "@/lib/departments";
+import { ASSIGNABLE_DEPARTMENTS, DEPARTMENTS, DEPARTMENT_LABEL, ROLE_LABEL, canAuditPayments, viewDepartments, visibleTabs, type Department } from "@/lib/departments";
+import { PaymentsModeBanner } from "@/components/PaymentsModeBanner";
+import { LivePriceAlert } from "@/components/LivePriceAudit";
 import { formatStaffRoleLabel } from "@/lib/staff-display";
 import { canManagePdfTemplates } from "@/lib/pdf-templates";
 import { SupportTicketsPanel } from "@/components/SupportTicketsPanel";
@@ -224,6 +226,11 @@ function AdminPage() {
       {/* Above the tab content, never inside it, so a due reminder follows the staff member across Admin tabs. */}
       <GlobalReminderBanner />
 
+      {/* Staff-only, and shown on every tab: a build/database payment-mode disagreement, or a sold price that is
+          missing or mispriced in live Stripe, refuses the member's Buy. */}
+      {canAuditPayments(access) && <PaymentsModeBanner />}
+      {canAuditPayments(access) && <LivePriceAlert onOpen={() => setActiveTab("prices")} />}
+
       <div className="mx-auto flex max-w-[100rem] gap-8 px-4 py-6 sm:px-6">
         <AdminSidebar tabs={tabs} active={current} onSelect={setActiveTab} access={access} />
         <main className="min-w-0 flex-1">
@@ -335,7 +342,7 @@ function AdminPage() {
           {show("handbook") && <TabsContent value="handbook"><Handbook /></TabsContent>}
           {show("staff-plan") && <TabsContent value="staff-plan"><StaffPlanPanel access={access} /></TabsContent>}
           {show("scripts") && <TabsContent value="scripts"><SupportScriptsPanel /></TabsContent>}
-          {show("prices") && <TabsContent value="prices"><PriceList isSuper={isSuper} /></TabsContent>}
+          {show("prices") && <TabsContent value="prices"><PriceList isSuper={isSuper} canAuditPrices={canAuditPayments(access)} /></TabsContent>}
           {show("pdf") && (
             <TabsContent value="pdf">
               <PdfTools
