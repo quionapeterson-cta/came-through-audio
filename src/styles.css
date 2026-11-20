@@ -530,16 +530,20 @@ label:has(> [data-infotip]) { line-height: 1.25rem; padding-bottom: 2px; overflo
     min-width: 16px;
     min-height: 16px;
   }
-  /* The circle is drawn at 16px but hit at 44px (founder, 2026-11-20): an invisible pseudo-element centred on it gives
-     the thumb the full target back without changing the drawn size or the space the circle takes in a label. */
+  /* The circle is drawn at 16px but hit wider (founder, 2026-11-20): an invisible pseudo-element widens the thumb target
+     without changing the drawn size or the space the circle takes in a label. It only reaches into the room the field
+     stack actually leaves — 44px across and 12px up, never below the circle — because in a stacked form the next input
+     or select starts at the label's own bottom edge (0-3px under the circle), and a 44px square was covering the top of
+     it and swallowing the tap that should have focused the field (measured on the Embed Metadata form at 320px and
+     375px). */
   button[data-infotip="circle"]::before {
     content: "";
     position: absolute;
-    top: 50%;
-    left: 50%;
-    width: 44px;
-    height: 44px;
-    transform: translate(-50%, -50%);
+    /* The trigger's own 1px border comes off the box it is measured against, so 15 and 13 give the 44px target. */
+    top: -13px;
+    right: -15px;
+    bottom: 0;
+    left: -15px;
   }
   /* Icon-only controls need the width as well as the height, or a 16px glyph stays a 24px target. */
   button:has(> svg:only-child),
