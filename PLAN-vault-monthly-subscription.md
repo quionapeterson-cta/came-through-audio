@@ -136,6 +136,10 @@ is the backstop for the double-click and two-tab race: one account can never hol
 - **`src/lib/price-audit.ts`** — a recurring row must match its **interval** (`month` for the Vault, `year` for plans,
   seats and the kit), not just `type === "recurring"`. `describeType` gains "a recurring monthly price".
 - **`src/lib/price-check.ts`** — amount unchanged (199). No type logic lives here.
+- **`src/lib/payments.functions.ts`** — a guard beside `refuseMispriced`: a `vault_month` price that is not recurring monthly
+  is refused before Stripe is asked to check out (one-time, yearly or an interval left unset), naming what Stripe holds and
+  what the page publishes. `vaultPriceShapeProblem` in `vault-subscription.ts` carries the wording and its test, so the
+  member reads a reason instead of "Checkout could not open (…)".
 
 ### Checkout
 
@@ -250,6 +254,11 @@ No test asserts the old one-time type except the one being rewritten; nothing is
 4. **Live Stripe**: create the new $1.99 **monthly recurring** price, archive the old `vault_month` price, move the
    lookup key to the new price (Stripe allows a key on one active price at a time, so archive first).
 5. Admin → Price List → Check again: **16 of 16**.
+
+**Ledger reconciliation (done 2026-11-20).** The remote `supabase_migrations.schema_migrations` recorded most migrations
+under Lovable's own versions, and 86 local files had no row at all. Every local version is now recorded (115 rows added,
+spot-checked against live objects first), so `supabase db push` sees no pending migration. The pre-existing
+Lovable-named rows are left as they are — they are history, not a second copy of the repo.
 
 ## 9. Decisions (settled 2026-11-20)
 

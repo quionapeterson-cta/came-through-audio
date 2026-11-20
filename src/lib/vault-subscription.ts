@@ -88,6 +88,34 @@ export function vaultMonthRow(
   };
 }
 
+/** The parts of a Stripe price the checkout guard reads. */
+export type VaultPriceLike = {
+  lookup_key?: string | null;
+  type?: string | null;
+  recurring?: { interval?: string | null } | null;
+};
+
+/**
+ * What is wrong with the Vault price's own shape — it must be recurring, monthly — or null when Stripe holds the price
+ * the pause is sold as. The amount is checked separately (`amountProblem`), so the two never disagree about the figure.
+ * The wording names what Stripe actually holds, so the fix is obvious without reading Stripe's generic error.
+ */
+export function vaultPriceShapeProblem(price: VaultPriceLike): string | null {
+  if (price.type === "recurring" && price.recurring?.interval === "month") return null;
+  const interval = price.recurring?.interval;
+  const every = interval === "year" ? "yearly" : interval === "week" ? "weekly" : interval === "day" ? "daily" : interval;
+  const held =
+    price.type === "recurring"
+      ? every
+        ? `a recurring ${every} price`
+        : "a recurring price with no interval set"
+      : price.type === "one_time"
+        ? "a one-time price"
+        : "a price with no type";
+  const key = price.lookup_key ?? "vault_month";
+  return `${key} (Pause · Vault fee) must be a monthly subscription in Stripe: the published price is $1.99 a month, billed monthly, but Stripe holds ${held}.`;
+}
+
 /**
  * One live pause per account (founder, 2026-11-20). A double click, a second tab or a retried checkout must never open a
  * second pause subscription beside the first one, so checkout refuses before Stripe is called. The message is here so the

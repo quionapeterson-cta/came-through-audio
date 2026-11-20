@@ -7,6 +7,7 @@ import {
   vaultMonthActive,
   vaultMonthKey,
   vaultMonthRow,
+  vaultPriceShapeProblem,
   vaultTrialEnd,
 } from "./vault-subscription";
 
@@ -31,6 +32,20 @@ describe("the Vault subscription", () => {
       "2026-12-10",
       "2027-01-10",
     ]);
+  });
+
+  it("passes the monthly price it sells, and names what Stripe holds when it is anything else", () => {
+    expect(vaultPriceShapeProblem({ lookup_key: "vault_month", type: "recurring", recurring: { interval: "month" } })).toBeNull();
+    // The old shape: one charge for the whole pause.
+    const oneTime = vaultPriceShapeProblem({ lookup_key: "vault_month", type: "one_time", recurring: null });
+    expect(oneTime).toContain("must be a monthly subscription");
+    expect(oneTime).toContain("one-time price");
+    expect(oneTime).toContain("published price");
+    // Billed once a year, which would take the whole pause fee up front and then a year later.
+    const yearly = vaultPriceShapeProblem({ lookup_key: "vault_month", type: "recurring", recurring: { interval: "year" } });
+    expect(yearly).toContain("recurring yearly price");
+    // A recurring price with no interval reads as unset, never as fine.
+    expect(vaultPriceShapeProblem({ type: "recurring", recurring: {} })).toContain("no interval set");
   });
 
   it("refuses a second pause before Stripe is called", () => {

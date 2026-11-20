@@ -7,7 +7,8 @@ import { checkoutInput, planCheckout } from "@/lib/stripe-mapping";
 import { isActiveSub, PRICE_TIER } from "@/lib/plans";
 import { PRICE_MISMATCH_NOTE, amountProblem } from "@/lib/price-check";
 import { purchaseLanding } from "@/lib/purchase-receipt";
-import { vaultTrialEnd } from "@/lib/vault-subscription";
+import { vaultPriceShapeProblem, vaultTrialEnd } from "@/lib/vault-subscription";
+import { VAULT_LOOKUP_KEY } from "@/lib/retention";
 
 /**
  * Sales tax on sales Came Through Audio, LLC makes directly (Expert Assistance). Stays off until Stripe Tax is
@@ -58,6 +59,18 @@ function refuseMispriced(env: "sandbox" | "live", lookupKey: string | null | und
   const problem = amountProblem(lookupKey ?? "", amount);
   if (!problem) return;
   console.error(`Stripe price mismatch (${env}): ${problem} ${PRICE_MISMATCH_NOTE}`);
+  throw new Error(`${problem} ${PRICE_MISMATCH_NOTE}`);
+}
+
+/**
+ * Refuses a Vault price that is not the monthly subscription the page sells (founder, 2026-11-20). Without this, a
+ * one-time or yearly price under `vault_month` failed at Stripe with "Checkout could not open (…)", which reads as a
+ * broken button; the member gets the reason and nothing is charged.
+ */
+function refuseVaultPrice(env: "sandbox" | "live", price: Parameters<typeof vaultPriceShapeProblem>[0] & { unit_amount?: number | null }) {
+  const problem = vaultPriceShapeProblem(price);
+  if (!problem) return;
+  console.error(`Vault price mismatch (${env}): ${problem} ${PRICE_MISMATCH_NOTE}`);
   throw new Error(`${problem} ${PRICE_MISMATCH_NOTE}`);
 }
 
@@ -313,8 +326,13 @@ export const createCheckoutSession = createServerFn({ method: "POST" })
         console.error(`Stripe price with lookup key ${missing.lookupKey} not found (${env})`);
         throw new Error("This item isn't available to buy yet. Contact support and we'll help right away.");
       }
-      // The card must be charged what the page quotes, every item in the order (founder, 2026-11-19).
-      for (const item of plan.items) refuseMispriced(env, item.lookupKey, byKey.get(item.lookupKey)!.unit_amount);
+      // The card must be charged what the page quotes, every item in the order (founder, 2026-11-19), and a pause's
+      // price must be the monthly one it is sold as, not a one-time or yearly price under the same key.
+      for (const item of plan.items) {
+        const price = byKey.get(item.lookupKey)!;
+        refuseMispriced(env, item.lookupKey, price.unit_amount);
+        if (item.lookupKey === VAULT_LOOKUP_KEY) refuseVaultPrice(env, price);
+      }
       const productNames = plan.items.map((i) => {
         const product = byKey.get(i.lookupKey)!.product;
         return typeof product === "object" && "name" in product ? product.name : i.lookupKey;
