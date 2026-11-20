@@ -13,7 +13,7 @@ import {
   type AdminCalendarView,
 } from "@/lib/admin-calendar";
 
-type CalEvent = { id: string; owner_id: string; department: Department | null; title: string; notes: string; starts_at: string; ends_at: string | null; all_day: boolean };
+type CalEvent = { id: string; owner_id: string; department: Department | null; title: string; notes: string; starts_at: string; ends_at: string | null; all_day: boolean; all_day_on: string | null };
 type Deadline = { id: string; department: Department; title: string; due_at: string; status?: string };
 type Draft = { id?: string; title: string; notes: string; date: string; start: string; end: string; allDay: boolean; calendar: Department | "private" };
 
@@ -30,6 +30,10 @@ const startOfDay = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDat
 const startOfWeek = (d: Date) => addDays(startOfDay(d), -startOfDay(d).getDay());
 const byStart = (a: CalEvent, b: CalEvent) => new Date(a.starts_at).getTime() - new Date(b.starts_at).getTime();
 const byDeadline = (a: Deadline, b: Deadline) => new Date(a.due_at).getTime() - new Date(b.due_at).getTime();
+/** An all-day entry carries the date that was picked; a timed one sits on the date its instant falls on here. */
+const eventDay = (e: CalEvent) => (e.all_day && e.all_day_on ? e.all_day_on : ymd(new Date(e.starts_at)));
+/** Ordering and the agenda window use the stored date's own midnight, so an all-day entry is not early or late. */
+const eventAt = (e: CalEvent) => (e.all_day && e.all_day_on ? new Date(`${e.all_day_on}T00:00`).toISOString() : e.starts_at);
 
 /** The rows each view needs. Month keeps exactly the window it always had; the other views look around their anchor. */
 function loadWindow(view: AdminCalendarView, month: Date, anchor: Date): [string, string] {
@@ -101,24 +105,24 @@ export function AdminCalendar({ me, access }: { me: string; access: StaffAccess 
     return Array.from({ length: 42 }, (_, i) => { const d = new Date(start); d.setDate(start.getDate() + i); return d; });
   }, [month]);
   const onDay = (day: string) => ({
-    ev: events.filter((e) => shown(e.department) && ymd(new Date(e.starts_at)) === day),
+    ev: events.filter((e) => shown(e.department) && eventDay(e) === day),
     due: deadlines.filter((d) => shown(d.department) && ymd(new Date(d.due_at)) === day),
   });
   const today = ymd(new Date());
-  const upcoming = [...events.filter((e) => shown(e.department)).map((e) => ({ at: e.starts_at, e })), ...deadlines.filter((d) => shown(d.department) && d.status !== "done").map((d) => ({ at: d.due_at, d }))]
+  const upcoming = [...events.filter((e) => shown(e.department)).map((e) => ({ at: eventAt(e), e })), ...deadlines.filter((d) => shown(d.department) && d.status !== "done").map((d) => ({ at: d.due_at, d }))]
     .filter((x) => x.at >= new Date().toISOString().slice(0, 10)).sort((a, b) => a.at.localeCompare(b.at)).slice(0, 12);
 
   const weekDays = useMemo(() => Array.from({ length: 7 }, (_, i) => addDays(startOfWeek(anchor), i)), [anchor]);
   const anchorDay = startOfDay(anchor);
   const dayKey = ymd(anchorDay);
-  const dayEvents = events.filter((e) => shown(e.department) && ymd(new Date(e.starts_at)) === dayKey).sort(byStart);
+  const dayEvents = events.filter((e) => shown(e.department) && eventDay(e) === dayKey).sort(byStart);
   const dayDeadlines = deadlines.filter((d) => shown(d.department) && ymd(new Date(d.due_at)) === dayKey).sort(byDeadline);
 
   const agenda = useMemo(() => {
     const fromMs = startOfDay(anchor).getTime();
     const toMs = addDays(startOfDay(anchor), 90).getTime();
     const rows: ({ at: string; event: CalEvent } | { at: string; deadline: Deadline })[] = [
-      ...events.filter((e) => shown(e.department)).map((e) => ({ at: e.starts_at, event: e })),
+      ...events.filter((e) => shown(e.department)).map((e) => ({ at: eventAt(e), event: e })),
       ...deadlines.filter((d) => shown(d.department)).map((d) => ({ at: d.due_at, deadline: d })),
     ];
     const window = rows
@@ -126,14 +130,14 @@ export function AdminCalendar({ me, access }: { me: string; access: StaffAccess 
       .sort((a, b) => a.at.localeCompare(b.at));
     const grouped = new Map<string, typeof window>();
     for (const row of window) {
-      const key = ymd(new Date(row.at));
+      const key = "event" in row ? eventDay(row.event) : ymd(new Date(row.deadline.due_at));
       grouped.set(key, [...(grouped.get(key) ?? []), row]);
     }
     return [...grouped.entries()];
   }, [events, deadlines, filter, anchor]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const open = (day: string, e?: CalEvent) => setDraft(e
-    ? { id: e.id, title: e.title, notes: e.notes, date: ymd(new Date(e.starts_at)), start: e.all_day ? "" : time24(e.starts_at), end: e.ends_at && !e.all_day ? time24(e.ends_at) : "", allDay: e.all_day, calendar: e.department ?? "private" }
+    ? { id: e.id, title: e.title, notes: e.notes, date: eventDay(e), start: e.all_day ? "" : time24(e.starts_at), end: e.ends_at && !e.all_day ? time24(e.ends_at) : "", allDay: e.all_day, calendar: e.department ?? "private" }
     : { title: "", notes: "", date: day, start: "10:00", end: "11:00", allDay: false, calendar: "private" });
 
   async function save() {
@@ -142,7 +146,7 @@ export function AdminCalendar({ me, access }: { me: string; access: StaffAccess 
     const endsAt = !draft.allDay && draft.end ? new Date(`${draft.date}T${draft.end}`) : null;
     if (endsAt && endsAt < startsAt) { toast.error("The end time is before the start."); return; }
     setBusy(true);
-    const row = { title: draft.title.trim(), notes: draft.notes.trim(), starts_at: startsAt.toISOString(), ends_at: endsAt?.toISOString() ?? null, all_day: draft.allDay,
+    const row = { title: draft.title.trim(), notes: draft.notes.trim(), starts_at: startsAt.toISOString(), ends_at: endsAt?.toISOString() ?? null, all_day: draft.allDay, all_day_on: draft.allDay ? draft.date : null,
       department: draft.calendar === "private" ? null : draft.calendar, updated_at: new Date().toISOString() };
     const { error } = draft.id ? await supabase.from("calendar_events" as never).update(row as never).eq("id", draft.id) : await supabase.from("calendar_events" as never).insert(row as never);
     setBusy(false);
@@ -350,7 +354,7 @@ export function AdminCalendar({ me, access }: { me: string; access: StaffAccess 
               <ul className="divide-y divide-border">
                 {rows.map((row) => "event" in row ? (
                   <li key={`e-${row.event.id}`}>
-                    <button type="button" onClick={() => open(ymd(new Date(row.event.starts_at)), row.event)} className="flex w-full flex-wrap items-center justify-between gap-2 px-4 py-2 text-left text-sm hover:bg-muted">
+                    <button type="button" onClick={() => open(eventDay(row.event), row.event)} className="flex w-full flex-wrap items-center justify-between gap-2 px-4 py-2 text-left text-sm hover:bg-muted">
                       <span className="font-semibold">{row.event.department ? "" : "🔒 "}{row.event.title}</span>
                       <span className="text-xs text-muted-foreground">{row.event.all_day ? "All day" : time(row.event.starts_at)} · {row.event.department ? DEPARTMENT_LABEL[row.event.department] : "Private"}</span>
                     </button>
@@ -374,9 +378,9 @@ export function AdminCalendar({ me, access }: { me: string; access: StaffAccess 
           {upcoming.length === 0 ? <p className="text-sm text-muted-foreground">Nothing coming up on these calendars.</p> : (
             <ul className="divide-y divide-border rounded-xl border border-border">
               {upcoming.map((x, i) => "e" in x && x.e
-                ? <li key={i}><button type="button" onClick={() => open(ymd(new Date(x.e.starts_at)), x.e)} className="flex w-full flex-wrap items-center justify-between gap-2 px-4 py-2 text-left text-sm hover:bg-muted">
+                ? <li key={i}><button type="button" onClick={() => open(eventDay(x.e), x.e)} className="flex w-full flex-wrap items-center justify-between gap-2 px-4 py-2 text-left text-sm hover:bg-muted">
                     <span className="font-semibold">{x.e.department ? "" : "🔒 "}{x.e.title}</span>
-                    <span className="text-xs text-muted-foreground">{x.e.department ? DEPARTMENT_LABEL[x.e.department] : "Private"} · {new Date(x.e.starts_at).toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" })}{x.e.all_day ? "" : ` · ${time(x.e.starts_at)}`}</span></button></li>
+                    <span className="text-xs text-muted-foreground">{x.e.department ? DEPARTMENT_LABEL[x.e.department] : "Private"} · {new Date(`${eventDay(x.e)}T00:00`).toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" })}{x.e.all_day ? "" : ` · ${time(x.e.starts_at)}`}</span></button></li>
                 : "d" in x && x.d ? <li key={i} className="flex flex-wrap items-center justify-between gap-2 px-4 py-2 text-sm">
                     <span>Due: {x.d.title}</span>
                     <span className="text-xs text-muted-foreground">{DEPARTMENT_LABEL[x.d.department] ?? x.d.department} · {new Date(x.d.due_at).toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" })}</span></li> : null)}

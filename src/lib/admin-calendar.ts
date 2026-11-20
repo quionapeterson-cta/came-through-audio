@@ -33,6 +33,8 @@ export interface AdminCalendarEvent {
   starts_at: string;
   ends_at: string | null;
   all_day: boolean;
+  /** The date a member picked for an all-day entry. Missing on rows saved before the column existed. */
+  all_day_on?: string | null;
   updated_at?: string | null;
 }
 
@@ -135,6 +137,20 @@ function nextDateKey(iso: string, timeZone?: string): string {
   return `${next.getUTCFullYear()}${pad2(next.getUTCMonth() + 1)}${pad2(next.getUTCDate())}`;
 }
 
+/** The stored date is the only thing an all-day entry's day may come from; anything but a plain date is ignored. */
+function storedAllDayDate(value?: string | null): string | null {
+  if (!value || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return null;
+  const date = new Date(`${value}T00:00:00Z`);
+  return !Number.isNaN(date.getTime()) && date.toISOString().slice(0, 10) === value ? value : null;
+}
+
+/** The day after a stored date, in the same VALUE=DATE form. */
+function dayAfterStoredDate(value: string): string {
+  const date = new Date(`${value}T00:00:00Z`);
+  date.setUTCDate(date.getUTCDate() + 1);
+  return date.toISOString().slice(0, 10).replace(/-/g, "");
+}
+
 function validTimeZone(timeZone?: string): string | undefined {
   if (!timeZone) return undefined;
   try {
@@ -207,7 +223,11 @@ export function buildCalendarFeedIcs({
 
     lines.push("BEGIN:VEVENT", `UID:calendar-${event.id}@camethroughaudio.com`, `DTSTAMP:${stamp}`);
     if (event.all_day) {
-      lines.push(`DTSTART;VALUE=DATE:${dateKey(event.starts_at, zone)}`, `DTEND;VALUE=DATE:${nextDateKey(event.starts_at, zone)}`);
+      // The stored date is the day the member picked, so every subscriber sees the same day whatever their zone is.
+      const stored = storedAllDayDate(event.all_day_on);
+      const startKey = stored ? stored.replace(/-/g, "") : dateKey(event.starts_at, zone);
+      const endKey = stored ? dayAfterStoredDate(stored) : nextDateKey(event.starts_at, zone);
+      lines.push(`DTSTART;VALUE=DATE:${startKey}`, `DTEND;VALUE=DATE:${endKey}`);
     } else {
       lines.push(`DTSTART:${icsDate(start)}`, `DTEND:${icsDate(end)}`);
     }

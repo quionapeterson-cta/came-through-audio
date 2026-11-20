@@ -139,6 +139,22 @@ describe("Personal calendar feed", () => {
     expect(utc).toContain("DTSTART;VALUE=DATE:20261119");
   });
 
+  it("uses the stored all-day date in every time zone instead of the instant", () => {
+    // Local midnight on the 20th in Berlin is 23:00Z on the 19th; the stored date is what every viewer must see.
+    const entry = event({ title: "Release day", starts_at: "2026-11-19T23:00:00.000Z", ends_at: null, all_day: true, all_day_on: "2026-11-20" });
+    for (const timeZone of ["UTC", "Europe/Berlin", "America/Los_Angeles", "Pacific/Kiritimati"]) {
+      const ics = buildCalendarFeedIcs({ events: [entry], deadlines: [], now: new Date("2026-11-19T12:00:00.000Z"), timeZone });
+      expect(ics, timeZone).toContain("DTSTART;VALUE=DATE:20261120");
+      expect(ics, timeZone).toContain("DTEND;VALUE=DATE:20261121");
+    }
+  });
+
+  it("ignores a malformed stored date and falls back to the reading in the subscriber's zone", () => {
+    const entry = event({ starts_at: "2026-11-19T23:00:00.000Z", ends_at: null, all_day: true, all_day_on: "2026-13-45" });
+    const ics = buildCalendarFeedIcs({ events: [entry], deadlines: [], now: new Date("2026-11-19T12:00:00.000Z"), timeZone: "Europe/Berlin" });
+    expect(ics).toContain("DTSTART;VALUE=DATE:20261120");
+  });
+
   it("falls back to UTC for an unknown time zone instead of dropping the calendar", () => {
     const ics = buildCalendarFeedIcs({
       events: [event({ all_day: true, starts_at: "2026-11-20T00:00:00.000Z" })],

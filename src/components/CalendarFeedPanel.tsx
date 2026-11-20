@@ -166,8 +166,8 @@ export function CalendarFeedPanel({ me }: { me: string }) {
           </div>
           <p className="text-xs text-muted-foreground">
             Apple Calendar: File → New Calendar Subscription. Google Calendar: Other calendars → From URL. Outlook: Add
-            calendar → Subscribe from web. The link carries your time zone ({timeZone || "UTC"}) so all-day entries stay
-            on the day you picked. Anyone holding the link can read the feed, so keep it like a password — “New link”
+            calendar → Subscribe from web. All-day entries carry the date that was picked; the link's time zone
+            ({timeZone || "UTC"}) covers an older entry saved before that date was stored. Anyone holding the link can read the feed, so keep it like a password — “New link”
             replaces it immediately.
           </p>
         </>
