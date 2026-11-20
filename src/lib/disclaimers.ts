@@ -15,8 +15,6 @@ export const DISCLAIMERS = {
   health: "Health scores, findings, converters and earnings estimates are based on the details you enter and on public searches that can be incomplete or out of date. They don't guarantee registration, matching or payment and aren't legal, financial or tax advice; each agency decides the final result.",
   /** "Registration Ready" badges and readiness lists. */
   readiness: "\"Registration Ready\" means the required details are filled in. It doesn't confirm they're correct or that you own the rights.",
-  /** Split sheets. */
-  splits: "A split sheet records what the collaborators agree to. Came Through Audio isn't a party to it, doesn't check who owns what and doesn't give legal advice. Each person is responsible for the splits they sign; settle disagreements between yourselves or with an attorney.",
   /** Contract Generator (on top of CONTRACT_DISCLAIMER). */
   generator: "Drafts are put together automatically from what you type and can contain mistakes or miss terms your deal needs. Came Through Audio isn't a party to your contract and isn't responsible for its terms or how it's used.",
   /** AI Protection Hub, certificates, the verify page. */

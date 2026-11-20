@@ -1,7 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import {
-  AlertTriangle,
   Check,
   Download,
   FileSignature,
@@ -21,7 +20,7 @@ import { BadgeWatcher } from "@/components/Badges";
 import { SIGNATURE_CSS } from "@/lib/signature-font";
 import { requestBadgeCheck } from "@/lib/badge-events";
 import { Button } from "@/components/ui/button";
-import { COMPANY_LEGAL_NAME, CONTRACT_DISCLAIMER } from "@/lib/contract-blueprints";
+import { COMPANY_LEGAL_NAME } from "@/lib/contract-blueprints";
 import { downloadContractPdf } from "@/lib/contract-pdf";
 import {
   templateToHtml,
@@ -211,10 +210,8 @@ function ContractView({
           {invite.body}
         </div>
       )}
-      <p className="flex items-start gap-2 text-xs text-muted-foreground">
-        <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-primary" />
-        {CONTRACT_DISCLAIMER} Contract fingerprint (SHA-256):{" "}
-        <span className="break-all">{invite.body_hash}</span>
+      <p className="text-xs text-muted-foreground">
+        Contract fingerprint (SHA-256): <span className="break-all">{invite.body_hash}</span>
       </p>
     </>
   );
