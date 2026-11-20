@@ -1,0 +1,165 @@
+import { describe, expect, it, vi } from "vitest";
+import {
+  askHelpDesk,
+  EXPERT_HELP,
+  HELP_DESK_TICKET,
+  helpActions,
+  helpTab,
+  localAnswer,
+  MAX_HELP_CHARS,
+  quickQuestions,
+} from "./help-desk";
+
+const ok = (body: unknown, status = 200) =>
+  new Response(JSON.stringify(body), { status, headers: { "content-type": "application/json" } });
+
+describe("quick questions", () => {
+  it("fits the workspace tab the member is on", () => {
+    expect(helpTab("/workspace?tab=splits")).toBe("splits");
+    expect(quickQuestions("/workspace?tab=splits")[0]).toMatch(/split/i);
+    expect(quickQuestions("/workspace?tab=health")).toContain("Which PRO should I join?");
+    expect(quickQuestions("/workspace?tab=embed").join(" ")).toMatch(/ISWC/);
+  });
+
+  it("falls back to questions any visitor can ask", () => {
+    expect(quickQuestions("/")).toHaveLength(3);
+    expect(quickQuestions("/")).toContain("What's the difference between © and ℗?");
+    expect(quickQuestions("/", 2)).toHaveLength(2);
+  });
+});
+
+describe("action pills", () => {
+  it("offers the done-for-you desk where it belongs", () => {
+    expect(helpActions("/workspace?tab=health")).toContainEqual({
+      label: "Jump to Expert Help →",
+      to: EXPERT_HELP,
+    });
+    expect(helpActions("/workspace?tab=splits")).toContainEqual({
+      label: "Let Us Do It For You →",
+      to: EXPERT_HELP,
+    });
+  });
+
+  it("always leaves a way to a person", () => {
+    expect(helpActions("/somewhere")).toContainEqual({
+      label: "Open the Help Center →",
+      to: "/contact",
+    });
+  });
+});
+
+describe("local knowledge base", () => {
+  it("answers the two copyrights without the worker", () => {
+    const answer = localAnswer("what is the difference between composition and master?");
+    expect(answer.source).toBe("local");
+    expect(answer.title).toMatch(/Composition/);
+    expect(answer.text).toContain("©");
+    expect(answer.text).toContain("℗");
+  });
+
+  it("understands the copyright symbols on their own", () => {
+    const answer = localAnswer("What's the difference between © and ℗?");
+    expect(answer.title).toMatch(/Composition/);
+    expect(answer.text).toContain("℗");
+    expect(localAnswer("copyright of the recording?").title).toMatch(/Composition/);
+  });
+
+  it("does not treat an upload question as a copyright question", () => {
+    expect(localAnswer("how do I upload a wav file?").title).not.toMatch(/Composition/);
+  });
+
+  it("answers a code question with that code", () => {
+    expect(localAnswer("what is an ISRC?").text).toContain("ISRC");
+    expect(localAnswer("what is an iswc").text).toContain("ISWC");
+    expect(localAnswer("what is an ipi number").text).toContain("IPI");
+  });
+
+  it("answers a splits question with the two halves", () => {
+    const answer = localAnswer("how should two writers split a song 50/50?");
+    expect(answer.text).toMatch(/writer share/i);
+    expect(answer.text).toMatch(/publisher share/i);
+  });
+
+  it("points a done-for-you question at Expert Help", () => {
+    const answer = localAnswer("can you register my songs for me?");
+    expect(answer.link?.to).toBe(EXPERT_HELP);
+  });
+
+  it("never leaves the member with nothing", () => {
+    const answer = localAnswer("zzzz qqqq");
+    expect(answer.link?.to).toBe(HELP_DESK_TICKET);
+    expect(answer.text).toMatch(/support ticket/i);
+  });
+});
+
+describe("asking the Help Desk", () => {
+  it("answers locally when the worker is not configured yet", async () => {
+    const fetchImpl = vi.fn();
+    const reply = await askHelpDesk(
+      { message: "what is an isrc" },
+      { url: "", fetchImpl: fetchImpl as never },
+    );
+    expect(fetchImpl).not.toHaveBeenCalled();
+    expect(reply.source).toBe("local");
+    expect(reply.text).toContain("ISRC");
+  });
+
+  it("uses the worker's answer when it answers", async () => {
+    const fetchImpl = vi.fn(async () => ok({ reply: "It identifies the recording." }));
+    const reply = await askHelpDesk(
+      {
+        message: "what is an isrc",
+        currentRoute: "/workspace?tab=embed",
+        history: [{ role: "user", content: "hi" }],
+      },
+      { url: "https://cta-help-desk.example.workers.dev", fetchImpl: fetchImpl as never },
+    );
+    expect(reply).toEqual({ text: "It identifies the recording.", source: "help-desk" });
+    const [url, init] = fetchImpl.mock.calls[0] as unknown as [string, RequestInit];
+    expect(url).toBe("https://cta-help-desk.example.workers.dev");
+    expect(JSON.parse(String(init.body))).toMatchObject({
+      message: "what is an isrc",
+      currentRoute: "/workspace?tab=embed",
+    });
+  });
+
+  it("falls back to the local answer on 429, a bad reply or a dropped connection", async () => {
+    const rateLimited = await askHelpDesk(
+      { message: "what is an isrc" },
+      {
+        url: "https://w.example",
+        fetchImpl: vi.fn(async () => ok({ error: "Too many" }, 429)) as never,
+      },
+    );
+    expect(rateLimited.source).toBe("local");
+    expect(rateLimited.text).toContain("ISRC");
+
+    const empty = await askHelpDesk(
+      { message: "what is an isrc" },
+      { url: "https://w.example", fetchImpl: vi.fn(async () => ok({})) as never },
+    );
+    expect(empty.source).toBe("local");
+
+    const boom = await askHelpDesk(
+      { message: "what is an isrc" },
+      {
+        url: "https://w.example",
+        fetchImpl: vi.fn(async () => {
+          throw new Error("offline");
+        }) as never,
+      },
+    );
+    expect(boom.source).toBe("local");
+    expect(boom.text).toContain("ISRC");
+  });
+
+  it("keeps the question within the worker's limit", async () => {
+    const fetchImpl = vi.fn(async () => ok({ reply: "ok" }));
+    await askHelpDesk(
+      { message: "a".repeat(MAX_HELP_CHARS + 200) },
+      { url: "https://w.example", fetchImpl: fetchImpl as never },
+    );
+    const [, init] = fetchImpl.mock.calls[0] as unknown as [string, RequestInit];
+    expect(JSON.parse(String(init.body)).message).toHaveLength(MAX_HELP_CHARS);
+  });
+});

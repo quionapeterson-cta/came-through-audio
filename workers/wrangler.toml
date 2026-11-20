@@ -1,0 +1,32 @@
+# Came Through Audio Help Desk — a separate Worker (founder, 2026-11-20).
+#
+# This is NOT one of the email routing workers. Its name is its own, its binding is its own, and deploying it changes no
+# Email Routing rule and no address.
+#
+# Two minutes to activate:
+#   1. Deploy from the repo root:   npx wrangler deploy -c workers/wrangler.toml
+#      (the first time, `npx wrangler login` in a terminal on your own machine, or set CLOUDFLARE_API_TOKEN)
+#   2. Workers AI must be switched on for the account once: dashboard → Workers AI → the model in HELP_DESK_MODEL
+#      (src/lib/help-desk-worker.ts) sits on the free daily allowance. No key is needed; the [ai] binding below is it.
+#      Cloudflare retired @cf/meta/llama-3.1-8b-instruct-fp8 on 2026-11-20, so the desk runs the -fp8-fast build.
+#   3. Copy the printed URL (https://cta-help-desk.<your-subdomain>.workers.dev) into the app as
+#      VITE_CTA_HELP_WORKER_URL (for a hosted build, the same name in Sites/Cloudflare → Settings → Variables).
+#      Without it the Help Desk still answers from the local knowledge base, so nothing goes down while you set it up.
+#
+# Check it without a browser:
+#   curl -i -X POST https://cta-help-desk.<your-subdomain>.workers.dev \
+#     -H 'Origin: https://camethroughaudio.com' -H 'content-type: application/json' \
+#     -d '{"message":"What is the difference between (c) and (p)?"}'
+# A call with no Origin, or with another domain, must answer 403 and spend no AI.
+
+name = "cta-help-desk"
+main = "cta-help-desk.ts"
+compatibility_date = "2026-11-03"
+workers_dev = true
+
+# Workers AI: the model itself is chosen in workers/cta-help-desk.ts (HELP_DESK_MODEL). Free daily neurons apply.
+[ai]
+binding = "AI"
+
+[observability]
+enabled = true

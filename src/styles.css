@@ -551,6 +551,23 @@ label:has(> [data-infotip]) { line-height: 1.25rem; padding-bottom: 2px; overflo
   a:has(> svg:only-child) {
     min-width: 44px;
   }
+  /* The Help Desk's quick-question chips sit inside a 440px drawer (founder, 2026-11-20): three of them stacked at the
+     44px thumb height would push the conversation out of the panel, so they keep one compact line. */
+  button.cta-help-desk-chip {
+    min-height: 32px;
+  }
+  /* The Help Desk badge is the low-profile corner badge (founder, 2026-11-20): 40px in both directions on a phone, so the
+     44px thumb rule does not turn it into a taller bubble. The panel it opens keeps the full-size controls. */
+  button.cta-help-desk-badge {
+    min-width: 40px;
+    min-height: 40px;
+  }
+  /* Minimize and close sit in the drawer's own header; at the 44px thumb size they pushed the desk's name into "…Help
+     De…". They keep a 32px target, which still clears the 24px accessibility minimum. */
+  button.cta-help-desk-control {
+    min-width: 32px;
+    min-height: 32px;
+  }
   /* Header links too: the brand mark is a link, and on a 320px phone it was only 24px tall. Inline links inside a
      sentence are left alone — they wrap with the text and are exempt from the target-size rule. */
   header a[href],
