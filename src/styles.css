@@ -4,6 +4,7 @@
 @import "./came-icons.css";
 @import "./royalty-report.css";
 @import "./treatment-plan.css";
+@import "./financial-lab.css";
 
 @custom-variant dark (&:is(.dark *));
 
