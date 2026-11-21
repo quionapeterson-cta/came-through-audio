@@ -96,7 +96,8 @@ today; 57 of them repeat, and the full task→badge table for those is in
 | Task | Badge today | Repeats | Celebration today |
 | --- | --- | --- | --- |
 | Complete a certificate | AI Slayer | every certificate | pop-up |
-| Every 10 protected songs | Time Witness / Shield Up | every 10 | pop-up |
+| Every 10 protected songs | Time Witness | every 10 | pop-up |
+| 10 protected songs | Shield Up | every 5 after the first 10 | pop-up |
 | 25 protected songs | Key Keeper | every 25 | pop-up |
 | First Bitcoin-timestamped certificate | Sound Sealed | once | pop-up |
 

@@ -655,15 +655,17 @@ const CORE: BadgeDef[] = [
     title: "Shield Up",
     collection: "ai",
     tier: "standard",
-    milestone: "10 songs protected in the AI Protection Hub, then every 10 more",
+    milestone: "10 songs protected in the AI Protection Hub, then every 5 more",
     action: "Protect 10 songs",
     metric: "protected",
     goal: 10,
-    every: 10,
+    // Ten songs first, then every 5 more (founder, 2026-11-21): 10, 15, 20, 25 keep earning it, so the 10s still hold.
+    every: 5,
     src: `${S}/award_shield.png`,
     description:
       "Ten songs guarded in the AI Protection Hub. You protect what you make before anyone else gets ideas.",
     popup: "Shield up! 10 songs protected.",
+    repeatPopup: "Shield up! 5 more songs protected.",
   },
   // AI Protection set (PLAN-master-notes 3.7): serious art already in the repo, picked 2026-10-25.
   {

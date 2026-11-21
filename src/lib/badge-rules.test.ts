@@ -518,7 +518,7 @@ describe("every-time task badges", () => {
       "101st",
     ]);
   });
-  it("AI Protection set: Time Witness every 10 songs, Sound Sealed on the first Bitcoin timestamp, Shield Up at 10, Key Keeper at 25", () => {
+  it("AI Protection set: Time Witness every 10 songs, Sound Sealed on the first Bitcoin timestamp, Shield Up at 10 then every 5, Key Keeper at 25", () => {
     const m = badgeMetrics(
       data({
         certificates: [
@@ -539,10 +539,12 @@ describe("every-time task badges", () => {
       ["ai_slayer", 2],
       ["sound_sealed", 1],
     ]);
+    // Shield Up stays on 10, 20, 30… and adds 15, 25, 35… in between (founder, 2026-11-21).
+    expect(badgeById("shield_up")).toMatchObject({ goal: 10, every: 5 });
     expect(earned({ protected: 50, timestamped: 50 })).toEqual([
       ["time_witness", 5],
       ["ai_slayer", 50],
-      ["shield_up", 5],
+      ["shield_up", 9],
       ["sound_sealed", 1],
       ["key_keeper", 2],
     ]);
