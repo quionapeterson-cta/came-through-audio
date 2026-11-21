@@ -813,6 +813,7 @@ export function PdfTemplateStudio() {
       patch(active.id, { parties });
     } else if (active.kind === "seal") patch(active.id, { label: append(active.label) });
     else if (active.kind === "date") patch(active.id, { label: append(active.label) });
+    else if (active.kind === "printName") patch(active.id, { label: append(active.label) });
     else if (active.kind === "section") patch(active.id, { title: append(active.title) });
     else if (active.kind === "fields") patch(active.id, { heading: append(active.heading) });
     else if (active.kind === "checkboxes") patch(active.id, { heading: append(active.heading) });

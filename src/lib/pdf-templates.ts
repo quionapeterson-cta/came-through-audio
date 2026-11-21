@@ -579,34 +579,34 @@ function blockHtml(
   }
   if (block.kind === "meta") {
     return `<section style="padding:28px 48px 0">
-  <h2 style="font-size:12px;letter-spacing:2px;text-transform:uppercase;color:${BRAND.cobalt};margin:0 0 12px">${esc(fillTokens(block.heading))}</h2>
+  <h2 style="font-size:12px;letter-spacing:2px;text-transform:uppercase;color:${BRAND.cobalt};margin:0 0 12px">${esc(fillTokens(block.heading, data))}</h2>
   <table style="width:100%;border-collapse:collapse;font-size:13px">
-    ${block.rows.map((r) => `<tr><th style="text-align:left;width:38%;padding:8px 0;border-bottom:1px solid ${BRAND.platinum};font-weight:600;color:${BRAND.black}">${esc(r.label)}</th><td style="padding:8px 0;border-bottom:1px solid ${BRAND.platinum};color:${BRAND.black}">${esc(fillTokens(r.value))}</td></tr>`).join("\n    ")}
+    ${block.rows.map((r) => `<tr><th style="text-align:left;width:38%;padding:8px 0;border-bottom:1px solid ${BRAND.platinum};font-weight:600;color:${BRAND.black}">${esc(fillTokens(r.label, data))}</th><td style="padding:8px 0;border-bottom:1px solid ${BRAND.platinum};color:${BRAND.black}">${esc(fillTokens(r.value, data))}</td></tr>`).join("\n    ")}
   </table>
 </section>`;
   }
   if (block.kind === "clause") {
     return `<section style="padding:24px 48px 0">
-  ${block.heading.trim() ? `<h2 style="font-size:15px;color:${BRAND.black};margin:0 0 8px">${esc(fillTokens(block.heading))}</h2>` : ""}
-  <p style="font-size:13px;line-height:1.7;color:${BRAND.black};margin:0">${esc(fillTokens(block.body)).replace(/\n/g, "<br>")}</p>
-  ${block.help ? `<p style="font-size:11px;line-height:1.6;color:${BRAND.black};opacity:0.7;margin:8px 0 0;border-left:2px solid ${BRAND.platinum};padding-left:10px">${esc(block.help)}</p>` : ""}
+  ${block.heading.trim() ? `<h2 style="font-size:15px;color:${BRAND.black};margin:0 0 8px">${esc(fillTokens(block.heading, data))}</h2>` : ""}
+  <p style="font-size:13px;line-height:1.7;color:${BRAND.black};margin:0">${esc(fillTokens(block.body, data)).replace(/\n/g, "<br>")}</p>
+  ${block.help ? `<p style="font-size:11px;line-height:1.6;color:${BRAND.black};opacity:0.7;margin:8px 0 0;border-left:2px solid ${BRAND.platinum};padding-left:10px">${esc(fillTokens(block.help, data))}</p>` : ""}
 </section>`;
   }
   if (block.kind === "signatures") {
     return `<section style="padding:32px 48px 0">
-  <h2 style="font-size:12px;letter-spacing:2px;text-transform:uppercase;color:${BRAND.cobalt};margin:0 0 18px">${esc(block.heading)}</h2>
-  ${block.parties.map((p) => `<div style="margin-bottom:22px"><div style="border-bottom:1px solid ${BRAND.black};height:28px"></div><div style="font-size:11px;color:${BRAND.black};opacity:0.7;margin-top:6px">${esc(fillTokens(p.label))}</div></div>`).join("\n  ")}
+  <h2 style="font-size:12px;letter-spacing:2px;text-transform:uppercase;color:${BRAND.cobalt};margin:0 0 18px">${esc(fillTokens(block.heading, data))}</h2>
+  ${block.parties.map((p) => `<div style="margin-bottom:22px"><div style="border-bottom:1px solid ${BRAND.black};height:28px"></div><div style="font-size:11px;color:${BRAND.black};opacity:0.7;margin-top:6px">${esc(fillTokens(p.label, data))}</div></div>`).join("\n  ")}
 </section>`;
   }
   if (block.kind === "section") {
     return `<section style="page-break-before:always;padding:34px 48px 0">
-  ${block.title.trim() ? `<h2 style="font-size:18px;color:${BRAND.black};margin:0;padding-bottom:10px;border-bottom:2px solid ${BRAND.platinum}">${esc(block.title)}</h2>` : ""}
-  ${block.subtitle ? `<p style="font-size:11px;letter-spacing:1.5px;text-transform:uppercase;color:${BRAND.cobalt};margin:8px 0 0">${esc(block.subtitle)}</p>` : ""}
+  ${block.title.trim() ? `<h2 style="font-size:18px;color:${BRAND.black};margin:0;padding-bottom:10px;border-bottom:2px solid ${BRAND.platinum}">${esc(fillTokens(block.title, data))}</h2>` : ""}
+  ${block.subtitle ? `<p style="font-size:11px;letter-spacing:1.5px;text-transform:uppercase;color:${BRAND.cobalt};margin:8px 0 0">${esc(fillTokens(block.subtitle, data))}</p>` : ""}
 </section>`;
   }
   if (block.kind === "fields") {
     return `<section style="padding:24px 48px 0">
-  <h2 style="font-size:12px;letter-spacing:2px;text-transform:uppercase;color:${BRAND.cobalt};margin:0 0 12px">${esc(fillTokens(block.heading))}</h2>
+  <h2 style="font-size:12px;letter-spacing:2px;text-transform:uppercase;color:${BRAND.cobalt};margin:0 0 12px">${esc(fillTokens(block.heading, data))}</h2>
   ${block.fields
     .map((f) => {
       const answer = answerFor(values, f.id);
@@ -616,26 +616,26 @@ function blockHtml(
           ? `<textarea data-bv="${esc(f.id)}" rows="2" style="${line};resize:vertical">${esc(answer)}</textarea>`
           : `<input data-bv="${esc(f.id)}" value="${esc(answer)}" aria-label="${esc(f.label)}" style="${line}" />`
         : `<div style="border-bottom:1px solid ${BRAND.platinum};min-height:${f.type === "textarea" ? 44 : 24}px;font-size:12px;color:${BRAND.black};padding-top:4px">${esc(answer)}</div>`;
-      return `<div style="margin-bottom:14px"><div style="font-size:11px;font-weight:600;color:${BRAND.black}">${esc(f.label)}${f.required ? " *" : ""}</div>${field}</div>`;
+      return `<div style="margin-bottom:14px"><div style="font-size:11px;font-weight:600;color:${BRAND.black}">${esc(fillTokens(f.label, data))}${f.required ? " *" : ""}</div>${field}</div>`;
     })
     .join("\n  ")}
 </section>`;
   }
   if (block.kind === "checkboxes") {
     return `<section style="padding:24px 48px 0">
-  <h2 style="font-size:12px;letter-spacing:2px;text-transform:uppercase;color:${BRAND.cobalt};margin:0 0 10px">${esc(fillTokens(block.heading))}</h2>
+  <h2 style="font-size:12px;letter-spacing:2px;text-transform:uppercase;color:${BRAND.cobalt};margin:0 0 10px">${esc(fillTokens(block.heading, data))}</h2>
   ${block.options
     .map((o) =>
       editable
-        ? `<label style="display:flex;gap:8px;align-items:center;font-size:12px;color:${BRAND.black};margin:6px 0"><input type="${block.mode === "single" ? "radio" : "checkbox"}" name="g-${esc(block.id)}" data-bg="${esc(block.id)}" value="${esc(o.id)}"${tickedIn(values, block.id).has(o.id) ? " checked" : ""} />${esc(o.label)}</label>`
-        : `<div style="font-size:12px;color:${BRAND.black};margin:6px 0">${tickedIn(values, block.id).has(o.id) ? "☑" : "☐"}&nbsp;&nbsp;${esc(o.label)}</div>`,
+        ? `<label style="display:flex;gap:8px;align-items:center;font-size:12px;color:${BRAND.black};margin:6px 0"><input type="${block.mode === "single" ? "radio" : "checkbox"}" name="g-${esc(block.id)}" data-bg="${esc(block.id)}" value="${esc(o.id)}"${tickedIn(values, block.id).has(o.id) ? " checked" : ""} />${esc(fillTokens(o.label, data))}</label>`
+        : `<div style="font-size:12px;color:${BRAND.black};margin:6px 0">${tickedIn(values, block.id).has(o.id) ? "☑" : "☐"}&nbsp;&nbsp;${esc(fillTokens(o.label, data))}</div>`,
     )
     .join("\n  ")}
 </section>`;
   }
   if (block.kind === "date") {
     return `<section style="padding:26px 48px 0">
-  ${block.label.trim() ? `<div style="font-size:10px;letter-spacing:2px;text-transform:uppercase;color:${BRAND.cobalt};margin-bottom:6px">${esc(block.label)}</div>` : ""}
+  ${block.label.trim() ? `<div style="font-size:10px;letter-spacing:2px;text-transform:uppercase;color:${BRAND.cobalt};margin-bottom:6px">${esc(fillTokens(block.label, data))}</div>` : ""}
   <div style="font-size:19px;font-weight:700;color:${BRAND.black}">${esc(formatBlockDate(block) || "—")}</div>
 </section>`;
   }
@@ -650,7 +650,7 @@ function blockHtml(
   if (block.kind === "signature") {
     const who = block.role === "recipient" ? "Recipient" : "Company representative";
     return `<section style="padding:30px 48px 0">
-  <h2 style="font-size:12px;letter-spacing:2px;text-transform:uppercase;color:${BRAND.cobalt};margin:0 0 10px">${esc(fillTokens(block.heading))}</h2>
+  <h2 style="font-size:12px;letter-spacing:2px;text-transform:uppercase;color:${BRAND.cobalt};margin:0 0 10px">${esc(fillTokens(block.heading, data))}</h2>
   <div style="display:flex;gap:24px">
     <div style="flex:2"><div style="border-bottom:1px solid ${BRAND.black};height:34px"></div><div style="font-size:10px;color:${BRAND.black};opacity:0.7;margin-top:5px">${who} signature</div></div>
     ${block.showDate ? `<div style="flex:1"><div style="border-bottom:1px solid ${BRAND.black};height:34px"></div><div style="font-size:10px;color:${BRAND.black};opacity:0.7;margin-top:5px">Date</div></div>` : ""}
@@ -659,8 +659,8 @@ function blockHtml(
   }
   const metal = block.tier === "gold" ? BRAND.gold : BRAND.platinum;
   const mark = block.art
-    ? `<img src="${SEAL_ART[block.art]}" alt="${esc(fillTokens(block.label))}" width="96" height="96" style="display:block;width:96px;height:96px;object-fit:contain" />`
-    : `<div style="display:inline-flex;align-items:center;justify-content:center;box-sizing:border-box;border:2px solid ${metal};border-radius:50%;width:96px;height:96px;padding:12px;text-align:center;font-size:11px;font-weight:700;letter-spacing:1px;color:${BRAND.black}">${esc(fillTokens(block.label))}</div>`;
+    ? `<img src="${SEAL_ART[block.art]}" alt="${esc(fillTokens(block.label, data))}" width="96" height="96" style="display:block;width:96px;height:96px;object-fit:contain" />`
+    : `<div style="display:inline-flex;align-items:center;justify-content:center;box-sizing:border-box;border:2px solid ${metal};border-radius:50%;width:96px;height:96px;padding:12px;text-align:center;font-size:11px;font-weight:700;letter-spacing:1px;color:${BRAND.black}">${esc(fillTokens(block.label, data))}</div>`;
   return `<section style="padding:28px 48px 0">
   ${mark}
   <div style="font-size:10px;letter-spacing:2px;color:${BRAND.black};opacity:0.65;margin-top:8px">CTA CERTIFICATION · ${block.tier.toUpperCase()}</div>

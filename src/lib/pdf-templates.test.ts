@@ -179,6 +179,50 @@ describe("print legal name block", () => {
   });
 });
 
+describe("HTML preview values", () => {
+  it("fills every token-bearing block from the contract's own values, not the sample release", () => {
+    const template: PdfTemplate = {
+      name: "Values",
+      tier: "standard",
+      blocks: [
+        { id: newId(), kind: "meta", heading: "{{ARTIST_NAME}} details", rows: [{ id: newId(), label: "Name", value: "{{LEGAL_NAME}}" }] },
+        { id: newId(), kind: "clause", heading: "{{ARTIST_NAME}} term", body: "{{ARTIST_NAME}} signs as {{PRINT_LEGAL_NAME}}.", help: "{{DATE}}" },
+        { id: newId(), kind: "signatures", heading: "{{ARTIST_NAME}} signatures", parties: [{ id: newId(), label: "{{LEGAL_NAME}} · artist" }] },
+        { id: newId(), kind: "section", title: "{{ARTIST_NAME}} section", subtitle: "{{DATE}}" },
+        { id: newId(), kind: "fields", heading: "{{ARTIST_NAME}} fields", role: "recipient", fields: [{ id: newId(), label: "{{DATE}}", type: "text", role: "recipient" }] },
+        { id: newId(), kind: "checkboxes", heading: "{{ARTIST_NAME}} options", role: "recipient", mode: "single", options: [{ id: newId(), label: "{{DATE}}" }] },
+        { id: newId(), kind: "date", label: "{{DATE}}", value: "2026-11-21", format: "long" },
+        { id: newId(), kind: "seal", tier: "gold", label: "{{CERTIFICATION_TIER}}" },
+        { id: newId(), kind: "signature", heading: "{{ARTIST_NAME}} signature", role: "recipient", showDate: true },
+        { id: newId(), kind: "printName", label: "{{ARTIST_NAME}} printed name" },
+      ],
+    };
+    const html = templateToHtml(template, {
+      ARTIST_NAME: "Ada Lovelace",
+      LEGAL_NAME: "Ada Byron",
+      PRINT_LEGAL_NAME: "Ada Lovelace",
+      DATE: "21 November 2026",
+      CERTIFICATION_TIER: "Diamond",
+    });
+    expect(html).not.toContain("Karma Came");
+    for (const value of [
+      "Ada Lovelace details",
+      "Ada Byron",
+      "Ada Lovelace signs",
+      "Ada Lovelace signatures",
+      "21 November 2026",
+      "Ada Lovelace section",
+      "Ada Lovelace fields",
+      "Ada Lovelace options",
+      "Diamond",
+      "Ada Lovelace signature",
+      "Ada Lovelace printed name",
+    ]) {
+      expect(html).toContain(value);
+    }
+  });
+});
+
 describe("universal token scanner", () => {
   it("finds standalone and inline tokens once, in reading order", () => {
     const template: PdfTemplate = {
