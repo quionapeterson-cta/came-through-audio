@@ -1,5 +1,10 @@
 import { AtSign, Facebook, Instagram, Twitter, Youtube } from "lucide-react";
-import { SOCIAL_PLATFORMS, visibleSocials, type SocialLink, type SocialPlatform } from "@/lib/social";
+import {
+  SOCIAL_PLATFORMS,
+  visibleSocials,
+  type SocialLink,
+  type SocialPlatform,
+} from "@/lib/social";
 
 /** TikTok isn't in the icon set, so its own mark is drawn here. */
 function TikTokMark({ className }: { className?: string }) {
@@ -13,12 +18,18 @@ function TikTokMark({ className }: { className?: string }) {
 function Icon({ platform }: { platform: SocialPlatform }) {
   const cls = "h-5 w-5";
   switch (platform) {
-    case "instagram": return <Instagram className={cls} aria-hidden />;
-    case "tiktok": return <TikTokMark className={cls} />;
-    case "youtube": return <Youtube className={cls} aria-hidden />;
-    case "x": return <Twitter className={cls} aria-hidden />;
-    case "facebook": return <Facebook className={cls} aria-hidden />;
-    case "threads": return <AtSign className={cls} aria-hidden />;
+    case "instagram":
+      return <Instagram className={cls} aria-hidden />;
+    case "tiktok":
+      return <TikTokMark className={cls} />;
+    case "youtube":
+      return <Youtube className={cls} aria-hidden />;
+    case "x":
+      return <Twitter className={cls} aria-hidden />;
+    case "facebook":
+      return <Facebook className={cls} aria-hidden />;
+    case "threads":
+      return <AtSign className={cls} aria-hidden />;
   }
 }
 
@@ -32,8 +43,14 @@ export function SocialLinks({ links, className }: { links: SocialLink[]; classNa
         const label = SOCIAL_PLATFORMS.find((p) => p.platform === l.platform)?.label ?? l.platform;
         return (
           <li key={l.platform}>
-            <a href={l.url} target="_blank" rel="me noopener noreferrer" aria-label={label} title={l.url}
-              className="grid h-11 w-11 touch-manipulation place-items-center rounded-full border border-ink-border text-ink-foreground transition hover:border-brand-electric hover:text-brand-electric active:scale-95">
+            <a
+              href={l.url}
+              target="_blank"
+              rel="me noopener noreferrer"
+              aria-label={label}
+              title={l.url}
+              className="grid h-11 w-11 touch-manipulation place-items-center rounded-full border border-ink-border text-ink-foreground transition hover:border-brand-electric hover:text-brand-electric active:scale-95"
+            >
               <Icon platform={l.platform} />
             </a>
           </li>

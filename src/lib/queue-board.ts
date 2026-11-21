@@ -16,8 +16,10 @@ export const LOCK_LABEL: Record<StepLock, string> = {
 
 export const LOCK_COPY: Record<StepLock, string> = {
   open: "Anyone assigned this task can change the step.",
-  locked: "Only a super admin or department lead can change this step. Ask them, or request approval.",
-  approval: "Staff can propose a change; a super admin or department lead approves it before it applies.",
+  locked:
+    "Only a super admin or department lead can change this step. Ask them, or request approval.",
+  approval:
+    "Staff can propose a change; a super admin or department lead approves it before it applies.",
 };
 
 /**
@@ -29,7 +31,8 @@ export function canLockSteps(role: string): boolean {
 }
 
 /** The lock button on a step cycles open → locked → needs approval → open. */
-export const nextLock = (lock: StepLock): StepLock => (lock === "open" ? "locked" : lock === "locked" ? "approval" : "open");
+export const nextLock = (lock: StepLock): StepLock =>
+  lock === "open" ? "locked" : lock === "locked" ? "approval" : "open";
 
 /** A step's wording is the owner's to change while it is open; a locked or approval step sends a request instead. */
 export function canEditStep(o: { ownerId: string; me: string; lock: StepLock }): boolean {
@@ -58,18 +61,31 @@ export function queueColumns<T extends BoardItem>(items: T[], rows: BoardRow[]) 
  * The bar at the top fills as steps are ticked. Steps are the honest measure because a task can hold ten of them; when
  * nobody has written any steps yet the bar counts items instead, so it still moves on day one.
  */
-export function queueProgress(items: BoardItem[], rows: BoardRow[], steps: { item_ref: string; done_at: string | null }[]) {
+export function queueProgress(
+  items: BoardItem[],
+  rows: BoardRow[],
+  steps: { item_ref: string; done_at: string | null }[],
+) {
   const refs = new Set(items.map((i) => i.ref));
   const mine = steps.filter((s) => refs.has(s.item_ref));
   const doneSteps = mine.filter((s) => s.done_at).length;
   const doneItems = rows.filter((r) => r.state === "done" && refs.has(r.item_ref)).length;
   const total = mine.length ? mine.length : items.length;
   const done = mine.length ? doneSteps : Math.min(doneItems, total);
-  return { done, total, pct: total ? Math.round((done / total) * 100) : 0, unit: mine.length ? ("steps" as const) : ("items" as const) };
+  return {
+    done,
+    total,
+    pct: total ? Math.round((done / total) * 100) : 0,
+    unit: mine.length ? ("steps" as const) : ("items" as const),
+  };
 }
 
 /** Only today's work counts toward "completed": yesterday's wins should not keep the column busy. */
-export function completedToday<T extends BoardItem>(completed: T[], rows: BoardRow[], now = new Date()): T[] {
+export function completedToday<T extends BoardItem>(
+  completed: T[],
+  rows: BoardRow[],
+  now = new Date(),
+): T[] {
   const midnight = new Date(now).setHours(0, 0, 0, 0);
   return completed.filter((i) => {
     const at = rows.find((r) => r.item_ref === i.ref)?.updated_at;

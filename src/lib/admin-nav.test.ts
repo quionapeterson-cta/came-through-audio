@@ -11,7 +11,33 @@ describe("groupTabs", () => {
   });
 
   it("places every tab it is given exactly once", () => {
-    const values = ["queue", "team", "tasks", "calendar", "support", "scripts", "accounts", "reg", "splits", "purchases", "billing", "badges", "legal", "company", "ai", "pdf", "staff-plan", "handbook", "prices", "recognition", "holiday", "plans", "email", "homepage", "submissions"];
+    const values = [
+      "queue",
+      "team",
+      "tasks",
+      "calendar",
+      "support",
+      "scripts",
+      "accounts",
+      "reg",
+      "splits",
+      "purchases",
+      "billing",
+      "badges",
+      "legal",
+      "company",
+      "ai",
+      "pdf",
+      "staff-plan",
+      "handbook",
+      "prices",
+      "recognition",
+      "holiday",
+      "plans",
+      "email",
+      "homepage",
+      "submissions",
+    ];
     const groups = groupTabs(values.map(tab));
     const seen = groups.flatMap((g) => g.tabs.map((t) => t.value));
     expect(seen.sort()).toEqual([...values].sort());
@@ -20,7 +46,10 @@ describe("groupTabs", () => {
 
   it("keeps an unknown tab reachable in a More group instead of hiding it", () => {
     const groups = groupTabs([tab("queue"), tab("brand-new")]);
-    expect(groups.at(-1)).toMatchObject({ key: "more", tabs: [{ value: "brand-new", label: "BRAND-NEW" }] });
+    expect(groups.at(-1)).toMatchObject({
+      key: "more",
+      tabs: [{ value: "brand-new", label: "BRAND-NEW" }],
+    });
   });
 
   it("never invents a tab the caller cannot see", () => {

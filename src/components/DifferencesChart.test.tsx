@@ -9,27 +9,83 @@ import { emptyMetadata, type Metadata } from "@/lib/metadata";
  * code match still shows the field that actually disagrees — and a card whose sides are identical is never drawn.
  */
 const catTrack = (title: string, extra: Partial<Metadata>) => ({
-  id: "a", title, artist: "Karma Came", updatedAt: "",
-  metadata: { ...emptyMetadata(), title, artist: "Karma Came", writers: [], composers: [], publishers: [], ...extra },
+  id: "a",
+  title,
+  artist: "Karma Came",
+  updatedAt: "",
+  metadata: {
+    ...emptyMetadata(),
+    title,
+    artist: "Karma Came",
+    writers: [],
+    composers: [],
+    publishers: [],
+    ...extra,
+  },
 });
-const work = (extra: Record<string, unknown>) => ({ title: "", iswc: "", isrc: "", workId: "", writers: [], ...extra });
-const stored = (differences: unknown[]) => ({
-  byId: { soundexchange: { file: "sx.csv", result: { matched: [], clashes: [], notListed: [], extra: [], works: differences.length, differences } } },
-}) as never;
+const work = (extra: Record<string, unknown>) => ({
+  title: "",
+  iswc: "",
+  isrc: "",
+  workId: "",
+  writers: [],
+  ...extra,
+});
+const stored = (differences: unknown[]) =>
+  ({
+    byId: {
+      soundexchange: {
+        file: "sx.csv",
+        result: {
+          matched: [],
+          clashes: [],
+          notListed: [],
+          extra: [],
+          works: differences.length,
+          differences,
+        },
+      },
+    },
+  }) as never;
 
-const versionRow = () => buildDifferenceRows({
-  tracks: [catTrack("Bloodline", { isrc: "US-CTA-26-00111", version: "Radio edit", releaseDate: "2026-01-01" })],
-  stored: stored([{
-    trackId: "a", title: "Bloodline",
-    work: work({ title: "Bloodline (Clean Version)", coreTitle: "Bloodline", version: "Clean Version", artist: "KARMA CAME", isrc: "US-CTA-26-00111" }),
-    issues: ['The agency has version "Clean Version", your catalog has "Radio edit" — same title, two versions of the recording'],
-  }]),
-});
+const versionRow = () =>
+  buildDifferenceRows({
+    tracks: [
+      catTrack("Bloodline", {
+        isrc: "US-CTA-26-00111",
+        version: "Radio edit",
+        releaseDate: "2026-01-01",
+      }),
+    ],
+    stored: stored([
+      {
+        trackId: "a",
+        title: "Bloodline",
+        work: work({
+          title: "Bloodline (Clean Version)",
+          coreTitle: "Bloodline",
+          version: "Clean Version",
+          artist: "KARMA CAME",
+          isrc: "US-CTA-26-00111",
+        }),
+        issues: [
+          'The agency has version "Clean Version", your catalog has "Radio edit" — same title, two versions of the recording',
+        ],
+      },
+    ]),
+  });
 
 describe("DifferencesChart", () => {
-  const renderRow = (row: DifferenceRow) => render(
-    <DifferencesChart rows={[row]} onFixCatalog={vi.fn()} onAdopt={vi.fn()} onKeepBoth={vi.fn()} onSaveAlternate={() => {}} />,
-  );
+  const renderRow = (row: DifferenceRow) =>
+    render(
+      <DifferencesChart
+        rows={[row]}
+        onFixCatalog={vi.fn()}
+        onAdopt={vi.fn()}
+        onKeepBoth={vi.fn()}
+        onSaveAlternate={() => {}}
+      />,
+    );
 
   it("shows the version that disagrees, beside the title, artist and ISRC each side holds", () => {
     const row = versionRow()[0]!;
@@ -53,11 +109,16 @@ describe("DifferencesChart", () => {
   it("draws no card at all when the two sides read the same recording", () => {
     const rows = buildDifferenceRows({
       tracks: [catTrack("AM PM", { isrc: "QT6HX2656773", releaseDate: "2026-01-01" })],
-      stored: stored([{
-        trackId: "a", title: "AM PM",
-        work: work({ title: "AM PM", isrc: "QT6HX2656773" }),
-        issues: ['The agency calls it "AM PM", your catalog has "AM PM" — same recording, different name'],
-      }]),
+      stored: stored([
+        {
+          trackId: "a",
+          title: "AM PM",
+          work: work({ title: "AM PM", isrc: "QT6HX2656773" }),
+          issues: [
+            'The agency calls it "AM PM", your catalog has "AM PM" — same recording, different name',
+          ],
+        },
+      ]),
     });
     expect(rows).toHaveLength(0);
   });
@@ -66,9 +127,20 @@ describe("DifferencesChart", () => {
     const row = buildDifferenceRows({
       tracks: [catTrack("Big Swag", { isrc: "QZNMY2291720", releaseDate: "2026-01-01" })],
       stored: stored([
-        { trackId: "a", title: "Big Swag", work: work({ title: "Big Swag", isrc: "QZNMY2291720" }), issues: [] },
-        { trackId: "a", title: "Big Swag", work: work({ title: "Big Swag", isrc: "QZNMY2291727" }),
-          issues: ['The agency holds a second ISRC for "Big Swag": QZNMY2291727, beside QZNMY2291720 — one title, 2 codes'] },
+        {
+          trackId: "a",
+          title: "Big Swag",
+          work: work({ title: "Big Swag", isrc: "QZNMY2291720" }),
+          issues: [],
+        },
+        {
+          trackId: "a",
+          title: "Big Swag",
+          work: work({ title: "Big Swag", isrc: "QZNMY2291727" }),
+          issues: [
+            'The agency holds a second ISRC for "Big Swag": QZNMY2291727, beside QZNMY2291720 — one title, 2 codes',
+          ],
+        },
       ]),
     })[0]!;
     renderRow(row);
@@ -83,13 +155,38 @@ describe("DifferencesChart", () => {
 
   it("shows a title holding two codes as two versions, with Add Version and the agency's sign-in page", () => {
     const pairStored = {
-      byId: { soundexchange: { file: "sx.csv", result: { differences: [], clashes: [], notListed: [], extra: [], works: 2, matched: [
-        { trackId: "a", title: "AM PM", work: { title: "AM PM", iswc: "", isrc: "QT6HX2656773", workId: "", writers: [] }, issues: [] },
-        { trackId: "b", title: "AM PM", work: { title: "AM PM", iswc: "", isrc: "QT6HX2656774", workId: "", writers: [] }, issues: [] },
-      ] } } },
+      byId: {
+        soundexchange: {
+          file: "sx.csv",
+          result: {
+            differences: [],
+            clashes: [],
+            notListed: [],
+            extra: [],
+            works: 2,
+            matched: [
+              {
+                trackId: "a",
+                title: "AM PM",
+                work: { title: "AM PM", iswc: "", isrc: "QT6HX2656773", workId: "", writers: [] },
+                issues: [],
+              },
+              {
+                trackId: "b",
+                title: "AM PM",
+                work: { title: "AM PM", iswc: "", isrc: "QT6HX2656774", workId: "", writers: [] },
+                issues: [],
+              },
+            ],
+          },
+        },
+      },
     } as never;
     const rows = buildDifferenceRows({
-      tracks: [catTrack("AM PM", { isrc: "QT6HX2656773", releaseDate: "2026-01-01" }), { ...catTrack("AM PM", { isrc: "QT6HX2656774", releaseDate: "2026-01-01" }), id: "b" }],
+      tracks: [
+        catTrack("AM PM", { isrc: "QT6HX2656773", releaseDate: "2026-01-01" }),
+        { ...catTrack("AM PM", { isrc: "QT6HX2656774", releaseDate: "2026-01-01" }), id: "b" },
+      ],
       stored: pairStored,
     });
     const row = rows.find((r) => r.kind === "version-pair")!;
@@ -108,8 +205,18 @@ describe("DifferencesChart", () => {
     const rows = buildDifferenceRows({
       tracks: [catTrack("Bloodline", { isrc: "US-CTA-26-00111", releaseDate: "2026-01-01" })],
       stored: stored([
-        { trackId: "a", title: "Bloodline", work: work({ title: "Bloodline", isrc: "GBSMU2963386" }), issues: ["The agency has ISRC GBSMU2963386, your catalog has US-CTA-26-00111"] },
-        { trackId: "a", title: "Bloodline", work: work({ title: "Bloodline", isrc: "GBSMU2963386" }), issues: ["The agency lists a second ISRC for \"Bloodline\": QZ85M1938225"] },
+        {
+          trackId: "a",
+          title: "Bloodline",
+          work: work({ title: "Bloodline", isrc: "GBSMU2963386" }),
+          issues: ["The agency has ISRC GBSMU2963386, your catalog has US-CTA-26-00111"],
+        },
+        {
+          trackId: "a",
+          title: "Bloodline",
+          work: work({ title: "Bloodline", isrc: "GBSMU2963386" }),
+          issues: ['The agency lists a second ISRC for "Bloodline": QZ85M1938225'],
+        },
       ]),
     });
     const row = rows[0]!;
@@ -124,13 +231,56 @@ describe("DifferencesChart", () => {
     const rows = buildDifferenceRows({
       tracks: [catTrack("Bloodline", { iswc: "T1111111111" })],
       societies: [{ id: "bmi", name: "BMI" }],
-      stored: ({
-        byId: { bmi: { file: "bmi.csv", result: { matched: [], clashes: [], notListed: [], extra: [], works: 1, differences: [
-          { trackId: "a", title: "Bloodline", work: work({ title: "Bloodline", iswc: "T1234567890", writers: [{ name: "Ann Lee", share: 100 }] }), issues: ["The agency has ISWC T1234567890, your catalog has T1111111111"] },
-          { trackId: "a", title: "Bloodline", work: work({ title: "Bloodline", iswc: "T1234567890", writers: [{ name: "LEE ANN", share: 100 }] }), issues: ["The agency has LEE ANN where your catalog has Ann Lee — same writer, fix the spelling so both records match"] },
-          { trackId: "a", title: "Bloodline", work: work({ title: "Bloodline", iswc: "T1234567890", writers: [{ name: "STEPHENS CALVIN", share: 100 }] }), issues: ["The agency has STEPHENS CALVIN where your catalog has Calvin Stephens — same writer, fix the spelling so both records match"] },
-        ] } } },
-      }) as never,
+      stored: {
+        byId: {
+          bmi: {
+            file: "bmi.csv",
+            result: {
+              matched: [],
+              clashes: [],
+              notListed: [],
+              extra: [],
+              works: 1,
+              differences: [
+                {
+                  trackId: "a",
+                  title: "Bloodline",
+                  work: work({
+                    title: "Bloodline",
+                    iswc: "T1234567890",
+                    writers: [{ name: "Ann Lee", share: 100 }],
+                  }),
+                  issues: ["The agency has ISWC T1234567890, your catalog has T1111111111"],
+                },
+                {
+                  trackId: "a",
+                  title: "Bloodline",
+                  work: work({
+                    title: "Bloodline",
+                    iswc: "T1234567890",
+                    writers: [{ name: "LEE ANN", share: 100 }],
+                  }),
+                  issues: [
+                    "The agency has LEE ANN where your catalog has Ann Lee — same writer, fix the spelling so both records match",
+                  ],
+                },
+                {
+                  trackId: "a",
+                  title: "Bloodline",
+                  work: work({
+                    title: "Bloodline",
+                    iswc: "T1234567890",
+                    writers: [{ name: "STEPHENS CALVIN", share: 100 }],
+                  }),
+                  issues: [
+                    "The agency has STEPHENS CALVIN where your catalog has Calvin Stephens — same writer, fix the spelling so both records match",
+                  ],
+                },
+              ],
+            },
+          },
+        },
+      } as never,
     });
     renderRow(rows[0]!);
     const text = () => document.body.textContent ?? "";
@@ -150,25 +300,57 @@ describe("DifferencesChart", () => {
     // Two writers whose names differ from the registration are one rule, written once, with both cases named under it.
     expect(count("Match the writer's full registered name")).toBe(1);
     expect(text()).toContain("The agency has LEE ANN where your catalog has Ann Lee");
-    expect(text()).toContain("The agency has STEPHENS CALVIN where your catalog has Calvin Stephens");
+    expect(text()).toContain(
+      "The agency has STEPHENS CALVIN where your catalog has Calvin Stephens",
+    );
     // One check for the agency, however many differences the card lists, and one sign-in (founder, 2026-11-15): a title
     // check and an ISWC check were two BMI searches on one card.
     expect(count("Copy Writer Name & Check BMI")).toBe(1);
     expect(text()).not.toContain("Copy ISWC");
     expect(count("Sign in and register the work")).toBe(1);
     // The one thing members get wrong: the name has to match the registration exactly.
-    expect(count("Repertoire search matches the writer's name exactly as it was registered")).toBe(1);
+    expect(count("Repertoire search matches the writer's name exactly as it was registered")).toBe(
+      1,
+    );
   });
 
   it("offers to keep the agency's own name as an alternate title, beside the one check", () => {
     const rows = buildDifferenceRows({
-      tracks: [{ ...catTrack("24/7 Love", { iswc: "T9187370996" }), metadata: { ...catTrack("24/7 Love", {}).metadata, title: "24/7 Love", iswc: "T9187370996" } }],
+      tracks: [
+        {
+          ...catTrack("24/7 Love", { iswc: "T9187370996" }),
+          metadata: {
+            ...catTrack("24/7 Love", {}).metadata,
+            title: "24/7 Love",
+            iswc: "T9187370996",
+          },
+        },
+      ],
       societies: [{ id: "bmi", name: "BMI" }],
-      stored: ({
-        byId: { bmi: { file: "bmi.csv", result: { matched: [], clashes: [], notListed: [], extra: [], works: 1, differences: [
-          { trackId: "a", title: "24/7 Love", work: work({ title: "TWENTY FOUR SEVEN" }), issues: ['The agency registers this work as "TWENTY FOUR SEVEN", your catalog says "24/7 Love" — a work is found by its registered title, so the two names have to match or yours has to be saved as an alternate title'] },
-        ] } } },
-      }) as never,
+      stored: {
+        byId: {
+          bmi: {
+            file: "bmi.csv",
+            result: {
+              matched: [],
+              clashes: [],
+              notListed: [],
+              extra: [],
+              works: 1,
+              differences: [
+                {
+                  trackId: "a",
+                  title: "24/7 Love",
+                  work: work({ title: "TWENTY FOUR SEVEN" }),
+                  issues: [
+                    'The agency registers this work as "TWENTY FOUR SEVEN", your catalog says "24/7 Love" — a work is found by its registered title, so the two names have to match or yours has to be saved as an alternate title',
+                  ],
+                },
+              ],
+            },
+          },
+        },
+      } as never,
     });
     const row = rows[0]!;
     expect(row.kind).toBe("alternate-title");
@@ -186,11 +368,31 @@ describe("DifferencesChart", () => {
     const rows = buildDifferenceRows({
       tracks: [catTrack("24/7 Love", { iswc: "T9187370996" })],
       societies: [{ id: "bmi", name: "BMI" }],
-      stored: ({
-        byId: { bmi: { file: "bmi.csv", result: { matched: [], clashes: [], notListed: [], extra: [], works: 1, differences: [
-          { trackId: "a", title: "24/7 Love", work: work({ title: "TWENTY FOUR SEVEN", iswc: "T1234567890" }), issues: ['The agency registers this work as "TWENTY FOUR SEVEN", your catalog says "24/7 Love" — a work is found by its registered title, so the two names have to match or yours has to be saved as an alternate title', "The agency has ISWC T1234567890, your catalog has T9187370996"] },
-        ] } } },
-      }) as never,
+      stored: {
+        byId: {
+          bmi: {
+            file: "bmi.csv",
+            result: {
+              matched: [],
+              clashes: [],
+              notListed: [],
+              extra: [],
+              works: 1,
+              differences: [
+                {
+                  trackId: "a",
+                  title: "24/7 Love",
+                  work: work({ title: "TWENTY FOUR SEVEN", iswc: "T1234567890" }),
+                  issues: [
+                    'The agency registers this work as "TWENTY FOUR SEVEN", your catalog says "24/7 Love" — a work is found by its registered title, so the two names have to match or yours has to be saved as an alternate title',
+                    "The agency has ISWC T1234567890, your catalog has T9187370996",
+                  ],
+                },
+              ],
+            },
+          },
+        },
+      } as never,
     });
     renderRow(rows[0]!);
     const text = document.body.textContent ?? "";

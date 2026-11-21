@@ -1,7 +1,36 @@
 import { useEffect, useMemo, useState } from "react";
 import { confirmAction } from "@/components/ConfirmHost";
 import { FollowUpReminderButton } from "@/components/FollowUpReminderButton";
-import { ArrowUpRight, Sparkles, AlertTriangle, BookOpen, FolderOpen, Pin, PinOff, CalendarDays, Gift, Check, ChevronDown, ChevronLeft, Copy, Download, FileSignature, FlaskConical, Loader2, Lock, Mail, PenLine, Plus, RotateCcw, ScrollText, ShieldCheck, StickyNote, Trash2, Unlock, Vault } from "lucide-react";
+import {
+  ArrowUpRight,
+  Sparkles,
+  AlertTriangle,
+  BookOpen,
+  FolderOpen,
+  Pin,
+  PinOff,
+  CalendarDays,
+  Gift,
+  Check,
+  ChevronDown,
+  ChevronLeft,
+  Copy,
+  Download,
+  FileSignature,
+  FlaskConical,
+  Loader2,
+  Lock,
+  Mail,
+  PenLine,
+  Plus,
+  RotateCcw,
+  ScrollText,
+  ShieldCheck,
+  StickyNote,
+  Trash2,
+  Unlock,
+  Vault,
+} from "lucide-react";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -10,7 +39,13 @@ import { Button } from "@/components/ui/button";
 import { UpgradeLock } from "@/components/UpgradeLock";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { format, isValid, parse } from "date-fns";
@@ -19,11 +54,37 @@ import { InfoTip } from "@/components/InfoTip";
 import { Confetti } from "@/components/Confetti";
 import { StarSky } from "@/components/StarSky";
 import { listTracks, saveBlob, type CatalogTrack } from "@/lib/catalog";
-import { blocksToText, contractCardSummary, templateToHtml } from "@/lib/pdf-templates";
+import {
+  blocksToText,
+  contractCardSummary,
+  missingTokens,
+  templateTokens,
+  templateToHtml,
+  tokenLabel,
+  tokenValues,
+  withoutRepeatedLeadingTitle,
+} from "@/lib/pdf-templates";
 import { listContractTemplates, type SavedTemplate } from "@/lib/pdf-templates.functions";
 import { templateToPdfBytes } from "@/lib/pdf-template-pdf";
 import { getLaunchStatus } from "@/lib/gate.functions";
-import { BLUEPRINTS, CATEGORIES, COMPANY_BLUEPRINTS, dropPrelaunch, COMPANY_LEGAL_NAME, COMPANY_SIGNER_NAME, CONTRACT_DISCLAIMER, SIGNATURE_FONT, blueprintById, fillBlanks, georgiaLaw, initialFields, missingFields, renderContract, type Blueprint, type BlueprintField } from "@/lib/contract-blueprints";
+import {
+  BLUEPRINTS,
+  CATEGORIES,
+  COMPANY_BLUEPRINTS,
+  dropPrelaunch,
+  COMPANY_LEGAL_NAME,
+  COMPANY_SIGNER_NAME,
+  CONTRACT_DISCLAIMER,
+  SIGNATURE_FONT,
+  blueprintById,
+  fillBlanks,
+  georgiaLaw,
+  initialFields,
+  missingFields,
+  renderContract,
+  type Blueprint,
+  type BlueprintField,
+} from "@/lib/contract-blueprints";
 import { SIGNATURE_CSS } from "@/lib/signature-font";
 import { ownProIpi } from "@/lib/artist-profile";
 import { draftingRole, takesOwnRegistration } from "@/lib/contract-blueprints";
@@ -35,30 +96,94 @@ import type { GeneratedDraft } from "@/lib/contract-generator";
 import { sendContractInvite } from "@/lib/contracts-email.functions";
 import { companySignLink } from "@/lib/contract-sign.functions";
 import { grantLaunchGift, listLaunchGifts, type LaunchGiftRow } from "@/lib/launch-gift.functions";
-import { grantLifetimeAccess, listBetaFeedback, listBetaTesters, type BetaFeedbackRow, type BetaTesterRow } from "@/lib/beta.functions";
+import {
+  grantLifetimeAccess,
+  listBetaFeedback,
+  listBetaTesters,
+  type BetaFeedbackRow,
+  type BetaTesterRow,
+} from "@/lib/beta.functions";
 import { BETA_ITEMS, BETA_WINDOW } from "@/lib/beta";
 import { listOutreach, sendOutreach, type OutreachLogRow } from "@/lib/outreach.functions";
-import { OUTREACH_DAILY_LIMIT, OUTREACH_LABEL, outreachDraft, type OutreachFields, type OutreachKind } from "@/lib/outreach-emails";
+import {
+  OUTREACH_DAILY_LIMIT,
+  OUTREACH_LABEL,
+  outreachDraft,
+  type OutreachFields,
+  type OutreachKind,
+} from "@/lib/outreach-emails";
 import { TIER_LABEL } from "@/lib/plans";
 import { logBadgeEvent, requestBadgeCheck } from "@/lib/badge-events";
-import { BLUEPRINT_GUIDES, CHEAT_SHEETS, crossedSteps, linkFor, type Guide, type GuideLink, type GuideSection } from "@/lib/guides";
+import {
+  BLUEPRINT_GUIDES,
+  CHEAT_SHEETS,
+  crossedSteps,
+  linkFor,
+  type Guide,
+  type GuideLink,
+  type GuideSection,
+} from "@/lib/guides";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ProgressMeter, WorkingOn } from "@/components/WorkingOn";
 import { useWorkbench, type Workbench } from "@/hooks/useWorkbench";
-import { checklistProgress, customItems, defaultsFinished, dueLabel, guideIdOf, isOverdue, metaFor, nextRunId, runOf, runTitle, toggleChecked, workingOnCount, type WorkbenchEntry } from "@/lib/workbench";
+import {
+  checklistProgress,
+  customItems,
+  defaultsFinished,
+  dueLabel,
+  guideIdOf,
+  isOverdue,
+  metaFor,
+  nextRunId,
+  runOf,
+  runTitle,
+  toggleChecked,
+  workingOnCount,
+  type WorkbenchEntry,
+} from "@/lib/workbench";
 import { claimDefaultsSky } from "@/lib/celebrate";
 import {
-  approveContract, contractLink, deleteContract, emptyParty, getContract, isValidEmail, listContracts, listReceivedContracts, loadCompanyTemplates, reopenContract, requestContractChanges, resumeChangedContract, saveCompanyTemplate, saveContract, sendContract, signContract, submitForApproval,
-  type Contract, type ContractParty, type ReceivedContract,
+  approveContract,
+  contractLink,
+  deleteContract,
+  emptyParty,
+  getContract,
+  isValidEmail,
+  listContracts,
+  listReceivedContracts,
+  loadCompanyTemplates,
+  reopenContract,
+  requestContractChanges,
+  resumeChangedContract,
+  saveCompanyTemplate,
+  saveContract,
+  sendContract,
+  signContract,
+  submitForApproval,
+  type Contract,
+  type ContractParty,
+  type ReceivedContract,
 } from "@/lib/contracts";
 
-type View = "working" | "generator" | "blueprints" | "guides" | "contracts" | "vault" | "gifts" | "beta" | "outreach";
+type View =
+  | "working"
+  | "generator"
+  | "blueprints"
+  | "guides"
+  | "contracts"
+  | "vault"
+  | "gifts"
+  | "beta"
+  | "outreach";
 
 const STATUS: Record<Contract["status"], { label: string; className: string }> = {
   draft: { label: "Draft", className: "border-border text-muted-foreground" },
   // With the approver, or sent back with a note: neither can reach a signer yet (founder, 2026-11-16).
   pending_approval: { label: "Pending approval", className: "border-amber-500 text-amber-600" },
-  changes_requested: { label: "Changes requested", className: "border-destructive text-destructive" },
+  changes_requested: {
+    label: "Changes requested",
+    className: "border-destructive text-destructive",
+  },
   sent: { label: "Out for signature", className: "border-primary text-primary" },
   signed: { label: "Fully signed", className: "border-primary bg-primary text-primary-foreground" },
 };
@@ -68,11 +193,29 @@ const STATUS: Record<Contract["status"], { label: string; className: string }> =
  * request signatures, and keep fully signed contracts in the vault. Creating requires Catalog Management;
  * contracts other people send you are always visible, since signing is free.
  */
-export function Contracts({ userId, unlocked, onUpgrade, company = false, canApprove = false, onOpen }: { userId: string; unlocked: boolean; onUpgrade: () => void; /** Admin → Company Contracts: the LLC's own agreements and templates. */ company?: boolean; /** Super Admin: approves a lead's agreement, and the only one who may send a company agreement. */ canApprove?: boolean; /** Opens the screen a checklist item is done on (founder, 2026-11-06); absent in Admin, where there is no workspace. */ onOpen?: (link: GuideLink) => void }) {
+export function Contracts({
+  userId,
+  unlocked,
+  onUpgrade,
+  company = false,
+  canApprove = false,
+  onOpen,
+}: {
+  userId: string;
+  unlocked: boolean;
+  onUpgrade: () => void;
+  /** Admin → Company Contracts: the LLC's own agreements and templates. */ company?: boolean;
+  /** Super Admin: approves a lead's agreement, and the only one who may send a company agreement. */ canApprove?: boolean;
+  /** Opens the screen a checklist item is done on (founder, 2026-11-06); absent in Admin, where there is no workspace. */ onOpen?: (
+    link: GuideLink,
+  ) => void;
+}) {
   // A reminder's Open link can name a contract or a blueprint: land on the screen that shows it.
   const [view, setView] = useState<View>(() => {
     if (typeof window === "undefined") return "blueprints";
-    return new URLSearchParams(window.location.search).get("contractId") ? "contracts" : "blueprints";
+    return new URLSearchParams(window.location.search).get("contractId")
+      ? "contracts"
+      : "blueprints";
   });
   const [contracts, setContracts] = useState<Contract[]>([]);
   const [received, setReceived] = useState<ReceivedContract[]>([]);
@@ -83,31 +226,51 @@ export function Contracts({ userId, unlocked, onUpgrade, company = false, canApp
   /** Company templates with any wording a super admin saved in place of the original. */
   // After launch (site passcode removed) the pre-launch confidentiality section drops out of every company template.
   const [prelaunch, setPrelaunch] = useState(true);
-  useEffect(() => { if (company) getLaunchStatus().then((r) => setPrelaunch(r.prelaunch)).catch(() => {}); }, [company]);
-  const companyBlueprints = useMemo(() => COMPANY_BLUEPRINTS.map((bp) => {
-    const body = templates[bp.id] ? georgiaLaw(templates[bp.id]!) : bp.body;
-    return { ...bp, body: prelaunch ? body : dropPrelaunch(body) };
-  }), [templates, prelaunch]);
+  useEffect(() => {
+    if (company)
+      getLaunchStatus()
+        .then((r) => setPrelaunch(r.prelaunch))
+        .catch(() => {});
+  }, [company]);
+  const companyBlueprints = useMemo(
+    () =>
+      COMPANY_BLUEPRINTS.map((bp) => {
+        const body = templates[bp.id] ? georgiaLaw(templates[bp.id]!) : bp.body;
+        return { ...bp, body: prelaunch ? body : dropPrelaunch(body) };
+      }),
+    [templates, prelaunch],
+  );
   const workbench = useWorkbench(userId, !company);
   /** A blueprint opened from Working On: the Blueprints tab opens with it expanded. */
   const [focusGuide, setFocusGuide] = useState<string | undefined>(() => {
     if (typeof window === "undefined") return undefined;
     return new URLSearchParams(window.location.search).get("blueprintId") ?? undefined;
   });
-  const blueprintFor = (id: string) => (company ? companyBlueprints.find((b) => b.id === id) : undefined) ?? blueprintById(id);
+  const blueprintFor = (id: string) =>
+    (company ? companyBlueprints.find((b) => b.id === id) : undefined) ?? blueprintById(id);
 
   const load = async () => {
     setLoading(true);
-    if (company) void loadCompanyTemplates().then(setTemplates).catch(() => {});
+    if (company)
+      void loadCompanyTemplates()
+        .then(setTemplates)
+        .catch(() => {});
     // Everyone loads their own contracts: a $3.99 generated contract is theirs on any plan.
-    const [c, r, t] = await Promise.allSettled([listContracts({ company }), company ? Promise.resolve([]) : listReceivedContracts(), company ? Promise.resolve([]) : listTracks()]);
+    const [c, r, t] = await Promise.allSettled([
+      listContracts({ company }),
+      company ? Promise.resolve([]) : listReceivedContracts(),
+      company ? Promise.resolve([]) : listTracks(),
+    ]);
     if (c.status === "fulfilled") setContracts(c.value);
     if (r.status === "fulfilled") setReceived(r.value);
     if (t.status === "fulfilled") setTracks(t.value);
-    if (c.status === "rejected" || r.status === "rejected") toast.error("Could not load your contracts.");
+    if (c.status === "rejected" || r.status === "rejected")
+      toast.error("Could not load your contracts.");
     setLoading(false);
   };
-  useEffect(() => { void load(); }, [unlocked]);
+  useEffect(() => {
+    void load();
+  }, [unlocked]);
   // Back from paying for a generated contract: show My Contracts, where the webhook puts it within a few seconds.
   useEffect(() => {
     const q = new URLSearchParams(window.location.search);
@@ -120,7 +283,10 @@ export function Contracts({ userId, unlocked, onUpgrade, company = false, canApp
 
   /** A new contract from a blueprint; a Contract Generator draft adds the details and names it filled in. */
   const start = (bp: Blueprint, draft?: GeneratedDraft) => {
-    if (!unlocked) { onUpgrade(); return; }
+    if (!unlocked) {
+      onUpgrade();
+      return;
+    }
     // A deal that asks for the drafting member's own PRO affiliation or IPI number starts from their catalog defaults
     // (founder, 2026-11-09). A field naming the other party stays blank: the artist drafting a producer deal must not put
     // their own number where the producer's belongs.
@@ -132,10 +298,21 @@ export function Contracts({ userId, unlocked, onUpgrade, company = false, canApp
       fields[f.key] = f.key === "pro" ? own.pro : own.ipi;
     }
     setEditing({
-      blueprint: bp.id, title: bp.name, catalogId: null, fields, body: "", status: "draft", bodyHash: "",
-      sentAt: null, completedAt: null, updatedAt: new Date().toISOString(),
+      blueprint: bp.id,
+      title: bp.name,
+      catalogId: null,
+      fields,
+      body: "",
+      status: "draft",
+      bodyHash: "",
+      sentAt: null,
+      completedAt: null,
+      updatedAt: new Date().toISOString(),
       // Company agreements: the founder's printed name is pre-filled for the Company block (3.9).
-      parties: bp.roles.map((role, i) => ({ ...emptyParty(role, i === 0), legalName: draft?.parties[role] ?? (company && i === 0 ? COMPANY_SIGNER_NAME : "") })),
+      parties: bp.roles.map((role, i) => ({
+        ...emptyParty(role, i === 0),
+        legalName: draft?.parties[role] ?? (company && i === 0 ? COMPANY_SIGNER_NAME : ""),
+      })),
       ...(company && { isCompany: true }),
     });
   };
@@ -145,18 +322,46 @@ export function Contracts({ userId, unlocked, onUpgrade, company = false, canApp
    * contract now, so editing the template later never rewrites an agreement that was already sent.
    */
   const startTemplate = (t: SavedTemplate) => {
-    if (!unlocked) { onUpgrade(); return; }
+    if (!unlocked) {
+      onUpgrade();
+      return;
+    }
     setEditing({
-      blueprint: "custom", title: t.name, catalogId: null, fields: {}, body: blocksToText(t.blocks, t.name), status: "draft", bodyHash: "",
-      sentAt: null, completedAt: null, updatedAt: new Date().toISOString(),
-      parties: [{ ...emptyParty("Company", true), legalName: company ? COMPANY_SIGNER_NAME : "" }, emptyParty("Recipient")],
+      blueprint: "custom",
+      title: t.name,
+      catalogId: null,
+      fields: {},
+      body: blocksToText(t.blocks, t.name),
+      status: "draft",
+      bodyHash: "",
+      sentAt: null,
+      completedAt: null,
+      updatedAt: new Date().toISOString(),
+      parties: [
+        { ...emptyParty("Company", true), legalName: company ? COMPANY_SIGNER_NAME : "" },
+        emptyParty("Recipient"),
+      ],
       ...(company && { isCompany: true }),
-      blocks: t.blocks, templateId: t.id,
+      blocks: t.blocks,
+      templateId: t.id,
+      blockValues: {},
     });
   };
 
   if (editing) {
-    return <ContractEditor userId={userId} initial={editing} tracks={tracks} canApprove={canApprove} blueprint={blueprintFor(editing.blueprint)} onClose={() => { setEditing(null); void load(); }} />;
+    return (
+      <ContractEditor
+        userId={userId}
+        initial={editing}
+        tracks={tracks}
+        canApprove={canApprove}
+        blueprint={blueprintFor(editing.blueprint)}
+        onClose={() => {
+          setEditing(null);
+          void load();
+        }}
+      />
+    );
   }
 
   const open = contracts.filter((c) => c.status !== "signed");
@@ -164,100 +369,254 @@ export function Contracts({ userId, unlocked, onUpgrade, company = false, canApp
   // Company Contracts is the super admin's own (founder, 2026-11-17): the agreements, their templates, launch gifts,
   // beta testers and outreach are theirs alone.
   const companyViews = canApprove
-    ? [["blueprints", "Templates", ScrollText], ["contracts", "Drafts & out for signature", FileSignature], ["vault", "Signed", Vault], ["gifts", "Launch gifts", Gift], ["beta", "Beta testers", FlaskConical], ["outreach", "Outreach", Mail]] as const
-    : [["blueprints", "Templates", ScrollText], ["contracts", "Drafts & out for signature", FileSignature], ["vault", "Signed", Vault]] as const;
+    ? ([
+        ["blueprints", "Templates", ScrollText],
+        ["contracts", "Drafts & out for signature", FileSignature],
+        ["vault", "Signed", Vault],
+        ["gifts", "Launch gifts", Gift],
+        ["beta", "Beta testers", FlaskConical],
+        ["outreach", "Outreach", Mail],
+      ] as const)
+    : ([
+        ["blueprints", "Templates", ScrollText],
+        ["contracts", "Drafts & out for signature", FileSignature],
+        ["vault", "Signed", Vault],
+      ] as const);
   const workingCount = company ? 0 : workingOnCount(workbench.entries, contracts);
 
   return (
     <TooltipProvider delayDuration={100}>
       <div className="mt-6 space-y-6">
         <div className="flex flex-wrap items-center justify-center gap-3">
-          <div className="inline-flex flex-wrap justify-center gap-1 rounded-lg bg-muted p-1" role="tablist" aria-label="Contracts">
+          <div
+            className="inline-flex flex-wrap justify-center gap-1 rounded-lg bg-muted p-1"
+            role="tablist"
+            aria-label="Contracts"
+          >
             {(company
               ? companyViews
-              // The Contract Generator has its own tab, right before the contracts (founder, 2026-10-27).
-              // Working On closes the row, after the library and the vault (founder, 2026-11-06).
-              : [["generator", "Contract Generator", Sparkles], ["blueprints", "Contracts", ScrollText], ["guides", "Blueprints", BookOpen], ["contracts", "My Contracts", FileSignature], ["vault", "Signed Vault", Vault], ["working", "Working On", FolderOpen]] as const).map(([id, label, Icon]) => (
-              <Button key={id} role="tab" aria-selected={view === id} size="sm" variant={view === id ? "default" : "ghost"} onClick={() => { setFocusGuide(undefined); setView(id); }}>
-                <Icon className="h-4 w-4" />{label}
-                {id === "working" && workingCount > 0 && <span className="ml-1 opacity-70">{workingCount}</span>}
-                {id === "contracts" && open.length > 0 && <span className="ml-1 opacity-70">{open.length}</span>}
-                {id === "vault" && signed.length + received.length > 0 && <span className="ml-1 opacity-70">{signed.length + received.length}</span>}
+              : // The Contract Generator has its own tab, right before the contracts (founder, 2026-10-27).
+                // Working On closes the row, after the library and the vault (founder, 2026-11-06).
+                ([
+                  ["generator", "Contract Generator", Sparkles],
+                  ["blueprints", "Contracts", ScrollText],
+                  ["guides", "Blueprints", BookOpen],
+                  ["contracts", "My Contracts", FileSignature],
+                  ["vault", "Signed Vault", Vault],
+                  ["working", "Working On", FolderOpen],
+                ] as const)
+            ).map(([id, label, Icon]) => (
+              <Button
+                key={id}
+                role="tab"
+                aria-selected={view === id}
+                size="sm"
+                variant={view === id ? "default" : "ghost"}
+                onClick={() => {
+                  setFocusGuide(undefined);
+                  setView(id);
+                }}
+              >
+                <Icon className="h-4 w-4" />
+                {label}
+                {id === "working" && workingCount > 0 && (
+                  <span className="ml-1 opacity-70">{workingCount}</span>
+                )}
+                {id === "contracts" && open.length > 0 && (
+                  <span className="ml-1 opacity-70">{open.length}</span>
+                )}
+                {id === "vault" && signed.length + received.length > 0 && (
+                  <span className="ml-1 opacity-70">{signed.length + received.length}</span>
+                )}
               </Button>
             ))}
           </div>
-          {!unlocked && <Button size="sm" onClick={onUpgrade}><Lock className="h-4 w-4" />Unlock with Catalog Management</Button>}
+          {!unlocked && (
+            <Button size="sm" onClick={onUpgrade}>
+              <Lock className="h-4 w-4" />
+              Unlock with Catalog Management
+            </Button>
+          )}
         </div>
 
-        {(company ? view === "blueprints" : view === "generator") && <ContractGenerator blueprints={company ? companyBlueprints : BLUEPRINTS} unlocked={unlocked} company={company} onDraft={start} onUse={(bp) => start(bp)} />}
+        {(company ? view === "blueprints" : view === "generator") && (
+          <ContractGenerator
+            blueprints={company ? companyBlueprints : BLUEPRINTS}
+            unlocked={unlocked}
+            company={company}
+            onDraft={start}
+            onUse={(bp) => start(bp)}
+          />
+        )}
 
         {company && canApprove && view === "contracts" && (
           <ApprovalQueue contracts={contracts} onOpen={setEditing} onDone={() => void load()} />
         )}
 
-        {view === "blueprints" && (company
-          ? <CompanyTemplates blueprints={companyBlueprints} edited={templates} canEdit={canApprove} onUse={start} onUseTemplate={startTemplate} onSaved={() => void loadCompanyTemplates().then(setTemplates)} />
-          : <Blueprints unlocked={unlocked} onUse={start} />)}
+        {view === "blueprints" &&
+          (company ? (
+            <CompanyTemplates
+              blueprints={companyBlueprints}
+              edited={templates}
+              canEdit={canApprove}
+              onUse={start}
+              onUseTemplate={startTemplate}
+              onSaved={() => void loadCompanyTemplates().then(setTemplates)}
+            />
+          ) : (
+            <Blueprints unlocked={unlocked} onUse={start} />
+          ))}
 
         {view === "gifts" && company && <LaunchGifts />}
         {view === "beta" && company && <BetaTesters />}
         {view === "outreach" && company && <Outreach />}
 
-        {view === "guides" && (!unlocked
-          ? <UpgradeLock className="" title="Blueprints" tier="management" onUpgrade={onUpgrade} text="Step-by-step guides to running your music business, from royalty registration to touring, plus home recording cheat sheets for every genre." />
-          : <Guides workbench={workbench} focusId={focusGuide} onOpen={onOpen} />)}
+        {view === "guides" &&
+          (!unlocked ? (
+            <UpgradeLock
+              className=""
+              title="Blueprints"
+              tier="management"
+              onUpgrade={onUpgrade}
+              text="Step-by-step guides to running your music business, from royalty registration to touring, plus home recording cheat sheets for every genre."
+            />
+          ) : (
+            <Guides workbench={workbench} focusId={focusGuide} onOpen={onOpen} />
+          ))}
 
         {view === "working" && !company && (
-          <WorkingOn workbench={workbench} contracts={contracts} loading={loading}
-            statusBadge={(c) => <Badge variant="outline" className={STATUS[c.status].className}>{STATUS[c.status].label}</Badge>}
-            onOpenGuide={(g) => { logBadgeEvent("blueprint_read"); setFocusGuide(g.id); setView("guides"); }}
+          <WorkingOn
+            workbench={workbench}
+            contracts={contracts}
+            loading={loading}
+            statusBadge={(c) => (
+              <Badge variant="outline" className={STATUS[c.status].className}>
+                {STATUS[c.status].label}
+              </Badge>
+            )}
+            onOpenGuide={(g) => {
+              logBadgeEvent("blueprint_read");
+              setFocusGuide(g.id);
+              setView("guides");
+            }}
             onOpenContract={setEditing}
-            onBrowse={() => { setFocusGuide(undefined); setView("guides"); }} />
+            onBrowse={() => {
+              setFocusGuide(undefined);
+              setView("guides");
+            }}
+          />
         )}
 
-        {view === "contracts" && (!unlocked && !contracts.length ? (
-          <Locked onUpgrade={onUpgrade} text="Build custom contracts from any blueprint, send them for e-signature and keep every signed copy in your vault. Or draft one with the Contract Generator for $3.99." />
-        ) : loading ? <Spinner /> : (
-          <section className="space-y-4">
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <p className="text-sm text-muted-foreground">{company ? "Company agreements in progress and who still needs to sign. Start a new one from a template." : "Drafts and contracts waiting on signatures. Start a new one from any blueprint."}</p>
-              <Button onClick={() => setView(unlocked || company ? "blueprints" : "generator")}><Plus className="h-4 w-4" />{unlocked ? "New contract" : "Generate a contract"}</Button>
-            </div>
-            {open.length === 0
-              ? <Empty icon={FileSignature} text={company ? "No company agreements yet. Pick a template to send the first one." : "No contracts yet. Pick a blueprint to create your first one."} />
-              : <ContractList contracts={open} onOpen={setEditing} workbench={company ? undefined : workbench} />}
-          </section>
-        ))}
-
-        {view === "vault" && (loading ? <Spinner /> : (
-          <div className="space-y-6">
-            <section className="rounded-2xl border border-border p-5">
-              <h3 className="mb-3 text-sm font-bold uppercase tracking-widest text-primary">{company ? "Signed company agreements" : "Your signed contracts"} <span className="opacity-70">{signed.length}</span></h3>
-              {!unlocked && !signed.length ? <p className="text-sm text-muted-foreground">Contracts you create with Catalog Management or the Contract Generator are stored here once everyone signs.</p>
-                : signed.length === 0 ? <p className="text-sm text-muted-foreground">Fully signed contracts are locked and stored here, ready to download.</p>
-                : <ContractList contracts={signed} onOpen={setEditing} workbench={company ? undefined : workbench} />}
-            </section>
-            {!company && <section className="rounded-2xl border border-border p-5">
-              <h3 className="mb-3 text-sm font-bold uppercase tracking-widest text-primary">Sent to you <span className="opacity-70">{received.length}</span></h3>
-              {received.length === 0 ? <p className="text-sm text-muted-foreground">Contracts other people ask you to sign show up here.</p> : (
-                <ul className="grid gap-2">
-                  {received.map((r) => (
-                    <li key={r.party_id} className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border p-3">
-                      <div>
-                        <div className="font-semibold">{r.title}</div>
-                        <div className="text-xs text-muted-foreground">You sign as {r.role}{r.signed_at ? ` · signed ${new Date(r.signed_at).toLocaleDateString()}` : ""}</div>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Badge variant="outline" className={STATUS[r.status].className}>{STATUS[r.status].label}</Badge>
-                        <Button asChild size="sm" variant={r.signed_at ? "outline" : "default"}><a href={`/contract/${r.party_id}`}>{r.signed_at ? "View" : "Review & sign"}</a></Button>
-                      </div>
-                    </li>
-                  ))}
-                </ul>
+        {view === "contracts" &&
+          (!unlocked && !contracts.length ? (
+            <Locked
+              onUpgrade={onUpgrade}
+              text="Build custom contracts from any blueprint, send them for e-signature and keep every signed copy in your vault. Or draft one with the Contract Generator for $3.99."
+            />
+          ) : loading ? (
+            <Spinner />
+          ) : (
+            <section className="space-y-4">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <p className="text-sm text-muted-foreground">
+                  {company
+                    ? "Company agreements in progress and who still needs to sign. Start a new one from a template."
+                    : "Drafts and contracts waiting on signatures. Start a new one from any blueprint."}
+                </p>
+                <Button onClick={() => setView(unlocked || company ? "blueprints" : "generator")}>
+                  <Plus className="h-4 w-4" />
+                  {unlocked ? "New contract" : "Generate a contract"}
+                </Button>
+              </div>
+              {open.length === 0 ? (
+                <Empty
+                  icon={FileSignature}
+                  text={
+                    company
+                      ? "No company agreements yet. Pick a template to send the first one."
+                      : "No contracts yet. Pick a blueprint to create your first one."
+                  }
+                />
+              ) : (
+                <ContractList
+                  contracts={open}
+                  onOpen={setEditing}
+                  workbench={company ? undefined : workbench}
+                />
               )}
-            </section>}
-          </div>
-        ))}
+            </section>
+          ))}
+
+        {view === "vault" &&
+          (loading ? (
+            <Spinner />
+          ) : (
+            <div className="space-y-6">
+              <section className="rounded-2xl border border-border p-5">
+                <h3 className="mb-3 text-sm font-bold uppercase tracking-widest text-primary">
+                  {company ? "Signed company agreements" : "Your signed contracts"}{" "}
+                  <span className="opacity-70">{signed.length}</span>
+                </h3>
+                {!unlocked && !signed.length ? (
+                  <p className="text-sm text-muted-foreground">
+                    Contracts you create with Catalog Management or the Contract Generator are
+                    stored here once everyone signs.
+                  </p>
+                ) : signed.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">
+                    Fully signed contracts are locked and stored here, ready to download.
+                  </p>
+                ) : (
+                  <ContractList
+                    contracts={signed}
+                    onOpen={setEditing}
+                    workbench={company ? undefined : workbench}
+                  />
+                )}
+              </section>
+              {!company && (
+                <section className="rounded-2xl border border-border p-5">
+                  <h3 className="mb-3 text-sm font-bold uppercase tracking-widest text-primary">
+                    Sent to you <span className="opacity-70">{received.length}</span>
+                  </h3>
+                  {received.length === 0 ? (
+                    <p className="text-sm text-muted-foreground">
+                      Contracts other people ask you to sign show up here.
+                    </p>
+                  ) : (
+                    <ul className="grid gap-2">
+                      {received.map((r) => (
+                        <li
+                          key={r.party_id}
+                          className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border p-3"
+                        >
+                          <div>
+                            <div className="font-semibold">{r.title}</div>
+                            <div className="text-xs text-muted-foreground">
+                              You sign as {r.role}
+                              {r.signed_at
+                                ? ` · signed ${new Date(r.signed_at).toLocaleDateString()}`
+                                : ""}
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Badge variant="outline" className={STATUS[r.status].className}>
+                              {STATUS[r.status].label}
+                            </Badge>
+                            <Button asChild size="sm" variant={r.signed_at ? "outline" : "default"}>
+                              <a href={`/contract/${r.party_id}`}>
+                                {r.signed_at ? "View" : "Review & sign"}
+                              </a>
+                            </Button>
+                          </div>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </section>
+              )}
+            </div>
+          ))}
       </div>
     </TooltipProvider>
   );
@@ -269,13 +628,22 @@ function remembered(bp: Blueprint): Record<string, string> {
   const out: Record<string, string> = {};
   for (const key of REMEMBER) {
     if (!bp.fields.some((f) => f.key === key)) continue;
-    try { const v = localStorage.getItem(`cta.contract.${key}`); if (v) out[key] = v; } catch { /* storage blocked */ }
+    try {
+      const v = localStorage.getItem(`cta.contract.${key}`);
+      if (v) out[key] = v;
+    } catch {
+      /* storage blocked */
+    }
   }
   return out;
 }
 function remember(fields: Record<string, string>) {
   for (const key of REMEMBER) {
-    try { if (fields[key]?.trim()) localStorage.setItem(`cta.contract.${key}`, fields[key]!.trim()); } catch { /* storage blocked */ }
+    try {
+      if (fields[key]?.trim()) localStorage.setItem(`cta.contract.${key}`, fields[key]!.trim());
+    } catch {
+      /* storage blocked */
+    }
   }
 }
 
@@ -285,47 +653,138 @@ function Blueprints({ unlocked, onUse }: { unlocked: boolean; onUse: (bp: Bluepr
   const [query, setQuery] = useState("");
   const [openCats, setOpenCats] = useState<Set<string>>(new Set());
   const q = query.trim().toLowerCase();
-  const matches = (bp: Blueprint) => !q || `${bp.name} ${bp.summary} ${bp.category}`.toLowerCase().includes(q);
-  const toggle = (cat: string) => setOpenCats((x) => { const n = new Set(x); if (n.has(cat)) n.delete(cat); else n.add(cat); return n; });
+  const matches = (bp: Blueprint) =>
+    !q || `${bp.name} ${bp.summary} ${bp.category}`.toLowerCase().includes(q);
+  const toggle = (cat: string) =>
+    setOpenCats((x) => {
+      const n = new Set(x);
+      if (n.has(cat)) n.delete(cat);
+      else n.add(cat);
+      return n;
+    });
   return (
     <section className="space-y-4">
-      <p className="flex items-start gap-2 rounded-xl border border-border bg-muted/50 p-3 text-sm text-muted-foreground"><AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-primary" />{CONTRACT_DISCLAIMER}</p>
-      <Input aria-label="Search contracts" value={query} onChange={(e) => setQuery(e.target.value)} placeholder={`Search ${BLUEPRINTS.length} contracts, e.g. "producer", "photo", "DJ"`} />
+      <p className="flex items-start gap-2 rounded-xl border border-border bg-muted/50 p-3 text-sm text-muted-foreground">
+        <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+        {CONTRACT_DISCLAIMER}
+      </p>
+      <Input
+        aria-label="Search contracts"
+        value={query}
+        onChange={(e) => setQuery(e.target.value)}
+        placeholder={`Search ${BLUEPRINTS.length} contracts, e.g. "producer", "photo", "DJ"`}
+      />
       {CATEGORIES.map((cat) => {
         const list = BLUEPRINTS.filter((bp) => bp.category === cat && matches(bp));
         if (!list.length) return null;
         const open = !!q || openCats.has(cat);
         return (
           <div key={cat} className="rounded-2xl border border-border">
-            <button type="button" aria-expanded={open} onClick={() => toggle(cat)} className="flex w-full items-center gap-2 p-4 text-left">
+            <button
+              type="button"
+              aria-expanded={open}
+              onClick={() => toggle(cat)}
+              className="flex w-full items-center gap-2 p-4 text-left"
+            >
               <span className="text-lg font-bold">{cat}</span>
-              <span className="truncate text-sm text-muted-foreground">· {list.length} {list.length === 1 ? "contract" : "contracts"}</span>
-              <ChevronDown className={`ml-auto h-5 w-5 shrink-0 transition ${open ? "rotate-180" : ""}`} />
+              <span className="truncate text-sm text-muted-foreground">
+                · {list.length} {list.length === 1 ? "contract" : "contracts"}
+              </span>
+              <ChevronDown
+                className={`ml-auto h-5 w-5 shrink-0 transition ${open ? "rotate-180" : ""}`}
+              />
             </button>
             {open && (
               <div className="grid gap-4 p-4 pt-0 md:grid-cols-2">
                 {list.map((bp) => {
                   const expanded = openId === bp.id;
                   return (
-                    <article key={bp.id} className={`flex flex-col rounded-2xl border p-5 transition ${expanded ? "border-primary" : "border-border hover:border-primary"}`}>
+                    <article
+                      key={bp.id}
+                      className={`flex flex-col rounded-2xl border p-5 transition ${expanded ? "border-primary" : "border-border hover:border-primary"}`}
+                    >
                       <h3 className="text-lg font-bold">{bp.name}</h3>
                       <p className="mt-1 text-sm text-muted-foreground">{bp.summary}</p>
                       {expanded && (
                         <div className="mt-4 space-y-3 text-sm">
-                          <p><span className="font-semibold">When to use it: </span>{bp.whenToUse}</p>
+                          <p>
+                            <span className="font-semibold">When to use it: </span>
+                            {bp.whenToUse}
+                          </p>
                           <div>
                             <p className="font-semibold">Key terms to watch</p>
-                            <ul className="mt-1 space-y-1">{bp.keyTerms.map((k) => <li key={k} className="flex gap-2"><Check className="mt-0.5 h-4 w-4 shrink-0 text-primary" strokeWidth={3} /><span>{k}</span></li>)}</ul>
+                            <ul className="mt-1 space-y-1">
+                              {bp.keyTerms.map((k) => (
+                                <li key={k} className="flex gap-2">
+                                  <Check
+                                    className="mt-0.5 h-4 w-4 shrink-0 text-primary"
+                                    strokeWidth={3}
+                                  />
+                                  <span>{k}</span>
+                                </li>
+                              ))}
+                            </ul>
                           </div>
-                          <p className="text-muted-foreground">Parties: {bp.roles.join(" and ")} · You fill in: {bp.fields.filter((f) => f.required).map((f) => f.label).join(", ") || "nothing, it's all filled in"}</p>
+                          <p className="text-muted-foreground">
+                            Parties: {bp.roles.join(" and ")} · You fill in:{" "}
+                            {bp.fields
+                              .filter((f) => f.required)
+                              .map((f) => f.label)
+                              .join(", ") || "nothing, it's all filled in"}
+                          </p>
                         </div>
                       )}
                       <div className="mt-auto flex flex-wrap gap-2 pt-4">
-                        <Button size="sm" variant="ghost" onClick={() => { if (!expanded) logBadgeEvent("blueprint_read"); setOpenId(expanded ? undefined : bp.id); }}>{expanded ? "Hide guide" : "Read the guide"}</Button>
-                        <Button size="sm" variant="outline" onClick={() => unlocked ? void myBrand("contracts").then((brand) => downloadContractPdf({ title: bp.name, body: renderContract(bp, { ...initialFields(bp), effectiveDate: "" }, []), parties: bp.roles.map((role) => ({ name: "", role, signedAt: null })), status: "draft", brand })) : onUse(bp)}>
-                          {unlocked ? <Download className="h-4 w-4" /> : <Lock className="h-4 w-4" />}Blank PDF
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => {
+                            if (!expanded) logBadgeEvent("blueprint_read");
+                            setOpenId(expanded ? undefined : bp.id);
+                          }}
+                        >
+                          {expanded ? "Hide guide" : "Read the guide"}
                         </Button>
-                        <Button size="sm" onClick={() => onUse(bp)}>{unlocked ? <PenLine className="h-4 w-4" /> : <Lock className="h-4 w-4" />}Use this contract</Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() =>
+                            unlocked
+                              ? void myBrand("contracts").then((brand) =>
+                                  downloadContractPdf({
+                                    title: bp.name,
+                                    body: renderContract(
+                                      bp,
+                                      { ...initialFields(bp), effectiveDate: "" },
+                                      [],
+                                    ),
+                                    parties: bp.roles.map((role) => ({
+                                      name: "",
+                                      role,
+                                      signedAt: null,
+                                    })),
+                                    status: "draft",
+                                    brand,
+                                  }),
+                                )
+                              : onUse(bp)
+                          }
+                        >
+                          {unlocked ? (
+                            <Download className="h-4 w-4" />
+                          ) : (
+                            <Lock className="h-4 w-4" />
+                          )}
+                          Blank PDF
+                        </Button>
+                        <Button size="sm" onClick={() => onUse(bp)}>
+                          {unlocked ? (
+                            <PenLine className="h-4 w-4" />
+                          ) : (
+                            <Lock className="h-4 w-4" />
+                          )}
+                          Use this contract
+                        </Button>
                       </div>
                     </article>
                   );
@@ -335,7 +794,12 @@ function Blueprints({ unlocked, onUse }: { unlocked: boolean; onUse: (bp: Bluepr
           </div>
         );
       })}
-      {q && !BLUEPRINTS.some(matches) && <p className="text-sm text-muted-foreground">No contract matches "{query}". Try another word, or start from the closest one and customize the wording.</p>}
+      {q && !BLUEPRINTS.some(matches) && (
+        <p className="text-sm text-muted-foreground">
+          No contract matches "{query}". Try another word, or start from the closest one and
+          customize the wording.
+        </p>
+      )}
     </section>
   );
 }
@@ -348,18 +812,27 @@ function Pamphlet({ parts }: { parts: GuideSection[] }) {
   const [open, setOpen] = useState(false);
   return (
     <>
-      <button type="button" aria-haspopup="dialog" onClick={() => setOpen(true)}
-        className="flex w-full items-center gap-2 rounded-xl border border-border bg-muted/40 p-3 text-left transition hover:border-primary/50">
+      <button
+        type="button"
+        aria-haspopup="dialog"
+        onClick={() => setOpen(true)}
+        className="flex w-full items-center gap-2 rounded-xl border border-border bg-muted/40 p-3 text-left transition hover:border-primary/50"
+      >
         <BookOpen className="h-4 w-4 shrink-0 text-primary" />
         <span className="font-semibold">Open the pamphlet</span>
-        <span className="truncate text-xs text-muted-foreground">· {parts.length} sections of the detail behind the steps</span>
+        <span className="truncate text-xs text-muted-foreground">
+          · {parts.length} sections of the detail behind the steps
+        </span>
         <ChevronDown className="ml-auto h-4 w-4 shrink-0 -rotate-90" />
       </button>
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="max-h-[85vh] max-w-2xl overflow-y-auto">
           <DialogHeader>
             <DialogTitle>The pamphlet</DialogTitle>
-            <DialogDescription>{parts.length} sections of the detail behind the numbered steps. The downloaded PDF prints the same pages after the checklist.</DialogDescription>
+            <DialogDescription>
+              {parts.length} sections of the detail behind the numbered steps. The downloaded PDF
+              prints the same pages after the checklist.
+            </DialogDescription>
           </DialogHeader>
           <div className="space-y-5">
             {parts.map((p) => (
@@ -368,7 +841,9 @@ function Pamphlet({ parts }: { parts: GuideSection[] }) {
                 <p className="mt-1 text-muted-foreground">{p.body}</p>
                 {p.points?.length ? (
                   <ul className="mt-2 space-y-1.5 text-muted-foreground">
-                    {p.points.map((point) => <li key={point}>{point}</li>)}
+                    {p.points.map((point) => (
+                      <li key={point}>{point}</li>
+                    ))}
                   </ul>
                 ) : null}
               </section>
@@ -381,16 +856,42 @@ function Pamphlet({ parts }: { parts: GuideSection[] }) {
 }
 
 /** Blueprints (business guides) and home recording cheat sheets, in two titled, collapsible groups. */
-function Guides({ workbench, focusId, onOpen }: { workbench: Workbench; /** Opened from Working On: start with this one expanded. */ focusId?: string | undefined; onOpen?: ((link: GuideLink) => void) | undefined }) {
-  const groups: [string, string, Guide[]][] = [["Blueprints", `${BLUEPRINT_GUIDES.length} step by step guides to running your music business`, BLUEPRINT_GUIDES], ["Home recording cheat sheets", "Setup, genre tips and quick fixes", CHEAT_SHEETS]];
+function Guides({
+  workbench,
+  focusId,
+  onOpen,
+}: {
+  workbench: Workbench;
+  /** Opened from Working On: start with this one expanded. */ focusId?: string | undefined;
+  onOpen?: ((link: GuideLink) => void) | undefined;
+}) {
+  const groups: [string, string, Guide[]][] = [
+    [
+      "Blueprints",
+      `${BLUEPRINT_GUIDES.length} step by step guides to running your music business`,
+      BLUEPRINT_GUIDES,
+    ],
+    ["Home recording cheat sheets", "Setup, genre tips and quick fixes", CHEAT_SHEETS],
+  ];
   const [openId, setOpenId] = useState<string | undefined>(focusId);
   /** What the member is typing into "add your own item", per guide. */
   const [ownDraft, setOwnDraft] = useState<Record<string, string>>({});
-  const [openGroup, setOpenGroup] = useState<string | undefined>(() => groups.find(([, , list]) => list.some((g) => g.id === focusId))?.[0] ?? "Blueprints");
-  useEffect(() => { if (focusId) document.getElementById(`guide-${focusId}`)?.scrollIntoView({ behavior: "smooth", block: "start" }); }, [focusId]);
+  const [openGroup, setOpenGroup] = useState<string | undefined>(
+    () => groups.find(([, , list]) => list.some((g) => g.id === focusId))?.[0] ?? "Blueprints",
+  );
+  useEffect(() => {
+    if (focusId)
+      document
+        .getElementById(`guide-${focusId}`)
+        ?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }, [focusId]);
   const pin = (g: Guide, entryId: string, pinned: boolean) => {
     workbench.setPinned("blueprint", entryId, pinned);
-    toast.success(pinned ? `${g.title} saved to Working On.` : `${g.title} removed from Working On. Your ticks are kept.`);
+    toast.success(
+      pinned
+        ? `${g.title} saved to Working On.`
+        : `${g.title} removed from Working On. Your ticks are kept.`,
+    );
   };
   /**
    * Work the same blueprint again (founder, 2026-11-06): a new run gets its own ticks, notes and dates, and the run that
@@ -400,7 +901,11 @@ function Guides({ workbench, focusId, onOpen }: { workbench: Workbench; /** Open
     workbench.setPinned("blueprint", nextRunId(workbench.entries, g.id), true);
     setOpenId(g.id);
     toast.success(`New run of ${g.title} started. The finished one stays in Working On.`);
-    requestAnimationFrame(() => document.getElementById(`guide-${g.id}`)?.scrollIntoView({ behavior: "smooth", block: "start" }));
+    requestAnimationFrame(() =>
+      document
+        .getElementById(`guide-${g.id}`)
+        ?.scrollIntoView({ behavior: "smooth", block: "start" }),
+    );
   };
   /** The note or date editor open on one item, as `guideId:item`. */
   const [openNote, setOpenNote] = useState<string>();
@@ -420,7 +925,10 @@ function Guides({ workbench, focusId, onOpen }: { workbench: Workbench; /** Open
     const before = workbench.get("blueprint", entryId);
     const next = toggleChecked(before, item);
     workbench.toggle("blueprint", entryId, item);
-    if (checklistProgress(g.checklist, next.checked).finished && !checklistProgress(g.checklist, before.checked).finished) {
+    if (
+      checklistProgress(g.checklist, next.checked).finished &&
+      !checklistProgress(g.checklist, before.checked).finished
+    ) {
       setCelebrating(entryId);
       toast.success(`${g.title} complete — every box ticked.`);
       requestBadgeCheck();
@@ -428,7 +936,8 @@ function Guides({ workbench, focusId, onOpen }: { workbench: Workbench; /** Open
       const ticked: WorkbenchEntry[] = [...workbench.entries];
       const at = ticked.findIndex((e) => e.kind === "blueprint" && e.itemId === entryId);
       if (at >= 0) ticked[at] = { ...ticked[at]!, checked: next.checked };
-      else ticked.push({ kind: "blueprint", itemId: entryId, checked: next.checked, pinned: false });
+      else
+        ticked.push({ kind: "blueprint", itemId: entryId, checked: next.checked, pinned: false });
       // The sky names the moment itself since 2026-11-08, so it no longer waits for a song title to write in the stars.
       if (defaultsFinished(ticked) && claimDefaultsSky()) setSky(true);
     }
@@ -439,25 +948,49 @@ function Guides({ workbench, focusId, onOpen }: { workbench: Workbench; /** Open
    */
   const openLink = (link: GuideLink) => {
     if (link.where === "blueprint" && link.guideId) {
-      setOpenGroup(groups.find(([, , list]) => list.some((x) => x.id === link.guideId))?.[0] ?? "Blueprints");
+      setOpenGroup(
+        groups.find(([, , list]) => list.some((x) => x.id === link.guideId))?.[0] ?? "Blueprints",
+      );
       setOpenId(link.guideId);
-      document.getElementById(`guide-${link.guideId}`)?.scrollIntoView({ behavior: "smooth", block: "start" });
+      document
+        .getElementById(`guide-${link.guideId}`)
+        ?.scrollIntoView({ behavior: "smooth", block: "start" });
       return;
     }
     onOpen?.(link);
   };
   return (
     <section className="space-y-4">
-      {celebrating && <div className="pointer-events-none fixed inset-0 z-[85]"><Confetti /></div>}
-      {sky && <StarSky rocket message="Embed defaults & Catalog Defaults 100% Filled!" sub="Both of your defaults are set, so every master you embed and every song you catalog starts finished." onDone={() => setSky(false)} />}
+      {celebrating && (
+        <div className="pointer-events-none fixed inset-0 z-[85]">
+          <Confetti />
+        </div>
+      )}
+      {sky && (
+        <StarSky
+          rocket
+          message="Embed defaults & Catalog Defaults 100% Filled!"
+          sub="Both of your defaults are set, so every master you embed and every song you catalog starts finished."
+          onDone={() => setSky(false)}
+        />
+      )}
       {groups.map(([name, hint, list]) => {
         const open = openGroup === name;
         return (
           <div key={name} className="rounded-2xl border border-border">
-            <button type="button" aria-expanded={open} onClick={() => setOpenGroup(open ? undefined : name)} className="flex w-full items-center gap-2 p-4 text-left">
+            <button
+              type="button"
+              aria-expanded={open}
+              onClick={() => setOpenGroup(open ? undefined : name)}
+              className="flex w-full items-center gap-2 p-4 text-left"
+            >
               <span className="text-lg font-bold">{name}</span>
-              <span className="truncate text-sm text-muted-foreground">· {list.length} · {hint}</span>
-              <ChevronDown className={`ml-auto h-5 w-5 shrink-0 transition ${open ? "rotate-180" : ""}`} />
+              <span className="truncate text-sm text-muted-foreground">
+                · {list.length} · {hint}
+              </span>
+              <ChevronDown
+                className={`ml-auto h-5 w-5 shrink-0 transition ${open ? "rotate-180" : ""}`}
+              />
             </button>
             {open && (
               <div className="grid gap-4 p-4 pt-0 md:grid-cols-2">
@@ -465,33 +998,64 @@ function Guides({ workbench, focusId, onOpen }: { workbench: Workbench; /** Open
                   const expanded = openId === g.id;
                   // A blueprint can be worked more than once: each run is its own row of ticks and notes, and the card
                   // shows the newest one (founder, 2026-11-06). The finished runs stay in Working On.
-                  const runs = workbench.entries.filter((e) => e.kind === "blueprint" && guideIdOf(e.itemId) === g.id).sort((a, b) => runOf(a.itemId) - runOf(b.itemId));
+                  const runs = workbench.entries
+                    .filter((e) => e.kind === "blueprint" && guideIdOf(e.itemId) === g.id)
+                    .sort((a, b) => runOf(a.itemId) - runOf(b.itemId));
                   const entryId = runs.length ? runs[runs.length - 1]!.itemId : g.id;
                   const entry = workbench.get("blueprint", entryId);
                   const progress = checklistProgress(g.checklist, entry.checked);
                   // Only a blueprint's numbered steps are instructions to cross out; a cheat sheet's steps are tips.
-                  const crossed = g.kind === "Blueprint" ? crossedSteps(g, entry.checked) : new Set<number>();
+                  const crossed =
+                    g.kind === "Blueprint" ? crossedSteps(g, entry.checked) : new Set<number>();
                   return (
-                    <article key={g.id} id={`guide-${g.id}`} className={`flex scroll-mt-24 flex-col rounded-2xl border p-5 transition ${expanded ? "border-primary md:col-span-2" : "border-border hover:border-primary"}`}>
+                    <article
+                      key={g.id}
+                      id={`guide-${g.id}`}
+                      className={`flex scroll-mt-24 flex-col rounded-2xl border p-5 transition ${expanded ? "border-primary md:col-span-2" : "border-border hover:border-primary"}`}
+                    >
                       <h3 className="text-lg font-bold">{runTitle(g.title, runOf(entryId))}</h3>
                       <p className="mt-1 text-sm text-muted-foreground">{g.summary}</p>
-                      {progress.started && <ProgressMeter progress={progress} title={g.title} className="mt-3" />}
+                      {progress.started && (
+                        <ProgressMeter progress={progress} title={g.title} className="mt-3" />
+                      )}
                       {expanded && (
                         <div className="mt-4 space-y-4 text-sm">
                           <ol className="space-y-3">
                             {g.steps.map((st, i) => (
-                              <li key={st.title} className={`flex gap-3 ${crossed.has(i) ? "text-muted-foreground" : ""}`}>
-                                <span className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-bold ${crossed.has(i) ? "bg-muted text-muted-foreground" : "bg-primary text-primary-foreground"}`}>{crossed.has(i) ? <Check className="h-3.5 w-3.5" /> : i + 1}</span>
-                                <span className={crossed.has(i) ? "line-through decoration-primary/60" : ""}><span className="font-semibold">{st.title}. </span>{st.text}</span>
+                              <li
+                                key={st.title}
+                                className={`flex gap-3 ${crossed.has(i) ? "text-muted-foreground" : ""}`}
+                              >
+                                <span
+                                  className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-bold ${crossed.has(i) ? "bg-muted text-muted-foreground" : "bg-primary text-primary-foreground"}`}
+                                >
+                                  {crossed.has(i) ? <Check className="h-3.5 w-3.5" /> : i + 1}
+                                </span>
+                                <span
+                                  className={
+                                    crossed.has(i) ? "line-through decoration-primary/60" : ""
+                                  }
+                                >
+                                  <span className="font-semibold">{st.title}. </span>
+                                  {st.text}
+                                </span>
                               </li>
                             ))}
                           </ol>
                           {g.pamphlet?.length ? <Pamphlet parts={g.pamphlet} /> : null}
                           {g.checklist && (
                             <div>
-                              <p className="font-semibold" id={`guide-${g.id}-checklist`}>Checklist</p>
-                              <ul className="mt-1 grid gap-2 sm:grid-cols-2" aria-labelledby={`guide-${g.id}-checklist`}>
-                                {[...g.checklist.map((k) => ({ k, own: false })), ...customItems(entry).map((k) => ({ k, own: true }))].map(({ k, own }, i) => {
+                              <p className="font-semibold" id={`guide-${g.id}-checklist`}>
+                                Checklist
+                              </p>
+                              <ul
+                                className="mt-1 grid gap-2 sm:grid-cols-2"
+                                aria-labelledby={`guide-${g.id}-checklist`}
+                              >
+                                {[
+                                  ...g.checklist.map((k) => ({ k, own: false })),
+                                  ...customItems(entry).map((k) => ({ k, own: true })),
+                                ].map(({ k, own }, i) => {
                                   const cid = `guide-${g.id}-item-${i}`;
                                   const ticked = entry.checked.includes(k);
                                   const meta = metaFor(entry, k);
@@ -502,33 +1066,110 @@ function Guides({ workbench, focusId, onOpen }: { workbench: Workbench; /** Open
                                   return (
                                     <li key={k}>
                                       <div className="flex items-start gap-2">
-                                        <Checkbox id={cid} checked={ticked} onCheckedChange={() => tick(g, entryId, k)} className="mt-0.5" />
-                                        <label htmlFor={cid} className={`min-w-0 flex-1 cursor-pointer ${ticked ? "text-muted-foreground line-through" : ""}`}>{k}</label>
+                                        <Checkbox
+                                          id={cid}
+                                          checked={ticked}
+                                          onCheckedChange={() => tick(g, entryId, k)}
+                                          className="mt-0.5"
+                                        />
+                                        <label
+                                          htmlFor={cid}
+                                          className={`min-w-0 flex-1 cursor-pointer ${ticked ? "text-muted-foreground line-through" : ""}`}
+                                        >
+                                          {k}
+                                        </label>
                                         {link && (link.where === "blueprint" || onOpen) && (
-                                          <button type="button" onClick={() => openLink(link)} aria-label={link.label} title={link.label}
-                                            className="shrink-0 rounded p-0.5 text-muted-foreground hover:text-primary"><ArrowUpRight className="h-4 w-4" /></button>
+                                          <button
+                                            type="button"
+                                            onClick={() => openLink(link)}
+                                            aria-label={link.label}
+                                            title={link.label}
+                                            className="shrink-0 rounded p-0.5 text-muted-foreground hover:text-primary"
+                                          >
+                                            <ArrowUpRight className="h-4 w-4" />
+                                          </button>
                                         )}
-                                        <button type="button" aria-expanded={open} aria-label={`Note or due date for ${k}`} title="Add a note or a due date"
+                                        <button
+                                          type="button"
+                                          aria-expanded={open}
+                                          aria-label={`Note or due date for ${k}`}
+                                          title="Add a note or a due date"
                                           className={`shrink-0 rounded p-0.5 hover:text-foreground ${meta.note || meta.due ? "text-primary" : "text-muted-foreground"}`}
-                                          onClick={() => setOpenNote(open ? undefined : key)}><StickyNote className="h-4 w-4" /></button>
-                                        {own && <button type="button" aria-label={`Remove your item ${k}`} title="Remove your item"
-                                          className="shrink-0 rounded p-0.5 text-muted-foreground hover:text-destructive"
-                                          onClick={() => workbench.setCustom("blueprint", entryId, "")}><Trash2 className="h-4 w-4" /></button>}
+                                          onClick={() => setOpenNote(open ? undefined : key)}
+                                        >
+                                          <StickyNote className="h-4 w-4" />
+                                        </button>
+                                        {own && (
+                                          <button
+                                            type="button"
+                                            aria-label={`Remove your item ${k}`}
+                                            title="Remove your item"
+                                            className="shrink-0 rounded p-0.5 text-muted-foreground hover:text-destructive"
+                                            onClick={() =>
+                                              workbench.setCustom("blueprint", entryId, "")
+                                            }
+                                          >
+                                            <Trash2 className="h-4 w-4" />
+                                          </button>
+                                        )}
                                       </div>
                                       {!open && (meta.due || meta.note) && (
                                         <p className="ml-6 mt-1 text-xs text-muted-foreground">
-                                          {meta.due && <span className={late ? "font-semibold text-destructive" : "font-medium"}>{late ? "Overdue" : "Due"} {dueLabel(meta.due)}</span>}
+                                          {meta.due && (
+                                            <span
+                                              className={
+                                                late
+                                                  ? "font-semibold text-destructive"
+                                                  : "font-medium"
+                                              }
+                                            >
+                                              {late ? "Overdue" : "Due"} {dueLabel(meta.due)}
+                                            </span>
+                                          )}
                                           {meta.due && meta.note ? " · " : ""}
                                           {meta.note}
                                         </p>
                                       )}
                                       {open && (
                                         <div className="ml-6 mt-2 flex flex-wrap items-center gap-2">
-                                          <Input type="date" aria-label={`Due date for ${k}`} value={meta.due ?? ""} className="h-8 w-40"
-                                            onChange={(e) => workbench.setMeta("blueprint", entryId, k, { due: e.target.value })} />
-                                          <Input aria-label={`Note for ${k}`} defaultValue={meta.note ?? ""} placeholder="Note (optional)" maxLength={500} className="h-8 min-w-0 flex-1"
-                                            onBlur={(e) => workbench.setMeta("blueprint", entryId, k, { note: e.target.value })} />
-                                          {(meta.note || meta.due) && <Button size="sm" variant="ghost" onClick={() => { workbench.setMeta("blueprint", entryId, k, { note: "", due: "" }); setOpenNote(undefined); }}>Clear</Button>}
+                                          <Input
+                                            type="date"
+                                            aria-label={`Due date for ${k}`}
+                                            value={meta.due ?? ""}
+                                            className="h-8 w-40"
+                                            onChange={(e) =>
+                                              workbench.setMeta("blueprint", entryId, k, {
+                                                due: e.target.value,
+                                              })
+                                            }
+                                          />
+                                          <Input
+                                            aria-label={`Note for ${k}`}
+                                            defaultValue={meta.note ?? ""}
+                                            placeholder="Note (optional)"
+                                            maxLength={500}
+                                            className="h-8 min-w-0 flex-1"
+                                            onBlur={(e) =>
+                                              workbench.setMeta("blueprint", entryId, k, {
+                                                note: e.target.value,
+                                              })
+                                            }
+                                          />
+                                          {(meta.note || meta.due) && (
+                                            <Button
+                                              size="sm"
+                                              variant="ghost"
+                                              onClick={() => {
+                                                workbench.setMeta("blueprint", entryId, k, {
+                                                  note: "",
+                                                  due: "",
+                                                });
+                                                setOpenNote(undefined);
+                                              }}
+                                            >
+                                              Clear
+                                            </Button>
+                                          )}
                                         </div>
                                       )}
                                     </li>
@@ -538,10 +1179,32 @@ function Guides({ workbench, focusId, onOpen }: { workbench: Workbench; /** Open
                               {/* One item of their own, for the step this blueprint doesn't name (founder, 2026-11-06). */}
                               {!customItems(entry).length && (
                                 <div className="mt-2 flex flex-wrap items-center gap-2">
-                                  <Input value={ownDraft[g.id] ?? ""} onChange={(e) => setOwnDraft((d) => ({ ...d, [g.id]: e.target.value }))}
-                                    placeholder="Add your own item (one per blueprint)" maxLength={120} aria-label={`Add your own item to ${g.title}`} className="h-8 min-w-0 flex-1" />
-                                  <Button size="sm" variant="outline" disabled={!(ownDraft[g.id] ?? "").trim()}
-                                    onClick={() => { workbench.setCustom("blueprint", entryId, ownDraft[g.id] ?? ""); setOwnDraft((d) => ({ ...d, [g.id]: "" })); }}><Plus className="h-4 w-4" />Add</Button>
+                                  <Input
+                                    value={ownDraft[g.id] ?? ""}
+                                    onChange={(e) =>
+                                      setOwnDraft((d) => ({ ...d, [g.id]: e.target.value }))
+                                    }
+                                    placeholder="Add your own item (one per blueprint)"
+                                    maxLength={120}
+                                    aria-label={`Add your own item to ${g.title}`}
+                                    className="h-8 min-w-0 flex-1"
+                                  />
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    disabled={!(ownDraft[g.id] ?? "").trim()}
+                                    onClick={() => {
+                                      workbench.setCustom(
+                                        "blueprint",
+                                        entryId,
+                                        ownDraft[g.id] ?? "",
+                                      );
+                                      setOwnDraft((d) => ({ ...d, [g.id]: "" }));
+                                    }}
+                                  >
+                                    <Plus className="h-4 w-4" />
+                                    Add
+                                  </Button>
                                 </div>
                               )}
                             </div>
@@ -549,16 +1212,72 @@ function Guides({ workbench, focusId, onOpen }: { workbench: Workbench; /** Open
                         </div>
                       )}
                       <div className="mt-auto flex flex-wrap pt-4">
-                        <Button size="sm" variant="ghost" onClick={() => { if (!expanded) logBadgeEvent("blueprint_read"); setOpenId(expanded ? undefined : g.id); }}>{expanded ? "Close" : "Read it"}</Button>
-                        <Button size="sm" variant="ghost" onClick={() => void import("@/lib/guide-pdf").then((m) => m.downloadGuidePdf(g)).catch(() => toast.error("Couldn't make the PDF. Try again."))}><Download />PDF</Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => {
+                            if (!expanded) logBadgeEvent("blueprint_read");
+                            setOpenId(expanded ? undefined : g.id);
+                          }}
+                        >
+                          {expanded ? "Close" : "Read it"}
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() =>
+                            void import("@/lib/guide-pdf")
+                              .then((m) => m.downloadGuidePdf(g))
+                              .catch(() => toast.error("Couldn't make the PDF. Try again."))
+                          }
+                        >
+                          <Download />
+                          PDF
+                        </Button>
                         {g.kind === "Blueprint" && !!g.checklist?.length && progress.finished && (
-                          <Button size="sm" variant="outline" title="Work through the same blueprint again, keeping this run" onClick={() => startRun(g)}><RotateCcw />Start again</Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            title="Work through the same blueprint again, keeping this run"
+                            onClick={() => startRun(g)}
+                          >
+                            <RotateCcw />
+                            Start again
+                          </Button>
                         )}
                         {g.checklist?.some((k) => !entry.checked.includes(k)) && (
-                          <FollowUpReminderButton contextType="blueprint" contextId={g.id} blueprintId={g.id}
-                            stepTitle={g.checklist.find((k) => !entry.checked.includes(k))} subject={g.title} />
+                          <FollowUpReminderButton
+                            contextType="blueprint"
+                            contextId={g.id}
+                            blueprintId={g.id}
+                            stepTitle={g.checklist.find((k) => !entry.checked.includes(k))}
+                            subject={g.title}
+                          />
                         )}
-                        <Button size="sm" variant="ghost" aria-pressed={entry.pinned} title={entry.pinned ? "Remove from Working On" : "Save to Working On"} aria-label={entry.pinned ? `Remove ${runTitle(g.title, runOf(entryId))} from Working On` : `Save ${runTitle(g.title, runOf(entryId))} to Working On`} onClick={() => pin(g, entryId, !entry.pinned)}>{entry.pinned ? <><PinOff />Remove</> : <><Pin />Save</>}</Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          aria-pressed={entry.pinned}
+                          title={entry.pinned ? "Remove from Working On" : "Save to Working On"}
+                          aria-label={
+                            entry.pinned
+                              ? `Remove ${runTitle(g.title, runOf(entryId))} from Working On`
+                              : `Save ${runTitle(g.title, runOf(entryId))} to Working On`
+                          }
+                          onClick={() => pin(g, entryId, !entry.pinned)}
+                        >
+                          {entry.pinned ? (
+                            <>
+                              <PinOff />
+                              Remove
+                            </>
+                          ) : (
+                            <>
+                              <Pin />
+                              Save
+                            </>
+                          )}
+                        </Button>
                       </div>
                     </article>
                   );
@@ -587,46 +1306,137 @@ function BetaTesters() {
   const [rows, setRows] = useState<BetaTesterRow[]>();
   const [results, setResults] = useState<BetaFeedbackRow[]>([]);
   const [busy, setBusy] = useState<string>();
-  const load = () => Promise.all([
-    list().then(setRows).catch((e: Error) => { toast.error(e.message); setRows([]); }),
-    feedback().then(setResults).catch(() => setResults([])),
-  ]);
-  useEffect(() => { void load(); }, []);
+  const load = () =>
+    Promise.all([
+      list()
+        .then(setRows)
+        .catch((e: Error) => {
+          toast.error(e.message);
+          setRows([]);
+        }),
+      feedback()
+        .then(setResults)
+        .catch(() => setResults([])),
+    ]);
+  useEffect(() => {
+    void load();
+  }, []);
   const give = async (r: BetaTesterRow) => {
-    if (!await confirmAction({ title: `Give ${r.name} lifetime ${r.agreedTier}?`, text: `Free for life on the account for ${r.email}, as their Beta Tester Agreement says. We email them that it's active.`, action: "Grant lifetime access" })) return;
+    if (
+      !(await confirmAction({
+        title: `Give ${r.name} lifetime ${r.agreedTier}?`,
+        text: `Free for life on the account for ${r.email}, as their Beta Tester Agreement says. We email them that it's active.`,
+        action: "Grant lifetime access",
+      }))
+    )
+      return;
     setBusy(r.partyId);
-    try { const { tier } = await grant({ data: { partyId: r.partyId } }); toast.success(`${r.name} has lifetime ${tier}.`); await load(); }
-    catch (e) { toast.error(e instanceof Error ? e.message : "Couldn't grant lifetime access."); }
-    finally { setBusy(undefined); }
+    try {
+      const { tier } = await grant({ data: { partyId: r.partyId } });
+      toast.success(`${r.name} has lifetime ${tier}.`);
+      await load();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Couldn't grant lifetime access.");
+    } finally {
+      setBusy(undefined);
+    }
   };
   if (!rows) return <Spinner />;
-  const byItem = BETA_ITEMS.map((i) => ({ item: i, rows: results.filter((r) => r.itemId === i.id) })).filter((x) => x.rows.length);
+  const byItem = BETA_ITEMS.map((i) => ({
+    item: i,
+    rows: results.filter((r) => r.itemId === i.id),
+  })).filter((x) => x.rows.length);
   return (
     <section className="space-y-6">
-      <p className="text-sm text-muted-foreground">{BETA_WINDOW}. Send each tester the Beta Tester Agreement from Templates, then point them to <a href="/beta" className="font-semibold text-primary underline">/beta</a> for their checklist. Grant lifetime access once the beta is done.</p>
-      {rows.length === 0 ? <Empty icon={FlaskConical} text="No fully signed Beta Tester Agreements yet." /> : (
+      <p className="text-sm text-muted-foreground">
+        {BETA_WINDOW}. Send each tester the Beta Tester Agreement from Templates, then point them to{" "}
+        <a href="/beta" className="font-semibold text-primary underline">
+          /beta
+        </a>{" "}
+        for their checklist. Grant lifetime access once the beta is done.
+      </p>
+      {rows.length === 0 ? (
+        <Empty icon={FlaskConical} text="No fully signed Beta Tester Agreements yet." />
+      ) : (
         <ul className="grid gap-3">
           {rows.map((r) => (
-            <li key={r.partyId} className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border p-4">
-              <div className="min-w-0"><div className="truncate font-bold">{r.name}</div><div className="text-xs text-muted-foreground">{r.email} · agreed: {r.agreedTier}</div></div>
-              {r.lifetime ? <Badge variant="outline" className="border-primary text-primary">Lifetime {r.lifetime}</Badge>
-                : !r.hasAccount ? <span className="text-sm text-muted-foreground">No account with this email yet</span>
-                : <Button size="sm" disabled={busy === r.partyId} onClick={() => void give(r)}>{busy === r.partyId ? <Loader2 className="h-4 w-4 animate-spin" /> : <Gift className="h-4 w-4" />}Grant lifetime access</Button>}
+            <li
+              key={r.partyId}
+              className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border p-4"
+            >
+              <div className="min-w-0">
+                <div className="truncate font-bold">{r.name}</div>
+                <div className="text-xs text-muted-foreground">
+                  {r.email} · agreed: {r.agreedTier}
+                </div>
+              </div>
+              {r.lifetime ? (
+                <Badge variant="outline" className="border-primary text-primary">
+                  Lifetime {r.lifetime}
+                </Badge>
+              ) : !r.hasAccount ? (
+                <span className="text-sm text-muted-foreground">
+                  No account with this email yet
+                </span>
+              ) : (
+                <Button size="sm" disabled={busy === r.partyId} onClick={() => void give(r)}>
+                  {busy === r.partyId ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Gift className="h-4 w-4" />
+                  )}
+                  Grant lifetime access
+                </Button>
+              )}
             </li>
           ))}
         </ul>
       )}
       <div className="space-y-3">
-        <h3 className="text-sm font-bold uppercase tracking-widest text-primary">Checklist results</h3>
-        {byItem.length === 0 ? <p className="text-sm text-muted-foreground">Results show here as testers mark items on /beta.</p> : (
+        <h3 className="text-sm font-bold uppercase tracking-widest text-primary">
+          Checklist results
+        </h3>
+        {byItem.length === 0 ? (
+          <p className="text-sm text-muted-foreground">
+            Results show here as testers mark items on /beta.
+          </p>
+        ) : (
           <ul className="grid gap-3">
             {byItem.map(({ item, rows: rs }) => {
               const broken = rs.filter((r) => r.result === "broken");
               return (
-                <li key={item.id} className={`rounded-xl border p-4 ${broken.length ? "border-destructive" : "border-border"}`}>
-                  <div className="flex flex-wrap items-baseline justify-between gap-2"><span className="font-semibold">{item.title} <span className="text-xs font-normal text-muted-foreground">· {TIER_LABEL[item.tier]}</span></span>
-                    <span className="text-sm"><span className="text-primary">{rs.filter((r) => r.result === "worked").length} worked</span> · <span className={broken.length ? "font-semibold text-destructive" : "text-muted-foreground"}>{broken.length} didn't</span></span></div>
-                  {rs.filter((r) => r.note).map((r, k) => <p key={k} className="mt-2 text-sm"><span className="font-semibold">{r.name || r.email}:</span> {r.note}</p>)}
+                <li
+                  key={item.id}
+                  className={`rounded-xl border p-4 ${broken.length ? "border-destructive" : "border-border"}`}
+                >
+                  <div className="flex flex-wrap items-baseline justify-between gap-2">
+                    <span className="font-semibold">
+                      {item.title}{" "}
+                      <span className="text-xs font-normal text-muted-foreground">
+                        · {TIER_LABEL[item.tier]}
+                      </span>
+                    </span>
+                    <span className="text-sm">
+                      <span className="text-primary">
+                        {rs.filter((r) => r.result === "worked").length} worked
+                      </span>{" "}
+                      ·{" "}
+                      <span
+                        className={
+                          broken.length ? "font-semibold text-destructive" : "text-muted-foreground"
+                        }
+                      >
+                        {broken.length} didn't
+                      </span>
+                    </span>
+                  </div>
+                  {rs
+                    .filter((r) => r.note)
+                    .map((r, k) => (
+                      <p key={k} className="mt-2 text-sm">
+                        <span className="font-semibold">{r.name || r.email}:</span> {r.note}
+                      </p>
+                    ))}
                 </li>
               );
             })}
@@ -646,61 +1456,194 @@ function Outreach() {
   const history = useServerFn(listOutreach);
   const [kind, setKind] = useState<OutreachKind>("cold");
   const [to, setTo] = useState("");
-  const [f, setF] = useState<OutreachFields>({ name: "", company: "", line: "", demo: "", sender: COMPANY_SIGNER_NAME });
-  const [draft, setDraft] = useState(() => outreachDraft("cold", { name: "", company: "", line: "", demo: "", sender: COMPANY_SIGNER_NAME }));
+  const [f, setF] = useState<OutreachFields>({
+    name: "",
+    company: "",
+    line: "",
+    demo: "",
+    sender: COMPANY_SIGNER_NAME,
+  });
+  const [draft, setDraft] = useState(() =>
+    outreachDraft("cold", {
+      name: "",
+      company: "",
+      line: "",
+      demo: "",
+      sender: COMPANY_SIGNER_NAME,
+    }),
+  );
   const [edited, setEdited] = useState(false);
   const [busy, setBusy] = useState(false);
   const [sent, setSent] = useState<OutreachLogRow[]>();
-  const load = () => history().then(setSent).catch(() => setSent([]));
-  useEffect(() => { void load(); }, []);
+  const load = () =>
+    history()
+      .then(setSent)
+      .catch(() => setSent([]));
+  useEffect(() => {
+    void load();
+  }, []);
   // The draft follows the fields until it's edited by hand; "Start over" brings the template back.
-  useEffect(() => { if (!edited) setDraft(outreachDraft(kind, f)); }, [kind, f, edited]);
-  const set = (k: keyof OutreachFields) => (e: React.ChangeEvent<HTMLInputElement>) => setF((x) => ({ ...x, [k]: e.target.value }));
+  useEffect(() => {
+    if (!edited) setDraft(outreachDraft(kind, f));
+  }, [kind, f, edited]);
+  const set = (k: keyof OutreachFields) => (e: React.ChangeEvent<HTMLInputElement>) =>
+    setF((x) => ({ ...x, [k]: e.target.value }));
   const go = async () => {
-    if (!isValidEmail(to)) { toast.error("Add a valid email address."); return; }
-    if (!await confirmAction({ title: `Send to ${to}?`, text: `"${draft.subject}" from partnerships@camethroughaudio.com.`, action: "Send email" })) return;
+    if (!isValidEmail(to)) {
+      toast.error("Add a valid email address.");
+      return;
+    }
+    if (
+      !(await confirmAction({
+        title: `Send to ${to}?`,
+        text: `"${draft.subject}" from partnerships@camethroughaudio.com.`,
+        action: "Send email",
+      }))
+    )
+      return;
     setBusy(true);
     try {
-      await send({ data: { kind, to, name: f.name, company: f.company, subject: draft.subject, body: draft.body } });
+      await send({
+        data: {
+          kind,
+          to,
+          name: f.name,
+          company: f.company,
+          subject: draft.subject,
+          body: draft.body,
+        },
+      });
       toast.success(`Sent to ${to}.`);
-      setTo(""); setF((x) => ({ ...x, name: "", company: "", line: "", demo: "" })); setEdited(false);
+      setTo("");
+      setF((x) => ({ ...x, name: "", company: "", line: "", demo: "" }));
+      setEdited(false);
       await load();
-    } catch (e) { toast.error(e instanceof Error ? e.message : "Couldn't send the email."); }
-    finally { setBusy(false); }
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Couldn't send the email.");
+    } finally {
+      setBusy(false);
+    }
   };
-  const date = (d: string) => new Date(d).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+  const date = (d: string) =>
+    new Date(d).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
   return (
     <section className="space-y-6">
-      <p className="text-sm text-muted-foreground">Emails to labels, music-tech and music-creation companies, from partnerships@camethroughaudio.com (replies go there too). Each one has an opt-out line, as the law requires. Up to {OUTREACH_DAILY_LIMIT} a day. Send agreements from Templates.</p>
+      <p className="text-sm text-muted-foreground">
+        Emails to labels, music-tech and music-creation companies, from
+        partnerships@camethroughaudio.com (replies go there too). Each one has an opt-out line, as
+        the law requires. Up to {OUTREACH_DAILY_LIMIT} a day. Send agreements from Templates.
+      </p>
       <div className="flex flex-wrap gap-2">
-        {(Object.keys(OUTREACH_LABEL) as OutreachKind[]).map((k) => <Button key={k} size="sm" variant={kind === k ? "default" : "outline"} onClick={() => setKind(k)}>{OUTREACH_LABEL[k]}</Button>)}
+        {(Object.keys(OUTREACH_LABEL) as OutreachKind[]).map((k) => (
+          <Button
+            key={k}
+            size="sm"
+            variant={kind === k ? "default" : "outline"}
+            onClick={() => setKind(k)}
+          >
+            {OUTREACH_LABEL[k]}
+          </Button>
+        ))}
       </div>
       <div className="grid gap-4 sm:grid-cols-2">
-        <Field label="Their email" tip="Where the email goes."><Input type="email" value={to} onChange={(e) => setTo(e.target.value)} placeholder="name@company.com" /></Field>
-        <Field label="Their name" tip="First name is fine."><Input value={f.name} onChange={set("name")} /></Field>
-        <Field label="Company" tip="Their company's name."><Input value={f.company} onChange={set("company")} /></Field>
-        <Field label="Signed by" tip="Your name at the bottom."><Input value={f.sender} onChange={set("sender")} /></Field>
-        <Field label="A personal line (optional)" tip="One sentence about them, so it doesn't read like a mass email." wide><Input value={f.line} onChange={set("line")} placeholder="Loved your roster's new release on Friday." /></Field>
-        {kind === "demo" && <Field label="Demo time and link" tip="When and where the demo is." wide><Input value={f.demo} onChange={set("demo")} placeholder="Tuesday, Nov 17 at 1 PM Eastern · meeting link" /></Field>}
+        <Field label="Their email" tip="Where the email goes.">
+          <Input
+            type="email"
+            value={to}
+            onChange={(e) => setTo(e.target.value)}
+            placeholder="name@company.com"
+          />
+        </Field>
+        <Field label="Their name" tip="First name is fine.">
+          <Input value={f.name} onChange={set("name")} />
+        </Field>
+        <Field label="Company" tip="Their company's name.">
+          <Input value={f.company} onChange={set("company")} />
+        </Field>
+        <Field label="Signed by" tip="Your name at the bottom.">
+          <Input value={f.sender} onChange={set("sender")} />
+        </Field>
+        <Field
+          label="A personal line (optional)"
+          tip="One sentence about them, so it doesn't read like a mass email."
+          wide
+        >
+          <Input
+            value={f.line}
+            onChange={set("line")}
+            placeholder="Loved your roster's new release on Friday."
+          />
+        </Field>
+        {kind === "demo" && (
+          <Field label="Demo time and link" tip="When and where the demo is." wide>
+            <Input
+              value={f.demo}
+              onChange={set("demo")}
+              placeholder="Tuesday, Nov 17 at 1 PM Eastern · meeting link"
+            />
+          </Field>
+        )}
       </div>
       <div className="space-y-3 rounded-xl border border-border p-4">
-        <Field label="Subject" tip="Keep it honest: what the email is about." wide><Input value={draft.subject} onChange={(e) => { setEdited(true); setDraft((d) => ({ ...d, subject: e.target.value })); }} /></Field>
+        <Field label="Subject" tip="Keep it honest: what the email is about." wide>
+          <Input
+            value={draft.subject}
+            onChange={(e) => {
+              setEdited(true);
+              setDraft((d) => ({ ...d, subject: e.target.value }));
+            }}
+          />
+        </Field>
         <Field label="Message" tip="Edit anything before you send." wide>
-          <textarea rows={12} value={draft.body} onChange={(e) => { setEdited(true); setDraft((d) => ({ ...d, body: e.target.value })); }} className="w-full rounded-md border border-input bg-background p-3 text-sm leading-relaxed" />
+          <textarea
+            rows={12}
+            value={draft.body}
+            onChange={(e) => {
+              setEdited(true);
+              setDraft((d) => ({ ...d, body: e.target.value }));
+            }}
+            className="w-full rounded-md border border-input bg-background p-3 text-sm leading-relaxed"
+          />
         </Field>
         <div className="flex flex-wrap gap-2">
-          <Button disabled={busy || !to.trim()} onClick={() => void go()}>{busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Mail className="h-4 w-4" />}Send email</Button>
-          {edited && <Button variant="ghost" onClick={() => setEdited(false)}><RotateCcw className="h-4 w-4" />Start over from the template</Button>}
+          <Button disabled={busy || !to.trim()} onClick={() => void go()}>
+            {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Mail className="h-4 w-4" />}Send
+            email
+          </Button>
+          {edited && (
+            <Button variant="ghost" onClick={() => setEdited(false)}>
+              <RotateCcw className="h-4 w-4" />
+              Start over from the template
+            </Button>
+          )}
         </div>
       </div>
       <div className="space-y-2">
-        <h3 className="text-sm font-bold uppercase tracking-widest text-primary">Sent <span className="opacity-70">{sent?.length ?? 0}</span></h3>
-        {!sent ? <Spinner /> : sent.length === 0 ? <p className="text-sm text-muted-foreground">Nothing sent yet.</p> : (
+        <h3 className="text-sm font-bold uppercase tracking-widest text-primary">
+          Sent <span className="opacity-70">{sent?.length ?? 0}</span>
+        </h3>
+        {!sent ? (
+          <Spinner />
+        ) : sent.length === 0 ? (
+          <p className="text-sm text-muted-foreground">Nothing sent yet.</p>
+        ) : (
           <ul className="divide-y divide-border rounded-xl border border-border">
-            {sent.map((r, i) => <li key={i} className="flex flex-wrap items-center justify-between gap-2 px-4 py-2 text-sm">
-              <span className="min-w-0"><span className="font-semibold">{r.company || r.toName || r.toEmail}</span> <span className="text-muted-foreground">· {r.toEmail} · {r.subject}</span></span>
-              <span className="text-xs text-muted-foreground">{OUTREACH_LABEL[r.kind as OutreachKind] ?? r.kind} · {date(r.sentAt)}</span>
-            </li>)}
+            {sent.map((r, i) => (
+              <li
+                key={i}
+                className="flex flex-wrap items-center justify-between gap-2 px-4 py-2 text-sm"
+              >
+                <span className="min-w-0">
+                  <span className="font-semibold">{r.company || r.toName || r.toEmail}</span>{" "}
+                  <span className="text-muted-foreground">
+                    · {r.toEmail} · {r.subject}
+                  </span>
+                </span>
+                <span className="text-xs text-muted-foreground">
+                  {OUTREACH_LABEL[r.kind as OutreachKind] ?? r.kind} · {date(r.sentAt)}
+                </span>
+              </li>
+            ))}
           </ul>
         )}
       </div>
@@ -713,31 +1656,79 @@ function LaunchGifts() {
   const grant = useServerFn(grantLaunchGift);
   const [rows, setRows] = useState<LaunchGiftRow[]>();
   const [busy, setBusy] = useState<string>();
-  const load = () => list().then(setRows).catch((e: Error) => { toast.error(e.message); setRows([]); });
-  useEffect(() => { void load(); }, []);
+  const load = () =>
+    list()
+      .then(setRows)
+      .catch((e: Error) => {
+        toast.error(e.message);
+        setRows([]);
+      });
+  useEffect(() => {
+    void load();
+  }, []);
   const give = async (r: LaunchGiftRow) => {
-    if (!await confirmAction({ title: `Start ${r.name}'s launch gift?`, text: `Catalog Plus, free for 3 months starting today, on the account for ${r.email}. We email them that it's active. It ends on its own.`, action: "Grant gift" })) return;
+    if (
+      !(await confirmAction({
+        title: `Start ${r.name}'s launch gift?`,
+        text: `Catalog Plus, free for 3 months starting today, on the account for ${r.email}. We email them that it's active. It ends on its own.`,
+        action: "Grant gift",
+      }))
+    )
+      return;
     setBusy(r.partyId);
-    try { await grant({ data: { partyId: r.partyId } }); toast.success(`Launch gift started for ${r.name}.`); await load(); }
-    catch (e) { toast.error(e instanceof Error ? e.message : "Couldn't grant the gift."); }
-    finally { setBusy(undefined); }
+    try {
+      await grant({ data: { partyId: r.partyId } });
+      toast.success(`Launch gift started for ${r.name}.`);
+      await load();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Couldn't grant the gift.");
+    } finally {
+      setBusy(undefined);
+    }
   };
-  const date = (d: string) => new Date(d).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+  const date = (d: string) =>
+    new Date(d).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
   if (!rows) return <Spinner />;
   return (
     <section className="space-y-4">
-      <p className="text-sm text-muted-foreground">Everyone who fully signed a testimonial release gets 3 months of Catalog Plus free, starting on launch day (release §11). Grant each one on launch day. They need a free account with the email they signed with.</p>
-      {rows.length === 0 ? <Empty icon={Gift} text="No fully signed testimonial releases yet." /> : (
+      <p className="text-sm text-muted-foreground">
+        Everyone who fully signed a testimonial release gets 3 months of Catalog Plus free, starting
+        on launch day (release §11). Grant each one on launch day. They need a free account with the
+        email they signed with.
+      </p>
+      {rows.length === 0 ? (
+        <Empty icon={Gift} text="No fully signed testimonial releases yet." />
+      ) : (
         <ul className="grid gap-3">
           {rows.map((r) => (
-            <li key={r.partyId} className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border p-4">
+            <li
+              key={r.partyId}
+              className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border p-4"
+            >
               <div className="min-w-0">
                 <div className="truncate font-bold">{r.name}</div>
-                <div className="text-xs text-muted-foreground">{r.email} · signed {date(r.signedAt)} · {r.contractTitle}</div>
+                <div className="text-xs text-muted-foreground">
+                  {r.email} · signed {date(r.signedAt)} · {r.contractTitle}
+                </div>
               </div>
-              {r.giftEndsAt ? <Badge variant="outline" className="border-primary text-primary">Gift active · ends {date(r.giftEndsAt)}</Badge>
-                : !r.hasAccount ? <span className="text-sm text-muted-foreground">No account with this email yet</span>
-                : <Button size="sm" disabled={busy === r.partyId} onClick={() => void give(r)}>{busy === r.partyId ? <Loader2 className="h-4 w-4 animate-spin" /> : <Gift className="h-4 w-4" />}Grant launch gift</Button>}
+              {r.giftEndsAt ? (
+                <Badge variant="outline" className="border-primary text-primary">
+                  Gift active · ends {date(r.giftEndsAt)}
+                </Badge>
+              ) : !r.hasAccount ? (
+                <span className="text-sm text-muted-foreground">
+                  No account with this email yet
+                </span>
+              ) : (
+                <Button size="sm" disabled={busy === r.partyId} onClick={() => void give(r)}>
+                  {busy === r.partyId ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Gift className="h-4 w-4" />
+                  )}
+                  Grant launch gift
+                </Button>
+              )}
             </li>
           ))}
         </ul>
@@ -752,7 +1743,15 @@ function LaunchGifts() {
  * the wording first, or sends it back with a reason. Approval is what locks the text and opens signing, so this is the
  * only place a company agreement can leave the building.
  */
-function ApprovalQueue({ contracts, onOpen, onDone }: { contracts: Contract[]; onOpen: (c: Contract) => void; onDone: () => void }) {
+function ApprovalQueue({
+  contracts,
+  onOpen,
+  onDone,
+}: {
+  contracts: Contract[];
+  onOpen: (c: Contract) => void;
+  onDone: () => void;
+}) {
   const pending = contracts.filter((c) => c.status === "pending_approval");
   const [notes, setNotes] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState<string>();
@@ -768,30 +1767,72 @@ function ApprovalQueue({ contracts, onOpen, onDone }: { contracts: Contract[]; o
         toast.success("Sent back with your note.");
       }
       onDone();
-    } catch (e) { toast.error(e instanceof Error ? e.message : "Couldn't update the contract."); }
-    finally { setBusy(undefined); }
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Couldn't update the contract.");
+    } finally {
+      setBusy(undefined);
+    }
   };
   return (
     <section className="rounded-2xl border border-amber-500 bg-amber-500/5 p-5">
-      <h2 className="flex items-center gap-2 font-semibold"><ShieldCheck className="h-4 w-4 text-amber-600" />Waiting for your approval <span className="opacity-70">{pending.length}</span></h2>
-      <p className="mt-1 text-sm text-muted-foreground">Nothing here has reached a signer. Approving locks the wording exactly as it stands and opens the signing links; sending it back reopens the draft for whoever wrote it.</p>
+      <h2 className="flex items-center gap-2 font-semibold">
+        <ShieldCheck className="h-4 w-4 text-amber-600" />
+        Waiting for your approval <span className="opacity-70">{pending.length}</span>
+      </h2>
+      <p className="mt-1 text-sm text-muted-foreground">
+        Nothing here has reached a signer. Approving locks the wording exactly as it stands and
+        opens the signing links; sending it back reopens the draft for whoever wrote it.
+      </p>
       <ul className="mt-4 space-y-3">
         {pending.map((c) => (
           <li key={c.id} className="rounded-xl border border-border bg-background p-4">
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div>
-                <button className="text-left font-semibold hover:underline" onClick={() => onOpen(c)}>{c.title || "Untitled agreement"}</button>
-                <p className="text-xs text-muted-foreground">Submitted {c.submittedAt ? new Date(c.submittedAt).toLocaleString() : "just now"} · {c.parties.length} parties</p>
+                <button
+                  className="text-left font-semibold hover:underline"
+                  onClick={() => onOpen(c)}
+                >
+                  {c.title || "Untitled agreement"}
+                </button>
+                <p className="text-xs text-muted-foreground">
+                  Submitted {c.submittedAt ? new Date(c.submittedAt).toLocaleString() : "just now"}{" "}
+                  · {c.parties.length} parties
+                </p>
               </div>
               <div className="flex flex-wrap gap-2">
-                <Button size="sm" variant="outline" onClick={() => onOpen(c)}><PenLine className="h-4 w-4" />Read &amp; edit</Button>
-                <Button size="sm" disabled={busy === c.id} onClick={() => void run(c, "approve")}>{busy === c.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}Approve</Button>
-                <Button size="sm" variant="outline" disabled={busy === c.id || !(notes[c.id!] ?? "").trim()} onClick={() => void run(c, "changes")}>Send back</Button>
+                <Button size="sm" variant="outline" onClick={() => onOpen(c)}>
+                  <PenLine className="h-4 w-4" />
+                  Read &amp; edit
+                </Button>
+                <Button size="sm" disabled={busy === c.id} onClick={() => void run(c, "approve")}>
+                  {busy === c.id ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Check className="h-4 w-4" />
+                  )}
+                  Approve
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  disabled={busy === c.id || !(notes[c.id!] ?? "").trim()}
+                  onClick={() => void run(c, "changes")}
+                >
+                  Send back
+                </Button>
               </div>
             </div>
             <label className="mt-3 block space-y-1 text-xs text-muted-foreground">
-              <span>Note to the author (required to send it back, never printed on the agreement)</span>
-              <textarea className="min-h-16 w-full rounded-lg border border-border bg-background p-2 text-sm text-foreground" value={notes[c.id!] ?? ""} maxLength={2000} onChange={(e) => setNotes((n) => ({ ...n, [c.id!]: e.target.value }))} placeholder="Change the termination notice to 30 days." />
+              <span>
+                Note to the author (required to send it back, never printed on the agreement)
+              </span>
+              <textarea
+                className="min-h-16 w-full rounded-lg border border-border bg-background p-2 text-sm text-foreground"
+                value={notes[c.id!] ?? ""}
+                maxLength={2000}
+                onChange={(e) => setNotes((n) => ({ ...n, [c.id!]: e.target.value }))}
+                placeholder="Change the termination notice to 30 days."
+              />
             </label>
           </li>
         ))}
@@ -800,38 +1841,77 @@ function ApprovalQueue({ contracts, onOpen, onDone }: { contracts: Contract[]; o
   );
 }
 
-function CompanyTemplates({ blueprints, edited, canEdit, onUse, onUseTemplate, onSaved }: { blueprints: Blueprint[]; edited: Record<string, string>; /** Only a super admin may rewrite the company's own master wording (the server refuses anyone else). */ canEdit: boolean; onUse: (bp: Blueprint) => void; /** A saved Template Studio template, toggled into contracts by a lead. */ onUseTemplate: (t: SavedTemplate) => void; onSaved: () => void }) {
+function CompanyTemplates({
+  blueprints,
+  edited,
+  canEdit,
+  onUse,
+  onUseTemplate,
+  onSaved,
+}: {
+  blueprints: Blueprint[];
+  edited: Record<string, string>;
+  /** Only a super admin may rewrite the company's own master wording (the server refuses anyone else). */ canEdit: boolean;
+  onUse: (bp: Blueprint) => void;
+  /** A saved Template Studio template, toggled into contracts by a lead. */ onUseTemplate: (
+    t: SavedTemplate,
+  ) => void;
+  onSaved: () => void;
+}) {
   const [editingId, setEditingId] = useState<string>();
   const [text, setText] = useState("");
   const [custom, setCustom] = useState<SavedTemplate[]>([]);
   const listCustom = useServerFn(listContractTemplates);
-  useEffect(() => { void listCustom().then(setCustom).catch(() => setCustom([])); }, [listCustom]);
+  useEffect(() => {
+    void listCustom()
+      .then(setCustom)
+      .catch(() => setCustom([]));
+  }, [listCustom]);
   const [busy, setBusy] = useState(false);
   const original = (id: string) => COMPANY_BLUEPRINTS.find((b) => b.id === id)!.body;
   const save = async (id: string, body: string) => {
     setBusy(true);
     try {
       await saveCompanyTemplate(id, body === original(id) ? "" : body);
-      toast.success(body === original(id) ? "Template reset to the original wording." : "Template saved. New agreements from it use this wording.");
+      toast.success(
+        body === original(id)
+          ? "Template reset to the original wording."
+          : "Template saved. New agreements from it use this wording.",
+      );
       setEditingId(undefined);
       onSaved();
-    } catch (e) { toast.error(e instanceof Error ? e.message : "Couldn't save the template."); }
-    finally { setBusy(false); }
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Couldn't save the template.");
+    } finally {
+      setBusy(false);
+    }
   };
   return (
     <section className="space-y-4">
-      <p className="flex items-start gap-2 rounded-xl border border-border bg-muted/50 p-3 text-sm text-muted-foreground"><AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-primary" />{CONTRACT_DISCLAIMER}</p>
+      <p className="flex items-start gap-2 rounded-xl border border-border bg-muted/50 p-3 text-sm text-muted-foreground">
+        <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+        {CONTRACT_DISCLAIMER}
+      </p>
       {custom.length > 0 && (
         <div className="space-y-2">
-          <h3 className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Your templates <span className="opacity-70">{custom.length}</span></h3>
+          <h3 className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
+            Your templates <span className="opacity-70">{custom.length}</span>
+          </h3>
           <div className="grid gap-4 md:grid-cols-2">
             {custom.map((t) => (
               <article key={t.id} className="flex flex-col rounded-2xl border border-border p-5">
-                <p className="text-xs font-bold uppercase tracking-widest text-primary">From Template Studio</p>
+                <p className="text-xs font-bold uppercase tracking-widest text-primary">
+                  From Template Studio
+                </p>
                 <h3 className="mt-1 text-lg font-bold">{t.name}</h3>
-                <p className="mt-1 text-sm text-muted-foreground">{contractCardSummary(t.contractDescription, t.blocks.length)}</p>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  {contractCardSummary(t.contractDescription, t.blocks.length)}
+                </p>
                 <div className="mt-auto pt-4">
-                  <Button size="sm" onClick={() => onUseTemplate(t)}><FileSignature className="h-4 w-4" />Use this template</Button>
+                  <Button size="sm" onClick={() => onUseTemplate(t)}>
+                    <FileSignature className="h-4 w-4" />
+                    Use this template
+                  </Button>
                 </div>
               </article>
             ))}
@@ -840,25 +1920,97 @@ function CompanyTemplates({ blueprints, edited, canEdit, onUse, onUseTemplate, o
       )}
       <div className="grid gap-4 md:grid-cols-2">
         {blueprints.map((bp) => (
-          <article key={bp.id} className={`flex flex-col rounded-2xl border p-5 ${editingId === bp.id ? "border-primary md:col-span-2" : "border-border"}`}>
-            <p className="text-xs font-bold uppercase tracking-widest text-primary">Company{edited[bp.id] ? " · your wording" : ""}</p>
+          <article
+            key={bp.id}
+            className={`flex flex-col rounded-2xl border p-5 ${editingId === bp.id ? "border-primary md:col-span-2" : "border-border"}`}
+          >
+            <p className="text-xs font-bold uppercase tracking-widest text-primary">
+              Company{edited[bp.id] ? " · your wording" : ""}
+            </p>
             <h3 className="mt-1 text-lg font-bold">{bp.name}</h3>
             <p className="mt-1 text-sm text-muted-foreground">{bp.summary}</p>
             {editingId === bp.id ? (
               <div className="mt-4 space-y-3">
-                <p className="text-sm text-muted-foreground">Change the terms for every agreement you send from this template from now on. Agreements already sent keep the wording they were signed with. Keep the <code>{"{{…}}"}</code> blanks: they fill in from the details and parties.</p>
-                <textarea aria-label={`${bp.name} wording`} rows={22} value={text} onChange={(e) => setText(e.target.value)} className="w-full rounded-xl border border-input bg-background p-4 font-mono text-sm leading-relaxed" />
+                <p className="text-sm text-muted-foreground">
+                  Change the terms for every agreement you send from this template from now on.
+                  Agreements already sent keep the wording they were signed with. Keep the{" "}
+                  <code>{"{{…}}"}</code> blanks: they fill in from the details and parties.
+                </p>
+                <textarea
+                  aria-label={`${bp.name} wording`}
+                  rows={22}
+                  value={text}
+                  onChange={(e) => setText(e.target.value)}
+                  className="w-full rounded-xl border border-input bg-background p-4 font-mono text-sm leading-relaxed"
+                />
                 <div className="flex flex-wrap gap-2">
-                  <Button disabled={busy || !text.trim()} onClick={() => void save(bp.id, text)}>{busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}Save template</Button>
-                  <Button variant="ghost" disabled={busy} onClick={() => setEditingId(undefined)}>Cancel</Button>
-                  {edited[bp.id] && <Button variant="ghost" className="ml-auto" disabled={busy} onClick={async () => { if (await confirmAction({ title: "Go back to the original wording?", text: "Your changes to this template are removed. Agreements already sent don't change.", action: "Reset" })) void save(bp.id, original(bp.id)); }}><RotateCcw className="h-4 w-4" />Reset to original</Button>}
+                  <Button disabled={busy || !text.trim()} onClick={() => void save(bp.id, text)}>
+                    {busy ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Check className="h-4 w-4" />
+                    )}
+                    Save template
+                  </Button>
+                  <Button variant="ghost" disabled={busy} onClick={() => setEditingId(undefined)}>
+                    Cancel
+                  </Button>
+                  {edited[bp.id] && (
+                    <Button
+                      variant="ghost"
+                      className="ml-auto"
+                      disabled={busy}
+                      onClick={async () => {
+                        if (
+                          await confirmAction({
+                            title: "Go back to the original wording?",
+                            text: "Your changes to this template are removed. Agreements already sent don't change.",
+                            action: "Reset",
+                          })
+                        )
+                          void save(bp.id, original(bp.id));
+                      }}
+                    >
+                      <RotateCcw className="h-4 w-4" />
+                      Reset to original
+                    </Button>
+                  )}
                 </div>
               </div>
             ) : (
               <div className="mt-auto flex flex-wrap gap-2 pt-4">
-                {canEdit && <Button size="sm" variant="ghost" onClick={() => { setText(bp.body); setEditingId(bp.id); }}><PenLine className="h-4 w-4" />Edit terms</Button>}
-                <Button size="sm" variant="outline" onClick={() => void downloadContractPdf({ title: bp.name, body: renderContract(bp, { ...initialFields(bp), effectiveDate: "" }, []), parties: bp.roles.map((role) => ({ name: "", role, signedAt: null })), status: "draft" })}><Download className="h-4 w-4" />Blank PDF</Button>
-                <Button size="sm" onClick={() => onUse(bp)}><FileSignature className="h-4 w-4" />Use this template</Button>
+                {canEdit && (
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => {
+                      setText(bp.body);
+                      setEditingId(bp.id);
+                    }}
+                  >
+                    <PenLine className="h-4 w-4" />
+                    Edit terms
+                  </Button>
+                )}
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() =>
+                    void downloadContractPdf({
+                      title: bp.name,
+                      body: renderContract(bp, { ...initialFields(bp), effectiveDate: "" }, []),
+                      parties: bp.roles.map((role) => ({ name: "", role, signedAt: null })),
+                      status: "draft",
+                    })
+                  }
+                >
+                  <Download className="h-4 w-4" />
+                  Blank PDF
+                </Button>
+                <Button size="sm" onClick={() => onUse(bp)}>
+                  <FileSignature className="h-4 w-4" />
+                  Use this template
+                </Button>
               </div>
             )}
           </article>
@@ -868,13 +2020,26 @@ function CompanyTemplates({ blueprints, edited, canEdit, onUse, onUseTemplate, o
   );
 }
 
-const DATE_RANGES = [["7", "Last 7 days"], ["30", "Last 30 days"], ["365", "Last 12 months"], ["all", "Any date"]] as const;
+const DATE_RANGES = [
+  ["7", "Last 7 days"],
+  ["30", "Last 30 days"],
+  ["365", "Last 12 months"],
+  ["all", "Any date"],
+] as const;
 
 /**
  * Contracts alphabetical by title, grouped by type, with filters for type, date and a search over names, signers and
  * emails (BRANDING.md §3; Admin → Company Contracts, 3.9). Specific choices come first, "All" last.
  */
-function ContractList({ contracts, onOpen, workbench }: { contracts: Contract[]; onOpen: (c: Contract) => void; /** Members only: Save to Working On. */ workbench?: Workbench | undefined }) {
+function ContractList({
+  contracts,
+  onOpen,
+  workbench,
+}: {
+  contracts: Contract[];
+  onOpen: (c: Contract) => void;
+  /** Members only: Save to Working On. */ workbench?: Workbench | undefined;
+}) {
   const [q, setQ] = useState("");
   const [type, setType] = useState("all");
   const [range, setRange] = useState("all");
@@ -885,75 +2050,231 @@ function ContractList({ contracts, onOpen, workbench }: { contracts: Contract[];
   const shown = contracts
     .filter((c) => type === "all" || typeOf(c) === type)
     .filter((c) => !since || Date.parse(c.updatedAt) >= since)
-    .filter((c) => !needle || [c.title, typeOf(c), ...c.parties.flatMap((p) => [p.legalName, p.email, p.role])].some((v) => v?.toLowerCase().includes(needle)))
+    .filter(
+      (c) =>
+        !needle ||
+        [c.title, typeOf(c), ...c.parties.flatMap((p) => [p.legalName, p.email, p.role])].some(
+          (v) => v?.toLowerCase().includes(needle),
+        ),
+    )
     .sort((a, b) => a.title.localeCompare(b.title));
-  const groups = types.map((t) => [t, shown.filter((c) => typeOf(c) === t)] as const).filter(([, list]) => list.length);
+  const groups = types
+    .map((t) => [t, shown.filter((c) => typeOf(c) === t)] as const)
+    .filter(([, list]) => list.length);
   const select = "h-9 rounded-md border border-input bg-background px-2 text-sm";
   return (
     <div className="space-y-4">
       {contracts.length > 3 && (
         <div className="flex flex-wrap gap-2">
-          <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search by name, signer or email" aria-label="Search contracts" className="h-9 max-w-xs" />
-          <select aria-label="Contract type" value={type} onChange={(e) => setType(e.target.value)} className={select}>
-            {types.map((t) => <option key={t} value={t}>{t}</option>)}<option value="all">All types</option>
+          <Input
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+            placeholder="Search by name, signer or email"
+            aria-label="Search contracts"
+            className="h-9 max-w-xs"
+          />
+          <select
+            aria-label="Contract type"
+            value={type}
+            onChange={(e) => setType(e.target.value)}
+            className={select}
+          >
+            {types.map((t) => (
+              <option key={t} value={t}>
+                {t}
+              </option>
+            ))}
+            <option value="all">All types</option>
           </select>
-          <select aria-label="Date" value={range} onChange={(e) => setRange(e.target.value)} className={select}>
-            {DATE_RANGES.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+          <select
+            aria-label="Date"
+            value={range}
+            onChange={(e) => setRange(e.target.value)}
+            className={select}
+          >
+            {DATE_RANGES.map(([v, l]) => (
+              <option key={v} value={v}>
+                {l}
+              </option>
+            ))}
           </select>
         </div>
       )}
-      {groups.length === 0 ? <p className="text-sm text-muted-foreground">No contracts match. Try another search or filter.</p> : groups.map(([t, list]) => (
-        <div key={t} className="space-y-2">
-          {types.length > 1 && <h4 className="text-xs font-bold uppercase tracking-widest text-muted-foreground">{t} <span className="opacity-70">{list.length}</span></h4>}
-          <ul className="grid gap-3">{list.map((c) => <ContractRow key={c.id} contract={c} onOpen={() => onOpen(c)} workbench={workbench} />)}</ul>
-        </div>
-      ))}
+      {groups.length === 0 ? (
+        <p className="text-sm text-muted-foreground">
+          No contracts match. Try another search or filter.
+        </p>
+      ) : (
+        groups.map(([t, list]) => (
+          <div key={t} className="space-y-2">
+            {types.length > 1 && (
+              <h4 className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
+                {t} <span className="opacity-70">{list.length}</span>
+              </h4>
+            )}
+            <ul className="grid gap-3">
+              {list.map((c) => (
+                <ContractRow
+                  key={c.id}
+                  contract={c}
+                  onOpen={() => onOpen(c)}
+                  workbench={workbench}
+                />
+              ))}
+            </ul>
+          </div>
+        ))
+      )}
     </div>
   );
 }
 
-function ContractRow({ contract: c, onOpen, workbench }: { contract: Contract; onOpen: () => void; workbench?: Workbench | undefined }) {
+function ContractRow({
+  contract: c,
+  onOpen,
+  workbench,
+}: {
+  contract: Contract;
+  onOpen: () => void;
+  workbench?: Workbench | undefined;
+}) {
   const done = c.parties.filter((p) => p.signedAt).length;
   const pinned = !!c.id && !!workbench?.get("contract", c.id).pinned;
   return (
-    <li id={`contract-${c.id}`} className="scroll-mt-24 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border p-4 transition hover:border-primary">
+    <li
+      id={`contract-${c.id}`}
+      className="scroll-mt-24 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border p-4 transition hover:border-primary"
+    >
       <div className="min-w-0">
         <div className="truncate font-bold">{c.title}</div>
-        <div className="text-xs text-muted-foreground">{blueprintById(c.blueprint)?.name ?? "Custom"} · {c.parties.map((p) => p.legalName || p.role).join(", ")} · {new Date(c.completedAt ?? c.updatedAt).toLocaleDateString()}</div>
+        <div className="text-xs text-muted-foreground">
+          {blueprintById(c.blueprint)?.name ?? "Custom"} ·{" "}
+          {c.parties.map((p) => p.legalName || p.role).join(", ")} ·{" "}
+          {new Date(c.completedAt ?? c.updatedAt).toLocaleDateString()}
+        </div>
       </div>
       <div className="flex flex-wrap items-center gap-2">
-        {c.status !== "draft" && <span className="text-xs text-muted-foreground">{done}/{c.parties.length} signed</span>}
-        <FollowUpReminderButton contextType="contract" contextId={c.id ?? c.title} contractId={c.id} subject={c.title} />
-        <Badge variant="outline" className={STATUS[c.status].className}>{STATUS[c.status].label}</Badge>
+        {c.status !== "draft" && (
+          <span className="text-xs text-muted-foreground">
+            {done}/{c.parties.length} signed
+          </span>
+        )}
+        <FollowUpReminderButton
+          contextType="contract"
+          contextId={c.id ?? c.title}
+          contractId={c.id}
+          subject={c.title}
+        />
+        <Badge variant="outline" className={STATUS[c.status].className}>
+          {STATUS[c.status].label}
+        </Badge>
         {workbench && c.id && (
-          <Button size="sm" variant="ghost" aria-pressed={pinned} title={pinned ? "Remove from Working On" : "Save to Working On"} aria-label={pinned ? `Remove ${c.title} from Working On` : `Save ${c.title} to Working On`} onClick={() => workbench.setPinned("contract", c.id!, !pinned)}>
+          <Button
+            size="sm"
+            variant="ghost"
+            aria-pressed={pinned}
+            title={pinned ? "Remove from Working On" : "Save to Working On"}
+            aria-label={
+              pinned ? `Remove ${c.title} from Working On` : `Save ${c.title} to Working On`
+            }
+            onClick={() => workbench.setPinned("contract", c.id!, !pinned)}
+          >
             {pinned ? <PinOff className="h-4 w-4" /> : <Pin className="h-4 w-4" />}
           </Button>
         )}
-        <Button size="sm" variant="outline" onClick={onOpen}>{c.status === "draft" ? "Edit" : "Open"}</Button>
+        <Button size="sm" variant="outline" onClick={onOpen}>
+          {c.status === "draft" ? "Edit" : "Open"}
+        </Button>
       </div>
     </li>
   );
 }
 
-function ContractEditor({ userId, initial, tracks, blueprint, canApprove = false, onClose }: { userId: string; initial: Contract; tracks: CatalogTrack[]; blueprint?: Blueprint | undefined; canApprove?: boolean; onClose: () => void }) {
+function ContractEditor({
+  userId,
+  initial,
+  tracks,
+  blueprint,
+  canApprove = false,
+  onClose,
+}: {
+  userId: string;
+  initial: Contract;
+  tracks: CatalogTrack[];
+  blueprint?: Blueprint | undefined;
+  canApprove?: boolean;
+  onClose: () => void;
+}) {
   // A block template's agreement has no blueprint of its own: its blocks are the whole document (founder, 2026-11-16).
   const fromBlocks = !!initial.blocks?.length;
-  const bp: Blueprint = blueprint ?? (fromBlocks
-    ? { id: "custom", name: initial.title || "Custom agreement", category: COMPANY_BLUEPRINTS[0]!.category, summary: "", whenToUse: "", keyTerms: [], roles: ["Company", "Recipient"], fields: [], body: "" }
-    : blueprintById(initial.blueprint) ?? BLUEPRINTS[0]!);
-  useEffect(() => { loadWebFont(SIGNATURE_FONT); }, []);
+  const bp: Blueprint =
+    blueprint ??
+    (fromBlocks
+      ? {
+          id: "custom",
+          name: initial.title || "Custom agreement",
+          category: COMPANY_BLUEPRINTS[0]!.category,
+          summary: "",
+          whenToUse: "",
+          keyTerms: [],
+          roles: ["Company", "Recipient"],
+          fields: [],
+          body: "",
+        }
+      : (blueprintById(initial.blueprint) ?? BLUEPRINTS[0]!));
+  useEffect(() => {
+    loadWebFont(SIGNATURE_FONT);
+  }, []);
   const [c, setC] = useState<Contract>(initial);
   // Their Branding Kits, for picking which one this contract uses (founder, 2026-10-27).
   const [kits, setKits] = useState<{ id: string; name: string }[]>([]);
   useEffect(() => {
     if (initial.isCompany) return;
-    void supabase.from("brand_kits" as never).select("id, name").eq("user_id", userId).order("created_at" as never, { ascending: true })
-      .then(({ data }) => setKits(((data ?? []) as { id: string; name: string }[]).filter((k) => k.id)));
+    void supabase
+      .from("brand_kits" as never)
+      .select("id, name")
+      .eq("user_id", userId)
+      .order("created_at" as never, { ascending: true })
+      .then(({ data }) =>
+        setKits(((data ?? []) as { id: string; name: string }[]).filter((k) => k.id)),
+      );
   }, [userId, initial.isCompany]);
-  const [customized, setCustomized] = useState(!!initial.body && initial.body !== renderContract(bp, initial.fields, initial.parties));
+  const [customized, setCustomized] = useState(
+    !!initial.body && initial.body !== renderContract(bp, initial.fields, initial.parties),
+  );
   const blocks = c.blocks ?? [];
   const blocksMode = blocks.length > 0;
+  // Every token the document asks for, read from the blocks themselves — a custom token gets a Step 2 field too, and a
+  // Print Legal Name block always asks for {{PRINT_LEGAL_NAME}}. The title is only used for the save preflight.
+  const blockTemplate = useMemo(
+    () => ({
+      name: c.title,
+      tier: c.isCompany ? ("platinum" as const) : ("standard" as const),
+      blocks,
+    }),
+    [c.title, c.isCompany, blocks],
+  );
+  const blockTokens = useMemo(
+    () => (blocksMode ? templateTokens(blockTemplate) : []),
+    [blocksMode, blockTemplate],
+  );
+  const unfilledTokens = useMemo(
+    () => (blocksMode ? missingTokens(blockTemplate, c.blockValues) : []),
+    [blocksMode, blockTemplate, c.blockValues],
+  );
+  /** A Print Legal Name block names its own field; every other token gets a readable label from the token itself. */
+  const printNameLabel = blocks
+    .find(
+      (b): b is Extract<(typeof blocks)[number], { kind: "printName" }> =>
+        b.kind === "printName" && !!b.label.trim(),
+    )
+    ?.label.trim();
+  const tokenFieldLabel = (token: string) =>
+    token === "PRINT_LEGAL_NAME" && printNameLabel ? printNameLabel : tokenLabel(token);
+  const previewBlocks = useMemo(
+    () => (blocksMode ? withoutRepeatedLeadingTitle(blocks, c.title) : blocks),
+    [blocksMode, blocks, c.title],
+  );
   const [busy, setBusy] = useState(false);
   const [account, setAccount] = useState({ email: "", legalName: "" });
   const [typed, setTyped] = useState("");
@@ -963,68 +2284,174 @@ function ContractEditor({ userId, initial, tracks, blueprint, canApprove = false
   /** Company agreements are signed without an account, through a private link only the server can make. */
   const copyLink = async (p: ContractParty) => {
     try {
-      const link = c.isCompany ? (await privateLink({ data: { partyId: p.id!, origin: window.location.origin } })).link : contractLink(p.id!);
+      const link = c.isCompany
+        ? (await privateLink({ data: { partyId: p.id!, origin: window.location.origin } })).link
+        : contractLink(p.id!);
       await navigator.clipboard.writeText(link);
       toast.success("Signing link copied.");
-    } catch (e) { toast.error(e instanceof Error ? e.message : "Couldn't copy the link."); }
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Couldn't copy the link.");
+    }
   };
   const draft = c.status === "draft";
 
   useEffect(() => {
-    void Promise.all([supabase.from("profiles").select("legal_name").eq("id", userId).maybeSingle(), supabase.auth.getUser()]).then(([{ data }, { data: auth }]) => {
+    void Promise.all([
+      supabase.from("profiles").select("legal_name").eq("id", userId).maybeSingle(),
+      supabase.auth.getUser(),
+    ]).then(([{ data }, { data: auth }]) => {
       const a = { email: auth.user?.email ?? "", legalName: data?.legal_name ?? "" };
       setAccount(a);
       // Company agreements may come from a department address, so a saved owner email is kept there.
-      if (initial.status === "draft") setC((x) => ({ ...x, parties: x.parties.map((p) => p.isOwner ? { ...p, email: x.isCompany ? p.email || a.email : a.email, legalName: p.legalName || a.legalName } : p) }));
+      if (initial.status === "draft")
+        setC((x) => ({
+          ...x,
+          parties: x.parties.map((p) =>
+            p.isOwner
+              ? {
+                  ...p,
+                  email: x.isCompany ? p.email || a.email : a.email,
+                  legalName: p.legalName || a.legalName,
+                }
+              : p,
+          ),
+        }));
     });
   }, [userId]);
 
-  const rendered = useMemo(() => renderContract(bp, c.fields, c.parties), [bp, c.fields, c.parties]);
+  const rendered = useMemo(
+    () => renderContract(bp, c.fields, c.parties),
+    [bp, c.fields, c.parties],
+  );
   // A block document's words come from its blocks, in one stable reading order, so the fingerprint covers exactly what
   // the page shows and the signing page has plain text to print.
-  const body = blocksMode ? blocksToText(blocks, c.title) : customized ? fillBlanks(bp, c.body, c.fields, c.parties) : rendered;
+  const body = blocksMode
+    ? blocksToText(blocks, c.title)
+    : customized
+      ? fillBlanks(bp, c.body, c.fields, c.parties)
+      : rendered;
   const owner = c.parties.find((p) => p.isOwner);
   /**
    * You sign in the app with your login email. On a company agreement sent from another (department) address, the
    * owner signs from the private link emailed there instead, like every other company signer.
    */
-  const signsHere = !!owner && (!c.isCompany || owner.email.trim().toLowerCase() === account.email.toLowerCase());
+  const signsHere =
+    !!owner && (!c.isCompany || owner.email.trim().toLowerCase() === account.email.toLowerCase());
   const others = c.parties.filter((p) => !p.isOwner || !signsHere);
   /** What still holds back signing: required details, and each party's legal name and email. Shown only when signing. */
-  const missing: Missing[] = draft ? [
-    ...(blocksMode ? [] : missingFields(bp, c.fields).filter((f) => !customized || body.includes(`[${f.label}]`)).map((f) => ({ label: f.label, target: `cf-${f.key}`, section: "details" as const }))),
-    ...(c.parties.length < 2 ? [{ label: "A second person to sign", target: "cp-add", section: "parties" as const }] : []),
-    ...c.parties.flatMap((p, i): Missing[] => [
-      ...(!p.legalName.trim() ? [{ label: `${p.isOwner ? "Your" : `${p.role || `Party ${i + 1}`}'s`} legal name`, target: `cp-${i}-name`, section: "parties" as const }] : []),
-      ...((!p.isOwner || c.isCompany) && !isValidEmail(p.email) ? [{ label: `${p.role || `Party ${i + 1}`}'s email`, target: `cp-${i}-email`, section: "parties" as const }] : []),
-    ]),
-  ] : [];
-  const [sections, setSections] = useState({ details: true, parties: true, sign: true, text: true });
+  const missing: Missing[] = draft
+    ? [
+        ...(blocksMode
+          ? unfilledTokens.map((token) => ({
+              label: tokenFieldLabel(token),
+              target: `tok-${token}`,
+              section: "details" as const,
+            }))
+          : missingFields(bp, c.fields)
+              .filter((f) => !customized || body.includes(`[${f.label}]`))
+              .map((f) => ({
+                label: f.label,
+                target: `cf-${f.key}`,
+                section: "details" as const,
+              }))),
+        ...(c.parties.length < 2
+          ? [{ label: "A second person to sign", target: "cp-add", section: "parties" as const }]
+          : []),
+        ...c.parties.flatMap((p, i): Missing[] => [
+          ...(!p.legalName.trim()
+            ? [
+                {
+                  label: `${p.isOwner ? "Your" : `${p.role || `Party ${i + 1}`}'s`} legal name`,
+                  target: `cp-${i}-name`,
+                  section: "parties" as const,
+                },
+              ]
+            : []),
+          ...((!p.isOwner || c.isCompany) && !isValidEmail(p.email)
+            ? [
+                {
+                  label: `${p.role || `Party ${i + 1}`}'s email`,
+                  target: `cp-${i}-email`,
+                  section: "parties" as const,
+                },
+              ]
+            : []),
+        ]),
+      ]
+    : [];
+  const [sections, setSections] = useState({
+    details: true,
+    parties: true,
+    sign: true,
+    text: true,
+  });
   const [showMissing, setShowMissing] = useState(false);
   const goTo = (m: Missing) => {
     setShowMissing(false);
     setSections((x) => ({ ...x, [m.section]: true }));
-    window.setTimeout(() => { const el = document.getElementById(m.target); el?.scrollIntoView({ behavior: "smooth", block: "center" }); el?.focus(); }, 150);
+    window.setTimeout(() => {
+      const el = document.getElementById(m.target);
+      el?.scrollIntoView({ behavior: "smooth", block: "center" });
+      el?.focus();
+    }, 150);
   };
   const required = bp.fields.filter((f) => f.required);
   const filled = required.filter((f) => c.fields[f.key]?.trim()).length;
 
-  const setField = (key: string, value: string) => setC((x) => ({ ...x, fields: { ...x.fields, [key]: value } }));
-  const setParty = (i: number, patch: Partial<ContractParty>) => setC((x) => ({ ...x, parties: x.parties.map((p, idx) => idx === i ? { ...p, ...patch } : p) }));
-  const markOwner = (i: number) => setC((x) => ({ ...x, parties: x.parties.map((p, idx) => idx === i
-    ? { ...p, isOwner: true, email: account.email, legalName: p.legalName || account.legalName }
-    : { ...p, isOwner: false, email: p.isOwner ? "" : p.email }) }));
+  const setField = (key: string, value: string) =>
+    setC((x) => ({ ...x, fields: { ...x.fields, [key]: value } }));
+  const setToken = (token: string, value: string) =>
+    setC((x) => ({ ...x, blockValues: { ...(x.blockValues ?? {}), [token]: value } }));
+  const setParty = (i: number, patch: Partial<ContractParty>) =>
+    setC((x) => ({
+      ...x,
+      parties: x.parties.map((p, idx) => (idx === i ? { ...p, ...patch } : p)),
+    }));
+  const markOwner = (i: number) =>
+    setC((x) => ({
+      ...x,
+      parties: x.parties.map((p, idx) =>
+        idx === i
+          ? {
+              ...p,
+              isOwner: true,
+              email: account.email,
+              legalName: p.legalName || account.legalName,
+            }
+          : { ...p, isOwner: false, email: p.isOwner ? "" : p.email },
+      ),
+    }));
   const pickSong = (id: string) => {
     const t = tracks.find((x) => x.id === id);
     // A split agreement also takes the song's writers, by legal name, from My Catalog (read only).
-    const splits = t && bp.fields.some((f) => f.key === "splits")
-      ? t.metadata.writers.filter((w) => w.legalName?.trim()).map((w) => `${w.legalName!.trim()}${w.role ? ` (${w.role})` : ""}: ${w.percentage || "?"}%`).join("\n")
-      : "";
+    const splits =
+      t && bp.fields.some((f) => f.key === "splits")
+        ? t.metadata.writers
+            .filter((w) => w.legalName?.trim())
+            .map(
+              (w) =>
+                `${w.legalName!.trim()}${w.role ? ` (${w.role})` : ""}: ${w.percentage || "?"}%`,
+            )
+            .join("\n")
+        : "";
     // The amendment reads the deal recorded on the master (§13); every other contract fills only what it always did.
-    const prefill = t && bp.id === "beat-license-amendment"
-      ? amendmentPrefill(t.metadata, t.metadata.beatMasterId ? tracks.find((x) => x.id === t.metadata.beatMasterId)?.title ?? "" : "")
-      : {};
-    setC((x) => ({ ...x, catalogId: id || null, ...(t && { fields: { ...x.fields, songTitle: t.title, ...(splits && { splits }), ...prefill }, title: `${bp.name} – ${t.title}` }) }));
+    const prefill =
+      t && bp.id === "beat-license-amendment"
+        ? amendmentPrefill(
+            t.metadata,
+            t.metadata.beatMasterId
+              ? (tracks.find((x) => x.id === t.metadata.beatMasterId)?.title ?? "")
+              : "",
+          )
+        : {};
+    setC((x) => ({
+      ...x,
+      catalogId: id || null,
+      ...(t && {
+        fields: { ...x.fields, songTitle: t.title, ...(splits && { splits }), ...prefill },
+        title: `${bp.name} – ${t.title}`,
+      }),
+    }));
   };
 
   const save = async (quiet = false) => {
@@ -1037,18 +2464,29 @@ function ContractEditor({ userId, initial, tracks, blueprint, canApprove = false
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Could not save the contract.");
       return null;
-    } finally { setBusy(false); }
+    } finally {
+      setBusy(false);
+    }
   };
 
-  const refresh = async () => { const fresh = c.id ? await getContract(c.id) : null; if (fresh) setC(fresh); };
+  const refresh = async () => {
+    const fresh = c.id ? await getContract(c.id) : null;
+    if (fresh) setC(fresh);
+  };
 
   /**
    * Signing happens at the bottom, after reading: it locks the text (frozen, with its SHA-256) and records your
    * signature. Sending to the others is a separate click afterwards, so nothing goes out by accident.
    */
   const signAndLock = async () => {
-    if (missing.length) { setShowMissing(true); return; }
-    if (signsHere && typed.trim().toLowerCase() !== owner!.legalName.trim().toLowerCase()) { toast.error(`Type your legal name exactly as listed: ${owner.legalName}`); return; }
+    if (missing.length) {
+      setShowMissing(true);
+      return;
+    }
+    if (signsHere && typed.trim().toLowerCase() !== owner!.legalName.trim().toLowerCase()) {
+      toast.error(`Type your legal name exactly as listed: ${owner.legalName}`);
+      return;
+    }
     const saved = await save(true);
     if (!saved?.id) return;
     setBusy(true);
@@ -1080,9 +2518,19 @@ function ContractEditor({ userId, initial, tracks, blueprint, canApprove = false
       setTyped("");
       const fresh = await getContract(saved.id);
       if (fresh) setC(fresh);
-      toast.success(me ? "Signed. Now send it to the others." : owner ? `Locked. Send it, then sign from the email sent to ${owner.email}.` : "Locked. Now send it for signature.");
-    } catch (e) { toast.error(e instanceof Error ? e.message : "Could not sign the contract."); await refresh(); }
-    finally { setBusy(false); }
+      toast.success(
+        me
+          ? "Signed. Now send it to the others."
+          : owner
+            ? `Locked. Send it, then sign from the email sent to ${owner.email}.`
+            : "Locked. Now send it for signature.",
+      );
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Could not sign the contract.");
+      await refresh();
+    } finally {
+      setBusy(false);
+    }
   };
 
   const email = async (p: ContractParty) => {
@@ -1092,8 +2540,11 @@ function ContractEditor({ userId, initial, tracks, blueprint, canApprove = false
       await sendInvite({ data: { partyId: p.id, origin: window.location.origin } });
       toast.success(`Signature request emailed to ${p.email}.`);
       await refresh();
-    } catch (e) { toast.error(e instanceof Error ? e.message : "Could not send the email."); }
-    finally { setSending(undefined); }
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Could not send the email.");
+    } finally {
+      setSending(undefined);
+    }
   };
 
   /** Emails everyone who hasn't been sent a request yet, in one click. */
@@ -1107,17 +2558,31 @@ function ContractEditor({ userId, initial, tracks, blueprint, canApprove = false
         sent++;
       }
       toast.success(sent === 1 ? `Sent to ${unsent[0]!.email}.` : `Sent to ${sent} people.`);
-    } catch (e) { toast.error(e instanceof Error ? e.message : "Could not send the email."); }
-    finally { setSending(undefined); await refresh(); }
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Could not send the email.");
+    } finally {
+      setSending(undefined);
+      await refresh();
+    }
   };
 
   const signAsOwner = async (p: ContractParty) => {
     if (!p.id) return;
-    if (typed.trim().toLowerCase() !== p.legalName.trim().toLowerCase()) { toast.error("Type your legal name exactly as listed."); return; }
+    if (typed.trim().toLowerCase() !== p.legalName.trim().toLowerCase()) {
+      toast.error("Type your legal name exactly as listed.");
+      return;
+    }
     setBusy(true);
-    try { await signContract(p.id, typed); setTyped(""); toast.success("Signed."); await refresh(); }
-    catch (e) { toast.error(e instanceof Error ? e.message : "Could not sign."); }
-    finally { setBusy(false); }
+    try {
+      await signContract(p.id, typed);
+      setTyped("");
+      toast.success("Signed.");
+      await refresh();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Could not sign.");
+    } finally {
+      setBusy(false);
+    }
   };
 
   // Company agreements keep the Came Through Audio header; the user's own contracts carry their brand kit (Catalog Management).
@@ -1126,52 +2591,122 @@ function ContractEditor({ userId, initial, tracks, blueprint, canApprove = false
     // with each party's typed signature on its own line.
     if (blocksMode) {
       const record = (p: ContractParty | undefined, role: "recipient" | "admin") =>
-        p?.signedAt && p.signatureName ? { kind: "type" as const, data: p.signatureName, name: p.signatureName, signedAt: p.signedAt, role } : null;
+        p?.signedAt && p.signatureName
+          ? {
+              kind: "type" as const,
+              data: p.signatureName,
+              name: p.signatureName,
+              signedAt: p.signedAt,
+              role,
+            }
+          : null;
       const bytes = await templateToPdfBytes(
         { name: c.title, tier: c.isCompany ? "platinum" : "standard", blocks },
-        {},
+        tokenValues(c.blockValues),
         {
           values: c.blockValues ?? {},
-          signatures: { recipient: record(c.parties.find((p) => !p.isOwner && p.signedAt), "recipient"), admin: record(c.parties.find((p) => p.isOwner), "admin") },
+          signatures: {
+            recipient: record(
+              c.parties.find((p) => !p.isOwner && p.signedAt),
+              "recipient",
+            ),
+            admin: record(
+              c.parties.find((p) => p.isOwner),
+              "admin",
+            ),
+          },
           // The template's own signature lines, in party order: Company first, then the people who sign.
-          lineSignatures: c.parties.map((p) => (p.signedAt && p.signatureName ? { name: p.signatureName, signedAt: p.signedAt } : null)),
+          lineSignatures: c.parties.map((p) =>
+            p.signedAt && p.signatureName ? { name: p.signatureName, signedAt: p.signedAt } : null,
+          ),
         },
       );
       const name = (c.title.trim() || "contract").replace(/[^\w\- ]+/g, "").trim() || "contract";
-      saveBlob(new Blob([bytes as unknown as BlobPart], { type: "application/pdf" }), `${name}${c.status === "signed" ? " - Signed" : ""}.pdf`);
+      saveBlob(
+        new Blob([bytes as unknown as BlobPart], { type: "application/pdf" }),
+        `${name}${c.status === "signed" ? " - Signed" : ""}.pdf`,
+      );
       return;
     }
-    await downloadContractPdf({ title: c.title, body, bodyHash: c.bodyHash, status: c.status, brand: c.isCompany ? null : await myBrand("contracts", c.brandKitId),
-      company: c.isCompany ? { signerTitle: c.fields["signerTitle"] || "Founder & CEO" } : undefined,
-      parties: c.parties.map((p) => ({ name: p.legalName, role: p.role, signedAt: p.signedAt, signatureName: p.signatureName, signatureHash: p.signatureHash })) });
+    await downloadContractPdf({
+      title: c.title,
+      body,
+      bodyHash: c.bodyHash,
+      status: c.status,
+      brand: c.isCompany ? null : await myBrand("contracts", c.brandKitId),
+      company: c.isCompany
+        ? { signerTitle: c.fields["signerTitle"] || "Founder & CEO" }
+        : undefined,
+      parties: c.parties.map((p) => ({
+        name: p.legalName,
+        role: p.role,
+        signedAt: p.signedAt,
+        signatureName: p.signatureName,
+        signatureHash: p.signatureHash,
+      })),
+    });
   };
 
   return (
     <TooltipProvider delayDuration={100}>
       <div className="mt-6 space-y-6">
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <Button variant="ghost" onClick={onClose}><ChevronLeft className="h-4 w-4" />All contracts</Button>
+          <Button variant="ghost" onClick={onClose}>
+            <ChevronLeft className="h-4 w-4" />
+            All contracts
+          </Button>
           <div className="flex items-center gap-2">
-            <Badge variant="outline" className={STATUS[c.status].className}>{STATUS[c.status].label}</Badge>
-            <Button variant="outline" size="sm" onClick={() => void pdf()}><Download className="h-4 w-4" />{c.status === "signed" ? "Signed PDF" : "PDF"}</Button>
+            <Badge variant="outline" className={STATUS[c.status].className}>
+              {STATUS[c.status].label}
+            </Badge>
+            <Button variant="outline" size="sm" onClick={() => void pdf()}>
+              <Download className="h-4 w-4" />
+              {c.status === "signed" ? "Signed PDF" : "PDF"}
+            </Button>
           </div>
         </div>
 
         <div>
-          <p className="text-xs font-bold uppercase tracking-widest text-primary">{bp.name}</p>
-          {draft
-            ? <Input aria-label="Contract title" value={c.title} onChange={(e) => setC({ ...c, title: e.target.value })} className="mt-1 h-auto border-0 px-0 text-2xl font-bold shadow-none focus-visible:ring-0" />
-            : <h2 className="mt-1 text-2xl font-bold">{c.title}</h2>}
+          {/* A template-built contract has no separate blueprint name: its title is the blueprint, so printing both put the
+              same words at the top twice (founder, 2026-11-21). */}
+          {bp.name.trim().toLowerCase() !== c.title.trim().toLowerCase() && (
+            <p className="text-xs font-bold uppercase tracking-widest text-primary">{bp.name}</p>
+          )}
+          {draft ? (
+            <Input
+              aria-label="Contract title"
+              value={c.title}
+              onChange={(e) => setC({ ...c, title: e.target.value })}
+              className="mt-1 h-auto border-0 px-0 text-2xl font-bold shadow-none focus-visible:ring-0"
+            />
+          ) : (
+            <h2 className="mt-1 text-2xl font-bold">{c.title}</h2>
+          )}
           {!c.isCompany && kits.length > 0 && (
             <div className="mt-2 flex flex-wrap items-center gap-2 text-sm">
-              {kits.length > 1 && <>
-                <label htmlFor="contract-kit" className="text-muted-foreground">Branding kit</label>
-                <select id="contract-kit" value={c.brandKitId ?? kits[0]!.id} disabled={!draft} onChange={(e) => setC({ ...c, brandKitId: e.target.value })}
-                  className="h-8 rounded-md border border-input bg-background px-2 text-sm">
-                  {kits.map((k, i) => <option key={k.id} value={k.id}>{k.name || `Kit ${i + 1}`}</option>)}
-                </select>
-              </>}
-              <a href="/profile#brand-kit" className="font-semibold text-primary hover:underline">Edit branding kits</a>
+              {kits.length > 1 && (
+                <>
+                  <label htmlFor="contract-kit" className="text-muted-foreground">
+                    Branding kit
+                  </label>
+                  <select
+                    id="contract-kit"
+                    value={c.brandKitId ?? kits[0]!.id}
+                    disabled={!draft}
+                    onChange={(e) => setC({ ...c, brandKitId: e.target.value })}
+                    className="h-8 rounded-md border border-input bg-background px-2 text-sm"
+                  >
+                    {kits.map((k, i) => (
+                      <option key={k.id} value={k.id}>
+                        {k.name || `Kit ${i + 1}`}
+                      </option>
+                    ))}
+                  </select>
+                </>
+              )}
+              <a href="/profile#brand-kit" className="font-semibold text-primary hover:underline">
+                Edit branding kits
+              </a>
             </div>
           )}
         </div>
@@ -1179,10 +2714,28 @@ function ContractEditor({ userId, initial, tracks, blueprint, canApprove = false
         {c.status === "changes_requested" && (
           <div className="rounded-xl border border-destructive bg-destructive/5 p-4 text-sm">
             <p className="font-semibold text-destructive">Changes requested</p>
-            {c.reviewerNote ? <p className="mt-1 whitespace-pre-wrap">{c.reviewerNote}</p> : <p className="mt-1 text-muted-foreground">The Super Admin sent this back without a note.</p>}
+            {c.reviewerNote ? (
+              <p className="mt-1 whitespace-pre-wrap">{c.reviewerNote}</p>
+            ) : (
+              <p className="mt-1 text-muted-foreground">
+                The Super Admin sent this back without a note.
+              </p>
+            )}
             <div className="mt-3 flex flex-wrap gap-2">
-              <Button size="sm" disabled={busy} onClick={() => void resumeChangedContract(c.id!).then(() => { toast.success("Reopened. Make the changes, then submit it again."); refresh(); }).catch((e: Error) => toast.error(e.message))}>
-                <PenLine className="h-4 w-4" />Resume &amp; edit
+              <Button
+                size="sm"
+                disabled={busy}
+                onClick={() =>
+                  void resumeChangedContract(c.id!)
+                    .then(() => {
+                      toast.success("Reopened. Make the changes, then submit it again.");
+                      refresh();
+                    })
+                    .catch((e: Error) => toast.error(e.message))
+                }
+              >
+                <PenLine className="h-4 w-4" />
+                Resume &amp; edit
               </Button>
             </div>
           </div>
@@ -1190,167 +2743,576 @@ function ContractEditor({ userId, initial, tracks, blueprint, canApprove = false
 
         {c.status === "pending_approval" && (
           <div className="rounded-xl border border-amber-500 bg-amber-500/5 p-4 text-sm">
-            <p className="font-semibold text-amber-700 dark:text-amber-400">Waiting for Super Admin approval</p>
-            <p className="mt-1 text-muted-foreground">Submitted {c.submittedAt ? new Date(c.submittedAt).toLocaleString() : "just now"}. Signing links unlock once it is approved, and nothing has been emailed to the signers.</p>
+            <p className="font-semibold text-amber-700 dark:text-amber-400">
+              Waiting for Super Admin approval
+            </p>
+            <p className="mt-1 text-muted-foreground">
+              Submitted {c.submittedAt ? new Date(c.submittedAt).toLocaleString() : "just now"}.
+              Signing links unlock once it is approved, and nothing has been emailed to the signers.
+            </p>
           </div>
         )}
 
         {draft && !blocksMode && (
-          <ol aria-label="How it works" className="grid gap-2 rounded-xl bg-muted p-4 text-sm sm:grid-cols-5">
-            {[["Read it", "Look over the contract below."], ["Fill in your details", "They fill into the contract as you type."], ["Adjust the wording", "Only if you need to; common terms are in."], ["Sign", "Sign at the bottom with your legal name."], ["Send", "Email each party a link to sign."]].map(([t, d], i) => (
+          <ol
+            aria-label="How it works"
+            className="grid gap-2 rounded-xl bg-muted p-4 text-sm sm:grid-cols-5"
+          >
+            {[
+              ["Read it", "Look over the contract below."],
+              ["Fill in your details", "They fill into the contract as you type."],
+              ["Adjust the wording", "Only if you need to; common terms are in."],
+              ["Sign", "Sign at the bottom with your legal name."],
+              ["Send", "Email each party a link to sign."],
+            ].map(([t, d], i) => (
               <li key={t} className="flex gap-2 sm:flex-col sm:gap-1">
-                <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary text-xs font-bold text-primary-foreground">{i + 1}</span>
-                <span><span className="font-semibold">{t}.</span> <span className="text-muted-foreground">{d}</span></span>
+                <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary text-xs font-bold text-primary-foreground">
+                  {i + 1}
+                </span>
+                <span>
+                  <span className="font-semibold">{t}.</span>{" "}
+                  <span className="text-muted-foreground">{d}</span>
+                </span>
               </li>
             ))}
           </ol>
         )}
 
         {/* Step 1 is Read (founder, 2026-10-27): the contract shows first, then the details to fill in. */}
-        <Step n={draft ? 1 : undefined} title={draft ? "Read the contract" : "Contract text"} open={sections.text} onToggle={() => setSections((x) => ({ ...x, text: !x.text }))}
-          summary="Fills in as you type" hint={draft ? "Read it first. It fills in as you complete steps 2 and 3, and you sign at the bottom." : c.bodyHash ? `Locked · SHA-256 ${c.bodyHash.slice(0, 16)}…` : undefined}>
+        <Step
+          n={draft ? 1 : undefined}
+          title={draft ? "Read the contract" : "Contract text"}
+          open={sections.text}
+          onToggle={() => setSections((x) => ({ ...x, text: !x.text }))}
+          summary="Fills in as you type"
+          hint={
+            draft
+              ? "Read it first. It fills in as you complete steps 2 and 3, and you sign at the bottom."
+              : c.bodyHash
+                ? `Locked · SHA-256 ${c.bodyHash.slice(0, 16)}…`
+                : undefined
+          }
+        >
           {draft && !blocksMode && (
             <div className="mb-3 flex flex-wrap gap-2">
-              {!customized
-                ? <Button variant="outline" size="sm" onClick={() => { setC({ ...c, body: rendered }); setCustomized(true); }}><PenLine className="h-4 w-4" />Customize wording</Button>
-                : <Button variant="ghost" size="sm" onClick={() => setCustomized(false)}><RotateCcw className="h-4 w-4" />Reset to blueprint</Button>}
+              {!customized ? (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    setC({ ...c, body: rendered });
+                    setCustomized(true);
+                  }}
+                >
+                  <PenLine className="h-4 w-4" />
+                  Customize wording
+                </Button>
+              ) : (
+                <Button variant="ghost" size="sm" onClick={() => setCustomized(false)}>
+                  <RotateCcw className="h-4 w-4" />
+                  Reset to blueprint
+                </Button>
+              )}
             </div>
           )}
-          {blocksMode
-            ? <div className="space-y-2">
-                <p className="text-xs text-muted-foreground">Built from a template in Template Studio. Its blocks and their wording are fixed; the parties below are named on the signature lines.</p>
-                {/\{\{[A-Z0-9_]+\}\}/.test(body) && (
-                  <p className="flex items-start gap-2 rounded-lg border border-amber-500 bg-amber-500/5 p-3 text-xs text-amber-700 dark:text-amber-400"><AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" />This template still has a {"{{…}}"} placeholder in it. Fill it in Template Studio before sending; placeholders are printed exactly as they are, never with another song's details.</p>
+          {blocksMode ? (
+            <div className="space-y-2">
+              <p className="text-xs text-muted-foreground">
+                Built from a template in Template Studio. Its blocks and their wording are fixed;
+                the parties below are named on the signature lines.
+              </p>
+              {unfilledTokens.length > 0 && (
+                <p className="flex items-start gap-2 rounded-lg border border-amber-500 bg-amber-500/5 p-3 text-xs text-amber-700 dark:text-amber-400">
+                  <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+                  This template still has {unfilledTokens
+                    .map((token) => `{{${token}}}`)
+                    .join(", ")}{" "}
+                  unfilled. Fill {unfilledTokens.length === 1 ? "it" : "them"} in Step 2; a
+                  placeholder is printed exactly as it is, never with another song's details.
+                </p>
+              )}
+              <iframe
+                title="Contract preview"
+                sandbox=""
+                srcDoc={templateToHtml(
+                  {
+                    name: c.title,
+                    tier: c.isCompany ? "platinum" : "standard",
+                    blocks: previewBlocks,
+                  },
+                  tokenValues(c.blockValues),
+                  c.blockValues,
                 )}
-                <iframe title="Contract preview" sandbox="" srcDoc={templateToHtml({ name: c.title, tier: c.isCompany ? "platinum" : "standard", blocks }, {}, c.blockValues)} className="h-[30rem] w-full rounded-xl border border-border bg-white" />
-              </div>
-            : draft && customized
-              ? <textarea aria-label="Contract text" rows={22} value={body} onChange={(e) => setC({ ...c, body: e.target.value })} className="w-full rounded-xl border border-input bg-background p-4 font-mono text-sm leading-relaxed" />
-              : <div className="max-h-[32rem] overflow-y-auto whitespace-pre-wrap rounded-xl border border-border bg-muted/30 p-5 text-sm leading-relaxed">{body}</div>}
+                className="h-[30rem] w-full rounded-xl border border-border bg-white"
+              />
+            </div>
+          ) : draft && customized ? (
+            <textarea
+              aria-label="Contract text"
+              rows={22}
+              value={body}
+              onChange={(e) => setC({ ...c, body: e.target.value })}
+              className="w-full rounded-xl border border-input bg-background p-4 font-mono text-sm leading-relaxed"
+            />
+          ) : (
+            <div className="max-h-[32rem] overflow-y-auto whitespace-pre-wrap rounded-xl border border-border bg-muted/30 p-5 text-sm leading-relaxed">
+              {body}
+            </div>
+          )}
         </Step>
         {draft && (
           <>
-            <Step n={2} title="Details" open={sections.details} onToggle={() => setSections((x) => ({ ...x, details: !x.details }))}
-              summary={required.length ? `${filled} of ${required.length} required filled${filled === required.length ? " ✓" : ""}` : "Nothing required · common terms already filled in ✓"}
-              hint={required.length ? "Only the fields marked * are needed. Everything else is already filled in with common terms; change anything you like." : "Everything is already filled in with common terms. Change anything you like."}>
+            <Step
+              n={2}
+              title="Details"
+              open={sections.details}
+              onToggle={() => setSections((x) => ({ ...x, details: !x.details }))}
+              summary={
+                blocksMode && blockTokens.length
+                  ? `${blockTokens.length - unfilledTokens.length} of ${blockTokens.length} fields filled${unfilledTokens.length === 0 ? " ✓" : ""}`
+                  : required.length
+                    ? `${filled} of ${required.length} required filled${filled === required.length ? " ✓" : ""}`
+                    : "Nothing required · common terms already filled in ✓"
+              }
+              hint={
+                blocksMode && blockTokens.length
+                  ? "Every variable in the template gets a field here. They fill into the page as you type."
+                  : required.length
+                    ? "Only the fields marked * are needed. Everything else is already filled in with common terms; change anything you like."
+                    : "Everything is already filled in with common terms. Change anything you like."
+              }
+            >
               <div className="grid gap-4 sm:grid-cols-2">
+                {blocksMode &&
+                  blockTokens.map((token) => (
+                    <Field
+                      key={token}
+                      label={tokenFieldLabel(token)}
+                      tip={`Prints wherever {{${token}}} appears in the template.`}
+                      required
+                    >
+                      <Input
+                        id={`tok-${token}`}
+                        value={String(c.blockValues?.[token] ?? "")}
+                        onChange={(e) => setToken(token, e.target.value)}
+                        placeholder={tokenLabel(token)}
+                      />
+                    </Field>
+                  ))}
                 {tracks.length > 0 && bp.fields.some((f) => f.key === "songTitle") && (
-                  <Field label="Catalog song" tip="Pick a song from My Catalog to fill in its title.">
-                    <select value={c.catalogId ?? ""} onChange={(e) => pickSong(e.target.value)} className="flex h-10 w-full rounded-md border border-input bg-background px-3 text-sm">
+                  <Field
+                    label="Catalog song"
+                    tip="Pick a song from My Catalog to fill in its title."
+                  >
+                    <select
+                      value={c.catalogId ?? ""}
+                      onChange={(e) => pickSong(e.target.value)}
+                      className="flex h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+                    >
                       <option value="">Not linked to a catalog song</option>
-                      {[...tracks].sort((a, b) => a.title.localeCompare(b.title)).map((t) => <option key={t.id} value={t.id}>{t.title}</option>)}
+                      {[...tracks]
+                        .sort((a, b) => a.title.localeCompare(b.title))
+                        .map((t) => (
+                          <option key={t.id} value={t.id}>
+                            {t.title}
+                          </option>
+                        ))}
                     </select>
                   </Field>
                 )}
                 {bp.fields.map((f) => (
-                  <Field key={f.key} label={f.label} tip={f.tip} wide={f.multiline} required={f.required}>
-                    {f.multiline
-                      ? <textarea id={`cf-${f.key}`} rows={3} value={c.fields[f.key] ?? ""} placeholder={f.placeholder ?? f.fallback} onChange={(e) => setField(f.key, e.target.value)} className="w-full rounded-md border border-input bg-background p-3 text-sm" />
-                      : f.date ? <DateInput id={`cf-${f.key}`} field={f} value={c.fields[f.key] ?? ""} onChange={(v) => setField(f.key, v)} />
-                      : <Input id={`cf-${f.key}`} value={c.fields[f.key] ?? ""} placeholder={f.placeholder ?? f.fallback} onChange={(e) => setField(f.key, e.target.value)} />}
+                  <Field
+                    key={f.key}
+                    label={f.label}
+                    tip={f.tip}
+                    wide={f.multiline}
+                    required={f.required}
+                  >
+                    {f.multiline ? (
+                      <textarea
+                        id={`cf-${f.key}`}
+                        rows={3}
+                        value={c.fields[f.key] ?? ""}
+                        placeholder={f.placeholder ?? f.fallback}
+                        onChange={(e) => setField(f.key, e.target.value)}
+                        className="w-full rounded-md border border-input bg-background p-3 text-sm"
+                      />
+                    ) : f.date ? (
+                      <DateInput
+                        id={`cf-${f.key}`}
+                        field={f}
+                        value={c.fields[f.key] ?? ""}
+                        onChange={(v) => setField(f.key, v)}
+                      />
+                    ) : (
+                      <Input
+                        id={`cf-${f.key}`}
+                        value={c.fields[f.key] ?? ""}
+                        placeholder={f.placeholder ?? f.fallback}
+                        onChange={(e) => setField(f.key, e.target.value)}
+                      />
+                    )}
                   </Field>
                 ))}
               </div>
             </Step>
 
-            <Step n={3} title="Who's signing" open={sections.parties} onToggle={() => setSections((x) => ({ ...x, parties: !x.parties }))}
-              summary={c.parties.map((p) => p.isOwner ? "You" : p.legalName.trim() || p.role).join(" + ")}
-              hint="Use each person's legal name. Mark which one is you; you sign with your account email.">
+            <Step
+              n={3}
+              title="Who's signing"
+              open={sections.parties}
+              onToggle={() => setSections((x) => ({ ...x, parties: !x.parties }))}
+              summary={c.parties
+                .map((p) => (p.isOwner ? "You" : p.legalName.trim() || p.role))
+                .join(" + ")}
+              hint="Use each person's legal name. Mark which one is you; you sign with your account email."
+            >
               <div className="space-y-3">
                 {c.parties.map((p, i) => (
-                  <div key={p.id ?? i} className={`grid gap-3 rounded-xl border p-3 sm:grid-cols-[10rem_1fr_1fr_auto] sm:items-end ${p.isOwner ? "border-primary bg-primary/5" : "border-border"}`}>
-                    <Field label="Role" tip="This party's role in the deal, for example Artist or Producer.">
-                      <Input list={`roles-${bp.id}`} value={p.role} onChange={(e) => setParty(i, { role: e.target.value })} />
+                  <div
+                    key={p.id ?? i}
+                    className={`grid gap-3 rounded-xl border p-3 sm:grid-cols-[10rem_1fr_1fr_auto] sm:items-end ${p.isOwner ? "border-primary bg-primary/5" : "border-border"}`}
+                  >
+                    <Field
+                      label="Role"
+                      tip="This party's role in the deal, for example Artist or Producer."
+                    >
+                      <Input
+                        list={`roles-${bp.id}`}
+                        value={p.role}
+                        onChange={(e) => setParty(i, { role: e.target.value })}
+                      />
                     </Field>
-                    <Field label="Legal name" tip="The person's or company's full legal name, exactly as it should appear on the contract." required>
-                      <Input id={`cp-${i}-name`} value={p.legalName} onChange={(e) => setParty(i, { legalName: e.target.value })} placeholder="Full legal name" />
+                    <Field
+                      label="Legal name"
+                      tip="The person's or company's full legal name, exactly as it should appear on the contract."
+                      required
+                    >
+                      <Input
+                        id={`cp-${i}-name`}
+                        value={p.legalName}
+                        onChange={(e) => setParty(i, { legalName: e.target.value })}
+                        placeholder="Full legal name"
+                      />
                     </Field>
-                    <Field label="Email" tip={c.isCompany ? p.isOwner ? "Your email, or a department address such as registrations@camethroughaudio.com. If it isn't your login email, you sign from the link sent there." : "Where the signing link goes. They sign with a code emailed here; no account needed." : "Where the signature request goes. They sign by logging in with this email."} required={!p.isOwner || c.isCompany}>
-                      <Input id={`cp-${i}-email`} type="email" value={p.email} disabled={p.isOwner && !c.isCompany} onChange={(e) => setParty(i, { email: e.target.value })} placeholder="name@example.com" />
+                    <Field
+                      label="Email"
+                      tip={
+                        c.isCompany
+                          ? p.isOwner
+                            ? "Your email, or a department address such as registrations@camethroughaudio.com. If it isn't your login email, you sign from the link sent there."
+                            : "Where the signing link goes. They sign with a code emailed here; no account needed."
+                          : "Where the signature request goes. They sign by logging in with this email."
+                      }
+                      required={!p.isOwner || c.isCompany}
+                    >
+                      <Input
+                        id={`cp-${i}-email`}
+                        type="email"
+                        value={p.email}
+                        disabled={p.isOwner && !c.isCompany}
+                        onChange={(e) => setParty(i, { email: e.target.value })}
+                        placeholder="name@example.com"
+                      />
                     </Field>
                     <div className="flex items-center gap-2 pb-1">
-                      <label className="flex items-center gap-1.5 text-sm"><input type="radio" name="owner" checked={p.isOwner} onChange={() => markOwner(i)} className="accent-[var(--primary)]" />Me</label>
-                      {c.parties.length > 2 && <Button variant="ghost" size="icon" aria-label={`Remove ${p.role}`} onClick={() => setC({ ...c, parties: c.parties.filter((_, idx) => idx !== i) })}><Trash2 className="h-4 w-4" /></Button>}
+                      <label className="flex items-center gap-1.5 text-sm">
+                        <input
+                          type="radio"
+                          name="owner"
+                          checked={p.isOwner}
+                          onChange={() => markOwner(i)}
+                          className="accent-[var(--primary)]"
+                        />
+                        Me
+                      </label>
+                      {c.parties.length > 2 && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          aria-label={`Remove ${p.role}`}
+                          onClick={() =>
+                            setC({ ...c, parties: c.parties.filter((_, idx) => idx !== i) })
+                          }
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      )}
                     </div>
                   </div>
                 ))}
-                <datalist id={`roles-${bp.id}`}>{bp.roles.map((r) => <option key={r} value={r} />)}</datalist>
-                <Button id="cp-add" variant="outline" size="sm" onClick={() => setC({ ...c, parties: [...c.parties, emptyParty(bp.roles[1])] })}><Plus className="h-4 w-4" />Add party</Button>
+                <datalist id={`roles-${bp.id}`}>
+                  {bp.roles.map((r) => (
+                    <option key={r} value={r} />
+                  ))}
+                </datalist>
+                <Button
+                  id="cp-add"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setC({ ...c, parties: [...c.parties, emptyParty(bp.roles[1])] })}
+                >
+                  <Plus className="h-4 w-4" />
+                  Add party
+                </Button>
               </div>
             </Step>
 
             {/* Step 4 is the signature (founder, 2026-11-07): it sits after Who's signing, the last step before it goes out. */}
-            <Step n={4} title="Sign" open={sections.sign} onToggle={() => setSections((x) => ({ ...x, sign: !x.sign }))} summary="Locks the wording, then you send">
-              {owner && !signsHere ? <p className="text-sm text-muted-foreground">You'll sign from the link emailed to <span className="font-semibold text-foreground">{owner.email || "your department address"}</span> once it's locked and sent.</p>
-                : owner ? (
+            <Step
+              n={4}
+              title="Sign"
+              open={sections.sign}
+              onToggle={() => setSections((x) => ({ ...x, sign: !x.sign }))}
+              summary="Locks the wording, then you send"
+            >
+              {owner && !signsHere ? (
+                <p className="text-sm text-muted-foreground">
+                  You'll sign from the link emailed to{" "}
+                  <span className="font-semibold text-foreground">
+                    {owner.email || "your department address"}
+                  </span>{" "}
+                  once it's locked and sent.
+                </p>
+              ) : owner ? (
                 c.isCompany ? (
                   // Company Name / By / Printed Name / Title, signed right before sending (3.9).
                   <dl className="grid max-w-xl grid-cols-[8rem_1fr] items-center gap-x-3 gap-y-2 rounded-xl border border-border p-4 text-sm">
-                    <dt className="font-semibold text-muted-foreground">Company Name</dt><dd>{COMPANY_LEGAL_NAME}</dd>
-                    <dt className="font-semibold text-muted-foreground"><label htmlFor="company-sign">By</label></dt>
-                    <dd><Input id="company-sign" value={typed} onChange={(e) => setTyped(e.target.value)} placeholder={owner.legalName || "Type your legal name to sign"} className="text-2xl" style={{ fontFamily: `"${SIGNATURE_FONT}", cursive` }} /></dd>
-                    <dt className="font-semibold text-muted-foreground">Printed Name</dt><dd>{owner.legalName || "Add your legal name in Parties"}</dd>
-                    <dt className="font-semibold text-muted-foreground">Title</dt><dd>{c.fields["signerTitle"] || "Founder & CEO"}</dd>
+                    <dt className="font-semibold text-muted-foreground">Company Name</dt>
+                    <dd>{COMPANY_LEGAL_NAME}</dd>
+                    <dt className="font-semibold text-muted-foreground">
+                      <label htmlFor="company-sign">By</label>
+                    </dt>
+                    <dd>
+                      <Input
+                        id="company-sign"
+                        value={typed}
+                        onChange={(e) => setTyped(e.target.value)}
+                        placeholder={owner.legalName || "Type your legal name to sign"}
+                        className="text-2xl"
+                        style={{ fontFamily: `"${SIGNATURE_FONT}", cursive` }}
+                      />
+                    </dd>
+                    <dt className="font-semibold text-muted-foreground">Printed Name</dt>
+                    <dd>{owner.legalName || "Add your legal name in Parties"}</dd>
+                    <dt className="font-semibold text-muted-foreground">Title</dt>
+                    <dd>{c.fields["signerTitle"] || "Founder & CEO"}</dd>
                   </dl>
                 ) : (
-                <label className="block space-y-1 text-sm"><span className="font-medium">Type your legal name to sign{owner.legalName.trim() && <>: <span className="font-bold">{owner.legalName}</span></>}</span>
-                  <Input value={typed} onChange={(e) => setTyped(e.target.value)} placeholder={owner.legalName || "Your legal name"} className="max-w-md text-2xl" style={{ fontFamily: `"${SIGNATURE_FONT}", cursive` }} /></label>)
-              ) : <p className="text-sm text-muted-foreground">You're not signing this one. Lock it, then send it to everyone who signs.</p>}
+                  <label className="block space-y-1 text-sm">
+                    <span className="font-medium">
+                      Type your legal name to sign
+                      {owner.legalName.trim() && (
+                        <>
+                          : <span className="font-bold">{owner.legalName}</span>
+                        </>
+                      )}
+                    </span>
+                    <Input
+                      value={typed}
+                      onChange={(e) => setTyped(e.target.value)}
+                      placeholder={owner.legalName || "Your legal name"}
+                      className="max-w-md text-2xl"
+                      style={{ fontFamily: `"${SIGNATURE_FONT}", cursive` }}
+                    />
+                  </label>
+                )
+              ) : (
+                <p className="text-sm text-muted-foreground">
+                  You're not signing this one. Lock it, then send it to everyone who signs.
+                </p>
+              )}
               <div className="mt-4 flex flex-wrap gap-3">
-                <Button disabled={busy} onClick={() => void signAndLock()}>{busy ? <Loader2 className="h-4 w-4 animate-spin" /> : (c.isCompany && !canApprove) || (c.status === "pending_approval" && canApprove) ? <ShieldCheck className="h-4 w-4" /> : <FileSignature className="h-4 w-4" />}{c.status === "pending_approval" && canApprove ? "Approve & send" : c.isCompany && !canApprove ? "Submit for approval" : signsHere ? "Sign" : "Lock"}</Button>
-                {(draft || (c.status === "pending_approval" && canApprove)) && <Button variant="outline" disabled={busy} onClick={() => void save()}><Check className="h-4 w-4" />Save draft</Button>}
-                {c.id && <Button variant="ghost" className="ml-auto" disabled={busy} onClick={async () => { if (await confirmAction({ title: "Delete this draft?" })) void deleteContract(c.id!).then(onClose); }}><Trash2 className="h-4 w-4" />Delete</Button>}
+                <Button disabled={busy} onClick={() => void signAndLock()}>
+                  {busy ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (c.isCompany && !canApprove) ||
+                    (c.status === "pending_approval" && canApprove) ? (
+                    <ShieldCheck className="h-4 w-4" />
+                  ) : (
+                    <FileSignature className="h-4 w-4" />
+                  )}
+                  {c.status === "pending_approval" && canApprove
+                    ? "Approve & send"
+                    : c.isCompany && !canApprove
+                      ? "Submit for approval"
+                      : signsHere
+                        ? "Sign"
+                        : "Lock"}
+                </Button>
+                {(draft || (c.status === "pending_approval" && canApprove)) && (
+                  <Button variant="outline" disabled={busy} onClick={() => void save()}>
+                    <Check className="h-4 w-4" />
+                    Save draft
+                  </Button>
+                )}
+                {c.id && (
+                  <Button
+                    variant="ghost"
+                    className="ml-auto"
+                    disabled={busy}
+                    onClick={async () => {
+                      if (await confirmAction({ title: "Delete this draft?" }))
+                        void deleteContract(c.id!).then(onClose);
+                    }}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                    Delete
+                  </Button>
+                )}
               </div>
-              <p className="mt-2 text-xs text-muted-foreground">{c.isCompany && !canApprove ? "A Super Admin approves this before anyone is asked to sign. Nothing is emailed to the signers until then; approving is what locks the wording and records its fingerprint." : "Signing locks the wording and records its fingerprint, so nobody can change it after you sign. You'll send it to the others next."}</p>
+              <p className="mt-2 text-xs text-muted-foreground">
+                {c.isCompany && !canApprove
+                  ? "A Super Admin approves this before anyone is asked to sign. Nothing is emailed to the signers until then; approving is what locks the wording and records its fingerprint."
+                  : "Signing locks the wording and records its fingerprint, so nobody can change it after you sign. You'll send it to the others next."}
+              </p>
             </Step>
           </>
         )}
 
-
         {!draft && (
           <Step title="Signatures">
-            {unsent.length > 0 && c.status === "draft" && (c.isCompany && !canApprove ? (
-              // A lead's company agreement waits for the approver instead of mailing anybody (founder, 2026-11-16).
-              <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-amber-500 bg-amber-500/5 p-4">
-                <p className="text-sm"><span className="font-semibold">Ready for approval.</span> {unsent.map((p) => p.legalName).join(", ")} {unsent.length === 1 ? "is" : "are"} next, but only after a Super Admin checks this. No email goes out yet.</p>
-                <Button disabled={!!sending} onClick={() => void submitForApproval(c.id!).then(() => { toast.success("Submitted for Super Admin approval. Signing links unlock once it is approved."); onClose(); }).catch((e: Error) => toast.error(e.message))}>
-                  {sending === "all" ? <Loader2 className="h-4 w-4 animate-spin" /> : <ShieldCheck className="h-4 w-4" />}Submit for approval
-                </Button>
-              </div>
-            ) : (
-              <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-primary bg-primary/5 p-4">
-                <p className="text-sm"><span className="font-semibold">Ready to send.</span> {unsent.map((p) => p.legalName).join(", ")} {unsent.length === 1 ? "gets" : "get"} an email to review and sign.</p>
-                <Button disabled={!!sending} onClick={() => void sendAll()}>{sending === "all" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Mail className="h-4 w-4" />}Send{unsent.length > 1 ? ` to all ${unsent.length}` : ""}</Button>
-              </div>
-            ))}
+            {unsent.length > 0 &&
+              c.status === "draft" &&
+              (c.isCompany && !canApprove ? (
+                // A lead's company agreement waits for the approver instead of mailing anybody (founder, 2026-11-16).
+                <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-amber-500 bg-amber-500/5 p-4">
+                  <p className="text-sm">
+                    <span className="font-semibold">Ready for approval.</span>{" "}
+                    {unsent.map((p) => p.legalName).join(", ")} {unsent.length === 1 ? "is" : "are"}{" "}
+                    next, but only after a Super Admin checks this. No email goes out yet.
+                  </p>
+                  <Button
+                    disabled={!!sending}
+                    onClick={() =>
+                      void submitForApproval(c.id!)
+                        .then(() => {
+                          toast.success(
+                            "Submitted for Super Admin approval. Signing links unlock once it is approved.",
+                          );
+                          onClose();
+                        })
+                        .catch((e: Error) => toast.error(e.message))
+                    }
+                  >
+                    {sending === "all" ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <ShieldCheck className="h-4 w-4" />
+                    )}
+                    Submit for approval
+                  </Button>
+                </div>
+              ) : (
+                <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-primary bg-primary/5 p-4">
+                  <p className="text-sm">
+                    <span className="font-semibold">Ready to send.</span>{" "}
+                    {unsent.map((p) => p.legalName).join(", ")}{" "}
+                    {unsent.length === 1 ? "gets" : "get"} an email to review and sign.
+                  </p>
+                  <Button disabled={!!sending} onClick={() => void sendAll()}>
+                    {sending === "all" ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Mail className="h-4 w-4" />
+                    )}
+                    Send{unsent.length > 1 ? ` to all ${unsent.length}` : ""}
+                  </Button>
+                </div>
+              ))}
             <ul className="space-y-3">
               {c.parties.map((p) => (
                 <li key={p.id} className="rounded-xl border border-border p-4">
                   <div className="flex flex-wrap items-center justify-between gap-3">
                     <div>
-                      <div className="font-semibold">{p.legalName} <span className="text-sm font-normal text-muted-foreground">· {p.role}{p.isOwner ? " · you" : ""}</span></div>
-                      <div className="text-xs text-muted-foreground">{p.signedAt ? `Signed ${new Date(p.signedAt).toLocaleString()}` : p.invitedAt ? `Request sent ${new Date(p.invitedAt).toLocaleDateString()}` : p.email}</div>
-                    </div>
-                    {p.signedAt ? <span className="flex items-center gap-1 text-sm font-semibold text-primary"><ShieldCheck className="h-4 w-4" />Signed</span> : (!p.isOwner || !signsHere) && c.status === "sent" && (
-                      <div className="flex gap-2">
-                        <Button size="sm" variant="outline" onClick={() => void copyLink(p)}><Copy className="h-4 w-4" />Copy link</Button>
-                        <Button size="sm" disabled={sending === p.id} onClick={() => void email(p)}>{sending === p.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Mail className="h-4 w-4" />}{p.invitedAt ? "Resend" : "Email request"}</Button>
+                      <div className="font-semibold">
+                        {p.legalName}{" "}
+                        <span className="text-sm font-normal text-muted-foreground">
+                          · {p.role}
+                          {p.isOwner ? " · you" : ""}
+                        </span>
                       </div>
+                      <div className="text-xs text-muted-foreground">
+                        {p.signedAt
+                          ? `Signed ${new Date(p.signedAt).toLocaleString()}`
+                          : p.invitedAt
+                            ? `Request sent ${new Date(p.invitedAt).toLocaleDateString()}`
+                            : p.email}
+                      </div>
+                    </div>
+                    {p.signedAt ? (
+                      <span className="flex items-center gap-1 text-sm font-semibold text-primary">
+                        <ShieldCheck className="h-4 w-4" />
+                        Signed
+                      </span>
+                    ) : (
+                      (!p.isOwner || !signsHere) &&
+                      c.status === "sent" && (
+                        <div className="flex gap-2">
+                          <Button size="sm" variant="outline" onClick={() => void copyLink(p)}>
+                            <Copy className="h-4 w-4" />
+                            Copy link
+                          </Button>
+                          <Button
+                            size="sm"
+                            disabled={sending === p.id}
+                            onClick={() => void email(p)}
+                          >
+                            {sending === p.id ? (
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                            ) : (
+                              <Mail className="h-4 w-4" />
+                            )}
+                            {p.invitedAt ? "Resend" : "Email request"}
+                          </Button>
+                        </div>
+                      )
                     )}
                   </div>
                   {p.isOwner && signsHere && !p.signedAt && c.status === "sent" && (
                     <div className="mt-3 flex flex-wrap items-end gap-3 border-t border-border pt-3">
-                      <label className="min-w-60 flex-1 space-y-1 text-sm"><span className="font-medium">Type your legal name to sign: <span className="font-bold">{p.legalName}</span></span>
-                        <Input value={typed} onChange={(e) => setTyped(e.target.value)} placeholder={p.legalName} className="text-lg" style={{ fontFamily: SIGNATURE_CSS }} /></label>
-                      <Button disabled={busy} onClick={() => void signAsOwner(p)}><FileSignature className="h-4 w-4" />Sign</Button>
+                      <label className="min-w-60 flex-1 space-y-1 text-sm">
+                        <span className="font-medium">
+                          Type your legal name to sign:{" "}
+                          <span className="font-bold">{p.legalName}</span>
+                        </span>
+                        <Input
+                          value={typed}
+                          onChange={(e) => setTyped(e.target.value)}
+                          placeholder={p.legalName}
+                          className="text-lg"
+                          style={{ fontFamily: SIGNATURE_CSS }}
+                        />
+                      </label>
+                      <Button disabled={busy} onClick={() => void signAsOwner(p)}>
+                        <FileSignature className="h-4 w-4" />
+                        Sign
+                      </Button>
                     </div>
                   )}
-                  {p.signatureHash && <p className="mt-2 break-all text-[11px] text-muted-foreground">Verification hash: {p.signatureHash}</p>}
+                  {p.signatureHash && (
+                    <p className="mt-2 break-all text-[11px] text-muted-foreground">
+                      Verification hash: {p.signatureHash}
+                    </p>
+                  )}
                 </li>
               ))}
             </ul>
             {c.status === "sent" && !c.parties.some((p) => p.signedAt) && (
-              <Button variant="ghost" size="sm" className="mt-3" disabled={busy} onClick={() => void reopenContract(c.id!).then(refresh).catch((e: Error) => toast.error(e.message))}><Unlock className="h-4 w-4" />Unlock to edit (nobody has signed yet)</Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="mt-3"
+                disabled={busy}
+                onClick={() =>
+                  void reopenContract(c.id!)
+                    .then(refresh)
+                    .catch((e: Error) => toast.error(e.message))
+                }
+              >
+                <Unlock className="h-4 w-4" />
+                Unlock to edit (nobody has signed yet)
+              </Button>
             )}
           </Step>
         )}
@@ -1359,18 +3321,24 @@ function ContractEditor({ userId, initial, tracks, blueprint, canApprove = false
       <Dialog open={showMissing} onOpenChange={setShowMissing}>
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>Almost there: {missing.length} {missing.length === 1 ? "thing" : "things"} to add</DialogTitle>
+            <DialogTitle>
+              Almost there: {missing.length} {missing.length === 1 ? "thing" : "things"} to add
+            </DialogTitle>
             <DialogDescription>Everything else is optional.</DialogDescription>
           </DialogHeader>
           <ul className="divide-y divide-border">
             {missing.map((m) => (
               <li key={m.target} className="flex items-center justify-between gap-3 py-2.5 text-sm">
                 <span>{m.label}</span>
-                <Button size="sm" variant="ghost" className="text-primary" onClick={() => goTo(m)}>Take me there →</Button>
+                <Button size="sm" variant="ghost" className="text-primary" onClick={() => goTo(m)}>
+                  Take me there →
+                </Button>
               </li>
             ))}
           </ul>
-          <Button variant="outline" onClick={() => setShowMissing(false)}>Keep editing</Button>
+          <Button variant="outline" onClick={() => setShowMissing(false)}>
+            Keep editing
+          </Button>
         </DialogContent>
       </Dialog>
     </TooltipProvider>
@@ -1380,21 +3348,61 @@ function ContractEditor({ userId, initial, tracks, blueprint, canApprove = false
 type Missing = { label: string; target: string; section: "details" | "parties" };
 
 /** A titled editor section. With onToggle it collapses to its title and a one-line summary (BRANDING §3). */
-function Step({ n, title, hint, summary, open = true, onToggle, children }: { n?: number | undefined; title: string; hint?: string | undefined; summary?: string; open?: boolean; onToggle?: () => void; children: React.ReactNode }) {
-  const heading = <>{n && <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary text-xs text-primary-foreground">{n}</span>}{title}</>;
+function Step({
+  n,
+  title,
+  hint,
+  summary,
+  open = true,
+  onToggle,
+  children,
+}: {
+  n?: number | undefined;
+  title: string;
+  hint?: string | undefined;
+  summary?: string;
+  open?: boolean;
+  onToggle?: () => void;
+  children: React.ReactNode;
+}) {
+  const heading = (
+    <>
+      {n && (
+        <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary text-xs text-primary-foreground">
+          {n}
+        </span>
+      )}
+      {title}
+    </>
+  );
   return (
     <section className="rounded-2xl border border-border p-5">
       {onToggle ? (
-        <button type="button" aria-expanded={open} onClick={onToggle} className="flex w-full items-center gap-2 text-left text-lg font-bold">
+        <button
+          type="button"
+          aria-expanded={open}
+          onClick={onToggle}
+          className="flex w-full items-center gap-2 text-left text-lg font-bold"
+        >
           {heading}
-          {!open && summary && <span className="ml-1 truncate text-sm font-normal text-muted-foreground">· {summary}</span>}
-          <ChevronDown className={`ml-auto h-5 w-5 shrink-0 transition ${open ? "rotate-180" : ""}`} />
+          {!open && summary && (
+            <span className="ml-1 truncate text-sm font-normal text-muted-foreground">
+              · {summary}
+            </span>
+          )}
+          <ChevronDown
+            className={`ml-auto h-5 w-5 shrink-0 transition ${open ? "rotate-180" : ""}`}
+          />
         </button>
-      ) : <h3 className="flex items-center gap-2 text-lg font-bold">{heading}</h3>}
-      {open && <>
-        {hint && <p className="mt-1 text-sm text-muted-foreground">{hint}</p>}
-        <div className="mt-4">{children}</div>
-      </>}
+      ) : (
+        <h3 className="flex items-center gap-2 text-lg font-bold">{heading}</h3>
+      )}
+      {open && (
+        <>
+          {hint && <p className="mt-1 text-sm text-muted-foreground">{hint}</p>}
+          <div className="mt-4">{children}</div>
+        </>
+      )}
     </section>
   );
 }
@@ -1402,7 +3410,17 @@ function Step({ n, title, hint, summary, open = true, onToggle, children }: { n?
 const DATE_FORMAT = "MMMM d, yyyy";
 
 /** A date field with a calendar beside it. Typing still works, for wording like "Within 6 months of delivery". */
-function DateInput({ id, field, value, onChange }: { id?: string; field: BlueprintField; value: string; onChange: (v: string) => void }) {
+function DateInput({
+  id,
+  field,
+  value,
+  onChange,
+}: {
+  id?: string;
+  field: BlueprintField;
+  value: string;
+  onChange: (v: string) => void;
+}) {
   const [open, setOpen] = useState(false);
   const many = field.date === "many";
   const last = value.split(";").pop()?.trim() ?? "";
@@ -1415,14 +3433,36 @@ function DateInput({ id, field, value, onChange }: { id?: string; field: Bluepri
   };
   return (
     <div className="flex gap-2">
-      <Input id={id} value={value} placeholder={field.placeholder ?? field.fallback} onChange={(e) => onChange(e.target.value)} />
+      <Input
+        id={id}
+        value={value}
+        placeholder={field.placeholder ?? field.fallback}
+        onChange={(e) => onChange(e.target.value)}
+      />
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger asChild>
-          <Button type="button" variant="outline" size="icon" className="shrink-0" aria-label={`Pick ${field.label.toLowerCase()} on a calendar`}><CalendarDays className="h-4 w-4" /></Button>
+          <Button
+            type="button"
+            variant="outline"
+            size="icon"
+            className="shrink-0"
+            aria-label={`Pick ${field.label.toLowerCase()} on a calendar`}
+          >
+            <CalendarDays className="h-4 w-4" />
+          </Button>
         </PopoverTrigger>
         <PopoverContent className="w-auto p-0" align="end">
-          <Calendar mode="single" captionLayout="dropdown" {...(isValid(shown) && { selected: shown, defaultMonth: shown })} onSelect={pick} />
-          {many && <p className="max-w-64 px-3 pb-3 text-xs text-muted-foreground">Pick each date; they're added to the list.</p>}
+          <Calendar
+            mode="single"
+            captionLayout="dropdown"
+            {...(isValid(shown) && { selected: shown, defaultMonth: shown })}
+            onSelect={pick}
+          />
+          {many && (
+            <p className="max-w-64 px-3 pb-3 text-xs text-muted-foreground">
+              Pick each date; they're added to the list.
+            </p>
+          )}
         </PopoverContent>
       </Popover>
     </div>
@@ -1430,11 +3470,28 @@ function DateInput({ id, field, value, onChange }: { id?: string; field: Bluepri
 }
 
 /** A labelled form field. Required ones get a * and nothing else: cautions only appear when signing. */
-function Field({ label, tip, wide, required, children }: { label: string; tip: string; wide?: boolean | undefined; required?: boolean | undefined; children: React.ReactNode }) {
+function Field({
+  label,
+  tip,
+  wide,
+  required,
+  children,
+}: {
+  label: string;
+  tip: string;
+  wide?: boolean | undefined;
+  required?: boolean | undefined;
+  children: React.ReactNode;
+}) {
   return (
     <div className={`space-y-1.5 ${wide ? "sm:col-span-2" : ""}`}>
       <span className="flex items-center text-sm font-medium">
-        {label}{required && <span className="ml-0.5 text-primary" aria-label="required">*</span>}
+        {label}
+        {required && (
+          <span className="ml-0.5 text-primary" aria-label="required">
+            *
+          </span>
+        )}
         <InfoTip title={label} text={tip} />
       </span>
       {children}
@@ -1443,7 +3500,15 @@ function Field({ label, tip, wide, required, children }: { label: string; tip: s
 }
 
 function Locked({ text, onUpgrade }: { text: string; onUpgrade: () => void }) {
-  return <UpgradeLock className="" title="Custom contracts" tier="management" onUpgrade={onUpgrade} text={text} />;
+  return (
+    <UpgradeLock
+      className=""
+      title="Custom contracts"
+      tier="management"
+      onUpgrade={onUpgrade}
+      text={text}
+    />
+  );
 }
 
 function Empty({ icon: Icon, text }: { icon: React.ElementType; text: string }) {
@@ -1456,5 +3521,10 @@ function Empty({ icon: Icon, text }: { icon: React.ElementType; text: string }) 
 }
 
 function Spinner() {
-  return <div className="flex items-center gap-2 text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" />Loading…</div>;
+  return (
+    <div className="flex items-center gap-2 text-muted-foreground">
+      <Loader2 className="h-4 w-4 animate-spin" />
+      Loading…
+    </div>
+  );
 }

@@ -30,7 +30,11 @@ export function claimDefaultsSky(now = new Date()): boolean {
 }
 
 /** True when the gap since the last visit is at least `days`. A missing or unreadable date is not a return. */
-export function isReturning(last: string | null | undefined, now = new Date(), days = RETURN_AFTER_DAYS): boolean {
+export function isReturning(
+  last: string | null | undefined,
+  now = new Date(),
+  days = RETURN_AFTER_DAYS,
+): boolean {
   if (!last) return false;
   const at = Date.parse(last);
   if (!Number.isFinite(at)) return false;

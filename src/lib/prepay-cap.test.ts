@@ -29,7 +29,11 @@ describe("prepay cap", () => {
   });
 
   it("refuses early renewal on a cancelling, paused or failing plan", () => {
-    expect(canRenewEarly({ ...sub("2027-06-01T00:00:00Z"), cancel_at_period_end: true }, [], now)).toBe(false);
-    expect(canRenewEarly({ ...sub("2027-06-01T00:00:00Z"), status: "past_due" }, [], now)).toBe(false);
+    expect(
+      canRenewEarly({ ...sub("2027-06-01T00:00:00Z"), cancel_at_period_end: true }, [], now),
+    ).toBe(false);
+    expect(canRenewEarly({ ...sub("2027-06-01T00:00:00Z"), status: "past_due" }, [], now)).toBe(
+      false,
+    );
   });
 });

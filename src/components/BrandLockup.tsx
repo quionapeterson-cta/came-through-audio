@@ -20,17 +20,36 @@ export const MARK_TUCK = "[margin-right:0.02em]";
  * (AGENTS.md, Brand Lockup; founder, 2026-11-04). The mark is sized in em, not pixels, so it scales with the name on a
  * phone instead of drifting off the baseline, and it is centred on the cap height with no rotation of its own.
  */
-export function BrandLockup({ className, nameClassName, sloganClassName }: {
-  className?: string; nameClassName?: string; sloganClassName?: string;
+export function BrandLockup({
+  className,
+  nameClassName,
+  sloganClassName,
+}: {
+  className?: string;
+  nameClassName?: string;
+  sloganClassName?: string;
 }) {
   return (
     <div className={className ?? "text-center"}>
-      <p className={`flex items-center justify-center gap-[0.02em] font-bold uppercase tracking-[2px] ${nameClassName ?? "text-lg"}`}>
-        <img src="/cta-mark-light.png" alt="" aria-hidden width={28} height={28} className={`${MARK_BOX} ${MARK_TUCK}`} />
+      <p
+        className={`flex items-center justify-center gap-[0.02em] font-bold uppercase tracking-[2px] ${nameClassName ?? "text-lg"}`}
+      >
+        <img
+          src="/cta-mark-light.png"
+          alt=""
+          aria-hidden
+          width={28}
+          height={28}
+          className={`${MARK_BOX} ${MARK_TUCK}`}
+        />
         <span aria-hidden>ame Through Audio</span>
         <span className="sr-only">Came Through Audio</span>
       </p>
-      <p className={`mt-1 font-bold uppercase tracking-[2px] text-brand-electric ${sloganClassName ?? "text-sm"}`}>{SLOGAN}</p>
+      <p
+        className={`mt-1 font-bold uppercase tracking-[2px] text-brand-electric ${sloganClassName ?? "text-sm"}`}
+      >
+        {SLOGAN}
+      </p>
     </div>
   );
 }

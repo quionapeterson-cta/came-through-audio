@@ -55,7 +55,10 @@ describe("the reply email", () => {
   });
 
   it("keeps paragraphs and escapes what the member would read", () => {
-    const html = replyParagraphs("Hi Tasha,\nThanks <b>again</b>.\n\nCame Through Audio", escapeHtml);
+    const html = replyParagraphs(
+      "Hi Tasha,\nThanks <b>again</b>.\n\nCame Through Audio",
+      escapeHtml,
+    );
     expect(html.match(/<p /g)?.length).toBe(2);
     expect(html).toContain("&lt;b&gt;");
     expect(html).toContain("Hi Tasha,<br/>");
@@ -99,8 +102,12 @@ describe("what the member may see", () => {
 
   it("marks a thread unread until the member opens it after our reply", () => {
     expect(memberUnread({ member_read_at: null }, "2026-11-08T10:00:00Z")).toBe(true);
-    expect(memberUnread({ member_read_at: "2026-11-08T11:00:00Z" }, "2026-11-08T10:00:00Z")).toBe(false);
-    expect(memberUnread({ member_read_at: "2026-11-08T09:00:00Z" }, "2026-11-08T10:00:00Z")).toBe(true);
+    expect(memberUnread({ member_read_at: "2026-11-08T11:00:00Z" }, "2026-11-08T10:00:00Z")).toBe(
+      false,
+    );
+    expect(memberUnread({ member_read_at: "2026-11-08T09:00:00Z" }, "2026-11-08T10:00:00Z")).toBe(
+      true,
+    );
     expect(memberUnread({ member_read_at: null }, null)).toBe(false);
   });
 });

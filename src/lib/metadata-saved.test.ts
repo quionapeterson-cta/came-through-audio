@@ -2,7 +2,15 @@ import { describe, expect, it } from "vitest";
 import { emptyMetadata, metadataSchema, savedSchema } from "@/lib/metadata";
 
 describe("saving a song with no artist of its own", () => {
-  const writer = { ...emptyMetadata().writers[0]!, name: "", legalName: "Ann Lee", role: "Author/Composer" as const, pro: "ASCAP", ipi: "00123456789", percentage: "100" };
+  const writer = {
+    ...emptyMetadata().writers[0]!,
+    name: "",
+    legalName: "Ann Lee",
+    role: "Author/Composer" as const,
+    pro: "ASCAP",
+    ipi: "00123456789",
+    percentage: "100",
+  };
   const song = { ...emptyMetadata(), title: "Words I Wrote", artist: "", writers: [writer] };
 
   it("saves a songwriter's work, because someone else performs it", () => {

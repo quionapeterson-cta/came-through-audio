@@ -1,5 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { fileProblem, KIND_LIMIT, KIND_LABEL, safeFileName, SUBMISSION_KINDS, SUBMISSION_STATUS } from "./staff-submissions";
+import {
+  fileProblem,
+  KIND_LIMIT,
+  KIND_LABEL,
+  safeFileName,
+  SUBMISSION_KINDS,
+  SUBMISSION_STATUS,
+} from "./staff-submissions";
 
 const file = (size: number, type: string, name = "file") => ({ name, size, type });
 
@@ -15,7 +22,9 @@ describe("fileProblem", () => {
     const tooBig = fileProblem("photo", file(KIND_LIMIT.photo + 1, "image/png", "huge.png"));
     expect(tooBig).toContain("Photo");
     expect(tooBig).toMatch(/MB/);
-    expect(fileProblem("paperwork", file(49 * 1024 * 1024, "application/pdf", "big.pdf"))).toBeNull();
+    expect(
+      fileProblem("paperwork", file(49 * 1024 * 1024, "application/pdf", "big.pdf")),
+    ).toBeNull();
   });
 
   it("refuses a type the kind doesn't take", () => {

@@ -8,17 +8,29 @@ describe("the credit check's copies", () => {
       { legalName: "Ann Lee", ipi: "00123456789", share: "50" },
       { legalName: "Lee Ann" },
     ]);
-    expect(writersText([{ legalName: "Ann Lee", ipi: "1", share: "50" }, { legalName: "Lee Ann" }])).toBe("Ann Lee | 1 | 50\nLee Ann");
+    expect(
+      writersText([{ legalName: "Ann Lee", ipi: "1", share: "50" }, { legalName: "Lee Ann" }]),
+    ).toBe("Ann Lee | 1 | 50\nLee Ann");
   });
   it("survives a copy that was saved badly, without inventing one", () => {
-    const copies = readCopies({ [CREDIT_KEYS.agency]: "{not json", [CREDIT_KEYS.release]: JSON.stringify({ title: "Gold Teeth", at: "2026-11-09", writers: [] }) });
+    const copies = readCopies({
+      [CREDIT_KEYS.agency]: "{not json",
+      [CREDIT_KEYS.release]: JSON.stringify({ title: "Gold Teeth", at: "2026-11-09", writers: [] }),
+    });
     expect(copies.agency).toBeUndefined();
     expect(copies.release?.title).toBe("Gold Teeth");
     expect(copies.reading).toBeUndefined();
   });
   it("keeps the other steps when a copy is saved or removed", () => {
     const base = { ...emptyStatus("t1"), steps: { "release:split": "x" } };
-    const saved = withCopy(base, "release", { name: "the release", at: "2026-11-09", verified: false, result: "found", title: "Gold Teeth", writers: [] });
+    const saved = withCopy(base, "release", {
+      name: "the release",
+      at: "2026-11-09",
+      verified: false,
+      result: "found",
+      title: "Gold Teeth",
+      writers: [],
+    });
     expect(saved.steps["release:split"]).toBe("x");
     expect(readCopies(saved.steps).release?.title).toBe("Gold Teeth");
     expect(withCopy(saved, "release", null).steps[CREDIT_KEYS.release]).toBeUndefined();

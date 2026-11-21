@@ -86,7 +86,18 @@ function ErrorComponent({ error, reset }: ErrorComponentProps) {
 }
 
 /** Open during pre-launch so Paddle's website review can see the business (founder, 2026-10-20). Search engines stay blocked. */
-const REVIEW_PAGES = new Set(["/", "/faq", "/plans", "/contact", "/contact-us", "/terms-of-service", "/terms-and-conditions", "/privacy-policy", "/privacy-notice", "/refund-policy"]);
+const REVIEW_PAGES = new Set([
+  "/",
+  "/faq",
+  "/plans",
+  "/contact",
+  "/contact-us",
+  "/terms-of-service",
+  "/terms-and-conditions",
+  "/privacy-policy",
+  "/privacy-notice",
+  "/refund-policy",
+]);
 
 export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()({
   // Staging passcode gate: clear SITE_PASSWORD to open the site at launch.
@@ -96,12 +107,26 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     // Invite opt-out links stay reachable so anyone who got an invite can stop them without a passcode.
     // Company agreement links (/contract/<id>?t=<private token>) stay reachable: the signer has no account or passcode,
     // and the token plus the emailed 6-digit code already protect them.
-    const companyLink = location.pathname.startsWith("/contract/") && !!(location.search as { t?: unknown }).t;
-    if (companyLink || location.pathname === "/unlock" || location.pathname === "/reset-password" || location.pathname === "/invites/stop" || location.pathname.startsWith("/share/") || location.pathname.startsWith("/verify/")) return { siteLocked: false };
+    const companyLink =
+      location.pathname.startsWith("/contract/") && !!(location.search as { t?: unknown }).t;
+    if (
+      companyLink ||
+      location.pathname === "/unlock" ||
+      location.pathname === "/reset-password" ||
+      location.pathname === "/invites/stop" ||
+      location.pathname.startsWith("/share/") ||
+      location.pathname.startsWith("/verify/")
+    )
+      return { siteLocked: false };
     const { unlocked } = await getGateStatus();
     // The pages a payment provider reviews (product, pricing, legal, contact) are open to everyone; signup on them
     // waits until launch (siteLocked). The workspace, admin and everything else stay behind the passcode.
-    if (!unlocked && !REVIEW_PAGES.has(location.pathname) && !location.pathname.startsWith("/docs/")) throw redirect({ to: "/unlock", search: { next: location.href } });
+    if (
+      !unlocked &&
+      !REVIEW_PAGES.has(location.pathname) &&
+      !location.pathname.startsWith("/docs/")
+    )
+      throw redirect({ to: "/unlock", search: { next: location.href } });
     return { siteLocked: !unlocked };
   },
   head: () => ({
@@ -109,11 +134,17 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { charSet: "utf-8" },
       // `maximum-scale=5` still lets a reader pinch in; `viewport-fit=cover` is what makes the safe-area insets in
       // styles.css resolve on a phone with a notch or a home indicator.
-      { name: "viewport", content: "width=device-width, initial-scale=1, maximum-scale=5, viewport-fit=cover" },
+      {
+        name: "viewport",
+        content: "width=device-width, initial-scale=1, maximum-scale=5, viewport-fit=cover",
+      },
       // Development-stage shield: remove before public launch.
       { name: "robots", content: "noindex, nofollow" },
       { title: "Came Through Audio" },
-      { name: "description", content: "Embed metadata, organize your catalog and check your royalty health." },
+      {
+        name: "description",
+        content: "Embed metadata, organize your catalog and check your royalty health.",
+      },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
       // Installable app (PWA): home-screen name and status bar color on phones.
@@ -130,11 +161,26 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       },
       { rel: "preconnect", href: "https://fonts.googleapis.com" },
       { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },
-      { rel: "stylesheet", href: "https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&family=Dancing+Script:wght@600&display=swap" },
+      {
+        rel: "stylesheet",
+        href: "https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&family=Dancing+Script:wght@600&display=swap",
+      },
       /* Chrome's tab strip is the ground, so the mark follows it: the ink version in a light browser, the white one in a
          dark one. Both PNGs are transparent, so the artwork sits straight on the tab with no plate behind it. */
-      { rel: "icon", href: "/favicon-light.png", type: "image/png", sizes: "64x64", media: "(prefers-color-scheme: light)" },
-      { rel: "icon", href: "/favicon.png", type: "image/png", sizes: "64x64", media: "(prefers-color-scheme: dark)" },
+      {
+        rel: "icon",
+        href: "/favicon-light.png",
+        type: "image/png",
+        sizes: "64x64",
+        media: "(prefers-color-scheme: light)",
+      },
+      {
+        rel: "icon",
+        href: "/favicon.png",
+        type: "image/png",
+        sizes: "64x64",
+        media: "(prefers-color-scheme: dark)",
+      },
       /* Credentials matter: a protected preview host rejects the manifest's default credential-less fetch, and the
          console fills with 403s even though the page itself is signed in. */
       { rel: "manifest", href: "/manifest.webmanifest", crossOrigin: "use-credentials" },
@@ -171,7 +217,8 @@ function RootComponent() {
     const path = window.location.pathname;
     const hash = window.location.hash;
     const search = window.location.search;
-    const fromEmail = hash.includes("access_token") || hash.includes("type=signup") || search.includes("code=");
+    const fromEmail =
+      hash.includes("access_token") || hash.includes("type=signup") || search.includes("code=");
     if (path === "/" && fromEmail) {
       const ret = takeReturn();
       window.location.replace(`/verified${ret ? `?next=${encodeURIComponent(ret)}` : ""}${hash}`);
@@ -185,11 +232,11 @@ function RootComponent() {
       hadSession = !!session;
       if (event !== "SIGNED_IN" || wasSignedIn !== false) return;
       const ret = takeReturn();
-      if (ret && window.location.pathname !== ret && window.location.pathname !== "/verified") window.location.assign(ret);
+      if (ret && window.location.pathname !== ret && window.location.pathname !== "/verified")
+        window.location.assign(ret);
     });
     return () => sub.subscription.unsubscribe();
   }, []);
-
 
   return (
     <QueryClientProvider client={queryClient}>

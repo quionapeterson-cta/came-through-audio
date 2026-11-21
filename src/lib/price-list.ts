@@ -1,6 +1,14 @@
 import { BRANDING_LOOKUP_KEY, BRANDING_PRICE } from "@/lib/brand-kit";
 import { CONTRACT_LOOKUP_KEY, CONTRACT_PRICE } from "@/lib/contract-generator";
-import { ARTIST_SEAT_PRICES, ASSISTANCE_PER_SONG_AGENCY, PLAN_TIERS, STATEMENT_DESCRIPTOR, STATEMENT_DESCRIPTOR_PREFIX, TIER_LABEL, assistanceFees } from "@/lib/plans";
+import {
+  ARTIST_SEAT_PRICES,
+  ASSISTANCE_PER_SONG_AGENCY,
+  PLAN_TIERS,
+  STATEMENT_DESCRIPTOR,
+  STATEMENT_DESCRIPTOR_PREFIX,
+  TIER_LABEL,
+  assistanceFees,
+} from "@/lib/plans";
 import { PACKAGES } from "@/lib/proof";
 import { VAULT_LOOKUP_KEY, VAULT_PRICE } from "@/lib/retention";
 
@@ -12,7 +20,8 @@ import { VAULT_LOOKUP_KEY, VAULT_PRICE } from "@/lib/retention";
 
 /**
  * How Stripe must hold the price: a yearly subscription, a monthly one, or a single charge. The Vault fee is monthly
- * (founder, 2026-11-20): $1.99 billed once per month of a pause, cancelled by Stripe at the pause end.
+ * (founder, 2026-11-20): $1.99 billed once per month for as long as the pause runs, cancelled on Resume
+ * (open-ended since 2026-11-21).
  */
 export type BillingType = "recurring-yearly" | "recurring-monthly" | "one-time";
 
@@ -78,21 +87,24 @@ export const PRICE_LIST: PriceGroup[] = [
       {
         item: "Generated contract",
         price: CONTRACT_PRICE,
-        detail: "One generated contract, any plan. Catalog Management can generate them from its blueprints without paying per contract.",
+        detail:
+          "One generated contract, any plan. Catalog Management can generate them from its blueprints without paying per contract.",
         lookupKey: CONTRACT_LOOKUP_KEY,
         billing: "one-time",
       },
       {
         item: "Personal Branding kit",
         price: BRANDING_PRICE,
-        detail: "Per kit, per year: your logo, colors, business name and tagline on split sheets and contracts. Included with Catalog Management. Its own yearly subscription, renewing until cancelled.",
+        detail:
+          "Per kit, per year: your logo, colors, business name and tagline on split sheets and contracts. Included with Catalog Management. Its own yearly subscription, renewing until cancelled.",
         lookupKey: BRANDING_LOOKUP_KEY,
         billing: "recurring-yearly",
       },
       {
         item: "Pause (Vault fee)",
         price: `${usd(VAULT_PRICE)} / month`,
-        detail: "While a plan is paused, up to 3 months. Its own monthly subscription: billed once a month and stopped by Stripe when the pause ends, on Resume, or when the card cannot be charged. Keeps the catalog and Vault files in place, and downloads stay available.",
+        detail:
+          "While a plan is paused, for as long as the member needs: its own monthly subscription, billed once a month and stopped on Resume or when the card cannot be charged. Keeps the catalog and Vault files in place, with downloads available and the paid tools waiting.",
         lookupKey: VAULT_LOOKUP_KEY,
         billing: "recurring-monthly",
       },
@@ -102,14 +114,35 @@ export const PRICE_LIST: PriceGroup[] = [
     title: "Expert Assistance",
     note: "Our team registers songs for the customer. Sold by Came Through Audio, LLC directly, so it is not part of Stripe's managed payments.",
     rows: [
-      { item: "Setup: single or EP", price: singleSetup, detail: "Up to 6 songs", lookupKey: "expert_setup_single", billing: "one-time" },
-      { item: "Setup: album", price: albumSetup, detail: "Up to 20 songs", lookupKey: "expert_setup_album", billing: "one-time" },
-      { item: "Each further block of album tracks", price: albumSetup, detail: "Every full block of 20 tracks beyond the first 20" },
-      { item: "A short final block of album tracks", price: singleSetup, detail: "1–6 extra tracks (7–19 is charged as another full block)" },
+      {
+        item: "Setup: single or EP",
+        price: singleSetup,
+        detail: "Up to 6 songs",
+        lookupKey: "expert_setup_single",
+        billing: "one-time",
+      },
+      {
+        item: "Setup: album",
+        price: albumSetup,
+        detail: "Up to 20 songs",
+        lookupKey: "expert_setup_album",
+        billing: "one-time",
+      },
+      {
+        item: "Each further block of album tracks",
+        price: albumSetup,
+        detail: "Every full block of 20 tracks beyond the first 20",
+      },
+      {
+        item: "A short final block of album tracks",
+        price: singleSetup,
+        detail: "1–6 extra tracks (7–19 is charged as another full block)",
+      },
       {
         item: "Registration, per song per agency",
         price: usd(ASSISTANCE_PER_SONG_AGENCY),
-        detail: "Added for every song in the request, times the number of agencies chosen. ASCAP or BMI, never both.",
+        detail:
+          "Added for every song in the request, times the number of agencies chosen. ASCAP or BMI, never both.",
         lookupKey: "expert_per_song_agency",
         billing: "one-time",
       },
@@ -128,14 +161,30 @@ export const PRICE_LIST: PriceGroup[] = [
   },
 ];
 
-export type SoldPrice = { item: string; price: string; detail?: string; lookupKey: string; billing: BillingType };
+export type SoldPrice = {
+  item: string;
+  price: string;
+  detail?: string;
+  lookupKey: string;
+  billing: BillingType;
+};
 
 /** Every row that is actually a Stripe price, in the order the page lists it. */
 export function soldPrices(): SoldPrice[] {
   return PRICE_LIST.flatMap((group) =>
-    group.rows.flatMap((row) => (row.lookupKey && row.billing
-      ? [{ item: row.item, price: row.price, lookupKey: row.lookupKey, billing: row.billing, ...(row.detail ? { detail: row.detail } : {}) }]
-      : [])),
+    group.rows.flatMap((row) =>
+      row.lookupKey && row.billing
+        ? [
+            {
+              item: row.item,
+              price: row.price,
+              lookupKey: row.lookupKey,
+              billing: row.billing,
+              ...(row.detail ? { detail: row.detail } : {}),
+            },
+          ]
+        : [],
+    ),
   );
 }
 
@@ -154,6 +203,9 @@ export function stripeLookupKeyText(): string {
     "Create each price on its own product and set the lookup key exactly as written.",
     "yearly subscription = a recurring price billed once a year; monthly subscription = a recurring price billed once a month; one-time = a single charge.",
     "",
-    ...rows.map((r) => `${r.lookupKey.padEnd(keyWidth)}  ${r.price.padEnd(priceWidth)}  ${BILLING_TEXT[r.billing]}  ${r.item}`),
+    ...rows.map(
+      (r) =>
+        `${r.lookupKey.padEnd(keyWidth)}  ${r.price.padEnd(priceWidth)}  ${BILLING_TEXT[r.billing]}  ${r.item}`,
+    ),
   ].join("\n");
 }

@@ -1,4 +1,15 @@
-import { brandFooter, brandHeader, COBALT, ensureSpace, font, INK, MARGIN, MUTED, newBrandedPdf, sectionTitle } from "@/lib/brand-pdf";
+import {
+  brandFooter,
+  brandHeader,
+  COBALT,
+  ensureSpace,
+  font,
+  INK,
+  MARGIN,
+  MUTED,
+  newBrandedPdf,
+  sectionTitle,
+} from "@/lib/brand-pdf";
 import { safeName, saveBlob } from "@/lib/catalog";
 import type { Guide } from "@/lib/guides";
 
@@ -27,16 +38,26 @@ export async function buildGuidePdf(g: Guide) {
   const ticks: Tick[] = [];
   let y = brandHeader(pdf, g.title, g.kind);
   font(pdf, "regular", 10.5).setTextColor(...MUTED);
-  for (const line of pdf.splitTextToSize(g.summary, width) as string[]) { pdf.text(line, MARGIN, y); y += LINE; }
+  for (const line of pdf.splitTextToSize(g.summary, width) as string[]) {
+    pdf.text(line, MARGIN, y);
+    y += LINE;
+  }
   y += 5;
   g.steps.forEach((st, i) => {
     const lines = pdf.splitTextToSize(st.text, width - 10) as string[];
     y = ensureSpace(pdf, y, 8 + lines.length * LINE);
-    font(pdf, "bold", 11).setTextColor(...COBALT).text(`${i + 1}`, MARGIN, y);
-    font(pdf, "semibold", 11).setTextColor(...INK).text(st.title, MARGIN + 10, y);
+    font(pdf, "bold", 11)
+      .setTextColor(...COBALT)
+      .text(`${i + 1}`, MARGIN, y);
+    font(pdf, "semibold", 11)
+      .setTextColor(...INK)
+      .text(st.title, MARGIN + 10, y);
     y += LINE + 0.6;
     font(pdf, "regular", 10).setTextColor(...MUTED);
-    for (const line of lines) { pdf.text(line, MARGIN + 10, y); y += LINE; }
+    for (const line of lines) {
+      pdf.text(line, MARGIN + 10, y);
+      y += LINE;
+    }
     y += 3;
   });
   if (g.checklist?.length) {
@@ -45,7 +66,10 @@ export async function buildGuidePdf(g: Guide) {
     font(pdf, "regular", 10.5).setTextColor(...INK);
     for (const item of g.checklist) {
       y = ensureSpace(pdf, y, LINE + 1);
-      pdf.setDrawColor(...COBALT).setLineWidth(0.4).rect(MARGIN, y - 3.4, BOX_MM, BOX_MM);
+      pdf
+        .setDrawColor(...COBALT)
+        .setLineWidth(0.4)
+        .rect(MARGIN, y - 3.4, BOX_MM, BOX_MM);
       ticks.push({ page: pdf.getNumberOfPages(), left: MARGIN, top: y - 3.4 });
       pdf.text(item, MARGIN + 7, y);
       y += LINE + 1;
@@ -58,18 +82,32 @@ export async function buildGuidePdf(g: Guide) {
     for (const part of g.pamphlet) {
       const lines = pdf.splitTextToSize(part.body, width) as string[];
       y = ensureSpace(pdf, y, 8 + lines.length * LINE);
-      font(pdf, "semibold", 11).setTextColor(...INK).text(part.heading, MARGIN, y);
+      font(pdf, "semibold", 11)
+        .setTextColor(...INK)
+        .text(part.heading, MARGIN, y);
       y += LINE + 1.4;
       font(pdf, "regular", 10).setTextColor(...MUTED);
-      for (const line of lines) { pdf.text(line, MARGIN, y); y += LINE; }
+      for (const line of lines) {
+        pdf.text(line, MARGIN, y);
+        y += LINE;
+      }
       // Same order as the screen: the bullets sit under the paragraph they belong to. The bullet glyphs stay on screen;
       // jsPDF's built-in fonts have no emoji, so the PDF prints the same sentence with the bullet instead.
       for (const point of part.points ?? []) {
-        const plain = point.replace(/[\u{1F000}-\u{1FAFF}\u{2190}-\u{21FF}\u{2600}-\u{27BF}\u{2B00}-\u{2BFF}\u{FE0F}]/gu, "").replace(/\s+/g, " ").trim();
+        const plain = point
+          .replace(
+            /[\u{1F000}-\u{1FAFF}\u{2190}-\u{21FF}\u{2600}-\u{27BF}\u{2B00}-\u{2BFF}]|\u{FE0F}/gu,
+            "",
+          )
+          .replace(/\s+/g, " ")
+          .trim();
         const pointLines = pdf.splitTextToSize(`• ${plain}`, width - 4) as string[];
         y = ensureSpace(pdf, y, pointLines.length * LINE + 1);
         font(pdf, "regular", 10).setTextColor(...MUTED);
-        for (const line of pointLines) { pdf.text(line, MARGIN + 4, y); y += LINE; }
+        for (const line of pointLines) {
+          pdf.text(line, MARGIN + 4, y);
+          y += LINE;
+        }
         y += 1;
       }
       y += 4;
@@ -97,7 +135,9 @@ export async function buildGuidePdfBytes(g: Guide) {
     ticks.forEach((tick, i) => {
       const page = pages[tick.page - 1];
       if (!page) return;
-      form.createCheckBox(`checklist-${i + 1}`).addToPage(page, { ...tickBox(height, tick), borderWidth: 0 });
+      form
+        .createCheckBox(`checklist-${i + 1}`)
+        .addToPage(page, { ...tickBox(height, tick), borderWidth: 0 });
     });
     return await doc.save();
   } catch (e) {
@@ -107,5 +147,8 @@ export async function buildGuidePdfBytes(g: Guide) {
 }
 
 export async function downloadGuidePdf(g: Guide) {
-  saveBlob(new Blob([new Uint8Array(await buildGuidePdfBytes(g))], { type: "application/pdf" }), `${safeName(g.title)}.pdf`);
+  saveBlob(
+    new Blob([new Uint8Array(await buildGuidePdfBytes(g))], { type: "application/pdf" }),
+    `${safeName(g.title)}.pdf`,
+  );
 }

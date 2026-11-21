@@ -67,7 +67,11 @@ export const listCompanyEmail = createServerFn({ method: "GET" })
       .order("sent_at", { ascending: false })
       .limit(100);
     const scoped =
-      scope === "all" ? base : scope === "own" ? base.eq("sent_by", context.userId) : base.in("mailbox", scope);
+      scope === "all"
+        ? base
+        : scope === "own"
+          ? base.eq("sent_by", context.userId)
+          : base.in("mailbox", scope);
     const { data, error } = await scoped;
     if (error) throw new Error("Couldn't load company email. Run migration 20261119200000 first.");
     return (
@@ -146,7 +150,13 @@ export const sendCompanyEmail = createServerFn({ method: "POST" })
       html: emailLayout(mailBodyHtml(data.body), {
         reason: "You're receiving this because Came Through Audio wrote to you directly.",
       }),
-      key: mailKey("company-letter", data.mailbox, data.to, data.subject, Math.floor(Date.now() / 60_000)),
+      key: mailKey(
+        "company-letter",
+        data.mailbox,
+        data.to,
+        data.subject,
+        Math.floor(Date.now() / 60_000),
+      ),
     });
     if (!res.ok) {
       console.error(`Company email failed [${res.status ?? res.detail}]: ${res.detail ?? ""}`);

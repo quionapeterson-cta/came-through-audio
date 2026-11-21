@@ -7,13 +7,18 @@ import {
   fillTokens,
   formatBlockDate,
   headerInk,
+  insertTokenAt,
+  missingTokens,
   newId,
   preflight,
   sameTemplateBlocks,
   starterPresets,
   templateToHtml,
+  templateTokens,
+  tokenLabel,
   tokensIn,
   unknownTokens,
+  withoutRepeatedLeadingTitle,
   type PdfTemplate,
 } from "./pdf-templates";
 
@@ -81,7 +86,12 @@ describe("blocks as text", () => {
         { id: newId(), kind: "date", label: "Effective date", value: "2026-11-16", format: "long" },
         { id: newId(), kind: "clause", heading: "Term", body: "One year, renewing.", help: "" },
         { id: newId(), kind: "seal", tier: "gold", label: "CTA" },
-        { id: newId(), kind: "signatures", heading: "Signed by", parties: [{ id: newId(), label: "Company" }] },
+        {
+          id: newId(),
+          kind: "signatures",
+          heading: "Signed by",
+          parties: [{ id: newId(), label: "Company" }],
+        },
       ],
       "Services Agreement",
     );
@@ -128,6 +138,262 @@ describe("tokens", () => {
       ],
     };
     expect(unknownTokens(template)).toEqual(["MYSTERY_TOKEN"]);
+  });
+});
+
+describe("print legal name block", () => {
+  const template = (): PdfTemplate => ({
+    name: "Participant Release",
+    tier: "standard",
+    blocks: [
+      { id: newId(), kind: "header", background: "light", showTagline: true },
+      { id: newId(), kind: "printName", label: "Participant Print Legal Name" },
+      { id: newId(), kind: "signature", heading: "Signature", role: "recipient", showDate: true },
+    ],
+  });
+
+  it("asks for PRINT_LEGAL_NAME without spelling the token in the label", () => {
+    expect(templateTokens(template())).toEqual(["PRINT_LEGAL_NAME"]);
+    expect(preflight(template()).find((c) => c.id === "tokens")?.ok).toBe(true);
+  });
+
+  it("prints the editable label and the Step 2 name on the line", () => {
+    const html = templateToHtml(template(), { PRINT_LEGAL_NAME: "Ada Lovelace" });
+    expect(html).toContain("Participant Print Legal Name");
+    expect(html).toContain("Ada Lovelace");
+    expect(html).not.toContain("{{PRINT_LEGAL_NAME}}");
+  });
+
+  it("keeps a blank line, never the raw token, when no name has been typed", () => {
+    const html = templateToHtml(template(), {});
+    expect(html).not.toContain("{{PRINT_LEGAL_NAME}}");
+    expect(html).toContain("Participant Print Legal Name");
+  });
+
+  it("is reported as missing until the name is filled", () => {
+    expect(missingTokens(template(), {})).toEqual(["PRINT_LEGAL_NAME"]);
+    expect(missingTokens(template(), { PRINT_LEGAL_NAME: "Ada Lovelace" })).toEqual([]);
+    expect(missingTokens(template(), { PRINT_LEGAL_NAME: "   " })).toEqual(["PRINT_LEGAL_NAME"]);
+  });
+
+  it("appears in the plain text and passes the block check", () => {
+    expect(
+      blocksToText([{ id: newId(), kind: "printName", label: "Parent/Guardian Print Legal Name" }]),
+    ).toContain("Parent/Guardian Print Legal Name: ____________________");
+    expect(preflight(template()).find((c) => c.id === "blocks")?.ok).toBe(true);
+  });
+});
+
+describe("HTML preview values", () => {
+  it("fills every token-bearing block from the contract's own values, not the sample release", () => {
+    const template: PdfTemplate = {
+      name: "Values",
+      tier: "standard",
+      blocks: [
+        {
+          id: newId(),
+          kind: "meta",
+          heading: "{{ARTIST_NAME}} details",
+          rows: [{ id: newId(), label: "Name", value: "{{LEGAL_NAME}}" }],
+        },
+        {
+          id: newId(),
+          kind: "clause",
+          heading: "{{ARTIST_NAME}} term",
+          body: "{{ARTIST_NAME}} signs as {{PRINT_LEGAL_NAME}}.",
+          help: "{{DATE}}",
+        },
+        {
+          id: newId(),
+          kind: "signatures",
+          heading: "{{ARTIST_NAME}} signatures",
+          parties: [{ id: newId(), label: "{{LEGAL_NAME}} · artist" }],
+        },
+        { id: newId(), kind: "section", title: "{{ARTIST_NAME}} section", subtitle: "{{DATE}}" },
+        {
+          id: newId(),
+          kind: "fields",
+          heading: "{{ARTIST_NAME}} fields",
+          role: "recipient",
+          fields: [{ id: newId(), label: "{{DATE}}", type: "text", role: "recipient" }],
+        },
+        {
+          id: newId(),
+          kind: "checkboxes",
+          heading: "{{ARTIST_NAME}} options",
+          role: "recipient",
+          mode: "single",
+          options: [{ id: newId(), label: "{{DATE}}" }],
+        },
+        { id: newId(), kind: "date", label: "{{DATE}}", value: "2026-11-21", format: "long" },
+        { id: newId(), kind: "seal", tier: "gold", label: "{{CERTIFICATION_TIER}}" },
+        {
+          id: newId(),
+          kind: "signature",
+          heading: "{{ARTIST_NAME}} signature",
+          role: "recipient",
+          showDate: true,
+        },
+        { id: newId(), kind: "printName", label: "{{ARTIST_NAME}} printed name" },
+      ],
+    };
+    const html = templateToHtml(template, {
+      ARTIST_NAME: "Ada Lovelace",
+      LEGAL_NAME: "Ada Byron",
+      PRINT_LEGAL_NAME: "Ada Lovelace",
+      DATE: "21 November 2026",
+      CERTIFICATION_TIER: "Diamond",
+    });
+    expect(html).not.toContain("Karma Came");
+    for (const value of [
+      "Ada Lovelace details",
+      "Ada Byron",
+      "Ada Lovelace signs",
+      "Ada Lovelace signatures",
+      "21 November 2026",
+      "Ada Lovelace section",
+      "Ada Lovelace fields",
+      "Ada Lovelace options",
+      "Diamond",
+      "Ada Lovelace signature",
+      "Ada Lovelace printed name",
+    ]) {
+      expect(html).toContain(value);
+    }
+  });
+});
+
+describe("universal token scanner", () => {
+  it("finds standalone and inline tokens once, in reading order", () => {
+    const template: PdfTemplate = {
+      name: "Services",
+      tier: "standard",
+      blocks: [
+        { id: newId(), kind: "header", background: "light", showTagline: true },
+        {
+          id: newId(),
+          kind: "clause",
+          heading: "Scope",
+          body: "{{SELECTED_SERVICE}} for {{PRINT_LEGAL_NAME}}",
+          help: "",
+        },
+        { id: newId(), kind: "printName", label: "Print Legal Name" },
+        { id: newId(), kind: "clause", heading: "Repeat", body: "{{SELECTED_SERVICE}}", help: "" },
+      ],
+    };
+    expect(templateTokens(template)).toEqual(["SELECTED_SERVICE", "PRINT_LEGAL_NAME"]);
+  });
+
+  it("makes a readable form label from any token", () => {
+    expect(tokenLabel("SELECTED_SERVICE")).toBe("Selected Service");
+    expect(tokenLabel("PRINT_LEGAL_NAME")).toBe("Print Legal Name");
+    expect(tokenLabel("PARENT_GUARDIAN_NAME")).toBe("Parent Guardian Name");
+  });
+
+  it("clears the missing list only when every token has a value", () => {
+    const template: PdfTemplate = {
+      name: "Services",
+      tier: "standard",
+      blocks: [
+        {
+          id: newId(),
+          kind: "clause",
+          heading: "Scope",
+          body: "{{A_ONE}} and {{B_TWO}}",
+          help: "",
+        },
+      ],
+    };
+    expect(missingTokens(template, { A_ONE: "one" })).toEqual(["B_TWO"]);
+    expect(missingTokens(template, { A_ONE: "one", B_TWO: "two" })).toEqual([]);
+  });
+});
+
+describe("inserting a token", () => {
+  it("lands at the caret and spaces only where needed", () => {
+    expect(insertTokenAt("Signed by .", "PRINT_LEGAL_NAME", 10, 10)).toEqual({
+      text: "Signed by {{PRINT_LEGAL_NAME}} .",
+      caret: 30,
+    });
+    expect(insertTokenAt("Signed by ", "PRINT_LEGAL_NAME", 10, 10).text).toBe(
+      "Signed by {{PRINT_LEGAL_NAME}}",
+    );
+  });
+
+  it("replaces the selected words instead of appending after them", () => {
+    expect(insertTokenAt("Signed by NAME here", "PRINT_LEGAL_NAME", 10, 14).text).toBe(
+      "Signed by {{PRINT_LEGAL_NAME}} here",
+    );
+  });
+});
+
+describe("contract title in the preview", () => {
+  const blocks = (heading: string) => [
+    { id: newId(), kind: "header" as const, background: "light" as const, showTagline: true },
+    { id: newId(), kind: "clause" as const, heading, body: "Terms.", help: "" },
+  ];
+
+  it("blanks a leading heading that repeats the title the preview already prints", () => {
+    const shown = withoutRepeatedLeadingTitle(
+      blocks("Master Services Agreement"),
+      "Master Services Agreement",
+    );
+    expect(shown[1]).toMatchObject({ heading: "" });
+    expect(shown[1]).toMatchObject({ body: "Terms." });
+  });
+
+  it("leaves a different first heading alone", () => {
+    const shown = withoutRepeatedLeadingTitle(blocks("Scope of work"), "Master Services Agreement");
+    expect(shown[1]).toMatchObject({ heading: "Scope of work" });
+  });
+});
+
+describe("default signature block", () => {
+  const template = (enabled: boolean): PdfTemplate => ({
+    name: "Own signatures",
+    tier: "standard",
+    blocks: [
+      { id: newId(), kind: "header", background: "light", showTagline: true },
+      {
+        id: newId(),
+        kind: "signatures",
+        heading: "SIGNATURES",
+        parties: [{ id: newId(), label: "{{ARTIST_NAME}} · artist" }],
+        enabled,
+      },
+      { id: newId(), kind: "signature", heading: "Signature", role: "recipient", showDate: true },
+    ],
+  });
+
+  it("prints when left on", () => {
+    expect(templateToHtml(template(true))).toContain("SIGNATURES");
+    expect(blocksToText(template(true).blocks)).toContain("SIGNATURES");
+  });
+
+  it("prints nothing, and asks for no token, when switched off", () => {
+    expect(templateToHtml(template(false))).not.toContain("SIGNATURES");
+    expect(blocksToText(template(false).blocks)).not.toContain("SIGNATURES");
+    expect(templateTokens(template(false))).toEqual([]);
+    expect(preflight(template(false)).find((c) => c.id === "blocks")?.ok).toBe(true);
+    // The standalone Signature block beside it still counts as a signature line for preflight.
+    expect(preflight(template(false)).find((c) => c.id === "signature")?.ok).toBe(true);
+  });
+});
+
+describe("block order", () => {
+  it("renders in the exact array order the studio saved", () => {
+    const blocks = [
+      { id: newId(), kind: "header" as const, background: "light" as const, showTagline: true },
+      { id: newId(), kind: "clause" as const, heading: "First", body: "One.", help: "" },
+      { id: newId(), kind: "printName" as const, label: "Print Legal Name" },
+      { id: newId(), kind: "clause" as const, heading: "Last", body: "Two.", help: "" },
+    ];
+    const html = templateToHtml(
+      { name: "Ordered", tier: "standard", blocks },
+      { PRINT_LEGAL_NAME: "Ada" },
+    );
+    expect(html.indexOf("First")).toBeLessThan(html.indexOf("Print Legal Name"));
+    expect(html.indexOf("Print Legal Name")).toBeLessThan(html.indexOf("Last"));
   });
 });
 

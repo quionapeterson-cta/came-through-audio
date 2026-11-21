@@ -22,7 +22,8 @@ export const TAG_LABEL: Record<EscalationTag, string> = {
  * The department a tag belongs to, whose lead receives the handoff beside the team. The founder is the top of her own
  * line and leads no department, so her tag names none. The mapping itself lives in escalation-departments.ts.
  */
-export const ESCALATION_DEPARTMENT: Record<EscalationTag, Department | null> = ESCALATION_TAG_DEPARTMENT;
+export const ESCALATION_DEPARTMENT: Record<EscalationTag, Department | null> =
+  ESCALATION_TAG_DEPARTMENT;
 
 /** The departments a handoff reaches, deduplicated, in the order the tags were chosen. */
 export function escalationDepartments(tags: readonly EscalationTag[]): Department[] {

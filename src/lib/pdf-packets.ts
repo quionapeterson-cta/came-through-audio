@@ -91,6 +91,7 @@ export function visibleBlocks(template: PdfTemplate, enabledForms: string[]): Te
   const blocks: TemplateBlock[] = [];
   let printing = true;
   for (const block of template.blocks) {
+    if (block.kind === "signatures" && block.enabled === false) continue;
     if (block.kind === "section") {
       printing = !block.formKey || !block.optional || enabled.has(block.formKey);
       if (!printing) continue;

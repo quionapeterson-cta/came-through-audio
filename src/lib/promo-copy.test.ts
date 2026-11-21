@@ -1,21 +1,36 @@
 import { describe, expect, it } from "vitest";
-import { captionForX, promoCaption, promoCount, promoOrder, PROMO_SITE, type PromoContext } from "@/lib/promo-copy";
+import {
+  captionForX,
+  promoCaption,
+  promoCount,
+  promoOrder,
+  PROMO_SITE,
+  type PromoContext,
+} from "@/lib/promo-copy";
 import { cardText } from "@/lib/promo-card";
 
-const all = (ctx: PromoContext, input: Parameters<typeof promoCaption>[2]) => Array.from({ length: promoCount(ctx) }, (_, i) => promoCaption(ctx, i, input));
+const all = (ctx: PromoContext, input: Parameters<typeof promoCaption>[2]) =>
+  Array.from({ length: promoCount(ctx) }, (_, i) => promoCaption(ctx, i, input));
 
 describe("promo captions", () => {
   it("names the single when there is a title, and stays generic when hidden", () => {
     expect(promoCaption("embed", 0, { title: "Midnight Drive" })).toContain('"Midnight Drive"');
-    expect(promoCaption("embed", 0, {})).toBe(`I'm embedding my new single with metadata on Came Through Audio RN! New music dropping soon! 🔥\n${PROMO_SITE}\n#CameThrough #CameThroughAudio #NewMusic #IndependentArtist #UpcomingArtist`);
+    expect(promoCaption("embed", 0, {})).toBe(
+      `I'm embedding my new single with metadata on Came Through Audio RN! New music dropping soon! 🔥\n${PROMO_SITE}\n#CameThrough #CameThroughAudio #NewMusic #IndependentArtist #UpcomingArtist`,
+    );
   });
   it("every caption has the site and five hashtags for the genre, and the line stays short", () => {
-    for (const ctx of ["embed", "catalog", "profile"] as const) for (const c of all(ctx, { title: "A Fairly Long Song Title", count: 12, genre: "R&B/Soul" })) {
-      const [line, site, tags] = c.split("\n");
-      expect(site).toBe(PROMO_SITE);
-      expect(tags).toBe("#CameThrough #CameThroughAudio #RnB #SoulMusic #NewRnB");
-      expect(line!.length).toBeLessThanOrEqual(130);
-    }
+    for (const ctx of ["embed", "catalog", "profile"] as const)
+      for (const c of all(ctx, {
+        title: "A Fairly Long Song Title",
+        count: 12,
+        genre: "R&B/Soul",
+      })) {
+        const [line, site, tags] = c.split("\n");
+        expect(site).toBe(PROMO_SITE);
+        expect(tags).toBe("#CameThrough #CameThroughAudio #RnB #SoulMusic #NewRnB");
+        expect(line!.length).toBeLessThanOrEqual(130);
+      }
   });
   it("X gets just two hashtags and fits in a post", () => {
     for (const c of all("embed", { title: "A Fairly Long Song Title", genre: "Hip-Hop/Rap" })) {
@@ -31,13 +46,18 @@ describe("promo captions", () => {
     expect(all("catalog", {}).join(" ")).not.toMatch(/undefined|\d+ songs/);
   });
   it("Generate goes through every style before repeating", () => {
-    expect([...promoOrder("embed")].sort((a, b) => a - b)).toEqual(Array.from({ length: promoCount("embed") }, (_, i) => i));
+    expect([...promoOrder("embed")].sort((a, b) => a - b)).toEqual(
+      Array.from({ length: promoCount("embed") }, (_, i) => i),
+    );
   });
 });
 
 describe("teaser card", () => {
   it("matches the spot it was opened from", () => {
-    expect(cardText({ ctx: "embed", artist: "Q", title: "Midnight Drive" })).toMatchObject({ kicker: "NEW SINGLE", headline: "“Midnight Drive”" });
+    expect(cardText({ ctx: "embed", artist: "Q", title: "Midnight Drive" })).toMatchObject({
+      kicker: "NEW SINGLE",
+      headline: "“Midnight Drive”",
+    });
     expect(cardText({ ctx: "embed", artist: "Q" }).kicker).toBe("NEW MUSIC");
     expect(cardText({ ctx: "catalog", artist: "Q", count: 12 }).headline).toBe("12 Songs");
     expect(cardText({ ctx: "catalog", artist: "Q", count: 1 }).headline).toBe("My First Song");
@@ -48,18 +68,26 @@ describe("teaser card", () => {
 describe("eagle status captions", () => {
   it("only come out for Catalog Management members, and keep the house format", () => {
     const plain = all("profile", {});
-    const withEagle = Array.from({ length: promoCount("profile", true) }, (_, i) => promoCaption("profile", i, { eagle: true }));
+    const withEagle = Array.from({ length: promoCount("profile", true) }, (_, i) =>
+      promoCaption("profile", i, { eagle: true }),
+    );
     expect(withEagle.length).toBeGreaterThan(plain.length);
     expect(plain.join("\n")).not.toMatch(/eagle/i);
     // Eagle, soaring, high achiever and excellence talk, as the founder asked for.
-    expect(withEagle.filter((c) => /eagle|soar|excellence|high achiever|altitude/i.test(c)).length).toBeGreaterThanOrEqual(10);
+    expect(
+      withEagle.filter((c) => /eagle|soar|excellence|high achiever|altitude/i.test(c)).length,
+    ).toBeGreaterThanOrEqual(10);
     // The other spots share the same captions whatever the plan.
     expect(promoCount("embed", true)).toBe(promoCount("embed"));
-    expect(promoCaption("catalog", 0, { count: 3, eagle: true })).toBe(promoCaption("catalog", 0, { count: 3 }));
+    expect(promoCaption("catalog", 0, { count: 3, eagle: true })).toBe(
+      promoCaption("catalog", 0, { count: 3 }),
+    );
     for (const c of withEagle) {
       const [line, site, tags] = c.split("\n");
       expect(site).toBe(PROMO_SITE);
-      expect(tags).toBe("#CameThrough #CameThroughAudio #NewMusic #IndependentArtist #UpcomingArtist");
+      expect(tags).toBe(
+        "#CameThrough #CameThroughAudio #NewMusic #IndependentArtist #UpcomingArtist",
+      );
       expect(line!.length).toBeLessThanOrEqual(130);
       expect(line).not.toMatch(/—/);
     }
@@ -69,7 +97,11 @@ describe("eagle status captions", () => {
 describe("caption library size", () => {
   it("has a big, repeat-free set for every spot", () => {
     for (const ctx of ["embed", "catalog", "profile"] as const) {
-      const all = Array.from({ length: promoCount(ctx) }, (_, i) => promoCaption(ctx, i, { title: "Bloodline", count: 5, genre: "Trap" }).split("\n")[0]);
+      const all = Array.from(
+        { length: promoCount(ctx) },
+        (_, i) =>
+          promoCaption(ctx, i, { title: "Bloodline", count: 5, genre: "Trap" }).split("\n")[0],
+      );
       expect(new Set(all).size).toBe(all.length);
       expect(all.length).toBeGreaterThanOrEqual(40);
       for (const line of all) expect(line).not.toMatch(/—/);

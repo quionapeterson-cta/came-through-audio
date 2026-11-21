@@ -5,7 +5,10 @@ import { getStripe } from "@/lib/stripe";
 export function StripeEmbeddedCheckout({ clientSecret }: { clientSecret: string }) {
   return (
     <div id="checkout">
-      <EmbeddedCheckoutProvider stripe={getStripe()} options={{ fetchClientSecret: () => Promise.resolve(clientSecret) }}>
+      <EmbeddedCheckoutProvider
+        stripe={getStripe()}
+        options={{ fetchClientSecret: () => Promise.resolve(clientSecret) }}
+      >
         <EmbeddedCheckout />
       </EmbeddedCheckoutProvider>
     </div>

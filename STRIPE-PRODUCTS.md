@@ -45,8 +45,8 @@ written for the customer, not for us.
 ## 5. Add-ons (one is a yearly subscription, two are one-time)
 
 The branding kit is a **yearly recurring** price: $13.99 a year, its own subscription, one per kit, renewing until the
-member cancels it. The pause fee is a **monthly recurring** price: $1.99 a month, its own subscription, cancelled at the
-pause end. The generated contract is a **one-time** price. Getting the type or the interval wrong breaks the checkout, so
+member cancels it. The pause fee is a **monthly recurring** price: $1.99 a month, its own subscription, cancelled on
+Resume. A pause has no end date, so no `cancel_at` is ever set on it. The generated contract is a **one-time** price. Getting the type or the interval wrong breaks the checkout, so
 set the kit and the pause to recurring (year and month) and the contract to one-off. Admin → Price List → Check live
 prices names a price held the wrong way.
 
@@ -54,7 +54,7 @@ prices names a price held the wrong way.
 |---|---|---|---|
 | `branding_yearly` | Personal Branding kit | $13.99 / year (recurring) | One branding kit, billed yearly: your logo, colors, business name and tagline on split sheets, lyric sheets, contracts and catalog downloads. Cancels any time and runs to the end of the paid year. |
 | `contract_generator` | Generated contract | $3.99 (one-time) | One generated contract from a blueprint, yours to fill in, sign and download. |
-| `vault_month` | Pause · Vault fee | $1.99 / month (recurring) | Keeps the catalog, Vault files and downloads in place while a plan is paused. One to three months, billed monthly, cancelled by Stripe at the pause end. |
+| `vault_month` | Pause · Vault fee | $1.99 / month (recurring) | Keeps the catalog, Vault files and downloads in place while a plan is paused. For as long as the member needs, billed monthly and cancelled on Resume. |
 
 **Renew now** has no product of its own: it charges the member's existing plan price, one year early.
 

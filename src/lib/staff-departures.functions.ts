@@ -14,12 +14,19 @@ async function db() {
 }
 
 type Ctx = {
-  supabase: { from: (table: "user_roles") => { select: (c: string) => { eq: (col: string, v: unknown) => PromiseLike<{ data: unknown }> } } };
+  supabase: {
+    from: (table: "user_roles") => {
+      select: (c: string) => { eq: (col: string, v: unknown) => PromiseLike<{ data: unknown }> };
+    };
+  };
   userId: string;
 };
 
 async function requireManager(context: Ctx) {
-  const { data } = await context.supabase.from("user_roles").select("role, departments").eq("user_id", context.userId);
+  const { data } = await context.supabase
+    .from("user_roles")
+    .select("role, departments")
+    .eq("user_id", context.userId);
   const access = resolveAccess((data ?? []) as { role: string; departments?: string[] | null }[]);
   if (!access?.canManageStaff) throw new Error("Super Admin or HR Admin only.");
   return access;
@@ -36,20 +43,37 @@ export type StaffDeparture = {
 };
 
 type Row = {
-  id: string; member_email: string; access_ended_at: string; delete_on: string | null;
-  within_probation: boolean; cancelled_at: string | null; deleted_at: string | null;
+  id: string;
+  member_email: string;
+  access_ended_at: string;
+  delete_on: string | null;
+  within_probation: boolean;
+  cancelled_at: string | null;
+  deleted_at: string | null;
 };
 
 /** staff_departures ships with its migration, so its generated types lag behind: reached through one cast. */
 type Departures = {
-  select: (cols: string) => { order: (col: string, opts: { ascending: boolean }) => { limit: (n: number) => Promise<{ data: Row[] | null }> } };
-  update: (row: Record<string, unknown>) => { eq: (col: string, value: unknown) => Promise<{ error: unknown }> };
+  select: (cols: string) => {
+    order: (
+      col: string,
+      opts: { ascending: boolean },
+    ) => { limit: (n: number) => Promise<{ data: Row[] | null }> };
+  };
+  update: (row: Record<string, unknown>) => {
+    eq: (col: string, value: unknown) => Promise<{ error: unknown }>;
+  };
 };
 const table = async () => (await db()) as unknown as Departures;
 
 const toRow = (r: Row): StaffDeparture => ({
-  id: r.id, email: r.member_email, accessEndedAt: r.access_ended_at, deleteOn: r.delete_on,
-  withinProbation: r.within_probation, cancelledAt: r.cancelled_at, deletedAt: r.deleted_at,
+  id: r.id,
+  email: r.member_email,
+  accessEndedAt: r.access_ended_at,
+  deleteOn: r.delete_on,
+  withinProbation: r.within_probation,
+  cancelledAt: r.cancelled_at,
+  deletedAt: r.deleted_at,
 });
 
 export const listStaffDepartures = createServerFn({ method: "GET" })
@@ -58,8 +82,12 @@ export const listStaffDepartures = createServerFn({ method: "GET" })
     await requireManager(context as unknown as Ctx);
     try {
       const t = await table();
-      const { data } = await t.select("id, member_email, access_ended_at, delete_on, within_probation, cancelled_at, deleted_at")
-        .order("created_at", { ascending: false }).limit(50);
+      const { data } = await t
+        .select(
+          "id, member_email, access_ended_at, delete_on, within_probation, cancelled_at, deleted_at",
+        )
+        .order("created_at", { ascending: false })
+        .limit(50);
       return { departures: (data ?? []).map(toRow) };
     } catch {
       // Before the migration runs there is nothing to show, not an error.

@@ -6,12 +6,16 @@ const hoursAgo = (h: number) => new Date(Date.now() - h * 3_600_000).toISOString
 
 describe("cleanInviteText", () => {
   it("removes web addresses and emails", () => {
-    expect(cleanInviteText("Claim your prize at https://evil.example/x now")).toBe("Claim your prize at now");
+    expect(cleanInviteText("Claim your prize at https://evil.example/x now")).toBe(
+      "Claim your prize at now",
+    );
     expect(cleanInviteText("Visit www.win.biz or prizes.com/claim")).toBe("Visit or");
     expect(cleanInviteText("Write to scam@bad.io")).toBe("Write to");
   });
   it("keeps ordinary titles and names", () => {
-    expect(cleanInviteText("Big Booty Bouncing (feat. OG PI)")).toBe("Big Booty Bouncing (feat. OG PI)");
+    expect(cleanInviteText("Big Booty Bouncing (feat. OG PI)")).toBe(
+      "Big Booty Bouncing (feat. OG PI)",
+    );
     expect(cleanInviteText("J. Cole")).toBe("J. Cole");
   });
   it("caps length at 80 characters", () => {
@@ -21,7 +25,8 @@ describe("cleanInviteText", () => {
 
 describe("inviteBlockReason", () => {
   it("allows a first send", () => expect(inviteBlockReason(ok)).toBeNull());
-  it("refuses blocked recipients", () => expect(inviteBlockReason({ ...ok, blocked: true })).toMatch(/turned off/));
+  it("refuses blocked recipients", () =>
+    expect(inviteBlockReason({ ...ok, blocked: true })).toMatch(/turned off/));
   it("caps the sender at 25 a day", () => {
     expect(inviteBlockReason({ ...ok, senderToday: 24 })).toBeNull();
     expect(inviteBlockReason({ ...ok, senderToday: 25 })).toMatch(/limit of 25/);
@@ -44,7 +49,9 @@ describe("inviteBlockReason", () => {
 describe("trustedOrigin", () => {
   const site = "https://pixel-perfect-studio-382.lovable.app";
   it("keeps our own addresses", () => {
-    expect(trustedOrigin("https://camethroughaudio.com/workspace", site)).toBe("https://camethroughaudio.com");
+    expect(trustedOrigin("https://camethroughaudio.com/workspace", site)).toBe(
+      "https://camethroughaudio.com",
+    );
     // Editor previews need a Lovable login, so recipients get the published site instead.
     expect(trustedOrigin("https://id-preview--abc.lovable.app", site)).toBe(site);
     expect(trustedOrigin("https://abc.lovableproject.com", site)).toBe(site);

@@ -2,7 +2,13 @@ import { describe, expect, it } from "vitest";
 import { outreachDraft } from "./outreach-emails";
 import { COMPANY_BLUEPRINTS } from "./contract-blueprints";
 
-const f = { name: "Sam", company: "Example Records", line: "Loved Friday's release.", demo: "Tue 1 PM", sender: "Qui-Ona Peterson" };
+const f = {
+  name: "Sam",
+  company: "Example Records",
+  line: "Loved Friday's release.",
+  demo: "Tue 1 PM",
+  sender: "Qui-Ona Peterson",
+};
 
 describe("company outreach kit", () => {
   it("drafts each email with their details, the tagline and an honest subject", () => {
@@ -17,6 +23,16 @@ describe("company outreach kit", () => {
   });
   it("has all 8 outreach agreements as company templates", () => {
     const ids = COMPANY_BLUEPRINTS.map((b) => b.id);
-    for (const id of ["company-mutual-nda", "company-referral", "company-co-marketing", "company-data-sharing", "company-sponsored-badge", "company-pilot", "company-api-integration", "company-loi"]) expect(ids).toContain(id);
+    for (const id of [
+      "company-mutual-nda",
+      "company-referral",
+      "company-co-marketing",
+      "company-data-sharing",
+      "company-sponsored-badge",
+      "company-pilot",
+      "company-api-integration",
+      "company-loi",
+    ])
+      expect(ids).toContain(id);
   });
 });

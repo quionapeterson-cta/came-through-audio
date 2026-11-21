@@ -85,9 +85,15 @@ type ReplyRow = {
   created_at: string;
 };
 
-async function boardDb(context: { supabase: unknown; userId: string }): Promise<{ db: Db; isSuper: boolean }> {
+async function boardDb(context: {
+  supabase: unknown;
+  userId: string;
+}): Promise<{ db: Db; isSuper: boolean }> {
   const client = context.supabase as {
-    rpc: (fn: "has_role", args: { _user_id: string; _role: "super_admin" }) => PromiseLike<{ data: unknown }>;
+    rpc: (
+      fn: "has_role",
+      args: { _user_id: string; _role: "super_admin" },
+    ) => PromiseLike<{ data: unknown }>;
   };
   const { data } = await client.rpc("has_role", { _user_id: context.userId, _role: "super_admin" });
   const isSuper = !!data;
@@ -106,11 +112,21 @@ async function requireSuperAdmin(context: { supabase: unknown; userId: string })
 }
 
 /** A thread is visible to a super admin, and to the staff member who opened it. */
-async function visibleThread(db: Db, threadId: string, userId: string, isSuper: boolean): Promise<ThreadRow> {
-  const { data } = await db.from("admin_board_threads" as never).select("*").eq("id", threadId).maybeSingle();
+async function visibleThread(
+  db: Db,
+  threadId: string,
+  userId: string,
+  isSuper: boolean,
+): Promise<ThreadRow> {
+  const { data } = await db
+    .from("admin_board_threads" as never)
+    .select("*")
+    .eq("id", threadId)
+    .maybeSingle();
   const thread = data as ThreadRow | null;
   if (!thread) throw new Error("That thread doesn't exist.");
-  if (!isSuper && thread.created_by !== userId) throw new Error("That thread belongs to a super admin.");
+  if (!isSuper && thread.created_by !== userId)
+    throw new Error("That thread belongs to a super admin.");
   return thread;
 }
 
@@ -164,16 +180,30 @@ export const listBoardThreads = createServerFn({ method: "GET" })
 
     const ids = rows.map((row) => row.id);
     const [{ data: replyRows }, { data: readRows }] = await Promise.all([
-      db.from("admin_board_replies" as never).select("thread_id, created_at").in("thread_id", ids).limit(5000),
-      db.from("admin_board_reads" as never).select("thread_id, read_at").eq("user_id", context.userId).in("thread_id", ids),
+      db
+        .from("admin_board_replies" as never)
+        .select("thread_id, created_at")
+        .in("thread_id", ids)
+        .limit(5000),
+      db
+        .from("admin_board_reads" as never)
+        .select("thread_id, read_at")
+        .eq("user_id", context.userId)
+        .in("thread_id", ids),
     ]);
 
     const readAt = new Map(
-      ((readRows ?? []) as unknown as { thread_id: string; read_at: string }[]).map((row) => [row.thread_id, row.read_at]),
+      ((readRows ?? []) as unknown as { thread_id: string; read_at: string }[]).map((row) => [
+        row.thread_id,
+        row.read_at,
+      ]),
     );
     const totals = new Map<string, number>();
     const unread = new Map<string, number>();
-    for (const reply of (replyRows ?? []) as unknown as { thread_id: string; created_at: string }[]) {
+    for (const reply of (replyRows ?? []) as unknown as {
+      thread_id: string;
+      created_at: string;
+    }[]) {
       totals.set(reply.thread_id, (totals.get(reply.thread_id) ?? 0) + 1);
       const seen = readAt.get(reply.thread_id);
       if (!seen || Date.parse(reply.created_at) > Date.parse(seen)) {
@@ -189,20 +219,37 @@ export const boardUnreadCount = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }): Promise<number> => {
     const { db, isSuper } = await boardDb(context);
-    let threadQuery = db.from("admin_board_threads" as never).select("id").limit(500);
+    let threadQuery = db
+      .from("admin_board_threads" as never)
+      .select("id")
+      .limit(500);
     if (!isSuper) threadQuery = threadQuery.eq("created_by", context.userId);
     const { data: threads } = await threadQuery;
     const ids = ((threads ?? []) as unknown as { id: string }[]).map((row) => row.id);
     if (!ids.length) return 0;
     const [{ data: replyRows }, { data: readRows }] = await Promise.all([
-      db.from("admin_board_replies" as never).select("thread_id, created_at").in("thread_id", ids).limit(5000),
-      db.from("admin_board_reads" as never).select("thread_id, read_at").eq("user_id", context.userId).in("thread_id", ids),
+      db
+        .from("admin_board_replies" as never)
+        .select("thread_id, created_at")
+        .in("thread_id", ids)
+        .limit(5000),
+      db
+        .from("admin_board_reads" as never)
+        .select("thread_id, read_at")
+        .eq("user_id", context.userId)
+        .in("thread_id", ids),
     ]);
     const readAt = new Map(
-      ((readRows ?? []) as unknown as { thread_id: string; read_at: string }[]).map((row) => [row.thread_id, row.read_at]),
+      ((readRows ?? []) as unknown as { thread_id: string; read_at: string }[]).map((row) => [
+        row.thread_id,
+        row.read_at,
+      ]),
     );
     let count = 0;
-    for (const reply of (replyRows ?? []) as unknown as { thread_id: string; created_at: string }[]) {
+    for (const reply of (replyRows ?? []) as unknown as {
+      thread_id: string;
+      created_at: string;
+    }[]) {
       const seen = readAt.get(reply.thread_id);
       if (!seen || Date.parse(reply.created_at) > Date.parse(seen)) count += 1;
     }
@@ -226,12 +273,14 @@ export const openBoardThread = createServerFn({ method: "POST" })
 
     // The read mark is the viewer's own row, moved to now; a failed write only means the badge stays unread, which is
     // the safe direction to fail in.
-    await db
-      .from("admin_board_reads" as never)
-      .upsert(
-        { thread_id: data.threadId, user_id: context.userId, read_at: new Date().toISOString() } as never,
-        { onConflict: "thread_id,user_id" } as never,
-      );
+    await db.from("admin_board_reads" as never).upsert(
+      {
+        thread_id: data.threadId,
+        user_id: context.userId,
+        read_at: new Date().toISOString(),
+      } as never,
+      { onConflict: "thread_id,user_id" } as never,
+    );
 
     return { ...toThread(thread, messages.length, 0), messages };
   });
@@ -239,7 +288,9 @@ export const openBoardThread = createServerFn({ method: "POST" })
 /** Adds a reply to a thread, naming whoever is tagged with a full @address. */
 export const replyToBoardThread = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d) => z.object({ threadId: z.string().uuid(), body: z.string().trim().min(1).max(8000) }).parse(d))
+  .inputValidator((d) =>
+    z.object({ threadId: z.string().uuid(), body: z.string().trim().min(1).max(8000) }).parse(d),
+  )
   .handler(async ({ data, context }) => {
     const { db, isSuper } = await boardDb(context);
     await visibleThread(db, data.threadId, context.userId, isSuper);
@@ -259,18 +310,21 @@ export const replyToBoardThread = createServerFn({ method: "POST" })
       .update({ last_reply_at: now, updated_at: now } as never)
       .eq("id", data.threadId);
     // Replying marks the thread read for the person who wrote it.
-    await db
-      .from("admin_board_reads" as never)
-      .upsert({ thread_id: data.threadId, user_id: context.userId, read_at: now } as never, {
+    await db.from("admin_board_reads" as never).upsert(
+      { thread_id: data.threadId, user_id: context.userId, read_at: now } as never,
+      {
         onConflict: "thread_id,user_id",
-      } as never);
+      } as never,
+    );
     return { ok: true };
   });
 
 /** Moves a thread's state; resolving a reported issue settles the registration case too. */
 export const setBoardThreadStatus = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d) => z.object({ threadId: z.string().uuid(), status: z.string().max(20) }).parse(d))
+  .inputValidator((d) =>
+    z.object({ threadId: z.string().uuid(), status: z.string().max(20) }).parse(d),
+  )
   .handler(async ({ data, context }) => {
     await requireSuperAdmin(context);
     if (!isBoardStatus(data.status)) throw new Error("That isn't a board status.");
@@ -285,7 +339,12 @@ export const setBoardThreadStatus = createServerFn({ method: "POST" })
     if (data.status === "resolved" && thread.issue_id) {
       await db
         .from("registration_issues" as never)
-        .update({ status: "resolved", resolved_at: now, resolved_by: context.userId, updated_at: now } as never)
+        .update({
+          status: "resolved",
+          resolved_at: now,
+          resolved_by: context.userId,
+          updated_at: now,
+        } as never)
         .eq("id", thread.issue_id);
     }
     return { ok: true, issueId: thread.issue_id };
@@ -295,16 +354,21 @@ export const setBoardThreadStatus = createServerFn({ method: "POST" })
 export const createBoardThread = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d) =>
-    z.object({
-      category: z.string().max(40),
-      title: z.string().trim().min(3).max(200),
-      body: z.string().trim().min(3).max(8000),
-      priority: z.string().max(20).optional(),
-    }).parse(d),
+    z
+      .object({
+        category: z.string().max(40),
+        title: z.string().trim().min(3).max(200),
+        body: z.string().trim().min(3).max(8000),
+        priority: z.string().max(20).optional(),
+      })
+      .parse(d),
   )
   .handler(async ({ data, context }) => {
     const { db } = await boardDb(context);
-    if (!isBoardCategory(data.category) || !(BOARD_POSTABLE_CATEGORIES as readonly string[]).includes(data.category)) {
+    if (
+      !isBoardCategory(data.category) ||
+      !(BOARD_POSTABLE_CATEGORIES as readonly string[]).includes(data.category)
+    ) {
       throw new Error("A reported issue can only be opened from a registration.");
     }
     const priority = data.priority && isBoardPriority(data.priority) ? data.priority : "normal";
@@ -345,12 +409,14 @@ export const createBoardThread = createServerFn({ method: "POST" })
 export const reportRegistrationIssue = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d) =>
-    z.object({
-      songId: z.string().uuid(),
-      agency: z.enum(["SoundExchange", "The MLC", "ASCAP", "BMI", "Internal/Metadata"]),
-      detail: z.string().trim().min(10).max(4000),
-      setOnHold: z.boolean().optional(),
-    }).parse(d),
+    z
+      .object({
+        songId: z.string().uuid(),
+        agency: z.enum(["SoundExchange", "The MLC", "ASCAP", "BMI", "Internal/Metadata"]),
+        detail: z.string().trim().min(10).max(4000),
+        setOnHold: z.boolean().optional(),
+      })
+      .parse(d),
   )
   .handler(async ({ data, context }) => {
     const { db } = await boardDb(context);
@@ -378,18 +444,28 @@ export const reportRegistrationIssue = createServerFn({ method: "POST" })
       .select("agencies")
       .eq("purchase_id", song.purchase_id)
       .maybeSingle();
-    const orderAgencies = ((orderRow as { agencies: string[] | null } | null)?.agencies ?? []).filter(Boolean);
+    const orderAgencies = (
+      (orderRow as { agencies: string[] | null } | null)?.agencies ?? []
+    ).filter(Boolean);
 
-    const { data: profile } = await db.from("profiles").select("stage_name, legal_name").eq("id", song.user_id).maybeSingle();
+    const { data: profile } = await db
+      .from("profiles")
+      .select("stage_name, legal_name")
+      .eq("id", song.user_id)
+      .maybeSingle();
     const { data: account } = await db.auth.admin.getUserById(song.user_id);
     const userEmail = account.user?.email ?? null;
-    const userName = (profile as { stage_name: string | null; legal_name: string | null } | null)?.stage_name
-      ?? (profile as { legal_name: string | null } | null)?.legal_name
-      ?? userEmail;
+    const userName =
+      (profile as { stage_name: string | null; legal_name: string | null } | null)?.stage_name ??
+      (profile as { legal_name: string | null } | null)?.legal_name ??
+      userEmail;
 
     const authorName = await staffName(db, context.userId);
     const now = new Date().toISOString();
-    const title = issueTitle({ agency: data.agency, songTitle: song.snapshot?.title?.trim() || "Untitled" });
+    const title = issueTitle({
+      agency: data.agency,
+      songTitle: song.snapshot?.title?.trim() || "Untitled",
+    });
 
     const { data: created, error: threadError } = await db
       .from("admin_board_threads" as never)
@@ -429,12 +505,18 @@ export const reportRegistrationIssue = createServerFn({ method: "POST" })
     if (issueError) {
       // The thread points at the issue, so a half-written pair is removed rather than left as an empty thread with
       // nothing to resolve.
-      await db.from("admin_board_threads" as never).delete().eq("id", threadId);
+      await db
+        .from("admin_board_threads" as never)
+        .delete()
+        .eq("id", threadId);
       throw new Error(issueError.message);
     }
     const issueId = (issue as { id: string }).id;
 
-    await db.from("admin_board_threads" as never).update({ issue_id: issueId } as never).eq("id", threadId);
+    await db
+      .from("admin_board_threads" as never)
+      .update({ issue_id: issueId } as never)
+      .eq("id", threadId);
 
     const opening = [
       data.detail,
@@ -457,11 +539,19 @@ export const reportRegistrationIssue = createServerFn({ method: "POST" })
     if (data.setOnHold && orderAgencies.includes(data.agency)) {
       await db
         .from("registration_songs" as never)
-        .update({ status: { ...(song.status ?? {}), [data.agency]: "on_hold" }, updated_at: now } as never)
+        .update({
+          status: { ...(song.status ?? {}), [data.agency]: "on_hold" },
+          updated_at: now,
+        } as never)
         .eq("id", song.id);
     }
 
-    return { ok: true, issueId, threadId, held: !!data.setOnHold && orderAgencies.includes(data.agency) };
+    return {
+      ok: true,
+      issueId,
+      threadId,
+      held: !!data.setOnHold && orderAgencies.includes(data.agency),
+    };
   });
 
 /** Settles a reported issue without opening the board (the same write the thread's Mark Resolved makes). */
@@ -481,7 +571,12 @@ export const resolveRegistrationIssue = createServerFn({ method: "POST" })
     if (!issue) throw new Error("That issue doesn't exist.");
     const { error } = await db
       .from("registration_issues" as never)
-      .update({ status: "resolved", resolved_at: now, resolved_by: context.userId, updated_at: now } as never)
+      .update({
+        status: "resolved",
+        resolved_at: now,
+        resolved_by: context.userId,
+        updated_at: now,
+      } as never)
       .eq("id", data.issueId);
     if (error) throw new Error(error.message);
     if (issue.thread_id) {
@@ -492,4 +587,3 @@ export const resolveRegistrationIssue = createServerFn({ method: "POST" })
     }
     return { ok: true, threadId: issue.thread_id };
   });
-

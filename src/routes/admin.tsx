@@ -64,7 +64,6 @@ import { StaffSubmissionsPanel } from "@/components/StaffSubmissionsPanel";
 import { RetiredIscrsPanel } from "@/components/RetiredIscrsPanel";
 import { BillingConsolePanel } from "@/components/BillingConsolePanel";
 import { PlansPanel } from "@/components/PlansPanel";
-import { TestimonialFilterPanel } from "@/components/TestimonialFilterPanel";
 import { TestimonialsEditor } from "@/components/TestimonialsEditor";
 import { AdminWelcome, TaskBell, WelcomeSwitch } from "@/components/AdminWelcome";
 import { GlobalReminderBanner } from "@/components/GlobalReminderBanner";
@@ -517,8 +516,7 @@ function AdminPage() {
                   )}
                   {show("homepage") && (
                     <TabsContent value="homepage">
-                      <TestimonialsEditor />
-                      <TestimonialFilterPanel />
+                      <TestimonialsEditor access={access} />
                       <SocialPanel />
                     </TabsContent>
                   )}

@@ -10,9 +10,18 @@ import { RELEASE_TYPES, type Metadata } from "@/lib/metadata";
 const isoDay = () => new Date().toISOString().slice(0, 10);
 
 export type ReleaseStatus = "unreleased" | "scheduled" | "released";
-export type SongRelease = Pick<Metadata, "releaseType" | "album" | "releaseDate" | "unreleased"> & Partial<Pick<Metadata, "releaseVersion" | "catalogNumber">>;
-export type ReleaseDraft = { releaseType: string; album: string; releaseDate: string; status: ReleaseStatus | ""; releaseVersion?: string; catalogNumber?: string };
-export type ReleasePatch = Pick<Metadata, "releaseType" | "album" | "releaseDate" | "unreleased"> & Partial<Pick<Metadata, "releaseVersion" | "catalogNumber">>;
+export type SongRelease = Pick<Metadata, "releaseType" | "album" | "releaseDate" | "unreleased"> &
+  Partial<Pick<Metadata, "releaseVersion" | "catalogNumber">>;
+export type ReleaseDraft = {
+  releaseType: string;
+  album: string;
+  releaseDate: string;
+  status: ReleaseStatus | "";
+  releaseVersion?: string;
+  catalogNumber?: string;
+};
+export type ReleasePatch = Pick<Metadata, "releaseType" | "album" | "releaseDate" | "unreleased"> &
+  Partial<Pick<Metadata, "releaseVersion" | "catalogNumber">>;
 
 /** Out, dated in the future, or not out yet. A blank date with the box unticked has always meant released. */
 export function releaseStatus(m: SongRelease, on = isoDay()): ReleaseStatus {
@@ -23,7 +32,11 @@ export function releaseStatus(m: SongRelease, on = isoDay()): ReleaseStatus {
 /** The status in words, for a group header. */
 export function statusWords(m: SongRelease, on = isoDay()): string {
   const s = releaseStatus(m, on);
-  return s === "scheduled" ? `Scheduled for ${m.releaseDate}` : s === "released" ? "Released" : "Not released yet";
+  return s === "scheduled"
+    ? `Scheduled for ${m.releaseDate}`
+    : s === "released"
+      ? "Released"
+      : "Not released yet";
 }
 
 /**
@@ -34,10 +47,15 @@ export function releaseDraft(songs: SongRelease[], on = isoDay()): ReleaseDraft 
   const first = songs[0];
   const out = songs.filter((m) => releaseStatus(m, on) === "released").length;
   const dates = [...new Set(songs.map((m) => m.releaseDate.trim()))];
-  const status: ReleaseStatus | "" = !songs.length ? "unreleased"
-    : out === songs.length ? "released"
-    : out > 0 ? ""
-    : songs.every((m) => releaseStatus(m, on) === "scheduled") ? "scheduled" : "unreleased";
+  const status: ReleaseStatus | "" = !songs.length
+    ? "unreleased"
+    : out === songs.length
+      ? "released"
+      : out > 0
+        ? ""
+        : songs.every((m) => releaseStatus(m, on) === "scheduled")
+          ? "scheduled"
+          : "unreleased";
   return {
     releaseType: first?.releaseType.trim() || "Single",
     album: first?.album.trim() ?? "",
@@ -55,14 +73,23 @@ export function releaseDraft(songs: SongRelease[], on = isoDay()): ReleaseDraft 
  * A release's status as a whole: released once every song is out, "N of M out" while it is coming out, and the date
  * only when every song carries the same future one.
  */
-export function groupReleaseStatus(songs: SongRelease[], on = isoDay()): { out: number; total: number; status: ReleaseStatus; label: string } {
+export function groupReleaseStatus(
+  songs: SongRelease[],
+  on = isoDay(),
+): { out: number; total: number; status: ReleaseStatus; label: string } {
   const total = songs.length;
   const out = songs.filter((m) => releaseStatus(m, on) === "released").length;
-  if (!total || out === total) return { out, total, status: "released", label: total ? "Released" : "Not released yet" };
+  if (!total || out === total)
+    return { out, total, status: "released", label: total ? "Released" : "Not released yet" };
   if (out > 0) return { out, total, status: "scheduled", label: `${out} of ${total} out` };
   const scheduled = songs.every((m) => releaseStatus(m, on) === "scheduled");
   const dates = [...new Set(songs.map((m) => m.releaseDate.trim()).filter(Boolean))];
-  return { out, total, status: scheduled ? "scheduled" : "unreleased", label: scheduled && dates.length === 1 ? `Scheduled for ${dates[0]}` : "Not released yet" };
+  return {
+    out,
+    total,
+    status: scheduled ? "scheduled" : "unreleased",
+    label: scheduled && dates.length === 1 ? `Scheduled for ${dates[0]}` : "Not released yet",
+  };
 }
 
 /**
@@ -70,16 +97,25 @@ export function groupReleaseStatus(songs: SongRelease[], on = isoDay()): { out: 
  * Save again after a failure is safe. A failure stops at the song that failed and says exactly how far it got, instead
  * of reporting the whole release as saved.
  */
-export async function writeRelease<T extends { id: string; title: string }>(songs: T[], save: (song: T) => Promise<unknown>): Promise<{ saved: T[]; error?: string }> {
+export async function writeRelease<T extends { id: string; title: string }>(
+  songs: T[],
+  save: (song: T) => Promise<unknown>,
+): Promise<{ saved: T[]; error?: string }> {
   const saved: T[] = [];
   for (const song of songs) {
     try {
       await save(song);
     } catch (e) {
-      const message = (e instanceof Error && e.message ? e.message : "The save failed.").replace(/\.$/, "");
+      const message = (e instanceof Error && e.message ? e.message : "The save failed.").replace(
+        /\.$/,
+        "",
+      );
       const done = saved.length ? `Saved ${saved.length} of ${songs.length} songs. ` : "";
       const again = saved.length ? " Press Save again to finish." : "";
-      return { saved, error: `${done}${song.title || "One song"} didn't save: ${message}.${again}` };
+      return {
+        saved,
+        error: `${done}${song.title || "One song"} didn't save: ${message}.${again}`,
+      };
     }
     saved.push(song);
   }
@@ -90,24 +126,40 @@ export async function writeRelease<T extends { id: string; title: string }>(song
  * What the dialog writes to every song in the group. The Status answer is the plain-language one: it sets the date and
  * the box together, so a chosen status can never contradict the fields.
  */
-export function releasePatch(d: ReleaseDraft, on = isoDay()): { patch: ReleasePatch } | { error: string } {
+export function releasePatch(
+  d: ReleaseDraft,
+  on = isoDay(),
+): { patch: ReleasePatch } | { error: string } {
   const releaseType = d.releaseType.trim();
-  if (!(RELEASE_TYPES as readonly string[]).includes(releaseType)) return { error: "Pick a release type." };
+  if (!(RELEASE_TYPES as readonly string[]).includes(releaseType))
+    return { error: "Pick a release type." };
   const album = d.album.trim();
-  if (releaseType !== "Single" && !album) return { error: `An ${releaseType === "EP" ? "EP" : "album"} needs a release title.` };
+  if (releaseType !== "Single" && !album)
+    return { error: `An ${releaseType === "EP" ? "EP" : "album"} needs a release title.` };
   const releaseDate = d.releaseDate.trim();
   const releaseVersion = (d.releaseVersion ?? "").trim();
   const catalogNumber = (d.catalogNumber ?? "").trim();
   if (!d.status) return { error: "Choose the release's status." };
   if (d.status === "scheduled") {
     if (!releaseDate) return { error: "Pick the release date, or choose Not released yet." };
-    if (releaseDate <= on) return { error: "That date isn't in the future. Choose Released, or pick a later date." };
-    return { patch: { releaseType, album, releaseDate, unreleased: false, releaseVersion, catalogNumber } };
+    if (releaseDate <= on)
+      return { error: "That date isn't in the future. Choose Released, or pick a later date." };
+    return {
+      patch: { releaseType, album, releaseDate, unreleased: false, releaseVersion, catalogNumber },
+    };
   }
   if (d.status === "released") {
-    if (releaseDate && releaseDate > on) return { error: "That date is still in the future, so the release would stay unreleased. Pick a date up to today, or choose Scheduled." };
-    return { patch: { releaseType, album, releaseDate, unreleased: false, releaseVersion, catalogNumber } };
+    if (releaseDate && releaseDate > on)
+      return {
+        error:
+          "That date is still in the future, so the release would stay unreleased. Pick a date up to today, or choose Scheduled.",
+      };
+    return {
+      patch: { releaseType, album, releaseDate, unreleased: false, releaseVersion, catalogNumber },
+    };
   }
   // "Not released yet" is the plain answer: no date to read, and the box ticked, which is how it has always been said.
-  return { patch: { releaseType, album, releaseDate: "", unreleased: true, releaseVersion, catalogNumber } };
+  return {
+    patch: { releaseType, album, releaseDate: "", unreleased: true, releaseVersion, catalogNumber },
+  };
 }

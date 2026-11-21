@@ -30,6 +30,8 @@ describe("calendar export", () => {
     const params = new URL(url).searchParams;
     expect(params.get("action")).toBe("TEMPLATE");
     expect(params.get("text")).toBe("💎 Came Through Audio: Send stems, please; today");
-    expect(params.get("details")).toContain("https://example.test/workspace?tab=catalog&songId=s1&focusField=iswc");
+    expect(params.get("details")).toContain(
+      "https://example.test/workspace?tab=catalog&songId=s1&focusField=iswc",
+    );
   });
 });

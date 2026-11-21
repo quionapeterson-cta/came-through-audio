@@ -1,4 +1,11 @@
-import { creditName, emptyContributor, emptyMetadata, withLegalName, type Contributor, type Metadata } from "@/lib/metadata";
+import {
+  creditName,
+  emptyContributor,
+  emptyMetadata,
+  withLegalName,
+  type Contributor,
+  type Metadata,
+} from "@/lib/metadata";
 import { supabase } from "@/integrations/supabase/client";
 import { requestBadgeCheck } from "@/lib/badge-events";
 import { currentBadge, DEFAULT_BADGE_PREFS, type BadgePrefs } from "@/lib/badges";
@@ -6,16 +13,42 @@ import type { AccountRole, Situation } from "@/lib/roles";
 
 /** Recurring details a user can opt to prefill on every embed. Stored only in this browser. */
 export const PROFILE_KEYS = [
-  "artist", "label", "contactEmail", "primaryGenre", "secondaryGenre", "releaseType", "explicit", "copyright", "phonographic", "language",
-  "writers", "composers", "producers", "publishers", "selfPublished", "bmiWriterPublishing", "recordedIn",
+  "artist",
+  "label",
+  "contactEmail",
+  "primaryGenre",
+  "secondaryGenre",
+  "releaseType",
+  "explicit",
+  "copyright",
+  "phonographic",
+  "language",
+  "writers",
+  "composers",
+  "producers",
+  "publishers",
+  "selfPublished",
+  "bmiWriterPublishing",
+  "recordedIn",
   // Usual answers that aren't song-specific (founder, 2026-10-25): they fill blanks only, never what a song already has.
-  "samples", "writtenFor", "masterShare", "masterBasis", "credits",
+  "samples",
+  "writtenFor",
+  "masterShare",
+  "masterBasis",
+  "credits",
   // The country and territory answers SoundExchange asks for (founder, 2026-11-12): the same on nearly every song, so
   // they are typed once here and filled into a song's blanks. They never join the meter's twelve checks.
-  "masteredIn", "ownerNationality", "firstReleaseCountry", "releaseCountry", "collectionTerritories",
+  "masteredIn",
+  "ownerNationality",
+  "firstReleaseCountry",
+  "releaseCountry",
+  "collectionTerritories",
   // The collection rights dates rarely change from song to song (founder, 2026-11-14): from inception and in perpetuity are
   // the usual answers, so they are saved once here and every new song arrives with the boxes ticked.
-  "rightsStart", "rightsEnd", "rightsStartInception", "rightsEndPerpetuity",
+  "rightsStart",
+  "rightsEnd",
+  "rightsStartInception",
+  "rightsEndPerpetuity",
 ] as const;
 export type ArtistProfile = Partial<Pick<Metadata, (typeof PROFILE_KEYS)[number]>>;
 
@@ -38,10 +71,19 @@ export interface Onboarding {
   roles?: AccountRole[];
   sellBeats?: boolean;
   /** The patient file handed over at the Royalties and Registrations's Front Desk, kept with the account, not just this browser. */
-  patientFile?: { legalName: string; pro: string; ipi: string; publishing: "" | "publisher" | "self" | "bmi"; publisher: string };
+  patientFile?: {
+    legalName: string;
+    pro: string;
+    ipi: string;
+    publishing: "" | "publisher" | "self" | "bmi";
+    publisher: string;
+  };
 }
 
-export const badgePrefs = (o?: Onboarding | null): BadgePrefs => ({ ...DEFAULT_BADGE_PREFS, ...o?.badgePrefs });
+export const badgePrefs = (o?: Onboarding | null): BadgePrefs => ({
+  ...DEFAULT_BADGE_PREFS,
+  ...o?.badgePrefs,
+});
 
 const key = (userId: string) => `cta-artist-profile:${userId}`;
 const onboardKey = (userId: string) => `cta-onboarding:${userId}`;
@@ -58,9 +100,18 @@ export function loadProfile(userId?: string): ArtistProfile | null {
     const v = localStorage.getItem(key(userId));
     if (!v) return null;
     const p = JSON.parse(v) as ArtistProfile;
-    const writers = withOwnWriter(p.writers && withLegalName(p.writers), loadOnboarding(userId)?.legalName);
-    return { ...p, ...(writers && { writers }), ...(p.composers && { composers: withLegalName(p.composers) }) };
-  } catch { return null; }
+    const writers = withOwnWriter(
+      p.writers && withLegalName(p.writers),
+      loadOnboarding(userId)?.legalName,
+    );
+    return {
+      ...p,
+      ...(writers && { writers }),
+      ...(p.composers && { composers: withLegalName(p.composers) }),
+    };
+  } catch {
+    return null;
+  }
 }
 
 /**
@@ -68,12 +119,22 @@ export function loadProfile(userId?: string): ArtistProfile | null {
  * full profile is the other way to earn the defaults sky, without ticking the two blueprint checklists.
  */
 export function profileChecks(ob: Onboarding, p: ArtistProfile): boolean[] {
-  const named = (rows?: Contributor[]) => (rows ?? []).some((r) => (r.legalName ?? r.name ?? "").trim());
+  const named = (rows?: Contributor[]) =>
+    (rows ?? []).some((r) => (r.legalName ?? r.name ?? "").trim());
   const writer = (p.writers ?? []).find((r) => (r.legalName ?? "").trim());
   return [
-    !!ob.stageName.trim(), !!p.label?.trim(), !!p.primaryGenre, !!p.language?.trim(), !!p.recordedIn?.trim(),
-    !!(p.copyright?.trim() || p.phonographic?.trim()), !!p.samples, !!p.writtenFor,
-    !!ob.legalName.trim(), !!writer?.pro?.trim(), !!writer?.ipi?.trim(), named(p.publishers) || !!p.selfPublished || !!p.bmiWriterPublishing,
+    !!ob.stageName.trim(),
+    !!p.label?.trim(),
+    !!p.primaryGenre,
+    !!p.language?.trim(),
+    !!p.recordedIn?.trim(),
+    !!(p.copyright?.trim() || p.phonographic?.trim()),
+    !!p.samples,
+    !!p.writtenFor,
+    !!ob.legalName.trim(),
+    !!writer?.pro?.trim(),
+    !!writer?.ipi?.trim(),
+    named(p.publishers) || !!p.selfPublished || !!p.bmiWriterPublishing,
   ];
 }
 
@@ -84,14 +145,25 @@ type PatientFileShape = NonNullable<Onboarding["patientFile"]>;
  * name, else the first named writer) for PRO and IPI, and the publishing answer from Catalog Defaults. A first visit
  * starts from this instead of a blank form; nothing is saved until the member submits it.
  */
-export function patientFileFromDefaults(ob: Pick<Onboarding, "legalName"> | null, p: ArtistProfile | null): PatientFileShape {
+export function patientFileFromDefaults(
+  ob: Pick<Onboarding, "legalName"> | null,
+  p: ArtistProfile | null,
+): PatientFileShape {
   const legal = (ob?.legalName ?? "").trim();
   const rows = p?.writers ?? [];
   const named = rows.filter((r) => creditName(r).trim());
   // A lone row is the member's own, named or not: setup often stored their PRO/IPI before the name (see withOwnWriter).
-  const own = named.find((r) => creditName(r).trim().toLowerCase() === legal.toLowerCase()) ?? (rows.length === 1 ? rows[0] : legal ? undefined : named[0]);
+  const own =
+    named.find((r) => creditName(r).trim().toLowerCase() === legal.toLowerCase()) ??
+    (rows.length === 1 ? rows[0] : legal ? undefined : named[0]);
   const publisher = hasName(p?.publishers)[0];
-  const publishing: PatientFileShape["publishing"] = publisher ? "publisher" : p?.bmiWriterPublishing ? "bmi" : p?.selfPublished ? "self" : "";
+  const publishing: PatientFileShape["publishing"] = publisher
+    ? "publisher"
+    : p?.bmiWriterPublishing
+      ? "bmi"
+      : p?.selfPublished
+        ? "self"
+        : "";
   return {
     legalName: legal || (own ? creditName(own).trim() : ""),
     pro: own?.pro?.trim() ?? "",
@@ -108,14 +180,18 @@ export function ownProIpi(userId?: string): { pro: string; ipi: string } {
 }
 
 /** Every default filled in: the catalog (and stage name) is 100% complete. */
-export const profileFilled = (ob: Onboarding, p: ArtistProfile) => profileChecks(ob, p).every(Boolean);
+export const profileFilled = (ob: Onboarding, p: ArtistProfile) =>
+  profileChecks(ob, p).every(Boolean);
 
 /**
  * The user's own writer row. Setup shows it prefilled with their legal name, but only stored the name once the row was
  * typed in, so a lone unnamed row (often holding their IPI/PRO) or no row at all takes the account's legal name.
  * Only fills a blank: an existing name is never replaced.
  */
-export function withOwnWriter(rows: Contributor[] | undefined, legalName?: string): Contributor[] | undefined {
+export function withOwnWriter(
+  rows: Contributor[] | undefined,
+  legalName?: string,
+): Contributor[] | undefined {
   const name = legalName?.trim();
   if (!name) return rows;
   if (!rows?.length) return [{ ...emptyContributor(), legalName: name, role: "Author/Composer" }];
@@ -128,22 +204,35 @@ export function withOwnWriter(rows: Contributor[] | undefined, legalName?: strin
 
 // The account (profiles row) is the source of truth; localStorage is a fast local cache.
 const pushCloud = (userId: string, patch: Record<string, unknown>) => {
-  void supabase.from("profiles").update(patch as never).eq("id", userId).then(({ error }) => {
-    if (error) console.error("Profile sync failed", error.message);
-  });
+  void supabase
+    .from("profiles")
+    .update(patch as never)
+    .eq("id", userId)
+    .then(({ error }) => {
+      if (error) console.error("Profile sync failed", error.message);
+    });
 };
 
 export function saveProfile(userId: string, profile: ArtistProfile | null) {
-  if (profile) localStorage.setItem(key(userId), JSON.stringify(profile)); else localStorage.removeItem(key(userId));
+  if (profile) localStorage.setItem(key(userId), JSON.stringify(profile));
+  else localStorage.removeItem(key(userId));
   pushCloud(userId, { artist_defaults: profile });
 }
 
 export function loadOnboarding(userId?: string): Onboarding | null {
   if (!userId || typeof localStorage === "undefined") return null;
-  try { const v = localStorage.getItem(onboardKey(userId)); return v ? withCurrentBadge(JSON.parse(v) as Onboarding) : null; } catch { return null; }
+  try {
+    const v = localStorage.getItem(onboardKey(userId));
+    return v ? withCurrentBadge(JSON.parse(v) as Onboarding) : null;
+  } catch {
+    return null;
+  }
 }
 
-const withCurrentBadge = (o: Onboarding): Onboarding => ({ ...o, avatar: currentBadge(o.avatar) ?? "" });
+const withCurrentBadge = (o: Onboarding): Onboarding => ({
+  ...o,
+  avatar: currentBadge(o.avatar) ?? "",
+});
 
 export function saveOnboarding(userId: string, o: Onboarding) {
   localStorage.setItem(onboardKey(userId), JSON.stringify(o));
@@ -154,8 +243,12 @@ export function saveOnboarding(userId: string, o: Onboarding) {
 /** Pull the account's saved profile into this device. Uploads local-only data from before sync existed. */
 export async function syncFromCloud(userId: string): Promise<Onboarding | null> {
   const { data } = await supabase.from("profiles").select("*").eq("id", userId).maybeSingle();
-  const row = data as { artist_defaults?: ArtistProfile | null; onboarding?: Onboarding | null } | null;
-  const localP = loadProfile(userId), localO = loadOnboarding(userId);
+  const row = data as {
+    artist_defaults?: ArtistProfile | null;
+    onboarding?: Onboarding | null;
+  } | null;
+  const localP = loadProfile(userId),
+    localO = loadOnboarding(userId);
   if (row?.artist_defaults) localStorage.setItem(key(userId), JSON.stringify(row.artist_defaults));
   else if (localP) pushCloud(userId, { artist_defaults: localP });
   if (row?.onboarding) localStorage.setItem(onboardKey(userId), JSON.stringify(row.onboarding));
@@ -167,10 +260,20 @@ export async function syncFromCloud(userId: string): Promise<Onboarding | null> 
  * A seat artist's saved defaults, read into this browser so an owner can edit them. Nothing is pushed back here: the
  * artist's account is not ours to overwrite just by opening it.
  */
-export async function loadSeatArtistDefaults(artistId: string): Promise<{ profile: ArtistProfile | null; onboarding: Onboarding | null }> {
-  const { data } = await supabase.from("profiles").select("artist_defaults, onboarding").eq("id", artistId).maybeSingle();
-  const row = data as { artist_defaults?: ArtistProfile | null; onboarding?: Onboarding | null } | null;
-  if (row?.artist_defaults) localStorage.setItem(key(artistId), JSON.stringify(row.artist_defaults));
+export async function loadSeatArtistDefaults(
+  artistId: string,
+): Promise<{ profile: ArtistProfile | null; onboarding: Onboarding | null }> {
+  const { data } = await supabase
+    .from("profiles")
+    .select("artist_defaults, onboarding")
+    .eq("id", artistId)
+    .maybeSingle();
+  const row = data as {
+    artist_defaults?: ArtistProfile | null;
+    onboarding?: Onboarding | null;
+  } | null;
+  if (row?.artist_defaults)
+    localStorage.setItem(key(artistId), JSON.stringify(row.artist_defaults));
   if (row?.onboarding) localStorage.setItem(onboardKey(artistId), JSON.stringify(row.onboarding));
   return { profile: row?.artist_defaults ?? null, onboarding: row?.onboarding ?? null };
 }
@@ -179,10 +282,17 @@ export async function loadSeatArtistDefaults(artistId: string): Promise<{ profil
  * Saves a seat artist's Embed Defaults and Catalog Profile. The database checks the caller pays for that artist's seat
  * and writes those two columns only, so an owner can set up an artist without touching their name, plan or role.
  */
-export async function saveSeatArtistDefaults(artistId: string, profile: ArtistProfile, onboarding: Onboarding): Promise<string | null> {
+export async function saveSeatArtistDefaults(
+  artistId: string,
+  profile: ArtistProfile,
+  onboarding: Onboarding,
+): Promise<string | null> {
   localStorage.setItem(key(artistId), JSON.stringify(profile));
   localStorage.setItem(onboardKey(artistId), JSON.stringify(onboarding));
-  const { error } = await supabase.rpc("set_seat_artist_defaults" as never, { _member: artistId, _artist_defaults: profile, _onboarding: onboarding } as never);
+  const { error } = await supabase.rpc(
+    "set_seat_artist_defaults" as never,
+    { _member: artistId, _artist_defaults: profile, _onboarding: onboarding } as never,
+  );
   return error ? error.message : null;
 }
 
@@ -196,13 +306,20 @@ export function withProfile(p: ArtistProfile | null): Metadata {
   // Blank profile answers keep the song's own defaults (e.g. a blank master share stays 100%, not empty).
   const set = Object.fromEntries(Object.entries(p).filter(([, v]) => v !== "" && v !== undefined));
   return {
-    ...base, ...set,
-    writers: rows(p.writers), composers: rows(p.composers), producers: rows(p.producers), publishers: rows(p.publishers),
+    ...base,
+    ...set,
+    writers: rows(p.writers),
+    composers: rows(p.composers),
+    producers: rows(p.producers),
+    publishers: rows(p.publishers),
   };
 }
 
 /** Fill only empty fields of detected file metadata from the profile — never overwrite what the file already has. */
-export function fillMissing(detected: Partial<Metadata>, p: ArtistProfile | null): Partial<Metadata> {
+export function fillMissing(
+  detected: Partial<Metadata>,
+  p: ArtistProfile | null,
+): Partial<Metadata> {
   if (!p) return detected;
   const out: Partial<Metadata> = { ...detected };
   for (const k of PROFILE_KEYS) {
@@ -212,7 +329,11 @@ export function fillMissing(detected: Partial<Metadata>, p: ArtistProfile | null
     // A ticked rights box is an answer, so an unticked one is still a blank to fill: without this the two rights boxes could
     // never arrive from the defaults (founder, 2026-11-14). Only these two: selfPublished is a real answer the song keeps.
     const unticked = cur === false && (k === "rightsStartInception" || k === "rightsEndPerpetuity");
-    const empty = cur === undefined || cur === "" || unticked || (Array.isArray(cur) && hasName(cur as Contributor[]).length === 0);
+    const empty =
+      cur === undefined ||
+      cur === "" ||
+      unticked ||
+      (Array.isArray(cur) && hasName(cur as Contributor[]).length === 0);
     if (empty && p[k] !== undefined) (out as Record<string, unknown>)[k] = p[k];
   }
   return out;
@@ -228,8 +349,20 @@ export function restoreRows(m: Partial<Metadata>, p: ArtistProfile | null): Part
     const rows = out[g];
     if (!rows) continue;
     out[g] = rows.map((r) => {
-      const saved = creditName(r) && p[g]?.find((s) => creditName(s).toLowerCase() === creditName(r).toLowerCase());
-      return saved ? { ...r, legalName: r.legalName || saved.legalName, pro: r.pro || saved.pro, ipi: r.ipi || saved.ipi, percentage: r.percentage || saved.percentage, hfa: r.hfa || saved.hfa, publishing: r.publishing || saved.publishing } : r;
+      const saved =
+        creditName(r) &&
+        p[g]?.find((s) => creditName(s).toLowerCase() === creditName(r).toLowerCase());
+      return saved
+        ? {
+            ...r,
+            legalName: r.legalName || saved.legalName,
+            pro: r.pro || saved.pro,
+            ipi: r.ipi || saved.ipi,
+            percentage: r.percentage || saved.percentage,
+            hfa: r.hfa || saved.hfa,
+            publishing: r.publishing || saved.publishing,
+          }
+        : r;
     });
   }
   return out;
@@ -243,8 +376,10 @@ export function restoreRows(m: Partial<Metadata>, p: ArtistProfile | null): Part
 export function withProfileFilled(m: Metadata, p: ArtistProfile | null): Metadata {
   if (!p) return m;
   const out = { ...m, ...restoreRows(fillMissing(m, p), p) } as Metadata;
-  if (p.selfPublished && !out.selfPublished && !hasName(out.publishers).length) out.selfPublished = true;
+  if (p.selfPublished && !out.selfPublished && !hasName(out.publishers).length)
+    out.selfPublished = true;
   // Same for a BMI writer with no publishing company: the profile's answer fills songs that have no publisher.
-  if (p.bmiWriterPublishing && !out.bmiWriterPublishing && !hasName(out.publishers).length) out.bmiWriterPublishing = true;
+  if (p.bmiWriterPublishing && !out.bmiWriterPublishing && !hasName(out.publishers).length)
+    out.bmiWriterPublishing = true;
   return out;
 }

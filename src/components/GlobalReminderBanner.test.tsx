@@ -15,12 +15,18 @@ const USER = "staff-1";
 function memoryStorage(): Storage {
   const map = new Map<string, string>();
   return {
-    get length() { return map.size; },
+    get length() {
+      return map.size;
+    },
     clear: () => map.clear(),
     getItem: (key: string) => map.get(key) ?? null,
     key: (index: number) => [...map.keys()][index] ?? null,
-    removeItem: (key: string) => { map.delete(key); },
-    setItem: (key: string, value: string) => { map.set(key, String(value)); },
+    removeItem: (key: string) => {
+      map.delete(key);
+    },
+    setItem: (key: string, value: string) => {
+      map.set(key, String(value));
+    },
   };
 }
 
@@ -64,14 +70,18 @@ describe("Global reminder banner", () => {
     seed(dueSoon);
     renderBanner();
     fireEvent.click(screen.getByRole("button", { name: "Mark Done" }));
-    await waitFor(() => expect(screen.queryByText("Approve Legal's redlines")).not.toBeInTheDocument());
+    await waitFor(() =>
+      expect(screen.queryByText("Approve Legal's redlines")).not.toBeInTheDocument(),
+    );
   });
 
   it("leaves the screen once snoozed and comes back tomorrow", async () => {
     seed(dueSoon);
     renderBanner();
     fireEvent.click(screen.getByRole("button", { name: "Snooze 1 Day" }));
-    await waitFor(() => expect(screen.queryByText("Approve Legal's redlines")).not.toBeInTheDocument());
+    await waitFor(() =>
+      expect(screen.queryByText("Approve Legal's redlines")).not.toBeInTheDocument(),
+    );
 
     const shownAt = Date.now();
     const tomorrow = vi.spyOn(Date, "now").mockReturnValue(shownAt + 25 * 3_600_000);
@@ -81,7 +91,10 @@ describe("Global reminder banner", () => {
   });
 
   it("stays quiet when nothing is due", () => {
-    seed({ title: "Next week's review", dueAt: new Date(Date.now() + 7 * 86_400_000).toISOString() });
+    seed({
+      title: "Next week's review",
+      dueAt: new Date(Date.now() + 7 * 86_400_000).toISOString(),
+    });
     renderBanner();
     expect(screen.queryByText("Next week's review")).not.toBeInTheDocument();
     expect(screen.queryByRole("region", { name: "Admin reminders due" })).not.toBeInTheDocument();

@@ -1,8 +1,21 @@
 import { describe, expect, it } from "vitest";
-import { dollarsToCents, formatUsd, proratedRefundCents, purchaseKindLabel, refundVerdict, windowDaysLeft } from "./billing-console";
+import {
+  dollarsToCents,
+  formatUsd,
+  proratedRefundCents,
+  purchaseKindLabel,
+  refundVerdict,
+  windowDaysLeft,
+} from "./billing-console";
 
 const now = new Date("2026-11-05T12:00:00Z");
-const base = { paidCents: 4499, refundedCents: 0, amountCents: 4499, paidAt: "2026-11-01T12:00:00Z", now };
+const base = {
+  paidCents: 4499,
+  refundedCents: 0,
+  amountCents: 4499,
+  paidAt: "2026-11-01T12:00:00Z",
+  now,
+};
 
 describe("refund rules", () => {
   it("allows a full refund inside the window, no ceiling but the payment", () => {
@@ -65,11 +78,17 @@ describe("prorated plan refunds", () => {
   });
 
   it("refunds everything when the term hasn't started", () => {
-    expect(proratedRefundCents({ paidCents: 8999, paidAt: "2026-12-01T12:00:00Z", now })).toBe(8999);
+    expect(proratedRefundCents({ paidCents: 8999, paidAt: "2026-12-01T12:00:00Z", now })).toBe(
+      8999,
+    );
   });
 
   it("prorates whatever is left after an earlier partial refund", () => {
-    const left = proratedRefundCents({ paidCents: 8999 - 2000, paidAt: "2026-05-05T12:00:00Z", now });
+    const left = proratedRefundCents({
+      paidCents: 8999 - 2000,
+      paidAt: "2026-05-05T12:00:00Z",
+      now,
+    });
     expect(left).toBeGreaterThan(3400);
     expect(left).toBeLessThan(3600);
   });

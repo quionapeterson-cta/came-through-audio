@@ -6,7 +6,14 @@ import { BrandLogo } from "@/components/BrandLogo";
 import { PlanComparison, planAction } from "@/components/PlanComparison";
 import { useAuth } from "@/hooks/useAuth";
 import { useBilling } from "@/hooks/useBilling";
-import { PRICE_TIER, TIER_LABEL, peekPlanIntent, rememberPlanIntent, takePlanIntent, upgradeNote } from "@/lib/plans";
+import {
+  PRICE_TIER,
+  TIER_LABEL,
+  peekPlanIntent,
+  rememberPlanIntent,
+  takePlanIntent,
+  upgradeNote,
+} from "@/lib/plans";
 import { SignupCard } from "@/components/SignupCard";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { getPaymentsEnvironment, openCheckout } from "@/lib/checkout";
@@ -18,8 +25,9 @@ type Spots = { paid_tier: "plus" | "collaborate"; spots_left: number };
 function useFoundingSpots() {
   const [spots, setSpots] = useState<Spots[]>([]);
   useEffect(() => {
-    void supabase.rpc("founding_spots" as never, { _env: getPaymentsEnvironment() } as never)
-      .then(({ data }) => setSpots(((data ?? []) as unknown as Spots[])));
+    void supabase
+      .rpc("founding_spots" as never, { _env: getPaymentsEnvironment() } as never)
+      .then(({ data }) => setSpots((data ?? []) as unknown as Spots[]));
   }, []);
   return spots;
 }
@@ -28,9 +36,16 @@ export const Route = createFileRoute("/plans")({
   head: () => ({
     meta: [
       { title: "Plans & Pricing — Came Through Audio" },
-      { name: "description", content: "Compare Catalog Plus, Catalog & Collaborate, and Catalog Management yearly plans for independent musicians." },
+      {
+        name: "description",
+        content:
+          "Compare Catalog Plus, Catalog & Collaborate, and Catalog Management yearly plans for independent musicians.",
+      },
       { property: "og:title", content: "Plans & Pricing — Came Through Audio" },
-      { property: "og:description", content: "Yearly plans for metadata embedding, cataloging, split sheets and contracts." },
+      {
+        property: "og:description",
+        content: "Yearly plans for metadata embedding, cataloging, split sheets and contracts.",
+      },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
     ],
@@ -51,8 +66,10 @@ function PlansPage() {
   // Paying no longer waits for the email confirmation (founder, 2026-11-05): the new account is signed in straight
   // away, the confirmation link arrives alongside the purchase, and the workspace reminds them to click it.
   const startCheckout = async (priceId: string) => {
-    try { await openCheckout({ kind: "plan", priceId }); takePlanIntent(); }
-    catch (e) {
+    try {
+      await openCheckout({ kind: "plan", priceId });
+      takePlanIntent();
+    } catch (e) {
       // Whatever went wrong, the pick stays in the browser: the workspace and the plan cards both resume it, instead of
       // the member quietly landing in a free workspace with the purchase forgotten (founder, 2026-11-05).
       rememberPlanIntent(priceId);
@@ -60,7 +77,11 @@ function PlansPage() {
     }
   };
   const buy = async (priceId: string) => {
-    if (!user) { rememberPlanIntent(priceId); setSignupFor(priceId); return; }
+    if (!user) {
+      rememberPlanIntent(priceId);
+      setSignupFor(priceId);
+      return;
+    }
     await startCheckout(priceId);
   };
   const afterSignup = () => {
@@ -79,11 +100,18 @@ function PlansPage() {
           {/* Log in is small, so it gets the Electric Cobalt with a soft glow to find it at a glance on ink. Signed out,
               it goes to the dedicated log-in page, which already has their email filled in (founder, 2026-11-05). */}
           {user ? (
-            <Link to="/workspace" search={{ tab: undefined }} className="text-sm font-bold text-ink-muted hover:text-primary">
+            <Link
+              to="/workspace"
+              search={{ tab: undefined }}
+              className="text-sm font-bold text-ink-muted hover:text-primary"
+            >
               Back to workspace
             </Link>
           ) : (
-            <Link to="/login" className="text-sm font-bold text-brand-electric drop-shadow-[0_0_10px_rgba(95,153,255,0.55)] hover:text-ink-foreground">
+            <Link
+              to="/login"
+              className="text-sm font-bold text-brand-electric drop-shadow-[0_0_10px_rgba(95,153,255,0.55)] hover:text-ink-foreground"
+            >
               Log in
             </Link>
           )}
@@ -92,25 +120,55 @@ function PlansPage() {
 
       <main className="mx-auto max-w-6xl px-4 py-16 sm:px-6">
         <h1 className="text-center text-4xl font-bold md:text-5xl">Choose your plan</h1>
-        <p className="mt-3 text-center text-ink-muted">Simple yearly pricing. Start free and upgrade anytime.</p>
+        <p className="mt-3 text-center text-ink-muted">
+          Simple yearly pricing. Start free and upgrade anytime.
+        </p>
         {spots.some((s) => s.spots_left > 0) && (
           <div className="mx-auto mt-8 max-w-3xl rounded-2xl border border-brand-electric/40 bg-brand-electric/10 p-5 text-center">
-            <p className="text-sm font-bold uppercase tracking-[2px] text-brand-electric">Founding offer</p>
-            <p className="mt-2 text-sm text-ink-muted">The first 100 members on Catalog Plus get Catalog &amp; Collaborate, and the first 100 on Catalog &amp; Collaborate get Catalog Management, for as long as their plan stays active.</p>
-            <p className="mt-2 text-sm font-semibold">Catalog Plus: {left("plus")} of 100 spots left · Catalog &amp; Collaborate: {left("collaborate")} of 100 spots left</p>
+            <p className="text-sm font-bold uppercase tracking-[2px] text-brand-electric">
+              Founding offer
+            </p>
+            <p className="mt-2 text-sm text-ink-muted">
+              The first 100 members on Catalog Plus get Catalog &amp; Collaborate, and the first 100
+              on Catalog &amp; Collaborate get Catalog Management, for as long as their plan stays
+              active.
+            </p>
+            <p className="mt-2 text-sm font-semibold">
+              Catalog Plus: {left("plus")} of 100 spots left · Catalog &amp; Collaborate:{" "}
+              {left("collaborate")} of 100 spots left
+            </p>
           </div>
         )}
         <div className="mt-12">
           {/* Dark chart on the plans page (founder, 11/3/2026); the homepage keeps the light one. */}
-          <PlanComparison tone="dark" currentTier={user ? tier : undefined} note={plan ? upgradeNote(plan.orderedAt) : undefined} action={(p) => planAction(p, { tier: user ? tier : undefined, onBuy: (id) => void buy(id), onSignup: () => { const id = peekPlanIntent(); if (id) setSignupFor(id); else navigate({ to: "/", hash: "signup" }); } })} />
+          <PlanComparison
+            tone="dark"
+            currentTier={user ? tier : undefined}
+            note={plan ? upgradeNote(plan.orderedAt) : undefined}
+            action={(p) =>
+              planAction(p, {
+                tier: user ? tier : undefined,
+                onBuy: (id) => void buy(id),
+                onSignup: () => {
+                  const id = peekPlanIntent();
+                  if (id) setSignupFor(id);
+                  else navigate({ to: "/", hash: "signup" });
+                },
+              })
+            }
+          />
         </div>
       </main>
 
       {signupFor && (
         <Dialog open onOpenChange={(o) => !o && setSignupFor(null)}>
           <DialogContent className="max-w-md border-0 bg-transparent p-0 shadow-none">
-            <DialogTitle className="sr-only">Sign up for {TIER_LABEL[PRICE_TIER[signupFor]!]}</DialogTitle>
-            <DialogDescription className="sr-only">Create your account and this plan's checkout opens right after.</DialogDescription>
+            <DialogTitle className="sr-only">
+              Sign up for {TIER_LABEL[PRICE_TIER[signupFor]!]}
+            </DialogTitle>
+            <DialogDescription className="sr-only">
+              Create your account and this plan's checkout opens right after.
+            </DialogDescription>
             <SignupCard onAuthed={afterSignup} />
           </DialogContent>
         </Dialog>
@@ -118,12 +176,24 @@ function PlansPage() {
 
       <footer className="bg-ink text-ink-muted">
         <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-center gap-6 px-6 py-8 text-sm">
-          <Link to="/terms-of-service" className="hover:text-ink-foreground">Terms of Service</Link>
-          <Link to="/refund-policy" className="hover:text-ink-foreground">Refund Policy</Link>
-          <Link to="/privacy-policy" className="hover:text-ink-foreground">Privacy Policy</Link>
+          <Link to="/terms-of-service" className="hover:text-ink-foreground">
+            Terms of Service
+          </Link>
+          <Link to="/refund-policy" className="hover:text-ink-foreground">
+            Refund Policy
+          </Link>
+          <Link to="/privacy-policy" className="hover:text-ink-foreground">
+            Privacy Policy
+          </Link>
         </div>
-        <div className="border-t border-ink-border py-6 text-center text-sm">© {new Date().getFullYear()} Came Through Audio, LLC</div>
-        <Disclaimer k="site" tone="ink" className="mx-auto max-w-4xl justify-center px-6 pb-8 text-center" />
+        <div className="border-t border-ink-border py-6 text-center text-sm">
+          © {new Date().getFullYear()} Came Through Audio, LLC
+        </div>
+        <Disclaimer
+          k="site"
+          tone="ink"
+          className="mx-auto max-w-4xl justify-center px-6 pb-8 text-center"
+        />
       </footer>
     </div>
   );

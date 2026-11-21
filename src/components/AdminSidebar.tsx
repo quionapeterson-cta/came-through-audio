@@ -7,10 +7,21 @@ import { groupTabs, tabIcon, type NavTab } from "@/lib/admin-nav";
 import { DEPARTMENT_LABEL, type Department, type StaffAccess } from "@/lib/departments";
 import { cn } from "@/lib/utils";
 
-type Props = { tabs: NavTab[]; active: string; onSelect: (value: string) => void; access: StaffAccess };
+type Props = {
+  tabs: NavTab[];
+  active: string;
+  onSelect: (value: string) => void;
+  access: StaffAccess;
+};
 
 /** The grouped navigation itself, shared by the desktop rail and the phone sheet. */
-function NavBody({ tabs, active, onSelect, access, compact = false }: Props & { compact?: boolean }) {
+function NavBody({
+  tabs,
+  active,
+  onSelect,
+  access,
+  compact = false,
+}: Props & { compact?: boolean }) {
   const groups = groupTabs(tabs);
   const [closed, setClosed] = useState<Record<string, boolean>>({});
   return (
@@ -25,7 +36,12 @@ function NavBody({ tabs, active, onSelect, access, compact = false }: Props & { 
               aria-expanded={!isClosed}
               className="group flex w-full items-center gap-1.5 rounded-md px-2 py-1 text-left text-[11px] font-bold uppercase tracking-[0.14em] text-muted-foreground transition-colors hover:text-foreground"
             >
-              <ChevronDown className={cn("h-3.5 w-3.5 transition-transform duration-200", isClosed && "-rotate-90")} />
+              <ChevronDown
+                className={cn(
+                  "h-3.5 w-3.5 transition-transform duration-200",
+                  isClosed && "-rotate-90",
+                )}
+              />
               <span className="truncate">{g.label}</span>
             </button>
             <p className="px-2 pb-1 text-[11px] leading-tight text-muted-foreground/70">{g.hint}</p>
@@ -47,7 +63,9 @@ function NavBody({ tabs, active, onSelect, access, compact = false }: Props & { 
                             : "text-muted-foreground hover:translate-x-0.5 hover:bg-accent/40 hover:text-foreground",
                         )}
                       >
-                        <Icon className={cn("h-4 w-4 shrink-0", on ? "text-primary" : "opacity-70")} />
+                        <Icon
+                          className={cn("h-4 w-4 shrink-0", on ? "text-primary" : "opacity-70")}
+                        />
                         <span className="truncate">{t.label}</span>
                       </button>
                     </li>
@@ -60,7 +78,11 @@ function NavBody({ tabs, active, onSelect, access, compact = false }: Props & { 
       })}
       {access.role !== "super_admin" && access.departments.length > 0 && (
         <div className="flex flex-wrap gap-1 px-1">
-          {access.departments.slice(0, 3).map((d) => <Badge key={d} variant="secondary" className="text-[10px]">{DEPARTMENT_LABEL[d as Department]}</Badge>)}
+          {access.departments.slice(0, 3).map((d) => (
+            <Badge key={d} variant="secondary" className="text-[10px]">
+              {DEPARTMENT_LABEL[d as Department]}
+            </Badge>
+          ))}
         </div>
       )}
     </nav>
@@ -92,7 +114,14 @@ export function AdminNavMobile(props: Props) {
         <SheetHeader className="px-1 pb-3">
           <SheetTitle className="text-left text-base">Admin sections</SheetTitle>
         </SheetHeader>
-        <NavBody {...props} onSelect={(v) => { setOpen(false); props.onSelect(v); }} compact />
+        <NavBody
+          {...props}
+          onSelect={(v) => {
+            setOpen(false);
+            props.onSelect(v);
+          }}
+          compact
+        />
       </SheetContent>
     </Sheet>
   );

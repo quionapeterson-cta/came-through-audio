@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
 import {
-  descriptorProblem, STATEMENT_DESCRIPTOR, STATEMENT_DESCRIPTOR_LIMIT, STATEMENT_DESCRIPTOR_PREFIX,
+  descriptorProblem,
+  STATEMENT_DESCRIPTOR,
+  STATEMENT_DESCRIPTOR_LIMIT,
+  STATEMENT_DESCRIPTOR_PREFIX,
   STATEMENT_DESCRIPTOR_PREFIX_LIMIT,
 } from "./plans";
 
@@ -11,7 +14,9 @@ describe("card statement descriptor", () => {
   });
 
   it("sets a card prefix inside the 10-character limit, so Stripe can't truncate it itself", () => {
-    expect(STATEMENT_DESCRIPTOR_PREFIX.length).toBeLessThanOrEqual(STATEMENT_DESCRIPTOR_PREFIX_LIMIT);
+    expect(STATEMENT_DESCRIPTOR_PREFIX.length).toBeLessThanOrEqual(
+      STATEMENT_DESCRIPTOR_PREFIX_LIMIT,
+    );
     expect(descriptorProblem(STATEMENT_DESCRIPTOR_PREFIX, true)).toBeNull();
   });
 

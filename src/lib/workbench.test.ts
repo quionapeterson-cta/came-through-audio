@@ -1,12 +1,39 @@
 import { describe, expect, it } from "vitest";
 import { GUIDES } from "./guides";
-import { checklistProgress, customItems, defaultsFinished, dueLabel, guideIdOf, isEmptyEntry, isOverdue, metaFor, nextDue, nextRunId, nextStep, progressLabel, runId, runOf, savedGuides, sortByProgress, toggleChecked, withCustomItem, withMeta, workingOnCount, type WorkbenchEntry } from "./workbench";
+import {
+  checklistProgress,
+  customItems,
+  defaultsFinished,
+  dueLabel,
+  guideIdOf,
+  isEmptyEntry,
+  isOverdue,
+  metaFor,
+  nextDue,
+  nextRunId,
+  nextStep,
+  progressLabel,
+  runId,
+  runOf,
+  savedGuides,
+  sortByProgress,
+  toggleChecked,
+  withCustomItem,
+  withMeta,
+  workingOnCount,
+  type WorkbenchEntry,
+} from "./workbench";
 
 const list = ["A", "B", "C", "D", "E", "F", "G", "H"];
 
 describe("working the same blueprint again", () => {
   const guide = GUIDES.find((g) => (g.checklist?.length ?? 0) > 0)!;
-  const saved = (itemId: string, checked: string[] = []): WorkbenchEntry => ({ kind: "blueprint", itemId, checked, pinned: true });
+  const saved = (itemId: string, checked: string[] = []): WorkbenchEntry => ({
+    kind: "blueprint",
+    itemId,
+    checked,
+    pinned: true,
+  });
 
   it("names the first run with the guide id and numbers the rest", () => {
     expect(runId(guide.id, 1)).toBe(guide.id);
@@ -25,17 +52,38 @@ describe("working the same blueprint again", () => {
   it("lifts the defaults sky only when both profile blueprints have a finished run", () => {
     const embed = GUIDES.find((g) => g.id === "embed-defaults")!;
     const catalog = GUIDES.find((g) => g.id === "catalog-defaults")!;
-    const row = (itemId: string, checked: string[]): WorkbenchEntry => ({ kind: "blueprint", itemId, checked, pinned: true });
+    const row = (itemId: string, checked: string[]): WorkbenchEntry => ({
+      kind: "blueprint",
+      itemId,
+      checked,
+      pinned: true,
+    });
     expect(defaultsFinished([])).toBe(false);
     expect(defaultsFinished([row(embed.id, embed.checklist!)])).toBe(false);
     // Half of the other one is not finished, and a finished earlier run still counts.
-    expect(defaultsFinished([row(embed.id, embed.checklist!), row(catalog.id, catalog.checklist!.slice(1))])).toBe(false);
-    expect(defaultsFinished([row(catalog.id, catalog.checklist!), row(`${embed.id}~2`, embed.checklist!)])).toBe(true);
+    expect(
+      defaultsFinished([
+        row(embed.id, embed.checklist!),
+        row(catalog.id, catalog.checklist!.slice(1)),
+      ]),
+    ).toBe(false);
+    expect(
+      defaultsFinished([
+        row(catalog.id, catalog.checklist!),
+        row(`${embed.id}~2`, embed.checklist!),
+      ]),
+    ).toBe(true);
   });
 
   it("keeps every saved run as its own record, named by run", () => {
-    const rows = savedGuides([saved(guide.id, guide.checklist!), saved(`${guide.id}~2`, guide.checklist!.slice(1))]);
-    expect(rows.map((r) => [r.itemId, r.run, r.progress.finished])).toEqual([[guide.id, 1, true], [`${guide.id}~2`, 2, false]]);
+    const rows = savedGuides([
+      saved(guide.id, guide.checklist!),
+      saved(`${guide.id}~2`, guide.checklist!.slice(1)),
+    ]);
+    expect(rows.map((r) => [r.itemId, r.run, r.progress.finished])).toEqual([
+      [guide.id, 1, true],
+      [`${guide.id}~2`, 2, false],
+    ]);
     expect(rows[1]!.title).toBe(`${guide.title} · Run 2`);
   });
 });
@@ -57,7 +105,13 @@ describe("checklistProgress", () => {
   });
 
   it("is 0, not NaN, with no checklist", () => {
-    expect(checklistProgress(undefined, ["A"])).toEqual({ done: 0, total: 0, pct: 0, started: false, finished: false });
+    expect(checklistProgress(undefined, ["A"])).toEqual({
+      done: 0,
+      total: 0,
+      pct: 0,
+      started: false,
+      finished: false,
+    });
   });
 });
 
@@ -102,7 +156,11 @@ describe("notes and due dates", () => {
   });
 
   it("reads the soonest open due date only", () => {
-    const entry = withMeta(withMeta({ ...blank, checked: ["A"] }, "A", { due: "2026-11-01" }), "B", { due: "2026-11-20" });
+    const entry = withMeta(
+      withMeta({ ...blank, checked: ["A"] }, "A", { due: "2026-11-01" }),
+      "B",
+      { due: "2026-11-20" },
+    );
     expect(nextDue(entry, ["A", "B"])).toBe("2026-11-20");
     expect(dueLabel("2026-11-20")).toBe("Nov 20");
   });
@@ -117,7 +175,9 @@ describe("the member's own checklist item", () => {
   const blank: WorkbenchEntry = { kind: "blueprint", itemId: "x", checked: [], pinned: false };
 
   it("keeps one item of their own, trimmed", () => {
-    expect(customItems(withCustomItem(blank, "  Ask about the split  "))).toEqual(["Ask about the split"]);
+    expect(customItems(withCustomItem(blank, "  Ask about the split  "))).toEqual([
+      "Ask about the split",
+    ]);
     expect(customItems(blank)).toEqual([]);
   });
 
@@ -126,12 +186,20 @@ describe("the member's own checklist item", () => {
     const noted = withMeta(own, "Ask about the split", { note: "Tuesday" });
     expect(customItems(noted)).toEqual(["Ask about the split"]);
     expect(metaFor(noted, "Ask about the split")).toMatchObject({ note: "Tuesday", custom: true });
-    expect(customItems(withMeta(noted, "Ask about the split", { note: "" }))).toEqual(["Ask about the split"]);
+    expect(customItems(withMeta(noted, "Ask about the split", { note: "" }))).toEqual([
+      "Ask about the split",
+    ]);
   });
 
   it("replaces it rather than adding a second, and drops the old tick", () => {
-    const own = withCustomItem({ ...blank, checked: ["Ask about the split"] }, "Ask about the split");
-    const renamed = toggleChecked(withCustomItem(own, "Ask about the splits"), "Ask about the splits");
+    const own = withCustomItem(
+      { ...blank, checked: ["Ask about the split"] },
+      "Ask about the split",
+    );
+    const renamed = toggleChecked(
+      withCustomItem(own, "Ask about the splits"),
+      "Ask about the splits",
+    );
     expect(customItems(renamed)).toEqual(["Ask about the splits"]);
     expect(renamed.checked).toEqual(["Ask about the splits"]);
   });
@@ -148,7 +216,10 @@ describe("sortByProgress", () => {
   it("puts in-progress first and finished after, each alphabetical", () => {
     const p = (done: number) => checklistProgress(["A", "B"], ["A", "B"].slice(0, done));
     const { inProgress, finished } = sortByProgress([
-      { title: "Zed", progress: p(1) }, { title: "Alpha", progress: p(2) }, { title: "Beta", progress: p(0) }, { title: "Aardvark", progress: p(2) },
+      { title: "Zed", progress: p(1) },
+      { title: "Alpha", progress: p(2) },
+      { title: "Beta", progress: p(0) },
+      { title: "Aardvark", progress: p(2) },
     ]);
     expect(inProgress.map((x) => x.title)).toEqual(["Beta", "Zed"]);
     expect(finished.map((x) => x.title)).toEqual(["Aardvark", "Alpha"]);
@@ -158,8 +229,18 @@ describe("sortByProgress", () => {
 describe("savedGuides and workingOnCount", () => {
   it("lists saved blueprints and counts what is still in progress", () => {
     const entries = [
-      { kind: "blueprint" as const, itemId: "music-business-startup", checked: ["Name checked"], pinned: true },
-      { kind: "blueprint" as const, itemId: "record-label", checked: ["Label purpose decided"], pinned: false },
+      {
+        kind: "blueprint" as const,
+        itemId: "music-business-startup",
+        checked: ["Name checked"],
+        pinned: true,
+      },
+      {
+        kind: "blueprint" as const,
+        itemId: "record-label",
+        checked: ["Label purpose decided"],
+        pinned: false,
+      },
     ];
     expect(savedGuides(entries).map((x) => x.guide.id)).toEqual(["music-business-startup"]);
     expect(workingOnCount(entries, [{ status: "draft" }, { status: "signed" }])).toBe(2);
@@ -169,7 +250,13 @@ describe("savedGuides and workingOnCount", () => {
 describe("nextStep", () => {
   it("suggests the dated item first, then the next unticked one", () => {
     const entries: WorkbenchEntry[] = [
-      { kind: "blueprint", itemId: "music-business-startup", checked: ["Name checked"], pinned: true, meta: { "Business bank account": { due: "2026-11-30" } } },
+      {
+        kind: "blueprint",
+        itemId: "music-business-startup",
+        checked: ["Name checked"],
+        pinned: true,
+        meta: { "Business bank account": { due: "2026-11-30" } },
+      },
       { kind: "blueprint", itemId: "record-label", checked: [], pinned: true },
     ];
     const step = nextStep(entries, []);
@@ -180,7 +267,13 @@ describe("nextStep", () => {
   });
 
   it("falls back to a draft, then a contract out for signature", () => {
-    const draft = nextStep([], [{ id: "c1", title: "Producer Agreement", status: "draft" }, { id: "c2", title: "Beat Lease", status: "sent" }]);
+    const draft = nextStep(
+      [],
+      [
+        { id: "c1", title: "Producer Agreement", status: "draft" },
+        { id: "c2", title: "Beat Lease", status: "sent" },
+      ],
+    );
     expect(draft).toMatchObject({ kind: "contract", contractId: "c1" });
     const sent = nextStep([], [{ id: "c2", title: "Beat Lease", status: "sent" }]);
     expect(sent).toMatchObject({ kind: "contract", contractId: "c2" });
@@ -192,7 +285,14 @@ describe("nextStep", () => {
 
   it("skips a finished blueprint", () => {
     const guide = GUIDES.find((g) => g.id === "record-label")!;
-    const done = [{ kind: "blueprint" as const, itemId: guide.id, checked: [...(guide.checklist ?? [])], pinned: true }];
+    const done = [
+      {
+        kind: "blueprint" as const,
+        itemId: guide.id,
+        checked: [...(guide.checklist ?? [])],
+        pinned: true,
+      },
+    ];
     expect(savedGuides(done)).toHaveLength(1);
     expect(nextStep(done, []).kind).toBe("browse");
   });

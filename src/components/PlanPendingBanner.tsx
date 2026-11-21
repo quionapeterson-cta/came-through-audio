@@ -25,7 +25,11 @@ export function PlanPendingBanner({ priceId }: { priceId: string }) {
       takePlanIntent();
       setDone(true);
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Checkout could not open. Try again, or contact support and we'll help right away.");
+      toast.error(
+        e instanceof Error
+          ? e.message
+          : "Checkout could not open. Try again, or contact support and we'll help right away.",
+      );
     } finally {
       setBusy(false);
     }
@@ -36,12 +40,17 @@ export function PlanPendingBanner({ priceId }: { priceId: string }) {
       <p className="flex items-center gap-2 text-sm">
         <CreditCard className="h-4 w-4 shrink-0 text-primary" />
         <span>
-          <span className="font-semibold">Your {TIER_LABEL[tier]} plan isn&apos;t paid for yet.</span> Your account is
-          ready; the card is the last step, and everything on the plan unlocks the moment Stripe confirms it.
+          <span className="font-semibold">
+            Your {TIER_LABEL[tier]} plan isn&apos;t paid for yet.
+          </span>{" "}
+          Your account is ready; the card is the last step, and everything on the plan unlocks the
+          moment Stripe confirms it.
         </span>
       </p>
       <Button size="sm" disabled={busy} onClick={() => void pay()}>
-        {busy ? "Opening checkout…" : `Pay ${plan?.price ?? ""} for ${TIER_LABEL[tier]}`.replace("  ", " ")}
+        {busy
+          ? "Opening checkout…"
+          : `Pay ${plan?.price ?? ""} for ${TIER_LABEL[tier]}`.replace("  ", " ")}
       </Button>
     </div>
   );

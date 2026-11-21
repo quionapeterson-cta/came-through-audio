@@ -2,8 +2,13 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 
 export type PublicCertificate = {
-  id: string; track_title: string | null; artist_name: string | null; issued_at: string | null;
-  proof_digest: string | null; ots_receipt: string | null; ots_calendar: string | null;
+  id: string;
+  track_title: string | null;
+  artist_name: string | null;
+  issued_at: string | null;
+  proof_digest: string | null;
+  ots_receipt: string | null;
+  ots_calendar: string | null;
 };
 
 /**
@@ -15,7 +20,10 @@ export const getPublicCertificate = createServerFn({ method: "GET" })
   .inputValidator((input: { id: string }) => z.object({ id: z.string().uuid() }).parse(input))
   .handler(async ({ data }): Promise<PublicCertificate | null> => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { data: row } = await supabaseAdmin.from("ai_protection_certificates")
-      .select("id, track_title, artist_name, issued_at, proof_digest, ots_receipt, ots_calendar").eq("id", data.id).maybeSingle();
+    const { data: row } = await supabaseAdmin
+      .from("ai_protection_certificates")
+      .select("id, track_title, artist_name, issued_at, proof_digest, ots_receipt, ots_calendar")
+      .eq("id", data.id)
+      .maybeSingle();
     return (row as PublicCertificate | null) ?? null;
   });

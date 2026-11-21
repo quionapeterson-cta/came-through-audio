@@ -26,7 +26,8 @@ export const HELP_CATEGORIES: HelpCategory[] = [
   {
     id: "files",
     title: "Audio & Mastered Files",
-    blurb: "A finished master that won't play, save or download, the artwork and lyrics that travel with it, and the documents your branding prints on.",
+    blurb:
+      "A finished master that won't play, save or download, the artwork and lyrics that travel with it, and the documents your branding prints on.",
     icon: "audio",
     faq: ["My Catalog", "PDF Fill & Sign", "Personal branding"],
     areas: ["My Catalog"],
@@ -34,7 +35,8 @@ export const HELP_CATEGORIES: HelpCategory[] = [
   {
     id: "metadata",
     title: "Metadata & Distribution",
-    blurb: "Credits, ISRC and UPC written into the file itself, and getting every detail in order before the song is distributed.",
+    blurb:
+      "Credits, ISRC and UPC written into the file itself, and getting every detail in order before the song is distributed.",
     icon: "metadata",
     faq: ["Embedding", "Agency exports & registration"],
     areas: ["Embed Metadata"],
@@ -50,7 +52,8 @@ export const HELP_CATEGORIES: HelpCategory[] = [
   {
     id: "royalties",
     title: "Royalties & Payouts",
-    blurb: "What each agency needs to find and pay a song, registering it, protecting it, and the splits behind the money.",
+    blurb:
+      "What each agency needs to find and pay a song, registering it, protecting it, and the splits behind the money.",
     icon: "royalties",
     faq: ["Royalties and Registrations", "Split sheets & contracts", "AI Protection Hub"],
     areas: ["Royalties and Registrations", "Split Sheets", "AI Protection Hub"],
@@ -60,15 +63,24 @@ export const HELP_CATEGORIES: HelpCategory[] = [
 export type HelpArticle = { id: string; q: string; a: string; source: "Quick answer" | "FAQ" };
 
 /** Same question asked in both catalogues is one answer here, worded by whichever is listed first. */
-const key = (q: string) => q.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+const key = (q: string) =>
+  q
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
 const slug = (q: string) => key(q).replace(/ /g, "-").slice(0, 60);
 
 /** Every answer under one card: the practical quick answers first, then the longer FAQ ones. */
 export function helpArticles(category: HelpCategory): HelpArticle[] {
-  const quick: HelpArticle[] = SUPPORT_FAQS.filter((f) => category.areas.includes(f.area))
-    .map((f) => ({ id: `q-${slug(f.q)}`, q: f.q, a: f.a, source: "Quick answer" }));
-  const full: HelpArticle[] = FAQS.filter((f) => category.faq.includes(f.category))
-    .map((f) => ({ id: `f-${slug(f.q)}`, q: f.q, a: f.a, source: "FAQ" }));
+  const quick: HelpArticle[] = SUPPORT_FAQS.filter((f) => category.areas.includes(f.area)).map(
+    (f) => ({ id: `q-${slug(f.q)}`, q: f.q, a: f.a, source: "Quick answer" }),
+  );
+  const full: HelpArticle[] = FAQS.filter((f) => category.faq.includes(f.category)).map((f) => ({
+    id: `f-${slug(f.q)}`,
+    q: f.q,
+    a: f.a,
+    source: "FAQ",
+  }));
   const seen = new Set<string>();
   return [...quick, ...full].filter((a) => {
     const k = key(a.q);

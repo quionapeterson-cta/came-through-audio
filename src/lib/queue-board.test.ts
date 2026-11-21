@@ -1,5 +1,14 @@
 import { describe, expect, it } from "vitest";
-import { canCheckStep, canEditStep, canLockSteps, completedToday, nextLock, queueColumns, queueProgress, LOCK_LABEL } from "./queue-board";
+import {
+  canCheckStep,
+  canEditStep,
+  canLockSteps,
+  completedToday,
+  nextLock,
+  queueColumns,
+  queueProgress,
+  LOCK_LABEL,
+} from "./queue-board";
 
 const items = [{ ref: "task:1" }, { ref: "task:2" }, { ref: "ticket:3" }];
 
@@ -30,7 +39,12 @@ describe("queueProgress", () => {
       { item_ref: "task:9", done_at: "2026-11-05T11:00:00Z" }, // not on today's board
     ];
     expect(queueProgress(items, [], steps)).toEqual({ done: 2, total: 3, pct: 67, unit: "steps" });
-    expect(queueProgress(items, [{ item_ref: "task:1", state: "done" }], [])).toEqual({ done: 1, total: 3, pct: 33, unit: "items" });
+    expect(queueProgress(items, [{ item_ref: "task:1", state: "done" }], [])).toEqual({
+      done: 1,
+      total: 3,
+      pct: 33,
+      unit: "items",
+    });
   });
 
   it("is 0, not NaN, on an empty board", () => {
@@ -76,6 +90,8 @@ describe("completedToday", () => {
       { item_ref: "task:1", state: "done" as const, updated_at: "2026-11-05T09:00:00Z" },
       { item_ref: "task:2", state: "done" as const, updated_at: "2026-11-04T09:00:00Z" },
     ];
-    expect(completedToday([{ ref: "task:1" }, { ref: "task:2" }], rows, now).map((i) => i.ref)).toEqual(["task:1"]);
+    expect(
+      completedToday([{ ref: "task:1" }, { ref: "task:2" }], rows, now).map((i) => i.ref),
+    ).toEqual(["task:1"]);
   });
 });

@@ -3,8 +3,36 @@ import { ID3Writer } from "browser-id3-writer";
 
 /** Every performing rights organization offered in PRO dropdowns, worldwide. "Other" lets users type a society not listed. */
 export const PROS = [
-  "ASCAP", "BMI", "SESAC", "GMR", "SOCAN", "PRS for Music", "APRA AMCOS", "SACEM", "GEMA", "SIAE", "SGAE", "BUMA/STEMRA",
-  "SABAM", "STIM", "TONO", "KODA", "TEOSTO", "IMRO", "JASRAC", "KOMCA", "SAMRO", "ECAD", "SADAIC", "SAYCE", "SACM", "IPRS", "COSON", "MCSK", "Other", "None",
+  "ASCAP",
+  "BMI",
+  "SESAC",
+  "GMR",
+  "SOCAN",
+  "PRS for Music",
+  "APRA AMCOS",
+  "SACEM",
+  "GEMA",
+  "SIAE",
+  "SGAE",
+  "BUMA/STEMRA",
+  "SABAM",
+  "STIM",
+  "TONO",
+  "KODA",
+  "TEOSTO",
+  "IMRO",
+  "JASRAC",
+  "KOMCA",
+  "SAMRO",
+  "ECAD",
+  "SADAIC",
+  "SAYCE",
+  "SACM",
+  "IPRS",
+  "COSON",
+  "MCSK",
+  "Other",
+  "None",
 ] as const;
 export const RELEASE_TYPES = ["Single", "EP", "Album", "Compilation"] as const;
 /**
@@ -15,27 +43,67 @@ export const RELEASE_TYPES = ["Single", "EP", "Album", "Compilation"] as const;
  * a song and its versions never look like the same recording. These are the suggestions: the field takes anything a
  * release is called in the wild, because no list is complete.
  */
-export const TRACK_VERSIONS = ["Radio edit", "Clean", "Dirty", "Instrumental", "Acapella", "Sped up", "Chopped and Screwed",
-  "Remastered", "Remix", "Extended mix", "Live", "Acoustic", "Unplugged", "Demo", "Deluxe", "Club mix", "Dub mix",
-  "Slowed", "Re-recorded", "Cover", "Reprise"] as const;
+export const TRACK_VERSIONS = [
+  "Radio edit",
+  "Clean",
+  "Dirty",
+  "Instrumental",
+  "Acapella",
+  "Sped up",
+  "Chopped and Screwed",
+  "Remastered",
+  "Remix",
+  "Extended mix",
+  "Live",
+  "Acoustic",
+  "Unplugged",
+  "Demo",
+  "Deluxe",
+  "Club mix",
+  "Dub mix",
+  "Slowed",
+  "Re-recorded",
+  "Cover",
+  "Reprise",
+] as const;
 /**
  * Main genres with their subgenres (founder, 2026-10-27: a much longer list). The main genres are the original list,
  * so saved songs and genre badges keep working; a subgenre counts as its main genre for badges, hashtags and agency
  * exports (parentGenre).
  */
 export const GENRE_GROUPS: { genre: string; subs: string[] }[] = [
-  { genre: "Hip-Hop/Rap", subs: ["Trap", "Drill", "Boom Bap", "Conscious Hip-Hop", "Southern Hip-Hop", "West Coast Hip-Hop", "Melodic Rap"] },
+  {
+    genre: "Hip-Hop/Rap",
+    subs: [
+      "Trap",
+      "Drill",
+      "Boom Bap",
+      "Conscious Hip-Hop",
+      "Southern Hip-Hop",
+      "West Coast Hip-Hop",
+      "Melodic Rap",
+    ],
+  },
   { genre: "Spiritual Hip-Hop", subs: [] },
   { genre: "R&B/Soul", subs: ["Contemporary R&B", "Neo-Soul", "Alternative R&B", "Funk"] },
   { genre: "Pop", subs: ["Dance Pop", "Indie Pop", "K-Pop", "Synth-Pop"] },
   { genre: "Rock", subs: ["Hard Rock", "Indie Rock", "Punk", "Metal"] },
-  { genre: "Gospel", subs: ["Contemporary Gospel", "Traditional Gospel", "Christian/CCM", "Worship"] },
+  {
+    genre: "Gospel",
+    subs: ["Contemporary Gospel", "Traditional Gospel", "Christian/CCM", "Worship"],
+  },
   { genre: "Jazz", subs: ["Smooth Jazz", "Jazz Fusion"] },
   { genre: "Blues", subs: ["Soul Blues"] },
   { genre: "Country", subs: ["Country Pop", "Americana", "Bluegrass", "Folk"] },
-  { genre: "Electronic", subs: ["House", "Afro House", "Amapiano", "Techno", "EDM", "Dubstep", "Drum & Bass", "Lo-Fi"] },
+  {
+    genre: "Electronic",
+    subs: ["House", "Afro House", "Amapiano", "Techno", "EDM", "Dubstep", "Drum & Bass", "Lo-Fi"],
+  },
   { genre: "Reggae", subs: ["Dancehall", "Roots Reggae"] },
-  { genre: "Latin", subs: ["Reggaeton", "Latin Trap", "Latin Pop", "Bachata", "Salsa", "Regional Mexican"] },
+  {
+    genre: "Latin",
+    subs: ["Reggaeton", "Latin Trap", "Latin Pop", "Bachata", "Salsa", "Regional Mexican"],
+  },
   { genre: "Afrobeats", subs: ["Afropop", "Afro-fusion", "Highlife"] },
   { genre: "Classical", subs: ["Orchestral", "Opera", "Choral"] },
   { genre: "Soundtrack", subs: ["Film Score", "Video Game", "Musical Theatre"] },
@@ -54,16 +122,34 @@ export const MASTER_BASES = ["Copyright Owner", "Collections Designee"] as const
 export const WRITER_ROLES = ["Author", "Composer", "Author/Composer"] as const;
 export type WriterRole = (typeof WRITER_ROLES)[number];
 /** MLC writer role codes: A = Author, C = Composer, CA = Composer/Author. */
-export const MLC_ROLE: Record<WriterRole, string> = { Author: "A", Composer: "C", "Author/Composer": "CA" };
-export const writerRole = (r?: string): WriterRole => (WRITER_ROLES as readonly string[]).includes(r ?? "") ? (r as WriterRole) : "Author/Composer";
+export const MLC_ROLE: Record<WriterRole, string> = {
+  Author: "A",
+  Composer: "C",
+  "Author/Composer": "CA",
+};
+export const writerRole = (r?: string): WriterRole =>
+  (WRITER_ROLES as readonly string[]).includes(r ?? "") ? (r as WriterRole) : "Author/Composer";
 
 export const contributorSchema = z.object({
   /** Producer/publisher name. Writers use legalName; their `name` only holds entries saved before that (see withLegalName). */
   name: z.string().trim(),
   legalName: z.string().trim().optional(),
   pro: z.string().trim(),
-  ipi: z.string().trim().default("").refine((value) => !value || /^\d{9,11}$/.test(value), "IPI numbers are 9–11 digits."),
-  percentage: z.string().trim().default("").refine((value) => value === "" || (Number.isFinite(Number(value)) && Number(value) >= 0 && Number(value) <= 100), "Enter a percentage between 0 and 100."),
+  ipi: z
+    .string()
+    .trim()
+    .default("")
+    .refine((value) => !value || /^\d{9,11}$/.test(value), "IPI numbers are 9–11 digits."),
+  percentage: z
+    .string()
+    .trim()
+    .default("")
+    .refine(
+      (value) =>
+        value === "" ||
+        (Number.isFinite(Number(value)) && Number(value) >= 0 && Number(value) <= 100),
+      "Enter a percentage between 0 and 100.",
+    ),
   role: z.string().optional(),
   /** Publishers only: the HFA account number (P#), which is also the publisher number on The MLC's bulk upload. Catalog-only, never embedded. */
   hfa: z.string().trim().optional(),
@@ -74,14 +160,32 @@ export const contributorSchema = z.object({
    */
   publishing: z.enum(["", "publisher", "self", "bmi", "none"]).optional(),
   /** Writers who are Self-published or paid by BMI: their part of the publisher half, in % (blank = their writer split). */
-  pubShare: z.string().trim().default("").refine((value) => value === "" || (Number.isFinite(Number(value)) && Number(value) >= 0 && Number(value) <= 100), "Enter a percentage between 0 and 100.").optional(),
+  pubShare: z
+    .string()
+    .trim()
+    .default("")
+    .refine(
+      (value) =>
+        value === "" ||
+        (Number.isFinite(Number(value)) && Number(value) >= 0 && Number(value) <= 100),
+      "Enter a percentage between 0 and 100.",
+    )
+    .optional(),
 });
 
 const metadataObject = z.object({
   title: z.string().trim().min(1, "Track title is required."),
-  trackNumber: z.string().trim().default("").refine((v) => !v || /^\d{1,3}$/.test(v), "Track number must be a whole number."),
+  trackNumber: z
+    .string()
+    .trim()
+    .default("")
+    .refine((v) => !v || /^\d{1,3}$/.test(v), "Track number must be a whole number."),
   /** Total tracks on the release: track 1 of 12 is trackNumber "1", trackTotal "12" (ID3 TRCK "1/12"). */
-  trackTotal: z.string().trim().default("").refine((v) => !v || /^\d{1,3}$/.test(v), "Total tracks must be a whole number."),
+  trackTotal: z
+    .string()
+    .trim()
+    .default("")
+    .refine((v) => !v || /^\d{1,3}$/.test(v), "Total tracks must be a whole number."),
   artist: z.string().trim(),
   /** "": the member records it (every row saved before this reads as today); "external": someone else performs it. */
   recordingSide: z.enum(["", "own", "external"]).default(""),
@@ -92,13 +196,22 @@ const metadataObject = z.object({
   /** The beat deal lives on the master, so it travels with the song that earns. */
   dealType: z.enum(["", "Exclusive", "Non-exclusive", "Lease", "Other"]).default(""),
   dealDate: z.string().default(""),
-  dealStreams: z.string().trim().default("").refine((v) => !v || /^\d{1,12}$/.test(v), "Enter the stream count as a number."),
+  dealStreams: z
+    .string()
+    .trim()
+    .default("")
+    .refine((v) => !v || /^\d{1,12}$/.test(v), "Enter the stream count as a number."),
   /** The agreement the deal is measured against: a Contracts & Blueprints document id, or blank. */
   dealContract: z.string().trim().default(""),
   featured: z.array(z.string().trim()).default([]),
   album: z.string().trim(),
   // Saved as mm:ss with two-digit minutes ("3:45" becomes "03:45"), as agency forms ask.
-  duration: z.string().trim().default("").refine((v) => !v || /^\d{1,3}:[0-5]\d$/.test(v), "Enter duration as mm:ss.").transform((v) => (/^\d:[0-5]\d$/.test(v) ? `0${v}` : v)),
+  duration: z
+    .string()
+    .trim()
+    .default("")
+    .refine((v) => !v || /^\d{1,3}:[0-5]\d$/.test(v), "Enter duration as mm:ss.")
+    .transform((v) => (/^\d:[0-5]\d$/.test(v) ? `0${v}` : v)),
   releaseType: z.string().default(""),
   /** Which version of the recording this is ("" for the main one). Embedded as TIT3, never as part of the title. */
   version: z.string().trim().default(""),
@@ -114,11 +227,21 @@ const metadataObject = z.object({
   /** The label's own catalog number for the release (SoundExchange's "Catalog #"). Catalog-only. */
   catalogNumber: z.string().trim().default(""),
   /** Optional contact email from Embed Defaults (founder, 2026-10-25), so whoever finds the file can reach the artist. Blank = not embedded. */
-  contactEmail: z.string().trim().default("").refine((v) => !v || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v), "Enter a valid email address."),
+  contactEmail: z
+    .string()
+    .trim()
+    .default("")
+    .refine((v) => !v || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v), "Enter a valid email address."),
   copyright: z.string().trim().default(""),
   phonographic: z.string().trim().default(""),
   language: z.string().trim().default(""),
-  isrc: z.string().trim().refine((value) => !value || /^[A-Z]{2}[A-Z0-9]{3}\d{7}$/i.test(value.replace(/-/g, "")), "Enter a valid 12-character ISRC."),
+  isrc: z
+    .string()
+    .trim()
+    .refine(
+      (value) => !value || /^[A-Z]{2}[A-Z0-9]{3}\d{7}$/i.test(value.replace(/-/g, "")),
+      "Enter a valid 12-character ISRC.",
+    ),
   /**
    * Codes this recording used to carry (founder, 2026-11-12): a replaced code, a taken-down release, a distributor
    * change. They are never embedded or exported — a retired code on a new delivery is an error — but they are not dead:
@@ -126,8 +249,17 @@ const metadataObject = z.object({
    * lets that old row be recognised as this recording instead of a mismatch (founder, 2026-11-12).
    */
   retiredIscrs: z.array(z.string().trim()).default([]),
-  upc: z.string().trim().refine((value) => !value || /^\d{12,13}$/.test(value), "Enter a 12- or 13-digit UPC/EAN."),
-  iswc: z.string().trim().refine((value) => !value || /^T\d{10}$/i.test(value.replace(/[.\s-]/g, "")), "Enter a valid ISWC (T followed by 10 digits)."),
+  upc: z
+    .string()
+    .trim()
+    .refine((value) => !value || /^\d{12,13}$/.test(value), "Enter a 12- or 13-digit UPC/EAN."),
+  iswc: z
+    .string()
+    .trim()
+    .refine(
+      (value) => !value || /^T\d{10}$/i.test(value.replace(/[.\s-]/g, "")),
+      "Enter a valid ISWC (T followed by 10 digits).",
+    ),
   /** Applied for, waiting on the PRO (founder, 2026-11-12). The member's own answer, so the checklist stops asking for
    *  a code nobody has yet; the day they picked is when to look in their PRO account. Catalog only, never embedded. */
   iswcPending: z.boolean().default(false),
@@ -151,10 +283,22 @@ const metadataObject = z.object({
   artHeight: z.coerce.number().int().nonnegative().default(0),
   aiProtection: z.boolean().default(false),
   /** Credits and performers. `instrument` matters for performers (session players, backup vocalists): it's what neighbouring-rights societies pay on. */
-  credits: z.array(z.object({ role: z.string(), name: z.string().trim(), instrument: z.string().trim().default("") })).default([]),
+  credits: z
+    .array(
+      z.object({
+        role: z.string(),
+        name: z.string().trim(),
+        instrument: z.string().trim().default(""),
+      }),
+    )
+    .default([]),
   /** Where and when the recording was made, for neighbouring rights (international airplay). Kept in the catalog, never embedded. */
   recordedIn: z.string().trim().default(""),
-  recordedYear: z.string().trim().default("").refine((v) => !v || /^\d{4}$/.test(v), "Enter a 4-digit year."),
+  recordedYear: z
+    .string()
+    .trim()
+    .default("")
+    .refine((v) => !v || /^\d{4}$/.test(v), "Enter a 4-digit year."),
   /**
    * The day the recording was made (YYYY-MM-DD). SoundExchange's ingest asks for the full date, which a year alone can't
    * answer honestly; recordedYear stays for the sheets that only want a year. Catalog-only, never embedded.
@@ -185,7 +329,14 @@ const metadataObject = z.object({
   writtenFor: z.enum(["", "No", ...PRODUCTION_TYPES]).default(""),
   productionTitle: z.string().trim().default(""),
   /** Master ownership for SoundExchange. Blank start/end mean from release, forever. */
-  masterShare: z.string().trim().default("100").refine((v) => v === "" || (Number.isFinite(Number(v)) && Number(v) > 0 && Number(v) <= 100), "Enter a master share between 0.01 and 100."),
+  masterShare: z
+    .string()
+    .trim()
+    .default("100")
+    .refine(
+      (v) => v === "" || (Number.isFinite(Number(v)) && Number(v) > 0 && Number(v) <= 100),
+      "Enter a master share between 0.01 and 100.",
+    ),
   masterBasis: z.enum(MASTER_BASES).default("Copyright Owner"),
   rightsStart: z.string().default(""),
   rightsEnd: z.string().default(""),
@@ -198,28 +349,42 @@ const metadataObject = z.object({
 const shareRules = (data: z.infer<typeof metadataObject>, ctx: z.RefinementCtx) => {
   for (const group of ["writers", "composers", "publishers"] as const) {
     data[group].forEach((row, index) => {
-      if ((row.pro || row.percentage || row.ipi) && !creditName(row)) ctx.addIssue({ code: "custom", path: [group, index, "name"], message: "Enter a name for this contributor." });
+      if ((row.pro || row.percentage || row.ipi) && !creditName(row))
+        ctx.addIssue({
+          code: "custom",
+          path: [group, index, "name"],
+          message: "Enter a name for this contributor.",
+        });
     });
     const total = data[group].reduce((sum, row) => sum + Number(row.percentage || 0), 0);
-    if (total > 100) ctx.addIssue({ code: "custom", path: [group], message: "Total percentages cannot exceed 100%." });
+    if (total > 100)
+      ctx.addIssue({
+        code: "custom",
+        path: [group],
+        message: "Total percentages cannot exceed 100%.",
+      });
   }
 };
 /** Embedding a master still needs its artist tag, unless the work is someone else's recording (the writer path). */
 export const metadataSchema = metadataObject.superRefine((data, ctx) => {
   shareRules(data, ctx);
-  if (!data.artist.trim() && data.recordingSide !== "external") ctx.addIssue({ code: "custom", path: ["artist"], message: "Artist name is required." });
+  if (!data.artist.trim() && data.recordingSide !== "external")
+    ctx.addIssue({ code: "custom", path: ["artist"], message: "Artist name is required." });
 });
 /**
  * Saving a song never requires an artist (founder, 2026-11-09): a songwriter whose work someone else performs has no
  * artist of their own, and the catalog is where that work is recorded. Tagging a file still requires one, because a
  * master's artist tag is the artist — `metadataSchema` stays the embed contract.
  */
-export const savedSchema = metadataObject.extend({ artist: z.string().trim() }).superRefine(shareRules);
+export const savedSchema = metadataObject
+  .extend({ artist: z.string().trim() })
+  .superRefine(shareRules);
 
 export type Metadata = z.infer<typeof metadataSchema>;
 export type Contributor = z.infer<typeof contributorSchema>;
 /** HFA P#s are 6 letters or numbers (P12345). Anything else gets a gentle warning, never a block. */
-export const hfaLooksOff = (v: string | undefined) => !!v?.trim() && !/^[A-Z0-9]{6}$/i.test(v.trim());
+export const hfaLooksOff = (v: string | undefined) =>
+  !!v?.trim() && !/^[A-Z0-9]{6}$/i.test(v.trim());
 export const emptyContributor = (): Contributor => ({ name: "", pro: "", ipi: "", percentage: "" });
 /**
  * A Postgres date column won't take a partial date. Spotify publishes "2019" or "2019-05" when the day isn't known, and
@@ -236,28 +401,98 @@ export function isoDate(value: string | undefined): string {
 }
 
 export const emptyMetadata = (): Metadata => ({
-  title: "", trackNumber: "", trackTotal: "", artist: "", featured: [""], album: "", duration: "", releaseType: "", version: "", releaseDate: "", unreleased: false, wasUnreleased: false, recordingSide: "", beatState: "", beatMasterId: "", dealType: "", dealDate: "", dealStreams: "", dealContract: "", label: "", releaseVersion: "", catalogNumber: "", contactEmail: "", copyright: "", phonographic: "", language: "",
-  isrc: "", retiredIscrs: [], upc: "", iswc: "", iswcPending: false, iswcCheckOn: "", explicit: false, instrumental: false, primaryGenre: "", secondaryGenre: "",
-  writers: [emptyContributor()], composers: [emptyContributor()], producers: [emptyContributor()], publishers: [emptyContributor()],
-  lyrics: "", coverThumb: "", audioPath: "", artPath: "", artWidth: 0, artHeight: 0, aiProtection: false, credits: [], recordedIn: "", recordedYear: "", recordingDate: "", masteredIn: "", ownerNationality: "", firstReleaseCountry: "", releaseCountry: "", collectionTerritories: "",
-  alternateTitles: [""], selfPublished: false, bmiWriterPublishing: false, samples: "", sampleTitle: "", sampleWriters: "", sampleSource: "", writtenFor: "", productionTitle: "",
-  masterShare: "100", masterBasis: "Copyright Owner", rightsStart: "", rightsEnd: "", rightsStartInception: false, rightsEndPerpetuity: false,
+  title: "",
+  trackNumber: "",
+  trackTotal: "",
+  artist: "",
+  featured: [""],
+  album: "",
+  duration: "",
+  releaseType: "",
+  version: "",
+  releaseDate: "",
+  unreleased: false,
+  wasUnreleased: false,
+  recordingSide: "",
+  beatState: "",
+  beatMasterId: "",
+  dealType: "",
+  dealDate: "",
+  dealStreams: "",
+  dealContract: "",
+  label: "",
+  releaseVersion: "",
+  catalogNumber: "",
+  contactEmail: "",
+  copyright: "",
+  phonographic: "",
+  language: "",
+  isrc: "",
+  retiredIscrs: [],
+  upc: "",
+  iswc: "",
+  iswcPending: false,
+  iswcCheckOn: "",
+  explicit: false,
+  instrumental: false,
+  primaryGenre: "",
+  secondaryGenre: "",
+  writers: [emptyContributor()],
+  composers: [emptyContributor()],
+  producers: [emptyContributor()],
+  publishers: [emptyContributor()],
+  lyrics: "",
+  coverThumb: "",
+  audioPath: "",
+  artPath: "",
+  artWidth: 0,
+  artHeight: 0,
+  aiProtection: false,
+  credits: [],
+  recordedIn: "",
+  recordedYear: "",
+  recordingDate: "",
+  masteredIn: "",
+  ownerNationality: "",
+  firstReleaseCountry: "",
+  releaseCountry: "",
+  collectionTerritories: "",
+  alternateTitles: [""],
+  selfPublished: false,
+  bmiWriterPublishing: false,
+  samples: "",
+  sampleTitle: "",
+  sampleWriters: "",
+  sampleSource: "",
+  writtenFor: "",
+  productionTitle: "",
+  masterShare: "100",
+  masterBasis: "Copyright Owner",
+  rightsStart: "",
+  rightsEnd: "",
+  rightsStartInception: false,
+  rightsEndPerpetuity: false,
 });
 
 /** The name shown for a contributor: a writer's legal name, otherwise the plain name (producers, publishers, older entries). */
 /** Seconds as mm:ss with two-digit minutes ("03:45"), the way agency registration forms ask for it (founder, 2026-10-27). */
-export const formatDuration = (sec: number) => `${String(Math.floor(sec / 60)).padStart(2, "0")}:${String(sec % 60).padStart(2, "0")}`;
+export const formatDuration = (sec: number) =>
+  `${String(Math.floor(sec / 60)).padStart(2, "0")}:${String(sec % 60).padStart(2, "0")}`;
 
 /** A percentage box that can't go above 100 (founder, 2026-10-27: the master share went past it). Keeps digits and one dot. */
 export const percentInput = (v: string) => {
-  const clean = v.replace(/[^\d.]/g, "").replace(/(\..*)\./g, "$1").slice(0, 6);
+  const clean = v
+    .replace(/[^\d.]/g, "")
+    .replace(/(\..*)\./g, "$1")
+    .slice(0, 6);
   return Number(clean) > 100 ? "100" : clean;
 };
 
 export const creditName = (r: Contributor) => r.legalName?.trim() || r.name.trim();
 
 /** Writers keep one name, the legal name. A blank legal name is filled from an older saved name; `name` itself is kept, never deleted. */
-export const withLegalName = (rows: Contributor[]): Contributor[] => rows.map((r) => (!r.legalName?.trim() && r.name.trim() ? { ...r, legalName: r.name.trim() } : r));
+export const withLegalName = (rows: Contributor[]): Contributor[] =>
+  rows.map((r) => (!r.legalName?.trim() && r.name.trim() ? { ...r, legalName: r.name.trim() } : r));
 
 /** "1/12" (ID3 TRCK) → track 1 of 12. Plain numbers have no total. */
 export function splitTrack(v: string): { trackNumber: string; trackTotal: string } {
@@ -265,17 +500,50 @@ export function splitTrack(v: string): { trackNumber: string; trackTotal: string
   return { trackNumber: n, trackTotal: t };
 }
 
-export const CREDIT_ROLES = ["Session musician", "Backup vocalist", "Arranger", "Mixing engineer", "Recording engineer", "Mastering engineer"] as const;
+export const CREDIT_ROLES = [
+  "Session musician",
+  "Backup vocalist",
+  "Arranger",
+  "Mixing engineer",
+  "Recording engineer",
+  "Mastering engineer",
+] as const;
 /**
  * One menu for performers and crew (founder, 2026-10-27): the instruments themselves instead of "Session musician" plus
  * an Instrument box. Saved the same way as before (role + instrument), so nothing already saved changes and instrument
  * badges keep counting: "Guitar" is stored as a session musician on guitar.
  */
-export const INSTRUMENT_CHOICES = ["Guitar", "Electric guitar", "Bass", "Drums", "Percussion", "Piano / Keys", "Synths / Programming", "Organ", "Trumpet", "Saxophone", "Trombone", "Clarinet", "Violin", "Cello", "Strings", "Harp", "Banjo", "Ukulele", "Steel pan", "Xylophone / Marimba"] as const;
+export const INSTRUMENT_CHOICES = [
+  "Guitar",
+  "Electric guitar",
+  "Bass",
+  "Drums",
+  "Percussion",
+  "Piano / Keys",
+  "Synths / Programming",
+  "Organ",
+  "Trumpet",
+  "Saxophone",
+  "Trombone",
+  "Clarinet",
+  "Violin",
+  "Cello",
+  "Strings",
+  "Harp",
+  "Banjo",
+  "Ukulele",
+  "Steel pan",
+  "Xylophone / Marimba",
+] as const;
 export const BACKUP_VOCALS = "Vocals (backup)";
 export const OTHER_INSTRUMENT = "Other instrument…";
 const CREW_ROLES = ["Arranger", "Mixing engineer", "Recording engineer", "Mastering engineer"];
-export const CREDIT_CHOICES = [BACKUP_VOCALS, ...INSTRUMENT_CHOICES, OTHER_INSTRUMENT, ...CREW_ROLES];
+export const CREDIT_CHOICES = [
+  BACKUP_VOCALS,
+  ...INSTRUMENT_CHOICES,
+  OTHER_INSTRUMENT,
+  ...CREW_ROLES,
+];
 type Credit = { role: string; instrument?: string | undefined };
 
 /** What the menu shows for a saved credit. */
@@ -287,10 +555,18 @@ export function creditChoice(c: Credit): string {
 }
 
 /** A menu pick as the role and instrument to save. "Other instrument…" keeps a typed instrument. */
-export function fromCreditChoice(choice: string, prev: Credit): { role: string; instrument: string } {
+export function fromCreditChoice(
+  choice: string,
+  prev: Credit,
+): { role: string; instrument: string } {
   if (choice === BACKUP_VOCALS) return { role: "Backup vocalist", instrument: "Vocals" };
-  if ((INSTRUMENT_CHOICES as readonly string[]).includes(choice)) return { role: "Session musician", instrument: choice };
-  if (choice === OTHER_INSTRUMENT) return { role: "Session musician", instrument: creditChoice(prev) === OTHER_INSTRUMENT ? prev.instrument ?? "" : "" };
+  if ((INSTRUMENT_CHOICES as readonly string[]).includes(choice))
+    return { role: "Session musician", instrument: choice };
+  if (choice === OTHER_INSTRUMENT)
+    return {
+      role: "Session musician",
+      instrument: creditChoice(prev) === OTHER_INSTRUMENT ? (prev.instrument ?? "") : "",
+    };
   return { role: choice, instrument: "" };
 }
 
@@ -301,15 +577,29 @@ export const isPerformer = (role: string) => PERFORMER_ROLES.includes(role);
 /** Everyone who performs on the recording: the main and featured artists (featured), then credited session players (non-featured). */
 export function performers(m: Pick<Metadata, "artist" | "featured" | "credits">) {
   return [
-    ...[m.artist, ...m.featured].map((n) => n.trim()).filter(Boolean).map((name) => ({ name, featured: true, role: "Featured artist", instrument: "" })),
-    ...m.credits.filter((c) => c.name.trim() && isPerformer(c.role)).map((c) => ({ name: c.name.trim(), featured: false, role: c.role, instrument: c.instrument ?? "" })),
+    ...[m.artist, ...m.featured]
+      .map((n) => n.trim())
+      .filter(Boolean)
+      .map((name) => ({ name, featured: true, role: "Featured artist", instrument: "" })),
+    ...m.credits
+      .filter((c) => c.name.trim() && isPerformer(c.role))
+      .map((c) => ({
+        name: c.name.trim(),
+        featured: false,
+        role: c.role,
+        instrument: c.instrument ?? "",
+      })),
   ];
 }
 
 /** True for a RIFF/WAVE file (the "RIFF....WAVE" header). */
 export function isWav(buf: ArrayBuffer) {
   const b = new Uint8Array(buf, 0, Math.min(12, buf.byteLength));
-  return b.length === 12 && String.fromCharCode(...b.subarray(0, 4)) === "RIFF" && String.fromCharCode(...b.subarray(8, 12)) === "WAVE";
+  return (
+    b.length === 12 &&
+    String.fromCharCode(...b.subarray(0, 4)) === "RIFF" &&
+    String.fromCharCode(...b.subarray(8, 12)) === "WAVE"
+  );
 }
 
 /** File extension for a master: "wav" for WAV, otherwise "mp3". */
@@ -349,13 +639,25 @@ function wavWithTags(audio: ArrayBuffer, id3: ArrayBuffer, data: Metadata): Blob
   const keep = wavChunks(b).filter((c) => {
     if (c.id === "id3 " || c.id === "ID3 ") return false;
     // Only our INFO list is replaced; other LIST chunks (e.g. adtl cue labels) stay.
-    return !(c.id === "LIST" && String.fromCharCode(...b.subarray(c.start, c.start + 4)) === "INFO");
+    return !(
+      c.id === "LIST" && String.fromCharCode(...b.subarray(c.start, c.start + 4)) === "INFO"
+    );
   });
-  const info: [string, string][] = [["INAM", data.title], ["IART", [data.artist, ...data.featured.filter(Boolean)].join(", ")], ["IPRD", data.album],
-    ["ICRD", data.releaseDate], ["IGNR", [data.primaryGenre, data.secondaryGenre].filter(Boolean).join("; ")], ["ICOP", data.copyright],
-    ["ITRK", data.trackNumber]];
-  const infoBody = info.filter(([, v]) => v?.trim()).map(([id, v]) => chunk(id, ascii(`${v.trim()}\0`)));
-  const list = infoBody.length ? chunk("LIST", new Uint8Array([...ascii("INFO"), ...infoBody.flatMap((c) => [...c])])) : new Uint8Array();
+  const info: [string, string][] = [
+    ["INAM", data.title],
+    ["IART", [data.artist, ...data.featured.filter(Boolean)].join(", ")],
+    ["IPRD", data.album],
+    ["ICRD", data.releaseDate],
+    ["IGNR", [data.primaryGenre, data.secondaryGenre].filter(Boolean).join("; ")],
+    ["ICOP", data.copyright],
+    ["ITRK", data.trackNumber],
+  ];
+  const infoBody = info
+    .filter(([, v]) => v?.trim())
+    .map(([id, v]) => chunk(id, ascii(`${v.trim()}\0`)));
+  const list = infoBody.length
+    ? chunk("LIST", new Uint8Array([...ascii("INFO"), ...infoBody.flatMap((c) => [...c])]))
+    : new Uint8Array();
   const parts: Uint8Array[] = keep.map((c) => {
     const raw = b.subarray(c.start - 8, c.start + c.size + (c.size % 2));
     // A last chunk missing its pad byte gets one, so the file stays valid with chunks after it.
@@ -367,7 +669,10 @@ function wavWithTags(audio: ArrayBuffer, id3: ArrayBuffer, data: Metadata): Blob
   new DataView(out.buffer).setUint32(4, out.length - 8, true);
   out.set(ascii("WAVE"), 8);
   let at = 12;
-  for (const p of parts) { out.set(p, at); at += p.length; }
+  for (const p of parts) {
+    out.set(p, at);
+    at += p.length;
+  }
   return new Blob([out.buffer], { type: "audio/wav" });
 }
 
@@ -378,16 +683,26 @@ function wavId3(buf: ArrayBuffer): ArrayBuffer | null {
   return c ? b.slice(c.start, c.start + c.size).buffer : null;
 }
 
-export async function embedMetadata(audio: ArrayBuffer, metadata: Metadata, artwork?: ArrayBuffer): Promise<Blob> {
+export async function embedMetadata(
+  audio: ArrayBuffer,
+  metadata: Metadata,
+  artwork?: ArrayBuffer,
+): Promise<Blob> {
   const data = metadataSchema.parse(metadata);
   const wav = isWav(audio);
   const writer = new ID3Writer(wav ? new ArrayBuffer(0) : audio);
   // No spare padding inside a WAV chunk (the library adds 4 KB for MP3s, for later in-place edits).
   if (wav) (writer as unknown as { padding: number }).padding = 0;
-  writer.setFrame("TIT2", data.title).setFrame("TPE1", [data.artist, ...data.featured.filter(Boolean)]);
+  writer
+    .setFrame("TIT2", data.title)
+    .setFrame("TPE1", [data.artist, ...data.featured.filter(Boolean)]);
   // The version is the file's subtitle, so a clean cut and its main mix keep the same title and still read apart.
   if (data.version) writer.setFrame("TIT3", data.version);
-  if (data.trackNumber) writer.setFrame("TRCK", data.trackTotal ? `${data.trackNumber}/${data.trackTotal}` : data.trackNumber);
+  if (data.trackNumber)
+    writer.setFrame(
+      "TRCK",
+      data.trackTotal ? `${data.trackNumber}/${data.trackTotal}` : data.trackNumber,
+    );
   if (data.album) writer.setFrame("TALB", data.album);
   if (data.isrc) writer.setFrame("TSRC", data.isrc.replace(/-/g, "").toUpperCase());
   if (data.duration) {
@@ -400,28 +715,53 @@ export async function embedMetadata(audio: ArrayBuffer, metadata: Metadata, artw
     writer.setFrame("TYER", Number(data.releaseDate.slice(0, 4)));
     writer.setFrame("TXXX", { description: "RELEASE_DATE", value: data.releaseDate });
   }
-  for (const [description, value] of [["UPC", data.upc], ["ISWC", data.iswc], ["RELEASE_TYPE", data.releaseType], ["LABEL", data.label], ["EXPLICIT", data.explicit ? "Yes" : "No"]] as const) {
+  for (const [description, value] of [
+    ["UPC", data.upc],
+    ["ISWC", data.iswc],
+    ["RELEASE_TYPE", data.releaseType],
+    ["LABEL", data.label],
+    ["EXPLICIT", data.explicit ? "Yes" : "No"],
+  ] as const) {
     if (value) writer.setFrame("TXXX", { description, value });
   }
   const writers = data.writers.filter(creditName).map((row) => ({ ...row, name: creditName(row) }));
-  const composers = data.composers.filter(creditName).map((row) => ({ ...row, name: creditName(row) }));
-  if (writers.length || composers.length) writer.setFrame("TCOM", [...writers, ...composers].map((row) => row.name));
+  const composers = data.composers
+    .filter(creditName)
+    .map((row) => ({ ...row, name: creditName(row) }));
+  if (writers.length || composers.length)
+    writer.setFrame(
+      "TCOM",
+      [...writers, ...composers].map((row) => row.name),
+    );
   // Privacy rule: PRO affiliations, IPI numbers and split percentages are never embedded — names only.
   // Publishers, ℗ and language are never embedded at all; they live in the catalog for registration.
-  const publicOnly = (rows: Contributor[]) => JSON.stringify(rows.map(({ name }) => ({ name, pro: "", ipi: "", percentage: "" })));
-  if (writers.length) writer.setFrame("TXXX", { description: "WRITER_SPLITS", value: publicOnly(writers) });
-  if (composers.length) writer.setFrame("TXXX", { description: "COMPOSER_SPLITS", value: publicOnly(composers) });
+  const publicOnly = (rows: Contributor[]) =>
+    JSON.stringify(rows.map(({ name }) => ({ name, pro: "", ipi: "", percentage: "" })));
+  if (writers.length)
+    writer.setFrame("TXXX", { description: "WRITER_SPLITS", value: publicOnly(writers) });
+  if (composers.length)
+    writer.setFrame("TXXX", { description: "COMPOSER_SPLITS", value: publicOnly(composers) });
   const producers = (data.producers ?? []).filter((row) => row.name);
-  if (producers.length) writer.setFrame("TXXX", { description: "PRODUCERS", value: producers.map((row) => row.name).join(", ") });
+  if (producers.length)
+    writer.setFrame("TXXX", {
+      description: "PRODUCERS",
+      value: producers.map((row) => row.name).join(", "),
+    });
   if (data.contactEmail) {
     writer.setFrame("TXXX", { description: "CONTACT_EMAIL", value: data.contactEmail });
     // Comments are what most players show, so the contact is visible without special software.
-    writer.setFrame("COMM", { description: "", text: `Contact: ${data.contactEmail}`, language: "eng" });
+    writer.setFrame("COMM", {
+      description: "",
+      text: `Contact: ${data.contactEmail}`,
+      language: "eng",
+    });
   }
   if (data.copyright) writer.setFrame("TCOP", data.copyright);
-  if (data.lyrics) writer.setFrame("USLT", { description: "", lyrics: data.lyrics, language: "eng" });
+  if (data.lyrics)
+    writer.setFrame("USLT", { description: "", lyrics: data.lyrics, language: "eng" });
   const credits = data.credits.filter((c) => c.name);
-  if (credits.length) writer.setFrame("TXXX", { description: "CREDITS", value: JSON.stringify(credits) });
+  if (credits.length)
+    writer.setFrame("TXXX", { description: "CREDITS", value: JSON.stringify(credits) });
   if (artwork) writer.setFrame("APIC", { type: 3, data: artwork, description: "Front cover" });
   if (wav) return wavWithTags(audio, writer.addTag(), data);
   return new Blob([writer.addTag()], { type: "audio/mpeg" });
@@ -429,21 +769,49 @@ export async function embedMetadata(audio: ArrayBuffer, metadata: Metadata, artw
 
 /** Reads ID3v2.3/2.4 text frames written by embedMetadata so re-uploads pre-fill the form. */
 export function readMetadata(buf: ArrayBuffer): Partial<Metadata> & { picture?: Blob } {
-  if (isWav(buf)) { const tag = wavId3(buf); return tag ? readMetadata(tag) : {}; }
+  if (isWav(buf)) {
+    const tag = wavId3(buf);
+    return tag ? readMetadata(tag) : {};
+  }
   const b = new Uint8Array(buf);
   if (b.length < 10 || b[0] !== 0x49 || b[1] !== 0x44 || b[2] !== 0x33) return {};
   const ver = b[3];
-  const syncsafe = (i: number) => ((b[i]! & 127) << 21) | ((b[i + 1]! & 127) << 14) | ((b[i + 2]! & 127) << 7) | (b[i + 3]! & 127);
+  const syncsafe = (i: number) =>
+    ((b[i]! & 127) << 21) |
+    ((b[i + 1]! & 127) << 14) |
+    ((b[i + 2]! & 127) << 7) |
+    (b[i + 3]! & 127);
   const end = 10 + syncsafe(6);
-  const dec = (enc: number, bytes: Uint8Array) => new TextDecoder(enc === 1 ? "utf-16" : enc === 2 ? "utf-16be" : enc === 3 ? "utf-8" : "latin1").decode(bytes).replace(/\uFEFF/g, "").replace(/\u0000+$/, "");
-  const frames: Record<string, string> = {}; const txxx: Record<string, string> = {}; let lyrics = ""; let picture: Blob | undefined;
+  const trimTrailingNul = (value: string) => {
+    let end = value.length;
+    while (end > 0 && value.charCodeAt(end - 1) === 0) end -= 1;
+    return value.slice(0, end);
+  };
+  const dec = (enc: number, bytes: Uint8Array) =>
+    trimTrailingNul(
+      new TextDecoder(
+        enc === 1 ? "utf-16" : enc === 2 ? "utf-16be" : enc === 3 ? "utf-8" : "latin1",
+      )
+        .decode(bytes)
+        .replace(/\uFEFF/g, ""),
+    );
+  const frames: Record<string, string> = {};
+  const txxx: Record<string, string> = {};
+  let lyrics = "";
+  let picture: Blob | undefined;
   let i = 10;
   while (i + 10 <= end && b[i] !== 0) {
     const id = String.fromCharCode(b[i]!, b[i + 1]!, b[i + 2]!, b[i + 3]!);
-    const size = ver === 4 ? syncsafe(i + 4) : (b[i + 4]! << 24) | (b[i + 5]! << 16) | (b[i + 6]! << 8) | b[i + 7]!;
-    const body = b.subarray(i + 10, i + 10 + size); const enc = body[0] ?? 0;
+    const size =
+      ver === 4
+        ? syncsafe(i + 4)
+        : (b[i + 4]! << 24) | (b[i + 5]! << 16) | (b[i + 6]! << 8) | b[i + 7]!;
+    const body = b.subarray(i + 10, i + 10 + size);
+    const enc = body[0] ?? 0;
     if (id === "TXXX") {
-      const parts = dec(enc, body.subarray(1)).split("\u0000").filter((x) => x !== "");
+      const parts = dec(enc, body.subarray(1))
+        .split("\u0000")
+        .filter((x) => x !== "");
       if (parts[0]) txxx[parts[0]] = parts.slice(1).join("");
     } else if (id === "USLT") {
       lyrics = dec(enc, body.subarray(4)).split("\u0000").filter(Boolean).pop() ?? "";
@@ -451,18 +819,36 @@ export function readMetadata(buf: ArrayBuffer): Partial<Metadata> & { picture?: 
       const mimeEnd = body.indexOf(0, 1);
       const mime = new TextDecoder("latin1").decode(body.subarray(1, mimeEnd)) || "image/jpeg";
       let j = mimeEnd + 2;
-      if (enc === 1 || enc === 2) { while (j + 1 < body.length && !(body[j] === 0 && body[j + 1] === 0)) j += 2; j += 2; }
-      else { while (j < body.length && body[j] !== 0) j++; j++; }
-      picture = new Blob([body.slice(j)], { type: mime.includes("png") ? "image/png" : "image/jpeg" });
-    } else if (id.startsWith("T")) frames[id] = dec(enc, body.subarray(1)).replace(/\u0000/g, "/");
+      if (enc === 1 || enc === 2) {
+        while (j + 1 < body.length && !(body[j] === 0 && body[j + 1] === 0)) j += 2;
+        j += 2;
+      } else {
+        while (j < body.length && body[j] !== 0) j++;
+        j++;
+      }
+      picture = new Blob([body.slice(j)], {
+        type: mime.includes("png") ? "image/png" : "image/jpeg",
+      });
+    } else if (id.startsWith("T"))
+      frames[id] = dec(enc, body.subarray(1)).split("\u0000").join("/");
     i += 10 + size;
   }
-  const json = <T,>(v?: string): T | undefined => { try { return v ? JSON.parse(v) as T : undefined; } catch { return undefined; } };
+  const json = <T>(v?: string): T | undefined => {
+    try {
+      return v ? (JSON.parse(v) as T) : undefined;
+    } catch {
+      return undefined;
+    }
+  };
   const out: Partial<Metadata> & { picture?: Blob } = {};
   if (picture && picture.size > 0) out.picture = picture;
   if (frames["TIT2"]) out.title = frames["TIT2"];
   if (frames["TIT3"]) out.version = frames["TIT3"];
-  if (frames["TPE1"]) { const [a, ...f] = frames["TPE1"].split("/"); out.artist = a ?? ""; out.featured = f.length ? f : [""]; }
+  if (frames["TPE1"]) {
+    const [a, ...f] = frames["TPE1"].split("/");
+    out.artist = a ?? "";
+    out.featured = f.length ? f : [""];
+  }
   if (frames["TALB"]) out.album = frames["TALB"];
   if (frames["TRCK"]) Object.assign(out, splitTrack(frames["TRCK"]));
   if (frames["TSRC"]) out.isrc = frames["TSRC"];
@@ -473,24 +859,34 @@ export function readMetadata(buf: ArrayBuffer): Partial<Metadata> & { picture?: 
   if (frames["TCOP"]) out.copyright = frames["TCOP"];
   if (txxx["RELEASE_DATE"]) out.releaseDate = txxx["RELEASE_DATE"];
   if (txxx["EXPLICIT"]) out.explicit = txxx["EXPLICIT"] === "Yes";
-  const w = json<Contributor[]>(txxx["WRITER_SPLITS"]); if (w?.length) out.writers = withLegalName(w);
-  const c = json<Contributor[]>(txxx["COMPOSER_SPLITS"]); if (c?.length) out.composers = withLegalName(c);
-  if (txxx["PRODUCERS"]) out.producers = txxx["PRODUCERS"].split(", ").map((name) => ({ ...emptyContributor(), name }));
-  const cr = json<Metadata["credits"]>(txxx["CREDITS"]); if (cr) out.credits = cr;
+  const w = json<Contributor[]>(txxx["WRITER_SPLITS"]);
+  if (w?.length) out.writers = withLegalName(w);
+  const c = json<Contributor[]>(txxx["COMPOSER_SPLITS"]);
+  if (c?.length) out.composers = withLegalName(c);
+  if (txxx["PRODUCERS"])
+    out.producers = txxx["PRODUCERS"].split(", ").map((name) => ({ ...emptyContributor(), name }));
+  const cr = json<Metadata["credits"]>(txxx["CREDITS"]);
+  if (cr) out.credits = cr;
   if (frames["TCON"]) {
     // Genre names contain "/" (e.g. "R&B/Soul"), so match known genres instead of splitting.
     const raw = frames["TCON"];
     // Longer names win ("K-Pop" isn't also read as "Pop").
     const hits = GENRES.filter((g) => raw.includes(g));
-    const found = hits.filter((g) => !hits.some((o) => o !== g && o.includes(g))).sort((a, b) => raw.indexOf(a) - raw.indexOf(b));
+    const found = hits
+      .filter((g) => !hits.some((o) => o !== g && o.includes(g)))
+      .sort((a, b) => raw.indexOf(a) - raw.indexOf(b));
     if (found[0]) out.primaryGenre = found[0];
     if (found[1]) out.secondaryGenre = found[1];
   }
-  if (frames["TLEN"]) { const sec = Math.round(Number(frames["TLEN"]) / 1000); if (sec > 0) out.duration = formatDuration(sec); }
+  if (frames["TLEN"]) {
+    const sec = Math.round(Number(frames["TLEN"]) / 1000);
+    if (sec > 0) out.duration = formatDuration(sec);
+  }
   if (txxx["RELEASE_TYPE"]) out.releaseType = txxx["RELEASE_TYPE"];
   const pubs = json<Contributor[]>(txxx["PUBLISHERS"]);
   if (pubs?.length) out.publishers = pubs.map((p) => ({ ...emptyContributor(), ...p }));
-  else if (frames["TPUB"]) out.publishers = frames["TPUB"].split("; ").map((name) => ({ ...emptyContributor(), name }));
+  else if (frames["TPUB"])
+    out.publishers = frames["TPUB"].split("; ").map((name) => ({ ...emptyContributor(), name }));
   if (lyrics) out.lyrics = lyrics;
   return out;
 }

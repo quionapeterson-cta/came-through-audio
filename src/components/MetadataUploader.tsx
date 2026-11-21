@@ -1,8 +1,33 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent, type ReactNode } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type FormEvent,
+  type ReactNode,
+} from "react";
 import { confirmAction } from "@/components/ConfirmHost";
 import { FollowUpReminderButton } from "@/components/FollowUpReminderButton";
 import { TerritoriesField } from "@/components/TerritoriesField";
-import { ChevronDown, Copy, Disc3, Lock, ShieldCheck, CheckCircle2, Download, FileAudio, FileText, ImagePlus, Pencil, Plus, Save, Stethoscope, Trash2, Upload } from "lucide-react";
+import {
+  ChevronDown,
+  Copy,
+  Disc3,
+  Lock,
+  ShieldCheck,
+  CheckCircle2,
+  Download,
+  FileAudio,
+  FileText,
+  ImagePlus,
+  Pencil,
+  Plus,
+  Save,
+  Stethoscope,
+  Trash2,
+  Upload,
+} from "lucide-react";
 import { capShare, splitStatus, splitSummary } from "@/lib/splits-total";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -16,14 +41,53 @@ import { StarsAligned } from "@/components/StarsAligned";
 import { burstConfetti } from "@/components/Confetti";
 import { claimFirstBurst } from "@/lib/celebrate";
 import { EXPORT_REQUIRED, GLOSSARY, type GlossaryKey } from "@/lib/glossary";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { OFFICIAL_MASTER_ACTION, PRE_DIST_NOTE, PRO_TIP, SOVEREIGN_BACKUP } from "@/lib/copy";
 import { useFocusHighlight } from "@/hooks/useFocusHighlight";
 import { clearFocusParams } from "@/hooks/useFocusHighlight";
-import { readMetadata, CREDIT_CHOICES, OTHER_INSTRUMENT, creditChoice, fromCreditChoice, isPerformer, performers, emptyContributor, emptyMetadata, embedMetadata, creditName, metadataSchema, savedSchema, GENRES, GENRE_GROUPS, MASTER_BASES, PRODUCTION_TYPES, RELEASE_TYPES, TRACK_VERSIONS, WRITER_ROLES, writerRole, hfaLooksOff, percentInput, formatDuration, type Contributor, type Metadata } from "@/lib/metadata";
+import {
+  readMetadata,
+  CREDIT_CHOICES,
+  OTHER_INSTRUMENT,
+  creditChoice,
+  fromCreditChoice,
+  isPerformer,
+  performers,
+  emptyContributor,
+  emptyMetadata,
+  embedMetadata,
+  creditName,
+  metadataSchema,
+  savedSchema,
+  GENRES,
+  GENRE_GROUPS,
+  MASTER_BASES,
+  PRODUCTION_TYPES,
+  RELEASE_TYPES,
+  TRACK_VERSIONS,
+  WRITER_ROLES,
+  writerRole,
+  hfaLooksOff,
+  percentInput,
+  formatDuration,
+  type Contributor,
+  type Metadata,
+} from "@/lib/metadata";
 import { releaseStatus, writeRelease, type ReleasePatch } from "@/lib/release-panel";
 import { RETIRE_STEPS } from "@/lib/isrc-retirement";
-import { beatIsOut, beatMasterLine, isSoldBeat, masterBeatLine, masterFromBeat, masterOfBeat } from "@/lib/beats";
+import {
+  beatIsOut,
+  beatMasterLine,
+  isSoldBeat,
+  masterBeatLine,
+  masterFromBeat,
+  masterOfBeat,
+} from "@/lib/beats";
 import { amendmentPrefill } from "@/lib/beat-amendment";
 import { BeatBox, DealBox } from "@/components/BeatBox";
 import { COUNTRIES, countryByCode, guessCountry } from "@/lib/repertoires";
@@ -35,12 +99,43 @@ import type { RepertoireCheck } from "@/lib/health";
 import { HealthLiquid, HealthMeter } from "@/components/HealthMeter";
 import { DownloadCatalogButton } from "@/components/CatalogLapseBanner";
 import { iswcReminder } from "@/lib/iswc-reminder";
-import { catalogArtwork, deleteTrack, downloadCatalogFile, downloadRelease, downloadWholeCatalog, duplicateTrack, groupReleases, listTracks, safeName, saveTrack, setReleaseArtwork, uploadCatalogFile, versionTitle, type CatalogTrack, type DownloadGap, type ZipResult } from "@/lib/catalog";
+import {
+  catalogArtwork,
+  deleteTrack,
+  downloadCatalogFile,
+  downloadRelease,
+  downloadWholeCatalog,
+  duplicateTrack,
+  groupReleases,
+  listTracks,
+  safeName,
+  saveTrack,
+  setReleaseArtwork,
+  uploadCatalogFile,
+  versionTitle,
+  type CatalogTrack,
+  type DownloadGap,
+  type ZipResult,
+} from "@/lib/catalog";
 import { albumKey, routedKinds } from "@/lib/release-routing";
-import { AGENCY_LABEL, downloadAgencyExport, downloadNeighbouringPack, mlcPlaceholderSongs, recordExports, type Agency, type Held } from "@/lib/agency-export";
+import {
+  AGENCY_LABEL,
+  downloadAgencyExport,
+  downloadNeighbouringPack,
+  mlcPlaceholderSongs,
+  recordExports,
+  type Agency,
+  type Held,
+} from "@/lib/agency-export";
 import { AgencyExportDialog } from "@/components/AgencyExportDialog";
 import { AGENCY_UPLOAD_STEPS, MLC_EXPORT_NOTES } from "@/lib/glossary";
-import { PUBLISHING_LABEL, proAccountGaps, publisherPie, registrationReadiness, type MissingItem } from "@/lib/readiness";
+import {
+  PUBLISHING_LABEL,
+  proAccountGaps,
+  publisherPie,
+  registrationReadiness,
+  type MissingItem,
+} from "@/lib/readiness";
 import { isBmi, notBmiWriters } from "@/lib/audit";
 import { downloadLyricsPdf } from "@/lib/lyrics-pdf";
 import { myBrand } from "@/lib/brand-load";
@@ -50,9 +145,24 @@ import { logBadgeEvent } from "@/lib/badge-events";
 import { ARTIST_SEAT_PRICES } from "@/lib/plans";
 import { PACKAGES } from "@/lib/proof";
 import { openCheckout } from "@/lib/checkout";
-import { loadOnboarding, loadProfile, restoreRows, withProfile, withProfileFilled } from "@/lib/artist-profile";
+import {
+  loadOnboarding,
+  loadProfile,
+  restoreRows,
+  withProfile,
+  withProfileFilled,
+} from "@/lib/artist-profile";
 import { isExternal, withRoleDefaults } from "@/lib/roles";
-import { clearEmbedDraft, clearEmbedCover, coverForDraft, loadEmbedCover, saveEmbedCover, loadEmbedDraft, orderAudioFiles, saveEmbedDraft } from "@/lib/embed-session";
+import {
+  clearEmbedDraft,
+  clearEmbedCover,
+  coverForDraft,
+  loadEmbedCover,
+  saveEmbedCover,
+  loadEmbedDraft,
+  orderAudioFiles,
+  saveEmbedDraft,
+} from "@/lib/embed-session";
 import { artworkChoice, coverFile, FILE_ART_IGNORED } from "@/lib/embed-artwork";
 import { clearIntake, readIntake, writeIntake } from "@/lib/intake-session";
 import { fillFromSaved, findSaved, libraryRowsOf, savedPeople } from "@/lib/saved-people";
@@ -73,7 +183,13 @@ const AUDIO_FILE = /\.(mp3|wav)$/i;
 const extOf = (name?: string) => (/\.wav$/i.test(name ?? "") ? "wav" : "mp3");
 
 /** A song in an Expert Registration order that hasn't been submitted yet, with the order's agencies. */
-type OpenRegSong = { id: string; purchase_id: string; track_id: string | null; pending_title: string | null; agencies: string[] };
+type OpenRegSong = {
+  id: string;
+  purchase_id: string;
+  track_id: string | null;
+  pending_title: string | null;
+  agencies: string[];
+};
 
 /** What another tab asks My Catalog to open: a field on a saved song, or a new song with its title typed in. */
 /**
@@ -81,10 +197,49 @@ type OpenRegSong = { id: string; purchase_id: string; track_id: string | null; p
  * the fix already in view (founder, 2026-11-13).
  */
 export type CatalogFocus =
-  | { trackId: string; field: string; agencyIsrc?: string | undefined; agencyVersion?: string | undefined; agencyVersions?: string[] | undefined; action?: string | undefined }
+  | {
+      trackId: string;
+      field: string;
+      agencyIsrc?: string | undefined;
+      agencyVersion?: string | undefined;
+      agencyVersions?: string[] | undefined;
+      action?: string | undefined;
+    }
   | { newTitle: string; artist?: string | undefined; nonce: number };
 
-export function MetadataUploader({ onShareInfo, userId, mode = "embed", readOnly, onSubmitted, onSplitSheet, onProtect, canSplit, canExport, canWav, focus, onFocused, onFixAcknowledged, onHealthCheck, onExpert }: { onExpert?: () => void; canWav?: boolean; onHealthCheck?: (trackId?: string, release?: boolean) => void; readOnly?: boolean; onShareInfo?: (s: Partial<ShareInfo> & Pick<ShareInfo, "ctx">) => void; onFocused?: () => void; /** A difference's quick-fix bar was finished or dismissed: the page can drop the target. */ onFixAcknowledged?: () => void; userId?: string; mode?: "embed" | "catalog"; focus?: CatalogFocus | undefined; onSubmitted?: () => void; onSplitSheet?: (t: CatalogTrack) => void; onProtect?: (t: CatalogTrack) => void; canSplit?: boolean; canExport?: boolean }) {
+export function MetadataUploader({
+  onShareInfo,
+  userId,
+  mode = "embed",
+  readOnly,
+  onSubmitted,
+  onSplitSheet,
+  onProtect,
+  canSplit,
+  canExport,
+  canWav,
+  focus,
+  onFocused,
+  onFixAcknowledged,
+  onHealthCheck,
+  onExpert,
+}: {
+  onExpert?: () => void;
+  canWav?: boolean;
+  onHealthCheck?: (trackId?: string, release?: boolean) => void;
+  readOnly?: boolean;
+  onShareInfo?: (s: Partial<ShareInfo> & Pick<ShareInfo, "ctx">) => void;
+  onFocused?: () => void;
+  /** A difference's quick-fix bar was finished or dismissed: the page can drop the target. */ onFixAcknowledged?: () => void;
+  userId?: string;
+  mode?: "embed" | "catalog";
+  focus?: CatalogFocus | undefined;
+  onSubmitted?: () => void;
+  onSplitSheet?: (t: CatalogTrack) => void;
+  onProtect?: (t: CatalogTrack) => void;
+  canSplit?: boolean;
+  canExport?: boolean;
+}) {
   const full = mode === "catalog";
   // One artist per account: the artist name from setup. A different name gets a gentle add-an-artist note.
   const registeredArtist = loadOnboarding(userId)?.stageName?.trim() ?? "";
@@ -117,11 +272,18 @@ export function MetadataUploader({ onShareInfo, userId, mode = "embed", readOnly
     // instead of the old tile reappearing the moment the file itself is gone.
     if (!next) setMetadata((m) => ({ ...m, coverThumb: "" }));
     if (!userId) return;
-    if (!next) { clearEmbedCover(userId); return; }
-    void coverForDraft(next).then((url) => saveEmbedCover(userId, url)).catch(() => {});
+    if (!next) {
+      clearEmbedCover(userId);
+      return;
+    }
+    void coverForDraft(next)
+      .then((url) => saveEmbedCover(userId, url))
+      .catch(() => {});
     // The badge rules ask whether a cover is 3000×3000, so the size is read once here and saved with the song
     // (founder, 2026-11-09). A file that can't be read simply keeps 0 and earns nothing on that rule.
-    void createImageBitmap(next).then((b) => setMetadata((m) => ({ ...m, artWidth: b.width, artHeight: b.height }))).catch(() => {});
+    void createImageBitmap(next)
+      .then((b) => setMetadata((m) => ({ ...m, artWidth: b.width, artHeight: b.height })))
+      .catch(() => {});
   };
   const [cover, setCover] = useState("");
   /** The cover shown came back from the last sitting, not from this one: labelled so it is never mistaken for the file's. */
@@ -141,9 +303,17 @@ export function MetadataUploader({ onShareInfo, userId, mode = "embed", readOnly
   const [sessionDone, setSessionDone] = useState<string[]>([]);
   const [waiting, setWaiting] = useState<string[]>([]);
   const [sessionReady, setSessionReady] = useState(false);
-  const [carry, setCarry] = useState<Record<CarryKey, boolean>>({ artist: true, release: true, people: true, genre: true });
+  const [carry, setCarry] = useState<Record<CarryKey, boolean>>({
+    artist: true,
+    release: true,
+    people: true,
+    genre: true,
+  });
   useEffect(() => {
-    if (full) { setSessionReady(true); return; }
+    if (full) {
+      setSessionReady(true);
+      return;
+    }
     const saved = readIntake<{ done?: string[]; waiting?: string[] }>(userId, "embed-session");
     if (saved?.done?.length) setSessionDone(saved.done);
     if (saved?.waiting?.length) setWaiting(saved.waiting);
@@ -160,7 +330,13 @@ export function MetadataUploader({ onShareInfo, userId, mode = "embed", readOnly
     const onKey = (e: KeyboardEvent) => {
       if (!(e.metaKey || e.ctrlKey) || e.key !== "Enter") return;
       const form = formRef.current;
-      if (!form || form.offsetParent === null || form.getAttribute("aria-busy") === "true" || document.querySelector('[role="dialog"], [role="alertdialog"]')) return;
+      if (
+        !form ||
+        form.offsetParent === null ||
+        form.getAttribute("aria-busy") === "true" ||
+        document.querySelector('[role="dialog"], [role="alertdialog"]')
+      )
+        return;
       e.preventDefault();
       form.requestSubmit();
     };
@@ -172,7 +348,13 @@ export function MetadataUploader({ onShareInfo, userId, mode = "embed", readOnly
   const [exportOpen, setExportOpen] = useState(false);
   // After a download: how to upload the file at that agency (and, for The MLC, which songs use the placeholder IPI).
   const [nextSteps, setNextSteps] = useState<{ agency: Agency; placeholders: string[] }>();
-  const togglePick = (id: string) => setPicked((s) => { const n = new Set(s); if (n.has(id)) n.delete(id); else n.add(id); return n; });
+  const togglePick = (id: string) =>
+    setPicked((s) => {
+      const n = new Set(s);
+      if (n.has(id)) n.delete(id);
+      else n.add(id);
+      return n;
+    });
   // One click for a release or the whole catalog (founder, 2026-11-06): the ZIP is the point of the catalog, so it never
   // hides behind a per-song menu.
   const [zipping, setZipping] = useState<string | null>(null);
@@ -188,8 +370,12 @@ export function MetadataUploader({ onShareInfo, userId, mode = "embed", readOnly
       if (r.gaps.length) setGaps(r.gaps);
       if (first && claimFirstBurst(first)) burstConfetti();
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Could not build the download. Try again in a moment.");
-    } finally { setZipping(null); }
+      toast.error(
+        e instanceof Error ? e.message : "Could not build the download. Try again in a moment.",
+      );
+    } finally {
+      setZipping(null);
+    }
   };
   /**
    * The same songs, with the values the catalog holds right now (founder, 2026-11-12). The tab loads its list once, so a
@@ -208,41 +394,93 @@ export function MetadataUploader({ onShareInfo, userId, mode = "embed", readOnly
     }
   };
   const runExport = async (a: Agency, list: CatalogTrack[], name: string) => {
-    if (!canExport) { setUpsell("export"); return; }
+    if (!canExport) {
+      setUpsell("export");
+      return;
+    }
     try {
       const current = await freshCatalog(list);
       const songs = await downloadAgencyExport(a, current, safeName(name));
       const sent = current.filter((t) => !songs.some((h) => h.track.id === t.id));
-      if (sent.length) { logBadgeEvent("agency_export"); void recordExports(a, sent.map((t) => t.id)).catch(() => {}); }
+      if (sent.length) {
+        logBadgeEvent("agency_export");
+        void recordExports(
+          a,
+          sent.map((t) => t.id),
+        ).catch(() => {});
+      }
       // The MLC: say which songs carry the placeholder publisher IPI, and what the file can't hold.
       // Songs held back open their own "what to fix" box first; the upload steps show when nothing was held.
-      if (sent.length && !songs.length) setNextSteps({ agency: a, placeholders: a === "mlc" ? mlcPlaceholderSongs(sent) : [] });
+      if (sent.length && !songs.length)
+        setNextSteps({ agency: a, placeholders: a === "mlc" ? mlcPlaceholderSongs(sent) : [] });
       if (songs.length) setHeld({ agency: a, songs, exported: current.length - songs.length });
       // Splits that don't add up to 100% are exported anyway, with a heads-up: agencies reject them.
-      const off = current.filter((t) => !songs.some((h) => h.track.id === t.id) && registrationReadiness(t.metadata, a).warnings.length);
-      if (off.length) toast.warning(`${off.length === 1 ? `"${off[0]!.title}" has splits` : `${off.length} songs have splits`} that don't add up to exactly 100%. Agencies reject splits under or over 100%, so fix ${off.length === 1 ? "it" : "them"} before you submit.`, { duration: 10000 });
+      const off = current.filter(
+        (t) =>
+          !songs.some((h) => h.track.id === t.id) &&
+          registrationReadiness(t.metadata, a).warnings.length,
+      );
+      if (off.length)
+        toast.warning(
+          `${off.length === 1 ? `"${off[0]!.title}" has splits` : `${off.length} songs have splits`} that don't add up to exactly 100%. Agencies reject splits under or over 100%, so fix ${off.length === 1 ? "it" : "them"} before you submit.`,
+          { duration: 10000 },
+        );
     } catch (e) {
       // Say what actually went wrong: a generic "could not build" hid every real failure from the person clicking.
-      toast.error(e instanceof Error ? `Could not build the export: ${e.message}` : "Could not build the export.");
+      toast.error(
+        e instanceof Error
+          ? `Could not build the export: ${e.message}`
+          : "Could not build the export.",
+      );
     }
   };
   /** Performers on each recording for PPL / SoundExchange International. Songs need an ISRC to be matched. */
   const runPack = async (list: CatalogTrack[], name: string) => {
-    if (!canExport) { setUpsell("export"); return; }
+    if (!canExport) {
+      setUpsell("export");
+      return;
+    }
     let skipped: CatalogTrack[];
-    try { skipped = await downloadNeighbouringPack(list, safeName(name)); }
-    catch (e) { toast.error(e instanceof Error ? `Could not build the pack: ${e.message}` : "Could not build the pack."); return; }
+    try {
+      skipped = await downloadNeighbouringPack(list, safeName(name));
+    } catch (e) {
+      toast.error(
+        e instanceof Error ? `Could not build the pack: ${e.message}` : "Could not build the pack.",
+      );
+      return;
+    }
     if (skipped.length < list.length) logBadgeEvent("agency_export");
-    if (skipped.length) toast.warning(skipped.length === list.length
-      ? "Add an ISRC first: societies match recordings by ISRC, so none of these songs could go in the pack."
-      : `${skipped.length} song${skipped.length === 1 ? "" : "s"} left out of the pack because ${skipped.length === 1 ? "it has" : "they have"} no ISRC yet.`, { duration: 10000 });
+    if (skipped.length)
+      toast.warning(
+        skipped.length === list.length
+          ? "Add an ISRC first: societies match recordings by ISRC, so none of these songs could go in the pack."
+          : `${skipped.length} song${skipped.length === 1 ? "" : "s"} left out of the pack because ${skipped.length === 1 ? "it has" : "they have"} no ISRC yet.`,
+        { duration: 10000 },
+      );
   };
-  const exportMenu = (label: string, list: CatalogTrack[], name: string, size: "sm" | "default" = "sm") => (
+  const exportMenu = (
+    label: string,
+    list: CatalogTrack[],
+    name: string,
+    size: "sm" | "default" = "sm",
+  ) => (
     <DropdownMenu>
-      <DropdownMenuTrigger asChild><Button type="button" variant="outline" size={size} onClick={(e) => e.stopPropagation()}>{!canExport && <Lock />}{label}</Button></DropdownMenuTrigger>
+      <DropdownMenuTrigger asChild>
+        <Button type="button" variant="outline" size={size} onClick={(e) => e.stopPropagation()}>
+          {!canExport && <Lock />}
+          {label}
+        </Button>
+      </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
-        {(["mlc", "soundexchange", "pro"] as Agency[]).map((a) => <DropdownMenuItem key={a} onClick={() => runExport(a, list, name)}>{AGENCY_LABEL[a]}<InfoTip title="Required fields" text={EXPORT_REQUIRED[a]} /></DropdownMenuItem>)}
-        <DropdownMenuItem onClick={() => void runPack(list, name)}>Neighbouring Rights Pack (.xlsx)</DropdownMenuItem>
+        {(["mlc", "soundexchange", "pro"] as Agency[]).map((a) => (
+          <DropdownMenuItem key={a} onClick={() => runExport(a, list, name)}>
+            {AGENCY_LABEL[a]}
+            <InfoTip title="Required fields" text={EXPORT_REQUIRED[a]} />
+          </DropdownMenuItem>
+        ))}
+        <DropdownMenuItem onClick={() => void runPack(list, name)}>
+          Neighbouring Rights Pack (.xlsx)
+        </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
   );
@@ -259,21 +497,32 @@ export function MetadataUploader({ onShareInfo, userId, mode = "embed", readOnly
     const savedCover = loadEmbedCover(userId);
     if (savedCover) {
       const remembered = coverFile(savedCover);
-      if (remembered) { setArtwork(remembered); setCoverRestored(true); }
+      if (remembered) {
+        setArtwork(remembered);
+        setCoverRestored(true);
+      }
     }
     // Profile changes made since the draft fill its blanks (and saved writers' details), never what was typed.
     if (draft) {
       setMetadata(withProfileFilled(draft, loadProfile(userId)));
       setRestored(true);
-      toast.info(`Embed Metadata: your unsaved details${savedCover ? " and cover art are" : " are"} back. Add the audio file again to embed.`);
+      toast.info(
+        `Embed Metadata: your unsaved details${savedCover ? " and cover art are" : " are"} back. Add the audio file again to embed.`,
+      );
       return;
     }
     const p = loadProfile(userId);
-    if (p) setMetadata((m) => (m.title || m.artist ? m : withRoleDefaults(withProfile(p), loadOnboarding(userId) ?? {})));
+    if (p)
+      setMetadata((m) =>
+        m.title || m.artist ? m : withRoleDefaults(withProfile(p), loadOnboarding(userId) ?? {}),
+      );
   }, [userId, full]);
   useEffect(() => {
     if (full) return;
-    const t = setTimeout(() => saveEmbedDraft(userId, metadata, withProfile(loadProfile(userId))), 400);
+    const t = setTimeout(
+      () => saveEmbedDraft(userId, metadata, withProfile(loadProfile(userId))),
+      400,
+    );
     return () => clearTimeout(t);
   }, [metadata, userId, full]);
   const artInput = useRef<HTMLInputElement>(null);
@@ -282,43 +531,88 @@ export function MetadataUploader({ onShareInfo, userId, mode = "embed", readOnly
   // Everyone the user has worked with (profile, Contributor Library, past songs): typed names bring their details along.
   const [library, setLibrary] = useState<SavedContributor[]>([]);
   const [libKey, setLibKey] = useState(0);
-  useEffect(() => { if (userId) listContributors().then(setLibrary).catch(() => {}); }, [userId, libKey]);
+  useEffect(() => {
+    if (userId)
+      listContributors()
+        .then(setLibrary)
+        .catch(() => {});
+  }, [userId, libKey]);
   // Songs in an Expert Registration order that isn't submitted yet: their catalog entry says what's left to fix.
   const [regSongs, setRegSongs] = useState<OpenRegSong[]>([]);
   const [regKey, setRegKey] = useState(0);
   useEffect(() => {
     if (!userId) return;
     void (async () => {
-      const { data: songs } = await supabase.from("registration_songs" as never).select("id, purchase_id, track_id, pending_title").is("submitted_at", null);
-      const rows = (songs ?? []) as { id: string; purchase_id: string; track_id: string | null; pending_title: string | null }[];
-      if (!rows.length) { setRegSongs([]); return; }
-      const { data: orders } = await supabase.from("registration_orders" as never).select("purchase_id, agencies").in("purchase_id", [...new Set(rows.map((r) => r.purchase_id))]);
-      const agencies = new Map(((orders ?? []) as { purchase_id: string; agencies: string[] }[]).map((o) => [o.purchase_id, o.agencies]));
+      const { data: songs } = await supabase
+        .from("registration_songs" as never)
+        .select("id, purchase_id, track_id, pending_title")
+        .is("submitted_at", null);
+      const rows = (songs ?? []) as {
+        id: string;
+        purchase_id: string;
+        track_id: string | null;
+        pending_title: string | null;
+      }[];
+      if (!rows.length) {
+        setRegSongs([]);
+        return;
+      }
+      const { data: orders } = await supabase
+        .from("registration_orders" as never)
+        .select("purchase_id, agencies")
+        .in("purchase_id", [...new Set(rows.map((r) => r.purchase_id))]);
+      const agencies = new Map(
+        ((orders ?? []) as { purchase_id: string; agencies: string[] }[]).map((o) => [
+          o.purchase_id,
+          o.agencies,
+        ]),
+      );
       setRegSongs(rows.map((r) => ({ ...r, agencies: agencies.get(r.purchase_id) ?? [] })));
     })().catch(() => {});
   }, [userId, regKey]);
 
   const refresh = useCallback(() => {
     if (!userId) return;
-    listTracks(userId).then(setTracks).catch((e) => toast.error(e.message ?? "Could not load your catalog."));
+    listTracks(userId)
+      .then(setTracks)
+      .catch((e) => toast.error(e.message ?? "Could not load your catalog."));
   }, [userId]);
-  useEffect(() => { refresh(); }, [refresh]);
+  useEffect(() => {
+    refresh();
+  }, [refresh]);
   // The page's share card (artist avatar next to the name): song count on My Catalog, the song being embedded on Embed.
   const shareGenre = full ? loadProfile(userId)?.primaryGenre : metadata.primaryGenre;
   useEffect(() => {
-    onShareInfo?.(full ? { ctx: "catalog", count: tracks.length, genre: shareGenre } : { ctx: "embed", artist: metadata.artist.trim(), title: metadata.title, genre: shareGenre });
+    onShareInfo?.(
+      full
+        ? { ctx: "catalog", count: tracks.length, genre: shareGenre }
+        : {
+            ctx: "embed",
+            artist: metadata.artist.trim(),
+            title: metadata.title,
+            genre: shareGenre,
+          },
+    );
   }, [full, tracks.length, metadata.artist, metadata.title, shareGenre]); // eslint-disable-line react-hooks/exhaustive-deps
   // The health meter reads the same saved checks and checklist ticks as the Royalties and Registrations.
   const [checks, setChecks] = useState<RepertoireCheck[]>([]);
   const [statuses, setStatuses] = useState<SongStatus[]>([]);
   useEffect(() => {
     if (!full || !userId) return;
-    listChecks().then(setChecks).catch(() => {});
-    listStatuses().then(setStatuses).catch(() => {});
+    listChecks()
+      .then(setChecks)
+      .catch(() => {});
+    listStatuses()
+      .then(setStatuses)
+      .catch(() => {});
   }, [full, userId]);
   const health = useMemo(() => {
     if (!full) return undefined;
-    const code = loadOnboarding(userId)?.healthCountry ?? guessCountry(tracks.flatMap((t) => [...t.metadata.writers, ...t.metadata.composers].map((w) => w.pro)));
+    const code =
+      loadOnboarding(userId)?.healthCountry ??
+      guessCountry(
+        tracks.flatMap((t) => [...t.metadata.writers, ...t.metadata.composers].map((w) => w.pro)),
+      );
     return catalogHealth(tracks, countryByCode(code) ?? countryByCode("US")!, checks, statuses);
   }, [full, userId, tracks, checks, statuses]);
   /**
@@ -328,10 +622,21 @@ export function MetadataUploader({ onShareInfo, userId, mode = "embed", readOnly
    */
   const saveRelease = async (patch: ReleasePatch, list: CatalogTrack[]) => {
     if (!userId) throw new Error("Sign in again to save this release.");
-    const { saved, error } = await writeRelease(list, (song) => saveTrack({ ...song.metadata, ...patch }, userId, song.id));
-    if (saved.length) setTracks((prev) => prev.map((song) => saved.some((x) => x.id === song.id) ? { ...song, metadata: { ...song.metadata, ...patch } } : song));
+    const { saved, error } = await writeRelease(list, (song) =>
+      saveTrack({ ...song.metadata, ...patch }, userId, song.id),
+    );
+    if (saved.length)
+      setTracks((prev) =>
+        prev.map((song) =>
+          saved.some((x) => x.id === song.id)
+            ? { ...song, metadata: { ...song.metadata, ...patch } }
+            : song,
+        ),
+      );
     if (error) throw new Error(error);
-    toast.success(`${list.length === 1 ? (list[0]!.title || "The song") : (list[0]!.metadata.album || "The release")} updated on ${list.length} song${list.length === 1 ? "" : "s"}.`);
+    toast.success(
+      `${list.length === 1 ? list[0]!.title || "The song" : list[0]!.metadata.album || "The release"} updated on ${list.length} song${list.length === 1 ? "" : "s"}.`,
+    );
   };
   /**
    * One cover for a whole release (founder, 2026-11-11): an EP or album filled in from an agency list or a Spotify link
@@ -339,17 +644,33 @@ export function MetadataUploader({ onShareInfo, userId, mode = "embed", readOnly
    * small tile the group reads.
    */
   const saveReleaseCover = async (list: CatalogTrack[], file: File) => {
-    if (!userId) { toast.error("Sign in again to save the cover."); return; }
+    if (!userId) {
+      toast.error("Sign in again to save the cover.");
+      return;
+    }
     try {
       const thumb = await makeThumb(file).catch(() => "");
       const { songs, covers, failed } = await setReleaseArtwork(list, userId, file, thumb);
-      setTracks((prev) => prev.map((song) => {
-        const written = covers.find((c) => c.id === song.id);
-        return written ? { ...song, metadata: { ...song.metadata, artPath: written.artPath, ...(thumb ? { coverThumb: thumb } : {}) } } : song;
-      }));
+      setTracks((prev) =>
+        prev.map((song) => {
+          const written = covers.find((c) => c.id === song.id);
+          return written
+            ? {
+                ...song,
+                metadata: {
+                  ...song.metadata,
+                  artPath: written.artPath,
+                  ...(thumb ? { coverThumb: thumb } : {}),
+                },
+              }
+            : song;
+        }),
+      );
       // Part of a release taking the cover is said out loud, with the songs that missed it, so nobody has to guess which.
       if (failed.length)
-        toast.error(`Album cover set on ${songs} of ${list.length} songs. These didn't take it: ${failed.join("; ")}. Try again.`);
+        toast.error(
+          `Album cover set on ${songs} of ${list.length} songs. These didn't take it: ${failed.join("; ")}. Try again.`,
+        );
       else toast.success(`Album cover set on ${songs} song${songs === 1 ? "" : "s"}.`);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "That cover didn't save. Try again.");
@@ -358,15 +679,31 @@ export function MetadataUploader({ onShareInfo, userId, mode = "embed", readOnly
   const pctOf = (id: string) => health?.songs.find((x) => x.track.id === id)?.pct ?? 0;
   // The album title routes a song into its release (founder, 2026-11-10), so a track saved as a Single on an album still
   // lists under that album instead of splitting the release in two.
-  const routedKind = useMemo(() => routedKinds(tracks, (t) => t.metadata, (t) => t.id), [tracks]);
+  const routedKind = useMemo(
+    () =>
+      routedKinds(
+        tracks,
+        (t) => t.metadata,
+        (t) => t.id,
+      ),
+    [tracks],
+  );
   const releaseGroup = (t: CatalogTrack) => routedKind.get(t.id) ?? releaseKind(t.metadata);
   // Fully completed catalog: the night sky spells the most recent song, once per completed set of songs.
   const [starsFor, setStarsFor] = useState<string>();
   useEffect(() => {
     if (!full || !userId || !health || !tracks.length || health.pct !== 100) return;
-    const sig = tracks.map((t) => t.id).sort().join(",");
+    const sig = tracks
+      .map((t) => t.id)
+      .sort()
+      .join(",");
     const key = `cta.catalogComplete.${userId}`;
-    try { if (localStorage.getItem(key) === sig) return; localStorage.setItem(key, sig); } catch { /* storage blocked: still celebrate */ }
+    try {
+      if (localStorage.getItem(key) === sig) return;
+      localStorage.setItem(key, sig);
+    } catch {
+      /* storage blocked: still celebrate */
+    }
     const latest = [...tracks].sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))[0]!;
     setStarsFor(latest.title || "Your catalog");
   }, [full, userId, health?.pct, tracks]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -394,65 +731,155 @@ export function MetadataUploader({ onShareInfo, userId, mode = "embed", readOnly
     // A songwriter whose work someone else performs has no artist of their own, so saving never requires one (founder,
     // 2026-11-09). Embedding a master still does: `submit` keeps the strict schema.
     const parsed = savedSchema.safeParse(metadata);
-    if (!parsed.success) { fail(parsed.error.issues[0]?.message ?? "Check your metadata."); return; }
+    if (!parsed.success) {
+      fail(parsed.error.issues[0]?.message ?? "Check your metadata.");
+      return;
+    }
     setError("");
     setSaving(true);
     try {
       // Platinum Press reads this later: a song saved while unreleased keeps that fact even after it's scheduled.
-      const data = { ...parsed.data, aiProtection: parsed.data.aiProtection || aiProtect, wasUnreleased: parsed.data.wasUnreleased || parsed.data.unreleased };
+      const data = {
+        ...parsed.data,
+        aiProtection: parsed.data.aiProtection || aiProtect,
+        wasUnreleased: parsed.data.wasUnreleased || parsed.data.unreleased,
+      };
       const id = await saveTrack(data, userId, editingId);
       // The song made from a beat now exists, so the beat is sold (§4.5). The link lives on the master only.
       if (data.beatMasterId) {
         const source = tracks.find((x) => x.id === data.beatMasterId);
-        if (source && source.metadata.beatState !== "sold") await saveTrack({ ...source.metadata, beatState: "sold" }, userId, source.id);
+        if (source && source.metadata.beatState !== "sold")
+          await saveTrack({ ...source.metadata, beatState: "sold" }, userId, source.id);
       }
       // The cover the song already has (a pull's release art, or one chosen earlier) is embedded too, not just one
       // attached in this sitting: the catalog's own artwork is what most songs have (founder, 2026-11-13).
-      const cover = artwork ?? (audio && data.artPath ? await catalogArtwork(data.artPath, safeName(data.title)) : undefined);
+      const cover =
+        artwork ??
+        (audio && data.artPath
+          ? await catalogArtwork(data.artPath, safeName(data.title))
+          : undefined);
       // Always store the fully tagged master (never the raw upload) and artwork in the private vault.
       let master: Blob | undefined;
       let embedded = false;
-      if (result) { master = await (await fetch(result.url)).blob(); embedded = true; }
-      else if (audio) {
-        try { master = await embedMetadata(await audio.arrayBuffer(), data, cover ? await cover.arrayBuffer() : undefined); embedded = true; }
-        catch { master = audio; }
+      if (result) {
+        master = await (await fetch(result.url)).blob();
+        embedded = true;
+      } else if (audio) {
+        try {
+          master = await embedMetadata(
+            await audio.arrayBuffer(),
+            data,
+            cover ? await cover.arrayBuffer() : undefined,
+          );
+          embedded = true;
+        } catch {
+          master = audio;
+        }
       }
-      let filesChanged = false, stored = false, artStored = false;
+      let filesChanged = false,
+        stored = false,
+        artStored = false;
       try {
-        if (master) { data.audioPath = await uploadCatalogFile(userId, id, "master", master, extOf(audio?.name)); filesChanged = stored = true; }
-        if (artwork) { data.artPath = await uploadCatalogFile(userId, id, "artwork", artwork, artwork.type === "image/png" ? "png" : "jpg"); filesChanged = artStored = true; }
+        if (master) {
+          data.audioPath = await uploadCatalogFile(
+            userId,
+            id,
+            "master",
+            master,
+            extOf(audio?.name),
+          );
+          filesChanged = stored = true;
+        }
+        if (artwork) {
+          data.artPath = await uploadCatalogFile(
+            userId,
+            id,
+            "artwork",
+            artwork,
+            artwork.type === "image/png" ? "png" : "jpg",
+          );
+          filesChanged = artStored = true;
+        }
         if (filesChanged) await saveTrack(data, userId, id);
-      } catch { toast.warning("Details saved, but your audio or artwork could not be stored. Try saving again."); }
+      } catch {
+        toast.warning(
+          "Details saved, but your audio or artwork could not be stored. Try saving again.",
+        );
+      }
       setMetadata(data);
       setEditingId(id);
       setAdding(false);
-      const info: SavedInfo = { trackId: id, title: data.title, hadAudio: !!audio || !!result, embedded, downloaded: !!result, stored, art: artStored, protect: aiProtect && !parsed.data.aiProtection };
+      const info: SavedInfo = {
+        trackId: id,
+        title: data.title,
+        hadAudio: !!audio || !!result,
+        embedded,
+        downloaded: !!result,
+        stored,
+        art: artStored,
+        protect: aiProtect && !parsed.data.aiProtection,
+      };
       setSavedInfo(info);
-      toast.success(`"${data.title}" ${editingId ? "updated in" : "saved to"} My Catalog${stored ? (embedded ? " with your embedded master" : " (audio stored without embedded details)") : ""}.`);
+      toast.success(
+        `"${data.title}" ${editingId ? "updated in" : "saved to"} My Catalog${stored ? (embedded ? " with your embedded master" : " (audio stored without embedded details)") : ""}.`,
+      );
       refresh();
       // A song bought for Expert Registration before it was cataloged links to its order as soon as it's saved.
-      const pending = regSongs.filter((r) => !r.track_id && catalogMatch(r.pending_title, [{ id, title: data.title }], regSongs.map((x) => x.track_id)) === id);
+      const pending = regSongs.filter(
+        (r) =>
+          !r.track_id &&
+          catalogMatch(
+            r.pending_title,
+            [{ id, title: data.title }],
+            regSongs.map((x) => x.track_id),
+          ) === id,
+      );
       if (pending[0] && !regSongs.some((r) => r.track_id === id)) {
-        void linkRegistrationSong({ data: { songId: pending[0].id, trackId: id } }).then(() => { setRegKey((k) => k + 1); toast.success(`"${data.title}" is linked to your Expert Registration order.`); }).catch(() => {});
+        void linkRegistrationSong({ data: { songId: pending[0].id, trackId: id } })
+          .then(() => {
+            setRegKey((k) => k + 1);
+            toast.success(`"${data.title}" is linked to your Expert Registration order.`);
+          })
+          .catch(() => {});
       }
       // Everyone on the song goes into the Contributor Library for next time: blanks only, nothing saved is changed.
-      void saveContributors(userId, libraryRowsOf(data), { fillOnly: true }).then(() => setLibKey((k) => k + 1)).catch(() => {});
+      void saveContributors(userId, libraryRowsOf(data), { fillOnly: true })
+        .then(() => setLibKey((k) => k + 1))
+        .catch(() => {});
       // The cover goes with the draft: a cleared session must not hand the next song the last one's artwork.
-      if (!full) { clearEmbedDraft(userId); clearEmbedCover(userId); setSubmitted(true); setRestored(false); onSubmitted?.(); }
+      if (!full) {
+        clearEmbedDraft(userId);
+        clearEmbedCover(userId);
+        setSubmitted(true);
+        setRestored(false);
+        onSubmitted?.();
+      }
       // They ticked AI Protection: go straight to its checkout for this song.
       if (info.protect) void protectNow(id);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Could not save track.");
-    } finally { setSaving(false); }
+    } finally {
+      setSaving(false);
+    }
   }
   /** AI Protection for one song: the $2.99 Single checkout, back to the AI Protection Hub to record the proof. */
   async function protectNow(trackId: string) {
-    try { await openCheckout({ kind: "ai", package: "Single", trackIds: [trackId] }); }
-    catch (e) { toast.error(e instanceof Error ? e.message : "Checkout could not open. Try again from the AI Protection Hub."); }
+    try {
+      await openCheckout({ kind: "ai", package: "Single", trackIds: [trackId] });
+    } catch (e) {
+      toast.error(
+        e instanceof Error
+          ? e.message
+          : "Checkout could not open. Try again from the AI Protection Hub.",
+      );
+    }
   }
   function open(t: CatalogTrack) {
     // After a plan ends or while paused, songs can be viewed and downloaded but not edited.
-    if (readOnly) { toast.info("Your catalog is read-only right now. Renew your plan to edit songs."); return; }
+    if (readOnly) {
+      toast.info("Your catalog is read-only right now. Renew your plan to edit songs.");
+      return;
+    }
     // Blanks fill from the profile (Embed Defaults + Catalog Profile), so only this song's own details are left.
     setMetadata(withProfileFilled({ ...emptyMetadata(), ...t.metadata }, loadProfile(userId)));
     setEditingId(t.id);
@@ -460,48 +887,83 @@ export function MetadataUploader({ onShareInfo, userId, mode = "embed", readOnly
     setError("");
     setAdding(false);
     // The song opens right where it sits in the list.
-    setTimeout(() => document.getElementById(`song-${t.id}`)?.scrollIntoView({ behavior: "smooth", block: "start" }), 50);
+    setTimeout(
+      () =>
+        document
+          .getElementById(`song-${t.id}`)
+          ?.scrollIntoView({ behavior: "smooth", block: "start" }),
+      50,
+    );
   }
   /** Close the open song (or the new one) and go back to the list. */
-  function closeSong() { startNew(); setAdding(false); }
+  function closeSong() {
+    startNew();
+    setAdding(false);
+  }
   /** Link a song already in the catalog as this beat's master, and mark the beat sold. */
   async function linkMaster(master: CatalogTrack) {
     if (!userId || !editingId) return;
     const existing = masterOfBeat(editingId, tracks);
     if (existing && existing.id !== master.id) {
-      toast.error(`This beat is already linked to "${existing.title || "Untitled"}". Unlink it before linking another song.`);
+      toast.error(
+        `This beat is already linked to "${existing.title || "Untitled"}". Unlink it before linking another song.`,
+      );
       return;
     }
     const taken = master.metadata.beatMasterId.trim();
     if (taken && taken !== editingId) {
-      toast.error(`"${master.title || "That song"}" is already linked to another beat. Open that beat to unlink it first.`);
+      toast.error(
+        `"${master.title || "That song"}" is already linked to another beat. Open that beat to unlink it first.`,
+      );
       return;
     }
     const beat = tracks.find((x) => x.id === editingId);
     try {
       await saveTrack({ ...master.metadata, beatMasterId: editingId }, userId, master.id);
       if (beat) await saveTrack({ ...beat.metadata, beatState: "sold" }, userId, beat.id);
-      setTracks((list) => list.map((x) => x.id === master.id ? { ...x, metadata: { ...x.metadata, beatMasterId: editingId } }
-        : beat && x.id === editingId ? { ...x, metadata: { ...x.metadata, beatState: "sold" } } : x));
+      setTracks((list) =>
+        list.map((x) =>
+          x.id === master.id
+            ? { ...x, metadata: { ...x.metadata, beatMasterId: editingId } }
+            : beat && x.id === editingId
+              ? { ...x, metadata: { ...x.metadata, beatState: "sold" } }
+              : x,
+        ),
+      );
       setMetadata((m) => ({ ...m, beatState: "sold" }));
       toast.success(`Linked to "${master.title || "Untitled"}". The beat is marked sold.`);
-    } catch (e) { toast.error(e instanceof Error ? e.message : "Could not link the master."); }
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Could not link the master.");
+    }
   }
   /** Open a new entry for the song made from this beat, with the beat's writers carried across. */
   function createMaster() {
-    if (!editingId) { toast.info("Save the beat first, then create the master."); return; }
+    if (!editingId) {
+      toast.info("Save the beat first, then create the master.");
+      return;
+    }
     const linked = masterOfBeat(editingId, tracks);
-    if (linked) { toast.info(`This beat is already linked to "${linked.title || "Untitled"}".`); return; }
+    if (linked) {
+      toast.info(`This beat is already linked to "${linked.title || "Untitled"}".`);
+      return;
+    }
     const beat = metadata;
     const beatId = editingId;
     startNew();
     setMetadata(masterFromBeat(beat, beatId));
     setAdding(true);
-    setTimeout(() => document.getElementById("song-new")?.scrollIntoView({ behavior: "smooth", block: "start" }), 50);
+    setTimeout(
+      () =>
+        document.getElementById("song-new")?.scrollIntoView({ behavior: "smooth", block: "start" }),
+      50,
+    );
   }
   /** Open a catalog song and jump to the field a ⚠️ readiness item points at. */
   function fix(t: CatalogTrack, field: string) {
-    if (readOnly) { open(t); return; }
+    if (readOnly) {
+      open(t);
+      return;
+    }
     open(t);
     setHeld(undefined);
     setTimeout(() => jumpTo(field), 150);
@@ -524,11 +986,29 @@ export function MetadataUploader({ onShareInfo, userId, mode = "embed", readOnly
     if (carry.artist) Object.assign(next, { artist: m.artist, featured: m.featured });
     if (carry.release) {
       const n = Number(m.trackNumber);
-      Object.assign(next, { album: m.album, releaseType: m.releaseType, releaseDate: m.releaseDate, label: m.label, upc: m.upc,
-        trackTotal: m.trackTotal, trackNumber: n ? String(n + 1) : "", coverThumb: m.coverThumb, copyright: m.copyright, phonographic: m.phonographic });
+      Object.assign(next, {
+        album: m.album,
+        releaseType: m.releaseType,
+        releaseDate: m.releaseDate,
+        label: m.label,
+        upc: m.upc,
+        trackTotal: m.trackTotal,
+        trackNumber: n ? String(n + 1) : "",
+        coverThumb: m.coverThumb,
+        copyright: m.copyright,
+        phonographic: m.phonographic,
+      });
     }
-    if (carry.people) Object.assign(next, { writers: m.writers, composers: m.composers, producers: m.producers, publishers: m.publishers, credits: m.credits });
-    if (carry.genre) Object.assign(next, { primaryGenre: m.primaryGenre, secondaryGenre: m.secondaryGenre });
+    if (carry.people)
+      Object.assign(next, {
+        writers: m.writers,
+        composers: m.composers,
+        producers: m.producers,
+        publishers: m.publishers,
+        credits: m.credits,
+      });
+    if (carry.genre)
+      Object.assign(next, { primaryGenre: m.primaryGenre, secondaryGenre: m.secondaryGenre });
     setMetadata(next);
     setEditingId(undefined);
     setAudio(undefined);
@@ -546,24 +1026,41 @@ export function MetadataUploader({ onShareInfo, userId, mode = "embed", readOnly
   /** Drop or pick several MP3s or WAVs: the first fills the form if it's free, the rest wait in the session queue. */
   async function addFiles(list: FileList | File[]) {
     // WAV embedding is a Catalog Management feature (founder, 2026-10-25); other plans see the upgrade box.
-    if (!canWav && [...list].some((f) => /\.wav$/i.test(f.name))) { setUpsell("wav"); list = [...list].filter((f) => !/\.wav$/i.test(f.name)); if (!list.length) return; }
+    if (!canWav && [...list].some((f) => /\.wav$/i.test(f.name))) {
+      setUpsell("wav");
+      list = [...list].filter((f) => !/\.wav$/i.test(f.name));
+      if (!list.length) return;
+    }
     const picked = [...list].filter((f) => AUDIO_FILE.test(f.name));
-    if (!picked.length) { setError("Choose MP3 or WAV audio files. FLAC embedding isn't available yet."); return; }
+    if (!picked.length) {
+      setError("Choose MP3 or WAV audio files. FLAC embedding isn't available yet.");
+      return;
+    }
     // An album dropped in at once lines up first song first: tag track number, then file-name number, then name.
     const files = await orderAudioFiles(picked);
     setWaiting((w) => w.filter((name) => !files.some((f) => f.name === name)));
     const [first, ...rest] = files;
-    if (!audio && !full) { selectAudio(first); setQueue((q) => [...q, ...rest]); }
-    else if (full) selectAudio(first);
+    if (!audio && !full) {
+      selectAudio(first);
+      setQueue((q) => [...q, ...rest]);
+    } else if (full) selectAudio(first);
     else setQueue((q) => [...q, ...files]);
   }
   async function remove(id: string) {
-    if (!(await confirmAction({ title: "Delete this song from your catalog?", text: "Its master, artwork and lyrics are removed too. Badges you earned stay on your profile." }))) return;
+    if (
+      !(await confirmAction({
+        title: "Delete this song from your catalog?",
+        text: "Its master, artwork and lyrics are removed too. Badges you earned stay on your profile.",
+      }))
+    )
+      return;
     try {
       await deleteTrack(id, userId);
       if (id === editingId) startNew();
       refresh();
-    } catch (e) { toast.error(e instanceof Error ? e.message : "Could not delete track."); }
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Could not delete track.");
+    }
   }
   /** Another version of the same recording as its own entry — radio edit, clean, instrumental (founder, 2026-11-10). */
   async function duplicate(t: CatalogTrack, version: string) {
@@ -571,27 +1068,58 @@ export function MetadataUploader({ onShareInfo, userId, mode = "embed", readOnly
     try {
       const made = await duplicateTrack(t, userId, version);
       refresh();
-      toast.success(`"${versionTitle(t.title, version)}" saved to My Catalog${made.files ? " with its master and artwork" : ". Add its audio or artwork when you're ready"}.`);
-    } catch (e) { toast.error(e instanceof Error ? e.message : "Could not duplicate the song."); }
+      toast.success(
+        `"${versionTitle(t.title, version)}" saved to My Catalog${made.files ? " with its master and artwork" : ". Add its audio or artwork when you're ready"}.`,
+      );
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Could not duplicate the song.");
+    }
   }
 
   useEffect(() => {
-    if (!artwork) { setCover(""); return; }
+    if (!artwork) {
+      setCover("");
+      return;
+    }
     const url = URL.createObjectURL(artwork);
     setCover(url);
     return () => URL.revokeObjectURL(url);
   }, [artwork]);
-  useEffect(() => () => { if (result) URL.revokeObjectURL(result.url); }, [result]);
+  useEffect(
+    () => () => {
+      if (result) URL.revokeObjectURL(result.url);
+    },
+    [result],
+  );
 
   /** Clear session: empty the queue and the finished list, start a fresh song (e.g. switching to another album). */
   async function clearSession() {
-    if (!(await confirmAction({ title: "Clear this session?", text: "Songs waiting in the queue and the embedded list are cleared, and the form starts fresh. Files you already downloaded aren't affected.", action: "Clear session" }))) return;
-    setQueue([]); setSessionDone([]); setWaiting([]); setAudio(undefined); startNew(); setError("");
+    if (
+      !(await confirmAction({
+        title: "Clear this session?",
+        text: "Songs waiting in the queue and the embedded list are cleared, and the form starts fresh. Files you already downloaded aren't affected.",
+        action: "Clear session",
+      }))
+    )
+      return;
+    setQueue([]);
+    setSessionDone([]);
+    setWaiting([]);
+    setAudio(undefined);
+    startNew();
+    setError("");
     clearIntake(userId, "embed-session");
   }
   /** The artist name is set in the profile; explain and offer to go there. */
   async function explainArtistName() {
-    if (await confirmAction({ title: "Your artist name comes from your profile", text: "To fix a typo or change your artist name for good, edit it in your profile. New songs use it automatically. Featuring someone? Add them under Featured artist.", action: "Edit profile", tone: "primary" })) {
+    if (
+      await confirmAction({
+        title: "Your artist name comes from your profile",
+        text: "To fix a typo or change your artist name for good, edit it in your profile. New songs use it automatically. Featuring someone? Add them under Featured artist.",
+        action: "Edit profile",
+        tone: "primary",
+      })
+    ) {
       void navigate({ to: "/profile" });
     }
   }
@@ -600,7 +1128,13 @@ export function MetadataUploader({ onShareInfo, userId, mode = "embed", readOnly
     const listed = (metadata.publishers ?? []).filter(creditName);
     if (on && listed.length) {
       const names = listed.map(creditName).join(", ");
-      if (!(await confirmAction({ title: "Remove the listed publisher?", text: `Self-published means this song has no publisher, so ${names} would be removed from this song only. Your Catalog Profile keeps it.` }))) return;
+      if (
+        !(await confirmAction({
+          title: "Remove the listed publisher?",
+          text: `Self-published means this song has no publisher, so ${names} would be removed from this song only. Your Catalog Profile keeps it.`,
+        }))
+      )
+        return;
       update("publishers", [emptyContributor()]);
     }
     update("selfPublished", on);
@@ -613,8 +1147,14 @@ export function MetadataUploader({ onShareInfo, userId, mode = "embed", readOnly
   function selectAudio(file?: File) {
     if (!file) return;
     setResult(undefined);
-    if (!canWav && /\.wav$/i.test(file.name)) { setUpsell("wav"); return; }
-    if (!AUDIO_FILE.test(file.name)) { setError("Choose an MP3 or WAV audio file. FLAC embedding isn't available yet."); return; }
+    if (!canWav && /\.wav$/i.test(file.name)) {
+      setUpsell("wav");
+      return;
+    }
+    if (!AUDIO_FILE.test(file.name)) {
+      setError("Choose an MP3 or WAV audio file. FLAC embedding isn't available yet.");
+      return;
+    }
     setAudio(file);
     setError("");
     const probe = new Audio();
@@ -622,55 +1162,106 @@ export function MetadataUploader({ onShareInfo, userId, mode = "embed", readOnly
     probe.preload = "metadata";
     probe.onloadedmetadata = () => {
       const sec = Math.round(probe.duration);
-      if (Number.isFinite(sec) && sec > 0) setMetadata((m) => ({ ...m, duration: formatDuration(sec) }));
+      if (Number.isFinite(sec) && sec > 0)
+        setMetadata((m) => ({ ...m, duration: formatDuration(sec) }));
       URL.revokeObjectURL(probeUrl);
     };
     probe.onerror = () => URL.revokeObjectURL(probeUrl);
     probe.src = probeUrl;
-    file.arrayBuffer().then((buf) => {
-      const { picture, ...found } = readMetadata(buf);
-      // The member's cover beats the picture baked into the audio (founder, 2026-11-12): re-embedding a master that was
-      // embedded before used to bring its old artwork back and replace the cover just chosen. The remembered cover counts
-      // as chosen, so a restored sitting is never overruled by the file before the artwork reaches state.
-      if (picture && artworkChoice(!!artwork || !!loadEmbedCover(userId), true) === "use-file") {
-        const art = new File([picture], picture.type === "image/png" ? "cover.png" : "cover.jpg", { type: picture.type });
-        putArtwork(art);
-        makeThumb(art).then((t) => setMetadata((m) => ({ ...m, coverThumb: t }))).catch(() => {});
-      } else if (picture && artwork) {
-        toast.info(FILE_ART_IGNORED);
-      }
-      const filled = Object.fromEntries(Object.entries(found).filter(([, v]) => Array.isArray(v) ? v.some((x) => (typeof x === "string" ? x : x?.name)) : v !== "" && v != null));
-      // Private PRO/IPI/splits never live in files — restore them from the saved profile for matching names.
-      const restored = restoreRows(filled as Partial<Metadata>, loadProfile(userId));
-      // A carried release wins over the file's tags: the queue is one album, and a missing or different album tag in the
-      // next file filed that song as its own single even though the form held the album title.
-      const kept: Record<string, string> = {};
-      if (carry.release && !full) for (const k of ["album", "releaseType", "releaseDate", "label", "upc", "trackTotal"] as const) { const v = metadata[k]; if (v) kept[k] = v; }
-      if (Object.keys(filled).length || picture) { setMetadata((m) => ({ ...m, ...restored, ...kept })); toast.success("Existing metadata found and pre-filled. You can still edit every field."); }
-    }).catch(() => {});
+    file
+      .arrayBuffer()
+      .then((buf) => {
+        const { picture, ...found } = readMetadata(buf);
+        // The member's cover beats the picture baked into the audio (founder, 2026-11-12): re-embedding a master that was
+        // embedded before used to bring its old artwork back and replace the cover just chosen. The remembered cover counts
+        // as chosen, so a restored sitting is never overruled by the file before the artwork reaches state.
+        if (picture && artworkChoice(!!artwork || !!loadEmbedCover(userId), true) === "use-file") {
+          const art = new File(
+            [picture],
+            picture.type === "image/png" ? "cover.png" : "cover.jpg",
+            { type: picture.type },
+          );
+          putArtwork(art);
+          makeThumb(art)
+            .then((t) => setMetadata((m) => ({ ...m, coverThumb: t })))
+            .catch(() => {});
+        } else if (picture && artwork) {
+          toast.info(FILE_ART_IGNORED);
+        }
+        const filled = Object.fromEntries(
+          Object.entries(found).filter(([, v]) =>
+            Array.isArray(v)
+              ? v.some((x) => (typeof x === "string" ? x : x?.name))
+              : v !== "" && v != null,
+          ),
+        );
+        // Private PRO/IPI/splits never live in files — restore them from the saved profile for matching names.
+        const restored = restoreRows(filled as Partial<Metadata>, loadProfile(userId));
+        // A carried release wins over the file's tags: the queue is one album, and a missing or different album tag in the
+        // next file filed that song as its own single even though the form held the album title.
+        const kept: Record<string, string> = {};
+        if (carry.release && !full)
+          for (const k of [
+            "album",
+            "releaseType",
+            "releaseDate",
+            "label",
+            "upc",
+            "trackTotal",
+          ] as const) {
+            const v = metadata[k];
+            if (v) kept[k] = v;
+          }
+        if (Object.keys(filled).length || picture) {
+          setMetadata((m) => ({ ...m, ...restored, ...kept }));
+          toast.success("Existing metadata found and pre-filled. You can still edit every field.");
+        }
+      })
+      .catch(() => {});
   }
   async function submit(event: FormEvent) {
     event.preventDefault();
     setResult(undefined);
     setError("");
-    if (!audio) { fail("Choose an MP3 or WAV file first, then embed."); return; }
+    if (!audio) {
+      fail("Choose an MP3 or WAV file first, then embed.");
+      return;
+    }
     const parsed = metadataSchema.safeParse(metadata);
-    if (!parsed.success) { fail(parsed.error.issues[0]?.message ?? "Check your metadata."); return; }
+    if (!parsed.success) {
+      fail(parsed.error.issues[0]?.message ?? "Check your metadata.");
+      return;
+    }
     setBusy(true);
     setSavedInfo(undefined);
     try {
-      const cover = artwork ?? (await catalogArtwork(parsed.data.artPath, safeName(parsed.data.title)));
-      const blob = await embedMetadata(await audio.arrayBuffer(), parsed.data, cover ? await cover.arrayBuffer() : undefined);
-      const file = { url: URL.createObjectURL(blob), name: `${safeName(parsed.data.title)}.${extOf(audio.name)}` };
+      const cover =
+        artwork ?? (await catalogArtwork(parsed.data.artPath, safeName(parsed.data.title)));
+      const blob = await embedMetadata(
+        await audio.arrayBuffer(),
+        parsed.data,
+        cover ? await cover.arrayBuffer() : undefined,
+      );
+      const file = {
+        url: URL.createObjectURL(blob),
+        name: `${safeName(parsed.data.title)}.${extOf(audio.name)}`,
+      };
       const a = document.createElement("a");
-      a.href = file.url; a.download = file.name;
-      document.body.appendChild(a); a.click(); a.remove();
+      a.href = file.url;
+      a.download = file.name;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
       logBadgeEvent("master_download");
       setResult(file);
       setSessionDone((d) => [...d, parsed.data.title.trim() || file.name]);
     } catch {
-      fail("This file could not be tagged. Check that it is a valid MP3 or WAV and the cover is a valid JPEG or PNG.");
-    } finally { setBusy(false); }
+      fail(
+        "This file could not be tagged. Check that it is a valid MP3 or WAV and the cover is a valid JPEG or PNG.",
+      );
+    } finally {
+      setBusy(false);
+    }
   }
 
   const showForm = !full || !!editingId || adding;
@@ -678,491 +1269,1667 @@ export function MetadataUploader({ onShareInfo, userId, mode = "embed", readOnly
   // The difference spotlight: the field the link names is scrolled to and lit for a few seconds, in either theme.
   const deepLink = focus && !("newTitle" in focus) ? focus : undefined;
   const { highlighted } = useFocusHighlight({ field: deepLink?.field });
-  const acknowledgeFix = () => { clearFocusParams(); onFixAcknowledged?.(); };
+  const acknowledgeFix = () => {
+    clearFocusParams();
+    onFixAcknowledged?.();
+  };
   // The field names arrive as ids; the bar says them the way a member reads them.
-  const FIELD_LABEL: Record<string, string> = { isrc: "ISRC", title: "title", artist: "artist", version: "Version", release: "Release", releaseDate: "Release date", status: "retired status", retired: "retired status" };
-  const fixBar = deepLink && (deepLink.agencyIsrc || deepLink.action) ? (
-    <div className="rounded-xl border border-[#004AAD]/25 bg-[#004AAD]/[0.04] p-3 text-sm dark:border-[#4D8CFF]/30 dark:bg-[#4D8CFF]/[0.08]">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <p className="font-semibold">
-          🩺 Diagnostic target: fix {FIELD_LABEL[deepLink.field] ?? (deepLink.field || "this song")}
-          {highlighted && <span className="ml-2 rounded-full border border-[#4D8CFF]/40 bg-[#4D8CFF]/15 px-1.5 py-px font-mono text-[10px] uppercase tracking-wide text-[#004AAD] dark:border-[#4D8CFF]/45 dark:bg-[#4D8CFF]/20 dark:text-[#4D8CFF]">live</span>}
-        </p>
-        <button type="button" className="text-xs font-semibold text-muted-foreground underline underline-offset-4 hover:text-primary" onClick={acknowledgeFix}>Done</button>
-      </div>
-      {deepLink.action === "adopt" && deepLink.agencyIsrc && (
-        <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
-          <span className="text-xs text-muted-foreground">Agency ISRC found: <b className="font-mono tabular-nums text-foreground">{deepLink.agencyIsrc}</b></span>
-          <Button type="button" size="sm" onClick={() => { update("isrc", deepLink.agencyIsrc!); acknowledgeFix(); }}>Apply to Catalog</Button>
+  const FIELD_LABEL: Record<string, string> = {
+    isrc: "ISRC",
+    title: "title",
+    artist: "artist",
+    version: "Version",
+    release: "Release",
+    releaseDate: "Release date",
+    status: "retired status",
+    retired: "retired status",
+  };
+  const fixBar =
+    deepLink && (deepLink.agencyIsrc || deepLink.action) ? (
+      <div className="rounded-xl border border-[#004AAD]/25 bg-[#004AAD]/[0.04] p-3 text-sm dark:border-[#4D8CFF]/30 dark:bg-[#4D8CFF]/[0.08]">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <p className="font-semibold">
+            🩺 Diagnostic target: fix{" "}
+            {FIELD_LABEL[deepLink.field] ?? (deepLink.field || "this song")}
+            {highlighted && (
+              <span className="ml-2 rounded-full border border-[#4D8CFF]/40 bg-[#4D8CFF]/15 px-1.5 py-px font-mono text-[10px] uppercase tracking-wide text-[#004AAD] dark:border-[#4D8CFF]/45 dark:bg-[#4D8CFF]/20 dark:text-[#4D8CFF]">
+                live
+              </span>
+            )}
+          </p>
+          <button
+            type="button"
+            className="text-xs font-semibold text-muted-foreground underline underline-offset-4 hover:text-primary"
+            onClick={acknowledgeFix}
+          >
+            Done
+          </button>
         </div>
-      )}
-      {deepLink.action === "dual_isrc" && deepLink.agencyIsrc && (
-        <div className="mt-2 space-y-2">
-          <p className="text-xs text-muted-foreground">Both codes are real. Choose the current one; the other is kept as the retired code.</p>
-          <div className="flex flex-wrap gap-2">
-            {[metadata.isrc.trim(), deepLink.agencyIsrc].filter(Boolean).filter((c, i, a) => a.indexOf(c) === i).map((code) => (
-              <Button key={code} type="button" size="sm" variant="outline" className="font-mono text-xs tabular-nums"
-                onClick={() => {
-                  const other = [metadata.isrc.trim(), deepLink.agencyIsrc].filter(Boolean).find((c) => c !== code) ?? "";
-                  update("isrc", code);
-                  if (other) update("retiredIscrs", [...new Set([...(metadata.retiredIscrs ?? []), other])]);
-                  acknowledgeFix();
-                }}>Keep {code}</Button>
-            ))}
+        {deepLink.action === "adopt" && deepLink.agencyIsrc && (
+          <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
+            <span className="text-xs text-muted-foreground">
+              Agency ISRC found:{" "}
+              <b className="font-mono tabular-nums text-foreground">{deepLink.agencyIsrc}</b>
+            </span>
+            <Button
+              type="button"
+              size="sm"
+              onClick={() => {
+                update("isrc", deepLink.agencyIsrc!);
+                acknowledgeFix();
+              }}
+            >
+              Apply to Catalog
+            </Button>
           </div>
-        </div>
-      )}
-      {deepLink.action === "add-version" && (() => {
-        // Two recordings under one title, or a version the agency names and the catalog doesn't. The agency's own wording is
-        // offered as it was read from its file, never appended to the title (founder, 2026-11-14). A title the list holds
-        // under four codes names four versions, so every one is offered, not just the first (founder, 2026-11-14).
-        const first = (deepLink.agencyVersion ?? "").trim();
-        const versions = [...new Set([...(deepLink.agencyVersions ?? []), first].map((v) => (v ?? "").trim()).filter(Boolean))];
-        const track = tracks.find((x) => x.id === editingId);
-        return (
+        )}
+        {deepLink.action === "dual_isrc" && deepLink.agencyIsrc && (
           <div className="mt-2 space-y-2">
             <p className="text-xs text-muted-foreground">
-              {versions.length === 1
-                ? <>The agency names this recording <b className="text-foreground">{versions[0]}</b>.</>
-                : versions.length > 1
-                  ? <>The agency lists {versions.length} versions of this title: <b className="text-foreground">{versions.join(", ")}</b>.</>
-                  : "Give this recording the version name the agency uses, so the two records pair up."}
+              Both codes are real. Choose the current one; the other is kept as the retired code.
             </p>
-            {versions.length > 0 && (
-              <div className="flex flex-wrap gap-2">
-                {versions.map((v) => (
-                  <Button key={`use-${v}`} type="button" size="sm" onClick={() => { update("version", v); acknowledgeFix(); }}>
-                    {versions.length === 1 ? "Use this version name" : `Use ${v}`}
+            <div className="flex flex-wrap gap-2">
+              {[metadata.isrc.trim(), deepLink.agencyIsrc]
+                .filter(Boolean)
+                .filter((c, i, a) => a.indexOf(c) === i)
+                .map((code) => (
+                  <Button
+                    key={code}
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    className="font-mono text-xs tabular-nums"
+                    onClick={() => {
+                      const other =
+                        [metadata.isrc.trim(), deepLink.agencyIsrc]
+                          .filter(Boolean)
+                          .find((c) => c !== code) ?? "";
+                      update("isrc", code);
+                      if (other)
+                        update("retiredIscrs", [
+                          ...new Set([...(metadata.retiredIscrs ?? []), other]),
+                        ]);
+                      acknowledgeFix();
+                    }}
+                  >
+                    Keep {code}
                   </Button>
                 ))}
-              </div>
-            )}
-            {track && versions.length > 0 && (
-              <div className="flex flex-wrap gap-2">
-                {versions.map((v) => (
-                  <Button key={`add-${v}`} type="button" size="sm" variant="outline" onClick={() => { void duplicate(track, v); acknowledgeFix(); }}>
-                    {versions.length === 1 ? "Add as a separate version" : `Add ${v} as a version`}
-                  </Button>
-                ))}
-              </div>
-            )}
+            </div>
           </div>
-        );
-      })()}
-      <a href="/workspace?tab=health&panel=differences#differences-panel" className="mt-2 inline-block text-xs font-semibold text-primary underline underline-offset-4">← Back to Differences Panel</a>
-    </div>
-  ) : null;
-  const formBlock = (<>
+        )}
+        {deepLink.action === "add-version" &&
+          (() => {
+            // Two recordings under one title, or a version the agency names and the catalog doesn't. The agency's own wording is
+            // offered as it was read from its file, never appended to the title (founder, 2026-11-14). A title the list holds
+            // under four codes names four versions, so every one is offered, not just the first (founder, 2026-11-14).
+            const first = (deepLink.agencyVersion ?? "").trim();
+            const versions = [
+              ...new Set(
+                [...(deepLink.agencyVersions ?? []), first]
+                  .map((v) => (v ?? "").trim())
+                  .filter(Boolean),
+              ),
+            ];
+            const track = tracks.find((x) => x.id === editingId);
+            return (
+              <div className="mt-2 space-y-2">
+                <p className="text-xs text-muted-foreground">
+                  {versions.length === 1 ? (
+                    <>
+                      The agency names this recording{" "}
+                      <b className="text-foreground">{versions[0]}</b>.
+                    </>
+                  ) : versions.length > 1 ? (
+                    <>
+                      The agency lists {versions.length} versions of this title:{" "}
+                      <b className="text-foreground">{versions.join(", ")}</b>.
+                    </>
+                  ) : (
+                    "Give this recording the version name the agency uses, so the two records pair up."
+                  )}
+                </p>
+                {versions.length > 0 && (
+                  <div className="flex flex-wrap gap-2">
+                    {versions.map((v) => (
+                      <Button
+                        key={`use-${v}`}
+                        type="button"
+                        size="sm"
+                        onClick={() => {
+                          update("version", v);
+                          acknowledgeFix();
+                        }}
+                      >
+                        {versions.length === 1 ? "Use this version name" : `Use ${v}`}
+                      </Button>
+                    ))}
+                  </div>
+                )}
+                {track && versions.length > 0 && (
+                  <div className="flex flex-wrap gap-2">
+                    {versions.map((v) => (
+                      <Button
+                        key={`add-${v}`}
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        onClick={() => {
+                          void duplicate(track, v);
+                          acknowledgeFix();
+                        }}
+                      >
+                        {versions.length === 1
+                          ? "Add as a separate version"
+                          : `Add ${v} as a version`}
+                      </Button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            );
+          })()}
+        <a
+          href="/workspace?tab=health&panel=differences#differences-panel"
+          className="mt-2 inline-block text-xs font-semibold text-primary underline underline-offset-4"
+        >
+          ← Back to Differences Panel
+        </a>
+      </div>
+    ) : null;
+  const formBlock = (
+    <>
       {fixBar}
       {showForm && submitted && !full ? (
         <div className="rounded-2xl border border-primary p-8">
           <CheckCircle2 className="mx-auto h-10 w-10 text-primary" />
-          <p className="mt-3 text-center text-lg font-semibold">Saved to My Catalog{savedInfo ? `: ${savedInfo.title}` : ""}</p>
-          {savedInfo && <SaveChecklist info={savedInfo} onProtect={() => void protectNow(savedInfo.trackId)} />}
+          <p className="mt-3 text-center text-lg font-semibold">
+            Saved to My Catalog{savedInfo ? `: ${savedInfo.title}` : ""}
+          </p>
+          {savedInfo && (
+            <SaveChecklist info={savedInfo} onProtect={() => void protectNow(savedInfo.trackId)} />
+          )}
           <NextSong queue={queue} carry={carry} onCarry={setCarry} onNext={startNext} />
         </div>
-      ) : showForm && (
-      <form key={editingId ?? (adding ? "add" : "new")} ref={formRef} onSubmit={submit} className="space-y-8" aria-busy={busy}>
-        {restored && !full && (
-          <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-primary/40 bg-accent/30 p-3 text-sm">
-            <span>These are your unsaved details from last time.</span>
-            <Button type="button" variant="outline" size="sm" onClick={() => { clearEmbedDraft(userId); startNew(); }}>Start fresh with my profile</Button>
-          </div>
-        )}
-        {full && editingId && (() => {
-          const reg = regSongs.find((r) => r.track_id === editingId);
-          if (!reg) return null;
-          const miss = missingFor(metadata, orderAgencies(reg.agencies));
-          return (
-            <div className={`rounded-lg border p-3 text-sm ${miss.length ? "border-primary" : "border-primary/40 bg-accent/30"}`}>
-              <p className="font-semibold">{miss.length ? `⚠️ This song is in your Expert Registration order: ${miss.length} item${miss.length === 1 ? "" : "s"} to fix before we can register it.` : "✓ This song is ready for your Expert Registration order."}</p>
-              {miss.length > 0 && <ul className="mt-2 space-y-1">{miss.map((i) => <li key={i.field + i.message}><button type="button" className="text-left hover:text-primary" onClick={() => jumpTo(i.field)}>⚠️ {i.message}</button></li>)}</ul>}
-              {miss.length > 0 && <p className="mt-2 text-muted-foreground">Fix these and click Update in My Catalog, then continue your registration.</p>}
-              {onExpert && <Button type="button" size="sm" variant={miss.length ? "outline" : "default"} className="mt-3" onClick={onExpert}>Continue Expert Registration</Button>}
-            </div>
-          );
-        })()}
-        <fieldset disabled={busy} className="grid gap-5 sm:grid-cols-[1fr_220px]">
-          <div onDragOver={(event) => event.preventDefault()} onDrop={(event) => { event.preventDefault(); if (!busy) void addFiles(event.dataTransfer.files); }} className="flex min-h-44 flex-col items-center justify-center gap-3 rounded-lg border border-dashed border-primary bg-accent/30 p-5 text-center">
-            {/* The brand mark sits where the uploader used to show a plain file icon (founder, 11/3/2026): the light
-                mark on light surfaces, the white one in Studio Mode, so it reads on both themes. */}
-            <img src="/cta-mark-dark.png" alt="" aria-hidden className="mark-on-light h-11 w-11 object-contain" />
-            <img src="/cta-mark-light.png" alt="" aria-hidden className="mark-on-dark h-11 w-11 object-contain" />
-            <div className="max-w-full break-all text-sm font-semibold">{audio ? audio.name : full ? (editingId ? "Re-embed" : "MP3 or WAV (optional)") : "Audio file"}</div>
-            {full && editingId && !audio && <span className="max-w-xs text-xs text-muted-foreground">Choose this song's master again: we embed everything saved here, plus what you add now (codes, producer credits), save the new master and you can download it.</span>}
-            {audio && <span className="text-xs text-muted-foreground">{(audio.size / 1024 / 1024).toFixed(1)} MB</span>}
-            <Button type="button" variant="outline" onClick={() => audioInput.current?.click()}><Upload />{audio ? (full ? "Choose a different file" : "Add more songs") : full ? (editingId ? "Re-embed" : "Choose MP3 or WAV") : "Choose MP3s or WAVs"}</Button>
-            {!full && !audio && <span className="text-xs text-muted-foreground">Drop a whole EP or album. Songs wait in your session queue.</span>}
-            <input id="audio" ref={audioInput} type="file" accept=".mp3,.wav,audio/mpeg,audio/wav,audio/x-wav" multiple={!full} aria-label="MP3 or WAV audio files" className="sr-only" onChange={(event) => { if (event.target.files) void addFiles([...event.target.files]); event.target.value = ""; }} />
-          </div>
-          <div className="flex min-h-44 flex-col items-center justify-center gap-3 rounded-lg border border-dashed border-border p-4">
-            {cover ? <img src={cover} alt="Selected cover artwork" className="h-20 w-20 rounded object-cover" /> : <ImagePlus className="h-8 w-8 text-primary" />}
-            <Button type="button" variant="ghost" onClick={() => artInput.current?.click()}>{artwork ? "Replace artwork" : "Add cover art"}</Button>
-            {coverRestored && <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[11px] font-semibold text-primary">Your last cover</span>}
-            <p className="text-center text-xs text-muted-foreground">3000x3000px recommended (streaming standard). JPEG or PNG; any standard album size works.</p>
-            {artwork && <Button type="button" size="icon" variant="ghost" aria-label="Remove cover artwork" onClick={() => { putArtwork(undefined); setResult(undefined); }}><Trash2 /></Button>}
-            <input id="artwork" ref={artInput} type="file" accept="image/jpeg,image/png" aria-label="Cover artwork" className="sr-only" onChange={(event) => {
-              const file = event.target.files?.[0];
-              if (file && !["image/jpeg", "image/png"].includes(file.type)) { setError("Choose JPEG or PNG artwork."); return; }
-              putArtwork(file); setResult(undefined); setError(""); event.target.value = "";
-              if (file) makeThumb(file).then((t) => setMetadata((m) => ({ ...m, coverThumb: t }))).catch(() => {});
-            }} />
-          </div>
-        </fieldset>
-
-        {(() => {
-          const r = registrationReadiness(metadata);
-          // Embed never shows or writes splits, so split warnings belong to My Catalog only (founder, 2026-10-27).
-          const warnIn = (...prefixes: string[]) => [...r.missing, ...(full ? r.warnings : [])].some((i) => prefixes.some((p) => i.field.startsWith(p)));
-          const count = (rows: Contributor[] | undefined) => (rows ?? []).filter(creditName).length;
-          const filled = (pairs: [string, string][]) => pairs.filter(([, v]) => v.trim()).map(([k]) => k).join(" · ");
-          const writersWarn = warnIn("writers-", "composers-");
-          // PRO and IPI are asked by a PRO and The MLC, not by the core rule (readiness.ts), so this section says what
-          // is still needed instead of calling the writers ready (founder, 2026-11-13).
-          const accountGaps = proAccountGaps(metadata);
-          // The publisher half as one pie (readiness.ts): listed publishers plus Self-published / BMI-paid writers.
-          const pie = publisherPie(metadata);
-          // A usual answer from the Catalog Profile that this song still uses, so it's easy to spot and change.
-          const profile = loadProfile(userId);
-          const people = savedPeople(profile, library, tracks.map((t) => t.metadata));
-          const fromProfile = (k: "samples" | "writtenFor") => !!profile?.[k] && profile[k] === metadata[k];
-          const publishersWarn = warnIn("publishers-", "bmiWriterPublishing");
-          // With no publisher, BMI pays the publisher share to its writers, so say so where it matters.
-          const bmiNoPublisher = full && !count(metadata.publishers) && [...metadata.writers, ...metadata.composers].some((w) => creditName(w) && isBmi(w));
-          // The unreleased answer stays in the catalog: it is never written into the file, it only files the song under
-          // the Unreleased list and its pre-release checklist.
-          const unreleasedBox = (
-            <label className="flex items-start gap-2 text-sm">
-              <input id="unreleased" type="checkbox" className="mt-0.5 h-4 w-4 accent-[var(--primary)]" checked={metadata.unreleased} onChange={(e) => update("unreleased", e.target.checked)} />
-              <span><span className="font-semibold">This song isn't released yet</span><InfoTip text="Unreleased songs get a Release checklist in the Royalties and Registrations: what to have ready before you distribute. On release day they switch to the normal health reading. This answer stays in your catalog; it isn't written into the MP3." /></span>
-            </label>
-          );
-          return <div className="space-y-3">
-            <FormSection title="Song info" open={!full || !metadata.title} disabled={busy} summary={filled([[metadata.title, metadata.title], [metadata.artist, metadata.artist]]) || "Title and artist"}>
-              <div className="grid gap-5 sm:grid-cols-2">
-                <Field label="Track title" id="title" value={metadata.title} required onChange={(value) => update("title", value)} />
-                <div>
-                  {/* The artist name comes from the profile (founder, 2026-10-25): clicking it explains where to change it. */}
-                  <div className="min-w-0 space-y-2"><Label htmlFor="artist" className="leading-5">{isExternal(metadata) ? "Recording artist (who released it)" : "Artist name *"}</Label>
-                    <div className="relative">{registeredArtist
-                      ? <><Input id="artist" value={metadata.artist} required={!isExternal(metadata)} readOnly className="cursor-pointer pr-9" onClick={() => void explainArtistName()} onKeyDown={(e) => { if (e.key.length === 1 || e.key === "Backspace") { e.preventDefault(); void explainArtistName(); } }} />
-                          <Lock className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" /></>
-                      // No profile name yet: typing stays open so nobody is stuck.
-                      : <Input id="artist" value={metadata.artist} required={!isExternal(metadata)} onChange={(e) => update("artist", e.target.value)} />}</div></div>
-                  {registeredArtist && metadata.artist.trim() && normArtist(metadata.artist) !== normArtist(registeredArtist) && (
-                    <p role="note" className="mt-2 rounded-md border border-primary/50 bg-accent/30 p-2 text-xs">
-                      This account is registered to <span className="font-semibold">{registeredArtist}</span>. Releasing as a different artist? Each artist gets their own catalog with an add-on artist account (from {ARTIST_SEAT_PRICES[0]!.price}/yr, with any paid plan). Add one from Profile → Add another artist. Featuring someone? Add them under Featured artist instead.
+      ) : (
+        showForm && (
+          <form
+            key={editingId ?? (adding ? "add" : "new")}
+            ref={formRef}
+            onSubmit={submit}
+            className="space-y-8"
+            aria-busy={busy}
+          >
+            {restored && !full && (
+              <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-primary/40 bg-accent/30 p-3 text-sm">
+                <span>These are your unsaved details from last time.</span>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    clearEmbedDraft(userId);
+                    startNew();
+                  }}
+                >
+                  Start fresh with my profile
+                </Button>
+              </div>
+            )}
+            {full &&
+              editingId &&
+              (() => {
+                const reg = regSongs.find((r) => r.track_id === editingId);
+                if (!reg) return null;
+                const miss = missingFor(metadata, orderAgencies(reg.agencies));
+                return (
+                  <div
+                    className={`rounded-lg border p-3 text-sm ${miss.length ? "border-primary" : "border-primary/40 bg-accent/30"}`}
+                  >
+                    <p className="font-semibold">
+                      {miss.length
+                        ? `⚠️ This song is in your Expert Registration order: ${miss.length} item${miss.length === 1 ? "" : "s"} to fix before we can register it.`
+                        : "✓ This song is ready for your Expert Registration order."}
                     </p>
-                  )}
-                </div>
-                {/* A second name the song is registered under, right under the title it belongs to (founder, 2026-11-15):
-                    an agency that files the work under that name then matches this song instead of reporting it missing. */}
-                {full && <ListField label="Alternate title" id="alternateTitles" tip={TIPS.alternateTitles} values={metadata.alternateTitles?.length ? metadata.alternateTitles : [""]} onChange={(v) => update("alternateTitles", v)} />}
-                {/* Someone else performs it (founder, 2026-11-09): the composition is the member's, the recording is not. */}
-                <div className="space-y-2 sm:col-span-2">
-                  <label className="flex items-start gap-2 text-sm">
-                    <input id="recordingSide" type="checkbox" className="mt-0.5 h-4 w-4 accent-[var(--primary)]" checked={isExternal(metadata)} onChange={(e) => update("recordingSide", e.target.checked ? "external" : "")} />
-                    <span><span className="font-semibold">Someone else performs this song</span><InfoTip text="A song you wrote that another artist records. The ISRC, artwork, UPC and SoundExchange step belong to their release, so this entry is read on the composition only." /></span>
-                  </label>
-                  {isExternal(metadata) && <p className="text-xs text-muted-foreground">Add the artist who released it under Artist, so their release is easy to find.</p>}
-                </div>
-                <div className="space-y-2">
-                  {metadata.featured.map((name, index) => (
-                    <div key={index} className="flex items-end gap-2">
-                      <div className="flex-1"><Field label={index === 0 ? "Featured artist" : `Featured artist ${index + 1}`} term={index === 0 ? "featured" : undefined} id={`featured-${index}`} value={name} onChange={(value) => update("featured", metadata.featured.map((n, i) => i === index ? value : n))} /></div>
-                      {index === metadata.featured.length - 1
-                        ? <Button type="button" size="icon" variant="outline" aria-label="Add featured artist" onClick={() => update("featured", [...metadata.featured, ""])}><Plus /></Button>
-                        : <Button type="button" size="icon" variant="ghost" aria-label={`Remove featured artist ${index + 1}`} onClick={() => update("featured", metadata.featured.filter((_, i) => i !== index))}><Trash2 /></Button>}
-                    </div>
-                  ))}
-                </div>
-                <Field label="Track duration" id="duration" value={metadata.duration} placeholder="03:45" onChange={(value) => update("duration", value)} />
-                <div className="space-y-2">
-                  <Label>Explicit content<InfoTip term="explicit" /></Label>
-                  <Choice label="Explicit content" value={metadata.explicit ? "Yes" : "No"} options={["Yes", "No"]} onChange={(v) => update("explicit", v === "Yes")} />
-                </div>
-                <SelectField label="Primary genre" id="primaryGenre" value={metadata.primaryGenre} options={GENRES} groups={GENRE_GROUPS} onChange={(value) => update("primaryGenre", value)} />
-                <SelectField label="Secondary genre" id="secondaryGenre" value={metadata.secondaryGenre} options={GENRES} groups={GENRE_GROUPS} onChange={(value) => update("secondaryGenre", value)} />
-              </div>
-            </FormSection>
-
-            <FormSection title="Release" open={!full} disabled={busy} summary={filled([[metadata.releaseType, metadata.releaseType], [metadata.album, metadata.album], [metadata.releaseDate, metadata.releaseDate], [metadata.label, metadata.label]]) || (full ? "Release type, album, date, label" : "Release type, label, ©")}>
-              <div className="grid gap-5 sm:grid-cols-2">
-                <SelectField label="Release type" term="releaseType" id="releaseType" value={metadata.releaseType} options={RELEASE_TYPES} onChange={(value) => update("releaseType", value)} />
-                {/* Which version of the recording this is: the usual ones are suggested, and a release called something
-                    else can be typed, so no list has to be complete. A blank field is the main mix. */}
-                <div className="min-w-0 space-y-1.5">
-                  <Label htmlFor="version">Version</Label>
-                  <Input id="version" list="track-versions" autoComplete="off" value={metadata.version ?? ""} placeholder="Leave blank for the main mix" onChange={(e) => update("version", e.target.value)} />
-                  <datalist id="track-versions">{TRACK_VERSIONS.map((v) => <option key={v} value={v} />)}</datalist>
-                </div>
-                <div className="min-w-0 space-y-2">
-                  <Label htmlFor="trackNumber">Track number</Label>
-                  <div className="flex items-center gap-3">
-                    <Input id="trackNumber" inputMode="numeric" className="w-20" value={metadata.trackNumber} placeholder="1" onChange={(e) => update("trackNumber", e.target.value.replace(/\D/g, "").slice(0, 3))} />
-                    <span className="text-sm text-muted-foreground">of</span>
-                    <Input id="trackTotal" aria-label="Total tracks on the release" inputMode="numeric" className="w-20" value={metadata.trackTotal} placeholder="12" onChange={(e) => update("trackTotal", e.target.value.replace(/\D/g, "").slice(0, 3))} />
-                  </div>
-                  <p className="text-xs text-muted-foreground">Example: track 1 of 12 on the album</p>
-                </div>
-                <Field label="Album / release title" id="album" value={metadata.album} onChange={(value) => update("album", value)} />
-                {full && <div className="min-w-0 space-y-2">
-                    <Field label="Release date" id="releaseDate" type="date" value={metadata.releaseDate} onChange={(value) => update("releaseDate", value)} />
-                    {/* Pre-distribution: no date picked yet, but not out. A future date counts on its own. */}
-                    {!metadata.releaseDate && unreleasedBox}
-                  </div>}
-                {/* Embed asks it too (founder, 2026-11-10), so a master can be filed for the unreleased path as it's embedded. */}
-                {!full && <div className="sm:col-span-2">{unreleasedBox}</div>}
-                {full && metadata.instrumental && (metadata.beatState !== "" || loadOnboarding(userId)?.sellBeats) && <div className="sm:col-span-2">
-                  <BeatBox metadata={metadata} update={update} tracks={tracks} beatId={editingId} disabled={busy} onLink={linkMaster} onCreateMaster={createMaster} />
-                </div>}
-                {full && !!metadata.beatMasterId && <div className="sm:col-span-2">
-                  <DealBox metadata={metadata} update={update} beatTitle={tracks.find((x) => x.id === metadata.beatMasterId)?.title ?? ""} disabled={busy} />
-                </div>}
-                <Field label="Record label" term="label" id="label" value={metadata.label} onChange={(value) => update("label", value)} />
-                {/* The release's catalog number. "Release version" is gone from the catalog (founder, 2026-11-14): an edition
-                    ("Deluxe", "Remastered") is not the recording's version, and it was being read as one beside Release date. What
-                    a song already holds is kept, never rewritten. */}
-                {full && <>
-                  <Field label="Catalog #" id="catalogNumber" value={metadata.catalogNumber} placeholder="Your label's number" onChange={(value) => update("catalogNumber", value)} />
-                </>}
-                <div className="min-w-0 space-y-2"><Label htmlFor="copyright" className="leading-5">Composition copyright (©)<InfoTip term="cLine" /></Label><CopyrightInput symbol="©" id="copyright" value={metadata.copyright} onChange={(value) => update("copyright", value)} /></div>
-                {/* ℗ and language are catalog details; they aren't embedded in the MP3. */}
-                {full && <>
-                  <div className="min-w-0 space-y-2"><Label htmlFor="phonographic" className="leading-5">Sound recording copyright (℗)<InfoTip term="pLine" /></Label><CopyrightInput symbol="℗" id="phonographic" value={metadata.phonographic} onChange={(value) => update("phonographic", value)} /></div>
-                  <Field label="Language" id="language" value={metadata.language} onChange={(value) => update("language", value)} />
-                </>}
-              </div>
-            </FormSection>
-
-            {/* Asked before Writers (founder, 2026-10-27), so the BMI answer is clear before writers are added. */}
-            {full && <FormSection title="Publishing for this song" disabled={busy} open={!metadata.selfPublished && !metadata.bmiWriterPublishing && !count(metadata.publishers)} ok={metadata.selfPublished || !!metadata.bmiWriterPublishing || count(metadata.publishers) > 0}
-              summary={metadata.selfPublished ? "Self-published" : metadata.bmiWriterPublishing ? "BMI writer, no publishing company" : count(metadata.publishers) ? "Publisher listed below" : "Self-published, BMI, or a publisher"}>
-              <div className="space-y-3">
-                <label className="flex items-center gap-2 text-sm"><input id="selfPublished" type="checkbox" className="h-4 w-4 accent-[var(--primary)]" disabled={busy} checked={metadata.selfPublished} onChange={(e) => void setSelfPublished(e.target.checked)} />Self-published (no publisher)<Tip text={TIPS.selfPublished} title="Self-published" /></label>
-                <label className="flex items-start gap-2 text-sm"><input id="bmiWriterPublishing" type="checkbox" className="mt-0.5 h-4 w-4 accent-[var(--primary)]" disabled={busy} checked={!!metadata.bmiWriterPublishing} onChange={(e) => update("bmiWriterPublishing", e.target.checked)} />
-                  <span><span className="font-semibold">I'm a BMI writer with no publishing company</span><Tip text={TIPS.bmiWriterPublishing} title="BMI writer, no publishing company" /><span className="block text-muted-foreground">BMI pays you both halves of your royalties, the writer share and the publisher share, so you don't need a publisher or a publisher IPI. Tick this only if every writer on the song is with BMI; it's why a song can reach 100% without a publisher.</span></span></label>
-                {bmiNoPublisher && !metadata.bmiWriterPublishing && <p className="rounded-lg border border-primary/40 bg-accent/30 p-3 text-sm text-muted-foreground"><span className="font-semibold text-foreground">💡 No publisher? BMI has you covered.</span> When a song has no publisher, BMI pays the publisher share to the writers automatically. It's split between all the writers in proportion to their writer splits, so a 60/40 split gets 60% and 40% of the publisher share too. Check the box above so your songs say so.</p>}
-                {metadata.bmiWriterPublishing && notBmiWriters(metadata).length > 0 && !count(metadata.publishers) && <p className="text-sm">⚠️ {notBmiWriters(metadata).join(", ")} {notBmiWriters(metadata).length === 1 ? "isn't" : "aren't"} with BMI, so BMI can't pay the publisher share for them. Add their publisher, or check Self-published.</p>}
-                <p className="text-xs text-muted-foreground">Have a publishing company? Leave both unchecked and add it under Publishers below.</p>
-              </div>
-            </FormSection>}
-
-            <div id="writers" className="scroll-mt-24">
-            <FormSection title={`Writers · ${count(metadata.writers)}`} open={!full || writersWarn} warn={writersWarn} ok={!writersWarn && count(metadata.writers) > 0 && accountGaps.length === 0} summary={writersWarn ? "Needs info to register" : count(metadata.writers) ? (accountGaps.length ? "PRO or IPI still needed" : "Ready to register") : "Who wrote the song"}>
-              <Contributors bare title="Writers" singular="writer" group="writers" writer rows={metadata.writers} saved={people.writers} disabled={busy} onChange={(rows) => update("writers", rows)}
-                songPublishing={full ? (metadata.selfPublished ? "Self-published (the song's answer)" : metadata.bmiWriterPublishing ? "The song's answer (BMI pays BMI writers)" : "") : undefined}
-                collectsPublishing={full ? (row) => pie.parts.some((p) => p.field.startsWith("writers-") && metadata.writers[Number(p.field.split("-")[1])] === row) : undefined} tip={full ? "Choose Author (lyrics/melody), Composer (music/beat) or Author/Composer for each writer. Writer splits must total 100%." : undefined} simple={!full}
-                rowNote={(row) => bmiNoPublisher && isBmi(row) && <p className="text-sm text-muted-foreground">💡 With no publisher, BMI pays this writer's part of the publisher share too, in proportion to their split.</p>}>
-                <label className="flex items-center gap-2 text-sm"><input id="instrumental" type="checkbox" className="h-4 w-4 accent-[var(--primary)]" checked={metadata.instrumental} onChange={(e) => update("instrumental", e.target.checked)} />Instrumental (no lyrics)<Tip text={TIPS.instrumental} /></label>
-              </Contributors>
-              <ReadinessPanel metadata={metadata} embed={!full} />
-              {full && <p className="rounded-lg border border-primary/40 bg-accent/30 p-3 text-sm text-muted-foreground"><span className="font-semibold text-foreground">No PRO or IPI number yet?</span> Leave them blank. Add them anytime after you register with a PRO and receive your IPI name number.</p>}
-            </FormSection>
-            </div>
-            {full && metadata.composers.some(creditName) && <FormSection title={`Composers (earlier entries) · ${count(metadata.composers)}`} open={writersWarn} warn={warnIn("composers-")} summary="Move these into Writers">
-              <Contributors bare title="Composers (earlier entries)" singular="composer" group="composers" rows={metadata.composers} saved={people.writers} disabled={busy} onChange={(rows) => update("composers", rows)} tip="Saved before Writer roles existed. Move these into Writer with the Composer role when you can." />
-            </FormSection>}
-
-            <FormSection title={`Producers · ${count(metadata.producers)}`} open={!full} summary={(metadata.producers ?? []).filter(creditName).map(creditName).join(", ") || "Produced by"}>
-              <Contributors bare title="Producers" singular="producer" group="producers" rows={metadata.producers ?? [emptyContributor()]} saved={people.producers} disabled={busy} onChange={(rows) => update("producers", rows)} simple
-                tip={GLOSSARY.producedBy.text} tipOnly />
-            </FormSection>
-
-            <FormSection title="Performers & recording" open={!full} summary={filled([[`${metadata.credits.length} credit${metadata.credits.length === 1 ? "" : "s"}`, metadata.credits.length ? "x" : ""], [metadata.recordedIn, metadata.recordedIn], [metadata.recordedYear, metadata.recordedYear]]) || "Optional"}>
-              <Performers bare metadata={metadata} disabled={busy} update={update} />
-            </FormSection>
-
-            {full && <FormSection title="Song origins" disabled={busy} summary={metadata.samples && metadata.writtenFor ? `Sample: ${metadata.samples} · Written for: ${metadata.writtenFor}` : "Not answered yet"} ok={!!(metadata.samples && metadata.writtenFor)}>
-              <div className="space-y-2">
-                <Label>Uses a sample or based on another song?<Tip text={TIPS.samples} title="Samples" /></Label>
-                <Choice id="samples" label="Uses a sample or based on another song" value={metadata.samples} options={["No", "Yes"]} onChange={(v) => update("samples", v as Metadata["samples"])} />
-                {fromProfile("samples") && <p className="text-xs text-muted-foreground">From your profile. Change it if this song is different.</p>}
-              </div>
-              {metadata.samples === "Yes" && <div className="grid gap-5 sm:grid-cols-3">
-                <Field label="Original song title" id="sampleTitle" value={metadata.sampleTitle} onChange={(v) => update("sampleTitle", v)} />
-                <Field label="Original writers" id="sampleWriters" value={metadata.sampleWriters} placeholder="Names, comma separated" onChange={(v) => update("sampleWriters", v)} />
-                <Field label="Source" id="sampleSource" value={metadata.sampleSource} placeholder="Recording, or Public domain" onChange={(v) => update("sampleSource", v)} />
-              </div>}
-              <div className="space-y-2">
-                <Label>Written for film, TV, stage or an ad?<Tip text={TIPS.writtenFor} title="Written for" /></Label>
-                <Choice id="writtenFor" label="Written for film, TV, stage or an ad" value={metadata.writtenFor} options={["No", ...PRODUCTION_TYPES]} onChange={(v) => update("writtenFor", v as Metadata["writtenFor"])} />
-                {fromProfile("writtenFor") && <p className="text-xs text-muted-foreground">From your profile. Change it if this song is different.</p>}
-              </div>
-              {metadata.writtenFor && metadata.writtenFor !== "No" && <Field label="Production title" id="productionTitle" value={metadata.productionTitle} placeholder="Name of the film, show or ad" onChange={(v) => update("productionTitle", v)} />}
-            </FormSection>}
-
-            {full && <FormSection title={metadata.bmiWriterPublishing && !count(metadata.publishers) ? "Publishers · BMI pays the publisher share" : metadata.selfPublished && !count(metadata.publishers) ? "Publishers · self-published" : `Publishers · ${count(metadata.publishers)}`} open={publishersWarn} warn={publishersWarn} summary={metadata.bmiWriterPublishing && !count(metadata.publishers) ? "BMI writer, no publishing company" : metadata.selfPublished ? "No publisher" : (metadata.publishers ?? []).filter(creditName).map(creditName).join(", ") || "Who publishes the song"}>
-              {metadata.bmiWriterPublishing && count(metadata.publishers) > 0 && <p className="text-sm">⚠️ You said there's no publishing company but also listed a publisher. Uncheck the BMI box, or remove the publisher.</p>}
-              {pie.parts.length > 0 && <p className={`text-sm ${pie.state === "ok" ? "text-muted-foreground" : "font-medium"}`}>{pie.state === "ok" ? "✓ " : "⚠️ "}Publisher shares: {pie.total}% of 100% ({pie.parts.map((p) => `${p.label} ${p.share}%`).join(" · ")})</p>}
-              {(!metadata.selfPublished || count(metadata.publishers) > 0) && <Contributors bare title="Publishers" singular="publisher" group="publishers" rows={metadata.publishers} saved={people.publishers} disabled={busy} publisher onChange={(rows) => update("publishers", rows)} tip={GLOSSARY.publisher.text} />}
-              {metadata.selfPublished && count(metadata.publishers) > 0 && <p className="text-sm">⚠️ You checked Self-published but also listed a publisher. Uncheck Self-published, or remove the publisher.</p>}
-            </FormSection>}
-
-            {full && <FormSection title="Master ownership" disabled={busy} summary={`${metadata.masterShare || "100"}% · ${metadata.masterBasis === "Collections Designee" ? "Authorized designee" : "Owner"}`}>
-              <div className="grid gap-5 sm:grid-cols-2">
-                <Field label="Share of the master you own (%)" id="masterShare" value={metadata.masterShare} placeholder="100" tip={TIPS.masterShare} onChange={(v) => update("masterShare", percentInput(v))} />
-                <div className="space-y-2">
-                  <Label>Your claim<Tip text={TIPS.masterBasis} title="Your claim" /></Label>
-                  <Choice id="masterBasis" label="Your claim" value={metadata.masterBasis} options={MASTER_BASES} labels={{ "Copyright Owner": "I own it", "Collections Designee": "Authorized designee" }} onChange={(v) => update("masterBasis", v as Metadata["masterBasis"])} />
-                </div>
-                <RightsDate label="Rights start" id="rightsStart" check="Inception" tip={TIPS.inception} value={metadata.rightsStart} disabled={busy} onChange={(v) => update("rightsStart", v)} onCheck={(v) => update("rightsStartInception", v)} />
-                <RightsDate label="Rights end" id="rightsEnd" check="Perpetuity" tip={TIPS.perpetuity} value={metadata.rightsEnd} disabled={busy} onChange={(v) => update("rightsEnd", v)} onCheck={(v) => update("rightsEndPerpetuity", v)} />
-              </div>
-            </FormSection>}
-
-            <FormSection title="Identifiers" open={!full} disabled={busy} summary={filled([["ISRC", metadata.isrc], ["UPC", metadata.upc], ["ISWC", metadata.iswc]]) || "ISRC, UPC, ISWC"}>
-              <div className="grid gap-5 sm:grid-cols-3">
-                <Field label="ISRC" term="isrc" id="isrc" value={metadata.isrc} placeholder="USABC2600001" onChange={(value) => update("isrc", value)} />
-                <Field label="UPC / EAN" term="upc" id="upc" value={metadata.upc} placeholder="12 or 13 digits" onChange={(value) => update("upc", value)} />
-                <div className="space-y-2">
-                  {/* Applied for and waiting on the PRO (founder, 2026-11-12): the member's own answer, so the checklist
-                      stops asking for a code nobody has yet. */}
-                  <label className="flex items-start gap-2 text-xs font-semibold leading-snug">
-                    <input type="checkbox" className="mt-0.5 h-4 w-4" aria-label="Awaiting PRO approval for the ISWC"
-                      checked={metadata.iswcPending} disabled={busy}
-                      onChange={(e) => update("iswcPending", e.target.checked)} />
-                    <span>Awaiting PRO approval for the ISWC</span>
-                  </label>
-                  <Field label="ISWC (optional)" term="iswc" id="iswc" value={metadata.iswc} placeholder="T-123.456.789-0" onChange={(value) => update("iswc", value)} />
-                  {metadata.iswcPending && (() => {
-                    const reminder = iswcReminder(metadata.iswcCheckOn, metadata.title, typeof window === "undefined" ? "" : window.location.origin);
-                    return (
-                      <div className="rounded-lg border border-border bg-muted/40 p-2 text-xs">
-                        <label className="flex flex-wrap items-center gap-2">
-                          <span className="font-semibold">Remind me to check on</span>
-                          <input type="date" aria-label="Remind me to check the ISWC on" disabled={busy}
-                            className="rounded-md border border-input bg-background px-2 py-1"
-                            value={metadata.iswcCheckOn} onChange={(e) => update("iswcCheckOn", e.target.value)} />
-                        </label>
-                        {reminder ? (
-                          <div className="mt-2 flex flex-wrap gap-3">
-                            <a className="font-semibold text-primary underline" href={reminder.google} target="_blank" rel="noopener noreferrer">Add to Google Calendar</a>
-                            <button type="button" className="font-semibold text-primary underline"
-                              onClick={() => {
-                                const url = URL.createObjectURL(new Blob([reminder.ics], { type: "text/calendar" }));
-                                const link = Object.assign(document.createElement("a"), { href: url, download: "ISWC reminder.ics" });
-                                link.click();
-                                setTimeout(() => URL.revokeObjectURL(url), 1000);
-                              }}>
-                              Download calendar file
+                    {miss.length > 0 && (
+                      <ul className="mt-2 space-y-1">
+                        {miss.map((i) => (
+                          <li key={i.field + i.message}>
+                            <button
+                              type="button"
+                              className="text-left hover:text-primary"
+                              onClick={() => jumpTo(i.field)}
+                            >
+                              ⚠️ {i.message}
                             </button>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                    {miss.length > 0 && (
+                      <p className="mt-2 text-muted-foreground">
+                        Fix these and click Update in My Catalog, then continue your registration.
+                      </p>
+                    )}
+                    {onExpert && (
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant={miss.length ? "outline" : "default"}
+                        className="mt-3"
+                        onClick={onExpert}
+                      >
+                        Continue Expert Registration
+                      </Button>
+                    )}
+                  </div>
+                );
+              })()}
+            <fieldset disabled={busy} className="grid gap-5 sm:grid-cols-[1fr_220px]">
+              <div
+                onDragOver={(event) => event.preventDefault()}
+                onDrop={(event) => {
+                  event.preventDefault();
+                  if (!busy) void addFiles(event.dataTransfer.files);
+                }}
+                className="flex min-h-44 flex-col items-center justify-center gap-3 rounded-lg border border-dashed border-primary bg-accent/30 p-5 text-center"
+              >
+                {/* The brand mark sits where the uploader used to show a plain file icon (founder, 11/3/2026): the light
+                mark on light surfaces, the white one in Studio Mode, so it reads on both themes. */}
+                <img
+                  src="/cta-mark-dark.png"
+                  alt=""
+                  aria-hidden
+                  className="mark-on-light h-11 w-11 object-contain"
+                />
+                <img
+                  src="/cta-mark-light.png"
+                  alt=""
+                  aria-hidden
+                  className="mark-on-dark h-11 w-11 object-contain"
+                />
+                <div className="max-w-full break-all text-sm font-semibold">
+                  {audio
+                    ? audio.name
+                    : full
+                      ? editingId
+                        ? "Re-embed"
+                        : "MP3 or WAV (optional)"
+                      : "Audio file"}
+                </div>
+                {full && editingId && !audio && (
+                  <span className="max-w-xs text-xs text-muted-foreground">
+                    Choose this song's master again: we embed everything saved here, plus what you
+                    add now (codes, producer credits), save the new master and you can download it.
+                  </span>
+                )}
+                {audio && (
+                  <span className="text-xs text-muted-foreground">
+                    {(audio.size / 1024 / 1024).toFixed(1)} MB
+                  </span>
+                )}
+                <Button type="button" variant="outline" onClick={() => audioInput.current?.click()}>
+                  <Upload />
+                  {audio
+                    ? full
+                      ? "Choose a different file"
+                      : "Add more songs"
+                    : full
+                      ? editingId
+                        ? "Re-embed"
+                        : "Choose MP3 or WAV"
+                      : "Choose MP3s or WAVs"}
+                </Button>
+                {!full && !audio && (
+                  <span className="text-xs text-muted-foreground">
+                    Drop a whole EP or album. Songs wait in your session queue.
+                  </span>
+                )}
+                <input
+                  id="audio"
+                  ref={audioInput}
+                  type="file"
+                  accept=".mp3,.wav,audio/mpeg,audio/wav,audio/x-wav"
+                  multiple={!full}
+                  aria-label="MP3 or WAV audio files"
+                  className="sr-only"
+                  onChange={(event) => {
+                    if (event.target.files) void addFiles([...event.target.files]);
+                    event.target.value = "";
+                  }}
+                />
+              </div>
+              <div className="flex min-h-44 flex-col items-center justify-center gap-3 rounded-lg border border-dashed border-border p-4">
+                {cover ? (
+                  <img
+                    src={cover}
+                    alt="Selected cover artwork"
+                    className="h-20 w-20 rounded object-cover"
+                  />
+                ) : (
+                  <ImagePlus className="h-8 w-8 text-primary" />
+                )}
+                <Button type="button" variant="ghost" onClick={() => artInput.current?.click()}>
+                  {artwork ? "Replace artwork" : "Add cover art"}
+                </Button>
+                {coverRestored && (
+                  <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[11px] font-semibold text-primary">
+                    Your last cover
+                  </span>
+                )}
+                <p className="text-center text-xs text-muted-foreground">
+                  3000x3000px recommended (streaming standard). JPEG or PNG; any standard album size
+                  works.
+                </p>
+                {artwork && (
+                  <Button
+                    type="button"
+                    size="icon"
+                    variant="ghost"
+                    aria-label="Remove cover artwork"
+                    onClick={() => {
+                      putArtwork(undefined);
+                      setResult(undefined);
+                    }}
+                  >
+                    <Trash2 />
+                  </Button>
+                )}
+                <input
+                  id="artwork"
+                  ref={artInput}
+                  type="file"
+                  accept="image/jpeg,image/png"
+                  aria-label="Cover artwork"
+                  className="sr-only"
+                  onChange={(event) => {
+                    const file = event.target.files?.[0];
+                    if (file && !["image/jpeg", "image/png"].includes(file.type)) {
+                      setError("Choose JPEG or PNG artwork.");
+                      return;
+                    }
+                    putArtwork(file);
+                    setResult(undefined);
+                    setError("");
+                    event.target.value = "";
+                    if (file)
+                      makeThumb(file)
+                        .then((t) => setMetadata((m) => ({ ...m, coverThumb: t })))
+                        .catch(() => {});
+                  }}
+                />
+              </div>
+            </fieldset>
+
+            {(() => {
+              const r = registrationReadiness(metadata);
+              // Embed never shows or writes splits, so split warnings belong to My Catalog only (founder, 2026-10-27).
+              const warnIn = (...prefixes: string[]) =>
+                [...r.missing, ...(full ? r.warnings : [])].some((i) =>
+                  prefixes.some((p) => i.field.startsWith(p)),
+                );
+              const count = (rows: Contributor[] | undefined) =>
+                (rows ?? []).filter(creditName).length;
+              const filled = (pairs: [string, string][]) =>
+                pairs
+                  .filter(([, v]) => v.trim())
+                  .map(([k]) => k)
+                  .join(" · ");
+              const writersWarn = warnIn("writers-", "composers-");
+              // PRO and IPI are asked by a PRO and The MLC, not by the core rule (readiness.ts), so this section says what
+              // is still needed instead of calling the writers ready (founder, 2026-11-13).
+              const accountGaps = proAccountGaps(metadata);
+              // The publisher half as one pie (readiness.ts): listed publishers plus Self-published / BMI-paid writers.
+              const pie = publisherPie(metadata);
+              // A usual answer from the Catalog Profile that this song still uses, so it's easy to spot and change.
+              const profile = loadProfile(userId);
+              const people = savedPeople(
+                profile,
+                library,
+                tracks.map((t) => t.metadata),
+              );
+              const fromProfile = (k: "samples" | "writtenFor") =>
+                !!profile?.[k] && profile[k] === metadata[k];
+              const publishersWarn = warnIn("publishers-", "bmiWriterPublishing");
+              // With no publisher, BMI pays the publisher share to its writers, so say so where it matters.
+              const bmiNoPublisher =
+                full &&
+                !count(metadata.publishers) &&
+                [...metadata.writers, ...metadata.composers].some((w) => creditName(w) && isBmi(w));
+              // The unreleased answer stays in the catalog: it is never written into the file, it only files the song under
+              // the Unreleased list and its pre-release checklist.
+              const unreleasedBox = (
+                <label className="flex items-start gap-2 text-sm">
+                  <input
+                    id="unreleased"
+                    type="checkbox"
+                    className="mt-0.5 h-4 w-4 accent-[var(--primary)]"
+                    checked={metadata.unreleased}
+                    onChange={(e) => update("unreleased", e.target.checked)}
+                  />
+                  <span>
+                    <span className="font-semibold">This song isn't released yet</span>
+                    <InfoTip text="Unreleased songs get a Release checklist in the Royalties and Registrations: what to have ready before you distribute. On release day they switch to the normal health reading. This answer stays in your catalog; it isn't written into the MP3." />
+                  </span>
+                </label>
+              );
+              return (
+                <div className="space-y-3">
+                  <FormSection
+                    title="Song info"
+                    open={!full || !metadata.title}
+                    disabled={busy}
+                    summary={
+                      filled([
+                        [metadata.title, metadata.title],
+                        [metadata.artist, metadata.artist],
+                      ]) || "Title and artist"
+                    }
+                  >
+                    <div className="grid gap-5 sm:grid-cols-2">
+                      <Field
+                        label="Track title"
+                        id="title"
+                        value={metadata.title}
+                        required
+                        onChange={(value) => update("title", value)}
+                      />
+                      <div>
+                        {/* The artist name comes from the profile (founder, 2026-10-25): clicking it explains where to change it. */}
+                        <div className="min-w-0 space-y-2">
+                          <Label htmlFor="artist" className="leading-5">
+                            {isExternal(metadata)
+                              ? "Recording artist (who released it)"
+                              : "Artist name *"}
+                          </Label>
+                          <div className="relative">
+                            {registeredArtist ? (
+                              <>
+                                <Input
+                                  id="artist"
+                                  value={metadata.artist}
+                                  required={!isExternal(metadata)}
+                                  readOnly
+                                  className="cursor-pointer pr-9"
+                                  onClick={() => void explainArtistName()}
+                                  onKeyDown={(e) => {
+                                    if (e.key.length === 1 || e.key === "Backspace") {
+                                      e.preventDefault();
+                                      void explainArtistName();
+                                    }
+                                  }}
+                                />
+                                <Lock className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                              </>
+                            ) : (
+                              // No profile name yet: typing stays open so nobody is stuck.
+                              <Input
+                                id="artist"
+                                value={metadata.artist}
+                                required={!isExternal(metadata)}
+                                onChange={(e) => update("artist", e.target.value)}
+                              />
+                            )}
                           </div>
-                        ) : (
-                          <p className="mt-1 text-muted-foreground">Pick the day you&apos;ll look in your PRO account.</p>
+                        </div>
+                        {registeredArtist &&
+                          metadata.artist.trim() &&
+                          normArtist(metadata.artist) !== normArtist(registeredArtist) && (
+                            <p
+                              role="note"
+                              className="mt-2 rounded-md border border-primary/50 bg-accent/30 p-2 text-xs"
+                            >
+                              This account is registered to{" "}
+                              <span className="font-semibold">{registeredArtist}</span>. Releasing
+                              as a different artist? Each artist gets their own catalog with an
+                              add-on artist account (from {ARTIST_SEAT_PRICES[0]!.price}/yr, with
+                              any paid plan). Add one from Profile → Add another artist. Featuring
+                              someone? Add them under Featured artist instead.
+                            </p>
+                          )}
+                      </div>
+                      {/* A second name the song is registered under, right under the title it belongs to (founder, 2026-11-15):
+                    an agency that files the work under that name then matches this song instead of reporting it missing. */}
+                      {full && (
+                        <ListField
+                          label="Alternate title"
+                          id="alternateTitles"
+                          tip={TIPS.alternateTitles}
+                          values={
+                            metadata.alternateTitles?.length ? metadata.alternateTitles : [""]
+                          }
+                          onChange={(v) => update("alternateTitles", v)}
+                        />
+                      )}
+                      {/* Someone else performs it (founder, 2026-11-09): the composition is the member's, the recording is not. */}
+                      <div className="space-y-2 sm:col-span-2">
+                        <label className="flex items-start gap-2 text-sm">
+                          <input
+                            id="recordingSide"
+                            type="checkbox"
+                            className="mt-0.5 h-4 w-4 accent-[var(--primary)]"
+                            checked={isExternal(metadata)}
+                            onChange={(e) =>
+                              update("recordingSide", e.target.checked ? "external" : "")
+                            }
+                          />
+                          <span>
+                            <span className="font-semibold">Someone else performs this song</span>
+                            <InfoTip text="A song you wrote that another artist records. The ISRC, artwork, UPC and SoundExchange step belong to their release, so this entry is read on the composition only." />
+                          </span>
+                        </label>
+                        {isExternal(metadata) && (
+                          <p className="text-xs text-muted-foreground">
+                            Add the artist who released it under Artist, so their release is easy to
+                            find.
+                          </p>
                         )}
                       </div>
-                    );
-                  })()}
-                </div>
-              </div>
-              {full && (
-                <div className="mt-4 space-y-2 rounded-xl border border-border p-3">
-                  {/* A code the recording used to carry (founder, 2026-11-12). Never embedded or exported: it exists so an
+                      <div className="space-y-2">
+                        {metadata.featured.map((name, index) => (
+                          <div key={index} className="flex items-end gap-2">
+                            <div className="flex-1">
+                              <Field
+                                label={
+                                  index === 0 ? "Featured artist" : `Featured artist ${index + 1}`
+                                }
+                                term={index === 0 ? "featured" : undefined}
+                                id={`featured-${index}`}
+                                value={name}
+                                onChange={(value) =>
+                                  update(
+                                    "featured",
+                                    metadata.featured.map((n, i) => (i === index ? value : n)),
+                                  )
+                                }
+                              />
+                            </div>
+                            {index === metadata.featured.length - 1 ? (
+                              <Button
+                                type="button"
+                                size="icon"
+                                variant="outline"
+                                aria-label="Add featured artist"
+                                onClick={() => update("featured", [...metadata.featured, ""])}
+                              >
+                                <Plus />
+                              </Button>
+                            ) : (
+                              <Button
+                                type="button"
+                                size="icon"
+                                variant="ghost"
+                                aria-label={`Remove featured artist ${index + 1}`}
+                                onClick={() =>
+                                  update(
+                                    "featured",
+                                    metadata.featured.filter((_, i) => i !== index),
+                                  )
+                                }
+                              >
+                                <Trash2 />
+                              </Button>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                      <Field
+                        label="Track duration"
+                        id="duration"
+                        value={metadata.duration}
+                        placeholder="03:45"
+                        onChange={(value) => update("duration", value)}
+                      />
+                      <div className="space-y-2">
+                        <Label>
+                          Explicit content
+                          <InfoTip term="explicit" />
+                        </Label>
+                        <Choice
+                          label="Explicit content"
+                          value={metadata.explicit ? "Yes" : "No"}
+                          options={["Yes", "No"]}
+                          onChange={(v) => update("explicit", v === "Yes")}
+                        />
+                      </div>
+                      <SelectField
+                        label="Primary genre"
+                        id="primaryGenre"
+                        value={metadata.primaryGenre}
+                        options={GENRES}
+                        groups={GENRE_GROUPS}
+                        onChange={(value) => update("primaryGenre", value)}
+                      />
+                      <SelectField
+                        label="Secondary genre"
+                        id="secondaryGenre"
+                        value={metadata.secondaryGenre}
+                        options={GENRES}
+                        groups={GENRE_GROUPS}
+                        onChange={(value) => update("secondaryGenre", value)}
+                      />
+                    </div>
+                  </FormSection>
+
+                  <FormSection
+                    title="Release"
+                    open={!full}
+                    disabled={busy}
+                    summary={
+                      filled([
+                        [metadata.releaseType, metadata.releaseType],
+                        [metadata.album, metadata.album],
+                        [metadata.releaseDate, metadata.releaseDate],
+                        [metadata.label, metadata.label],
+                      ]) || (full ? "Release type, album, date, label" : "Release type, label, ©")
+                    }
+                  >
+                    <div className="grid gap-5 sm:grid-cols-2">
+                      <SelectField
+                        label="Release type"
+                        term="releaseType"
+                        id="releaseType"
+                        value={metadata.releaseType}
+                        options={RELEASE_TYPES}
+                        onChange={(value) => update("releaseType", value)}
+                      />
+                      {/* Which version of the recording this is: the usual ones are suggested, and a release called something
+                    else can be typed, so no list has to be complete. A blank field is the main mix. */}
+                      <div className="min-w-0 space-y-1.5">
+                        <Label htmlFor="version">Version</Label>
+                        <Input
+                          id="version"
+                          list="track-versions"
+                          autoComplete="off"
+                          value={metadata.version ?? ""}
+                          placeholder="Leave blank for the main mix"
+                          onChange={(e) => update("version", e.target.value)}
+                        />
+                        <datalist id="track-versions">
+                          {TRACK_VERSIONS.map((v) => (
+                            <option key={v} value={v} />
+                          ))}
+                        </datalist>
+                      </div>
+                      <div className="min-w-0 space-y-2">
+                        <Label htmlFor="trackNumber">Track number</Label>
+                        <div className="flex items-center gap-3">
+                          <Input
+                            id="trackNumber"
+                            inputMode="numeric"
+                            className="w-20"
+                            value={metadata.trackNumber}
+                            placeholder="1"
+                            onChange={(e) =>
+                              update("trackNumber", e.target.value.replace(/\D/g, "").slice(0, 3))
+                            }
+                          />
+                          <span className="text-sm text-muted-foreground">of</span>
+                          <Input
+                            id="trackTotal"
+                            aria-label="Total tracks on the release"
+                            inputMode="numeric"
+                            className="w-20"
+                            value={metadata.trackTotal}
+                            placeholder="12"
+                            onChange={(e) =>
+                              update("trackTotal", e.target.value.replace(/\D/g, "").slice(0, 3))
+                            }
+                          />
+                        </div>
+                        <p className="text-xs text-muted-foreground">
+                          Example: track 1 of 12 on the album
+                        </p>
+                      </div>
+                      <Field
+                        label="Album / release title"
+                        id="album"
+                        value={metadata.album}
+                        onChange={(value) => update("album", value)}
+                      />
+                      {full && (
+                        <div className="min-w-0 space-y-2">
+                          <Field
+                            label="Release date"
+                            id="releaseDate"
+                            type="date"
+                            value={metadata.releaseDate}
+                            onChange={(value) => update("releaseDate", value)}
+                          />
+                          {/* Pre-distribution: no date picked yet, but not out. A future date counts on its own. */}
+                          {!metadata.releaseDate && unreleasedBox}
+                        </div>
+                      )}
+                      {/* Embed asks it too (founder, 2026-11-10), so a master can be filed for the unreleased path as it's embedded. */}
+                      {!full && <div className="sm:col-span-2">{unreleasedBox}</div>}
+                      {full &&
+                        metadata.instrumental &&
+                        (metadata.beatState !== "" || loadOnboarding(userId)?.sellBeats) && (
+                          <div className="sm:col-span-2">
+                            <BeatBox
+                              metadata={metadata}
+                              update={update}
+                              tracks={tracks}
+                              beatId={editingId}
+                              disabled={busy}
+                              onLink={linkMaster}
+                              onCreateMaster={createMaster}
+                            />
+                          </div>
+                        )}
+                      {full && !!metadata.beatMasterId && (
+                        <div className="sm:col-span-2">
+                          <DealBox
+                            metadata={metadata}
+                            update={update}
+                            beatTitle={
+                              tracks.find((x) => x.id === metadata.beatMasterId)?.title ?? ""
+                            }
+                            disabled={busy}
+                          />
+                        </div>
+                      )}
+                      <Field
+                        label="Record label"
+                        term="label"
+                        id="label"
+                        value={metadata.label}
+                        onChange={(value) => update("label", value)}
+                      />
+                      {/* The release's catalog number. "Release version" is gone from the catalog (founder, 2026-11-14): an edition
+                    ("Deluxe", "Remastered") is not the recording's version, and it was being read as one beside Release date. What
+                    a song already holds is kept, never rewritten. */}
+                      {full && (
+                        <>
+                          <Field
+                            label="Catalog #"
+                            id="catalogNumber"
+                            value={metadata.catalogNumber}
+                            placeholder="Your label's number"
+                            onChange={(value) => update("catalogNumber", value)}
+                          />
+                        </>
+                      )}
+                      <div className="min-w-0 space-y-2">
+                        <Label htmlFor="copyright" className="leading-5">
+                          Composition copyright (©)
+                          <InfoTip term="cLine" />
+                        </Label>
+                        <CopyrightInput
+                          symbol="©"
+                          id="copyright"
+                          value={metadata.copyright}
+                          onChange={(value) => update("copyright", value)}
+                        />
+                      </div>
+                      {/* ℗ and language are catalog details; they aren't embedded in the MP3. */}
+                      {full && (
+                        <>
+                          <div className="min-w-0 space-y-2">
+                            <Label htmlFor="phonographic" className="leading-5">
+                              Sound recording copyright (℗)
+                              <InfoTip term="pLine" />
+                            </Label>
+                            <CopyrightInput
+                              symbol="℗"
+                              id="phonographic"
+                              value={metadata.phonographic}
+                              onChange={(value) => update("phonographic", value)}
+                            />
+                          </div>
+                          <Field
+                            label="Language"
+                            id="language"
+                            value={metadata.language}
+                            onChange={(value) => update("language", value)}
+                          />
+                        </>
+                      )}
+                    </div>
+                  </FormSection>
+
+                  {/* Asked before Writers (founder, 2026-10-27), so the BMI answer is clear before writers are added. */}
+                  {full && (
+                    <FormSection
+                      title="Publishing for this song"
+                      disabled={busy}
+                      open={
+                        !metadata.selfPublished &&
+                        !metadata.bmiWriterPublishing &&
+                        !count(metadata.publishers)
+                      }
+                      ok={
+                        metadata.selfPublished ||
+                        !!metadata.bmiWriterPublishing ||
+                        count(metadata.publishers) > 0
+                      }
+                      summary={
+                        metadata.selfPublished
+                          ? "Self-published"
+                          : metadata.bmiWriterPublishing
+                            ? "BMI writer, no publishing company"
+                            : count(metadata.publishers)
+                              ? "Publisher listed below"
+                              : "Self-published, BMI, or a publisher"
+                      }
+                    >
+                      <div className="space-y-3">
+                        <label className="flex items-center gap-2 text-sm">
+                          <input
+                            id="selfPublished"
+                            type="checkbox"
+                            className="h-4 w-4 accent-[var(--primary)]"
+                            disabled={busy}
+                            checked={metadata.selfPublished}
+                            onChange={(e) => void setSelfPublished(e.target.checked)}
+                          />
+                          Self-published (no publisher)
+                          <Tip text={TIPS.selfPublished} title="Self-published" />
+                        </label>
+                        <label className="flex items-start gap-2 text-sm">
+                          <input
+                            id="bmiWriterPublishing"
+                            type="checkbox"
+                            className="mt-0.5 h-4 w-4 accent-[var(--primary)]"
+                            disabled={busy}
+                            checked={!!metadata.bmiWriterPublishing}
+                            onChange={(e) => update("bmiWriterPublishing", e.target.checked)}
+                          />
+                          <span>
+                            <span className="font-semibold">
+                              I'm a BMI writer with no publishing company
+                            </span>
+                            <Tip
+                              text={TIPS.bmiWriterPublishing}
+                              title="BMI writer, no publishing company"
+                            />
+                            <span className="block text-muted-foreground">
+                              BMI pays you both halves of your royalties, the writer share and the
+                              publisher share, so you don't need a publisher or a publisher IPI.
+                              Tick this only if every writer on the song is with BMI; it's why a
+                              song can reach 100% without a publisher.
+                            </span>
+                          </span>
+                        </label>
+                        {bmiNoPublisher && !metadata.bmiWriterPublishing && (
+                          <p className="rounded-lg border border-primary/40 bg-accent/30 p-3 text-sm text-muted-foreground">
+                            <span className="font-semibold text-foreground">
+                              💡 No publisher? BMI has you covered.
+                            </span>{" "}
+                            When a song has no publisher, BMI pays the publisher share to the
+                            writers automatically. It's split between all the writers in proportion
+                            to their writer splits, so a 60/40 split gets 60% and 40% of the
+                            publisher share too. Check the box above so your songs say so.
+                          </p>
+                        )}
+                        {metadata.bmiWriterPublishing &&
+                          notBmiWriters(metadata).length > 0 &&
+                          !count(metadata.publishers) && (
+                            <p className="text-sm">
+                              ⚠️ {notBmiWriters(metadata).join(", ")}{" "}
+                              {notBmiWriters(metadata).length === 1 ? "isn't" : "aren't"} with BMI,
+                              so BMI can't pay the publisher share for them. Add their publisher, or
+                              check Self-published.
+                            </p>
+                          )}
+                        <p className="text-xs text-muted-foreground">
+                          Have a publishing company? Leave both unchecked and add it under
+                          Publishers below.
+                        </p>
+                      </div>
+                    </FormSection>
+                  )}
+
+                  <div id="writers" className="scroll-mt-24">
+                    <FormSection
+                      title={`Writers · ${count(metadata.writers)}`}
+                      open={!full || writersWarn}
+                      warn={writersWarn}
+                      ok={!writersWarn && count(metadata.writers) > 0 && accountGaps.length === 0}
+                      summary={
+                        writersWarn
+                          ? "Needs info to register"
+                          : count(metadata.writers)
+                            ? accountGaps.length
+                              ? "PRO or IPI still needed"
+                              : "Ready to register"
+                            : "Who wrote the song"
+                      }
+                    >
+                      <Contributors
+                        bare
+                        title="Writers"
+                        singular="writer"
+                        group="writers"
+                        writer
+                        rows={metadata.writers}
+                        saved={people.writers}
+                        disabled={busy}
+                        onChange={(rows) => update("writers", rows)}
+                        songPublishing={
+                          full
+                            ? metadata.selfPublished
+                              ? "Self-published (the song's answer)"
+                              : metadata.bmiWriterPublishing
+                                ? "The song's answer (BMI pays BMI writers)"
+                                : ""
+                            : undefined
+                        }
+                        collectsPublishing={
+                          full
+                            ? (row) =>
+                                pie.parts.some(
+                                  (p) =>
+                                    p.field.startsWith("writers-") &&
+                                    metadata.writers[Number(p.field.split("-")[1])] === row,
+                                )
+                            : undefined
+                        }
+                        tip={
+                          full
+                            ? "Choose Author (lyrics/melody), Composer (music/beat) or Author/Composer for each writer. Writer splits must total 100%."
+                            : undefined
+                        }
+                        simple={!full}
+                        rowNote={(row) =>
+                          bmiNoPublisher &&
+                          isBmi(row) && (
+                            <p className="text-sm text-muted-foreground">
+                              💡 With no publisher, BMI pays this writer's part of the publisher
+                              share too, in proportion to their split.
+                            </p>
+                          )
+                        }
+                      >
+                        <label className="flex items-center gap-2 text-sm">
+                          <input
+                            id="instrumental"
+                            type="checkbox"
+                            className="h-4 w-4 accent-[var(--primary)]"
+                            checked={metadata.instrumental}
+                            onChange={(e) => update("instrumental", e.target.checked)}
+                          />
+                          Instrumental (no lyrics)
+                          <Tip text={TIPS.instrumental} />
+                        </label>
+                      </Contributors>
+                      <ReadinessPanel metadata={metadata} embed={!full} />
+                      {full && (
+                        <p className="rounded-lg border border-primary/40 bg-accent/30 p-3 text-sm text-muted-foreground">
+                          <span className="font-semibold text-foreground">
+                            No PRO or IPI number yet?
+                          </span>{" "}
+                          Leave them blank. Add them anytime after you register with a PRO and
+                          receive your IPI name number.
+                        </p>
+                      )}
+                    </FormSection>
+                  </div>
+                  {full && metadata.composers.some(creditName) && (
+                    <FormSection
+                      title={`Composers (earlier entries) · ${count(metadata.composers)}`}
+                      open={writersWarn}
+                      warn={warnIn("composers-")}
+                      summary="Move these into Writers"
+                    >
+                      <Contributors
+                        bare
+                        title="Composers (earlier entries)"
+                        singular="composer"
+                        group="composers"
+                        rows={metadata.composers}
+                        saved={people.writers}
+                        disabled={busy}
+                        onChange={(rows) => update("composers", rows)}
+                        tip="Saved before Writer roles existed. Move these into Writer with the Composer role when you can."
+                      />
+                    </FormSection>
+                  )}
+
+                  <FormSection
+                    title={`Producers · ${count(metadata.producers)}`}
+                    open={!full}
+                    summary={
+                      (metadata.producers ?? []).filter(creditName).map(creditName).join(", ") ||
+                      "Produced by"
+                    }
+                  >
+                    <Contributors
+                      bare
+                      title="Producers"
+                      singular="producer"
+                      group="producers"
+                      rows={metadata.producers ?? [emptyContributor()]}
+                      saved={people.producers}
+                      disabled={busy}
+                      onChange={(rows) => update("producers", rows)}
+                      simple
+                      tip={GLOSSARY.producedBy.text}
+                      tipOnly
+                    />
+                  </FormSection>
+
+                  <FormSection
+                    title="Performers & recording"
+                    open={!full}
+                    summary={
+                      filled([
+                        [
+                          `${metadata.credits.length} credit${metadata.credits.length === 1 ? "" : "s"}`,
+                          metadata.credits.length ? "x" : "",
+                        ],
+                        [metadata.recordedIn, metadata.recordedIn],
+                        [metadata.recordedYear, metadata.recordedYear],
+                      ]) || "Optional"
+                    }
+                  >
+                    <Performers bare metadata={metadata} disabled={busy} update={update} />
+                  </FormSection>
+
+                  {full && (
+                    <FormSection
+                      title="Song origins"
+                      disabled={busy}
+                      summary={
+                        metadata.samples && metadata.writtenFor
+                          ? `Sample: ${metadata.samples} · Written for: ${metadata.writtenFor}`
+                          : "Not answered yet"
+                      }
+                      ok={!!(metadata.samples && metadata.writtenFor)}
+                    >
+                      <div className="space-y-2">
+                        <Label>
+                          Uses a sample or based on another song?
+                          <Tip text={TIPS.samples} title="Samples" />
+                        </Label>
+                        <Choice
+                          id="samples"
+                          label="Uses a sample or based on another song"
+                          value={metadata.samples}
+                          options={["No", "Yes"]}
+                          onChange={(v) => update("samples", v as Metadata["samples"])}
+                        />
+                        {fromProfile("samples") && (
+                          <p className="text-xs text-muted-foreground">
+                            From your profile. Change it if this song is different.
+                          </p>
+                        )}
+                      </div>
+                      {metadata.samples === "Yes" && (
+                        <div className="grid gap-5 sm:grid-cols-3">
+                          <Field
+                            label="Original song title"
+                            id="sampleTitle"
+                            value={metadata.sampleTitle}
+                            onChange={(v) => update("sampleTitle", v)}
+                          />
+                          <Field
+                            label="Original writers"
+                            id="sampleWriters"
+                            value={metadata.sampleWriters}
+                            placeholder="Names, comma separated"
+                            onChange={(v) => update("sampleWriters", v)}
+                          />
+                          <Field
+                            label="Source"
+                            id="sampleSource"
+                            value={metadata.sampleSource}
+                            placeholder="Recording, or Public domain"
+                            onChange={(v) => update("sampleSource", v)}
+                          />
+                        </div>
+                      )}
+                      <div className="space-y-2">
+                        <Label>
+                          Written for film, TV, stage or an ad?
+                          <Tip text={TIPS.writtenFor} title="Written for" />
+                        </Label>
+                        <Choice
+                          id="writtenFor"
+                          label="Written for film, TV, stage or an ad"
+                          value={metadata.writtenFor}
+                          options={["No", ...PRODUCTION_TYPES]}
+                          onChange={(v) => update("writtenFor", v as Metadata["writtenFor"])}
+                        />
+                        {fromProfile("writtenFor") && (
+                          <p className="text-xs text-muted-foreground">
+                            From your profile. Change it if this song is different.
+                          </p>
+                        )}
+                      </div>
+                      {metadata.writtenFor && metadata.writtenFor !== "No" && (
+                        <Field
+                          label="Production title"
+                          id="productionTitle"
+                          value={metadata.productionTitle}
+                          placeholder="Name of the film, show or ad"
+                          onChange={(v) => update("productionTitle", v)}
+                        />
+                      )}
+                    </FormSection>
+                  )}
+
+                  {full && (
+                    <FormSection
+                      title={
+                        metadata.bmiWriterPublishing && !count(metadata.publishers)
+                          ? "Publishers · BMI pays the publisher share"
+                          : metadata.selfPublished && !count(metadata.publishers)
+                            ? "Publishers · self-published"
+                            : `Publishers · ${count(metadata.publishers)}`
+                      }
+                      open={publishersWarn}
+                      warn={publishersWarn}
+                      summary={
+                        metadata.bmiWriterPublishing && !count(metadata.publishers)
+                          ? "BMI writer, no publishing company"
+                          : metadata.selfPublished
+                            ? "No publisher"
+                            : (metadata.publishers ?? [])
+                                .filter(creditName)
+                                .map(creditName)
+                                .join(", ") || "Who publishes the song"
+                      }
+                    >
+                      {metadata.bmiWriterPublishing && count(metadata.publishers) > 0 && (
+                        <p className="text-sm">
+                          ⚠️ You said there's no publishing company but also listed a publisher.
+                          Uncheck the BMI box, or remove the publisher.
+                        </p>
+                      )}
+                      {pie.parts.length > 0 && (
+                        <p
+                          className={`text-sm ${pie.state === "ok" ? "text-muted-foreground" : "font-medium"}`}
+                        >
+                          {pie.state === "ok" ? "✓ " : "⚠️ "}Publisher shares: {pie.total}% of 100%
+                          ({pie.parts.map((p) => `${p.label} ${p.share}%`).join(" · ")})
+                        </p>
+                      )}
+                      {(!metadata.selfPublished || count(metadata.publishers) > 0) && (
+                        <Contributors
+                          bare
+                          title="Publishers"
+                          singular="publisher"
+                          group="publishers"
+                          rows={metadata.publishers}
+                          saved={people.publishers}
+                          disabled={busy}
+                          publisher
+                          onChange={(rows) => update("publishers", rows)}
+                          tip={GLOSSARY.publisher.text}
+                        />
+                      )}
+                      {metadata.selfPublished && count(metadata.publishers) > 0 && (
+                        <p className="text-sm">
+                          ⚠️ You checked Self-published but also listed a publisher. Uncheck
+                          Self-published, or remove the publisher.
+                        </p>
+                      )}
+                    </FormSection>
+                  )}
+
+                  {full && (
+                    <FormSection
+                      title="Master ownership"
+                      disabled={busy}
+                      summary={`${metadata.masterShare || "100"}% · ${metadata.masterBasis === "Collections Designee" ? "Authorized designee" : "Owner"}`}
+                    >
+                      <div className="grid gap-5 sm:grid-cols-2">
+                        <Field
+                          label="Share of the master you own (%)"
+                          id="masterShare"
+                          value={metadata.masterShare}
+                          placeholder="100"
+                          tip={TIPS.masterShare}
+                          onChange={(v) => update("masterShare", percentInput(v))}
+                        />
+                        <div className="space-y-2">
+                          <Label>
+                            Your claim
+                            <Tip text={TIPS.masterBasis} title="Your claim" />
+                          </Label>
+                          <Choice
+                            id="masterBasis"
+                            label="Your claim"
+                            value={metadata.masterBasis}
+                            options={MASTER_BASES}
+                            labels={{
+                              "Copyright Owner": "I own it",
+                              "Collections Designee": "Authorized designee",
+                            }}
+                            onChange={(v) => update("masterBasis", v as Metadata["masterBasis"])}
+                          />
+                        </div>
+                        <RightsDate
+                          label="Rights start"
+                          id="rightsStart"
+                          check="Inception"
+                          tip={TIPS.inception}
+                          value={metadata.rightsStart}
+                          disabled={busy}
+                          onChange={(v) => update("rightsStart", v)}
+                          onCheck={(v) => update("rightsStartInception", v)}
+                        />
+                        <RightsDate
+                          label="Rights end"
+                          id="rightsEnd"
+                          check="Perpetuity"
+                          tip={TIPS.perpetuity}
+                          value={metadata.rightsEnd}
+                          disabled={busy}
+                          onChange={(v) => update("rightsEnd", v)}
+                          onCheck={(v) => update("rightsEndPerpetuity", v)}
+                        />
+                      </div>
+                    </FormSection>
+                  )}
+
+                  <FormSection
+                    title="Identifiers"
+                    open={!full}
+                    disabled={busy}
+                    summary={
+                      filled([
+                        ["ISRC", metadata.isrc],
+                        ["UPC", metadata.upc],
+                        ["ISWC", metadata.iswc],
+                      ]) || "ISRC, UPC, ISWC"
+                    }
+                  >
+                    <div className="grid gap-5 sm:grid-cols-3">
+                      <Field
+                        label="ISRC"
+                        term="isrc"
+                        id="isrc"
+                        value={metadata.isrc}
+                        placeholder="USABC2600001"
+                        onChange={(value) => update("isrc", value)}
+                      />
+                      <Field
+                        label="UPC / EAN"
+                        term="upc"
+                        id="upc"
+                        value={metadata.upc}
+                        placeholder="12 or 13 digits"
+                        onChange={(value) => update("upc", value)}
+                      />
+                      <div className="space-y-2">
+                        {/* Applied for and waiting on the PRO (founder, 2026-11-12): the member's own answer, so the checklist
+                      stops asking for a code nobody has yet. */}
+                        <label className="flex items-start gap-2 text-xs font-semibold leading-snug">
+                          <input
+                            type="checkbox"
+                            className="mt-0.5 h-4 w-4"
+                            aria-label="Awaiting PRO approval for the ISWC"
+                            checked={metadata.iswcPending}
+                            disabled={busy}
+                            onChange={(e) => update("iswcPending", e.target.checked)}
+                          />
+                          <span>Awaiting PRO approval for the ISWC</span>
+                        </label>
+                        <Field
+                          label="ISWC (optional)"
+                          term="iswc"
+                          id="iswc"
+                          value={metadata.iswc}
+                          placeholder="T-123.456.789-0"
+                          onChange={(value) => update("iswc", value)}
+                        />
+                        {metadata.iswcPending &&
+                          (() => {
+                            const reminder = iswcReminder(
+                              metadata.iswcCheckOn,
+                              metadata.title,
+                              typeof window === "undefined" ? "" : window.location.origin,
+                            );
+                            return (
+                              <div className="rounded-lg border border-border bg-muted/40 p-2 text-xs">
+                                <label className="flex flex-wrap items-center gap-2">
+                                  <span className="font-semibold">Remind me to check on</span>
+                                  <input
+                                    type="date"
+                                    aria-label="Remind me to check the ISWC on"
+                                    disabled={busy}
+                                    className="rounded-md border border-input bg-background px-2 py-1"
+                                    value={metadata.iswcCheckOn}
+                                    onChange={(e) => update("iswcCheckOn", e.target.value)}
+                                  />
+                                </label>
+                                {reminder ? (
+                                  <div className="mt-2 flex flex-wrap gap-3">
+                                    <a
+                                      className="font-semibold text-primary underline"
+                                      href={reminder.google}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                    >
+                                      Add to Google Calendar
+                                    </a>
+                                    <button
+                                      type="button"
+                                      className="font-semibold text-primary underline"
+                                      onClick={() => {
+                                        const url = URL.createObjectURL(
+                                          new Blob([reminder.ics], { type: "text/calendar" }),
+                                        );
+                                        const link = Object.assign(document.createElement("a"), {
+                                          href: url,
+                                          download: "ISWC reminder.ics",
+                                        });
+                                        link.click();
+                                        setTimeout(() => URL.revokeObjectURL(url), 1000);
+                                      }}
+                                    >
+                                      Download calendar file
+                                    </button>
+                                  </div>
+                                ) : (
+                                  <p className="mt-1 text-muted-foreground">
+                                    Pick the day you&apos;ll look in your PRO account.
+                                  </p>
+                                )}
+                              </div>
+                            );
+                          })()}
+                      </div>
+                    </div>
+                    {full && (
+                      <div className="mt-4 space-y-2 rounded-xl border border-border p-3">
+                        {/* A code the recording used to carry (founder, 2026-11-12). Never embedded or exported: it exists so an
                       agency still reporting under the old code is recognised as this recording, not as a mismatch. */}
-                  <ListField label="Retired ISRC" id="retiredIscrs" tip={TIPS.retiredIscrs}
-                    values={metadata.retiredIscrs?.length ? metadata.retiredIscrs : [""]}
-                    onChange={(v) => update("retiredIscrs", v)} />
-                  <p className="text-xs text-muted-foreground">
-                    A code this recording used to carry (replaced, taken down, moved distributor). Never embedded or exported — it lets an agency still reporting under the old code read as this song. The agency keeps both codes: an old one can still carry uncollected royalties years later, so it is added to, never swapped out. Add the new code yourself in your agency account, or have CTA's Expert Registration Assistance do it.
-                  </p>
-                  {/* The process, in the member's own hands (founder, 2026-11-12): their agency account, or our team doing
+                        <ListField
+                          label="Retired ISRC"
+                          id="retiredIscrs"
+                          tip={TIPS.retiredIscrs}
+                          values={metadata.retiredIscrs?.length ? metadata.retiredIscrs : [""]}
+                          onChange={(v) => update("retiredIscrs", v)}
+                        />
+                        <p className="text-xs text-muted-foreground">
+                          A code this recording used to carry (replaced, taken down, moved
+                          distributor). Never embedded or exported — it lets an agency still
+                          reporting under the old code read as this song. The agency keeps both
+                          codes: an old one can still carry uncollected royalties years later, so it
+                          is added to, never swapped out. Add the new code yourself in your agency
+                          account, or have CTA's Expert Registration Assistance do it.
+                        </p>
+                        {/* The process, in the member's own hands (founder, 2026-11-12): their agency account, or our team doing
                       it. Closed until asked for, so it never crowds the form. */}
-                  <details className="text-xs">
-                    <summary className="cursor-pointer font-semibold text-primary">How the old code gets updated</summary>
-                    <ol className="mt-2 space-y-1.5">
-                      {RETIRE_STEPS.map((step) => (
-                        <li key={step.title}>
-                          <span className="font-semibold">{step.title}</span>{" "}
-                          <span className="text-muted-foreground">{step.body}</span>
-                        </li>
-                      ))}
-                    </ol>
-                  </details>
+                        <details className="text-xs">
+                          <summary className="cursor-pointer font-semibold text-primary">
+                            How the old code gets updated
+                          </summary>
+                          <ol className="mt-2 space-y-1.5">
+                            {RETIRE_STEPS.map((step) => (
+                              <li key={step.title}>
+                                <span className="font-semibold">{step.title}</span>{" "}
+                                <span className="text-muted-foreground">{step.body}</span>
+                              </li>
+                            ))}
+                          </ol>
+                        </details>
+                      </div>
+                    )}
+                    <InfoTip
+                      title="Pre-Distribution Note"
+                      text={`${PRE_DIST_NOTE} ⭐ Pro Tip: ${PRO_TIP}`}
+                      className="inline-flex items-center rounded-full border border-primary px-3 py-1 text-sm font-semibold text-primary"
+                    >
+                      💡 Pre-Distribution Note
+                    </InfoTip>
+                  </FormSection>
+
+                  {/* The agency answers the song itself doesn't carry (founder, 2026-11-12). Catalog-only, never embedded:
+                they exist so a SoundExchange filing is complete, and they arrive filled from the catalog defaults. */}
+                  {full && (
+                    <FormSection
+                      title="Agency answers"
+                      disabled={busy}
+                      summary={
+                        filled([
+                          ["mastered in", metadata.masteredIn],
+                          ["owner country", metadata.ownerNationality],
+                          [
+                            "release country",
+                            metadata.releaseCountry || metadata.firstReleaseCountry,
+                          ],
+                          ["territories", metadata.collectionTerritories],
+                        ]) || "Not set yet"
+                      }
+                    >
+                      <div className="grid gap-5 sm:grid-cols-2">
+                        <CountrySelect
+                          id="masteredIn"
+                          label="Mastered in (country)"
+                          value={metadata.masteredIn}
+                          placeholder="Not set"
+                          onChange={(v) => update("masteredIn", v)}
+                        />
+                        <CountrySelect
+                          id="ownerNationality"
+                          label="Copyright owner's country"
+                          value={metadata.ownerNationality}
+                          placeholder="Not set"
+                          onChange={(v) => update("ownerNationality", v)}
+                        />
+                        <CountrySelect
+                          id="firstReleaseCountry"
+                          label="Country of first release"
+                          value={metadata.firstReleaseCountry}
+                          placeholder="Not set"
+                          onChange={(v) => update("firstReleaseCountry", v)}
+                        />
+                        <CountrySelect
+                          id="releaseCountry"
+                          label="Country of release"
+                          value={metadata.releaseCountry}
+                          placeholder="Not set"
+                          onChange={(v) => update("releaseCountry", v)}
+                        />
+                        <div className="min-w-0 space-y-2">
+                          <Label htmlFor="collectionTerritories">
+                            Territories of collection rights
+                            <Tip
+                              text="The United States is already on a SoundExchange claim, so this is where else the recording earns. If the song is out worldwide on streaming, choose Worldwide."
+                              title="Territories of collection rights"
+                            />
+                          </Label>
+                          <TerritoriesField
+                            id="collectionTerritories"
+                            value={metadata.collectionTerritories}
+                            onChange={(v) => update("collectionTerritories", v)}
+                          />
+                          <p className="text-xs text-muted-foreground">
+                            Released worldwide on streaming? Choose Worldwide.
+                          </p>
+                        </div>
+                      </div>
+                      <p className="mt-3 text-xs text-muted-foreground">
+                        SoundExchange asks for these on its ISRC ingest. They are never embedded in
+                        a master — set them once in Profile → Edit profile → Catalog Defaults and
+                        each new song arrives with them.
+                      </p>
+                      {(() => {
+                        // A hint, never a score (founder, 2026-11-12): blank answers don't hold back saving, exporting or the health meter.
+                        const blank = [
+                          ["mastered in country", metadata.masteredIn],
+                          ["copyright owner's country", metadata.ownerNationality],
+                          ["country of first release", metadata.firstReleaseCountry],
+                          ["country of release", metadata.releaseCountry],
+                          ["non-US territories", metadata.collectionTerritories],
+                        ]
+                          .filter(([, v]) => !String(v).trim())
+                          .map(([label]) => label);
+                        return blank.length ? (
+                          <p className="mt-1 text-xs text-muted-foreground">
+                            Still blank, and optional: {blank.join(", ")}.
+                          </p>
+                        ) : null;
+                      })()}
+                    </FormSection>
+                  )}
+
+                  <FormSection
+                    title="Lyrics"
+                    open={!full}
+                    disabled={busy}
+                    summary={metadata.lyrics.trim() ? "Added" : "None yet"}
+                  >
+                    <textarea
+                      id="lyrics"
+                      aria-label="Lyrics"
+                      rows={6}
+                      value={metadata.lyrics}
+                      onChange={(e) => update("lyrics", e.target.value)}
+                      placeholder="Paste your lyrics"
+                      className="w-full rounded-md border border-input bg-background p-3 text-sm"
+                    />
+                  </FormSection>
+                </div>
+              );
+            })()}
+
+            <div className="space-y-4 border-t border-border pt-6 pb-8">
+              {userId && !full && (
+                <p className="rounded-xl border border-primary bg-accent/30 p-4 text-sm">
+                  <span className="font-semibold">Need to change prepopulated metadata?</span>{" "}
+                  <Link to="/profile" className="font-semibold text-primary hover:underline">
+                    Go to Profile
+                  </Link>{" "}
+                  and click Edit profile, then edit Embed Defaults.
+                </p>
+              )}
+              {error && (
+                <p ref={errorRef} role="alert" className="text-sm text-destructive">
+                  {error}
+                </p>
+              )}
+              {full && savedInfo && savedInfo.trackId === editingId && !result && (
+                <SaveChecklist
+                  info={savedInfo}
+                  onProtect={() => void protectNow(savedInfo.trackId)}
+                />
+              )}
+              {result && (
+                <div role="status" className="space-y-3 rounded-xl border border-primary p-5">
+                  <p className="flex items-center gap-2 text-lg font-bold">
+                    Embedded and downloaded{" "}
+                    <span className="cta-icon cta-party cta-bedazzled-unlock" aria-hidden />
+                  </p>
+                  <ul className="space-y-1 text-sm">
+                    <li className="flex items-center gap-2">
+                      <CheckCircle2 className="h-4 w-4 text-primary" />
+                      Your details are embedded in the master
+                    </li>
+                    <li className="flex items-center gap-2">
+                      <CheckCircle2 className="h-4 w-4 text-primary" />
+                      Downloaded to this device as{" "}
+                      <span className="font-semibold">{result.name}</span>
+                    </li>
+                    <li className="flex items-center gap-2 font-semibold">
+                      ⚠️ Not in My Catalog yet: click{" "}
+                      <span className="text-primary">
+                        {editingId ? "Update in My Catalog" : "Save to My Catalog"}
+                      </span>{" "}
+                      to keep it there
+                    </li>
+                  </ul>
+                  <label className="flex items-start gap-3 text-sm">
+                    <input
+                      type="checkbox"
+                      className="mt-1 h-4 w-4 accent-[var(--primary)]"
+                      checked={aiProtect}
+                      onChange={(e) => setAiProtect(e.target.checked)}
+                    />
+                    <span>
+                      <span className="font-semibold">
+                        Add AI Protection Certificate (+${PACKAGES[0]!.price})
+                      </span>{" "}
+                      — With generative AI cloning and scraping artist catalogs at an alarming rate,
+                      secure your time-stamped proof of human origin right now to protect your music
+                      from false plagiarism claims and automated platform takedowns before
+                      downloading.
+                    </span>
+                  </label>
                 </div>
               )}
-              <InfoTip title="Pre-Distribution Note" text={`${PRE_DIST_NOTE} ⭐ Pro Tip: ${PRO_TIP}`} className="inline-flex items-center rounded-full border border-primary px-3 py-1 text-sm font-semibold text-primary">💡 Pre-Distribution Note</InfoTip>
-            </FormSection>
-
-            {/* The agency answers the song itself doesn't carry (founder, 2026-11-12). Catalog-only, never embedded:
-                they exist so a SoundExchange filing is complete, and they arrive filled from the catalog defaults. */}
-            {full && (
-              <FormSection title="Agency answers" disabled={busy}
-                summary={filled([["mastered in", metadata.masteredIn], ["owner country", metadata.ownerNationality], ["release country", metadata.releaseCountry || metadata.firstReleaseCountry], ["territories", metadata.collectionTerritories]]) || "Not set yet"}>
-                <div className="grid gap-5 sm:grid-cols-2">
-                  <CountrySelect id="masteredIn" label="Mastered in (country)" value={metadata.masteredIn} placeholder="Not set" onChange={(v) => update("masteredIn", v)} />
-                  <CountrySelect id="ownerNationality" label="Copyright owner's country" value={metadata.ownerNationality} placeholder="Not set" onChange={(v) => update("ownerNationality", v)} />
-                  <CountrySelect id="firstReleaseCountry" label="Country of first release" value={metadata.firstReleaseCountry} placeholder="Not set" onChange={(v) => update("firstReleaseCountry", v)} />
-                  <CountrySelect id="releaseCountry" label="Country of release" value={metadata.releaseCountry} placeholder="Not set" onChange={(v) => update("releaseCountry", v)} />
-                  <div className="min-w-0 space-y-2">
-                    <Label htmlFor="collectionTerritories">Territories of collection rights
-                      <Tip text="The United States is already on a SoundExchange claim, so this is where else the recording earns. If the song is out worldwide on streaming, choose Worldwide." title="Territories of collection rights" />
-                    </Label>
-                    <TerritoriesField id="collectionTerritories" value={metadata.collectionTerritories} onChange={(v) => update("collectionTerritories", v)} />
-                    <p className="text-xs text-muted-foreground">Released worldwide on streaming? Choose Worldwide.</p>
-                  </div>
-                </div>
-                <p className="mt-3 text-xs text-muted-foreground">
-                  SoundExchange asks for these on its ISRC ingest. They are never embedded in a master — set them once in Profile → Edit profile → Catalog Defaults and each new song arrives with them.
+              {result && aiProtect && (
+                <p className="-mt-1 text-sm font-semibold text-primary">
+                  Next: click Save to My Catalog, then pay ${PACKAGES[0]!.price} at checkout. You'll
+                  record your proof in the AI Protection Hub.
                 </p>
-                {(() => {
-                  // A hint, never a score (founder, 2026-11-12): blank answers don't hold back saving, exporting or the health meter.
-                  const blank = [
-                    ["mastered in country", metadata.masteredIn], ["copyright owner's country", metadata.ownerNationality],
-                    ["country of first release", metadata.firstReleaseCountry], ["country of release", metadata.releaseCountry],
-                    ["non-US territories", metadata.collectionTerritories],
-                  ].filter(([, v]) => !String(v).trim()).map(([label]) => label);
-                  return blank.length ? <p className="mt-1 text-xs text-muted-foreground">Still blank, and optional: {blank.join(", ")}.</p> : null;
-                })()}
-              </FormSection>
-            )}
-
-            <FormSection title="Lyrics" open={!full} disabled={busy} summary={metadata.lyrics.trim() ? "Added" : "None yet"}>
-              <textarea id="lyrics" aria-label="Lyrics" rows={6} value={metadata.lyrics} onChange={(e) => update("lyrics", e.target.value)} placeholder="Paste your lyrics" className="w-full rounded-md border border-input bg-background p-3 text-sm" />
-            </FormSection>
-          </div>;
-        })()}
-
-        <div className="space-y-4 border-t border-border pt-6 pb-8">
-          {userId && !full && (
-            <p className="rounded-xl border border-primary bg-accent/30 p-4 text-sm">
-              <span className="font-semibold">Need to change prepopulated metadata?</span> <Link to="/profile" className="font-semibold text-primary hover:underline">Go to Profile</Link> and click Edit profile, then edit Embed Defaults.
-            </p>
-          )}
-          {error && <p ref={errorRef} role="alert" className="text-sm text-destructive">{error}</p>}
-          {full && savedInfo && savedInfo.trackId === editingId && !result && <SaveChecklist info={savedInfo} onProtect={() => void protectNow(savedInfo.trackId)} />}
-          {result && (
-            <div role="status" className="space-y-3 rounded-xl border border-primary p-5">
-              <p className="flex items-center gap-2 text-lg font-bold">Embedded and downloaded <span className="cta-icon cta-party cta-bedazzled-unlock" aria-hidden /></p>
-              <ul className="space-y-1 text-sm">
-                <li className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-primary" />Your details are embedded in the master</li>
-                <li className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-primary" />Downloaded to this device as <span className="font-semibold">{result.name}</span></li>
-                <li className="flex items-center gap-2 font-semibold">⚠️ Not in My Catalog yet: click <span className="text-primary">{editingId ? "Update in My Catalog" : "Save to My Catalog"}</span> to keep it there</li>
-              </ul>
-              <label className="flex items-start gap-3 text-sm">
-                <input type="checkbox" className="mt-1 h-4 w-4 accent-[var(--primary)]" checked={aiProtect} onChange={(e) => setAiProtect(e.target.checked)} />
-                <span><span className="font-semibold">Add AI Protection Certificate (+${PACKAGES[0]!.price})</span> — With generative AI cloning and scraping artist catalogs at an alarming rate, secure your time-stamped proof of human origin right now to protect your music from false plagiarism claims and automated platform takedowns before downloading.</span>
-              </label>
+              )}
+              {userId && !result && (
+                <p className="text-xs text-muted-foreground">
+                  <span className="font-semibold">{OFFICIAL_MASTER_ACTION}</span> writes your
+                  details into the audio file and downloads it.{" "}
+                  <span className="font-semibold">
+                    {editingId ? "Update in My Catalog" : "Save to My Catalog"}
+                  </span>{" "}
+                  embeds it the same way and keeps the tagged master in My Catalog, without
+                  downloading.
+                </p>
+              )}
+              {!full && (
+                <p className="text-xs text-muted-foreground">
+                  <kbd className="rounded border border-border px-1.5 py-0.5">Ctrl</kbd> +{" "}
+                  <kbd className="rounded border border-border px-1.5 py-0.5 sm:inline">Enter</kbd>{" "}
+                  (<kbd className="rounded border border-border px-1.5 py-0.5">⌘</kbd> +{" "}
+                  <kbd className="rounded border border-border px-1.5 py-0.5">Enter</kbd> on Mac)
+                  embeds your details and downloads the master — the same as the button.
+                </p>
+              )}
+              {result && !full && (
+                <NextSong
+                  queue={queue}
+                  carry={carry}
+                  onCarry={setCarry}
+                  onNext={startNext}
+                  compact
+                />
+              )}
+              <div className="flex flex-wrap items-center gap-3">
+                <Button
+                  type="submit"
+                  size="lg"
+                  disabled={busy}
+                  className="h-auto min-h-10 max-w-full whitespace-normal py-2"
+                >
+                  <FileAudio />
+                  {busy ? "Embedding…" : OFFICIAL_MASTER_ACTION}
+                </Button>
+                {userId && (
+                  <Button
+                    type="button"
+                    size="lg"
+                    variant={result ? "default" : "outline"}
+                    disabled={saving}
+                    onClick={save}
+                  >
+                    <Save />
+                    {saving ? "Saving…" : editingId ? "Update in My Catalog" : "Save to My Catalog"}
+                  </Button>
+                )}
+                {full && (editingId || adding) && (
+                  <Button type="button" size="lg" variant="ghost" onClick={closeSong}>
+                    Close
+                  </Button>
+                )}
+              </div>
+              <p className="text-xs text-muted-foreground">{SOVEREIGN_BACKUP}</p>
             </div>
-          )}
-          {result && aiProtect && <p className="-mt-1 text-sm font-semibold text-primary">Next: click Save to My Catalog, then pay ${PACKAGES[0]!.price} at checkout. You'll record your proof in the AI Protection Hub.</p>}
-          {userId && !result && <p className="text-xs text-muted-foreground"><span className="font-semibold">{OFFICIAL_MASTER_ACTION}</span> writes your details into the audio file and downloads it. <span className="font-semibold">{editingId ? "Update in My Catalog" : "Save to My Catalog"}</span> embeds it the same way and keeps the tagged master in My Catalog, without downloading.</p>}
-          {!full && <p className="text-xs text-muted-foreground"><kbd className="rounded border border-border px-1.5 py-0.5">Ctrl</kbd> + <kbd className="rounded border border-border px-1.5 py-0.5 sm:inline">Enter</kbd> (<kbd className="rounded border border-border px-1.5 py-0.5">⌘</kbd> + <kbd className="rounded border border-border px-1.5 py-0.5">Enter</kbd> on Mac) embeds your details and downloads the master — the same as the button.</p>}
-          {result && !full && <NextSong queue={queue} carry={carry} onCarry={setCarry} onNext={startNext} compact />}
-          <div className="flex flex-wrap items-center gap-3">
-            <Button type="submit" size="lg" disabled={busy} className="h-auto min-h-10 max-w-full whitespace-normal py-2"><FileAudio />{busy ? "Embedding…" : OFFICIAL_MASTER_ACTION}</Button>
-            {userId && <Button type="button" size="lg" variant={result ? "default" : "outline"} disabled={saving} onClick={save}><Save />{saving ? "Saving…" : editingId ? "Update in My Catalog" : "Save to My Catalog"}</Button>}
-            {full && (editingId || adding) && <Button type="button" size="lg" variant="ghost" onClick={closeSong}>Close</Button>}
-          </div>
-          <p className="text-xs text-muted-foreground">{SOVEREIGN_BACKUP}</p>
-        </div>
-      </form>
+          </form>
+        )
       )}
-  </>);
+    </>
+  );
   function addSong(withAudio: boolean) {
     startNew();
     setAdding(true);
-    setTimeout(() => document.getElementById("song-new")?.scrollIntoView({ behavior: "smooth", block: "start" }), 50);
+    setTimeout(
+      () =>
+        document.getElementById("song-new")?.scrollIntoView({ behavior: "smooth", block: "start" }),
+      50,
+    );
     if (withAudio) setTimeout(() => audioInput.current?.click(), 50);
   }
   return (
@@ -1171,348 +2938,1022 @@ export function MetadataUploader({ onShareInfo, userId, mode = "embed", readOnly
         <div className="flex flex-wrap items-center gap-3">
           <h1 className="text-2xl font-bold">{full ? "My Catalog" : "Embed Metadata"}</h1>
         </div>
-        {full && userId && readOnly ? <div className="flex flex-wrap items-center gap-3"><span className="text-sm text-muted-foreground"><Lock className="mr-1 inline h-3.5 w-3.5" />Read-only</span><DownloadCatalogButton /></div>
-        : <span className="text-sm text-muted-foreground">{full ? "Saved songs, identifiers and splits" : "MP3 or WAV · ID3v2.3"}</span>}
+        {full && userId && readOnly ? (
+          <div className="flex flex-wrap items-center gap-3">
+            <span className="text-sm text-muted-foreground">
+              <Lock className="mr-1 inline h-3.5 w-3.5" />
+              Read-only
+            </span>
+            <DownloadCatalogButton ownerId={userId} />
+          </div>
+        ) : (
+          <span className="text-sm text-muted-foreground">
+            {full ? "Saved songs, identifiers and splits" : "MP3 or WAV · ID3v2.3"}
+          </span>
+        )}
       </div>
-      {!full && <div className="lg:grid lg:grid-cols-[13rem_minmax(0,1fr)_17rem] lg:items-start lg:gap-6">
-      <SessionRail audio={audio} queue={queue} done={sessionDone} waiting={waiting} onAdd={() => audioInput.current?.click()} onRemove={(i) => setQueue((q) => q.filter((_, j) => j !== i))} onClear={() => void clearSession()} />
-      <div className="min-w-0">
-      {formBlock}
-      </div>
-      <NowEmbedding metadata={metadata} cover={cover} />
-      </div>}
+      {!full && (
+        <div className="lg:grid lg:grid-cols-[13rem_minmax(0,1fr)_17rem] lg:items-start lg:gap-6">
+          <SessionRail
+            audio={audio}
+            queue={queue}
+            done={sessionDone}
+            waiting={waiting}
+            onAdd={() => audioInput.current?.click()}
+            onRemove={(i) => setQueue((q) => q.filter((_, j) => j !== i))}
+            onClear={() => void clearSession()}
+          />
+          <div className="min-w-0">{formBlock}</div>
+          <NowEmbedding metadata={metadata} cover={cover} />
+        </div>
+      )}
 
-      {userId && full && (() => { const newest = [...tracks].sort((a, b) => String(b.updatedAt).localeCompare(String(a.updatedAt)))[0]; return (
-        <div className="pb-12">
-          {health && tracks.length > 0 && <div className="mb-8 rounded-2xl border border-border bg-card p-5">
-            <HealthMeter pct={health.pct} ready={health.ready} registered={health.registered} total={health.released} prerelease={health.prerelease} next={readOnly ? undefined : health.next?.track.title}
-              onNext={() => { const n = health.next; if (n) { if (n.field) fix(n.track, n.field); else open(n.track); } }} />
-            {onHealthCheck && <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-border pt-4">
-              <p className="text-sm text-muted-foreground">Get a full Royalty Health Report: what's blocking your money, and exactly how to fix it.</p>
-              <Button type="button" onClick={() => onHealthCheck()}><Stethoscope />Run a Royalty Health Check</Button>
-            </div>}
-          </div>}
-          {adding && <div id="song-new" className="mb-8 scroll-mt-4 rounded-2xl border border-primary p-4">
-            <h2 className="mb-4 text-xl font-bold">Add a song</h2>
-            {formBlock}
-          </div>}
-          {/* Musicians work with the same people again and again: the library is right here, not only in Split Sheets. */}
-          {!readOnly && <div className="mb-8"><ContributorLibrary userId={userId} refreshKey={libKey} onSaved={() => setLibKey((k) => k + 1)} /></div>}
-          {/* The heading became the filter menu (founder, 2026-11-06): "Your songs" opens the release filters, so the
+      {userId &&
+        full &&
+        (() => {
+          const newest = [...tracks].sort((a, b) =>
+            String(b.updatedAt).localeCompare(String(a.updatedAt)),
+          )[0];
+          return (
+            <div className="pb-12">
+              {health && tracks.length > 0 && (
+                <div className="mb-8 rounded-2xl border border-border bg-card p-5">
+                  <HealthMeter
+                    pct={health.pct}
+                    ready={health.ready}
+                    registered={health.registered}
+                    total={health.released}
+                    prerelease={health.prerelease}
+                    next={readOnly ? undefined : health.next?.track.title}
+                    onNext={() => {
+                      const n = health.next;
+                      if (n) {
+                        if (n.field) fix(n.track, n.field);
+                        else open(n.track);
+                      }
+                    }}
+                  />
+                  {onHealthCheck && (
+                    <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-border pt-4">
+                      <p className="text-sm text-muted-foreground">
+                        Get a full Royalty Health Report: what's blocking your money, and exactly
+                        how to fix it.
+                      </p>
+                      <Button type="button" onClick={() => onHealthCheck()}>
+                        <Stethoscope />
+                        Run a Royalty Health Check
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              )}
+              {adding && (
+                <div
+                  id="song-new"
+                  className="mb-8 scroll-mt-4 rounded-2xl border border-primary p-4"
+                >
+                  <h2 className="mb-4 text-xl font-bold">Add a song</h2>
+                  {formBlock}
+                </div>
+              )}
+              {/* Musicians work with the same people again and again: the library is right here, not only in Split Sheets. */}
+              {!readOnly && (
+                <div className="mb-8">
+                  <ContributorLibrary
+                    userId={userId}
+                    refreshKey={libKey}
+                    onSaved={() => setLibKey((k) => k + 1)}
+                  />
+                </div>
+              )}
+              {/* The heading became the filter menu (founder, 2026-11-06): "Your songs" opens the release filters, so the
               actions sit level with it on the right instead of stacking under a separate row of tabs. */}
-          <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button type="button" variant="outline" className="text-xl font-bold">
-                  {filter === "All" ? "Your songs" : `Your songs · ${filter}s`}
-                  <span aria-hidden className="text-xs">▼</span>
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="start">
-                {(["All", "Album", "EP", "Single"] as const).map((f) => (
-                  <DropdownMenuItem key={f} onClick={() => setFilter(f)}>
-                    {f === "All" ? "Every song" : `${f}s`}
-                    <span className="ml-auto pl-6 text-xs tabular-nums text-muted-foreground">{f === "All" ? tracks.length : tracks.filter((t) => releaseGroup(t) === f).length}</span>
-                  </DropdownMenuItem>
-                ))}
-              </DropdownMenuContent>
-            </DropdownMenu>
-            <div className="flex flex-wrap items-center justify-end gap-2">
-              {!readOnly && (<>          <DropdownMenu>
-            <DropdownMenuTrigger asChild><Button type="button" size="sm"><Plus />Add song</Button></DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="max-w-xs">
-              <DropdownMenuItem onClick={() => addSong(true)} className="flex-col items-start gap-0.5">
-                <span className="font-semibold">Upload an MP3 or WAV you already embedded</span>
-                <span className="text-xs text-muted-foreground">We read its tags and fill in the details for you.</span>
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => addSong(false)} className="flex-col items-start gap-0.5">
-                <span className="font-semibold">Add without audio</span>
-                <span className="text-xs text-muted-foreground">Type in the details. Add the audio anytime later.</span>
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-</>)}
-              {tracks.length > 0 && (<>          {/* 1-click agency export of the whole catalog: every song goes into the agency's template. */}
-          {tracks.length > 0 && (
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild><Button type="button" variant="outline" size="sm">{!canExport && <Lock />}One Click Agency Export</Button></DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                {(["mlc", "soundexchange", "pro"] as Agency[]).map((a) => <DropdownMenuItem key={a} onClick={() => runExport(a, tracks, "Full Catalog")}>{AGENCY_LABEL[a]}<InfoTip title="Required fields" text={EXPORT_REQUIRED[a]} /></DropdownMenuItem>)}
-                <DropdownMenuItem onClick={() => void runPack(tracks, "Full Catalog")}>Neighbouring Rights Pack (.xlsx)</DropdownMenuItem>
-                <DropdownMenuItem onClick={() => (canExport ? setExportOpen(true) : setUpsell("export"))} className="flex-col items-start gap-0.5 border-t border-border">
-                  <span className="font-semibold">Choose a release or songs…</span>
-                  <span className="text-xs text-muted-foreground">Just the new album, picked singles, or songs not exported yet.</span>
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          )}
-</>)}
-              {tracks.length > 0 && (
+              <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button type="button" variant="outline" size="sm" disabled={!!zipping}><Download />{zipping ?? "Download"}</Button>
+                    <Button type="button" variant="outline" className="text-xl font-bold">
+                      {filter === "All" ? "Your songs" : `Your songs · ${filter}s`}
+                      <span aria-hidden className="text-xs">
+                        ▼
+                      </span>
+                    </Button>
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="max-h-80 overflow-y-auto">
-                    <DropdownMenuItem disabled={!!zipping} onClick={() => void zip(`Zipping ${tracks.length} songs…`, () => downloadWholeCatalog(undefined, kitId, userId), "catalog_zip")} className="flex-col items-start gap-0.5">
-                      <span className="font-semibold">The whole catalog</span>
-                      <span className="text-xs text-muted-foreground">Every master, its artwork, lyrics and the catalog PDF in one ZIP.</span>
-                    </DropdownMenuItem>
-                    {groupReleases(tracks).map((r) => (
-                      <DropdownMenuItem key={r.key} disabled={!!zipping} onClick={() => void zip(`Zipping ${r.album}…`, () => downloadRelease(r, undefined, kitId), "release_zip")} className="flex-col items-start gap-0.5 border-t border-border">
-                        <span className="font-semibold">Just {r.album}</span>
-                        <span className="text-xs text-muted-foreground">{r.type} · {r.tracks.length} {r.tracks.length === 1 ? "song" : "songs"}</span>
+                  <DropdownMenuContent align="start">
+                    {(["All", "Album", "EP", "Single"] as const).map((f) => (
+                      <DropdownMenuItem key={f} onClick={() => setFilter(f)}>
+                        {f === "All" ? "Every song" : `${f}s`}
+                        <span className="ml-auto pl-6 text-xs tabular-nums text-muted-foreground">
+                          {f === "All"
+                            ? tracks.length
+                            : tracks.filter((t) => releaseGroup(t) === f).length}
+                        </span>
                       </DropdownMenuItem>
                     ))}
                   </DropdownMenuContent>
                 </DropdownMenu>
-              )}
-              {tracks.length > 0 && <BrandKitChoice kits={kits} kitId={kitId} onChange={setKitId} />}
-              {tracks.length > 0 && <Button type="button" variant="outline" size="sm" onClick={() => { const list = filter === "All" ? tracks : tracks.filter((t) => releaseGroup(t) === filter); void myBrand("catalog", kitId ?? null).then((brand) => downloadCatalogPdf(list, filter === "All" ? "Catalog" : `Catalog - ${filter}s`, brand)).catch((e) => toast.error(e instanceof Error ? `Could not create the catalog PDF: ${e.message}` : "Could not create the catalog PDF.")); }}><FileText />{filter === "All" ? "Catalog PDF" : `${filter}s PDF`}</Button>}
-            </div>
-          </div>
-          {tracks.length === 0 ? <p className="text-sm text-muted-foreground">No songs yet. Use Add song to save a song you already embedded, or embed a new one in Embed Metadata. Every song you save is checked automatically in the Royalties and Registrations.</p> : (
-            <>
-            {(() => {
-              const row = (t: CatalogTrack) => (
-                <li key={t.id} id={`song-${t.id}`} className={`group scroll-mt-4 rounded-xl border p-3 transition hover:border-primary hover:shadow-md ${t.id === editingId || picked.has(t.id) ? "border-primary bg-accent/30" : "border-border"}`}>
-                  <div className="flex flex-wrap items-center gap-4">
-                  <input type="checkbox" aria-label={`Select ${t.title} for bulk export`} checked={picked.has(t.id)} onChange={() => togglePick(t.id)} className="h-4 w-4 accent-primary" />
-                  {releaseGroup(t) !== "Single" && <span className="w-6 text-center text-sm font-bold text-primary">{t.metadata.trackNumber || "–"}</span>}
-                  {t.metadata.coverThumb
-                    ? <img src={t.metadata.coverThumb} alt={`${t.title} artwork`} className="h-16 w-16 shrink-0 rounded-lg object-cover shadow" />
-                    : <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground shadow"><Disc3 className="h-8 w-8 transition group-hover:rotate-180" /></div>}
-                  <div className="min-w-[10rem] flex-1">
-                    <div className="truncate text-lg font-bold">{t.title}</div>
-                    <div className="truncate text-sm text-muted-foreground">{t.artist}{t.metadata.album ? ` · ${t.metadata.album}` : ""}</div>
-                    {isSoldBeat(t.metadata) && <div className="truncate text-xs font-semibold text-primary">{beatMasterLine(masterOfBeat(t.id, tracks))}</div>}
-                    {!!t.metadata.beatMasterId && <div className="truncate text-xs font-semibold text-primary">{masterBeatLine(tracks.find((b) => b.id === t.metadata.beatMasterId)?.title ?? "", t.metadata)}</div>}
-                    {/* A single is a release of one, so its own header carries the panel (§4.1). */}
-                    {releaseGroup(t) === "Single" && <ReleaseRow name={t.title || "Untitled"} type="Single" tracks={[t]} readOnly={readOnly} onSave={saveRelease} compact />}
-                  </div>
-                  {health && <div className="w-20 shrink-0" title="Royalty health">
-                    <HealthLiquid pct={pctOf(t.id)} className="h-1.5" />
-                    <div className="mt-1 text-right text-xs tabular-nums text-muted-foreground">{pctOf(t.id)}%</div>
-                  </div>}
-                  <div className="flex flex-wrap gap-2">
-                    {readOnly ? null : t.id === editingId
-                      ? <Button type="button" size="sm" onClick={closeSong}>Close</Button>
-                      : <Button type="button" variant="outline" size="sm" onClick={() => open(t)}><Pencil />Edit</Button>}
-                    <FollowUpReminderButton contextType="catalog" contextId={t.id} songId={t.id} subject={t.title} />
-                    {!readOnly && <DropdownMenu>
-                      <DropdownMenuTrigger asChild><Button type="button" variant="outline" size="sm"><Copy />Duplicate</Button></DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        {VERSIONS.map((v) => <DropdownMenuItem key={v} onClick={() => void duplicate(t, v)} className="flex-col items-start gap-0.5">
-                          <span className="font-semibold">{v}</span>
-                          <span className="text-xs text-muted-foreground">{versionTitle(t.title, v)}</span>
-                        </DropdownMenuItem>)}
-                      </DropdownMenuContent>
-                    </DropdownMenu>}
-                    {(t.metadata.audioPath || t.metadata.artPath || t.metadata.lyrics) && (
+                <div className="flex flex-wrap items-center justify-end gap-2">
+                  {!readOnly && (
+                    <>
+                      {" "}
                       <DropdownMenu>
-                        <DropdownMenuTrigger asChild><Button type="button" variant="outline" size="sm"><Download />Downloads</Button></DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          {t.metadata.audioPath && <DropdownMenuItem onClick={() => downloadCatalogFile(t.metadata.audioPath, `${safeName(t.title)}.${extOf(t.metadata.audioPath)}`).catch(() => toast.error("Could not download the song."))}>Master {extOf(t.metadata.audioPath).toUpperCase()}</DropdownMenuItem>}
-                          {t.metadata.artPath && <DropdownMenuItem onClick={() => downloadCatalogFile(t.metadata.artPath, `${safeName(t.title)}-artwork.${t.metadata.artPath.split(".").pop()}`).catch(() => toast.error("Could not download the artwork."))}>Artwork</DropdownMenuItem>}
-                          {t.metadata.lyrics && <DropdownMenuItem onClick={() => void myBrand("lyrics", kitId ?? null).then((brand) => downloadLyricsPdf(t, brand))}>Lyrics PDF</DropdownMenuItem>}
+                        <DropdownMenuTrigger asChild>
+                          <Button type="button" size="sm">
+                            <Plus />
+                            Add song
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="max-w-xs">
+                          <DropdownMenuItem
+                            onClick={() => addSong(true)}
+                            className="flex-col items-start gap-0.5"
+                          >
+                            <span className="font-semibold">
+                              Upload an MP3 or WAV you already embedded
+                            </span>
+                            <span className="text-xs text-muted-foreground">
+                              We read its tags and fill in the details for you.
+                            </span>
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            onClick={() => addSong(false)}
+                            className="flex-col items-start gap-0.5"
+                          >
+                            <span className="font-semibold">Add without audio</span>
+                            <span className="text-xs text-muted-foreground">
+                              Type in the details. Add the audio anytime later.
+                            </span>
+                          </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
-                    )}
-                    {onHealthCheck && <Button type="button" variant="outline" size="sm" onClick={() => onHealthCheck(t.id)}><Stethoscope />Health check</Button>}
-                    {exportMenu("Agency Export", [t], t.title)}
-                    {!readOnly && onProtect && <Button type="button" variant={t.metadata.aiProtection ? "default" : "outline"} size="sm" onClick={() => onProtect(t)}><ShieldCheck />{t.metadata.aiProtection ? "Add AI Protection Proof" : "Protect Track"}</Button>}
-                    {!readOnly && <>
-                    <Button type="button" size="sm" onClick={() => { if (!canSplit) { setUpsell("split"); return; } onSplitSheet?.(t); }}>{!canSplit && <Lock />}Generate Split Sheet</Button>
-                    <Button type="button" variant="ghost" size="icon" aria-label={`Delete ${t.title}`} onClick={() => remove(t.id)}><Trash2 /></Button>
-                    </>}
-                  </div>
-                  </div>
-                  {t.id === editingId ? <div className="mt-3 border-t border-border pt-4">{formBlock}</div> : <div className="mt-3 space-y-3 border-t border-border pt-3">
-                    <div className="flex flex-wrap gap-1.5 text-xs">
-                      {regBadges(t).map((b) => <span key={b} className="rounded-full border border-primary px-2 py-0.5 text-primary">{b}</span>)}
-                    </div>
-                    {(() => {
-                      const r = registrationReadiness(t.metadata);
-                      // A PRO affiliation and each writer's IPI are what a PRO and The MLC register by (founder, 2026-11-13):
-                      // a song missing them is not shown as "Ready to register" in My Catalog, the same way the embed rail
-                      // and the readiness panel already say so.
-                      const gaps = r.ready ? proAccountGaps(t.metadata) : [];
-                      if (r.ready && !r.warnings.length && !gaps.length) return <span className="inline-flex items-center gap-1 rounded-full bg-primary px-2 py-0.5 text-xs font-semibold text-primary-foreground"><CheckCircle2 className="h-3 w-3" />Ready to register</span>;
-                      if (r.ready && !gaps.length) return <details className="text-sm">
-                        <summary className="cursor-pointer font-semibold">⚠️ Settle splits before registering</summary>
-                        <div className="mt-2 pl-1"><MissingList items={r.warnings} onJump={(field) => fix(t, field)} /></div>
-                      </details>;
-                      const items = [...r.missing, ...r.warnings, ...gaps];
-                      return <details className="text-sm">
-                        <summary className="cursor-pointer font-semibold">⚠️ {items.length} to fix before registering</summary>
-                        <div className="mt-2 pl-1"><MissingList items={items} onJump={(field) => fix(t, field)} /></div>
-                      </details>;
-                    })()}
-                    {creditGroups(t).length > 0 && <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-                      {creditGroups(t).map((cg) => <div key={cg.label} className="min-w-0">
-                        <div className="mb-1 text-xs font-bold uppercase tracking-widest text-primary">{cg.label}</div>
-                        <ul className="space-y-1 text-sm">{cg.rows.map((c, i) => <li key={i} className="min-w-0">
-                          <span className="font-semibold">{c.name}</span>
-                          {(cg.label === "Writers" || c.percentage || c.pro || c.ipi) && <span className="block text-xs text-muted-foreground">{[cg.label === "Writers" && writerRole(c.role), c.percentage && `${c.percentage}%`, c.pro, c.ipi && `IPI ${c.ipi}`].filter(Boolean).join(" · ")}</span>}
-                        </li>)}</ul>
-                      </div>)}
-                    </div>}
-                  </div>}
-                </li>
-              );
-              // The Unreleased section (§4.2) sits above the released groups and holds every song that isn't out.
-              // Nothing here is read-only: each entry opens the same song and the same Release checklist as before.
-              // Instrumentals keep their own folder (founder, 2026-11-16), so they are taken out of Unreleased and every
-              // released group below; the box at the end of the catalog is where they live.
-              const pre = tracks.filter((t) => !t.metadata.instrumental && releaseStatus(t.metadata) !== "released" && !beatIsOut(t, tracks) && (filter === "All" || releaseGroup(t) === filter));
-              const prePct = pre.length ? Math.round(pre.reduce((n, t) => n + pctOf(t.id), 0) / pre.length) : 0;
-              const byPct = (a: CatalogTrack, b: CatalogTrack) => pctOf(a.id) - pctOf(b.id);
-              // A release can be part out and part not yet: its panel still counts and writes every song on it.
-              const albumKeyOf = (x: CatalogTrack) => albumKey(x.metadata.album) || "untitled";
-              return <>
-              {!!pre.length && (
-                <div id="unreleased" className="mb-8 scroll-mt-4 rounded-2xl border-2 border-dashed border-primary/60 bg-primary/5 p-4">
-                  <h3 className="text-sm font-bold uppercase tracking-widest text-primary">Unreleased · {pre.length} {pre.length === 1 ? "song" : "songs"} · {prePct}% ready to distribute</h3>
-                  <p className="mt-1 text-xs text-muted-foreground">Not out yet. These are read against what to have ready before release, and they never count against your catalog's score.</p>
-                  <div className="mt-4 space-y-5">
-                    {(["Album", "EP", "Single"] as const).map((g) => {
-                      const list = pre.filter((t) => releaseGroup(t) === g);
-                      if (!list.length) return null;
-                      return <div key={g}>
-                        <h4 className="mb-2 text-xs font-bold uppercase tracking-widest text-muted-foreground">{g}s</h4>
-                        {g === "Single"
-                          ? <div className="grid gap-3">{[...list].sort(byPct).map((t) => (
-                              <div key={t.id} className="rounded-xl border border-border bg-card p-3">
-                                <ul>{row(t)}</ul>
-                              </div>
-                            ))}</div>
-                          : <div className="grid gap-3">{groupProjects(list).map((p) => {
-                              const all = tracks.filter((x) => releaseGroup(x) !== "Single" && albumKeyOf(x) === p.key);
-                              return (
-                              <div key={p.key} className="rounded-xl border border-border bg-card p-3">
-                                <ReleaseRow name={p.title} type={releaseGroup(p.tracks[0]!)} tracks={all} readOnly={readOnly} onSave={saveRelease} onCover={(file) => saveReleaseCover(all, file)} />
-                                <ul className="mt-3 grid gap-3">{[...p.tracks].sort(byPct).map(row)}</ul>
-                              </div>
-                              );
-                            })}</div>}
-                      </div>;
-                    })}
-                  </div>
-                </div>
-              )}
-              {(["Album", "EP", "Single"] as const).filter((g) => filter === "All" || filter === g).map((g) => {
-              // Released groups list released music only; the chip says where the rest went.
-              const items = tracks.filter((t) => !t.metadata.instrumental && releaseGroup(t) === g && releaseStatus(t.metadata) === "released");
-              if (!items.length) return null;
-              const preCount = tracks.filter((t) => !t.metadata.instrumental && releaseGroup(t) === g && releaseStatus(t.metadata) !== "released").length;
-              return <div key={g} className="mb-8">
-                <h3 className="mb-3 text-sm font-bold uppercase tracking-widest text-primary">{g}s<UnreleasedChip count={preCount} /></h3>
-                {g === "Single"
-                  ? <details open={items.some((x) => x.id === editingId) || (newest ? releaseGroup(newest) === "Single" : false)} className="rounded-2xl border border-border p-4 open:border-primary">
-                      <summary className="flex cursor-pointer list-none items-center gap-4">
-                        <div className="flex h-14 w-14 items-center justify-center rounded-lg bg-primary text-primary-foreground"><Disc3 className="h-7 w-7" /></div>
-                        <div className="min-w-0 flex-1"><div className="truncate text-xl font-bold">All Singles</div><div className="text-sm text-muted-foreground">{items.length} {items.length === 1 ? "single" : "singles"} · A–Z</div></div>
-                      </summary>
-                      <ul className="mt-4 grid gap-3">{[...items].sort((a, b) => a.title.localeCompare(b.title)).map(row)}</ul>
-                    </details>
-                  : <div className="grid gap-4">{groupProjects(items).map((p) => {
-                    const all = tracks.filter((x) => releaseGroup(x) !== "Single" && albumKeyOf(x) === p.key);
-                    return (
-                    <details key={p.key} open={p.tracks.some((x) => x.id === editingId) || (!!newest && p.tracks.some((x) => x.id === newest.id))} className="rounded-2xl border border-border p-4 open:border-primary">
-                      <summary className="flex cursor-pointer list-none flex-wrap items-center gap-4">
-                        {p.cover ? <img src={p.cover} alt={`${p.title} artwork`} className="h-14 w-14 rounded-lg object-cover shadow" /> : <div className="flex h-14 w-14 items-center justify-center rounded-lg bg-primary text-primary-foreground"><Disc3 className="h-7 w-7" /></div>}
-                        <div className="min-w-[10rem] flex-1">
-                          <div className="truncate text-sm text-muted-foreground">{p.artist}</div>
-                          <ReleaseRow name={p.title} type={releaseGroup(p.tracks[0]!)} tracks={all} readOnly={readOnly} onSave={saveRelease} onCover={(file) => saveReleaseCover(all, file)} />
-                        </div>
-                        {onHealthCheck && <Button type="button" variant="outline" size="sm" onClick={(e) => { e.preventDefault(); onHealthCheck(p.tracks[0]!.id, true); }}><Stethoscope />Health check</Button>}
-                        {exportMenu("Export Release", p.tracks, p.title)}
-                      </summary>
-                      <ul className="mt-4 grid gap-3">{p.tracks.map(row)}</ul>
-                    </details>
-                    );
-                  })}</div>}
-              </div>;
-            })}
-            {(() => {
-              // Instrumentals have their own folder (founder, 2026-11-16): no album says an instrumental version belongs with
-              // the songs on that album, so the versions sit together here instead.
-              const instrumentals = tracks.filter((t) => t.metadata.instrumental && (filter === "All" || releaseGroup(t) === filter));
-              if (!instrumentals.length) return null;
-              const ready = Math.round(instrumentals.reduce((n, t) => n + pctOf(t.id), 0) / instrumentals.length);
-              return <div id="instrumentals" className="mb-8 scroll-mt-4">
-                <h3 className="mb-3 text-sm font-bold uppercase tracking-widest text-primary">Instrumentals</h3>
-                <details open={instrumentals.some((t) => t.id === editingId) || !instrumentals.some((t) => releaseStatus(t.metadata) === "released")} className="rounded-2xl border border-border p-4 open:border-primary">
-                  <summary className="flex cursor-pointer list-none items-center gap-4">
-                    <div className="flex h-14 w-14 items-center justify-center rounded-lg bg-primary text-primary-foreground"><Disc3 className="h-7 w-7" /></div>
-                    <div className="min-w-0 flex-1">
-                      <div className="truncate text-xl font-bold">Instrumentals</div>
-                      <div className="text-sm text-muted-foreground">{instrumentals.length} {instrumentals.length === 1 ? "instrumental" : "instrumentals"} · {ready}% ready to register</div>
-                    </div>
-                  </summary>
-                  <ul className="mt-4 grid gap-3">{[...instrumentals].sort((a, b) => a.title.localeCompare(b.title)).map(row)}</ul>
-                </details>
-              </div>;
-            })()}
-            </>;
-            })()}
-            {picked.size > 0 && (() => { const sel = tracks.filter((t) => picked.has(t.id)); return sel.length > 0 && (
-              <div role="region" aria-label="Selected tracks" className="sticky bottom-4 z-20 mx-auto flex max-w-2xl flex-wrap items-center justify-between gap-3 rounded-2xl border border-primary bg-card p-3 shadow-lg">
-                <span className="font-semibold">{sel.length} {sel.length === 1 ? "track" : "tracks"} selected</span>
-                <div className="flex flex-wrap gap-2">
-                  <Button type="button" variant="ghost" size="sm" onClick={() => setPicked(new Set())}>Clear</Button>
-                  <Button type="button" variant="outline" size="sm" onClick={() => void myBrand("catalog", kitId ?? null).then((brand) => downloadCatalogPdf(sel, `Catalog - ${sel.length} Songs`, brand)).catch(() => toast.error("Could not create the catalog PDF."))}><FileText />PDF</Button>
-                  {exportMenu("Export Selected", sel, `${sel.length} Tracks`)}
+                    </>
+                  )}
+                  {tracks.length > 0 && (
+                    <>
+                      {" "}
+                      {/* 1-click agency export of the whole catalog: every song goes into the agency's template. */}
+                      {tracks.length > 0 && (
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button type="button" variant="outline" size="sm">
+                              {!canExport && <Lock />}One Click Agency Export
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            {(["mlc", "soundexchange", "pro"] as Agency[]).map((a) => (
+                              <DropdownMenuItem
+                                key={a}
+                                onClick={() => runExport(a, tracks, "Full Catalog")}
+                              >
+                                {AGENCY_LABEL[a]}
+                                <InfoTip title="Required fields" text={EXPORT_REQUIRED[a]} />
+                              </DropdownMenuItem>
+                            ))}
+                            <DropdownMenuItem onClick={() => void runPack(tracks, "Full Catalog")}>
+                              Neighbouring Rights Pack (.xlsx)
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={() =>
+                                canExport ? setExportOpen(true) : setUpsell("export")
+                              }
+                              className="flex-col items-start gap-0.5 border-t border-border"
+                            >
+                              <span className="font-semibold">Choose a release or songs…</span>
+                              <span className="text-xs text-muted-foreground">
+                                Just the new album, picked singles, or songs not exported yet.
+                              </span>
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      )}
+                    </>
+                  )}
+                  {tracks.length > 0 && (
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button type="button" variant="outline" size="sm" disabled={!!zipping}>
+                          <Download />
+                          {zipping ?? "Download"}
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="max-h-80 overflow-y-auto">
+                        <DropdownMenuItem
+                          disabled={!!zipping}
+                          onClick={() =>
+                            void zip(
+                              `Zipping ${tracks.length} songs…`,
+                              () => downloadWholeCatalog(undefined, kitId, userId),
+                              "catalog_zip",
+                            )
+                          }
+                          className="flex-col items-start gap-0.5"
+                        >
+                          <span className="font-semibold">The whole catalog</span>
+                          <span className="text-xs text-muted-foreground">
+                            Every master, its artwork, lyrics and the catalog PDF in one ZIP.
+                          </span>
+                        </DropdownMenuItem>
+                        {groupReleases(tracks).map((r) => (
+                          <DropdownMenuItem
+                            key={r.key}
+                            disabled={!!zipping}
+                            onClick={() =>
+                              void zip(
+                                `Zipping ${r.album}…`,
+                                () => downloadRelease(r, undefined, kitId),
+                                "release_zip",
+                              )
+                            }
+                            className="flex-col items-start gap-0.5 border-t border-border"
+                          >
+                            <span className="font-semibold">Just {r.album}</span>
+                            <span className="text-xs text-muted-foreground">
+                              {r.type} · {r.tracks.length}{" "}
+                              {r.tracks.length === 1 ? "song" : "songs"}
+                            </span>
+                          </DropdownMenuItem>
+                        ))}
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  )}
+                  {tracks.length > 0 && (
+                    <BrandKitChoice kits={kits} kitId={kitId} onChange={setKitId} />
+                  )}
+                  {tracks.length > 0 && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        const list =
+                          filter === "All"
+                            ? tracks
+                            : tracks.filter((t) => releaseGroup(t) === filter);
+                        void myBrand("catalog", kitId ?? null)
+                          .then((brand) =>
+                            downloadCatalogPdf(
+                              list,
+                              filter === "All" ? "Catalog" : `Catalog - ${filter}s`,
+                              brand,
+                            ),
+                          )
+                          .catch((e) =>
+                            toast.error(
+                              e instanceof Error
+                                ? `Could not create the catalog PDF: ${e.message}`
+                                : "Could not create the catalog PDF.",
+                            ),
+                          );
+                      }}
+                    >
+                      <FileText />
+                      {filter === "All" ? "Catalog PDF" : `${filter}s PDF`}
+                    </Button>
+                  )}
                 </div>
               </div>
-            ); })()}
-            </>
-          )}
-        </div>
-      ); })()}
+              {tracks.length === 0 ? (
+                <p className="text-sm text-muted-foreground">
+                  No songs yet. Use Add song to save a song you already embedded, or embed a new one
+                  in Embed Metadata. Every song you save is checked automatically in the Royalties
+                  and Registrations.
+                </p>
+              ) : (
+                <>
+                  {(() => {
+                    const row = (t: CatalogTrack) => (
+                      <li
+                        key={t.id}
+                        id={`song-${t.id}`}
+                        className={`group scroll-mt-4 rounded-xl border p-3 transition hover:border-primary hover:shadow-md ${t.id === editingId || picked.has(t.id) ? "border-primary bg-accent/30" : "border-border"}`}
+                      >
+                        <div className="flex flex-wrap items-center gap-4">
+                          <input
+                            type="checkbox"
+                            aria-label={`Select ${t.title} for bulk export`}
+                            checked={picked.has(t.id)}
+                            onChange={() => togglePick(t.id)}
+                            className="h-4 w-4 accent-primary"
+                          />
+                          {releaseGroup(t) !== "Single" && (
+                            <span className="w-6 text-center text-sm font-bold text-primary">
+                              {t.metadata.trackNumber || "–"}
+                            </span>
+                          )}
+                          {t.metadata.coverThumb ? (
+                            <img
+                              src={t.metadata.coverThumb}
+                              alt={`${t.title} artwork`}
+                              className="h-16 w-16 shrink-0 rounded-lg object-cover shadow"
+                            />
+                          ) : (
+                            <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground shadow">
+                              <Disc3 className="h-8 w-8 transition group-hover:rotate-180" />
+                            </div>
+                          )}
+                          <div className="min-w-[10rem] flex-1">
+                            <div className="truncate text-lg font-bold">{t.title}</div>
+                            <div className="truncate text-sm text-muted-foreground">
+                              {t.artist}
+                              {t.metadata.album ? ` · ${t.metadata.album}` : ""}
+                            </div>
+                            {isSoldBeat(t.metadata) && (
+                              <div className="truncate text-xs font-semibold text-primary">
+                                {beatMasterLine(masterOfBeat(t.id, tracks))}
+                              </div>
+                            )}
+                            {!!t.metadata.beatMasterId && (
+                              <div className="truncate text-xs font-semibold text-primary">
+                                {masterBeatLine(
+                                  tracks.find((b) => b.id === t.metadata.beatMasterId)?.title ?? "",
+                                  t.metadata,
+                                )}
+                              </div>
+                            )}
+                            {/* A single is a release of one, so its own header carries the panel (§4.1). */}
+                            {releaseGroup(t) === "Single" && (
+                              <ReleaseRow
+                                name={t.title || "Untitled"}
+                                type="Single"
+                                tracks={[t]}
+                                readOnly={readOnly}
+                                onSave={saveRelease}
+                                compact
+                              />
+                            )}
+                          </div>
+                          {health && (
+                            <div className="w-20 shrink-0" title="Royalty health">
+                              <HealthLiquid pct={pctOf(t.id)} className="h-1.5" />
+                              <div className="mt-1 text-right text-xs tabular-nums text-muted-foreground">
+                                {pctOf(t.id)}%
+                              </div>
+                            </div>
+                          )}
+                          <div className="flex flex-wrap gap-2">
+                            {readOnly ? null : t.id === editingId ? (
+                              <Button type="button" size="sm" onClick={closeSong}>
+                                Close
+                              </Button>
+                            ) : (
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                onClick={() => open(t)}
+                              >
+                                <Pencil />
+                                Edit
+                              </Button>
+                            )}
+                            <FollowUpReminderButton
+                              contextType="catalog"
+                              contextId={t.id}
+                              songId={t.id}
+                              subject={t.title}
+                            />
+                            {!readOnly && (
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <Button type="button" variant="outline" size="sm">
+                                    <Copy />
+                                    Duplicate
+                                  </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end">
+                                  {VERSIONS.map((v) => (
+                                    <DropdownMenuItem
+                                      key={v}
+                                      onClick={() => void duplicate(t, v)}
+                                      className="flex-col items-start gap-0.5"
+                                    >
+                                      <span className="font-semibold">{v}</span>
+                                      <span className="text-xs text-muted-foreground">
+                                        {versionTitle(t.title, v)}
+                                      </span>
+                                    </DropdownMenuItem>
+                                  ))}
+                                </DropdownMenuContent>
+                              </DropdownMenu>
+                            )}
+                            {(t.metadata.audioPath || t.metadata.artPath || t.metadata.lyrics) && (
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <Button type="button" variant="outline" size="sm">
+                                    <Download />
+                                    Downloads
+                                  </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end">
+                                  {t.metadata.audioPath && (
+                                    <DropdownMenuItem
+                                      onClick={() =>
+                                        downloadCatalogFile(
+                                          t.metadata.audioPath,
+                                          `${safeName(t.title)}.${extOf(t.metadata.audioPath)}`,
+                                        ).catch(() => toast.error("Could not download the song."))
+                                      }
+                                    >
+                                      Master {extOf(t.metadata.audioPath).toUpperCase()}
+                                    </DropdownMenuItem>
+                                  )}
+                                  {t.metadata.artPath && (
+                                    <DropdownMenuItem
+                                      onClick={() =>
+                                        downloadCatalogFile(
+                                          t.metadata.artPath,
+                                          `${safeName(t.title)}-artwork.${t.metadata.artPath.split(".").pop()}`,
+                                        ).catch(() =>
+                                          toast.error("Could not download the artwork."),
+                                        )
+                                      }
+                                    >
+                                      Artwork
+                                    </DropdownMenuItem>
+                                  )}
+                                  {t.metadata.lyrics && (
+                                    <DropdownMenuItem
+                                      onClick={() =>
+                                        void myBrand("lyrics", kitId ?? null).then((brand) =>
+                                          downloadLyricsPdf(t, brand),
+                                        )
+                                      }
+                                    >
+                                      Lyrics PDF
+                                    </DropdownMenuItem>
+                                  )}
+                                </DropdownMenuContent>
+                              </DropdownMenu>
+                            )}
+                            {onHealthCheck && (
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                onClick={() => onHealthCheck(t.id)}
+                              >
+                                <Stethoscope />
+                                Health check
+                              </Button>
+                            )}
+                            {exportMenu("Agency Export", [t], t.title)}
+                            {!readOnly && onProtect && (
+                              <Button
+                                type="button"
+                                variant={t.metadata.aiProtection ? "default" : "outline"}
+                                size="sm"
+                                onClick={() => onProtect(t)}
+                              >
+                                <ShieldCheck />
+                                {t.metadata.aiProtection
+                                  ? "Add AI Protection Proof"
+                                  : "Protect Track"}
+                              </Button>
+                            )}
+                            {!readOnly && (
+                              <>
+                                <Button
+                                  type="button"
+                                  size="sm"
+                                  onClick={() => {
+                                    if (!canSplit) {
+                                      setUpsell("split");
+                                      return;
+                                    }
+                                    onSplitSheet?.(t);
+                                  }}
+                                >
+                                  {!canSplit && <Lock />}Generate Split Sheet
+                                </Button>
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="icon"
+                                  aria-label={`Delete ${t.title}`}
+                                  onClick={() => remove(t.id)}
+                                >
+                                  <Trash2 />
+                                </Button>
+                              </>
+                            )}
+                          </div>
+                        </div>
+                        {t.id === editingId ? (
+                          <div className="mt-3 border-t border-border pt-4">{formBlock}</div>
+                        ) : (
+                          <div className="mt-3 space-y-3 border-t border-border pt-3">
+                            <div className="flex flex-wrap gap-1.5 text-xs">
+                              {regBadges(t).map((b) => (
+                                <span
+                                  key={b}
+                                  className="rounded-full border border-primary px-2 py-0.5 text-primary"
+                                >
+                                  {b}
+                                </span>
+                              ))}
+                            </div>
+                            {(() => {
+                              const r = registrationReadiness(t.metadata);
+                              // A PRO affiliation and each writer's IPI are what a PRO and The MLC register by (founder, 2026-11-13):
+                              // a song missing them is not shown as "Ready to register" in My Catalog, the same way the embed rail
+                              // and the readiness panel already say so.
+                              const gaps = r.ready ? proAccountGaps(t.metadata) : [];
+                              if (r.ready && !r.warnings.length && !gaps.length)
+                                return (
+                                  <span className="inline-flex items-center gap-1 rounded-full bg-primary px-2 py-0.5 text-xs font-semibold text-primary-foreground">
+                                    <CheckCircle2 className="h-3 w-3" />
+                                    Ready to register
+                                  </span>
+                                );
+                              if (r.ready && !gaps.length)
+                                return (
+                                  <details className="text-sm">
+                                    <summary className="cursor-pointer font-semibold">
+                                      ⚠️ Settle splits before registering
+                                    </summary>
+                                    <div className="mt-2 pl-1">
+                                      <MissingList
+                                        items={r.warnings}
+                                        onJump={(field) => fix(t, field)}
+                                      />
+                                    </div>
+                                  </details>
+                                );
+                              const items = [...r.missing, ...r.warnings, ...gaps];
+                              return (
+                                <details className="text-sm">
+                                  <summary className="cursor-pointer font-semibold">
+                                    ⚠️ {items.length} to fix before registering
+                                  </summary>
+                                  <div className="mt-2 pl-1">
+                                    <MissingList items={items} onJump={(field) => fix(t, field)} />
+                                  </div>
+                                </details>
+                              );
+                            })()}
+                            {creditGroups(t).length > 0 && (
+                              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                                {creditGroups(t).map((cg) => (
+                                  <div key={cg.label} className="min-w-0">
+                                    <div className="mb-1 text-xs font-bold uppercase tracking-widest text-primary">
+                                      {cg.label}
+                                    </div>
+                                    <ul className="space-y-1 text-sm">
+                                      {cg.rows.map((c, i) => (
+                                        <li key={i} className="min-w-0">
+                                          <span className="font-semibold">{c.name}</span>
+                                          {(cg.label === "Writers" ||
+                                            c.percentage ||
+                                            c.pro ||
+                                            c.ipi) && (
+                                            <span className="block text-xs text-muted-foreground">
+                                              {[
+                                                cg.label === "Writers" && writerRole(c.role),
+                                                c.percentage && `${c.percentage}%`,
+                                                c.pro,
+                                                c.ipi && `IPI ${c.ipi}`,
+                                              ]
+                                                .filter(Boolean)
+                                                .join(" · ")}
+                                            </span>
+                                          )}
+                                        </li>
+                                      ))}
+                                    </ul>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </li>
+                    );
+                    // The Unreleased section (§4.2) sits above the released groups and holds every song that isn't out.
+                    // Nothing here is read-only: each entry opens the same song and the same Release checklist as before.
+                    // Instrumentals keep their own folder (founder, 2026-11-16), so they are taken out of Unreleased and every
+                    // released group below; the box at the end of the catalog is where they live.
+                    const pre = tracks.filter(
+                      (t) =>
+                        !t.metadata.instrumental &&
+                        releaseStatus(t.metadata) !== "released" &&
+                        !beatIsOut(t, tracks) &&
+                        (filter === "All" || releaseGroup(t) === filter),
+                    );
+                    const prePct = pre.length
+                      ? Math.round(pre.reduce((n, t) => n + pctOf(t.id), 0) / pre.length)
+                      : 0;
+                    const byPct = (a: CatalogTrack, b: CatalogTrack) => pctOf(a.id) - pctOf(b.id);
+                    // A release can be part out and part not yet: its panel still counts and writes every song on it.
+                    const albumKeyOf = (x: CatalogTrack) =>
+                      albumKey(x.metadata.album) || "untitled";
+                    return (
+                      <>
+                        {!!pre.length && (
+                          <div
+                            id="unreleased"
+                            className="mb-8 scroll-mt-4 rounded-2xl border-2 border-dashed border-primary/60 bg-primary/5 p-4"
+                          >
+                            <h3 className="text-sm font-bold uppercase tracking-widest text-primary">
+                              Unreleased · {pre.length} {pre.length === 1 ? "song" : "songs"} ·{" "}
+                              {prePct}% ready to distribute
+                            </h3>
+                            <p className="mt-1 text-xs text-muted-foreground">
+                              Not out yet. These are read against what to have ready before release,
+                              and they never count against your catalog's score.
+                            </p>
+                            <div className="mt-4 space-y-5">
+                              {(["Album", "EP", "Single"] as const).map((g) => {
+                                const list = pre.filter((t) => releaseGroup(t) === g);
+                                if (!list.length) return null;
+                                return (
+                                  <div key={g}>
+                                    <h4 className="mb-2 text-xs font-bold uppercase tracking-widest text-muted-foreground">
+                                      {g}s
+                                    </h4>
+                                    {g === "Single" ? (
+                                      <div className="grid gap-3">
+                                        {[...list].sort(byPct).map((t) => (
+                                          <div
+                                            key={t.id}
+                                            className="rounded-xl border border-border bg-card p-3"
+                                          >
+                                            <ul>{row(t)}</ul>
+                                          </div>
+                                        ))}
+                                      </div>
+                                    ) : (
+                                      <div className="grid gap-3">
+                                        {groupProjects(list).map((p) => {
+                                          const all = tracks.filter(
+                                            (x) =>
+                                              releaseGroup(x) !== "Single" &&
+                                              albumKeyOf(x) === p.key,
+                                          );
+                                          return (
+                                            <div
+                                              key={p.key}
+                                              className="rounded-xl border border-border bg-card p-3"
+                                            >
+                                              <ReleaseRow
+                                                name={p.title}
+                                                type={releaseGroup(p.tracks[0]!)}
+                                                tracks={all}
+                                                readOnly={readOnly}
+                                                onSave={saveRelease}
+                                                onCover={(file) => saveReleaseCover(all, file)}
+                                              />
+                                              <ul className="mt-3 grid gap-3">
+                                                {[...p.tracks].sort(byPct).map(row)}
+                                              </ul>
+                                            </div>
+                                          );
+                                        })}
+                                      </div>
+                                    )}
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        )}
+                        {(["Album", "EP", "Single"] as const)
+                          .filter((g) => filter === "All" || filter === g)
+                          .map((g) => {
+                            // Released groups list released music only; the chip says where the rest went.
+                            const items = tracks.filter(
+                              (t) =>
+                                !t.metadata.instrumental &&
+                                releaseGroup(t) === g &&
+                                releaseStatus(t.metadata) === "released",
+                            );
+                            if (!items.length) return null;
+                            const preCount = tracks.filter(
+                              (t) =>
+                                !t.metadata.instrumental &&
+                                releaseGroup(t) === g &&
+                                releaseStatus(t.metadata) !== "released",
+                            ).length;
+                            return (
+                              <div key={g} className="mb-8">
+                                <h3 className="mb-3 text-sm font-bold uppercase tracking-widest text-primary">
+                                  {g}s<UnreleasedChip count={preCount} />
+                                </h3>
+                                {g === "Single" ? (
+                                  <details
+                                    open={
+                                      items.some((x) => x.id === editingId) ||
+                                      (newest ? releaseGroup(newest) === "Single" : false)
+                                    }
+                                    className="rounded-2xl border border-border p-4 open:border-primary"
+                                  >
+                                    <summary className="flex cursor-pointer list-none items-center gap-4">
+                                      <div className="flex h-14 w-14 items-center justify-center rounded-lg bg-primary text-primary-foreground">
+                                        <Disc3 className="h-7 w-7" />
+                                      </div>
+                                      <div className="min-w-0 flex-1">
+                                        <div className="truncate text-xl font-bold">
+                                          All Singles
+                                        </div>
+                                        <div className="text-sm text-muted-foreground">
+                                          {items.length} {items.length === 1 ? "single" : "singles"}{" "}
+                                          · A–Z
+                                        </div>
+                                      </div>
+                                    </summary>
+                                    <ul className="mt-4 grid gap-3">
+                                      {[...items]
+                                        .sort((a, b) => a.title.localeCompare(b.title))
+                                        .map(row)}
+                                    </ul>
+                                  </details>
+                                ) : (
+                                  <div className="grid gap-4">
+                                    {groupProjects(items).map((p) => {
+                                      const all = tracks.filter(
+                                        (x) =>
+                                          releaseGroup(x) !== "Single" && albumKeyOf(x) === p.key,
+                                      );
+                                      return (
+                                        <details
+                                          key={p.key}
+                                          open={
+                                            p.tracks.some((x) => x.id === editingId) ||
+                                            (!!newest && p.tracks.some((x) => x.id === newest.id))
+                                          }
+                                          className="rounded-2xl border border-border p-4 open:border-primary"
+                                        >
+                                          <summary className="flex cursor-pointer list-none flex-wrap items-center gap-4">
+                                            {p.cover ? (
+                                              <img
+                                                src={p.cover}
+                                                alt={`${p.title} artwork`}
+                                                className="h-14 w-14 rounded-lg object-cover shadow"
+                                              />
+                                            ) : (
+                                              <div className="flex h-14 w-14 items-center justify-center rounded-lg bg-primary text-primary-foreground">
+                                                <Disc3 className="h-7 w-7" />
+                                              </div>
+                                            )}
+                                            <div className="min-w-[10rem] flex-1">
+                                              <div className="truncate text-sm text-muted-foreground">
+                                                {p.artist}
+                                              </div>
+                                              <ReleaseRow
+                                                name={p.title}
+                                                type={releaseGroup(p.tracks[0]!)}
+                                                tracks={all}
+                                                readOnly={readOnly}
+                                                onSave={saveRelease}
+                                                onCover={(file) => saveReleaseCover(all, file)}
+                                              />
+                                            </div>
+                                            {onHealthCheck && (
+                                              <Button
+                                                type="button"
+                                                variant="outline"
+                                                size="sm"
+                                                onClick={(e) => {
+                                                  e.preventDefault();
+                                                  onHealthCheck(p.tracks[0]!.id, true);
+                                                }}
+                                              >
+                                                <Stethoscope />
+                                                Health check
+                                              </Button>
+                                            )}
+                                            {exportMenu("Export Release", p.tracks, p.title)}
+                                          </summary>
+                                          <ul className="mt-4 grid gap-3">{p.tracks.map(row)}</ul>
+                                        </details>
+                                      );
+                                    })}
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          })}
+                        {(() => {
+                          // Instrumentals have their own folder (founder, 2026-11-16): no album says an instrumental version belongs with
+                          // the songs on that album, so the versions sit together here instead.
+                          const instrumentals = tracks.filter(
+                            (t) =>
+                              t.metadata.instrumental &&
+                              (filter === "All" || releaseGroup(t) === filter),
+                          );
+                          if (!instrumentals.length) return null;
+                          const ready = Math.round(
+                            instrumentals.reduce((n, t) => n + pctOf(t.id), 0) /
+                              instrumentals.length,
+                          );
+                          return (
+                            <div id="instrumentals" className="mb-8 scroll-mt-4">
+                              <h3 className="mb-3 text-sm font-bold uppercase tracking-widest text-primary">
+                                Instrumentals
+                              </h3>
+                              <details
+                                open={
+                                  instrumentals.some((t) => t.id === editingId) ||
+                                  !instrumentals.some(
+                                    (t) => releaseStatus(t.metadata) === "released",
+                                  )
+                                }
+                                className="rounded-2xl border border-border p-4 open:border-primary"
+                              >
+                                <summary className="flex cursor-pointer list-none items-center gap-4">
+                                  <div className="flex h-14 w-14 items-center justify-center rounded-lg bg-primary text-primary-foreground">
+                                    <Disc3 className="h-7 w-7" />
+                                  </div>
+                                  <div className="min-w-0 flex-1">
+                                    <div className="truncate text-xl font-bold">Instrumentals</div>
+                                    <div className="text-sm text-muted-foreground">
+                                      {instrumentals.length}{" "}
+                                      {instrumentals.length === 1
+                                        ? "instrumental"
+                                        : "instrumentals"}{" "}
+                                      · {ready}% ready to register
+                                    </div>
+                                  </div>
+                                </summary>
+                                <ul className="mt-4 grid gap-3">
+                                  {[...instrumentals]
+                                    .sort((a, b) => a.title.localeCompare(b.title))
+                                    .map(row)}
+                                </ul>
+                              </details>
+                            </div>
+                          );
+                        })()}
+                      </>
+                    );
+                  })()}
+                  {picked.size > 0 &&
+                    (() => {
+                      const sel = tracks.filter((t) => picked.has(t.id));
+                      return (
+                        sel.length > 0 && (
+                          <div
+                            role="region"
+                            aria-label="Selected tracks"
+                            className="sticky bottom-4 z-20 mx-auto flex max-w-2xl flex-wrap items-center justify-between gap-3 rounded-2xl border border-primary bg-card p-3 shadow-lg"
+                          >
+                            <span className="font-semibold">
+                              {sel.length} {sel.length === 1 ? "track" : "tracks"} selected
+                            </span>
+                            <div className="flex flex-wrap gap-2">
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => setPicked(new Set())}
+                              >
+                                Clear
+                              </Button>
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                onClick={() =>
+                                  void myBrand("catalog", kitId ?? null)
+                                    .then((brand) =>
+                                      downloadCatalogPdf(
+                                        sel,
+                                        `Catalog - ${sel.length} Songs`,
+                                        brand,
+                                      ),
+                                    )
+                                    .catch(() => toast.error("Could not create the catalog PDF."))
+                                }
+                              >
+                                <FileText />
+                                PDF
+                              </Button>
+                              {exportMenu("Export Selected", sel, `${sel.length} Tracks`)}
+                            </div>
+                          </div>
+                        )
+                      );
+                    })()}
+                </>
+              )}
+            </div>
+          );
+        })()}
       {starsFor && <StarsAligned title={starsFor} onDone={() => setStarsFor(undefined)} />}
-      {full && <AgencyExportDialog open={exportOpen} onOpenChange={setExportOpen} tracks={tracks}
-        releases={groupProjects(tracks.filter((t) => releaseGroup(t) !== "Single"))} run={runExport} />}
+      {full && (
+        <AgencyExportDialog
+          open={exportOpen}
+          onOpenChange={setExportOpen}
+          tracks={tracks}
+          releases={groupProjects(tracks.filter((t) => releaseGroup(t) !== "Single"))}
+          run={runExport}
+        />
+      )}
       <Dialog open={!!nextSteps} onOpenChange={(o) => !o && setNextSteps(undefined)}>
         <DialogContent className="bg-card text-card-foreground">
-          <DialogHeader><DialogTitle className="text-xl font-bold">Downloaded. Now upload it at {nextSteps && AGENCY_LABEL[nextSteps.agency].split(" (")[0]}</DialogTitle></DialogHeader>
-          {nextSteps && <ol className="list-decimal space-y-1 pl-5 text-sm">{AGENCY_UPLOAD_STEPS[nextSteps.agency].map((step) => <li key={step}>{step}</li>)}</ol>}
-          {nextSteps?.agency === "mlc" && <div className="space-y-2 rounded-lg bg-muted p-3 text-sm">
-            {nextSteps.placeholders.length > 0 && <p>⚠️ {MLC_EXPORT_NOTES.placeholder} <span className="text-muted-foreground">({nextSteps.placeholders.join(", ")})</span></p>}
-            <p>{MLC_EXPORT_NOTES.recording}</p>
-          </div>}
-          <div className="flex justify-end"><Button type="button" onClick={() => setNextSteps(undefined)}>Got it</Button></div>
+          <DialogHeader>
+            <DialogTitle className="text-xl font-bold">
+              Downloaded. Now upload it at{" "}
+              {nextSteps && AGENCY_LABEL[nextSteps.agency].split(" (")[0]}
+            </DialogTitle>
+          </DialogHeader>
+          {nextSteps && (
+            <ol className="list-decimal space-y-1 pl-5 text-sm">
+              {AGENCY_UPLOAD_STEPS[nextSteps.agency].map((step) => (
+                <li key={step}>{step}</li>
+              ))}
+            </ol>
+          )}
+          {nextSteps?.agency === "mlc" && (
+            <div className="space-y-2 rounded-lg bg-muted p-3 text-sm">
+              {nextSteps.placeholders.length > 0 && (
+                <p>
+                  ⚠️ {MLC_EXPORT_NOTES.placeholder}{" "}
+                  <span className="text-muted-foreground">
+                    ({nextSteps.placeholders.join(", ")})
+                  </span>
+                </p>
+              )}
+              <p>{MLC_EXPORT_NOTES.recording}</p>
+            </div>
+          )}
+          <div className="flex justify-end">
+            <Button type="button" onClick={() => setNextSteps(undefined)}>
+              Got it
+            </Button>
+          </div>
         </DialogContent>
       </Dialog>
       <Dialog open={!!held} onOpenChange={(o) => !o && setHeld(undefined)}>
         <DialogContent className="bg-card text-card-foreground">
-          <DialogHeader><DialogTitle className="text-xl font-bold">{held?.exported ? `Exported ${held.exported} ${held.exported === 1 ? "song" : "songs"}` : "Nothing exported yet"}</DialogTitle></DialogHeader>
-          <p className="text-sm text-muted-foreground">{held?.songs.length === 1 ? "This song needs" : "These songs need"} writer info before {held && AGENCY_LABEL[held.agency].split(" (")[0]} can accept {held?.songs.length === 1 ? "it" : "them"}. Fix them, then export again.</p>
+          <DialogHeader>
+            <DialogTitle className="text-xl font-bold">
+              {held?.exported
+                ? `Exported ${held.exported} ${held.exported === 1 ? "song" : "songs"}`
+                : "Nothing exported yet"}
+            </DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">
+            {held?.songs.length === 1 ? "This song needs" : "These songs need"} writer info before{" "}
+            {held && AGENCY_LABEL[held.agency].split(" (")[0]} can accept{" "}
+            {held?.songs.length === 1 ? "it" : "them"}. Fix them, then export again.
+          </p>
           <div className="max-h-80 space-y-3 overflow-y-auto">
-            {held?.songs.map(({ track, missing }) => <div key={track.id} className="rounded-lg border border-border p-3">
-              <div className="mb-1 font-semibold">{track.title || "Untitled"}</div>
-              <MissingList items={missing} onJump={(field) => fix(track, field)} />
-            </div>)}
+            {held?.songs.map(({ track, missing }) => (
+              <div key={track.id} className="rounded-lg border border-border p-3">
+                <div className="mb-1 font-semibold">{track.title || "Untitled"}</div>
+                <MissingList items={missing} onJump={(field) => fix(track, field)} />
+              </div>
+            ))}
           </div>
           <Button onClick={() => setHeld(undefined)}>Got it</Button>
         </DialogContent>
       </Dialog>
       <Dialog open={!!gaps} onOpenChange={(o) => !o && setGaps(undefined)}>
         <DialogContent className="bg-card text-card-foreground">
-          <DialogHeader><DialogTitle className="text-xl font-bold">Your ZIP is ready, with {gaps?.length === 1 ? "1 song" : `${gaps?.length} songs`} to finish</DialogTitle></DialogHeader>
-          <p className="text-sm text-muted-foreground">Everything else is in the ZIP. Fill these in, then download again for the full set.</p>
+          <DialogHeader>
+            <DialogTitle className="text-xl font-bold">
+              Your ZIP is ready, with {gaps?.length === 1 ? "1 song" : `${gaps?.length} songs`} to
+              finish
+            </DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">
+            Everything else is in the ZIP. Fill these in, then download again for the full set.
+          </p>
           <div className="max-h-80 space-y-3 overflow-y-auto">
-            {gaps?.map(({ track, items }) => <div key={track.id} className="rounded-lg border border-border p-3">
-              <div className="mb-1 font-semibold">{track.title || "Untitled"}</div>
-              <MissingList items={items} onJump={(field) => { setGaps(undefined); fix(track, field); }} />
-            </div>)}
+            {gaps?.map(({ track, items }) => (
+              <div key={track.id} className="rounded-lg border border-border p-3">
+                <div className="mb-1 font-semibold">{track.title || "Untitled"}</div>
+                <MissingList
+                  items={items}
+                  onJump={(field) => {
+                    setGaps(undefined);
+                    fix(track, field);
+                  }}
+                />
+              </div>
+            ))}
           </div>
           <Button onClick={() => setGaps(undefined)}>Got it</Button>
         </DialogContent>
       </Dialog>
       <Dialog open={!!upsell} onOpenChange={(o) => !o && setUpsell(false)}>
         <DialogContent className="bg-card text-card-foreground">
-          <DialogHeader><DialogTitle className="flex items-center gap-2 text-xl font-bold"><Lock className="h-5 w-5 text-primary" />{upsell === "wav" ? "WAV embedding is part of Catalog Management" : upsell === "export" ? "1-Click Official Agency Exports are locked" : "Split Sheets are locked"}</DialogTitle></DialogHeader>
-          <p className="text-base font-medium">{upsell === "wav" ? "Embed your metadata into WAV masters and keep them in My Catalog with Catalog Management. MP3 embedding is included in your plan." : upsell === "export" ? "Upgrade to Catalog & Collaborate to export official The MLC and SoundExchange Direct bulk spreadsheets, plus BMI and ASCAP registration cheat sheets." : "Generate unlimited split sheets from your catalog starting with Catalog Plus ($24.99/yr). Add collaborator e-signatures with Catalog & Collaborate."}</p>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-xl font-bold">
+              <Lock className="h-5 w-5 text-primary" />
+              {upsell === "wav"
+                ? "WAV embedding is part of Catalog Management"
+                : upsell === "export"
+                  ? "1-Click Official Agency Exports are locked"
+                  : "Split Sheets are locked"}
+            </DialogTitle>
+          </DialogHeader>
+          <p className="text-base font-medium">
+            {upsell === "wav"
+              ? "Embed your metadata into WAV masters and keep them in My Catalog with Catalog Management. MP3 embedding is included in your plan."
+              : upsell === "export"
+                ? "Upgrade to Catalog & Collaborate to export official The MLC and SoundExchange Direct bulk spreadsheets, plus BMI and ASCAP registration cheat sheets."
+                : "Generate unlimited split sheets from your catalog starting with Catalog Plus ($24.99/yr). Add collaborator e-signatures with Catalog & Collaborate."}
+          </p>
           <Button onClick={() => setUpsell(false)}>Got it</Button>
         </DialogContent>
       </Dialog>
@@ -1521,54 +3962,168 @@ export function MetadataUploader({ onShareInfo, userId, mode = "embed", readOnly
 }
 
 const TIPS = {
-  instrumental: "Check this if the song has no lyrics. Instrumental songs don't need an Author to be registered.",
-  retiredIscrs: "A code this recording used to carry. Put the current code above first, then the old one here. A recording carries one ISRC, so the new code can't be added to the old entry: it is registered as an entry of its own — do it yourself in SoundExchange Direct, The MLC Portal or your PRO, or choose Expert Registration Assistance in the workspace and our team does it. A Support ticket saying it's an ISRC change works too. Give the title, artist, release date and both codes, and the distributor's confirmation if an agency asks for it. Never remove or close the old code: money filed under it can still be found and paid later.",
-  alternateTitles: "Other names the song is registered or released under — a short title, a translation, or the name an agency files it by. Repertoire search matches a name exactly, so save each one as that agency prints it: a work filed under this name then matches your song instead of reading as unregistered.",
-  samples: "Answer Yes if the song uses a sample, borrows from another song, or is based on an older song (public-domain songs too). PROs ask for the original song's details when you register.",
-  writtenFor: "Was the song made for a movie, TV show, stage show or commercial? BMI asks this when you register.",
-  pubShare: "This writer's part of the publisher half, because they're self-published or BMI pays them. It starts at their writer split. Every publisher share on the song (listed publishers plus these) has to add up to exactly 100%.",
-  publishing: "Who collects this writer's publisher share on this song. My publisher: a publisher listed under Publishers. Self-published: no publisher, so the writer collects it. BMI pays me: BMI writers with no publishing company get it from BMI. None: this writer gets no publishing on this song (for example, they signed it to someone else's publisher, or the deal gives it away).",
-  bmiWriterPublishing: "Check this if every writer on the song is with BMI and none of you has a publishing company. BMI pays you the publisher share too, so no publisher or publisher IPI is needed.",
-  selfPublished: "Check this if no publisher has rights to the song. Your PRO then pays the publisher half to the writers. Have your own publishing company? List it as a publisher instead.",
-  masterShare: "How much of the recording (the master) you own. Most independent artists own 100%. SoundExchange pays the master owner by this share.",
-  masterBasis: "I own it: you own the recording. Authorized designee: you collect for the owner, for example as their label or administrator.",
-  inception: "You've owned the recording since it was first made or released. Uncheck if your rights started on a later date, for example when you bought or took over the master.",
-  perpetuity: "You'll own the recording forever. Uncheck if your rights end on a set date, for example when a license or deal expires.",
+  instrumental:
+    "Check this if the song has no lyrics. Instrumental songs don't need an Author to be registered.",
+  retiredIscrs:
+    "A code this recording used to carry. Put the current code above first, then the old one here. A recording carries one ISRC, so the new code can't be added to the old entry: it is registered as an entry of its own — do it yourself in SoundExchange Direct, The MLC Portal or your PRO, or choose Expert Registration Assistance in the workspace and our team does it. A Support ticket saying it's an ISRC change works too. Give the title, artist, release date and both codes, and the distributor's confirmation if an agency asks for it. Never remove or close the old code: money filed under it can still be found and paid later.",
+  alternateTitles:
+    "Other names the song is registered or released under — a short title, a translation, or the name an agency files it by. Repertoire search matches a name exactly, so save each one as that agency prints it: a work filed under this name then matches your song instead of reading as unregistered.",
+  samples:
+    "Answer Yes if the song uses a sample, borrows from another song, or is based on an older song (public-domain songs too). PROs ask for the original song's details when you register.",
+  writtenFor:
+    "Was the song made for a movie, TV show, stage show or commercial? BMI asks this when you register.",
+  pubShare:
+    "This writer's part of the publisher half, because they're self-published or BMI pays them. It starts at their writer split. Every publisher share on the song (listed publishers plus these) has to add up to exactly 100%.",
+  publishing:
+    "Who collects this writer's publisher share on this song. My publisher: a publisher listed under Publishers. Self-published: no publisher, so the writer collects it. BMI pays me: BMI writers with no publishing company get it from BMI. None: this writer gets no publishing on this song (for example, they signed it to someone else's publisher, or the deal gives it away).",
+  bmiWriterPublishing:
+    "Check this if every writer on the song is with BMI and none of you has a publishing company. BMI pays you the publisher share too, so no publisher or publisher IPI is needed.",
+  selfPublished:
+    "Check this if no publisher has rights to the song. Your PRO then pays the publisher half to the writers. Have your own publishing company? List it as a publisher instead.",
+  masterShare:
+    "How much of the recording (the master) you own. Most independent artists own 100%. SoundExchange pays the master owner by this share.",
+  masterBasis:
+    "I own it: you own the recording. Authorized designee: you collect for the owner, for example as their label or administrator.",
+  inception:
+    "You've owned the recording since it was first made or released. Uncheck if your rights started on a later date, for example when you bought or took over the master.",
+  perpetuity:
+    "You'll own the recording forever. Uncheck if your rights end on a set date, for example when a license or deal expires.",
 };
 
 /** A titled dropdown section of the song form. The closed summary shows ⚠️ or ✓; it starts open when asked to. */
-function FormSection({ title, summary, open, warn, ok, disabled, children }: { title: string; summary: string; open?: boolean; warn?: boolean; ok?: boolean; disabled?: boolean; children: ReactNode }) {
+function FormSection({
+  title,
+  summary,
+  open,
+  warn,
+  ok,
+  disabled,
+  children,
+}: {
+  title: string;
+  summary: string;
+  open?: boolean;
+  warn?: boolean;
+  ok?: boolean;
+  disabled?: boolean;
+  children: ReactNode;
+}) {
   // Fixed at mount (the form is keyed per song), so React never closes a section the user opened.
   const [initial] = useState(!!open);
-  return <details open={initial} className="group rounded-xl border border-border open:border-primary/60">
-    <summary className="flex cursor-pointer list-none items-center justify-between gap-3 p-4 [&::-webkit-details-marker]:hidden">
-      <span className="text-lg font-semibold">{title}</span>
-      <span className="flex min-w-0 items-center gap-2 text-sm text-muted-foreground">
-        <span className="truncate">{warn ? "⚠️ " : ok ? "✓ " : ""}{summary}</span>
-        <ChevronDown className="h-4 w-4 shrink-0 transition group-open:rotate-180" aria-hidden />
-      </span>
-    </summary>
-    <fieldset disabled={disabled} className="min-w-0 space-y-5 border-t border-border p-4">{children}</fieldset>
-  </details>;
+  return (
+    <details
+      open={initial}
+      className="group rounded-xl border border-border open:border-primary/60"
+    >
+      <summary className="flex cursor-pointer list-none items-center justify-between gap-3 p-4 [&::-webkit-details-marker]:hidden">
+        <span className="text-lg font-semibold">{title}</span>
+        <span className="flex min-w-0 items-center gap-2 text-sm text-muted-foreground">
+          <span className="truncate">
+            {warn ? "⚠️ " : ok ? "✓ " : ""}
+            {summary}
+          </span>
+          <ChevronDown className="h-4 w-4 shrink-0 transition group-open:rotate-180" aria-hidden />
+        </span>
+      </summary>
+      <fieldset disabled={disabled} className="min-w-0 space-y-5 border-t border-border p-4">
+        {children}
+      </fieldset>
+    </details>
+  );
 }
 
 /** Button-style single choice (Yes / No and similar), matching the Explicit content control. */
-function Choice({ id, label, value, options, labels, onChange }: { id?: string; label: string; value: string; options: readonly string[]; labels?: Record<string, string>; onChange: (value: string) => void }) {
-  return <div id={id} tabIndex={-1} className="flex flex-wrap gap-2" role="radiogroup" aria-label={label}>
-    {options.map((o) => <Button key={o} type="button" role="radio" aria-checked={value === o} variant={value === o ? "default" : "outline"} onClick={() => onChange(o)}>{labels?.[o] ?? o}</Button>)}
-  </div>;
+function Choice({
+  id,
+  label,
+  value,
+  options,
+  labels,
+  onChange,
+}: {
+  id?: string;
+  label: string;
+  value: string;
+  options: readonly string[];
+  labels?: Record<string, string>;
+  onChange: (value: string) => void;
+}) {
+  return (
+    <div
+      id={id}
+      tabIndex={-1}
+      className="flex flex-wrap gap-2"
+      role="radiogroup"
+      aria-label={label}
+    >
+      {options.map((o) => (
+        <Button
+          key={o}
+          type="button"
+          role="radio"
+          aria-checked={value === o}
+          variant={value === o ? "default" : "outline"}
+          onClick={() => onChange(o)}
+        >
+          {labels?.[o] ?? o}
+        </Button>
+      ))}
+    </div>
+  );
 }
 
 /** A list of short text values with add and remove, like Featured artist. */
-function ListField({ label, id, tip, values, onChange }: { label: string; id: string; tip: string; values: string[]; onChange: (values: string[]) => void }) {
-  return <div className="space-y-2">
-    {values.map((v, i) => <div key={i} className="flex items-end gap-2">
-      <div className="flex-1"><Field label={i === 0 ? label : `${label} ${i + 1}`} id={`${id}-${i}`} value={v} {...(i === 0 && { tip })} onChange={(next) => onChange(values.map((x, j) => (j === i ? next : x)))} /></div>
-      {i === values.length - 1
-        ? <Button type="button" size="icon" variant="outline" aria-label={`Add ${label.toLowerCase()}`} onClick={() => onChange([...values, ""])}><Plus /></Button>
-        : <Button type="button" size="icon" variant="ghost" aria-label={`Remove ${label.toLowerCase()} ${i + 1}`} onClick={() => onChange(values.filter((_, j) => j !== i))}><Trash2 /></Button>}
-    </div>)}
-  </div>;
+function ListField({
+  label,
+  id,
+  tip,
+  values,
+  onChange,
+}: {
+  label: string;
+  id: string;
+  tip: string;
+  values: string[];
+  onChange: (values: string[]) => void;
+}) {
+  return (
+    <div className="space-y-2">
+      {values.map((v, i) => (
+        <div key={i} className="flex items-end gap-2">
+          <div className="flex-1">
+            <Field
+              label={i === 0 ? label : `${label} ${i + 1}`}
+              id={`${id}-${i}`}
+              value={v}
+              {...(i === 0 && { tip })}
+              onChange={(next) => onChange(values.map((x, j) => (j === i ? next : x)))}
+            />
+          </div>
+          {i === values.length - 1 ? (
+            <Button
+              type="button"
+              size="icon"
+              variant="outline"
+              aria-label={`Add ${label.toLowerCase()}`}
+              onClick={() => onChange([...values, ""])}
+            >
+              <Plus />
+            </Button>
+          ) : (
+            <Button
+              type="button"
+              size="icon"
+              variant="ghost"
+              aria-label={`Remove ${label.toLowerCase()} ${i + 1}`}
+              onClick={() => onChange(values.filter((_, j) => j !== i))}
+            >
+              <Trash2 />
+            </Button>
+          )}
+        </div>
+      ))}
+    </div>
+  );
 }
 
 function Tip({ text, title }: { text: string; title?: string }) {
@@ -1584,54 +4139,186 @@ function Tip({ text, title }: { text: string; title?: string }) {
  * A country field as a real list (founder, 2026-11-12): agencies reject "USA" where they expect a country name, and a
  * free-text box invites it. A value saved before this was a dropdown stays selectable, so opening the form can't drop it.
  */
-function CountrySelect({ id, label, value, placeholder, onChange }: { id: string; label: string; value: string; placeholder: string; onChange: (v: string) => void }) {
+function CountrySelect({
+  id,
+  label,
+  value,
+  placeholder,
+  onChange,
+}: {
+  id: string;
+  label: string;
+  value: string;
+  placeholder: string;
+  onChange: (v: string) => void;
+}) {
   return (
     <div className="min-w-0 space-y-2">
       <Label htmlFor={id}>{label}</Label>
-      <select id={id} value={value} onChange={(e) => onChange(e.target.value)}
-        className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm">
+      <select
+        id={id}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
+      >
         <option value="">{placeholder}</option>
-        {countryOptions(value).map((name) => <option key={name} value={name}>{name}</option>)}
+        {countryOptions(value).map((name) => (
+          <option key={name} value={name}>
+            {name}
+          </option>
+        ))}
       </select>
     </div>
   );
 }
 
-function Performers({ metadata: m, disabled, update, bare }: { bare?: boolean; metadata: Metadata; disabled: boolean; update: <K extends keyof Metadata>(key: K, value: Metadata[K]) => void }) {
+function Performers({
+  metadata: m,
+  disabled,
+  update,
+  bare,
+}: {
+  bare?: boolean;
+  metadata: Metadata;
+  disabled: boolean;
+  update: <K extends keyof Metadata>(key: K, value: Metadata[K]) => void;
+}) {
   const credits = m.credits;
-  const set = (i: number, patch: Partial<Metadata["credits"][number]>) => update("credits", credits.map((x, j) => (j === i ? { ...x, ...patch } : x)));
+  const set = (i: number, patch: Partial<Metadata["credits"][number]>) =>
+    update(
+      "credits",
+      credits.map((x, j) => (j === i ? { ...x, ...patch } : x)),
+    );
   const named = performers({ ...m, credits: [] });
   const releaseYear = /^\d{4}/.exec(m.releaseDate)?.[0] ?? "";
   return (
-    <fieldset id="performers" disabled={disabled} className={bare ? "min-w-0 space-y-4" : "space-y-4 border-t border-border pt-6"}>
-      <legend className={bare ? "sr-only" : "pr-3 text-lg font-semibold"}>Performers & credits{!bare && <InfoTip term="performers" />}</legend>
-      {bare && <p className="flex items-center text-sm font-semibold">Performers & credits<InfoTip term="performers" /></p>}
-      <p className="text-sm text-muted-foreground">Add everyone who played or sang on this recording, so every performer can be paid for airplay outside the US. Optional; add it anytime.</p>
+    <fieldset
+      id="performers"
+      disabled={disabled}
+      className={bare ? "min-w-0 space-y-4" : "space-y-4 border-t border-border pt-6"}
+    >
+      <legend className={bare ? "sr-only" : "pr-3 text-lg font-semibold"}>
+        Performers & credits{!bare && <InfoTip term="performers" />}
+      </legend>
+      {bare && (
+        <p className="flex items-center text-sm font-semibold">
+          Performers & credits
+          <InfoTip term="performers" />
+        </p>
+      )}
+      <p className="text-sm text-muted-foreground">
+        Add everyone who played or sang on this recording, so every performer can be paid for
+        airplay outside the US. Optional; add it anytime.
+      </p>
       {named.length > 0 && (
         <ul className="space-y-1 text-sm">
-          {named.map((p) => <li key={p.name}><span className="font-semibold">{p.name}</span> <span className="text-muted-foreground">· Featured artist (from {p.name === m.artist.trim() ? "Artist name" : "Featured artist"})</span></li>)}
+          {named.map((p) => (
+            <li key={p.name}>
+              <span className="font-semibold">{p.name}</span>{" "}
+              <span className="text-muted-foreground">
+                · Featured artist (from{" "}
+                {p.name === m.artist.trim() ? "Artist name" : "Featured artist"})
+              </span>
+            </li>
+          ))}
         </ul>
       )}
       {credits.map((c, i) => (
         <div key={i} className="grid items-end gap-3 sm:grid-cols-[220px_1fr_1fr_36px]">
-          <SelectField label="Instrument or role" id={`credit-${i}-role`} value={creditChoice(c)} options={CREDIT_CHOICES} onChange={(v) => set(i, fromCreditChoice(v, c))} />
-          <Field label="Name" id={`credit-${i}-name`} value={c.name} onChange={(v) => set(i, { name: v })} />
-          {creditChoice(c) === OTHER_INSTRUMENT
-            ? <Field label="Which instrument?" id={`credit-${i}-instrument`} value={c.instrument ?? ""} placeholder="e.g. Sitar" onChange={(v) => set(i, { instrument: v })} />
-            : isPerformer(c.role) ? <span aria-hidden /> : <p className="pb-2 text-xs text-muted-foreground">Credited only: engineers and arrangers aren't paid for airplay.</p>}
-          <Button type="button" size="icon" variant="ghost" aria-label={`Remove credit ${i + 1}`} onClick={() => update("credits", credits.filter((_, j) => j !== i))}><Trash2 /></Button>
+          <SelectField
+            label="Instrument or role"
+            id={`credit-${i}-role`}
+            value={creditChoice(c)}
+            options={CREDIT_CHOICES}
+            onChange={(v) => set(i, fromCreditChoice(v, c))}
+          />
+          <Field
+            label="Name"
+            id={`credit-${i}-name`}
+            value={c.name}
+            onChange={(v) => set(i, { name: v })}
+          />
+          {creditChoice(c) === OTHER_INSTRUMENT ? (
+            <Field
+              label="Which instrument?"
+              id={`credit-${i}-instrument`}
+              value={c.instrument ?? ""}
+              placeholder="e.g. Sitar"
+              onChange={(v) => set(i, { instrument: v })}
+            />
+          ) : isPerformer(c.role) ? (
+            <span aria-hidden />
+          ) : (
+            <p className="pb-2 text-xs text-muted-foreground">
+              Credited only: engineers and arrangers aren't paid for airplay.
+            </p>
+          )}
+          <Button
+            type="button"
+            size="icon"
+            variant="ghost"
+            aria-label={`Remove credit ${i + 1}`}
+            onClick={() =>
+              update(
+                "credits",
+                credits.filter((_, j) => j !== i),
+              )
+            }
+          >
+            <Trash2 />
+          </Button>
         </div>
       ))}
-      <Button type="button" variant="outline" onClick={() => update("credits", [...credits, { role: "Session musician", name: "", instrument: "Guitar" }])}><Plus />Add performer or credit</Button>
+      <Button
+        type="button"
+        variant="outline"
+        onClick={() =>
+          update("credits", [
+            ...credits,
+            { role: "Session musician", name: "", instrument: "Guitar" },
+          ])
+        }
+      >
+        <Plus />
+        Add performer or credit
+      </Button>
       <div className="grid gap-5 sm:grid-cols-2">
         <div className="min-w-0 space-y-2">
-          <Label htmlFor="recordedIn">Country where it was recorded<Tip text="For airplay royalties outside the US (neighbouring rights). Most US artists can leave it as United States." title="Country where it was recorded" /></Label>
-          <Input id="recordedIn" list="recorded-in-countries" value={m.recordedIn} placeholder="United States" onChange={(e) => update("recordedIn", e.target.value)} />
-          <datalist id="recorded-in-countries">{COUNTRIES.filter((c) => c.code !== "XX").map((c) => <option key={c.code} value={c.name} />)}</datalist>
+          <Label htmlFor="recordedIn">
+            Country where it was recorded
+            <Tip
+              text="For airplay royalties outside the US (neighbouring rights). Most US artists can leave it as United States."
+              title="Country where it was recorded"
+            />
+          </Label>
+          <Input
+            id="recordedIn"
+            list="recorded-in-countries"
+            value={m.recordedIn}
+            placeholder="United States"
+            onChange={(e) => update("recordedIn", e.target.value)}
+          />
+          <datalist id="recorded-in-countries">
+            {COUNTRIES.filter((c) => c.code !== "XX").map((c) => (
+              <option key={c.code} value={c.name} />
+            ))}
+          </datalist>
         </div>
-        <Field label="Year recorded" id="recordedYear" value={m.recordedYear} placeholder={releaseYear || "2026"} onChange={(v) => update("recordedYear", v.replace(/\D/g, "").slice(0, 4))} />
+        <Field
+          label="Year recorded"
+          id="recordedYear"
+          value={m.recordedYear}
+          placeholder={releaseYear || "2026"}
+          onChange={(v) => update("recordedYear", v.replace(/\D/g, "").slice(0, 4))}
+        />
         {/* The full day, which SoundExchange's ingest asks for; a year alone can't answer it honestly. */}
-        <Field label="Recording date" id="recordingDate" type="date" value={m.recordingDate} onChange={(v) => update("recordingDate", v)} />
+        <Field
+          label="Recording date"
+          id="recordingDate"
+          type="date"
+          value={m.recordingDate}
+          onChange={(v) => update("recordingDate", v)}
+        />
       </div>
     </fieldset>
   );
@@ -1649,82 +4336,228 @@ function jumpTo(field: string) {
 }
 
 type CarryKey = "artist" | "release" | "people" | "genre";
-const CARRY_LABEL: Record<CarryKey, string> = { artist: "Artist", release: "Album, art & release", people: "Writers & producers", genre: "Genre" };
+const CARRY_LABEL: Record<CarryKey, string> = {
+  artist: "Artist",
+  release: "Album, art & release",
+  people: "Writers & producers",
+  genre: "Genre",
+};
 
 /** "Next song" with carry-over chips, so a whole release can be embedded without retyping what's shared. */
-type SavedInfo = { trackId: string; title: string; hadAudio: boolean; embedded: boolean; downloaded: boolean; stored: boolean; art: boolean; protect: boolean };
+type SavedInfo = {
+  trackId: string;
+  title: string;
+  hadAudio: boolean;
+  embedded: boolean;
+  downloaded: boolean;
+  stored: boolean;
+  art: boolean;
+  protect: boolean;
+};
 
 /** Exactly what a save did: embedded, downloaded, stored in My Catalog, artwork, and AI Protection if they asked for it. */
 function SaveChecklist({ info, onProtect }: { info: SavedInfo; onProtect: () => void }) {
-  const row = (ok: boolean, text: ReactNode) => <li className="flex items-start gap-2">{ok ? <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-primary" /> : <span className="w-4 shrink-0 text-center">⚠️</span>}<span>{text}</span></li>;
+  const row = (ok: boolean, text: ReactNode) => (
+    <li className="flex items-start gap-2">
+      {ok ? (
+        <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+      ) : (
+        <span className="w-4 shrink-0 text-center">⚠️</span>
+      )}
+      <span>{text}</span>
+    </li>
+  );
   return (
     <ul className="mx-auto mt-4 max-w-md space-y-1.5 rounded-xl border border-border p-4 text-sm">
       {row(true, "Song details saved to My Catalog")}
-      {info.hadAudio
-        ? <>{row(info.embedded, info.embedded ? "Details embedded in the master" : "The audio couldn't be tagged, so it was stored without embedded details. Try again.")}
-            {row(info.stored, info.stored ? "Tagged master stored in My Catalog" : "The master couldn't be stored. Save again.")}
-            {row(info.downloaded, info.downloaded ? "Downloaded to this device" : "Not downloaded to this device. Download it anytime from My Catalog.")}</>
-        : row(false, "No audio added, so nothing was embedded. Add the MP3 or WAV to embed it.")}
+      {info.hadAudio ? (
+        <>
+          {row(
+            info.embedded,
+            info.embedded
+              ? "Details embedded in the master"
+              : "The audio couldn't be tagged, so it was stored without embedded details. Try again.",
+          )}
+          {row(
+            info.stored,
+            info.stored
+              ? "Tagged master stored in My Catalog"
+              : "The master couldn't be stored. Save again.",
+          )}
+          {row(
+            info.downloaded,
+            info.downloaded
+              ? "Downloaded to this device"
+              : "Not downloaded to this device. Download it anytime from My Catalog.",
+          )}
+        </>
+      ) : (
+        row(false, "No audio added, so nothing was embedded. Add the MP3 or WAV to embed it.")
+      )}
       {info.art && row(true, "Artwork stored in My Catalog")}
-      {info.protect && <li className="flex flex-wrap items-center justify-between gap-2 border-t border-border pt-2"><span className="font-semibold">AI Protection: checkout opening…</span><Button type="button" size="sm" onClick={onProtect}><ShieldCheck />Pay {`$${PACKAGES[0]!.price}`}</Button></li>}
+      {info.protect && (
+        <li className="flex flex-wrap items-center justify-between gap-2 border-t border-border pt-2">
+          <span className="font-semibold">AI Protection: checkout opening…</span>
+          <Button type="button" size="sm" onClick={onProtect}>
+            <ShieldCheck />
+            Pay {`$${PACKAGES[0]!.price}`}
+          </Button>
+        </li>
+      )}
     </ul>
   );
 }
 
 /** Saves the embed sitting for this account: what is finished, and every song still waiting for its audio. */
-function keepSession(userId: string, done: string[], waiting: string[], audio: File | undefined, queue: File[]) {
+function keepSession(
+  userId: string,
+  done: string[],
+  waiting: string[],
+  audio: File | undefined,
+  queue: File[],
+) {
   const names = queue.map((f) => f.name);
-  writeIntake(userId, "embed-session", { done, waiting: [...waiting, ...(audio ? [audio.name] : []), ...names] });
+  writeIntake(userId, "embed-session", {
+    done,
+    waiting: [...waiting, ...(audio ? [audio.name] : []), ...names],
+  });
 }
 
-function NextSong({ queue, carry, onCarry, onNext, compact }: { queue: File[]; carry: Record<CarryKey, boolean>; onCarry: (c: Record<CarryKey, boolean>) => void; onNext: () => void; compact?: boolean }) {
+function NextSong({
+  queue,
+  carry,
+  onCarry,
+  onNext,
+  compact,
+}: {
+  queue: File[];
+  carry: Record<CarryKey, boolean>;
+  onCarry: (c: Record<CarryKey, boolean>) => void;
+  onNext: () => void;
+  compact?: boolean;
+}) {
   return (
     <div className={compact ? "rounded-xl border border-border p-4" : "mt-5"}>
-      <p className={`text-sm font-semibold ${compact ? "" : "text-center"}`}>Carry over to the next song</p>
+      <p className={`text-sm font-semibold ${compact ? "" : "text-center"}`}>
+        Carry over to the next song
+      </p>
       <div className={`mt-2 flex flex-wrap gap-2 ${compact ? "" : "justify-center"}`}>
         {(Object.keys(CARRY_LABEL) as CarryKey[]).map((k) => (
-          <button key={k} type="button" aria-pressed={carry[k]} onClick={() => onCarry({ ...carry, [k]: !carry[k] })}
-            className={`rounded-full border px-3 py-1 text-xs font-semibold transition ${carry[k] ? "border-primary bg-primary text-primary-foreground" : "border-border text-muted-foreground hover:border-primary"}`}>
-            {carry[k] && <CheckCircle2 className="mr-1 inline h-3 w-3" />}{CARRY_LABEL[k]}
+          <button
+            key={k}
+            type="button"
+            aria-pressed={carry[k]}
+            onClick={() => onCarry({ ...carry, [k]: !carry[k] })}
+            className={`rounded-full border px-3 py-1 text-xs font-semibold transition ${carry[k] ? "border-primary bg-primary text-primary-foreground" : "border-border text-muted-foreground hover:border-primary"}`}
+          >
+            {carry[k] && <CheckCircle2 className="mr-1 inline h-3 w-3" />}
+            {CARRY_LABEL[k]}
           </button>
         ))}
       </div>
-      <Button type="button" size="lg" className={`mt-4 ${compact ? "" : "mx-auto"}`} onClick={onNext} autoFocus={!compact}>
-        <Plus />{queue[0] ? `Next song: ${queue[0].name.replace(AUDIO_FILE, "")}` : "Next song"}
+      <Button
+        type="button"
+        size="lg"
+        className={`mt-4 ${compact ? "" : "mx-auto"}`}
+        onClick={onNext}
+        autoFocus={!compact}
+      >
+        <Plus />
+        {queue[0] ? `Next song: ${queue[0].name.replace(AUDIO_FILE, "")}` : "Next song"}
       </Button>
     </div>
   );
 }
 
 /** Left rail: what's done this sitting, what's on now, and what's waiting. */
-function SessionRail({ audio, queue, done, waiting, onAdd, onRemove, onClear }: { audio: File | undefined; queue: File[]; done: string[]; waiting: string[]; onAdd: () => void; onRemove: (i: number) => void; onClear: () => void }) {
-  if (!audio && !queue.length && !done.length && !waiting.length) return (
-    <aside aria-label="Embed session" className="hidden rounded-2xl border border-dashed border-border p-4 lg:sticky lg:top-6 lg:block">
-      <h2 className="text-xs font-bold uppercase tracking-[2px] text-primary">Session</h2>
-      <p className="mt-2 text-sm text-muted-foreground">Add a few songs at once and work through them one after another. Shared details carry over.</p>
-      <Button type="button" variant="outline" size="sm" className="mt-3 w-full" onClick={onAdd}><Plus />Add songs</Button>
-    </aside>
-  );
+function SessionRail({
+  audio,
+  queue,
+  done,
+  waiting,
+  onAdd,
+  onRemove,
+  onClear,
+}: {
+  audio: File | undefined;
+  queue: File[];
+  done: string[];
+  waiting: string[];
+  onAdd: () => void;
+  onRemove: (i: number) => void;
+  onClear: () => void;
+}) {
+  if (!audio && !queue.length && !done.length && !waiting.length)
+    return (
+      <aside
+        aria-label="Embed session"
+        className="hidden rounded-2xl border border-dashed border-border p-4 lg:sticky lg:top-6 lg:block"
+      >
+        <h2 className="text-xs font-bold uppercase tracking-[2px] text-primary">Session</h2>
+        <p className="mt-2 text-sm text-muted-foreground">
+          Add a few songs at once and work through them one after another. Shared details carry
+          over.
+        </p>
+        <Button type="button" variant="outline" size="sm" className="mt-3 w-full" onClick={onAdd}>
+          <Plus />
+          Add songs
+        </Button>
+      </aside>
+    );
   return (
-    <aside aria-label="Embed session" className="mb-6 rounded-2xl border border-border bg-card p-4 lg:sticky lg:top-6 lg:mb-0">
+    <aside
+      aria-label="Embed session"
+      className="mb-6 rounded-2xl border border-border bg-card p-4 lg:sticky lg:top-6 lg:mb-0"
+    >
       <div className="flex items-baseline justify-between">
         <h2 className="text-xs font-bold uppercase tracking-[2px] text-primary">Session</h2>
         <span className="text-xs text-muted-foreground">{done.length} embedded</span>
       </div>
       <ol className="mt-3 max-h-[60vh] space-y-1.5 overflow-y-auto text-sm">
-        {done.map((t, i) => <li key={`d${i}`} className="flex items-center gap-2 text-muted-foreground"><CheckCircle2 className="h-4 w-4 shrink-0 text-primary" /><span className="truncate">{t}</span></li>)}
-        {audio && <li className="flex items-center gap-2 rounded-lg bg-primary/10 px-2 py-1.5 font-semibold"><FileAudio className="h-4 w-4 shrink-0 text-primary" /><span className="truncate">{audio.name.replace(AUDIO_FILE, "")}</span></li>}
+        {done.map((t, i) => (
+          <li key={`d${i}`} className="flex items-center gap-2 text-muted-foreground">
+            <CheckCircle2 className="h-4 w-4 shrink-0 text-primary" />
+            <span className="truncate">{t}</span>
+          </li>
+        ))}
+        {audio && (
+          <li className="flex items-center gap-2 rounded-lg bg-primary/10 px-2 py-1.5 font-semibold">
+            <FileAudio className="h-4 w-4 shrink-0 text-primary" />
+            <span className="truncate">{audio.name.replace(AUDIO_FILE, "")}</span>
+          </li>
+        )}
         {queue.map((f, i) => (
           <li key={`q${i}`} className="group flex items-center gap-2 px-2">
             <span className="w-4 shrink-0 text-center text-xs text-muted-foreground">{i + 1}</span>
             <span className="min-w-0 flex-1 truncate">{f.name.replace(AUDIO_FILE, "")}</span>
-            <button type="button" aria-label={`Remove ${f.name} from the queue`} onClick={() => onRemove(i)} className="text-muted-foreground opacity-0 transition hover:text-destructive group-hover:opacity-100 focus:opacity-100"><Trash2 className="h-3.5 w-3.5" /></button>
+            <button
+              type="button"
+              aria-label={`Remove ${f.name} from the queue`}
+              onClick={() => onRemove(i)}
+              className="text-muted-foreground opacity-0 transition hover:text-destructive group-hover:opacity-100 focus:opacity-100"
+            >
+              <Trash2 className="h-3.5 w-3.5" />
+            </button>
           </li>
         ))}
-        {waiting.map((name, i) => <li key={`w${i}${name}`} className="flex items-center gap-2 px-2 text-muted-foreground"><span className="w-4 shrink-0 text-center text-xs">–</span><span className="min-w-0 flex-1 truncate">{name.replace(AUDIO_FILE, "")}<span className="block text-[11px]">add the file again to finish it</span></span></li>)}
+        {waiting.map((name, i) => (
+          <li key={`w${i}${name}`} className="flex items-center gap-2 px-2 text-muted-foreground">
+            <span className="w-4 shrink-0 text-center text-xs">–</span>
+            <span className="min-w-0 flex-1 truncate">
+              {name.replace(AUDIO_FILE, "")}
+              <span className="block text-[11px]">add the file again to finish it</span>
+            </span>
+          </li>
+        ))}
       </ol>
-      <Button type="button" variant="outline" size="sm" className="mt-3 w-full" onClick={onAdd}><Plus />{waiting.length ? "Re-add the waiting songs" : "Add songs"}</Button>
-      <Button type="button" variant="ghost" size="sm" className="mt-1 w-full" onClick={onClear}><Trash2 />Clear session</Button>
+      <Button type="button" variant="outline" size="sm" className="mt-3 w-full" onClick={onAdd}>
+        <Plus />
+        {waiting.length ? "Re-add the waiting songs" : "Add songs"}
+      </Button>
+      <Button type="button" variant="ghost" size="sm" className="mt-1 w-full" onClick={onClear}>
+        <Trash2 />
+        Clear session
+      </Button>
     </aside>
   );
 }
@@ -1733,38 +4566,91 @@ function SessionRail({ audio, queue, done, waiting, onAdd, onRemove, onClear }: 
 function NowEmbedding({ metadata: m, cover }: { metadata: Metadata; cover: string }) {
   const art = cover || m.coverThumb;
   const feat = m.featured.filter(Boolean);
-  const people = (["writers", "composers", "producers"] as const).reduce((n, g) => n + (m[g] ?? []).filter(creditName).length, 0);
+  const people = (["writers", "composers", "producers"] as const).reduce(
+    (n, g) => n + (m[g] ?? []).filter(creditName).length,
+    0,
+  );
   const r = registrationReadiness(m);
   // A PRO affiliation and an IPI are what The MLC and a PRO register by; SoundExchange asks for neither (founder, 2026-11-12).
   const gaps = proAccountGaps(m);
   const rows: [string, string][] = [
-    ["Album", m.album], ["Track", m.trackNumber ? `${m.trackNumber}${m.trackTotal ? ` of ${m.trackTotal}` : ""}` : ""],
-    ["Genre", m.primaryGenre], ["ISRC", m.isrc], ["UPC", m.upc], ["Credits", people ? `${people} ${people === 1 ? "person" : "people"}` : ""],
+    ["Album", m.album],
+    ["Track", m.trackNumber ? `${m.trackNumber}${m.trackTotal ? ` of ${m.trackTotal}` : ""}` : ""],
+    ["Genre", m.primaryGenre],
+    ["ISRC", m.isrc],
+    ["UPC", m.upc],
+    ["Credits", people ? `${people} ${people === 1 ? "person" : "people"}` : ""],
     ["Lyrics", m.lyrics.trim() ? "Included" : ""],
   ];
   return (
-    <aside aria-label="Now embedding" className="hidden rounded-2xl border border-border bg-card p-4 lg:sticky lg:top-6 lg:block">
+    <aside
+      aria-label="Now embedding"
+      className="hidden rounded-2xl border border-border bg-card p-4 lg:sticky lg:top-6 lg:block"
+    >
       <h2 className="text-xs font-bold uppercase tracking-[2px] text-primary">Now embedding</h2>
       <div className="mt-3 aspect-square overflow-hidden rounded-xl bg-muted">
-        {art ? <img src={art} alt="" className="h-full w-full object-cover" /> : <div className="flex h-full items-center justify-center"><Disc3 className="h-16 w-16 text-muted-foreground/40" /></div>}
+        {art ? (
+          <img src={art} alt="" className="h-full w-full object-cover" />
+        ) : (
+          <div className="flex h-full items-center justify-center">
+            <Disc3 className="h-16 w-16 text-muted-foreground/40" />
+          </div>
+        )}
       </div>
       <p className="mt-3 truncate text-lg font-bold">{m.title || "Untitled"}</p>
-      <p className="truncate text-sm text-muted-foreground">{m.artist || "Artist"}{feat.length ? ` feat. ${feat.join(", ")}` : ""}</p>
-      <dl className="mt-3 space-y-1 text-xs">
-        {rows.map(([k, v]) => <div key={k} className="flex justify-between gap-3"><dt className="text-muted-foreground">{k}</dt><dd className={`truncate font-semibold ${v ? "" : "text-muted-foreground/50"}`}>{v || "—"}</dd></div>)}
-      </dl>
-      <p className={`mt-3 rounded-lg px-2 py-1.5 text-xs font-semibold ${r.ready && !gaps.length ? "bg-primary/10 text-primary" : "bg-muted"}`}>
-        {!r.ready ? `⚠️ ${r.missing.length} to fix before registering` : gaps.length ? "PRO or IPI still needed to register" : "Writer info ready"}
+      <p className="truncate text-sm text-muted-foreground">
+        {m.artist || "Artist"}
+        {feat.length ? ` feat. ${feat.join(", ")}` : ""}
       </p>
-      <p className="mt-2 text-[11px] leading-snug text-muted-foreground">PRO, IPI and split percentages stay private and are never written into the file. Splits are set in My Catalog.</p>
+      <dl className="mt-3 space-y-1 text-xs">
+        {rows.map(([k, v]) => (
+          <div key={k} className="flex justify-between gap-3">
+            <dt className="text-muted-foreground">{k}</dt>
+            <dd className={`truncate font-semibold ${v ? "" : "text-muted-foreground/50"}`}>
+              {v || "—"}
+            </dd>
+          </div>
+        ))}
+      </dl>
+      <p
+        className={`mt-3 rounded-lg px-2 py-1.5 text-xs font-semibold ${r.ready && !gaps.length ? "bg-primary/10 text-primary" : "bg-muted"}`}
+      >
+        {!r.ready
+          ? `⚠️ ${r.missing.length} to fix before registering`
+          : gaps.length
+            ? "PRO or IPI still needed to register"
+            : "Writer info ready"}
+      </p>
+      <p className="mt-2 text-[11px] leading-snug text-muted-foreground">
+        PRO, IPI and split percentages stay private and are never written into the file. Splits are
+        set in My Catalog.
+      </p>
     </aside>
   );
 }
 
-function MissingList({ items, onJump }: { items: Pick<MissingItem, "field" | "message">[]; onJump: (field: string) => void }) {
-  return <ul className="space-y-1">{items.map((i) => <li key={i.field + i.message}>
-    <button type="button" className="text-left text-sm hover:text-primary" onClick={() => onJump(i.field)}>⚠️ {i.message}</button>
-  </li>)}</ul>;
+function MissingList({
+  items,
+  onJump,
+}: {
+  items: Pick<MissingItem, "field" | "message">[];
+  onJump: (field: string) => void;
+}) {
+  return (
+    <ul className="space-y-1">
+      {items.map((i) => (
+        <li key={i.field + i.message}>
+          <button
+            type="button"
+            className="text-left text-sm hover:text-primary"
+            onClick={() => onJump(i.field)}
+          >
+            ⚠️ {i.message}
+          </button>
+        </li>
+      ))}
+    </ul>
+  );
 }
 
 /** Embed shows no split boxes and never writes splits into the file, so its panel leaves split warnings to My Catalog. */
@@ -1773,23 +4659,98 @@ function ReadinessPanel({ metadata, embed }: { metadata: Metadata; embed?: boole
   const r = embed ? { ...all, warnings: [] } : all;
   // Ready for the catalog is not ready for every society: The MLC and a PRO also register by PRO and IPI (founder, 2026-11-12).
   const gaps = r.ready ? proAccountGaps(metadata) : [];
-  return <div role="status" className="rounded-lg border border-primary/40 bg-accent/30 p-3 text-sm">
-    {r.ready && !r.warnings.length && gaps.length === 0 && <p className="flex items-center gap-2 font-semibold"><CheckCircle2 className="h-4 w-4 text-primary" />Writer info is ready to register.</p>}
-    {r.ready && gaps.length > 0 && <div className="space-y-1">
-      <p className="flex items-center gap-2 font-semibold"><CheckCircle2 className="h-4 w-4 text-primary" />Saved and ready to export.</p>
-      <p className="text-muted-foreground">The MLC and your PRO still need these before they can register the song. SoundExchange registers the recording, so it doesn't ask for them:</p>
-      <MissingList items={gaps} onJump={jumpTo} />
-    </div>}
-    {embed && all.warnings.length > 0 && <p className="mt-1 text-muted-foreground">Splits are set in My Catalog after you save. They stay private and are never put in the file.</p>}
-    {r.ready
-      ? null
-      : <><p className="mb-2"><span className="font-semibold">You can still embed and save.</span> To register this song, fix:</p><MissingList items={r.missing} onJump={jumpTo} /></>}
-    {r.warnings.length > 0 && <div className="mt-2"><p className="mb-1 text-muted-foreground">You can still embed, save and export. Settle splits before registering; agencies only accept exactly 100%:</p><MissingList items={r.warnings} onJump={jumpTo} /></div>}
-  </div>;
+  return (
+    <div role="status" className="rounded-lg border border-primary/40 bg-accent/30 p-3 text-sm">
+      {r.ready && !r.warnings.length && gaps.length === 0 && (
+        <p className="flex items-center gap-2 font-semibold">
+          <CheckCircle2 className="h-4 w-4 text-primary" />
+          Writer info is ready to register.
+        </p>
+      )}
+      {r.ready && gaps.length > 0 && (
+        <div className="space-y-1">
+          <p className="flex items-center gap-2 font-semibold">
+            <CheckCircle2 className="h-4 w-4 text-primary" />
+            Saved and ready to export.
+          </p>
+          <p className="text-muted-foreground">
+            The MLC and your PRO still need these before they can register the song. SoundExchange
+            registers the recording, so it doesn't ask for them:
+          </p>
+          <MissingList items={gaps} onJump={jumpTo} />
+        </div>
+      )}
+      {embed && all.warnings.length > 0 && (
+        <p className="mt-1 text-muted-foreground">
+          Splits are set in My Catalog after you save. They stay private and are never put in the
+          file.
+        </p>
+      )}
+      {r.ready ? null : (
+        <>
+          <p className="mb-2">
+            <span className="font-semibold">You can still embed and save.</span> To register this
+            song, fix:
+          </p>
+          <MissingList items={r.missing} onJump={jumpTo} />
+        </>
+      )}
+      {r.warnings.length > 0 && (
+        <div className="mt-2">
+          <p className="mb-1 text-muted-foreground">
+            You can still embed, save and export. Settle splits before registering; agencies only
+            accept exactly 100%:
+          </p>
+          <MissingList items={r.warnings} onJump={jumpTo} />
+        </div>
+      )}
+    </div>
+  );
 }
 
-function Field({ label, id, value, onChange, required, type = "text", placeholder, tip, term, list }: { label: string; id: string; value: string; onChange: (value: string) => void; required?: boolean; type?: string; placeholder?: string | undefined; tip?: string; term?: GlossaryKey | undefined; list?: string | undefined }) {
-  return <div className="min-w-0 space-y-1.5"><Label htmlFor={id} className="leading-4">{label}{required ? " *" : ""}{term ? <InfoTip term={term} /> : tip && <Tip text={tip} title={label} />}</Label><Input id={id} value={value} type={type} required={required} placeholder={placeholder} list={list} autoComplete={list ? "off" : undefined} className={type === "date" && !value ? "text-muted-foreground/50" : undefined} onChange={(event) => onChange(event.target.value)} /></div>;
+function Field({
+  label,
+  id,
+  value,
+  onChange,
+  required,
+  type = "text",
+  placeholder,
+  tip,
+  term,
+  list,
+}: {
+  label: string;
+  id: string;
+  value: string;
+  onChange: (value: string) => void;
+  required?: boolean;
+  type?: string;
+  placeholder?: string | undefined;
+  tip?: string;
+  term?: GlossaryKey | undefined;
+  list?: string | undefined;
+}) {
+  return (
+    <div className="min-w-0 space-y-1.5">
+      <Label htmlFor={id} className="leading-4">
+        {label}
+        {required ? " *" : ""}
+        {term ? <InfoTip term={term} /> : tip && <Tip text={tip} title={label} />}
+      </Label>
+      <Input
+        id={id}
+        value={value}
+        type={type}
+        required={required}
+        placeholder={placeholder}
+        list={list}
+        autoComplete={list ? "off" : undefined}
+        className={type === "date" && !value ? "text-muted-foreground/50" : undefined}
+        onChange={(event) => onChange(event.target.value)}
+      />
+    </div>
+  );
 }
 
 /**
@@ -1801,40 +4762,184 @@ function Field({ label, id, value, onChange, required, type = "text", placeholde
  * SoundExchange's Collection Rights Begin and End columns are filled from. Blank is a real answer — the form reads an empty
  * date as inception and perpetuity — so the checkbox says so rather than hiding the calendar.
  */
-function RightsDate({ label, id, check, tip, value, disabled, onChange, onCheck }: { label: string; id: string; check: string; tip: string; value: string; disabled?: boolean; onChange: (value: string) => void; onCheck: (checked: boolean) => void }) {
+function RightsDate({
+  label,
+  id,
+  check,
+  tip,
+  value,
+  disabled,
+  onChange,
+  onCheck,
+}: {
+  label: string;
+  id: string;
+  check: string;
+  tip: string;
+  value: string;
+  disabled?: boolean;
+  onChange: (value: string) => void;
+  onCheck: (checked: boolean) => void;
+}) {
   const [dated, setDated] = useState(!!value);
-  return <div className="min-w-0 space-y-2">
-    <Label htmlFor={id}>{label}</Label>
-    <Input id={id} type="date" aria-label={`${label} date`} value={value} disabled={disabled || !dated}
-      className={value ? undefined : "text-muted-foreground/50"}
-      onChange={(e) => { setDated(true); onCheck(false); onChange(e.target.value); }} />
-    <label className="flex items-center gap-2 text-sm"><input id={`${id}-open`} type="checkbox" className="h-4 w-4 accent-[var(--primary)]" disabled={disabled} checked={!dated}
-      onChange={(e) => { setDated(!e.target.checked); onCheck(e.target.checked); if (e.target.checked) onChange(""); }} />{check}<Tip text={tip} title={check} /></label>
-    <p className="text-xs text-muted-foreground">{dated ? `Pick the date, or tick ${check} to leave it blank.` : `Blank goes to the agency as it is: it reads an empty date as ${check.toLowerCase()}.`}</p>
-  </div>;
+  return (
+    <div className="min-w-0 space-y-2">
+      <Label htmlFor={id}>{label}</Label>
+      <Input
+        id={id}
+        type="date"
+        aria-label={`${label} date`}
+        value={value}
+        disabled={disabled || !dated}
+        className={value ? undefined : "text-muted-foreground/50"}
+        onChange={(e) => {
+          setDated(true);
+          onCheck(false);
+          onChange(e.target.value);
+        }}
+      />
+      <label className="flex items-center gap-2 text-sm">
+        <input
+          id={`${id}-open`}
+          type="checkbox"
+          className="h-4 w-4 accent-[var(--primary)]"
+          disabled={disabled}
+          checked={!dated}
+          onChange={(e) => {
+            setDated(!e.target.checked);
+            onCheck(e.target.checked);
+            if (e.target.checked) onChange("");
+          }}
+        />
+        {check}
+        <Tip text={tip} title={check} />
+      </label>
+      <p className="text-xs text-muted-foreground">
+        {dated
+          ? `Pick the date, or tick ${check} to leave it blank.`
+          : `Blank goes to the agency as it is: it reads an empty date as ${check.toLowerCase()}.`}
+      </p>
+    </div>
+  );
 }
 
-function SelectField({ label, id, value, options, onChange, term, groups }: { label: string; id: string; value: string; options: readonly string[]; onChange: (value: string) => void; term?: GlossaryKey; groups?: { genre: string; subs: string[] }[] }) {
-  return <div className="min-w-0 space-y-2"><Label htmlFor={id}>{label}{term && <InfoTip term={term} />}</Label>
-    <select id={id} value={value} onChange={(event) => onChange(event.target.value)} className="flex h-9 w-full rounded-md border border-input bg-background px-3 text-sm shadow-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
-      <option value="">Select…</option>
-      {groups
-        ? groups.map((g) => <optgroup key={g.genre} label={g.genre}>{[g.genre, ...g.subs].map((o) => <option key={o} value={o}>{o}</option>)}</optgroup>)
-        : options.map((o) => <option key={o} value={o}>{o}</option>)}
-    </select></div>;
+function SelectField({
+  label,
+  id,
+  value,
+  options,
+  onChange,
+  term,
+  groups,
+}: {
+  label: string;
+  id: string;
+  value: string;
+  options: readonly string[];
+  onChange: (value: string) => void;
+  term?: GlossaryKey;
+  groups?: { genre: string; subs: string[] }[];
+}) {
+  return (
+    <div className="min-w-0 space-y-2">
+      <Label htmlFor={id}>
+        {label}
+        {term && <InfoTip term={term} />}
+      </Label>
+      <select
+        id={id}
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        className="flex h-9 w-full rounded-md border border-input bg-background px-3 text-sm shadow-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+      >
+        <option value="">Select…</option>
+        {groups
+          ? groups.map((g) => (
+              <optgroup key={g.genre} label={g.genre}>
+                {[g.genre, ...g.subs].map((o) => (
+                  <option key={o} value={o}>
+                    {o}
+                  </option>
+                ))}
+              </optgroup>
+            ))
+          : options.map((o) => (
+              <option key={o} value={o}>
+                {o}
+              </option>
+            ))}
+      </select>
+    </div>
+  );
 }
 
-function Contributors({ title, singular, group, rows, onChange, disabled, publisher, tip, tipOnly, simple, writer, bare, rowNote, songPublishing, collectsPublishing, saved = [], children }: { saved?: Contributor[]; collectsPublishing?: ((row: Contributor) => boolean) | undefined; songPublishing?: string | undefined; rowNote?: (row: Contributor, index: number) => ReactNode; bare?: boolean; title: string; singular: string; group: string; rows: Contributor[]; onChange: (rows: Contributor[]) => void; disabled: boolean; publisher?: boolean; tip?: string | undefined; tipOnly?: boolean; simple?: boolean; writer?: boolean; children?: ReactNode }) {
-  const roleSelect = (row: Contributor, index: number) => writer && <SelectField label="Role" term="roles" id={`${group}-${index}-role`} value={writerRole(row.role)} options={WRITER_ROLES} onChange={(value) => change(index, "role", value)} />;
+function Contributors({
+  title,
+  singular,
+  group,
+  rows,
+  onChange,
+  disabled,
+  publisher,
+  tip,
+  tipOnly,
+  simple,
+  writer,
+  bare,
+  rowNote,
+  songPublishing,
+  collectsPublishing,
+  saved = [],
+  children,
+}: {
+  saved?: Contributor[];
+  collectsPublishing?: ((row: Contributor) => boolean) | undefined;
+  songPublishing?: string | undefined;
+  rowNote?: (row: Contributor, index: number) => ReactNode;
+  bare?: boolean;
+  title: string;
+  singular: string;
+  group: string;
+  rows: Contributor[];
+  onChange: (rows: Contributor[]) => void;
+  disabled: boolean;
+  publisher?: boolean;
+  tip?: string | undefined;
+  tipOnly?: boolean;
+  simple?: boolean;
+  writer?: boolean;
+  children?: ReactNode;
+}) {
+  const roleSelect = (row: Contributor, index: number) =>
+    writer && (
+      <SelectField
+        label="Role"
+        term="roles"
+        id={`${group}-${index}-role`}
+        value={writerRole(row.role)}
+        options={WRITER_ROLES}
+        onChange={(value) => change(index, "role", value)}
+      />
+    );
   // Writers (and pre-role composer entries) have one name: their legal name, used for credits and registration.
   const legal = writer || group === "composers";
   const simpleLabel = group === "producers" ? "Produced by" : `${title} name`;
-  function change(index: number, key: keyof Contributor, value: string) { onChange(rows.map((row, i) => i === index ? { ...row, [key]: value } : row)); }
+  function change(index: number, key: keyof Contributor, value: string) {
+    onChange(rows.map((row, i) => (i === index ? { ...row, [key]: value } : row)));
+  }
   // A name that matches someone saved (profile, Contributor Library, past songs) brings their details: blanks only.
   const listId = saved.length ? `${group}-saved` : undefined;
   function changeName(index: number, key: "name" | "legalName", value: string) {
     const match = findSaved(saved, value);
-    onChange(rows.map((row, i) => (i !== index ? row : match ? fillFromSaved({ ...row, [key]: value }, match, legal) : { ...row, [key]: value })));
+    onChange(
+      rows.map((row, i) =>
+        i !== index
+          ? row
+          : match
+            ? fillFromSaved({ ...row, [key]: value }, match, legal)
+            : { ...row, [key]: value },
+      ),
+    );
   }
   // Shares in a group can't add up past 100%: a box snaps to what's left, with a short note saying so.
   const [capped, setCapped] = useState<{ index: number; at: number }>();
@@ -1844,52 +4949,263 @@ function Contributors({ title, singular, group, rows, onChange, disabled, publis
     change(index, "percentage", next.value);
   };
   const totals = !simple && (publisher || legal) ? splitStatus(rows) : undefined;
-  const names = (row: Contributor, index: number) => <Field label="Legal name" id={`${group}-${index}-legalName`} value={row.legalName ?? ""} term="legalName" list={listId} onChange={(value) => changeName(index, "legalName", value)} />;
+  const names = (row: Contributor, index: number) => (
+    <Field
+      label="Legal name"
+      id={`${group}-${index}-legalName`}
+      value={row.legalName ?? ""}
+      term="legalName"
+      list={listId}
+      onChange={(value) => changeName(index, "legalName", value)}
+    />
+  );
   // The last row can't be removed, so it shows no delete button (an empty space keeps the columns lined up).
-  const removeButton = (index: number) => rows.length === 1 ? <span aria-hidden className="h-9 w-9 shrink-0" />
-    : <Button type="button" size="icon" variant="ghost" aria-label={`Remove ${singular} ${index + 1}`} onClick={() => onChange(rows.filter((_, i) => i !== index))}><Trash2 /></Button>;
-  const share = (row: Contributor, index: number) => <div className="space-y-2"><Label htmlFor={`${group}-${index}-share`}>{publisher ? "Share (%)" : "Split (%)"}<InfoTip term={publisher ? "publisher" : "split"} /></Label><Input id={`${group}-${index}-share`} type="number" min="0" max="100" step="0.01" value={row.percentage} onChange={(event) => changeShare(index, event.target.value)} />{capped?.index === index && <p className="text-xs text-muted-foreground">Capped at {capped.at}%, the share that's left.</p>}</div>;
-  const ipi = (row: Contributor, index: number) => <Field label="IPI name number" term="ipi" id={`${group}-${index}-ipi`} value={row.ipi} placeholder="9–11 digits" onChange={(value) => change(index, "ipi", value)} />;
-  const hfa = (row: Contributor, index: number) => <Field label="HFA P#" term="hfa" id={`${group}-${index}-hfa`} value={row.hfa ?? ""} placeholder="P12345" onChange={(value) => change(index, "hfa", value.toUpperCase())} />;
+  const removeButton = (index: number) =>
+    rows.length === 1 ? (
+      <span aria-hidden className="h-9 w-9 shrink-0" />
+    ) : (
+      <Button
+        type="button"
+        size="icon"
+        variant="ghost"
+        aria-label={`Remove ${singular} ${index + 1}`}
+        onClick={() => onChange(rows.filter((_, i) => i !== index))}
+      >
+        <Trash2 />
+      </Button>
+    );
+  const share = (row: Contributor, index: number) => (
+    <div className="space-y-2">
+      <Label htmlFor={`${group}-${index}-share`}>
+        {publisher ? "Share (%)" : "Split (%)"}
+        <InfoTip term={publisher ? "publisher" : "split"} />
+      </Label>
+      <Input
+        id={`${group}-${index}-share`}
+        type="number"
+        min="0"
+        max="100"
+        step="0.01"
+        value={row.percentage}
+        onChange={(event) => changeShare(index, event.target.value)}
+      />
+      {capped?.index === index && (
+        <p className="text-xs text-muted-foreground">
+          Capped at {capped.at}%, the share that's left.
+        </p>
+      )}
+    </div>
+  );
+  const ipi = (row: Contributor, index: number) => (
+    <Field
+      label="IPI name number"
+      term="ipi"
+      id={`${group}-${index}-ipi`}
+      value={row.ipi}
+      placeholder="9–11 digits"
+      onChange={(value) => change(index, "ipi", value)}
+    />
+  );
+  const hfa = (row: Contributor, index: number) => (
+    <Field
+      label="HFA P#"
+      term="hfa"
+      id={`${group}-${index}-hfa`}
+      value={row.hfa ?? ""}
+      placeholder="P12345"
+      onChange={(value) => change(index, "hfa", value.toUpperCase())}
+    />
+  );
   // Who collects this writer's publisher share on this song (founder, 2026-10-25). Blank follows the song's answer.
-  const publishing = (row: Contributor, index: number) => songPublishing !== undefined && <div className="min-w-0 space-y-2">
-    <Label htmlFor={`${group}-${index}-publishing`}>Publishing on this song<Tip text={TIPS.publishing} title="Publishing on this song" /></Label>
-    <select id={`${group}-${index}-publishing`} value={row.publishing ?? ""} onChange={(e) => change(index, "publishing", e.target.value)}
-      className="flex h-9 w-full rounded-md border border-input bg-background px-3 text-sm shadow-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
-      <option value="">{songPublishing || "Choose who collects it…"}</option>
-      {(Object.keys(PUBLISHING_LABEL) as (keyof typeof PUBLISHING_LABEL)[]).filter((k) => k !== "bmi" || isBmi(row) || row.publishing === "bmi").map((k) => <option key={k} value={k}>{PUBLISHING_LABEL[k]}</option>)}
-    </select></div>;
+  const publishing = (row: Contributor, index: number) =>
+    songPublishing !== undefined && (
+      <div className="min-w-0 space-y-2">
+        <Label htmlFor={`${group}-${index}-publishing`}>
+          Publishing on this song
+          <Tip text={TIPS.publishing} title="Publishing on this song" />
+        </Label>
+        <select
+          id={`${group}-${index}-publishing`}
+          value={row.publishing ?? ""}
+          onChange={(e) => change(index, "publishing", e.target.value)}
+          className="flex h-9 w-full rounded-md border border-input bg-background px-3 text-sm shadow-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        >
+          <option value="">{songPublishing || "Choose who collects it…"}</option>
+          {(Object.keys(PUBLISHING_LABEL) as (keyof typeof PUBLISHING_LABEL)[])
+            .filter((k) => k !== "bmi" || isBmi(row) || row.publishing === "bmi")
+            .map((k) => (
+              <option key={k} value={k}>
+                {PUBLISHING_LABEL[k]}
+              </option>
+            ))}
+        </select>
+      </div>
+    );
   // A Self-published or BMI-paid writer's part of the publisher half (blank = their writer split).
-  const pubShare = (row: Contributor, index: number) => collectsPublishing?.(row) && <div className="min-w-0 space-y-2">
-    <Label htmlFor={`${group}-${index}-pubShare`}>Publisher share (%)<Tip text={TIPS.pubShare} title="Publisher share" /></Label>
-    <Input id={`${group}-${index}-pubShare`} type="number" min="0" max="100" step="0.01" value={row.pubShare ?? ""} placeholder={row.percentage || "100"} onChange={(e) => change(index, "pubShare", e.target.value)} /></div>;
-  const pro = (row: Contributor, index: number) => <div className="min-w-0 space-y-2"><Label htmlFor={`${group}-${index}-pro`}>PRO affiliation<InfoTip term="pro" /></Label>
-    <ProSelect id={`${group}-${index}-pro`} value={row.pro} onChange={(value) => change(index, "pro", value)} className="flex h-9 w-full rounded-md border border-input bg-background px-3 text-sm shadow-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" /></div>;
-  return <fieldset disabled={disabled} className={bare ? "min-w-0 space-y-5" : "space-y-5 border-t border-border pt-6"}>
-    <legend className={bare ? "sr-only" : "pr-3 text-lg font-semibold"}>{title}{!bare && tip && <Tip text={tip} title={title} />}</legend>
-    {bare && tip && tipOnly && <p className="flex items-center text-sm text-muted-foreground">About this<Tip text={tip} title={title} /></p>}
-    {tip && !tipOnly && <p className="text-sm text-muted-foreground">{tip}</p>}
-    {rows.map((row, index) => simple
-      ? legal
-        ? <div key={index} className={`grid items-end gap-x-6 gap-y-3 ${writer ? "sm:grid-cols-[1fr_176px_36px]" : "sm:grid-cols-[1fr_36px]"}`}>{names(row, index)}{roleSelect(row, index)}{removeButton(index)}</div>
-        : <div key={index} className="flex items-end gap-2"><div className="flex-1"><Field label={simpleLabel} id={`${group}-${index}-name`} value={row.name} placeholder={group === "producers" ? "Name" : undefined} list={listId} onChange={(value) => changeName(index, "name", value)} /></div>{removeButton(index)}</div>
-      : legal
-        ? <div key={index} className="space-y-4 rounded-lg border border-border p-3">
-            <div className={`grid items-end gap-x-6 gap-y-4 ${writer ? "sm:grid-cols-[1fr_180px_36px]" : "sm:grid-cols-[1fr_36px]"}`}>{names(row, index)}{roleSelect(row, index)}{removeButton(index)}</div>
-            <div className={`grid items-end gap-x-6 gap-y-4 sm:grid-cols-3 ${songPublishing !== undefined ? "lg:grid-cols-4" : ""}`}>{share(row, index)}{ipi(row, index)}{pro(row, index)}{publishing(row, index)}{pubShare(row, index)}</div>
+  const pubShare = (row: Contributor, index: number) =>
+    collectsPublishing?.(row) && (
+      <div className="min-w-0 space-y-2">
+        <Label htmlFor={`${group}-${index}-pubShare`}>
+          Publisher share (%)
+          <Tip text={TIPS.pubShare} title="Publisher share" />
+        </Label>
+        <Input
+          id={`${group}-${index}-pubShare`}
+          type="number"
+          min="0"
+          max="100"
+          step="0.01"
+          value={row.pubShare ?? ""}
+          placeholder={row.percentage || "100"}
+          onChange={(e) => change(index, "pubShare", e.target.value)}
+        />
+      </div>
+    );
+  const pro = (row: Contributor, index: number) => (
+    <div className="min-w-0 space-y-2">
+      <Label htmlFor={`${group}-${index}-pro`}>
+        PRO affiliation
+        <InfoTip term="pro" />
+      </Label>
+      <ProSelect
+        id={`${group}-${index}-pro`}
+        value={row.pro}
+        onChange={(value) => change(index, "pro", value)}
+        className="flex h-9 w-full rounded-md border border-input bg-background px-3 text-sm shadow-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+      />
+    </div>
+  );
+  return (
+    <fieldset
+      disabled={disabled}
+      className={bare ? "min-w-0 space-y-5" : "space-y-5 border-t border-border pt-6"}
+    >
+      <legend className={bare ? "sr-only" : "pr-3 text-lg font-semibold"}>
+        {title}
+        {!bare && tip && <Tip text={tip} title={title} />}
+      </legend>
+      {bare && tip && tipOnly && (
+        <p className="flex items-center text-sm text-muted-foreground">
+          About this
+          <Tip text={tip} title={title} />
+        </p>
+      )}
+      {tip && !tipOnly && <p className="text-sm text-muted-foreground">{tip}</p>}
+      {rows.map((row, index) =>
+        simple ? (
+          legal ? (
+            <div
+              key={index}
+              className={`grid items-end gap-x-6 gap-y-3 ${writer ? "sm:grid-cols-[1fr_176px_36px]" : "sm:grid-cols-[1fr_36px]"}`}
+            >
+              {names(row, index)}
+              {roleSelect(row, index)}
+              {removeButton(index)}
+            </div>
+          ) : (
+            <div key={index} className="flex items-end gap-2">
+              <div className="flex-1">
+                <Field
+                  label={simpleLabel}
+                  id={`${group}-${index}-name`}
+                  value={row.name}
+                  placeholder={group === "producers" ? "Name" : undefined}
+                  list={listId}
+                  onChange={(value) => changeName(index, "name", value)}
+                />
+              </div>
+              {removeButton(index)}
+            </div>
+          )
+        ) : legal ? (
+          <div key={index} className="space-y-4 rounded-lg border border-border p-3">
+            <div
+              className={`grid items-end gap-x-6 gap-y-4 ${writer ? "sm:grid-cols-[1fr_180px_36px]" : "sm:grid-cols-[1fr_36px]"}`}
+            >
+              {names(row, index)}
+              {roleSelect(row, index)}
+              {removeButton(index)}
+            </div>
+            <div
+              className={`grid items-end gap-x-6 gap-y-4 sm:grid-cols-3 ${songPublishing !== undefined ? "lg:grid-cols-4" : ""}`}
+            >
+              {share(row, index)}
+              {ipi(row, index)}
+              {pro(row, index)}
+              {publishing(row, index)}
+              {pubShare(row, index)}
+            </div>
             {rowNote?.(row, index)}
           </div>
-        : <div key={index} className={`grid items-end gap-4 ${publisher ? "sm:grid-cols-[1fr_170px_150px_110px_120px_36px]" : "sm:grid-cols-[1fr_110px_150px_150px_36px]"}`}>
-            <Field label="Legal name" id={`${group}-${index}-name`} value={row.name} list={listId} onChange={(value) => changeName(index, "name", value)} />
-            {publisher ? <>{pro(row, index)}{ipi(row, index)}{share(row, index)}{hfa(row, index)}</> : <>{share(row, index)}{ipi(row, index)}{pro(row, index)}</>}
+        ) : (
+          <div
+            key={index}
+            className={`grid items-end gap-4 ${publisher ? "sm:grid-cols-[1fr_170px_150px_110px_120px_36px]" : "sm:grid-cols-[1fr_110px_150px_150px_36px]"}`}
+          >
+            <Field
+              label="Legal name"
+              id={`${group}-${index}-name`}
+              value={row.name}
+              list={listId}
+              onChange={(value) => changeName(index, "name", value)}
+            />
+            {publisher ? (
+              <>
+                {pro(row, index)}
+                {ipi(row, index)}
+                {share(row, index)}
+                {hfa(row, index)}
+              </>
+            ) : (
+              <>
+                {share(row, index)}
+                {ipi(row, index)}
+                {pro(row, index)}
+              </>
+            )}
             {removeButton(index)}
-            {publisher && hfaLooksOff(row.hfa) && <p className="text-xs text-muted-foreground sm:col-span-full">⚠️ HFA P#s are 6 letters or numbers, like P12345. Check it in the HFA Portal.</p>}
-          </div>)}
-    {listId && <datalist id={listId}>{saved.map((p) => <option key={creditName(p)} value={creditName(p)} />)}</datalist>}
-    {listId && <p className="text-xs text-muted-foreground">Start typing a name to pick someone you've worked with. Their saved details fill in; you can change anything.</p>}
-    {children}
-    <div className="flex flex-wrap items-center justify-between gap-3"><Button type="button" variant="outline" onClick={() => onChange([...rows, emptyContributor()])}><Plus />Add {singular}</Button>{totals && <span className={`text-sm ${totals.state === "over" || totals.state === "under" ? "font-medium text-foreground" : "text-muted-foreground"}`}>{totals.state === "over" || totals.state === "under" ? "⚠️ " : ""}{splitSummary(rows)}</span>}</div>
-  </fieldset>;
+            {publisher && hfaLooksOff(row.hfa) && (
+              <p className="text-xs text-muted-foreground sm:col-span-full">
+                ⚠️ HFA P#s are 6 letters or numbers, like P12345. Check it in the HFA Portal.
+              </p>
+            )}
+          </div>
+        ),
+      )}
+      {listId && (
+        <datalist id={listId}>
+          {saved.map((p) => (
+            <option key={creditName(p)} value={creditName(p)} />
+          ))}
+        </datalist>
+      )}
+      {listId && (
+        <p className="text-xs text-muted-foreground">
+          Start typing a name to pick someone you've worked with. Their saved details fill in; you
+          can change anything.
+        </p>
+      )}
+      {children}
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <Button
+          type="button"
+          variant="outline"
+          onClick={() => onChange([...rows, emptyContributor()])}
+        >
+          <Plus />
+          Add {singular}
+        </Button>
+        {totals && (
+          <span
+            className={`text-sm ${totals.state === "over" || totals.state === "under" ? "font-medium text-foreground" : "text-muted-foreground"}`}
+          >
+            {totals.state === "over" || totals.state === "under" ? "⚠️ " : ""}
+            {splitSummary(rows)}
+          </span>
+        )}
+      </div>
+    </fieldset>
+  );
 }
 function groupProjects(items: CatalogTrack[]) {
   const map = new Map<string, CatalogTrack[]>();
@@ -1897,22 +5213,54 @@ function groupProjects(items: CatalogTrack[]) {
     const key = albumKey(t.metadata.album) || "untitled";
     map.set(key, [...(map.get(key) ?? []), t]);
   }
-  return [...map.entries()].map(([key, list]) => {
-    const tracks = [...list].sort((a, b) => (Number(a.metadata.trackNumber) || 999) - (Number(b.metadata.trackNumber) || 999) || a.title.localeCompare(b.title));
-    return { key, tracks, title: list[0]!.metadata.album?.trim() || "Untitled", artist: list[0]!.artist, cover: tracks.find((t) => t.metadata.coverThumb)?.metadata.coverThumb };
-  }).sort((a, b) => a.title.localeCompare(b.title));
+  return [...map.entries()]
+    .map(([key, list]) => {
+      const tracks = [...list].sort(
+        (a, b) =>
+          (Number(a.metadata.trackNumber) || 999) - (Number(b.metadata.trackNumber) || 999) ||
+          a.title.localeCompare(b.title),
+      );
+      return {
+        key,
+        tracks,
+        title: list[0]!.metadata.album?.trim() || "Untitled",
+        artist: list[0]!.artist,
+        cover: tracks.find((t) => t.metadata.coverThumb)?.metadata.coverThumb,
+      };
+    })
+    .sort((a, b) => a.title.localeCompare(b.title));
 }
 
 function regBadges(t: CatalogTrack): string[] {
   const m = t.metadata;
-  return [m.beatState === "sold" ? "Sold beat" : m.beatState ? "Beat" : "", m.releaseType || "Single", m.version, m.primaryGenre, m.duration, m.releaseDate && `Released ${m.releaseDate}`, m.label && `Label ${m.label}`,
-    m.isrc && `ISRC ${m.isrc}`, m.upc && `UPC ${m.upc}`, m.iswc && `ISWC ${m.iswc}`].filter((b): b is string => !!b);
+  return [
+    m.beatState === "sold" ? "Sold beat" : m.beatState ? "Beat" : "",
+    m.releaseType || "Single",
+    m.version,
+    m.primaryGenre,
+    m.duration,
+    m.releaseDate && `Released ${m.releaseDate}`,
+    m.label && `Label ${m.label}`,
+    m.isrc && `ISRC ${m.isrc}`,
+    m.upc && `UPC ${m.upc}`,
+    m.iswc && `ISWC ${m.iswc}`,
+  ].filter((b): b is string => !!b);
 }
 
 function creditGroups(t: CatalogTrack) {
   const m = t.metadata;
-  return ([["Writers", m.writers], ["Composers", m.composers], ["Publishers", m.publishers], ["Producers", m.producers]] as const)
-    .map(([label, rows]) => ({ label, rows: (rows ?? []).filter(creditName).map((c) => ({ ...c, name: creditName(c) })) }))
+  return (
+    [
+      ["Writers", m.writers],
+      ["Composers", m.composers],
+      ["Publishers", m.publishers],
+      ["Producers", m.producers],
+    ] as const
+  )
+    .map(([label, rows]) => ({
+      label,
+      rows: (rows ?? []).filter(creditName).map((c) => ({ ...c, name: creditName(c) })),
+    }))
     .filter((g) => g.rows.length > 0);
 }
 

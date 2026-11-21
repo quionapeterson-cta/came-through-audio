@@ -1,4 +1,13 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
 import { supabase } from "@/integrations/supabase/client";
 import {
   loadReminders,
@@ -83,51 +92,94 @@ export function WorkspaceRemindersProvider({
     };
   }, [userId]);
 
-  const commit = useCallback((next: WorkspaceReminder[]) => {
-    const trimmed = trimReminders(next);
-    latest.current = trimmed;
-    setReminders(trimmed);
-    saveReminders(userId, trimmed);
-    // Best effort: a blocked or signed-out auth write never stops the in-browser reminder.
-    void supabase.auth
-      .updateUser({ data: { workspace_reminders: trimmed } })
-      .then(({ error }) => { if (error) console.info("Reminders stayed in this browser:", error.message); })
-      .catch(() => {});
-  }, [userId]);
+  const commit = useCallback(
+    (next: WorkspaceReminder[]) => {
+      const trimmed = trimReminders(next);
+      latest.current = trimmed;
+      setReminders(trimmed);
+      saveReminders(userId, trimmed);
+      // Best effort: a blocked or signed-out auth write never stops the in-browser reminder.
+      void supabase.auth
+        .updateUser({ data: { workspace_reminders: trimmed } })
+        .then(({ error }) => {
+          if (error) console.info("Reminders stayed in this browser:", error.message);
+        })
+        .catch(() => {});
+    },
+    [userId],
+  );
 
-  const add = useCallback((input: NewReminder) => {
-    const reminder = makeReminder(input);
-    commit([reminder, ...latest.current]);
-    return reminder;
-  }, [commit]);
+  const add = useCallback(
+    (input: NewReminder) => {
+      const reminder = makeReminder(input);
+      commit([reminder, ...latest.current]);
+      return reminder;
+    },
+    [commit],
+  );
 
-  const update = useCallback((id: string, patch: Partial<WorkspaceReminder>) => {
-    const at = new Date().toISOString();
-    commit(latest.current.map((r) => (r.id === id ? { ...r, ...patch, id: r.id, updatedAt: at } : r)));
-  }, [commit]);
+  const update = useCallback(
+    (id: string, patch: Partial<WorkspaceReminder>) => {
+      const at = new Date().toISOString();
+      commit(
+        latest.current.map((r) => (r.id === id ? { ...r, ...patch, id: r.id, updatedAt: at } : r)),
+      );
+    },
+    [commit],
+  );
 
-  const remove = useCallback((id: string) => {
-    commit(latest.current.filter((r) => r.id !== id));
-  }, [commit]);
+  const remove = useCallback(
+    (id: string) => {
+      commit(latest.current.filter((r) => r.id !== id));
+    },
+    [commit],
+  );
 
-  const snooze = useCallback((id: string, hours = 24) => {
-    const until = new Date(Date.now() + hours * 3_600_000).toISOString();
-    commit(latest.current.map((r) => (r.id === id ? { ...r, snoozedUntil: until, updatedAt: new Date().toISOString() } : r)));
-  }, [commit]);
+  const snooze = useCallback(
+    (id: string, hours = 24) => {
+      const until = new Date(Date.now() + hours * 3_600_000).toISOString();
+      commit(
+        latest.current.map((r) =>
+          r.id === id ? { ...r, snoozedUntil: until, updatedAt: new Date().toISOString() } : r,
+        ),
+      );
+    },
+    [commit],
+  );
 
-  const complete = useCallback((id: string) => {
-    const at = new Date().toISOString();
-    commit(latest.current.map((r) => (r.id === id ? { ...r, completedAt: at, snoozedUntil: null, updatedAt: at } : r)));
-  }, [commit]);
+  const complete = useCallback(
+    (id: string) => {
+      const at = new Date().toISOString();
+      commit(
+        latest.current.map((r) =>
+          r.id === id ? { ...r, completedAt: at, snoozedUntil: null, updatedAt: at } : r,
+        ),
+      );
+    },
+    [commit],
+  );
 
-  const restore = useCallback((id: string) => {
-    commit(latest.current.map((r) => (r.id === id ? { ...r, completedAt: null, snoozedUntil: null, updatedAt: new Date().toISOString() } : r)));
-  }, [commit]);
+  const restore = useCallback(
+    (id: string) => {
+      commit(
+        latest.current.map((r) =>
+          r.id === id
+            ? { ...r, completedAt: null, snoozedUntil: null, updatedAt: new Date().toISOString() }
+            : r,
+        ),
+      );
+    },
+    [commit],
+  );
 
   const value = useMemo<WorkspaceRemindersStore>(
     () => ({ reminders, now, add, update, remove, snooze, complete, restore }),
     [reminders, now, add, update, remove, snooze, complete, restore],
   );
 
-  return <WorkspaceRemindersContext.Provider value={value}>{children}</WorkspaceRemindersContext.Provider>;
+  return (
+    <WorkspaceRemindersContext.Provider value={value}>
+      {children}
+    </WorkspaceRemindersContext.Provider>
+  );
 }

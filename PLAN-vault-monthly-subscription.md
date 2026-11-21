@@ -5,6 +5,10 @@
 **Founder decision:** 2026-11-20 — the pause fee is **$1.99 a month, billed monthly while the pause runs, and it stops
 by itself when the pause ends** (and when the member resumes). This replaces the 2026-10-21 decision that it was paid up
 front as a one-time charge.
+**Amended 2026-11-21:** a pause has **no fixed length** — it runs as long as the member needs, and resuming charges a
+fresh year from that day. The 1–3 month length and Stripe's `cancel_at` described below are superseded by
+`20261121150000_pause-open-ended.sql` and the open-ended pause in `src/lib/retention.server.ts`; while paused the plan's
+tier is Free, except a live artist seat someone else pays for.
 **Supersedes:** `PLAN-catalog-emptying.md` §10, §17.5 (the "paid up front" rule) and the `vault_month` row's type in
 `STRIPE-PRODUCTS.md` / `PLAN-stripe-setup-guide.md`.
 

@@ -1,10 +1,7 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { EscalationNotices } from "@/components/EscalationNotices";
-import {
-  listLeadEscalations,
-  markLeadEscalationsRead,
-} from "@/lib/support-escalation.functions";
+import { listLeadEscalations, markLeadEscalationsRead } from "@/lib/support-escalation.functions";
 
 /**
  * Escalated to your team (founder, 2026-11-19): a handoff routed to a department also reaches that department's lead, and

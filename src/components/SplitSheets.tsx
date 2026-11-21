@@ -1,7 +1,19 @@
 import { useEffect, useMemo, useState } from "react";
 import { confirmAction } from "@/components/ConfirmHost";
 import { FollowUpReminderButton } from "@/components/FollowUpReminderButton";
-import { FileSignature, Plus, Trash2, Download, Lock, PenLine, Check, ChevronLeft, Loader2, Mail, Copy } from "lucide-react";
+import {
+  FileSignature,
+  Plus,
+  Trash2,
+  Download,
+  Lock,
+  PenLine,
+  Check,
+  ChevronLeft,
+  Loader2,
+  Mail,
+  Copy,
+} from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { ContributorLibrary } from "@/components/ContributorLibrary";
 import { BrandKitChoice } from "@/components/BrandKitChoice";
@@ -41,7 +53,19 @@ const statusBadge: Record<string, { label: string; className: string }> = {
   signed: { label: "Fully signed", className: "border-primary bg-primary text-primary-foreground" },
 };
 
-export function SplitSheets({ userId, canSplit, canCollect, prefillTrackId, onUpgrade }: { userId: string; canSplit: boolean; canCollect: boolean; prefillTrackId: string | undefined; onUpgrade: () => void }) {
+export function SplitSheets({
+  userId,
+  canSplit,
+  canCollect,
+  prefillTrackId,
+  onUpgrade,
+}: {
+  userId: string;
+  canSplit: boolean;
+  canCollect: boolean;
+  prefillTrackId: string | undefined;
+  onUpgrade: () => void;
+}) {
   const [tracks, setTracks] = useState<CatalogTrack[]>([]);
   const [sheets, setSheets] = useState<Map<string, SplitCollaborator[]>>(new Map());
   const [loading, setLoading] = useState(true);
@@ -56,7 +80,19 @@ export function SplitSheets({ userId, canSplit, canCollect, prefillTrackId, onUp
       setTracks(t);
       setSheets(s);
       // Keep catalog writers, composers, producers and publishers in the contributor library.
-      const fromCatalog = t.flatMap((tr) => collaboratorsFromTrack(tr).filter((c) => c.name.trim()).map((c) => ({ name: c.name, kind: c.role, email: "", pro: c.pro ?? "", ipi: c.ipi ?? "", publisher: "", label: "" })));
+      const fromCatalog = t.flatMap((tr) =>
+        collaboratorsFromTrack(tr)
+          .filter((c) => c.name.trim())
+          .map((c) => ({
+            name: c.name,
+            kind: c.role,
+            email: "",
+            pro: c.pro ?? "",
+            ipi: c.ipi ?? "",
+            publisher: "",
+            label: "",
+          })),
+      );
       await saveContributors(userId, fromCatalog).catch(() => {});
       setLibKey((k) => k + 1);
     } catch {
@@ -80,11 +116,20 @@ export function SplitSheets({ userId, canSplit, canCollect, prefillTrackId, onUp
   // After a free trial (or a plan) ends, split sheets already made stay here to view and download; signing sheets
   // others send stays free. Only new split sheets and new requests need a plan again.
   const readOnly = !canSplit && sheets.size > 0;
-  if (!canSplit && loading) return <div className="mt-6 flex items-center gap-2 text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" /> Loading…</div>;
+  if (!canSplit && loading)
+    return (
+      <div className="mt-6 flex items-center gap-2 text-muted-foreground">
+        <Loader2 className="h-4 w-4 animate-spin" /> Loading…
+      </div>
+    );
   if (!canSplit && !readOnly) {
     return (
-      <UpgradeLock title="Split sheets start with Catalog Plus" tier="plus" onUpgrade={onUpgrade}
-        text="Generate unlimited split sheets from your catalog. Split sheet e-signature requests come with Catalog & Collaborate. Split sheets someone sends you are always free to sign." />
+      <UpgradeLock
+        title="Split sheets start with Catalog Plus"
+        tier="plus"
+        onUpgrade={onUpgrade}
+        text="Generate unlimited split sheets from your catalog. Split sheet e-signature requests come with Catalog & Collaborate. Split sheets someone sends you are always free to sign."
+      />
     );
   }
 
@@ -108,161 +153,379 @@ export function SplitSheets({ userId, canSplit, canCollect, prefillTrackId, onUp
   const isSigned = (t: CatalogTrack) => splitStatus(sheets.get(t.id)!) === "signed";
   const pendingTracks = tracks.filter((t) => sheets.has(t.id) && !isSigned(t));
   const signedTracks = tracks.filter((t) => sheets.has(t.id) && isSigned(t));
-  const waitingAll = pendingTracks.flatMap((t) => sheets.get(t.id)!.filter((c) => c.name && !c.signedAt).map((c) => ({ name: c.name, track: t.title })));
+  const waitingAll = pendingTracks.flatMap((t) =>
+    sheets
+      .get(t.id)!
+      .filter((c) => c.name && !c.signedAt)
+      .map((c) => ({ name: c.name, track: t.title })),
+  );
 
   return (
     <div className="mt-6 space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="min-w-0 flex-1 basis-80">
           <h2 className="text-2xl font-bold">Split Sheets</h2>
-          <p className="text-sm text-muted-foreground">Create industry-standard split sheets from your catalog songs and sign as the owner. Collaborators receive an email invitation to review and sign, plus a free 30-day trial of the Catalog & Collaborate account.</p>
+          <p className="text-sm text-muted-foreground">
+            Create industry-standard split sheets from your catalog songs and sign as the owner.
+            Collaborators receive an email invitation to review and sign, plus a free 30-day trial
+            of the Catalog & Collaborate account.
+          </p>
         </div>
       </div>
       {readOnly && (
         <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-primary p-4 text-sm">
-          <p className="min-w-0 flex-1 basis-72"><span className="font-semibold">Your split sheets are safe.</span> View and download them anytime, and keep signing split sheets others send you. Adding songs to split sheets and sending new signature requests starts with Catalog Plus.</p>
-          <Button size="sm" onClick={onUpgrade}>Upgrade</Button>
+          <p className="min-w-0 flex-1 basis-72">
+            <span className="font-semibold">Your split sheets are safe.</span> View and download
+            them anytime, and keep signing split sheets others send you. Adding songs to split
+            sheets and sending new signature requests starts with Catalog Plus.
+          </p>
+          <Button size="sm" onClick={onUpgrade}>
+            Upgrade
+          </Button>
         </div>
       )}
 
       {/* Generate comes first (founder, 2026-10-27), above the library and status boxes. */}
-      {!readOnly && !loading && tracks.length > 0 && <div className="flex flex-wrap items-end gap-3 rounded-2xl border border-primary p-5">
+      {!readOnly && !loading && tracks.length > 0 && (
+        <div className="flex flex-wrap items-end gap-3 rounded-2xl border border-primary p-5">
           <div className="min-w-60 flex-1 space-y-2">
-            <label htmlFor="split-song" className="text-sm font-semibold">Choose a song for a split sheet</label>
-            <select id="split-song" value={pick} onChange={(e) => setPick(e.target.value)} className="flex h-10 w-full rounded-md border border-input bg-background px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+            <label htmlFor="split-song" className="text-sm font-semibold">
+              Choose a song for a split sheet
+            </label>
+            <select
+              id="split-song"
+              value={pick}
+              onChange={(e) => setPick(e.target.value)}
+              className="flex h-10 w-full rounded-md border border-input bg-background px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            >
               <option value="">Select a song…</option>
-              {[...tracks].sort((a, b) => a.title.localeCompare(b.title)).map((t) => <option key={t.id} value={t.id}>{t.title}{t.metadata.album ? ` — ${t.metadata.album}` : ""}{sheets.has(t.id) ? " (has split sheet)" : ""}</option>)}
+              {[...tracks]
+                .sort((a, b) => a.title.localeCompare(b.title))
+                .map((t) => (
+                  <option key={t.id} value={t.id}>
+                    {t.title}
+                    {t.metadata.album ? ` — ${t.metadata.album}` : ""}
+                    {sheets.has(t.id) ? " (has split sheet)" : ""}
+                  </option>
+                ))}
             </select>
           </div>
-          <Button disabled={!pick} onClick={() => { const t = tracks.find((x) => x.id === pick); if (t) { setEditing(t); setPick(""); } }}><PenLine className="h-4 w-4" /> Generate</Button>
-        </div>}
+          <Button
+            disabled={!pick}
+            onClick={() => {
+              const t = tracks.find((x) => x.id === pick);
+              if (t) {
+                setEditing(t);
+                setPick("");
+              }
+            }}
+          >
+            <PenLine className="h-4 w-4" /> Generate
+          </Button>
+        </div>
+      )}
 
       {/* One glance row: the library you draw from on the left, what needs attention and what's done on the right.
           Opening the library's editor moves it below the row, full width, so the status cards never jump away. */}
       <div className="grid gap-4 lg:grid-cols-[1.6fr_1fr_1fr]">
-        {readOnly ? <div className="hidden lg:block" /> : <ContributorLibrary userId={userId} refreshKey={libKey} />}
-        <a href="#split-pending" className="group flex flex-col rounded-2xl border border-border p-5 transition hover:border-primary">
+        {readOnly ? (
+          <div className="hidden lg:block" />
+        ) : (
+          <ContributorLibrary userId={userId} refreshKey={libKey} />
+        )}
+        <a
+          href="#split-pending"
+          className="group flex flex-col rounded-2xl border border-border p-5 transition hover:border-primary"
+        >
           <div className="flex items-center justify-between">
             <h3 className="font-bold">Pending Signatures</h3>
-            <span className="text-3xl font-extrabold leading-none text-primary">{pendingTracks.length}</span>
+            <span className="text-3xl font-extrabold leading-none text-primary">
+              {pendingTracks.length}
+            </span>
           </div>
-          {waitingAll.length === 0
-            ? <p className="mt-2 text-sm text-muted-foreground">{pendingTracks.length ? "Everyone listed has signed." : "Nothing waiting on signatures."}</p>
-            : <ul className="mt-3 max-h-28 space-y-1 overflow-y-auto pr-1 text-sm">
-                {waitingAll.map((w, i) => <li key={i} className="truncate"><span className="font-semibold">{w.name}</span> <span className="text-muted-foreground">· {w.track}</span></li>)}
-              </ul>}
-          <span className="mt-auto pt-3 text-xs font-semibold text-primary opacity-0 transition group-hover:opacity-100">See all ↓</span>
+          {waitingAll.length === 0 ? (
+            <p className="mt-2 text-sm text-muted-foreground">
+              {pendingTracks.length
+                ? "Everyone listed has signed."
+                : "Nothing waiting on signatures."}
+            </p>
+          ) : (
+            <ul className="mt-3 max-h-28 space-y-1 overflow-y-auto pr-1 text-sm">
+              {waitingAll.map((w, i) => (
+                <li key={i} className="truncate">
+                  <span className="font-semibold">{w.name}</span>{" "}
+                  <span className="text-muted-foreground">· {w.track}</span>
+                </li>
+              ))}
+            </ul>
+          )}
+          <span className="mt-auto pt-3 text-xs font-semibold text-primary opacity-0 transition group-hover:opacity-100">
+            See all ↓
+          </span>
         </a>
-        <a href="#split-signed" className="group flex flex-col rounded-2xl border border-border p-5 transition hover:border-primary">
+        <a
+          href="#split-signed"
+          className="group flex flex-col rounded-2xl border border-border p-5 transition hover:border-primary"
+        >
           <div className="flex items-center justify-between">
             <h3 className="font-bold">Signed Vault</h3>
-            <span className="text-3xl font-extrabold leading-none text-primary">{signedTracks.length}</span>
+            <span className="text-3xl font-extrabold leading-none text-primary">
+              {signedTracks.length}
+            </span>
           </div>
-          {signedTracks.length === 0
-            ? <p className="mt-2 text-sm text-muted-foreground">Fully signed split sheets are stored here.</p>
-            : <ul className="mt-3 max-h-28 space-y-1 overflow-y-auto pr-1 text-sm">
-                {signedTracks.map((t) => <li key={t.id} className="flex items-center gap-1.5 truncate"><Check className="h-3.5 w-3.5 shrink-0 text-primary" />{t.title}</li>)}
-              </ul>}
-          <span className="mt-auto pt-3 text-xs font-semibold text-primary opacity-0 transition group-hover:opacity-100">See all ↓</span>
+          {signedTracks.length === 0 ? (
+            <p className="mt-2 text-sm text-muted-foreground">
+              Fully signed split sheets are stored here.
+            </p>
+          ) : (
+            <ul className="mt-3 max-h-28 space-y-1 overflow-y-auto pr-1 text-sm">
+              {signedTracks.map((t) => (
+                <li key={t.id} className="flex items-center gap-1.5 truncate">
+                  <Check className="h-3.5 w-3.5 shrink-0 text-primary" />
+                  {t.title}
+                </li>
+              ))}
+            </ul>
+          )}
+          <span className="mt-auto pt-3 text-xs font-semibold text-primary opacity-0 transition group-hover:opacity-100">
+            See all ↓
+          </span>
         </a>
       </div>
 
       {loading ? (
-        <div className="flex items-center gap-2 text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" /> Loading…</div>
+        <div className="flex items-center gap-2 text-muted-foreground">
+          <Loader2 className="h-4 w-4 animate-spin" /> Loading…
+        </div>
       ) : tracks.length === 0 ? (
         <div className="flex min-h-60 flex-col items-center justify-center rounded-2xl border-2 border-dashed border-border p-10 text-center">
           <FileSignature className="h-10 w-10 text-primary" />
-          <p className="mt-4 max-w-md text-muted-foreground">Add a song to My Catalog first — every split sheet is tied to one of your tracks.</p>
+          <p className="mt-4 max-w-md text-muted-foreground">
+            Add a song to My Catalog first — every split sheet is tied to one of your tracks.
+          </p>
         </div>
       ) : (
         <>
-        {([["Pending Signatures", false], ["Signed Split Sheet Vault", true]] as const).map(([heading, signedGroup]) => {
-          const list = tracks.filter((t) => { const c = sheets.get(t.id); return c && (splitStatus(c) === "signed") === signedGroup; });
-          const groups = new Map<string, CatalogTrack[]>();
-          for (const t of list) { const k = t.metadata.album?.trim() || ""; groups.set(k, [...(groups.get(k) ?? []), t]); }
-          const ordered = [...groups.entries()].sort(([a], [b]) => (a === "" ? 1 : b === "" ? -1 : a.localeCompare(b)));
-          return (
-            <section key={heading} id={signedGroup ? "split-signed" : "split-pending"} className="scroll-mt-4 rounded-2xl border border-border p-5">
-              <h3 className="mb-3 text-sm font-bold uppercase tracking-widest text-primary">{heading} <span className="opacity-70">{list.length}</span></h3>
-              {list.length === 0 ? <p className="text-sm text-muted-foreground">{signedGroup ? "No fully signed split sheets in your vault yet." : "No split sheets waiting on signatures."}</p> : (
-                <div className="space-y-3">
-                  {ordered.map(([album, items]) => (
-                    <details key={album || "singles"} open className="rounded-xl border border-border">
-                      <summary className="flex cursor-pointer items-center justify-between gap-2 px-4 py-3 font-semibold">
-                        <span>{album || "Singles"}</span><span className="text-xs text-muted-foreground">{items.length} {items.length === 1 ? "song" : "songs"}</span>
-                      </summary>
-        <div className="grid gap-4 p-4 pt-0 md:grid-cols-2">
-          {[...items].sort((a, b) => a.title.localeCompare(b.title)).map((track) => {
-            const collaborators = sheets.get(track.id)!;
-            const badge = statusBadge[splitStatus(collaborators)];
+          {(
+            [
+              ["Pending Signatures", false],
+              ["Signed Split Sheet Vault", true],
+            ] as const
+          ).map(([heading, signedGroup]) => {
+            const list = tracks.filter((t) => {
+              const c = sheets.get(t.id);
+              return c && (splitStatus(c) === "signed") === signedGroup;
+            });
+            const groups = new Map<string, CatalogTrack[]>();
+            for (const t of list) {
+              const k = t.metadata.album?.trim() || "";
+              groups.set(k, [...(groups.get(k) ?? []), t]);
+            }
+            const ordered = [...groups.entries()].sort(([a], [b]) =>
+              a === "" ? 1 : b === "" ? -1 : a.localeCompare(b),
+            );
             return (
-              <div key={track.id} id={`split-sheet-${track.id}`} className="scroll-mt-24 rounded-2xl border border-border p-5">
-                <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <div className="font-bold">{track.title}</div>
-                    <div className="text-sm text-muted-foreground">{track.artist}</div>
-                  </div>
-                  {badge && <Badge variant="outline" className={badge.className}>{badge.label}</Badge>}
-                </div>
-                  <div className="mt-4 space-y-1.5 text-sm">
-                    {collaborators.filter((c) => c.name).map((c, i) => (
-                      <div key={i} className="flex items-center justify-between gap-2">
-                        <span className="flex items-center gap-2">
-                          {c.signedAt ? <Check className="h-3.5 w-3.5 text-primary" /> : <span className="h-1.5 w-1.5 rounded-full bg-muted-foreground" />}
-                          {c.name} <span className="text-muted-foreground">· {c.role}</span>
-                          {/* "Not signed" only once a request went out (or for the owner, who signs here); before that, nothing is late. */}
-                          {!c.signedAt && (c.invitedAt || c.isOwner ? <span className="text-xs text-destructive">Not signed</span> : <span className="text-xs text-muted-foreground">Not yet requested</span>)}
-                        </span>
-                        <span className="font-semibold">{c.percentage}%</span>
-                      </div>
+              <section
+                key={heading}
+                id={signedGroup ? "split-signed" : "split-pending"}
+                className="scroll-mt-4 rounded-2xl border border-border p-5"
+              >
+                <h3 className="mb-3 text-sm font-bold uppercase tracking-widest text-primary">
+                  {heading} <span className="opacity-70">{list.length}</span>
+                </h3>
+                {list.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">
+                    {signedGroup
+                      ? "No fully signed split sheets in your vault yet."
+                      : "No split sheets waiting on signatures."}
+                  </p>
+                ) : (
+                  <div className="space-y-3">
+                    {ordered.map(([album, items]) => (
+                      <details
+                        key={album || "singles"}
+                        open
+                        className="rounded-xl border border-border"
+                      >
+                        <summary className="flex cursor-pointer items-center justify-between gap-2 px-4 py-3 font-semibold">
+                          <span>{album || "Singles"}</span>
+                          <span className="text-xs text-muted-foreground">
+                            {items.length} {items.length === 1 ? "song" : "songs"}
+                          </span>
+                        </summary>
+                        <div className="grid gap-4 p-4 pt-0 md:grid-cols-2">
+                          {[...items]
+                            .sort((a, b) => a.title.localeCompare(b.title))
+                            .map((track) => {
+                              const collaborators = sheets.get(track.id)!;
+                              const badge = statusBadge[splitStatus(collaborators)];
+                              return (
+                                <div
+                                  key={track.id}
+                                  id={`split-sheet-${track.id}`}
+                                  className="scroll-mt-24 rounded-2xl border border-border p-5"
+                                >
+                                  <div className="flex items-start justify-between gap-3">
+                                    <div>
+                                      <div className="font-bold">{track.title}</div>
+                                      <div className="text-sm text-muted-foreground">
+                                        {track.artist}
+                                      </div>
+                                    </div>
+                                    {badge && (
+                                      <Badge variant="outline" className={badge.className}>
+                                        {badge.label}
+                                      </Badge>
+                                    )}
+                                  </div>
+                                  <div className="mt-4 space-y-1.5 text-sm">
+                                    {collaborators
+                                      .filter((c) => c.name)
+                                      .map((c, i) => (
+                                        <div
+                                          key={i}
+                                          className="flex items-center justify-between gap-2"
+                                        >
+                                          <span className="flex items-center gap-2">
+                                            {c.signedAt ? (
+                                              <Check className="h-3.5 w-3.5 text-primary" />
+                                            ) : (
+                                              <span className="h-1.5 w-1.5 rounded-full bg-muted-foreground" />
+                                            )}
+                                            {c.name}{" "}
+                                            <span className="text-muted-foreground">
+                                              · {c.role}
+                                            </span>
+                                            {/* "Not signed" only once a request went out (or for the owner, who signs here); before that, nothing is late. */}
+                                            {!c.signedAt &&
+                                              (c.invitedAt || c.isOwner ? (
+                                                <span className="text-xs text-destructive">
+                                                  Not signed
+                                                </span>
+                                              ) : (
+                                                <span className="text-xs text-muted-foreground">
+                                                  Not yet requested
+                                                </span>
+                                              ))}
+                                          </span>
+                                          <span className="font-semibold">{c.percentage}%</span>
+                                        </div>
+                                      ))}
+                                    <div className="flex items-center justify-between border-t border-border pt-1.5 font-semibold">
+                                      <span>Total</span>
+                                      <span
+                                        className={
+                                          splitTotal(collaborators) === 100
+                                            ? "text-primary"
+                                            : "text-destructive"
+                                        }
+                                      >
+                                        {splitTotal(collaborators)}%
+                                      </span>
+                                    </div>
+                                  </div>
+                                  <div className="mt-4 flex flex-wrap items-center gap-2">
+                                    <FollowUpReminderButton
+                                      contextType="split_sheet"
+                                      contextId={track.id}
+                                      sheetId={track.id}
+                                      songId={track.id}
+                                      subject={track.title}
+                                    />
+                                    {readOnly ? (
+                                      <Button
+                                        size="sm"
+                                        variant="outline"
+                                        className="flex-1"
+                                        onClick={() => void downloadSplitPdf(track, collaborators)}
+                                      >
+                                        <Download className="h-4 w-4" /> Download PDF
+                                      </Button>
+                                    ) : (
+                                      <>
+                                        <Button
+                                          size="sm"
+                                          className="flex-1"
+                                          onClick={() => setEditing(track)}
+                                        >
+                                          <PenLine className="h-4 w-4" />{" "}
+                                          {signedGroup ? "View split sheet" : "Edit split sheet"}
+                                        </Button>
+                                        <Button
+                                          size="sm"
+                                          variant="outline"
+                                          onClick={() =>
+                                            void downloadSplitPdf(track, collaborators)
+                                          }
+                                          aria-label="Download PDF"
+                                        >
+                                          <Download className="h-4 w-4" />
+                                        </Button>
+                                        <Button
+                                          size="sm"
+                                          variant="outline"
+                                          aria-label="Delete split sheet"
+                                          onClick={async () => {
+                                            if (
+                                              !(await confirmAction({
+                                                title: "Delete this split sheet?",
+                                                text: "Signatures already collected on it are deleted too.",
+                                              }))
+                                            )
+                                              return;
+                                            try {
+                                              await deleteSplitSheet(track.id);
+                                              toast.success("Split sheet deleted.");
+                                              await load();
+                                            } catch {
+                                              toast.error("Could not delete the split sheet.");
+                                            }
+                                          }}
+                                        >
+                                          <Trash2 className="h-4 w-4" />
+                                        </Button>
+                                      </>
+                                    )}
+                                  </div>
+                                </div>
+                              );
+                            })}
+                        </div>
+                      </details>
                     ))}
-                    <div className="flex items-center justify-between border-t border-border pt-1.5 font-semibold">
-                      <span>Total</span><span className={splitTotal(collaborators) === 100 ? "text-primary" : "text-destructive"}>{splitTotal(collaborators)}%</span>
-                    </div>
                   </div>
-                <div className="mt-4 flex flex-wrap items-center gap-2">
-                  <FollowUpReminderButton contextType="split_sheet" contextId={track.id} sheetId={track.id} songId={track.id} subject={track.title} />
-                  {readOnly ? <Button size="sm" variant="outline" className="flex-1" onClick={() => void downloadSplitPdf(track, collaborators)}><Download className="h-4 w-4" /> Download PDF</Button> : <>
-                  <Button size="sm" className="flex-1" onClick={() => setEditing(track)}>
-                    <PenLine className="h-4 w-4" /> {signedGroup ? "View split sheet" : "Edit split sheet"}
-                  </Button>
-                      <Button size="sm" variant="outline" onClick={() => void downloadSplitPdf(track, collaborators)} aria-label="Download PDF"><Download className="h-4 w-4" /></Button>
-                      <Button size="sm" variant="outline" aria-label="Delete split sheet"
-                        onClick={async () => {
-                          if (!(await confirmAction({ title: "Delete this split sheet?", text: "Signatures already collected on it are deleted too." }))) return;
-                          try {
-                            await deleteSplitSheet(track.id);
-                            toast.success("Split sheet deleted.");
-                            await load();
-                          } catch {
-                            toast.error("Could not delete the split sheet.");
-                          }
-                        }}>
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                  </>}
-                </div>
-              </div>
+                )}
+              </section>
             );
           })}
-        </div>
-                    </details>
-                  ))}
-                </div>
-              )}
-            </section>
-          );
-        })}
         </>
       )}
     </div>
   );
 }
 
-function SplitEditor({ userId, track, initial, canCollect, onUpgrade, onClose, onSaved }: { userId: string; track: CatalogTrack; initial: SplitCollaborator[] | undefined; canCollect: boolean; onUpgrade: () => void; onClose: () => void; onSaved: () => void }) {
+function SplitEditor({
+  userId,
+  track,
+  initial,
+  canCollect,
+  onUpgrade,
+  onClose,
+  onSaved,
+}: {
+  userId: string;
+  track: CatalogTrack;
+  initial: SplitCollaborator[] | undefined;
+  canCollect: boolean;
+  onUpgrade: () => void;
+  onClose: () => void;
+  onSaved: () => void;
+}) {
   // Which kit brands the PDF they download from here, when they have more than one (founder, 2026-11-06).
   const { kits, kitId, setKitId } = useBrandKits(userId);
-  const [collaborators, setCollaborators] = useState<SplitCollaborator[]>(initial?.length ? initial : collaboratorsFromTrack(track));
+  const [collaborators, setCollaborators] = useState<SplitCollaborator[]>(
+    initial?.length ? initial : collaboratorsFromTrack(track),
+  );
   const [signingIndex, setSigningIndex] = useState<number | null>(null);
   const [typedName, setTypedName] = useState("");
   const [saving, setSaving] = useState(false);
@@ -280,13 +543,25 @@ function SplitEditor({ userId, track, initial, canCollect, onUpgrade, onClose, o
       const accountEmail = auth.user?.email ?? "";
       setOwnerName(legal);
       setCollaborators((rows) => {
-        let next = rows.some((r) => r.isOwner) || !legal ? rows : rows.map((r) => r.name.trim().toLowerCase() === legal.trim().toLowerCase() ? { ...r, isOwner: true } : r);
-        if (accountEmail) next = next.map((r) => (r.isOwner && !r.email.trim() ? { ...r, email: accountEmail } : r));
+        let next =
+          rows.some((r) => r.isOwner) || !legal
+            ? rows
+            : rows.map((r) =>
+                r.name.trim().toLowerCase() === legal.trim().toLowerCase()
+                  ? { ...r, isOwner: true }
+                  : r,
+              );
+        if (accountEmail)
+          next = next.map((r) =>
+            r.isOwner && !r.email.trim() ? { ...r, email: accountEmail } : r,
+          );
         return next;
       });
       setAccountEmail(accountEmail);
     });
-    void listContributors().then(setLibrary).catch(() => {});
+    void listContributors()
+      .then(setLibrary)
+      .catch(() => {});
   }, [userId]);
   const [accountEmail, setAccountEmail] = useState("");
   const [notes, setNotes] = useState(initial?.find((c) => c.notes)?.notes ?? "");
@@ -296,10 +571,22 @@ function SplitEditor({ userId, track, initial, canCollect, onUpgrade, onClose, o
     const match = library.find((l) => l.name.toLowerCase() === name.trim().toLowerCase());
     const row = collaborators[i];
     if (!match || !row) return;
-    update(i, { email: row.email || match.email, pro: row.pro || match.pro, ipi: row.ipi || match.ipi, publisherName: row.publisherName || match.publisher });
+    update(i, {
+      email: row.email || match.email,
+      pro: row.pro || match.pro,
+      ipi: row.ipi || match.ipi,
+      publisherName: row.publisherName || match.publisher,
+    });
   };
 
-  const markOwner = (i: number) => setCollaborators((rows) => rows.map((r, idx) => ({ ...r, isOwner: idx === i, email: idx === i && !r.email.trim() ? accountEmail : r.email })));
+  const markOwner = (i: number) =>
+    setCollaborators((rows) =>
+      rows.map((r, idx) => ({
+        ...r,
+        isOwner: idx === i,
+        email: idx === i && !r.email.trim() ? accountEmail : r.email,
+      })),
+    );
 
   const requestSignature = async (i: number) => {
     const c = collaborators[i];
@@ -314,7 +601,10 @@ function SplitEditor({ userId, track, initial, canCollect, onUpgrade, onClose, o
     }
     try {
       // "Requested" only shows once the email really went out (the server records invited_at after sending).
-      const saved = await saveSplitSheet(track.id, collaborators.map((r) => ({ ...r, notes })));
+      const saved = await saveSplitSheet(
+        track.id,
+        collaborators.map((r) => ({ ...r, notes })),
+      );
       setCollaborators(saved);
       // saveSplitSheet returns the named rows in order, so this row is found by position, not by name/email
       // (a trailing space in either used to make the lookup miss and the invite silently never sent).
@@ -323,7 +613,9 @@ function SplitEditor({ userId, track, initial, canCollect, onUpgrade, onClose, o
       setSendingIndex(i);
       await sendInvite({ data: { rowId: row.rowId, origin: window.location.origin } });
       const sentAt = new Date().toISOString();
-      setCollaborators((rows) => rows.map((r) => (r.rowId === row.rowId ? { ...r, invitedAt: sentAt } : r)));
+      setCollaborators((rows) =>
+        rows.map((r) => (r.rowId === row.rowId ? { ...r, invitedAt: sentAt } : r)),
+      );
       toast.success(`Signature request emailed to ${c.email}.`);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Could not send the signature request.");
@@ -346,13 +638,37 @@ function SplitEditor({ userId, track, initial, canCollect, onUpgrade, onClose, o
     }
     setSaving(true);
     try {
-      await saveSplitSheet(track.id, collaborators.map((c) => ({ ...c, notes })));
-      await saveContributors(userId, collaborators.map((c) => ({ name: c.name, kind: c.role, email: c.email, pro: c.pro, ipi: c.ipi, publisher: c.publisherName, label: "" }))).catch(() => {});
+      await saveSplitSheet(
+        track.id,
+        collaborators.map((c) => ({ ...c, notes })),
+      );
+      await saveContributors(
+        userId,
+        collaborators.map((c) => ({
+          name: c.name,
+          kind: c.role,
+          email: c.email,
+          pro: c.pro,
+          ipi: c.ipi,
+          publisher: c.publisherName,
+          label: "",
+        })),
+      ).catch(() => {});
       toast.success("Split sheet saved.");
       // Splits change over time: offer to carry the new percentages back to the catalog, never automatically.
       const updated = catalogWithSplits(track, collaborators);
-      if (updated && (await confirmAction({ title: "Update My Catalog too?", text: `These splits differ from "${track.title}" in My Catalog. Update the catalog's split percentages to match? Names, roles and everything else stay as they are.`, action: "Update catalog", tone: "primary" }))) {
-        await saveTrack(updated, userId, track.id).then(() => toast.success("My Catalog updated.")).catch(() => toast.error("Split sheet saved, but My Catalog could not be updated."));
+      if (
+        updated &&
+        (await confirmAction({
+          title: "Update My Catalog too?",
+          text: `These splits differ from "${track.title}" in My Catalog. Update the catalog's split percentages to match? Names, roles and everything else stay as they are.`,
+          action: "Update catalog",
+          tone: "primary",
+        }))
+      ) {
+        await saveTrack(updated, userId, track.id)
+          .then(() => toast.success("My Catalog updated."))
+          .catch(() => toast.error("Split sheet saved, but My Catalog could not be updated."));
       }
       onSaved();
     } catch {
@@ -366,7 +682,9 @@ function SplitEditor({ userId, track, initial, canCollect, onUpgrade, onClose, o
     const c = collaborators[i];
     if (!c) return;
     if (!c.isOwner) {
-      toast.error("Only the account owner signs here. Collaborators sign from their email request.");
+      toast.error(
+        "Only the account owner signs here. Collaborators sign from their email request.",
+      );
       return;
     }
     if (typedName.trim().toLowerCase() !== c.name.trim().toLowerCase()) {
@@ -382,48 +700,103 @@ function SplitEditor({ userId, track, initial, canCollect, onUpgrade, onClose, o
 
   return (
     <div className="mt-6 space-y-6">
-      <Button variant="ghost" size="sm" onClick={onClose}><ChevronLeft className="h-4 w-4" /> Back to split sheets</Button>
+      <Button variant="ghost" size="sm" onClick={onClose}>
+        <ChevronLeft className="h-4 w-4" /> Back to split sheets
+      </Button>
 
       <div className="rounded-2xl border border-border p-6">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
             <h2 className="text-2xl font-bold">{track.title}</h2>
-            <p className="text-sm text-muted-foreground">{track.artist}{track.metadata.isrc ? ` · ISRC ${track.metadata.isrc}` : ""}</p>
+            <p className="text-sm text-muted-foreground">
+              {track.artist}
+              {track.metadata.isrc ? ` · ISRC ${track.metadata.isrc}` : ""}
+            </p>
           </div>
-          <Badge variant="outline" className={statusBadge[status]!.className}>{statusBadge[status]!.label}</Badge>
+          <Badge variant="outline" className={statusBadge[status]!.className}>
+            {statusBadge[status]!.label}
+          </Badge>
         </div>
-        {!anySigned && <p className="mt-3 text-sm text-muted-foreground">Splits filled in from My Catalog. Things change: edit any split here.</p>}
+        {!anySigned && (
+          <p className="mt-3 text-sm text-muted-foreground">
+            Splits filled in from My Catalog. Things change: edit any split here.
+          </p>
+        )}
 
         <div className="mt-6 space-y-3">
           {collaborators.map((c, i) => (
             <div key={i} className="rounded-xl border border-border p-4">
               <div className="grid gap-3 md:grid-cols-[1.4fr_1.4fr_1fr_0.6fr_auto]">
                 <label className="space-y-1 text-sm">
-                  <span className="inline-flex items-center font-medium">Legal name<InfoTip term="legalName" /></span>
-                  <input list="contributor-library" value={c.name} onChange={(e) => update(i, { name: e.target.value })} onBlur={(e) => fillFromLibrary(i, e.target.value)} disabled={!!c.signedAt}
-                    className="w-full rounded-md border border-input bg-background px-3 py-2" placeholder="Full legal name" />
+                  <span className="inline-flex items-center font-medium">
+                    Legal name
+                    <InfoTip term="legalName" />
+                  </span>
+                  <input
+                    list="contributor-library"
+                    value={c.name}
+                    onChange={(e) => update(i, { name: e.target.value })}
+                    onBlur={(e) => fillFromLibrary(i, e.target.value)}
+                    disabled={!!c.signedAt}
+                    className="w-full rounded-md border border-input bg-background px-3 py-2"
+                    placeholder="Full legal name"
+                  />
                 </label>
                 <label className="space-y-1 text-sm">
                   <span className="font-medium">Email</span>
-                  <input type="email" value={c.email} onChange={(e) => update(i, { email: e.target.value })} disabled={!!c.signedAt}
-                    className="w-full rounded-md border border-input bg-background px-3 py-2" placeholder={c.isOwner ? "Your account email" : "collaborator@email.com"} />
+                  <input
+                    type="email"
+                    value={c.email}
+                    onChange={(e) => update(i, { email: e.target.value })}
+                    disabled={!!c.signedAt}
+                    className="w-full rounded-md border border-input bg-background px-3 py-2"
+                    placeholder={c.isOwner ? "Your account email" : "collaborator@email.com"}
+                  />
                 </label>
                 <label className="space-y-1 text-sm">
                   <span className="font-medium">Role</span>
-                  <select value={c.role} onChange={(e) => update(i, { role: e.target.value as SplitCollaborator["role"] })} disabled={!!c.signedAt}
-                    className="w-full rounded-md border border-input bg-background px-3 py-2">
-                    {SPLIT_ROLES.map((r) => <option key={r} value={r}>{r}</option>)}
+                  <select
+                    value={c.role}
+                    onChange={(e) =>
+                      update(i, { role: e.target.value as SplitCollaborator["role"] })
+                    }
+                    disabled={!!c.signedAt}
+                    className="w-full rounded-md border border-input bg-background px-3 py-2"
+                  >
+                    {SPLIT_ROLES.map((r) => (
+                      <option key={r} value={r}>
+                        {r}
+                      </option>
+                    ))}
                   </select>
                 </label>
                 <label className="space-y-1 text-sm">
-                  <span className="inline-flex items-center font-medium">Split %<InfoTip term="split" /></span>
-                  <input type="number" min={0} max={100} value={c.percentage || ""} disabled={!!c.signedAt}
-                    onChange={(e) => update(i, { percentage: Math.min(100, Math.max(0, Number(e.target.value) || 0)) })}
-                    className="w-full rounded-md border border-input bg-background px-3 py-2" placeholder="0" />
+                  <span className="inline-flex items-center font-medium">
+                    Split %<InfoTip term="split" />
+                  </span>
+                  <input
+                    type="number"
+                    min={0}
+                    max={100}
+                    value={c.percentage || ""}
+                    disabled={!!c.signedAt}
+                    onChange={(e) =>
+                      update(i, {
+                        percentage: Math.min(100, Math.max(0, Number(e.target.value) || 0)),
+                      })
+                    }
+                    className="w-full rounded-md border border-input bg-background px-3 py-2"
+                    placeholder="0"
+                  />
                 </label>
                 <div className="flex items-end gap-1">
                   {!c.signedAt && collaborators.length > 1 && (
-                    <Button variant="ghost" size="icon" aria-label="Remove collaborator" onClick={() => setCollaborators((rows) => rows.filter((_, idx) => idx !== i))}>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      aria-label="Remove collaborator"
+                      onClick={() => setCollaborators((rows) => rows.filter((_, idx) => idx !== i))}
+                    >
                       <Trash2 className="h-4 w-4" />
                     </Button>
                   )}
@@ -431,83 +804,221 @@ function SplitEditor({ userId, track, initial, canCollect, onUpgrade, onClose, o
               </div>
               <div className="mt-3 grid gap-3 md:grid-cols-2">
                 <label className="space-y-1 text-sm">
-                  <span className="inline-flex flex-wrap items-center font-medium">PRO affiliation<InfoTip term="pro" /> <span className="ml-1 font-normal text-muted-foreground">(optional — they can add it too)</span></span>
-                  <ProSelect value={c.pro} onChange={(v) => update(i, { pro: v })} disabled={!!c.signedAt} />
+                  <span className="inline-flex flex-wrap items-center font-medium">
+                    PRO affiliation
+                    <InfoTip term="pro" />{" "}
+                    <span className="ml-1 font-normal text-muted-foreground">
+                      (optional — they can add it too)
+                    </span>
+                  </span>
+                  <ProSelect
+                    value={c.pro}
+                    onChange={(v) => update(i, { pro: v })}
+                    disabled={!!c.signedAt}
+                  />
                 </label>
                 <label className="space-y-1 text-sm">
-                  <span className="inline-flex items-center font-medium">IPI / CAE number<InfoTip term="ipi" /></span>
-                  <input value={c.ipi} onChange={(e) => update(i, { ipi: e.target.value })} disabled={!!c.signedAt}
-                    className="w-full rounded-md border border-input bg-background px-3 py-2" placeholder="Optional — they can add it too" />
+                  <span className="inline-flex items-center font-medium">
+                    IPI / CAE number
+                    <InfoTip term="ipi" />
+                  </span>
+                  <input
+                    value={c.ipi}
+                    onChange={(e) => update(i, { ipi: e.target.value })}
+                    disabled={!!c.signedAt}
+                    className="w-full rounded-md border border-input bg-background px-3 py-2"
+                    placeholder="Optional — they can add it too"
+                  />
                 </label>
               </div>
 
-              <details className="mt-3 rounded-lg border border-border p-3" open={!!c.publisherName}>
-                <summary className="cursor-pointer text-sm font-semibold">Publishing <span className="font-normal text-muted-foreground">— optional</span></summary>
+              <details
+                className="mt-3 rounded-lg border border-border p-3"
+                open={!!c.publisherName}
+              >
+                <summary className="cursor-pointer text-sm font-semibold">
+                  Publishing <span className="font-normal text-muted-foreground">— optional</span>
+                </summary>
                 <div className="mt-3 grid gap-3 md:grid-cols-[1.4fr_1fr_1fr_0.6fr]">
                   <label className="space-y-1 text-sm">
-                    <span className="inline-flex items-center font-medium">Publisher name<InfoTip term="publisher" /></span>
-                    <input value={c.publisherName} onChange={(e) => update(i, { publisherName: e.target.value })} disabled={!!c.signedAt}
-                      className="w-full rounded-md border border-input bg-background px-3 py-2" placeholder="Publishing company or self-published" />
+                    <span className="inline-flex items-center font-medium">
+                      Publisher name
+                      <InfoTip term="publisher" />
+                    </span>
+                    <input
+                      value={c.publisherName}
+                      onChange={(e) => update(i, { publisherName: e.target.value })}
+                      disabled={!!c.signedAt}
+                      className="w-full rounded-md border border-input bg-background px-3 py-2"
+                      placeholder="Publishing company or self-published"
+                    />
                   </label>
                   <label className="space-y-1 text-sm">
                     <span className="font-medium">Publisher PRO</span>
-                    <ProSelect value={c.publisherPro} onChange={(v) => update(i, { publisherPro: v })} disabled={!!c.signedAt || !c.publisherName.trim()} />
+                    <ProSelect
+                      value={c.publisherPro}
+                      onChange={(v) => update(i, { publisherPro: v })}
+                      disabled={!!c.signedAt || !c.publisherName.trim()}
+                    />
                   </label>
                   <label className="space-y-1 text-sm">
                     <span className="font-medium">Publisher IPI #</span>
-                    <input value={c.publisherIpi} onChange={(e) => update(i, { publisherIpi: e.target.value })} disabled={!!c.signedAt || !c.publisherName.trim()}
-                      className="w-full rounded-md border border-input bg-background px-3 py-2" placeholder="Optional" />
+                    <input
+                      value={c.publisherIpi}
+                      onChange={(e) => update(i, { publisherIpi: e.target.value })}
+                      disabled={!!c.signedAt || !c.publisherName.trim()}
+                      className="w-full rounded-md border border-input bg-background px-3 py-2"
+                      placeholder="Optional"
+                    />
                   </label>
                   <label className="space-y-1 text-sm">
                     <span className="font-medium">Publisher %</span>
-                    <input type="number" min={0} max={100} value={c.publisherPercentage || ""} disabled={!!c.signedAt || !c.publisherName.trim()}
-                      onChange={(e) => update(i, { publisherPercentage: Math.max(0, Math.min(100, Number(e.target.value) || 0)) })}
-                      className="w-full rounded-md border border-input bg-background px-3 py-2" placeholder="0" />
+                    <input
+                      type="number"
+                      min={0}
+                      max={100}
+                      value={c.publisherPercentage || ""}
+                      disabled={!!c.signedAt || !c.publisherName.trim()}
+                      onChange={(e) =>
+                        update(i, {
+                          publisherPercentage: Math.max(
+                            0,
+                            Math.min(100, Number(e.target.value) || 0),
+                          ),
+                        })
+                      }
+                      className="w-full rounded-md border border-input bg-background px-3 py-2"
+                      placeholder="0"
+                    />
                   </label>
                 </div>
-                <p className="mt-2 text-xs text-muted-foreground">Publisher share is the publishing side of this writer's split — it doesn't change the 100% writer total.</p>
+                <p className="mt-2 text-xs text-muted-foreground">
+                  Publisher share is the publishing side of this writer's split — it doesn't change
+                  the 100% writer total.
+                </p>
               </details>
 
               <div className="mt-3 flex flex-wrap items-center gap-3">
                 {c.signedAt ? (
                   <p className="flex items-center gap-2 text-sm">
                     <Check className="h-4 w-4 text-primary" />
-                    <span className="text-lg text-foreground" style={{ fontFamily: SIGNATURE_CSS }}>{c.signatureName}</span>
-                    <span className="text-muted-foreground">signed {new Date(c.signedAt).toLocaleDateString()}</span>
+                    <span className="text-lg text-foreground" style={{ fontFamily: SIGNATURE_CSS }}>
+                      {c.signatureName}
+                    </span>
+                    <span className="text-muted-foreground">
+                      signed {new Date(c.signedAt).toLocaleDateString()}
+                    </span>
                   </p>
                 ) : c.isOwner ? (
                   signingIndex === i ? (
                     <div className="flex flex-1 flex-wrap items-center gap-2 rounded-lg bg-muted p-3">
-                      <input value={typedName} onChange={(e) => setTypedName(e.target.value)} placeholder={`Type "${c.name}" to sign`}
+                      <input
+                        value={typedName}
+                        onChange={(e) => setTypedName(e.target.value)}
+                        placeholder={`Type "${c.name}" to sign`}
                         className="min-w-56 flex-1 rounded-md border border-input bg-background px-3 py-2 text-lg text-foreground"
-                        style={{ fontFamily: SIGNATURE_CSS }} />
-                      <Button size="sm" onClick={() => void sign(i)}>Sign</Button>
-                      <Button size="sm" variant="ghost" onClick={() => { setSigningIndex(null); setTypedName(""); }}>Cancel</Button>
+                        style={{ fontFamily: SIGNATURE_CSS }}
+                      />
+                      <Button size="sm" onClick={() => void sign(i)}>
+                        Sign
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => {
+                          setSigningIndex(null);
+                          setTypedName("");
+                        }}
+                      >
+                        Cancel
+                      </Button>
                     </div>
                   ) : (
-                    <Button size="sm" disabled={!c.name.trim()} onClick={() => { setSigningIndex(i); setTypedName(""); }}>
+                    <Button
+                      size="sm"
+                      disabled={!c.name.trim()}
+                      onClick={() => {
+                        setSigningIndex(i);
+                        setTypedName("");
+                      }}
+                    >
                       <PenLine className="h-4 w-4" /> Sign as account owner
                     </Button>
                   )
                 ) : !canCollect ? (
-                  <Button size="sm" variant="outline" className="opacity-60" title="Split sheet e-signature requests are included with Catalog & Collaborate"
-                    onClick={() => void confirmAction({ title: "Collect e-signatures with Catalog & Collaborate", text: "Email collaborators a secure link to sign your split sheet. Upgrade to Catalog & Collaborate to send signature requests.", action: "See upgrade", cancel: "Not now", tone: "primary" }).then((go) => go && onUpgrade())}>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="opacity-60"
+                    title="Split sheet e-signature requests are included with Catalog & Collaborate"
+                    onClick={() =>
+                      void confirmAction({
+                        title: "Collect e-signatures with Catalog & Collaborate",
+                        text: "Email collaborators a secure link to sign your split sheet. Upgrade to Catalog & Collaborate to send signature requests.",
+                        action: "See upgrade",
+                        cancel: "Not now",
+                        tone: "primary",
+                      }).then((go) => go && onUpgrade())
+                    }
+                  >
                     <Lock className="h-4 w-4" /> Request e-signature
                   </Button>
                 ) : c.invitedAt && c.rowId ? (
                   <>
-                    <Badge variant="outline" className="border-primary text-primary"><Mail className="mr-1 h-3.5 w-3.5" /> Requested {new Date(c.invitedAt).toLocaleDateString()} · awaiting signature</Badge>
-                    <Button size="sm" variant="ghost" onClick={() => { void navigator.clipboard.writeText(signLink(c.rowId!)); toast.success("Signing link copied."); }}><Copy className="h-4 w-4" /> Copy link</Button>
-                    <Button size="sm" variant="ghost" disabled={sendingIndex === i} onClick={() => void requestSignature(i)}>{sendingIndex === i ? <Loader2 className="h-4 w-4 animate-spin" /> : <Mail className="h-4 w-4" />} Resend invite</Button>
+                    <Badge variant="outline" className="border-primary text-primary">
+                      <Mail className="mr-1 h-3.5 w-3.5" /> Requested{" "}
+                      {new Date(c.invitedAt).toLocaleDateString()} · awaiting signature
+                    </Badge>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => {
+                        void navigator.clipboard.writeText(signLink(c.rowId!));
+                        toast.success("Signing link copied.");
+                      }}
+                    >
+                      <Copy className="h-4 w-4" /> Copy link
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      disabled={sendingIndex === i}
+                      onClick={() => void requestSignature(i)}
+                    >
+                      {sendingIndex === i ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <Mail className="h-4 w-4" />
+                      )}{" "}
+                      Resend invite
+                    </Button>
                   </>
                 ) : (
-                  <Button size="sm" variant="outline" disabled={!c.name.trim() || sendingIndex === i} onClick={() => void requestSignature(i)}>
-                    {sendingIndex === i ? <Loader2 className="h-4 w-4 animate-spin" /> : <Mail className="h-4 w-4" />} Send invite
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    disabled={!c.name.trim() || sendingIndex === i}
+                    onClick={() => void requestSignature(i)}
+                  >
+                    {sendingIndex === i ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Mail className="h-4 w-4" />
+                    )}{" "}
+                    Send invite
                   </Button>
                 )}
-                {!c.signedAt && !c.isOwner && !collaborators.some((r) => r.isOwner && r.signedAt) && (
-                  <button type="button" className="text-xs text-muted-foreground underline" onClick={() => markOwner(i)}>This is me</button>
-                )}
+                {!c.signedAt &&
+                  !c.isOwner &&
+                  !collaborators.some((r) => r.isOwner && r.signedAt) && (
+                    <button
+                      type="button"
+                      className="text-xs text-muted-foreground underline"
+                      onClick={() => markOwner(i)}
+                    >
+                      This is me
+                    </button>
+                  )}
                 {c.isOwner && <Badge variant="outline">Account owner{ownerName ? "" : ""}</Badge>}
               </div>
             </div>
@@ -515,30 +1026,71 @@ function SplitEditor({ userId, track, initial, canCollect, onUpgrade, onClose, o
         </div>
 
         <datalist id="contributor-library">
-          {library.map((l) => <option key={`${l.name}-${l.kind}`} value={l.name}>{l.kind}</option>)}
+          {library.map((l) => (
+            <option key={`${l.name}-${l.kind}`} value={l.name}>
+              {l.kind}
+            </option>
+          ))}
         </datalist>
-        <Button variant="outline" className="mt-4" onClick={() => setCollaborators((rows) => [...rows, emptySplitCollaborator()])}>
+        <Button
+          variant="outline"
+          className="mt-4"
+          onClick={() => setCollaborators((rows) => [...rows, emptySplitCollaborator()])}
+        >
           <Plus className="h-4 w-4" /> Add collaborator
         </Button>
 
-        <div className={`mt-6 flex items-center justify-between rounded-xl border p-4 ${totalOk ? "border-primary" : "border-destructive"}`}>
+        <div
+          className={`mt-6 flex items-center justify-between rounded-xl border p-4 ${totalOk ? "border-primary" : "border-destructive"}`}
+        >
           <span className="font-semibold">Total ownership</span>
-          <span className={`text-2xl font-bold ${totalOk ? "text-primary" : "text-destructive"}`}>{total}%</span>
+          <span className={`text-2xl font-bold ${totalOk ? "text-primary" : "text-destructive"}`}>
+            {total}%
+          </span>
         </div>
-        {!totalOk && <p className="mt-2 text-sm text-destructive">{splitSummary(collaborators.map((c) => ({ percentage: String(c.percentage || "") })))}<span className="block">Splits must add up to exactly 100% before saving.</span></p>}
+        {!totalOk && (
+          <p className="mt-2 text-sm text-destructive">
+            {splitSummary(collaborators.map((c) => ({ percentage: String(c.percentage || "") })))}
+            <span className="block">Splits must add up to exactly 100% before saving.</span>
+          </p>
+        )}
 
         <label className="mt-6 block space-y-1 text-sm">
-          <span className="font-semibold">Notes <span className="font-normal text-muted-foreground">— optional</span></span>
-          <textarea value={notes} onChange={(e) => setNotes(e.target.value)} disabled={anySigned} rows={4}
-            className="w-full rounded-md border border-input bg-background px-3 py-2" />
-          <span className="block text-xs text-muted-foreground">Shown right above the signatures on the split sheet.</span>
+          <span className="font-semibold">
+            Notes <span className="font-normal text-muted-foreground">— optional</span>
+          </span>
+          <textarea
+            value={notes}
+            onChange={(e) => setNotes(e.target.value)}
+            disabled={anySigned}
+            rows={4}
+            className="w-full rounded-md border border-input bg-background px-3 py-2"
+          />
+          <span className="block text-xs text-muted-foreground">
+            Shown right above the signatures on the split sheet.
+          </span>
         </label>
 
         <div className="mt-6 flex flex-wrap gap-2">
           <Button onClick={() => void save()} disabled={saving || !totalOk}>
-            {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileSignature className="h-4 w-4" />} Save split sheet
+            {saving ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <FileSignature className="h-4 w-4" />
+            )}{" "}
+            Save split sheet
           </Button>
-          <Button variant="outline" onClick={() => void downloadSplitPdf(track, collaborators.map((c) => ({ ...c, notes })), kitId)} disabled={!collaborators.some((c) => c.name)}>
+          <Button
+            variant="outline"
+            onClick={() =>
+              void downloadSplitPdf(
+                track,
+                collaborators.map((c) => ({ ...c, notes })),
+                kitId,
+              )
+            }
+            disabled={!collaborators.some((c) => c.name)}
+          >
             <Download className="h-4 w-4" /> Download PDF
           </Button>
           <BrandKitChoice kits={kits} kitId={kitId} onChange={setKitId} />
@@ -548,7 +1100,11 @@ function SplitEditor({ userId, track, initial, canCollect, onUpgrade, onClose, o
   );
 }
 
-async function downloadSplitPdf(track: CatalogTrack, collaborators: SplitCollaborator[], kitId?: string) {
+async function downloadSplitPdf(
+  track: CatalogTrack,
+  collaborators: SplitCollaborator[],
+  kitId?: string,
+) {
   const id = toast.loading("Preparing your split sheet PDF…");
   try {
     await buildSplitPdf(track, collaborators, kitId);
@@ -559,11 +1115,50 @@ async function downloadSplitPdf(track: CatalogTrack, collaborators: SplitCollabo
   }
 }
 
-async function buildSplitPdf(track: CatalogTrack, rawCollaborators: SplitCollaborator[], kitId?: string) {
+async function buildSplitPdf(
+  track: CatalogTrack,
+  rawCollaborators: SplitCollaborator[],
+  kitId?: string,
+) {
   const t = (v: unknown) => (v === null || v === undefined ? "" : String(v));
-  const collaborators = rawCollaborators.map((c) => ({ ...c, name: t(c.name), role: t(c.role) as SplitCollaborator["role"], pro: t(c.pro), ipi: t(c.ipi), performerName: t(c.performerName), publisherName: t(c.publisherName), publisherPro: t(c.publisherPro), publisherIpi: t(c.publisherIpi), signatureName: t(c.signatureName) || t(c.name), signatureHash: t(c.signatureHash), percentage: Number(c.percentage) || 0 }));
-  track = { ...track, title: t(track.title) || "Untitled", artist: t(track.artist), metadata: { ...track.metadata, isrc: t(track.metadata?.isrc), iswc: t(track.metadata?.iswc) } };
-  const [{ newBrandedPdf, brandHeader, brandFooter, infoGrid, sectionTitle, ensureSpace, accentOf, onAccent, headerDate, addSignatureFont, INK, MUTED, RULE }, { myBrand }] = await Promise.all([import("@/lib/brand-pdf"), import("@/lib/brand-load")]);
+  const collaborators = rawCollaborators.map((c) => ({
+    ...c,
+    name: t(c.name),
+    role: t(c.role) as SplitCollaborator["role"],
+    pro: t(c.pro),
+    ipi: t(c.ipi),
+    performerName: t(c.performerName),
+    publisherName: t(c.publisherName),
+    publisherPro: t(c.publisherPro),
+    publisherIpi: t(c.publisherIpi),
+    signatureName: t(c.signatureName) || t(c.name),
+    signatureHash: t(c.signatureHash),
+    percentage: Number(c.percentage) || 0,
+  }));
+  track = {
+    ...track,
+    title: t(track.title) || "Untitled",
+    artist: t(track.artist),
+    metadata: { ...track.metadata, isrc: t(track.metadata?.isrc), iswc: t(track.metadata?.iswc) },
+  };
+  const [
+    {
+      newBrandedPdf,
+      brandHeader,
+      brandFooter,
+      infoGrid,
+      sectionTitle,
+      ensureSpace,
+      accentOf,
+      onAccent,
+      headerDate,
+      addSignatureFont,
+      INK,
+      MUTED,
+      RULE,
+    },
+    { myBrand },
+  ] = await Promise.all([import("@/lib/brand-pdf"), import("@/lib/brand-load")]);
   // Personal Branding (Catalog Management, or the split sheet add-on) swaps in their header; otherwise ours.
   // Which of their kits brands this sheet, if they picked one (the server still decides whether it may be used).
   const brand = await myBrand("splits", kitId ?? null);
@@ -573,32 +1168,63 @@ async function buildSplitPdf(track: CatalogTrack, rawCollaborators: SplitCollabo
   const w = pdf.internal.pageSize.getWidth();
   const rows = collaborators.filter((c) => c.name);
   const status = splitStatus(collaborators);
-  let y = brandHeader(pdf, "Split Sheet Agreement", `${track.title} — ${track.artist}`, headerDate(), brand);
+  let y = brandHeader(
+    pdf,
+    "Split Sheet Agreement",
+    `${track.title} — ${track.artist}`,
+    headerDate(),
+    brand,
+  );
   y = infoGrid(pdf, y, [
-    ["Song title", track.title], ["Artist", track.artist],
-    ["ISRC", track.metadata.isrc], ["ISWC", track.metadata.iswc],
-    ["Status", status === "signed" ? "Fully signed" : status === "partial" ? "Partially signed" : "Draft"], ["Agreement ID", track.id.slice(0, 8).toUpperCase()],
+    ["Song title", track.title],
+    ["Artist", track.artist],
+    ["ISRC", track.metadata.isrc],
+    ["ISWC", track.metadata.iswc],
+    [
+      "Status",
+      status === "signed" ? "Fully signed" : status === "partial" ? "Partially signed" : "Draft",
+    ],
+    ["Agreement ID", track.id.slice(0, 8).toUpperCase()],
   ]);
 
   y = sectionTitle(pdf, y, "Ownership splits");
   const cols = [18, 80, 115, 145, 175];
   pdf.setFillColor(...accentOf(pdf)).rect(18, y, w - 36, 8, "F");
-  pdf.setFont("helvetica", "bold").setFontSize(8).setTextColor(...onAccent(pdf));
+  pdf
+    .setFont("helvetica", "bold")
+    .setFontSize(8)
+    .setTextColor(...onAccent(pdf));
   ["NAME", "ROLE", "PRO", "IPI", "SHARE"].forEach((h, i) => pdf.text(h, cols[i]! + 3, y + 5.5));
   y += 8;
   rows.forEach((c, i) => {
     if (i % 2) pdf.setFillColor(245, 247, 251).rect(18, y, w - 36, 9, "F");
-    pdf.setFont("helvetica", "normal").setFontSize(10).setTextColor(...INK);
+    pdf
+      .setFont("helvetica", "normal")
+      .setFontSize(10)
+      .setTextColor(...INK);
     pdf.text(c.name, cols[0]! + 3, y + 6);
-    if (c.performerName) pdf.setFontSize(7).setTextColor(...MUTED).text(`p/k/a ${c.performerName}`, cols[0]! + 3, y + 9.5).setFontSize(10).setTextColor(...INK);
+    if (c.performerName)
+      pdf
+        .setFontSize(7)
+        .setTextColor(...MUTED)
+        .text(`p/k/a ${c.performerName}`, cols[0]! + 3, y + 9.5)
+        .setFontSize(10)
+        .setTextColor(...INK);
     pdf.text(c.role, cols[1]! + 3, y + 6);
     pdf.text(c.pro || "—", cols[2]! + 3, y + 6);
     pdf.text(c.ipi || "—", cols[3]! + 3, y + 6);
     pdf.setFont("helvetica", "bold").text(`${c.percentage}%`, cols[4]! + 3, y + 6);
     y += c.performerName ? 11 : 9;
   });
-  pdf.setDrawColor(...accentOf(pdf)).setLineWidth(0.6).line(18, y, w - 18, y);
-  pdf.setFont("helvetica", "bold").setFontSize(10).setTextColor(...INK).text("TOTAL", cols[0]! + 3, y + 6);
+  pdf
+    .setDrawColor(...accentOf(pdf))
+    .setLineWidth(0.6)
+    .line(18, y, w - 18, y);
+  pdf
+    .setFont("helvetica", "bold")
+    .setFontSize(10)
+    .setTextColor(...INK)
+    .text("TOTAL", cols[0]! + 3, y + 6);
   pdf.setTextColor(...accentOf(pdf)).text(`${splitTotal(collaborators)}%`, cols[4]! + 3, y + 6);
   y += 18;
 
@@ -607,12 +1233,20 @@ async function buildSplitPdf(track: CatalogTrack, rawCollaborators: SplitCollabo
     y = ensureSpace(pdf, y, 20 + pubs.length * 9);
     y = sectionTitle(pdf, y, "Publishing");
     pdf.setFillColor(...accentOf(pdf)).rect(18, y, w - 36, 8, "F");
-    pdf.setFont("helvetica", "bold").setFontSize(8).setTextColor(...onAccent(pdf));
-    ["PUBLISHER", "FOR WRITER", "PRO", "IPI", "SHARE"].forEach((h, i) => pdf.text(h, cols[i]! + 3, y + 5.5));
+    pdf
+      .setFont("helvetica", "bold")
+      .setFontSize(8)
+      .setTextColor(...onAccent(pdf));
+    ["PUBLISHER", "FOR WRITER", "PRO", "IPI", "SHARE"].forEach((h, i) =>
+      pdf.text(h, cols[i]! + 3, y + 5.5),
+    );
     y += 8;
     pubs.forEach((c, i) => {
       if (i % 2) pdf.setFillColor(245, 247, 251).rect(18, y, w - 36, 9, "F");
-      pdf.setFont("helvetica", "normal").setFontSize(9).setTextColor(...INK);
+      pdf
+        .setFont("helvetica", "normal")
+        .setFontSize(9)
+        .setTextColor(...INK);
       pdf.text(c.publisherName, cols[0]! + 3, y + 6);
       pdf.text(c.name, cols[1]! + 3, y + 6);
       pdf.text(c.publisherPro || "—", cols[2]! + 3, y + 6);
@@ -628,35 +1262,68 @@ async function buildSplitPdf(track: CatalogTrack, rawCollaborators: SplitCollabo
     const lines = pdf.splitTextToSize(notes, w - 36) as string[];
     y = ensureSpace(pdf, y, 14 + lines.length * 4.5);
     y = sectionTitle(pdf, y, "Notes");
-    pdf.setFont("helvetica", "normal").setFontSize(9.5).setTextColor(...INK).text(lines, 18, y);
+    pdf
+      .setFont("helvetica", "normal")
+      .setFontSize(9.5)
+      .setTextColor(...INK)
+      .text(lines, 18, y);
     y += lines.length * 4.5 + 8;
   }
 
   y = ensureSpace(pdf, y, 40);
   y = sectionTitle(pdf, y, "Signatures");
-  pdf.setFont("helvetica", "normal").setFontSize(8.5).setTextColor(...MUTED);
-  const agreement = pdf.splitTextToSize("By signing, each party confirms the ownership percentages above are accurate and agrees to them for this composition. Each electronic signature is recorded with a timestamp and a SHA-256 verification hash.", w - 36) as string[];
-  pdf.text(agreement, 18, y); y += agreement.length * 4 + 6;
+  pdf
+    .setFont("helvetica", "normal")
+    .setFontSize(8.5)
+    .setTextColor(...MUTED);
+  const agreement = pdf.splitTextToSize(
+    "By signing, each party confirms the ownership percentages above are accurate and agrees to them for this composition. Each electronic signature is recorded with a timestamp and a SHA-256 verification hash.",
+    w - 36,
+  ) as string[];
+  pdf.text(agreement, 18, y);
+  y += agreement.length * 4 + 6;
   const boxW = (w - 36 - 6) / 2;
   rows.forEach((c, i) => {
     const x = 18 + (i % 2) * (boxW + 6);
     if (i % 2 === 0) y = ensureSpace(pdf, y, 36);
-    pdf.setDrawColor(...RULE).setLineWidth(0.3).roundedRect(x, y, boxW, 32, 2, 2, "S");
+    pdf
+      .setDrawColor(...RULE)
+      .setLineWidth(0.3)
+      .roundedRect(x, y, boxW, 32, 2, 2, "S");
     if (c.signedAt) {
       const setSignature = () =>
-        cursive ? pdf.setFont(SIGNATURE_FONT, "bold").setFontSize(18) : pdf.setFont("times", "italic").setFontSize(18);
-      setSignature().setTextColor(...INK).text(c.signatureName, x + 5, y + 12);
+        cursive
+          ? pdf.setFont(SIGNATURE_FONT, "bold").setFontSize(18)
+          : pdf.setFont("times", "italic").setFontSize(18);
+      setSignature()
+        .setTextColor(...INK)
+        .text(c.signatureName, x + 5, y + 12);
     }
     // An unsigned box is left blank on purpose (founder, 2026-11-16): the download is often printed and signed in
     // person, so no status line may sit where the pen goes. The screen still says who has not signed yet.
     pdf.setDrawColor(...INK).line(x + 5, y + 15, x + boxW - 5, y + 15);
-    pdf.setFont("helvetica", "bold").setFontSize(9).setTextColor(...INK).text(`${c.name}${c.isOwner ? "  (Account owner)" : ""}`, x + 5, y + 20);
-    pdf.setFont("helvetica", "normal").setFontSize(7.5).setTextColor(...MUTED);
-    pdf.text(c.signedAt ? `Signed ${new Date(c.signedAt).toLocaleString()}` : `${c.role} · ${c.percentage}%`, x + 5, y + 24.5);
-    if (c.signedAt && c.signatureHash) pdf.setTextColor(...accentOf(pdf)).text(`Hash ${c.signatureHash.slice(0, 32)}…`, x + 5, y + 28.5);
+    pdf
+      .setFont("helvetica", "bold")
+      .setFontSize(9)
+      .setTextColor(...INK)
+      .text(`${c.name}${c.isOwner ? "  (Account owner)" : ""}`, x + 5, y + 20);
+    pdf
+      .setFont("helvetica", "normal")
+      .setFontSize(7.5)
+      .setTextColor(...MUTED);
+    pdf.text(
+      c.signedAt
+        ? `Signed ${new Date(c.signedAt).toLocaleString()}`
+        : `${c.role} · ${c.percentage}%`,
+      x + 5,
+      y + 24.5,
+    );
+    if (c.signedAt && c.signatureHash)
+      pdf
+        .setTextColor(...accentOf(pdf))
+        .text(`Hash ${c.signatureHash.slice(0, 32)}…`, x + 5, y + 28.5);
     if (i % 2 === 1 || i === rows.length - 1) y += 36;
   });
   brandFooter(pdf, brand);
   pdf.save(`${track.title.replace(/[^a-z0-9]+/gi, "-") || "split-sheet"}-split-sheet.pdf`);
 }
-

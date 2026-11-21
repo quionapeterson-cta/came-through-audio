@@ -1,7 +1,15 @@
 import { useState } from "react";
 import { Disclaimer } from "@/components/Disclaimer";
 import { createFileRoute, Link, notFound } from "@tanstack/react-router";
-import { CheckCircle2, Download, ExternalLink, FolderOpen, Loader2, ShieldCheck, XCircle } from "lucide-react";
+import {
+  CheckCircle2,
+  Download,
+  ExternalLink,
+  FolderOpen,
+  Loader2,
+  ShieldCheck,
+  XCircle,
+} from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -23,11 +31,20 @@ export const Route = createFileRoute("/verify/$id")({
     if (!cert) throw notFound();
     return cert;
   },
-  head: () => ({ meta: [{ title: "Verify a certificate — Came Through Audio" }, { name: "robots", content: "noindex" }] }),
+  head: () => ({
+    meta: [
+      { title: "Verify a certificate — Came Through Audio" },
+      { name: "robots", content: "noindex" },
+    ],
+  }),
   // Our own loading screen while the certificate loads, so nothing else flashes first.
   pendingComponent: () => (
     <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-background text-foreground">
-      <BrandLogo tone="light" /><p className="flex items-center gap-2 text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" />Loading the certificate…</p>
+      <BrandLogo tone="light" />
+      <p className="flex items-center gap-2 text-sm text-muted-foreground">
+        <Loader2 className="h-4 w-4 animate-spin" />
+        Loading the certificate…
+      </p>
     </div>
   ),
   component: VerifyPage,
@@ -43,14 +60,28 @@ function VerifyPage() {
 
   /** The owner's own proof files, on the same phone that opened the QR code (no second device needed). */
   async function downloadProof() {
-    if (!user) { toast.error("Log in with the account that owns this certificate to download its proof files."); return; }
+    if (!user) {
+      toast.error(
+        "Log in with the account that owns this certificate to download its proof files.",
+      );
+      return;
+    }
     setBusy(true);
     try {
-      const { data } = await supabase.from("ai_protection_certificates").select("*").eq("id", c.id).maybeSingle();
-      if (!data) { toast.error("Only the account that owns this certificate can download its proof files."); return; }
+      const { data } = await supabase
+        .from("ai_protection_certificates")
+        .select("*")
+        .eq("id", c.id)
+        .maybeSingle();
+      if (!data) {
+        toast.error("Only the account that owns this certificate can download its proof files.");
+        return;
+      }
       await saveCertificatePdf(data as Certificate);
       saveBitcoinProof(data as Certificate);
-    } finally { setBusy(false); }
+    } finally {
+      setBusy(false);
+    }
   }
 
   async function checkFile(file: File | undefined) {
@@ -62,37 +93,83 @@ function VerifyPage() {
   return (
     <div className="min-h-screen bg-background text-foreground">
       <header className="border-b border-border">
-        <div className="mx-auto flex max-w-3xl items-center justify-between px-4 py-5 sm:px-6"><BrandLogo tone="light" /></div>
+        <div className="mx-auto flex max-w-3xl items-center justify-between px-4 py-5 sm:px-6">
+          <BrandLogo tone="light" />
+        </div>
       </header>
       <main className="mx-auto max-w-3xl space-y-6 px-4 py-12 sm:px-6">
         <div>
-          <p className="flex items-center gap-2 text-sm font-bold uppercase tracking-[2px] text-primary"><ShieldCheck className="h-4 w-4" />Certificate of Human Origin</p>
+          <p className="flex items-center gap-2 text-sm font-bold uppercase tracking-[2px] text-primary">
+            <ShieldCheck className="h-4 w-4" />
+            Certificate of Human Origin
+          </p>
           <h1 className="mt-2 text-3xl font-bold md:text-4xl">{c.track_title || "Untitled"}</h1>
           <p className="mt-1 text-lg text-muted-foreground">{c.artist_name}</p>
         </div>
 
         {/* Already on the phone that scanned the code? Open it or download the files here. */}
         <div className="flex flex-wrap gap-2">
-          <Button asChild><Link to="/workspace" search={{ tab: "protect" }}><FolderOpen className="h-4 w-4" />Open your certificate</Link></Button>
-          <Button variant="outline" disabled={busy} onClick={() => void downloadProof()}>{busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}Download proof files</Button>
+          <Button asChild>
+            <Link to="/workspace" search={{ tab: "protect" }}>
+              <FolderOpen className="h-4 w-4" />
+              Open your certificate
+            </Link>
+          </Button>
+          <Button variant="outline" disabled={busy} onClick={() => void downloadProof()}>
+            {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
+            Download proof files
+          </Button>
         </div>
-        <p className="-mt-3 text-xs text-muted-foreground">For the artist who owns this certificate: log in to open it or download the PDF and Bitcoin proof. Anyone can check it below.</p>
+        <p className="-mt-3 text-xs text-muted-foreground">
+          For the artist who owns this certificate: log in to open it or download the PDF and
+          Bitcoin proof. Anyone can check it below.
+        </p>
 
         <dl className="grid gap-3 rounded-2xl border border-border p-5 text-sm sm:grid-cols-[10rem_1fr]">
-          <dt className="font-semibold">Issued</dt><dd>{issued}</dd>
-          <dt className="font-semibold">Certificate ID</dt><dd className="break-all">{c.id}</dd>
-          <dt className="font-semibold">Fingerprint (SHA-256)</dt><dd className="break-all font-mono text-xs">{c.proof_digest ?? "—"}</dd>
+          <dt className="font-semibold">Issued</dt>
+          <dd>{issued}</dd>
+          <dt className="font-semibold">Certificate ID</dt>
+          <dd className="break-all">{c.id}</dd>
+          <dt className="font-semibold">Fingerprint (SHA-256)</dt>
+          <dd className="break-all font-mono text-xs">{c.proof_digest ?? "—"}</dd>
           <dt className="font-semibold">Bitcoin timestamp</dt>
-          <dd>{c.ots_receipt ? "Stamped as a Bitcoin Timestamp on the public Bitcoin blockchain. It's confirmed within a few hours of the issue time." : "This certificate was issued without a Bitcoin timestamp."}</dd>
+          <dd>
+            {c.ots_receipt
+              ? "Stamped as a Bitcoin Timestamp on the public Bitcoin blockchain. It's confirmed within a few hours of the issue time."
+              : "This certificate was issued without a Bitcoin timestamp."}
+          </dd>
         </dl>
 
         <section className="space-y-3 rounded-2xl border border-border p-5">
           <h2 className="text-lg font-bold">Check a proof manifest</h2>
-          <p className="text-sm text-muted-foreground">Choose the <b>proof-manifest.txt</b> that came with this certificate. We check it on this device; nothing is uploaded.</p>
-          <p className="text-sm text-muted-foreground">Where to find it: <b>AI Protection Hub → My certificates → Bitcoin proof</b>. It's inside that ZIP; unzip it first (on a phone, open the ZIP in Files and tap the .txt).</p>
-          <input type="file" accept=".txt,text/plain" aria-label="Proof manifest" onChange={(e) => void checkFile(e.target.files?.[0])} className="text-sm" />
-          {check === "match" && <p className="flex items-center gap-2 font-semibold text-primary"><CheckCircle2 className="h-5 w-5" />It matches. This is the exact manifest this certificate stamped.</p>}
-          {check === "nomatch" && <p className="flex items-center gap-2 font-semibold text-destructive"><XCircle className="h-5 w-5" />It doesn't match. Use the proof-manifest.txt from this certificate, unchanged (not the PDF).</p>}
+          <p className="text-sm text-muted-foreground">
+            Choose the <b>proof-manifest.txt</b> that came with this certificate. We check it on
+            this device; nothing is uploaded.
+          </p>
+          <p className="text-sm text-muted-foreground">
+            Where to find it: <b>AI Protection Hub → My certificates → Bitcoin proof</b>. It's
+            inside that ZIP; unzip it first (on a phone, open the ZIP in Files and tap the .txt).
+          </p>
+          <input
+            type="file"
+            accept=".txt,text/plain"
+            aria-label="Proof manifest"
+            onChange={(e) => void checkFile(e.target.files?.[0])}
+            className="text-sm"
+          />
+          {check === "match" && (
+            <p className="flex items-center gap-2 font-semibold text-primary">
+              <CheckCircle2 className="h-5 w-5" />
+              It matches. This is the exact manifest this certificate stamped.
+            </p>
+          )}
+          {check === "nomatch" && (
+            <p className="flex items-center gap-2 font-semibold text-destructive">
+              <XCircle className="h-5 w-5" />
+              It doesn't match. Use the proof-manifest.txt from this certificate, unchanged (not the
+              PDF).
+            </p>
+          )}
         </section>
 
         {c.ots_receipt && c.proof_digest && (
@@ -101,17 +178,46 @@ function VerifyPage() {
             <ol className="list-decimal space-y-1 pl-5 text-sm">
               <li>Download the timestamp receipt below (the .ots file).</li>
               <li>Open the verifier below and drop in the .ots file.</li>
-              <li>When it asks for the original file, drop in the <b>proof-manifest.txt</b>, not the PDF.</li>
+              <li>
+                When it asks for the original file, drop in the <b>proof-manifest.txt</b>, not the
+                PDF.
+              </li>
             </ol>
             <div className="flex flex-wrap gap-2">
-              <Button variant="outline" onClick={() => download(`${base}-proof-manifest.txt.ots`, buildOtsFile(c.proof_digest!, c.ots_receipt!), "application/octet-stream")}><Download className="h-4 w-4" />Timestamp receipt (.ots)</Button>
-              <Button asChild variant="outline"><a href="https://opentimestamps.org" target="_blank" rel="noreferrer">opentimestamps.org<ExternalLink className="h-4 w-4" /></a></Button>
+              <Button
+                variant="outline"
+                onClick={() =>
+                  download(
+                    `${base}-proof-manifest.txt.ots`,
+                    buildOtsFile(c.proof_digest!, c.ots_receipt!),
+                    "application/octet-stream",
+                  )
+                }
+              >
+                <Download className="h-4 w-4" />
+                Timestamp receipt (.ots)
+              </Button>
+              <Button asChild variant="outline">
+                <a href="https://opentimestamps.org" target="_blank" rel="noreferrer">
+                  opentimestamps.org
+                  <ExternalLink className="h-4 w-4" />
+                </a>
+              </Button>
             </div>
-            <p className="text-xs text-muted-foreground">In the first few hours it shows as pending while Bitcoin confirms. That's normal.</p>
+            <p className="text-xs text-muted-foreground">
+              In the first few hours it shows as pending while Bitcoin confirms. That's normal.
+            </p>
           </section>
         )}
 
-        <p className="text-xs text-muted-foreground">Bitcoin timestamping proves this fingerprint existed at that time and hasn't changed since. It doesn't prove ownership by itself. Issued by <Link to="/" className="underline">Came Through Audio</Link>.</p>
+        <p className="text-xs text-muted-foreground">
+          Bitcoin timestamping proves this fingerprint existed at that time and hasn't changed
+          since. It doesn't prove ownership by itself. Issued by{" "}
+          <Link to="/" className="underline">
+            Came Through Audio
+          </Link>
+          .
+        </p>
         <Disclaimer k="aiProtection" />
       </main>
     </div>

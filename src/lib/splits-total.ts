@@ -4,7 +4,10 @@
  */
 type Shared = { percentage: string };
 
-const num = (v: string) => { const n = Number(v); return Number.isFinite(n) && n > 0 ? n : 0; };
+const num = (v: string) => {
+  const n = Number(v);
+  return Number.isFinite(n) && n > 0 ? n : 0;
+};
 const round = (n: number) => Math.round(n * 100) / 100;
 
 export function splitTotal(rows: Shared[]) {
@@ -15,14 +18,23 @@ export function splitTotal(rows: Shared[]) {
 export function splitStatus(rows: Shared[]) {
   const total = splitTotal(rows);
   const state = total === 0 ? "empty" : total > 100 ? "over" : total < 100 ? "under" : "full";
-  return { total, left: round(Math.max(0, 100 - total)), over: round(Math.max(0, total - 100)), state } as const;
+  return {
+    total,
+    left: round(Math.max(0, 100 - total)),
+    over: round(Math.max(0, total - 100)),
+    state,
+  } as const;
 }
 
 /**
  * The value a share box accepts: at most what the other rows leave. Lowering a share is always allowed, so a song
  * already over 100% can be fixed one box at a time. Returns the value to store and the cap when it snapped.
  */
-export function capShare(rows: Shared[], index: number, value: string): { value: string; cappedAt?: number } {
+export function capShare(
+  rows: Shared[],
+  index: number,
+  value: string,
+): { value: string; cappedAt?: number } {
   const v = Number(value);
   if (value.trim() === "" || !Number.isFinite(v)) return { value };
   if (v < 0) return { value: "0" };

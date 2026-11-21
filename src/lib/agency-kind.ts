@@ -9,7 +9,8 @@ export type AgencyKind = "composition" | "recording";
 /** The societies that register recordings. Everything else — every PRO, the MLC and the rest of the world's societies — registers works. */
 const RECORDING_AGENCIES = new Set(["soundexchange", "resound"]);
 
-export const agencyKind = (society: string): AgencyKind => (RECORDING_AGENCIES.has(society) ? "recording" : "composition");
+export const agencyKind = (society: string): AgencyKind =>
+  RECORDING_AGENCIES.has(society) ? "recording" : "composition";
 export const registersRecording = (society: string) => agencyKind(society) === "recording";
 
 /**

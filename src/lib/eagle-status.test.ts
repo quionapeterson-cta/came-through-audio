@@ -25,7 +25,9 @@ describe("eagle status", () => {
     expect(eagleStage(0).art).toBe(EAGLE_ART.soar);
     expect(eagleStage(4).art).toBe(EAGLE_ART.keepSoaring);
     expect(eagleStage(20).art).toBe(EAGLE_ART.highest);
-    expect(EAGLE_ART.soar).toContain("/icons/playful/cta-catalog management - eagle- status badges/");
+    expect(EAGLE_ART.soar).toContain(
+      "/icons/playful/cta-catalog management - eagle- status badges/",
+    );
   });
 
   it("locks the eagle for everyone off Catalog Management", () => {
@@ -34,7 +36,11 @@ describe("eagle status", () => {
     expect(locked.art).toBe(EAGLE_ART.disc);
     expect(locked.detail).toMatch(/Catalog Management/);
 
-    const active = eagleStatus({ onManagement: true, startedAt: "2026-01-10T00:00:00Z", now: at("2026-11-10T00:00:00Z") });
+    const active = eagleStatus({
+      onManagement: true,
+      startedAt: "2026-01-10T00:00:00Z",
+      now: at("2026-11-10T00:00:00Z"),
+    });
     expect(active.locked).toBe(false);
     if (active.locked) throw new Error("unreachable");
     expect(active.months).toBe(10);

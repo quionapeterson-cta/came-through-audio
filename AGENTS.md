@@ -141,16 +141,38 @@
   ten characters as the card prefix unless a shortened descriptor is set, so the prefix is what stops the name printing
   as `CAME THROU`. Keep both an exact substring of the business name — never invent a DBA, never put a service
   description there — and keep every Stripe product name and description in `STRIPE-PRODUCTS.md`.
-- Pausing is never presented as cancelling (founder, 2026-11-05): the pause dialog says the plan renews by itself, Resume
-  now says it ends the pause rather than the plan, and a member who thought a pause cancelled gets the prorated refund.
-  The renewal reminder email always carries the Cancel-or-change link and that same warning.
-- **The pause fee is a monthly subscription** (founder, 2026-11-20, replacing the one-time charge of 2026-10-21): $1.99 a
-  month while the pause runs, billed once per month chosen (1–3), with Stripe's `cancel_at` set to the pause end so no
-  month after it is ever charged. Resume and a refund of the newest month cancel it too. The rules live in
-  `src/lib/vault-subscription.ts` with their test — one `purchases` row per paid month, keyed `vault:<invoice id>` — and
-  a Vault subscription is never a plan (no `subscriptions` row, no "your plan ends" email). A month Stripe cannot
-  collect after its retries ends the pause and moves the account to the Free plan, never a free pause. While paused the
-  catalog is read-only and downloads still work.
+- Pausing is never presented as cancelling (founder, 2026-11-05): the pause dialog says the plan renews when they
+  resume, Resume now says it ends the pause rather than the plan, and a member who thought a pause cancelled gets the
+  prorated refund. The renewal reminder email always carries the Cancel-or-change link and that same warning.
+- **A pause lasts as long as the member needs** (founder, 2026-11-21, replacing the 1–3 month pause of 2026-11-20): $1.99
+  a month while it runs, billed once per month with **no end date**; resuming cancels the Vault subscription and charges a
+  fresh year from that day. Pause stays once every 12 months, and only one pause is live at a time. Because there is no
+  sold end date, the plan's own charge is held by pushing its trial forward (`PAUSE_TRIAL_DAYS`), topped up by the daily
+  job before it gets close; never set `cancel_at` on the Vault subscription, and never let an open-ended pause be closed
+  by the daily pass. The rules live in `src/lib/vault-subscription.ts` with their test — one `purchases` row per paid
+  month, keyed `vault:<invoice id>` — and a Vault subscription is never a plan (no `subscriptions` row, no "your plan
+  ends" email). A month Stripe cannot collect after its retries ends the pause and moves the account to the Free plan,
+  never a free pause. **Cancelling the plan while paused ends the pause and cancels the Vault subscription in the same
+  call** (`setCancelling`); a pause that has started cancels the plan immediately rather than at a period end, because
+  ending the pause would otherwise hand back a paid tier from the trial holding it (a pause still scheduled for the
+  renewal keeps the normal end-of-period cancellation, but the pause and Vault fee end now). A plan deleted in Stripe
+  does the same through the webhook
+  (`endPauseWithoutPlan`), and the daily pass ends a pause whose plan trial has lapsed instead of billing $1.99 for a
+  pause that is not pausing. All three close through `closePause`, which ends the row **only after Stripe confirms the
+  Vault subscription is stopped**: if Stripe refuses, the pause stays open (never closed with the $1.99 still billing),
+  an `ALERT` is logged **and recorded as a failed `billing_actions` row** (`action: pause_alert`,
+  `reason: pause_vault_cancel_refused`) so it shows in Admin → Billing as its own alert, and the webhook returns 500 /
+  the daily pass retries — a subscription Stripe already reports as
+  cancelled counts as stopped, so a retry finishes cleanly. A pause closed this way sends the `pause-ended` email, keyed
+  `pause-ended:<pause id>` so the app and the webhook can't send it twice. The rolling trial is guarded by `pauseTrialAction` / `resumeChargesFreshYear` in
+  `src/lib/vault-subscription.ts` with their test: never set `trial_end` on a plan Stripe no longer treats as trialing,
+  and never charge a second year on Resume when the trial already lapsed.
+- **While paused the account is Free, seats included** (founder, 2026-11-21): the catalog is read-only and every file
+  still downloads — masters, artwork, lyrics, the catalog PDF and release ZIPs — while embedding, uploads, new or edited
+  catalog entries, split sheets, contracts, exports, branding and AI packages are off, because `user_tier` returns
+  `free` for a paused account (`20261121163000_pause-free-only.sql`, superseding the seat exception). Staff roles and
+  staff plans are not the member's own plan and keep their tier. Never give a paused account a paid feature back on the
+  side, and never gate a download on the tier.
 - Money must be idempotent: the panel sends a fresh `requestId` per confirmed action and the server uses it as Stripe's
   idempotency key, so a double click or a retry never refunds twice. Keep that when adding an action.
 - Every attempt writes a `billing_actions` row — refusals and Stripe errors included — with the actor's email. Never
@@ -363,6 +385,31 @@ announcement or anything a named recipient did not ask for.
   sheet was being shown as 0 while the overview was down).
 - **Admin explains a signed-out visit** (founder, 2026-11-10): `/admin` says "Staff sign-in needed" with Log in and Back
   to the site, instead of redirecting to the homepage with no explanation and looking like a broken bookmark.
+
+## Homepage Testimonials & Gated Staff Copy (always follow)
+
+- **A testimonial change reaches the homepage only with a super admin's approval** (founder, 2026-11-21): Marketing and
+  Branding edit and see the working copy, drafts included; a Marketing or Branding **lead** (or a super admin) sends a
+  version for approval; a super admin approves it, declines it, or sends it back with a note. `saveTestimonials` writes
+  only `site_settings.testimonial_drafts`; the live `testimonials` and `testimonial_filter` rows are written inside
+  `decideTestimonials` when a version is approved, so no Save publishes anything. The section is locked while a version
+  is waiting. The rules live in `src/lib/testimonial-review.ts` with their test — never inline a second copy in the
+  panel or a function.
+- **The photo filter is part of that version, never a save of its own** (founder, 2026-11-21): `TestimonialFilterPanel`
+  is controlled by `TestimonialsEditor` and edits the same draft as the cards, so tuning it counts as an unsaved change
+  (`testimonialsChanged`) and it reaches the homepage only when the version carrying it is approved. Never give the
+  filter a direct write path again, and never leave it out of the approval payload.
+- **Homepage is not a write path at all**: no session writes `testimonials`, `testimonial_drafts` or
+  `testimonial_filter`. The whole section is server-written, and a super admin is the approver.
+- **site_settings is row-scoped, never staff-wide** (founder, 2026-11-21, migration 20261121130000): a super admin reads
+  every row, Marketing and Branding read the three homepage rows, any staff member reads `pdf_inbox`, and nothing else is
+  granted. `payments` is read by the server (`readCountedPaymentsEnvironment`), never by a session. Never widen the read
+  back to `is_staff`: that exposed testimonial drafts and the payment mode to every staff member.
+- **Restricted staff copy lives in a `.server` module** (founder, 2026-11-21): the Holiday Cover plan
+  (`holiday-coverage.server.ts`, served by `getHolidayPlan`) and the support script catalog
+  (`support-scripts.server.ts`, served by `listSupportScripts`) are fetched, not imported by a component, because a
+  static import ships the text in the public admin chunk — the `internal: true` script wording above all. Scheduled
+  content like this never goes back into a client module.
 
 ## Blueprint Checklists & Working On (always follow)
 

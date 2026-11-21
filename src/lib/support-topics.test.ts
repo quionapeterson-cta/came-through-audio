@@ -10,7 +10,15 @@ import {
   TICKET_TOPICS,
 } from "./support-topics";
 
-const WORKSPACE_TABS = ["Embed Metadata", "My Catalog", "Royalties and Registrations", "AI Protection Hub", "Split Sheets", "Contracts & Blueprints", "PDF Fill & Sign"];
+const WORKSPACE_TABS = [
+  "Embed Metadata",
+  "My Catalog",
+  "Royalties and Registrations",
+  "AI Protection Hub",
+  "Split Sheets",
+  "Contracts & Blueprints",
+  "PDF Fill & Sign",
+];
 
 describe("support topics", () => {
   it("offers every workspace tab as a first choice, plus the account side and a catch-all", () => {
@@ -30,7 +38,9 @@ describe("support topics", () => {
   it("stores one unique category per pair, so staff can tell them apart", () => {
     expect(new Set(TICKET_CATEGORIES).size).toBe(TICKET_CATEGORIES.length);
     expect(TICKET_CATEGORIES.length).toBe(TICKET_TOPICS.reduce((n, t) => n + t.issues.length, 0));
-    expect(TICKET_CATEGORIES[0]).toBe(categoryFor(TICKET_TOPICS[0].area, TICKET_TOPICS[0].issues[0]));
+    expect(TICKET_CATEGORIES[0]).toBe(
+      categoryFor(TICKET_TOPICS[0].area, TICKET_TOPICS[0].issues[0]),
+    );
   });
 
   it("no longer offers the old Royalty Help category", () => {
@@ -42,16 +52,21 @@ describe("support topics", () => {
 describe("general inquiries (Contact Us)", () => {
   it("offers topics the ticket schema already accepts", () => {
     expect(GENERAL_INQUIRIES.length).toBeGreaterThan(0);
-    for (const topic of GENERAL_INQUIRIES) expect(TICKET_CATEGORIES).toContain(generalInquiryCategory(topic));
+    for (const topic of GENERAL_INQUIRIES)
+      expect(TICKET_CATEGORIES).toContain(generalInquiryCategory(topic));
   });
 
   it("stores a contact under the catch-all area, so it lands in the support queue", () => {
-    expect(generalInquiryCategory("Press, partnership or licensing")).toBe(`${GENERAL_AREA} · Press, partnership or licensing`);
+    expect(generalInquiryCategory("Press, partnership or licensing")).toBe(
+      `${GENERAL_AREA} · Press, partnership or licensing`,
+    );
     expect(TICKET_TOPICS.some((t) => t.area === GENERAL_AREA)).toBe(true);
   });
 
   it("gives the queue a subject that says it is a contact, within the schema's limit", () => {
-    expect(generalInquirySubject("Feedback or a feature request")).toBe("General inquiry · Feedback or a feature request");
+    expect(generalInquirySubject("Feedback or a feature request")).toBe(
+      "General inquiry · Feedback or a feature request",
+    );
     expect(generalInquirySubject("x".repeat(300)).length).toBeLessThanOrEqual(150);
   });
 });

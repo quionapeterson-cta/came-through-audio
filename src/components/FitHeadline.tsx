@@ -4,7 +4,7 @@ import { useEffect, useRef, type ReactNode } from "react";
 function fitToWidth(el: HTMLElement, width: number) {
   for (let i = 0; i < 3; i++) {
     const size = parseFloat(getComputedStyle(el).fontSize);
-    el.style.fontSize = `${(size * width / el.getBoundingClientRect().width).toFixed(2)}px`;
+    el.style.fontSize = `${((size * width) / el.getBoundingClientRect().width).toFixed(2)}px`;
   }
 }
 
@@ -13,8 +13,18 @@ function fitToWidth(el: HTMLElement, width: number) {
  * An optional subheading is fitted to the same width on one line, unless that would make it smaller than
  * `subMin` px; then it wraps at its own size. The className sizes are the pre-hydration fallback.
  */
-export function FitHeadline({ lines, className = "", sub, subClassName = "", subMin = 16 }: {
-  lines: { text: ReactNode; className?: string }[]; className?: string; sub?: ReactNode; subClassName?: string; subMin?: number;
+export function FitHeadline({
+  lines,
+  className = "",
+  sub,
+  subClassName = "",
+  subMin = 16,
+}: {
+  lines: { text: ReactNode; className?: string }[];
+  className?: string;
+  sub?: ReactNode;
+  subClassName?: string;
+  subMin?: number;
 }) {
   const ref = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -29,18 +39,26 @@ export function FitHeadline({ lines, className = "", sub, subClassName = "", sub
       p.style.whiteSpace = "nowrap";
       p.style.width = "max-content";
       fitToWidth(p, width);
-      if (parseFloat(p.style.fontSize) < subMin) p.style.fontSize = p.style.whiteSpace = p.style.width = "";
+      if (parseFloat(p.style.fontSize) < subMin)
+        p.style.fontSize = p.style.whiteSpace = p.style.width = "";
     };
     let live = true;
     void document.fonts?.ready.then(() => live && fit());
     const observer = new ResizeObserver(fit);
     observer.observe(box);
-    return () => { live = false; observer.disconnect(); };
+    return () => {
+      live = false;
+      observer.disconnect();
+    };
   }, [subMin]);
   return (
     <div ref={ref} className="space-y-5">
       <h1 className={`[text-rendering:geometricPrecision] ${className}`}>
-        {lines.map((l, i) => <span key={i} className={`block w-max whitespace-nowrap ${l.className ?? ""}`}>{l.text}</span>)}
+        {lines.map((l, i) => (
+          <span key={i} className={`block w-max whitespace-nowrap ${l.className ?? ""}`}>
+            {l.text}
+          </span>
+        ))}
       </h1>
       {sub && <p className={`[text-rendering:geometricPrecision] ${subClassName}`}>{sub}</p>}
     </div>

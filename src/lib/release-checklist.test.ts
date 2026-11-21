@@ -7,10 +7,38 @@ import { countryByCode } from "@/lib/repertoires";
 import { isUnreleased, RELEASE_TICK } from "@/lib/release-checklist";
 
 const us = countryByCode("US")!;
-const track = (id: string, extra = {}) => ({ id, title: id, artist: "Q", updatedAt: "", metadata: { ...emptyMetadata(), title: id, artist: "Q", isrc: "USCTA2600001",
-  upc: "", duration: "3:10", primaryGenre: "Hip-Hop/Rap", samples: "No" as const, writtenFor: "No" as const, lyrics: "la la", audioPath: "u/a.mp3", artPath: "u/a.jpg",
-  writers: [{ name: "", legalName: "Ann Lee", role: "Author/Composer", pro: "BMI", ipi: "00123456789", percentage: "100" }],
-  publishers: [{ name: "Lee Songs", pro: "BMI", ipi: "00987654321", percentage: "100" }], ...extra } });
+const track = (id: string, extra = {}) => ({
+  id,
+  title: id,
+  artist: "Q",
+  updatedAt: "",
+  metadata: {
+    ...emptyMetadata(),
+    title: id,
+    artist: "Q",
+    isrc: "USCTA2600001",
+    upc: "",
+    duration: "3:10",
+    primaryGenre: "Hip-Hop/Rap",
+    samples: "No" as const,
+    writtenFor: "No" as const,
+    lyrics: "la la",
+    audioPath: "u/a.mp3",
+    artPath: "u/a.jpg",
+    writers: [
+      {
+        name: "",
+        legalName: "Ann Lee",
+        role: "Author/Composer",
+        pro: "BMI",
+        ipi: "00123456789",
+        percentage: "100",
+      },
+    ],
+    publishers: [{ name: "Lee Songs", pro: "BMI", ipi: "00987654321", percentage: "100" }],
+    ...extra,
+  },
+});
 
 describe("pre-distribution (release checklist)", () => {
   it("knows a song isn't out from a future date or the box", () => {
@@ -26,29 +54,68 @@ describe("pre-distribution (release checklist)", () => {
     expect(c.prerelease).toBe(true);
     const release = c.steps.filter((s) => s.stage === "release");
     expect(release.map((s) => [s.id, s.done])).toEqual([
-      ["release:writers", true], ["release:splits", true], ["release:splitSheet", false], ["release:pro", true], ["release:isrc", true],
-      ["release:upc", false], ["release:master", true], ["release:art", true], ["release:ai", false],
+      ["release:writers", true],
+      ["release:splits", true],
+      ["release:splitSheet", false],
+      ["release:pro", true],
+      ["release:isrc", true],
+      ["release:upc", false],
+      ["release:master", true],
+      ["release:art", true],
+      ["release:ai", false],
     ]);
     const sx = c.steps.find((s) => s.id === "register:digital");
     expect(sx).toMatchObject({ optional: true, done: false });
     // 6 of 8 required release items + 0 of 2 registrations (BMI, MLC) = 6 / 10.
     expect(c.pct).toBe(60);
     expect(encouragement(c)).toContain("60% ready to distribute");
-    const ticked = songChecklist(trackReport(t, us, []), us, { ...emptyStatus("Soon"), steps: { [RELEASE_TICK.split]: "x", [RELEASE_TICK.upc]: "x", "registered:bmi": "x", "registered:mlc": "x" } });
+    const ticked = songChecklist(trackReport(t, us, []), us, {
+      ...emptyStatus("Soon"),
+      steps: {
+        [RELEASE_TICK.split]: "x",
+        [RELEASE_TICK.upc]: "x",
+        "registered:bmi": "x",
+        "registered:mlc": "x",
+      },
+    });
     expect(ticked.pct).toBe(100);
   });
 
   it("waits for the IPI a writer needs once they have a PRO", () => {
-    const soon = (writers: unknown) => songChecklist(trackReport(track("Soon", { releaseDate: "2099-01-01", writers }), us, []), us);
-    const noIpi = soon([{ name: "", legalName: "Ann Lee", role: "Author/Composer", pro: "BMI", ipi: "", percentage: "100" }]);
+    const soon = (writers: unknown) =>
+      songChecklist(trackReport(track("Soon", { releaseDate: "2099-01-01", writers }), us, []), us);
+    const noIpi = soon([
+      {
+        name: "",
+        legalName: "Ann Lee",
+        role: "Author/Composer",
+        pro: "BMI",
+        ipi: "",
+        percentage: "100",
+      },
+    ]);
     expect(noIpi.steps.find((s) => s.id === "release:pro")).toMatchObject({ done: false });
     expect(noIpi.steps.find((s) => s.id === "release:pro")?.items?.[0]?.text).toContain("IPI");
-    const noPro = soon([{ name: "", legalName: "Ann Lee", role: "Author/Composer", pro: "", ipi: "", percentage: "100" }]);
+    const noPro = soon([
+      {
+        name: "",
+        legalName: "Ann Lee",
+        role: "Author/Composer",
+        pro: "",
+        ipi: "",
+        percentage: "100",
+      },
+    ]);
     expect(noPro.steps.find((s) => s.id === "release:pro")).toMatchObject({ done: false });
   });
 
   it("keeps unreleased songs out of the catalog score, on their own line", () => {
-    const h = catalogHealth([track("Out"), track("Soon", { releaseDate: "2099-01-01" })], us, [], []);
+    const h = catalogHealth(
+      [track("Out"), track("Soon", { releaseDate: "2099-01-01" })],
+      us,
+      [],
+      [],
+    );
     expect(h.released).toBe(1);
     expect(h.prerelease).toEqual({ count: 1, pct: 60 });
     expect(h.songs.find((s) => s.track.id === "Out")?.prerelease).toBe(false);

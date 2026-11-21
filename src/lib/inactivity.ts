@@ -46,7 +46,8 @@ export const daysUntil = (iso: string | Date, now = new Date()) =>
 export const hasBeenActiveSince = (
   row: Pick<InactivityRow, "last_active_at">,
   lastActive: string | Date | null | undefined,
-): boolean => !!lastActive && new Date(lastActive).getTime() > new Date(row.last_active_at).getTime();
+): boolean =>
+  !!lastActive && new Date(lastActive).getTime() > new Date(row.last_active_at).getTime();
 
 /** What the date removes: the files and catalog of a free account that came back, or everything when it never did. */
 export type InactivityOutcome = "catalog" | "account";

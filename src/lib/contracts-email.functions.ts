@@ -11,52 +11,96 @@ const esc = escapeHtml;
 /** Emails a contract party their signing link. Both rows must be readable by the caller (RLS = contract owner only). */
 export const sendContractInvite = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d) => z.object({ partyId: z.string().uuid(), origin: z.string().url() }).parse(d))
+  .inputValidator((d) =>
+    z.object({ partyId: z.string().uuid(), origin: z.string().url() }).parse(d),
+  )
   .handler(async ({ data, context }) => {
-
-    const { data: canSend, error: tierErr } = await context.supabase.rpc("has_tier" as never, { _uid: context.userId, _needed: "management" } as never);
+    const { data: canSend, error: tierErr } = await context.supabase.rpc(
+      "has_tier" as never,
+      { _uid: context.userId, _needed: "management" } as never,
+    );
     // A failed plan check is reported as such, not as "upgrade", so a database problem can't pass for a plan block.
     if (tierErr) {
       console.error("has_tier failed:", tierErr);
-      throw new Error(`Couldn't check your plan (${tierErr.message}). Contact support and we'll help right away.`);
+      throw new Error(
+        `Couldn't check your plan (${tierErr.message}). Contact support and we'll help right away.`,
+      );
     }
 
     const since = new Date(Date.now() - 86400000).toISOString();
-    const { count: sentToday } = await context.supabase.from("contract_parties" as never).select("id", { count: "exact", head: true }).gte("invited_at", since);
-    if ((sentToday ?? 0) >= CONTRACT_INVITE_DAILY_LIMIT) throw new Error("You've reached today's limit of " + CONTRACT_INVITE_DAILY_LIMIT + " invites. Try again tomorrow, or contact support if you need more.");
+    const { count: sentToday } = await context.supabase
+      .from("contract_parties" as never)
+      .select("id", { count: "exact", head: true })
+      .gte("invited_at", since);
+    if ((sentToday ?? 0) >= CONTRACT_INVITE_DAILY_LIMIT)
+      throw new Error(
+        "You've reached today's limit of " +
+          CONTRACT_INVITE_DAILY_LIMIT +
+          " invites. Try again tomorrow, or contact support if you need more.",
+      );
     const { data: party, error } = await context.supabase
       .from("contract_parties" as never)
       .select("id, contract_id, legal_name, email, role, signed_at")
       .eq("id", data.partyId)
       .maybeSingle();
-    const p = party as { id: string; contract_id: string; legal_name: string; email: string; role: string; signed_at: string | null } | null;
+    const p = party as {
+      id: string;
+      contract_id: string;
+      legal_name: string;
+      email: string;
+      role: string;
+      signed_at: string | null;
+    } | null;
     if (error || !p) throw new Error("Signature request not found.");
     if (p.signed_at) throw new Error("This party already signed.");
     const email = p.email.trim();
-    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) throw new Error("Add a valid email for this party first.");
+    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email))
+      throw new Error("Add a valid email for this party first.");
 
     // "*" so this still works before the is_company column exists.
-    const { data: contract } = await context.supabase.from("contracts" as never).select("*").eq("id", p.contract_id).maybeSingle();
+    const { data: contract } = await context.supabase
+      .from("contracts" as never)
+      .select("*")
+      .eq("id", p.contract_id)
+      .maybeSingle();
     const k = contract as { title: string; status: string; is_company?: boolean } | null;
     if (!k || k.status !== "sent") throw new Error("Send the contract for signature first.");
     // A $3.99 generated contract can request signatures on any plan.
-    if (!canSend && !(k as { paid_purchase_id?: string | null }).paid_purchase_id) throw new Error("Contract signature requests are included with Catalog Management, or with a $3.99 generated contract.");
+    if (!canSend && !(k as { paid_purchase_id?: string | null }).paid_purchase_id)
+      throw new Error(
+        "Contract signature requests are included with Catalog Management, or with a $3.99 generated contract.",
+      );
 
-    const { data: owner } = await context.supabase.from("profiles").select("stage_name, legal_name").eq("id", context.userId).maybeSingle();
-    const from = k.is_company ? COMPANY_LEGAL_NAME : owner?.stage_name || owner?.legal_name || "A Came Through Audio member";
+    const { data: owner } = await context.supabase
+      .from("profiles")
+      .select("stage_name, legal_name")
+      .eq("id", context.userId)
+      .maybeSingle();
+    const from = k.is_company
+      ? COMPANY_LEGAL_NAME
+      : owner?.stage_name || owner?.legal_name || "A Came Through Audio member";
     // Company agreements sign without an account, through a private link (contract-sign.functions.ts).
     const origin = trustedOrigin(data.origin, SITE_URL);
-    const link = k.is_company ? (await import("./contract-sign.server")).signLink(origin, p.id) : `${origin}/contract/${p.id}`;
+    const link = k.is_company
+      ? (await import("./contract-sign.server")).signLink(origin, p.id)
+      : `${origin}/contract/${p.id}`;
     const howToSign = k.is_company
       ? `<b>No account needed.</b> Open the agreement, read it, and sign with a 6-digit code we email to this address (<b>${esc(email)}</b>). Your signature is time-stamped and secured with a verification hash, and you'll get the signed copy when everyone has signed. Take your time before you sign.`
       : `<b>Signing is always free.</b> Log in or create a free account with this email (<b>${esc(email)}</b>) to read the full contract and sign. Your signature is time-stamped and secured with a verification hash, and you can download the signed copy when everyone has signed. Take your time before you sign.`;
 
-    const html = emailLayout(`<p style="font-size:12px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:#004AAD;margin:0">Contract Signature Request</p>
+    const html = emailLayout(
+      `<p style="font-size:12px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:#004AAD;margin:0">Contract Signature Request</p>
 <h1 style="font-size:24px;margin:8px 0 16px">Hi ${esc(p.legal_name || "there")}, please review and sign "${esc(k.title)}"</h1>
 <p style="font-size:15px;line-height:1.6">${esc(from)} sent you a contract to sign as <b>${esc(p.role)}</b>.</p>
 <a href="${link}" style="display:inline-block;background:#004AAD;color:#ffffff;text-decoration:none;font-weight:700;padding:14px 28px;border-radius:8px">Review &amp; Sign</a>
 <p style="font-size:13px;line-height:1.6;color:#555;margin-top:24px">${howToSign}</p>
-`, { reason: k.is_company ? `You're receiving this because ${from} asked you to review and sign an agreement with us.` : `You're receiving this because ${from} listed you as a party on a contract in Came Through Audio.` });
+`,
+      {
+        reason: k.is_company
+          ? `You're receiving this because ${from} asked you to review and sign an agreement with us.`
+          : `You're receiving this because ${from} listed you as a party on a contract in Came Through Audio.`,
+      },
+    );
 
     // A minute bucket: pressing Send twice sends one email, asking again later sends a fresh one.
     const res = await sendMail({
@@ -68,8 +112,15 @@ export const sendContractInvite = createServerFn({ method: "POST" })
     });
     if (!res.ok) {
       console.error(`Resend failed [${res.status ?? res.detail}]: ${res.detail ?? ""}`);
-      throw new Error(res.detail === "no-key" ? "Email sending is not configured yet." : `Email could not be sent (${res.status ?? "network"}).`);
+      throw new Error(
+        res.detail === "no-key"
+          ? "Email sending is not configured yet."
+          : `Email could not be sent (${res.status ?? "network"}).`,
+      );
     }
-    await context.supabase.from("contract_parties" as never).update({ invited_at: new Date().toISOString() } as never).eq("id", p.id);
+    await context.supabase
+      .from("contract_parties" as never)
+      .update({ invited_at: new Date().toISOString() } as never)
+      .eq("id", p.id);
     return { ok: true };
   });

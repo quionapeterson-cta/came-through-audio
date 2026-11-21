@@ -13,7 +13,9 @@ export function loadEmbedDraft(userId?: string): Metadata | undefined {
     const raw = localStorage.getItem(draftKey(userId));
     const m = raw ? (JSON.parse(raw) as Metadata) : undefined;
     return m && typeof m === "object" && typeof m.title === "string" ? m : undefined;
-  } catch { return undefined; }
+  } catch {
+    return undefined;
+  }
 }
 
 /** Saves the draft, or clears it when the form only holds the profile's defaults (nothing typed yet). */
@@ -21,7 +23,9 @@ export function saveEmbedDraft(userId: string | undefined, m: Metadata, defaults
   try {
     if (JSON.stringify(m) === JSON.stringify(defaults)) localStorage.removeItem(draftKey(userId));
     else localStorage.setItem(draftKey(userId), JSON.stringify(m));
-  } catch { /* storage full or blocked: the form still works, it just won't survive a reload */ }
+  } catch {
+    /* storage full or blocked: the form still works, it just won't survive a reload */
+  }
 }
 
 const coverKey = (userId?: string) => `cta-embed-cover:${userId ?? "guest"}`;
@@ -41,17 +45,34 @@ export async function coverForDraft(file: File): Promise<string> {
   return canvas.toDataURL("image/jpeg", 0.9);
 }
 export function saveEmbedCover(userId: string | undefined, dataUrl: string) {
-  try { localStorage.setItem(coverKey(userId), dataUrl); } catch { /* storage full: the session still works, the cover just won't return */ }
+  try {
+    localStorage.setItem(coverKey(userId), dataUrl);
+  } catch {
+    /* storage full: the session still works, the cover just won't return */
+  }
 }
 export function loadEmbedCover(userId?: string): string | undefined {
-  try { const v = localStorage.getItem(coverKey(userId)); return v?.startsWith("data:image/") ? v : undefined; } catch { return undefined; }
+  try {
+    const v = localStorage.getItem(coverKey(userId));
+    return v?.startsWith("data:image/") ? v : undefined;
+  } catch {
+    return undefined;
+  }
 }
 export function clearEmbedCover(userId?: string) {
-  try { localStorage.removeItem(coverKey(userId)); } catch { /* storage blocked */ }
+  try {
+    localStorage.removeItem(coverKey(userId));
+  } catch {
+    /* storage blocked */
+  }
 }
 
 export function clearEmbedDraft(userId?: string) {
-  try { localStorage.removeItem(draftKey(userId)); } catch { /* storage blocked */ }
+  try {
+    localStorage.removeItem(draftKey(userId));
+  } catch {
+    /* storage blocked */
+  }
 }
 
 /** The first number in a file name ("03 - Bloodline.mp3" → 3), or Infinity when there isn't one. */
@@ -61,10 +82,18 @@ export function fileNumber(name: string): number {
 }
 
 /** Album order: track number in the tags, then the number in the file name, then the name. */
-export function orderFiles<T extends { name: string }>(files: T[], tagTrack: (f: T) => number): T[] {
+export function orderFiles<T extends { name: string }>(
+  files: T[],
+  tagTrack: (f: T) => number,
+): T[] {
   return files
     .map((f) => ({ f, tag: tagTrack(f), num: fileNumber(f.name) }))
-    .sort((a, b) => a.tag - b.tag || a.num - b.num || a.f.name.localeCompare(b.f.name, undefined, { numeric: true }))
+    .sort(
+      (a, b) =>
+        a.tag - b.tag ||
+        a.num - b.num ||
+        a.f.name.localeCompare(b.f.name, undefined, { numeric: true }),
+    )
     .map((x) => x.f);
 }
 
@@ -74,7 +103,9 @@ async function tagTrack(file: File): Promise<number> {
   try {
     const n = Number(readMetadata(await file.slice(0, 1024 * 1024).arrayBuffer()).trackNumber);
     return n > 0 ? n : Infinity;
-  } catch { return Infinity; }
+  } catch {
+    return Infinity;
+  }
 }
 
 /** Sorts dropped audio files into album order, first song first. */

@@ -24,11 +24,21 @@ export const GENRE_TAGS: Record<string, [string, string, string]> = {
   Soundtrack: ["#FilmScore", "#Soundtrack", "#Composer"],
   Alternative: ["#AlternativeMusic", "#AltMusic", "#IndieMusic"],
 };
-const DEFAULT_TAGS: [string, string, string] = ["#NewMusic", "#IndependentArtist", "#UpcomingArtist"];
-export const genreTags = (genre?: string) => (genre && (GENRE_TAGS[genre] ?? GENRE_TAGS[parentGenre(genre)])) || DEFAULT_TAGS;
+const DEFAULT_TAGS: [string, string, string] = [
+  "#NewMusic",
+  "#IndependentArtist",
+  "#UpcomingArtist",
+];
+export const genreTags = (genre?: string) =>
+  (genre && (GENRE_TAGS[genre] ?? GENRE_TAGS[parentGenre(genre)])) || DEFAULT_TAGS;
 
 /** title: the song title, or undefined when blank or hidden. count: catalog song count, or undefined when hidden. genre: primary genre for hashtags. */
-export type PromoInput = { title?: string | undefined; count?: number | undefined; genre?: string | undefined; eagle?: boolean | undefined };
+export type PromoInput = {
+  title?: string | undefined;
+  count?: number | undefined;
+  genre?: string | undefined;
+  eagle?: boolean | undefined;
+};
 
 const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 
@@ -99,23 +109,30 @@ const EMBED: ((song: string) => string)[] = [
 
 /** n: number of songs, or undefined when the count is hidden. */
 const CATALOG: ((n?: number) => string)[] = [
-  (n) => `${n ? (n === 1 ? "My first song." : `${n} songs.`) : "My whole catalog."} Every credit, split and code in one place. Organized the right way 🔥`,
+  (n) =>
+    `${n ? (n === 1 ? "My first song." : `${n} songs.`) : "My whole catalog."} Every credit, split and code in one place. Organized the right way 🔥`,
   () => `Building my catalog like a business 📂 Every song credited, every split locked 🔥`,
   () => `Nobody talks about the paperwork. My whole catalog is organized and ready to register 🔥`,
-  (n) => `Catalog check ✔️ ${n ? (n === 1 ? "My first song is" : `${n} songs`) : "Every song"} organized, credited and protected. Stay tuned 🔥`,
-  (n) => `Owning my music starts with knowing my catalog. ${n ? (n === 1 ? "First song" : `${n} songs`) : "Every song"} locked in 🔥`,
+  (n) =>
+    `Catalog check ✔️ ${n ? (n === 1 ? "My first song is" : `${n} songs`) : "Every song"} organized, credited and protected. Stay tuned 🔥`,
+  (n) =>
+    `Owning my music starts with knowing my catalog. ${n ? (n === 1 ? "First song" : `${n} songs`) : "Every song"} locked in 🔥`,
   () => `Credits, splits, codes: all filed. This is what being independent looks like 🔥`,
-  (n) => `${n && n > 1 ? `${n} songs deep` : "Catalog growing"} and every single one is organized 📂🔥`,
+  (n) =>
+    `${n && n > 1 ? `${n} songs deep` : "Catalog growing"} and every single one is organized 📂🔥`,
   () => `My catalog is my business. Organized, protected and ready to collect 💰🔥`,
   () => `Getting my catalog right so every song gets paid right 🔥`,
-  (n) => `Building a catalog, not just dropping songs. ${n ? (n === 1 ? "Song one" : `${n} songs`) : "Every song"} in order 🔥`,
+  (n) =>
+    `Building a catalog, not just dropping songs. ${n ? (n === 1 ? "Song one" : `${n} songs`) : "Every song"} in order 🔥`,
   () => `Spring cleaning my catalog 🧹 Every credit where it belongs 🔥`,
   () => `If you don't know your catalog, you don't know your money. Mine's organized 🔥`,
-  (n) => `${n ? (n === 1 ? "Song number one" : `${n} songs`) : "My catalog"} organized and ready to register. Building the right way 🏗️🔥`,
+  (n) =>
+    `${n ? (n === 1 ? "Song number one" : `${n} songs`) : "My catalog"} organized and ready to register. Building the right way 🏗️🔥`,
   () => `Came Through Audio came through for my catalog 🙌🏽 Every song in order 🔥`,
   () => `Behind every song is paperwork. Mine's handled 📑🔥`,
   () => `My future self is going to thank me for organizing this catalog 🙏🏽🔥`,
-  (n) => `Milestone unlocked: ${n ? (n === 1 ? "first song cataloged" : `${n} songs cataloged`) : "catalog organized"} 🏆🔥`,
+  (n) =>
+    `Milestone unlocked: ${n ? (n === 1 ? "first song cataloged" : `${n} songs cataloged`) : "catalog organized"} 🏆🔥`,
   () => `Royalties don't find you, registrations do. Catalog ready 💰🔥`,
   () => `Every credit in the right place, every split agreed. Peace of mind 😌🔥`,
   () => `I don't just make songs, I manage a catalog 📂🔥`,
@@ -129,7 +146,8 @@ const CATALOG: ((n?: number) => string)[] = [
   () => `This is what owning your music looks like 👑🔥`,
   () => `My catalog is my legacy. Treating it like one 🔥`,
   () => `Shout out to every collaborator in my catalog. You're credited 🙏🏽🔥`,
-  (n) => `${n ? (n === 1 ? "One song" : `${n} songs`) : "Every song"} down, a whole career to go 🔥`,
+  (n) =>
+    `${n ? (n === 1 ? "One song" : `${n} songs`) : "Every song"} down, a whole career to go 🔥`,
   () => `Doing the boring stuff so the music can pay 🧾🔥`,
   () => `Catalog: organized. Splits: settled. Mind: clear 🧠🔥`,
   () => `Making sure every stream finds its way back to the right people 🔁🔥`,
@@ -214,16 +232,27 @@ const PROFILE_EAGLE: (() => string)[] = [
 const profileCaptions = (eagle: boolean) => (eagle ? [...PROFILE, ...PROFILE_EAGLE] : PROFILE);
 
 export function promoCount(ctx: PromoContext, eagle = false): number {
-  return ctx === "embed" ? EMBED.length : ctx === "catalog" ? CATALOG.length : profileCaptions(eagle).length;
+  return ctx === "embed"
+    ? EMBED.length
+    : ctx === "catalog"
+      ? CATALOG.length
+      : profileCaptions(eagle).length;
 }
 
 /** The i-th caption for this spot: the line, the site, then five hashtags (two brand, three for the genre). */
-export function promoCaption(ctx: PromoContext, i: number, { title, count, genre, eagle }: PromoInput): string {
+export function promoCaption(
+  ctx: PromoContext,
+  i: number,
+  { title, count, genre, eagle }: PromoInput,
+): string {
   const n = promoCount(ctx, !!eagle);
   const k = ((i % n) + n) % n;
-  const body = ctx === "embed" ? EMBED[k]!(title ? `"${title}"` : "my new single")
-    : ctx === "catalog" ? CATALOG[k]!(count)
-    : profileCaptions(!!eagle)[k]!();
+  const body =
+    ctx === "embed"
+      ? EMBED[k]!(title ? `"${title}"` : "my new single")
+      : ctx === "catalog"
+        ? CATALOG[k]!(count)
+        : profileCaptions(!!eagle)[k]!();
   return `${body}\n${PROMO_SITE}\n${[...BRAND_TAGS, ...genreTags(genre)].join(" ")}`;
 }
 
@@ -236,6 +265,9 @@ export function captionForX(caption: string, genre?: string): string {
 /** A shuffled order of caption indexes, so Generate goes through every style before repeating. */
 export function promoOrder(ctx: PromoContext, eagle = false, random = Math.random): number[] {
   const order = Array.from({ length: promoCount(ctx, eagle) }, (_, i) => i);
-  for (let i = order.length - 1; i > 0; i--) { const j = Math.floor(random() * (i + 1)); [order[i], order[j]] = [order[j]!, order[i]!]; }
+  for (let i = order.length - 1; i > 0; i--) {
+    const j = Math.floor(random() * (i + 1));
+    [order[i], order[j]] = [order[j]!, order[i]!];
+  }
   return order;
 }

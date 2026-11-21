@@ -38,7 +38,10 @@ export function zipBytes(entries: ZipEntry[], now = new Date()): Uint8Array {
   const all = zipParts(entries, now);
   const out = new Uint8Array(all.reduce((n, p) => n + p.length, 0));
   let at = 0;
-  for (const p of all) { out.set(p, at); at += p.length; }
+  for (const p of all) {
+    out.set(p, at);
+    at += p.length;
+  }
   return out;
 }
 
@@ -97,7 +100,8 @@ function zipParts(entries: ZipEntry[], now: Date): Uint8Array[] {
 export function uniqueName(name: string, taken: Set<string>) {
   const dot = name.lastIndexOf(".");
   const [base, ext] = dot > 0 ? [name.slice(0, dot), name.slice(dot)] : [name, ""];
-  let out = name, n = 2;
+  let out = name,
+    n = 2;
   while (taken.has(out.toLowerCase())) out = `${base} (${n++})${ext}`;
   taken.add(out.toLowerCase());
   return out;

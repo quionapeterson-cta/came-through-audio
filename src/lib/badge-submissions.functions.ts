@@ -1,7 +1,14 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-import { badgeKeys, badgeSlug, mayApproveBadgeArt, setFolderProblem, slugProblem, type BadgeScope } from "@/lib/badge-protocol";
+import {
+  badgeKeys,
+  badgeSlug,
+  mayApproveBadgeArt,
+  setFolderProblem,
+  slugProblem,
+  type BadgeScope,
+} from "@/lib/badge-protocol";
 
 /**
  * Badge art protocol (founder, 2026-11-05). Branding, Marketing & Social Media and Support submit ideas plus art
@@ -15,13 +22,19 @@ const ART_TYPES = ["image/png", "image/jpeg", "image/webp"] as const;
 const MAX_ART = 12_000_000;
 const SIGNED_FOR = 60 * 60 * 24;
 
-type Ctx = { supabase: { rpc: (fn: never, args: never) => PromiseLike<{ data: unknown }> }; userId: string };
+type Ctx = {
+  supabase: { rpc: (fn: never, args: never) => PromiseLike<{ data: unknown }> };
+  userId: string;
+};
 
 const adminDb = async () => (await import("@/integrations/supabase/client.server")).supabaseAdmin;
 
 /** Super admins, Branding, Marketing & Social Media and Support: the same check that opens Admin → Badges. */
 async function canManage(context: Ctx): Promise<boolean> {
-  const { data } = await context.supabase.rpc("can_manage_badges" as never, { _user_id: context.userId } as never);
+  const { data } = await context.supabase.rpc(
+    "can_manage_badges" as never,
+    { _user_id: context.userId } as never,
+  );
   return !!data;
 }
 
@@ -36,17 +49,36 @@ type Approver = { claimed: boolean; me: boolean; canApprove: boolean };
 async function approverState(context: Ctx): Promise<Approver> {
   const db = await adminDb();
   const [{ data: claimRows }, { data: mine }, { data: isSuper }] = await Promise.all([
-    db.from("founder_access" as never).select("user_id").limit(1),
+    db
+      .from("founder_access" as never)
+      .select("user_id")
+      .limit(1),
     context.supabase.rpc("is_founder" as never, { _user_id: context.userId } as never),
-    context.supabase.rpc("has_role" as never, { _user_id: context.userId, _role: "super_admin" } as never),
+    context.supabase.rpc(
+      "has_role" as never,
+      { _user_id: context.userId, _role: "super_admin" } as never,
+    ),
   ]);
   const claimant = ((claimRows ?? []) as { user_id: string }[])[0]?.user_id ?? null;
   const founder = !!mine || claimant === context.userId;
   // One named lead of one department: the Branding lead, never the whole department and never another department's lead.
-  const { data: roles } = await db.from("user_roles" as never).select("role, departments").eq("user_id", context.userId);
-  const brandingLead = ((roles ?? []) as { role: string; departments: string[] | null }[])
-    .some((r) => r.role === "department_lead" && (r.departments ?? []).includes("branding"));
-  return { claimed: !!claimant, me: founder, canApprove: mayApproveBadgeArt({ founder, brandingLead, superAdmin: !!isSuper, seatClaimed: !!claimant }) };
+  const { data: roles } = await db
+    .from("user_roles" as never)
+    .select("role, departments")
+    .eq("user_id", context.userId);
+  const brandingLead = ((roles ?? []) as { role: string; departments: string[] | null }[]).some(
+    (r) => r.role === "department_lead" && (r.departments ?? []).includes("branding"),
+  );
+  return {
+    claimed: !!claimant,
+    me: founder,
+    canApprove: mayApproveBadgeArt({
+      founder,
+      brandingLead,
+      superAdmin: !!isSuper,
+      seatClaimed: !!claimant,
+    }),
+  };
 }
 
 async function requireApprover(context: Ctx): Promise<void> {
@@ -92,14 +124,33 @@ export type BadgeSubmission = {
 };
 
 type Row = {
-  id: string; created_at: string; submitted_by: string; title: string; collection: string; tier: string;
-  scope: BadgeScope; set_folder: string | null; slug: string; milestone: string; action: string;
-  description: string; popup: string; art_path: string | null; art_name: string | null; art_mime: string | null;
-  master_path: string | null; master_name: string | null; master_mime: string | null;
-  status: BadgeSubmissionStatus; decision_note: string | null; decided_at: string | null; uploaded_at: string | null;
+  id: string;
+  created_at: string;
+  submitted_by: string;
+  title: string;
+  collection: string;
+  tier: string;
+  scope: BadgeScope;
+  set_folder: string | null;
+  slug: string;
+  milestone: string;
+  action: string;
+  description: string;
+  popup: string;
+  art_path: string | null;
+  art_name: string | null;
+  art_mime: string | null;
+  master_path: string | null;
+  master_name: string | null;
+  master_mime: string | null;
+  status: BadgeSubmissionStatus;
+  decision_note: string | null;
+  decided_at: string | null;
+  uploaded_at: string | null;
 };
 
-const extension = (type: string) => (type === "image/jpeg" ? "jpg" : type === "image/webp" ? "webp" : "png");
+const extension = (type: string) =>
+  type === "image/jpeg" ? "jpg" : type === "image/webp" ? "webp" : "png";
 
 const ideaInput = z.object({
   title: z.string().trim().min(2, "Give the badge a title.").max(80),
@@ -133,53 +184,73 @@ const ideaInput = z.object({
 export const submitBadgeIdea = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => ideaInput.parse(d))
-  .handler(async ({ data, context }): Promise<{ id: string; slug: string; webKey: string; masterKey: string }> => {
-    if (!(await canManage(context))) throw new Error("Only Branding, Marketing & Social Media and Support can submit badge ideas.");
-    const slug = badgeSlug(data.title);
-    const problem = slugProblem(slug) ?? setFolderProblem(data.set ?? "");
-    if (problem) throw new Error(problem);
-    const set = badgeSlug(data.set ?? "") || null;
-    const keys = badgeKeys({ scope: data.scope, slug, set });
+  .handler(
+    async ({
+      data,
+      context,
+    }): Promise<{ id: string; slug: string; webKey: string; masterKey: string }> => {
+      if (!(await canManage(context)))
+        throw new Error(
+          "Only Branding, Marketing & Social Media and Support can submit badge ideas.",
+        );
+      const slug = badgeSlug(data.title);
+      const problem = slugProblem(slug) ?? setFolderProblem(data.set ?? "");
+      if (problem) throw new Error(problem);
+      const set = badgeSlug(data.set ?? "") || null;
+      const keys = badgeKeys({ scope: data.scope, slug, set });
 
-    const db = await adminDb();
-    const folder = `submissions/${crypto.randomUUID()}`;
-    const upload = async (file: { name: string; type: string; base64: string }, suffix: string) => {
-      const path = `${folder}/${slug}${suffix}.${extension(file.type)}`;
-      const { error } = await db.storage
-        .from("badge-submissions")
-        .upload(path, Buffer.from(file.base64, "base64"), { contentType: file.type });
-      if (error) throw new Error("Couldn't upload the art. Has migration 20261105120000 (badge-submissions) been run?");
-      return path;
-    };
-    const artPath = data.art ? await upload(data.art, "") : null;
-    const masterPath = data.master ? await upload(data.master, "-4k") : null;
+      const db = await adminDb();
+      const folder = `submissions/${crypto.randomUUID()}`;
+      const upload = async (
+        file: { name: string; type: string; base64: string },
+        suffix: string,
+      ) => {
+        const path = `${folder}/${slug}${suffix}.${extension(file.type)}`;
+        const { error } = await db.storage
+          .from("badge-submissions")
+          .upload(path, Buffer.from(file.base64, "base64"), { contentType: file.type });
+        if (error)
+          throw new Error(
+            "Couldn't upload the art. Has migration 20261105120000 (badge-submissions) been run?",
+          );
+        return path;
+      };
+      const artPath = data.art ? await upload(data.art, "") : null;
+      const masterPath = data.master ? await upload(data.master, "-4k") : null;
 
-    const { data: row, error } = await db
-      .from("badge_submissions" as never)
-      .insert({
-        submitted_by: context.userId,
-        title: data.title,
-        collection: data.collection,
-        tier: data.tier,
-        scope: data.scope,
-        set_folder: set,
+      const { data: row, error } = await db
+        .from("badge_submissions" as never)
+        .insert({
+          submitted_by: context.userId,
+          title: data.title,
+          collection: data.collection,
+          tier: data.tier,
+          scope: data.scope,
+          set_folder: set,
+          slug,
+          milestone: data.milestone,
+          action: data.action,
+          description: data.description,
+          popup: data.popup,
+          art_path: artPath,
+          art_name: data.art?.name ?? null,
+          art_mime: data.art?.type ?? null,
+          master_path: masterPath,
+          master_name: data.master?.name ?? null,
+          master_mime: data.master?.type ?? null,
+        } as never)
+        .select("id")
+        .single();
+      if (error)
+        throw new Error("Couldn't save the badge idea. Run migration 20261105120000 first.");
+      return {
+        id: (row as unknown as { id: string }).id,
         slug,
-        milestone: data.milestone,
-        action: data.action,
-        description: data.description,
-        popup: data.popup,
-        art_path: artPath,
-        art_name: data.art?.name ?? null,
-        art_mime: data.art?.type ?? null,
-        master_path: masterPath,
-        master_name: data.master?.name ?? null,
-        master_mime: data.master?.type ?? null,
-      } as never)
-      .select("id")
-      .single();
-    if (error) throw new Error("Couldn't save the badge idea. Run migration 20261105120000 first.");
-    return { id: (row as unknown as { id: string }).id, slug, webKey: keys.web, masterKey: keys.master };
-  });
+        webKey: keys.web,
+        masterKey: keys.master,
+      };
+    },
+  );
 
 /** The queue. Anyone who designs badges reads it; only a super admin gets the signed art links. */
 export const listBadgeSubmissions = createServerFn({ method: "GET" })
@@ -199,8 +270,15 @@ export const listBadgeSubmissions = createServerFn({ method: "GET" })
     const ids = [...new Set(rows.map((r) => r.submitted_by))];
     const names = new Map<string, string>();
     if (ids.length) {
-      const { data: people } = await db.from("profiles").select("id, stage_name, legal_name").in("id", ids);
-      for (const p of (people ?? []) as { id: string; stage_name: string | null; legal_name: string | null }[]) {
+      const { data: people } = await db
+        .from("profiles")
+        .select("id, stage_name, legal_name")
+        .in("id", ids);
+      for (const p of (people ?? []) as {
+        id: string;
+        stage_name: string | null;
+        legal_name: string | null;
+      }[]) {
         names.set(p.id, p.legal_name || p.stage_name || "");
       }
     }
@@ -212,11 +290,15 @@ export const listBadgeSubmissions = createServerFn({ method: "GET" })
         let masterUrl: string | null = null;
         if (approver.canApprove) {
           if (r.art_path) {
-            const { data: signed } = await db.storage.from("badge-submissions").createSignedUrl(r.art_path, SIGNED_FOR);
+            const { data: signed } = await db.storage
+              .from("badge-submissions")
+              .createSignedUrl(r.art_path, SIGNED_FOR);
             downloadUrl = signed?.signedUrl ?? null;
           }
           if (r.master_path) {
-            const { data: signed } = await db.storage.from("badge-submissions").createSignedUrl(r.master_path, SIGNED_FOR);
+            const { data: signed } = await db.storage
+              .from("badge-submissions")
+              .createSignedUrl(r.master_path, SIGNED_FOR);
             masterUrl = signed?.signedUrl ?? null;
           }
         }
@@ -255,14 +337,25 @@ export const listBadgeSubmissions = createServerFn({ method: "GET" })
 export const decideBadgeSubmission = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) =>
-    z.object({ id: z.string().uuid(), decision: z.enum(["approved", "rejected"]), note: z.string().trim().max(500).default("") }).parse(d),
+    z
+      .object({
+        id: z.string().uuid(),
+        decision: z.enum(["approved", "rejected"]),
+        note: z.string().trim().max(500).default(""),
+      })
+      .parse(d),
   )
   .handler(async ({ data, context }) => {
     await requireApprover(context);
     const db = await adminDb();
     const { error } = await db
       .from("badge_submissions" as never)
-      .update({ status: data.decision, decided_by: context.userId, decided_at: new Date().toISOString(), decision_note: data.note } as never)
+      .update({
+        status: data.decision,
+        decided_by: context.userId,
+        decided_at: new Date().toISOString(),
+        decision_note: data.note,
+      } as never)
       .eq("id", data.id);
     if (error) throw new Error("Couldn't save the decision.");
     return { status: data.decision };
@@ -271,14 +364,24 @@ export const decideBadgeSubmission = createServerFn({ method: "POST" })
 /** Founder/super admin: the art is in the R2 bucket at the printed keys. This is engineering's green light. */
 export const markBadgeUploaded = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: unknown) => z.object({ id: z.string().uuid(), note: z.string().trim().max(500).default("") }).parse(d))
+  .inputValidator((d: unknown) =>
+    z.object({ id: z.string().uuid(), note: z.string().trim().max(500).default("") }).parse(d),
+  )
   .handler(async ({ data, context }) => {
     await requireFounder(context);
     const db = await adminDb();
-    const { data: row } = await db.from("badge_submissions" as never).select("status, decision_note").eq("id", data.id).maybeSingle();
-    const current = row as unknown as { status: BadgeSubmissionStatus; decision_note: string | null } | null;
+    const { data: row } = await db
+      .from("badge_submissions" as never)
+      .select("status, decision_note")
+      .eq("id", data.id)
+      .maybeSingle();
+    const current = row as unknown as {
+      status: BadgeSubmissionStatus;
+      decision_note: string | null;
+    } | null;
     if (!current) throw new Error("That badge idea no longer exists.");
-    if (current.status !== "approved" && current.status !== "uploaded") throw new Error("Approve the badge before marking its art uploaded.");
+    if (current.status !== "approved" && current.status !== "uploaded")
+      throw new Error("Approve the badge before marking its art uploaded.");
     const { error } = await db
       .from("badge_submissions" as never)
       .update({
@@ -305,13 +408,22 @@ export const getFounderAccess = createServerFn({ method: "GET" })
 export const claimFounderAccess = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
-    const { data: isSuper } = await context.supabase.rpc("has_role" as never, { _user_id: context.userId, _role: "super_admin" } as never);
+    const { data: isSuper } = await context.supabase.rpc(
+      "has_role" as never,
+      { _user_id: context.userId, _role: "super_admin" } as never,
+    );
     if (!isSuper) throw new Error("Only a super admin can claim founder access.");
     const db = await adminDb();
-    const { data: existing, error: readError } = await db.from("founder_access" as never).select("user_id").limit(1);
-    if (readError) throw new Error("Couldn't check founder access. Run migration 20261105140000 first.");
+    const { data: existing, error: readError } = await db
+      .from("founder_access" as never)
+      .select("user_id")
+      .limit(1);
+    if (readError)
+      throw new Error("Couldn't check founder access. Run migration 20261105140000 first.");
     if ((existing ?? []).length) throw new Error("Founder access is already claimed.");
-    const { error } = await db.from("founder_access" as never).insert({ user_id: context.userId } as never);
+    const { error } = await db
+      .from("founder_access" as never)
+      .insert({ user_id: context.userId } as never);
     if (error) throw new Error("Couldn't claim founder access.");
     return { me: true };
   });

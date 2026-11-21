@@ -26,7 +26,8 @@ export const TESTIMONIALS: Testimonial[] = [
     name: "Biggz",
     location: "Atlanta, GA",
     service: "Royalty Account Setups",
-    quote: "Before Came Through Audio, I didn't know nothin' about no MLC, no SoundExchange, no ASCAP… but they got me right. Now I have all my accounts properly set up. I'm ready for that bag, feel me?",
+    quote:
+      "Before Came Through Audio, I didn't know nothin' about no MLC, no SoundExchange, no ASCAP… but they got me right. Now I have all my accounts properly set up. I'm ready for that bag, feel me?",
     photo: "/testimonials/biggz.jpg",
     focus: "50% 30%",
   },
@@ -35,7 +36,8 @@ export const TESTIMONIALS: Testimonial[] = [
     title: "CEO & Founder, Hustlin 4 A Livin Ent, LLC",
     location: "Dallas born, LA livin'",
     service: "Branding Power Sessions",
-    quote: "My Branding Power Session allowed me to build my Blueprint and Branding Guidelines. They helped me gain greater clarity, strengthen my brand identity, and establish a more consistent and professional presence in the entertainment industry.",
+    quote:
+      "My Branding Power Session allowed me to build my Blueprint and Branding Guidelines. They helped me gain greater clarity, strengthen my brand identity, and establish a more consistent and professional presence in the entertainment industry.",
     photo: "/testimonials/hustlemann.jpg",
     focus: "50% 12%",
   },
@@ -43,7 +45,8 @@ export const TESTIMONIALS: Testimonial[] = [
     name: "Lil Flippa",
     location: "Atlanta, GA",
     service: "Branding Power Sessions",
-    quote: "They came up with a perfect blueprint that fits my artistry all around… Most definitely one of the best services ever offered to me as an independent musician.",
+    quote:
+      "They came up with a perfect blueprint that fits my artistry all around… Most definitely one of the best services ever offered to me as an independent musician.",
     photo: "/testimonials/lil-flippa.jpg",
     focus: "47% 22%",
     // Kept low: browser zoom stretches pixels, and 1.6 made this photo look grainy.
@@ -66,14 +69,22 @@ export type TestimonialFilter = {
   fade: number;
 };
 
-export const FILTER_RANGES: Record<keyof TestimonialFilter, { min: number; max: number; label: string }> = {
+export const FILTER_RANGES: Record<
+  keyof TestimonialFilter,
+  { min: number; max: number; label: string }
+> = {
   brightness: { min: 80, max: 120, label: "Brightness" },
   contrast: { min: 90, max: 130, label: "Contrast" },
   tint: { min: 0, max: 80, label: "Cobalt tint" },
   fade: { min: 35, max: 100, label: "Dark fade height" },
 };
 
-export const DEFAULT_TESTIMONIAL_FILTER: TestimonialFilter = { brightness: 100, contrast: 110, tint: 50, fade: 60 };
+export const DEFAULT_TESTIMONIAL_FILTER: TestimonialFilter = {
+  brightness: 100,
+  contrast: 110,
+  tint: 50,
+  fade: 60,
+};
 
 /** Any saved value, kept inside its range; missing or broken values fall back to the default. */
 export function cleanFilter(v: unknown): TestimonialFilter {
@@ -81,17 +92,28 @@ export function cleanFilter(v: unknown): TestimonialFilter {
   const out = { ...DEFAULT_TESTIMONIAL_FILTER };
   for (const k of Object.keys(FILTER_RANGES) as (keyof TestimonialFilter)[]) {
     const n = Number(o[k]);
-    if (Number.isFinite(n)) out[k] = Math.round(Math.min(FILTER_RANGES[k].max, Math.max(FILTER_RANGES[k].min, n)));
+    if (Number.isFinite(n))
+      out[k] = Math.round(Math.min(FILTER_RANGES[k].max, Math.max(FILTER_RANGES[k].min, n)));
   }
   return out;
 }
 
 /** Limits that keep every card the same shape on the homepage (same fonts and sizes, no overflowing text). */
-export const TESTIMONIAL_LIMITS = { name: 40, title: 70, location: 40, service: 40, quote: 320 } as const;
+export const TESTIMONIAL_LIMITS = {
+  name: 40,
+  title: 70,
+  location: 40,
+  service: 40,
+  quote: 320,
+} as const;
 export const ZOOM_RANGE = { min: 1, max: 1.6 } as const;
 
 /** A testimonial as Marketing edits it in Admin → Homepage: published only with a signed release date. */
-export type EditableTestimonial = Testimonial & { id: string; published: boolean; releaseSignedOn: string };
+export type EditableTestimonial = Testimonial & {
+  id: string;
+  published: boolean;
+  releaseSignedOn: string;
+};
 
 /** What blocks publishing a card, in plain words; empty when it's ready. */
 export function testimonialProblems(t: EditableTestimonial): string[] {
@@ -100,9 +122,11 @@ export function testimonialProblems(t: EditableTestimonial): string[] {
   if (!t.quote.trim()) out.push("Add their quote.");
   if (!t.service.trim()) out.push("Add the service it's about.");
   if (!t.photo) out.push("Add a photo.");
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(t.releaseSignedOn)) out.push("Enter the date their Photo, Video & Testimonial Release was signed.");
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(t.releaseSignedOn))
+    out.push("Enter the date their Photo, Video & Testimonial Release was signed.");
   for (const k of Object.keys(TESTIMONIAL_LIMITS) as (keyof typeof TESTIMONIAL_LIMITS)[]) {
-    if ((t[k] ?? "").length > TESTIMONIAL_LIMITS[k]) out.push(`Shorten the ${k} to ${TESTIMONIAL_LIMITS[k]} characters.`);
+    if ((t[k] ?? "").length > TESTIMONIAL_LIMITS[k])
+      out.push(`Shorten the ${k} to ${TESTIMONIAL_LIMITS[k]} characters.`);
   }
   return out;
 }
@@ -113,17 +137,36 @@ export function cleanTestimonials(v: unknown): EditableTestimonial[] {
   const list = Array.isArray(v) ? v.slice(0, 12) : [];
   return list.map((raw, i): EditableTestimonial => {
     const o = (raw && typeof raw === "object" ? raw : {}) as Record<string, unknown>;
-    const photo = typeof o["photo"] === "string" && /^(https:\/\/|\/)[^\s"'<>]+$/.test(o["photo"]) ? o["photo"] : "";
-    const focus = typeof o["focus"] === "string" && /^\d{1,3}% \d{1,3}%$/.test(o["focus"]) ? o["focus"] : "50% 30%";
+    const photo =
+      typeof o["photo"] === "string" && /^(https:\/\/|\/)[^\s"'<>]+$/.test(o["photo"])
+        ? o["photo"]
+        : "";
+    const focus =
+      typeof o["focus"] === "string" && /^\d{1,3}% \d{1,3}%$/.test(o["focus"])
+        ? o["focus"]
+        : "50% 30%";
     const zoom = Math.min(ZOOM_RANGE.max, Math.max(ZOOM_RANGE.min, Number(o["zoom"]) || 1));
     const t: EditableTestimonial = {
-      id: str(o["id"], 40) || `t${i}`, name: str(o["name"], TESTIMONIAL_LIMITS.name), title: str(o["title"], TESTIMONIAL_LIMITS.title),
-      location: str(o["location"], TESTIMONIAL_LIMITS.location), service: str(o["service"], TESTIMONIAL_LIMITS.service),
-      quote: str(o["quote"], TESTIMONIAL_LIMITS.quote), photo, focus, zoom, releaseSignedOn: str(o["releaseSignedOn"], 10), published: o["published"] === true,
+      id: str(o["id"], 40) || `t${i}`,
+      name: str(o["name"], TESTIMONIAL_LIMITS.name),
+      title: str(o["title"], TESTIMONIAL_LIMITS.title),
+      location: str(o["location"], TESTIMONIAL_LIMITS.location),
+      service: str(o["service"], TESTIMONIAL_LIMITS.service),
+      quote: str(o["quote"], TESTIMONIAL_LIMITS.quote),
+      photo,
+      focus,
+      zoom,
+      releaseSignedOn: str(o["releaseSignedOn"], 10),
+      published: o["published"] === true,
     };
     return { ...t, published: t.published && testimonialProblems(t).length === 0 };
   });
 }
 
 /** The current file entries as editable cards (their releases are signed; date recorded as the editor's start). */
-export const SEED_TESTIMONIALS: EditableTestimonial[] = TESTIMONIALS.map((t, i) => ({ ...t, id: `seed${i}`, published: true, releaseSignedOn: "2026-10-20" }));
+export const SEED_TESTIMONIALS: EditableTestimonial[] = TESTIMONIALS.map((t, i) => ({
+  ...t,
+  id: `seed${i}`,
+  published: true,
+  releaseSignedOn: "2026-10-20",
+}));

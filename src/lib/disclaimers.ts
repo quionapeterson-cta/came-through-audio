@@ -8,23 +8,32 @@ export const DISCLAIMERS = {
   /** Every page footer. */
   site: "Came Through Audio is an independent record label that offers label services to independent artists. We aren't signing other artists at this time, and using our tools or services doesn't sign you to the label or create a recording, publishing or management deal. Came Through Audio is not a law firm, accountant, publisher, collection society or distributor, and nothing on this site is legal, financial or tax advice. We are not affiliated with or endorsed by ASCAP, BMI, SESAC, GMR, The MLC, SoundExchange, the Harry Fox Agency or any streaming service; their names belong to their owners.",
   /** Embed Metadata and My Catalog. */
-  embed: "You're responsible for the accuracy of the details you embed and for having the rights to the audio, artwork and lyrics you upload. Stores, streaming services and other platforms may remove or change embedded metadata, and embedding doesn't register a song or guarantee royalties.",
+  embed:
+    "You're responsible for the accuracy of the details you embed and for having the rights to the audio, artwork and lyrics you upload. Stores, streaming services and other platforms may remove or change embedded metadata, and embedding doesn't register a song or guarantee royalties.",
   /** Agency exports. */
-  exports: "Exports follow each agency's template as we know it. Agencies can change their requirements and decide on their own what they accept and pay. Check every file before you upload it; you're responsible for what you submit.",
+  exports:
+    "Exports follow each agency's template as we know it. Agencies can change their requirements and decide on their own what they accept and pay. Check every file before you upload it; you're responsible for what you submit.",
   /** Royalties and Registrations, Royalty Health Report, Royalty Utility Suite. */
-  health: "Health scores, findings, converters and earnings estimates are based on the details you enter and on public searches that can be incomplete or out of date. They don't guarantee registration, matching or payment and aren't legal, financial or tax advice; each agency decides the final result.",
+  health:
+    "Health scores, findings, converters and earnings estimates are based on the details you enter and on public searches that can be incomplete or out of date. They don't guarantee registration, matching or payment and aren't legal, financial or tax advice; each agency decides the final result.",
   /** "Registration Ready" badges and readiness lists. */
-  readiness: "\"Registration Ready\" means the required details are filled in. It doesn't confirm they're correct or that you own the rights.",
+  readiness:
+    "\"Registration Ready\" means the required details are filled in. It doesn't confirm they're correct or that you own the rights.",
   /** Contract Generator (on top of CONTRACT_DISCLAIMER). */
-  generator: "Drafts are put together automatically from what you type and can contain mistakes or miss terms your deal needs. Came Through Audio isn't a party to your contract and isn't responsible for its terms or how it's used.",
+  generator:
+    "Drafts are put together automatically from what you type and can contain mistakes or miss terms your deal needs. Came Through Audio isn't a party to your contract and isn't responsible for its terms or how it's used.",
   /** AI Protection Hub, certificates, the verify page. */
-  aiProtection: "AI Protection certificates are made to help you show proof: evidence that your files existed in this exact form by a date, which you can include with takedown requests, platform disputes and legal claims. A certificate isn't proof of ownership, a copyright registration, legal advice or a guarantee against AI training, imitation, infringement, claims or takedowns, and courts and platforms decide how much weight it gets. The attestation is your own statement, so make sure it's true. Came Through Audio isn't a party to your disputes and doesn't investigate, take sides or act as a witness; anyone can check a certificate themselves on our verify page. For the strongest protection, register your work with the U.S. Copyright Office.",
+  aiProtection:
+    "AI Protection certificates are made to help you show proof: evidence that your files existed in this exact form by a date, which you can include with takedown requests, platform disputes and legal claims. A certificate isn't proof of ownership, a copyright registration, legal advice or a guarantee against AI training, imitation, infringement, claims or takedowns, and courts and platforms decide how much weight it gets. The attestation is your own statement, so make sure it's true. Came Through Audio isn't a party to your disputes and doesn't investigate, take sides or act as a witness; anyone can check a certificate themselves on our verify page. For the strongest protection, register your work with the U.S. Copyright Office.",
   /** Personal Branding brand kit. */
-  branding: "Only upload logos, names, taglines and fonts you own or have permission to use. You're responsible for anything you put on your documents.",
+  branding:
+    "Only upload logos, names, taglines and fonts you own or have permission to use. You're responsible for anything you put on your documents.",
   /** Expert Registration Assistance. */
-  expert: "Our team registers using the details you give us, as your authorized representative in your own accounts. Each organization decides whether and when to accept a registration and pay royalties, so we can't guarantee acceptance, timing or any amount.",
+  expert:
+    "Our team registers using the details you give us, as your authorized representative in your own accounts. Each organization decides whether and when to accept a registration and pay royalties, so we can't guarantee acceptance, timing or any amount.",
   /** Badges, awards and share cards. */
-  badges: "Badges celebrate your progress. They have no cash value and don't confirm any registration, ownership or rights.",
+  badges:
+    "Badges celebrate your progress. They have no cash value and don't confirm any registration, ownership or rights.",
 } as const;
 
 export type DisclaimerKey = keyof typeof DISCLAIMERS;

@@ -70,26 +70,45 @@ import type { CatalogTrack } from "@/lib/catalog";
  */
 
 /** Which existing export template each agency uses (ASCAP and BMI share the PRO cheat sheet). */
-const EXPORT: Record<string, Agency> = { ASCAP: "pro", BMI: "pro", "The MLC": "mlc", SoundExchange: "soundexchange" };
+const EXPORT: Record<string, Agency> = {
+  ASCAP: "pro",
+  BMI: "pro",
+  "The MLC": "mlc",
+  SoundExchange: "soundexchange",
+};
 const STATUSES: SongStatus[] = ["pending", "in_progress", "on_hold", "registered"];
 const ISSUE_AGENCIES = ["SoundExchange", "BMI", "The MLC", "ASCAP", "Internal/Metadata"] as const;
 type IssueAgency = (typeof ISSUE_AGENCIES)[number];
-const isIssueAgency = (value: string): value is IssueAgency => (ISSUE_AGENCIES as readonly string[]).includes(value);
+const isIssueAgency = (value: string): value is IssueAgency =>
+  (ISSUE_AGENCIES as readonly string[]).includes(value);
 const day = (d: string | null) => (d ? new Date(d).toLocaleDateString() : "—");
 const daysSince = (d: string) => Math.floor((Date.now() - Date.parse(d)) / 86400000);
 const inviteTone = (status: AgencyInviteStatus) =>
-  status === "representative_accepted" ? "default" : status === "action_needed" ? "destructive" : "secondary";
+  status === "representative_accepted"
+    ? "default"
+    : status === "action_needed"
+      ? "destructive"
+      : "secondary";
 
 export function RegistrationQueuePanel({ focusPurchaseId }: { focusPurchaseId?: string | null }) {
   const qc = useQueryClient();
   const q = useQuery({ queryKey: ["registration-queue"], queryFn: () => listRegistrationQueue() });
   const invites = useQuery({ queryKey: ["agency-invites"], queryFn: () => listAgencyInvites() });
-  const [verifying, setVerifying] = useState<{ order: QueueOrder; song: QueueSong; agency: string } | null>(null);
-  const [finishing, setFinishing] = useState<{ group: UserGroup<QueueOrder>; purchaseId: string } | null>(null);
+  const [verifying, setVerifying] = useState<{
+    order: QueueOrder;
+    song: QueueSong;
+    agency: string;
+  } | null>(null);
+  const [finishing, setFinishing] = useState<{
+    group: UserGroup<QueueOrder>;
+    purchaseId: string;
+  } | null>(null);
   const [reporting, setReporting] = useState<{ order: QueueOrder; song: QueueSong } | null>(null);
 
   const groups = useMemo(() => groupOrdersByUser(q.data ?? []), [q.data]);
-  const pendingInvites = (invites.data ?? []).filter((row) => row.status !== "representative_accepted");
+  const pendingInvites = (invites.data ?? []).filter(
+    (row) => row.status !== "representative_accepted",
+  );
 
   const refresh = async () => {
     await Promise.all([
@@ -104,8 +123,8 @@ export function RegistrationQueuePanel({ focusPurchaseId }: { focusPurchaseId?: 
   if (q.error) {
     return (
       <p className="mt-6 text-muted-foreground">
-        ⚠️ Couldn't load the queue ({(q.error as Error).message}). If the registration tables are missing, run migration
-        20261023090000.
+        ⚠️ Couldn't load the queue ({(q.error as Error).message}). If the registration tables are
+        missing, run migration 20261023090000.
       </p>
     );
   }
@@ -128,7 +147,8 @@ export function RegistrationQueuePanel({ focusPurchaseId }: { focusPurchaseId?: 
               (row) => !!group.email && row.userEmail?.toLowerCase() === group.email.toLowerCase(),
             )}
             defaultOpen={
-              !!focusPurchaseId && group.orders.some((order) => order.purchaseId === focusPurchaseId)
+              !!focusPurchaseId &&
+              group.orders.some((order) => order.purchaseId === focusPurchaseId)
             }
             onVerify={setVerifying}
             onFinish={(purchaseId) => setFinishing({ group, purchaseId })}
@@ -194,7 +214,8 @@ function AgentTips() {
   return (
     <details className="group rounded-xl border border-border bg-muted/40">
       <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-2 p-4 text-sm font-semibold [&::-webkit-details-marker]:hidden">
-        Agent tips <span className="font-normal text-muted-foreground">{AGENT_TIPS.length} reminders</span>
+        Agent tips{" "}
+        <span className="font-normal text-muted-foreground">{AGENT_TIPS.length} reminders</span>
       </summary>
       <ul className="list-disc space-y-1 border-t border-border p-4 pl-8 text-sm">
         {AGENT_TIPS.map((tip) => (
@@ -246,8 +267,9 @@ function PendingInvites({
       </summary>
       <div className="space-y-3 border-t border-border p-4">
         <p className="text-xs text-muted-foreground">
-          SoundExchange, The MLC and ASCAP invitations, filed from admin@ mail and kept in the Inbox too. Accept the
-          invite in the agency's own portal, then record it here so the next person doesn't accept it twice.
+          SoundExchange, The MLC and ASCAP invitations, filed from admin@ mail and kept in the Inbox
+          too. Accept the invite in the agency's own portal, then record it here so the next person
+          doesn't accept it twice.
         </p>
         {failed ? (
           <p className="text-sm text-destructive">
@@ -261,11 +283,17 @@ function PendingInvites({
               <li key={row.id} className="rounded-lg border border-border bg-muted/40 p-3">
                 <div className="flex flex-wrap items-center gap-2">
                   <Badge variant={inviteTone(row.status)}>{row.agency}</Badge>
-                  <Badge variant="outline" className="text-[10px]">{AGENCY_EMAIL_KIND_LABEL[row.kind]}</Badge>
-                  <span className="text-xs font-semibold">{AGENCY_INVITE_STATUS_LABEL[row.status]}</span>
+                  <Badge variant="outline" className="text-[10px]">
+                    {AGENCY_EMAIL_KIND_LABEL[row.kind]}
+                  </Badge>
+                  <span className="text-xs font-semibold">
+                    {AGENCY_INVITE_STATUS_LABEL[row.status]}
+                  </span>
                   <span className="text-xs text-muted-foreground">{day(row.receivedAt)}</span>
                 </div>
-                <p className="mt-1 break-words text-sm font-medium">{row.subject || "(no subject)"}</p>
+                <p className="mt-1 break-words text-sm font-medium">
+                  {row.subject || "(no subject)"}
+                </p>
                 <p className="break-words text-xs text-muted-foreground">
                   {row.accountName ? `Account: ${row.accountName} · ` : ""}
                   {row.userEmail ?? "No invited address found in the mail"}
@@ -274,7 +302,8 @@ function PendingInvites({
                   {row.verifyUrl ? (
                     <Button asChild size="sm" variant="outline" className="min-h-11">
                       <a href={row.verifyUrl} target="_blank" rel="noreferrer">
-                        <ExternalLink className="h-4 w-4" />Open invite
+                        <ExternalLink className="h-4 w-4" />
+                        Open invite
                       </a>
                     </Button>
                   ) : null}
@@ -284,14 +313,20 @@ function PendingInvites({
                       className="min-h-11 rounded-md border border-input bg-background px-2 text-xs"
                       value={row.status}
                       disabled={busy === row.id}
-                      onChange={(event) => void move(row.id, event.target.value as AgencyInviteStatus)}
+                      onChange={(event) =>
+                        void move(row.id, event.target.value as AgencyInviteStatus)
+                      }
                     >
                       {AGENCY_INVITE_STATUSES.map((status) => (
-                        <option key={status} value={status}>{AGENCY_INVITE_STATUS_LABEL[status]}</option>
+                        <option key={status} value={status}>
+                          {AGENCY_INVITE_STATUS_LABEL[status]}
+                        </option>
                       ))}
                     </select>
                   </label>
-                  <span className="text-[11px] text-muted-foreground">{AGENCY_INVITE_STATUS_HINT[row.status]}</span>
+                  <span className="text-[11px] text-muted-foreground">
+                    {AGENCY_INVITE_STATUS_HINT[row.status]}
+                  </span>
                 </div>
               </li>
             ))}
@@ -303,12 +338,18 @@ function PendingInvites({
 }
 
 function InviteBadges({ rows }: { rows: AgencyInviteRow[] }) {
-  const best = summariseInvites(rows.map((row) => ({ agency: row.agency, status: row.status, received_at: row.receivedAt })));
+  const best = summariseInvites(
+    rows.map((row) => ({ agency: row.agency, status: row.status, received_at: row.receivedAt })),
+  );
   if (!best.length) return null;
   return (
     <span className="flex flex-wrap items-center gap-1.5">
       {best.map((invite) => (
-        <Badge key={invite.agency} variant={inviteTone(invite.status)} className="text-[10px] font-semibold">
+        <Badge
+          key={invite.agency}
+          variant={inviteTone(invite.status)}
+          className="text-[10px] font-semibold"
+        >
           {invite.agency}: {AGENCY_INVITE_STATUS_LABEL[invite.status]}
         </Badge>
       ))}
@@ -343,14 +384,20 @@ function UserCard({
       <summary className="flex min-h-11 cursor-pointer list-none flex-wrap items-center gap-x-4 gap-y-2 p-4 text-sm [&::-webkit-details-marker]:hidden">
         <span className="min-w-0 flex-1">
           <span className="block truncate font-semibold">{group.name}</span>
-          <span className="block truncate text-xs font-normal text-muted-foreground">{group.email || "no email on file"}</span>
+          <span className="block truncate text-xs font-normal text-muted-foreground">
+            {group.email || "no email on file"}
+          </span>
         </span>
         <InviteBadges rows={invites} />
         <span className="text-xs text-muted-foreground">
           {group.songs} {group.songs === 1 ? "song" : "songs"}
         </span>
         <span className="text-xs font-semibold">{progressLabel(group)}</span>
-        {group.onHold > 0 && <Badge variant="destructive" className="text-[10px]">{group.onHold} on hold</Badge>}
+        {group.onHold > 0 && (
+          <Badge variant="destructive" className="text-[10px]">
+            {group.onHold} on hold
+          </Badge>
+        )}
         {group.batchDone ? (
           <Badge variant="default" className="text-[10px]">
             <CheckCircle2 className="h-3 w-3" /> Finished
@@ -362,7 +409,8 @@ function UserCard({
             disabled={!canFinishGroup(group)}
             onClick={(event) => {
               event.preventDefault();
-              const first = group.orders.find((order) => !order.batchRegisteredAt) ?? group.orders[0];
+              const first =
+                group.orders.find((order) => !order.batchRegisteredAt) ?? group.orders[0];
               if (first) onFinish(first.purchaseId);
             }}
           >
@@ -373,8 +421,8 @@ function UserCard({
       <div className="space-y-4 border-t border-border p-4 text-sm">
         {!canFinishGroup(group) && !group.batchDone && (
           <p className="text-xs text-muted-foreground">
-            The batch finish unlocks once every song is Registered at every agency this customer bought. Until then, work
-            each song below.
+            The batch finish unlocks once every song is Registered at every agency this customer
+            bought. Until then, work each song below.
           </p>
         )}
         {group.orders.map((order) => (
@@ -421,8 +469,18 @@ function OrderBlock({
   async function exportFor(agency: string) {
     const tracks: CatalogTrack[] = order.songs
       .filter((song) => song.snapshot)
-      .map((song) => ({ id: song.id, title: song.title, artist: song.snapshot!.artist, updatedAt: "", metadata: song.snapshot! }));
-    const held = await downloadAgencyExport(EXPORT[agency]!, tracks, `${order.customer} - ${agency}`);
+      .map((song) => ({
+        id: song.id,
+        title: song.title,
+        artist: song.snapshot!.artist,
+        updatedAt: "",
+        metadata: song.snapshot!,
+      }));
+    const held = await downloadAgencyExport(
+      EXPORT[agency]!,
+      tracks,
+      `${order.customer} - ${agency}`,
+    );
     if (held.length) toast.warning(`Held back: ${held.map((h) => h.track.title).join(", ")}`);
   }
 
@@ -430,9 +488,13 @@ function OrderBlock({
     <div className="rounded-lg border border-border/70 p-3">
       <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
         <span className="font-semibold text-foreground">{order.agencies.join(", ")}</span>
-        <span>Songs {submitted}/{order.songs.length} submitted</span>
+        <span>
+          Songs {submitted}/{order.songs.length} submitted
+        </span>
         <span>Agreement {order.signedAt ? "✓" : "–"}</span>
-        <span>Access {accessDone}/{order.agencies.length}</span>
+        <span>
+          Access {accessDone}/{order.agencies.length}
+        </span>
         <Badge variant={canWork ? "default" : "secondary"}>{order.state}</Badge>
         {order.agent && (
           <span className={order.agent.me ? "font-semibold text-primary" : "font-semibold"}>
@@ -447,8 +509,9 @@ function OrderBlock({
 
       {order.agent && !order.agent.me && (
         <p className="mt-2 rounded-lg border border-primary p-2 text-xs font-semibold">
-          🔒 {order.agent.name} is working on this customer{order.agent.state === "paused" ? " (paused)" : ""}. Pick a
-          different order so registrations don't get mixed up.
+          🔒 {order.agent.name} is working on this customer
+          {order.agent.state === "paused" ? " (paused)" : ""}. Pick a different order so
+          registrations don't get mixed up.
         </p>
       )}
 
@@ -462,12 +525,14 @@ function OrderBlock({
             disabled={!canWork}
             onClick={() => void exportFor(agency)}
           >
-            <Download className="h-4 w-4" />Export for {agency}
+            <Download className="h-4 w-4" />
+            Export for {agency}
           </Button>
         ))}
         {!canWork && (
           <span className="self-center text-xs text-muted-foreground">
-            Exports unlock once every song is submitted, the agreement is signed and access is confirmed.
+            Exports unlock once every song is submitted, the agreement is signed and access is
+            confirmed.
           </span>
         )}
       </div>
@@ -494,20 +559,26 @@ function OrderBlock({
                     )
                   }
                 >
-                  <Unlock className="h-4 w-4" />Unlock for a fix
+                  <Unlock className="h-4 w-4" />
+                  Unlock for a fix
                 </Button>
               ) : (
                 <span className="text-xs text-muted-foreground">Not submitted yet</span>
               )}
             </div>
             {song.snapshot && (
-              <p className="mt-1 break-words text-xs text-muted-foreground">Writers: {writerLine(song.snapshot) || "—"}</p>
+              <p className="mt-1 break-words text-xs text-muted-foreground">
+                Writers: {writerLine(song.snapshot) || "—"}
+              </p>
             )}
             {song.submitted && (
               <>
                 <div className="mt-2 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
                   {order.agencies.map((agency) => (
-                    <label key={agency} className="flex min-w-0 flex-wrap items-center justify-between gap-2 text-xs">
+                    <label
+                      key={agency}
+                      className="flex min-w-0 flex-wrap items-center justify-between gap-2 text-xs"
+                    >
                       <span className="font-medium">{agency}</span>
                       <select
                         className="min-h-11 rounded-md border border-input bg-background px-2"
@@ -528,7 +599,9 @@ function OrderBlock({
                         }}
                       >
                         {STATUSES.map((status) => (
-                          <option key={status} value={status}>{SONG_STATUS_LABEL[status]}</option>
+                          <option key={status} value={status}>
+                            {SONG_STATUS_LABEL[status]}
+                          </option>
                         ))}
                       </select>
                     </label>
@@ -542,7 +615,8 @@ function OrderBlock({
                     disabled={!canWork}
                     onClick={() => onReport(order, song)}
                   >
-                    <Flag className="h-4 w-4" />Report an Issue
+                    <Flag className="h-4 w-4" />
+                    Report an Issue
                   </Button>
                   <span className="text-[11px] text-muted-foreground">
                     {order.songs.indexOf(song) + 1} of {order.songs.length}
@@ -623,7 +697,9 @@ function VerifyDialog({
                     <Checkbox
                       checked={ticked[index] ?? false}
                       onCheckedChange={(value) =>
-                        setTicked((current) => current.map((was, at) => (at === index ? value === true : was)))
+                        setTicked((current) =>
+                          current.map((was, at) => (at === index ? value === true : was)),
+                        )
                       }
                       className="mt-0.5"
                     />
@@ -645,7 +721,9 @@ function VerifyDialog({
                 <div key={list.agency}>
                   <p className="text-xs font-bold">{list.agency}</p>
                   <ul className="mt-1 list-disc space-y-1 pl-5 text-xs text-muted-foreground">
-                    {list.checks.map((check) => <li key={check}>{check}</li>)}
+                    {list.checks.map((check) => (
+                      <li key={check}>{check}</li>
+                    ))}
                   </ul>
                 </div>
               ))}
@@ -654,13 +732,23 @@ function VerifyDialog({
         )}
 
         <label className="flex min-h-11 items-start gap-2 rounded-lg border border-primary/50 bg-primary/5 p-3 text-sm">
-          <Checkbox checked={confirmed} onCheckedChange={(value) => setConfirmed(value === true)} className="mt-0.5" />
+          <Checkbox
+            checked={confirmed}
+            onCheckedChange={(value) => setConfirmed(value === true)}
+            className="mt-0.5"
+          />
           <span className="min-w-0 break-words font-medium">{REGISTRATION_CONFIRMATION}</span>
         </label>
 
         <DialogFooter className="gap-2">
-          <Button variant="ghost" className="min-h-11" onClick={onClose} disabled={busy}>Cancel</Button>
-          <Button className="min-h-11" onClick={() => void submit()} disabled={busy || !confirmed || !allTicked}>
+          <Button variant="ghost" className="min-h-11" onClick={onClose} disabled={busy}>
+            Cancel
+          </Button>
+          <Button
+            className="min-h-11"
+            onClick={() => void submit()}
+            disabled={busy || !confirmed || !allTicked}
+          >
             {busy ? "Saving…" : "Mark Registered"}
           </Button>
         </DialogFooter>
@@ -712,8 +800,8 @@ function FinishDialog({
         <DialogHeader>
           <DialogTitle className="break-words">All songs registered for {group.name}</DialogTitle>
           <DialogDescription className="break-words">
-            {group.email || "no email on file"} · {songs.length} {songs.length === 1 ? "song" : "songs"} across{" "}
-            {groupAgencies.join(", ")}
+            {group.email || "no email on file"} · {songs.length}{" "}
+            {songs.length === 1 ? "song" : "songs"} across {groupAgencies.join(", ")}
           </DialogDescription>
         </DialogHeader>
 
@@ -727,7 +815,9 @@ function FinishDialog({
             {songs.map((song) => (
               <li key={`${song.id}-${song.title}`} className="break-words">
                 {song.title}
-                {song.isrc ? <span className="text-xs text-muted-foreground"> · {song.isrc}</span> : null}
+                {song.isrc ? (
+                  <span className="text-xs text-muted-foreground"> · {song.isrc}</span>
+                ) : null}
               </li>
             ))}
           </ul>
@@ -738,23 +828,34 @@ function FinishDialog({
           <p className="text-xs text-muted-foreground">{BATCH_CONFIRMATION}</p>
           {lists.map((list) => (
             <details key={list.agency} className="rounded-lg border border-border p-3">
-              <summary className="min-h-11 cursor-pointer text-sm font-semibold">{list.agency}</summary>
+              <summary className="min-h-11 cursor-pointer text-sm font-semibold">
+                {list.agency}
+              </summary>
               <ul className="mt-1 list-disc space-y-1 pl-5 text-xs text-muted-foreground">
-                {list.checks.map((check) => <li key={check}>{check}</li>)}
+                {list.checks.map((check) => (
+                  <li key={check}>{check}</li>
+                ))}
               </ul>
             </details>
           ))}
         </section>
 
         <label className="flex min-h-11 items-start gap-2 rounded-lg border border-primary/50 bg-primary/5 p-3 text-sm">
-          <Checkbox checked={confirmed} onCheckedChange={(value) => setConfirmed(value === true)} className="mt-0.5" />
+          <Checkbox
+            checked={confirmed}
+            onCheckedChange={(value) => setConfirmed(value === true)}
+            className="mt-0.5"
+          />
           <span className="min-w-0 break-words font-medium">
-            Every song above is complete with zero errors, and I have verified each agency's submission.
+            Every song above is complete with zero errors, and I have verified each agency's
+            submission.
           </span>
         </label>
 
         <DialogFooter className="gap-2">
-          <Button variant="ghost" className="min-h-11" onClick={onClose} disabled={busy}>Cancel</Button>
+          <Button variant="ghost" className="min-h-11" onClick={onClose} disabled={busy}>
+            Cancel
+          </Button>
           <Button className="min-h-11" onClick={() => void submit()} disabled={busy || !confirmed}>
             {busy ? "Finishing…" : "Registration Successful"}
           </Button>
@@ -778,24 +879,30 @@ function ReportIssueDialog({
 }) {
   const report = useServerFn(reportRegistrationIssue);
   // The agency this order was actually bought for, so reporting a BMI problem doesn't open on SoundExchange.
-  const [agency, setAgency] = useState<IssueAgency>(() =>
-    order.agencies.find((name) => isIssueAgency(name) && name !== "Internal/Metadata") as IssueAgency | undefined
-      ?? "Internal/Metadata",
+  const [agency, setAgency] = useState<IssueAgency>(
+    () =>
+      (order.agencies.find((name) => isIssueAgency(name) && name !== "Internal/Metadata") as
+        IssueAgency | undefined) ?? "Internal/Metadata",
   );
   const [detail, setDetail] = useState("");
   const [onHold, setOnHold] = useState(true);
   const [busy, setBusy] = useState(false);
-  const currentStatus = Object.entries(song.status)
-    .map(([name, value]) => `${name} ${SONG_STATUS_LABEL[value as SongStatus] ?? value}`)
-    .join(" · ") || "Pending";
+  const currentStatus =
+    Object.entries(song.status)
+      .map(([name, value]) => `${name} ${SONG_STATUS_LABEL[value as SongStatus] ?? value}`)
+      .join(" · ") || "Pending";
 
   const holdable = agency !== "Internal/Metadata";
 
   const submit = async () => {
     setBusy(true);
     try {
-      const answer = await report({ data: { songId: song.id, agency, detail: detail.trim(), setOnHold: holdable && onHold } });
-      toast.success(answer.held ? "Reported, and the song is On Hold." : "Reported. It's on the Message Board.");
+      const answer = await report({
+        data: { songId: song.id, agency, detail: detail.trim(), setOnHold: holdable && onHold },
+      });
+      toast.success(
+        answer.held ? "Reported, and the song is On Hold." : "Reported. It's on the Message Board.",
+      );
       onSaved();
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Couldn't file that.");
@@ -815,10 +922,19 @@ function ReportIssueDialog({
         </DialogHeader>
 
         <div className="rounded-lg border border-border bg-muted/40 p-3 text-xs">
-          <p className="break-words"><span className="font-semibold">Customer:</span> {order.customer} · {order.email ?? "no email"}</p>
-          <p className="break-words"><span className="font-semibold">Song:</span> {song.title}</p>
-          <p className="break-words"><span className="font-semibold">ISRC:</span> {song.isrc || "—"}</p>
-          <p className="break-words"><span className="font-semibold">Status:</span> {currentStatus}</p>
+          <p className="break-words">
+            <span className="font-semibold">Customer:</span> {order.customer} ·{" "}
+            {order.email ?? "no email"}
+          </p>
+          <p className="break-words">
+            <span className="font-semibold">Song:</span> {song.title}
+          </p>
+          <p className="break-words">
+            <span className="font-semibold">ISRC:</span> {song.isrc || "—"}
+          </p>
+          <p className="break-words">
+            <span className="font-semibold">Status:</span> {currentStatus}
+          </p>
         </div>
 
         <label className="block text-sm">
@@ -828,7 +944,11 @@ function ReportIssueDialog({
             value={agency}
             onChange={(event) => setAgency(event.target.value as IssueAgency)}
           >
-            {ISSUE_AGENCIES.map((name) => <option key={name} value={name}>{name}</option>)}
+            {ISSUE_AGENCIES.map((name) => (
+              <option key={name} value={name}>
+                {name}
+              </option>
+            ))}
           </select>
         </label>
 
@@ -841,12 +961,18 @@ function ReportIssueDialog({
             placeholder="Wrong IPI, split doesn't total 100%, the invited address is wrong, the portal won't accept the ISRC…"
             onChange={(event) => setDetail(event.target.value)}
           />
-          <span className="text-xs text-muted-foreground">{detail.trim().length}/4000 · at least 10 characters</span>
+          <span className="text-xs text-muted-foreground">
+            {detail.trim().length}/4000 · at least 10 characters
+          </span>
         </label>
 
         {holdable && (
           <label className="flex min-h-11 items-start gap-2 rounded-lg border border-border p-3 text-sm">
-            <Checkbox checked={onHold} onCheckedChange={(value) => setOnHold(value === true)} className="mt-0.5" />
+            <Checkbox
+              checked={onHold}
+              onCheckedChange={(value) => setOnHold(value === true)}
+              className="mt-0.5"
+            />
             <span className="min-w-0 break-words">
               Switch {agency} to <strong>On Hold</strong> until this is resolved
             </span>
@@ -854,13 +980,19 @@ function ReportIssueDialog({
         )}
 
         <p className="flex items-start gap-2 text-xs text-muted-foreground">
-          <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-          A resolved issue is marked on the Message Board, which also settles the case here.
+          <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" />A resolved issue is marked on the
+          Message Board, which also settles the case here.
         </p>
 
         <DialogFooter className="gap-2">
-          <Button variant="ghost" className="min-h-11" onClick={onClose} disabled={busy}>Cancel</Button>
-          <Button className="min-h-11" onClick={() => void submit()} disabled={busy || detail.trim().length < 10}>
+          <Button variant="ghost" className="min-h-11" onClick={onClose} disabled={busy}>
+            Cancel
+          </Button>
+          <Button
+            className="min-h-11"
+            onClick={() => void submit()}
+            disabled={busy || detail.trim().length < 10}
+          >
             {busy ? "Filing…" : "Report an Issue"}
           </Button>
         </DialogFooter>

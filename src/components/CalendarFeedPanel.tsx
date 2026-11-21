@@ -22,10 +22,12 @@ export function CalendarFeedPanel({ me }: { me: string }) {
   const [failed, setFailed] = useState(false);
   const origin = typeof window === "undefined" ? "" : window.location.origin;
   // The browser's own zone travels in the link, so an all-day entry stays on the day it was picked east of Greenwich.
-  const timeZone = typeof Intl === "undefined" ? "" : Intl.DateTimeFormat().resolvedOptions().timeZone ?? "";
-  const url = token && origin
-    ? `${origin}/api/calendar/feed?token=${token}${timeZone ? `&tz=${encodeURIComponent(timeZone)}` : ""}`
-    : "";
+  const timeZone =
+    typeof Intl === "undefined" ? "" : (Intl.DateTimeFormat().resolvedOptions().timeZone ?? "");
+  const url =
+    token && origin
+      ? `${origin}/api/calendar/feed?token=${token}${timeZone ? `&tz=${encodeURIComponent(timeZone)}` : ""}`
+      : "";
 
   async function load() {
     const { data, error } = await supabase
@@ -97,7 +99,10 @@ export function CalendarFeedPanel({ me }: { me: string }) {
     });
     if (!ok) return;
     setBusy(true);
-    const { error } = await supabase.from("calendar_feed_tokens" as never).delete().eq("user_id", me);
+    const { error } = await supabase
+      .from("calendar_feed_tokens" as never)
+      .delete()
+      .eq("user_id", me);
     setBusy(false);
     if (error) {
       toast.error("Couldn't turn the feed off. Try again.");
@@ -122,11 +127,12 @@ export function CalendarFeedPanel({ me }: { me: string }) {
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h4 className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-primary">
-            <CalendarPlus className="h-4 w-4" />Personal calendar feed
+            <CalendarPlus className="h-4 w-4" />
+            Personal calendar feed
           </h4>
           <p className="mt-1 max-w-2xl text-sm text-muted-foreground">
-            Subscribe once and your own entries, your department calendars and your open Task Bank deadlines stay in
-            sync. It only carries what you can see on this page.
+            Subscribe once and your own entries, your department calendars and your open Task Bank
+            deadlines stay in sync. It only carries what you can see on this page.
           </p>
         </div>
         {!loading && !token && (
@@ -155,20 +161,24 @@ export function CalendarFeedPanel({ me }: { me: string }) {
               onFocus={(event) => event.currentTarget.select()}
             />
             <Button size="sm" variant="outline" onClick={() => void copy()}>
-              <Copy className="h-4 w-4" />Copy
+              <Copy className="h-4 w-4" />
+              Copy
             </Button>
             <Button size="sm" variant="outline" disabled={busy} onClick={() => void rotate()}>
-              <RefreshCw className="h-4 w-4" />New link
+              <RefreshCw className="h-4 w-4" />
+              New link
             </Button>
             <Button size="sm" variant="ghost" disabled={busy} onClick={() => void off()}>
-              <Power className="h-4 w-4" />Turn off
+              <Power className="h-4 w-4" />
+              Turn off
             </Button>
           </div>
           <p className="text-xs text-muted-foreground">
-            Apple Calendar: File → New Calendar Subscription. Google Calendar: Other calendars → From URL. Outlook: Add
-            calendar → Subscribe from web. All-day entries carry the date that was picked; the link's time zone
-            ({timeZone || "UTC"}) covers an older entry saved before that date was stored. Anyone holding the link can read the feed, so keep it like a password — “New link”
-            replaces it immediately.
+            Apple Calendar: File → New Calendar Subscription. Google Calendar: Other calendars →
+            From URL. Outlook: Add calendar → Subscribe from web. All-day entries carry the date
+            that was picked; the link's time zone ({timeZone || "UTC"}) covers an older entry saved
+            before that date was stored. Anyone holding the link can read the feed, so keep it like
+            a password — “New link” replaces it immediately.
           </p>
         </>
       ) : null}

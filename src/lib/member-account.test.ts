@@ -2,14 +2,28 @@ import { describe, expect, it } from "vitest";
 import { accountScope, CARD_UPDATE_STEPS, profileEditError, profilePatch } from "./member-account";
 import type { StaffAccess } from "./departments";
 
-const access = (role: StaffAccess["role"], departments: StaffAccess["departments"]): StaffAccess =>
-  ({ role, departments, canManageStaff: role === "super_admin" });
+const access = (
+  role: StaffAccess["role"],
+  departments: StaffAccess["departments"],
+): StaffAccess => ({ role, departments, canManageStaff: role === "super_admin" });
 
 describe("who may edit a member account", () => {
   it("lets support and super admins fix the person, and billing fix the card", () => {
-    expect(accountScope(access("super_admin", ["support"]))).toEqual({ editProfile: true, editPayment: true, label: "Super admin" });
-    expect(accountScope(access("employee", ["support"]))).toEqual({ editProfile: true, editPayment: false, label: "Support" });
-    expect(accountScope(access("employee", ["billing"]))).toEqual({ editProfile: false, editPayment: true, label: "Billing" });
+    expect(accountScope(access("super_admin", ["support"]))).toEqual({
+      editProfile: true,
+      editPayment: true,
+      label: "Super admin",
+    });
+    expect(accountScope(access("employee", ["support"]))).toEqual({
+      editProfile: true,
+      editPayment: false,
+      label: "Support",
+    });
+    expect(accountScope(access("employee", ["billing"]))).toEqual({
+      editProfile: false,
+      editPayment: true,
+      label: "Billing",
+    });
   });
 
   it("gives nobody else the tab: not HR, not a lead outside the two teams, not a member", () => {
@@ -27,7 +41,10 @@ describe("who may edit a member account", () => {
 
 describe("correcting a member's names", () => {
   it("trims what was typed and clears an emptied field", () => {
-    expect(profilePatch({ stageName: "  Nina Simone ", legalName: "" })).toEqual({ stage_name: "Nina Simone", legal_name: null });
+    expect(profilePatch({ stageName: "  Nina Simone ", legalName: "" })).toEqual({
+      stage_name: "Nina Simone",
+      legal_name: null,
+    });
   });
 
   it("saves only the field that was sent", () => {
@@ -37,7 +54,9 @@ describe("correcting a member's names", () => {
 
   it("refuses a stray save and an over-long name", () => {
     expect(profileEditError({})).toBe("Nothing to change.");
-    expect(profileEditError({ stageName: "x".repeat(121) })).toBe("Each name is 120 characters at most.");
+    expect(profileEditError({ stageName: "x".repeat(121) })).toBe(
+      "Each name is 120 characters at most.",
+    );
     expect(profileEditError({ stageName: "Nina" })).toBeNull();
   });
 });

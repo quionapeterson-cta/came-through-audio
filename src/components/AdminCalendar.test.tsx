@@ -6,22 +6,64 @@ const writes = vi.hoisted(() => ({ inserted: [] as Record<string, unknown>[] }))
 
 vi.mock("@/integrations/supabase/client", () => {
   const today = new Date();
-  const at = (h: number) => new Date(today.getFullYear(), today.getMonth(), today.getDate(), h).toISOString();
-  const ymd = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  const at = (h: number) =>
+    new Date(today.getFullYear(), today.getMonth(), today.getDate(), h).toISOString();
+  const ymd = (d: Date) =>
+    `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
   // Local 23:00 yesterday: a date picker would have stored it as an instant on the day before the picked one.
   const lastNight = new Date(today.getFullYear(), today.getMonth(), today.getDate() - 1, 23);
   const rows: Record<string, unknown[]> = {
     calendar_events: [
-      { id: "e1", owner_id: "me", department: null, title: "Lawyer call", notes: "", starts_at: at(14), ends_at: null, all_day: false },
-      { id: "e2", owner_id: "x", department: "support", title: "Support standup", notes: "", starts_at: at(10), ends_at: null, all_day: false },
-      { id: "e3", owner_id: "me", department: null, title: "Release day", notes: "", starts_at: lastNight.toISOString(), ends_at: null, all_day: true, all_day_on: ymd(today) },
+      {
+        id: "e1",
+        owner_id: "me",
+        department: null,
+        title: "Lawyer call",
+        notes: "",
+        starts_at: at(14),
+        ends_at: null,
+        all_day: false,
+      },
+      {
+        id: "e2",
+        owner_id: "x",
+        department: "support",
+        title: "Support standup",
+        notes: "",
+        starts_at: at(10),
+        ends_at: null,
+        all_day: false,
+      },
+      {
+        id: "e3",
+        owner_id: "me",
+        department: null,
+        title: "Release day",
+        notes: "",
+        starts_at: lastNight.toISOString(),
+        ends_at: null,
+        all_day: true,
+        all_day_on: ymd(today),
+      },
     ],
-    department_tasks: [{ id: "t1", department: "launch", title: "Move hosting to Cloudflare", due_at: at(17), status: "planned" }],
+    department_tasks: [
+      {
+        id: "t1",
+        department: "launch",
+        title: "Move hosting to Cloudflare",
+        due_at: at(17),
+        status: "planned",
+      },
+    ],
   };
   const q = (table: string) => {
     const b: Record<string, unknown> = {};
-    for (const m of ["select", "gte", "lte", "order", "not", "neq", "eq", "maybeSingle"]) b[m] = () => b;
-    b["insert"] = (row: Record<string, unknown>) => { writes.inserted.push(row); return b; };
+    for (const m of ["select", "gte", "lte", "order", "not", "neq", "eq", "maybeSingle"])
+      b[m] = () => b;
+    b["insert"] = (row: Record<string, unknown>) => {
+      writes.inserted.push(row);
+      return b;
+    };
     b["then"] = (r: (v: unknown) => void) => r({ data: rows[table], error: null });
     return b;
   };
@@ -36,7 +78,17 @@ describe("Admin calendar", () => {
   });
 
   it("writes the picked date for an all-day entry and null for a timed one", async () => {
-    render(<AdminCalendar me="me" access={{ role: "super_admin", departments: ["support", "launch"], canManageStaff: true, allTeams: true }} />);
+    render(
+      <AdminCalendar
+        me="me"
+        access={{
+          role: "super_admin",
+          departments: ["support", "launch"],
+          canManageStaff: true,
+          allTeams: true,
+        }}
+      />,
+    );
     await waitFor(() => expect(screen.getAllByText(/Lawyer call/).length).toBeGreaterThan(0));
 
     fireEvent.click(screen.getByRole("button", { name: "New entry" }));
@@ -58,7 +110,17 @@ describe("Admin calendar", () => {
   });
 
   it("shows private entries, department entries and task deadlines", async () => {
-    render(<AdminCalendar me="me" access={{ role: "super_admin", departments: ["support", "launch"], canManageStaff: true, allTeams: true }} />);
+    render(
+      <AdminCalendar
+        me="me"
+        access={{
+          role: "super_admin",
+          departments: ["support", "launch"],
+          canManageStaff: true,
+          allTeams: true,
+        }}
+      />,
+    );
     await waitFor(() => expect(screen.getAllByText(/Lawyer call/).length).toBeGreaterThan(0));
     expect(screen.getAllByText(/Support standup/).length).toBeGreaterThan(0);
     expect(screen.getAllByText(/Move hosting to Cloudflare/).length).toBeGreaterThan(0);
@@ -66,7 +128,17 @@ describe("Admin calendar", () => {
   });
 
   it("draws an all-day entry on its stored date, not on the instant's day", async () => {
-    render(<AdminCalendar me="me" access={{ role: "super_admin", departments: ["support", "launch"], canManageStaff: true, allTeams: true }} />);
+    render(
+      <AdminCalendar
+        me="me"
+        access={{
+          role: "super_admin",
+          departments: ["support", "launch"],
+          canManageStaff: true,
+          allTeams: true,
+        }}
+      />,
+    );
     await waitFor(() => expect(screen.getAllByText(/Release day/).length).toBeGreaterThan(0));
 
     // The entry was saved at 23:00 the day before; the date the member picked is what every viewer sees.
@@ -79,7 +151,17 @@ describe("Admin calendar", () => {
   });
 
   it("switches through Week, Day and Agenda and comes back to Month", async () => {
-    render(<AdminCalendar me="me" access={{ role: "super_admin", departments: ["support", "launch"], canManageStaff: true, allTeams: true }} />);
+    render(
+      <AdminCalendar
+        me="me"
+        access={{
+          role: "super_admin",
+          departments: ["support", "launch"],
+          canManageStaff: true,
+          allTeams: true,
+        }}
+      />,
+    );
     await waitFor(() => expect(screen.getAllByText(/Lawyer call/).length).toBeGreaterThan(0));
 
     // Month is the view the screen opens on, with its own grid and Coming up list.

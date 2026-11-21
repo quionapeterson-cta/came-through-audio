@@ -7,6 +7,7 @@ import {
   FileDown,
   FileJson,
   FileText,
+  GripVertical,
   Loader2,
   Maximize2,
   Minimize2,
@@ -46,6 +47,7 @@ import {
   fillTokens,
   formatBlockDate,
   headerInk,
+  insertTokenAt,
   newId,
   todayIso,
   preflight,
@@ -97,6 +99,7 @@ const BLOCK_LABELS: Record<TemplateBlock["kind"], string> = {
   checkboxes: "Checkboxes",
   signature: "Signature block",
   date: "Date",
+  printName: "Print legal name",
 };
 
 /** The words a block prints with, so a 100-block packet reads as its forms instead of a column of "Clause". */
@@ -105,6 +108,7 @@ function blockName(block: TemplateBlock): string {
   if (block.kind === "section") return block.title.trim() || BLOCK_LABELS.section;
   if (block.kind === "seal") return block.label.trim() || BLOCK_LABELS.seal;
   if (block.kind === "date") return block.label.trim() || BLOCK_LABELS.date;
+  if (block.kind === "printName") return block.label.trim() || BLOCK_LABELS.printName;
   return block.heading.trim() || BLOCK_LABELS[block.kind];
 }
 
@@ -149,6 +153,8 @@ function Paper({
   return (
     <div className="mx-auto w-full max-w-[720px] overflow-hidden rounded-sm bg-white shadow-lg ring-1 ring-black/10">
       {template.blocks.map((block) => {
+        // A signature block switched off prints nothing, so the page shows the document as it will be sent.
+        if (block.kind === "signatures" && block.enabled === false) return null;
         const selected = block.id === activeId;
         return (
           <div
@@ -425,6 +431,32 @@ function Paper({
                 </div>
               </div>
             )}
+            {block.kind === "printName" && (
+              <div style={{ padding: "24px 44px 0" }}>
+                <div
+                  style={{
+                    fontSize: 9,
+                    letterSpacing: "1.5px",
+                    textTransform: "uppercase",
+                    color: BRAND.cobalt,
+                    marginBottom: 6,
+                  }}
+                >
+                  <Rich text={block.label || "Print legal name"} sample={sample} />
+                </div>
+                <div
+                  style={{
+                    borderBottom: `1px solid ${BRAND.black}`,
+                    minHeight: 24,
+                    padding: "4px 0 5px",
+                    fontSize: 12.5,
+                    color: BRAND.black,
+                  }}
+                >
+                  {sample ? fillTokens("{{PRINT_LEGAL_NAME}}") : ""}
+                </div>
+              </div>
+            )}
             {block.kind === "date" && (
               <div style={{ padding: "24px 44px 0" }}>
                 {block.label.trim() ? (
@@ -520,6 +552,10 @@ export function PdfTemplateStudio() {
   const [tab, setTab] = useState<"build" | "convert">("build");
   const [template, setTemplate] = useState<PdfTemplate>(blank);
   const [activeId, setActiveId] = useState<string | null>(null);
+  /** Where the caret sat in the selected clause body, so a token pill inserts there instead of at the end. */
+  const [bodyCaret, setBodyCaret] = useState<{ id: string; start: number; end: number } | null>(
+    null,
+  );
   const [sample, setSample] = useState(false);
   const [library, setLibrary] = useState<SavedTemplate[]>([]);
   const [loading, setLoading] = useState(true);
@@ -632,50 +668,59 @@ export function PdfTemplateStudio() {
                 }
               : kind === "date"
                 ? { id: newId(), kind, label: "Effective date", value: todayIso(), format: "long" }
-              : kind === "seal"
-                ? { id: newId(), kind, tier: "gold", label: "CTA" }
-                : kind === "section"
-                  ? {
-                      id: newId(),
-                      kind,
-                      title: "New form",
-                      subtitle: "Packet section",
-                      formKey: `form${template.blocks.length + 1}`,
-                      optional: true,
-                    }
-                  : kind === "fields"
-                    ? {
-                        id: newId(),
-                        kind,
-                        heading: "Details",
-                        role: "recipient",
-                        fields: [
-                          {
-                            id: newId(),
-                            label: "Full name",
-                            type: "text",
-                            role: "recipient",
-                            required: true,
-                          },
-                        ],
-                      }
-                    : kind === "checkboxes"
+                : kind === "printName"
+                  ? { id: newId(), kind, label: "Print legal name" }
+                  : kind === "seal"
+                    ? { id: newId(), kind, tier: "gold", label: "CTA" }
+                    : kind === "section"
                       ? {
                           id: newId(),
                           kind,
-                          heading: "I agree",
-                          role: "recipient",
-                          mode: "multi",
-                          options: [{ id: newId(), label: "I agree to these terms" }],
+                          title: "New form",
+                          subtitle: "Packet section",
+                          formKey: `form${template.blocks.length + 1}`,
+                          optional: true,
                         }
-                      : {
-                          id: newId(),
-                          kind,
-                          heading: "Signature",
-                          role: "recipient",
-                          showDate: true,
-                        };
-    setTemplate((t) => ({ ...t, blocks: [...t.blocks, block] }));
+                      : kind === "fields"
+                        ? {
+                            id: newId(),
+                            kind,
+                            heading: "Details",
+                            role: "recipient",
+                            fields: [
+                              {
+                                id: newId(),
+                                label: "Full name",
+                                type: "text",
+                                role: "recipient",
+                                required: true,
+                              },
+                            ],
+                          }
+                        : kind === "checkboxes"
+                          ? {
+                              id: newId(),
+                              kind,
+                              heading: "I agree",
+                              role: "recipient",
+                              mode: "multi",
+                              options: [{ id: newId(), label: "I agree to these terms" }],
+                            }
+                          : {
+                              id: newId(),
+                              kind,
+                              heading: "Signature",
+                              role: "recipient",
+                              showDate: true,
+                            };
+    // Add where the next block belongs (founder, 2026-11-21): directly below the selected block, or at the bottom only
+    // when nothing is selected. Appending every time put a new signature line after the seal however the page was read.
+    setTemplate((t) => {
+      const at = activeId ? t.blocks.findIndex((b) => b.id === activeId) : -1;
+      const blocks = [...t.blocks];
+      blocks.splice(at >= 0 ? at + 1 : blocks.length, 0, block);
+      return { ...t, blocks };
+    });
     setActiveId(block.id);
   }
 
@@ -736,11 +781,22 @@ export function PdfTemplateStudio() {
       toast.message("Choose a block first.");
       return;
     }
+    // Inside a clause, the pill lands at the caret (founder, 2026-11-21); other blocks have no caret to read, so they
+    // keep the safe append-at-the-end behaviour.
+    if (active.kind === "clause") {
+      const caret =
+        bodyCaret?.id === active.id
+          ? bodyCaret
+          : { id: active.id, start: active.body.length, end: active.body.length };
+      const next = insertTokenAt(active.body, key, caret.start, caret.end);
+      patch(active.id, { body: next.text });
+      setBodyCaret({ id: active.id, start: next.caret, end: next.caret });
+      return;
+    }
     const token = `{{${key}}}`;
     // Never glue a token to the word before it: "artist{{ARTIST_NAME}}" reads as one broken field.
     const append = (value: string) => `${value}${!value || /\s$/.test(value) ? "" : " "}${token}`;
-    if (active.kind === "clause") patch(active.id, { body: append(active.body) });
-    else if (active.kind === "meta") {
+    if (active.kind === "meta") {
       const rows = [...active.rows];
       const last = rows[rows.length - 1];
       if (!last) {
@@ -760,6 +816,7 @@ export function PdfTemplateStudio() {
       patch(active.id, { parties });
     } else if (active.kind === "seal") patch(active.id, { label: append(active.label) });
     else if (active.kind === "date") patch(active.id, { label: append(active.label) });
+    else if (active.kind === "printName") patch(active.id, { label: append(active.label) });
     else if (active.kind === "section") patch(active.id, { title: append(active.title) });
     else if (active.kind === "fields") patch(active.id, { heading: append(active.heading) });
     else if (active.kind === "checkboxes") patch(active.id, { heading: append(active.heading) });
@@ -1004,6 +1061,10 @@ export function PdfTemplateStudio() {
                           aria-pressed={block.id === activeId}
                           className="flex min-w-0 flex-1 items-center gap-2 py-0.5 text-left"
                         >
+                          <GripVertical
+                            className="h-3.5 w-3.5 shrink-0 cursor-grab text-muted-foreground"
+                            aria-hidden
+                          />
                           <FileText className="h-3.5 w-3.5 shrink-0 text-primary" />
                           <span className="min-w-0 flex-1 truncate" title={blockName(block)}>
                             {blockName(block)}
@@ -1063,6 +1124,7 @@ export function PdfTemplateStudio() {
                       "checkboxes",
                       "signature",
                       "date",
+                      "printName",
                     ] as const
                   ).map((kind) => (
                     <button
@@ -1403,10 +1465,21 @@ export function PdfTemplateStudio() {
                           <Textarea
                             value={active.body}
                             onChange={(e) => patch(active.id, { body: e.target.value })}
+                            onSelect={(e) =>
+                              setBodyCaret({
+                                id: active.id,
+                                start: e.currentTarget.selectionStart,
+                                end: e.currentTarget.selectionEnd,
+                              })
+                            }
                             rows={8}
                             placeholder="The clause itself"
                             aria-label="Clause body"
                           />
+                          <p className="text-[11px] text-muted-foreground">
+                            Put the caret where a variable belongs, then click its pill below to
+                            insert it there.
+                          </p>
                           <Textarea
                             value={active.help}
                             onChange={(e) => patch(active.id, { help: e.target.value })}
@@ -1463,6 +1536,34 @@ export function PdfTemplateStudio() {
                             <Plus className="h-3.5 w-3.5" />
                             Signature line
                           </Button>
+                          <label className="flex items-center gap-2 text-xs text-muted-foreground">
+                            <input
+                              type="checkbox"
+                              checked={active.enabled !== false}
+                              onChange={(e) => patch(active.id, { enabled: e.target.checked })}
+                            />
+                            Print these signature lines
+                          </label>
+                          <p className="text-[11px] text-muted-foreground">
+                            Switch this off when the template has its own Signature and Print Legal
+                            Name blocks.
+                          </p>
+                        </>
+                      )}
+
+                      {active.kind === "printName" && (
+                        <>
+                          <Input
+                            value={active.label}
+                            onChange={(e) => patch(active.id, { label: e.target.value })}
+                            placeholder="Print legal name"
+                            aria-label="Print name label"
+                          />
+                          <p className="text-[11px] text-muted-foreground">
+                            The label is yours to change, for example Participant Print Legal Name
+                            or Parent/Guardian Print Legal Name. The line fills from the{" "}
+                            {"{{PRINT_LEGAL_NAME}}"} answer in Company Contracts Step 2.
+                          </p>
                         </>
                       )}
 
@@ -1747,8 +1848,8 @@ export function PdfTemplateStudio() {
                             ))}
                           </div>
                           <p className="text-xs text-muted-foreground">
-                            The day is fixed on the block, so a signed copy printed later still reads the
-                            same date.
+                            The day is fixed on the block, so a signed copy printed later still
+                            reads the same date.
                           </p>
                         </>
                       )}

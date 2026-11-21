@@ -1,19 +1,42 @@
 import { beforeEach, describe, expect, it } from "vitest";
-import { cacheReleases, mergeRelease, mergeRemembered, readCachedReleases, releaseKey, withoutCatalog, withoutKeystrokes, type FillRelease } from "./fill-releases";
+import {
+  cacheReleases,
+  mergeRelease,
+  mergeRemembered,
+  readCachedReleases,
+  releaseKey,
+  withoutCatalog,
+  withoutKeystrokes,
+  type FillRelease,
+} from "./fill-releases";
 
 class Memory implements Storage {
   private map = new Map<string, string>();
-  get length() { return this.map.size; }
-  clear() { this.map.clear(); }
-  getItem(k: string) { return this.map.get(k) ?? null; }
-  key(i: number) { return [...this.map.keys()][i] ?? null; }
-  removeItem(k: string) { this.map.delete(k); }
-  setItem(k: string, v: string) { this.map.set(k, v); }
+  get length() {
+    return this.map.size;
+  }
+  clear() {
+    this.map.clear();
+  }
+  getItem(k: string) {
+    return this.map.get(k) ?? null;
+  }
+  key(i: number) {
+    return [...this.map.keys()][i] ?? null;
+  }
+  removeItem(k: string) {
+    this.map.delete(k);
+  }
+  setItem(k: string, v: string) {
+    this.map.set(k, v);
+  }
 }
 
 describe("releases typed by hand in the fill dialog", () => {
   let store: Memory;
-  beforeEach(() => { store = new Memory(); });
+  beforeEach(() => {
+    store = new Memory();
+  });
 
   it("puts a new release first and keeps one entry per kind and title", () => {
     let list: FillRelease[] = [];
@@ -29,7 +52,9 @@ describe("releases typed by hand in the fill dialog", () => {
       { id: "r1", type: "EP", name: "afterglow" },
       { type: "Album", name: "BAM" },
     ]);
-    expect(releaseKey({ type: "EP", name: " AFterglow " })).toBe(releaseKey({ type: "EP", name: "afterglow" }));
+    expect(releaseKey({ type: "EP", name: " AFterglow " })).toBe(
+      releaseKey({ type: "EP", name: "afterglow" }),
+    );
   });
 
   it("keeps a different kind of the same title apart, and never keeps an unnamed release", () => {
@@ -40,17 +65,33 @@ describe("releases typed by hand in the fill dialog", () => {
   });
 
   it("drops the half-typed titles one name leaves behind, and keeps a real shorter one", () => {
-    const typed = ["N", "No", "Not", "Not A", "Not Ag", "Not Aga", "Not Agai", "Not Again"].map((name) => ({ type: "Single" as const, name }));
+    const typed = ["N", "No", "Not", "Not A", "Not Ag", "Not Aga", "Not Agai", "Not Again"].map(
+      (name) => ({ type: "Single" as const, name }),
+    );
     expect(withoutKeystrokes(typed)).toEqual([{ type: "Single", name: "Not Again" }]);
     // One shorter title beside a longer one may be a release of its own, so it stays.
-    expect(withoutKeystrokes([{ type: "Single", name: "Love" }, { type: "Single", name: "Love Again" }])).toHaveLength(2);
+    expect(
+      withoutKeystrokes([
+        { type: "Single", name: "Love" },
+        { type: "Single", name: "Love Again" },
+      ]),
+    ).toHaveLength(2);
     // The same title under another kind is a different release and is untouched.
-    expect(withoutKeystrokes([{ type: "Single", name: "Not" }, { type: "EP", name: "Not Again" }])).toHaveLength(2);
+    expect(
+      withoutKeystrokes([
+        { type: "Single", name: "Not" },
+        { type: "EP", name: "Not Again" },
+      ]),
+    ).toHaveLength(2);
   });
 
   it("drops a remembered title the catalog now offers", () => {
-    expect(withoutCatalog([{ type: "EP", name: "Afterglow" }], [{ album: "afterglow", kind: "EP" }])).toEqual([]);
-    expect(withoutCatalog([{ type: "EP", name: "Afterglow" }], [{ album: "Afterglow", kind: "Album" }])).toHaveLength(1);
+    expect(
+      withoutCatalog([{ type: "EP", name: "Afterglow" }], [{ album: "afterglow", kind: "EP" }]),
+    ).toEqual([]);
+    expect(
+      withoutCatalog([{ type: "EP", name: "Afterglow" }], [{ album: "Afterglow", kind: "Album" }]),
+    ).toHaveLength(1);
   });
 
   it("keeps the browser's own entries when the account's list arrives", () => {
@@ -70,7 +111,12 @@ describe("releases typed by hand in the fill dialog", () => {
     ]);
     // An unnamed entry is never one, and neither list can grow past the handful the dialog offers.
     expect(mergeRemembered(account, [{ type: "Single", name: "   " }])).toHaveLength(2);
-    expect(mergeRemembered(Array.from({ length: 30 }, (_, i) => ({ type: "EP" as const, name: `R${i}` })), [])).toHaveLength(24);
+    expect(
+      mergeRemembered(
+        Array.from({ length: 30 }, (_, i) => ({ type: "EP" as const, name: `R${i}` })),
+        [],
+      ),
+    ).toHaveLength(24);
   });
 
   it("keeps a browser copy per account, and survives a browser that blocks storage", () => {
@@ -81,10 +127,14 @@ describe("releases typed by hand in the fill dialog", () => {
     const broken: Storage = {
       length: 0,
       clear: () => undefined,
-      getItem: () => { throw new Error("blocked"); },
+      getItem: () => {
+        throw new Error("blocked");
+      },
       key: () => null,
       removeItem: () => undefined,
-      setItem: () => { throw new Error("blocked"); },
+      setItem: () => {
+        throw new Error("blocked");
+      },
     };
     expect(() => cacheReleases("u1", [{ type: "EP", name: "Afterglow" }], broken)).not.toThrow();
     expect(readCachedReleases("u1", broken)).toEqual([]);

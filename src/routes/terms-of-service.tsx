@@ -3,7 +3,8 @@ import { LegalPage } from "@/components/LegalPage";
 import { TERMS } from "@/lib/legal-docs";
 import { loadLegalOverrides } from "@/lib/legal-overrides";
 
-const d = "The terms that govern your use of Came Through Audio, operated by Came Through Audio, LLC.";
+const d =
+  "The terms that govern your use of Came Through Audio, operated by Came Through Audio, LLC.";
 
 export const Route = createFileRoute("/terms-of-service")({
   head: () => ({
@@ -22,7 +23,5 @@ export const Route = createFileRoute("/terms-of-service")({
 });
 
 function Terms() {
-  return (
-    <LegalPage {...TERMS} overrides={Route.useLoaderData()} />
-  );
+  return <LegalPage {...TERMS} overrides={Route.useLoaderData()} />;
 }

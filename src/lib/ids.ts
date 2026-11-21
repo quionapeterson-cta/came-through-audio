@@ -10,7 +10,9 @@
 const INSPECTOR_PREFIX = "h:";
 
 /** True when the id names a song in My Catalog, so a row can be updated by it. */
-export const isCatalogId = (id: string | undefined): id is string => !!id && !id.startsWith(INSPECTOR_PREFIX);
+export const isCatalogId = (id: string | undefined): id is string =>
+  !!id && !id.startsWith(INSPECTOR_PREFIX);
 
 /** The id to update, or nothing when the row has to be created: an Inspector id is never written as a catalog id. */
-export const updateTarget = (id: string | undefined): string | undefined => (isCatalogId(id) ? id : undefined);
+export const updateTarget = (id: string | undefined): string | undefined =>
+  isCatalogId(id) ? id : undefined;

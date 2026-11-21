@@ -12,24 +12,31 @@ export function packageFor(songs: number): PackageId {
 }
 
 /** Most songs a package covers (Singles: up to 3, each paid for separately). */
-export const packageSongs = (id: string | undefined) => PACKAGES.find((p) => p.id === id)?.songs ?? 1;
+export const packageSongs = (id: string | undefined) =>
+  PACKAGES.find((p) => p.id === id)?.songs ?? 1;
 
 /** Singles are priced per song; the other packages are one price for up to their song count. */
 export function packagePrice(id: PackageId, songs: number): number {
   const p = PACKAGES.find((x) => x.id === id)!;
-  return id === "Single" ? Math.round(p.price * Math.min(Math.max(1, songs), p.songs) * 100) / 100 : p.price;
+  return id === "Single"
+    ? Math.round(p.price * Math.min(Math.max(1, songs), p.songs) * 100) / 100
+    : p.price;
 }
 
 type AiPurchase = { kind: string; details: Record<string, string> };
 
 /** Certificates one purchase unlocks: Singles count the songs bought, packages their full size. */
 export function purchaseCredits(details: Record<string, string>): number {
-  return details["package"] === "Single" || !details["package"] ? Math.max(1, Number(details["songs"]) || 1) : packageSongs(details["package"]);
+  return details["package"] === "Single" || !details["package"]
+    ? Math.max(1, Number(details["songs"]) || 1)
+    : packageSongs(details["package"]);
 }
 
 /** Certificates paid for. Mirrors public.can_issue_ai_certificate. */
 export function certificateCredits(purchases: AiPurchase[]): number {
-  return purchases.filter((p) => p.kind === "ai" && !p.details["refunded_at"]).reduce((n, p) => n + purchaseCredits(p.details), 0);
+  return purchases
+    .filter((p) => p.kind === "ai" && !p.details["refunded_at"])
+    .reduce((n, p) => n + purchaseCredits(p.details), 0);
 }
 
 /** Stripe metadata values hold 500 characters, so song IDs travel in chunks of 10. */
@@ -37,10 +44,17 @@ export const TRACKS_PER_KEY = 10;
 
 /** Catalog song IDs picked at checkout, in order (older purchases carry a single trackId). */
 export function paidTrackIds(purchases: AiPurchase[]): string[] {
-  const ids = purchases.filter((p) => p.kind === "ai" && !p.details["refunded_at"]).flatMap((p) => {
-    const keys = Object.keys(p.details).filter((k) => /^tracks_\d+$/.test(k)).sort((a, b) => Number(a.slice(7)) - Number(b.slice(7)));
-    return [...(p.details["trackId"] ? [p.details["trackId"]] : []), ...keys.flatMap((k) => p.details[k]!.split(",").filter(Boolean))];
-  });
+  const ids = purchases
+    .filter((p) => p.kind === "ai" && !p.details["refunded_at"])
+    .flatMap((p) => {
+      const keys = Object.keys(p.details)
+        .filter((k) => /^tracks_\d+$/.test(k))
+        .sort((a, b) => Number(a.slice(7)) - Number(b.slice(7)));
+      return [
+        ...(p.details["trackId"] ? [p.details["trackId"]] : []),
+        ...keys.flatMap((k) => p.details[k]!.split(",").filter(Boolean)),
+      ];
+    });
   return [...new Set(ids)];
 }
 
@@ -53,7 +67,12 @@ export const MAX_PROOF_BYTES = 52_428_800;
 /** Largest video the browser fingerprints in one go. */
 export const MAX_PROOF_INPUT_BYTES = 1_073_741_824; // 1GB
 export const PROOF_VIDEO_TYPES = ["video/mp4", "video/quicktime", "video/webm", "video/x-m4v"];
-const PROOF_VIDEO_EXT: Record<string, string> = { mp4: "video/mp4", m4v: "video/x-m4v", mov: "video/quicktime", webm: "video/webm" };
+const PROOF_VIDEO_EXT: Record<string, string> = {
+  mp4: "video/mp4",
+  m4v: "video/x-m4v",
+  mov: "video/quicktime",
+  webm: "video/webm",
+};
 
 /** The video's type, taken from its extension when the phone leaves the file type blank. */
 export function proofVideoType(file: { type: string; name: string }): string | null {
@@ -64,7 +83,8 @@ export function proofVideoType(file: { type: string; name: string }): string | n
 /** Returns an error message, or null when the file is an acceptable proof video. */
 export function proofFileError(file: { type: string; name: string; size: number }): string | null {
   if (!proofVideoType(file)) return "Use an MP4, MOV or WebM video.";
-  if (file.size > MAX_PROOF_INPUT_BYTES) return "This video is over 1GB. Record a shorter clip (5–60 seconds).";
+  if (file.size > MAX_PROOF_INPUT_BYTES)
+    return "This video is over 1GB. Record a shorter clip (5–60 seconds).";
   return null;
 }
 
@@ -79,8 +99,15 @@ export function videoDuration(file: File): Promise<number> {
     v.preload = "metadata";
     v.muted = true;
     const url = URL.createObjectURL(file);
-    v.onloadedmetadata = () => { v.pause(); URL.revokeObjectURL(url); resolve(v.duration); };
-    v.onerror = () => { URL.revokeObjectURL(url); reject(new Error("Could not read video")); };
+    v.onloadedmetadata = () => {
+      v.pause();
+      URL.revokeObjectURL(url);
+      resolve(v.duration);
+    };
+    v.onerror = () => {
+      URL.revokeObjectURL(url);
+      reject(new Error("Could not read video"));
+    };
     v.src = url;
   });
 }

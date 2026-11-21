@@ -4,20 +4,44 @@ import { Link } from "@tanstack/react-router";
 import { ChevronLeft, ChevronRight, Lock, Settings2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Switch } from "@/components/ui/switch";
 import { CelebrationStage, SharePanel } from "@/components/BadgeCelebration";
 import { useBadges } from "@/hooks/useBadges";
 import { badgePrefs, loadOnboarding, saveOnboarding, type Onboarding } from "@/lib/artist-profile";
 import { useServerFn } from "@tanstack/react-start";
 import { useQueryClient } from "@tanstack/react-query";
-import { BADGES, COLLECTIONS, TIER_LABEL, earningPopup, isBigTier, nextGoal, rotationArt, withArtist, type BadgeDef, type BadgePrefs, type CollectionId } from "@/lib/badges";
+import {
+  BADGES,
+  COLLECTIONS,
+  TIER_LABEL,
+  earningPopup,
+  isBigTier,
+  nextGoal,
+  rotationArt,
+  withArtist,
+  type BadgeDef,
+  type BadgePrefs,
+  type CollectionId,
+} from "@/lib/badges";
 import { artUrl } from "@/lib/art-url";
 import { markBadgesSeen } from "@/lib/badge-events";
 import { pickBadgeArt, resetMyBadges, type EarnedBadge } from "@/lib/badges.functions";
 import { confirmAction } from "@/components/ConfirmHost";
 
-export type BadgeState = { badge: BadgeDef; count: number; earned?: EarnedBadge | undefined; off: boolean; /** Art the founder replaced, if any. */ art?: string | undefined };
+export type BadgeState = {
+  badge: BadgeDef;
+  count: number;
+  earned?: EarnedBadge | undefined;
+  off: boolean;
+  /** Art the founder replaced, if any. */ art?: string | undefined;
+};
 
 /** Every badge with the user's progress, plus the earned ones still waiting for their pop-up. */
 export function useBadgeStates(userId: string | undefined) {
@@ -27,7 +51,13 @@ export function useBadgeStates(userId: string | undefined) {
     const held = new Map((d?.earned ?? []).map((e) => [e.id, e]));
     const off = new Set(d?.disabled ?? []);
     const art = d?.art ?? {};
-    return BADGES.map((badge): BadgeState => ({ badge, count: d?.metrics[badge.metric] ?? 0, earned: held.get(badge.id), off: off.has(badge.id), art: art[badge.id] }));
+    return BADGES.map((badge): BadgeState => ({
+      badge,
+      count: d?.metrics[badge.metric] ?? 0,
+      earned: held.get(badge.id),
+      off: off.has(badge.id),
+      art: art[badge.id],
+    }));
   }, [query.data]);
   return { ...query, states, unseen: states.filter((s) => s.earned && !s.earned.seenAt) };
 }
@@ -35,7 +65,9 @@ export function useBadgeStates(userId: string | undefined) {
 /** The art for one earning: the user's pick for badges with choices, otherwise the badge's own art. */
 /** A badge's art: the user's pick where it offers choices, else its rotation art for how many times it's been earned. */
 const artFor = (badge: BadgeDef, pick?: string | null, times = 1, override?: string) =>
-  override ? artUrl(override) : artUrl(pick && badge.choices?.includes(pick) ? pick : rotationArt(badge, times));
+  override
+    ? artUrl(override)
+    : artUrl(pick && badge.choices?.includes(pick) ? pick : rotationArt(badge, times));
 /** The art the shelf shows: the latest pick, or the badge's own art. */
 /** Earned (or earned again) in the last 7 days. */
 const isNew = (s: BadgeState) => {
@@ -43,12 +75,24 @@ const isNew = (s: BadgeState) => {
   return !!last && Date.now() - Date.parse(last) < 7 * 86_400_000;
 };
 /** The art a badge shows on the shelf and when shared. */
-export const shelfArt = (s: BadgeState) => artFor(s.badge, [...(s.earned?.log ?? [])].reverse().find((e) => e.pick)?.pick, s.earned?.times ?? 1, s.art);
+export const shelfArt = (s: BadgeState) =>
+  artFor(
+    s.badge,
+    [...(s.earned?.log ?? [])].reverse().find((e) => e.pick)?.pick,
+    s.earned?.times ?? 1,
+    s.art,
+  );
 
 function TierChip({ badge }: { badge: BadgeDef }) {
   const label = TIER_LABEL[badge.tier];
   if (!label) return null;
-  return <span className={`${isBigTier(badge.tier) ? "cta-badge-gold" : "cta-badge-blue"} text-xs uppercase tracking-widest`}>{label}</span>;
+  return (
+    <span
+      className={`${isBigTier(badge.tier) ? "cta-badge-gold" : "cta-badge-blue"} text-xs uppercase tracking-widest`}
+    >
+      {label}
+    </span>
+  );
 }
 
 /**
@@ -57,7 +101,15 @@ function TierChip({ badge }: { badge: BadgeDef }) {
  * summary. Badges already waiting when the page opens (earned while away) go straight to the shelf, marked New,
  * so logging in never starts with a string of pop-ups (founder, 2026-10-20).
  */
-export function BadgeWatcher({ userId, artist, eagle }: { userId: string; artist?: string | undefined; eagle?: boolean | undefined }) {
+export function BadgeWatcher({
+  userId,
+  artist,
+  eagle,
+}: {
+  userId: string;
+  artist?: string | undefined;
+  eagle?: boolean | undefined;
+}) {
   const { unseen: waiting, isFetched } = useBadgeStates(userId);
   const arrived = useRef(false);
   const [queue, setQueue] = useState<BadgeState[]>([]);
@@ -71,7 +123,10 @@ export function BadgeWatcher({ userId, artist, eagle }: { userId: string; artist
     arrived.current = true;
     if (!unseen.length || badgePrefs(loadOnboarding(userId)).celebrations === "off") return;
     for (const s of unseen) shown.current.add(`${s.badge.id}:${s.earned?.times}`);
-    void markBadgesSeen(userId, unseen.map((s) => s.badge.id));
+    void markBadgesSeen(
+      userId,
+      unseen.map((s) => s.badge.id),
+    );
   }, [isFetched]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
@@ -81,13 +136,22 @@ export function BadgeWatcher({ userId, artist, eagle }: { userId: string; artist
     const prefs = badgePrefs(loadOnboarding(userId));
     if (prefs.celebrations === "off") return;
     for (const s of fresh) shown.current.add(`${s.badge.id}:${s.earned?.times}`);
-    const quiet = fresh.filter((s) => prefs.hidden.includes(s.badge.collection) || (prefs.celebrations === "big" && !isBigTier(s.badge.tier)));
+    const quiet = fresh.filter(
+      (s) =>
+        prefs.hidden.includes(s.badge.collection) ||
+        (prefs.celebrations === "big" && !isBigTier(s.badge.tier)),
+    );
     const loud = fresh.filter((s) => !quiet.includes(s));
     if (quiet.length) {
-      void markBadgesSeen(userId, quiet.map((s) => s.badge.id));
-      for (const s of quiet.filter((q) => !prefs.hidden.includes(q.badge.collection)).slice(0, 3)) toast.success(`New badge: ${s.badge.title}`);
+      void markBadgesSeen(
+        userId,
+        quiet.map((s) => s.badge.id),
+      );
+      for (const s of quiet.filter((q) => !prefs.hidden.includes(q.badge.collection)).slice(0, 3))
+        toast.success(`New badge: ${s.badge.title}`);
     }
-    if (loud.length >= 4) setSummary(loud); else setQueue(loud);
+    if (loud.length >= 4) setSummary(loud);
+    else setQueue(loud);
   }, [unseen.length, userId, isFetched]); // eslint-disable-line react-hooks/exhaustive-deps
 
   function next() {
@@ -96,42 +160,86 @@ export function BadgeWatcher({ userId, artist, eagle }: { userId: string; artist
     setQueue(rest);
   }
   function closeSummary() {
-    void markBadgesSeen(userId, summary.map((s) => s.badge.id));
+    void markBadgesSeen(
+      userId,
+      summary.map((s) => s.badge.id),
+    );
     setSummary([]);
   }
 
   const current = queue[0];
-  return <>
-    <Dialog open={!!current} onOpenChange={(o) => !o && next()}>
-      {current && <UnlockPopup key={`${current.badge.id}:${current.earned?.times}`} state={current} artist={artist} more={queue.length - 1} onNext={next}
-        share={badgePrefs(loadOnboarding(userId)).share} eagle={!!eagle} />}
-    </Dialog>
-    <Dialog open={summary.length > 0} onOpenChange={(o) => !o && closeSummary()}>
-      <DialogContent className="max-h-[90svh] max-w-2xl overflow-y-auto bg-card text-card-foreground">
-        <DialogHeader>
-          <DialogTitle className="text-2xl font-bold">You came through: {summary.length} new badges</DialogTitle>
-          <DialogDescription>Every one of these was earned by handling your music business. Open your profile to see what each one means.</DialogDescription>
-        </DialogHeader>
-        <ul className="grid grid-cols-3 gap-4 sm:grid-cols-4">
-          {summary.map((s) => <li key={s.badge.id} className="flex flex-col items-center gap-2 text-center">
-            <img src={artFor(s.badge, undefined, s.earned?.times ?? 1, s.art)} alt="" className="aspect-square w-full object-contain drop-shadow-lg" style={{ animation: "badge-pop 0.6s ease-out" }} />
-            <span className="text-xs font-semibold">{s.badge.title}</span>
-          </li>)}
-        </ul>
-        <div className="flex flex-wrap gap-2">
-          <Button asChild onClick={closeSummary}><Link to="/profile">See all my badges</Link></Button>
-          <Button variant="outline" onClick={closeSummary}>Keep going</Button>
-        </div>
-      </DialogContent>
-    </Dialog>
-  </>;
+  return (
+    <>
+      <Dialog open={!!current} onOpenChange={(o) => !o && next()}>
+        {current && (
+          <UnlockPopup
+            key={`${current.badge.id}:${current.earned?.times}`}
+            state={current}
+            artist={artist}
+            more={queue.length - 1}
+            onNext={next}
+            share={badgePrefs(loadOnboarding(userId)).share}
+            eagle={!!eagle}
+          />
+        )}
+      </Dialog>
+      <Dialog open={summary.length > 0} onOpenChange={(o) => !o && closeSummary()}>
+        <DialogContent className="max-h-[90svh] max-w-2xl overflow-y-auto bg-card text-card-foreground">
+          <DialogHeader>
+            <DialogTitle className="text-2xl font-bold">
+              You came through: {summary.length} new badges
+            </DialogTitle>
+            <DialogDescription>
+              Every one of these was earned by handling your music business. Open your profile to
+              see what each one means.
+            </DialogDescription>
+          </DialogHeader>
+          <ul className="grid grid-cols-3 gap-4 sm:grid-cols-4">
+            {summary.map((s) => (
+              <li key={s.badge.id} className="flex flex-col items-center gap-2 text-center">
+                <img
+                  src={artFor(s.badge, undefined, s.earned?.times ?? 1, s.art)}
+                  alt=""
+                  className="aspect-square w-full object-contain drop-shadow-lg"
+                  style={{ animation: "badge-pop 0.6s ease-out" }}
+                />
+                <span className="text-xs font-semibold">{s.badge.title}</span>
+              </li>
+            ))}
+          </ul>
+          <div className="flex flex-wrap gap-2">
+            <Button asChild onClick={closeSummary}>
+              <Link to="/profile">See all my badges</Link>
+            </Button>
+            <Button variant="outline" onClick={closeSummary}>
+              Keep going
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </>
+  );
 }
 
 /**
  * The unlock pop-up: the big badge pops in, shines, rains and floats, with the message underneath and a Share button
  * that opens the share-card panel. Badges with art choices (Self-Produced) ask for the pick first.
  */
-function UnlockPopup({ state, artist, more, onNext, share, eagle }: { state: BadgeState; artist?: string | undefined; more: number; onNext: () => void; share: boolean; eagle: boolean }) {
+function UnlockPopup({
+  state,
+  artist,
+  more,
+  onNext,
+  share,
+  eagle,
+}: {
+  state: BadgeState;
+  artist?: string | undefined;
+  more: number;
+  onNext: () => void;
+  share: boolean;
+  eagle: boolean;
+}) {
   const { badge, earned } = state;
   const pickFn = useServerFn(pickBadgeArt);
   const qc = useQueryClient();
@@ -149,8 +257,11 @@ function UnlockPopup({ state, artist, more, onNext, share, eagle }: { state: Bad
       await pickFn({ data: { badgeId: badge.id, index: open, pick } });
       setPicked(pick);
       void qc.invalidateQueries({ queryKey: ["badges"] });
-    } catch { toast.error("Couldn't save your pick. Try again."); }
-    finally { setSaving(false); }
+    } catch {
+      toast.error("Couldn't save your pick. Try again.");
+    } finally {
+      setSaving(false);
+    }
   }
 
   return (
@@ -163,44 +274,93 @@ function UnlockPopup({ state, artist, more, onNext, share, eagle }: { state: Bad
       {/* Even sides and level tops (founder, 2026-11-11): the same padding both sides of the pair, and the share card starts
           on the same line as the badge instead of being centred against a taller column. */}
       <div className="mx-auto grid min-h-full w-full max-w-[min(94vw,64rem)] justify-items-center gap-6 px-4 py-12 text-center text-white [align-content:safe_center] md:px-6">
-        {choosing ? <section className="w-full max-w-[40rem] space-y-6">
-          <p className="text-xs font-bold uppercase tracking-[2px] text-[#4d8cff]">{badge.title}</p>
-          <h2 className="text-2xl font-bold sm:text-3xl">{withArtist(line, artist)}</h2>
-          <ul className="grid grid-cols-3 gap-3 sm:gap-6">
-            {badge.choices!.map((c) => <li key={c}>
-              <button type="button" disabled={saving} onClick={() => void choose(c)} aria-label={`Pick ${c.split("/").pop()?.replace(/[_-]/g, " ").replace(/\.\w+$/, "")}`}
-                className="w-full rounded-2xl border border-white/20 p-2 transition hover:border-[#4d8cff] hover:bg-white/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50">
-                <img src={artUrl(c)} alt="" className="aspect-square w-full object-contain drop-shadow-xl" style={{ animation: "badge-pop 0.6s ease-out" }} />
-              </button>
-            </li>)}
-          </ul>
-        </section> : <div className={`grid w-full gap-6 md:items-start md:gap-8 ${share ? "md:grid-cols-2" : ""}`}>
-          <div className="space-y-4">
-            {/* The award celebration keeps the rain without its "Make it rain again" button (founder, 2026-11-11): the
+        {choosing ? (
+          <section className="w-full max-w-[40rem] space-y-6">
+            <p className="text-xs font-bold uppercase tracking-[2px] text-[#4d8cff]">
+              {badge.title}
+            </p>
+            <h2 className="text-2xl font-bold sm:text-3xl">{withArtist(line, artist)}</h2>
+            <ul className="grid grid-cols-3 gap-3 sm:gap-6">
+              {badge.choices!.map((c) => (
+                <li key={c}>
+                  <button
+                    type="button"
+                    disabled={saving}
+                    onClick={() => void choose(c)}
+                    aria-label={`Pick ${c
+                      .split("/")
+                      .pop()
+                      ?.replace(/[_-]/g, " ")
+                      .replace(/\.\w+$/, "")}`}
+                    className="w-full rounded-2xl border border-white/20 p-2 transition hover:border-[#4d8cff] hover:bg-white/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50"
+                  >
+                    <img
+                      src={artUrl(c)}
+                      alt=""
+                      className="aspect-square w-full object-contain drop-shadow-xl"
+                      style={{ animation: "badge-pop 0.6s ease-out" }}
+                    />
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </section>
+        ) : (
+          <div
+            className={`grid w-full gap-6 md:items-start md:gap-8 ${share ? "md:grid-cols-2" : ""}`}
+          >
+            <div className="space-y-4">
+              {/* The award celebration keeps the rain without its "Make it rain again" button (founder, 2026-11-11): the
                 replay label sat under the badge and read as an instruction; a badge opened from the profile still has it. */}
-            <CelebrationStage src={src} name={badge.title} float replay={false} />
-            {/* The badge, then its message, then the way on (founder, 2026-11-10): the award celebration is the same
+              <CelebrationStage src={src} name={badge.title} float replay={false} />
+              {/* The badge, then its message, then the way on (founder, 2026-11-10): the award celebration is the same
                 celebration a badge opens from the profile, so the card sits to the right of the badge and Keep going
                 stays straight under the description. */}
-            <div className="mx-auto max-w-md space-y-3">
-              <p className="text-xs font-bold uppercase tracking-[2px] text-[#4d8cff]">
-                {TIER_LABEL[badge.tier] || "New badge"}{(earned?.times ?? 0) > 1 ? ` · ×${earned!.times}` : ""}
-              </p>
-              <p className="text-2xl font-bold sm:text-3xl">{withArtist(line, artist)}</p>
-              <p className="text-white/75">{badge.description}</p>
-              {/* Keep going sits straight under the description (founder, 2026-11-09), so the way on is the first thing after
+              <div className="mx-auto max-w-md space-y-3">
+                <p className="text-xs font-bold uppercase tracking-[2px] text-[#4d8cff]">
+                  {TIER_LABEL[badge.tier] || "New badge"}
+                  {(earned?.times ?? 0) > 1 ? ` · ×${earned!.times}` : ""}
+                </p>
+                <p className="text-2xl font-bold sm:text-3xl">{withArtist(line, artist)}</p>
+                <p className="text-white/75">{badge.description}</p>
+                {/* Keep going sits straight under the description (founder, 2026-11-09), so the way on is the first thing after
                   the words rather than below the milestone and the shelf link. */}
-              <div className="flex flex-wrap justify-center gap-3 pt-3">
-                <Button size="lg" variant="outline" className="border-white/60 bg-transparent text-white hover:bg-white/10 hover:text-white" onClick={onNext}>
-                  {more > 0 ? <>Next badge ({more} more)<ChevronRight /></> : "Keep going"}
-                </Button>
+                <div className="flex flex-wrap justify-center gap-3 pt-3">
+                  <Button
+                    size="lg"
+                    variant="outline"
+                    className="border-white/60 bg-transparent text-white hover:bg-white/10 hover:text-white"
+                    onClick={onNext}
+                  >
+                    {more > 0 ? (
+                      <>
+                        Next badge ({more} more)
+                        <ChevronRight />
+                      </>
+                    ) : (
+                      "Keep going"
+                    )}
+                  </Button>
+                </div>
+                <p className="text-sm text-white/60">
+                  <span className="font-semibold">Milestone: </span>
+                  {badge.milestone}
+                </p>
+                <Link
+                  to="/profile"
+                  hash="badges"
+                  onClick={onNext}
+                  className="inline-block pt-1 text-sm text-white/70 underline-offset-4 hover:text-white hover:underline"
+                >
+                  See all my badges
+                </Link>
               </div>
-              <p className="text-sm text-white/60"><span className="font-semibold">Milestone: </span>{badge.milestone}</p>
-              <Link to="/profile" hash="badges" onClick={onNext} className="inline-block pt-1 text-sm text-white/70 underline-offset-4 hover:text-white hover:underline">See all my badges</Link>
             </div>
+            {share && (
+              <SharePanel avatar={src} share={{ ctx: "profile", artist: artist ?? "", eagle }} />
+            )}
           </div>
-          {share && <SharePanel avatar={src} share={{ ctx: "profile", artist: artist ?? "", eagle }} />}
-        </div>}
+        )}
       </div>
     </DialogContent>
   );
@@ -213,37 +373,78 @@ const remaining = (s: BadgeState) => Math.max(0, s.badge.goal - s.count);
  * it (no counts, which read like song credits). Says "Badge" so nobody mistakes it for a real record certification.
  * Links to the profile shelf.
  */
-export function NextBadgeHint({ userId, collections, className = "" }: { userId: string; collections: CollectionId[]; className?: string }) {
+export function NextBadgeHint({
+  userId,
+  collections,
+  className = "",
+}: {
+  userId: string;
+  collections: CollectionId[];
+  className?: string;
+}) {
   const { states } = useBadgeStates(userId);
   const prefs = badgePrefs(loadOnboarding(userId));
   if (!prefs.hints) return null;
   const next = states
-    .filter((s) => collections.includes(s.badge.collection) && !prefs.hidden.includes(s.badge.collection) && !s.earned && !s.off)
+    .filter(
+      (s) =>
+        collections.includes(s.badge.collection) &&
+        !prefs.hidden.includes(s.badge.collection) &&
+        !s.earned &&
+        !s.off,
+    )
     .sort((a, b) => remaining(a) / a.badge.goal - remaining(b) / b.badge.goal)[0];
   if (!next) return null;
   const pct = Math.round((Math.min(next.count, next.badge.goal) / next.badge.goal) * 100);
   return (
     <TooltipProvider delayDuration={150}>
-    <Tooltip>
-    <TooltipTrigger asChild>
-    <Link to="/profile" hash="badges" aria-label={`Next badge: ${next.badge.title}. ${next.badge.milestone}. ${pct}% there.`}
-      className={`flex w-full items-center gap-2.5 rounded-lg border border-border bg-card px-2.5 py-2 text-left transition hover:border-primary sm:w-56 ${className}`}>
-      <img src={shelfArt(next)} alt="" className="h-8 w-8 shrink-0 object-contain opacity-60 grayscale" />
-      <span className="min-w-0 flex-1 space-y-0.5">
-        <span className="block text-[9px] font-bold uppercase tracking-widest text-primary">Badge</span>
-        <span className="block truncate text-xs font-semibold leading-tight">{next.badge.title}</span>
-        <span className="block truncate text-[11px] leading-snug text-muted-foreground">{next.badge.action}</span>
-        <span role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={pct} className="mt-1 block h-1 overflow-hidden rounded-full bg-muted">
-          <span className="block h-full rounded-full bg-primary transition-[width] duration-700" style={{ width: `${Math.max(pct, 4)}%` }} />
-        </span>
-      </span>
-    </Link>
-    </TooltipTrigger>
-    <TooltipContent side="bottom" align="end" className="max-w-64 space-y-1 border border-border bg-popover px-3 py-2 text-popover-foreground">
-      <p className="font-semibold">{next.badge.milestone}</p>
-      <p className="text-muted-foreground">{next.badge.description}</p>
-    </TooltipContent>
-    </Tooltip>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Link
+            to="/profile"
+            hash="badges"
+            aria-label={`Next badge: ${next.badge.title}. ${next.badge.milestone}. ${pct}% there.`}
+            className={`flex w-full items-center gap-2.5 rounded-lg border border-border bg-card px-2.5 py-2 text-left transition hover:border-primary sm:w-56 ${className}`}
+          >
+            <img
+              src={shelfArt(next)}
+              alt=""
+              className="h-8 w-8 shrink-0 object-contain opacity-60 grayscale"
+            />
+            <span className="min-w-0 flex-1 space-y-0.5">
+              <span className="block text-[9px] font-bold uppercase tracking-widest text-primary">
+                Badge
+              </span>
+              <span className="block truncate text-xs font-semibold leading-tight">
+                {next.badge.title}
+              </span>
+              <span className="block truncate text-[11px] leading-snug text-muted-foreground">
+                {next.badge.action}
+              </span>
+              <span
+                role="progressbar"
+                aria-valuemin={0}
+                aria-valuemax={100}
+                aria-valuenow={pct}
+                className="mt-1 block h-1 overflow-hidden rounded-full bg-muted"
+              >
+                <span
+                  className="block h-full rounded-full bg-primary transition-[width] duration-700"
+                  style={{ width: `${Math.max(pct, 4)}%` }}
+                />
+              </span>
+            </span>
+          </Link>
+        </TooltipTrigger>
+        <TooltipContent
+          side="bottom"
+          align="end"
+          className="max-w-64 space-y-1 border border-border bg-popover px-3 py-2 text-popover-foreground"
+        >
+          <p className="font-semibold">{next.badge.milestone}</p>
+          <p className="text-muted-foreground">{next.badge.description}</p>
+        </TooltipContent>
+      </Tooltip>
     </TooltipProvider>
   );
 }
@@ -252,18 +453,31 @@ type Size = "large" | "small";
 const UP_NEXT = 3;
 
 /** Profile shelf: earned badges and the next few locked ones, grouped by collection. */
-export function BadgeShelf({ userId, size, onOpen }: { userId: string; size: Size; onOpen: (s: BadgeState, list: BadgeState[]) => void }) {
+export function BadgeShelf({
+  userId,
+  size,
+  onOpen,
+}: {
+  userId: string;
+  size: Size;
+  onOpen: (s: BadgeState, list: BadgeState[]) => void;
+}) {
   const { states, isLoading, isError } = useBadgeStates(userId);
   const prefs = badgePrefs(loadOnboarding(userId));
   if (isLoading) return <p className="text-sm text-muted-foreground">Loading your badges…</p>;
-  if (isError) return <p className="text-sm text-destructive">Couldn't load your badges. Refresh to try again.</p>;
-  const groups = COLLECTIONS.filter((c) => !prefs.hidden.includes(c.id)).map((c) => {
-    const mine = states.filter((s) => s.badge.collection === c.id);
-    const earned = mine.filter((s) => s.earned);
-    const started = c.always || earned.length > 0 || mine.some((s) => s.count > 0);
-    const locked = started ? mine.filter((s) => !s.earned && !s.off).slice(0, UP_NEXT) : [];
-    return { ...c, earned, locked, total: mine.length };
-  }).filter((g) => g.earned.length || g.locked.length);
+  if (isError)
+    return (
+      <p className="text-sm text-destructive">Couldn't load your badges. Refresh to try again.</p>
+    );
+  const groups = COLLECTIONS.filter((c) => !prefs.hidden.includes(c.id))
+    .map((c) => {
+      const mine = states.filter((s) => s.badge.collection === c.id);
+      const earned = mine.filter((s) => s.earned);
+      const started = c.always || earned.length > 0 || mine.some((s) => s.count > 0);
+      const locked = started ? mine.filter((s) => !s.earned && !s.off).slice(0, UP_NEXT) : [];
+      return { ...c, earned, locked, total: mine.length };
+    })
+    .filter((g) => g.earned.length || g.locked.length);
   // Large is the size small used to be and small is half that (founder, 2026-11-07): each step doubles the columns, so a
   // logo's width halves while every tile stays square. The spacing shrinks with the tiles so the halving is real, not eaten
   // by gaps the same width as a logo.
@@ -273,25 +487,71 @@ export function BadgeShelf({ userId, size, onOpen }: { userId: string; size: Siz
   return (
     <div className="space-y-8">
       {groups.map((g, gi) => (
-        <details key={g.id} open={gi === 0 || g.earned.some(isNew)} className="group/c border-t border-border pt-4 first:border-t-0 first:pt-0">
+        <details
+          key={g.id}
+          open={gi === 0 || g.earned.some(isNew)}
+          className="group/c border-t border-border pt-4 first:border-t-0 first:pt-0"
+        >
           <summary className="flex cursor-pointer list-none items-baseline justify-between gap-3">
             <h3 className="text-xs font-bold uppercase tracking-widest text-primary">{g.title}</h3>
-            <span className="flex items-center gap-2 text-xs text-muted-foreground">{g.earned.length} of {g.total} earned<ChevronRight className="h-4 w-4 transition group-open/c:rotate-90" /></span>
+            <span className="flex items-center gap-2 text-xs text-muted-foreground">
+              {g.earned.length} of {g.total} earned
+              <ChevronRight className="h-4 w-4 transition group-open/c:rotate-90" />
+            </span>
           </summary>
           <ul className={`mt-4 grid ${gap} ${grid}`}>
-            {[...g.earned, ...g.locked].map((s) => <li key={s.badge.id}>
-              <button type="button" onClick={() => onOpen(s, groups.flatMap((x) => [...x.earned, ...x.locked]))} aria-label={s.earned ? `View ${s.badge.title}` : `${s.badge.title} (locked): ${s.badge.milestone}`}
-                className={`group flex w-full flex-col items-center gap-2 rounded-xl ${pad} text-center transition hover:bg-accent/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring`}>
-                <span className="relative flex aspect-square w-full items-center justify-center">
-                  <img src={shelfArt(s)} alt="" loading="lazy" className={`h-full w-full object-contain transition ${s.earned ? "drop-shadow-lg group-hover:drop-shadow-2xl" : "opacity-30 grayscale"}`} />
-                  {!s.earned && <Lock className="absolute h-6 w-6 text-muted-foreground" />}
-                  {(s.earned?.times ?? 0) > 1 && <span className="cta-badge-count absolute right-0 top-0" aria-label={`Earned ${s.earned!.times} times`}>×{s.earned!.times}</span>}
-                  {isNew(s) && <span className="absolute left-0 top-0 rounded-full bg-primary px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-primary-foreground">New</span>}
-                </span>
-                <span className={`font-semibold ${size === "large" ? "text-sm" : "text-[10px] leading-tight"} ${s.earned ? "" : "text-muted-foreground"}`}>{s.badge.title}</span>
-                {!s.earned && s.badge.goal > 1 && <span className="text-xs text-muted-foreground">{Math.min(s.count, s.badge.goal)}/{s.badge.goal}</span>}
-              </button>
-            </li>)}
+            {[...g.earned, ...g.locked].map((s) => (
+              <li key={s.badge.id}>
+                <button
+                  type="button"
+                  onClick={() =>
+                    onOpen(
+                      s,
+                      groups.flatMap((x) => [...x.earned, ...x.locked]),
+                    )
+                  }
+                  aria-label={
+                    s.earned
+                      ? `View ${s.badge.title}`
+                      : `${s.badge.title} (locked): ${s.badge.milestone}`
+                  }
+                  className={`group flex w-full flex-col items-center gap-2 rounded-xl ${pad} text-center transition hover:bg-accent/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring`}
+                >
+                  <span className="relative flex aspect-square w-full items-center justify-center">
+                    <img
+                      src={shelfArt(s)}
+                      alt=""
+                      loading="lazy"
+                      className={`h-full w-full object-contain transition ${s.earned ? "drop-shadow-lg group-hover:drop-shadow-2xl" : "opacity-30 grayscale"}`}
+                    />
+                    {!s.earned && <Lock className="absolute h-6 w-6 text-muted-foreground" />}
+                    {(s.earned?.times ?? 0) > 1 && (
+                      <span
+                        className="cta-badge-count absolute right-0 top-0"
+                        aria-label={`Earned ${s.earned!.times} times`}
+                      >
+                        ×{s.earned!.times}
+                      </span>
+                    )}
+                    {isNew(s) && (
+                      <span className="absolute left-0 top-0 rounded-full bg-primary px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-primary-foreground">
+                        New
+                      </span>
+                    )}
+                  </span>
+                  <span
+                    className={`font-semibold ${size === "large" ? "text-sm" : "text-[10px] leading-tight"} ${s.earned ? "" : "text-muted-foreground"}`}
+                  >
+                    {s.badge.title}
+                  </span>
+                  {!s.earned && s.badge.goal > 1 && (
+                    <span className="text-xs text-muted-foreground">
+                      {Math.min(s.count, s.badge.goal)}/{s.badge.goal}
+                    </span>
+                  )}
+                </button>
+              </li>
+            ))}
           </ul>
         </details>
       ))}
@@ -303,47 +563,150 @@ export function BadgeShelf({ userId, size, onOpen }: { userId: string; size: Siz
  * Close-up of one badge, floating large in the middle of the screen with no box (founder, 2026-10-25): description
  * underneath, ← → (keys or swipe) to browse the list it was opened from, and earned badges can become the profile picture.
  */
-export function BadgeDetail({ state, list = [], artist, onClose, onShare, onMove, onUseAsAvatar }: {
-  state?: BadgeState | undefined; list?: BadgeState[]; artist?: string | undefined; onClose: () => void;
-  onShare?: ((s: BadgeState) => void) | undefined; onMove?: ((s: BadgeState) => void) | undefined; onUseAsAvatar?: ((src: string) => void) | undefined;
+export function BadgeDetail({
+  state,
+  list = [],
+  artist,
+  onClose,
+  onShare,
+  onMove,
+  onUseAsAvatar,
+}: {
+  state?: BadgeState | undefined;
+  list?: BadgeState[];
+  artist?: string | undefined;
+  onClose: () => void;
+  onShare?: ((s: BadgeState) => void) | undefined;
+  onMove?: ((s: BadgeState) => void) | undefined;
+  onUseAsAvatar?: ((src: string) => void) | undefined;
 }) {
   const s = state;
   const at = s ? list.findIndex((x) => x.badge.id === s.badge.id) : -1;
-  const go = (d: number) => { if (at < 0 || !list.length || !onMove) return; onMove(list[(at + d + list.length) % list.length]!); };
+  const go = (d: number) => {
+    if (at < 0 || !list.length || !onMove) return;
+    onMove(list[(at + d + list.length) % list.length]!);
+  };
   const touch = useRef<number | null>(null);
   return (
     <Dialog open={!!s} onOpenChange={(o) => !o && onClose()}>
-      {s && <DialogContent className="max-h-[95svh] max-w-[min(94vw,46rem)] overflow-y-auto border-0 bg-transparent p-2 text-white shadow-none [&>button]:text-white"
-        onKeyDown={(e) => { if (e.key === "ArrowRight") go(1); if (e.key === "ArrowLeft") go(-1); }}
-        onTouchStart={(e) => { touch.current = e.touches[0]?.clientX ?? null; }}
-        onTouchEnd={(e) => { const x = e.changedTouches[0]?.clientX; if (touch.current != null && x != null && Math.abs(x - touch.current) > 50) go(x < touch.current ? 1 : -1); touch.current = null; }}>
-        <div className="flex items-center gap-2">
-          {list.length > 1 && onMove && <Button type="button" variant="ghost" size="icon" aria-label="Previous badge" className="shrink-0 text-white hover:bg-white/10 hover:text-white" onClick={() => go(-1)}><ChevronLeft className="h-7 w-7" /></Button>}
-          <img src={shelfArt(s)} alt="" className={`cta-badge-float mx-auto max-h-[52svh] w-full min-w-0 object-contain ${s.earned ? "drop-shadow-2xl" : "opacity-40 grayscale"}`} />
-          {list.length > 1 && onMove && <Button type="button" variant="ghost" size="icon" aria-label="Next badge" className="shrink-0 text-white hover:bg-white/10 hover:text-white" onClick={() => go(1)}><ChevronRight className="h-7 w-7" /></Button>}
-        </div>
-        <div className="mx-auto max-w-lg space-y-2 text-center">
-          <TierChip badge={s.badge} />
-          <DialogTitle className="text-2xl font-bold text-white">{s.badge.title}</DialogTitle>
-          <DialogDescription className="text-base text-white/80">{s.earned ? s.badge.description : `Locked. ${s.badge.milestone}.`}</DialogDescription>
-          {s.earned
-            ? <p className="text-sm text-white/80"><span className="font-semibold text-white">Earned </span>{new Date(s.earned.earnedAt).toLocaleDateString(undefined, { month: "long", day: "numeric", year: "numeric" })}{s.earned.times > 1 ? ` · ${s.earned.times} times` : ""}</p>
-            : <>
-              <p className="text-sm text-white/80"><span className="font-semibold text-white">Progress: </span>{Math.min(s.count, s.badge.goal)} of {s.badge.goal}</p>
-              <div className="mx-auto h-2 max-w-xs overflow-hidden rounded-full bg-white/20" role="progressbar" aria-valuemin={0} aria-valuemax={s.badge.goal} aria-valuenow={Math.min(s.count, s.badge.goal)}>
-                <div className="h-full bg-primary" style={{ width: `${Math.min(100, (s.count / s.badge.goal) * 100)}%` }} />
+      {s && (
+        <DialogContent
+          className="max-h-[95svh] max-w-[min(94vw,46rem)] overflow-y-auto border-0 bg-transparent p-2 text-white shadow-none [&>button]:text-white"
+          onKeyDown={(e) => {
+            if (e.key === "ArrowRight") go(1);
+            if (e.key === "ArrowLeft") go(-1);
+          }}
+          onTouchStart={(e) => {
+            touch.current = e.touches[0]?.clientX ?? null;
+          }}
+          onTouchEnd={(e) => {
+            const x = e.changedTouches[0]?.clientX;
+            if (touch.current != null && x != null && Math.abs(x - touch.current) > 50)
+              go(x < touch.current ? 1 : -1);
+            touch.current = null;
+          }}
+        >
+          <div className="flex items-center gap-2">
+            {list.length > 1 && onMove && (
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                aria-label="Previous badge"
+                className="shrink-0 text-white hover:bg-white/10 hover:text-white"
+                onClick={() => go(-1)}
+              >
+                <ChevronLeft className="h-7 w-7" />
+              </Button>
+            )}
+            <img
+              src={shelfArt(s)}
+              alt=""
+              className={`cta-badge-float mx-auto max-h-[52svh] w-full min-w-0 object-contain ${s.earned ? "drop-shadow-2xl" : "opacity-40 grayscale"}`}
+            />
+            {list.length > 1 && onMove && (
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                aria-label="Next badge"
+                className="shrink-0 text-white hover:bg-white/10 hover:text-white"
+                onClick={() => go(1)}
+              >
+                <ChevronRight className="h-7 w-7" />
+              </Button>
+            )}
+          </div>
+          <div className="mx-auto max-w-lg space-y-2 text-center">
+            <TierChip badge={s.badge} />
+            <DialogTitle className="text-2xl font-bold text-white">{s.badge.title}</DialogTitle>
+            <DialogDescription className="text-base text-white/80">
+              {s.earned ? s.badge.description : `Locked. ${s.badge.milestone}.`}
+            </DialogDescription>
+            {s.earned ? (
+              <p className="text-sm text-white/80">
+                <span className="font-semibold text-white">Earned </span>
+                {new Date(s.earned.earnedAt).toLocaleDateString(undefined, {
+                  month: "long",
+                  day: "numeric",
+                  year: "numeric",
+                })}
+                {s.earned.times > 1 ? ` · ${s.earned.times} times` : ""}
+              </p>
+            ) : (
+              <>
+                <p className="text-sm text-white/80">
+                  <span className="font-semibold text-white">Progress: </span>
+                  {Math.min(s.count, s.badge.goal)} of {s.badge.goal}
+                </p>
+                <div
+                  className="mx-auto h-2 max-w-xs overflow-hidden rounded-full bg-white/20"
+                  role="progressbar"
+                  aria-valuemin={0}
+                  aria-valuemax={s.badge.goal}
+                  aria-valuenow={Math.min(s.count, s.badge.goal)}
+                >
+                  <div
+                    className="h-full bg-primary"
+                    style={{ width: `${Math.min(100, (s.count / s.badge.goal) * 100)}%` }}
+                  />
+                </div>
+              </>
+            )}
+            {s.earned && s.badge.every && (
+              <p className="text-sm text-white/80">
+                <span className="font-semibold text-white">Earn it again: </span>
+                {s.count} of {nextGoal(s.badge, s.count)}
+              </p>
+            )}
+            {s.earned && (
+              <p className="text-sm italic text-white/70">
+                “{withArtist(earningPopup(s.badge, s.earned.times), artist)}”
+              </p>
+            )}
+            {s.earned && (onShare || onUseAsAvatar) && (
+              <div className="flex flex-wrap justify-center gap-2 pt-1">
+                {onUseAsAvatar && (
+                  <Button variant="secondary" onClick={() => onUseAsAvatar(shelfArt(s))}>
+                    Use as my profile picture
+                  </Button>
+                )}
+                {onShare && <Button onClick={() => onShare(s)}>Share your badge</Button>}
               </div>
-            </>}
-          {s.earned && s.badge.every && <p className="text-sm text-white/80"><span className="font-semibold text-white">Earn it again: </span>{s.count} of {nextGoal(s.badge, s.count)}</p>}
-          {s.earned && <p className="text-sm italic text-white/70">“{withArtist(earningPopup(s.badge, s.earned.times), artist)}”</p>}
-          {s.earned && (onShare || onUseAsAvatar) && <div className="flex flex-wrap justify-center gap-2 pt-1">
-            {onUseAsAvatar && <Button variant="secondary" onClick={() => onUseAsAvatar(shelfArt(s))}>Use as my profile picture</Button>}
-            {onShare && <Button onClick={() => onShare(s)}>Share your badge</Button>}
-          </div>}
-          {list.length > 1 && <p className="text-xs text-white/50">{at + 1} of {list.length}</p>}
-        </div>
-        {s.earned && s.earned.times > 1 && <div className="rounded-2xl bg-card p-4 text-card-foreground"><Earnings state={s} /></div>}
-      </DialogContent>}
+            )}
+            {list.length > 1 && (
+              <p className="text-xs text-white/50">
+                {at + 1} of {list.length}
+              </p>
+            )}
+          </div>
+          {s.earned && s.earned.times > 1 && (
+            <div className="rounded-2xl bg-card p-4 text-card-foreground">
+              <Earnings state={s} />
+            </div>
+          )}
+        </DialogContent>
+      )}
     </Dialog>
   );
 }
@@ -355,24 +718,55 @@ function Earnings({ state }: { state: BadgeState }) {
   const times = earned?.times ?? 0;
   // Badges earned before dates were kept have only their first date; later dates line up from the most recent.
   const gap = times - log.length;
-  const items = Array.from({ length: times }, (_, i) => (i === 0 ? log[0] : i > gap ? log[i - gap] : undefined));
+  const items = Array.from({ length: times }, (_, i) =>
+    i === 0 ? log[0] : i > gap ? log[i - gap] : undefined,
+  );
   return (
     <section className="space-y-3 border-t border-border pt-5">
-      <h3 className="text-xs font-bold uppercase tracking-widest text-primary">Earned {times} times</h3>
+      <h3 className="text-xs font-bold uppercase tracking-widest text-primary">
+        Earned {times} times
+      </h3>
       <ol className="grid grid-cols-4 gap-4 sm:grid-cols-6">
-        {items.map((e, i) => <li key={i} className="flex flex-col items-center gap-1 text-center">
-          <img src={artFor(badge, e?.pick, i + 1, state.art)} alt="" loading="lazy" className="aspect-square w-full object-contain drop-shadow-md" />
-          <span className="text-xs text-muted-foreground">{e?.at ? new Date(e.at).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" }) : `#${i + 1}`}</span>
-        </li>)}
+        {items.map((e, i) => (
+          <li key={i} className="flex flex-col items-center gap-1 text-center">
+            <img
+              src={artFor(badge, e?.pick, i + 1, state.art)}
+              alt=""
+              loading="lazy"
+              className="aspect-square w-full object-contain drop-shadow-md"
+            />
+            <span className="text-xs text-muted-foreground">
+              {e?.at
+                ? new Date(e.at).toLocaleDateString(undefined, {
+                    month: "short",
+                    day: "numeric",
+                    year: "numeric",
+                  })
+                : `#${i + 1}`}
+            </span>
+          </li>
+        ))}
       </ol>
     </section>
   );
 }
 
 /** Badge settings: what shows, never what's earned. Saved with the profile so it follows the user across devices. */
-export function BadgeSettings({ userId, open, onOpenChange, onSaved }: { userId: string; open: boolean; onOpenChange: (o: boolean) => void; onSaved?: (o: Onboarding) => void }) {
+export function BadgeSettings({
+  userId,
+  open,
+  onOpenChange,
+  onSaved,
+}: {
+  userId: string;
+  open: boolean;
+  onOpenChange: (o: boolean) => void;
+  onSaved?: (o: Onboarding) => void;
+}) {
   const [prefs, setPrefs] = useState<BadgePrefs>(() => badgePrefs(loadOnboarding(userId)));
-  useEffect(() => { if (open) setPrefs(badgePrefs(loadOnboarding(userId))); }, [open, userId]);
+  useEffect(() => {
+    if (open) setPrefs(badgePrefs(loadOnboarding(userId)));
+  }, [open, userId]);
   function save(next: BadgePrefs) {
     setPrefs(next);
     const ob = loadOnboarding(userId);
@@ -381,42 +775,91 @@ export function BadgeSettings({ userId, open, onOpenChange, onSaved }: { userId:
     saveOnboarding(userId, updated);
     onSaved?.(updated);
   }
-  const choices = [["all", "All"], ["big", "Big moments only"], ["off", "Off"]] as const;
+  const choices = [
+    ["all", "All"],
+    ["big", "Big moments only"],
+    ["off", "Off"],
+  ] as const;
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-h-[90svh] overflow-y-auto bg-card text-card-foreground">
         <DialogHeader>
           <DialogTitle className="text-xl font-bold">Badge settings</DialogTitle>
-          <DialogDescription>You keep earning badges no matter what you choose here. These settings only change what you see.</DialogDescription>
+          <DialogDescription>
+            You keep earning badges no matter what you choose here. These settings only change what
+            you see.
+          </DialogDescription>
         </DialogHeader>
         <div className="space-y-6">
           <fieldset className="space-y-2">
             <legend className="text-sm font-semibold">Celebrations</legend>
-            <p className="text-xs text-muted-foreground">"Big moments only" celebrates MEGA and Ultimate badges and quietly adds the rest. With celebrations off, new badges wait for you until you turn them back on.</p>
-            <div role="radiogroup" aria-label="Celebrations" className="flex flex-wrap rounded-lg border border-border p-0.5">
-              {choices.map(([v, label]) => <button key={v} type="button" role="radio" aria-checked={prefs.celebrations === v} onClick={() => save({ ...prefs, celebrations: v })}
-                className={`rounded-md px-3 py-1.5 text-sm font-semibold transition ${prefs.celebrations === v ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}>{label}</button>)}
+            <p className="text-xs text-muted-foreground">
+              "Big moments only" celebrates MEGA and Ultimate badges and quietly adds the rest. With
+              celebrations off, new badges wait for you until you turn them back on.
+            </p>
+            <div
+              role="radiogroup"
+              aria-label="Celebrations"
+              className="flex flex-wrap rounded-lg border border-border p-0.5"
+            >
+              {choices.map(([v, label]) => (
+                <button
+                  key={v}
+                  type="button"
+                  role="radio"
+                  aria-checked={prefs.celebrations === v}
+                  onClick={() => save({ ...prefs, celebrations: v })}
+                  className={`rounded-md px-3 py-1.5 text-sm font-semibold transition ${prefs.celebrations === v ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}
+                >
+                  {label}
+                </button>
+              ))}
             </div>
           </fieldset>
           <label className="flex items-start justify-between gap-4">
-            <span><span className="block text-sm font-semibold">Next-badge hints</span><span className="text-xs text-muted-foreground">Shows how close you are to your next badge in My Catalog, Embed Metadata and the Royalties and Registrations.</span></span>
+            <span>
+              <span className="block text-sm font-semibold">Next-badge hints</span>
+              <span className="text-xs text-muted-foreground">
+                Shows how close you are to your next badge in My Catalog, Embed Metadata and the
+                Royalties and Registrations.
+              </span>
+            </span>
             <Switch checked={prefs.hints} onCheckedChange={(v) => save({ ...prefs, hints: v })} />
           </label>
           <label className="flex items-start justify-between gap-4">
-            <span><span className="block text-sm font-semibold">Badge sharing</span><span className="text-xs text-muted-foreground">Shows the share card with your earned badges.</span></span>
+            <span>
+              <span className="block text-sm font-semibold">Badge sharing</span>
+              <span className="text-xs text-muted-foreground">
+                Shows the share card with your earned badges.
+              </span>
+            </span>
             <Switch checked={prefs.share} onCheckedChange={(v) => save({ ...prefs, share: v })} />
           </label>
           <fieldset className="space-y-2">
             <legend className="text-sm font-semibold">Collections</legend>
-            <p className="text-xs text-muted-foreground">Turn off collections that don't fit your music. Hidden collections still earn quietly.</p>
+            <p className="text-xs text-muted-foreground">
+              Turn off collections that don't fit your music. Hidden collections still earn quietly.
+            </p>
             <ul className="divide-y divide-border rounded-lg border border-border">
-              {COLLECTIONS.map((c) => <li key={c.id}>
-                <label className="flex items-center justify-between gap-4 px-3 py-2 text-sm">
-                  {c.title}
-                  <Switch checked={!prefs.hidden.includes(c.id)} aria-label={`Show ${c.title}`}
-                    onCheckedChange={(v) => save({ ...prefs, hidden: v ? prefs.hidden.filter((h) => h !== c.id) : [...prefs.hidden, c.id] })} />
-                </label>
-              </li>)}
+              {COLLECTIONS.map((c) => (
+                <li key={c.id}>
+                  <label className="flex items-center justify-between gap-4 px-3 py-2 text-sm">
+                    {c.title}
+                    <Switch
+                      checked={!prefs.hidden.includes(c.id)}
+                      aria-label={`Show ${c.title}`}
+                      onCheckedChange={(v) =>
+                        save({
+                          ...prefs,
+                          hidden: v
+                            ? prefs.hidden.filter((h) => h !== c.id)
+                            : [...prefs.hidden, c.id],
+                        })
+                      }
+                    />
+                  </label>
+                </li>
+              ))}
             </ul>
           </fieldset>
           <StartOver userId={userId} />
@@ -432,31 +875,50 @@ function StartOver({ userId }: { userId: string }) {
   const qc = useQueryClient();
   const [busy, setBusy] = useState(false);
   async function run() {
-    if (!(await confirmAction({
-      title: "Reset all your badges?",
-      text: "All of your badges will disappear, and you'll have to earn each one again from the start. Badges for work you still have saved, like songs in My Catalog, come back on their own. This can't be undone.",
-      action: "Reset badges",
-    }))) return;
+    if (
+      !(await confirmAction({
+        title: "Reset all your badges?",
+        text: "All of your badges will disappear, and you'll have to earn each one again from the start. Badges for work you still have saved, like songs in My Catalog, come back on their own. This can't be undone.",
+        action: "Reset badges",
+      }))
+    )
+      return;
     setBusy(true);
     try {
       await reset();
       // The "stars aligned" catalog celebration plays again too.
-      try { localStorage.removeItem(`cta.catalogComplete.${userId}`); } catch { /* storage blocked */ }
+      try {
+        localStorage.removeItem(`cta.catalogComplete.${userId}`);
+      } catch {
+        /* storage blocked */
+      }
       await qc.invalidateQueries({ queryKey: ["badges", userId] });
       toast.success("Badges reset. Time to earn them again.");
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Couldn't reset your badges.");
-    } finally { setBusy(false); }
+    } finally {
+      setBusy(false);
+    }
   }
   return (
     <div className="space-y-2 border-t border-border pt-4">
       <p className="text-sm font-semibold">Start over</p>
-      <p className="text-xs text-muted-foreground">⚠️ Resetting removes all of your badges. You'll earn them again, and see every celebration again, as you rebuild your catalog.</p>
-      <Button type="button" variant="outline" size="sm" disabled={busy} onClick={run}>{busy ? "Resetting…" : "Reset my badges"}</Button>
+      <p className="text-xs text-muted-foreground">
+        ⚠️ Resetting removes all of your badges. You'll earn them again, and see every celebration
+        again, as you rebuild your catalog.
+      </p>
+      <Button type="button" variant="outline" size="sm" disabled={busy} onClick={run}>
+        {busy ? "Resetting…" : "Reset my badges"}
+      </Button>
     </div>
   );
 }
 
 export function BadgeSettingsButton({ onClick }: { onClick: () => void }) {
-  return <Button variant="outline" size="sm" onClick={onClick}><Settings2 />Badge settings</Button>;
+  return (
+    <Button variant="outline" size="sm" onClick={onClick}>
+      <Settings2 />
+      Badge settings
+    </Button>
+  );
 }

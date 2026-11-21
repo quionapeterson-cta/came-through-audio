@@ -14,12 +14,15 @@ export const FOUNDER_ROLE_LABEL = "The Founder";
 export const FOUNDER_DISPLAY_NAME = "Mrs. Peterson";
 
 /** Minimal profile shape: the name is whatever the claims or the profile row carries. */
-export type StaffNameSource = {
-  name?: string | null | undefined;
-  full_name?: string | null | undefined;
-  display_name?: string | null | undefined;
-  email?: string | null | undefined;
-} | null | undefined;
+export type StaffNameSource =
+  | {
+      name?: string | null | undefined;
+      full_name?: string | null | undefined;
+      display_name?: string | null | undefined;
+      email?: string | null | undefined;
+    }
+  | null
+  | undefined;
 
 export function isFounder(role: string | null | undefined): boolean {
   return role === FOUNDER_ROLE;
@@ -41,7 +44,10 @@ export function formatStaffRoleLabel(role: string | null | undefined): string {
  * The name shown for a person: "Mrs. Peterson" for the founder, otherwise their own name, then their address, then a
  * neutral word. A personal address is a last resort, never the first thing staff see.
  */
-export function formatStaffDisplayName(role: string | null | undefined, profile?: StaffNameSource): string {
+export function formatStaffDisplayName(
+  role: string | null | undefined,
+  profile?: StaffNameSource,
+): string {
   if (isFounder(role)) return FOUNDER_DISPLAY_NAME;
   const named = (profile?.name ?? profile?.full_name ?? profile?.display_name ?? "").trim();
   if (named) return named.slice(0, 100);
@@ -56,7 +62,11 @@ export function founderHandoffLabel(): string {
 }
 
 /** "Approved by Mrs. Peterson" / "Approved by Dana" — one shape for every action line. */
-export function staffActionLabel(verb: string, role: string | null | undefined, profile?: StaffNameSource): string {
+export function staffActionLabel(
+  verb: string,
+  role: string | null | undefined,
+  profile?: StaffNameSource,
+): string {
   return `${verb} by ${formatStaffDisplayName(role, profile)}`;
 }
 

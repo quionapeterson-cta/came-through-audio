@@ -47,7 +47,12 @@ export function blankAudit(): AuditTrail {
 }
 
 /** One more stop on the trail. The address is kept per screen, so a second fix in the same audit updates the hop. */
-export function recordStop(trail: AuditTrail, screen: AuditScreen, href: string, songId?: string): AuditTrail {
+export function recordStop(
+  trail: AuditTrail,
+  screen: AuditScreen,
+  href: string,
+  songId?: string,
+): AuditTrail {
   const hrefs = { ...trail.hrefs, [screen]: href };
   const order = AUDIT_SCREENS.filter((s) => !!hrefs[s]);
   return { ...trail, hrefs, order, ...(songId ? { songId } : {}) };
@@ -90,28 +95,44 @@ export function readAudit(): AuditTrail | null {
     const order = AUDIT_SCREENS.filter((s) => !!hrefs[s]);
     if (!order.length) return null;
     const queue = Array.isArray(t.queue)
-      ? t.queue.filter((s): s is AuditSong => !!s && typeof s === "object" && typeof (s as AuditSong).id === "string")
-        .map((s) => ({ id: s.id, ...(typeof s.field === "string" ? { field: s.field } : {}) }))
+      ? t.queue
+          .filter(
+            (s): s is AuditSong =>
+              !!s && typeof s === "object" && typeof (s as AuditSong).id === "string",
+          )
+          .map((s) => ({ id: s.id, ...(typeof s.field === "string" ? { field: s.field } : {}) }))
       : [];
     return {
-      order, hrefs, queue,
+      order,
+      hrefs,
+      queue,
       ...(typeof t.songId === "string" ? { songId: t.songId } : {}),
       ...(typeof t.title === "string" ? { title: t.title } : {}),
       ...(typeof t.detail === "string" ? { detail: t.detail } : {}),
     };
-  } catch { return null; }
+  } catch {
+    return null;
+  }
 }
 
 /** Saves the trail and tells the workspace, so the bar appears the moment the first hop lands. */
 export function saveAudit(trail: AuditTrail) {
   if (typeof window === "undefined") return;
-  try { window.sessionStorage.setItem(KEY, JSON.stringify(trail)); } catch { /* a full or blocked storage simply has no trail */ }
+  try {
+    window.sessionStorage.setItem(KEY, JSON.stringify(trail));
+  } catch {
+    /* a full or blocked storage simply has no trail */
+  }
   window.dispatchEvent(new Event(AUDIT_EVENT));
 }
 
 /** Ends the audit: the trail is dropped and the bar goes away. Songs and reports are untouched. */
 export function endAudit() {
   if (typeof window === "undefined") return;
-  try { window.sessionStorage.removeItem(KEY); } catch { /* nothing to clear */ }
+  try {
+    window.sessionStorage.removeItem(KEY);
+  } catch {
+    /* nothing to clear */
+  }
   window.dispatchEvent(new Event(AUDIT_EVENT));
 }

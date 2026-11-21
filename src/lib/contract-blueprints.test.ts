@@ -1,16 +1,30 @@
 import { describe, expect, it } from "vitest";
-import { BLUEPRINTS, CATEGORIES, COMPANY_BLUEPRINTS, fillBlanks, initialFields, missingFields, renderContract } from "./contract-blueprints";
+import {
+  BLUEPRINTS,
+  CATEGORIES,
+  COMPANY_BLUEPRINTS,
+  fillBlanks,
+  initialFields,
+  missingFields,
+  renderContract,
+} from "./contract-blueprints";
 
 const ALL = [...BLUEPRINTS, ...COMPANY_BLUEPRINTS];
-const partiesFor = (roles: readonly string[]) => roles.map((role, i) => ({ role, legalName: `Person ${i + 1}` }));
-const filled = (bp: (typeof ALL)[number]) => ({ ...initialFields(bp), ...Object.fromEntries(bp.fields.filter((f) => f.required).map((f) => [f.key, `x-${f.key}`])) });
+const partiesFor = (roles: readonly string[]) =>
+  roles.map((role, i) => ({ role, legalName: `Person ${i + 1}` }));
+const filled = (bp: (typeof ALL)[number]) => ({
+  ...initialFields(bp),
+  ...Object.fromEntries(bp.fields.filter((f) => f.required).map((f) => [f.key, `x-${f.key}`])),
+});
 
 describe("contract blueprints", () => {
   it("every token has a matching field or party role", () => {
     for (const bp of ALL) {
       const keys = new Set(bp.fields.map((f) => f.key));
-      for (const [, key] of bp.body.matchAll(/\{\{(\w+)\}\}/g)) expect(keys, `${bp.id}: {{${key}}}`).toContain(key);
-      for (const [, role] of bp.body.matchAll(/\{\{party:([^}]+)\}\}/g)) expect(bp.roles, `${bp.id}: party ${role}`).toContain(role);
+      for (const [, key] of bp.body.matchAll(/\{\{(\w+)\}\}/g))
+        expect(keys, `${bp.id}: {{${key}}}`).toContain(key);
+      for (const [, role] of bp.body.matchAll(/\{\{party:([^}]+)\}\}/g))
+        expect(bp.roles, `${bp.id}: party ${role}`).toContain(role);
     }
   });
 
@@ -24,7 +38,10 @@ describe("contract blueprints", () => {
   it("optional details never hold back signing, even left blank", () => {
     for (const bp of ALL) {
       expect(missingFields(bp, filled(bp)), bp.id).toEqual([]);
-      expect(missingFields(bp, {}).every((f) => f.required), bp.id).toBe(true);
+      expect(
+        missingFields(bp, {}).every((f) => f.required),
+        bp.id,
+      ).toBe(true);
     }
   });
 
@@ -39,7 +56,10 @@ describe("contract blueprints", () => {
 
   it("company agreements are governed by Georgia law, with no field for it", () => {
     for (const bp of COMPANY_BLUEPRINTS) {
-      expect(bp.fields.some((f) => f.key === "governingLaw"), bp.id).toBe(false);
+      expect(
+        bp.fields.some((f) => f.key === "governingLaw"),
+        bp.id,
+      ).toBe(false);
       expect(bp.body, bp.id).toContain("the laws of the State of Georgia");
     }
   });
@@ -72,11 +92,15 @@ describe("contract blueprints", () => {
 describe("dropPrelaunch", async () => {
   const { dropPrelaunch, COMPANY_BLUEPRINTS } = await import("./contract-blueprints");
   it("removes the pre-launch section and renumbers what follows", () => {
-    const body = "11. LAUNCH GIFT\nGift.\n\n12. PRE-LAUNCH CONFIDENTIALITY\nSecret.\n\n13. GENERAL\nLaw.\n\n14. SIGNATURES\nSign.";
-    expect(dropPrelaunch(body)).toBe("11. LAUNCH GIFT\nGift.\n\n12. GENERAL\nLaw.\n\n13. SIGNATURES\nSign.");
+    const body =
+      "11. LAUNCH GIFT\nGift.\n\n12. PRE-LAUNCH CONFIDENTIALITY\nSecret.\n\n13. GENERAL\nLaw.\n\n14. SIGNATURES\nSign.";
+    expect(dropPrelaunch(body)).toBe(
+      "11. LAUNCH GIFT\nGift.\n\n12. GENERAL\nLaw.\n\n13. SIGNATURES\nSign.",
+    );
   });
   it("cleans every company template that has the clause", () => {
-    for (const bp of COMPANY_BLUEPRINTS) expect(dropPrelaunch(bp.body)).not.toContain("PRE-LAUNCH CONFIDENTIALITY");
+    for (const bp of COMPANY_BLUEPRINTS)
+      expect(dropPrelaunch(bp.body)).not.toContain("PRE-LAUNCH CONFIDENTIALITY");
   });
   it("leaves bodies without the clause alone", () => {
     expect(dropPrelaunch("1. TERMS\nx")).toBe("1. TERMS\nx");
@@ -91,8 +115,12 @@ describe("own PRO and IPI prefill, gated by who drafts", () => {
   const fieldOf = (bp: typeof producerDeal, key: string) => bp.fields.find((f) => f.key === key)!;
   it("fills a producer's own details on the deal the producer drafts", () => {
     expect(draftingRole(producerDeal)).toBe("Producer");
-    expect(takesOwnRegistration(fieldOf(producerDeal, "pro"), draftingRole(producerDeal))).toBe(true);
-    expect(takesOwnRegistration(fieldOf(producerDeal, "ipi"), draftingRole(producerDeal))).toBe(true);
+    expect(takesOwnRegistration(fieldOf(producerDeal, "pro"), draftingRole(producerDeal))).toBe(
+      true,
+    );
+    expect(takesOwnRegistration(fieldOf(producerDeal, "ipi"), draftingRole(producerDeal))).toBe(
+      true,
+    );
   });
   it("leaves the producer's details blank on the deal the artist drafts", () => {
     expect(draftingRole(artistDeal)).toBe("Artist");

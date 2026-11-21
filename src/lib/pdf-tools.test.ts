@@ -14,7 +14,12 @@ async function formPdf() {
 }
 
 // A 1×1 transparent PNG.
-const PNG = Uint8Array.from(atob("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII="), (c) => c.charCodeAt(0));
+const PNG = Uint8Array.from(
+  atob(
+    "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=",
+  ),
+  (c) => c.charCodeAt(0),
+);
 
 describe("buildPdf", () => {
   it("returns the uploaded file untouched when nothing was added", async () => {
@@ -23,7 +28,9 @@ describe("buildPdf", () => {
   });
 
   it("fills only the boxes that were changed and keeps the form fillable", async () => {
-    const out = await PDFDocument.load(await buildPdf(await formPdf(), { name: "Jordan Lee", agree: true }, []));
+    const out = await PDFDocument.load(
+      await buildPdf(await formPdf(), { name: "Jordan Lee", agree: true }, []),
+    );
     const form = out.getForm();
     expect(form.getTextField("name").getText()).toBe("Jordan Lee");
     expect(form.getCheckBox("agree").isChecked()).toBe(true);

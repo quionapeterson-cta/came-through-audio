@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { dueDepartureReminder, departureOn, keepsAccountOnPayment, leftWithinProbation, planRecycles } from "./offboarding";
+import {
+  dueDepartureReminder,
+  departureOn,
+  keepsAccountOnPayment,
+  leftWithinProbation,
+  planRecycles,
+} from "./offboarding";
 
 const now = new Date("2026-11-05T12:00:00Z");
 
@@ -24,12 +30,22 @@ describe("offboarding", () => {
   });
 
   it("sends the ended email first, then the week-before reminder once", () => {
-    const row = { access_ended_at: "2026-11-05T12:00:00Z", delete_on: "2026-12-05T12:00:00Z", reminders: [] as string[] };
+    const row = {
+      access_ended_at: "2026-11-05T12:00:00Z",
+      delete_on: "2026-12-05T12:00:00Z",
+      reminders: [] as string[],
+    };
     expect(dueDepartureReminder(row, now)).toBe("ended");
     expect(dueDepartureReminder({ ...row, reminders: ["ended"] }, now)).toBeNull();
-    expect(dueDepartureReminder({ ...row, reminders: ["ended"] }, new Date("2026-12-01T12:00:00Z"))).toBe("7");
-    expect(dueDepartureReminder({ ...row, reminders: ["ended", "7"] }, new Date("2026-12-01T12:00:00Z"))).toBeNull();
-    expect(dueDepartureReminder({ ...row, reminders: ["ended"] }, new Date("2026-12-06T12:00:00Z"))).toBeNull();
+    expect(
+      dueDepartureReminder({ ...row, reminders: ["ended"] }, new Date("2026-12-01T12:00:00Z")),
+    ).toBe("7");
+    expect(
+      dueDepartureReminder({ ...row, reminders: ["ended", "7"] }, new Date("2026-12-01T12:00:00Z")),
+    ).toBeNull();
+    expect(
+      dueDepartureReminder({ ...row, reminders: ["ended"] }, new Date("2026-12-06T12:00:00Z")),
+    ).toBeNull();
   });
 
   it("stops the deletion for anyone who pays, and recycles the plan past 90 days", () => {
@@ -41,6 +57,11 @@ describe("offboarding", () => {
   });
 
   it("sends nothing when no deletion is scheduled", () => {
-    expect(dueDepartureReminder({ access_ended_at: "2026-11-05T12:00:00Z", delete_on: null, reminders: [] }, now)).toBeNull();
+    expect(
+      dueDepartureReminder(
+        { access_ended_at: "2026-11-05T12:00:00Z", delete_on: null, reminders: [] },
+        now,
+      ),
+    ).toBeNull();
   });
 });

@@ -1,21 +1,72 @@
 import { existsSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { ALL_BADGES, BADGES, badgeById, nextGoal, rotationArt, timesEarned, withArtist } from "@/lib/badges";
+import {
+  ALL_BADGES,
+  BADGES,
+  badgeById,
+  nextGoal,
+  rotationArt,
+  timesEarned,
+  withArtist,
+} from "@/lib/badges";
 import { artUrl } from "@/lib/art-url";
-import { badgeMetrics, evaluateBadges, instrumentOf, localTime, type BadgeData } from "@/lib/badge-rules";
+import {
+  badgeMetrics,
+  evaluateBadges,
+  instrumentOf,
+  localTime,
+  type BadgeData,
+} from "@/lib/badge-rules";
 import { emptyMetadata, type Contributor, type Metadata } from "@/lib/metadata";
 
-const writer = (legalName: string, role: string, percentage: string): Contributor => ({ name: legalName, legalName, role, pro: "", ipi: "", percentage });
+const writer = (legalName: string, role: string, percentage: string): Contributor => ({
+  name: legalName,
+  legalName,
+  role,
+  pro: "",
+  ipi: "",
+  percentage,
+});
 let n = 0;
 const track = (patch: Partial<Metadata> = {}, createdAt = "2026-10-20T15:00:00Z") => {
-  const metadata = { ...emptyMetadata(), title: `Song ${++n}`, artist: "CTAudio", writers: [], composers: [], ...patch };
-  return { id: `t${n}`, title: metadata.title, artist: metadata.artist, updatedAt: createdAt, createdAt, metadata };
+  const metadata = {
+    ...emptyMetadata(),
+    title: `Song ${++n}`,
+    artist: "CTAudio",
+    writers: [],
+    composers: [],
+    ...patch,
+  };
+  return {
+    id: `t${n}`,
+    title: metadata.title,
+    artist: metadata.artist,
+    updatedAt: createdAt,
+    createdAt,
+    metadata,
+  };
 };
 const ready = (patch: Partial<Metadata> = {}, createdAt?: string) =>
-  track({ writers: [writer("Ava Writer", "Author", "50"), writer("Ben Beats", "Composer", "50")], ...patch }, createdAt);
+  track(
+    {
+      writers: [writer("Ava Writer", "Author", "50"), writer("Ben Beats", "Composer", "50")],
+      ...patch,
+    },
+    createdAt,
+  );
 const data = (patch: Partial<BadgeData> = {}): BadgeData => ({
-  tracks: [], splits: [], contracts: [], checks: [], certificates: [], events: { agency_export: 0, master_download: 0, blueprint_read: 0 },
-  welcomed: false, names: [], accountCreatedAt: "2026-10-01T00:00:00Z", timeZone: "America/New_York", now: new Date("2026-10-21T00:00:00Z"), ...patch,
+  tracks: [],
+  splits: [],
+  contracts: [],
+  checks: [],
+  certificates: [],
+  events: { agency_export: 0, master_download: 0, blueprint_read: 0 },
+  welcomed: false,
+  names: [],
+  accountCreatedAt: "2026-10-01T00:00:00Z",
+  timeZone: "America/New_York",
+  now: new Date("2026-10-21T00:00:00Z"),
+  ...patch,
 });
 
 describe("badge catalog", () => {
@@ -23,7 +74,9 @@ describe("badge catalog", () => {
     expect(new Set(ALL_BADGES.map((b) => b.id)).size).toBe(ALL_BADGES.length);
   });
   it("only offers badges whose art is in the repo, unless it lives in the bucket on purpose", () => {
-    const missing = BADGES.filter((b) => !b.artInBucket && !existsSync(`public${b.src}`)).map((b) => b.src);
+    const missing = BADGES.filter((b) => !b.artInBucket && !existsSync(`public${b.src}`)).map(
+      (b) => b.src,
+    );
     expect(missing).toEqual([]);
     // Only a picture the founder uploaded to R2 by hand, with no repo copy yet, may skip the check, and each one is named
     // here so a mistyped path can't hide behind the exemption. With VITE_ART_BASE unset that tile is blank by design.
@@ -35,20 +88,37 @@ describe("badge catalog", () => {
   });
   it("carries no crown badge, and Royalty Health keeps only the clean-report badge", () => {
     // The founder removed all three crowns as a poor fit (2026-11-08); a healthy song earns no badge of its own now.
-    expect(["silver_crown", "jeweled_crown", "gold_crown"].filter((id) => badgeById(id))).toEqual([]);
-    expect(ALL_BADGES.filter((b) => b.collection === "health").map((b) => b.id)).toEqual(["health_report_matched"]);
+    expect(["silver_crown", "jeweled_crown", "gold_crown"].filter((id) => badgeById(id))).toEqual(
+      [],
+    );
+    expect(ALL_BADGES.filter((b) => b.collection === "health").map((b) => b.id)).toEqual([
+      "health_report_matched",
+    ]);
   });
   it("has nothing left waiting on art, so every badge can be earned", () => {
     expect(BADGES.filter((b) => b.collection === "lyrics")).toHaveLength(9);
     expect(ALL_BADGES.filter((b) => b.artPending).map((b) => b.id)).toEqual([]);
-    expect(BADGES.map((b) => b.id)).toEqual(expect.arrayContaining(["ai_slayer", "full_album", "full_ep", "unbreakable_2", "unbreakable_5"]));
+    expect(BADGES.map((b) => b.id)).toEqual(
+      expect.arrayContaining([
+        "ai_slayer",
+        "full_album",
+        "full_ep",
+        "unbreakable_2",
+        "unbreakable_5",
+      ]),
+    );
   });
   it("only offers art choices that exist", () => {
-    for (const b of ALL_BADGES) for (const c of b.choices ?? []) expect(existsSync(`public${c}`)).toBe(true);
+    for (const b of ALL_BADGES)
+      for (const c of b.choices ?? []) expect(existsSync(`public${c}`)).toBe(true);
   });
   it("places live-musician art at its step: cobalt at 1 (again every 5), medallion at 10, star-studded at 25", () => {
     expect(badgeById("live_vocals_1")).toMatchObject({ goal: 1, every: 5 });
-    expect(badgeById("live_steel_pan_1")).toMatchObject({ goal: 1, every: 5, src: expect.stringContaining("live_musicians/steel_pan.webp") });
+    expect(badgeById("live_steel_pan_1")).toMatchObject({
+      goal: 1,
+      every: 5,
+      src: expect.stringContaining("live_musicians/steel_pan.webp"),
+    });
     expect(badgeById("live_steel_pan_10")?.src).toContain("medallion");
     expect(badgeById("live_steel_pan_25")?.src).toContain("star_studded");
     expect(badgeById("live_cello_25")?.src).toContain("star_studded_cello");
@@ -64,16 +134,23 @@ describe("badge catalog", () => {
     expect(rotationArt(badgeById("embedded")!, 11)).not.toBe(artUrl(badgeById("embedded")!.src));
     // The gold lock is the every-time lyric badge, and the first lyric has its own badge beside it (founder, 2026-11-08).
     const lyric = badgeById("lyric_locked_gold")!;
-    expect([1, 12, 40].map((n) => rotationArt(lyric, n))).toEqual([1, 12, 40].map(() => artUrl(lyric.src)));
+    expect([1, 12, 40].map((n) => rotationArt(lyric, n))).toEqual(
+      [1, 12, 40].map(() => artUrl(lyric.src)),
+    );
     // First Lyric Entry keeps its own copy in the repo, so it draws everywhere, bucket base or not (founder, 2026-11-08).
-    expect(badgeById("first_lyric_entry")).toMatchObject({ goal: 1, src: expect.stringContaining("lyrics/1_first_lyric_entry_alt.webp") });
+    expect(badgeById("first_lyric_entry")).toMatchObject({
+      goal: 1,
+      src: expect.stringContaining("lyrics/1_first_lyric_entry_alt.webp"),
+    });
     expect(badgeById("first_lyric_entry")?.artInBucket).toBeFalsy();
     expect(badgeById("first_lyric_entry")?.every).toBeUndefined();
   });
 
   it("fills or drops the artist name in pop-ups", () => {
     expect(withArtist("This is huge, {artist}.", "Karma Came")).toBe("This is huge, Karma Came.");
-    expect(withArtist("crown on, {artist}. You made history.", "")).toBe("crown on. You made history.");
+    expect(withArtist("crown on, {artist}. You made history.", "")).toBe(
+      "crown on. You made history.",
+    );
   });
 });
 
@@ -95,102 +172,244 @@ describe("instrument matching", () => {
 
 describe("badge metrics", () => {
   it("counts songs, lyrics, stored masters and Registration Ready songs", () => {
-    const m = badgeMetrics(data({ tracks: [ready({ lyrics: "la la" }), track({ lyrics: "  " }), track({ audioPath: "u/t/master.mp3" })] }));
+    const m = badgeMetrics(
+      data({
+        tracks: [
+          ready({ lyrics: "la la" }),
+          track({ lyrics: "  " }),
+          track({ audioPath: "u/t/master.mp3" }),
+        ],
+      }),
+    );
     expect(m).toMatchObject({ songs: 3, lyrics: 1, masters: 1, ready: 1 });
   });
 
   it("counts night-shift saves in the user's own time zone", () => {
     // 02:30 UTC is 10:30 PM the evening before in New York.
     const evening = Array.from({ length: 5 }, (_, i) => track({}, `2026-10-21T02:${10 + i}:00Z`));
-    const m = badgeMetrics(data({ tracks: [...evening, track({}, "2026-10-21T05:30:00Z"), track({}, "2026-10-21T09:00:00Z")] }));
+    const m = badgeMetrics(
+      data({
+        tracks: [...evening, track({}, "2026-10-21T05:30:00Z"), track({}, "2026-10-21T09:00:00Z")],
+      }),
+    );
     expect(m).toMatchObject({ marathonNights: 1, midnightNights: 1, quietMornings: 1 });
     expect(localTime("2026-10-21T02:30:00Z", "Not/AZone")).toEqual({ date: "2026-10-21", hour: 2 });
   });
 
   it("counts fully signed split sheets on the user's own songs only", () => {
-    const a = ready(), b = ready();
-    const row = (catalogId: string, signedAt: string | null, isOwner = false, role = "Writer") => ({ catalogId, isOwner, role, signedAt });
-    const m = badgeMetrics(data({
-      tracks: [a, b],
-      splits: [row(a.id, "x", true), row(a.id, "x"), row(a.id, "x"), row(a.id, "x", false, "Publisher"),
-        row(b.id, "x", true), row(b.id, null), row("someone-else", "x"), row("someone-else", "x")],
-    }));
-    expect(m).toMatchObject({ splitsCreated: 2, splitsSigned: 1, signedSplits3: 1, signedSplits4: 0, collaboratorSigned: 1, signaturesReceived: 3 });
+    const a = ready(),
+      b = ready();
+    const row = (catalogId: string, signedAt: string | null, isOwner = false, role = "Writer") => ({
+      catalogId,
+      isOwner,
+      role,
+      signedAt,
+    });
+    const m = badgeMetrics(
+      data({
+        tracks: [a, b],
+        splits: [
+          row(a.id, "x", true),
+          row(a.id, "x"),
+          row(a.id, "x"),
+          row(a.id, "x", false, "Publisher"),
+          row(b.id, "x", true),
+          row(b.id, null),
+          row("someone-else", "x"),
+          row("someone-else", "x"),
+        ],
+      }),
+    );
+    expect(m).toMatchObject({
+      splitsCreated: 2,
+      splitsSigned: 1,
+      signedSplits3: 1,
+      signedSplits4: 0,
+      collaboratorSigned: 1,
+      signaturesReceived: 3,
+    });
   });
 
   it("adds signed split sheets and contracts together for Deal Maker", () => {
     const a = ready();
-    const m = badgeMetrics(data({
-      tracks: [a], splits: [{ catalogId: a.id, isOwner: true, role: "Writer", signedAt: "x" }],
-      contracts: [{ status: "signed", parties: [] }, { status: "sent", parties: [] }, { status: "draft", parties: [] }],
-    }));
-    expect(m).toMatchObject({ contractsDrafted: 3, contractsSent: 2, contractsSigned: 1, deals: 2 });
+    const m = badgeMetrics(
+      data({
+        tracks: [a],
+        splits: [{ catalogId: a.id, isOwner: true, role: "Writer", signedAt: "x" }],
+        contracts: [
+          { status: "signed", parties: [] },
+          { status: "sent", parties: [] },
+          { status: "draft", parties: [] },
+        ],
+      }),
+    );
+    expect(m).toMatchObject({
+      contractsDrafted: 3,
+      contractsSent: 2,
+      contractsSigned: 1,
+      deals: 2,
+    });
   });
 
   it("finds Chain of Title songs: ready, splits at 100%, signed sheet and a timestamp", () => {
-    const a = ready(), b = ready();
-    const m = badgeMetrics(data({
-      tracks: [a, b],
-      splits: [a, b].map((t) => ({ catalogId: t.id, isOwner: true, role: "Writer", signedAt: "x" })),
-      certificates: [{ catalogId: a.id, trackTitle: a.title, timestamped: true }],
-    }));
+    const a = ready(),
+      b = ready();
+    const m = badgeMetrics(
+      data({
+        tracks: [a, b],
+        splits: [a, b].map((t) => ({
+          catalogId: t.id,
+          isOwner: true,
+          role: "Writer",
+          signedAt: "x",
+        })),
+        certificates: [{ catalogId: a.id, trackTitle: a.title, timestamped: true }],
+      }),
+    );
     expect(m).toMatchObject({ chainOfTitle: 1, timestamped: 1, protected: 1 });
   });
 
   it("counts releases of 3+ tracks where every track is ready", () => {
-    const album = [ready({ album: "Came Through" }), ready({ album: "came through " }), ready({ album: "Came Through" })];
+    const album = [
+      ready({ album: "Came Through" }),
+      ready({ album: "came through " }),
+      ready({ album: "Came Through" }),
+    ];
     expect(badgeMetrics(data({ tracks: album }))["readyReleases"]).toBe(1);
-    expect(badgeMetrics(data({ tracks: [...album, track({ album: "Came Through" })] }))["readyReleases"]).toBe(0);
+    expect(
+      badgeMetrics(data({ tracks: [...album, track({ album: "Came Through" })] }))["readyReleases"],
+    ).toBe(0);
   });
 
   it("matches the user's names in Produced by, and genres for the genre collections", () => {
-    const m = badgeMetrics(data({
-      names: ["Karma Came"],
-      tracks: [
-        track({ producers: [{ name: "karma came", pro: "", ipi: "", percentage: "" }], primaryGenre: "Hip-Hop/Rap" }),
-        track({ producers: [{ name: "Someone Else", pro: "", ipi: "", percentage: "" }], secondaryGenre: "Spiritual Hip-Hop" }),
-      ],
-    }));
+    const m = badgeMetrics(
+      data({
+        names: ["Karma Came"],
+        tracks: [
+          track({
+            producers: [{ name: "karma came", pro: "", ipi: "", percentage: "" }],
+            primaryGenre: "Hip-Hop/Rap",
+          }),
+          track({
+            producers: [{ name: "Someone Else", pro: "", ipi: "", percentage: "" }],
+            secondaryGenre: "Spiritual Hip-Hop",
+          }),
+        ],
+      }),
+    );
     expect(m).toMatchObject({ produced: 1, hiphop: 1, spiritual: 1 });
   });
 
   it("counts performer credits by instrument", () => {
-    const m = badgeMetrics(data({ tracks: [track({ credits: [
-      { role: "Session musician", name: "P1", instrument: "Piano" }, { role: "Session musician", name: "P2", instrument: "Keys" },
-      { role: "Backup vocalist", name: "V", instrument: "" }, { role: "Mixing engineer", name: "E", instrument: "" },
-    ] })] }));
-    expect(m).toMatchObject({ "instrument:piano": 2, "instrument:vocals": 1, performerCredits: 3, vocalSongs: 1, fullBandSongs: 1 });
+    const m = badgeMetrics(
+      data({
+        tracks: [
+          track({
+            credits: [
+              { role: "Session musician", name: "P1", instrument: "Piano" },
+              { role: "Session musician", name: "P2", instrument: "Keys" },
+              { role: "Backup vocalist", name: "V", instrument: "" },
+              { role: "Mixing engineer", name: "E", instrument: "" },
+            ],
+          }),
+        ],
+      }),
+    );
+    expect(m).toMatchObject({
+      "instrument:piano": 2,
+      "instrument:vocals": 1,
+      performerCredits: 3,
+      vocalSongs: 1,
+      fullBandSongs: 1,
+    });
   });
 
   it("counts every signature from someone else on the user's split sheets and contracts", () => {
     const a = ready();
-    const m = badgeMetrics(data({
-      tracks: [a],
-      splits: [{ catalogId: a.id, isOwner: true, role: "Writer", signedAt: "x" }, { catalogId: a.id, isOwner: false, role: "Writer", signedAt: "x" }],
-      contracts: [{ status: "signed", parties: [{ isOwner: true, signedAt: "x" }, { isOwner: false, signedAt: "x" }, { isOwner: false, signedAt: null }] }],
-    }));
+    const m = badgeMetrics(
+      data({
+        tracks: [a],
+        splits: [
+          { catalogId: a.id, isOwner: true, role: "Writer", signedAt: "x" },
+          { catalogId: a.id, isOwner: false, role: "Writer", signedAt: "x" },
+        ],
+        contracts: [
+          {
+            status: "signed",
+            parties: [
+              { isOwner: true, signedAt: "x" },
+              { isOwner: false, signedAt: "x" },
+              { isOwner: false, signedAt: null },
+            ],
+          },
+        ],
+      }),
+    );
     expect(m["signaturesReceived"]).toBe(2);
   });
 
   it("counts full EPs (4 to 6 songs) and albums (7+), using the track totals when entered", () => {
-    const project = (name: string, n: number, total = "", ext = "mp3") => Array.from({ length: n }, (_, i) => track({ album: name, trackTotal: total, audioPath: `u/${name}/${i}.${ext}` }));
-    const m = badgeMetrics(data({ tracks: [...project("EP", 5), ...project("Half", 4, "10"), ...project("LP", 8, "", "wav"), ...project("Seven", 7)] }));
+    const project = (name: string, n: number, total = "", ext = "mp3") =>
+      Array.from({ length: n }, (_, i) =>
+        track({ album: name, trackTotal: total, audioPath: `u/${name}/${i}.${ext}` }),
+      );
+    const m = badgeMetrics(
+      data({
+        tracks: [
+          ...project("EP", 5),
+          ...project("Half", 4, "10"),
+          ...project("LP", 8, "", "wav"),
+          ...project("Seven", 7),
+        ],
+      }),
+    );
     expect(m).toMatchObject({ fullEps: 1, fullAlbums: 2, masterCrowns: 1 });
-    expect(badgeMetrics(data({ events: { agency_export: 0, master_download: 2, blueprint_read: 0 } }))["masterCrowns"]).toBe(1);
+    expect(
+      badgeMetrics(data({ events: { agency_export: 0, master_download: 2, blueprint_read: 0 } }))[
+        "masterCrowns"
+      ],
+    ).toBe(1);
   });
 
   it("counts self-produced Ready songs: the track's artist is also in Produced by", () => {
-    const m = badgeMetrics(data({ tracks: [
-      ready({ artist: "Karma Came", producers: [{ name: "karma came", pro: "", ipi: "", percentage: "" }] }),
-      track({ artist: "Karma Came", producers: [{ name: "Karma Came", pro: "", ipi: "", percentage: "" }] }),
-      ready({ artist: "Karma Came", producers: [{ name: "Someone Else", pro: "", ipi: "", percentage: "" }] }),
-    ] }));
+    const m = badgeMetrics(
+      data({
+        tracks: [
+          ready({
+            artist: "Karma Came",
+            producers: [{ name: "karma came", pro: "", ipi: "", percentage: "" }],
+          }),
+          track({
+            artist: "Karma Came",
+            producers: [{ name: "Karma Came", pro: "", ipi: "", percentage: "" }],
+          }),
+          ready({
+            artist: "Karma Came",
+            producers: [{ name: "Someone Else", pro: "", ipi: "", percentage: "" }],
+          }),
+        ],
+      }),
+    );
     expect(m["selfProduced"]).toBe(1);
   });
 
   it("counts health-check months, not checks", () => {
-    const check = (checkedAt: string) => ({ trackId: "t", society: "BMI", status: "found" as const, source: "self" as const, checkedAt });
-    const m = badgeMetrics(data({ checks: [check("2026-09-02T12:00:00Z"), check("2026-09-20T12:00:00Z"), check("2026-10-01T12:00:00Z")] }));
+    const check = (checkedAt: string) => ({
+      trackId: "t",
+      society: "BMI",
+      status: "found" as const,
+      source: "self" as const,
+      checkedAt,
+    });
+    const m = badgeMetrics(
+      data({
+        checks: [
+          check("2026-09-02T12:00:00Z"),
+          check("2026-09-20T12:00:00Z"),
+          check("2026-10-01T12:00:00Z"),
+        ],
+      }),
+    );
     expect(m["healthCheckMonths"]).toBe(2);
   });
 
@@ -207,8 +426,12 @@ describe("evaluateBadges", () => {
     expect(s.find((x) => x.badge.id === "unbreakable")).toMatchObject({ earned: false, times: 0 });
   });
   it("repeats from the goal by each step", () => {
-    expect([0, 1, 4, 5, 10].map((c) => timesEarned({ goal: 1, every: 5 }, c))).toEqual([0, 1, 1, 2, 3]);
-    expect([99, 100, 199, 200].map((c) => timesEarned({ goal: 100, every: 100 }, c))).toEqual([0, 1, 1, 2]);
+    expect([0, 1, 4, 5, 10].map((c) => timesEarned({ goal: 1, every: 5 }, c))).toEqual([
+      0, 1, 1, 2, 3,
+    ]);
+    expect([99, 100, 199, 200].map((c) => timesEarned({ goal: 100, every: 100 }, c))).toEqual([
+      0, 1, 1, 2,
+    ]);
     expect([4, 5, 10].map((c) => timesEarned({ goal: 5, every: 5 }, c))).toEqual([0, 1, 2]);
     expect(timesEarned({ goal: 10 }, 50)).toBe(1);
     expect(nextGoal({ goal: 100, every: 100 }, 130)).toBe(200);
@@ -220,7 +443,11 @@ describe("evaluateBadges", () => {
     expect(s.find((x) => x.badge.id === "encourager")?.times).toBe(2);
   });
   it("skips badges staff switched off", () => {
-    expect(evaluateBadges({ songs: 1 }, new Set(["first_note"])).some((x) => x.badge.id === "first_note")).toBe(false);
+    expect(
+      evaluateBadges({ songs: 1 }, new Set(["first_note"])).some(
+        (x) => x.badge.id === "first_note",
+      ),
+    ).toBe(false);
   });
 });
 
@@ -235,23 +462,66 @@ describe("every-time task badges", () => {
     expect(rotationArt(sealed, 61)).toBe(badgeById("fist_bump_deal")!.src); // cycles after the last
     expect(earningPopup(sealed, 1)).toBe(sealed.popup);
     expect(earningPopup(sealed, 12)).toBe("Sealed! Your 12th split sheet is signed by everyone.");
-    expect([1, 2, 3, 4, 11, 12, 13, 21, 22, 101].map(ordinal)).toEqual(["1st", "2nd", "3rd", "4th", "11th", "12th", "13th", "21st", "22nd", "101st"]);
+    expect([1, 2, 3, 4, 11, 12, 13, 21, 22, 101].map(ordinal)).toEqual([
+      "1st",
+      "2nd",
+      "3rd",
+      "4th",
+      "11th",
+      "12th",
+      "13th",
+      "21st",
+      "22nd",
+      "101st",
+    ]);
   });
   it("AI Protection set: Time Witness every 10 songs, Sound Sealed on the first Bitcoin timestamp, Shield Up at 10, Key Keeper at 25", () => {
-    const m = badgeMetrics(data({ certificates: [
-      { catalogId: "a", trackTitle: "A", timestamped: false },
-      { catalogId: "b", trackTitle: "B", timestamped: true },
-    ] }));
+    const m = badgeMetrics(
+      data({
+        certificates: [
+          { catalogId: "a", trackTitle: "A", timestamped: false },
+          { catalogId: "b", trackTitle: "B", timestamped: true },
+        ],
+      }),
+    );
     expect(m).toMatchObject({ protected: 2, timestamped: 1 });
-    const earned = (metrics: Record<string, number>) => evaluateBadges(metrics).filter((x) => x.earned && x.badge.collection === "ai").map((x) => [x.badge.id, x.times]);
+    const earned = (metrics: Record<string, number>) =>
+      evaluateBadges(metrics)
+        .filter((x) => x.earned && x.badge.collection === "ai")
+        .map((x) => [x.badge.id, x.times]);
     // AI Slayer ships with every certificate, so it comes with the first protected song (founder, 2026-11-07).
-    expect(earned(m)).toEqual([["time_witness", 1], ["ai_slayer", 2], ["sound_sealed", 1]]);
-    expect(earned({ protected: 50, timestamped: 50 })).toEqual([["time_witness", 6], ["ai_slayer", 50], ["shield_up", 5], ["sound_sealed", 1], ["key_keeper", 2]]);
-    expect(badgeById("time_witness")?.rotation).toEqual(["shield_up", "sound_sealed", "key_keeper"]);
+    expect(earned(m)).toEqual([
+      ["time_witness", 1],
+      ["ai_slayer", 2],
+      ["sound_sealed", 1],
+    ]);
+    expect(earned({ protected: 50, timestamped: 50 })).toEqual([
+      ["time_witness", 6],
+      ["ai_slayer", 50],
+      ["shield_up", 5],
+      ["sound_sealed", 1],
+      ["key_keeper", 2],
+    ]);
+    expect(badgeById("time_witness")?.rotation).toEqual([
+      "shield_up",
+      "sound_sealed",
+      "key_keeper",
+    ]);
   });
   it("has one every-time badge for each task", async () => {
     const { badgeById } = await import("@/lib/badges");
-    for (const id of ["embedded", "came_strong", "lyric_locked_gold", "sealed", "blueprints_checked", "contract_signed", "executive_contract", "cover_single", "cover_ep", "cover_album"]) {
+    for (const id of [
+      "embedded",
+      "came_strong",
+      "lyric_locked_gold",
+      "sealed",
+      "blueprints_checked",
+      "contract_signed",
+      "executive_contract",
+      "cover_single",
+      "cover_ep",
+      "cover_album",
+    ]) {
       expect(badgeById(id)).toMatchObject({ goal: 1, every: 1 });
     }
   });
@@ -260,17 +530,29 @@ describe("every-time task badges", () => {
 describe("cover art by release kind", () => {
   const art = { artPath: "u/t/artwork.jpg", artWidth: 3000, artHeight: 3000 };
   const many = (kind: string, count: number, patch: Partial<Metadata> = {}) =>
-    Array.from({ length: count }, (_, i) => track({ releaseType: kind, title: `${kind} ${i}`, album: kind === "Single" ? "" : `The ${kind}`, ...art, ...patch }));
+    Array.from({ length: count }, (_, i) =>
+      track({
+        releaseType: kind,
+        title: `${kind} ${i}`,
+        album: kind === "Single" ? "" : `The ${kind}`,
+        ...art,
+        ...patch,
+      }),
+    );
 
   it("counts each kind on its own, so a single never earns the album picture", () => {
-    const m = badgeMetrics(data({ tracks: [...many("Single", 2), ...many("EP", 1), ...many("Album", 1)] }));
+    const m = badgeMetrics(
+      data({ tracks: [...many("Single", 2), ...many("EP", 1), ...many("Album", 1)] }),
+    );
     expect(m).toMatchObject({ singleArt: 2, epArt: 1, albumArt: 1, artUploads: 4 });
   });
   it("awards a cover star every 12 singles and every 3 EPs", () => {
     expect(badgeMetrics(data({ tracks: many("Single", 11) }))["coverStarSteps"]).toBe(0);
     expect(badgeMetrics(data({ tracks: many("Single", 12) }))["coverStarSteps"]).toBe(1);
     expect(badgeMetrics(data({ tracks: many("EP", 3) }))["coverStarSteps"]).toBe(1);
-    expect(badgeMetrics(data({ tracks: [...many("Single", 24), ...many("EP", 6)] }))["coverStarSteps"]).toBe(4);
+    expect(
+      badgeMetrics(data({ tracks: [...many("Single", 24), ...many("EP", 6)] }))["coverStarSteps"],
+    ).toBe(4);
   });
   it("turns an album's picture over on every earning", () => {
     const album = badgeById("cover_album")!;
@@ -291,26 +573,65 @@ describe("cover art by release kind", () => {
     expect(timesEarned(badgeById("cover_star_20")!, 40)).toBe(2);
   });
   it("holds Platinum Press until a release that was unreleased is scheduled with a 3000×3000 cover", () => {
-    const scheduled = many("Album", 2, { wasUnreleased: true, unreleased: false, releaseDate: "2026-12-01" });
-    expect(badgeMetrics(data({ tracks: scheduled }))["platinumPress"]).toBe(1);
-    expect(badgeMetrics(data({ tracks: many("Album", 2, { wasUnreleased: true, unreleased: true, releaseDate: "2026-12-01" }) }))["platinumPress"]).toBe(0);
-    expect(badgeMetrics(data({ tracks: many("Album", 2, { wasUnreleased: true, unreleased: false, releaseDate: "2026-12-01", artWidth: 1400, artHeight: 1400 }) }))["platinumPress"]).toBe(0);
-  });
-    it("counts only 3000×3000 art toward the platinum stars", () => {
-      const hi = { artWidth: 3000, artHeight: 3000 };
-      const small = { artWidth: 1400, artHeight: 1400 };
-      // An album is one cover, so each album needs its own art path to count on its own.
-      const albumAt = (i: number, size: number) => track({
-        releaseType: "Album", title: `Album ${i}`, album: `Album ${i}`,
-        artPath: `u/t/album-${size}-${i}.jpg`, artWidth: size, artHeight: size,
-      });
-      expect(badgeMetrics(data({ tracks: [0, 1, 2].map((i) => albumAt(i, 3000)) }))).toMatchObject({ hiResAlbumArt: 3 });
-      expect(badgeMetrics(data({ tracks: [0, 1, 2].map((i) => albumAt(i, 1400)) }))).toMatchObject({ hiResAlbumArt: 0 });
-      expect(badgeMetrics(data({ tracks: many("Single", 20, hi) }))).toMatchObject({ hiResSingleArt: 20 });
-      expect(badgeMetrics(data({ tracks: many("Single", 20, small) }))).toMatchObject({ hiResSingleArt: 0 });
-      // Gold Cover Star and Platinum Albums both read the hi-res album count, so a 4th hi-res album is their 2nd/1st.
-      expect(timesEarned(badgeById("album_cover_star")!, 8)).toBe(2);
-      expect(timesEarned(badgeById("album_cover_star_platinum")!, 3)).toBe(1);
-      expect(timesEarned(badgeById("album_cover_star_platinum")!, 6)).toBe(2);
+    const scheduled = many("Album", 2, {
+      wasUnreleased: true,
+      unreleased: false,
+      releaseDate: "2026-12-01",
     });
+    expect(badgeMetrics(data({ tracks: scheduled }))["platinumPress"]).toBe(1);
+    expect(
+      badgeMetrics(
+        data({
+          tracks: many("Album", 2, {
+            wasUnreleased: true,
+            unreleased: true,
+            releaseDate: "2026-12-01",
+          }),
+        }),
+      )["platinumPress"],
+    ).toBe(0);
+    expect(
+      badgeMetrics(
+        data({
+          tracks: many("Album", 2, {
+            wasUnreleased: true,
+            unreleased: false,
+            releaseDate: "2026-12-01",
+            artWidth: 1400,
+            artHeight: 1400,
+          }),
+        }),
+      )["platinumPress"],
+    ).toBe(0);
+  });
+  it("counts only 3000×3000 art toward the platinum stars", () => {
+    const hi = { artWidth: 3000, artHeight: 3000 };
+    const small = { artWidth: 1400, artHeight: 1400 };
+    // An album is one cover, so each album needs its own art path to count on its own.
+    const albumAt = (i: number, size: number) =>
+      track({
+        releaseType: "Album",
+        title: `Album ${i}`,
+        album: `Album ${i}`,
+        artPath: `u/t/album-${size}-${i}.jpg`,
+        artWidth: size,
+        artHeight: size,
+      });
+    expect(badgeMetrics(data({ tracks: [0, 1, 2].map((i) => albumAt(i, 3000)) }))).toMatchObject({
+      hiResAlbumArt: 3,
+    });
+    expect(badgeMetrics(data({ tracks: [0, 1, 2].map((i) => albumAt(i, 1400)) }))).toMatchObject({
+      hiResAlbumArt: 0,
+    });
+    expect(badgeMetrics(data({ tracks: many("Single", 20, hi) }))).toMatchObject({
+      hiResSingleArt: 20,
+    });
+    expect(badgeMetrics(data({ tracks: many("Single", 20, small) }))).toMatchObject({
+      hiResSingleArt: 0,
+    });
+    // Gold Cover Star and Platinum Albums both read the hi-res album count, so a 4th hi-res album is their 2nd/1st.
+    expect(timesEarned(badgeById("album_cover_star")!, 8)).toBe(2);
+    expect(timesEarned(badgeById("album_cover_star_platinum")!, 3)).toBe(1);
+    expect(timesEarned(badgeById("album_cover_star_platinum")!, 6)).toBe(2);
+  });
 });

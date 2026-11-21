@@ -58,7 +58,8 @@ export type ChargeReading = {
 export function paymentState(status: string, captured?: boolean | null): PaymentState {
   if (status === "requires_capture") return "requires_capture";
   if (status === "processing" || status === "pending") return "processing";
-  if (status === "succeeded" || status === "paid") return captured === false ? "requires_capture" : "succeeded";
+  if (status === "succeeded" || status === "paid")
+    return captured === false ? "requires_capture" : "succeeded";
   return "failed";
 }
 
@@ -98,12 +99,31 @@ export function readCharge(c: ChargeFacts): ChargeReading {
   }
   if (c.state === "succeeded") {
     if (refunded) {
-      return { settled: true, held: false, refunded: true, clearsBy: null, line: "Paid, and already refunded in full — the second line they are seeing is the refund on its way back." };
+      return {
+        settled: true,
+        held: false,
+        refunded: true,
+        clearsBy: null,
+        line: "Paid, and already refunded in full — the second line they are seeing is the refund on its way back.",
+      };
     }
-    const partly = c.refundedCents > 0 ? ` ${formatUsd(c.refundedCents)} of it has already been refunded.` : "";
-    return { settled: true, held: false, refunded: false, clearsBy: null, line: `Paid. The money left their account.${partly}` };
+    const partly =
+      c.refundedCents > 0 ? ` ${formatUsd(c.refundedCents)} of it has already been refunded.` : "";
+    return {
+      settled: true,
+      held: false,
+      refunded: false,
+      clearsBy: null,
+      line: `Paid. The money left their account.${partly}`,
+    };
   }
-  return { settled: false, held: false, refunded, clearsBy: null, line: "No money moved: the payment failed or was cancelled." };
+  return {
+    settled: false,
+    held: false,
+    refunded,
+    clearsBy: null,
+    line: "No money moved: the payment failed or was cancelled.",
+  };
 }
 
 export type DuplicateVerdict =
@@ -112,7 +132,12 @@ export type DuplicateVerdict =
   | { kind: "not_duplicate"; why: string }
   | { kind: "already_refunded"; why: string };
 
-export type DuplicateGroup = { amountCents: number; currency: string; charges: ChargeFacts[]; verdict: DuplicateVerdict };
+export type DuplicateGroup = {
+  amountCents: number;
+  currency: string;
+  charges: ChargeFacts[];
+  verdict: DuplicateVerdict;
+};
 
 /**
  * The decision for one group of same-amount payments. Order matters: a hold beats everything (there is no second charge
@@ -132,18 +157,30 @@ export function assessDuplicateGroup(group: ChargeFacts[]): DuplicateVerdict {
   const settled = readings.filter((x) => x.r.settled);
   const refunded = settled.filter((x) => x.r.refunded);
   if (refunded.length && settled.length > refunded.length) {
-    return { kind: "already_refunded", why: "One of those lines is a refund going back to their card, not a second charge. Nothing is owed." };
+    return {
+      kind: "already_refunded",
+      why: "One of those lines is a refund going back to their card, not a second charge. Nothing is owed.",
+    };
   }
   if (settled.length < 2) {
-    return { kind: "not_duplicate", why: "Only one payment actually went through, so there is nothing to refund twice." };
+    return {
+      kind: "not_duplicate",
+      why: "Only one payment actually went through, so there is nothing to refund twice.",
+    };
   }
   const items = [...new Set(settled.map((x) => x.c.item))];
   if (items.length > 1) {
-    return { kind: "not_duplicate", why: `Two payments for two different things (${items.join(" and ")}). That is not a duplicate.` };
+    return {
+      kind: "not_duplicate",
+      why: `Two payments for two different things (${items.join(" and ")}). That is not a duplicate.`,
+    };
   }
   const intents = new Set(settled.map((x) => x.c.paymentIntent ?? x.c.id));
   if (intents.size === 1) {
-    return { kind: "not_duplicate", why: "Both lines are the same payment shown twice by the bank. Nothing is owed." };
+    return {
+      kind: "not_duplicate",
+      why: "Both lines are the same payment shown twice by the bank. Nothing is owed.",
+    };
   }
   const keep = settled[0]!;
   const refund = settled[settled.length - 1]!;
@@ -168,7 +205,13 @@ export function groupPossibleDuplicates(charges: readonly ChargeFacts[]): Duplic
       return Date.parse(c.createdAt) - Date.parse(newest.createdAt) <= windowMs;
     });
     if (match) match.charges.push(c);
-    else groups.push({ amountCents: c.amountCents, currency: c.currency, charges: [c], verdict: { kind: "not_duplicate", why: "" } });
+    else
+      groups.push({
+        amountCents: c.amountCents,
+        currency: c.currency,
+        charges: [c],
+        verdict: { kind: "not_duplicate", why: "" },
+      });
   }
   return groups
     .filter((g) => g.charges.length > 1)
@@ -182,12 +225,22 @@ export function groupPossibleDuplicates(charges: readonly ChargeFacts[]): Duplic
  */
 export const DUPLICATE_CHECKS = [
   { id: "settled", label: "Both payments show as paid — not an authorization, not 'processing'." },
-  { id: "same_item", label: "They paid twice for the same thing, not two seats, two certificates, or a purchase plus a renewal." },
+  {
+    id: "same_item",
+    label:
+      "They paid twice for the same thing, not two seats, two certificates, or a purchase plus a renewal.",
+  },
   { id: "nothing_back", label: "No refund has already gone back on either payment." },
-  { id: "not_a_hold", label: "What they are looking at is the charge, not a hold sitting beside the real charge." },
+  {
+    id: "not_a_hold",
+    label: "What they are looking at is the charge, not a hold sitting beside the real charge.",
+  },
 ] as const;
 export type DuplicateCheck = (typeof DUPLICATE_CHECKS)[number]["id"];
-export const DUPLICATE_CHECK_IDS = DUPLICATE_CHECKS.map((c) => c.id) as [DuplicateCheck, ...DuplicateCheck[]];
+export const DUPLICATE_CHECK_IDS = DUPLICATE_CHECKS.map((c) => c.id) as [
+  DuplicateCheck,
+  ...DuplicateCheck[],
+];
 
 export function duplicateChecksDone(checks: readonly string[]): boolean {
   return DUPLICATE_CHECKS.every((c) => checks.includes(c.id));
@@ -197,10 +250,19 @@ export function duplicateChecksDone(checks: readonly string[]): boolean {
  * Refuses a refund that claims "duplicate" when the payment says otherwise. Runs on the server and again in the panel,
  * so neither a screenshot nor a hurried click can turn a hold into a refund.
  */
-export function duplicateRefundBlock(o: { checks: readonly string[]; settled: boolean; held: boolean; refunded: boolean }): string | null {
-  if (o.held) return "That payment hasn't settled yet, so there is nothing to refund: it is an authorization that clears by itself. Tell them when it should be gone, and check again after that.";
-  if (!o.settled) return "No money moved on that payment, so a duplicate refund would refund nothing. Check the payment status with them before doing anything else.";
-  if (o.refunded) return "That payment is already refunded in full. Refunding it again is refused, not just unwise.";
-  if (!duplicateChecksDone(o.checks)) return `A duplicate refund needs all ${DUPLICATE_CHECKS.length} checks ticked. If any is not true, it isn't a duplicate: answer the member instead of refunding.`;
+export function duplicateRefundBlock(o: {
+  checks: readonly string[];
+  settled: boolean;
+  held: boolean;
+  refunded: boolean;
+}): string | null {
+  if (o.held)
+    return "That payment hasn't settled yet, so there is nothing to refund: it is an authorization that clears by itself. Tell them when it should be gone, and check again after that.";
+  if (!o.settled)
+    return "No money moved on that payment, so a duplicate refund would refund nothing. Check the payment status with them before doing anything else.";
+  if (o.refunded)
+    return "That payment is already refunded in full. Refunding it again is refused, not just unwise.";
+  if (!duplicateChecksDone(o.checks))
+    return `A duplicate refund needs all ${DUPLICATE_CHECKS.length} checks ticked. If any is not true, it isn't a duplicate: answer the member instead of refunding.`;
   return null;
 }

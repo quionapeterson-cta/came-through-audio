@@ -13,18 +13,29 @@ export const runSongLookups = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d) => z.object({ trackId: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }): Promise<LookupResult> => {
-    const { data: row, error } = await context.supabase.from("catalogs").select("*").eq("id", data.trackId).maybeSingle();
+    const { data: row, error } = await context.supabase
+      .from("catalogs")
+      .select("*")
+      .eq("id", data.trackId)
+      .maybeSingle();
     if (error || !row) throw new Error("Song not found.");
     const t = fromCatalogRow(row as Record<string, unknown>);
     const result = await lookupSong({ isrc: t.metadata.isrc, title: t.title, artist: t.artist });
     const now = new Date().toISOString();
-    const rows = [
-      { society: INTERNATIONAL.deezer.id, hit: result.streaming },
-    ].map(({ society, hit }) => ({
-      user_id: context.userId, track_id: t.id, society, source: "auto", status: hit ? "found" : "not_listed",
-      details: (hit ?? {}) as never, checked_at: now,
-    }));
-    const { error: saveError } = await context.supabase.from("repertoire_checks").upsert(rows, { onConflict: "track_id,society" });
+    const rows = [{ society: INTERNATIONAL.deezer.id, hit: result.streaming }].map(
+      ({ society, hit }) => ({
+        user_id: context.userId,
+        track_id: t.id,
+        society,
+        source: "auto",
+        status: hit ? "found" : "not_listed",
+        details: (hit ?? {}) as never,
+        checked_at: now,
+      }),
+    );
+    const { error: saveError } = await context.supabase
+      .from("repertoire_checks")
+      .upsert(rows, { onConflict: "track_id,society" });
     if (saveError) throw new Error("Couldn't save the lookup results.");
     return result;
   });

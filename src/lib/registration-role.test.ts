@@ -15,7 +15,17 @@ const song = (role: string): Metadata => ({
   releaseDate: "2026-01-01",
   samples: "No",
   selfPublished: true,
-  writers: [{ ...emptyContributor(), name: "", legalName: "Ann Lee", role, pro: "ASCAP", ipi: "00123456789", percentage: "100" }],
+  writers: [
+    {
+      ...emptyContributor(),
+      name: "",
+      legalName: "Ann Lee",
+      role,
+      pro: "ASCAP",
+      ipi: "00123456789",
+      percentage: "100",
+    },
+  ],
   publishers: [],
 });
 
@@ -26,7 +36,9 @@ describe("registration and a writer's role", () => {
   });
   it("does not ask again once the role is answered", () => {
     for (const role of ["Author", "Composer", "Author/Composer"]) {
-      expect(registrationCheck(song(role), "bmi").missing.some((m) => m.code === "role")).toBe(false);
+      expect(registrationCheck(song(role), "bmi").missing.some((m) => m.code === "role")).toBe(
+        false,
+      );
     }
   });
   it("never blocks saving or embedding: only the registration check carries the role item", () => {

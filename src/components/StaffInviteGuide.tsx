@@ -14,17 +14,21 @@ export function StaffInviteGuide() {
         <div>
           <h3 className="text-sm font-semibold">HR or super admin</h3>
           <ol className="mt-2 list-decimal space-y-1 pl-5 text-sm text-muted-foreground">
-            {INVITE_STEPS.map((s) => <li key={s}>{s}</li>)}
+            {INVITE_STEPS.map((s) => (
+              <li key={s}>{s}</li>
+            ))}
           </ol>
         </div>
         <div>
           <h3 className="text-sm font-semibold">What the new starter does</h3>
           <ol className="mt-2 list-decimal space-y-1 pl-5 text-sm text-muted-foreground">
-            {ACCEPT_STEPS.map((s) => <li key={s}>{s}</li>)}
+            {ACCEPT_STEPS.map((s) => (
+              <li key={s}>{s}</li>
+            ))}
           </ol>
           <p className="mt-3 text-xs text-muted-foreground">
-            The link opens our own page, never a sign-up form. If it expires, Forgot password on the login page sends a
-            branded email from admin@camethroughaudio.com.
+            The link opens our own page, never a sign-up form. If it expires, Forgot password on the
+            login page sends a branded email from admin@camethroughaudio.com.
           </p>
         </div>
       </div>

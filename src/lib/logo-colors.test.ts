@@ -8,8 +8,11 @@ const pixels = (list: [number, number, number, number][]) => new Uint8ClampedArr
 describe("dominantColors", () => {
   it("skips transparent pixels and white paper", () => {
     const art = pixels([
-      [255, 255, 255, 255], [255, 255, 255, 255], [255, 255, 255, 255],
-      [0, 74, 173, 255], [0, 74, 173, 255],
+      [255, 255, 255, 255],
+      [255, 255, 255, 255],
+      [255, 255, 255, 255],
+      [0, 74, 173, 255],
+      [0, 74, 173, 255],
       [255, 0, 0, 255],
       [0, 0, 0, 0],
     ]);
@@ -18,7 +21,13 @@ describe("dominantColors", () => {
 
   it("hands the palette back darkest first, whatever the biggest colour is", () => {
     // A pale blue covers most of the art, but the dark ink still comes first (founder, 2026-11-07).
-    const art = pixels([[77, 140, 255, 255], [77, 140, 255, 255], [77, 140, 255, 255], [20, 20, 20, 255], [0, 74, 173, 255]]);
+    const art = pixels([
+      [77, 140, 255, 255],
+      [77, 140, 255, 255],
+      [77, 140, 255, 255],
+      [20, 20, 20, 255],
+      [0, 74, 173, 255],
+    ]);
     const order = dominantColors(art);
     expect(order[0]).toBe("#141414");
     // The pale blue is the biggest colour but must not come first, and the darker blue is not the last either.
@@ -27,7 +36,11 @@ describe("dominantColors", () => {
   });
 
   it("merges shades that read as the same colour", () => {
-    const art = pixels([[10, 10, 10, 255], [18, 16, 14, 255], [200, 30, 40, 255]]);
+    const art = pixels([
+      [10, 10, 10, 255],
+      [18, 16, 14, 255],
+      [200, 30, 40, 255],
+    ]);
     expect(dominantColors(art)).toEqual(["#0A0A0A", "#C81E28"]);
   });
 
@@ -37,7 +50,14 @@ describe("dominantColors", () => {
   });
 
   it("caps the number of swatches", () => {
-    const art = pixels([[0, 0, 0, 255], [255, 0, 0, 255], [0, 255, 0, 255], [0, 0, 255, 255], [255, 255, 0, 255], [0, 255, 255, 255]]);
+    const art = pixels([
+      [0, 0, 0, 255],
+      [255, 0, 0, 255],
+      [0, 255, 0, 255],
+      [0, 0, 255, 255],
+      [255, 255, 0, 255],
+      [0, 255, 255, 255],
+    ]);
     expect(dominantColors(art, { max: 3 })).toHaveLength(3);
   });
 });
@@ -49,22 +69,90 @@ describe("contrast helpers", () => {
   });
 
   it("warns about a pale name and tagline but not a strong blue", () => {
-    const strong = contrastWarnings({ colors: ["#004AAD", "#0B0B0B"], headerColor: null, style: "classic", options: { watermark: false, cover: false, signature: "line", accent: null, titleColor: null, corners: "rounded", logoAlign: "left" as const, logoSnap: "middle" as const, logoNudge: 0 } });
+    const strong = contrastWarnings({
+      colors: ["#004AAD", "#0B0B0B"],
+      headerColor: null,
+      style: "classic",
+      options: {
+        watermark: false,
+        cover: false,
+        signature: "line",
+        accent: null,
+        titleColor: null,
+        corners: "rounded",
+        logoAlign: "left" as const,
+        logoSnap: "middle" as const,
+        logoNudge: 0,
+      },
+    });
     expect(strong).toEqual([]);
-    const pale = contrastWarnings({ colors: ["#FFC0CB", "#EEEEEE"], headerColor: null, style: "classic", options: { watermark: false, cover: false, signature: "line", accent: null, titleColor: null, corners: "rounded", logoAlign: "left" as const, logoSnap: "middle" as const, logoNudge: 0 } });
+    const pale = contrastWarnings({
+      colors: ["#FFC0CB", "#EEEEEE"],
+      headerColor: null,
+      style: "classic",
+      options: {
+        watermark: false,
+        cover: false,
+        signature: "line",
+        accent: null,
+        titleColor: null,
+        corners: "rounded",
+        logoAlign: "left" as const,
+        logoSnap: "middle" as const,
+        logoNudge: 0,
+      },
+    });
     expect(pale.map((w) => w.field)).toEqual(["name", "tagline"]);
     expect(pale[0]!.severe).toBe(true);
   });
 
   it("leaves a banner's name alone because the PDF picks readable text on the band", () => {
-    const banner = contrastWarnings({ colors: ["#FFC0CB"], headerColor: null, style: "banner", options: { watermark: false, cover: false, signature: "line", accent: null, titleColor: null, corners: "rounded", logoAlign: "left" as const, logoSnap: "middle" as const, logoNudge: 0 } });
+    const banner = contrastWarnings({
+      colors: ["#FFC0CB"],
+      headerColor: null,
+      style: "banner",
+      options: {
+        watermark: false,
+        cover: false,
+        signature: "line",
+        accent: null,
+        titleColor: null,
+        corners: "rounded",
+        logoAlign: "left" as const,
+        logoSnap: "middle" as const,
+        logoNudge: 0,
+      },
+    });
     expect(banner).toEqual([]);
   });
 
   it("checks the section title and accent colours too", () => {
-    const kit = { colors: [], headerColor: "#EFEFEF", style: "classic" as const, options: { watermark: false, cover: false, signature: "line" as const, accent: "#F5F5F5", titleColor: null, corners: "rounded" as const, logoAlign: "left" as const, logoSnap: "middle" as const, logoNudge: 0 } };
-    expect(contrastWarnings(kit).map((w) => w.label)).toEqual(["Your section titles", "Your second accent colour"]);
+    const kit = {
+      colors: [],
+      headerColor: "#EFEFEF",
+      style: "classic" as const,
+      options: {
+        watermark: false,
+        cover: false,
+        signature: "line" as const,
+        accent: "#F5F5F5",
+        titleColor: null,
+        corners: "rounded" as const,
+        logoAlign: "left" as const,
+        logoSnap: "middle" as const,
+        logoNudge: 0,
+      },
+    };
+    expect(contrastWarnings(kit).map((w) => w.label)).toEqual([
+      "Your section titles",
+      "Your second accent colour",
+    ]);
     // The document title is checked at the large-text ratio, because it is set at 24 pt bold.
-    expect(contrastWarnings({ ...kit, options: { ...kit.options, accent: null, titleColor: "#EFEFEF" } }).map((w) => w.field)).toEqual(["sectionTitles", "documentTitle"]);
+    expect(
+      contrastWarnings({
+        ...kit,
+        options: { ...kit.options, accent: null, titleColor: "#EFEFEF" },
+      }).map((w) => w.field),
+    ).toEqual(["sectionTitles", "documentTitle"]);
   });
 });

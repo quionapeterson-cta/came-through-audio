@@ -10,7 +10,9 @@
  */
 
 /** The bucket's public address, without a trailing slash. Empty means "serve from public/". */
-const BASE = ((import.meta.env['VITE_ART_BASE'] as string | undefined) ?? "").trim().replace(/\/+$/, "");
+const BASE = ((import.meta.env["VITE_ART_BASE"] as string | undefined) ?? "")
+  .trim()
+  .replace(/\/+$/, "");
 
 /** The bucket holds .webp for every picture; the repo holds the original .png/.jpg. */
 const PICTURE = /\.(png|jpe?g)$/i;

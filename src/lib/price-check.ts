@@ -1,6 +1,11 @@
 import { BRANDING_LOOKUP_KEY, BRANDING_PRICE } from "@/lib/brand-kit";
 import { CONTRACT_LOOKUP_KEY, CONTRACT_PRICE } from "@/lib/contract-generator";
-import { ARTIST_SEAT_PRICES, ASSISTANCE_PER_SONG_AGENCY, PLAN_TIERS, assistanceFees } from "@/lib/plans";
+import {
+  ARTIST_SEAT_PRICES,
+  ASSISTANCE_PER_SONG_AGENCY,
+  PLAN_TIERS,
+  assistanceFees,
+} from "@/lib/plans";
 import { PACKAGES } from "@/lib/proof";
 import { VAULT_LOOKUP_KEY, VAULT_PRICE } from "@/lib/retention";
 
@@ -11,7 +16,8 @@ import { VAULT_LOOKUP_KEY, VAULT_PRICE } from "@/lib/retention";
  */
 
 /** "$3.99" and 3.99 both become 399. */
-const cents = (value: string | number) => Math.round(Number(String(value).replace(/[^0-9.]/g, "")) * 100);
+const cents = (value: string | number) =>
+  Math.round(Number(String(value).replace(/[^0-9.]/g, "")) * 100);
 /** 1399 → "$13.99". */
 export const usdText = (value: number) => `$${(value / 100).toFixed(2)}`;
 
@@ -20,7 +26,8 @@ export const PUBLISHED_AMOUNTS: Record<string, number> = (() => {
   const amounts: Record<string, number> = {};
   for (const plan of PLAN_TIERS) if (plan.priceId) amounts[plan.priceId] = cents(plan.price);
   for (const seat of ARTIST_SEAT_PRICES) amounts[seat.lookupKey] = cents(seat.amount);
-  for (const pack of PACKAGES) amounts[`ai_protection_${pack.id.toLowerCase()}`] = cents(pack.price);
+  for (const pack of PACKAGES)
+    amounts[`ai_protection_${pack.id.toLowerCase()}`] = cents(pack.price);
   amounts[BRANDING_LOOKUP_KEY] = cents(BRANDING_PRICE);
   amounts[CONTRACT_LOOKUP_KEY] = cents(CONTRACT_PRICE);
   amounts[VAULT_LOOKUP_KEY] = cents(VAULT_PRICE);
@@ -35,7 +42,10 @@ export const PUBLISHED_AMOUNTS: Record<string, number> = (() => {
  * What is wrong with this Stripe price, naming the lookup key and both amounts, or null when it charges the published
  * price. An unknown key (nothing published for it) is not this guard's business.
  */
-export function amountProblem(lookupKey: string, stripeAmount: number | null | undefined): string | null {
+export function amountProblem(
+  lookupKey: string,
+  stripeAmount: number | null | undefined,
+): string | null {
   const expected = PUBLISHED_AMOUNTS[lookupKey];
   if (expected === undefined) return null;
   if (typeof stripeAmount !== "number" || !Number.isFinite(stripeAmount)) {
@@ -46,4 +56,5 @@ export function amountProblem(lookupKey: string, stripeAmount: number | null | u
 }
 
 /** The suffix every refusal carries, so checkout can pass it through instead of wrapping it in a generic failure. */
-export const PRICE_MISMATCH_NOTE = "Nothing was charged. Fix that price in Stripe, or contact support and we'll help right away.";
+export const PRICE_MISMATCH_NOTE =
+  "Nothing was charged. Fix that price in Stripe, or contact support and we'll help right away.";

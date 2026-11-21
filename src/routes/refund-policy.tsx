@@ -3,7 +3,8 @@ import { LegalPage } from "@/components/LegalPage";
 import { REFUNDS } from "@/lib/legal-docs";
 import { loadLegalOverrides } from "@/lib/legal-overrides";
 
-const d = "Came Through Audio offers a 30-day refund window on plans, packages and Expert Registration Assistance, processed by Stripe.";
+const d =
+  "Came Through Audio offers a 30-day refund window on plans, packages and Expert Registration Assistance, processed by Stripe.";
 
 export const Route = createFileRoute("/refund-policy")({
   head: () => ({
@@ -22,7 +23,5 @@ export const Route = createFileRoute("/refund-policy")({
 });
 
 function Refund() {
-  return (
-    <LegalPage {...REFUNDS} overrides={Route.useLoaderData()} />
-  );
+  return <LegalPage {...REFUNDS} overrides={Route.useLoaderData()} />;
 }

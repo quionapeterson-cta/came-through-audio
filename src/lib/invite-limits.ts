@@ -17,7 +17,8 @@ export const RECIPIENT_DAILY_LIMIT = 6;
 /** Longest title, artist or name that goes into an email. */
 export const INVITE_TEXT_MAX = 80;
 
-const LINKISH = /(?:https?:\/\/|www\.)\S*|\S+@\S+|\S+\.(?:com|net|org|info|biz|io|co|me|ly|gg|app|xyz|top|site|online|link|click|shop|store|live|us|uk|ru|cn)\b\S*/gi;
+const LINKISH =
+  /(?:https?:\/\/|www\.)\S*|\S+@\S+|\S+\.(?:com|net|org|info|biz|io|co|me|ly|gg|app|xyz|top|site|online|link|click|shop|store|live|us|uk|ru|cn)\b\S*/gi;
 
 /** Sender-typed text for an email: no web addresses or emails, single spaces, at most 80 characters. */
 export function cleanInviteText(s: string | null | undefined) {
@@ -37,11 +38,14 @@ export interface InviteCounts {
 
 /** Why this invite can't go out right now, in words for the sender, or null when it can. */
 export function inviteBlockReason(c: InviteCounts): string | null {
-  if (c.blocked) return "This collaborator has turned off split-sheet invite emails. Contact them directly to sign.";
-  if (c.senderToday >= DAILY_INVITE_LIMIT) return `You've reached today's limit of ${DAILY_INVITE_LIMIT} invites. Try again tomorrow, or contact support if you need more.`;
+  if (c.blocked)
+    return "This collaborator has turned off split-sheet invite emails. Contact them directly to sign.";
+  if (c.senderToday >= DAILY_INVITE_LIMIT)
+    return `You've reached today's limit of ${DAILY_INVITE_LIMIT} invites. Try again tomorrow, or contact support if you need more.`;
   if (c.rowSends.length >= ROW_SEND_LIMIT)
     return `This invite was already sent ${ROW_SEND_LIMIT} times. Check the email is right before you send it again. Start a new split sheet if it needs to go again.`;
-  if (c.recipientToday >= RECIPIENT_DAILY_LIMIT) return "This email address has received several invites today. Try again tomorrow.";
+  if (c.recipientToday >= RECIPIENT_DAILY_LIMIT)
+    return "This email address has received several invites today. Try again tomorrow.";
   return null;
 }
 

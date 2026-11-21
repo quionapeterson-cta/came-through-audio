@@ -1,5 +1,14 @@
 import { describe, expect, it } from "vitest";
-import { assistanceFees, assistanceItems, assistanceTotal, convertShare, hasTier, refundDaysLeft, tierFromPrice, upgradeNote } from "./plans";
+import {
+  assistanceFees,
+  assistanceItems,
+  assistanceTotal,
+  convertShare,
+  hasTier,
+  refundDaysLeft,
+  tierFromPrice,
+  upgradeNote,
+} from "./plans";
 
 describe("plans", () => {
   it("single/EP: $14.99 setup + $4.99 per song per agency", () => {
@@ -40,7 +49,9 @@ describe("plans", () => {
 describe("plan comparison", () => {
   it("each plan includes everything below it, so the list only grows", async () => {
     const { PLAN_FEATURES, PLAN_TIERS } = await import("./plans");
-    const counts = PLAN_TIERS.map((p) => PLAN_FEATURES.filter((f) => hasTier(p.tier, f.from)).length);
+    const counts = PLAN_TIERS.map(
+      (p) => PLAN_FEATURES.filter((f) => hasTier(p.tier, f.from)).length,
+    );
     expect(counts).toEqual([...counts].sort((a, b) => a - b));
     expect(counts.at(-1)).toBe(PLAN_FEATURES.length);
   });
@@ -51,8 +62,14 @@ describe("plan comparison", () => {
     const [free, plus, collab] = PLAN_TIERS;
     const o = { onBuy: () => {}, onSignup: () => {} };
     expect(planAction(collab!, { ...o, tier: undefined }).label).toBe("Sign up & pay");
-    expect(planAction(plus!, { ...o, tier: "plus" })).toMatchObject({ label: "Current plan", disabled: true });
-    expect(planAction(free!, { ...o, tier: "plus" })).toMatchObject({ label: "Included", disabled: true });
+    expect(planAction(plus!, { ...o, tier: "plus" })).toMatchObject({
+      label: "Current plan",
+      disabled: true,
+    });
+    expect(planAction(free!, { ...o, tier: "plus" })).toMatchObject({
+      label: "Included",
+      disabled: true,
+    });
     expect(planAction(collab!, { ...o, tier: "plus" }).label).toBe("Upgrade");
     expect(planAction(collab!, { ...o, tier: "free" }).label).toBe("Get started");
   });
@@ -67,7 +84,11 @@ describe("refund countdown", () => {
     expect(refundDaysLeft(null, now)).toBe(0);
   });
   it("always says upgrades are prorated, and adds the countdown only inside the window", () => {
-    expect(upgradeNote("2026-10-24T12:00:00Z", now)).toBe("Upgrading? You pay only the prorated difference for the rest of your year. Your 30-day full refund window has 29 days left.");
-    expect(upgradeNote("2026-08-01T00:00:00Z", now)).toBe("Upgrading? You pay only the prorated difference for the rest of your year.");
+    expect(upgradeNote("2026-10-24T12:00:00Z", now)).toBe(
+      "Upgrading? You pay only the prorated difference for the rest of your year. Your 30-day full refund window has 29 days left.",
+    );
+    expect(upgradeNote("2026-08-01T00:00:00Z", now)).toBe(
+      "Upgrading? You pay only the prorated difference for the rest of your year.",
+    );
   });
 });

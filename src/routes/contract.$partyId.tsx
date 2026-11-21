@@ -25,6 +25,8 @@ import { downloadContractPdf } from "@/lib/contract-pdf";
 import {
   templateToHtml,
   templateToSigningHtml,
+  tokenValues,
+  withoutRepeatedLeadingTitle,
   type BlockValues,
   type TemplateBlock,
 } from "@/lib/pdf-templates";
@@ -98,7 +100,7 @@ const pdf = async (i: ContractInvite) => {
         : null;
     const bytes = await templateToPdfBytes(
       { name: i.title, tier: "platinum", blocks: i.blocks },
-      {},
+      tokenValues(i.block_values ?? undefined),
       {
         values: i.block_values ?? {},
         signatures: {
@@ -192,14 +194,19 @@ function ContractView({
       </div>
 
       {invite.blocks?.length ? (
-        <iframe data-signing-frame
+        <iframe
+          data-signing-frame
           title="Agreement"
           sandbox={doc ? "allow-scripts" : ""}
           srcDoc={
             doc ??
             templateToHtml(
-              { name: invite.title, tier: "platinum", blocks: invite.blocks },
-              {},
+              {
+                name: invite.title,
+                tier: "platinum",
+                blocks: withoutRepeatedLeadingTitle(invite.blocks, invite.title),
+              },
+              tokenValues(invite.block_values ?? undefined),
               invite.signed_at ? (invite.block_values ?? {}) : values,
             )
           }
@@ -305,8 +312,12 @@ function LinkSigning({ token }: { token: string }) {
     () =>
       invite?.blocks?.length && invite.can_sign && !signed
         ? templateToSigningHtml(
-            { name: invite.title, tier: "platinum", blocks: invite.blocks },
-            {},
+            {
+              name: invite.title,
+              tier: "platinum",
+              blocks: withoutRepeatedLeadingTitle(invite.blocks, invite.title),
+            },
+            tokenValues(invite.block_values ?? undefined),
             invite.block_values ?? {},
           )
         : "",
@@ -316,7 +327,9 @@ function LinkSigning({ token }: { token: string }) {
   useEffect(() => {
     const onMessage = (e: MessageEvent) => {
       // Only the signing frame on this page may send answers: its sandbox gives it an opaque ("null") origin.
-      const frame = document.querySelector<HTMLIFrameElement>("iframe[data-signing-frame]") ?? document.querySelector("iframe");
+      const frame =
+        document.querySelector<HTMLIFrameElement>("iframe[data-signing-frame]") ??
+        document.querySelector("iframe");
       if (!frame || e.source !== frame.contentWindow) return;
       if (e.origin !== "null" && e.origin !== window.location.origin) return;
       const data = e.data as { type?: string; values?: BlockValues } | null;

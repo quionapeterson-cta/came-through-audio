@@ -6,7 +6,14 @@
  * approved. Staff-only notes never reach this file's callers.
  */
 import { resendKey } from "./collab-trial.server";
-import { BILLING_EMAIL, emailLayout, escapeHtml, INFO_EMAIL, SITE_URL, SUPPORT_EMAIL } from "./email-layout";
+import {
+  BILLING_EMAIL,
+  emailLayout,
+  escapeHtml,
+  INFO_EMAIL,
+  SITE_URL,
+  SUPPORT_EMAIL,
+} from "./email-layout";
 import {
   channelOf,
   inboxFor,
@@ -26,7 +33,12 @@ export type ReplyEmailResult = { emailed: boolean; reason?: string };
  * One idempotency key per ticket, so a retried submit cannot send it twice.
  */
 export async function sendTicketReceivedEmail(input: {
-  id: string; kind: string; name: string; email: string; category: string; subject: string;
+  id: string;
+  kind: string;
+  name: string;
+  email: string;
+  category: string;
+  subject: string;
 }): Promise<ReplyEmailResult> {
   const key = resendKey();
   if (!key) return { emailed: false, reason: "no-key" };
@@ -38,11 +50,18 @@ export async function sendTicketReceivedEmail(input: {
 <h1 style="font-size:22px;margin:8px 0 16px">${support ? `We've got your ticket, ${escapeHtml(first)}` : `Thanks for writing, ${escapeHtml(first)}`}</h1>
 <p style="font-size:15px;line-height:1.6"><b>${escapeHtml(input.subject)}</b><br/><span style="color:#666">${escapeHtml(input.category)}</span></p>
 <p style="font-size:15px;line-height:1.6">It's in the queue and Support will take it from here. Most replies go out in about 48 hours; a high-volume week or a holiday break can take longer, and we'll always come back to you.</p>
-${support
+${
+  support
     ? `<p style="margin:24px 0"><a href="${ticketLink(SITE_URL, input.id)}" style="background:#004AAD;color:#ffffff;text-decoration:none;font-weight:700;padding:12px 22px;border-radius:8px;display:inline-block">Open your ticket</a></p>
 <p style="font-size:13px;line-height:1.6;color:#666">You can read the thread and answer any time in the Support tab of your workspace. Replying to this email lands on the same ticket, so nothing gets lost.</p>`
-    : `<p style="font-size:13px;line-height:1.6;color:#666">We'll reply to this address. If you have an account, a ticket from the Support tab keeps everything in one thread.</p>`}`,
-    { hideAddress: true, reason: support ? "You're receiving this because you opened a support ticket with Came Through Audio." : "You're receiving this because you sent Came Through Audio a message from our Contact page." },
+    : `<p style="font-size:13px;line-height:1.6;color:#666">We'll reply to this address. If you have an account, a ticket from the Support tab keeps everything in one thread.</p>`
+}`,
+    {
+      hideAddress: true,
+      reason: support
+        ? "You're receiving this because you opened a support ticket with Came Through Audio."
+        : "You're receiving this because you sent Came Through Audio a message from our Contact page.",
+    },
   );
   try {
     const res = await fetch("https://api.resend.com/emails", {
@@ -53,10 +72,16 @@ ${support
         "Idempotency-Key": `ticket-received-${input.id}`,
       },
       body: JSON.stringify({
-        from: support ? `Came Through Audio ${inbox === BILLING_EMAIL ? "Billing" : "Support"} <${inbox}>` : `Came Through Audio <${INFO_EMAIL}>`,
+        from: support
+          ? `Came Through Audio ${inbox === BILLING_EMAIL ? "Billing" : "Support"} <${inbox}>`
+          : `Came Through Audio <${INFO_EMAIL}>`,
         to: [input.email],
         reply_to: inbox,
-        subject: `${support ? "We've got your ticket" : "We've got your message"}: ${input.subject}`.slice(0, 200),
+        subject:
+          `${support ? "We've got your ticket" : "We've got your message"}: ${input.subject}`.slice(
+            0,
+            200,
+          ),
         html,
       }),
     });
@@ -135,20 +160,29 @@ export async function sendMemberReplyNotice(
 ): Promise<ReplyEmailResult> {
   const key = resendKey();
   if (!key) return { emailed: false, reason: "no-key" };
-  const to = ticket.category.trim().toLowerCase().startsWith("account & billing") ? BILLING_EMAIL : SUPPORT_EMAIL;
+  const to = ticket.category.trim().toLowerCase().startsWith("account & billing")
+    ? BILLING_EMAIL
+    : SUPPORT_EMAIL;
   const html = emailLayout(
     `<p style="font-size:12px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:#004AAD;margin:0">Member replied</p>
 <h1 style="font-size:22px;margin:8px 0 16px">${escapeHtml(ticket.subject)}</h1>
 <p style="font-size:14px;margin:0 0 14px"><b>From:</b> ${escapeHtml(ticket.name)} (${escapeHtml(ticket.email)})<br/><b>Category:</b> ${escapeHtml(ticket.category)}</p>
 ${replyParagraphs(body, escapeHtml)}
 <p style="font-size:13px;line-height:1.6;color:#666">Answer in Admin → Support Tickets. The reply is already on the ticket.</p>`,
-    { hideAddress: true, reason: "You're receiving this staff notice because a member answered a support ticket." },
+    {
+      hideAddress: true,
+      reason: "You're receiving this staff notice because a member answered a support ticket.",
+    },
   );
   try {
     const res = await fetch("https://api.resend.com/emails", {
       method: "POST",
       // One id per stored message: a retried notice can't email the team about the same reply twice.
-      headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json", "Idempotency-Key": `member-reply-${messageId}` },
+      headers: {
+        Authorization: `Bearer ${key}`,
+        "Content-Type": "application/json",
+        "Idempotency-Key": `member-reply-${messageId}`,
+      },
       body: JSON.stringify({
         from: `Came Through Audio <${INFO_EMAIL}>`,
         to: [to],

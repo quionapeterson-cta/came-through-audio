@@ -17,13 +17,29 @@ import { PODCASTING } from "./blueprints/podcasting";
 import { RIGHTS } from "./blueprints/rights";
 import { RELEASE_TERMS, VISUAL } from "./blueprints/visual";
 
-export { CATEGORIES, type Blueprint, type BlueprintField, type Category } from "./blueprints/common";
+export {
+  CATEGORIES,
+  type Blueprint,
+  type BlueprintField,
+  type Category,
+} from "./blueprints/common";
 
 export const CONTRACT_DISCLAIMER =
   "Contract drafts are general templates to help you organize a deal. They are not legal advice.";
 
 /** The customer blueprint library, in category order. */
-export const BLUEPRINTS: Blueprint[] = [...MUSIC_PRODUCTION, ...MANAGEMENT, ...RIGHTS, ...VISUAL, ...FASHION, ...INFLUENCERS, ...PODCASTING, ...LIVE, ...BUSINESS, ...EVENTS];
+export const BLUEPRINTS: Blueprint[] = [
+  ...MUSIC_PRODUCTION,
+  ...MANAGEMENT,
+  ...RIGHTS,
+  ...VISUAL,
+  ...FASHION,
+  ...INFLUENCERS,
+  ...PODCASTING,
+  ...LIVE,
+  ...BUSINESS,
+  ...EVENTS,
+];
 
 export const COMPANY_LEGAL_NAME = "Came Through Audio, LLC";
 /** Who signs company agreements by default (founder, 2026-10-25): pre-filled, still editable for another admin. */
@@ -32,11 +48,23 @@ export const COMPANY_SIGNER_NAME = "Qui-Ona Peterson";
 export { SIGNATURE_FONT } from "@/lib/signature-font";
 
 /** Company agreements name the LLC as the party; the founder signs as its authorized representative. */
-const SIGNER: BlueprintField = { key: "signerTitle", label: "Your title", value: "Founder & CEO", tip: "Your title at Came Through Audio, LLC. You sign with your own legal name on the company's behalf. We remember your last one." };
+const SIGNER: BlueprintField = {
+  key: "signerTitle",
+  label: "Your title",
+  value: "Founder & CEO",
+  tip: "Your title at Came Through Audio, LLC. You sign with your own legal name on the company's behalf. We remember your last one.",
+};
 
 /** Every company agreement is governed by Georgia law, so it has no governing-law field. Also applied to saved wording. */
-export const georgiaLaw = (body: string) => body.replaceAll("{{governingLaw}}", "the State of Georgia");
-const asCompany = (body: string) => georgiaLaw(body.replace(`{{party:Company}} ("Company")`, `${COMPANY_LEGAL_NAME} ("Company"), signed by its authorized representative {{party:Company}}, {{signerTitle}},`));
+export const georgiaLaw = (body: string) =>
+  body.replaceAll("{{governingLaw}}", "the State of Georgia");
+const asCompany = (body: string) =>
+  georgiaLaw(
+    body.replace(
+      `{{party:Company}} ("Company")`,
+      `${COMPANY_LEGAL_NAME} ("Company"), signed by its authorized representative {{party:Company}}, {{signerTitle}},`,
+    ),
+  );
 const RELEASE = BLUEPRINTS.find((b) => b.id === "photo-video-release")!;
 
 const LAUNCH_GIFT = (n: number) => `${n}. LAUNCH GIFT
@@ -58,8 +86,14 @@ export function dropPrelaunch(body: string): string {
   const m = /^(\d+)\. PRE-LAUNCH CONFIDENTIALITY\n[\s\S]*?(?=^\d+\. [A-Z]|(?![\s\S]))/m.exec(body);
   if (!m) return body;
   const removed = Number(m[1]);
-  const before = body.slice(0, m.index), after = body.slice(m.index + m[0].length);
-  return before + after.replace(/^(\d+)\. (?=[A-Z])/gm, (all, n: string) => (Number(n) > removed ? `${Number(n) - 1}. ` : all));
+  const before = body.slice(0, m.index),
+    after = body.slice(m.index + m[0].length);
+  return (
+    before +
+    after.replace(/^(\d+)\. (?=[A-Z])/gm, (all, n: string) =>
+      Number(n) > removed ? `${Number(n) - 1}. ` : all,
+    )
+  );
 }
 
 /**
@@ -71,9 +105,26 @@ export const COMPANY_BLUEPRINTS: Blueprint[] = [
     ...RELEASE,
     id: "company-testimonial-release",
     category: "Company",
-    summary: "A homepage or marketing testimonial giver lets Came Through Audio use their photo, video, name and words, and keeps the app private until launch.",
-    whenToUse: "Send it to everyone whose testimonial, photo or video appears on the site or in marketing, including people already on the homepage.",
-    fields: [SIGNER, ...RELEASE.fields.filter((f) => f.key !== "governingLaw").map((f) => f.key === "consideration" ? { ...f, value: "the launch gift in section 11" } : f.key === "uses" ? { ...f, value: "Came Through Audio's website, social media, ads, email, presentations and press" } : f)],
+    summary:
+      "A homepage or marketing testimonial giver lets Came Through Audio use their photo, video, name and words, and keeps the app private until launch.",
+    whenToUse:
+      "Send it to everyone whose testimonial, photo or video appears on the site or in marketing, including people already on the homepage.",
+    fields: [
+      SIGNER,
+      ...RELEASE.fields
+        .filter((f) => f.key !== "governingLaw")
+        .map((f) =>
+          f.key === "consideration"
+            ? { ...f, value: "the launch gift in section 11" }
+            : f.key === "uses"
+              ? {
+                  ...f,
+                  value:
+                    "Came Through Audio's website, social media, ads, email, presentations and press",
+                }
+              : f,
+        ),
+    ],
     body: asCompany(`${RELEASE_TERMS}${LAUNCH_GIFT(11)}${PRELAUNCH(12)}${general(13)}`),
   },
   {
@@ -81,8 +132,10 @@ export const COMPANY_BLUEPRINTS: Blueprint[] = [
     id: "company-beta-agreement",
     name: "Beta Tester Agreement",
     category: "Company",
-    summary: "A beta tester tests Came Through Audio before launch, keeps it confidential and shares feedback, in exchange for lifetime access.",
-    whenToUse: "Send it to every beta tester before they get access. Grant their lifetime access from Admin → Company Contracts → Beta testers once the beta is done.",
+    summary:
+      "A beta tester tests Came Through Audio before launch, keeps it confidential and shares feedback, in exchange for lifetime access.",
+    whenToUse:
+      "Send it to every beta tester before they get access. Grant their lifetime access from Admin → Company Contracts → Beta testers once the beta is done.",
     keyTerms: [
       "Schedule: the beta dates and session times.",
       "Compensation: lifetime access at the plan named here, granted after the beta, with no cash value.",
@@ -91,9 +144,22 @@ export const COMPANY_BLUEPRINTS: Blueprint[] = [
     ],
     roles: ["Company", "Participant"],
     fields: [
-      SIGNER, DATE,
-      { key: "betaDates", label: "Beta dates and times", value: "November 16 to December 3, 2026, Monday to Thursday, 12 PM to 2 PM Eastern", tip: "When testing happens.", required: true },
-      { key: "tier", label: "Lifetime plan", value: "Catalog Management", tip: "The plan the tester gets for life: Catalog Plus, Catalog & Collaborate or Catalog Management.", required: true },
+      SIGNER,
+      DATE,
+      {
+        key: "betaDates",
+        label: "Beta dates and times",
+        value: "November 16 to December 3, 2026, Monday to Thursday, 12 PM to 2 PM Eastern",
+        tip: "When testing happens.",
+        required: true,
+      },
+      {
+        key: "tier",
+        label: "Lifetime plan",
+        value: "Catalog Management",
+        tip: "The plan the tester gets for life: Catalog Plus, Catalog & Collaborate or Catalog Management.",
+        required: true,
+      },
     ],
     body: asCompany(`BETA TESTER AGREEMENT
 
@@ -129,7 +195,18 @@ ${PRELAUNCH(7)}${general(8)}`),
     whenToUse: "Any company agreement that doesn't have a template yet.",
     keyTerms: ["Write the terms in your own words, then sign at the bottom and send."],
     roles: ["Company", "Participant"],
-    fields: [SIGNER, DATE, { key: "terms", label: "Terms", placeholder: "What each side agrees to", tip: "The agreement in plain language.", multiline: true, required: true }],
+    fields: [
+      SIGNER,
+      DATE,
+      {
+        key: "terms",
+        label: "Terms",
+        placeholder: "What each side agrees to",
+        tip: "The agreement in plain language.",
+        multiline: true,
+        required: true,
+      },
+    ],
     body: asCompany(`AGREEMENT
 
 This agreement is made on {{effectiveDate}} between {{party:Company}} ("Company") and {{party:Participant}} ("Participant").
@@ -141,14 +218,21 @@ ${general(2)}`),
   },
 ];
 
-export type AuthorizationSchedule = { songs: { title: string; isrc: string }[]; agencies: string[]; purchasedOn: string; amount: string };
+export type AuthorizationSchedule = {
+  songs: { title: string; isrc: string }[];
+  agencies: string[];
+  purchasedOn: string;
+  amount: string;
+};
 
 /**
  * The Registration Authorization a customer signs at intake step 4 (PLAN-registration-intake §6). Came Through Audio,
  * LLC is the party; Schedule A is filled from the order. Built on the server when signing, so the text and its hash
  * can't be changed by the browser.
  */
-export function registrationAuthorization(o: { effectiveDate: string; client: string; prelaunch: boolean } & AuthorizationSchedule): string {
+export function registrationAuthorization(
+  o: { effectiveDate: string; client: string; prelaunch: boolean } & AuthorizationSchedule,
+): string {
   const agencies = o.agencies.join(", ");
   const n = o.prelaunch ? 10 : 9;
   return `REGISTRATION AUTHORIZATION
@@ -179,10 +263,14 @@ Came Through Audio uses Client's information only to complete these registration
 8. ENDING THIS AUTHORIZATION
 This authorization ends when every registration in Schedule A is complete, or earlier if either side ends it in writing. Registrations already submitted stay in place.
 
-${o.prelaunch ? `9. PRE-LAUNCH CONFIDENTIALITY
+${
+  o.prelaunch
+    ? `9. PRE-LAUNCH CONFIDENTIALITY
 Until Came Through Audio publicly announces the launch of its service (or gives written permission first), Client will not post, share, screenshot, record or describe the Came Through Audio app or its features.
 
-` : ""}${general(n).replace("{{governingLaw}}", "the State of Georgia")}
+`
+    : ""
+}${general(n).replace("{{governingLaw}}", "the State of Georgia")}
 
 SCHEDULE A
 Organizations: ${agencies}
@@ -190,14 +278,20 @@ Purchased: ${o.purchasedOn} · Amount paid: ${o.amount}
 ${o.songs.map((s, i) => `${i + 1}. ${s.title}${s.isrc ? ` (ISRC ${s.isrc})` : ""}`).join("\n")}`;
 }
 
-export const blueprintById = (id: string) => BLUEPRINTS.find((b) => b.id === id) ?? COMPANY_BLUEPRINTS.find((b) => b.id === id);
+export const blueprintById = (id: string) =>
+  BLUEPRINTS.find((b) => b.id === id) ?? COMPANY_BLUEPRINTS.find((b) => b.id === id);
 
 /** A new contract's starting details: each field's pre-filled default, and today as the effective date. */
 export function initialFields(bp: Blueprint, today = new Date()): Record<string, string> {
   const out: Record<string, string> = {};
   for (const f of bp.fields) {
     if (f.value) out[f.key] = f.value;
-    if (f.key === "effectiveDate") out[f.key] = today.toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" });
+    if (f.key === "effectiveDate")
+      out[f.key] = today.toLocaleDateString("en-US", {
+        month: "long",
+        day: "numeric",
+        year: "numeric",
+      });
   }
   return out;
 }
@@ -217,7 +311,8 @@ export function takesOwnRegistration(f: BlueprintField, drafting: string): boole
 }
 
 /** The required details still blank, in form order. Only these (plus party names and emails) hold back signing. */
-export const missingFields = (bp: Blueprint, fields: Record<string, string>) => bp.fields.filter((f) => f.required && !fields[f.key]?.trim());
+export const missingFields = (bp: Blueprint, fields: Record<string, string>) =>
+  bp.fields.filter((f) => f.required && !fields[f.key]?.trim());
 
 /**
  * Fills {{field}} and {{party:Role}} tokens. A blank required field or party stays visible as a [Label] blank to fill
@@ -227,18 +322,36 @@ export const missingFields = (bp: Blueprint, fields: Record<string, string>) => 
  * Customized wording is free text, so it doesn't re-render as details change. This fills any [Label] or
  * [Role legal name] gaps still in it from the details and parties, so filling a field always clears its gap.
  */
-export function fillBlanks(bp: Blueprint, text: string, fields: Record<string, string>, parties: { role: string; legalName: string }[]) {
+export function fillBlanks(
+  bp: Blueprint,
+  text: string,
+  fields: Record<string, string>,
+  parties: { role: string; legalName: string }[],
+) {
   let out = text;
-  for (const f of bp.fields) if (fields[f.key]?.trim()) out = out.replaceAll(`[${f.label}]`, fields[f.key]!.trim());
-  for (const p of parties) if (p.legalName.trim()) out = out.replaceAll(`[${p.role} legal name]`, p.legalName.trim());
+  for (const f of bp.fields)
+    if (fields[f.key]?.trim()) out = out.replaceAll(`[${f.label}]`, fields[f.key]!.trim());
+  for (const p of parties)
+    if (p.legalName.trim()) out = out.replaceAll(`[${p.role} legal name]`, p.legalName.trim());
   return out;
 }
 
-export function renderContract(bp: Blueprint, fields: Record<string, string>, parties: { role: string; legalName: string }[]) {
+export function renderContract(
+  bp: Blueprint,
+  fields: Record<string, string>,
+  parties: { role: string; legalName: string }[],
+) {
   return bp.body
-    .replace(/\{\{party:([^}]+)\}\}/g, (_, role: string) => parties.find((p) => p.role === role)?.legalName.trim() || `[${role} legal name]`)
+    .replace(
+      /\{\{party:([^}]+)\}\}/g,
+      (_, role: string) =>
+        parties.find((p) => p.role === role)?.legalName.trim() || `[${role} legal name]`,
+    )
     .replace(/\{\{(\w+)\}\}/g, (_, key: string) => {
       const f = bp.fields.find((x) => x.key === key);
-      return fields[key]?.trim() || (f && !f.required ? f.fallback ?? f.value ?? "" : `[${f?.label ?? key}]`);
+      return (
+        fields[key]?.trim() ||
+        (f && !f.required ? (f.fallback ?? f.value ?? "") : `[${f?.label ?? key}]`)
+      );
     });
 }

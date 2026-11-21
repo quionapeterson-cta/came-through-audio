@@ -4,7 +4,10 @@ import { ASSIGNABLE_DEPARTMENTS } from "./departments";
 
 describe("department plan generator", () => {
   it("has a scorecard for every department staff can be in", () => {
-    for (const d of ASSIGNABLE_DEPARTMENTS) { expect(SCORECARD[d].goals).toHaveLength(3); expect(SCORECARD[d].milestones.length).toBeGreaterThan(0); }
+    for (const d of ASSIGNABLE_DEPARTMENTS) {
+      expect(SCORECARD[d].goals).toHaveLength(3);
+      expect(SCORECARD[d].milestones.length).toBeGreaterThan(0);
+    }
   });
   it("lists the next quarters and spreads milestones across the chosen one", () => {
     const q = quarters(new Date("2026-11-15T12:00:00Z"), 2);
@@ -17,7 +20,11 @@ describe("department plan generator", () => {
   });
   it("scores goals, including lower-is-better ones", () => {
     expect(goalPct({ name: "Tickets", target: 300, current: 150, unit: "tickets" })).toBe(50);
-    expect(goalPct({ name: "Reopened", target: 5, current: 4, unit: "%", lowerIsBetter: true })).toBe(100);
-    expect(goalPct({ name: "Reopened", target: 5, current: 10, unit: "%", lowerIsBetter: true })).toBe(50);
+    expect(
+      goalPct({ name: "Reopened", target: 5, current: 4, unit: "%", lowerIsBetter: true }),
+    ).toBe(100);
+    expect(
+      goalPct({ name: "Reopened", target: 5, current: 10, unit: "%", lowerIsBetter: true }),
+    ).toBe(50);
   });
 });

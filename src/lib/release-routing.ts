@@ -23,7 +23,11 @@ export type ReleaseFields = Pick<Metadata, "album" | "releaseType" | "title">;
 export const albumKey = (album: string) => album.trim().toLowerCase().replace(/\s+/g, " ");
 
 const declared = (releaseType: string): "EP" | "Album" | "" =>
-  releaseType === "EP" ? "EP" : releaseType === "Album" || releaseType === "Compilation" ? "Album" : "";
+  releaseType === "EP"
+    ? "EP"
+    : releaseType === "Album" || releaseType === "Compilation"
+      ? "Album"
+      : "";
 
 /** The kind of release each song belongs to, by song id. */
 export function routedKinds<T>(
@@ -40,7 +44,9 @@ export function routedKinds<T>(
     albums.set(key, [...(albums.get(key) ?? []), song]);
   }
   for (const list of albums.values()) {
-    const tags = list.map((song) => declared(fields(song).releaseType)).filter((tag): tag is "EP" | "Album" => !!tag);
+    const tags = list
+      .map((song) => declared(fields(song).releaseType))
+      .filter((tag): tag is "EP" | "Album" => !!tag);
     const eps = tags.filter((tag) => tag === "EP").length;
     const lps = tags.length - eps;
     const only = list.length === 1 ? list[0] : undefined;
@@ -50,7 +56,18 @@ export function routedKinds<T>(
     // own is a release of one, while an explicit Single stays a single whatever its album field says.
     // With no release type declared anywhere, the release's own size decides: the app already treats up to six songs as
     // an EP (the EP package's ceiling), and a longer run of songs on one title is an album.
-    const kind: RoutedKind = eps > lps ? "EP" : lps > 0 ? "Album" : list.length > 1 ? (list.length <= EP_MAX ? "EP" : "Album") : named && !fields(only!).releaseType.trim() ? "Album" : "Single";
+    const kind: RoutedKind =
+      eps > lps
+        ? "EP"
+        : lps > 0
+          ? "Album"
+          : list.length > 1
+            ? list.length <= EP_MAX
+              ? "EP"
+              : "Album"
+            : named && !fields(only!).releaseType.trim()
+              ? "Album"
+              : "Single";
     if (kind === "Single") continue;
     for (const song of list) kinds.set(id(song), kind);
   }
@@ -76,7 +93,7 @@ export function catalogReleases<T>(
     const f = fields(song);
     const kind = kinds.get(id(song));
     // A single is named by its song when the album field is empty; that is the title My Catalog shows it under.
-    const album = (f.album.trim() || f.title.trim());
+    const album = f.album.trim() || f.title.trim();
     if (!album || !kind) continue;
     const key = albumKey(album);
     if (!out.has(key)) out.set(key, { album, kind });

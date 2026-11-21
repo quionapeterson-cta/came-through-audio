@@ -33,9 +33,14 @@ export function leftWithinProbation(firstDay: string | Date, lastDay: string | D
  * What happens when someone leaves. Access ends now either way for the early leaver; for a longer-serving employee the
  * staff plan simply ends on their last day and nothing is scheduled, because that policy is still undecided.
  */
-export function departureOn(firstDay: string | Date, lastDay: string | Date, now = new Date()): Departure {
+export function departureOn(
+  firstDay: string | Date,
+  lastDay: string | Date,
+  now = new Date(),
+): Departure {
   const immediate = leftWithinProbation(firstDay, lastDay);
-  if (!immediate) return { immediate: false, accessEndsAt: new Date(lastDay).toISOString(), deleteOn: null };
+  if (!immediate)
+    return { immediate: false, accessEndsAt: new Date(lastDay).toISOString(), deleteOn: null };
   const deleteOn = addDays(now, ASSET_DAYS).toISOString();
   return { immediate: true, accessEndsAt: now.toISOString(), deleteOn };
 }
@@ -64,7 +69,8 @@ export const deletionLine = (deleteOn: string | null) =>
   deleteOn ? `Deleted on ${new Date(deleteOn).toLocaleDateString()}` : "No deletion scheduled";
 
 /** Said before the deletion date everywhere, because keeping the account is the option we want them to take. */
-export const SECURE_COPY = "Pay for any plan before that date and the account, songs and paperwork stay.";
+export const SECURE_COPY =
+  "Pay for any plan before that date and the account, songs and paperwork stay.";
 
 /** Paying anything before the date stops the deletion. The cron re-checks the tier on the day, so a late payment wins. */
 export const keepsAccountOnPayment = (tier: string) => tier !== "free";

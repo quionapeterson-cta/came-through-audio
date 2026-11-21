@@ -1,9 +1,13 @@
 import { describe, expect, it } from "vitest";
-import { canSeeHolidayPlan, COVERAGE_SECTIONS, HOLIDAY_BREAKS, HOLIDAY_PAY_STATUS } from "./holiday-coverage";
+import { canSeeHolidayPlan } from "./holiday-coverage";
+// The plan itself is server-side now (2026-11-21); the test reads it directly, as it stands beside the module.
+import { COVERAGE_SECTIONS, HOLIDAY_BREAKS, HOLIDAY_PAY_STATUS } from "./holiday-coverage.server";
 import type { StaffAccess } from "./departments";
 
-const access = (role: StaffAccess["role"], departments: StaffAccess["departments"] = ["support"]): StaffAccess =>
-  ({ role, departments, canManageStaff: role === "super_admin" });
+const access = (
+  role: StaffAccess["role"],
+  departments: StaffAccess["departments"] = ["support"],
+): StaffAccess => ({ role, departments, canManageStaff: role === "super_admin" });
 
 describe("holiday coverage plan", () => {
   it("is for super admins and department leads only", () => {

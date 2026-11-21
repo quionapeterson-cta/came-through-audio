@@ -37,7 +37,9 @@ export function WorkspaceReminderStrip() {
     >
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex min-w-0 flex-1 items-start gap-3">
-          <span className="cta-reminder-sparkle mt-0.5 text-xl leading-none" aria-hidden="true">💎</span>
+          <span className="cta-reminder-sparkle mt-0.5 text-xl leading-none" aria-hidden="true">
+            💎
+          </span>
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-2">
               <span className="cta-reminder-chip">{PRIORITY_SHORT[reminder.priority]}</span>
@@ -45,25 +47,57 @@ export function WorkspaceReminderStrip() {
               <span className="cta-reminder-due">{dueText(reminder, store.now)}</span>
             </div>
             <p className="mt-1 truncate text-sm font-bold sm:text-base">{reminder.title}</p>
-            {reminder.note && <p className="mt-0.5 line-clamp-1 text-xs opacity-75">{reminder.note}</p>}
+            {reminder.note && (
+              <p className="mt-0.5 line-clamp-1 text-xs opacity-75">{reminder.note}</p>
+            )}
           </div>
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
           {due.length > 1 && (
             <div className="cta-reminder-pager" aria-label={`Reminder ${at + 1} of ${due.length}`}>
-              <button type="button" aria-label="Previous reminder" onClick={() => setIndex((i) => (i - 1 + due.length) % due.length)}>
+              <button
+                type="button"
+                aria-label="Previous reminder"
+                onClick={() => setIndex((i) => (i - 1 + due.length) % due.length)}
+              >
                 <ChevronLeft className="h-3.5 w-3.5" />
               </button>
-              <span>{at + 1} of {due.length}</span>
-              <button type="button" aria-label="Next reminder" onClick={() => setIndex((i) => (i + 1) % due.length)}>
+              <span>
+                {at + 1} of {due.length}
+              </span>
+              <button
+                type="button"
+                aria-label="Next reminder"
+                onClick={() => setIndex((i) => (i + 1) % due.length)}
+              >
                 <ChevronRight className="h-3.5 w-3.5" />
               </button>
             </div>
           )}
-          <button type="button" className="cta-reminder-open" onClick={open}>Take Action / Open</button>
-          <button type="button" className="cta-reminder-ghost" onClick={() => { store.snooze(reminder.id); setIndex(0); }}>Snooze 1 Day</button>
-          <button type="button" className="cta-reminder-ghost" onClick={() => { store.complete(reminder.id); setIndex(0); }}>Mark Complete</button>
+          <button type="button" className="cta-reminder-open" onClick={open}>
+            Take Action / Open
+          </button>
+          <button
+            type="button"
+            className="cta-reminder-ghost"
+            onClick={() => {
+              store.snooze(reminder.id);
+              setIndex(0);
+            }}
+          >
+            Snooze 1 Day
+          </button>
+          <button
+            type="button"
+            className="cta-reminder-ghost"
+            onClick={() => {
+              store.complete(reminder.id);
+              setIndex(0);
+            }}
+          >
+            Mark Complete
+          </button>
         </div>
       </div>
     </section>

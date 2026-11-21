@@ -201,8 +201,7 @@ export function PdfPacketCenter() {
     return placedAnswers(
       admin,
       (id) =>
-        prefillForm.current?.querySelector<HTMLInputElement>(`input[name="prefill-${id}"]`)
-          ?.value,
+        prefillForm.current?.querySelector<HTMLInputElement>(`input[name="prefill-${id}"]`)?.value,
     );
   }
 
@@ -520,9 +519,7 @@ export function PdfPacketCenter() {
                         id={`send-to-${packet.id}`}
                         type="email"
                         value={sending.email}
-                        onChange={(e) =>
-                          setSending({ id: packet.id, email: e.target.value })
-                        }
+                        onChange={(e) => setSending({ id: packet.id, email: e.target.value })}
                         className="mt-1"
                       />
                     </div>

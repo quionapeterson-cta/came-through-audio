@@ -15,7 +15,12 @@ import { escapeIcs, foldLine, icsDate } from "@/utils/calendarExport";
 
 export type AdminCalendarView = "month" | "week" | "day" | "agenda";
 
-export const ADMIN_CALENDAR_VIEWS: readonly AdminCalendarView[] = ["month", "week", "day", "agenda"];
+export const ADMIN_CALENDAR_VIEWS: readonly AdminCalendarView[] = [
+  "month",
+  "week",
+  "day",
+  "agenda",
+];
 
 export const ADMIN_CALENDAR_VIEW_LABEL: Record<AdminCalendarView, string> = {
   month: "Month",
@@ -64,7 +69,10 @@ export function calendarViewer(userId: string, access: StaffAccess): AdminCalend
   };
 }
 
-export function canSeeCalendarEvent(event: AdminCalendarEvent, viewer: AdminCalendarViewer): boolean {
+export function canSeeCalendarEvent(
+  event: AdminCalendarEvent,
+  viewer: AdminCalendarViewer,
+): boolean {
   // Your own entry is yours whatever calendar it sits on.
   if (event.owner_id === viewer.userId) return true;
   if (!event.department) return false;
@@ -73,18 +81,27 @@ export function canSeeCalendarEvent(event: AdminCalendarEvent, viewer: AdminCale
   return viewer.departments.includes(event.department);
 }
 
-export function canSeeTaskDeadline(task: AdminCalendarDeadline, viewer: AdminCalendarViewer): boolean {
+export function canSeeTaskDeadline(
+  task: AdminCalendarDeadline,
+  viewer: AdminCalendarViewer,
+): boolean {
   if (task.department === "launch") return viewer.isSuperAdmin;
   if (viewer.isSuperAdmin || viewer.seesAllTeams) return true;
   // A department lead works their own bank; another department's tasks are not theirs to read.
   return viewer.departments.includes(task.department);
 }
 
-export function visibleCalendarEvents(events: AdminCalendarEvent[], viewer: AdminCalendarViewer): AdminCalendarEvent[] {
+export function visibleCalendarEvents(
+  events: AdminCalendarEvent[],
+  viewer: AdminCalendarViewer,
+): AdminCalendarEvent[] {
   return events.filter((event) => canSeeCalendarEvent(event, viewer));
 }
 
-export function visibleTaskDeadlines(deadlines: AdminCalendarDeadline[], viewer: AdminCalendarViewer): AdminCalendarDeadline[] {
+export function visibleTaskDeadlines(
+  deadlines: AdminCalendarDeadline[],
+  viewer: AdminCalendarViewer,
+): AdminCalendarDeadline[] {
   return deadlines.filter((task) => canSeeTaskDeadline(task, viewer));
 }
 
@@ -108,15 +125,26 @@ const pad2 = (n: number) => String(n).padStart(2, "0");
  * offset, so the date is formatted in the subscription's zone instead. No zone, or one Intl refuses, falls back to UTC
  * rather than failing the whole feed.
  */
-function zoneParts(iso: string, timeZone?: string): { year: number; month: number; day: number } | null {
+function zoneParts(
+  iso: string,
+  timeZone?: string,
+): { year: number; month: number; day: number } | null {
   const date = new Date(iso);
   if (Number.isNaN(date.getTime())) return null;
   if (timeZone) {
     try {
-      const parts = new Intl.DateTimeFormat("en-US", { timeZone, year: "numeric", month: "2-digit", day: "2-digit" }).formatToParts(date);
+      const parts = new Intl.DateTimeFormat("en-US", {
+        timeZone,
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+      }).formatToParts(date);
       const part = (type: string) => Number(parts.find((one) => one.type === type)?.value);
-      const year = part("year"), month = part("month"), day = part("day");
-      if (Number.isFinite(year) && Number.isFinite(month) && Number.isFinite(day)) return { year, month, day };
+      const year = part("year"),
+        month = part("month"),
+        day = part("day");
+      if (Number.isFinite(year) && Number.isFinite(month) && Number.isFinite(day))
+        return { year, month, day };
     } catch {
       // An unknown zone never costs the entry; the UTC fallback below is what it gets.
     }
@@ -210,7 +238,9 @@ export function buildCalendarFeedIcs({
     const start = new Date(event.starts_at);
     if (Number.isNaN(start.getTime())) continue;
     const end =
-      event.ends_at && !Number.isNaN(Date.parse(event.ends_at)) && Date.parse(event.ends_at) >= start.getTime()
+      event.ends_at &&
+      !Number.isNaN(Date.parse(event.ends_at)) &&
+      Date.parse(event.ends_at) >= start.getTime()
         ? new Date(event.ends_at)
         : new Date(start.getTime() + 3_600_000);
     const details = [

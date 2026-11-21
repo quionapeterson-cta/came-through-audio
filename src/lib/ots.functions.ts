@@ -18,7 +18,10 @@ export const stampDigest = createServerFn({ method: "POST" })
       try {
         const res = await fetch(`${cal}/digest`, {
           method: "POST",
-          headers: { Accept: "application/vnd.opentimestamps.v1", "Content-Type": "application/x-www-form-urlencoded" },
+          headers: {
+            Accept: "application/vnd.opentimestamps.v1",
+            "Content-Type": "application/x-www-form-urlencoded",
+          },
           body: bytes,
         });
         if (!res.ok) continue;

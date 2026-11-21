@@ -50,12 +50,30 @@ export type EagleStage = {
 
 /** Month 1–4 Soaring, 4–8 Keep Soaring, 8–12 and thereafter I Soar The Highest. */
 export const EAGLE_STAGES: EagleStage[] = [
-  { key: "soar", label: "Soaring", art: EAGLE_ART.soar, from: 1, until: 4,
-    detail: "Active on Catalog Management: month 1 to 4." },
-  { key: "keep_soaring", label: "Keep Soaring", art: EAGLE_ART.keepSoaring, from: 4, until: 8,
-    detail: "Active on Catalog Management: month 4 to 8." },
-  { key: "highest", label: "I Soar The Highest", art: EAGLE_ART.highest, from: 8, until: null,
-    detail: "Active on Catalog Management: month 8, and every month after." },
+  {
+    key: "soar",
+    label: "Soaring",
+    art: EAGLE_ART.soar,
+    from: 1,
+    until: 4,
+    detail: "Active on Catalog Management: month 1 to 4.",
+  },
+  {
+    key: "keep_soaring",
+    label: "Keep Soaring",
+    art: EAGLE_ART.keepSoaring,
+    from: 4,
+    until: 8,
+    detail: "Active on Catalog Management: month 4 to 8.",
+  },
+  {
+    key: "highest",
+    label: "I Soar The Highest",
+    art: EAGLE_ART.highest,
+    from: 8,
+    until: null,
+    detail: "Active on Catalog Management: month 8, and every month after.",
+  },
 ];
 
 /** Whole months of active use between two dates (0 before the first full month). */
@@ -63,7 +81,8 @@ export function activeMonths(startedAt: string | null | undefined, now = new Dat
   if (!startedAt) return 0;
   const start = new Date(startedAt);
   if (Number.isNaN(start.getTime())) return 0;
-  const months = (now.getFullYear() - start.getFullYear()) * 12 + (now.getMonth() - start.getMonth());
+  const months =
+    (now.getFullYear() - start.getFullYear()) * 12 + (now.getMonth() - start.getMonth());
   // A month that started on the 31st isn't complete until the 31st (or the last day) of a later month.
   const whole = now.getDate() < start.getDate() ? months - 1 : months;
   return Math.max(0, whole);
@@ -73,18 +92,36 @@ export function activeMonths(startedAt: string | null | undefined, now = new Dat
 export function eagleStage(months: number): EagleStage {
   // Months count from 1 for the first month of use; boundaries are 4 and 8 per the rules.
   const month = Math.max(1, Math.floor(months) + 1);
-  return EAGLE_STAGES.find((s) => month < (s.until ?? Infinity)) ?? EAGLE_STAGES[EAGLE_STAGES.length - 1]!;
+  return (
+    EAGLE_STAGES.find((s) => month < (s.until ?? Infinity)) ??
+    EAGLE_STAGES[EAGLE_STAGES.length - 1]!
+  );
 }
 
 export type EagleStatus =
   | { locked: true; label: string; detail: string; art: string }
-  | { locked: false; label: string; detail: string; art: string; stage: EagleStage; months: number };
+  | {
+      locked: false;
+      label: string;
+      detail: string;
+      art: string;
+      stage: EagleStage;
+      months: number;
+    };
 
 /**
  * The status for one account. `onManagement` comes from the tier (the same `management` tier the server's has_tier
  * checks, paused accounts count as Free); `startedAt` is when the plan began.
  */
-export function eagleStatus({ onManagement, startedAt, now = new Date() }: { onManagement: boolean; startedAt?: string | null; now?: Date }): EagleStatus {
+export function eagleStatus({
+  onManagement,
+  startedAt,
+  now = new Date(),
+}: {
+  onManagement: boolean;
+  startedAt?: string | null;
+  now?: Date;
+}): EagleStatus {
   if (!onManagement) {
     return {
       locked: true,

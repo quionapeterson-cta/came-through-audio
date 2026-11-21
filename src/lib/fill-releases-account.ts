@@ -24,7 +24,8 @@ export const toRelease = (row: Row): FillRelease => ({
 
 /** The dialog's own spelling rule, so "afterglow " and "Afterglow" are one release here too. */
 const sameRelease = (row: { kind: string; name: string }, wanted: { kind: string; name: string }) =>
-  releaseKey({ type: row.kind, name: row.name }) === releaseKey({ type: wanted.kind, name: wanted.name });
+  releaseKey({ type: row.kind, name: row.name }) ===
+  releaseKey({ type: wanted.kind, name: wanted.name });
 
 async function rowsFor(db: ReleaseDb, userId: string): Promise<Row[]> {
   const { data, error } = await db
@@ -43,7 +44,11 @@ async function rowsFor(db: ReleaseDb, userId: string): Promise<Row[]> {
  * `lower(btrim(name))` (20261117133708_fill-releases.sql), an expression PostgREST cannot name as an `on_conflict`
  * target, so an upsert on the plain columns fails with 42P10 and the release would only ever live in the browser.
  */
-export async function rememberRelease(db: ReleaseDb, userId: string, data: ReleaseEntry): Promise<FillRelease> {
+export async function rememberRelease(
+  db: ReleaseDb,
+  userId: string,
+  data: ReleaseEntry,
+): Promise<FillRelease> {
   const wanted = { kind: data.type, name: data.name };
   const existing = (await rowsFor(db, userId)).find((row) => sameRelease(row, wanted));
   if (existing) {
@@ -76,7 +81,11 @@ export async function rememberRelease(db: ReleaseDb, userId: string, data: Relea
  * Forgets an entry the member no longer wants offered. The row is matched with the same rule the dialog uses, so a title
  * holding a `%` or `_` is still found as itself rather than as a wildcard.
  */
-export async function forgetRelease(db: ReleaseDb, userId: string, data: ReleaseEntry): Promise<true> {
+export async function forgetRelease(
+  db: ReleaseDb,
+  userId: string,
+  data: ReleaseEntry,
+): Promise<true> {
   const wanted = { kind: data.type, name: data.name };
   const matching = (await rowsFor(db, userId)).filter((row) => sameRelease(row, wanted));
   if (!matching.length) return true;
@@ -84,7 +93,10 @@ export async function forgetRelease(db: ReleaseDb, userId: string, data: Release
     .from("fill_releases")
     .delete()
     .eq("user_id", userId)
-    .in("id", matching.map((row) => row.id));
+    .in(
+      "id",
+      matching.map((row) => row.id),
+    );
   if (error) throw new Error(error.message);
   return true;
 }

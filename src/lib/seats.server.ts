@@ -9,17 +9,21 @@ type Admin = Awaited<typeof import("@/integrations/supabase/client.server")>["su
 
 export async function runSeatEndings(now = new Date()) {
   const db: Admin = (await import("@/integrations/supabase/client.server")).supabaseAdmin;
-  const { data, error } = await db.from("artist_seats" as never)
+  const { data, error } = await db
+    .from("artist_seats" as never)
     .select("id, status, current_period_end" as never)
     .in("status" as never, ["unclaimed", "invited", "active", "canceled"] as never)
     .not("current_period_end", "is", null)
     .lte("current_period_end", now.toISOString());
   if (error) throw error;
-  const due = ((data ?? []) as unknown as Pick<ArtistSeat, "id" | "status" | "current_period_end">[])
+  const due = (
+    (data ?? []) as unknown as Pick<ArtistSeat, "id" | "status" | "current_period_end">[]
+  )
     .filter((seat) => seatShouldEnd(seat, now))
     .map((seat) => seat.id);
   if (!due.length) return { seatsEnded: 0 };
-  const { error: saveError } = await db.from("artist_seats" as never)
+  const { error: saveError } = await db
+    .from("artist_seats" as never)
     .update({ status: "ended", updated_at: now.toISOString() } as never)
     .in("id" as never, due as never);
   if (saveError) throw saveError;

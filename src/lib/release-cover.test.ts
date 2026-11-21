@@ -47,9 +47,14 @@ vi.mock("@/integrations/supabase/client", () => ({
         eq: (_column: string, id: string) => ({
           select: () => ({
             single: async () => {
-              if (calls.refuseSaveFor.has(id)) return { data: null, error: { message: "the database refused it" } };
+              if (calls.refuseSaveFor.has(id))
+                return { data: null, error: { message: "the database refused it" } };
               // The artwork lives in the song's own details, which is where the catalog stores every metadata field.
-              calls.updates.push({ id, artPath: String(row.details?.artPath ?? ""), coverThumb: String(row.details?.coverThumb ?? "") });
+              calls.updates.push({
+                id,
+                artPath: String(row.details?.artPath ?? ""),
+                coverThumb: String(row.details?.coverThumb ?? ""),
+              });
               return { data: { id }, error: null };
             },
           }),
@@ -103,12 +108,21 @@ describe("setReleaseArtwork", () => {
   });
 
   it("carries the small tile to every song too, so the release header shows the cover", async () => {
-    await setReleaseArtwork([song("a"), song("b")], "user-1", cover(), "data:image/jpeg;base64,tile");
+    await setReleaseArtwork(
+      [song("a"), song("b")],
+      "user-1",
+      cover(),
+      "data:image/jpeg;base64,tile",
+    );
     expect(calls.updates.every((u) => u.coverThumb === "data:image/jpeg;base64,tile")).toBe(true);
   });
 
   it("keeps the png it was given", async () => {
-    await setReleaseArtwork([song("a")], "user-1", new File(["x"], "cover.png", { type: "image/png" }));
+    await setReleaseArtwork(
+      [song("a")],
+      "user-1",
+      new File(["x"], "cover.png", { type: "image/png" }),
+    );
     expect(calls.uploads).toEqual(["user-1/a/artwork.png"]);
   });
 
@@ -125,7 +139,11 @@ describe("setReleaseArtwork", () => {
 
   it("keeps the songs whose cover landed when one copy is refused, and names the one it missed", async () => {
     calls.failCopyFor.add("b");
-    const { songs, covers, failed } = await setReleaseArtwork([song("a"), song("b"), song("c")], "user-1", cover());
+    const { songs, covers, failed } = await setReleaseArtwork(
+      [song("a"), song("b"), song("c")],
+      "user-1",
+      cover(),
+    );
 
     // b's folder was never written, so its row is left alone instead of pointing at a cover it doesn't have.
     expect(songs).toBe(2);
@@ -147,7 +165,11 @@ describe("setReleaseArtwork", () => {
     // The reported bug: a cover set before leaves artwork.jpg in the folder, and copy() refuses to overwrite it, so
     // every song but the first failed with "The resource already exists" while the release looked half-covered.
     calls.existing.add("user-1/b/artwork.jpg");
-    const { songs, covers, failed } = await setReleaseArtwork([song("a"), song("b")], "user-1", cover());
+    const { songs, covers, failed } = await setReleaseArtwork(
+      [song("a"), song("b")],
+      "user-1",
+      cover(),
+    );
 
     expect(failed).toEqual([]);
     expect(songs).toBe(2);
@@ -165,6 +187,8 @@ describe("setReleaseArtwork", () => {
   it("still fails outright when no song takes the cover", async () => {
     calls.refuseSaveFor.add("a");
     calls.failCopyFor.add("b");
-    await expect(setReleaseArtwork([song("a"), song("b")], "user-1", cover())).rejects.toThrow(/didn't reach any song/);
+    await expect(setReleaseArtwork([song("a"), song("b")], "user-1", cover())).rejects.toThrow(
+      /didn't reach any song/,
+    );
   });
 });

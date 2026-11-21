@@ -2,7 +2,13 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { emailLayout } from "./email-layout";
 import { MAILBOXES, mailFrom, mailKey, mailboxAddress, sendMail } from "./mailer";
 
-const mail = { from: "support" as const, to: ["a@b.com"], subject: "Hi", html: "<p>hi</p>", key: "key-1" };
+const mail = {
+  from: "support" as const,
+  to: ["a@b.com"],
+  subject: "Hi",
+  html: "<p>hi</p>",
+  key: "key-1",
+};
 
 describe("mailboxes", () => {
   it("names one address per mailbox, all on our own domain", () => {
@@ -13,7 +19,9 @@ describe("mailboxes", () => {
 
   it("builds the from header with our name, or the one that mailbox reads", () => {
     expect(mailFrom("support")).toBe("Came Through Audio <support@camethroughaudio.com>");
-    expect(mailFrom("billing", "Came Through Audio Billing")).toBe("Came Through Audio Billing <billing@camethroughaudio.com>");
+    expect(mailFrom("billing", "Came Through Audio Billing")).toBe(
+      "Came Through Audio Billing <billing@camethroughaudio.com>",
+    );
     expect(mailboxAddress("registrations")).toBe("registrations@camethroughaudio.com");
   });
 });
@@ -51,7 +59,9 @@ describe("sendMail", () => {
   it("says it is not configured instead of pretending to send", async () => {
     vi.stubEnv("RESEND_API_KEY", "");
     vi.stubEnv("CameThroughAudio", "");
-    await expect(sendMail({ ...mail, html: emailLayout("<p>hi</p>", { reason: "test" }) })).resolves.toEqual({
+    await expect(
+      sendMail({ ...mail, html: emailLayout("<p>hi</p>", { reason: "test" }) }),
+    ).resolves.toEqual({
       ok: false,
       detail: "no-key",
     });
@@ -66,10 +76,17 @@ describe("sendMail", () => {
     });
     vi.stubGlobal("fetch", fetchMock);
 
-    const result = await sendMail({ ...mail, to: ["  a@b.com "], replyTo: "support@camethroughaudio.com" });
+    const result = await sendMail({
+      ...mail,
+      to: ["  a@b.com "],
+      replyTo: "support@camethroughaudio.com",
+    });
 
     expect(result).toEqual({ ok: true, status: 200, id: "msg_1" });
-    const [url, init] = fetchMock.mock.calls[0] as [string, { headers: Record<string, string>; body: string }];
+    const [url, init] = fetchMock.mock.calls[0] as [
+      string,
+      { headers: Record<string, string>; body: string },
+    ];
     expect(url).toBe("https://api.resend.com/emails");
     expect(init.headers["Idempotency-Key"]).toBe("key-1");
     const body = JSON.parse(init.body) as { from: string; to: string[]; reply_to?: string };
@@ -80,7 +97,12 @@ describe("sendMail", () => {
 
   it("reports a refused send with its status and reason", async () => {
     vi.stubEnv("RESEND_API_KEY", "test_key");
-    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: false, status: 403, text: async () => "domain not verified" }));
+    vi.stubGlobal(
+      "fetch",
+      vi
+        .fn()
+        .mockResolvedValue({ ok: false, status: 403, text: async () => "domain not verified" }),
+    );
     await expect(sendMail({ ...mail, from: "admin" })).resolves.toEqual({
       ok: false,
       status: 403,

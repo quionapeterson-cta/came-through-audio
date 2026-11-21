@@ -55,7 +55,9 @@ export const listPdfEmails = createServerFn({ method: "GET" })
       .from("user_roles")
       .select("role, departments")
       .eq("user_id", context.userId);
-    const access = resolveAccess((roles ?? []) as { role: string; departments?: string[] | null }[]);
+    const access = resolveAccess(
+      (roles ?? []) as { role: string; departments?: string[] | null }[],
+    );
     if (!access) throw new Error("Only staff can see PDF emails.");
     const scope = companyMailReadScope(access);
     if (Array.isArray(scope) && !scope.length) return [];
@@ -65,7 +67,11 @@ export const listPdfEmails = createServerFn({ method: "GET" })
       .order("created_at", { ascending: false })
       .limit(20);
     const scoped =
-      scope === "all" ? base : scope === "own" ? base.eq("sent_by", context.userId) : base.in("mailbox", scope);
+      scope === "all"
+        ? base
+        : scope === "own"
+          ? base.eq("sent_by", context.userId)
+          : base.in("mailbox", scope);
     const { data, error } = await scoped;
     if (error)
       throw new Error("Couldn't load delivery results. Run migration 20261115180000 first.");

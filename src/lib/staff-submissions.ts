@@ -4,7 +4,15 @@
  * "too big" means. Files land in a private bucket; the super admin downloads them through a signed link.
  */
 
-export const SUBMISSION_KINDS = ["idea", "paperwork", "video", "music", "photo", "project", "other"] as const;
+export const SUBMISSION_KINDS = [
+  "idea",
+  "paperwork",
+  "video",
+  "music",
+  "photo",
+  "project",
+  "other",
+] as const;
 export type SubmissionKind = (typeof SUBMISSION_KINDS)[number];
 
 export const KIND_LABEL: Record<SubmissionKind, string> = {
@@ -44,12 +52,25 @@ export const KIND_LIMIT: Record<SubmissionKind, number> = {
 /** The MIME types each kind accepts; the file input's `accept` is built from the same lists. */
 export const KIND_TYPES: Record<SubmissionKind, readonly string[]> = {
   idea: ["application/pdf", "image/png", "image/jpeg", "image/webp", "text/plain"],
-  paperwork: ["application/pdf", "image/png", "image/jpeg", "image/webp", "application/vnd.openxmlformats-officedocument.wordprocessingml.document"],
+  paperwork: [
+    "application/pdf",
+    "image/png",
+    "image/jpeg",
+    "image/webp",
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  ],
   video: ["video/mp4", "video/quicktime", "video/webm"],
   music: ["audio/mpeg", "audio/wav", "audio/x-wav", "audio/aiff", "audio/mp4"],
   photo: ["image/png", "image/jpeg", "image/webp", "image/heic"],
   project: ["application/pdf", "application/zip", "image/png", "image/jpeg", "text/plain"],
-  other: ["application/pdf", "image/png", "image/jpeg", "image/webp", "text/plain", "application/zip"],
+  other: [
+    "application/pdf",
+    "image/png",
+    "image/jpeg",
+    "image/webp",
+    "text/plain",
+    "application/zip",
+  ],
 };
 
 const EXTENSION: Record<string, string> = {
@@ -71,15 +92,20 @@ const EXTENSION: Record<string, string> = {
   "application/vnd.openxmlformats-officedocument.wordprocessingml.document": ".docx",
 };
 
-export const ACCEPT_FOR = (kind: SubmissionKind) => KIND_TYPES[kind].map((t) => EXTENSION[t] ?? t).join(",");
+export const ACCEPT_FOR = (kind: SubmissionKind) =>
+  KIND_TYPES[kind].map((t) => EXTENSION[t] ?? t).join(",");
 export const limitLabel = (bytes: number) => `${Math.round((bytes / MB) * 10) / 10} MB`;
 
 /** Why this file can't be sent as this kind, or null when it can. */
-export function fileProblem(kind: SubmissionKind, file: { name: string; size: number; type: string }): string | null {
+export function fileProblem(
+  kind: SubmissionKind,
+  file: { name: string; size: number; type: string },
+): string | null {
   if (!file.name?.trim()) return "Choose a file, or send the note on its own.";
   if (file.size <= 0) return "That file looks empty.";
   const limit = KIND_LIMIT[kind];
-  if (file.size > limit) return `${KIND_LABEL[kind]} files can be up to ${limitLabel(limit)}. Anything bigger goes as a link.`;
+  if (file.size > limit)
+    return `${KIND_LABEL[kind]} files can be up to ${limitLabel(limit)}. Anything bigger goes as a link.`;
   if (!KIND_TYPES[kind].includes(file.type)) {
     const ok = KIND_TYPES[kind].map((t) => EXTENSION[t] ?? t).join(", ");
     return `A ${KIND_LABEL[kind].toLowerCase()} needs one of: ${ok}.`;
@@ -89,7 +115,10 @@ export function fileProblem(kind: SubmissionKind, file: { name: string; size: nu
 
 /** A filename that can't break a storage key or escape the folder. */
 export function safeFileName(name: string): string {
-  const cleaned = name.replace(/[^A-Za-z0-9._-]+/g, "-").replace(/-{2,}/g, "-").replace(/^[-.]+/, "");
+  const cleaned = name
+    .replace(/[^A-Za-z0-9._-]+/g, "-")
+    .replace(/-{2,}/g, "-")
+    .replace(/^[-.]+/, "");
   return (cleaned || "file").slice(-80);
 }
 

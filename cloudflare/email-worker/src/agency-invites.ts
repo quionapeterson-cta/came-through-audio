@@ -64,7 +64,8 @@ function plainText(input: { text?: string; html?: string }): string {
 function agencyOf(from: string, subject: string, body: string): AgencyTag["agency"] | null {
   const domain = domainOf(from);
   for (const entry of AGENCIES) {
-    if (entry.domains.some((known) => domain === known || domain.endsWith(`.${known}`))) return entry.agency;
+    if (entry.domains.some((known) => domain === known || domain.endsWith(`.${known}`)))
+      return entry.agency;
   }
   const haystack = `${subject} ${body}`.toLowerCase();
   for (const entry of AGENCIES) {
@@ -80,7 +81,8 @@ function invitedEmail(from: string, body: string): string | undefined {
     const address = match[0].toLowerCase();
     const domain = domainOf(address);
     if (!domain || own.has(domain)) continue;
-    if (/^(no-?reply|donotreply|notifications?|support)\b/.test(address.split("@")[0] ?? "")) continue;
+    if (/^(no-?reply|donotreply|notifications?|support)\b/.test(address.split("@")[0] ?? ""))
+      continue;
     found.add(address);
   }
   return found.size === 1 ? [...found][0] : undefined;
@@ -89,14 +91,26 @@ function invitedEmail(from: string, body: string): string | undefined {
 function accountNameOf(subject: string, body: string): string | undefined {
   const text = `${subject}. ${body}`;
   const hit =
-    /account (?:name|holder)\s*[:\u2013-]\s*([A-Za-z0-9][A-Za-z0-9 .,'&()/-]{1,80})/i.exec(text)?.[1] ??
-    /(?:added|invited)\s+you\s+to\s+(?:the\s+)?([A-Za-z0-9][A-Za-z0-9 .,'&()/-]{1,80}?)\s+(?:account|organization|organisation|profile)/i.exec(text)?.[1];
-  return hit?.trim().replace(/[.,;:]$/, "").slice(0, 120);
+    /account (?:name|holder)\s*[:\u2013-]\s*([A-Za-z0-9][A-Za-z0-9 .,'&()/-]{1,80})/i.exec(
+      text,
+    )?.[1] ??
+    /(?:added|invited)\s+you\s+to\s+(?:the\s+)?([A-Za-z0-9][A-Za-z0-9 .,'&()/-]{1,80}?)\s+(?:account|organization|organisation|profile)/i.exec(
+      text,
+    )?.[1];
+  return hit
+    ?.trim()
+    .replace(/[.,;:]$/, "")
+    .slice(0, 120);
 }
 
-function verifyUrlOf(html: string | undefined, body: string, agency: AgencyTag["agency"]): string | undefined {
+function verifyUrlOf(
+  html: string | undefined,
+  body: string,
+  agency: AgencyTag["agency"],
+): string | undefined {
   const links: string[] = [];
-  if (html) for (const match of html.matchAll(/href\s*=\s*["']([^"']+)["']/gi)) links.push(match[1]!);
+  if (html)
+    for (const match of html.matchAll(/href\s*=\s*["']([^"']+)["']/gi)) links.push(match[1]!);
   for (const match of body.matchAll(/https?:\/\/[^\s<>"')]+/gi)) links.push(match[0]!);
 
   const domains = AGENCIES.find((entry) => entry.agency === agency)?.domains ?? [];
@@ -105,10 +119,16 @@ function verifyUrlOf(html: string | undefined, body: string, agency: AgencyTag["
       const clean = url.replace(/[.,;:)]+$/, "");
       const lower = clean.toLowerCase();
       if (!/^https?:\/\//.test(lower)) return { url: clean, score: -1 };
-      if (/(unsubscribe|preferences|privacy|terms|support\.)/.test(lower)) return { url: clean, score: -1 };
+      if (/(unsubscribe|preferences|privacy|terms|support\.)/.test(lower))
+        return { url: clean, score: -1 };
       let score = 0;
       if (domains.some((domain) => lower.includes(domain))) score += 3;
-      if (/(verif|confirm|accept|invit|activation|activate|join|signin|sign-in|login|guest|portal)/.test(lower)) score += 2;
+      if (
+        /(verif|confirm|accept|invit|activation|activate|join|signin|sign-in|login|guest|portal)/.test(
+          lower,
+        )
+      )
+        score += 2;
       return { url: clean, score };
     })
     .filter((entry) => entry.score > 0)
@@ -131,7 +151,9 @@ export function tagAgencyEmail(input: {
 
   const haystack = `${subject} ${body}`.toLowerCase();
   const verification =
-    /\b(verification|verify|one[- ]time|confirm (your|the) (email|account)|access code|security code)\b/.test(haystack);
+    /\b(verification|verify|one[- ]time|confirm (your|the) (email|account)|access code|security code)\b/.test(
+      haystack,
+    );
   const invitation =
     /\b(invit|has been added|have been added|added as|guest list|designated user|user permission|permission group|representative|accept access)\b/.test(
       haystack,

@@ -87,7 +87,14 @@ export type TemplateBlock =
       rows: { id: string; label: string; value: string }[];
     }
   | { id: string; kind: "clause"; heading: string; body: string; help: string }
-  | { id: string; kind: "signatures"; heading: string; parties: { id: string; label: string }[] }
+  | {
+      id: string;
+      kind: "signatures";
+      heading: string;
+      parties: { id: string; label: string }[];
+      /** Off prints nothing at all (founder, 2026-11-21): a template can use its own signature and print-name blocks instead. */
+      enabled?: boolean;
+    }
   | {
       id: string;
       kind: "seal";
@@ -118,6 +125,11 @@ export type TemplateBlock =
       required?: boolean;
       options: CheckOption[];
     }
+  /**
+   * The name printed under a signature (founder, 2026-11-21): a fillable line whose label is the template's own (for a
+   * participant, a parent or guardian) and whose value is the `{{PRINT_LEGAL_NAME}}` the Company Contracts step asks for.
+   */
+  | { id: string; kind: "printName"; label: string }
   /** A drawn or typed signature with its date, from the recipient or the company representative. */
   | {
       id: string;
@@ -171,6 +183,7 @@ export function blocksToText(blocks: TemplateBlock[], title = ""): string {
   if (title.trim()) lines.push(title.trim().toUpperCase());
   for (const block of blocks) {
     if (block.kind === "header" || block.kind === "seal") continue;
+    if (block.kind === "signatures" && block.enabled === false) continue;
     if (block.kind === "section") {
       if (block.title.trim()) lines.push("", block.title.trim().toUpperCase());
       if (block.subtitle.trim()) lines.push(block.subtitle.trim());
@@ -199,6 +212,10 @@ export function blocksToText(blocks: TemplateBlock[], title = ""): string {
     if (block.kind === "date") {
       const printed = formatBlockDate(block);
       lines.push(`${block.label.trim() ? `${block.label.trim()}: ` : ""}${printed || "—"}`);
+      continue;
+    }
+    if (block.kind === "printName") {
+      lines.push("", `${block.label.trim() || "Print legal name"}: ____________________`);
       continue;
     }
     if (block.kind === "signature") {
@@ -236,6 +253,9 @@ export type PdfTemplate = {
 export const TOKENS = [
   { key: "ARTIST_NAME", label: "Artist name", sample: "Karma Came" },
   { key: "LEGAL_NAME", label: "Legal name", sample: "Qui-Ona Peterson" },
+  { key: "PRINT_LEGAL_NAME", label: "Print Legal Name", sample: "Qui-Ona Peterson" },
+  { key: "SELECTED_SERVICE", label: "Selected Service", sample: "Mixing" },
+  { key: "DATE", label: "Date", sample: "15 November 2026" },
   { key: "TRACK_TITLE", label: "Track title", sample: "Roll Out" },
   { key: "ISRC_CODE", label: "ISRC code", sample: "US-CTA-26-00001" },
   { key: "UPC_CODE", label: "UPC code", sample: "195589000001" },
@@ -269,33 +289,127 @@ export function fillTokens(text: string, data: Record<string, string> = SAMPLE_D
   return text.replace(/\{\{\s*([A-Z0-9_]+)\s*\}\}/g, (whole, name: string) => data[name] ?? whole);
 }
 
+/** The words a block can hold a token in, for the scanner; decoration (header, seal art) is left out. */
+function blockTokenText(block: TemplateBlock): string {
+  if (block.kind === "meta")
+    return [block.heading, ...block.rows.flatMap((r) => [r.label, r.value])].join(" ");
+  if (block.kind === "clause") return [block.heading, block.body, block.help].join(" ");
+  if (block.kind === "signatures")
+    return [block.heading, ...block.parties.map((p) => p.label)].join(" ");
+  if (block.kind === "seal") return block.label;
+  if (block.kind === "section") return [block.title, block.subtitle].join(" ");
+  if (block.kind === "fields")
+    return [block.heading, ...block.fields.map((f) => f.label)].join(" ");
+  if (block.kind === "checkboxes")
+    return [block.heading, ...block.options.map((o) => o.label)].join(" ");
+  if (block.kind === "signature") return block.heading;
+  if (block.kind === "date") return block.label;
+  if (block.kind === "printName") return block.label;
+  return "";
+}
+
+/**
+ * Every unique token a template asks for, in reading order (founder, 2026-11-21). Company Contracts uses this to build
+ * Step 2 from the document itself, so a custom block or an inline `{{TOKEN}}` gets a field without a hardcoded list. A
+ * Print Legal Name block always asks for `{{PRINT_LEGAL_NAME}}`, whether or not its label spells the token out.
+ */
+export function templateTokens(template: PdfTemplate): string[] {
+  const found: string[] = [];
+  const add = (token: string) => {
+    if (!found.includes(token)) found.push(token);
+  };
+  for (const block of template.blocks) {
+    if (block.kind === "signatures" && block.enabled === false) continue;
+    if (block.kind === "printName") add("PRINT_LEGAL_NAME");
+    for (const token of tokensIn(blockTokenText(block))) add(token);
+  }
+  return found;
+}
+
+/** A readable form label from the token itself: `SELECTED_SERVICE` → "Selected Service". */
+export function tokenLabel(key: string): string {
+  const known = TOKENS.find((t) => t.key === key);
+  if (known) return known.label;
+  return key
+    .split("_")
+    .filter(Boolean)
+    .map((word) => word.charAt(0) + word.slice(1).toLowerCase())
+    .join(" ");
+}
+
+/** Token values only, trimmed and never blank, so an unfilled token stays visible instead of erasing itself. */
+export function tokenValues(values: BlockValues | undefined): Record<string, string> {
+  const out: Record<string, string> = {};
+  for (const [key, value] of Object.entries(values ?? {})) {
+    if (typeof value === "string" && value.trim()) out[key] = value.trim();
+  }
+  return out;
+}
+
+/** The tokens a document still needs a value for, in reading order. */
+export function missingTokens(template: PdfTemplate, values: BlockValues | undefined): string[] {
+  const filled = tokenValues(values);
+  return templateTokens(template).filter((token) => !filled[token]);
+}
+
+/**
+ * Inserts a token where the caret is, not at the end of the block (founder, 2026-11-21). A space is added only where one
+ * is needed, so `artist{{ARTIST_NAME}}` never becomes one broken field. Returns the new text and where the caret belongs.
+ */
+export function insertTokenAt(
+  text: string,
+  key: string,
+  start: number,
+  end = start,
+): { text: string; caret: number } {
+  const from = Math.max(0, Math.min(start, text.length));
+  const to = Math.max(from, Math.min(end, text.length));
+  const token = `{{${key}}}`;
+  const before = text.slice(0, from);
+  const after = text.slice(to);
+  const lead = before && !/\s$/.test(before) ? " " : "";
+  const trail = after && !/^\s/.test(after) ? " " : "";
+  return {
+    text: `${before}${lead}${token}${trail}${after}`,
+    caret: from + lead.length + token.length,
+  };
+}
+
+const sameWords = (a: string, b: string) =>
+  a.replace(/\s+/g, " ").trim().toLowerCase() === b.replace(/\s+/g, " ").trim().toLowerCase();
+
+/**
+ * A preview that already prints the contract title above the page hides a leading heading block that repeats it, so the
+ * title never appears twice (founder, 2026-11-21). The block itself is kept: only its repeated heading is blanked in the
+ * preview, and the PDF (which has no outer title) still prints it.
+ */
+export function withoutRepeatedLeadingTitle(
+  blocks: TemplateBlock[],
+  title: string,
+): TemplateBlock[] {
+  if (!title.trim()) return blocks;
+  const index = blocks.findIndex(
+    (b) => b.kind !== "header" && !(b.kind === "signatures" && b.enabled === false),
+  );
+  const first = blocks[index];
+  if (!first) return blocks;
+  const heading =
+    first.kind === "clause" ? first.heading : first.kind === "section" ? first.title : "";
+  if (!heading.trim() || !sameWords(heading, title)) return blocks;
+  return blocks.map((block, i) =>
+    i !== index
+      ? block
+      : block.kind === "clause"
+        ? { ...block, heading: "" }
+        : block.kind === "section"
+          ? { ...block, title: "" }
+          : block,
+  );
+}
+
 /** An unknown token anywhere in the template, named once. */
 export function unknownTokens(template: PdfTemplate): string[] {
-  const found = new Set<string>();
-  for (const block of template.blocks) {
-    const text =
-      block.kind === "meta"
-        ? block.rows.map((r) => `${r.label} ${r.value}`).join(" ")
-        : block.kind === "clause"
-          ? `${block.heading} ${block.body} ${block.help}`
-          : block.kind === "signatures"
-            ? `${block.heading} ${block.parties.map((p) => p.label).join(" ")}`
-            : block.kind === "seal"
-              ? block.label
-              : block.kind === "section"
-                ? `${block.title} ${block.subtitle}`
-                : block.kind === "fields"
-                  ? `${block.heading} ${block.fields.map((f) => f.label).join(" ")}`
-                  : block.kind === "checkboxes"
-                    ? `${block.heading} ${block.options.map((o) => o.label).join(" ")}`
-                    : block.kind === "signature"
-                      ? block.heading
-                      : block.kind === "date"
-                        ? block.label
-                        : "";
-    for (const token of tokensIn(text)) if (!isTokenKey(token)) found.add(token);
-  }
-  return [...found];
+  return templateTokens(template).filter((token) => !isTokenKey(token));
 }
 
 /**
@@ -380,6 +494,7 @@ export function preflight(template: PdfTemplate): PreflightCheck[] {
     contrastRatio(ink.audio, ink.surface),
   );
   const blocksOk = template.blocks.every((block) => {
+    if (block.kind === "signatures" && block.enabled === false) return true;
     if (block.kind === "clause") return block.body.trim().length > 0;
     if (block.kind === "meta")
       return block.rows.length > 0 && block.rows.every((r) => r.label.trim() && r.value.trim());
@@ -390,10 +505,14 @@ export function preflight(template: PdfTemplate): PreflightCheck[] {
     if (block.kind === "checkboxes") return block.options.every((o) => o.label.trim());
     if (block.kind === "section") return block.title.trim().length > 0;
     if (block.kind === "date") return formatBlockDate(block).length > 0;
+    if (block.kind === "printName") return block.label.trim().length > 0;
     return true;
   });
   const unknown = unknownTokens(template);
-  const signed = template.blocks.some((b) => b.kind === "signatures");
+  // A template may use the standalone Signature block instead of the SIGNATURES lines, so either one satisfies the check.
+  const signed = template.blocks.some(
+    (b) => b.kind === "signature" || (b.kind === "signatures" && b.enabled !== false),
+  );
 
   return [
     {
@@ -463,6 +582,7 @@ function blockHtml(
   /** A signing page fills its fields in place, inside the document, instead of printing the answers only. */
   editable = false,
 ): string {
+  if (block.kind === "signatures" && block.enabled === false) return "";
   if (block.kind === "header") {
     const ink = headerInk(block.background);
     return `<header style="background:${ink.surface};padding:40px 48px;border-bottom:3px solid ${BRAND.cobalt}">
@@ -472,34 +592,34 @@ function blockHtml(
   }
   if (block.kind === "meta") {
     return `<section style="padding:28px 48px 0">
-  <h2 style="font-size:12px;letter-spacing:2px;text-transform:uppercase;color:${BRAND.cobalt};margin:0 0 12px">${esc(fillTokens(block.heading))}</h2>
+  <h2 style="font-size:12px;letter-spacing:2px;text-transform:uppercase;color:${BRAND.cobalt};margin:0 0 12px">${esc(fillTokens(block.heading, data))}</h2>
   <table style="width:100%;border-collapse:collapse;font-size:13px">
-    ${block.rows.map((r) => `<tr><th style="text-align:left;width:38%;padding:8px 0;border-bottom:1px solid ${BRAND.platinum};font-weight:600;color:${BRAND.black}">${esc(r.label)}</th><td style="padding:8px 0;border-bottom:1px solid ${BRAND.platinum};color:${BRAND.black}">${esc(fillTokens(r.value))}</td></tr>`).join("\n    ")}
+    ${block.rows.map((r) => `<tr><th style="text-align:left;width:38%;padding:8px 0;border-bottom:1px solid ${BRAND.platinum};font-weight:600;color:${BRAND.black}">${esc(fillTokens(r.label, data))}</th><td style="padding:8px 0;border-bottom:1px solid ${BRAND.platinum};color:${BRAND.black}">${esc(fillTokens(r.value, data))}</td></tr>`).join("\n    ")}
   </table>
 </section>`;
   }
   if (block.kind === "clause") {
     return `<section style="padding:24px 48px 0">
-  <h2 style="font-size:15px;color:${BRAND.black};margin:0 0 8px">${esc(fillTokens(block.heading))}</h2>
-  <p style="font-size:13px;line-height:1.7;color:${BRAND.black};margin:0">${esc(fillTokens(block.body)).replace(/\n/g, "<br>")}</p>
-  ${block.help ? `<p style="font-size:11px;line-height:1.6;color:${BRAND.black};opacity:0.7;margin:8px 0 0;border-left:2px solid ${BRAND.platinum};padding-left:10px">${esc(block.help)}</p>` : ""}
+  ${block.heading.trim() ? `<h2 style="font-size:15px;color:${BRAND.black};margin:0 0 8px">${esc(fillTokens(block.heading, data))}</h2>` : ""}
+  <p style="font-size:13px;line-height:1.7;color:${BRAND.black};margin:0">${esc(fillTokens(block.body, data)).replace(/\n/g, "<br>")}</p>
+  ${block.help ? `<p style="font-size:11px;line-height:1.6;color:${BRAND.black};opacity:0.7;margin:8px 0 0;border-left:2px solid ${BRAND.platinum};padding-left:10px">${esc(fillTokens(block.help, data))}</p>` : ""}
 </section>`;
   }
   if (block.kind === "signatures") {
     return `<section style="padding:32px 48px 0">
-  <h2 style="font-size:12px;letter-spacing:2px;text-transform:uppercase;color:${BRAND.cobalt};margin:0 0 18px">${esc(block.heading)}</h2>
-  ${block.parties.map((p) => `<div style="margin-bottom:22px"><div style="border-bottom:1px solid ${BRAND.black};height:28px"></div><div style="font-size:11px;color:${BRAND.black};opacity:0.7;margin-top:6px">${esc(fillTokens(p.label))}</div></div>`).join("\n  ")}
+  <h2 style="font-size:12px;letter-spacing:2px;text-transform:uppercase;color:${BRAND.cobalt};margin:0 0 18px">${esc(fillTokens(block.heading, data))}</h2>
+  ${block.parties.map((p) => `<div style="margin-bottom:22px"><div style="border-bottom:1px solid ${BRAND.black};height:28px"></div><div style="font-size:11px;color:${BRAND.black};opacity:0.7;margin-top:6px">${esc(fillTokens(p.label, data))}</div></div>`).join("\n  ")}
 </section>`;
   }
   if (block.kind === "section") {
     return `<section style="page-break-before:always;padding:34px 48px 0">
-  <h2 style="font-size:18px;color:${BRAND.black};margin:0;padding-bottom:10px;border-bottom:2px solid ${BRAND.platinum}">${esc(block.title)}</h2>
-  ${block.subtitle ? `<p style="font-size:11px;letter-spacing:1.5px;text-transform:uppercase;color:${BRAND.cobalt};margin:8px 0 0">${esc(block.subtitle)}</p>` : ""}
+  ${block.title.trim() ? `<h2 style="font-size:18px;color:${BRAND.black};margin:0;padding-bottom:10px;border-bottom:2px solid ${BRAND.platinum}">${esc(fillTokens(block.title, data))}</h2>` : ""}
+  ${block.subtitle ? `<p style="font-size:11px;letter-spacing:1.5px;text-transform:uppercase;color:${BRAND.cobalt};margin:8px 0 0">${esc(fillTokens(block.subtitle, data))}</p>` : ""}
 </section>`;
   }
   if (block.kind === "fields") {
     return `<section style="padding:24px 48px 0">
-  <h2 style="font-size:12px;letter-spacing:2px;text-transform:uppercase;color:${BRAND.cobalt};margin:0 0 12px">${esc(fillTokens(block.heading))}</h2>
+  <h2 style="font-size:12px;letter-spacing:2px;text-transform:uppercase;color:${BRAND.cobalt};margin:0 0 12px">${esc(fillTokens(block.heading, data))}</h2>
   ${block.fields
     .map((f) => {
       const answer = answerFor(values, f.id);
@@ -509,33 +629,41 @@ function blockHtml(
           ? `<textarea data-bv="${esc(f.id)}" rows="2" style="${line};resize:vertical">${esc(answer)}</textarea>`
           : `<input data-bv="${esc(f.id)}" value="${esc(answer)}" aria-label="${esc(f.label)}" style="${line}" />`
         : `<div style="border-bottom:1px solid ${BRAND.platinum};min-height:${f.type === "textarea" ? 44 : 24}px;font-size:12px;color:${BRAND.black};padding-top:4px">${esc(answer)}</div>`;
-      return `<div style="margin-bottom:14px"><div style="font-size:11px;font-weight:600;color:${BRAND.black}">${esc(f.label)}${f.required ? " *" : ""}</div>${field}</div>`;
+      return `<div style="margin-bottom:14px"><div style="font-size:11px;font-weight:600;color:${BRAND.black}">${esc(fillTokens(f.label, data))}${f.required ? " *" : ""}</div>${field}</div>`;
     })
     .join("\n  ")}
 </section>`;
   }
   if (block.kind === "checkboxes") {
     return `<section style="padding:24px 48px 0">
-  <h2 style="font-size:12px;letter-spacing:2px;text-transform:uppercase;color:${BRAND.cobalt};margin:0 0 10px">${esc(fillTokens(block.heading))}</h2>
+  <h2 style="font-size:12px;letter-spacing:2px;text-transform:uppercase;color:${BRAND.cobalt};margin:0 0 10px">${esc(fillTokens(block.heading, data))}</h2>
   ${block.options
     .map((o) =>
       editable
-        ? `<label style="display:flex;gap:8px;align-items:center;font-size:12px;color:${BRAND.black};margin:6px 0"><input type="${block.mode === "single" ? "radio" : "checkbox"}" name="g-${esc(block.id)}" data-bg="${esc(block.id)}" value="${esc(o.id)}"${tickedIn(values, block.id).has(o.id) ? " checked" : ""} />${esc(o.label)}</label>`
-        : `<div style="font-size:12px;color:${BRAND.black};margin:6px 0">${tickedIn(values, block.id).has(o.id) ? "☑" : "☐"}&nbsp;&nbsp;${esc(o.label)}</div>`,
+        ? `<label style="display:flex;gap:8px;align-items:center;font-size:12px;color:${BRAND.black};margin:6px 0"><input type="${block.mode === "single" ? "radio" : "checkbox"}" name="g-${esc(block.id)}" data-bg="${esc(block.id)}" value="${esc(o.id)}"${tickedIn(values, block.id).has(o.id) ? " checked" : ""} />${esc(fillTokens(o.label, data))}</label>`
+        : `<div style="font-size:12px;color:${BRAND.black};margin:6px 0">${tickedIn(values, block.id).has(o.id) ? "☑" : "☐"}&nbsp;&nbsp;${esc(fillTokens(o.label, data))}</div>`,
     )
     .join("\n  ")}
 </section>`;
   }
   if (block.kind === "date") {
     return `<section style="padding:26px 48px 0">
-  ${block.label.trim() ? `<div style="font-size:10px;letter-spacing:2px;text-transform:uppercase;color:${BRAND.cobalt};margin-bottom:6px">${esc(block.label)}</div>` : ""}
+  ${block.label.trim() ? `<div style="font-size:10px;letter-spacing:2px;text-transform:uppercase;color:${BRAND.cobalt};margin-bottom:6px">${esc(fillTokens(block.label, data))}</div>` : ""}
   <div style="font-size:19px;font-weight:700;color:${BRAND.black}">${esc(formatBlockDate(block) || "—")}</div>
+</section>`;
+  }
+  if (block.kind === "printName") {
+    const printed = fillTokens("{{PRINT_LEGAL_NAME}}", data);
+    const value = printed === "{{PRINT_LEGAL_NAME}}" ? "" : printed;
+    return `<section style="padding:26px 48px 0">
+  <div style="font-size:11px;font-weight:600;color:${BRAND.black};margin-bottom:6px">${esc(fillTokens(block.label, data))}</div>
+  <div style="border-bottom:1px solid ${BRAND.black};min-height:26px;padding:4px 0 5px;font-size:13px;color:${BRAND.black}">${esc(value)}</div>
 </section>`;
   }
   if (block.kind === "signature") {
     const who = block.role === "recipient" ? "Recipient" : "Company representative";
     return `<section style="padding:30px 48px 0">
-  <h2 style="font-size:12px;letter-spacing:2px;text-transform:uppercase;color:${BRAND.cobalt};margin:0 0 10px">${esc(fillTokens(block.heading))}</h2>
+  <h2 style="font-size:12px;letter-spacing:2px;text-transform:uppercase;color:${BRAND.cobalt};margin:0 0 10px">${esc(fillTokens(block.heading, data))}</h2>
   <div style="display:flex;gap:24px">
     <div style="flex:2"><div style="border-bottom:1px solid ${BRAND.black};height:34px"></div><div style="font-size:10px;color:${BRAND.black};opacity:0.7;margin-top:5px">${who} signature</div></div>
     ${block.showDate ? `<div style="flex:1"><div style="border-bottom:1px solid ${BRAND.black};height:34px"></div><div style="font-size:10px;color:${BRAND.black};opacity:0.7;margin-top:5px">Date</div></div>` : ""}
@@ -544,8 +672,8 @@ function blockHtml(
   }
   const metal = block.tier === "gold" ? BRAND.gold : BRAND.platinum;
   const mark = block.art
-    ? `<img src="${SEAL_ART[block.art]}" alt="${esc(fillTokens(block.label))}" width="96" height="96" style="display:block;width:96px;height:96px;object-fit:contain" />`
-    : `<div style="display:inline-flex;align-items:center;justify-content:center;box-sizing:border-box;border:2px solid ${metal};border-radius:50%;width:96px;height:96px;padding:12px;text-align:center;font-size:11px;font-weight:700;letter-spacing:1px;color:${BRAND.black}">${esc(fillTokens(block.label))}</div>`;
+    ? `<img src="${SEAL_ART[block.art]}" alt="${esc(fillTokens(block.label, data))}" width="96" height="96" style="display:block;width:96px;height:96px;object-fit:contain" />`
+    : `<div style="display:inline-flex;align-items:center;justify-content:center;box-sizing:border-box;border:2px solid ${metal};border-radius:50%;width:96px;height:96px;padding:12px;text-align:center;font-size:11px;font-weight:700;letter-spacing:1px;color:${BRAND.black}">${esc(fillTokens(block.label, data))}</div>`;
   return `<section style="padding:28px 48px 0">
   ${mark}
   <div style="font-size:10px;letter-spacing:2px;color:${BRAND.black};opacity:0.65;margin-top:8px">CTA CERTIFICATION · ${block.tier.toUpperCase()}</div>

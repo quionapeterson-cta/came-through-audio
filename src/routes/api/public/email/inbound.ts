@@ -338,7 +338,12 @@ export const Route = createFileRoute("/api/public/email/inbound")({
         // An agency invitation is filed beside the mail that carried it, so Admin → Registrations can show it without
         // anyone reading every thread. The app's own rules decide the agency; the worker's tag only fills in a detail the
         // app could not read. A failure here never fails the delivery: the message is already stored.
-        const detected = readAgencyEmail({ from: from.email, subject, text: input.text, html: input.html });
+        const detected = readAgencyEmail({
+          from: from.email,
+          subject,
+          text: input.text,
+          html: input.html,
+        });
         const tag = input.agencyInvite;
         const taggedAgency = tag && isInviteAgency(tag.agency) ? tag.agency : null;
         if (detected && taggedAgency && taggedAgency !== detected.agency) {
@@ -374,7 +379,10 @@ export const Route = createFileRoute("/api/public/email/inbound")({
             } as never);
             // A redelivery that raced this insert is the same invitation, not an error worth failing on.
             if (inviteError && inviteError.code !== "23505") {
-              console.error("Admin inbox: couldn't file the agency invitation:", inviteError.message);
+              console.error(
+                "Admin inbox: couldn't file the agency invitation:",
+                inviteError.message,
+              );
             }
           }
         }

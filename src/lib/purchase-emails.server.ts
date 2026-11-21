@@ -8,7 +8,13 @@
  */
 import { resendKey } from "./collab-trial.server";
 import { BILLING_EMAIL, emailLayout, escapeHtml, SITE_URL } from "./email-layout";
-import { money, purchaseKind, purchaseLanding, purchasedPlan, receiptCopy } from "./purchase-receipt";
+import {
+  money,
+  purchaseKind,
+  purchaseLanding,
+  purchasedPlan,
+  receiptCopy,
+} from "./purchase-receipt";
 
 const FROM = `Came Through Audio Billing <${BILLING_EMAIL}>`;
 const REASON = "You're receiving this because you made a purchase from Came Through Audio.";
@@ -28,9 +34,8 @@ export type ReceiptInput = {
   managed: boolean;
   /** For Renew now: the date the plan next renews (never a Stripe trial end). */
   renewsOn?: string | null;
-  /** For a pause: the dates its monthly Vault fee runs between (founder, 2026-11-20). */
+  /** For a pause: when its monthly Vault fee starts (founder, 2026-11-20). It has no end date (2026-11-21). */
   pauseStarts?: string | null;
-  pauseEnds?: string | null;
 };
 
 export type ReceiptResult = { sent: boolean; reason?: string };
@@ -48,7 +53,6 @@ export async function sendPurchaseReceipt(i: ReceiptInput): Promise<ReceiptResul
     managed: i.managed,
     renewsOn: i.renewsOn ?? null,
     pauseStarts: i.pauseStarts ?? null,
-    pauseEnds: i.pauseEnds ?? null,
   });
   const html = emailLayout(
     `<p style="font-size:12px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:#004AAD;margin:0">${escapeHtml(copy.eyebrow)}</p>
@@ -68,7 +72,13 @@ ${copy.paragraphs.map((p) => `<p style="font-size:15px;line-height:1.6">${escape
         // One id per checkout: a retried webhook can't send the same confirmation twice.
         "Idempotency-Key": `purchase-receipt-${i.sessionId}`,
       },
-      body: JSON.stringify({ from: FROM, to: [i.email], reply_to: BILLING_EMAIL, subject: copy.subject, html }),
+      body: JSON.stringify({
+        from: FROM,
+        to: [i.email],
+        reply_to: BILLING_EMAIL,
+        subject: copy.subject,
+        html,
+      }),
     });
     if (!res.ok) {
       console.error(`Purchase receipt failed [${res.status}]: ${await res.text()}`);

@@ -6,8 +6,16 @@ import type { CatalogTrack } from "@/lib/catalog";
 import { PROS, creditName, type Metadata } from "@/lib/metadata";
 import { registrationWriters } from "@/lib/readiness";
 
-export type SplitRole = "Writer" | "Composer" | "Author/Composer" | "Producer" | "Artist" | "Publisher";
-export const SPLIT_ROLES: SplitRole[] = ["Writer", "Composer", "Author/Composer", "Producer", "Artist", "Publisher"];
+export type SplitRole =
+  "Writer" | "Composer" | "Author/Composer" | "Producer" | "Artist" | "Publisher";
+export const SPLIT_ROLES: SplitRole[] = [
+  "Writer",
+  "Composer",
+  "Author/Composer",
+  "Producer",
+  "Artist",
+  "Publisher",
+];
 
 /** Worldwide PRO choices, shared with the catalog and profile forms. */
 export const ALL_PROS = PROS;
@@ -78,12 +86,33 @@ export function collaboratorsFromTrack(track: CatalogTrack): SplitCollaborator[]
   const out: SplitCollaborator[] = [];
   const push = (name: string, role: SplitRole, percentage: string, pro: string, ipi: string) => {
     if (!name.trim() || out.some((c) => c.name === name.trim())) return;
-    out.push({ ...emptySplitCollaborator(), name: name.trim(), role, percentage: Number(percentage) || 0, pro, ipi });
+    out.push({
+      ...emptySplitCollaborator(),
+      name: name.trim(),
+      role,
+      percentage: Number(percentage) || 0,
+      pro,
+      ipi,
+    });
   };
   // Split sheets are legal records: writers come in under their legal name when known.
-  for (const w of registrationWriters(track.metadata)) push(w.name, w.role === "Author" ? "Writer" : (w.role as SplitRole), w.percentage, w.pro, w.ipi);
-  for (const p of track.metadata.producers ?? []) push(p.name, "Producer", p.percentage, p.pro, p.ipi);
-  if (!out.length && track.artist.trim()) out.push({ ...emptySplitCollaborator(), name: track.artist.trim(), role: "Artist", percentage: 100 });
+  for (const w of registrationWriters(track.metadata))
+    push(
+      w.name,
+      w.role === "Author" ? "Writer" : (w.role as SplitRole),
+      w.percentage,
+      w.pro,
+      w.ipi,
+    );
+  for (const p of track.metadata.producers ?? [])
+    push(p.name, "Producer", p.percentage, p.pro, p.ipi);
+  if (!out.length && track.artist.trim())
+    out.push({
+      ...emptySplitCollaborator(),
+      name: track.artist.trim(),
+      role: "Artist",
+      percentage: 100,
+    });
   return out.length ? out : [emptySplitCollaborator()];
 }
 
@@ -92,14 +121,23 @@ export function collaboratorsFromTrack(track: CatalogTrack): SplitCollaborator[]
  * producer rows (matched by name, first match only, the same rows collaboratorsFromTrack read them from). Only
  * percentages change: no row is added or removed. Returns null when nothing differs.
  */
-export function catalogWithSplits(track: CatalogTrack, collaborators: SplitCollaborator[]): Metadata | null {
+export function catalogWithSplits(
+  track: CatalogTrack,
+  collaborators: SplitCollaborator[],
+): Metadata | null {
   const m = track.metadata;
-  const groups = { writers: m.writers.map((r) => ({ ...r })), composers: m.composers.map((r) => ({ ...r })), producers: (m.producers ?? []).map((r) => ({ ...r })) };
+  const groups = {
+    writers: m.writers.map((r) => ({ ...r })),
+    composers: m.composers.map((r) => ({ ...r })),
+    producers: (m.producers ?? []).map((r) => ({ ...r })),
+  };
   const key = (name: string) => name.trim().toLowerCase();
   let changed = false;
   for (const c of collaborators) {
     if (!c.name.trim()) continue;
-    const row = [...groups.writers, ...groups.composers, ...groups.producers].find((r) => key(creditName(r)) === key(c.name));
+    const row = [...groups.writers, ...groups.composers, ...groups.producers].find(
+      (r) => key(creditName(r)) === key(c.name),
+    );
     if (!row || Number(row.percentage || 0) === c.percentage) continue;
     row.percentage = String(c.percentage);
     changed = true;
@@ -166,7 +204,10 @@ export async function listSplitSheets(): Promise<Map<string, SplitCollaborator[]
 }
 
 /** Save a track's split sheet. Existing rows keep their id so signature links stay valid; signed rows are never overwritten. */
-export async function saveSplitSheet(catalogId: string, collaborators: SplitCollaborator[]): Promise<SplitCollaborator[]> {
+export async function saveSplitSheet(
+  catalogId: string,
+  collaborators: SplitCollaborator[],
+): Promise<SplitCollaborator[]> {
   const named = collaborators.filter((c) => c.name.trim());
   const toRow = (c: SplitCollaborator) => ({
     catalog_id: catalogId,
@@ -188,7 +229,10 @@ export async function saveSplitSheet(catalogId: string, collaborators: SplitColl
     invited_at: c.invitedAt,
     notes: c.notes.trim() || null,
   });
-  const { data: current, error: curErr } = await supabase.from("split_sheets").select("id, signed_at").eq("catalog_id", catalogId);
+  const { data: current, error: curErr } = await supabase
+    .from("split_sheets")
+    .select("id, signed_at")
+    .eq("catalog_id", catalogId);
   if (curErr) throw curErr;
   const keep = new Set(named.map((c) => c.rowId).filter(Boolean));
   const remove = (current ?? []).filter((r) => !keep.has(r.id)).map((r) => r.id);
@@ -199,13 +243,23 @@ export async function saveSplitSheet(catalogId: string, collaborators: SplitColl
   const signedRemote = new Set((current ?? []).filter((r) => r.signed_at).map((r) => r.id));
   const saved: SplitCollaborator[] = [];
   for (const c of named) {
-    if (c.rowId && signedRemote.has(c.rowId)) { saved.push(c); continue; }
+    if (c.rowId && signedRemote.has(c.rowId)) {
+      saved.push(c);
+      continue;
+    }
     if (c.rowId) {
-      const { error } = await supabase.from("split_sheets").update(toRow(c) as never).eq("id", c.rowId);
+      const { error } = await supabase
+        .from("split_sheets")
+        .update(toRow(c) as never)
+        .eq("id", c.rowId);
       if (error) throw error;
       saved.push(c);
     } else {
-      const { data, error } = await supabase.from("split_sheets").insert(toRow(c) as never).select("id").single();
+      const { data, error } = await supabase
+        .from("split_sheets")
+        .insert(toRow(c) as never)
+        .select("id")
+        .single();
       if (error) throw error;
       saved.push({ ...c, rowId: (data as { id: string }).id });
     }
@@ -215,26 +269,64 @@ export async function saveSplitSheet(catalogId: string, collaborators: SplitColl
 }
 
 /** Shared links always open the live site, never a Lovable editor preview (which needs a Lovable login). */
-export const signLink = (rowId: string) => `${trustedOrigin(window.location.origin, SITE_URL)}/sign/${rowId}`;
+export const signLink = (rowId: string) =>
+  `${trustedOrigin(window.location.origin, SITE_URL)}/sign/${rowId}`;
 
 export type SplitInvite = {
-  row_id: string; track_title: string; artist_name: string; isrc: string | null;
-  legal_name: string; performer_name: string | null; role: string;
-  publisher_name: string | null; publisher_pro: string | null; publisher_ipi: string | null; publisher_percentage: number | null; notes: string | null; percentage: number; pro: string | null; ipi: string | null; signed_at: string | null;
-  collaborators: { name: string; performer: string | null; role: string; percentage: number; signed: boolean }[];
+  row_id: string;
+  track_title: string;
+  artist_name: string;
+  isrc: string | null;
+  legal_name: string;
+  performer_name: string | null;
+  role: string;
+  publisher_name: string | null;
+  publisher_pro: string | null;
+  publisher_ipi: string | null;
+  publisher_percentage: number | null;
+  notes: string | null;
+  percentage: number;
+  pro: string | null;
+  ipi: string | null;
+  signed_at: string | null;
+  collaborators: {
+    name: string;
+    performer: string | null;
+    role: string;
+    percentage: number;
+    signed: boolean;
+  }[];
 };
 
 export async function getSplitInvite(rowId: string): Promise<SplitInvite | null> {
-  const { data, error } = await supabase.rpc("get_split_invite" as never, { _row_id: rowId } as never);
+  const { data, error } = await supabase.rpc(
+    "get_split_invite" as never,
+    { _row_id: rowId } as never,
+  );
   if (error) throw error;
   return data as unknown as SplitInvite | null;
 }
 
-export async function signSplitInvite(rowId: string, typedName: string, pro: string, ipi: string, email: string, percentage: number) {
+export async function signSplitInvite(
+  rowId: string,
+  typedName: string,
+  pro: string,
+  ipi: string,
+  email: string,
+  percentage: number,
+) {
   const signedAt = new Date().toISOString();
-  const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(`${typedName.trim()}|${email}|${percentage}|${rowId}|${signedAt}`));
-  const hash = Array.from(new Uint8Array(digest)).map((b) => b.toString(16).padStart(2, "0")).join("");
-  const { error } = await supabase.rpc("sign_split_invite" as never, { _row_id: rowId, _signature_name: typedName, _pro: pro, _ipi: ipi, _hash: hash } as never);
+  const digest = await crypto.subtle.digest(
+    "SHA-256",
+    new TextEncoder().encode(`${typedName.trim()}|${email}|${percentage}|${rowId}|${signedAt}`),
+  );
+  const hash = Array.from(new Uint8Array(digest))
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("");
+  const { error } = await supabase.rpc(
+    "sign_split_invite" as never,
+    { _row_id: rowId, _signature_name: typedName, _pro: pro, _ipi: ipi, _hash: hash } as never,
+  );
   if (error) throw error;
 }
 
@@ -244,27 +336,76 @@ export async function deleteSplitSheet(catalogId: string) {
 }
 
 /** Typed e-signature: stores the typed legal name and a SHA-256 signature hash. */
-export async function signCollaborator(collaborator: SplitCollaborator, typedName: string): Promise<SplitCollaborator> {
+export async function signCollaborator(
+  collaborator: SplitCollaborator,
+  typedName: string,
+): Promise<SplitCollaborator> {
   const signedAt = new Date().toISOString();
   const digest = await crypto.subtle.digest(
     "SHA-256",
-    new TextEncoder().encode(`${typedName.trim()}|${collaborator.email}|${collaborator.percentage}|${signedAt}`),
+    new TextEncoder().encode(
+      `${typedName.trim()}|${collaborator.email}|${collaborator.percentage}|${signedAt}`,
+    ),
   );
-  const hash = Array.from(new Uint8Array(digest)).map((b) => b.toString(16).padStart(2, "0")).join("");
+  const hash = Array.from(new Uint8Array(digest))
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("");
   return { ...collaborator, signatureName: typedName.trim(), signatureHash: hash, signedAt };
 }
 
 // ---------- Saved contributor library ----------
-export const CONTRIBUTOR_KINDS = ["Writer", "Composer", "Producer", "Artist", "Publisher", "Label"] as const;
+export const CONTRIBUTOR_KINDS = [
+  "Writer",
+  "Composer",
+  "Producer",
+  "Artist",
+  "Publisher",
+  "Label",
+] as const;
 /** `role` and `share` (a writer's usual role and split) are for writers, so a saved writer fills in a song in one go. */
-export type SavedContributor = { id?: string; name: string; kind: string; email: string; pro: string; ipi: string; publisher: string; label: string; role?: string; share?: string };
+export type SavedContributor = {
+  id?: string;
+  name: string;
+  kind: string;
+  email: string;
+  pro: string;
+  ipi: string;
+  publisher: string;
+  label: string;
+  role?: string;
+  share?: string;
+};
 
 export async function listContributors(): Promise<SavedContributor[]> {
-  const { data, error } = await supabase.from("contributors" as never).select("*").order("name");
+  const { data, error } = await supabase
+    .from("contributors" as never)
+    .select("*")
+    .order("name");
   if (error) throw error;
-  return ((data ?? []) as unknown as { id: string; name: string | null; kind: string | null; email: string | null; pro: string | null; ipi: string | null; publisher: string | null; label: string | null; role?: string | null; share?: string | null }[]).map((r) => ({
-    id: r.id, name: r.name ?? "", kind: r.kind ?? "Writer", email: r.email ?? "",
-    pro: r.pro ?? "", ipi: r.ipi ?? "", publisher: r.publisher ?? "", label: r.label ?? "", role: r.role ?? "", share: r.share ?? "",
+  return (
+    (data ?? []) as unknown as {
+      id: string;
+      name: string | null;
+      kind: string | null;
+      email: string | null;
+      pro: string | null;
+      ipi: string | null;
+      publisher: string | null;
+      label: string | null;
+      role?: string | null;
+      share?: string | null;
+    }[]
+  ).map((r) => ({
+    id: r.id,
+    name: r.name ?? "",
+    kind: r.kind ?? "Writer",
+    email: r.email ?? "",
+    pro: r.pro ?? "",
+    ipi: r.ipi ?? "",
+    publisher: r.publisher ?? "",
+    label: r.label ?? "",
+    role: r.role ?? "",
+    share: r.share ?? "",
   }));
 }
 
@@ -275,34 +416,55 @@ const WRITER_KINDS = ["Writer", "Composer"];
  * `fillOnly` (songs saved in My Catalog or Embed, founder 2026-10-27) goes further: what's already saved is never
  * changed, only blanks fill, and a writer already saved as Writer or Composer is updated in place, not added twice.
  */
-export async function saveContributors(userId: string, list: SavedContributor[], { fillOnly = false } = {}) {
+export async function saveContributors(
+  userId: string,
+  list: SavedContributor[],
+  { fillOnly = false } = {},
+) {
   const clean = list.filter((c) => c.name.trim());
   if (!clean.length) return;
   const existing = await listContributors().catch(() => [] as SavedContributor[]);
   const same = (e: SavedContributor, c: SavedContributor) =>
-    e.name.trim().toLowerCase() === c.name.trim().toLowerCase() && (e.kind === c.kind || (fillOnly && WRITER_KINDS.includes(e.kind) && WRITER_KINDS.includes(c.kind)));
+    e.name.trim().toLowerCase() === c.name.trim().toLowerCase() &&
+    (e.kind === c.kind ||
+      (fillOnly && WRITER_KINDS.includes(e.kind) && WRITER_KINDS.includes(c.kind)));
   const rows = clean.map((c) => {
     const prev = existing.find((e) => same(e, c));
     const pick = (a = "", b = "") => (fillOnly ? b || a.trim() : a.trim() || b) || null;
     return {
-      user_id: userId, name: fillOnly && prev ? prev.name : c.name.trim(), kind: fillOnly && prev ? prev.kind : c.kind,
-      email: pick(c.email, prev?.email), pro: pick(c.pro, prev?.pro), ipi: pick(c.ipi, prev?.ipi),
-      publisher: pick(c.publisher, prev?.publisher), label: pick(c.label, prev?.label),
-      role: pick(c.role, prev?.role), share: pick(c.share, prev?.share),
+      user_id: userId,
+      name: fillOnly && prev ? prev.name : c.name.trim(),
+      kind: fillOnly && prev ? prev.kind : c.kind,
+      email: pick(c.email, prev?.email),
+      pro: pick(c.pro, prev?.pro),
+      ipi: pick(c.ipi, prev?.ipi),
+      publisher: pick(c.publisher, prev?.publisher),
+      label: pick(c.label, prev?.label),
+      role: pick(c.role, prev?.role),
+      share: pick(c.share, prev?.share),
       updated_at: new Date().toISOString(),
     };
   });
   // Unique by name + kind, so two rows in one save can't collide.
   const unique = [...new Map(rows.map((r) => [`${r.name.toLowerCase()}|${r.kind}`, r])).values()];
-  let { error } = await supabase.from("contributors" as never).upsert(unique as never, { onConflict: "user_id,name,kind" });
+  let { error } = await supabase
+    .from("contributors" as never)
+    .upsert(unique as never, { onConflict: "user_id,name,kind" });
   // Before migration 20261027180000 adds role and share, save everything else.
   if (error && /role|share/.test(error.message)) {
-    ({ error } = await supabase.from("contributors" as never).upsert(unique.map(({ role: _r, share: _s, ...r }) => r) as never, { onConflict: "user_id,name,kind" }));
+    ({ error } = await supabase
+      .from("contributors" as never)
+      .upsert(unique.map(({ role: _r, share: _s, ...r }) => r) as never, {
+        onConflict: "user_id,name,kind",
+      }));
   }
   if (error) throw error;
 }
 
 export async function deleteContributor(id: string) {
-  const { error } = await supabase.from("contributors" as never).delete().eq("id", id);
+  const { error } = await supabase
+    .from("contributors" as never)
+    .delete()
+    .eq("id", id);
   if (error) throw error;
 }

@@ -39,9 +39,14 @@ export function cleanSocials(raw: unknown): SocialLink[] {
     const row = rows.find((r) => r?.platform === platform);
     const fallback = DEFAULT_SOCIALS.find((d) => d.platform === platform)!;
     const typed = typeof row?.url === "string" ? row.url.trim() : "";
-    return { platform, url: typed && urlOk(typed) ? typed : fallback.url, enabled: row ? row.enabled === true : fallback.enabled };
+    return {
+      platform,
+      url: typed && urlOk(typed) ? typed : fallback.url,
+      enabled: row ? row.enabled === true : fallback.enabled,
+    };
   });
 }
 
 /** Only what the page may draw: switched on and pointing at a real address. */
-export const visibleSocials = (links: SocialLink[]) => links.filter((l) => l.enabled && urlOk(l.url));
+export const visibleSocials = (links: SocialLink[]) =>
+  links.filter((l) => l.enabled && urlOk(l.url));

@@ -34,7 +34,8 @@ export const AGENCY_INVITE_STATUS_LABEL: Record<AgencyInviteStatus, string> = {
 export const AGENCY_INVITE_STATUS_HINT: Record<AgencyInviteStatus, string> = {
   invite_received: "The agency emailed an invitation and nobody has accepted it yet.",
   representative_accepted: "Came Through Audio now has access at this agency for the account.",
-  action_needed: "Something is blocking the invite: a wrong address, an expired link or a missing account.",
+  action_needed:
+    "Something is blocking the invite: a wrong address, an expired link or a missing account.",
 };
 
 /** What kind of agency mail arrived; a notice is filed but is not an invitation. */
@@ -107,7 +108,9 @@ export function plainText(input: { text?: string | undefined; html?: string | un
 export function agencyOf(from: string, subject = "", body = ""): InviteAgency | null {
   const domain = domainOf(from);
   for (const agency of INVITE_AGENCIES) {
-    if (MATCHERS[agency].domains.some((known) => domain === known || domain.endsWith(`.${known}`))) {
+    if (
+      MATCHERS[agency].domains.some((known) => domain === known || domain.endsWith(`.${known}`))
+    ) {
       return agency;
     }
   }
@@ -121,7 +124,11 @@ export function agencyOf(from: string, subject = "", body = ""): InviteAgency | 
 /** Invitation, verification or plain notice. A code or confirm link is the verification; the ask is the invite. */
 export function kindOf(subject = "", body = ""): AgencyEmailKind {
   const haystack = `${subject} ${body}`.toLowerCase();
-  if (/\b(verification|verify|one[- ]time|confirm (your|the) (email|account)|access code|security code)\b/.test(haystack)) {
+  if (
+    /\b(verification|verify|one[- ]time|confirm (your|the) (email|account)|access code|security code)\b/.test(
+      haystack,
+    )
+  ) {
     return "verification";
   }
   if (
@@ -143,7 +150,8 @@ export function invitedEmail(from: string, body: string): string | null {
     const domain = domainOf(address);
     if (!domain || ownDomain.has(domain)) continue;
     if (domain.endsWith("example.com") || domain.endsWith("sentry.io")) continue;
-    if (/^(no-?reply|donotreply|notifications?|support)\b/.test(address.split("@")[0] ?? "")) continue;
+    if (/^(no-?reply|donotreply|notifications?|support)\b/.test(address.split("@")[0] ?? ""))
+      continue;
     found.add(address);
   }
   // One address is the usual case (the invite names the person). More than one means the mail is a notice, so the
@@ -170,7 +178,11 @@ export function accountNameOf(subject: string, body: string): string | null {
  * The link to click: the agency's own address if it is there, otherwise the most invite-shaped link, and never a
  * tracker or an unsubscribe. Ties keep the order they appeared in, so the mail reads the way its sender meant.
  */
-export function verifyUrlOf(html: string | undefined, body: string, agency: InviteAgency | null): string | null {
+export function verifyUrlOf(
+  html: string | undefined,
+  body: string,
+  agency: InviteAgency | null,
+): string | null {
   const links: { url: string; score: number }[] = [];
   if (html) {
     for (const match of html.matchAll(HREF_PATTERN)) links.push({ url: match[1]!, score: 0 });
@@ -183,10 +195,16 @@ export function verifyUrlOf(html: string | undefined, body: string, agency: Invi
       const clean = url.replace(/[.,;:)]+$/, "");
       const lower = clean.toLowerCase();
       if (!/^https?:\/\//.test(lower)) return { url: clean, score: -1 };
-      if (/(unsubscribe|preferences|privacy|terms|help center|support\.)/.test(lower)) return { url: clean, score: -1 };
+      if (/(unsubscribe|preferences|privacy|terms|help center|support\.)/.test(lower))
+        return { url: clean, score: -1 };
       let score = 0;
       if (domains.some((domain) => lower.includes(domain))) score += 3;
-      if (/(verif|confirm|accept|invit|activation|activate|join|signin|sign-in|login|guest|portal)/.test(lower)) score += 2;
+      if (
+        /(verif|confirm|accept|invit|activation|activate|join|signin|sign-in|login|guest|portal)/.test(
+          lower,
+        )
+      )
+        score += 2;
       return { url: clean, score };
     })
     .filter((entry) => entry.score > 0);
@@ -233,7 +251,10 @@ export function summariseInvites(
     action_needed: 2,
     invite_received: 1,
   };
-  const best = new Map<InviteAgency, { agency: InviteAgency; status: AgencyInviteStatus; receivedAt: string }>();
+  const best = new Map<
+    InviteAgency,
+    { agency: InviteAgency; status: AgencyInviteStatus; receivedAt: string }
+  >();
   for (const row of rows) {
     if (!isInviteAgency(row.agency) || !isAgencyInviteStatus(row.status)) continue;
     const current = best.get(row.agency);

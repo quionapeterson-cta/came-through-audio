@@ -272,9 +272,9 @@ export function AdminInboxPanel({ access }: { access: StaffAccess }) {
   return (
     <div className="mt-4 space-y-3">
       <p className="text-sm text-muted-foreground">
-        Mail sent to {mailboxes.map((one) => INBOX_ADDRESS[one]).join(", ")}. Unread is counted from the
-        messages themselves, so the badge and this list can't disagree. Opening a conversation marks it
-        read; a reply is saved on the thread and leaves from the mailbox it arrived at.
+        Mail sent to {mailboxes.map((one) => INBOX_ADDRESS[one]).join(", ")}. Unread is counted from
+        the messages themselves, so the badge and this list can't disagree. Opening a conversation
+        marks it read; a reply is saved on the thread and leaves from the mailbox it arrived at.
       </p>
 
       <div className="flex flex-wrap items-center gap-2">

@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { createHash } from "node:crypto";
 import { z } from "zod";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import {
   isAgencyInviteStatus,
@@ -16,9 +17,24 @@ import type { RegistrationOrder, RegistrationSong, SongStatus } from "./registra
 const purchaseInput = z.object({ purchaseId: z.string().uuid() });
 
 /** The caller's own paid Expert Assistance purchase, or an error. */
-async function ownPurchase(supabase: { from: (t: string) => any }, userId: string, purchaseId: string) { // eslint-disable-line @typescript-eslint/no-explicit-any
-  const { data } = await supabase.from("purchases").select("id, user_id, kind, details, created_at").eq("id", purchaseId).eq("user_id", userId).maybeSingle();
-  const p = data as { id: string; user_id: string; kind: string; details: Record<string, string>; created_at: string } | null;
+async function ownPurchase(
+  supabase: Pick<SupabaseClient, "from">,
+  userId: string,
+  purchaseId: string,
+) {
+  const { data } = await supabase
+    .from("purchases")
+    .select("id, user_id, kind, details, created_at")
+    .eq("id", purchaseId)
+    .eq("user_id", userId)
+    .maybeSingle();
+  const p = data as {
+    id: string;
+    user_id: string;
+    kind: string;
+    details: Record<string, string>;
+    created_at: string;
+  } | null;
   if (!p || p.kind !== "expert") throw new Error("Registration order not found.");
   if (p.details["refunded_at"]) throw new Error("This order was refunded.");
   return p;
@@ -38,19 +54,47 @@ export const ensureRegistrationOrder = createServerFn({ method: "POST" })
 /** Links a paid song to one of the user's catalog songs: an uncataloged title once it's added, or a swap (§1, Q5). */
 export const linkRegistrationSong = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d) => z.object({ songId: z.string().uuid(), trackId: z.string().uuid() }).parse(d))
+  .inputValidator((d) =>
+    z.object({ songId: z.string().uuid(), trackId: z.string().uuid() }).parse(d),
+  )
   .handler(async ({ data, context }) => {
     const { admin } = await import("./registration.server");
     const db = await admin();
-    const { data: row } = await db.from("registration_songs" as never).select("id, purchase_id, user_id, submitted_at").eq("id", data.songId).maybeSingle();
-    const song = row as { id: string; purchase_id: string; user_id: string; submitted_at: string | null } | null;
+    const { data: row } = await db
+      .from("registration_songs" as never)
+      .select("id, purchase_id, user_id, submitted_at")
+      .eq("id", data.songId)
+      .maybeSingle();
+    const song = row as {
+      id: string;
+      purchase_id: string;
+      user_id: string;
+      submitted_at: string | null;
+    } | null;
     if (!song || song.user_id !== context.userId) throw new Error("Song not found.");
-    if (song.submitted_at) throw new Error("This song is already submitted. Ask us to unlock it if something needs fixing.");
-    const { data: track } = await context.supabase.from("catalogs").select("id").eq("id", data.trackId).eq("user_id", context.userId).maybeSingle();
+    if (song.submitted_at)
+      throw new Error(
+        "This song is already submitted. Ask us to unlock it if something needs fixing.",
+      );
+    const { data: track } = await context.supabase
+      .from("catalogs")
+      .select("id")
+      .eq("id", data.trackId)
+      .eq("user_id", context.userId)
+      .maybeSingle();
     if (!track) throw new Error("Pick a song from your catalog.");
-    const { data: dupe } = await db.from("registration_songs" as never).select("id").eq("purchase_id", song.purchase_id).eq("track_id", data.trackId).neq("id", song.id).limit(1);
+    const { data: dupe } = await db
+      .from("registration_songs" as never)
+      .select("id")
+      .eq("purchase_id", song.purchase_id)
+      .eq("track_id", data.trackId)
+      .neq("id", song.id)
+      .limit(1);
     if ((dupe ?? []).length) throw new Error("That song is already in this order.");
-    const { error } = await db.from("registration_songs" as never).update({ track_id: data.trackId, updated_at: new Date().toISOString() } as never).eq("id", song.id);
+    const { error } = await db
+      .from("registration_songs" as never)
+      .update({ track_id: data.trackId, updated_at: new Date().toISOString() } as never)
+      .eq("id", song.id);
     if (error) throw new Error(error.message);
     return { ok: true };
   });
@@ -68,12 +112,18 @@ export const submitRegistrationSongs = createServerFn({ method: "POST" })
     const db = await admin();
     const loaded = await loadOrder(db, data.purchaseId);
     if (!loaded) throw new Error("Registration order not found.");
-    const blocked = loaded.checks.filter((c) => !c.song.submitted_at && (c.needsCatalog || c.missing.length));
-    if (blocked.length) throw new Error(`Finish ${blocked.map((c) => `"${c.title}"`).join(", ")} first.`);
+    const blocked = loaded.checks.filter(
+      (c) => !c.song.submitted_at && (c.needsCatalog || c.missing.length),
+    );
+    if (blocked.length)
+      throw new Error(`Finish ${blocked.map((c) => `"${c.title}"`).join(", ")} first.`);
     const now = new Date().toISOString();
     const status = Object.fromEntries(loaded.order.agencies.map((a) => [a, "pending"]));
     for (const c of loaded.checks.filter((x) => !x.song.submitted_at)) {
-      const { error } = await db.from("registration_songs" as never).update({ snapshot: c.metadata, submitted_at: now, status, updated_at: now } as never).eq("id", c.song.id);
+      const { error } = await db
+        .from("registration_songs" as never)
+        .update({ snapshot: c.metadata, submitted_at: now, status, updated_at: now } as never)
+        .eq("id", c.song.id);
       if (error) throw new Error(error.message);
     }
     return { ok: true };
@@ -82,7 +132,9 @@ export const submitRegistrationSongs = createServerFn({ method: "POST" })
 /** Signs the Registration Authorization (§6). The text is built and hashed here, never taken from the browser. */
 export const signRegistrationAgreement = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d) => purchaseInput.extend({ legalName: z.string().trim().min(2).max(200) }).parse(d))
+  .inputValidator((d) =>
+    purchaseInput.extend({ legalName: z.string().trim().min(2).max(200) }).parse(d),
+  )
   .handler(async ({ data, context }) => {
     const p = await ownPurchase(context.supabase, context.userId, data.purchaseId);
     const { admin, loadOrder } = await import("./registration.server");
@@ -90,12 +142,26 @@ export const signRegistrationAgreement = createServerFn({ method: "POST" })
     const loaded = await loadOrder(db, data.purchaseId);
     if (!loaded) throw new Error("Registration order not found.");
     if (loaded.order.agreement_signed_at) return { ok: true };
-    if (loaded.checks.some((c) => !c.song.submitted_at)) throw new Error("Submit every song first.");
-    const body = agreementFor(loaded.order, loaded.checks.map((c) => c.metadata), p, data.legalName);
+    if (loaded.checks.some((c) => !c.song.submitted_at))
+      throw new Error("Submit every song first.");
+    const body = agreementFor(
+      loaded.order,
+      loaded.checks.map((c) => c.metadata),
+      p,
+      data.legalName,
+    );
     const now = new Date().toISOString();
-    const { error } = await db.from("registration_orders" as never).update({
-      agreement_body: body, agreement_hash: createHash("sha256").update(body, "utf8").digest("hex"), agreement_name: data.legalName, agreement_signed_at: now, updated_at: now,
-    } as never).eq("purchase_id", data.purchaseId).is("agreement_signed_at", null);
+    const { error } = await db
+      .from("registration_orders" as never)
+      .update({
+        agreement_body: body,
+        agreement_hash: createHash("sha256").update(body, "utf8").digest("hex"),
+        agreement_name: data.legalName,
+        agreement_signed_at: now,
+        updated_at: now,
+      } as never)
+      .eq("purchase_id", data.purchaseId)
+      .is("agreement_signed_at", null);
     if (error) throw new Error(error.message);
     return { ok: true };
   });
@@ -109,13 +175,32 @@ export const previewRegistrationAgreement = createServerFn({ method: "POST" })
     const { admin, loadOrder } = await import("./registration.server");
     const loaded = await loadOrder(await admin(), data.purchaseId);
     if (!loaded) throw new Error("Registration order not found.");
-    return { body: loaded.order.agreement_body ?? agreementFor(loaded.order, loaded.checks.map((c) => c.metadata), p, data.legalName.trim() || "[Your legal name]") };
+    return {
+      body:
+        loaded.order.agreement_body ??
+        agreementFor(
+          loaded.order,
+          loaded.checks.map((c) => c.metadata),
+          p,
+          data.legalName.trim() || "[Your legal name]",
+        ),
+    };
   });
 
-function agreementFor(o: RegistrationOrder, songs: ({ title: string; isrc: string } | null)[], p: { created_at: string; details: Record<string, string> }, client: string) {
-  const day = (d: string | Date) => new Date(d).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" });
+function agreementFor(
+  o: RegistrationOrder,
+  songs: ({ title: string; isrc: string } | null)[],
+  p: { created_at: string; details: Record<string, string> },
+  client: string,
+) {
+  const day = (d: string | Date) =>
+    new Date(d).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" });
   const n = songs.length;
-  const amount = assistanceTotal(p.details["type"] === "album" ? "album" : "single", n, o.agencies.length);
+  const amount = assistanceTotal(
+    p.details["type"] === "album" ? "album" : "single",
+    n,
+    o.agencies.length,
+  );
   return registrationAuthorization({
     effectiveDate: day(new Date()),
     client,
@@ -136,11 +221,25 @@ export const confirmRegistrationAccess = createServerFn({ method: "POST" })
     await ownPurchase(context.supabase, context.userId, data.purchaseId);
     const { admin } = await import("./registration.server");
     const db = await admin();
-    const { data: row } = await db.from("registration_orders" as never).select("agencies, access_confirmed, agreement_signed_at").eq("purchase_id", data.purchaseId).maybeSingle();
-    const o = row as Pick<RegistrationOrder, "agencies" | "access_confirmed" | "agreement_signed_at"> | null;
-    if (!o || !o.agencies.includes(data.agency)) throw new Error("That agency isn't in this order.");
+    const { data: row } = await db
+      .from("registration_orders" as never)
+      .select("agencies, access_confirmed, agreement_signed_at")
+      .eq("purchase_id", data.purchaseId)
+      .maybeSingle();
+    const o = row as Pick<
+      RegistrationOrder,
+      "agencies" | "access_confirmed" | "agreement_signed_at"
+    > | null;
+    if (!o || !o.agencies.includes(data.agency))
+      throw new Error("That agency isn't in this order.");
     if (!o.agreement_signed_at) throw new Error("Sign the Registration Authorization first.");
-    const { error } = await db.from("registration_orders" as never).update({ access_confirmed: { ...o.access_confirmed, [data.agency]: new Date().toISOString() }, updated_at: new Date().toISOString() } as never).eq("purchase_id", data.purchaseId);
+    const { error } = await db
+      .from("registration_orders" as never)
+      .update({
+        access_confirmed: { ...o.access_confirmed, [data.agency]: new Date().toISOString() },
+        updated_at: new Date().toISOString(),
+      } as never)
+      .eq("purchase_id", data.purchaseId);
     if (error) throw new Error(error.message);
     return { ok: true };
   });
@@ -154,15 +253,30 @@ async function requireRegistrationStaff(context: { supabase: unknown; userId: st
 }
 
 export type QueueSong = {
-  id: string; title: string; submitted: boolean; status: Record<string, SongStatus>; snapshot: RegistrationSong["snapshot"]; trackId: string | null; ready: boolean;
+  id: string;
+  title: string;
+  submitted: boolean;
+  status: Record<string, SongStatus>;
+  snapshot: RegistrationSong["snapshot"];
+  trackId: string | null;
+  ready: boolean;
   /** The submitted copy's own ISRC and artist, so a report or an export never re-reads a catalog that may have changed. */
-  isrc: string; artist: string;
+  isrc: string;
+  artist: string;
 };
 export type QueueOrder = {
-  purchaseId: string; customer: string; email: string | null; agencies: string[]; createdAt: string; signedAt: string | null;
+  purchaseId: string;
+  customer: string;
+  email: string | null;
+  agencies: string[];
+  createdAt: string;
+  signedAt: string | null;
   /** The legal name typed on the Registration Authorization: agency invites come from accounts in this name. */
   signedName: string | null;
-  access: Record<string, string>; songs: QueueSong[]; state: "Waiting on customer" | "Ready to register" | "In progress" | "On hold" | "Registered"; stale: boolean;
+  access: Record<string, string>;
+  songs: QueueSong[];
+  state: "Waiting on customer" | "Ready to register" | "In progress" | "On hold" | "Registered";
+  stale: boolean;
   /** When this order's whole customer finish was recorded, so a finished card is never shown as work left. */
   batchRegisteredAt: string | null;
   /** The agent who started (or paused) this order in My Queue, so two agents never work one customer at once. */
@@ -176,14 +290,36 @@ export const listRegistrationQueue = createServerFn({ method: "GET" })
     await requireRegistrationStaff(context);
     const { admin, loadOrder } = await import("./registration.server");
     const db = await admin();
-    const { data } = await db.from("registration_orders" as never).select("purchase_id, user_id").order("created_at").limit(200);
+    const { data } = await db
+      .from("registration_orders" as never)
+      .select("purchase_id, user_id")
+      .order("created_at")
+      .limit(200);
     const rows = (data ?? []) as { purchase_id: string; user_id: string }[];
     // Who has each order open in My Queue (work_queue is private per agent, so it's read with the server client).
-    const { data: claims } = await db.from("work_queue" as never).select("user_id, item_ref, state").like("item_ref", "reg:%").in("state", ["working", "paused"]);
-    const claimRows = (claims ?? []) as { user_id: string; item_ref: string; state: "working" | "paused" }[];
+    const { data: claims } = await db
+      .from("work_queue" as never)
+      .select("user_id, item_ref, state")
+      .like("item_ref", "reg:%")
+      .in("state", ["working", "paused"]);
+    const claimRows = (claims ?? []) as {
+      user_id: string;
+      item_ref: string;
+      state: "working" | "paused";
+    }[];
     const agentIds = [...new Set(claimRows.map((c) => c.user_id))];
-    const { data: agentProfiles } = agentIds.length ? await db.from("profiles").select("id, stage_name, legal_name").in("id", agentIds) : { data: [] };
-    const agentName = new Map(((agentProfiles ?? []) as { id: string; stage_name: string | null; legal_name: string | null }[]).map((p) => [p.id, p.legal_name || p.stage_name || "A teammate"]));
+    const { data: agentProfiles } = agentIds.length
+      ? await db.from("profiles").select("id, stage_name, legal_name").in("id", agentIds)
+      : { data: [] };
+    const agentName = new Map(
+      (
+        (agentProfiles ?? []) as {
+          id: string;
+          stage_name: string | null;
+          legal_name: string | null;
+        }[]
+      ).map((p) => [p.id, p.legal_name || p.stage_name || "A teammate"]),
+    );
     const out: QueueOrder[] = [];
     for (const r of rows) {
       const [loaded, { data: prof }, { data: u }] = await Promise.all([
@@ -194,25 +330,63 @@ export const listRegistrationQueue = createServerFn({ method: "GET" })
       if (!loaded) continue;
       const o = loaded.order;
       const songs = loaded.checks.map((c) => ({
-        id: c.song.id, title: c.title, submitted: !!c.song.submitted_at, status: c.song.status, snapshot: c.song.snapshot, trackId: c.song.track_id,
+        id: c.song.id,
+        title: c.title,
+        submitted: !!c.song.submitted_at,
+        status: c.song.status,
+        snapshot: c.song.snapshot,
+        trackId: c.song.track_id,
         // Re-checked on the server against the submitted copy, never trusted from the browser.
         ready: !!c.song.submitted_at && !!c.song.snapshot && !c.missing.length,
-        isrc: c.song.snapshot?.isrc ?? "", artist: c.song.snapshot?.artist ?? "",
+        isrc: c.song.snapshot?.isrc ?? "",
+        artist: c.song.snapshot?.artist ?? "",
       }));
-      const allIn = songs.length > 0 && songs.every((s) => s.submitted) && !!o.agreement_signed_at && o.agencies.every((a) => o.access_confirmed[a]);
+      const allIn =
+        songs.length > 0 &&
+        songs.every((s) => s.submitted) &&
+        !!o.agreement_signed_at &&
+        o.agencies.every((a) => o.access_confirmed[a]);
       const statuses = songs.flatMap((s) => o.agencies.map((a) => s.status[a]));
       // On Hold is reported before "In progress": a held song needs a person, and calling it progress hid that.
-      const state = !allIn ? "Waiting on customer" : statuses.every((s) => s === "registered") ? "Registered" : statuses.some((s) => s === "on_hold") ? "On hold" : statuses.some((s) => s === "in_progress" || s === "registered") ? "In progress" : "Ready to register";
-      const submittedAt = loaded.checks.map((c) => c.song.submitted_at).filter(Boolean).sort()[0];
+      const state = !allIn
+        ? "Waiting on customer"
+        : statuses.every((s) => s === "registered")
+          ? "Registered"
+          : statuses.some((s) => s === "on_hold")
+            ? "On hold"
+            : statuses.some((s) => s === "in_progress" || s === "registered")
+              ? "In progress"
+              : "Ready to register";
+      const submittedAt = loaded.checks
+        .map((c) => c.song.submitted_at)
+        .filter(Boolean)
+        .sort()[0];
       out.push({
-        purchaseId: o.purchase_id, customer: prof?.stage_name || prof?.legal_name || "—", email: u.user?.email ?? null, agencies: o.agencies, createdAt: o.created_at,
-        signedAt: o.agreement_signed_at, signedName: o.agreement_name, access: o.access_confirmed, songs, state,
+        purchaseId: o.purchase_id,
+        customer: prof?.stage_name || prof?.legal_name || "—",
+        email: u.user?.email ?? null,
+        agencies: o.agencies,
+        createdAt: o.created_at,
+        signedAt: o.agreement_signed_at,
+        signedName: o.agreement_name,
+        access: o.access_confirmed,
+        songs,
+        state,
         batchRegisteredAt: o.batch_registered_at ?? null,
         // Internal target only, never shown to users (§3 step 6).
-        stale: state !== "Registered" && !!submittedAt && Date.parse(submittedAt) < Date.now() - 30 * 86400000,
+        stale:
+          state !== "Registered" &&
+          !!submittedAt &&
+          Date.parse(submittedAt) < Date.now() - 30 * 86400000,
         agent: (() => {
           const c = claimRows.find((x) => x.item_ref === `reg:${o.purchase_id}`);
-          return c ? { name: agentName.get(c.user_id) ?? "A teammate", state: c.state, me: c.user_id === context.userId } : null;
+          return c
+            ? {
+                name: agentName.get(c.user_id) ?? "A teammate",
+                state: c.state,
+                me: c.user_id === context.userId,
+              }
+            : null;
         })(),
       });
     }
@@ -223,13 +397,15 @@ export const listRegistrationQueue = createServerFn({ method: "GET" })
 export const setRegistrationStatus = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d) =>
-    z.object({
-      songId: z.string().uuid(),
-      agency: z.string().max(60),
-      status: z.enum(["pending", "in_progress", "on_hold", "registered"]),
-      /** Required for `registered`: the verification checklist's mandatory tick, checked here and not only in the form. */
-      confirmed: z.boolean().optional(),
-    }).parse(d),
+    z
+      .object({
+        songId: z.string().uuid(),
+        agency: z.string().max(60),
+        status: z.enum(["pending", "in_progress", "on_hold", "registered"]),
+        /** Required for `registered`: the verification checklist's mandatory tick, checked here and not only in the form. */
+        confirmed: z.boolean().optional(),
+      })
+      .parse(d),
   )
   .handler(async ({ data, context }) => {
     await requireRegistrationStaff(context);
@@ -238,8 +414,16 @@ export const setRegistrationStatus = createServerFn({ method: "POST" })
     }
     const { admin, sendFiledEmail } = await import("./registration.server");
     const db = await admin();
-    const { data: row } = await db.from("registration_songs" as never).select("purchase_id, status, submitted_at").eq("id", data.songId).maybeSingle();
-    const song = row as { purchase_id: string; status: Record<string, SongStatus>; submitted_at: string | null } | null;
+    const { data: row } = await db
+      .from("registration_songs" as never)
+      .select("purchase_id, status, submitted_at")
+      .eq("id", data.songId)
+      .maybeSingle();
+    const song = row as {
+      purchase_id: string;
+      status: Record<string, SongStatus>;
+      submitted_at: string | null;
+    } | null;
     if (!song?.submitted_at) throw new Error("This song hasn't been submitted.");
     // The agency has to be one this order was bought for: the browser names it, so the server checks it before writing a
     // key nothing reads. It is also why a made-up agency can no longer sit in the status map.
@@ -248,9 +432,17 @@ export const setRegistrationStatus = createServerFn({ method: "POST" })
       .select("agencies")
       .eq("purchase_id", song.purchase_id)
       .maybeSingle();
-    const agencies = ((orderRow as { agencies: string[] | null } | null)?.agencies ?? []).filter(Boolean);
+    const agencies = ((orderRow as { agencies: string[] | null } | null)?.agencies ?? []).filter(
+      Boolean,
+    );
     if (!agencies.includes(data.agency)) throw new Error("That agency isn't in this order.");
-    const { error } = await db.from("registration_songs" as never).update({ status: { ...(song.status ?? {}), [data.agency]: data.status }, updated_at: new Date().toISOString() } as never).eq("id", data.songId);
+    const { error } = await db
+      .from("registration_songs" as never)
+      .update({
+        status: { ...(song.status ?? {}), [data.agency]: data.status },
+        updated_at: new Date().toISOString(),
+      } as never)
+      .eq("id", data.songId);
     if (error) throw new Error(error.message);
     if (data.status === "registered") await sendFiledEmail(db, song.purchase_id, data.agency);
     return { ok: true };
@@ -263,7 +455,17 @@ export const unlockRegistrationSong = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     await requireRegistrationStaff(context);
     const { admin } = await import("./registration.server");
-    const { error } = await (await admin()).from("registration_songs" as never).update({ snapshot: null, submitted_at: null, status: {}, updated_at: new Date().toISOString() } as never).eq("id", data.songId);
+    const { error } = await (
+      await admin()
+    )
+      .from("registration_songs" as never)
+      .update({
+        snapshot: null,
+        submitted_at: null,
+        status: {},
+        updated_at: new Date().toISOString(),
+      } as never)
+      .eq("id", data.songId);
     if (error) throw new Error(error.message);
     return { ok: true };
   });
@@ -293,7 +495,9 @@ export const markAllSongsRegistered = createServerFn({ method: "POST" })
       .from("registration_orders" as never)
       .select("purchase_id")
       .eq("user_id", userId);
-    const siblingIds = ((siblingRows ?? []) as unknown as { purchase_id: string }[]).map((row) => row.purchase_id);
+    const siblingIds = ((siblingRows ?? []) as unknown as { purchase_id: string }[]).map(
+      (row) => row.purchase_id,
+    );
     const orders: NonNullable<Awaited<ReturnType<typeof loadOrder>>>[] = [];
     for (const purchaseId of siblingIds.length ? siblingIds : [data.purchaseId]) {
       const order = await loadOrder(db, purchaseId);
@@ -309,7 +513,9 @@ export const markAllSongsRegistered = createServerFn({ method: "POST" })
     const titles = new Set<string>();
     const agencies = new Set<string>();
     for (const order of orders) {
-      const status = Object.fromEntries(order.order.agencies.map((agency) => [agency, "registered"]));
+      const status = Object.fromEntries(
+        order.order.agencies.map((agency) => [agency, "registered"]),
+      );
       for (const check of order.checks) {
         // Merged, not replaced: the batch finish only ever moves the agencies it covers, so nothing else in the map is
         // dropped by a finish.
@@ -321,9 +527,14 @@ export const markAllSongsRegistered = createServerFn({ method: "POST" })
         titles.add(check.title);
       }
       for (const agency of order.order.agencies) agencies.add(agency);
-      const { error: orderError } = await db.from("registration_orders" as never).update({
-        batch_registered_at: now, batch_registered_by: context.userId, updated_at: now,
-      } as never).eq("purchase_id", order.order.purchase_id);
+      const { error: orderError } = await db
+        .from("registration_orders" as never)
+        .update({
+          batch_registered_at: now,
+          batch_registered_by: context.userId,
+          updated_at: now,
+        } as never)
+        .eq("purchase_id", order.order.purchase_id);
       if (orderError) throw new Error(orderError.message);
     }
 
@@ -373,43 +584,54 @@ export const listAgencyInvites = createServerFn({ method: "GET" })
     const db = await admin();
     const { data, error } = await db
       .from("agency_invites" as never)
-      .select("id, agency, kind, status, subject, account_name, user_email, verify_url, received_at, inbox_message_id")
+      .select(
+        "id, agency, kind, status, subject, account_name, user_email, verify_url, received_at, inbox_message_id",
+      )
       .order("received_at", { ascending: false })
       .limit(200);
     if (error) throw new Error("Couldn't load agency invites. Run migration 20261118160000 first.");
     return ((data ?? []) as unknown as StoredInvite[]).flatMap((row) => {
       if (!isInviteAgency(row.agency) || !isAgencyInviteStatus(row.status)) return [];
-      const kind: AgencyEmailKind = row.kind === "verification" || row.kind === "notice" ? row.kind : "invite";
-      return [{
-        id: row.id,
-        agency: row.agency,
-        kind,
-        status: row.status,
-        subject: row.subject ?? "",
-        accountName: row.account_name,
-        userEmail: row.user_email,
-        verifyUrl: row.verify_url,
-        receivedAt: row.received_at,
-        inboxMessageId: row.inbox_message_id,
-      }];
+      const kind: AgencyEmailKind =
+        row.kind === "verification" || row.kind === "notice" ? row.kind : "invite";
+      return [
+        {
+          id: row.id,
+          agency: row.agency,
+          kind,
+          status: row.status,
+          subject: row.subject ?? "",
+          accountName: row.account_name,
+          userEmail: row.user_email,
+          verifyUrl: row.verify_url,
+          receivedAt: row.received_at,
+          inboxMessageId: row.inbox_message_id,
+        },
+      ];
     });
   });
 
 /** Moves one invitation along Invite Received → Representative Accepted / Action Needed. */
 export const setAgencyInviteStatus = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d) => z.object({ inviteId: z.string().uuid(), status: z.string().max(40) }).parse(d))
+  .inputValidator((d) =>
+    z.object({ inviteId: z.string().uuid(), status: z.string().max(40) }).parse(d),
+  )
   .handler(async ({ data, context }) => {
     await requireRegistrationStaff(context);
     if (!isAgencyInviteStatus(data.status)) throw new Error("That isn't an invite status.");
     const { admin } = await import("./registration.server");
-    const { error } = await (await admin()).from("agency_invites" as never).update({
-      status: data.status,
-      handled_at: new Date().toISOString(),
-      handled_by: context.userId,
-      updated_at: new Date().toISOString(),
-    } as never).eq("id", data.inviteId);
+    const { error } = await (
+      await admin()
+    )
+      .from("agency_invites" as never)
+      .update({
+        status: data.status,
+        handled_at: new Date().toISOString(),
+        handled_by: context.userId,
+        updated_at: new Date().toISOString(),
+      } as never)
+      .eq("id", data.inviteId);
     if (error) throw new Error(error.message);
     return { ok: true };
   });
-

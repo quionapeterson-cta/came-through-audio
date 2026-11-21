@@ -38,7 +38,9 @@ export const sendPdfEmail = createServerFn({ method: "POST" })
       .from("user_roles")
       .select("role, departments")
       .eq("user_id", context.userId);
-    const access = resolveAccess((roles ?? []) as { role: string; departments?: string[] | null }[]);
+    const access = resolveAccess(
+      (roles ?? []) as { role: string; departments?: string[] | null }[],
+    );
     if (!access) throw new Error("Staff access only.");
     if (!companyMailboxesFor(access).includes(data.from))
       throw new Error(

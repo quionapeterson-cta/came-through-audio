@@ -13,7 +13,9 @@ describe("founder display", () => {
   it("never shows the raw super_admin token in staff-facing copy", () => {
     expect(formatStaffRoleLabel("super_admin")).toBe(FOUNDER_ROLE_LABEL);
     expect(formatStaffRoleLabel("super_admin")).not.toContain("super");
-    expect(formatStaffDisplayName("super_admin", { name: "Qui-Ona Peterson" })).toBe(FOUNDER_DISPLAY_NAME);
+    expect(formatStaffDisplayName("super_admin", { name: "Qui-Ona Peterson" })).toBe(
+      FOUNDER_DISPLAY_NAME,
+    );
   });
 
   it("names the founder in hand-offs, actions and the viewer badge", () => {

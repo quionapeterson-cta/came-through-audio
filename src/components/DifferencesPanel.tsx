@@ -1,5 +1,12 @@
 import { useEffect, useMemo, useState } from "react";
-import { ChevronDown, ChevronRight, FileSearch, Loader2, RefreshCw, Stethoscope } from "lucide-react";
+import {
+  ChevronDown,
+  ChevronRight,
+  FileSearch,
+  Loader2,
+  RefreshCw,
+  Stethoscope,
+} from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -9,8 +16,15 @@ import { updateTarget } from "@/lib/ids";
 import type { SavedListSummary } from "@/lib/agency-lists";
 import { catalogHref } from "@/lib/catalog-links";
 import {
-  actionFor, buildDifferenceRows, fieldFor, openDifferenceCount, readStoredLists, rereadStored, societyName,
-  type DifferenceRow, type StoredLists,
+  actionFor,
+  buildDifferenceRows,
+  fieldFor,
+  openDifferenceCount,
+  readStoredLists,
+  rereadStored,
+  societyName,
+  type DifferenceRow,
+  type StoredLists,
 } from "@/lib/discrepancy-treatments";
 
 /**
@@ -34,11 +48,20 @@ const FILTERS = [
 
 type Side = (typeof FILTERS)[number]["id"];
 
-const PILL = "inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-semibold transition";
+const PILL =
+  "inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-semibold transition";
 const PILL_OFF = `${PILL} border-[#E5E4E2] bg-transparent text-[#0b0b0b]/65 hover:border-[#4D8CFF]/60 hover:text-[#004AAD] dark:border-[#E5E4E2]/15 dark:text-[#E5E4E2]/65 dark:hover:border-[#4D8CFF]/70 dark:hover:text-[#4D8CFF]`;
 const PILL_ON = `${PILL} border-transparent bg-[#004AAD] text-[#FFFFFF] shadow-[0_0_15px_rgba(0,74,173,0.3)] dark:bg-[#4D8CFF] dark:text-[#0b0b0b] dark:font-semibold dark:shadow-[0_0_18px_rgba(77,140,255,0.45)]`;
 
-export function DifferencesPanel({ userId, tracks, societies, summaries, defaultSociety, onSaved, className = "" }: {
+export function DifferencesPanel({
+  userId,
+  tracks,
+  societies,
+  summaries,
+  defaultSociety,
+  onSaved,
+  className = "",
+}: {
   userId?: string | undefined;
   tracks: CatalogTrack[];
   societies: { id: string; name: string; url?: string }[];
@@ -59,8 +82,12 @@ export function DifferencesPanel({ userId, tracks, societies, summaries, default
   const [pick, setPick] = useState<{ row: DifferenceRow; current: string }>();
 
   // The stored comparison is re-read when the account changes, and again when the intake writes a new one in this sitting.
-  useEffect(() => { setStored(readStoredLists(userId)); }, [userId, tracks.length]);
-  useEffect(() => { if (defaultSociety) setSociety(defaultSociety); }, [defaultSociety]);
+  useEffect(() => {
+    setStored(readStoredLists(userId));
+  }, [userId, tracks.length]);
+  useEffect(() => {
+    if (defaultSociety) setSociety(defaultSociety);
+  }, [defaultSociety]);
 
   // Arriving from Intake: the panel opens, the society is preselected and the panel announces itself.
   useEffect(() => {
@@ -70,35 +97,63 @@ export function DifferencesPanel({ userId, tracks, societies, summaries, default
     if (wanted) setSociety(wanted);
     if (window.location.hash === "#differences-panel" || p.get("panel") === "differences") {
       setOpen(true);
-      setTimeout(() => document.getElementById("differences-panel")?.scrollIntoView({ behavior: "smooth", block: "start" }), 120);
+      setTimeout(
+        () =>
+          document
+            .getElementById("differences-panel")
+            ?.scrollIntoView({ behavior: "smooth", block: "start" }),
+        120,
+      );
     }
   }, []);
 
   // A comparison saved before versions and artists were read is compared again, from the works it kept, rather than shown
   // with a verdict from an older reader (founder, 2026-11-14).
-  const reread = useMemo(() => rereadStored(stored, tracks, societies), [stored, tracks, societies]);
+  const reread = useMemo(
+    () => rereadStored(stored, tracks, societies),
+    [stored, tracks, societies],
+  );
   const refreshed = reread !== stored;
-  const rows = useMemo(() => buildDifferenceRows({ stored: reread, tracks, societies }), [reread, tracks, societies]);
-  const shown = useMemo(() => rows
-    .map((r) => treated.has(r.key) ? { ...r, status: "both-registered" as const } : r)
-    .filter((r) => side === "all" || r.side === side)
-    .filter((r) => !society || r.claims.some((c) => c.society === society)),
-  [rows, side, society, treated]);
+  const rows = useMemo(
+    () => buildDifferenceRows({ stored: reread, tracks, societies }),
+    [reread, tracks, societies],
+  );
+  const shown = useMemo(
+    () =>
+      rows
+        .map((r) => (treated.has(r.key) ? { ...r, status: "both-registered" as const } : r))
+        .filter((r) => side === "all" || r.side === side)
+        .filter((r) => !society || r.claims.some((c) => c.society === society)),
+    [rows, side, society, treated],
+  );
 
   const counts = useMemo(() => {
     const open = openDifferenceCount(rows);
     const agencies = rows.filter((r) => r.side === "agencies").length;
     const waiting = rows.filter((r) => r.status === "waiting").length;
     const bySociety = new Map<string, number>();
-    for (const r of rows) for (const c of r.claims) bySociety.set(c.society, (bySociety.get(c.society) ?? 0) + 1);
+    for (const r of rows)
+      for (const c of r.claims) bySociety.set(c.society, (bySociety.get(c.society) ?? 0) + 1);
     return { open, agencies, waiting, catalog: rows.length - agencies, bySociety };
   }, [rows]);
 
-  const savedDiffCount = Object.values(summaries ?? {}).reduce((n, s) => n + (s?.differences ?? 0), 0);
+  const savedDiffCount = Object.values(summaries ?? {}).reduce(
+    (n, s) => n + (s?.differences ?? 0),
+    0,
+  );
   const expired = !stored && savedDiffCount > 0;
-  const societyList = societies.length ? societies : [...new Set(rows.flatMap((r) => r.claims.map((c) => c.society)))].map((id) => ({ id, name: societyName(id) }));
+  const societyList = societies.length
+    ? societies
+    : [...new Set(rows.flatMap((r) => r.claims.map((c) => c.society)))].map((id) => ({
+        id,
+        name: societyName(id),
+      }));
 
-  async function resolve(row: DifferenceRow, patch: Partial<CatalogTrack["metadata"]>, note: string) {
+  async function resolve(
+    row: DifferenceRow,
+    patch: Partial<CatalogTrack["metadata"]>,
+    note: string,
+  ) {
     const track = tracks.find((t) => t.id === row.songId);
     if (!userId || !track) return;
     setBusyKey(row.key);
@@ -124,17 +179,31 @@ export function DifferencesPanel({ userId, tracks, societies, summaries, default
   function fixInCatalog(row: DifferenceRow, field: string = fieldFor(row)) {
     const agency = row.claims.find((c) => c.isrc)?.isrc ?? "";
     const version = row.agencyCodes.find((c) => c.version)?.version ?? row.versions.agency;
-    const versions = [...new Set([...row.claims.map((c) => c.version ?? ""), ...row.agencyCodes.map((c) => c.version)].map((v) => v.trim()).filter(Boolean))];
-    window.location.assign(catalogHref({
-      trackId: row.songId, field, action: actionFor(row),
-      ...(agency ? { agencyIsrc: agency } : {}), ...(version ? { agencyVersion: version } : {}),
-      ...(versions.length ? { agencyVersions: versions } : {}),
-    }));
+    const versions = [
+      ...new Set(
+        [...row.claims.map((c) => c.version ?? ""), ...row.agencyCodes.map((c) => c.version)]
+          .map((v) => v.trim())
+          .filter(Boolean),
+      ),
+    ];
+    window.location.assign(
+      catalogHref({
+        trackId: row.songId,
+        field,
+        action: actionFor(row),
+        ...(agency ? { agencyIsrc: agency } : {}),
+        ...(version ? { agencyVersion: version } : {}),
+        ...(versions.length ? { agencyVersions: versions } : {}),
+      }),
+    );
   }
 
   return (
-    <section id="differences-panel" aria-labelledby="differences-title"
-      className={`scroll-mt-6 overflow-hidden rounded-2xl border bg-[#FFFFFF] text-[#0b0b0b] border-[#E5E4E2] dark:border-[#E5E4E2]/15 dark:bg-[#0b0b0b] dark:text-[#FFFFFF] ${className}`}>
+    <section
+      id="differences-panel"
+      aria-labelledby="differences-title"
+      className={`scroll-mt-6 overflow-hidden rounded-2xl border bg-[#FFFFFF] text-[#0b0b0b] border-[#E5E4E2] dark:border-[#E5E4E2]/15 dark:bg-[#0b0b0b] dark:text-[#FFFFFF] ${className}`}
+    >
       <header className="border-b border-[#E5E4E2] dark:border-[#E5E4E2]/15">
         <div className="flex flex-wrap items-start justify-between gap-3 px-4 py-3.5">
           <div className="flex min-w-0 items-start gap-3">
@@ -142,14 +211,20 @@ export function DifferencesPanel({ userId, tracks, societies, summaries, default
               <Stethoscope className="h-4.5 w-4.5" aria-hidden />
             </span>
             <div className="min-w-0">
-              <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#004AAD] dark:text-[#4D8CFF]">Music Royalty Doctors · Diagnostics</p>
-              <h2 id="differences-title" className="text-lg font-extrabold leading-tight">Differences</h2>
+              <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#004AAD] dark:text-[#4D8CFF]">
+                Music Royalty Doctors · Diagnostics
+              </p>
+              <h2 id="differences-title" className="text-lg font-extrabold leading-tight">
+                Differences
+              </h2>
               <p className="mt-0.5 max-w-[70ch] text-xs text-[#0b0b0b]/65 dark:text-[#E5E4E2]/65">
-                Your catalog against each agency, and the agencies against each other. Every card names what disagrees and the exact treatment.
+                Your catalog against each agency, and the agencies against each other. Every card
+                names what disagrees and the exact treatment.
               </p>
               {refreshed && (
                 <p className="mt-1 text-xs text-[#0b0b0b]/60 dark:text-[#E5E4E2]/60">
-                  Read again just now: this comparison was saved before versions and artists were compared. Upload the list again to keep the newer reading.
+                  Read again just now: this comparison was saved before versions and artists were
+                  compared. Upload the list again to keep the newer reading.
                 </p>
               )}
             </div>
@@ -162,13 +237,31 @@ export function DifferencesPanel({ userId, tracks, societies, summaries, default
             )}
             <div className="hidden items-center gap-2 sm:flex" aria-hidden>
               <svg viewBox="0 0 60 24" className="h-6 w-16 text-[#004AAD] dark:text-[#4D8CFF]">
-                <path d={EKG} fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+                <path
+                  d={EKG}
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.6"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
               </svg>
-              <span className="font-mono text-[10px] uppercase tracking-widest text-[#0b0b0b]/45 dark:text-[#E5E4E2]/45">12h device read</span>
+              <span className="font-mono text-[10px] uppercase tracking-widest text-[#0b0b0b]/45 dark:text-[#E5E4E2]/45">
+                12h device read
+              </span>
             </div>
-            <button type="button" onClick={() => setOpen((v) => !v)} aria-expanded={open} aria-controls="differences-body"
-              className="inline-flex items-center gap-1 rounded-md border border-[#E5E4E2] px-2 py-1 text-xs font-semibold text-[#0b0b0b]/65 transition hover:border-[#4D8CFF]/60 hover:text-[#004AAD] dark:border-[#E5E4E2]/15 dark:text-[#E5E4E2]/65 dark:hover:border-[#4D8CFF]/70 dark:hover:text-[#4D8CFF]">
-              {open ? <ChevronDown className="h-3.5 w-3.5" aria-hidden /> : <ChevronRight className="h-3.5 w-3.5" aria-hidden />}
+            <button
+              type="button"
+              onClick={() => setOpen((v) => !v)}
+              aria-expanded={open}
+              aria-controls="differences-body"
+              className="inline-flex items-center gap-1 rounded-md border border-[#E5E4E2] px-2 py-1 text-xs font-semibold text-[#0b0b0b]/65 transition hover:border-[#4D8CFF]/60 hover:text-[#004AAD] dark:border-[#E5E4E2]/15 dark:text-[#E5E4E2]/65 dark:hover:border-[#4D8CFF]/70 dark:hover:text-[#4D8CFF]"
+            >
+              {open ? (
+                <ChevronDown className="h-3.5 w-3.5" aria-hidden />
+              ) : (
+                <ChevronRight className="h-3.5 w-3.5" aria-hidden />
+              )}
               {open ? "Hide" : "Open"}
             </button>
           </div>
@@ -181,9 +274,16 @@ export function DifferencesPanel({ userId, tracks, societies, summaries, default
               { label: "Agency vs. agency", value: counts.agencies },
               { label: "Waiting on release", value: counts.waiting },
             ].map((m) => (
-              <div key={m.label} className="rounded-lg border border-[#E5E4E2] bg-[#E5E4E2]/20 px-3 py-2 dark:border-[#E5E4E2]/15 dark:bg-[#141414]">
-                <div className="font-mono text-xl font-bold tabular-nums leading-none text-[#0b0b0b] dark:text-[#FFFFFF]">{m.value}</div>
-                <div className="mt-1 text-[10px] font-semibold uppercase tracking-wide text-[#0b0b0b]/60 dark:text-[#E5E4E2]/60">{m.label}</div>
+              <div
+                key={m.label}
+                className="rounded-lg border border-[#E5E4E2] bg-[#E5E4E2]/20 px-3 py-2 dark:border-[#E5E4E2]/15 dark:bg-[#141414]"
+              >
+                <div className="font-mono text-xl font-bold tabular-nums leading-none text-[#0b0b0b] dark:text-[#FFFFFF]">
+                  {m.value}
+                </div>
+                <div className="mt-1 text-[10px] font-semibold uppercase tracking-wide text-[#0b0b0b]/60 dark:text-[#E5E4E2]/60">
+                  {m.label}
+                </div>
               </div>
             ))}
           </div>
@@ -192,25 +292,55 @@ export function DifferencesPanel({ userId, tracks, societies, summaries, default
 
       {open && (
         <div id="differences-body">
-          <div className="flex flex-wrap items-center gap-1.5 border-b border-[#E5E4E2] px-4 py-2.5 dark:border-[#E5E4E2]/15" role="group" aria-label="Difference filters">
+          <div
+            className="flex flex-wrap items-center gap-1.5 border-b border-[#E5E4E2] px-4 py-2.5 dark:border-[#E5E4E2]/15"
+            role="group"
+            aria-label="Difference filters"
+          >
             {FILTERS.map((f) => {
               const active = side === f.id;
-              const n = f.id === "all" ? rows.length : f.id === "catalog" ? counts.catalog : counts.agencies;
+              const n =
+                f.id === "all"
+                  ? rows.length
+                  : f.id === "catalog"
+                    ? counts.catalog
+                    : counts.agencies;
               return (
-                <button key={f.id} type="button" aria-pressed={active} onClick={() => setSide(f.id)} className={active ? PILL_ON : PILL_OFF}>
-                  {f.label}<span className="font-mono tabular-nums opacity-70">{n}</span>
+                <button
+                  key={f.id}
+                  type="button"
+                  aria-pressed={active}
+                  onClick={() => setSide(f.id)}
+                  className={active ? PILL_ON : PILL_OFF}
+                >
+                  {f.label}
+                  <span className="font-mono tabular-nums opacity-70">{n}</span>
                 </button>
               );
             })}
-            <span className="mx-1 hidden h-4 w-px bg-[#E5E4E2] dark:bg-[#E5E4E2]/15 sm:block" aria-hidden />
+            <span
+              className="mx-1 hidden h-4 w-px bg-[#E5E4E2] dark:bg-[#E5E4E2]/15 sm:block"
+              aria-hidden
+            />
             {society && (
-              <button type="button" onClick={() => setSociety("")} className={PILL_OFF}>All societies ✕</button>
+              <button type="button" onClick={() => setSociety("")} className={PILL_OFF}>
+                All societies ✕
+              </button>
             )}
             {societyList.map((s) => {
               const active = society === s.id;
               return (
-                <button key={s.id} type="button" aria-pressed={active} onClick={() => setSociety(active ? "" : s.id)} className={active ? PILL_ON : PILL_OFF}>
-                  {s.name}<span className="font-mono tabular-nums opacity-70">{counts.bySociety.get(s.id) ?? 0}</span>
+                <button
+                  key={s.id}
+                  type="button"
+                  aria-pressed={active}
+                  onClick={() => setSociety(active ? "" : s.id)}
+                  className={active ? PILL_ON : PILL_OFF}
+                >
+                  {s.name}
+                  <span className="font-mono tabular-nums opacity-70">
+                    {counts.bySociety.get(s.id) ?? 0}
+                  </span>
                 </button>
               );
             })}
@@ -222,11 +352,17 @@ export function DifferencesPanel({ userId, tracks, societies, summaries, default
                 <FileSearch className="h-5 w-5" aria-hidden />
               </span>
               <p className="max-w-[70ch] text-sm text-[#0b0b0b]/70 dark:text-[#E5E4E2]/70">
-                Detailed row comparisons expire after 12 hours per device. Re-upload your{society ? ` ${societyName(society, societyList)}` : ""} list in Intake to view exact field differences.
+                Detailed row comparisons expire after 12 hours per device. Re-upload your
+                {society ? ` ${societyName(society, societyList)}` : ""} list in Intake to view
+                exact field differences.
               </p>
-              <Button size="sm" onClick={() => window.location.assign("/workspace?tab=health")}
-                className="bg-[#004AAD] text-[#FFFFFF] shadow-[0_0_14px_rgba(0,74,173,0.25)] hover:bg-[#4D8CFF] hover:shadow-[0_0_20px_rgba(77,140,255,0.55)] dark:bg-[#4D8CFF] dark:text-[#0b0b0b] dark:font-semibold dark:shadow-[0_0_18px_rgba(77,140,255,0.45)]">
-                <RefreshCw className="mr-1 h-3.5 w-3.5" aria-hidden />Re-run Intake Scan →
+              <Button
+                size="sm"
+                onClick={() => window.location.assign("/workspace?tab=health")}
+                className="bg-[#004AAD] text-[#FFFFFF] shadow-[0_0_14px_rgba(0,74,173,0.25)] hover:bg-[#4D8CFF] hover:shadow-[0_0_20px_rgba(77,140,255,0.55)] dark:bg-[#4D8CFF] dark:text-[#0b0b0b] dark:font-semibold dark:shadow-[0_0_18px_rgba(77,140,255,0.45)]"
+              >
+                <RefreshCw className="mr-1 h-3.5 w-3.5" aria-hidden />
+                Re-run Intake Scan →
               </Button>
             </div>
           ) : shown.length === 0 ? (
@@ -237,82 +373,151 @@ export function DifferencesPanel({ userId, tracks, societies, summaries, default
             </div>
           ) : (
             <div className="p-3 sm:p-4">
-              <DifferencesChart rows={shown} busyKey={busyKey} onFixCatalog={fixInCatalog}
+              <DifferencesChart
+                rows={shown}
+                busyKey={busyKey}
+                onFixCatalog={fixInCatalog}
                 onAdopt={(row) => {
                   const agency = row.claims.find((c) => c.isrc)?.isrc ?? "";
-                  if (agency) void resolve(row, { isrc: agency }, `Adopted ${agency}. The catalog now matches ${row.claims[0]!.name}.`);
+                  if (agency)
+                    void resolve(
+                      row,
+                      { isrc: agency },
+                      `Adopted ${agency}. The catalog now matches ${row.claims[0]!.name}.`,
+                    );
                 }}
                 onSaveAlternate={(row) => {
                   const track = tracks.find((t) => t.id === row.songId);
                   const name = (row.alternateTitle ?? row.claims[0]?.title ?? "").trim();
                   if (!track || !name) return;
-                  const saved = (track.metadata.alternateTitles ?? []).map((t) => t.trim()).filter(Boolean);
+                  const saved = (track.metadata.alternateTitles ?? [])
+                    .map((t) => t.trim())
+                    .filter(Boolean);
                   if (saved.some((t) => t.toLowerCase() === name.toLowerCase())) {
                     toast.success(`"${name}" is already an alternate title of this song.`);
                     return;
                   }
-                  void resolve(row, { alternateTitles: [...saved, name] }, `Saved "${name}" as an alternate title of ${track.title}.`);
+                  void resolve(
+                    row,
+                    { alternateTitles: [...saved, name] },
+                    `Saved "${name}" as an alternate title of ${track.title}.`,
+                  );
                 }}
                 onKeepBoth={(row) => {
-                  const agency = row.claims.map((c) => c.isrc).find((c) => c && c.toUpperCase() !== row.catalogIsrc.toUpperCase()) ?? "";
+                  const agency =
+                    row.claims
+                      .map((c) => c.isrc)
+                      .find((c) => c && c.toUpperCase() !== row.catalogIsrc.toUpperCase()) ?? "";
                   setPick({ row, current: row.catalogIsrc || agency });
-                }} />
+                }}
+              />
             </div>
           )}
           <p className="border-t border-[#E5E4E2] px-4 py-2 text-[11px] text-[#0b0b0b]/55 dark:border-[#E5E4E2]/15 dark:text-[#E5E4E2]/55">
-            A saved detail is kept as you enter it until a lookup confirms it. Both ISRCs stay on the work for record-keeping; only the current one is embedded.
+            A saved detail is kept as you enter it until a lookup confirms it. Both ISRCs stay on
+            the work for record-keeping; only the current one is embedded.
           </p>
         </div>
       )}
 
-      <Dialog open={!!pick} onOpenChange={(o) => { if (!o) setPick(undefined); }}>
+      <Dialog
+        open={!!pick}
+        onOpenChange={(o) => {
+          if (!o) setPick(undefined);
+        }}
+      >
         <DialogContent className="sm:max-w-lg">
-          <DialogHeader><DialogTitle>Keep both ISRCs — which one is current?</DialogTitle></DialogHeader>
-          {pick && (() => {
-            const codes = [...new Set([pick.row.catalogIsrc, ...pick.row.claims.map((c) => c.isrc), ...pick.row.retiredIscrs].filter(Boolean))];
-            const other = codes.find((c) => c !== pick.current) ?? "";
-            return (
-              <div className="space-y-3">
-                <p className="text-sm text-muted-foreground">
-                  Never guessed for you: choose the code your distributor delivered as the current one. The other is marked Retired and stays on the
-                  work, because royalties filed under it can still surface.
-                </p>
-                <div className="grid gap-2 sm:grid-cols-2">
-                  {codes.map((code) => {
-                    const active = pick.current === code;
-                    const claim = pick.row.claims.find((c) => c.isrc === code);
-                    return (
-                      <button key={code} type="button" aria-pressed={active} onClick={() => setPick({ ...pick, current: code })}
-                        className={`rounded-xl border p-3 text-left transition ${active
-                          ? "border-[#004AAD] bg-[#004AAD]/[0.06] shadow-[0_0_15px_rgba(0,74,173,0.2)] dark:border-[#4D8CFF] dark:bg-[#4D8CFF]/10 dark:shadow-[0_0_18px_rgba(77,140,255,0.3)]"
-                          : "border-[#E5E4E2] hover:border-[#4D8CFF]/60 dark:border-[#E5E4E2]/15 dark:hover:border-[#4D8CFF]/70"}`}>
-                        <span className="block text-[10px] font-bold uppercase tracking-wide text-[#0b0b0b]/55 dark:text-[#E5E4E2]/55">
-                          {claim ? claim.name : pick.row.retiredIscrs.includes(code) ? "Retired today" : "Your catalog"}
-                        </span>
-                        <span className="mt-1 block font-mono text-sm font-semibold tabular-nums text-[#0b0b0b] dark:text-[#FFFFFF]">{code}</span>
-                        {pick.row.release.date && <span className="mt-1 block text-[11px] text-[#0b0b0b]/55 dark:text-[#E5E4E2]/55">Release {pick.row.release.date}</span>}
-                      </button>
-                    );
-                  })}
+          <DialogHeader>
+            <DialogTitle>Keep both ISRCs — which one is current?</DialogTitle>
+          </DialogHeader>
+          {pick &&
+            (() => {
+              const codes = [
+                ...new Set(
+                  [
+                    pick.row.catalogIsrc,
+                    ...pick.row.claims.map((c) => c.isrc),
+                    ...pick.row.retiredIscrs,
+                  ].filter(Boolean),
+                ),
+              ];
+              const other = codes.find((c) => c !== pick.current) ?? "";
+              return (
+                <div className="space-y-3">
+                  <p className="text-sm text-muted-foreground">
+                    Never guessed for you: choose the code your distributor delivered as the current
+                    one. The other is marked Retired and stays on the work, because royalties filed
+                    under it can still surface.
+                  </p>
+                  <div className="grid gap-2 sm:grid-cols-2">
+                    {codes.map((code) => {
+                      const active = pick.current === code;
+                      const claim = pick.row.claims.find((c) => c.isrc === code);
+                      return (
+                        <button
+                          key={code}
+                          type="button"
+                          aria-pressed={active}
+                          onClick={() => setPick({ ...pick, current: code })}
+                          className={`rounded-xl border p-3 text-left transition ${
+                            active
+                              ? "border-[#004AAD] bg-[#004AAD]/[0.06] shadow-[0_0_15px_rgba(0,74,173,0.2)] dark:border-[#4D8CFF] dark:bg-[#4D8CFF]/10 dark:shadow-[0_0_18px_rgba(77,140,255,0.3)]"
+                              : "border-[#E5E4E2] hover:border-[#4D8CFF]/60 dark:border-[#E5E4E2]/15 dark:hover:border-[#4D8CFF]/70"
+                          }`}
+                        >
+                          <span className="block text-[10px] font-bold uppercase tracking-wide text-[#0b0b0b]/55 dark:text-[#E5E4E2]/55">
+                            {claim
+                              ? claim.name
+                              : pick.row.retiredIscrs.includes(code)
+                                ? "Retired today"
+                                : "Your catalog"}
+                          </span>
+                          <span className="mt-1 block font-mono text-sm font-semibold tabular-nums text-[#0b0b0b] dark:text-[#FFFFFF]">
+                            {code}
+                          </span>
+                          {pick.row.release.date && (
+                            <span className="mt-1 block text-[11px] text-[#0b0b0b]/55 dark:text-[#E5E4E2]/55">
+                              Release {pick.row.release.date}
+                            </span>
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Suggestion only, from the release date and the code's year digits. You decide.
+                  </p>
+                  <div className="flex justify-end gap-2">
+                    <Button variant="ghost" onClick={() => setPick(undefined)}>
+                      Cancel
+                    </Button>
+                    <Button
+                      disabled={!pick.current || busyKey === pick.row.key}
+                      className="bg-[#004AAD] text-[#FFFFFF] shadow-[0_0_14px_rgba(0,74,173,0.25)] hover:bg-[#4D8CFF] dark:bg-[#4D8CFF] dark:text-[#0b0b0b] dark:font-semibold dark:shadow-[0_0_18px_rgba(77,140,255,0.45)]"
+                      onClick={() => {
+                        const row = pick.row;
+                        setPick(undefined);
+                        void resolve(
+                          row,
+                          {
+                            isrc: pick.current,
+                            retiredIscrs: [...new Set([...row.retiredIscrs, other])].filter(
+                              Boolean,
+                            ),
+                          },
+                          `Kept ${pick.current} as current and marked ${other} retired. Both stay on the work.`,
+                        );
+                      }}
+                    >
+                      {busyKey === pick.row.key ? (
+                        <Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" aria-hidden />
+                      ) : null}
+                      Keep both &amp; retire {other || "the other"}
+                    </Button>
+                  </div>
                 </div>
-                <p className="text-xs text-muted-foreground">Suggestion only, from the release date and the code's year digits. You decide.</p>
-                <div className="flex justify-end gap-2">
-                  <Button variant="ghost" onClick={() => setPick(undefined)}>Cancel</Button>
-                  <Button disabled={!pick.current || busyKey === pick.row.key}
-                    className="bg-[#004AAD] text-[#FFFFFF] shadow-[0_0_14px_rgba(0,74,173,0.25)] hover:bg-[#4D8CFF] dark:bg-[#4D8CFF] dark:text-[#0b0b0b] dark:font-semibold dark:shadow-[0_0_18px_rgba(77,140,255,0.45)]"
-                    onClick={() => {
-                      const row = pick.row;
-                      setPick(undefined);
-                      void resolve(row, { isrc: pick.current, retiredIscrs: [...new Set([...row.retiredIscrs, other])].filter(Boolean) },
-                        `Kept ${pick.current} as current and marked ${other} retired. Both stay on the work.`);
-                    }}>
-                    {busyKey === pick.row.key ? <Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" aria-hidden /> : null}
-                    Keep both &amp; retire {other || "the other"}
-                  </Button>
-                </div>
-              </div>
-            );
-          })()}
+              );
+            })()}
         </DialogContent>
       </Dialog>
     </section>

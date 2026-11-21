@@ -67,14 +67,19 @@ function Login() {
       rememberLoginEmail(email);
       navigate({ to: "/workspace", search: { tab: undefined } });
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Couldn't log in. Check your email and password.");
+      toast.error(
+        err instanceof Error ? err.message : "Couldn't log in. Check your email and password.",
+      );
     } finally {
       setBusy(false);
     }
   }
 
   async function sendReset() {
-    if (!email.trim()) { toast.error("Type the email on your account first."); return; }
+    if (!email.trim()) {
+      toast.error("Type the email on your account first.");
+      return;
+    }
     setBusy(true);
     try {
       // Our own branded email, not the provider's default template (founder, 2026-11-05).
@@ -91,7 +96,9 @@ function Login() {
     <div className="min-h-screen bg-ink text-ink-foreground">
       <header className="mx-auto flex max-w-5xl items-center justify-between px-4 py-5 sm:px-6">
         <BrandLogo />
-        <Link to="/" className="text-sm font-semibold text-ink-muted hover:text-primary">Home</Link>
+        <Link to="/" className="text-sm font-semibold text-ink-muted hover:text-primary">
+          Home
+        </Link>
       </header>
       <main className="mx-auto max-w-md px-4 py-8 sm:px-6">
         <div className="rounded-2xl bg-background p-8 text-foreground shadow-2xl">
@@ -100,7 +107,14 @@ function Login() {
               somebody opens every week. The tab icon is white, so the card uses the light-scheme copy the same way the
               tab does; MARK_BOX keeps it on the name's baseline in em, like the header. */}
           <p className="flex items-center gap-[0.02em] text-lg font-bold uppercase tracking-[2px] text-foreground">
-            <img src="/favicon-light.png" alt="" aria-hidden width={26} height={26} className={`${MARK_BOX} ${MARK_TUCK}`} />
+            <img
+              src="/favicon-light.png"
+              alt=""
+              aria-hidden
+              width={26}
+              height={26}
+              className={`${MARK_BOX} ${MARK_TUCK}`}
+            />
             <span aria-hidden>ame Through Audio</span>
             <span className="sr-only">Came Through Audio</span>
           </p>
@@ -108,24 +122,35 @@ function Login() {
             <div className="mt-4 space-y-3">
               <h1 className="text-2xl font-bold">Check your email</h1>
               <p className="text-muted-foreground">
-                If an account uses <span className="font-semibold text-foreground">{email}</span>, a reset link is on its
-                way. It works once and expires in an hour.
+                If an account uses <span className="font-semibold text-foreground">{email}</span>, a
+                reset link is on its way. It works once and expires in an hour.
               </p>
-              <button type="button" className="text-sm font-semibold text-primary" onClick={() => setResetSent(false)}>Back to log in</button>
+              <button
+                type="button"
+                className="text-sm font-semibold text-primary"
+                onClick={() => setResetSent(false)}
+              >
+                Back to log in
+              </button>
             </div>
           ) : (
             <form onSubmit={submit} className="mt-4 space-y-4">
               <div>
                 <h1 className="text-2xl font-bold">Welcome back</h1>
                 <p className="mt-1 text-sm text-muted-foreground">
-                  {remembered ? "You signed in on this browser before. Your email is already in place — just enter your password." : "Log in to your catalog, splits and contracts."}
+                  {remembered
+                    ? "You signed in on this browser before. Your email is already in place — just enter your password."
+                    : "Log in to your catalog, splits and contracts."}
                 </p>
               </div>
               {!guard.locked && (
                 <>
                   {/* A second door, not a replacement: the email and password fields below are untouched. */}
                   <GoogleButton />
-                  <div className="flex items-center gap-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground" aria-hidden>
+                  <div
+                    className="flex items-center gap-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground"
+                    aria-hidden
+                  >
                     <span className="h-px flex-1 bg-border" />
                     or
                     <span className="h-px flex-1 bg-border" />
@@ -146,7 +171,11 @@ function Login() {
                   <button
                     type="button"
                     className="text-xs font-semibold text-primary"
-                    onClick={() => { forgetLoginEmail(); setRemembered(false); setEmail(""); }}
+                    onClick={() => {
+                      forgetLoginEmail();
+                      setRemembered(false);
+                      setEmail("");
+                    }}
                   >
                     Use a different account
                   </button>
@@ -155,7 +184,13 @@ function Login() {
               <div className="space-y-1.5">
                 <div className="flex items-baseline justify-between">
                   <Label htmlFor="login-password">Password</Label>
-                  <button type="button" className="text-xs font-semibold text-primary" onClick={() => void sendReset()}>Forgot password?</button>
+                  <button
+                    type="button"
+                    className="text-xs font-semibold text-primary"
+                    onClick={() => void sendReset()}
+                  >
+                    Forgot password?
+                  </button>
                 </div>
                 <Input
                   id="login-password"
@@ -172,7 +207,9 @@ function Login() {
               </Button>
               <p className="text-center text-sm text-muted-foreground">
                 New here?{" "}
-                <Link to="/" className="font-semibold text-primary">Create a free account</Link>
+                <Link to="/" className="font-semibold text-primary">
+                  Create a free account
+                </Link>
               </p>
             </form>
           )}

@@ -1,5 +1,13 @@
 import { useEffect, useState } from "react";
-import { CloudDownload, Copy, ShieldCheck, ShieldQuestion, ShieldX, Loader2, Upload } from "lucide-react";
+import {
+  CloudDownload,
+  Copy,
+  ShieldCheck,
+  ShieldQuestion,
+  ShieldX,
+  Loader2,
+  Upload,
+} from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -29,7 +37,14 @@ type Ok = Extract<FastTrackResult, { ok: true; kind: "discography" }>;
 type Choice = "keep" | "streaming" | "both";
 
 /** What the prefill did: songs added, songs left alone, and the first one, to open for audio. */
-type SavedPull = { added: number; updated: number; kept: number; existing: number; matched: number; first?: string | undefined };
+type SavedPull = {
+  added: number;
+  updated: number;
+  kept: number;
+  existing: number;
+  matched: number;
+  first?: string | undefined;
+};
 /** The sitting's pull, kept for the account so leaving the check-in doesn't throw it away. */
 type StreamSession = {
   link: string;
@@ -55,7 +70,13 @@ const uniqueRecordings = (r: Ok) => {
   return n;
 };
 
-export function StreamingFastTrack({ userId, canCatalog = false, onUpgrade, onUploadAudio, onSaved }: {
+export function StreamingFastTrack({
+  userId,
+  canCatalog = false,
+  onUpgrade,
+  onUploadAudio,
+  onSaved,
+}: {
   userId?: string | undefined;
   /** Prefilling My Catalog is a paid feature (plan §4.6); the diagnosis itself is free on every plan (§4.8). */
   canCatalog?: boolean | undefined;
@@ -74,7 +95,11 @@ export function StreamingFastTrack({ userId, canCatalog = false, onUpgrade, onUp
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState<SavedPull>();
   /** Songs that look like ones already in My Catalog, waiting on the member's choice before anything is written. */
-  const [review, setReview] = useState<{ plan: PrefillPlan; tracks: CatalogTrack[]; choices: Choice[] }>();
+  const [review, setReview] = useState<{
+    plan: PrefillPlan;
+    tracks: CatalogTrack[];
+    choices: Choice[];
+  }>();
   const [later, setLater] = useState(false);
   const [dismissed, setDismissed] = useState(false);
 
@@ -96,8 +121,19 @@ export function StreamingFastTrack({ userId, canCatalog = false, onUpgrade, onUp
   }, [userId]);
   useEffect(() => {
     if (!restored || !userId) return;
-    if (!link && !name && !result && !candidates) { clearIntake(userId, "streaming"); return; }
-    writeIntake<StreamSession>(userId, "streaming", { link, name, result, candidates, saved, later, dismissed });
+    if (!link && !name && !result && !candidates) {
+      clearIntake(userId, "streaming");
+      return;
+    }
+    writeIntake<StreamSession>(userId, "streaming", {
+      link,
+      name,
+      result,
+      candidates,
+      saved,
+      later,
+      dismissed,
+    });
   }, [restored, userId, link, name, result, candidates, saved, later, dismissed]);
 
   function forget() {
@@ -124,13 +160,22 @@ export function StreamingFastTrack({ userId, canCatalog = false, onUpgrade, onUp
       const plan = prefillPlan({
         discography: result.discography,
         matches: result.matches,
-        existing: existing.map((t) => ({ id: t.id, title: t.title, artist: t.artist, isrc: t.metadata.isrc, album: t.metadata.album })),
+        existing: existing.map((t) => ({
+          id: t.id,
+          title: t.title,
+          artist: t.artist,
+          isrc: t.metadata.isrc,
+          album: t.metadata.album,
+        })),
         profile: loadProfile(userId),
       });
-      if (plan.conflicts.length) setReview({ plan, tracks: existing, choices: plan.conflicts.map(() => "keep") });
+      if (plan.conflicts.length)
+        setReview({ plan, tracks: existing, choices: plan.conflicts.map(() => "keep") });
       else await commit(plan, existing, []);
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Couldn't add these songs to your catalog. Try again.");
+      toast.error(
+        e instanceof Error ? e.message : "Couldn't add these songs to your catalog. Try again.",
+      );
     } finally {
       setSaving(false);
     }
@@ -144,14 +189,20 @@ export function StreamingFastTrack({ userId, canCatalog = false, onUpgrade, onUp
    */
   async function attachCover(id: string, song: Metadata) {
     const album = song.album.trim().toLowerCase();
-    const url = album ? result?.discography.releases.find((r) => r.title.trim().toLowerCase() === album)?.cover : undefined;
+    const url = album
+      ? result?.discography.releases.find((r) => r.title.trim().toLowerCase() === album)?.cover
+      : undefined;
     if (!url) return;
     const file = await coverFileFrom(url, song.title || "cover");
     if (!file) return;
     try {
       const path = await uploadCatalogFile(userId!, id, "artwork", file, coverExtension(file.type));
       const thumb = await coverThumb(file).catch(() => "");
-      await saveTrack({ ...song, artPath: path, ...(thumb ? { coverThumb: thumb } : {}) }, userId!, id);
+      await saveTrack(
+        { ...song, artPath: path, ...(thumb ? { coverThumb: thumb } : {}) },
+        userId!,
+        id,
+      );
     } catch (e) {
       // Quiet: the song is saved and usable, and the member can add the cover by hand.
       console.warn("The pulled cover wasn't saved:", e instanceof Error ? e.message : e);
@@ -184,11 +235,22 @@ export function StreamingFastTrack({ userId, canCatalog = false, onUpgrade, onUp
     }
     const added = plan.songs.length + both;
     const kept = plan.conflicts.length - updated - both;
-    setSaved({ added, updated, kept, existing: plan.existingCount, matched: plan.matchedCount, first });
+    setSaved({
+      added,
+      updated,
+      kept,
+      existing: plan.existingCount,
+      matched: plan.matchedCount,
+      first,
+    });
     setReview(undefined);
     setLater(false);
     if (added || updated) {
-      toast.success([added && `${added} song${added === 1 ? "" : "s"} added`, updated && `${updated} updated`].filter(Boolean).join(", ") + " in My Catalog.");
+      toast.success(
+        [added && `${added} song${added === 1 ? "" : "s"} added`, updated && `${updated} updated`]
+          .filter(Boolean)
+          .join(", ") + " in My Catalog.",
+      );
       onSaved?.();
     } else {
       toast.success("Nothing changed: every track here is already in your catalog.");
@@ -201,7 +263,9 @@ export function StreamingFastTrack({ userId, canCatalog = false, onUpgrade, onUp
     try {
       await commit(review.plan, review.tracks, review.choices);
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Couldn't add these songs to your catalog. Try again.");
+      toast.error(
+        e instanceof Error ? e.message : "Couldn't add these songs to your catalog. Try again.",
+      );
     } finally {
       setSaving(false);
     }
@@ -371,19 +435,32 @@ export function StreamingFastTrack({ userId, canCatalog = false, onUpgrade, onUp
                 <p className="mt-1 text-muted-foreground">
                   {saved.added
                     ? `${saved.added} song${saved.added === 1 ? " is" : "s are"} in My Catalog with ${saved.added === 1 ? "its" : "their"} verified details${saved.matched ? `, ${saved.matched} with the writers and publishers on file at The MLC` : ""}. All you need to do is upload your masters, then embed and download them.`
-                    : saved.updated ? "" : "Every track in this pull is already in My Catalog, so nothing was added."}
-                  {saved.updated ? ` ${saved.updated} of your entries took ${sourceName}'s recording details (ISRC, UPC, release, track number), keeping your writers, lyrics and master.` : ""}
-                  {saved.kept ? ` ${saved.kept} of your entries ${saved.kept === 1 ? "was" : "were"} kept as ${saved.kept === 1 ? "it is" : "they are"}, as you chose.` : ""}
-                  {saved.existing ? ` ${saved.existing} song${saved.existing === 1 ? " was" : "s were"} already there with the same ISRC and left exactly as ${saved.existing === 1 ? "it is" : "they are"}.` : ""}
+                    : saved.updated
+                      ? ""
+                      : "Every track in this pull is already in My Catalog, so nothing was added."}
+                  {saved.updated
+                    ? ` ${saved.updated} of your entries took ${sourceName}'s recording details (ISRC, UPC, release, track number), keeping your writers, lyrics and master.`
+                    : ""}
+                  {saved.kept
+                    ? ` ${saved.kept} of your entries ${saved.kept === 1 ? "was" : "were"} kept as ${saved.kept === 1 ? "it is" : "they are"}, as you chose.`
+                    : ""}
+                  {saved.existing
+                    ? ` ${saved.existing} song${saved.existing === 1 ? " was" : "s were"} already there with the same ISRC and left exactly as ${saved.existing === 1 ? "it is" : "they are"}.`
+                    : ""}
                 </p>
                 {later ? (
-                  <p className="mt-2 text-muted-foreground">Kept for later: they're in My Catalog whenever you're ready to add the audio.</p>
+                  <p className="mt-2 text-muted-foreground">
+                    Kept for later: they're in My Catalog whenever you're ready to add the audio.
+                  </p>
                 ) : (
                   <div className="mt-3 flex flex-wrap items-center gap-2">
                     <Button onClick={() => onUploadAudio?.(saved.first)} disabled={!saved.first}>
-                      <Upload />Upload audio now
+                      <Upload />
+                      Upload audio now
                     </Button>
-                    <Button variant="outline" onClick={() => setLater(true)}>Add Audio Later</Button>
+                    <Button variant="outline" onClick={() => setLater(true)}>
+                      Add Audio Later
+                    </Button>
                   </div>
                 )}
                 <p className="mt-2 text-xs text-muted-foreground">{SOVEREIGN_BACKUP}</p>
@@ -391,38 +468,100 @@ export function StreamingFastTrack({ userId, canCatalog = false, onUpgrade, onUp
             ) : review ? (
               <div className="rounded-2xl border-2 border-primary/40 bg-card p-4 text-sm">
                 <p className="font-bold">
-                  {review.plan.conflicts.length} song{review.plan.conflicts.length === 1 ? " looks" : "s look"} like {review.plan.conflicts.length === 1 ? "one" : "ones"} already in My Catalog
+                  {review.plan.conflicts.length} song
+                  {review.plan.conflicts.length === 1 ? " looks" : "s look"} like{" "}
+                  {review.plan.conflicts.length === 1 ? "one" : "ones"} already in My Catalog
                 </p>
                 <p className="mt-1 max-w-[68ch] text-muted-foreground">
-                  Same title, so this may be the entry you already have — with a different or missing ISRC, or a different
-                  artist credit. Choose which entry you want for each. <b>Use {sourceName}&apos;s</b> puts the released
-                  ISRC, UPC, release and track number on your entry and keeps your writers, lyrics and master. Nothing is
-                  saved until you confirm.
+                  Same title, so this may be the entry you already have — with a different or
+                  missing ISRC, or a different artist credit. Choose which entry you want for each.{" "}
+                  <b>Use {sourceName}&apos;s</b> puts the released ISRC, UPC, release and track
+                  number on your entry and keeps your writers, lyrics and master. Nothing is saved
+                  until you confirm.
                 </p>
                 <div className="mt-3 flex flex-wrap gap-2">
-                  <Button size="sm" variant="outline" onClick={() => setReview({ ...review, choices: review.choices.map(() => "streaming") })}>Use {sourceName}&apos;s for all</Button>
-                  <Button size="sm" variant="outline" onClick={() => setReview({ ...review, choices: review.choices.map(() => "keep") })}>Keep mine for all</Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() =>
+                      setReview({ ...review, choices: review.choices.map(() => "streaming") })
+                    }
+                  >
+                    Use {sourceName}&apos;s for all
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() =>
+                      setReview({ ...review, choices: review.choices.map(() => "keep") })
+                    }
+                  >
+                    Keep mine for all
+                  </Button>
                 </div>
                 <ul className="mt-3 grid gap-2">
                   {review.plan.conflicts.map((c, i) => (
-                    <li key={`${c.existing.id}-${c.song.isrc}`} className="rounded-xl border border-border p-3">
+                    <li
+                      key={`${c.existing.id}-${c.song.isrc}`}
+                      className="rounded-xl border border-border p-3"
+                    >
                       <div className="grid gap-2 sm:grid-cols-2">
                         <div className="min-w-0">
-                          <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Yours</p>
+                          <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                            Yours
+                          </p>
                           <b className="block truncate">{c.existing.title}</b>
-                          <span className="text-xs text-muted-foreground">{[c.existing.album, c.existing.isrc ? `ISRC ${c.existing.isrc}` : "No ISRC"].filter(Boolean).join(" · ")}</span>
+                          <span className="text-xs text-muted-foreground">
+                            {[
+                              c.existing.album,
+                              c.existing.isrc ? `ISRC ${c.existing.isrc}` : "No ISRC",
+                            ]
+                              .filter(Boolean)
+                              .join(" · ")}
+                          </span>
                         </div>
                         <div className="min-w-0">
-                          <p className="text-xs font-semibold uppercase tracking-wide text-primary">{sourceName}</p>
+                          <p className="text-xs font-semibold uppercase tracking-wide text-primary">
+                            {sourceName}
+                          </p>
                           <b className="block truncate">{c.song.title}</b>
-                          <span className="text-xs text-muted-foreground">{[c.song.album, c.song.releaseDate.slice(0, 4), c.song.isrc ? `ISRC ${c.song.isrc}` : ""].filter(Boolean).join(" · ")}</span>
+                          <span className="text-xs text-muted-foreground">
+                            {[
+                              c.song.album,
+                              c.song.releaseDate.slice(0, 4),
+                              c.song.isrc ? `ISRC ${c.song.isrc}` : "",
+                            ]
+                              .filter(Boolean)
+                              .join(" · ")}
+                          </span>
                         </div>
                       </div>
-                      <div role="radiogroup" aria-label={`What to do with ${c.existing.title}`} className="mt-2 flex flex-wrap gap-2">
-                        {([["streaming", `Use ${sourceName}'s`], ["keep", "Keep mine"], ["both", "Keep both"]] as const).map(([value, label]) => (
-                          <Button key={value} type="button" size="sm" role="radio" aria-checked={review.choices[i] === value}
+                      <div
+                        role="radiogroup"
+                        aria-label={`What to do with ${c.existing.title}`}
+                        className="mt-2 flex flex-wrap gap-2"
+                      >
+                        {(
+                          [
+                            ["streaming", `Use ${sourceName}'s`],
+                            ["keep", "Keep mine"],
+                            ["both", "Keep both"],
+                          ] as const
+                        ).map(([value, label]) => (
+                          <Button
+                            key={value}
+                            type="button"
+                            size="sm"
+                            role="radio"
+                            aria-checked={review.choices[i] === value}
                             variant={review.choices[i] === value ? "default" : "outline"}
-                            onClick={() => setReview({ ...review, choices: review.choices.map((x, j) => (j === i ? value : x)) })}>
+                            onClick={() =>
+                              setReview({
+                                ...review,
+                                choices: review.choices.map((x, j) => (j === i ? value : x)),
+                              })
+                            }
+                          >
                             {label}
                           </Button>
                         ))}
@@ -435,9 +574,12 @@ export function StreamingFastTrack({ userId, canCatalog = false, onUpgrade, onUp
                     {saving ? <Loader2 className="animate-spin" /> : <CloudDownload />}
                     {saving ? "Saving to My Catalog…" : "Confirm and save"}
                   </Button>
-                  <Button variant="ghost" onClick={() => setReview(undefined)} disabled={saving}>Cancel</Button>
+                  <Button variant="ghost" onClick={() => setReview(undefined)} disabled={saving}>
+                    Cancel
+                  </Button>
                   <span className="text-xs text-muted-foreground">
-                    {review.plan.songs.length} new song{review.plan.songs.length === 1 ? "" : "s"} will be added too.
+                    {review.plan.songs.length} new song{review.plan.songs.length === 1 ? "" : "s"}{" "}
+                    will be added too.
                   </span>
                 </div>
               </div>
@@ -445,9 +587,10 @@ export function StreamingFastTrack({ userId, canCatalog = false, onUpgrade, onUp
               <div className="rounded-2xl border border-border bg-card p-4 text-sm">
                 <p className="font-bold">Keep these releases in your own catalog</p>
                 <p className="mt-1 max-w-[68ch] text-muted-foreground">
-                  Every track can be saved to My Catalog with what streaming confirmed: title, artist, release, track
-                  number, duration, ISRC, UPC and label. A song you already have with the same ISRC is left untouched;
-                  one with the same title and another code is yours to choose. Then upload the masters now or later.
+                  Every track can be saved to My Catalog with what streaming confirmed: title,
+                  artist, release, track number, duration, ISRC, UPC and label. A song you already
+                  have with the same ISRC is left untouched; one with the same title and another
+                  code is yours to choose. Then upload the masters now or later.
                 </p>
                 <Button className="mt-3" onClick={() => void saveToCatalog()} disabled={saving}>
                   {saving ? <Loader2 className="animate-spin" /> : <CloudDownload />}
@@ -459,7 +602,8 @@ export function StreamingFastTrack({ userId, canCatalog = false, onUpgrade, onUp
             )
           ) : dismissed ? (
             <p className="rounded-xl border border-dashed border-border p-3 text-sm text-muted-foreground">
-              Your diagnosis below is complete and free. Saving these releases to My Catalog starts with Catalog Plus.
+              Your diagnosis below is complete and free. Saving these releases to My Catalog starts
+              with Catalog Plus.
             </p>
           ) : (
             <UpgradeLock
