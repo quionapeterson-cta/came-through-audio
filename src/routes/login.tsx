@@ -20,6 +20,10 @@ export const Route = createFileRoute("/login")({
     meta: [
       { title: "Log in — Came Through Audio" },
       { name: "description", content: "Log in to your Came Through Audio workspace." },
+      { property: "og:title", content: "Log in — Came Through Audio" },
+      { property: "og:description", content: "Log in to your Came Through Audio workspace." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
       { name: "robots", content: "noindex" },
     ],
   }),

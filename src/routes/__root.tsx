@@ -22,6 +22,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { takeReturn } from "@/lib/password";
 import { redirect } from "@tanstack/react-router";
 import { getGateStatus } from "@/lib/gate.functions";
+import { isPageLoadError, readGateWithRetry } from "@/lib/page-load";
+import { Button } from "@/components/ui/button";
 // Listens for the browser's one-time install prompt from the first page, for "Install the app" in the workspace.
 import "@/components/InstallApp";
 
@@ -64,15 +66,20 @@ function ErrorComponent({ error, reset }: ErrorComponentProps) {
           Something went wrong on our end. You can try refreshing or head back home.
         </p>
         <div className="mt-6 flex flex-wrap justify-center gap-2">
-          <button
+          <Button
             onClick={() => {
-              router.invalidate();
+              // A failed module import can stay cached; fetch a fresh document instead of retrying that module.
+              if (isPageLoadError(error)) {
+                window.location.reload();
+                return;
+              }
+              void router.invalidate();
               reset();
             }}
             className="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
           >
             Try again
-          </button>
+          </Button>
           <a
             href="/"
             className="inline-flex items-center justify-center rounded-md border border-input bg-background px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-accent"
@@ -118,7 +125,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       location.pathname.startsWith("/verify/")
     )
       return { siteLocked: false };
-    const { unlocked } = await getGateStatus();
+    const { unlocked } = await readGateWithRetry(() => getGateStatus());
     // The pages a payment provider reviews (product, pricing, legal, contact) are open to everyone; signup on them
     // waits until launch (siteLocked). The workspace, admin and everything else stay behind the passcode.
     if (
