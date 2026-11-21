@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type CSSProperties } from "react";
+import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { Check, ChevronLeft, ChevronRight, Lock, Sparkles } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -78,6 +78,7 @@ export function PrestigeBadgeCapsule({
   const [style, setStyle] = useState<PrestigeStyle>(() => loadPrestigeStyle(userId));
   const [index, setIndex] = useState(0);
   const [preview, setPreview] = useState<{ frame: FrameId; until: number } | null>(null);
+  const previewRef = useRef<HTMLDivElement>(null);
   const [now, setNow] = useState(() => Date.now());
 
   useEffect(() => {
@@ -146,6 +147,12 @@ export function PrestigeBadgeCapsule({
     const timer = setInterval(() => setNow(Date.now()), 100);
     return () => clearInterval(timer);
   }, [preview]);
+
+  // The studio scrolls on a short screen, so a frame picked near the bottom would otherwise hide the countdown it just
+  // started. Scroll only the card, and only as far as the notice needs.
+  useEffect(() => {
+    if (preview) previewRef.current?.scrollIntoView({ block: "nearest" });
+  }, [preview?.frame]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (preview && now >= preview.until) setPreview(null);
@@ -272,6 +279,8 @@ export function PrestigeBadgeCapsule({
                 <PopoverContent
                   side="bottom"
                   align="end"
+                  // Keep a margin off the window edge, so the scrolling card never touches the bottom of a short screen.
+                  collisionPadding={12}
                   className="prestige-studio w-[21rem] border-[#2a2a2a] bg-[#0b0b0b] p-3 text-white"
                 >
                   <div className="space-y-4">
@@ -284,7 +293,12 @@ export function PrestigeBadgeCapsule({
                     </div>
 
                     {preview && previewFrameDef && (
-                      <div className="prestige-preview" role="status" aria-live="polite">
+                      <div
+                        className="prestige-preview"
+                        ref={previewRef}
+                        role="status"
+                        aria-live="polite"
+                      >
                         <div className="flex items-center justify-between text-[11px] font-semibold">
                           <span className="truncate">Previewing {previewFrameDef.name}</span>
                           <span className="tabular-nums text-[#4D8CFF]" aria-hidden>
@@ -442,7 +456,7 @@ export function PrestigeBadgeCapsule({
               </Popover>
             </div>
 
-            <div className="mt-1 flex items-center gap-1">
+            <div className="prestige-controls mt-1 flex items-center gap-1">
               <button
                 type="button"
                 aria-label="Show previous badge"
