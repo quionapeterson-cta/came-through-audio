@@ -26,7 +26,7 @@ import {
   tabTitle,
   earningPopup,
   isBigTier,
-  nextGoal,
+  limitText,
   rotationArt,
   withArtist,
   type BadgeDef,
@@ -456,7 +456,7 @@ export function NextBadgeHint({
 type Size = "large" | "small";
 const UP_NEXT = 3;
 /** The tabs that always show, so a new member can see where badges come from. */
-const ALWAYS_TABS = new Set<BadgeTab>(["embed", "catalog", "splits", "account"]);
+const ALWAYS_TABS = new Set<BadgeTab>(["embed", "catalog", "protect", "splits", "account"]);
 
 /** Profile shelf: earned badges and the next few locked ones, grouped by the tab that earns them. */
 export function BadgeShelf({
@@ -557,9 +557,10 @@ export function BadgeShelf({
                   >
                     {s.badge.action}
                   </span>
-                  {!s.earned && s.badge.goal > 1 && (
+                  {/* A fraction only where the badge declares a real limit (founder, 2026-11-21). */}
+                  {!s.earned && limitText(s.badge, s.count) && (
                     <span className="text-xs text-muted-foreground">
-                      {Math.min(s.count, s.badge.goal)}/{s.badge.goal}
+                      {limitText(s.badge, s.count)}
                     </span>
                   )}
                 </button>
@@ -662,6 +663,11 @@ export function BadgeDetail({
             <DialogDescription className="text-base text-white/80">
               {s.badge.description}
             </DialogDescription>
+            {/* A first-timer's preview explains itself before it asks for anything (founder, 2026-11-21). Once they
+              have started the task, the explainer has done its job and steps out of the way. */}
+            {!s.earned && s.count === 0 && s.badge.intro && (
+              <p className="mx-auto max-w-md text-sm text-white/70">{s.badge.intro}</p>
+            )}
             {s.earned && (
               <p className="text-sm text-white/80">
                 <span className="font-semibold text-white">Earned </span>
@@ -687,11 +693,13 @@ export function BadgeDetail({
                 {s.badge.action}
               </p>
               <p className="text-sm text-white/70">{s.badge.milestone}</p>
+              {/* A bar, never a fraction (founder, 2026-11-21): "5 of 10" reads as a cap on the badge, so the
+                preview shows how far along it is without turning it into a limit. */}
               {!s.earned && (
                 <div className="space-y-1">
                   <p className="text-sm text-white/85">
-                    <span className="font-semibold text-white">Progress: </span>
-                    {Math.min(s.count, s.badge.goal)} of {s.badge.goal}
+                    <span className="font-semibold text-white">Progress</span>
+                    {limitText(s.badge, s.count) ? ` · ${limitText(s.badge, s.count)}` : null}
                   </p>
                   <div
                     className="h-2 overflow-hidden rounded-full bg-white/20"
@@ -709,8 +717,11 @@ export function BadgeDetail({
               )}
               {s.earned && s.badge.every && (
                 <p className="text-sm text-white/85">
-                  <span className="font-semibold text-white">Earn it again: </span>
-                  {s.count} of {nextGoal(s.badge, s.count)}
+                  <span className="font-semibold text-white">
+                    {limitText(s.badge, s.count)
+                      ? `Earn it again · ${limitText(s.badge, s.count)}`
+                      : "Earn it again as you keep going."}
+                  </span>
                 </p>
               )}
             </div>

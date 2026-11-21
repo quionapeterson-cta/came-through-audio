@@ -64,6 +64,16 @@ export type BadgeDef = {
    * track; Lyrical Legacy (goal 100, every 100) comes again at 200, 300…
    */
   every?: number;
+  /**
+   * A real ceiling on the count, for the rare badge the product genuinely caps ("3/5 seats"). A goal is not a limit
+   * (founder, 2026-11-21): only a badge that declares one prints a fraction anywhere in the product.
+   */
+  limit?: number;
+  /**
+   * Plain language for a member who has never done the thing behind the badge (founder, 2026-11-21). It sits before
+   * the action so a first-timer's preview explains itself instead of assuming they know the jargon.
+   */
+  intro?: string;
   /** Art the user picks from each time it's earned (Self-Produced lets producers choose a Beat Machine). */
   choices?: string[];
   /** Art isn't uploaded yet: the badge stays out of checks and shelves until this flag is removed. */
@@ -138,6 +148,15 @@ export function timesEarned(badge: Pick<BadgeDef, "goal" | "every">, count: numb
 export function nextGoal(badge: Pick<BadgeDef, "goal" | "every">, count: number) {
   if (count < badge.goal || !badge.every) return badge.goal;
   return (Math.floor(count / badge.every) + 1) * badge.every;
+}
+
+/**
+ * The one place a badge's counter text is decided (founder, 2026-11-21). A fraction only for a badge that declares a
+ * real `limit`: "5 of 10" on an ordinary milestone read as a cap on what the member may do, so every other badge says
+ * nothing. Surfaces that used to print their own x/y call this instead.
+ */
+export function limitText(badge: Pick<BadgeDef, "limit">, count: number): string | undefined {
+  return badge.limit ? `${Math.min(count, badge.limit)}/${badge.limit}` : undefined;
 }
 
 /**
@@ -644,6 +663,8 @@ const CORE: BadgeDef[] = [
     metric: "protected",
     goal: 1,
     every: 1,
+    intro:
+      "Protecting a song saves a short proof of it — a screen recording of your session or a lyric draft — then fingerprints it and stamps the date on Bitcoin. Nobody can claim it's theirs later, and it needs no registration.",
     src: `${S}/ai_slayer.png`,
     description:
       "Certificate on file, timestamped and yours. Your proof travels with the song, and every certificate you complete earns this again.",

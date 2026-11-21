@@ -1,5 +1,22 @@
 import { describe, expect, it } from "vitest";
-import { BADGES, BADGE_TAB, BADGE_TABS, badgeTab, badgesInTab } from "@/lib/badges";
+import { BADGES, BADGE_TAB, BADGE_TABS, badgeTab, badgesInTab, limitText } from "@/lib/badges";
+
+// A goal is not a limit (founder, 2026-11-21): only a badge that declares a real ceiling prints a fraction.
+describe("limitText", () => {
+  it("says nothing for an ordinary milestone", () => {
+    expect(limitText({}, 5)).toBeUndefined();
+    expect(limitText({}, 0)).toBeUndefined();
+  });
+
+  it("prints the fraction a genuinely limited badge holds to", () => {
+    expect(limitText({ limit: 5 }, 3)).toBe("3/5");
+    expect(limitText({ limit: 5 }, 9)).toBe("5/5");
+  });
+
+  it("leaves every live badge without a limit today", () => {
+    expect(BADGES.filter((b) => b.limit)).toEqual([]);
+  });
+});
 
 // Badges are organized by the workspace tab that earns them (founder, 2026-11-21). The mapping is written out per badge
 // id, so these tests are what stops a new badge drifting onto a tab by accident.

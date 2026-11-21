@@ -5,7 +5,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { shelfArt, useBadgeStates, type BadgeState } from "@/components/Badges";
 import { badgePrefs, loadOnboarding } from "@/lib/artist-profile";
-import { METRIC_UNIT, badgeTab, tabShort, tabTitle, type BadgeTab } from "@/lib/badges";
+import { METRIC_UNIT, badgeTab, limitText, tabShort, tabTitle, type BadgeTab } from "@/lib/badges";
 import {
   DEFAULT_PRESTIGE_STYLE,
   LIQUID_FINISHES,
@@ -46,12 +46,16 @@ const GLINTS = [
 const lastEarned = (s: BadgeState) =>
   Date.parse(s.earned?.log?.[s.earned.log.length - 1]?.at ?? s.earned?.earnedAt ?? "") || 0;
 
-/** "2 of 3 fully signed split sheets" — the bar's own number, in the badge's own unit. */
+/**
+ * The bar's own number. A badge with a real limit reads "3/5"; everything else says what is left in words, never a
+ * fraction (founder, 2026-11-21) — "0 of 1" under a milestone read as a cap.
+ */
 const progressLabel = (s: BadgeState) => {
+  const cap = limitText(s.badge, s.count);
+  if (cap) return cap;
   const goal = Math.max(1, nextEarningAt(s.badge, s.count, !!s.earned));
-  const count = Math.min(s.count, goal);
   const unit = METRIC_UNIT[s.badge.metric];
-  return unit ? `${count} of ${goal} ${unit[1]}` : `${count} of ${goal}`;
+  return unit ? `${goal} ${unit[1]} to go` : "next step";
 };
 
 /**
@@ -193,7 +197,7 @@ export function PrestigeBadgeCapsule({
   return (
     <TooltipProvider delayDuration={150}>
       <div
-        className={cn("relative mx-auto w-full max-w-[16rem] sm:mx-0 sm:max-w-[14rem]", className)}
+        className={cn("relative mx-auto w-full max-w-[20rem] sm:mx-0 sm:max-w-[22rem]", className)}
         data-prestige-capsule=""
       >
         <div className={cn("prestige-capsule", `prestige-frame-${activeFrame}`)}>
@@ -205,7 +209,7 @@ export function PrestigeBadgeCapsule({
               style={{ left: g.left, top: g.top, animationDelay: `${i * 0.9}s` }}
             />
           ))}
-          <div className="prestige-capsule-inner px-3 py-2">
+          <div className="prestige-capsule-inner px-5 py-3">
             {/* The pill opens the profile shelf, the way the next-badge card did (founder, 2026-11-21). The stepper
               and the studio button sit above it, so their own clicks never navigate. */}
             <Tooltip>
@@ -224,13 +228,21 @@ export function PrestigeBadgeCapsule({
               >
                 <p className="font-semibold">{badge?.title ?? "Your first badge"}</p>
                 <p className="text-muted-foreground">{badge?.action ?? "Earn one to start"}</p>
-                {badge && <p className="text-muted-foreground">{badge.milestone}</p>}
+                {/* A member who has never done the thing the badge asks for gets the plain explanation instead of
+                  the jargon milestone (founder, 2026-11-21). */}
+                {badge && next && next.count === 0 && badge.intro ? (
+                  <p className="text-muted-foreground">{badge.intro}</p>
+                ) : badge ? (
+                  <p className="text-muted-foreground">{badge.milestone}</p>
+                ) : null}
               </TooltipContent>
             </Tooltip>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-3">
+              {/* Sized by its row, not by a fixed pixel box (founder, 2026-11-21): the disc fills the left side of the
+                pill, keeps an even gap from the border, and its own circle never stretches or crops the art. */}
               <span
                 className={cn(
-                  "prestige-medallion h-8 w-8 shrink-0",
+                  "prestige-medallion aspect-square max-h-[4.5rem] shrink-0 self-stretch",
                   style.liquid === "gold" && "prestige-medallion-gold",
                 )}
                 aria-hidden
@@ -240,7 +252,7 @@ export function PrestigeBadgeCapsule({
                     <img
                       src={shelfArt(show)}
                       alt=""
-                      className="h-6 w-6 object-contain drop-shadow"
+                      className="h-[78%] w-[78%] object-contain drop-shadow"
                     />
                   )}
                 </span>
@@ -250,21 +262,21 @@ export function PrestigeBadgeCapsule({
                 {/* Inline, not a nowrap row (founder, 2026-11-21): a phone's font scaling stretches the micro-label past
                   the plate, so it wraps onto the next line instead of running outside the border. */}
                 <span className="block leading-none [overflow-wrap:anywhere]">
-                  <span className="text-[8px] font-bold uppercase tracking-[0.18em] text-[#4D8CFF]">
+                  <span className="text-[9px] font-bold uppercase tracking-[0.18em] text-[#4D8CFF]">
                     {isCurrent ? "Badge" : "Next badge"}
                   </span>{" "}
                   {badge && (
-                    <span className="text-[7px] font-semibold uppercase tracking-[0.08em] text-[#E5E4E2]/70">
+                    <span className="text-[8px] font-semibold uppercase tracking-[0.08em] text-[#E5E4E2]/70">
                       · {tabShort(tab)}
                     </span>
                   )}
                 </span>
                 {/* The title is the small line; the action is the biggest text on the pill, because the step to take
                   is what the member has to read (founder, 2026-11-21). Both wrap rather than clipping mid-word. */}
-                <span className="mt-0.5 block text-[10px] font-semibold leading-tight text-[#E5E4E2]/85 [overflow-wrap:anywhere]">
+                <span className="mt-1 block text-[12px] font-semibold leading-tight text-[#E5E4E2]/85 [overflow-wrap:anywhere]">
                   {badge?.title ?? "Your first badge"}
                 </span>
-                <span className="mt-0.5 block text-[15px] font-extrabold leading-[1.1] text-white [overflow-wrap:anywhere]">
+                <span className="mt-0.5 block text-[20px] font-extrabold leading-[1.05] text-white [overflow-wrap:anywhere]">
                   {badge ? badge.action : "Earn one to start"}
                 </span>
               </span>
@@ -275,9 +287,9 @@ export function PrestigeBadgeCapsule({
                     type="button"
                     aria-label="Open Badge Studio"
                     title="Badge Studio"
-                    className="prestige-icon-button relative z-20 shrink-0 text-[#E5E4E2]/80 hover:text-white"
+                    className="prestige-icon-button relative z-20 shrink-0 self-start text-[#E5E4E2]/80 hover:text-white"
                   >
-                    <Sparkles className="h-3.5 w-3.5" />
+                    <Sparkles className="h-4 w-4" />
                   </button>
                 </PopoverTrigger>
                 <PopoverContent
@@ -463,7 +475,7 @@ export function PrestigeBadgeCapsule({
               </Popover>
             </div>
 
-            <div className="prestige-controls mt-1 flex items-center gap-1">
+            <div className="prestige-controls mt-2 flex items-center gap-2">
               <Tooltip>
                 <TooltipTrigger asChild>
                   <div
@@ -504,19 +516,25 @@ export function PrestigeBadgeCapsule({
                     </div>
                   </div>
                 </TooltipTrigger>
-                <TooltipContent side="bottom" className="max-w-64">
+                <TooltipContent side="bottom" className="max-w-72">
                   <p className="font-semibold">{badge?.title ?? "Your first badge"}</p>
                   <p>{label}</p>
                   {badge && !isCurrent && <p className="mt-1 opacity-80">{badge.milestone}</p>}
                 </TooltipContent>
               </Tooltip>
 
-              <span className="shrink-0 pr-1 text-[9px] font-bold tabular-nums text-[#E5E4E2]/70">
+              <span className="shrink-0 pr-1 text-[11px] font-bold tabular-nums text-[#E5E4E2]/70">
                 {pct}%
               </span>
             </div>
           </div>
         </div>
+        {/* A first-timer sees what the badge means without hovering anything (founder, 2026-11-21). */}
+        {badge && next && next.count === 0 && badge.intro && (
+          <p className="mt-1 text-center text-[9px] font-medium leading-snug text-[#E5E4E2]/70 sm:text-right">
+            {badge.intro}
+          </p>
+        )}
         {preview && (
           <p
             className="mt-1 truncate text-center text-[9px] font-semibold text-[#4D8CFF] sm:text-right"
