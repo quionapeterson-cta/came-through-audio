@@ -77,7 +77,7 @@ import {
   type AuditTrail,
 } from "@/lib/audit-mode";
 import { catalogHref } from "@/lib/catalog-links";
-import { NextBadgeHint } from "@/components/Badges";
+import { PrestigeBadgeCapsule } from "@/components/PrestigeBadgeCapsule";
 import { PaymentTestModeBanner } from "@/components/PaymentTestModeBanner";
 import { toast } from "sonner";
 import { sendTrialEndingReminder } from "@/lib/collab-trial.functions";
@@ -956,7 +956,7 @@ function Workspace() {
                   <WorkspaceReminderHeaderActions />
                 </div>
               </div>
-              <NextBadgeHint userId={user.id} collections={TAB_BADGES[tab] ?? ["core"]} />
+              <PrestigeBadgeCapsule userId={user.id} collections={TAB_BADGES[tab] ?? ["core"]} />
             </div>
             {/* Full-width, directly under the artist-name header; it stays until opened, snoozed or completed. */}
             <WorkspaceReminderStrip />
