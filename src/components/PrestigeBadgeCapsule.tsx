@@ -16,6 +16,8 @@ import {
   frameTierLabel,
   frameUnlocked,
   loadPrestigeStyle,
+  nextEarningAt,
+  pickCapsuleBadge,
   savePrestigeStyle,
   type FrameId,
   type PrestigeFrame,
@@ -44,11 +46,9 @@ const GLINTS = [
 const lastEarned = (s: BadgeState) =>
   Date.parse(s.earned?.log?.[s.earned.log.length - 1]?.at ?? s.earned?.earnedAt ?? "") || 0;
 
-const remaining = (s: BadgeState) => Math.max(0, s.badge.goal - s.count);
-
 /** "2 of 3 fully signed split sheets" — the bar's own number, in the badge's own unit. */
 const progressLabel = (s: BadgeState) => {
-  const goal = Math.max(1, s.badge.goal);
+  const goal = Math.max(1, nextEarningAt(s.badge, s.count, !!s.earned));
   const count = Math.min(s.count, goal);
   const unit = METRIC_UNIT[s.badge.metric];
   return unit ? `${count} of ${goal} ${unit[1]}` : `${count} of ${goal}`;
@@ -113,13 +113,23 @@ export function PrestigeBadgeCapsule({
     equipped ||
     newest;
 
-  // The pill shows one badge: the next one this tab can earn, closest to earning first. Only when the tab has nothing
-  // left does it settle on the newest earned badge, so the header always points at the next step.
+  // The pill shows one badge: the next one this tab can earn. Repeatable badges come first (an embed, a lyric or a
+  // cover is one action away), then whatever is closest. Only a tab with nothing left settles on its newest badge.
   const next = useMemo(() => {
     if (!prefs.hints) return undefined;
-    return inTab
-      .filter((s) => !s.earned && !s.off && !prefs.hidden.includes(s.badge.collection))
-      .sort((a, b) => remaining(a) / a.badge.goal - remaining(b) / b.badge.goal)[0];
+    const pool = inTab.filter((s) => !s.off && !prefs.hidden.includes(s.badge.collection));
+    return pickCapsuleBadge(
+      pool
+        .filter((s) => s.badge.every || !s.earned)
+        .map((s) => ({
+          state: s,
+          goal: s.badge.goal,
+          every: s.badge.every,
+          count: s.count,
+          earned: !!s.earned,
+          lastEarnedAt: s.earned ? lastEarned(s) : 0,
+        })),
+    )?.state;
   }, [inTab, prefs]);
   const show = next ?? featured;
 
@@ -142,10 +152,8 @@ export function PrestigeBadgeCapsule({
 
   const badge = show?.badge;
   const isCurrent = !next && !!show;
-  const pct =
-    show && badge
-      ? Math.round((Math.min(show.count, Math.max(1, badge.goal)) / Math.max(1, badge.goal)) * 100)
-      : 0;
+  const target = show && badge ? Math.max(1, nextEarningAt(badge, show.count, !!show.earned)) : 1;
+  const pct = show ? Math.round((Math.min(show.count, target) / target) * 100) : 0;
 
   const previewLeft = preview ? Math.max(0, preview.until - now) : 0;
   const activeFrame = preview

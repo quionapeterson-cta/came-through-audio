@@ -6,6 +6,10 @@ import {
   frameById,
   frameTierLabel,
   frameUnlocked,
+  nextEarningAt,
+  pickCapsuleBadge,
+  stepsToNextEarning,
+  type CapsuleBadge,
 } from "./prestige-badge";
 
 // The thresholds the studio's copy promises: Starter at 1 badge, Pro at 5 or half the ecosystem, Master at 10 or all
@@ -163,5 +167,66 @@ describe("frame catalog", () => {
     }
     for (const frame of PRESTIGE_FRAMES.filter((f) => f.tier === "base"))
       expect(frame.completion).toBe(0);
+  });
+});
+
+// The capsule shows one badge for the open tab (founder, 2026-11-21): a repeatable badge comes first, because embedding
+// a master, a lyric or a cover is one action away, and a milestone many steps out never hides it.
+describe("pickCapsuleBadge", () => {
+  const badge = (id: string, fields: Partial<CapsuleBadge>) => ({
+    id,
+    goal: 1,
+    count: 0,
+    ...fields,
+  });
+  const repeatable = (id: string, count: number, lastEarnedAt = 0) =>
+    badge(id, { every: 1, count, earned: true, lastEarnedAt });
+  const milestone = (id: string, goal: number, count: number) =>
+    badge(id, { goal, count, earned: count >= goal });
+
+  it("puts a repeatable badge ahead of a milestone that takes more steps", () => {
+    const picked = pickCapsuleBadge([milestone("ready-ten", 10, 9), repeatable("embedded", 5)]);
+    expect(picked?.id).toBe("embedded");
+  });
+
+  it("still prefers a repeatable even when a milestone is closer", () => {
+    const picked = pickCapsuleBadge([
+      milestone("three-way", 1, 0),
+      badge("time-witness", { goal: 1, every: 10, count: 4, earned: true }),
+    ]);
+    expect(picked?.id).toBe("time-witness");
+  });
+
+  it("takes the repeatable closest to its next earning", () => {
+    const picked = pickCapsuleBadge([
+      badge("shield-up", { goal: 10, every: 10, count: 4, earned: true }),
+      repeatable("lyric-locked-gold", 2),
+    ]);
+    expect(picked?.id).toBe("lyric-locked-gold");
+  });
+
+  it("breaks a tie toward the badge earned most recently", () => {
+    const picked = pickCapsuleBadge([
+      repeatable("embedded", 3, 1_000),
+      repeatable("album-cover", 3, 5_000),
+    ]);
+    expect(picked?.id).toBe("album-cover");
+  });
+
+  it("falls back to the closest one-time badge when nothing repeats", () => {
+    const picked = pickCapsuleBadge([milestone("full-album", 7, 2), milestone("mic-check", 1, 0)]);
+    expect(picked?.id).toBe("mic-check");
+  });
+
+  it("returns nothing for an empty tab", () => {
+    expect(pickCapsuleBadge([])).toBeUndefined();
+  });
+
+  it("measures the step to the next earning, not to the first", () => {
+    expect(stepsToNextEarning(repeatable("embedded", 5))).toBe(1);
+    expect(stepsToNextEarning(badge("shield-up", { every: 10, count: 4, earned: true }))).toBe(6);
+    expect(stepsToNextEarning(milestone("ready-ten", 10, 9))).toBe(1);
+    expect(nextEarningAt({ goal: 1, every: 1 }, 5, true)).toBe(6);
+    expect(nextEarningAt({ goal: 1, every: 1 }, 0, false)).toBe(1);
   });
 });

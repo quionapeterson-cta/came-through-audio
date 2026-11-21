@@ -6,6 +6,8 @@
  * than in the component, where the shelf, the studio and its copy can all read the same numbers.
  */
 
+import { nextGoal } from "@/lib/badges";
+
 export type LiquidFinish = "gold" | "platinum";
 export type FrameTier = "base" | "starter" | "pro" | "master";
 export type FrameId =
@@ -172,6 +174,41 @@ export function badgesToUnlock(frame: PrestigeFrame, earned: number, total: numb
   const goal = Math.min(frame.badges, completionGoal(frame, total));
   if (!Number.isFinite(goal)) return Math.max(0, frame.badges - earned);
   return Math.max(0, goal - earned);
+}
+
+/** A badge as the capsule ranks it: its goal and repeat step, how far the member has got, and when it last came. */
+export type CapsuleBadge = {
+  goal: number;
+  every?: number | undefined;
+  count: number;
+  earned?: boolean | undefined;
+  lastEarnedAt?: number | undefined;
+};
+
+/** The count at which a badge is next earned: its goal the first time, then its next repeat step. */
+export const nextEarningAt = (
+  b: Pick<CapsuleBadge, "goal" | "every">,
+  count: number,
+  held: boolean,
+) => (held && b.every ? nextGoal({ goal: b.goal, every: b.every }, count) : b.goal);
+
+/** How many more actions before the badge is earned, or earned again. */
+export const stepsToNextEarning = (b: CapsuleBadge) =>
+  Math.max(1, nextEarningAt(b, b.count, !!b.earned) - b.count);
+
+/**
+ * The one badge the capsule shows for a tab (founder, 2026-11-21): repeatable badges first, because an every-time badge
+ * is one action away and should not wait behind a milestone that takes many steps, then whatever is closest to its next
+ * earning. A recent earning breaks a tie, so the badge the member is working on now wins.
+ */
+export function pickCapsuleBadge<T extends CapsuleBadge>(items: T[]): T | undefined {
+  return [...items].sort((a, b) => {
+    const repeatable = Number(!!b.every) - Number(!!a.every);
+    if (repeatable) return repeatable;
+    const steps = stepsToNextEarning(a) - stepsToNextEarning(b);
+    if (steps) return steps;
+    return (b.lastEarnedAt ?? 0) - (a.lastEarnedAt ?? 0);
+  })[0];
 }
 
 export const frameTierLabel: Record<FrameTier, string> = {
