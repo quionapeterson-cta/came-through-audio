@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { Link } from "@tanstack/react-router";
-import { Check, ChevronLeft, ChevronRight, Lock, Sparkles } from "lucide-react";
+import { Check, Lock, Sparkles } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { shelfArt, useBadgeStates, type BadgeState } from "@/components/Badges";
@@ -75,14 +75,12 @@ export function PrestigeBadgeCapsule({
 }) {
   const { states, data } = useBadgeStates(userId);
   const [style, setStyle] = useState<PrestigeStyle>(() => loadPrestigeStyle(userId));
-  const [index, setIndex] = useState(0);
   const [preview, setPreview] = useState<{ frame: FrameId; until: number } | null>(null);
   const previewRef = useRef<HTMLDivElement>(null);
   const [now, setNow] = useState(() => Date.now());
 
   useEffect(() => {
     setStyle(loadPrestigeStyle(userId));
-    setIndex(0);
     setPreview(null);
   }, [userId]);
 
@@ -98,7 +96,6 @@ export function PrestigeBadgeCapsule({
   const completion = ecosystemCompletion(earnedCount, total);
   const inTab = useMemo(() => states.filter((s) => badgeTab(s.badge) === tab), [states, tab]);
   const tabEarned = useMemo(() => inTab.filter((s) => !s.off && s.earned), [inTab]);
-  const tabTotal = inTab.filter((s) => !s.off).length;
 
   // A frame kept in storage is only worn while the ecosystem still says it is earned: disabling a badge or resetting a
   // shelf can take one back, and a saved choice is not proof of it. Until the badges have loaded, keep what was chosen.
@@ -116,30 +113,15 @@ export function PrestigeBadgeCapsule({
     equipped ||
     newest;
 
-  // Upcoming badges stay in full colour, closest to earning first, and only from the open tab.
-  const upcoming = useMemo(() => {
-    if (!prefs.hints) return [];
+  // The pill shows one badge: the next one this tab can earn, closest to earning first. Only when the tab has nothing
+  // left does it settle on the newest earned badge, so the header always points at the next step.
+  const next = useMemo(() => {
+    if (!prefs.hints) return undefined;
     return inTab
-      .filter((s) => !s.earned && !prefs.hidden.includes(s.badge.collection))
-      .sort((a, b) => remaining(a) / a.badge.goal - remaining(b) / b.badge.goal)
-      .slice(0, 8);
+      .filter((s) => !s.earned && !s.off && !prefs.hidden.includes(s.badge.collection))
+      .sort((a, b) => remaining(a) / a.badge.goal - remaining(b) / b.badge.goal)[0];
   }, [inTab, prefs]);
-
-  const items = useMemo(
-    () => [
-      ...(featured ? [{ state: featured, current: true }] : []),
-      ...upcoming.map((state) => ({ state, current: false })),
-    ],
-    [featured, upcoming],
-  );
-
-  useEffect(() => {
-    setIndex((i) => (i > items.length - 1 ? 0 : i));
-  }, [items.length]);
-
-  useEffect(() => {
-    setIndex(0);
-  }, [userId, style.featuredId]);
+  const show = next ?? featured;
 
   // A locked frame may be worn for five seconds; the pill returns to what the member owns on its own.
   useEffect(() => {
@@ -158,14 +140,12 @@ export function PrestigeBadgeCapsule({
     if (preview && now >= preview.until) setPreview(null);
   }, [preview, now]);
 
-  const item = items[index] ?? null;
-  const badge = item?.state.badge;
-  const isCurrent = !!item?.current;
-  const pct = badge
-    ? isCurrent
-      ? Math.round((tabEarned.length / Math.max(1, tabTotal)) * 100)
-      : Math.round((Math.min(item!.state.count, badge.goal) / Math.max(1, badge.goal)) * 100)
-    : 0;
+  const badge = show?.badge;
+  const isCurrent = !next && !!show;
+  const pct =
+    show && badge
+      ? Math.round((Math.min(show.count, Math.max(1, badge.goal)) / Math.max(1, badge.goal)) * 100)
+      : 0;
 
   const previewLeft = preview ? Math.max(0, preview.until - now) : 0;
   const activeFrame = preview
@@ -177,10 +157,10 @@ export function PrestigeBadgeCapsule({
   const previewFrameDef = preview ? frameById(preview.frame) : undefined;
   const previewMissing = previewFrameDef ? badgesToUnlock(previewFrameDef, earnedCount, total) : 0;
 
-  const label = isCurrent
-    ? `${tabTitle(tab)}: ${tabEarned.length} of ${tabTotal} badges earned.`
-    : badge
-      ? `Next badge: ${badge.title}. ${progressLabel(item!.state)}.`
+  const label = next
+    ? `Next badge: ${next.badge.title}. ${progressLabel(next)}.`
+    : isCurrent
+      ? `${tabTitle(tab)}: every badge earned. ${show.badge.title} came last.`
       : "No badge progress yet.";
 
   const bubbles = pct >= 75 ? BUBBLES.length : pct >= 40 ? 6 : 3;
@@ -201,11 +181,6 @@ export function PrestigeBadgeCapsule({
     setNow(Date.now());
     setPreview({ frame: frame.id, until: Date.now() + 5000 });
   }
-
-  const step = (delta: number) => {
-    if (items.length < 2) return;
-    setIndex((i) => (i + delta + items.length) % items.length);
-  };
 
   return (
     <TooltipProvider delayDuration={150}>
@@ -253,9 +228,9 @@ export function PrestigeBadgeCapsule({
                 aria-hidden
               >
                 <span className="prestige-medallion-face">
-                  {item && (
+                  {show && (
                     <img
-                      src={shelfArt(item.state)}
+                      src={shelfArt(show)}
                       alt=""
                       className="h-6 w-6 object-contain drop-shadow"
                     />
@@ -274,12 +249,12 @@ export function PrestigeBadgeCapsule({
                     </span>
                   )}
                 </span>
-                {/* The title and the action wrap onto a second line rather than clipping mid-word. */}
-                <span className="mt-0.5 block text-[12px] font-bold leading-tight text-white">
+                {/* The title is the small line; the action is the biggest text on the pill, because the step to take
+                  is what the member has to read (founder, 2026-11-21). Both wrap rather than clipping mid-word. */}
+                <span className="mt-0.5 block text-[10px] font-semibold leading-tight text-[#E5E4E2]/85">
                   {badge?.title ?? "Your first badge"}
                 </span>
-                {/* What earns the badge, in the badge's own action words (founder, 2026-11-21). */}
-                <span className="block text-[9px] leading-snug text-[#E5E4E2]/75">
+                <span className="mt-0.5 block text-[15px] font-extrabold leading-[1.1] text-white">
                   {badge ? badge.action : "Earn one to start"}
                 </span>
               </span>
@@ -433,6 +408,10 @@ export function PrestigeBadgeCapsule({
                       <legend className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#4D8CFF]">
                         Featured badge
                       </legend>
+                      <p className="text-[10px] leading-snug text-[#E5E4E2]/60">
+                        The capsule always shows this tab's next badge. A pick here is worn once
+                        every badge on the tab is earned.
+                      </p>
                       {tabEarned.length === 0 ? (
                         <p className="text-[11px] text-[#E5E4E2]/70">
                           Earn a badge on this tab and it can sit on the capsule.
@@ -475,16 +454,6 @@ export function PrestigeBadgeCapsule({
             </div>
 
             <div className="prestige-controls mt-1 flex items-center gap-1">
-              <button
-                type="button"
-                aria-label="Show previous badge"
-                disabled={items.length < 2}
-                onClick={() => step(-1)}
-                className="prestige-icon-button relative z-20 shrink-0 disabled:opacity-30"
-              >
-                <ChevronLeft className="h-3 w-3" />
-              </button>
-
               <Tooltip>
                 <TooltipTrigger asChild>
                   <div
@@ -532,19 +501,9 @@ export function PrestigeBadgeCapsule({
                 </TooltipContent>
               </Tooltip>
 
-              <span className="shrink-0 text-[9px] font-bold tabular-nums text-[#E5E4E2]/70">
+              <span className="shrink-0 pr-1 text-[9px] font-bold tabular-nums text-[#E5E4E2]/70">
                 {pct}%
               </span>
-
-              <button
-                type="button"
-                aria-label="Show next badge"
-                disabled={items.length < 2}
-                onClick={() => step(1)}
-                className="prestige-icon-button relative z-20 shrink-0 disabled:opacity-30"
-              >
-                <ChevronRight className="h-3 w-3" />
-              </button>
             </div>
           </div>
         </div>
