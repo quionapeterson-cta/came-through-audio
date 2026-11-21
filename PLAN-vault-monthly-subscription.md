@@ -266,8 +266,16 @@ Lovable's own timestamps live there and are expected, so they never fail it). It
 migration and 2 when it could not read the remote ledger, so a check that cannot see the database never passes
 quietly. The remote side comes from `supabase migration list --linked`, the Management API with
 `SUPABASE_ACCESS_TOKEN` and the project ref in `supabase/config.toml`, or a list saved earlier with `--remote-file`.
-The rules live in `src/lib/migration-ledger.ts` with their test; object existence is deliberately not part of it,
-because that needs a live SQL query and the object check above was read by hand.
+The rules live in `src/lib/migration-ledger.ts` with their test, and the script compiles that module with the
+project's own TypeScript rather than importing it as source, so `npm run db:drift` runs on Node 20 and 22 — the
+versions the app is developed on — as well as newer Node. Object existence is deliberately not part of it, because
+that needs a live SQL query and the object check above was read by hand.
+
+**Read against the live ledger (2026-11-20).** With the 178 rows of `supabase_migrations.schema_migrations` as the
+remote side, `npm run db:drift` reports 145 of 145 repo migrations recorded and 33 stray, and exits 0. The database
+agrees: asked for any of those 145 versions it holds no row for, it returns none. Dropping two versions from the list
+still exits 1 and names both files, an unreachable ledger still exits 2, and the check was run on Node 20, 22.12, 22
+and 26.
 
 ## 9. Decisions (settled 2026-11-20)
 

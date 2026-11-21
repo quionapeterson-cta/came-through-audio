@@ -12,22 +12,64 @@
  * supabase/config.toml. Exits 0 clean, 1 on a pending migration, and 2 when it could not read the remote ledger — a
  * check that cannot see the database never passes quietly.
  *
- * The rules live in src/lib/migration-ledger.ts with their test; this file only reads files, asks the remote, and
- * prints. Object existence is deliberately not part of it: that needs a live SQL query, and the 2026-11-20 check
- * (578 declared objects, 570 present, the 8 deliberate absences) was read by hand.
+ * The rules live in src/lib/migration-ledger.ts with their test; this file only compiles them (see loadRules), reads
+ * files, asks the remote, and prints. Object existence is deliberately not part of it: that needs a live SQL query,
+ * and the 2026-11-20 check (578 declared objects, 570 present, the 8 deliberate absences) was read by hand.
  */
 import { execFileSync } from "node:child_process";
 import { readdirSync, readFileSync } from "node:fs";
+import { createRequire } from "node:module";
 import { join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import {
+
+/**
+ * The rules are TypeScript so they can carry their test, and this script has to run wherever the app is worked on —
+ * Node 22 in CI and the devcontainer, whatever the machine in front of you uses. Node only strips types by default
+ * from 22.18, so the module is compiled with the TypeScript the project already depends on instead of being imported
+ * as source: a runtime that cannot read `.ts` is not a reason for the check to break. The compiled module is imported
+ * from a data: URL, so nothing is written to disk and the rules still live in exactly one place.
+ */
+async function loadRules() {
+  let ts;
+  try {
+    ts = createRequire(import.meta.url)("typescript");
+  } catch {
+    console.error(
+      "The drift check needs TypeScript. Run npm install (or bun install), then retry.",
+    );
+    process.exit(2);
+  }
+  const file = fileURLToPath(new URL("../src/lib/migration-ledger.ts", import.meta.url));
+  const { outputText, diagnostics } = ts.transpileModule(readFileSync(file, "utf8"), {
+    fileName: file,
+    reportDiagnostics: true,
+    compilerOptions: {
+      module: ts.ModuleKind.ESNext,
+      target: ts.ScriptTarget.ES2022,
+    },
+  });
+  const errors = (diagnostics ?? []).filter((d) => d.category === ts.DiagnosticCategory.Error);
+  if (errors.length) {
+    console.error(
+      `Could not compile ${file}:\n${errors
+        .map((d) => `  ${ts.flattenDiagnosticMessageText(d.messageText, " ")}`)
+        .join("\n")}`,
+    );
+    process.exit(2);
+  }
+  return import(
+    `data:text/javascript;base64,${Buffer.from(outputText, "utf8").toString("base64")}`
+  );
+}
+
+const {
   driftFailed,
   driftReport,
   formatDriftReport,
   localMigrations,
   parseMigrationListTable,
   versionsFromRows,
-} from "../src/lib/migration-ledger.ts";
+} = await loadRules();
 
 const ROOT = fileURLToPath(new URL("..", import.meta.url));
 
