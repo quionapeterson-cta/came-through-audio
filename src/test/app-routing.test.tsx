@@ -1,18 +1,38 @@
 import { QueryClient } from "@tanstack/react-query";
 import { createRouter, isRedirect, rootRouteId } from "@tanstack/react-router";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { routeTree } from "@/routeTree.gen";
 import { Route as RootRoute } from "@/routes/__root";
+import { Route as UnlockRoute } from "@/routes/unlock";
+
+const gateStatus = vi.hoisted(() => vi.fn(async () => ({ unlocked: false })));
 
 vi.mock("@/lib/gate.functions", () => ({
-  getGateStatus: async () => ({ unlocked: false }),
+  getGateStatus: gateStatus,
   unlockSite: async () => ({ ok: false }),
 }));
+
+afterEach(() => {
+  vi.useRealTimers();
+  gateStatus.mockReset().mockResolvedValue({ unlocked: false });
+});
 
 // Match routes without running loaders or rendering: loaders may need a server or
 // network the test run lacks, and jsdom never loads the stylesheets React waits on.
 describe("App routing", () => {
+  it("retries interrupted reads on the passcode page without skipping a locked gate", async () => {
+    vi.useFakeTimers();
+    gateStatus.mockRejectedValueOnce(new TypeError("Load failed"));
+    const beforeLoad = UnlockRoute.options.beforeLoad as unknown as (
+      ctx: unknown,
+    ) => Promise<unknown>;
+    const result = beforeLoad({ search: { next: "/login" } });
+    await vi.runAllTimersAsync();
+    await expect(result).resolves.toBeUndefined();
+    expect(gateStatus).toHaveBeenCalledTimes(2);
+  });
+
   it("matches a page for / instead of falling back to not found", () => {
     const router = createRouter({ routeTree, context: { queryClient: new QueryClient() } });
 

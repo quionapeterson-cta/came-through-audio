@@ -1,4 +1,6 @@
 # Tasks
+- [x] Verify login recovery from interrupted page-loading requests without bypassing the passcode gate.
+- [x] Check shared recovery across entry pages and verify passcode-page interruptions safely recover.
 - [x] Add Embed Metadata forms and tagged MP3 downloads inside My Catalog.
 - [x] Update global accent tokens to signature Cobalt Blue.
 - [x] AI Hub: quick-add checkout first, details & proof after payment
