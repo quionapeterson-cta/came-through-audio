@@ -103,7 +103,7 @@ export function formatDriftReport(drift: LedgerDrift): string {
   if (drift.stray.length) {
     lines.push(
       "",
-      `STRAY (${drift.stray.length}) — in the ledger with no file in the repo (Lovable records its own versions, so this is expected history):`,
+      `STRAY (${drift.stray.length}) — in the ledger with no file in the repo (the editor records its own versions, so this is expected history):`,
     );
     for (const version of drift.stray) lines.push(`  ${version}`);
   }

@@ -14,7 +14,9 @@ describe("page loading recovery", () => {
 
   it("recovers a transient gate request and preserves the server's locked result", async () => {
     vi.useFakeTimers();
-    const read = vi.fn().mockRejectedValueOnce(new TypeError("Load failed"))
+    const read = vi
+      .fn()
+      .mockRejectedValueOnce(new TypeError("Load failed"))
       .mockResolvedValue({ unlocked: false });
     const result = readGateWithRetry(read);
     await vi.runAllTimersAsync();

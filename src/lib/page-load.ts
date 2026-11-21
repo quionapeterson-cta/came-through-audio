@@ -1,7 +1,11 @@
 /** Safari reports interrupted fetches as "Load failed", including during preview updates. */
 export function isPageLoadError(error: unknown): boolean {
-  return error instanceof TypeError &&
-    /^(Load failed|Failed to fetch|NetworkError when attempting to fetch resource\.?|Importing a module script failed\.?|Failed to fetch dynamically imported module:.*|error loading dynamically imported module:.*)$/i.test(error.message);
+  return (
+    error instanceof TypeError &&
+    /^(Load failed|Failed to fetch|NetworkError when attempting to fetch resource\.?|Importing a module script failed\.?|Failed to fetch dynamically imported module:.*|error loading dynamically imported module:.*)$/i.test(
+      error.message,
+    )
+  );
 }
 
 /** Only retry this read: never fabricate an unlocked result or repeat a sign-in/write. */

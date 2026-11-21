@@ -28,7 +28,7 @@ export const BOARD_CATEGORIES = [
   {
     value: "billing_audits",
     label: "Billing, Payouts & Verification Audits",
-    hint: "Stripe and Paddle checks, refund questions and royalty health flags.",
+    hint: "Payment checks, refund questions and royalty health flags.",
   },
   {
     value: "announcements",
