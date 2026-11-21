@@ -656,7 +656,8 @@ const CORE: BadgeDef[] = [
     collection: "ai",
     tier: "standard",
     milestone: "10 songs protected in the AI Protection Hub, then every 5 more",
-    action: "Protect 10 songs",
+    // The line names the repeat step (founder, 2026-11-21): 5 songs is the usual gap once the first 10 are protected.
+    action: "Protect 5 songs",
     metric: "protected",
     goal: 10,
     // Ten songs first, then every 5 more (founder, 2026-11-21): 10, 15, 20, 25 keep earning it, so the 10s still hold.

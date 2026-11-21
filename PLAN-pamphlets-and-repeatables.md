@@ -130,7 +130,7 @@ The mechanics are built (`every`, `×N`, the Repeatable section, per-badge art r
 | --- | --- | --- | --- | --- |
 | Protect a song | AI Slayer | 1 | 1 | no, the same picture |
 | Protect 10 songs | Time Witness | 10 | 10 | Shield Up → Sound Sealed → Key Keeper (its own art for the first 10, then one per 10) |
-| Protect 10 songs | Shield Up | 10 | 5 | no, the same picture |
+| Protect 5 songs | Shield Up | 10 | 5 | no, the same picture |
 | Protect 25 songs | Key Keeper | 25 | 25 | no, the same picture |
 
 **Producer** — 2 repeating badges
