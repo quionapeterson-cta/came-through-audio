@@ -4,13 +4,30 @@ import { ESCALATION_DEPARTMENTS } from "./escalation-departments";
  * Staff roles and departments. Mirrors public.in_department / public.can_manage_staff so the
  * dashboard shows exactly the tabs the database will let each person read.
  */
-export const DEPARTMENTS = ["registration", "royalty_accounts", "finance", "billing", "branding", "marketing", "marketing_sales", "support", "ai", "software", "security", "hr", "research", "launch"] as const;
+export const DEPARTMENTS = [
+  "registration",
+  "royalty_accounts",
+  "finance",
+  "billing",
+  "branding",
+  "marketing",
+  "marketing_sales",
+  "support",
+  "ai",
+  "software",
+  "security",
+  "hr",
+  "research",
+  "launch",
+] as const;
 export type Department = (typeof DEPARTMENTS)[number];
 /**
  * Departments staff can be placed in. "launch" holds the pre-launch milestones (Phase 4, 2026-10-25) and is never
  * assigned, so only super admins (who see every department) see it.
  */
-export const ASSIGNABLE_DEPARTMENTS = DEPARTMENTS.filter((d): d is Exclude<Department, "launch"> => d !== "launch");
+export const ASSIGNABLE_DEPARTMENTS = DEPARTMENTS.filter(
+  (d): d is Exclude<Department, "launch"> => d !== "launch",
+);
 
 /**
  * Departments only a super admin holds (founder, 2026-11-18): the launch milestones name hosting, secrets and vendors,
@@ -41,7 +58,12 @@ export const DEPARTMENT_LABEL: Record<Department, string> = {
 };
 
 /** Roles HR can hand out from /admin/staff. super_admin is never granted from the UI. */
-export const MANAGED_ROLES = ["employee", "department_lead", "project_manager", "hr_admin"] as const;
+export const MANAGED_ROLES = [
+  "employee",
+  "department_lead",
+  "project_manager",
+  "hr_admin",
+] as const;
 export type ManagedRole = (typeof MANAGED_ROLES)[number];
 export type StaffRole = "super_admin" | ManagedRole;
 
@@ -53,32 +75,56 @@ export const ROLE_LABEL: Record<StaffRole, string> = {
   employee: "Employee",
 };
 
-const ROLE_RANK: StaffRole[] = ["super_admin", "hr_admin", "project_manager", "department_lead", "employee"];
+const ROLE_RANK: StaffRole[] = [
+  "super_admin",
+  "hr_admin",
+  "project_manager",
+  "department_lead",
+  "employee",
+];
 
 /**
  * `allTeams`: sees every team's Task Bank and calendar (super admins and Project Managers, Phase 4 item 8). A Project
  * Manager reads them only; `departments` is still just what they work in and can edit.
  */
-export type StaffAccess = { role: StaffRole; departments: Department[]; canManageStaff: boolean; allTeams?: boolean };
+export type StaffAccess = {
+  role: StaffRole;
+  departments: Department[];
+  canManageStaff: boolean;
+  allTeams?: boolean;
+};
 
 /** Resolves a user's user_roles rows into one access summary, or null for non-staff. */
-export function resolveAccess(rows: { role: string; departments?: string[] | null }[]): StaffAccess | null {
+export function resolveAccess(
+  rows: { role: string; departments?: string[] | null }[],
+): StaffAccess | null {
   const role = ROLE_RANK.find((r) => rows.some((row) => row.role === r));
   if (!role) return null;
-  if (role === "super_admin") return { role, departments: [...DEPARTMENTS], canManageStaff: true, allTeams: true };
+  if (role === "super_admin")
+    return { role, departments: [...DEPARTMENTS], canManageStaff: true, allTeams: true };
   const set = new Set<Department>();
   for (const row of rows) {
     if (row.role === "employee" || row.role === "department_lead") {
-      for (const d of row.departments ?? []) if ((DEPARTMENTS as readonly string[]).includes(d) && !isSuperAdminOnly(d)) set.add(d as Department);
+      for (const d of row.departments ?? [])
+        if ((DEPARTMENTS as readonly string[]).includes(d) && !isSuperAdminOnly(d))
+          set.add(d as Department);
     }
     if (row.role === "hr_admin") set.add("hr");
   }
   const allTeams = rows.some((r) => r.role === "project_manager");
-  return { role, departments: DEPARTMENTS.filter((d) => set.has(d)), canManageStaff: role === "hr_admin", ...(allTeams && { allTeams }) };
+  return {
+    role,
+    departments: DEPARTMENTS.filter((d) => set.has(d)),
+    canManageStaff: role === "hr_admin",
+    ...(allTeams && { allTeams }),
+  };
 }
 
 /** HR Admins only ever hold the HR department; everyone else needs at least one. */
-export function normalizeDepartments(role: ManagedRole, departments: readonly string[]): Department[] {
+export function normalizeDepartments(
+  role: ManagedRole,
+  departments: readonly string[],
+): Department[] {
   if (role === "hr_admin") return ["hr"];
   // Project Managers see every team without being placed in one.
   if (role === "project_manager") return [];
@@ -90,15 +136,26 @@ export function normalizeDepartments(role: ManagedRole, departments: readonly st
  * Why a staff change isn't allowed, or null when it is. Nobody edits themselves or a super admin,
  * and only a super admin can grant, change or remove HR Admin, so HR can't escalate its own power.
  */
-export function staffChangeError(o: { actorId: string; actorIsSuper: boolean; targetId: string; targetRoles: string[]; nextRole?: ManagedRole }): string | null {
+export function staffChangeError(o: {
+  actorId: string;
+  actorIsSuper: boolean;
+  targetId: string;
+  targetRoles: string[];
+  nextRole?: ManagedRole;
+}): string | null {
   if (o.actorId === o.targetId) return "You can't change your own access.";
   if (o.targetRoles.includes("super_admin")) return "Super admins can't be changed here.";
-  if (!o.actorIsSuper && (o.nextRole === "hr_admin" || o.targetRoles.includes("hr_admin"))) return "Only a super admin can manage HR Admins.";
+  if (!o.actorIsSuper && (o.nextRole === "hr_admin" || o.targetRoles.includes("hr_admin")))
+    return "Only a super admin can manage HR Admins.";
   return null;
 }
 
 /** Departments that see and control badges in Admin → Badges (super admins hold every department). Mirrors public.can_manage_badges. */
-export const BADGE_DEPARTMENTS = ["branding", "marketing", "support"] as const satisfies readonly Department[];
+export const BADGE_DEPARTMENTS = [
+  "branding",
+  "marketing",
+  "support",
+] as const satisfies readonly Department[];
 
 /**
  * Departments that run the billing console (super admins hold every department). Mirrors public.can_see_billing.
@@ -111,13 +168,27 @@ export const BILLING_DEPARTMENTS = ["billing", "finance"] as const satisfies rea
  * that failed. Billing owns the console, Support hears from the member, and Software owns the build and its keys.
  * Finance keeps the console but not this check, which is why it lists software rather than reusing BILLING_DEPARTMENTS.
  */
-export const PAYMENTS_AUDIT_DEPARTMENTS = ["billing", "support", "software"] as const satisfies readonly Department[];
+export const PAYMENTS_AUDIT_DEPARTMENTS = [
+  "billing",
+  "support",
+  "software",
+] as const satisfies readonly Department[];
 
 /** super admins and the departments above; a member (no access) never sees it. The server enforces the same rule. */
 export function canAuditPayments(access: StaffAccess | null | undefined): boolean {
   if (!access) return false;
   if (access.role === "super_admin") return true;
   return PAYMENTS_AUDIT_DEPARTMENTS.some((d) => access.departments.includes(d));
+}
+
+/**
+ * Task Bank → Plans (Phase 4 item 9) are the super admin's alone (founder, 2026-11-21). A plan is its department's
+ * scorecard: the quarter's targets and the goals behind them, so it sits with Legal and Company Contracts rather than
+ * with the department that carries it out. Staff keep their Task Bank, and a plan's milestones stay ordinary tasks.
+ * Mirrors "Super admins manage department plans" in migration 20261121210000; never widen it to a department.
+ */
+export function canViewDepartmentPlans(access: StaffAccess | null | undefined): boolean {
+  return access?.role === "super_admin";
 }
 
 /**
@@ -131,7 +202,11 @@ export const TICKET_DEPARTMENTS = ["support", "billing"] as const satisfies read
  * Who works a retired ISRC through (founder, 2026-11-12): Registration and Royalty Accounts chase the change with the
  * agencies, Support sees the queue because a member often raises it in a ticket first.
  */
-export const RETIRED_ISRC_DEPARTMENTS = ["registration", "royalty_accounts", "support"] as const satisfies readonly Department[];
+export const RETIRED_ISRC_DEPARTMENTS = [
+  "registration",
+  "royalty_accounts",
+  "support",
+] as const satisfies readonly Department[];
 
 export const ADMIN_TABS = [
   { value: "ai", label: "AI Protection", departments: ["ai"] },
@@ -155,7 +230,11 @@ export const ADMIN_TABS = [
   // Terms, Privacy and Refund wording (founder, 2026-10-27, narrowed 2026-11-20): the super admin's alone. It holds no
   // department, so visibleTabs adds it by role; `can_edit_legal` in the database carries the same rule.
   { value: "legal", label: "Legal", departments: [] },
-] as const satisfies readonly { value: string; label: string; departments: readonly Department[] }[];
+] as const satisfies readonly {
+  value: string;
+  label: string;
+  departments: readonly Department[];
+}[];
 
 /** Departments in view: all of the caller's, or the one the super admin switcher picked. */
 export function viewDepartments(access: StaffAccess, view: Department | "all" = "all") {
@@ -163,38 +242,69 @@ export function viewDepartments(access: StaffAccess, view: Department | "all" = 
 }
 
 /** Tabs for the caller, optionally narrowed to one department. Every department gets the Task Bank; super admins also get Company Contracts and Plans. */
-export function visibleTabs(access: StaffAccess, view: Department | "all" = "all"): { value: string; label: string }[] {
+export function visibleTabs(
+  access: StaffAccess,
+  view: Department | "all" = "all",
+): { value: string; label: string }[] {
   // A thread escalated to a department is its lead's, so the Support Tickets tab is the lead's too — the department's
   // employees never get it, because only the lead and a super admin read an escalated thread (founder, 2026-11-19).
   const escalatedLead =
     access.role === "department_lead" &&
     access.departments.some(
       (d) =>
-        (ESCALATION_DEPARTMENTS as readonly Department[]).includes(d) && (view === "all" || d === view),
+        (ESCALATION_DEPARTMENTS as readonly Department[]).includes(d) &&
+        (view === "all" || d === view),
     );
   const tabs = ADMIN_TABS.filter(
     (t) =>
-      t.departments.some((d: Department) => access.departments.includes(d) && (view === "all" || d === view)) ||
+      t.departments.some(
+        (d: Department) => access.departments.includes(d) && (view === "all" || d === view),
+      ) ||
       (t.value === "support" && escalatedLead) ||
       // Legal is a role, not a department (founder, 2026-11-20), so no department can hand it to its staff. Like
       // Company Contracts and Plans it sits in the all-departments view rather than following the switcher.
       (t.value === "legal" && access.role === "super_admin" && view === "all"),
   );
-  const base = viewDepartments(access, view).length || (access.allTeams && view === "all") ? [...tabs, { value: "tasks", label: "Task Bank" }] : tabs;
+  const base =
+    viewDepartments(access, view).length || (access.allTeams && view === "all")
+      ? [...tabs, { value: "tasks", label: "Task Bank" }]
+      : tabs;
   // Everyone on the team gets the Calendar (Phase 4 item 8) and their own staff badges (item 6); nobody with no access
   // at all gets a tab.
   // My Queue and the Handbook (item 10) come first for everyone working in Admin; PDF Tools is for everyone too.
   // Support Scripts is for every staff member, whichever department: the words to send are shared (founder, 2026-11-05).
   // Team Board (founder, 2026-11-05): what every department has in progress, plus the coordination notices. Every staff
   // member reads it, whichever department they hold, so nobody works behind a wall.
-  const withTasks = base.length ? [{ value: "queue", label: "My Queue" }, { value: "team", label: "Team Board" }, { value: "submissions", label: "Idea Box" }, ...base, { value: "calendar", label: "Calendar" }, { value: "handbook", label: "Handbook" }, { value: "staff-plan", label: "Staff Plan" }, { value: "scripts", label: "Support Scripts" }, { value: "prices", label: "Price List" }, { value: "pdf", label: "PDF Tools" }, { value: "email", label: "Email" }, { value: "recognition", label: "My Recognition" }] : base;
+  const withTasks = base.length
+    ? [
+        { value: "queue", label: "My Queue" },
+        { value: "team", label: "Team Board" },
+        { value: "submissions", label: "Idea Box" },
+        ...base,
+        { value: "calendar", label: "Calendar" },
+        { value: "handbook", label: "Handbook" },
+        { value: "staff-plan", label: "Staff Plan" },
+        { value: "scripts", label: "Support Scripts" },
+        { value: "prices", label: "Price List" },
+        { value: "pdf", label: "PDF Tools" },
+        { value: "email", label: "Email" },
+        { value: "recognition", label: "My Recognition" },
+      ]
+    : base;
   // Holiday Cover is the rota and the pay plan: super admins and department leads only (founder, 2026-11-05).
   // It is cross-department, so a super admin sees it in the all-departments view rather than inside a narrowed one.
-  const holiday = access.role === "department_lead" || (access.role === "super_admin" && view === "all") ? [{ value: "holiday", label: "Holiday Cover" }] : [];
+  const holiday =
+    access.role === "department_lead" || (access.role === "super_admin" && view === "all")
+      ? [{ value: "holiday", label: "Holiday Cover" }]
+      : [];
   // Company Contracts is the super admin's own (founder, 2026-11-17, narrowing 2026-11-16): the LLC's agreements, its
   // contract templates and the launch tools. Like Plans it sits in the all-departments view.
-  const company = access.role === "super_admin" && view === "all" ? [{ value: "company", label: "Company Contracts" }] : [];
-  const plans = access.role === "super_admin" && view === "all" ? [{ value: "plans", label: "Plans" }] : [];
+  const company =
+    access.role === "super_admin" && view === "all"
+      ? [{ value: "company", label: "Company Contracts" }]
+      : [];
+  const plans =
+    access.role === "super_admin" && view === "all" ? [{ value: "plans", label: "Plans" }] : [];
   // The company inbox (founder, 2026-11-17): admin@ and contracts@ mail is the company's, so only a super admin reads it,
   // in every view rather than only the all-departments one.
   // The registration desk answers registrations@ from the same tab (founder, 2026-11-18); the server shows it that
