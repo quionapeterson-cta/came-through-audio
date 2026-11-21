@@ -261,6 +261,14 @@ function DuplicateWatch({ userId }: { userId: string }) {
   );
 }
 
+/** Plain words for each logged action. A pause alert is its own line: nothing was cancelled, so never call it one. */
+const ACTION_LABEL: Record<string, string> = {
+  refund: "refunded",
+  cancel_plan: "stopped a plan renewing",
+  resume_plan: "let a plan renew",
+  pause_alert: "couldn't stop a pause's Vault charge, so the pause was left open",
+};
+
 /**
  * Admin → Billing (founder, 2026-11-05): Finance and super admins look a member up by email, refund a payment or stop a
  * plan from renewing, without anyone logging into Stripe. Every action lands in the log at the bottom.
@@ -361,7 +369,7 @@ export function BillingConsolePanel({ isSuper }: { isSuper: boolean }) {
               <li key={`${a.createdAt}-${i}`} className="flex flex-wrap items-baseline justify-between gap-2 py-2 text-sm">
                 <span className="min-w-0">
                   <b>{a.actorEmail || "someone"}</b>{" "}
-                  {a.action === "refund" ? "refunded" : a.action === "cancel_plan" ? "stopped a plan renewing" : "let a plan renew"}
+                  {ACTION_LABEL[a.action] ?? a.action}
                   {a.amountCents ? ` ${formatUsd(a.amountCents)}` : ""}
                   {a.targetEmail ? ` · ${a.targetEmail}` : ""}
                   {a.status === "failed" ? <span className="text-destructive"> · refused: {a.error ?? "no reason given"}</span> : null}
